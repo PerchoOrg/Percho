@@ -92,3 +92,56 @@ When resuming work: read the most recent entries first, then check IMPLEMENTATIO
 - Task 1.2: `/auth/callback` route — exchange `?code=` for session, validate redirect target (must start with `/`, not `//`), redirect to dashboard.
 
 ---
+
+## 2026-06-07 — Phase 1.2: Auth callback route
+
+**Objective**: Build `GET /auth/callback` — exchange `?code=` for session, redirect to `?redirect=` target, harden against open-redirect.
+
+**Actions**:
+- Created `app/auth/callback/route.ts` (38 lines). GET handler: reads `code` + `redirect` from URL; calls `supabase.auth.exchangeCodeForSession(code)`; on success redirects to validated target; on any failure redirects to `/login?error=auth_failed`.
+- Open-redirect guard: `redirect` must `startsWith('/')` AND NOT `startsWith('//')`. Otherwise falls back to `/dashboard`.
+- Updated `app/(auth)/login/page.tsx` to render a red banner when `?error=auth_failed` is in the URL.
+- Added `package-lock.json` to `.gitignore` (pnpm project; npm lockfile would conflict).
+- PR `phase1/auth-callback`, merged to main as `a4a04f1`.
+
+**Decisions**:
+- 307 redirect (Next default) over 302 — preserves request method; consistent with Next defaults.
+- Single error code `auth_failed` covers both "no code" and "exchange failed" — failure UX is identical so disambiguating adds no value.
+- No structured logging of exchange failures yet — Phase 1 keeps it minimal; will revisit with observability work.
+
+**Issues**: None.
+
+**Resolution**: Merged. Hermes browser verified all four redirect paths on Vercel preview. Real magic-link click-through end-to-end will be exercised naturally in 1.4 when dashboard layout renders.
+
+**Learnings**:
+- Vercel Next.js redirects show as 307 in HTTP, not 302 — confirmed expected.
+- Open-redirect guard pattern (`startsWith('/') && !startsWith('//')`) is the right minimal check; protocol-relative URLs are the only browser attack vector here.
+
+**Next steps**: Task 1.3 — verify `handle_new_user` trigger end-to-end and document.
+
+---
+
+## 2026-06-07 — Phase 1.3: Trigger verification + manual test log
+
+**Objective**: Confirm the `handle_new_user` trigger (migration 0002) actually creates an `agents` row on Supabase Auth signup, and document the verification so it's repeatable.
+
+**Actions**:
+- Owner already exercised the full flow during 1.1 verification (submitted personal email at `/login`, clicked magic link, observed new row in `auth.users` AND `public.agents` in Supabase Studio with derived slug).
+- Updated `docs/manual-tests.md` to record exactly what was verified, when, and how to re-run cleanly (use a fresh email; cleanup via `auth.users` deletion cascades to `agents` via FK — incidentally verifies the cascade).
+- Filled in checkboxes for Phase 0 and Phase 1.1–1.3.
+
+**Decisions**:
+- No automated integration test for the trigger in V1. Reasoning: needs a separate Supabase test instance + service-role key in CI, high setup cost for a declarative SQL trigger that's stable once verified. Revisit only if migration 0002 changes.
+- Cleanup path (deleting from `auth.users`) doubles as a cascade-FK verification.
+
+**Issues**: None.
+
+**Resolution**: Trigger confirmed in production-like Supabase environment. Runbook in place.
+
+**Learnings**:
+- Slug derivation from email local-part works as designed; collision suffix logic untested in practice but SQL is straightforward.
+- `docs/manual-tests.md` is the runbook, DEVLOG is the narrative — keep them complementary, not redundant.
+
+**Next steps**: Task 1.4 — build `/dashboard/layout.tsx` (top bar, agent name, Sign out).
+
+---
