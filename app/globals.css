@@ -2,12 +2,25 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  /* Demo design tokens (Phase 3 will reuse these for VideoFeed migration). */
+  --brand: #c9a227;
+  --brand-dark: #a88a1e;
+  --bg: #0c0c0c;
+  --card: #141414;
+  --border: rgba(255, 255, 255, 0.08);
+  --text: #f5f5f5;
+  --muted: #9a9a9a;
+}
+
 html,
 body {
   height: 100%;
 }
 
 body {
+  background: var(--bg);
+  color: var(--text);
   font-family:
     var(--font-inter),
     system-ui,
