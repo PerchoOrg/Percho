@@ -94,8 +94,33 @@ strip it. Surface it in the PR description.
 3. **Plan before coding.** For each task, post a short plan (3-6 bullets) before
    touching files. Wait for user OK on non-trivial work.
 4. **Commit messages**: imperative, prefix with phase: `phase2: add tus uploader`.
-5. **End-of-session log**: append a `### YYYY-MM-DD` entry at the bottom of
-   IMPLEMENTATION.md with: what shipped, what's blocked, what's next.
+5. **Development log (DEVLOG.md)**: this is the project's institutional memory.
+   Update it **incrementally**, not at session end. Append a new entry whenever
+   you: start a task, make a design decision, hit a bug/blocker, investigate a
+   problem, complete a milestone, discover a tradeoff, or change an assumption.
+
+   Entry format (keep concise but informative — another engineer should be
+   able to reconstruct project history from DEVLOG.md alone, without reading
+   commits):
+
+   ```
+   ## YYYY-MM-DD HH:MM — <short title>
+
+   **Objective**: what you're trying to accomplish
+   **Actions**: files modified / commands run / infra changes
+   **Decisions**: alternatives considered, why you picked this one
+   **Issues**: errors, blockers, unexpected behavior
+   **Resolution**: how it was resolved + remaining risks
+   **Learnings**: discoveries, future recommendations
+   **Next steps**: recommended actions for the next session
+   ```
+
+   Rules:
+   - When resuming work, read the most recent DEVLOG entries first to
+     reconstruct state. Summarize current state before starting new work.
+   - Highlight assumptions, tech debt, and unresolved risks explicitly.
+   - If a task spans sessions, reference the prior entry by date+title.
+   - Before ending a session, ensure all significant work is logged.
 
 ---
 
