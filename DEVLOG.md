@@ -10,6 +10,24 @@ When resuming work: read the most recent entries first, then check IMPLEMENTATIO
 
 ---
 
+## 2026-06-08 23:47 UTC — Phase 1.6 verified (no new code)
+
+**Objective**: Confirm the sign-out route works end-to-end and close out task 1.6.
+
+**Actions**: Owner clicked "Sign out" in the dashboard TopBar on the Vercel preview from his Mac; flow redirected back to `/login` and the session cookies were cleared. Marked 1.6 `[x]` in IMPLEMENTATION.md with a note that the route was actually shipped in 1.4 alongside the TopBar form.
+
+**Decisions**: No new commit on the source side — `app/api/auth/signout/route.ts` already exists on `phase1/dashboard-content` (and on main, since it landed with 1.4). Splitting it into a separate "1.6 implementation" commit would have been busywork.
+
+**Issues**: None. The original IMPLEMENTATION.md plan ordered 1.6 after 1.5, but the TopBar in 1.4 needed a working POST target, so the route was written early. Documenting that here so the timeline is reconstructable from DEVLOG alone.
+
+**Resolution**: 1.6 closed. Phase 1 has only 1.7 (manual-test doc) remaining before phase merge to main.
+
+**Learnings**: When task N's dependency forces task M (M > N) to ship early, leave the checkbox open until verified, and call it out in DEVLOG when you tick it — otherwise the implementation order looks wrong to anyone reading the diff after the fact.
+
+**Next steps**: 1.7 — write `docs/manual-tests.md` covering the full sign-in → dashboard → sign-out E2E flow (magic link, callback, agents-row trigger, empty state, sign-out). Once 1.7 is verified, fast-forward `phase1/dashboard-content` into main.
+
+---
+
 ## 2026-06-08 23:40 UTC — Phase 1.5: dashboard empty state
 
 **Objective**: Replace the placeholder dashboard home with the real V1 empty state for logged-in agents who haven't created a listing yet.

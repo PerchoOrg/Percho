@@ -34,17 +34,19 @@ page; Supabase Studio shows all 9 tables with RLS enabled.
 
 Goal: Vivian can log in via magic link, lands on an empty dashboard.
 
-- [ ] **1.1** `app/(auth)/login/page.tsx` — magic-link form, Supabase
+- [x] **1.1** `app/(auth)/login/page.tsx` — magic-link form, Supabase
       `signInWithOtp`. Redirect target from `?redirect=` query param.
-- [ ] **1.2** `app/(auth)/auth/callback/route.ts` — exchange code for session.
-- [ ] **1.3** Verify the `handle_new_user` trigger creates an `agents` row
+- [x] **1.2** `app/(auth)/auth/callback/route.ts` — exchange code for session.
+- [x] **1.3** Verify the `handle_new_user` trigger creates an `agents` row
       after first login. Add an integration test (or a documented manual
       check) confirming this.
-- [ ] **1.4** `app/dashboard/layout.tsx` — auth-gated; renders top bar with
+- [x] **1.4** `app/dashboard/layout.tsx` — auth-gated; renders top bar with
       agent name + "Sign out" button.
-- [ ] **1.5** `app/dashboard/page.tsx` — empty-state listing list ("No
+- [x] **1.5** `app/dashboard/page.tsx` — empty-state listing list ("No
       listings yet · New listing").
-- [ ] **1.6** `app/api/auth/signout/route.ts` — POST clears session, redirects /.
+- [x] **1.6** `app/api/auth/signout/route.ts` — POST clears session, redirects
+      to `/login`. (Shipped in 1.4 alongside the TopBar form; verified Mac-side
+      on 2026-06-08.)
 - [ ] **1.7** Sign-in flow E2E manual test documented in `docs/manual-tests.md`.
 
 **Definition of done**: a fresh email signs up via magic link → lands on
