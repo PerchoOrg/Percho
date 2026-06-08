@@ -10,6 +10,24 @@ When resuming work: read the most recent entries first, then check IMPLEMENTATIO
 
 ---
 
+## 2026-06-09 00:15 UTC — Phase 1.7 manual test doc written; Phase 1 complete
+
+**Objective**: Land the Phase 1.7 deliverable — a runnable E2E manual test script in `docs/manual-tests.md` — and close out Phase 1 on the `phase1/dashboard-content` branch.
+
+**Actions**: Replaced the stub `### 1.4–1.7 (pending)` section in `docs/manual-tests.md` with four real sub-sections: 1.4 (top bar) and 1.6 (signout) checked off based on the Mac-side verification from yesterday; 1.5 (empty state) checked off citing the `phase1/dashboard-content` Vercel preview screenshot review; 1.7 written as a full happy-path checklist (8 numbered steps from `/login` → magic link → `/dashboard` → Supabase `agents` row check → sign out → re-block) plus three negative cases (expired/reused link, unauthenticated dashboard access, open-redirect guard). Marked 1.7 `[x]` in IMPLEMENTATION.md.
+
+**Decisions**: Kept the doc verification-oriented rather than prescriptive — each step states the user action and the expected observable side effect (cookie present/absent, redirect status, DB row), so a future tester can reproduce it without reading code. Explicitly called out the `+tag` / `delete from auth.users` cleanup pattern so re-runs aren't blocked by Supabase email dedup. Did not touch the Phase 0 / 1.1 / 1.2 / 1.3 sections — surgical change per CLAUDE.md §0.3.
+
+**Issues**: None. Doc-only change, no typecheck/biome impact.
+
+**Resolution**: All Phase 1 tasks (1.1–1.7) now `[x]` in IMPLEMENTATION.md. Branch `phase1/dashboard-content` is ready to merge to main once owner reviews the doc.
+
+**Learnings**: The 1.7 spec from IMPLEMENTATION.md was thin ("documented in manual-tests.md"). Filling it in well meant deciding the doc's audience — a future engineer or auditor running the flow on a clean preview, not a hands-on tutorial. That framing made the negative cases obvious (expired link, anon dashboard, open-redirect) because each one is a security-relevant invariant that a reviewer would want re-checked whenever auth code moves.
+
+**Next steps**: Wait for owner review of `docs/manual-tests.md` on `phase1/dashboard-content`. On approval, fast-forward merge `phase1/dashboard-content` → `main` (this closes Phase 1 entirely), then start Phase 2 on a fresh `phase2/<slug>` branch.
+
+---
+
 ## 2026-06-08 23:47 UTC — Phase 1.6 verified (no new code)
 
 **Objective**: Confirm the sign-out route works end-to-end and close out task 1.6.

@@ -47,7 +47,10 @@ Goal: Vivian can log in via magic link, lands on an empty dashboard.
 - [x] **1.6** `app/api/auth/signout/route.ts` — POST clears session, redirects
       to `/login`. (Shipped in 1.4 alongside the TopBar form; verified Mac-side
       on 2026-06-08.)
-- [ ] **1.7** Sign-in flow E2E manual test documented in `docs/manual-tests.md`.
+- [x] **1.7** Sign-in flow E2E manual test documented in `docs/manual-tests.md`.
+      Happy path (8 steps) + 3 negative cases (expired link, unauthenticated
+      dashboard access, open-redirect guard) covering the full Phase 1 surface.
+      Doc-only; no code change. (2026-06-08)
 
 **Definition of done**: a fresh email signs up via magic link → lands on
 empty `/dashboard` → `agents` table has the new row.
