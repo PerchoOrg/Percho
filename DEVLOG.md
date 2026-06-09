@@ -10,6 +10,27 @@ When resuming work: read the most recent entries first, then check IMPLEMENTATIO
 
 ---
 
+## 2026-06-09 14:36 UTC — phase6.1b: rate-limit lib + generate-copy route + vitest
+
+**Objective**: Land the LLM listing-copy endpoint and the rate-limit primitive both AI routes will share. Cover the rate-limit logic with vitest so 6.3a doesn't reinvent it.
+
+**Actions**:
+- New `lib/ai/rate-limit.ts` exporting `checkAndRecord(supabase, agentId, kind)` + `RATE_LIMIT_PER_MIN = 10`. HEAD/count query against `ai_usage_log` for the last minute, then insert a marker row. Service-role client required (no anon insert policy on the ledger).
+- New `lib/ai/__tests__/rate-limit.test.ts` (5 cases): under cap → ok, at cap → rate_limited, above cap → rate_limited, count error → internal, insert error → internal. All green.
+- New `app/api/generate-copy/route.ts`: zod input → cookie-client `auth.getUser()` → resolve agent_id by user_id → service-role `checkAndRecord(...,'listing_copy')` → `generateListingCopy(...)` (Phase 0 lib, model pin + max_tokens cap already there) → `{paragraphs}` 200, `429 rate_limited`, `502 generation_failed`, `401 unauthorized`, `400 invalid_input`.
+
+**Decisions**:
+- Listing fields come from request body, not from the listings table by id. The edit form has unsaved local state and the agent should be able to preview copy *before* saving — so we validate shape via zod and trust the agent (auth-gated, rate-limited) for content. Server-side trust boundary = auth + rate-limit, not DB consistency.
+- `kind` text + check constraint over enum — keeps schema migrations boring; we only have two values (`listing_copy`, `social_copy`).
+- Rate-limit race is tolerable: two concurrent requests can both pass the count check and both insert, briefly exceeding the cap by 1. Soft ceiling against UI spam, not a billing meter.
+- Anon-cookie supabase client used to read auth (RLS safe), service-role client used only for `ai_usage_log` writes (no anon insert policy by design).
+
+**Verification**: `pnpm exec vitest run lib/ai/__tests__/rate-limit.test.ts` → 5/5. `pnpm exec tsc --noEmit` clean. `pnpm exec biome check` clean (one auto-format applied to collapse a multi-line `(supabase as any).from(...).insert(...)` chain).
+
+**Next steps**: 6.2 — wire the route into `EditListingForm` with a "Generate description" button.
+
+---
+
 ## 2026-06-09 14:34 UTC — phase6.1a: ai_usage_log migration
 
 **Objective**: Land schema for per-agent AI rate-limit ledger before the route handlers come online (6.1b/6.3a both depend on it).
