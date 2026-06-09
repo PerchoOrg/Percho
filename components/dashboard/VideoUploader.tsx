@@ -22,11 +22,19 @@ const MAX_BYTES = 2 * 1024 * 1024 * 1024; // 2 GB
 
 type Status = 'idle' | 'creating' | 'uploading' | 'done' | 'error';
 
-interface Props {
-  listingId: string;
+export interface UploadedVideo {
+  rowId: string;
+  videoId: string;
+  title: string;
+  kind: 'walkthrough';
 }
 
-export function VideoUploader({ listingId }: Props) {
+interface Props {
+  listingId: string;
+  onUploaded?: (video: UploadedVideo) => void;
+}
+
+export function VideoUploader({ listingId, onUploaded }: Props) {
   const [status, setStatus] = useState<Status>('idle');
   const [progress, setProgress] = useState(0);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -52,6 +60,8 @@ export function VideoUploader({ listingId }: Props) {
     setProgress(0);
 
     let uploadUrl: string;
+    let rowId: string;
+    let videoId: string;
     try {
       const res = await fetch('/api/video/create-upload', {
         method: 'POST',
@@ -68,8 +78,10 @@ export function VideoUploader({ listingId }: Props) {
         const body = (await res.json().catch(() => ({}))) as { error?: string };
         throw new Error(body.error ?? `create-upload returned ${res.status}`);
       }
-      const json = (await res.json()) as { uploadUrl: string };
+      const json = (await res.json()) as { uploadUrl: string; rowId: string; videoId: string };
       uploadUrl = json.uploadUrl;
+      rowId = json.rowId;
+      videoId = json.videoId;
     } catch (err) {
       setStatus('error');
       setErrorMsg(err instanceof Error ? err.message : 'Failed to start upload.');
@@ -89,6 +101,7 @@ export function VideoUploader({ listingId }: Props) {
       onSuccess: () => {
         setStatus('done');
         setProgress(100);
+        onUploaded?.({ rowId, videoId, title: file.name, kind: 'walkthrough' });
       },
       onError: (err) => {
         setStatus('error');

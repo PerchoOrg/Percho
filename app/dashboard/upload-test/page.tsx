@@ -1,5 +1,4 @@
-import { type ListingVideoRow, ListingVideosLive } from '@/components/dashboard/ListingVideosLive';
-import { VideoUploader } from '@/components/dashboard/VideoUploader';
+import { UploadHarness, type VideoRow } from '@/components/dashboard/UploadHarness';
 import { createClient } from '@/lib/supabase/server';
 /**
  * /dashboard/upload-test — standalone page to test the Phase 2 video pipeline
@@ -86,7 +85,7 @@ export default async function UploadTestPage() {
     .from('listing_videos')
     .select('id, cf_video_id, kind, title, status, created_at')
     .eq('listing_id', listing.id)
-    .order('created_at', { ascending: false })) as { data: ListingVideoRow[] | null };
+    .order('created_at', { ascending: false })) as { data: VideoRow[] | null };
 
   const initialVideos = videosRaw ?? [];
 
@@ -100,9 +99,7 @@ export default async function UploadTestPage() {
         </p>
       </header>
 
-      <VideoUploader listingId={listing.id} />
-
-      <ListingVideosLive listingId={listing.id} initialVideos={initialVideos} />
+      <UploadHarness listingId={listing.id} initialVideos={initialVideos} />
     </div>
   );
 }

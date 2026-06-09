@@ -10,6 +10,26 @@ When resuming work: read the most recent entries first, then check IMPLEMENTATIO
 
 ---
 
+## 2026-06-09 02:55 UTC — Phase 2 hotfix: optimistic insert + polling fallback
+
+**Objective**: After Phase 2 merged to main and went live on production, e2e smoke revealed two visible bugs on `/dashboard/upload-test`: (1) successful upload did not add a row to the table without a manual refresh, and (2) once the row appeared, the `processing → ready` transition never rendered live — only a manual refresh would surface it. Both symptoms point at the Realtime channel not delivering events to the browser, even though the webhook is updating the row in DB (confirmed via direct SQL).
+
+**Actions**: (1) New `app/api/video/list/route.ts` — `GET /api/video/list?listing_id=<uuid>` returns owner-fenced rows for a listing (anon client + RLS). (2) Replaced `components/dashboard/ListingVideosLive.tsx` with `components/dashboard/UploadHarness.tsx` — a single Client Component that owns the row state for the page. Three layered freshness mechanisms: (a) **optimistic insert** — when `VideoUploader` signals success, the harness adds a `processing` row to local state immediately, fixing symptom 1; (b) **polling** — while any row is in `processing`, GET `/api/video/list` every 5s and merge results, fixing symptom 2 regardless of whether Realtime works; (c) Realtime subscription — kept as a best-effort accelerator. If it works, transitions are instant; if not, polling backstops within 5s. (3) `VideoUploader` now exposes `onUploaded?: (UploadedVideo) => void` and forwards `rowId` + `videoId` from the create-upload response so the harness can build the optimistic row. (4) `app/dashboard/upload-test/page.tsx` now renders a single `<UploadHarness>` instead of separate uploader + table components.
+
+**Decisions**: (a) Polling-first reliability instead of debugging Realtime — Realtime depends on multiple gears aligning (publication membership, RLS-on-Realtime, WebSocket auth, anon JWT propagation). Each is independently a failure mode and three of them aren't observable from EC2. The user explicitly asked for working behavior over root-cause; polling is a 30-line guarantee that works now. Cost is cheap: poll only fires while at least one row is `processing`, so an idle dashboard with all-`ready` rows makes zero polling requests. (b) 5s poll interval — Cloudflare typical processing time is 30-60s for short clips, so 5s gives ~6-12 ticks per video and feels live without being chatty. (c) Kept Realtime channel — when it works (most cases) transitions appear instantly; when it doesn't, polling kicks in within 5s. No reason to remove the better path. (d) Kept the optimistic row in state for 30s even if the server-side list doesn't yet show it — covers the race window where the page polls in the same tick as the create-upload INSERT is committing. (e) Deleted `ListingVideosLive.tsx` rather than keeping it — UploadHarness fully supersedes it, and dead code is worse than diff churn.
+
+**Issues**: None during implementation. The original Realtime-only design's failure mode (silent: subscription returns `SUBSCRIBED` but no events arrive) is the kind of bug that's only visible in production with real users — caught here by the user's e2e smoke.
+
+**Verification**: `npx tsc --noEmit` clean, `npx biome check` clean on changed files, `npx vitest run` → `20 passed (20)` (no test changes — uploader callback is opt-in via `?.()` so existing route tests still pass). Pushed to `phase2/realtime-fallback` branch off main 2d840ef. Production merge + e2e re-test pending user verification.
+
+**Learnings**: For features that depend on third-party push channels (Realtime, webhooks, cloud-provider events), build a polling fallback from day 1, not as a hotfix. Cost is trivial (gated on "is anything actually pending"). Removing the polling later if Realtime proves reliable is easy; adding it under production fire is what we just did.
+
+**Next steps**: Merge `phase2/realtime-fallback` to main once user e2e-verifies the fix on Vercel preview or confirms a re-deploy of main. Then close Phase 2 and start Phase 3.
+
+---
+
+
+
 ## 2026-06-09 06:20 UTC — Phase 2.5 + 2.6 Cost Guard & Tests
 
 **Objective**: Close out Phase 2. Task 2.5 — server-side belt-and-suspenders against oversized/overlong videos slipping past the upload-time guard. Task 2.6 — unit tests covering webhook signature verification and the `/api/video/create-upload` route.
