@@ -1,12 +1,13 @@
 import { createClient } from '@/lib/supabase/server';
 /**
- * GET /api/video/list?listing_id=<uuid>
+ * GET /api/video/list?listing_id=<uuid>     (Phase 2)
+ * GET /api/video/list?community_id=<uuid>   (Phase 4.5)
  *
- * Returns listing_videos rows for the given listing. Owner-fenced via RLS:
- * the caller's anon client only sees rows under listings they own.
+ * Returns video rows for the given parent. Owner-fenced via RLS for listings;
+ * communities are publicly readable (V1 shared-community model).
  *
- * Used by the dashboard upload harness to poll for status transitions
- * (processing → ready) as a fallback when Realtime isn't delivering events.
+ * Used by dashboard panels to poll for status transitions (processing → ready)
+ * as a fallback when Realtime isn't delivering events.
  */
 import { NextResponse } from 'next/server';
 
@@ -22,29 +23,53 @@ export async function GET(req: Request) {
 
   const url = new URL(req.url);
   const listingId = url.searchParams.get('listing_id');
-  if (!listingId) {
-    return NextResponse.json({ error: 'missing_listing_id' }, { status: 400 });
+  const communityId = url.searchParams.get('community_id');
+
+  if (listingId) {
+    const { data, error } = (await supabase
+      .from('listing_videos')
+      .select('id, cf_video_id, kind, title, status, created_at')
+      .eq('listing_id', listingId)
+      .order('created_at', { ascending: false })) as {
+      data: Array<{
+        id: string;
+        cf_video_id: string;
+        kind: string;
+        title: string | null;
+        status: string;
+        created_at: string;
+      }> | null;
+      error: unknown;
+    };
+    if (error) {
+      return NextResponse.json({ error: 'list_failed' }, { status: 500 });
+    }
+    return NextResponse.json({ videos: data ?? [] });
   }
 
-  const { data, error } = (await supabase
-    .from('listing_videos')
-    .select('id, cf_video_id, kind, title, status, created_at')
-    .eq('listing_id', listingId)
-    .order('created_at', { ascending: false })) as {
-    data: Array<{
-      id: string;
-      cf_video_id: string;
-      kind: string;
-      title: string | null;
-      status: string;
-      created_at: string;
-    }> | null;
-    error: unknown;
-  };
-
-  if (error) {
-    return NextResponse.json({ error: 'list_failed' }, { status: 500 });
+  if (communityId) {
+    const { data, error } = (await supabase
+      .from('community_videos')
+      .select('id, cf_video_id, kind, school_id, poi_id, title, status, created_at')
+      .eq('community_id', communityId)
+      .order('created_at', { ascending: false })) as {
+      data: Array<{
+        id: string;
+        cf_video_id: string;
+        kind: string;
+        school_id: string | null;
+        poi_id: string | null;
+        title: string | null;
+        status: string;
+        created_at: string;
+      }> | null;
+      error: unknown;
+    };
+    if (error) {
+      return NextResponse.json({ error: 'list_failed' }, { status: 500 });
+    }
+    return NextResponse.json({ videos: data ?? [] });
   }
 
-  return NextResponse.json({ videos: data ?? [] });
+  return NextResponse.json({ error: 'missing_parent_id' }, { status: 400 });
 }

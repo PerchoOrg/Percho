@@ -45,7 +45,14 @@ export const VideoCreateUpload = z.object({
   parent_id: z.string().uuid(),
   kind: z.string().min(1).max(40),
   title: z.string().max(120).optional(),
-  upload_length: z.number().int().positive().max(2 * 1024 * 1024 * 1024), // 2 GB cap
+  upload_length: z
+    .number()
+    .int()
+    .positive()
+    .max(2 * 1024 * 1024 * 1024), // 2 GB cap
+  // Community-scope only: optional school/POI link. Validated against scope at the route handler.
+  school_id: z.string().uuid().optional(),
+  poi_id: z.string().uuid().optional(),
 });
 export type VideoCreateUpload = z.infer<typeof VideoCreateUpload>;
 

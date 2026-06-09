@@ -2,12 +2,12 @@
 
 import { useRef, useState } from 'react';
 /**
- * VideoUploader — Client Component (task 2.2).
+ * VideoUploader — Client Component (task 2.2; Phase 4.5 extends to community).
  *
  * Flow:
  *   1. User picks a file. Reject locally if > 2 GB (server enforces too).
  *   2. POST /api/video/create-upload to reserve a Cloudflare Stream slot
- *      and pre-insert a `listing_videos` row (status=processing).
+ *      and pre-insert a row in listing_videos OR community_videos.
  *   3. tus-js-client uploads bytes directly to Cloudflare. Browser → CF.
  *      Our server never touches the bytes.
  *   4. On success, the row stays `processing` until the CF webhook fires
@@ -22,19 +22,30 @@ const MAX_BYTES = 2 * 1024 * 1024 * 1024; // 2 GB
 
 type Status = 'idle' | 'creating' | 'uploading' | 'done' | 'error';
 
+export type ListingTarget = { scope: 'listing'; listingId: string };
+export type CommunityKind = 'school' | 'poi' | 'neighborhood';
+export type CommunityTarget = {
+  scope: 'community';
+  communityId: string;
+  kind: CommunityKind;
+  schoolId?: string;
+  poiId?: string;
+};
+export type UploadTarget = ListingTarget | CommunityTarget;
+
 export interface UploadedVideo {
   rowId: string;
   videoId: string;
   title: string;
-  kind: 'walkthrough';
+  kind: 'walkthrough' | CommunityKind;
 }
 
 interface Props {
-  listingId: string;
+  target: UploadTarget;
   onUploaded?: (video: UploadedVideo) => void;
 }
 
-export function VideoUploader({ listingId, onUploaded }: Props) {
+export function VideoUploader({ target, onUploaded }: Props) {
   const [status, setStatus] = useState<Status>('idle');
   const [progress, setProgress] = useState(0);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -59,6 +70,25 @@ export function VideoUploader({ listingId, onUploaded }: Props) {
     setStatus('creating');
     setProgress(0);
 
+    const requestBody =
+      target.scope === 'listing'
+        ? {
+            scope: 'listing' as const,
+            parent_id: target.listingId,
+            kind: 'walkthrough' as const,
+            upload_length: file.size,
+            title: file.name,
+          }
+        : {
+            scope: 'community' as const,
+            parent_id: target.communityId,
+            kind: target.kind,
+            upload_length: file.size,
+            title: file.name,
+            ...(target.schoolId ? { school_id: target.schoolId } : {}),
+            ...(target.poiId ? { poi_id: target.poiId } : {}),
+          };
+
     let uploadUrl: string;
     let rowId: string;
     let videoId: string;
@@ -66,13 +96,7 @@ export function VideoUploader({ listingId, onUploaded }: Props) {
       const res = await fetch('/api/video/create-upload', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          scope: 'listing',
-          parent_id: listingId,
-          kind: 'walkthrough',
-          upload_length: file.size,
-          title: file.name,
-        }),
+        body: JSON.stringify(requestBody),
       });
       if (!res.ok) {
         const body = (await res.json().catch(() => ({}))) as { error?: string };
@@ -90,6 +114,9 @@ export function VideoUploader({ listingId, onUploaded }: Props) {
 
     setStatus('uploading');
 
+    const uploadedKind: UploadedVideo['kind'] =
+      target.scope === 'listing' ? 'walkthrough' : target.kind;
+
     const upload = new tus.Upload(file, {
       uploadUrl,
       retryDelays: [0, 1000, 3000, 5000, 10000],
@@ -101,7 +128,7 @@ export function VideoUploader({ listingId, onUploaded }: Props) {
       onSuccess: () => {
         setStatus('done');
         setProgress(100);
-        onUploaded?.({ rowId, videoId, title: file.name, kind: 'walkthrough' });
+        onUploaded?.({ rowId, videoId, title: file.name, kind: uploadedKind });
       },
       onError: (err) => {
         setStatus('error');

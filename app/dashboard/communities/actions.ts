@@ -198,3 +198,27 @@ export async function deletePoi(poiId: string, communityId: string): Promise<Act
   revalidatePath(`/dashboard/communities/${communityId}`);
   return { ok: true };
 }
+
+// ─── community videos (Phase 4.5) ────────────────────────────────
+// Note: this only deletes the DB row. The underlying Cloudflare Stream asset
+// is orphaned — V1 accepted cost; a periodic reconcile job will clean those
+// up post-launch. Same approach as listing_videos (no delete UI yet).
+
+export async function deleteCommunityVideo(
+  videoId: string,
+  communityId: string,
+): Promise<ActionResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: 'unauthorized' };
+  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
+  const { error } = await (supabase as any).from('community_videos').delete().eq('id', videoId);
+  if (error) {
+    console.error('[deleteCommunityVideo] failed', error);
+    return { ok: false, error: 'delete_failed' };
+  }
+  revalidatePath(`/dashboard/communities/${communityId}`);
+  return { ok: true };
+}

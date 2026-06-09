@@ -175,7 +175,7 @@ export function UploadHarness({ listingId, initialVideos }: Props) {
         Realtime: <span style={{ color: 'var(--brand)' }}>{rtStatus}</span>
         {POLLING_ENABLED ? ' · polling 5s' : ' · polling off'}
       </div>
-      <VideoUploader listingId={listingId} onUploaded={handleUploaded} />
+      <VideoUploader target={{ scope: 'listing', listingId }} onUploaded={handleUploaded} />
       <VideosTable videos={videos} />
     </>
   );

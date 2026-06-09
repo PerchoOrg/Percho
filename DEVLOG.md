@@ -10,6 +10,44 @@ When resuming work: read the most recent entries first, then check IMPLEMENTATIO
 
 ---
 
+## 2026-06-11 06:15 UTC — phase4.5: community video upload + dashboard nav link
+
+**Objective**: Phase 4.5 — let agents upload neighborhood/school/POI videos under a community, with optional linkage to specific schools or POIs. Plus the deferred Phase 4.4 follow-up: actually surface `/dashboard/communities` in the top nav so agents can find it without typing the URL.
+
+**Actions**:
+- `app/dashboard/top-bar.tsx` — added a primary nav row (Listings / Communities) between the brand block and the right-side user menu. Hidden on mobile (`md:flex`) for V1; full mobile nav is post-launch polish.
+- `lib/zod/schemas.ts` — extended `VideoCreateUpload` with optional `school_id` / `poi_id` (uuid). Shared schema across both scopes; community handler enforces the kind/link consistency rules in the route.
+- `app/api/video/create-upload/route.ts` — split into `handleListing` and `handleCommunity`. Community path validates `kind ∈ {school,poi,neighborhood}`, enforces school_id↔kind=school and poi_id↔kind=poi consistency, looks up `agents.id` via `auth.uid()` for the `uploaded_by` column, then issues the CF Stream direct-upload URL and inserts the `community_videos` row with status='processing'.
+- `app/api/video/list/route.ts` — accepts either `listing_id=` or `community_id=`. Listings are RLS-fenced (owner only); communities are publicly readable per V1 RLS. Returns 400 when neither is provided.
+- `components/dashboard/VideoUploader.tsx` — replaced `listingId: string` prop with a discriminated `target: ListingTarget | CommunityTarget` so the same uploader handles both scopes. Listing target keeps `kind: 'walkthrough'` hardcoded; community target carries kind + optional school/poi link from the parent panel.
+- `app/dashboard/listings/[id]/edit/VideoPanel.tsx` + `components/dashboard/UploadHarness.tsx` — call sites updated to the new `target` prop.
+- `app/dashboard/communities/[id]/CommunityVideoPanel.tsx` — new file. Lists existing community videos (cf thumbnail + kind + linked school/POI name + status), provides kind/school/poi selector, embeds `VideoUploader`. Polls `/api/video/list?community_id=…` every 5s while any row is processing (mirrors the listing panel pattern; no Realtime here, polling is sufficient for the lower-frequency community surface).
+- `app/dashboard/communities/[id]/page.tsx` — added a third parallel `community_videos` fetch alongside schools/POIs and rendered `<CommunityVideoPanel>` below the metadata editor.
+- `app/dashboard/communities/actions.ts` — added `deleteCommunityVideo` server action with the standard auth check + RLS-scoped delete + revalidate.
+
+**Decisions**:
+- **One discriminated `target` prop, not two uploader components.** A second `<CommunityVideoUploader>` would duplicate the tus + progress + retry logic. The discriminated union keeps a single source of truth for upload mechanics; only the request-body shape branches.
+- **Community videos do NOT support reorder or cover photo.** Those are listing-page concerns (the listing carousel is the consumer-facing surface). Community videos surface as a flat collection on the public listing page in Phase 5; ordering can be added later if needed.
+- **Polling, not Realtime, for community videos.** Community uploads are low-frequency (one per agent per community per session), and the listing panel's Realtime path adds complexity (channel mgmt + auth) we don't need here. 5s poll while `processing` rows exist; idle when all are `ready`.
+- **`uploaded_by` is set server-side from `auth.uid()` → `agents.id`**, never trusted from the client. Same pattern as `recorded_by` for schools/POIs in 4.4.
+- **Cross-field consistency enforced server-side**: `school_id` only with `kind='school'`, `poi_id` only with `kind='poi'`. Client UI also gates the dropdown by kind, but the server is the source of truth — a tampered client can't insert a `kind='neighborhood'` row with a `school_id`.
+- **`deleteCommunityVideo` only deletes the DB row**; the underlying CF Stream asset is orphaned. Same approach as listing_videos (no delete UI yet there either). A periodic reconcile job is queued for post-launch — known V1 cost, accepted to ship.
+- **Top-nav stays minimal (just two links).** Listings and Communities are the only top-level dashboard surfaces; everything else is nested. A flatter nav would accumulate noise as we add post-V1 surfaces (analytics, billing, settings).
+
+**Validation**:
+- `pnpm exec tsc --noEmit` — clean.
+- `biome check` on the 9 changed/added files — clean. (UploadHarness has 3 pre-existing `console.log` warnings I didn't touch; not part of this commit's changes.)
+
+**Issues**:
+- None blocking. Two papercuts noted for later: (1) Community videos lack a "linked school/POI" filter on the panel — fine for ≤20 rows, will need it once communities scale. (2) The "delete" affordance is a plain text button; should pick up the same trash-icon treatment used in the schools/POIs sub-forms in a polish pass.
+
+**Next steps**:
+- Phase 4.6 — `publishListing` server action: validate required fields (≥1 ready listing video, address, price, beds, baths), flip status='published' + `published_at = now()`, revalidate the public listing path, and surface a publish button on the edit page. After 4.6 lands, clean up the Phase 3 `__upload_test__` listings + `publishPhase3Demo` action + `PublishPhase3Button` component (or fold into a 4.6.5 cleanup commit).
+- Phase 4.7 — archive (soft delete) + dashboard list "show archived" toggle.
+- Phase 4.8 — Vivian / owner runs the 30-min e2e smoke test, captured in `docs/manual-tests.md`.
+
+---
+
 ## 2026-06-11 05:30 UTC — phase4.4: community editor (list, create, schools, POIs) + listing community selector
 
 **Objective**: Phase 4.4 — communities CRUD so agents can self-serve community/school/POI data, plus retrofit the listing edit form with a community selector so listings can link into them.

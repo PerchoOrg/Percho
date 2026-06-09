@@ -9,6 +9,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import { CommunityEditor } from './CommunityEditor';
+import { CommunityVideoPanel, type CommunityVideoRow } from './CommunityVideoPanel';
 
 interface CommunityRow {
   id: string;
@@ -64,7 +65,7 @@ export default async function CommunityEditorPage({
     );
   }
 
-  const [{ data: schoolsRaw }, { data: poisRaw }] = await Promise.all([
+  const [{ data: schoolsRaw }, { data: poisRaw }, { data: videosRaw }] = await Promise.all([
     // biome-ignore lint/suspicious/noExplicitAny: stub generated types
     (supabase as any)
       .from('schools')
@@ -78,6 +79,14 @@ export default async function CommunityEditorPage({
       .eq('community_id', id)
       .order('poi_type', { ascending: true })
       .order('name', { ascending: true }) as Promise<{ data: PoiRow[] | null }>,
+    // biome-ignore lint/suspicious/noExplicitAny: stub generated types
+    (supabase as any)
+      .from('community_videos')
+      .select('id, cf_video_id, kind, school_id, poi_id, title, status, created_at')
+      .eq('community_id', id)
+      .order('created_at', { ascending: false }) as Promise<{
+      data: CommunityVideoRow[] | null;
+    }>,
   ]);
 
   return (
@@ -91,6 +100,12 @@ export default async function CommunityEditorPage({
       </header>
 
       <CommunityEditor community={community} schools={schoolsRaw ?? []} pois={poisRaw ?? []} />
+      <CommunityVideoPanel
+        communityId={community.id}
+        initialVideos={videosRaw ?? []}
+        schools={schoolsRaw ?? []}
+        pois={poisRaw ?? []}
+      />
     </div>
   );
 }

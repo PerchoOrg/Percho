@@ -31,6 +31,26 @@ export function TopBar({ displayName, brokerage }: Props) {
           <span className="text-base font-semibold tracking-tight">Vicinity</span>
         </div>
 
+        <nav className="hidden items-center gap-5 text-sm md:flex" aria-label="Dashboard">
+          <a href="/dashboard" className="hover:opacity-80" style={{ color: 'var(--muted)' }}>
+            Home
+          </a>
+          <a
+            href="/dashboard/listings/new"
+            className="hover:opacity-80"
+            style={{ color: 'var(--muted)' }}
+          >
+            New listing
+          </a>
+          <a
+            href="/dashboard/communities"
+            className="hover:opacity-80"
+            style={{ color: 'var(--muted)' }}
+          >
+            Communities
+          </a>
+        </nav>
+
         <div className="flex items-center gap-4">
           <div className="text-right leading-tight">
             <div className="text-sm font-medium">{displayName}</div>
