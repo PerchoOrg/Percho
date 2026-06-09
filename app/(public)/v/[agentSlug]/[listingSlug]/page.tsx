@@ -2,13 +2,16 @@ import { thumbnailUrl } from '@/lib/cloudflare/stream';
 import { createClient } from '@/lib/supabase/server';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
+import { VideoFeed } from './_components/VideoFeed';
+import type { FeedCard } from './_components/types';
 
 /**
  * Public listing page — `/v/[agentSlug]/[listingSlug]`.
  *
- * Phase 3.1: Server Component, ISR, 404 if not published. Renders a minimal
- * skeleton (title, price, agent name, content counts). The actual swipeable
- * video feed UI lands in Phase 3.3+.
+ * Phase 3.3: vertical scroll-snap video feed UI (poster only — playback
+ * lands in 3.4). Server Component fetches all data + ISR. Naive feed
+ * composition (listing videos then community videos) — ARCH §5 interleave
+ * is Phase 3.5.
  *
  * Data fetch order:
  *   agent (by slug)
@@ -200,43 +203,44 @@ export default async function PublicListingPage({
   const data = await fetchPageData(agentSlug, listingSlug);
   if (!data) notFound();
 
-  const { agent, listing, community, listingVideos, communityVideos, schools, pois } = data;
+  const { agent, listing, listingVideos, communityVideos } = data;
+
+  // Naive concat — listing first, community after. ARCH §5 interleave is 3.5.
+  const cards: FeedCard[] = [
+    ...listingVideos.map(
+      (v): FeedCard => ({
+        id: v.id,
+        cfVideoId: v.cf_video_id,
+        source: 'listing',
+        kind: v.kind,
+        title: v.title,
+      }),
+    ),
+    ...communityVideos.map(
+      (v): FeedCard => ({
+        id: v.id,
+        cfVideoId: v.cf_video_id,
+        source: 'community',
+        kind: v.kind,
+        title: v.title,
+      }),
+    ),
+  ];
 
   return (
-    <main className="mx-auto max-w-3xl space-y-6 px-6 py-12 text-white">
-      <header className="space-y-1">
-        <p className="text-xs uppercase tracking-widest text-amber-300/70">
-          Phase 3.1 · feed UI ships in 3.3
-        </p>
-        <h1 className="text-3xl font-semibold tracking-tight">{listing.address}</h1>
-        <p className="text-sm text-white/60">
-          {listing.city}, {listing.state}
-          {listing.price ? ` · $${listing.price.toLocaleString()}` : ''}
-        </p>
-      </header>
-
-      <section className="space-y-1 text-sm text-white/80">
-        {listing.beds != null && <div>Beds: {listing.beds}</div>}
-        {listing.baths != null && <div>Baths: {listing.baths}</div>}
-        {listing.sqft != null && <div>Sqft: {listing.sqft.toLocaleString()}</div>}
-      </section>
-
-      <section className="space-y-1 text-sm text-white/70">
-        <div>
-          Listed by <span className="text-amber-300">{agent.name}</span>
-        </div>
-        {community && <div>Community: {community.name}</div>}
-      </section>
-
-      <section className="rounded border border-white/10 bg-white/5 p-4 text-sm">
-        <div className="mb-2 text-xs uppercase tracking-widest text-white/50">Feed payload</div>
-        <ul className="space-y-1 text-white/80">
-          <li>{listingVideos.length} listing video(s)</li>
-          <li>{communityVideos.length} community video(s)</li>
-          <li>{schools.length} school(s)</li>
-          <li>{pois.length} POI(s)</li>
-        </ul>
-      </section>
-    </main>
+    <VideoFeed
+      agent={{ slug: agent.slug, name: agent.name }}
+      listing={{
+        slug: listing.slug,
+        address: listing.address,
+        city: listing.city,
+        state: listing.state,
+        price: listing.price,
+        beds: listing.beds,
+        baths: listing.baths,
+        sqft: listing.sqft,
+      }}
+      cards={cards}
+    />
   );
 }

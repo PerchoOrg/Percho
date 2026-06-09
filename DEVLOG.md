@@ -10,6 +10,50 @@ When resuming work: read the most recent entries first, then check IMPLEMENTATIO
 
 ---
 
+## 2026-06-09 20:30 UTC — Phase 3.3: video feed UI (poster-only)
+
+**Objective**: Replace the 3.1 skeleton on `/v/[agentSlug]/[listingSlug]` with a real vertical scroll-snap video feed in the demo's gold/cream/ink palette. Mobile-first, TikTok-style. Per Phase 3 plan: poster-only this task — `<video>` + hls.js lands in 3.4.
+
+**Actions**:
+- `tailwind.config.ts` — added palette tokens lifted from the demo's tailwind config: `ink #0a0a0a`, `ink2 #1a1a1a`, `ink3 #222222`, `gold #c9a961`, `bronze #8b7355`, `cream #f5f1ea`. Existing `accent` token kept untouched.
+- New components under `app/(public)/v/[agentSlug]/[listingSlug]/_components/`:
+  - `types.ts` — `FeedAgent`, `FeedListing`, `FeedCard` shapes shared between server fetch and client feed.
+  - `VideoFeed.tsx` (client) — vertical scroll-snap container, `h-[100dvh]` per card, mobile-first with desktop letterbox (`max-w-[480px]` centered on `bg-ink`). Hosts the global `ActionRail`. Empty-state copy when no videos.
+  - `FeedCard.tsx` (client) — full-viewport card. Cloudflare Stream poster as `<img>` background, top/bottom legibility gradients, top-left source badge (LISTING / SCHOOL / POI / NEIGHBORHOOD), top-right address+price, center play-icon overlay (inline SVG), bottom-left agent strip (initial-letter avatar, since agent.headshot is Phase 4) + caption.
+  - `ActionRail.tsx` (client) — V1 lean rail: Heart (local toggle, Phase 5 wires saves), Share (`navigator.share()` with clipboard fallback), Contact (placeholder alert — Phase 3.6 replaces with LeadModal).
+- `page.tsx` Server Component — composes `listingVideos` then `communityVideos` into a flat `FeedCard[]` and hands to `<VideoFeed/>`. Skeleton + debug payload section deleted. Header doc updated to "Phase 3.3" framing.
+- All icons inline SVG (Play / Heart / Share / Contact). No new deps — `lucide-react` was not installed and adding it for 4 icons isn't worth it.
+
+**Decisions**:
+- Naive concat (listing first, community after) for now — ARCH §5 interleave rules + SCHOOL/POI overlay shaping are explicitly Phase 3.5. Surfaced in commit + page.tsx comment so it isn't mistaken for done.
+- Dropped demo's dislike + filter-chips (schools / nearby / community) from V1 ActionRail. Those drove ML-recommendation mechanics that don't exist in V1 backend; revisit when Phase 6+ adds rec system.
+- Heart state is local-component only (`useState<Record<string, boolean>>`). Phase 5 wires real persistence. ActionRail's "save" button toggles the first card's like as a stand-in for "save listing" — pragmatic placeholder, not the final UX.
+- Agent avatar: initial-letter circle with `border-gold`. `agents.headshot_url` doesn't exist in schema yet (Phase 4 territory), so synthesizing from name is honest rather than placeholder-image-rot.
+- Plain `<img>` for posters instead of `next/image` — Cloudflare Stream already serves optimized thumbnails, and configuring `next/image` remote patterns for the Stream subdomain is unnecessary friction. Will revisit if LCP scores demand it.
+- No hls.js, no IntersectionObserver autoplay, no max-3-mounted policy in 3.3. Those are 3.4. Mid-phase state (poster-only) is acceptable since we merge phase-end.
+
+**Issues**:
+- First write referenced `lucide-react` for the Play icon — package not installed. Switched to inline SVG (consistent with how I did the rail icons anyway). No new deps added.
+- Two stray `biome-ignore` comment lines on the `<img>` element triggered "Suppression comment has no effect" + "failed to parse category" because the rules they referenced (`lint/performance/noImgElement`, `lint/a11y/useAltText`) aren't enabled in our biome config. Removed them.
+- `pnpm exec biome check 'app/(public)/v/**'` errors out with `internalError/io No such file or directory` — biome's globber appears to choke on the literal-paren `(public)` route group. Workaround: pass each file path explicitly. Pre-existing tailwind.config.ts format warning (`content:` array on one line) confirmed pre-existing via stash; not touched.
+
+**Resolution**:
+- `pnpm exec tsc --noEmit` — clean.
+- Biome on the 5 new/modified files — clean.
+- Phase 3 baseline of 15 pre-existing biome errors elsewhere unchanged.
+
+**Learnings**:
+- Demo's tailwind palette is small and worth lifting wholesale — six color tokens cover everything the listing page needs.
+- Inline SVG is cheaper than `lucide-react` for fewer than ~10 icons and avoids a runtime dep. Reuse across components by extracting to a `_components/icons.tsx` if the count climbs.
+- Biome glob bug with route-group parens — call out individual files in CI scripts that target `app/(public)/...`.
+
+**Next steps**:
+- Phase 3.4: `<video>` element + hls.js, IntersectionObserver autoplay (current card plays, others pause), max-3-mounted policy. Native HLS on iOS Safari, hls.js elsewhere. Add `hls.js` dep.
+- Phase 3.5: ARCH §5 feed-composition function (`composeFeed(listingVideos, communityVideos, schools, pois)`) + unit test. Replaces the current naive concat.
+
+---
+
+
 ## 2026-06-09 19:00 UTC — Phase 3.2: OG / Twitter card metadata
 
 **Objective**: Make `/v/[agentSlug]/[listingSlug]` produce a proper social-share preview (iMessage / Slack / Twitter / Facebook) — title, description, image. Phase 3.2 task in IMPLEMENTATION.md.
