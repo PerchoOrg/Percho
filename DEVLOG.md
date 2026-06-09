@@ -10,6 +10,26 @@ When resuming work: read the most recent entries first, then check IMPLEMENTATIO
 
 ---
 
+## 2026-06-09 14:34 UTC — phase6.1a: ai_usage_log migration
+
+**Objective**: Land schema for per-agent AI rate-limit ledger before the route handlers come online (6.1b/6.3a both depend on it).
+
+**Actions**:
+- New migration `supabase/migrations/0010_ai_usage_log.sql`: `ai_usage_log(id bigserial, agent_id uuid fk→agents, kind text check, created_at)`. Index `(agent_id, kind, created_at desc)` matches the exact rate-limit predicate.
+- RLS: select-own policy for transparency (so we can later show a usage panel); no anon/authed insert policies — only service role writes from the route handler.
+- Branch `phase6/ai-copy-and-analytics` cut from main `be44684`.
+
+**Decisions**:
+- Postgres ledger over Upstash Redis or in-process counter — Redis = new account/dep, in-process = broken on Vercel multi-instance. Volume during internal beta is trivially absorbed.
+- `kind` is a check-constrained text not an enum — keeps migrations boring; we have two values today and `'social_copy'` already covers both Facebook+Instagram (one Anthropic call, one row).
+- No `tokens_used` column yet. The Anthropic SDK in `lib/ai/anthropic.ts` doesn't currently surface usage; adding it is a separate seam to widen later if cost surveillance needs it.
+
+**Issues / Resolution**: `pnpm db:push` aborts on EC2 (`Cannot find project ref. Have you run supabase link?`) — expected, the project is linked from the owner's Mac per Phase 0. Owner applies after merge. Migration file ships as the artifact.
+
+**Next steps**: 6.1b — `lib/ai/rate-limit.ts` + `app/api/generate-copy/route.ts` + vitest for the rate-limit logic.
+
+---
+
 ## 2026-06-09 14:19 UTC — Phase 5 merged to main + closed
 
 **Objective**: Phase 5 全部 8 个 task e2e 通过 (17/17 manual walkthrough),ff-merge phase5/lead-capture → main,关单。
