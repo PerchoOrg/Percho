@@ -10,6 +10,32 @@ When resuming work: read the most recent entries first, then check IMPLEMENTATIO
 
 ---
 
+## 2026-06-11 11:15 UTC — phase4.7: archive listings + dashboard list
+
+**Objective**: Phase 4.7 — soft-delete via `status='archived'`, dashboard listings index with active/archived toggle, archive controls on the edit page.
+
+**Actions**:
+- `app/dashboard/listings/[id]/edit/archive-actions.ts` — new server actions `archiveListing` and `unarchiveListing`. Archive flips `status='archived'` and revalidates the public path so any cached published version drops to 404 + revalidates `/dashboard`. Unarchive returns the listing to `draft` (NOT `published`) so the publish gate runs again.
+- `app/dashboard/page.tsx` — replaced the Phase 1.5 placeholder empty-state with a real listings index. Default view filters out archived; `?archived=1` toggle shows only-active vs include-archived. Status badges colored by state (gold = published, neutral = draft, dim = archived). Edit link per row.
+- `app/dashboard/listings/[id]/edit/PublishPanel.tsx` — added Archive button next to Publish/Unpublish (with a `confirm()` guard since archive is destructive-ish from a public-URL perspective). When status is `archived`, the panel switches to an Unarchive-only view with a hint that returns it to draft.
+
+**Decisions**:
+- No `archived_at` column. Schema's status check already permits `'archived'`. Adding a timestamp column would need a migration with no immediate consumer (no UI surfaces "archived 3 days ago" in V1). Audit trail is available via supabase row history if ever needed.
+- Public page (`/v/[agent]/[listing]`) needs zero changes — its query already has `.eq('status', 'published')`, so archived listings auto-404. Verified by reading the file.
+- Unarchive returns to `draft`, not `published`. Bringing a listing back as published silently re-exposes content the agent intentionally pulled; forcing them through the publish gate again is the safer default. Same rationale as 4.6's unpublish.
+- `/dashboard` (the empty-state page) was the right place for the listings index. No `/dashboard/listings` route — keeps URLs flat. The empty-state was Phase 1 placeholder content explicitly waiting for Phase 4 to replace it.
+
+**Issues**: none.
+
+**Resolution**: typecheck clean, biome clean on 3 changed files, DEVLOG header count 36 → 37.
+
+**Learnings**:
+- Re-reading the public page before patching saved a wasted file edit. The schema-level constraint (`check (status in ('draft','published','archived'))`) plus the existing `.eq('status','published')` filter meant 4.7 needed zero schema and zero public-page changes — the surface area is just dashboard-side UI.
+
+**Next steps**: Phase 4.8 — owner runs the 30-minute e2e clock (create address → upload videos → community → schools/POIs → publish → public page renders → archive → 404), records timing + friction in `docs/manual-tests.md`. After that Phase 4 ff-merges to main.
+
+---
+
 ## 2026-06-11 09:30 UTC — phase4.6: publish/unpublish + Phase 3 cleanup
 
 **Objective**: Phase 4.6 — give agents a Publish button on the listing edit page that gates on the PRD-mandated required fields (address/price/beds/baths/≥1 ready video), flips `status='published'` + `published_at=now()`, and revalidates the public route. Plus Phase 3 cleanup: drop the `__upload_test__` seed listings and their UI surface, now that real listing CRUD covers the same workflow.
