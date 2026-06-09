@@ -1,11 +1,13 @@
 'use client';
 
 /**
- * LeadModal — UI-only contact form for the public listing page.
+ * LeadModal — contact form for the public listing page.
  *
- * Phase 3.6: form fields + client-side validation + body-scroll lock + Esc
- * close + backdrop close. Submission is fake — shows an inline confirmation
- * then auto-closes. Phase 5 wires the actual POST + Resend email.
+ * Phase 3.6: UI + client-side validation + body-scroll lock + Esc/backdrop close.
+ * Phase 5.1: real POST to `/api/leads` (client-side splits the single contact
+ * field into email-or-phone based on regex match — server schema accepts
+ * either). On success: shows inline confirmation, auto-closes after 1.5s.
+ * On failure: surfaces the server error inline; user can retry.
  *
  * Mobile: bottom-sheet (slides up from bottom, full-width, rounded top).
  * Desktop: centered card.
@@ -19,13 +21,14 @@ type Props = {
   onClose: () => void;
   agent: FeedAgent;
   listing: FeedListing;
+  listingId: string;
 };
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 // Loose phone match: 7+ digits, allows +, spaces, dashes, parens.
 const PHONE_RE = /^[\d+\-\s()]{7,}$/;
 
-export function LeadModal({ open, onClose, agent, listing }: Props) {
+export function LeadModal({ open, onClose, agent, listing, listingId }: Props) {
   const firstName = agent.name.split(' ')[0] ?? agent.name;
   const defaultMessage = `Hi ${firstName}, I'm interested in ${listing.address}.`;
 
@@ -33,6 +36,7 @@ export function LeadModal({ open, onClose, agent, listing }: Props) {
   const [contact, setContact] = useState('');
   const [message, setMessage] = useState(defaultMessage);
   const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const dialogRef = useRef<HTMLDivElement | null>(null);
 
@@ -43,6 +47,7 @@ export function LeadModal({ open, onClose, agent, listing }: Props) {
       setContact('');
       setMessage(defaultMessage);
       setError(null);
+      setSubmitting(false);
       setSubmitted(false);
     }
   }, [open, defaultMessage]);
@@ -80,9 +85,41 @@ export function LeadModal({ open, onClose, agent, listing }: Props) {
       return;
     }
     setError(null);
-    setSubmitted(true);
-    // UI-only: auto-close after a moment. Phase 5 replaces with real POST.
-    setTimeout(() => onClose(), 1500);
+    setSubmitting(true);
+
+    const c = contact.trim();
+    const isEmail = EMAIL_RE.test(c);
+    const payload = {
+      listing_id: listingId,
+      name: name.trim(),
+      email: isEmail ? c : null,
+      phone: isEmail ? null : c,
+      message: message.trim() || null,
+      source: 'listing-page',
+    };
+
+    fetch('/api/leads', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+      .then(async (res) => {
+        if (!res.ok) {
+          const body = (await res.json().catch(() => ({}))) as { error?: string };
+          throw new Error(body.error ?? `request_failed_${res.status}`);
+        }
+        setSubmitting(false);
+        setSubmitted(true);
+        setTimeout(() => onClose(), 1500);
+      })
+      .catch((err) => {
+        setSubmitting(false);
+        setError(
+          err instanceof Error && err.message
+            ? `Couldn't send: ${err.message}. Please try again.`
+            : "Couldn't send. Please try again.",
+        );
+      });
   }
 
   return (
@@ -134,9 +171,7 @@ export function LeadModal({ open, onClose, agent, listing }: Props) {
         {submitted ? (
           <div className="rounded-md border border-gold/40 bg-gold/10 p-4 text-center">
             <p className="font-medium text-cream text-sm">Thanks, {name.split(' ')[0]}!</p>
-            <p className="mt-1 text-cream/70 text-xs">
-              Real submission wires in Phase 5 (Resend email).
-            </p>
+            <p className="mt-1 text-cream/70 text-xs">{firstName} will reach out shortly.</p>
           </div>
         ) : (
           <form onSubmit={onSubmit} className="space-y-3">
@@ -181,9 +216,10 @@ export function LeadModal({ open, onClose, agent, listing }: Props) {
 
             <button
               type="submit"
-              className="mt-2 w-full rounded-md bg-gold px-4 py-2.5 font-semibold text-ink text-sm transition-colors hover:bg-gold/90"
+              disabled={submitting}
+              className="mt-2 w-full rounded-md bg-gold px-4 py-2.5 font-semibold text-ink text-sm transition-colors hover:bg-gold/90 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              Send to {firstName}
+              {submitting ? 'Sending…' : `Send to ${firstName}`}
             </button>
             <p className="text-center text-[11px] text-cream/50">
               By sending, you agree to be contacted about this listing.

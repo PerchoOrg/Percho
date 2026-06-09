@@ -140,6 +140,7 @@ export function VideoFeed({ agent, listing, listingId, cards }: Props) {
         onClose={() => setLeadOpen(false)}
         agent={agent}
         listing={listing}
+        listingId={listingId}
       />
     </main>
   );
