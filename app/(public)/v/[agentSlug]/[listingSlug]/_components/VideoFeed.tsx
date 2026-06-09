@@ -36,39 +36,38 @@ export function VideoFeed({ agent, listing, cards }: Props) {
 
   return (
     <main className="relative h-[100dvh] w-full bg-ink">
-      <div
-        className="mx-auto h-full w-full max-w-[480px] snap-y snap-mandatory overflow-y-scroll scroll-smooth"
-        style={{ scrollbarWidth: 'none' }}
-      >
-        {cards.map((card, i) => (
-          <FeedCard
-            key={card.id}
-            card={card}
-            agent={agent}
-            listing={listing}
-            isFirst={i === 0}
-            isLast={i === cards.length - 1}
-            liked={!!liked[card.id]}
-            onToggleLike={() => setLiked((s) => ({ ...s, [card.id]: !s[card.id] }))}
-          />
-        ))}
-      </div>
+      {/* Inner column = positioning context for ActionRail so it tracks the
+          card edge on desktop letterbox, not the viewport edge. */}
+      <div className="relative mx-auto h-full w-full max-w-[480px]">
+        <div
+          className="h-full w-full snap-y snap-mandatory overflow-y-scroll scroll-smooth"
+          style={{ scrollbarWidth: 'none' }}
+        >
+          {cards.map((card, i) => (
+            <FeedCard
+              key={card.id}
+              card={card}
+              agent={agent}
+              listing={listing}
+              isFirst={i === 0}
+              isLast={i === cards.length - 1}
+              liked={!!liked[card.id]}
+              onToggleLike={() => setLiked((s) => ({ ...s, [card.id]: !s[card.id] }))}
+            />
+          ))}
+        </div>
 
-      {/* Action rail floats over the feed. Card-scoped state passes via props
-          on the active card; for V1 we keep it global to the listing for
-          simplicity (rail acts on the *current* listing, not per-card). */}
-      <ActionRail
-        liked={Object.values(liked).some(Boolean)}
-        onToggleLike={() => {
-          // Toggle the first card's like as a stand-in for "save listing".
-          // Phase 5 replaces this with a real saved-listings server action.
-          const firstId = cards[0]?.id;
-          if (!firstId) return;
-          setLiked((s) => ({ ...s, [firstId]: !s[firstId] }));
-        }}
-        listing={listing}
-        agent={agent}
-      />
+        <ActionRail
+          liked={Object.values(liked).some(Boolean)}
+          onToggleLike={() => {
+            const firstId = cards[0]?.id;
+            if (!firstId) return;
+            setLiked((s) => ({ ...s, [firstId]: !s[firstId] }));
+          }}
+          listing={listing}
+          agent={agent}
+        />
+      </div>
     </main>
   );
 }
