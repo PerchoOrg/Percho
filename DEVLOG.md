@@ -10,6 +10,43 @@ When resuming work: read the most recent entries first, then check IMPLEMENTATIO
 
 ---
 
+## 2026-06-11 03:30 UTC — phase4.3a: listing edit form (metadata fields)
+
+**Objective**: First slice of Phase 4.3 — the `/dashboard/listings/[id]/edit` page replaces its placeholder with a real form that lets the agent edit the mutable metadata fields of a draft listing (price, beds, baths, sqft, year_built, lot_size, hoa, style, description). Videos and cover photo are deferred to 4.3b/c.
+
+**Actions**:
+- New `app/dashboard/listings/[id]/edit/actions.ts` — `updateListing(id, input)` server action. Zod-validates the payload, sends a single `update` through Supabase (RLS policy "agent manages own listings" enforces ownership), revalidates the edit page path. Returns `{ok:true} | {ok:false, error}`. `description` is normalized server-side: split the textarea on blank lines, trim, drop empties, cap at 10 paragraphs (matches the schema in `lib/zod/schemas.ts`).
+- New `app/dashboard/listings/[id]/edit/EditListingForm.tsx` — client component, fully controlled state per field (numbers held as strings so empty input cleanly maps to `null`), `useTransition` for the server-action call, inline save-state badge ("Saving…" / "✓ Saved" / error). Description rendered as a single textarea, joined on render with `\n\n`.
+- `app/dashboard/listings/[id]/edit/page.tsx` — replaces the Phase 4.1 placeholder. Server component fetches the full row (RLS enforces ownership), renders read-only header + the form + a stub section for "Videos & cover photo" with a "Coming in Phase 4.3b/c" notice so the page structure is in place.
+
+**Decisions**:
+- **Address/city/state/zip/lat/lng kept read-only**, not editable on the edit page. Re-editing the address would invalidate `slug` (which is derived from address) and break any already-shared `/v/<agent>/<slug>` URLs. For V1 the safer model is "wrong address → archive + recreate" (Phase 4.7 covers archive). Documented this rationale in the `actions.ts` header so it's not lost. If the user wants address-edit later it should be a separate flow with explicit slug-change consent + 301 redirect plumbing.
+- **Numbers as strings in form state, parsed at submit.** Considered using `<input type="number" valueAsNumber>` but that makes "empty field → null" awkward (NaN handling). String state + `parseIntOrNull` / `parseFloatOrNull` at submit is simpler and gives clean null vs. zero distinction.
+- **`updateListing` does NOT accept slug or address fields.** Schema deliberately omits them. Even if a malicious client sent them, zod would reject. Belt and suspenders for the slug-stability invariant above.
+- **Description as one textarea, blank-line-separated**, not multiple paragraph inputs with add/remove buttons. The latter is more "structured" but for V1 it's friction; agents writing listing copy think in paragraphs, not in array indices. Server-side normalization covers the parsing.
+- **Save-state UX**: optimistic spinner during the action + green "✓ Saved" for 2s, then back to idle. No toast lib added; inline state is enough and matches the rest of the dashboard.
+- **No `<style jsx>`**: the project doesn't use styled-jsx anywhere; switched to a `INPUT_CLASS` const + tailwind classes to match the codebase's existing `bg-ink2` / `border-bronze` / `text-cream` palette (used in LeadModal, ActionRail, FeedCard, login-form).
+- **Biome `noLabelWithoutControl`**: switched the `Field` wrapper from `<label>` to `<div>` because the rule can't see through the children prop. Loses click-on-label affordance, but the `<input>` itself is always rendered with focus styles. Acceptable tradeoff for keeping the lint clean.
+
+**Issues**:
+- Initial draft used `<style jsx>` which the project doesn't use; refactored to tailwind-only.
+- Biome `lint/a11y/noLabelWithoutControl` fired on `<label>{children}</label>` because the rule statically scans for an input child it can see. Tried biome-ignore but the suppression's location relative to the JSX kept tripping the "unused suppression" warning. Resolved by switching to `<div>`.
+
+**Resolution**:
+- typecheck clean
+- biome clean on the 3 changed files
+- Phase 3 cleanup (`__upload_test__` listing + `publishPhase3Demo` + `PublishPhase3Button`) NOT touched — still planned for 4.6 / 4.6.5 per the kickoff plan, since upload-test still serves as a smoke-test for video pipeline while 4.3b/c are in flight.
+
+**Learnings**:
+- Biome's `noLabelWithoutControl` is structural (AST), not semantic. Wrapping inputs via `children` is a blind spot. Best to use a `<div>` with a `<label htmlFor>` pair when the control isn't a direct child, or just accept the `<div>` wrapper for compound form fields.
+- `update().select('id', { count: 'exact', head: true })` is a clean way to detect "RLS dropped the row" vs. "actual error" without a second roundtrip.
+
+**Next steps**:
+- 4.3b: video panel — list `listing_videos` for the listing, embed `VideoUploader`, install `@dnd-kit/core` + `@dnd-kit/sortable` for reorder, server action to persist `sort_order`.
+- 4.3c: cover photo — pick a video in the panel, persist `cover_url` to that video's CF thumbnail URL.
+
+---
+
 ## 2026-06-11 03:00 UTC — phase4.2: neighborhood resolution
 
 **Objective**: Phase 4.2 — extract `neighborhood` from Place Details so listings have a complete geographic profile (city/state/zip + neighborhood) on draft creation. Phase 4.1 already wrote the other fields; this is the surgical follow-up.

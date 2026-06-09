@@ -1,13 +1,37 @@
 /**
- * /dashboard/listings/[id]/edit — placeholder until Phase 4.3.
+ * /dashboard/listings/[id]/edit — listing edit page (Phase 4.3a).
  *
- * Phase 4.1 redirects here after a draft listing is created so the user has
- * a destination to land on. Phase 4.3 will replace this with the full edit
- * form (all fields, video reorder via dnd-kit, cover photo selector).
+ * Phase 4.3a: metadata fields (price/beds/baths/sqft/year_built/lot_size/hoa/style/description).
+ * Phase 4.3b will add the video panel (list, upload, dnd-kit reorder).
+ * Phase 4.3c will add the cover photo selector.
+ *
+ * Address/city/state/zip/lat/lng are read-only on this page — see
+ * `actions.ts` header for rationale.
  */
 
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
+import { EditListingForm } from './EditListingForm';
+
+interface ListingRow {
+  id: string;
+  address: string;
+  city: string;
+  state: string;
+  zip: string | null;
+  neighborhood: string | null;
+  status: string;
+  slug: string;
+  price: number | null;
+  beds: number | null;
+  baths: number | null;
+  sqft: number | null;
+  year_built: number | null;
+  lot_size: string | null;
+  hoa: string | null;
+  style: string | null;
+  description: string[] | null;
+}
 
 export default async function EditListingPage({
   params,
@@ -24,19 +48,11 @@ export default async function EditListingPage({
   // biome-ignore lint/suspicious/noExplicitAny: stub generated types
   const { data: listing } = (await (supabase as any)
     .from('listings')
-    .select('id, address, city, state, zip, status, slug')
+    .select(
+      'id, address, city, state, zip, neighborhood, status, slug, price, beds, baths, sqft, year_built, lot_size, hoa, style, description',
+    )
     .eq('id', id)
-    .maybeSingle()) as {
-    data: {
-      id: string;
-      address: string;
-      city: string;
-      state: string;
-      zip: string | null;
-      status: string;
-      slug: string;
-    } | null;
-  };
+    .maybeSingle()) as { data: ListingRow | null };
 
   if (!listing) {
     return (
@@ -54,19 +70,35 @@ export default async function EditListingPage({
         <h1 className="text-2xl font-semibold tracking-tight">{listing.address}</h1>
         <p className="mt-1 text-sm text-cream/60">
           {listing.city}, {listing.state}
-          {listing.zip ? ` ${listing.zip}` : ''} · status:{' '}
+          {listing.zip ? ` ${listing.zip}` : ''}
+          {listing.neighborhood ? ` · ${listing.neighborhood}` : ''} · status:{' '}
           <span className="font-medium text-cream">{listing.status}</span> · slug:{' '}
           <code className="text-cream">{listing.slug}</code>
         </p>
       </header>
 
       <section className="rounded border border-bronze/30 bg-ink2 p-6">
-        <h2 className="text-base font-semibold">Edit form coming in Phase 4.3</h2>
+        <h2 className="mb-4 text-base font-semibold">Listing details</h2>
+        <EditListingForm
+          listingId={listing.id}
+          initial={{
+            price: listing.price,
+            beds: listing.beds,
+            baths: listing.baths,
+            sqft: listing.sqft,
+            year_built: listing.year_built,
+            lot_size: listing.lot_size,
+            hoa: listing.hoa,
+            style: listing.style,
+            description: listing.description ?? [],
+          }}
+        />
+      </section>
+
+      <section className="rounded border border-bronze/30 bg-ink2 p-6">
+        <h2 className="text-base font-semibold">Videos & cover photo</h2>
         <p className="mt-2 text-sm text-cream/60">
-          This page will let you fill in the remaining details (price, beds/baths, description, year
-          built, lot size, HOA, style), upload home videos, reorder them via drag-and-drop, set the
-          cover photo, and publish. Phase 4.1 created the draft row so the rest of the flow has
-          somewhere to attach.
+          Coming in Phase 4.3b/c — upload home videos, drag to reorder, pick the cover photo.
         </p>
       </section>
     </div>
