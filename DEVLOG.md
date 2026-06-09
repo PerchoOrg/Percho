@@ -10,6 +10,43 @@ When resuming work: read the most recent entries first, then check IMPLEMENTATIO
 
 ---
 
+## 2026-06-11 17:30 UTC — phase5.5-5.8: leads dashboard + tests + manual e2e
+
+**Objective**: Wrap Phase 5 — give the agent a live inbox at /dashboard/leads, a detail/reply view at /dashboard/leads/[id], formalize the idempotency story, and document the 5s end-to-end manual test.
+
+**Actions**:
+- migration `0009_realtime_leads.sql`: `alter publication supabase_realtime add table public.leads`. RLS still gates payloads — only leads on the agent's own listings reach the client.
+- `app/dashboard/leads/page.tsx`: SSR initial fetch (RLS-scoped, joins listings address), passes `initial` to `LeadsLive`.
+- `app/dashboard/leads/leads-live.tsx`: client component, three-layer freshness — SSR initial + `postgres_changes` INSERT/UPDATE channel `leads-inbox` + 8s polling fallback (always-on while mounted, merge by id, last-write-wins on `notified_at`).
+- `app/dashboard/leads/[id]/page.tsx`: detail view, RLS-scoped maybeSingle (404s if cross-tenant), pre-filled mailto with subject `Re: your inquiry about {address}` + polite body referencing the listing, tel: shortcut for phone-only leads.
+- TopBar: add "Leads" nav link between Communities and Sign out.
+- `lib/zod/schemas.test.ts`: import `LeadCreate` from `lib/zod/leads.ts` (not `schemas.ts` — route handler uses the stricter trim/regex variant). Added 5 new cases — phone-only accept, garbage phone reject, non-uuid listing_id reject, empty/whitespace name reject, message length cap.
+- `docs/manual-tests.md`: added Phase 5 e2e section — 17-step walkthrough covering form submit / DB persistence / Edge Function logs / Resend delivery / Realtime list / detail+mailto / idempotent re-fire / failure modes.
+
+**Decisions**:
+(a) Realtime + polling is mandatory, not redundant. Lead inbox is the conversion-critical surface; we already learned in Phase 2.4 that server-side RLS-on-Realtime can silently drop events. 8s polling burns minimal quota and guarantees the "sent" badge eventually flips even when the channel hiccups.
+(b) Realtime payload doesn't include the joined `listings(address, …)` — INSERT handler refetches the single row with the join before merging, so the UI shows address immediately rather than `(unknown listing)` until next poll.
+(c) Idempotency (5.7) was already shipped in 5.3+5.4 (Edge Function bails on `notified_at IS NOT NULL`, stamps only after Resend 2xx). No new code — documented the property in manual-tests §5.7 with a SQL recipe to re-fire the function for an existing lead and observe `skipped: already_notified`.
+(d) mailto body is hand-written, not AI-generated (Phase 6 territory). Surgical change — agents can edit before sending.
+(e) Phone leads get tel:, not a placeholder textarea. Real estate leads expect to be called, not chatted.
+
+**Issues**: First test run failed — schemas.test.ts imported `LeadCreate` from `./schemas`, which has a looser email schema (no trim, accepts whitespace name). Route handler uses `lib/zod/leads.ts` which matches the LeadModal client regex and the DB check. Switched test import; 9/9 pass.
+
+**Resolution**: branch `phase5/lead-capture` carries 5.5 (b5ff3f7), 5.6 (d8d95a5), and the 5.7+5.8 entry below. Awaiting `supabase db push` for 0009 and a Vercel preview build before owner runs the manual-tests Phase 5 walkthrough.
+
+**Learnings**:
+- Two LeadCreate schemas drifted (lib/zod/schemas.ts vs lib/zod/leads.ts). The leads.ts one is canonical (used by the route). The schemas.ts one is dead — flagged as tech debt below; not deleting yet because CLAUDE.md §0.3 says don't refactor adjacent dead code without asking.
+- Realtime postgres_changes payload shape: `payload.new` carries column values but no joins. Refetch with the join is the pattern.
+
+**Next steps**:
+- Owner Mac: `supabase db push` (apply 0009).
+- Owner Mac: confirm Edge Function still deployed (no changes to function — only DB publication).
+- Vercel preview: walk through `docs/manual-tests.md` §Phase 5 (17 steps).
+- Once 17/17 pass: tick 5.1–5.8 in IMPLEMENTATION.md, ff-merge `phase5/lead-capture` to main, keep remote branch.
+- Tech debt: collapse `lib/zod/schemas.ts` LeadCreate into `lib/zod/leads.ts` re-export (next phase touch — surgical-changes rule says don't do it now).
+
+---
+
 ## 2026-06-11 16:10 UTC — phase5.3 fixup #2: pg_net lives in `net`, not `extensions`
 
 **Objective**: Unblock e2e — first lead submit on preview returned `insert_failed`. Vercel logs: `function extensions.http_post(url => text, headers => jsonb, body => jsonb) does not exist`. The trigger ran on INSERT, raised, and bubbled up through the route handler.
