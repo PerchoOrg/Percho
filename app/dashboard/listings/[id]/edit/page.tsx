@@ -14,6 +14,7 @@ import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import { type CommunityOption, EditListingForm, type ListingContext } from './EditListingForm';
 import { PublishPanel } from './PublishPanel';
+import { SocialCopyPanel } from './SocialCopyPanel';
 import { type ListingVideoRow, VideoPanel } from './VideoPanel';
 
 interface ListingRow {
@@ -169,6 +170,16 @@ export default async function EditListingPage({
           initialVideos={videos}
           initialCoverVideoId={initialCoverVideoId}
         />
+      </section>
+
+      <section className="rounded border border-bronze/30 bg-ink2 p-6">
+        <div className="mb-4 flex items-baseline justify-between">
+          <h2 className="text-base font-semibold">Social copy</h2>
+          <span className="text-xs text-cream/50">
+            Facebook + Instagram drafts, copy to clipboard
+          </span>
+        </div>
+        <SocialCopyPanel listingId={listing.id} />
       </section>
     </div>
   );

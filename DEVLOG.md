@@ -10,6 +10,26 @@ When resuming work: read the most recent entries first, then check IMPLEMENTATIO
 
 ---
 
+## 2026-06-09 14:54 UTC — phase6.3b: SocialCopyPanel UI
+
+**Objective**: Surface `/api/generate-social` on the listing edit page with a transient highlights input + Facebook/Instagram output blocks + copy-to-clipboard.
+
+**Actions**:
+- New `app/dashboard/listings/[id]/edit/SocialCopyPanel.tsx` (client component). Comma-split highlights → `?.slice(0, 5)`, fetch, render two read-only textareas with per-block copy buttons. All state local; nothing persists.
+- `page.tsx`: dropped a new "Social copy" section below the Videos section.
+
+**Decisions**:
+- Throwaway state by design: refresh = clean slate. The deliverable is text on the agent's clipboard, not a stored draft. CLAUDE.md §0.2 again — no schema unless we know the shape.
+- Highlights input is a single comma-separated text field, not a chips UI. 80% of the value at 10% of the code; chips can come if real users want them.
+- Clipboard copy uses `navigator.clipboard.writeText` with try/catch — silently degrades when permission denied (user can still select+copy manually). No toast library introduced.
+- Component is a sibling to the form (separate `<section>`) so its render lifecycle never interferes with form save state, and the panel can grow without bloating EditListingForm further.
+
+**Verification**: `pnpm exec tsc --noEmit` clean. `pnpm exec biome check --write` flagged + auto-fixed one multi-line `<textarea>` collapse. End-to-end Anthropic call is preview-deploy territory.
+
+**Next steps**: 6.4a — `lib/analytics/listing-stats.ts` aggregation lib + vitest.
+
+---
+
 ## 2026-06-09 14:48 UTC — phase6.3a: generate-social route
 
 **Objective**: Land the Facebook/Instagram social-copy endpoint. Reuses the rate-limit primitive under a separate `kind='social_copy'` bucket.
