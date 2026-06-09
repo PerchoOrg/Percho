@@ -58,6 +58,7 @@ export type PlaceDetails = {
   city: string;
   state: string; // 2-letter
   zip: string | null;
+  neighborhood: string | null;
   lat: number;
   lng: number;
 };
@@ -114,6 +115,12 @@ export async function placeDetails(
     '';
   const state = pickComponent(comps, 'administrative_area_level_1', true) ?? '';
   const zip = pickComponent(comps, 'postal_code');
+  // Neighborhood: Google may return it under either 'neighborhood' (most common
+  // in major US metros — e.g. Buckhead, SoMa) or 'sublocality_level_1' (NYC-style
+  // boroughs / dense urban areas). Suburban / rural addresses often have neither —
+  // 4.6 publish does NOT require it, so null is a normal outcome.
+  const neighborhood =
+    pickComponent(comps, 'neighborhood') ?? pickComponent(comps, 'sublocality_level_1');
 
   return {
     place_id: r.place_id,
@@ -122,6 +129,7 @@ export async function placeDetails(
     city,
     state,
     zip,
+    neighborhood,
     lat: r.geometry.location.lat,
     lng: r.geometry.location.lng,
   };

@@ -10,6 +10,33 @@ When resuming work: read the most recent entries first, then check IMPLEMENTATIO
 
 ---
 
+## 2026-06-11 03:00 UTC — phase4.2: neighborhood resolution
+
+**Objective**: Phase 4.2 — extract `neighborhood` from Place Details so listings have a complete geographic profile (city/state/zip + neighborhood) on draft creation. Phase 4.1 already wrote the other fields; this is the surgical follow-up.
+
+**Actions**:
+- `lib/google/places.ts` — `PlaceDetails` type gains `neighborhood: string | null`. Resolver tries `neighborhood` type first, falls back to `sublocality_level_1` (NYC-style). No third fallback — suburban/rural addresses legitimately have no neighborhood and `null` is the correct outcome.
+- `app/api/places/details/route.ts` — no change needed; route returns the whole `PlaceDetails` object so the new field flows through automatically.
+- `app/dashboard/listings/new/NewListingForm.tsx` — `Resolved` type adds `neighborhood`; resolved-address chip shows it conditionally (`· Buckhead`); payload carries it.
+- `app/dashboard/listings/new/actions.ts` — `NewListingInput` zod schema accepts `neighborhood: z.string().max(120).optional().nullable()`; insert writes it. `listings.neighborhood` column already exists in `0001_init.sql:93`, no migration needed.
+
+**Decisions**:
+- **Two-tier fallback only (`neighborhood` → `sublocality_level_1`), not a third tier.** Considered falling back further (e.g. `administrative_area_level_2`), but that returns county names for most US addresses, which is wrong for the use case (county ≠ neighborhood). Better to leave `null` and let Phase 4.6 publish validation skip neighborhood as a required field — PRD never mandated it.
+- **Optional in the schema, not required.** Suburban Atlanta listings (Vivian's bread-and-butter) often won't return a neighborhood from Google. Forcing it would create a UX dead-end for valid addresses.
+- **No edge-case handling for PO boxes / unparseable addresses.** Phase 4.1's `street_address` fallback (`r.formatted_address.split(',')[0]`) already handles those. If Place Details returns a result with no address_components at all, city/state/zip already end up as empty strings, and zod's `state: z.string().length(2)` rejects → `invalid_input`. That's correct behavior — we don't want to silently insert garbage geocoded rows. PO boxes would surface as autocomplete results that fail submit, which is fine (agent picks the actual street address instead).
+
+**Issues**: None. typecheck clean; biome clean on 4 changed files (no fixes applied).
+
+**Resolution**: Commit + push pending — verified SHA below.
+
+**Learnings**:
+- `pickComponent()` returning `null` (not empty string) when the type isn't found made this trivial — fallback chain is just `?? pickComponent(...) ?? null`. Worth preserving the null-vs-empty-string distinction throughout `lib/google/places.ts` so future component lookups (Phase 4.5 community POIs maybe) keep the same semantics.
+- Phase 4.2 ended up much smaller than the IMPLEMENTATION.md task description suggested ("Geocode address → fill lat/lng/city/state/zip/neighborhood") because Phase 4.1 chose path (ii) and pre-swept the first five fields. This is the kind of scope-shift that should be reflected in DEVLOG so a future session doesn't expect a bigger change.
+
+**Next steps**: Phase 4.3 — real edit form (full-field edit, video reorder via dnd-kit, cover photo selector). Will require `pnpm add @dnd-kit/core @dnd-kit/sortable`.
+
+---
+
 ## 2026-06-11 02:30 UTC — phase4.1: new-listing form + Place Details proxy
 
 **Objective**: Phase 4 kickoff. Ship `/dashboard/listings/new` so an agent can pick an address from Google Places Autocomplete and create a draft listings row, redirecting to a placeholder edit page (Phase 4.3 fills it in).

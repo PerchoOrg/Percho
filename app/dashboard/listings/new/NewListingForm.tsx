@@ -28,6 +28,7 @@ type Resolved = {
   city: string;
   state: string;
   zip: string | null;
+  neighborhood: string | null;
   lat: number;
   lng: number;
   place_id: string;
@@ -151,6 +152,7 @@ export function NewListingForm() {
       city: resolved.city,
       state: resolved.state,
       zip: resolved.zip,
+      neighborhood: resolved.neighborhood,
       lat: resolved.lat,
       lng: resolved.lng,
       place_id: resolved.place_id,
@@ -185,8 +187,9 @@ export function NewListingForm() {
               <div className="font-medium text-cream">{resolved.formatted_address}</div>
               <div className="mt-1 text-xs text-cream/60">
                 {resolved.city}, {resolved.state}
-                {resolved.zip ? ` ${resolved.zip}` : ''} · {resolved.lat.toFixed(4)},{' '}
-                {resolved.lng.toFixed(4)}
+                {resolved.zip ? ` ${resolved.zip}` : ''}
+                {resolved.neighborhood ? ` · ${resolved.neighborhood}` : ''} ·{' '}
+                {resolved.lat.toFixed(4)}, {resolved.lng.toFixed(4)}
               </div>
             </div>
             <button
