@@ -14,6 +14,7 @@ import { createClient } from '@/lib/supabase/server';
  * Phase 4 will delete this page and the seeded rows.
  */
 import { redirect } from 'next/navigation';
+import { PublishPhase3Button } from './PublishPhase3Button';
 
 const TEST_LISTING_SLUG = '__upload_test__';
 
@@ -100,6 +101,16 @@ export default async function UploadTestPage() {
       </header>
 
       <UploadHarness listingId={listing.id} initialVideos={initialVideos} />
+
+      <section className="space-y-2 rounded border border-white/10 p-4">
+        <h2 className="text-sm font-semibold">Phase 3 demo publish</h2>
+        <p className="text-xs" style={{ color: 'var(--muted)' }}>
+          Flip this listing to <code>published</code> with placeholder fields so the public route at{' '}
+          <code>/v/&lt;your-slug&gt;/__upload_test__</code> has live data to render. Phase 4
+          listings CRUD will replace this with a real publish flow.
+        </p>
+        <PublishPhase3Button />
+      </section>
     </div>
   );
 }
