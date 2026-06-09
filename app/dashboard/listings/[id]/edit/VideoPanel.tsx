@@ -17,7 +17,7 @@
  * alongside this one on the same page).
  */
 
-import { reorderListingVideos } from '@/app/dashboard/listings/[id]/edit/actions';
+import { reorderListingVideos, setListingCover } from '@/app/dashboard/listings/[id]/edit/actions';
 import { type UploadedVideo, VideoUploader } from '@/components/dashboard/VideoUploader';
 import { thumbnailUrl } from '@/lib/cloudflare/stream';
 import {
@@ -49,13 +49,17 @@ export interface ListingVideoRow {
 interface Props {
   listingId: string;
   initialVideos: ListingVideoRow[];
+  initialCoverVideoId: string | null;
 }
 
 const POLL_INTERVAL_MS = 5000;
 
-export function VideoPanel({ listingId, initialVideos }: Props) {
+export function VideoPanel({ listingId, initialVideos, initialCoverVideoId }: Props) {
   const [videos, setVideos] = useState<ListingVideoRow[]>(initialVideos);
+  const [coverVideoId, setCoverVideoId] = useState<string | null>(initialCoverVideoId);
   const [reorderError, setReorderError] = useState<string | null>(null);
+  const [coverError, setCoverError] = useState<string | null>(null);
+  const [coverPending, setCoverPending] = useState(false);
   const [, startTransition] = useTransition();
   const videosRef = useRef(videos);
   videosRef.current = videos;
@@ -129,6 +133,24 @@ export function VideoPanel({ listingId, initialVideos }: Props) {
     });
   }, []);
 
+  const handleSetCover = useCallback(
+    (videoId: string | null) => {
+      const previous = coverVideoId;
+      setCoverVideoId(videoId); // optimistic
+      setCoverError(null);
+      setCoverPending(true);
+      startTransition(async () => {
+        const result = await setListingCover(listingId, videoId);
+        setCoverPending(false);
+        if (!result.ok) {
+          setCoverVideoId(previous);
+          setCoverError(result.error);
+        }
+      });
+    },
+    [coverVideoId, listingId],
+  );
+
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
@@ -166,6 +188,12 @@ export function VideoPanel({ listingId, initialVideos }: Props) {
         </div>
       ) : null}
 
+      {coverError ? (
+        <div className="rounded border border-red-400/40 bg-red-950/30 px-3 py-2 text-sm text-red-300">
+          Cover update failed: {coverError}
+        </div>
+      ) : null}
+
       {videos.length === 0 ? (
         <p className="text-sm text-cream/50">No videos yet. Use the uploader above.</p>
       ) : (
@@ -173,7 +201,14 @@ export function VideoPanel({ listingId, initialVideos }: Props) {
           <SortableContext items={videos.map((v) => v.id)} strategy={verticalListSortingStrategy}>
             <ul className="space-y-2">
               {videos.map((v, i) => (
-                <SortableVideoItem key={v.id} video={v} index={i} />
+                <SortableVideoItem
+                  key={v.id}
+                  video={v}
+                  index={i}
+                  isCover={coverVideoId === v.id}
+                  coverPending={coverPending}
+                  onSetCover={handleSetCover}
+                />
               ))}
             </ul>
           </SortableContext>
@@ -183,7 +218,19 @@ export function VideoPanel({ listingId, initialVideos }: Props) {
   );
 }
 
-function SortableVideoItem({ video, index }: { video: ListingVideoRow; index: number }) {
+function SortableVideoItem({
+  video,
+  index,
+  isCover,
+  coverPending,
+  onSetCover,
+}: {
+  video: ListingVideoRow;
+  index: number;
+  isCover: boolean;
+  coverPending: boolean;
+  onSetCover: (videoId: string | null) => void;
+}) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: video.id,
   });
@@ -202,11 +249,15 @@ function SortableVideoItem({ video, index }: { video: ListingVideoRow; index: nu
     }
   }
 
+  const canBeCover = video.status === 'ready';
+
   return (
     <li
       ref={setNodeRef}
       style={style}
-      className="flex items-center gap-3 rounded border border-bronze/30 bg-ink2 p-3"
+      className={`flex items-center gap-3 rounded border p-3 ${
+        isCover ? 'border-gold/60 bg-ink2' : 'border-bronze/30 bg-ink2'
+      }`}
     >
       <button
         type="button"
@@ -230,10 +281,43 @@ function SortableVideoItem({ video, index }: { video: ListingVideoRow; index: nu
         )}
       </div>
       <div className="min-w-0 flex-1">
-        <div className="truncate text-sm text-cream">{video.title ?? video.cf_video_id}</div>
+        <div className="flex items-center gap-2">
+          <span className="truncate text-sm text-cream">{video.title ?? video.cf_video_id}</span>
+          {isCover ? (
+            <span className="rounded bg-gold px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-ink">
+              Cover
+            </span>
+          ) : null}
+        </div>
         <div className="text-xs text-cream/50">
           {video.kind} · <StatusText status={video.status} />
         </div>
+      </div>
+      <div className="flex flex-shrink-0 items-center gap-2">
+        {isCover ? (
+          <button
+            type="button"
+            onClick={() => onSetCover(null)}
+            disabled={coverPending}
+            className="rounded border border-bronze/40 px-2 py-1 text-xs text-cream/70 hover:border-bronze/60 hover:text-cream disabled:opacity-50"
+          >
+            Clear cover
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={() => onSetCover(video.id)}
+            disabled={!canBeCover || coverPending}
+            title={
+              canBeCover
+                ? 'Use this video as the listing cover'
+                : 'Available once processing finishes'
+            }
+            className="rounded border border-bronze/40 px-2 py-1 text-xs text-cream/70 hover:border-gold hover:text-gold disabled:opacity-30"
+          >
+            Set as cover
+          </button>
+        )}
       </div>
     </li>
   );

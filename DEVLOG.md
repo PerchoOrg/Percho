@@ -10,6 +10,41 @@ When resuming work: read the most recent entries first, then check IMPLEMENTATIO
 
 ---
 
+## 2026-06-11 04:30 UTC — phase4.3c: cover photo selector
+
+**Objective**: Final slice of Phase 4.3 — agent can pick which video's CF Stream thumbnail becomes the listing's `cover_url` (the image shown on `/v/<agent>/<slug>` cards in the public feed). Also: clear-cover affordance.
+
+**Actions**:
+- `app/dashboard/listings/[id]/edit/actions.ts` — added `setListingCover(listingId, videoId | null)`. Pass `null` to clear. When videoId is set: read the video row under RLS (ownership check piggy-backs on the SELECT), assert `status='ready'` (no thumbnail until CF Stream finishes processing), compute `thumbnailUrl(cf_video_id)`, write `listings.cover_url`. Returns `{ok:true, coverUrl}` so the client can use the canonical URL if it ever needs to re-render.
+- `app/dashboard/listings/[id]/edit/VideoPanel.tsx` — per-row "Set as cover" / "Clear cover" button on the right side of each list item. Optimistic `coverVideoId` state + revert on failure (same pattern as 4.3b reorder). Active cover row gets a gold border + a "COVER" badge. Buttons disabled while a save is pending or while the video is still `status='processing'`.
+- `app/dashboard/listings/[id]/edit/page.tsx` — fetches `cover_url` on the listing select, then resolves it back to a `videoId` by recomputing `thumbnailUrl(cf_video_id)` per video and matching. Passes `initialCoverVideoId` to the panel.
+
+**Decisions**:
+- **Store `cover_url` as a fully-resolved string**, not as a foreign key to `listing_videos`. The public feed already reads `cover_url` directly (`SELECT cover_url FROM listings`), so storing the URL keeps that read path one-hop. The downside is "if CF Stream URL format ever changes we have stale URLs" — accepted, the URL pattern is stable per Cloudflare's docs and the shape is centralized in `lib/cloudflare/stream`.
+- **Resolve videoId on render by URL match**, not by adding a `cover_video_id` column. Considered the column but: (a) it's redundant with `cover_url`, (b) needs a migration for cleanup of an existing field's role, (c) the URL match is O(N) over a list that's already loaded and capped at 50. The match is exact-string.
+- **`status='ready'` gate is server-enforced**, not just UI-disabled. The action re-checks status because a malicious client could replay an old request after a video errored. Returning `video_not_ready` keeps the user model honest.
+- **Single-video cover**, not a separate cover-image upload field. PRD describes the cover as "first video's poster" — using any-video lets agents pick the most flattering frame without uploading a separate JPEG. Phase 4.6 publish gate doesn't require cover_url to be set (the public card has a fallback).
+- **No Cloudflare-specific time-offset thumbnail picker** (e.g. `?time=3s`). Each video's thumbnail is whatever CF picked at upload. If agents want a specific frame later, that's a future polish — not on the V1 critical path.
+- **Clear-cover button shown only on the current cover row**, not as a separate top-level "Clear" button. Less visual chrome, and the affordance is contextual (you can only clear the thing that's currently set).
+
+**Issues**:
+- LSP cached an old `VideoPanel` Props signature briefly — false-positive diagnostic that resolved on next tsc run. typecheck and biome both clean on actual run.
+
+**Resolution**:
+- typecheck clean
+- biome clean on the 3 changed files
+- 4.3 (a/b/c) complete: edit form + video reorder + cover selector all live on `/dashboard/listings/[id]/edit`.
+
+**Learnings**:
+- "Storing the rendered URL vs. the underlying ID" is a recurring tradeoff. The right answer depends on the read pattern: when the consumer is outside your service boundary (public feed, embedded card) and reads the URL directly, store the URL. When the consumer is your own admin/edit UI and needs to re-render with different params, store the ID + recompute. We have both: the public side reads the stored URL; the edit page reverses-the-mapping locally.
+- `setCoverVideoId(prev)` revert pattern needs the previous value captured BEFORE `setCoverVideoId(next)`. Reading inside the transition callback would race against subsequent clicks and revert to whatever the latest optimistic state was.
+
+**Next steps**:
+- Tag 4.3 done in IMPLEMENTATION.md.
+- Move to 4.4: community editor (`/dashboard/communities/[id]`) — schools/POIs editor with mandatory `source_url` per row (fair-housing). New territory: existing `community_schools` / `community_pois` schema, `source_url` validation as a URL with required attribution.
+
+---
+
 ## 2026-06-11 04:00 UTC — phase4.3b: video panel + dnd-kit reorder
 
 **Objective**: Second slice of Phase 4.3 — the edit page can list a listing's videos, embed the existing Phase 2 uploader to add new ones, and let the agent drag-and-drop them into a new order that persists to `listing_videos.sort_order`.

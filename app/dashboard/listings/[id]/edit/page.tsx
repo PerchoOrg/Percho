@@ -9,6 +9,7 @@
  * `actions.ts` header for rationale.
  */
 
+import { thumbnailUrl } from '@/lib/cloudflare/stream';
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import { EditListingForm } from './EditListingForm';
@@ -32,6 +33,7 @@ interface ListingRow {
   hoa: string | null;
   style: string | null;
   description: string[] | null;
+  cover_url: string | null;
 }
 
 export default async function EditListingPage({
@@ -50,7 +52,7 @@ export default async function EditListingPage({
   const { data: listing } = (await (supabase as any)
     .from('listings')
     .select(
-      'id, address, city, state, zip, neighborhood, status, slug, price, beds, baths, sqft, year_built, lot_size, hoa, style, description',
+      'id, address, city, state, zip, neighborhood, status, slug, price, beds, baths, sqft, year_built, lot_size, hoa, style, description, cover_url',
     )
     .eq('id', id)
     .maybeSingle()) as { data: ListingRow | null };
@@ -74,6 +76,24 @@ export default async function EditListingPage({
     .order('created_at', { ascending: true })) as { data: ListingVideoRow[] | null };
 
   const videos = videosRaw ?? [];
+
+  // Match the persisted cover_url back to a videoId by recomputing the
+  // CF Stream thumbnail URL for each video. We don't store the videoId
+  // directly on the listing — only the rendered URL, because the public
+  // feed reads `cover_url` directly.
+  let initialCoverVideoId: string | null = null;
+  if (listing.cover_url) {
+    for (const v of videos) {
+      try {
+        if (thumbnailUrl(v.cf_video_id) === listing.cover_url) {
+          initialCoverVideoId = v.id;
+          break;
+        }
+      } catch {
+        // ignore — env might be missing in dev for one video; skip
+      }
+    }
+  }
 
   return (
     <div className="mx-auto max-w-3xl space-y-6 py-4">
@@ -109,9 +129,13 @@ export default async function EditListingPage({
       <section className="rounded border border-bronze/30 bg-ink2 p-6">
         <div className="mb-4 flex items-baseline justify-between">
           <h2 className="text-base font-semibold">Videos</h2>
-          <span className="text-xs text-cream/50">Drag to reorder · cover photo in 4.3c</span>
+          <span className="text-xs text-cream/50">Drag to reorder · use ⓒ to set cover</span>
         </div>
-        <VideoPanel listingId={listing.id} initialVideos={videos} />
+        <VideoPanel
+          listingId={listing.id}
+          initialVideos={videos}
+          initialCoverVideoId={initialCoverVideoId}
+        />
       </section>
     </div>
   );

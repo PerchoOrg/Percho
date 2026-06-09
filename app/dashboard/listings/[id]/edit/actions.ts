@@ -97,6 +97,77 @@ function emptyToNull(s: string | null): string | null {
   return trimmed.length === 0 ? null : trimmed;
 }
 
+// ─── setListingCover ─────────────────────────────────────────────
+
+const SetCoverInput = z.object({
+  listingId: z.string().uuid(),
+  videoId: z.string().uuid().nullable(),
+});
+
+export type SetListingCoverResult =
+  | { ok: true; coverUrl: string | null }
+  | { ok: false; error: string };
+
+/**
+ * Set (or clear) the listing's cover photo.
+ *
+ * Pass `videoId = null` to clear the cover. Otherwise we look up the video,
+ * confirm it belongs to this listing AND is `status='ready'` (no thumbnail
+ * until CF Stream finishes processing), and write
+ *   listings.cover_url = thumbnailUrl(cf_video_id)
+ *
+ * The chosen video's `cf_video_id` is read under RLS, so we don't need a
+ * separate ownership check — Supabase returns null if the caller can't see
+ * the row.
+ */
+export async function setListingCover(
+  listingId: string,
+  videoId: string | null,
+): Promise<SetListingCoverResult> {
+  const parsed = SetCoverInput.safeParse({ listingId, videoId });
+  if (!parsed.success) return { ok: false, error: 'invalid_input' };
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: 'unauthorized' };
+
+  let coverUrl: string | null = null;
+
+  if (parsed.data.videoId !== null) {
+    // biome-ignore lint/suspicious/noExplicitAny: stub generated types
+    const { data: video } = (await (supabase as any)
+      .from('listing_videos')
+      .select('id, cf_video_id, status, listing_id')
+      .eq('id', parsed.data.videoId)
+      .eq('listing_id', parsed.data.listingId)
+      .maybeSingle()) as {
+      data: { id: string; cf_video_id: string; status: string; listing_id: string } | null;
+    };
+
+    if (!video) return { ok: false, error: 'video_not_found' };
+    if (video.status !== 'ready') return { ok: false, error: 'video_not_ready' };
+
+    const { thumbnailUrl } = await import('@/lib/cloudflare/stream');
+    coverUrl = thumbnailUrl(video.cf_video_id);
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
+  const { error } = await (supabase as any)
+    .from('listings')
+    .update({ cover_url: coverUrl })
+    .eq('id', parsed.data.listingId);
+
+  if (error) {
+    console.error('[setListingCover] update failed', { error });
+    return { ok: false, error: 'update_failed' };
+  }
+
+  revalidatePath(`/dashboard/listings/${parsed.data.listingId}/edit`);
+  return { ok: true, coverUrl };
+}
+
 // ─── reorderListingVideos ────────────────────────────────────────
 
 const ReorderInput = z.object({
