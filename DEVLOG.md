@@ -10,6 +10,28 @@ When resuming work: read the most recent entries first, then check IMPLEMENTATIO
 
 ---
 
+## 2026-06-11 16:10 UTC — phase5.3 fixup #2: pg_net lives in `net`, not `extensions`
+
+**Objective**: Unblock e2e — first lead submit on preview returned `insert_failed`. Vercel logs: `function extensions.http_post(url => text, headers => jsonb, body => jsonb) does not exist`. The trigger ran on INSERT, raised, and bubbled up through the route handler.
+
+**Actions**:
+- New migration `supabase/migrations/0008_notify_lead_use_net_schema.sql`: `create or replace` of `notify_lead_on_insert()` — call site changed from `extensions.http_post(...)` to `net.http_post(...)`; search_path now `public, net, vault`.
+- Trigger object unchanged (still the one from 0006).
+
+**Decisions**:
+- pg_net creates and owns its own `net` schema regardless of the `create extension ... with schema extensions` clause in 0006. The extension's pg_catalog entry is in `extensions` but the callable functions are in `net`. Supabase docs confirm — every example uses `net.http_post`. My `with schema extensions` in 0006 was misleading but not harmful (the extension installed fine); the bug was the call site.
+- No revert of 0006/0007 — both are valid history (extension install + vault wiring). 0008 just patches the function body. Keeps migration log linear.
+
+**Issues**: My fault — should have grep'd Supabase pg_net docs before writing 0006. `with schema extensions` on `create extension` made me assume the functions land there too; they don't.
+
+**Resolution**: 0008 written, pushed. Awaiting user `supabase db push` + retry e2e.
+
+**Learnings**: Supabase extensions split between `extensions` (catalog) and dedicated schemas (`net` for pg_net, `vault` for vault, `pgmq` for queues) — always check the extension's own docs for the function schema, not just `\dx`.
+
+**Next steps**: user runs `supabase db push` (only 0008 will apply, 0006/0007 already done) → retry the lead form on preview → expect 201 + email within 5s.
+
+---
+
 ## 2026-06-11 15:30 UTC — phase5.3 fixup: switch notify_lead trigger to Supabase Vault
 
 **Objective**: Unblock 0006 deploy on hosted Supabase — the original migration assumed `alter database postgres set app.settings.* = ...` works, but on Supabase hosted the `postgres` role lacks superuser perms (error 42501 permission denied to set parameter). 0006 itself applied (DDL was fine), but step 1 of the deploy runbook (setting the two GUCs) is impossible in SQL Editor.
