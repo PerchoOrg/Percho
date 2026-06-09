@@ -98,31 +98,54 @@ export function UploadHarness({ listingId, initialVideos }: Props) {
   }, [listingId, mergeRows]);
 
   // --- Realtime (best-effort bonus) ---
+  const [rtStatus, setRtStatus] = useState<string>('init');
   useEffect(() => {
     const supabase = createBrowserClient();
-    const channel = supabase
-      .channel(`listing_videos:${listingId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'listing_videos',
-          filter: `listing_id=eq.${listingId}`,
-        },
-        (payload) => {
-          if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
-            const row = payload.new as VideoRow;
-            mergeRows([row]);
-          } else if (payload.eventType === 'DELETE') {
-            const old = payload.old as { id: string };
-            setVideos((prev) => prev.filter((v) => v.id !== old.id));
-          }
-        },
-      )
-      .subscribe();
+    let cancelled = false;
+
+    (async () => {
+      // Explicitly forward user JWT to Realtime so RLS evaluates correctly.
+      // Without this, the channel connects as anon and RLS blocks all rows.
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      console.log('[Realtime] session present:', !!session, 'user:', session?.user?.id);
+      if (session) supabase.realtime.setAuth(session.access_token);
+      if (cancelled) return;
+
+      const channel = supabase
+        .channel(`listing_videos:${listingId}`)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'listing_videos',
+            filter: `listing_id=eq.${listingId}`,
+          },
+          (payload) => {
+            console.log('[Realtime] payload:', payload.eventType, payload);
+            if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+              const row = payload.new as VideoRow;
+              mergeRows([row]);
+            } else if (payload.eventType === 'DELETE') {
+              const old = payload.old as { id: string };
+              setVideos((prev) => prev.filter((v) => v.id !== old.id));
+            }
+          },
+        )
+        .subscribe((status, err) => {
+          console.log('[Realtime] channel status:', status, err ?? '');
+          setRtStatus(status);
+        });
+
+      return () => {
+        void supabase.removeChannel(channel);
+      };
+    })();
+
     return () => {
-      void supabase.removeChannel(channel);
+      cancelled = true;
     };
   }, [listingId, mergeRows]);
 
@@ -143,6 +166,9 @@ export function UploadHarness({ listingId, initialVideos }: Props) {
 
   return (
     <>
+      <div className="text-xs" style={{ color: 'var(--muted)' }}>
+        Realtime: <span style={{ color: 'var(--brand)' }}>{rtStatus}</span> · polling 5s
+      </div>
       <VideoUploader listingId={listingId} onUploaded={handleUploaded} />
       <VideosTable videos={videos} />
     </>

@@ -10,6 +10,23 @@ When resuming work: read the most recent entries first, then check IMPLEMENTATIO
 
 ---
 
+## 2026-06-09 03:40 UTC — Phase 2 Realtime debug instrumentation
+
+**Objective**: Diagnose why Supabase Realtime is silent on `/dashboard/upload-test` (polling fallback works, Realtime never fires). Add visible instrumentation rather than guess.
+
+**Actions**: Edited `components/dashboard/UploadHarness.tsx`:
+- Forward user JWT to Realtime via `supabase.realtime.setAuth(session.access_token)` BEFORE subscribing. Without this the channel auths as anon, and the per-listing RLS policy on `listing_videos` blocks every row, so no events surface.
+- Log session presence + user id at subscription time.
+- Log `subscribe()` callback `(status, err)` — surfaces SUBSCRIBED / CHANNEL_ERROR / TIMED_OUT / CLOSED.
+- Log every `postgres_changes` payload that arrives.
+- Render Realtime status as a small pill above the uploader so the state is visible without devtools.
+
+**Decisions**: Added `setAuth` first because it's the single most common cause of "Realtime appears connected but delivers nothing" on Supabase — RLS evaluates against `auth.uid()` from the JWT on the WebSocket, not from the cookie. The `@supabase/ssr` browser client does not auto-forward this to the realtime socket. If `setAuth` fixes it, that's our root cause and we can drop the visible debug pill but keep the call. If status is SUBSCRIBED but payloads still don't arrive, the problem is on the server side (publication, replica identity, policy on the realtime channel).
+
+**Next steps**: Push to `phase2/realtime-fallback`, hotfix-merge to main, owner reloads `/dashboard/upload-test` with devtools console open, captures the `[Realtime]` log lines and the on-page status pill, and reports back. Then we know whether to fix client (auth) or server (publication/RLS).
+
+---
+
 ## 2026-06-09 02:55 UTC — Phase 2 hotfix: optimistic insert + polling fallback
 
 **Objective**: After Phase 2 merged to main and went live on production, e2e smoke revealed two visible bugs on `/dashboard/upload-test`: (1) successful upload did not add a row to the table without a manual refresh, and (2) once the row appeared, the `processing → ready` transition never rendered live — only a manual refresh would surface it. Both symptoms point at the Realtime channel not delivering events to the browser, even though the webhook is updating the row in DB (confirmed via direct SQL).
