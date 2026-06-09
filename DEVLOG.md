@@ -10,6 +10,40 @@ When resuming work: read the most recent entries first, then check IMPLEMENTATIO
 
 ---
 
+## 2026-06-11 02:30 UTC — phase4.1: new-listing form + Place Details proxy
+
+**Objective**: Phase 4 kickoff. Ship `/dashboard/listings/new` so an agent can pick an address from Google Places Autocomplete and create a draft listings row, redirecting to a placeholder edit page (Phase 4.3 fills it in).
+
+**Actions**:
+- New branch `phase4/listing-crud` off `1516411` (Phase 3 close + login hotfix). One branch for all of Phase 4 per §2.1 rule 3.
+- `lib/google/places.ts` — server-side wrappers for Google Places Autocomplete + Place Details. Session-token threaded through both calls so Google bills as one session per address-search burst. Place Details parses `address_components` into {street_address, city, state, zip, lat, lng}.
+- `app/api/places/autocomplete/route.ts` + `app/api/places/details/route.ts` — auth-gated server-side proxies. Anon callers get 401, keeping `GOOGLE_PLACES_API_KEY` off the client bundle.
+- `lib/listings/slug.ts` — `deriveSlug(address)` + `nextCandidate(base, attempt)`. Lowercase, hyphenated, 64-char cap; collisions retry with `-2`, `-3`, ... up to 20 attempts (errors out as `slug_exhaustion` after).
+- `app/dashboard/listings/new/page.tsx` — Server Component, auth-guards, renders `NewListingForm`.
+- `app/dashboard/listings/new/NewListingForm.tsx` — Client Component. Debounced (250ms) autocomplete fetch; pick a prediction → fetch Place Details → resolved chip with "change" affordance. Optional price/beds/baths/sqft text inputs. Submit calls `createListing` server action.
+- `app/dashboard/listings/new/actions.ts` — `createListing` server action. Re-validates with zod (never trust client), looks up agent.id via RLS, loops `(slug, slug-2, ...)` insert until a row lands, then `redirect('/dashboard/listings/${id}/edit')`. Catches Postgres 23505 unique_violation and retries; any other error aborts.
+- `app/dashboard/listings/[id]/edit/page.tsx` — placeholder so the redirect doesn't 404. Shows address/city/state/zip/status/slug + "Edit form coming in Phase 4.3" panel. RLS-gated read so only the owning agent sees the row (anon would 0-row it).
+
+**Decisions**:
+- **(ii) Place Details one-shot, not (i) Autocomplete-only**. Place Details already returns address_components + geometry, so 4.1 captures all geocoded fields in one call. Phase 4.2 narrows to neighborhood resolution + edge-case fixups (PO boxes, sublocality fallback). Saves one round-trip per submit and avoids stale duplicate-billing risk.
+- **Google session token minted per address-search burst**, not per-keystroke. Google bills Autocomplete + Details as one session if the same UUID is passed within ~3 minutes; we mint via `crypto.randomUUID()` with a `Date.now()+Math.random()` fallback, and re-mint after each successful resolve or "change".
+- **Slug derived server-side from street address, not user-entered.** Phase 4.1 keeps the form minimal; Phase 4.3 edit page can expose slug rename later if a user cares. Collisions auto-suffix.
+- **lat/lng required in NewListingInput zod schema.** Place Details guarantees them, so absence means the client tampered or skipped picking a prediction; reject as invalid_input. Form also disables Submit until `resolved` is set.
+- **Edit page placeholder, not 404.** Phase 4.1 redirect needs a destination. Cheap to ship a stub now; Phase 4.3 replaces.
+
+**Issues**: None. typecheck clean; biome auto-fixed 2 files (import order in route handlers).
+
+**Resolution**: Local commit + branch push pending — see commit step below for verified SHA.
+
+**Learnings**:
+- Existing `lib/zod/schemas.ts` already had `ListingCreate` but its shape (slug user-entered, lat/lng absent) didn't match Phase 4.1's needs. Defined a separate `NewListingInput` inside the action file scoped to "what the form sends". Phase 4.3 likely lives off the broader `ListingUpdate` schema for the edit form. Keep them as parallel schemas — don't try to unify prematurely.
+- `redirect()` inside a server action throws a `NEXT_REDIRECT` signal that propagates through the client's `await createListing(...)`. The form's transition handler treats any returned object as the error path; success never returns. Client matches that contract via `if (!result.ok)`.
+- Pre-existing 15 biome errors in repo unchanged (verified by stashing diff: still 15). All new files clean.
+
+**Next steps**: Commit + push branch, verify SHA on origin/phase4/listing-crud, report to user with Mac-side e2e steps. Phase 4.2 (neighborhood resolve + edge cases) next.
+
+---
+
 ## 2026-06-10 10:15 UTC — main hotfix: login-form ink-ified
 
 **Objective**: After previous hotfix flipped layout to `bg-ink`, login-form card itself stayed `bg-white` with `text-neutral-700` — on iOS Safari email input rendered white-text-on-white-bg (input inherited body's global `#f5f5f5` text color, Safari doesn't force black input text like Chrome).
