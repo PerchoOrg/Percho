@@ -10,6 +10,18 @@ When resuming work: read the most recent entries first, then check IMPLEMENTATIO
 
 ---
 
+## 2026-06-09 04:30 UTC — Disable polling fallback (Realtime verified)
+
+**Objective**: Realtime works in production after replica-identity-full migration (0ce24b3). User confirmed INSERT/UPDATE events arriving live. Disable the 5s polling fallback to avoid redundant `/api/video/list` requests, but keep the code path intact for fast re-enable if Realtime regresses.
+
+**Actions**: `components/dashboard/UploadHarness.tsx` — added `POLLING_ENABLED = false` constant; polling `useEffect` now early-returns when disabled (no timer scheduled, no fetch); UI status line shows "polling off" instead of "polling 5s". All polling code (loop, merge logic, fetch) preserved unchanged.
+
+**Decisions**: Gate via constant rather than delete code. Realtime depends on publication + RLS-on-Realtime + replica identity + JWT setAuth — four moving parts that can regress on any future schema/policy change. Keeping polling as a 1-line flip is cheap insurance.
+
+**Next steps**: Phase 2 closeout. Open Phase 3.
+
+---
+
 ## 2026-06-09 04:05 UTC — Phase 2 Realtime root cause: REPLICA IDENTITY
 
 **Objective**: Realtime channel SUBSCRIBED with valid JWT (user uuid logged), but zero `postgres_changes` payloads ever arrive on INSERT or UPDATE. Polling fallback works, so DB writes are happening. Server-side RLS-on-Realtime is silently dropping events.

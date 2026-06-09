@@ -33,6 +33,10 @@ interface Props {
 }
 
 const POLL_INTERVAL_MS = 5000;
+// Polling fallback — kept as code path but disabled now that Realtime is verified
+// working in production (replica identity full + JWT setAuth landed in 0ce24b3).
+// Flip back to true if Realtime regresses (e.g. publication / RLS schema change).
+const POLLING_ENABLED = false;
 
 export function UploadHarness({ listingId, initialVideos }: Props) {
   const [videos, setVideos] = useState<VideoRow[]>(initialVideos);
@@ -65,8 +69,9 @@ export function UploadHarness({ listingId, initialVideos }: Props) {
     });
   }, []);
 
-  // --- Polling ---
+  // --- Polling (fallback, gated by POLLING_ENABLED) ---
   useEffect(() => {
+    if (!POLLING_ENABLED) return;
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout> | null = null;
 
@@ -167,7 +172,8 @@ export function UploadHarness({ listingId, initialVideos }: Props) {
   return (
     <>
       <div className="text-xs" style={{ color: 'var(--muted)' }}>
-        Realtime: <span style={{ color: 'var(--brand)' }}>{rtStatus}</span> · polling 5s
+        Realtime: <span style={{ color: 'var(--brand)' }}>{rtStatus}</span>
+        {POLLING_ENABLED ? ' · polling 5s' : ' · polling off'}
       </div>
       <VideoUploader listingId={listingId} onUploaded={handleUploaded} />
       <VideosTable videos={videos} />
