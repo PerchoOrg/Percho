@@ -10,6 +10,38 @@ When resuming work: read the most recent entries first, then check IMPLEMENTATIO
 
 ---
 
+## 2026-06-11 09:30 UTC — phase4.6: publish/unpublish + Phase 3 cleanup
+
+**Objective**: Phase 4.6 — give agents a Publish button on the listing edit page that gates on the PRD-mandated required fields (address/price/beds/baths/≥1 ready video), flips `status='published'` + `published_at=now()`, and revalidates the public route. Plus Phase 3 cleanup: drop the `__upload_test__` seed listings and their UI surface, now that real listing CRUD covers the same workflow.
+
+**Actions**:
+- `app/dashboard/listings/[id]/edit/publish-actions.ts` — new server actions `publishListing` and `unpublishListing`. `publishListing` validates address/price/beds/baths and counts ready videos via `head:true count:'exact'`, returns `{ ok: false, missing: string[] }` with field names if any check fails so the UI can list them inline. On success: update status + published_at, look up the agent slug, call `revalidatePath('/v/<agentSlug>/<listingSlug>')`. `unpublishListing` flips back to `draft` (NOT `archived` — that's 4.7) and revalidates the same path.
+- `app/dashboard/listings/[id]/edit/PublishPanel.tsx` — new client component. Top-of-page banner showing current status + Publish or Unpublish button. When published, surfaces the public URL as a clickable link (target=_blank). When publish fails, renders the missing-fields list as red bullets so the agent doesn't have to guess.
+- `app/dashboard/listings/[id]/edit/page.tsx` — adds `agent_id` to the listings select, fetches `agents.slug` separately for the public URL, renders `<PublishPanel>` between the header and the listing-details section. Removed the now-redundant inline "status: …" text from the header (PublishPanel owns status display).
+- `supabase/migrations/0005_drop_upload_test_listings.sql` — `delete from public.listings where slug = '__upload_test__';`. CASCADE removes orphaned `listing_videos` rows. Cloudflare Stream assets become orphans; reconcile job is post-V1.
+- Deleted `app/dashboard/upload-test/` (page.tsx + actions.ts + PublishPhase3Button.tsx) and `components/dashboard/UploadHarness.tsx`. UploadHarness was only referenced from upload-test, so it goes too. Updated a stale comment in `VideoPanel.tsx` (UploadHarness → VideoUploader).
+
+**Decisions**:
+- Validate beds with `null` check rather than `<= 0` because studios are 0 bedrooms and we want to allow them.
+- `unpublishListing` flips to `draft`, not `archived`. Archive is a stronger signal (out of marketplace permanently) and belongs in 4.7. Unpublish is "I want to edit before re-publishing".
+- Migration is a hard delete, not a soft one. The seed listings exist only as scaffolding for Phase 2 video-uploader testing — no public URL ever served them, no analytics, no leads. Soft-delete would just leave noise in the dashboard list.
+- Did NOT add a `pnpm db:push` step to the deploy pipeline as part of this commit. Migration runs via Supabase dashboard SQL editor when Vivian is ready (or via existing CI if/when one exists). Rationale: 4.6 is shippable independent of the cleanup, and forcing a DB migration into a code-only PR creates rollback complications.
+
+**Issues**: none. Typecheck and biome both clean on first pass after biome's auto-format collapsed the `PublishResult` union onto one line.
+
+**Resolution**: shipped on `phase4/listing-crud`. See commit message for SHA. Verification path is on the user's Mac via Vercel preview — see "Next steps" below.
+
+**Learnings**:
+- Inserting DEVLOG entries with a single-line `---` anchor keeps clobbering the next entry's header. Switched to a multi-line anchor that includes the next entry's `## ` line in both old_string and new_string. Also using `grep -c '^## '` to verify the header count goes up by exactly 1 after every patch.
+- `revalidatePath()` only revalidates if the path was actually rendered before; on the very first publish there's nothing cached yet, so the call is a no-op and that's fine. The point is to invalidate stale caches on republish/unpublish.
+
+**Next steps**:
+- Vivian-side verify on Vercel preview: hit /dashboard/listings/[id]/edit on a draft listing, click Publish, expect (1) missing-fields banner if requirements aren't met, (2) green status + public URL when met. Visit the public URL, confirm the listing renders. Click Unpublish, refresh public URL, expect 404.
+- After verify is green, run `supabase/migrations/0005_drop_upload_test_listings.sql` against the prod Supabase via SQL editor to remove the seed rows.
+- Phase 4.7 next: archive (soft-delete + hide from public/dashboard list, with a "show archived" toggle).
+
+---
+
 ## 2026-06-11 06:15 UTC — phase4.5: community video upload + dashboard nav link
 
 **Objective**: Phase 4.5 — let agents upload neighborhood/school/POI videos under a community, with optional linkage to specific schools or POIs. Plus the deferred Phase 4.4 follow-up: actually surface `/dashboard/communities` in the top nav so agents can find it without typing the URL.

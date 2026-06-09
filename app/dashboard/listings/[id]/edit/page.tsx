@@ -13,6 +13,7 @@ import { thumbnailUrl } from '@/lib/cloudflare/stream';
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import { type CommunityOption, EditListingForm } from './EditListingForm';
+import { PublishPanel } from './PublishPanel';
 import { type ListingVideoRow, VideoPanel } from './VideoPanel';
 
 interface ListingRow {
@@ -24,6 +25,7 @@ interface ListingRow {
   neighborhood: string | null;
   status: string;
   slug: string;
+  agent_id: string;
   price: number | null;
   beds: number | null;
   baths: number | null;
@@ -53,7 +55,7 @@ export default async function EditListingPage({
   const { data: listing } = (await (supabase as any)
     .from('listings')
     .select(
-      'id, address, city, state, zip, neighborhood, status, slug, price, beds, baths, sqft, year_built, lot_size, hoa, style, description, cover_url, community_id',
+      'id, address, city, state, zip, neighborhood, status, slug, agent_id, price, beds, baths, sqft, year_built, lot_size, hoa, style, description, cover_url, community_id',
     )
     .eq('id', id)
     .maybeSingle()) as { data: ListingRow | null };
@@ -103,6 +105,13 @@ export default async function EditListingPage({
     }
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
+  const { data: agent } = (await (supabase as any)
+    .from('agents')
+    .select('slug')
+    .eq('id', listing.agent_id)
+    .maybeSingle()) as { data: { slug: string } | null };
+
   return (
     <div className="mx-auto max-w-3xl space-y-6 py-4">
       <header>
@@ -110,11 +119,17 @@ export default async function EditListingPage({
         <p className="mt-1 text-sm text-cream/60">
           {listing.city}, {listing.state}
           {listing.zip ? ` ${listing.zip}` : ''}
-          {listing.neighborhood ? ` · ${listing.neighborhood}` : ''} · status:{' '}
-          <span className="font-medium text-cream">{listing.status}</span> · slug:{' '}
+          {listing.neighborhood ? ` · ${listing.neighborhood}` : ''} · slug:{' '}
           <code className="text-cream">{listing.slug}</code>
         </p>
       </header>
+
+      <PublishPanel
+        listingId={listing.id}
+        status={listing.status}
+        agentSlug={agent?.slug ?? null}
+        listingSlug={listing.slug}
+      />
 
       <section className="rounded border border-bronze/30 bg-ink2 p-6">
         <h2 className="mb-4 text-base font-semibold">Listing details</h2>

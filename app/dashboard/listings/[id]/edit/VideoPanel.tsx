@@ -67,7 +67,7 @@ export function VideoPanel({ listingId, initialVideos, initialCoverVideoId }: Pr
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
 
   // Poll for status flips while any row is processing. Same pattern as
-  // UploadHarness but scoped to this listing.
+  // VideoUploader but scoped to this listing.
   useEffect(() => {
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout> | null = null;
