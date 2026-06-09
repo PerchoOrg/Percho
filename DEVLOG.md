@@ -10,6 +10,28 @@ When resuming work: read the most recent entries first, then check IMPLEMENTATIO
 
 ---
 
+## 2026-06-11 12:30 UTC — hotfix(4.3a): updateListing false-negative on save
+
+**Objective**: User hit `Error: not_found_or_forbidden` when saving the listing edit form despite owning the listing (RLS allowed the read on entry).
+
+**Root cause**: `updateListing` used `.update().select('id', { count: 'exact', head: true })` and rejected when `count ?? 0 === 0`. In supabase-js v2, that combination returns `count = null` after `UPDATE` — `head: true` skips the body and PostgREST's `Content-Range` count for UPDATE post-RLS is unreliable. So every successful update was misread as "RLS dropped the row" and returned `not_found_or_forbidden`. The 4.3a DEVLOG entry that praised this pattern was wrong.
+
+**Actions**:
+- `app/dashboard/listings/[id]/edit/actions.ts` — replaced count-based detection with `.select('id').maybeSingle()`. `data === null` ⇒ RLS hid the row; data present ⇒ update applied. One row instead of two roundtrips.
+
+**Decisions**: Could have used `count: 'exact'` without `head: true` and parsed `Content-Range` ourselves, but `maybeSingle()` is the idiomatic pattern other actions in this repo already use (`reorderListingVideos`, `setListingCover`).
+
+**Verification**:
+- `tsc --noEmit` clean
+- biome clean on the changed file
+- `reorderListingVideos` and `setListingCover` audited — they use `.maybeSingle()` for ownership pre-checks (correct). `publish-actions.ts` uses `count: 'exact', head: true` only on a pure SELECT against `listing_videos` (not after UPDATE), which IS reliable.
+
+**Learnings**: `count: 'exact', head: true` is reliable post-`SELECT` but not post-`UPDATE` under RLS. Don't trust the count return from a mutating call. Always read the row back via `.select().maybeSingle()` to confirm RLS visibility.
+
+**Next steps**: Vivian should re-test edit-page save; if green, resume Phase 4.8 (manual e2e).
+
+---
+
 ## 2026-06-11 11:15 UTC — phase4.7: archive listings + dashboard list
 
 **Objective**: Phase 4.7 — soft-delete via `status='archived'`, dashboard listings index with active/archived toggle, archive controls on the edit page.

@@ -60,10 +60,17 @@ export async function updateListing(
   } = await supabase.auth.getUser();
   if (!user) return { ok: false, error: 'unauthorized' };
 
-  // RLS policy "agent manages own listings" enforces ownership; we just send
-  // the update through. If it's not the agent's row, rowcount is 0.
+  // RLS policy "agent manages own listings" enforces ownership; if the caller
+  // can't see the row, the update silently affects zero rows. We detect that
+  // by requesting the updated row back via .select().maybeSingle() — null
+  // means RLS hid it (or the id doesn't exist).
+  //
+  // Earlier impl used `.select('id', { count: 'exact', head: true })` and
+  // checked count, but that combination returns count=null after .update()
+  // in supabase-js v2 (head=true skips body, and PostgREST's Content-Range
+  // count for UPDATE is unreliable post-RLS). Switched to maybeSingle().
   // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { error, count } = (await (supabase as any)
+  const { data: updated, error } = (await (supabase as any)
     .from('listings')
     .update({
       price: data.price,
@@ -78,16 +85,17 @@ export async function updateListing(
       community_id: data.community_id,
     })
     .eq('id', id)
-    .select('id', { count: 'exact', head: true })) as {
+    .select('id')
+    .maybeSingle()) as {
+    data: { id: string } | null;
     error: { message?: string } | null;
-    count: number | null;
   };
 
   if (error) {
     console.error('[updateListing] update failed', error);
     return { ok: false, error: 'update_failed' };
   }
-  if ((count ?? 0) === 0) return { ok: false, error: 'not_found_or_forbidden' };
+  if (!updated) return { ok: false, error: 'not_found_or_forbidden' };
 
   revalidatePath(`/dashboard/listings/${id}/edit`);
   return { ok: true };
