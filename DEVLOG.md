@@ -10,6 +10,20 @@ When resuming work: read the most recent entries first, then check IMPLEMENTATIO
 
 ---
 
+## 2026-06-10 09:30 UTC — main hotfix: auth pages ink background
+
+**Objective**: iOS Safari shows white-on-white login (white bg + body's global `#f5f5f5` text color from globals.css). Real bug, blocks anyone trying to log in on mobile. Phase 1 leftover, surfaced after Phase 3 merge.
+
+**Actions**:
+- `app/(auth)/layout.tsx`: `bg-neutral-50` → `bg-ink`. One-line change.
+- Direct push to main per project rule (visual hotfix, scope strictly inside auth route group, doesn't affect the merged Phase 3 branch).
+
+**Decisions**: minimal A1 fix only — didn't restyle login-form card or buttons. Full auth ink/gold restyle deferred to Phase 4 (dashboard CRUD will touch all auth-adjacent UI anyway). Goal here is "make it readable", not "make it pretty".
+
+**Next steps**: Phase 4 dashboard work covers full auth visual pass (cream text on ink2 cards, gold submit button, bronze borders).
+
+---
+
 ## 2026-06-10 09:06 UTC — Phase 3.8: composeFeed unit tests
 
 **Objective**: Lock the ARCH §5 feed composition rules under tests before phase merge. Pure function, easy to fixture, high regression value (this rule will keep evolving in Phase 6+).
