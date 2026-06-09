@@ -10,6 +10,38 @@ When resuming work: read the most recent entries first, then check IMPLEMENTATIO
 
 ---
 
+## 2026-06-09 18:00 UTC — Phase 3 kickoff: 3.1 public listing route + demo publish toggle
+
+**Objective**: Open Phase 3 with task 3.1 — public listing page at `/v/[agentSlug]/[listingSlug]`, ISR `revalidate=3600`, 404 for unpublished/missing, minimal skeleton render. Phase 4 owns real listings CRUD; for 3.1 we need a way to flip the agent's reserved `__upload_test__` listing to `published` so the new route has live data without writing CRUD UI early.
+
+**Actions**:
+- Branch `phase3/public-listing-feed` cut off origin/main `c7d9f1d`.
+- New `app/(public)/v/[agentSlug]/[listingSlug]/page.tsx` — Server Component, async params (Next 14), sequential fetch (agent → listing → community → listing_videos → community_videos → schools → pois) using anon supabase client + RLS. `notFound()` if agent missing, listing missing, or status ≠ published. `generateMetadata()` returns OG title/description (3.2 will replace with cover image).
+- New `app/dashboard/upload-test/actions.ts` — `publishPhase3Demo` server action: idempotent UPDATE on `__upload_test__` row to status='published' + minimum field set (address, city, state, zip, price, beds, baths, sqft) + `revalidatePath()` on the public URL.
+- New `app/dashboard/upload-test/PublishPhase3Button.tsx` — Client Component button with success/error feedback. Wired into existing `/dashboard/upload-test` page below the upload harness.
+
+**Decisions**:
+- **Reserved-slug pattern reused**: `__upload_test__` listing already exists per agent (Phase 2 seed). Extending it for Phase 3 demo is more surgical than minting a new placeholder. Phase 4 cleanup deletes both upload-test page and the reserved row in one pass.
+- **community_videos seed deferred**: schema confirms `cf_video_id` is per-table unique (not cross-table), so reusing `listing_videos.cf_video_id` for community_videos rows is technically allowed. But seeding it now requires also seeding a community row + linking via `community_id`, all of which 3.3+ would have to extend. Keeping 3.1 surgical: skeleton render shows `0 community video(s)` until 3.3 needs them.
+- **Skeleton not visual**: 3.1 is data-fetch + 404 path correctness only. Visual feed (VideoFeed/Card/ActionRail) lands in 3.3 — borrowing tone from `vicinity-app/src/pages/Listing.jsx` (gold/dark) but rebuilding cards with `<video>` + hls.js since the demo is photo-feed.
+- **Stub types**: continued tail-cast pattern (`as { data: ... | null }`). `pnpm db:types` regen deferred to phase end.
+
+**Issues**: none — typecheck clean, biome clean on new files. Repo-wide 15 biome errors remain pre-existing (unchanged from Phase 2 baseline).
+
+**Resolution**: Local commits ready. Pre-push verification (`git log origin/main`) shows `c7d9f1d` HEAD; awaiting push to origin/phase3/public-listing-feed.
+
+**Learnings**:
+- Next 14 dynamic route params are now `Promise<{...}>` — both `page` and `generateMetadata` must `await params`. Older snippets in references still show sync params; treat as stale.
+- Biome `organizeImports` enforces external-before-internal AND demands import block ABOVE file-level JSDoc comments. Putting a top-of-file `/** ... */` before imports kept losing the fix loop until I moved the doc block below imports.
+
+**Next steps**:
+- Push `phase3/public-listing-feed` to origin.
+- Wait for Vercel preview URL.
+- E2E (preview): 404 on missing slug, 200 + skeleton after clicking demo publish toggle, header shows `x-vercel-cache: HIT` on second hit.
+- Then 3.2 (OG metadata with cover_url fallback to first listing_video thumbnail) on same branch.
+
+---
+
 ## 2026-06-09 04:30 UTC — Disable polling fallback (Realtime verified)
 
 **Objective**: Realtime works in production after replica-identity-full migration (0ce24b3). User confirmed INSERT/UPDATE events arriving live. Disable the 5s polling fallback to avoid redundant `/api/video/list` requests, but keep the code path intact for fast re-enable if Realtime regresses.
