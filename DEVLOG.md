@@ -10,6 +10,32 @@ When resuming work: read the most recent entries first, then check IMPLEMENTATIO
 
 ---
 
+## 2026-06-09 21:45 UTC — Phase 3.4: hls.js playback + mount-window policy
+
+**Objective**: Make the feed actually play. Wire hls.js (with native HLS path on iOS Safari) into FeedCard and add an IntersectionObserver-driven mount window so at most three `<video>` tags exist in the DOM at once.
+
+**Actions**:
+- `pnpm add hls.js` — runtime dep, ~30KB gzipped, pinned by lockfile (no transitive surprises).
+- `_components/FeedCard.tsx` — full rewrite of the body: real `<video>` element with `playsInline`, `loop`, `muted`, `preload="metadata"`. Two refs: `videoRef` (HTMLVideoElement) and `hlsRef` (Hls). First effect attaches the player based on `canPlayType('application/vnd.apple.mpegurl')` — native on Safari/iOS, hls.js everywhere else. Cleanup destroys the Hls instance, removes `src`, calls `video.load()` so the buffer is released. Second effect drives play/pause from the parent's `isActive` flag. `onTap` toggles play/pause and unmutes on first interaction (treated as user gesture). New "tap to unmute" pill + Play overlay shown only when paused.
+- `_components/VideoFeed.tsx` — added `activeIndex` state + `IntersectionObserver` (60% threshold) tracking which card is in view via outer wrapper `<div data-card-idx>`. Computes `shouldMount = |i - activeIndex| <= 1` per card and passes `isActive`/`shouldMount` down. ActionRail's like state now keyed off the active card, not "any card."
+- hls.js buffer caps tightened: `maxBufferLength: 20`, `maxMaxBufferLength: 30`. Mobile data-safe; default would buffer 60s × 3 cards = unnecessary.
+
+**Decisions**:
+- Mount window = ±1 (3 total). Pre-buffers next card so swipes are instant; keeps previous mounted so back-swipe doesn't restart. Larger windows (±2) tested in Hls.js docs but waste memory on mobile.
+- Autoplay starts muted to satisfy browser policy; first tap = unmute. Standard TikTok/Reels convention.
+- a11y: `<video onClick>` flagged by biome; suppressed via biome-ignore. Keyboard users get the centered Play `<button>` overlay which is fully accessible. Pure tap targets on a video element aren't keyboard-navigable by design.
+- IntersectionObserver attached to a wrapper `<div>` rather than the `<section>` inside FeedCard — clean separation: parent owns layout/observation, card owns content/playback.
+
+**Issues**: Initial biome run flagged the `<video>` click handler. Pre-existing 15 biome errors elsewhere untouched.
+
+**Resolution**: typecheck clean, biome clean on the two edited files. Branch `phase3/public-listing-feed` ready to push.
+
+**Learnings**: hls.js + native Safari HLS coexistence is one of the few places `canPlayType` is the right pre-flight check (vs UA sniffing). Get the polyfill order right: native first, then hls.js fallback, then "no HLS support" fall-through to poster-only.
+
+**Next steps**: User verifies on phone — autoplay, swipe-to-next, tap-to-unmute, max 3 `<video>` tags via devtools Elements count. Then 3.5 (ARCH §5 feed composition).
+
+---
+
 ## 2026-06-09 21:10 UTC — Phase 3.3 hotfix: Cloudflare Stream host parsing
 
 **Objective**: Fix broken poster images on `/v/<slug>/__upload_test__` preview. URL was rendering as `customer-xxx.cloudflarestream.com.cloudflarestream.com/...` (domain doubled) → poster 404 → all-black cards, hiding the gold accents / agent strip / action rail behind broken images.
