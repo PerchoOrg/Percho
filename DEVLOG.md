@@ -10,6 +10,39 @@ When resuming work: read the most recent entries first, then check IMPLEMENTATIO
 
 ---
 
+## 2026-06-09 15:21 UTC — phase6.3 hotfix: social copy generation_failed
+
+**Objective**: User reported `Error: generation_failed` clicking the social-copy generate button (description button worked). Diagnose and fix without leaving Phase 6.
+
+**Actions**:
+- Inspected `app/api/generate-social/route.ts` — 502 path is hit only when `generateSocialCopy` throws.
+- Inspected `lib/ai/anthropic.ts` `generateSocialCopy`:
+  - System prompt did NOT say "no markdown / no code fences" (the listing-copy prompt did). Sonnet 4.5 commonly wraps JSON in ```json fences when not forbidden.
+  - `JSON.parse(text)` is unguarded — any fence or truncation throws straight to the route's catch with no observability.
+  - `maxTokens: 800` was tight for FB 2-3 paragraphs + IG paragraph + hashtags + escaped JSON; truncation = unparseable JSON.
+- Added `stripCodeFence()` helper + `safeJsonParse(raw, label)` that logs the first 500 chars of the raw response on parse failure (so next failure is debuggable from Vercel logs).
+- Tightened social prompt: "Output strict JSON and nothing else (no markdown, no code fences, no commentary)" + "under 500 words" budget hint.
+- Bumped social `maxTokens` 800 → 1200.
+- Wired `safeJsonParse` into both `generateListingCopy` and `generateSocialCopy` so listing-copy gets the same fence tolerance + log-on-failure for free.
+
+**Decisions**:
+- Did NOT switch to Anthropic's `tool_use` / structured-output mode — that's a bigger surface change and adds a dependency on a specific SDK shape. A regex fence-strip is 8 lines and covers the observed failure mode. Revisit if we see post-fix failures that aren't fence-related.
+- Logged raw response truncated to 500 chars. Listing copy is not PII; this is fine per CLAUDE.md §3.6.
+- Kept the route's catch path 502 → `generation_failed` for the client (still a useful signal).
+
+**Issues**: None — tsc clean, biome clean (after auto-format), 46/47 vitest passing (the one failing test is the same pre-existing `create-upload.test.ts > scope='community'` flake on main `be44684`, untouched).
+
+**Resolution**: Hotfix commit on `phase6/ai-copy-and-analytics`. Owner re-deploys preview, retries social-copy button. If it still fails, Vercel runtime log will now show `[anthropic:social-copy] JSON.parse failed; raw=...` and we'll have the actual model output to debug from.
+
+**Learnings**:
+- "Output strict JSON" alone is NOT sufficient with Sonnet 4.5 — must explicitly forbid code fences and markdown. The listing-copy prompt got this right by accident ("and nothing else"); social-copy didn't.
+- Always wrap LLM `JSON.parse` with logging-on-failure. The cost is one helper function; the value is being able to debug a prod failure without adding a follow-up commit just to add logs.
+- Tight `maxTokens` on multi-field JSON output is a footgun — escape characters double the byte count and the model can't recover from mid-string truncation.
+
+**Next steps**: Owner verifies fix via preview deploy. If green, this rolls into the same Phase 6 phase-end ff-merge — no separate hotfix branch needed (we're still pre-merge on `phase6/...`).
+
+---
+
 ## 2026-06-09 15:08 UTC — phase6.5: dashboard rollup + Phase 6 close
 
 **Objective**: Add agent-wide rollup numbers to the dashboard top, then tick Phase 6 closed in IMPLEMENTATION.md.

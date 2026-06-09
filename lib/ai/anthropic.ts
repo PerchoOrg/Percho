@@ -57,6 +57,29 @@ async function callMessages(opts: {
 }
 
 /**
+ * Strip ```json ... ``` or ``` ... ``` fences the model sometimes wraps JSON
+ * in despite "no markdown" instructions. Also trims leading/trailing whitespace.
+ */
+function stripCodeFence(s: string): string {
+  const t = s.trim();
+  const fence = /^```(?:json)?\s*\n?([\s\S]*?)\n?```$/i;
+  const m = t.match(fence);
+  return m?.[1] ? m[1].trim() : t;
+}
+
+function safeJsonParse(raw: string, label: string): unknown {
+  const cleaned = stripCodeFence(raw);
+  try {
+    return JSON.parse(cleaned);
+  } catch (err) {
+    // Surface the first ~500 chars of the raw response so we can see why
+    // the model went off-format. Not PII — just listing copy.
+    console.error(`[anthropic:${label}] JSON.parse failed; raw=`, raw.slice(0, 500));
+    throw err;
+  }
+}
+
+/**
  * Generate a 3-paragraph English description for a listing.
  *
  * @returns array of 3 paragraphs (no markdown, no headings).
@@ -86,8 +109,12 @@ export async function generateListingCopy(input: {
     maxTokens: 1000,
   });
 
-  const parsed = JSON.parse(text) as unknown;
-  if (!Array.isArray(parsed) || parsed.length !== 3 || !parsed.every((p) => typeof p === 'string')) {
+  const parsed = safeJsonParse(text, 'listing-copy') as unknown;
+  if (
+    !Array.isArray(parsed) ||
+    parsed.length !== 3 ||
+    !parsed.every((p) => typeof p === 'string')
+  ) {
     throw new Error('Anthropic response was not a 3-string array');
   }
   return parsed as string[];
@@ -107,13 +134,15 @@ export async function generateSocialCopy(input: {
   const text = await callMessages({
     system:
       'You write social media copy for real estate listings, US market, English. ' +
-      'Output strict JSON: { "facebook": string, "instagram": string }. ' +
-      'Facebook: 2-3 paragraphs, professional but warm, ends with the listing URL. ' +
-      'Instagram: 1 short paragraph + 4-6 hashtags, casual tone.',
+      'Output strict JSON and nothing else (no markdown, no code fences, no commentary): ' +
+      '{ "facebook": string, "instagram": string }. ' +
+      'Facebook: 2-3 short paragraphs, professional but warm, ends with the listing URL. ' +
+      'Instagram: 1 short paragraph + 4-6 hashtags, casual tone. ' +
+      'Keep both fields concise — total response under 500 words.',
     messages: [{ role: 'user', content: JSON.stringify(input) }],
-    maxTokens: 800,
+    maxTokens: 1200,
   });
-  const parsed = JSON.parse(text) as { facebook?: unknown; instagram?: unknown };
+  const parsed = safeJsonParse(text, 'social-copy') as { facebook?: unknown; instagram?: unknown };
   if (typeof parsed.facebook !== 'string' || typeof parsed.instagram !== 'string') {
     throw new Error('Anthropic response missing facebook/instagram strings');
   }
