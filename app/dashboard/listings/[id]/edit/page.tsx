@@ -12,6 +12,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import { EditListingForm } from './EditListingForm';
+import { type ListingVideoRow, VideoPanel } from './VideoPanel';
 
 interface ListingRow {
   id: string;
@@ -64,6 +65,16 @@ export default async function EditListingPage({
     );
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
+  const { data: videosRaw } = (await (supabase as any)
+    .from('listing_videos')
+    .select('id, cf_video_id, kind, title, status, sort_order')
+    .eq('listing_id', listing.id)
+    .order('sort_order', { ascending: true })
+    .order('created_at', { ascending: true })) as { data: ListingVideoRow[] | null };
+
+  const videos = videosRaw ?? [];
+
   return (
     <div className="mx-auto max-w-3xl space-y-6 py-4">
       <header>
@@ -96,10 +107,11 @@ export default async function EditListingPage({
       </section>
 
       <section className="rounded border border-bronze/30 bg-ink2 p-6">
-        <h2 className="text-base font-semibold">Videos & cover photo</h2>
-        <p className="mt-2 text-sm text-cream/60">
-          Coming in Phase 4.3b/c — upload home videos, drag to reorder, pick the cover photo.
-        </p>
+        <div className="mb-4 flex items-baseline justify-between">
+          <h2 className="text-base font-semibold">Videos</h2>
+          <span className="text-xs text-cream/50">Drag to reorder · cover photo in 4.3c</span>
+        </div>
+        <VideoPanel listingId={listing.id} initialVideos={videos} />
       </section>
     </div>
   );

@@ -1,7 +1,10 @@
 'use server';
 
 /**
- * Server actions for the listing edit page (Phase 4.3a — metadata fields).
+ * Server actions for the listing edit page.
+ *
+ * 4.3a — `updateListing` (metadata fields).
+ * 4.3b — `reorderListingVideos` (drag-and-drop sort_order persistence).
  *
  * Address/city/state/zip/lat/lng/neighborhood are intentionally NOT editable
  * here. Re-editing the address would invalidate the slug and break any
@@ -10,6 +13,7 @@
  *
  * What this file owns:
  *  - `updateListing(id, input)` — patches mutable metadata fields.
+ *  - `reorderListingVideos(listingId, orderedIds)` — writes new sort_order.
  *  - description is stored as text[] (one element per paragraph). The form
  *    sends a single string; we split on blank lines and trim/empty-filter.
  */
@@ -91,4 +95,68 @@ function emptyToNull(s: string | null): string | null {
   if (s === null) return null;
   const trimmed = s.trim();
   return trimmed.length === 0 ? null : trimmed;
+}
+
+// ─── reorderListingVideos ────────────────────────────────────────
+
+const ReorderInput = z.object({
+  listingId: z.string().uuid(),
+  orderedIds: z.array(z.string().uuid()).min(1).max(50),
+});
+
+export type ReorderListingVideosResult = { ok: true } | { ok: false; error: string };
+
+/**
+ * Persist a new video order. The client sends the full ordered list of
+ * video IDs; we issue one update per row with its new sort_order.
+ *
+ * Authorization: each update is RLS-fenced ("agent manages own listing
+ * videos" policy). If the caller doesn't own the listing, all updates
+ * silently affect 0 rows; we detect that via a count check on the first
+ * update and return `not_found_or_forbidden`.
+ *
+ * Concurrency: this isn't transactional across the N updates. If a partial
+ * failure happens, the UI will see a mixed sort_order and re-render against
+ * the server state on next page load. For V1 this is acceptable — the user
+ * just drags again.
+ */
+export async function reorderListingVideos(
+  listingId: string,
+  orderedIds: string[],
+): Promise<ReorderListingVideosResult> {
+  const parsed = ReorderInput.safeParse({ listingId, orderedIds });
+  if (!parsed.success) return { ok: false, error: 'invalid_input' };
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: 'unauthorized' };
+
+  // Ownership check first — read the listing under RLS. If it returns null
+  // the caller doesn't own it and every update below would be a no-op.
+  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
+  const { data: ownerCheck } = (await (supabase as any)
+    .from('listings')
+    .select('id')
+    .eq('id', parsed.data.listingId)
+    .maybeSingle()) as { data: { id: string } | null };
+  if (!ownerCheck) return { ok: false, error: 'not_found_or_forbidden' };
+
+  for (let i = 0; i < parsed.data.orderedIds.length; i++) {
+    const videoId = parsed.data.orderedIds[i];
+    // biome-ignore lint/suspicious/noExplicitAny: stub generated types
+    const { error } = await (supabase as any)
+      .from('listing_videos')
+      .update({ sort_order: i })
+      .eq('id', videoId)
+      .eq('listing_id', parsed.data.listingId);
+    if (error) {
+      console.error('[reorderListingVideos] update failed', { videoId, error });
+      return { ok: false, error: 'update_failed' };
+    }
+  }
+
+  revalidatePath(`/dashboard/listings/${parsed.data.listingId}/edit`);
+  return { ok: true };
 }

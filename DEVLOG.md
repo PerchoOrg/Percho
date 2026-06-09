@@ -10,6 +10,43 @@ When resuming work: read the most recent entries first, then check IMPLEMENTATIO
 
 ---
 
+## 2026-06-11 04:00 UTC — phase4.3b: video panel + dnd-kit reorder
+
+**Objective**: Second slice of Phase 4.3 — the edit page can list a listing's videos, embed the existing Phase 2 uploader to add new ones, and let the agent drag-and-drop them into a new order that persists to `listing_videos.sort_order`.
+
+**Actions**:
+- `pnpm add @dnd-kit/core @dnd-kit/sortable @dnd-kit/utilities` — added to dependencies. ~30 KB gzip total. Per the kickoff plan, deferred install until 4.3 actually needed it.
+- New `app/dashboard/listings/[id]/edit/VideoPanel.tsx` — client component. Reuses `VideoUploader` from Phase 2 unchanged. Renders an ordered `<ul>` with each row showing CF Stream thumbnail (when status=ready), kind, and title. dnd-kit `DndContext` + `SortableContext` + `verticalListSortingStrategy`. PointerSensor with 4px activation distance so accidental clicks don't start a drag.
+- `app/dashboard/listings/[id]/edit/actions.ts` — added `reorderListingVideos(listingId, orderedIds)` server action. Ownership pre-check (RLS-fenced read of the listing row), then a loop of `update sort_order = i` per row. Zod-validated input (uuid, ≤50 ids).
+- `app/dashboard/listings/[id]/edit/page.tsx` — fetches `listing_videos` ordered by `sort_order asc, created_at asc` and replaces the "coming in 4.3b/c" placeholder section with `<VideoPanel>`. Cover-photo selector still stub-mentioned for 4.3c.
+
+**Decisions**:
+- **Optimistic local reorder, save in background.** Drag drops feel instant; on server-action failure we revert local state and surface an inline "Reorder failed: <error>. Drag again to retry." This is simpler than a per-row save indicator and matches user mental model (drag = done).
+- **Loop of N updates, not a single bulk RPC.** Considered writing a Postgres function or using `upsert` with the `(id, sort_order)` payload, but: (a) RLS already fences each row, (b) N is small (max 50, typical 5-10), (c) introducing a SQL function for V1 adds migration surface area. Acceptable to revisit if reorder latency becomes user-visible. Loop body is one SQL statement so total round-trips are bounded. Documented "not transactional across N updates" in the action header.
+- **Ownership pre-check before the update loop.** A naive design lets RLS silently no-op on each update if the caller doesn't own the row, returning `{ok:true}` with zero rows changed. The pre-check makes "not_found_or_forbidden" explicit and avoids the silent-success failure mode.
+- **Reused `VideoUploader` unchanged.** Phase 2 already hardcodes `kind: 'walkthrough'` and `scope: 'listing'`. For V1 listing CRUD, walkthrough is the canonical video kind; agents who want exterior/interior tags can use the kind dropdown later (Phase 4.5 introduces community-video kind selection; we'll likely revisit this then).
+- **Polling-only freshness inside this panel** (no Realtime). The Phase 2 UploadHarness has a Realtime subscription, but we don't need it here: the panel is for the edit screen, the agent is actively driving. A 5s poll while any row is `processing` is good enough. Keeps this component free of the Realtime auth dance.
+- **Plain `<img>` for CF Stream thumbnails** instead of `next/image`. CF Stream URLs are external + would need `remotePatterns` config in `next.config.ts` for every CF subdomain; for an 80×48 dashboard preview the optimization win is zero. Documented inline.
+- **Cover-photo selector deferred to 4.3c.** Wanted to keep 4.3b's commit focused on the reorder primitive. 4.3c will add a "Set as cover" button per row that writes `listings.cover_url = thumbnailUrl(cf_video_id)`.
+
+**Issues**:
+- None during implementation. typecheck clean on first pass; biome flagged a pre-existing import ordering nit on its first run and auto-fixed it.
+
+**Resolution**:
+- typecheck clean
+- biome clean on the 4 changed files
+- pnpm-lock.yaml committed alongside the dnd-kit add
+
+**Learnings**:
+- dnd-kit is the right choice over react-beautiful-dnd for a Next 14 app: maintained, no React 18 strict-mode warnings, smaller bundle. The `arrayMove` util + `verticalListSortingStrategy` covers 90% of list-reorder UIs.
+- When using server actions for "save in background" with optimistic UI, store the pre-mutation state in a local variable BEFORE calling `setVideos(reordered)` so revert is trivial. Storing inside `useTransition`'s callback would race against subsequent drags.
+
+**Next steps**:
+- 4.3c: cover photo selector. Per-row "Set as cover" button → server action writes `listings.cover_url = thumbnailUrl(cf_video_id)`. Highlight the current cover row with a "Cover" badge. Only allow `status='ready'` videos as cover candidates (no thumbnail until processing finishes).
+- After 4.3c: tag 4.3 as done in IMPLEMENTATION.md, move to 4.4 (community editor with mandatory `source_url` for schools/POIs).
+
+---
+
 ## 2026-06-11 03:30 UTC — phase4.3a: listing edit form (metadata fields)
 
 **Objective**: First slice of Phase 4.3 — the `/dashboard/listings/[id]/edit` page replaces its placeholder with a real form that lets the agent edit the mutable metadata fields of a draft listing (price, beds, baths, sqft, year_built, lot_size, hoa, style, description). Videos and cover photo are deferred to 4.3b/c.
