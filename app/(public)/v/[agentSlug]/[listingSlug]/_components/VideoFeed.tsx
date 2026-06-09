@@ -15,6 +15,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActionRail } from './ActionRail';
 import { FeedCard } from './FeedCard';
+import { LeadModal } from './LeadModal';
 import type { FeedAgent, FeedCard as FeedCardData, FeedListing } from './types';
 
 type Props = {
@@ -26,6 +27,7 @@ type Props = {
 export function VideoFeed({ agent, listing, cards }: Props) {
   const [liked, setLiked] = useState<Record<string, boolean>>({});
   const [activeIndex, setActiveIndex] = useState(0);
+  const [leadOpen, setLeadOpen] = useState(false);
   const cardRefs = useRef<Map<number, HTMLElement>>(new Map());
 
   const setCardRef = useCallback(
@@ -109,8 +111,16 @@ export function VideoFeed({ agent, listing, cards }: Props) {
           }}
           listing={listing}
           agent={agent}
+          onContact={() => setLeadOpen(true)}
         />
       </div>
+
+      <LeadModal
+        open={leadOpen}
+        onClose={() => setLeadOpen(false)}
+        agent={agent}
+        listing={listing}
+      />
     </main>
   );
 }

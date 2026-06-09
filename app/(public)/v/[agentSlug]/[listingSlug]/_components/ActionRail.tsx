@@ -19,6 +19,7 @@ type Props = {
   onToggleLike: () => void;
   listing: FeedListing;
   agent: FeedAgent;
+  onContact: () => void;
 };
 
 function HeartIcon({ filled }: { filled: boolean }) {
@@ -73,7 +74,7 @@ function ContactIcon() {
   );
 }
 
-export function ActionRail({ liked, onToggleLike, listing, agent }: Props) {
+export function ActionRail({ liked, onToggleLike, listing, agent, onContact }: Props) {
   async function handleShare() {
     const url = typeof window !== 'undefined' ? window.location.href : '';
     const shareData = {
@@ -97,10 +98,7 @@ export function ActionRail({ liked, onToggleLike, listing, agent }: Props) {
   }
 
   function handleContact() {
-    // Phase 3.6 replaces with LeadModal (UI-only); Phase 5 wires the POST.
-    if (typeof window !== 'undefined') {
-      window.alert('Contact form lands in Phase 3.6');
-    }
+    onContact();
   }
 
   const buttonBase =

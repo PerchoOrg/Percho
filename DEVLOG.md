@@ -10,6 +10,34 @@ When resuming work: read the most recent entries first, then check IMPLEMENTATIO
 
 ---
 
+## 2026-06-09 23:10 UTC — Phase 3.6: LeadModal (UI-only)
+
+**Objective**: Replace the placeholder Contact alert with a real lead-capture modal. UI + client validation only — Phase 5 wires the actual POST + Resend email.
+
+**Actions**:
+- New `_components/LeadModal.tsx` — client component. Mobile bottom-sheet (slides up, full-width, `rounded-t-2xl`); desktop centered card. Backdrop `bg-black/70`, panel `bg-ink2 border-bronze/30`. Gold submit button matches palette.
+- Form fields: name (required), phone-or-email (one required, validated by regex — loose phone match `^[\d+\-\s()]{7,}$` or RFC-ish email), message (textarea, prefilled `"Hi {firstName}, I'm interested in {listing.address}."`).
+- Submit shows inline "Thanks!" confirmation then auto-closes after 1.5s. No network call.
+- Body-scroll lock + Escape key + backdrop tap to close. Form resets every time modal reopens.
+- `_components/ActionRail.tsx` — added required `onContact: () => void` prop, dropped the `window.alert` placeholder.
+- `_components/VideoFeed.tsx` — lifted `leadOpen` state, renders single `<LeadModal>` instance at the column level (not per-card → one DOM node, not N), wires `onContact={() => setLeadOpen(true)}` into ActionRail.
+
+**Decisions**:
+- Modal state lives on VideoFeed, not on each FeedCard. Per-card modals would mean N DOM instances and ambiguous "which card opened it." Single instance, one source of truth.
+- Phone/email collapsed into one input (vs two). Reduces form friction (TikTok-fast feel) and matches the "give us your fastest channel" intent. Phase 5 backend can route by detected type.
+- Default message uses agent's first name + listing address for personalization without forcing user to type. Editable so they can customize.
+- `role="dialog"` + ARIA labelledby instead of native `<dialog>` — needed full control of backdrop styling, scroll-lock, and bottom-sheet animation. Biome's `useSemanticElements` warning suppressed inline with rationale.
+
+**Issues**: biome flagged `useSemanticElements` (preferring `<dialog>`); intentional override documented inline.
+
+**Resolution**: Phase 3.6 done. typecheck + biome clean on all edited files. 15 pre-existing biome errors elsewhere untouched.
+
+**Learnings**: Lifting modal state to the feed-level wrapper is the right pattern for any future global UI (e.g. Phase 6 share sheet, save-to-collection picker) — keep ActionRail dumb and emit callback events.
+
+**Next steps**: 3.7 event tracking (page_view/card_view/video_complete buffered batch POST).
+
+---
+
 ## 2026-06-09 22:30 UTC — Phase 3.5: feed composition (ARCH §5)
 
 **Objective**: Replace naive `[...listing, ...community]` concat with the ARCH §5 interleave + structured overlay shaping for SCHOOL/POI/NEIGHBORHOOD community videos.
