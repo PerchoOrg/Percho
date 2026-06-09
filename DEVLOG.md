@@ -10,6 +10,27 @@ When resuming work: read the most recent entries first, then check IMPLEMENTATIO
 
 ---
 
+## 2026-06-11 15:30 UTC — phase5.3 fixup: switch notify_lead trigger to Supabase Vault
+
+**Objective**: Unblock 0006 deploy on hosted Supabase — the original migration assumed `alter database postgres set app.settings.* = ...` works, but on Supabase hosted the `postgres` role lacks superuser perms (error 42501 permission denied to set parameter). 0006 itself applied (DDL was fine), but step 1 of the deploy runbook (setting the two GUCs) is impossible in SQL Editor.
+
+**Actions**:
+- New migration `supabase/migrations/0007_notify_lead_use_vault.sql`: `create or replace` of `notify_lead_on_insert()` — reads `service_role_key` from `vault.decrypted_secrets` (Supabase's hosted-supported secret store). Project URL hardcoded to `https://tavmbcghxjeyaoptndvn.supabase.co` (single production project; URL is not a secret).
+- Trigger object itself unchanged (created in 0006); 0007 only swaps the function body.
+
+**Decisions**:
+- Vault over alternatives: pgsodium-direct is deprecated in favor of vault wrappers; storing the JWT in `pg_settings` via dashboard isn't exposed in SQL Editor. Vault is the path Supabase docs point at for trigger-side secrets.
+- URL hardcoded in migration, not vaulted: it appears in every browser request to the Edge Function (`/functions/v1/notify-lead`). Treating it as a secret would be theatre.
+- Kept the missing-secret → `raise warning` + `return new` path: better to land the lead and drop the email than to fail the public form.
+
+**Issues**: 0006's `alter database` step rejected on hosted (42501). My fault — should have written for hosted from the start; V1 stack is locked on Supabase hosted, not self-hosted.
+
+**Resolution**: 0007 written, awaiting `supabase db push` + one-time `select vault.create_secret('<JWT>', 'service_role_key');` in SQL Editor.
+
+**Next steps**: user pulls 0007 → `supabase db push` → vault.create_secret in SQL Editor → `supabase secrets set` for Edge Function (RESEND_API_KEY, RESEND_FROM, PUBLIC_APP_URL) → `supabase functions deploy notify-lead` → e2e on preview.
+
+---
+
 ## 2026-06-11 14:00 UTC — phase5.1-5.4: lead capture + Resend notification (chain)
 
 **Objective**: Phase 5 kickoff — wire the buyer lead form to Resend so an agent gets an email within 5s of submission, dashboard freshness landing in 5.5+. Chain mode: 5.1 → 5.4 in one branch (phase5/lead-capture), four independent commits, no stops.
