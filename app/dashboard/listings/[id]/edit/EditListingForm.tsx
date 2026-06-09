@@ -24,6 +24,19 @@ interface InitialValues {
   community_id: string | null;
 }
 
+/**
+ * Read-only listing context the LLM needs to write good copy. Pulled from the
+ * listings row at page render and passed through; the form doesn't edit any
+ * of these fields (address fields are immutable by design — see actions.ts
+ * header).
+ */
+export interface ListingContext {
+  address: string;
+  city: string;
+  state: string;
+  neighborhood: string | null;
+}
+
 export interface CommunityOption {
   id: string;
   name: string;
@@ -35,11 +48,13 @@ interface Props {
   listingId: string;
   initial: InitialValues;
   communities: CommunityOption[];
+  listingContext: ListingContext;
 }
 
 type SaveState = 'idle' | 'saving' | 'saved' | 'error';
+type GenState = 'idle' | 'loading' | 'error';
 
-export function EditListingForm({ listingId, initial, communities }: Props) {
+export function EditListingForm({ listingId, initial, communities, listingContext }: Props) {
   const [price, setPrice] = useState(initial.price?.toString() ?? '');
   const [beds, setBeds] = useState(initial.beds?.toString() ?? '');
   const [baths, setBaths] = useState(initial.baths?.toString() ?? '');
@@ -53,6 +68,8 @@ export function EditListingForm({ listingId, initial, communities }: Props) {
   const [saveState, setSaveState] = useState<SaveState>('idle');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [genState, setGenState] = useState<GenState>('idle');
+  const [genError, setGenError] = useState<string | null>(null);
 
   function parseIntOrNull(s: string): number | null {
     if (s.trim() === '') return null;
@@ -63,6 +80,51 @@ export function EditListingForm({ listingId, initial, communities }: Props) {
     if (s.trim() === '') return null;
     const n = Number.parseFloat(s);
     return Number.isFinite(n) && n >= 0 ? n : null;
+  }
+
+  // Phase 6.2 — fire /api/generate-copy with the current form state.
+  // Replaces the description textarea with the returned 3 paragraphs joined
+  // by blank lines, matching the editor's split-on-blank-line convention
+  // (see actions.ts `descriptionToParagraphs`). Existing description is
+  // overwritten — the button label warns about this.
+  async function onGenerate() {
+    setGenState('loading');
+    setGenError(null);
+    try {
+      const payload: Record<string, unknown> = {
+        address: listingContext.address,
+        city: listingContext.city,
+        state: listingContext.state,
+      };
+      if (listingContext.neighborhood) payload.neighborhood = listingContext.neighborhood;
+      const priceN = parseIntOrNull(price);
+      if (priceN !== null) payload.price = priceN;
+      const bedsN = parseFloatOrNull(beds);
+      if (bedsN !== null) payload.beds = bedsN;
+      const bathsN = parseFloatOrNull(baths);
+      if (bathsN !== null) payload.baths = bathsN;
+      const sqftN = parseIntOrNull(sqft);
+      if (sqftN !== null) payload.sqft = sqftN;
+      const styleT = style.trim();
+      if (styleT) payload.style = styleT;
+
+      const res = await fetch('/api/generate-copy', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        const body = (await res.json().catch(() => ({}))) as { error?: string };
+        if (res.status === 429) throw new Error('Rate limit hit — try again in a minute.');
+        throw new Error(body.error ?? `HTTP ${res.status}`);
+      }
+      const data = (await res.json()) as { paragraphs: string[] };
+      setDescription(data.paragraphs.join('\n\n'));
+      setGenState('idle');
+    } catch (err) {
+      setGenState('error');
+      setGenError(err instanceof Error ? err.message : 'unknown');
+    }
   }
 
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -208,6 +270,20 @@ export function EditListingForm({ listingId, initial, communities }: Props) {
         label="Description"
         hint="One paragraph per blank line. Up to 10 paragraphs, English only."
       >
+        <div className="mb-2 flex items-center gap-3">
+          <button
+            type="button"
+            onClick={onGenerate}
+            disabled={genState === 'loading'}
+            className="rounded border border-bronze/50 px-3 py-1 text-xs text-cream hover:bg-bronze/20 disabled:opacity-50"
+          >
+            {genState === 'loading' ? 'Generating…' : '✨ Generate description'}
+          </button>
+          {genState === 'error' && (
+            <span className="text-xs text-red-400">Error: {genError ?? 'unknown'}</span>
+          )}
+          <span className="text-xs text-cream/40">Overwrites current text.</span>
+        </div>
         <textarea
           value={description}
           onChange={(e) => setDescription(e.target.value)}

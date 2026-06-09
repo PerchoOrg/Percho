@@ -10,6 +10,25 @@ When resuming work: read the most recent entries first, then check IMPLEMENTATIO
 
 ---
 
+## 2026-06-09 14:42 UTC — phase6.2: Generate-description button in edit form
+
+**Objective**: Wire `/api/generate-copy` into the listing edit page so Vivian can one-click a draft description.
+
+**Actions**:
+- `EditListingForm.tsx`: added `ListingContext` type (address/city/state/neighborhood), new `genState`/`genError` local state, `onGenerate()` that POSTs current form values + listing context to `/api/generate-copy` and replaces the description textarea with `paragraphs.join('\\n\\n')`. Button + status row sit directly above the textarea; rate-limit-hit message ("try again in a minute") is surfaced verbatim.
+- `page.tsx`: SSR pulls `listing.address/city/state/neighborhood` (already in the select), passes through as `listingContext` prop.
+
+**Decisions**:
+- Overwrite-not-merge: the button replaces the textarea contents wholesale and the label says "Overwrites current text." Diffing or appending would be cuter but adds UX surface (which paragraph stays?) without a real win — the agent can always undo with the browser.
+- Listing context comes from the persisted row, but the *form-state* numeric fields (price/beds/baths/sqft/style) seed the LLM, so the agent can preview copy reflecting unsaved edits.
+- Optional fields are omitted (not sent as null) — the route's zod schema marks them `.optional()`, and the lib's `JSON.stringify` of the input keeps the prompt cleaner.
+
+**Verification**: `pnpm exec tsc --noEmit` clean. `pnpm exec biome check` clean on both edited files. Browser-side click + Anthropic round trip is owner-Mac territory once preview deploys.
+
+**Next steps**: 6.3a — `app/api/generate-social/route.ts` reusing `checkAndRecord('social_copy')`.
+
+---
+
 ## 2026-06-09 14:36 UTC — phase6.1b: rate-limit lib + generate-copy route + vitest
 
 **Objective**: Land the LLM listing-copy endpoint and the rate-limit primitive both AI routes will share. Cover the rate-limit logic with vitest so 6.3a doesn't reinvent it.

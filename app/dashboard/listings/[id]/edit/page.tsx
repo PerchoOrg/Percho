@@ -12,7 +12,7 @@
 import { thumbnailUrl } from '@/lib/cloudflare/stream';
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
-import { type CommunityOption, EditListingForm } from './EditListingForm';
+import { type CommunityOption, EditListingForm, type ListingContext } from './EditListingForm';
 import { PublishPanel } from './PublishPanel';
 import { type ListingVideoRow, VideoPanel } from './VideoPanel';
 
@@ -148,6 +148,14 @@ export default async function EditListingPage({
             community_id: listing.community_id,
           }}
           communities={communities}
+          listingContext={
+            {
+              address: listing.address,
+              city: listing.city,
+              state: listing.state,
+              neighborhood: listing.neighborhood,
+            } satisfies ListingContext
+          }
         />
       </section>
 
