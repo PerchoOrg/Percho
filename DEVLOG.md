@@ -10,6 +10,26 @@ When resuming work: read the most recent entries first, then check IMPLEMENTATIO
 
 ---
 
+## 2026-06-10 16:25 UTC — hotfix: dashboard mobile nav (hamburger)
+
+**Objective**: User on a phone reported "dashboard 里没有看到 communities". Root cause: `TopBar` nav was `hidden md:flex` — completely invisible below 768px width with no fallback. Communities, Leads, New listing, even Sign out were all unreachable on mobile.
+
+**Actions**:
+- Added a CSS-only `<details>` hamburger menu visible only `md:hidden`. Pops a 224px panel with all 4 nav links + agent name/brokerage + Sign out form.
+- Centralized nav items in a `NAV_ITEMS` const so desktop + mobile menus stay in sync.
+- Hid the desktop right-side displayName/Sign out below `sm` breakpoint (the hamburger surfaces them instead).
+- `<details>`/`<summary>` works without client JS — accessible, no hydration cost.
+
+**Decisions**:
+- **`<details>` over a useState-driven dropdown** — keeps TopBar a Server Component, no `'use client'` boundary, no hydration. Tradeoff: clicking a link inside doesn't auto-close the menu, but Next.js navigation unmounts the page anyway so it's a non-issue.
+- **Showed Sign out inside the mobile menu** instead of a separate button — saves header space on small screens.
+
+**Verification**: tsc clean, biome clean, pnpm build clean. Smoke 7/7 expected.
+
+**Next steps**: User retests on phone, finds Communities, uploads SCHOOL/POI/NEIGHBORHOOD videos, then `/browse` rail buttons should light up for listings linked to that community.
+
+---
+
 ## 2026-06-10 16:00 UTC — hotfix v4: /browse swipe-to-cycle b-roll + Home nav
 
 **Objective**: User feedback on v3 — (a) "无法返回主页" (no escape from /browse back to landing), (b) cycling b-roll by re-tapping the same rail button is non-obvious; want **horizontal swipe** within the card + visible "1/N" counter (TikTok-carousel pattern).
