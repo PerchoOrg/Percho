@@ -24,39 +24,32 @@ export default async function LoginPage({
   }
 
   return (
-    <div className="space-y-6">
-      <header className="space-y-1 text-center">
-        <h1 className="text-2xl font-semibold tracking-tight">Vicinity</h1>
-        <p className="text-sm text-neutral-500">Agent sign in</p>
-      </header>
+    <div className="space-y-5">
       {searchParams.error === 'auth_failed' ? (
         <p
           role="alert"
-          className="rounded-md px-3 py-2 text-center text-sm"
-          style={{
-            background: 'rgba(220, 38, 38, 0.1)',
-            color: '#fca5a5',
-            border: '1px solid rgba(220, 38, 38, 0.3)',
-          }}
+          className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-center text-sm text-red-300"
         >
           That sign-in link was invalid or expired. Try again.
         </p>
       ) : null}
       <LoginForm redirect={safeRedirect} />
-      <p className="text-center text-sm">
-        <a href="/forgot-password" className="text-cream/60 underline hover:text-cream">
-          Forgot password?
-        </a>
-      </p>
-      <p className="text-center text-sm text-cream/60">
-        Don&apos;t have an account?{' '}
-        <a
-          href={`/signup${safeRedirect === '/dashboard' ? '' : `?redirect=${encodeURIComponent(safeRedirect)}`}`}
-          className="text-gold underline hover:text-gold/80"
-        >
-          Sign up
-        </a>
-      </p>
+      <div className="space-y-2 text-center text-sm">
+        <p>
+          <a href="/forgot-password" className="text-cream/60 underline hover:text-cream">
+            Forgot password?
+          </a>
+        </p>
+        <p className="text-cream/60">
+          Don&apos;t have an account?{' '}
+          <a
+            href={`/signup${safeRedirect === '/dashboard' ? '' : `?redirect=${encodeURIComponent(safeRedirect)}`}`}
+            className="text-gold underline hover:text-gold/80"
+          >
+            Sign up
+          </a>
+        </p>
+      </div>
     </div>
   );
 }

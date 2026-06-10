@@ -6,6 +6,9 @@ import { useState } from 'react';
 
 type Status = 'idle' | 'sending' | 'sent' | 'error';
 
+const inputCls =
+  'mt-1 w-full rounded-lg border border-white/10 bg-ink px-3 py-2 text-sm text-cream placeholder:text-cream/30 focus:border-gold focus:outline-none disabled:opacity-50';
+
 export function ForgotPasswordForm() {
   const [email, setEmail] = useState('');
   const [status, setStatus] = useState<Status>('idle');
@@ -44,10 +47,10 @@ export function ForgotPasswordForm() {
 
   if (status === 'sent') {
     return (
-      <div className="space-y-4 rounded-lg border border-bronze/30 bg-ink2 p-6 text-center">
-        <p className="text-sm text-cream">
-          If <span className="font-medium text-gold">{email}</span> has an account, a reset link is
-          on its way. Check your inbox.
+      <div className="rounded-2xl border border-white/5 bg-ink2/60 p-8 text-center">
+        <h1 className="font-serif text-2xl text-cream">Check your inbox</h1>
+        <p className="mt-3 text-sm text-cream/70">
+          If <span className="text-gold">{email}</span> has an account, a reset link is on its way.
         </p>
         <button
           type="button"
@@ -55,7 +58,7 @@ export function ForgotPasswordForm() {
             setStatus('idle');
             setEmail('');
           }}
-          className="text-sm text-cream/60 underline hover:text-cream"
+          className="mt-4 text-sm text-cream/60 underline hover:text-cream"
         >
           Use a different email
         </button>
@@ -64,12 +67,11 @@ export function ForgotPasswordForm() {
   }
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="space-y-4 rounded-lg border border-bronze/30 bg-ink2 p-6"
-    >
-      <label className="block space-y-1">
-        <span className="text-sm font-medium text-cream">Email</span>
+    <form onSubmit={handleSubmit} className="rounded-2xl border border-white/5 bg-ink2/60 p-8">
+      <h1 className="font-serif text-3xl text-cream">Reset password</h1>
+      <p className="mt-1 text-sm text-cream/50">We&apos;ll email you a reset link.</p>
+      <label className="mt-6 block">
+        <span className="text-xs text-cream/60">Email</span>
         <input
           type="email"
           required
@@ -77,19 +79,19 @@ export function ForgotPasswordForm() {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           disabled={status === 'sending'}
-          className="w-full rounded-md border border-bronze/40 bg-ink px-3 py-2 text-sm text-cream placeholder:text-cream/40 focus:border-gold focus:outline-none disabled:opacity-50"
+          className={inputCls}
           placeholder="you@example.com"
         />
       </label>
       <button
         type="submit"
         disabled={status === 'sending' || email.length === 0}
-        className="w-full rounded-md bg-gold px-4 py-2 text-sm font-medium text-ink hover:bg-gold/90 disabled:cursor-not-allowed disabled:bg-bronze/40 disabled:text-cream/40"
+        className="btn-gold mt-6 w-full rounded-lg py-3 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50"
       >
         {status === 'sending' ? 'Sending…' : 'Send reset link'}
       </button>
       {error ? (
-        <p role="alert" className="text-sm text-red-400">
+        <p role="alert" className="mt-4 text-sm text-red-400">
           {error}
         </p>
       ) : null}

@@ -40,12 +40,11 @@ export function LoginForm({ redirect }: { redirect: string }) {
   }
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="space-y-4 rounded-lg border border-bronze/30 bg-ink2 p-6"
-    >
-      <label className="block space-y-1">
-        <span className="text-sm font-medium text-cream">Email</span>
+    <form onSubmit={handleSubmit} className="rounded-2xl border border-white/5 bg-ink2/60 p-8">
+      <h1 className="font-serif text-3xl text-cream">Agent login</h1>
+      <p className="mt-1 text-sm text-cream/50">Sign in to your agent dashboard.</p>
+      <label className="mt-6 block">
+        <span className="text-xs text-cream/60">Email</span>
         <input
           type="email"
           required
@@ -53,12 +52,12 @@ export function LoginForm({ redirect }: { redirect: string }) {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           disabled={status === 'sending'}
-          className="w-full rounded-md border border-bronze/40 bg-ink px-3 py-2 text-sm text-cream placeholder:text-cream/40 focus:border-gold focus:outline-none disabled:opacity-50"
+          className="mt-1 w-full rounded-lg border border-white/10 bg-ink px-3 py-2 text-sm text-cream placeholder:text-cream/30 focus:border-gold focus:outline-none disabled:opacity-50"
           placeholder="you@example.com"
         />
       </label>
-      <label className="block space-y-1">
-        <span className="text-sm font-medium text-cream">Password</span>
+      <label className="mt-4 block">
+        <span className="text-xs text-cream/60">Password</span>
         <input
           type="password"
           required
@@ -66,19 +65,19 @@ export function LoginForm({ redirect }: { redirect: string }) {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           disabled={status === 'sending'}
-          className="w-full rounded-md border border-bronze/40 bg-ink px-3 py-2 text-sm text-cream placeholder:text-cream/40 focus:border-gold focus:outline-none disabled:opacity-50"
+          className="mt-1 w-full rounded-lg border border-white/10 bg-ink px-3 py-2 text-sm text-cream placeholder:text-cream/30 focus:border-gold focus:outline-none disabled:opacity-50"
           placeholder="••••••••"
         />
       </label>
       <button
         type="submit"
         disabled={status === 'sending' || email.length === 0 || password.length === 0}
-        className="w-full rounded-md bg-gold px-4 py-2 text-sm font-medium text-ink hover:bg-gold/90 disabled:cursor-not-allowed disabled:bg-bronze/40 disabled:text-cream/40"
+        className="btn-gold mt-6 w-full rounded-lg py-3 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50"
       >
-        {status === 'sending' ? 'Signing in…' : 'Sign in'}
+        {status === 'sending' ? 'Signing in…' : 'Continue'}
       </button>
       {error ? (
-        <p role="alert" className="text-sm text-red-400">
+        <p role="alert" className="mt-4 text-sm text-red-400">
           {error}
         </p>
       ) : null}

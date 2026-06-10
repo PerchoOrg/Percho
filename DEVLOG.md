@@ -10,6 +10,42 @@ When resuming work: read the most recent entries first, then check IMPLEMENTATIO
 
 ---
 
+## 2026-06-10 00:30 UTC — phase8.2.A: auth pages visual redesign (login / signup / forgot / reset)
+
+**Objective**: After dropping magic link in the previous commit, the auth pages still used the placeholder visual style (`border-bronze/30`, `bg-ink2`, no serif title). Owner shipped two reference screenshots — the demo SPA's `Agent login` card (centered dark card, `font-serif` title, `btn-gold` continue button) and the demo Landing hero. This commit aligns the four auth surfaces (`/login`, `/signup`, `/forgot-password`, `/reset-password`) with the demo's `Login.jsx` aesthetic. Landing rewrite is the next commit.
+
+**Actions**:
+- Restyled all four auth forms: `rounded-2xl border-white/5 bg-ink2/60 p-8`, h1 `font-serif text-3xl`, inputs `rounded-lg border-white/10 bg-ink`, submit uses `.btn-gold` utility class (already in `globals.css` from 8.1).
+- Moved page-level `<h1>Vicinity</h1>` headers into the form card. The card now owns its own serif title (matches demo); page-level wrappers became space-y containers for the form + footer links.
+- Login page: title "Agent login" + subtitle "Sign in to your agent dashboard." Submit button copy "Continue" (matches demo). Removed the misleading "Demo: any email + password works" copy from the demo — V1 enforces real auth, that string would be a lie.
+- Signup / forgot / reset forms: same pattern with phase-appropriate titles ("Create account", "Reset password", "New password").
+- Updated `app/auth/callback/route.ts` doc comment — it's no longer a "magic link callback", it's exclusively the password-recovery code-exchange callback.
+- Updated `scripts/admin/production-smoke.sh`: smoke test #2 was grepping for "Agent sign in" in the body, now greps for "Agent login" to match the new copy. Without this update the smoke script would fail post-merge to main and generate a false alarm during the next phase merge.
+- Widened auth layout from `max-w-sm` to `max-w-md` to match the demo card proportions (looks too narrow at sm with the demo's 8-padding).
+
+**Decisions**:
+- **Card title in form, not page**: in the demo, the title is inside the form card. Cleaner — the card is self-contained, page-level becomes a thin wrapper for footer links. Means each form file controls its own h1 copy without a sync gap with the page wrapper.
+- **`max-w-md` not `max-w-sm`**: the demo card has generous internal padding (p-8) and looks too cramped at sm. md gives breathing room without going wide.
+- **Drop "Demo:" subtitle wholesale**: V1 isn't a demo. Honest copy ("Sign in to your agent dashboard") avoids implying free-form access.
+- **Submit copy "Continue" not "Sign in"**: matches the demo verbatim; "Continue" reads as forward-motion regardless of whether the action is sign-in, sign-up, send-reset, or save.
+- **Smoke test copy update is part of the same commit**: the test was checking for the old string. Changing the page without updating the test would break the next phase-end merge's smoke run. One-commit consistency.
+
+**Issues**: None. Biome auto-fixed import sort + minor formatter noise on all 5 modified files in one `--write` pass.
+
+**Verification**:
+- `pnpm tsc --noEmit` clean
+- `pnpm biome check app/(auth) app/auth/callback/route.ts` clean (10 files)
+- `pnpm build` 17 routes, all pages stable size (~166 kB First Load on auth routes)
+- Smoke-test grep target updated; will be re-run post-merge against production
+
+**Learnings**:
+- When a phase has a "phase8.1: tokens" commit that adds CSS utility classes (`.btn-gold`, `.font-serif`), downstream commits become genuinely smaller — this commit is mostly removing redundant Tailwind chains and replacing them with the utility class. The 8.1 investment pays back here.
+- Smoke-test copy assertions are a coupling hazard. When changing user-facing copy, grep the smoke script first. Caught it this time only by searching the script for the old string before commit. Worth a CLAUDE.md note.
+
+**Next**: phase8.2.B Landing rewrite (full-bleed Pexels video hero, "TikTok for Homebuying" headline, dual CTA, scroll-snap how-it-works section), as a separate commit on this same branch. After landing, ff-merge `phase8/design-parity` → main and proceed to 8.3 listing feed parity.
+
+---
+
 ## 2026-06-09 23:55 UTC — phase8/password-auth: drop magic link, add forgot/reset password
 
 **Objective**: Owner decided magic link goes away — password is the only sign-in method. Then add `/forgot-password` + `/reset-password` so users have a self-serve recovery path (otherwise the owner has to admin-reset every forgotten password). Continues on the same `phase8/password-auth` branch.

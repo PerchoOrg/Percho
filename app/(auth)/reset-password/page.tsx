@@ -17,13 +17,5 @@ export default async function ResetPasswordPage() {
     redirect('/forgot-password');
   }
 
-  return (
-    <div className="space-y-6">
-      <header className="space-y-1 text-center">
-        <h1 className="text-2xl font-semibold tracking-tight">Vicinity</h1>
-        <p className="text-sm text-neutral-500">Set a new password</p>
-      </header>
-      <ResetPasswordForm />
-    </div>
-  );
+  return <ResetPasswordForm />;
 }

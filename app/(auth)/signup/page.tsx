@@ -24,11 +24,7 @@ export default async function SignupPage({
   }
 
   return (
-    <div className="space-y-6">
-      <header className="space-y-1 text-center">
-        <h1 className="text-2xl font-semibold tracking-tight">Vicinity</h1>
-        <p className="text-sm text-neutral-500">Create your agent account</p>
-      </header>
+    <div className="space-y-5">
       <SignupForm redirect={safeRedirect} />
       <p className="text-center text-sm text-cream/60">
         Already have an account?{' '}

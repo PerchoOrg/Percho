@@ -11,7 +11,7 @@
 #
 # What it checks (all unauthenticated):
 #   1. GET /              → 200, body contains "Vicinity"
-#   2. GET /login         → 200, body contains "Agent sign in"
+#   2. GET /login         → 200, body contains "Agent login"
 #   3. GET /dashboard     → 307 redirect to /login (middleware gate)
 #   4. GET /auth/callback → 307 redirect (no code → /login?error=auth_failed)
 #   5. GET /v/__nope__/__nope__ → 404 (public listing route shape)
@@ -77,8 +77,8 @@ fi
 
 # 2. Login
 status=$(fetch '/login')
-if [[ "$status" == "200" ]] && grep -q 'Agent sign in' /tmp/smoke-body.$$; then
-  check "GET /login" yes "200 + 'Agent sign in' rendered"
+if [[ "$status" == "200" ]] && grep -q 'Agent login' /tmp/smoke-body.$$; then
+  check "GET /login" yes "200 + 'Agent login' rendered"
 else
   check "GET /login" no  "got status=$status, body grep miss"
 fi

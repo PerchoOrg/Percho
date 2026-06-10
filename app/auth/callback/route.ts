@@ -1,14 +1,16 @@
+import { createClient } from '@/lib/supabase/server';
 /**
- * Magic-link callback. Supabase sends users here after they click the email
- * link. We exchange the `?code=` for a session (cookies are written via the
- * server client) and 302 to the requested redirect.
+ * Email-link callback. Used exclusively for password recovery: when a user
+ * requests a reset via /forgot-password, Supabase emails them a link that
+ * lands here with `?code=`. We exchange the code for a session (cookies are
+ * written via the server client) and 302 to the requested redirect (typically
+ * /reset-password where they set a new password).
  *
  * Open-redirect guard: `redirect` must start with `/` and not `//` (which
  * would let an attacker redirect to `//evil.com`). Falls back to /dashboard.
  */
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
 
 const DEFAULT_REDIRECT = '/dashboard';
 
