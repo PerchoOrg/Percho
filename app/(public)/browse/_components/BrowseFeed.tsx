@@ -166,7 +166,12 @@ function ActionButton({
   );
   if (href && !disabled) {
     return (
-      <Link href={href} className="block" aria-label={label}>
+      <Link
+        href={href}
+        className="block"
+        aria-label={label}
+        style={{ touchAction: 'manipulation' }}
+      >
         {inner}
       </Link>
     );
@@ -177,6 +182,7 @@ function ActionButton({
       onClick={disabled ? undefined : onClick}
       className="block"
       aria-label={label}
+      style={{ touchAction: 'manipulation' }}
       disabled={disabled}
     >
       {inner}

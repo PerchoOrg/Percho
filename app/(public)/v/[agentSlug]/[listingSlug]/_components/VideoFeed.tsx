@@ -36,7 +36,8 @@ export function VideoFeed({ agent, listing, listingId, cards }: Props) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [leadOpen, setLeadOpen] = useState(false);
   const [likeAnimKey, setLikeAnimKey] = useState(0);
-  const [hasScrolled, setHasScrolled] = useState(false);
+  // hasScrolled removed — scroll cue is now persistent (shown on every card
+  // except the last). See VideoFeed JSX below.
   const cardRefs = useRef<Map<number, HTMLElement>>(new Map());
   const scrollerRef = useRef<HTMLDivElement | null>(null);
   const toggleLikeRef = useRef<() => void>(() => {});
@@ -59,7 +60,10 @@ export function VideoFeed({ agent, listing, listingId, cards }: Props) {
             const idx = Number((entry.target as HTMLElement).dataset.cardIdx);
             if (!Number.isNaN(idx)) {
               setActiveIndex(idx);
-              if (idx > 0) setHasScrolled(true);
+              if (idx > 0) {
+                /* user has scrolled past first card — kept as a marker for
+                 * future analytics; cue visibility no longer depends on it. */
+              }
             }
           }
         }
@@ -171,35 +175,33 @@ export function VideoFeed({ agent, listing, listingId, cards }: Props) {
           })}
         </div>
 
-        {/* Scroll cue: only on first card, fades once the user swipes. */}
-        {!hasScrolled && cards.length > 1 && activeIndex === 0 && (
-          <div className="-translate-x-1/2 pointer-events-none absolute bottom-28 left-1/2 z-20 flex flex-col items-center gap-1 text-cream/80">
-            <span className="text-[10px] tracking-[0.2em] uppercase drop-shadow">Swipe up</span>
+        {/* Persistent scroll cue (shown on every card except the last) — replaces
+         * the deprecated top-row dots. User feedback: dots looked like a left/right
+         * tab bar but the actual gesture is vertical scroll, which was misleading. */}
+        {cards.length > 1 && activeIndex < cards.length - 1 && (
+          <div className="-translate-x-1/2 pointer-events-none absolute bottom-6 left-1/2 z-20 flex flex-col items-center gap-1 text-cream/85">
+            <span className="font-medium text-[10px] tracking-[0.22em] uppercase drop-shadow">
+              Scroll up for more
+            </span>
             <svg
               aria-hidden="true"
               viewBox="0 0 24 24"
-              width={20}
-              height={20}
+              width={18}
+              height={18}
               fill="none"
               stroke="currentColor"
               strokeWidth="2"
-              className="animate-bounce text-gold"
+              className="animate-bounce text-gold drop-shadow"
             >
               <path d="M12 19V5M5 12l7-7 7 7" />
             </svg>
           </div>
         )}
 
-        {/* Card progress dots — slim, top center. */}
-        <div className="-translate-x-1/2 pointer-events-none absolute top-2 left-1/2 z-30 flex max-w-[60%] gap-1">
-          {cards.slice(0, Math.min(cards.length, 12)).map((c, i) => (
-            <span
-              key={c.id}
-              className={`h-0.5 w-4 rounded-full transition-colors ${
-                i === Math.min(activeIndex, 11) ? 'bg-gold' : 'bg-white/25'
-              }`}
-            />
-          ))}
+        {/* Card counter — top center, plain text "N / total". Replaces the
+         * dot row that read as a horizontal tab nav. */}
+        <div className="-translate-x-1/2 pointer-events-none absolute top-3 left-1/2 z-30 rounded-full border border-white/15 bg-ink/55 px-3 py-1 font-medium text-[11px] text-cream/85 tabular-nums backdrop-blur-md drop-shadow">
+          {Math.min(activeIndex + 1, cards.length)} / {cards.length}
         </div>
 
         <ActionRail

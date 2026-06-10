@@ -10,6 +10,39 @@ When resuming work: read the most recent entries first, then check IMPLEMENTATIO
 
 ---
 
+## 2026-06-10 17:30 UTC — hotfix: listing feed UX (frozen Contact, share toast, dot-row → counter)
+
+**Objective**: 3 user issues from in-flight phone QA:
+1. Contact button "经常 frozen not clickable" on iOS
+2. Share opening a native sheet with title+text body — user wants plain link copy
+3. Top-row dots looked like horizontal tab bar but actual gesture is vertical scroll
+
+**Actions**:
+- `ActionRail.tsx`:
+  - Removed `navigator.share` path entirely; share = clipboard write + ephemeral "Link copied" toast (matches dashboard CopyLinkButton). Falls back to `window.prompt` if clipboard rejects.
+  - Added `style={{ touchAction: 'manipulation' }}` to all 3 rail buttons → kills iOS Safari 300ms double-tap-to-zoom delay that was making the second/third tap feel "frozen".
+  - Bumped outer wrapper to `z-30` so the rail always paints above the play overlay button.
+  - Dropped now-unused `listing` / `agent` props (kept in `Props` shape for caller compat).
+- `BrowseFeed.tsx` `ActionButton`: same `touchAction: manipulation` on both the `<Link>` and `<button>` paths.
+- `VideoFeed.tsx`:
+  - Replaced top-row dot progress bar (read as horizontal tabs) with a single rounded-pill counter `N / total` at top-center.
+  - Replaced ephemeral first-card "Swipe up" cue with a persistent "Scroll up for more" arrow cue at bottom-center, shown on every card except the last. User explicitly noted the dot bar misled them about gesture direction.
+  - Removed `hasScrolled` state (cue visibility no longer depends on it).
+
+**Decisions**:
+- **Plain copy + toast over `navigator.share`** — user said "should just have link copied not a text box". On iOS, `navigator.share` with `title`+`text` was injecting `Address · Suwanee, GA — Check out this listing from Roy` alongside the URL into Messages/iMessage, which felt verbose and "salesy". Single-action copy is cleaner and matches the demo's premium tone.
+- **`touch-action: manipulation` over an explicit fast-tap library** — single-line fix, no deps; gets us 95% of the way to native click responsiveness.
+- **Counter (`N / total`) over re-styled dots** — even with bigger spacing, dots in a horizontal row above a vertical scroller will keep reading as a tab bar. Pure-text counter is unambiguous.
+- **Persistent scroll cue (not just first card)** — user fed back from card 1; making the cue persistent reduces the "did I miss something?" moment on subsequent cards.
+
+**Verification**: tsc clean, biome clean, `pnpm build` shows `/v/[agent]/[listing] 6.31 kB / 258 kB` and `/browse 4.94 kB / 265 kB`. Smoke 7/7 expected post-deploy.
+
+**Pending user input**: 5th feedback bubble was cut off ("This feature seems redundant. It's just a duplicate function of the..."). Asked user to clarify.
+
+**Next steps**: Wait for "redundant" feedback. Probable candidates: the bottom "View full listing →" pill on `/browse` may duplicate the "Home" reset button; or the per-listing feed's bottom agent strip may duplicate the listing header.
+
+---
+
 ## 2026-06-10 16:55 UTC — phase8.6: dashboard listings list polish (demo parity)
 
 **Objective**: User feedback "Listing list 界面需要优化 参考 demo 是怎么做每一个 list 的 preview 还有 public link 要展示得简洁高端". Old list was a bare divider list with just address + Edit button — no thumbnail, no stats, no public link visibility. Demo dashboard shows premium dark cards with cover, beds/baths/sqft, status pill, stat badges, and a copyable public URL.
