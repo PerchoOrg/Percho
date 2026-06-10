@@ -10,6 +10,35 @@ When resuming work: read the most recent entries first, then check IMPLEMENTATIO
 
 ---
 
+## 2026-06-10 16:55 UTC — phase8.6: dashboard listings list polish (demo parity)
+
+**Objective**: User feedback "Listing list 界面需要优化 参考 demo 是怎么做每一个 list 的 preview 还有 public link 要展示得简洁高端". Old list was a bare divider list with just address + Edit button — no thumbnail, no stats, no public link visibility. Demo dashboard shows premium dark cards with cover, beds/baths/sqft, status pill, stat badges, and a copyable public URL.
+
+**Actions**:
+- New client component `app/dashboard/_components/CopyLinkButton.tsx`: pill-shaped chip displaying the public URL in mono font with a chain-link icon. Click → `navigator.share` on mobile (premium feel — user picks channel) or `clipboard.writeText` with a 1.6s "Copied ✓" affordance on desktop. Falls back to `window.prompt` if clipboard API rejects.
+- Rewrote `app/dashboard/page.tsx` listing list:
+  - Demo-parity card: cover thumb (44×28 desktop, full-width 40h on mobile) → `cover_url` → fallback to first `listing_videos[ord=0]` Cloudflare Stream thumbnail
+  - Title in Playfair serif, status pill (gold/bronze/cream by state)
+  - City, state, price line + beds/baths/sqft chip line
+  - **Public URL pill** (`vicinities.cc/v/agent/listing` truncated, click to copy/share) — only on published listings; drafts show "Publish to get a public link"
+  - Action stack on the right: View ↗ / Edit / Analytics — all rounded-lg with gold hover
+- Added `beds, baths, sqft, cover_url` to the listing select projection.
+- Batched fallback-cover query: one `.in('listing_id', ids).order('ord')` for listings missing `cover_url`, deduped to first hit per id in JS. Avoids N+1.
+- Bumped rollup stats card style to demo-parity (Playfair 4xl numbers, all-caps labels, rounded-2xl).
+- Toggle (Active / Archived) → rounded-full pills.
+
+**Decisions**:
+- **Public URL goes on the card, not behind a Share modal** — user explicitly said "简洁高端"; the URL itself communicates the agent has a polished personal brand. A modal feels enterprise.
+- **`navigator.share` first on mobile** — gives user OS-native sheet (Messages, WeChat, AirDrop) which feels premium vs a clipboard toast.
+- **Display the link as `vicinities.cc/v/...`** (strip `https://www.`) — shorter, more design-like.
+- **Cover fallback to listing video thumb** — most agents will have video before they pick a still cover; we want every card to *look* finished even mid-setup.
+
+**Verification**: tsc clean, biome clean, `pnpm build` shows `/dashboard 858 B / 96.9 kB`. Smoke 7/7 expected.
+
+**Next steps**: User QA. Likely follow-ups: (a) drag-to-reorder cover photo, (b) compact "1 line" view toggle for agents with 30+ listings, (c) inline status flip (publish/archive) without going into edit page.
+
+---
+
 ## 2026-06-10 16:25 UTC — hotfix: dashboard mobile nav (hamburger)
 
 **Objective**: User on a phone reported "dashboard 里没有看到 communities". Root cause: `TopBar` nav was `hidden md:flex` — completely invisible below 768px width with no fallback. Communities, Leads, New listing, even Sign out were all unreachable on mobile.

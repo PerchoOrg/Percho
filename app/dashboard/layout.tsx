@@ -1,3 +1,4 @@
+import { createClient } from '@/lib/supabase/server';
 /**
  * Dashboard layout — gates all /dashboard/* routes behind auth.
  *
@@ -8,7 +9,6 @@
  */
 import { redirect } from 'next/navigation';
 import type { ReactNode } from 'react';
-import { createClient } from '@/lib/supabase/server';
 import { TopBar } from './top-bar';
 
 export default async function DashboardLayout({ children }: { children: ReactNode }) {
