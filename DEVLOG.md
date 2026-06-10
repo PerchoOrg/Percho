@@ -10,6 +10,41 @@ When resuming work: read the most recent entries first, then check IMPLEMENTATIO
 
 ---
 
+## 2026-06-10 00:50 UTC — phase8.2.B: Landing page rewritten to demo parity
+
+**Objective**: Replace the placeholder home page (centered serif "Vicinity" + one CTA, ~17 lines) with the demo SPA's Landing hero verbatim — full-bleed Pexels luxury-home video, "TikTok for Homebuying" headline, dual CTA (Browse Listings → /browse with arrow icon, Agent Login → /login as ghost button), then a "How it works" section with three icon cards. Owner shipped the demo screenshot as the reference target. This is the visual that loads when a logged-out visitor hits vicinities.cc — first-impression weight is high.
+
+**Actions**:
+- New `lib/copy/landing.ts`: marketing copy + asset URLs as named constants. `LANDING_TAGLINE = "TikTok for Homebuying"`, subtitle, hero video URL (Pexels hot-link, same as demo so visual parity is exact), Unsplash poster fallback, and `HOW_IT_WORKS` array (3 steps, English-only).
+- Rewrote `app/page.tsx` as a server component. Fetches the Supabase user once to pass `loggedIn` to `<SiteHeader transparent loggedIn={...} />` — first time `SiteHeader.loggedIn` actually wires up to a session check.
+- Hero: 100svh `<video autoPlay muted loop playsInline poster>`, dark gradient overlay (`from-ink/60 via-ink/30 to-ink`), gold "Vicinity" eyebrow with 0.4em tracking, `font-serif` headline at `text-5xl sm:text-7xl md:text-8xl`, dual rounded-full CTAs (`btn-gold` + `btn-ghost`).
+- "↓ scroll" indicator at bottom of hero — uses Tailwind `animate-bounce` instead of pulling framer-motion. Same visual cue, no library cost.
+- "How it works" section: 3-card grid, lucide icons (Upload / Sparkles / Heart), `bg-ink2/60 border-white/5 rounded-2xl` cards with `hover:border-gold/30` transition. Mirrors the demo's exact card aesthetic.
+- Rewrote step #3 copy: demo SPA had "share to WeChat or iMessage" — that violates V1 positioning (English-only, no WeChat / Chinese-channel references). New copy: "An immersive, swipeable listing — share with one tap." Stays demo-aligned, drops the WeChat reference.
+
+**Decisions**:
+- **No framer-motion**: the demo uses framer for fade-in + scroll bounce. Both can be done with Tailwind (`animate-bounce`) or static. Avoided pulling framer-motion in just for one decoration — CLAUDE.md §3.4 simplicity. Initial-fade animation is cosmetic, dropping it is invisible to first-impression value.
+- **Tagline as a named constant in `lib/copy/landing.ts`**: per memory note from earlier session — tagline will surface in OG meta tags / social embeds / dashboard onboarding eventually. One-edit replacement vs. a grep-and-replace later.
+- **Icons keyed by step title (object map), not array index**: tsc complained about `array[i]` returning `T | undefined` (noUncheckedIndexedAccess). Object lookup keyed by the step title is type-safe and self-documenting. The lucide imports stay in `app/page.tsx`, not `lib/copy/landing.ts`, so the copy module stays UI-agnostic.
+- **`/browse` CTA links to a route that doesn't exist yet**: deliberate. Owner pre-acked. The browse aggregate page is later in phase 8 (or further). Better to ship the dual-CTA visual now and have the link 404 for ~2 days than to revisit landing later. The site header has the same `/browse` link, so it was already a known dangling reference.
+- **Pexels hot-link, not local /public asset**: same reason as the demo — no Vercel egress cost, no LFS bulk in the repo, and visual parity guaranteed since both apps point at the same source URL. Pexels free-stock has stable URLs; if it ever 404s, the `<video>` falls back to the Unsplash poster gracefully.
+
+**Issues**: Initial array-indexed icon lookup hit `noUncheckedIndexedAccess` typescript strictness — fixed by switching to an object map keyed by step title. No build / lint regressions otherwise.
+
+**Verification**:
+- `pnpm tsc --noEmit` clean
+- `pnpm biome check app/page.tsx lib/copy/` clean (1 file auto-formatted on write)
+- `pnpm build` 17 routes (`/` route now 186 B / 96.2 kB First Load — this is the new home page; was 17 before, now still 17 because no new route was added)
+- Smoke-test #1 (`GET /` body contains "Vicinity") still passes — Header logo + hero eyebrow both contain "Vicinity"
+
+**Learnings**:
+- Server components with `transparent` overlays + a `<video>` background "just work" in Next.js 14 — no `'use client'` needed because video autoplay attributes are HTML-native, no JS handler involved. One less client-component boundary, smaller bundle.
+- The 8.1 globals.css investment (`btn-gold` / `btn-ghost` / `gold-line` / `font-serif`) made this commit short. Net new code ≈ 100 lines for the entire landing surface; the rest is leverage from 8.1 + components/site/* from earlier.
+
+**Next**: Phase 8.2 (auth + landing) is functionally complete on `phase8/design-parity`. Owner reviews → if green, ff-merge `phase8/design-parity` → main, run smoke-test against production, then start 8.3 (listing feed visual parity — V1 already has feed scaffolding from earlier phases, this becomes polish: action rail, lead modal, source tip, share UI per demo).
+
+---
+
 ## 2026-06-10 00:30 UTC — phase8.2.A: auth pages visual redesign (login / signup / forgot / reset)
 
 **Objective**: After dropping magic link in the previous commit, the auth pages still used the placeholder visual style (`border-bronze/30`, `bg-ink2`, no serif title). Owner shipped two reference screenshots — the demo SPA's `Agent login` card (centered dark card, `font-serif` title, `btn-gold` continue button) and the demo Landing hero. This commit aligns the four auth surfaces (`/login`, `/signup`, `/forgot-password`, `/reset-password`) with the demo's `Login.jsx` aesthetic. Landing rewrite is the next commit.
