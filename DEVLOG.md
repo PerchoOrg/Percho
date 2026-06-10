@@ -10,6 +10,36 @@ When resuming work: read the most recent entries first, then check IMPLEMENTATIO
 
 ---
 
+## 2026-06-10 11:50 UTC — phase8.3: TikTok feed visual polish
+
+**Objective**: Apply demo `pages/Listing.jsx` visual treatment to the V1 public listing feed (`/v/[agentSlug]/[listingSlug]`) — Playfair price/address, gold ribbon kind chip, heart-pop interaction, scroll cue, keyboard navigation. Visual parity with demo without porting demo's i18n / mock-data plumbing.
+
+**Actions**:
+- `app/(public)/v/[agentSlug]/[listingSlug]/_components/FeedCard.tsx`: relocated address/price block from top-right to top-left, applied Playfair serif on price (text-2xl) + address (text-lg), added city+state+specs subline; replaced top-left badge with top-right gold ribbon chip; muted indicator moved to top-center; play overlay enlarged 16→20 with hover scale-105; agent strip now shows "Listing agent" instead of leaking listing.city redundantly; `formatPrice` helper compresses 7-figure prices to `$1.2M` for tight top-left layout.
+- `app/(public)/v/[agentSlug]/[listingSlug]/_components/ActionRail.tsx`: added `likeAnimKey` prop to drive heart-pop animation (re-keys the wrapping div so the CSS animation replays each press); rose-500 fill when liked instead of gold (matches universal "like" affordance — gold reserved for accent/CTA); added text labels under each button ("Saved/Save", "Share", "Contact"); contact button promoted to gold-tinted (drives lead conversion, the actual revenue event).
+- `app/(public)/v/[agentSlug]/[listingSlug]/_components/VideoFeed.tsx`: keyboard nav (`ArrowDown/Up`, `PageDown/Up`, `j/k`, `l` to like) for desktop; first-card scroll cue with "Swipe up" copy + animated chevron, fades after first scroll; thin progress dots top-center (capped at 12 to avoid wrap on long feeds); `toggleLikeRef` pattern keeps the keyboard `l` handler in sync without re-binding the listener every render. Threaded `likeAnimKey` from feed → rail.
+- Stripped `card_like` track call: that event_type is not in the API whitelist (`app/api/events/route.ts:24`, `lib/zod/schemas.ts:97`) — would 400. Documented as Phase 9 follow-up tied to saved-listings persistence.
+
+**Decisions**:
+- Like color: rose, not gold. Gold is the brand accent reserved for "this is special" (CTA, kind chip, agent ring). Universal social-app vocabulary says hearts are red — fighting it costs comprehension for zero brand gain.
+- Progress dots cap at 12: long listings (Vivian's properties may have 20+ b-roll cards) would push the dots into a multi-row mess. Capping is honest "you're partway through" without lying about exact position.
+- Keyboard shortcuts: lifted from TikTok Web's actual bindings (j/k/l). Power users on desktop preview/share flows benefit; mobile path is unaffected.
+- Scroll cue: only renders when `cards.length > 1 && activeIndex === 0 && !hasScrolled`. Once a user scrolls anywhere, it's gone forever (this session) — no re-prompt nag.
+- Did NOT port demo's `tagWeights` / `suppressedTags` ML reranker. That's a recommendation-engine fiction in the demo (random reshuffles based on local state); V1's interleaved feed shape (Phase 3.5) already does the work. Adding a fake reranker just to look like the demo would be cargo-cult.
+
+**Issues**:
+- biome `useExhaustiveDependencies` flagged the keyboard `useEffect` for unused deps — switched to empty deps + ref pattern to avoid re-binding the global listener every active-card change. Cleaner solution than disabling the lint anyway.
+- `card_like` track call would have hit the events endpoint and 400 — caught via grep before commit. Phase 9 follow-up.
+
+**Verification**:
+- `node_modules/.bin/tsc --noEmit` clean.
+- `node_modules/.bin/biome check 'app/(public)/v'` clean (6 files).
+- `pnpm build` green: 14 routes, `/v/[agentSlug]/[listingSlug]` = 163 kB / 258 kB First Load JS (unchanged from pre-polish baseline — visual changes only, no new deps).
+
+**Next steps**: 8.4 Editor AI copy generator (Facebook / Instagram / Email tabs, Claude backend). Then 8.5 analytics dashboard. Stretch: agent profile page `/a/[agentSlug]` for Vivian's "one URL, all listings" share play.
+
+---
+
 ## 2026-06-10 06:30 UTC — phase8/password-auth: relax OTP length to 6-10 digits
 
 **Objective**: Owner reports Supabase project sends 8-digit recovery codes, not 6 — our zod regex `^\d{6}$` and `maxLength={6}` rejected/truncated them, so OTP submit always failed validation before reaching `verifyOtp`.

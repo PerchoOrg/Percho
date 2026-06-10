@@ -4,12 +4,9 @@
  * ActionRail — right-side floating action column on the public listing page.
  *
  * V1 lean version (per Phase 3 plan): Heart, Share, Contact only.
- * - Heart: local state only in 3.3 — Phase 5 wires real saves.
- * - Share: navigator.share() with copy-to-clipboard fallback.
- * - Contact: opens placeholder alert — Phase 3.6 replaces with LeadModal.
- *
- * Demo's dislike + filter chips dropped: those drove ML-recommendation
- * mechanics that don't exist in V1 backend.
+ * Phase 8.3: heart-pop animation when liked, larger touch targets, gold
+ * focus ring, lighter Tailwind composition (uses `rail-btn` from globals.css
+ * for consistent press transform across all icon buttons).
  */
 
 import type { FeedAgent, FeedListing } from './types';
@@ -20,6 +17,8 @@ type Props = {
   listing: FeedListing;
   agent: FeedAgent;
   onContact: () => void;
+  /** Bumps each time a like is registered — keys the heart-pop animation. */
+  likeAnimKey?: number;
 };
 
 function HeartIcon({ filled }: { filled: boolean }) {
@@ -30,8 +29,8 @@ function HeartIcon({ filled }: { filled: boolean }) {
       fill={filled ? 'currentColor' : 'none'}
       stroke="currentColor"
       strokeWidth="2"
-      width={24}
-      height={24}
+      width={26}
+      height={26}
     >
       <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
     </svg>
@@ -74,7 +73,14 @@ function ContactIcon() {
   );
 }
 
-export function ActionRail({ liked, onToggleLike, listing, agent, onContact }: Props) {
+export function ActionRail({
+  liked,
+  onToggleLike,
+  listing,
+  agent,
+  onContact,
+  likeAnimKey = 0,
+}: Props) {
   async function handleShare() {
     const url = typeof window !== 'undefined' ? window.location.href : '';
     const shareData = {
@@ -97,25 +103,28 @@ export function ActionRail({ liked, onToggleLike, listing, agent, onContact }: P
     }
   }
 
-  function handleContact() {
-    onContact();
-  }
-
   const buttonBase =
-    'flex h-12 w-12 items-center justify-center rounded-full border bg-black/55 backdrop-blur-md shadow-lg transition-colors';
+    'rail-btn flex h-12 w-12 items-center justify-center rounded-full border bg-ink/55 backdrop-blur-md shadow-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/60';
 
   return (
     <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center">
-      <div className="pointer-events-auto flex flex-col gap-4">
-        <button
-          type="button"
-          aria-label={liked ? 'Unsave listing' : 'Save listing'}
-          aria-pressed={liked}
-          onClick={onToggleLike}
-          className={`${buttonBase} ${liked ? 'border-gold bg-gold/90 text-ink' : 'border-white/15 text-cream hover:text-gold'}`}
-        >
-          <HeartIcon filled={liked} />
-        </button>
+      <div className="pointer-events-auto flex flex-col items-center gap-4">
+        {/* Heart with pop animation — `key` toggles re-mount so anim replays each press. */}
+        <div key={likeAnimKey} className={likeAnimKey > 0 ? 'heart-pop' : ''}>
+          <button
+            type="button"
+            aria-label={liked ? 'Unsave listing' : 'Save listing'}
+            aria-pressed={liked}
+            onClick={onToggleLike}
+            className={`${buttonBase} ${liked ? 'border-rose-400/80 bg-rose-500/90 text-white' : 'border-white/15 text-cream hover:text-gold'}`}
+          >
+            <HeartIcon filled={liked} />
+          </button>
+        </div>
+        <span className="-mt-2 text-[10px] text-cream/70 drop-shadow">
+          {liked ? 'Saved' : 'Save'}
+        </span>
+
         <button
           type="button"
           aria-label="Share listing"
@@ -124,14 +133,17 @@ export function ActionRail({ liked, onToggleLike, listing, agent, onContact }: P
         >
           <ShareIcon />
         </button>
+        <span className="-mt-3 text-[10px] text-cream/70 drop-shadow">Share</span>
+
         <button
           type="button"
           aria-label="Contact agent"
-          onClick={handleContact}
-          className={`${buttonBase} border-white/15 text-cream hover:text-gold`}
+          onClick={onContact}
+          className={`${buttonBase} border-gold/50 bg-gold/15 text-gold hover:bg-gold/25`}
         >
           <ContactIcon />
         </button>
+        <span className="-mt-3 text-[10px] text-gold drop-shadow">Contact</span>
       </div>
     </div>
   );
