@@ -10,6 +10,32 @@ When resuming work: read the most recent entries first, then check IMPLEMENTATIO
 
 ---
 
+## 2026-06-10 12:30 UTC — phase8.4: Social copy generator — Email tab + tabbed UX
+
+**Objective**: Bring the listing-edit page social-copy panel to demo-parity: tabbed UI with Sparkles + Loader2 affordances, per-platform regenerate, and add a 3rd platform. Demo's 3rd tab is 小红书 (Xiaohongshu) — replaced with **Email** because V1 is English-only US market and email blasts are the actual conversion tool for US agents (open-house invites, buyer-database drips). Vivian's Path-3 use case never said "I want to post to Xiaohongshu"; she did say "I have 2,000 buyers in my CRM I email weekly".
+
+**Actions**:
+- `lib/ai/anthropic.ts` `generateSocialCopy`: return type `{ facebook, instagram, email }`; system prompt updated with email-specific guidance (no subject line, no "Dear" greeting, 4-6 short paragraphs, 2-3 concrete listing details, showing invite, URL on its own line); `maxTokens` 1200 → 1800 to accommodate the 3rd field.
+- `app/dashboard/listings/[id]/edit/SocialCopyPanel.tsx`: full rewrite from 2-block read-only output to tabbed UX. Tabs: Facebook / Instagram / Email. Active tab shows in a textarea with `PLATFORM_ROWS` map (Email gets 10 rows, FB 6, IG 4). Single Generate button produces all 3 in one round-trip (backend already does this). Regenerate copy on the button when output exists. "See all 3 platforms side-by-side" `<details>` collapsible with mini textareas + small Copy buttons for the agent who wants to see everything at once. CopyButton extracted into `small={true}` variant for the side-by-side view.
+- Backend route (`app/api/generate-social/route.ts`): no changes — already passes through `out` from `generateSocialCopy`. Adding the email field flows transparently.
+
+**Decisions**:
+- **Email replaces Xiaohongshu, not adds to it.** Three reasons: (1) V1 positioning is English-only US homebuyers (per memory: "面向所有美国购房者,不是华人社区平台"), (2) Xiaohongshu copy in zh would require a `lang` param and zh prompt template — that's a Phase 9+ international scope, (3) Vivian's actual workflow uses Mailchimp / Gmail blasts, not Xiaohongshu. If a future Path-3-like Chinese-market segment shows up, we'd add `xhs_zh` as a 4th platform behind a feature flag.
+- **One generation, three outputs.** Backend bills one rate-limit unit per call and the prompt cheaply produces all three. Per-tab regenerate buttons would either lie (regen all 3 anyway) or require splitting the prompt into 3 separate calls (3× cost, 3× latency, no win). Settled on one shared "Regenerate" button — agent sees all three update together.
+- **Email format choice — body only, no subject line.** Subjects need a/b testing and are agent-personal ("Hey, just listed in your zip!"). Generating one will get used as-is and look spam-y. Better to leave it agent-authored and let the model nail the body.
+- **Did NOT regenerate per-platform on demand.** Same reason as above — would burn 3× rate limit for a small UX win. The collapsible side-by-side view satisfies the "I want to see all of them" use case without extra calls.
+
+**Issues**: None blocking. Pre-existing test failure in `__tests__/create-upload.test.ts` (`scope_not_supported` vs `invalid_kind` — unrelated to 8.4) noted, will pick up in 8.5 cleanup.
+
+**Verification**:
+- `tsc --noEmit` clean.
+- `biome check` clean (auto-fixed 1 formatting issue on `Object.keys` inline call).
+- `pnpm build` green: `/dashboard/listings/[id]/edit` route 21.9 kB → 22.6 kB First Load JS (lucide-react icons + collapsible block, expected).
+
+**Next steps**: 8.5 analytics dashboard polish — `/dashboard/listings/[id]/analytics` currently exists but is unstyled; apply card-grid layout from demo and surface the funnel + top-cards data.
+
+---
+
 ## 2026-06-10 11:50 UTC — phase8.3: TikTok feed visual polish
 
 **Objective**: Apply demo `pages/Listing.jsx` visual treatment to the V1 public listing feed (`/v/[agentSlug]/[listingSlug]`) — Playfair price/address, gold ribbon kind chip, heart-pop interaction, scroll cue, keyboard navigation. Visual parity with demo without porting demo's i18n / mock-data plumbing.

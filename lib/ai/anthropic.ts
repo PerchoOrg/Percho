@@ -145,7 +145,7 @@ export async function generateListingCopy(input: {
   return parsed as string[];
 }
 
-/** Social copy — Facebook + Instagram (no Xiaohongshu, no zh). */
+/** Social copy — Facebook + Instagram + Email (US market, English only). */
 export async function generateSocialCopy(input: {
   listingUrl: string;
   address: string;
@@ -155,21 +155,36 @@ export async function generateSocialCopy(input: {
   beds?: number;
   baths?: number;
   highlights?: string[];
-}): Promise<{ facebook: string; instagram: string }> {
+}): Promise<{ facebook: string; instagram: string; email: string }> {
   const text = await callMessages({
     system:
-      'You write social media copy for real estate listings, US market, English. ' +
+      'You write marketing copy for real estate listings, US market, English. ' +
       'Output strict JSON and nothing else (no markdown, no code fences, no commentary): ' +
-      '{ "facebook": string, "instagram": string }. ' +
+      '{ "facebook": string, "instagram": string, "email": string }. ' +
       'Facebook: 2-3 short paragraphs, professional but warm, ends with the listing URL. ' +
       'Instagram: 1 short paragraph + 4-6 hashtags, casual tone. ' +
-      'Keep both fields concise — total response under 500 words.',
+      'Email: a buyer-database email body (no subject line, no greeting "Dear" — start with a hook). ' +
+      '4-6 short paragraphs, warm but specific. Include 2-3 concrete listing details, ' +
+      'an invitation to schedule a showing, and the listing URL on its own line. ' +
+      'Keep all three fields concise — total response under 700 words.',
     messages: [{ role: 'user', content: JSON.stringify(input) }],
-    maxTokens: 1200,
+    maxTokens: 1800,
   });
-  const parsed = safeJsonParse(text, 'social-copy') as { facebook?: unknown; instagram?: unknown };
-  if (typeof parsed.facebook !== 'string' || typeof parsed.instagram !== 'string') {
-    throw new Error('Anthropic response missing facebook/instagram strings');
+  const parsed = safeJsonParse(text, 'social-copy') as {
+    facebook?: unknown;
+    instagram?: unknown;
+    email?: unknown;
+  };
+  if (
+    typeof parsed.facebook !== 'string' ||
+    typeof parsed.instagram !== 'string' ||
+    typeof parsed.email !== 'string'
+  ) {
+    throw new Error('Anthropic response missing facebook/instagram/email strings');
   }
-  return { facebook: parsed.facebook, instagram: parsed.instagram };
+  return {
+    facebook: parsed.facebook,
+    instagram: parsed.instagram,
+    email: parsed.email,
+  };
 }

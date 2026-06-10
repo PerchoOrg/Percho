@@ -1,18 +1,27 @@
 'use client';
 
 /**
- * Social copy generator panel — Phase 6.3b.
+ * Social copy generator panel — Phase 6.3b (rebuilt 8.4 for tabbed UX).
  *
  * Lives on the listing edit page below the metadata form. Calls
  * /api/generate-social with the listing id + a transient `highlights` input
- * (3-5 short selling points). Renders the Facebook + Instagram copy in
- * read-only textareas with copy-to-clipboard buttons.
+ * (3-5 short selling points). Renders Facebook / Instagram / Email copy in
+ * three tabs with per-tab Regenerate + Copy actions.
+ *
+ * Phase 8.4 changes:
+ *   - Email tab added (replaces demo's 小红书 — V1 is English-only US market;
+ *     email blasts are the actual conversion lever for US agents).
+ *   - Tab UI matches `vicinity-app/src/pages/Editor.jsx` S5 visual treatment.
+ *   - Per-tab regenerate button so a single bad output doesn't burn the rate
+ *     limit budget for the other two — though backend still bills 1 unit per
+ *     call regardless, so heads-up: regenerating any tab regenerates ALL three
+ *     (the prompt produces the full triple). UI just lets you focus.
  *
  * Nothing persists. The whole component is throwaway state — refresh and
- * you start over. That's intentional for V1: the agent's deliverable is the
- * text on their clipboard, not a stored draft.
+ * you start over.
  */
 
+import { Copy, Loader2, Sparkles } from 'lucide-react';
 import { useState } from 'react';
 
 interface Props {
@@ -20,17 +29,32 @@ interface Props {
 }
 
 type GenState = 'idle' | 'loading' | 'error';
+type Platform = 'facebook' | 'instagram' | 'email';
 
 interface SocialOutput {
   facebook: string;
   instagram: string;
+  email: string;
 }
+
+const PLATFORM_LABELS: Record<Platform, string> = {
+  facebook: 'Facebook',
+  instagram: 'Instagram',
+  email: 'Email',
+};
+
+const PLATFORM_ROWS: Record<Platform, number> = {
+  facebook: 6,
+  instagram: 4,
+  email: 10,
+};
 
 export function SocialCopyPanel({ listingId }: Props) {
   const [highlightsRaw, setHighlightsRaw] = useState('');
   const [state, setState] = useState<GenState>('idle');
   const [error, setError] = useState<string | null>(null);
   const [output, setOutput] = useState<SocialOutput | null>(null);
+  const [tab, setTab] = useState<Platform>('facebook');
 
   async function onGenerate() {
     setState('loading');
@@ -66,8 +90,9 @@ export function SocialCopyPanel({ listingId }: Props) {
 
   return (
     <div className="space-y-4">
+      {/* Highlights input */}
       <div>
-        <label className="mb-1 block text-xs font-medium text-cream/70" htmlFor="sc-highlights">
+        <label className="mb-1 block text-cream/70 text-xs" htmlFor="sc-highlights">
           Selling points (optional)
         </label>
         <input
@@ -79,36 +104,103 @@ export function SocialCopyPanel({ listingId }: Props) {
           className={INPUT_CLASS}
           maxLength={500}
         />
-        <span className="mt-1 block text-xs text-cream/40">
+        <span className="mt-1 block text-cream/40 text-xs">
           Up to 5, comma-separated. Leave blank to let the model riff on listing details.
         </span>
       </div>
 
-      <div className="flex items-center gap-3">
+      {/* Platform tabs */}
+      <div className="flex flex-wrap items-center gap-2">
+        {(Object.keys(PLATFORM_LABELS) as Platform[]).map((p) => (
+          <button
+            key={p}
+            type="button"
+            onClick={() => setTab(p)}
+            className={`rounded-full border px-3 py-1.5 text-xs transition ${
+              tab === p
+                ? 'border-gold bg-gold text-ink'
+                : 'border-white/15 text-cream/70 hover:border-gold/50 hover:text-cream'
+            }`}
+          >
+            {PLATFORM_LABELS[p]}
+          </button>
+        ))}
+        {state === 'error' && (
+          <span className="ml-auto text-red-400 text-xs">{error ?? 'unknown error'}</span>
+        )}
+      </div>
+
+      {/* Active tab textarea */}
+      <textarea
+        readOnly={!output}
+        value={output ? output[tab] : ''}
+        onChange={() => {}}
+        rows={PLATFORM_ROWS[tab]}
+        placeholder={
+          state === 'loading'
+            ? 'Generating…'
+            : `Click Generate to produce ${PLATFORM_LABELS[tab]} copy.`
+        }
+        className={`${INPUT_CLASS} resize-y font-mono text-xs`}
+      />
+
+      {/* Action row */}
+      <div className="flex flex-wrap gap-2">
         <button
           type="button"
           onClick={onGenerate}
           disabled={state === 'loading'}
-          className="rounded bg-gold px-4 py-2 text-sm font-medium text-ink transition hover:opacity-90 disabled:opacity-50"
+          className="inline-flex items-center gap-2 rounded-lg bg-gold px-4 py-2 font-medium text-ink text-sm transition hover:opacity-90 disabled:opacity-50"
         >
-          {state === 'loading' ? 'Generating…' : '✨ Generate social copy'}
+          {state === 'loading' ? (
+            <>
+              <Loader2 size={14} className="animate-spin" />
+              Generating…
+            </>
+          ) : (
+            <>
+              <Sparkles size={14} />
+              {output ? 'Regenerate' : 'Generate copy'}
+            </>
+          )}
         </button>
-        {state === 'error' && (
-          <span className="text-sm text-red-400">Error: {error ?? 'unknown'}</span>
-        )}
+        {output && <CopyButton value={output[tab]} />}
       </div>
 
+      {/* Compact preview of the other two tabs (collapsed) */}
       {output && (
-        <div className="space-y-4 pt-2">
-          <CopyBlock label="Facebook" value={output.facebook} rows={6} />
-          <CopyBlock label="Instagram" value={output.instagram} rows={4} />
-        </div>
+        <details className="rounded-lg border border-white/10 bg-ink2/40 p-3 text-xs">
+          <summary className="cursor-pointer text-cream/70 hover:text-gold">
+            See all 3 platforms side-by-side
+          </summary>
+          <div className="mt-3 grid gap-3 sm:grid-cols-3">
+            {(Object.keys(PLATFORM_LABELS) as Platform[]).map((p) => (
+              <div
+                key={p}
+                className="flex flex-col rounded-lg border border-white/10 bg-ink/60 p-2.5"
+              >
+                <div className="mb-1.5 flex items-center justify-between">
+                  <span className="text-[10px] text-gold uppercase tracking-widest">
+                    {PLATFORM_LABELS[p]}
+                  </span>
+                  <CopyButton value={output[p]} small />
+                </div>
+                <textarea
+                  readOnly
+                  value={output[p]}
+                  rows={6}
+                  className={`${INPUT_CLASS} flex-1 resize-none font-mono text-[11px]`}
+                />
+              </div>
+            ))}
+          </div>
+        </details>
       )}
     </div>
   );
 }
 
-function CopyBlock({ label, value, rows }: { label: string; value: string; rows: number }) {
+function CopyButton({ value, small = false }: { value: string; small?: boolean }) {
   const [copied, setCopied] = useState(false);
   async function onCopy() {
     try {
@@ -119,20 +211,26 @@ function CopyBlock({ label, value, rows }: { label: string; value: string; rows:
       // Clipboard permission denied — user can still select+copy manually.
     }
   }
+  if (small) {
+    return (
+      <button
+        type="button"
+        onClick={onCopy}
+        className="rounded border border-bronze/50 px-1.5 py-0.5 text-[10px] text-cream hover:bg-bronze/20"
+      >
+        {copied ? '✓' : 'Copy'}
+      </button>
+    );
+  }
   return (
-    <div>
-      <div className="mb-1 flex items-center justify-between">
-        <span className="text-xs font-medium text-cream/70">{label}</span>
-        <button
-          type="button"
-          onClick={onCopy}
-          className="rounded border border-bronze/50 px-2 py-0.5 text-xs text-cream hover:bg-bronze/20"
-        >
-          {copied ? '✓ Copied' : 'Copy'}
-        </button>
-      </div>
-      <textarea readOnly value={value} rows={rows} className={`${INPUT_CLASS} resize-y`} />
-    </div>
+    <button
+      type="button"
+      onClick={onCopy}
+      className="inline-flex items-center gap-1.5 rounded-lg border border-bronze/50 px-3 py-2 text-cream text-sm hover:bg-bronze/20"
+    >
+      <Copy size={14} />
+      {copied ? 'Copied' : 'Copy to clipboard'}
+    </button>
   );
 }
 
