@@ -1,24 +1,30 @@
 /**
- * Public browse page — `/browse`.
+ * /browse — discovery feed across all agents (TikTok mode, not grid).
  *
- * Hotfix 2026-06-10: Landing CTA + SiteHeader nav both link to `/browse`
- * (introduced in phase8.2.B Landing rewrite) but the route was never built.
- * Result: live 404 from the homepage hero. Surgical fix — ship a real
- * discover-all-listings page, mirroring the agent-profile listings grid.
+ * Hotfix 2026-06-10 (v2): user wanted demo-parity — Browse should drop into
+ * the same vertical-snap video feed as /v/[agent]/[listing], but with one
+ * card per listing (their hero video) and a right rail that lets the user
+ * jump into the full listing or contact the agent.
  *
- * Lists every `status='published'` listing across all agents, newest first.
- * Server Component, ISR (revalidate=300). RLS already allows public SELECT
- * on published listings.
+ * Server Component. Fetches up to 30 published listings (newest first), one
+ * hero video per listing (lowest sort_order, status='ready'). Filters out
+ * listings with no playable video — they'd render a black card.
  */
 
-import { thumbnailUrl } from '@/lib/cloudflare/stream';
 import { createClient } from '@/lib/supabase/server';
 import type { Metadata } from 'next';
-import Link from 'next/link';
+import { type BrowseCard, BrowseFeed } from './_components/BrowseFeed';
 
 export const revalidate = 300;
 
-type Row = {
+export const metadata: Metadata = {
+  title: 'Browse listings | Vicinity',
+  description: 'Discover homes for sale on Vicinity — short videos, real agents, no spam.',
+};
+
+const FEED_LIMIT = 30;
+
+type ListingRow = {
   id: string;
   slug: string;
   address: string;
@@ -28,148 +34,114 @@ type Row = {
   beds: number | null;
   baths: number | null;
   sqft: number | null;
-  cover_url: string | null;
   created_at: string;
   agent_id: string;
-  hero_video_id: string | null;
 };
 
-type AgentLite = { id: string; slug: string; name: string };
-
-export const metadata: Metadata = {
-  title: 'Browse listings | Vicinity',
-  description: 'Discover homes for sale on Vicinity — short videos, real agents, no spam.',
+type AgentRow = {
+  id: string;
+  slug: string;
+  name: string;
+  email: string | null;
+  phone: string | null;
 };
 
-async function fetchData(): Promise<{ rows: Row[]; agentsById: Map<string, AgentLite> }> {
+type VideoRow = {
+  listing_id: string;
+  cf_video_id: string;
+  title: string | null;
+  kind: string;
+  sort_order: number;
+};
+
+async function fetchCards(): Promise<BrowseCard[]> {
   const supabase = await createClient();
 
   // biome-ignore lint/suspicious/noExplicitAny: stub generated types
   const { data: rawListings } = (await (supabase as any)
     .from('listings')
-    .select(
-      'id, slug, address, city, state, price, beds, baths, sqft, cover_url, created_at, agent_id',
-    )
+    .select('id, slug, address, city, state, price, beds, baths, sqft, created_at, agent_id')
     .eq('status', 'published')
     .order('created_at', { ascending: false })
-    .limit(60)) as { data: Omit<Row, 'hero_video_id'>[] | null };
+    .limit(FEED_LIMIT)) as { data: ListingRow[] | null };
 
   const listings = rawListings ?? [];
-  if (listings.length === 0) {
-    return { rows: [], agentsById: new Map() };
-  }
+  if (listings.length === 0) return [];
 
   const listingIds = listings.map((l) => l.id);
   const agentIds = Array.from(new Set(listings.map((l) => l.agent_id)));
 
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { data: rawVideos } = (await (supabase as any)
-    .from('listing_videos')
-    .select('listing_id, cf_video_id, sort_order')
-    .in('listing_id', listingIds)
-    .eq('status', 'ready')
-    .order('sort_order', { ascending: true })) as {
-    data: { listing_id: string; cf_video_id: string }[] | null;
-  };
-  const firstVideoByListing = new Map<string, string>();
-  for (const v of rawVideos ?? []) {
-    if (!firstVideoByListing.has(v.listing_id)) {
-      firstVideoByListing.set(v.listing_id, v.cf_video_id);
-    }
+  const [videosResp, agentsResp] = await Promise.all([
+    // biome-ignore lint/suspicious/noExplicitAny: stub generated types
+    (supabase as any)
+      .from('listing_videos')
+      .select('listing_id, cf_video_id, title, kind, sort_order')
+      .in('listing_id', listingIds)
+      .eq('status', 'ready')
+      .order('sort_order', { ascending: true }),
+    // biome-ignore lint/suspicious/noExplicitAny: stub generated types
+    (supabase as any)
+      .from('agents')
+      .select('id, slug, name, email, phone')
+      .in('id', agentIds),
+  ]);
+
+  const videos = (videosResp.data ?? []) as VideoRow[];
+  const agents = (agentsResp.data ?? []) as AgentRow[];
+
+  const heroByListing = new Map<string, VideoRow>();
+  for (const v of videos) {
+    if (!heroByListing.has(v.listing_id)) heroByListing.set(v.listing_id, v);
   }
+  const agentsById = new Map(agents.map((a) => [a.id, a] as const));
 
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { data: rawAgents } = (await (supabase as any)
-    .from('agents')
-    .select('id, slug, name')
-    .in('id', agentIds)) as { data: AgentLite[] | null };
-  const agentsById = new Map<string, AgentLite>();
-  for (const a of rawAgents ?? []) agentsById.set(a.id, a);
-
-  const rows: Row[] = listings.map((l) => ({
-    ...l,
-    hero_video_id: firstVideoByListing.get(l.id) ?? null,
-  }));
-  return { rows, agentsById };
+  const cards: BrowseCard[] = [];
+  for (const l of listings) {
+    const hero = heroByListing.get(l.id);
+    const agent = agentsById.get(l.agent_id);
+    if (!hero || !agent) continue;
+    cards.push({
+      id: hero.cf_video_id,
+      cfVideoId: hero.cf_video_id,
+      kind: hero.kind,
+      title: hero.title,
+      listing: {
+        id: l.id,
+        slug: l.slug,
+        address: l.address,
+        city: l.city,
+        state: l.state,
+        price: l.price,
+        beds: l.beds,
+        baths: l.baths,
+        sqft: l.sqft,
+      },
+      agent: {
+        slug: agent.slug,
+        name: agent.name,
+        email: agent.email,
+        phone: agent.phone,
+      },
+    });
+  }
+  return cards;
 }
 
 export default async function BrowsePage() {
-  const { rows, agentsById } = await fetchData();
+  const cards = await fetchCards();
 
-  return (
-    <div className="min-h-screen bg-ink text-cream">
-      <section className="mx-auto max-w-6xl px-6 py-10 md:py-14">
-        <div className="mb-8">
-          <h1 className="font-serif text-3xl md:text-4xl">Browse listings</h1>
+  if (cards.length === 0) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-ink text-cream">
+        <div className="text-center">
+          <h1 className="font-serif text-2xl">No listings live yet</h1>
           <p className="mt-2 text-cream/60 text-sm">
-            {rows.length === 0
-              ? 'No listings live yet — check back soon.'
-              : `${rows.length} ${rows.length === 1 ? 'home' : 'homes'} on Vicinity right now.`}
+            Check back soon — Vicinity is just getting started.
           </p>
         </div>
+      </div>
+    );
+  }
 
-        {rows.length === 0 ? (
-          <div className="rounded-xl border border-bronze/30 bg-ink2/60 p-8 text-center">
-            <p className="text-cream/70">Vicinity is just getting started.</p>
-            <p className="mt-1 text-cream/40 text-sm">
-              <Link href="/" className="underline hover:text-gold">
-                Back home
-              </Link>
-            </p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {rows.map((l) => {
-              const agent = agentsById.get(l.agent_id);
-              if (!agent) return null;
-              const cover = l.cover_url ?? (l.hero_video_id ? thumbnailUrl(l.hero_video_id) : null);
-              return (
-                <Link
-                  key={l.id}
-                  href={`/v/${agent.slug}/${l.slug}`}
-                  className="group overflow-hidden rounded-xl border border-bronze/30 bg-ink2/60 transition hover:border-gold/50"
-                >
-                  <div className="aspect-[4/5] w-full overflow-hidden bg-ink">
-                    {cover ? (
-                      <img
-                        src={cover}
-                        alt={l.address}
-                        className="h-full w-full object-cover transition group-hover:scale-[1.03]"
-                        loading="lazy"
-                      />
-                    ) : (
-                      <div className="flex h-full w-full items-center justify-center text-cream/30 text-xs">
-                        No cover
-                      </div>
-                    )}
-                  </div>
-                  <div className="p-3">
-                    <div className="font-serif text-cream text-lg leading-tight">
-                      {l.price != null ? `$${formatPrice(l.price)}` : 'Price upon request'}
-                    </div>
-                    <div className="mt-0.5 truncate text-cream/80 text-sm">{l.address}</div>
-                    <div className="text-cream/50 text-xs">
-                      {l.city}, {l.state}
-                    </div>
-                    <div className="mt-2 flex items-center gap-2 text-cream/60 text-xs">
-                      {l.beds != null && <span>{l.beds} bd</span>}
-                      {l.baths != null && <span>· {l.baths} ba</span>}
-                      {l.sqft != null && <span>· {l.sqft.toLocaleString()} sqft</span>}
-                    </div>
-                    <div className="mt-2 text-cream/40 text-[11px]">Listed by {agent.name}</div>
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
-        )}
-      </section>
-    </div>
-  );
-}
-
-function formatPrice(price: number): string {
-  if (price >= 1_000_000) return `${(price / 1_000_000).toFixed(2).replace(/\.0+$/, '')}M`;
-  if (price >= 1_000) return `${Math.round(price / 1_000)}k`;
-  return price.toLocaleString();
+  return <BrowseFeed cards={cards} />;
 }

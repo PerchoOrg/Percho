@@ -10,6 +10,38 @@ When resuming work: read the most recent entries first, then check IMPLEMENTATIO
 
 ---
 
+## 2026-06-10 14:55 UTC — hotfix v2: /browse → TikTok feed (demo parity)
+
+**Objective**: User feedback on the v1 hotfix: "参照 demo,点击 browse 直接进入 feed,右下侧会有一些周边的小按键可以跳转。" The first hotfix shipped a static grid; the demo lands in the same vertical-scroll video feed, and the right rail jumps users to surrounding context.
+
+**Actions**:
+- Replaced `app/(public)/browse/page.tsx` with a feed loader: fetches up to 30 published listings (newest first) + their hero video (lowest sort_order, status='ready') + agent contact info, all in 3 batched queries. Filters out listings without a playable video.
+- New `app/(public)/browse/_components/BrowseFeed.tsx` (client) — vertical scroll-snap container, ±1 card mount window for HLS, IntersectionObserver-tracked active card. Right rail buttons:
+  - **Heart** — local toggle + heart-pop animation (matches /v feed).
+  - **View home →** — Link to `/v/[agent.slug]/[listing.slug]` (full listing feed for the active card).
+  - **Share** — `navigator.share()` with clipboard fallback.
+  - **Contact** — `mailto:` (fallback `tel:`) using agent.email/phone.
+- Top-left price + address (Playfair, gold drop-shadow). Bottom-left bd/ba/sqft + "Listed by [Agent Name]" linking to `/a/[agentSlug]`.
+- Card progress dots top center (only when ≤12 cards, to avoid clutter).
+
+**Decisions**:
+- **Hero video per listing**, not full per-listing feed inline. The home button takes the user into the dedicated listing feed when they want depth. Browse is for discovery breadth.
+- **No backend "card_dislike" yet**. Demo had thumbs-down but our events whitelist doesn't include it — adding it requires a zod schema change. Heart-only for now.
+- **No nearby/schools/community switches** like the demo. Those are *per-listing* concepts (only meaningful when you've picked a listing); on a cross-listing browse feed they'd misfire. The "View home" CTA gives you that context the moment you commit to a listing.
+- **Mailto fallback to tel** instead of opening a contact modal. Browse → contact = high-intent action; the user already knows whether they have email or SMS, no need to prompt.
+- **30-card cap** for V1 — enough for discovery breadth without burning bandwidth.
+
+**Verification**:
+- `tsc --noEmit` clean. `biome check` clean. `pnpm build` registers `/browse` at 3.52 kB / 264 kB First Load JS (HLS bundle dominates, same as /v feed).
+
+**Learnings**:
+- Phase 8.2.B and 8.3 both gestured at "browse" without specifying *what* browse looked like. Should have asked the user upfront what discovery experience they wanted instead of defaulting to a Zillow grid. The demo's behavior was the answer all along.
+- Reusing FeedCard.tsx from /v wasn't viable — different listing per card vs same listing; different rail; different CTAs. New focused component (~330 LOC) was cleaner than parameterizing the existing one.
+
+**Next steps**: Visual QA from user. Likely tweaks: agent attribution placement, share link copy text, contact CTA labeling.
+
+---
+
 ## 2026-06-10 14:25 UTC — hotfix: /browse route was missing (Landing CTA 404)
 
 **Objective**: User reported homepage "Browse Listings" CTA → 404 on production. Phase 8.2.B Landing rewrite + SiteHeader both link to `/browse`, but the route file was never created.
