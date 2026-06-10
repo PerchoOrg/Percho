@@ -91,6 +91,22 @@ function CommunityIcon() {
 
 // HomeIcon removed (2026-06-10) — rail "Home" button retired.
 
+function SoundOnIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24" width={22} height={22} fill="currentColor">
+      <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3a4.5 4.5 0 0 0-2.5-4.03v8.05a4.5 4.5 0 0 0 2.5-4.02zM14 3.23v2.06A7 7 0 0 1 14 18.71v2.06A9 9 0 0 0 14 3.23z" />
+    </svg>
+  );
+}
+
+function SoundOffIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24" width={22} height={22} fill="currentColor">
+      <path d="M3 9v6h4l5 5V4L7 9H3zm13.59 3L19 9.41 17.59 8 15 10.59 12.41 8 11 9.41 13.59 12 11 14.59 12.41 16 15 13.41 17.59 16 19 14.59 16.59 12z" />
+    </svg>
+  );
+}
+
 function ShareIcon() {
   return (
     <svg aria-hidden="true" viewBox="0 0 24 24" width={22} height={22} fill="currentColor">
@@ -196,6 +212,8 @@ interface CardProps {
   setPaused: (b: boolean) => void;
   onSwipe: (delta: 1 | -1) => void;
   poolSize: number;
+  /** Global mute state from parent feed — propagated to <video> on every render. */
+  muted: boolean;
 }
 
 function poolFor(card: BrowseCard, source: Source): number {
@@ -234,6 +252,7 @@ function Card({
   setPaused,
   onSwipe,
   poolSize,
+  muted,
 }: CardProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const hlsRef = useRef<Hls | null>(null);
@@ -294,7 +313,7 @@ function Card({
     const v = videoRef.current;
     if (!v) return;
     if (isActive && shouldMount) {
-      v.muted = true;
+      v.muted = muted;
       v.play()
         .then(() => setPaused(false))
         .catch(() => setPaused(true));
@@ -303,6 +322,14 @@ function Card({
       setPaused(true);
     }
   }, [isActive, shouldMount, setPaused, sel.cfVideoId]);
+
+  // Keep <video>.muted in sync with the global mute toggle while the card
+  // is mounted (parent flips it from the Sound button).
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v) return;
+    v.muted = muted;
+  }, [muted]);
 
   const onTap = () => {
     const v = videoRef.current;
@@ -432,6 +459,10 @@ export function BrowseFeed({ cards }: { cards: BrowseCard[] }) {
   const [sourceByCard, setSourceByCard] = useState<Record<string, Source>>({});
   const [cycleByCard, setCycleByCard] = useState<Record<string, number>>({});
   const [pausedActive, setPausedActive] = useState(true);
+  // Global mute state — once the user unmutes, every card stays unmuted as
+  // they swipe. Browser autoplay policy forces initial muted=true; we flip
+  // false on first explicit user gesture (the Sound button).
+  const [muted, setMuted] = useState(true);
   const cardRefs = useRef<Map<number, HTMLElement>>(new Map());
   const scrollerRef = useRef<HTMLDivElement | null>(null);
 
@@ -553,12 +584,7 @@ export function BrowseFeed({ cards }: { cards: BrowseCard[] }) {
 
   return (
     <div className="relative h-screen w-full overflow-hidden bg-black">
-      {/* Brand mark, top-left — links to landing. Replaces the previous
-       * top-right "Home" pill, which conflicted with the in-feed source
-       * "back to home" pill (one went to landing, one went back to hero
-       * video). User feedback: "logo做成home page redirect, apply 到所有页面".
-       * The /browse-internal back-to-hero is now labeled "← Back" below. */}
-      <Logo variant="overlay" className="absolute top-3 left-3 z-30" />
+      {/* Logo + Back nav cluster lives top-right (see below). */}
       <div
         ref={scrollerRef}
         className="h-full w-full snap-y snap-mandatory overflow-y-scroll overscroll-contain"
@@ -581,6 +607,7 @@ export function BrowseFeed({ cards }: { cards: BrowseCard[] }) {
               paused={isThisActive ? pausedActive : true}
               setPaused={isThisActive ? setPausedActive : () => {}}
               poolSize={poolFor(card, cardSource)}
+              muted={muted}
               onSwipe={(delta) => {
                 // Horizontal swipe cycles within the current source's b-roll pool.
                 const pool = poolFor(card, cardSource);
@@ -633,6 +660,13 @@ export function BrowseFeed({ cards }: { cards: BrowseCard[] }) {
          * top-center "← Back" pill. The pill now reads "Back" and is the
          * sole way to dismiss the source switcher. The brand Logo top-left
          * handles "go to landing". */}
+        <ActionButton
+          label={muted ? 'Sound' : 'Mute'}
+          onClick={() => setMuted((m) => !m)}
+          active={!muted}
+        >
+          {muted ? <SoundOffIcon /> : <SoundOnIcon />}
+        </ActionButton>
         <ActionButton label="Share" onClick={onShare}>
           <ShareIcon />
         </ActionButton>
@@ -652,22 +686,32 @@ export function BrowseFeed({ cards }: { cards: BrowseCard[] }) {
         )}
       </div>
 
-      {/* Active source pill — top center */}
+      {/* Active source label — top center, informational only (no nav). */}
       {activeSource !== 'hero' && (
-        <div className="-translate-x-1/2 absolute top-3 left-1/2 z-10 flex items-center gap-2 rounded-full border border-cream/20 bg-ink/60 px-3 py-1 backdrop-blur">
+        <div className="-translate-x-1/2 absolute top-3 left-1/2 z-10 rounded-full border border-cream/20 bg-ink/60 px-3 py-1 backdrop-blur">
           <span className="text-cream/80 text-xs uppercase tracking-wider">
             {activeSource === 'schools' ? 'Schools' : activeSource === 'nearby' ? 'Nearby' : 'Area'}
           </span>
+        </div>
+      )}
+
+      {/* Top-right nav cluster: [← Back] (when on a b-roll source) + [Logo] (always).
+       * Side-by-side per user feedback: 'Back' returns to the hero video (in-feed
+       * navigation), Logo returns to landing page (global nav). */}
+      <div className="absolute top-3 right-3 z-30 flex items-center gap-2">
+        {activeSource !== 'hero' && (
           <button
             type="button"
             onClick={() => switchSource('hero')}
-            className="text-cream/60 text-xs hover:text-cream"
             aria-label="Back to listing video"
+            className="flex h-9 items-center rounded-full border border-cream/20 bg-ink/55 px-3 text-cream text-xs backdrop-blur-md transition-colors hover:border-gold hover:text-gold"
+            style={{ touchAction: 'manipulation' }}
           >
             ← Back
           </button>
-        </div>
-      )}
+        )}
+        <Logo variant="overlay" />
+      </div>
 
       {/* "View full listing" pill removed (2026-06-10) — user feedback:
        * "duplicate function of the same buttons below". The browse card

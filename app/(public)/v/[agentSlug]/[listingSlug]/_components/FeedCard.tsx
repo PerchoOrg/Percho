@@ -162,11 +162,17 @@ export function FeedCard({
   function onTap() {
     const video = videoRef.current;
     if (!video || !shouldMount) return;
+    // Per user feedback (2026-06-10): tapping a playing card was just
+    // pausing it; unmute only fired on tap-resume of a paused card. Reorder:
+    // unmute is ALWAYS the first action of a tap on a muted card, regardless
+    // of play/pause state. Subsequent taps toggle play/pause.
+    if (muted) {
+      setMuted(false);
+      video.muted = false;
+      if (video.paused) video.play().catch(() => {});
+      return;
+    }
     if (video.paused) {
-      if (muted) {
-        setMuted(false);
-        video.muted = false;
-      }
       video.play().catch(() => {});
     } else {
       video.pause();
