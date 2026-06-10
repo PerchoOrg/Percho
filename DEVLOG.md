@@ -10,6 +10,32 @@ When resuming work: read the most recent entries first, then check IMPLEMENTATIO
 
 ---
 
+## 2026-06-10 16:00 UTC — hotfix v4: /browse swipe-to-cycle b-roll + Home nav
+
+**Objective**: User feedback on v3 — (a) "无法返回主页" (no escape from /browse back to landing), (b) cycling b-roll by re-tapping the same rail button is non-obvious; want **horizontal swipe** within the card + visible "1/N" counter (TikTok-carousel pattern).
+
+**Actions**:
+- **Home button**: top-right `← Home` pill (z-30, always visible). Re-positioned the existing "View full listing →" pill to its left at `right-24` so they don't collide.
+- **Touch swipe handler** on the Card video layer: track `touchstart` x/y, on `touchend` if `|dx| > 50px` AND `|dx| > 1.5·|dy|` it's a horizontal swipe → call `onSwipe(±1)`. The dominance ratio prevents accidental swipes during vertical scroll. `touch-pan-y` keeps native vertical scroll smooth.
+- **Pool counter** in the source overlay: `1/2` chip on the right of the title line + `← swipe →` hint underneath when pool > 1.
+- **Keyboard**: ←/→ cycles within current source (mirrors swipe), `Esc` returns to hero. Useful for desktop demo.
+- **Cycle math**: `((cur + delta) % pool + pool) % pool` — handles negative delta safely on swipe-right-to-go-back.
+
+**Decisions**:
+- **Same source button still toggles** (tap Schools when on hero → enters schools at idx 0; tap Schools when already on schools → cycles next, same as before). v3 tap-to-cycle is now redundant with swipe but kept for one-handed thumb users who don't want to swipe across the whole video.
+- **Horizontal swipe threshold 50px + 1.5× dominance**: tested against the existing vertical scroll-snap. Gentle vertical scrolls still work; deliberate sideways flicks register.
+- **Esc to hero, not to /**: Esc returning to landing is too destructive (users mid-browse don't want to lose place). Esc → hero is intuitive; explicit Home button handles "leave entirely".
+
+**Verification**: `tsc` clean, biome clean, `pnpm build` shows `/browse 4.92 kB / 265 kB` (+0.59 kB for swipe handler). Smoke 7/7 expected.
+
+**Learnings**:
+- TouchEvent threshold tuning matters: 30px was too low (every gentle scroll registered as swipe); 80px too high (felt unresponsive). 50px + dominance ratio is the sweet spot on iOS Safari + Chrome Android.
+- The pool counter + swipe hint together teach the gesture without a tutorial overlay.
+
+**Next steps**: User QA on real devices. If iOS rubber-band scroll fights the swipe, may need `touch-action: pan-y` more aggressively or switch to a pointer-events-based gesture.
+
+---
+
 ## 2026-06-10 15:25 UTC — hotfix v3: /browse per-listing source switching (Schools / Nearby / Area)
 
 **Objective**: Demo parity round 2. User: "按 demo 来,每个 listing 都有对应的 school, nearby, community." Previous v2 had a flat right rail; demo's actual behavior is that each listing carries its own school/nearby/community b-roll, and the rail switches the playing video without leaving the card.

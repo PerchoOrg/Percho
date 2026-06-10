@@ -193,6 +193,15 @@ interface CardProps {
   cardRef: (el: HTMLElement | null) => void;
   paused: boolean;
   setPaused: (b: boolean) => void;
+  onSwipe: (delta: 1 | -1) => void;
+  poolSize: number;
+}
+
+function poolFor(card: BrowseCard, source: Source): number {
+  if (source === 'schools') return card.schoolVideos.length;
+  if (source === 'nearby') return card.nearbyVideos.length;
+  if (source === 'community') return card.communityVideos.length;
+  return 1;
 }
 
 function pickVideo(card: BrowseCard, source: Source, cycleIdx: number): BrowseSourceVideo {
@@ -222,9 +231,12 @@ function Card({
   cardRef,
   paused,
   setPaused,
+  onSwipe,
+  poolSize,
 }: CardProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const hlsRef = useRef<Hls | null>(null);
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
 
   const sel = useMemo(() => pickVideo(card, source, cycleIdx), [card, source, cycleIdx]);
 
@@ -313,7 +325,30 @@ function Card({
       className="relative h-screen w-full snap-start snap-always overflow-hidden bg-black"
     >
       {/* biome-ignore lint/a11y/useKeyWithClickEvents: tap-to-play */}
-      <div className="absolute inset-0" onClick={onTap}>
+      <div
+        className="absolute inset-0 touch-pan-y"
+        onClick={onTap}
+        onTouchStart={(e) => {
+          if (e.touches.length !== 1) return;
+          const t = e.touches[0];
+          if (t) touchStartRef.current = { x: t.clientX, y: t.clientY };
+        }}
+        onTouchEnd={(e) => {
+          const start = touchStartRef.current;
+          touchStartRef.current = null;
+          if (!start) return;
+          const t = e.changedTouches[0];
+          if (!t) return;
+          const dx = t.clientX - start.x;
+          const dy = t.clientY - start.y;
+          // Treat as horizontal swipe only if |dx| dominant + threshold met
+          if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+            e.preventDefault();
+            e.stopPropagation();
+            onSwipe(dx < 0 ? 1 : -1);
+          }
+        }}
+      >
         {shouldMount ? (
           <video
             ref={videoRef}
@@ -348,8 +383,18 @@ function Card({
       {/* Source overlay (schools/nearby/community) */}
       {overlayLine1 && (
         <div className="absolute top-28 left-5 max-w-[70%] rounded-lg border border-cream/20 bg-ink/60 px-3 py-2 backdrop-blur">
-          <div className="text-cream text-sm">{overlayLine1}</div>
-          {overlayLine2 && <div className="text-cream/70 text-xs">{overlayLine2}</div>}
+          <div className="flex items-center justify-between gap-2">
+            <div className="text-cream text-sm">{overlayLine1}</div>
+            {poolSize > 1 && (
+              <div className="rounded-full bg-cream/15 px-2 py-0.5 font-medium text-[10px] text-cream/90 tabular-nums">
+                {(cycleIdx % poolSize) + 1}/{poolSize}
+              </div>
+            )}
+          </div>
+          {overlayLine2 && <div className="mt-0.5 text-cream/70 text-xs">{overlayLine2}</div>}
+          {poolSize > 1 && (
+            <div className="mt-1 text-[10px] text-cream/40 uppercase tracking-wider">← swipe →</div>
+          )}
         </div>
       )}
 
@@ -474,8 +519,50 @@ export function BrowseFeed({ cards }: { cards: BrowseCard[] }) {
   const hasNearby = (active?.nearbyVideos.length ?? 0) > 0;
   const hasCommunity = (active?.communityVideos.length ?? 0) > 0;
 
+  // Keyboard: ←/→ cycle b-roll within current source, Esc returns to hero.
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (!active) return;
+      if (e.key === 'Escape' && activeSource !== 'hero') {
+        e.preventDefault();
+        switchSource('hero');
+        return;
+      }
+      if (activeSource === 'hero') return;
+      const id = active.listing.id;
+      const pool = poolFor(active, activeSource);
+      if (pool <= 1) return;
+      if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        setCycleByCard((c) => {
+          const cur = c[id] ?? 0;
+          return { ...c, [id]: (cur + 1) % pool };
+        });
+      } else if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        setCycleByCard((c) => {
+          const cur = c[id] ?? 0;
+          return { ...c, [id]: (((cur - 1) % pool) + pool) % pool };
+        });
+      }
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [active, activeSource, switchSource]);
+
   return (
     <div className="relative h-screen w-full overflow-hidden bg-black">
+      {/* Top-right: home/exit nav (always visible — escape /browse to landing) */}
+      <Link
+        href="/"
+        aria-label="Back to home"
+        className="absolute top-3 right-3 z-30 flex h-9 items-center gap-1 rounded-full border border-cream/20 bg-ink/60 px-3 text-cream backdrop-blur hover:border-gold hover:text-gold"
+      >
+        <svg viewBox="0 0 24 24" width={14} height={14} fill="currentColor" aria-hidden="true">
+          <path d="M15.41 7.41 14 6l-6 6 6 6 1.41-1.41L10.83 12z" />
+        </svg>
+        <span className="text-xs">Home</span>
+      </Link>
       <div
         ref={scrollerRef}
         className="h-full w-full snap-y snap-mandatory overflow-y-scroll overscroll-contain"
@@ -497,6 +584,17 @@ export function BrowseFeed({ cards }: { cards: BrowseCard[] }) {
               cardRef={(el) => setCardRef(idx, el)}
               paused={isThisActive ? pausedActive : true}
               setPaused={isThisActive ? setPausedActive : () => {}}
+              poolSize={poolFor(card, cardSource)}
+              onSwipe={(delta) => {
+                // Horizontal swipe cycles within the current source's b-roll pool.
+                const pool = poolFor(card, cardSource);
+                if (pool <= 1) return;
+                setCycleByCard((c) => {
+                  const cur = c[id] ?? 0;
+                  const next = (((cur + delta) % pool) + pool) % pool;
+                  return { ...c, [id]: next };
+                });
+              }}
             />
           );
         })}
@@ -577,11 +675,11 @@ export function BrowseFeed({ cards }: { cards: BrowseCard[] }) {
         </div>
       )}
 
-      {/* "View full listing" deep-link, bottom right above contact rail */}
+      {/* "View full listing" deep-link, top — to the LEFT of the Home button */}
       {active && activeSource === 'hero' && (
         <Link
           href={`/v/${active.agent.slug}/${active.listing.slug}`}
-          className="absolute right-4 top-4 z-10 rounded-full border border-cream/30 bg-ink/60 px-3 py-1 text-cream text-xs backdrop-blur hover:border-gold hover:text-gold"
+          className="absolute right-24 top-3 z-20 rounded-full border border-cream/30 bg-ink/60 px-3 py-1.5 text-cream text-xs backdrop-blur hover:border-gold hover:text-gold"
         >
           View full listing →
         </Link>
