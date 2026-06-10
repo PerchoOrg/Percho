@@ -10,6 +10,26 @@ When resuming work: read the most recent entries first, then check IMPLEMENTATIO
 
 ---
 
+## 2026-06-10 06:30 UTC — phase8/password-auth: relax OTP length to 6-10 digits
+
+**Objective**: Owner reports Supabase project sends 8-digit recovery codes, not 6 — our zod regex `^\d{6}$` and `maxLength={6}` rejected/truncated them, so OTP submit always failed validation before reaching `verifyOtp`.
+
+**Actions**:
+- `app/(auth)/reset-password/reset-password-form.tsx`: zod regex `^\d{6}$` → `^\d{6,10}$`; input `maxLength={6}` → `10`; pattern `\d{6}` → `\d{6,10}`; slice cap 6 → 10; submit-disable check `otp.length !== 6` → `otp.length < 6`. Label "6-digit code" → "Verification code", placeholder "123456" → "From your email".
+- `app/(auth)/forgot-password/forgot-password-form.tsx`: comment update only ("a 6-digit OTP" → "a numeric OTP, 6-10 digits"). No behavior change.
+
+**Decisions**:
+- Range is 6-10 because Supabase Auth's `OTP_LENGTH` config supports 6 (default), 8 (apparently this project's setting), or up to 10. We accept the union rather than reading the project's exact setting at runtime — simpler, no extra config surface, no breakage if owner changes Supabase config later within that range.
+- Label dropped digit count entirely. Saying "8-digit code" would lock UI to a Supabase config the owner could change unilaterally; "Verification code" stays correct regardless.
+
+**Issues**: None — pure validation widening, no flow change.
+
+**Verification**: `tsc --noEmit` clean. `biome check` on both modified files clean.
+
+**Next steps**: Owner re-tests reset flow on preview with the 8-digit code from email. Reset succeeds → ready to merge `phase8/design-parity` to main.
+
+---
+
 ## 2026-06-10 06:15 UTC — phase8/password-auth: switch reset flow to OTP
 
 **Objective**: Replace the link-based password reset flow (which proved unusable in practice — Gmail's link-prefetch consumes the one-time PKCE code before the user clicks it, leaving the recipient with a permanently invalid `?code=…` callback URL) with a 6-digit OTP entered into a form on `/reset-password`. OTPs aren't dereferenced by inbox scanners, so prefetch consumption goes away.

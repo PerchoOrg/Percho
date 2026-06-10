@@ -13,7 +13,7 @@ const inputCls =
 const ResetSchema = z
   .object({
     email: Email,
-    otp: z.string().regex(/^\d{6}$/, 'Enter the 6-digit code from your email'),
+    otp: z.string().regex(/^\d{6,10}$/, 'Enter the verification code from your email'),
     password: Password,
     confirm: Password,
   })
@@ -92,19 +92,19 @@ export function ResetPasswordForm({ initialEmail }: { initialEmail: string }) {
         />
       </label>
       <label className="mt-4 block">
-        <span className="text-xs text-cream/60">6-digit code</span>
+        <span className="text-xs text-cream/60">Verification code</span>
         <input
           type="text"
           inputMode="numeric"
           required
           autoComplete="one-time-code"
-          maxLength={6}
-          pattern="\d{6}"
+          maxLength={10}
+          pattern="\d{6,10}"
           value={otp}
-          onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+          onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 10))}
           disabled={status === 'verifying'}
           className={`${inputCls} tracking-[0.4em]`}
-          placeholder="123456"
+          placeholder="From your email"
         />
       </label>
       <label className="mt-4 block">
@@ -138,7 +138,7 @@ export function ResetPasswordForm({ initialEmail }: { initialEmail: string }) {
         disabled={
           status === 'verifying' ||
           email.length === 0 ||
-          otp.length !== 6 ||
+          otp.length < 6 ||
           password.length === 0 ||
           confirm.length === 0
         }

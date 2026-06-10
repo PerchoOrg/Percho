@@ -30,7 +30,7 @@ export function ForgotPasswordForm() {
 
     const supabase = createClient();
     // Note: we do NOT pass redirectTo here. The Supabase email template should
-    // surface {{ .Token }} (a 6-digit OTP) instead of a magic link, and the
+    // surface {{ .Token }} (a numeric OTP, 6-10 digits) instead of a magic link,
     // user enters that OTP on /reset-password. Link-based fallback still works
     // via /auth/callback if the template includes {{ .ConfirmationURL }}.
     const { error: resetError } = await supabase.auth.resetPasswordForEmail(parsed.data);
