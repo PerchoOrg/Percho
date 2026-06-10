@@ -681,15 +681,13 @@ export function BrowseFeed({ cards }: { cards: BrowseCard[] }) {
         </div>
       )}
 
-      {/* "View full listing" deep-link, top — to the LEFT of the Home button */}
-      {active && activeSource === 'hero' && (
-        <Link
-          href={`/v/${active.agent.slug}/${active.listing.slug}`}
-          className="absolute right-24 top-3 z-20 rounded-full border border-cream/30 bg-ink/60 px-3 py-1.5 text-cream text-xs backdrop-blur hover:border-gold hover:text-gold"
-        >
-          View full listing →
-        </Link>
-      )}
+      {/* "View full listing" pill removed (2026-06-10) — user feedback:
+       * "duplicate function of the same buttons below". The browse card
+       * already IS the listing's hero video, and Schools/Nearby/Area/
+       * Share/Contact are all reachable from the right rail; a separate
+       * deep-link to /v/<agent>/<listing> read as redundant nav. Tap the
+       * agent strip in the bottom-left to reach the full single-listing
+       * feed if needed (handled in Card render below). */}
 
       {activeIndex === 0 && activeSource === 'hero' && (
         <div className="pointer-events-none absolute inset-x-0 bottom-2 z-10 text-center">

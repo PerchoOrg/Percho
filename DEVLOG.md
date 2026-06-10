@@ -10,6 +10,18 @@ When resuming work: read the most recent entries first, then check IMPLEMENTATIO
 
 ---
 
+## 2026-06-10 17:55 UTC — hotfix: drop "View full listing" pill on /browse
+
+**Objective**: User feedback (in-flight): the top-right "View full listing →" pill on `/browse` is redundant — same surface as the right-rail buttons below. Remove it.
+
+**Actions**: removed the `<Link>` block in `BrowseFeed.tsx`. Replaced with a comment explaining why (so we don't regret-add it later). Card body itself still navigates the source switcher; the agent strip at bottom remains as a less obtrusive way into `/v/<agent>/<listing>` if needed in a future iteration.
+
+**Decisions**: agreed with user — Schools / Nearby / Area / Share / Contact / Home reset all live in the rail; a top-corner deep link competed with the Home pill visually and didn't add reach.
+
+**Verification**: tsc/biome clean, `pnpm build` `/browse 4.89 kB / 265 kB`.
+
+---
+
 ## 2026-06-10 17:30 UTC — hotfix: listing feed UX (frozen Contact, share toast, dot-row → counter)
 
 **Objective**: 3 user issues from in-flight phone QA:
