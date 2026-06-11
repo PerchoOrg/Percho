@@ -1,5 +1,5 @@
+import type { BrowseCard } from '@/app/(public)/browse/_components/BrowseFeed';
 import { thumbnailUrl } from '@/lib/cloudflare/stream';
-import { composeFeed } from '@/lib/feed/compose';
 import { createClient } from '@/lib/supabase/server';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
@@ -8,18 +8,13 @@ import { VideoFeed } from './_components/VideoFeed';
 /**
  * Public listing page — `/v/[agentSlug]/[listingSlug]`.
  *
- * Phase 3.3: vertical scroll-snap video feed UI (poster only — playback
- * lands in 3.4). Server Component fetches all data + ISR. Naive feed
- * composition (listing videos then community videos) — ARCH §5 interleave
- * is Phase 3.5.
+ * 2026-06-11 (parity hotfix): now reuses `/browse`'s `BrowseFeed` so the
+ * right rail (Like / Schools / Nearby / Area / Sound / Share / Contact) is
+ * identical to discovery. Single listing → single `BrowseCard`, with
+ * walkthroughs exposed via `heroVideos`.
  *
- * Data fetch order:
- *   agent (by slug)
- *   → listing (by agent_id + slug + status='published')
- *   → community (left, may be null)
- *   → listing_videos (status='ready', sorted)
- *   → community_videos (status='ready')
- *   → schools, pois (for community)
+ * Data fetch: agent (incl. email/phone for Contact fallback) → listing →
+ * community → listing_videos → community_videos → schools → pois.
  *
  * Uses anon supabase client + RLS (Phase 0 schema grants public SELECT on
  * published listings + ready videos + communities/schools/pois).
@@ -29,7 +24,13 @@ export const revalidate = 3600;
 
 type PageParams = { agentSlug: string; listingSlug: string };
 
-type Agent = { id: string; slug: string; name: string };
+type Agent = {
+  id: string;
+  slug: string;
+  name: string;
+  email: string | null;
+  phone: string | null;
+};
 type Listing = {
   id: string;
   slug: string;
@@ -46,7 +47,13 @@ type Listing = {
   status: string;
 };
 type Community = { id: string; name: string; description: string | null };
-type ListingVideo = { id: string; cf_video_id: string; kind: string; title: string | null };
+type ListingVideo = {
+  id: string;
+  cf_video_id: string;
+  kind: string;
+  title: string | null;
+  sort_order: number;
+};
 type CommunityVideo = {
   id: string;
   cf_video_id: string;
@@ -64,7 +71,7 @@ async function fetchPageData(agentSlug: string, listingSlug: string) {
   // biome-ignore lint/suspicious/noExplicitAny: stub generated types — TODO(phase3-end): pnpm db:types regen
   const { data: agent } = (await (supabase as any)
     .from('agents')
-    .select('id, slug, name')
+    .select('id, slug, name, email, phone')
     .eq('slug', agentSlug)
     .maybeSingle()) as { data: Agent | null };
   if (!agent) return null;
@@ -95,7 +102,7 @@ async function fetchPageData(agentSlug: string, listingSlug: string) {
   // biome-ignore lint/suspicious/noExplicitAny: stub generated types
   const { data: listingVideos } = (await (supabase as any)
     .from('listing_videos')
-    .select('id, cf_video_id, kind, title')
+    .select('id, cf_video_id, kind, title, sort_order')
     .eq('listing_id', listing.id)
     .eq('status', 'ready')
     .order('sort_order', { ascending: true })) as { data: ListingVideo[] | null };
@@ -159,9 +166,6 @@ export async function generateMetadata({
     .join(' · ');
   const description = [priceText, specs, `Listed by ${agent.name}`].filter(Boolean).join(' — ');
 
-  // Image priority: explicit cover_url → first listing_video thumbnail → none.
-  // thumbnailUrl() throws if subdomain env not set; swallow so metadata still
-  // renders without an image rather than 500-ing the whole page.
   let imageUrl: string | null = listing.cover_url ?? null;
   if (!imageUrl && listingVideos[0]) {
     try {
@@ -194,6 +198,12 @@ export async function generateMetadata({
   };
 }
 
+const NEIGHBORHOOD_DESC_MAX = 80;
+function truncate(text: string, max: number): string {
+  if (text.length <= max) return text;
+  return `${text.slice(0, max - 1).trimEnd()}…`;
+}
+
 export default async function PublicListingPage({
   params,
 }: {
@@ -205,13 +215,102 @@ export default async function PublicListingPage({
 
   const { agent, listing, listingVideos, communityVideos, schools, pois, community } = data;
 
-  const cards = composeFeed({
-    listingVideos,
-    communityVideos,
-    schools,
-    pois,
-    community,
-  });
+  if (listingVideos.length === 0) {
+    // No hero — render empty state via VideoFeed (it handles cards.length === 0).
+    return (
+      <VideoFeed
+        agent={{ slug: agent.slug, name: agent.name }}
+        listing={{
+          slug: listing.slug,
+          address: listing.address,
+          city: listing.city,
+          state: listing.state,
+          price: listing.price,
+          beds: listing.beds,
+          baths: listing.baths,
+          sqft: listing.sqft,
+        }}
+        listingId={listing.id}
+        cards={[]}
+      />
+    );
+  }
+
+  const hero = listingVideos[0];
+  if (!hero) {
+    // Defensive — `listingVideos.length === 0` is handled above; this
+    // satisfies noUncheckedIndexedAccess without `!`.
+    notFound();
+  }
+
+  // Multi-walkthrough listings: expose extras via heroVideos pool so users
+  // can horizontal-swipe / re-tap Hero source on the rail.
+  const heroVideos = listingVideos.map((v) => ({
+    cfVideoId: v.cf_video_id,
+    line1: v.title ?? listing.address,
+    line2: `${listing.city}, ${listing.state}`,
+  }));
+
+  const schoolsById = new Map(schools.map((s) => [s.id, s] as const));
+  const poisById = new Map(pois.map((p) => [p.id, p] as const));
+
+  const schoolVideos = communityVideos
+    .filter((v) => v.kind.toUpperCase() === 'SCHOOL')
+    .map((v) => {
+      const s = v.school_id ? schoolsById.get(v.school_id) : undefined;
+      return {
+        cfVideoId: v.cf_video_id,
+        line1: s ? `${s.name}${s.grades ? ` ${s.grades}` : ''}` : (v.title ?? 'School'),
+        line2: s?.rating != null ? `${s.rating}/10` : undefined,
+      };
+    });
+
+  const nearbyVideos = communityVideos
+    .filter((v) => v.kind.toUpperCase() === 'POI')
+    .map((v) => {
+      const p = v.poi_id ? poisById.get(v.poi_id) : undefined;
+      return {
+        cfVideoId: v.cf_video_id,
+        line1: p?.name ?? v.title ?? 'Nearby',
+        line2: p?.distance_text ?? undefined,
+      };
+    });
+
+  const neighborhoodVideos = communityVideos
+    .filter((v) => v.kind.toUpperCase() === 'NEIGHBORHOOD')
+    .map((v) => ({
+      cfVideoId: v.cf_video_id,
+      line1: community?.name ?? v.title ?? 'Neighborhood',
+      line2: community?.description
+        ? truncate(community.description, NEIGHBORHOOD_DESC_MAX)
+        : undefined,
+    }));
+
+  const card: BrowseCard = {
+    id: hero.cf_video_id,
+    hero: { cfVideoId: hero.cf_video_id },
+    heroVideos: heroVideos.length > 1 ? heroVideos : undefined,
+    schoolVideos,
+    nearbyVideos,
+    communityVideos: neighborhoodVideos,
+    listing: {
+      id: listing.id,
+      slug: listing.slug,
+      address: listing.address,
+      city: listing.city,
+      state: listing.state,
+      price: listing.price,
+      beds: listing.beds,
+      baths: listing.baths,
+      sqft: listing.sqft,
+    },
+    agent: {
+      slug: agent.slug,
+      name: agent.name,
+      email: agent.email,
+      phone: agent.phone,
+    },
+  };
 
   return (
     <VideoFeed
@@ -227,7 +326,7 @@ export default async function PublicListingPage({
         sqft: listing.sqft,
       }}
       listingId={listing.id}
-      cards={cards}
+      cards={[card]}
     />
   );
 }

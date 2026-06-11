@@ -8,6 +8,40 @@ Institutional memory for the project. Updated incrementally, not at session end.
 
 ---
 
+## 2026-06-11 — Public listing feed: parity with /browse rail
+
+**Objective**: User feedback — the share-link feed (`/v/[agentSlug]/[listingSlug]`) felt second-class vs `/browse`. Right rail had only Heart/Share/Contact, missing Schools/Nearby/Area/Sound. Goal: identical playback + rail UX as discovery, single source of truth.
+
+**Actions**:
+- Read both feeds end-to-end. Browse: 1 card per listing, right rail switches active card's b-roll source between hero/schools/nearby/community. /v/: vertical scroll over composeFeed-flattened cards (one card per video), only 3 rail buttons.
+- Surfaced 3 alignment options to user (🅐 cheap / 🅑 medium / 🅒 full); user picked 🅒 (architectural alignment).
+- Extended `BrowseCard` with optional `heroVideos: BrowseSourceVideo[]` pool — when present, the Hero rail source cycles through it (multi-walkthrough listings on `/v/`). `/browse` doesn't set it; behavior unchanged there.
+- `BrowseFeed`: added optional `onContact?: (card) => void` prop; when set, Contact button calls it instead of falling through to mailto:/tel:. Lets `/v/` keep its LeadModal flow.
+- `pickVideo`/`poolFor`: hero branch now consumes `heroVideos` if provided.
+- Rewrote `app/(public)/v/[agentSlug]/[listingSlug]/_components/VideoFeed.tsx` to render `<BrowseFeed cards={cards} onContact={...}/>` + LeadModal; ~50 LOC client component.
+- Rewrote `app/(public)/v/[agentSlug]/[listingSlug]/page.tsx` to fetch agent (incl. email/phone), listing, community, listing_videos, community_videos, schools, pois → assemble into ONE `BrowseCard` (with `heroVideos` if multi-walkthrough). OG metadata + thumbnailUrl preserved.
+- Deleted dead code: `_components/FeedCard.tsx`, `_components/ActionRail.tsx`, `lib/feed/compose.ts`, `lib/feed/compose.test.ts`. Trimmed `_components/types.ts` to FeedAgent + FeedListing only.
+
+**Decisions**:
+- 🅒 over 🅐/🅑: user wants real parity, not a patch. Sound/Schools/Nearby/Area on browse are *source-switching within one card* — the `/v/` flat-card model couldn't honor that semantically. Easier to retire `/v/`'s flat model than to fork rail behavior.
+- Multi-walkthrough listings: cycle via `heroVideos` instead of stacking vertical cards. Consistent with browse model.
+- `card_view` event: dropped for now (browse doesn't fire it either). `page_view` still fires once on mount. Cross-card analytics deferred until BrowseFeed grows that hook — flagged as known regression.
+- Empty state: VideoFeed handles `cards.length === 0` instead of page.tsx, mirrors prior behavior.
+
+**Issues**:
+- composeFeed.test.ts (10 tests) deleted with the module — test count drops from 41 → 41 (no change since module retired). Pre-existing failures (`create-upload.test.ts`, `listing-stats.test.ts`) unchanged on main and after.
+- Path alias: `@/app/(public)/...` worked; relative paths through `(public)` route group fail (parens treated as glob). Stick with `@/app/...`.
+
+**Verification**: `npx tsc --noEmit` clean. `pnpm build` green. `pnpm test` shows same pre-existing 2 failures as main; no new regressions.
+
+**Learnings**:
+- Two feeds drifting is the real bug. Surface that and offer the architectural collapse — patching parity is a trap that compounds.
+- Optional props for behavior overrides (`onContact`) keep the shared component reusable without conditional logic inside it.
+
+**Next**: per-video description field (still gated on owner-side migration window).
+
+---
+
 ## 2026-06-11 — Mobile listing-edit hotfix: overlap + clean video titles
 
 **Objective**: Fix mobile-screenshot issues on `/dashboard/listings/[id]/edit` — UI elements overlapping and the video upload showing a raw camera filename like `80286515262__A36D0705-4E7F-466B-8EE7-9AD52895DF45.MOV`.

@@ -25,6 +25,13 @@ export type BrowseSourceVideo = {
 export type BrowseCard = {
   id: string;
   hero: { cfVideoId: string };
+  /**
+   * Optional richer hero pool — when set, the 'hero' source cycles through
+   * these videos (horizontal swipe / repeat-tap Hero source on the rail).
+   * Used by `/v/[agent]/[listing]` to expose multi-walkthrough listings;
+   * `/browse` doesn't set this (single hero per card by design).
+   */
+  heroVideos?: BrowseSourceVideo[];
   schoolVideos: BrowseSourceVideo[];
   nearbyVideos: BrowseSourceVideo[];
   communityVideos: BrowseSourceVideo[];
@@ -220,7 +227,8 @@ function poolFor(card: BrowseCard, source: Source): number {
   if (source === 'schools') return card.schoolVideos.length;
   if (source === 'nearby') return card.nearbyVideos.length;
   if (source === 'community') return card.communityVideos.length;
-  return 1;
+  // hero: count heroVideos pool if provided, else 1 (single hero).
+  return card.heroVideos && card.heroVideos.length > 0 ? card.heroVideos.length : 1;
 }
 
 function pickVideo(card: BrowseCard, source: Source, cycleIdx: number): BrowseSourceVideo {
@@ -233,7 +241,10 @@ function pickVideo(card: BrowseCard, source: Source, cycleIdx: number): BrowseSo
   if (source === 'community' && card.communityVideos.length > 0) {
     return card.communityVideos[cycleIdx % card.communityVideos.length] as BrowseSourceVideo;
   }
-  // hero fallback
+  // hero: use heroVideos pool if provided, else fall back to single hero.
+  if (card.heroVideos && card.heroVideos.length > 0) {
+    return card.heroVideos[cycleIdx % card.heroVideos.length] as BrowseSourceVideo;
+  }
   return {
     cfVideoId: card.hero.cfVideoId,
     line1: card.listing.address,
@@ -451,7 +462,18 @@ function Card({
   );
 }
 
-export function BrowseFeed({ cards }: { cards: BrowseCard[] }) {
+export function BrowseFeed({
+  cards,
+  onContact,
+}: {
+  cards: BrowseCard[];
+  /**
+   * Optional override for the Contact rail button. When set, clicking
+   * Contact calls this with the active card instead of falling through to
+   * mailto:/tel:. `/v/[agent]/[listing]` uses this to open LeadModal.
+   */
+  onContact?: (card: BrowseCard) => void;
+}) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [liked, setLiked] = useState<Record<string, boolean>>({});
   const [likeAnimKey, setLikeAnimKey] = useState(0);
@@ -670,16 +692,18 @@ export function BrowseFeed({ cards }: { cards: BrowseCard[] }) {
         <ActionButton label="Share" onClick={onShare}>
           <ShareIcon />
         </ActionButton>
-        {active && (active.agent.email || active.agent.phone) && (
+        {active && (onContact || active.agent.email || active.agent.phone) && (
           <ActionButton
             label="Contact"
-            href={
-              active.agent.email
-                ? `mailto:${active.agent.email}?subject=${encodeURIComponent(
-                    `Interested in ${active.listing.address}`,
-                  )}`
-                : `tel:${active.agent.phone ?? ''}`
-            }
+            {...(onContact
+              ? { onClick: () => onContact(active) }
+              : {
+                  href: active.agent.email
+                    ? `mailto:${active.agent.email}?subject=${encodeURIComponent(
+                        `Interested in ${active.listing.address}`,
+                      )}`
+                    : `tel:${active.agent.phone ?? ''}`,
+                })}
           >
             <MessageIcon />
           </ActionButton>
