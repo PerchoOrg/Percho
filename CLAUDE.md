@@ -151,6 +151,23 @@ These are mandated by the owner. Breaking any of them ends the session badly:
    - If a task spans sessions, reference the prior entry by date+title.
    - Before ending a session, ensure all significant work is logged.
 
+6. **Release notes (RELEASE.md)**: this is the **non-technical** changelog —
+   read by Vivian and other product stakeholders who don't read code.
+   - **Newest at the top**, reverse chronological.
+   - Update on every push to `main` that has user-visible impact (UI changes,
+   new features, bug fixes users would notice). Skip pure refactors or
+   internal-only changes.
+   - **No code/file/library/SHA names.** Write what a user would say:
+   "auto-save in the listing editor", not "added debounced useEffect in
+   EditListingForm.tsx".
+   - Follow the standard template at the bottom of RELEASE.md (🚀 Features /
+   ✨ Improvements / 🐛 Bug Fixes / 🔧 Technical / ⚠️ Known Issues /
+   📈 Metrics).
+   - Versioning: `v0.x.y` pre-launch. Bump `x` for a meaningful release; bump
+   `y` for a same-day follow-up. After public launch → `v1.0.0`.
+   - DEVLOG.md (engineer-facing) and RELEASE.md (product-facing) are both
+   updated — they are NOT the same document.
+
 ---
 
 ## 3. Security — non-negotiable
