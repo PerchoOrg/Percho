@@ -5,6 +5,57 @@ Format matches the standard release template (Features / Improvements / Bug Fixe
 
 ---
 
+## Release Notes - v0.9.0
+
+**Release Date:** 2026-06-12
+
+### 🚀 New Features
+
+**Browse: Grid + Swipe**
+The Browse experience now has two modes that feed into each other:
+- **Grid landing.** When you visit Browse you first see a Pinterest-style wall of every published listing — a cover photo, the price, the address, and the bed/bath/sqft line. You can scan a dozen homes in seconds and pick the one that catches your eye.
+- **Swipe view.** Tap any tile and you drop straight into a vertical, full-screen video tour of that listing — and you can keep swiping up to see the next one, the one after that, and so on. Tap the back arrow to return to the grid.
+
+This replaces the old "Browse drops you into a vertical feed" entry point. Why: a wrong tile costs you a glance; a wrong full-screen video costs you 30 seconds of attention.
+
+**Save Listings**
+A new bookmark icon on each video lets you save a listing for later. (For now this lives in the current browser tab; persistent saved-listings sync arrives with sign-in.)
+
+### ✨ Improvements
+
+**New Video-Detail Layout (Xiaohongshu-style)**
+Inside the swipe view, the buttons are now reorganized for one-thumb use:
+- **Top of the screen** — a back arrow on the left, search and share on the right. Easy to reach.
+- **Right edge** — quick access to neighborhood context: Schools, Nearby, Area, Sound on/off.
+- **Bottom of the screen** — a bigger, clearer action bar with **Like / Save / Contact**.
+
+The price, address, and bed/bath/sqft summary moved from the top-left to the bottom — closer to the action bar, easier to read against the video, and now followed by the listing's full description text (tap "more" to expand).
+
+### 🐛 Bug Fixes
+
+None this release — pure surface change.
+
+### 🔧 Technical
+
+- Single shared fetcher feeds both Browse views, so the grid card and the swipe card always show the exact same data.
+- The single-listing tour page (`/v/<agent>/<listing>`) is unchanged — direct deep links still work.
+
+### ⚠️ Known Issues
+
+- **Search icon is a placeholder.** It currently just returns to the grid. Real search (by city, address, neighborhood) ships in a follow-up.
+- **Save and Like don't persist** across visits yet — they reset when you close the tab. Both are wired to flip on once accounts ship.
+- **iOS bottom safe-area** — the new bottom action bar may need a small adjustment on phones with home-indicator gestures; flagged for a smoke test on real hardware.
+
+### 📈 Metrics
+
+To watch after this release:
+- **Grid-tile tap rate** — fraction of Browse visitors who tap into the swipe view (target: >40% — if not, the cover thumbnails aren't doing enough work).
+- **Swipe depth** — average number of cards a user views per swipe-feed session, segmented by entry tile vs. random entry.
+- **Save events / visitor** — even before persistence, this is a leading indicator of "would commit to this listing later."
+- **Contact-button taps from inside the swipe view** — should rise vs. previous release because Contact is now a primary action, not a side-rail one.
+
+---
+
 ## Release Notes - v0.8.1
 
 **Release Date:** 2026-06-11

@@ -44,6 +44,7 @@ type Listing = {
   baths: number | null;
   sqft: number | null;
   cover_url: string | null;
+  description: string[] | null;
   status: string;
 };
 type Community = { id: string; name: string; description: string | null };
@@ -80,7 +81,7 @@ async function fetchPageData(agentSlug: string, listingSlug: string) {
   const { data: listing } = (await (supabase as any)
     .from('listings')
     .select(
-      'id, slug, agent_id, community_id, address, city, state, price, beds, baths, sqft, cover_url, status',
+      'id, slug, agent_id, community_id, address, city, state, price, beds, baths, sqft, cover_url, description, status',
     )
     .eq('agent_id', agent.id)
     .eq('slug', listingSlug)
@@ -287,6 +288,7 @@ export default async function PublicListingPage({
       beds: listing.beds,
       baths: listing.baths,
       sqft: listing.sqft,
+      description: (listing.description ?? []).filter((s) => s && s.trim().length > 0),
     },
     agent: {
       slug: agent.slug,

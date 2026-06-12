@@ -1,19 +1,8 @@
 'use client';
-
-/**
- * BrowseFeed — vertical scroll-snap discovery feed across listings.
- *
- * v3 (demo parity): each card carries hero + schools/nearby/community
- * b-roll videos. The right rail's Schools / Nearby / Community buttons
- * switch the *active* card's playing video to the matching source. Tapping
- * the same source again cycles to the next b-roll in that pool. Cards
- * default to hero. The button glows gold while a non-hero source is active.
- */
-
-import { Logo } from '@/app/_components/Logo';
 import { hlsUrl, thumbnailUrl } from '@/lib/cloudflare/stream';
 import Hls from 'hls.js';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { LeadModal } from '../../_components/LeadModal';
 
@@ -46,6 +35,11 @@ export type BrowseCard = {
     beds: number | null;
     baths: number | null;
     sqft: number | null;
+    /**
+     * Multi-paragraph description (Phase 9). Each entry is one paragraph;
+     * rendered as the bottom caption (Xiaohongshu-style), expandable on tap.
+     */
+    description: string[];
   };
   agent: {
     slug: string;
@@ -123,10 +117,76 @@ function ShareIcon() {
   );
 }
 
-function MessageIcon() {
+function SearchIcon() {
   return (
-    <svg aria-hidden="true" viewBox="0 0 24 24" width={22} height={22} fill="currentColor">
-      <path d="M21 6h-2v9H6v2c0 .55.45 1 1 1h11l4 4V7c0-.55-.45-1-1-1zm-4 6V3c0-.55-.45-1-1-1H3c-.55 0-1 .45-1 1v14l4-4h10c.55 0 1-.45 1-1z" />
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      width={20}
+      height={20}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <circle cx="11" cy="11" r="7" />
+      <path d="m20 20-3.5-3.5" />
+    </svg>
+  );
+}
+
+function BookmarkIcon({ filled }: { filled?: boolean }) {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      width={26}
+      height={26}
+      fill={filled ? 'currentColor' : 'none'}
+      stroke="currentColor"
+      strokeWidth={filled ? 0 : 2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+    </svg>
+  );
+}
+
+function CommentIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      width={26}
+      height={26}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+    </svg>
+  );
+}
+
+function BackArrowIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      width={22}
+      height={22}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M19 12H5" />
+      <path d="m12 19-7-7 7-7" />
     </svg>
   );
 }
@@ -222,6 +282,41 @@ interface CardProps {
   poolSize: number;
   /** Global mute state from parent feed — propagated to <video> on every render. */
   muted: boolean;
+}
+
+/**
+ * Big, high-contrast button used in the bottom action bar (Like / Save /
+ * Contact). Larger tap target than the right-rail ActionButton because
+ * these are the primary CTAs in the new bottom-bar pattern.
+ */
+function BottomBarButton({
+  onClick,
+  label,
+  active,
+  activeColor = 'text-gold',
+  children,
+}: {
+  onClick: () => void;
+  label: string;
+  active?: boolean;
+  /** Tailwind text class used when active=true (e.g. 'text-rose-400'). */
+  activeColor?: string;
+  children: ReactNode;
+}) {
+  const tone = active ? activeColor : 'text-cream';
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={label}
+      aria-pressed={!!active}
+      className={`flex flex-col items-center gap-0.5 ${tone} transition-colors`}
+      style={{ touchAction: 'manipulation' }}
+    >
+      {children}
+      <span className="font-medium text-[10px] tracking-wide opacity-80">{label}</span>
+    </button>
+  );
 }
 
 function poolFor(card: BrowseCard, source: Source): number {
@@ -405,24 +500,12 @@ function Card({
       </div>
 
       <div className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-black/70 via-black/30 to-transparent" />
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-48 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-72 bg-gradient-to-t from-black/85 via-black/50 to-transparent" />
 
-      {/* Top-left price + address */}
-      <div className="absolute top-6 left-5 max-w-[70%]">
-        <div className="font-serif text-3xl text-cream tracking-tight drop-shadow">
-          {formatPrice(card.listing.price)}
-        </div>
-        <div className="mt-1 text-cream/90 text-sm leading-snug drop-shadow">
-          {card.listing.address}
-        </div>
-        <div className="text-cream/70 text-xs">
-          {card.listing.city}, {card.listing.state}
-        </div>
-      </div>
-
-      {/* Source overlay (schools/nearby/community) */}
+      {/* Source overlay (schools/nearby/community) — kept top-left so the
+       * bottom area is fully owned by the Xiaohongshu-style caption block. */}
       {overlayLine1 && (
-        <div className="absolute top-28 left-5 max-w-[70%] rounded-lg border border-cream/20 bg-ink/60 px-3 py-2 backdrop-blur">
+        <div className="absolute top-16 left-5 max-w-[70%] rounded-lg border border-cream/20 bg-ink/60 px-3 py-2 backdrop-blur">
           <div className="flex items-center justify-between gap-2">
             <div className="text-cream text-sm">{overlayLine1}</div>
             {poolSize > 1 && (
@@ -446,15 +529,31 @@ function Card({
         </div>
       )}
 
-      <div className="absolute bottom-6 left-5 right-24 text-cream">
-        <div className="flex items-center gap-2 text-cream/70 text-xs">
+      {/* Bottom caption block — Xiaohongshu/Douyin pattern. Sits above the
+       * action bar (BrowseFeed renders the action bar at the very bottom).
+       * Right-side rail is reserved for Schools/Nearby/Area/Sound. */}
+      <div className="absolute bottom-20 left-4 right-20 text-cream">
+        <div className="font-serif text-2xl text-cream leading-tight tracking-tight drop-shadow">
+          {formatPrice(card.listing.price)}
+        </div>
+        <div className="mt-1 text-cream text-sm leading-snug drop-shadow">
+          {card.listing.address}
+        </div>
+        <div className="text-cream/80 text-xs">
+          {card.listing.city}, {card.listing.state}
+        </div>
+        <div className="mt-1 flex items-center gap-2 text-cream/80 text-xs">
           {card.listing.beds != null && <span>{card.listing.beds} bd</span>}
           {card.listing.baths != null && <span>· {card.listing.baths} ba</span>}
           {card.listing.sqft != null && <span>· {card.listing.sqft.toLocaleString()} sqft</span>}
         </div>
+        {card.listing.description.length > 0 && (
+          <DescriptionBlock paragraphs={card.listing.description} />
+        )}
         <Link
           href={`/a/${card.agent.slug}`}
-          className="mt-1 inline-block text-cream/80 text-xs hover:text-gold"
+          className="mt-2 inline-block text-cream/80 text-xs hover:text-gold"
+          onClick={(e) => e.stopPropagation()}
         >
           Listed by {card.agent.name}
         </Link>
@@ -463,9 +562,70 @@ function Card({
   );
 }
 
-export function BrowseFeed({ cards }: { cards: BrowseCard[] }) {
-  const [activeIndex, setActiveIndex] = useState(0);
+/**
+ * Expandable description — collapsed shows first paragraph clamped to 2
+ * lines with a "more" toggle; expanded reveals all paragraphs.
+ */
+function DescriptionBlock({ paragraphs }: { paragraphs: string[] }) {
+  const [expanded, setExpanded] = useState(false);
+  const first = paragraphs[0] ?? '';
+  const hasMore = paragraphs.length > 1 || first.length > 90;
+  return (
+    <div className="mt-2 text-cream/90 text-xs leading-relaxed">
+      {expanded ? (
+        <div className="space-y-1">
+          {paragraphs.map((p, i) => (
+            <p key={`${i}-${p.slice(0, 16)}`}>{p}</p>
+          ))}
+          {hasMore && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setExpanded(false);
+              }}
+              className="text-cream/60 hover:text-gold"
+            >
+              less
+            </button>
+          )}
+        </div>
+      ) : (
+        <p className="line-clamp-2">
+          {first}
+          {hasMore && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setExpanded(true);
+              }}
+              className="ml-1 text-cream/60 hover:text-gold"
+            >
+              ... more
+            </button>
+          )}
+        </p>
+      )}
+    </div>
+  );
+}
+
+export function BrowseFeed({
+  cards,
+  initialIndex = 0,
+}: {
+  cards: BrowseCard[];
+  /**
+   * Phase 9: when launched from the grid, jump straight to the clicked card.
+   * Defaults to 0 (top of feed) for backwards compatibility.
+   */
+  initialIndex?: number;
+}) {
+  const router = useRouter();
+  const [activeIndex, setActiveIndex] = useState(initialIndex);
   const [liked, setLiked] = useState<Record<string, boolean>>({});
+  const [saved, setSaved] = useState<Record<string, boolean>>({});
   const [likeAnimKey, setLikeAnimKey] = useState(0);
   // per-card source + cycle index. key = listing.id
   const [sourceByCard, setSourceByCard] = useState<Record<string, Source>>({});
@@ -498,6 +658,18 @@ export function BrowseFeed({ cards }: { cards: BrowseCard[] }) {
     return () => obs.disconnect();
   }, []);
 
+  // Phase 9: when launched from the grid with ?start=<id>, jump to that
+  // card without animation on first paint. Skipped when initialIndex is 0
+  // (default — natural top-of-feed entry from older deep links).
+  // biome-ignore lint/correctness/useExhaustiveDependencies: intentional one-shot mount effect
+  useEffect(() => {
+    if (initialIndex <= 0) return;
+    const root = scrollerRef.current;
+    const target = cardRefs.current.get(initialIndex);
+    if (!root || !target) return;
+    root.scrollTo({ top: target.offsetTop, behavior: 'auto' });
+  }, []);
+
   const setCardRef = useCallback((idx: number, el: HTMLElement | null) => {
     if (!el) {
       cardRefs.current.delete(idx);
@@ -512,6 +684,7 @@ export function BrowseFeed({ cards }: { cards: BrowseCard[] }) {
   const activeSource: Source = activeId ? (sourceByCard[activeId] ?? 'hero') : 'hero';
   const activeCycle = activeId ? (cycleByCard[activeId] ?? 0) : 0;
   const isLiked = activeId ? !!liked[activeId] : false;
+  const isSaved = activeId ? !!saved[activeId] : false;
   void activeCycle; // kept for symmetry; per-card cycle read inside Card via cycleByCard
 
   const switchSource = useCallback(
@@ -540,6 +713,18 @@ export function BrowseFeed({ cards }: { cards: BrowseCard[] }) {
     setLiked((m) => ({ ...m, [id]: !wasLiked }));
     if (!wasLiked) setLikeAnimKey((n) => n + 1);
   }, [active, liked]);
+
+  const toggleSave = useCallback(() => {
+    if (!active) return;
+    const id = active.listing.id;
+    setSaved((m) => ({ ...m, [id]: !m[id] }));
+    // TODO V2: persist saved listings to Supabase (`saved_listings` table)
+    // once auth is in place. For now, in-memory only.
+  }, [active]);
+
+  const openContact = useCallback(() => {
+    setLeadOpen(true);
+  }, []);
 
   const onShare = useCallback(async () => {
     if (!active) return;
@@ -636,13 +821,10 @@ export function BrowseFeed({ cards }: { cards: BrowseCard[] }) {
         })}
       </div>
 
-      {/* Right rail */}
-      <div className="absolute right-3 bottom-20 z-20 flex flex-col items-center gap-3">
-        <div key={likeAnimKey} className={likeAnimKey > 0 ? 'heart-pop' : ''}>
-          <ActionButton label="Like" onClick={toggleLike} active={isLiked}>
-            <HeartIcon filled={isLiked} />
-          </ActionButton>
-        </div>
+      {/* Right rail — INFO actions only (Schools / Nearby / Area / Sound).
+       * Like / Save / Comment moved to the bottom action bar (Xiaohongshu
+       * pattern). Share moved to the top header. Hero-back lives top-left. */}
+      <div className="absolute right-3 bottom-32 z-20 flex flex-col items-center gap-3">
         <ActionButton
           label="Schools"
           onClick={() => switchSource('schools')}
@@ -669,10 +851,6 @@ export function BrowseFeed({ cards }: { cards: BrowseCard[] }) {
         >
           <CommunityIcon />
         </ActionButton>
-        {/* Hero reset removed (2026-06-10) — duplicated the in-feed
-         * top-center "← Back" pill. The pill now reads "Back" and is the
-         * sole way to dismiss the source switcher. The brand Logo top-left
-         * handles "go to landing". */}
         <ActionButton
           label={muted ? 'Sound' : 'Mute'}
           onClick={() => setMuted((m) => !m)}
@@ -680,53 +858,83 @@ export function BrowseFeed({ cards }: { cards: BrowseCard[] }) {
         >
           {muted ? <SoundOffIcon /> : <SoundOnIcon />}
         </ActionButton>
-        <ActionButton label="Share" onClick={onShare}>
-          <ShareIcon />
-        </ActionButton>
-        {active && (
-          <ActionButton label="Contact" onClick={() => setLeadOpen(true)}>
-            <MessageIcon />
-          </ActionButton>
-        )}
       </div>
 
       {/* Active source label — top center, informational only (no nav). */}
       {activeSource !== 'hero' && (
-        <div className="-translate-x-1/2 absolute top-3 left-1/2 z-10 rounded-full border border-cream/20 bg-ink/60 px-3 py-1 backdrop-blur">
+        <div className="-translate-x-1/2 absolute top-14 left-1/2 z-10 rounded-full border border-cream/20 bg-ink/60 px-3 py-1 backdrop-blur">
           <span className="text-cream/80 text-xs uppercase tracking-wider">
             {activeSource === 'schools' ? 'Schools' : activeSource === 'nearby' ? 'Nearby' : 'Area'}
           </span>
         </div>
       )}
 
-      {/* Top-right nav cluster: [← Back] (when on a b-roll source) + [Logo] (always).
-       * Side-by-side per user feedback: 'Back' returns to the hero video (in-feed
-       * navigation), Logo returns to landing page (global nav). */}
-      <div className="absolute top-3 right-3 z-30 flex items-center gap-2">
-        {activeSource !== 'hero' && (
+      {/* Top header — Xiaohongshu video pattern: [Back] ... [Search] [Share].
+       * Back goes to /browse (the grid). When viewing a b-roll source, Back
+       * first returns to hero, then back to grid on second tap. */}
+      <div className="absolute inset-x-0 top-0 z-30 flex items-center justify-between px-3 pt-3">
+        <button
+          type="button"
+          onClick={() => {
+            if (activeSource !== 'hero') {
+              switchSource('hero');
+            } else {
+              router.push('/browse');
+            }
+          }}
+          aria-label={activeSource !== 'hero' ? 'Back to listing video' : 'Back to grid'}
+          className="flex h-9 w-9 items-center justify-center rounded-full border border-cream/20 bg-ink/55 text-cream backdrop-blur-md transition-colors hover:border-gold hover:text-gold"
+          style={{ touchAction: 'manipulation' }}
+        >
+          <BackArrowIcon />
+        </button>
+        <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={() => switchSource('hero')}
-            aria-label="Back to listing video"
-            className="flex h-9 items-center rounded-full border border-cream/20 bg-ink/55 px-3 text-cream text-xs backdrop-blur-md transition-colors hover:border-gold hover:text-gold"
+            onClick={() => router.push('/browse')}
+            aria-label="Search listings"
+            title="Search (coming soon)"
+            className="flex h-9 w-9 items-center justify-center rounded-full border border-cream/20 bg-ink/55 text-cream/70 backdrop-blur-md transition-colors hover:border-gold hover:text-gold"
             style={{ touchAction: 'manipulation' }}
           >
-            ← Back
+            <SearchIcon />
           </button>
-        )}
-        <Logo variant="overlay" />
+          <button
+            type="button"
+            onClick={onShare}
+            aria-label="Share listing"
+            className="flex h-9 w-9 items-center justify-center rounded-full border border-cream/20 bg-ink/55 text-cream backdrop-blur-md transition-colors hover:border-gold hover:text-gold"
+            style={{ touchAction: 'manipulation' }}
+          >
+            <ShareIcon />
+          </button>
+        </div>
       </div>
 
-      {/* "View full listing" pill removed (2026-06-10) — user feedback:
-       * "duplicate function of the same buttons below". The browse card
-       * already IS the listing's hero video, and Schools/Nearby/Area/
-       * Share/Contact are all reachable from the right rail; a separate
-       * deep-link to /v/<agent>/<listing> read as redundant nav. Tap the
-       * agent strip in the bottom-left to reach the full single-listing
-       * feed if needed (handled in Card render below). */}
+      {/* Bottom action bar — Like / Save / Comment (Xiaohongshu pattern).
+       * Comment opens the lead modal (closest existing pathway to a
+       * conversation; "comments" UI itself is V2). */}
+      <div className="absolute inset-x-0 bottom-0 z-20 flex items-center justify-around border-cream/10 border-t bg-ink/70 px-4 pt-2 pb-4 backdrop-blur-md">
+        <div key={likeAnimKey} className={likeAnimKey > 0 ? 'heart-pop' : ''}>
+          <BottomBarButton
+            label="Like"
+            onClick={toggleLike}
+            active={isLiked}
+            activeColor="text-rose-400"
+          >
+            <HeartIcon filled={isLiked} />
+          </BottomBarButton>
+        </div>
+        <BottomBarButton label="Save" onClick={toggleSave} active={isSaved} activeColor="text-gold">
+          <BookmarkIcon filled={isSaved} />
+        </BottomBarButton>
+        <BottomBarButton label="Contact" onClick={openContact}>
+          <CommentIcon />
+        </BottomBarButton>
+      </div>
 
       {activeIndex === 0 && activeSource === 'hero' && (
-        <div className="pointer-events-none absolute inset-x-0 bottom-2 z-10 text-center">
+        <div className="pointer-events-none absolute inset-x-0 bottom-20 z-10 text-center">
           <span className="text-[10px] text-cream/50 uppercase tracking-widest">
             Swipe up for more
           </span>

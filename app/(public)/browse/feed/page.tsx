@@ -1,0 +1,38 @@
+import { BrowseFeed } from '@/app/(public)/browse/_components/BrowseFeed';
+import { fetchBrowseCards } from '@/lib/feed/browse-cards';
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'Browse · Vicinity',
+  description: 'Swipe through homes for sale. Video-first listing tours.',
+};
+
+export const dynamic = 'force-dynamic';
+
+/**
+ * Browse / Swipe Feed.
+ *
+ * Phase 9 (2026-06-12): the grid at `/browse` links here with `?start=<id>`
+ * to deep-link the swipe view to a specific listing. Without `start`, the
+ * feed renders top-down (back-compat for any external links pointing at
+ * the previous `/browse` URL).
+ */
+export default async function BrowseFeedPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ start?: string }>;
+}) {
+  const { start } = await searchParams;
+  const cards = await fetchBrowseCards();
+
+  // Resolve `start` (a listing id) → array index. Bad / missing ids fall
+  // through to 0 silently — preferable to a 404 because the swipe is just
+  // a presentation-order tweak, not a route the user typed by hand.
+  let initialIndex = 0;
+  if (start) {
+    const idx = cards.findIndex((c) => c.listing.id === start);
+    if (idx >= 0) initialIndex = idx;
+  }
+
+  return <BrowseFeed cards={cards} initialIndex={initialIndex} />;
+}

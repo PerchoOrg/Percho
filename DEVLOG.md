@@ -8,6 +8,52 @@ Institutional memory for the project. Updated incrementally, not at session end.
 
 ---
 
+## 2026-06-12 — Browse: grid-first + Xiaohongshu-style swipe (phase9/grid-then-swipe)
+
+**Objective**: Pivot `/browse` from "drop user straight into vertical TikTok feed" to a Pinterest-style grid that opens the swipe feed only when a card is tapped — Xiaohongshu / Douyin "explore → detail" pattern. While in the swipe view, redistribute the action UI so it matches the Xiaohongshu video-detail layout: top bar = Back / Search / Share, right rail = info actions only (Schools / Nearby / Area / Sound), bottom = caption block + Like / Save / Comment action bar. Pivot was user-initiated on a flight; ran in chain mode without per-step approval.
+
+**Actions**:
+- Branched `phase9/grid-then-swipe` off `main`.
+- Extracted `fetchBrowseCards()` from `app/(public)/browse/page.tsx` (which had it inline) into `lib/feed/browse-cards.ts` so the grid page and the new feed page share a single source of truth.
+- Extended `BrowseCard.listing` with `description: string[]` (sourced from `listings.description text[]`). Plumbed through `fetchBrowseCards` and the single-listing `/v/[agentSlug]/[listingSlug]/page.tsx`.
+- Rewrote `app/(public)/browse/page.tsx` as a 2/3/4-column grid (Pinterest-style) of cover thumbnails. Each tile shows price + truncated address + bd/ba/sqft. First 4 covers are `priority` for LCP. Tile is a `<Link href="/browse/feed?start={listing.id}">`.
+- Added `app/(public)/browse/feed/page.tsx`. Reads `?start=<listing_id>`, resolves it to an array index, passes `initialIndex` to `<BrowseFeed>`. Missing/bad `start` falls through to 0 (no 404).
+- Refactored `BrowseFeed.tsx`:
+  - Added `initialIndex` prop (default 0). New mount-once `useEffect` does `scrollTo({ top: cardEl.offsetTop, behavior: 'auto' })` on first paint when `initialIndex > 0`. Skipped for back-compat with old top-of-feed entry.
+  - Removed the old `Logo` + bare `← Back` cluster from top-right.
+  - Added a fixed top header at z-30: `[BackArrow]` (left), `[Search]` `[Share]` (right). Search is currently a stub that routes back to `/browse` (TODO V2). Back goes hero→grid (when on a b-roll source it hops to hero first, then grid on second tap).
+  - Right rail (z-20, bottom-32) now only carries info actions: `Schools / Nearby / Area / Sound`. `Like` / `Share` / `Contact` removed from the rail — moved to the new top header (Share) and bottom action bar (Like, Comment as Contact).
+  - Added a bottom action bar at z-20: `Like / Save / Comment(=Contact)` using a new `BottomBarButton` component (larger tap target than the rail's `ActionButton`).
+  - Added `Save` state (in-memory `Record<string, boolean>` keyed by listing id, parallel to `liked`). Bookmark icon fills gold when active. TODO V2: persist to a `saved_listings` table once auth is wired up.
+  - Card body: removed top-left price+address. Bottom caption block (left-4 right-20 bottom-20) now stacks: price (font-serif 2xl) → address → city/state → bd/ba/sqft → expandable description (`DescriptionBlock` — collapsed shows first paragraph clamped to 2 lines with "... more"; expanded shows all paragraphs and a "less" toggle) → "Listed by {agent}" link. Stronger bottom-up gradient (h-72 vs old h-48) keeps text legible against bright video frames.
+  - Deleted unused `MessageIcon` (replaced by `CommentIcon`); added `SearchIcon`, `BookmarkIcon`, `CommentIcon`, `BackArrowIcon`.
+- Verified `tsc --noEmit` clean → `biome check` clean → `next build` clean. New routes: `/browse` 5.34 kB (grid, ƒ dynamic), `/browse/feed` 181 B page + 267 kB shared chunks.
+- Updated SKILL.md (vicinity skill, references/decisions-and-context.md): explicitly revoked the previous "feed not grid" convention (it predated this user-driven pivot).
+
+**Decisions**:
+- **Click card → all-listings swipe starting at clicked card** (not single-listing). Matches Xiaohongshu actual behavior — keeps the feed serendipitous after the user picks a hook. The single-listing `/v/[agent]/[listing]` route still exists for direct deep-links / SEO and hasn't changed shape.
+- **Search is a stub** — routes back to `/browse` for now. No V1 search backend; shipping the icon empty would mislead. Documented as `title="Search (coming soon)"` and inline `// TODO V2`.
+- **Save = in-memory only** for V1. Parallels Like (also in-memory). Real persistence ships when auth ships. Documented inline.
+- **Comment button → opens `LeadModal`**. The closest existing path to a conversation; "comments" UI proper is V2.
+- **All buttons preserved**, just redistributed: Schools/Nearby/Area/Sound stay (right rail), Share moves up (top header), Like/Save/Contact move down (bottom bar). Nothing was removed wholesale.
+
+**Issues**:
+- `thumbnailUrl(videoId, opts)` doesn't accept a second arg in the current `lib/cloudflare/stream.ts` — first build attempt errored. Reverted to the single-arg call. (TODO: revisit if we want a `?time=2s` hint for thumbnails to land on a face frame instead of a black opening frame.)
+- Biome flagged the one-shot mount `useEffect` for missing deps; added a targeted `biome-ignore lint/correctness/useExhaustiveDependencies: intentional one-shot mount effect`. This is the right call here — `cardRefs.current` is mutable and `initialIndex` shouldn't trigger re-scroll on prop change (would stomp the user's scroll position).
+
+**Learnings**:
+- **The "feed not grid" convention was wrong** for a real-estate product, even if right for short-video. Short-video feeds work because the cost of "wrong post" is ~3 seconds. A wrong listing is 30 seconds of video + an emotional setup. The grid is a faster filter. Updated the skill so future sessions don't relitigate.
+- Sharing a single fetcher across grid and feed (`fetchBrowseCards`) keeps card composition logic (school/nearby/community video bundles, agent join, community description) in one place — both pages now display perfectly identical card metadata. Worth doing on day one rather than waiting for divergence.
+- LSP diagnostics in this repo lag tsc by a few seconds after multi-file edits — repeated false-positive "missing description" errors that vanished after `tsc --noEmit`. Trust tsc as the oracle, not LSP.
+
+**Next steps**:
+- Phase 9.1: persist `Save` to Supabase once auth lands (owner: future).
+- Phase 9.2: implement real search — at minimum address/city full-text on `listings`, ideally with PostGIS for radius queries.
+- Phase 9.3: when a comments table exists, swap `Comment` button from `LeadModal` → real comments drawer.
+- Smoke-test on a small phone after deploy: bottom action bar should sit above any iOS safe-area inset (`pb-4` may need to become `pb-safe`).
+
+---
+
 ## 2026-06-11 — Listing form auto-save (phase8/listing-form-autosave)
 
 **Objective**: Follow-up to listing-form-ux. User reported that even with required-field labels, Publish still failed with all required fields visibly filled. Root cause: form had a separate "Save changes" button — agents filled the dropdowns and clicked Publish without saving, so the publish gate read stale (null) DB values. Goal: kill the explicit Save button, auto-save on edit, flush before Publish.
