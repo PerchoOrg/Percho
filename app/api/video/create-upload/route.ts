@@ -178,24 +178,29 @@ async function handleCommunity(
     return NextResponse.json({ error: 'upload_provider_failed' }, { status: 502 });
   }
 
+  // Hotfix (2026-06-12): only include lat/lng keys when actually supplied.
+  // If migration 0011 hasn't been applied, the columns don't exist; sending
+  // them as null still triggers a 400 from PostgREST. Omitting the keys
+  // entirely keeps the insert compatible with both pre- and post-migration
+  // schemas. Once 0011 is applied, callers that supply geo get it persisted.
+  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
+  const insertPayload: any = {
+    community_id: input.parent_id,
+    cf_video_id: videoId,
+    kind: input.kind,
+    school_id: input.school_id ?? null,
+    poi_id: input.poi_id ?? null,
+    title: input.title ?? null,
+    status: 'processing',
+    uploaded_by: agent.id,
+  };
+  if (input.lat !== undefined && input.lat !== null) insertPayload.lat = input.lat;
+  if (input.lng !== undefined && input.lng !== null) insertPayload.lng = input.lng;
+
   // biome-ignore lint/suspicious/noExplicitAny: stub generated types
   const { data: row, error: insertErr } = (await (supabase as any)
     .from('community_videos')
-    .insert({
-      community_id: input.parent_id,
-      cf_video_id: videoId,
-      kind: input.kind,
-      school_id: input.school_id ?? null,
-      poi_id: input.poi_id ?? null,
-      title: input.title ?? null,
-      // Phase 11 — platform-wide nearby. Falls back to NULL for callers
-      // that don't supply geo (older clients); those rows won't show up
-      // in the radius query until backfilled.
-      lat: input.lat ?? null,
-      lng: input.lng ?? null,
-      status: 'processing',
-      uploaded_by: agent.id,
-    })
+    .insert(insertPayload)
     .select('id')
     .single()) as { data: { id: string } | null; error: unknown };
 

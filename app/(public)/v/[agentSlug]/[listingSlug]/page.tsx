@@ -227,7 +227,13 @@ export default async function PublicListingPage({
       .select('id, storage_path, alt_text, sort_order')
       .eq('listing_id', listing.id)
       .eq('status', 'ready')
-      .order('sort_order', { ascending: true })) as {
+      .order('sort_order', { ascending: true })
+      .then(
+        (r: unknown) => r as { data: unknown },
+        // Hotfix (2026-06-12): migration 0011 may not be applied — fall through
+        // to the existing video-empty-state below.
+        () => ({ data: [] }),
+      )) as {
       data:
         | { id: string; storage_path: string; alt_text: string | null; sort_order: number }[]
         | null;

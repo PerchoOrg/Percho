@@ -118,13 +118,21 @@ export async function fetchBrowseCards(): Promise<BrowseCard[]> {
       .eq('status', 'ready')
       .order('sort_order', { ascending: true }),
     // Phase 10: fetch photos in parallel for the photo-only fallback.
+    // Hotfix (2026-06-12): if migration 0011 hasn't run yet, the table
+    // doesn't exist. supabase-js returns { data: null, error } rather than
+    // throwing, but `.catch` here is belt-and-suspenders so /browse never
+    // crashes if a future client revision starts throwing.
     // biome-ignore lint/suspicious/noExplicitAny: stub generated types
     (supabase as any)
       .from('listing_photos')
       .select('listing_id, storage_path, sort_order')
       .in('listing_id', listingIds)
       .eq('status', 'ready')
-      .order('sort_order', { ascending: true }),
+      .order('sort_order', { ascending: true })
+      .then(
+        (r: { data: ListingPhotoRow[] | null }) => r,
+        () => ({ data: [] }),
+      ),
     // biome-ignore lint/suspicious/noExplicitAny: stub generated types
     (supabase as any)
       .from('agents')

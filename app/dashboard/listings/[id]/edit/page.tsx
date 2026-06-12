@@ -84,12 +84,19 @@ export default async function EditListingPage({
   const videos = videosRaw ?? [];
 
   // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { data: photosRaw } = (await (supabase as any)
+  const photosResp = (await (supabase as any)
     .from('listing_photos')
     .select('id, storage_path, alt_text, width, height, sort_order')
     .eq('listing_id', listing.id)
-    .order('sort_order', { ascending: true })) as { data: ListingPhotoRow[] | null };
-  const photos = photosRaw ?? [];
+    .order('sort_order', { ascending: true })
+    .then(
+      (r: { data: ListingPhotoRow[] | null }) => r,
+      // Hotfix (2026-06-12): migration 0011 may not be applied. Fall back
+      // to empty list so the edit page still loads — PhotoPanel will just
+      // show no photos and any upload attempt will surface its own error.
+      () => ({ data: [] }),
+    )) as { data: ListingPhotoRow[] | null };
+  const photos = photosResp.data ?? [];
 
   // biome-ignore lint/suspicious/noExplicitAny: stub generated types
   const { data: communitiesRaw } = (await (supabase as any)

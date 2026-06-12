@@ -58,12 +58,18 @@ export async function publishListing(listingId: string): Promise<PublishResult> 
 
   // Phase 10 (2026-06-12): photos count toward the publish gate too.
   // Either ≥1 ready video or ≥1 ready photo unblocks publish.
+  // Hotfix: graceful fallback if migration 0011 is missing — count = 0
+  // means publish gate falls back to "video required", matching V0 behaviour.
   // biome-ignore lint/suspicious/noExplicitAny: stub generated types
   const { count: readyPhotoCount } = (await (supabase as any)
     .from('listing_photos')
     .select('id', { count: 'exact', head: true })
     .eq('listing_id', listingId)
-    .eq('status', 'ready')) as { count: number | null };
+    .eq('status', 'ready')
+    .then(
+      (r: { count: number | null }) => r,
+      () => ({ count: 0 }),
+    )) as { count: number | null };
 
   const missing: string[] = [];
   if (!listing.address) missing.push('address');

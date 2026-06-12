@@ -45,9 +45,17 @@ export async function GET(req: Request) {
   const bbox = latLngBoundingBox(lat, lng, radius);
   const supabase = await createClient();
 
-  const [listingsResp, communityVidsResp] = await Promise.all([
+  // Hotfix (2026-06-12): migration 0011 (community_videos.lat/lng) may not be
+  // applied yet in some envs. Each query is awaited independently so a column-
+  // missing error on one side doesn't kill the whole response. supabase-js
+  // doesn't throw on PostgREST errors — it returns { data: null, error } —
+  // but we still wrap in try/catch as belt-and-suspenders against future
+  // changes to client behaviour.
+
+  let listingsData: unknown[] = [];
+  try {
     // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-    (supabase as any)
+    const r = await (supabase as any)
       .from('listings')
       .select(
         'id, slug, address, city, state, price, beds, baths, lat, lng, agent_id, agents!inner(slug, name)',
@@ -59,9 +67,16 @@ export async function GET(req: Request) {
       .lte('lat', bbox.maxLat)
       .gte('lng', bbox.minLng)
       .lte('lng', bbox.maxLng)
-      .limit(MAX_ROWS),
+      .limit(MAX_ROWS);
+    listingsData = r.data ?? [];
+  } catch (_err) {
+    listingsData = [];
+  }
+
+  let cvData: unknown[] = [];
+  try {
     // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-    (supabase as any)
+    const r = await (supabase as any)
       .from('community_videos')
       .select('id, cf_video_id, kind, title, lat, lng, status, community_id')
       .eq('status', 'ready')
@@ -71,8 +86,11 @@ export async function GET(req: Request) {
       .lte('lat', bbox.maxLat)
       .gte('lng', bbox.minLng)
       .lte('lng', bbox.maxLng)
-      .limit(MAX_ROWS),
-  ]);
+      .limit(MAX_ROWS);
+    cvData = r.data ?? [];
+  } catch (_err) {
+    cvData = [];
+  }
 
   const center = { lat, lng };
 
@@ -91,13 +109,13 @@ export async function GET(req: Request) {
     agents: { slug: string; name: string };
   };
 
-  const listings = (listingsResp.data ?? [])
-    .map((l: ListingRow) => ({
+  const listings = (listingsData as ListingRow[])
+    .map((l) => ({
       ...l,
       distance: haversineMiles(center, { lat: l.lat, lng: l.lng }),
     }))
-    .filter((l: ListingRow & { distance: number }) => l.distance <= radius)
-    .sort((a: { distance: number }, b: { distance: number }) => a.distance - b.distance);
+    .filter((l) => l.distance <= radius)
+    .sort((a, b) => a.distance - b.distance);
 
   type CvRow = {
     id: string;
@@ -109,10 +127,10 @@ export async function GET(req: Request) {
     community_id: string;
   };
 
-  const communityVideos = (communityVidsResp.data ?? [])
-    .map((v: CvRow) => ({ ...v, distance: haversineMiles(center, { lat: v.lat, lng: v.lng }) }))
-    .filter((v: CvRow & { distance: number }) => v.distance <= radius)
-    .sort((a: { distance: number }, b: { distance: number }) => a.distance - b.distance);
+  const communityVideos = (cvData as CvRow[])
+    .map((v) => ({ ...v, distance: haversineMiles(center, { lat: v.lat, lng: v.lng }) }))
+    .filter((v) => v.distance <= radius)
+    .sort((a, b) => a.distance - b.distance);
 
   return NextResponse.json({
     listings,
