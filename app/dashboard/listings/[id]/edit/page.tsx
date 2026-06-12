@@ -13,6 +13,7 @@ import { thumbnailUrl } from '@/lib/cloudflare/stream';
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import { type CommunityOption, EditListingForm, type ListingContext } from './EditListingForm';
+import { GenerateTourPanel } from './GenerateTourPanel';
 import { PublishPanel } from './PublishPanel';
 import { SocialCopyPanel } from './SocialCopyPanel';
 import { type ListingVideoRow, VideoPanel } from './VideoPanel';
@@ -189,6 +190,8 @@ export default async function EditListingPage({
         </div>
         <SocialCopyPanel listingId={listing.id} />
       </section>
+
+      <GenerateTourPanel listingId={listing.id} />
     </div>
   );
 }

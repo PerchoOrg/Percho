@@ -8,6 +8,37 @@ Institutional memory for the project. Updated incrementally, not at session end.
 
 ---
 
+## 2026-06-12 — Phase 12: AI tour video stub (interface only, same branch)
+
+**Objective**: Land the *contract* for the future "Generate AI tour video from listing photos" feature without picking a provider yet. Owner directive: "create necessary frontend and backend interfaces, mark it Coming soon." No queue, no worker, no provider integration. Just the route, the button, and a doc that the eventual implementation can be measured against.
+
+**Actions**:
+- New `app/api/listings/[id]/generate-tour/route.ts` — `POST` handler. Auth check + ownership check (returns 404 not 403 to avoid leaking listing existence). Always returns `501 Not Implemented` with `{ error: 'not_implemented', message, eta: 'Q4 2026', listing_id }`.
+- New `app/dashboard/listings/[id]/edit/GenerateTourPanel.tsx` — disabled button with tooltip "Coming soon — Q4 2026" + Sparkles icon + a one-paragraph explainer ("Turn 10 photos into a 30-second tour"). Button is `disabled`, no fetch wired up. When implementation lands, flip `disabled` based on `photoCount >= 3` (Phase 10 prerequisite).
+- Inserted `<GenerateTourPanel />` at the bottom of the listing edit page (after Social copy section).
+- New `docs/api/tour-generation.md` — full V1 contract: auth, request, V1 stub response, future async-202 + webhook response shape, error code table (`not_enough_photos`, `tour_already_queued`, `provider_failed`, `quota_exhausted`), implementation outline (`tour_jobs` table, Vercel cron worker, ingest via existing `createDirectUpload()`).
+- `tsc --noEmit` clean. `biome check` clean (after one template-literal autofix). `pnpm build` clean — new route `/api/listings/[id]/generate-tour 0 B` registered.
+
+**Decisions**:
+- **Endpoint exists today (returning 501) — not deferred** so the frontend can wire against the real URL once. Less rewiring later, and any accidental curl gets a clear error not a 404.
+- **Auth + ownership check runs even in the stub**. Two reasons: (1) the failure mode is "feature not ready" not "your permissions are weird"; (2) when implementation lands, this code path is already battle-tested.
+- **Button is `disabled`, no onClick fetch**. We discussed wiring a click → 501 toast → "coming soon" UX, but it adds surface area for zero product value when a tooltip already says the same thing. KISS.
+- **Photo gate is documented but not enforced today**. Photos don't exist yet (Phase 10). Documenting `photoCount >= 3` in `tour-generation.md` so the gate doesn't get forgotten when both phases ship.
+- **ETA constant `'Q4 2026'` lives at the top of the route file** so when we pick a provider and ship, we update one string and the response self-documents the change.
+
+**Issues**:
+- None. Biome flagged a string-concat for ETA → autofixed to template literal.
+
+**Learnings**:
+- The "ship the contract first, implement later" pattern is cheap when the contract is clear. The hard work is naming error codes and response shapes; once those are in `docs/api/tour-generation.md`, anyone (us or an AI agent) can fill in the implementation without asking the product owner what the response should look like.
+
+**Next steps**:
+- Phase 10: write the `listing_media` migration (consolidate `listing_videos` + photos), pause for owner to `supabase db push`, then ship MediaUploader + photo grid + cover/reorder.
+- Phase 11: wire `/nearby` to real geolocation + listing/community radius queries.
+- Provider selection for tour generation: Q3 2026 spike comparing Runway / Luma / Pika output on real Vivian-style listings.
+
+---
+
 ## 2026-06-12 — Phase 13+14: bottom nav + role-aware /profile (phase13/bottom-nav-and-profile)
 
 **Objective**: Land the role-aware mobile bottom navigation and a minimal `/profile` route. Spec from owner: anon/buyer see `Browse · Nearby · Profile`; agents additionally see `New Listing · Community · Dashboard · Leads`. Bottom nav is mobile-only (md+ uses existing TopBar / SiteHeader); hidden in feed and auth routes for immersion. `/profile` is role-aware: anon → Sign-in CTA + "buyer accounts coming soon", agent → identity card + dashboard shortcut + sign out, buyer → "coming soon" stub. No DB changes this phase — pure UI.
