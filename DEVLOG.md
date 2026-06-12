@@ -8,6 +8,44 @@ Institutional memory for the project. Updated incrementally, not at session end.
 
 ---
 
+## 2026-06-12 — Phase 13+14: bottom nav + role-aware /profile (phase13/bottom-nav-and-profile)
+
+**Objective**: Land the role-aware mobile bottom navigation and a minimal `/profile` route. Spec from owner: anon/buyer see `Browse · Nearby · Profile`; agents additionally see `New Listing · Community · Dashboard · Leads`. Bottom nav is mobile-only (md+ uses existing TopBar / SiteHeader); hidden in feed and auth routes for immersion. `/profile` is role-aware: anon → Sign-in CTA + "buyer accounts coming soon", agent → identity card + dashboard shortcut + sign out, buyer → "coming soon" stub. No DB changes this phase — pure UI.
+
+**Actions**:
+- New `app/_components/BottomNav.tsx` (Client) — `usePathname`, lucide icons, active-tab style, hides on `/`, `/v/...`, `/browse/feed`, auth routes, and `md:` and up via `md:hidden`.
+- New `app/_components/BottomNavWrapper.tsx` (Server) — resolves role: no session → anon, session + agents row → agent, session w/o agents row → buyer (V1 fallback; Phase 9.5 will wire real buyer accounts). Renders `<BottomNav role={...} />`.
+- Wired `<BottomNavWrapper />` into `app/layout.tsx` body so it appears site-wide; component itself self-hides where appropriate.
+- New `app/(public)/profile/page.tsx` — three branches by role.
+- New `app/(public)/nearby/page.tsx` — placeholder so the BottomNav tab doesn't 404; honest "coming soon" copy + CTA back to `/browse`. Real implementation lands in Phase 11.
+- Added `pb-20 md:pb-0` to `/browse` grid main and `pb-24 md:pb-8` to the dashboard layout main so content doesn't sit underneath the fixed bottom nav on mobile.
+- Extended `scripts/admin/production-smoke.sh` with checks 8 (`/nearby`) and 9 (`/profile` anon).
+- `tsc --noEmit` clean. `biome check` clean (auto-formatted on write). `pnpm build` clean — new routes: `/nearby` 194 B, `/profile` 194 B.
+
+**Decisions**:
+- **Component split**: `BottomNav` as Client (needs `usePathname`) + thin Server wrapper that resolves role from Supabase. Keeps the role check off the client and avoids a flash-of-wrong-tabs while hydration completes.
+- **Single nav, not two**: same component used for anon/buyer/agent — just different tab arrays. Avoids duplicating active-tab logic.
+- **Hide on `/` (landing)**: landing is a marketing page with its own SiteHeader; a bottom tab bar there fights the hero CTA buttons.
+- **Hide on feed routes (`/v/...`, `/browse/feed`)**: matches the immersive Xiaohongshu pattern just shipped in Phase 9. Feed already has its own top header (Back / Search / Share) and bottom action bar (Like / Save / Comment); a tab bar on top of that would be visual noise.
+- **Buyer = "logged in but no agents row"**: cheapest possible role inference until Phase 9.5 ships a real buyer/profile table. Misclassifies zero real users today (only agents have accounts) and degrades gracefully (buyer view is a "coming soon" stub).
+- **`/nearby` ships as placeholder, not deferred**: shipping the route empty keeps the BottomNav honest (no 404 on tab tap). The page is explicit about being incomplete — better UX than a broken link or a hidden tab.
+- **No avatar / password edit in V1 profile**: Supabase Auth's `/forgot-password` flow already handles password reset. Adding inline edit here multiplies surface area without product value at our current scale.
+
+**Issues**:
+- None during build. One minor: had to remember to add bottom-padding to `/browse` and `/dashboard` so the new fixed nav doesn't occlude the last row of cards / the bottom of forms on mobile. Easy to miss; should add a note to vicinity skill that any new mobile route under the bottom nav needs `pb-20 md:pb-0`.
+
+**Learnings**:
+- The role-resolution helper in `BottomNavWrapper` is the second place we cast `supabase.from('agents')` to `any` because `database.types.ts` is stale (first place: `app/dashboard/layout.tsx`). Worth tackling `pnpm db:types` regeneration as a small cleanup task next session — three files now share the same TODO.
+- Lucide icon set covers everything we needed (Compass, MapPin, Plus, Users, Building2, Mail, User) — no need for a custom icon for "Community" or "Leads".
+
+**Next steps**:
+- Phase 12 (next): AI tour video stub — dashboard button + 501 endpoint + docs contract. No schema, no queue.
+- Phase 10: `listing_media` migration (consolidating `listing_videos` + new photo support). Will write the SQL and pause for user to `supabase db push`.
+- Phase 11: Wire `/nearby` to real geolocation + radius query; backfill listings.lat/lng if any are missing.
+- Future cleanup: regenerate `lib/supabase/database.types.ts` so we can drop the three `as any` casts (dashboard layout, BottomNavWrapper, profile page).
+
+---
+
 ## 2026-06-12 — Browse: grid-first + Xiaohongshu-style swipe (phase9/grid-then-swipe)
 
 **Objective**: Pivot `/browse` from "drop user straight into vertical TikTok feed" to a Pinterest-style grid that opens the swipe feed only when a card is tapped — Xiaohongshu / Douyin "explore → detail" pattern. While in the swipe view, redistribute the action UI so it matches the Xiaohongshu video-detail layout: top bar = Back / Search / Share, right rail = info actions only (Schools / Nearby / Area / Sound), bottom = caption block + Like / Save / Comment action bar. Pivot was user-initiated on a flight; ran in chain mode without per-step approval.

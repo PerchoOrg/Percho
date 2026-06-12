@@ -24,7 +24,7 @@ export default async function BrowsePage() {
   const cards = await fetchBrowseCards();
 
   return (
-    <main className="min-h-dvh bg-ink text-cream">
+    <main className="min-h-dvh bg-ink pb-20 text-cream md:pb-0">
       <header className="sticky top-0 z-20 flex items-center justify-between border-cream/10 border-b bg-ink/85 px-4 py-3 backdrop-blur-md">
         <Logo variant="overlay" />
         <div className="font-medium text-cream/80 text-sm uppercase tracking-wider">Browse</div>

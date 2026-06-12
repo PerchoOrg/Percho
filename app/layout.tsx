@@ -2,6 +2,7 @@ import './globals.css';
 import type { Metadata } from 'next';
 import { Inter, Playfair_Display } from 'next/font/google';
 import type { ReactNode } from 'react';
+import { BottomNavWrapper } from './_components/BottomNavWrapper';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -24,7 +25,13 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" className={`${inter.variable} ${playfair.variable}`}>
-      <body className="bg-ink text-cream antialiased">{children}</body>
+      <body className="bg-ink text-cream antialiased">
+        {children}
+        {/* Mobile-only fixed bottom tab bar; self-hides on feed/auth/landing
+         * and on md+ breakpoints. Adds a md:hidden 14px bottom inset on every
+         * page; pages that need to butt up against the bottom (feed) hide it. */}
+        <BottomNavWrapper />
+      </body>
     </html>
   );
 }

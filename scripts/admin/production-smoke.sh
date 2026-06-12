@@ -125,6 +125,22 @@ else
   check "GET /browse" no  "got status=$status (expected 200)"
 fi
 
+# 8. Nearby placeholder → 200 (phase13)
+status=$(fetch '/nearby')
+if [[ "$status" == "200" ]] && grep -q 'Nearby' /tmp/smoke-body.$$; then
+  check "GET /nearby" yes "200 + body contains 'Nearby'"
+else
+  check "GET /nearby" no  "got status=$status, body grep miss"
+fi
+
+# 9. Profile (anon) → 200, shows Sign in CTA (phase14)
+status=$(fetch '/profile')
+if [[ "$status" == "200" ]] && grep -q 'Sign in' /tmp/smoke-body.$$; then
+  check "GET /profile (anon)" yes "200 + Sign in CTA rendered"
+else
+  check "GET /profile (anon)" no  "got status=$status, body grep miss"
+fi
+
 rm -f /tmp/smoke-body.$$ /tmp/smoke-headers.$$
 
 echo
