@@ -914,7 +914,10 @@ export function BrowseFeed({
       {/* Bottom action bar — Like / Save / Comment (Xiaohongshu pattern).
        * Comment opens the lead modal (closest existing pathway to a
        * conversation; "comments" UI itself is V2). */}
-      <div className="absolute inset-x-0 bottom-0 z-20 flex items-center justify-around border-cream/10 border-t bg-ink/70 px-4 pt-2 pb-4 backdrop-blur-md">
+      <div
+        className="absolute inset-x-0 bottom-0 z-20 flex items-center justify-around border-cream/10 border-t bg-ink/70 px-4 pt-2 backdrop-blur-md"
+        style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}
+      >
         <div key={likeAnimKey} className={likeAnimKey > 0 ? 'heart-pop' : ''}>
           <BottomBarButton
             label="Like"
