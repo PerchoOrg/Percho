@@ -8,6 +8,46 @@ Institutional memory for the project. Updated incrementally, not at session end.
 
 ---
 
+## 2026-06-12 — Phase 14: UX cleanup pass (logos, Browse→Explore, Home tab, video letterbox, landing nav prune)
+
+**Objective**: Owner-driven UX cleanup post-v0.10.0. Five surgical changes:
+1. Remove every top-left "Vicinity" logo across the app.
+2. Rename all user-facing "Browse" / "Browse Listings" copy to "Explore" (URLs unchanged).
+3. Add a Home tab to the mobile BottomNav so multi-card pages can return to landing in one tap.
+4. Stop the swipe-feed video from stretch-scaling on desktop browsers — letterbox 9:16 inside 16:9 instead.
+5. Strip the right-hand nav from the landing page (Browse / For agents / Dashboard / Log out) — the hero already has a "Browse Listings" CTA, "For agents" duplicates "Agent Login", Dashboard is post-auth only, and Log out has no place on a marketing page.
+
+**Branch**: `phase14/ux-cleanup` off `12c5bff` (v0.10.0).
+
+**Actions**:
+- `app/page.tsx`: removed `<SiteHeader />` mount + Supabase session lookup (no longer needed, header was the sole consumer of `loggedIn`). CTA text "Browse Listings" → "Explore Listings". Landing top is now empty — just the hero video and dual CTA.
+- `app/_components/BottomNav.tsx`: added `Home` as the leftmost COMMON_TABS entry (`href: '/'`, exact-match active so it doesn't light up on `/browse`). Renamed `Browse` → `Explore` (label only; href stays `/browse`). Promoted `Home` from `type Home` to a value import — we now use the icon at runtime.
+- `app/(public)/browse/page.tsx`: removed the `<Logo variant="overlay">` from the sticky header, centered the remaining "Explore" pill (was a 3-column flex with logo + label + spacer). Page metadata title/description Browse → Explore.
+- `app/(public)/browse/feed/page.tsx`: metadata title Browse → Explore.
+- `app/(public)/browse/_components/BrowseFeed.tsx`: changed video + poster `<img>` className from `object-cover` to `object-cover md:object-contain bg-ink`. Mobile keeps the immersive fill (9:16 video on 9:16 phone viewport — no letterbox needed). Desktop letterboxes the 9:16 video inside whatever aspect the viewport happens to be, on an `bg-ink` background, so the original framing is preserved instead of distorted.
+- `app/(public)/profile/page.tsx`: removed `<Logo variant="overlay">` and the unused trailing spacer from Header(); centered the "Profile" pill. Removed the Logo import. Buyer-stub CTA "Browse listings" → "Explore listings".
+- `app/(public)/a/[agentSlug]/page.tsx`: removed the top-bar `<div>` containing `<Logo />` from the agent profile page. Removed the Logo import.
+- `app/dashboard/top-bar.tsx`: removed `<Logo />` from the dashboard sticky header. Removed the import.
+
+**Decisions**:
+- **Kept the `/browse` URL.** Only labels and `<title>` change. Any prior bookmark or shared link still resolves; no redirect needed.
+- **Letterbox on `md:` breakpoint, not on aspect-ratio media query.** Tailwind's `md:` (≥768px) is a clean signal for "this is a desktop browser, not a phone in portrait." Avoids the edge case where a tablet in landscape gets a letterbox it doesn't need — those users are still a tiny fraction of traffic.
+- **Did not delete `components/site/SiteHeader.tsx` or `app/_components/Logo.tsx`.** They're now unused but the change is surgical to the request. Pruning unused code is a separate cleanup pass — stale imports don't ship to production via tree-shaking.
+- **Home tab leftmost.** Convention from iOS / Instagram / TikTok: home / discovery / profile reads left-to-right. Putting Home first matches user expectation for "go back to the start."
+
+**Issues / resolution**:
+- TypeScript flagged `BrowseCard.mediaKind` as missing during one intermediate edit — that's pre-existing LSP staleness, `npx tsc --noEmit` is clean.
+- Biome flagged 3 self-closing-img formatting issues from the BrowseFeed letterbox edit; auto-fixed with `biome check --write`.
+
+**Verification**:
+- `npx tsc --noEmit` → exit 0, no errors.
+- `npx biome check app/ components/` → clean.
+- `npm run build` → all 30+ routes build successfully.
+
+**Next steps**: Owner review on `phase14/ux-cleanup`. On "merge", fast-forward main and bump to v0.11.0 (meaningful UX release: 5 distinct user-visible changes).
+
+---
+
 ## 2026-06-12 — Phase 11: platform-wide /nearby + community video geo
 
 **Objective.** Make `/nearby` a real page (was Phase 13 placeholder) and let agents tag community videos with lat/lng so platform-wide radius search works.

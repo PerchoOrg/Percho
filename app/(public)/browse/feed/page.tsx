@@ -3,7 +3,7 @@ import { fetchBrowseCards } from '@/lib/feed/browse-cards';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Browse · Vicinity',
+  title: 'Explore · Vicinity',
   description: 'Swipe through homes for sale. Video-first listing tours.',
 };
 

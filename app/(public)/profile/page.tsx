@@ -15,7 +15,6 @@
  * minimal — adds surface area for V2).
  */
 
-import { Logo } from '@/app/_components/Logo';
 import { createClient } from '@/lib/supabase/server';
 import type { Metadata } from 'next';
 import Link from 'next/link';
@@ -157,7 +156,7 @@ export default async function ProfilePage() {
             href="/browse"
             className="btn-gold inline-flex items-center justify-center rounded-full px-6 py-3 text-sm"
           >
-            Browse listings
+            Explore listings
           </Link>
           <form action="/api/auth/signout" method="post">
             <button
@@ -175,10 +174,8 @@ export default async function ProfilePage() {
 
 function Header() {
   return (
-    <header className="sticky top-0 z-20 flex items-center justify-between border-cream/10 border-b bg-ink/85 px-4 py-3 backdrop-blur-md">
-      <Logo variant="overlay" />
+    <header className="sticky top-0 z-20 flex items-center justify-center border-cream/10 border-b bg-ink/85 px-4 py-3 backdrop-blur-md">
       <div className="font-medium text-cream/80 text-sm uppercase tracking-wider">Profile</div>
-      <div className="w-9" aria-hidden="true" />
     </header>
   );
 }

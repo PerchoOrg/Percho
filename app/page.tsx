@@ -1,5 +1,4 @@
 import { SiteFooter } from '@/components/site/SiteFooter';
-import { SiteHeader } from '@/components/site/SiteHeader';
 import {
   HOW_IT_WORKS,
   LANDING_HERO_POSTER,
@@ -7,7 +6,6 @@ import {
   LANDING_SUBTITLE,
   LANDING_TAGLINE,
 } from '@/lib/copy/landing';
-import { createClient } from '@/lib/supabase/server';
 import { ArrowRight, Heart, Sparkles, Upload } from 'lucide-react';
 import Link from 'next/link';
 
@@ -19,16 +17,8 @@ const HOW_IT_WORKS_ICONS = {
 } as const;
 
 export default async function HomePage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  const loggedIn = !!user;
-
   return (
     <>
-      <SiteHeader transparent loggedIn={loggedIn} />
-
       {/* Hero — full-bleed video with dark gradient over, centered headline + dual CTA */}
       <section className="relative h-[100svh] min-h-[640px] w-full overflow-hidden">
         <video
@@ -58,7 +48,7 @@ export default async function HomePage() {
               href="/browse"
               className="btn-gold inline-flex items-center justify-center gap-2 rounded-full px-7 py-3.5"
             >
-              Browse Listings <ArrowRight size={16} />
+              Explore Listings <ArrowRight size={16} />
             </Link>
             <Link
               href="/login"

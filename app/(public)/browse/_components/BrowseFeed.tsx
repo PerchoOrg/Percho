@@ -499,14 +499,18 @@ function Card({
           <video
             ref={videoRef}
             poster={poster ?? undefined}
-            className="h-full w-full object-cover"
+            className="h-full w-full bg-ink object-cover md:object-contain"
             playsInline
             muted
             loop
             preload="metadata"
           />
         ) : poster ? (
-          <img src={poster} alt="" className="h-full w-full object-cover" />
+          <img
+            src={poster}
+            alt=""
+            className="h-full w-full bg-ink object-cover md:object-contain"
+          />
         ) : null}
       </div>
 

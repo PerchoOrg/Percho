@@ -18,7 +18,7 @@
  * Role is passed in as a prop from a Server Component wrapper.
  */
 
-import { Building2, Compass, type Home, Mail, MapPin, Plus, User, Users } from 'lucide-react';
+import { Building2, Compass, Home, Mail, MapPin, Plus, User, Users } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
@@ -33,7 +33,8 @@ type Tab = {
 };
 
 const COMMON_TABS: Tab[] = [
-  { href: '/browse', label: 'Browse', icon: Compass, matchPrefix: false },
+  { href: '/', label: 'Home', icon: Home, matchPrefix: false },
+  { href: '/browse', label: 'Explore', icon: Compass, matchPrefix: false },
   { href: '/nearby', label: 'Nearby', icon: MapPin, matchPrefix: false },
 ];
 

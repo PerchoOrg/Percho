@@ -1,4 +1,3 @@
-import { Logo } from '@/app/_components/Logo';
 import { thumbnailUrl } from '@/lib/cloudflare/stream';
 import { fetchBrowseCards } from '@/lib/feed/browse-cards';
 import type { Metadata } from 'next';
@@ -6,8 +5,8 @@ import Image from 'next/image';
 import Link from 'next/link';
 
 export const metadata: Metadata = {
-  title: 'Browse Listings · Vicinity',
-  description: 'Browse homes for sale. Tap a listing to start a video tour.',
+  title: 'Explore Listings · Vicinity',
+  description: 'Explore homes for sale. Tap a listing to start a video tour.',
 };
 
 export const dynamic = 'force-dynamic';
@@ -25,10 +24,8 @@ export default async function BrowsePage() {
 
   return (
     <main className="min-h-dvh bg-ink pb-20 text-cream md:pb-0">
-      <header className="sticky top-0 z-20 flex items-center justify-between border-cream/10 border-b bg-ink/85 px-4 py-3 backdrop-blur-md">
-        <Logo variant="overlay" />
-        <div className="font-medium text-cream/80 text-sm uppercase tracking-wider">Browse</div>
-        <div className="w-9" aria-hidden="true" />
+      <header className="sticky top-0 z-20 flex items-center justify-center border-cream/10 border-b bg-ink/85 px-4 py-3 backdrop-blur-md">
+        <div className="font-medium text-cream/80 text-sm uppercase tracking-wider">Explore</div>
       </header>
 
       {cards.length === 0 ? (
