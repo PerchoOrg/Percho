@@ -5,6 +5,82 @@ Format matches the standard release template (Features / Improvements / Bug Fixe
 
 ---
 
+## Release Notes - v0.10.0
+
+**Release Date:** 2026-06-12
+
+This release reshapes Vicinity from "agents only, video-first" into the full two-sided product: a **bottom navigation** that adapts to who you are, a **profile page** for both buyers and agents, **photos as a first-class listing format** (not just video), a real **Nearby** screen that respects your current location, and a **placeholder for the AI tour-video** feature so we can wire the UI now and plug in a provider later.
+
+### 🚀 New Features
+
+**Mobile bottom navigation**
+A persistent tab bar appears at the bottom of the screen on mobile. The tabs adapt to who you are:
+- **Anyone (logged out or signed-in buyer):** Browse · Nearby · Profile.
+- **Agent:** Browse · Nearby · New Listing · Community · Dashboard · Leads · Profile.
+
+The bar hides itself on the immersive swipe feed and on auth screens so it doesn't compete with the content.
+
+**Profile page**
+A dedicated `/profile` screen that recognizes who's looking at it:
+- **Anonymous visitors** see a friendly call-to-action with the choice "I'm an agent" (start a sign-up) vs. "I'm a buyer" (sign in to save listings and contact agents).
+- **Buyers** get a settings shell — saved-listings sync and notification preferences land in the next release.
+- **Agents** see a quick link into the dashboard plus sign-out — full agent settings ride the existing dashboard.
+
+**Nearby** *(replaces the placeholder)*
+The Nearby tab now actually works:
+- Asks once for your location (with a manual lat/lng fallback if you decline).
+- Default radius is **10 miles**, adjustable with a slider from 1 mile up to 50 miles.
+- Returns the listings closest to you, sorted by distance.
+- Will also surface neighborhood / community videos around you, once agents start tagging them with a location (see below).
+
+**Listing photos**
+Agents can now publish a listing with **just photos** — no video required. The listing-edit screen has a new Photos panel: drag-and-drop or tap to upload one or more photos, set a cover photo, delete the ones you don't want. The publish gate now reads "**at least one ready video OR photo**" instead of insisting on a hero video.
+
+Photo-only listings:
+- Show up in the Browse grid with the cover photo as the tile cover.
+- Tapping a photo-only tile opens a clean photo gallery on the listing page (the swipe feed itself stays video-only by design — that's still the "TikTok for homebuying" moment).
+- Listings that already have a hero video keep behaving exactly as before; photos are additive, not a replacement.
+
+**AI tour video — coming soon**
+The listing editor now has a **"Generate AI tour video"** button — disabled today, with a clear "Coming soon" tooltip. We've wired the API contract end-to-end so that once we pick a provider, the feature lights up across listings without further frontend work.
+
+**Community videos can be tagged with a location**
+When uploading a community / neighborhood video, agents can now optionally drop in a latitude / longitude (or tap "Use my current location" to fill it in from the browser). Videos with a location feed the platform-wide Nearby search; videos without a location keep working as they did before — they just won't appear as a nearby pin on someone else's screen.
+
+### ✨ Improvements
+
+**Browse grid renders photo covers**
+The grid landing on Browse now shows cover photos for photo-only listings — previously only video-backed listings made it onto the grid. Tapping a photo-only tile takes you to that listing's gallery instead of the swipe feed.
+
+**Publish gate copy is clearer**
+The publish-readiness panel in the listing editor now explains the new "video OR photo" rule explicitly so agents aren't blocked thinking they must wait for a video.
+
+### 🔧 Technical
+
+- New `Nearby` HTTP API powering the `/nearby` page; bbox prefilter + exact distance sort, capped at 200 listings + 200 community videos per response.
+- New first-class `listing_photos` storage path alongside the existing `listing_videos` flow; cover-photo selection lives there.
+- New geolocation columns on community videos (with a partial index so legacy rows without coordinates don't pay any cost).
+- Hardening: every page that touches the new tables degrades gracefully — empty state, never a crash — if the database migration hasn't been applied yet in a given environment.
+
+### ⚠️ Known Issues / Pending
+
+- **Database migration `0011` is not yet applied to production.** Until it lands:
+  - Photo upload in the listing editor will fail at the upload step (the table and storage bucket don't exist yet).
+  - Nearby returns listings only, not community videos.
+  - Photo-only listings can't be published.
+  All other surfaces (Profile, bottom nav, AI-tour stub, video uploads, existing publish flow) work today.
+- **Buyer "save / like / contact" sign-in gate** is still on the cutting board for the next release — anonymous visitors can browse and view but can't yet bookmark or message an agent.
+- **AI tour video generation** is wired end-to-end as an interface only; the actual video provider is not yet picked.
+- **Bottom nav at 6 tabs (agent role)** is tight on narrow phones; we may collapse two of them into a "More" overflow if user feedback flags it.
+
+### 📈 Metrics to watch
+
+- % of listings published with photos only vs. with a hero video.
+- Nearby usage: % of sessions that grant location, average radius selected.
+- Bottom-nav tap distribution by role (which tabs actually get used on mobile).
+
+---
+
 ## Release Notes - v0.9.0
 
 **Release Date:** 2026-06-12
