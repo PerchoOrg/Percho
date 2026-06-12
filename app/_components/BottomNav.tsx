@@ -8,7 +8,7 @@
  *   - agent         → Browse · Nearby · New Listing · Community · Dashboard · Leads · Profile
  *
  * Hides itself on:
- *   - `md:` and up (desktop uses SiteHeader / TopBar nav)
+ *   - `md:` and up (desktop uses TopBar nav)
  *   - feed routes (`/v/...`, `/browse/feed`) — immersive
  *   - auth routes (`/login`, `/signup`, `/forgot-password`, `/reset-password`)
  *   - landing (`/`)

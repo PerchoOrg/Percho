@@ -32,7 +32,7 @@ Institutional memory for the project. Updated incrementally, not at session end.
 **Decisions**:
 - **Kept the `/browse` URL.** Only labels and `<title>` change. Any prior bookmark or shared link still resolves; no redirect needed.
 - **Letterbox on `md:` breakpoint, not on aspect-ratio media query.** Tailwind's `md:` (≥768px) is a clean signal for "this is a desktop browser, not a phone in portrait." Avoids the edge case where a tablet in landscape gets a letterbox it doesn't need — those users are still a tiny fraction of traffic.
-- **Did not delete `components/site/SiteHeader.tsx` or `app/_components/Logo.tsx`.** They're now unused but the change is surgical to the request. Pruning unused code is a separate cleanup pass — stale imports don't ship to production via tree-shaking.
+- **Deleted `components/site/SiteHeader.tsx` and `app/_components/Logo.tsx`.** Both files had zero remaining call sites after this pass. Owner asked for cleanup ("清理掉 merge") so they go now rather than as a separate stale-code sweep later.
 - **Home tab leftmost.** Convention from iOS / Instagram / TikTok: home / discovery / profile reads left-to-right. Putting Home first matches user expectation for "go back to the start."
 
 **Issues / resolution**:
