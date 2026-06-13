@@ -5,6 +5,19 @@ Format matches the standard release template (Features / Improvements / Bug Fixe
 
 ---
 
+## Release Notes - v0.10.2
+
+**Release Date:** 2026-06-13
+
+Desktop video feed polish — Douyin-style.
+
+### ✨ Improvements
+
+**Blurred backdrop in the desktop video feed**
+On desktop, vertical 9:16 videos now sit in a softly-blurred extension of the current frame instead of solid black gutters. The video itself stays a fixed portrait shape (no stretching, no distortion); the blur fills the leftover space ambiently — same look as Douyin / TikTok on PC. Mobile is unchanged: videos continue to fill the screen edge-to-edge.
+
+---
+
 ## Release Notes - v0.10.1
 
 **Release Date:** 2026-06-12

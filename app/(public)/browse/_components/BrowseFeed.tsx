@@ -512,11 +512,24 @@ function Card({
           }
         }}
       >
+        {/* Desktop blurred backdrop — Douyin-style. Fills the letterbox
+         * gutters on md+ where the video is object-contain (9:16 inside 16:9).
+         * Uses the poster as a still backdrop (zero extra bandwidth: poster
+         * is already loaded by the <video> tag below). Hidden on mobile where
+         * object-cover already fills the viewport. */}
+        {poster && (
+          <img
+            src={poster}
+            alt=""
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0 hidden h-full w-full scale-110 object-cover opacity-60 blur-2xl md:block"
+          />
+        )}
         {shouldMount ? (
           <video
             ref={videoRef}
             poster={poster ?? undefined}
-            className="h-full w-full bg-ink object-cover md:object-contain"
+            className="relative h-full w-full object-cover md:object-contain"
             playsInline
             muted
             loop
@@ -526,7 +539,7 @@ function Card({
           <img
             src={poster}
             alt=""
-            className="h-full w-full bg-ink object-cover md:object-contain"
+            className="relative h-full w-full object-cover md:object-contain"
           />
         ) : null}
       </div>

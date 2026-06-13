@@ -8,6 +8,34 @@ Institutional memory for the project. Updated incrementally, not at session end.
 
 ---
 
+## 2026-06-13 00:00 UTC — feat: Douyin-style blurred backdrop on desktop video feed
+
+**Objective**: Owner referenced Douyin's PC feed: video stays in fixed 9:16 portrait (no stretch), gutters fill with a blurred extension of the current frame instead of solid black. Phase 14 already shipped `object-cover md:object-contain bg-ink` (no stretch, but black gutters); this finishes the look.
+
+**Actions**:
+- `app/(public)/browse/_components/BrowseFeed.tsx` (`<FeedCard>` only, ~line 515): added a `<img>` backdrop layer absolutely positioned behind the `<video>`. Uses the existing poster URL (zero extra bandwidth — poster is already loaded), `object-cover scale-110 blur-2xl opacity-60`, gated `hidden md:block`. Removed `bg-ink` from the video/img elements (now transparent so backdrop shows through); added `relative` to keep them above the absolute backdrop.
+- `/v/[agentSlug]/[listingSlug]` inherits automatically (its `VideoFeed` is a thin pass-through to `BrowseFeed` since the rail-parity collapse on 2026-06-11).
+
+**Decisions**:
+- **Poster `<img>` not a second `<video>`**: doubling the HLS load 2× costs bandwidth + GPU + iOS Safari quirks with same-source duplicate `<video>` tags. Douyin itself uses still-frame blur, not live duplicate playback.
+- **`md:` only**: mobile's `object-cover` already fills the viewport — adding a backdrop layer there is wasted GPU.
+- **`scale-110`**: prevents `blur-2xl` (24px radius) from showing the underlying black at the edges.
+- **`opacity-60`**: keeps focus on the centered video, backdrop is ambient not competing.
+- **Per-card backdrop, not viewport-level**: each `<FeedCard>` already fills `h-screen` via scroll-snap, so a card-scoped backdrop is visually identical to a viewport-level one with much less rewiring.
+
+**Verification**: `tsc --noEmit` clean. `biome check` on the file clean. `next build` succeeds (`/browse/feed` 23.5kB, `/v/[agent]/[listing]` 896B unchanged — backdrop is JSX-only, no new deps).
+
+**Hotfix justification**: visual UX polish requested directly by owner, low risk (additive `<img>` layer behind existing video, mobile path untouched). Direct push to main per project convention for additive fixes that don't change data or auth surfaces.
+
+**Learnings**:
+- Once two surfaces (`/browse` and `/v/`) collapse onto a single feed component (rail-parity, 2026-06-11), styling polish like this lands once and benefits both — the architectural collapse keeps paying dividends 2 days later.
+- `bg-ink` on the `<video>` element specifically (vs the parent `<section>`) was the gotcha — leaving it would have made the video opaque even where letterboxed, hiding the backdrop. Removed; `<section>` keeps `bg-black` as the ultimate fallback.
+
+**Next steps**:
+- Owner to eyeball on desktop after deploy. If `opacity-60` is too dim or `blur-2xl` too soft, tweakable from a single line. Mobile should be visually unchanged.
+
+---
+
 ## 2026-06-12 01:26 UTC — hotfix: remove broken dashboard hamburger (BottomNav covers it)
 
 **Objective**: Vivian (third-party reporter via owner) caught broken dropdown in top-left of `/dashboard/listings/<id>/edit` on mobile — panel opens but appears empty. Owner asked: why do we even need this dropdown when BottomNav already has everything?
