@@ -5,7 +5,7 @@
  *
  * Phase 13 (2026-06-12). Two role variants:
  *   - anon / buyer  → Browse · Nearby · Profile
- *   - agent         → Browse · Nearby · New Listing · Community · Dashboard · Leads · Profile
+ *   - agent         → Browse · Nearby · + Listing · + Community · Dashboard · Leads · Profile
  *
  * Hides itself on:
  *   - `md:` and up (desktop uses TopBar nav)
@@ -18,7 +18,7 @@
  * Role is passed in as a prop from a Server Component wrapper.
  */
 
-import { Building2, Compass, Home, Mail, MapPin, Plus, User, Users } from 'lucide-react';
+import { Building2, Compass, Home, Mail, MapPin, Plus, User } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
@@ -39,8 +39,8 @@ const COMMON_TABS: Tab[] = [
 ];
 
 const AGENT_EXTRA_TABS: Tab[] = [
-  { href: '/dashboard/listings/new', label: 'New', icon: Plus },
-  { href: '/dashboard/communities', label: 'Community', icon: Users, matchPrefix: true },
+  { href: '/dashboard/listings/new', label: '+ Listing', icon: Plus },
+  { href: '/dashboard/communities', label: '+ Community', icon: Plus, matchPrefix: true },
   { href: '/dashboard', label: 'Dashboard', icon: Building2 },
   { href: '/dashboard/leads', label: 'Leads', icon: Mail, matchPrefix: true },
 ];
