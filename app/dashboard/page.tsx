@@ -12,7 +12,6 @@
  */
 
 import { CopyLinkButton } from '@/app/dashboard/_components/CopyLinkButton';
-import { getRollupStats } from '@/lib/analytics/listing-stats';
 import { thumbnailUrl } from '@/lib/cloudflare/stream';
 import { createClient } from '@/lib/supabase/server';
 import Link from 'next/link';
@@ -64,17 +63,6 @@ function StatusBadge({ status }: { status: string }) {
     >
       {status}
     </span>
-  );
-}
-
-function RollupStat({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="rounded-2xl border border-cream/5 bg-ink2/60 p-5">
-      <div className="text-[11px] uppercase tracking-widest text-cream/50">{label}</div>
-      <div className="mt-2 font-serif text-3xl text-cream tabular-nums sm:text-4xl">
-        {value.toLocaleString()}
-      </div>
-    </div>
   );
 }
 
@@ -133,51 +121,49 @@ export default async function DashboardHomePage({ searchParams }: PageProps) {
     }
   }
 
-  // Phase 6.5 — rollup stats across the *published* subset only.
-  const publishedIds = rows.filter((l) => l.status === 'published').map((l) => l.id);
-  const rollup = await getRollupStats(supabase, publishedIds);
-
   return (
     <div className="mx-auto max-w-6xl px-5 py-8 sm:px-8 sm:py-12">
-      <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="font-serif text-4xl tracking-tight text-cream sm:text-5xl">Listings</h1>
-          <p className="mt-1 text-cream/60 text-sm">
-            Manage your inventory and share your public links.
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {agentSlug && (
-            <Link
-              href={`/a/${agentSlug}`}
-              target="_blank"
-              rel="noopener"
-              className="rounded-full border border-bronze/40 px-4 py-2 text-cream/80 text-xs hover:border-gold hover:text-gold"
-              title="Public profile — share one URL with all your listings"
-            >
-              View public profile ↗
-            </Link>
-          )}
+      <div className="mb-8 flex items-start justify-between gap-4">
+        <h1 className="font-serif text-4xl tracking-tight text-cream sm:text-5xl">Dashboard</h1>
+        {agentSlug && (
           <Link
-            href="/dashboard/listings/new"
-            className="inline-flex items-center gap-1.5 rounded-full bg-gold px-5 py-2 font-semibold text-ink text-sm hover:bg-gold/90"
+            href={`/a/${agentSlug}`}
+            target="_blank"
+            rel="noopener"
+            className="shrink-0 rounded-full border border-bronze/40 px-4 py-2 text-cream/80 text-xs hover:border-gold hover:text-gold"
+            title="Public profile — share one URL with all your listings"
           >
-            <svg viewBox="0 0 24 24" width={14} height={14} fill="currentColor" aria-hidden="true">
-              <path d="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6z" />
-            </svg>
-            New listing
+            View public profile ↗
           </Link>
-        </div>
+        )}
       </div>
 
-      {publishedIds.length > 0 && (
-        <section className="mb-10 grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-5">
-          <RollupStat label="Listings" value={publishedIds.length} />
-          <RollupStat label="Page views" value={rollup.pageViews} />
-          <RollupStat label="Sessions" value={rollup.uniqueSessions} />
-          <RollupStat label="Leads" value={rollup.leads} />
-        </section>
-      )}
+      <section className="mb-10 grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-5">
+        <Link
+          href="/dashboard/listings/new"
+          className="group flex items-center justify-between rounded-2xl border border-cream/5 bg-ink2/60 p-5 transition hover:border-gold/40"
+        >
+          <div>
+            <div className="text-[11px] uppercase tracking-widest text-gold">New listing</div>
+            <div className="mt-2 font-serif text-2xl text-cream">Add a property →</div>
+          </div>
+          <svg viewBox="0 0 24 24" width={20} height={20} fill="currentColor" className="text-gold" aria-hidden="true">
+            <path d="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6z" />
+          </svg>
+        </Link>
+        <Link
+          href="/dashboard/communities"
+          className="group flex items-center justify-between rounded-2xl border border-cream/5 bg-ink2/60 p-5 transition hover:border-gold/40"
+        >
+          <div>
+            <div className="text-[11px] uppercase tracking-widest text-gold">New community video</div>
+            <div className="mt-2 font-serif text-2xl text-cream">Pick a community →</div>
+          </div>
+          <svg viewBox="0 0 24 24" width={20} height={20} fill="currentColor" className="text-gold" aria-hidden="true">
+            <path d="M8 5v14l11-7z" />
+          </svg>
+        </Link>
+      </section>
 
       <div className="mb-4 flex items-center justify-between">
         <div className="text-[11px] uppercase tracking-widest text-gold">Your Listings</div>
