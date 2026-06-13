@@ -5,6 +5,48 @@ Format matches the standard release template (Features / Improvements / Bug Fixe
 
 ---
 
+## Release Notes - v0.14.0
+
+**Release Date:** 2026-06-13
+
+Bottom navigation redesign. The mobile bar drops from eight items to a tidy five, with a single gold "+" button in the center for agents and a new Saved tab for buyers. Profile moves to a small avatar in the top-right corner.
+
+### 🚀 Features
+
+**Cleaner mobile navigation (5 tabs)**
+- **Buyers**: Home · Explore · Saved · Nearby · Me
+- **Agents**: Home · Dashboard · ⊕ New · Leads · Me
+
+The "+" in the agent bar is a raised gold button. Tap it and a sheet slides up offering **+ New Listing** or **+ New Community Video** — no more two adjacent plus icons fighting for attention.
+
+**Saved tab for buyers**
+A new heart-icon Saved tab gives buyers a place to find listings they've kept for later. The page itself is a placeholder for now ("Your saved listings will appear here") — saving listings to your account ships in the next release.
+
+**Top-right avatar menu**
+Your initial now appears as a small gold-ringed circle in the top-right corner of every mobile page. Tap it for quick access to Profile and Sign out without hunting through the nav. Signed-out visitors see a "Sign in" pill in the same spot.
+
+### ✨ Improvements
+
+- The **Profile** label in the bar is now **Me** — shorter, frees up nav space, matches the avatar pattern.
+- Both buyer and agent views share the same five-slot skeleton, so the bar layout doesn't shift when you sign in or change accounts.
+
+### 🔧 Technical
+
+- Single `BottomNav` component drives both role variants based on whether the signed-in user has an `agents` row.
+- New `/saved` route ready to be wired to a real saved-listings table in a follow-up release.
+
+### ⚠️ Known Issues
+
+- Tapping the heart while watching a listing still keeps the save in-memory only — it won't show up in /saved yet. Persistence ships next.
+- The avatar shows the first letter of your agent name (or email). Custom avatar images are not in V1.
+
+### 📈 Metrics
+
+- Mobile tab count reduced from 8 → 5 (–37%).
+- Bundle: shared chunks unchanged at 87.3 kB; `/saved` adds 187 B.
+
+---
+
 ## Release Notes - v0.13.0
 
 **Release Date:** 2026-06-13

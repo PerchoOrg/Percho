@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import { Inter, Playfair_Display } from 'next/font/google';
 import type { ReactNode } from 'react';
 import { BottomNavWrapper } from './_components/BottomNavWrapper';
+import { TopRightAvatarWrapper } from './_components/TopRightAvatarWrapper';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -26,6 +27,8 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" className={`${inter.variable} ${playfair.variable}`}>
       <body className="bg-ink text-cream antialiased">
+        {/* Mobile-only top-right avatar / sign-in pill; mirrors BottomNav hide rules. */}
+        <TopRightAvatarWrapper />
         {children}
         {/* Mobile-only fixed bottom tab bar; self-hides on feed/auth/landing
          * and on md+ breakpoints. Adds a md:hidden 14px bottom inset on every

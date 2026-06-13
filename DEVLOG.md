@@ -8,6 +8,52 @@ Institutional memory for the project. Updated incrementally, not at session end.
 
 ---
 
+## 2026-06-13 21:30 UTC — phase19: bottom-nav redesign, role-aware FAB, top-right avatar
+
+**Objective**: Vivian flagged the bottom nav as visually cluttered (8 mobile tabs for agents — Home/Explore/Nearby/+Listing/+Community/Dashboard/Leads/Profile). Two `+` icons sitting next to each other competed for attention; buyer/agent layouts had different tab counts so the visual skeleton shifted across roles.
+
+User requirements:
+1. ≤ 5 bottom tabs (mobile-nav best practice, Apple HIG / Material).
+2. The `+` lives in the **center** slot, not as two adjacent items.
+3. Buyer view and agent view must look "整整齐齐" — same skeleton, role-aware middle slot only.
+4. Profile moves to a top-right avatar.
+5. **No role switching** in the avatar dropdown — registration locks the role (agent if `agents` row exists, else buyer); switching would confuse first-time users.
+
+**Actions**:
+- Rewrote `app/_components/BottomNav.tsx`:
+  - Buyer / anon: `Home · Explore · Saved · Nearby · Me` (5 plain tabs).
+  - Agent: `Home · Dashboard · ⊕ New (FAB) · Leads · Me` — slot 3 is a circular gold FAB lifted 5px above the bar.
+  - FAB taps open a slide-up action sheet with `+ New Listing` (→ `/dashboard/listings/new`) and `+ New Community Video` (→ `/dashboard/communities`); ESC + backdrop click + close button all dismiss.
+  - Slot label `Profile` → `Me` (href unchanged: `/profile`).
+- Created `app/(public)/saved/page.tsx` as a V1 placeholder so the buyer Saved tab has a landing page; renders an empty-state with "Sign in to save" for anon, "No saved listings yet" for authed buyers, and a CTA back to `/browse`. The in-feed heart in `BrowseFeed` is still in-memory only — V2 will wire both surfaces to a `saved_listings` table.
+- New `app/_components/TopRightAvatar.tsx` (client) + `TopRightAvatarWrapper.tsx` (server). Renders a 36px gold-bordered circle with the user's initial in the top-right corner (mobile only, `md:hidden`, mirrors BottomNav hide rules — landing/feed/auth pages excluded). Tap opens a small dropdown with **Profile** + **Sign out**. Anonymous users see a "Sign in" pill linking to `/login`. Initial source: agents.name → email local-part → '?'.
+- Mounted `<TopRightAvatarWrapper />` in `app/layout.tsx` alongside the existing `<BottomNavWrapper />`.
+
+**Decisions**:
+- **No role-switch toggle in dropdown**. User vetoed mid-flight: registration is binary (agent applies via signup form; everyone else is buyer). Adding a "Switch view" menu item would imply users can toggle it, which they can't. Cleaner to let the agents-table row determine nav silently.
+- **FAB instead of two `+` tabs**. Material guidance: a single primary creation action centered in the bar reads as "create" without ambiguity. The action sheet handles the listing-vs-community fork at tap time, where the user already has intent.
+- **Buyer slot 3 = Saved (heart icon)** rather than mirror the FAB. Buyers are consumers, not creators — a `+` in their bar is meaningless. Saved gives them parity in slot count and a useful surface that didn't have a home before.
+- **Top-right avatar mobile-only**. Desktop already has the dashboard TopBar with brand + sign-out; duplicating an avatar there would be redundant. Public mobile pages (browse, nearby, saved, profile) had no quick sign-out path — avatar fixes that without consuming a tab slot.
+- **Same 5-slot skeleton for both roles** (vs. variable tab count by role). When you switch from a buyer-view page to a dashboard page (or vice versa), the bar doesn't reflow — only the icons change. This is the "整齐" the user asked for.
+- **`/saved` as a real route, not a profile sub-tab**. Tapping the Saved tab needs to go *somewhere*; making it a placeholder now lets the V2 implementation drop in without re-routing.
+
+**Issues**:
+- Biome `lint/a11y/useSemanticElements` flagged `<div role="dialog">` for the action sheet; suppressed inline because `<dialog>` requires imperative `showModal()`/`close()` and conflicts with the slide-up CSS animation. Re-evaluate when we add a real Radix/Headless UI modal primitive.
+
+**Verification**:
+- `pnpm typecheck` ✓
+- `pnpm biome check` ✓ on the 5 changed files (pre-existing errors elsewhere unrelated).
+- `pnpm build` ✓; `/saved` route registered (187 B), build size for new components negligible.
+
+**Out of scope (deferred)**:
+- Real notification badge on the avatar (`agents` has no `unread_leads` field yet).
+- Persisting `saved_listings` to Supabase (V2 phase, separate task).
+- Desktop sidebar / TopBar redesign — this is mobile-only.
+
+**Next steps**: push branch, wait for Vercel preview, ask Vivian to walk through both buyer and agent flows on her phone (login as agent → see FAB; sign out → see anon "Sign in" pill; sign in as buyer → see Saved tab). Once she confirms, fast-forward `phase19/nav-redesign` → main, bump RELEASE to v0.14.0.
+
+---
+
 ## 2026-06-13 19:50 UTC — phase18: leads inbox upgrade
 
 **Objective**: Vivian feedback round on /dashboard/leads:
