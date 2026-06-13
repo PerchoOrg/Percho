@@ -103,12 +103,20 @@ export default async function CommunityEditorPage({
             <code className="text-cream">{community.slug}</code>
           </p>
         </div>
-        <Link
-          href={`/dashboard/communities/${community.id}/videos`}
-          className="shrink-0 rounded bg-gold px-3 py-2 text-sm font-medium text-ink transition hover:opacity-90"
-        >
-          + Add video
-        </Link>
+        <div className="flex shrink-0 gap-2">
+          <Link
+            href={`/dashboard/communities/${community.id}/photos`}
+            className="rounded border border-bronze/40 px-3 py-2 text-cream/80 text-sm transition hover:border-gold hover:text-cream"
+          >
+            + Add photos
+          </Link>
+          <Link
+            href={`/dashboard/communities/${community.id}/videos`}
+            className="rounded bg-gold px-3 py-2 font-medium text-ink text-sm transition hover:opacity-90"
+          >
+            + Add video
+          </Link>
+        </div>
       </header>
 
       <CommunityEditor
