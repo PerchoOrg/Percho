@@ -1,4 +1,6 @@
 'use client';
+import { listSavedListingIds, saveListing, unsaveListing } from '@/app/_actions/saved-listings';
+import { getOrCreateDeviceId } from '@/lib/buyer/device-id';
 import { hlsUrl, thumbnailUrl } from '@/lib/cloudflare/stream';
 import Hls from 'hls.js';
 import Link from 'next/link';
@@ -869,6 +871,26 @@ export function BrowseFeed({
   const [liked, setLiked] = useState<Record<string, boolean>>({});
   const [saved, setSaved] = useState<Record<string, boolean>>({});
   const [likeAnimKey, setLikeAnimKey] = useState(0);
+
+  // Phase 21 (2026-06-13): persistent saves keyed by anonymous device id.
+  // Hydrated on mount from saved_listings; toggleSave fires server actions.
+  // Resolved lazily on the client (localStorage requires window).
+  const deviceIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    void (async () => {
+      const id = getOrCreateDeviceId();
+      deviceIdRef.current = id;
+      try {
+        const ids = await listSavedListingIds({ deviceId: id });
+        if (ids.length > 0) {
+          setSaved(Object.fromEntries(ids.map((lid: string) => [lid, true])));
+        }
+      } catch (err) {
+        console.error('[BrowseFeed] saved hydrate failed', err);
+      }
+    })();
+  }, []);
+
   // per-card source + cycle index. key = listing.id
   const [sourceByCard, setSourceByCard] = useState<Record<string, Source>>({});
   const [cycleByCard, setCycleByCard] = useState<Record<string, number>>({});
@@ -963,10 +985,24 @@ export function BrowseFeed({
   const toggleSave = useCallback(() => {
     if (!active) return;
     const id = active.listing.id;
-    setSaved((m) => ({ ...m, [id]: !m[id] }));
-    // TODO V2: persist saved listings to Supabase (`saved_listings` table)
-    // once auth is in place. For now, in-memory only.
-  }, [active]);
+    const wasSaved = !!saved[id];
+    // Optimistic flip; revert on server failure.
+    setSaved((m) => ({ ...m, [id]: !wasSaved }));
+
+    const deviceId = deviceIdRef.current;
+    if (!deviceId) return; // hydration race; user likely double-tapped before mount fetch
+
+    void (async () => {
+      const result = await (wasSaved
+        ? unsaveListing({ deviceId, listingId: id })
+        : saveListing({ deviceId, listingId: id }));
+      if (!result.ok) {
+        console.error('[BrowseFeed] save toggle failed', result.error);
+        // revert optimistic flip
+        setSaved((m) => ({ ...m, [id]: wasSaved }));
+      }
+    })();
+  }, [active, saved]);
 
   const openContact = useCallback(() => {
     setLeadOpen(true);

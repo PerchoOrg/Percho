@@ -293,6 +293,31 @@ export async function fetchBrowseCards(): Promise<BrowseCard[]> {
 }
 
 /**
+ * Phase 21 (2026-06-13): fetch BrowseCards for a specific id set,
+ * preserving the input order. Used by `/saved` to render the buyer's
+ * saved listings via the same grid card shape as `/browse`. Filters
+ * out non-published listings (e.g. archived after save).
+ */
+export async function fetchBrowseCardsByIds(ids: string[]): Promise<BrowseCard[]> {
+  if (ids.length === 0) return [];
+  const supabase = await createClient();
+
+  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
+  const { data: rawListings } = (await (supabase as any)
+    .from('listings')
+    .select(
+      'id, slug, address, city, state, price, beds, baths, sqft, description, community_id, agent_id',
+    )
+    .in('id', ids)
+    .eq('status', 'published')) as { data: ListingRow[] | null };
+
+  const cards = await assembleCards(rawListings ?? [], supabase);
+  // Preserve caller order (saves are sorted newest-first).
+  const byId = new Map(cards.map((c) => [c.listing.id, c]));
+  return ids.map((id) => byId.get(id)).filter((c): c is BrowseCard => Boolean(c));
+}
+
+/**
  * Phase 14: nearby-aware cards. bbox prefilter (b-tree on lat/lng) +
  * exact haversine in JS, sorted ascending by distance. Returns the same
  * `BrowseCard` shape as `fetchBrowseCards()` so the grid renders
