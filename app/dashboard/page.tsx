@@ -155,7 +155,7 @@ export default async function DashboardHomePage({ searchParams }: PageProps) {
             className="text-gold"
             aria-hidden="true"
           >
-            <path d="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6z" />
+            <path d="M8 5v14l11-7z" />
           </svg>
         </Link>
         <Link
