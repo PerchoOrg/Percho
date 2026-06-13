@@ -37,7 +37,7 @@ export function LoginForm({ redirect }: { redirect: string }) {
 
     // Role-aware default: if caller passed the generic '/dashboard' default
     // and this user has no agents row (they're a buyer), send them to
-    // /profile instead. An explicit ?redirect=… in the URL always wins.
+    // /browse (Explore) instead. An explicit ?redirect=… in the URL always wins.
     let target = redirect;
     if (redirect === '/dashboard' && data.user) {
       const { data: agent } = await supabase
@@ -45,7 +45,7 @@ export function LoginForm({ redirect }: { redirect: string }) {
         .select('user_id')
         .eq('user_id', data.user.id)
         .maybeSingle();
-      if (!agent) target = '/profile';
+      if (!agent) target = '/browse';
     }
 
     // Force a full reload so server components observe the new auth cookies.

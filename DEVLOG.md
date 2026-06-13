@@ -8,6 +8,32 @@ Institutional memory for the project. Updated incrementally, not at session end.
 
 ---
 
+## 2026-06-13 11:30 UTC — phase15.2: buyer post-login → /browse, copy cleanup
+
+**Objective**: Owner follow-up after 15.1 review: "1. 选 b (signup 走 /signup 单页 with role picker — already shipped). 2. buyer 登录后当然是 explore. 3. 整个网站扫一遍类似的说明文字 cleanup, button 鼠标悬浮才出现." This phase fixes the buyer landing route and trims residual explainer copy.
+
+**Actions**:
+- `app/(auth)/login/login-form.tsx` — buyer post-login redirect '/profile' → '/browse' (Explore is the right landing for someone here to look at homes; /profile is just settings).
+- `app/(auth)/signup/signup-form.tsx` — same change for buyer post-signup redirect.
+- `app/(public)/profile/page.tsx` — logged-in buyer view: dropped the "Buyer profiles — saved listings, messages with agents, preferences — are coming soon" info box. The identity card + Explore listings CTA + Sign out are self-explanatory; the "coming soon" line read as broken UX rather than helpful framing.
+- `app/(public)/v/[agentSlug]/[listingSlug]/page.tsx` — photo-only fallback footer "Listed by {agent.name}. Video walkthrough coming soon." → "Listed by {agent.name}." Same reasoning: "coming soon" inside a public listing page degrades trust. If a video isn't there, just don't promise one.
+
+**Decisions**:
+- **Site-wide grep for explainer copy yielded 4 distinct hits**: (a) `/profile` anon (already cleaned in 15.1), (b) `/profile` logged-in buyer (this commit), (c) `/v/.../...` photo-fallback footer (this commit), (d) `BrowseFeed` Search button `title="Search (coming soon)"` — kept because Search is a real Phase 9+ feature stubbed with a tooltip; the user explicitly said "如果建议真的会帮到人的说明可以加一个,button 只有鼠标悬浮才会出现" — the tooltip pattern matches their preference.
+- Role-aware redirect cascade is now: agent → /dashboard, buyer → /browse. /profile is reachable via the bottom-nav Profile tab; it's a settings surface, not a landing surface.
+
+**Issues**: None. tsc + biome clean on the four changed files.
+
+**Resolution**: Branch `phase15.2/buyer-redirect-and-cleanup` ready for owner FF-merge. Owner can verify on Mac with `pnpm dev`: signup as buyer → lands on /browse; signup as agent → lands on /dashboard; existing buyer login → also lands on /browse.
+
+**Learnings**:
+- The pre-existing 15.1 redirect to `/profile` for buyers was a defensible default while saved-listings UX wasn't ready, but once you frame buyer ≠ "I want to manage settings" and = "I want to see homes", `/browse` is obviously right. The owner caught this in <2h, validating the "ship the thinnest spine, iterate on landing UX once it's live" approach.
+- "Coming soon" inside production UI is a smell. Either the feature is shipping next sprint and a tooltip-only placeholder buys honest forward-looking goodwill (BrowseFeed Search button is this case), or it's deferred indefinitely and reads as broken (the two strings deleted here are this case). The owner's rule "button-hover-only" lines up with the former pattern.
+
+**Next steps**: Phase 15.3 saved-listings (heart action wires to a `saved_listings` table; /profile gets a "Saved" tab); Phase 15.4 buyer↔agent messaging extension on `leads`. Both still gated on owner direction.
+
+---
+
 ## 2026-06-13 04:00 UTC — phase15.1: buyer accounts (login/signup role split, profile cleanup)
 
 **Objective**: Owner: "主页 agent login 改成 login,在 login 页面里可以选择 signup,signup 时可以选择账号类型 agent 还是 buyer,以后登陆自动根据账号类型显示不同内容。Profile 页面里删除说明文字保持简洁。" Phase 15.1 lays the architectural foundation for buyer accounts; saved-listings + messaging come in Phase 15.2/15.3.

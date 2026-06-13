@@ -56,7 +56,7 @@ export function SignupForm({ redirect }: { redirect: string }) {
       // Role-aware default redirect — only override if caller passed the
       // generic '/dashboard' default. An explicit ?redirect=… still wins.
       const target =
-        redirect === '/dashboard' && parsed.data.role === 'buyer' ? '/profile' : redirect;
+        redirect === '/dashboard' && parsed.data.role === 'buyer' ? '/browse' : redirect;
       window.location.assign(target);
       return;
     }

@@ -142,11 +142,6 @@ export default async function ProfilePage() {
           <div className="mt-2 font-serif text-2xl text-cream">{user.email ?? 'Buyer'}</div>
         </div>
 
-        <div className="mt-6 rounded-xl border border-cream/10 bg-ink2/40 p-4 text-cream/70 text-sm leading-relaxed">
-          Buyer profiles — saved listings, messages with agents, preferences — are coming soon. For
-          now you can keep browsing.
-        </div>
-
         <div className="mt-6">
           <NearbyRadiusPref />
         </div>

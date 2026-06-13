@@ -267,7 +267,7 @@ export default async function PublicListingPage({
               ))}
             </div>
             <div className="mt-8 rounded border border-bronze/30 bg-ink2 p-4 text-cream/70 text-xs">
-              Listed by {agent.name}. Video walkthrough coming soon.
+              Listed by {agent.name}.
             </div>
           </div>
         </main>

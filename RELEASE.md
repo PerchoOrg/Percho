@@ -5,6 +5,36 @@ Format matches the standard release template (Features / Improvements / Bug Fixe
 
 ---
 
+## Release Notes - v0.12.1
+
+**Release Date:** 2026-06-13
+
+Quick follow-up to v0.12.0 based on owner feedback after kicking the tires.
+
+### ✨ Improvements
+
+**Buyers now land on Explore after sign-in/sign-up**
+v0.12.0 sent buyers to /profile after authentication. Profile is a settings surface, not a landing surface — buyers come to look at homes. Sign in or sign up as a buyer now drops you straight into the Explore grid. Agents still land on /dashboard. (Profile remains one tap away via the bottom nav.)
+
+**Trimmed lingering "coming soon" copy**
+Removed two strings that read as broken UX rather than helpful framing:
+- The "Buyer profiles — saved listings, messages with agents, preferences — are coming soon" notice on the logged-in buyer Profile view. The identity card + Explore CTA + Sign out are self-explanatory.
+- The "Video walkthrough coming soon" tail on the photo-only fallback view of public listing pages. Photos already render; the page no longer makes a promise it can't keep.
+
+### 🔧 Technical
+
+- `app/(auth)/login/login-form.tsx`: buyer redirect target `/profile` → `/browse`.
+- `app/(auth)/signup/signup-form.tsx`: same.
+- `app/(public)/profile/page.tsx`: dropped logged-in buyer info box.
+- `app/(public)/v/[agentSlug]/[listingSlug]/page.tsx`: shortened photo-fallback footer.
+- No schema or migration changes.
+
+### ⚠️ Known Issues
+
+None new. Buyer accounts still cannot save listings or message agents — those land in v0.13.x and v0.14.x respectively.
+
+---
+
 ## Release Notes - v0.12.0
 
 **Release Date:** 2026-06-13
