@@ -8,6 +8,37 @@ Institutional memory for the project. Updated incrementally, not at session end.
 
 ---
 
+## 2026-06-13 02:00 UTC — phase14.2: /nearby ↔ /browse parity + radius preference moves to /profile
+
+**Objective**: Owner: "nearby 应该跟 explore 是一致的 — 根据预设的参数显示很多 cards;这个 radius 可以放到 setting 里。" Pre-Phase-14 `/nearby` shipped a custom layout (sectioned listings list + community-videos strip) plus an inline 1..50 mi slider that drove every re-fetch. That made the page feel like a debug tool instead of an Explore-style discovery surface.
+
+**Actions**:
+- `lib/feed/browse-cards.ts` — extracted the join + assembly half of `fetchBrowseCards()` into an internal `assembleCards(listings, supabase, distanceById?)` helper. Added a sibling exported `fetchNearbyCards({ lat, lng, radius })` that runs the bbox prefilter (b-tree on `listings.lat/lng`) + exact haversine in JS, then reuses `assembleCards` so cards come back identical in shape to Explore. Distance is attached as an additive optional field.
+- `app/(public)/browse/_components/BrowseFeed.tsx` — `BrowseCard` type extended with optional `distance?: number` so the same shape covers both surfaces. Explore leaves it `undefined`; the swipe feed never reads it (sort/click-through unchanged).
+- `app/api/nearby/route.ts` — rewritten as a thin wrapper around `fetchNearbyCards`. Old payload `{ listings, communityVideos, center, radius }` → new `{ cards, center, radius }`. Validation rules unchanged (lat/lng bounds, 1..100 mi radius, 200-row cap inside `fetchNearbyCards`). The stand-alone `community_videos` query was dropped from the public API — community video discovery already lives inside each `BrowseCard` (school/POI/neighborhood arrays) when the listing has a `community_id`.
+- `app/(public)/nearby/page.tsx` — collapsed to a 35-line shell with the same sticky "NEARBY" header bar as `/browse`'s "EXPLORE". Page-level h1 + subtitle + slider all gone.
+- `app/(public)/nearby/NearbyClient.tsx` — full rewrite. Reads radius from `localStorage['vicinity:nearby_radius']` on mount (default 10), runs geolocation, fetches `/api/nearby`, renders the **same** `<Image>` + `aspect-[3/4]` Pinterest grid (`grid-cols-2 sm:gap-3 md:grid-cols-3 lg:grid-cols-4`) as `/browse`. Click-through identical: video → `/browse/feed?start=<id>`, photo-only → `/v/<a>/<l>`. Adds a single distance overlay pill (`absolute top-2 left-2`) when `card.distance` is set.
+- `app/(public)/profile/_components/NearbyRadiusPref.tsx` — new client component. Select with 1/5/10/25/50 mi buckets; persists to `localStorage`; transient "Saved." chip. Mounted in all three `/profile` variants (anon, agent, buyer) so any visitor can adjust regardless of auth state.
+
+**Decisions**:
+- **Card-shape reuse over a parallel `NearbyCard` type**: `BrowseCard` already carries everything Explore renders; adding an optional `distance` is one line of type surface vs. duplicating ~150 LOC of join+assembly logic. The swipe feed (`/browse/feed`) ignores `distance`, so no behaviour change there.
+- **Bucketed select, not a slider, on `/profile`**: 1/5/10/25/50 covers the realistic search distances; a slider makes a Preferences card feel like a control panel. The API still validates 1..100 mi as a sanity cap.
+- **`localStorage` not DB**: V1 has no buyer-side `user_preferences` table and buyers are anonymous (no auth row). Cookie would force SSR plumbing for zero benefit since `NearbyClient` is `'use client'` and reads the value on mount anyway.
+- **Stand-alone community-videos strip removed from `/nearby`**: per owner direction (option 1a). Community context (school/POI/neighborhood videos) is still surfaced inside each card's swipe rail via `card.communityVideos` / `card.schoolVideos` / `card.nearbyVideos` — same place Explore exposes them.
+- **Single `/api/nearby` endpoint kept**: rather than introducing `/api/nearby/cards` and leaving the old endpoint as dead weight. The old payload had one external caller (the nearby client itself), so the breaking change is internal-only.
+
+**Verification**: `npx tsc --noEmit` exit 0. `npx biome check app/(public)/nearby app/(public)/profile app/api/nearby lib/feed/browse-cards.ts` clean (3 files auto-formatted, 1 useOptionalChain rule applied). `npx next build` succeeds: `/nearby` 2.8 kB / 112 kB First Load JS (was a custom one-off page; now reuses Explore's `next/image` + grid plumbing). `/profile` 839 B / 96.8 kB (was 599 B / 96.5 kB — +240 B from the `NearbyRadiusPref` client island).
+
+**Learnings**:
+- The Explore card already carried community-video arrays per card, so killing the dedicated community strip on `/nearby` lost zero information — the videos still surface in the swipe rail of whichever listing card they're attached to. Worth checking whenever a "X also shows Y" pattern appears: does the unified card shape already plumb Y?
+- Selecting + persisting a single integer is the canonical "should this go in DB or localStorage" coin-flip. Anonymous + client-only render path → localStorage every time. The DB only needs to enter the picture when (a) the value drives an SSR query, or (b) it has to roam across devices.
+
+**Next steps**:
+- Phase 14.3 candidate: surface saved radius on the bottom-nav so changing it doesn't require a `/profile` round-trip. Current cost (one tap to Profile, one tap on the select) is acceptable for V1.
+- When buyer accounts ship (Phase 9.5), migrate `vicinity:nearby_radius` from localStorage into a `user_preferences` row on first sign-in (one-time `localStorage` → DB transfer in the post-auth callback).
+
+---
+
 ## 2026-06-13 00:00 UTC — feat: Douyin-style blurred backdrop on desktop video feed
 
 **Objective**: Owner referenced Douyin's PC feed: video stays in fixed 9:16 portrait (no stretch), gutters fill with a blurred extension of the current frame instead of solid black. Phase 14 already shipped `object-cover md:object-contain bg-ink` (no stretch, but black gutters); this finishes the look.

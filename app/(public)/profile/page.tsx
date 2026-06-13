@@ -18,6 +18,7 @@
 import { createClient } from '@/lib/supabase/server';
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { NearbyRadiusPref } from './_components/NearbyRadiusPref';
 
 export const metadata: Metadata = {
   title: 'Profile · Vicinity',
@@ -65,6 +66,10 @@ export default async function ProfilePage() {
               Buyer accounts (saved listings, messages with agents) are coming soon. For now, browse
               freely — no sign-in needed.
             </div>
+          </div>
+
+          <div className="mt-6">
+            <NearbyRadiusPref />
           </div>
         </section>
       </main>
@@ -131,6 +136,10 @@ export default async function ProfilePage() {
               to send yourself a one-time code.
             </div>
           </div>
+
+          <div className="mt-6">
+            <NearbyRadiusPref />
+          </div>
         </section>
       </main>
     );
@@ -149,6 +158,10 @@ export default async function ProfilePage() {
         <div className="mt-6 rounded-xl border border-cream/10 bg-ink2/40 p-4 text-cream/70 text-sm leading-relaxed">
           Buyer profiles — saved listings, messages with agents, preferences — are coming soon. For
           now you can keep browsing.
+        </div>
+
+        <div className="mt-6">
+          <NearbyRadiusPref />
         </div>
 
         <div className="mt-6 flex flex-col gap-2">

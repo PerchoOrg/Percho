@@ -9,12 +9,19 @@
  * Phase 9 (2026-06-12): grid-first browse pivot. Card type extended with
  * `description` (joined from `listings.description text[]`) so the swipe
  * feed can render a longer caption at the bottom (Xiaohongshu-style).
+ *
+ * Phase 14 (2026-06-13): `/nearby` reuses the same card shape via
+ * `fetchNearbyCards({ lat, lng, radius })` so the Nearby grid is visually
+ * identical to Explore (Pinterest-style, click → swipe feed). Distance is
+ * the only additive, optional field on the returned card.
  */
 
 import type { BrowseCard } from '@/app/(public)/browse/_components/BrowseFeed';
+import { haversineMiles, latLngBoundingBox } from '@/lib/geo/distance';
 import { createClient } from '@/lib/supabase/server';
 
 const FEED_LIMIT = 30;
+const NEARBY_MAX_ROWS = 200;
 
 type ListingRow = {
   id: string;
@@ -29,6 +36,8 @@ type ListingRow = {
   description: string[] | null;
   community_id: string | null;
   agent_id: string;
+  lat?: number | null;
+  lng?: number | null;
 };
 
 type AgentRow = {
@@ -79,20 +88,21 @@ type PoiRow = {
 
 type CommunityRow = { id: string; name: string; description: string | null };
 
-export async function fetchBrowseCards(): Promise<BrowseCard[]> {
-  const supabase = await createClient();
-
+/**
+ * Internal helper: given a pre-filtered batch of listings, fan out the
+ * joined queries (agents, videos, photos, community context) and assemble
+ * `BrowseCard[]`. Distance is passed in by the caller (`/nearby` only —
+ * `/browse` passes `undefined`).
+ *
+ * Phase 14: extracted from `fetchBrowseCards()` so `fetchNearbyCards()`
+ * can reuse the join + assembly without duplicating ~150 LOC.
+ */
+async function assembleCards(
+  listings: ListingRow[],
   // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { data: rawListings } = (await (supabase as any)
-    .from('listings')
-    .select(
-      'id, slug, address, city, state, price, beds, baths, sqft, description, community_id, agent_id',
-    )
-    .eq('status', 'published')
-    .order('created_at', { ascending: false })
-    .limit(FEED_LIMIT)) as { data: ListingRow[] | null };
-
-  const listings = rawListings ?? [];
+  supabase: any,
+  distanceById?: Map<string, number>,
+): Promise<BrowseCard[]> {
   if (listings.length === 0) return [];
 
   const listingIds = listings.map((l) => l.id);
@@ -110,20 +120,17 @@ export async function fetchBrowseCards(): Promise<BrowseCard[]> {
     poisResp,
     communitiesResp,
   ] = await Promise.all([
-    // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-    (supabase as any)
+    supabase
       .from('listing_videos')
       .select('listing_id, cf_video_id, title, kind, sort_order')
       .in('listing_id', listingIds)
       .eq('status', 'ready')
       .order('sort_order', { ascending: true }),
-    // Phase 10: fetch photos in parallel for the photo-only fallback.
-    // Hotfix (2026-06-12): if migration 0011 hasn't run yet, the table
-    // doesn't exist. supabase-js returns { data: null, error } rather than
-    // throwing, but `.catch` here is belt-and-suspenders so /browse never
-    // crashes if a future client revision starts throwing.
-    // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-    (supabase as any)
+    // Phase 10: photos parallel for photo-only fallback. If migration 0011
+    // hasn't run yet, supabase-js returns { data: null, error } rather than
+    // throwing — `.then` second arg is belt-and-suspenders against future
+    // client revisions that throw.
+    supabase
       .from('listing_photos')
       .select('listing_id, storage_path, sort_order')
       .in('listing_id', listingIds)
@@ -133,39 +140,28 @@ export async function fetchBrowseCards(): Promise<BrowseCard[]> {
         (r: { data: ListingPhotoRow[] | null }) => r,
         () => ({ data: [] }),
       ),
-    // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-    (supabase as any)
-      .from('agents')
-      .select('id, slug, name, email, phone')
-      .in('id', agentIds),
+    supabase.from('agents').select('id, slug, name, email, phone').in('id', agentIds),
     communityIds.length > 0
-      ? // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-        (supabase as any)
+      ? supabase
           .from('community_videos')
           .select('community_id, cf_video_id, title, kind, school_id, poi_id')
           .in('community_id', communityIds)
           .eq('status', 'ready')
       : Promise.resolve({ data: [] }),
     communityIds.length > 0
-      ? // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-        (supabase as any)
+      ? supabase
           .from('schools')
           .select('community_id, id, name, grades, rating')
           .in('community_id', communityIds)
       : Promise.resolve({ data: [] }),
     communityIds.length > 0
-      ? // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-        (supabase as any)
+      ? supabase
           .from('pois')
           .select('community_id, id, name, distance_text')
           .in('community_id', communityIds)
       : Promise.resolve({ data: [] }),
     communityIds.length > 0
-      ? // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-        (supabase as any)
-          .from('communities')
-          .select('id, name, description')
-          .in('id', communityIds)
+      ? supabase.from('communities').select('id, name, description').in('id', communityIds)
       : Promise.resolve({ data: [] }),
   ]);
 
@@ -181,8 +177,6 @@ export async function fetchBrowseCards(): Promise<BrowseCard[]> {
   for (const v of listingVideos) {
     if (!heroByListing.has(v.listing_id)) heroByListing.set(v.listing_id, v);
   }
-  // First photo per listing (already ordered by sort_order asc) — used as
-  // hero when no ready video exists.
   const heroPhotoByListing = new Map<string, ListingPhotoRow>();
   for (const p of listingPhotos) {
     if (!heroPhotoByListing.has(p.listing_id)) heroPhotoByListing.set(p.listing_id, p);
@@ -207,7 +201,6 @@ export async function fetchBrowseCards(): Promise<BrowseCard[]> {
     const heroPhoto = heroPhotoByListing.get(l.id);
     const agent = agentsById.get(l.agent_id);
     if (!agent) continue;
-    // Phase 10: include listings that have either a ready video OR a ready photo.
     if (!hero && !heroPhoto) continue;
 
     const community = l.community_id ? (communitiesById.get(l.community_id) ?? null) : null;
@@ -247,7 +240,7 @@ export async function fetchBrowseCards(): Promise<BrowseCard[]> {
           : undefined,
       }));
 
-    cards.push({
+    const card: BrowseCard = {
       id: hero ? hero.cf_video_id : `photo:${l.id}`,
       mediaKind: hero ? 'video' : 'photo',
       hero: { cfVideoId: hero?.cf_video_id ?? '' },
@@ -273,7 +266,85 @@ export async function fetchBrowseCards(): Promise<BrowseCard[]> {
         email: agent.email,
         phone: agent.phone,
       },
-    });
+    };
+    if (distanceById?.has(l.id)) {
+      card.distance = distanceById.get(l.id);
+    }
+    cards.push(card);
   }
+  return cards;
+}
+
+export async function fetchBrowseCards(): Promise<BrowseCard[]> {
+  const supabase = await createClient();
+
+  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
+  const { data: rawListings } = (await (supabase as any)
+    .from('listings')
+    .select(
+      'id, slug, address, city, state, price, beds, baths, sqft, description, community_id, agent_id',
+    )
+    .eq('status', 'published')
+    .order('created_at', { ascending: false })
+    .limit(FEED_LIMIT)) as { data: ListingRow[] | null };
+
+  const listings = rawListings ?? [];
+  return assembleCards(listings, supabase);
+}
+
+/**
+ * Phase 14: nearby-aware cards. bbox prefilter (b-tree on lat/lng) +
+ * exact haversine in JS, sorted ascending by distance. Returns the same
+ * `BrowseCard` shape as `fetchBrowseCards()` so the grid renders
+ * identically; an additive `distance` field is attached for the overlay
+ * line. Resilient to migration 0011 not being applied (try/catch on the
+ * lat/lng query).
+ */
+export async function fetchNearbyCards(args: {
+  lat: number;
+  lng: number;
+  radius: number;
+}): Promise<BrowseCard[]> {
+  const supabase = await createClient();
+  const bbox = latLngBoundingBox(args.lat, args.lng, args.radius);
+
+  let raw: ListingRow[] = [];
+  try {
+    // biome-ignore lint/suspicious/noExplicitAny: stub generated types
+    const r = (await (supabase as any)
+      .from('listings')
+      .select(
+        'id, slug, address, city, state, price, beds, baths, sqft, description, community_id, agent_id, lat, lng',
+      )
+      .eq('status', 'published')
+      .not('lat', 'is', null)
+      .not('lng', 'is', null)
+      .gte('lat', bbox.minLat)
+      .lte('lat', bbox.maxLat)
+      .gte('lng', bbox.minLng)
+      .lte('lng', bbox.maxLng)
+      .limit(NEARBY_MAX_ROWS)) as { data: ListingRow[] | null };
+    raw = r.data ?? [];
+  } catch {
+    raw = [];
+  }
+
+  const center = { lat: args.lat, lng: args.lng };
+  const withDistance = raw
+    .filter(
+      (l): l is ListingRow & { lat: number; lng: number } =>
+        typeof l.lat === 'number' && typeof l.lng === 'number',
+    )
+    .map((l) => ({
+      row: l as ListingRow,
+      distance: haversineMiles(center, { lat: l.lat, lng: l.lng }),
+    }))
+    .filter((x) => x.distance <= args.radius)
+    .sort((a, b) => a.distance - b.distance);
+
+  const distanceById = new Map(withDistance.map((x) => [x.row.id, x.distance] as const));
+  const ordered = withDistance.map((x) => x.row);
+  const cards = await assembleCards(ordered, supabase, distanceById);
+  // `assembleCards` preserves input order → cards already sorted by distance.
   return cards;
 }

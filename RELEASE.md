@@ -5,6 +5,37 @@ Format matches the standard release template (Features / Improvements / Bug Fixe
 
 ---
 
+## Release Notes - v0.11.0
+
+**Release Date:** 2026-06-13
+
+Nearby is now a true twin of Explore — same Pinterest-style grid, same tap-to-watch behaviour. The radius preference moved off the page into Profile.
+
+### ✨ Improvements
+
+**Nearby ↔ Explore visual parity**
+The Nearby tab used to be its own thing — a sectioned list of listing rows on top, a strip of community videos below, and a slider on the page that re-fetched on every drag. It now shows the exact same Pinterest-style card grid as Explore: 2 columns on phones, 3–4 on larger screens, full-bleed cover photo or video poster, price + address overlay. Tap any card and you drop into the same vertical swipe feed Explore uses, starting at that listing. A small "X.X mi" pill in the top-left corner is the only visual difference — every other detail (cover, overlay, hover ring, click-through) is shared.
+
+**Search radius lives in Profile → Preferences**
+Instead of a slider taking up space on the Nearby page itself, your search radius is now a single setting on the Profile screen: pick 1, 5, 10, 25, or 50 miles. The choice sticks (saved on your device) and is used every time you open Nearby. Default is still 10 miles for first-time visitors. This works whether you're signed in or not — agents, buyers, and anonymous browsers all share the same control.
+
+### 🛠️ Technical
+
+- New `fetchNearbyCards({ lat, lng, radius })` server fetcher reuses the same join + assembly logic as Explore, returning the same `BrowseCard` shape with an additive optional `distance` field. Bbox prefilter on `(lat, lng)` plus exact haversine in JS, capped at 200 listings.
+- `/api/nearby` payload is now `{ cards, center, radius }` (was `{ listings, communityVideos, center, radius }`). Community videos still surface inside each card's swipe rail (school / POI / neighborhood arrays) — the dedicated strip is no longer needed.
+- Radius preference persists in `localStorage` under `vicinity:nearby_radius`. Buyers are anonymous in V1 so there's no DB row to attach this to yet; when buyer accounts ship the preference will migrate into `user_preferences` on first sign-in.
+
+### 📋 Known Issues
+
+- The Nearby grid only shows listings whose `lat/lng` were geocoded at upload time. Older agent uploads pre-Phase 11 won't appear here even if they're inside the radius. Fixing requires a one-shot backfill (out of scope for this release).
+
+### 📊 Metrics
+
+- Build: `/nearby` 2.8 kB / 112 kB First Load JS (down from a custom multi-section page).
+- Build: `/profile` 839 B / 96.8 kB (up ~240 B from the new Preferences client island).
+
+---
+
 ## Release Notes - v0.10.2
 
 **Release Date:** 2026-06-13

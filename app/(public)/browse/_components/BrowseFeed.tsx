@@ -36,6 +36,13 @@ export type BrowseCard = {
   schoolVideos: BrowseSourceVideo[];
   nearbyVideos: BrowseSourceVideo[];
   communityVideos: BrowseSourceVideo[];
+  /**
+   * Phase 14 (2026-06-13): present only when the card is rendered from
+   * `/nearby` (computed via haversine from the buyer's location). Explore
+   * cards leave it `undefined`. Used purely for an optional overlay line —
+   * never affects sort order or click-through.
+   */
+  distance?: number;
   listing: {
     id: string;
     slug: string;

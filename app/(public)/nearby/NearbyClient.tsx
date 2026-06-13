@@ -1,40 +1,28 @@
 'use client';
 
+import type { BrowseCard } from '@/app/(public)/browse/_components/BrowseFeed';
 import { thumbnailUrl } from '@/lib/cloudflare/stream';
+import Image from 'next/image';
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 
-interface NearbyListing {
-  id: string;
-  slug: string;
-  address: string;
-  city: string;
-  state: string;
-  price: number | null;
-  beds: number | null;
-  baths: number | null;
-  distance: number;
-  agents: { slug: string; name: string };
-}
-
-interface NearbyCommunityVideo {
-  id: string;
-  cf_video_id: string;
-  kind: string;
-  title: string | null;
-  distance: number;
-}
-
 interface NearbyResponse {
-  listings: NearbyListing[];
-  communityVideos: NearbyCommunityVideo[];
+  cards: BrowseCard[];
   center: { lat: number; lng: number };
   radius: number;
 }
 
 const RADIUS_DEFAULT = 10;
-const RADIUS_MIN = 1;
-const RADIUS_MAX = 50;
+const RADIUS_STORAGE_KEY = 'vicinity:nearby_radius';
+
+function readStoredRadius(): number {
+  if (typeof window === 'undefined') return RADIUS_DEFAULT;
+  const raw = window.localStorage.getItem(RADIUS_STORAGE_KEY);
+  if (!raw) return RADIUS_DEFAULT;
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n < 1 || n > 100) return RADIUS_DEFAULT;
+  return n;
+}
 
 export function NearbyClient() {
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
@@ -45,6 +33,11 @@ export function NearbyClient() {
   const [manualLat, setManualLat] = useState('');
   const [manualLng, setManualLng] = useState('');
   const [needsManual, setNeedsManual] = useState(false);
+
+  // Step 0 — pull stored radius preference (set from /profile Preferences).
+  useEffect(() => {
+    setRadius(readStoredRadius());
+  }, []);
 
   // Step 1 — try geolocation on mount.
   useEffect(() => {
@@ -63,7 +56,6 @@ export function NearbyClient() {
     );
   }, []);
 
-  // Step 2 — fetch whenever coords or radius change.
   const fetchNearby = useCallback(async (c: { lat: number; lng: number }, r: number) => {
     setLoading(true);
     setError(null);
@@ -107,12 +99,12 @@ export function NearbyClient() {
     setNeedsManual(false);
   }
 
-  return (
-    <div className="mt-6 space-y-6">
-      {/* Location status / manual fallback */}
-      {!coords && needsManual && (
-        <div className="rounded border border-bronze/30 bg-ink2 p-4 text-sm">
-          <p className="mb-3 text-cream/80">Couldn't read your location. Enter it manually:</p>
+  // Manual fallback when geolocation is denied/unavailable.
+  if (!coords && needsManual) {
+    return (
+      <div className="mx-auto max-w-md px-6 py-12">
+        <div className="rounded-xl border border-cream/10 bg-ink2/40 p-4 text-sm">
+          <p className="mb-3 text-cream/80">Couldn&apos;t read your location. Enter it manually:</p>
           <div className="grid grid-cols-2 gap-2">
             <input
               type="text"
@@ -138,103 +130,95 @@ export function NearbyClient() {
           >
             Apply
           </button>
+          {error && <p className="mt-2 text-red-400 text-xs">{error}</p>}
         </div>
-      )}
+      </div>
+    );
+  }
 
-      {!coords && !needsManual && <p className="text-cream/60 text-sm">Reading your location…</p>}
+  if (!coords) {
+    return <p className="px-6 py-12 text-center text-cream/60 text-sm">Reading your location…</p>;
+  }
 
-      {/* Radius slider */}
-      {coords && (
-        <div className="rounded border border-bronze/20 bg-ink2 p-4">
-          <div className="mb-2 flex items-baseline justify-between">
-            <label htmlFor="radius" className="text-cream/70 text-xs uppercase tracking-wide">
-              Radius
-            </label>
-            <span className="text-cream text-sm tabular-nums">{radius} mi</span>
-          </div>
-          <input
-            id="radius"
-            type="range"
-            min={RADIUS_MIN}
-            max={RADIUS_MAX}
-            step={1}
-            value={radius}
-            onChange={(e) => setRadius(Number(e.target.value))}
-            className="w-full accent-bronze"
-          />
-          <div className="mt-1 flex justify-between text-cream/40 text-[11px]">
-            <span>{RADIUS_MIN}mi</span>
-            <span>{RADIUS_MAX}mi</span>
-          </div>
-        </div>
-      )}
+  if (loading && !data) {
+    return <p className="px-6 py-12 text-center text-cream/60 text-sm">Searching nearby…</p>;
+  }
 
-      {error && <p className="text-red-400 text-sm">{error}</p>}
-      {loading && coords && <p className="text-cream/60 text-sm">Searching nearby…</p>}
+  if (error) {
+    return <p className="px-6 py-12 text-center text-red-400 text-sm">{error}</p>;
+  }
 
-      {/* Listings */}
-      {data && (
-        <section>
-          <h2 className="mb-3 font-medium text-cream/80 text-sm uppercase tracking-wide">
-            Listings ({data.listings.length})
-          </h2>
-          {data.listings.length === 0 ? (
-            <p className="text-cream/50 text-sm">
-              No listings within {data.radius} mi. Try a larger radius.
-            </p>
-          ) : (
-            <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {data.listings.map((l) => (
-                <li key={l.id}>
-                  <Link
-                    href={`/v/${l.agents.slug}/${l.slug}`}
-                    className="block rounded border border-bronze/20 bg-ink2 p-3 transition hover:border-gold/40"
-                  >
-                    <div className="font-medium text-cream truncate">{l.address}</div>
-                    <div className="text-cream/60 text-xs">
-                      {l.city}, {l.state} · {l.distance.toFixed(1)} mi away
-                    </div>
-                    <div className="mt-1 text-cream/70 text-xs">
-                      {l.price != null ? `$${l.price.toLocaleString()}` : 'Price on request'}
-                      {l.beds != null && l.baths != null ? ` · ${l.beds}bd · ${l.baths}ba` : ''}
-                    </div>
-                    <div className="mt-1 text-cream/40 text-[11px]">by {l.agents.name}</div>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-      )}
+  const cards = data?.cards ?? [];
 
-      {/* Community videos */}
-      {data && data.communityVideos.length > 0 && (
-        <section>
-          <h2 className="mb-3 font-medium text-cream/80 text-sm uppercase tracking-wide">
-            Community videos ({data.communityVideos.length})
-          </h2>
-          <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-            {data.communityVideos.map((v) => (
-              <li key={v.id} className="overflow-hidden rounded border border-bronze/20 bg-ink2">
-                <div
-                  className="aspect-video w-full bg-ink"
-                  style={{
-                    backgroundImage: `url(${thumbnailUrl(v.cf_video_id)})`,
-                    backgroundSize: 'cover',
-                    backgroundPosition: 'center',
-                  }}
-                />
-                <div className="p-2 text-xs">
-                  <div className="truncate text-cream">{v.title ?? '(untitled)'}</div>
-                  <div className="text-cream/50">
-                    {v.kind} · {v.distance.toFixed(1)} mi
-                  </div>
+  if (cards.length === 0) {
+    return (
+      <div className="mx-auto max-w-md px-6 py-24 text-center">
+        <p className="text-cream/80">
+          No listings within {data?.radius ?? radius} mi.{' '}
+          <Link href="/profile" className="text-gold hover:underline">
+            Adjust your search radius in Preferences
+          </Link>{' '}
+          or check back soon.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mx-auto max-w-5xl px-2 py-4">
+      <div className="grid grid-cols-2 gap-2 sm:gap-3 md:grid-cols-3 lg:grid-cols-4">
+        {cards.map((card, idx) => (
+          <Link
+            key={card.listing.id}
+            href={
+              card.mediaKind === 'video'
+                ? `/browse/feed?start=${encodeURIComponent(card.listing.id)}`
+                : `/v/${card.agent.slug}/${card.listing.slug}`
+            }
+            prefetch={false}
+            className="group block overflow-hidden rounded-xl bg-ink/60 ring-1 ring-cream/10 transition-shadow hover:ring-gold/60"
+          >
+            <div className="relative aspect-[3/4] w-full bg-black/40">
+              <Image
+                src={
+                  card.mediaKind === 'video'
+                    ? thumbnailUrl(card.hero.cfVideoId)
+                    : (card.heroPhotoUrl as string)
+                }
+                alt={card.listing.address}
+                fill
+                sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                priority={idx < 4}
+                className="object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+              />
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+              {typeof card.distance === 'number' && (
+                <div className="absolute top-2 left-2 rounded-full bg-black/60 px-2 py-0.5 text-[10px] text-cream/90 backdrop-blur-sm">
+                  {card.distance.toFixed(1)} mi
                 </div>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
+              )}
+              <div className="absolute right-2 bottom-2 left-2 text-cream">
+                <div className="font-serif text-lg leading-tight tracking-tight drop-shadow">
+                  {formatPrice(card.listing.price)}
+                </div>
+                <div className="truncate text-cream/85 text-xs">{card.listing.address}</div>
+                <div className="flex items-center gap-1.5 text-[10px] text-cream/70">
+                  {card.listing.beds != null && <span>{card.listing.beds} bd</span>}
+                  {card.listing.baths != null && <span>· {card.listing.baths} ba</span>}
+                  {card.listing.sqft != null && (
+                    <span>· {card.listing.sqft.toLocaleString()} sqft</span>
+                  )}
+                </div>
+              </div>
+            </div>
+          </Link>
+        ))}
+      </div>
     </div>
   );
+}
+
+function formatPrice(price: number | null): string {
+  if (price == null) return 'Price on request';
+  return `$${price.toLocaleString()}`;
 }
