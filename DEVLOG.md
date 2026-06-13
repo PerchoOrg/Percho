@@ -8,6 +8,46 @@ Institutional memory for the project. Updated incrementally, not at session end.
 
 ---
 
+## 2026-06-13 04:00 UTC — phase15.1: buyer accounts (login/signup role split, profile cleanup)
+
+**Objective**: Owner: "主页 agent login 改成 login,在 login 页面里可以选择 signup,signup 时可以选择账号类型 agent 还是 buyer,以后登陆自动根据账号类型显示不同内容。Profile 页面里删除说明文字保持简洁。" Phase 15.1 lays the architectural foundation for buyer accounts; saved-listings + messaging come in Phase 15.2/15.3.
+
+**Actions**:
+- `supabase/migrations/0012_buyer_accounts.sql` (new) — adds `public.buyers` table (user_id PK → auth.users, display_name, email, timestamps). RLS enabled with `buyers_self_select` + `buyers_self_update` policies (no public read, no anon insert — INSERT goes through trigger). Replaces `handle_new_user()` to branch on `raw_user_meta_data->>'role'`: 'buyer' → insert `buyers`, default/'agent' → existing slug-derived `agents` insert (preserves backward compat for any signup that doesn't pass role).
+- `lib/zod/auth.ts` — added `Role = z.enum(['agent','buyer'])` and required `role` field on `SignupWithPassword`.
+- `lib/auth/role.ts` (new) — `getUserRole(supabase, userId)` queries both tables in parallel and returns `'agent' | 'buyer' | null`. The `buyers` lookup is wrapped in a `.then(ok, err)` graceful-degradation slot so preview/local environments where 0012 hasn't been pushed don't crash. `defaultLandingForRole(role)` → '/dashboard' for agent, '/profile' for buyer (saved-listings UI doesn't exist yet, so /profile is the buyer's main control surface).
+- `app/(auth)/signup/signup-form.tsx` — added a 2-up role picker ("Homebuyer" / "Agent") above the email field, defaulting to **buyer** (Vicinity is buyer-first). Role passed to Supabase via `options.data.role`. After successful signup, role-aware redirect: if caller passed the generic '/dashboard' default and user picked buyer, send to '/profile' instead. Explicit `?redirect=…` always wins.
+- `app/(auth)/login/login-form.tsx` — heading changed `Agent login` → `Login`, subtitle `Sign in to your agent dashboard.` → `Sign in to your account.` After `signInWithPassword`, if redirect is the generic '/dashboard' default, query `agents` table by `user_id` — no row ⇒ user is a buyer ⇒ redirect to '/profile'. Single round-trip; explicit `?redirect=…` still wins.
+- `app/page.tsx` — landing CTA `Agent Login` → `Login`.
+- `app/(public)/profile/page.tsx` — anon view: removed the 3-line description paragraph and the "For homebuyers (coming soon)" info box; "Create an agent account" → "Create account". Agent and buyer logged-in views unchanged.
+
+**Decisions**:
+- **Phase 15.1 = architectural bedding only, no buyer features yet**. Buyer signup goes into a buyers row but the only thing they can do post-login is land on /profile and adjust their search radius (already shipped in Phase 14.2). Saved listings + messaging deliberately deferred — adding both in one phase would require 3 migrations and a new lead-extension thread model. Surface the role split first, validate the UX, then layer features.
+- **Default role = buyer** in the signup picker. Vicinity's homepage tagline is "TikTok for Homebuying" and the public-facing surfaces (`/`, `/browse`, `/nearby`, `/v/...`) all serve buyers; agents are a smaller second-class population we converted late. Agents who land on /signup are a self-selecting group already willing to read a label and click "Agent."
+- **Email confirmation: OFF for both roles** (chose option `i`). Vivian's beta is starting, friction-minimization > anti-spam in V1. Toggle back on before GA. (Documented in `lib/zod/auth.ts` comment as the "internal beta" disposition.)
+- **Buyer redirect target = `/profile`, not `/browse`**. /browse is unauthenticated discovery — it doesn't change behaviour for a logged-in user, so landing there post-signup feels like nothing happened. /profile shows their account state and their NearbyRadiusPref control, signaling "you're signed in, here's your settings."
+- **Login form does its own role check via `agents` table query, not `getUserRole` helper**. Login needs to redirect *before* the page reload, so it stays in the client component and queries directly. The `getUserRole` helper is parked in `lib/auth/role.ts` for server-side callers (`/api/auth/me`-style endpoints, future SSR role-gated pages).
+- **Migration uses `create or replace function` for `handle_new_user`** — the `on_auth_user_created` trigger is created once in 0002 and points at the function name; replacing the function definition is enough, no need to drop+recreate the trigger.
+- **`buyers` columns intentionally minimal** — just user_id / display_name / email / timestamps. No phone, no avatar, no preferences yet. Phase 15.2 adds `saved_listings`. Phase 15.3 adds `lead_messages` thread table (lead-extension model — every conversation pivots on an existing leads row). User preferences (saved searches, notification settings) deferred until post-V1 once we know what buyers actually want.
+
+**Verification**: `node_modules/.bin/tsc --noEmit` exit 0. `node_modules/.bin/biome check` clean across 6 touched files (1 file auto-formatted: lib/auth/role.ts chained then). `node_modules/.bin/next build` green — `/login` 1.42 kB / 166 kB (unchanged), `/signup` 1.91 kB / 167 kB (was 1.41 kB; +500 B from role picker), `/profile` 839 B / 96.8 kB (slightly smaller after removing the info box).
+
+**Issues**: None during implementation. Migration **not yet pushed** — owner must run `supabase db push` on Mac before deploying. Until then, on production:
+- New buyer signups will fail at the trigger (handle_new_user expects buyers table to exist for role='buyer' branch).
+- The login redirect path to /profile still works for any user (no buyers table read on the login hot path; `getUserRole` is only used by server callers we haven't introduced yet).
+- Agent flow is unchanged.
+
+**Learnings**:
+- Default role choice is a product signal. Picking "Homebuyer" first makes the form match Vicinity's actual audience priority. Agents are willing to click an extra option; buyers shouldn't have to think about it at all.
+- `getUserRole` lives in `lib/auth/role.ts` with a graceful-degradation slot for the buyers table because preview deploys may not have run the migration yet — the same pattern from Phase 11 (migration-graceful-degradation reference). Don't let a missing column or table kill an entire route.
+
+**Next steps**:
+- Owner: `supabase db push` on Mac to apply 0012. After that, smoke-test signup as buyer + agent, confirm row lands in correct table.
+- Phase 15.2: saved listings (heart button persists for logged-in buyers, table + RLS + UI in /profile).
+- Phase 15.3: messaging — extend `leads` with `lead_messages` thread table; agent replies in /dashboard/leads/[id], buyer reads from /profile inbox.
+
+---
+
 ## 2026-06-13 02:00 UTC — phase14.2: /nearby ↔ /browse parity + radius preference moves to /profile
 
 **Objective**: Owner: "nearby 应该跟 explore 是一致的 — 根据预设的参数显示很多 cards;这个 radius 可以放到 setting 里。" Pre-Phase-14 `/nearby` shipped a custom layout (sectioned listings list + community-videos strip) plus an inline 1..50 mi slider that drove every re-fetch. That made the page feel like a debug tool instead of an Explore-style discovery surface.

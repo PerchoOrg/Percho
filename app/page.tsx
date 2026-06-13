@@ -54,7 +54,7 @@ export default async function HomePage() {
               href="/login"
               className="btn-ghost inline-flex items-center justify-center rounded-full px-7 py-3.5"
             >
-              Agent Login
+              Login
             </Link>
           </div>
           <div className="absolute bottom-8 animate-bounce text-xs uppercase tracking-widest text-cream/50">

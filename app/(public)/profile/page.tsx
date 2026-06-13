@@ -39,11 +39,6 @@ export default async function ProfilePage() {
         <Header />
         <section className="mx-auto max-w-md px-6 py-12">
           <h1 className="font-serif text-3xl text-cream">Welcome</h1>
-          <p className="mt-3 text-cream/70 text-sm leading-relaxed">
-            Vicinity is open to all homebuyers — you can browse listings and nearby content without
-            an account. Sign in if you&apos;re a real estate agent, or to save listings and contact
-            agents.
-          </p>
 
           <div className="mt-8 flex flex-col gap-3">
             <Link
@@ -56,16 +51,8 @@ export default async function ProfilePage() {
               href="/signup"
               className="btn-ghost inline-flex items-center justify-center rounded-full px-6 py-3 text-sm"
             >
-              Create an agent account
+              Create account
             </Link>
-          </div>
-
-          <div className="mt-10 rounded-xl border border-cream/10 bg-ink2/40 p-4 text-xs text-cream/60">
-            <div className="font-medium text-cream/80">For homebuyers</div>
-            <div className="mt-1">
-              Buyer accounts (saved listings, messages with agents) are coming soon. For now, browse
-              freely — no sign-in needed.
-            </div>
           </div>
 
           <div className="mt-6">

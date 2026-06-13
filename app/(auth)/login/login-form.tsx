@@ -25,7 +25,7 @@ export function LoginForm({ redirect }: { redirect: string }) {
     }
 
     const supabase = createClient();
-    const { error: signInError } = await supabase.auth.signInWithPassword(parsed.data);
+    const { data, error: signInError } = await supabase.auth.signInWithPassword(parsed.data);
 
     if (signInError) {
       setStatus('error');
@@ -35,14 +35,27 @@ export function LoginForm({ redirect }: { redirect: string }) {
       return;
     }
 
+    // Role-aware default: if caller passed the generic '/dashboard' default
+    // and this user has no agents row (they're a buyer), send them to
+    // /profile instead. An explicit ?redirect=… in the URL always wins.
+    let target = redirect;
+    if (redirect === '/dashboard' && data.user) {
+      const { data: agent } = await supabase
+        .from('agents')
+        .select('user_id')
+        .eq('user_id', data.user.id)
+        .maybeSingle();
+      if (!agent) target = '/profile';
+    }
+
     // Force a full reload so server components observe the new auth cookies.
-    window.location.assign(redirect);
+    window.location.assign(target);
   }
 
   return (
     <form onSubmit={handleSubmit} className="rounded-2xl border border-white/5 bg-ink2/60 p-8">
-      <h1 className="font-serif text-3xl text-cream">Agent login</h1>
-      <p className="mt-1 text-sm text-cream/50">Sign in to your agent dashboard.</p>
+      <h1 className="font-serif text-3xl text-cream">Login</h1>
+      <p className="mt-1 text-sm text-cream/50">Sign in to your account.</p>
       <label className="mt-6 block">
         <span className="text-xs text-cream/60">Email</span>
         <input

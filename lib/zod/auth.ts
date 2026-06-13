@@ -22,11 +22,15 @@ export const LoginWithPassword = z.object({
   password: Password,
 });
 
+export const Role = z.enum(['agent', 'buyer']);
+export type Role = z.infer<typeof Role>;
+
 export const SignupWithPassword = z
   .object({
     email: Email,
     password: Password,
     confirm: Password,
+    role: Role,
   })
   .refine((v) => v.password === v.confirm, {
     message: "Passwords don't match",

@@ -5,6 +5,43 @@ Format matches the standard release template (Features / Improvements / Bug Fixe
 
 ---
 
+## Release Notes - v0.12.0
+
+**Release Date:** 2026-06-13
+
+Buyer accounts arrive in their first form: anyone can sign up as a homebuyer, not just agents. The signup screen now asks who you are; the home screen and login screen drop the "agent" framing.
+
+### ✨ Features
+
+**Buyer signup**
+The signup form now starts with a two-up choice: **Homebuyer** or **Agent**, defaulting to Homebuyer. Buyers create an account in seconds, no agent fields, no slug. After signup they land on Profile (where they can already adjust the Nearby search radius from v0.11.0). Agents continue to land on /dashboard exactly as before — their flow is unchanged.
+
+**Login and home screen are role-neutral**
+The home page CTA changed from "Agent Login" to "Login." The login form heading changed from "Agent login" to "Login," subtitle from "Sign in to your agent dashboard" to "Sign in to your account." After signing in, the app figures out your role automatically: agents go to /dashboard, buyers go to /profile.
+
+### 🛠️ Improvements
+
+**Profile screen — anonymous view simplified**
+Removed the three-line explanatory paragraph and the "For homebuyers (coming soon)" info box. The screen is now a clean Welcome heading + Sign in / Create account buttons + Nearby radius preference. Less reading, the same actions.
+
+### 🔧 Technical
+
+- New `public.buyers` table (user_id PK → auth.users) with RLS: buyers can read/update their own row, no public read, no anon insert. INSERT goes through the security-definer trigger.
+- `handle_new_user` trigger now branches on `raw_user_meta_data->>'role'`: `'buyer'` inserts into `buyers`, anything else (default `'agent'`) into `agents`. Backward compatible — any signup that doesn't pass role is treated as an agent.
+- `lib/zod/auth.ts` `SignupWithPassword` now requires `role: 'agent' | 'buyer'`. Login form does a single `agents` lookup post-`signInWithPassword` and falls back to /profile if no agent row is found.
+- Migration `0012_buyer_accounts.sql` must be applied before this release goes live.
+
+### 📋 Known Issues
+
+- **Buyer features are still limited**: a logged-in buyer can adjust the Nearby radius but can't yet save listings or message agents. Saved listings ship in v0.13 (Phase 15.2), messaging in v0.14 (Phase 15.3). The lead form on listing pages still works for unauthenticated buyers exactly as before.
+- Email confirmation is intentionally **OFF** for both roles in this internal-beta release. Will flip to ON before GA.
+
+### 📊 Migration Required
+
+Run `supabase db push` to apply `0012_buyer_accounts.sql` before deploying this release. Without it, buyer signups will fail at the database trigger.
+
+---
+
 ## Release Notes - v0.11.0
 
 **Release Date:** 2026-06-13

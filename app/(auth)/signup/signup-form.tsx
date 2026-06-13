@@ -5,11 +5,13 @@ import { SignupWithPassword } from '@/lib/zod/auth';
 import { useState } from 'react';
 
 type Status = 'idle' | 'sending' | 'sent' | 'error';
+type Role = 'agent' | 'buyer';
 
 const inputCls =
   'mt-1 w-full rounded-lg border border-white/10 bg-ink px-3 py-2 text-sm text-cream placeholder:text-cream/30 focus:border-gold focus:outline-none disabled:opacity-50';
 
 export function SignupForm({ redirect }: { redirect: string }) {
+  const [role, setRole] = useState<Role>('buyer');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -21,7 +23,7 @@ export function SignupForm({ redirect }: { redirect: string }) {
     setStatus('sending');
     setError(null);
 
-    const parsed = SignupWithPassword.safeParse({ email, password, confirm });
+    const parsed = SignupWithPassword.safeParse({ email, password, confirm, role });
     if (!parsed.success) {
       setStatus('error');
       setError(parsed.error.issues[0]?.message ?? 'Invalid input');
@@ -35,7 +37,10 @@ export function SignupForm({ redirect }: { redirect: string }) {
     const { data, error: signUpError } = await supabase.auth.signUp({
       email: parsed.data.email,
       password: parsed.data.password,
-      options: { emailRedirectTo: callback.toString() },
+      options: {
+        emailRedirectTo: callback.toString(),
+        data: { role: parsed.data.role },
+      },
     });
 
     if (signUpError) {
@@ -48,7 +53,11 @@ export function SignupForm({ redirect }: { redirect: string }) {
     // immediately and the user is logged in. With it ON (post-GA), `session`
     // is null and we show the confirm-email screen.
     if (data.session) {
-      window.location.assign(redirect);
+      // Role-aware default redirect — only override if caller passed the
+      // generic '/dashboard' default. An explicit ?redirect=… still wins.
+      const target =
+        redirect === '/dashboard' && parsed.data.role === 'buyer' ? '/profile' : redirect;
+      window.location.assign(target);
       return;
     }
     setStatus('sent');
@@ -68,7 +77,28 @@ export function SignupForm({ redirect }: { redirect: string }) {
   return (
     <form onSubmit={handleSubmit} className="rounded-2xl border border-white/5 bg-ink2/60 p-8">
       <h1 className="font-serif text-3xl text-cream">Create account</h1>
-      <p className="mt-1 text-sm text-cream/50">Start listing in minutes.</p>
+      <p className="mt-1 text-sm text-cream/50">Join Vicinity in seconds.</p>
+
+      <fieldset className="mt-6">
+        <legend className="text-xs text-cream/60">I am a…</legend>
+        <div className="mt-2 grid grid-cols-2 gap-2">
+          <RoleOption
+            label="Homebuyer"
+            sub="Browse and save listings"
+            selected={role === 'buyer'}
+            onSelect={() => setRole('buyer')}
+            disabled={status === 'sending'}
+          />
+          <RoleOption
+            label="Agent"
+            sub="List properties and get leads"
+            selected={role === 'agent'}
+            onSelect={() => setRole('agent')}
+            disabled={status === 'sending'}
+          />
+        </div>
+      </fieldset>
+
       <label className="mt-6 block">
         <span className="text-xs text-cream/60">Email</span>
         <input
@@ -128,5 +158,36 @@ export function SignupForm({ redirect }: { redirect: string }) {
         </p>
       ) : null}
     </form>
+  );
+}
+
+function RoleOption({
+  label,
+  sub,
+  selected,
+  onSelect,
+  disabled,
+}: {
+  label: string;
+  sub: string;
+  selected: boolean;
+  onSelect: () => void;
+  disabled: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={selected}
+      disabled={disabled}
+      onClick={onSelect}
+      className={`rounded-lg border px-3 py-3 text-left text-sm transition disabled:opacity-50 ${
+        selected
+          ? 'border-gold bg-gold/10 text-cream'
+          : 'border-white/10 bg-ink text-cream/80 hover:border-white/30'
+      }`}
+    >
+      <div className="font-medium">{label}</div>
+      <div className="mt-0.5 text-xs text-cream/50">{sub}</div>
+    </button>
   );
 }
