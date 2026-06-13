@@ -241,37 +241,53 @@ export default async function PublicListingPage({
     const photos = photoRows ?? [];
     if (photos.length > 0) {
       const { photoPublicUrl } = await import('@/lib/supabase/storage');
-      return (
-        <main className="min-h-dvh bg-ink pb-20 text-cream md:pb-0">
-          <div className="mx-auto max-w-3xl px-4 py-6">
-            <h1 className="font-serif text-2xl">{listing.address}</h1>
-            <p className="text-cream/70 text-sm">
-              {listing.city}, {listing.state}
-            </p>
-            <div className="mt-2 text-cream/80 text-sm">
-              {listing.price != null ? `$${listing.price.toLocaleString()}` : 'Price on request'}
-              {listing.beds != null && listing.baths != null
-                ? ` · ${listing.beds} bd · ${listing.baths} ba`
-                : ''}
-            </div>
-            <div className="mt-6 grid grid-cols-1 gap-2 sm:grid-cols-2">
-              {photos.map((p) => (
-                // Cross-origin Supabase asset.
-                <img
-                  key={p.id}
-                  src={photoPublicUrl(p.storage_path)}
-                  alt={p.alt_text ?? listing.address}
-                  loading="lazy"
-                  className="w-full rounded border border-bronze/20 object-cover"
-                />
-              ))}
-            </div>
-            <div className="mt-8 rounded border border-bronze/30 bg-ink2 p-4 text-cream/70 text-xs">
-              Listed by {agent.name}.
-            </div>
-          </div>
-        </main>
-      );
+      // Phase 20 (2026-06-13): photo-only listings now reuse BrowseFeed for
+      // full feature parity with video (LeadModal, Like/Save/Share, swipeable
+      // carousel, schools/POI strip). The right rail is hidden by BrowseFeed
+      // for photo cards — schools/POIs surface as a plain text strip in the
+      // PhotoCard caption block instead.
+      const heroStoragePath = photos[0]?.storage_path;
+      if (!heroStoragePath) {
+        // Defensive: photos.length > 0 already passed, so this never fires.
+        return <VideoFeed listingId={listing.id} cards={[]} />;
+      }
+      const photoCard: BrowseCard = {
+        id: `photo:${listing.id}`,
+        mediaKind: 'photo',
+        hero: { cfVideoId: '' },
+        heroPhotoUrl: photoPublicUrl(heroStoragePath),
+        photos: photos.map((p) => photoPublicUrl(p.storage_path)),
+        // Video-source rails are unused by photo cards (rail is hidden), but
+        // BrowseCard requires the keys. Empty arrays keep the type honest.
+        schoolVideos: [],
+        nearbyVideos: [],
+        communityVideos: [],
+        photoSchools: schools.map((s) => ({
+          name: s.name,
+          grades: s.grades,
+          rating: s.rating,
+        })),
+        photoPois: pois.map((p) => ({ name: p.name, distance_text: p.distance_text })),
+        listing: {
+          id: listing.id,
+          slug: listing.slug,
+          address: listing.address,
+          city: listing.city,
+          state: listing.state,
+          price: listing.price,
+          beds: listing.beds,
+          baths: listing.baths,
+          sqft: listing.sqft,
+          description: (listing.description ?? []).filter((s) => s && s.trim().length > 0),
+        },
+        agent: {
+          slug: agent.slug,
+          name: agent.name,
+          email: agent.email,
+          phone: agent.phone,
+        },
+      };
+      return <VideoFeed listingId={listing.id} cards={[photoCard]} />;
     }
     return <VideoFeed listingId={listing.id} cards={[]} />;
   }

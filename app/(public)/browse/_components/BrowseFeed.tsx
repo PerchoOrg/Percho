@@ -27,6 +27,13 @@ export type BrowseCard = {
   /** Set when mediaKind === 'photo'. Public Supabase Storage URL. */
   heroPhotoUrl?: string;
   /**
+   * Phase 20 (2026-06-13): full photo URL list for the photo branch of the
+   * detail page. Only set when mediaKind === 'photo' AND we want a swipeable
+   * carousel (not just a grid cover). `/browse` grid leaves this undefined.
+   * Order matches `listing_photos.sort_order`. First entry is the cover.
+   */
+  photos?: string[];
+  /**
    * Optional richer hero pool — when set, the 'hero' source cycles through
    * these videos (horizontal swipe / repeat-tap Hero source on the rail).
    * Used by `/v/[agent]/[listing]` to expose multi-walkthrough listings;
@@ -36,6 +43,14 @@ export type BrowseCard = {
   schoolVideos: BrowseSourceVideo[];
   nearbyVideos: BrowseSourceVideo[];
   communityVideos: BrowseSourceVideo[];
+  /**
+   * Phase 20 (2026-06-13): plain-text schools / POIs for the photo branch
+   * of the detail page (no community videos to switch to, so the right
+   * rail is hidden — buyers see this list under the photo caption block
+   * instead). `/browse` grid + video cards leave these undefined.
+   */
+  photoSchools?: { name: string; grades: string | null; rating: number | null }[];
+  photoPois?: { name: string; distance_text: string | null }[];
   /**
    * Phase 14 (2026-06-13): present only when the card is rendered from
    * `/nearby` (computed via haversine from the buyer's location). Explore
@@ -340,6 +355,11 @@ function BottomBarButton({
 }
 
 function poolFor(card: BrowseCard, source: Source): number {
+  if (card.mediaKind === 'photo') {
+    // Photos: swipe horizontally through the photo[] carousel. Source rail
+    // is hidden in the parent — `source` is always 'hero' here.
+    return Math.max(1, card.photos?.length ?? 1);
+  }
   if (source === 'schools') return card.schoolVideos.length;
   if (source === 'nearby') return card.nearbyVideos.length;
   if (source === 'community') return card.communityVideos.length;
@@ -366,6 +386,176 @@ function pickVideo(card: BrowseCard, source: Source, cycleIdx: number): BrowseSo
     line1: card.listing.address,
     line2: `${card.listing.city}, ${card.listing.state}`,
   };
+}
+
+/**
+ * Phase 20 (2026-06-13): photo-only card. Same layout language as the video
+ * Card (gradient overlays, bottom caption, source overlay top-left, action
+ * bar handled by parent), but renders an <img> carousel instead of <video>.
+ * Horizontal swipe / left-right keys cycle through `card.photos[]` via the
+ * parent's existing cycleByCard plumbing — so persistence/keyboard logic
+ * stays single-source-of-truth in BrowseFeed.
+ */
+function PhotoCard({
+  card,
+  cycleIdx,
+  cardRef,
+  onSwipe,
+  poolSize,
+}: {
+  card: BrowseCard;
+  cycleIdx: number;
+  cardRef: (el: HTMLElement | null) => void;
+  onSwipe: (delta: 1 | -1) => void;
+  poolSize: number;
+}) {
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
+  const photos =
+    card.photos && card.photos.length > 0
+      ? card.photos
+      : card.heroPhotoUrl
+        ? [card.heroPhotoUrl]
+        : [];
+  const total = photos.length;
+  const idx = total > 0 ? cycleIdx % total : 0;
+  const current = photos[idx];
+
+  const goPrev = () => onSwipe(-1);
+  const goNext = () => onSwipe(1);
+
+  return (
+    <section
+      ref={(el) => cardRef(el)}
+      className="relative h-screen w-full snap-start snap-always overflow-hidden bg-black"
+    >
+      <div
+        className="absolute inset-0 touch-pan-y"
+        onTouchStart={(e) => {
+          if (e.touches.length !== 1) return;
+          const t = e.touches[0];
+          if (t) touchStartRef.current = { x: t.clientX, y: t.clientY };
+        }}
+        onTouchEnd={(e) => {
+          const start = touchStartRef.current;
+          touchStartRef.current = null;
+          if (!start) return;
+          const t = e.changedTouches[0];
+          if (!t) return;
+          const dx = t.clientX - start.x;
+          const dy = t.clientY - start.y;
+          if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+            e.preventDefault();
+            e.stopPropagation();
+            onSwipe(dx < 0 ? 1 : -1);
+          }
+        }}
+      >
+        {current && (
+          <img
+            src={current}
+            alt={card.listing.address}
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0 hidden h-full w-full scale-110 object-cover opacity-60 blur-2xl md:block"
+          />
+        )}
+        {current ? (
+          <img
+            src={current}
+            alt={`${card.listing.address} — ${idx + 1} of ${total}`}
+            className="relative h-full w-full object-cover md:object-contain"
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center text-cream/40 text-sm">
+            No photo
+          </div>
+        )}
+      </div>
+
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-black/70 via-black/30 to-transparent" />
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-72 bg-gradient-to-t from-black/85 via-black/50 to-transparent" />
+
+      {/* Photo counter — top-left, mirrors the source overlay slot the
+       * video card uses. Hidden when there's a single photo. */}
+      {poolSize > 1 && (
+        <div className="absolute top-16 left-5 rounded-lg border border-cream/20 bg-ink/60 px-3 py-2 backdrop-blur">
+          <div className="font-medium text-cream/90 text-xs tabular-nums">
+            {idx + 1} / {total}
+          </div>
+          <div className="mt-1 text-[10px] text-cream/40 uppercase tracking-wider">← swipe →</div>
+        </div>
+      )}
+
+      {/* Desktop-only left/right arrows. Mobile uses swipe. */}
+      {poolSize > 1 && (
+        <>
+          <button
+            type="button"
+            onClick={goPrev}
+            aria-label="Previous photo"
+            className="-translate-y-1/2 absolute top-1/2 left-3 z-10 hidden h-10 w-10 items-center justify-center rounded-full border border-cream/20 bg-ink/55 text-cream backdrop-blur transition-colors hover:border-gold hover:text-gold md:flex"
+            style={{ touchAction: 'manipulation' }}
+          >
+            ‹
+          </button>
+          <button
+            type="button"
+            onClick={goNext}
+            aria-label="Next photo"
+            className="-translate-y-1/2 absolute top-1/2 right-3 z-10 hidden h-10 w-10 items-center justify-center rounded-full border border-cream/20 bg-ink/55 text-cream backdrop-blur transition-colors hover:border-gold hover:text-gold md:flex"
+            style={{ touchAction: 'manipulation' }}
+          >
+            ›
+          </button>
+        </>
+      )}
+
+      {/* Bottom caption — same shape as video Card. Photo cards additionally
+       * surface a plain-text schools + POI strip below the description (no
+       * source rail to switch into, so the info has to live in-frame). */}
+      <div className="absolute bottom-20 left-4 right-4 text-cream">
+        <div className="font-serif text-2xl text-cream leading-tight tracking-tight drop-shadow">
+          {formatPrice(card.listing.price)}
+        </div>
+        <div className="mt-1 text-cream text-sm leading-snug drop-shadow">
+          {card.listing.address}
+        </div>
+        <div className="text-cream/80 text-xs">
+          {card.listing.city}, {card.listing.state}
+        </div>
+        <div className="mt-1 flex items-center gap-2 text-cream/80 text-xs">
+          {card.listing.beds != null && <span>{card.listing.beds} bd</span>}
+          {card.listing.baths != null && <span>· {card.listing.baths} ba</span>}
+          {card.listing.sqft != null && <span>· {card.listing.sqft.toLocaleString()} sqft</span>}
+        </div>
+        {card.listing.description.length > 0 && (
+          <DescriptionBlock paragraphs={card.listing.description} />
+        )}
+        {((card.photoSchools?.length ?? 0) > 0 || (card.photoPois?.length ?? 0) > 0) && (
+          <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-cream/70 text-[11px]">
+            {card.photoSchools?.map((s) => (
+              <span key={`sch:${s.name}`}>
+                🏫 {s.name}
+                {s.rating != null ? ` · ${s.rating}/10` : ''}
+              </span>
+            ))}
+            {card.photoPois?.map((p) => (
+              <span key={`poi:${p.name}`}>
+                📍 {p.name}
+                {p.distance_text ? ` · ${p.distance_text}` : ''}
+              </span>
+            ))}
+          </div>
+        )}
+        <Link
+          href={`/a/${card.agent.slug}`}
+          className="mt-2 inline-block text-cream/80 text-xs hover:text-gold"
+          onClick={(e) => e.stopPropagation()}
+        >
+          Listed by {card.agent.name}
+        </Link>
+      </div>
+    </section>
+  );
 }
 
 function Card({
@@ -849,6 +1039,26 @@ export function BrowseFeed({
           const cardSource = sourceByCard[id] ?? 'hero';
           const cardCycle = cycleByCard[id] ?? 0;
           const isThisActive = idx === activeIndex;
+          if (card.mediaKind === 'photo') {
+            return (
+              <PhotoCard
+                key={card.id}
+                card={card}
+                cycleIdx={cardCycle}
+                cardRef={(el) => setCardRef(idx, el)}
+                poolSize={poolFor(card, cardSource)}
+                onSwipe={(delta) => {
+                  const pool = poolFor(card, cardSource);
+                  if (pool <= 1) return;
+                  setCycleByCard((c) => {
+                    const cur = c[id] ?? 0;
+                    const next = (((cur + delta) % pool) + pool) % pool;
+                    return { ...c, [id]: next };
+                  });
+                }}
+              />
+            );
+          }
           return (
             <Card
               key={card.id}
@@ -880,42 +1090,47 @@ export function BrowseFeed({
 
       {/* Right rail — INFO actions only (Schools / Nearby / Area / Sound).
        * Like / Save / Comment moved to the bottom action bar (Xiaohongshu
-       * pattern). Share moved to the top header. Hero-back lives top-left. */}
-      <div className="absolute right-3 bottom-32 z-20 flex flex-col items-center gap-3">
-        <ActionButton
-          label="Schools"
-          onClick={() => switchSource('schools')}
-          active={activeSource === 'schools'}
-          disabled={!hasSchools}
-          badge={hasSchools && active ? active.schoolVideos.length : undefined}
-        >
-          <SchoolIcon />
-        </ActionButton>
-        <ActionButton
-          label="Nearby"
-          onClick={() => switchSource('nearby')}
-          active={activeSource === 'nearby'}
-          disabled={!hasNearby}
-          badge={hasNearby && active ? active.nearbyVideos.length : undefined}
-        >
-          <NearbyIcon />
-        </ActionButton>
-        <ActionButton
-          label="Area"
-          onClick={() => switchSource('community')}
-          active={activeSource === 'community'}
-          disabled={!hasCommunity}
-        >
-          <CommunityIcon />
-        </ActionButton>
-        <ActionButton
-          label={muted ? 'Sound' : 'Mute'}
-          onClick={() => setMuted((m) => !m)}
-          active={!muted}
-        >
-          {muted ? <SoundOffIcon /> : <SoundOnIcon />}
-        </ActionButton>
-      </div>
+       * pattern). Share moved to the top header. Hero-back lives top-left.
+       * Phase 20 (2026-06-13): photo cards hide the rail entirely — there's
+       * no source to switch to and no audio to mute. Schools/POIs surface
+       * as a plain text strip inside the PhotoCard caption block. */}
+      {active?.mediaKind !== 'photo' && (
+        <div className="absolute right-3 bottom-32 z-20 flex flex-col items-center gap-3">
+          <ActionButton
+            label="Schools"
+            onClick={() => switchSource('schools')}
+            active={activeSource === 'schools'}
+            disabled={!hasSchools}
+            badge={hasSchools && active ? active.schoolVideos.length : undefined}
+          >
+            <SchoolIcon />
+          </ActionButton>
+          <ActionButton
+            label="Nearby"
+            onClick={() => switchSource('nearby')}
+            active={activeSource === 'nearby'}
+            disabled={!hasNearby}
+            badge={hasNearby && active ? active.nearbyVideos.length : undefined}
+          >
+            <NearbyIcon />
+          </ActionButton>
+          <ActionButton
+            label="Area"
+            onClick={() => switchSource('community')}
+            active={activeSource === 'community'}
+            disabled={!hasCommunity}
+          >
+            <CommunityIcon />
+          </ActionButton>
+          <ActionButton
+            label={muted ? 'Sound' : 'Mute'}
+            onClick={() => setMuted((m) => !m)}
+            active={!muted}
+          >
+            {muted ? <SoundOffIcon /> : <SoundOnIcon />}
+          </ActionButton>
+        </div>
+      )}
 
       {/* Active source label — top center, informational only (no nav). */}
       {activeSource !== 'hero' && (
