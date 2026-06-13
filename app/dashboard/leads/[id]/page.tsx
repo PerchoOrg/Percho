@@ -11,6 +11,7 @@
 import { createClient } from '@/lib/supabase/server';
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
+import { FollowUpToggle } from './follow-up-toggle';
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -24,6 +25,7 @@ type LeadDetail = {
   message: string | null;
   source: string | null;
   notified_at: string | null;
+  followed_up_at: string | null;
   created_at: string;
   listing_id: string;
   listings: {
@@ -53,7 +55,7 @@ export default async function LeadDetailPage({ params }: PageProps) {
   const { data: lead } = (await (supabase as any)
     .from('leads')
     .select(
-      'id, name, email, phone, message, source, notified_at, created_at, listing_id, listings(address, city, state, slug)',
+      'id, name, email, phone, message, source, notified_at, followed_up_at, created_at, listing_id, listings(address, city, state, slug)',
     )
     .eq('id', id)
     .maybeSingle()) as { data: LeadDetail | null };
@@ -94,12 +96,18 @@ export default async function LeadDetailPage({ params }: PageProps) {
           </div>
           <span
             className={`rounded border px-2 py-0.5 text-[10px] font-medium uppercase ${
-              lead.notified_at != null
-                ? 'border-gold/30 bg-gold/15 text-gold'
-                : 'border-bronze/40 bg-bronze/10 text-cream/70'
+              lead.followed_up_at != null
+                ? 'border-cream/20 bg-cream/5 text-cream/60'
+                : lead.notified_at != null
+                  ? 'border-gold/30 bg-gold/15 text-gold'
+                  : 'border-bronze/40 bg-bronze/10 text-cream/70'
             }`}
           >
-            {lead.notified_at != null ? 'Email sent' : 'Email pending'}
+            {lead.followed_up_at != null
+              ? 'Followed up'
+              : lead.notified_at != null
+                ? 'New'
+                : 'Email pending'}
           </span>
         </div>
 
@@ -156,7 +164,7 @@ export default async function LeadDetailPage({ params }: PageProps) {
           </div>
         ) : null}
 
-        <div className="mt-6 flex gap-3">
+        <div className="mt-6 flex flex-wrap gap-3">
           {mailto ? (
             <a
               href={mailto}
@@ -173,6 +181,7 @@ export default async function LeadDetailPage({ params }: PageProps) {
               Call
             </a>
           ) : null}
+          <FollowUpToggle leadId={lead.id} initialFollowedUpAt={lead.followed_up_at} />
         </div>
       </div>
     </div>

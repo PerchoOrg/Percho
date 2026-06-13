@@ -1,14 +1,15 @@
 /**
- * Dashboard /leads — Phase 5.5.
+ * Dashboard /leads — Phase 5.5 + Phase 18.
  *
  * Server-side: fetch agent's leads (RLS scopes to own agent), hydrate as
  * `initialLeads` to the LeadsLive client component which subscribes to
- * Realtime INSERTs + polls as fallback (three-layer freshness pattern,
- * see DEVLOG Phase 2.4 hotfix).
+ * Realtime INSERT/UPDATE + polls as fallback.
+ *
+ * Phase 18: drop the "← Listings" backlink (TopBar nav already covers it),
+ * add followed_up_at to the select set so the client gets it on first paint.
  */
 
 import { createClient } from '@/lib/supabase/server';
-import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { type LeadRow, LeadsLive } from './leads-live';
 
@@ -25,7 +26,7 @@ export default async function LeadsPage() {
   const { data } = (await (supabase as any)
     .from('leads')
     .select(
-      'id, name, email, phone, message, source, notified_at, created_at, listing_id, listings(address, city, state, slug)',
+      'id, name, email, phone, message, source, notified_at, followed_up_at, created_at, listing_id, listings(address, city, state, slug)',
     )
     .order('created_at', { ascending: false })
     .limit(200)) as { data: LeadRow[] | null };
@@ -34,11 +35,11 @@ export default async function LeadsPage() {
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8">
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-semibold tracking-tight">Leads</h1>
-        <Link href="/dashboard" className="text-xs text-cream/60 hover:text-cream">
-          ← Listings
-        </Link>
+      <div className="mb-6">
+        <h1 className="font-serif text-3xl tracking-tight text-cream sm:text-4xl">Leads</h1>
+        <p className="mt-1 text-xs text-cream/50">
+          Buyer inquiries from your published listings, in real time.
+        </p>
       </div>
 
       <LeadsLive initial={initial} />

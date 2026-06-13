@@ -8,6 +8,65 @@ Institutional memory for the project. Updated incrementally, not at session end.
 
 ---
 
+## 2026-06-13 19:50 UTC — phase18: leads inbox upgrade
+
+**Objective**: Vivian feedback round on /dashboard/leads:
+1. Dashboard should link to leads. *(no-op — already shipped in phase17 commit `df576c0` as the third quick-link card.)*
+2. Drop the "← Listings" backlink on /dashboard/leads (TopBar nav already covers it).
+3. Leads page is too bare — add the basics for triaging an inbox: search, filter, stats, CSV export.
+4. **Add a Follow-up button** so she can mark "I contacted this person already" without leaving the row.
+
+**Actions**:
+
+*Schema (migration 0014)*
+- `supabase/migrations/0014_leads_followed_up.sql` — `alter table leads add column followed_up_at timestamptz` + partial index `where followed_up_at is null` (the hot subset for the "Awaiting follow-up" filter chip). Existing per-listing RLS policies cover this column unchanged. **Not yet pushed** — owner runs `pnpm db:push` from Mac (Hermes EC2 has masked credentials).
+
+*API*
+- `app/api/leads/[id]/follow-up/route.ts` (POST) — body `{ value: "now" | null }`. Auth via Supabase server client; RLS gates the update, so an `affected = 0` returns 404 without leaking row existence. Idempotent on repeated "now" sets.
+- `app/api/leads/export/route.ts` (GET) — RLS-scoped CSV of all the agent's leads. Columns: created_at, name, email, phone, listing_address, city, state, message, source, email_status (sent/pending), follow_up_status (open/followed_up), followed_up_at. `content-disposition: attachment; filename="vicinity-leads-YYYY-MM-DD.csv"`. No pagination — single-agent volume fits one response; revisit if multi-tenant.
+
+*Page rewrite*
+- `app/dashboard/leads/page.tsx`: drop the `← Listings` Link, drop the placeholder body copy, hand off to `LeadsLive`. Select set now includes `followed_up_at`.
+- `app/dashboard/leads/leads-live.tsx`: full rewrite from a flat list to a triage UI:
+  - **Stats strip** (4 cards): Total · This week · Pending email · Awaiting follow-up. The two action-relevant ones (This week, Awaiting follow-up) are gold-accented.
+  - **Filter chips** (client-side): All · Awaiting follow-up · This week · Pending email. Counts inline.
+  - **Search input** (client-side, debounced via React render): matches name / email / phone / message / listing address / city.
+  - **Export CSV** link in the header right next to search.
+  - **Status pill** is now 3-state: `pending` (no email sent yet) / `new` (email sent, awaiting follow-up, gold) / `followed up` (cream/dim, row also goes 60% opacity).
+  - **`Follow up ▾` dropdown per row**: 📧 Email reply (mailto:, autoMark) · 💬 Text message (sms:, autoMark) · ✓ Mark as followed up / ↺ Mark as new toggle. **Auto-mark intent**: clicking Email or Text auto-records `followed_up_at = now()`. Mom Test: the agent will not double-tap to confirm she just emailed someone — the click *is* the intent. If she clicks by accident, the detail page has a manual revert.
+  - Realtime subscription now listens for `UPDATE` events too (not just INSERT) so a follow-up done in another tab reflects without a refresh. Polling fallback unchanged (8s).
+
+*Detail page*
+- `app/dashboard/leads/[id]/page.tsx`: pulls `followed_up_at`. Status pill becomes 3-state to match the list. `<FollowUpToggle>` client island appended to the action row.
+- `app/dashboard/leads/[id]/follow-up-toggle.tsx` *(new)*: optimistic toggle, refreshes the server component on success via `router.refresh()`.
+
+**Decisions**:
+- Did **not** add a `lead_notes` table. User said "follow up button", not "track every interaction". Avoiding scope creep — notes is a separate ask if it ever surfaces.
+- Did **not** build a kanban / pipeline-stages view. Single timestamp covers the only real question Vivian's asking: "did I reply to this one yet?"
+- Single `followed_up_at` (nullable timestamptz) instead of a status enum. Two states (open/closed) + a timestamp for "when". Trivially extensible later if we add stages.
+- Auto-mark on Email/Text click is the default. Manual override on the detail page (Mark as new). Verified by walking through the Mom Test scenario: agent emails 8 leads, expects all 8 to show "followed up" without 8 extra confirm clicks.
+- Export CSV is server-rendered (RLS-scoped) instead of client-side from the in-memory list. Reason: list is capped at 200 rows for first paint; Vivian eventually crosses that. Server fetches all.
+
+**Issues**: None. `pnpm tsc --noEmit` clean, `pnpm build` clean, biome auto-fixed 2 formatting nits in `leads-live.tsx`. Vitest: 41 pass / 2 pre-existing fails (`listing-stats.test.ts`, unrelated to phase18).
+
+**Files changed**:
+- `supabase/migrations/0014_leads_followed_up.sql` *(new)*
+- `app/api/leads/[id]/follow-up/route.ts` *(new)*
+- `app/api/leads/export/route.ts` *(new)*
+- `app/dashboard/leads/[id]/follow-up-toggle.tsx` *(new)*
+- `app/dashboard/leads/[id]/page.tsx`
+- `app/dashboard/leads/leads-live.tsx`
+- `app/dashboard/leads/page.tsx`
+
+**Next steps**:
+- Owner: `pnpm db:push` to apply migration 0014, then `pnpm db:types` to regenerate types so we can drop a few `as any` casts later.
+- Smoke test on prod after migration: submit a test lead → verify it appears with `pending` pill → click Email reply → verify pill flips to `followed up` and row dims.
+- Phase 19 candidates (parking lot): sort options (oldest unanswered first), bulk-select for CSV slice / bulk mark, lead notes table.
+
+
+
+---
+
 ## 2026-06-13 14:00 UTC — phase17: dashboard + community polish
 
 **Objective**: Four owner-driven UX tweaks landed as one PR:

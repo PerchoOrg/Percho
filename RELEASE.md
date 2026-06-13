@@ -5,6 +5,55 @@ Format matches the standard release template (Features / Improvements / Bug Fixe
 
 ---
 
+## Release Notes - v0.13.0
+
+**Release Date:** 2026-06-13
+
+Leads inbox upgrade. The /dashboard/leads page graduates from a flat list to a triage view, with a one-click follow-up tracker so you can see at a glance who's still owed a reply.
+
+### ✨ Features
+
+**Follow-up tracking**
+Every lead now has a "Follow up ▾" button right on the row. Open it and you get three options:
+- **📧 Email reply** — opens your mail client pre-filled with the lead's name and listing address
+- **💬 Text message** — opens an SMS draft on phone-equipped devices
+- **✓ Mark as followed up** — log the contact without leaving the page
+
+Clicking Email or Text **automatically marks the lead as followed up** — the click is the intent, no extra confirmation needed. If you click by mistake, open the lead and use "Mark as new" to revert.
+
+**Stats strip**
+The page now opens with four counters: Total · This week · Pending email · Awaiting follow-up. The two action-relevant ones (This week, Awaiting follow-up) are gold-accented so you can tell at a glance what needs attention.
+
+**Filter chips + search**
+- Chips: All · Awaiting follow-up · This week · Pending email — each with a live count.
+- Search box matches across name, email, phone, message, and listing address/city.
+- Followed-up rows dim to 60% opacity so they fade into the background without disappearing.
+
+**Export to CSV**
+A new "Export CSV" button in the header downloads every lead — name, email, phone, listing, message, status, and follow-up timestamp — in a spreadsheet you can open in Excel, Numbers, or hand off to a CRM.
+
+### 🛠️ Improvements
+
+- The "← Listings" backlink is gone — Listings is already in the top nav.
+- Status pill is now three-state (`pending` → `new` → `followed up`) on both the list and the detail page.
+- Realtime: a follow-up done in another tab now reflects automatically (the inbox subscribes to UPDATE events, not just new leads).
+
+### 🔧 Technical
+
+- New migration `0014_leads_followed_up.sql` adds `leads.followed_up_at timestamptz` (nullable) + a partial index on rows still pending follow-up.
+- New endpoints: `POST /api/leads/[id]/follow-up` (toggle), `GET /api/leads/export` (CSV).
+- Existing per-listing RLS policies cover the new column unchanged.
+- Migration must be applied (`pnpm db:push`) before deploying — the column is referenced on every leads query.
+
+### 📊 Metrics
+
+- 7 files touched (3 new, 4 modified, 1 migration).
+- `pnpm tsc --noEmit` clean, `pnpm build` clean.
+
+
+
+---
+
 ## Release Notes - v0.12.2
 
 **Release Date:** 2026-06-13
