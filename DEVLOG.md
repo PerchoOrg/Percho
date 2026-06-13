@@ -8,6 +8,30 @@ Institutional memory for the project. Updated incrementally, not at session end.
 
 ---
 
+## 2026-06-13 12:00 UTC — phase16.1: dashboard refresh
+
+**Objective**: Owner feedback after looking at /dashboard on his phone: "大 title 换成 Dashboard, 删除这几个数字没啥意思, 需要两个 quick link (New Listing + New Community Video), View public profile 放到右上角."
+
+**Actions**:
+- `app/dashboard/page.tsx`: rename h1 `Listings` → `Dashboard`; drop subtitle "Manage your inventory…"
+- Removed the 4-cell rollup grid (Listings / Page views / Sessions / Leads) along with `RollupStat` component, `getRollupStats` import, and the `publishedIds` calc that fed it.
+- Replaced the old top-right CTA cluster with two quick-link cards in a 2-col grid: **New listing** → `/dashboard/listings/new`, **New community video** → `/dashboard/communities`.
+- Moved **View public profile ↗** pill to the top-right of the header (same row as the title).
+
+**Decisions**:
+- New community video links to `/dashboard/communities` (the list page) rather than a dedicated picker. Schema requires a community video to be attached to a community, and we have no global "create community video" flow. Two options were on the table — (A) reuse the existing list (one extra click), or (B) build a picker page. Owner chose (A); zero new code, no schema change.
+- Kept the rollup *data* path deletable rather than commented out — `getRollupStats` is still exported from `lib/analytics/listing-stats` for the per-listing analytics page, just not invoked here. No dead code left behind on the dashboard route.
+
+**Issues**: One sloppy patch during the edit clobbered `StatusBadge`'s opening line onto `DashboardHomePage`'s function signature — caught by `tsc --noEmit` and fixed in the same session before commit.
+
+**Resolution**: Branch `phase16/dashboard-cleanup`, commit `6428d59`, fast-forward merged to `main` (verified via `git log origin/main`). One file changed, +36/-50.
+
+**Learnings**: Pre-launch dashboards with zero traffic shouldn't show zero-valued analytics tiles — they read as "this product is dead." Quick-link cards convert dead pixels into next-action surfaces.
+
+**Next steps**: Wait for Vivian's reaction on phone view. Likely follow-ups: (a) badge counts on the quick-links once she has real listings/community videos, (b) a real picker for community video if she finds the two-step "list → community → upload" flow annoying.
+
+---
+
 ## 2026-06-13 11:30 UTC — phase15.2: buyer post-login → /browse, copy cleanup
 
 **Objective**: Owner follow-up after 15.1 review: "1. 选 b (signup 走 /signup 单页 with role picker — already shipped). 2. buyer 登录后当然是 explore. 3. 整个网站扫一遍类似的说明文字 cleanup, button 鼠标悬浮才出现." This phase fixes the buyer landing route and trims residual explainer copy.

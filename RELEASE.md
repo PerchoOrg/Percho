@@ -5,6 +5,36 @@ Format matches the standard release template (Features / Improvements / Bug Fixe
 
 ---
 
+## Release Notes - v0.12.2
+
+**Release Date:** 2026-06-13
+
+Dashboard refresh based on owner feedback after looking at the page on his phone.
+
+### ✨ Improvements
+
+**Cleaner dashboard header**
+The dashboard's main heading now reads "Dashboard" instead of "Listings" — it's the home of more than just listings now. The "Manage your inventory…" subtitle was redundant and is gone. The "View public profile" link moves to the top-right of the page where it belongs as a secondary action.
+
+**Two quick-link cards replace the empty stats grid**
+The four analytics tiles at the top (Listings / Page views / Sessions / Leads) were showing mostly zeros pre-launch and added noise rather than signal. They've been replaced with two clear quick links:
+
+- **New listing** → jump straight into adding a property
+- **New community video** → jump to the communities list to pick where the video belongs
+
+Per-listing analytics are still available on each listing's Analytics tab — nothing was removed from the data layer.
+
+### 🔧 Technical
+
+- One file touched (`app/dashboard/page.tsx`), +36/-50.
+- Removed the now-unused `RollupStat` component and the rollup query call on the dashboard route.
+
+### ⚠️ Known Issues
+
+- "New community video" currently sends you to the communities list rather than a one-step picker. If picking-then-uploading feels too clicky in real use, we'll add a dedicated picker page.
+
+---
+
 ## Release Notes - v0.12.1
 
 **Release Date:** 2026-06-13
