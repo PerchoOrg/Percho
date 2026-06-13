@@ -1,11 +1,15 @@
 /**
- * /dashboard/communities — list page (Phase 4.4).
+ * /dashboard/communities — list page (Phase 4.4 + Phase 17 polish).
  *
- * V1 design choice: communities are shared (any authenticated agent can
- * create/edit per the `agents manage communities` RLS policy). So this list
- * is unscoped — every agent sees the same global set. We're betting the
- * agent count stays small enough in V1 that this is fine; if it gets messy
- * later we can scope by `created_by` (column doesn't exist yet).
+ * Phase 17: every row now has explicit `+ Add video` and `Edit` actions
+ * instead of being a single edit-link. Edit is only shown to the agent who
+ * created the community (or for legacy unowned rows where created_by is
+ * NULL); migration 0013 enforces this on the DB side too — UI hide is just
+ * a UX hint so non-creators don't try and get a "forbidden" toast.
+ *
+ * V1 design choice (kept): communities are globally readable. Schools / POIs
+ * / community videos remain editable by any authenticated agent — only
+ * metadata (name / city / state / description) is creator-gated.
  */
 
 import { createClient } from '@/lib/supabase/server';
@@ -18,6 +22,7 @@ interface CommunityRow {
   slug: string;
   city: string | null;
   state: string;
+  created_by: string | null;
 }
 
 export default async function CommunitiesListPage() {
@@ -28,9 +33,17 @@ export default async function CommunitiesListPage() {
   if (!user) redirect('/login?redirect=%2Fdashboard%2Fcommunities');
 
   // biome-ignore lint/suspicious/noExplicitAny: stub generated types
+  const { data: agentRow } = (await (supabase as any)
+    .from('agents')
+    .select('id')
+    .eq('user_id', user.id)
+    .maybeSingle()) as { data: { id: string } | null };
+  const myAgentId = agentRow?.id ?? null;
+
+  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
   const { data: rows } = (await (supabase as any)
     .from('communities')
-    .select('id, name, slug, city, state')
+    .select('id, name, slug, city, state, created_by')
     .order('name', { ascending: true })) as { data: CommunityRow[] | null };
 
   const communities = rows ?? [];
@@ -41,8 +54,8 @@ export default async function CommunitiesListPage() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Communities</h1>
           <p className="mt-1 text-sm text-cream/60">
-            Shared across all agents. Add schools and POIs once; every listing in this community can
-            reference them.
+            Shared across all agents. Add videos to any community; only the agent who created a
+            community can edit its metadata.
           </p>
         </div>
         <Link
@@ -61,23 +74,47 @@ export default async function CommunitiesListPage() {
         </div>
       ) : (
         <ul className="divide-y divide-bronze/20 rounded border border-bronze/30 bg-ink2">
-          {communities.map((c) => (
-            <li key={c.id}>
-              <Link
-                href={`/dashboard/communities/${c.id}`}
-                className="flex items-center justify-between px-4 py-3 transition hover:bg-bronze/10"
+          {communities.map((c) => {
+            const canEdit = c.created_by == null || c.created_by === myAgentId;
+            return (
+              <li
+                key={c.id}
+                className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
               >
-                <div>
+                <div className="min-w-0 flex-1">
                   <div className="text-sm font-medium text-cream">{c.name}</div>
-                  <div className="text-xs text-cream/50">
+                  <div className="truncate text-xs text-cream/50">
                     {c.city ? `${c.city}, ${c.state}` : c.state} ·{' '}
                     <code className="text-cream/70">{c.slug}</code>
                   </div>
                 </div>
-                <span className="text-xs text-cream/40">edit →</span>
-              </Link>
-            </li>
-          ))}
+                <div className="flex shrink-0 gap-2">
+                  <Link
+                    href={`/dashboard/communities/${c.id}/videos`}
+                    className="inline-flex items-center justify-center gap-1 rounded-lg border border-bronze/40 px-3 py-1.5 text-cream text-xs hover:border-gold hover:text-gold"
+                  >
+                    + Add video
+                  </Link>
+                  {canEdit ? (
+                    <Link
+                      href={`/dashboard/communities/${c.id}`}
+                      className="inline-flex items-center justify-center gap-1 rounded-lg border border-bronze/40 px-3 py-1.5 text-cream text-xs hover:border-gold hover:text-gold"
+                    >
+                      Edit
+                    </Link>
+                  ) : (
+                    <Link
+                      href={`/dashboard/communities/${c.id}`}
+                      className="inline-flex items-center justify-center gap-1 rounded-lg border border-bronze/20 px-3 py-1.5 text-cream/60 text-xs hover:border-bronze/50 hover:text-cream/80"
+                      title="View only — only the creator can edit metadata"
+                    >
+                      View
+                    </Link>
+                  )}
+                </div>
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>

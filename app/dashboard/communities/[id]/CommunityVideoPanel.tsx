@@ -166,67 +166,25 @@ export function CommunityVideoPanel({
           };
 
   return (
-    <section className="rounded border border-bronze/30 bg-ink2 p-6">
-      <h2 className="mb-4 text-base font-semibold">Community videos ({videos.length})</h2>
+    <section className="rounded border border-bronze/30 bg-ink2 p-5">
+      <div className="mb-4 flex items-baseline justify-between">
+        <h2 className="text-base font-semibold">Upload a video</h2>
+        <span className="text-xs text-cream/50">{videos.length} uploaded</span>
+      </div>
 
-      {videos.length > 0 && (
-        <ul className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
-          {videos.map((v) => {
-            const linked =
-              v.school_id != null
-                ? (schools.find((s) => s.id === v.school_id)?.name ?? 'school')
-                : v.poi_id != null
-                  ? (pois.find((p) => p.id === v.poi_id)?.name ?? 'poi')
-                  : null;
-            return (
-              <li key={v.id} className="flex gap-3 rounded border border-bronze/20 p-3 text-sm">
-                <div
-                  className="h-16 w-28 flex-shrink-0 overflow-hidden rounded bg-ink"
-                  style={{
-                    backgroundImage: `url(${thumbnailUrl(v.cf_video_id)})`,
-                    backgroundSize: 'cover',
-                    backgroundPosition: 'center',
-                  }}
-                />
-                <div className="min-w-0 flex-1">
-                  <div className="truncate font-medium text-cream">{v.title ?? '(untitled)'}</div>
-                  <div className="text-xs text-cream/50">
-                    {v.kind}
-                    {linked ? ` · ${linked}` : null}
-                    {' · '}
-                    <span
-                      className={
-                        v.status === 'ready'
-                          ? 'text-emerald-400'
-                          : v.status === 'error'
-                            ? 'text-red-400'
-                            : 'text-cream/50'
-                      }
-                    >
-                      {v.status}
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => handleDelete(v.id)}
-                    className="mt-2 text-xs text-red-400 hover:underline"
-                  >
-                    delete
-                  </button>
-                </div>
-              </li>
-            );
-          })}
-        </ul>
-      )}
+      {/* Primary action — keep above the fold. Defaults are sane
+          (kind=neighborhood, no link, no geo) so the agent can just drop a
+          file and ship; everything else is tucked into <details> below. */}
+      <VideoUploader target={target} onUploaded={handleUploaded} />
+      {error && <p className="mt-2 text-xs text-red-400">{error}</p>}
 
-      <div className="space-y-3 rounded border border-dashed border-bronze/20 p-4">
-        <h3 className="text-xs font-medium uppercase tracking-wide text-cream/50">
-          Upload a community video
-        </h3>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <details className="mt-4 rounded border border-bronze/20 bg-ink/50 px-3 py-2 text-sm">
+        <summary className="cursor-pointer select-none text-xs uppercase tracking-wide text-cream/60 hover:text-cream">
+          Categorize this video (optional)
+        </summary>
+        <div className="mt-3 space-y-3">
           <label className="block">
-            <span className="mb-1 block text-xs font-medium text-cream/70">Kind *</span>
+            <span className="mb-1 block text-xs font-medium text-cream/70">Kind</span>
             <select
               value={kind}
               onChange={(e) => {
@@ -242,7 +200,7 @@ export function CommunityVideoPanel({
             </select>
           </label>
           {kind === 'school' && schools.length > 0 && (
-            <label className="block sm:col-span-2">
+            <label className="block">
               <span className="mb-1 block text-xs font-medium text-cream/70">
                 Link to school (optional)
               </span>
@@ -261,7 +219,7 @@ export function CommunityVideoPanel({
             </label>
           )}
           {kind === 'poi' && pois.length > 0 && (
-            <label className="block sm:col-span-2">
+            <label className="block">
               <span className="mb-1 block text-xs font-medium text-cream/70">
                 Link to POI (optional)
               </span>
@@ -279,25 +237,25 @@ export function CommunityVideoPanel({
               </select>
             </label>
           )}
+          {kind === 'school' && schools.length === 0 && (
+            <p className="text-xs text-cream/40">
+              No schools yet — add one in the editor to link it to a video.
+            </p>
+          )}
+          {kind === 'poi' && pois.length === 0 && (
+            <p className="text-xs text-cream/40">
+              No POIs yet — add one in the editor to link it to a video.
+            </p>
+          )}
         </div>
-        {kind === 'school' && schools.length === 0 && (
-          <p className="text-xs text-cream/40">
-            No schools yet — add one above to link it to a video.
-          </p>
-        )}
-        {kind === 'poi' && pois.length === 0 && (
-          <p className="text-xs text-cream/40">
-            No POIs yet — add one above to link it to a video.
-          </p>
-        )}
+      </details>
 
-        {/* Phase 11 — location for platform-wide /nearby. Optional but strongly
-            encouraged: without lat/lng the video won't appear in radius searches. */}
-        <div className="rounded border border-bronze/15 bg-ink p-3">
-          <div className="mb-2 flex items-baseline justify-between gap-2">
-            <h4 className="text-xs font-medium uppercase tracking-wide text-cream/60">
-              Location (optional, but enables Nearby)
-            </h4>
+      <details className="mt-3 rounded border border-bronze/20 bg-ink/50 px-3 py-2 text-sm">
+        <summary className="cursor-pointer select-none text-xs uppercase tracking-wide text-cream/60 hover:text-cream">
+          Add location (enables Nearby)
+        </summary>
+        <div className="mt-3">
+          <div className="mb-2 flex justify-end">
             <button
               type="button"
               onClick={useMyLocation}
@@ -337,9 +295,63 @@ export function CommunityVideoPanel({
           )}
           {geoError && <p className="mt-2 text-[11px] text-red-400">{geoError}</p>}
         </div>
-        <VideoUploader target={target} onUploaded={handleUploaded} />
-        {error && <p className="text-xs text-red-400">{error}</p>}
-      </div>
+      </details>
+
+      {videos.length > 0 && (
+        <details className="mt-4" open>
+          <summary className="cursor-pointer select-none text-xs uppercase tracking-wide text-cream/60 hover:text-cream">
+            Already uploaded ({videos.length})
+          </summary>
+          <ul className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {videos.map((v) => {
+              const linked =
+                v.school_id != null
+                  ? (schools.find((s) => s.id === v.school_id)?.name ?? 'school')
+                  : v.poi_id != null
+                    ? (pois.find((p) => p.id === v.poi_id)?.name ?? 'poi')
+                    : null;
+              return (
+                <li key={v.id} className="flex gap-3 rounded border border-bronze/20 p-3 text-sm">
+                  <div
+                    className="h-16 w-28 flex-shrink-0 overflow-hidden rounded bg-ink"
+                    style={{
+                      backgroundImage: `url(${thumbnailUrl(v.cf_video_id)})`,
+                      backgroundSize: 'cover',
+                      backgroundPosition: 'center',
+                    }}
+                  />
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate font-medium text-cream">{v.title ?? '(untitled)'}</div>
+                    <div className="text-xs text-cream/50">
+                      {v.kind}
+                      {linked ? ` · ${linked}` : null}
+                      {' · '}
+                      <span
+                        className={
+                          v.status === 'ready'
+                            ? 'text-emerald-400'
+                            : v.status === 'error'
+                              ? 'text-red-400'
+                              : 'text-cream/50'
+                        }
+                      >
+                        {v.status}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(v.id)}
+                      className="mt-2 text-xs text-red-400 hover:underline"
+                    >
+                      delete
+                    </button>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </details>
+      )}
     </section>
   );
 }

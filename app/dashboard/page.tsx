@@ -138,7 +138,7 @@ export default async function DashboardHomePage({ searchParams }: PageProps) {
         )}
       </div>
 
-      <section className="mb-10 grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-5">
+      <section className="mb-10 grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-5">
         <Link
           href="/dashboard/listings/new"
           className="group flex items-center justify-between rounded-2xl border border-cream/5 bg-ink2/60 p-5 transition hover:border-gold/40"
@@ -147,7 +147,14 @@ export default async function DashboardHomePage({ searchParams }: PageProps) {
             <div className="text-[11px] uppercase tracking-widest text-gold">New listing</div>
             <div className="mt-2 font-serif text-2xl text-cream">Add a property →</div>
           </div>
-          <svg viewBox="0 0 24 24" width={20} height={20} fill="currentColor" className="text-gold" aria-hidden="true">
+          <svg
+            viewBox="0 0 24 24"
+            width={20}
+            height={20}
+            fill="currentColor"
+            className="text-gold"
+            aria-hidden="true"
+          >
             <path d="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6z" />
           </svg>
         </Link>
@@ -156,11 +163,39 @@ export default async function DashboardHomePage({ searchParams }: PageProps) {
           className="group flex items-center justify-between rounded-2xl border border-cream/5 bg-ink2/60 p-5 transition hover:border-gold/40"
         >
           <div>
-            <div className="text-[11px] uppercase tracking-widest text-gold">New community video</div>
+            <div className="text-[11px] uppercase tracking-widest text-gold">
+              New community video
+            </div>
             <div className="mt-2 font-serif text-2xl text-cream">Pick a community →</div>
           </div>
-          <svg viewBox="0 0 24 24" width={20} height={20} fill="currentColor" className="text-gold" aria-hidden="true">
+          <svg
+            viewBox="0 0 24 24"
+            width={20}
+            height={20}
+            fill="currentColor"
+            className="text-gold"
+            aria-hidden="true"
+          >
             <path d="M8 5v14l11-7z" />
+          </svg>
+        </Link>
+        <Link
+          href="/dashboard/leads"
+          className="group flex items-center justify-between rounded-2xl border border-cream/5 bg-ink2/60 p-5 transition hover:border-gold/40"
+        >
+          <div>
+            <div className="text-[11px] uppercase tracking-widest text-gold">Leads</div>
+            <div className="mt-2 font-serif text-2xl text-cream">View leads →</div>
+          </div>
+          <svg
+            viewBox="0 0 24 24"
+            width={20}
+            height={20}
+            fill="currentColor"
+            className="text-gold"
+            aria-hidden="true"
+          >
+            <path d="M4 4h16v2H4zm0 5h16v2H4zm0 5h10v2H4z" />
           </svg>
         </Link>
       </section>

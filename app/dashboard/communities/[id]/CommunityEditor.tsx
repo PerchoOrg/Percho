@@ -44,14 +44,16 @@ export function CommunityEditor({
   community,
   schools,
   pois,
+  canEditMetadata,
 }: {
   community: CommunityRow;
   schools: SchoolRow[];
   pois: PoiRow[];
+  canEditMetadata: boolean;
 }) {
   return (
     <div className="space-y-6">
-      <MetadataSection community={community} />
+      <MetadataSection community={community} canEdit={canEditMetadata} />
       <SchoolsSection communityId={community.id} schools={schools} />
       <PoisSection communityId={community.id} pois={pois} />
     </div>
@@ -60,7 +62,13 @@ export function CommunityEditor({
 
 // ─── metadata ────────────────────────────────────────────────────
 
-function MetadataSection({ community }: { community: CommunityRow }) {
+function MetadataSection({
+  community,
+  canEdit,
+}: {
+  community: CommunityRow;
+  canEdit: boolean;
+}) {
   const router = useRouter();
   const [name, setName] = useState(community.name);
   const [city, setCity] = useState(community.city ?? '');
@@ -72,6 +80,7 @@ function MetadataSection({ community }: { community: CommunityRow }) {
 
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (!canEdit) return;
     setSaveState('saving');
     setError(null);
     startTransition(async () => {
@@ -94,7 +103,20 @@ function MetadataSection({ community }: { community: CommunityRow }) {
 
   return (
     <section className="rounded border border-bronze/30 bg-ink2 p-6">
-      <h2 className="mb-4 text-base font-semibold">Community details</h2>
+      <div className="mb-4 flex items-baseline justify-between gap-2">
+        <h2 className="text-base font-semibold">Community details</h2>
+        {!canEdit && (
+          <span className="rounded-full border border-bronze/30 px-2 py-0.5 text-[10px] uppercase tracking-wider text-cream/60">
+            View only
+          </span>
+        )}
+      </div>
+      {!canEdit && (
+        <p className="mb-4 rounded border border-bronze/20 bg-ink px-3 py-2 text-xs text-cream/60">
+          Only the agent who created this community can edit metadata. You can still add schools,
+          POIs, and videos below.
+        </p>
+      )}
       <form onSubmit={onSubmit} className="space-y-4">
         <Field label="Name" required>
           <input
@@ -103,7 +125,8 @@ function MetadataSection({ community }: { community: CommunityRow }) {
             onChange={(e) => setName(e.target.value)}
             required
             maxLength={120}
-            className={INPUT_CLASS}
+            disabled={!canEdit}
+            className={`${INPUT_CLASS} disabled:cursor-not-allowed disabled:opacity-60`}
           />
         </Field>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-[1fr_5rem]">
@@ -113,7 +136,8 @@ function MetadataSection({ community }: { community: CommunityRow }) {
               value={city}
               onChange={(e) => setCity(e.target.value)}
               maxLength={80}
-              className={INPUT_CLASS}
+              disabled={!canEdit}
+              className={`${INPUT_CLASS} disabled:cursor-not-allowed disabled:opacity-60`}
             />
           </Field>
           <Field label="State" required>
@@ -123,7 +147,8 @@ function MetadataSection({ community }: { community: CommunityRow }) {
               onChange={(e) => setState(e.target.value.toUpperCase())}
               required
               maxLength={2}
-              className={INPUT_CLASS}
+              disabled={!canEdit}
+              className={`${INPUT_CLASS} disabled:cursor-not-allowed disabled:opacity-60`}
             />
           </Field>
         </div>
@@ -133,22 +158,25 @@ function MetadataSection({ community }: { community: CommunityRow }) {
             onChange={(e) => setDescription(e.target.value)}
             rows={4}
             maxLength={2000}
-            className={`${INPUT_CLASS} resize-y`}
+            disabled={!canEdit}
+            className={`${INPUT_CLASS} resize-y disabled:cursor-not-allowed disabled:opacity-60`}
           />
         </Field>
-        <div className="flex items-center gap-3 pt-2">
-          <button
-            type="submit"
-            disabled={isPending || saveState === 'saving'}
-            className="rounded bg-gold px-4 py-2 text-sm font-medium text-ink transition hover:opacity-90 disabled:opacity-50"
-          >
-            {saveState === 'saving' ? 'Saving…' : 'Save changes'}
-          </button>
-          {saveState === 'saved' && <span className="text-sm text-emerald-400">✓ Saved</span>}
-          {saveState === 'error' && (
-            <span className="text-sm text-red-400">Error: {error ?? 'unknown'}</span>
-          )}
-        </div>
+        {canEdit && (
+          <div className="flex items-center gap-3 pt-2">
+            <button
+              type="submit"
+              disabled={isPending || saveState === 'saving'}
+              className="rounded bg-gold px-4 py-2 text-sm font-medium text-ink transition hover:opacity-90 disabled:opacity-50"
+            >
+              {saveState === 'saving' ? 'Saving…' : 'Save changes'}
+            </button>
+            {saveState === 'saved' && <span className="text-sm text-emerald-400">✓ Saved</span>}
+            {saveState === 'error' && (
+              <span className="text-sm text-red-400">Error: {error ?? 'unknown'}</span>
+            )}
+          </div>
+        )}
       </form>
     </section>
   );

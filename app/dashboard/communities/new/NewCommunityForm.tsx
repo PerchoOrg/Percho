@@ -9,21 +9,11 @@
  */
 
 import { createCommunity } from '@/app/dashboard/communities/actions';
+import { nameToSlug } from '@/lib/utils/slug';
 import { useState, useTransition } from 'react';
 
 const INPUT_CLASS =
   'w-full rounded border border-bronze/30 bg-ink2 px-3 py-2 text-sm text-cream placeholder:text-cream/40 focus:border-gold focus:outline-none focus:ring-1 focus:ring-gold';
-
-function nameToSlug(name: string): string {
-  return name
-    .toLowerCase()
-    .normalize('NFKD')
-    .replace(/[^\w\s-]+/g, ' ')
-    .trim()
-    .replace(/[\s_]+/g, '-')
-    .replace(/-+/g, '-')
-    .slice(0, 64);
-}
 
 export function NewCommunityForm() {
   const [name, setName] = useState('');

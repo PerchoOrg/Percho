@@ -8,6 +8,74 @@ Institutional memory for the project. Updated incrementally, not at session end.
 
 ---
 
+## 2026-06-13 14:00 UTC — phase17: dashboard + community polish
+
+**Objective**: Four owner-driven UX tweaks landed as one PR:
+1. Dashboard quick-links: add a "View leads" card alongside listing + community video.
+2. Communities list: every row gets explicit "+ Add video" and "Edit" buttons; only the creator sees Edit.
+3. Slug must follow the community name when name is renamed.
+4. Community video upload page is too long — drop a video should fit a screen; collapse the rest.
+
+**Actions**:
+
+*Schema (migration 0013)*
+- `supabase/migrations/0013_community_created_by.sql` — adds `communities.created_by uuid references agents(id) on delete set null` + index. Replaces the V1 "agents manage communities" all-in-one policy with three split policies: `insert` open to authenticated, `update`/`delete` gated to `created_by IS NULL OR created_by ∈ caller's agents`. NULL = legacy/unowned (existing rows pre-phase17), still editable by anyone — keeps backward compat without a backfill.
+- Schools / POIs / community videos remain globally writable. Only metadata (name/city/state/description) is creator-gated. V1 design call: those are crowdsourced data, not the community's "identity".
+
+*Slug + actions*
+- `lib/utils/slug.ts` — extracted `nameToSlug` from `NewCommunityForm` so server actions can reuse it.
+- `app/dashboard/communities/actions.ts`:
+  - `createCommunity`: looks up the caller's `agents.id` and stamps `created_by` on insert (best-effort: NULL if no agent row).
+  - `updateCommunity`: fetches existing `name` + `slug`. If name changed, re-derives slug via `nameToSlug` and tries it; on Postgres `23505` (unique violation) appends a 4-char random suffix and retries once. Update uses `{ count: 'exact' }` so RLS-filtered "no rows updated" surfaces as `forbidden` instead of a silent success. Returns `slug_taken` if both candidates collide.
+  - `NewCommunityForm.tsx` now imports the shared helper.
+
+*Dashboard*
+- `app/dashboard/page.tsx`: 2-col → 3-col grid, added third card linking to `/dashboard/leads`.
+
+*Communities list*
+- `app/dashboard/communities/page.tsx`: full rewrite. Each row shows name + city/state + slug, plus two trailing buttons: `+ Add video` (always) and `Edit` (only when `created_by IS NULL` or `created_by === myAgentId`). Non-creators see a `View` button instead of `Edit`, with a tooltip explaining why. Header subtitle updated to set the expectation: shared communities, creator-only metadata edits.
+
+*Editor split*
+- `app/dashboard/communities/[id]/page.tsx`: removed `CommunityVideoPanel` from this page. Now metadata + schools + POIs only. Computes `canEditMetadata` from `created_by` + agent lookup and passes through to `CommunityEditor`. Header gets a `+ Add video` CTA linking to `./videos`.
+- `app/dashboard/communities/[id]/CommunityEditor.tsx`: added `canEditMetadata` prop. `MetadataSection` shows a "View only" badge + explainer when locked, all inputs become `disabled`, and the `Save changes` button is hidden (not just disabled — keeps the read-only state visually clean). Schools + POIs sections unchanged.
+- `app/dashboard/communities/[id]/videos/page.tsx` — new route. Loads only what the upload flow needs (community, schools/POIs for the optional link selectors, existing community videos for the polled status list). Header has a back link to "all communities" and an "edit details" link back to the editor.
+
+*CommunityVideoPanel*
+- `app/dashboard/communities/[id]/CommunityVideoPanel.tsx`: restructured for "drop a file in 5 seconds" flow.
+  - **Above the fold**: heading, count, and the `VideoUploader` widget itself. Defaults are sane (`kind=neighborhood`, no link, no geo) so the agent can just drop a file.
+  - **Collapsed `<details>` blocks below**: "Categorize this video" (kind dropdown + optional school/poi link) and "Add location (enables Nearby)" (lat/lng + Use my location). Empty by default; agent opens what they need.
+  - **Already uploaded** list also moved into a `<details open>` to free up vertical space when there are many videos.
+  - Logic unchanged — same `target` builder, same `handleUploaded` / `handleDelete`, same poll loop.
+
+**Decisions**:
+- *Creator gating only on metadata, not on schools/POIs/videos.* V1 communities are crowdsourced data — multiple agents adding schools or videos to the same community is the desired flow. Locking everything to one creator would break that. Only the "what is this community called / where is it" identity layer needs ownership.
+- *NULL `created_by` = legacy unowned, fully editable.* Cheaper than a backfill that would assign rows to whoever happened to run a script. Once an existing community gets edited and re-saved (no, the update doesn't change `created_by`), it stays unowned forever — fine, that matches the "shared baseline" framing. New rows get owned.
+- *Slug always derived from name; not user-editable post-create.* Simpler than tracking a "slug was hand-edited" bit. If name is renamed, slug follows. Collision → 4-char suffix. No public `/c/[slug]` route exists yet, so no external links to worry about.
+- *Editor split keeps the editor URL stable.* `/dashboard/communities/[id]` still works (links from elsewhere don't break) — videos just moved to a sibling route. The editor page now also surfaces a `+ Add video` button so an agent who lands on the editor can pivot to upload in one click.
+- *`<details>` over a stepper / wizard / accordion library.* Native HTML, zero JS, no library needed, mobile-friendly. The owner's screenshot shows iPhone usage — a native `<summary>` tap is more reliable than custom click handlers.
+
+**Issues**:
+- Hermes container env had `SUPABASE_DB_PASSWORD` and `SUPABASE_ACCESS_TOKEN` set to literal `***` (masked / not real values), so `supabase db push` couldn't run from here. Migration is committed and ready; owner must run `pnpm db:push` (or `supabase db push --include-all`) locally to apply.
+
+**Files changed**:
+- `supabase/migrations/0013_community_created_by.sql` *(new)*
+- `lib/utils/slug.ts` *(new)*
+- `app/dashboard/communities/actions.ts`
+- `app/dashboard/communities/new/NewCommunityForm.tsx`
+- `app/dashboard/page.tsx`
+- `app/dashboard/communities/page.tsx`
+- `app/dashboard/communities/[id]/page.tsx`
+- `app/dashboard/communities/[id]/CommunityEditor.tsx`
+- `app/dashboard/communities/[id]/videos/page.tsx` *(new)*
+- `app/dashboard/communities/[id]/CommunityVideoPanel.tsx`
+
+**Next steps**:
+- Owner runs `pnpm db:push` to apply migration 0013 (no app code reads `created_by` until the column exists, so deploy order is: migrate → deploy app).
+- After migration: existing communities all show as legacy/unowned (Edit available to anyone). Newly created communities will be creator-gated.
+
+---
+
+
 ## 2026-06-13 12:00 UTC — phase16.1: dashboard refresh
 
 **Objective**: Owner feedback after looking at /dashboard on his phone: "大 title 换成 Dashboard, 删除这几个数字没啥意思, 需要两个 quick link (New Listing + New Community Video), View public profile 放到右上角."
