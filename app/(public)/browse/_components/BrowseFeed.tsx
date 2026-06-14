@@ -1063,7 +1063,11 @@ export function BrowseFeed({
   }, [active, activeSource, switchSource]);
 
   return (
-    <div className="relative h-screen w-full overflow-hidden bg-black">
+    <div className="relative mx-auto h-screen w-full overflow-hidden bg-black md:w-[min(430px,calc(100vh*9/16))] md:shadow-2xl md:shadow-black/50">
+      {/* Desktop: constrain feed to a phone-width portrait column centered on the
+       * page. Mobile (default): full viewport. The outer body bg-ink fills the
+       * surrounding desktop gutters — keeps a single immersive surface but stops
+       * the video from stretching into a desktop-wide letterbox banner. */}
       {/* Logo + Back nav cluster lives top-right (see below). */}
       <div
         ref={scrollerRef}
