@@ -6,6 +6,73 @@ Institutional memory for the project. Updated incrementally, not at session end.
 
 ---
 
+## 2026-06-14 — Phase 25 — Communities list polish + unified upload category
+
+**Objective.** Two small UX wins on the agent dashboard's community surface, both raised
+by Vivian after walking through the current flow.
+
+1. **Communities list page**: each row was 2 lines (name + city/slug) with `+ Upload` /
+   `Edit` buttons in that order. Felt thin and the action order privileged Upload over
+   Edit even though Edit is the more common first-touch action when an agent comes back
+   to a community.
+2. **Per-community upload page**: video panel had its own 12-button category grid AND
+   the photo panel below had its own dropdown picker. Same axis, two pickers — agents
+   uploading a video plus a stack of photos for the same category had to pick it twice.
+
+**Actions.**
+- `app/dashboard/communities/page.tsx`: added `description` to the SELECT and rendered
+  it (line-clamped to 2) below city/state. When null we show a muted "No description
+  yet" placeholder so the row doesn't visually collapse — also a soft prompt to fill it
+  in via Edit. Reordered actions: Edit first, Upload second.
+- `app/dashboard/communities/[id]/CommunityUploadShell.tsx` (new, client): owns shared
+  category state. Renders a single `<select>` with the same Bucket A / Bucket B
+  optgroups + the "Must include" rule blurb; passes `category` down to both panels as a
+  prop. Also includes a one-line "Applies to both video and photos uploaded below."
+- `CommunityVideoPanel.tsx`: now requires `category` as a prop. Stripped the internal
+  `useState`, the in-panel two-bucket button grid, the meta blurb box, and the unused
+  local `CategoryGroup` helper. Kept everything else (address, silent geo, uploader,
+  "already uploaded" list).
+- `CommunityPhotoPanel.tsx`: now requires `category` as a prop. Stripped the internal
+  `useState`, the dropdown, and the meta blurb box. Kept everything else (the "Add
+  photos as <label>" button still reflects the shared category via `meta.label`).
+- `app/dashboard/communities/[id]/upload/page.tsx`: rewritten to use
+  `CommunityUploadShell` instead of stacking the two panels directly. The collapsed
+  `<details>` wrapper around the photo panel is gone — it's now a flat sibling under
+  the shared category section, matching the principle that one category drives both.
+
+**Decisions.**
+- The shared picker lives in a dedicated `CommunityUploadShell` rather than promoting
+  `category` to a URL param or context provider. Two consumers, both on the same page,
+  both client components — local state in a shared parent is the lightest possible
+  coupling. No router gymnastics.
+- Kept the optgroup `<select>` over a button grid for the unified picker. The 12-button
+  grid was prettier on the video panel but visually outweighed the panels themselves
+  once it sat at the top driving both. A compact dropdown also signals "shared knob"
+  better than a billboard does.
+- Photo panel no longer has a `<details>` collapse around it. The previous wrapper made
+  sense when it was a private "raw material" sidecar to the primary video flow; now
+  that they share a category and sit side-by-side as equals, hiding it behind a click
+  was just friction.
+
+**Issues / resolution.** None — `npx tsc --noEmit` clean, `npm run build` green on
+first pass after the unused `getCategoryMeta` import in `CommunityVideoPanel` was
+removed (the meta blurb moved into the shell, so the video panel doesn't need it).
+
+**Learnings.**
+- Per-component category state was the symptom; the root cause was the upload page
+  having no place to put shared concerns. A 30-line shell component is a much better
+  home than two parallel `useState`s that have to stay in sync via convention.
+- "No description yet" placeholders on list rows do double duty — they prevent
+  collapse and they nudge the agent toward the Edit action right next to them.
+
+**Next steps.** Watch for whether agents actually use the description field (would
+suggest adding it to the New Community form too, which currently doesn't expose it).
+Also: the photo panel still says "Photo library (private) — for AI video generation"
+in its header copy, which is fine for now but might need rewording once we ship the
+AI assembly step and the photos *do* end up buyer-visible (indirectly).
+
+---
+
 ## 2026-06-14 — Phase 24 — Photos get the same 12-category axis
 
 **Objective.** Phase 22 gave videos a 12-category taxonomy and Phase 23

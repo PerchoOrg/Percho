@@ -2,20 +2,21 @@
  * /dashboard/communities/[id]/upload — combined video + photo upload.
  *
  * Phase 23 (2026-06-14): collapses the previous /videos and /photos
- * subpages into one screen. Video is the primary action (full 12-category
- * picker); the photo library remains available below it as a private
- * raw-material pool but no longer gets its own page.
+ * subpages into one screen.
+ * Phase 25 (2026-06-14): unified the two separate category pickers (one
+ * per panel) into a single shared dropdown at the top of the page via
+ * CommunityUploadShell. Same category drives both the video upload and
+ * the photo batch — drop a video, drop a stack of photos, both get tagged
+ * the same way without re-picking.
  */
 
-import {
-  CommunityPhotoPanel,
-  type CommunityPhotoRow,
-} from '@/app/dashboard/communities/[id]/CommunityPhotoPanel';
+import type { CommunityPhotoRow } from '@/app/dashboard/communities/[id]/CommunityPhotoPanel';
 import { signCommunityPhotoUrls } from '@/app/dashboard/communities/[id]/photo-actions';
 import { createClient } from '@/lib/supabase/server';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { CommunityVideoPanel, type CommunityVideoRow } from '../CommunityVideoPanel';
+import { CommunityUploadShell } from '../CommunityUploadShell';
+import type { CommunityVideoRow } from '../CommunityVideoPanel';
 
 interface CommunityRow {
   id: string;
@@ -128,16 +129,11 @@ export default async function CommunityUploadPage({
         </Link>
       </header>
 
-      <CommunityVideoPanel communityId={community.id} initialVideos={videosRaw ?? []} />
-
-      <details className="rounded border border-bronze/30 bg-ink2 p-5">
-        <summary className="cursor-pointer select-none text-sm font-medium text-cream/80 hover:text-cream">
-          Photo library ({initialPhotos.length}) — private, for AI video generation
-        </summary>
-        <div className="mt-4">
-          <CommunityPhotoPanel communityId={community.id} initialPhotos={initialPhotos} />
-        </div>
-      </details>
+      <CommunityUploadShell
+        communityId={community.id}
+        initialVideos={videosRaw ?? []}
+        initialPhotos={initialPhotos}
+      />
     </div>
   );
 }

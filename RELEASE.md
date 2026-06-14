@@ -5,6 +5,27 @@ Format matches the standard release template (Features / Improvements / Bug Fixe
 
 ---
 
+## Release Notes - v0.18.1
+
+**Release Date:** 2026-06-14
+
+### Improvements
+
+- **Communities list shows what each community is actually about.** Each row now displays the community description right under its city/state, so you can tell your communities apart at a glance instead of relying on slugs alone. If a community has no description yet, the row says so and nudges you toward the Edit action.
+- **Edit comes before Upload on the communities list.** Small order tweak — when you come back to a community, you're more often opening it to tweak details than to drop a new file, so Edit is now the first action on each row.
+- **One category picker for both video and photos.** Going to a community's upload page used to ask you to pick a category twice — once for the video uploader, once for the photo library. Now there's a single dropdown at the top that drives both. Pick "Walk the Block" once, drop a video and a stack of photos, everything gets tagged the same way. Switch the dropdown to upload a different category.
+- **Photo library is now visible by default.** It used to be hidden behind a "Photo library" toggle below the video uploader. Now it sits right under the video panel, so it's obvious you can drop both kinds of files in the same session.
+
+### Why
+
+Vivian flagged two things while walking through the dashboard: the communities list felt visually thin (no way to remember which community is which without reading the slug), and having to pick the same category twice on the upload page was busywork. Both of these are small fixes individually, but they compound — fewer clicks, less re-reading, more time on the actual work.
+
+### Known Issues
+
+- The New Community form doesn't yet ask for a description at creation time — you have to fill it in via Edit afterward. That's coming next.
+
+---
+
 ## Release Notes - v0.18.0
 
 **Release Date:** 2026-06-14

@@ -23,7 +23,6 @@ import { thumbnailUrl } from '@/lib/cloudflare/stream';
 import {
   COMMUNITY_VIDEO_CATEGORIES,
   type CommunityVideoCategoryId,
-  getCategoryMeta,
   legacyKindForCategory,
 } from '@/lib/zod/community-video-categories';
 import { useRouter } from 'next/navigation';
@@ -44,19 +43,17 @@ export interface CommunityVideoRow {
 
 const POLL_MS = 5000;
 
-const BUCKET_A = COMMUNITY_VIDEO_CATEGORIES.filter((c) => c.bucket === 'a');
-const BUCKET_B = COMMUNITY_VIDEO_CATEGORIES.filter((c) => c.bucket === 'b');
-
 export function CommunityVideoPanel({
   communityId,
   initialVideos,
+  category,
 }: {
   communityId: string;
   initialVideos: CommunityVideoRow[];
+  category: CommunityVideoCategoryId;
 }) {
   const router = useRouter();
   const [videos, setVideos] = useState<CommunityVideoRow[]>(initialVideos);
-  const [category, setCategory] = useState<CommunityVideoCategoryId>('walk_the_block');
   const [address, setAddress] = useState<string>('');
   // Phase 23: silent geo. Captured once on mount; never surfaced in the UI.
   // If the user denies geolocation we just don't send lat/lng — the row still
@@ -65,7 +62,6 @@ export function CommunityVideoPanel({
   const [lng, setLng] = useState<number | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
 
-  const meta = getCategoryMeta(category);
   const kind: CommunityKind = legacyKindForCategory(category);
 
   // Silent geolocation on mount. Browser will prompt once; if the user
@@ -138,31 +134,6 @@ export function CommunityVideoPanel({
       <div className="mb-4 flex items-baseline justify-between">
         <h2 className="text-base font-semibold">Upload a video</h2>
         <span className="text-xs text-cream/50">{videos.length} uploaded</span>
-      </div>
-
-      {/* ── Category picker — Phase 22 ───────────────────────────── */}
-      <div className="mb-4 space-y-3">
-        <CategoryGroup
-          title="Only on Vicinity"
-          subtitle="Scarce content nobody else has"
-          items={BUCKET_A}
-          selected={category}
-          onPick={setCategory}
-        />
-        <CategoryGroup
-          title="Real look at the data"
-          subtitle="The visceral layer over numbers buyers can already find"
-          items={BUCKET_B}
-          selected={category}
-          onPick={setCategory}
-        />
-        <div className="rounded border border-gold/30 bg-gold/5 px-3 py-2 text-xs text-cream/80">
-          <span className="font-medium text-gold">{meta.label}</span>
-          <span className="text-cream/60"> — {meta.blurb}.</span>
-          <div className="mt-1 text-[11px] text-cream/60">
-            <span className="font-medium">Must include:</span> {meta.hardRule}
-          </div>
-        </div>
       </div>
 
       {/* ── Address (Phase 23) ───────────────────────────────────── */}
@@ -245,51 +216,5 @@ export function CommunityVideoPanel({
         </details>
       )}
     </section>
-  );
-}
-
-// ─── helpers ─────────────────────────────────────────────────────
-
-function CategoryGroup({
-  title,
-  subtitle,
-  items,
-  selected,
-  onPick,
-}: {
-  title: string;
-  subtitle: string;
-  items: readonly { id: CommunityVideoCategoryId; label: string; blurb: string }[];
-  selected: CommunityVideoCategoryId;
-  onPick: (id: CommunityVideoCategoryId) => void;
-}) {
-  return (
-    <div>
-      <div className="mb-1 flex items-baseline gap-2">
-        <span className="text-xs font-semibold uppercase tracking-wide text-gold">{title}</span>
-        <span className="text-[11px] text-cream/50">{subtitle}</span>
-      </div>
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-        {items.map((c) => {
-          const isSel = selected === c.id;
-          return (
-            <button
-              key={c.id}
-              type="button"
-              onClick={() => onPick(c.id)}
-              className={[
-                'rounded border px-2 py-2 text-left text-xs transition',
-                isSel
-                  ? 'border-gold bg-gold/10 text-cream'
-                  : 'border-bronze/30 bg-ink text-cream/80 hover:border-gold/60 hover:text-cream',
-              ].join(' ')}
-            >
-              <div className="font-medium">{c.label}</div>
-              <div className="mt-0.5 text-[11px] text-cream/50">{c.blurb}</div>
-            </button>
-          );
-        })}
-      </div>
-    </div>
   );
 }

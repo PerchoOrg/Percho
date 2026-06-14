@@ -48,6 +48,7 @@ export interface CommunityPhotoRow {
 interface Props {
   communityId: string;
   initialPhotos: CommunityPhotoRow[];
+  category: CommunityVideoCategoryId;
 }
 
 const MAX_FILE_BYTES = 10 * 1024 * 1024;
@@ -60,14 +61,10 @@ interface PendingItem {
   error?: string;
 }
 
-const BUCKET_A = COMMUNITY_VIDEO_CATEGORIES.filter((c) => c.bucket === 'a');
-const BUCKET_B = COMMUNITY_VIDEO_CATEGORIES.filter((c) => c.bucket === 'b');
-
-export function CommunityPhotoPanel({ communityId, initialPhotos }: Props) {
+export function CommunityPhotoPanel({ communityId, initialPhotos, category }: Props) {
   const [photos, setPhotos] = useState<CommunityPhotoRow[]>(initialPhotos);
   const [pending, setPending] = useState<PendingItem[]>([]);
   const [globalError, setGlobalError] = useState<string | null>(null);
-  const [category, setCategory] = useState<CommunityVideoCategoryId>('walk_the_block');
   const [_, startTransition] = useTransition();
   const inputRef = useRef<HTMLInputElement | null>(null);
 
@@ -179,38 +176,6 @@ export function CommunityPhotoPanel({ communityId, initialPhotos }: Props) {
         material the platform can use to generate community videos later. JPEG / PNG / WebP, up to
         10 MB each.
       </p>
-
-      {/* ── Category picker (Phase 24) ──────────────────────────── */}
-      <div className="mb-4 space-y-2">
-        <label htmlFor="cp-category" className="block text-xs font-medium text-cream/70">
-          Category for the next batch
-        </label>
-        <select
-          id="cp-category"
-          value={category}
-          onChange={(e) => setCategory(e.target.value as CommunityVideoCategoryId)}
-          className="w-full rounded border border-bronze/30 bg-ink px-3 py-2 text-sm text-cream focus:border-gold focus:outline-none focus:ring-1 focus:ring-gold"
-        >
-          <optgroup label="Only on Vicinity">
-            {BUCKET_A.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.label} — {c.blurb}
-              </option>
-            ))}
-          </optgroup>
-          <optgroup label="Real look at the data">
-            {BUCKET_B.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.label} — {c.blurb}
-              </option>
-            ))}
-          </optgroup>
-        </select>
-        <div className="rounded border border-gold/30 bg-gold/5 px-3 py-2 text-xs text-cream/80">
-          <span className="font-medium text-gold">{meta.label}</span>
-          <span className="text-cream/60"> — {meta.blurb}.</span>
-        </div>
-      </div>
 
       {globalError ? (
         <div className="mb-3 rounded border border-red-500/30 bg-red-500/10 px-3 py-2 text-red-200 text-xs">

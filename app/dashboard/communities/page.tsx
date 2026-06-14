@@ -22,6 +22,7 @@ interface CommunityRow {
   slug: string;
   city: string | null;
   state: string;
+  description: string | null;
   created_by: string | null;
 }
 
@@ -43,7 +44,7 @@ export default async function CommunitiesListPage() {
   // biome-ignore lint/suspicious/noExplicitAny: stub generated types
   const { data: rows } = (await (supabase as any)
     .from('communities')
-    .select('id, name, slug, city, state, created_by')
+    .select('id, name, slug, city, state, description, created_by')
     .order('name', { ascending: true })) as { data: CommunityRow[] | null };
 
   const communities = rows ?? [];
@@ -87,14 +88,13 @@ export default async function CommunitiesListPage() {
                     {c.city ? `${c.city}, ${c.state}` : c.state} ·{' '}
                     <code className="text-cream/70">{c.slug}</code>
                   </div>
+                  {c.description ? (
+                    <p className="mt-1 line-clamp-2 text-xs text-cream/60">{c.description}</p>
+                  ) : (
+                    <p className="mt-1 text-xs text-cream/30 italic">No description yet</p>
+                  )}
                 </div>
                 <div className="flex shrink-0 gap-2">
-                  <Link
-                    href={`/dashboard/communities/${c.id}/upload`}
-                    className="inline-flex items-center justify-center gap-1 rounded-lg border border-bronze/40 px-3 py-1.5 text-cream text-xs hover:border-gold hover:text-gold"
-                  >
-                    + Upload
-                  </Link>
                   {canEdit ? (
                     <Link
                       href={`/dashboard/communities/${c.id}`}
@@ -111,6 +111,12 @@ export default async function CommunitiesListPage() {
                       View
                     </Link>
                   )}
+                  <Link
+                    href={`/dashboard/communities/${c.id}/upload`}
+                    className="inline-flex items-center justify-center gap-1 rounded-lg border border-bronze/40 px-3 py-1.5 text-cream text-xs hover:border-gold hover:text-gold"
+                  >
+                    Upload
+                  </Link>
                 </div>
               </li>
             );
