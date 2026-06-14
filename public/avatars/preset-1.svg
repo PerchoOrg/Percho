@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-label="House avatar preset 1">
+  <circle cx="128" cy="128" r="128" fill="#1a1a1a"/>
+  <g fill="none" stroke="#c9a961" stroke-width="6" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M62 132 L128 76 L194 132"/>
+    <path d="M76 124 L76 188 L180 188 L180 124"/>
+    <rect x="116" y="148" width="24" height="40" />
+  </g>
+</svg>

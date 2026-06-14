@@ -11,13 +11,18 @@
 
 import { useState, useTransition } from 'react';
 import { updateBuyerDisplayName } from '../actions';
+import { AvatarPicker } from './AvatarPicker';
 
 export function EditableBuyerIdentity({
   initialDisplayName,
   email,
+  userId,
+  initialAvatarUrl,
 }: {
   initialDisplayName: string;
   email: string;
+  userId: string;
+  initialAvatarUrl: string | null;
 }) {
   const [displayName, setDisplayName] = useState(initialDisplayName);
   const [editing, setEditing] = useState(false);
@@ -50,6 +55,14 @@ export function EditableBuyerIdentity({
   return (
     <div className="rounded-xl border border-cream/10 bg-ink2/40 p-5">
       <div className="text-cream/60 text-xs uppercase tracking-wider">Signed in</div>
+
+      <div className="mt-3">
+        <AvatarPicker
+          initialUrl={initialAvatarUrl}
+          userId={userId}
+          fallbackLetter={(initialDisplayName || email || '?').charAt(0)}
+        />
+      </div>
 
       <div className="mt-2">
         {editing ? (

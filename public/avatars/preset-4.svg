@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-label="House avatar preset 4">
+  <circle cx="128" cy="128" r="128" fill="#8b7355"/>
+  <!-- Two-house cluster, geometric -->
+  <g>
+    <polygon points="48,140 92,96 136,140 136,192 48,192" fill="#f5f1ea"/>
+    <polygon points="120,150 164,106 208,150 208,192 120,192" fill="#0a0a0a"/>
+    <rect x="82" y="158" width="18" height="34" fill="#8b7355"/>
+    <rect x="156" y="160" width="16" height="32" fill="#c9a961"/>
+  </g>
+</svg>

@@ -110,3 +110,73 @@ export async function updateBuyerDisplayName(input: {
   revalidatePath('/profile');
   return { error: null };
 }
+
+/**
+ * Phase 27 (2026-06-14): set or clear the current user's avatar URL.
+ *
+ * Detects role automatically — agents write `agents.headshot_url`, buyers
+ * write `buyers.avatar_url` (DB columns kept put per the migration's note).
+ * Pass `url: null` to clear. The caller is responsible for having uploaded
+ * the file to Storage (or for picking a `/avatars/preset-N.svg` path).
+ */
+export async function updateAvatarUrl(input: {
+  url: string | null;
+}): Promise<{ error: string | null }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: 'Not signed in.' };
+
+  // Light validation — keep it simple; URL shape is whatever the picker
+  // supplies (preset path or Supabase Storage public URL).
+  const url = input.url;
+  if (url !== null && (typeof url !== 'string' || url.length > 2048)) {
+    return { error: 'Invalid avatar URL.' };
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: agents typing not in stub yet
+  const { data: agent } = (await (supabase as any)
+    .from('agents')
+    .select('slug')
+    .eq('user_id', user.id)
+    .maybeSingle()) as { data: { slug: string | null } | null };
+
+  if (agent) {
+    // biome-ignore lint/suspicious/noExplicitAny: agents typing not in stub yet
+    const { error: updateErr } = await (supabase as any)
+      .from('agents')
+      .update({ headshot_url: url })
+      .eq('user_id', user.id);
+    if (updateErr) return { error: updateErr.message };
+    revalidatePath('/profile');
+    if (agent.slug) revalidatePath(`/a/${agent.slug}`);
+    return { error: null };
+  }
+
+  // Buyer branch — upsert because legacy users may be missing a buyers row.
+  // biome-ignore lint/suspicious/noExplicitAny: buyers typing not in stub yet
+  const { data: existing } = (await (supabase as any)
+    .from('buyers')
+    .select('user_id')
+    .eq('user_id', user.id)
+    .maybeSingle()) as { data: { user_id: string } | null };
+
+  if (existing) {
+    // biome-ignore lint/suspicious/noExplicitAny: buyers typing not in stub yet
+    const { error: updateErr } = await (supabase as any)
+      .from('buyers')
+      .update({ avatar_url: url })
+      .eq('user_id', user.id);
+    if (updateErr) return { error: updateErr.message };
+  } else {
+    // biome-ignore lint/suspicious/noExplicitAny: buyers typing not in stub yet
+    const { error: insertErr } = await (supabase as any)
+      .from('buyers')
+      .insert({ user_id: user.id, email: user.email, avatar_url: url });
+    if (insertErr) return { error: insertErr.message };
+  }
+
+  revalidatePath('/profile');
+  return { error: null };
+}

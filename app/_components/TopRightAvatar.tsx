@@ -38,9 +38,11 @@ export type TopRightAvatarProps = {
   authed: boolean;
   /** First letter shown in the avatar circle (e.g. "P" for "Patrick"). */
   initial: string;
+  /** Optional avatar image URL — preset path or Supabase Storage public URL. */
+  avatarUrl?: string | null;
 };
 
-export function TopRightAvatar({ authed, initial }: TopRightAvatarProps) {
+export function TopRightAvatar({ authed, initial, avatarUrl }: TopRightAvatarProps) {
   const pathname = usePathname() ?? '/';
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -99,9 +101,14 @@ export function TopRightAvatar({ authed, initial }: TopRightAvatarProps) {
         aria-haspopup="menu"
         aria-expanded={open}
         aria-label="Account menu"
-        className="flex h-9 w-9 items-center justify-center rounded-full border border-gold/60 bg-ink/80 font-medium text-cream text-sm backdrop-blur-md transition active:scale-95"
+        className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border border-gold/60 bg-ink/80 font-medium text-cream text-sm backdrop-blur-md transition active:scale-95"
       >
-        {initial.toUpperCase()}
+        {avatarUrl ? (
+          // biome-ignore lint/a11y/useAltText: aria-label on the button covers it
+          <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
+        ) : (
+          initial.toUpperCase()
+        )}
       </button>
       {open ? (
         <div

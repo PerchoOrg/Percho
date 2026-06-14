@@ -45,3 +45,38 @@ export function nextCommunityPhotoStoragePath(communityId: string, fileName: str
 }
 
 export const COMMUNITY_PHOTOS_BUCKET = COMMUNITY_BUCKET;
+
+/**
+ * Phase 27 (2026-06-14): user avatars (agents + buyers share one bucket).
+ * Path convention: `{user_id}/{uuid}.webp`. Public bucket — anyone can
+ * read by URL; storage RLS scopes writes to the caller's own user_id.
+ */
+const AVATARS = 'avatars';
+
+export const AVATARS_BUCKET = AVATARS;
+
+export function avatarPublicUrl(storagePath: string): string {
+  const base = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  if (!base) return `/storage/${AVATARS}/${storagePath}`;
+  return `${base.replace(/\/$/, '')}/storage/v1/object/public/${AVATARS}/${storagePath}`;
+}
+
+export function nextAvatarStoragePath(userId: string): string {
+  const id =
+    globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  return `${userId}/${id}.webp`;
+}
+
+/** The 6 system-provided house presets (served from /public/avatars). */
+export const AVATAR_PRESETS: readonly string[] = [
+  '/avatars/preset-1.svg',
+  '/avatars/preset-2.svg',
+  '/avatars/preset-3.svg',
+  '/avatars/preset-4.svg',
+  '/avatars/preset-5.svg',
+  '/avatars/preset-6.svg',
+];
+
+export function isPresetAvatar(url: string | null | undefined): boolean {
+  return !!url && url.startsWith('/avatars/preset-');
+}

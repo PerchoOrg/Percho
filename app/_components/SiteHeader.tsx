@@ -40,8 +40,9 @@ export type SiteHeaderProps = {
   initial: string;
   /** Display name shown in the avatar dropdown (agent name or email). */
   displayName: string | null;
-  /** Brokerage shown under the display name (agent only). */
   brokerage: string | null;
+  /** Optional avatar URL (preset path or Storage public URL). */
+  avatarUrl?: string | null;
 };
 
 function NavLink({ tab, active }: { tab: Tab; active: boolean }) {
@@ -135,10 +136,12 @@ function AvatarMenu({
   initial,
   displayName,
   brokerage,
+  avatarUrl,
 }: {
   initial: string;
   displayName: string | null;
   brokerage: string | null;
+  avatarUrl?: string | null;
 }) {
   const pathname = usePathname() ?? '/';
   const [open, setOpen] = useState(false);
@@ -173,9 +176,14 @@ function AvatarMenu({
         aria-haspopup="menu"
         aria-expanded={open}
         aria-label="Account menu"
-        className="flex h-9 w-9 items-center justify-center rounded-full border border-gold/60 bg-ink/80 font-medium text-cream text-sm transition hover:border-gold active:scale-95"
+        className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border border-gold/60 bg-ink/80 font-medium text-cream text-sm transition hover:border-gold active:scale-95"
       >
-        {initial.toUpperCase()}
+        {avatarUrl ? (
+          // biome-ignore lint/a11y/useAltText: aria-label on the button covers it
+          <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
+        ) : (
+          initial.toUpperCase()
+        )}
       </button>
       {open ? (
         <div
@@ -215,7 +223,7 @@ function AvatarMenu({
   );
 }
 
-export function SiteHeader({ role, initial, displayName, brokerage }: SiteHeaderProps) {
+export function SiteHeader({ role, initial, displayName, brokerage, avatarUrl }: SiteHeaderProps) {
   const pathname = usePathname() ?? '/';
 
   if (isChromeHidden(pathname)) return null;
@@ -264,7 +272,7 @@ export function SiteHeader({ role, initial, displayName, brokerage }: SiteHeader
               </Link>
             </>
           ) : (
-            <AvatarMenu initial={initial} displayName={displayName} brokerage={brokerage} />
+            <AvatarMenu initial={initial} displayName={displayName} brokerage={brokerage} avatarUrl={avatarUrl} />
           )}
         </div>
       </div>

@@ -3,6 +3,13 @@
 Newest at the top. Each release covers a meaningful product change visible to users.
 Format matches the standard release template (Features / Improvements / Bug Fixes / Technical / Known Issues / Metrics).
 
+## v0.27.0 — 2026-06-14
+
+### 🚀 Features
+- **Profile pictures.** You can now set an avatar from your profile page, both as an agent and as a buyer. Pick from six built-in house illustrations in the Vicinity gold-and-cream style, or upload your own photo — the editor lets you drag and zoom to crop a square, then saves it as a small, fast-loading image. The avatar shows up in the top-right circle on every page, in the desktop header dropdown, and (for agents) on your public `/a/<slug>` page. A "Remove avatar" link reverts to the letter-initial circle if you change your mind.
+
+---
+
 ## v0.26.1 — 2026-06-14
 
 ### 🐛 Bug Fixes

@@ -17,6 +17,7 @@
 
 import { useState, useTransition } from 'react';
 import { updateAgentIdentity } from '../actions';
+import { AvatarPicker } from './AvatarPicker';
 
 type Field = 'name' | 'brokerage';
 
@@ -24,10 +25,14 @@ export function EditableAgentIdentity({
   initialName,
   initialBrokerage,
   email,
+  userId,
+  initialAvatarUrl,
 }: {
   initialName: string;
   initialBrokerage: string | null;
   email: string;
+  userId: string;
+  initialAvatarUrl: string | null;
 }) {
   const [name, setName] = useState(initialName);
   const [brokerage, setBrokerage] = useState(initialBrokerage ?? '');
@@ -72,6 +77,14 @@ export function EditableAgentIdentity({
   return (
     <div className="rounded-xl border border-cream/10 bg-ink2/40 p-5">
       <div className="text-cream/60 text-xs uppercase tracking-wider">Signed in as agent</div>
+
+      <div className="mt-3">
+        <AvatarPicker
+          initialUrl={initialAvatarUrl}
+          userId={userId}
+          fallbackLetter={(initialName || email || '?').charAt(0)}
+        />
+      </div>
 
       {/* Name */}
       <div className="mt-2">

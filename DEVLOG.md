@@ -2,6 +2,37 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-06-14 — Phase 27: Avatar picker (presets + upload)
+
+**Objective**: `/profile` only showed letter-initial circles for avatars. Add a picker so any signed-in user (agent or buyer) can pick a system preset house illustration or upload + crop a custom photo. Keep one shared component, let it drive both `agents.headshot_url` and `buyers.avatar_url`.
+
+**Actions**:
+- `supabase/migrations/0021_avatars.sql`: `alter table buyers add column avatar_url text` (agents already had `headshot_url` since 0001 — kept put to avoid touching `/a/[slug]` and other consumers). Storage RLS for the `avatars` bucket: insert/update/delete fenced by `(split_part(name,'/',1))::uuid = auth.uid()`. Public reads via bucket-level public flag.
+- `supabase/migrations/0022_avatars_bucket.sql`: `insert into storage.buckets ('avatars', public=true, 5 MB, jpeg|png|webp)` — idempotent bootstrap so we don't need a manual Dashboard step.
+- `lib/supabase/storage.ts`: new `AVATARS_BUCKET`, `avatarPublicUrl()`, `nextAvatarStoragePath(userId)`, `AVATAR_PRESETS` (6 paths), `isPresetAvatar()`.
+- `public/avatars/preset-{1..6}.svg`: 6 hand-authored 256×256 house geometries in the project's gold/cream/ink/bronze palette (gabled, gold-line outline, monogram-style, two-house cluster, modern flat-roof, key + roof). Zero deps.
+- `app/(public)/profile/_components/AvatarPicker.tsx`: shared client component. Modal with two tabs (Presets, Upload), plus inline "Remove avatar". Upload uses `react-easy-crop` (round preview, aspect=1, 1× → 3× zoom slider); confirm renders to a 256×256 WebP at q=0.9 via canvas, uploads to `avatars/{user_id}/{uuid}.webp`, then commits via the server action.
+- `app/(public)/profile/actions.ts`: `updateAvatarUrl({ url })` server action — auto-detects role, writes `agents.headshot_url` for agents (revalidates `/a/<slug>`), upserts `buyers.avatar_url` for buyers, accepts `null` to clear.
+- `app/(public)/profile/_components/EditableAgentIdentity.tsx` + `EditableBuyerIdentity.tsx`: render the picker above name/brokerage. Pass through `userId` and `initialAvatarUrl`.
+- `app/(public)/profile/page.tsx`: select `headshot_url` / `avatar_url` and feed both editable cards.
+- `app/_components/TopRightAvatar.tsx` + `TopRightAvatarWrapper.tsx`: render the picked image (or preset SVG) in the mobile top-right circle when set, fall back to the letter otherwise.
+- `app/_components/SiteHeader.tsx` + `SiteHeaderWrapper.tsx`: same for the desktop avatar dropdown trigger.
+- `package.json`: `react-easy-crop@^6.0.2` added.
+
+**Verification**: `pnpm tsc --noEmit` clean. `pnpm build` clean. Migrations 0021 + 0022 applied to Supabase prod via `supabase db push`. Bucket visible with public=true and the right MIME limits.
+
+**Decisions**:
+- **Single `avatars` bucket, not `agent-avatars` + `buyer-avatars`**. Path-prefix RLS by `auth.uid()` is cheaper and unambiguous; agent vs buyer is a UI concern, not a storage concern. Future: if a user is ever both, they still own one path.
+- **Don't rename `agents.headshot_url` to `avatar_url`**. The column is referenced by `/a/[agentSlug]/page.tsx` and would force a broader rename. The DB column stays put; the UI normalises both fields to "avatar". Surgical changes only.
+- **Presets = static SVGs in `/public/avatars/`, served directly**. No DiceBear / no third-party generator. Six is enough variety while keeping the picker grid 3×2 on mobile. Stored URL is just the path string (e.g. `/avatars/preset-3.svg`) — UI doesn't distinguish preset vs uploaded.
+- **`react-easy-crop@6` instead of pure-canvas drag**. ~15 KB but the cropper UX (round mask, smooth zoom, mobile pinch) is dramatically better than what a homemade canvas drag would produce. Net win.
+- **256×256 WebP**. WebP is supported everywhere we care about (Safari 14+ included), much smaller than JPEG at the same quality, and avatars are tiny so the size cap is comfortable.
+- **Buyer branch upserts**, not just updates. Some legacy users might be missing a `buyers` row entirely (they signed up before phase 9.5); the action inserts on first save instead of erroring.
+
+**Learnings**: The migration's `drop policy if exists ... create policy` pattern emits NOTICE on first run (policy didn't exist) which is fine — `supabase db push` happily reports them and continues. Storage policies live on `storage.objects`, not on the bucket row, so they're managed via SQL even when the bucket itself is created via `storage.buckets`.
+
+---
+
 ## 2026-06-14 — Phase 26.1: Desktop video feed not stretched
 
 **Objective**: User reported the public link video page (`/v/...`) and `/browse/feed` stretch video to fill the wide Mac browser viewport. Should keep mobile portrait sizing.

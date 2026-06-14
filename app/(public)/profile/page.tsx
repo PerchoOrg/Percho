@@ -68,10 +68,15 @@ export default async function ProfilePage() {
   // biome-ignore lint/suspicious/noExplicitAny: agents typing not in stub yet (TODO phase1-end db:types)
   const { data: agent } = (await (supabase as any)
     .from('agents')
-    .select('name, brokerage, slug')
+    .select('name, brokerage, slug, headshot_url')
     .eq('user_id', user.id)
     .maybeSingle()) as {
-    data: { name: string | null; brokerage: string | null; slug: string | null } | null;
+    data: {
+      name: string | null;
+      brokerage: string | null;
+      slug: string | null;
+      headshot_url: string | null;
+    } | null;
   };
 
   if (agent) {
@@ -83,6 +88,8 @@ export default async function ProfilePage() {
             initialName={agent.name ?? user.email ?? 'Agent'}
             initialBrokerage={agent.brokerage}
             email={user.email ?? ''}
+            userId={user.id}
+            initialAvatarUrl={agent.headshot_url}
           />
 
           <div className="mt-6">
@@ -133,9 +140,11 @@ export default async function ProfilePage() {
   // biome-ignore lint/suspicious/noExplicitAny: buyers typing not in stub yet
   const { data: buyer } = (await (supabase as any)
     .from('buyers')
-    .select('display_name')
+    .select('display_name, avatar_url')
     .eq('user_id', user.id)
-    .maybeSingle()) as { data: { display_name: string | null } | null };
+    .maybeSingle()) as {
+    data: { display_name: string | null; avatar_url: string | null } | null;
+  };
 
   const buyerDisplayName =
     buyer?.display_name?.trim() || user.email?.split('@')[0] || 'Buyer';
@@ -147,6 +156,8 @@ export default async function ProfilePage() {
         <EditableBuyerIdentity
           initialDisplayName={buyerDisplayName}
           email={user.email ?? ''}
+          userId={user.id}
+          initialAvatarUrl={buyer?.avatar_url ?? null}
         />
 
         <div className="mt-6">

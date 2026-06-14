@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-label="House avatar preset 3">
+  <circle cx="128" cy="128" r="128" fill="#0a0a0a"/>
+  <g>
+    <polygon points="80,124 128,80 176,124 176,184 80,184" fill="#f5f1ea"/>
+    <rect x="120" y="148" width="16" height="36" fill="#0a0a0a"/>
+    <circle cx="128" cy="116" r="8" fill="#c9a961"/>
+  </g>
+</svg>
