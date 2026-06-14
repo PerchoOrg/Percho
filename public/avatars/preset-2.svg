@@ -1,12 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-label="House avatar preset 2">
-  <circle cx="128" cy="128" r="128" fill="#c9a961"/>
-  <g fill="#0a0a0a">
-    <polygon points="128,68 196,132 60,132"/>
-    <rect x="74" y="124" width="108" height="68"/>
-  </g>
-  <g fill="#c9a961">
-    <rect x="118" y="150" width="20" height="42"/>
-    <rect x="86" y="138" width="18" height="18"/>
-    <rect x="152" y="138" width="18" height="18"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-label="Two-house avatar">
+  <circle cx="128" cy="128" r="128" fill="#1a1a1a"/>
+  <g fill="none" stroke="#c9a961" stroke-width="6" stroke-linejoin="round" stroke-linecap="round">
+    <!-- left house (back) -->
+    <polygon points="44,150 84,110 124,150 124,196 44,196"/>
+    <rect x="74" y="160" width="20" height="36"/>
+    <!-- right house (front) -->
+    <polygon points="132,138 176,94 220,138 220,196 132,196"/>
+    <rect x="166" y="150" width="20" height="46"/>
   </g>
 </svg>

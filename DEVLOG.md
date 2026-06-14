@@ -2,6 +2,21 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-06-14 — Phase 27.1: Trim presets to 3 (1/2/3 houses)
+
+**Objective**: User feedback — six presets was too many; cleaner to offer one house, two houses, three houses, and let the letter-initial fallback be the implicit fourth option for users who pick nothing.
+
+**Actions**:
+- `public/avatars/preset-{1,2,3}.svg`: re-authored as a clean stroke-only triptych — single gabled house, two-house cluster (back+front, varied roof heights), three-house row (left/right shorter, center taller). All gold stroke on ink fill, project palette.
+- Removed `preset-{4,5,6}.svg`.
+- `lib/supabase/storage.ts`: `AVATAR_PRESETS` shortened to 3 entries; doc comment updated.
+
+**Verification**: tsc clean, build clean. Default avatar (no headshot_url / avatar_url) still falls back to the letter-initial circle — that's the "system default" without needing a preset row.
+
+**Decisions**: No new column needed for "default = initial". `null` already encodes that; `AvatarCircle` already renders the letter when url is null. The picker's "Remove avatar" link doubles as "use the default initial".
+
+---
+
 ## 2026-06-14 — Phase 27: Avatar picker (presets + upload)
 
 **Objective**: `/profile` only showed letter-initial circles for avatars. Add a picker so any signed-in user (agent or buyer) can pick a system preset house illustration or upload + crop a custom photo. Keep one shared component, let it drive both `agents.headshot_url` and `buyers.avatar_url`.

@@ -67,14 +67,11 @@ export function nextAvatarStoragePath(userId: string): string {
   return `${userId}/${id}.webp`;
 }
 
-/** The 6 system-provided house presets (served from /public/avatars). */
+/** The 3 system-provided house presets (1 / 2 / 3 houses). */
 export const AVATAR_PRESETS: readonly string[] = [
   '/avatars/preset-1.svg',
   '/avatars/preset-2.svg',
   '/avatars/preset-3.svg',
-  '/avatars/preset-4.svg',
-  '/avatars/preset-5.svg',
-  '/avatars/preset-6.svg',
 ];
 
 export function isPresetAvatar(url: string | null | undefined): boolean {
