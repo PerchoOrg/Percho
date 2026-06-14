@@ -175,7 +175,7 @@ function FabActionSheet({ open, onClose }: { open: boolean; onClose: () => void 
               <span className="flex flex-col">
                 <span className="font-medium text-cream text-sm">+ Add Community Video</span>
                 <span className="text-cream/60 text-xs">
-                  Pick a community, then upload a school, park, or area video
+                  Show buyers what a community really feels like
                 </span>
               </span>
             </Link>
