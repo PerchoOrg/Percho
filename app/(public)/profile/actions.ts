@@ -62,3 +62,51 @@ export async function updateAgentIdentity(input: {
 
   return { error: null };
 }
+
+const DISPLAY_NAME_MAX = 80;
+
+export async function updateBuyerDisplayName(input: {
+  displayName: string;
+}): Promise<{ error: string | null }> {
+  const displayName = input.displayName.trim();
+  if (displayName === '') return { error: 'Display name cannot be empty.' };
+  if (displayName.length > DISPLAY_NAME_MAX) {
+    return { error: `Display name too long (max ${DISPLAY_NAME_MAX} chars).` };
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: 'Not signed in.' };
+
+  // Upsert — handles legacy users who signed up before the buyers trigger.
+  // RLS `buyers_self_update` covers the update path; the insert path goes
+  // through handle_new_user (security definer) for new signups, but legacy
+  // rows may be missing. Use a service-free upsert: if the row is missing,
+  // we insert; otherwise we update.
+  // biome-ignore lint/suspicious/noExplicitAny: buyers typing not in stub yet
+  const { data: existing } = (await (supabase as any)
+    .from('buyers')
+    .select('user_id')
+    .eq('user_id', user.id)
+    .maybeSingle()) as { data: { user_id: string } | null };
+
+  if (existing) {
+    // biome-ignore lint/suspicious/noExplicitAny: buyers typing not in stub yet
+    const { error: updateErr } = await (supabase as any)
+      .from('buyers')
+      .update({ display_name: displayName })
+      .eq('user_id', user.id);
+    if (updateErr) return { error: updateErr.message };
+  } else {
+    // biome-ignore lint/suspicious/noExplicitAny: buyers typing not in stub yet
+    const { error: insertErr } = await (supabase as any)
+      .from('buyers')
+      .insert({ user_id: user.id, display_name: displayName, email: user.email });
+    if (insertErr) return { error: insertErr.message };
+  }
+
+  revalidatePath('/profile');
+  return { error: null };
+}

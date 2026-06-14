@@ -2,6 +2,40 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-06-14 — phase25.3: buyer profile inline edit (display_name) + reorder
+
+**Objective**: same treatment as agent profile — inline-edit the buyer's
+display_name + reorder so info sits above action buttons. Buyer branch was
+showing raw `user.email` with no edit.
+
+**Actions**:
+- New `app/(public)/profile/_components/EditableBuyerIdentity.tsx` — same
+  click-to-edit pattern as the agent component, single field.
+- `app/(public)/profile/actions.ts`: added `updateBuyerDisplayName`. Upserts
+  into `buyers` to handle legacy users (signed up before 0012's trigger or
+  signed up as agent and somehow ended up in the buyer branch). Read path
+  also covers the missing-row case via fallback to `email.split('@')[0]`.
+- `supabase/migrations/0020_buyer_self_insert.sql`: adds `buyers_self_insert`
+  RLS policy (`with check (auth.uid() = user_id)`). 0012 only had
+  self_select + self_update; insert went through the security-definer
+  trigger. Legacy upsert path needs RLS to allow the insert. Migration
+  applied to remote.
+- `page.tsx` buyer branch: `<EditableBuyerIdentity>` + Preferences →
+  Account settings → Explore listings + Sign out (matches agent branch).
+
+**Decisions**:
+- **Upsert from session, not service role.** Legacy users without a buyers
+  row needed a way to bootstrap. Tightly scoped self_insert policy
+  (`auth.uid() = user_id`) is the cleanest path — service role would mean
+  shipping that key into a place RLS can already cover.
+- **No public buyer page.** No revalidatePath beyond `/profile` — buyers
+  are anon-facing in V1.
+- **Display name fallback chain.** `buyers.display_name` → email local-part
+  → 'Buyer'. Matches the agent fallback chain shape.
+
+**Verification**: tsc clean, next build green, supabase db push applied
+0020 to remote.
+
 ## 2026-06-14 — phase25.2: profile inline edit (name + brokerage) + reorder
 
 **Objective**: agent can rename `name` + `brokerage` from /profile inline.

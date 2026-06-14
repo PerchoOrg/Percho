@@ -19,6 +19,7 @@ import { createClient } from '@/lib/supabase/server';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { EditableAgentIdentity } from './_components/EditableAgentIdentity';
+import { EditableBuyerIdentity } from './_components/EditableBuyerIdentity';
 import { NearbyRadiusPref } from './_components/NearbyRadiusPref';
 
 export const metadata: Metadata = {
@@ -129,20 +130,41 @@ export default async function ProfilePage() {
   }
 
   // Logged in but no agents row — treat as buyer (V1 stub; Phase 9.5).
+  // biome-ignore lint/suspicious/noExplicitAny: buyers typing not in stub yet
+  const { data: buyer } = (await (supabase as any)
+    .from('buyers')
+    .select('display_name')
+    .eq('user_id', user.id)
+    .maybeSingle()) as { data: { display_name: string | null } | null };
+
+  const buyerDisplayName =
+    buyer?.display_name?.trim() || user.email?.split('@')[0] || 'Buyer';
+
   return (
     <main className="min-h-dvh bg-ink text-cream pb-20 md:pb-0">
       <Header />
       <section className="mx-auto max-w-md px-6 py-8">
-        <div className="rounded-xl border border-cream/10 bg-ink2/40 p-5">
-          <div className="text-cream/60 text-xs uppercase tracking-wider">Signed in</div>
-          <div className="mt-2 font-serif text-2xl text-cream">{user.email ?? 'Buyer'}</div>
-        </div>
+        <EditableBuyerIdentity
+          initialDisplayName={buyerDisplayName}
+          email={user.email ?? ''}
+        />
 
         <div className="mt-6">
           <NearbyRadiusPref />
         </div>
 
-        <div className="mt-6 flex flex-col gap-2">
+        <div className="mt-6 rounded-xl border border-cream/10 bg-ink2/40 p-4 text-xs text-cream/60">
+          <div className="font-medium text-cream/80">Account settings</div>
+          <div className="mt-1">
+            Need to change your password? Use{' '}
+            <Link href="/forgot-password" className="text-gold hover:underline">
+              Forgot password
+            </Link>{' '}
+            to send yourself a one-time code.
+          </div>
+        </div>
+
+        <div className="mt-8 flex flex-col gap-2">
           <Link
             href="/browse"
             className="btn-gold inline-flex items-center justify-center rounded-full px-6 py-3 text-sm"

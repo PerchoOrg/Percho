@@ -3,6 +3,14 @@
 Newest at the top. Each release covers a meaningful product change visible to users.
 Format matches the standard release template (Features / Improvements / Bug Fixes / Technical / Known Issues / Metrics).
 
+## v0.25.3 — 2026-06-14
+
+### ✨ Improvements
+- **Buyer profile page redesigned.** If you're signed in as a buyer, your
+  Profile page now lets you edit your display name inline (tap to change),
+  and the page is reorganized so your settings and search-radius preference
+  sit above the Explore / Sign out buttons.
+
 ## v0.25.2 — 2026-06-14
 
 ### ✨ Improvements
