@@ -12,6 +12,7 @@
  */
 
 import { CopyLinkButton } from '@/app/dashboard/_components/CopyLinkButton';
+import { DashboardMetrics } from '@/app/dashboard/_components/DashboardMetrics';
 import { thumbnailUrl } from '@/lib/cloudflare/stream';
 import { createClient } from '@/lib/supabase/server';
 import Link from 'next/link';
@@ -79,10 +80,11 @@ export default async function DashboardHomePage({ searchParams }: PageProps) {
   // biome-ignore lint/suspicious/noExplicitAny: stub generated types
   const { data: agentRow } = (await (supabase as any)
     .from('agents')
-    .select('slug')
+    .select('id, slug')
     .eq('user_id', user.id)
-    .maybeSingle()) as { data: { slug: string } | null };
+    .maybeSingle()) as { data: { id: string; slug: string } | null };
   const agentSlug = agentRow?.slug ?? null;
+  const agentId = agentRow?.id ?? null;
 
   // biome-ignore lint/suspicious/noExplicitAny: stub generated types
   let query = (supabase as any)
@@ -138,67 +140,80 @@ export default async function DashboardHomePage({ searchParams }: PageProps) {
         )}
       </div>
 
-      <section className="mb-10 grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-5">
-        <Link
-          href="/dashboard/listings/new"
-          className="group flex items-center justify-between rounded-2xl border border-cream/5 bg-ink2/60 p-5 transition hover:border-gold/40"
-        >
-          <div>
-            <div className="text-[11px] uppercase tracking-widest text-gold">New listing</div>
-            <div className="mt-2 font-serif text-2xl text-cream">Add a property →</div>
-          </div>
-          <svg
-            viewBox="0 0 24 24"
-            width={20}
-            height={20}
-            fill="currentColor"
-            className="text-gold"
-            aria-hidden="true"
+      {/*
+        State-aware top section:
+        - 0 listings (new agent) → onboarding CTA cards (Add property / Pick
+          community / View leads). Bottom nav + center FAB cover the same
+          actions, but new agents need the visual cue.
+        - else → metrics (NEW LEADS · THIS WEEK · TOP LISTING). The CTAs are
+          redundant once the agent has stuff to look at, so we replace them
+          with state worth seeing.
+      */}
+      {rows.length === 0 && !showArchived ? (
+        <section className="mb-10 grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-5">
+          <Link
+            href="/dashboard/listings/new"
+            className="group flex items-center justify-between rounded-2xl border border-cream/5 bg-ink2/60 p-5 transition hover:border-gold/40"
           >
-            <path d="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6z" />
-          </svg>
-        </Link>
-        <Link
-          href="/dashboard/communities"
-          className="group flex items-center justify-between rounded-2xl border border-cream/5 bg-ink2/60 p-5 transition hover:border-gold/40"
-        >
-          <div>
-            <div className="text-[11px] uppercase tracking-widest text-gold">
-              New community video
+            <div>
+              <div className="text-[11px] uppercase tracking-widest text-gold">New listing</div>
+              <div className="mt-2 font-serif text-2xl text-cream">Add a property →</div>
             </div>
-            <div className="mt-2 font-serif text-2xl text-cream">Pick a community →</div>
-          </div>
-          <svg
-            viewBox="0 0 24 24"
-            width={20}
-            height={20}
-            fill="currentColor"
-            className="text-gold"
-            aria-hidden="true"
+            <svg
+              viewBox="0 0 24 24"
+              width={20}
+              height={20}
+              fill="currentColor"
+              className="text-gold"
+              aria-hidden="true"
+            >
+              <path d="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6z" />
+            </svg>
+          </Link>
+          <Link
+            href="/dashboard/communities"
+            className="group flex items-center justify-between rounded-2xl border border-cream/5 bg-ink2/60 p-5 transition hover:border-gold/40"
           >
-            <path d="M8 5v14l11-7z" />
-          </svg>
-        </Link>
-        <Link
-          href="/dashboard/leads"
-          className="group flex items-center justify-between rounded-2xl border border-cream/5 bg-ink2/60 p-5 transition hover:border-gold/40"
-        >
-          <div>
-            <div className="text-[11px] uppercase tracking-widest text-gold">Leads</div>
-            <div className="mt-2 font-serif text-2xl text-cream">View leads →</div>
-          </div>
-          <svg
-            viewBox="0 0 24 24"
-            width={20}
-            height={20}
-            fill="currentColor"
-            className="text-gold"
-            aria-hidden="true"
+            <div>
+              <div className="text-[11px] uppercase tracking-widest text-gold">
+                New community video
+              </div>
+              <div className="mt-2 font-serif text-2xl text-cream">Pick a community →</div>
+            </div>
+            <svg
+              viewBox="0 0 24 24"
+              width={20}
+              height={20}
+              fill="currentColor"
+              className="text-gold"
+              aria-hidden="true"
+            >
+              <path d="M8 5v14l11-7z" />
+            </svg>
+          </Link>
+          <Link
+            href="/dashboard/leads"
+            className="group flex items-center justify-between rounded-2xl border border-cream/5 bg-ink2/60 p-5 transition hover:border-gold/40"
           >
-            <path d="M4 4h16v2H4zm0 5h16v2H4zm0 5h10v2H4z" />
-          </svg>
-        </Link>
-      </section>
+            <div>
+              <div className="text-[11px] uppercase tracking-widest text-gold">Leads</div>
+              <div className="mt-2 font-serif text-2xl text-cream">View leads →</div>
+            </div>
+            <svg
+              viewBox="0 0 24 24"
+              width={20}
+              height={20}
+              fill="currentColor"
+              className="text-gold"
+              aria-hidden="true"
+            >
+              <path d="M4 4h16v2H4zm0 5h16v2H4zm0 5h10v2H4z" />
+            </svg>
+          </Link>
+        </section>
+      ) : agentId ? (
+        <DashboardMetrics agentId={agentId} />
+      ) : null}
 
       <div className="mb-4 flex items-center justify-between">
         <div className="text-[11px] uppercase tracking-widest text-gold">Your Listings</div>

@@ -8,6 +8,33 @@ Institutional memory for the project. Updated incrementally, not at session end.
 
 ---
 
+## 2026-06-14 18:00 UTC — dashboard home: state-aware metrics replace redundant CTAs
+
+**Objective**: Replace the three top CTA cards on `/dashboard` (Add property / Pick community / View leads) with content the agent actually wants to see. The CTAs duplicated the bottom nav (Leads tab) and the center FAB (which already opens "+ New Listing / + New Community Video"). Dashboard had become a task list, not a dashboard.
+
+**Decision (with user)**: state-aware top section.
+- 0 listings + Active tab → keep the three original CTA cards as an onboarding cue. Bottom nav covers them, but new agents need the visual prompt.
+- else → render `<DashboardMetrics agentId={...} />`: NEW LEADS (24h) · THIS WEEK (views/saves/leads + WoW%) · TOP LISTING (this week's most-viewed, links to its analytics page).
+
+**"Saves" instead of "Likes"**: the `events` enum has no `like` type. The real swipe-❤ proxy is `saved_listings` (Phase 21). Pulled saves from there via inner-join on `listings.agent_id`.
+
+**Actions**:
+- `app/dashboard/_components/DashboardMetrics.tsx` (new, server component) — 5 parallel queries (`leads count 24h`, `latest lead`, `this/prev week events`, `this/prev week leads bucket`) + 2 saved_listings queries + a top-listing follow-up. RLS already scopes events to the agent ("agent reads own listing events" policy in 0001), so no manual agent_id filter on the events query.
+- `app/dashboard/page.tsx` — added `DashboardMetrics` import, fetched `agents.id` alongside `slug`, conditional render: `rows.length === 0 && !showArchived` → CTA cards, else → `<DashboardMetrics />`.
+
+**Issues / non-issues**:
+- WoW% shows "↑ N%" / "↓ N%" / nothing if both buckets are 0 / "new" if prev=0 & curr>0. Pure JS, no extra query.
+- Top listing query joins back to `listings` for the address — necessary because `events.listing_id` is the only key in the agg, and we want a human-readable label. One extra round-trip when there's a top listing; acceptable given dashboards aren't hot paths.
+- Did not add a "last visit" column — keeping V1 schema-stable, 24h window is good enough for "is anything new?".
+
+**Verification**: `pnpm tsc --noEmit` clean, `pnpm biome check` clean, `pnpm build` green (dashboard route still 1.6 kB-ish bundle since metrics are server-rendered).
+
+**Next steps**:
+- Watch agent feedback once Vivian or another agent has live data — confirm the three metrics are what they actually want to see, or pivot.
+- If lead-attention becomes a bigger deal, consider replacing "Top listing" with "Listings needing attention" (no cover, expiring, etc.).
+
+---
+
 ## 2026-06-14 00:30 UTC — phase21 complete: persistent Save via anonymous device-id (C+X)
 
 **Objective**: Make Save survive page reloads. Like stays in-memory animation.

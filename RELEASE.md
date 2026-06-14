@@ -5,6 +5,36 @@ Format matches the standard release template (Features / Improvements / Bug Fixe
 
 ---
 
+## Release Notes - v0.15.0
+
+**Release Date:** 2026-06-14
+
+Agent dashboard home is now a real dashboard, not a task list. The three big buttons at the top (Add a property / Pick a community / View leads) duplicated what the bottom nav already does — they're gone for agents who already have listings, and replaced by three cards that actually tell you how your business is doing.
+
+### 🚀 Features
+
+**State-aware dashboard top**
+- **New agents (no listings yet)**: still see the original three call-to-action cards, so the path to "add your first listing" stays obvious.
+- **Active agents**: see three live cards instead.
+  - **🔥 New leads · 24h** — count of leads from the last 24 hours, plus the most recent lead's name and how long ago it came in. Tap to jump to the full Leads list.
+  - **This week** — total views this week with saves and leads underneath, plus a week-over-week trend (e.g. "↑ 23% vs last week").
+  - **🏆 Top listing** — the address that's getting the most views this week, with its view and lead count. Tap to open that listing's analytics page.
+
+### ✨ Improvements
+
+- The Add Listing and New Community Video entry points stay reachable through the gold "+" button in the bottom bar, so removing them from the dashboard top costs nothing.
+- "Empty" states are honest — if there are no leads, the card says so. If there are no views yet this week, it says "Waiting for first views…" instead of showing zeros.
+
+### 🔧 Technical
+
+- Saves come from the persistent saved-listings store (the swipe-❤ system shipped last release), not a "likes" event — the dashboard now reflects what buyers actually keep, not what they tap past.
+
+### ⚠️ Known Issues
+
+- The "new leads" badge is currently a fixed 24-hour window. A future release may switch it to "since you last opened the dashboard" once that's worth the extra plumbing.
+
+---
+
 ## Release Notes - v0.14.0
 
 **Release Date:** 2026-06-13
