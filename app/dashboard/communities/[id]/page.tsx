@@ -86,8 +86,7 @@ export default async function CommunityEditorPage({
         <div className="min-w-0">
           <h1 className="truncate text-2xl font-semibold tracking-tight">{community.name}</h1>
           <p className="mt-1 text-sm text-cream/60">
-            {community.city ? `${community.city}, ${community.state}` : community.state} · slug:{' '}
-            <code className="text-cream">{community.slug}</code>
+            {community.city ? `${community.city}, ${community.state}` : community.state}
           </p>
         </div>
         <div className="flex shrink-0 gap-2">

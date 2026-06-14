@@ -1,15 +1,14 @@
 'use client';
 
 /**
- * NewCommunityForm — Phase 4.4.
+ * NewCommunityForm — Phase 4.4 / simplified Phase 25.4 (2026-06-14).
  *
- * Slug auto-derives from the name on first input but stays editable. We let
- * the user own the slug because communities are referenced by URL in the
- * public feed (eventually) and we want stable, hand-pickable identifiers.
+ * The slug used to be user-editable here. Per product direction, agents
+ * should never type slugs — they're URL plumbing. Server now derives the
+ * slug from the name and handles collisions itself.
  */
 
 import { createCommunity } from '@/app/dashboard/communities/actions';
-import { nameToSlug } from '@/lib/utils/slug';
 import { useState, useTransition } from 'react';
 
 const INPUT_CLASS =
@@ -17,18 +16,11 @@ const INPUT_CLASS =
 
 export function NewCommunityForm() {
   const [name, setName] = useState('');
-  const [slug, setSlug] = useState('');
-  const [slugTouched, setSlugTouched] = useState(false);
   const [city, setCity] = useState('');
   const [state, setState] = useState('GA');
   const [description, setDescription] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
-
-  function onNameChange(v: string) {
-    setName(v);
-    if (!slugTouched) setSlug(nameToSlug(v));
-  }
 
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -36,7 +28,6 @@ export function NewCommunityForm() {
     startTransition(async () => {
       const result = await createCommunity({
         name: name.trim(),
-        slug: slug.trim(),
         city: city.trim() === '' ? null : city.trim(),
         state: state.trim().toUpperCase(),
         description: description.trim() === '' ? null : description.trim(),
@@ -52,25 +43,10 @@ export function NewCommunityForm() {
         <input
           type="text"
           value={name}
-          onChange={(e) => onNameChange(e.target.value)}
+          onChange={(e) => setName(e.target.value)}
           placeholder="Buckhead"
           required
           maxLength={120}
-          className={INPUT_CLASS}
-        />
-      </Field>
-      <Field label="Slug" hint="Used in URLs. Lowercase, digits, hyphens.">
-        <input
-          type="text"
-          value={slug}
-          onChange={(e) => {
-            setSlug(e.target.value);
-            setSlugTouched(true);
-          }}
-          placeholder="buckhead"
-          required
-          maxLength={64}
-          pattern="[a-z0-9-]+"
           className={INPUT_CLASS}
         />
       </Field>
@@ -109,16 +85,12 @@ export function NewCommunityForm() {
       <div className="flex items-center gap-3 pt-2">
         <button
           type="submit"
-          disabled={isPending || name.trim() === '' || slug.trim() === ''}
+          disabled={isPending || name.trim() === ''}
           className="rounded bg-gold px-4 py-2 text-sm font-medium text-ink transition hover:opacity-90 disabled:opacity-50"
         >
           {isPending ? 'Creating…' : 'Create community'}
         </button>
-        {error && (
-          <span className="text-sm text-red-400">
-            {error === 'slug_taken' ? 'Slug already in use — pick another.' : `Error: ${error}`}
-          </span>
-        )}
+        {error && <span className="text-sm text-red-400">Error: {error}</span>}
       </div>
     </form>
   );

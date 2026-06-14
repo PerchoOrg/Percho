@@ -18,8 +18,8 @@ export default async function NewCommunityPage() {
       <header>
         <h1 className="text-2xl font-semibold tracking-tight">New community</h1>
         <p className="mt-1 text-sm text-cream/60">
-          Communities are shared across all agents. Pick a stable slug — changing it later breaks
-          any hardcoded references.
+          Communities are shared across all agents. The community will be reachable at a public URL
+          derived from its name.
         </p>
       </header>
       <section className="rounded border border-bronze/30 bg-ink2 p-6">

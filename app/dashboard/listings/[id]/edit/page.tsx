@@ -151,8 +151,7 @@ export default async function EditListingPage({
         <p className="mt-1 text-sm text-cream/60">
           {listing.city}, {listing.state}
           {listing.zip ? ` ${listing.zip}` : ''}
-          {listing.neighborhood ? ` · ${listing.neighborhood}` : ''} · slug:{' '}
-          <code className="text-cream">{listing.slug}</code>
+          {listing.neighborhood ? ` · ${listing.neighborhood}` : ''}
         </p>
         <div className="mt-2">
           <a

@@ -3,6 +3,14 @@
 Newest at the top. Each release covers a meaningful product change visible to users.
 Format matches the standard release template (Features / Improvements / Bug Fixes / Technical / Known Issues / Metrics).
 
+## v0.25.4 — 2026-06-14
+
+### ✨ Improvements
+- **Removed all user-facing "slug" fields and labels.** When you create a
+  new community, you only enter a name now — the URL is generated for you.
+  The slug labels that used to appear under listing and community headers
+  are gone. URLs themselves haven't changed.
+
 ## v0.25.3 — 2026-06-14
 
 ### ✨ Improvements

@@ -11,11 +11,6 @@ import { z } from 'zod';
 
 export const CreateCommunityInput = z.object({
   name: z.string().min(2).max(120),
-  slug: z
-    .string()
-    .regex(/^[a-z0-9-]+$/, 'lowercase, digits, hyphens only')
-    .min(2)
-    .max(64),
   city: z.string().max(80).optional().nullable(),
   state: z.string().length(2).default('GA'),
   description: z.string().max(2000).optional().nullable(),

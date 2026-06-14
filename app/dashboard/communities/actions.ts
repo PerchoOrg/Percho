@@ -47,32 +47,42 @@ export async function createCommunity(raw: unknown): Promise<ActionResult<{ id: 
     .maybeSingle()) as { data: { id: string } | null };
   const createdBy = agentRow?.id ?? null;
 
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { data: created, error } = (await (supabase as any)
-    .from('communities')
-    .insert({
-      name: parsed.data.name,
-      slug: parsed.data.slug,
-      city: parsed.data.city ?? null,
-      state: parsed.data.state,
-      description: parsed.data.description ?? null,
-      created_by: createdBy,
-    })
-    .select('id')
-    .single()) as {
-    data: { id: string } | null;
-    error: { code?: string; message?: string } | null;
-  };
+  // Slug is system-derived from name. On collision append a short random
+  // suffix and retry once; we don't expose slug to users (Phase 25.4: agents
+  // should never type slugs — they're URL plumbing).
+  const baseSlug = nameToSlug(parsed.data.name) || 'community';
+  const slugCandidates = [baseSlug, `${baseSlug}-${Math.random().toString(36).slice(2, 6)}`];
 
-  if (error) {
-    if (error.code === '23505') return { ok: false, error: 'slug_taken' };
-    console.error('[createCommunity] insert failed', error);
-    return { ok: false, error: 'insert_failed' };
+  let lastError: { code?: string; message?: string } | null = null;
+  for (const slug of slugCandidates) {
+    // biome-ignore lint/suspicious/noExplicitAny: stub generated types
+    const { data: created, error } = (await (supabase as any)
+      .from('communities')
+      .insert({
+        name: parsed.data.name,
+        slug,
+        city: parsed.data.city ?? null,
+        state: parsed.data.state,
+        description: parsed.data.description ?? null,
+        created_by: createdBy,
+      })
+      .select('id')
+      .single()) as {
+      data: { id: string } | null;
+      error: { code?: string; message?: string } | null;
+    };
+
+    if (!error && created) {
+      revalidatePath('/dashboard/communities');
+      redirect(`/dashboard/communities/${created.id}`);
+    }
+    lastError = error;
+    if (error?.code !== '23505') break;
+    // else: slug collision — retry with suffixed candidate
   }
-  if (!created) return { ok: false, error: 'insert_failed' };
 
-  revalidatePath('/dashboard/communities');
-  redirect(`/dashboard/communities/${created.id}`);
+  console.error('[createCommunity] insert failed', lastError);
+  return { ok: false, error: 'insert_failed' };
 }
 
 export async function updateCommunity(id: string, raw: unknown): Promise<ActionResult> {

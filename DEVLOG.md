@@ -2,6 +2,43 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-06-14 — phase25.4: strip user-facing slug references
+
+**Objective**: per product direction, agents should never see or type slugs.
+Slugs are URL plumbing the system manages. Sweep the dashboard UI, remove
+all slug labels / inputs / hint text. Schema `slug` columns stay (URLs need
+them); only the UI surface is stripped.
+
+**Actions**:
+- `dashboard/communities/new/NewCommunityForm.tsx`: removed Slug input,
+  `slugTouched` state, slug-from-name auto-derive (now happens server-side),
+  `slug_taken` error message branch.
+- `dashboard/communities/new/page.tsx`: rewrote intro paragraph from "Pick
+  a stable slug — changing it later breaks any hardcoded references" to
+  "The community will be reachable at a public URL derived from its name".
+- `dashboard/communities/actions.ts → createCommunity`: derives slug from
+  name with `nameToSlug`, retries once with random 4-char suffix on 23505
+  collision (mirrors update path's logic).
+- `dashboard/communities/[id]/page.tsx`: header subtitle no longer shows
+  `· slug: <code>foo-bar</code>`.
+- `dashboard/listings/[id]/edit/page.tsx`: header subtitle no longer shows
+  `· slug: <code>123-main-st</code>`. Listing slug is fully system-managed
+  (derived from address at creation; never re-derived).
+- `lib/zod/community.ts`: dropped `slug` field from `CreateCommunityInput`.
+
+**Decisions**:
+- **Schema columns stay.** `agents.slug`, `communities.slug`,
+  `listings.slug` are URL-routing identifiers — the public pages
+  `/a/<slug>`, `/v/<agent>/<listing>`, `/c/<community>` (future) all rely
+  on them. Removing the column would force a UUID-in-URL change that
+  breaks every shared link.
+- **No DB migration.** Pure UI change; column visibility ≠ column existence.
+- **Listing slug stays frozen at creation.** Same rule as Phase 25.2 for
+  agent slug: re-deriving on rename would break every shared
+  `/v/<agent>/<listing>` URL.
+
+**Verification**: tsc clean, next build green.
+
 ## 2026-06-14 — phase25.3: buyer profile inline edit (display_name) + reorder
 
 **Objective**: same treatment as agent profile — inline-edit the buyer's
