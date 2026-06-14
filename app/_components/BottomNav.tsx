@@ -157,8 +157,8 @@ function FabActionSheet({ open, onClose }: { open: boolean; onClose: () => void 
                 <Building2 size={18} />
               </span>
               <span className="flex flex-col">
-                <span className="font-medium text-cream text-sm">+ New Listing</span>
-                <span className="text-cream/60 text-xs">Add a property to your portfolio</span>
+                <span className="font-medium text-cream text-sm">+ List a Property</span>
+                <span className="text-cream/60 text-xs">Add a home to your portfolio</span>
               </span>
             </Link>
           </li>
@@ -173,8 +173,10 @@ function FabActionSheet({ open, onClose }: { open: boolean; onClose: () => void 
                 <Video size={18} />
               </span>
               <span className="flex flex-col">
-                <span className="font-medium text-cream text-sm">+ New Community Video</span>
-                <span className="text-cream/60 text-xs">Upload a school / park / area video</span>
+                <span className="font-medium text-cream text-sm">+ Add Community Video</span>
+                <span className="text-cream/60 text-xs">
+                  Pick a community, then upload a school, park, or area video
+                </span>
               </span>
             </Link>
           </li>
