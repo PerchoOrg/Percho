@@ -2,6 +2,24 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-06-14 — fix: authed users on / redirect to /browse
+
+**Objective**: logged-in agents hitting `/` (e.g. via brand link or stray
+nav) were getting the public marketing splash with a Login button —
+confusing and broken UX since they're already authed.
+
+**Actions**:
+- `app/page.tsx`: server-side `supabase.auth.getUser()` at the top of
+  `HomePage()`; `redirect('/browse')` when authed. Anon users still see
+  the landing unchanged.
+
+**Decisions**: redirect to `/browse` (the buyer feed entry — the actual
+"home" of the app for everyone, agent or buyer). Considered `/dashboard`
+for agents but `/browse` is the universal home and agents already have a
+top-right avatar to reach the dashboard.
+
+**Verification**: `tsc --noEmit` clean. Pushed to main `fc81520`.
+
 ## 2026-06-14 — phase25.4: strip user-facing slug references
 
 **Objective**: per product direction, agents should never see or type slugs.
