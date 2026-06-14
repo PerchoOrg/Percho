@@ -183,59 +183,7 @@ export function CommunityPhotoPanel({ communityId, initialPhotos, category }: Pr
         </div>
       ) : null}
 
-      <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
-        {photos.map((photo) => {
-          const catLabel = photo.category
-            ? (COMMUNITY_VIDEO_CATEGORIES.find((c) => c.id === photo.category)?.label ?? null)
-            : null;
-          return (
-            <div
-              key={photo.id}
-              className="group relative aspect-[4/3] overflow-hidden rounded border border-bronze/20 bg-ink"
-            >
-              {photo.signed_url ? (
-                <img
-                  src={photo.signed_url}
-                  alt={photo.alt_text ?? ''}
-                  loading="lazy"
-                  className="h-full w-full object-cover"
-                />
-              ) : (
-                <div className="flex h-full w-full items-center justify-center text-cream/40 text-xs">
-                  (preview unavailable)
-                </div>
-              )}
-              {catLabel ? (
-                <span className="absolute bottom-1 left-1 rounded bg-ink/80 px-1.5 py-0.5 text-[10px] text-cream/80">
-                  {catLabel}
-                </span>
-              ) : null}
-              <button
-                type="button"
-                onClick={() => handleDelete(photo.id)}
-                aria-label="Delete photo"
-                className="absolute top-1.5 right-1.5 hidden rounded bg-ink/80 p-1.5 text-cream/80 hover:text-red-300 group-hover:block"
-              >
-                <Trash2 size={14} aria-hidden="true" />
-              </button>
-            </div>
-          );
-        })}
-
-        {pending.map((p) => (
-          <div
-            key={p.tempId}
-            className="relative aspect-[4/3] overflow-hidden rounded border border-bronze/20 bg-ink"
-          >
-            <img src={p.preview} alt="" className="h-full w-full object-cover opacity-50" />
-            <div className="absolute inset-0 flex items-center justify-center text-cream/80 text-xs">
-              {p.error ? <span className="text-red-300">{p.error}</span> : 'Uploading…'}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <div>
+      <div className="mb-4">
         <input
           ref={inputRef}
           type="file"
@@ -258,6 +206,69 @@ export function CommunityPhotoPanel({ communityId, initialPhotos, category }: Pr
           Add photos as “{meta.label}”
         </button>
       </div>
+
+      {pending.length > 0 ? (
+        <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+          {pending.map((p) => (
+            <div
+              key={p.tempId}
+              className="relative aspect-[4/3] overflow-hidden rounded border border-bronze/20 bg-ink"
+            >
+              <img src={p.preview} alt="" className="h-full w-full object-cover opacity-50" />
+              <div className="absolute inset-0 flex items-center justify-center text-cream/80 text-xs">
+                {p.error ? <span className="text-red-300">{p.error}</span> : 'Uploading…'}
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : null}
+
+      {photos.length > 0 ? (
+        <details>
+          <summary className="cursor-pointer select-none text-xs uppercase tracking-wide text-cream/60 hover:text-cream">
+            Already uploaded ({photos.length})
+          </summary>
+          <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+            {photos.map((photo) => {
+              const catLabel = photo.category
+                ? (COMMUNITY_VIDEO_CATEGORIES.find((c) => c.id === photo.category)?.label ?? null)
+                : null;
+              return (
+                <div
+                  key={photo.id}
+                  className="group relative aspect-[4/3] overflow-hidden rounded border border-bronze/20 bg-ink"
+                >
+                  {photo.signed_url ? (
+                    <img
+                      src={photo.signed_url}
+                      alt={photo.alt_text ?? ''}
+                      loading="lazy"
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center text-cream/40 text-xs">
+                      (preview unavailable)
+                    </div>
+                  )}
+                  {catLabel ? (
+                    <span className="absolute bottom-1 left-1 rounded bg-ink/80 px-1.5 py-0.5 text-[10px] text-cream/80">
+                      {catLabel}
+                    </span>
+                  ) : null}
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(photo.id)}
+                    aria-label="Delete photo"
+                    className="absolute top-1.5 right-1.5 hidden rounded bg-ink/80 p-1.5 text-cream/80 hover:text-red-300 group-hover:block"
+                  >
+                    <Trash2 size={14} aria-hidden="true" />
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </details>
+      ) : null}
     </section>
   );
 }

@@ -41,30 +41,23 @@ export function CommunityUploadShell({
     <div className="space-y-4">
       {/* Shared category picker — drives both video + photo upload below. */}
       <section className="rounded border border-bronze/30 bg-ink2 p-5">
-        <label htmlFor="cu-category" className="mb-2 block text-sm font-medium text-cream">
-          Category
-        </label>
-        <select
-          id="cu-category"
-          value={category}
-          onChange={(e) => setCategory(e.target.value as CommunityVideoCategoryId)}
-          className="w-full rounded border border-bronze/30 bg-ink px-3 py-2 text-sm text-cream focus:border-gold focus:outline-none focus:ring-1 focus:ring-gold"
-        >
-          <optgroup label="Only on Vicinity — scarce content nobody else has">
-            {BUCKET_A.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.label} — {c.blurb}
-              </option>
-            ))}
-          </optgroup>
-          <optgroup label="Real look at the data — visceral layer over Zillow numbers">
-            {BUCKET_B.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.label} — {c.blurb}
-              </option>
-            ))}
-          </optgroup>
-        </select>
+        <div className="mb-3 text-sm font-medium text-cream">Category</div>
+        <div className="grid grid-cols-2 gap-3">
+          <CategoryColumn
+            heading="Only on Vicinity"
+            subheading="Scarce content nobody else has"
+            items={BUCKET_A}
+            selected={category}
+            onPick={setCategory}
+          />
+          <CategoryColumn
+            heading="Real look at the data"
+            subheading="Visceral layer over Zillow numbers"
+            items={BUCKET_B}
+            selected={category}
+            onPick={setCategory}
+          />
+        </div>
         <div className="mt-3 rounded border border-gold/30 bg-gold/5 px-3 py-2 text-xs text-cream/80">
           <span className="font-medium text-gold">{meta.label}</span>
           <span className="text-cream/60"> — {meta.blurb}.</span>
@@ -88,6 +81,52 @@ export function CommunityUploadShell({
         initialPhotos={initialPhotos}
         category={category}
       />
+    </div>
+  );
+}
+
+function CategoryColumn({
+  heading,
+  subheading,
+  items,
+  selected,
+  onPick,
+}: {
+  heading: string;
+  subheading: string;
+  items: readonly { id: CommunityVideoCategoryId; label: string; blurb: string }[];
+  selected: CommunityVideoCategoryId;
+  onPick: (id: CommunityVideoCategoryId) => void;
+}) {
+  return (
+    <div>
+      <div className="mb-1.5">
+        <div className="text-[11px] font-semibold uppercase tracking-wide text-gold">
+          {heading}
+        </div>
+        <div className="text-[10px] text-cream/50">{subheading}</div>
+      </div>
+      <div className="space-y-1.5">
+        {items.map((c) => {
+          const isSel = selected === c.id;
+          return (
+            <button
+              key={c.id}
+              type="button"
+              onClick={() => onPick(c.id)}
+              className={[
+                'w-full rounded border px-2 py-1.5 text-left text-xs transition',
+                isSel
+                  ? 'border-gold bg-gold/10 text-cream'
+                  : 'border-bronze/30 bg-ink text-cream/80 hover:border-gold/60 hover:text-cream',
+              ].join(' ')}
+            >
+              <div className="font-medium leading-tight">{c.label}</div>
+              <div className="mt-0.5 text-[10px] leading-tight text-cream/50">{c.blurb}</div>
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }

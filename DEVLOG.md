@@ -6,6 +6,40 @@ Institutional memory for the project. Updated incrementally, not at session end.
 
 ---
 
+## Phase 25.1 — Category picker grid + collapse uploaded lists (2026-06-14)
+
+**Why.** Vivian feedback after Phase 25 ship:
+1. Dropdown hides 12 categories behind a click — wants all visible at once.
+2. "Already uploaded" video grid was open by default — too long, pushed the
+   uploader off-screen on long-running communities. Photos had no collapse at
+   all and rendered the full grid above the upload button.
+
+**Changes.**
+- `CommunityUploadShell.tsx`: replaced `<select>` + optgroups with a 2-column
+  grid (Bucket A left / Bucket B right, 6 buttons each). Each cell shows label
+  + blurb. Selected cell highlighted with gold border + `bg-gold/10`. Meta
+  blurb ("Must include: ...") still rendered below the grid.
+- `CommunityVideoPanel.tsx`: removed `open` from the `<details>` wrapper so
+  the uploaded list is collapsed by default.
+- `CommunityPhotoPanel.tsx`: reorganized the section — upload button first,
+  pending uploads inline (only when present), then `<details>` "Already
+  uploaded ({n})" wrapping the photo grid (collapsed by default).
+
+**Tradeoffs considered.**
+- Grid > dropdown: takes more vertical space but Vivian's flow (record video
+  → switch category → upload → switch again) makes click cost > scroll cost.
+- Collapse default for uploaded photos: inconsistent with most CMS patterns
+  (show what you have first), but on this page the *primary* action is
+  "upload more", not "review what's there" — the upload button being above
+  the fold matters.
+
+**Verified.** `npx tsc --noEmit` clean, `npm run build` green.
+
+**Next.** Vercel UAT — confirm grid renders + selected state + collapsed
+sections expand.
+
+---
+
 ## 2026-06-14 — Phase 25 — Communities list polish + unified upload category
 
 **Objective.** Two small UX wins on the agent dashboard's community surface, both raised

@@ -160,7 +160,7 @@ export function CommunityVideoPanel({
       {error && <p className="mt-2 text-xs text-red-400">{error}</p>}
 
       {videos.length > 0 && (
-        <details className="mt-4" open>
+        <details className="mt-4">
           <summary className="cursor-pointer select-none text-xs uppercase tracking-wide text-cream/60 hover:text-cream">
             Already uploaded ({videos.length})
           </summary>

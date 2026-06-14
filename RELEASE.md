@@ -5,6 +5,23 @@ Format matches the standard release template (Features / Improvements / Bug Fixe
 
 ---
 
+## Release Notes - v0.18.2
+
+**Release Date:** 2026-06-14
+
+### Improvements
+- **Community upload — category picker is now a visible grid.** The dropdown
+  has been replaced with a side-by-side grid showing all 12 categories at
+  once. Left column is "Only on Vicinity" (the scarce-content bucket); right
+  column is "Real look at the data" (the visceral layer over Zillow numbers).
+  One click switches both video and photo upload to the new category.
+- **"Already uploaded" lists collapse by default.** On a community's upload
+  page, both the video and photo grids start collapsed. The upload action
+  stays above the fold; click "Already uploaded (N)" to expand and review
+  past content.
+
+---
+
 ## Release Notes - v0.18.1
 
 **Release Date:** 2026-06-14
