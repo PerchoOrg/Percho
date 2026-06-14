@@ -3,6 +3,23 @@
 Newest at the top. Each release covers a meaningful product change visible to users.
 Format matches the standard release template (Features / Improvements / Bug Fixes / Technical / Known Issues / Metrics).
 
+## v0.26.0 — 2026-06-14
+
+### 🚀 Features
+- **Desktop browser now has a proper top navigation.** When you open Vicinity
+  on a Mac or PC, you'll see a sticky header with the Vicinity logo, the same
+  tabs you have on mobile (Home, Explore, Saved, Nearby for buyers; Dashboard,
+  Leads, "+ New" for agents), plus a "Sign in / Sign up" pill for visitors
+  and an avatar dropdown for signed-in users. Previously the desktop view of
+  Explore / Saved / Nearby / Profile had no navigation at all — you could only
+  reach those pages by typing the URL. This is now fixed.
+- **Agents get a "+ New" dropdown in the desktop header.** Quick access to
+  list a property or add a community video without leaving the current page.
+
+### ✨ Improvements
+- **Mobile experience unchanged.** The bottom tab bar and top-right avatar
+  are exactly as they were — desktop just got the equivalent surface up top.
+
 ## v0.25.4 — 2026-06-14
 
 ### ✨ Improvements

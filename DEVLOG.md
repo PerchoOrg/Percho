@@ -2,6 +2,77 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-06-14 — phase26: desktop chrome parity (SiteHeader + nav SSOT)
+
+**Objective**: mobile gained a full nav surface (BottomNav + top-right avatar)
+in Phase 19, but desktop (md+) was left with no chrome on buyer-side pages
+(`/browse`, `/saved`, `/nearby`, `/profile`, `/a/[slug]`) — no logo, no nav,
+no auth entry, no profile menu. Anon visitors on desktop literally couldn't
+sign in from /browse without retyping the URL. Dashboard had a `TopBar` but
+duplicated nav state. Fix the gap and refactor so future tab additions don't
+require touching two components.
+
+**Actions**:
+- `app/_components/nav-config.ts` (NEW): SSOT for `BUYER_TABS`,
+  `AGENT_LEFT_TABS`, `AGENT_RIGHT_TABS`, `CHROME_HIDDEN_PREFIXES`,
+  `isChromeHidden`, `isTabActive`, plus shared `Tab` and `ViewerRole` types.
+- `app/_components/BottomNav.tsx`: stripped local tab definitions, now
+  imports from nav-config. Same mobile UX, shorter file.
+- `app/_components/SiteHeader.tsx` (NEW): client component, `hidden md:block`
+  sticky top header. Layout: brand "Vicinity" + role-aware horizontal nav +
+  right cluster (agent → "+ New" dropdown w/ Listing/Community + avatar
+  menu; anon → Sign in / Sign up pills; buyer → avatar menu only).
+  Avatar dropdown shows display name + brokerage + Profile + Sign out form.
+- `app/_components/SiteHeaderWrapper.tsx` (NEW): server component, resolves
+  role + initial + display name + brokerage from Supabase, renders the
+  client SiteHeader.
+- `app/layout.tsx`: mount `<SiteHeaderWrapper />` alongside the existing
+  `<TopRightAvatarWrapper />` and `<BottomNavWrapper />`. Each surface
+  self-hides on the breakpoints + routes it doesn't own — no duplication.
+- `app/dashboard/layout.tsx`: dropped `<TopBar>`. The dashboard top bar was
+  redundant once SiteHeader is role-aware. File is now just an auth gate +
+  page wrapper. `app/dashboard/top-bar.tsx` deleted.
+- `app/(public)/{browse,saved,nearby,profile}` mobile sticky title bars
+  (`EXPLORE` / `SAVED` / `NEARBY` etc.) gained `md:hidden` — SiteHeader
+  takes over the top of the viewport on desktop, so the duplicate label
+  bar would just be visual noise.
+
+**Decisions**:
+- One header for both buyer-side and dashboard (role-aware) instead of
+  two parallel headers. Reason: the user moves between `/browse` and
+  `/dashboard` constantly; a consistent chrome anchor reduces context-switch
+  friction. Old `TopBar` was Dashboard-only and would have duplicated state.
+- "Me" tab dropped from the inline desktop nav (it lives in the avatar
+  dropdown). Mobile keeps it as a tab because the bottom bar is the only
+  surface there. This is the one place mobile and desktop intentionally
+  differ — surfacing it twice on desktop felt redundant.
+- `nav-config.ts` is the SSOT pivot — adding a new tab now means editing
+  one array and both surfaces pick it up. The temptation to add a 6th
+  buyer tab will hit eventually; this prevents drift.
+- Kept `TopRightAvatar` (mobile) and the SiteHeader's `AvatarMenu` (desktop)
+  as separate components rather than collapsing them. They have different
+  positioning, layout, and dropdown anchor logic — the duplication is
+  clearer than a flag-driven shared component would be.
+
+**Issues**: none — `pnpm tsc --noEmit` and `pnpm build` both clean on first
+try.
+
+**Verification**: `pnpm tsc --noEmit` clean. `pnpm build` clean (all routes
+compile, bundle sizes unchanged within noise). Manually verified the
+mobile-vs-desktop chrome gap on prod before the change via browser tools
+(/browse desktop had no header at all; /dashboard had a redundant TopBar).
+
+**Learnings**: when shipping a mobile-first surface, audit desktop
+breakpoints before declaring "feature done". `md:hidden` without an `md:`
+counterpart is the responsive equivalent of a TODO in production.
+
+**Next steps**: smoke test on prod after deploy — expected to verify
+(a) anon `/browse` desktop now shows Vicinity / Home / Explore / Saved /
+Nearby + Sign in / Sign up; (b) authed buyer desktop shows the avatar
+dropdown w/ Profile + Sign out; (c) agent desktop /dashboard shows
+Dashboard / Leads in the header + "+ New" dropdown + avatar; (d) mobile
+unchanged (BottomNav + top-right avatar still there).
+
 ## 2026-06-14 — fix: authed users on / redirect to /browse
 
 **Objective**: logged-in agents hitting `/` (e.g. via brand link or stray

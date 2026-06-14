@@ -11,82 +11,31 @@
  * with "+ New Listing" / "+ New Community". Same visual skeleton as the
  * buyer view; only the middle three slots' content changes by role.
  *
+ * Phase 26 (2026-06-14): tab definitions moved to `nav-config.ts` so the
+ * desktop <SiteHeader> uses the exact same set without drift.
+ *
  * Hides itself on:
- *   - `md:` and up (desktop uses TopBar nav)
+ *   - `md:` and up (desktop uses SiteHeader)
  *   - feed routes (`/v/...`, `/browse/feed`) — immersive
  *   - auth routes (`/login`, `/signup`, `/forgot-password`, `/reset-password`)
  *   - landing (`/`)
- *
- * Role is passed in as a prop from a Server Component wrapper.
  */
 
-import {
-  Building2,
-  Compass,
-  Heart,
-  Home,
-  LayoutDashboard,
-  Mail,
-  MapPin,
-  Plus,
-  User,
-  Video,
-  X,
-} from 'lucide-react';
+import { Building2, Plus, Video, X } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import {
+  AGENT_LEFT_TABS,
+  AGENT_RIGHT_TABS,
+  BUYER_TABS,
+  isChromeHidden,
+  isTabActive,
+  type Tab,
+  type ViewerRole,
+} from './nav-config';
 
-export type ViewerRole = 'anon' | 'buyer' | 'agent';
-
-type Tab = {
-  href: string;
-  label: string;
-  icon: typeof Home;
-  /** Pathname is "active" if it equals href OR starts with href + "/". */
-  matchPrefix?: boolean;
-};
-
-const HIDDEN_PREFIXES = [
-  '/v/',
-  '/browse/feed',
-  '/login',
-  '/signup',
-  '/forgot-password',
-  '/reset-password',
-  '/auth/',
-];
-
-function isHidden(pathname: string): boolean {
-  if (pathname === '/') return true;
-  return HIDDEN_PREFIXES.some((p) => pathname === p || pathname.startsWith(p));
-}
-
-function isActive(pathname: string, tab: Tab): boolean {
-  if (tab.matchPrefix === true) {
-    return pathname === tab.href || pathname.startsWith(`${tab.href}/`);
-  }
-  return pathname === tab.href;
-}
-
-const BUYER_TABS: Tab[] = [
-  { href: '/', label: 'Home', icon: Home },
-  { href: '/browse', label: 'Explore', icon: Compass },
-  { href: '/saved', label: 'Saved', icon: Heart },
-  { href: '/nearby', label: 'Nearby', icon: MapPin },
-  { href: '/profile', label: 'Me', icon: User },
-];
-
-const AGENT_SIDE_TABS: { left: Tab[]; right: Tab[] } = {
-  left: [
-    { href: '/', label: 'Home', icon: Home },
-    { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  ],
-  right: [
-    { href: '/dashboard/leads', label: 'Leads', icon: Mail, matchPrefix: true },
-    { href: '/profile', label: 'Me', icon: User },
-  ],
-};
+export type { ViewerRole } from './nav-config';
 
 function TabButton({ tab, active }: { tab: Tab; active: boolean }) {
   const Icon = tab.icon;
@@ -203,7 +152,7 @@ export function BottomNav({ role }: { role: ViewerRole }) {
   const pathname = usePathname() ?? '/';
   const [fabOpen, setFabOpen] = useState(false);
 
-  if (isHidden(pathname)) return null;
+  if (isChromeHidden(pathname)) return null;
 
   const isAgent = role === 'agent';
 
@@ -217,9 +166,9 @@ export function BottomNav({ role }: { role: ViewerRole }) {
         <ul className="mx-auto flex max-w-3xl items-stretch justify-around">
           {isAgent ? (
             <>
-              {AGENT_SIDE_TABS.left.map((tab) => (
+              {AGENT_LEFT_TABS.map((tab) => (
                 <li key={tab.href} className="flex-1">
-                  <TabButton tab={tab} active={isActive(pathname, tab)} />
+                  <TabButton tab={tab} active={isTabActive(pathname, tab)} />
                 </li>
               ))}
               <li className="flex flex-1 items-center justify-center">
@@ -234,16 +183,16 @@ export function BottomNav({ role }: { role: ViewerRole }) {
                   <Plus size={26} strokeWidth={2.5} aria-hidden="true" />
                 </button>
               </li>
-              {AGENT_SIDE_TABS.right.map((tab) => (
+              {AGENT_RIGHT_TABS.map((tab) => (
                 <li key={tab.href} className="flex-1">
-                  <TabButton tab={tab} active={isActive(pathname, tab)} />
+                  <TabButton tab={tab} active={isTabActive(pathname, tab)} />
                 </li>
               ))}
             </>
           ) : (
             BUYER_TABS.map((tab) => (
               <li key={tab.href} className="flex-1">
-                <TabButton tab={tab} active={isActive(pathname, tab)} />
+                <TabButton tab={tab} active={isTabActive(pathname, tab)} />
               </li>
             ))
           )}

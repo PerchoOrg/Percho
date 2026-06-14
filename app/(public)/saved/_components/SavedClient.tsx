@@ -37,7 +37,7 @@ export function SavedClient() {
   if (cards === null) {
     return (
       <main className="min-h-dvh bg-ink pb-20 text-cream md:pb-0">
-        <header className="sticky top-0 z-20 flex items-center justify-center border-cream/10 border-b bg-ink/85 px-4 py-3 backdrop-blur-md">
+        <header className="sticky top-0 z-20 flex items-center justify-center border-cream/10 border-b bg-ink/85 px-4 py-3 backdrop-blur-md md:hidden">
           <div className="font-medium text-cream/80 text-sm uppercase tracking-wider">Saved</div>
         </header>
         <div className="mx-auto max-w-md px-6 py-24 text-center text-cream/50">Loading…</div>
@@ -73,7 +73,7 @@ export function SavedClient() {
 
   return (
     <main className="min-h-dvh bg-ink pb-20 text-cream md:pb-0">
-      <header className="sticky top-0 z-20 flex items-center justify-center border-cream/10 border-b bg-ink/85 px-4 py-3 backdrop-blur-md">
+      <header className="sticky top-0 z-20 flex items-center justify-center border-cream/10 border-b bg-ink/85 px-4 py-3 backdrop-blur-md md:hidden">
         <div className="font-medium text-cream/80 text-sm uppercase tracking-wider">Saved</div>
       </header>
 

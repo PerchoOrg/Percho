@@ -24,7 +24,7 @@ export default async function BrowsePage() {
 
   return (
     <main className="min-h-dvh bg-ink pb-20 text-cream md:pb-0">
-      <header className="sticky top-0 z-20 flex items-center justify-center border-cream/10 border-b bg-ink/85 px-4 py-3 backdrop-blur-md">
+      <header className="sticky top-0 z-20 flex items-center justify-center border-cream/10 border-b bg-ink/85 px-4 py-3 backdrop-blur-md md:hidden">
         <div className="font-medium text-cream/80 text-sm uppercase tracking-wider">Explore</div>
       </header>
 
