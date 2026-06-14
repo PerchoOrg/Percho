@@ -6,8 +6,10 @@ import {
   LANDING_SUBTITLE,
   LANDING_TAGLINE,
 } from '@/lib/copy/landing';
+import { createClient } from '@/lib/supabase/server';
 import { ArrowRight, Heart, Sparkles, Upload } from 'lucide-react';
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
 
 // Icon mapping kept in the page (the copy module shouldn't import lucide).
 const HOW_IT_WORKS_ICONS = {
@@ -17,6 +19,14 @@ const HOW_IT_WORKS_ICONS = {
 } as const;
 
 export default async function HomePage() {
+  // If already authed, the landing's Login button is meaningless and Explore
+  // should be the default — send them straight to /browse.
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (user) redirect('/browse');
+
   return (
     <>
       {/* Hero — full-bleed video with dark gradient over, centered headline + dual CTA */}
