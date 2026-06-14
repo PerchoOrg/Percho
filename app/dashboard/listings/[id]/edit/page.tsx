@@ -123,6 +123,20 @@ export default async function EditListingPage({
     }
   }
 
+  // Same idea for the photo cover: match cover_url against each photo's
+  // public URL. Video cover and photo cover are mutually exclusive — they
+  // share one column (`cover_url`) — so at most one of these will match.
+  let initialCoverPhotoId: string | null = null;
+  if (listing.cover_url && initialCoverVideoId === null) {
+    const { photoPublicUrl } = await import('@/lib/supabase/storage');
+    for (const p of photos) {
+      if (photoPublicUrl(p.storage_path) === listing.cover_url) {
+        initialCoverPhotoId = p.id;
+        break;
+      }
+    }
+  }
+
   // biome-ignore lint/suspicious/noExplicitAny: stub generated types
   const { data: agent } = (await (supabase as any)
     .from('agents')
@@ -201,10 +215,14 @@ export default async function EditListingPage({
         <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
           <h2 className="text-base font-semibold">Photos</h2>
           <span className="text-xs text-cream/50">
-            JPEG / PNG / WebP — used as fallback when no video is uploaded
+            JPEG / PNG / WebP — used as fallback when no video is uploaded · use ⓒ to set cover
           </span>
         </div>
-        <PhotoPanel listingId={listing.id} initialPhotos={photos} />
+        <PhotoPanel
+          listingId={listing.id}
+          initialPhotos={photos}
+          initialCoverPhotoId={initialCoverPhotoId}
+        />
       </section>
 
       <section className="rounded border border-bronze/30 bg-ink2 p-6">

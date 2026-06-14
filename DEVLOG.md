@@ -8,6 +8,33 @@ Institutional memory for the project. Updated incrementally, not at session end.
 
 ---
 
+## 2026-06-14 19:00 UTC — photo cover selection: photo-only listings can pick a face
+
+**Objective**: Photo-only listings (no video uploaded) had no way to set a cover. `setListingCover` in `actions.ts` only accepted a `videoId` and wrote `thumbnailUrl(cf_video_id)` into `listings.cover_url`. Result: `cover_url = null` forever for photo-only listings, and the dashboard's fallback (first ready video) found nothing → blank thumbnails on `/dashboard` listing cards. User asked: "如果只有photos 也可以选择一个当作cover."
+
+**Design**: video cover and photo cover share the same `listings.cover_url` column. They're mutually exclusive at the data layer — writing one supersedes the other. The agent picks one face, whichever they last clicked wins. No new column, no migration. Public surfaces (`/a/[slug]`, `/v/[slug]/[listing]`, `/browse`, `/dashboard` cards) read `cover_url` as a URL string and don't care about its origin → zero changes outside the edit page.
+
+**Actions**:
+- `app/dashboard/listings/[id]/edit/actions.ts` — added `setListingCoverPhoto(listingId, photoId | null)` server action. Mirrors `setListingCover` shape. Validates with `zod`, looks up `listing_photos` (RLS-fenced via the `listing_id` filter on the user-scoped supabase client), resolves URL through `photoPublicUrl(storage_path)`, writes to `listings.cover_url`. Pass `null` to clear. Same `revalidatePath` of the edit route as the video version.
+- `app/dashboard/listings/[id]/edit/page.tsx` — added `initialCoverPhotoId` resolution: if `listing.cover_url` is set and didn't match any video thumbnail, scan photos and match by `photoPublicUrl(storage_path)`. Passed to `<PhotoPanel>` alongside the existing props.
+- `app/dashboard/listings/[id]/edit/PhotoPanel.tsx` — added `initialCoverPhotoId` prop; `coverPhotoId` / `coverError` / `coverPending` state; `handleSetCover` (optimistic, rollback on failure, same pattern as `VideoPanel.handleSetCover`). Each photo tile now shows: a Star icon button (filled gold = current cover, outline = available), a "Cover" badge in the top-left when active, a gold ring around the active tile. Star click toggles set/clear. Delete still hides on the right; Star sits next to it. `handleDelete` clears `coverPhotoId` if you delete the cover tile (with rollback on server failure).
+
+**Decisions**:
+- **Shared `cover_url` column, not a new `cover_photo_id` column** — the column's semantics are "what URL renders as the listing cover," not "which entity provides it." Adding a discriminator would force every reader (`/a`, `/v`, `/browse`, dashboard cards) to learn the shape. Net: pure storage win, zero downstream churn.
+- **No "video cover wins" priority gate** — the agent decides. If they upload video later but want to keep the photo as the face, fine. If they want to switch back to a video frame, click Set Cover on the video tile.
+- **Star icon, not text "Set as cover"** — VideoPanel has room for a button + drag handle; PhotoPanel tiles are a tight grid. Icon hover-revealed (always visible when active) keeps the tile clean.
+
+**Verification**:
+- `tsc --noEmit` clean.
+- `biome check` clean (one auto-format applied to a multi-line `<Star />`).
+- Manual test on `/dashboard/listings/<id>/edit` for a photo-only listing pending; deferred to user since EC2 has no live browser session.
+
+**Files**: `actions.ts` (+69), `page.tsx` (+18), `PhotoPanel.tsx` (~+55, ~-15).
+
+**Next**: user verifies on prod. If photo-only listings still show blank covers on the dashboard list, check whether the listing being tested actually has `cover_url` set after clicking the star (cache?) — `revalidatePath` covers the edit page but `/dashboard` is a separate route; the home page is server-rendered per request so no extra invalidation needed.
+
+---
+
 ## 2026-06-14 18:00 UTC — dashboard home: state-aware metrics replace redundant CTAs
 
 **Objective**: Replace the three top CTA cards on `/dashboard` (Add property / Pick community / View leads) with content the agent actually wants to see. The CTAs duplicated the bottom nav (Leads tab) and the center FAB (which already opens "+ New Listing / + New Community Video"). Dashboard had become a task list, not a dashboard.

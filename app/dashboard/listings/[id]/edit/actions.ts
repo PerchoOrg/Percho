@@ -178,6 +178,75 @@ export async function setListingCover(
   return { ok: true, coverUrl };
 }
 
+// ─── setListingCoverPhoto ────────────────────────────────────────
+
+const SetCoverPhotoInput = z.object({
+  listingId: z.string().uuid(),
+  photoId: z.string().uuid().nullable(),
+});
+
+export type SetListingCoverPhotoResult =
+  | { ok: true; coverUrl: string | null }
+  | { ok: false; error: string };
+
+/**
+ * Set (or clear) the listing's cover photo from the photo library.
+ *
+ * Pass `photoId = null` to clear. Otherwise look up the photo, confirm it
+ * belongs to this listing (RLS-fenced), and write
+ *   listings.cover_url = photoPublicUrl(storage_path)
+ *
+ * Video cover and photo cover share one column (`cover_url`), so writing a
+ * photo cover automatically supersedes any prior video cover and vice versa.
+ * The agent picks one face for the listing — whichever they last clicked wins.
+ */
+export async function setListingCoverPhoto(
+  listingId: string,
+  photoId: string | null,
+): Promise<SetListingCoverPhotoResult> {
+  const parsed = SetCoverPhotoInput.safeParse({ listingId, photoId });
+  if (!parsed.success) return { ok: false, error: 'invalid_input' };
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: 'unauthorized' };
+
+  let coverUrl: string | null = null;
+
+  if (parsed.data.photoId !== null) {
+    // biome-ignore lint/suspicious/noExplicitAny: stub generated types
+    const { data: photo } = (await (supabase as any)
+      .from('listing_photos')
+      .select('id, storage_path, listing_id')
+      .eq('id', parsed.data.photoId)
+      .eq('listing_id', parsed.data.listingId)
+      .maybeSingle()) as {
+      data: { id: string; storage_path: string; listing_id: string } | null;
+    };
+
+    if (!photo) return { ok: false, error: 'photo_not_found' };
+
+    const { photoPublicUrl } = await import('@/lib/supabase/storage');
+    coverUrl = photoPublicUrl(photo.storage_path);
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
+  const { error } = await (supabase as any)
+    .from('listings')
+    .update({ cover_url: coverUrl })
+    .eq('id', parsed.data.listingId);
+
+  if (error) {
+    console.error('[setListingCoverPhoto] update failed', { error });
+    return { ok: false, error: 'update_failed' };
+  }
+
+  revalidatePath(`/dashboard/listings/${parsed.data.listingId}/edit`);
+  return { ok: true, coverUrl };
+}
+
 // ─── reorderListingVideos ────────────────────────────────────────
 
 const ReorderInput = z.object({

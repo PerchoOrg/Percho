@@ -21,6 +21,7 @@
  * No status polling — photos are 'ready' immediately on insert.
  */
 
+import { setListingCoverPhoto } from '@/app/dashboard/listings/[id]/edit/actions';
 import {
   deleteListingPhoto,
   recordListingPhoto,
@@ -31,7 +32,7 @@ import {
   nextPhotoStoragePath,
   photoPublicUrl,
 } from '@/lib/supabase/storage';
-import { Trash2, Upload } from 'lucide-react';
+import { Star, Trash2, Upload } from 'lucide-react';
 import { useCallback, useRef, useState, useTransition } from 'react';
 
 export interface ListingPhotoRow {
@@ -46,6 +47,7 @@ export interface ListingPhotoRow {
 interface Props {
   listingId: string;
   initialPhotos: ListingPhotoRow[];
+  initialCoverPhotoId: string | null;
 }
 
 const MAX_FILE_BYTES = 10 * 1024 * 1024; // 10 MB — matches bucket policy
@@ -58,10 +60,13 @@ interface PendingItem {
   error?: string;
 }
 
-export function PhotoPanel({ listingId, initialPhotos }: Props) {
+export function PhotoPanel({ listingId, initialPhotos, initialCoverPhotoId }: Props) {
   const [photos, setPhotos] = useState<ListingPhotoRow[]>(initialPhotos);
   const [pending, setPending] = useState<PendingItem[]>([]);
   const [globalError, setGlobalError] = useState<string | null>(null);
+  const [coverPhotoId, setCoverPhotoId] = useState<string | null>(initialCoverPhotoId);
+  const [coverError, setCoverError] = useState<string | null>(null);
+  const [coverPending, setCoverPending] = useState(false);
   const [_, startTransition] = useTransition();
   const inputRef = useRef<HTMLInputElement | null>(null);
 
@@ -143,15 +148,36 @@ export function PhotoPanel({ listingId, initialPhotos }: Props) {
       startTransition(async () => {
         // Optimistic remove.
         const prev = photos;
+        const wasCover = coverPhotoId === photoId;
         setPhotos((p) => p.filter((x) => x.id !== photoId));
+        if (wasCover) setCoverPhotoId(null);
         const res = await deleteListingPhoto({ listingId, photoId });
         if (!res.ok) {
           setGlobalError(`Delete failed: ${res.error}`);
           setPhotos(prev);
+          if (wasCover) setCoverPhotoId(photoId);
         }
       });
     },
-    [listingId, photos],
+    [listingId, photos, coverPhotoId],
+  );
+
+  const handleSetCover = useCallback(
+    (photoId: string | null) => {
+      const previous = coverPhotoId;
+      setCoverPhotoId(photoId); // optimistic
+      setCoverError(null);
+      setCoverPending(true);
+      startTransition(async () => {
+        const result = await setListingCoverPhoto(listingId, photoId);
+        setCoverPending(false);
+        if (!result.ok) {
+          setCoverPhotoId(previous);
+          setCoverError(result.error);
+        }
+      });
+    },
+    [coverPhotoId, listingId],
   );
 
   return (
@@ -162,29 +188,62 @@ export function PhotoPanel({ listingId, initialPhotos }: Props) {
         </div>
       ) : null}
 
+      {coverError ? (
+        <div className="rounded border border-red-400/40 bg-red-950/30 px-3 py-2 text-sm text-red-300">
+          Cover update failed: {coverError}
+        </div>
+      ) : null}
+
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
-        {photos.map((photo) => (
-          <div
-            key={photo.id}
-            className="group relative aspect-[4/3] overflow-hidden rounded border border-bronze/20 bg-ink"
-          >
-            {/* Cross-origin Supabase URL — next/image domain config out of scope. */}
-            <img
-              src={photoPublicUrl(photo.storage_path)}
-              alt={photo.alt_text ?? ''}
-              loading="lazy"
-              className="h-full w-full object-cover"
-            />
-            <button
-              type="button"
-              onClick={() => handleDelete(photo.id)}
-              aria-label="Delete photo"
-              className="absolute top-1.5 right-1.5 hidden rounded bg-ink/80 p-1.5 text-cream/80 hover:text-red-300 group-hover:block"
+        {photos.map((photo) => {
+          const isCover = coverPhotoId === photo.id;
+          return (
+            <div
+              key={photo.id}
+              className={`group relative aspect-[4/3] overflow-hidden rounded border bg-ink ${
+                isCover ? 'border-gold/70 ring-1 ring-gold/40' : 'border-bronze/20'
+              }`}
             >
-              <Trash2 size={14} aria-hidden="true" />
-            </button>
-          </div>
-        ))}
+              {/* Cross-origin Supabase URL — next/image domain config out of scope. */}
+              <img
+                src={photoPublicUrl(photo.storage_path)}
+                alt={photo.alt_text ?? ''}
+                loading="lazy"
+                className="h-full w-full object-cover"
+              />
+
+              {isCover ? (
+                <span className="absolute top-1.5 left-1.5 rounded bg-gold px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-ink">
+                  Cover
+                </span>
+              ) : null}
+
+              <button
+                type="button"
+                onClick={() => handleSetCover(isCover ? null : photo.id)}
+                disabled={coverPending}
+                aria-label={isCover ? 'Clear cover' : 'Set as cover'}
+                title={isCover ? 'Clear cover' : 'Set as cover'}
+                className={`absolute top-1.5 right-9 rounded bg-ink/80 p-1.5 disabled:opacity-50 ${
+                  isCover
+                    ? 'text-gold block'
+                    : 'hidden text-cream/80 hover:text-gold group-hover:block'
+                }`}
+              >
+                <Star size={14} aria-hidden="true" fill={isCover ? 'currentColor' : 'none'} />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleDelete(photo.id)}
+                aria-label="Delete photo"
+                className="absolute top-1.5 right-1.5 hidden rounded bg-ink/80 p-1.5 text-cream/80 hover:text-red-300 group-hover:block"
+              >
+                <Trash2 size={14} aria-hidden="true" />
+              </button>
+            </div>
+          );
+        })}
 
         {pending.map((p) => (
           <div

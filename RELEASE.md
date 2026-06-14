@@ -5,6 +5,37 @@ Format matches the standard release template (Features / Improvements / Bug Fixe
 
 ---
 
+## Release Notes - v0.15.1
+
+**Release Date:** 2026-06-14
+
+Photo-only listings can now pick a cover photo. Until now, only listings with a video could choose a cover; if you only had photos, the listing had no face — its dashboard card showed blank.
+
+### 🐛 Bug Fixes
+
+- **Photo-only listings had no cover** — listings with photos but no video used to render with a blank cover thumbnail on the dashboard. They now always have a cover available.
+
+### 🚀 Features
+
+**Pick any photo as the cover**
+- Hover any photo in the edit page's Photos section and a star icon appears in the top-right of the tile.
+- Click the star to set that photo as the listing's cover. The active cover gets a gold border, a "Cover" badge, and a filled gold star.
+- Click the filled star again to clear the cover.
+- The chosen cover shows up everywhere the listing renders — the dashboard list, the public agent page, the swipe feed, the listing detail page.
+
+**Cover swap is automatic**
+- Each listing has one cover. Setting a photo cover replaces a video cover (and vice versa) — pick whichever face you want, switch any time.
+
+### ✨ Improvements
+
+- The Photos section header now hints that the star icon sets the cover, so the feature is discoverable without reading docs.
+
+### Known Issues
+
+- None.
+
+---
+
 ## Release Notes - v0.15.0
 
 **Release Date:** 2026-06-14
