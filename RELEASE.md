@@ -3,6 +3,16 @@
 Newest at the top. Each release covers a meaningful product change visible to users.
 Format matches the standard release template (Features / Improvements / Bug Fixes / Technical / Known Issues / Metrics).
 
+## v0.25.2 — 2026-06-14
+
+### ✨ Improvements
+- **Edit your name and brokerage from your profile.** Tap your name (or
+  brokerage) on the Profile page to rename it. Changes show up immediately on
+  your public agent page too.
+- **Profile page reorganized.** Your settings and preferences are now above
+  the dashboard / sign-out buttons, so the things you read are on top and
+  the things you tap are at the bottom.
+
 ---
 
 ## Release Notes - v0.18.2

@@ -2,6 +2,41 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-06-14 — phase25.2: profile inline edit (name + brokerage) + reorder
+
+**Objective**: agent can rename `name` + `brokerage` from /profile inline.
+Reorder /profile so info (Preferences, Account settings) sits above action
+buttons (Open dashboard / View public profile / Sign out).
+
+**Actions**:
+- New `app/(public)/profile/_components/EditableAgentIdentity.tsx` — click
+  field → input → Enter/blur saves, Escape cancels. Optimistic local state
+  with revert on server error.
+- New `app/(public)/profile/actions.ts` — `updateAgentIdentity` server action,
+  user-scoped Supabase client (RLS `agent updates own profile` policy already
+  exists). Trims, validates max length, normalizes empty brokerage → null.
+  Revalidates `/profile` and `/a/<slug>`.
+- `app/(public)/profile/page.tsx`: identity card → `<EditableAgentIdentity>`;
+  reordered to identity → Preferences → Account settings → action buttons.
+
+**Decisions**:
+- **Slug stays system-generated, never editable by agent.** Already derived
+  from email local-part in `0002_agent_signup_trigger.sql`; renaming would
+  break already-shared `/a/<slug>` links. UX-wise, agents shouldn't think
+  about URL identity at all (Vivian's point: most slug-edit UIs are noise).
+- **Brokerage kept on /profile.** User asked "需要显示 KW 吗" — keeping it
+  here so it's editable (Compass→KW switches happen). It's already shown on
+  public `/a/<slug>` for buyer trust. Skipping the dedup pass in V1.
+- **Inline edit, no `/profile/edit` sub-route.** One-tap mobile UX. Single
+  source of truth, fewer navigation hops.
+- **Email read-only.** Goes through Supabase Auth's flows from
+  /forgot-password (already documented in the Account settings card).
+
+**Verification**: `npx tsc --noEmit` clean, `npx next build` green.
+
+**Next steps**: User-tests on Vercel preview. Possible follow-ups: phone +
+bio + headshot inline-edit (same pattern), but skip until requested.
+
 **Order**: REVERSE chronological — newest entry at the top. Always insert above existing entries.
 
 ---

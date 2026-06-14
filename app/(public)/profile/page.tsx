@@ -18,6 +18,7 @@
 import { createClient } from '@/lib/supabase/server';
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { EditableAgentIdentity } from './_components/EditableAgentIdentity';
 import { NearbyRadiusPref } from './_components/NearbyRadiusPref';
 
 export const metadata: Metadata = {
@@ -77,16 +78,11 @@ export default async function ProfilePage() {
       <main className="min-h-dvh bg-ink text-cream pb-20 md:pb-0">
         <Header />
         <section className="mx-auto max-w-md px-6 py-8">
-          <div className="rounded-xl border border-cream/10 bg-ink2/40 p-5">
-            <div className="text-cream/60 text-xs uppercase tracking-wider">Signed in as agent</div>
-            <div className="mt-2 font-serif text-2xl text-cream">
-              {agent.name ?? user.email ?? 'Agent'}
-            </div>
-            {agent.brokerage ? (
-              <div className="text-cream/70 text-sm">{agent.brokerage}</div>
-            ) : null}
-            {user.email ? <div className="mt-3 text-cream/60 text-xs">{user.email}</div> : null}
-          </div>
+          <EditableAgentIdentity
+            initialName={agent.name ?? user.email ?? 'Agent'}
+            initialBrokerage={agent.brokerage}
+            email={user.email ?? ''}
+          />
 
           <div className="mt-6">
             <NearbyRadiusPref />
