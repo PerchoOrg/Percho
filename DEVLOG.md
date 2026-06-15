@@ -2,6 +2,51 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-06-15 — Browse feed: HD-first HLS + first-tap auto-unmute
+
+**Objective**: Two complaints from owner: (1) videos look low-quality on the
+swipe feed, (2) sound should be on by default.
+
+**Root cause — quality**: hls.js defaults to starting playback at the lowest
+ladder rung and then ABR-climbs. On a fast-swipe Tok-style feed the user
+moves to the next card before ABR has time to climb, so cards effectively
+play at the bottom rung the whole time. Additionally `capLevelToPlayerSize`
+defaults to true, which caps quality to the rendered pixel size — desktop's
+9:16-in-16:9 letterbox renders smallish even on a big monitor.
+
+**Root cause — sound**: code already initializes `muted=false`, but every
+modern browser blocks autoplay-with-sound without sticky activation. Direct
+visits to /browse fall back to muted via the existing catch handler. There's
+no way around the browser policy — the only fix is to upgrade the *next*
+user gesture into the unmute trigger (TikTok web does this).
+
+**Actions**:
+- `BrowseFeed.tsx` Card HLS init: `capLevelToPlayerSize: false` +
+  `MANIFEST_PARSED` handler that sets `hls.nextLevel` to the top ladder rung.
+  ABR can still downgrade on real network pressure.
+- `BrowseFeed` parent: added `wasAutoplayBlockedRef`. When the Card's
+  `onAutoplayBlocked` fires (autoplay-with-sound rejected → muted fallback),
+  flip the ref and register one-shot `pointerdown` + `keydown` listeners on
+  window. The next user gesture (tap, swipe, scroll-trigger keydown)
+  auto-unmutes globally, so users don't have to find the bottom-bar Sound
+  button.
+
+**Verification**: `npx tsc --noEmit` clean. Pushed to main.
+
+**Risks / follow-ups**:
+- HD-first means slightly slower first-frame on weak networks (top-rung
+  segments are larger). Vivian's demo audience is on broadband, low priority
+  to revisit. If real users complain, swap `nextLevel = top` for a smarter
+  policy (e.g. start at level N-2, not N-1).
+- The auto-unmute only fires on the *next* gesture after a blocked autoplay.
+  If the user lands on /browse, sees muted, then immediately taps the Sound
+  button, the listener fires once and the ref is consumed — no double-toggle
+  bug because `setMuted(false)` runs before the click handler's `setMuted(m
+  => !m)` reads stale state. Verified by reading the React batching
+  semantics, not by integration test.
+
+---
+
 ## 2026-06-14 — Community form: inline per-field validation errors
 
 **Objective**: When a community-create / -update server action fails zod

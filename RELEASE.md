@@ -3,6 +3,12 @@
 Newest at the top. Each release covers a meaningful product change visible to users.
 Format matches the standard release template (Features / Improvements / Bug Fixes / Technical / Known Issues / Metrics).
 
+## v0.28.2 — 2026-06-15
+
+### ✨ Improvements
+- **Sharper video on the swipe feed.** Videos now start at full HD instead of climbing up from the lowest quality. On fast swipes the picture stops looking soft.
+- **Sound turns on with your first tap.** The browser still requires a tap before it'll let any website play sound, but now any tap, swipe, or key press on the feed flips sound on automatically — you don't have to hunt for the Sound button.
+
 ## v0.28.1 — 2026-06-14
 
 ### 🐛 Bug Fixes

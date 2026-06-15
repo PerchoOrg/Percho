@@ -577,7 +577,21 @@ function Card({
     if (video.canPlayType('application/vnd.apple.mpegurl')) {
       video.src = src;
     } else if (Hls.isSupported()) {
-      const hls = new Hls({ maxBufferLength: 20, maxMaxBufferLength: 30 });
+      // capLevelToPlayerSize:false → don't cap quality to the player's pixel
+      //   size (desktop letterbox renders smallish but we still want HD).
+      // MANIFEST_PARSED → jump to the top level for first playback so users
+      //   don't see the lowest-bitrate ladder rung. ABR can still downgrade
+      //   on real network pressure afterwards.
+      const hls = new Hls({
+        maxBufferLength: 20,
+        maxMaxBufferLength: 30,
+        capLevelToPlayerSize: false,
+      });
+      hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        if (hls.levels.length > 0) {
+          hls.nextLevel = hls.levels.length - 1;
+        }
+      });
       hls.loadSource(src);
       hls.attachMedia(video);
       hlsRef.current = hls;
@@ -886,6 +900,24 @@ export function BrowseFeed({
   // calls setMuted(true) to fall back to muted playback. In either case the
   // bottom-bar Sound button reflects the actual state.
   const [muted, setMuted] = useState(false);
+  // Set when autoplay-with-sound was blocked and we fell back to muted. The
+  // next genuine user gesture (tap/swipe/keydown) on the feed flips us back
+  // to unmuted — TikTok-style "first interaction enables sound" so users
+  // don't have to find the Sound button.
+  const wasAutoplayBlockedRef = useRef(false);
+  useEffect(() => {
+    if (!muted || !wasAutoplayBlockedRef.current) return;
+    const unmuteOnce = () => {
+      wasAutoplayBlockedRef.current = false;
+      setMuted(false);
+    };
+    window.addEventListener('pointerdown', unmuteOnce, { once: true, passive: true });
+    window.addEventListener('keydown', unmuteOnce, { once: true });
+    return () => {
+      window.removeEventListener('pointerdown', unmuteOnce);
+      window.removeEventListener('keydown', unmuteOnce);
+    };
+  }, [muted]);
   const [leadOpen, setLeadOpen] = useState(false);
   const cardRefs = useRef<Map<number, HTMLElement>>(new Map());
   const scrollerRef = useRef<HTMLDivElement | null>(null);
@@ -1093,7 +1125,10 @@ export function BrowseFeed({
               setPaused={isThisActive ? setPausedActive : () => {}}
               poolSize={poolFor(card, cardSource)}
               muted={muted}
-              onAutoplayBlocked={() => setMuted(true)}
+              onAutoplayBlocked={() => {
+                wasAutoplayBlockedRef.current = true;
+                setMuted(true);
+              }}
               onSwipe={(delta) => {
                 // Horizontal swipe cycles within the current source's b-roll pool.
                 const pool = poolFor(card, cardSource);
