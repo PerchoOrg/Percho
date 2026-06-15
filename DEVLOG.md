@@ -2,6 +2,27 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-06-15 — Nearby pool: desktop wheel + arrow buttons, drop blurb
+
+**Objective**: Owner: (1) on Mac the Nearby pool can't be advanced — touch
+events don't fire on a mouse so the new vertical-swipe gesture is mobile-only;
+(2) the gold pill is too long, drop the per-category blurb and keep only
+the title.
+
+**Actions** (`BrowseFeed.tsx`):
+- Removed `sel.line2` from the gold pill — title-only, single-line.
+- Added a wheel/trackpad listener on the outer scroller that activates
+  only when `activeSource !== 'hero'`. Wheel events with |deltaY| ≥ 8
+  cycle the pool by ±1, debounced with a 350ms lock so a single trackpad
+  flick doesn't blast through the whole pool. preventDefault() stops the
+  outer snap-y from jumping to the next listing.
+- Added desktop-only (`md:flex`) up/down arrow buttons centered top/bottom
+  of the card while in Nearby mode + pool > 1. Mirrors the existing
+  PhotoCard left/right arrow pattern. `stopPropagation` so the click
+  doesn't toggle play/pause.
+
+**Verification**: `npx tsc --noEmit` clean; `npm run build` green.
+
 ## 2026-06-15 — Nearby pool: vertical swipe + single category pill
 
 **Objective**: Owner feedback on /browse Nearby mode: (1) the pool felt

@@ -744,21 +744,56 @@ function Card({
        * top-left. Replaces the older dark-card source overlay AND the
        * bottom-caption gold pill that duplicated this same data. Only
        * shown in Nearby mode; hero is unlabelled. Pool counter sits in
-       * the same pill so the user knows their position in the feed. */}
+       * the same pill so the user knows their position in the feed.
+       * Phase 28.2 (2026-06-15): the per-category blurb (sel.line2) is
+       * dropped — the title alone reads cleaner and the blurb was
+       * pushing the pill into a multi-line wrap on long captions. */}
       {source === 'nearby' && sel.category && (
-        <div className="absolute top-16 left-5 z-10 inline-flex max-w-[80%] items-center gap-2 rounded-full border border-gold/40 bg-gold/15 px-3 py-1 backdrop-blur">
+        <div className="absolute top-16 left-5 z-10 inline-flex items-center gap-2 rounded-full border border-gold/40 bg-gold/15 px-3 py-1 backdrop-blur">
           <span className="font-medium text-[11px] text-gold uppercase tracking-wider">
             {sel.line1}
           </span>
-          {sel.line2 && (
-            <span className="truncate text-[11px] text-cream/80">· {sel.line2}</span>
-          )}
           {poolSize > 1 && (
             <span className="rounded-full bg-cream/15 px-1.5 py-0.5 font-medium text-[10px] text-cream/90 tabular-nums">
               {(cycleIdx % poolSize) + 1}/{poolSize}
             </span>
           )}
         </div>
+      )}
+
+      {/* Phase 28.2 (2026-06-15): desktop nav arrows for the Nearby pool.
+       * Touch events don't fire on a Mac mouse, so the vertical-swipe
+       * gesture is mobile-only. Up/Down arrows (md:flex) mirror the
+       * PhotoCard's left/right arrow pattern. Hidden when pool ≤ 1 or
+       * when not in Nearby mode. Stops propagation so the click doesn't
+       * also trigger the tap-to-pause handler. */}
+      {source === 'nearby' && poolSize > 1 && (
+        <>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onSwipe(-1);
+            }}
+            aria-label="Previous nearby video"
+            className="-translate-x-1/2 absolute top-20 left-1/2 z-10 hidden h-10 w-10 items-center justify-center rounded-full border border-cream/20 bg-ink/55 text-cream backdrop-blur transition-colors hover:border-gold hover:text-gold md:flex"
+            style={{ touchAction: 'manipulation' }}
+          >
+            ‹
+          </button>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onSwipe(1);
+            }}
+            aria-label="Next nearby video"
+            className="-translate-x-1/2 absolute bottom-32 left-1/2 z-10 hidden h-10 w-10 items-center justify-center rounded-full border border-cream/20 bg-ink/55 text-cream backdrop-blur transition-colors hover:border-gold hover:text-gold md:flex"
+            style={{ touchAction: 'manipulation', transform: 'translateX(-50%) rotate(180deg)' }}
+          >
+            ‹
+          </button>
+        </>
       )}
 
       {paused && shouldMount && (
@@ -1081,6 +1116,36 @@ export function BrowseFeed({
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [active, activeSource, switchSource]);
+
+  // Phase 28.2 (2026-06-15): desktop wheel/trackpad cycles the Nearby pool.
+  // Without this, wheeling on a Mac scrolls the outer snap-y feed and jumps
+  // to the next listing — the same UX bug the user reported. We intercept
+  // wheel only while in Nearby mode, debounce by ignoring sub-threshold deltas
+  // and a 350ms cool-down, and step through the pool by ±1.
+  const wheelLockRef = useRef<number>(0);
+  useEffect(() => {
+    if (activeSource !== 'hero') {
+      const root = scrollerRef.current;
+      if (!root || !active) return;
+      const id = active.listing.id;
+      const pool = poolFor(active, activeSource);
+      if (pool <= 1) return;
+      const onWheel = (e: WheelEvent) => {
+        if (Math.abs(e.deltaY) < 8) return;
+        e.preventDefault();
+        const now = Date.now();
+        if (now - wheelLockRef.current < 350) return;
+        wheelLockRef.current = now;
+        const delta = e.deltaY > 0 ? 1 : -1;
+        setCycleByCard((c) => {
+          const cur = c[id] ?? 0;
+          return { ...c, [id]: (((cur + delta) % pool) + pool) % pool };
+        });
+      };
+      root.addEventListener('wheel', onWheel, { passive: false });
+      return () => root.removeEventListener('wheel', onWheel);
+    }
+  }, [active, activeSource]);
 
   return (
     <div className="relative mx-auto h-screen w-full overflow-hidden bg-black md:w-[min(430px,calc(100vh*9/16))] md:shadow-2xl md:shadow-black/50">

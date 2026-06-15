@@ -3,6 +3,14 @@
 Newest at the top. Each release covers a meaningful product change visible to users.
 Format matches the standard release template (Features / Improvements / Bug Fixes / Technical / Known Issues / Metrics).
 
+## v0.28.4 — 2026-06-15
+
+### 🐛 Bug Fixes
+- **Nearby videos now advance on Mac/desktop.** Previously the pool only responded to a finger-swipe, which doesn't exist on a laptop trackpad or mouse. Now scroll-wheel / two-finger trackpad scroll cycles through the videos, and on-screen up/down buttons appear in the middle of the card so a click works too.
+
+### ✨ Improvements
+- **Shorter gold tag.** The neighborhood pill in the top-left corner now shows just the category name (e.g. "Walk the Block") — the long descriptive blurb that wrapped onto a second line has been removed.
+
 ## v0.28.3 — 2026-06-15
 
 ### ✨ Improvements
