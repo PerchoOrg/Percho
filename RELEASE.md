@@ -3,6 +3,13 @@
 Newest at the top. Each release covers a meaningful product change visible to users.
 Format matches the standard release template (Features / Improvements / Bug Fixes / Technical / Known Issues / Metrics).
 
+## v0.28.3 — 2026-06-15
+
+### ✨ Improvements
+- **Nearby videos now swipe up-and-down, like the rest of the feed.** Tap Nearby on a listing and the neighborhood videos stack vertically — the same gesture you already use to move between listings, just inside one listing's pool. No more switching wrist directions mid-session.
+- **Cleaner overlay.** The duplicated "Walk the Block" labels are gone; each Nearby video now shows a single gold category pill at the top-left of the screen (with a small "1/3" counter so you know your position in the pool). The price and address at the bottom are left alone — your eye goes there for the listing, top-left for the neighborhood story.
+- **No more redundant "NEARBY" banner.** The standalone label at the top center has been removed — the active gold Nearby button on the right rail already tells you which mode you're in.
+
 ## v0.28.2 — 2026-06-15
 
 ### ✨ Improvements

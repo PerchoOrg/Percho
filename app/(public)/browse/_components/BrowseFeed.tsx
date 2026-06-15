@@ -658,9 +658,6 @@ function Card({
     }
   };
 
-  const overlayLine1 = source === 'hero' ? null : sel.line1;
-  const overlayLine2 = source === 'hero' ? null : sel.line2;
-
   return (
     <section
       ref={(el) => cardRef(el)}
@@ -668,7 +665,13 @@ function Card({
     >
       {/* biome-ignore lint/a11y/useKeyWithClickEvents: tap-to-play */}
       <div
-        className="absolute inset-0 touch-pan-y"
+        // Phase 28.1 (2026-06-15): in Nearby mode the inner div owns the
+        // vertical gesture — `touch-none` blocks the browser's native pan so
+        // swipes never reach the outer listing-feed scroller. In hero mode we
+        // keep `touch-pan-y` so vertical pans pass through to the snap-y
+        // listing scroller as before, and only horizontal swipes (heroVideos
+        // pool) are intercepted here.
+        className={`absolute inset-0 ${source === 'nearby' ? 'touch-none' : 'touch-pan-y'}`}
         onClick={onTap}
         onTouchStart={(e) => {
           if (e.touches.length !== 1) return;
@@ -683,7 +686,18 @@ function Card({
           if (!t) return;
           const dx = t.clientX - start.x;
           const dy = t.clientY - start.y;
-          // Treat as horizontal swipe only if |dx| dominant + threshold met
+          if (source === 'nearby') {
+            // Vertical swipe cycles within the nearby pool — same gesture as
+            // moving between listings, so the pool feels like a feed.
+            if (Math.abs(dy) > 50 && Math.abs(dy) > Math.abs(dx) * 1.5) {
+              e.preventDefault();
+              e.stopPropagation();
+              onSwipe(dy < 0 ? 1 : -1);
+            }
+            return;
+          }
+          // Hero: horizontal swipe cycles heroVideos (when present); vertical
+          // pans fall through to the outer snap scroller for next listing.
           if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) {
             e.preventDefault();
             e.stopPropagation();
@@ -726,21 +740,23 @@ function Card({
       <div className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-black/70 via-black/30 to-transparent" />
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-72 bg-gradient-to-t from-black/85 via-black/50 to-transparent" />
 
-      {/* Source overlay (schools/nearby/community) — kept top-left so the
-       * bottom area is fully owned by the Xiaohongshu-style caption block. */}
-      {overlayLine1 && (
-        <div className="absolute top-16 left-5 max-w-[70%] rounded-lg border border-cream/20 bg-ink/60 px-3 py-2 backdrop-blur">
-          <div className="flex items-center justify-between gap-2">
-            <div className="text-cream text-sm">{overlayLine1}</div>
-            {poolSize > 1 && (
-              <div className="rounded-full bg-cream/15 px-2 py-0.5 font-medium text-[10px] text-cream/90 tabular-nums">
-                {(cycleIdx % poolSize) + 1}/{poolSize}
-              </div>
-            )}
-          </div>
-          {overlayLine2 && <div className="mt-0.5 text-cream/70 text-xs">{overlayLine2}</div>}
+      {/* Phase 28.1 (2026-06-15): single category pill — gold-on-gold,
+       * top-left. Replaces the older dark-card source overlay AND the
+       * bottom-caption gold pill that duplicated this same data. Only
+       * shown in Nearby mode; hero is unlabelled. Pool counter sits in
+       * the same pill so the user knows their position in the feed. */}
+      {source === 'nearby' && sel.category && (
+        <div className="absolute top-16 left-5 z-10 inline-flex max-w-[80%] items-center gap-2 rounded-full border border-gold/40 bg-gold/15 px-3 py-1 backdrop-blur">
+          <span className="font-medium text-[11px] text-gold uppercase tracking-wider">
+            {sel.line1}
+          </span>
+          {sel.line2 && (
+            <span className="truncate text-[11px] text-cream/80">· {sel.line2}</span>
+          )}
           {poolSize > 1 && (
-            <div className="mt-1 text-[10px] text-cream/40 uppercase tracking-wider">← swipe →</div>
+            <span className="rounded-full bg-cream/15 px-1.5 py-0.5 font-medium text-[10px] text-cream/90 tabular-nums">
+              {(cycleIdx % poolSize) + 1}/{poolSize}
+            </span>
           )}
         </div>
       )}
@@ -762,18 +778,6 @@ function Card({
         className="absolute left-4 right-20 text-cream"
         style={{ bottom: 'max(1rem, env(safe-area-inset-bottom))' }}
       >
-        {/* Phase 28: category pill — shows the 12-category label + blurb
-         * for community videos in the Nearby pool. Sits above price so
-         * users immediately know what they're looking at when the feed
-         * cycles through (e.g. "School Run · Morning departure timing"). */}
-        {source === 'nearby' && sel.category && (
-          <div className="mb-2 inline-flex max-w-full items-center gap-2 rounded-full border border-gold/40 bg-gold/15 px-3 py-1 backdrop-blur">
-            <span className="font-medium text-[11px] text-gold uppercase tracking-wider">
-              {sel.line1}
-            </span>
-            {sel.line2 && <span className="truncate text-[11px] text-cream/80">· {sel.line2}</span>}
-          </div>
-        )}
         <div className="font-serif text-2xl text-cream leading-tight tracking-tight drop-shadow">
           {formatPrice(card.listing.price)}
         </div>
@@ -1057,13 +1061,16 @@ export function BrowseFeed({
       const id = active.listing.id;
       const pool = poolFor(active, activeSource);
       if (pool <= 1) return;
-      if (e.key === 'ArrowRight') {
+      // Phase 28.1 (2026-06-15): in Nearby mode the swipe gesture is now
+      // vertical, so accept ArrowUp/Down as the keyboard equivalent.
+      // Left/Right are kept as a desktop power-user fallback.
+      if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
         e.preventDefault();
         setCycleByCard((c) => {
           const cur = c[id] ?? 0;
           return { ...c, [id]: (cur + 1) % pool };
         });
-      } else if (e.key === 'ArrowLeft') {
+      } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
         e.preventDefault();
         setCycleByCard((c) => {
           const cur = c[id] ?? 0;
@@ -1192,16 +1199,10 @@ export function BrowseFeed({
         )}
       </div>
 
-      {/* Active source label — top center. Phase 28: only one b-roll
-       * source remaining ("Nearby"), so the label is purely a hint that
-       * the user is viewing community videos rather than the listing
-       * hero. The category pill on each video carries the per-video
-       * detail. */}
-      {activeSource === 'nearby' && (
-        <div className="-translate-x-1/2 absolute top-14 left-1/2 z-10 rounded-full border border-cream/20 bg-ink/60 px-3 py-1 backdrop-blur">
-          <span className="text-cream/80 text-xs uppercase tracking-wider">Nearby</span>
-        </div>
-      )}
+      {/* Phase 28.1 (2026-06-15): centered NEARBY label removed — the
+       * gold category pill on each card already tells the user they're
+       * in the Nearby pool, and the right-rail Nearby button is in its
+       * active gold state, so the standalone label was redundant. */}
 
       {/* Top header — Xiaohongshu video pattern: [Back] ... [Search] [Share].
        * Back goes to /browse (the grid). When viewing a b-roll source, Back

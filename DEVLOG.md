@@ -2,6 +2,33 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-06-15 — Nearby pool: vertical swipe + single category pill
+
+**Objective**: Owner feedback on /browse Nearby mode: (1) the pool felt
+foreign because it cycled with horizontal swipes while listings cycle
+vertically, (2) "Walk the Block" rendered twice (dark top-left info card +
+gold pill above price), (3) the redundant centered "NEARBY" hint at top.
+
+**Actions** (`app/(public)/browse/_components/BrowseFeed.tsx`):
+- Inner Card `onTouchEnd` now branches on `source`. In `nearby` mode the
+  vertical-axis swipe (|dy| dominant + 50px threshold) drives `onSwipe`;
+  the inner div uses `touch-none` to prevent the gesture leaking into
+  the outer snap-y listing scroller. Hero mode keeps horizontal-only
+  intercept + `touch-pan-y` so vertical pans still travel up to the
+  listing scroller.
+- ArrowDown/ArrowUp added as keyboard equivalents for the pool cycle.
+- Removed the dark `bg-ink/60` source overlay box (top-left).
+- Removed the bottom-of-caption gold pill (it duplicated the same
+  category data).
+- Single gold-bordered pill now lives at top-left (`top-16 left-5`,
+  `border-gold/40 bg-gold/15`) and absorbs the pool position counter
+  (`N/M`) on the same row.
+- Removed the centered "NEARBY" pill at the top of the feed — the
+  active gold Nearby button on the right rail + the per-card category
+  pill already convey the same state.
+
+**Verification**: `npx tsc --noEmit` clean; `npm run build` green.
+
 ## 2026-06-15 — Browse feed: HD-first HLS + first-tap auto-unmute
 
 **Objective**: Two complaints from owner: (1) videos look low-quality on the
