@@ -2,6 +2,29 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-06-17 — Phase 27.7b: /saved gets a Communities tab
+
+**Objective**: now that communities are saveable (Phase 27.7), the
+`/saved` page has to actually surface them. Previously /saved was
+listings-only with no awareness of saved_communities.
+
+**Changes**:
+- `app/(public)/saved/_actions.ts` — added `fetchSavedCommunitiesAction`
+  + `SavedCommunityCard` type. Pulls saved community ids, joins to
+  `communities`, then takes the first ready video per community via
+  `community_video_membership` for the cover thumbnail. Single
+  service-role round-trip per join (3 queries total).
+- `app/(public)/saved/_components/SavedClient.tsx` — rewrote as a
+  two-tab layout (Listings / Communities) with per-tab counts. Each
+  tab has its own empty state CTA (Listings → /browse, Communities →
+  /communities). Community card is 9:16 cover (Cloudflare poster) →
+  links to `/c/<slug>/feed`.
+
+Both tabs hydrate in parallel on mount; loading state is shared so we
+don't double-flicker.
+
+**Verification**: `tsc --noEmit` clean, `next build` green.
+
 ## 2026-06-17 — Phase 27.7: community video swipe feed + community save
 
 **Objective**: two buyer bugs reported after Path-3 demo.

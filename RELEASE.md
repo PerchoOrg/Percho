@@ -3,6 +3,11 @@
 Newest at the top. Each release covers a meaningful product change visible to users.
 Format matches the standard release template (Features / Improvements / Bug Fixes / Technical / Known Issues / Metrics).
 
+## v0.31.1 — 2026-06-17
+
+### ✨ Features
+- **Saved Communities now show up on the Saved page.** The Saved page split into two tabs — Listings and Communities — each with its own count and its own empty state. Tap any saved community and you drop straight into its swipe feed. Cover thumbnail is the first video in that community, so even at-a-glance the page reads as "neighborhoods I'm watching" rather than a flat bookmark list.
+
 ## v0.31.0 — 2026-06-17
 
 ### ✨ Features
