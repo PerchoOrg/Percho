@@ -281,16 +281,45 @@ export default async function DashboardHomePage({ searchParams }: PageProps) {
                 key={l.id}
                 className="flex flex-col gap-4 rounded-2xl border border-cream/5 bg-ink2/60 p-3 sm:flex-row sm:p-4"
               >
-                {/* Cover */}
-                <div className="relative h-40 w-full shrink-0 overflow-hidden rounded-xl bg-ink sm:h-28 sm:w-44">
-                  {cover ? (
-                    <img src={cover} alt="" className="h-full w-full object-cover" loading="lazy" />
-                  ) : (
-                    <div className="grid h-full w-full place-items-center text-cream/30 text-xs">
-                      No cover
-                    </div>
-                  )}
-                </div>
+                {/* Cover — clickable for published listings (same target as View ↗) */}
+                {isPub && publicPath ? (
+                  <Link
+                    href={`${publicPath}?from=dashboard`}
+                    target="_blank"
+                    rel="noopener"
+                    className="group relative h-40 w-full shrink-0 overflow-hidden rounded-xl bg-ink sm:h-28 sm:w-44"
+                    title="Open public listing ↗"
+                  >
+                    {cover ? (
+                      <img
+                        src={cover}
+                        alt=""
+                        className="h-full w-full object-cover transition group-hover:opacity-90"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div className="grid h-full w-full place-items-center text-cream/30 text-xs">
+                        No cover
+                      </div>
+                    )}
+                    <span
+                      className="pointer-events-none absolute right-2 top-2 rounded-full bg-ink/70 px-2 py-0.5 text-[10px] text-cream/80 opacity-0 transition group-hover:opacity-100"
+                      aria-hidden="true"
+                    >
+                      Open ↗
+                    </span>
+                  </Link>
+                ) : (
+                  <div className="relative h-40 w-full shrink-0 overflow-hidden rounded-xl bg-ink sm:h-28 sm:w-44">
+                    {cover ? (
+                      <img src={cover} alt="" className="h-full w-full object-cover" loading="lazy" />
+                    ) : (
+                      <div className="grid h-full w-full place-items-center text-cream/30 text-xs">
+                        No cover
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* Body */}
                 <div className="min-w-0 flex-1">

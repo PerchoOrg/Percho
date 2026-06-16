@@ -2,6 +2,23 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-06-17 — Phase 27.9: dashboard listing cover thumbnail is clickable
+
+**What:** On `/dashboard`, the cover thumbnail on each listing row was
+purely decorative — only the "View ↗" button on the right opened the
+public page. Wrapped the cover in a `<Link>` (same target as View:
+`/v/{agentSlug}/{listingSlug}?from=dashboard`, opens new tab) for
+published listings. Drafts/archived rows keep the plain `<div>` since
+they have no public URL. Added a subtle "Open ↗" pill that fades in on
+hover so the affordance is discoverable.
+
+**Files:** `app/dashboard/page.tsx`.
+
+**Verify:** `tsc --noEmit` clean. Hovering a published listing's cover
+shows the Open pill and cursor changes to pointer; click opens the
+public listing page in a new tab. Draft/archived covers remain
+non-interactive.
+
 ## 2026-06-17 — Phase 27.8: unify badge format on /c/[slug] header
 
 **What:** Both badges (videos count + active listings count) now share the

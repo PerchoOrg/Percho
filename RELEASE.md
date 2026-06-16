@@ -3,6 +3,14 @@
 Newest at the top. Each release covers a meaningful product change visible to users.
 Format matches the standard release template (Features / Improvements / Bug Fixes / Technical / Known Issues / Metrics).
 
+## v0.32.8 — 2026-06-17
+
+### ✨ Improvements
+- **Dashboard cover thumbnails are now clickable.** On your listings list,
+  tap the cover image to open the public listing page in a new tab — same
+  destination as the "View" button on the right. Drafts and archived
+  listings stay non-clickable since they don't have a public link yet.
+
 ## v0.32.7 — 2026-06-17
 
 ### ✨ Improvements
