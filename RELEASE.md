@@ -3,6 +3,16 @@
 Newest at the top. Each release covers a meaningful product change visible to users.
 Format matches the standard release template (Features / Improvements / Bug Fixes / Technical / Known Issues / Metrics).
 
+## v0.32.9 — 2026-06-17
+
+### ✨ Improvements
+- **Drafts and archived listings are now previewable from the dashboard.**
+  Tapping a draft's cover (or the new "Preview" button) opens the same
+  full-screen video feed buyers see, with a banner at the top reminding
+  you it's a draft and only you can see it. Archived listings open the
+  same preview with a muted banner explaining the public link is
+  offline — no more dead-ends.
+
 ## v0.32.8 — 2026-06-17
 
 ### ✨ Improvements

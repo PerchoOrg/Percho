@@ -2,6 +2,42 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-06-17 — Phase 27.10: dashboard listing preview route (draft / archived viewable)
+
+**What:** Follow-up to 27.9. Cover thumbnail (and the new "Preview" button)
+for non-published rows now route to `/dashboard/listings/[id]/preview` —
+an owner-only route that renders the same `BrowseFeed` as the public page
+with a status banner pinned at the top:
+- **draft** → bronze banner, "Draft preview — only you can see this. Publish it to get a shareable link."
+- **archived** → muted cream banner, "Archived — the public link is offline. Restore the listing to publish it again." Cover is dimmed to 60% in the dashboard list.
+- **published** → preview is reachable too (currently no UI links there since cover already opens the public page); banner offers an "Open public ↗" shortcut for parity.
+
+Refactor: extracted `fetchPageData` + the BrowseCard builder out of
+`app/(public)/v/[agentSlug]/[listingSlug]/page.tsx` into
+`lib/listing-feed/load.ts` (`loadListingFeedBySlug`,
+`loadListingFeedById`, `buildListingCards`, `loadListingPhotos`). Public
+page is now a thin wrapper; ISR (`revalidate = 3600`) preserved. Preview
+page is `force-dynamic` and owner-checked (RLS + explicit agent_id match
+for clarity); wraps `<VideoFeed>` in `fixed inset-0` to escape the
+dashboard layout's `max-w-6xl px-6 py-8` so scroll-snap stays intact.
+
+**Files:**
+- new: `lib/listing-feed/load.ts`
+- new: `app/dashboard/listings/[id]/preview/page.tsx`
+- refactor: `app/(public)/v/[agentSlug]/[listingSlug]/page.tsx` (377 → 100 lines)
+- updated: `app/dashboard/page.tsx` (cover routing by status; "Preview" button replaces "View ↗" for non-published; archived cover dimmed)
+
+**Decisions:**
+- Picked option B (separate dashboard preview route) over option A
+  (owner-aware public page) so `/v/...` keeps its ISR cache. Public page
+  cost stays flat as traffic grows.
+- Banner uses fixed positioning + per-tone class objects — Tailwind
+  doesn't support `border-current/30` opacity modifiers so each tone
+  ships its own border / pill / button classes (caught during initial
+  pass before push).
+
+**Verify:** `tsc --noEmit` clean; `next build` green; `/dashboard/listings/[id]/preview` shows up at 913 B / 270 kB First Load. Manual: dashboard published cover still opens `/v/...` in new tab; draft cover opens preview with bronze banner; archived cover opens preview with muted banner; cross-agent access to a foreign id returns 404 (RLS + explicit owner check).
+
 ## 2026-06-17 — Phase 27.9: dashboard listing cover thumbnail is clickable
 
 **What:** On `/dashboard`, the cover thumbnail on each listing row was
