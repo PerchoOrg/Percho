@@ -66,9 +66,9 @@
   .right-rail .btn{width:44px;height:44px;border-radius:50%;background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;font-size:18px}
   .right-rail .lbl{font-size:11px;color:#fff;margin-top:-12px}
 
-  /* Community chip */
+  /* Community chip — top-left, under status bar */
   .chip{
-    position:absolute;left:16px;bottom:24px;z-index:6;
+    position:absolute;left:16px;top:56px;z-index:6;
     display:flex;align-items:center;gap:10px;
     padding:8px 14px 8px 8px;border-radius:999px;
     background:rgba(15,15,18,.78);backdrop-filter:blur(12px);
@@ -107,8 +107,10 @@
   .sheet .vid-strip .v{flex:0 0 130px;height:170px;border-radius:10px;background-size:cover;background-position:center;position:relative;overflow:hidden}
   .sheet .vid-strip .v .lab{position:absolute;left:8px;bottom:8px;font-size:11px;color:#fff;font-weight:600;text-shadow:0 1px 2px rgba(0,0,0,.8)}
   .sheet .vid-strip .v::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,0) 50%,rgba(0,0,0,.7) 100%)}
+  .sheet .vid-strip .v{cursor:pointer}
+  .sheet .vid-strip .v .play{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:36px;height:36px;border-radius:50%;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;font-size:14px;color:#fff;z-index:2}
   .sheet .listings-mini{display:flex;gap:8px;overflow-x:auto;padding-bottom:6px;margin:0 -16px 14px;padding-left:16px}
-  .sheet .listings-mini .l{flex:0 0 150px;background:#222226;border-radius:10px;overflow:hidden}
+  .sheet .listings-mini .l{flex:0 0 150px;background:#222226;border-radius:10px;overflow:hidden;cursor:pointer}
   .sheet .listings-mini .l .img{height:90px;background-size:cover;background-position:center}
   .sheet .listings-mini .l .info{padding:8px}
   .sheet .listings-mini .l .p{font-size:14px;font-weight:700}
@@ -196,6 +198,41 @@
   .scene{display:none}
   .scene.active{display:block}
 
+  /* L2 fullscreen page (community feed / listing detail) — slides over the screen */
+  .l2{
+    position:absolute;inset:0;z-index:20;
+    background:#000;display:flex;flex-direction:column;
+    transform:translateX(100%);transition:transform .28s cubic-bezier(.32,.72,.32,1);
+    pointer-events:none
+  }
+  .l2.open{transform:translateX(0);pointer-events:auto}
+  .l2 .l2-top{
+    height:48px;flex-shrink:0;display:flex;align-items:center;gap:8px;
+    padding:0 14px;background:rgba(0,0,0,.55);backdrop-filter:blur(10px);
+    color:#fff;font-size:13px;border-bottom:1px solid rgba(255,255,255,.08);z-index:3
+  }
+  .l2 .l2-top .back{display:flex;align-items:center;gap:6px;cursor:pointer;color:#fff;font-weight:600}
+  .l2 .l2-top .back .arr{font-size:18px}
+  .l2 .l2-top .back .lab{font-size:12px;color:#cbd5e1}
+  .l2 .l2-body{flex:1;position:relative;overflow:hidden}
+  .l2 .l2-vid{position:absolute;inset:0;background-size:cover;background-position:center}
+  .l2 .l2-vid::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.3) 0%,rgba(0,0,0,0) 30%,rgba(0,0,0,0) 60%,rgba(0,0,0,.85) 100%)}
+  .l2 .l2-meta{position:absolute;left:16px;right:80px;bottom:24px;color:#fff;z-index:2}
+  .l2 .l2-meta .t{font-size:20px;font-weight:700}
+  .l2 .l2-meta .s{font-size:13px;color:#e5e7eb;margin-top:4px}
+  .l2 .l2-meta .stats{font-size:13px;color:#cbd5e1;margin-top:6px}
+  .l2 .l2-rail{position:absolute;right:12px;bottom:80px;display:flex;flex-direction:column;gap:18px;z-index:2;align-items:center}
+  .l2 .l2-rail .b{width:44px;height:44px;border-radius:50%;background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;font-size:18px;color:#fff}
+  .l2 .l2-tag{position:absolute;left:16px;top:14px;z-index:2;background:rgba(0,0,0,.55);backdrop-filter:blur(10px);padding:6px 12px;border-radius:999px;font-size:12px;color:#fff;border:1px solid rgba(255,255,255,.12)}
+
+  /* Debug HUD — shows current layer */
+  .hud{
+    position:absolute;top:8px;left:50%;transform:translateX(-50%);z-index:99;
+    background:rgba(34,211,238,.92);color:#062229;font-size:10px;font-weight:700;
+    padding:3px 10px;border-radius:999px;letter-spacing:.5px;font-family:ui-monospace,monospace;
+    pointer-events:none
+  }
+
   .compare-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:8px}
   .compare-grid .col h3{font-size:13px;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px;margin:0 0 8px}
   .compare-grid .phone-mini{height:560px;width:100%;max-width:330px;border-radius:32px;border-width:6px;margin:0 auto}
@@ -277,23 +314,48 @@
                 </div>
 
                 <h4>Community Videos · 23</h4>
-                <div class="vid-strip">
-                  <div class="v" style="background-image:url('https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=400&q=70')"><div class="lab">Schools</div></div>
-                  <div class="v" style="background-image:url('https://images.unsplash.com/photo-1545209463-e2825498edbf?w=400&q=70')"><div class="lab">Commute</div></div>
-                  <div class="v" style="background-image:url('https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=400&q=70')"><div class="lab">Parks</div></div>
-                  <div class="v" style="background-image:url('https://images.unsplash.com/photo-1542317854-04a7a8523b3a?w=400&q=70')"><div class="lab">Dining</div></div>
+                <div class="vid-strip" id="stripA">
+                  <div class="v" data-l2="comm-video" data-title="Schools tour" data-img="https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=900&q=70" style="background-image:url('https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=400&q=70')"><div class="play">▶</div><div class="lab">Schools</div></div>
+                  <div class="v" data-l2="comm-video" data-title="Commute · SR-520" data-img="https://images.unsplash.com/photo-1545209463-e2825498edbf?w=900&q=70" style="background-image:url('https://images.unsplash.com/photo-1545209463-e2825498edbf?w=400&q=70')"><div class="play">▶</div><div class="lab">Commute</div></div>
+                  <div class="v" data-l2="comm-video" data-title="Bellevue Park" data-img="https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=900&q=70" style="background-image:url('https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=400&q=70')"><div class="play">▶</div><div class="lab">Parks</div></div>
+                  <div class="v" data-l2="comm-video" data-title="Dining intro" data-img="https://images.unsplash.com/photo-1542317854-04a7a8523b3a?w=900&q=70" style="background-image:url('https://images.unsplash.com/photo-1542317854-04a7a8523b3a?w=400&q=70')"><div class="play">▶</div><div class="lab">Dining</div></div>
                 </div>
 
                 <h4>More homes here · 47</h4>
-                <div class="listings-mini">
-                  <div class="l"><div class="img" style="background-image:url('https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=400&q=70')"></div><div class="info"><div class="p">$1.29M</div><div class="a">3 bd · 2 ba</div></div></div>
-                  <div class="l"><div class="img" style="background-image:url('https://images.unsplash.com/photo-1598228723793-52759bba239c?w=400&q=70')"></div><div class="info"><div class="p">$1.65M</div><div class="a">4 bd · 3 ba</div></div></div>
-                  <div class="l"><div class="img" style="background-image:url('https://images.unsplash.com/photo-1605276373954-0c4a0dac5b12?w=400&q=70')"></div><div class="info"><div class="p">$2.10M</div><div class="a">5 bd · 4 ba</div></div></div>
+                <div class="listings-mini" id="listingsA">
+                  <div class="l" data-l2="listing" data-title="$1.29M · 1421 NE 22nd St" data-img="https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=900&q=70"><div class="img" style="background-image:url('https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=400&q=70')"></div><div class="info"><div class="p">$1.29M</div><div class="a">3 bd · 2 ba</div></div></div>
+                  <div class="l" data-l2="listing" data-title="$1.65M · 14530 NE 24th St" data-img="https://images.unsplash.com/photo-1598228723793-52759bba239c?w=900&q=70"><div class="img" style="background-image:url('https://images.unsplash.com/photo-1598228723793-52759bba239c?w=400&q=70')"></div><div class="info"><div class="p">$1.65M</div><div class="a">4 bd · 3 ba</div></div></div>
+                  <div class="l" data-l2="listing" data-title="$2.10M · 14102 NE 25th Pl" data-img="https://images.unsplash.com/photo-1605276373954-0c4a0dac5b12?w=900&q=70"><div class="img" style="background-image:url('https://images.unsplash.com/photo-1605276373954-0c4a0dac5b12?w=400&q=70')"></div><div class="info"><div class="p">$2.10M</div><div class="a">5 bd · 4 ba</div></div></div>
                 </div>
 
-                <button class="cta">Browse all 47 homes in this community →</button>
+                <button class="cta" id="ctaBrowseA">Browse all 47 homes in this community →</button>
               </div>
             </div>
+
+            <!-- L2 fullscreen overlay (community video / listing detail) -->
+            <div class="l2" id="l2A">
+              <div class="l2-top">
+                <div class="back" id="backA">
+                  <span class="arr">‹</span>
+                  <div>
+                    <div style="font-weight:600;font-size:13px">Back</div>
+                    <div class="lab" id="backLabA">14207 NE 23rd Pl</div>
+                  </div>
+                </div>
+              </div>
+              <div class="l2-body">
+                <div class="l2-vid" id="l2VidA"></div>
+                <div class="l2-tag" id="l2TagA">Bellevue Eastside</div>
+                <div class="l2-meta" id="l2MetaA"></div>
+                <div class="l2-rail">
+                  <div class="b">❤️</div>
+                  <div class="b">💬</div>
+                  <div class="b">↗</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="hud" id="hudA">L0 · LISTING FEED</div>
           </div>
           <div class="bottombar">
             <div class="tab active"><div class="ic">🏠</div>For You</div>
@@ -309,16 +371,17 @@
         <p>**目标 buyer**:被动派发型 — 想刷视频,不想做选区决策。Listing 视频是主轴,community 是上下文。</p>
         <ul>
           <li>左下角:listing 元数据(房价、地址、户型、agent)— 卖房买房主线永不消失</li>
-          <li>右下角浮一个 <b>community chip</b>(脉冲动画引导第一次注意)</li>
-          <li>点击 chip → 底部 sheet 弹起,**视频不暂停、不离开** listing</li>
-          <li>Sheet 内:学区/通勤/中位价 + community 视频条带 + 该区域更多房源 + CTA</li>
-          <li>关掉 sheet 回到原 listing,继续 swipe</li>
+          <li><b>左上角</b>浮一个 <b>community chip</b>(脉冲动画引导第一次注意,不挡 listing 元数据)</li>
+          <li>点击 chip → 底部 sheet 弹起(L1)— sheet 只装信息和缩略图,**不在 sheet 内播视频**</li>
+          <li>Sheet 内点 community 视频缩略图 / 房源 / "Browse all" → 跳转**全屏新页 L2**,顶部明示返回路径 <code>← 14207 NE 23rd Pl</code></li>
+          <li>顶部 HUD 实时显示 L0 / L1 / L2,验证不会迷路</li>
         </ul>
         <div class="legend">
-          <span class="pill">点 chip 看 sheet 弹起</span>
-          <span class="pill">没用过 chip 时会脉冲 2 次</span>
+          <span class="pill">L0 listing feed → L1 sheet → L2 全屏页</span>
+          <span class="pill">每层都有明确返回路径</span>
+          <span class="pill">没有 modal 内播全屏视频</span>
         </div>
-        <p style="margin-top:14px;color:#34d399"><b>试一下:</b> 点击 phone 里右下的 community chip。</p>
+        <p style="margin-top:14px;color:#34d399"><b>试一下:</b> 点左上 chip → 进 sheet → 点任意 community 视频缩略图 / 房源缩略图 → 看顶部 ← 14207 NE 23rd Pl 把你带回原 listing。</p>
       </div>
     </div>
   </section>
@@ -566,16 +629,62 @@
     scenes.forEach(sc => sc.classList.toggle('active', sc.dataset.scene === s));
   });
 
-  // Sheet open/close (Scene A)
+  // Sheet open/close (Scene A — Layer 1)
   const chipA = document.getElementById('chipA');
   const sheetA = document.getElementById('sheetA');
   const maskA = document.getElementById('maskA');
   const closeA = document.getElementById('closeA');
-  function open() { sheetA.classList.add('open'); maskA.classList.add('open'); }
-  function close() { sheetA.classList.remove('open'); maskA.classList.remove('open'); }
-  chipA.addEventListener('click', open);
-  closeA.addEventListener('click', close);
-  maskA.addEventListener('click', close);
+  const hudA = document.getElementById('hudA');
+  const l2A = document.getElementById('l2A');
+  const l2VidA = document.getElementById('l2VidA');
+  const l2MetaA = document.getElementById('l2MetaA');
+  const l2TagA = document.getElementById('l2TagA');
+  const backA = document.getElementById('backA');
+  const stripA = document.getElementById('stripA');
+  const listingsA = document.getElementById('listingsA');
+  const ctaBrowseA = document.getElementById('ctaBrowseA');
+
+  function setHUD(label) { hudA.textContent = label; }
+  function openSheet() { sheetA.classList.add('open'); maskA.classList.add('open'); setHUD('L1 · COMMUNITY SHEET'); }
+  function closeSheet() { sheetA.classList.remove('open'); maskA.classList.remove('open'); if (!l2A.classList.contains('open')) setHUD('L0 · LISTING FEED'); }
+
+  function openL2(kind, title, img) {
+    l2VidA.style.backgroundImage = `url('${img}')`;
+    if (kind === 'comm-video') {
+      l2TagA.textContent = '🏘️ Bellevue Eastside · Community';
+      l2MetaA.innerHTML = `<div class="t">${title}</div><div class="s">Hosted by Mark Liu · 8 yrs in area</div><div class="stats">2.3k views · ⭐ 4.8</div>`;
+      setHUD('L2 · COMMUNITY VIDEO');
+    } else {
+      l2TagA.textContent = '🏠 Listing · Bellevue Eastside';
+      l2MetaA.innerHTML = `<div class="t">${title.split('·')[0].trim()}</div><div class="s">${title.split('·').slice(1).join('·').trim()}</div><div class="stats">4 bd · 3 ba · 2,840 sqft</div>`;
+      setHUD('L2 · LISTING DETAIL');
+    }
+    l2A.classList.add('open');
+  }
+  function closeL2() {
+    l2A.classList.remove('open');
+    if (sheetA.classList.contains('open')) setHUD('L1 · COMMUNITY SHEET');
+    else setHUD('L0 · LISTING FEED');
+  }
+
+  chipA.addEventListener('click', openSheet);
+  closeA.addEventListener('click', closeSheet);
+  maskA.addEventListener('click', closeSheet);
+  backA.addEventListener('click', closeL2);
+
+  // Delegated click handlers for sheet items → L2
+  function bindL2(container) {
+    container.addEventListener('click', e => {
+      const el = e.target.closest('[data-l2]');
+      if (!el) return;
+      openL2(el.dataset.l2, el.dataset.title, el.dataset.img);
+    });
+  }
+  bindL2(stripA);
+  bindL2(listingsA);
+  ctaBrowseA.addEventListener('click', () => {
+    openL2('comm-video', 'All 47 homes in Bellevue Eastside', 'https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=900&q=70');
+  });
 </script>
 </body>
 </html>
