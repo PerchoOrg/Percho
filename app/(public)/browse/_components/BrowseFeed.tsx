@@ -4,7 +4,7 @@ import { getOrCreateDeviceId } from '@/lib/buyer/device-id';
 import { hlsUrl, thumbnailUrl } from '@/lib/cloudflare/stream';
 import Hls from 'hls.js';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { LeadModal } from '../../_components/LeadModal';
 
@@ -912,6 +912,11 @@ export function BrowseFeed({
   hideNearby?: boolean;
 }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  // Phase 28.x (2026-06-16): when opened from the agent's dashboard
+  // ("View ↗"), Back returns to /dashboard instead of /browse so the
+  // agent doesn't get dumped into the public explore feed.
+  const backHref = searchParams?.get('from') === 'dashboard' ? '/dashboard' : '/browse';
   const [activeIndex, setActiveIndex] = useState(initialIndex);
   const [liked, setLiked] = useState<Record<string, boolean>>({});
   const [saved, setSaved] = useState<Record<string, boolean>>({});
@@ -1307,10 +1312,10 @@ export function BrowseFeed({
             if (activeSource !== 'hero') {
               switchSource('hero');
             } else {
-              router.push('/browse');
+              router.push(backHref);
             }
           }}
-          aria-label={activeSource !== 'hero' ? 'Back to listing video' : 'Back to grid'}
+          aria-label={activeSource !== 'hero' ? 'Back to listing video' : 'Back'}
           className="flex h-9 w-9 items-center justify-center rounded-full border border-cream/20 bg-ink/55 text-cream backdrop-blur-md transition-colors hover:border-gold hover:text-gold"
           style={{ touchAction: 'manipulation' }}
         >

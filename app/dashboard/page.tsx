@@ -323,7 +323,7 @@ export default async function DashboardHomePage({ searchParams }: PageProps) {
                 <div className="flex flex-wrap gap-2 sm:flex-col sm:gap-2 sm:self-center">
                   {isPub && publicPath && (
                     <Link
-                      href={publicPath}
+                      href={`${publicPath}?from=dashboard`}
                       target="_blank"
                       rel="noopener"
                       className="inline-flex flex-1 items-center justify-center gap-1 rounded-lg border border-bronze/40 px-3 py-2 text-cream text-xs hover:border-gold hover:text-gold"
