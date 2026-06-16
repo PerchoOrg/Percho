@@ -35,14 +35,29 @@ const NewListingInput = z.object({
 
 export type CreateListingInput = z.infer<typeof NewListingInput>;
 
-export type CreateListingResult = { ok: true; id: string } | { ok: false; error: string };
+export type CreateListingResult =
+  | { ok: true; id: string }
+  | { ok: false; error: string; fieldErrors?: Record<string, string[]> };
 
 const MAX_SLUG_ATTEMPTS = 20;
 
 export async function createListing(input: CreateListingInput): Promise<CreateListingResult> {
   const parsed = NewListingInput.safeParse(input);
   if (!parsed.success) {
-    return { ok: false, error: 'invalid_input' };
+    const flat = parsed.error.flatten();
+    console.error('[createListing] invalid_input', {
+      fieldErrors: flat.fieldErrors,
+      // Log the input shape (not values that might leak PII) for debugging.
+      hasCity: Boolean(input.city),
+      hasState: Boolean(input.state),
+      hasLat: typeof input.lat === 'number',
+      hasLng: typeof input.lng === 'number',
+    });
+    return {
+      ok: false,
+      error: 'invalid_input',
+      fieldErrors: flat.fieldErrors as Record<string, string[]>,
+    };
   }
   const data = parsed.data;
 

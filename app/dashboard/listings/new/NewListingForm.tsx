@@ -64,6 +64,7 @@ export function NewListingForm() {
   const [resolving, setResolving] = useState(false);
   const [autocompleteErr, setAutocompleteErr] = useState<string | null>(null);
   const [submitErr, setSubmitErr] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
   const [isPending, startTransition] = useTransition();
 
   const sessionRef = useRef<string>(newSessionToken());
@@ -142,6 +143,7 @@ export function NewListingForm() {
   function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSubmitErr(null);
+    setFieldErrors({});
     if (!resolved) {
       setSubmitErr('Please pick an address from the dropdown.');
       return;
@@ -170,6 +172,7 @@ export function NewListingForm() {
       // as an error path.
       if (!result.ok) {
         setSubmitErr(result.error);
+        if (result.fieldErrors) setFieldErrors(result.fieldErrors);
       }
     });
   }
@@ -317,7 +320,31 @@ export function NewListingForm() {
         </div>
       </div>
 
-      {submitErr && <p className="text-sm text-red-400">Error: {submitErr}</p>}
+      {submitErr && (
+        <div className="space-y-1 text-sm text-red-400">
+          {Object.keys(fieldErrors).length > 0 ? (
+            <>
+              <p>Could not create draft — please fix:</p>
+              <ul className="ml-4 list-disc text-xs">
+                {Object.entries(fieldErrors).map(([field, msgs]) => (
+                  <li key={field}>
+                    <span className="font-medium">{field}</span>: {msgs.join(', ')}
+                    {field === 'city' && resolved && !resolved.city && (
+                      <>
+                        {' '}— Google didn't return a city for this address (rural /
+                        unincorporated). Try a more specific street address, or pick a nearby
+                        address with a city.
+                      </>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </>
+          ) : (
+            <p>Error: {submitErr}</p>
+          )}
+        </div>
+      )}
 
       <button
         type="submit"

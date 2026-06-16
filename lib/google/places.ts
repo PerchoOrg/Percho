@@ -108,10 +108,15 @@ export async function placeDetails(
   const route = pickComponent(comps, 'route') ?? '';
   const street_address = [streetNumber, route].filter(Boolean).join(' ').trim();
 
+  // City fallback chain: locality (incorporated city) → sublocality (NYC borough)
+  // → admin_area_level_3 (township) → admin_area_level_2 (county). Rural addresses
+  // (e.g. county roads in unincorporated areas) often only have county. We accept
+  // that for V1 drafts — the agent can edit the city field on the next screen.
   const city =
     pickComponent(comps, 'locality') ??
     pickComponent(comps, 'sublocality') ??
     pickComponent(comps, 'administrative_area_level_3') ??
+    pickComponent(comps, 'administrative_area_level_2') ??
     '';
   const state = pickComponent(comps, 'administrative_area_level_1', true) ?? '';
   const zip = pickComponent(comps, 'postal_code');
