@@ -12,6 +12,7 @@ import { createClient } from '@/lib/supabase/server';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { CommunityEditor } from './CommunityEditor';
+import { CommunityCoverPanel } from './CommunityCoverPanel';
 
 interface CommunityRow {
   id: string;
@@ -21,6 +22,8 @@ interface CommunityRow {
   state: string;
   description: string | null;
   created_by: string | null;
+  cover_video_id: string | null;
+  cover_storage_path: string | null;
 }
 
 // Re-exported for downstream consumers that import these row types from
@@ -59,7 +62,7 @@ export default async function CommunityEditorPage({
   // biome-ignore lint/suspicious/noExplicitAny: stub generated types
   const { data: community } = (await (supabase as any)
     .from('communities')
-    .select('id, name, slug, city, state, description, created_by')
+    .select('id, name, slug, city, state, description, created_by, cover_video_id, cover_storage_path')
     .eq('id', id)
     .maybeSingle()) as { data: CommunityRow | null };
 
@@ -80,6 +83,18 @@ export default async function CommunityEditorPage({
   const myAgentId = agentRow?.id ?? null;
   const canEditMetadata = community.created_by == null || community.created_by === myAgentId;
 
+  // Load this community's ready videos for the cover picker.
+  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
+  const { data: videoRows } = (await (supabase as any)
+    .from('community_videos')
+    .select('id, cf_video_id, title')
+    .eq('community_id', community.id)
+    .eq('status', 'ready')
+    .order('created_at', { ascending: true })) as {
+    data: Array<{ id: string; cf_video_id: string; title: string | null }> | null;
+  };
+  const coverVideos = videoRows ?? [];
+
   return (
     <div className="mx-auto max-w-3xl space-y-6 py-4">
       <header className="flex items-baseline justify-between gap-3">
@@ -98,6 +113,14 @@ export default async function CommunityEditorPage({
           </Link>
         </div>
       </header>
+
+      <CommunityCoverPanel
+        communityId={community.id}
+        canEdit={canEditMetadata}
+        videos={coverVideos}
+        initialCoverVideoId={community.cover_video_id}
+        initialCoverStoragePath={community.cover_storage_path}
+      />
 
       <CommunityEditor community={community} canEditMetadata={canEditMetadata} />
     </div>

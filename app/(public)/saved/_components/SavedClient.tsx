@@ -190,9 +190,9 @@ function CommunitiesView({ communities }: { communities: SavedCommunityCard[] })
             className="group block overflow-hidden rounded-xl bg-ink/60 ring-1 ring-cream/10 transition-shadow hover:ring-gold/60"
           >
             <div className="relative aspect-[9/16] w-full bg-black/40">
-              {c.coverCfVideoId ? (
+              {c.coverUrl ? (
                 <Image
-                  src={thumbnailUrl(c.coverCfVideoId)}
+                  src={c.coverUrl}
                   alt={c.name}
                   fill
                   sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"

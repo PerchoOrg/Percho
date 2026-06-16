@@ -3,6 +3,11 @@
 Newest at the top. Each release covers a meaningful product change visible to users.
 Format matches the standard release template (Features / Improvements / Bug Fixes / Technical / Known Issues / Metrics).
 
+## v0.32.0 — 2026-06-17
+
+### ✨ Features
+- **Pick a cover for each community.** Every community now has an editable cover that shows up on the buyer-facing community grid, on the community page itself (as a wide hero banner), and on the Saved page. You can either pick one of the community's own videos as the cover (the auto-generated poster frame is used) or upload a custom photo. Clear it any time to fall back to the first video. The community grid switched from a text-only list to tall 9:16 cards — a buyer can now scan twelve neighborhoods visually before tapping in.
+
 ## v0.31.1 — 2026-06-17
 
 ### ✨ Features

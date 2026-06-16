@@ -2,6 +2,67 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-06-17 — Phase 27.8: agent-pickable community covers
+
+**Objective**: previously the community "cover" (used in the buyer
+`/communities` grid, the `/c/[slug]` page, and the `/saved` Communities
+tab) was hardcoded to the first ready video's Cloudflare poster. Agents
+had no way to choose. They wanted to either pick a different video or
+upload a custom image.
+
+**Schema** (`0025_community_covers.sql`):
+- `communities.cover_video_id uuid` references `community_videos(id)`
+  ON DELETE SET NULL — explicit pick (must be a primary-FK video, not
+  a secondary membership).
+- `communities.cover_storage_path text` — uploaded image in the new
+  `community-covers` public bucket.
+- XOR check constraint: only one of the two can be non-null.
+- New public bucket `community-covers` (10MB, jpg/png/webp). Owner-write
+  RLS mirrors the editor permission rule
+  (`created_by IS NULL OR created_by = caller's agent_id`). Public read
+  is bucket-level — anon buyer pages fetch directly without signed URLs.
+
+We did NOT reuse `community-photos` because that bucket is private
+(signed-URL only, dashboard-internal). Reusing it would force every
+buyer page render to mint signed URLs per community card — too
+expensive at the grid scale.
+
+**Resolution priority** (encoded in `lib/community/cover.ts`):
+1. `cover_video_id` → Cloudflare Stream poster
+2. `cover_storage_path` → public bucket URL
+3. fallback: first ready video poster (legacy behavior)
+4. fallback: blank (gradient placeholder)
+
+**Server actions** (`app/dashboard/communities/[id]/cover-actions.ts`):
+- `setCommunityCoverVideo({ communityId, videoId })`
+- `recordCommunityCoverImage({ communityId, storagePath })`
+- `clearCommunityCover({ communityId })`
+
+Each setter zeros the other field (defense in depth, the DB constraint
+also blocks both being non-null) and revalidates the dashboard,
+`/communities`, and `/c/<slug>` paths.
+
+**Dashboard UI** (`CommunityCoverPanel.tsx`): preview tile + three
+buttons (Pick from videos / Upload image / Clear) + collapsible video
+picker grid. Upload goes directly to Supabase Storage from the browser
+(supabase-js), then the server action records the path. Same shape as
+`PhotoPanel` from Phase 10 but trimmed — single image, no sort_order.
+
+**Buyer renders**:
+- `/communities`: 9:16 hero cards (was text-only). Cover with bottom
+  gradient + name/city/video-count overlay. Grid is 2/3/4 cols
+  (sm/md/lg).
+- `/c/[slug]`: new 21:9 hero banner at top with cover + dark gradient +
+  name/city overlay. Description + chips moved below the hero.
+- `/saved` Communities tab: switched from `coverCfVideoId` (cf id) to
+  `coverUrl` (resolved URL) to support the image-upload case. The
+  Saved query now also joins the chosen cover video's `cf_video_id`
+  for the explicit-pick case.
+
+**Verification**: `tsc --noEmit` clean, `next build` green
+(`/communities` 195 B / 96.2 kB, `/c/[slug]` 195 B / 96.2 kB,
+`/dashboard/communities/[id]` 3.94 kB / 165 kB).
+
 ## 2026-06-17 — Phase 27.7b: /saved gets a Communities tab
 
 **Objective**: now that communities are saveable (Phase 27.7), the
