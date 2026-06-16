@@ -341,8 +341,6 @@
                   <div class="v" data-idx="3" style="background-image:url('https://images.unsplash.com/photo-1542317854-04a7a8523b3a?w=400&q=70')"><div class="play">▶</div><div class="lab">Dining</div></div>
                   <div class="v" data-idx="4" style="background-image:url('https://images.unsplash.com/photo-1519501025264-65ba15a82390?w=400&q=70')"><div class="play">▶</div><div class="lab">Nightlife</div></div>
                 </div>
-
-                <button class="cta" id="ctaBrowseA">▶ Watch all 5 community videos</button>
               </div>
             </div>
 
@@ -651,7 +649,6 @@
   const counterA = document.getElementById('counterA');
   const backA = document.getElementById('backA');
   const stripA = document.getElementById('stripA');
-  const ctaBrowseA = document.getElementById('ctaBrowseA');
 
   // Community video collection (5 videos)
   const COMM_VIDS = [
@@ -682,14 +679,6 @@
           <div class="b">❤️</div>
           <div class="b">💬</div>
           <div class="b">↗</div>
-        </div>
-        <div class="l2-chip" data-link="listings">
-          <div class="ico">🏠</div>
-          <div>
-            <div class="name">47 homes in Bellevue Eastside</div>
-            <div class="sub">Tap to browse all listings</div>
-          </div>
-          <div class="arrow">›</div>
         </div>
       </div>
     `).join('');
@@ -759,14 +748,6 @@
     const el = e.target.closest('[data-idx]');
     if (!el) return;
     openL2(parseInt(el.dataset.idx, 10));
-  });
-  ctaBrowseA.addEventListener('click', () => openL2(0));
-
-  // Listings chip on L2 — for now just demo alert (next iteration: opens listings sheet L1')
-  trackA.addEventListener('click', e => {
-    if (e.target.closest('[data-link="listings"]')) {
-      alert('🏠 Next iteration: opens "47 listings in Bellevue Eastside" sheet → tap any listing → swipeable listing carousel (symmetric to this).');
-    }
   });
 </script>
 </body>
