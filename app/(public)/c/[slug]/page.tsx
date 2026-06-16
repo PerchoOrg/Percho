@@ -19,7 +19,7 @@ import { thumbnailUrl } from '@/lib/cloudflare/stream';
 import { resolveCommunityCoverWithCfIds } from '@/lib/community/cover';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { Building2 } from 'lucide-react';
+import { Building2, Film } from 'lucide-react';
 
 interface CommunityRow {
   id: string;
@@ -129,13 +129,14 @@ export default async function CommunityPage({
             <p className="max-w-2xl text-cream/70 text-sm">{community.description}</p>
           ) : null}
           <div className="mt-4 flex flex-wrap items-center gap-2">
-            <span className="rounded-full bg-gold/10 px-3 py-1 text-gold text-xs">
-              {videos.length} {videos.length === 1 ? 'video' : 'videos'}
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-gold/10 px-3 py-1 text-gold text-xs">
+              <Film size={12} aria-hidden="true" />
+              {videos.length} community {videos.length === 1 ? 'video' : 'videos'}
             </span>
             <Link
               href={`/browse?community=${community.slug}`}
               prefetch={false}
-              className="inline-flex items-center gap-1.5 rounded-full border border-bronze/40 px-3 py-1 text-cream text-xs transition hover:border-gold hover:text-gold"
+              className="inline-flex items-center gap-1.5 rounded-full bg-gold/10 px-3 py-1 text-gold text-xs transition hover:bg-gold/20"
             >
               <Building2 size={12} aria-hidden="true" />
               {activeListings ?? 0} active{' '}

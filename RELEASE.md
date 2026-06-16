@@ -3,6 +3,14 @@
 Newest at the top. Each release covers a meaningful product change visible to users.
 Format matches the standard release template (Features / Improvements / Bug Fixes / Technical / Known Issues / Metrics).
 
+## v0.32.7 — 2026-06-17
+
+### ✨ Improvements
+- **Consistent badges on the community page.** The "videos" and "active
+  listings" tags below the community description now share the same pill
+  shape and gold accent, each with a small icon. "5 videos" reads
+  "5 community videos" so the two labels parse symmetrically.
+
 ## v0.32.6 — 2026-06-17
 
 ### ✨ Improvements

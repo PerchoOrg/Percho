@@ -2,6 +2,19 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-06-17 — Phase 27.8: unify badge format on /c/[slug] header
+
+**What:** Both badges (videos count + active listings count) now share the
+same shape: `bg-gold/10 px-3 py-1 text-gold text-xs` rounded-full pill with
+a 12px lucide icon prefix. "5 videos" → "5 community videos" + film icon;
+listings keeps Building2 icon, drops the bordered cream styling. Reads
+like one row of consistent chips.
+
+**Files:** `app/(public)/c/[slug]/page.tsx` (+`Film` import).
+
+**Verify:** `tsc --noEmit` clean. `/c/peachtree-corners` shows two
+matching gold-tinted pills "🎞 5 community videos" / "🏢 1 active listing".
+
 ## 2026-06-17 — Phase 27.7: Listings CTA → circular icon + corner badge (matches Save/Like)
 
 **What:** Restyled the community feed's "View N listings" gold pill into a
