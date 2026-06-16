@@ -291,13 +291,6 @@ function VideoCard({
       <div className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-black/70 via-black/30 to-transparent" />
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-72 bg-gradient-to-t from-black/85 via-black/50 to-transparent" />
 
-      {/* Category pill — top-left, gold accent (mirrors Nearby pool). */}
-      {cat && (
-        <div className="pointer-events-none absolute top-16 left-5 z-10 inline-flex items-center gap-2 rounded-full border border-gold/40 bg-gold/15 px-3 py-1 backdrop-blur">
-          <span className="font-medium text-gold text-xs">{cat.label}</span>
-        </div>
-      )}
-
       {/* Pause indicator. */}
       {paused && shouldMount && (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
@@ -316,7 +309,12 @@ function VideoCard({
        * tells the buyer what they're watching ("A walk through the
        * neighborhood, block by block."). When we add curated descriptions
        * (post-V1), they replace the blurb here. */}
-      <div className="absolute right-20 bottom-32 left-4 text-cream">
+      <div className="absolute right-20 bottom-20 left-4 text-cream">
+        {cat && (
+          <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-gold/40 bg-gold/15 px-3 py-1 backdrop-blur">
+            <span className="font-medium text-gold text-xs">{cat.label}</span>
+          </div>
+        )}
         {cat?.blurb && (
           <p className="text-cream/85 text-sm leading-snug drop-shadow">{cat.blurb}</p>
         )}
