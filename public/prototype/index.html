@@ -1,0 +1,581 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1" />
+<title>Vicinity UX Prototype — A + B</title>
+<style>
+  :root{
+    --bg:#0b0b0c; --panel:#141416; --line:#26262a; --ink:#f4f4f5; --mute:#a1a1aa;
+    --brand:#22d3ee; --brand2:#a78bfa; --good:#34d399; --warn:#fbbf24;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);font:16px/1.4 -apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif}
+  a{color:var(--brand)}
+  .wrap{max-width:1200px;margin:0 auto;padding:24px 16px 80px}
+  h1{font-size:22px;margin:0 0 4px}
+  .lede{color:var(--mute);font-size:14px;margin:0 0 24px}
+  .scenario-bar{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+  .scenario-bar button{
+    background:var(--panel);color:var(--ink);border:1px solid var(--line);
+    padding:10px 14px;border-radius:999px;font-size:14px;cursor:pointer
+  }
+  .scenario-bar button.active{background:var(--brand);color:#062229;border-color:var(--brand);font-weight:600}
+  .row{display:flex;flex-wrap:wrap;gap:32px;align-items:flex-start}
+  .side{flex:1 1 320px;min-width:300px;max-width:420px}
+  .side h2{font-size:16px;margin:0 0 8px;color:var(--brand2)}
+  .side p, .side li{font-size:14px;color:var(--mute);line-height:1.55}
+  .side ul{padding-left:18px;margin:8px 0}
+
+  /* Phone frame */
+  .phone{
+    width:390px;max-width:100%;height:780px;background:#000;border:8px solid #1a1a1d;
+    border-radius:42px;box-shadow:0 30px 80px rgba(0,0,0,.6);overflow:hidden;
+    position:relative;display:flex;flex-direction:column;margin:0 auto
+  }
+  .phone .notch{position:absolute;top:8px;left:50%;transform:translateX(-50%);width:120px;height:28px;background:#000;border-radius:0 0 16px 16px;z-index:50}
+  .screen{flex:1;overflow:hidden;position:relative;background:#000;display:flex;flex-direction:column}
+
+  /* Common nav */
+  .topbar{height:44px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;color:#fff;font-weight:600}
+  .bottombar{
+    height:64px;display:flex;background:#0a0a0c;border-top:1px solid #1d1d20;
+    flex-shrink:0;align-items:center;justify-content:space-around;color:#9ca3af;font-size:11px
+  }
+  .bottombar .tab{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 10px}
+  .bottombar .tab.active{color:#fff}
+  .bottombar .tab .ic{font-size:20px}
+
+  /* Feed video */
+  .feed{flex:1;position:relative;overflow:hidden;background:#111}
+  .feed .vid{
+    position:absolute;inset:0;
+    background-image:url('https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=900&q=70');
+    background-size:cover;background-position:center
+  }
+  .feed .vid::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.3) 0%,rgba(0,0,0,0) 25%,rgba(0,0,0,0) 55%,rgba(0,0,0,.85) 100%)}
+
+  .listing-meta{position:absolute;left:16px;right:96px;bottom:88px;z-index:5}
+  .listing-meta .price{font-size:24px;font-weight:700}
+  .listing-meta .addr{font-size:14px;color:#e5e7eb;margin-top:2px}
+  .listing-meta .stats{font-size:13px;color:#cbd5e1;margin-top:6px}
+  .listing-meta .agent{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:13px}
+  .listing-meta .agent .av{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#22d3ee,#a78bfa)}
+
+  .right-rail{position:absolute;right:12px;bottom:120px;display:flex;flex-direction:column;gap:18px;z-index:5;align-items:center}
+  .right-rail .btn{width:44px;height:44px;border-radius:50%;background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;font-size:18px}
+  .right-rail .lbl{font-size:11px;color:#fff;margin-top:-12px}
+
+  /* Community chip */
+  .chip{
+    position:absolute;left:16px;bottom:24px;z-index:6;
+    display:flex;align-items:center;gap:10px;
+    padding:8px 14px 8px 8px;border-radius:999px;
+    background:rgba(15,15,18,.78);backdrop-filter:blur(12px);
+    border:1px solid rgba(255,255,255,.14);cursor:pointer;
+    animation:chipPulse 2.5s ease-in-out 1.5s 2
+  }
+  @keyframes chipPulse{0%,100%{box-shadow:0 0 0 0 rgba(34,211,238,.55)}50%{box-shadow:0 0 0 10px rgba(34,211,238,0)}}
+  .chip .ico{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#22d3ee,#a78bfa);display:flex;align-items:center;justify-content:center;font-size:14px}
+  .chip .name{font-size:13px;font-weight:600}
+  .chip .sub{font-size:11px;color:#9ca3af;margin-top:1px}
+  .chip .arrow{margin-left:6px;color:#9ca3af;font-size:14px}
+
+  /* Bottom sheet */
+  .sheet-mask{position:absolute;inset:0;background:rgba(0,0,0,.55);opacity:0;pointer-events:none;transition:opacity .25s;z-index:10}
+  .sheet-mask.open{opacity:1;pointer-events:auto}
+  .sheet{
+    position:absolute;left:0;right:0;bottom:0;z-index:11;
+    background:#1a1a1d;border-radius:20px 20px 0 0;
+    transform:translateY(100%);transition:transform .3s cubic-bezier(.32,.72,.32,1);
+    max-height:78%;overflow:hidden;display:flex;flex-direction:column
+  }
+  .sheet.open{transform:translateY(0)}
+  .sheet .grip{width:36px;height:4px;background:#3f3f46;border-radius:2px;margin:8px auto 4px}
+  .sheet .head{padding:12px 16px 8px;display:flex;justify-content:space-between;align-items:flex-start;border-bottom:1px solid #26262a}
+  .sheet .head .title{font-size:18px;font-weight:700}
+  .sheet .head .sub{font-size:13px;color:#9ca3af;margin-top:2px}
+  .sheet .head .close{font-size:22px;color:#9ca3af;cursor:pointer;line-height:1;padding:4px 8px;margin-right:-8px}
+  .sheet .body{overflow-y:auto;padding:14px 16px}
+  .sheet .stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
+  .sheet .stat{background:#222226;border-radius:10px;padding:10px;text-align:center}
+  .sheet .stat .v{font-size:15px;font-weight:700}
+  .sheet .stat .k{font-size:11px;color:#9ca3af;margin-top:2px}
+  .sheet .desc{font-size:13px;color:#d4d4d8;line-height:1.5;margin-bottom:14px}
+  .sheet h4{font-size:13px;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px;margin:6px 0 8px;font-weight:600}
+  .sheet .vid-strip{display:flex;gap:8px;overflow-x:auto;padding-bottom:6px;margin:0 -16px 14px;padding-left:16px}
+  .sheet .vid-strip .v{flex:0 0 130px;height:170px;border-radius:10px;background-size:cover;background-position:center;position:relative;overflow:hidden}
+  .sheet .vid-strip .v .lab{position:absolute;left:8px;bottom:8px;font-size:11px;color:#fff;font-weight:600;text-shadow:0 1px 2px rgba(0,0,0,.8)}
+  .sheet .vid-strip .v::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,0) 50%,rgba(0,0,0,.7) 100%)}
+  .sheet .listings-mini{display:flex;gap:8px;overflow-x:auto;padding-bottom:6px;margin:0 -16px 14px;padding-left:16px}
+  .sheet .listings-mini .l{flex:0 0 150px;background:#222226;border-radius:10px;overflow:hidden}
+  .sheet .listings-mini .l .img{height:90px;background-size:cover;background-position:center}
+  .sheet .listings-mini .l .info{padding:8px}
+  .sheet .listings-mini .l .p{font-size:14px;font-weight:700}
+  .sheet .listings-mini .l .a{font-size:11px;color:#9ca3af;margin-top:2px}
+  .sheet .cta{
+    width:100%;padding:14px;border-radius:12px;background:var(--brand);color:#062229;
+    font-weight:700;font-size:15px;border:0;margin-top:8px;cursor:pointer
+  }
+
+  /* B: Search tab */
+  .search-screen{flex:1;overflow-y:auto;padding:0 16px 12px}
+  .search-input{
+    background:#1a1a1d;border:1px solid #26262a;border-radius:12px;
+    padding:12px 14px;display:flex;align-items:center;gap:8px;color:#a1a1aa;font-size:15px;margin-top:8px
+  }
+  .seg{display:flex;background:#1a1a1d;border-radius:10px;padding:4px;margin:14px 0}
+  .seg button{flex:1;background:transparent;border:0;color:#a1a1aa;padding:8px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer}
+  .seg button.active{background:#2d2d31;color:#fff}
+  .comm-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .comm-card{background:#1a1a1d;border-radius:14px;overflow:hidden;border:1px solid #26262a;cursor:pointer}
+  .comm-card .cover{height:110px;background-size:cover;background-position:center;position:relative}
+  .comm-card .cover::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,0) 50%,rgba(0,0,0,.7) 100%)}
+  .comm-card .badge{position:absolute;left:8px;top:8px;background:rgba(0,0,0,.55);color:#fff;font-size:11px;padding:3px 8px;border-radius:999px}
+  .comm-card .meta{padding:10px}
+  .comm-card .name{font-size:14px;font-weight:600}
+  .comm-card .stat{font-size:12px;color:#9ca3af;margin-top:3px}
+
+  /* Agent dashboard */
+  .agent-screen{flex:1;overflow-y:auto;padding:12px 16px}
+  .agent-header{font-size:20px;font-weight:700;margin-bottom:4px}
+  .agent-sub{font-size:13px;color:#9ca3af;margin-bottom:16px}
+  .panel-card{background:#141416;border:1px solid #26262a;border-radius:14px;padding:14px;margin-bottom:12px}
+  .panel-card .ph{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+  .panel-card .ph .t{font-size:14px;font-weight:600}
+  .panel-card .ph .add{font-size:12px;color:var(--brand);font-weight:600;cursor:pointer}
+  .vid-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+  .vid-grid .t{aspect-ratio:9/16;border-radius:8px;background-size:cover;background-position:center;position:relative;overflow:hidden}
+  .vid-grid .t .l{position:absolute;left:6px;bottom:6px;font-size:10px;color:#fff;font-weight:600;text-shadow:0 1px 2px rgba(0,0,0,.7)}
+  .vid-grid .t::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,0) 60%,rgba(0,0,0,.7) 100%)}
+  .vid-grid .empty{aspect-ratio:9/16;border-radius:8px;border:2px dashed #3f3f46;display:flex;align-items:center;justify-content:center;color:#52525b;font-size:24px}
+  .listings-row{display:flex;gap:8px;overflow-x:auto;margin:0 -14px;padding:0 14px}
+  .listings-row .l{flex:0 0 130px}
+  .listings-row .l .img{height:80px;border-radius:8px;background-size:cover;background-position:center}
+  .listings-row .l .p{font-size:13px;font-weight:700;margin-top:5px}
+  .listings-row .l .a{font-size:11px;color:#9ca3af;margin-top:1px}
+  .listings-row .l .by{font-size:10px;color:#6b7280;margin-top:2px}
+  .stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px}
+  .stats-grid .s{background:#0a0a0c;border-radius:10px;padding:10px;text-align:center}
+  .stats-grid .s .v{font-size:18px;font-weight:700;color:var(--brand)}
+  .stats-grid .s .k{font-size:11px;color:#9ca3af;margin-top:3px}
+
+  /* Create wizard */
+  .wiz-screen{flex:1;overflow-y:auto;padding:16px}
+  .wiz-step{font-size:12px;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+  .wiz-title{font-size:22px;font-weight:700;margin-bottom:4px}
+  .wiz-help{font-size:14px;color:#9ca3af;margin-bottom:18px}
+  .wiz-field{margin-bottom:14px}
+  .wiz-field label{font-size:13px;font-weight:600;display:block;margin-bottom:6px}
+  .wiz-field input,.wiz-field textarea{
+    width:100%;background:#1a1a1d;border:1px solid #26262a;border-radius:10px;
+    color:#fff;padding:12px;font-size:16px;font-family:inherit
+  }
+  .wiz-field textarea{resize:vertical;min-height:80px}
+  .wiz-map{height:160px;background:linear-gradient(135deg,#1e3a5f 0%,#1a4d4f 100%);border-radius:10px;display:flex;align-items:center;justify-content:center;color:#9ca3af;font-size:13px;margin-top:6px;position:relative;overflow:hidden}
+  .wiz-map::before{content:"";position:absolute;inset:0;background:radial-gradient(circle at 50% 50%, rgba(34,211,238,.25) 0%, transparent 60%)}
+  .wiz-map .pin{position:relative;z-index:2;font-size:30px}
+  .wiz-progress{display:flex;gap:6px;margin-bottom:18px}
+  .wiz-progress span{flex:1;height:4px;border-radius:2px;background:#26262a}
+  .wiz-progress span.done{background:var(--brand)}
+  .wiz-cta-row{display:flex;gap:8px;margin-top:20px}
+  .wiz-cta-row button{flex:1;padding:14px;border-radius:12px;font-size:15px;font-weight:700;border:0;cursor:pointer}
+  .wiz-cta-row .ghost{background:transparent;border:1px solid #3f3f46;color:#fff}
+  .wiz-cta-row .primary{background:var(--brand);color:#062229}
+
+  /* Old-form scare side */
+  .old-form{flex:1;overflow-y:auto;padding:16px;background:#0a0a0c}
+  .old-form .lbl{font-size:11px;color:#71717a;display:block;margin-bottom:4px;margin-top:10px;text-transform:uppercase}
+  .old-form select,.old-form input{
+    width:100%;background:#fff;color:#000;border:1px solid #ccc;border-radius:4px;padding:6px 8px;font-size:13px
+  }
+
+  .legend{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+  .legend .pill{font-size:11px;padding:3px 8px;border-radius:999px;background:#1a1a1d;border:1px solid #26262a;color:#a1a1aa}
+
+  .scene{display:none}
+  .scene.active{display:block}
+
+  .compare-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:8px}
+  .compare-grid .col h3{font-size:13px;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px;margin:0 0 8px}
+  .compare-grid .phone-mini{height:560px;width:100%;max-width:330px;border-radius:32px;border-width:6px;margin:0 auto}
+
+  @media (max-width:760px){
+    .row{flex-direction:column}
+    .side{max-width:none}
+    .compare-grid{grid-template-columns:1fr}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Vicinity — UX Prototype</h1>
+  <p class="lede">A + B 都做 · 不同 buyer 旅程互补 · 静态原型,真代码改动前先看效果</p>
+
+  <div class="scenario-bar" id="bar">
+    <button data-s="A" class="active">📱 方案 A · Listing + Community Chip</button>
+    <button data-s="B">🔍 方案 B · Search 里独立按小区浏览</button>
+    <button data-s="DASH">🏗️ Agent 运营台</button>
+    <button data-s="WIZ">✨ Create Community 三步化</button>
+  </div>
+
+  <!-- ==================== SCENE A ==================== -->
+  <section class="scene active" data-scene="A">
+    <div class="row">
+      <div class="phone">
+        <div class="notch"></div>
+        <div class="screen">
+          <div class="topbar"><span style="font-size:13px;color:#9ca3af">9:41</span><span></span></div>
+          <div class="feed">
+            <div class="vid"></div>
+            <div class="listing-meta">
+              <div class="price">$1,485,000</div>
+              <div class="addr">14207 NE 23rd Pl, Bellevue WA</div>
+              <div class="stats">4 bd · 3 ba · 2,840 sqft · Built 2018</div>
+              <div class="agent">
+                <div class="av"></div>
+                <div>
+                  <div style="font-weight:600">Sarah Chen</div>
+                  <div style="font-size:11px;color:#9ca3af">Realtor · Eastside</div>
+                </div>
+              </div>
+            </div>
+            <div class="right-rail">
+              <div><div class="btn">❤️</div><div class="lbl">Save</div></div>
+              <div><div class="btn">💬</div><div class="lbl">Ask</div></div>
+              <div><div class="btn">↗</div><div class="lbl">Share</div></div>
+              <div><div class="btn">🔇</div></div>
+            </div>
+            <div class="chip" id="chipA">
+              <div class="ico">🏘️</div>
+              <div>
+                <div class="name">Bellevue Eastside</div>
+                <div class="sub">⭐ 4.8 · 23 videos · in this area</div>
+              </div>
+              <div class="arrow">›</div>
+            </div>
+
+            <div class="sheet-mask" id="maskA"></div>
+            <div class="sheet" id="sheetA">
+              <div class="grip"></div>
+              <div class="head">
+                <div>
+                  <div class="title">Bellevue Eastside</div>
+                  <div class="sub">Bellevue, WA · 12 sq mi · 23 videos</div>
+                </div>
+                <div class="close" id="closeA">×</div>
+              </div>
+              <div class="body">
+                <div class="stats-row">
+                  <div class="stat"><div class="v">9.2</div><div class="k">School</div></div>
+                  <div class="stat"><div class="v">22 min</div><div class="k">to Seattle</div></div>
+                  <div class="stat"><div class="v">$1.4M</div><div class="k">Median</div></div>
+                </div>
+                <div class="desc">
+                  Quiet residential district near Microsoft, walkable to top-rated Bellevue School District.
+                  Hosted by <b>Mark Liu</b> · 8 yrs in area.
+                </div>
+
+                <h4>Community Videos · 23</h4>
+                <div class="vid-strip">
+                  <div class="v" style="background-image:url('https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=400&q=70')"><div class="lab">Schools</div></div>
+                  <div class="v" style="background-image:url('https://images.unsplash.com/photo-1545209463-e2825498edbf?w=400&q=70')"><div class="lab">Commute</div></div>
+                  <div class="v" style="background-image:url('https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=400&q=70')"><div class="lab">Parks</div></div>
+                  <div class="v" style="background-image:url('https://images.unsplash.com/photo-1542317854-04a7a8523b3a?w=400&q=70')"><div class="lab">Dining</div></div>
+                </div>
+
+                <h4>More homes here · 47</h4>
+                <div class="listings-mini">
+                  <div class="l"><div class="img" style="background-image:url('https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=400&q=70')"></div><div class="info"><div class="p">$1.29M</div><div class="a">3 bd · 2 ba</div></div></div>
+                  <div class="l"><div class="img" style="background-image:url('https://images.unsplash.com/photo-1598228723793-52759bba239c?w=400&q=70')"></div><div class="info"><div class="p">$1.65M</div><div class="a">4 bd · 3 ba</div></div></div>
+                  <div class="l"><div class="img" style="background-image:url('https://images.unsplash.com/photo-1605276373954-0c4a0dac5b12?w=400&q=70')"></div><div class="info"><div class="p">$2.10M</div><div class="a">5 bd · 4 ba</div></div></div>
+                </div>
+
+                <button class="cta">Browse all 47 homes in this community →</button>
+              </div>
+            </div>
+          </div>
+          <div class="bottombar">
+            <div class="tab active"><div class="ic">🏠</div>For You</div>
+            <div class="tab"><div class="ic">🔍</div>Search</div>
+            <div class="tab"><div class="ic">❤️</div>Saved</div>
+            <div class="tab"><div class="ic">👤</div>Me</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="side">
+        <h2>方案 A · Listing 视频流里浮 Community Chip</h2>
+        <p>**目标 buyer**:被动派发型 — 想刷视频,不想做选区决策。Listing 视频是主轴,community 是上下文。</p>
+        <ul>
+          <li>左下角:listing 元数据(房价、地址、户型、agent)— 卖房买房主线永不消失</li>
+          <li>右下角浮一个 <b>community chip</b>(脉冲动画引导第一次注意)</li>
+          <li>点击 chip → 底部 sheet 弹起,**视频不暂停、不离开** listing</li>
+          <li>Sheet 内:学区/通勤/中位价 + community 视频条带 + 该区域更多房源 + CTA</li>
+          <li>关掉 sheet 回到原 listing,继续 swipe</li>
+        </ul>
+        <div class="legend">
+          <span class="pill">点 chip 看 sheet 弹起</span>
+          <span class="pill">没用过 chip 时会脉冲 2 次</span>
+        </div>
+        <p style="margin-top:14px;color:#34d399"><b>试一下:</b> 点击 phone 里右下的 community chip。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== SCENE B ==================== -->
+  <section class="scene" data-scene="B">
+    <div class="row">
+      <div class="phone">
+        <div class="notch"></div>
+        <div class="screen">
+          <div class="topbar"><span style="font-size:13px;color:#9ca3af">9:41</span><span></span></div>
+          <div class="search-screen">
+            <div class="search-input">🔍 <span>Search homes, communities, agents…</span></div>
+            <div class="seg">
+              <button>Homes</button>
+              <button class="active">Communities</button>
+              <button>Agents</button>
+            </div>
+            <div style="font-size:13px;color:#9ca3af;margin-bottom:10px">Browse by neighborhood — 412 communities</div>
+            <div class="comm-grid">
+              <div class="comm-card">
+                <div class="cover" style="background-image:url('https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=500&q=70')"><div class="badge">23 vids · ⭐4.8</div></div>
+                <div class="meta"><div class="name">Bellevue Eastside</div><div class="stat">$1.4M · School 9.2</div></div>
+              </div>
+              <div class="comm-card">
+                <div class="cover" style="background-image:url('https://images.unsplash.com/photo-1605276373954-0c4a0dac5b12?w=500&q=70')"><div class="badge">17 vids · ⭐4.6</div></div>
+                <div class="meta"><div class="name">Kirkland Houghton</div><div class="stat">$1.1M · School 8.7</div></div>
+              </div>
+              <div class="comm-card">
+                <div class="cover" style="background-image:url('https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=500&q=70')"><div class="badge">31 vids · ⭐4.9</div></div>
+                <div class="meta"><div class="name">Mercer Island</div><div class="stat">$2.3M · School 9.5</div></div>
+              </div>
+              <div class="comm-card">
+                <div class="cover" style="background-image:url('https://images.unsplash.com/photo-1598228723793-52759bba239c?w=500&q=70')"><div class="badge">12 vids · ⭐4.5</div></div>
+                <div class="meta"><div class="name">Redmond Education Hill</div><div class="stat">$1.2M · School 9.0</div></div>
+              </div>
+              <div class="comm-card">
+                <div class="cover" style="background-image:url('https://images.unsplash.com/photo-1542317854-04a7a8523b3a?w=500&q=70')"><div class="badge">19 vids · ⭐4.7</div></div>
+                <div class="meta"><div class="name">Sammamish Plateau</div><div class="stat">$1.6M · School 9.3</div></div>
+              </div>
+              <div class="comm-card">
+                <div class="cover" style="background-image:url('https://images.unsplash.com/photo-1545209463-e2825498edbf?w=500&q=70')"><div class="badge">14 vids · ⭐4.4</div></div>
+                <div class="meta"><div class="name">Issaquah Highlands</div><div class="stat">$1.0M · School 8.8</div></div>
+              </div>
+            </div>
+          </div>
+          <div class="bottombar">
+            <div class="tab"><div class="ic">🏠</div>For You</div>
+            <div class="tab active"><div class="ic">🔍</div>Search</div>
+            <div class="tab"><div class="ic">❤️</div>Saved</div>
+            <div class="tab"><div class="ic">👤</div>Me</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="side">
+        <h2>方案 B · Search → "按小区浏览" 独立入口</h2>
+        <p>**目标 buyer**:主动选区型 — 已经有目标地理范围(学区、通勤),要先比较 community 再看房。</p>
+        <ul>
+          <li>底部 tab <b>Search</b> 里加一个 segmented:Homes / <b>Communities</b> / Agents</li>
+          <li>不再做顶级 tab(避免常驻导航膨胀),藏在 Search 二级</li>
+          <li>每个 community card:封面 + 视频数 + 评分 + 中位价 + 学区分</li>
+          <li>点进去 = community feed(已有的 `/c/[slug]/feed`,这部分不用重做)</li>
+          <li>从 community feed 里点房子又会回到 listing video,形成闭环</li>
+        </ul>
+        <div class="legend">
+          <span class="pill">复用现有 communities 数据</span>
+          <span class="pill">不占顶级 tab</span>
+          <span class="pill">服务"先选区"型 buyer</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== SCENE DASH ==================== -->
+  <section class="scene" data-scene="DASH">
+    <div class="row">
+      <div class="phone">
+        <div class="notch"></div>
+        <div class="screen">
+          <div class="topbar"><span style="font-size:13px;color:#9ca3af">9:41</span><span style="font-size:13px;color:var(--brand)">Agent</span></div>
+          <div class="agent-screen">
+            <div class="agent-header">Bellevue Eastside</div>
+            <div class="agent-sub">📍 You manage this community · 12 sq mi</div>
+
+            <div class="panel-card">
+              <div class="ph">
+                <div class="t">📹 Community Videos · 5</div>
+                <div class="add">+ Upload</div>
+              </div>
+              <div class="vid-grid">
+                <div class="t" style="background-image:url('https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=300&q=70')"><div class="l">Schools tour</div></div>
+                <div class="t" style="background-image:url('https://images.unsplash.com/photo-1545209463-e2825498edbf?w=300&q=70')"><div class="l">Commute SR-520</div></div>
+                <div class="t" style="background-image:url('https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=300&q=70')"><div class="l">Bellevue Park</div></div>
+                <div class="t" style="background-image:url('https://images.unsplash.com/photo-1542317854-04a7a8523b3a?w=300&q=70')"><div class="l">Dining intro</div></div>
+                <div class="t" style="background-image:url('https://images.unsplash.com/photo-1605276373954-0c4a0dac5b12?w=300&q=70')"><div class="l">Winter feel</div></div>
+                <div class="empty">+</div>
+              </div>
+            </div>
+
+            <div class="panel-card">
+              <div class="ph">
+                <div class="t">🏠 Listings in this area · 47</div>
+                <div class="add" style="color:#9ca3af">auto-aggregated</div>
+              </div>
+              <div class="listings-row">
+                <div class="l"><div class="img" style="background-image:url('https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=300&q=70')"></div><div class="p">$1.29M</div><div class="a">3 bd · 2 ba</div><div class="by">by you</div></div>
+                <div class="l"><div class="img" style="background-image:url('https://images.unsplash.com/photo-1598228723793-52759bba239c?w=300&q=70')"></div><div class="p">$1.65M</div><div class="a">4 bd · 3 ba</div><div class="by">by Mark Liu</div></div>
+                <div class="l"><div class="img" style="background-image:url('https://images.unsplash.com/photo-1605276373954-0c4a0dac5b12?w=300&q=70')"></div><div class="p">$2.10M</div><div class="a">5 bd · 4 ba</div><div class="by">by Jenny Park</div></div>
+                <div class="l"><div class="img" style="background-image:url('https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=300&q=70')"></div><div class="p">$1.48M</div><div class="a">4 bd · 3 ba</div><div class="by">by you</div></div>
+              </div>
+            </div>
+
+            <div class="panel-card">
+              <div class="ph"><div class="t">📊 This month</div></div>
+              <div class="stats-grid">
+                <div class="s"><div class="v">2,847</div><div class="k">Video views</div></div>
+                <div class="s"><div class="v">14</div><div class="k">Leads</div></div>
+                <div class="s"><div class="v">3</div><div class="k">→ Listings</div></div>
+              </div>
+            </div>
+          </div>
+          <div class="bottombar">
+            <div class="tab"><div class="ic">📊</div>Dashboard</div>
+            <div class="tab"><div class="ic">📹</div>Listings</div>
+            <div class="tab active"><div class="ic">🏘️</div>Communities</div>
+            <div class="tab"><div class="ic">💬</div>Leads</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="side">
+        <h2>Agent Community 运营台</h2>
+        <p>替代当前残废版本(只能 edit metadata,看不到视频)。</p>
+        <ul>
+          <li><b>Community 视频面板</b>:9:16 grid + Upload 按钮 — agent 直接管理自己拍的小区内容</li>
+          <li><b>该区域 Listing 视频</b>:按地理自动聚合,**含其他 agent 的房源** — 让 community owner 看到自己地盘上的全部活跃房源</li>
+          <li><b>本月数据</b>:曝光 / lead / 转 listing — 让 community 经营有 ROI 反馈</li>
+          <li>"Preview as buyer" 按钮放在每个面板右上(不再做成顶级 tab 切换)</li>
+        </ul>
+        <div class="legend">
+          <span class="pill">取消 Agent View / User View 顶部切换</span>
+          <span class="pill">Public Profile 入口去重</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== SCENE WIZ ==================== -->
+  <section class="scene" data-scene="WIZ">
+    <div class="compare-grid">
+      <div class="col">
+        <h3>❌ 现在 · 20+ 字段一屏炸</h3>
+        <div class="phone phone-mini">
+          <div class="notch"></div>
+          <div class="screen">
+            <div class="topbar"><span style="font-size:13px;color:#9ca3af">Create Community</span><span></span></div>
+            <div class="old-form">
+              <span class="lbl">Name</span><input value="" />
+              <span class="lbl">Slug</span><input />
+              <span class="lbl">City</span><select><option>Select…</option></select>
+              <span class="lbl">State</span><select><option>Select…</option></select>
+              <span class="lbl">ZIP codes</span><input placeholder="98004, 98005…" />
+              <span class="lbl">Boundary type</span><select><option>Polygon</option></select>
+              <span class="lbl">Geographic radius</span><input placeholder="miles" />
+              <span class="lbl">School district</span><select><option>Bellevue SD</option></select>
+              <span class="lbl">Median price</span><input />
+              <span class="lbl">Median rent</span><input />
+              <span class="lbl">Walk score</span><input />
+              <span class="lbl">Transit score</span><input />
+              <span class="lbl">Tags</span><select multiple><option>Family</option><option>Tech</option></select>
+              <span class="lbl">Description</span><input />
+              <span class="lbl">Cover photo</span><input type="file" />
+              <span class="lbl">Visibility</span><select><option>Public</option></select>
+              <span class="lbl">Allow membership</span><select><option>Yes</option></select>
+              <span class="lbl">Featured agents</span><input />
+              <span class="lbl">External links</span><input />
+              <span class="lbl">Notes</span><input />
+              <div style="height:14px"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col">
+        <h3>✅ 新 · 3 步,每步 1-2 题</h3>
+        <div class="phone phone-mini">
+          <div class="notch"></div>
+          <div class="screen">
+            <div class="topbar"><span style="font-size:13px;color:#9ca3af">New Community</span><span style="font-size:13px;color:#9ca3af">Step 1 of 3</span></div>
+            <div class="wiz-screen">
+              <div class="wiz-progress"><span class="done"></span><span></span><span></span></div>
+              <div class="wiz-step">Step 1</div>
+              <div class="wiz-title">What's the neighborhood?</div>
+              <div class="wiz-help">Just enough to find it on a map. Everything else later.</div>
+
+              <div class="wiz-field">
+                <label>Name</label>
+                <input value="Bellevue Eastside" />
+              </div>
+              <div class="wiz-field">
+                <label>Boundary</label>
+                <div class="wiz-map"><span class="pin">📍</span></div>
+                <div style="font-size:12px;color:#9ca3af;margin-top:6px">Tap to draw a polygon. Or pick from ZIP codes.</div>
+              </div>
+
+              <div class="wiz-cta-row">
+                <button class="ghost">Skip</button>
+                <button class="primary">Next →</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="max-width:760px;margin:24px auto 0">
+      <h2 style="color:var(--brand2);font-size:16px;margin:0 0 8px">Create Community 三步化</h2>
+      <ul style="font-size:14px;color:var(--mute);line-height:1.6">
+        <li><b>Step 1:</b> Name + 地图画范围 (or ZIP codes) — 必填</li>
+        <li><b>Step 2:</b> 1 句描述 + 1 张封面图 — 必填</li>
+        <li><b>Step 3:</b> [Skip] 或 高级设置(学区/walk score/tags 等)— 全部选填,默认值兜底,创建后随时改</li>
+      </ul>
+      <p style="font-size:13px;color:#71717a;margin-top:12px">
+        <b>设计原则</b>:用户还没体验过 community 是什么时,不让他在表单里炸晕。其余 17 个字段全部推到 community 详情页"⚙️ Settings"里渐进披露。
+      </p>
+    </div>
+  </section>
+
+  <p style="text-align:center;color:#52525b;font-size:12px;margin-top:60px">
+    Static prototype · No real data · Built 2026-06-17
+  </p>
+</div>
+
+<script>
+  // Scenario switcher
+  const bar = document.getElementById('bar');
+  const scenes = document.querySelectorAll('.scene');
+  bar.addEventListener('click', e => {
+    const btn = e.target.closest('button[data-s]');
+    if (!btn) return;
+    bar.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const s = btn.dataset.s;
+    scenes.forEach(sc => sc.classList.toggle('active', sc.dataset.scene === s));
+  });
+
+  // Sheet open/close (Scene A)
+  const chipA = document.getElementById('chipA');
+  const sheetA = document.getElementById('sheetA');
+  const maskA = document.getElementById('maskA');
+  const closeA = document.getElementById('closeA');
+  function open() { sheetA.classList.add('open'); maskA.classList.add('open'); }
+  function close() { sheetA.classList.remove('open'); maskA.classList.remove('open'); }
+  chipA.addEventListener('click', open);
+  closeA.addEventListener('click', close);
+  maskA.addEventListener('click', close);
+</script>
+</body>
+</html>
