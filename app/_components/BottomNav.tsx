@@ -83,8 +83,7 @@ function FabActionSheet({ open, onClose }: { open: boolean; onClose: () => void 
         className="relative z-10 w-full max-w-md rounded-t-2xl border-cream/10 border-t bg-ink p-4 pb-[calc(1rem+env(safe-area-inset-bottom))]"
         style={{ animation: 'slideUp 180ms ease-out' }}
       >
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="font-serif text-cream text-lg">Create new</h2>
+        <div className="mb-3 flex items-center justify-end">
           <button
             type="button"
             onClick={onClose}
@@ -106,7 +105,7 @@ function FabActionSheet({ open, onClose }: { open: boolean; onClose: () => void 
                 <Building2 size={18} />
               </span>
               <span className="flex flex-col">
-                <span className="font-medium text-cream text-sm">+ List a Property</span>
+                <span className="font-medium text-cream text-sm">List a Property</span>
                 <span className="text-cream/60 text-xs">Add a home to your portfolio</span>
               </span>
             </Link>
@@ -122,7 +121,7 @@ function FabActionSheet({ open, onClose }: { open: boolean; onClose: () => void 
                 <Video size={18} />
               </span>
               <span className="flex flex-col">
-                <span className="font-medium text-cream text-sm">+ Add Community Video</span>
+                <span className="font-medium text-cream text-sm">Add Community Video</span>
                 <span className="text-cream/60 text-xs">
                   Show buyers what a community really feels like
                 </span>
