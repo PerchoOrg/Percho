@@ -2,6 +2,26 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-06-17 — Phase 28.x: dashboard 'View ↗' Back returns to dashboard
+
+**Objective**: Agent on `/dashboard` taps "View ↗" on a published listing
+(opens public listing page in a new tab); tapping the top-left Back arrow
+on the listing page dumps them into `/browse` (public explore feed)
+instead of returning to `/dashboard`.
+
+**Root cause**: `BrowseFeed.tsx` Back handler was hardcoded to
+`router.push('/browse')`. The dashboard link uses `target="_blank"`, so the
+new tab has empty history and `router.back()` wouldn't help anyway.
+
+**Fix**: dashboard `View ↗` link now passes `?from=dashboard`. `BrowseFeed`
+reads `useSearchParams` and routes Back to `/dashboard` when that flag is
+present; otherwise unchanged (`/browse`). Public `/browse → /v/...` flow
+is untouched.
+
+**Files**: `app/dashboard/page.tsx`, `app/(public)/browse/_components/BrowseFeed.tsx`.
+**Verification**: `npx tsc --noEmit` clean; `npx next build` green.
+**Commit**: `6f32ea7`.
+
 ## 2026-06-17 — Phase 27.9: community swipe UI parity + infinite swipe
 
 **Objective**: Vivian flagged four bugs on `/c/<slug>/feed`:

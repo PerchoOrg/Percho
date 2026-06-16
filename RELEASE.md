@@ -3,6 +3,13 @@
 Newest at the top. Each release covers a meaningful product change visible to users.
 Format matches the standard release template (Features / Improvements / Bug Fixes / Technical / Known Issues / Metrics).
 
+## v0.32.2 — 2026-06-17
+
+### 🐛 Bug Fixes
+- **"View ↗" from your dashboard now returns you to your dashboard.**
+  Previously, tapping the back arrow on the public listing page sent you
+  to the public explore feed instead. Agents stay in their workspace.
+
 ## v0.32.1 — 2026-06-17
 
 ### ✨ Improvements
