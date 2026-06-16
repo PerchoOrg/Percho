@@ -2,6 +2,47 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-06-17 — perf: drop revalidatePath from listing autosave action
+
+**Symptom:** Vivian reported the dashboard UI feels slow — "every keystroke
+takes a few seconds to react." On the listing edit page (`/dashboard/listings/<id>/edit`)
+the form is debounced-autosave (600ms after the last keystroke calls
+`updateListing` server action). The action ended with
+`revalidatePath('/dashboard/listings/<id>/edit')` — which forces the Next
+router to re-fetch the page's full RSC payload (listing row, communities
+list, agent context, RLS-checked permissions) and apply it after the
+in-flight transition resolves. On a slow link that re-fetch happens every
+~600ms while the user is still typing, and the router transition
+serialises with the user's next keystroke — visible UI lag.
+
+**Why removing it is safe:** the form's client state IS the truth of what
+the user just typed; we don't want server data overwriting it. Pages that
+genuinely need server-data sync after an action — `publishListing`,
+`unpublishListing`, `archiveListing`, `setListingCover`,
+`reorderListingVideos`, the cover/video upload panels — still
+`revalidatePath` from their own actions, untouched. Only the autosave
+metadata patcher is now silent.
+
+**Files:** `app/dashboard/listings/[id]/edit/actions.ts` (8 lines: replaced
+the `revalidatePath` call with an explanatory comment).
+
+**Verify:** `tsc --noEmit` clean. Functional verify deferred to Vivian on
+prod once Vercel deploys — she should feel keystroke→display latency drop
+back to React's normal sub-frame on the listing edit page (price, beds,
+baths, sqft, description, etc.). Other dashboard forms (community editor,
+publish, cover upload) are explicit-submit + intentional refresh — those
+were already fine and were not changed.
+
+**Risk:** very low. Worst case: if a future feature reads listing fields
+from RSC on the same page while the user is still typing, it would see
+stale data — but no such feature exists today; the page IS the editor.
+
+**Next:** if Vivian still reports lag after this ships, the next
+suspects are (a) the 664-line single-component form re-rendering all 30+
+inputs on every setState — split into sub-fieldsets memoized on their own
+slice of state, and (b) Cloudflare Stream `<iframe>` players in the photo
+panel competing for main-thread time — lazy-mount on intersection.
+
 ## 2026-06-17 — Phase 27.10: dashboard listing preview route (draft / archived viewable)
 
 **What:** Follow-up to 27.9. Cover thumbnail (and the new "Preview" button)

@@ -97,7 +97,14 @@ export async function updateListing(
   }
   if (!updated) return { ok: false, error: 'not_found_or_forbidden' };
 
-  revalidatePath(`/dashboard/listings/${id}/edit`);
+  // NOTE: intentionally NO revalidatePath here. This action is called from
+  // debounced autosave on every keystroke burst; revalidating forces the
+  // Next router to re-fetch the page's RSC payload (listing row, communities
+  // list, permission checks, etc.) and applies it after the in-flight
+  // transition resolves. On a slow link that adds visible UI lag while the
+  // user is still typing — and the client form state is already the truth.
+  // Pages that DO need server-data sync (publish, archive, cover, video
+  // reorder) revalidate from their own actions.
   return { ok: true };
 }
 

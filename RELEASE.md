@@ -3,6 +3,16 @@
 Newest at the top. Each release covers a meaningful product change visible to users.
 Format matches the standard release template (Features / Improvements / Bug Fixes / Technical / Known Issues / Metrics).
 
+## v0.32.10 — 2026-06-17
+
+### 🐛 Bug Fixes
+- **Listing edit page no longer feels laggy while typing.** The form was
+  doing a full server-data sync after every autosave, which on slower
+  connections caused noticeable keystroke→display delay. Autosave still
+  runs (and your edits are still saved 600ms after you stop typing); it
+  just no longer drags the rest of the page along with it. Other
+  dashboard pages (publish, cover upload, community editor) are unchanged.
+
 ## v0.32.9 — 2026-06-17
 
 ### ✨ Improvements
