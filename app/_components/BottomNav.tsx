@@ -46,7 +46,6 @@ function TabButton({ tab, active }: { tab: Tab; active: boolean }) {
   return (
     <Link
       href={tab.href}
-      prefetch={false}
       aria-current={active ? 'page' : undefined}
       className={`flex h-14 flex-col items-center justify-center gap-0.5 text-[10px] transition-colors ${
         active ? 'text-gold' : 'text-cream/65 hover:text-cream'
@@ -101,7 +100,6 @@ function FabActionSheet({ open, onClose }: { open: boolean; onClose: () => void 
           <li>
             <Link
               href="/dashboard/listings/new"
-              prefetch={false}
               onClick={onClose}
               className="flex items-center gap-3 rounded-xl border-cream/10 border bg-ink/60 px-4 py-3 transition hover:border-gold/40 hover:bg-gold/5"
             >
@@ -117,7 +115,6 @@ function FabActionSheet({ open, onClose }: { open: boolean; onClose: () => void 
           <li>
             <Link
               href="/dashboard/communities"
-              prefetch={false}
               onClick={onClose}
               className="flex items-center gap-3 rounded-xl border-cream/10 border bg-ink/60 px-4 py-3 transition hover:border-gold/40 hover:bg-gold/5"
             >
@@ -198,7 +195,6 @@ export function BottomNav({ role }: { role: ViewerRole }) {
                 <li key={tab.href} className="flex flex-1 items-center justify-center">
                   <Link
                     href={tab.href}
-                    prefetch={false}
                     aria-label={tab.label}
                     aria-current={isTabActive(pathname, tab) ? 'page' : undefined}
                     className="-mt-5 flex h-14 w-14 items-center justify-center rounded-full bg-gold text-ink shadow-gold/20 shadow-lg transition active:scale-95"

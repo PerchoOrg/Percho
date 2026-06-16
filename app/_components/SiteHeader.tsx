@@ -49,7 +49,6 @@ function NavLink({ tab, active }: { tab: Tab; active: boolean }) {
   return (
     <Link
       href={tab.href}
-      prefetch={false}
       aria-current={active ? 'page' : undefined}
       className={`text-sm transition-colors ${
         active ? 'text-gold' : 'text-cream/70 hover:text-cream'
@@ -242,7 +241,6 @@ export function SiteHeader({ role, initial, displayName, brokerage, avatarUrl }:
         <div className="flex items-center gap-7">
           <Link
             href={role === 'agent' ? '/dashboard' : '/'}
-            prefetch={false}
             className="font-serif text-cream text-xl tracking-tight transition hover:opacity-90"
           >
             Vicinity

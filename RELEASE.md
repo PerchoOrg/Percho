@@ -3,6 +3,16 @@
 Newest at the top. Each release covers a meaningful product change visible to users.
 Format matches the standard release template (Features / Improvements / Bug Fixes / Technical / Known Issues / Metrics).
 
+## v0.32.12 — 2026-06-17
+
+### 🐛 Bug Fixes
+- **Tapping a tab in the nav now feels instant.** Previously the first tap
+  on Communities, Leads, Me, or any other tab from the bottom nav or top
+  header had a 1-3 second pause before anything happened. The app now
+  prepares the next page's content in the background as you browse and
+  paints a placeholder layout the moment you tap — every tab change reads
+  as immediate, even on slower networks.
+
 ## v0.32.11 — 2026-06-17
 
 ### 🐛 Bug Fixes

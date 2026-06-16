@@ -2,6 +2,64 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-06-17 — perf: site-wide nav prefetch + loading skeletons (v0.32.12)
+
+**Symptom:** Vivian's partner qiaoxux: "first tap on community / leads / me
+still has a long delay." After v0.32.11 fixed the `/communities` →
+`/c/[slug]` click, the same lag reproduced on the bottom-nav and top-nav
+tabs themselves. Tapping `Communities`, `Leads`, `Me` from any page sat
+unresponsive for 1-3 seconds.
+
+**Root cause (two compounding issues):**
+
+1. **All nav `<Link>`s had `prefetch={false}`.** `app/_components/BottomNav.tsx`
+   (TabButton, FAB sheet items, center-emphasis tab) and
+   `app/_components/SiteHeader.tsx` (NavLink, brand wordmark) every single
+   nav link disabled prefetch. Next 14's default behaviour — prefetch the
+   destination's RSC payload as the link enters the viewport — was turned
+   off everywhere. Every tab tap therefore paid full RSC roundtrip on the
+   critical path: cookies → auth → RLS-filtered Supabase queries → render.
+   On the slowest routes (`/dashboard`, `/saved`, `/communities`) that's
+   2-3s of dead time.
+
+2. **No `loading.tsx` on most route segments.** Without a loading boundary
+   Next holds the previous route's UI until SSR resolves, which reads as a
+   freeze. Even after prefetch lands, the user-perceived latency is bound
+   by the slowest data dep on the page.
+
+**Why these were originally `prefetch={false}`:** likely defensive — early
+in the project routes were heavy and prefetching every nav target on every
+page would have hammered Supabase RLS quota and Cloudflare egress. But the
+current routes are reasonably light, and the perceived-latency cost of
+disabled prefetch has clearly outweighed the bandwidth savings. If usage
+patterns prove prefetch is hurting our Supabase/Vercel bill, revisit with
+`prefetch="auto"` (Next 14's intent-based prefetch) on a per-link basis.
+
+**Files:**
+- `app/_components/BottomNav.tsx` — drop 5x `prefetch={false}`.
+- `app/_components/SiteHeader.tsx` — drop 2x `prefetch={false}`.
+- `app/(public)/profile/loading.tsx` — new generic skeleton.
+- `app/(public)/saved/loading.tsx` — new (saved listings grid).
+- `app/(public)/communities/loading.tsx` — new (community grid).
+- `app/(public)/browse/loading.tsx` — new (listings grid).
+- `app/(public)/nearby/loading.tsx` — new.
+- `app/dashboard/loading.tsx` — new.
+- `app/dashboard/leads/loading.tsx` — new (rows skeleton).
+
+**Verification:** `node_modules/.bin/tsc --noEmit` clean.
+
+**Validation plan:** Vivian on prod — open any page, tap Communities /
+Leads / Me from the bottom nav. Should feel instant: skeleton paints on
+the click, then content swaps in. If still slow on a specific tab, that
+tab's data deps are the next thing to attack (likely candidates: `/dashboard`
+agent context query, `/saved` saved-* expansion).
+
+**Next-cut candidates** if a specific tab is still slow:
+- `/dashboard` — server agent context query. Profile with `EXPLAIN ANALYZE`.
+- `/saved` — multiple `saved_*` table joins. Already a view but might miss
+  index on `device_id` for anon users.
+- BrowseFeed (1378 LOC) — only attack if user reports the swipe/feed is laggy.
+
 ## 2026-06-17 — perf: instant click on Communities grid (prefetch + parallel queries + loading skeleton)
 
 **Symptom:** Vivian: "first click on a community takes ~3 seconds to respond."
