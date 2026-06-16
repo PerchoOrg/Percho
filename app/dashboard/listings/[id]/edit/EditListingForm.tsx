@@ -317,12 +317,10 @@ export function EditListingForm({ listingId, initial, communities, listingContex
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between gap-3">
-        <p className="flex-1 rounded border border-bronze/20 bg-ink2/40 p-3 text-xs text-cream/60">
-          <span className="text-red-300">*</span> Required to publish (address, list price,
-          bedrooms, bathrooms, and at least one ready video). Other fields are optional and can be
-          added later. <span className="text-cream/80">Changes save automatically.</span>
-        </p>
+      <div className="flex items-center justify-between gap-3 text-xs text-cream/50">
+        <span>
+          <span className="text-red-300">*</span> = required to publish
+        </span>
         <SaveBadge state={saveState} error={errorMsg} />
       </div>
 
@@ -640,7 +638,7 @@ function Field({
   label,
   hint,
   required,
-  optional,
+  optional: _optional,
   children,
 }: {
   label: string;
@@ -651,15 +649,11 @@ function Field({
 }) {
   return (
     <div className="block">
-      <span className="mb-1 flex items-center gap-2 text-xs font-medium text-cream/70">
+      <span className="mb-1 flex items-center gap-1 text-xs font-medium text-cream/70">
         <span>{label}</span>
         {required ? (
-          <span className="rounded bg-red-500/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-red-300">
-            <span aria-hidden="true">*</span> Required
-          </span>
-        ) : optional ? (
-          <span className="rounded border border-cream/15 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-cream/40">
-            Optional
+          <span className="text-red-300" aria-label="required">
+            *
           </span>
         ) : null}
       </span>

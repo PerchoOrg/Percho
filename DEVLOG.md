@@ -2,6 +2,49 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-06-16 02:27 UTC — Listing edit page: header utility links + status row + form chrome cleanup
+
+**Objective**: Owner flagged the listing edit page top section as cluttered.
+Three problems: (1) the "Auto-save on" pill was wedged inside a 6-line help
+paragraph in the form header, fighting it for visual weight; (2) the
+PublishPanel was a tall block with status, public URL, and a redundant
+"Required to publish: …" hint duplicating the form's help text; (3)
+every Optional field carried an `Optional` pill — pure noise — and the
+Required pill triple-encoded itself (red box + `*` + the word "Required").
+
+**Actions**:
+- `app/dashboard/listings/[id]/edit/page.tsx` — header is now a flex row.
+  Right column stacks two utility links: `View public ↗`
+  (CopyLinkButton — shares the path on mobile, copies on desktop) and
+  `View analytics →`. CopyLinkButton only renders for published listings
+  (no public URL otherwise).
+- `app/dashboard/listings/[id]/edit/PublishPanel.tsx` — collapsed to a
+  one-row `Status: <state>   [Unpublish] [Archive]`. Removed the
+  `Public URL: …` line (now covered by the header link) and the
+  `Required to publish: …` hint (already in the form header). Dropped
+  the `agentSlug` / `listingSlug` props since the public URL moved out.
+  Archived state still shows its descriptive sentence below the row.
+- `app/dashboard/listings/[id]/edit/EditListingForm.tsx` — the bordered
+  6-line help paragraph is now a thin single-line `* = required to publish`
+  flanked by the SaveBadge. The `Field` component's `Optional` pill is
+  gone entirely; `Required` is now a small red `*` next to the label.
+  `optional` prop kept on the type for source-compat with all callsites
+  (it's a no-op now).
+
+**Decisions**:
+- Kept the `optional` prop on Field instead of mass-removing every
+  `optional` callsite — surgical-changes principle. The prop reads as
+  documentation; removing the visual treatment is the change.
+- CopyLinkButton over a plain `<a>` because Vivian's main use of the
+  edit page is grabbing the public URL to share — a one-tap mobile share
+  sheet beats "open link, copy from address bar".
+- Did not touch NewListingForm (the create page); it has its own
+  OptionalBadge component but isn't on the edit page screenshot the
+  owner showed. Same change can be made there separately if requested.
+
+**Verification**: `npx tsc --noEmit` clean. `next build` clean. Did not
+verify in browser — owner will check the deployed page.
+
 ## 2026-06-16 02:03 UTC — Dashboard listings: 3-state tabs + Archived filter fix
 
 **Objective**: Owner reported (1) the Archived tab on `/dashboard` shows

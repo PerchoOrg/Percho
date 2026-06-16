@@ -9,6 +9,7 @@
  * `actions.ts` header for rationale.
  */
 
+import { CopyLinkButton } from '@/app/dashboard/_components/CopyLinkButton';
 import { thumbnailUrl } from '@/lib/cloudflare/stream';
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
@@ -146,14 +147,19 @@ export default async function EditListingPage({
 
   return (
     <div className="mx-auto max-w-3xl space-y-6 py-4">
-      <header>
-        <h1 className="text-2xl font-semibold tracking-tight">{listing.address}</h1>
-        <p className="mt-1 text-sm text-cream/60">
-          {listing.city}, {listing.state}
-          {listing.zip ? ` ${listing.zip}` : ''}
-          {listing.neighborhood ? ` · ${listing.neighborhood}` : ''}
-        </p>
-        <div className="mt-2">
+      <header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <h1 className="text-2xl font-semibold tracking-tight">{listing.address}</h1>
+          <p className="mt-1 text-sm text-cream/60">
+            {listing.city}, {listing.state}
+            {listing.zip ? ` ${listing.zip}` : ''}
+            {listing.neighborhood ? ` · ${listing.neighborhood}` : ''}
+          </p>
+        </div>
+        <div className="flex shrink-0 flex-col items-start gap-1.5 sm:items-end">
+          {listing.status === 'published' && agent?.slug ? (
+            <CopyLinkButton path={`/v/${agent.slug}/${listing.slug}`} display="View public ↗" />
+          ) : null}
           <a
             href={`/dashboard/listings/${listing.id}/analytics`}
             className="text-xs text-gold hover:underline"
@@ -163,12 +169,7 @@ export default async function EditListingPage({
         </div>
       </header>
 
-      <PublishPanel
-        listingId={listing.id}
-        status={listing.status}
-        agentSlug={agent?.slug ?? null}
-        listingSlug={listing.slug}
-      />
+      <PublishPanel listingId={listing.id} status={listing.status} />
 
       <section className="rounded border border-bronze/30 bg-ink2 p-6">
         <h2 className="mb-4 text-base font-semibold">Listing details</h2>

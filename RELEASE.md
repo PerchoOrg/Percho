@@ -3,6 +3,13 @@
 Newest at the top. Each release covers a meaningful product change visible to users.
 Format matches the standard release template (Features / Improvements / Bug Fixes / Technical / Known Issues / Metrics).
 
+## v0.28.6 — 2026-06-16
+
+### ✨ Improvements
+- **Cleaner top of the listing edit page.** The two utility links (View public link, View analytics) are now stacked in the top-right corner instead of buried below the address. The View public link is one-tap copy/share — on mobile it opens the share sheet so you can send it straight to a client.
+- **Status row is now one line.** "Status: published" and the Unpublish / Archive buttons share a single row instead of a tall block. The duplicated "Required to publish…" hint is gone (it was already shown right below in the form).
+- **Less noise on every form field.** The "Optional" badge on every non-required field is gone. Required fields show a small red `*` next to the label instead of a red pill that read "* Required". Easier to scan, same information.
+
 ## v0.28.5 — 2026-06-16
 
 ### 🐛 Bug Fixes

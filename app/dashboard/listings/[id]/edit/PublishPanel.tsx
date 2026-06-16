@@ -19,8 +19,6 @@ import { publishListing, unpublishListing } from './publish-actions';
 interface Props {
   listingId: string;
   status: string;
-  agentSlug: string | null;
-  listingSlug: string;
 }
 
 /**
@@ -61,7 +59,7 @@ function describeMissing(key: string): { label: string; hint: string } {
   return { label: key, hint: '' };
 }
 
-export function PublishPanel({ listingId, status, agentSlug, listingSlug }: Props) {
+export function PublishPanel({ listingId, status }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [missing, setMissing] = useState<string[] | null>(null);
@@ -69,7 +67,6 @@ export function PublishPanel({ listingId, status, agentSlug, listingSlug }: Prop
 
   const isPublished = status === 'published';
   const isArchived = status === 'archived';
-  const publicUrl = agentSlug ? `/v/${agentSlug}/${listingSlug}` : null;
 
   function handlePublish() {
     setMissing(null);
@@ -134,42 +131,17 @@ export function PublishPanel({ listingId, status, agentSlug, listingSlug }: Prop
   }
 
   return (
-    <div className="rounded border border-bronze/30 bg-ink2 p-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h2 className="text-base font-semibold">
-            Status:{' '}
-            <span
-              className={isPublished ? 'text-gold' : isArchived ? 'text-cream/40' : 'text-cream/70'}
-            >
-              {status}
-            </span>
-          </h2>
-          {isPublished && publicUrl && (
-            <p className="mt-1 text-xs text-cream/60">
-              Public URL:{' '}
-              <a
-                href={publicUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="text-gold hover:underline"
-              >
-                {publicUrl}
-              </a>
-            </p>
-          )}
-          {isArchived && (
-            <p className="mt-1 text-xs text-cream/60">
-              Hidden from the public site and the dashboard's default view. Unarchive returns it to
-              draft.
-            </p>
-          )}
-          {!isPublished && !isArchived && (
-            <p className="mt-1 text-xs text-cream/60">
-              Required to publish: address, list price, bedrooms, bathrooms, and at least one ready
-              video.
-            </p>
-          )}
+    <div className="rounded border border-bronze/30 bg-ink2 px-4 py-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="text-sm">
+          <span className="text-cream/60">Status: </span>
+          <span
+            className={`font-medium ${
+              isPublished ? 'text-gold' : isArchived ? 'text-cream/40' : 'text-cream/80'
+            }`}
+          >
+            {status}
+          </span>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {isArchived ? (
@@ -214,8 +186,14 @@ export function PublishPanel({ listingId, status, agentSlug, listingSlug }: Prop
           )}
         </div>
       </div>
+      {isArchived && (
+        <p className="mt-2 text-xs text-cream/60">
+          Hidden from the public site and the dashboard's default view. Unarchive returns it to
+          draft.
+        </p>
+      )}
       {missing && missing.length > 0 && (
-        <div className="mt-4 rounded border border-red-500/40 bg-red-500/10 p-3 text-sm">
+        <div className="mt-3 rounded border border-red-500/40 bg-red-500/10 p-3 text-sm">
           <p className="font-medium text-red-300">
             Can't publish yet — please fix the following and try again:
           </p>
@@ -238,7 +216,7 @@ export function PublishPanel({ listingId, status, agentSlug, listingSlug }: Prop
         </div>
       )}
       {err && (
-        <p className="mt-4 rounded border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-300">
+        <p className="mt-3 rounded border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-300">
           Error: {err}
         </p>
       )}
