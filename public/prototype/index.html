@@ -209,21 +209,41 @@
   .l2 .l2-top{
     height:48px;flex-shrink:0;display:flex;align-items:center;gap:8px;
     padding:0 14px;background:rgba(0,0,0,.55);backdrop-filter:blur(10px);
-    color:#fff;font-size:13px;border-bottom:1px solid rgba(255,255,255,.08);z-index:3
+    color:#fff;font-size:13px;border-bottom:1px solid rgba(255,255,255,.08);z-index:5
   }
   .l2 .l2-top .back{display:flex;align-items:center;gap:6px;cursor:pointer;color:#fff;font-weight:600}
   .l2 .l2-top .back .arr{font-size:18px}
   .l2 .l2-top .back .lab{font-size:12px;color:#cbd5e1}
+  .l2 .l2-top .counter{margin-left:auto;font-size:12px;color:#cbd5e1;font-variant-numeric:tabular-nums}
+  .l2 .l2-progress{height:3px;display:flex;gap:3px;padding:0 14px;background:rgba(0,0,0,.55);flex-shrink:0}
+  .l2 .l2-progress span{flex:1;background:rgba(255,255,255,.18);border-radius:2px;transition:background .2s}
+  .l2 .l2-progress span.active{background:#fff}
   .l2 .l2-body{flex:1;position:relative;overflow:hidden}
+  /* Horizontal carousel track inside L2 */
+  .l2 .track{position:absolute;inset:0;display:flex;transition:transform .3s cubic-bezier(.32,.72,.32,1);will-change:transform;touch-action:pan-y}
+  .l2 .slide{flex:0 0 100%;height:100%;position:relative}
   .l2 .l2-vid{position:absolute;inset:0;background-size:cover;background-position:center}
   .l2 .l2-vid::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.3) 0%,rgba(0,0,0,0) 30%,rgba(0,0,0,0) 60%,rgba(0,0,0,.85) 100%)}
-  .l2 .l2-meta{position:absolute;left:16px;right:80px;bottom:24px;color:#fff;z-index:2}
+  .l2 .l2-meta{position:absolute;left:16px;right:80px;bottom:90px;color:#fff;z-index:2}
   .l2 .l2-meta .t{font-size:20px;font-weight:700}
   .l2 .l2-meta .s{font-size:13px;color:#e5e7eb;margin-top:4px}
   .l2 .l2-meta .stats{font-size:13px;color:#cbd5e1;margin-top:6px}
-  .l2 .l2-rail{position:absolute;right:12px;bottom:80px;display:flex;flex-direction:column;gap:18px;z-index:2;align-items:center}
+  .l2 .l2-rail{position:absolute;right:12px;bottom:160px;display:flex;flex-direction:column;gap:18px;z-index:2;align-items:center}
   .l2 .l2-rail .b{width:44px;height:44px;border-radius:50%;background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;font-size:18px;color:#fff}
-  .l2 .l2-tag{position:absolute;left:16px;top:14px;z-index:2;background:rgba(0,0,0,.55);backdrop-filter:blur(10px);padding:6px 12px;border-radius:999px;font-size:12px;color:#fff;border:1px solid rgba(255,255,255,.12)}
+  /* Cross-link chip on L2 (e.g. listings chip on community video) */
+  .l2 .l2-chip{
+    position:absolute;left:16px;bottom:24px;z-index:3;
+    display:flex;align-items:center;gap:10px;
+    padding:8px 14px 8px 8px;border-radius:999px;
+    background:rgba(15,15,18,.78);backdrop-filter:blur(12px);
+    border:1px solid rgba(255,255,255,.14);cursor:pointer;color:#fff
+  }
+  .l2 .l2-chip .ico{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#34d399,#22d3ee);display:flex;align-items:center;justify-content:center;font-size:14px}
+  .l2 .l2-chip .name{font-size:13px;font-weight:600}
+  .l2 .l2-chip .sub{font-size:11px;color:#9ca3af;margin-top:1px}
+  .l2 .l2-chip .arrow{margin-left:6px;color:#9ca3af;font-size:14px}
+  .l2 .swipe-hint{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);color:rgba(255,255,255,.6);font-size:12px;pointer-events:none;animation:fade 2.2s ease-in-out 1;z-index:1}
+  @keyframes fade{0%,100%{opacity:0}30%,70%{opacity:1}}
 
   /* Debug HUD — shows current layer */
   .hud{
@@ -313,45 +333,35 @@
                   Hosted by <b>Mark Liu</b> · 8 yrs in area.
                 </div>
 
-                <h4>Community Videos · 23</h4>
+                <h4>Community Videos · 5</h4>
                 <div class="vid-strip" id="stripA">
-                  <div class="v" data-l2="comm-video" data-title="Schools tour" data-img="https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=900&q=70" style="background-image:url('https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=400&q=70')"><div class="play">▶</div><div class="lab">Schools</div></div>
-                  <div class="v" data-l2="comm-video" data-title="Commute · SR-520" data-img="https://images.unsplash.com/photo-1545209463-e2825498edbf?w=900&q=70" style="background-image:url('https://images.unsplash.com/photo-1545209463-e2825498edbf?w=400&q=70')"><div class="play">▶</div><div class="lab">Commute</div></div>
-                  <div class="v" data-l2="comm-video" data-title="Bellevue Park" data-img="https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=900&q=70" style="background-image:url('https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=400&q=70')"><div class="play">▶</div><div class="lab">Parks</div></div>
-                  <div class="v" data-l2="comm-video" data-title="Dining intro" data-img="https://images.unsplash.com/photo-1542317854-04a7a8523b3a?w=900&q=70" style="background-image:url('https://images.unsplash.com/photo-1542317854-04a7a8523b3a?w=400&q=70')"><div class="play">▶</div><div class="lab">Dining</div></div>
+                  <div class="v" data-idx="0" style="background-image:url('https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=400&q=70')"><div class="play">▶</div><div class="lab">Schools</div></div>
+                  <div class="v" data-idx="1" style="background-image:url('https://images.unsplash.com/photo-1545209463-e2825498edbf?w=400&q=70')"><div class="play">▶</div><div class="lab">Commute</div></div>
+                  <div class="v" data-idx="2" style="background-image:url('https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=400&q=70')"><div class="play">▶</div><div class="lab">Parks</div></div>
+                  <div class="v" data-idx="3" style="background-image:url('https://images.unsplash.com/photo-1542317854-04a7a8523b3a?w=400&q=70')"><div class="play">▶</div><div class="lab">Dining</div></div>
+                  <div class="v" data-idx="4" style="background-image:url('https://images.unsplash.com/photo-1519501025264-65ba15a82390?w=400&q=70')"><div class="play">▶</div><div class="lab">Nightlife</div></div>
                 </div>
 
-                <h4>More homes here · 47</h4>
-                <div class="listings-mini" id="listingsA">
-                  <div class="l" data-l2="listing" data-title="$1.29M · 1421 NE 22nd St" data-img="https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=900&q=70"><div class="img" style="background-image:url('https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=400&q=70')"></div><div class="info"><div class="p">$1.29M</div><div class="a">3 bd · 2 ba</div></div></div>
-                  <div class="l" data-l2="listing" data-title="$1.65M · 14530 NE 24th St" data-img="https://images.unsplash.com/photo-1598228723793-52759bba239c?w=900&q=70"><div class="img" style="background-image:url('https://images.unsplash.com/photo-1598228723793-52759bba239c?w=400&q=70')"></div><div class="info"><div class="p">$1.65M</div><div class="a">4 bd · 3 ba</div></div></div>
-                  <div class="l" data-l2="listing" data-title="$2.10M · 14102 NE 25th Pl" data-img="https://images.unsplash.com/photo-1605276373954-0c4a0dac5b12?w=900&q=70"><div class="img" style="background-image:url('https://images.unsplash.com/photo-1605276373954-0c4a0dac5b12?w=400&q=70')"></div><div class="info"><div class="p">$2.10M</div><div class="a">5 bd · 4 ba</div></div></div>
-                </div>
-
-                <button class="cta" id="ctaBrowseA">Browse all 47 homes in this community →</button>
+                <button class="cta" id="ctaBrowseA">▶ Watch all 5 community videos</button>
               </div>
             </div>
 
-            <!-- L2 fullscreen overlay (community video / listing detail) -->
+            <!-- L2 fullscreen: community video carousel (horizontal swipe) -->
             <div class="l2" id="l2A">
               <div class="l2-top">
                 <div class="back" id="backA">
                   <span class="arr">‹</span>
                   <div>
                     <div style="font-weight:600;font-size:13px">Back</div>
-                    <div class="lab" id="backLabA">14207 NE 23rd Pl</div>
+                    <div class="lab">14207 NE 23rd Pl</div>
                   </div>
                 </div>
+                <div class="counter" id="counterA">1 / 5</div>
               </div>
+              <div class="l2-progress" id="progA"></div>
               <div class="l2-body">
-                <div class="l2-vid" id="l2VidA"></div>
-                <div class="l2-tag" id="l2TagA">Bellevue Eastside</div>
-                <div class="l2-meta" id="l2MetaA"></div>
-                <div class="l2-rail">
-                  <div class="b">❤️</div>
-                  <div class="b">💬</div>
-                  <div class="b">↗</div>
-                </div>
+                <div class="track" id="trackA"></div>
+                <div class="swipe-hint">← swipe →</div>
               </div>
             </div>
 
@@ -636,54 +646,127 @@
   const closeA = document.getElementById('closeA');
   const hudA = document.getElementById('hudA');
   const l2A = document.getElementById('l2A');
-  const l2VidA = document.getElementById('l2VidA');
-  const l2MetaA = document.getElementById('l2MetaA');
-  const l2TagA = document.getElementById('l2TagA');
+  const trackA = document.getElementById('trackA');
+  const progA = document.getElementById('progA');
+  const counterA = document.getElementById('counterA');
   const backA = document.getElementById('backA');
   const stripA = document.getElementById('stripA');
-  const listingsA = document.getElementById('listingsA');
   const ctaBrowseA = document.getElementById('ctaBrowseA');
+
+  // Community video collection (5 videos)
+  const COMM_VIDS = [
+    { title: 'Schools tour',    img: 'https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=900&q=70', stat: '⭐ 4.8 · 2.3k views', sub: 'Top-rated Bellevue School District walkthrough' },
+    { title: 'Commute · SR-520',img: 'https://images.unsplash.com/photo-1545209463-e2825498edbf?w=900&q=70', stat: '⭐ 4.7 · 1.8k views', sub: '22 min drive to Seattle, 18 min to Microsoft' },
+    { title: 'Bellevue Park',   img: 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=900&q=70', stat: '⭐ 4.9 · 3.1k views', sub: 'Trails, downtown park, weekend farmers market' },
+    { title: 'Dining intro',    img: 'https://images.unsplash.com/photo-1542317854-04a7a8523b3a?w=900&q=70', stat: '⭐ 4.6 · 1.2k views', sub: 'Crossroads, Old Bellevue, neighborhood favorites' },
+    { title: 'Nightlife',       img: 'https://images.unsplash.com/photo-1519501025264-65ba15a82390?w=900&q=70', stat: '⭐ 4.5 · 980 views',  sub: 'Bars, late-night, what the area looks like at 10pm' },
+  ];
+
+  let cur = 0;
 
   function setHUD(label) { hudA.textContent = label; }
   function openSheet() { sheetA.classList.add('open'); maskA.classList.add('open'); setHUD('L1 · COMMUNITY SHEET'); }
   function closeSheet() { sheetA.classList.remove('open'); maskA.classList.remove('open'); if (!l2A.classList.contains('open')) setHUD('L0 · LISTING FEED'); }
 
-  function openL2(kind, title, img) {
-    l2VidA.style.backgroundImage = `url('${img}')`;
-    if (kind === 'comm-video') {
-      l2TagA.textContent = '🏘️ Bellevue Eastside · Community';
-      l2MetaA.innerHTML = `<div class="t">${title}</div><div class="s">Hosted by Mark Liu · 8 yrs in area</div><div class="stats">2.3k views · ⭐ 4.8</div>`;
-      setHUD('L2 · COMMUNITY VIDEO');
-    } else {
-      l2TagA.textContent = '🏠 Listing · Bellevue Eastside';
-      l2MetaA.innerHTML = `<div class="t">${title.split('·')[0].trim()}</div><div class="s">${title.split('·').slice(1).join('·').trim()}</div><div class="stats">4 bd · 3 ba · 2,840 sqft</div>`;
-      setHUD('L2 · LISTING DETAIL');
-    }
+  // Build carousel slides once
+  function buildTrack() {
+    trackA.innerHTML = COMM_VIDS.map((v, i) => `
+      <div class="slide" data-i="${i}">
+        <div class="l2-vid" style="background-image:url('${v.img}')"></div>
+        <div class="l2-meta">
+          <div class="t">${v.title}</div>
+          <div class="s">${v.sub}</div>
+          <div class="stats">${v.stat}</div>
+        </div>
+        <div class="l2-rail">
+          <div class="b">❤️</div>
+          <div class="b">💬</div>
+          <div class="b">↗</div>
+        </div>
+        <div class="l2-chip" data-link="listings">
+          <div class="ico">🏠</div>
+          <div>
+            <div class="name">47 homes in Bellevue Eastside</div>
+            <div class="sub">Tap to browse all listings</div>
+          </div>
+          <div class="arrow">›</div>
+        </div>
+      </div>
+    `).join('');
+    progA.innerHTML = COMM_VIDS.map(() => '<span></span>').join('');
+  }
+  buildTrack();
+
+  function renderCarousel() {
+    trackA.style.transform = `translateX(-${cur * 100}%)`;
+    counterA.textContent = `${cur + 1} / ${COMM_VIDS.length}`;
+    progA.querySelectorAll('span').forEach((s, i) => s.classList.toggle('active', i === cur));
+  }
+
+  function openL2(idx) {
+    cur = idx || 0;
+    renderCarousel();
     l2A.classList.add('open');
+    setHUD('L2 · COMMUNITY VIDEO');
   }
   function closeL2() {
     l2A.classList.remove('open');
-    if (sheetA.classList.contains('open')) setHUD('L1 · COMMUNITY SHEET');
-    else setHUD('L0 · LISTING FEED');
+    // Always returns to L0 listing — the home anchor (per user request)
+    setHUD(sheetA.classList.contains('open') ? 'L1 · COMMUNITY SHEET' : 'L0 · LISTING FEED');
   }
+
+  // Horizontal swipe on track
+  let dragX = 0, startX = 0, dragging = false;
+  trackA.addEventListener('touchstart', e => { startX = e.touches[0].clientX; dragX = 0; dragging = true; trackA.style.transition = 'none'; }, {passive:true});
+  trackA.addEventListener('touchmove', e => {
+    if (!dragging) return;
+    dragX = e.touches[0].clientX - startX;
+    const w = trackA.clientWidth;
+    trackA.style.transform = `translateX(calc(-${cur * 100}% + ${dragX}px))`;
+  }, {passive:true});
+  trackA.addEventListener('touchend', () => {
+    dragging = false;
+    trackA.style.transition = '';
+    const w = trackA.clientWidth;
+    if (dragX < -w * 0.18 && cur < COMM_VIDS.length - 1) cur++;
+    else if (dragX > w * 0.18 && cur > 0) cur--;
+    renderCarousel();
+  });
+
+  // Mouse drag (desktop preview)
+  let mDown = false;
+  trackA.addEventListener('mousedown', e => { mDown = true; startX = e.clientX; dragX = 0; trackA.style.transition='none'; });
+  window.addEventListener('mousemove', e => {
+    if (!mDown) return;
+    dragX = e.clientX - startX;
+    trackA.style.transform = `translateX(calc(-${cur * 100}% + ${dragX}px))`;
+  });
+  window.addEventListener('mouseup', () => {
+    if (!mDown) return; mDown = false; trackA.style.transition='';
+    const w = trackA.clientWidth;
+    if (dragX < -w * 0.18 && cur < COMM_VIDS.length - 1) cur++;
+    else if (dragX > w * 0.18 && cur > 0) cur--;
+    renderCarousel();
+  });
 
   chipA.addEventListener('click', openSheet);
   closeA.addEventListener('click', closeSheet);
   maskA.addEventListener('click', closeSheet);
   backA.addEventListener('click', closeL2);
 
-  // Delegated click handlers for sheet items → L2
-  function bindL2(container) {
-    container.addEventListener('click', e => {
-      const el = e.target.closest('[data-l2]');
-      if (!el) return;
-      openL2(el.dataset.l2, el.dataset.title, el.dataset.img);
-    });
-  }
-  bindL2(stripA);
-  bindL2(listingsA);
-  ctaBrowseA.addEventListener('click', () => {
-    openL2('comm-video', 'All 47 homes in Bellevue Eastside', 'https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=900&q=70');
+  // Sheet thumbnails → open carousel at that index
+  stripA.addEventListener('click', e => {
+    const el = e.target.closest('[data-idx]');
+    if (!el) return;
+    openL2(parseInt(el.dataset.idx, 10));
+  });
+  ctaBrowseA.addEventListener('click', () => openL2(0));
+
+  // Listings chip on L2 — for now just demo alert (next iteration: opens listings sheet L1')
+  trackA.addEventListener('click', e => {
+    if (e.target.closest('[data-link="listings"]')) {
+      alert('🏠 Next iteration: opens "47 listings in Bellevue Eastside" sheet → tap any listing → swipeable listing carousel (symmetric to this).');
+    }
   });
 </script>
 </body>
