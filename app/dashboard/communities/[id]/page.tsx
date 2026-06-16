@@ -114,6 +114,8 @@ export default async function CommunityEditorPage({
         </div>
       </header>
 
+      <CommunityEditor community={community} canEditMetadata={canEditMetadata} />
+
       <CommunityCoverPanel
         communityId={community.id}
         canEdit={canEditMetadata}
@@ -121,8 +123,6 @@ export default async function CommunityEditorPage({
         initialCoverVideoId={community.cover_video_id}
         initialCoverStoragePath={community.cover_storage_path}
       />
-
-      <CommunityEditor community={community} canEditMetadata={canEditMetadata} />
     </div>
   );
 }
