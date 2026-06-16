@@ -3,6 +3,11 @@
 Newest at the top. Each release covers a meaningful product change visible to users.
 Format matches the standard release template (Features / Improvements / Bug Fixes / Technical / Known Issues / Metrics).
 
+## v0.30.2 — 2026-06-16
+
+### 🐛 Bug Fixes
+- **Rural addresses no longer break the New-listing form.** Picking a Texas county-road address (and other unincorporated rural US addresses) used to surface a single red `Error: invalid_input` next to the submit button — Google returns no city for those addresses, the form silently rejected the submission, and there was no way to tell which field was wrong. Now the form fills the city from the county when Google can't give a proper city, and if any field is still invalid you'll see exactly which one (`city: …`, `state: …`, etc.) inline so you can fix it before retrying.
+
 ## v0.30.1 — 2026-06-16
 
 ### 🐛 Bug Fixes

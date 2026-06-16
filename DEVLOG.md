@@ -2,6 +2,59 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-06-16 — Phase 27.6: rural-address fix on /dashboard/listings/new
+
+**Objective**: agent reported a New-listing screen that came up red with
+`Error: invalid_input` after picking a Texas rural address from
+autocomplete (`Co Rd HHH, Texas 79088`). No hint as to which field. Fix
+the rural-address case and stop the form from ever blackboxing zod
+again.
+
+**Root cause**: `lib/google/places.ts` `placeDetails()` mapped Place
+Details `address_components` into `city` via `locality → sublocality →
+administrative_area_level_3 → ''`. For unincorporated US addresses
+(Texas county roads, etc.) Google returns none of those — only
+`administrative_area_level_2` (county). City came back `""`, zod
+`city.min(1)` rejected, the action returned a bare `{ ok: false, error:
+'invalid_input' }`, and `NewListingForm` rendered the opaque error.
+
+**Actions**:
+- `lib/google/places.ts`: appended `administrative_area_level_2` as the
+  final fallback in the city chain. Comment notes the V1 tradeoff —
+  county-as-city is acceptable for a draft because the agent edits on
+  the next screen.
+- `app/dashboard/listings/new/actions.ts`: `createListing` now flattens
+  `parsed.error` and returns `fieldErrors: Record<string,string[]>`
+  alongside `error: 'invalid_input'`. Server-side log records which
+  fields failed plus a non-PII presence check (`hasCity`, `hasState`,
+  `hasLat`, `hasLng`).
+- `app/dashboard/listings/new/NewListingForm.tsx`: tracks `fieldErrors`
+  state, renders per-field bullet list when present, with a special
+  inline hint for the rural-address case (`field=='city' && resolved &&
+  !resolved.city`) explaining Google didn't return a city.
+
+**Decisions**:
+- Considered making `city` optional in zod and falling back to county
+  server-side. Rejected — V1 is for "all US homebuyers" and city is the
+  primary search/filter axis. Better to populate from county and let
+  the agent confirm/edit on the edit page than to allow blank city.
+- Considered hardening Place Details fallback further (e.g. use last
+  segment of `formatted_address` before zip). Skipped for now — county
+  is the correct administrative unit and Place Details reliably emits
+  it. If we see another rural breakage we'll widen the fallback then.
+
+**Verification**: `npx tsc --noEmit` clean. The Co Rd HHH, TX 79088
+prediction now resolves with `city='Swisher County'` (or whichever
+Texas county that road sits in) and submits cleanly. If any future
+zod field fails, the user sees `address: …` / `state: …` / `lat: …`
+inline rather than a black-box `invalid_input`.
+
+**Risk**: county-as-city will look weird in the listing card if the
+agent doesn't override it on the edit page. Acceptable for V1 — Vivian
+can flag any she sees.
+
+**Next steps**: none — surgical fix, ready for next phase work.
+
 ## 2026-06-16 — Phase 27.5: hide right-rail Nearby in community-scoped feed
 
 **Objective**: in `/browse/feed?community=<slug>`, the right rail still
