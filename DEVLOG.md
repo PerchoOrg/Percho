@@ -2,6 +2,107 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-06-17 — phase35.3: agent dashboard rework (Tianrou batch)
+
+**Objective**: process Tianrou's full review queue from the second agent
+test pass after phase35.2. Six items, ordered by him as "顺序不重要 一直
+干完 需要我在 main 上测试":
+  1. Picker P2: chip cloud (replace 12-card grid that wasted half the screen)
+  2. Hide the multi-community selector on the upload screen (cross-community
+     batching is post-V1, not visible to agents now)
+  3. Video owner-only permissions (community-shared videos shouldn't be
+     editable/deletable by other agents in the same community)
+  4. Listing detail: differentiate Back vs Search (they pointed at the
+     same destination)
+  5. Listing feed: vertical swipe between listings (was trapped on a single
+     card on /v/)
+  6. Dashboard: stats stay rendered when filter tab changes (was flashing
+     on every Draft/Published/Archived flip)
+
+**Actions**:
+  - `feat(dashboard): chip-cloud category picker + hide multi-community selector` (691306e):
+    `CategoryPicker.tsx` rewritten as a wrap-flow chip cloud (every row
+    is a button). `CommunityVideoPanel.tsx` dropped the multi-community
+    section + meta block on the upload screen. Picker collapsed from 12
+    fixed cards to a label cloud — fits one phone screen.
+  - `feat(community-videos): owner-only writes (RLS + server actions + UI)` (c1f3c70):
+    Migration `0027_community_video_owner_only.sql` drops the for-all
+    "agents manage community videos" policy and replaces it with three
+    scoped policies: insert (any authenticated agent), update (where
+    `uploaded_by = caller agents.id`), delete (same). Server actions
+    `actions.ts` got a `requireOwnedVideo()` helper that resolves caller
+    → agents.id and gates `deleteCommunityVideo` /
+    `updateCommunityVideoVisibility` / `updateCommunityVideoCategory`,
+    returning `'not_owner'` for UI display. `CommunityVideoManageList`
+    receives `myAgentId`, computes `isOwner` per row, hides the action
+    region for non-owners and shows a `by @uploader` chip instead.
+    Page joins `agents!community_videos_uploaded_by_fkey(slug, name)`
+    and passes `myAgentId` down. Applied to prod via
+    `supabase db push`.
+  - `fix(browse): smart Back, drop placeholder Search` (b7e5bd1): the
+    listing-detail header had two buttons pointing at /browse — Back
+    (forward-nav, lost grid scroll) and Search ("coming soon" stub).
+    Back now uses `router.back()` when `window.history.length > 1`
+    (preserves grid scroll) and falls back to push only on deep-link.
+    Search button + `SearchIcon` component removed — placeholder by
+    our no-fake-data rule.
+  - `feat(public): /v/ inherits explore feed for vertical swipe` (fb83cbf):
+    `PublicListingPage` now loads `fetchBrowseCards()` server-side and
+    renders the target listing at index 0 followed by the rest of the
+    explore feed (video-only, deduped). `BrowseFeed` already supports
+    vertical swipe — change is the `cards[]` length. Photo-only path
+    keeps the single-card behavior (explore is video-only).
+  - `feat(dashboard): tabs as client island, no metrics flash` (d8b2da3):
+    Split the page. Server loads all listings for the agent in a
+    single query (was per-tab). New client component
+    `ListingsTabbedList` holds `activeTab` in `useState`, filters in
+    memory, and uses `router.replace(scroll: false)` to keep the URL
+    in sync without triggering a server nav. Metrics block above no
+    longer flashes.
+
+**Decisions**:
+  - **Front-place vs center-and-jump on /v/**: front-place. The listing
+    page loader builds a richer card (multi-hero pool, community videos,
+    POIs, schools) than `fetchBrowseCards`. Front-placing keeps the
+    rich card on first paint and hands the swipe-down lane to lighter
+    explore neighbors. Avoids `initialIndex` scroll-jump on landing.
+  - **Owner-only RLS three-policy split** (insert / update / delete)
+    instead of one for-all-with-uploaded_by-check: clearer audit trail,
+    lets us differentiate inert vs writable scopes cleanly. Legacy
+    `uploaded_by IS NULL` rows become lock-only — V1 community videos
+    set is small, service role can backfill.
+  - **Back uses `window.history.length > 1`** rather than tracking a
+    referrer ourselves. Less state, matches what the browser back
+    button does.
+  - **Search button removal vs hiding behind a flag**: kill it. It was
+    a "coming soon" placeholder, which violates the no-fake-data rule.
+    Re-add when real search lands as its own route.
+
+**Issues**: none mid-flight. Tianrou pre-flagged that A (same-agent) and
+C (same-community) feed semantics for /v/ would be wrong — buyer
+mental model is one explore stream, /v/ is invisible to them. That
+killed an early A/B/C decision matrix and made B (full explore)
+obviously correct.
+
+**Resolution**: queue cleared. tsc clean + pnpm build green at every
+commit. All six items pushed to main:
+`691306e c1f3c70 b7e5bd1 fb83cbf d8b2da3` (in order).
+Migration 0027 applied to prod.
+
+**Learnings**:
+  - When a route is an engineering artifact (e.g. /v/ predates the
+    swipe feed), product-side it doesn't exist. Don't paint a UI
+    that exposes the seam.
+  - "Coming soon" buttons read as features the product doesn't deliver
+    yet — same UX cost as fake data.
+  - Tab nav via `<Link>` + searchParams re-runs every server component
+    on the page. For dashboards with expensive metrics queries, do
+    a client island and `router.replace(scroll: false)` for URL sync.
+
+**Next steps**: ship to Tianrou for the next test pass. Outstanding
+non-queue items from earlier passes still pending (deferred sections
+in phase35.2 entry below).
+
 ## 2026-06-17 — phase35.2: community video manage UX (visibility + inline editor)
 
 **Objective** (Tianrou agent test, follow-on to phase35): once a community has

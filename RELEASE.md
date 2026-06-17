@@ -3,6 +3,21 @@
 Newest at the top. Each release covers a meaningful product change visible to users.
 Format matches the standard release template (Features / Improvements / Bug Fixes / Technical / Known Issues / Metrics).
 
+## v0.35.3 — 2026-06-17
+
+### ✨ Features
+- **Vertical swipe between listings.** Open a listing from a shared link and the swipe-up gesture now carries you on to the next listing in your area, just like the explore feed does. The page you land on is no longer a dead end.
+- **Owner-only edits on community videos.** When several agents share a community, each agent can only edit, hide, or delete the videos they uploaded themselves. Other agents' work shows up in your dashboard with a "by @uploader" tag and read-only thumbnails — no more accidental deletes of someone else's video.
+
+### 🛠 Improvements
+- **Cleaner category picker on upload.** Replaced the 12-card grid with a tight chip cloud — fits the whole list on one phone screen instead of forcing you to scroll past category cards. Faster to skim, faster to pick.
+- **Less clutter on the upload screen.** Removed the multi-community toggle and the meta block from the upload flow — cross-community uploading was a power-user feature most agents didn't use, and it was crowding the page.
+- **Smarter Back on the listing page.** The Back arrow now returns to the explore grid where you left off, scroll position and all, instead of jumping you to the top.
+- **Stats stay put when you switch tabs.** Flipping Draft / Published / Archived on the dashboard no longer flashes the stats block. The numbers up top stay rendered while only the list below changes.
+
+### 🐛 Bug Fixes
+- Removed a non-functional Search button from the listing detail header — it was a placeholder that pointed at the same place as Back, which was confusing.
+
 ## v0.35.2 — 2026-06-17
 
 ### ✨ Features
