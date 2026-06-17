@@ -290,7 +290,13 @@ function SortableVideoItem({
           ) : null}
         </div>
         <div className="truncate text-xs text-cream/50">
-          {video.kind} · <StatusText status={video.status} />
+          {video.kind}
+          {video.status !== 'ready' ? (
+            <>
+              {' · '}
+              <StatusText status={video.status} />
+            </>
+          ) : null}
         </div>
       </div>
       <div className="flex w-full flex-shrink-0 items-center gap-2 sm:w-auto">
@@ -324,7 +330,11 @@ function SortableVideoItem({
 }
 
 function StatusText({ status }: { status: string }) {
-  const color =
-    status === 'ready' ? 'text-emerald-400' : status === 'error' ? 'text-red-400' : 'text-gold';
-  return <span className={color}>{status}</span>;
+  // Phase 35.3 (2026-06-17): humanize Cloudflare Stream lifecycle states.
+  // Callers are expected to skip rendering this when status === 'ready'
+  // (the happy path is silent, no flag needed). We still handle it for
+  // defensive rendering.
+  if (status === 'ready') return <span className="text-emerald-400">Ready</span>;
+  if (status === 'error') return <span className="text-red-400">Upload failed</span>;
+  return <span className="text-gold">Processing…</span>;
 }

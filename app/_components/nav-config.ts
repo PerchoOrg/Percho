@@ -79,6 +79,12 @@ export const AGENT_LEFT_TABS: Tab[] = [
 ];
 
 export const AGENT_RIGHT_TABS: Tab[] = [
+  // Phase 35.3 (2026-06-17): added Explore. Tianrou: "为什么 agent
+  // 没有 explore listing 的入口?" — agents need to see their own
+  // listings from the buyer's perspective (and check competitor
+  // listings in the market). Sharing the same /browse feed keeps
+  // one consumption surface across roles.
+  { href: '/browse', label: 'Explore', icon: Compass, matchPrefix: true },
   { href: '/dashboard/leads', label: 'Leads', icon: Mail, matchPrefix: true },
   { href: '/profile', label: 'Me', icon: User },
 ];

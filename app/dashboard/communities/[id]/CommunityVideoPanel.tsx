@@ -206,18 +206,18 @@ export function CommunityVideoPanel({
                           needs review
                         </span>
                       ) : null}
-                      {' · '}
-                      <span
-                        className={
-                          v.status === 'ready'
-                            ? 'text-emerald-400'
-                            : v.status === 'error'
-                              ? 'text-red-400'
-                              : 'text-cream/50'
-                        }
-                      >
-                        {v.status}
-                      </span>
+                      {v.status !== 'ready' ? (
+                        <>
+                          {' · '}
+                          <span
+                            className={
+                              v.status === 'error' ? 'text-red-400' : 'text-cream/50'
+                            }
+                          >
+                            {v.status === 'error' ? 'Upload failed' : 'Processing…'}
+                          </span>
+                        </>
+                      ) : null}
                     </div>
                     <button
                       type="button"

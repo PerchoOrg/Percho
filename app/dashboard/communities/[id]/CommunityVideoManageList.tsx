@@ -251,17 +251,24 @@ function ManageRow({
                 by {video.uploaderDisplayName}
               </span>
             ) : null}
-            <span
-              className={
-                video.status === 'ready'
-                  ? 'text-emerald-400'
-                  : video.status === 'error'
-                    ? 'text-red-400'
-                    : 'text-cream/45'
-              }
-            >
-              {video.status}
-            </span>
+            {/*
+              Phase 35.3 (2026-06-17): hide the Cloudflare Stream
+              `status` field when it's the happy path. "ready" is an
+              internal transcoding state — agents asked "what does
+              ready mean?" because by the time they're managing a
+              video it's almost always ready. Only surface non-ready
+              statuses (queued / inprogress / error) — those mean
+              the agent has to wait or re-upload.
+            */}
+            {video.status !== 'ready' ? (
+              <span
+                className={
+                  video.status === 'error' ? 'text-red-400' : 'text-cream/45'
+                }
+              >
+                {video.status === 'error' ? 'Upload failed' : 'Processing…'}
+              </span>
+            ) : null}
           </div>
         </div>
       </div>
