@@ -3,6 +3,17 @@
 Newest at the top. Each release covers a meaningful product change visible to users.
 Format matches the standard release template (Features / Improvements / Bug Fixes / Technical / Known Issues / Metrics).
 
+## v0.35.0 — 2026-06-17
+
+### 🐛 Bug Fixes
+- **Your dashboard now shows only your own listings.** A new agent with no listings was seeing other agents' published homes on her dashboard, which made the "Published" tab look populated and led to broken links when she tapped through. Each agent's dashboard is now scoped to her own portfolio — counts, the listing grid, and the cards all reflect what she actually owns.
+
+### 🛠 Improvements
+- **Community editor now shows the videos already on it.** Open any community and you'll see a roster of thumbnails right under the details, plus a one-tap "Manage" link to upload more. No more tapping into the upload page just to see what's there.
+- **Community list shows video counts.** Each row in your community list now carries a small "N videos" pill so you can tell at a glance which communities already have content.
+- **"Add Community Video" picks a community first.** The center "+" button used to send you to the community list page. Now it opens a quick picker — tap the community you want and you're straight on the upload screen for it. New community? "Create one" is right there too.
+- **Dashboard header is leaner.** The "View public profile" pill at the top of the dashboard is gone — it's already on the Me tab, one tap away. One way to do each thing.
+
 ## v0.34.2 — 2026-06-17
 
 ### 🐛 Bug Fixes

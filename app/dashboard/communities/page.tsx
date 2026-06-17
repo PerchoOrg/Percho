@@ -49,6 +49,18 @@ export default async function CommunitiesListPage() {
 
   const communities = rows ?? [];
 
+  // Phase 35: per-row video counts so the agent can see which communities
+  // already have content without drilling in. One round-trip across all
+  // communities the agent can see; cheap because we only count.
+  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
+  const { data: videoIdRows } = (await (supabase as any)
+    .from('community_videos')
+    .select('community_id')) as { data: { community_id: string }[] | null };
+  const videoCountById = new Map<string, number>();
+  for (const r of videoIdRows ?? []) {
+    videoCountById.set(r.community_id, (videoCountById.get(r.community_id) ?? 0) + 1);
+  }
+
   return (
     <div className="mx-auto max-w-3xl space-y-6 py-4">
       <header className="flex items-baseline justify-between">
@@ -83,7 +95,17 @@ export default async function CommunitiesListPage() {
                 className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
               >
                 <div className="min-w-0 flex-1">
-                  <div className="text-sm font-medium text-cream">{c.name}</div>
+                  <div className="text-sm font-medium text-cream">
+                    {c.name}
+                    {(() => {
+                      const n = videoCountById.get(c.id) ?? 0;
+                      return n > 0 ? (
+                        <span className="ml-2 rounded-full bg-bronze/20 px-2 py-0.5 text-[10px] text-cream/70">
+                          {n} video{n === 1 ? '' : 's'}
+                        </span>
+                      ) : null;
+                    })()}
+                  </div>
                   <div className="truncate text-xs text-cream/50">
                     {c.city ? `${c.city}, ${c.state}` : c.state} ·{' '}
                     <code className="text-cream/70">{c.slug}</code>

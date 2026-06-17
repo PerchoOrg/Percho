@@ -2,6 +2,65 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-06-17 — phase35: agent dashboard data scoping + community video discoverability
+
+**Objective**: Six debt items from a real agent walkthrough (`tianrouwang0221`):
+(1) dashboard published listing → 404; (2) `/a/<slug>` public profile shows zero
+listings; (3) duplicate "View public profile" CTA; (4) community editor has no
+video roster; (5) FAB → "Add Community Video" dumps the agent on the list page;
+(6) create-community wizard rough edges.
+
+**Root cause investigation (the real story behind #1 and #2)**:
+- Probed prod via the pooler. `tianrouwang0221` agent row exists (`d2ac80ea…`)
+  but **owns 0 listings**. Every listing in prod (12 of them, including
+  `000-cheyney-road`) is owned by `royxue812` (`0bed14c8…`).
+- The dashboard was nonetheless showing "PUBLISHED" listings to Tianrou. That's
+  because the listings query had no `agent_id` filter — it relied on RLS to
+  scope. RLS has TWO policies that OR together: "agent manages own listings"
+  AND "public reads published". So an authenticated agent with 0 listings sees
+  every published listing (Qiaoxuan's, in this case) on her own dashboard.
+- The 404 on `/v/tianrouwang0221/000-cheyney-road` and the empty `/a/tianrouwang0221`
+  page were therefore CORRECT: that listing genuinely doesn't belong to her.
+  The bug was upstream — the dashboard lying about ownership.
+
+**Actions**:
+- **Scoped dashboard listings + counts to `agent_id` (`app/dashboard/page.tsx`).**
+  Both the status-counts query and the per-tab listings query now filter by
+  the logged-in agent's `agents.id`. Stops the cross-agent leak. Fixes #1 and
+  #2 by removing the false dashboard signal that pointed Tianrou at a listing
+  she doesn't own.
+- **Dropped the duplicate "View public profile ↗" pill at the top of the
+  dashboard.** The same link lives on the Me tab (`/profile`); two surfaces for
+  one job is the duplication we keep killing. Fixes #3.
+- **Added a Videos roster section to the community editor
+  (`/dashboard/communities/[id]`).** Shows up to 8 thumbnails plus a "Manage →"
+  link to the upload page. Previously the editor had no video surface at all —
+  agents had to tap "+ Upload" just to see what was already there. Fixes #4
+  without duplicating the upload UI (which already lives at `/upload`).
+- **`/dashboard/communities` list page now shows per-row video counts.** Small
+  bronze pill next to each community name when count > 0. Fixes the #5-A use
+  case ("manage videos for community X") — the list page is now a real
+  navigator instead of just an entry point.
+- **FAB "Add Community Video" now opens a community picker sheet.** Two-step:
+  root sheet → tap the row → sheet swaps to a scroll list of communities (top
+  50 by name, prefetched in the server wrapper). Tap a name to jump straight
+  to that community's upload page. Empty-state offers "create one." Falls
+  through to "Browse all" if the agent has more than the cap. Fixes #5-B —
+  the picker was the missing UX, not a different button.
+- **#6 (wizard polish)**: deferred. The form already inline-shows per-field
+  errors and trims slug authoring (server derives it). Want a concrete
+  step-by-step complaint before adding more.
+
+**Files**:
+- `app/dashboard/page.tsx` — scoped queries, dropped CTA
+- `app/dashboard/communities/[id]/page.tsx` — added Videos roster section
+- `app/dashboard/communities/page.tsx` — added video count pill
+- `app/_components/BottomNavWrapper.tsx` — prefetch communities for picker
+- `app/_components/BottomNav.tsx` — two-step FAB sheet with picker
+
+**Verification**: `tsc --noEmit` clean. `pnpm build` green. Prod SQL probe
+confirmed root cause for #1/#2.
+
 ## 2026-06-17 — phase34b.2: keep Nearby tab, drop right-rail Nearby button + chip-video sound
 
 **Objective**: Correct phase34b.1 (I removed the wrong Nearby — user wanted the right-rail listing button gone, not the bottom-nav tab) and fix chip-launched videos playing silently.

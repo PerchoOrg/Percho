@@ -13,6 +13,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { CommunityEditor } from './CommunityEditor';
 import { CommunityCoverPanel } from './CommunityCoverPanel';
+import { thumbnailUrl } from '@/lib/cloudflare/stream';
 
 interface CommunityRow {
   id: string;
@@ -115,6 +116,43 @@ export default async function CommunityEditorPage({
       </header>
 
       <CommunityEditor community={community} canEditMetadata={canEditMetadata} />
+
+      {/* Phase 35: video roster on the editor itself. Previously you had to
+       * tap "+ Upload" just to see what was already there; now the editor
+       * shows thumbnails up-front and the upload page is one tap away. */}
+      <section className="rounded border border-bronze/30 bg-ink2 p-5">
+        <div className="mb-3 flex items-baseline justify-between gap-3">
+          <h2 className="text-base font-semibold">
+            Videos <span className="text-cream/50 text-xs font-normal">({coverVideos.length})</span>
+          </h2>
+          <Link
+            href={`/dashboard/communities/${community.id}/upload`}
+            className="text-xs text-gold hover:underline"
+          >
+            Manage →
+          </Link>
+        </div>
+        {coverVideos.length === 0 ? (
+          <p className="text-xs text-cream/50">
+            No videos yet. Tap <span className="text-cream/80">+ Upload</span> to add one.
+          </p>
+        ) : (
+          <ul className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+            {coverVideos.slice(0, 8).map((v) => (
+              <li
+                key={v.id}
+                className="aspect-video overflow-hidden rounded bg-ink"
+                style={{
+                  backgroundImage: `url(${thumbnailUrl(v.cf_video_id)})`,
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                }}
+                title={v.title ?? '(untitled)'}
+              />
+            ))}
+          </ul>
+        )}
+      </section>
 
       <CommunityCoverPanel
         communityId={community.id}

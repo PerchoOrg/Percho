@@ -91,11 +91,18 @@ export default async function DashboardHomePage({ searchParams }: PageProps) {
   const agentSlug = agentRow?.slug ?? null;
   const agentId = agentRow?.id ?? null;
 
-  // Counts per status — one query, group in JS. Cheap (RLS-scoped to agent).
+  // Counts per status — one query, group in JS. Phase 35: scoped to the
+  // logged-in agent's own listings. Previously the query relied on RLS to
+  // narrow rows, but RLS also exposes every *published* listing to anyone
+  // (public read), so a new agent with 0 listings was seeing everyone
+  // else's stuff in their dashboard counts and listing grid.
   // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { data: allStatuses } = (await (supabase as any)
-    .from('listings')
-    .select('status')) as { data: Array<{ status: string }> | null };
+  const { data: allStatuses } = agentId
+    ? ((await (supabase as any)
+        .from('listings')
+        .select('status')
+        .eq('agent_id', agentId)) as { data: Array<{ status: string }> | null })
+    : { data: [] };
   const counts = { draft: 0, published: 0, archived: 0 } as Record<StatusTab, number>;
   for (const r of allStatuses ?? []) {
     if (r.status === 'draft' || r.status === 'published' || r.status === 'archived') {
@@ -110,6 +117,7 @@ export default async function DashboardHomePage({ searchParams }: PageProps) {
       'id, slug, address, city, state, status, price, beds, baths, sqft, cover_url, updated_at',
     )
     .eq('status', activeTab)
+    .eq('agent_id', agentId ?? '00000000-0000-0000-0000-000000000000')
     .order('updated_at', { ascending: false });
 
   const { data: listings } = (await query) as { data: ListingRow[] | null };
@@ -139,19 +147,10 @@ export default async function DashboardHomePage({ searchParams }: PageProps) {
 
   return (
     <div className="mx-auto max-w-6xl px-5 py-8 sm:px-8 sm:py-12">
-      <div className="mb-8 flex items-start justify-between gap-4">
+      <div className="mb-8">
+        {/* Phase 35: dropped duplicate "View public profile" CTA — same link
+         * already lives on the Me tab (/profile). One canonical entry. */}
         <h1 className="font-serif text-4xl tracking-tight text-cream sm:text-5xl">Dashboard</h1>
-        {agentSlug && (
-          <Link
-            href={`/a/${agentSlug}`}
-            target="_blank"
-            rel="noopener"
-            className="shrink-0 rounded-full border border-bronze/40 px-4 py-2 text-cream/80 text-xs hover:border-gold hover:text-gold"
-            title="Public profile — share one URL with all your listings"
-          >
-            View public profile ↗
-          </Link>
-        )}
       </div>
 
       {/*

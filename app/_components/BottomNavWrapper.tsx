@@ -40,5 +40,22 @@ export async function BottomNavWrapper() {
     role = 'buyer';
   }
 
-  return <BottomNav role={role} />;
+  // Phase 35: prefetch communities for the agent FAB picker so "Add Community
+  // Video" can pop a picker sheet instead of dumping the agent on the list
+  // page. V1: globally readable, capped at 50 by name. Agents with more can
+  // still hit "Browse all communities" to fall through to the list page.
+  let communities: { id: string; name: string; city: string | null; state: string }[] = [];
+  if (role === 'agent') {
+    // biome-ignore lint/suspicious/noExplicitAny: stub generated types
+    const { data } = (await (supabase as any)
+      .from('communities')
+      .select('id, name, city, state')
+      .order('name', { ascending: true })
+      .limit(50)) as {
+      data: { id: string; name: string; city: string | null; state: string }[] | null;
+    };
+    communities = data ?? [];
+  }
+
+  return <BottomNav role={role} communities={communities} />;
 }

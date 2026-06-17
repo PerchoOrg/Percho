@@ -57,15 +57,32 @@ function TabButton({ tab, active }: { tab: Tab; active: boolean }) {
   );
 }
 
-function FabActionSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
+function FabActionSheet({
+  open,
+  onClose,
+  communities,
+}: {
+  open: boolean;
+  onClose: () => void;
+  communities: CommunityChoice[];
+}) {
+  const [step, setStep] = useState<'root' | 'pick'>('root');
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape') {
+        if (step === 'pick') setStep('root');
+        else onClose();
+      }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [open, onClose]);
+  }, [open, onClose, step]);
+
+  // Reset to root every time the sheet re-opens.
+  useEffect(() => {
+    if (!open) setStep('root');
+  }, [open]);
 
   if (!open) return null;
   return (
@@ -97,45 +114,103 @@ function FabActionSheet({ open, onClose }: { open: boolean; onClose: () => void 
           </button>
         </div>
         <ul className="space-y-2">
-          <li>
-            <Link
-              href="/dashboard/listings/new"
-              onClick={onClose}
-              className="flex items-center gap-3 rounded-xl border-cream/10 border bg-ink/60 px-4 py-3 transition hover:border-gold/40 hover:bg-gold/5"
-            >
-              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-gold/15 text-gold">
-                <Building2 size={18} />
-              </span>
-              <span className="flex flex-col">
-                <span className="font-medium text-cream text-sm">List a Property</span>
-                <span className="text-cream/60 text-xs">Add a home to your portfolio</span>
-              </span>
-            </Link>
-          </li>
-          <li>
-            <Link
-              href="/dashboard/communities"
-              onClick={onClose}
-              className="flex items-center gap-3 rounded-xl border-cream/10 border bg-ink/60 px-4 py-3 transition hover:border-gold/40 hover:bg-gold/5"
-            >
-              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-gold/15 text-gold">
-                <Video size={18} />
-              </span>
-              <span className="flex flex-col">
-                <span className="font-medium text-cream text-sm">Add Community Video</span>
-                <span className="text-cream/60 text-xs">
-                  Show buyers what a community really feels like
-                </span>
-              </span>
-            </Link>
-          </li>
+          {step === 'root' ? (
+            <>
+              <li>
+                <Link
+                  href="/dashboard/listings/new"
+                  onClick={onClose}
+                  className="flex items-center gap-3 rounded-xl border-cream/10 border bg-ink/60 px-4 py-3 transition hover:border-gold/40 hover:bg-gold/5"
+                >
+                  <span className="flex h-9 w-9 items-center justify-center rounded-full bg-gold/15 text-gold">
+                    <Building2 size={18} />
+                  </span>
+                  <span className="flex flex-col">
+                    <span className="font-medium text-cream text-sm">List a Property</span>
+                    <span className="text-cream/60 text-xs">Add a home to your portfolio</span>
+                  </span>
+                </Link>
+              </li>
+              <li>
+                <button
+                  type="button"
+                  onClick={() => setStep('pick')}
+                  className="flex w-full items-center gap-3 rounded-xl border-cream/10 border bg-ink/60 px-4 py-3 text-left transition hover:border-gold/40 hover:bg-gold/5"
+                >
+                  <span className="flex h-9 w-9 items-center justify-center rounded-full bg-gold/15 text-gold">
+                    <Video size={18} />
+                  </span>
+                  <span className="flex flex-col">
+                    <span className="font-medium text-cream text-sm">Add Community Video</span>
+                    <span className="text-cream/60 text-xs">
+                      Show buyers what a community really feels like
+                    </span>
+                  </span>
+                </button>
+              </li>
+            </>
+          ) : (
+            <>
+              <li className="px-1 text-cream/60 text-xs">
+                Pick a community to add a video to:
+              </li>
+              {communities.length === 0 ? (
+                <li>
+                  <Link
+                    href="/dashboard/communities/new"
+                    onClick={onClose}
+                    className="block rounded-xl border-cream/10 border bg-ink/60 px-4 py-3 text-cream/80 text-sm hover:border-gold/40"
+                  >
+                    No communities yet — create one →
+                  </Link>
+                </li>
+              ) : (
+                <>
+                  <li className="max-h-[50vh] overflow-y-auto">
+                    <ul className="space-y-1">
+                      {communities.map((c) => (
+                        <li key={c.id}>
+                          <Link
+                            href={`/dashboard/communities/${c.id}/upload`}
+                            onClick={onClose}
+                            className="flex items-baseline justify-between gap-3 rounded-lg border-cream/5 border bg-ink/40 px-3 py-2 hover:border-gold/40 hover:bg-gold/5"
+                          >
+                            <span className="truncate font-medium text-cream text-sm">{c.name}</span>
+                            <span className="shrink-0 text-cream/50 text-[11px]">
+                              {c.city ? `${c.city}, ${c.state}` : c.state}
+                            </span>
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  </li>
+                  <li className="flex gap-2 pt-1">
+                    <Link
+                      href="/dashboard/communities/new"
+                      onClick={onClose}
+                      className="flex-1 rounded-lg border-cream/10 border bg-ink/40 px-3 py-2 text-center text-cream/80 text-xs hover:border-gold/40"
+                    >
+                      + New community
+                    </Link>
+                    <Link
+                      href="/dashboard/communities"
+                      onClick={onClose}
+                      className="flex-1 rounded-lg border-cream/10 border bg-ink/40 px-3 py-2 text-center text-cream/80 text-xs hover:border-gold/40"
+                    >
+                      Browse all
+                    </Link>
+                  </li>
+                </>
+              )}
+            </>
+          )}
         </ul>
         <button
           type="button"
-          onClick={onClose}
+          onClick={() => (step === 'pick' ? setStep('root') : onClose())}
           className="mt-3 w-full rounded-xl border-cream/10 border bg-transparent px-4 py-3 text-cream/70 text-sm hover:text-cream"
         >
-          Cancel
+          {step === 'pick' ? '← Back' : 'Cancel'}
         </button>
       </div>
       <style>{`
@@ -148,7 +223,20 @@ function FabActionSheet({ open, onClose }: { open: boolean; onClose: () => void 
   );
 }
 
-export function BottomNav({ role }: { role: ViewerRole }) {
+export type CommunityChoice = {
+  id: string;
+  name: string;
+  city: string | null;
+  state: string;
+};
+
+export function BottomNav({
+  role,
+  communities = [],
+}: {
+  role: ViewerRole;
+  communities?: CommunityChoice[];
+}) {
   const pathname = usePathname() ?? '/';
   const [fabOpen, setFabOpen] = useState(false);
 
@@ -218,7 +306,13 @@ export function BottomNav({ role }: { role: ViewerRole }) {
           )}
         </ul>
       </nav>
-      {isAgent ? <FabActionSheet open={fabOpen} onClose={() => setFabOpen(false)} /> : null}
+      {isAgent ? (
+        <FabActionSheet
+          open={fabOpen}
+          onClose={() => setFabOpen(false)}
+          communities={communities}
+        />
+      ) : null}
     </>
   );
 }
