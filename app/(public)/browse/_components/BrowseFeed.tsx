@@ -152,25 +152,6 @@ function ShareIcon() {
   );
 }
 
-function SearchIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 24 24"
-      width={20}
-      height={20}
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <circle cx="11" cy="11" r="7" />
-      <path d="m20 20-3.5-3.5" />
-    </svg>
-  );
-}
-
 function BookmarkIcon({ filled }: { filled?: boolean }) {
   return (
     <svg
@@ -953,10 +934,30 @@ export function BrowseFeed({
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  // Phase 28.x (2026-06-16): when opened from the agent's dashboard
-  // ("View ↗"), Back returns to /dashboard instead of /browse so the
-  // agent doesn't get dumped into the public explore feed.
-  const backHref = searchParams?.get('from') === 'dashboard' ? '/dashboard' : '/browse';
+  // Phase 35.3 (2026-06-17): Back semantics fix.
+  //
+  // Old behavior: Back pushed router.push(backHref) which was always
+  // '/browse' (or '/dashboard' if ?from=dashboard). Same destination as
+  // the Search button next to it, AND a same-tab forward-nav that lost
+  // the grid's scroll position — so a buyer who tapped through 30
+  // listings to get here landed back at slot 0. Tianrou flagged this:
+  // two buttons doing the same thing isn't a feature.
+  //
+  // New behavior:
+  //   - If we have history within the same origin → router.back().
+  //     That's exactly what the browser back button does, preserves the
+  //     grid scroll, and lets a buyer browse → listing → browse linearly.
+  //   - If there's no history (deep link, opened in new tab) → push the
+  //     fallback href (/dashboard for from=dashboard, /browse otherwise).
+  //   - Dashboard "View ↗" still passes ?from=dashboard so the fallback
+  //     stays /dashboard and the agent doesn't get dumped into /browse.
+  //
+  // The Search button next to Back is removed in this same change —
+  // it was wired to /browse with title="Search (coming soon)", which is
+  // a placeholder by our no-fake-data rule. When real search lands we
+  // can add it back.
+  const backFallbackHref =
+    searchParams?.get('from') === 'dashboard' ? '/dashboard' : '/browse';
   const [activeIndex, setActiveIndex] = useState(initialIndex);
   const [liked, setLiked] = useState<Record<string, boolean>>({});
   const [saved, setSaved] = useState<Record<string, boolean>>({});
@@ -1353,17 +1354,27 @@ export function BrowseFeed({
        * in the Nearby pool, and the right-rail Nearby button is in its
        * active gold state, so the standalone label was redundant. */}
 
-      {/* Top header — Xiaohongshu video pattern: [Back] ... [Search] [Share].
-       * Back goes to /browse (the grid). When viewing a b-roll source, Back
-       * first returns to hero, then back to grid on second tap. */}
+      {/* Top header — Xiaohongshu video pattern: [Back] ... [Share].
+       * Phase 35.3: Search button removed (was a same-destination
+       * duplicate of Back wired to a "coming soon" placeholder). When
+       * viewing a b-roll source, Back first returns to hero; on the
+       * hero we do router.back() if there's history (preserves grid
+       * scroll), else push the fallback. */}
       <div className="absolute inset-x-0 top-0 z-30 flex items-center justify-between px-3 pt-3">
         <button
           type="button"
           onClick={() => {
             if (activeSource !== 'hero') {
               switchSource('hero');
+              return;
+            }
+            // history.length > 1 means there's at least one prior entry
+            // we can pop back to. window.history.length is 1 on a fresh
+            // tab / deep link, in which case we use the fallback.
+            if (typeof window !== 'undefined' && window.history.length > 1) {
+              router.back();
             } else {
-              router.push(backHref);
+              router.push(backFallbackHref);
             }
           }}
           aria-label={activeSource !== 'hero' ? 'Back to listing video' : 'Back'}
@@ -1373,16 +1384,6 @@ export function BrowseFeed({
           <BackArrowIcon />
         </button>
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => router.push('/browse')}
-            aria-label="Search listings"
-            title="Search (coming soon)"
-            className="flex h-11 w-11 items-center justify-center rounded-full border border-cream/20 bg-ink/55 text-cream/70 backdrop-blur-md transition-colors hover:border-gold hover:text-gold"
-            style={{ touchAction: 'manipulation' }}
-          >
-            <SearchIcon />
-          </button>
           <button
             type="button"
             onClick={onShare}
