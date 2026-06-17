@@ -2,6 +2,31 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-06-17 — phase34b (V1 redo): Scenario A+B chip → sheet → carousel (no fake data)
+
+**Objective**: Re-implement the buyer discovery loop per V1 prototype after reverting d0f7d5e (v2 attempt). Two parallel scenarios on top of the existing snap-scroll feeds, sharing the same chip → sheet → fullscreen-carousel pattern.
+
+**Actions**:
+- **Scenario A (`/browse`, listing video → community context).** `BrowseCard.community` now carries `city / state / description / listingCount` alongside `name / slug / videoCount` (was just name+slug+videoCount). New `CommunitySheet` (L1) opens from the listing card's top-left community chip — header (name · city, state · N videos · N homes), description if any, and a horizontal community-video preview strip. New `CommunityCarousel` (L2) opens when the buyer taps a video thumb in the sheet — fullscreen horizontal swipe over that community's videos. Closing the carousel returns to L0 (the listing), not back to the sheet — sheet was a transient lookup; the user's anchor is the listing.
+- **Scenario B (`/c/[slug]/feed`, community feed → listings).** Right-rail `HouseIcon` button removed (it navigated away to `/browse?community=…` and duplicated the new chip). Added bottom-left `🏠 N homes here` chip on the community feed; tap opens new `CommunityListingsSheet` (L2) — vertical list of every published listing in the community. Tap a row → new `CommunityListingCarousel` (L3) — fullscreen horizontal swipe over those listings. Hero is video if available, photo as fallback. Closing L3 returns to L0 (community feed).
+- **Data plumbing.** `/c/[slug]/feed/page.tsx` now fetches `listings + listing_videos + listing_photos` in parallel (same shape as `browse-cards.ts`) and passes a normalized `CommunityListingItem[]` to the feed. Only listings with media are surfaced — a home with no video and no photo can't be browsed visually. `lib/feed/browse-cards.ts` extended to also fetch `city/state` on communities + a parallel listing-count query keyed by `community_id`.
+- **No fake data.** Deleted `lib/community/fake-stats.ts`. `CommunityGrid` cards now show only real fields (name / city, state / videoCount / listingCount). `CommunitySheet` dropped the rating/school/commute/median/host placeholder rows — only schema-real fields render, nulls are omissions, not styled "—" placeholders.
+
+**Decisions**:
+- L1→L2→L0 (carousel close skips the sheet) instead of L2→L1→L0. The sheet is a directory; once the buyer is inside the carousel the sheet has done its job. Returning to the sheet would force a redundant tap.
+- Chip is the single entry to the listings sheet on Scenario B. The right-rail HouseIcon was a duplicate — both opened the same set of listings — and it broke the "stay in the community feed" anchor by routing to `/browse`.
+- Carousel surfaces only listings with hero media. Listing pages still exist for direct links; the discovery loop just skips media-less rows because the prototype is video/photo-first.
+- "No fake data" applied retroactively to the v2 attempt's leftover stat row + host block — even with-comment placeholders are out per repeat user direction. If the schema doesn't have it, it doesn't render.
+
+**Issues**: One TS path issue (`./CommunityVideoFeed` from inside `_components/` should be `../CommunityVideoFeed`). Caught immediately by `tsc --noEmit`. Otherwise build green first try.
+
+**Resolution**: tsc clean, `next build` green. ff to `main` (`d50715b..6391302`), pushed origin/main + origin/phase34b/v1-redo. Branch retained per workflow rule.
+
+**Next steps**:
+- Smoke on prod: 5 layer transitions in both scenarios (L0 → L1 → L2 → back to L0; for B also L2 → L3 → back to L0).
+- phase34c: agent operations console.
+- phase35: T1 community geo + create-community wizard rework.
+
 ## 2026-06-17 — phase34a foundation: T2/T3/T4 hygiene shipped (v0.33.0)
 
 **Objective**: Ship the invisible plumbing + global hygiene that 34b/34c depend on. No new buyer features — user should perceive "things feel right", not "new feature".

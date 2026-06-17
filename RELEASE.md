@@ -3,6 +3,17 @@
 Newest at the top. Each release covers a meaningful product change visible to users.
 Format matches the standard release template (Features / Improvements / Bug Fixes / Technical / Known Issues / Metrics).
 
+## v0.34.0 — 2026-06-17
+
+### ✨ Features
+- **Tap a community badge on any listing → see the neighborhood without leaving the swipe feed.** A new bottom sheet rises with the community's name, location, description, and a row of preview videos you can scroll horizontally. Tap any video and you're in a fullscreen left-right swipe through that whole community. Hit Back and you're right back on the listing you started from — the sheet was a quick look, not a detour.
+- **Tap "🏠 N homes here" on any community feed → see every home for sale in that neighborhood without leaving.** A chip in the bottom-left corner of every community video opens a list of all the homes for sale in that community, sorted newest-first, with price, address, beds/baths, and square footage. Tap a row and you're in a fullscreen left-right swipe through those homes — videos play automatically, photos cover when there's no video. Hit Back and you're back on the community feed.
+- **Both new flows use the same shape.** Tap a chip → bottom sheet for context → fullscreen swipe for browsing → Back to where you started. Same gesture in two places — buyers learn it once.
+
+### 🔧 Technical
+- **Real data only.** Stat rows and "host" cards that previously rendered with hardcoded ratings, school scores, commute times, and median-price placeholders have been removed. Where the database doesn't have a value yet, the surface stays clean instead of showing fake numbers. As the data fills in over time, those fields will appear automatically — no more stale placeholders to update.
+- **Homes without any video or photo don't appear in the new community swipe.** They remain reachable through their direct listing link; they're just hidden from the visual browse loop until media is uploaded.
+
 ## v0.33.0 — 2026-06-17
 
 ### ✨ Improvements
