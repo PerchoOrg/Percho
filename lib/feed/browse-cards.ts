@@ -91,7 +91,7 @@ type PoiRow = {
   distance_text: string | null;
 };
 
-type CommunityRow = { id: string; name: string; description: string | null };
+type CommunityRow = { id: string; name: string; slug: string; description: string | null };
 
 /**
  * Internal helper: given a pre-filtered batch of listings, fan out the
@@ -166,7 +166,7 @@ async function assembleCards(
           .in('community_id', communityIds)
       : Promise.resolve({ data: [] }),
     communityIds.length > 0
-      ? supabase.from('communities').select('id, name, description').in('id', communityIds)
+      ? supabase.from('communities').select('id, name, slug, description').in('id', communityIds)
       : Promise.resolve({ data: [] }),
   ]);
 
@@ -208,7 +208,7 @@ async function assembleCards(
     if (!agent) continue;
     if (!hero && !heroPhoto) continue;
 
-    const _community = l.community_id ? (communitiesById.get(l.community_id) ?? null) : null;
+    const community = l.community_id ? (communitiesById.get(l.community_id) ?? null) : null;
     const cVids = l.community_id ? (commVidsByCommunity.get(l.community_id) ?? []) : [];
 
     const categoryMetaById = new Map(COMMUNITY_VIDEO_CATEGORIES.map((m) => [m.id, m] as const));
@@ -280,6 +280,15 @@ async function assembleCards(
         phone: agent.phone,
       },
     };
+    if (community) {
+      // Phase 34b: surface community on the card so BrowseFeed can render
+      // a top-left chip → /c/{slug}/feed for anchored buyers.
+      card.community = {
+        slug: community.slug,
+        name: community.name,
+        videoCount: cVids.length,
+      };
+    }
     if (distanceById?.has(l.id)) {
       card.distance = distanceById.get(l.id);
     }

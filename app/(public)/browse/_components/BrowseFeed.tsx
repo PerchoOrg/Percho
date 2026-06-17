@@ -98,6 +98,18 @@ export type BrowseCard = {
     email: string | null;
     phone: string | null;
   };
+  /**
+   * Phase 34b (2026-06-17, Scenario A): when set, the listing belongs to a
+   * community and we surface a top-left chip on the immersive feed that
+   * jumps to the community's video feed (`/c/{slug}/feed`). Anchored buyers
+   * who like the area can explore it without leaving the listing context.
+   * Listings with no `community_id` leave this undefined → no chip.
+   */
+  community?: {
+    slug: string;
+    name: string;
+    videoCount: number;
+  };
 };
 
 type Source = 'hero' | 'nearby';
@@ -1332,6 +1344,34 @@ export function BrowseFeed({
           </button>
         </div>
       </div>
+
+      {/* Phase 34b (2026-06-17, Scenario A): community chip — appears on
+       * the immersive feed when the active listing has a community attached.
+       * Tap → community video feed (`/c/{slug}/feed`). Anchored buyers can
+       * explore the area without losing their place. Hidden when the listing
+       * has no community, so the chrome stays clean for orphan listings. */}
+      {active?.community && (
+        <button
+          type="button"
+          onClick={() => active.community && router.push(`/c/${active.community.slug}/feed`)}
+          aria-label={`Explore ${active.community.name} community videos`}
+          className="absolute top-16 left-3 z-30 flex max-w-[70%] items-center gap-2 rounded-full border border-cream/15 bg-ink/70 py-1.5 pr-3 pl-1.5 text-cream backdrop-blur-md transition-colors hover:border-gold/60"
+          style={{ touchAction: 'manipulation' }}
+        >
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-cyan-400 to-purple-500 text-sm">
+            🏘️
+          </span>
+          <span className="flex min-w-0 flex-col items-start leading-tight">
+            <span className="truncate font-medium text-[13px]">{active.community.name}</span>
+            <span className="text-[10px] text-cream/60">
+              {active.community.videoCount > 0
+                ? `${active.community.videoCount} community ${active.community.videoCount === 1 ? 'video' : 'videos'}`
+                : 'See the neighborhood'}
+            </span>
+          </span>
+          <span className="ml-1 text-cream/50 text-sm">›</span>
+        </button>
+      )}
 
       {/* Phase 28 (2026-06-14): the bottom Like/Save/Contact bar moved
        * into the right rail above. The caption block on the Card now

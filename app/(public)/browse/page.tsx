@@ -3,6 +3,9 @@ import {
   fetchBrowseCards,
   fetchBrowseCardsByCommunitySlug,
 } from '@/lib/feed/browse-cards';
+import { fetchCommunityListCards } from '@/lib/communities/list';
+import { CommunityGrid } from '@/app/_components/CommunityGrid';
+import { BrowseTabs, type BrowseTab } from './_components/BrowseTabs';
 import { createClient } from '@/lib/supabase/server';
 import type { Metadata } from 'next';
 import Image from 'next/image';
@@ -27,13 +30,35 @@ export const dynamic = 'force-dynamic';
  * grid to active (published) listings inside a single community. Linked
  * from the "N active listings" badge on `/c/[slug]`. Unknown / empty slug
  * silently falls through to the global grid so the page is never empty.
+ *
+ * Phase 34b (2026-06-17): adds `?tab=communities` segmented control so
+ * "active buyers" (browsing by area) can pick a community first instead
+ * of starting from a single home. Communities view reuses the same grid
+ * rendered on `/communities`.
  */
 export default async function BrowsePage({
   searchParams,
 }: {
-  searchParams: Promise<{ community?: string }>;
+  searchParams: Promise<{ community?: string; tab?: string }>;
 }) {
-  const { community: communitySlug } = await searchParams;
+  const { community: communitySlug, tab: tabRaw } = await searchParams;
+  const tab: BrowseTab = tabRaw === 'communities' ? 'communities' : 'homes';
+
+  // Communities tab — early return; no listing fetches.
+  if (tab === 'communities') {
+    const communities = await fetchCommunityListCards();
+    return (
+      <main className="min-h-dvh bg-ink pb-20 text-cream md:pb-0">
+        <header className="sticky top-0 z-20 flex items-center justify-center border-cream/10 border-b bg-ink/85 px-4 py-3 backdrop-blur-md md:hidden">
+          <div className="font-medium text-cream/80 text-sm uppercase tracking-wider">Explore</div>
+        </header>
+        <div className="mx-auto max-w-5xl px-2 py-4">
+          <BrowseTabs active="communities" />
+          <CommunityGrid communities={communities} />
+        </div>
+      </main>
+    );
+  }
 
   const scopedCards = communitySlug
     ? await fetchBrowseCardsByCommunitySlug(communitySlug)
@@ -62,6 +87,13 @@ export default async function BrowsePage({
         </div>
       </header>
 
+      {/* Segmented tabs — only on the global Explore (not when scoped to a single community). */}
+      {!isCommunityScoped && (
+        <div className="mx-auto max-w-5xl px-2 pt-4">
+          <BrowseTabs active="homes" />
+        </div>
+      )}
+
       {cards.length === 0 ? (
         <div className="mx-auto max-w-md px-6 py-24 text-center">
           <p className="text-cream/80">
@@ -69,7 +101,7 @@ export default async function BrowsePage({
           </p>
         </div>
       ) : (
-        <div className="mx-auto max-w-5xl px-2 py-4">
+        <div className={`mx-auto max-w-5xl px-2 ${isCommunityScoped ? 'py-4' : 'pb-4'}`}>
           <div className="grid grid-cols-2 gap-2 sm:gap-3 md:grid-cols-3 lg:grid-cols-4">
             {cards.map((card, idx) => (
               <Link

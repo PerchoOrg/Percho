@@ -3,6 +3,34 @@
 Newest at the top. Each release covers a meaningful product change visible to users.
 Format matches the standard release template (Features / Improvements / Bug Fixes / Technical / Known Issues / Metrics).
 
+## v0.34.0 — 2026-06-17
+
+### ✨ Features
+
+**Communities and homes are now linked, both directions.**
+
+- **From a home video, see its community.** A new chip in the top-left corner of any home's video shows the community it belongs to (with a count of videos). Tap it to jump straight into that community's video feed.
+- **From a community video, see homes for sale there.** A new chip at the bottom-left of any community video shows how many homes are currently for sale in that community. Tap it to swipe through those homes one by one. The chip is hidden when no homes are listed.
+- **Browse can now be filtered to Communities.** The Browse page has a new `Homes | Communities` toggle at the top. Switch to Communities to scroll a grid of all communities; tap one to enter its video feed.
+
+### 🛠 Improvements
+
+- The previous house-icon button on the right rail of community videos has been retired. Discovery of "homes here" now lives in one place — a single, more visible chip — instead of two.
+- Volume continues to be controlled by the device's system volume keys; no in-app mute button.
+
+### 🧪 Known Issues
+
+- None known. Test on iPhone Safari and Android Chrome and tell us if any chip wraps awkwardly on smaller screens.
+
+### How to test
+
+1. Go to `vicinities.cc/browse` → top toggle should show `Homes | Communities`. Tap `Communities` → grid of communities, tap one → community video feed.
+2. From a community video feed, look for the 🏠 chip at the bottom-left → tap → should land in a vertical homes feed scoped to that community.
+3. Open any home from `vicinities.cc/browse` → top-left should show the community chip (only when the home has a community) → tap → community feed.
+4. Same surfaces continue to work: like, save, share, back navigation, deep-linking via `/c/{slug}/feed` and `/browse/feed?community={slug}`.
+
+---
+
 ## v0.33.0 — 2026-06-17
 
 ### ✨ Improvements

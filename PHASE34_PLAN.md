@@ -30,29 +30,24 @@
 
 ---
 
-## Phase 34b · Buyer experience (NEXT)
+## Phase 34b · Buyer experience (DONE 2026-06-17)
 
-**Branch**: `phase34b/buyer-community-ux`
-**Goal**: Ship Scenario A + B per locked V1 prototype.
+**Branch**: `phase34b/buyer-experience`
+**Goal**: Ship Scenario A + B per **v2 prototype** (simplified — no sheets, all vertical swipe).
 
 | # | Item | Type | Notes |
 |---|---|---|---|
-| 4 | Listing + Community chip + bottom sheet (Scenario A) | new interaction | Per V1 prototype; 5-video sheet, L2 horizontal carousel, auto-advance. |
-| — | Scenario B: `/browse/` segmented control `Homes / Communities` | new interaction | Selected A: extend existing `/browse/`, NOT new `/search/`. NO `Agents` tab (product doesn't have agent search). |
+| 4 | Listing video → community chip (Scenario A) | new interaction | Top-left chip on immersive feed → `/c/{slug}/feed`. No sheet, no carousel — direct nav. |
+| — | `/browse/` segmented `Homes / Communities` (Scenario B entry) | new interaction | URL `?tab=communities`. No `Agents` tab. |
+| — | Community video → listings chip | new interaction | Bottom-left chip on `/c/{slug}/feed` videos → `/browse/feed?community=<slug>` (immersive). Replaced the earlier right-rail house icon — single CTA, not two. |
 
-**Locked decisions** (D-list from earlier review, minus the agent-tab bug):
-- D1 Build both A and B
-- D2 A=passive (anchored to listing), B=active (browsing by area)
-- D3 A's chip → sheet (5 community videos) → L2 horizontal carousel; **no listings in A's sheet**
-- D4 *(REVISED)* B's `/browse/` adds segmented control `Homes / Communities`; tap a Communities card → vertical community video feed; each community video has `🏠 N homes here` chip → bottom sheet of listings → tap → L3 horizontal listing carousel
-- D5 L2 auto-advance on video end, stop at boundary, no loop
-- D6 Chip label = literal community name
-- D7 B entry segmented label = `Communities`
-- D9 `/c/[slug]/feed` stays as deep-link route
-- D10 Reuse `saved_<entity>`, `community_video_membership`, `--brand: cyan`
-- D8 *(MOVED to 34c)* — agent dashboard work belongs in author phase
+**Decisions revised vs original D-list** (because v2 prototype superseded V1):
+- ~~D3 A's chip → bottom sheet (5 community videos) → L2 horizontal carousel~~ → **A's chip → vertical community feed directly** (v2: kill sheets)
+- ~~D4 B's community video chip → bottom sheet of listings → L3 horizontal carousel~~ → **B's chip → vertical listing feed directly** (v2: kill sheets)
+- ~~D5 L2 auto-advance on video end~~ → **N/A** (no L2 carousel anymore)
+- ~~D8 listings count badges~~ → **show real count when known** (we already had `activeListingsCount` server-side; ditto `videoCount` via comm-vids map)
 
-**Spec file**: `UX_AUDIT_34b.md` (after 34a ships).
+**Spec file**: `UX_AUDIT_34b.md` ✓
 
 ---
 

@@ -2,6 +2,58 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-06-17 — phase34b: buyer experience (Scenario A + B) shipped (v0.34.0)
+
+**Objective**: Ship the two buyer-visible community↔listing bridges from the v2 prototype. v2 supersedes the original PHASE34_PLAN sheet/carousel design — simplified to all-vertical-swipe, no sheets.
+
+### What shipped
+
+**Scenario A (passive buyer, in a listing)** — `BrowseFeed`:
+- New top-left chip on listing video when the listing has a community: emoji avatar + community name + video count + chevron.
+- Tap → `/c/{slug}/feed` (immersive community video feed).
+- Hidden when listing has no community.
+- BrowseCard type extended: `community?: { slug; name; videoCount }`. `lib/feed/browse-cards.ts` now selects `communities.slug` and populates `card.community` with `videoCount = cVids.length` (count of fan-out community videos already in the feed).
+
+**Scenario B entry** — `/browse/`:
+- New `BrowseTabs` segmented control `Homes | Communities`, URL state `?tab=communities`.
+- Communities tab renders the same shared `CommunityGrid` used by `/communities`.
+- Helpers extracted: `lib/communities/list.ts` (shared loader) + `app/_components/CommunityGrid.tsx` (shared 2/3/4-col grid). `/communities/page.tsx` rewritten to use them (29 LOC, was 129).
+
+**Scenario B drill-down** — `CommunityVideoFeed`:
+- Removed right-rail `Listings` icon (Phase 27.7) — replaced by a more prominent bottom-left chip per v2 prototype.
+- New chip: 🏠 emoji + `N homes here` + `Tap to swipe` subtitle.
+- Tap → `/browse/feed?community={slug}` (immersive vertical swipe feed scoped to that community, NOT the grid).
+- Hidden when `activeListingsCount === 0` so we never lead the buyer to an empty feed.
+- One CTA, not two — single discovery surface for community→listings.
+
+### Why this differs from PHASE34_PLAN.md
+
+Original plan called for sheets (D3, D4) and L2/L3 horizontal carousels (D5). The v2 prototype the user tested last week is simpler: chip → vertical feed directly. v2 wins because (a) it's the version the user reviewed and approved, (b) sheets + L2 carousels are infrastructure cost that doesn't change the buyer outcome, (c) consistent gesture model = always vertical-swipe in immersive feeds. PHASE34_PLAN.md updated to reflect.
+
+### Files changed
+
+- `app/(public)/browse/_components/BrowseFeed.tsx` — `BrowseCard.community` field; community chip JSX (`absolute top-16 left-3 z-30`).
+- `app/(public)/browse/_components/BrowseTabs.tsx` *(NEW)* — segmented control.
+- `app/(public)/browse/page.tsx` — wired `BrowseTabs`; renders `CommunityGrid` when `tab=communities`.
+- `app/(public)/c/[slug]/feed/CommunityVideoFeed.tsx` — removed right-rail Listings icon + `HouseIcon` helper; added bottom-left listings chip.
+- `app/(public)/communities/page.tsx` — rewritten on shared helpers (29 LOC).
+- `app/_components/CommunityGrid.tsx` *(NEW)* — shared community grid component.
+- `lib/communities/list.ts` *(NEW)* — `fetchCommunityListCards()` shared loader.
+- `lib/feed/browse-cards.ts` — `CommunityRow.slug`; `communities` select adds `slug`; populates `card.community`.
+- `UX_AUDIT_34b.md` *(NEW)* — phase spec.
+- `PHASE34_PLAN.md` — phase34b section rewritten to mark DONE + record v2-vs-V1 revisions.
+
+### Verification
+
+- `tsc --noEmit` exit 0
+- `next build` green; route table includes `/browse`, `/browse/feed`, `/communities`, `/c/[slug]`, `/c/[slug]/feed` with sane bundle sizes.
+
+### Pitfall encountered
+
+JSX comment `{/* ... */}` requires the closing `*/}` — easy to lose the trailing `}` when reformatting a block comment, and the parser then reports the brace error on the *next* JSX expression line, not where the bug is. Lost ~3 iterations to it.
+
+---
+
 ## 2026-06-17 — phase34a foundation: T2/T3/T4 hygiene shipped (v0.33.0)
 
 **Objective**: Ship the invisible plumbing + global hygiene that 34b/34c depend on. No new buyer features — user should perceive "things feel right", not "new feature".

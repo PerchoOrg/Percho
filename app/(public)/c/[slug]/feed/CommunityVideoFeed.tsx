@@ -103,25 +103,6 @@ function BackArrowIcon() {
   );
 }
 
-function HouseIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 24 24"
-      width={22}
-      height={22}
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M3 11.5 12 4l9 7.5" />
-      <path d="M5 10v10h14V10" />
-    </svg>
-  );
-}
-
 const CATEGORY_META = new Map(COMMUNITY_VIDEO_CATEGORIES.map((m) => [m.id, m] as const));
 
 function categoryLabel(id: string | null): { label: string; blurb?: string } | null {
@@ -547,14 +528,13 @@ export function CommunityVideoFeed({
         </button>
       </div>
 
-      {/* Right rail: Like / Save / Listings / Mute.
-       * Phase 27.7 (2026-06-17): Listings becomes a 12×12 circular icon in
-       * the same family as the other rail buttons, with the count rendered
-       * as a gold badge on the top-right corner — visually consistent with
-       * BrowseFeed's "Nearby" badge pattern (BrowseFeed.tsx:282). Placed
-       * below Save: Like → Save → Listings → Mute. Same destination as
-       * the badge on `/c/[slug]` (`/browse?community=<slug>`). Hidden when
-       * count is 0 (no homes for sale yet). */}
+      {/* Right rail: Like / Save / Mute.
+       *
+       * Phase 27.7 (2026-06-17) had a Listings icon here. Phase 34b
+       * (2026-06-17) moves that affordance into a more prominent
+       * bottom-left chip per v2 prototype, so listings discovery is one
+       * surface (not two). Right rail stays focused on save/like signals.
+       */}
        <div
          className="absolute right-3 z-20 flex flex-col items-center gap-3"
          style={{ bottom: 'max(6rem, calc(env(safe-area-inset-bottom) + 5rem))' }}
@@ -583,23 +563,35 @@ export function CommunityVideoFeed({
          >
            <BookmarkIcon filled={saved} />
          </button>
-         {activeListingsCount > 0 && (
-           <button
-             type="button"
-             onClick={() => router.push(`/browse?community=${community.slug}`)}
-             aria-label={`View ${activeListingsCount} ${activeListingsCount === 1 ? 'listing' : 'listings'} in ${community.name}`}
-             className="relative flex h-12 w-12 items-center justify-center rounded-full border border-cream/20 bg-ink/40 text-cream backdrop-blur transition hover:border-gold hover:text-gold"
-           >
-             <HouseIcon />
-             <span className="-right-1 -top-1 absolute rounded-full bg-gold px-1.5 py-0.5 font-semibold text-[9px] text-ink leading-none tabular-nums">
-               {activeListingsCount}
-             </span>
-           </button>
-         )}
          {/* phase34a (2026-06-17): right-rail mute button removed.
           * Volume is controlled by the device's system volume keys.
           * Internal `muted` state retained for autoplay-blocked fallback. */}
        </div>
+
+      {/* Phase 34b (2026-06-17, Scenario B): listings chip - bottom-left
+       * affordance into the homes feed scoped to this community. Tap goes
+       * to the immersive vertical swipe feed (NOT the grid). Hidden when
+       * no active listings exist for this community. */}
+      {activeListingsCount > 0 && (
+        <button
+          type="button"
+          onClick={() => router.push(`/browse/feed?community=${community.slug}`)}
+          aria-label={`Browse ${activeListingsCount} ${activeListingsCount === 1 ? 'home' : 'homes'} in ${community.name}`}
+          className="absolute bottom-24 left-3 z-30 flex max-w-[60%] items-center gap-2 rounded-full border border-cream/15 bg-ink/70 py-1.5 pr-3 pl-1.5 text-cream backdrop-blur-md transition-colors hover:border-gold/60"
+          style={{ touchAction: 'manipulation' }}
+        >
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-amber-400 to-orange-500 text-sm">
+            🏠
+          </span>
+          <span className="flex min-w-0 flex-col items-start leading-tight">
+            <span className="truncate font-medium text-[13px]">
+              {activeListingsCount} {activeListingsCount === 1 ? 'home' : 'homes'} here
+            </span>
+            <span className="text-[10px] text-cream/60">Tap to swipe</span>
+          </span>
+          <span className="ml-1 text-cream/50 text-sm">›</span>
+        </button>
+      )}
     </div>
   );
 }
