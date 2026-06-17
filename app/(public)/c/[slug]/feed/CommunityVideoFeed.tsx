@@ -26,12 +26,34 @@ import {
 import Hls from 'hls.js';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { CommunityListingsSheet } from './_components/CommunityListingsSheet';
+import { CommunityListingCarousel } from './_components/CommunityListingCarousel';
 
 export type CommunityFeedVideo = {
   id: string;
   cfVideoId: string;
   title: string | null;
   category: string | null;
+};
+
+/**
+ * Phase 34b (V1 redo, 2026-06-17): Scenario B data shape — listings
+ * surfaced via the bottom-left "homes here" chip on the community feed.
+ * Hero is a video if available, photo as fallback. Real fields only;
+ * nulls render as omissions, not placeholders.
+ */
+export type CommunityListingItem = {
+  id: string;
+  slug: string;
+  address: string;
+  city: string;
+  state: string;
+  price: number | null;
+  beds: number | null;
+  baths: number | null;
+  sqft: number | null;
+  heroCfVideoId: string | null;
+  heroPhotoUrl: string | null;
 };
 
 export type CommunityFeedCommunity = {
@@ -331,17 +353,24 @@ export function CommunityVideoFeed({
   videos,
   initialIndex = 0,
   activeListingsCount = 0,
+  listings = [],
 }: {
   community: CommunityFeedCommunity;
   videos: CommunityFeedVideo[];
   initialIndex?: number;
   activeListingsCount?: number;
+  /** Phase 34b (V1 redo): listings to surface via the bottom-left chip. */
+  listings?: CommunityListingItem[];
 }) {
   const router = useRouter();
   const [activeIndex, setActiveIndex] = useState(initialIndex);
   const [muted, setMuted] = useState(false);
   const [liked, setLiked] = useState(false); // in-memory, V1
   const [saved, setSaved] = useState(false);
+  // Phase 34b (V1 redo): Scenario B sheet/carousel state.
+  const [listingsSheetOpen, setListingsSheetOpen] = useState(false);
+  const [listingCarouselOpen, setListingCarouselOpen] = useState(false);
+  const [listingCarouselStartIdx, setListingCarouselStartIdx] = useState(0);
   // Phase 27.9 (2026-06-16): infinite swipe — render the videos array
   // multiple times. Start at 2 copies; whenever the user enters the last
   // copy we append another. Capped at 50 copies (~hundreds of cards) to
@@ -583,23 +612,63 @@ export function CommunityVideoFeed({
          >
            <BookmarkIcon filled={saved} />
          </button>
-         {activeListingsCount > 0 && (
-           <button
-             type="button"
-             onClick={() => router.push(`/browse?community=${community.slug}`)}
-             aria-label={`View ${activeListingsCount} ${activeListingsCount === 1 ? 'listing' : 'listings'} in ${community.name}`}
-             className="relative flex h-12 w-12 items-center justify-center rounded-full border border-cream/20 bg-ink/40 text-cream backdrop-blur transition hover:border-gold hover:text-gold"
-           >
-             <HouseIcon />
-             <span className="-right-1 -top-1 absolute rounded-full bg-gold px-1.5 py-0.5 font-semibold text-[9px] text-ink leading-none tabular-nums">
-               {activeListingsCount}
-             </span>
-           </button>
+         {/* Phase 34b (V1 redo, 2026-06-17): the right-rail HouseIcon was
+          * removed in favor of a bottom-left "🏠 N homes here" chip that
+          * opens an in-place listings sheet (L2) instead of navigating
+          * away to /browse. Old right-rail entry duplicated the chip's
+          * affordance and broke the user's anchor (community feed). The
+          * mute button was already removed in phase34a. */}
+         </div>
+
+         {/* Bottom-left "homes here" chip — Scenario B · L1 trigger.
+         * Hidden when the community has 0 listings (no fake data). Tap
+         * opens CommunityListingsSheet (L2). z-30 keeps it above the
+         * snap-scroll cards but below modals. */}
+         {listings.length > 0 && (
+         <button
+           type="button"
+           onClick={() => setListingsSheetOpen(true)}
+           aria-label={`View ${listings.length} ${
+             listings.length === 1 ? 'home' : 'homes'
+           } in ${community.name}`}
+           className="absolute bottom-6 left-3 z-20 flex items-center gap-1.5 rounded-full border border-cream/20 bg-ink/65 py-2 pr-3 pl-3 text-cream backdrop-blur-md transition-colors hover:border-gold hover:text-gold"
+           style={{
+             bottom: 'max(1.5rem, calc(env(safe-area-inset-bottom) + 0.5rem))',
+             touchAction: 'manipulation',
+           }}
+         >
+           <span aria-hidden="true">🏠</span>
+           <span className="font-medium text-[12px]">
+             {listings.length} {listings.length === 1 ? 'home' : 'homes'} here
+           </span>
+           <span className="text-cream/60" aria-hidden="true">
+             ›
+           </span>
+         </button>
          )}
-         {/* phase34a (2026-06-17): right-rail mute button removed.
-          * Volume is controlled by the device's system volume keys.
-          * Internal `muted` state retained for autoplay-blocked fallback. */}
-       </div>
+
+         <CommunityListingsSheet
+         open={listingsSheetOpen && !listingCarouselOpen}
+         communityName={community.name}
+         listings={listings}
+         onClose={() => setListingsSheetOpen(false)}
+         onOpenListing={(idx) => {
+           setListingCarouselStartIdx(idx);
+           setListingCarouselOpen(true);
+         }}
+         />
+         <CommunityListingCarousel
+         open={listingCarouselOpen}
+         listings={listings}
+         startIndex={listingCarouselStartIdx}
+         backLabel={community.name}
+         onClose={() => {
+           // Per V1 prototype: closing L3 returns straight to L0 (community
+           // feed), not back to the sheet — sheet was a transient lookup.
+           setListingCarouselOpen(false);
+           setListingsSheetOpen(false);
+         }}
+         />
     </div>
   );
 }

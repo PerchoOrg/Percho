@@ -1,10 +1,12 @@
 /**
- * CommunityGrid — shared 2/3/4-column grid of community cards.
+ * CommunityGrid — shared grid card for the buyer-facing communities surface.
  *
- * Phase 34b (2026-06-17): rendered on `/communities` (full page) and
- * inside `/browse?tab=communities` (segmented control). Both surfaces
- * use the same query (`fetchCommunityListCards`) and the same card
- * markup, so the cards look identical wherever they appear.
+ * Used by `/browse` (Communities tab) and `/communities`. Each card is a
+ * 9:16 cover with name + city/state + real counters (videos, listings).
+ *
+ * Phase 34b note (2026-06-17, V1 redo): no fake stats. If a field doesn't
+ * exist in the schema yet, it doesn't render — when the migration ships
+ * that adds rating / school / median, those badges are added then.
  */
 import Link from 'next/link';
 import type { CommunityListCard } from '@/lib/communities/list';
@@ -12,9 +14,9 @@ import type { CommunityListCard } from '@/lib/communities/list';
 export function CommunityGrid({ communities }: { communities: CommunityListCard[] }) {
   if (communities.length === 0) {
     return (
-      <div className="rounded border border-bronze/30 border-dashed bg-ink2 px-6 py-12 text-center">
-        <p className="text-cream/60 text-sm">No communities yet.</p>
-      </div>
+      <p className="rounded-lg border border-cream/10 bg-ink2 px-4 py-6 text-cream/60 text-sm">
+        No communities yet.
+      </p>
     );
   }
 
@@ -44,8 +46,16 @@ export function CommunityGrid({ communities }: { communities: CommunityListCard[
               <div className="mt-0.5 text-cream/60 text-[11px]">
                 {c.city ? `${c.city}, ${c.state}` : c.state}
               </div>
-              <div className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-gold/20 px-2 py-0.5 text-[10px] text-gold backdrop-blur">
-                {c.videoCount} {c.videoCount === 1 ? 'video' : 'videos'}
+              {/* Real counters only — videos + active listings. */}
+              <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                <span className="inline-flex items-center gap-1 rounded-full bg-gold/20 px-2 py-0.5 text-[10px] text-gold backdrop-blur">
+                  {c.videoCount} {c.videoCount === 1 ? 'video' : 'videos'}
+                </span>
+                {c.listingCount > 0 && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-cream/10 px-2 py-0.5 text-[10px] text-cream/80 backdrop-blur">
+                    {c.listingCount} {c.listingCount === 1 ? 'home' : 'homes'}
+                  </span>
+                )}
               </div>
             </div>
           </Link>

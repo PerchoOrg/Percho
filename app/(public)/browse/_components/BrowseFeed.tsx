@@ -7,6 +7,8 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { LeadModal } from '../../_components/LeadModal';
+import { CommunityCarousel } from './CommunityCarousel';
+import { CommunitySheet, type CommunitySheetData } from './CommunitySheet';
 
 export type BrowseSourceVideo = {
   cfVideoId: string;
@@ -102,12 +104,17 @@ export type BrowseCard = {
    * Phase 34b (V1 buyer redo): set when the listing belongs to a community.
    * BrowseFeed renders a top-left chip per V1 prototype Scenario A; tapping
    * the chip opens CommunitySheet (L1) — does NOT navigate. videoCount is
-   * the fan-out community-video pool size.
+   * the fan-out community-video pool size; listingCount is the number of
+   * published listings in this community (real, used for sheet header).
    */
   community?: {
     slug: string;
     name: string;
+    city: string | null;
+    state: string;
+    description: string | null;
     videoCount: number;
+    listingCount: number;
   };
 };
 
@@ -323,6 +330,13 @@ interface CardProps {
   muted: boolean;
   /** Called if the browser blocks autoplay-with-sound and we fall back to muted. */
   onAutoplayBlocked?: () => void;
+  /**
+   * Phase 34b (V1 redo): opens the community sheet at the parent level.
+   * Only fires when `card.community` is set. Chip is rendered inside this
+   * Card so it's positioned over the listing video; the sheet itself is
+   * a sibling overlay outside the card swiper.
+   */
+  onOpenCommunitySheet?: () => void;
 }
 
 function poolFor(card: BrowseCard, source: Source): number {
@@ -534,6 +548,7 @@ function Card({
   poolSize,
   muted,
   onAutoplayBlocked,
+  onOpenCommunitySheet,
 }: CardProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const hlsRef = useRef<Hls | null>(null);
@@ -764,6 +779,37 @@ function Card({
         </div>
       )}
 
+      {/* Phase 34b (V1 redo): top-left community chip — Scenario A. Only on
+       * the hero source (the listing video itself); switching into Nearby
+       * pool replaces this slot with the gold category pill above. Tapping
+       * opens CommunitySheet at the parent level. Pulse animation on first
+       * appearance per session draws first-time attention without obstructing
+       * the bottom listing meta or the right rail. */}
+      {source === 'hero' && card.community && onOpenCommunitySheet && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onOpenCommunitySheet();
+          }}
+          aria-label={`Explore ${card.community.name} community`}
+          className="absolute top-16 left-3 z-10 flex max-w-[70%] items-center gap-2 rounded-full border border-cream/15 bg-ink/65 py-1.5 pr-3 pl-2 text-cream backdrop-blur-md transition-colors hover:border-gold/60"
+          style={{ touchAction: 'manipulation' }}
+        >
+          <span className="text-base leading-none">🏘️</span>
+          <span className="flex min-w-0 flex-col text-left leading-tight">
+            <span className="truncate font-semibold text-[12px]">
+              {card.community.name}
+            </span>
+            <span className="text-[10px] text-cream/60">
+              {card.community.videoCount}{' '}
+              {card.community.videoCount === 1 ? 'video' : 'videos'} · in this area
+            </span>
+          </span>
+          <span className="text-cream/50 leading-none">›</span>
+        </button>
+      )}
+
       {/* Phase 28.2 (2026-06-15): desktop nav arrows for the Nearby pool.
        * Touch events don't fire on a Mac mouse, so the vertical-swipe
        * gesture is mobile-only. Up/Down arrows (md:flex) mirror the
@@ -924,6 +970,15 @@ export function BrowseFeed({
   const [liked, setLiked] = useState<Record<string, boolean>>({});
   const [saved, setSaved] = useState<Record<string, boolean>>({});
   const [likeAnimKey, setLikeAnimKey] = useState(0);
+
+  // Phase 34b (V1 redo, 2026-06-17): community sheet + carousel state.
+  // The chip on each card opens a single shared sheet at the parent level
+  // (only one card can be active at a time, so a single sheet suffices).
+  // Carousel is L2 (fullscreen) and pushes/pops independently.
+  const [sheetCardId, setSheetCardId] = useState<string | null>(null);
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [carouselOpen, setCarouselOpen] = useState(false);
+  const [carouselStartIdx, setCarouselStartIdx] = useState(0);
 
   // Phase 21 (2026-06-13): persistent saves keyed by anonymous device id.
   // Hydrated on mount from saved_listings; toggleSave fires server actions.
@@ -1245,6 +1300,16 @@ export function BrowseFeed({
                   return { ...c, [id]: next };
                 });
               }}
+              onOpenCommunitySheet={
+                card.community
+                  ? () => {
+                      setSheetCardId(card.id);
+                      setSheetOpen(true);
+                      // Pause the underlying listing video so the sheet has focus.
+                      setPausedActive(true);
+                    }
+                  : undefined
+              }
             />
           );
         })}
@@ -1365,6 +1430,61 @@ export function BrowseFeed({
           listingId={active.listing.id}
         />
       )}
+
+      {/* Phase 34b (V1 redo): community sheet (L1) + fullscreen carousel (L2).
+       * Resolved once at parent level — `sheetCardId` selects which card's
+       * community/data flows into the sheet. Sheet → carousel transition
+       * keeps the sheet mounted underneath so closing the carousel returns
+       * the user to L0 (listing video) per V1 spec — the sheet is a transient
+       * lookup, not a stable anchor. */}
+      {(() => {
+        const sheetCard = sheetCardId
+          ? cards.find((c) => c.id === sheetCardId) ?? null
+          : null;
+        const sheetData: CommunitySheetData | null =
+          sheetCard && sheetCard.community
+            ? {
+                slug: sheetCard.community.slug,
+                name: sheetCard.community.name,
+                city: sheetCard.community.city,
+                state: sheetCard.community.state,
+                description: sheetCard.community.description,
+                videoCount: sheetCard.community.videoCount,
+                listingCount: sheetCard.community.listingCount,
+                videos: sheetCard.categoryVideos,
+              }
+            : null;
+        return (
+          <>
+            <CommunitySheet
+              open={sheetOpen && !carouselOpen}
+              data={sheetData}
+              onClose={() => {
+                setSheetOpen(false);
+                setSheetCardId(null);
+              }}
+              onOpenCarousel={(idx) => {
+                setCarouselStartIdx(idx);
+                setCarouselOpen(true);
+              }}
+            />
+            <CommunityCarousel
+              open={carouselOpen}
+              videos={sheetCard?.categoryVideos ?? []}
+              startIndex={carouselStartIdx}
+              backLabel={sheetCard?.listing.address ?? ''}
+              onClose={() => {
+                // Close carousel AND sheet — V1 spec: "‹ Back" goes to L0,
+                // skipping the sheet so the user lands back on the listing
+                // video without an extra dismiss step.
+                setCarouselOpen(false);
+                setSheetOpen(false);
+                setSheetCardId(null);
+              }}
+            />
+          </>
+        );
+      })()}
     </div>
   );
 }

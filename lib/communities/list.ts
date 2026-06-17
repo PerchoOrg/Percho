@@ -17,6 +17,8 @@ export type CommunityListCard = {
   state: string;
   description: string | null;
   videoCount: number;
+  /** Phase 34b: real count of published listings (`status='published'` && `community_id`). */
+  listingCount: number;
   cover: ReturnType<typeof resolveCommunityCoverWithCfIds>;
 };
 
@@ -72,6 +74,26 @@ export async function fetchCommunityListCards(): Promise<CommunityListCard[]> {
     }
   }
 
+  // Phase 34b: real listing counts per community (status='published').
+  const communityIds = communities.map((c) => c.id);
+  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
+  const { data: listingRows } = (await (supabase as any)
+    .from('listings')
+    .select('community_id')
+    .eq('status', 'published')
+    .in(
+      'community_id',
+      communityIds.length > 0 ? communityIds : ['00000000-0000-0000-0000-000000000000'],
+    )) as { data: Array<{ community_id: string | null }> | null };
+  const listingCountByCommunity = new Map<string, number>();
+  for (const r of listingRows ?? []) {
+    if (!r.community_id) continue;
+    listingCountByCommunity.set(
+      r.community_id,
+      (listingCountByCommunity.get(r.community_id) ?? 0) + 1,
+    );
+  }
+
   return communities.map((c) => ({
     id: c.id,
     name: c.name,
@@ -80,6 +102,7 @@ export async function fetchCommunityListCards(): Promise<CommunityListCard[]> {
     state: c.state,
     description: c.description,
     videoCount: countByCommunity.get(c.id) ?? 0,
+    listingCount: listingCountByCommunity.get(c.id) ?? 0,
     cover: resolveCommunityCoverWithCfIds({
       cover_video_id: c.cover_video_id,
       cover_video_cf_id: c.cover_video_id ? cfById.get(c.cover_video_id) ?? null : null,

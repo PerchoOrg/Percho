@@ -91,7 +91,14 @@ type PoiRow = {
   distance_text: string | null;
 };
 
-type CommunityRow = { id: string; name: string; slug: string; description: string | null };
+type CommunityRow = {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  city: string | null;
+  state: string | null;
+};
 
 /**
  * Internal helper: given a pre-filtered batch of listings, fan out the
@@ -124,6 +131,7 @@ async function assembleCards(
     schoolsResp,
     poisResp,
     communitiesResp,
+    listingCountResp,
   ] = await Promise.all([
     supabase
       .from('listing_videos')
@@ -166,7 +174,21 @@ async function assembleCards(
           .in('community_id', communityIds)
       : Promise.resolve({ data: [] }),
     communityIds.length > 0
-      ? supabase.from('communities').select('id, name, slug, description').in('id', communityIds)
+      ? supabase
+          .from('communities')
+          .select('id, name, slug, description, city, state')
+          .in('id', communityIds)
+      : Promise.resolve({ data: [] }),
+    // Phase 34b (V1 redo): listingCount per community for the sheet header.
+    // Counts ALL published listings, not just the ones in this card batch —
+    // the user opens the sheet expecting "homes in this community", not
+    // "homes in current page".
+    communityIds.length > 0
+      ? supabase
+          .from('listings')
+          .select('community_id')
+          .in('community_id', communityIds)
+          .eq('status', 'published')
       : Promise.resolve({ data: [] }),
   ]);
 
@@ -177,6 +199,14 @@ async function assembleCards(
   const schools = (schoolsResp.data ?? []) as SchoolRow[];
   const pois = (poisResp.data ?? []) as PoiRow[];
   const communities = (communitiesResp.data ?? []) as CommunityRow[];
+  const listingCountRows = (listingCountResp.data ?? []) as Array<{ community_id: string }>;
+  const listingCountByCommunity = new Map<string, number>();
+  for (const row of listingCountRows) {
+    listingCountByCommunity.set(
+      row.community_id,
+      (listingCountByCommunity.get(row.community_id) ?? 0) + 1,
+    );
+  }
 
   const heroByListing = new Map<string, ListingVideoRow>();
   for (const v of listingVideos) {
@@ -281,12 +311,18 @@ async function assembleCards(
       },
     };
     if (community) {
-      // Phase 34b: surface community on the card so BrowseFeed can render
-      // a top-left chip → /c/{slug}/feed for anchored buyers.
+      // Phase 34b (V1 redo): surface community on the card so BrowseFeed
+      // can render a top-left chip; tapping the chip opens CommunitySheet
+      // (L1) — does NOT navigate. videoCount is the fan-out community-video
+      // pool size and seeds the sheet's "COMMUNITY VIDEOS · N" header.
       card.community = {
         slug: community.slug,
         name: community.name,
+        city: community.city,
+        state: community.state ?? '',
+        description: community.description,
         videoCount: cVids.length,
+        listingCount: listingCountByCommunity.get(community.id) ?? 0,
       };
     }
     if (distanceById?.has(l.id)) {
