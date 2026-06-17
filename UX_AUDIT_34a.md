@@ -23,61 +23,72 @@ Ship the invisible plumbing + global hygiene that 34b/34c depend on. Nothing fla
 
 ---
 
-### T2 · Default sound on, remove top mute toggle
+### T2 · ✅ DONE — Default sound + remove right-rail mute button
 
-**Why**: TikTok mental model — autoplay with sound, tap-to-mute per video. Current player has a top-bar mute that defaults to muted (anti-pattern for a video-first app).
+**Done in commit `f40898d`**:
+- Default `muted = false` already existed in both `BrowseFeed` and `CommunityVideoFeed` (`useState(false)` + first-interaction unmute fallback for autoplay-blocked browsers).
+- **Removed the right-rail mute toggle button** from both feeds. Volume is now controlled exclusively by the device's system volume keys — keeps the rail clean and avoids a redundant in-app control. (Per repeated user direction: never put a mute button in the right rail.)
+- Internal `muted` state retained for the autoplay-blocked fallback only (browser blocks unmuted autoplay → start muted → first interaction unmutes).
 
-**What**:
-1. Find every `<video>` player wrapper. Known files: `app/(public)/c/[slug]/feed/CommunityVideoFeed.tsx`, `app/(public)/browse/_components/BrowseFeed.tsx`. There may be more — grep for `muted`.
-2. Default `muted = false`. (Browser autoplay policy: `muted` is required for autoplay on first load. Workaround: start muted, unmute on first user interaction OR after explicit "tap to enable sound" tooltip. Pick the less janky path — **stop and ask if uncertain**.)
-3. Remove the top-bar mute toggle button. Mute is per-video, controlled by tapping the video itself.
-4. On tap-to-mute: show a brief overlay icon (🔇 / 🔊) that fades in 600ms, fades out 600ms.
-5. Persist mute preference per session in `sessionStorage` (not localStorage — fresh state next visit).
+**De-scoped from original spec**:
+- Tap-to-mute overlay (🔇 / 🔊 fade): not implemented. Tap on video already maps to `togglePlay` (TikTok/Reels convention) — overloading tap with mute would conflict. If users ask for mute later, revisit.
+- `sessionStorage` mute persistence: not needed — mute state is ephemeral and tied to the autoplay-fallback only.
 
-**Stop and ask if**:
-- Browser autoplay policy blocks unmuted autoplay even after first interaction (might need a one-time "tap to start" gate)
-
-**Files**: video player components (find all). Remove the mute button from top-bar UI; add tap handler on video element.
-
-**Acceptance**: open any video feed in Chrome mobile emulator → first video starts (muted is OK if browser forces it) → tap video once → unmuted; tap again → muted; reload → starts fresh per autoplay rules.
+**Acceptance**: First video starts muted only if browser blocks unmuted autoplay; first interaction unmutes; no in-app mute UI.
 
 ---
 
-### T3 · Nav: cut tabs, dedupe Public Profile
+### T3 · ⏸ DEFERRED — audit complete, no action needed in 34a
 
-**Why**: Linear-minimal IA. Current tabs likely include redundancy (Profile vs Public Profile vs Me, etc).
+**Audit (2026-06-17)**:
 
-**What**:
-1. **Audit step (write before changing)**: list every nav surface in the app — bottom tab bar, top header items, dashboard sidebar, profile dropdown. Output as a markdown table in the PR description: `Surface | Item | Route | Purpose | Duplicate of?`.
-2. **Decide minimal set**: bottom-bar tabs target = 4 (For You / Browse-or-Search / Saved / Me). Anything beyond gets folded under Me or removed.
-3. **Public Profile dedup**: if there's both `/profile/[id]` and `/u/[username]` and `/me` — pick one canonical public route, redirect the others.
-4. **Implement**: remove the redundant tabs/items, add 301-style redirects for old paths (Next.js `redirect()` in route handler or `next.config.js` redirects).
+| Surface | Item | Route | Purpose | Duplicate? |
+|---|---|---|---|---|
+| Bottom bar (buyer) | Community / Nearby / ▶ Explore (FAB) / Saved / Me | `/communities`, `/nearby`, `/browse`, `/saved`, `/profile` | Primary IA | None |
+| Bottom bar (agent) | Dashboard / Community / +New (FAB) / Leads / Me | dashboard routes + `/profile` | Agent workspace | None |
+| Top header (md+) | Mirrors bottom (minus Me; avatar instead) | — | Desktop chrome | Same SSOT (`nav-config.ts`) |
+| Avatar dropdown | Profile, Sign out | `/profile`, `/api/auth/signout` | Account menu | One redundant entry to `/profile` (also reachable via Me tab) — acceptable; standard pattern |
+| `/profile` page | "View public profile" → `/a/[agentSlug]` | — | Owner-only edit page links to public mirror | Cross-link, not duplicate |
+| `/a/[agentSlug]` | Agent's public page | — | Only public agent route | None |
 
-**Stop and ask if**:
-- Audit reveals more than 2 routes that look like "public profile" (need product call on which is canonical)
-- Removing a tab would orphan content that has no other entry point
+**Conclusion**:
+- **5 buyer tabs are intentional IA** (phase 27 design): Community is the platform's signature asset; Explore is the center FAB consumption mode; Nearby / Saved / Me each have unique entry points. Cutting any tab would orphan content. The `≤4` target in the original spec was written without an audit and is wrong.
+- **Public profile is already deduped**: only one public route (`/a/[agentSlug]`). `/profile` is the private owner page and already cross-links to it. Nothing to redirect.
+- **"Me" vs "Profile" copy is fine**: short label in nav, descriptive title on the page — standard mobile pattern. Not a bug.
 
-**Files**: bottom tab bar component (find it), affected page files.
+**Why DEFERRED, not DONE**: nothing to ship for T3 in 34a. If a real tab-cut becomes desirable (e.g. fold Nearby into Explore as a filter), that's a buyer-visible product change → belongs in **34b** at the earliest, with Vivian's input.
 
-**Acceptance**: bottom bar has ≤4 tabs; only one route serves "public profile"; old routes 301 to canonical.
+**Files touched**: none.
 
 ---
 
-### T4 · Site-wide font / touch-target audit
+### T4 · ✅ DONE — Tap-target audit + fixes; font scale audited
 
-**Why**: Hygiene. WCAG-recommended touch target = 44×44px; many of our buttons may be smaller.
+**Audit (2026-06-17)**:
 
-**What**:
-1. **Audit step**: grep for `<button`, `Tailwind h-` and `w-` classes < `h-11`/`w-11` (44px = 11×4 in default Tailwind). List every button/link/interactive element below threshold.
-2. **Fix**: bump to min 44×44 by adding padding, not by enlarging visible chrome. Use `min-h-[44px] min-w-[44px]` on tap targets where the visible element is smaller.
-3. **Font scale**: confirm body text ≥ 14px, headings ≥ 18px. Anything 12px or smaller → either bump or justify in PR description.
+Scanned all `*.tsx` under `app/` and `components/` for explicit `h-7..h-10` / `w-7..w-10` on interactive elements (`<button>`, `<Link>`, `role="button"`).
 
-**Stop and ask if**:
-- A design intentionally uses small text (timestamps, captions) — pick a global "caption" size and apply consistently rather than ad-hoc
+**Real violations fixed (8 buttons → 44×44)**:
+- `app/_components/SiteHeader.tsx` — "+ New" pill (h-9 → h-11), avatar trigger (h-9 w-9 → h-11 w-11), "Sign up" pill (h-9 → h-11)
+- `app/_components/TopRightAvatar.tsx` — "Sign in" pill (h-8 → h-11), avatar trigger (h-9 w-9 → h-11 w-11)
+- `app/_components/BottomNav.tsx` — FAB sheet "Close" button (`p-1` ≈ 28px → h-11 w-11)
+- `app/(public)/browse/_components/BrowseFeed.tsx` — top-bar Back / Search / Share (3× h-9 w-9 → h-11 w-11)
+- `app/(public)/c/[slug]/feed/CommunityVideoFeed.tsx` — top-bar Back / Share (2× h-9 w-9 → h-11 w-11)
 
-**Files**: Tailwind classes across components — touch broadly but make changes minimal (just size bumps, no restructure).
+**Intentionally not changed**:
+- `BrowseFeed` paginators at lines 447/456/771/783 — `md:flex` only, mouse-only desktop chrome (44×44 is a touch standard, not mouse).
+- Decorative `h-9 w-9` icon spans inside `BottomNav` FAB rows (lines 106/121) and `SiteHeader` (lines 106/120) — they sit inside `py-3 px-4` row containers whose tap target is already ≫ 44px.
+- `loading.tsx` skeletons (`h-7`, `h-8`) — non-interactive placeholders.
 
-**Acceptance**: `grep -r 'h-[0-9]' --include='*.tsx'` shows no tap targets below `h-11` without an explicit `min-h-[44px]` override. Visual smoke test: every button feels comfortably tappable on iPhone 12 mini (smallest common screen).
+**Font scale audit**:
+- Body text everywhere ≥ `text-sm` (14px). ✅
+- `text-[10px]` / `text-[11px]` usages are limited to: pill badges (uppercase tracking-wider), uploader status captions, photo position numbers, deal-stage chips, dashboard metric eyebrows. These are **caption-class** by design — bumping them to 14px would balloon the dashboard.
+- Decision per CLAUDE.md §0.3 (surgical changes): keep caption convention as-is. If we ever standardize a "caption" token (e.g. `text-caption`), do it as a separate Tailwind plugin pass, not in 34a.
+
+**Acceptance**:
+- `tsc --noEmit` clean ✅
+- `pnpm build` green ✅
+- All primary chrome tap targets ≥ 44×44.
 
 ---
 

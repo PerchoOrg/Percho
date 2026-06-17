@@ -1305,7 +1305,7 @@ export function BrowseFeed({
             }
           }}
           aria-label={activeSource !== 'hero' ? 'Back to listing video' : 'Back'}
-          className="flex h-9 w-9 items-center justify-center rounded-full border border-cream/20 bg-ink/55 text-cream backdrop-blur-md transition-colors hover:border-gold hover:text-gold"
+          className="flex h-11 w-11 items-center justify-center rounded-full border border-cream/20 bg-ink/55 text-cream backdrop-blur-md transition-colors hover:border-gold hover:text-gold"
           style={{ touchAction: 'manipulation' }}
         >
           <BackArrowIcon />
@@ -1316,7 +1316,7 @@ export function BrowseFeed({
             onClick={() => router.push('/browse')}
             aria-label="Search listings"
             title="Search (coming soon)"
-            className="flex h-9 w-9 items-center justify-center rounded-full border border-cream/20 bg-ink/55 text-cream/70 backdrop-blur-md transition-colors hover:border-gold hover:text-gold"
+            className="flex h-11 w-11 items-center justify-center rounded-full border border-cream/20 bg-ink/55 text-cream/70 backdrop-blur-md transition-colors hover:border-gold hover:text-gold"
             style={{ touchAction: 'manipulation' }}
           >
             <SearchIcon />
@@ -1325,7 +1325,7 @@ export function BrowseFeed({
             type="button"
             onClick={onShare}
             aria-label="Share listing"
-            className="flex h-9 w-9 items-center justify-center rounded-full border border-cream/20 bg-ink/55 text-cream backdrop-blur-md transition-colors hover:border-gold hover:text-gold"
+            className="flex h-11 w-11 items-center justify-center rounded-full border border-cream/20 bg-ink/55 text-cream backdrop-blur-md transition-colors hover:border-gold hover:text-gold"
             style={{ touchAction: 'manipulation' }}
           >
             <ShareIcon />

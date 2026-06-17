@@ -85,7 +85,7 @@ export function TopRightAvatar({ authed, initial, avatarUrl }: TopRightAvatarPro
       >
         <Link
           href="/login"
-          className="inline-flex h-8 items-center rounded-full border-cream/20 border bg-ink/70 px-3 font-medium text-cream/90 text-xs backdrop-blur-md transition hover:border-cream/40"
+          className="inline-flex h-11 items-center rounded-full border-cream/20 border bg-ink/70 px-4 font-medium text-cream/90 text-xs backdrop-blur-md transition hover:border-cream/40"
         >
           Sign in
         </Link>
@@ -105,7 +105,7 @@ export function TopRightAvatar({ authed, initial, avatarUrl }: TopRightAvatarPro
         aria-haspopup="menu"
         aria-expanded={open}
         aria-label="Account menu"
-        className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border border-gold/60 bg-ink/80 font-medium text-cream text-sm backdrop-blur-md transition active:scale-95"
+        className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-full border border-gold/60 bg-ink/80 font-medium text-cream text-sm backdrop-blur-md transition active:scale-95"
       >
         {avatarUrl ? (
           // biome-ignore lint/a11y/useAltText: aria-label on the button covers it

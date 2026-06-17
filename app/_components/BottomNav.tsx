@@ -91,7 +91,7 @@ function FabActionSheet({ open, onClose }: { open: boolean; onClose: () => void 
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="rounded-full p-1 text-cream/60 hover:text-cream"
+            className="flex h-11 w-11 items-center justify-center rounded-full text-cream/60 hover:text-cream"
           >
             <X size={20} />
           </button>

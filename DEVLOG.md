@@ -2,6 +2,32 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-06-17 — phase34a foundation: T2/T3/T4 hygiene shipped (v0.33.0)
+
+**Objective**: Ship the invisible plumbing + global hygiene that 34b/34c depend on. No new buyer features — user should perceive "things feel right", not "new feature".
+
+**Actions**:
+- **T1 (community geo) deferred to phase35.** `communities` table has only `city, state` text; adding centroid + radius requires reworking the Create Community form too. Doing it twice is waste. Pairing T1 with the wizard rework in phase35 keeps the migration single-shot. `UX_AUDIT_34a.md` records the deadlock + rationale.
+- **T2 (default sound + no in-app mute control) — done in `f40898d`.** Default `muted = false` already shipped (autoplay-blocked browsers fall back to muted → first interaction unmutes). The right-rail mute toggle was removed from both `BrowseFeed.tsx` and `CommunityVideoFeed.tsx`. Volume is now controlled exclusively by the device's system volume keys, per repeated user direction. Internal `muted` state is retained for the autoplay-blocked fallback only. Tap-to-mute overlay and `sessionStorage` persistence (in original spec) were dropped — tap maps to play/pause (TikTok convention), and overloading it with mute conflicts.
+- **T3 (nav cut + public profile dedup) — audit complete, no action.** Full audit of every nav surface (bottom bar, top header, avatar dropdown, `/profile`, `/a/[slug]`) showed: 5 buyer tabs are intentional IA (phase 27 design — Community / Nearby / Explore / Saved / Me each unique entry); only one public agent route (`/a/[agentSlug]`) exists; `/profile` is the private owner page and already cross-links to it. The original `≤4 tabs` target was written without an audit and is wrong. Cutting any tab would orphan content. If a real tab consolidation becomes desirable (e.g. fold Nearby into Explore as a filter), it belongs in phase34b at the earliest, with Vivian's input. Audit table preserved in `UX_AUDIT_34a.md`.
+- **T4 (tap-target + font audit) — done.** Eight chrome buttons bumped from h-8/h-9 to h-11 (44×44 WCAG): SiteHeader "+ New" / avatar / "Sign up", TopRightAvatar "Sign in" / avatar, BottomNav FAB sheet "Close", BrowseFeed top-bar Back/Search/Share, CommunityVideoFeed top-bar Back/Share. Mouse-only desktop paginators left alone. Decorative h-9 w-9 icon spans inside py-3 px-4 row containers left alone (whole row is the tap target). Body text is ≥ 14px everywhere; `text-[10/11]px` is limited to caption-class pills/badges/eyebrows by design — not bumped (per CLAUDE.md §0.3 surgical rule).
+
+**Decisions**:
+- T1+wizard pairing (P1) > backfill-now+rework-later (P2) > skip-geo (P3). P1 chosen because PostGIS is already declined in the migrations (`0011_listing_photos_and_geo.sql` comment) — keeping geo as plain `lat/lng` columns means no new infra, and the wizard rework is the natural place to collect the data at source.
+- T3 entire substance dropped instead of forcing a fake tab cut. CLAUDE.md §0.4 ("define success criteria") + §0.3 ("touch only what you must") combined: if the audit's stop-condition fires ("removing a tab would orphan content"), the right move is stop and document, not invent work.
+- Caption-class fonts (text-[10px]/text-[11px]) kept. A site-wide caption token would be a styling refactor — out of scope for 34a hygiene.
+
+**Issues**: T2 spec/reality mismatch (default-sound + tap-to-mute overlay were partially already implemented; the "top mute toggle" never existed — the actual button was a right-rail toggle). Resolved by aligning spec to reality and removing the right-rail button instead.
+
+**Resolution**: 34a complete. Branch `phase34a/foundation` ready to ff to main.
+
+**Learnings**: When a phase spec is written before the audit step, the spec's success criteria can be wrong by the time you actually look at the code. The CLAUDE.md "audit step (write before changing)" rule earned its keep here — the `≤4 tabs` target turned out to be impossible without orphaning content, and it was cheaper to discover that during T3 than to half-implement it.
+
+**Next steps**:
+- phase34b: Scenario A chip+sheet+carousel + Scenario B `/browse/` Communities tab. Multiple commits (chip / sheet / Communities tab / carousel / hygiene).
+- phase34c: agent operations console (grid + filter All/Mine, default All). One commit.
+- phase35: T1 geo + Create Community wizard three-step rework.
+
 ## 2026-06-17 — perf: site-wide nav prefetch + loading skeletons (v0.32.12)
 
 **Symptom:** Vivian's partner qiaoxux: "first tap on community / leads / me

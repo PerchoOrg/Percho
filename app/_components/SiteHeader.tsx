@@ -86,7 +86,7 @@ function NewDropdown() {
         onClick={() => setOpen((v) => !v)}
         aria-haspopup="menu"
         aria-expanded={open}
-        className="inline-flex h-9 items-center gap-1.5 rounded-full bg-gold px-4 font-medium text-ink text-sm transition hover:opacity-90"
+        className="inline-flex h-11 items-center gap-1.5 rounded-full bg-gold px-4 font-medium text-ink text-sm transition hover:opacity-90"
       >
         <Plus size={16} strokeWidth={2.5} aria-hidden="true" />
         New
@@ -175,7 +175,7 @@ function AvatarMenu({
         aria-haspopup="menu"
         aria-expanded={open}
         aria-label="Account menu"
-        className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border border-gold/60 bg-ink/80 font-medium text-cream text-sm transition hover:border-gold active:scale-95"
+        className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-full border border-gold/60 bg-ink/80 font-medium text-cream text-sm transition hover:border-gold active:scale-95"
       >
         {avatarUrl ? (
           // biome-ignore lint/a11y/useAltText: aria-label on the button covers it
@@ -264,7 +264,7 @@ export function SiteHeader({ role, initial, displayName, brokerage, avatarUrl }:
               </Link>
               <Link
                 href="/signup"
-                className="inline-flex h-9 items-center rounded-full bg-gold px-4 font-medium text-ink text-sm transition hover:opacity-90"
+                className="inline-flex h-11 items-center rounded-full bg-gold px-4 font-medium text-ink text-sm transition hover:opacity-90"
               >
                 Sign up
               </Link>

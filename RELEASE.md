@@ -3,6 +3,15 @@
 Newest at the top. Each release covers a meaningful product change visible to users.
 Format matches the standard release template (Features / Improvements / Bug Fixes / Technical / Known Issues / Metrics).
 
+## v0.33.0 — 2026-06-17
+
+### ✨ Improvements
+- **Sound is on by default; the in-app mute button is gone.** Videos now autoplay with sound the moment you tap into a feed. The mute toggle that used to live on the right side of every video has been removed — use your phone's volume keys (or the side switch) to control audio. One control instead of two, and the right rail stays focused on the things you actually do (Like, Save, Listings).
+- **Buttons feel right under your thumb everywhere.** Every tappable control in the top bars, the sign-in / sign-up pills, the avatar menu, the create-new sheet's close button, and the share / back / search buttons inside the swipe feeds is now a comfortable 44×44 — the size Apple and Google recommend for touch. Smaller targets that were hard to hit on a phone are gone.
+
+### 🔧 Technical
+- Foundation pass for upcoming community-discovery features. No new feature surface in this release; the changes below the line clean up sizing tokens, default media behaviour, and navigation invariants so the next release can move faster.
+
 ## v0.32.12 — 2026-06-17
 
 ### 🐛 Bug Fixes
