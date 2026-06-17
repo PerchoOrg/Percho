@@ -38,7 +38,7 @@ export type CommunityFeedVideo = {
 
 /**
  * Phase 34b (V1 redo, 2026-06-17): Scenario B data shape — listings
- * surfaced via the bottom-left "homes here" chip on the community feed.
+ * surfaced via the top-left "homes here" chip on the community feed.
  * Hero is a video if available, photo as fallback. Real fields only;
  * nulls render as omissions, not placeholders.
  */
@@ -359,7 +359,7 @@ export function CommunityVideoFeed({
   videos: CommunityFeedVideo[];
   initialIndex?: number;
   activeListingsCount?: number;
-  /** Phase 34b (V1 redo): listings to surface via the bottom-left chip. */
+  /** Phase 34b (V1 redo): listings to surface via the top-left chip. */
   listings?: CommunityListingItem[];
 }) {
   const router = useRouter();
@@ -612,18 +612,23 @@ export function CommunityVideoFeed({
          >
            <BookmarkIcon filled={saved} />
          </button>
-         {/* Phase 34b (V1 redo, 2026-06-17): the right-rail HouseIcon was
-          * removed in favor of a bottom-left "🏠 N homes here" chip that
+         {/* Phase 34b.1 (V1 redo, 2026-06-17): the right-rail HouseIcon was
+          * removed in favor of a top-left "🏠 N homes here" chip that
           * opens an in-place listings sheet (L2) instead of navigating
           * away to /browse. Old right-rail entry duplicated the chip's
           * affordance and broke the user's anchor (community feed). The
-          * mute button was already removed in phase34a. */}
+          * mute button was already removed in phase34a. The chip lives at
+          * top-left (not bottom) to mirror the listing-card community
+          * chip on /browse — same corner, same job. */}
          </div>
 
-         {/* Bottom-left "homes here" chip — Scenario B · L1 trigger.
-         * Hidden when the community has 0 listings (no fake data). Tap
-         * opens CommunityListingsSheet (L2). z-30 keeps it above the
-         * snap-scroll cards but below modals. */}
+         {/* Top-left "homes here" chip — Scenario B · L1 trigger.
+         * Positioned at top-16 (just under the top header) to mirror the
+         * listing-card community chip on /browse — same corner, same job:
+         * cross-collection sheet → carousel. Hidden when the community has
+         * 0 listings (no fake data). Tap opens CommunityListingsSheet (L2).
+         * Phase 34b.1 (2026-06-17): moved from bottom-left to top-left for
+         * consistency with the listing chip the user already learned. */}
          {listings.length > 0 && (
          <button
            type="button"
@@ -631,11 +636,8 @@ export function CommunityVideoFeed({
            aria-label={`View ${listings.length} ${
              listings.length === 1 ? 'home' : 'homes'
            } in ${community.name}`}
-           className="absolute bottom-6 left-3 z-20 flex items-center gap-1.5 rounded-full border border-cream/20 bg-ink/65 py-2 pr-3 pl-3 text-cream backdrop-blur-md transition-colors hover:border-gold hover:text-gold"
-           style={{
-             bottom: 'max(1.5rem, calc(env(safe-area-inset-bottom) + 0.5rem))',
-             touchAction: 'manipulation',
-           }}
+           className="absolute top-16 left-3 z-20 flex items-center gap-1.5 rounded-full border border-cream/20 bg-ink/65 py-2 pr-3 pl-3 text-cream backdrop-blur-md transition-colors hover:border-gold hover:text-gold"
+           style={{ touchAction: 'manipulation' }}
          >
            <span aria-hidden="true">🏠</span>
            <span className="font-medium text-[12px]">

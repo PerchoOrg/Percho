@@ -192,7 +192,7 @@ export function BottomNav({ role }: { role: ViewerRole }) {
           ) : (
             BUYER_TABS.map((tab) =>
               tab.centerEmphasis === true ? (
-                <li key={tab.href} className="flex flex-1 items-center justify-center">
+                <li key={tab.href} className="flex flex-1 flex-col items-center justify-center">
                   <Link
                     href={tab.href}
                     aria-label={tab.label}
@@ -201,6 +201,13 @@ export function BottomNav({ role }: { role: ViewerRole }) {
                   >
                     <tab.icon size={24} strokeWidth={2.25} aria-hidden="true" />
                   </Link>
+                  <span
+                    className={`mt-0.5 font-medium text-[10px] leading-none ${
+                      isTabActive(pathname, tab) ? 'text-gold' : 'text-cream/70'
+                    }`}
+                  >
+                    {tab.label}
+                  </span>
                 </li>
               ) : (
                 <li key={tab.href} className="flex-1">

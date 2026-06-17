@@ -2,6 +2,20 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-06-17 — phase34b.1: nav cleanup + chip top-left
+
+**Objective**: Three small follow-ups from V1 redo review — kill duplicate surfaces, label the FAB, and align the community-feed chip with the listing-card chip.
+
+**Actions**:
+- **Dropped `Nearby` from buyer bottom nav.** The community chip on every listing card already does the "filter by neighborhood" job, and `/communities` is a one-tap landing for picking an area. Two surfaces for one job is the duplication the chip was meant to remove. `/nearby` route still resolves for any deep links in the wild; just isn't surfaced in primary nav. Buyer nav is now 4 tabs: `Community · ▶ Explore · Saved · Me`.
+- **Explore FAB shows its label.** The center FAB on `BottomNav` was icon-only; siblings have icon + label, so the unlabeled FAB read as "what does this even do." Added a `text-[10px]` label below the gold pill, gold-tinted when active, matching the rest of the row.
+- **Removed `BrowseTabs` segmented control on `/browse`.** It overlapped with `/communities` (same data, same card, different URL). Deleted `app/(public)/browse/_components/BrowseTabs.tsx`, simplified `page.tsx` to drop the `?tab=communities` branch.
+- **Moved Scenario B chip from bottom-left to top-left.** The listing-card community chip on `/browse` lives at `top-16 left-3`; the community-feed homes chip lived at `bottom-6 left-3`. Same job (cross-collection sheet → carousel), so same corner. Now both open at top-left under the header — buyer learns the affordance once.
+
+**Decisions**:
+- Kept `/nearby` route alive as a soft 404 surface rather than deleting it — anyone with a bookmark gets a real page, just no longer in primary nav. Cheaper than a 410 redirect.
+- FAB label is `text-[10px]` not `text-xs` so the FAB stays visually emphasized — the label clarifies, doesn't compete.
+
 ## 2026-06-17 — phase34b (V1 redo): Scenario A+B chip → sheet → carousel (no fake data)
 
 **Objective**: Re-implement the buyer discovery loop per V1 prototype after reverting d0f7d5e (v2 attempt). Two parallel scenarios on top of the existing snap-scroll feeds, sharing the same chip → sheet → fullscreen-carousel pattern.

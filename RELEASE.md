@@ -3,6 +3,14 @@
 Newest at the top. Each release covers a meaningful product change visible to users.
 Format matches the standard release template (Features / Improvements / Bug Fixes / Technical / Known Issues / Metrics).
 
+## v0.34.1 — 2026-06-17
+
+### 🛠 Improvements
+- **Cleaner bottom nav.** "Nearby" is gone — the community badge on every listing already takes you straight to a neighborhood, and the Community tab is right there for picking an area first. One way to do each thing.
+- **The center button now says "Explore."** Big gold compass in the middle of the nav was unlabeled; now it carries its name like every other tab.
+- **Explore stops duplicating Community.** The "Homes / Communities" toggle on top of Explore is removed — the Community tab already shows the same grid one tap away.
+- **Homes chip moved to the top.** On any community video feed, the "🏠 N homes here" chip now sits in the top-left corner, matching the community badge on listing cards. Same place, same job — fewer rules to remember.
+
 ## v0.34.0 — 2026-06-17
 
 ### ✨ Features
