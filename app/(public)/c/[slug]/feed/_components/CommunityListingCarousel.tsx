@@ -247,13 +247,20 @@ function ListingSlide({
     };
   }, [shouldMount, listing.heroCfVideoId]);
 
+  // Sound: chip tap is a user gesture, so unmuted autoplay should be
+  // permitted. Try with sound first; fall back to muted if the browser
+  // still blocks it. (phase34b.1 fix: chip-launched videos used to be
+  // silent because we forced muted=true.)
   useEffect(() => {
     const v = ref.current;
     if (!v) return;
     if (isActive) {
-      v.muted = true;
-      void v.play().catch(() => {
-        /* swallow autoplay errors */
+      v.muted = false;
+      v.play().catch(() => {
+        v.muted = true;
+        void v.play().catch(() => {
+          /* swallow */
+        });
       });
     } else {
       v.pause();
@@ -275,7 +282,6 @@ function ListingSlide({
           poster={poster ?? undefined}
           className="h-full w-full bg-black object-contain"
           playsInline
-          muted
           loop
           preload="metadata"
         />

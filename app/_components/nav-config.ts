@@ -18,6 +18,7 @@ import {
   LayoutDashboard,
   type LucideIcon,
   Mail,
+  MapPin,
   User,
 } from 'lucide-react';
 
@@ -39,8 +40,8 @@ export type Tab = {
 };
 
 /**
- * Buyer / anonymous primary tabs. 4 slots, mobile + desktop share the set.
- * Order: Community · ▶ Explore (center FAB) · Saved · Me
+ * Buyer / anonymous primary tabs. 5 slots, mobile + desktop share the set.
+ * Order: Community · Nearby · ▶ Explore (center FAB) · Saved · Me
  *
  * - Community is leftmost: it's the platform's signature asset (12-category
  *   neighborhood video taxonomy lives here). New users land on the grid and
@@ -48,18 +49,12 @@ export type Tab = {
  * - Explore in the center is the emphasized swipe-feed entry. This is the
  *   buyer's primary consumption mode — full-screen vertical swipe of all
  *   listings, taste-trained over time.
- * - Saved flanks Explore as the curating verb.
+ * - Nearby and Saved flank Explore as the two filtering/curating verbs.
  * - Me is rightmost (universal convention).
- *
- * Phase 34b.1 (2026-06-17): "Nearby" tab removed — its function (filter by
- * neighborhood) is now served by the community chip on every listing card
- * and the bottom-sheet community → listings flow. Two surfaces for the
- * same job is exactly the duplication the chip was meant to replace.
- * Route `/nearby` still resolves for any deep links in the wild; it just
- * isn't surfaced in primary nav.
  */
 export const BUYER_TABS: Tab[] = [
   { href: '/communities', label: 'Community', icon: Building2, matchPrefix: true },
+  { href: '/nearby', label: 'Nearby', icon: MapPin },
   { href: '/browse', label: 'Explore', icon: Compass, matchPrefix: true, centerEmphasis: true },
   { href: '/saved', label: 'Saved', icon: Heart },
   { href: '/profile', label: 'Me', icon: User },

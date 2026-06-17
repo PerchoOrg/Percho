@@ -943,7 +943,6 @@ function DescriptionBlock({ paragraphs }: { paragraphs: string[] }) {
 export function BrowseFeed({
   cards,
   initialIndex = 0,
-  hideNearby = false,
 }: {
   cards: BrowseCard[];
   /**
@@ -951,14 +950,6 @@ export function BrowseFeed({
    * Defaults to 0 (top of feed) for backwards compatibility.
    */
   initialIndex?: number;
-  /**
-   * Phase 27.5 (2026-06-16): hide the right-rail Nearby button. Used by the
-   * community-scoped feed (`/browse/feed?community=<slug>`) — the user
-   * already entered the feed from a single community context, so offering
-   * "Nearby" (which switches the active card into its community-video
-   * pool) reads as redundant noise. Defaults false (global feed shows it).
-   */
-  hideNearby?: boolean;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -1343,17 +1334,12 @@ export function BrowseFeed({
         <ActionButton label="Contact" onClick={openContact}>
           <CommentIcon />
         </ActionButton>
-        {!hideNearby && (
-          <ActionButton
-            label="Nearby"
-            onClick={() => switchSource(activeSource === 'nearby' ? 'hero' : 'nearby')}
-            active={activeSource === 'nearby'}
-            disabled={!hasNearby}
-            badge={hasNearby && active ? active.categoryVideos.length : undefined}
-          >
-            <NearbyIcon />
-          </ActionButton>
-        )}
+        {/* Phase 34b.1 (2026-06-17): right-rail "Nearby" button removed. The
+         * top-left community chip already opens the same set of community
+         * videos via CommunitySheet → CommunityCarousel — keeping both
+         * surfaces was the duplication the chip was meant to replace. The
+         * /nearby tab in bottom nav still exists for the radius-search
+         * lane. */}
         {/* phase34a (2026-06-17): right-rail mute button removed.
          * Volume is controlled by the device's system volume keys —
          * keeps the rail clean and avoids a redundant control. The

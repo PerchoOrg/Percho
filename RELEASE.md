@@ -3,6 +3,15 @@
 Newest at the top. Each release covers a meaningful product change visible to users.
 Format matches the standard release template (Features / Improvements / Bug Fixes / Technical / Known Issues / Metrics).
 
+## v0.34.2 — 2026-06-17
+
+### 🐛 Bug Fixes
+- **Community videos opened from a listing now play with sound.** Tapping a listing's community badge and then a video used to open the carousel silent. Now it plays with sound by default — same as the main feeds. Volume is on your device's volume keys.
+
+### 🛠 Improvements
+- **"Nearby" is back in the bottom nav.** It got dropped in v0.34.1 by mistake — the radius-search Nearby tab is its own thing and stays.
+- **Right-side rail on the listing feed dropped its "Nearby" button.** The community badge in the top-left already opens the same set of videos in a quick sheet without leaving the listing. One way to do each thing.
+
 ## v0.34.1 — 2026-06-17
 
 ### 🛠 Improvements

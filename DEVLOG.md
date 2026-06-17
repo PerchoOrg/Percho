@@ -2,6 +2,19 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-06-17 — phase34b.2: keep Nearby tab, drop right-rail Nearby button + chip-video sound
+
+**Objective**: Correct phase34b.1 (I removed the wrong Nearby — user wanted the right-rail listing button gone, not the bottom-nav tab) and fix chip-launched videos playing silently.
+
+**Actions**:
+- **Restored `Nearby` tab in buyer bottom nav.** Reverted the BUYER_TABS change from phase34b.1. The tab serves the radius-search lane (`/nearby`) which is a different job from the chip's "this listing's neighborhood" jump. Kept the FAB label addition, kept the `BrowseTabs` removal, kept the chip top-left move.
+- **Removed right-rail "Nearby" button on the listing feed (`BrowseFeed.tsx`).** This is what the user actually meant — the chip on each listing card already opens that listing's community videos via the sheet → carousel flow, so the right-rail entry duplicated the affordance. Dropped the `hideNearby` prop too (no longer needed; it's always hidden). The underlying `switchSource` / `nearbyVideos` plumbing stays — `NearbyIcon` is unreferenced now but I'm leaving it as dead code for one cycle in case we need to bring back the button.
+- **Fixed chip-launched carousels playing silently (`CommunityCarousel.tsx`, `CommunityListingCarousel.tsx`).** Both carousels hard-set `v.muted = true` on every active-slide change and had `muted` on the `<video>` tag, so even though the chip tap is a user gesture (autoplay-with-sound permitted), the video came up silent. Switched to: try `muted=false` + `play()` first; if browser still blocks (some iOS/strict policies), fall back to muted so the video at least plays. Removed the `muted` attribute from the JSX in both files.
+
+**Decisions**:
+- Soft-removed the `NearbyIcon` SVG component instead of deleting it — fast revert if the user changes their mind, costs nothing.
+- Volume is still on the device's system volume keys, no in-app mute control. Matches the main feeds, matches phase34a's removal of the right-rail mute.
+
 ## 2026-06-17 — phase34b.1: nav cleanup + chip top-left
 
 **Objective**: Three small follow-ups from V1 redo review — kill duplicate surfaces, label the FAB, and align the community-feed chip with the listing-card chip.

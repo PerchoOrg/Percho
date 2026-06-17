@@ -57,18 +57,10 @@ export default async function BrowseFeedPage({
     if (idx >= 0) initialIndex = idx;
   }
 
-  // Phase 27.5: hide right-rail Nearby button when the feed is scoped to a
-  // single community — the user is already inside that community's context,
-  // so offering "Nearby" reads as redundant. Only true when the community
-  // filter actually matched (allCards.length > 0); unknown-slug fallback
-  // to the global feed keeps the Nearby button.
-  const isCommunityScoped = Boolean(community) && allCards.length > 0;
-
   return (
     <BrowseFeed
       cards={cards}
       initialIndex={initialIndex}
-      hideNearby={isCommunityScoped}
     />
   );
 }

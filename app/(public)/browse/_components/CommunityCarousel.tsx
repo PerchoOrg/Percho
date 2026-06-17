@@ -246,14 +246,24 @@ function CarouselSlide({
   }, [shouldMount, video.cfVideoId]);
 
   // Play only the active slide; pause siblings to save battery.
+  // Sound: the carousel is opened by an explicit chip tap (user gesture),
+  // so browsers grant autoplay-with-sound. Try unmuted first; if the browser
+  // still blocks it (some iOS/strict policies), fall back to muted so the
+  // video at least plays. Default-on volume mirrors the main feeds — the
+  // user's system volume keys are the volume control. (phase34b.1 fix:
+  // chip-launched videos used to be silent because we forced muted=true.)
   useEffect(() => {
     const v = ref.current;
     if (!v) return;
     if (isActive) {
-      // Always start muted to satisfy autoplay-with-sound policies.
-      v.muted = true;
-      void v.play().catch(() => {
-        /* swallow autoplay errors */
+      v.muted = false;
+      v.play().catch(() => {
+        // Autoplay-with-sound blocked → retry muted so the user at least
+        // sees the video play.
+        v.muted = true;
+        void v.play().catch(() => {
+          /* swallow */
+        });
       });
     } else {
       v.pause();
@@ -269,7 +279,6 @@ function CarouselSlide({
           poster={poster ?? undefined}
           className="h-full w-full bg-black object-contain"
           playsInline
-          muted
           loop
           preload="metadata"
         />
