@@ -301,3 +301,89 @@ export async function deleteCommunityVideo(
   revalidatePath(`/dashboard/communities/${communityId}`);
   return { ok: true };
 }
+
+// ─── Phase 35.2: visibility + category edit ──────────────────────
+// Why server actions instead of inline supabase calls in the client:
+// future change to tighten ownership (`uploaded_by = auth.uid()`) lands
+// here without touching every caller, and revalidatePath stays in one
+// place so the manage list refreshes on tap.
+
+const COMMUNITY_VIDEO_VISIBILITIES = ['public', 'private', 'archived'] as const;
+export type CommunityVideoVisibility = (typeof COMMUNITY_VIDEO_VISIBILITIES)[number];
+
+export async function updateCommunityVideoVisibility(
+  videoId: string,
+  communityId: string,
+  visibility: CommunityVideoVisibility,
+): Promise<ActionResult> {
+  if (!COMMUNITY_VIDEO_VISIBILITIES.includes(visibility)) {
+    return { ok: false, error: 'invalid_visibility' };
+  }
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: 'unauthorized' };
+  const { error } = await (supabase as unknown as {
+    from: (t: string) => {
+      update: (v: { visibility: string }) => {
+        eq: (col: string, val: string) => Promise<{ error: unknown }>;
+      };
+    };
+  })
+    .from('community_videos')
+    .update({ visibility })
+    .eq('id', videoId);
+  if (error) {
+    console.error('[updateCommunityVideoVisibility] failed', error);
+    return { ok: false, error: 'update_failed' };
+  }
+  revalidatePath(`/dashboard/communities/${communityId}`);
+  return { ok: true };
+}
+
+const COMMUNITY_VIDEO_CATEGORY_IDS = [
+  'walk_the_block',
+  'listen_here',
+  'morning_rush',
+  'after_dark',
+  'hidden_spot',
+  'local_pick',
+  'school_run',
+  'daily_errands',
+  'the_park',
+  'eating_out',
+  'get_active',
+  'transit_reality',
+] as const;
+
+export async function updateCommunityVideoCategory(
+  videoId: string,
+  communityId: string,
+  category: string,
+): Promise<ActionResult> {
+  if (!(COMMUNITY_VIDEO_CATEGORY_IDS as readonly string[]).includes(category)) {
+    return { ok: false, error: 'invalid_category' };
+  }
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: 'unauthorized' };
+  const { error } = await (supabase as unknown as {
+    from: (t: string) => {
+      update: (v: { category: string; category_needs_review: boolean }) => {
+        eq: (col: string, val: string) => Promise<{ error: unknown }>;
+      };
+    };
+  })
+    .from('community_videos')
+    .update({ category, category_needs_review: false })
+    .eq('id', videoId);
+  if (error) {
+    console.error('[updateCommunityVideoCategory] failed', error);
+    return { ok: false, error: 'update_failed' };
+  }
+  revalidatePath(`/dashboard/communities/${communityId}`);
+  return { ok: true };
+}

@@ -84,7 +84,8 @@ export default async function CommunityPage({
       .from('community_videos')
       .select('id, cf_video_id, title, category')
       .in('id', videoIds)
-      .eq('status', 'ready')) as { data: VideoRow[] | null };
+      .eq('status', 'ready')
+      .eq('visibility', 'public')) as { data: VideoRow[] | null };
     videos = rows ?? [];
   }
 

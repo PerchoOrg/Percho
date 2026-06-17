@@ -88,6 +88,7 @@ export default async function CommunityFeedPage({
       .select('id, cf_video_id, title, category, created_at')
       .in('id', videoIds)
       .eq('status', 'ready')
+      .eq('visibility', 'public')
       .order('created_at', { ascending: false })) as { data: VideoRow[] | null };
     videos = rows ?? [];
   }

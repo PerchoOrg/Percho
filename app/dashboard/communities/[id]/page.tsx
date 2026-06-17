@@ -13,7 +13,10 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { CommunityEditor } from './CommunityEditor';
 import { CommunityCoverPanel } from './CommunityCoverPanel';
-import { thumbnailUrl } from '@/lib/cloudflare/stream';
+import {
+  CommunityVideoManageList,
+  type ManageVideoRow,
+} from './CommunityVideoManageList';
 
 interface CommunityRow {
   id: string;
@@ -84,17 +87,25 @@ export default async function CommunityEditorPage({
   const myAgentId = agentRow?.id ?? null;
   const canEditMetadata = community.created_by == null || community.created_by === myAgentId;
 
-  // Load this community's ready videos for the cover picker.
+  // Phase 35.2: full manage-list rows (visibility + category) so the editor
+  // page is the manage surface — no more bouncing to /upload to delete or
+  // hide a video.
   // biome-ignore lint/suspicious/noExplicitAny: stub generated types
   const { data: videoRows } = (await (supabase as any)
     .from('community_videos')
-    .select('id, cf_video_id, title')
+    .select(
+      'id, cf_video_id, title, category, category_needs_review, status, visibility, created_at',
+    )
     .eq('community_id', community.id)
-    .eq('status', 'ready')
-    .order('created_at', { ascending: true })) as {
-    data: Array<{ id: string; cf_video_id: string; title: string | null }> | null;
+    .order('created_at', { ascending: false })) as {
+    data: ManageVideoRow[] | null;
   };
-  const coverVideos = videoRows ?? [];
+  const manageVideos = videoRows ?? [];
+  // CoverPanel still wants the lighter shape (id, cf_video_id, title) for
+  // ready videos only — not every uploaded video is cover-eligible.
+  const coverVideos = manageVideos
+    .filter((v) => v.status === 'ready' && v.visibility === 'public')
+    .map((v) => ({ id: v.id, cf_video_id: v.cf_video_id, title: v.title }));
 
   return (
     <div className="mx-auto max-w-3xl space-y-6 py-4">
@@ -115,45 +126,29 @@ export default async function CommunityEditorPage({
         </div>
       </header>
 
-      <CommunityEditor community={community} canEditMetadata={canEditMetadata} />
-
-      {/* Phase 35: video roster on the editor itself. Previously you had to
-       * tap "+ Upload" just to see what was already there; now the editor
-       * shows thumbnails up-front and the upload page is one tap away. */}
-      <section className="rounded border border-bronze/30 bg-ink2 p-5">
+      {/* Phase 35.2: Videos first — that's why agents come here. Inline manage
+       * list lets them re-categorize / hide / archive / delete without bouncing
+       * to /upload. The metadata editor and cover picker drop below. */}
+      <section className="rounded border border-bronze/30 bg-ink2 p-4 sm:p-5">
         <div className="mb-3 flex items-baseline justify-between gap-3">
           <h2 className="text-base font-semibold">
-            Videos <span className="text-cream/50 text-xs font-normal">({coverVideos.length})</span>
+            Videos{' '}
+            <span className="text-cream/50 text-xs font-normal">({manageVideos.length})</span>
           </h2>
           <Link
             href={`/dashboard/communities/${community.id}/upload`}
             className="text-xs text-gold hover:underline"
           >
-            Manage →
+            + Add
           </Link>
         </div>
-        {coverVideos.length === 0 ? (
-          <p className="text-xs text-cream/50">
-            No videos yet. Tap <span className="text-cream/80">+ Upload</span> to add one.
-          </p>
-        ) : (
-          <ul className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-            {coverVideos.slice(0, 8).map((v) => (
-              <li
-                key={v.id}
-                className="aspect-video overflow-hidden rounded bg-ink"
-                style={{
-                  backgroundImage: `url(${thumbnailUrl(v.cf_video_id)})`,
-                  backgroundSize: 'cover',
-                  backgroundPosition: 'center',
-                }}
-                title={v.title ?? '(untitled)'}
-              />
-            ))}
-          </ul>
-        )}
+        <CommunityVideoManageList
+          communityId={community.id}
+          videos={manageVideos}
+        />
       </section>
 
+      {/* Cover picker — uses the public+ready subset. */}
       <CommunityCoverPanel
         communityId={community.id}
         canEdit={canEditMetadata}
@@ -161,6 +156,19 @@ export default async function CommunityEditorPage({
         initialCoverVideoId={community.cover_video_id}
         initialCoverStoragePath={community.cover_storage_path}
       />
+
+      {/* Metadata editor moved below — agents rarely re-edit name/city after
+       * creation. Collapsed by default to keep the working video list above
+       * the fold. */}
+      <details className="rounded border border-bronze/30 bg-ink2">
+        <summary className="cursor-pointer select-none px-4 py-3 text-sm font-medium text-cream/85 hover:text-cream sm:px-5">
+          Community details{' '}
+          <span className="ml-1 text-xs text-cream/50">(name, city, description)</span>
+        </summary>
+        <div className="border-t border-bronze/20 p-4 sm:p-5">
+          <CommunityEditor community={community} canEditMetadata={canEditMetadata} />
+        </div>
+      </details>
     </div>
   );
 }

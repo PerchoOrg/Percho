@@ -89,57 +89,59 @@ export default async function CommunitiesListPage() {
         <ul className="divide-y divide-bronze/20 rounded border border-bronze/30 bg-ink2">
           {communities.map((c) => {
             const canEdit = c.created_by == null || c.created_by === myAgentId;
+            // Phase 35.2: whole row → editor link. The editor itself is now
+            // the manage surface (videos + metadata + cover all live there),
+            // so a single tap from the list lands you in the right place.
+            // Upload stays as a visible secondary action (with stopPropagation
+            // wrapper) for agents whose primary intent is "add another video".
             return (
-              <li
-                key={c.id}
-                className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
-              >
-                <div className="min-w-0 flex-1">
-                  <div className="text-sm font-medium text-cream">
-                    {c.name}
-                    {(() => {
-                      const n = videoCountById.get(c.id) ?? 0;
-                      return n > 0 ? (
-                        <span className="ml-2 rounded-full bg-bronze/20 px-2 py-0.5 text-[10px] text-cream/70">
-                          {n} video{n === 1 ? '' : 's'}
+              <li key={c.id} className="relative">
+                <Link
+                  href={`/dashboard/communities/${c.id}`}
+                  className="flex flex-col gap-3 px-4 py-3 transition hover:bg-ink/40 sm:flex-row sm:items-center sm:justify-between"
+                  aria-label={canEdit ? `Edit ${c.name}` : `View ${c.name}`}
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm font-medium text-cream">
+                      {c.name}
+                      {(() => {
+                        const n = videoCountById.get(c.id) ?? 0;
+                        return n > 0 ? (
+                          <span className="ml-2 rounded-full bg-bronze/20 px-2 py-0.5 text-[10px] text-cream/70">
+                            {n} video{n === 1 ? '' : 's'}
+                          </span>
+                        ) : null;
+                      })()}
+                      {!canEdit ? (
+                        <span className="ml-2 text-[10px] uppercase tracking-wide text-cream/40">
+                          view only
                         </span>
-                      ) : null;
-                    })()}
+                      ) : null}
+                    </div>
+                    <div className="truncate text-xs text-cream/50">
+                      {c.city ? `${c.city}, ${c.state}` : c.state} ·{' '}
+                      <code className="text-cream/70">{c.slug}</code>
+                    </div>
+                    {c.description ? (
+                      <p className="mt-1 line-clamp-2 text-xs text-cream/60">{c.description}</p>
+                    ) : (
+                      <p className="mt-1 text-xs text-cream/30 italic">No description yet</p>
+                    )}
                   </div>
-                  <div className="truncate text-xs text-cream/50">
-                    {c.city ? `${c.city}, ${c.state}` : c.state} ·{' '}
-                    <code className="text-cream/70">{c.slug}</code>
+                  <div className="flex shrink-0 items-center gap-3 text-xs text-cream/55">
+                    <span aria-hidden>→</span>
                   </div>
-                  {c.description ? (
-                    <p className="mt-1 line-clamp-2 text-xs text-cream/60">{c.description}</p>
-                  ) : (
-                    <p className="mt-1 text-xs text-cream/30 italic">No description yet</p>
-                  )}
-                </div>
-                <div className="flex shrink-0 gap-2">
-                  {canEdit ? (
-                    <Link
-                      href={`/dashboard/communities/${c.id}`}
-                      className="inline-flex items-center justify-center gap-1 rounded-lg border border-bronze/40 px-3 py-1.5 text-cream text-xs hover:border-gold hover:text-gold"
-                    >
-                      Edit
-                    </Link>
-                  ) : (
-                    <Link
-                      href={`/dashboard/communities/${c.id}`}
-                      className="inline-flex items-center justify-center gap-1 rounded-lg border border-bronze/20 px-3 py-1.5 text-cream/60 text-xs hover:border-bronze/50 hover:text-cream/80"
-                      title="View only — only the creator can edit metadata"
-                    >
-                      View
-                    </Link>
-                  )}
-                  <Link
-                    href={`/dashboard/communities/${c.id}/upload`}
-                    className="inline-flex items-center justify-center gap-1 rounded-lg border border-bronze/40 px-3 py-1.5 text-cream text-xs hover:border-gold hover:text-gold"
-                  >
-                    Upload
-                  </Link>
-                </div>
+                </Link>
+                {/* Upload shortcut — escapes the row link via z-index +
+                 * absolute positioning so the click doesn't bubble to the
+                 * <Link> wrapper. */}
+                <Link
+                  href={`/dashboard/communities/${c.id}/upload`}
+                  className="absolute right-3 top-1/2 z-10 hidden -translate-y-1/2 items-center justify-center rounded-lg border border-bronze/40 bg-ink2 px-3 py-1.5 text-xs text-cream hover:border-gold hover:text-gold sm:inline-flex"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  + Upload
+                </Link>
               </li>
             );
           })}

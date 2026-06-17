@@ -2,6 +2,78 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-06-17 — phase35.2: community video manage UX (visibility + inline editor)
+
+**Objective** (Tianrou agent test, follow-on to phase35): once a community has
+a handful of videos, the agent has nowhere to *manage* them. The editor page
+showed read-only thumbnails; "Manage →" bounced to /upload, which is a CREATE
+surface (the existing 12-card category grid is sized for first-pick, not
+for re-categorizing). And there was no way to **hide** a video without
+deleting it — agents asked for "take this offline but don't lose the file".
+
+**Decisions** (with rejected alternatives):
+- **Visibility = enum (`public|private|archived`)**, default `public`. Buyers
+  see only `public`; agents see all three on their dashboard. Considered a
+  boolean `is_public` — rejected: agents asked for two distinct hidden
+  states (working draft vs parked permanently), and a future "scheduled"
+  state will fit naturally as a 4th enum value.
+- **Manage on the editor page, not on /upload**. The editor is the natural
+  manage surface (it's where you land from the list, it owns metadata + cover);
+  /upload stays a pure create flow. Reduced cognitive load and stopped the
+  "tap Manage to upload, tap into the editor to edit metadata, tap again to
+  pick cover" three-page round-trip.
+- **One `<CategoryPicker mode="create"|"edit">` component**, not two. Card
+  sub-component is shared. Considered a dropdown for edit — rejected:
+  category cards carry the `hardRule` spec ("must include doors-and-floors"
+  etc.) which a dropdown would hide, silently degrading video quality
+  over time. The cards ARE the spec.
+- **Mobile create flow = 2-step (bucket → category)**, desktop create flow =
+  flat 12-card grid (existing UX, ≥sm only). 12 cards on a 5″ phone is a
+  scrollfest; bucket cards (`Only on Vicinity` / `Real look at the data`)
+  double as product education on the moat. Edit flow stays flat on all
+  breakpoints — agents already know the taxonomy by the time they're editing.
+- **Whole community-row → editor link**. Dropped the redundant Edit button
+  (it pointed at the same href). Upload kept as a secondary action escaping
+  the row link via `e.stopPropagation()` + `position: absolute z-10` (only
+  visible ≥sm, so on mobile the row is a single tap target with no inner
+  click conflict).
+- **Tighten public reads to `visibility='public'`**. The `agents manage own
+  community videos` policy is `for all` and ORs with `public read ready
+  videos`, so private rows would still leak to authenticated agents browsing
+  someone else's community. Added `.eq('visibility','public')` to all six
+  buyer-facing reads (browse cards, listing-feed videos, communities/list
+  cover thumbs, /c/[slug], /c/[slug]/feed, /saved cards). Belt + RLS
+  suspenders.
+
+**Files**
+- migration: `supabase/migrations/0026_community_video_visibility.sql`
+  (enum, column default `'public'`, backfill, RLS rewrite)
+- new: `app/dashboard/communities/[id]/CategoryPicker.tsx` (shared, dual-mode)
+- new: `app/dashboard/communities/[id]/CommunityVideoManageList.tsx` (inline manage)
+- updated: `app/dashboard/communities/actions.ts` —
+  `updateCommunityVideoCategory`, `updateCommunityVideoVisibility`
+- updated: `app/dashboard/communities/[id]/page.tsx` (videos to top, metadata
+  collapsed into `<details>`)
+- updated: `app/dashboard/communities/[id]/CommunityUploadShell.tsx`
+  (swapped inline grid for shared `<CategoryPicker mode="create">`)
+- updated: `app/dashboard/communities/page.tsx` (whole row → Link, Upload
+  pinned via z-10 + stopPropagation)
+- updated buyer-facing reads: `lib/feed/browse-cards.ts`,
+  `lib/listing-feed/load.ts`, `lib/communities/list.ts`,
+  `app/(public)/c/[slug]/page.tsx`, `app/(public)/c/[slug]/feed/page.tsx`,
+  `app/(public)/saved/_actions.ts`
+
+**Verify** (manual, prod):
+1. Editor lands on a video-first view with categorized thumbnails grouped by
+   Live / Private / Archived.
+2. "edit category" toggles the flat 2×6 picker; pick → row updates without
+   reload.
+3. "mark private" / "archive" / "make public" round-trip; chip flips colour.
+4. Buyer surfaces (/browse, /c/<slug>, /c/<slug>/feed, /saved, /v/<...>) hide
+   the non-public videos.
+5. Communities list rows are tap-anywhere-to-edit on mobile; +Upload still
+   reachable on ≥sm.
+
 ## 2026-06-17 — phase35: agent dashboard data scoping + community video discoverability
 
 **Objective**: Six debt items from a real agent walkthrough (`tianrouwang0221`):

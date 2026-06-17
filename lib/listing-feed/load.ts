@@ -111,7 +111,8 @@ async function fetchAroundListing(
       .from('community_videos')
       .select('id, cf_video_id, kind, title, category, school_id, poi_id')
       .eq('community_id', listing.community_id)
-      .eq('status', 'ready')) as { data: CommunityVideo[] | null };
+      .eq('status', 'ready')
+      .eq('visibility', 'public')) as { data: CommunityVideo[] | null };
     communityVideos = cv.data ?? [];
 
     const sc = (await supabase

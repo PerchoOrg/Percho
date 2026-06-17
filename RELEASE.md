@@ -3,6 +3,20 @@
 Newest at the top. Each release covers a meaningful product change visible to users.
 Format matches the standard release template (Features / Improvements / Bug Fixes / Technical / Known Issues / Metrics).
 
+## v0.35.2 — 2026-06-17
+
+### ✨ Features
+- **Hide a community video without deleting it.** Each video on the community editor now has *Mark private* and *Archive* — they're pulled off the buyer-facing experience but stay in your dashboard. Use *Private* for "drafts I'm not happy with yet", *Archive* for "park it, I might bring it back later". Tap *Make public* to flip it back. Buyers only ever see the live ones.
+
+### 🛠 Improvements
+- **Manage your videos directly on the community editor.** Open any community and you'll land on a video-first view: thumbnail, current category, status, and visibility — grouped into Live / Private / Archived. Re-categorize, hide, archive, or delete inline. No more bouncing into the upload page just to fix a typo on a video category.
+- **Re-categorize without the create-flow walkthrough.** First-time uploads still walk you through the "Only on Vicinity" vs "Real look at the data" buckets on mobile (so you don't get a 12-card list on a small phone). When you're editing an existing video the picker drops the bucket step and lays the 12 categories out flat — you already know the taxonomy by then.
+- **Mobile-friendly category picker on upload.** The 12 categories are now a 2-step pick on phones (bucket → category) instead of a wall of cards. The bucket step doubles as a quick reminder of *why* each kind of video matters on Vicinity.
+- **Community list rows are tap-anywhere now.** Tap any row to open the community. The *+ Upload* shortcut still sits on the right (on tablet/desktop) for when you just want to drop a new clip in.
+
+### 🐛 Bug Fixes
+- **Hidden community videos no longer leak.** Tightened the buyer-facing queries so private and archived videos can't show up in the feed, on a community page, on a listing's community sheet, or in saved communities.
+
 ## v0.35.0 — 2026-06-17
 
 ### 🐛 Bug Fixes

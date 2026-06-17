@@ -91,7 +91,8 @@ export async function fetchSavedCommunitiesAction(input: {
       .from('community_videos')
       .select('id, cf_video_id')
       .in('id', Array.from(allVideoIds))
-      .eq('status', 'ready')) as { data: Array<{ id: string; cf_video_id: string }> | null };
+      .eq('status', 'ready')
+      .eq('visibility', 'public')) as { data: Array<{ id: string; cf_video_id: string }> | null };
     readyVideos = vids ?? [];
   }
 

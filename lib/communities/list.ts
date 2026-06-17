@@ -57,7 +57,8 @@ export async function fetchCommunityListCards(): Promise<CommunityListCard[]> {
     .from('community_videos')
     .select('id, cf_video_id, status')
     .in('id', allVideoIds.length > 0 ? allVideoIds : ['00000000-0000-0000-0000-000000000000'])
-    .eq('status', 'ready')) as {
+    .eq('status', 'ready')
+    .eq('visibility', 'public')) as {
     data: Array<{ id: string; cf_video_id: string }> | null;
   };
   const cfById = new Map<string, string>();

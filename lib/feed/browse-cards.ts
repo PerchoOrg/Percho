@@ -160,6 +160,7 @@ async function assembleCards(
           .select('community_id, cf_video_id, title, kind, category, school_id, poi_id')
           .in('community_id', communityIds)
           .eq('status', 'ready')
+          .eq('visibility', 'public')
       : Promise.resolve({ data: [] }),
     communityIds.length > 0
       ? supabase
