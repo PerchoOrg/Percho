@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+<title>Browse — Vicinity</title>
+<link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400;0,6..96,500;1,6..96,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{--bg:#fafaf9;--ink:#0a0a0a;--ink2:#3a3a3a;--muted:#8a8a8a;--line:rgba(10,10,10,0.12)}
+  *{box-sizing:border-box} html,body{margin:0;background:var(--bg);color:var(--ink);font-family:'Inter',sans-serif;font-weight:400;-webkit-font-smoothing:antialiased;overscroll-behavior:none;font-size:15px}
+  .didone{font-family:'Bodoni Moda',serif;font-weight:400}
+  .eyebrow{font-family:'Inter',sans-serif;font-size:10px;letter-spacing:0.18em;text-transform:uppercase;font-weight:500}
+  a{color:inherit;text-decoration:none}
+
+  .deck{height:100dvh;width:100vw;position:relative;overflow:hidden;display:flex;justify-content:center;background:var(--bg)}
+  .stage{position:relative;width:min(560px,100%);height:100%;background:var(--bg);overflow:hidden;display:flex;flex-direction:column}
+
+  /* TOP — Naftali horizontal */
+  .top{flex:0 0 auto;z-index:10;padding:env(safe-area-inset-top,16px) 20px 12px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line);background:rgba(250,250,249,0.94);backdrop-filter:blur(10px)}
+  .top .brand{font-family:'Bodoni Moda',serif;font-weight:500;font-size:18px;color:var(--ink);letter-spacing:0}
+  .top .filters{display:flex;gap:6px}
+  .top .filters a{font-family:'Inter',sans-serif;font-size:10px;letter-spacing:0.18em;text-transform:uppercase;font-weight:500;color:var(--ink2);padding:6px 11px;border:1px solid var(--line)}
+  .top .filters a.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+  .top .saved{font-family:'Inter',sans-serif;font-size:10px;letter-spacing:0.18em;text-transform:uppercase;font-weight:500;color:var(--ink2)}
+
+  /* CARD STACK — fills remaining */
+  .deck-stack{position:relative;flex:1;overflow:hidden}
+  .card{position:absolute;inset:14px;transition:transform .55s ease,opacity .55s ease;display:flex;flex-direction:column;background:#000;border:1px solid var(--line)}
+  .card .img-wrap{flex:1;position:relative;overflow:hidden}
+  .card .img{position:absolute;inset:0;background-size:cover;background-position:center;animation:kb 14s ease-in-out infinite alternate}
+  @keyframes kb{from{transform:scale(1.04)}to{transform:scale(1.16) translate(-2%,2%)}}
+  .card .img-wrap::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,0.45) 0%,rgba(0,0,0,0) 30%,rgba(0,0,0,0) 60%,rgba(0,0,0,0.7) 100%);pointer-events:none}
+
+  /* AGENT — top-right floating tag */
+  .agent-tag{position:absolute;top:14px;right:14px;z-index:6;display:flex;align-items:center;gap:10px;background:rgba(250,250,249,0.95);backdrop-filter:blur(10px);padding:6px 14px 6px 6px;border:1px solid rgba(10,10,10,0.08)}
+  .agent-tag img{width:26px;height:26px;border-radius:50%;object-fit:cover}
+  .agent-tag .l{font-family:'Inter',sans-serif;font-size:9px;letter-spacing:0.22em;text-transform:uppercase;color:var(--muted);line-height:1;font-weight:500}
+  .agent-tag .n{font-family:'Bodoni Moda',serif;font-weight:500;font-size:13px;line-height:1.2;margin-top:3px;color:var(--ink)}
+
+  /* NUMBER — top-left big italic Bodoni numeral */
+  .num-large{position:absolute;top:14px;left:18px;z-index:6;font-family:'Bodoni Moda',serif;font-weight:400;font-style:italic;font-size:64px;line-height:0.9;color:rgba(255,255,255,0.95);letter-spacing:-0.025em;text-shadow:0 2px 16px rgba(0,0,0,0.3)}
+  .num-large .of{font-family:'Inter',sans-serif;font-size:11px;letter-spacing:0.22em;text-transform:uppercase;font-style:normal;font-weight:500;color:rgba(255,255,255,0.85);margin-left:6px;vertical-align:top}
+
+  /* OVERLAY META on image bottom */
+  .img-meta{position:absolute;left:20px;right:20px;bottom:18px;z-index:5;color:#fff}
+  .img-meta .badge{display:inline-block;font-family:'Inter',sans-serif;font-size:9px;letter-spacing:0.22em;text-transform:uppercase;background:#fff;color:var(--ink);padding:4px 9px;font-weight:500;margin-bottom:14px}
+  .img-meta .hood{font-family:'Inter',sans-serif;font-size:10px;letter-spacing:0.32em;text-transform:uppercase;color:rgba(255,255,255,0.85);font-weight:500}
+  .img-meta .addr{font-family:'Bodoni Moda',serif;font-weight:400;font-size:32px;line-height:1.05;letter-spacing:-0.02em;margin-top:8px;text-shadow:0 2px 16px rgba(0,0,0,0.3)}
+  .img-meta .addr .it{font-style:italic}
+
+  /* DATA STRIP — light cream below image */
+  .data{flex:0 0 auto;background:var(--bg);padding:14px 20px;display:grid;grid-template-columns:1.3fr 1fr 1fr 1fr;gap:14px;border-top:0;align-items:end}
+  .data .col .l{font-family:'Inter',sans-serif;font-size:9px;letter-spacing:0.22em;text-transform:uppercase;color:var(--muted);font-weight:500}
+  .data .col .v{font-family:'Bodoni Moda',serif;font-weight:400;font-size:22px;letter-spacing:-0.02em;color:var(--ink);margin-top:4px;line-height:1.1}
+  .data .col .v.small{font-size:14px}
+  .data .col.price .v{font-size:26px}
+  .data .col .v .ppsf{font-family:'Inter',sans-serif;font-size:10px;color:var(--muted);font-weight:400;letter-spacing:0.04em;margin-left:4px}
+
+  /* CONTEXT BUTTONS BELOW DATA */
+  .context{padding:8px 20px 12px;display:flex;gap:6px;background:var(--bg);overflow-x:auto;scrollbar-width:none}
+  .context::-webkit-scrollbar{display:none}
+  .context .chip{flex:0 0 auto;font-family:'Inter',sans-serif;font-size:10px;letter-spacing:0.12em;text-transform:uppercase;font-weight:500;color:var(--ink);background:transparent;border:1px solid var(--line);padding:7px 12px;cursor:pointer;display:flex;align-items:center;gap:6px}
+  .context .chip:hover{border-color:var(--ink)}
+  .context .chip .v{font-family:'Bodoni Moda',serif;font-weight:400;text-transform:none;letter-spacing:0;font-size:11px}
+
+  /* ACTIONS */
+  .actions{flex:0 0 auto;padding:12px 20px calc(env(safe-area-inset-bottom,16px) + 12px);display:flex;justify-content:space-between;align-items:center;gap:10px;background:var(--bg);border-top:1px solid var(--line)}
+  .actions .pass,.actions .save{width:50px;height:50px;display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer;background:transparent;border:1px solid var(--line);color:var(--ink);font-family:'Bodoni Moda',serif}
+  .actions .pass:hover,.actions .save:hover{border-color:var(--ink);background:#fff}
+  .actions .like{flex:1;height:50px;background:var(--ink);color:var(--bg);display:flex;align-items:center;justify-content:center;gap:10px;font-family:'Inter',sans-serif;font-size:11px;font-weight:500;letter-spacing:0.22em;text-transform:uppercase;cursor:pointer}
+
+  .hint{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:20;font-family:'Bodoni Moda',serif;font-style:italic;font-size:14px;color:rgba(255,255,255,0.95);letter-spacing:0.02em;pointer-events:none;animation:fade 4s ease-out forwards;text-shadow:0 1px 8px rgba(0,0,0,0.4)}
+  @keyframes fade{0%{opacity:0}20%{opacity:1}80%{opacity:1}100%{opacity:0}}
+
+  .behind1{transform:scale(0.97) translateY(8px);opacity:.4;filter:blur(1px)}
+  .behind2{transform:scale(0.94) translateY(16px);opacity:.2;filter:blur(3px)}
+
+  /* progress dots inside top */
+  .progress{position:absolute;top:calc(env(safe-area-inset-top,16px) + 50px);left:20px;right:20px;z-index:11;display:flex;gap:3px}
+  .progress span{flex:1;height:1px;background:rgba(10,10,10,0.14)}
+  .progress span.on{background:var(--ink)}
+
+  @media(min-width:900px){
+    .deck{align-items:center;background:#f0eee9}
+    .stage{box-shadow:0 30px 80px rgba(10,10,10,0.18);margin:24px;height:calc(100% - 48px);border:1px solid var(--line)}
+  }
+</style></head><body>
+
+<div class="deck">
+  <main class="stage" id="stage">
+    <div class="top">
+      <div class="brand">VICINITY</div>
+      <div class="filters"><a class="on">For You</a><a>$3M+</a><a>Eastside</a></div>
+      <div class="saved">Saved · 3</div>
+    </div>
+    <div class="progress" id="progress"></div>
+    <div class="deck-stack" id="stack">
+      <div class="hint">— scroll or tap for the next —</div>
+    </div>
+  </main>
+</div>
+
+<script src="_data.js"></script>
+<script src="_swipe_data.js"></script>
+<script>
+  const stack=document.getElementById('stack'); const prog=document.getElementById('progress');
+  let active=0; const N=SWIPE_FEED.length;
+  prog.innerHTML=SWIPE_FEED.map((_,i)=>`<span class="${i===0?'on':''}"></span>`).join('');
+  function render(){
+    stack.querySelectorAll('.card').forEach(n=>n.remove());
+    for(let off=2;off>=0;off--){
+      const idx=(active+off)%N; const L=SWIPE_FEED[idx]; const ppsf=Math.round(L.price/L.sqft);
+      const cls=off===0?'':(off===1?'behind1':'behind2');
+      const card=document.createElement('div'); card.className='card '+cls;
+      card.innerHTML=`
+        <div class="img-wrap">
+          <div class="img" style="background-image:url(${L.angles[0].replace('w=1600','w=1800')})"></div>
+          ${off===0?`
+          <div class="num-large">${String(active+1).padStart(2,'0')}<span class="of">/ ${String(N).padStart(2,'0')}</span></div>
+          <div class="agent-tag"><img src="${L.agent.avatar}" alt=""/>
+            <div><div class="l">Listed by</div><div class="n">${L.agent.name}</div></div>
+          </div>
+          <div class="img-meta">
+            ${L.status==='Just Listed'?`<span class="badge">Just Listed</span><br/>`:''}
+            <div class="hood">${L.community} · ${L.city.split(',')[0]}</div>
+            <div class="addr">${L.address.split(',')[0]}<br/><span class="it">${L.style}</span></div>
+          </div>`:''}
+        </div>
+        ${off===0?`
+        <div class="data">
+          <div class="col price"><div class="l">Price</div><div class="v">${fmtPrice(L.price)} <span class="ppsf">$${ppsf.toLocaleString()}/sf</span></div></div>
+          <div class="col"><div class="l">Beds</div><div class="v">${L.beds}</div></div>
+          <div class="col"><div class="l">Baths</div><div class="v">${L.baths}</div></div>
+          <div class="col"><div class="l">Interior</div><div class="v small">${L.sqft.toLocaleString()} sf</div></div>
+        </div>
+        <div class="context">
+          <div class="chip">School <span class="v">${L.schools.split(' · ')[1]||'—'}</span></div>
+          <div class="chip">Commute <span class="v">${L.commute}</span></div>
+          <div class="chip">Year <span class="v">${L.year_built||'—'}</span></div>
+          <div class="chip">Style <span class="v">${L.style}</span></div>
+        </div>
+        <div class="actions">
+          <div class="pass">✕</div>
+          <div class="like">♡ Save to Shortlist</div>
+          <div class="save">▶</div>
+        </div>`:''}
+      `;
+      stack.appendChild(card);
+    }
+    prog.innerHTML=SWIPE_FEED.map((_,i)=>`<span class="${i===active?'on':''}"></span>`).join('');
+  }
+  render();
+  stack.addEventListener('click',e=>{if(e.target.closest('.actions')||e.target.closest('.context'))return; active=(active+1)%N;render();});
+  let acc=0; stack.addEventListener('wheel',e=>{acc+=e.deltaY;if(acc>120){active=(active+1)%N;render();acc=0}else if(acc<-120){active=(active-1+N)%N;render();acc=0}});
+</script></body></html>
