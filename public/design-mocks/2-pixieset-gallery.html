@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Vivian Zhang — Vicinity</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#f7f4ee; --paper:#ffffff; --ink:#1c1a16; --muted:#7a766d; --line:#dcd6c8;
+    --accent:#7a6a4a;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font-family:'Inter',sans-serif;font-weight:300;letter-spacing:0.005em;-webkit-font-smoothing:antialiased}
+  a{color:inherit;text-decoration:none}
+  .serif{font-family:'Cormorant Garamond',serif;font-weight:400}
+  .container{max-width:1320px;margin:0 auto;padding:0 32px}
+  @media(max-width:720px){.container{padding:0 18px}}
+
+  /* Nav — minimal photographer style */
+  nav.top{display:flex;align-items:center;justify-content:space-between;padding:32px 48px}
+  nav.top .brand{font-family:'Cormorant Garamond',serif;font-style:italic;font-size:24px;letter-spacing:0.04em}
+  nav.top ul{display:flex;gap:40px;list-style:none;margin:0;padding:0;font-size:11px;letter-spacing:0.28em;text-transform:uppercase;color:var(--muted)}
+  nav.top .cta{font-size:11px;letter-spacing:0.28em;text-transform:uppercase;color:var(--ink);border-bottom:1px solid var(--ink);padding-bottom:3px}
+
+  /* Cover */
+  .cover{padding:48px 0 80px;text-align:center;position:relative}
+  .cover .ornament{font-family:'Cormorant Garamond',serif;font-style:italic;font-size:14px;color:var(--muted);letter-spacing:0.3em;margin-bottom:36px}
+  .cover h1{font-family:'Cormorant Garamond',serif;font-weight:300;font-size:clamp(72px,11vw,168px);line-height:0.95;letter-spacing:-0.01em;margin:0}
+  .cover h1 .it{font-style:italic;font-weight:300}
+  .cover .role{font-family:'Cormorant Garamond',serif;font-style:italic;font-size:24px;color:#3a362e;margin-top:18px;font-weight:300}
+  .cover .meta{display:flex;justify-content:center;gap:48px;margin-top:48px;font-size:11px;letter-spacing:0.28em;text-transform:uppercase;color:var(--muted)}
+  .cover .meta span:not(:last-child){border-right:1px solid var(--line);padding-right:48px}
+  .cover hr{border:0;border-top:1px solid var(--line);max-width:80px;margin:60px auto 0}
+
+  /* Hero photo — full bleed */
+  .hero-photo{aspect-ratio:21/10;background:#222 center/cover no-repeat;margin:0 auto;max-width:1640px}
+
+  /* About strip */
+  .about{padding:120px 0;text-align:center;max-width:780px;margin:0 auto}
+  .about .label{font-size:11px;letter-spacing:0.32em;text-transform:uppercase;color:var(--muted);margin-bottom:28px}
+  .about p{font-family:'Cormorant Garamond',serif;font-weight:300;font-size:28px;line-height:1.5;font-style:italic;color:#2a2722}
+  .about .signature{font-family:'Cormorant Garamond',serif;font-style:italic;font-size:32px;margin-top:36px;color:var(--accent)}
+
+  /* Gallery title */
+  .gtitle{text-align:center;padding:32px 0 56px}
+  .gtitle .label{font-size:11px;letter-spacing:0.32em;text-transform:uppercase;color:var(--muted);margin-bottom:18px}
+  .gtitle h2{font-family:'Cormorant Garamond',serif;font-weight:300;font-size:72px;margin:0;letter-spacing:-0.01em}
+  .gtitle h2 .it{font-style:italic}
+  .gtitle .sub{font-family:'Cormorant Garamond',serif;font-style:italic;color:var(--muted);font-size:18px;margin-top:12px}
+
+  /* Pixieset grid: tight 3-col masonry */
+  .pgrid{column-count:3;column-gap:14px;padding:0 0 96px}
+  @media(max-width:900px){.pgrid{column-count:2}}
+  @media(max-width:560px){.pgrid{column-count:1}}
+  .ptile{break-inside:avoid;margin-bottom:14px;display:block;background:#000;position:relative;overflow:hidden;cursor:pointer}
+  .ptile img{display:block;width:100%;height:auto;transition:transform .6s ease,opacity .4s}
+  .ptile:hover img{transform:scale(1.03);opacity:.85}
+  .ptile .overlay{position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,0) 35%,rgba(0,0,0,0.55) 100%);opacity:0;transition:opacity .3s;display:flex;align-items:flex-end;padding:24px;color:#fff}
+  .ptile:hover .overlay{opacity:1}
+  .ptile .ov-inner{width:100%}
+  .ptile .ov-inner .price{font-family:'Cormorant Garamond',serif;font-size:28px;letter-spacing:-0.01em}
+  .ptile .ov-inner .addr{font-size:12px;letter-spacing:0.18em;text-transform:uppercase;margin-top:6px;opacity:.92}
+  .ptile .ov-inner .specs{font-size:11px;letter-spacing:0.12em;color:rgba(255,255,255,0.75);margin-top:4px}
+  .ptile .corner{position:absolute;top:14px;left:14px;background:#fff;color:var(--ink);font-size:10px;letter-spacing:0.22em;text-transform:uppercase;padding:5px 10px;font-weight:500}
+
+  /* Bottom CTA */
+  .cta-band{padding:140px 0;text-align:center;border-top:1px solid var(--line)}
+  .cta-band .label{font-size:11px;letter-spacing:0.32em;text-transform:uppercase;color:var(--muted);margin-bottom:24px}
+  .cta-band h3{font-family:'Cormorant Garamond',serif;font-weight:300;font-size:clamp(40px,6vw,80px);margin:0;letter-spacing:-0.01em}
+  .cta-band h3 .it{font-style:italic}
+  .cta-band .row{margin-top:44px;display:inline-flex;gap:14px;flex-wrap:wrap;justify-content:center}
+  .cta-band a{font-size:11px;letter-spacing:0.28em;text-transform:uppercase;padding:16px 28px;border:1px solid var(--ink);color:var(--ink);background:transparent}
+  .cta-band a.solid{background:var(--ink);color:var(--bg)}
+
+  footer.foot{padding:48px 0;text-align:center;font-size:10px;letter-spacing:0.32em;text-transform:uppercase;color:var(--muted);border-top:1px solid var(--line)}
+</style>
+</head>
+<body>
+
+<nav class="top">
+  <a class="brand" href="#">Vicinity <span style="font-style:normal;color:var(--muted);font-size:11px;letter-spacing:0.28em;margin-left:8px;text-transform:uppercase">— Vivian Z.</span></a>
+  <ul><li>Portfolio</li><li>About</li><li>Journal</li><li>Press</li></ul>
+  <a class="cta" href="#">Get In Touch</a>
+</nav>
+
+<section class="cover">
+  <div class="ornament">— Listing Specialist · Eastside —</div>
+  <h1 class="serif">Vivian <span class="it">Zhang</span></h1>
+  <div class="role">A portfolio of homes, sold beautifully.</div>
+  <div class="meta">
+    <span id="m1"></span>
+    <span id="m2"></span>
+    <span id="m3"></span>
+  </div>
+  <hr/>
+</section>
+
+<div class="hero-photo" id="hero-photo"></div>
+
+<section class="about container">
+  <div class="label">About the Studio</div>
+  <p id="bio"></p>
+  <div class="signature">— Vivian</div>
+</section>
+
+<section class="container gtitle">
+  <div class="label">The Portfolio · 2026</div>
+  <h2 class="serif">Homes <span class="it">curated</span> for the Eastside</h2>
+  <div class="sub" id="cnt"></div>
+</section>
+
+<section class="container">
+  <div class="pgrid" id="grid"></div>
+</section>
+
+<section class="cta-band">
+  <div class="container">
+    <div class="label">Selling Soon?</div>
+    <h3 class="serif">Let's tell <span class="it">your home's</span> story.</h3>
+    <div class="row">
+      <a class="solid" href="#">Request a Valuation</a>
+      <a href="#">Book a Consultation</a>
+    </div>
+  </div>
+</section>
+
+<footer class="foot">© Vicinity · Demo · Eastside Washington</footer>
+
+<script src="_data.js"></script>
+<script>
+  document.getElementById('m1').textContent = AGENT.sold + ' Homes Sold';
+  document.getElementById('m2').textContent = AGENT.years + ' Years';
+  document.getElementById('m3').textContent = '4.96 ★ · ' + AGENT.reviews + ' Reviews';
+  document.getElementById('bio').textContent = '“' + AGENT.bio + '”';
+  document.getElementById('hero-photo').style.backgroundImage = `url(${LISTINGS[2].cover})`;
+  document.getElementById('cnt').textContent = `${LISTINGS.length} active listings · scroll to view`;
+
+  const grid = document.getElementById('grid');
+  // varied aspect ratios for masonry feel
+  const ratios = [1.25, 0.75, 1.0, 1.4, 0.85, 1.15, 1.3, 0.9];
+  LISTINGS.concat(LISTINGS.slice(0,2)).forEach((L, i) => {
+    const r = ratios[i % ratios.length];
+    grid.insertAdjacentHTML('beforeend', `
+      <a class="ptile" href="#">
+        ${L.status==='Just Listed'?`<span class="corner">New</span>`:''}
+        <img src="${L.cover}" alt="${L.address}" style="aspect-ratio:1/${r};object-fit:cover" />
+        <div class="overlay"><div class="ov-inner">
+          <div class="price">${fmtPrice(L.price)}</div>
+          <div class="addr">${L.address}</div>
+          <div class="specs">${L.beds} BD · ${L.baths} BA · ${L.sqft.toLocaleString()} SQFT · ${L.neighborhood}</div>
+        </div></div>
+      </a>`);
+  });
+</script>
+</body>
+</html>
