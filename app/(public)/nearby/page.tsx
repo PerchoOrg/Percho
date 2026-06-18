@@ -1,34 +1,19 @@
 /**
- * `/nearby` — Pinterest-style grid of listings within the buyer's radius.
+ * `/nearby` → 308 redirect to `/browse?tab=nearby`.
  *
- * Phase 14 (2026-06-13): visually consistent with `/browse` (Explore).
- * Same card shape, same click-through to the swipe feed. The radius
- * preference moved off this page — it now lives in `/profile` →
- * Preferences (persisted in `localStorage` since buyers are anon in V1).
+ * Phase 37 (2026-06-18): the standalone /nearby grid was folded into the
+ * Explore page as a sub-tab (Douyin 推荐/同城 model). The route is kept as
+ * a permanent redirect so external links, profile shortcuts, and the
+ * `vicinity:nearby_radius` localStorage flow (handed off to <NearbyClient>
+ * unchanged inside /browse) keep working.
  *
- * Flow:
- *   1. Mount → request browser geolocation (one-time prompt).
- *   2. Read radius preference from localStorage (default 10 mi).
- *   3. GET /api/nearby?lat&lng&radius → render Explore-style grid.
- *
- * If geolocation is denied, fall back to a manual lat/lng input.
+ * The `NearbyClient` component itself still lives at
+ * `app/(public)/nearby/NearbyClient.tsx` — `/browse/page.tsx` imports it.
  */
-
-import { NearbyClient } from './NearbyClient';
-
-export const metadata = {
-  title: 'Nearby · Vicinity',
-};
+import { permanentRedirect } from 'next/navigation';
 
 export const dynamic = 'force-dynamic';
 
 export default function NearbyPage() {
-  return (
-    <main className="min-h-dvh bg-ink pb-20 text-cream md:pb-0">
-      <header className="sticky top-0 z-20 flex items-center justify-center border-cream/10 border-b bg-ink/85 px-4 py-3 backdrop-blur-md md:hidden">
-        <div className="font-medium text-cream/80 text-sm uppercase tracking-wider">Nearby</div>
-      </header>
-      <NearbyClient />
-    </main>
-  );
+  permanentRedirect('/browse?tab=nearby');
 }

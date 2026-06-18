@@ -2,6 +2,56 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-06-18 21:00 UTC — phase37: collapse Nearby tab into Explore sub-nav, drop center FAB
+
+**Objective**: Tianrou: "nearby 这个 feature 占地下 bottom nav 一个位置有
+必要吗". Two top-level slots ("Explore" + "Nearby") both led to listings;
+Nearby is a *filter*, not a distinct verb. Collapse to a flat 4-icon bar
+with sub-tabs inside Explore (Douyin 推荐/同城 model).
+
+**Actions**:
+- `app/_components/nav-config.ts`: drop Nearby tab, drop `centerEmphasis`
+  flag on Explore. Bar is now `Community · Explore · {Saved|Workspace} · Me`.
+- `app/_components/BottomNav.tsx`: remove the FAB-rendering branch; flat
+  4-icon strip for all roles.
+- `app/(public)/browse/page.tsx`: server component reads `?tab=` param,
+  renders sticky sub-nav row (`Recommended | Nearby`) above content.
+  `tab=nearby` mounts `<NearbyClient />` (existing component, untouched).
+  `tab=recommended` (default, unknown values fall through here) renders
+  the existing Pinterest grid. Sub-nav is suppressed when `?community=` is
+  set — that mode is community-scoped, "nearby" has no meaning there.
+- `app/(public)/nearby/page.tsx` → `permanentRedirect('/browse?tab=nearby')`.
+  `NearbyClient.tsx` stays in place (imported from /browse). `/api/nearby`
+  untouched.
+- `app/(public)/browse/_components/BrowseFeed.tsx`: corrected stale
+  comment that referenced "/nearby tab in bottom nav still exists".
+
+**Decisions**:
+- Confirmed (B) over (A) with Tianrou before touching code: Explore
+  landing stays a grid (Phase 9 first-impression decision intact); both
+  sub-tabs click through into the same vertical swipe feed. Consumption
+  shape stays uniform — only the filter differs.
+- Considered keeping the center FAB but with 4 slots ("4 + emphasized
+  middle"). Rejected: 4-slot flat bar reads as "all equal-weight verbs"
+  which matches the new IA. Swipe-as-primary signal moves from the nav
+  to the Explore page itself (cards click straight into feed).
+- 308 redirect, not delete, on `/nearby`: profile preferences flow
+  (`vicinity:nearby_radius` localStorage) and any external bookmarks keep
+  working. The `NearbyClient` component is a regular React component now
+  imported from /browse — not coupled to the route.
+
+**Issues**: none. `tsc --noEmit` clean, `next build` green, `/nearby`
+still appears in route table as a 308 redirect target.
+
+**Self-check (per memory rule)**: same-destination button audit on the
+new sub-nav. After change, `/browse?tab=nearby` is reachable from:
+(1) Explore tab → Nearby sub-tab. That's the only entry. The old
+bottom-nav Nearby slot is gone. No duplicate entries to the same
+destination.
+
+**Next steps**: ship → verify on Vercel preview → screenshot the new
+4-slot bar + sub-tabs for Vivian.
+
 ## 2026-06-18 — phase36.3.1: move sub-nav CTAs into the chips row
 
 **Objective**: Tianrou flagged on the 36.3 push: "视觉上这个 cta 位置不对

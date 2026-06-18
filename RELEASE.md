@@ -3,6 +3,19 @@
 Newest at the top. Each release covers a meaningful product change visible to users.
 Format matches the standard release template (Features / Improvements / Bug Fixes / Technical / Known Issues / Metrics).
 
+## v0.37.0 — 2026-06-18
+
+### ✨ Improvements
+
+- **Bottom bar is now a clean 4-icon strip: Community · Explore · {Saved | Workspace} · Me.** The standalone "Nearby" slot is gone, and the gold raised "Explore" button in the middle is flat now too — every tab gets equal visual weight. The bar feels less busy and the four icons line up.
+- **Nearby moved inside Explore as a sub-tab.** Open Explore and you'll see two sub-tabs at the top: **Recommended** (default) and **Nearby**. Both show the same listing-grid layout; tap any card and you land in the same vertical swipe feed. Recommended shows everything, Nearby filters to your radius — same model 抖音 uses for 推荐/同城.
+- **Old `/nearby` link still works.** If you've bookmarked Nearby or have an old tab open, it now redirects to Explore with the Nearby sub-tab pre-selected. Your saved radius preference (set in Profile) carries over unchanged.
+
+### 🔧 Technical
+
+- Sub-tabs are URL-driven (`?tab=recommended` / `?tab=nearby`), so they're shareable, back-button-friendly, and SSR-rendered.
+- The community-scoped Explore view (`/browse?community=<slug>`) hides the sub-nav — that surface is already location-anchored to one community, so "Nearby" has no meaning there.
+
 ## v0.36.4 — 2026-06-18
 
 ### ✨ Improvements

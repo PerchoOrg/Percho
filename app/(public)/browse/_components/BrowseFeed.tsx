@@ -1338,9 +1338,10 @@ export function BrowseFeed({
         {/* Phase 34b.1 (2026-06-17): right-rail "Nearby" button removed. The
          * top-left community chip already opens the same set of community
          * videos via CommunitySheet → CommunityCarousel — keeping both
-         * surfaces was the duplication the chip was meant to replace. The
-         * /nearby tab in bottom nav still exists for the radius-search
-         * lane. */}
+         * surfaces was the duplication the chip was meant to replace.
+         * Phase 37 (2026-06-18): /nearby tab in bottom nav was folded
+         * into Explore sub-nav (Recommended | Nearby) — radius search
+         * lives at /browse?tab=nearby. */}
         {/* phase34a (2026-06-17): right-rail mute button removed.
          * Volume is controlled by the device's system volume keys —
          * keeps the rail clean and avoids a redundant control. The
