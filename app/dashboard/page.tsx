@@ -117,8 +117,13 @@ export default async function DashboardHomePage({ searchParams }: PageProps) {
   }));
 
   const totalRows = rows.length;
-  const showOnboarding =
-    totalRows === 0 && initialTab === 'published';
+  // Onboarding visibility is an ACCOUNT-level state (brand-new agent has nothing
+  // to manage), not a listings-list filter state. Earlier this was gated on
+  // `initialTab === 'published'`, which meant clicking the Draft tab swapped
+  // the top section from onboarding CTAs to the empty DashboardMetrics row
+  // ("No views yet" placeholders) — Tianrou caught that 2026-06-18. Decouple
+  // from the tab: 0 listings → onboarding regardless of which filter is active.
+  const showOnboarding = totalRows === 0;
 
   return (
     <div className="mx-auto max-w-6xl px-5 py-6 sm:px-8 sm:py-12">

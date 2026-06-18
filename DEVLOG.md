@@ -2,6 +2,21 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-06-18 — phase35.5: dashboard top section decoupled from listings tab
+
+**Objective**: Tianrou screenshot pair: on Dashboard the top row of cards swaps semantics when she flips the Draft/Published/Archived filter — Published shows action shortcuts ("Add a property", "Pick a community", "View leads"), Draft shows the metrics row ("No views yet", "Waiting for views..."). Two different things share one slot, depending on a filter that's supposed to scope only the list below.
+
+**Root cause**: `app/dashboard/page.tsx:120-121` gated onboarding visibility on `totalRows === 0 && initialTab === 'published'`. `ListingsTabbedList` is a client island that calls `router.replace('/dashboard?status=draft')` on tab change, which re-runs the server component with `initialTab='draft'` → `showOnboarding` flips from `true` to `false` → the top section swaps from onboarding CTAs to `DashboardMetrics`. New agents (0 listings) saw the metrics row's "No views yet" placeholders any time they touched the filter.
+
+**Actions**:
+- `app/dashboard/page.tsx` — `showOnboarding = totalRows === 0` (drop the `initialTab` coupling). Onboarding is an account-level state, not a list-filter state.
+
+**Decisions**:
+- Picked decouple over restructure. Could have moved the tabs into a sub-region with its own scope, but the slot itself was fine; only the gate was wrong.
+- Side benefit: new agents now see the "Add a property" CTA from any tab, including the Draft tab they likely land on first.
+
+**Verification**: `tsc --noEmit` clean, `next build` green.
+
 ## 2026-06-18 — phase35.4: photo listings join the swipe feed
 
 **Objective**: Tianrou (third report on the same surface): "888 Rhonda Place Southeast, Leesburg VA — image listing 还是没有进入 feed 流". DB confirms photo-only (0 videos, 1 ready photo). The Phase 10 (2026-06-12) `mediaKind === 'video'` filter at `app/(public)/browse/feed/page.tsx:49` was excluding it from `/browse/feed`. Original rationale ("TikTok for Homebuying = video-only") was an engineering boundary — buyers experience Explore as one stream regardless of media kind, and we already removed the same constraint on `/v/` in Phase 35.3.

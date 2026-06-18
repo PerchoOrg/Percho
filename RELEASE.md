@@ -3,6 +3,12 @@
 Newest at the top. Each release covers a meaningful product change visible to users.
 Format matches the standard release template (Features / Improvements / Bug Fixes / Technical / Known Issues / Metrics).
 
+## v0.35.5 — 2026-06-18
+
+### 🐛 Bug Fixes
+
+- **Dashboard top section no longer changes when you flip the listing filter.** Switching between Draft / Published / Archived used to swap the cards above — sometimes showing quick actions, sometimes empty stats. The filter now only affects the listings list below it; the top section stays consistent. New agents who land on the Draft tab will also see the "Add a property" shortcut, instead of an empty stats row.
+
 ## v0.35.4 — 2026-06-18
 
 ### ✨ Improvements
