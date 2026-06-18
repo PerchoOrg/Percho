@@ -2,6 +2,45 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-06-18 — phase36 follow-up: dashboard community page = my videos only
+
+**Objective**: Tianrou (agent UAT) flagged that `/dashboard/communities/<id>`
+showed every agent's videos in the "Videos" manage list — including rows
+this agent could neither play, mark private, nor delete. Caption "by
+<other agent>" was the only differentiator. Meaningless info display on a
+manage surface.
+
+**Root cause**: Phase 35.3 added the `uploaded_by` column + RLS for
+owner-only writes, and the dashboard list correctly hid mutating buttons
+on non-owner rows. But it kept rendering those rows for "context", which
+on a manage surface is just noise — agents already have the buyer feed at
+`/c/<slug>` if they want to see what's been shot in this community.
+
+**Decisions**:
+- Manage list query filters to `uploaded_by = myAgentId`. Legacy NULL
+  `uploaded_by` rows are included only if the viewing agent is the
+  community creator (otherwise nobody could ever manage them).
+- Header now carries a `View public page →` link to `/c/<slug>` so the
+  "see everyone's videos" workflow is one tap away — consistent with
+  Phase 36 IA where agents share buyer surfaces.
+- Section title `Videos` → `Your videos` to make the scoping unambiguous.
+- Rejected: Preview-as-buyer toggle inside dashboard. That mode was
+  deleted in Phase 36 (b6ea280) on principle — agents and buyers share
+  surfaces, no toggle.
+
+**Actions**:
+- `app/dashboard/communities/[id]/page.tsx`: filter community_videos by
+  uploaded_by; add View public page link; rename heading.
+
+**Verification**: tsc clean. Biome clean (auto-format applied).
+
+**Learnings**: The "non-owner row + by-caption" UX (Phase 35.3) was a
+half-measure — it patched the action surface but left the data surface
+wrong. Lesson: when RLS blocks mutating actions on a row, audit whether
+the row should appear at all on a manage surface, not just whether its
+buttons should be disabled. Captured in `references/zombie-constraints-
+and-repeat-reports.md` siblings as a future check.
+
 ## 2026-06-18 — phase36: unified IA, drop preview-as-buyer mode
 
 **Objective**: Tianrou screenshot — agent bottom nav had grown to 6 buttons (Dashboard · Community · ⊕FAB · Explore · Leads · Me), asymmetric, FAB no longer on the visual midline. Phase 35.3 had bolted "Explore" onto AGENT_RIGHT_TABS to give agents a way to see the buyer feed. Tianrou's follow-up question reframed the issue at IA level: "为什么要让 agent 切换身份/有 preview mode 而不是让 agent 界面尽量和 buyer 一样,只把 agent-specific feature 显示出来?"

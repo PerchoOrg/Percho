@@ -6,17 +6,21 @@
  * using them and they cluttered the page. The DB tables stay (other code
  * paths still read them) but the UI no longer surfaces add/edit/delete.
  * Add-photos and Add-video are now a single "Upload" button (combined page).
+ *
+ * Phase 36 follow-up (2026-06-18, Tianrou agent UAT): manage list only shows
+ * videos uploaded by the viewing agent. Showing other agents' rows here
+ * was meaningless — RLS already blocks edit/hide/delete, the videos can't
+ * play in this surface, and after Phase 36 IA (agents share buyer
+ * surfaces), the right place to browse a community's full video set is
+ * `/c/<slug>` itself. Header carries a small link there.
  */
 
 import { createClient } from '@/lib/supabase/server';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { CommunityEditor } from './CommunityEditor';
 import { CommunityCoverPanel } from './CommunityCoverPanel';
-import {
-  CommunityVideoManageList,
-  type ManageVideoRow,
-} from './CommunityVideoManageList';
+import { CommunityEditor } from './CommunityEditor';
+import { CommunityVideoManageList, type ManageVideoRow } from './CommunityVideoManageList';
 
 interface CommunityRow {
   id: string;
@@ -66,7 +70,9 @@ export default async function CommunityEditorPage({
   // biome-ignore lint/suspicious/noExplicitAny: stub generated types
   const { data: community } = (await (supabase as any)
     .from('communities')
-    .select('id, name, slug, city, state, description, created_by, cover_video_id, cover_storage_path')
+    .select(
+      'id, name, slug, city, state, description, created_by, cover_video_id, cover_storage_path',
+    )
     .eq('id', id)
     .maybeSingle()) as { data: CommunityRow | null };
 
@@ -92,14 +98,28 @@ export default async function CommunityEditorPage({
   // hide a video.
   // Phase 35.3: include uploaded_by so the row can render owner-only chrome
   // (delete/edit only if you uploaded it; "by @other-agent" caption otherwise).
+  // Phase 36 follow-up: filter to videos owned by the viewing agent. Legacy
+  // NULL `uploaded_by` rows are included only if this agent is the
+  // community creator — otherwise they'd be unmanageable forever.
+  const ownsLegacy = community.created_by != null && community.created_by === myAgentId;
   // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { data: videoRows } = (await (supabase as any)
+  let manageQuery = (supabase as any)
     .from('community_videos')
     .select(
       'id, cf_video_id, title, category, category_needs_review, status, visibility, created_at, uploaded_by, uploader:agents!community_videos_uploaded_by_fkey(slug, name)',
     )
-    .eq('community_id', community.id)
-    .order('created_at', { ascending: false })) as {
+    .eq('community_id', community.id);
+  if (myAgentId != null) {
+    manageQuery = ownsLegacy
+      ? manageQuery.or(`uploaded_by.eq.${myAgentId},uploaded_by.is.null`)
+      : manageQuery.eq('uploaded_by', myAgentId);
+  } else {
+    // Not an agent → no manage rows.
+    manageQuery = manageQuery.eq('uploaded_by', '00000000-0000-0000-0000-000000000000');
+  }
+  const { data: videoRows } = (await manageQuery.order('created_at', {
+    ascending: false,
+  })) as {
     data:
       | (Omit<ManageVideoRow, 'uploaderSlug' | 'uploaderDisplayName'> & {
           uploader: { slug: string | null; name: string | null } | null;
@@ -133,6 +153,17 @@ export default async function CommunityEditorPage({
           <p className="mt-1 text-sm text-cream/60">
             {community.city ? `${community.city}, ${community.state}` : community.state}
           </p>
+          {/*
+            Phase 36 follow-up: agents share buyer surfaces — link to the
+            public community page so an agent can browse every video in
+            this community (not just their own) the same way a buyer does.
+          */}
+          <Link
+            href={`/c/${community.slug}`}
+            className="mt-1 inline-flex items-center gap-1 text-xs text-cream/55 hover:text-gold"
+          >
+            View public page →
+          </Link>
         </div>
         <div className="flex shrink-0 gap-2">
           <Link
@@ -150,7 +181,7 @@ export default async function CommunityEditorPage({
       <section className="rounded border border-bronze/30 bg-ink2 p-4 sm:p-5">
         <div className="mb-3 flex items-baseline justify-between gap-3">
           <h2 className="text-base font-semibold">
-            Videos{' '}
+            Your videos{' '}
             <span className="text-cream/50 text-xs font-normal">({manageVideos.length})</span>
           </h2>
           <Link

@@ -3,6 +3,12 @@
 Newest at the top. Each release covers a meaningful product change visible to users.
 Format matches the standard release template (Features / Improvements / Bug Fixes / Technical / Known Issues / Metrics).
 
+## v0.36.1 — 2026-06-18
+
+### 🐛 Bug Fixes
+
+- **The community page in your dashboard now only lists *your* videos.** Previously you'd see every agent's videos for a community you also uploaded to — but you couldn't play, hide, or delete the ones that weren't yours, so they were just clutter. The list is now scoped to videos you uploaded; tap **View public page →** in the header to browse the whole community the way buyers do.
+
 ## v0.36.0 — 2026-06-18
 
 ### ✨ Improvements
