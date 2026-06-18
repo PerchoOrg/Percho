@@ -3,6 +3,22 @@
 Newest at the top. Each release covers a meaningful product change visible to users.
 Format matches the standard release template (Features / Improvements / Bug Fixes / Technical / Known Issues / Metrics).
 
+## v0.36.0 — 2026-06-18
+
+### ✨ Improvements
+
+- **One nav for everyone — agents and buyers see the same primary tabs.** The bottom bar (and the desktop top bar) is now a single 5-slot layout: **Community · Nearby · Explore · Saved/Leads · Me**, with Explore as the gold center button for both roles. Agents see "Leads" in slot 4 where buyers see "Saved" — that's the only difference. No more "preview as buyer" toggle, no more separate agent IA — the agent experience *is* the buyer experience, plus tools.
+- **"+ New listing" moved to a floating button on the bottom-right.** When you're an agent on Dashboard, Profile, or Communities, you'll see a gold "+" floating in the corner — tap it for the same "List a Property / Add Community Video" sheet you had before. The center of the nav bar is now Explore for everyone, so the visual midline is back where it should be. Desktop agents can still use the "+ New" button in the top bar, and there's now a "Dashboard / New listing" shortcut inside the avatar dropdown for quick access from anywhere.
+
+### 🐛 Bug Fixes
+
+- **Bottom navigation is symmetric again.** The agent bar had grown to six items, pushing the gold action button off-center. It's back to five slots with the FAB on the midline, matching the buyer view.
+
+### ⚙️ Technical
+
+- Removed the "preview as buyer" mode and its supporting infrastructure (`vicinity_preview_as_buyer` cookie, `<PreviewBanner>`, dashboard preview redirect, profile-page toggle button). Agents now just *use* the buyer surface — no role-impersonation cookie needed. The cookie, if a browser still holds it, is harmless and will expire on next browser close.
+- Collapsed `BUYER_TABS` / `AGENT_LEFT_TABS` / `AGENT_RIGHT_TABS` in `nav-config.ts` into a single `getPrimaryTabs(role)` helper — one source of truth for both `<BottomNav>` and `<SiteHeader>`.
+
 ## v0.35.5 — 2026-06-18
 
 ### 🐛 Bug Fixes

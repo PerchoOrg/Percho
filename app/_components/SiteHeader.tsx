@@ -25,9 +25,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import {
-  AGENT_LEFT_TABS,
-  AGENT_RIGHT_TABS,
-  BUYER_TABS,
+  getPrimaryTabs,
   isChromeHidden,
   isTabActive,
   type Tab,
@@ -136,11 +134,13 @@ function AvatarMenu({
   displayName,
   brokerage,
   avatarUrl,
+  role,
 }: {
   initial: string;
   displayName: string | null;
   brokerage: string | null;
   avatarUrl?: string | null;
+  role: ViewerRole;
 }) {
   const pathname = usePathname() ?? '/';
   const [open, setOpen] = useState(false);
@@ -206,6 +206,28 @@ function AvatarMenu({
             <User size={16} aria-hidden="true" />
             Profile
           </Link>
+          {role === 'agent' ? (
+            <>
+              <Link
+                href="/dashboard"
+                role="menuitem"
+                onClick={() => setOpen(false)}
+                className="flex items-center gap-2 border-cream/10 border-t px-4 py-3 text-cream/90 text-sm transition hover:bg-cream/5"
+              >
+                <Building2 size={16} aria-hidden="true" />
+                Dashboard
+              </Link>
+              <Link
+                href="/dashboard/listings/new"
+                role="menuitem"
+                onClick={() => setOpen(false)}
+                className="flex items-center gap-2 border-cream/10 border-t px-4 py-3 text-cream/90 text-sm transition hover:bg-cream/5"
+              >
+                <Plus size={16} aria-hidden="true" />
+                New listing
+              </Link>
+            </>
+          ) : null}
           <form action="/api/auth/signout" method="post" className="border-cream/10 border-t">
             <button
               type="submit"
@@ -227,10 +249,13 @@ export function SiteHeader({ role, initial, displayName, brokerage, avatarUrl }:
 
   if (isChromeHidden(pathname)) return null;
 
-  // Drop "Me" from inline nav — it lives in the avatar dropdown on desktop.
-  const buyerInline = BUYER_TABS.filter((t) => t.href !== '/profile');
-  const agentInline = [...AGENT_LEFT_TABS, ...AGENT_RIGHT_TABS].filter((t) => t.href !== '/profile');
-  const tabs = role === 'agent' ? agentInline : buyerInline;
+  // Phase 36: single set of primary tabs per role. Drop "Me" from inline nav
+  // — it lives in the avatar dropdown on desktop. Also drop "Explore" since
+  // it has its own brand-adjacent emphasis on mobile but doesn't need a
+  // duplicate inline link on desktop where it's the most prominent route in
+  // the top nav anyway. (Keep it in: simpler, fewer special cases.)
+  const inline = getPrimaryTabs(role).filter((t) => t.href !== '/profile');
+  const tabs = inline;
 
   return (
     <header
@@ -270,7 +295,7 @@ export function SiteHeader({ role, initial, displayName, brokerage, avatarUrl }:
               </Link>
             </>
           ) : (
-            <AvatarMenu initial={initial} displayName={displayName} brokerage={brokerage} avatarUrl={avatarUrl} />
+            <AvatarMenu initial={initial} displayName={displayName} brokerage={brokerage} avatarUrl={avatarUrl} role={role} />
           )}
         </div>
       </div>

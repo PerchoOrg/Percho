@@ -2,8 +2,8 @@ import './globals.css';
 import type { Metadata } from 'next';
 import { Inter, Playfair_Display } from 'next/font/google';
 import type { ReactNode } from 'react';
+import { AgentFloatingNewWrapper } from './_components/AgentFloatingNewWrapper';
 import { BottomNavWrapper } from './_components/BottomNavWrapper';
-import { PreviewBanner } from './_components/PreviewBanner';
 import { SiteHeaderWrapper } from './_components/SiteHeaderWrapper';
 import { TopRightAvatarWrapper } from './_components/TopRightAvatarWrapper';
 
@@ -29,9 +29,6 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" className={`${inter.variable} ${playfair.variable}`}>
       <body className="bg-ink text-cream antialiased">
-        {/* Sticky banner shown only while an agent is previewing the
-         * buyer view (Phase 27.3). Renders nothing otherwise. */}
-        <PreviewBanner />
         {/* Desktop (md+) sticky top header — role-aware nav, "+ New", avatar.
          * Hides on feed/auth/landing same as BottomNav. */}
         <SiteHeaderWrapper />
@@ -42,6 +39,10 @@ export default function RootLayout({ children }: { children: ReactNode }) {
          * and on md+ breakpoints. Pages that need to butt up against the
          * bottom (feed) hide it via CHROME_HIDDEN_PREFIXES. */}
         <BottomNavWrapper />
+        {/* Mobile-only floating "+" for agents on dashboard / listings /
+         * profile / communities (Phase 36). Replaces the old agent-FAB
+         * center slot in BottomNav. Renders nothing for non-agents. */}
+        <AgentFloatingNewWrapper />
       </body>
     </html>
   );

@@ -6,16 +6,27 @@
  * once here; both surfaces pick it up.
  *
  * Phase 26 (2026-06-14): introduced when porting mobile-only chrome to desktop.
- * Phase 27 (2026-06-16): drop "Home" tab, promote "Community" to leftmost slot
- * for both buyer and agent. Buyer middle slot is now the emphasized "Explore"
- * FAB-style entry into the swipe feed (consumption, not navigation). Agent
- * left cluster is [Dashboard, Community]; right cluster unchanged.
+ * Phase 27 (2026-06-16): drop "Home" tab, promote "Community" to leftmost slot.
+ *   Buyer middle slot is the emphasized "Explore" FAB-style entry into the
+ *   swipe feed (consumption, not navigation).
+ * Phase 36 (2026-06-18): unified IA. One nav for all roles — agents and buyers
+ *   share the same 5-slot bar with Explore as the center FAB. The only role
+ *   difference is slot 4: buyers see "Saved", agents see "Leads". Dashboard,
+ *   Listings management, and the "+ New" listing flow live inside the agent's
+ *   profile (`/profile`) — they're agent-specific affordances, not primary
+ *   verbs. The "Preview as buyer" mode is gone: agents already use the buyer
+ *   surface as their default.
+ *
+ *   Rationale: agents spend 80% of their time doing buyer-shaped work
+ *   (browsing market, comps, competitor listings). A separate agent IA forced
+ *   a "preview mode" toggle to compensate, which is itself a smell. Airbnb /
+ *   Instagram model: one consumption surface, role-specific tools live in the
+ *   profile drawer.
  */
 import {
   Building2,
   Compass,
   Heart,
-  LayoutDashboard,
   type LucideIcon,
   Mail,
   MapPin,
@@ -32,62 +43,42 @@ export type Tab = {
   matchPrefix?: boolean;
   /**
    * When true, BottomNav renders this tab as the emphasized middle FAB-style
-   * slot (raised, gold-tinted, larger icon). Used for the buyer "Explore"
-   * tab to mirror the consumption-first IA (Instagram/抖音 center = primary
-   * action). Only one tab per role should set this.
+   * slot (raised, gold-tinted, larger icon). Used for the "Explore" tab to
+   * mirror the consumption-first IA (Instagram/抖音 center = primary action).
+   * Only one tab per role should set this.
    */
   centerEmphasis?: boolean;
 };
 
 /**
- * Buyer / anonymous primary tabs. 5 slots, mobile + desktop share the set.
- * Order: Community · Nearby · ▶ Explore (center FAB) · Saved · Me
+ * Build the role's primary tabs. 5 slots, mobile + desktop share the set.
+ *
+ * Order: Community · Nearby · ▶ Explore (center FAB) · {Saved|Leads} · Me
  *
  * - Community is leftmost: it's the platform's signature asset (12-category
- *   neighborhood video taxonomy lives here). New users land on the grid and
- *   immediately see what makes Vicinity different from Zillow.
- * - Explore in the center is the emphasized swipe-feed entry. This is the
- *   buyer's primary consumption mode — full-screen vertical swipe of all
- *   listings, taste-trained over time.
- * - Nearby and Saved flank Explore as the two filtering/curating verbs.
- * - Me is rightmost (universal convention).
+ *   neighborhood video taxonomy lives here).
+ * - Nearby is the buyer's location-anchored discovery verb.
+ * - Explore in the center is the emphasized swipe-feed entry. Primary
+ *   consumption mode for both roles.
+ * - Slot 4 swaps by role: buyers save listings, agents work leads. These are
+ *   the equivalent "what you keep coming back to" verbs for each role.
+ * - Me is rightmost (universal convention). Agents reach Dashboard /
+ *   Listings management / + New listing through `/profile` shortcuts.
  */
-export const BUYER_TABS: Tab[] = [
-  { href: '/communities', label: 'Community', icon: Building2, matchPrefix: true },
-  { href: '/nearby', label: 'Nearby', icon: MapPin },
-  { href: '/browse', label: 'Explore', icon: Compass, matchPrefix: true, centerEmphasis: true },
-  { href: '/saved', label: 'Saved', icon: Heart },
-  { href: '/profile', label: 'Me', icon: User },
-];
+export function getPrimaryTabs(role: ViewerRole): Tab[] {
+  const slot4: Tab =
+    role === 'agent'
+      ? { href: '/dashboard/leads', label: 'Leads', icon: Mail, matchPrefix: true }
+      : { href: '/saved', label: 'Saved', icon: Heart };
 
-/**
- * Agent dashboard tabs. Mobile lays this out as: left=[Dashboard, Community],
- * center=FAB (+New action sheet), right=[Leads, Me]. Desktop renders them
- * as a flat horizontal nav with a "+ New" button on the right cluster.
- *
- * Phase 27: dropped "Home" (agents don't browse listings as a primary verb)
- * and added "Community" so the agent's content-management hub is one tap away.
- */
-export const AGENT_LEFT_TABS: Tab[] = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  {
-    href: '/dashboard/communities',
-    label: 'Community',
-    icon: Building2,
-    matchPrefix: true,
-  },
-];
-
-export const AGENT_RIGHT_TABS: Tab[] = [
-  // Phase 35.3 (2026-06-17): added Explore. Tianrou: "为什么 agent
-  // 没有 explore listing 的入口?" — agents need to see their own
-  // listings from the buyer's perspective (and check competitor
-  // listings in the market). Sharing the same /browse feed keeps
-  // one consumption surface across roles.
-  { href: '/browse', label: 'Explore', icon: Compass, matchPrefix: true },
-  { href: '/dashboard/leads', label: 'Leads', icon: Mail, matchPrefix: true },
-  { href: '/profile', label: 'Me', icon: User },
-];
+  return [
+    { href: '/communities', label: 'Community', icon: Building2, matchPrefix: true },
+    { href: '/nearby', label: 'Nearby', icon: MapPin },
+    { href: '/browse', label: 'Explore', icon: Compass, matchPrefix: true, centerEmphasis: true },
+    slot4,
+    { href: '/profile', label: 'Me', icon: User },
+  ];
+}
 
 /**
  * Routes where chrome (BottomNav + SiteHeader) hides itself entirely:

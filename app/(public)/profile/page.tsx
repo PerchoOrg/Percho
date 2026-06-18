@@ -21,7 +21,6 @@ import Link from 'next/link';
 import { EditableAgentIdentity } from './_components/EditableAgentIdentity';
 import { EditableBuyerIdentity } from './_components/EditableBuyerIdentity';
 import { NearbyRadiusPref } from './_components/NearbyRadiusPref';
-import { enableBuyerPreview } from '@/app/_actions/preview';
 
 export const metadata: Metadata = {
   title: 'Profile · Vicinity',
@@ -123,18 +122,8 @@ export default async function ProfilePage() {
                 View public profile
               </Link>
             ) : null}
-            {/* Phase 27.3: agent can step into the buyer view without
-             * signing out. Submit posts a server action that sets a
-             * httpOnly cookie + redirects to /communities; banner +
-             * dashboard guard handle the rest. */}
-            <form action={enableBuyerPreview}>
-              <button
-                type="submit"
-                className="w-full rounded-full border border-cream/15 px-6 py-3 text-cream/70 text-sm transition hover:text-cream"
-              >
-                Preview as buyer
-              </button>
-            </form>
+            {/* Phase 36 (2026-06-18): "Preview as buyer" removed — agents
+             * already share the buyer surface as their default. */}
             <form action="/api/auth/signout" method="post">
               <button
                 type="submit"

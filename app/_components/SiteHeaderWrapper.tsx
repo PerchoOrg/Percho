@@ -5,10 +5,12 @@
  *
  * Phase 27 (2026-06-14): also fetch agent.headshot_url / buyer.avatar_url
  * so the desktop avatar matches the user's chosen avatar.
+ * Phase 36 (2026-06-18): unified IA — agent and buyer share one nav.
+ * Removed the "preview as buyer" cookie branch; agents now see agent
+ * affordances inline (Dashboard / + New) inside the avatar dropdown.
  */
 
 import { createClient } from '@/lib/supabase/server';
-import { isPreviewingAsBuyer } from '@/lib/auth/preview';
 import { SiteHeader } from './SiteHeader';
 import type { ViewerRole } from './nav-config';
 
@@ -22,7 +24,7 @@ export async function SiteHeaderWrapper() {
     return <SiteHeader role="anon" initial="" displayName={null} brokerage={null} />;
   }
 
-  // biome-ignore lint/suspicious/noExplicitAny: agents typing not in stub yet (TODO phase1-end db:types)
+  // biome-ignore lint/suspicious/noExplicitAny: agents typing not in stub yet
   const { data: agent } = (await (supabase as any)
     .from('agents')
     .select('id, name, brokerage, headshot_url')
@@ -37,15 +39,13 @@ export async function SiteHeaderWrapper() {
   };
 
   if (agent) {
-    // Phase 27.3: agent previewing as buyer → render buyer chrome.
-    const previewAsBuyer = await isPreviewingAsBuyer();
     const source = agent.name?.trim() || user.email?.trim() || '?';
     return (
       <SiteHeader
-        role={previewAsBuyer ? 'buyer' : 'agent'}
+        role="agent"
         initial={source.charAt(0) || '?'}
         displayName={agent.name?.trim() || user.email || null}
-        brokerage={previewAsBuyer ? null : agent.brokerage}
+        brokerage={agent.brokerage}
         avatarUrl={agent.headshot_url}
       />
     );

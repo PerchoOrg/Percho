@@ -1,12 +1,12 @@
 import { createClient } from '@/lib/supabase/server';
-import { isPreviewingAsBuyer } from '@/lib/auth/preview';
 /**
  * Dashboard layout — gates all /dashboard/* routes behind auth.
  *
  * Phase 26 (2026-06-14): the dashboard-specific <TopBar> is gone — the
  * global <SiteHeader> in the root layout now handles desktop chrome for
- * agent routes too (role=agent shows Dashboard / Leads / + New / avatar).
- * This file is now just an auth gate + page wrapper.
+ * agent routes too. This file is now just an auth gate + page wrapper.
+ * Phase 36 (2026-06-18): removed the "preview as buyer" redirect — that
+ * mode no longer exists under the unified IA.
  */
 import { redirect } from 'next/navigation';
 import type { ReactNode } from 'react';
@@ -19,13 +19,6 @@ export default async function DashboardLayout({ children }: { children: ReactNod
 
   if (!user) {
     redirect('/login?redirect=%2Fdashboard');
-  }
-
-  // Phase 27.3: while previewing as buyer, /dashboard/* should bounce
-  // back to the buyer surface — so an agent in preview mode can't
-  // accidentally land on admin pages by clicking a stale link.
-  if (await isPreviewingAsBuyer()) {
-    redirect('/communities');
   }
 
   return (

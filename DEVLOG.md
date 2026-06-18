@@ -2,6 +2,44 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-06-18 — phase36: unified IA, drop preview-as-buyer mode
+
+**Objective**: Tianrou screenshot — agent bottom nav had grown to 6 buttons (Dashboard · Community · ⊕FAB · Explore · Leads · Me), asymmetric, FAB no longer on the visual midline. Phase 35.3 had bolted "Explore" onto AGENT_RIGHT_TABS to give agents a way to see the buyer feed. Tianrou's follow-up question reframed the issue at IA level: "为什么要让 agent 切换身份/有 preview mode 而不是让 agent 界面尽量和 buyer 一样,只把 agent-specific feature 显示出来?"
+
+**Decision** (after stress-test, owner picked option A): unify IA — agents and buyers share one 5-slot primary nav with Explore as the center FAB for both. Slot 4 is the only role difference: buyers see "Saved", agents see "Leads". Dashboard / Listings management / "+ New listing" become agent-specific affordances accessed through `/profile` (mobile) and the avatar dropdown (desktop), plus a mobile-only floating "+" button on agent content surfaces.
+
+**Why this reframes the bug, not just patches it**:
+- "Preview as buyer" is a code smell — its existence implies the agent IA had drifted from the real buyer experience. Removing the smell removes the asymmetric-nav class of bug. Phase 35.3 was patching a symptom.
+- Agents spend ~80% of their time on buyer-shaped work (browsing market, comps, competitor listings). Airbnb / Instagram model: one consumption surface, role tools live in the profile drawer.
+- Two pushbacks against full symmetry: (1) Leads is core agent verb, can't be buried two taps deep — earns the slot 4 swap. (2) "+ New listing" needs to be reachable while the agent is on /dashboard, not just /profile — earns the floating button (Gmail compose pattern).
+
+**Actions**:
+- `app/_components/nav-config.ts` — collapse `BUYER_TABS` / `AGENT_LEFT_TABS` / `AGENT_RIGHT_TABS` into a single `getPrimaryTabs(role)` that returns the same 5 tabs except slot 4 (Saved↔Leads).
+- `app/_components/BottomNav.tsx` — collapse buyer/agent branches into one render path. Center FAB renders via `centerEmphasis` flag for both roles. Agent FAB action sheet extracted (it now lives in <AgentFloatingNew>).
+- `app/_components/AgentFloatingNew.tsx` (new) — mobile-only floating "+" pinned bottom-right above the nav bar (`bottom: env(safe-area-inset-bottom) + 5rem`). Visible only on agent content surfaces (`/dashboard`, `/profile`, `/communities`). Re-uses the old action sheet (List a Property / Add Community Video → community picker).
+- `app/_components/AgentFloatingNewWrapper.tsx` (new) — server component that resolves agent role + pre-fetches the community picker list. Renders nothing for non-agents.
+- `app/_components/SiteHeader.tsx` — `AvatarMenu` gains a `role` prop; agents see `Dashboard` + `New listing` shortcuts inside the avatar dropdown. Inline tabs source from `getPrimaryTabs(role)`.
+- `app/_components/SiteHeaderWrapper.tsx`, `app/_components/BottomNavWrapper.tsx` — drop the `isPreviewingAsBuyer()` branch and the community pre-fetch (moved).
+- `app/dashboard/layout.tsx` — drop the preview redirect.
+- `app/(public)/profile/page.tsx` — drop the "Preview as buyer" form.
+- `app/layout.tsx` — drop `<PreviewBanner />`, mount `<AgentFloatingNewWrapper />`.
+- Deleted: `app/_actions/preview.ts`, `lib/auth/preview.ts`, `app/_components/PreviewBanner.tsx`. Cookie `vicinity_preview_as_buyer` is now an unused string in any browser still holding it — harmless, expires on browser close (it was a session cookie).
+
+**Verification**: `tsc --noEmit` clean; `next build` green; bottom nav slot count back to 5 with FAB on the midline; floating "+" only renders for agents on declared SHOW_PREFIXES.
+
+**Decisions considered and rejected**:
+- Keep split IA, just hotfix Phase 35.3 by stuffing Explore into Dashboard's top section. Rejected — local fix that leaves the preview-mode smell intact, and the next "agent needs buyer thing X" report will recreate the same asymmetric-nav bug.
+- Full symmetry (Leads → /profile, no slot 4 difference). Rejected — Leads is agent's core daily verb; one extra tap on every Lead check is a real productivity hit.
+- Move "+ New listing" to a nav slot. Rejected — that's how 35.3 happened; nav slots are for navigation, creation actions belong to floating affordances per platform conventions (Airbnb host upload, Gmail compose, Instagram +).
+
+**Learnings**:
+- "We need a preview/dev/admin mode toggle to verify what the other role sees" is a strong signal the two roles' surfaces have drifted. Audit before extending — usually the right fix is to merge the surfaces, not to make the toggle prettier.
+- A repeat report on the same surface (here: the bottom nav, third Tianrou observation in two weeks) means the abstraction is wrong, not the implementation. Phase 35.3 was a tactical fix when the strategic one was overdue.
+
+**Next steps**: deploy, watch Tianrou validate the symmetric nav. Possible follow-ups if friction surfaces:
+- Add a small "View as buyer" toggle in AvatarMenu if agents express they want a clean buyer-only view occasionally (without our preview cookie infra — just render-time role override). Skip until requested.
+- Consider whether Profile should grow "My listings" / "My communities" cards as inline shortcuts instead of relying on the avatar dropdown link to Dashboard. Defer until profile page traffic data exists.
+
 ## 2026-06-18 — phase35.5: dashboard top section decoupled from listings tab
 
 **Objective**: Tianrou screenshot pair: on Dashboard the top row of cards swaps semantics when she flips the Draft/Published/Archived filter — Published shows action shortcuts ("Add a property", "Pick a community", "View leads"), Draft shows the metrics row ("No views yet", "Waiting for views..."). Two different things share one slot, depending on a filter that's supposed to scope only the list below.
