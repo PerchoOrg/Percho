@@ -2,6 +2,7 @@
 import { listSavedListingIds, saveListing, unsaveListing } from '@/app/_actions/saved-listings';
 import { getOrCreateDeviceId } from '@/lib/buyer/device-id';
 import { hlsUrl, thumbnailUrl } from '@/lib/cloudflare/stream';
+import { demoCoverFor, demoVideoFor, type DemoVideoPool } from '@/lib/demo-media';
 import Hls from 'hls.js';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -537,18 +538,43 @@ function Card({
 
   const sel = useMemo(() => pickVideo(card, source, cycleIdx), [card, source, cycleIdx]);
 
+  // Demo media override (NEXT_PUBLIC_DEMO_MEDIA). When on, the swipe feed
+  // mounts a plain <video src=MP4> (curated luxury / nearby clip) instead
+  // of attaching HLS to the real Cloudflare Stream id. Production launch
+  // flips the flag to false and the real video shows through verbatim.
+  const demoPool: DemoVideoPool = source === 'nearby' ? 'nearby' : 'home';
+  const demoVideoUrl = demoVideoFor(sel.cfVideoId, demoPool);
+  const isDemoVideo = demoVideoUrl !== null;
+
   let poster: string | null = null;
   try {
     poster = thumbnailUrl(sel.cfVideoId);
   } catch {
     poster = null;
   }
+  // Override the poster too so the loading/blurred-backdrop frame matches
+  // the demo clip instead of the real CF Stream thumbnail.
+  poster = demoCoverFor(sel.cfVideoId, poster);
 
-  // (Re)attach HLS when mount or selected video changes.
+  // (Re)attach HLS when mount or selected video changes. In demo mode we
+  // skip HLS entirely and just set the <video> src to the curated MP4.
   useEffect(() => {
     if (!shouldMount) return;
     const video = videoRef.current;
     if (!video) return;
+
+    // Tear down previous HLS attachment regardless of mode.
+    if (hlsRef.current) {
+      hlsRef.current.destroy();
+      hlsRef.current = null;
+    }
+    video.removeAttribute('src');
+    video.load();
+
+    if (isDemoVideo && demoVideoUrl) {
+      video.src = demoVideoUrl;
+      return;
+    }
 
     let src: string;
     try {
@@ -556,14 +582,6 @@ function Card({
     } catch {
       return;
     }
-
-    // Tear down previous attachment first.
-    if (hlsRef.current) {
-      hlsRef.current.destroy();
-      hlsRef.current = null;
-    }
-    video.removeAttribute('src');
-    video.load();
 
     if (video.canPlayType('application/vnd.apple.mpegurl')) {
       video.src = src;
@@ -596,7 +614,7 @@ function Card({
         hlsRef.current = null;
       }
     };
-  }, [shouldMount, sel.cfVideoId]);
+  }, [shouldMount, sel.cfVideoId, isDemoVideo, demoVideoUrl]);
 
   // Play/pause on active changes.
   // Try with current mute state first; if browser blocks autoplay-with-sound

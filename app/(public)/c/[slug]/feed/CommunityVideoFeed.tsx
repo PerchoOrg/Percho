@@ -19,6 +19,7 @@
 import { listSavedCommunityIds, saveCommunity, unsaveCommunity } from '@/app/_actions/saved-communities';
 import { getOrCreateDeviceId } from '@/lib/buyer/device-id';
 import { hlsUrl, thumbnailUrl } from '@/lib/cloudflare/stream';
+import { demoCoverFor, demoVideoFor } from '@/lib/demo-media';
 import {
   COMMUNITY_VIDEO_CATEGORIES,
   type CommunityVideoCategoryId,
@@ -174,25 +175,25 @@ function VideoCard({
   const hlsRef = useRef<Hls | null>(null);
   const [paused, setPaused] = useState(true);
 
+  // Demo override — see lib/demo-media.ts. Community feed is the "nearby"
+  // pool (cafes, schools, parks). Production flips NEXT_PUBLIC_DEMO_MEDIA
+  // to false and real videos show through.
+  const demoVideoUrl = demoVideoFor(video.cfVideoId, 'nearby');
+  const isDemoVideo = demoVideoUrl !== null;
+
   let poster: string | null = null;
   try {
     poster = thumbnailUrl(video.cfVideoId);
   } catch {
     poster = null;
   }
+  poster = demoCoverFor(video.cfVideoId, poster);
 
-  // Attach HLS.
+  // Attach HLS (or in demo mode, skip and use the curated MP4).
   useEffect(() => {
     if (!shouldMount) return;
     const el = videoElRef.current;
     if (!el) return;
-
-    let src: string;
-    try {
-      src = hlsUrl(video.cfVideoId);
-    } catch {
-      return;
-    }
 
     if (hlsRef.current) {
       hlsRef.current.destroy();
@@ -200,6 +201,18 @@ function VideoCard({
     }
     el.removeAttribute('src');
     el.load();
+
+    if (isDemoVideo && demoVideoUrl) {
+      el.src = demoVideoUrl;
+      return;
+    }
+
+    let src: string;
+    try {
+      src = hlsUrl(video.cfVideoId);
+    } catch {
+      return;
+    }
 
     if (el.canPlayType('application/vnd.apple.mpegurl')) {
       el.src = src;
@@ -227,7 +240,7 @@ function VideoCard({
         hlsRef.current = null;
       }
     };
-  }, [shouldMount, video.cfVideoId]);
+  }, [shouldMount, video.cfVideoId, isDemoVideo, demoVideoUrl]);
 
   // Play/pause on activation; honor mute, fall back if blocked.
   useEffect(() => {

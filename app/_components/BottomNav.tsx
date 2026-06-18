@@ -44,12 +44,24 @@ function TabButton({ tab, active }: { tab: Tab; active: boolean }) {
     <Link
       href={tab.href}
       aria-current={active ? 'page' : undefined}
-      className={`flex h-14 flex-col items-center justify-center gap-0.5 text-[10px] transition-colors ${
-        active ? 'text-ink' : 'text-ink2 hover:text-ink'
+      className={`relative flex h-14 flex-col items-center justify-center gap-0.5 text-[10px] transition-colors ${
+        active ? 'font-medium text-ink' : 'text-muted hover:text-ink'
       }`}
     >
-      <Icon size={20} aria-hidden="true" />
-      <span className="leading-none">{tab.label}</span>
+      {/* Aman idiom: 1px ink hairline above the active tab. Cream-on-cream
+          color contrast alone wasn't readable (Tianrou, 2026-06-18). */}
+      {active && (
+        <span
+          aria-hidden="true"
+          className="absolute top-0 left-1/2 h-px w-8 -translate-x-1/2 bg-ink"
+        />
+      )}
+      <Icon
+        size={20}
+        aria-hidden="true"
+        strokeWidth={active ? 1.75 : 1.25}
+      />
+      <span className="leading-none tracking-wide">{tab.label}</span>
     </Link>
   );
 }

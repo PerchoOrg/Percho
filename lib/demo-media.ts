@@ -79,3 +79,50 @@ export function demoHeadshotFor(real: string | null): string | null {
   if (!DEMO_MEDIA_ENABLED) return real;
   return real ?? DEMO_HEADSHOT;
 }
+
+/**
+ * Curated luxury / neighborhood video clips for swipe feed override.
+ * All Pexels free commercial-use, hot-linked from videos.pexels.com.
+ *
+ * Two pools so we can route by context:
+ *   - `home`: interior + exterior tours, the listing swipe feed
+ *   - `nearby`: streetscape, dining, schools, parks (the Nearby pool)
+ *
+ * Picked at 720p where possible (smaller file, fast first-frame). We hash
+ * the cfVideoId so the same listing always maps to the same demo clip
+ * (no flicker between renders / autoplay restarts).
+ */
+const DEMO_HOME_VIDEOS: readonly string[] = [
+  // Pexels luxury home tours, all free for commercial use.
+  'https://videos.pexels.com/video-files/7578548/7578548-uhd_2560_1440_30fps.mp4', // landing hero, modern villa drone
+  'https://videos.pexels.com/video-files/8134860/8134860-hd_1920_1080_25fps.mp4',  // contemporary interior pan
+  'https://videos.pexels.com/video-files/3773486/3773486-hd_1920_1080_24fps.mp4',  // pool / patio twilight
+  'https://videos.pexels.com/video-files/7578544/7578544-hd_1920_1080_30fps.mp4',  // architectural exterior
+  'https://videos.pexels.com/video-files/8581019/8581019-hd_1920_1080_25fps.mp4',  // bright living room
+  'https://videos.pexels.com/video-files/6580837/6580837-hd_1920_1080_30fps.mp4',  // kitchen marble
+];
+
+const DEMO_NEARBY_VIDEOS: readonly string[] = [
+  // Pexels neighborhood / lifestyle clips.
+  'https://videos.pexels.com/video-files/3214448/3214448-hd_1920_1080_25fps.mp4',  // cafe / street
+  'https://videos.pexels.com/video-files/4109365/4109365-hd_1920_1080_24fps.mp4',  // park walk
+  'https://videos.pexels.com/video-files/2022395/2022395-hd_1920_1080_30fps.mp4',  // restaurant interior
+  'https://videos.pexels.com/video-files/5147455/5147455-hd_1920_1080_25fps.mp4',  // suburban tree-lined street
+  'https://videos.pexels.com/video-files/4434150/4434150-hd_1920_1080_25fps.mp4',  // boutique shopping
+  'https://videos.pexels.com/video-files/3209828/3209828-hd_1920_1080_25fps.mp4',  // school / kids
+];
+
+export type DemoVideoPool = 'home' | 'nearby';
+
+/**
+ * Returns a curated MP4 URL for the given seed, or null if demo mode off.
+ *
+ * Callers (BrowseFeed / VideoFeed / CommunityVideoFeed) check this first;
+ * if non-null, mount a plain `<video src=mp4>` instead of attaching HLS.
+ * That keeps the override logic out of the HLS path entirely.
+ */
+export function demoVideoFor(seed: string, pool: DemoVideoPool): string | null {
+  if (!DEMO_MEDIA_ENABLED) return null;
+  const list = pool === 'home' ? DEMO_HOME_VIDEOS : DEMO_NEARBY_VIDEOS;
+  return list[stableIndex(seed, list.length)] ?? null;
+}
