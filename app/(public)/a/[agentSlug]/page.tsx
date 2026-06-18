@@ -10,6 +10,7 @@
  */
 
 import { thumbnailUrl } from '@/lib/cloudflare/stream';
+import { DEMO_MEDIA_ENABLED, demoCoverFor, demoHeadshotFor } from '@/lib/demo-media';
 import { createClient } from '@/lib/supabase/server';
 import type { Metadata } from 'next';
 import Link from 'next/link';
@@ -139,18 +140,21 @@ export default async function AgentProfilePage({
 
           <div className="flex flex-col gap-10 md:flex-row md:items-end md:justify-between">
             <div className="flex items-center gap-6 md:items-end md:gap-8">
-              {agent.headshot_url ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={agent.headshot_url}
-                  alt={agent.name}
-                  className="h-20 w-20 rounded-full object-cover md:h-24 md:w-24"
-                />
-              ) : (
-                <div className="flex h-20 w-20 items-center justify-center rounded-full border border-line font-serif text-3xl text-ink2 md:h-24 md:w-24">
-                  {agent.name.slice(0, 1)}
-                </div>
-              )}
+              {(() => {
+                const headshot = demoHeadshotFor(agent.headshot_url);
+                return headshot ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={headshot}
+                    alt={agent.name}
+                    className="h-20 w-20 rounded-full object-cover md:h-24 md:w-24"
+                  />
+                ) : (
+                  <div className="flex h-20 w-20 items-center justify-center rounded-full border border-line font-serif text-3xl text-ink2 md:h-24 md:w-24">
+                    {agent.name.slice(0, 1)}
+                  </div>
+                );
+              })()}
               <div>
                 <h1 className="display-xl">{agent.name}</h1>
                 {agent.brokerage && (
@@ -250,8 +254,10 @@ function ListingCardView({
   listing: ListingCard;
   index: number;
 }) {
-  const cover =
+  const realCover =
     listing.cover_url ?? (listing.hero_video_id ? thumbnailUrl(listing.hero_video_id) : null);
+  const cover = demoCoverFor(listing.id, realCover);
+  const isDemoStock = DEMO_MEDIA_ENABLED && cover !== realCover;
   const specs = [
     listing.beds != null ? `${listing.beds} bd` : null,
     listing.baths != null ? `${listing.baths} ba` : null,
@@ -265,7 +271,7 @@ function ListingCardView({
       href={`/v/${agentSlug}/${listing.slug}`}
       className="group block"
     >
-      <div className="aspect-[4/5] w-full overflow-hidden bg-surface">
+      <div className="relative aspect-[4/5] w-full overflow-hidden bg-surface">
         {cover ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -278,6 +284,11 @@ function ListingCardView({
           <div className="flex h-full w-full items-center justify-center text-muted text-xs">
             No cover
           </div>
+        )}
+        {isDemoStock && (
+          <span className="absolute top-3 right-3 bg-ink/85 px-2 py-1 text-[9px] tracking-[0.18em] text-surface uppercase backdrop-blur">
+            Stock
+          </span>
         )}
       </div>
       <div className="pt-5">

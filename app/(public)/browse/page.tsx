@@ -1,3 +1,4 @@
+import { DEMO_MEDIA_ENABLED, demoCoverFor } from '@/lib/demo-media';
 import { thumbnailUrl } from '@/lib/cloudflare/stream';
 import {
   fetchBrowseCards,
@@ -176,18 +177,31 @@ async function RecommendedGrid({ communitySlug }: { communitySlug: string | null
             className="group block"
           >
             <div className="relative aspect-[3/4] w-full overflow-hidden bg-surface">
-              <Image
-                src={
+              {(() => {
+                const realSrc =
                   card.mediaKind === 'video'
                     ? thumbnailUrl(card.hero.cfVideoId)
-                    : (card.heroPhotoUrl as string)
-                }
-                alt={card.listing.address}
-                fill
-                sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-                priority={idx < 4}
-                className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.02]"
-              />
+                    : (card.heroPhotoUrl as string);
+                const src = demoCoverFor(card.listing.id, realSrc) as string;
+                const isDemoStock = DEMO_MEDIA_ENABLED && src !== realSrc;
+                return (
+                  <>
+                    <Image
+                      src={src}
+                      alt={card.listing.address}
+                      fill
+                      sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                      priority={idx < 4}
+                      className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.02]"
+                    />
+                    {isDemoStock && (
+                      <span className="absolute top-2 right-2 bg-ink/85 px-1.5 py-0.5 text-[8px] tracking-[0.18em] text-surface uppercase backdrop-blur">
+                        Stock
+                      </span>
+                    )}
+                  </>
+                );
+              })()}
             </div>
             {/* Caption — Pixieset / gallery idiom: text BELOW image, not overlaid. */}
             <div className="pt-3">
