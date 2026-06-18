@@ -3,6 +3,16 @@
 Newest at the top. Each release covers a meaningful product change visible to users.
 Format matches the standard release template (Features / Improvements / Bug Fixes / Technical / Known Issues / Metrics).
 
+## v0.36.2 — 2026-06-18
+
+### ✨ Improvements
+
+- **Bottom-nav "Leads" is now "Workspace" — one tap to your full agent surface.** The slot-4 tab on the bottom bar (and its desktop equivalent) used to send you to the leads list only, while the rest of your tools (listings management, community-video upload, lead pipeline) lived behind a separate "Open dashboard" button on your profile. Two doors to overlapping content. Now the tab is **Workspace** and lands directly on the full surface — leads, listings, and community uploads all in one place.
+
+### 🐛 Bug Fixes
+
+- **Removed the duplicate "Open dashboard" button on Profile.** It pointed at the same place the new Workspace tab now opens. Profile actions are now: edit identity, view your public profile, sign out — nothing redundant.
+
 ## v0.36.1 — 2026-06-18
 
 ### 🐛 Bug Fixes

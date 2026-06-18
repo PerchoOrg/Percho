@@ -23,15 +23,7 @@
  *   Instagram model: one consumption surface, role-specific tools live in the
  *   profile drawer.
  */
-import {
-  Building2,
-  Compass,
-  Heart,
-  type LucideIcon,
-  Mail,
-  MapPin,
-  User,
-} from 'lucide-react';
+import { Briefcase, Building2, Compass, Heart, type LucideIcon, MapPin, User } from 'lucide-react';
 
 export type ViewerRole = 'anon' | 'buyer' | 'agent';
 
@@ -66,9 +58,22 @@ export type Tab = {
  *   Listings management / + New listing through `/profile` shortcuts.
  */
 export function getPrimaryTabs(role: ViewerRole): Tab[] {
+  // Phase 36.1 (2026-06-18): agent slot 4 was "Leads" → "/dashboard/leads",
+  // but that surface is already a *subset* of /dashboard (which has leads +
+  // listings management + community-video upload). Two entry points to
+  // overlapping content (bottom-nav "Leads" and Me-tab "Open dashboard")
+  // confused users — Tianrou caught it 2026-06-18: "dashboard 里的 lead 和
+  // bottom nav 里的 lead 完全是重复的". Renaming "Leads" → "Workspace" + pointing
+  // it at /dashboard collapses both entries into one. The "Open dashboard"
+  // shortcut on /profile is removed in the same change so there is one
+  // canonical entry to the agent's working surface.
+  //
+  // Why "Workspace" and not "Dashboard": dashboards are read-only data
+  // overviews; this surface is action-shaped (manage listings, upload videos,
+  // work leads). Workspace = where you do the work.
   const slot4: Tab =
     role === 'agent'
-      ? { href: '/dashboard/leads', label: 'Leads', icon: Mail, matchPrefix: true }
+      ? { href: '/dashboard', label: 'Workspace', icon: Briefcase, matchPrefix: true }
       : { href: '/saved', label: 'Saved', icon: Heart };
 
   return [

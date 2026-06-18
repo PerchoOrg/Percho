@@ -108,16 +108,14 @@ export default async function ProfilePage() {
           </div>
 
           <div className="mt-8 flex flex-col gap-2">
-            <Link
-              href="/dashboard"
-              className="btn-gold inline-flex items-center justify-center rounded-full px-6 py-3 text-sm"
-            >
-              Open dashboard
-            </Link>
+            {/* Phase 36.1 (2026-06-18): "Open dashboard" CTA removed.
+             * The bottom-nav "Workspace" tab (slot 4) is now the canonical
+             * entry to /dashboard for agents — keeping a second entry here
+             * recreates the duplication Tianrou caught 2026-06-18. */}
             {agent.slug ? (
               <Link
                 href={`/a/${agent.slug}`}
-                className="btn-ghost inline-flex items-center justify-center rounded-full px-6 py-3 text-sm"
+                className="btn-gold inline-flex items-center justify-center rounded-full px-6 py-3 text-sm"
               >
                 View public profile
               </Link>
@@ -148,8 +146,7 @@ export default async function ProfilePage() {
     data: { display_name: string | null; avatar_url: string | null } | null;
   };
 
-  const buyerDisplayName =
-    buyer?.display_name?.trim() || user.email?.split('@')[0] || 'Buyer';
+  const buyerDisplayName = buyer?.display_name?.trim() || user.email?.split('@')[0] || 'Buyer';
 
   return (
     <main className="min-h-dvh bg-ink text-cream pb-20 md:pb-0">

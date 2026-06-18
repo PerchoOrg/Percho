@@ -2,6 +2,66 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-06-18 — phase36.1: bottom-nav "Leads" → "Workspace", drop /profile dashboard CTA
+
+**Objective**: Tianrou (co-owner UAT) flagged: "dashboard 里的 lead 和 bottom
+nav 里的 lead 完全是重复的". Two entry points to overlapping content — bottom-nav
+slot-4 "Leads" pointing at `/dashboard/leads`, and a "Open dashboard" CTA on
+`/profile` pointing at `/dashboard` (which already includes leads + listings
+management + community-video upload as a superset).
+
+**Actions**:
+- `app/_components/nav-config.ts`: agent slot 4 changed from
+  `{ href: '/dashboard/leads', label: 'Leads', icon: Mail }` to
+  `{ href: '/dashboard', label: 'Workspace', icon: Briefcase }`. Single SSOT
+  flips both BottomNav (mobile) and SiteHeader (desktop md+) at once.
+- `app/(public)/profile/page.tsx`: removed the "Open dashboard" CTA from the
+  agent profile actions block. View-public-profile is now the single primary
+  CTA in that block (kept gold-styled).
+- `app/dashboard/page.tsx`: h1 "Dashboard" → "Workspace" so the page label
+  matches the tab label users tapped to get there.
+
+**Decisions**:
+- *Workspace, not Dashboard*: dashboards in SaaS imply read-only metrics
+  overviews. This surface is action-shaped (manage listings, upload videos,
+  work leads) — workspace is the honest verb.
+- *Workspace, not Hub / Agent Hub / My*: "Hub" is too abstract ("agent hub"
+  is also a same-side tautology since the whole app is for agents). "My" is
+  iOS-style but information-free. Workspace = where you do the work, fits
+  both EN (Vivian) and the mental model.
+- *Did not re-IA the page contents*: Tianrou's report was about IA
+  duplication, not page composition. /dashboard already had leads +
+  listings + community uploads after phase35.5 + phase36 — collapsing the
+  two entry points was sufficient. No content moved.
+- *Single change, two surfaces*: because `getPrimaryTabs()` is the SSOT for
+  both BottomNav and SiteHeader, mobile + desktop ship in lockstep.
+
+**Issues**: none — biome reformatted long-line className strings on the
+files touched (preexisting style). tsc clean. `next build` green.
+
+**Verification**:
+- `npx tsc --noEmit` → clean
+- `npx next build` → green; `/dashboard` route compiled, `/profile` route
+  compiled, no broken Link imports
+- DOM-level check via grep: `Open dashboard` no longer appears anywhere
+  except in this DEVLOG entry; `Workspace` label wired through nav-config.
+
+**Learnings**:
+- IA bug reports of the form "X and Y are duplicates" are usually a sign
+  one of them is *vestigial* — it predates a recent merge of features. In
+  this case the bottom-nav "Leads" predated phase35.5 (decoupled dashboard
+  top section) + phase36 (unified IA), each of which broadened /dashboard
+  into a workspace. The leads-only entry was leftover.
+- "Open dashboard" CTA on /profile was a phase-14 affordance from when
+  dashboard was hard to reach. After phase36 promoted dashboard-equivalent
+  flows into bottom-nav reach, the CTA became a duplicate too. Tianrou
+  caught both with one report — they were the same root issue.
+
+**Next steps**: monitor Tianrou's next pass for whether "Workspace" reads
+right in context, and whether any deep links to `/dashboard/leads` (e.g.
+in onboarding empty-state CTAs on `/dashboard`) should be re-pointed at
+the leads sub-route now that the tab itself owns the workspace top level.
+
 ## 2026-06-18 — phase36 follow-up: dashboard community page = my videos only
 
 **Objective**: Tianrou (agent UAT) flagged that `/dashboard/communities/<id>`
