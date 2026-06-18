@@ -147,6 +147,12 @@ export default async function CommunityEditorPage({
 
   return (
     <div className="mx-auto max-w-3xl space-y-6 py-4">
+      <Link
+        href="/dashboard/communities"
+        className="inline-flex items-center gap-1 text-xs text-cream/60 hover:text-gold"
+      >
+        ← Back to communities
+      </Link>
       <header className="flex items-baseline justify-between gap-3">
         <div className="min-w-0">
           <h1 className="truncate text-2xl font-semibold tracking-tight">{community.name}</h1>
@@ -209,16 +215,27 @@ export default async function CommunityEditorPage({
 
       {/* Metadata editor moved below — agents rarely re-edit name/city after
        * creation. Collapsed by default to keep the working video list above
-       * the fold. */}
-      <details className="rounded border border-bronze/30 bg-ink2">
-        <summary className="cursor-pointer select-none px-4 py-3 text-sm font-medium text-cream/85 hover:text-cream sm:px-5">
-          Community details{' '}
-          <span className="ml-1 text-xs text-cream/50">(name, city, description)</span>
-        </summary>
-        <div className="border-t border-bronze/20 p-4 sm:p-5">
-          <CommunityEditor community={community} canEditMetadata={canEditMetadata} />
-        </div>
-      </details>
+       * the fold.
+       *
+       * Phase 36 follow-up (2026-06-18, Tianrou): community metadata is owned
+       * by the creating agent. Other agents can upload videos to this
+       * community but should not see — let alone interact with — name/city/
+       * description fields. Hide the entire <details> block when
+       * !canEditMetadata. (RLS already blocks writes; this is the UI-side
+       * half of the same rule so non-owners don't see a misleading
+       * read-only form. Same reason CommunityCoverPanel returns null for
+       * non-owners.) */}
+      {canEditMetadata && (
+        <details className="rounded border border-bronze/30 bg-ink2">
+          <summary className="cursor-pointer select-none px-4 py-3 text-sm font-medium text-cream/85 hover:text-cream sm:px-5">
+            Community details{' '}
+            <span className="ml-1 text-xs text-cream/50">(name, city, description)</span>
+          </summary>
+          <div className="border-t border-bronze/20 p-4 sm:p-5">
+            <CommunityEditor community={community} canEditMetadata={canEditMetadata} />
+          </div>
+        </details>
+      )}
     </div>
   );
 }
