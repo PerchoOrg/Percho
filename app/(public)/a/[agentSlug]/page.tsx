@@ -1,29 +1,12 @@
 /**
  * Public agent profile page — `/a/[agentSlug]`.
  *
- * Phase 8 stretch goal. The single most-requested Path-3 feature: Vivian has
- * 12 listings; she does NOT want to send 12 different URLs in WhatsApp /
- * email / Facebook DMs. She wants ONE link — vicinities.cc/a/vivian-zhang —
- * that surfaces every published listing she has, presented in her brand.
+ * Phase 38 (2026-06-18): redesigned in Aman direction (warm cream, no gold).
+ * The profile is now the centerpiece "gallery" experience — Vivian's listings
+ * presented like a Pixieset portfolio: full-bleed cover, large serif address,
+ * tracked-caps eyebrow, hairline dividers, generous whitespace.
  *
- * What's on the page:
- *   - Agent hero: headshot + name + brokerage + license + bio + contact CTAs
- *     (email + phone tel:/mailto:).
- *   - Listings grid: every published listing for this agent, oldest first
- *     (we want her newest at the bottom so you scroll past her best work) —
- *     wait, actually newest first. Realtors live and die by "just listed".
- *     Sorted by `created_at` desc.
- *   - Empty state: friendly "no listings yet" if she has no published rows
- *     (still want the page to render — she can share the URL eagerly).
- *
- * RLS notes:
- *   - `agents` has a `public reads agent profile` policy (everyone can SELECT).
- *   - `listings` has a published-only public read policy.
- *   - `listing_videos` ditto for ready rows (we use cover_url + first video
- *     thumbnail as fallback).
- *
- * SSR with ISR (revalidate=300, 5 min): listings rarely change minute-to-
- * minute. Agent edits a listing, worst case CDN serves a 5-min-stale card.
+ * RLS / data load unchanged — see DESIGN.md for the token reference.
  */
 
 import { thumbnailUrl } from '@/lib/cloudflare/stream';
@@ -90,8 +73,6 @@ async function fetchListings(agentId: string): Promise<ListingCard[]> {
   const listings = rawListings ?? [];
   if (listings.length === 0) return [];
 
-  // For each listing, find a hero video id to use as fallback when cover_url
-  // is null. One round-trip via in() then group by listing_id in JS.
   const ids = listings.map((l) => l.id);
   // biome-ignore lint/suspicious/noExplicitAny: stub generated types
   const { data: rawVideos } = (await (supabase as any)
@@ -143,94 +124,112 @@ export default async function AgentProfilePage({
 }) {
   const { agentSlug } = await params;
   const agent = await fetchAgent(agentSlug);
+
   if (!agent) notFound();
 
   const listings = await fetchListings(agent.id);
+  const firstName = agent.name.split(' ')[0];
 
   return (
-    <div className="min-h-screen bg-ink text-cream">
-      {/* Hero */}
-      <section className="border-bronze/20 border-b">
-        <div className="mx-auto max-w-5xl px-6 py-12 md:py-16">
-          <div className="flex flex-col gap-8 md:flex-row md:items-start">
-            {/* Headshot */}
-            <div className="shrink-0">
+    <div className="min-h-screen bg-bg text-ink">
+      {/* Hero — Aman idiom: eyebrow caps + large serif name + hairline. */}
+      <section>
+        <div className="mx-auto max-w-6xl px-6 pt-16 pb-10 md:pt-24 md:pb-14">
+          <div className="eyebrow mb-6">Vicinity · Listing Specialist</div>
+
+          <div className="flex flex-col gap-10 md:flex-row md:items-end md:justify-between">
+            <div className="flex items-center gap-6 md:items-end md:gap-8">
               {agent.headshot_url ? (
+                // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={agent.headshot_url}
                   alt={agent.name}
-                  className="h-32 w-32 rounded-full border-2 border-gold/40 object-cover md:h-40 md:w-40"
+                  className="h-20 w-20 rounded-full object-cover md:h-24 md:w-24"
                 />
               ) : (
-                <div className="flex h-32 w-32 items-center justify-center rounded-full border-2 border-gold/40 bg-ink2 font-serif text-4xl text-gold md:h-40 md:w-40">
+                <div className="flex h-20 w-20 items-center justify-center rounded-full border border-line font-serif text-3xl text-ink2 md:h-24 md:w-24">
                   {agent.name.slice(0, 1)}
                 </div>
               )}
-            </div>
-
-            {/* Identity + CTAs */}
-            <div className="flex-1">
-              <h1 className="font-serif text-3xl md:text-4xl">{agent.name}</h1>
-              {agent.brokerage && <p className="mt-1 text-cream/70 text-sm">{agent.brokerage}</p>}
-              {agent.license_no && (
-                <p className="mt-1 text-cream/40 text-xs">License #{agent.license_no}</p>
-              )}
-              {agent.bio && (
-                <p className="mt-4 max-w-2xl whitespace-pre-line text-cream/80 text-sm leading-relaxed">
-                  {agent.bio}
-                </p>
-              )}
-              <div className="mt-6 flex flex-wrap gap-2">
-                <a
-                  href={`mailto:${agent.email}`}
-                  className="inline-flex items-center gap-2 rounded-lg bg-gold px-4 py-2 font-medium text-ink text-sm transition hover:opacity-90"
-                >
-                  Email {agent.name.split(' ')[0]}
-                </a>
-                {agent.phone && (
-                  <a
-                    href={`tel:${agent.phone}`}
-                    className="inline-flex items-center gap-2 rounded-lg border border-bronze/50 px-4 py-2 text-cream text-sm hover:bg-bronze/20"
-                  >
-                    {formatPhone(agent.phone)}
-                  </a>
+              <div>
+                <h1 className="display-xl">{agent.name}</h1>
+                {agent.brokerage && (
+                  <p className="mt-3 text-ink2 text-sm tracking-wide">{agent.brokerage}</p>
                 )}
-                <ShareButton />
+                {agent.license_no && (
+                  <p className="mt-1 text-muted text-xs tracking-wide">License #{agent.license_no}</p>
+                )}
               </div>
             </div>
+
+            <div className="flex flex-wrap gap-3">
+              <a
+                href={`mailto:${agent.email}`}
+                className="inline-flex items-center justify-center bg-ink px-6 py-3 text-[12px] tracking-[0.18em] text-surface uppercase transition hover:bg-[#1f1f1f]"
+              >
+                Email {firstName}
+              </a>
+              {agent.phone && (
+                <a
+                  href={`tel:${agent.phone}`}
+                  className="inline-flex items-center justify-center border border-line-strong px-6 py-3 text-[12px] tracking-[0.18em] text-ink uppercase transition hover:border-ink"
+                >
+                  {formatPhone(agent.phone)}
+                </a>
+              )}
+            </div>
           </div>
+
+          {agent.bio && (
+            <p className="mt-12 max-w-2xl whitespace-pre-line text-ink2 text-base leading-[1.7]">
+              {agent.bio}
+            </p>
+          )}
         </div>
+        <hr className="hairline" />
       </section>
 
-      {/* Listings */}
-      <section className="mx-auto max-w-5xl px-6 py-10">
-        <div className="mb-6 flex items-baseline justify-between">
-          <h2 className="font-serif text-2xl">Listings</h2>
-          <span className="text-cream/40 text-xs">
-            {listings.length} {listings.length === 1 ? 'home' : 'homes'}
-          </span>
+      {/* Listings — gallery */}
+      <section>
+        <div className="mx-auto max-w-6xl px-6 py-14 md:py-20">
+          <div className="mb-10 flex items-baseline justify-between">
+            <div>
+              <div className="eyebrow mb-3">The Portfolio</div>
+              <h2 className="display-md">Selected residences</h2>
+            </div>
+            <span className="text-muted text-xs tracking-[0.18em] uppercase">
+              {String(listings.length).padStart(2, '0')} {listings.length === 1 ? 'home' : 'homes'}
+            </span>
+          </div>
+
+          {listings.length === 0 ? (
+            <div className="border border-line py-20 text-center">
+              <p className="text-ink2">No live listings right now.</p>
+              <p className="mt-2 text-muted text-sm">
+                Check back soon or reach out directly above.
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-x-8 gap-y-14 md:grid-cols-2 lg:grid-cols-3">
+              {listings.map((l, i) => (
+                <ListingCardView
+                  key={l.id}
+                  index={i}
+                  agentSlug={agent.slug}
+                  listing={l}
+                />
+              ))}
+            </div>
+          )}
         </div>
-        {listings.length === 0 ? (
-          <div className="rounded-xl border border-bronze/30 bg-ink2/60 p-8 text-center">
-            <p className="text-cream/70">No live listings right now.</p>
-            <p className="mt-1 text-cream/40 text-sm">
-              Check back soon or reach out directly above.
-            </p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {listings.map((l) => (
-              <ListingCardView key={l.id} agentSlug={agent.slug} listing={l} />
-            ))}
-          </div>
-        )}
       </section>
 
       {/* Footer */}
-      <footer className="border-bronze/20 border-t">
-        <div className="mx-auto max-w-5xl px-6 py-6 text-cream/40 text-xs">
+      <hr className="hairline" />
+      <footer>
+        <div className="mx-auto max-w-6xl px-6 py-10 text-muted text-xs tracking-wide">
           <p>
-            <Link href="/" className="hover:text-gold hover:underline">
+            <Link href="/" className="hover:text-ink hover:underline">
               Vicinity
             </Link>{' '}
             · Equal Housing Opportunity. All listings shown are submitted by the agent and are
@@ -245,61 +244,65 @@ export default async function AgentProfilePage({
 function ListingCardView({
   agentSlug,
   listing,
+  index,
 }: {
   agentSlug: string;
   listing: ListingCard;
+  index: number;
 }) {
   const cover =
     listing.cover_url ?? (listing.hero_video_id ? thumbnailUrl(listing.hero_video_id) : null);
+  const specs = [
+    listing.beds != null ? `${listing.beds} bd` : null,
+    listing.baths != null ? `${listing.baths} ba` : null,
+    listing.sqft != null ? `${listing.sqft.toLocaleString()} sqft` : null,
+  ]
+    .filter(Boolean)
+    .join('  ·  ');
+
   return (
     <Link
       href={`/v/${agentSlug}/${listing.slug}`}
-      className="group overflow-hidden rounded-xl border border-bronze/30 bg-ink2/60 transition hover:border-gold/50"
+      className="group block"
     >
-      <div className="aspect-[4/5] w-full overflow-hidden bg-ink">
+      <div className="aspect-[4/5] w-full overflow-hidden bg-surface">
         {cover ? (
+          // eslint-disable-next-line @next/next/no-img-element
           <img
             src={cover}
             alt={listing.address}
-            className="h-full w-full object-cover transition group-hover:scale-[1.03]"
+            className="h-full w-full object-cover transition duration-700 ease-out group-hover:scale-[1.02]"
             loading="lazy"
           />
         ) : (
-          <div className="flex h-full w-full items-center justify-center text-cream/30 text-xs">
+          <div className="flex h-full w-full items-center justify-center text-muted text-xs">
             No cover
           </div>
         )}
       </div>
-      <div className="p-3">
-        <div className="font-serif text-cream text-lg leading-tight">
-          {listing.price != null ? `$${formatPrice(listing.price)}` : 'Price upon request'}
+      <div className="pt-5">
+        <div className="flex items-baseline justify-between gap-3">
+          <span className="eyebrow">No. {String(index + 1).padStart(2, '0')}</span>
+          <span className="text-muted text-[11px] tracking-[0.18em] uppercase">
+            {listing.city}, {listing.state}
+          </span>
         </div>
-        <div className="mt-0.5 truncate text-cream/80 text-sm">{listing.address}</div>
-        <div className="text-cream/50 text-xs">
-          {listing.city}, {listing.state}
+        <div className="mt-3 font-serif text-2xl text-ink leading-tight tracking-[-0.012em]">
+          {listing.address}
         </div>
-        <div className="mt-2 flex items-center gap-2 text-cream/60 text-xs">
-          {listing.beds != null && <span>{listing.beds} bd</span>}
-          {listing.baths != null && <span>· {listing.baths} ba</span>}
-          {listing.sqft != null && <span>· {listing.sqft.toLocaleString()} sqft</span>}
+        <div className="mt-3 flex items-baseline justify-between">
+          <span className="text-ink text-base tracking-tight">
+            {listing.price != null ? `$${formatPrice(listing.price)}` : 'Price upon request'}
+          </span>
+          {specs && <span className="text-ink2 text-xs tracking-wide">{specs}</span>}
         </div>
       </div>
     </Link>
   );
 }
 
-function ShareButton() {
-  // Server component — render a noscript-friendly anchor that copies the page URL
-  // when JS is available (handled by inline script below). Keeping this dead-simple
-  // because the agent-profile page is the *target* of shares, not the source.
-  // For Phase 8 we ship without the JS handler — agents copy from the URL bar.
-  // Adding a real share button would require 'use client' for the click handler;
-  // skipping for now per the surgical-changes principle.
-  return null;
-}
-
 function formatPrice(price: number): string {
-  if (price >= 1_000_000) return `${(price / 1_000_000).toFixed(2).replace(/\.0+$/, '')}M`;
+  if (price >= 1_000_000) return `${(price / 1_000_000).toFixed(2).replace(/\.?0+$/, '')}M`;
   if (price >= 1_000) return `${Math.round(price / 1_000)}k`;
   return price.toLocaleString();
 }

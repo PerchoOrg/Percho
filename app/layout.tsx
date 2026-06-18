@@ -1,6 +1,6 @@
 import './globals.css';
 import type { Metadata } from 'next';
-import { Inter, Playfair_Display } from 'next/font/google';
+import { Inter, Source_Serif_4 } from 'next/font/google';
 import type { ReactNode } from 'react';
 import { BottomNavWrapper } from './_components/BottomNavWrapper';
 import { SiteHeaderWrapper } from './_components/SiteHeaderWrapper';
@@ -12,10 +12,12 @@ const inter = Inter({
   display: 'swap',
 });
 
-const playfair = Playfair_Display({
+// Aman direction display serif. See DESIGN.md.
+const serifDisplay = Source_Serif_4({
   subsets: ['latin'],
-  variable: '--font-playfair',
+  variable: '--font-serif-display',
   display: 'swap',
+  weight: ['400', '500', '600'],
 });
 
 export const metadata: Metadata = {
@@ -26,8 +28,8 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en" className={`${inter.variable} ${playfair.variable}`}>
-      <body className="bg-ink text-cream antialiased">
+    <html lang="en" className={`${inter.variable} ${serifDisplay.variable}`}>
+      <body className="bg-bg text-ink antialiased">
         {/* Desktop (md+) sticky top header — role-aware nav, "+ New", avatar.
          * Hides on feed/auth/landing same as BottomNav. */}
         <SiteHeaderWrapper />

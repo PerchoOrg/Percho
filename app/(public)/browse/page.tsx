@@ -62,7 +62,7 @@ export default async function BrowsePage({
   const showSubTabs = !isCommunityScoped;
 
   return (
-    <main className="min-h-dvh bg-ink pb-20 text-cream md:pb-0">
+    <main className="min-h-dvh bg-bg pb-20 text-ink md:pb-0">
       <BrowseHeader
         activeTab={activeTab}
         showSubTabs={showSubTabs}
@@ -102,21 +102,21 @@ async function BrowseHeader({
   }
 
   return (
-    <header className="sticky top-0 z-20 border-cream/10 border-b bg-ink/85 backdrop-blur-md md:hidden">
+    <header className="sticky top-0 z-20 border-line border-b bg-bg/85 backdrop-blur-md md:hidden">
       {communitySlug && communityLabel ? (
         <div className="flex items-center justify-center px-4 py-3">
-          <div className="font-medium text-cream/80 text-sm uppercase tracking-wider">
+          <div className="text-ink2 text-[11px] tracking-[0.22em] uppercase">
             {`Listings in ${communityLabel}`}
           </div>
         </div>
       ) : showSubTabs ? (
-        <nav aria-label="Explore sub-nav" className="flex items-center justify-center gap-6 px-4 py-3">
+        <nav aria-label="Explore sub-nav" className="flex items-center justify-center gap-8 px-4 py-3">
           <SubTabLink href="/browse" label="Recommended" active={activeTab === 'recommended'} />
           <SubTabLink href="/browse?tab=nearby" label="Nearby" active={activeTab === 'nearby'} />
         </nav>
       ) : (
         <div className="flex items-center justify-center px-4 py-3">
-          <div className="font-medium text-cream/80 text-sm uppercase tracking-wider">Explore</div>
+          <div className="text-ink2 text-[11px] tracking-[0.22em] uppercase">Explore</div>
         </div>
       )}
     </header>
@@ -129,15 +129,15 @@ function SubTabLink({ href, label, active }: { href: string; label: string; acti
       href={href}
       aria-current={active ? 'page' : undefined}
       prefetch={false}
-      className={`relative pb-1 font-medium text-sm tracking-wide transition-colors ${
-        active ? 'text-gold' : 'text-cream/60 hover:text-cream'
+      className={`relative pb-1 text-[12px] tracking-[0.18em] uppercase transition-colors ${
+        active ? 'text-ink' : 'text-muted hover:text-ink'
       }`}
     >
       {label}
       {active ? (
         <span
           aria-hidden="true"
-          className="absolute inset-x-0 -bottom-0.5 h-0.5 rounded-full bg-gold"
+          className="absolute inset-x-0 -bottom-0.5 h-px bg-ink"
         />
       ) : null}
     </Link>
@@ -154,7 +154,7 @@ async function RecommendedGrid({ communitySlug }: { communitySlug: string | null
   if (cards.length === 0) {
     return (
       <div className="mx-auto max-w-md px-6 py-24 text-center">
-        <p className="text-cream/80">
+        <p className="text-ink2">
           No listings yet. Check back soon — agents are uploading new tours.
         </p>
       </div>
@@ -162,8 +162,8 @@ async function RecommendedGrid({ communitySlug }: { communitySlug: string | null
   }
 
   return (
-    <div className={`mx-auto max-w-5xl px-2 ${isCommunityScoped ? 'py-4' : 'pb-4'}`}>
-      <div className="grid grid-cols-2 gap-2 sm:gap-3 md:grid-cols-3 lg:grid-cols-4">
+    <div className={`mx-auto max-w-6xl px-3 sm:px-6 ${isCommunityScoped ? 'py-6' : 'pb-6'}`}>
+      <div className="grid grid-cols-2 gap-x-3 gap-y-8 sm:gap-x-5 sm:gap-y-12 md:grid-cols-3 lg:grid-cols-4">
         {cards.map((card, idx) => (
           <Link
             key={card.listing.id}
@@ -173,9 +173,9 @@ async function RecommendedGrid({ communitySlug }: { communitySlug: string | null
                 : `/v/${card.agent.slug}/${card.listing.slug}`
             }
             prefetch={false}
-            className="group block overflow-hidden rounded-xl bg-ink/60 ring-1 ring-cream/10 transition-shadow hover:ring-gold/60"
+            className="group block"
           >
-            <div className="relative aspect-[3/4] w-full bg-black/40">
+            <div className="relative aspect-[3/4] w-full overflow-hidden bg-surface">
               <Image
                 src={
                   card.mediaKind === 'video'
@@ -186,21 +186,21 @@ async function RecommendedGrid({ communitySlug }: { communitySlug: string | null
                 fill
                 sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
                 priority={idx < 4}
-                className="object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+                className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.02]"
               />
-              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
-              <div className="absolute right-2 bottom-2 left-2 text-cream">
-                <div className="font-serif text-lg leading-tight tracking-tight drop-shadow">
-                  {formatPrice(card.listing.price)}
-                </div>
-                <div className="truncate text-cream/85 text-xs">{card.listing.address}</div>
-                <div className="flex items-center gap-1.5 text-[10px] text-cream/70">
-                  {card.listing.beds != null && <span>{card.listing.beds} bd</span>}
-                  {card.listing.baths != null && <span>· {card.listing.baths} ba</span>}
-                  {card.listing.sqft != null && (
-                    <span>· {card.listing.sqft.toLocaleString()} sqft</span>
-                  )}
-                </div>
+            </div>
+            {/* Caption — Pixieset / gallery idiom: text BELOW image, not overlaid. */}
+            <div className="pt-3">
+              <div className="font-serif text-base text-ink leading-tight tracking-[-0.012em]">
+                {formatPrice(card.listing.price)}
+              </div>
+              <div className="mt-1 truncate text-ink2 text-[12px]">{card.listing.address}</div>
+              <div className="mt-1 flex items-center gap-1.5 text-[11px] text-muted tracking-wide">
+                {card.listing.beds != null && <span>{card.listing.beds} bd</span>}
+                {card.listing.baths != null && <span>· {card.listing.baths} ba</span>}
+                {card.listing.sqft != null && (
+                  <span>· {card.listing.sqft.toLocaleString()} sqft</span>
+                )}
               </div>
             </div>
           </Link>

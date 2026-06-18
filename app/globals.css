@@ -3,32 +3,83 @@
 @tailwind utilities;
 
 :root {
-  color-scheme: dark;
-  /* Demo design tokens — kept as CSS vars for components that prefer var() over Tailwind utilities. */
-  --brand: #c9a961;
-  --brand-dark: #a88a1e;
-  --bg: #0a0a0a;
-  --card: #141414;
-  --border: rgba(255, 255, 255, 0.08);
-  --text: #f5f1ea;
-  --muted: #9a9a9a;
+  color-scheme: light;
+  /* Aman direction — warm cream, no chromatic accent. See DESIGN.md. */
+  --bg: #f3eee7;
+  --surface: #fbf8f3;
+  --ink: #313131;
+  --ink2: #5a5651;
+  --muted: #8a857d;
+  --line: rgba(49, 49, 49, 0.14);
+  --line-strong: rgba(49, 49, 49, 0.32);
+
+  /* Legacy aliases — kept so 73 files of existing classes don't break.
+     Old "card", "border", "text", "brand" names now resolve to the light palette. */
+  --card: var(--surface);
+  --border: var(--line);
+  --text: var(--ink);
+  --brand: var(--ink);
+  --brand-dark: #1f1f1f;
 }
 
 html,
 body,
 #root {
-  background: #0a0a0a;
-  color: #f5f1ea;
+  background: var(--bg);
+  color: var(--ink);
   min-height: 100%;
 }
 
 body {
   font-family: var(--font-inter), Inter, system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
 .font-serif {
-  font-family: var(--font-playfair), "Playfair Display", Georgia, serif;
+  font-family: var(--font-serif-display), "Source Serif 4", Georgia, serif;
+  font-feature-settings: "ss01", "ss02";
+}
+
+/* Tracked-caps eyebrow — top luxury idiom. */
+.eyebrow {
+  font-family: var(--font-inter), Inter, sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* Hairline divider */
+.hairline {
+  height: 1px;
+  background: var(--line);
+  width: 100%;
+  border: 0;
+}
+
+/* Display sizing — negative tracking on large serif. */
+.display-xl {
+  font-family: var(--font-serif-display), "Source Serif 4", Georgia, serif;
+  font-size: clamp(40px, 6vw, 72px);
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  font-weight: 400;
+}
+.display-lg {
+  font-family: var(--font-serif-display), "Source Serif 4", Georgia, serif;
+  font-size: clamp(32px, 4.5vw, 56px);
+  line-height: 1.08;
+  letter-spacing: -0.018em;
+  font-weight: 400;
+}
+.display-md {
+  font-family: var(--font-serif-display), "Source Serif 4", Georgia, serif;
+  font-size: clamp(24px, 3vw, 36px);
+  line-height: 1.15;
+  letter-spacing: -0.012em;
+  font-weight: 400;
 }
 
 /* Scroll-snap utilities */
@@ -51,78 +102,58 @@ body {
 }
 
 @keyframes heart-pop {
-  0% {
-    transform: scale(1);
-  }
-  30% {
-    transform: scale(1.4);
-  }
-  60% {
-    transform: scale(0.9);
-  }
-  100% {
-    transform: scale(1);
-  }
+  0% { transform: scale(1); }
+  30% { transform: scale(1.4); }
+  60% { transform: scale(0.9); }
+  100% { transform: scale(1); }
 }
-.heart-pop {
-  animation: heart-pop 0.45s ease;
-}
+.heart-pop { animation: heart-pop 0.45s ease; }
 
 @keyframes btn-press {
-  0% {
-    transform: scale(1);
-  }
-  50% {
-    transform: scale(0.85);
-  }
-  100% {
-    transform: scale(1);
-  }
+  0% { transform: scale(1); }
+  50% { transform: scale(0.85); }
+  100% { transform: scale(1); }
 }
-.btn-press {
-  animation: btn-press 0.25s ease;
-}
-.rail-btn {
-  transition: transform 0.15s ease;
-}
-.rail-btn:active {
-  transform: scale(0.85);
-}
+.btn-press { animation: btn-press 0.25s ease; }
+.rail-btn { transition: transform 0.15s ease; }
+.rail-btn:active { transform: scale(0.85); }
 
-/* Brand utilities */
+/* Brand utilities — re-skinned, kept under same names so existing classes
+   in 73 files keep working without a sweep. */
 .gold-line {
-  background: linear-gradient(90deg, transparent, #c9a961, transparent);
+  background: var(--line);
   height: 1px;
 }
 .btn-gold {
-  background: #c9a961;
-  color: #0a0a0a;
-  font-weight: 600;
+  background: var(--ink);
+  color: #fbf8f3;
+  font-weight: 500;
+  border-radius: 2px;
+  letter-spacing: 0.04em;
+  transition: background 0.18s ease;
 }
 .btn-gold:hover {
-  background: #d8ba73;
+  background: #1f1f1f;
 }
 .btn-ghost {
-  border: 1px solid rgba(245, 241, 234, 0.25);
-  color: #f5f1ea;
+  border: 1px solid var(--line-strong);
+  color: var(--ink);
+  background: transparent;
+  border-radius: 2px;
+  letter-spacing: 0.04em;
+  transition: border-color 0.18s ease, color 0.18s ease;
 }
 .btn-ghost:hover {
-  border-color: #c9a961;
-  color: #c9a961;
+  border-color: var(--ink);
+  color: var(--ink);
 }
 
 /* Hide scrollbars (used in horizontal carousels) */
-.scrollbar-hide::-webkit-scrollbar {
-  display: none;
-}
-.scrollbar-hide {
-  scrollbar-width: none;
-}
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+.scrollbar-hide { scrollbar-width: none; }
 
-/* Tooltip — used by SourceTip and similar */
-.tip {
-  position: relative;
-}
+/* Tooltip — used by SourceTip and similar. Re-skinned to light. */
+.tip { position: relative; }
 .tip:hover .tip-body,
 .tip:focus-within .tip-body {
   opacity: 1;
@@ -134,12 +165,12 @@ body {
   bottom: calc(100% + 6px);
   left: 50%;
   transform: translate(-50%, 4px);
-  background: #1a1a1a;
-  border: 1px solid #c9a961;
-  color: #f5f1ea;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  color: var(--ink);
   padding: 8px 10px;
   font-size: 11px;
-  border-radius: 8px;
+  border-radius: 4px;
   white-space: normal;
   width: max-content;
   min-width: 220px;
@@ -148,5 +179,11 @@ body {
   pointer-events: none;
   transition: all 0.15s ease;
   z-index: 50;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 10px 30px rgba(49, 49, 49, 0.14);
+}
+
+/* Focus ring — accessibility */
+:focus-visible {
+  outline: 2px solid var(--line-strong);
+  outline-offset: 2px;
 }
