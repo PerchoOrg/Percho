@@ -57,7 +57,7 @@ export default async function HomePage() {
         <div className="relative z-10 flex h-full flex-col items-center justify-end px-6 pb-20 text-center md:pb-28">
           <div className="eyebrow mb-6">Vicinity</div>
           <h1 className="display-xl max-w-4xl text-ink">{LANDING_TAGLINE}</h1>
-          <p className="mx-auto mt-6 max-w-xl text-base text-ink2 leading-[1.7] sm:text-lg">
+          <p className="mx-auto mt-6 max-w-xl text-base text-ink leading-[1.7] sm:text-lg">
             {LANDING_SUBTITLE}
           </p>
           <div className="mt-10 flex flex-col justify-center gap-3 sm:flex-row">
