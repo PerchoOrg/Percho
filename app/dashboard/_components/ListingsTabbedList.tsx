@@ -123,7 +123,7 @@ export function ListingsTabbedList({ initialTab, agentSlug, rows, counts }: Prop
               ? 'No drafts.'
               : activeTab === 'archived'
                 ? 'No archived listings.'
-                : 'No published listings — publish one to share it.'}
+                : 'No listings yet — tap + New listing above to add one.'}
           </p>
         </div>
       ) : (

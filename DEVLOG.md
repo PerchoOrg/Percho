@@ -2,6 +2,76 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-06-18 — phase36.3: unified Workspace CTAs, drop FAB and onboarding cards
+
+**Objective**: Tianrou flagged three overlapping creation surfaces on the
+agent's Workspace:
+1. Listings tab top showed three onboarding cards ("Add a property" /
+   "Pick a community" / "View leads") that duplicated the just-added
+   sub-nav chips and only rendered on the Listings tab anyway.
+2. Right-bottom gold FAB (`AgentFloatingNew`) opened a sheet whose two
+   actions ("List a Property" / "Add Community Video") duplicated CTAs that
+   already exist on each respective sub-nav surface.
+3. Inside Community detail, header `+ Upload` and the in-section `+ Add`
+   text-link both pointed at the same upload page.
+
+She also pointed out the per-tab CTAs were stylistically inconsistent —
+big bordered cards, gold pills, bordered buttons, text links, and a
+floating circle were all doing similar work.
+
+**Decision**: collapse to one design language (gold pill in the Workspace
+header) with one CTA per sub-nav surface:
+- Listings (`/dashboard`): `+ New listing`
+- Communities list (`/dashboard/communities`): `+ New community` (promoted
+  from a sub-header to the Workspace header so all three surfaces share
+  the same slot)
+- Community detail (`/dashboard/communities/[id]`): `+ Upload video`
+  (renamed from `+ Upload` for clarity)
+- Leads (`/dashboard/leads`): no CTA — leads is an inbox, not a creator.
+
+Rejected: an empty-state secondary CTA on the Listings 0-listings view
+("double CTA on same page = the same redundancy I'm trying to fix").
+Empty state copy now redirects the eye to the header pill instead:
+"No listings yet — tap + New listing above to add one."
+
+**Actions**:
+- Removed `app/_components/AgentFloatingNew.tsx` and
+  `app/_components/AgentFloatingNewWrapper.tsx`; unmounted from
+  `app/layout.tsx`.
+- `app/dashboard/page.tsx`: dropped the 3-card onboarding section and its
+  account-level `showOnboarding` gating. Added `+ New listing` gold pill
+  in the Workspace header. Metrics row now renders only when the agent has
+  listings (no point showing "—" placeholders to a brand-new agent; the
+  empty-state in `<ListingsTabbedList>` is the new-agent affordance).
+- `app/dashboard/_components/ListingsTabbedList.tsx`: published-tab empty
+  copy → "No listings yet — tap + New listing above to add one."
+- `app/dashboard/communities/page.tsx`: promoted `+ New community` to the
+  Workspace header (same slot as listings); removed sm+ inline `+ Upload`
+  shortcut on each row (whole row already navigates to the manage surface,
+  which has its own header `+ Upload video`).
+- `app/dashboard/communities/[id]/page.tsx`: renamed header `+ Upload` →
+  `+ Upload video`; removed the `+ Add` text-link in the "Your videos"
+  section (duplicated the header pill on the same screen).
+
+**Verification**: `tsc --noEmit` clean; `next build` green. Deferred to
+Vercel preview / Tianrou's mobile session for visual verification.
+
+**Learnings**: Each phase that introduced one of these surfaces had a
+locally-good reason (FAB unified create across role surfaces;
+onboarding cards taught new agents the IA; per-row Upload was a power-user
+shortcut). They only become redundant when stacked on top of a sub-nav
+that names the same destinations. Rule of thumb going forward: when adding
+a new chrome element (sub-nav, FAB, header CTA), audit every page-local
+CTA that overlaps in *destination* and remove the older one in the same
+phase. Don't leave audits for "later".
+
+**Next steps**: watch for whether new agents successfully discover
+`+ New listing` without the 3-card onboarding scaffolding. If discovery
+turns out to be a problem we'll know quickly from the first cohort that
+hits the empty state.
+
+---
+
 ## 2026-06-18 — phase36.2: Workspace sub-nav (Listings · Communities · Leads)
 
 **Objective**: Tianrou flagged immediately after phase36.1 shipped:

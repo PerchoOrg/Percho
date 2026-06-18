@@ -118,13 +118,6 @@ export default async function DashboardHomePage({ searchParams }: PageProps) {
   }));
 
   const totalRows = rows.length;
-  // Onboarding visibility is an ACCOUNT-level state (brand-new agent has nothing
-  // to manage), not a listings-list filter state. Earlier this was gated on
-  // `initialTab === 'published'`, which meant clicking the Draft tab swapped
-  // the top section from onboarding CTAs to the empty DashboardMetrics row
-  // ("No views yet" placeholders) — Tianrou caught that 2026-06-18. Decouple
-  // from the tab: 0 listings → onboarding regardless of which filter is active.
-  const showOnboarding = totalRows === 0;
 
   return (
     <div className="mx-auto max-w-6xl px-5 py-6 sm:px-8 sm:py-12">
@@ -137,95 +130,29 @@ export default async function DashboardHomePage({ searchParams }: PageProps) {
          * (listings) is the bottom-nav landing surface; /dashboard/communities
          * and /dashboard/leads need a stable in-app entry once onboarding
          * empty-state cards stop rendering. Tianrou flagged the missing
-         * communities entry directly. */}
-        <h1 className="font-serif text-2xl tracking-tight text-cream sm:text-4xl">Workspace</h1>
+         * communities entry directly.
+         * Phase 36.3 (2026-06-18): unified per-tab CTA — header gets a single
+         * gold pill "+ New listing". Replaces the old 3-card onboarding row
+         * (duplicated sub-nav navigation) AND the global agent FAB
+         * (duplicated this CTA + community upload). Each Workspace sub-nav
+         * surface owns exactly one creation CTA in the same gold-pill style.
+         */}
+        <div className="flex items-baseline justify-between gap-3">
+          <h1 className="font-serif text-2xl tracking-tight text-cream sm:text-4xl">Workspace</h1>
+          <Link
+            href="/dashboard/listings/new"
+            className="shrink-0 rounded bg-gold px-3 py-2 font-medium text-ink text-sm transition hover:opacity-90"
+          >
+            + New listing
+          </Link>
+        </div>
         <WorkspaceSubNav active="listings" />
       </div>
 
-      {/*
-        State-aware top section:
-        - 0 listings (new agent) → onboarding CTA cards (Add property / Pick
-          community / View leads). Bottom nav + center FAB cover the same
-          actions, but new agents need the visual cue.
-        - else → metrics (NEW LEADS · THIS WEEK · TOP LISTING). The CTAs are
-          redundant once the agent has stuff to look at, so we replace them
-          with state worth seeing.
-      */}
-      {showOnboarding ? (
-        <section className="mb-8 grid grid-cols-1 gap-2 sm:mb-10 sm:grid-cols-3 sm:gap-5">
-          <Link
-            href="/dashboard/listings/new"
-            className="group flex items-center justify-between rounded-2xl border border-cream/5 bg-ink2/60 p-4 transition hover:border-gold/40 sm:p-5"
-          >
-            <div>
-              <div className="text-[10px] uppercase tracking-widest text-gold sm:text-[11px]">
-                New listing
-              </div>
-              <div className="mt-1 font-serif text-base text-cream sm:mt-2 sm:text-2xl">
-                Add a property →
-              </div>
-            </div>
-            <svg
-              viewBox="0 0 24 24"
-              width={18}
-              height={18}
-              fill="currentColor"
-              className="text-gold"
-              aria-hidden="true"
-            >
-              <path d="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6z" />
-            </svg>
-          </Link>
-          <Link
-            href="/dashboard/communities"
-            className="group flex items-center justify-between rounded-2xl border border-cream/5 bg-ink2/60 p-4 transition hover:border-gold/40 sm:p-5"
-          >
-            <div>
-              <div className="text-[10px] uppercase tracking-widest text-gold sm:text-[11px]">
-                New community video
-              </div>
-              <div className="mt-1 font-serif text-base text-cream sm:mt-2 sm:text-2xl">
-                Pick a community →
-              </div>
-            </div>
-            <svg
-              viewBox="0 0 24 24"
-              width={18}
-              height={18}
-              fill="currentColor"
-              className="text-gold"
-              aria-hidden="true"
-            >
-              <path d="M8 5v14l11-7z" />
-            </svg>
-          </Link>
-          <Link
-            href="/dashboard/leads"
-            className="group flex items-center justify-between rounded-2xl border border-cream/5 bg-ink2/60 p-4 transition hover:border-gold/40 sm:p-5"
-          >
-            <div>
-              <div className="text-[10px] uppercase tracking-widest text-gold sm:text-[11px]">
-                Leads
-              </div>
-              <div className="mt-1 font-serif text-base text-cream sm:mt-2 sm:text-2xl">
-                View leads →
-              </div>
-            </div>
-            <svg
-              viewBox="0 0 24 24"
-              width={18}
-              height={18}
-              fill="currentColor"
-              className="text-gold"
-              aria-hidden="true"
-            >
-              <path d="M4 4h16v2H4zm0 5h16v2H4zm0 5h10v2H4z" />
-            </svg>
-          </Link>
-        </section>
-      ) : agentId ? (
-        <DashboardMetrics agentId={agentId} />
-      ) : null}
+      {/* Metrics row — only meaningful once the agent has listings. With zero
+       * listings every metric is "—", which is just noise; the empty-state
+       * inside <ListingsTabbedList> already tells the new agent what to do. */}
+      {totalRows > 0 && agentId ? <DashboardMetrics agentId={agentId} /> : null}
 
       <ListingsTabbedList
         initialTab={initialTab}

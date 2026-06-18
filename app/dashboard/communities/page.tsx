@@ -66,9 +66,22 @@ export default async function CommunitiesListPage() {
     <div className="mx-auto max-w-3xl space-y-6 px-5 py-4 sm:px-8">
       {/* Phase 36.2 (2026-06-18): Workspace sub-nav. /dashboard/communities is
        * one of the agent's three working surfaces; the chips give a stable
-       * cross-link instead of relying on browser back. */}
+       * cross-link instead of relying on browser back.
+       * Phase 36.3 (2026-06-18): "+ New community" promoted to the Workspace
+       * header so all three sub-nav surfaces share the same gold-pill CTA
+       * pattern (Listings: + New listing; Communities: + New community;
+       * Community detail: + Upload video; Leads: no CTA — inbox not creator).
+       */}
       <div>
-        <h1 className="font-serif text-2xl tracking-tight text-cream sm:text-4xl">Workspace</h1>
+        <div className="flex items-baseline justify-between gap-3">
+          <h1 className="font-serif text-2xl tracking-tight text-cream sm:text-4xl">Workspace</h1>
+          <Link
+            href="/dashboard/communities/new"
+            className="shrink-0 rounded bg-gold px-3 py-2 font-medium text-ink text-sm transition hover:opacity-90"
+          >
+            + New community
+          </Link>
+        </div>
         <WorkspaceSubNav active="communities" />
       </div>
       <header className="flex items-baseline justify-between">
@@ -79,12 +92,6 @@ export default async function CommunitiesListPage() {
             community can edit its metadata.
           </p>
         </div>
-        <Link
-          href="/dashboard/communities/new"
-          className="rounded bg-gold px-4 py-2 text-sm font-medium text-ink transition hover:opacity-90"
-        >
-          + New community
-        </Link>
       </header>
 
       {communities.length === 0 ? (
@@ -139,15 +146,6 @@ export default async function CommunitiesListPage() {
                   <div className="flex shrink-0 items-center gap-3 text-xs text-cream/55">
                     <span aria-hidden>→</span>
                   </div>
-                </Link>
-                {/* Upload shortcut — sibling of the row Link (not nested),
-                 * so clicks land on Upload directly without bubbling. The
-                 * absolute positioning floats it on top visually. */}
-                <Link
-                  href={`/dashboard/communities/${c.id}/upload`}
-                  className="absolute right-3 top-1/2 z-10 hidden -translate-y-1/2 items-center justify-center rounded-lg border border-bronze/40 bg-ink2 px-3 py-1.5 text-xs text-cream hover:border-gold hover:text-gold sm:inline-flex"
-                >
-                  + Upload
                 </Link>
               </li>
             );

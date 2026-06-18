@@ -3,6 +3,18 @@
 Newest at the top. Each release covers a meaningful product change visible to users.
 Format matches the standard release template (Features / Improvements / Bug Fixes / Technical / Known Issues / Metrics).
 
+## v0.36.4 — 2026-06-18
+
+### ✨ Improvements
+
+- **Workspace creation buttons are unified — one gold pill per page.** Each Workspace surface now has exactly one creation action in the same place and style: **+ New listing** on Listings, **+ New community** on Communities, **+ Upload video** inside a community. Leads has none — it's an inbox, not somewhere you create things. Before, the same actions were scattered across big "Add a property" cards, a floating gold "+" button on the bottom-right, an in-row "+ Upload" shortcut on each community, and a small "+ Add" text-link on the community page — all pointing at the same places, just stylistically inconsistent.
+
+### 🐛 Bug Fixes
+
+- **Removed the floating "+" button on Workspace pages.** It tried to be a single shortcut to "List a property" or "Add a community video," but each Workspace page already has its own button for the same thing in a more obvious spot. The floating button was visually competing with the gold Explore tab in the bottom bar too.
+- **Removed the three "Add a property / Pick a community / View leads" cards from the new-agent dashboard.** They duplicated the chips row right above them and disappeared as soon as you published a single listing — confusing on the way in, and gone before you'd built any habit. The empty-state inside the listings list now points at the new header button: "No listings yet — tap + New listing above to add one."
+- **The community page no longer shows two buttons that do the same thing.** Header had **+ Upload** and the videos section had **+ Add** — both opened the upload page. Kept just the header button (renamed to **+ Upload video** for clarity) and dropped the duplicate.
+
 ## v0.36.3 — 2026-06-18
 
 ### 🐛 Bug Fixes

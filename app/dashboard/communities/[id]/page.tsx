@@ -176,7 +176,7 @@ export default async function CommunityEditorPage({
             href={`/dashboard/communities/${community.id}/upload`}
             className="rounded bg-gold px-3 py-2 font-medium text-ink text-sm transition hover:opacity-90"
           >
-            + Upload
+            + Upload video
           </Link>
         </div>
       </header>
@@ -190,12 +190,6 @@ export default async function CommunityEditorPage({
             Your videos{' '}
             <span className="text-cream/50 text-xs font-normal">({manageVideos.length})</span>
           </h2>
-          <Link
-            href={`/dashboard/communities/${community.id}/upload`}
-            className="text-xs text-gold hover:underline"
-          >
-            + Add
-          </Link>
         </div>
         <CommunityVideoManageList
           communityId={community.id}
