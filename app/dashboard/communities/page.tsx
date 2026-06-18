@@ -12,6 +12,7 @@
  * metadata (name / city / state / description) is creator-gated.
  */
 
+import { WorkspaceSubNav } from '@/app/dashboard/_components/WorkspaceSubNav';
 import { createClient } from '@/lib/supabase/server';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
@@ -62,10 +63,17 @@ export default async function CommunitiesListPage() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6 py-4">
+    <div className="mx-auto max-w-3xl space-y-6 px-5 py-4 sm:px-8">
+      {/* Phase 36.2 (2026-06-18): Workspace sub-nav. /dashboard/communities is
+       * one of the agent's three working surfaces; the chips give a stable
+       * cross-link instead of relying on browser back. */}
+      <div>
+        <h1 className="font-serif text-2xl tracking-tight text-cream sm:text-4xl">Workspace</h1>
+        <WorkspaceSubNav active="communities" />
+      </div>
       <header className="flex items-baseline justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Communities</h1>
+          <h2 className="text-2xl font-semibold tracking-tight">Communities</h2>
           <p className="mt-1 text-sm text-cream/60">
             Shared across all agents. Add videos to any community; only the agent who created a
             community can edit its metadata.

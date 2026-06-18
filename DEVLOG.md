@@ -2,6 +2,78 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-06-18 — phase36.2: Workspace sub-nav (Listings · Communities · Leads)
+
+**Objective**: Tianrou flagged immediately after phase36.1 shipped:
+"agent 虽然可以看 community 视频 但没办法 manage community 了". Same shape
+on `/dashboard/leads`.
+
+**Root cause**: phase36.1 collapsed the bottom-nav "Leads" entry into a single
+"Workspace" tab pointing at `/dashboard`. `/dashboard` itself only renders
+the listings list (+ metrics or onboarding cards). Once an agent has any
+listings the onboarding cards (which previously linked to
+`/dashboard/communities` and `/dashboard/leads`) stop rendering — leaving
+no in-app mobile entry to either of those manage surfaces. The
+`AgentFloatingNew` "+" button only covers *create* flows (new listing /
+upload community video), not metadata management.
+
+**Actions**:
+- New `app/dashboard/_components/WorkspaceSubNav.tsx`: 3-chip sub-nav
+  (Listings → /dashboard, Communities → /dashboard/communities, Leads →
+  /dashboard/leads). Active chip is gold-tinted, non-clickable. Server
+  component, no client JS.
+- Mounted under the page heading on all three workspace pages:
+  `app/dashboard/page.tsx`, `app/dashboard/communities/page.tsx`,
+  `app/dashboard/leads/page.tsx`. Each page now opens with `<h1>Workspace
+  </h1>` + chips, then a section `<h2>` (Listings has no h2 — the tabbed
+  list is the body; Communities + Leads keep their own h2 for narrative).
+
+**Decisions**:
+- *Sub-nav over redirect*: considered making `/dashboard` redirect to the
+  most recently used surface; rejected — adds state, hides where you are,
+  and the chips are zero-cost on every page anyway.
+- *Equal weight for all three*: leads is not "more primary" than
+  communities or listings on this surface. Chips are equal-sized; active
+  state is the only differentiator.
+- *Did not move communities into a tabbed island on `/dashboard`*: that
+  would conflate 3 different schemas (listings / communities / leads) into
+  one client island and break URL-state semantics. Three pages, one chips
+  row, current page is gold.
+- *Workspace heading repeats on all three pages*: yes — it's the parent
+  surface label, the chips need it as visual anchor. h2 underneath gives
+  per-section identity without breaking the IA story.
+
+**Issues**: my phase36.1 was incomplete — I collapsed two entry points
+into one Workspace tab without checking that `/dashboard` itself was
+the *superset* surface in practice. It wasn't: `/dashboard` only shows
+listings, while `/dashboard/communities` and `/dashboard/leads` are
+sibling pages, not subsections of the listings page. The verbal model
+("dashboard is the superset, leads is a subset") didn't match the route
+shape ("dashboard, communities, leads are siblings under /dashboard/").
+Tianrou caught it within minutes.
+
+**Verification**:
+- `npx tsc --noEmit` → clean
+- `npx next build` → green; all three workspace routes compile, sub-nav
+  renders SSR.
+
+**Learnings**:
+- "X and Y are duplicates" reports often have a *third* surface the
+  collapse forgets about. Phase36.1 collapsed Profile→Dashboard CTA and
+  bottom-nav Leads tab; both pointed somewhere, but the somewhere they
+  pointed at (`/dashboard`) was *not* the umbrella the verbal description
+  implied. Should have grep'd for `/dashboard/` siblings before treating
+  `/dashboard` as the canonical workspace.
+- Pattern: when an IA change reframes a route as "the agent's one surface",
+  audit the sibling routes under the same prefix and either fold them in
+  or surface them on the parent. Otherwise they become orphans.
+
+**Next steps**: monitor Tianrou's next pass for any other workspace-shape
+routes (e.g. `/dashboard/listings/[id]/analytics`, `/dashboard/communities/
+[id]`) that also benefit from the chips — currently the chips only render
+on the three top-level pages because deeper routes have their own breadcrumb
+context.
+
 ## 2026-06-18 — phase36.1: bottom-nav "Leads" → "Workspace", drop /profile dashboard CTA
 
 **Objective**: Tianrou (co-owner UAT) flagged: "dashboard 里的 lead 和 bottom

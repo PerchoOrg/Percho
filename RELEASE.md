@@ -3,6 +3,12 @@
 Newest at the top. Each release covers a meaningful product change visible to users.
 Format matches the standard release template (Features / Improvements / Bug Fixes / Technical / Known Issues / Metrics).
 
+## v0.36.3 — 2026-06-18
+
+### 🐛 Bug Fixes
+
+- **Workspace now has chips for Listings · Communities · Leads.** After yesterday's "Workspace" rename, the tab landed on listings but there was no in-app way back to community management or the leads list once you had any listings — the empty-state CTA cards for those surfaces stop showing as soon as you publish your first property. Added a chips row right under the Workspace heading on all three pages so you can hop between Listings, Communities, and Leads without using browser back. The chip for the page you're on is gold-highlighted; the other two are tappable.
+
 ## v0.36.2 — 2026-06-18
 
 ### ✨ Improvements

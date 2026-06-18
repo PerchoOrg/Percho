@@ -23,6 +23,7 @@ import {
   ListingsTabbedList,
   type StatusTab,
 } from '@/app/dashboard/_components/ListingsTabbedList';
+import { WorkspaceSubNav } from '@/app/dashboard/_components/WorkspaceSubNav';
 import { thumbnailUrl } from '@/lib/cloudflare/stream';
 import { createClient } from '@/lib/supabase/server';
 import Link from 'next/link';
@@ -131,8 +132,14 @@ export default async function DashboardHomePage({ searchParams }: PageProps) {
         {/* Phase 35: dropped duplicate "View public profile" CTA — same link
          * already lives on the Me tab (/profile). One canonical entry.
          * Phase 35.1: scaled down for mobile — 4xl was wasting half the
-         * viewport on a label nobody needs that big. */}
+         * viewport on a label nobody needs that big.
+         * Phase 36.2 (2026-06-18): sub-nav chips below the heading. /dashboard
+         * (listings) is the bottom-nav landing surface; /dashboard/communities
+         * and /dashboard/leads need a stable in-app entry once onboarding
+         * empty-state cards stop rendering. Tianrou flagged the missing
+         * communities entry directly. */}
         <h1 className="font-serif text-2xl tracking-tight text-cream sm:text-4xl">Workspace</h1>
+        <WorkspaceSubNav active="listings" />
       </div>
 
       {/*
