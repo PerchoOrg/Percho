@@ -284,7 +284,7 @@ function SortableVideoItem({
         <div className="flex items-center gap-2">
           <span className="truncate text-sm text-ink">{video.title ?? video.cf_video_id}</span>
           {isCover ? (
-            <span className="flex-shrink-0 rounded bg-ink px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-ink">
+            <span className="flex-shrink-0 rounded bg-ink px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-cream">
               Cover
             </span>
           ) : null}

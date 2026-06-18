@@ -174,7 +174,7 @@ export default async function CommunityEditorPage({
         <div className="flex shrink-0 gap-2">
           <Link
             href={`/dashboard/communities/${community.id}/upload`}
-            className="rounded bg-ink px-3 py-2 font-medium text-ink text-sm transition hover:opacity-90"
+            className="rounded bg-ink px-3 py-2 font-medium text-cream text-sm transition hover:opacity-90"
           >
             + Upload video
           </Link>

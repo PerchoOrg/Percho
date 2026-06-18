@@ -213,7 +213,7 @@ export function PhotoPanel({ listingId, initialPhotos, initialCoverPhotoId }: Pr
               />
 
               {isCover ? (
-                <span className="absolute top-1.5 left-1.5 rounded bg-ink px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-ink">
+                <span className="absolute top-1.5 left-1.5 rounded bg-ink px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-cream">
                   Cover
                 </span>
               ) : null}

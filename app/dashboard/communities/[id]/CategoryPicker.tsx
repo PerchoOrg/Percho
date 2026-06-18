@@ -73,7 +73,7 @@ function Chip({
       className={[
         'inline-flex min-h-9 items-center rounded-full border px-3 text-xs transition',
         selected
-          ? 'border-line-strong bg-ink text-ink font-semibold'
+          ? 'border-line-strong bg-ink text-cream font-semibold'
           : 'border-line bg-surface text-ink2 hover:border-line-strong hover:text-ink',
       ].join(' ')}
     >

@@ -82,7 +82,7 @@ export default async function CommunitiesListPage() {
           cta={
             <Link
               href="/dashboard/communities/new"
-              className="rounded-full border border-line-strong bg-ink px-3 py-1.5 font-medium text-paper text-xs transition hover:opacity-90 sm:text-sm"
+              className="rounded-full border border-line-strong bg-ink px-3 py-1.5 font-medium text-cream text-xs transition hover:opacity-90 sm:text-sm"
             >
               + New community
             </Link>

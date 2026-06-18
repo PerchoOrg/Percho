@@ -118,7 +118,7 @@ export function SocialCopyPanel({ listingId }: Props) {
             onClick={() => setTab(p)}
             className={`rounded-full border px-3 py-1.5 text-xs transition ${
               tab === p
-                ? 'border-line-strong bg-ink text-ink'
+                ? 'border-line-strong bg-ink text-cream'
                 : 'border-line text-ink2 hover:border-line-strong hover:text-ink'
             }`}
           >
@@ -150,7 +150,7 @@ export function SocialCopyPanel({ listingId }: Props) {
           type="button"
           onClick={onGenerate}
           disabled={state === 'loading'}
-          className="inline-flex items-center gap-2 rounded-lg bg-ink px-4 py-2 font-medium text-ink text-sm transition hover:opacity-90 disabled:opacity-50"
+          className="inline-flex items-center gap-2 rounded-lg bg-ink px-4 py-2 font-medium text-cream text-sm transition hover:opacity-90 disabled:opacity-50"
         >
           {state === 'loading' ? (
             <>

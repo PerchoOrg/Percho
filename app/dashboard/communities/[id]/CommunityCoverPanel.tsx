@@ -228,7 +228,7 @@ export function CommunityCoverPanel({
                   loading="lazy"
                 />
                 {selected && (
-                  <span className="absolute right-1 top-1 rounded bg-ink px-1.5 py-0.5 text-[10px] font-medium text-ink">
+                  <span className="absolute right-1 top-1 rounded bg-ink px-1.5 py-0.5 text-[10px] font-medium text-cream">
                     Cover
                   </span>
                 )}

@@ -84,7 +84,7 @@ function NewDropdown() {
         onClick={() => setOpen((v) => !v)}
         aria-haspopup="menu"
         aria-expanded={open}
-        className="inline-flex h-11 items-center gap-1.5 rounded-full bg-ink px-4 font-medium text-ink text-sm transition hover:opacity-90"
+        className="inline-flex h-11 items-center gap-1.5 rounded-full bg-ink px-4 font-medium text-cream text-sm transition hover:opacity-90"
       >
         <Plus size={16} strokeWidth={2.5} aria-hidden="true" />
         New
@@ -289,7 +289,7 @@ export function SiteHeader({ role, initial, displayName, brokerage, avatarUrl }:
               </Link>
               <Link
                 href="/signup"
-                className="inline-flex h-11 items-center rounded-full bg-ink px-4 font-medium text-ink text-sm transition hover:opacity-90"
+                className="inline-flex h-11 items-center rounded-full bg-ink px-4 font-medium text-cream text-sm transition hover:opacity-90"
               >
                 Sign up
               </Link>

@@ -148,7 +148,7 @@ export default async function DashboardHomePage({ searchParams }: PageProps) {
           cta={
             <Link
               href="/dashboard/listings/new"
-              className="rounded-full border border-line-strong bg-ink px-3 py-1.5 font-medium text-ink text-xs transition hover:opacity-90 sm:text-sm"
+              className="rounded-full border border-line-strong bg-ink px-3 py-1.5 font-medium text-cream text-xs transition hover:opacity-90 sm:text-sm"
             >
               + New listing
             </Link>

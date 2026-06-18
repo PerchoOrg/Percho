@@ -349,7 +349,7 @@ export function NewListingForm() {
       <button
         type="submit"
         disabled={!resolved || isPending}
-        className="rounded bg-ink px-4 py-2 font-medium text-ink disabled:opacity-50"
+        className="rounded bg-ink px-4 py-2 font-medium text-cream disabled:opacity-50"
       >
         {isPending ? 'Creating...' : 'Create draft listing'}
       </button>

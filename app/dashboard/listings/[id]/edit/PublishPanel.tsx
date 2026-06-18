@@ -169,7 +169,7 @@ export function PublishPanel({ listingId, status }: Props) {
                   type="button"
                   onClick={handlePublish}
                   disabled={isPending}
-                  className="rounded bg-ink px-4 py-2 text-sm font-semibold text-ink hover:bg-ink/90 disabled:opacity-50"
+                  className="rounded bg-ink px-4 py-2 text-sm font-semibold text-cream hover:bg-ink/90 disabled:opacity-50"
                 >
                   {isPending ? 'Publishing…' : 'Publish'}
                 </button>

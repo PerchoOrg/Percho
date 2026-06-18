@@ -248,7 +248,7 @@ function EmptyState({
         <div className="mt-6">
           <Link
             href={ctaHref}
-            className="rounded-full bg-ink px-5 py-2 font-medium text-ink text-sm transition hover:opacity-90"
+            className="rounded-full bg-ink px-5 py-2 font-medium text-cream text-sm transition hover:opacity-90"
           >
             {ctaLabel}
           </Link>

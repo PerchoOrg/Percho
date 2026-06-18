@@ -2,6 +2,67 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-06-18 22:30 UTC — phase38.1: fix systemic bg-ink + text-ink same-color regression (19 sites)
+
+**Objective**: Tianrou flagged the `+ New community` CTA on the workspace
+sub-nav rendering as a fully black pill with no visible label (mobile, in-app
+WebView). Audit showed this was not a one-off — it's a systemic class-string
+bug on dark CTAs across the app.
+
+**Root cause**: When the dark→light theme migration landed (see tailwind.config
+comment "kept so existing class strings resolve … without a 73-file sweep"),
+both `ink` (now `#313131`) and `text-ink` were collapsed onto the dark color.
+Any class string that pairs `bg-ink` with `text-ink` in the same element now
+renders as black-on-black. Background sweeping never caught these because
+class-string co-occurrence wasn't checked.
+
+phase38 commit `118f4ee` had partially attempted a fix on
+`app/dashboard/communities/page.tsx` but typed `text-paper` (token does not
+exist in tailwind.config — `cream` is the alias), so Tailwind's JIT silently
+dropped the class and the CTA reverted to default (= `text-ink`, invisible).
+
+**Audit (audit-first per luxury-redesign-playbook)**: 19 sites grouped by
+surface impact:
+- P0 public/conversion (4): LeadModal submit, SiteHeader desktop+mobile CTAs,
+  SavedClient empty-state CTA
+- P1 workspace primary CTAs (5): listings/communities sub-nav `+ New …`,
+  leads `Reply by email`, AvatarPicker upload, SocialCopyPanel generate
+- P2 form submits (5): NewCommunityForm, CommunityEditor save,
+  community detail action, NewListingForm, PublishPanel publish
+- P3 selected-state chips (2): CategoryPicker, SocialCopyPanel chip
+- P4 photo/video corner badges (3): CommunityCoverPanel, PhotoPanel, VideoPanel
+
+**Actions**:
+- Single replacement rule across all 19 sites: `text-ink` → `text-cream`
+  (`#fbf8f3` on `#313131` = 12.6:1 contrast, WCAG AAA).
+- Replaced the orphan `text-paper` in `app/dashboard/communities/page.tsx`
+  with the same `text-cream`.
+- `npx tsc --noEmit` → 0 errors.
+- `grep -rn 'bg-ink' | grep 'text-ink[^2-9]'` post-fix → 0 hits.
+- `grep -rn 'text-paper'` → 0 hits.
+
+**Decisions**: rejected the option of adding a new `inverse` semantic token to
+tailwind.config — would have rippled the change into the design-system layer
+and required updating DESIGN.md. Pure class-string sweep keeps the fix
+surgical and review-able as one diff. If we later want a semantic
+`text-on-ink` token we can introduce it then and migrate.
+
+**Self-check (per memory rule "改 IA/affordance 前 surface inventory")**: not
+an IA change — same destinations, same buttons; only the foreground color
+changes. No risk of re-introducing duplicate-CTA bug from 2026-06-18.
+
+**Learnings**:
+- Tailwind JIT silently drops unknown utility classes (`text-paper`). Future
+  token swaps should grep both for the new token AND for any orphan classes
+  that look token-shaped but aren't in `tailwind.config.ts`.
+- Theme migration that collapses two tokens to the same color must run a
+  co-occurrence audit (`bg-X + text-X` in same className), not just a
+  per-token rename. Add to `vicinity` skill?
+
+**Next steps**: visual spot-check on mobile after Vercel preview deploys; if
+P4 photo/video badges look weird in cream-on-ink (overlay readability on
+busy images), revisit those three only.
+
 ## 2026-06-18 21:00 UTC — phase37: collapse Nearby tab into Explore sub-nav, drop center FAB
 
 **Objective**: Tianrou: "nearby 这个 feature 占地下 bottom nav 一个位置有

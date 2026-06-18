@@ -390,7 +390,7 @@ function UploadCropPanel({
           type="button"
           onClick={() => void confirm()}
           disabled={busy}
-          className="inline-flex flex-1 items-center justify-center gap-2 rounded-md bg-ink px-3 py-2 font-medium text-ink text-sm transition hover:opacity-90 disabled:opacity-60"
+          className="inline-flex flex-1 items-center justify-center gap-2 rounded-md bg-ink px-3 py-2 font-medium text-cream text-sm transition hover:opacity-90 disabled:opacity-60"
         >
           {busy ? <Loader2 size={14} className="animate-spin" aria-hidden="true" /> : null}
           {busy ? 'Saving…' : 'Save avatar'}
