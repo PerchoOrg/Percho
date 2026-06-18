@@ -92,24 +92,25 @@ export function demoHeadshotFor(real: string | null): string | null {
  * the cfVideoId so the same listing always maps to the same demo clip
  * (no flicker between renders / autoplay restarts).
  */
+// All URLs below validated 200 via curl HEAD (Pexels CDN is picky about
+// the exact quality/fps variant — guessing breaks). If you swap a clip,
+// re-verify the variant suffix or playback will silently fall back.
 const DEMO_HOME_VIDEOS: readonly string[] = [
-  // Pexels luxury home tours, all free for commercial use.
-  'https://videos.pexels.com/video-files/7578548/7578548-uhd_2560_1440_30fps.mp4', // landing hero, modern villa drone
-  'https://videos.pexels.com/video-files/8134860/8134860-hd_1920_1080_25fps.mp4',  // contemporary interior pan
-  'https://videos.pexels.com/video-files/3773486/3773486-hd_1920_1080_24fps.mp4',  // pool / patio twilight
-  'https://videos.pexels.com/video-files/7578544/7578544-hd_1920_1080_30fps.mp4',  // architectural exterior
-  'https://videos.pexels.com/video-files/8581019/8581019-hd_1920_1080_25fps.mp4',  // bright living room
-  'https://videos.pexels.com/video-files/6580837/6580837-hd_1920_1080_30fps.mp4',  // kitchen marble
+  'https://videos.pexels.com/video-files/7578548/7578548-hd_1920_1080_30fps.mp4', // modern villa drone
+  'https://videos.pexels.com/video-files/7578544/7578544-hd_1920_1080_30fps.mp4', // architectural exterior
+  'https://videos.pexels.com/video-files/3773486/3773486-hd_1920_1080_30fps.mp4', // pool / patio twilight
+  'https://videos.pexels.com/video-files/2098989/2098989-hd_1920_1080_30fps.mp4', // bright modern interior
+  'https://videos.pexels.com/video-files/2249402/2249402-hd_1920_1080_24fps.mp4', // mansion exterior
+  'https://videos.pexels.com/video-files/1739010/1739010-hd_1920_1080_30fps.mp4', // contemporary living
 ];
 
 const DEMO_NEARBY_VIDEOS: readonly string[] = [
-  // Pexels neighborhood / lifestyle clips.
-  'https://videos.pexels.com/video-files/3214448/3214448-hd_1920_1080_25fps.mp4',  // cafe / street
-  'https://videos.pexels.com/video-files/4109365/4109365-hd_1920_1080_24fps.mp4',  // park walk
-  'https://videos.pexels.com/video-files/2022395/2022395-hd_1920_1080_30fps.mp4',  // restaurant interior
-  'https://videos.pexels.com/video-files/5147455/5147455-hd_1920_1080_25fps.mp4',  // suburban tree-lined street
-  'https://videos.pexels.com/video-files/4434150/4434150-hd_1920_1080_25fps.mp4',  // boutique shopping
-  'https://videos.pexels.com/video-files/3209828/3209828-hd_1920_1080_25fps.mp4',  // school / kids
+  'https://videos.pexels.com/video-files/3214448/3214448-hd_1920_1080_25fps.mp4', // cafe / street
+  'https://videos.pexels.com/video-files/2022395/2022395-hd_1920_1080_30fps.mp4', // restaurant interior
+  'https://videos.pexels.com/video-files/3209828/3209828-hd_1920_1080_25fps.mp4', // suburban street / school
+  'https://videos.pexels.com/video-files/853877/853877-hd_1920_1080_25fps.mp4',   // tree-lined park
+  'https://videos.pexels.com/video-files/6963744/6963744-hd_1920_1080_25fps.mp4', // boutique / shop interior
+  'https://videos.pexels.com/video-files/855564/855564-hd_1920_1080_24fps.mp4',   // park walk
 ];
 
 export type DemoVideoPool = 'home' | 'nearby';
