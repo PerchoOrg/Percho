@@ -5,57 +5,89 @@
 <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600&family=Geist+Mono:wght@400&display=swap" rel="stylesheet">
 <style>
   body{margin:0;background:#0a0a0a;color:#f5f5f3;font-family:'Geist',sans-serif;font-weight:300;padding:48px;-webkit-font-smoothing:antialiased}
-  .wrap{max-width:1100px;margin:0 auto}
-  h1{font-weight:300;font-size:56px;letter-spacing:-0.03em;margin:0 0 8px}
-  .lede{color:#888;max-width:64ch;line-height:1.5;font-size:16px;margin-bottom:48px}
+  .wrap{max-width:1180px;margin:0 auto}
+  h1{font-weight:300;font-size:48px;letter-spacing:-0.03em;margin:0 0 8px}
+  .lede{color:#888;max-width:64ch;line-height:1.55;font-size:15px;margin-bottom:48px}
   .lede b{color:#f5f5f3;font-weight:500}
-  .grid{display:grid;grid-template-columns:1fr 1fr;gap:24px}
-  @media(max-width:780px){.grid{grid-template-columns:1fr}}
-  a.card{display:block;background:#111;border:1px solid #222;padding:32px;text-decoration:none;color:inherit;transition:border-color .2s,transform .2s}
-  a.card:hover{border-color:#d8ff3d;transform:translateY(-2px)}
-  .num{font-family:'Geist Mono',monospace;font-size:11px;color:#d8ff3d;letter-spacing:0.18em;text-transform:uppercase}
-  .name{font-size:28px;font-weight:400;letter-spacing:-0.01em;margin:8px 0 4px}
-  .desc{color:#aaa;line-height:1.55;font-size:14px;margin-top:8px}
-  .ref{font-family:'Geist Mono',monospace;font-size:11px;color:#666;letter-spacing:0.08em;margin-top:14px;text-transform:uppercase}
-  .pros{margin-top:14px;font-size:13px;color:#cfcfcf;line-height:1.5}
-  .pros b{color:#d8ff3d;font-weight:500}
-  .foot{margin-top:48px;padding-top:24px;border-top:1px solid #222;color:#666;font-size:12px;font-family:'Geist Mono',monospace}
+  .style-block{background:#111;border:1px solid #222;padding:28px;margin-bottom:20px;display:grid;grid-template-columns:1fr 1.4fr;gap:32px;align-items:start}
+  @media(max-width:780px){.style-block{grid-template-columns:1fr}}
+  .style-block:hover{border-color:#444}
+  .left .num{font-family:'Geist Mono',monospace;font-size:11px;color:#d8ff3d;letter-spacing:0.18em;text-transform:uppercase}
+  .left h2{font-size:30px;font-weight:400;letter-spacing:-0.01em;margin:6px 0 8px}
+  .left .desc{color:#aaa;line-height:1.55;font-size:14px}
+  .left .pros{margin-top:14px;font-size:13px;color:#d8ff3d;line-height:1.5;font-weight:400}
+  .left .ref{font-family:'Geist Mono',monospace;font-size:10px;color:#666;letter-spacing:0.08em;margin-top:14px;text-transform:uppercase}
+  .links{display:flex;gap:8px;flex-wrap:wrap}
+  .links a{flex:1;min-width:140px;display:block;background:#1a1a1a;border:1px solid #2a2a2a;padding:18px;text-decoration:none;color:#f5f5f3;font-size:14px;transition:all .2s;font-weight:400}
+  .links a:hover{border-color:#d8ff3d;color:#d8ff3d}
+  .links a .lbl{font-family:'Geist Mono',monospace;font-size:9px;letter-spacing:0.18em;color:#666;text-transform:uppercase}
+  .links a .ttl{margin-top:6px;font-size:15px}
+  .foot{margin-top:48px;padding-top:24px;border-top:1px solid #222;color:#666;font-size:12px;font-family:'Geist Mono',monospace;line-height:1.7}
 </style></head><body>
 <div class="wrap">
-  <h1>Vicinity — Agent Profile / 4 Design Directions</h1>
-  <p class="lede">Four totally different visual languages for the agent profile (<b>/a/[slug]</b>). Click each to view the full comp. Same mock data — Vivian Zhang, 6 Eastside listings — so you can compare apples to apples. Pick one (or mix-and-match) and I'll run accessibility audit + surface inventory + production rollout.</p>
+  <h1>Vicinity — Site-wide Redesign / 4 Directions</h1>
+  <p class="lede">Each direction comes with <b>2 surfaces</b>: the <b>agent profile</b> (Pixieset-style portfolio) and the <b>browse swipe feed</b> (Tinder-for-houses, the core product). Swipe feed is the truth-test — that's where most styles break. Open both per row before judging. Pick one (or "01 layout + 03 colors" mix), I'll extend to the rest of the surfaces (lander, listing detail, dashboard).</p>
 
-  <div class="grid">
-    <a class="card" href="1-editorial-mono.html">
+  <div class="style-block">
+    <div class="left">
       <div class="num">[ 01 / Editorial Mono ]</div>
-      <div class="name">The Magazine</div>
-      <div class="desc">Cream paper, oversized Fraunces serif, asymmetric editorial grid. Numbered listings (No. 01–06) like a print portfolio. Closest to a New Yorker / Kinfolk / Apartamento spread.</div>
-      <div class="pros"><b>Best when:</b> Vivian wants to read as a craft / studio practitioner — sellers who care about how their home is told.</div>
+      <h2>The Magazine</h2>
+      <div class="desc">Cream paper, oversized Fraunces serif, asymmetric grid. Numbered listings (No. 01–06) like a print portfolio. Apartamento / Cereal / The Gentlewoman territory.</div>
+      <div class="pros">Best when: Vivian reads as a craft / studio practitioner. Calm, slow, considered.</div>
       <div class="ref">REF: Apartamento · Cereal · The Gentlewoman</div>
-    </a>
-
-    <a class="card" href="2-pixieset-gallery.html">
-      <div class="name" style="display:flex;justify-content:space-between"><span>The Photographer</span><span class="num">[ 02 / Pixieset ]</span></div>
-      <div class="desc">Italic Cormorant Garamond, soft cream/sand background, pure masonry of full-bleed photos with hover overlays. The literal Pixieset translation you asked for — feels like a wedding photographer's gallery.</div>
-      <div class="pros"><b>Best when:</b> the photos must do 90% of the talking and you want the lowest cognitive load on the buyer.</div>
-      <div class="ref">REF: Pixieset · Format · Squarespace Brine</div>
-    </a>
-
-    <a class="card" href="3-compass-luxe.html">
-      <div class="name" style="display:flex;justify-content:space-between"><span>The Brokerage</span><span class="num">[ 03 / Compass-Luxe ]</span></div>
-      <div class="desc">Deep navy background, Playfair Display + gold accents, structured 2-column listing cards with featured slab. Reads as institutional, ultra-credible — Compass / Sotheby's / The Agency LA territory.</div>
-      <div class="pros"><b>Best when:</b> you need to convince sellers Vivian plays at the $5M+ tier without saying it. Most "buyable" feeling for B-side acquisition.</div>
-      <div class="ref">REF: Compass · Sotheby's Realty · The Agency</div>
-    </a>
-
-    <a class="card" href="4-cinematic-runway.html">
-      <div class="name" style="display:flex;justify-content:space-between"><span>The Studio</span><span class="num">[ 04 / Cinematic Runway ]</span></div>
-      <div class="desc">Pure black, Geist + Geist Mono, full-bleed cinematic listing rows alternating sides. Lime accent ticker. Reads like a film studio reel or RunwayML / Linear product page — youngest, most "tech".</div>
-      <div class="pros"><b>Best when:</b> Vicinity wants to position as the new-school alternative to Zillow/Compass — tech-y, video-first, brand differentiator.</div>
-      <div class="ref">REF: RunwayML · Linear · Apple Vision Pro</div>
-    </a>
+    </div>
+    <div class="links">
+      <a href="1-editorial-mono.html"><div class="lbl">Surface · Profile</div><div class="ttl">/a/vivian-zhang →</div></a>
+      <a href="swipe-1-editorial-mono.html"><div class="lbl">Surface · Swipe Feed</div><div class="ttl">/browse →</div></a>
+    </div>
   </div>
 
-  <div class="foot">All four use the same mock data (_data.js). Demo-only stock photos from Unsplash. Production switches back to real agent footage with a feature flag.</div>
+  <div class="style-block">
+    <div class="left">
+      <div class="num">[ 02 / Pixieset ]</div>
+      <h2>The Photographer</h2>
+      <div class="desc">Italic Cormorant Garamond, cream on dark for swipe (gold accents). Pure photo masonry on the profile. Centered editorial caption on swipe — feels like print.</div>
+      <div class="pros">Best when: photos must do 90% of the work. Lowest cognitive load on the buyer.</div>
+      <div class="ref">REF: Pixieset · Format · Squarespace Brine</div>
+    </div>
+    <div class="links">
+      <a href="2-pixieset-gallery.html"><div class="lbl">Surface · Profile</div><div class="ttl">/a/vivian-zhang →</div></a>
+      <a href="swipe-2-pixieset-gallery.html"><div class="lbl">Surface · Swipe Feed</div><div class="ttl">/browse →</div></a>
+    </div>
+  </div>
+
+  <div class="style-block">
+    <div class="left">
+      <div class="num">[ 03 / Compass-Luxe ]</div>
+      <h2>The Brokerage</h2>
+      <div class="desc">Deep navy + gold + Playfair Display. Structured 2-column listing cards. Most institutional, most credible — Sotheby's / Compass / The Agency LA tier.</div>
+      <div class="pros">Best when: convincing sellers Vivian plays at $5M+ tier. Most "buyable" feel.</div>
+      <div class="ref">REF: Compass · Sotheby's Realty · The Agency</div>
+    </div>
+    <div class="links">
+      <a href="3-compass-luxe.html"><div class="lbl">Surface · Profile</div><div class="ttl">/a/vivian-zhang →</div></a>
+      <a href="swipe-3-compass-luxe.html"><div class="lbl">Surface · Swipe Feed</div><div class="ttl">/browse →</div></a>
+    </div>
+  </div>
+
+  <div class="style-block">
+    <div class="left">
+      <div class="num">[ 04 / Cinematic Runway ]</div>
+      <h2>The Studio</h2>
+      <div class="desc">Pure black + Geist + lime accent. Cinema-style listing rows on profile. REC ● LIVE timecodes on swipe — like a film studio reel. Most "tech".</div>
+      <div class="pros">Best when: Vicinity = the new-school alternative to Zillow. Tech-y, video-first, brand-led.</div>
+      <div class="ref">REF: RunwayML · Linear · Apple Vision Pro</div>
+    </div>
+    <div class="links">
+      <a href="4-cinematic-runway.html"><div class="lbl">Surface · Profile</div><div class="ttl">/a/vivian-zhang →</div></a>
+      <a href="swipe-4-cinematic-runway.html"><div class="lbl">Surface · Swipe Feed</div><div class="ttl">/browse →</div></a>
+    </div>
+  </div>
+
+  <div class="foot">
+    All comps share the same mock data. Demo-only stock photos from Unsplash with CSS Ken Burns simulating video.<br/>
+    Production: real CF Stream videos via &lt;video&gt; tag, gated by FF_DEMO_STOCK_FOOTAGE flag.<br/>
+    Pick any combination — I'll lock the design system and roll out across all surfaces.
+  </div>
 </div>
 </body></html>

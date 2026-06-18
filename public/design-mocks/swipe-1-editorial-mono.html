@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+<title>Browse — Vicinity</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;1,9..144,300&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{--bg:#0a0a08;--ink:#fafaf7;--muted:#a8a59c;--line:rgba(255,255,255,0.16);--accent:#fafaf7}
+  *{box-sizing:border-box} html,body{margin:0;background:var(--bg);color:var(--ink);font-family:'Inter',sans-serif;font-weight:400;-webkit-font-smoothing:antialiased;overscroll-behavior:none}
+  .serif{font-family:'Fraunces',serif;font-weight:300;letter-spacing:-0.02em}
+  a{color:inherit;text-decoration:none}
+
+  .deck{height:100dvh;width:100vw;position:relative;overflow:hidden;display:flex;justify-content:center;background:#000}
+  .stage{position:relative;width:min(560px,100%);height:100%;background:#000;overflow:hidden}
+
+  .card{position:absolute;inset:0;transition:transform .5s ease,opacity .5s ease}
+  .card .img{position:absolute;inset:0;background-size:cover;background-position:center;animation:kb 14s ease-in-out infinite alternate}
+  @keyframes kb{from{transform:scale(1.05) translate(0,0)}to{transform:scale(1.18) translate(2%,-3%)}}
+  .card::before{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,0.55) 0%,rgba(0,0,0,0) 25%,rgba(0,0,0,0) 55%,rgba(0,0,0,0.85) 100%);z-index:1}
+
+  /* TOP BAR — minimal editorial */
+  .top{position:absolute;top:0;left:0;right:0;z-index:10;padding:env(safe-area-inset-top,18px) 22px 14px;display:flex;align-items:center;justify-content:space-between}
+  .top .brand{font-family:'Fraunces',serif;font-size:20px;letter-spacing:-0.01em}
+  .top .filters{display:flex;gap:8px;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:rgba(255,255,255,0.85)}
+  .top .filters a{padding:6px 12px;border:1px solid rgba(255,255,255,0.3);border-radius:999px}
+  .top .filters a.on{background:#fff;color:#000;border-color:#fff}
+  .top .menu{font-size:13px;color:rgba(255,255,255,0.85)}
+
+  /* AGENT TAG TOP */
+  .agent-tag{position:absolute;top:74px;left:22px;z-index:9;display:flex;align-items:center;gap:10px;background:rgba(0,0,0,0.4);backdrop-filter:blur(12px) saturate(140%);border:1px solid rgba(255,255,255,0.18);border-radius:999px;padding:5px 14px 5px 5px}
+  .agent-tag img{width:28px;height:28px;border-radius:50%;object-fit:cover}
+  .agent-tag .label{font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:rgba(255,255,255,0.7);line-height:1}
+  .agent-tag .name{font-size:13px;font-weight:500;line-height:1.2;margin-top:2px}
+
+  /* BOTTOM CONTENT */
+  .meta{position:absolute;left:24px;right:88px;bottom:128px;z-index:5}
+  .meta .badge{display:inline-block;font-size:10px;letter-spacing:0.22em;text-transform:uppercase;background:#fff;color:#000;padding:5px 10px;font-weight:500;margin-bottom:14px}
+  .meta .price{font-family:'Fraunces',serif;font-weight:300;font-size:54px;line-height:1;letter-spacing:-0.025em;color:#fff}
+  .meta .addr{font-family:'Fraunces',serif;font-style:italic;font-weight:300;font-size:22px;color:rgba(255,255,255,0.92);margin-top:10px;letter-spacing:-0.005em}
+  .meta .specs{font-size:13px;color:rgba(255,255,255,0.78);margin-top:10px;letter-spacing:0.04em}
+  .meta .tagchips{display:flex;gap:6px;margin-top:14px;flex-wrap:wrap}
+  .meta .tagchips span{font-size:11px;letter-spacing:0.06em;color:rgba(255,255,255,0.85);border:1px solid rgba(255,255,255,0.28);padding:4px 10px;border-radius:999px;backdrop-filter:blur(6px)}
+
+  /* RIGHT RAIL — context buttons (school / commute / parks) */
+  .rail{position:absolute;right:18px;bottom:128px;z-index:6;display:flex;flex-direction:column;gap:14px;align-items:center}
+  .rail .btn{width:54px;height:54px;border-radius:50%;background:rgba(0,0,0,0.45);backdrop-filter:blur(14px) saturate(140%);border:1px solid rgba(255,255,255,0.22);display:flex;align-items:center;justify-content:center;color:#fff;cursor:pointer}
+  .rail .btn:hover{background:rgba(255,255,255,0.18)}
+  .rail .l{font-size:9px;letter-spacing:0.16em;text-transform:uppercase;color:rgba(255,255,255,0.78);margin-top:2px;text-align:center}
+
+  /* BOTTOM ACTION BAR */
+  .actions{position:absolute;left:0;right:0;bottom:0;z-index:7;padding:14px 22px calc(env(safe-area-inset-bottom,18px) + 14px);display:flex;justify-content:space-between;align-items:center;gap:14px;background:linear-gradient(180deg,rgba(0,0,0,0) 0%,rgba(0,0,0,0.45) 50%,rgba(0,0,0,0.7) 100%)}
+  .actions .pass,.actions .save{width:60px;height:60px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;cursor:pointer}
+  .actions .pass{background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.22);color:#fff}
+  .actions .like{flex:1;height:60px;border-radius:999px;background:#fff;color:#000;display:flex;align-items:center;justify-content:center;gap:10px;font-family:'Fraunces',serif;font-size:18px;font-weight:400;letter-spacing:-0.01em;cursor:pointer}
+  .actions .save{background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.22);color:#fff}
+
+  /* tab nav */
+  .tabbar{position:absolute;bottom:0;left:0;right:0;z-index:8;display:none}
+
+  /* progress dots */
+  .progress{position:absolute;top:env(safe-area-inset-top,18px);left:50%;transform:translateX(-50%);z-index:11;display:flex;gap:4px;padding-top:6px}
+  .progress span{width:18px;height:2px;background:rgba(255,255,255,0.32);border-radius:2px}
+  .progress span.on{background:#fff}
+
+  /* swipe stack — slight cards behind */
+  .behind1{transform:scale(0.96) translateY(8px);opacity:.5;filter:blur(2px)}
+  .behind2{transform:scale(0.92) translateY(16px);opacity:.25;filter:blur(4px)}
+
+  /* Hint */
+  .hint{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:20;font-family:'Fraunces',serif;font-style:italic;font-size:14px;color:rgba(255,255,255,0.7);letter-spacing:0.02em;pointer-events:none;animation:fade 4s ease-out forwards}
+  @keyframes fade{0%{opacity:0}20%{opacity:1}80%{opacity:1}100%{opacity:0}}
+
+  /* sidebar (desktop only) showcasing this is the editorial "magazine" reading */
+  @media(min-width:900px){
+    .stage{box-shadow:0 30px 80px rgba(0,0,0,0.5);border-radius:24px;margin:24px;height:calc(100% - 48px)}
+    .deck{align-items:center;background:radial-gradient(circle at center,#1a1a16 0%,#0a0a08 70%)}
+    .magazine{position:absolute;left:6vw;top:50%;transform:translateY(-50%);max-width:280px;color:rgba(255,255,255,0.7)}
+    .magazine .label{font-size:10px;letter-spacing:0.32em;text-transform:uppercase;color:rgba(255,255,255,0.5);margin-bottom:14px}
+    .magazine h2{font-family:'Fraunces',serif;font-weight:300;font-size:38px;line-height:1.05;letter-spacing:-0.02em;margin:0 0 14px;color:#fff}
+    .magazine .it{font-style:italic}
+    .magazine p{font-size:13px;line-height:1.6;color:rgba(255,255,255,0.65)}
+    .magazine .num{font-family:'Fraunces',serif;font-size:11px;letter-spacing:0.32em;text-transform:uppercase;margin-top:24px;color:rgba(255,255,255,0.5)}
+  }
+  @media(max-width:899px){.magazine{display:none}}
+</style></head><body>
+
+<div class="deck">
+
+  <aside class="magazine">
+    <div class="label">— The Daily Edit · 2026 —</div>
+    <h2 class="serif">Six homes, <span class="it">curated</span> for your morning.</h2>
+    <p>Each card is a real listing from a real Eastside agent. Tap heart to save. Swipe to dismiss. Pull right for the walkthrough.</p>
+    <div class="num">No. 06 / 174</div>
+  </aside>
+
+  <main class="stage" id="stage">
+    <div class="progress" id="progress"></div>
+
+    <div class="top">
+      <div class="brand">Vicinity</div>
+      <div class="filters"><a class="on">For You</a><a>$3M+</a><a>Eastside</a></div>
+      <div class="menu">⌕</div>
+    </div>
+
+    <div class="hint">— swipe up for next —</div>
+
+    <!-- card stack will be injected -->
+  </main>
+
+</div>
+
+<script src="_data.js"></script>
+<script src="_swipe_data.js"></script>
+<script>
+  const stage = document.getElementById('stage');
+  const prog = document.getElementById('progress');
+  let active = 0;
+  const N = SWIPE_FEED.length;
+
+  // build progress dots
+  prog.innerHTML = SWIPE_FEED.map((_,i)=>`<span class="${i===0?'on':''}"></span>`).join('');
+
+  function render(){
+    // remove old cards
+    stage.querySelectorAll('.card').forEach(n=>n.remove());
+    // 3 cards in stack: behind2, behind1, top
+    for(let off=2; off>=0; off--){
+      const idx = (active + off) % N;
+      const L = SWIPE_FEED[idx];
+      const cls = off===0 ? '' : (off===1?'behind1':'behind2');
+      const card = document.createElement('div');
+      card.className = 'card '+cls;
+      card.innerHTML = `
+        <div class="img" style="background-image:url(${L.angles[0].replace('w=1600','w=1800')})"></div>
+        ${off===0 ? `
+        <div class="agent-tag">
+          <img src="${L.agent.avatar}" alt="" />
+          <div>
+            <div class="label">Listed by</div>
+            <div class="name">${L.agent.name}</div>
+          </div>
+        </div>
+        <div class="meta">
+          ${L.status==='Just Listed'?`<span class="badge">Just Listed</span><br/>`:''}
+          <div class="price">${fmtPrice(L.price)}</div>
+          <div class="addr">${L.address}, ${L.neighborhood}</div>
+          <div class="specs">${L.beds} BD · ${L.baths} BA · ${L.sqft.toLocaleString()} sqft · ${L.style}</div>
+          <div class="tagchips">
+            <span>${L.schools}</span><span>${L.commute}</span><span>${L.community}</span>
+          </div>
+        </div>
+        <div class="rail">
+          <div><div class="btn" title="Schools">🏫</div><div class="l">School</div></div>
+          <div><div class="btn" title="Commute">⏱</div><div class="l">Commute</div></div>
+          <div><div class="btn" title="Parks">🌳</div><div class="l">Parks</div></div>
+          <div><div class="btn" title="Map">📍</div><div class="l">Map</div></div>
+        </div>
+        <div class="actions">
+          <div class="pass" title="Pass">✕</div>
+          <div class="like" title="Save">♥ &nbsp;Save to shortlist</div>
+          <div class="save" title="Tour">▶</div>
+        </div>` : ''}
+      `;
+      stage.appendChild(card);
+    }
+    prog.innerHTML = SWIPE_FEED.map((_,i)=>`<span class="${i===active?'on':''}"></span>`).join('');
+  }
+  render();
+  // advance on click anywhere on the top card
+  stage.addEventListener('click', (e)=>{
+    if(e.target.closest('.actions') || e.target.closest('.rail') || e.target.closest('.top')) return;
+    active = (active+1)%N; render();
+  });
+  // wheel/swipe up advances
+  let acc=0;
+  stage.addEventListener('wheel', e=>{ acc+=e.deltaY; if(acc>120){active=(active+1)%N;render();acc=0} else if(acc<-120){active=(active-1+N)%N;render();acc=0} });
+</script>
+</body></html>
