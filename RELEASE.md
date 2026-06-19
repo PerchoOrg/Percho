@@ -3,6 +3,25 @@
 Newest at the top. Each release covers a meaningful product change visible to users.
 Format matches the standard release template (Features / Improvements / Bug Fixes / Technical / Known Issues / Metrics).
 
+## v0.39.0 — 2026-06-19
+
+### 🚀 Features
+
+- **Download poster images** — every showcase style now has a matching downloadable poster (vertical, designed for phone screens). Open the listing edit page → "Share as poster" → click "Download poster" on the style you want. Save it and post directly to WeChat moments, Instagram, or any image-friendly channel.
+
+### ✨ Improvements
+
+- Showcase pages now show more about each home: a short description, community details with nearby landmarks (school / grocery / transit), and an agent contact card.
+- Editorial and Luxury showcase layouts now use a two-column reading flow on tablet and desktop. Phones still see a single clean column.
+
+### 🐛 Bug Fixes
+
+- Fixed a missing photo slot in the Editorial showcase gallery.
+
+### 🔧 Technical
+
+- Retired the Minimal Poster style; its "share as image" use case is better served by the new poster downloads. Editorial / Cinematic / Luxury Brochure remain.
+
 ## v0.38.0 — 2026-06-19
 
 ### 🚀 Features

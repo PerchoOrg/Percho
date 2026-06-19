@@ -2,6 +2,16 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-06-19 — phase40 showcase iteration: deeper info, flex layout, per-style downloadable posters
+
+**Objective**: Address user feedback after phase39 — info density too low, video forced full-width single column, broken gallery slot, WeChat OG card limitation. Differentiate two image products: OG image (chat link preview, 1 horizontal 1200×630, site-wide) vs downloadable poster (manual share image, 1 vertical 1080×1920 per style).
+**Actions**: Removed Style 3 Minimal Poster (use case absorbed by poster downloads). Fixed Style 1 gallery padding via demo-media fallback (replaced 404'd Unsplash ID `1605114704324-4f4d2cf41b32` with `1600210492486-724fe5c67fb0`; `demoPhotosFor` now guarantees ≥4 URLs). Added About / Community (with 3 fake nearby landmarks) / Agent contact blocks to Style 1 + Style 4. Added tablet+ two-column layouts (mobile stays single column). Added per-style poster routes `poster-{1,2,4}.png/route.tsx` (1080×1920 vertical, `next/og` ImageResponse edge runtime). Share modal grew per-card "Download poster" anchor with `download` attr.
+**Decisions**: Posters static (no video) — agent shares image + URL pair, web page handles video playback when buyer clicks through. Three styles instead of four (Style 3 minimal collapsed into poster download use case). Per-style posters (not shared) so poster-N matches the visual identity of Style-N agent picked.
+**Issues**: (a) Subagent first run created `export const contentType = 'image/png'` in poster routes — Next 14 rejects this in App Router type check ("contentType is not a valid Route export field"). The opengraph-image.tsx convention allows it but generic `route.tsx` does not. Stripped from all 3 poster routes. (b) Subagent ran `biome --write` which formatted 50 unrelated files — discarded with `git checkout --` per CLAUDE.md §0.3 surgical changes rule before committing.
+**Resolution**: Build green locally after stripping `contentType`. 7 phase40 commits, FF-merged to main.
+**Learnings**: For App Router image routes, only the file-name conventions (`opengraph-image`, `twitter-image`, `apple-icon`, `icon`) accept the `contentType` export. Custom `*.png/route.tsx` routes return their content-type via the `Response` headers (or in this case `ImageResponse` defaults to `image/png`). Never run `biome --write` repo-wide in a feature branch; scope to changed files (`biome check <file1> <file2> --write`).
+**Next steps**: Validate with Vivian which downloadable poster style she'd actually post to 朋友圈. Track download click rates if we can wire analytics. v2 candidate: per-style differentiated OG images if user keeps confusing them with download posters.
+
 ## 2026-06-19 — phase39 showcase poster pages
 
 **Objective**: Mobile-first showcase landing pages for agents to share listings — 4 distinct visual styles, OG image generator, dashboard share modal.
