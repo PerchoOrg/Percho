@@ -144,7 +144,7 @@ describe('POST /api/video/create-upload', () => {
       rowId: 'row-123',
     });
     expect(mockedCreateDirectUpload).toHaveBeenCalledWith(
-      expect.objectContaining({ uploadLength: validBody.upload_length, maxDurationSeconds: 300 }),
+      expect.objectContaining({ uploadLength: validBody.upload_length, maxDurationSeconds: 600 }),
     );
   });
 

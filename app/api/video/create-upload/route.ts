@@ -74,14 +74,16 @@ async function handleListing(
     return NextResponse.json({ error: 'listing_not_found' }, { status: 404 });
   }
 
-  // Reserve a Cloudflare Stream slot. maxDurationSeconds=300 enforces the
-  // 5-minute cap server-side (task 2.5). 2 GB byte cap is enforced by zod.
+  // Reserve a Cloudflare Stream slot. maxDurationSeconds=600 enforces the
+  // 10-minute cap server-side (raised from 5min on 2026-06-19 — agent walkthrough
+  // videos sourced from TikTok/Douyin run 5–10min and were getting rejected by
+  // Stream's transcoder). 2 GB byte cap is enforced by zod.
   let uploadUrl: string;
   let videoId: string;
   try {
     const result = await createDirectUpload({
       uploadLength: input.upload_length,
-      maxDurationSeconds: 300,
+      maxDurationSeconds: 600,
       meta: input.title ? { name: input.title } : undefined,
     });
     uploadUrl = result.uploadUrl;
@@ -192,7 +194,7 @@ async function handleCommunity(
   try {
     const result = await createDirectUpload({
       uploadLength: input.upload_length,
-      maxDurationSeconds: 300,
+      maxDurationSeconds: 600,
       meta: input.title ? { name: input.title } : undefined,
     });
     uploadUrl = result.uploadUrl;

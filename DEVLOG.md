@@ -2,6 +2,67 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-06-19 — video duration cap → 10min + delete UI for listing_videos
+
+**Trigger.** Agent (Tianrou) tried to upload two listing videos in the dashboard
+edit page; both came back `status='error'`. DB lookup confirmed both rows had
+`cf_video_id` populated (tus upload completed) but `duration_sec=null` (CF
+Stream transcode failed before probing). One title was `v0300fg10000d3kbtq...`
+(Douyin/TikTok original asset ID format) — the source is short-form vertical
+video, runtime ~7min.
+
+**Why 5min was wrong.** The 5min `maxDurationSeconds=300` cap was added in
+phase 2.5 as a CF Stream cost guard with the framing "swipe feed = short
+clips". That framing is stale: TikTok and Douyin's primary feeds now host
+3–10min videos, so capping below 7min is rejecting exactly the asset class
+agents are pulling from. The cost arithmetic is also fine at 10min: $5/1000
+storage-min × 10min × 100 listings ≈ $5/mo, well within V1 budget.
+
+**Cap raised: 5min → 10min (300s → 600s).** Touched 4 sites + 1 test:
+
+- `lib/cloudflare/stream.ts` — default `maxDurationSeconds: 600`, jsdoc.
+- `app/api/video/create-upload/route.ts` — listing + community paths both
+  now pass `maxDurationSeconds: 600`. Comment updated with the rationale
+  so future-me doesn't lower it again on cargo-cult cost-cutting.
+- `app/api/webhooks/cloudflare-stream/route.ts` — defensive cap check
+  raised from `> 305s → > 605s` (10min + 5s slack).
+- `docs/ARCHITECTURE.md` — Stream cost-guard section.
+- `__tests__/create-upload.test.ts` — assertion `maxDurationSeconds: 300 → 600`.
+
+**UX bug: error rows had no escape hatch.** When CF transcoding failed, the
+listing edit page showed `Upload failed` in red but offered no Delete button
+and no "retry / replace this slot" affordance. The user could see the failure
+but couldn't act on it — they were stuck with permanent error rows in their
+listing. This is the actual blocker (worse than the cap), and matches the
+known V1 gap noted in `app/dashboard/communities/actions.ts:284` ("no delete
+UI yet for listing_videos").
+
+**Fix.** New server action `deleteListingVideo(listingId, videoId)` in
+`app/dashboard/listings/[id]/edit/actions.ts`:
+- RLS-fenced ownership check via row read.
+- If the deleted video was the listing's cover (cover_url matches its CF
+  thumbnail URL), clear cover_url too — otherwise the listing keeps a
+  dangling cover URL pointing at a deleted asset.
+- Same V1 trade-off as `deleteCommunityVideo`: only deletes the DB row,
+  leaves the CF Stream asset orphaned. Periodic reconcile job sweeps
+  post-launch (already a known V1 cost, accepted).
+
+`VideoPanel.tsx` gets a `Delete` button on every row (any status), with
+`window.confirm` guard. Native confirm() is V1-acceptable; styled modal
+deferred until UX pushback. Optimistic delete with rollback on failure.
+
+**TypeScript clean, `npx next build` green.** One pre-existing test failure
+in `create-upload.test.ts` (`scope: 'community'` returns `invalid_kind`
+instead of `scope_not_supported`) is unrelated to this change — that test
+was written before community scope shipped in phase 4.5 and is already wrong
+in main.
+
+**What this does NOT fix.** If CF transcoding fails for codec/container
+reasons (Douyin's non-standard H.264 muxing, e.g.), 10min cap won't help.
+Need to see CF dashboard `errorReasonCode` on the next failure to
+disambiguate. If we see codec failures, next step is a client-side ffmpeg
+re-mux pre-flight or a "convert your video to standard MP4" docs link.
+
 ## 2026-06-18 23:10 UTC — phase38.2: fix theme-migration overlay regression (image / gradient / chip surfaces, 21 sites)
 
 **Objective**: Phase38.1 closed `bg-ink + text-ink` *literal same-className* dark-on-dark, but Tianrou immediately surfaced a second wave: (1) Nearby card photos still ship the wrong cover (no `demoCoverFor()` wrapper); (2) text on top of video stills / cover photos is unreadable (dark text on dark gradient mask); (3) community hero + grid card titles likewise vanish into the `from-ink via-ink/60` mask.

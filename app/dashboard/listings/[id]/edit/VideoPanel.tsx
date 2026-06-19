@@ -17,7 +17,7 @@
  * alongside this one on the same page).
  */
 
-import { reorderListingVideos, setListingCover } from '@/app/dashboard/listings/[id]/edit/actions';
+import { deleteListingVideo, reorderListingVideos, setListingCover } from '@/app/dashboard/listings/[id]/edit/actions';
 import { type UploadedVideo, VideoUploader } from '@/components/dashboard/VideoUploader';
 import { thumbnailUrl } from '@/lib/cloudflare/stream';
 import {
@@ -60,6 +60,8 @@ export function VideoPanel({ listingId, initialVideos, initialCoverVideoId }: Pr
   const [reorderError, setReorderError] = useState<string | null>(null);
   const [coverError, setCoverError] = useState<string | null>(null);
   const [coverPending, setCoverPending] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [, startTransition] = useTransition();
   const videosRef = useRef(videos);
   videosRef.current = videos;
@@ -151,6 +153,31 @@ export function VideoPanel({ listingId, initialVideos, initialCoverVideoId }: Pr
     [coverVideoId, listingId],
   );
 
+  const handleDelete = useCallback(
+    (videoId: string, title: string | null) => {
+      const label = title?.trim() || 'this video';
+      // Native confirm — V1 ok, no design system modal yet. Phase-N: lift to
+      // a styled dialog if confirm() UX gets pushback.
+      if (!window.confirm(`Delete ${label}? This can't be undone.`)) return;
+      const previous = videos;
+      setVideos((prev) => prev.filter((v) => v.id !== videoId));
+      setDeleteError(null);
+      setDeletingId(videoId);
+      startTransition(async () => {
+        const result = await deleteListingVideo(listingId, videoId);
+        setDeletingId(null);
+        if (!result.ok) {
+          setVideos(previous);
+          setDeleteError(result.error);
+        } else if (coverVideoId === videoId) {
+          // Server cleared cover_url; reflect locally.
+          setCoverVideoId(null);
+        }
+      });
+    },
+    [videos, coverVideoId, listingId],
+  );
+
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
@@ -194,6 +221,12 @@ export function VideoPanel({ listingId, initialVideos, initialCoverVideoId }: Pr
         </div>
       ) : null}
 
+      {deleteError ? (
+        <div className="rounded border border-red-400/40 bg-red-950/30 px-3 py-2 text-sm text-red-300">
+          Delete failed: {deleteError}
+        </div>
+      ) : null}
+
       {videos.length === 0 ? (
         <p className="text-sm text-muted">No videos yet. Use the uploader above.</p>
       ) : (
@@ -207,7 +240,9 @@ export function VideoPanel({ listingId, initialVideos, initialCoverVideoId }: Pr
                   index={i}
                   isCover={coverVideoId === v.id}
                   coverPending={coverPending}
+                  deletePending={deletingId === v.id}
                   onSetCover={handleSetCover}
+                  onDelete={handleDelete}
                 />
               ))}
             </ul>
@@ -223,13 +258,17 @@ function SortableVideoItem({
   index,
   isCover,
   coverPending,
+  deletePending,
   onSetCover,
+  onDelete,
 }: {
   video: ListingVideoRow;
   index: number;
   isCover: boolean;
   coverPending: boolean;
+  deletePending: boolean;
   onSetCover: (videoId: string | null) => void;
+  onDelete: (videoId: string, title: string | null) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: video.id,
@@ -324,6 +363,15 @@ function SortableVideoItem({
             Set as cover
           </button>
         )}
+        <button
+          type="button"
+          onClick={() => onDelete(video.id, video.title)}
+          disabled={deletePending}
+          title="Remove this video"
+          className="whitespace-nowrap rounded border border-line px-2 py-1 text-xs text-red-400 hover:border-red-400/60 hover:text-red-300 disabled:opacity-30"
+        >
+          {deletePending ? 'Deleting…' : 'Delete'}
+        </button>
       </div>
     </li>
   );

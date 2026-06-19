@@ -149,7 +149,7 @@ Dashboard sees status flip via Supabase Realtime
 
 Cost guards:
 - 2 GB upload size cap (server-enforced via TUS Upload-Length).
-- 5 min duration cap (passed to Stream as `maxDurationSeconds`).
+- 10 min duration cap (passed to Stream as `maxDurationSeconds`).
 - Stream subscription is $5/mo + per-minute storage/delivery; monitor in
   Cloudflare dashboard.
 

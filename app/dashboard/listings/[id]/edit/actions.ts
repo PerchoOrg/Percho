@@ -317,3 +317,89 @@ export async function reorderListingVideos(
   revalidatePath(`/dashboard/listings/${parsed.data.listingId}/edit`);
   return { ok: true };
 }
+
+// ─── deleteListingVideo ──────────────────────────────────────────
+
+const DeleteVideoInput = z.object({
+  listingId: z.string().uuid(),
+  videoId: z.string().uuid(),
+});
+
+export type DeleteListingVideoResult = { ok: true } | { ok: false; error: string };
+
+/**
+ * Delete a listing_videos row.
+ *
+ * Authorization: RLS policy "agent manages own listing videos" gates the
+ * delete — non-owners affect 0 rows. We do an explicit existence check
+ * first so we can return a clean error instead of a silent 0-row delete.
+ *
+ * Side effects:
+ *  - If this video was the listing's cover (`listings.cover_url` matches
+ *    its CF Stream thumbnail URL), clear cover_url too. Otherwise the
+ *    listing keeps a dangling cover URL pointing at a deleted asset.
+ *  - The Cloudflare Stream asset itself is NOT deleted server-side.
+ *    Same V1 trade-off as deleteCommunityVideo (see communities/actions.ts:284):
+ *    accepted orphan, periodic reconcile job will sweep post-launch.
+ */
+export async function deleteListingVideo(
+  listingId: string,
+  videoId: string,
+): Promise<DeleteListingVideoResult> {
+  const parsed = DeleteVideoInput.safeParse({ listingId, videoId });
+  if (!parsed.success) return { ok: false, error: 'invalid_input' };
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: 'unauthorized' };
+
+  // Look up the row first (RLS-fenced) so we can (a) confirm the caller
+  // owns it and (b) read cf_video_id for the cover-url cleanup below.
+  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
+  const { data: video } = (await (supabase as any)
+    .from('listing_videos')
+    .select('id, cf_video_id, listing_id')
+    .eq('id', parsed.data.videoId)
+    .eq('listing_id', parsed.data.listingId)
+    .maybeSingle()) as { data: { id: string; cf_video_id: string; listing_id: string } | null };
+
+  if (!video) return { ok: false, error: 'not_found_or_forbidden' };
+
+  // If this video is currently the cover, clear it. We compare cover_url
+  // against the thumbnail URL we'd have written when set. Strict equality
+  // on the full thumbnail URL is fine because setListingCover writes
+  // exactly that string.
+  const { thumbnailUrl } = await import('@/lib/cloudflare/stream');
+  const thumb = thumbnailUrl(video.cf_video_id);
+  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
+  const { data: listing } = (await (supabase as any)
+    .from('listings')
+    .select('cover_url')
+    .eq('id', parsed.data.listingId)
+    .maybeSingle()) as { data: { cover_url: string | null } | null };
+
+  if (listing && listing.cover_url === thumb) {
+    // biome-ignore lint/suspicious/noExplicitAny: stub generated types
+    await (supabase as any)
+      .from('listings')
+      .update({ cover_url: null })
+      .eq('id', parsed.data.listingId);
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
+  const { error } = await (supabase as any)
+    .from('listing_videos')
+    .delete()
+    .eq('id', parsed.data.videoId)
+    .eq('listing_id', parsed.data.listingId);
+
+  if (error) {
+    console.error('[deleteListingVideo] delete failed', error);
+    return { ok: false, error: 'delete_failed' };
+  }
+
+  revalidatePath(`/dashboard/listings/${parsed.data.listingId}/edit`);
+  return { ok: true };
+}

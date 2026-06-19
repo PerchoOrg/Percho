@@ -26,7 +26,7 @@ function accountId(): string {
  * server never sees the video bytes.
  *
  * @param uploadLength - file size in bytes (TUS Upload-Length header)
- * @param maxDurationSeconds - cap on video duration (cost guard); default 300s
+ * @param maxDurationSeconds - cap on video duration (cost guard); default 600s (10min)
  */
 export async function createDirectUpload(opts: {
   uploadLength: number;
@@ -34,7 +34,7 @@ export async function createDirectUpload(opts: {
   meta?: Record<string, string>;
 }): Promise<{ uploadUrl: string; videoId: string }> {
   const meta = {
-    maxDurationSeconds: String(opts.maxDurationSeconds ?? 300),
+    maxDurationSeconds: String(opts.maxDurationSeconds ?? 600),
     ...opts.meta,
   };
   const uploadMetadata = Object.entries(meta)
