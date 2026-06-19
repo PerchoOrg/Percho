@@ -3,6 +3,12 @@
 Newest at the top. Each release covers a meaningful product change visible to users.
 Format matches the standard release template (Features / Improvements / Bug Fixes / Technical / Known Issues / Metrics).
 
+## v0.41.0 — 2026-06-20
+
+### 🔧 Technical
+
+- Removed the "Share as poster" feature from the listing editor. After several rounds of design iteration the format wasn't earning its keep, so we pulled it to focus on the actual sharing path (Public URL ↗). The public listing page itself is unchanged.
+
 ## v0.40.0 — 2026-06-20
 
 ### ✨ Improvements

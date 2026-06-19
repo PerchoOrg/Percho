@@ -1,11 +1,7 @@
 import type { Config } from 'tailwindcss';
 
 const config: Config = {
-  content: [
-    './app/**/*.{ts,tsx}',
-    './components/**/*.{ts,tsx}',
-    './lib/**/*.{ts,tsx}',
-  ],
+  content: ['./app/**/*.{ts,tsx}', './components/**/*.{ts,tsx}', './lib/**/*.{ts,tsx}'],
   theme: {
     extend: {
       colors: {
@@ -20,19 +16,18 @@ const config: Config = {
 
         // Legacy aliases — kept so existing class strings (text-cream, bg-ink, gold, etc.)
         // resolve onto the light palette without a 73-file sweep.
-        cream: '#fbf8f3',  // was warm cream on dark; now paper on light
+        cream: '#fbf8f3', // was warm cream on dark; now paper on light
         ink3: '#5a5651',
         accent: {
-          DEFAULT: '#313131',  // was gold; now ink (kills chromatic accent)
+          DEFAULT: '#313131', // was gold; now ink (kills chromatic accent)
           dark: '#1f1f1f',
         },
-        gold: '#313131',     // any text-gold / bg-gold now reads as ink
-        bronze: '#5a5651',   // any text-bronze now reads as ink2
+        gold: '#313131', // any text-gold / bg-gold now reads as ink
+        bronze: '#5a5651', // any text-bronze now reads as ink2
 
         // Dossier accent — Style 1 only. Burgundy, NOT gold/chromatic-everywhere.
         // Used on price, numbered badges (occasional), the "this home" $/sqft chip.
         // Do not bleed into other surfaces.
-        dossier: '#8a2a23',
       },
       fontFamily: {
         sans: ['var(--font-inter)', 'system-ui', 'sans-serif'],

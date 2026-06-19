@@ -18,7 +18,6 @@ import { type ListingPhotoRow, PhotoPanel } from './PhotoPanel';
 import { PublishPanel } from './PublishPanel';
 import { SocialCopyPanel } from './SocialCopyPanel';
 import { type ListingVideoRow, VideoPanel } from './VideoPanel';
-import { SharePosterButton } from './_components/SharePosterButton';
 
 interface ListingRow {
   id: string;
@@ -164,9 +163,6 @@ export default async function EditListingPage({
             >
               Public URL ↗
             </a>
-          ) : null}
-          {agent?.slug ? (
-            <SharePosterButton agentSlug={agent.slug} listingSlug={listing.slug} />
           ) : null}
           <a
             href={`/dashboard/listings/${listing.id}/analytics`}

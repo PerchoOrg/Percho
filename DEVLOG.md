@@ -2,6 +2,16 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-06-20 — phase42 remove share-poster feature
+
+**Objective**: User pulled the plug on the entire preview-poster / share-poster feature. After three iterations (phase39 four-style showcase, phase40 magazine reset, phase41 dossier rewrite) and prototype-based sign-off, the feature still didn't feel right to the user. Decision: remove it cleanly rather than keep iterating.
+**Actions**: Branched `phase42/remove-share-poster`. `git rm -r` removed the entire `app/(public)/s/[agentSlug]/[listingSlug]/` route tree (page, three Style components, three poster-N.png edge routes, opengraph-image, shared.ts). Deleted `app/dashboard/listings/[id]/edit/_components/SharePosterButton.tsx` plus its import + JSX usage in `edit/page.tsx`. Deleted `public/prototypes/dossier.html` and `public/prototypes/spec-sheet.html` (sign-off mocks no longer needed). Removed `dossier: '#8a2a23'` token from `tailwind.config.ts`. The `/v/[agentSlug]/[listingSlug]` real listing detail page is untouched — that's a separate feature. Verified: `tsc --noEmit` clean, `next build` green, no `/s/...` routes appear in the route table, `/v/[agentSlug]/[listingSlug]` still in the build (272 kB First Load).
+**Decisions**: Full removal over hide-the-button-keep-the-code. Rationale: dead code rots, and reviving the feature later (if ever) would more likely take a fresh design pass than reuse this implementation. Preserved `lib/demo-media.ts` helpers (`demoPhotosFor`, etc.) — Browse feed still consumes them.
+**Issues**: None. Clean delete.
+**Resolution**: Branch `phase42/remove-share-poster` ready for ff-merge to main.
+**Learnings**: Three iterations on a feature whose value the user couldn't viscerally feel = signal the feature concept is wrong, not the execution. The Mom Test pattern: when user can't articulate "I would download this and send it" without prompting, no amount of design polish saves it. Better to kill fast and free up capacity for the actual share funnel question (where do agents currently drop off when sharing a listing?).
+**Next steps**: ff-merge to main. Open question worth investigating next: what does the agent-shares-listing path look like today (Public URL ↗ button → buyer sees `/v/[agentSlug]/[listingSlug]`)? Where does that funnel actually leak? Don't build a new sharing feature until that's measured.
+
 ## 2026-06-20 — phase41 dossier-style Style 1 + matching poster-1.png
 
 **Objective**: User reviewed phase40 share previews and pushed back: "三个 download 下载的都是同样的 OG · 排版变化不大 · 视频也没有动" — visually the four styles read the same, video appeared static (turned out to be cache, fine), and the downloadable posters were too similar. User then sent a research-poster reference and asked for that information-dense, numbered-panel feel — explicitly NOT the magazine/editorial gloss phase40 shipped. Reset Style 1 + poster-1 to a "Listing Dossier" identity that's structurally distinct from Style 2 (Cinematic) and Style 4 (Luxury Brochure) at thumbnail glance.
