@@ -2,6 +2,16 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-06-19 — phase39 showcase poster pages
+
+**Objective**: Mobile-first showcase landing pages for agents to share listings — 4 distinct visual styles, OG image generator, dashboard share modal.
+**Actions**: New route `/s/[agentSlug]/[listingSlug]` with `?style=1..4`. `_components/Style1..4.tsx` (Editorial Magazine / Cinematic Story / Minimal Poster / Luxury Brochure). `opengraph-image.tsx` via `next/og` edge runtime. `SharePosterButton` on listing edit page header.
+**Decisions**: Reused `loadListingFeedBySlug` to avoid new DB shape. All media routed through `lib/demo-media.ts` helpers. Community shows name+blurb+photo with "View community details" click-through to `/c/<slug>` (kept community as a Vicinity differentiator per user, but didn't inline expand schools/POIs). Single OG image shared by all 4 styles for v1.
+**Issues**: Previous session hit subagent iteration cap at 5/6 tasks; resumed in fresh session. Initial biome-ignore comments referenced `lint/performance/noImgElement` — actual category is `lint/nursery/noImgElement` in biome 1.9.4; bulk-fixed across all 4 style files + opengraph-image.tsx.
+**Resolution**: Completed 39.6 share modal + lint/typecheck/build/commit/push/merge. Build green locally; `/s/[agentSlug]/[listingSlug]` route compiled cleanly.
+**Learnings**: Mobile-first showcase + OG is ~7 files of additive code; demo-media discipline + tailwind token audit prevented re-introducing 2026-06-18 demo-cover regression class. Biome's nursery group hosts Next-specific rules like `noImgElement`.
+**Next steps**: Validate with Vivian on which style she'd actually share. Iterate copy if styles feel template-y. Consider per-style differentiated OG images in v2.
+
 ## 2026-06-19 — video duration cap → 10min + delete UI for listing_videos
 
 **Trigger.** Agent (Tianrou) tried to upload two listing videos in the dashboard

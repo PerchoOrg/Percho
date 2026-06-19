@@ -299,3 +299,19 @@ Buyer surfaces stay byte-for-byte unchanged; this is dashboard-only ingestion fo
 
 Explicitly out of scope. Photos sit in `community_photos` as raw material. When we wire AI video generation (Phase 2x or later), we revisit display.
 
+
+
+---
+
+## Phase 39 — Showcase poster pages (`/s/`)
+
+Goal: agents can share a listing as a single, beautiful, mobile-first landing page — designed to be screenshotted, forwarded in DMs, posted to socials. Picks deliberately different visual idioms so Vivian can choose per-listing.
+
+- [x] **39.1** New route `app/(public)/s/[agentSlug]/[listingSlug]/page.tsx` with `?style=1|2|3|4` query (default 1). Reuses `loadListingFeedBySlug` + `loadListingPhotos`. Style 1 = Editorial Magazine (serif title, hero image/video, 3-col spec strip, magazine pull-quote for community).
+- [x] **39.2** Style 2 = Cinematic Story — scroll-snap full-viewport sections, IG-story pacing.
+- [x] **39.3** Style 3 = Minimal Poster — single static screen, screenshot-friendly.
+- [x] **39.4** Style 4 = Luxury Brochure — paper bg, framed video card, two-column on tablet+, follows luxury-redesign-playbook three-tier rule.
+- [x] **39.5** OG image generator at `app/(public)/s/[agentSlug]/[listingSlug]/opengraph-image.tsx` — `next/og` ImageResponse, 1200×630, single shared OG across all 4 styles.
+- [x] **39.6** Dashboard share modal — "Share as poster" entry on listing edit page; modal with 4 style cards; click → copies `/s/<slug>?style=N` URL.
+
+Design rules: light-only, mobile-first, all media via `lib/demo-media.ts` helpers, English copy only, no `_zh`/WeChat/Xiaohongshu refs, no gold accents (Style 4 follows three-tier rule).

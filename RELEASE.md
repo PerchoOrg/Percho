@@ -3,6 +3,13 @@
 Newest at the top. Each release covers a meaningful product change visible to users.
 Format matches the standard release template (Features / Improvements / Bug Fixes / Technical / Known Issues / Metrics).
 
+## v0.38.0 — 2026-06-19
+
+### 🚀 Features
+
+- **Share as poster** — every listing now has a shareable showcase page in 4 visual styles (Editorial Magazine, Cinematic Story, Minimal Poster, Luxury Brochure). Find it on the listing edit page; copy a link to drop into a message, post, or email.
+- **Beautiful link previews** — when you share a showcase link, the preview card automatically shows the home's photo, address, and price.
+
 ## v0.37.0 — 2026-06-18
 
 ### ✨ Improvements
