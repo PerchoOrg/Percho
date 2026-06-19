@@ -1,9 +1,9 @@
 'use client';
 
 /**
- * SharePosterButton — opens a modal with 4 showcase poster styles for the
- * listing. Each card has a "Copy link" button + Preview link. Used on the
- * listing edit page header (phase 39.6).
+ * SharePosterButton — opens a modal with 3 showcase poster styles for the
+ * listing. Each card has a "Copy link" + "Download poster" action. Used on
+ * the listing edit page header (phase 39.6, expanded phase 40.1/40.6).
  */
 
 import { useEffect, useState } from 'react';
@@ -16,7 +16,6 @@ interface Props {
 const STYLES: { n: number; name: string; desc: string }[] = [
   { n: 1, name: 'Editorial Magazine', desc: 'Serif headlines, clean text-led layout.' },
   { n: 2, name: 'Cinematic Story', desc: 'Full-bleed photo, moody overlay copy.' },
-  { n: 3, name: 'Minimal Poster', desc: 'Whitespace-forward, gallery-style cards.' },
   { n: 4, name: 'Luxury Brochure', desc: 'Warm tones, refined typography.' },
 ];
 

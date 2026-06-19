@@ -17,7 +17,6 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { Style1Editorial } from './_components/Style1';
 import { Style2Cinematic } from './_components/Style2';
-import { Style3MinimalPoster } from './_components/Style3';
 import { Style4LuxuryBrochure } from './_components/Style4';
 import { buildShowcaseData } from './_components/shared';
 
@@ -26,9 +25,12 @@ export const revalidate = 3600;
 type PageParams = { agentSlug: string; listingSlug: string };
 type PageSearch = { style?: string };
 
-function resolveStyle(raw: string | undefined): 1 | 2 | 3 | 4 {
+function resolveStyle(raw: string | undefined): 1 | 2 | 4 {
   const n = Number(raw);
-  if (n === 2 || n === 3 || n === 4) return n;
+  if (n === 2 || n === 4) return n;
+  // Style 3 (Minimal Poster) was retired in phase 40 — its share-as-image
+  // use case is now served by the per-style downloadable poster PNGs.
+  // Any leftover ?style=3 link falls through to the Editorial default.
   return 1;
 }
 
@@ -104,8 +106,6 @@ export default async function ShowcasePosterPage({
   switch (style) {
     case 2:
       return <Style2Cinematic data={data} communitySlug={communitySlug} />;
-    case 3:
-      return <Style3MinimalPoster data={data} />;
     case 4:
       return <Style4LuxuryBrochure data={data} communitySlug={communitySlug} />;
     default:
