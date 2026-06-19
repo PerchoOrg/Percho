@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<title>Spec Sheet — 1247 Alpine Dr · Vicinity prototype</title>
+<style>
+  :root{
+    --paper:#efece4;
+    --paper-2:#e2dccf;
+    --ink:#0f0f0e;
+    --ink-soft:#3a3a36;
+    --line:#0f0f0e;
+    --rule:rgba(15,15,14,0.22);
+    --accent:#3d5b3a; /* olive/forest, NOT gold */
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:#1a1916;color:var(--ink);font-family:ui-monospace,'SF Mono','Söhne Mono',Menlo,Consolas,monospace;-webkit-font-smoothing:antialiased}
+  .page{max-width:540px;margin:0 auto;background:var(--paper);min-height:100vh;padding:0 0 56px;box-shadow:0 0 60px rgba(0,0,0,0.4)}
+  .top{display:flex;justify-content:space-between;align-items:center;padding:10px 16px;border-bottom:1px solid var(--line);font-size:10.5px;letter-spacing:0.22em;text-transform:uppercase}
+  .top .stamp{border:1px solid var(--line);padding:3px 8px;letter-spacing:0.16em}
+  .stamp.green{color:var(--accent);border-color:var(--accent)}
+  .hero{position:relative;border-bottom:1px solid var(--line)}
+  .hero .v{width:100%;aspect-ratio:16/10;background:#000;display:block}
+  .hero video, .hero img{width:100%;height:100%;object-fit:cover;display:block}
+  .hero .lbl{position:absolute;left:0;bottom:0;background:var(--ink);color:var(--paper);font-size:10px;padding:4px 10px;letter-spacing:0.2em;text-transform:uppercase}
+  .hero .lbl2{position:absolute;right:0;bottom:0;background:var(--paper);color:var(--ink);font-size:10px;padding:4px 10px;letter-spacing:0.2em;text-transform:uppercase;border-left:1px solid var(--line);border-top:1px solid var(--line)}
+  .row{display:grid;border-bottom:1px solid var(--line)}
+  .r2{grid-template-columns:1fr 1fr}
+  .cell{padding:14px 16px;border-right:1px solid var(--line)}
+  .cell:last-child{border-right:none}
+  .k{font-size:10.5px;letter-spacing:0.22em;text-transform:uppercase;color:var(--ink-soft)}
+  .v{font-size:22px;font-weight:600;letter-spacing:-0.01em;margin-top:6px;font-feature-settings:"tnum" 1,"lnum" 1}
+  .v.lg{font-size:32px}
+  .v.serif{font-family:'Iowan Old Style','Palatino Linotype','Georgia',serif;letter-spacing:-0.02em}
+  .section{padding:18px 16px;border-bottom:1px solid var(--line)}
+  .section .h{font-size:11px;letter-spacing:0.28em;text-transform:uppercase;display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+  .section .h .pn{color:var(--ink-soft)}
+  table{width:100%;border-collapse:collapse;font-size:13px;font-feature-settings:"tnum" 1}
+  table td{padding:8px 0;border-bottom:1px dotted var(--rule)}
+  table td:first-child{color:var(--ink-soft);text-transform:uppercase;letter-spacing:0.14em;font-size:11px;width:55%}
+  table td:last-child{text-align:right;font-weight:600}
+  .twocol{display:grid;grid-template-columns:1fr 1fr;column-gap:16px}
+  .twocol table td:first-child{width:60%}
+  .map{
+    position:relative;background:var(--paper-2);height:180px;border:1px solid var(--line);
+    background-image:
+      linear-gradient(var(--rule) 1px,transparent 1px),
+      linear-gradient(90deg,var(--rule) 1px,transparent 1px);
+    background-size:20px 20px;
+  }
+  .dot{position:absolute;width:10px;height:10px;border-radius:50%;background:var(--ink);transform:translate(-50%,-50%)}
+  .dot.me{background:var(--accent);width:14px;height:14px;box-shadow:0 0 0 4px rgba(61,91,58,0.18)}
+  .dot::after{content:attr(data-l);position:absolute;left:14px;top:-2px;font-size:10px;letter-spacing:0.14em;text-transform:uppercase;white-space:nowrap;background:var(--paper);padding:1px 4px;border:1px solid var(--rule)}
+  .strip{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);border:1px solid var(--line);margin-top:14px}
+  .strip img{width:100%;aspect-ratio:1/1;object-fit:cover;display:block}
+  .nbhd-list{font-size:13px}
+  .nbhd-list div{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px dotted var(--rule)}
+  .nbhd-list div span:first-child{color:var(--ink-soft);text-transform:uppercase;letter-spacing:0.12em;font-size:11px}
+  .agent{display:flex;gap:14px;align-items:center}
+  .agent img{width:56px;height:56px;border-radius:50%;object-fit:cover;border:1px solid var(--line)}
+  .agent .nm{font-family:'Iowan Old Style','Palatino Linotype','Georgia',serif;font-size:20px;font-weight:600;letter-spacing:-0.01em}
+  .agent .meta{font-size:10.5px;letter-spacing:0.18em;text-transform:uppercase;color:var(--ink-soft);margin-top:4px}
+  .ctas{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px}
+  .ctas a{display:block;text-align:center;padding:14px;font-size:11.5px;letter-spacing:0.22em;text-transform:uppercase;text-decoration:none;border:1px solid var(--ink)}
+  .ctas a.primary{background:var(--ink);color:var(--paper)}
+  .footer{padding:14px 16px;display:flex;justify-content:space-between;font-size:10px;letter-spacing:0.22em;text-transform:uppercase;color:var(--ink-soft)}
+  .barcode{font-family:'Libre Barcode 39',monospace;height:30px;background:repeating-linear-gradient(90deg,var(--ink) 0 2px,transparent 2px 4px,var(--ink) 4px 5px,transparent 5px 9px);width:120px}
+</style>
+</head>
+<body>
+  <div class="page">
+    <div class="top">
+      <span>SPEC&nbsp;SHEET / 2026-Q2</span>
+      <span class="stamp green">Active · MLS 81957224</span>
+    </div>
+
+    <div class="hero">
+      <div class="v">
+        <video src="https://www.w3schools.com/html/mov_bbb.mp4" autoplay muted loop playsinline poster="https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1600&q=80"></video>
+      </div>
+      <div class="lbl">Specimen 0247 · Walkthrough</div>
+      <div class="lbl2">0:42 · 1080p</div>
+    </div>
+
+    <div class="row r2">
+      <div class="cell">
+        <div class="k">Address</div>
+        <div class="v serif">1247 Alpine Dr</div>
+        <div class="k" style="margin-top:8px">Mountain View, CA 94040</div>
+      </div>
+      <div class="cell">
+        <div class="k">List price</div>
+        <div class="v lg">$2,850,000</div>
+        <div class="k" style="margin-top:8px">$1,003 / sqft</div>
+      </div>
+    </div>
+
+    <div class="row r2">
+      <div class="cell"><div class="k">Beds</div><div class="v">4</div></div>
+      <div class="cell"><div class="k">Baths</div><div class="v">3</div></div>
+    </div>
+    <div class="row r2">
+      <div class="cell"><div class="k">Living</div><div class="v">2,840 sqft</div></div>
+      <div class="cell"><div class="k">Lot</div><div class="v">0.21 ac</div></div>
+    </div>
+
+    <section class="section">
+      <div class="h"><span>Dimensions</span><span class="pn">/ 01</span></div>
+      <div class="twocol">
+        <table>
+          <tr><td>Primary bed</td><td>14 × 16</td></tr>
+          <tr><td>Bed 2</td><td>11 × 12</td></tr>
+          <tr><td>Bed 3</td><td>10 × 12</td></tr>
+          <tr><td>Bed 4</td><td>9 × 11</td></tr>
+        </table>
+        <table>
+          <tr><td>Kitchen</td><td>12 × 18</td></tr>
+          <tr><td>Living</td><td>18 × 22</td></tr>
+          <tr><td>Dining</td><td>11 × 14</td></tr>
+          <tr><td>Garage</td><td>20 × 20</td></tr>
+        </table>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="h"><span>Construction · Systems</span><span class="pn">/ 02</span></div>
+      <div class="twocol">
+        <table>
+          <tr><td>Year built</td><td>1978</td></tr>
+          <tr><td>Stories</td><td>2</td></tr>
+          <tr><td>Foundation</td><td>Slab</td></tr>
+          <tr><td>Roof</td><td>Comp · 2018</td></tr>
+        </table>
+        <table>
+          <tr><td>Heat</td><td>Central gas</td></tr>
+          <tr><td>Cooling</td><td>Central A/C</td></tr>
+          <tr><td>Water heater</td><td>Tankless</td></tr>
+          <tr><td>EV charger</td><td>240V · garage</td></tr>
+        </table>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="h"><span>Financials</span><span class="pn">/ 03</span></div>
+      <table>
+        <tr><td>List price</td><td>$2,850,000</td></tr>
+        <tr><td>Price / sqft</td><td>$1,003</td></tr>
+        <tr><td>Property tax (2025)</td><td>$28,500</td></tr>
+        <tr><td>HOA</td><td>$0</td></tr>
+        <tr><td>County · APN</td><td>Santa Clara · 193-04-007</td></tr>
+        <tr><td>Zoning</td><td>R1</td></tr>
+      </table>
+    </section>
+
+    <section class="section">
+      <div class="h"><span>The Place</span><span class="pn">/ 04</span></div>
+      <div class="map">
+        <div class="dot me" style="left:50%;top:55%" data-l="1247 Alpine Dr"></div>
+        <div class="dot" style="left:30%;top:30%" data-l="Castro St · 0.4 mi"></div>
+        <div class="dot" style="left:65%;top:38%" data-l="Cuesta Park · 0.3 mi"></div>
+        <div class="dot" style="left:42%;top:78%" data-l="Bubb Elem · 0.6 mi"></div>
+      </div>
+      <div class="strip">
+        <img src="https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=600&q=80" alt="">
+        <img src="https://images.unsplash.com/photo-1473773508845-188df298d2d1?auto=format&fit=crop&w=600&q=80" alt="">
+        <img src="https://images.unsplash.com/photo-1517457373958-b7bdd4587205?auto=format&fit=crop&w=600&q=80" alt="">
+      </div>
+      <div class="nbhd-list" style="margin-top:14px">
+        <div><span>Walk score</span><span>78</span></div>
+        <div><span>Transit</span><span>41</span></div>
+        <div><span>Bike</span><span>92</span></div>
+        <div><span>Caltrain · Mountain View</span><span>1.4 mi</span></div>
+        <div><span>I-280 on-ramp</span><span>1.1 mi</span></div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="h"><span>Represented by</span><span class="pn">/ 05</span></div>
+      <div class="agent">
+        <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=400&q=80" alt="">
+        <div>
+          <div class="nm">Vivian Chen</div>
+          <div class="meta">Compass · DRE# 02184722</div>
+          <div class="meta">vivian@compass.com</div>
+        </div>
+      </div>
+      <div class="ctas">
+        <a class="primary" href="#">Schedule tour</a>
+        <a href="#">Full listing →</a>
+      </div>
+    </section>
+
+    <div class="footer">
+      <span>Vicinity · vicinities.cc</span>
+      <div class="barcode" aria-hidden="true"></div>
+      <span>Sheet 0247 / 2026-06-20</span>
+    </div>
+  </div>
+</body>
+</html>
