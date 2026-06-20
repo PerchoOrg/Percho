@@ -82,7 +82,11 @@ export function PublishPanel({ listingId, status }: Props) {
       }
       const res = await publishListing(listingId);
       if (res.ok) {
-        router.refresh();
+        // phase45.15 (2026-06-20): per owner round 6 #4 — once an agent
+        // hits Publish, send them straight to the dashboard listing view
+        // so they can see the freshly-published row in context. Avoids
+        // the "now what?" pause on the edit page.
+        router.replace('/dashboard');
       } else {
         setMissing(res.missing);
       }

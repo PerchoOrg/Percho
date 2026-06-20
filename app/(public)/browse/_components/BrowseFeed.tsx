@@ -1360,10 +1360,16 @@ export function BrowseFeed({
        *
        * Photo cards: same Like/Save/Contact/Nearby — only Sound is
        * hidden because there's no <video> to mute. Schools/POIs strip
-       * inside PhotoCard caption is preserved (Phase 20). */}
+       * inside PhotoCard caption is preserved (Phase 20).
+       *
+       * Phase45.15 (2026-06-20): bottom anchored close to safe-area so
+       * the three buttons don't float in the middle leaving a phantom
+       * empty slot below. Caption block sits at `bottom: 1rem` and is
+       * `right-20` so it clears the rail; placing the rail at the same
+       * baseline keeps both stacks bottom-aligned. */}
       <div
         className="absolute right-3 z-20 flex flex-col items-center gap-3"
-        style={{ bottom: 'max(6rem, calc(env(safe-area-inset-bottom) + 5rem))' }}
+        style={{ bottom: 'max(1rem, env(safe-area-inset-bottom))' }}
       >
         <div key={likeAnimKey} className={likeAnimKey > 0 ? 'heart-pop' : ''}>
           <ActionButton label="Like" onClick={toggleLike} active={isLiked} activeColor="rose">

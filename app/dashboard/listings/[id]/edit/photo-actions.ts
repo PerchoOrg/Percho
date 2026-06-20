@@ -97,6 +97,28 @@ export async function recordListingPhoto(
     return { ok: false, error: 'insert_failed' };
   }
 
+  // phase45.15 (2026-06-20): owner round 6 #7 — auto-pick the first
+  // uploaded asset as cover. Read current cover_url; if it's null,
+  // stamp this newly-inserted photo onto it. Idempotent (only writes
+  // when null), so subsequent uploads don't override an explicit pick.
+  // Photo wins over a still-processing video because photos are
+  // synchronously `ready`; video covers fill in via the CF Stream
+  // webhook only after `status='ready'`.
+  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
+  const { data: cur } = (await (supabase as any)
+    .from('listings')
+    .select('cover_url')
+    .eq('id', listingId)
+    .maybeSingle()) as { data: { cover_url: string | null } | null };
+  if (cur && !cur.cover_url) {
+    const { photoPublicUrl } = await import('@/lib/supabase/storage');
+    // biome-ignore lint/suspicious/noExplicitAny: stub generated types
+    await (supabase as any)
+      .from('listings')
+      .update({ cover_url: photoPublicUrl(storagePath) })
+      .eq('id', listingId);
+  }
+
   revalidatePath(`/dashboard/listings/${listingId}/edit`);
   return { ok: true, id: row.id, sortOrder: row.sort_order };
 }

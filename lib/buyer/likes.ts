@@ -41,16 +41,22 @@ export async function toggleLike(input: z.infer<typeof TOGGLE_INPUT>): Promise<L
   const { table, col } = tableFor(parsed.data.kind);
 
   if (parsed.data.liked) {
+    // NOTE: listing_likes / community_likes only have *partial* unique indexes
+    // (`where device_id is not null`) and no PK on (device_id, target_id), so
+    // PostgREST upsert with `onConflict` is rejected ("no unique or exclusion
+    // constraint matching the ON CONFLICT specification"). Use a plain insert
+    // and silently absorb the unique-violation when the row already exists.
     // biome-ignore lint/suspicious/noExplicitAny: stub generated types
     const { error } = await (supabase as any)
       .from(table)
-      .upsert(
-        { device_id: parsed.data.deviceId, [col]: parsed.data.targetId },
-        { onConflict: `device_id,${col}`, ignoreDuplicates: true },
-      );
+      .insert({ device_id: parsed.data.deviceId, [col]: parsed.data.targetId });
     if (error) {
-      console.error('[toggleLike] insert failed', error);
-      return { ok: false, error: 'insert_failed' };
+      // 23505 = unique_violation → already liked, treat as success (idempotent).
+      const code = (error as { code?: string } | null)?.code;
+      if (code !== '23505') {
+        console.error('[toggleLike] insert failed', error);
+        return { ok: false, error: 'insert_failed' };
+      }
     }
   } else {
     // biome-ignore lint/suspicious/noExplicitAny: stub generated types

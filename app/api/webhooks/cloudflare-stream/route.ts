@@ -102,9 +102,48 @@ export async function POST(req: Request) {
   // biome-ignore lint/suspicious/noExplicitAny: database.types.ts is a Phase 0 stub; regen at phase-end via `pnpm db:types`.
   const sb = supabase as any;
   const [listingRes, communityRes] = await Promise.all([
-    sb.from('listing_videos').update(update).eq('cf_video_id', videoId).select('id'),
-    sb.from('community_videos').update(update).eq('cf_video_id', videoId).select('id'),
+    sb.from('listing_videos').update(update).eq('cf_video_id', videoId).select('id, listing_id'),
+    sb.from('community_videos').update(update).eq('cf_video_id', videoId).select('id, community_id'),
   ]);
+
+  // phase45.15 (2026-06-20): owner round 6 #7 — auto-pick the first
+  // ready video as cover when nothing else has filled it yet. Photos
+  // are synchronously ready and stamp the cover at insert time
+  // (photo-actions.recordListingPhoto / community photo-actions); a
+  // video can only set its own cover once CF Stream flips it to ready,
+  // so the work happens here. Idempotent: only writes when the cover
+  // column is null. If a photo already won, the video does nothing.
+  if (status === 'ready') {
+    const { thumbnailUrl } = await import('@/lib/cloudflare/stream');
+    const lr = listingRes.data?.[0] as { id: string; listing_id: string } | undefined;
+    if (lr?.listing_id) {
+      const { data: cur } = await sb
+        .from('listings')
+        .select('cover_url')
+        .eq('id', lr.listing_id)
+        .maybeSingle();
+      if (cur && !cur.cover_url) {
+        await sb
+          .from('listings')
+          .update({ cover_url: thumbnailUrl(videoId) })
+          .eq('id', lr.listing_id);
+      }
+    }
+    const cr = communityRes.data?.[0] as { id: string; community_id: string } | undefined;
+    if (cr?.community_id) {
+      const { data: cur } = await sb
+        .from('communities')
+        .select('cover_video_id, cover_storage_path')
+        .eq('id', cr.community_id)
+        .maybeSingle();
+      if (cur && !cur.cover_video_id && !cur.cover_storage_path) {
+        await sb
+          .from('communities')
+          .update({ cover_video_id: cr.id, cover_storage_path: null })
+          .eq('id', cr.community_id);
+      }
+    }
+  }
 
   const matched = (listingRes.data?.length ?? 0) + (communityRes.data?.length ?? 0);
   if (matched === 0) {

@@ -66,16 +66,12 @@ export function CommunityGrid({
               <div className="mt-1 truncate text-ink2 text-[12px]">
                 {c.city ? `${c.city}, ${c.state}` : c.state}
               </div>
-              <div className="mt-1 flex items-center gap-1.5 text-[11px] text-muted tracking-wide">
-                <span>
-                  {c.videoCount} {c.videoCount === 1 ? 'video' : 'videos'}
-                </span>
-                {c.listingCount > 0 && (
-                  <span>
-                    · {c.listingCount} {c.listingCount === 1 ? 'home' : 'homes'}
-                  </span>
-                )}
-              </div>
+              {/* phase45.15 (2026-06-20): owner round 6 #8 — hide
+               * "5 videos · 1 home" meta line on community cards.
+               * The counts are noise on Explore (a buyer cares about
+               * the place, not the inventory) and the cover already
+               * implies "this place has stuff in it". Counts still
+               * surface inside `/c/[slug]` where they're contextual. */}
             </div>
           </Link>
         );
