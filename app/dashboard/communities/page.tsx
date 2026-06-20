@@ -12,7 +12,7 @@
  * metadata (name / city / state / description) is creator-gated.
  */
 
-import { WorkspaceSubNav } from '@/app/dashboard/_components/WorkspaceSubNav';
+
 import { createClient } from '@/lib/supabase/server';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
@@ -75,19 +75,14 @@ export default async function CommunitiesListPage() {
        * matching chip dimensions, so the action's scope is the active sub-nav
        * page, not the Workspace label above it.
        */}
-      <div>
-        <h1 className="font-serif text-2xl tracking-tight text-ink sm:text-4xl">Workspace</h1>
-        <WorkspaceSubNav
-          active="communities"
-          cta={
-            <Link
-              href="/dashboard/communities/new"
-              className="rounded-full border border-line-strong bg-ink px-3 py-1.5 font-medium text-cream text-xs transition hover:opacity-90 sm:text-sm"
-            >
-              + New community
-            </Link>
-          }
-        />
+      <div className="flex items-center justify-between">
+        <h1 className="font-serif text-2xl tracking-tight text-ink sm:text-4xl">Communities</h1>
+        <Link
+          href="/dashboard/communities/new"
+          className="rounded-full border border-line-strong bg-ink px-3 py-1.5 font-medium text-cream text-xs transition hover:opacity-90 sm:text-sm"
+        >
+          + New community
+        </Link>
       </div>
       <header className="flex items-baseline justify-between">
         <div>

@@ -9,7 +9,7 @@
  * add followed_up_at to the select set so the client gets it on first paint.
  */
 
-import { WorkspaceSubNav } from '@/app/dashboard/_components/WorkspaceSubNav';
+
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import { type LeadRow, LeadsLive } from './leads-live';
@@ -36,14 +36,11 @@ export default async function LeadsPage() {
 
   return (
     <div className="mx-auto max-w-5xl px-5 py-6 sm:px-8 sm:py-12">
-      {/* Phase 36.2 (2026-06-18): Workspace sub-nav. /dashboard/leads is one
-       * of the agent's three working surfaces; chips give a stable cross-link. */}
+      {/* Phase 45 (2026-06-20): Workspace H1 + sub-nav chips removed —
+       * the global TopBar pins Listings | Communities | Leads | Analytics
+       * as sub-tabs (see app/_components/nav-config.ts → getSubTabs). */}
       <div className="mb-6">
-        <h1 className="font-serif text-2xl tracking-tight text-ink sm:text-4xl">Workspace</h1>
-        <WorkspaceSubNav active="leads" />
-      </div>
-      <div className="mb-6">
-        <h2 className="font-serif text-2xl tracking-tight text-ink sm:text-3xl">Leads</h2>
+        <h1 className="font-serif text-2xl tracking-tight text-ink sm:text-4xl">Leads</h1>
         <p className="mt-1 text-xs text-muted">
           Buyer inquiries from your published listings, in real time.
         </p>

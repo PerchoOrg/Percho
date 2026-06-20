@@ -23,7 +23,6 @@ import {
   ListingsTabbedList,
   type StatusTab,
 } from '@/app/dashboard/_components/ListingsTabbedList';
-import { WorkspaceSubNav } from '@/app/dashboard/_components/WorkspaceSubNav';
 import { thumbnailUrl } from '@/lib/cloudflare/stream';
 import { createClient } from '@/lib/supabase/server';
 import Link from 'next/link';
@@ -142,18 +141,15 @@ export default async function DashboardHomePage({ searchParams }: PageProps) {
          * not a Listings-tab action; layered next to the active chip the
          * scope is unambiguous.
          */}
-        <h1 className="font-serif text-2xl tracking-tight text-ink sm:text-4xl">Workspace</h1>
-        <WorkspaceSubNav
-          active="listings"
-          cta={
-            <Link
-              href="/dashboard/listings/new"
-              className="rounded-full border border-line-strong bg-ink px-3 py-1.5 font-medium text-cream text-xs transition hover:opacity-90 sm:text-sm"
-            >
-              + New listing
-            </Link>
-          }
-        />
+      <div className="flex items-center justify-between">
+        <h1 className="font-serif text-2xl tracking-tight text-ink sm:text-4xl">Listings</h1>
+        <Link
+          href="/dashboard/listings/new"
+          className="rounded-full border border-line-strong bg-ink px-3 py-1.5 font-medium text-cream text-xs transition hover:opacity-90 sm:text-sm"
+        >
+          + New listing
+        </Link>
+      </div>
       </div>
 
       {/* Metrics row — only meaningful once the agent has listings. With zero

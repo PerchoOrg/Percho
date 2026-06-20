@@ -10,7 +10,7 @@
  * without changing the data layer.
  */
 
-import { WorkspaceSubNav } from '@/app/dashboard/_components/WorkspaceSubNav';
+
 import { getRollupStats } from '@/lib/analytics/listing-stats';
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
@@ -138,8 +138,7 @@ export default async function DashboardAnalyticsPage() {
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-6">
-      <WorkspaceSubNav active="analytics" />
-      <h1 className="mt-6 font-serif text-3xl text-ink">Analytics</h1>
+      <h1 className="font-serif text-3xl text-ink">Analytics</h1>
       <p className="mt-1 text-sm text-ink2">
         Rollup across {listingIds.length} {listingIds.length === 1 ? 'listing' : 'listings'}.
       </p>
