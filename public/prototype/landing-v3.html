@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Vicinity — Landing v3 prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&family=Source+Serif+4:opsz,wght@8..60,400;8..60,500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f3eee7;
+    --surface: #fbf8f3;
+    --ink: #313131;
+    --ink2: #5a5651;
+    --muted: #8a857d;
+    --line: rgba(49,49,49,0.14);
+    --line-strong: rgba(49,49,49,0.32);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--ink); }
+  body {
+    font-family: Inter, system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .serif { font-family: "Source Serif 4", Georgia, serif; font-feature-settings: "ss01","ss02"; }
+  .eyebrow {
+    font-size: 11px; font-weight: 500; letter-spacing: 0.22em;
+    text-transform: uppercase; color: var(--muted);
+  }
+
+  /* Hero */
+  .hero {
+    position: relative; height: 100svh; min-height: 640px; overflow: hidden;
+    background: var(--bg);
+  }
+  .hero video {
+    position: absolute; inset: 0; width: 100%; height: 100%;
+    object-fit: cover;
+  }
+  .hero .wash {
+    position: absolute; inset-inline: 0; bottom: 0; height: 55%;
+    background: linear-gradient(to bottom, rgba(243,238,231,0) 0%, rgba(243,238,231,0.6) 50%, rgba(243,238,231,1) 100%);
+  }
+  .hero .stack {
+    position: relative; z-index: 2;
+    height: 100%;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: 0 24px; text-align: center;
+  }
+  .hero .eyebrow { margin-bottom: 24px; color: var(--ink); }
+  .hero h1 {
+    font-family: "Source Serif 4", Georgia, serif;
+    font-weight: 400;
+    font-size: clamp(44px, 6.5vw, 84px);
+    line-height: 1.05;
+    letter-spacing: -0.02em;
+    margin: 0;
+    max-width: 880px;
+    color: var(--ink);
+  }
+  .hero p.subtitle {
+    margin: 24px auto 0;
+    max-width: 560px;
+    font-size: 18px;
+    line-height: 1.7;
+    color: var(--ink);
+  }
+  .ctas { display: flex; gap: 12px; margin-top: 40px; flex-direction: column; }
+  @media (min-width: 640px) { .ctas { flex-direction: row; } }
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    padding: 16px 32px; font-size: 12px;
+    letter-spacing: 0.22em; text-transform: uppercase;
+    text-decoration: none; transition: all 0.15s ease;
+  }
+  .btn-primary { background: var(--ink); color: var(--surface); }
+  .btn-primary:hover { background: #1f1f1f; }
+  .btn-ghost { border: 1px solid var(--line-strong); color: var(--ink); }
+  .btn-ghost:hover { border-color: var(--ink); }
+
+  /* Footer */
+  footer.site {
+    border-top: 1px solid var(--line);
+    background: var(--bg);
+    margin-top: 0;
+  }
+  .footer-inner {
+    max-width: 1200px; margin: 0 auto; padding: 64px 24px 32px;
+  }
+  .footer-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 40px;
+  }
+  @media (min-width: 768px) {
+    .footer-grid {
+      grid-template-columns: 2fr 1fr 1fr 1fr;
+    }
+  }
+  .brand-cell .wordmark {
+    font-family: "Source Serif 4", Georgia, serif;
+    font-size: 28px; line-height: 1; letter-spacing: -0.01em;
+    color: var(--ink);
+  }
+  .brand-cell .tagline {
+    margin-top: 12px; font-size: 14px; color: var(--ink2);
+    max-width: 320px; line-height: 1.6;
+  }
+  .col-title {
+    font-size: 11px; font-weight: 500; letter-spacing: 0.22em;
+    text-transform: uppercase; color: var(--muted); margin-bottom: 16px;
+  }
+  .col ul { list-style: none; padding: 0; margin: 0; }
+  .col li { margin-bottom: 10px; }
+  .col a {
+    color: var(--ink); text-decoration: none; font-size: 14px;
+  }
+  .col a:hover { color: var(--ink2); text-decoration: underline; }
+
+  .footer-bottom {
+    margin-top: 48px;
+    padding-top: 24px;
+    border-top: 1px solid var(--line);
+    display: flex; flex-direction: column; gap: 12px;
+    justify-content: space-between; align-items: flex-start;
+    font-size: 12px; color: var(--muted); line-height: 1.6;
+  }
+  @media (min-width: 768px) {
+    .footer-bottom { flex-direction: row; align-items: center; }
+  }
+  .footer-bottom .legal { max-width: 720px; }
+  .footer-bottom .meta { display: flex; gap: 16px; flex-wrap: wrap; }
+  .footer-bottom .meta a { color: var(--muted); text-decoration: none; }
+  .footer-bottom .meta a:hover { color: var(--ink); }
+</style>
+</head>
+<body>
+
+<section class="hero">
+  <video autoplay muted loop playsinline
+    poster="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1600&q=80">
+    <source src="https://videos.pexels.com/video-files/7578548/7578548-uhd_2560_1440_30fps.mp4" type="video/mp4" />
+  </video>
+  <div class="wash"></div>
+  <div class="stack">
+    <div class="eyebrow">Vicinity</div>
+    <h1 class="serif">TikTok for Homebuying</h1>
+    <p class="subtitle">Listings that feel like a place, not a spreadsheet.</p>
+    <div class="ctas">
+      <a class="btn btn-primary" href="/browse">Explore</a>
+      <a class="btn btn-ghost" href="/login">Sign In</a>
+    </div>
+  </div>
+</section>
+
+<footer class="site">
+  <div class="footer-inner">
+    <div class="footer-grid">
+      <div class="brand-cell">
+        <div class="wordmark serif">Vicinity<span style="color:var(--ink)">.</span></div>
+        <div class="tagline">A quieter way to find a home. Real listings, real video, real neighborhoods — no spreadsheet, no spam.</div>
+      </div>
+
+      <div class="col">
+        <div class="col-title">Product</div>
+        <ul>
+          <li><a href="/browse">Explore listings</a></li>
+          <li><a href="/communities">Communities</a></li>
+          <li><a href="/saved">Saved</a></li>
+          <li><a href="/login">Sign in</a></li>
+        </ul>
+      </div>
+
+      <div class="col">
+        <div class="col-title">Company</div>
+        <ul>
+          <li><a href="/about">About</a></li>
+          <li><a href="/contact">Contact</a></li>
+        </ul>
+      </div>
+
+      <div class="col">
+        <div class="col-title">Legal</div>
+        <ul>
+          <li><a href="/privacy">Privacy</a></li>
+          <li><a href="/terms">Terms of Service</a></li>
+          <li><a href="/fair-housing">Fair Housing</a></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="footer-bottom">
+      <div class="legal">
+        © 2026 Vicinity, Inc. All rights reserved. Vicinity is a home-discovery
+        platform, not a licensed real estate broker. Listing information is
+        provided by participating agents; verify details with the listing
+        agent before transacting. Equal Housing Opportunity.
+      </div>
+      <div class="meta">
+        <a href="/privacy">Privacy</a>
+        <a href="/terms">Terms</a>
+        <a href="/contact">Contact</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
