@@ -1514,6 +1514,18 @@ export function BrowseFeed({
                 setSheetOpen(false);
                 setSheetCardId(null);
               }}
+              // Phase 45.17 (2026-06-20): rail handlers target the parent
+              // listing (the user's anchor). Reuses the same callbacks the
+              // main listing feed uses, so Like/Save state is consistent
+              // whether the buyer taps the rail on L0 or in the carousel.
+              // Per owner: "if exploring listing then going to see the
+              // community videos, contact listing owner".
+              onShare={onShare}
+              onToggleLike={toggleLike}
+              onToggleSave={toggleSave}
+              onContact={openContact}
+              liked={isLiked}
+              saved={isSaved}
             />
           </>
         );

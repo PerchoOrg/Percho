@@ -3,8 +3,27 @@
  *
  * Phase 34b (V1 redo, 2026-06-17): fullscreen horizontal-swipe carousel
  * over a community's videos. Opens after a buyer taps a video thumbnail
- * in CommunitySheet (L1). Per V1 prototype:
+ * in CommunitySheet (L1).
  *
+ * Phase 45.17 (2026-06-20): desktop layout brought to parity with the
+ * listing video feed (BrowseFeed) and the community feed
+ * (CommunityVideoFeed). Two changes per owner feedback:
+ *
+ *  (1) The carousel column is now constrained to the same phone-shape
+ *      width on desktop (`md:w-[min(430px,calc(100vh*9/16))]`) instead
+ *      of stretching edge-to-edge. Mobile stays full viewport. Beige
+ *      gutters fill the surrounding space — same idiom as the other
+ *      two feeds, single immersive surface.
+ *  (2) A right-rail with Share / Like / Save / Contact buttons is
+ *      rendered over the active slide, mirroring the listing feed's
+ *      rail. Per owner: when the carousel is opened from a listing,
+ *      Like/Save/Contact target the *listing* (the user's anchor),
+ *      not the community video — Contact opens the listing agent's
+ *      lead form. The community-feed entry point (`/c/[slug]/feed`)
+ *      keeps its own rail (community-scoped, no Contact) and is
+ *      unaffected by this change.
+ *
+ * Per V1 prototype:
  * - Horizontal swipe / left-right arrow keys / desktop nav arrows cycle
  *   between community videos.
  * - Top-left "‹ Back · <listing address>" returns to L0 (NOT to the sheet).
@@ -40,6 +59,18 @@ interface Props {
   /** Listing address shown in the back-button label so context is explicit. */
   backLabel: string;
   onClose: () => void;
+  /**
+   * Phase 45.17: rail handlers. The carousel renders a Share/Like/Save/Contact
+   * rail when these are provided; they target the parent listing (the user's
+   * anchor), so the parent (BrowseFeed) supplies them already bound to the
+   * active card. `liked`/`saved` reflect the current per-listing state.
+   */
+  onShare?: () => void;
+  onToggleLike?: () => void;
+  onToggleSave?: () => void;
+  onContact?: () => void;
+  liked?: boolean;
+  saved?: boolean;
 }
 
 export function CommunityCarousel({
@@ -48,6 +79,12 @@ export function CommunityCarousel({
   startIndex,
   backLabel,
   onClose,
+  onShare,
+  onToggleLike,
+  onToggleSave,
+  onContact,
+  liked,
+  saved,
 }: Props) {
   const [active, setActive] = useState(0);
   const trackRef = useRef<HTMLDivElement | null>(null);
@@ -101,94 +138,168 @@ export function CommunityCarousel({
 
   const total = videos.length;
   const safeActive = Math.min(active, total - 1);
+  const showRail =
+    !!onShare || !!onToggleLike || !!onToggleSave || !!onContact;
 
   return (
+    // Outer fixed wrapper fills the viewport with the cream gutter so the
+    // surrounding chrome (sidebar / header) doesn't peek through; the
+    // inner wrapper is the phone-shape column hosting the carousel.
     <div
       role="dialog"
       aria-modal="true"
       aria-label={`${videos[safeActive]?.line1 ?? 'Community'} video carousel`}
-      className="fixed inset-0 z-[60] flex flex-col bg-black"
+      className="fixed inset-0 z-[60] flex items-center justify-center bg-bg"
       onTouchStart={onTouchStart}
       onTouchEnd={onTouchEnd}
     >
-      {/* Top bar: back + counter. */}
-      <div className="absolute inset-x-0 top-0 z-10 flex items-center justify-between px-3 pt-3">
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label="Back to listing"
-          className="flex h-11 items-center gap-2 rounded-full border border-line bg-bg pr-3 pl-2 text-ink backdrop-blur-md transition-colors hover:border-line-strong hover:text-ink"
-        >
-          <span className="text-xl leading-none">‹</span>
-          <span className="flex flex-col text-left leading-tight">
-            <span className="text-[12px] font-semibold">Back</span>
-            <span className="max-w-[40vw] truncate text-[10px] text-ink2">
-              {backLabel}
+      <div
+        className="relative h-full w-full overflow-hidden bg-black md:w-[min(430px,calc(100vh*9/16))] md:shadow-2xl md:shadow-black/50"
+      >
+        {/* Top bar: back + counter + (optional) share. */}
+        <div className="absolute inset-x-0 top-0 z-10 flex items-center justify-between gap-2 px-3 pt-3">
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Back to listing"
+            className="flex h-11 items-center gap-2 rounded-full border border-cream/20 bg-ink/55 pr-3 pl-2 text-cream backdrop-blur-md transition-colors hover:border-cream hover:text-cream"
+            style={{ touchAction: 'manipulation' }}
+          >
+            <span className="text-xl leading-none">‹</span>
+            <span className="flex flex-col text-left leading-tight">
+              <span className="text-[12px] font-semibold">Back</span>
+              <span className="max-w-[40vw] truncate text-[10px] text-cream/70">
+                {backLabel}
+              </span>
             </span>
-          </span>
-        </button>
-        <div className="flex h-9 items-center rounded-full bg-bg px-3 font-medium text-[12px] text-ink backdrop-blur-md tabular-nums">
-          {safeActive + 1} / {total}
+          </button>
+          <div className="flex items-center gap-2">
+            <div className="flex h-9 items-center rounded-full border border-cream/20 bg-ink/55 px-3 font-medium text-[12px] text-cream backdrop-blur-md tabular-nums">
+              {safeActive + 1} / {total}
+            </div>
+            {onShare && (
+              <button
+                type="button"
+                onClick={onShare}
+                aria-label="Share listing"
+                className="flex h-11 w-11 items-center justify-center rounded-full border border-cream/20 bg-ink/55 text-cream backdrop-blur-md transition-colors hover:border-cream hover:text-cream"
+                style={{ touchAction: 'manipulation' }}
+              >
+                <ShareIcon />
+              </button>
+            )}
+          </div>
         </div>
-      </div>
 
-      {/* Segmented progress bar */}
-      <div className="absolute inset-x-3 top-16 z-10 flex gap-1">
-        {videos.map((v, i) => (
-          <div
-            key={`${v.cfVideoId}-prog`}
-            className={`h-0.5 flex-1 rounded-full ${
-              i <= safeActive ? 'bg-ink' : 'bg-surface/20'
-            }`}
-          />
-        ))}
-      </div>
-
-      {/* Track — translateX animates between active slides. */}
-      <div className="relative flex-1 overflow-hidden">
-        <div
-          ref={trackRef}
-          className="flex h-full transition-transform duration-300 ease-out"
-          style={{ transform: `translateX(-${safeActive * 100}%)` }}
-        >
+        {/* Segmented progress bar */}
+        <div className="absolute inset-x-3 top-16 z-10 flex gap-1">
           {videos.map((v, i) => (
-            <CarouselSlide
-              key={`${v.cfVideoId}-${i}`}
-              video={v}
-              shouldMount={Math.abs(i - safeActive) <= 1}
-              isActive={i === safeActive}
+            <div
+              key={`${v.cfVideoId}-prog`}
+              className={`h-0.5 flex-1 rounded-full ${
+                i <= safeActive ? 'bg-cream' : 'bg-cream/20'
+              }`}
             />
           ))}
         </div>
 
-        {/* Desktop arrows (≥md). */}
-        {safeActive > 0 && (
-          <button
-            type="button"
-            onClick={() => setActive((i) => Math.max(0, i - 1))}
-            aria-label="Previous video"
-            className="-translate-y-1/2 absolute top-1/2 left-3 hidden h-11 w-11 items-center justify-center rounded-full border border-line bg-bg text-ink backdrop-blur-md transition-colors hover:border-line-strong hover:text-ink md:flex"
+        {/* Track — translateX animates between active slides. */}
+        <div className="relative h-full w-full overflow-hidden">
+          <div
+            ref={trackRef}
+            className="flex h-full transition-transform duration-300 ease-out"
+            style={{ transform: `translateX(-${safeActive * 100}%)` }}
           >
-            ‹
-          </button>
-        )}
-        {safeActive < total - 1 && (
-          <button
-            type="button"
-            onClick={() => setActive((i) => Math.min(total - 1, i + 1))}
-            aria-label="Next video"
-            className="-translate-y-1/2 absolute top-1/2 right-3 hidden h-11 w-11 items-center justify-center rounded-full border border-line bg-bg text-ink backdrop-blur-md transition-colors hover:border-line-strong hover:text-ink md:flex"
-          >
-            ›
-          </button>
-        )}
-
-        {/* Swipe hint, fades after first move. */}
-        {safeActive === 0 && total > 1 && (
-          <div className="pointer-events-none absolute bottom-24 left-1/2 z-10 -translate-x-1/2 rounded-full bg-black/40 px-3 py-1 text-[10px] text-cream/85 uppercase tracking-widest">
-            ← swipe →
+            {videos.map((v, i) => (
+              <CarouselSlide
+                key={`${v.cfVideoId}-${i}`}
+                video={v}
+                shouldMount={Math.abs(i - safeActive) <= 1}
+                isActive={i === safeActive}
+              />
+            ))}
           </div>
-        )}
+
+          {/* Desktop arrows (≥md). Pull them outside the phone-column to
+           * avoid overlapping the right-rail buttons; they sit in the
+           * cream gutter on either side. */}
+          {safeActive > 0 && (
+            <button
+              type="button"
+              onClick={() => setActive((i) => Math.max(0, i - 1))}
+              aria-label="Previous video"
+              className="-translate-y-1/2 -left-14 absolute top-1/2 hidden h-11 w-11 items-center justify-center rounded-full border border-line bg-bg text-ink backdrop-blur-md transition-colors hover:border-line-strong hover:text-ink md:flex"
+            >
+              ‹
+            </button>
+          )}
+          {safeActive < total - 1 && (
+            <button
+              type="button"
+              onClick={() => setActive((i) => Math.min(total - 1, i + 1))}
+              aria-label="Next video"
+              className="-translate-y-1/2 -right-14 absolute top-1/2 hidden h-11 w-11 items-center justify-center rounded-full border border-line bg-bg text-ink backdrop-blur-md transition-colors hover:border-line-strong hover:text-ink md:flex"
+            >
+              ›
+            </button>
+          )}
+
+          {/* Swipe hint, fades after first move. */}
+          {safeActive === 0 && total > 1 && (
+            <div className="pointer-events-none absolute bottom-24 left-1/2 z-10 -translate-x-1/2 rounded-full bg-black/40 px-3 py-1 text-[10px] text-cream/85 uppercase tracking-widest">
+              ← swipe →
+            </div>
+          )}
+
+          {/* Right rail — Like / Save / Contact. Mirrors BrowseFeed's
+           * rail (phase 28); buttons target the listing the user came
+           * from, since the carousel is anchored to that listing. */}
+          {showRail && (
+            <div
+              className="absolute right-3 z-20 flex flex-col items-center gap-3"
+              style={{ bottom: 'max(6rem, calc(env(safe-area-inset-bottom) + 5rem))' }}
+            >
+              {onToggleLike && (
+                <button
+                  type="button"
+                  onClick={onToggleLike}
+                  aria-label="Like listing"
+                  className={`flex h-12 w-12 items-center justify-center rounded-full border backdrop-blur transition ${
+                    liked
+                      ? 'border-rose-400/70 bg-rose-400/20 text-rose-400'
+                      : 'border-cream/20 bg-ink/40 text-cream hover:border-cream/50'
+                  }`}
+                >
+                  <HeartIcon filled={liked} />
+                </button>
+              )}
+              {onToggleSave && (
+                <button
+                  type="button"
+                  onClick={onToggleSave}
+                  aria-label="Save listing"
+                  className={`flex h-12 w-12 items-center justify-center rounded-full border backdrop-blur transition ${
+                    saved
+                      ? 'border-cream/40 bg-cream/15 text-cream'
+                      : 'border-cream/20 bg-ink/40 text-cream hover:border-cream/50'
+                  }`}
+                >
+                  <BookmarkIcon filled={saved} />
+                </button>
+              )}
+              {onContact && (
+                <button
+                  type="button"
+                  onClick={onContact}
+                  aria-label="Contact agent"
+                  className="flex h-12 w-12 items-center justify-center rounded-full border border-cream/20 bg-ink/40 text-cream backdrop-blur transition hover:border-cream/50"
+                >
+                  <CommentIcon />
+                </button>
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -287,25 +398,89 @@ function CarouselSlide({
           ref={ref}
           // biome-ignore lint/a11y/useMediaCaption: HLS source has no caption track.
           poster={poster ?? undefined}
-          className="h-full w-full bg-black object-contain"
+          className="h-full w-full bg-black object-cover"
           playsInline
           loop
           preload="metadata"
         />
       ) : poster ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={poster} alt="" className="h-full w-full bg-black object-contain" />
+        <img src={poster} alt="" className="h-full w-full bg-black object-cover" />
       ) : null}
 
       {/* Category label */}
-      <div className="absolute top-24 left-4 inline-flex items-center rounded-full border border-line-strong bg-ink/15 px-3 py-1 text-[11px] font-medium text-cream uppercase tracking-wider backdrop-blur-md">
+      <div className="absolute top-24 left-4 inline-flex items-center rounded-full border border-cream/30 bg-ink/40 px-3 py-1 text-[11px] font-medium text-cream uppercase tracking-wider backdrop-blur-md">
         {video.line1}
       </div>
       {video.line2 && (
-        <div className="absolute right-4 bottom-8 left-4 text-[13px] text-cream/85 leading-snug drop-shadow">
+        <div className="absolute right-20 bottom-8 left-4 text-[13px] text-cream/85 leading-snug drop-shadow">
           {video.line2}
         </div>
       )}
     </div>
+  );
+}
+
+/* ---------- Inline icons (kept local to avoid pulling BrowseFeed deps) ---------- */
+
+function ShareIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24" width={22} height={22} fill="currentColor">
+      <path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z" />
+    </svg>
+  );
+}
+
+function HeartIcon({ filled }: { filled?: boolean }) {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      width={24}
+      height={24}
+      fill={filled ? 'currentColor' : 'none'}
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+    </svg>
+  );
+}
+
+function BookmarkIcon({ filled }: { filled?: boolean }) {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      width={22}
+      height={22}
+      fill={filled ? 'currentColor' : 'none'}
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+    </svg>
+  );
+}
+
+function CommentIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      width={22}
+      height={22}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+    </svg>
   );
 }

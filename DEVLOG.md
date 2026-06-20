@@ -2,6 +2,32 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-06-20 14:00 UTC — Phase 45.17: Community-video carousel parity with listing feed
+
+**Objective**: Owner-flagged delta — the community-video carousel reached from the listing feed (`/v/.../...` → top-left community chip → CommunitySheet → CommunityCarousel) was rendering full-screen on desktop instead of the phone-column shape used by the listing feed and the standalone community feed (`/c/[slug]/feed`). It also lacked the Share/Like/Save/Contact rail that the surrounding feeds have. Bring all three feeds to visual + functional parity.
+
+**Actions**: single commit on `main`.
+
+- `app/(public)/browse/_components/CommunityCarousel.tsx`: rewrote outer chrome — overlay now `flex items-center justify-center bg-bg`, with an inner phone-column wrapper using the same `md:w-[min(430px,calc(100vh*9/16))]` class as `BrowseFeed.tsx` and `CommunityVideoFeed.tsx`. Mobile stays full viewport. Beige gutters fill the surrounding space, matching the cream background of the rest of the site.
+- Added optional rail props (`onShare`, `onToggleLike`, `onToggleSave`, `onContact`, `liked`, `saved`) — when provided, a right-rail with Like / Save / Contact (and a top-right Share button next to the counter) is rendered over the active slide. Inline SVG icons kept local so the carousel stays self-contained.
+- Desktop prev/next arrows pulled outside the phone column (into the cream gutters with negative offsets) so they don't overlap the rail.
+- `app/(public)/browse/_components/BrowseFeed.tsx`: passed the existing per-card `onShare`, `toggleLike`, `toggleSave`, `openContact` callbacks plus `isLiked`/`isSaved` flags into `<CommunityCarousel>`. Per the owner: when the buyer enters the carousel from a listing, the rail targets *that listing* (the user's anchor), not the community video. The community-feed entry point (`/c/[slug]/feed`) keeps its own rail (community-scoped, no Contact) and is unaffected.
+
+**Decisions**:
+- Rail handlers reuse the listing-feed callbacks instead of new community-video ones — Like/Save state stays consistent whether the buyer taps the rail on L0 or in the carousel; one source of truth per listing.
+- The community feed (`/c/[slug]/feed`) intentionally diverges (no Contact button) because there's no single agent context for a community as a whole. Two feeds, two scopes — same shape, different scoped actions.
+- Inline icons in `CommunityCarousel` rather than importing from `BrowseFeed`: kept the dependency tree shallow so the carousel can be unit-tested or reused without dragging the entire feed component in.
+
+**Issues / Resolution**:
+- Original `CommunityCarousel` used `bg-bg` token names (`text-ink`, `border-line`) for the back button and progress bar that read as light-on-dark over a black slide; switched to the same cream-on-ink chrome the listing feed uses (`border-cream/20 bg-ink/55 text-cream`) for visual consistency.
+- Initial concern about z-index / sheet still being mounted underneath the carousel was unfounded — `CommunitySheet` uses `open={sheetOpen && !carouselOpen}`, so it auto-hides while the carousel is open.
+
+**Learnings**:
+- Three-feed parity check is now in the vicinity skill's pitfall list: any time we change the right-rail / top-header / column-shape on one of {listing feed, community feed, community carousel}, audit the other two — they're three skins of the same idiom and divergence is always owner-flagged.
+- Bringing a deeply-nested overlay into phone-column shape is best done with a centred outer flex + phone-width inner wrapper (`fixed inset-0 flex items-center justify-center bg-bg` + inner `md:w-[min(430px,calc(100vh*9/16))]`) — same pattern works for any modal/lightbox we add later.
+
+**Next steps**: owner verification that desktop community-video viewing from a listing now matches the rest of the site.
+
 ## 2026-06-20 10:00 UTC — Phase 45: Top-nav redesign + 6 rounds of owner polish
 
 **Objective**: Replace the old SiteHeader/TopRightAvatar/SearchPill chrome with a unified TopBar + DesktopSidebar nav system, then iterate through 6 rounds of owner feedback covering favorites, agent hub, community feed, search, upload flow, and publish redirects.

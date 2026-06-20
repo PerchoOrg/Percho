@@ -3,6 +3,12 @@
 Newest at the top. Each release covers a meaningful product change visible to users.
 Format matches the standard release template (Features / Improvements / Bug Fixes / Technical / Known Issues / Metrics).
 
+## v0.45.1 — 2026-06-20
+
+### 🐛 Bug Fixes
+
+- **Community videos viewed from a listing** now show in the same phone-shape column as everything else on desktop, instead of stretching to fill the whole screen. Share, Like, Save, and Contact buttons now appear in the side rail — same shape and behaviour as the listing feed itself, so you can save the listing or contact the agent without leaving the video.
+
 ## v0.45.0 — 2026-06-20
 
 ### 🚀 Features
