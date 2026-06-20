@@ -20,7 +20,7 @@
  *   `nav-config.ts` for the full rationale.
  *
  * Hides itself on:
- *   - `md:` and up (desktop uses SiteHeader)
+ *   - `md:` and up (desktop uses DesktopSidebar)
  *   - feed routes (`/v/...`, `/browse/feed`) — immersive
  *   - auth routes (`/login`, `/signup`, `/forgot-password`, `/reset-password`)
  *   - landing (`/`)
