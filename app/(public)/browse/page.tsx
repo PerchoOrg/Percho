@@ -1,9 +1,6 @@
-import { DEMO_MEDIA_ENABLED, demoCoverFor } from '@/lib/demo-media';
 import { thumbnailUrl } from '@/lib/cloudflare/stream';
-import {
-  fetchBrowseCards,
-  fetchBrowseCardsByCommunitySlug,
-} from '@/lib/feed/browse-cards';
+import { DEMO_MEDIA_ENABLED, demoCoverFor } from '@/lib/demo-media';
+import { fetchBrowseCards, fetchBrowseCardsByCommunitySlug } from '@/lib/feed/browse-cards';
 import { createClient } from '@/lib/supabase/server';
 import type { Metadata } from 'next';
 import Image from 'next/image';
@@ -65,9 +62,7 @@ async function BrowseHeader({
     <header className="sticky top-0 z-20 border-line border-b bg-bg/85 backdrop-blur-md md:hidden">
       <div className="flex items-center justify-center px-4 py-3">
         <div className="text-ink2 text-[11px] tracking-[0.22em] uppercase">
-          {communitySlug && communityLabel
-            ? `Listings in ${communityLabel}`
-            : 'For You'}
+          {communitySlug && communityLabel ? `Listings in ${communityLabel}` : 'For You'}
         </div>
       </div>
     </header>
@@ -75,9 +70,7 @@ async function BrowseHeader({
 }
 
 async function RecommendedGrid({ communitySlug }: { communitySlug: string | null }) {
-  const scopedCards = communitySlug
-    ? await fetchBrowseCardsByCommunitySlug(communitySlug)
-    : null;
+  const scopedCards = communitySlug ? await fetchBrowseCardsByCommunitySlug(communitySlug) : null;
   const cards = scopedCards && scopedCards.length > 0 ? scopedCards : await fetchBrowseCards();
   const isCommunityScoped = Boolean(scopedCards && scopedCards.length > 0);
 

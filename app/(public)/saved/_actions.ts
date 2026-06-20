@@ -20,8 +20,8 @@ import type { BrowseCard } from '@/app/(public)/browse/_components/BrowseFeed';
 import { listSavedCommunityIds } from '@/app/_actions/saved-communities';
 import { listSavedListingIds } from '@/app/_actions/saved-listings';
 import { listLiked } from '@/lib/buyer/likes';
-import { fetchBrowseCardsByIds } from '@/lib/feed/browse-cards';
 import { resolveCommunityCoverWithCfIds } from '@/lib/community/cover';
+import { fetchBrowseCardsByIds } from '@/lib/feed/browse-cards';
 import { createServiceClient } from '@/lib/supabase/server';
 
 export async function fetchSavedCardsAction(input: {
@@ -136,7 +136,7 @@ async function fetchCommunityCardsByIds(ids: string[]): Promise<SavedCommunityCa
     const cfList = byCommunity.get(id) ?? [];
     const cover = resolveCommunityCoverWithCfIds({
       cover_video_id: c.cover_video_id,
-      cover_video_cf_id: c.cover_video_id ? readyById.get(c.cover_video_id) ?? null : null,
+      cover_video_cf_id: c.cover_video_id ? (readyById.get(c.cover_video_id) ?? null) : null,
       cover_storage_path: c.cover_storage_path,
       fallback_video_cf_id: cfList[0] ?? null,
     });

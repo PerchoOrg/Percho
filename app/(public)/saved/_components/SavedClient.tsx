@@ -21,11 +21,11 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import {
+  type SavedCommunityCard,
   fetchLikedCardsAction,
   fetchLikedCommunitiesAction,
   fetchSavedCardsAction,
   fetchSavedCommunitiesAction,
-  type SavedCommunityCard,
 } from '../_actions';
 
 type Mode = 'saves' | 'likes';
@@ -82,20 +82,15 @@ export function SavedClient() {
     data.likesListings === null ||
     data.likesCommunities === null;
 
-  const cards =
-    mode === 'saves' ? data.savesListings ?? [] : data.likesListings ?? [];
+  const cards = mode === 'saves' ? (data.savesListings ?? []) : (data.likesListings ?? []);
   const communities =
-    mode === 'saves'
-      ? data.savesCommunities ?? []
-      : data.likesCommunities ?? [];
+    mode === 'saves' ? (data.savesCommunities ?? []) : (data.likesCommunities ?? []);
 
   return (
     <main className="min-h-dvh bg-bg pb-20 text-ink md:pb-0">
       <header className="sticky top-0 z-20 border-line border-b bg-bg backdrop-blur-md">
         <div className="flex items-center justify-center px-4 py-3 md:hidden">
-          <div className="font-medium text-ink2 text-sm uppercase tracking-wider">
-            Favorites
-          </div>
+          <div className="font-medium text-ink2 text-sm uppercase tracking-wider">Favorites</div>
         </div>
         <div className="mx-auto flex max-w-5xl flex-col items-center gap-2 px-4 pb-2 md:pt-3">
           <div className="flex items-center gap-1">

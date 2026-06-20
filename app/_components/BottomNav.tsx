@@ -28,14 +28,14 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { UploadFAB } from './UploadFAB';
 import {
+  type Tab,
+  type ViewerRole,
   getPrimaryTabs,
   isChromeHidden,
   isTabActive,
-  type Tab,
-  type ViewerRole,
 } from './nav-config';
-import { UploadFAB } from './UploadFAB';
 
 export type { ViewerRole } from './nav-config';
 
@@ -57,11 +57,7 @@ function TabButton({ tab, active }: { tab: Tab; active: boolean }) {
           className="absolute top-0 left-1/2 h-px w-8 -translate-x-1/2 bg-ink"
         />
       )}
-      <Icon
-        size={20}
-        aria-hidden="true"
-        strokeWidth={active ? 1.75 : 1.25}
-      />
+      <Icon size={20} aria-hidden="true" strokeWidth={active ? 1.75 : 1.25} />
       <span className="leading-none tracking-wide">{tab.label}</span>
     </Link>
   );
@@ -83,11 +79,7 @@ export function BottomNav({ role }: { role: ViewerRole }) {
       <ul className="mx-auto flex max-w-3xl items-stretch justify-around">
         {tabs.map((tab) => (
           <li key={tab.href} className="flex-1">
-            {tab.fab ? (
-              <UploadFAB />
-            ) : (
-              <TabButton tab={tab} active={isTabActive(pathname, tab)} />
-            )}
+            {tab.fab ? <UploadFAB /> : <TabButton tab={tab} active={isTabActive(pathname, tab)} />}
           </li>
         ))}
       </ul>

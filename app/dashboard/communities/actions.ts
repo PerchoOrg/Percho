@@ -356,13 +356,15 @@ export async function updateCommunityVideoVisibility(
   const supabase = await createClient();
   const owned = await requireOwnedVideo(supabase, videoId);
   if (!owned.ok) return owned;
-  const { error } = await (supabase as unknown as {
-    from: (t: string) => {
-      update: (v: { visibility: string }) => {
-        eq: (col: string, val: string) => Promise<{ error: unknown }>;
+  const { error } = await (
+    supabase as unknown as {
+      from: (t: string) => {
+        update: (v: { visibility: string }) => {
+          eq: (col: string, val: string) => Promise<{ error: unknown }>;
+        };
       };
-    };
-  })
+    }
+  )
     .from('community_videos')
     .update({ visibility })
     .eq('id', videoId);
@@ -400,13 +402,15 @@ export async function updateCommunityVideoCategory(
   const supabase = await createClient();
   const owned = await requireOwnedVideo(supabase, videoId);
   if (!owned.ok) return owned;
-  const { error } = await (supabase as unknown as {
-    from: (t: string) => {
-      update: (v: { category: string; category_needs_review: boolean }) => {
-        eq: (col: string, val: string) => Promise<{ error: unknown }>;
+  const { error } = await (
+    supabase as unknown as {
+      from: (t: string) => {
+        update: (v: { category: string; category_needs_review: boolean }) => {
+          eq: (col: string, val: string) => Promise<{ error: unknown }>;
+        };
       };
-    };
-  })
+    }
+  )
     .from('community_videos')
     .update({ category, category_needs_review: false })
     .eq('id', videoId);

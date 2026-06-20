@@ -1,9 +1,9 @@
 'use client';
 import { listSavedListingIds, saveListing, unsaveListing } from '@/app/_actions/saved-listings';
-import { listLiked, toggleLike as toggleLikeAction } from '@/lib/buyer/likes';
 import { getOrCreateDeviceId } from '@/lib/buyer/device-id';
+import { listLiked, toggleLike as toggleLikeAction } from '@/lib/buyer/likes';
 import { hlsUrl, thumbnailUrl } from '@/lib/cloudflare/stream';
-import { demoCoverFor, demoPhotosFor, demoVideoFor, type DemoVideoPool } from '@/lib/demo-media';
+import { type DemoVideoPool, demoCoverFor, demoPhotosFor, demoVideoFor } from '@/lib/demo-media';
 import Hls from 'hls.js';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -802,12 +802,10 @@ function Card({
         >
           <span className="text-base leading-none">🏘️</span>
           <span className="flex min-w-0 flex-col text-left leading-tight">
-            <span className="truncate font-semibold text-[12px]">
-              {card.community.name}
-            </span>
+            <span className="truncate font-semibold text-[12px]">{card.community.name}</span>
             <span className="text-[10px] text-cream/60">
-              {card.community.videoCount}{' '}
-              {card.community.videoCount === 1 ? 'video' : 'videos'} · in this area
+              {card.community.videoCount} {card.community.videoCount === 1 ? 'video' : 'videos'} ·
+              in this area
             </span>
           </span>
           <span className="text-cream/50 leading-none">›</span>
@@ -979,8 +977,7 @@ export function BrowseFeed({
   // it was wired to /browse with title="Search (coming soon)", which is
   // a placeholder by our no-fake-data rule. When real search lands we
   // can add it back.
-  const backFallbackHref =
-    searchParams?.get('from') === 'dashboard' ? '/dashboard' : '/browse';
+  const backFallbackHref = searchParams?.get('from') === 'dashboard' ? '/dashboard' : '/browse';
   const [activeIndex, setActiveIndex] = useState(initialIndex);
   const [liked, setLiked] = useState<Record<string, boolean>>({});
   const [saved, setSaved] = useState<Record<string, boolean>>({});
@@ -1470,9 +1467,7 @@ export function BrowseFeed({
        * the user to L0 (listing video) per V1 spec — the sheet is a transient
        * lookup, not a stable anchor. */}
       {(() => {
-        const sheetCard = sheetCardId
-          ? cards.find((c) => c.id === sheetCardId) ?? null
-          : null;
+        const sheetCard = sheetCardId ? (cards.find((c) => c.id === sheetCardId) ?? null) : null;
         const sheetData: CommunitySheetData | null =
           sheetCard && sheetCard.community
             ? {

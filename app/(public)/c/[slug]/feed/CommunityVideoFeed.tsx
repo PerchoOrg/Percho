@@ -16,9 +16,13 @@
  * an entry point to look for homes inside it later.
  */
 
-import { listSavedCommunityIds, saveCommunity, unsaveCommunity } from '@/app/_actions/saved-communities';
-import { listLiked, toggleLike as toggleLikeAction } from '@/lib/buyer/likes';
+import {
+  listSavedCommunityIds,
+  saveCommunity,
+  unsaveCommunity,
+} from '@/app/_actions/saved-communities';
 import { getOrCreateDeviceId } from '@/lib/buyer/device-id';
+import { listLiked, toggleLike as toggleLikeAction } from '@/lib/buyer/likes';
 import { hlsUrl, thumbnailUrl } from '@/lib/cloudflare/stream';
 import { demoCoverFor, demoVideoFor } from '@/lib/demo-media';
 import {
@@ -28,8 +32,8 @@ import {
 import Hls from 'hls.js';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { CommunityListingsSheet } from './_components/CommunityListingsSheet';
 import { CommunityListingCarousel } from './_components/CommunityListingCarousel';
+import { CommunityListingsSheet } from './_components/CommunityListingsSheet';
 
 export type CommunityFeedVideo = {
   id: string;
@@ -623,93 +627,93 @@ export function CommunityVideoFeed({
        * below Save: Like → Save → Listings → Mute. Same destination as
        * the badge on `/c/[slug]` (`/browse?community=<slug>`). Hidden when
        * count is 0 (no homes for sale yet). */}
-       <div
-         className="absolute right-3 z-20 flex flex-col items-center gap-3"
-         style={{ bottom: 'max(6rem, calc(env(safe-area-inset-bottom) + 5rem))' }}
-       >
-         <button
-           type="button"
-           onClick={toggleLike}
-           aria-label="Like community"
-           className={`flex h-12 w-12 items-center justify-center rounded-full border backdrop-blur transition ${
-             liked
-               ? 'border-rose-400/70 bg-rose-400/20 text-rose-400'
-               : 'border-cream/20 bg-ink/40 text-cream hover:border-cream/50'
-           }`}
-         >
-           <HeartIcon filled={liked} />
-         </button>
-         <button
-           type="button"
-           onClick={toggleSave}
-           aria-label="Save community"
-           className={`flex h-12 w-12 items-center justify-center rounded-full border backdrop-blur transition ${
-             saved
-               ? 'border-cream/40 bg-cream/15 text-cream'
-               : 'border-cream/20 bg-ink/40 text-cream hover:border-cream/50'
-           }`}
-         >
-           <BookmarkIcon filled={saved} />
-         </button>
-         {/* Phase 34b.1 (V1 redo, 2026-06-17): the right-rail HouseIcon was
-          * removed in favor of a top-left "🏠 N homes here" chip that
-          * opens an in-place listings sheet (L2) instead of navigating
-          * away to /browse. Old right-rail entry duplicated the chip's
-          * affordance and broke the user's anchor (community feed). The
-          * mute button was already removed in phase34a. The chip lives at
-          * top-left (not bottom) to mirror the listing-card community
-          * chip on /browse — same corner, same job. */}
-         </div>
+      <div
+        className="absolute right-3 z-20 flex flex-col items-center gap-3"
+        style={{ bottom: 'max(6rem, calc(env(safe-area-inset-bottom) + 5rem))' }}
+      >
+        <button
+          type="button"
+          onClick={toggleLike}
+          aria-label="Like community"
+          className={`flex h-12 w-12 items-center justify-center rounded-full border backdrop-blur transition ${
+            liked
+              ? 'border-rose-400/70 bg-rose-400/20 text-rose-400'
+              : 'border-cream/20 bg-ink/40 text-cream hover:border-cream/50'
+          }`}
+        >
+          <HeartIcon filled={liked} />
+        </button>
+        <button
+          type="button"
+          onClick={toggleSave}
+          aria-label="Save community"
+          className={`flex h-12 w-12 items-center justify-center rounded-full border backdrop-blur transition ${
+            saved
+              ? 'border-cream/40 bg-cream/15 text-cream'
+              : 'border-cream/20 bg-ink/40 text-cream hover:border-cream/50'
+          }`}
+        >
+          <BookmarkIcon filled={saved} />
+        </button>
+        {/* Phase 34b.1 (V1 redo, 2026-06-17): the right-rail HouseIcon was
+         * removed in favor of a top-left "🏠 N homes here" chip that
+         * opens an in-place listings sheet (L2) instead of navigating
+         * away to /browse. Old right-rail entry duplicated the chip's
+         * affordance and broke the user's anchor (community feed). The
+         * mute button was already removed in phase34a. The chip lives at
+         * top-left (not bottom) to mirror the listing-card community
+         * chip on /browse — same corner, same job. */}
+      </div>
 
-         {/* Top-left "homes here" chip — Scenario B · L1 trigger.
-         * Positioned at top-16 (just under the top header) to mirror the
-         * listing-card community chip on /browse — same corner, same job:
-         * cross-collection sheet → carousel. Hidden when the community has
-         * 0 listings (no fake data). Tap opens CommunityListingsSheet (L2).
-         * Phase 34b.1 (2026-06-17): moved from bottom-left to top-left for
-         * consistency with the listing chip the user already learned. */}
-         {listings.length > 0 && (
-         <button
-           type="button"
-           onClick={() => setListingsSheetOpen(true)}
-           aria-label={`View ${listings.length} ${
-             listings.length === 1 ? 'home' : 'homes'
-           } in ${community.name}`}
-           className="absolute top-16 left-3 z-20 flex items-center gap-1.5 rounded-full border border-cream/20 bg-ink/65 py-2 pr-3 pl-3 text-cream backdrop-blur-md transition-colors hover:border-cream hover:text-cream"
-           style={{ touchAction: 'manipulation' }}
-         >
-           <span aria-hidden="true">🏠</span>
-           <span className="font-medium text-[12px]">
-             {listings.length} {listings.length === 1 ? 'home' : 'homes'} here
-           </span>
-           <span className="text-cream/60" aria-hidden="true">
-             ›
-           </span>
-         </button>
-         )}
+      {/* Top-left "homes here" chip — Scenario B · L1 trigger.
+       * Positioned at top-16 (just under the top header) to mirror the
+       * listing-card community chip on /browse — same corner, same job:
+       * cross-collection sheet → carousel. Hidden when the community has
+       * 0 listings (no fake data). Tap opens CommunityListingsSheet (L2).
+       * Phase 34b.1 (2026-06-17): moved from bottom-left to top-left for
+       * consistency with the listing chip the user already learned. */}
+      {listings.length > 0 && (
+        <button
+          type="button"
+          onClick={() => setListingsSheetOpen(true)}
+          aria-label={`View ${listings.length} ${
+            listings.length === 1 ? 'home' : 'homes'
+          } in ${community.name}`}
+          className="absolute top-16 left-3 z-20 flex items-center gap-1.5 rounded-full border border-cream/20 bg-ink/65 py-2 pr-3 pl-3 text-cream backdrop-blur-md transition-colors hover:border-cream hover:text-cream"
+          style={{ touchAction: 'manipulation' }}
+        >
+          <span aria-hidden="true">🏠</span>
+          <span className="font-medium text-[12px]">
+            {listings.length} {listings.length === 1 ? 'home' : 'homes'} here
+          </span>
+          <span className="text-cream/60" aria-hidden="true">
+            ›
+          </span>
+        </button>
+      )}
 
-         <CommunityListingsSheet
-         open={listingsSheetOpen && !listingCarouselOpen}
-         communityName={community.name}
-         listings={listings}
-         onClose={() => setListingsSheetOpen(false)}
-         onOpenListing={(idx) => {
-           setListingCarouselStartIdx(idx);
-           setListingCarouselOpen(true);
-         }}
-         />
-         <CommunityListingCarousel
-         open={listingCarouselOpen}
-         listings={listings}
-         startIndex={listingCarouselStartIdx}
-         backLabel={community.name}
-         onClose={() => {
-           // Per V1 prototype: closing L3 returns straight to L0 (community
-           // feed), not back to the sheet — sheet was a transient lookup.
-           setListingCarouselOpen(false);
-           setListingsSheetOpen(false);
-         }}
-         />
+      <CommunityListingsSheet
+        open={listingsSheetOpen && !listingCarouselOpen}
+        communityName={community.name}
+        listings={listings}
+        onClose={() => setListingsSheetOpen(false)}
+        onOpenListing={(idx) => {
+          setListingCarouselStartIdx(idx);
+          setListingCarouselOpen(true);
+        }}
+      />
+      <CommunityListingCarousel
+        open={listingCarouselOpen}
+        listings={listings}
+        startIndex={listingCarouselStartIdx}
+        backLabel={community.name}
+        onClose={() => {
+          // Per V1 prototype: closing L3 returns straight to L0 (community
+          // feed), not back to the sheet — sheet was a transient lookup.
+          setListingCarouselOpen(false);
+          setListingsSheetOpen(false);
+        }}
+      />
     </div>
   );
 }

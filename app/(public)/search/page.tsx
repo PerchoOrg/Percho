@@ -1,3 +1,4 @@
+import { CommunityGrid } from '@/app/_components/CommunityGrid';
 /**
  * /search — basic site-wide search across listings and communities.
  *
@@ -9,10 +10,9 @@
  */
 import { thumbnailUrl } from '@/lib/cloudflare/stream';
 import { fetchCommunityListCards } from '@/lib/communities/list';
-import { CommunityGrid } from '@/app/_components/CommunityGrid';
 import { DEMO_MEDIA_ENABLED, demoCoverFor } from '@/lib/demo-media';
-import { photoPublicUrl } from '@/lib/supabase/storage';
 import { createClient } from '@/lib/supabase/server';
+import { photoPublicUrl } from '@/lib/supabase/storage';
 import type { Metadata } from 'next';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -101,7 +101,10 @@ async function searchListings(q: string): Promise<ListingHit[]> {
         () => ({ data: [] }),
       ),
     // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-    (supabase as any).from('agents').select('id, slug').in('id', agentIds),
+    (supabase as any)
+      .from('agents')
+      .select('id, slug')
+      .in('id', agentIds),
   ]);
 
   const heroVid = new Map<string, string>();
@@ -219,11 +222,7 @@ export default async function SearchPage({
     // small in V1; if it grows, push the filter into a dedicated query.
     fetchCommunityListCards().then((rows) =>
       rows
-        .filter(
-          (c) =>
-            c.name.toLowerCase().includes(q) ||
-            (c.city ?? '').toLowerCase().includes(q),
-        )
+        .filter((c) => c.name.toLowerCase().includes(q) || (c.city ?? '').toLowerCase().includes(q))
         .slice(0, LIMIT),
     ),
   ]);

@@ -16,9 +16,9 @@
  * one session, not per-keystroke.
  */
 
-import { useEffect, useRef, useState, useTransition } from 'react';
-import { useSearchParams } from 'next/navigation';
 import { peekPrefillCount } from '@/app/_components/upload-prefill-store';
+import { useSearchParams } from 'next/navigation';
+import { useEffect, useRef, useState, useTransition } from 'react';
 import type { CreateListingInput } from './actions';
 import { createListing } from './actions';
 
@@ -344,9 +344,9 @@ export function NewListingForm() {
                     <span className="font-medium">{field}</span>: {msgs.join(', ')}
                     {field === 'city' && resolved && !resolved.city && (
                       <>
-                        {' '}— Google didn't return a city for this address (rural /
-                        unincorporated). Try a more specific street address, or pick a nearby
-                        address with a city.
+                        {' '}
+                        — Google didn't return a city for this address (rural / unincorporated). Try
+                        a more specific street address, or pick a nearby address with a city.
                       </>
                     )}
                   </li>

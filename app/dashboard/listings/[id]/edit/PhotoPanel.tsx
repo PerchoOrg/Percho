@@ -255,9 +255,7 @@ export function PhotoPanel({ listingId, initialPhotos, initialCoverPhotoId, pref
                 aria-label={isCover ? 'Clear cover' : 'Set as cover'}
                 title={isCover ? 'Clear cover' : 'Set as cover'}
                 className={`absolute top-1.5 right-9 rounded bg-bg p-1.5 disabled:opacity-50 ${
-                  isCover
-                    ? 'text-ink block'
-                    : 'hidden text-ink2 hover:text-ink group-hover:block'
+                  isCover ? 'text-ink block' : 'hidden text-ink2 hover:text-ink group-hover:block'
                 }`}
               >
                 <Star size={14} aria-hidden="true" fill={isCover ? 'currentColor' : 'none'} />

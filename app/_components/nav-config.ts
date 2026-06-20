@@ -27,7 +27,16 @@
  *   swipe-feed-as-primary signal moves to the Explore page itself (cards
  *   click straight into vertical feed) rather than the nav.
  */
-import { Briefcase, Building2, Compass, Heart, LogIn, type LucideIcon, Plus, User } from 'lucide-react';
+import {
+  Briefcase,
+  Building2,
+  Compass,
+  Heart,
+  LogIn,
+  type LucideIcon,
+  Plus,
+  User,
+} from 'lucide-react';
 
 export type ViewerRole = 'anon' | 'buyer' | 'agent';
 

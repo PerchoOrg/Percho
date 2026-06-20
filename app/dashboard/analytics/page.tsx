@@ -59,15 +59,7 @@ function Sparkline({ buckets }: { buckets: DayBucket[] }) {
       {buckets.map((b, i) => {
         const x = pad + i * stepX;
         const y = h - pad - (b.views / max) * (h - pad * 2);
-        return (
-          <circle
-            key={b.date}
-            cx={x}
-            cy={y}
-            r={2}
-            fill="currentColor"
-          />
-        );
+        return <circle key={b.date} cx={x} cy={y} r={2} fill="currentColor" />;
       })}
     </svg>
   );

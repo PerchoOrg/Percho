@@ -117,9 +117,7 @@ export interface LikedListingRow {
 export async function listLikedListings(input: {
   deviceId: string;
 }): Promise<LikedListingRow[]> {
-  const parsed = z
-    .object({ deviceId: z.string().refine(isValidDeviceId) })
-    .safeParse(input);
+  const parsed = z.object({ deviceId: z.string().refine(isValidDeviceId) }).safeParse(input);
   if (!parsed.success) return [];
 
   const supabase = createServiceClient();

@@ -110,7 +110,10 @@ export function UploadFAB() {
             {sheet === 'source-picker' && (
               <div className="space-y-2">
                 <h2 className="px-2 pb-1 font-serif text-lg text-ink">Upload</h2>
-                <SheetButton label="Photo or video from album" onClick={() => albumRef.current?.click()} />
+                <SheetButton
+                  label="Photo or video from album"
+                  onClick={() => albumRef.current?.click()}
+                />
                 <SheetButton label="Take photo" onClick={() => photoRef.current?.click()} />
                 <SheetButton label="Record video" onClick={() => videoRef.current?.click()} />
                 <SheetButton label="Cancel" onClick={close} variant="muted" />

@@ -97,7 +97,8 @@ export function ListingsTabbedList({ initialTab, agentSlug, rows, counts, view =
         <div className="flex items-center gap-2 text-xs">
           {(['draft', 'published', 'archived'] as const).map((tab) => {
             const isActive = activeTab === tab;
-            const label = tab === 'draft' ? 'Draft' : tab === 'published' ? 'Published' : 'Archived';
+            const label =
+              tab === 'draft' ? 'Draft' : tab === 'published' ? 'Published' : 'Archived';
             return (
               <button
                 key={tab}
@@ -249,9 +250,7 @@ export function ListingsTabbedList({ initialTab, agentSlug, rows, counts, view =
                     {l.city && l.state ? `${l.city}, ${l.state}` : '—'}
                     {l.price != null && ` · ${fmtPrice(l.price)}`}
                   </p>
-                  {meta.length > 0 && (
-                    <p className="mt-1 text-muted text-xs">{meta.join(' · ')}</p>
-                  )}
+                  {meta.length > 0 && <p className="mt-1 text-muted text-xs">{meta.join(' · ')}</p>}
                   {isPub && publicPath && (
                     <div className="mt-3">
                       <CopyLinkButton path={publicPath} display={`vicinities.cc${publicPath}`} />
