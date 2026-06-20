@@ -44,6 +44,11 @@ type Props = {
   /** Phase 43.10: 'grid' renders 2-up cards (mobile-friendly).
    * Default 'list' keeps the existing wide-row layout. */
   view?: 'list' | 'grid';
+  /** Phase 45.13 (2026-06-20): owner round 5 #5 — hide the Draft/Published/
+   * Archived pill row on /dashboard. When false, all listings render together
+   * regardless of status (initialTab is ignored). Default true preserves the
+   * old behaviour for any other surface that mounts this island. */
+  showStatusTabs?: boolean;
 };
 
 function fmtPrice(n: number | null): string | null {
@@ -75,7 +80,7 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
-export function ListingsTabbedList({ initialTab, agentSlug, rows, counts, view = 'list' }: Props) {
+export function ListingsTabbedList({ initialTab, agentSlug, rows, counts, view = 'list', showStatusTabs = true }: Props) {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<StatusTab>(initialTab);
 
@@ -84,40 +89,43 @@ export function ListingsTabbedList({ initialTab, agentSlug, rows, counts, view =
   // server component tree, so metrics above don't flicker. Use scroll: false
   // because tab switching shouldn't yank the user back to the top.
   useEffect(() => {
+    if (!showStatusTabs) return; // no URL sync when filter row is hidden
     const target = activeTab === 'published' ? '/dashboard' : `/dashboard?status=${activeTab}`;
     router.replace(target, { scroll: false });
-  }, [activeTab, router]);
+  }, [activeTab, router, showStatusTabs]);
 
-  const filteredRows = rows.filter((r) => r.status === activeTab);
+  const filteredRows = showStatusTabs ? rows.filter((r) => r.status === activeTab) : rows;
 
   return (
     <>
-      <div className="mb-4 flex items-center justify-end">
-        <div className="flex items-center gap-2 text-xs">
-          {(['draft', 'published', 'archived'] as const).map((tab) => {
-            const isActive = activeTab === tab;
-            const label =
-              tab === 'draft' ? 'Draft' : tab === 'published' ? 'Published' : 'Archived';
-            return (
-              <button
-                key={tab}
-                type="button"
-                onClick={() => setActiveTab(tab)}
-                className={`rounded-full px-3 py-1 transition ${
-                  isActive ? 'bg-ink2/30 text-ink' : 'text-ink2 hover:text-ink'
-                }`}
-              >
-                {label}
-                {counts[tab] > 0 && (
-                  <span className={`ml-1.5 ${isActive ? 'text-ink2' : 'text-muted'}`}>
-                    {counts[tab]}
-                  </span>
-                )}
-              </button>
-            );
-          })}
+      {showStatusTabs && (
+        <div className="mb-4 flex items-center justify-end">
+          <div className="flex items-center gap-2 text-xs">
+            {(['draft', 'published', 'archived'] as const).map((tab) => {
+              const isActive = activeTab === tab;
+              const label =
+                tab === 'draft' ? 'Draft' : tab === 'published' ? 'Published' : 'Archived';
+              return (
+                <button
+                  key={tab}
+                  type="button"
+                  onClick={() => setActiveTab(tab)}
+                  className={`rounded-full px-3 py-1 transition ${
+                    isActive ? 'bg-ink2/30 text-ink' : 'text-ink2 hover:text-ink'
+                  }`}
+                >
+                  {label}
+                  {counts[tab] > 0 && (
+                    <span className={`ml-1.5 ${isActive ? 'text-ink2' : 'text-muted'}`}>
+                      {counts[tab]}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
         </div>
-      </div>
+      )}
 
       {filteredRows.length === 0 ? (
         <div className="rounded-2xl border border-line border-dashed bg-surface px-8 py-16 text-center">

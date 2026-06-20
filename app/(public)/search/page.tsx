@@ -166,7 +166,7 @@ function ListingCard({ hit, idx }: { hit: ListingHit; idx: number }) {
               src={src}
               alt={hit.address}
               fill
-              sizes="50vw"
+              sizes="(min-width: 768px) 25vw, 50vw"
               priority={idx < 4}
               className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.02]"
             />
@@ -251,7 +251,7 @@ export default async function SearchPage({
                 <h2 className="mb-3 px-1 text-[11px] text-ink2 tracking-[0.22em] uppercase">
                   Listings
                 </h2>
-                <div className="grid grid-cols-2 gap-x-3 gap-y-8 sm:gap-x-5 sm:gap-y-12">
+                <div className="grid grid-cols-2 gap-x-3 gap-y-8 md:grid-cols-4 md:gap-x-5 md:gap-y-12">
                   {listings.map((hit, idx) => (
                     <ListingCard key={hit.id} hit={hit} idx={idx} />
                   ))}

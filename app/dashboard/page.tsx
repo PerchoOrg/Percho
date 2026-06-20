@@ -127,6 +127,7 @@ export default async function DashboardHomePage({ searchParams }: PageProps) {
         rows={rows}
         counts={counts}
         view="grid"
+        showStatusTabs={false}
       />
     </div>
   );

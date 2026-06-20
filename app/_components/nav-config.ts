@@ -96,8 +96,8 @@ export function getSubTabs(pathname: string, role: ViewerRole): SubTab[] | null 
     // for Favorites. SavedClient no longer renders its own pill row.
     // Phase 45.12 (2026-06-20): singular per owner ("Listing" / "Community").
     return [
-      { href: '/saved', label: 'Listing' },
-      { href: '/saved/communities', label: 'Community' },
+      { href: '/saved', label: 'Saved Listing' },
+      { href: '/saved/communities', label: 'Saved Community' },
     ];
   }
   if (pathname === '/profile' || pathname.startsWith('/profile/')) {

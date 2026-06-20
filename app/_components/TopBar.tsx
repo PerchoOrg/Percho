@@ -277,17 +277,8 @@ function AvatarMenu({
             <User size={16} aria-hidden="true" />
             Profile
           </Link>
-          {role === 'agent' ? (
-            <Link
-              href="/dashboard"
-              role="menuitem"
-              onClick={() => setOpen(false)}
-              className="flex items-center gap-2 border-line border-t px-4 py-3 text-ink2 text-sm transition hover:bg-surface/5"
-            >
-              <User size={16} aria-hidden="true" />
-              Agent Hub
-            </Link>
-          ) : null}
+          {/* Phase 45.13 (2026-06-20): Agent Hub removed from dropdown — already
+            * a primary tab in BottomNav/DesktopSidebar. Owner round 5 #3. */}
           <form action="/api/auth/signout" method="post" className="border-line border-t">
             <button
               type="submit"

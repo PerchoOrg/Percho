@@ -12,8 +12,14 @@ import Link from 'next/link';
 
 export function CommunityGrid({
   communities,
+  hrefBuilder,
 }: {
   communities: (CommunityListCard & { nearestVideoMi?: number | null })[];
+  /** Optional override for the per-card link target. Defaults to `/c/<slug>`
+   * (public community page). Phase 45.13 (2026-06-20): /dashboard/communities
+   * passes `(c) => /dashboard/communities/<id>` so agents land on the editor
+   * instead of the buyer-facing browse page when tapping their own card. */
+  hrefBuilder?: (c: CommunityListCard) => string;
 }) {
   if (communities.length === 0) {
     return (
@@ -30,7 +36,7 @@ export function CommunityGrid({
         const distanceMi =
           typeof c.nearestVideoMi === 'number' ? c.nearestVideoMi : null;
         return (
-          <Link key={c.id} href={`/c/${c.slug}`} prefetch={false} className="group block">
+          <Link key={c.id} href={hrefBuilder ? hrefBuilder(c) : `/c/${c.slug}`} prefetch={false} className="group block">
             <div className="relative aspect-[3/4] w-full overflow-hidden bg-surface">
               {coverUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element

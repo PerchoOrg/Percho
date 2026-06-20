@@ -55,7 +55,10 @@ export default async function CommunitiesListPage() {
         * itself links to /c/[slug] (public). For editing, agents use the
         * "Edit" affordance on /c/[slug] or hit /dashboard/communities/[id]
         * directly — kept consistent so the cross-page card style holds. */}
-      <CommunityGrid communities={cards} />
+      <CommunityGrid
+        communities={cards}
+        hrefBuilder={(c) => `/dashboard/communities/${c.id}`}
+      />
     </div>
   );
 }
