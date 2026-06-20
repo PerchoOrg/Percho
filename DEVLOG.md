@@ -2,6 +2,27 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-06-20 18:30 UTC — Phase 45.21: Listing-feed right rail back up to 6rem (revert 45.15 #5)
+
+**Objective**: owner reverted phase 45.15 #5 — "rail lowered to safe-area baseline" felt wrong after living with it. Move the three right-rail buttons (Like / Save / Contact) back up.
+
+**Actions**: one-line CSS revert in `app/(public)/browse/_components/BrowseFeed.tsx` (right-rail container `bottom`).
+- Before (45.15): `bottom: max(1rem, env(safe-area-inset-bottom))` — same baseline as caption block.
+- After (45.21, restoring pre-45.15): `bottom: max(6rem, calc(env(safe-area-inset-bottom) + 5rem))` — rail floats ~5rem above safe-area, caption stays anchored at `bottom: 1rem`.
+
+Caption block (`right-20`, `bottom: 1rem`) is unchanged — the original 45.15 worry was that lifting the rail leaves a phantom empty slot under it, but in practice the caption fills the bottom edge and the rail at thumb height reads cleanly.
+
+**Decisions**:
+- **Just BrowseFeed**, not CommunityVideoFeed or CommunityCarousel. Owner explicitly said "listing feed". Other surfaces keep whatever rail position they have today.
+- **Restore the exact pre-45.15 value** (`max(6rem, env(safe-area-inset-bottom) + 5rem)`) instead of inventing a new one. That value lived for several phases without complaint; "back to where it was" is the cheapest correct answer.
+
+**Issues / Resolution**: trivial revert. `git log -- BrowseFeed.tsx` showed 45.15 was the change, the diff showed the pre-value, restored it.
+
+**Learnings**:
+- "Lower the rail to align with caption" sounded clean in 45.15 but cost thumb reach. UX micro-positioning needs the owner to live with it for a day before we declare a change a win — the second-look revert here is the right loop, not failure.
+
+**Next steps**: owner verification on Vercel — `/browse` rail should sit roughly at thumb height again, caption stays at the bottom edge.
+
 ## 2026-06-20 18:00 UTC — Phase 45.20: Contact button — invisible click in carousel + missing on legacy communities
 
 **Objective**: two owner-flagged Contact-button bugs. (A) `/browse` (For You) → tap a listing → community videos carousel → Contact: button click had "no response". (B) Community tab → Peachtree Corners → Videos: no Contact button on the right rail at all.
