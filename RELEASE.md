@@ -3,6 +3,12 @@
 Newest at the top. Each release covers a meaningful product change visible to users.
 Format matches the standard release template (Features / Improvements / Bug Fixes / Technical / Known Issues / Metrics).
 
+## v0.45.5 — 2026-06-20
+
+### ✨ Improvements
+
+- **Listing feed right-rail buttons (Like / Save / Contact) moved back up** to thumb height. They had been lowered to sit at the very bottom edge in v0.45.x; reverted per owner feedback — they now float ~5rem above the safe area where they're easier to reach.
+
 ## v0.45.4 — 2026-06-20
 
 ### 🐛 Bug Fixes
