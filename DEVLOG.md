@@ -2,6 +2,40 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-06-20 03:05 UTC — Phase 43: IA polish + Save/Like split + agent analytics
+
+**Objective**: V1 IA cleanup — landing copy reduction, role-aware bottom nav, Favorites split into Saves/Likes, agent center FAB upload, global search, agent analytics rollup.
+
+**Actions**: 12 commits on `phase43/ia-polish` (10 feature + 1 tsc fix + 1 biome format).
+- 43.1 Landing: drop How-it-works section, hero = "Vicinity" / "TikTok for Homebuying", CTAs = Explore / Sign In.
+- 43.2 Auth: clickable Vicinity wordmark top-left.
+- 43.3 Schema: migration 0028 — `listing_likes` + `community_likes` tables (additive) + `lib/buyer/likes.ts` helper.
+- 43.4 Favorites buyer UI: Saves | Likes segmented control with persistent likes.
+- 43.5 Bottom nav: role-aware (anon / buyer / agent); anon gets Sign in CTA.
+- 43.6 UploadFAB: source picker (Album/Photo/Video) → type picker (Listing/Community) → prefill via in-memory ULID-keyed store, photo prefill wired into PhotoPanel via PhotoPanelPrefillBridge.
+- 43.7 `/browse`: drop Recommended/Nearby sub-tabs, single For You grid 2-up.
+- 43.8 `/communities`: grid 2-up.
+- 43.9 SearchPill in topbar + `/search` global results page.
+- 43.10 Agent Hub: 4th sub-tab Analytics, listings/communities migrated to grid 2-up. Analytics page = page views / unique sessions / likes / leads stat cards + 7-day inline SVG sparkline.
+- 43.11 tsc strict fixes (analytics bucket access + likes col mapping `noUncheckedIndexedAccess`).
+- 43.12 biome format scoped to changed files (17 files reformatted, all in our diff).
+
+**Decisions**:
+- Kept cream/ink theme (user retracted earlier black/gold idea).
+- Save vs Like = two distinct actions (heart = Like, bookmark = Save).
+- Grid 2-up at all breakpoints (no responsive override).
+- Likes helper anon-only (device_id) for V1; user_id backfill is phase 44.
+- Inline SVG sparkline instead of recharts (npm install timed out twice; tracked as follow-up).
+- Video prefill skipped — Cloudflare Stream tus path complex; photo prefill only for V1.
+
+**Issues**: recharts install timed out (npm cache + network); video prefill skipped intentionally; ListingsTabbedList grew a `view: 'list' | 'grid'` prop. Initial tsc surfaced 4 strict errors (analytics buckets[i], buckets[0], buckets[-1], likes col map) — all surgically fixed in 43.11.
+
+**Resolution**: All 10 sub-tasks landed. Sparkline is functional, swap to recharts in a follow-up. Build green, tsc clean, biome scoped clean.
+
+**Learnings**: Two-segment split (A code, B validate/ship) again necessary for 10-task phases — single subagent hit cap twice in segment A. Scoped biome (changed files only) is the only way to keep formatter from polluting 50+ unrelated files.
+
+**Next steps**: Phase 44 — install recharts properly + upgrade analytics chart; video prefill via Cloudflare Stream tus; user_id likes backfill on signup.
+
 ## 2026-06-20 — phase42 remove share-poster feature
 
 **Objective**: User pulled the plug on the entire preview-poster / share-poster feature. After three iterations (phase39 four-style showcase, phase40 magazine reset, phase41 dossier rewrite) and prototype-based sign-off, the feature still didn't feel right to the user. Decision: remove it cleanly rather than keep iterating.

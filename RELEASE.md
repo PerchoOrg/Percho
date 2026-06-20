@@ -3,6 +3,24 @@
 Newest at the top. Each release covers a meaningful product change visible to users.
 Format matches the standard release template (Features / Improvements / Bug Fixes / Technical / Known Issues / Metrics).
 
+## v0.42.0 — 2026-06-20
+
+### 🚀 Features
+
+- **Center upload button on the agent home** — pick from album, take a photo, or record a video, and we'll prefill the listing or community editor for you.
+- **Global search** across listings and communities — tap the magnifier in the top right.
+- **Agent analytics dashboard** — page views, unique sessions, likes, and leads, plus a 7-day trend.
+- **Likes are now their own action**, separate from saves. The Favorites tab keeps both side by side.
+
+### ✨ Improvements
+
+- Landing page is cleaner: just the wordmark and a single tagline, with Explore and Sign In as the only buttons.
+- Sign-in page now has a clickable Vicinity wordmark to bounce back home.
+- Browse and Community grids now show two cards per row at every screen size.
+- Bottom navigation is role-aware: buyers see For You / Community / Favorites / Me; agents see Agent Hub / For You / + / Community / Me; signed-out visitors get a Sign in shortcut.
+- Agent Hub has a new Analytics tab next to Listings, Communities, and Leads.
+- Listings and Communities in Agent Hub show as cards instead of a list.
+
 ## v0.41.0 — 2026-06-20
 
 ### 🔧 Technical
