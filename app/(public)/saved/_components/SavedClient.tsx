@@ -1,13 +1,16 @@
 'use client';
 
 /**
- * SavedClient — Phase 21 (2026-06-13), extended Phase 27.7 (2026-06-17).
+ * SavedClient — Phase 21 (2026-06-13), extended Phase 27.7 (2026-06-17),
+ * Phase 43.4 (2026-06-20).
  *
- * Reads device_id from localStorage and renders the buyer's saves in
- * two tabs: Listings (the original /browse-style grid) and
- * Communities (a 9:16 cover grid that links into each community's
- * swipe feed). Pure client component — device_id lives in browser
- * storage, no SSR data.
+ * Buyer Favorites surface. Two orthogonal axes:
+ *   - mode: Saves (bookmark) vs Likes (heart reaction)
+ *   - kind: Listings vs Communities
+ *
+ * Renders a 2-row pill control (top: Saves/Likes, bottom: Listings/
+ * Communities) and a single grid driven by the active (mode, kind).
+ * device_id lives in browser storage — pure client component.
  */
 
 import type { BrowseCard } from '@/app/(public)/browse/_components/BrowseFeed';
@@ -17,69 +20,117 @@ import { Bookmark, Heart } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { fetchSavedCardsAction, fetchSavedCommunitiesAction, type SavedCommunityCard } from '../_actions';
+import {
+  fetchLikedCardsAction,
+  fetchLikedCommunitiesAction,
+  fetchSavedCardsAction,
+  fetchSavedCommunitiesAction,
+  type SavedCommunityCard,
+} from '../_actions';
 
-type Tab = 'listings' | 'communities';
+type Mode = 'saves' | 'likes';
+type Kind = 'listings' | 'communities';
+
+type Bucket = {
+  savesListings: BrowseCard[] | null;
+  savesCommunities: SavedCommunityCard[] | null;
+  likesListings: BrowseCard[] | null;
+  likesCommunities: SavedCommunityCard[] | null;
+};
 
 export function SavedClient() {
-  const [tab, setTab] = useState<Tab>('listings');
-  const [cards, setCards] = useState<BrowseCard[] | null>(null);
-  const [communities, setCommunities] = useState<SavedCommunityCard[] | null>(null);
+  const [mode, setMode] = useState<Mode>('saves');
+  const [kind, setKind] = useState<Kind>('listings');
+  const [data, setData] = useState<Bucket>({
+    savesListings: null,
+    savesCommunities: null,
+    likesListings: null,
+    likesCommunities: null,
+  });
 
   useEffect(() => {
     void (async () => {
       const deviceId = getOrCreateDeviceId();
       try {
-        const [c, cc] = await Promise.all([
+        const [sl, sc, ll, lc] = await Promise.all([
           fetchSavedCardsAction({ deviceId }),
           fetchSavedCommunitiesAction({ deviceId }),
+          fetchLikedCardsAction({ deviceId }),
+          fetchLikedCommunitiesAction({ deviceId }),
         ]);
-        setCards(c);
-        setCommunities(cc);
+        setData({
+          savesListings: sl,
+          savesCommunities: sc,
+          likesListings: ll,
+          likesCommunities: lc,
+        });
       } catch (err) {
         console.error('[SavedClient] fetch failed', err);
-        setCards([]);
-        setCommunities([]);
+        setData({
+          savesListings: [],
+          savesCommunities: [],
+          likesListings: [],
+          likesCommunities: [],
+        });
       }
     })();
   }, []);
 
-  const loading = cards === null || communities === null;
+  const loading =
+    data.savesListings === null ||
+    data.savesCommunities === null ||
+    data.likesListings === null ||
+    data.likesCommunities === null;
+
+  const cards =
+    mode === 'saves' ? data.savesListings ?? [] : data.likesListings ?? [];
+  const communities =
+    mode === 'saves'
+      ? data.savesCommunities ?? []
+      : data.likesCommunities ?? [];
 
   return (
     <main className="min-h-dvh bg-bg pb-20 text-ink md:pb-0">
       <header className="sticky top-0 z-20 border-line border-b bg-bg backdrop-blur-md">
         <div className="flex items-center justify-center px-4 py-3 md:hidden">
-          <div className="font-medium text-ink2 text-sm uppercase tracking-wider">Saved</div>
+          <div className="font-medium text-ink2 text-sm uppercase tracking-wider">
+            Favorites
+          </div>
         </div>
-        <div className="mx-auto flex max-w-5xl items-center gap-1 px-4 pb-2 md:pt-3">
-          <TabButton
-            active={tab === 'listings'}
-            onClick={() => setTab('listings')}
-            label="Listings"
-            count={cards?.length}
-          />
-          <TabButton
-            active={tab === 'communities'}
-            onClick={() => setTab('communities')}
-            label="Communities"
-            count={communities?.length}
-          />
+        <div className="mx-auto flex max-w-5xl flex-col items-center gap-2 px-4 pb-2 md:pt-3">
+          <div className="flex items-center gap-1">
+            <PillButton active={mode === 'saves'} onClick={() => setMode('saves')} label="Saves" />
+            <PillButton active={mode === 'likes'} onClick={() => setMode('likes')} label="Likes" />
+          </div>
+          <div className="flex items-center gap-1">
+            <PillButton
+              active={kind === 'listings'}
+              onClick={() => setKind('listings')}
+              label="Listings"
+              count={cards.length}
+            />
+            <PillButton
+              active={kind === 'communities'}
+              onClick={() => setKind('communities')}
+              label="Communities"
+              count={communities.length}
+            />
+          </div>
         </div>
       </header>
 
       {loading ? (
         <div className="mx-auto max-w-md px-6 py-24 text-center text-muted">Loading…</div>
-      ) : tab === 'listings' ? (
-        <ListingsView cards={cards ?? []} />
+      ) : kind === 'listings' ? (
+        <ListingsView cards={cards} mode={mode} />
       ) : (
-        <CommunitiesView communities={communities ?? []} />
+        <CommunitiesView communities={communities} mode={mode} />
       )}
     </main>
   );
 }
 
-function TabButton({
+function PillButton({
   active,
   onClick,
   label,
@@ -106,13 +157,21 @@ function TabButton({
   );
 }
 
-function ListingsView({ cards }: { cards: BrowseCard[] }) {
+function ListingsView({ cards, mode }: { cards: BrowseCard[]; mode: Mode }) {
   if (cards.length === 0) {
-    return (
+    return mode === 'saves' ? (
       <EmptyState
-        icon={<Heart size={26} aria-hidden="true" />}
+        icon={<Bookmark size={26} aria-hidden="true" />}
         title="No saved listings yet"
         body="Tap the bookmark while browsing to save a listing for later."
+        ctaHref="/browse"
+        ctaLabel="Start browsing"
+      />
+    ) : (
+      <EmptyState
+        icon={<Heart size={26} aria-hidden="true" />}
+        title="No liked listings yet"
+        body="Tap the heart while browsing to react to a listing."
         ctaHref="/browse"
         ctaLabel="Start browsing"
       />
@@ -120,7 +179,7 @@ function ListingsView({ cards }: { cards: BrowseCard[] }) {
   }
   return (
     <div className="mx-auto max-w-5xl px-2 py-4">
-      <div className="grid grid-cols-2 gap-2 sm:gap-3 md:grid-cols-3 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2 sm:gap-3">
         {cards.map((card, idx) => (
           <Link
             key={card.listing.id}
@@ -141,7 +200,7 @@ function ListingsView({ cards }: { cards: BrowseCard[] }) {
                 }
                 alt={card.listing.address}
                 fill
-                sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                sizes="50vw"
                 priority={idx < 4}
                 className="object-cover transition-transform duration-300 group-hover:scale-[1.03]"
               />
@@ -167,9 +226,15 @@ function ListingsView({ cards }: { cards: BrowseCard[] }) {
   );
 }
 
-function CommunitiesView({ communities }: { communities: SavedCommunityCard[] }) {
+function CommunitiesView({
+  communities,
+  mode,
+}: {
+  communities: SavedCommunityCard[];
+  mode: Mode;
+}) {
   if (communities.length === 0) {
-    return (
+    return mode === 'saves' ? (
       <EmptyState
         icon={<Bookmark size={26} aria-hidden="true" />}
         title="No saved communities yet"
@@ -177,11 +242,19 @@ function CommunitiesView({ communities }: { communities: SavedCommunityCard[] })
         ctaHref="/communities"
         ctaLabel="Browse communities"
       />
+    ) : (
+      <EmptyState
+        icon={<Heart size={26} aria-hidden="true" />}
+        title="No liked communities yet"
+        body="Tap the heart on any community's swipe feed to react."
+        ctaHref="/communities"
+        ctaLabel="Browse communities"
+      />
     );
   }
   return (
     <div className="mx-auto max-w-5xl px-2 py-4">
-      <div className="grid grid-cols-2 gap-2 sm:gap-3 md:grid-cols-3 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2 sm:gap-3">
         {communities.map((c, idx) => (
           <Link
             key={c.id}
@@ -195,7 +268,7 @@ function CommunitiesView({ communities }: { communities: SavedCommunityCard[] })
                   src={c.coverUrl}
                   alt={c.name}
                   fill
-                  sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                  sizes="50vw"
                   priority={idx < 4}
                   className="object-cover transition-transform duration-300 group-hover:scale-[1.03]"
                 />

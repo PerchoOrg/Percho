@@ -19,6 +19,7 @@
 import type { BrowseCard } from '@/app/(public)/browse/_components/BrowseFeed';
 import { listSavedCommunityIds } from '@/app/_actions/saved-communities';
 import { listSavedListingIds } from '@/app/_actions/saved-listings';
+import { listLiked } from '@/lib/buyer/likes';
 import { fetchBrowseCardsByIds } from '@/lib/feed/browse-cards';
 import { resolveCommunityCoverWithCfIds } from '@/lib/community/cover';
 import { createServiceClient } from '@/lib/supabase/server';
@@ -27,6 +28,14 @@ export async function fetchSavedCardsAction(input: {
   deviceId: string;
 }): Promise<BrowseCard[]> {
   const ids = await listSavedListingIds(input);
+  if (ids.length === 0) return [];
+  return fetchBrowseCardsByIds(ids);
+}
+
+export async function fetchLikedCardsAction(input: {
+  deviceId: string;
+}): Promise<BrowseCard[]> {
+  const ids = await listLiked({ deviceId: input.deviceId, kind: 'listing' });
   if (ids.length === 0) return [];
   return fetchBrowseCardsByIds(ids);
 }
@@ -46,6 +55,17 @@ export async function fetchSavedCommunitiesAction(input: {
   deviceId: string;
 }): Promise<SavedCommunityCard[]> {
   const ids = await listSavedCommunityIds(input);
+  return fetchCommunityCardsByIds(ids);
+}
+
+export async function fetchLikedCommunitiesAction(input: {
+  deviceId: string;
+}): Promise<SavedCommunityCard[]> {
+  const ids = await listLiked({ deviceId: input.deviceId, kind: 'community' });
+  return fetchCommunityCardsByIds(ids);
+}
+
+async function fetchCommunityCardsByIds(ids: string[]): Promise<SavedCommunityCard[]> {
   if (ids.length === 0) return [];
 
   const supabase = createServiceClient();

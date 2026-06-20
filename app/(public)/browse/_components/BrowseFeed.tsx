@@ -1,5 +1,6 @@
 'use client';
 import { listSavedListingIds, saveListing, unsaveListing } from '@/app/_actions/saved-listings';
+import { listLiked, toggleLike as toggleLikeAction } from '@/lib/buyer/likes';
 import { getOrCreateDeviceId } from '@/lib/buyer/device-id';
 import { hlsUrl, thumbnailUrl } from '@/lib/cloudflare/stream';
 import { demoCoverFor, demoPhotosFor, demoVideoFor, type DemoVideoPool } from '@/lib/demo-media';
@@ -1003,9 +1004,15 @@ export function BrowseFeed({
       const id = getOrCreateDeviceId();
       deviceIdRef.current = id;
       try {
-        const ids = await listSavedListingIds({ deviceId: id });
+        const [ids, likedIds] = await Promise.all([
+          listSavedListingIds({ deviceId: id }),
+          listLiked({ deviceId: id, kind: 'listing' }),
+        ]);
         if (ids.length > 0) {
           setSaved(Object.fromEntries(ids.map((lid: string) => [lid, true])));
+        }
+        if (likedIds.length > 0) {
+          setLiked(Object.fromEntries(likedIds.map((lid: string) => [lid, true])));
         }
       } catch (err) {
         console.error('[BrowseFeed] saved hydrate failed', err);
@@ -1135,6 +1142,21 @@ export function BrowseFeed({
     const wasLiked = !!liked[id];
     setLiked((m) => ({ ...m, [id]: !wasLiked }));
     if (!wasLiked) setLikeAnimKey((n) => n + 1);
+
+    const deviceId = deviceIdRef.current;
+    if (!deviceId) return;
+    void (async () => {
+      const result = await toggleLikeAction({
+        deviceId,
+        kind: 'listing',
+        targetId: id,
+        liked: !wasLiked,
+      });
+      if (!result.ok) {
+        console.error('[BrowseFeed] like toggle failed', result.error);
+        setLiked((m) => ({ ...m, [id]: wasLiked }));
+      }
+    })();
   }, [active, liked]);
 
   const toggleSave = useCallback(() => {

@@ -17,6 +17,7 @@
  */
 
 import { listSavedCommunityIds, saveCommunity, unsaveCommunity } from '@/app/_actions/saved-communities';
+import { listLiked, toggleLike as toggleLikeAction } from '@/lib/buyer/likes';
 import { getOrCreateDeviceId } from '@/lib/buyer/device-id';
 import { hlsUrl, thumbnailUrl } from '@/lib/cloudflare/stream';
 import { demoCoverFor, demoVideoFor } from '@/lib/demo-media';
@@ -408,8 +409,12 @@ export function CommunityVideoFeed({
       try {
         const id = getOrCreateDeviceId();
         deviceIdRef.current = id;
-        const ids = await listSavedCommunityIds({ deviceId: id });
+        const [ids, likedIds] = await Promise.all([
+          listSavedCommunityIds({ deviceId: id }),
+          listLiked({ deviceId: id, kind: 'community' }),
+        ]);
         if (ids.includes(community.id)) setSaved(true);
+        if (likedIds.includes(community.id)) setLiked(true);
       } catch (err) {
         console.error('[CommunityVideoFeed] saved hydrate failed', err);
       }
@@ -480,7 +485,28 @@ export function CommunityVideoFeed({
     router.push(`/c/${community.slug}`);
   }, [router, community.slug]);
 
-  const toggleLike = useCallback(() => setLiked((v) => !v), []);
+  const toggleLike = useCallback(() => {
+    const wasLiked = liked;
+    setLiked(!wasLiked);
+    void (async () => {
+      try {
+        const deviceId = getOrCreateDeviceId();
+        const result = await toggleLikeAction({
+          deviceId,
+          kind: 'community',
+          targetId: community.id,
+          liked: !wasLiked,
+        });
+        if (!result.ok) {
+          console.error('[CommunityVideoFeed] like toggle failed', result.error);
+          setLiked(wasLiked);
+        }
+      } catch (err) {
+        console.error('[CommunityVideoFeed] like toggle threw', err);
+        setLiked(wasLiked);
+      }
+    })();
+  }, [liked, community.id]);
 
   const toggleSave = useCallback(() => {
     const wasSaved = saved;

@@ -13,8 +13,8 @@ import type { Metadata } from 'next';
 import { SavedClient } from './_components/SavedClient';
 
 export const metadata: Metadata = {
-  title: 'Saved',
-  description: 'Listings you have saved while browsing.',
+  title: 'Favorites · Vicinity',
+  description: 'Listings and communities you have saved or liked while browsing.',
 };
 
 export default function SavedPage() {
