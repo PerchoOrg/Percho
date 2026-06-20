@@ -570,9 +570,13 @@ export function CommunityVideoFeed({
   return (
     <div
       ref={scrollerRef}
-      className="h-screen w-full snap-y snap-mandatory overflow-y-scroll bg-black"
+      className="relative mx-auto h-screen w-full snap-y snap-mandatory overflow-y-scroll bg-black md:w-[min(430px,calc(100vh*9/16))] md:shadow-2xl md:shadow-black/50"
       style={{ scrollSnapType: 'y mandatory' }}
     >
+      {/* Phase 45.12 (2026-06-20): desktop constrains the feed to a phone-width
+       * portrait column centered on the page — same idiom as BrowseFeed.
+       * Mobile stays full viewport. Owner: community videos shouldn't expand
+       * to full desktop width; should match the listing video feed. */}
       {Array.from({ length: totalCards }, (_, idx) => {
         const v = videos[idx % videos.length];
         if (!v) return null;

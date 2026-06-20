@@ -47,11 +47,14 @@ export type Tab = {
  */
 export function getPrimaryTabs(role: ViewerRole): Tab[] {
   if (role === 'agent') {
+    // Phase 45.12 (2026-06-20): "+ New" moved to the center slot so the
+    // mobile FAB lands in the middle of the 5-item BottomNav (index 2 of 5)
+    // per owner — matches the visual idiom of TikTok / Instagram bottom nav.
     return [
       { href: '/dashboard', label: 'Agent Hub', icon: Briefcase, matchPrefix: true },
       { href: '/browse', label: 'For You', icon: Compass, matchPrefix: true },
-      { href: '/communities', label: 'Community', icon: Building2, matchPrefix: true },
       { href: '/upload', label: 'New', icon: Plus, fab: true },
+      { href: '/communities', label: 'Community', icon: Building2, matchPrefix: true },
       { href: '/profile', label: 'Me', icon: User },
     ];
   }
@@ -89,20 +92,23 @@ export function getSubTabs(pathname: string, role: ViewerRole): SubTab[] | null 
     ];
   }
   if (pathname === '/saved' || pathname.startsWith('/saved/')) {
-    // Phase 45.11: Listings / Communities are now the global TopBar sub-tabs
+    // Phase 45.11: Listing / Community are now the global TopBar sub-tabs
     // for Favorites. SavedClient no longer renders its own pill row.
+    // Phase 45.12 (2026-06-20): singular per owner ("Listing" / "Community").
     return [
-      { href: '/saved', label: 'Listings' },
-      { href: '/saved/communities', label: 'Communities' },
+      { href: '/saved', label: 'Listing' },
+      { href: '/saved/communities', label: 'Community' },
     ];
   }
   if (pathname === '/profile' || pathname.startsWith('/profile/')) {
     return null;
   }
   if (role === 'agent' && (pathname === '/dashboard' || pathname.startsWith('/dashboard'))) {
+    // Phase 45.12 (2026-06-20): "My …" prefix per owner so agents read the
+    // tabs as their own inventory, not a generic catalog.
     return [
-      { href: '/dashboard', label: 'Listing' },
-      { href: '/dashboard/communities', label: 'Community' },
+      { href: '/dashboard', label: 'My Listing' },
+      { href: '/dashboard/communities', label: 'My Community' },
       { href: '/dashboard/leads', label: 'Leads' },
       { href: '/dashboard/analytics', label: 'Analytics' },
     ];

@@ -87,13 +87,13 @@ function FavoritesEmpty() {
             href="/browse"
             className="rounded-full bg-ink px-5 py-2 font-medium text-cream text-sm transition hover:opacity-90"
           >
-            Explore listings
+            Explore listing
           </Link>
           <Link
             href="/communities"
             className="rounded-full border border-line-strong px-5 py-2 font-medium text-ink text-sm transition hover:bg-surface/30"
           >
-            Explore communities
+            Explore community
           </Link>
         </div>
       </div>

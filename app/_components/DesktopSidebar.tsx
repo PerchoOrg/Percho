@@ -45,13 +45,23 @@ export function DesktopSidebar({ role }: DesktopSidebarProps) {
       className="fixed inset-y-0 left-0 z-50 hidden w-[200px] flex-col border-line border-r bg-bg md:flex"
       style={{ paddingTop: 'env(safe-area-inset-top)' }}
     >
-      <nav aria-label="Primary" className="flex flex-1 flex-col gap-1 px-3 pt-5">
-        {role === 'agent' ? <NewButton /> : null}
-        {tabs.map((tab) =>
-          tab.fab ? null : (
-            <SidebarLink key={tab.href} tab={tab} active={isTabActive(pathname, tab)} />
-          ),
-        )}
+      <nav aria-label="Primary" className="flex flex-1 flex-col px-4 pt-7">
+        {role === 'agent' ? (
+          <>
+            <NewButton />
+            {/* Phase 45.12 (2026-06-20): hairline separator + extra gap below
+             * "+ New" — owner round 4 said the rail felt cramped at 4–5 items.
+             * Visually separates the action ("New") from navigation. */}
+            <div className="my-4 border-line border-t" aria-hidden="true" />
+          </>
+        ) : null}
+        <div className="flex flex-col gap-2">
+          {tabs.map((tab) =>
+            tab.fab ? null : (
+              <SidebarLink key={tab.href} tab={tab} active={isTabActive(pathname, tab)} />
+            ),
+          )}
+        </div>
       </nav>
     </aside>
   );
@@ -63,7 +73,7 @@ function SidebarLink({ tab, active }: { tab: Tab; active: boolean }) {
     <Link
       href={tab.href}
       aria-current={active ? 'page' : undefined}
-      className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors ${
+      className={`flex items-center gap-3 rounded-lg px-3 py-3 text-sm transition-colors ${
         active
           ? 'bg-surface/30 font-medium text-ink'
           : 'text-ink2 hover:bg-surface/20 hover:text-ink'

@@ -16,9 +16,15 @@
 import type { BrowseCard } from '@/app/(public)/browse/_components/BrowseFeed';
 import { thumbnailUrl } from '@/lib/cloudflare/stream';
 import { demoCoverFor } from '@/lib/demo-media';
+import {
+  COMMUNITY_VIDEO_CATEGORIES,
+  type CommunityVideoCategoryId,
+} from '@/lib/zod/community-video-categories';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useState } from 'react';
+
+const CATEGORY_META = new Map(COMMUNITY_VIDEO_CATEGORIES.map((m) => [m.id, m] as const));
 
 type CommunityVideo = {
   id: string;
@@ -102,36 +108,44 @@ function VideosGrid({
   }
   return (
     <div className="grid grid-cols-2 gap-x-3 gap-y-8 md:grid-cols-4 md:gap-x-5 md:gap-y-12">
-      {videos.map((v) => (
-        <Link
-          key={v.id}
-          href={`/c/${communitySlug}/feed?start=${v.id}`}
-          prefetch={false}
-          className="group block"
-        >
-          <div className="relative aspect-square w-full overflow-hidden bg-surface">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={demoCoverFor(v.cf_video_id, thumbnailUrl(v.cf_video_id)) ?? thumbnailUrl(v.cf_video_id)}
-              alt={v.title ?? 'Community video'}
-              className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.02]"
-              loading="lazy"
-            />
-            {v.category ? (
-              <span className="absolute top-2 left-2 rounded-full bg-ink/85 px-2 py-0.5 font-medium text-[10px] text-surface backdrop-blur">
-                {v.category}
-              </span>
-            ) : null}
-          </div>
-          {v.title ? (
-            <div className="pt-3">
-              <div className="truncate font-serif text-base text-ink leading-tight tracking-[-0.012em]">
-                {v.title}
-              </div>
+      {videos.map((v) => {
+        // Phase 45.12 (2026-06-20): caption shows category label + blurb
+        // (the editorial description), not `v.title` — titles default to
+        // raw filenames like "IMG_2349.mp4" and leak that artifact onto
+        // the buyer surface. The category taxonomy is the SSOT for "what
+        // this video is about" (see lib/zod/community-video-categories).
+        const meta = v.category
+          ? CATEGORY_META.get(v.category as CommunityVideoCategoryId)
+          : null;
+        return (
+          <Link
+            key={v.id}
+            href={`/c/${communitySlug}/feed?start=${v.id}`}
+            prefetch={false}
+            className="group block"
+          >
+            <div className="relative aspect-square w-full overflow-hidden bg-surface">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={demoCoverFor(v.cf_video_id, thumbnailUrl(v.cf_video_id)) ?? thumbnailUrl(v.cf_video_id)}
+                alt={meta?.label ?? 'Community video'}
+                className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.02]"
+                loading="lazy"
+              />
             </div>
-          ) : null}
-        </Link>
-      ))}
+            {meta ? (
+              <div className="pt-3">
+                <div className="truncate font-serif text-base text-ink leading-tight tracking-[-0.012em]">
+                  {meta.label}
+                </div>
+                <div className="mt-1 line-clamp-2 text-ink2 text-[12px] leading-snug">
+                  {meta.blurb}
+                </div>
+              </div>
+            ) : null}
+          </Link>
+        );
+      })}
     </div>
   );
 }
