@@ -2,6 +2,32 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-06-20 18:00 UTC — Phase 45.20: Contact button — invisible click in carousel + missing on legacy communities
+
+**Objective**: two owner-flagged Contact-button bugs. (A) `/browse` (For You) → tap a listing → community videos carousel → Contact: button click had "no response". (B) Community tab → Peachtree Corners → Videos: no Contact button on the right rail at all.
+
+**Actions**: two single-file fixes, no migration.
+
+- **Bug A — z-index inversion**: `LeadModal` was `z-50`, `CommunityCarousel` was `z-[60]`. The modal *was* opening on Contact click, but stacking order put it behind the carousel — invisible, and the carousel's overlay caught all the pointer events. Bumped LeadModal to `z-[70]` so it sits above any feed surface that opens it. (`app/(public)/_components/LeadModal.tsx`).
+- **Bug B — legacy communities have `created_by = NULL`**: phase 45.18 hid the Contact button when `communities.created_by` was null because there was nobody to route to. But communities created before phase 13 (when `created_by` shipped) all still have null — including `peachtree-corners`, the canonical demo community, even though Qiaoxuan is the only agent who has ever posted listings into it. Added a server-side fallback in `app/(public)/c/[slug]/feed/page.tsx`: if `created_by` is null OR the agent lookup misses, fall back to the agent on the most-recent published listing in that community. If there are no listings either, owner stays null and the button stays hidden — same as before.
+
+**Decisions**:
+- **Z-index `z-[70]` for LeadModal, not e.g. `z-50` on the carousel**. The modal is the topmost surface in our app — it should always win. Lowering the carousel could re-break other overlays that already assume `z-[60]` is the carousel layer.
+- **Server-side fallback over a backfill migration** for legacy `created_by`. A backfill needs business judgment per community ("which agent should own this?") that we don't have at the row level — multiple agents could have posted listings, and "most recent listing's agent" is a defensible heuristic only at *read* time. Doing it server-side keeps the data honest (`created_by` still says "nobody explicitly claimed this") while giving buyers a Contact target. When ownership matters more (say, for editing community metadata), the backfill conversation can happen separately without affecting buyer-facing routing.
+- **Owner rule preserved**: from a *listing's* community videos → contact the listing agent (BrowseFeed's existing behavior). From a *community feed directly* → contact community owner, with the new fallback to "most-recent listing's agent" for legacy rows. Two paths, two scopes, one mental model — unchanged.
+
+**Issues / Resolution**: pure code/data bugs, no migration needed.
+- Bug A diagnosis: read CommunityCarousel.tsx, found `z-[60]` on the outer wrapper at line 152; cross-referenced LeadModal.tsx line 144 (`z-50`); confirmed inversion.
+- Bug B diagnosis: queried prod via the Supabase pooler — `peachtree-corners` row has `created_by = NULL`. Cross-checked all 8 communities: 6 have `created_by` set, 2 are legacy (`hhh`, `peachtree-corners`). Of the 8, only `peachtree-corners` has any published listings (1 listing by Qiaoxuan), so the fallback is well-defined for it and a safe no-op for everything else.
+
+**Learnings**:
+- Z-index for modal layers should be a single source of truth — would be worth a tiny `lib/zindex.ts` constant file the next time we add a third overlay layer. Our current ad-hoc `z-50 / z-[60]` pattern is two-pair in this codebase, which is just enough to bite.
+- Pre-launch nullable-owner columns + post-launch behavior gating on "owner present" is a recurring legacy-data pattern. Always plan a fallback-or-backfill answer at the moment the gate ships, not three releases later when an owner reports a missing button.
+
+**Next steps**: owner verification on Vercel:
+1. `/browse` → click any listing with community videos → swipe into carousel → tap Contact. Modal should appear and be interactive.
+2. `/c/peachtree-corners/feed` → right rail should now show four buttons (Like, Save, Contact, View N homes). Tapping Contact should open the LeadModal addressed to Qiaoxuan.
+
 ## 2026-06-20 17:30 UTC — Phase 45.19: Community-feed overlay buttons disappear after first video
 
 **Objective**: Owner reported on `/c/peachtree-corners/feed` (community tab → community card → Community Videos → tap a video) that the small overlay buttons — top header (Back, community pill, Share), right-rail (Like, Save, Contact), and the top-left "🏠 N homes here" chip — were not visible on screen.

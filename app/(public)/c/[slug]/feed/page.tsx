@@ -76,15 +76,48 @@ export default async function CommunityFeedPage({
   // direct community feed routes leads to `communities.created_by` per
   // the owner rule. Legacy / unowned communities (created_by NULL) get
   // no Contact button (nobody to route to).
+  //
+  // Phase 45.20 (2026-06-20): legacy communities pre-phase-13 have
+  // `created_by = NULL` but often still have an obvious owner — the
+  // single agent who posted listings into them (peachtree-corners is
+  // the canonical example). Falling back to "most recent published
+  // listing's agent" is the closest unambiguous signal we have without
+  // a backfill migration; it gives buyers a Contact target instead of
+  // hiding the button. If nobody has posted a listing yet, owner stays
+  // null and the button stays hidden — same as before.
+  let ownerId: string | null = community.created_by;
   let ownerName: string | null = null;
-  if (community.created_by) {
+  if (ownerId) {
     // biome-ignore lint/suspicious/noExplicitAny: stub generated types
     const { data: owner } = (await (supabase as any)
       .from('agents')
       .select('name')
-      .eq('id', community.created_by)
+      .eq('id', ownerId)
       .maybeSingle()) as { data: { name: string } | null };
     ownerName = owner?.name ?? null;
+  }
+  if (!ownerId || !ownerName) {
+    // biome-ignore lint/suspicious/noExplicitAny: stub generated types
+    const { data: fallbackListing } = (await (supabase as any)
+      .from('listings')
+      .select('agent_id')
+      .eq('community_id', community.id)
+      .eq('status', 'published')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()) as { data: { agent_id: string } | null };
+    if (fallbackListing?.agent_id) {
+      // biome-ignore lint/suspicious/noExplicitAny: stub generated types
+      const { data: fallbackAgent } = (await (supabase as any)
+        .from('agents')
+        .select('id, name')
+        .eq('id', fallbackListing.agent_id)
+        .maybeSingle()) as { data: { id: string; name: string } | null };
+      if (fallbackAgent) {
+        ownerId = fallbackAgent.id;
+        ownerName = fallbackAgent.name;
+      }
+    }
   }
 
   // Membership view: primary community_id UNION extra links.
@@ -230,11 +263,7 @@ export default async function CommunityFeedPage({
         city: community.city,
         state: community.state,
       }}
-      owner={
-        community.created_by && ownerName
-          ? { id: community.created_by, name: ownerName }
-          : null
-      }
+      owner={ownerId && ownerName ? { id: ownerId, name: ownerName } : null}
       videos={feedVideos}
       initialIndex={initialIndex}
       activeListingsCount={activeListings ?? 0}

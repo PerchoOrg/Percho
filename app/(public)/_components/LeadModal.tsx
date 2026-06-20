@@ -141,7 +141,11 @@ export function LeadModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 sm:items-center"
+      // Phase 45.20 (2026-06-20): z-[70] so the modal stays above the
+      // CommunityCarousel overlay (z-[60]). Previously z-50 — when a buyer
+      // hit Contact from inside the carousel, the modal opened *behind*
+      // the carousel and looked like a dead click.
+      className="fixed inset-0 z-[70] flex items-end justify-center bg-black/70 sm:items-center"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}

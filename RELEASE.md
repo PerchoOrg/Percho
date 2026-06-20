@@ -3,6 +3,13 @@
 Newest at the top. Each release covers a meaningful product change visible to users.
 Format matches the standard release template (Features / Improvements / Bug Fixes / Technical / Known Issues / Metrics).
 
+## v0.45.4 — 2026-06-20
+
+### 🐛 Bug Fixes
+
+- **Contact button now opens the form when tapping it from inside a community-video carousel** (For You → listing → community videos → Contact). Previously the button looked like a dead click — the form was actually opening, but stacking order put it behind the carousel so you couldn't see or interact with it. Fixed.
+- **Contact button now appears on legacy community feeds** (Community tab → Peachtree Corners → Videos, and other communities created before owner-tracking shipped). When a community doesn't have a registered owner, the Contact button now routes to the agent who posted listings into that community — so buyers always have a way to reach somebody. Communities with no owner *and* no listings still hide the button (nobody to route to).
+
 ## v0.45.3 — 2026-06-20
 
 ### 🐛 Bug Fixes
