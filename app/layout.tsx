@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import { Inter, Source_Serif_4 } from 'next/font/google';
 import type { ReactNode } from 'react';
 import { BottomNavWrapper } from './_components/BottomNavWrapper';
+import { SearchPill } from './_components/SearchPill';
 import { SiteHeaderWrapper } from './_components/SiteHeaderWrapper';
 import { TopRightAvatarWrapper } from './_components/TopRightAvatarWrapper';
 
@@ -35,6 +36,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <SiteHeaderWrapper />
         {/* Mobile-only top-right avatar / sign-in pill; mirrors BottomNav hide rules. */}
         <TopRightAvatarWrapper />
+        <SearchPill />
         {children}
         {/* Mobile-only fixed bottom tab bar; self-hides on feed/auth/landing
          * and on md+ breakpoints. Pages that need to butt up against the
