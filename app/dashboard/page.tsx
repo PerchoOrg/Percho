@@ -17,7 +17,6 @@
  * island; the island filters in memory on tab change.
  */
 
-import { DashboardMetrics } from '@/app/dashboard/_components/DashboardMetrics';
 import {
   type ListingRow,
   ListingsTabbedList,
@@ -25,7 +24,6 @@ import {
 } from '@/app/dashboard/_components/ListingsTabbedList';
 import { thumbnailUrl } from '@/lib/cloudflare/stream';
 import { createClient } from '@/lib/supabase/server';
-import Link from 'next/link';
 import { redirect } from 'next/navigation';
 
 interface PageProps {
@@ -120,43 +118,9 @@ export default async function DashboardHomePage({ searchParams }: PageProps) {
 
   return (
     <div className="mx-auto max-w-6xl px-5 py-6 sm:px-8 sm:py-12">
-      <div className="mb-6 sm:mb-8">
-        {/* Phase 35: dropped duplicate "View public profile" CTA — same link
-         * already lives on the Me tab (/profile). One canonical entry.
-         * Phase 35.1: scaled down for mobile — 4xl was wasting half the
-         * viewport on a label nobody needs that big.
-         * Phase 36.2 (2026-06-18): sub-nav chips below the heading. /dashboard
-         * (listings) is the bottom-nav landing surface; /dashboard/communities
-         * and /dashboard/leads need a stable in-app entry once onboarding
-         * empty-state cards stop rendering. Tianrou flagged the missing
-         * communities entry directly.
-         * Phase 36.3 (2026-06-18): unified per-tab CTA — header gets a single
-         * gold pill "+ New listing". Replaces the old 3-card onboarding row
-         * (duplicated sub-nav navigation) AND the global agent FAB
-         * (duplicated this CTA + community upload). Each Workspace sub-nav
-         * surface owns exactly one creation CTA in the same gold-pill style.
-         * Phase 36.3.1 (2026-06-18): Tianrou — CTA moved into the sub-nav row
-         * (right side, smaller pill matching chip dimensions). Putting it
-         * next to "Workspace" made it read like a Workspace-global action,
-         * not a Listings-tab action; layered next to the active chip the
-         * scope is unambiguous.
-         */}
-      <div className="flex items-center justify-between">
-        <h1 className="font-serif text-2xl tracking-tight text-ink sm:text-4xl">Listings</h1>
-        <Link
-          href="/dashboard/listings/new"
-          className="rounded-full border border-line-strong bg-ink px-3 py-1.5 font-medium text-cream text-xs transition hover:opacity-90 sm:text-sm"
-        >
-          + New listing
-        </Link>
-      </div>
-      </div>
-
-      {/* Metrics row — only meaningful once the agent has listings. With zero
-       * listings every metric is "—", which is just noise; the empty-state
-       * inside <ListingsTabbedList> already tells the new agent what to do. */}
-      {totalRows > 0 && agentId ? <DashboardMetrics agentId={agentId} /> : null}
-
+      {/* Phase 45.9 (2026-06-20): H1 + stats + per-page CTA removed per
+       * owner. TopBar sub-tab "Listings" labels the surface; "+ New" lives
+       * in the sidebar (desktop) or BottomNav center FAB (mobile). */}
       <ListingsTabbedList
         initialTab={initialTab}
         agentSlug={agentSlug}

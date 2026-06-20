@@ -91,9 +91,9 @@ function TopBarInner({
         {role === 'anon' ? (
           <Link
             href="/login"
-            className="inline-flex h-11 items-center rounded-full border-line border bg-bg px-4 font-medium text-ink2 text-sm transition hover:border-line-strong hover:text-ink"
+            className="inline-flex h-11 items-center px-3 font-medium text-ink2 text-sm transition hover:text-ink"
           >
-            Sign in
+            Log in
           </Link>
         ) : (
           <AvatarMenu initial={initial} avatarUrl={avatarUrl} role={role} />
@@ -110,25 +110,14 @@ function SubTabRow({
   tabs: ReturnType<typeof getSubTabs> & object;
   pathname: string;
 }) {
-  // Single-tab fallback (Favorites / Profile) — render as a non-clickable
-  // label so the middle slot still has its own visual presence. Owner explicitly
-  // asked to keep this shape on 2026-06-20 ("先按照我说的做看看效果").
-  if (tabs.length === 1) {
-    const only = tabs[0];
-    if (!only) return null;
-    return (
-      <div className="flex items-center justify-center text-ink text-sm">
-        <span aria-current="page" className="font-medium">
-          {only.label}
-        </span>
-      </div>
-    );
-  }
-
+  // Phase 45.9 (2026-06-20): owner — "agent hub: by default sub tabs on top
+  // should show full names from left, not the middle ones". Left-align all
+  // sub-tab rows; full-name labels (no truncation), horizontal scroll if
+  // they overflow on narrow screens.
   return (
     <nav
       aria-label="Section"
-      className="flex items-center justify-center gap-5 overflow-x-auto"
+      className="flex items-center justify-start gap-5 overflow-x-auto"
     >
       {tabs.map((t) => {
         const active = isSubTabActive(pathname, t, tabs);

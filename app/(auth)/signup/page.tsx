@@ -32,7 +32,7 @@ export default async function SignupPage({
           href={`/login${safeRedirect === '/dashboard' ? '' : `?redirect=${encodeURIComponent(safeRedirect)}`}`}
           className="text-ink underline hover:text-ink/80"
         >
-          Sign in
+          Log in
         </a>
       </p>
     </div>

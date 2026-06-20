@@ -154,7 +154,7 @@ export default async function CommunityPage({
           <p className="text-ink2 text-sm">No videos in this community yet.</p>
         </div>
       ) : (
-        <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+        <ul className="grid grid-cols-2 gap-2 md:grid-cols-4">
           {videos.map((v) => (
             <li key={v.id}>
               <Link

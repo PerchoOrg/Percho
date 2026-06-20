@@ -55,7 +55,7 @@ export function LoginForm({ redirect }: { redirect: string }) {
   return (
     <form onSubmit={handleSubmit} className="rounded-2xl border border-line bg-surface p-8">
       <h1 className="font-serif text-3xl text-ink">Login</h1>
-      <p className="mt-1 text-sm text-muted">Sign in to your account.</p>
+      <p className="mt-1 text-sm text-muted">Log in to your account.</p>
       <label className="mt-6 block">
         <span className="text-xs text-ink2">Email</span>
         <input

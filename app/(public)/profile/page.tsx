@@ -2,7 +2,7 @@
  * `/profile` — role-aware profile / settings landing.
  *
  * Phase 14 (2026-06-12). Minimal V1 shell:
- *   - anon  → CTA: "Sign in as agent" / "Sign up as agent" + note that
+ *   - anon  → CTA: "Log in as agent" / "Sign up as agent" + note that
  *             buyer accounts are coming soon.
  *   - agent → identity card (name, brokerage, email) + shortcut to
  *             /dashboard + Sign out form.
@@ -47,7 +47,7 @@ export default async function ProfilePage() {
               href="/login"
               className="btn-gold inline-flex items-center justify-center rounded-full px-6 py-3 text-sm"
             >
-              Sign in
+              Log in
             </Link>
             <Link
               href="/signup"

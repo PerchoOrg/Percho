@@ -76,7 +76,7 @@ async function RecommendedGrid({ communitySlug }: { communitySlug: string | null
 
   return (
     <div className={`mx-auto max-w-6xl px-3 sm:px-6 ${isCommunityScoped ? 'py-6' : 'pb-6'}`}>
-      <div className="grid grid-cols-2 gap-x-3 gap-y-8 sm:gap-x-5 sm:gap-y-12">
+      <div className="grid grid-cols-2 gap-x-3 gap-y-8 md:grid-cols-4 md:gap-x-5 md:gap-y-12">
         {cards.map((card, idx) => (
           <Link
             key={card.listing.id}

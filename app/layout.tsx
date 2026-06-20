@@ -4,6 +4,7 @@ import { Inter, Source_Serif_4 } from 'next/font/google';
 import type { ReactNode } from 'react';
 import { BottomNavWrapper } from './_components/BottomNavWrapper';
 import { DesktopSidebarWrapper } from './_components/DesktopSidebarWrapper';
+import { MainShell } from './_components/MainShell';
 import { TopBarWrapper } from './_components/TopBarWrapper';
 
 const inter = Inter({
@@ -38,7 +39,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
          * All three self-hide on feed/auth/landing via isChromeHidden. */}
         <DesktopSidebarWrapper />
         <TopBarWrapper />
-        <main className="md:pl-[200px]">{children}</main>
+        <MainShell>{children}</MainShell>
         <BottomNavWrapper />
       </body>
     </html>

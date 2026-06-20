@@ -14,14 +14,8 @@ export default async function CommunitiesGridPage() {
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-6">
-      <header className="mb-6">
-        <h1 className="font-semibold text-2xl text-ink tracking-tight">Communities</h1>
-        <p className="mt-1 text-ink2 text-sm">
-          Walk the block, hear the morning rush, see what after-dark really looks like — twelve
-          neighborhood stories per community.
-        </p>
-      </header>
-
+      {/* Phase 45.9 (2026-06-20): H1 + description removed per owner —
+       * TopBar sub-tabs already label the active surface. */}
       <CommunityGrid communities={communities} />
     </div>
   );

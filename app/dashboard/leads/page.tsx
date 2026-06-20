@@ -39,13 +39,7 @@ export default async function LeadsPage() {
       {/* Phase 45 (2026-06-20): Workspace H1 + sub-nav chips removed —
        * the global TopBar pins Listings | Communities | Leads | Analytics
        * as sub-tabs (see app/_components/nav-config.ts → getSubTabs). */}
-      <div className="mb-6">
-        <h1 className="font-serif text-2xl tracking-tight text-ink sm:text-4xl">Leads</h1>
-        <p className="mt-1 text-xs text-muted">
-          Buyer inquiries from your published listings, in real time.
-        </p>
-      </div>
-
+      {/* Phase 45.9 (2026-06-20): H1 + description removed per owner. */}
       <LeadsLive initial={initial} />
     </div>
   );

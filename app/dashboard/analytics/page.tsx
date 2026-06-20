@@ -138,12 +138,8 @@ export default async function DashboardAnalyticsPage() {
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-6">
-      <h1 className="font-serif text-3xl text-ink">Analytics</h1>
-      <p className="mt-1 text-sm text-ink2">
-        Rollup across {listingIds.length} {listingIds.length === 1 ? 'listing' : 'listings'}.
-      </p>
-
-      <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+      {/* Phase 45.9 (2026-06-20): H1 + description removed per owner. */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <StatCard label="Page Views" value={rollup.pageViews} />
         <StatCard label="Unique Sessions" value={rollup.uniqueSessions} />
         <StatCard label="Likes" value={likes} />

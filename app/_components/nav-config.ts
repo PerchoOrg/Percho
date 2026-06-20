@@ -30,8 +30,6 @@ import {
   Briefcase,
   Building2,
   Compass,
-  Heart,
-  LogIn,
   type LucideIcon,
   Plus,
   User,
@@ -53,9 +51,11 @@ export type Tab = {
 /**
  * Build the role's primary tabs.
  *
- * - anon:  For You · Community · Favorites · Sign in
- * - buyer: For You · Community · Favorites · Me
- * - agent: Agent Hub · For You · Community · + New · Me
+ * - anon:  For You · Community · Me (links /login)
+ * - buyer: For You · Community · Me
+ * - agent: Agent Hub · For You · Community · + New · Me  (#13 — see DesktopSidebar)
+ *
+ * Phase 45.9: dropped Favorites from primary tabs per owner 2026-06-20.
  *   (BottomNav still renders + New as a center FAB; DesktopSidebar renders it
  *   as a dropdown. Phase 45.)
  */
@@ -70,16 +70,19 @@ export function getPrimaryTabs(role: ViewerRole): Tab[] {
     ];
   }
 
-  const slot4: Tab =
+  // Anon's Me tab links to /login (auth gate). Buyer's Me goes to /profile.
+  // Favorites is intentionally NOT in primary tabs anymore — owner moved it
+  // off the top nav 2026-06-20 since SavedClient is reachable from Me/avatar
+  // menu and the empty-state CTAs already cover discovery.
+  const meTab: Tab =
     role === 'buyer'
       ? { href: '/profile', label: 'Me', icon: User }
-      : { href: '/login', label: 'Sign in', icon: LogIn };
+      : { href: '/login', label: 'Me', icon: User };
 
   return [
     { href: '/browse', label: 'For You', icon: Compass, matchPrefix: true },
     { href: '/communities', label: 'Community', icon: Building2, matchPrefix: true },
-    { href: '/saved', label: 'Favorites', icon: Heart },
-    slot4,
+    meTab,
   ];
 }
 
@@ -97,7 +100,7 @@ export type SubTab = {
  * Resolve sub-tabs for the current pathname.
  *
  * Returns null when the route has no contextual sub-nav (TopBar middle slot
- * stays empty — keeps Favorites/Profile minimal per owner's call 2026-06-20).
+ * stays empty on /saved + /profile per owner's call 2026-06-20).
  *
  * Routes:
  *   /browse, /browse/*           → Explore | Nearby
@@ -127,13 +130,12 @@ export function getSubTabs(pathname: string, role: ViewerRole): SubTab[] | null 
     ];
   }
   if (pathname === '/saved' || pathname.startsWith('/saved/')) {
-    // Single-label fallback per owner's 2026-06-20 call — see the Phase 45
-    // session log entry. Re-evaluate if Saves/Likes/etc. ever need real tabs
-    // back at top level.
-    return [{ href: '/saved', label: 'Favorites' }];
+    // /saved sub-tabs are owned by SavedClient itself (Listings | Communities
+    // pill row). TopBar middle stays empty here — no redundant label.
+    return null;
   }
   if (pathname === '/profile' || pathname.startsWith('/profile/')) {
-    return [{ href: '/profile', label: 'Profile' }];
+    return null;
   }
   if (role === 'agent' && (pathname === '/dashboard' || pathname.startsWith('/dashboard'))) {
     return [

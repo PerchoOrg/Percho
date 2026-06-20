@@ -167,7 +167,7 @@ export function NearbyClient() {
 
   return (
     <div className="mx-auto max-w-5xl px-2 py-4">
-      <div className="grid grid-cols-2 gap-2 sm:gap-3 md:grid-cols-3 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2 md:grid-cols-4 md:gap-3">
         {cards.map((card, idx) => (
           <Link
             key={card.listing.id}

@@ -4,122 +4,86 @@
  * SavedClient — Phase 21 (2026-06-13), extended Phase 27.7 (2026-06-17),
  * Phase 43.4 (2026-06-20).
  *
- * Buyer Favorites surface. Two orthogonal axes:
- *   - mode: Saves (bookmark) vs Likes (heart reaction)
- *   - kind: Listings vs Communities
+ * Buyer Favorites surface (saves only).
  *
- * Renders a 2-row pill control (top: Saves/Likes, bottom: Listings/
- * Communities) and a single grid driven by the active (mode, kind).
+ * Phase 45.9 (2026-06-20): owner dropped the Likes mode + page header per
+ * "Favorites only show saves, and its sub tab are listing and community"
+ * — was a 2-row pill control, now a single Listings/Communities row.
+ *
  * device_id lives in browser storage — pure client component.
  */
 
 import type { BrowseCard } from '@/app/(public)/browse/_components/BrowseFeed';
 import { getOrCreateDeviceId } from '@/lib/buyer/device-id';
 import { thumbnailUrl } from '@/lib/cloudflare/stream';
-import { Bookmark, Heart } from 'lucide-react';
+import { Bookmark } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import {
   type SavedCommunityCard,
-  fetchLikedCardsAction,
-  fetchLikedCommunitiesAction,
   fetchSavedCardsAction,
   fetchSavedCommunitiesAction,
 } from '../_actions';
 
-type Mode = 'saves' | 'likes';
 type Kind = 'listings' | 'communities';
 
 type Bucket = {
   savesListings: BrowseCard[] | null;
   savesCommunities: SavedCommunityCard[] | null;
-  likesListings: BrowseCard[] | null;
-  likesCommunities: SavedCommunityCard[] | null;
 };
 
 export function SavedClient() {
-  const [mode, setMode] = useState<Mode>('saves');
   const [kind, setKind] = useState<Kind>('listings');
   const [data, setData] = useState<Bucket>({
     savesListings: null,
     savesCommunities: null,
-    likesListings: null,
-    likesCommunities: null,
   });
 
   useEffect(() => {
     void (async () => {
       const deviceId = getOrCreateDeviceId();
       try {
-        const [sl, sc, ll, lc] = await Promise.all([
+        const [sl, sc] = await Promise.all([
           fetchSavedCardsAction({ deviceId }),
           fetchSavedCommunitiesAction({ deviceId }),
-          fetchLikedCardsAction({ deviceId }),
-          fetchLikedCommunitiesAction({ deviceId }),
         ]);
-        setData({
-          savesListings: sl,
-          savesCommunities: sc,
-          likesListings: ll,
-          likesCommunities: lc,
-        });
+        setData({ savesListings: sl, savesCommunities: sc });
       } catch (err) {
         console.error('[SavedClient] fetch failed', err);
-        setData({
-          savesListings: [],
-          savesCommunities: [],
-          likesListings: [],
-          likesCommunities: [],
-        });
+        setData({ savesListings: [], savesCommunities: [] });
       }
     })();
   }, []);
 
-  const loading =
-    data.savesListings === null ||
-    data.savesCommunities === null ||
-    data.likesListings === null ||
-    data.likesCommunities === null;
+  const loading = data.savesListings === null || data.savesCommunities === null;
 
-  const cards = mode === 'saves' ? (data.savesListings ?? []) : (data.likesListings ?? []);
-  const communities =
-    mode === 'saves' ? (data.savesCommunities ?? []) : (data.likesCommunities ?? []);
+  const cards = data.savesListings ?? [];
+  const communities = data.savesCommunities ?? [];
 
   return (
     <main className="min-h-dvh bg-bg pb-20 text-ink md:pb-0">
-      <header className="sticky top-0 z-20 border-line border-b bg-bg backdrop-blur-md">
-        <div className="flex items-center justify-center px-4 py-3 md:hidden">
-          <div className="font-medium text-ink2 text-sm uppercase tracking-wider">Favorites</div>
-        </div>
-        <div className="mx-auto flex max-w-5xl flex-col items-center gap-2 px-4 pb-2 md:pt-3">
-          <div className="flex items-center gap-1">
-            <PillButton active={mode === 'saves'} onClick={() => setMode('saves')} label="Saves" />
-            <PillButton active={mode === 'likes'} onClick={() => setMode('likes')} label="Likes" />
-          </div>
-          <div className="flex items-center gap-1">
-            <PillButton
-              active={kind === 'listings'}
-              onClick={() => setKind('listings')}
-              label="Listings"
-              count={cards.length}
-            />
-            <PillButton
-              active={kind === 'communities'}
-              onClick={() => setKind('communities')}
-              label="Communities"
-              count={communities.length}
-            />
-          </div>
-        </div>
-      </header>
+      <div className="mx-auto flex max-w-5xl items-center justify-center gap-1 px-4 py-3">
+        <PillButton
+          active={kind === 'listings'}
+          onClick={() => setKind('listings')}
+          label="Listings"
+          count={cards.length}
+        />
+        <PillButton
+          active={kind === 'communities'}
+          onClick={() => setKind('communities')}
+          label="Communities"
+          count={communities.length}
+        />
+      </div>
 
       {loading ? (
         <div className="mx-auto max-w-md px-6 py-24 text-center text-muted">Loading…</div>
       ) : kind === 'listings' ? (
-        <ListingsView cards={cards} mode={mode} />
+        <ListingsView cards={cards} />
       ) : (
-        <CommunitiesView communities={communities} mode={mode} />
+        <CommunitiesView communities={communities} />
       )}
     </main>
   );
@@ -152,9 +116,9 @@ function PillButton({
   );
 }
 
-function ListingsView({ cards, mode }: { cards: BrowseCard[]; mode: Mode }) {
+function ListingsView({ cards }: { cards: BrowseCard[] }) {
   if (cards.length === 0) {
-    return mode === 'saves' ? (
+    return (
       <EmptyState
         icon={<Bookmark size={26} aria-hidden="true" />}
         title="No saved listings yet"
@@ -162,19 +126,11 @@ function ListingsView({ cards, mode }: { cards: BrowseCard[]; mode: Mode }) {
         ctaHref="/browse"
         ctaLabel="Start browsing"
       />
-    ) : (
-      <EmptyState
-        icon={<Heart size={26} aria-hidden="true" />}
-        title="No liked listings yet"
-        body="Tap the heart while browsing to react to a listing."
-        ctaHref="/browse"
-        ctaLabel="Start browsing"
-      />
     );
   }
   return (
     <div className="mx-auto max-w-5xl px-2 py-4">
-      <div className="grid grid-cols-2 gap-2 sm:gap-3">
+      <div className="grid grid-cols-2 gap-2 md:grid-cols-4 md:gap-3">
         {cards.map((card, idx) => (
           <Link
             key={card.listing.id}
@@ -221,15 +177,9 @@ function ListingsView({ cards, mode }: { cards: BrowseCard[]; mode: Mode }) {
   );
 }
 
-function CommunitiesView({
-  communities,
-  mode,
-}: {
-  communities: SavedCommunityCard[];
-  mode: Mode;
-}) {
+function CommunitiesView({ communities }: { communities: SavedCommunityCard[] }) {
   if (communities.length === 0) {
-    return mode === 'saves' ? (
+    return (
       <EmptyState
         icon={<Bookmark size={26} aria-hidden="true" />}
         title="No saved communities yet"
@@ -237,19 +187,11 @@ function CommunitiesView({
         ctaHref="/communities"
         ctaLabel="Browse communities"
       />
-    ) : (
-      <EmptyState
-        icon={<Heart size={26} aria-hidden="true" />}
-        title="No liked communities yet"
-        body="Tap the heart on any community's swipe feed to react."
-        ctaHref="/communities"
-        ctaLabel="Browse communities"
-      />
     );
   }
   return (
     <div className="mx-auto max-w-5xl px-2 py-4">
-      <div className="grid grid-cols-2 gap-2 sm:gap-3">
+      <div className="grid grid-cols-2 gap-2 md:grid-cols-4 md:gap-3">
         {communities.map((c, idx) => (
           <Link
             key={c.id}

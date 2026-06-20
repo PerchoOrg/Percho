@@ -75,24 +75,8 @@ export default async function CommunitiesListPage() {
        * matching chip dimensions, so the action's scope is the active sub-nav
        * page, not the Workspace label above it.
        */}
-      <div className="flex items-center justify-between">
-        <h1 className="font-serif text-2xl tracking-tight text-ink sm:text-4xl">Communities</h1>
-        <Link
-          href="/dashboard/communities/new"
-          className="rounded-full border border-line-strong bg-ink px-3 py-1.5 font-medium text-cream text-xs transition hover:opacity-90 sm:text-sm"
-        >
-          + New community
-        </Link>
-      </div>
-      <header className="flex items-baseline justify-between">
-        <div>
-          <h2 className="text-2xl font-semibold tracking-tight">Communities</h2>
-          <p className="mt-1 text-sm text-ink2">
-            Shared across all agents. Add videos to any community; only the agent who created a
-            community can edit its metadata.
-          </p>
-        </div>
-      </header>
+      {/* Phase 45.9 (2026-06-20): H1 + description + page-level CTA removed
+       * per owner. "+ New" lives in sidebar/BottomNav. */}
 
       {communities.length === 0 ? (
         <div className="rounded border border-dashed border-line bg-surface px-6 py-12 text-center">
@@ -101,7 +85,7 @@ export default async function CommunitiesListPage() {
           </p>
         </div>
       ) : (
-        <ul className="grid grid-cols-2 gap-3">
+        <ul className="grid grid-cols-2 gap-3 md:grid-cols-4">
           {communities.map((c) => {
             const canEdit = c.created_by == null || c.created_by === myAgentId;
             // Phase 35.2: whole row → editor link. The editor itself is now
