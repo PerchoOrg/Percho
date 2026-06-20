@@ -2,6 +2,20 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-06-20 17:30 UTC — Phase 45.19: Community-feed overlay buttons disappear after first video
+
+**Objective**: Owner reported on `/c/peachtree-corners/feed` (community tab → community card → Community Videos → tap a video) that the small overlay buttons — top header (Back, community pill, Share), right-rail (Like, Save, Contact), and the top-left "🏠 N homes here" chip — were not visible on screen.
+
+**Actions**: single-file fix in `app/(public)/c/[slug]/feed/CommunityVideoFeed.tsx`. Lifted the snap-y/overflow-y-scroll behaviour off the outer feed container into a dedicated inner `<div ref={scrollerRef}>`; the overlay buttons now sit as siblings of (not children of) the scroller, so they're positioned relative to the viewport-locked outer container and stay pinned across all swipes.
+
+**Decisions**: matched BrowseFeed's exact structure (`BrowseFeed.tsx:1271–1280`) — outer `relative h-screen overflow-hidden` shell + inner scroller — instead of inventing a new layout. Three feeds, one structural pattern.
+
+**Issues / Resolution**: pure CSS-structure bug. The previous container had `relative + snap-y + overflow-y-scroll` on the same element, which made the overflow viewport equal to the scroller's content size, not the visible viewport. Absolute children (header / rail / chip) were positioned against the *full content height* (videos × N copies), not the screen — so on the first card they happened to land on-screen, and the moment the user swiped they shifted with the content and went off-screen. Verified by browser console: `Like community` button bbox `{x:742, y:238}` (visible) vs `Back to Peachtree Corners` `{y:-123}` (off-screen) on the same render.
+
+**Learnings**: the snap-y scroller and any sticky overlay rails should never share a node — overlays need a non-scrolling positioning ancestor. Worth folding into the vicinity skill's component-removal/layout playbook the next time we touch feed structure.
+
+**Next steps**: owner verification on `/c/peachtree-corners/feed?start=…` — back arrow, community pill, share, Like, Save, Contact, and the homes chip all visible at first paint AND after swiping through several videos.
+
 ## 2026-06-20 16:30 UTC — Phase 45.18: Community-feed Like fix + Contact-to-owner
 
 **Objective**: Two owner-flagged bugs on `/c/[slug]/feed` (the community video feed reached directly, not from a listing): (1) Like button auto-reverts on click — never persists; (2) no Contact button in the right rail, so buyers exploring a community directly cannot reach the community owner.

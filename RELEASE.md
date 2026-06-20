@@ -3,6 +3,12 @@
 Newest at the top. Each release covers a meaningful product change visible to users.
 Format matches the standard release template (Features / Improvements / Bug Fixes / Technical / Known Issues / Metrics).
 
+## v0.45.3 — 2026-06-20
+
+### 🐛 Bug Fixes
+
+- **Community video feed buttons no longer disappear.** When tapping into a video from the Community tab, the top header (back, community name, share) and the side rail (Like, Save, Contact) plus the "homes here" chip now stay pinned to the screen as you swipe. Previously they shifted off-screen after the first video.
+
 ## v0.45.2 — 2026-06-20
 
 ### 🐛 Bug Fixes

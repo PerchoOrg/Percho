@@ -599,30 +599,39 @@ export function CommunityVideoFeed({
   }
 
   return (
-    <div
-      ref={scrollerRef}
-      className="relative mx-auto h-screen w-full snap-y snap-mandatory overflow-y-scroll bg-black md:w-[min(430px,calc(100vh*9/16))] md:shadow-2xl md:shadow-black/50"
-      style={{ scrollSnapType: 'y mandatory' }}
-    >
+    <div className="relative mx-auto h-screen w-full overflow-hidden bg-black md:w-[min(430px,calc(100vh*9/16))] md:shadow-2xl md:shadow-black/50">
       {/* Phase 45.12 (2026-06-20): desktop constrains the feed to a phone-width
        * portrait column centered on the page — same idiom as BrowseFeed.
        * Mobile stays full viewport. Owner: community videos shouldn't expand
-       * to full desktop width; should match the listing video feed. */}
-      {Array.from({ length: totalCards }, (_, idx) => {
-        const v = videos[idx % videos.length];
-        if (!v) return null;
-        return (
-          <VideoCard
-            key={`${v.id}-${idx}`}
-            video={v}
-            shouldMount={mountWindow.has(idx)}
-            isActive={idx === activeIndex}
-            cardRef={(el) => setCardRef(idx, el)}
-            muted={muted}
-            onAutoplayBlocked={onAutoplayBlocked}
-          />
-        );
-      })}
+       * to full desktop width; should match the listing video feed.
+       *
+       * Phase 45.19 (2026-06-20): the snap-y scroller is now a child of this
+       * outer container, not the container itself. Earlier the overlay
+       * buttons (top header, right-rail Like/Save/Contact, "homes here"
+       * chip) were absolute children of the scroller, which meant they
+       * scrolled WITH the cards and disappeared off-screen after the first
+       * video. Same idiom BrowseFeed uses (BrowseFeed.tsx:1271). */}
+      <div
+        ref={scrollerRef}
+        className="h-full w-full snap-y snap-mandatory overflow-y-scroll overscroll-contain"
+        style={{ scrollSnapType: 'y mandatory' }}
+      >
+        {Array.from({ length: totalCards }, (_, idx) => {
+          const v = videos[idx % videos.length];
+          if (!v) return null;
+          return (
+            <VideoCard
+              key={`${v.id}-${idx}`}
+              video={v}
+              shouldMount={mountWindow.has(idx)}
+              isActive={idx === activeIndex}
+              cardRef={(el) => setCardRef(idx, el)}
+              muted={muted}
+              onAutoplayBlocked={onAutoplayBlocked}
+            />
+          );
+        })}
+      </div>
 
       {/* Top header — Back + community name pill. */}
       <div className="absolute inset-x-0 top-0 z-30 flex items-center justify-between px-3 pt-3">
