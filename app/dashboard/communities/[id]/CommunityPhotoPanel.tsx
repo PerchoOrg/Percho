@@ -29,7 +29,7 @@ import {
   legacyKindForCategory,
 } from '@/lib/zod/community-video-categories';
 import { Trash2, Upload } from 'lucide-react';
-import { useCallback, useRef, useState, useTransition } from 'react';
+import { useCallback, useEffect, useRef, useState, useTransition } from 'react';
 
 export interface CommunityPhotoRow {
   id: string;
@@ -49,6 +49,14 @@ interface Props {
   communityId: string;
   initialPhotos: CommunityPhotoRow[];
   category: CommunityVideoCategoryId;
+  /**
+   * Phase 45.16 (2026-06-20): files queued by UploadFAB and handed off via
+   * the upload-prefill-store. When present (and non-empty) on first mount,
+   * the panel auto-uploads them under the current category — same path as
+   * if the agent had picked them via the "Add photos" button. Subsequent
+   * renders ignore the prop (consumePrefill makes it a one-shot anyway).
+   */
+  prefillFiles?: File[];
 }
 
 const MAX_FILE_BYTES = 10 * 1024 * 1024;
@@ -61,20 +69,32 @@ interface PendingItem {
   error?: string;
 }
 
-export function CommunityPhotoPanel({ communityId, initialPhotos, category }: Props) {
+export function CommunityPhotoPanel({
+  communityId,
+  initialPhotos,
+  category,
+  prefillFiles,
+}: Props) {
   const [photos, setPhotos] = useState<CommunityPhotoRow[]>(initialPhotos);
   const [pending, setPending] = useState<PendingItem[]>([]);
   const [globalError, setGlobalError] = useState<string | null>(null);
   const [_, startTransition] = useTransition();
   const inputRef = useRef<HTMLInputElement | null>(null);
+  // Phase 45.16: latch category at mount-time so the auto-upload effect can
+  // run with the value the FAB intended (the user may switch categories
+  // between mount and any subsequent prop change — but we already kicked
+  // off the prefill upload by then).
+  const categoryRef = useRef(category);
+  categoryRef.current = category;
 
   const meta = getCategoryMeta(category);
 
   const handleFiles = useCallback(
-    async (files: FileList) => {
+    async (files: Iterable<File>, useCategory?: CommunityVideoCategoryId) => {
       setGlobalError(null);
       const supabase = createClient();
-      const kind = legacyKindForCategory(category);
+      const cat = useCategory ?? categoryRef.current;
+      const kind = legacyKindForCategory(cat);
 
       for (const file of Array.from(files)) {
         const tempId = `tmp-${Date.now()}-${Math.random().toString(36).slice(2)}`;
@@ -110,7 +130,7 @@ export function CommunityPhotoPanel({ communityId, initialPhotos, category }: Pr
           communityId,
           storagePath: path,
           kind,
-          category,
+          category: cat,
           schoolId: null,
           poiId: null,
           lat: null,
@@ -136,7 +156,7 @@ export function CommunityPhotoPanel({ communityId, initialPhotos, category }: Pr
             storage_path: path,
             signed_url: preview,
             kind,
-            category,
+            category: cat,
             school_id: null,
             poi_id: null,
             alt_text: null,
@@ -147,8 +167,23 @@ export function CommunityPhotoPanel({ communityId, initialPhotos, category }: Pr
         ]);
       }
     },
-    [communityId, category],
+    [communityId],
   );
+
+  // Phase 45.16: auto-upload prefilled files once on mount. The bridge
+  // consumes the upload-prefill-store key (one-shot) so re-renders won't
+  // double-upload, but we still gate on a ref to be defensive against
+  // StrictMode double-invoke in dev.
+  const didConsumePrefill = useRef(false);
+  useEffect(() => {
+    if (didConsumePrefill.current) return;
+    if (!prefillFiles || prefillFiles.length === 0) return;
+    didConsumePrefill.current = true;
+    // Only photos belong here — videos go through CommunityVideoPanel.
+    const photos = prefillFiles.filter((f) => f.type.startsWith('image/'));
+    if (photos.length === 0) return;
+    void handleFiles(photos);
+  }, [prefillFiles, handleFiles]);
 
   const handleDelete = useCallback(
     (photoId: string) => {
@@ -192,7 +227,7 @@ export function CommunityPhotoPanel({ communityId, initialPhotos, category }: Pr
           className="hidden"
           onChange={(e) => {
             if (e.target.files && e.target.files.length > 0) {
-              void handleFiles(e.target.files);
+              void handleFiles(Array.from(e.target.files));
               e.target.value = '';
             }
           }}

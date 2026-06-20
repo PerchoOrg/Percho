@@ -13,7 +13,9 @@
  */
 
 import { createCommunity } from '@/app/dashboard/communities/actions';
+import { useSearchParams } from 'next/navigation';
 import { useState, useTransition } from 'react';
+import { peekPrefillCount } from '@/app/_components/upload-prefill-store';
 
 const INPUT_BASE =
   'w-full rounded border bg-surface px-3 py-2 text-sm text-ink placeholder:text-muted focus:outline-none focus:ring-1';
@@ -25,6 +27,9 @@ function inputCls(hasError: boolean) {
 }
 
 export function NewCommunityForm() {
+  const searchParams = useSearchParams();
+  const prefillId = searchParams?.get('prefill') ?? null;
+  const prefillCount = prefillId ? peekPrefillCount(prefillId) : 0;
   const [name, setName] = useState('');
   const [city, setCity] = useState('');
   const [state, setState] = useState('GA');
@@ -47,12 +52,15 @@ export function NewCommunityForm() {
     setFieldErrors({});
     setFormError(null);
     startTransition(async () => {
-      const result = await createCommunity({
-        name: name.trim(),
-        city: city.trim() === '' ? null : city.trim(),
-        state: state.trim().toUpperCase(),
-        description: description.trim() === '' ? null : description.trim(),
-      });
+      const result = await createCommunity(
+        {
+          name: name.trim(),
+          city: city.trim() === '' ? null : city.trim(),
+          state: state.trim().toUpperCase(),
+          description: description.trim() === '' ? null : description.trim(),
+        },
+        { prefillId },
+      );
       // On success, server action redirects — we never get here.
       if (!result.ok) {
         if (result.fieldErrors) setFieldErrors(result.fieldErrors);
@@ -67,6 +75,12 @@ export function NewCommunityForm() {
 
   return (
     <form onSubmit={onSubmit} className="space-y-4" noValidate>
+      {prefillCount > 0 && (
+        <div className="rounded border border-line bg-surface p-3 text-xs text-ink2">
+          {prefillCount} file{prefillCount === 1 ? '' : 's'} queued — they'll attach to this
+          community after you create it.
+        </div>
+      )}
       <Field label="Name" required error={fieldErrors.name} hint="2–120 characters">
         <input
           type="text"

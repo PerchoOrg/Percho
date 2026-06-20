@@ -61,11 +61,14 @@ export function CommunityVideoPanel({
   // server component doesn't have to change shape; we just stop rendering
   // the picker. Re-enable in the migration that adds the distance check.
   availableCommunities: _availableCommunities,
+  prefillVideo,
 }: {
   communityId: string;
   initialVideos: CommunityVideoRow[];
   category: CommunityVideoCategoryId;
   availableCommunities: CommunityOption[];
+  /** Phase 45.16: file handed off by UploadFAB (one-shot). */
+  prefillVideo?: File;
 }) {
   const router = useRouter();
   const [videos, setVideos] = useState<CommunityVideoRow[]>(initialVideos);
@@ -171,7 +174,7 @@ export function CommunityVideoPanel({
         </p>
       </div>
 
-      <VideoUploader target={target} onUploaded={handleUploaded} />
+      <VideoUploader target={target} onUploaded={handleUploaded} initialFile={prefillVideo} />
       {error && <p className="mt-2 text-xs text-red-400">{error}</p>}
 
       {/* Phase 35.3: "Also show this video in" multi-community picker

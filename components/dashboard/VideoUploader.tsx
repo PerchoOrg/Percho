@@ -1,7 +1,7 @@
 'use client';
 
 import type { CommunityVideoCategoryId } from '@/lib/zod/community-video-categories';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 /**
  * VideoUploader — Client Component (task 2.2; Phase 4.5 extends to community).
  *
@@ -83,9 +83,17 @@ export interface UploadedVideo {
 interface Props {
   target: UploadTarget;
   onUploaded?: (video: UploadedVideo) => void;
+  /**
+   * Phase 45.16 (2026-06-20): when set on first mount, the file is treated
+   * as if the agent had picked it via the file input — same validation,
+   * same "picked" state. The agent still presses "Start upload" to confirm
+   * and (optionally) edit the title. We intentionally don't auto-start so
+   * the agent can sanity-check before bytes leave the device.
+   */
+  initialFile?: File;
 }
 
-export function VideoUploader({ target, onUploaded }: Props) {
+export function VideoUploader({ target, onUploaded, initialFile }: Props) {
   const [status, setStatus] = useState<Status>('idle');
   const [progress, setProgress] = useState(0);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -93,6 +101,18 @@ export function VideoUploader({ target, onUploaded }: Props) {
   const [pickedFile, setPickedFile] = useState<File | null>(null);
   const [title, setTitle] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Phase 45.16: when the FAB handed us a file via prefill, treat it as if
+  // the agent had picked it. We don't auto-start the upload — the agent
+  // confirms via the existing button so they can edit the title first.
+  const didConsumeInitial = useRef(false);
+  useEffect(() => {
+    if (didConsumeInitial.current) return;
+    if (!initialFile) return;
+    didConsumeInitial.current = true;
+    handlePicked(initialFile);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialFile]);
 
   function handlePicked(file: File) {
     setErrorMsg(null);

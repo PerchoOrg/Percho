@@ -15,7 +15,7 @@ import { signCommunityPhotoUrls } from '@/app/dashboard/communities/[id]/photo-a
 import { createClient } from '@/lib/supabase/server';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { CommunityUploadShell } from '../CommunityUploadShell';
+import { CommunityUploadPrefillBridge } from '../CommunityUploadPrefillBridge';
 import type { CommunityVideoRow } from '../CommunityVideoPanel';
 
 interface CommunityRow {
@@ -146,7 +146,7 @@ export default async function CommunityUploadPage({
         </Link>
       </header>
 
-      <CommunityUploadShell
+      <CommunityUploadPrefillBridge
         communityId={community.id}
         initialVideos={videosRaw ?? []}
         initialPhotos={initialPhotos}
