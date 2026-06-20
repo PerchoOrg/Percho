@@ -3,9 +3,8 @@ import type { Metadata } from 'next';
 import { Inter, Source_Serif_4 } from 'next/font/google';
 import type { ReactNode } from 'react';
 import { BottomNavWrapper } from './_components/BottomNavWrapper';
-import { SearchPill } from './_components/SearchPill';
-import { SiteHeaderWrapper } from './_components/SiteHeaderWrapper';
-import { TopRightAvatarWrapper } from './_components/TopRightAvatarWrapper';
+import { DesktopSidebarWrapper } from './_components/DesktopSidebarWrapper';
+import { TopBarWrapper } from './_components/TopBarWrapper';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -31,16 +30,15 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" className={`${inter.variable} ${serifDisplay.variable}`}>
       <body className="bg-bg text-ink antialiased">
-        {/* Desktop (md+) sticky top header — role-aware nav, "+ New", avatar.
-         * Hides on feed/auth/landing same as BottomNav. */}
-        <SiteHeaderWrapper />
-        {/* Mobile-only top-right avatar / sign-in pill; mirrors BottomNav hide rules. */}
-        <TopRightAvatarWrapper />
-        <SearchPill />
-        {children}
-        {/* Mobile-only fixed bottom tab bar; self-hides on feed/auth/landing
-         * and on md+ breakpoints. Pages that need to butt up against the
-         * bottom (feed) hide it via CHROME_HIDDEN_PREFIXES. */}
+        {/* Phase 45 chrome (2026-06-20):
+         *   - DesktopSidebar: md+ only, fixed 200px left rail with brand +
+         *     primary tabs.
+         *   - TopBar: every breakpoint, sticky [search · sub-tabs · avatar].
+         *   - BottomNav: mobile-only bottom tab bar (kept).
+         * All three self-hide on feed/auth/landing via isChromeHidden. */}
+        <DesktopSidebarWrapper />
+        <TopBarWrapper />
+        <main className="md:pl-[200px]">{children}</main>
         <BottomNavWrapper />
       </body>
     </html>
