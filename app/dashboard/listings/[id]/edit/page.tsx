@@ -35,6 +35,7 @@ import { type ListingVideoRow, VideoPanel } from './VideoPanel';
 import { MarketingPanel } from './MarketingPanel';
 import { ListingLeadsPanel } from './ListingLeadsPanel';
 import { AnalyticsPanel } from './AnalyticsPanel';
+import { DangerZone } from './DangerZone';
 
 interface ListingRow {
   id: string;
@@ -195,15 +196,11 @@ export default async function EditListingPage({
         subtitle={subtitle}
         controls={
           <>
-            <HeroControl
-              href={`/dashboard/listings/${listing.id}/preview`}
-              className="border-white/35 bg-white/15 backdrop-blur-md hover:bg-white/25"
-            >
+            <HeroControl href={`/dashboard/listings/${listing.id}/preview`}>
               <span aria-hidden>↗</span>
               <span>Preview</span>
             </HeroControl>
             <InstantStatusToggle id={listing.id} status={listing.status} />
-            <HeroDeleteButton listingId={listing.id} />
           </>
         }
       />
@@ -279,6 +276,8 @@ export default async function EditListingPage({
           analytics: <AnalyticsPanel listingId={listing.id} />,
         }}
       />
+
+      <DangerZone listingId={listing.id} />
     </>
   );
 }

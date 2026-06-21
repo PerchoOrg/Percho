@@ -118,7 +118,7 @@ export function InstantStatusToggle({ id, status, variant = 'hero' }: Props) {
   const dotCls = isActive
     ? 'bg-emerald-500'
     : isHero
-      ? 'bg-white/60'
+      ? 'bg-gray-400'
       : 'bg-ink2/40';
 
   return (
