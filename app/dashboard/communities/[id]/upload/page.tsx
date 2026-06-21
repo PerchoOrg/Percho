@@ -60,7 +60,7 @@ export default async function CommunityUploadPage({
 
   if (!community) {
     return (
-      <div className="mx-auto max-w-2xl py-12 text-center">
+      <div className="mx-auto max-w-2xl px-4 py-12 text-center sm:px-6">
         <p className="text-sm text-ink2">Community not found.</p>
       </div>
     );
@@ -124,7 +124,7 @@ export default async function CommunityUploadPage({
   }));
 
   return (
-    <div className="mx-auto max-w-3xl space-y-4 py-4">
+    <div className="mx-auto max-w-3xl space-y-4 px-4 py-4 sm:px-6">
       <header className="flex items-baseline justify-between gap-3">
         <div className="min-w-0">
           <h1 className="truncate text-2xl font-semibold tracking-tight">{community.name}</h1>
