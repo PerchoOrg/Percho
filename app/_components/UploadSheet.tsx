@@ -148,7 +148,12 @@ export function useUploadSheet() {
 
   const portal = (
     <>
-      <input ref={albumRef} type="file" accept="image/*,video/*" multiple className="hidden" onChange={onFilesPicked} />
+      {/* Album: explicit extensions instead of image/*,video/* — on some
+          iOS Safari versions the wildcard MIME forces the system 3-way
+          action sheet (Photo Library / Take Photo / Choose Files) but
+          explicit extensions can route directly into the Photos picker.
+          Not guaranteed across iOS versions — see Phase 45.36 DEVLOG. */}
+      <input ref={albumRef} type="file" accept=".jpg,.jpeg,.png,.heic,.heif,.webp,.gif,.mp4,.mov,.m4v" multiple className="hidden" onChange={onFilesPicked} />
       <input ref={cameraRef} type="file" accept="image/*,video/*" capture="environment" className="hidden" onChange={onFilesPicked} />
       {mounted && sheetUI ? createPortal(sheetUI, document.body) : null}
     </>
