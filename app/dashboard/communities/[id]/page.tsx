@@ -92,7 +92,7 @@ export default async function CommunityEditorPage({
 
   if (!community) {
     return (
-      <div className="mx-auto max-w-2xl py-12 text-center">
+      <div className="mx-auto max-w-2xl px-4 py-12 text-center sm:px-6">
         <p className="text-sm text-ink2">Community not found.</p>
       </div>
     );

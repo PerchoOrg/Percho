@@ -81,7 +81,7 @@ export default async function EditListingPage({
 
   if (!listing) {
     return (
-      <div className="mx-auto max-w-2xl py-12 text-center">
+      <div className="mx-auto max-w-2xl px-4 py-12 text-center sm:px-6">
         <p className="text-sm text-ink2">Listing not found, or you don&apos;t have access to it.</p>
       </div>
     );

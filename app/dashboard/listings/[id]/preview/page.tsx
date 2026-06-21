@@ -144,10 +144,9 @@ export default async function DashboardListingPreviewPage({ params }: PageProps)
     <>
       <StatusBanner status={data.listing.status} publicHref={publicHref} />
       {/*
-        BrowseFeed is full-viewport scroll-snap; the dashboard layout wraps
-        children in `max-w-6xl px-6 py-8` which would clip it. We escape the
-        wrapper with `fixed inset-0` so the feed renders edge-to-edge while
-        the banner sits at z-60 above it.
+        BrowseFeed is full-viewport scroll-snap; render it edge-to-edge
+        outside any normal page container so the snap points line up
+        with the viewport. The status banner sits at z-60 above it.
       */}
       <div className="fixed inset-0 z-50 bg-bg">
         <VideoFeed listingId={data.listing.id} cards={cards} />

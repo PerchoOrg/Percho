@@ -1,10 +1,10 @@
+import { GridPageShell } from '@/app/_components/GridPageShell';
+import { ListingGrid, type ListingGridItem } from '@/app/_components/ListingGrid';
 import { thumbnailUrl } from '@/lib/cloudflare/stream';
 import { DEMO_MEDIA_ENABLED, demoCoverFor } from '@/lib/demo-media';
 import { fetchBrowseCards, fetchBrowseCardsByCommunitySlug } from '@/lib/feed/browse-cards';
 import { createClient } from '@/lib/supabase/server';
 import type { Metadata } from 'next';
-import Image from 'next/image';
-import Link from 'next/link';
 
 export const metadata: Metadata = {
   title: 'For You · Vicinity',
@@ -23,14 +23,13 @@ export const dynamic = 'force-dynamic';
  * grid to a single community.
  *
  * Phase 43.7 (2026-06-20): dropped the Recommended / Nearby sub-tabs.
- * The page is now a single "For You" grid (always 2-up). The standalone
- * /nearby route still 308-redirects here.
+ * Phase 45 (2026-06-20): Nearby resurrected as a TopBar sub-tab.
  *
- * Phase 45 (2026-06-20): Nearby is back, but as a top-bar sub-tab pinned
- * by the global TopBar (see app/_components/nav-config.ts → getSubTabs).
- * `/browse/nearby` renders the radius-bound grid; `/browse` is still the
- * "Explore" / For You feed. The mobile-only sticky header below was
- * removed because TopBar now owns that surface (sub-tabs live there).
+ * Phase 47 (2026-06-21): refactored on top of shared GridPageShell +
+ * ListingGrid so /browse, /dashboard, /communities, /dashboard/communities
+ * all share the same card and container chrome. Per-card mapping (video
+ * vs photo href, demo "Stock" badge) lives here; cover + caption shell
+ * lives in app/_components/GridCard.tsx.
  */
 export default async function BrowsePage({
   searchParams,
@@ -64,84 +63,34 @@ async function RecommendedGrid({ communitySlug }: { communitySlug: string | null
   const cards = scopedCards && scopedCards.length > 0 ? scopedCards : await fetchBrowseCards();
   const isCommunityScoped = Boolean(scopedCards && scopedCards.length > 0);
 
-  if (cards.length === 0) {
-    return (
-      <div className="mx-auto max-w-md px-6 py-24 text-center">
-        <p className="text-ink2">
-          No listings yet. Check back soon — agents are uploading new tours.
-        </p>
-      </div>
-    );
-  }
+  const items: ListingGridItem[] = cards.map((card) => {
+    const realSrc =
+      card.mediaKind === 'video'
+        ? thumbnailUrl(card.hero.cfVideoId)
+        : (card.heroPhotoUrl as string);
+    const src = demoCoverFor(card.listing.id, realSrc) as string;
+    const isDemoStock = DEMO_MEDIA_ENABLED && src !== realSrc;
+    return {
+      id: card.listing.id,
+      href:
+        card.mediaKind === 'video'
+          ? `/browse/feed?${
+              isCommunityScoped ? `community=${encodeURIComponent(communitySlug as string)}&` : ''
+            }start=${encodeURIComponent(card.listing.id)}`
+          : `/v/${card.agent.slug}/${card.listing.slug}`,
+      coverUrl: src,
+      price: card.listing.price,
+      beds: card.listing.beds,
+      baths: card.listing.baths,
+      sqft: card.listing.sqft,
+      address: card.listing.address,
+      badge: isDemoStock ? { label: 'Stock', tone: 'dark' } : null,
+    };
+  });
 
   return (
-    <div className={`mx-auto max-w-6xl px-3 sm:px-6 ${isCommunityScoped ? 'py-6' : 'pb-6'}`}>
-      {/* Phase 45.26 (2026-06-21): TikTok-density grid — overlay variant D.
-       * Cover占 100%, info(price/specs/address) 叠在底部 gradient scrim 上,
-       * gap 紧凑(4/8px mobile, 6/12px desktop)so >2 rows 可见 swipe 提示。 */}
-      <div className="grid grid-cols-2 gap-x-1 gap-y-2 md:grid-cols-4 md:gap-x-1.5 md:gap-y-3">
-        {cards.map((card, idx) => (
-          <Link
-            key={card.listing.id}
-            href={
-              card.mediaKind === 'video'
-                ? `/browse/feed?${isCommunityScoped ? `community=${encodeURIComponent(communitySlug as string)}&` : ''}start=${encodeURIComponent(card.listing.id)}`
-                : `/v/${card.agent.slug}/${card.listing.slug}`
-            }
-            prefetch={false}
-            className="group block"
-          >
-            <div className="relative aspect-[3/4] w-full overflow-hidden bg-surface">
-              {(() => {
-                const realSrc =
-                  card.mediaKind === 'video'
-                    ? thumbnailUrl(card.hero.cfVideoId)
-                    : (card.heroPhotoUrl as string);
-                const src = demoCoverFor(card.listing.id, realSrc) as string;
-                const isDemoStock = DEMO_MEDIA_ENABLED && src !== realSrc;
-                return (
-                  <>
-                    <Image
-                      src={src}
-                      alt={card.listing.address}
-                      fill
-                      sizes="(max-width: 640px) 50vw, 50vw"
-                      priority={idx < 4}
-                      className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.02]"
-                    />
-                    {isDemoStock && (
-                      <span className="absolute top-2 right-2 bg-ink/85 px-1.5 py-0.5 text-[8px] tracking-[0.18em] text-surface uppercase backdrop-blur">
-                        Stock
-                      </span>
-                    )}
-                  </>
-                );
-              })()}
-              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-3/5 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
-              <div className="absolute inset-x-2 bottom-2 text-surface">
-                <div className="font-serif text-[15px] font-semibold leading-tight tracking-[-0.01em]">
-                  {formatPrice(card.listing.price)}
-                </div>
-                <div className="mt-0.5 truncate text-[11px] opacity-95 tracking-wide">
-                  {[
-                    card.listing.beds != null ? `${card.listing.beds} bd` : null,
-                    card.listing.baths != null ? `${card.listing.baths} ba` : null,
-                    card.listing.sqft != null ? `${card.listing.sqft.toLocaleString()} sqft` : null,
-                  ]
-                    .filter(Boolean)
-                    .join(' · ')}
-                </div>
-                <div className="mt-px truncate text-[11px] opacity-80">{card.listing.address}</div>
-              </div>
-            </div>
-          </Link>
-        ))}
-      </div>
-    </div>
+    <GridPageShell>
+      <ListingGrid items={items} />
+    </GridPageShell>
   );
-}
-
-function formatPrice(price: number | null): string {
-  if (price == null) return 'Price on request';
-  return `$${price.toLocaleString()}`;
 }

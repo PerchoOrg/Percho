@@ -18,7 +18,7 @@ export default async function NewListingPage() {
   if (!user) redirect('/login?redirect=%2Fdashboard%2Flistings%2Fnew');
 
   return (
-    <div className="mx-auto max-w-2xl space-y-8 py-4">
+    <div className="mx-auto max-w-2xl space-y-8 px-4 py-4 sm:px-6">
       <header>
         <h1 className="text-2xl font-semibold tracking-tight">New listing</h1>
         <p className="mt-1 text-sm text-ink2">

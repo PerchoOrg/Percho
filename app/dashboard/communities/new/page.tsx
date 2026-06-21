@@ -14,7 +14,7 @@ export default async function NewCommunityPage() {
   if (!user) redirect('/login?redirect=%2Fdashboard%2Fcommunities%2Fnew');
 
   return (
-    <div className="mx-auto max-w-xl space-y-6 py-4">
+    <div className="mx-auto max-w-xl space-y-6 px-4 py-4 sm:px-6">
       <header>
         <h1 className="text-2xl font-semibold tracking-tight">New community</h1>
         <p className="mt-1 text-sm text-ink2">
