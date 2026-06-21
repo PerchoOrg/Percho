@@ -189,7 +189,7 @@ async function assembleCards(
           .from('listings')
           .select('community_id')
           .in('community_id', communityIds)
-          .eq('status', 'published')
+          .eq('status', 'active')
       : Promise.resolve({ data: [] }),
   ]);
 
@@ -343,7 +343,7 @@ export async function fetchBrowseCards(): Promise<BrowseCard[]> {
     .select(
       'id, slug, address, city, state, price, beds, baths, sqft, description, community_id, agent_id',
     )
-    .eq('status', 'published')
+    .eq('status', 'active')
     .order('created_at', { ascending: false })
     .limit(FEED_LIMIT)) as { data: ListingRow[] | null };
 
@@ -379,7 +379,7 @@ export async function fetchBrowseCardsByCommunitySlug(
     .select(
       'id, slug, address, city, state, price, beds, baths, sqft, description, community_id, agent_id',
     )
-    .eq('status', 'published')
+    .eq('status', 'active')
     .eq('community_id', community.id)
     .order('created_at', { ascending: false })
     .limit(FEED_LIMIT)) as { data: ListingRow[] | null };
@@ -404,7 +404,7 @@ export async function fetchBrowseCardsByIds(ids: string[]): Promise<BrowseCard[]
       'id, slug, address, city, state, price, beds, baths, sqft, description, community_id, agent_id',
     )
     .in('id', ids)
-    .eq('status', 'published')) as { data: ListingRow[] | null };
+    .eq('status', 'active')) as { data: ListingRow[] | null };
 
   const cards = await assembleCards(rawListings ?? [], supabase);
   // Preserve caller order (saves are sorted newest-first).
@@ -436,7 +436,7 @@ export async function fetchNearbyCards(args: {
       .select(
         'id, slug, address, city, state, price, beds, baths, sqft, description, community_id, agent_id, lat, lng',
       )
-      .eq('status', 'published')
+      .eq('status', 'active')
       .not('lat', 'is', null)
       .not('lng', 'is', null)
       .gte('lat', bbox.minLat)

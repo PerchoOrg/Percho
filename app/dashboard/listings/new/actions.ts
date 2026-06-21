@@ -107,7 +107,7 @@ export async function createListing(input: CreateListingInput): Promise<CreateLi
         beds: data.beds ?? null,
         baths: data.baths ?? null,
         sqft: data.sqft ?? null,
-        status: 'draft',
+        status: 'inactive',
       })
       .select('id')
       .single()) as {

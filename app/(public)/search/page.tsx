@@ -57,7 +57,7 @@ async function searchListings(q: string): Promise<ListingHit[]> {
   const { data: rawListings } = (await (supabase as any)
     .from('listings')
     .select('id, slug, address, city, state, price, beds, baths, sqft, agent_id')
-    .eq('status', 'published')
+    .eq('status', 'active')
     .or(`address.ilike.${pattern},city.ilike.${pattern}`)
     .order('created_at', { ascending: false })
     .limit(LIMIT)) as {

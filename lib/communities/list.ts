@@ -17,7 +17,7 @@ export type CommunityListCard = {
   state: string;
   description: string | null;
   videoCount: number;
-  /** Phase 34b: real count of published listings (`status='published'` && `community_id`). */
+  /** Phase 34b: real count of active listings (`status='active'` && `community_id`). */
   listingCount: number;
   cover: ReturnType<typeof resolveCommunityCoverWithCfIds>;
 };
@@ -75,13 +75,13 @@ export async function fetchCommunityListCards(): Promise<CommunityListCard[]> {
     }
   }
 
-  // Phase 34b: real listing counts per community (status='published').
+  // Phase 34b: real listing counts per community (status='active').
   const communityIds = communities.map((c) => c.id);
   // biome-ignore lint/suspicious/noExplicitAny: stub generated types
   const { data: listingRows } = (await (supabase as any)
     .from('listings')
     .select('community_id')
-    .eq('status', 'published')
+    .eq('status', 'active')
     .in(
       'community_id',
       communityIds.length > 0 ? communityIds : ['00000000-0000-0000-0000-000000000000'],

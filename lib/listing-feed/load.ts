@@ -10,7 +10,7 @@
  *
  * Two entry points:
  *   - `loadListingFeedBySlug(agentSlug, listingSlug, { statuses })` — public
- *     page; default `statuses=['published']` keeps existing behavior.
+ *     page; default `statuses=['active']` keeps existing behavior.
  *   - `loadListingFeedById(listingId)` — dashboard preview; ignores status,
  *     RLS already scopes to the calling agent's own rows.
  *
@@ -148,7 +148,7 @@ export async function loadListingFeedBySlug(
   listingSlug: string,
   opts: { statuses?: string[] } = {},
 ): Promise<ListingFeedBundle | null> {
-  const statuses = opts.statuses ?? ['published'];
+  const statuses = opts.statuses ?? ['active'];
   const supabase = await createClient();
 
   // biome-ignore lint/suspicious/noExplicitAny: stub generated types

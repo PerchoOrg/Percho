@@ -155,7 +155,7 @@ export default async function EditListingPage({
           </p>
         </div>
         <div className="flex shrink-0 flex-row items-center gap-2">
-          {listing.status === 'published' && agent?.slug ? (
+          {listing.status === 'active' && agent?.slug ? (
             <a
               href={`/v/${agent.slug}/${listing.slug}`}
               target="_blank"

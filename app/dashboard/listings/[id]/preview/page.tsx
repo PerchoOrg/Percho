@@ -34,9 +34,9 @@ function StatusBanner({
   status: string;
   publicHref: string | null;
 }) {
-  const isDraft = status === 'draft';
-  const isArchived = status === 'archived';
-  const isPublished = status === 'published';
+  const isDraft = status === 'inactive';
+  const isArchived = false; // phase46: archive removed
+  const isPublished = status === 'active';
 
   // Tailwind doesn't support `current` with opacity modifiers, so each
   // tone variant ships its own border / pill / button classes.
@@ -136,7 +136,7 @@ export default async function DashboardListingPreviewPage({ params }: PageProps)
   const cards = await buildListingCards(data, photos);
 
   const publicHref =
-    data.listing.status === 'published'
+    data.listing.status === 'active'
       ? `/v/${data.agent.slug}/${data.listing.slug}`
       : null;
 

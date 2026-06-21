@@ -12,7 +12,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
-import { archiveListing, deleteListing, unarchiveListing } from './archive-actions';
+import { deleteListing } from './archive-actions';
 import { flushPending } from './flush-registry';
 import { publishListing, unpublishListing } from './publish-actions';
 
@@ -65,8 +65,8 @@ export function PublishPanel({ listingId, status }: Props) {
   const [missing, setMissing] = useState<string[] | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
-  const isPublished = status === 'published';
-  const isArchived = status === 'archived';
+  const isPublished = status === 'active';
+  const isArchived = false; // phase46: archive concept removed
 
   function handlePublish() {
     setMissing(null);
@@ -112,7 +112,7 @@ export function PublishPanel({ listingId, status }: Props) {
     setMissing(null);
     setErr(null);
     startTransition(async () => {
-      const res = await archiveListing(listingId);
+      const res = await unpublishListing(listingId);
       if (res.ok) {
         router.refresh();
       } else {
@@ -125,11 +125,11 @@ export function PublishPanel({ listingId, status }: Props) {
     setMissing(null);
     setErr(null);
     startTransition(async () => {
-      const res = await unarchiveListing(listingId);
+      const res = await publishListing(listingId);
       if (res.ok) {
         router.refresh();
       } else {
-        setErr(res.error);
+        setErr(res.missing.join(', '));
       }
     });
   }

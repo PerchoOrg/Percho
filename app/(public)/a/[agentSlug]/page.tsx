@@ -66,7 +66,7 @@ async function fetchListings(agentId: string): Promise<ListingCard[]> {
     .from('listings')
     .select('id, slug, address, city, state, price, beds, baths, sqft, cover_url, created_at')
     .eq('agent_id', agentId)
-    .eq('status', 'published')
+    .eq('status', 'active')
     .order('created_at', { ascending: false })) as {
     data: Omit<ListingCard, 'hero_video_id'>[] | null;
   };
