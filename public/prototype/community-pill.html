@@ -1,0 +1,367 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Vicinity — Community pill variants</title>
+<style>
+  :root {
+    --bg:        #f3eee7;
+    --surface:   #ffffff;
+    --ink:       #1a1a1a;
+    --ink2:     #4a4a4a;
+    --muted:    #8a8a8a;
+    --line:     #e7e1d8;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin:0; background: var(--bg); color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  body { padding: 0 0 96px; }
+
+  .page-header {
+    padding: 20px 16px 8px;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+  .page-header h1 {
+    font-family: "Iowan Old Style", Georgia, serif;
+    font-size: 22px; font-weight: 500; letter-spacing: -0.012em; margin: 0 0 6px;
+  }
+  .page-header p { color: var(--ink2); font-size: 13px; margin: 0; line-height: 1.5; }
+  .page-header code { background: var(--surface); padding: 1px 6px; border-radius: 4px; border: 1px solid var(--line); font-size: 12px; }
+
+  .stage {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+    padding: 16px;
+    max-width: 1500px;
+    margin: 0 auto;
+  }
+  @media (max-width: 1200px) { .stage { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 640px)  { .stage { grid-template-columns: 1fr; } }
+
+  .phone {
+    background: #000;
+    border-radius: 28px;
+    overflow: hidden;
+    box-shadow: 0 6px 24px rgba(0,0,0,0.12);
+    height: 720px;
+    position: relative;
+    isolation: isolate;
+  }
+  .phone-label {
+    position: absolute; bottom: -28px; left: 0; right: 0;
+    text-align: center; font-size: 12px; color: var(--ink2);
+  }
+  .phone-label strong { display: block; color: var(--ink); font-size: 14px; font-weight: 600; margin-bottom: 2px; }
+
+  /* Simulate the immersive video background */
+  .frame {
+    position: absolute; inset: 0;
+    background-image: url('https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=800&q=70');
+    background-size: cover;
+    background-position: center;
+    filter: brightness(0.78);
+  }
+  .frame::after {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(180deg, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0) 30%, rgba(0,0,0,0) 60%, rgba(0,0,0,0.55) 100%);
+  }
+
+  /* Status bar */
+  .statusbar {
+    position: absolute; top: 0; left: 0; right: 0;
+    height: 44px; padding: 14px 22px 0;
+    color: #fff; font-size: 13px; font-weight: 600;
+    display: flex; justify-content: space-between; align-items: center;
+    z-index: 5;
+  }
+
+  /* Top chrome row (back, pill, share) */
+  .topchrome {
+    position: absolute; top: 50px; left: 12px; right: 12px;
+    display: flex; align-items: flex-start; gap: 8px;
+    z-index: 4;
+  }
+
+  .icon-btn {
+    width: 38px; height: 38px; border-radius: 999px;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: rgba(0,0,0,0.45);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid rgba(255,255,255,0.16);
+    color: #fff; font-size: 18px;
+    flex-shrink: 0;
+  }
+
+  /* The pill being prototyped — slot in the middle, takes remaining space */
+  .pill-slot { flex: 1; display: flex; justify-content: center; min-width: 0; }
+
+  /* "1 home here" reference pill, sits below top chrome */
+  .home-pill {
+    position: absolute;
+    top: 102px; left: 50%; transform: translateX(-50%);
+    z-index: 4;
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 9px 14px;
+    background: rgba(0,0,0,0.35);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid rgba(255,255,255,0.18);
+    border-radius: 999px;
+    color: #fff; font-size: 14px; font-weight: 500;
+    white-space: nowrap;
+  }
+  .home-pill .chev { opacity: 0.7; margin-left: 2px; }
+
+  /* Bottom content placeholder */
+  .bottom {
+    position: absolute; left: 16px; right: 80px; bottom: 24px;
+    color: #fff; z-index: 3;
+  }
+  .bottom .tag {
+    display: inline-block; padding: 4px 10px;
+    background: rgba(0,0,0,0.4);
+    backdrop-filter: blur(10px);
+    border-radius: 999px; font-size: 12px; font-weight: 500;
+    margin-bottom: 8px;
+  }
+  .bottom h3 { margin: 0 0 4px; font-size: 18px; font-weight: 600; }
+  .bottom p { margin: 0; font-size: 13px; opacity: 0.85; line-height: 1.4; }
+
+  /* Right-side action stack */
+  .actions {
+    position: absolute; right: 12px; bottom: 100px; z-index: 3;
+    display: flex; flex-direction: column; gap: 16px; align-items: center;
+  }
+  .actions .act {
+    width: 44px; height: 44px; border-radius: 999px;
+    background: rgba(0,0,0,0.4);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(255,255,255,0.14);
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 18px;
+  }
+  .actions .lbl { font-size: 10px; color: #fff; margin-top: -10px; opacity: 0.85; }
+
+  /* ============================================ */
+  /* VARIANT 0 — CURRENT (flat dark scrim, 2-line)  */
+  /* ============================================ */
+  .pill-current {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 7px 14px;
+    background: rgba(0,0,0,0.55);
+    border-radius: 999px;
+    color: #fff;
+    max-width: 100%;
+  }
+  .pill-current .ico { font-size: 14px; }
+  .pill-current .meta { display: flex; flex-direction: column; line-height: 1.15; min-width: 0; }
+  .pill-current .meta .t1 { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pill-current .meta .t2 { font-size: 10px; opacity: 0.75; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pill-current .chev { opacity: 0.6; font-size: 14px; margin-left: 2px; }
+
+  /* ============================================ */
+  /* VARIANT A — GLASS MATCH, single line          */
+  /* ============================================ */
+  .pill-A {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 9px 14px;
+    background: rgba(0,0,0,0.35);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid rgba(255,255,255,0.18);
+    border-radius: 999px;
+    color: #fff; font-size: 14px; font-weight: 500;
+    white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis;
+  }
+  .pill-A .ico { font-size: 14px; }
+  .pill-A .sep { opacity: 0.45; margin: 0 2px; }
+  .pill-A .meta { opacity: 0.75; font-weight: 400; }
+  .pill-A .chev { opacity: 0.7; margin-left: 2px; }
+
+  /* ============================================ */
+  /* VARIANT B — GLASS MATCH, two-line              */
+  /* ============================================ */
+  .pill-B {
+    display: inline-flex; align-items: center; gap: 9px;
+    padding: 7px 14px 7px 12px;
+    background: rgba(0,0,0,0.35);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid rgba(255,255,255,0.18);
+    border-radius: 999px;
+    color: #fff;
+    max-width: 100%;
+  }
+  .pill-B .ico { font-size: 14px; }
+  .pill-B .meta { display: flex; flex-direction: column; line-height: 1.15; min-width: 0; }
+  .pill-B .meta .t1 { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pill-B .meta .t2 { font-size: 10px; opacity: 0.65; white-space: nowrap; }
+  .pill-B .chev { opacity: 0.7; margin-left: 2px; font-size: 13px; }
+
+  /* ============================================ */
+  /* VARIANT C — MINIMAL GLASS (compact, single)    */
+  /* ============================================ */
+  .pill-C {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 11px 6px 10px;
+    background: rgba(0,0,0,0.3);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid rgba(255,255,255,0.14);
+    border-radius: 999px;
+    color: #fff; font-size: 12.5px; font-weight: 500;
+    white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis;
+    letter-spacing: 0.005em;
+  }
+  .pill-C .ico { font-size: 12px; }
+  .pill-C .chev { opacity: 0.6; margin-left: 2px; font-size: 12px; }
+
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <h1>Community pill — variants</h1>
+  <p>
+    Top-left community button restyled to match the <code>1 home here</code>
+    glass pill below it. Same fake background and reference pill across all 4
+    so you compare the chrome only. Pick a letter.
+  </p>
+</div>
+
+<div class="stage">
+
+  <!-- ============== CURRENT (baseline) ============== -->
+  <div class="phone">
+    <div class="frame"></div>
+    <div class="statusbar"><span>12:32</span><span>🌙 18%</span></div>
+    <div class="topchrome">
+      <button class="icon-btn">←</button>
+      <div class="pill-slot">
+        <div class="pill-current">
+          <span class="ico">🏠</span>
+          <div class="meta">
+            <div class="t1">Peachtree Corners</div>
+            <div class="t2">5 videos · in this area</div>
+          </div>
+          <span class="chev">›</span>
+        </div>
+      </div>
+      <button class="icon-btn">↗</button>
+    </div>
+    <div class="home-pill"><span>🏠</span><span>1 home here</span><span class="chev">›</span></div>
+    <div class="actions">
+      <div class="act" style="color:#ff5a72;">♥</div><div class="lbl">Like</div>
+      <div class="act">🔖</div><div class="lbl">Save</div>
+      <div class="act">💬</div><div class="lbl">Contact</div>
+    </div>
+    <div class="bottom">
+      <span class="tag">Walk the Block</span>
+      <h3>4825 Chesterfield Ct</h3>
+      <p>Suwanee, GA · 4 bd · 3.5 ba · $950K</p>
+    </div>
+    <div class="phone-label"><strong>Current</strong>flat dark scrim · no blur · 2-line</div>
+  </div>
+
+  <!-- ============== VARIANT A ============== -->
+  <div class="phone">
+    <div class="frame"></div>
+    <div class="statusbar"><span>12:32</span><span>🌙 18%</span></div>
+    <div class="topchrome">
+      <button class="icon-btn">←</button>
+      <div class="pill-slot">
+        <div class="pill-A">
+          <span class="ico">🏠</span>
+          <span>Peachtree Corners</span>
+          <span class="sep">·</span>
+          <span class="meta">5 videos</span>
+          <span class="chev">›</span>
+        </div>
+      </div>
+      <button class="icon-btn">↗</button>
+    </div>
+    <div class="home-pill"><span>🏠</span><span>1 home here</span><span class="chev">›</span></div>
+    <div class="actions">
+      <div class="act" style="color:#ff5a72;">♥</div><div class="lbl">Like</div>
+      <div class="act">🔖</div><div class="lbl">Save</div>
+      <div class="act">💬</div><div class="lbl">Contact</div>
+    </div>
+    <div class="bottom">
+      <span class="tag">Walk the Block</span>
+      <h3>4825 Chesterfield Ct</h3>
+      <p>Suwanee, GA · 4 bd · 3.5 ba · $950K</p>
+    </div>
+    <div class="phone-label"><strong>A — Glass single-line</strong>same material as home pill · "Name · 5 videos"</div>
+  </div>
+
+  <!-- ============== VARIANT B ============== -->
+  <div class="phone">
+    <div class="frame"></div>
+    <div class="statusbar"><span>12:32</span><span>🌙 18%</span></div>
+    <div class="topchrome">
+      <button class="icon-btn">←</button>
+      <div class="pill-slot">
+        <div class="pill-B">
+          <span class="ico">🏠</span>
+          <div class="meta">
+            <div class="t1">Peachtree Corners</div>
+            <div class="t2">5 videos · in this area</div>
+          </div>
+          <span class="chev">›</span>
+        </div>
+      </div>
+      <button class="icon-btn">↗</button>
+    </div>
+    <div class="home-pill"><span>🏠</span><span>1 home here</span><span class="chev">›</span></div>
+    <div class="actions">
+      <div class="act" style="color:#ff5a72;">♥</div><div class="lbl">Like</div>
+      <div class="act">🔖</div><div class="lbl">Save</div>
+      <div class="act">💬</div><div class="lbl">Contact</div>
+    </div>
+    <div class="bottom">
+      <span class="tag">Walk the Block</span>
+      <h3>4825 Chesterfield Ct</h3>
+      <p>Suwanee, GA · 4 bd · 3.5 ba · $950K</p>
+    </div>
+    <div class="phone-label"><strong>B — Glass two-line</strong>same material · keeps subtitle</div>
+  </div>
+
+  <!-- ============== VARIANT C ============== -->
+  <div class="phone">
+    <div class="frame"></div>
+    <div class="statusbar"><span>12:32</span><span>🌙 18%</span></div>
+    <div class="topchrome">
+      <button class="icon-btn">←</button>
+      <div class="pill-slot">
+        <div class="pill-C">
+          <span class="ico">🏠</span>
+          <span>Peachtree Corners</span>
+          <span class="chev">›</span>
+        </div>
+      </div>
+      <button class="icon-btn">↗</button>
+    </div>
+    <div class="home-pill"><span>🏠</span><span>1 home here</span><span class="chev">›</span></div>
+    <div class="actions">
+      <div class="act" style="color:#ff5a72;">♥</div><div class="lbl">Like</div>
+      <div class="act">🔖</div><div class="lbl">Save</div>
+      <div class="act">💬</div><div class="lbl">Contact</div>
+    </div>
+    <div class="bottom">
+      <span class="tag">Walk the Block</span>
+      <h3>4825 Chesterfield Ct</h3>
+      <p>Suwanee, GA · 4 bd · 3.5 ba · $950K</p>
+    </div>
+    <div class="phone-label"><strong>C — Minimal glass</strong>compact · name only · most immersive</div>
+  </div>
+
+</div>
+
+</body>
+</html>
