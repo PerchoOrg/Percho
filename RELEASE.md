@@ -3,6 +3,55 @@
 Newest at the top. Each release covers a meaningful product change visible to users.
 Format matches the standard release template (Features / Improvements / Bug Fixes / Technical / Known Issues / Metrics).
 
+## v0.50.0 — 2026-06-21 — Agent hub rebuild
+
+### ✨ Features
+
+- **Unified agent hub detail shell**: clicking a listing or community now
+  opens a hero-cover layout with sticky sub-tabs underneath. Switch tabs
+  inline (URL `?tab=…` deep-links and shares cleanly); edits auto-save.
+  Replaces the prior long-scroll edit pages.
+- **Status simplified to Active / Inactive**: no more draft / published /
+  archived. Listings now have a single Active ↔ Inactive toggle in the
+  hero top-right. Activating still runs the readiness gate (address,
+  price, beds/baths, ≥1 ready media); deactivate is one click.
+  Communities gained the same toggle.
+- **Three-dot menu with Delete**: archive removed entirely. Permanent
+  delete is the sole destructive action, behind ⋮ in the hero.
+
+### 🎨 Improvements
+
+- **My-listings grid**: removed the empty padding wrapper and matched
+  `/browse` exactly — 2-up on mobile, 4-up on desktop, 3:4 cards with
+  bottom-gradient legibility overlay. Inactive cards de-emphasized
+  with reduced opacity + small Inactive pill.
+- **My-communities grid**: same padding tightened to match `/communities`.
+- **Detail hero ratio**: dashboard hero uses the same `aspect-[5/2]
+  md:aspect-[5/1]` as the public community page, so what you see while
+  editing matches what buyers see live.
+- **Listing detail Media tab**: videos and photos panels stacked together
+  on one tab — fewer hops to swap a cover image.
+
+### 🛠️ Technical
+
+- DB migration 0030 collapses `listings.status` enum + adds
+  `communities.status`. Backfill: `published → active`, `draft|archived
+  → inactive`. Buyer-side reads gated on `status='active'`.
+- New shared components: `HubDetailShell`, `HubTabs`, `StatusPill`,
+  `ListingDetailMenu`, `CommunityDetailMenu`.
+- PublishPanel deleted; archive helpers replaced by deactivate.
+- Stacking-context guard: pill-error popover and detail menus portalled
+  to `document.body` so BottomNav z-40 doesn't clip them on mobile.
+
+### 🐛 Known Issues / Follow-ups
+
+- Community photos tab currently shows a "Manage photos →" link to the
+  existing photos page rather than inlining the panel — keeps phase 46
+  bounded; inlining is straightforward in a follow-up.
+- Buyer-facing `/c/<slug>` visibility still ignores
+  `communities.status` this phase; will gate in a follow-up if owner
+  wants inactive communities hidden from buyers.
+
 ## v0.49.5 — 2026-06-21
 
 ### 🐛 Bug Fixes
