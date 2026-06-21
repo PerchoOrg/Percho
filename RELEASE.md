@@ -3,6 +3,12 @@
 Newest at the top. Each release covers a meaningful product change visible to users.
 Format matches the standard release template (Features / Improvements / Bug Fixes / Technical / Known Issues / Metrics).
 
+## v0.49.3 — 2026-06-21
+
+### ✨ Improvements
+
+- **Upload menu redesigned.** Tapping the center "+" button on the bottom bar now fans out three round buttons (Album / Photo / Video) in a soft arc above it, with the "+" rotating into an ✕ to cancel. Tap any empty space to close — no more dedicated Cancel button. Replaces the old stacked sheet that several agents flagged as flat-looking and hard to dismiss.
+
 ## v0.49.2 — 2026-06-21
 
 ### ✨ Improvements

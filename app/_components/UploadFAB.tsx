@@ -20,7 +20,7 @@ export function UploadFAB() {
     <>
       <button
         type="button"
-        onClick={open}
+        onClick={() => open('fan')}
         aria-label="Upload"
         className="mx-auto -translate-y-3 flex h-14 w-14 items-center justify-center rounded-full bg-ink text-cream shadow-lg shadow-black/20 transition active:scale-95"
       >

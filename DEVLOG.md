@@ -2,6 +2,56 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-06-21 — Phase 45.31: upload source-picker — fan-out radial menu
+
+**Objective**: qiaoxux complaint — the existing 4-button vertical sheet
+(Choose from album / Video / Photo / Cancel) "太难看了 而且必须点 Cancel
+才能取消". Two issues: visually flat (4 identical rectangles), and the
+backdrop tap-to-close worked but had no visual hint so users felt
+trapped into hitting Cancel.
+
+**Actions**:
+- Wrote `public/prototype/upload-sheet.html` (Current vs A/B/C — iOS
+  grouped / icon grid / inline pillbar). User: 都不好.
+- Wrote `public/prototype/upload-sheet-v2.html` (3 fan-spread angles:
+  180° / 120° / 160° upward arcs). User picked **C** (160° wide upward).
+- Reworked `app/_components/UploadSheet.tsx`:
+  - Added `open(mode: 'fan' | 'sheet')` parameter.
+  - `'fan'` mode renders 3 satellite buttons (Album / Photo / Video)
+    fanning out from the FAB at angles 160° / 90° / 20° (offsets
+    `(-99,-36)`, `(0,-105)`, `(99,-36)`). Center FAB rotates to ✕ —
+    tap ✕ OR scrim closes. No more Cancel row.
+  - Stagger animation: each satellite 220ms cubic-bezier ease-out with
+    0/60/120ms delays.
+  - `'sheet'` mode keeps the original bottom-sheet for desktop sidebar
+    "+ New" (no FAB to fan around) and for the type-picker confirmation
+    step (Listing / Community after files chosen — a confirmation flow
+    with metadata, not suited for radial layout).
+- `app/_components/UploadFAB.tsx` — call `open('fan')`.
+- `app/_components/DesktopSidebar.tsx` — call `open('sheet')`.
+
+**Decisions**:
+- Type-picker stays as bottom sheet, not fan. Reason: it shows
+  "N files selected" metadata and is a confirmation step. Fan is for
+  source choice (3 equal-weight branches). Mixing layouts per step is
+  fine; reuse forces a worse fit.
+- Desktop sidebar keeps sheet. Fan-around-FAB pattern doesn't translate
+  to a sidebar button.
+- Animation uses cubic-bezier(0.34, 1.4, 0.5, 1) for a tiny overshoot
+  ("pop" feel) — matches the playful spirit of fan menus.
+
+**Issues**: TypeScript caught two stale `onClick={open}` callsites
+(UploadFAB + DesktopSidebar) — handler signature changed from `() =>
+void` to `(mode?: 'fan' | 'sheet') => void`, React mouse event signature
+incompatible. Fixed with arrow wrappers.
+
+**Verification**: `npm run build` green first try after type fixes.
+Will verify Vercel preview before claiming shipped.
+
+**Next steps**: deploy + visual check on phone (Vivian / qiaoxux).
+Possible follow-up: swipe-to-dismiss the satellites individually, or
+subtle haptic feedback on iOS.
+
 ## 2026-06-21 — Phase 45.30: dot + icon + text chip, dropped to 25vh
 
 **Objective**: qiaoxux follow-up on 45.29 — banner cut-edge was too
