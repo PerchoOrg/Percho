@@ -627,8 +627,8 @@ export function CommunityVideoFeed({
         >
           <span
             aria-hidden="true"
-            className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-400"
-            style={{ boxShadow: '0 0 6px rgba(52, 211, 153, 0.7)' }}
+            className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-cream"
+            style={{ boxShadow: '0 0 6px rgba(255, 255, 255, 0.8)' }}
           />
           <span aria-hidden="true">🏠</span>
           <span className="font-medium text-[12px]">Live here</span>
