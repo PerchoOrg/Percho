@@ -76,7 +76,10 @@ async function RecommendedGrid({ communitySlug }: { communitySlug: string | null
 
   return (
     <div className={`mx-auto max-w-6xl px-3 sm:px-6 ${isCommunityScoped ? 'py-6' : 'pb-6'}`}>
-      <div className="grid grid-cols-2 gap-x-3 gap-y-8 md:grid-cols-4 md:gap-x-5 md:gap-y-12">
+      {/* Phase 45.26 (2026-06-21): TikTok-density grid — overlay variant D.
+       * Cover占 100%, info(price/specs/address) 叠在底部 gradient scrim 上,
+       * gap 紧凑(4/8px mobile, 6/12px desktop)so >2 rows 可见 swipe 提示。 */}
+      <div className="grid grid-cols-2 gap-x-1 gap-y-2 md:grid-cols-4 md:gap-x-1.5 md:gap-y-3">
         {cards.map((card, idx) => (
           <Link
             key={card.listing.id}
@@ -114,19 +117,21 @@ async function RecommendedGrid({ communitySlug }: { communitySlug: string | null
                   </>
                 );
               })()}
-            </div>
-            {/* Caption — Pixieset / gallery idiom: text BELOW image, not overlaid. */}
-            <div className="pt-3">
-              <div className="font-serif text-base text-ink leading-tight tracking-[-0.012em]">
-                {formatPrice(card.listing.price)}
-              </div>
-              <div className="mt-1 truncate text-ink2 text-[12px]">{card.listing.address}</div>
-              <div className="mt-1 flex items-center gap-1.5 text-[11px] text-muted tracking-wide">
-                {card.listing.beds != null && <span>{card.listing.beds} bd</span>}
-                {card.listing.baths != null && <span>· {card.listing.baths} ba</span>}
-                {card.listing.sqft != null && (
-                  <span>· {card.listing.sqft.toLocaleString()} sqft</span>
-                )}
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-3/5 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
+              <div className="absolute inset-x-2 bottom-2 text-surface">
+                <div className="font-serif text-[15px] font-semibold leading-tight tracking-[-0.01em]">
+                  {formatPrice(card.listing.price)}
+                </div>
+                <div className="mt-0.5 truncate text-[11px] opacity-95 tracking-wide">
+                  {[
+                    card.listing.beds != null ? `${card.listing.beds} bd` : null,
+                    card.listing.baths != null ? `${card.listing.baths} ba` : null,
+                    card.listing.sqft != null ? `${card.listing.sqft.toLocaleString()} sqft` : null,
+                  ]
+                    .filter(Boolean)
+                    .join(' · ')}
+                </div>
+                <div className="mt-px truncate text-[11px] opacity-80">{card.listing.address}</div>
               </div>
             </div>
           </Link>

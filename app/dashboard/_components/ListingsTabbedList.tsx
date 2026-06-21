@@ -138,7 +138,7 @@ export function ListingsTabbedList({ initialTab, agentSlug, rows, counts, view =
           </p>
         </div>
       ) : view === 'grid' ? (
-        <div className="grid grid-cols-2 gap-x-3 gap-y-8 md:grid-cols-4 md:gap-x-5 md:gap-y-12">
+        <div className="grid grid-cols-2 gap-x-1 gap-y-2 md:grid-cols-4 md:gap-x-1.5 md:gap-y-3">
           {filteredRows.map((l) => {
             const cover = l.cover_url ?? l.fallback_cover_url;
             const price = fmtPrice(l.price);
@@ -164,23 +164,29 @@ export function ListingsTabbedList({ initialTab, agentSlug, rows, counts, view =
                       No cover
                     </div>
                   )}
-                  <div className="absolute right-2 top-2">
+                  <div className="absolute right-2 top-2 z-10">
                     <StatusBadge status={l.status} />
                   </div>
-                </div>
-                <div className="pt-3">
-                  {price && (
-                    <div className="font-serif text-ink text-base leading-tight tracking-[-0.012em]">
-                      {price}
+                  {/* Phase 45.26 (2026-06-21): TikTok-density overlay D. */}
+                  <div className="pointer-events-none absolute inset-x-0 bottom-0 h-3/5 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
+                  <div className="absolute inset-x-2 bottom-2 text-surface">
+                    {price && (
+                      <div className="font-serif text-[15px] font-semibold leading-tight tracking-[-0.01em]">
+                        {price}
+                      </div>
+                    )}
+                    <div className="mt-0.5 truncate text-[11px] opacity-95 tracking-wide">
+                      {[
+                        l.beds != null ? `${l.beds} bd` : null,
+                        fmtBaths(l.baths) ? `${fmtBaths(l.baths)} ba` : null,
+                        l.sqft != null ? `${l.sqft.toLocaleString()} sqft` : null,
+                      ]
+                        .filter(Boolean)
+                        .join(' · ')}
                     </div>
-                  )}
-                  <div className="mt-1 truncate text-ink2 text-[12px]">
-                    {l.address ?? '(no address)'}
-                  </div>
-                  <div className="mt-1 flex items-center gap-1.5 text-[11px] text-muted tracking-wide">
-                    {l.beds != null && <span>{l.beds} bd</span>}
-                    {l.baths != null && <span>· {fmtBaths(l.baths)} ba</span>}
-                    {l.sqft != null && <span>· {l.sqft.toLocaleString()} sqft</span>}
+                    <div className="mt-px truncate text-[11px] opacity-80">
+                      {l.address ?? '(no address)'}
+                    </div>
                   </div>
                 </div>
               </Link>

@@ -3,6 +3,13 @@
 Newest at the top. Each release covers a meaningful product change visible to users.
 Format matches the standard release template (Features / Improvements / Bug Fixes / Technical / Known Issues / Metrics).
 
+## v0.48.0 — 2026-06-21
+
+### ✨ Improvements
+
+- **All grid pages now feel like a TikTok feed.** The cover photo / video thumbnail takes up the entire card, and the price, beds/baths/sqft, and address sit on a soft dark gradient at the bottom of the cover instead of in a separate row underneath. The empty space between cards has been tightened to almost nothing (a 4-pixel gap between columns, an 8-pixel gap between rows on phones), so just over two rows of listings are visible on screen at once — your eye picks up that there's more to scroll to without anyone having to tell you. This applies everywhere a grid shows up: Explore, Nearby, Saved, Search results, an individual community's videos and listings tabs, and the agent dashboard listings view.
+- **Specs now read as one line.** "3 bd · 2 ba · 1,820 sqft" sits below the price as a single sentence instead of three side-by-side spans. If a listing is missing one of the three (some homes don't list square footage), the dot separators stay clean and the line just shows what's known.
+
 ## v0.47.2 — 2026-06-21
 
 ### ✨ Improvements

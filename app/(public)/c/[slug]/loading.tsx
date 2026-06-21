@@ -18,14 +18,10 @@ export default function Loading() {
           <div className="h-9 w-36 animate-pulse rounded-full bg-ink2/20" />
         </div>
 
-        <div className="grid grid-cols-2 gap-x-3 gap-y-8 md:grid-cols-4 md:gap-x-5 md:gap-y-12">
+        <div className="grid grid-cols-2 gap-x-1 gap-y-2 md:grid-cols-4 md:gap-x-1.5 md:gap-y-3">
           {Array.from({ length: 8 }).map((_, i) => (
             // biome-ignore lint/suspicious/noArrayIndexKey: skeleton placeholders
-            <div key={i}>
-              <div className="aspect-[3/4] animate-pulse bg-surface" />
-              <div className="mt-3 h-4 w-2/3 animate-pulse rounded bg-ink2/20" />
-              <div className="mt-2 h-3 w-1/2 animate-pulse rounded bg-ink2/20" />
-            </div>
+            <div key={i} className="aspect-[3/4] animate-pulse bg-surface" />
           ))}
         </div>
       </div>

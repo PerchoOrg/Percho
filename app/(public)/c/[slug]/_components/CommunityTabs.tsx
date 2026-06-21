@@ -107,13 +107,9 @@ function VideosGrid({
     );
   }
   return (
-    <div className="grid grid-cols-2 gap-x-3 gap-y-8 md:grid-cols-4 md:gap-x-5 md:gap-y-12">
+    <div className="grid grid-cols-2 gap-x-1 gap-y-2 md:grid-cols-4 md:gap-x-1.5 md:gap-y-3">
       {videos.map((v) => {
-        // Phase 45.12 (2026-06-20): caption shows category label + blurb
-        // (the editorial description), not `v.title` — titles default to
-        // raw filenames like "IMG_2349.mp4" and leak that artifact onto
-        // the buyer surface. The category taxonomy is the SSOT for "what
-        // this video is about" (see lib/zod/community-video-categories).
+        // Phase 45.12: caption shows category label + blurb (not raw filename).
         const meta = v.category
           ? CATEGORY_META.get(v.category as CommunityVideoCategoryId)
           : null;
@@ -132,17 +128,19 @@ function VideosGrid({
                 className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.02]"
                 loading="lazy"
               />
+              {meta ? (
+                <>
+                  {/* Phase 45.26 (2026-06-21): TikTok-density overlay D. */}
+                  <div className="pointer-events-none absolute inset-x-0 bottom-0 h-3/5 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
+                  <div className="absolute inset-x-2 bottom-2 text-surface">
+                    <div className="truncate font-serif text-[15px] font-semibold leading-tight tracking-[-0.01em]">
+                      {meta.label}
+                    </div>
+                    <div className="mt-0.5 truncate text-[11px] opacity-90">{meta.blurb}</div>
+                  </div>
+                </>
+              ) : null}
             </div>
-            {meta ? (
-              <div className="pt-3">
-                <div className="truncate font-serif text-base text-ink leading-tight tracking-[-0.012em]">
-                  {meta.label}
-                </div>
-                <div className="mt-1 line-clamp-2 text-ink2 text-[12px] leading-snug">
-                  {meta.blurb}
-                </div>
-              </div>
-            ) : null}
           </Link>
         );
       })}
@@ -159,7 +157,7 @@ function ListingsGrid({ listings }: { listings: BrowseCard[] }) {
     );
   }
   return (
-    <div className="grid grid-cols-2 gap-x-3 gap-y-8 md:grid-cols-4 md:gap-x-5 md:gap-y-12">
+    <div className="grid grid-cols-2 gap-x-1 gap-y-2 md:grid-cols-4 md:gap-x-1.5 md:gap-y-3">
       {listings.map((card, idx) => (
         <Link
           key={card.listing.id}
@@ -187,18 +185,22 @@ function ListingsGrid({ listings }: { listings: BrowseCard[] }) {
               priority={idx < 4}
               className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.02]"
             />
-          </div>
-          <div className="pt-3">
-            <div className="font-serif text-base text-ink leading-tight tracking-[-0.012em]">
-              {formatPrice(card.listing.price)}
-            </div>
-            <div className="mt-1 truncate text-ink2 text-[12px]">{card.listing.address}</div>
-            <div className="mt-1 flex items-center gap-1.5 text-[11px] text-muted tracking-wide">
-              {card.listing.beds != null && <span>{card.listing.beds} bd</span>}
-              {card.listing.baths != null && <span>· {card.listing.baths} ba</span>}
-              {card.listing.sqft != null && (
-                <span>· {card.listing.sqft.toLocaleString()} sqft</span>
-              )}
+            {/* Phase 45.26 (2026-06-21): TikTok-density overlay D. */}
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 h-3/5 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
+            <div className="absolute inset-x-2 bottom-2 text-surface">
+              <div className="font-serif text-[15px] font-semibold leading-tight tracking-[-0.01em]">
+                {formatPrice(card.listing.price)}
+              </div>
+              <div className="mt-0.5 truncate text-[11px] opacity-95 tracking-wide">
+                {[
+                  card.listing.beds != null ? `${card.listing.beds} bd` : null,
+                  card.listing.baths != null ? `${card.listing.baths} ba` : null,
+                  card.listing.sqft != null ? `${card.listing.sqft.toLocaleString()} sqft` : null,
+                ]
+                  .filter(Boolean)
+                  .join(' · ')}
+              </div>
+              <div className="mt-px truncate text-[11px] opacity-80">{card.listing.address}</div>
             </div>
           </div>
         </Link>

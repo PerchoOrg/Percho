@@ -2,6 +2,38 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-06-21 — Phase 45.26: TikTok-density grid view (overlay variant D)
+
+**Objective**: owner referenced TikTok's Community feed and asked for grid pages to feel more immersive — cover takes more space, less empty whitespace between feeds, all caption text on one line so a touch over 2 rows fits per screen (gesture affordance for swipe). Two prototype rounds: v1 (A/B/C) cut fields and was rejected ("保留 价 房型 大小 和 地址"); v2 (D/E/F) kept all 4 fields with three cover-density gradients. Owner picked **D** (cover 100% with bottom gradient scrim and overlaid caption).
+
+**Actions**:
+
+- `app/(public)/browse/page.tsx` — replaced caption-below-cover layout with overlay D. Cover is full card; gradient scrim `bg-gradient-to-t from-black/80 via-black/40 to-transparent` covers the bottom 60%; price (15px serif), specs (`X bd · Y ba · Z sqft` joined into one line via `[...].filter(Boolean).join(' · ')`), and address sit on the scrim. Grid gap dropped from `gap-x-3 gap-y-8 md:gap-x-5 md:gap-y-12` (12/32px → 20/48px) to `gap-x-1 gap-y-2 md:gap-x-1.5 md:gap-y-3` (4/8px → 6/12px).
+- `app/(public)/nearby/NearbyClient.tsx` — same edit + the existing distance pill stays at top-left (above the bottom scrim).
+- `app/(public)/saved/_components/SavedClient.tsx` — both the listings sub-grid and the communities sub-grid get the overlay; community variant shows `name` + `city, state`.
+- `app/_components/CommunityGrid.tsx` (shared by Explore + saved + community-search results) — overlay with name + location.
+- `app/(public)/c/[slug]/_components/CommunityTabs.tsx` — both `aspect-square` sub-grids (videos with category label/blurb, listings with price/specs/address) migrated.
+- `app/(public)/search/page.tsx` ListingCard — same overlay; the wrapping grid `<div>` also got the new gap classes.
+- `app/dashboard/_components/ListingsTabbedList.tsx` — agent-facing dashboard grid; the `StatusBadge` (top-right) gets `z-10` so it stays above the gradient scrim.
+- Skeletons: `app/(public)/c/[slug]/loading.tsx` (already 3:4) and the four `9/16` rounded skeletons (`browse/saved/nearby/communities` `loading.tsx`) updated to `aspect-[3/4]` with the new gap and no text-bar children — caption is now overlaid so the skeleton-vs-loaded transition has no layout shift.
+- `public/prototype/grid-tiktok.html` (v1 A/B/C) and `public/prototype/grid-tiktok-v2.html` (v2 D/E/F) used for the two sign-off rounds; left in `public/prototype/` per visual-prototype-workflow ("don't delete after merge — they double as institutional memory").
+
+**Decisions**:
+
+- **Overlay over caption-below.** Owner explicitly asked for "more immersive" + "all text in one line" — D maximises cover real estate (100%) and lets the caption sit on the image like TikTok. v1's options that dropped fields were rejected; the constraint was always "keep all 4 fields", and overlay was the only way to keep them while expanding the cover.
+- **Specs on one line via `filter(Boolean).join(' · ')`.** The previous `<span> · ` chain produced inconsistent leading dots when `beds` was null and `baths` wasn't. The join idiom keeps the separator clean regardless of which fields are present, and matches the prototype.
+- **Did not extract a shared `ListingCard` component.** Each grid has slightly different fields (community vs listing vs video, distance pill vs status badge vs nothing) and a shared component would need a half-dozen optional props. Same overlay markup is now repeated in ~6 places; if drift becomes a problem next phase the consolidation is mechanical (overlay block is identical text-byte-for-byte across files now).
+- **Kept `aspect-square` for community videos.** The 1:1 frame is intentional — videos are recorded portrait but the category cards on `/c/[slug]` are a square mosaic by design (phase 45.10 decision). Only the gap / overlay changed.
+
+**Verification**: `npx tsc --noEmit` clean. Visual sign-off via the v2 prototype on Vercel; D selected.
+
+**Learnings**:
+
+- When a redesign touches N grid pages that share a class string but not a component, doing the prototype round in `public/prototype/*.html` pays off twice: once for the design pick (D vs E vs F) and once as a literal copy-paste reference while editing the N call sites — the prototype's overlay block became the canonical snippet pasted into all 6 grids.
+- Skeletons need to match the new layout, not just the new gap. Leaving the old `text-bar` children in skeletons would produce a layout shift when the real grid (which now has zero below-image content) replaces them.
+
+**Next steps**: Owner to test on the Vercel deploy. If overlay legibility on light-cover photos is a problem, the scrim opacity (`from-black/80`) is the single knob to bump.
+
 ## 2026-06-21 — Phase 45.25: Drop manual lat/lng input fallback on geolocation deny
 
 **Objective**: owner reported that when a user blocks browser geolocation, both `/browse/nearby` and `/communities/nearby` rendered an input box asking the user to type their latitude/longitude. Owner: "it is very stupid" — show empty result instead.

@@ -177,16 +177,22 @@ function ListingCard({ hit, idx }: { hit: ListingHit; idx: number }) {
             )}
           </>
         ) : null}
-      </div>
-      <div className="pt-3">
-        <div className="font-serif text-base text-ink leading-tight tracking-[-0.012em]">
-          {formatPrice(hit.price)}
-        </div>
-        <div className="mt-1 truncate text-ink2 text-[12px]">{hit.address}</div>
-        <div className="mt-1 flex items-center gap-1.5 text-[11px] text-muted tracking-wide">
-          {hit.beds != null && <span>{hit.beds} bd</span>}
-          {hit.baths != null && <span>· {hit.baths} ba</span>}
-          {hit.sqft != null && <span>· {hit.sqft.toLocaleString()} sqft</span>}
+        {/* Phase 45.26 (2026-06-21): TikTok-density overlay D. */}
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-3/5 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
+        <div className="absolute inset-x-2 bottom-2 text-surface">
+          <div className="font-serif text-[15px] font-semibold leading-tight tracking-[-0.01em]">
+            {formatPrice(hit.price)}
+          </div>
+          <div className="mt-0.5 truncate text-[11px] opacity-95 tracking-wide">
+            {[
+              hit.beds != null ? `${hit.beds} bd` : null,
+              hit.baths != null ? `${hit.baths} ba` : null,
+              hit.sqft != null ? `${hit.sqft.toLocaleString()} sqft` : null,
+            ]
+              .filter(Boolean)
+              .join(' · ')}
+          </div>
+          <div className="mt-px truncate text-[11px] opacity-80">{hit.address}</div>
         </div>
       </div>
     </Link>
@@ -251,7 +257,7 @@ export default async function SearchPage({
                 <h2 className="mb-3 px-1 text-[11px] text-ink2 tracking-[0.22em] uppercase">
                   Listings
                 </h2>
-                <div className="grid grid-cols-2 gap-x-3 gap-y-8 md:grid-cols-4 md:gap-x-5 md:gap-y-12">
+                <div className="grid grid-cols-2 gap-x-1 gap-y-2 md:grid-cols-4 md:gap-x-1.5 md:gap-y-3">
                   {listings.map((hit, idx) => (
                     <ListingCard key={hit.id} hit={hit} idx={idx} />
                   ))}

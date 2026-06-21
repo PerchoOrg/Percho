@@ -30,7 +30,7 @@ export function CommunityGrid({
   }
 
   return (
-    <div className="grid grid-cols-2 gap-x-3 gap-y-8 md:grid-cols-4 md:gap-x-5 md:gap-y-12">
+    <div className="grid grid-cols-2 gap-x-1 gap-y-2 md:grid-cols-4 md:gap-x-1.5 md:gap-y-3">
       {communities.map((c) => {
         const coverUrl = demoCoverFor(c.id, c.cover?.url ?? null);
         const distanceMi =
@@ -58,20 +58,16 @@ export function CommunityGrid({
                   {distanceMi.toFixed(1)} mi
                 </div>
               )}
-            </div>
-            <div className="pt-3">
-              <div className="font-serif text-base text-ink leading-tight tracking-[-0.012em]">
-                {c.name}
+              {/* Phase 45.26 (2026-06-21): TikTok-density overlay D. */}
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-3/5 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
+              <div className="absolute inset-x-2 bottom-2 text-surface">
+                <div className="truncate font-serif text-[15px] font-semibold leading-tight tracking-[-0.01em]">
+                  {c.name}
+                </div>
+                <div className="mt-0.5 truncate text-[11px] opacity-90">
+                  {c.city ? `${c.city}, ${c.state}` : c.state}
+                </div>
               </div>
-              <div className="mt-1 truncate text-ink2 text-[12px]">
-                {c.city ? `${c.city}, ${c.state}` : c.state}
-              </div>
-              {/* phase45.15 (2026-06-20): owner round 6 #8 — hide
-               * "5 videos · 1 home" meta line on community cards.
-               * The counts are noise on Explore (a buyer cares about
-               * the place, not the inventory) and the cover already
-               * implies "this place has stuff in it". Counts still
-               * surface inside `/c/[slug]` where they're contextual. */}
             </div>
           </Link>
         );
