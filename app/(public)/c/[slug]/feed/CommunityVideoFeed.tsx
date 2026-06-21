@@ -43,6 +43,7 @@ import {
   HouseIcon,
   ShareIcon,
 } from '../../../_components/feed/icons';
+import { ActionButton } from '../../../_components/feed/ActionButton';
 
 export type CommunityFeedVideo = {
   id: string;
@@ -578,49 +579,38 @@ export function CommunityVideoFeed({
        * below Save: Like → Save → Listings → Mute. Same destination as
        * the badge on `/c/[slug]` (`/browse?community=<slug>`). Hidden when
        * count is 0 (no homes for sale yet). */}
+      {/* Phase 45.22 (2026-06-21): rail migrated onto the shared
+       * ActionButton primitive used by BrowseFeed. Pre-45.22 the rail
+       * inlined bare circular buttons with no labels, which made them
+       * read as "small mystery icons" against bright video frames —
+       * users couldn't tell Like from Save from Contact at a glance.
+       * ActionButton renders a 12x12 circle WITH a "Like"/"Save"/
+       * "Contact" caption underneath, matching BrowseFeed exactly so
+       * the three feed surfaces speak with one voice. */}
       <div
         className="absolute right-3 z-20 flex flex-col items-center gap-3"
         style={{ bottom: 'max(6rem, calc(env(safe-area-inset-bottom) + 5rem))' }}
       >
-        <button
-          type="button"
+        <ActionButton
           onClick={toggleLike}
-          aria-label="Like community"
-          className={`flex h-12 w-12 items-center justify-center rounded-full border backdrop-blur transition ${
-            liked
-              ? 'border-rose-400/70 bg-rose-400/20 text-rose-400'
-              : 'border-cream/20 bg-ink/40 text-cream hover:border-cream/50'
-          }`}
+          label="Like"
+          active={liked}
+          activeColor="rose"
         >
           <HeartIcon filled={liked} />
-        </button>
-        <button
-          type="button"
-          onClick={toggleSave}
-          aria-label="Save community"
-          className={`flex h-12 w-12 items-center justify-center rounded-full border backdrop-blur transition ${
-            saved
-              ? 'border-cream/40 bg-cream/15 text-cream'
-              : 'border-cream/20 bg-ink/40 text-cream hover:border-cream/50'
-          }`}
-        >
+        </ActionButton>
+        <ActionButton onClick={toggleSave} label="Save" active={saved}>
           <BookmarkIcon filled={saved} />
-        </button>
+        </ActionButton>
         {/* Phase 45.18 (2026-06-20): Contact button → community owner.
          * Owner rule: "if exploring community directly, contact community
          * owner". Hidden for legacy/unowned communities (no owner to
          * route to). Same speech-bubble glyph as BrowseFeed Contact so
          * the three feeds read as one product. */}
         {owner && (
-          <button
-            type="button"
-            onClick={() => setLeadOpen(true)}
-            aria-label={`Contact ${owner.name}`}
-            className="flex h-12 w-12 items-center justify-center rounded-full border border-cream/20 bg-ink/40 text-cream backdrop-blur transition hover:border-cream/50"
-            style={{ touchAction: 'manipulation' }}
-          >
+          <ActionButton onClick={() => setLeadOpen(true)} label="Contact">
             <CommentIcon />
-          </button>
+          </ActionButton>
         )}
         {/* Phase 34b.1 (V1 redo, 2026-06-17): the right-rail HouseIcon was
          * removed in favor of a top-left "🏠 N homes here" chip that

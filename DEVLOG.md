@@ -2,6 +2,34 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-06-21 — Phase 45.22: Shared feed primitives + community-rail button labels
+
+**Objective**: owner reported "community tab → community → videos → click one video → I don't see all the small buttons on the screen, fix it". Three feed surfaces (BrowseFeed, CommunityVideoFeed, CommunityCarousel) had drifted in their rail-button rendering — BrowseFeed had circle+caption, the other two had bare icons — so the same Like/Save/Contact actions read as "small unlabeled mystery buttons" on the community feed. Root cause: rail markup was inlined per-feed instead of shared, so the caption pattern only existed in BrowseFeed.
+
+**Actions**:
+
+1. Extracted icon set (`HeartIcon`, `BookmarkIcon`, `ShareIcon`, `CommentIcon`, `BackArrowIcon`, `NearbyIcon`, `PlayIcon`, `HouseIcon`) from BrowseFeed + CommunityVideoFeed into `app/(public)/_components/feed/icons.tsx`. Byte-identical SVG paths preserved. `CommunityCarousel` icons left local — different SVG path/sizes (Heart viewBox 0 0 24 24 vs 0 0 26 26), unifying would shift pixels.
+2. Extracted `ActionButton` from BrowseFeed into `app/(public)/_components/feed/ActionButton.tsx`. The component renders the 12x12 cream/ink circle WITH a caption underneath ("Like" / "Save" / "Contact"), Link or button output, optional `activeColor='rose'` for Like, optional badge.
+3. Migrated CommunityVideoFeed's right rail onto `ActionButton`. Three inlined `<button>` blocks (Like / Save / Contact) collapsed into three `<ActionButton>` calls. Container positioning (`right-3`, `bottom: max(6rem, env(safe-area-inset-bottom)+5rem)`) unchanged. The visible difference: each circle now has a "Like" / "Save" / "Contact" caption beneath it, matching BrowseFeed exactly.
+
+**Decisions**:
+
+- **Scope shrunk mid-phase**. Original plan had 6 steps (icons → ActionButton → FeedShell → migrate BrowseFeed → migrate CommunityVideoFeed → migrate CommunityCarousel). Stopped at step 3. Reasoning: only steps 1–3 move the user-visible bug needle. FeedShell/HorizontalSwipePager extractions are architectural cleanup; per memory `component-removal-playbook.md` they're high-risk and the right loop is "ship the bug fix, then earn the architecture refactor in a separate phase". CommunityCarousel was found (during step 1) to have non-byte-identical icons, so unifying it requires owner pixel-parity sign-off anyway.
+- **CommunityCarousel rail untouched**. Same reason — pixel parity.
+- **Not bumping `package.json` version** (still 0.11.0); RELEASE.md numbering is independent of npm package version per existing convention. v0.46.0 release notes added.
+
+**Issues / Resolution**:
+
+- Originally specced as 6 commits on a phase branch. Now 3 commits on `phase45.22/unify-feeds`. tsc clean throughout.
+- `ReactNode` import in BrowseFeed became unused after ActionButton extraction; pruned per CLAUDE.md §0.3.
+
+**Learnings**:
+
+- The user's bug report was not "buttons positioned wrong" but "I can't tell which button is which". Vision-tool analysis initially said "rail too high"; ground-truth DOM measurement showed the rail is fine. The actual diff between feeds was the missing **caption** under each circle. Lesson: when vision tool and DOM disagree, trust DOM, then look at the markup not the geometry.
+- The 6-step plan was correct *for the architecture*, wrong *for the bug*. The bug fix lives entirely in steps 1–3. Subagent budget pressure (memory note) and the user's stated request both argue for shipping the fix in 3 commits rather than 6.
+
+**Next steps**: owner verification on Vercel — `/c/peachtree-corners/feed` should now show "Like" / "Save" / "Contact" labels under the right-rail circles, matching `/browse`.
+
 ## 2026-06-20 18:30 UTC — Phase 45.21: Listing-feed right rail back up to 6rem (revert 45.15 #5)
 
 **Objective**: owner reverted phase 45.15 #5 — "rail lowered to safe-area baseline" felt wrong after living with it. Move the three right-rail buttons (Like / Save / Contact) back up.
