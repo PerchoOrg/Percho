@@ -2,6 +2,97 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## Phase 47.5–47.10 — AgentHub mylisting redesign (2026-06-21)
+
+Owner ask: "关于agenthub里的mylisting 的子页面们 你有什么建议吗 增加或改动或布局".
+Iterated 6 HTML prototypes (`public/prototype/agenthub-mylisting{,-v2…v6}.html`)
+to lock visual + interaction direction, then shipped the full redesign in
+one batch: hero rebuilt as a 3-section CSS grid, sub-tabs reorganised to
+5 tabs, Analytics inlined, per-listing Leads tab added, and the dashboard
+grid gained filter chips + sort.
+
+**Hero (Phase 47.5).** New `app/dashboard/_components/HeroHeader.tsx` —
+CSS grid `auto · 1fr · auto` with three explicit rows: §1 right-aligned
+controls, §2 left-aligned title/subtitle filling the middle, §3 three
+frosted-glass stat tiles (Views / Saves / Leads + delta). No
+`position:absolute` anywhere — physical separation, zero overlap risk on
+arbitrary-length addresses (we tested with "1247 Peachtree Ridge Manor
+Crossing Lane" in the prototype). Companion `HeroControl.tsx` provides
+the chromeless button: transparent + text-shadow at rest, frosted-glass
+surface on hover (160ms transition, scale(0.97) on active), focus ring
+on `focus-visible`.
+
+**5 tabs (Phase 47.6).** Order: `Details · Media · Marketing · Leads ·
+Analytics`. Marketing replaces the old Social + Tour tabs — sibling tab
+count down from 6 to 5 to keep mobile from horizontally scrolling. The
+Leads tab label appends `· N` when there are unfollowed-up leads, so
+the agent sees actionable count without opening the tab.
+
+**Marketing merge (Phase 47.6).** New
+`app/dashboard/listings/[id]/edit/MarketingPanel.tsx` — pill sub-tabs
+(Social copy / Home tour script) over plain `useState`, no URL
+persistence. Hosts the existing `SocialCopyPanel` and `GenerateTourPanel`
+unchanged; the merge is purely a routing/structural change.
+
+**Per-listing Leads (Phase 47.7).** New
+`app/dashboard/listings/[id]/edit/ListingLeadsPanel.tsx` — server
+component that selects from `public.leads` filtered by `listing_id`
+(RLS already gates to agent-owned listings). Renders a compact list with
+the same mailto/sms affordances as the global `/dashboard/leads` inbox,
+plus a "See all leads →" backlink. Empty state copy:
+"No leads on this listing yet. Leads from the public listing page will
+appear here in real time." — uses the listing context to set agent
+expectation. No realtime subscription here; per-page-view freshness is
+fine for the inline tab. If we need it later, swap to `LeadsLive` with
+a `listing_id` filter.
+
+**Analytics inline + redirect (Phase 47.8).** New
+`app/dashboard/listings/[id]/edit/AnalyticsPanel.tsx` — lifted from the
+old standalone `app/dashboard/listings/[id]/analytics/page.tsx`. Same
+data shape (Stat tiles + Funnel + TopCards) but now scoped to a tab; the
+crumbs / H1 are dropped because the hero already shows them. The old
+route now `permanentRedirect`s to `/dashboard/listings/[id]/edit?tab=analytics`
+so existing bookmarks survive. Replaced `from-gold/80 to-gold/40` funnel
+gradient with `from-ink/40 to-ink/20` to match the burgundy-free Aman
+direction (the gold alias still resolves to ink, but explicit is clearer).
+
+**Hero stats SSR (Phase 47.5).** Edit page now runs three count queries
+in parallel after the listing fetch:
+- `events` count where `event_type='page_view'` (Views)
+- `saved_listings` count by `listing_id` (Saves)
+- `leads` count + `followed_up_at` rows (Leads + open delta)
+Three counts hit different tables with `head: true` on the first two;
+leads needs the rows to compute the open count (no `is null` count
+shortcut on the supabase-js client we use). Total cost: 3 round-trips,
+well under the page's existing video/photo/community fetches.
+
+**Dashboard grid (Phase 47.10).** New
+`app/dashboard/_components/DashboardListingGrid.tsx` — client wrapper
+around the existing `ListingGrid`. Adds filter chips (All / Active /
+Inactive with inline counts) and a sort dropdown (Recently updated /
+Newest / Most viewed). Filtering and sorting are pure client-side over
+the SSR-hydrated rows — agent portfolios are bounded enough that we
+don't need server pagination. View counts are aggregated in one
+`events.select('listing_id').in('listing_id', ids)` query, then folded
+into a Map in JS.
+
+**Files created** (8): `HeroHeader.tsx`, `HeroControl.tsx`,
+`DashboardListingGrid.tsx`, `MarketingPanel.tsx`, `ListingLeadsPanel.tsx`,
+`AnalyticsPanel.tsx`. **Modified** (3): `app/dashboard/page.tsx`,
+`app/dashboard/listings/[id]/edit/page.tsx`,
+`app/dashboard/listings/[id]/analytics/page.tsx`.
+
+**Verification.** `npx tsc --noEmit` clean; `npx next build` succeeded
+(edit page first-load JS 29.3 kB / 206 kB total, dashboard grid 2.23 kB /
+98.2 kB total).
+
+**Process note.** Plan was 6 phases originally laid out as
+`Phase A: hero → B: 5-tab → C: marketing → D: leads → E: redirect →
+F: dashboard grid`. Per the memory pattern about the 50-call subagent
+cap, this phase was mechanical (8 file creates + 3 modifies, ~12 patches
+total, no nontrivial reasoning), so the parent agent handled it directly
+in ~22 tool calls. No subagent dispatch needed.
+
 ## Phase 47.4 — Portfolio internal rhythm (2026-06-21)
 
 Owner feedback after Phase 47.3 ship: "可以放大一点 并且同一个页面内各处间距尽量保持一致 这里是 agent profile 不需要和 grid view 里的设置一样 但是自己页面内要协调."

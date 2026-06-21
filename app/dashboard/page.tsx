@@ -1,21 +1,25 @@
 /**
  * Dashboard home — my listings.
  *
+ * Phase 47.10 (2026-06-21): added filter chips (All / Active / Inactive)
+ * and sort dropdown (Recently updated / Newest / Most viewed) via the new
+ * client component DashboardListingGrid. Snapshot view counts are
+ * aggregated in a single events query over all owned listings.
+ *
  * Phase 47 (2026-06-21): refactored on top of shared GridPageShell +
  * ListingGrid. Same card markup as /browse — owner reported the two
  * grids "looked different"; root cause was duplicated card markup in
  * ListingsTabbedList.tsx. That file was deleted; this page now maps
  * fetched rows into ListingGridItem and renders the shared grid.
  *
- * Phase 46 (preserved): status simplified to 'active' | 'inactive'; the
- * pill row is hidden. Inactive listings show a small "Inactive" pill in
- * the top-right and dim the cover.
- *
  * RLS scopes the result to the calling agent's own listings.
  */
 
 import { GridPageShell } from '@/app/_components/GridPageShell';
-import { ListingGrid, type ListingGridItem } from '@/app/_components/ListingGrid';
+import {
+  DashboardListingGrid,
+  type DashboardItem,
+} from '@/app/dashboard/_components/DashboardListingGrid';
 import { thumbnailUrl } from '@/lib/cloudflare/stream';
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
@@ -39,7 +43,9 @@ export default async function DashboardHomePage() {
     ? // biome-ignore lint/suspicious/noExplicitAny: stub generated types
       ((await (supabase as any)
         .from('listings')
-        .select('id, slug, address, status, price, beds, baths, sqft, cover_url, updated_at')
+        .select(
+          'id, slug, address, status, price, beds, baths, sqft, cover_url, created_at, updated_at',
+        )
         .eq('agent_id', agentId)
         .order('updated_at', { ascending: false })) as {
         data: Array<{
@@ -52,15 +58,18 @@ export default async function DashboardHomePage() {
           baths: number | null;
           sqft: number | null;
           cover_url: string | null;
+          created_at: string;
           updated_at: string;
         }> | null;
       })
     : { data: [] };
 
+  const rows = allRows ?? [];
+
   // Fallback covers: pull the first listing_video thumbnail per listing
   // when cover_url is null. One batched query ordered by ord asc; keep
   // the first hit per listing in JS.
-  const idsNeedingCover = (allRows ?? []).filter((l) => !l.cover_url).map((l) => l.id);
+  const idsNeedingCover = rows.filter((l) => !l.cover_url).map((l) => l.id);
   const fallbackCovers = new Map<string, string>();
   if (idsNeedingCover.length > 0) {
     // biome-ignore lint/suspicious/noExplicitAny: stub generated types
@@ -79,7 +88,24 @@ export default async function DashboardHomePage() {
     }
   }
 
-  const items: ListingGridItem[] = (allRows ?? []).map((l) => {
+  // Snapshot view counts: page_view events grouped by listing_id.
+  const viewCounts = new Map<string, number>();
+  if (rows.length > 0) {
+    const ids = rows.map((r) => r.id);
+    // biome-ignore lint/suspicious/noExplicitAny: stub generated types
+    const { data: events } = (await (supabase as any)
+      .from('events')
+      .select('listing_id')
+      .in('listing_id', ids)
+      .eq('event_type', 'page_view')) as {
+      data: Array<{ listing_id: string }> | null;
+    };
+    for (const e of events ?? []) {
+      viewCounts.set(e.listing_id, (viewCounts.get(e.listing_id) ?? 0) + 1);
+    }
+  }
+
+  const items: DashboardItem[] = rows.map((l) => {
     const isInactive = l.status === 'inactive';
     return {
       id: l.id,
@@ -92,19 +118,16 @@ export default async function DashboardHomePage() {
       address: l.address,
       badge: isInactive ? { label: 'Inactive', tone: 'light' } : null,
       dimmed: isInactive,
+      rawStatus: l.status,
+      updatedAt: l.updated_at,
+      createdAt: l.created_at,
+      viewCount: viewCounts.get(l.id) ?? 0,
     };
   });
 
   return (
     <GridPageShell>
-      <ListingGrid
-        items={items}
-        emptyState={
-          <div className="mx-auto max-w-md rounded-2xl border border-line border-dashed bg-surface px-8 py-16 text-center">
-            <p className="text-ink2 text-sm">No listings yet — tap + New listing to add one.</p>
-          </div>
-        }
-      />
+      <DashboardListingGrid items={items} />
     </GridPageShell>
   );
 }

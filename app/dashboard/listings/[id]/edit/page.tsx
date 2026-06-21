@@ -1,27 +1,28 @@
 /**
- * /dashboard/listings/[id]/edit — listing detail (Phase 46 rebuild).
+ * /dashboard/listings/[id]/edit — listing detail (Phase 47.5–47.8 rebuild).
  *
- * New layout:
- *   - Hero cover (same aspect ratio as buyer-facing community page).
- *   - StatusPill in the top-right of the hero — Active/Inactive toggle
- *     replaces the old PublishPanel.
- *   - Sticky HubTabs underneath: Details · Media · Social · Tour.
- *   - Each tab renders inline; switching is `?tab=` URL state, no
- *     server nav. Auto-save (existing in EditListingForm/VideoPanel/
- *     PhotoPanel) keeps everything persistent.
+ * Hero: 3-section grid header (HeroHeader) — Row 1 chromeless controls,
+ * Row 2 left-aligned title/subtitle, Row 3 three frosted-glass stats
+ * (Views / Saves / Leads). No absolute positioning. No overlap risk.
  *
- * No more long-scroll multi-section page. No more PublishPanel block.
+ * Tabs (5): Details · Media · Marketing · Leads · Analytics.
+ *   - "Marketing" merges the old Social + Tour tabs (sub-tabs inside).
+ *   - "Leads" is a per-listing slice of the global lead inbox.
+ *   - "Analytics" inlines what used to live at /dashboard/listings/[id]/analytics
+ *     (that route now redirects here with ?tab=analytics).
  *
- * Removed surface: `View analytics` link. Analytics is reachable via
- * the listing dashboard top bar; redundant on the hero. (If owner
- * wants it back, a small button can sit beside StatusPill.)
+ * Stats are SSR-fetched once per page load. They're snapshot numbers, not
+ * realtime — the dedicated Analytics tab carries the funnel + breakdowns
+ * for deeper inspection.
  */
 
 import { thumbnailUrl } from '@/lib/cloudflare/stream';
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 
-import { HubDetailShell } from '@/app/dashboard/_components/HubDetailShell';
+import { HubTabs } from '@/app/dashboard/_components/HubTabs';
+import { HeroHeader, type HeroStat } from '@/app/dashboard/_components/HeroHeader';
+import { HeroControl } from '@/app/dashboard/_components/HeroControl';
 import { StatusPill } from '@/app/dashboard/_components/StatusPill';
 
 import { type CommunityOption, EditListingForm, type ListingContext } from './EditListingForm';
@@ -31,6 +32,9 @@ import { PhotoPanelPrefillBridge } from './PhotoPanelPrefillBridge';
 import { SocialCopyPanel } from './SocialCopyPanel';
 import { type ListingVideoRow, VideoPanel } from './VideoPanel';
 import { ListingDetailMenu } from './ListingDetailMenu';
+import { MarketingPanel } from './MarketingPanel';
+import { ListingLeadsPanel } from './ListingLeadsPanel';
+import { AnalyticsPanel } from './AnalyticsPanel';
 
 interface ListingRow {
   id: string;
@@ -53,6 +57,10 @@ interface ListingRow {
   description: string[] | null;
   cover_url: string | null;
   community_id: string | null;
+}
+
+function fmtCount(n: number): string {
+  return n.toLocaleString('en-US');
 }
 
 export default async function EditListingPage({
@@ -116,8 +124,45 @@ export default async function EditListingPage({
     .order('name', { ascending: true })) as { data: CommunityOption[] | null };
   const communities = communitiesRaw ?? [];
 
-  // Match the persisted cover_url back to a videoId/photoId so the
-  // VideoPanel / PhotoPanel can highlight the cover marker.
+  // ── Hero stats: Views / Saves / Leads ────────────────────────────────
+  // Snapshot numbers, intentionally lightweight. Detailed funnels live in
+  // the Analytics tab.
+  const [viewsRes, savesRes, leadsRes] = await Promise.all([
+    // biome-ignore lint/suspicious/noExplicitAny: stub generated types
+    (supabase as any)
+      .from('events')
+      .select('id', { count: 'exact', head: true })
+      .eq('listing_id', listing.id)
+      .eq('event_type', 'page_view'),
+    // biome-ignore lint/suspicious/noExplicitAny: stub generated types
+    (supabase as any)
+      .from('saved_listings')
+      .select('listing_id', { count: 'exact', head: true })
+      .eq('listing_id', listing.id),
+    // biome-ignore lint/suspicious/noExplicitAny: stub generated types
+    (supabase as any)
+      .from('leads')
+      .select('id, followed_up_at', { count: 'exact' })
+      .eq('listing_id', listing.id),
+  ]);
+
+  const viewCount = (viewsRes?.count as number | null) ?? 0;
+  const saveCount = (savesRes?.count as number | null) ?? 0;
+  const leadCount = (leadsRes?.count as number | null) ?? 0;
+  const leadRows = (leadsRes?.data ?? []) as Array<{ followed_up_at: string | null }>;
+  const openLeads = leadRows.filter((l) => !l.followed_up_at).length;
+
+  const stats: HeroStat[] = [
+    { label: 'Views', value: fmtCount(viewCount) },
+    { label: 'Saves', value: fmtCount(saveCount) },
+    {
+      label: 'Leads',
+      value: fmtCount(leadCount),
+      delta: openLeads > 0 ? `${openLeads} new` : undefined,
+    },
+  ];
+
+  // ── Cover resolution (unchanged from phase 46) ───────────────────────
   let initialCoverVideoId: string | null = null;
   if (listing.cover_url) {
     for (const v of videos) {
@@ -127,7 +172,7 @@ export default async function EditListingPage({
           break;
         }
       } catch {
-        // ignore — env might be missing in dev for one video; skip
+        // ignore
       }
     }
   }
@@ -143,8 +188,6 @@ export default async function EditListingPage({
     }
   }
 
-  // Hero cover fallback: cover_url, else first ready video thumb,
-  // else first photo URL, else null.
   let heroCover = listing.cover_url ?? null;
   if (!heroCover) {
     const firstReadyVideo = videos.find((v) => v.status === 'ready');
@@ -174,92 +217,94 @@ export default async function EditListingPage({
   };
 
   return (
-    <HubDetailShell
-      coverUrl={heroCover}
-      title={listing.address}
-      subtitle={subtitle}
-      rightOverlay={
-        <div className="flex items-center gap-2">
-          <StatusPill id={listing.id} status={listing.status} variant="listing" />
-          <ListingDetailMenu listingId={listing.id} />
-        </div>
-      }
-      tabs={[
-        { id: 'details', label: 'Details' },
-        { id: 'media', label: 'Media' },
-        { id: 'social', label: 'Social' },
-        { id: 'tour', label: 'Tour' },
-      ]}
-      defaultTab="details"
-      panels={{
-        details: (
-          <section className="rounded-2xl border border-line bg-surface p-4 sm:p-6">
-            <EditListingForm
-              listingId={listing.id}
-              initial={{
-                price: listing.price,
-                beds: listing.beds,
-                baths: listing.baths,
-                sqft: listing.sqft,
-                year_built: listing.year_built,
-                lot_size: listing.lot_size,
-                hoa: listing.hoa,
-                style: listing.style,
-                description: listing.description ?? [],
-                community_id: listing.community_id,
-              }}
-              communities={communities}
-              listingContext={listingContext}
-            />
-          </section>
-        ),
-        media: (
-          <div className="space-y-6">
+    <>
+      <HeroHeader
+        coverUrl={heroCover}
+        title={listing.address}
+        subtitle={subtitle}
+        controls={
+          <>
+            <HeroControl href={`/dashboard/listings/${listing.id}/preview`}>
+              Preview
+            </HeroControl>
+            <StatusPill id={listing.id} status={listing.status} variant="listing" />
+            <ListingDetailMenu listingId={listing.id} />
+          </>
+        }
+        stats={stats}
+      />
+
+      <HubTabs
+        tabs={[
+          { id: 'details', label: 'Details' },
+          { id: 'media', label: 'Media' },
+          { id: 'marketing', label: 'Marketing' },
+          { id: 'leads', label: openLeads > 0 ? `Leads · ${openLeads}` : 'Leads' },
+          { id: 'analytics', label: 'Analytics' },
+        ]}
+        defaultTab="details"
+        panels={{
+          details: (
             <section className="rounded-2xl border border-line bg-surface p-4 sm:p-6">
-              <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
-                <h2 className="text-base font-semibold">Videos</h2>
-                <span className="text-muted text-xs">
-                  Drag to reorder · use ⓒ to set cover
-                </span>
-              </div>
-              <VideoPanel
+              <EditListingForm
                 listingId={listing.id}
-                initialVideos={videos}
-                initialCoverVideoId={initialCoverVideoId}
+                initial={{
+                  price: listing.price,
+                  beds: listing.beds,
+                  baths: listing.baths,
+                  sqft: listing.sqft,
+                  year_built: listing.year_built,
+                  lot_size: listing.lot_size,
+                  hoa: listing.hoa,
+                  style: listing.style,
+                  description: listing.description ?? [],
+                  community_id: listing.community_id,
+                }}
+                communities={communities}
+                listingContext={listingContext}
               />
             </section>
-            <section className="rounded-2xl border border-line bg-surface p-4 sm:p-6">
-              <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
-                <h2 className="text-base font-semibold">Photos</h2>
-                <span className="text-muted text-xs">
-                  JPEG / PNG / WebP — fallback cover when no video · use ⓒ to set cover
-                </span>
-              </div>
-              <PhotoPanelPrefillBridge
-                listingId={listing.id}
-                initialPhotos={photos}
-                initialCoverPhotoId={initialCoverPhotoId}
-              />
-            </section>
-          </div>
-        ),
-        social: (
-          <section className="rounded-2xl border border-line bg-surface p-4 sm:p-6">
-            <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
-              <h2 className="text-base font-semibold">Social copy</h2>
-              <span className="text-muted text-xs">
-                Facebook + Instagram drafts, copy to clipboard
-              </span>
+          ),
+          media: (
+            <div className="space-y-6">
+              <section className="rounded-2xl border border-line bg-surface p-4 sm:p-6">
+                <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
+                  <h2 className="text-base font-semibold">Videos</h2>
+                  <span className="text-muted text-xs">
+                    Drag to reorder · use ⓒ to set cover
+                  </span>
+                </div>
+                <VideoPanel
+                  listingId={listing.id}
+                  initialVideos={videos}
+                  initialCoverVideoId={initialCoverVideoId}
+                />
+              </section>
+              <section className="rounded-2xl border border-line bg-surface p-4 sm:p-6">
+                <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
+                  <h2 className="text-base font-semibold">Photos</h2>
+                  <span className="text-muted text-xs">
+                    JPEG / PNG / WebP — fallback cover when no video · use ⓒ to set cover
+                  </span>
+                </div>
+                <PhotoPanelPrefillBridge
+                  listingId={listing.id}
+                  initialPhotos={photos}
+                  initialCoverPhotoId={initialCoverPhotoId}
+                />
+              </section>
             </div>
-            <SocialCopyPanel listingId={listing.id} />
-          </section>
-        ),
-        tour: (
-          <section className="rounded-2xl border border-line bg-surface p-4 sm:p-6">
-            <GenerateTourPanel listingId={listing.id} />
-          </section>
-        ),
-      }}
-    />
+          ),
+          marketing: (
+            <MarketingPanel
+              socialPanel={<SocialCopyPanel listingId={listing.id} />}
+              tourPanel={<GenerateTourPanel listingId={listing.id} />}
+            />
+          ),
+          leads: <ListingLeadsPanel listingId={listing.id} />,
+          analytics: <AnalyticsPanel listingId={listing.id} />,
+        }}
+      />
+    </>
   );
 }
