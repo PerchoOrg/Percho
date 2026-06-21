@@ -87,17 +87,27 @@ export function CommunityBody({
           ) : null}
         </div>
 
-        {/* Phase 45.28: CTA — bottom-right of hero. Switches body → listings. */}
-        {tab === 'videos' ? (
-          <button
-            type="button"
-            onClick={() => setTab('listings')}
-            className="absolute right-3 bottom-3 inline-flex h-9 items-center gap-1 rounded-full bg-cream px-4 font-medium text-ink text-sm shadow-md transition hover:bg-cream/90 sm:right-4 sm:bottom-4 sm:h-10 sm:px-5"
-          >
-            Live here
-            <span aria-hidden="true">→</span>
-          </button>
-        ) : null}
+        {/* Phase 45.28.1: CTA at hero top-right (was bottom-right — overlapped
+         *  hero title/desc on mobile). Same pill, label flips with tab state,
+         *  serving as both the videos→listings entry and the listings→videos
+         *  return path. No separate "back" link in body. */}
+        <button
+          type="button"
+          onClick={() => setTab(tab === 'videos' ? 'listings' : 'videos')}
+          className="absolute top-3 right-3 inline-flex h-9 items-center gap-1 rounded-full bg-cream px-4 font-medium text-ink text-sm shadow-md transition hover:bg-cream/90 sm:top-4 sm:right-4 sm:h-10 sm:px-5"
+        >
+          {tab === 'videos' ? (
+            <>
+              Live here
+              <span aria-hidden="true">→</span>
+            </>
+          ) : (
+            <>
+              <span aria-hidden="true">←</span>
+              Videos
+            </>
+          )}
+        </button>
       </div>
 
       {/* Body */}
@@ -105,17 +115,7 @@ export function CommunityBody({
         {tab === 'videos' ? (
           <VideosGrid communitySlug={community.slug} videos={videos} />
         ) : (
-          <>
-            <button
-              type="button"
-              onClick={() => setTab('videos')}
-              className="-mx-1 mb-3 inline-flex items-center gap-1 px-1 text-ink2 text-sm hover:text-ink"
-            >
-              <span aria-hidden="true">←</span>
-              Community videos
-            </button>
-            <ListingsGrid listings={listings} />
-          </>
+          <ListingsGrid listings={listings} />
         )}
       </div>
     </div>
