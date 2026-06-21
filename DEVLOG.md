@@ -2,6 +2,22 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-06-21 — Phase 45.25: Drop manual lat/lng input fallback on geolocation deny
+
+**Objective**: owner reported that when a user blocks browser geolocation, both `/browse/nearby` and `/communities/nearby` rendered an input box asking the user to type their latitude/longitude. Owner: "it is very stupid" — show empty result instead.
+
+**Actions**:
+
+- `app/(public)/nearby/NearbyClient.tsx` — removed `manualLat`, `manualLng`, `needsManual` state + the `applyManual()` handler + the input-box JSX block. Renamed remaining flag to `geoDenied`. On geo denied / unavailable, render a single-line empty state: "Enable location access in your browser to see listings near you."
+- `app/(public)/communities/nearby/CommunitiesNearbyClient.tsx` — same edits applied; copy reads "…communities near you."
+
+**Decisions**:
+
+- Did NOT add a `/profile`-Preferences-style fallback location picker. Owner's request was specifically to show empty, not to migrate the input elsewhere. Out of scope.
+- Kept `geoDenied` as a separate boolean (not folded into the no-coords branch) so the "Reading your location…" loading state still wins when geolocation is genuinely in-flight; only after the API errors out do we switch to the empty CTA.
+
+**Verification**: `npx tsc --noEmit` clean. Visual sign-off via Vercel preview on `phase45.25/nearby-empty-on-deny`.
+
 ## 2026-06-21 — Phase 45.24: Full-screen feed on mobile Safari + remove swipe hints
 
 **Objective**: owner reported (with iPhone screenshot of `/v/<agent>/<listing>`) that the feed wasn't using the full screen and asked to remove the "Swipe up for more" copy on the listing/explore feed and the "← swipe →" hint on community-videos carousels.

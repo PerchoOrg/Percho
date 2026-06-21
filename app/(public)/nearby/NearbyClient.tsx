@@ -31,19 +31,18 @@ export function NearbyClient() {
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<NearbyResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [manualLat, setManualLat] = useState('');
-  const [manualLng, setManualLng] = useState('');
-  const [needsManual, setNeedsManual] = useState(false);
+  const [geoDenied, setGeoDenied] = useState(false);
 
   // Step 0 — pull stored radius preference (set from /profile Preferences).
   useEffect(() => {
     setRadius(readStoredRadius());
   }, []);
 
-  // Step 1 — try geolocation on mount.
+  // Step 1 — try geolocation on mount. If denied/unavailable, render empty
+  // state (no manual lat/lng input — owner request 2026-06-21).
   useEffect(() => {
     if (typeof navigator === 'undefined' || !navigator.geolocation) {
-      setNeedsManual(true);
+      setGeoDenied(true);
       return;
     }
     navigator.geolocation.getCurrentPosition(
@@ -51,7 +50,7 @@ export function NearbyClient() {
         setCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude });
       },
       () => {
-        setNeedsManual(true);
+        setGeoDenied(true);
       },
       { enableHighAccuracy: false, timeout: 8000 },
     );
@@ -82,57 +81,14 @@ export function NearbyClient() {
     fetchNearby(coords, radius);
   }, [coords, radius, fetchNearby]);
 
-  function applyManual() {
-    const la = Number(manualLat);
-    const ln = Number(manualLng);
-    if (
-      !Number.isFinite(la) ||
-      !Number.isFinite(ln) ||
-      la < -90 ||
-      la > 90 ||
-      ln < -180 ||
-      ln > 180
-    ) {
-      setError('Enter valid lat (-90..90) and lng (-180..180).');
-      return;
-    }
-    setCoords({ lat: la, lng: ln });
-    setNeedsManual(false);
-  }
-
-  // Manual fallback when geolocation is denied/unavailable.
-  if (!coords && needsManual) {
+  // Geolocation denied / unavailable — show empty result with a one-line
+  // explanation. No input boxes.
+  if (!coords && geoDenied) {
     return (
-      <div className="mx-auto max-w-md px-6 py-12">
-        <div className="rounded-xl border border-line bg-surface p-4 text-sm">
-          <p className="mb-3 text-ink2">Couldn&apos;t read your location. Enter it manually:</p>
-          <div className="grid grid-cols-2 gap-2">
-            <input
-              type="text"
-              inputMode="decimal"
-              value={manualLat}
-              onChange={(e) => setManualLat(e.target.value)}
-              placeholder="lat (e.g. 33.838)"
-              className="rounded border border-line bg-bg px-2 py-1 text-ink"
-            />
-            <input
-              type="text"
-              inputMode="decimal"
-              value={manualLng}
-              onChange={(e) => setManualLng(e.target.value)}
-              placeholder="lng (e.g. -84.378)"
-              className="rounded border border-line bg-bg px-2 py-1 text-ink"
-            />
-          </div>
-          <button
-            type="button"
-            onClick={applyManual}
-            className="mt-3 rounded border border-line px-3 py-1 text-ink2 text-xs hover:border-line-strong hover:text-ink"
-          >
-            Apply
-          </button>
-          {error && <p className="mt-2 text-red-400 text-xs">{error}</p>}
-        </div>
+      <div className="mx-auto max-w-md px-6 py-24 text-center">
+        <p className="text-ink2">
+          Enable location access in your browser to see listings near you.
+        </p>
       </div>
     );
   }
