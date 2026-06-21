@@ -3,6 +3,12 @@
 Newest at the top. Each release covers a meaningful product change visible to users.
 Format matches the standard release template (Features / Improvements / Bug Fixes / Technical / Known Issues / Metrics).
 
+## v0.51.1 — 2026-06-21 — Even grid spacing
+
+### ✨ Improvements
+
+- **Grid spacing is now even.** Horizontal and vertical gaps between cards match, so the grid reads as a uniform mesh instead of horizontal rows. Applies to For You, Communities, My Listings, and My Communities.
+
 ## v0.51.0 — 2026-06-21 — Unified grid layout
 
 ### ✨ Improvements
@@ -498,13 +504,3 @@ Format matches the standard release template (Features / Improvements / Bug Fixe
   full-screen video feed buyers see, with a banner at the top reminding
   you it's a draft and only you can see it. Archived listings open the
   same preview with a muted banner explaining the public link is
-  offline — no more dead-ends.
-
-## v0.32.8 — 2026-06-17
-
-### ✨ Improvements
-- **Dashboard cover thumbnails are now clickable.** On your listings list,
-  tap the cover image to open the public listing page in a new tab — same
-  destination as the "View" button on the right. Drafts and archived
-  listings stay non-clickable since they don't have a public link yet.
-
