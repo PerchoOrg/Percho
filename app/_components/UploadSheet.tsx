@@ -94,7 +94,7 @@ export function useUploadSheet() {
         <div className="mx-auto mt-2.5 mb-1 h-1 w-10 rounded-full bg-line" aria-hidden="true" />
         {sheet === 'source-picker' && (
           <div className="px-5 pt-3 pb-2">
-            <h2 className="pb-3 text-center font-serif text-ink text-lg">Add photos or video</h2>
+            <h2 className="pb-3 text-center font-serif text-ink text-lg">Add video or photos</h2>
             <div className="grid grid-cols-2 gap-3">
               <SourceTile
                 label="Album"
@@ -120,7 +120,13 @@ export function useUploadSheet() {
                 }
               />
             </div>
-            <p className="pt-4 pb-1 text-center text-ink2 text-xs">Tap outside to cancel</p>
+            <button
+              type="button"
+              onClick={close}
+              className="mt-4 w-full rounded-xl px-4 py-3 text-center text-ink2 text-sm transition active:scale-[0.99] hover:text-ink"
+            >
+              Cancel
+            </button>
           </div>
         )}
         {sheet === 'type-picker' && (
@@ -131,7 +137,13 @@ export function useUploadSheet() {
             </p>
             <SheetRow label="Listing" onClick={() => pickType('listings')} />
             <SheetRow label="Community" onClick={() => pickType('communities')} />
-            <p className="pt-2 pb-1 text-center text-ink2 text-xs">Tap outside to cancel</p>
+            <button
+              type="button"
+              onClick={close}
+              className="mt-2 w-full rounded-xl px-4 py-3 text-center text-ink2 text-sm transition active:scale-[0.99] hover:text-ink"
+            >
+              Cancel
+            </button>
           </div>
         )}
       </div>
