@@ -3,6 +3,16 @@
 Newest at the top. Each release covers a meaningful product change visible to users.
 Format matches the standard release template (Features / Improvements / Bug Fixes / Technical / Known Issues / Metrics).
 
+## v0.46.0 — 2026-06-21
+
+### 🐛 Bug Fixes
+
+- **Community video feed buttons now have labels.** When tapping into a community video (Community tab → community → Videos → click a video), the three right-rail buttons (Like / Save / Contact) now show their names underneath each circle — same as the listing feed (For You). Previously they were bare circles, which made it hard to tell which button does what. The buttons themselves and their positions are unchanged.
+
+### 🔧 Technical
+
+- Extracted shared feed primitives — icons (`Heart`, `Bookmark`, `Share`, `Comment`, `BackArrow`, `Nearby`, `Play`, `House`) and `ActionButton` — into `app/(public)/_components/feed/`. BrowseFeed and CommunityVideoFeed now consume the same components. Pixel-identical to the previous BrowseFeed look. CommunityCarousel kept its local icon set this release (icon SVGs differ subtly; unifying needs owner pixel sign-off).
+
 ## v0.45.5 — 2026-06-20
 
 ### ✨ Improvements

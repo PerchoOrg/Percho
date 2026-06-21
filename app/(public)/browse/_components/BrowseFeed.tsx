@@ -7,10 +7,20 @@ import { type DemoVideoPool, demoCoverFor, demoPhotosFor, demoVideoFor } from '@
 import Hls from 'hls.js';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { LeadModal } from '../../_components/LeadModal';
 import { CommunityCarousel } from './CommunityCarousel';
 import { CommunitySheet, type CommunitySheetData } from './CommunitySheet';
+import { ActionButton } from '../../_components/feed/ActionButton';
+import {
+  BackArrowIcon,
+  BookmarkIcon,
+  CommentIcon,
+  HeartIcon,
+  NearbyIcon,
+  PlayIcon,
+  ShareIcon,
+} from '../../_components/feed/icons';
 
 export type BrowseSourceVideo = {
   cfVideoId: string;
@@ -122,180 +132,11 @@ export type BrowseCard = {
 
 type Source = 'hero' | 'nearby';
 
-function HeartIcon({ filled }: { filled?: boolean }) {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 24 24"
-      width={26}
-      height={26}
-      fill={filled ? 'currentColor' : 'none'}
-      stroke="currentColor"
-      strokeWidth={filled ? 0 : 2}
-    >
-      <path d="M12 21s-7.5-4.55-9.5-9.5C1.13 8.36 3.36 5 6.5 5c1.87 0 3.5 1 5 2.5C13 6 14.63 5 16.5 5c3.14 0 5.37 3.36 4 6.5C19.5 16.45 12 21 12 21z" />
-    </svg>
-  );
-}
-
-function NearbyIcon() {
-  return (
-    <svg aria-hidden="true" viewBox="0 0 24 24" width={22} height={22} fill="currentColor">
-      <path d="M11 17a1 1 0 1 1 2 0 1 1 0 0 1-2 0zM12 2a8 8 0 0 0-8 8c0 5.5 8 12 8 12s8-6.5 8-12a8 8 0 0 0-8-8zm0 11a3 3 0 1 1 0-6 3 3 0 0 1 0 6z" />
-    </svg>
-  );
-}
-
-function ShareIcon() {
-  return (
-    <svg aria-hidden="true" viewBox="0 0 24 24" width={22} height={22} fill="currentColor">
-      <path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92 1.61 0 2.92-1.31 2.92-2.92s-1.31-2.92-2.92-2.92z" />
-    </svg>
-  );
-}
-
-function BookmarkIcon({ filled }: { filled?: boolean }) {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 24 24"
-      width={26}
-      height={26}
-      fill={filled ? 'currentColor' : 'none'}
-      stroke="currentColor"
-      strokeWidth={filled ? 0 : 2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
-    </svg>
-  );
-}
-
-function CommentIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 24 24"
-      width={26}
-      height={26}
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-    </svg>
-  );
-}
-
-function BackArrowIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 24 24"
-      width={22}
-      height={22}
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M19 12H5" />
-      <path d="m12 19-7-7 7-7" />
-    </svg>
-  );
-}
-
-function PlayIcon() {
-  return (
-    <svg aria-hidden="true" viewBox="0 0 24 24" width={36} height={36} fill="currentColor">
-      <path d="M8 5v14l11-7z" />
-    </svg>
-  );
-}
-
 function formatPrice(n: number | null): string {
   if (n == null) return '';
   if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(2).replace(/\.?0+$/, '')}M`;
   if (n >= 1_000) return `$${Math.round(n / 1_000)}K`;
   return `$${n.toLocaleString()}`;
-}
-
-function ActionButton({
-  onClick,
-  href,
-  label,
-  active,
-  activeColor,
-  disabled,
-  badge,
-  children,
-}: {
-  onClick?: () => void;
-  href?: string;
-  label: string;
-  active?: boolean;
-  /**
-   * Phase 28: optional accent for the active state. 'gold' (default) is
-   * used by all info actions and Save; 'rose' is used by Like to match
-   * Xiaohongshu / TikTok convention.
-   */
-  activeColor?: 'gold' | 'rose';
-  disabled?: boolean;
-  badge?: string | number;
-  children: ReactNode;
-}) {
-  const activeCls =
-    activeColor === 'rose'
-      ? 'border-rose-400/70 bg-rose-400/20 text-rose-400'
-      : 'border-cream/40 bg-cream/15 text-cream';
-  const cls = `flex h-12 w-12 items-center justify-center rounded-full border backdrop-blur transition ${
-    active
-      ? activeCls
-      : disabled
-        ? 'border-cream/10 bg-ink/30 text-cream/30'
-        : 'border-cream/20 bg-ink/40 text-cream hover:border-cream/50'
-  }`;
-  const inner = (
-    <div className="flex flex-col items-center gap-1">
-      <span className="relative">
-        <span className={cls}>{children}</span>
-        {badge ? (
-          <span className="-right-1 -top-1 absolute rounded-full bg-cream px-1.5 py-0.5 font-semibold text-[9px] text-ink leading-none tabular-nums">
-            {badge}
-          </span>
-        ) : null}
-      </span>
-      <span className="font-medium text-[10px] text-cream/80">{label}</span>
-    </div>
-  );
-  if (href && !disabled) {
-    return (
-      <Link
-        href={href}
-        className="block"
-        aria-label={label}
-        style={{ touchAction: 'manipulation' }}
-      >
-        {inner}
-      </Link>
-    );
-  }
-  return (
-    <button
-      type="button"
-      onClick={disabled ? undefined : onClick}
-      className="block"
-      aria-label={label}
-      style={{ touchAction: 'manipulation' }}
-      disabled={disabled}
-    >
-      {inner}
-    </button>
-  );
 }
 
 interface CardProps {
