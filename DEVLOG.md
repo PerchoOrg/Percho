@@ -2,6 +2,43 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## Phase 47.15 — Delete consolidated to Details tab (2026-06-21)
+
+User feedback after 47.11/47.12: on community detail the Delete affordance lived
+in the hero ⋯ menu *and* inline in the Details tab — confusing, asymmetric vs
+listing detail (which had moved to a bottom DangerZone in 47.12). User asked to
+align both: **Delete only inside the Details tab, identical rose DangerZone
+block, never on the hero**.
+
+Changes:
+
+- `app/dashboard/listings/[id]/edit/page.tsx` — `<DangerZone>` moved from
+  outside `<HubTabs>` into the `details:` panel (wrapped with the form in a
+  `space-y-6` flex column). Dropped now-unused `HeroDeleteButton` import.
+- `app/dashboard/listings/[id]/edit/DangerZone.tsx` — outer `mx-auto mt-12
+  max-w-6xl px-4 pb-16` shell stripped (HubTabs panel already provides the
+  6xl/padding container).
+- `app/dashboard/communities/[id]/page.tsx` — removed `<CommunityDetailMenu>`
+  from the hero `rightOverlay`; `CommunityStatusPill` is the only hero pill
+  again.
+- `app/dashboard/communities/[id]/CommunityEditor.tsx` — inline `<DangerZone>`
+  upgraded to match listing's rose 2xl block (rose-300/60 border, rose-50/40
+  bg, rose-600 solid CTA). Same prose, same `confirm()`.
+
+Orphans removed:
+- `app/dashboard/listings/[id]/edit/ListingDetailMenu.tsx`
+- `app/dashboard/communities/[id]/CommunityDetailMenu.tsx`
+- `app/dashboard/_components/HeroDeleteButton.tsx`
+
+Verification: `npx tsc --noEmit` clean.
+
+Result: both detail pages now have one Delete affordance, in the same place
+(Details tab, bottom of form), with identical visual weight. Other tabs (Media,
+Marketing, Leads, Analytics, Videos, Photos, Cover) no longer carry the Delete
+block — it is genuinely tied to "this is the master record for this listing/
+community".
+
+
 ## Phase 47.11 — AgentHub mylisting hero polish (2026-06-21)
 
 Agent feedback after Phase 47.10 ship surfaced four UX papercuts:

@@ -28,7 +28,6 @@ import { HubDetailShell } from '@/app/dashboard/_components/HubDetailShell';
 import type { CommunityPhotoRow } from './CommunityPhotoPanel';
 import { signCommunityPhotoUrls } from './photo-actions';
 import { CommunityCoverPanel } from './CommunityCoverPanel';
-import { CommunityDetailMenu } from './CommunityDetailMenu';
 import { CommunityEditor } from './CommunityEditor';
 import { CommunityPhotosTab } from './CommunityPhotosTab';
 import { CommunityStatusPill } from './CommunityStatusPill';
@@ -218,10 +217,7 @@ export default async function CommunityEditorPage({
       subtitle={subtitle}
       rightOverlay={
         isOwner ? (
-          <div className="flex items-center gap-2">
-            <CommunityStatusPill communityId={community.id} status={community.status} />
-            <CommunityDetailMenu communityId={community.id} />
-          </div>
+          <CommunityStatusPill communityId={community.id} status={community.status} />
         ) : null
       }
       tabs={[

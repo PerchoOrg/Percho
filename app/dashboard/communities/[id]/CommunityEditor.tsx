@@ -72,26 +72,28 @@ function DangerZone({ communityId }: { communityId: string }) {
   }
 
   return (
-    <section className="rounded border border-line bg-surface px-4 py-3">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="text-sm">
-          <div className="font-medium text-ink">Danger zone</div>
-          <p className="text-ink2 text-xs">Permanently delete this community.</p>
-        </div>
+    <section>
+      <div className="rounded-2xl border border-rose-300/60 bg-rose-50/40 p-5 sm:p-6">
+        <h2 className="font-semibold text-ink text-sm">Danger zone</h2>
+        <p className="mt-1 text-ink2 text-xs">
+          Permanently delete this community. Schools, POIs, photos, videos and
+          saved entries will be removed. Listings will be detached but not
+          deleted. This cannot be undone.
+        </p>
         <button
           type="button"
           onClick={handleDelete}
           disabled={isPending}
-          className="rounded border border-line px-3 py-2 text-xs text-ink2 hover:border-red-500/40 hover:text-red-300 disabled:opacity-50"
+          className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-rose-600 px-5 py-3 font-medium text-sm text-white transition hover:bg-rose-700 active:scale-[0.99] disabled:opacity-60 sm:w-auto sm:min-w-[240px]"
         >
-          {isPending ? 'Deleting…' : 'Delete community'}
+          {isPending ? 'Deleting…' : 'Delete this community'}
         </button>
+        {err && (
+          <p className="mt-3 rounded border border-red-500/40 bg-red-500/10 p-2 text-red-600 text-xs">
+            Error: {err}
+          </p>
+        )}
       </div>
-      {err && (
-        <p className="mt-2 rounded border border-red-500/40 bg-red-500/10 p-2 text-red-300 text-xs">
-          Error: {err}
-        </p>
-      )}
     </section>
   );
 }

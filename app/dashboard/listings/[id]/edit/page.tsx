@@ -24,7 +24,6 @@ import { HubTabs } from '@/app/dashboard/_components/HubTabs';
 import { HeroHeader } from '@/app/dashboard/_components/HeroHeader';
 import { HeroControl } from '@/app/dashboard/_components/HeroControl';
 import { InstantStatusToggle } from '@/app/dashboard/_components/InstantStatusToggle';
-import { HeroDeleteButton } from '@/app/dashboard/_components/HeroDeleteButton';
 
 import { type CommunityOption, EditListingForm, type ListingContext } from './EditListingForm';
 import { GenerateTourPanel } from './GenerateTourPanel';
@@ -216,25 +215,28 @@ export default async function EditListingPage({
         defaultTab="details"
         panels={{
           details: (
-            <section className="rounded-2xl border border-line bg-surface p-4 sm:p-6">
-              <EditListingForm
-                listingId={listing.id}
-                initial={{
-                  price: listing.price,
-                  beds: listing.beds,
-                  baths: listing.baths,
-                  sqft: listing.sqft,
-                  year_built: listing.year_built,
-                  lot_size: listing.lot_size,
-                  hoa: listing.hoa,
-                  style: listing.style,
-                  description: listing.description ?? [],
-                  community_id: listing.community_id,
-                }}
-                communities={communities}
-                listingContext={listingContext}
-              />
-            </section>
+            <div className="space-y-6">
+              <section className="rounded-2xl border border-line bg-surface p-4 sm:p-6">
+                <EditListingForm
+                  listingId={listing.id}
+                  initial={{
+                    price: listing.price,
+                    beds: listing.beds,
+                    baths: listing.baths,
+                    sqft: listing.sqft,
+                    year_built: listing.year_built,
+                    lot_size: listing.lot_size,
+                    hoa: listing.hoa,
+                    style: listing.style,
+                    description: listing.description ?? [],
+                    community_id: listing.community_id,
+                  }}
+                  communities={communities}
+                  listingContext={listingContext}
+                />
+              </section>
+              <DangerZone listingId={listing.id} />
+            </div>
           ),
           media: (
             <div className="space-y-6">
@@ -276,8 +278,6 @@ export default async function EditListingPage({
           analytics: <AnalyticsPanel listingId={listing.id} />,
         }}
       />
-
-      <DangerZone listingId={listing.id} />
     </>
   );
 }

@@ -38,7 +38,7 @@ export function DangerZone({ listingId }: { listingId: string }) {
   }
 
   return (
-    <section className="mx-auto mt-12 max-w-6xl px-4 pb-16 sm:px-6">
+    <section>
       <div className="rounded-2xl border border-rose-300/60 bg-rose-50/40 p-5 sm:p-6">
         <h2 className="font-semibold text-ink text-sm">Danger zone</h2>
         <p className="mt-1 text-ink2 text-xs">

@@ -2,6 +2,23 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.51.5 — Delete lives in Details tab on both pages (2026-06-21)
+
+### ✨ Improvements
+
+- My listing & my community detail pages: the Delete control now appears in
+  exactly one place — the bottom of the **Details** tab, as a clear rose-bordered
+  "Danger zone" block with a solid red "Delete this listing/community" button.
+  Same look, same place, on both pages.
+- Removed the three-dot ⋯ menu from the community hero. The Active/Inactive
+  pill is the only top-right control again, matching the listing hero.
+
+### 🐛 Bug Fixes
+
+- Fixes the report that Delete only showed at the bottom of the Details tab on
+  community pages — now that's the *intended* place on both listings and
+  communities, with identical styling.
+
 ## v0.51.4 — Portfolio internal rhythm (2026-06-21)
 
 - Agent portfolio (`/a/[agentSlug]`): overlay typography enlarged to match
