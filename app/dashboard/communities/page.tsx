@@ -31,7 +31,7 @@ export default async function CommunitiesListPage() {
   // CommunityGrid through a wrapper that overrides the link target. Simpler:
   // CommunityGrid takes communities and links to /c/<slug>. For the dashboard
   // surface we map id-keyed editor links via a sibling overlay grid below.
-  const cards = await fetchCommunityListCards();
+  const cards = await fetchCommunityListCards({ includeInactive: true });
 
   if (cards.length === 0) {
     return (
@@ -50,11 +50,9 @@ export default async function CommunitiesListPage() {
   }
 
   return (
-    <div className="mx-auto max-w-6xl px-3 sm:px-6 py-6 sm:py-8">
-      {/* Agent-side reuses the canonical CommunityGrid card style. The grid
-        * itself links to /c/[slug] (public). For editing, agents use the
-        * "Edit" affordance on /c/[slug] or hit /dashboard/communities/[id]
-        * directly — kept consistent so the cross-page card style holds. */}
+    <div className="mx-auto max-w-6xl px-3 pb-6 sm:px-6">
+      {/* Agent-side reuses the canonical CommunityGrid card style. Phase 46:
+        * tap routes to the new HubDetailShell editor at /dashboard/communities/[id]. */}
       <CommunityGrid
         communities={cards}
         hrefBuilder={(c) => `/dashboard/communities/${c.id}`}

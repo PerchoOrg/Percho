@@ -1,24 +1,36 @@
 /**
- * /dashboard/listings/[id]/edit — listing edit page (Phase 4.3a).
+ * /dashboard/listings/[id]/edit — listing detail (Phase 46 rebuild).
  *
- * Phase 4.3a: metadata fields (price/beds/baths/sqft/year_built/lot_size/hoa/style/description).
- * Phase 4.3b will add the video panel (list, upload, dnd-kit reorder).
- * Phase 4.3c will add the cover photo selector.
+ * New layout:
+ *   - Hero cover (same aspect ratio as buyer-facing community page).
+ *   - StatusPill in the top-right of the hero — Active/Inactive toggle
+ *     replaces the old PublishPanel.
+ *   - Sticky HubTabs underneath: Details · Media · Social · Tour.
+ *   - Each tab renders inline; switching is `?tab=` URL state, no
+ *     server nav. Auto-save (existing in EditListingForm/VideoPanel/
+ *     PhotoPanel) keeps everything persistent.
  *
- * Address/city/state/zip/lat/lng are read-only on this page — see
- * `actions.ts` header for rationale.
+ * No more long-scroll multi-section page. No more PublishPanel block.
+ *
+ * Removed surface: `View analytics` link. Analytics is reachable via
+ * the listing dashboard top bar; redundant on the hero. (If owner
+ * wants it back, a small button can sit beside StatusPill.)
  */
 
 import { thumbnailUrl } from '@/lib/cloudflare/stream';
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
+
+import { HubDetailShell } from '@/app/dashboard/_components/HubDetailShell';
+import { StatusPill } from '@/app/dashboard/_components/StatusPill';
+
 import { type CommunityOption, EditListingForm, type ListingContext } from './EditListingForm';
 import { GenerateTourPanel } from './GenerateTourPanel';
 import type { ListingPhotoRow } from './PhotoPanel';
 import { PhotoPanelPrefillBridge } from './PhotoPanelPrefillBridge';
-import { PublishPanel } from './PublishPanel';
 import { SocialCopyPanel } from './SocialCopyPanel';
 import { type ListingVideoRow, VideoPanel } from './VideoPanel';
+import { ListingDetailMenu } from './ListingDetailMenu';
 
 interface ListingRow {
   id: string;
@@ -45,10 +57,13 @@ interface ListingRow {
 
 export default async function EditListingPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ tab?: string }>;
 }) {
   const { id } = await params;
+  await searchParams; // tab handled client-side by HubTabs
   const supabase = await createClient();
   const {
     data: { user },
@@ -90,9 +105,6 @@ export default async function EditListingPage({
     .order('sort_order', { ascending: true })
     .then(
       (r: { data: ListingPhotoRow[] | null }) => r,
-      // Hotfix (2026-06-12): migration 0011 may not be applied. Fall back
-      // to empty list so the edit page still loads — PhotoPanel will just
-      // show no photos and any upload attempt will surface its own error.
       () => ({ data: [] }),
     )) as { data: ListingPhotoRow[] | null };
   const photos = photosResp.data ?? [];
@@ -104,10 +116,8 @@ export default async function EditListingPage({
     .order('name', { ascending: true })) as { data: CommunityOption[] | null };
   const communities = communitiesRaw ?? [];
 
-  // Match the persisted cover_url back to a videoId by recomputing the
-  // CF Stream thumbnail URL for each video. We don't store the videoId
-  // directly on the listing — only the rendered URL, because the public
-  // feed reads `cover_url` directly.
+  // Match the persisted cover_url back to a videoId/photoId so the
+  // VideoPanel / PhotoPanel can highlight the cover marker.
   let initialCoverVideoId: string | null = null;
   if (listing.cover_url) {
     for (const v of videos) {
@@ -122,9 +132,6 @@ export default async function EditListingPage({
     }
   }
 
-  // Same idea for the photo cover: match cover_url against each photo's
-  // public URL. Video cover and photo cover are mutually exclusive — they
-  // share one column (`cover_url`) — so at most one of these will match.
   let initialCoverPhotoId: string | null = null;
   if (listing.cover_url && initialCoverVideoId === null) {
     const { photoPublicUrl } = await import('@/lib/supabase/storage');
@@ -136,109 +143,123 @@ export default async function EditListingPage({
     }
   }
 
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { data: agent } = (await (supabase as any)
-    .from('agents')
-    .select('slug')
-    .eq('id', listing.agent_id)
-    .maybeSingle()) as { data: { slug: string } | null };
+  // Hero cover fallback: cover_url, else first ready video thumb,
+  // else first photo URL, else null.
+  let heroCover = listing.cover_url ?? null;
+  if (!heroCover) {
+    const firstReadyVideo = videos.find((v) => v.status === 'ready');
+    if (firstReadyVideo) {
+      try {
+        heroCover = thumbnailUrl(firstReadyVideo.cf_video_id);
+      } catch {
+        // skip
+      }
+    }
+  }
+  if (!heroCover && photos.length > 0 && photos[0]) {
+    const { photoPublicUrl } = await import('@/lib/supabase/storage');
+    heroCover = photoPublicUrl(photos[0].storage_path);
+  }
+
+  const subtitle =
+    [listing.city, listing.state].filter(Boolean).join(', ') +
+    (listing.zip ? ` ${listing.zip}` : '') +
+    (listing.neighborhood ? ` · ${listing.neighborhood}` : '');
+
+  const listingContext: ListingContext = {
+    address: listing.address,
+    city: listing.city,
+    state: listing.state,
+    neighborhood: listing.neighborhood,
+  };
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6 py-4">
-      <header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0">
-          <h1 className="text-2xl font-semibold tracking-tight">{listing.address}</h1>
-          <p className="mt-1 text-sm text-ink2">
-            {listing.city}, {listing.state}
-            {listing.zip ? ` ${listing.zip}` : ''}
-            {listing.neighborhood ? ` · ${listing.neighborhood}` : ''}
-          </p>
+    <HubDetailShell
+      coverUrl={heroCover}
+      title={listing.address}
+      subtitle={subtitle}
+      rightOverlay={
+        <div className="flex items-center gap-2">
+          <StatusPill id={listing.id} status={listing.status} variant="listing" />
+          <ListingDetailMenu listingId={listing.id} />
         </div>
-        <div className="flex shrink-0 flex-row items-center gap-2">
-          {listing.status === 'published' && agent?.slug ? (
-            <a
-              href={`/v/${agent.slug}/${listing.slug}`}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center gap-2 rounded-full border border-line bg-bg px-3 py-1.5 text-xs text-ink2 transition hover:border-line-strong hover:text-ink"
-            >
-              Public URL ↗
-            </a>
-          ) : null}
-          <a
-            href={`/dashboard/listings/${listing.id}/analytics`}
-            className="inline-flex items-center gap-2 rounded-full border border-line bg-bg px-3 py-1.5 text-xs text-ink2 transition hover:border-line-strong hover:text-ink"
-          >
-            View analytics →
-          </a>
-        </div>
-      </header>
-
-      <PublishPanel listingId={listing.id} status={listing.status} />
-
-      <section className="rounded border border-line bg-surface p-6">
-        <h2 className="mb-4 text-base font-semibold">Listing details</h2>
-        <EditListingForm
-          listingId={listing.id}
-          initial={{
-            price: listing.price,
-            beds: listing.beds,
-            baths: listing.baths,
-            sqft: listing.sqft,
-            year_built: listing.year_built,
-            lot_size: listing.lot_size,
-            hoa: listing.hoa,
-            style: listing.style,
-            description: listing.description ?? [],
-            community_id: listing.community_id,
-          }}
-          communities={communities}
-          listingContext={
-            {
-              address: listing.address,
-              city: listing.city,
-              state: listing.state,
-              neighborhood: listing.neighborhood,
-            } satisfies ListingContext
-          }
-        />
-      </section>
-
-      <section className="rounded border border-line bg-surface p-6">
-        <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
-          <h2 className="text-base font-semibold">Videos</h2>
-          <span className="text-xs text-muted">Drag to reorder · use ⓒ to set cover</span>
-        </div>
-        <VideoPanel
-          listingId={listing.id}
-          initialVideos={videos}
-          initialCoverVideoId={initialCoverVideoId}
-        />
-      </section>
-
-      <section className="rounded border border-line bg-surface p-6">
-        <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
-          <h2 className="text-base font-semibold">Photos</h2>
-          <span className="text-xs text-muted">
-            JPEG / PNG / WebP — used as fallback when no video is uploaded · use ⓒ to set cover
-          </span>
-        </div>
-        <PhotoPanelPrefillBridge
-          listingId={listing.id}
-          initialPhotos={photos}
-          initialCoverPhotoId={initialCoverPhotoId}
-        />
-      </section>
-
-      <section className="rounded border border-line bg-surface p-6">
-        <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
-          <h2 className="text-base font-semibold">Social copy</h2>
-          <span className="text-xs text-muted">Facebook + Instagram drafts, copy to clipboard</span>
-        </div>
-        <SocialCopyPanel listingId={listing.id} />
-      </section>
-
-      <GenerateTourPanel listingId={listing.id} />
-    </div>
+      }
+      tabs={[
+        { id: 'details', label: 'Details' },
+        { id: 'media', label: 'Media' },
+        { id: 'social', label: 'Social' },
+        { id: 'tour', label: 'Tour' },
+      ]}
+      defaultTab="details"
+      panels={{
+        details: (
+          <section className="rounded-2xl border border-line bg-surface p-4 sm:p-6">
+            <EditListingForm
+              listingId={listing.id}
+              initial={{
+                price: listing.price,
+                beds: listing.beds,
+                baths: listing.baths,
+                sqft: listing.sqft,
+                year_built: listing.year_built,
+                lot_size: listing.lot_size,
+                hoa: listing.hoa,
+                style: listing.style,
+                description: listing.description ?? [],
+                community_id: listing.community_id,
+              }}
+              communities={communities}
+              listingContext={listingContext}
+            />
+          </section>
+        ),
+        media: (
+          <div className="space-y-6">
+            <section className="rounded-2xl border border-line bg-surface p-4 sm:p-6">
+              <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
+                <h2 className="text-base font-semibold">Videos</h2>
+                <span className="text-muted text-xs">
+                  Drag to reorder · use ⓒ to set cover
+                </span>
+              </div>
+              <VideoPanel
+                listingId={listing.id}
+                initialVideos={videos}
+                initialCoverVideoId={initialCoverVideoId}
+              />
+            </section>
+            <section className="rounded-2xl border border-line bg-surface p-4 sm:p-6">
+              <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
+                <h2 className="text-base font-semibold">Photos</h2>
+                <span className="text-muted text-xs">
+                  JPEG / PNG / WebP — fallback cover when no video · use ⓒ to set cover
+                </span>
+              </div>
+              <PhotoPanelPrefillBridge
+                listingId={listing.id}
+                initialPhotos={photos}
+                initialCoverPhotoId={initialCoverPhotoId}
+              />
+            </section>
+          </div>
+        ),
+        social: (
+          <section className="rounded-2xl border border-line bg-surface p-4 sm:p-6">
+            <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
+              <h2 className="text-base font-semibold">Social copy</h2>
+              <span className="text-muted text-xs">
+                Facebook + Instagram drafts, copy to clipboard
+              </span>
+            </div>
+            <SocialCopyPanel listingId={listing.id} />
+          </section>
+        ),
+        tour: (
+          <section className="rounded-2xl border border-line bg-surface p-4 sm:p-6">
+            <GenerateTourPanel listingId={listing.id} />
+          </section>
+        ),
+      }}
+    />
   );
 }

@@ -1,31 +1,36 @@
 'use server';
 
 /**
- * Phase 4.6 — publish / unpublish server actions.
+ * Phase 46 — activate / deactivate server actions.
  *
- * Validation gate (PRD-mandated) before allowing status='published':
- *  - address (always present from 4.1, but defensive check)
+ * Replaces the prior 3-state publish/unpublish/archive flow. Listings now
+ * live in two states only: 'active' (buyer-visible) or 'inactive' (hidden).
+ *
+ * Validation gate before allowing status='active':
+ *  - address (always present from create flow, but defensive check)
  *  - price (int, > 0)
  *  - beds (>= 0, NOT NULL — studios use 0)
  *  - baths (> 0)
- *  - >= 1 listing_video with status='ready'
+ *  - >= 1 ready listing_video OR >= 1 ready listing_photo
  *
- * On success: status='published', published_at=now(), revalidate the public
- * route at `/v/<agentSlug>/<listingSlug>` so the new listing shows up
- * immediately on the public feed.
+ * On activate: status='active', published_at=now() (first activation marks
+ * the historical timestamp; later toggles preserve it). Revalidates the
+ * public route at `/v/<agentSlug>/<listingSlug>`.
  *
- * Unpublish flips back to 'draft' (NOT 'archived' — that's Phase 4.7) and
- * keeps published_at as a historical marker. Revalidates the same path so
- * the public page 404s cleanly.
+ * Deactivate flips back to 'inactive' and keeps published_at intact.
  *
  * RLS does the row-ownership check (only the owning agent can update their
- * listing). This action does NOT use the service role key.
+ * own listing). This action does NOT use the service role key.
+ *
+ * Function names `publishListing` / `unpublishListing` are preserved as
+ * stable exports so existing imports continue to resolve; semantics are
+ * activate/deactivate now.
  */
 
 import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
 
-export type PublishResult = { ok: true; status: 'published' } | { ok: false; missing: string[] };
+export type PublishResult = { ok: true; status: 'active' } | { ok: false; missing: string[] };
 
 export async function publishListing(listingId: string): Promise<PublishResult> {
   const supabase = await createClient();
@@ -33,7 +38,7 @@ export async function publishListing(listingId: string): Promise<PublishResult> 
   // biome-ignore lint/suspicious/noExplicitAny: stub generated types
   const { data: listing } = (await (supabase as any)
     .from('listings')
-    .select('id, address, price, beds, baths, agent_id, slug')
+    .select('id, address, price, beds, baths, agent_id, slug, published_at')
     .eq('id', listingId)
     .maybeSingle()) as {
     data: {
@@ -44,6 +49,7 @@ export async function publishListing(listingId: string): Promise<PublishResult> 
       baths: number | null;
       agent_id: string;
       slug: string;
+      published_at: string | null;
     } | null;
   };
 
@@ -56,10 +62,10 @@ export async function publishListing(listingId: string): Promise<PublishResult> 
     .eq('listing_id', listingId)
     .eq('status', 'ready')) as { count: number | null };
 
-  // Phase 10 (2026-06-12): photos count toward the publish gate too.
-  // Either ≥1 ready video or ≥1 ready photo unblocks publish.
+  // Phase 10 (2026-06-12): photos count toward the activate gate too.
+  // Either ≥1 ready video or ≥1 ready photo unblocks activation.
   // Hotfix: graceful fallback if migration 0011 is missing — count = 0
-  // means publish gate falls back to "video required", matching V0 behaviour.
+  // means activate gate falls back to "video required", matching V0 behaviour.
   // biome-ignore lint/suspicious/noExplicitAny: stub generated types
   const { count: readyPhotoCount } = (await (supabase as any)
     .from('listing_photos')
@@ -82,10 +88,14 @@ export async function publishListing(listingId: string): Promise<PublishResult> 
 
   if (missing.length > 0) return { ok: false, missing };
 
+  // Only stamp published_at on first activation; preserve subsequent toggles.
+  const update: Record<string, unknown> = { status: 'active' };
+  if (!listing.published_at) update.published_at = new Date().toISOString();
+
   // biome-ignore lint/suspicious/noExplicitAny: stub generated types
   const { error } = await (supabase as any)
     .from('listings')
-    .update({ status: 'published', published_at: new Date().toISOString() })
+    .update(update)
     .eq('id', listingId);
 
   if (error) return { ok: false, missing: [`db: ${error.message}`] };
@@ -102,7 +112,7 @@ export async function publishListing(listingId: string): Promise<PublishResult> 
     revalidatePath(`/v/${agent.slug}/${listing.slug}`);
   }
 
-  return { ok: true, status: 'published' };
+  return { ok: true, status: 'active' };
 }
 
 export async function unpublishListing(
@@ -122,7 +132,7 @@ export async function unpublishListing(
   // biome-ignore lint/suspicious/noExplicitAny: stub generated types
   const { error } = await (supabase as any)
     .from('listings')
-    .update({ status: 'draft' })
+    .update({ status: 'inactive' })
     .eq('id', listingId);
 
   if (error) return { ok: false, error: error.message };

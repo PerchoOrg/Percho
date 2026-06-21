@@ -1,25 +1,37 @@
 /**
- * /dashboard/communities/[id] — community editor.
+ * /dashboard/communities/[id] — community detail (Phase 46 rebuild).
  *
- * Phase 17: video upload moved off this page (now at ./upload).
- * Phase 23 (2026-06-14): dropped Schools and POIs sections — agents weren't
- * using them and they cluttered the page. The DB tables stay (other code
- * paths still read them) but the UI no longer surfaces add/edit/delete.
- * Add-photos and Add-video are now a single "Upload" button (combined page).
+ * New layout (parallels listing detail):
+ *   - Hero cover (resolved via lib/community/cover) with StatusPill +
+ *     ⋮ menu in top-right.
+ *   - Sticky tabs: Details · Videos · Photos · Cover.
+ *   - Switch is `?tab=` URL state, no server nav.
  *
- * Phase 36 follow-up (2026-06-18, Tianrou agent UAT): manage list only shows
- * videos uploaded by the viewing agent. Showing other agents' rows here
- * was meaningless — RLS already blocks edit/hide/delete, the videos can't
- * play in this surface, and after Phase 36 IA (agents share buyer
- * surfaces), the right place to browse a community's full video set is
- * `/c/<slug>` itself. Header carries a small link there.
+ * Buyer link "View public page →" moved into the Details panel header
+ * so the hero stays minimal.
+ *
+ * Owner-only sections (metadata edit, cover panel, status toggle) only
+ * render when the viewer is the creating agent. Non-creators upload-only
+ * see the public-style layout — videos & photos panels still render so
+ * they can manage their own contributions, but no metadata/cover/status.
  */
 
+import { resolveCommunityCoverWithCfIds } from '@/lib/community/cover';
+import { demoCoverFor } from '@/lib/demo-media';
+import { thumbnailUrl } from '@/lib/cloudflare/stream';
 import { createClient } from '@/lib/supabase/server';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
+
+import { HubDetailShell } from '@/app/dashboard/_components/HubDetailShell';
+
+import type { CommunityPhotoRow } from './CommunityPhotoPanel';
+import { signCommunityPhotoUrls } from './photo-actions';
 import { CommunityCoverPanel } from './CommunityCoverPanel';
+import { CommunityDetailMenu } from './CommunityDetailMenu';
 import { CommunityEditor } from './CommunityEditor';
+import { CommunityPhotosTab } from './CommunityPhotosTab';
+import { CommunityStatusPill } from './CommunityStatusPill';
 import { CommunityVideoManageList, type ManageVideoRow } from './CommunityVideoManageList';
 
 interface CommunityRow {
@@ -29,14 +41,13 @@ interface CommunityRow {
   city: string | null;
   state: string;
   description: string | null;
+  status: string;
   created_by: string | null;
   cover_video_id: string | null;
   cover_storage_path: string | null;
 }
 
-// Re-exported for downstream consumers that import these row types from
-// this page module (e.g. the upload subpage). These mirror the shape of
-// the corresponding tables; we keep them here to avoid churning callers.
+// Re-exported for downstream consumers (e.g. upload subpage).
 export interface SchoolRow {
   id: string;
   name: string;
@@ -57,10 +68,13 @@ export interface PoiRow {
 
 export default async function CommunityEditorPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ tab?: string }>;
 }) {
   const { id } = await params;
+  await searchParams;
   const supabase = await createClient();
   const {
     data: { user },
@@ -71,7 +85,7 @@ export default async function CommunityEditorPage({
   const { data: community } = (await (supabase as any)
     .from('communities')
     .select(
-      'id, name, slug, city, state, description, created_by, cover_video_id, cover_storage_path',
+      'id, name, slug, city, state, description, status, created_by, cover_video_id, cover_storage_path',
     )
     .eq('id', id)
     .maybeSingle()) as { data: CommunityRow | null };
@@ -91,16 +105,10 @@ export default async function CommunityEditorPage({
     .eq('user_id', user.id)
     .maybeSingle()) as { data: { id: string } | null };
   const myAgentId = agentRow?.id ?? null;
-  const canEditMetadata = community.created_by == null || community.created_by === myAgentId;
+  const isOwner = community.created_by != null && community.created_by === myAgentId;
+  const canEditMetadata = community.created_by == null || isOwner;
 
-  // Phase 35.2: full manage-list rows (visibility + category) so the editor
-  // page is the manage surface — no more bouncing to /upload to delete or
-  // hide a video.
-  // Phase 35.3: include uploaded_by so the row can render owner-only chrome
-  // (delete/edit only if you uploaded it; "by @other-agent" caption otherwise).
-  // Phase 36 follow-up: filter to videos owned by the viewing agent. Legacy
-  // NULL `uploaded_by` rows are included only if this agent is the
-  // community creator — otherwise they'd be unmanageable forever.
+  // Manage list — only own videos (legacy NULL uploaded_by visible to creator).
   const ownsLegacy = community.created_by != null && community.created_by === myAgentId;
   // biome-ignore lint/suspicious/noExplicitAny: stub generated types
   let manageQuery = (supabase as any)
@@ -114,7 +122,6 @@ export default async function CommunityEditorPage({
       ? manageQuery.or(`uploaded_by.eq.${myAgentId},uploaded_by.is.null`)
       : manageQuery.eq('uploaded_by', myAgentId);
   } else {
-    // Not an agent → no manage rows.
     manageQuery = manageQuery.eq('uploaded_by', '00000000-0000-0000-0000-000000000000');
   }
   const { data: videoRows } = (await manageQuery.order('created_at', {
@@ -139,97 +146,153 @@ export default async function CommunityEditorPage({
     uploaderSlug: row.uploader?.slug ?? null,
     uploaderDisplayName: row.uploader?.name ?? null,
   }));
-  // CoverPanel still wants the lighter shape (id, cf_video_id, title) for
-  // ready videos only — not every uploaded video is cover-eligible.
   const coverVideos = manageVideos
     .filter((v) => v.status === 'ready' && v.visibility === 'public')
     .map((v) => ({ id: v.id, cf_video_id: v.cf_video_id, title: v.title }));
 
+  // Photos for the inline Photos tab — match what /upload loads. We fetch
+  // every photo for the community (RLS owns visibility) and sign their
+  // URLs in batch so the panel can render thumbs immediately.
+  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
+  const { data: photoRows } = (await (supabase as any)
+    .from('community_photos')
+    .select(
+      'id, storage_path, kind, category, school_id, poi_id, alt_text, width, height, sort_order',
+    )
+    .eq('community_id', community.id)
+    .order('sort_order', { ascending: true })) as {
+    data:
+      | Array<{
+          id: string;
+          storage_path: string;
+          kind: string;
+          category: string | null;
+          school_id: string | null;
+          poi_id: string | null;
+          alt_text: string | null;
+          width: number | null;
+          height: number | null;
+          sort_order: number;
+        }>
+      | null;
+  };
+  const dbPhotos = photoRows ?? [];
+  const signed = await signCommunityPhotoUrls(dbPhotos.map((p) => p.storage_path));
+  const urlByPath = new Map(signed.map((s) => [s.path, s.url]));
+  const initialPhotos: CommunityPhotoRow[] = dbPhotos.map((p) => ({
+    id: p.id,
+    storage_path: p.storage_path,
+    signed_url: urlByPath.get(p.storage_path) ?? null,
+    kind: p.kind,
+    category: p.category,
+    school_id: p.school_id,
+    poi_id: p.poi_id,
+    alt_text: p.alt_text,
+    width: p.width,
+    height: p.height,
+    sort_order: p.sort_order,
+  }));
+
+  // Hero cover resolution — same path the buyer-facing public page uses.
+  const firstReadyVideo = manageVideos.find((v) => v.status === 'ready' && v.visibility === 'public');
+  const coverVideoCfId = community.cover_video_id
+    ? manageVideos.find((v) => v.id === community.cover_video_id)?.cf_video_id ?? null
+    : null;
+  const heroCover = resolveCommunityCoverWithCfIds({
+    cover_video_id: community.cover_video_id,
+    cover_video_cf_id: coverVideoCfId,
+    cover_storage_path: community.cover_storage_path,
+    fallback_video_cf_id: firstReadyVideo?.cf_video_id ?? null,
+  });
+  void thumbnailUrl;
+  const heroCoverUrl = heroCover
+    ? demoCoverFor(community.slug, heroCover.url) ?? heroCover.url
+    : null;
+
+  const subtitle = community.city ? `${community.city}, ${community.state}` : community.state;
+
   return (
-    <div className="mx-auto max-w-3xl space-y-6 py-4">
-      <Link
-        href="/dashboard/communities"
-        className="inline-flex items-center gap-1 text-xs text-ink2 hover:text-ink"
-      >
-        ← Back to communities
-      </Link>
-      <header className="flex items-baseline justify-between gap-3">
-        <div className="min-w-0">
-          <h1 className="truncate text-2xl font-semibold tracking-tight">{community.name}</h1>
-          <p className="mt-1 text-sm text-ink2">
-            {community.city ? `${community.city}, ${community.state}` : community.state}
-          </p>
-          {/*
-            Phase 36 follow-up: agents share buyer surfaces — link to the
-            public community page so an agent can browse every video in
-            this community (not just their own) the same way a buyer does.
-          */}
-          <Link
-            href={`/c/${community.slug}`}
-            className="mt-1 inline-flex items-center gap-1 text-xs text-ink2 hover:text-ink"
-          >
-            View public page →
-          </Link>
-        </div>
-        <div className="flex shrink-0 gap-2">
-          <Link
-            href={`/dashboard/communities/${community.id}/upload`}
-            className="rounded bg-ink px-3 py-2 font-medium text-cream text-sm transition hover:opacity-90"
-          >
-            + Upload video
-          </Link>
-        </div>
-      </header>
-
-      {/* Phase 35.2: Videos first — that's why agents come here. Inline manage
-       * list lets them re-categorize / hide / archive / delete without bouncing
-       * to /upload. The metadata editor and cover picker drop below. */}
-      <section className="rounded border border-line bg-surface p-4 sm:p-5">
-        <div className="mb-3 flex items-baseline justify-between gap-3">
-          <h2 className="text-base font-semibold">
-            Your videos{' '}
-            <span className="text-muted text-xs font-normal">({manageVideos.length})</span>
-          </h2>
-        </div>
-        <CommunityVideoManageList
-          communityId={community.id}
-          videos={manageVideos}
-          myAgentId={myAgentId}
-        />
-      </section>
-
-      {/* Cover picker — uses the public+ready subset. */}
-      <CommunityCoverPanel
-        communityId={community.id}
-        canEdit={canEditMetadata}
-        videos={coverVideos}
-        initialCoverVideoId={community.cover_video_id}
-        initialCoverStoragePath={community.cover_storage_path}
-      />
-
-      {/* Metadata editor moved below — agents rarely re-edit name/city after
-       * creation. Collapsed by default to keep the working video list above
-       * the fold.
-       *
-       * Phase 36 follow-up (2026-06-18, Tianrou): community metadata is owned
-       * by the creating agent. Other agents can upload videos to this
-       * community but should not see — let alone interact with — name/city/
-       * description fields. Hide the entire <details> block when
-       * !canEditMetadata. (RLS already blocks writes; this is the UI-side
-       * half of the same rule so non-owners don't see a misleading
-       * read-only form. Same reason CommunityCoverPanel returns null for
-       * non-owners.) */}
-      {canEditMetadata && (
-        <details className="rounded border border-line bg-surface">
-          <summary className="cursor-pointer select-none px-4 py-3 text-sm font-medium text-ink2 hover:text-ink sm:px-5">
-            Community details{' '}
-            <span className="ml-1 text-xs text-muted">(name, city, description)</span>
-          </summary>
-          <div className="border-t border-line p-4 sm:p-5">
-            <CommunityEditor community={community} canEditMetadata={canEditMetadata} />
+    <HubDetailShell
+      coverUrl={heroCoverUrl}
+      title={community.name}
+      subtitle={subtitle}
+      rightOverlay={
+        isOwner ? (
+          <div className="flex items-center gap-2">
+            <CommunityStatusPill communityId={community.id} status={community.status} />
+            <CommunityDetailMenu communityId={community.id} />
           </div>
-        </details>
-      )}
-    </div>
+        ) : null
+      }
+      tabs={[
+        { id: 'details', label: 'Details' },
+        { id: 'videos', label: 'Videos' },
+        { id: 'photos', label: 'Photos' },
+        ...(isOwner ? [{ id: 'cover', label: 'Cover' }] : []),
+      ]}
+      defaultTab="videos"
+      panels={{
+        details: (
+          <section className="rounded-2xl border border-line bg-surface p-4 sm:p-6">
+            <div className="mb-4 flex flex-wrap items-baseline justify-between gap-3">
+              <h2 className="text-base font-semibold">Community details</h2>
+              <Link
+                href={`/c/${community.slug}`}
+                className="inline-flex items-center gap-1 text-xs text-ink2 hover:text-ink"
+              >
+                View public page →
+              </Link>
+            </div>
+            {canEditMetadata ? (
+              <CommunityEditor community={community} canEditMetadata={canEditMetadata} />
+            ) : (
+              <p className="text-ink2 text-sm">
+                Only the creating agent can edit this community&apos;s name, city, or description.
+                You can still manage your own videos &amp; photos.
+              </p>
+            )}
+          </section>
+        ),
+        videos: (
+          <section className="rounded-2xl border border-line bg-surface p-4 sm:p-6">
+            <div className="mb-3 flex flex-wrap items-baseline justify-between gap-3">
+              <h2 className="text-base font-semibold">
+                Your videos{' '}
+                <span className="text-muted text-xs font-normal">({manageVideos.length})</span>
+              </h2>
+              <Link
+                href={`/dashboard/communities/${community.id}/upload`}
+                className="rounded bg-ink px-3 py-1.5 font-medium text-cream text-xs transition hover:opacity-90"
+              >
+                + Upload video
+              </Link>
+            </div>
+            <CommunityVideoManageList
+              communityId={community.id}
+              videos={manageVideos}
+              myAgentId={myAgentId}
+            />
+          </section>
+        ),
+        photos: (
+          <CommunityPhotosTab communityId={community.id} initialPhotos={initialPhotos} />
+        ),
+        ...(isOwner
+          ? {
+              cover: (
+                <section className="rounded-2xl border border-line bg-surface p-4 sm:p-6">
+                  <CommunityCoverPanel
+                    communityId={community.id}
+                    canEdit={canEditMetadata}
+                    videos={coverVideos}
+                    initialCoverVideoId={community.cover_video_id}
+                    initialCoverStoragePath={community.cover_storage_path}
+                  />
+                </section>
+              ),
+            }
+          : {}),
+      }}
+    />
   );
 }

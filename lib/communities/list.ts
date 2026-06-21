@@ -17,19 +17,26 @@ export type CommunityListCard = {
   state: string;
   description: string | null;
   videoCount: number;
-  /** Phase 34b: real count of published listings (`status='published'` && `community_id`). */
+  /** Phase 34b: real count of active listings (`status='active'` && `community_id`). */
   listingCount: number;
   cover: ReturnType<typeof resolveCommunityCoverWithCfIds>;
 };
 
-export async function fetchCommunityListCards(): Promise<CommunityListCard[]> {
+export async function fetchCommunityListCards(
+  opts: { includeInactive?: boolean } = {},
+): Promise<CommunityListCard[]> {
   const supabase = await createClient();
 
+  // Phase 46: buyer surfaces only see status='active' communities.
+  // Dashboard passes includeInactive=true so the agent can still see
+  // and reactivate her own inactive communities.
   // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { data: rows } = (await (supabase as any)
+  let q = (supabase as any)
     .from('communities')
     .select('id, name, slug, city, state, description, cover_video_id, cover_storage_path')
-    .order('name', { ascending: true })) as {
+    .order('name', { ascending: true });
+  if (!opts.includeInactive) q = q.eq('status', 'active');
+  const { data: rows } = (await q) as {
     data: Array<{
       id: string;
       name: string;
@@ -75,13 +82,13 @@ export async function fetchCommunityListCards(): Promise<CommunityListCard[]> {
     }
   }
 
-  // Phase 34b: real listing counts per community (status='published').
+  // Phase 34b: real listing counts per community (status='active').
   const communityIds = communities.map((c) => c.id);
   // biome-ignore lint/suspicious/noExplicitAny: stub generated types
   const { data: listingRows } = (await (supabase as any)
     .from('listings')
     .select('community_id')
-    .eq('status', 'published')
+    .eq('status', 'active')
     .in(
       'community_id',
       communityIds.length > 0 ? communityIds : ['00000000-0000-0000-0000-000000000000'],

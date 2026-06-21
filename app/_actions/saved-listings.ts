@@ -36,7 +36,7 @@ export async function saveListing(input: z.infer<typeof SaveInput>): Promise<Sav
     .eq('id', parsed.data.listingId)
     .maybeSingle()) as { data: { id: string; status: string } | null };
   if (!listing) return { ok: false, error: 'listing_not_found' };
-  if (listing.status !== 'published') return { ok: false, error: 'listing_not_published' };
+  if (listing.status !== 'active') return { ok: false, error: 'listing_not_active' };
 
   // biome-ignore lint/suspicious/noExplicitAny: stub generated types
   const { error } = await (supabase as any).from('saved_listings').upsert(
@@ -160,7 +160,7 @@ export async function listSavedListings(
     `,
     )
     .eq('device_id', parsed.data.deviceId)
-    .eq('listing.status', 'published')
+    .eq('listing.status', 'active')
     .order('created_at', { ascending: false })) as {
     // biome-ignore lint/suspicious/noExplicitAny: stub generated types
     data: any[] | null;

@@ -102,7 +102,7 @@ export default async function CommunityFeedPage({
       .from('listings')
       .select('agent_id')
       .eq('community_id', community.id)
-      .eq('status', 'published')
+      .eq('status', 'active')
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle()) as { data: { agent_id: string } | null };
@@ -158,7 +158,7 @@ export default async function CommunityFeedPage({
     .from('listings')
     .select('id', { count: 'exact', head: true })
     .eq('community_id', community.id)
-    .eq('status', 'published');
+    .eq('status', 'active');
 
   // Phase 34b (V1 redo, 2026-06-17): Scenario B — bottom-left "homes here"
   // chip opens a listings sheet (L2) for the active community. Fetch the
@@ -171,7 +171,7 @@ export default async function CommunityFeedPage({
       'id, slug, address, city, state, price, beds, baths, sqft, created_at',
     )
     .eq('community_id', community.id)
-    .eq('status', 'published')
+    .eq('status', 'active')
     .order('created_at', { ascending: false })) as {
     data: Array<{
       id: string;

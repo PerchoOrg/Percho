@@ -50,7 +50,7 @@ export async function POST(req: Request) {
 
   if (parsed.data.listing_id) {
     // Listing-targeted lead: agent_id from listing.agent_id, gate by
-    // status='published' (small abuse guard since RLS is `with check (true)`).
+    // status='active' (small abuse guard since RLS is `with check (true)`).
     // biome-ignore lint/suspicious/noExplicitAny: stub generated types
     const lookup = await (supabase as any)
       .from('listings')
@@ -63,7 +63,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'internal' }, { status: 500 });
     }
     const listing = lookup.data as { id: string; agent_id: string; status: string } | null;
-    if (!listing || listing.status !== 'published') {
+    if (!listing || listing.status !== 'active') {
       return NextResponse.json({ error: 'listing_not_available' }, { status: 404 });
     }
     listingId = listing.id;

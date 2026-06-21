@@ -8,7 +8,7 @@ import { z } from 'zod';
 import { CommunityVideoCategory } from './community-video-categories';
 
 // ─── Listings ────────────────────────────────────────────────────
-export const ListingStatus = z.enum(['draft', 'published', 'archived']);
+export const ListingStatus = z.enum(['active', 'inactive']);
 export type ListingStatus = z.infer<typeof ListingStatus>;
 
 export const ListingCreate = z.object({

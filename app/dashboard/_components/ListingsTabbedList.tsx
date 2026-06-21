@@ -1,23 +1,23 @@
 'use client';
 
 /**
- * ListingsTabbedList — client island for the dashboard's listings table.
+ * ListingsTabbedList — my-listings grid (Phase 46 rewrite).
  *
- * Phase 35.3 (2026-06-17): tabs used to be <Link href="/dashboard?status=...">,
- * which kicked a server nav that re-rendered the whole page including the
- * DashboardMetrics block above. Tianrou flagged the metrics flash on tab
- * switch. This component receives all three statuses' rows up front and
- * filters in memory; tab change is a setState, no server round-trip,
- * metrics stay rendered. URL is kept in sync via router.replace so a
- * refresh / share still lands on the right tab.
+ * Phase 46 rebuild:
+ *   - Status tabs gone (status simplified to 'active' | 'inactive' and the
+ *     pill row was already hidden in 35.3).
+ *   - Single grid layout matches buyer-facing `/browse`:
+ *       grid-cols-2 gap-x-1 gap-y-2 md:grid-cols-4 md:gap-x-1.5 md:gap-y-3
+ *     Each card aspect-[3/4] with bottom-gradient overlay.
+ *   - Inactive listings rendered with reduced opacity + small "Inactive"
+ *     pill in the corner (no scary red, just visual de-emphasis).
+ *   - List view removed; the wide-row layout is no longer used anywhere.
+ *   - Empty state simplified.
+ *
+ * Click → /dashboard/listings/<id>/edit (the new HubDetailShell).
  */
 
-import { CopyLinkButton } from '@/app/dashboard/_components/CopyLinkButton';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
-
-export type StatusTab = 'draft' | 'published' | 'archived';
 
 export type ListingRow = {
   id: string;
@@ -25,7 +25,7 @@ export type ListingRow = {
   address: string | null;
   city: string | null;
   state: string | null;
-  status: string;
+  status: string; // 'active' | 'inactive'
   price: number | null;
   beds: number | null;
   baths: number | null;
@@ -36,19 +36,11 @@ export type ListingRow = {
 };
 
 type Props = {
-  initialTab: StatusTab;
   agentSlug: string | null;
-  /** All listings for the calling agent across draft/published/archived. */
   rows: ListingRow[];
-  counts: Record<StatusTab, number>;
-  /** Phase 43.10: 'grid' renders 2-up cards (mobile-friendly).
-   * Default 'list' keeps the existing wide-row layout. */
-  view?: 'list' | 'grid';
-  /** Phase 45.13 (2026-06-20): owner round 5 #5 — hide the Draft/Published/
-   * Archived pill row on /dashboard. When false, all listings render together
-   * regardless of status (initialTab is ignored). Default true preserves the
-   * old behaviour for any other surface that mounts this island. */
-  showStatusTabs?: boolean;
+  /** Phase 43.10 / 46: only 'grid' is rendered now. Prop kept for forward
+   * compat with the dashboard server component. */
+  view?: 'grid';
 };
 
 function fmtPrice(n: number | null): string | null {
@@ -64,259 +56,75 @@ function fmtBaths(n: number | null): string | null {
   return `${whole}`;
 }
 
-function StatusBadge({ status }: { status: string }) {
-  const cls =
-    status === 'published'
-      ? 'bg-ink/15 text-ink border-line-strong'
-      : status === 'archived'
-        ? 'bg-surface/5 text-muted border-line'
-        : 'bg-ink2/15 text-ink2 border-line';
-  return (
-    <span
-      className={`rounded-full border px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider ${cls}`}
-    >
-      {status}
-    </span>
-  );
-}
-
-export function ListingsTabbedList({ initialTab, agentSlug, rows, counts, view = 'list', showStatusTabs = true }: Props) {
-  const router = useRouter();
-  const [activeTab, setActiveTab] = useState<StatusTab>(initialTab);
-
-  // Keep URL in sync without triggering a server nav. router.replace with the
-  // same pathname only updates the query string and does not re-fetch the
-  // server component tree, so metrics above don't flicker. Use scroll: false
-  // because tab switching shouldn't yank the user back to the top.
-  useEffect(() => {
-    if (!showStatusTabs) return; // no URL sync when filter row is hidden
-    const target = activeTab === 'published' ? '/dashboard' : `/dashboard?status=${activeTab}`;
-    router.replace(target, { scroll: false });
-  }, [activeTab, router, showStatusTabs]);
-
-  const filteredRows = showStatusTabs ? rows.filter((r) => r.status === activeTab) : rows;
+export function ListingsTabbedList({ rows }: Props) {
+  if (rows.length === 0) {
+    return (
+      <div className="mx-auto max-w-md rounded-2xl border border-line border-dashed bg-surface px-8 py-16 text-center">
+        <p className="text-ink2 text-sm">
+          No listings yet — tap + New listing to add one.
+        </p>
+      </div>
+    );
+  }
 
   return (
-    <>
-      {showStatusTabs && (
-        <div className="mb-4 flex items-center justify-end">
-          <div className="flex items-center gap-2 text-xs">
-            {(['draft', 'published', 'archived'] as const).map((tab) => {
-              const isActive = activeTab === tab;
-              const label =
-                tab === 'draft' ? 'Draft' : tab === 'published' ? 'Published' : 'Archived';
-              return (
-                <button
-                  key={tab}
-                  type="button"
-                  onClick={() => setActiveTab(tab)}
-                  className={`rounded-full px-3 py-1 transition ${
-                    isActive ? 'bg-ink2/30 text-ink' : 'text-ink2 hover:text-ink'
+    <div className="grid grid-cols-2 gap-x-1 gap-y-2 md:grid-cols-4 md:gap-x-1.5 md:gap-y-3">
+      {rows.map((l) => {
+        const cover = l.cover_url ?? l.fallback_cover_url;
+        const price = fmtPrice(l.price);
+        const isInactive = l.status === 'inactive';
+        return (
+          <Link
+            key={l.id}
+            href={`/dashboard/listings/${l.id}/edit`}
+            className="group block"
+          >
+            <div className="relative aspect-[3/4] w-full overflow-hidden bg-surface">
+              {cover ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={cover}
+                  alt=""
+                  className={`h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.02] ${
+                    isInactive ? 'opacity-60' : ''
                   }`}
-                >
-                  {label}
-                  {counts[tab] > 0 && (
-                    <span className={`ml-1.5 ${isActive ? 'text-ink2' : 'text-muted'}`}>
-                      {counts[tab]}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {filteredRows.length === 0 ? (
-        <div className="rounded-2xl border border-line border-dashed bg-surface px-8 py-16 text-center">
-          <p className="text-ink2 text-sm">
-            {activeTab === 'draft'
-              ? 'No drafts.'
-              : activeTab === 'archived'
-                ? 'No archived listings.'
-                : 'No listings yet — tap + New listing above to add one.'}
-          </p>
-        </div>
-      ) : view === 'grid' ? (
-        <div className="grid grid-cols-2 gap-x-1 gap-y-2 md:grid-cols-4 md:gap-x-1.5 md:gap-y-3">
-          {filteredRows.map((l) => {
-            const cover = l.cover_url ?? l.fallback_cover_url;
-            const price = fmtPrice(l.price);
-            return (
-              <Link
-                key={l.id}
-                href={`/dashboard/listings/${l.id}/edit`}
-                className="group block"
-              >
-                <div className="relative aspect-[3/4] w-full overflow-hidden bg-surface">
-                  {cover ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={cover}
-                      alt=""
-                      className={`h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.02] ${
-                        l.status === 'archived' ? 'opacity-60' : ''
-                      }`}
-                      loading="lazy"
-                    />
-                  ) : (
-                    <div className="grid h-full w-full place-items-center text-muted text-xs">
-                      No cover
-                    </div>
-                  )}
-                  <div className="absolute right-2 top-2 z-10">
-                    <StatusBadge status={l.status} />
-                  </div>
-                  {/* Phase 45.26 (2026-06-21): TikTok-density overlay D. */}
-                  <div className="pointer-events-none absolute inset-x-0 bottom-0 h-3/5 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
-                  <div className="absolute inset-x-2 bottom-2 text-surface">
-                    {price && (
-                      <div className="font-serif text-[15px] font-semibold leading-tight tracking-[-0.01em]">
-                        {price}
-                      </div>
-                    )}
-                    <div className="mt-0.5 truncate text-[11px] opacity-95 tracking-wide">
-                      {[
-                        l.beds != null ? `${l.beds} bd` : null,
-                        fmtBaths(l.baths) ? `${fmtBaths(l.baths)} ba` : null,
-                        l.sqft != null ? `${l.sqft.toLocaleString()} sqft` : null,
-                      ]
-                        .filter(Boolean)
-                        .join(' · ')}
-                    </div>
-                    <div className="mt-px truncate text-[11px] opacity-80">
-                      {l.address ?? '(no address)'}
-                    </div>
-                  </div>
+                  loading="lazy"
+                />
+              ) : (
+                <div className="grid h-full w-full place-items-center text-muted text-xs">
+                  No cover
                 </div>
-              </Link>
-            );
-          })}
-        </div>
-      ) : (
-        <ul className="space-y-3">
-          {filteredRows.map((l) => {
-            const cover = l.cover_url ?? l.fallback_cover_url;
-            const meta: string[] = [];
-            if (l.beds != null) meta.push(`${l.beds} bd`);
-            const baths = fmtBaths(l.baths);
-            if (baths) meta.push(`${baths} ba`);
-            if (l.sqft != null) meta.push(`${l.sqft.toLocaleString()} sqft`);
-            const isPub = l.status === 'published';
-            const publicPath = agentSlug ? `/v/${agentSlug}/${l.slug}` : null;
-            const previewHref = `/dashboard/listings/${l.id}/preview`;
-            const isExternal = isPub && !!publicPath;
-            const coverHref = isExternal ? `${publicPath}?from=dashboard` : previewHref;
-            const titleAttr = isExternal
-              ? 'Open public listing ↗'
-              : l.status === 'archived'
-                ? 'Preview archived listing — public link is offline'
-                : 'Preview draft listing — only you can see this';
-            const overlayLabel = isExternal
-              ? 'Open ↗'
-              : l.status === 'archived'
-                ? 'Archived'
-                : 'Draft preview';
-            return (
-              <li
-                key={l.id}
-                className="flex flex-col gap-4 rounded-2xl border border-line bg-surface p-3 sm:flex-row sm:p-4"
-              >
-                <Link
-                  href={coverHref}
-                  target={isExternal ? '_blank' : undefined}
-                  rel={isExternal ? 'noopener' : undefined}
-                  className="group relative h-40 w-full shrink-0 overflow-hidden rounded-xl bg-bg sm:h-28 sm:w-44"
-                  title={titleAttr}
-                >
-                  {cover ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={cover}
-                      alt=""
-                      className={`h-full w-full object-cover transition group-hover:opacity-90 ${
-                        l.status === 'archived' ? 'opacity-60' : ''
-                      }`}
-                      loading="lazy"
-                    />
-                  ) : (
-                    <div className="grid h-full w-full place-items-center text-muted text-xs">
-                      No cover
-                    </div>
-                  )}
-                  <span
-                    className="pointer-events-none absolute right-2 top-2 rounded-full bg-bg px-2 py-0.5 text-[10px] text-ink2 opacity-0 transition group-hover:opacity-100"
-                    aria-hidden="true"
-                  >
-                    {overlayLabel}
-                  </span>
-                </Link>
-
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h3 className="truncate font-serif text-ink text-xl">
-                      {l.address ?? '(no address)'}
-                    </h3>
-                    <StatusBadge status={l.status} />
+              )}
+              {isInactive && (
+                <div className="absolute right-2 top-2 z-10 rounded-full border border-line bg-surface/90 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-ink2 backdrop-blur">
+                  Inactive
+                </div>
+              )}
+              {/* Bottom-gradient overlay for legibility — phase 45.26. */}
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-3/5 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
+              <div className="absolute inset-x-2 bottom-2 text-surface">
+                {price && (
+                  <div className="font-serif text-[15px] font-semibold leading-tight tracking-[-0.01em]">
+                    {price}
                   </div>
-                  <p className="mt-0.5 text-ink2 text-sm">
-                    {l.city && l.state ? `${l.city}, ${l.state}` : '—'}
-                    {l.price != null && ` · ${fmtPrice(l.price)}`}
-                  </p>
-                  {meta.length > 0 && <p className="mt-1 text-muted text-xs">{meta.join(' · ')}</p>}
-                  {isPub && publicPath && (
-                    <div className="mt-3">
-                      <CopyLinkButton path={publicPath} display={`vicinities.cc${publicPath}`} />
-                    </div>
-                  )}
-                  {!isPub && (
-                    <div className="mt-3 text-[11px] text-muted uppercase tracking-widest">
-                      Publish to get a public link
-                    </div>
-                  )}
+                )}
+                <div className="mt-0.5 truncate text-[11px] opacity-95 tracking-wide">
+                  {[
+                    l.beds != null ? `${l.beds} bd` : null,
+                    fmtBaths(l.baths) ? `${fmtBaths(l.baths)} ba` : null,
+                    l.sqft != null ? `${l.sqft.toLocaleString()} sqft` : null,
+                  ]
+                    .filter(Boolean)
+                    .join(' · ')}
                 </div>
-
-                <div className="flex flex-wrap gap-2 sm:flex-col sm:gap-2 sm:self-center">
-                  {isPub && publicPath ? (
-                    <Link
-                      href={`${publicPath}?from=dashboard`}
-                      target="_blank"
-                      rel="noopener"
-                      className="inline-flex flex-1 items-center justify-center gap-1 rounded-lg border border-line px-3 py-2 text-ink text-xs hover:border-line-strong hover:text-ink"
-                    >
-                      View ↗
-                    </Link>
-                  ) : (
-                    <Link
-                      href={`/dashboard/listings/${l.id}/preview`}
-                      className="inline-flex flex-1 items-center justify-center gap-1 rounded-lg border border-line px-3 py-2 text-ink text-xs hover:border-line-strong hover:text-ink"
-                      title={
-                        l.status === 'archived'
-                          ? 'Preview archived listing'
-                          : 'Preview draft listing'
-                      }
-                    >
-                      Preview
-                    </Link>
-                  )}
-                  <Link
-                    href={`/dashboard/listings/${l.id}/edit`}
-                    className="inline-flex flex-1 items-center justify-center gap-1 rounded-lg border border-line px-3 py-2 text-ink text-xs hover:border-line-strong hover:text-ink"
-                  >
-                    Edit
-                  </Link>
-                  <Link
-                    href={`/dashboard/listings/${l.id}/analytics`}
-                    className="inline-flex flex-1 items-center justify-center gap-1 rounded-lg border border-line px-3 py-2 text-ink text-xs hover:border-line-strong hover:text-ink"
-                  >
-                    Analytics
-                  </Link>
+                <div className="mt-px truncate text-[11px] opacity-80">
+                  {l.address ?? '(no address)'}
                 </div>
-              </li>
-            );
-          })}
-        </ul>
-      )}
-    </>
+              </div>
+            </div>
+          </Link>
+        );
+      })}
+    </div>
   );
 }

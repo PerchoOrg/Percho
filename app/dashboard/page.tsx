@@ -1,42 +1,29 @@
 /**
- * Dashboard home — listings list (Phase 4.7 + Phase 8.6 polish).
+ * Dashboard home — my listings (Phase 46 rebuild).
  *
- * Phase 8.6: replaces the bare divider list with demo-style listing cards —
- * cover thumbnail (falls back to the first listing_video thumb), beds /
- * baths / sqft strip, status badge, per-listing stat row, public-URL pill
- * with copy-to-clipboard (or native share on mobile), and Edit / Analytics
- * actions. Matches the dark + gold demo aesthetic; the public URL is the
- * focal interaction because that's what Vivian actually shares all day.
+ * Phase 46 changes:
+ *   - status simplified to 'active' | 'inactive' (was draft/published/archived).
+ *   - status tabs already hidden (phase 45.9). All rows render in a single
+ *     buyer-facing grid — same layout as `/browse`.
+ *   - Removed the `max-w-6xl px-3 sm:px-6 py-6 sm:py-8` wrapper that caused
+ *     the empty-spaces gripe. Grid now bleeds edge-to-edge on mobile, with
+ *     the same gutter rules as `/browse`.
  *
  * RLS scopes the result to the calling agent's own listings.
  *
- * Phase 35.3 (2026-06-17): tab switching moved into a client island
- * (ListingsTabbedList) so the metrics block above doesn't flicker on
- * every Draft/Published/Archived flip. Server-side now loads all rows
- * for the agent in a single query (was per-tab) and hands them to the
- * island; the island filters in memory on tab change.
+ * Phase 35.3 (preserved): server-side loads all statuses in one query and
+ * hands them to the client island; island filters in memory if needed.
  */
 
 import {
   type ListingRow,
   ListingsTabbedList,
-  type StatusTab,
 } from '@/app/dashboard/_components/ListingsTabbedList';
 import { thumbnailUrl } from '@/lib/cloudflare/stream';
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 
-interface PageProps {
-  searchParams: Promise<{ status?: string; archived?: string }>;
-}
-
-export default async function DashboardHomePage({ searchParams }: PageProps) {
-  const params = await searchParams;
-  // Back-compat: legacy ?archived=1 → status=archived. Default = published.
-  const rawStatus = params.status ?? (params.archived === '1' ? 'archived' : 'published');
-  const initialTab: StatusTab =
-    rawStatus === 'draft' || rawStatus === 'archived' ? rawStatus : 'published';
-
+export default async function DashboardHomePage() {
   const supabase = await createClient();
   const {
     data: { user },
@@ -52,8 +39,6 @@ export default async function DashboardHomePage({ searchParams }: PageProps) {
   const agentSlug = agentRow?.slug ?? null;
   const agentId = agentRow?.id ?? null;
 
-  // Phase 35.3: pull every status in one query so the client island can
-  // filter in memory. Counts come from the same data set.
   // biome-ignore lint/suspicious/noExplicitAny: stub generated types
   const { data: allRows } = agentId
     ? ((await (supabase as any)
@@ -79,13 +64,6 @@ export default async function DashboardHomePage({ searchParams }: PageProps) {
         }> | null;
       })
     : { data: [] };
-
-  const counts: Record<StatusTab, number> = { draft: 0, published: 0, archived: 0 };
-  for (const r of allRows ?? []) {
-    if (r.status === 'draft' || r.status === 'published' || r.status === 'archived') {
-      counts[r.status as StatusTab] += 1;
-    }
-  }
 
   // Fallback covers: pull the first listing_video thumbnail per listing
   // when cover_url is null. One batched query ordered by ord asc; we keep
@@ -114,21 +92,11 @@ export default async function DashboardHomePage({ searchParams }: PageProps) {
     fallback_cover_url: fallbackCovers.get(r.id) ?? null,
   }));
 
-  const totalRows = rows.length;
-
   return (
-    <div className="mx-auto max-w-6xl px-3 sm:px-6 py-6 sm:py-8">
-      {/* Phase 45.9 (2026-06-20): H1 + stats + per-page CTA removed per
-       * owner. TopBar sub-tab "Listings" labels the surface; "+ New" lives
-       * in the sidebar (desktop) or BottomNav center FAB (mobile). */}
-      <ListingsTabbedList
-        initialTab={initialTab}
-        agentSlug={agentSlug}
-        rows={rows}
-        counts={counts}
-        view="grid"
-        showStatusTabs={false}
-      />
-    </div>
+    <ListingsTabbedList
+      agentSlug={agentSlug}
+      rows={rows}
+      view="grid"
+    />
   );
 }

@@ -2,6 +2,137 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-06-21 — Phase 46 follow-up: inline Photos tab + buyer-side active gating
+
+**Objective**: qiaoxux follow-up after phase46 merge — (1) inline the
+community Photos panel inside the new HubDetailShell instead of linking
+out to /upload, (2) buyer surfaces only show `status='active'` communities.
+
+**Changes**:
+- `app/dashboard/communities/[id]/CommunityPhotosTab.tsx` — new client
+  wrapper: CategoryPicker + CommunityPhotoPanel, mirroring the photo
+  half of /upload (same shared category drives uploads).
+- `app/dashboard/communities/[id]/page.tsx` — load `community_photos`
+  rows + sign URLs server-side (same loader path as /upload), pass to
+  CommunityPhotosTab. Photos tab is now in-place editable.
+- `lib/communities/list.ts` — `fetchCommunityListCards()` now takes
+  `{ includeInactive?: boolean }`. Default false (buyer surfaces:
+  /communities, /browse?tab=communities). Dashboard's
+  /dashboard/communities passes `includeInactive: true` so the agent
+  can still see and reactivate her own inactive communities.
+- `lib/feed/browse-cards.ts` — both community fetches gate
+  `status='active'`: the listing-feed slug lookup
+  (fetchBrowseCardsForCommunity) and the inline community-sheet hydration.
+- `app/(public)/c/[slug]/page.tsx` — selects `status` and `notFound()`
+  on non-active. Inactive communities now 404 for buyers; the creating
+  agent still sees them in /dashboard/communities.
+
+Build green; tsc clean.
+
+## 2026-06-21 — Phase 46: agent hub rebuild (HubDetailShell + status simplification)
+
+**Objective**: qiaoxux —「let's rebuild the agent hub now」, two acceptance criteria:
+1. My-listings & my-communities reuse the same buyer-facing grid (kill the
+   empty-spaces gripe on /dashboard).
+2. Click → unified detail shell: hero cover with status pill top-right,
+   sticky sub-tabs underneath, inline switching, auto-saved edits.
+
+Plus a status-model simplification: collapse listing's `draft|published|archived`
+three-state into Active/Inactive only. Communities gain the same two-state
+field. No more PublishPanel block, no more separate publish/archive flows.
+
+**Schema migration (0030_simplify_status.sql)**:
+- `listings.status`: backfill `published → active`, `draft|archived → inactive`,
+  rewrite check constraint to `('active','inactive')`, default `'inactive'`.
+- `communities.status`: new column added, default `'active'`, all existing
+  rows backfilled. Buyer-facing RLS unchanged this phase (full visibility
+  preserved; future phase can gate `/c/<slug>` on status if owner asks).
+- Applied to remote DB via `supabase db push --include-all`.
+
+**Status literal collapse across app/lib (18 files)**:
+- `lib/zod/schemas.ts` ListingStatus enum simplified.
+- `publish-actions.ts`: `publishListing()` activates, `unpublishListing()`
+  deactivates. Names preserved for stable imports.
+- `archive-actions.ts`: archive helpers gone — only `deleteListing()` /
+  `deleteListingAndRedirect()` remain.
+- All buyer-facing reads (browse-cards, communities/list, listing-feed,
+  saved-listings, leads/route, search, agent profile, community feed,
+  buyer/likes) gate on `status='active'`.
+- New listings default to `'inactive'`.
+- PublishPanel.tsx deleted (dead after detail-page rebuild).
+
+**New shared components**:
+- `app/dashboard/_components/HubDetailShell.tsx` — server component.
+  Hero (`max-w-6xl aspect-[5/2] md:aspect-[5/1] sm:rounded-b-xl`, matches
+  the canonical community public-page hero from phase 45.28) with optional
+  title/subtitle gradient and right-overlay slot. Renders `<HubTabs />`
+  underneath.
+- `app/dashboard/_components/HubTabs.tsx` — client island. Sticky pill row;
+  tab switch is `router.replace('?tab=...', { scroll: false })` so
+  there's no server nav and no scroll jump. Active tab shows underline.
+- `app/dashboard/_components/StatusPill.tsx` — generic Active/Inactive
+  toggle. For listings calls publishListing/unpublishListing; for
+  communities takes a `setCommunityStatus` action prop. Calls
+  `flushPending()` before activate so EditListingForm debounce can't
+  spuriously fail the publish gate. Error popover portalled to
+  `document.body` (stacking-context guard, per phase 45.33 lesson).
+- `ListingDetailMenu.tsx` / `CommunityDetailMenu.tsx` — three-dot
+  overflow with Delete only. Menu sheet portalled to body for the same
+  z-40 reason.
+
+**Listing detail rebuild (`/dashboard/listings/[id]/edit`)**:
+- Old: long-scroll page with header → PublishPanel → Details → Videos →
+  Photos → Social → Tour. Six fully-rendered sections + a status panel
+  taking up vertical real estate.
+- New: HubDetailShell hero with cover (cover_url → first ready video
+  thumb → first photo URL fallback), StatusPill + ⋮ menu top-right.
+  Sticky tabs: Details · Media · Social · Tour. Media tab merges Videos
+  and Photos panels stacked vertically (no sub-sub-tab — phase 46 design
+  decision: less friction beats finer granularity).
+
+**Community detail rebuild (`/dashboard/communities/[id]`)**:
+- Same shell. Hero uses the public page's cover-resolution helper
+  (`resolveCommunityCoverWithCfIds` + `demoCoverFor`) so the dashboard
+  hero exactly matches what the buyer sees on `/c/<slug>`.
+- Tabs: Details · Videos · Photos · Cover (Cover only for the creating
+  agent). Defaults to Videos because that's why agents come here.
+- StatusPill + ⋮ menu only render for the creating agent. Non-creators
+  see a read-only Details panel explaining the metadata is owned, but
+  can still manage their own videos/photos.
+- New `status-actions.ts`: `setCommunityStatus()` and
+  `deleteCommunityAction()` server actions, both gated to creator.
+
+**Grid parity with buyer-facing surfaces**:
+- `/dashboard` (my listings): removed `max-w-6xl px-3 sm:px-6 py-6 sm:py-8`
+  wrapper; `ListingsTabbedList` gutted from 322 → 130 lines (status tabs
+  and list view dropped). Single grid matches `/browse`:
+  `grid-cols-2 gap-x-1 gap-y-2 md:grid-cols-4 md:gap-x-1.5 md:gap-y-3`,
+  `aspect-[3/4]` cards, bottom-gradient overlay, opacity-60 + small
+  "Inactive" pill on inactive cards.
+- `/dashboard/communities`: already used `CommunityGrid`; just dropped
+  the extra `py-*` padding to match `/communities` (`pb-6`).
+
+**Verification**:
+- `npx tsc --noEmit` — clean.
+- `npx next build` — green; new dashboard listing detail bundle
+  26.3kB (was ~12kB pre-46 because we now ship StatusPill/HubTabs
+  client-side, but old PublishPanel was bigger).
+- Migration applied to remote DB; `supabase migration list --linked`
+  shows 0030 present.
+
+**Pitfalls navigated**:
+- `flushPending()` before activate — per existing EditListingForm
+  contract; without it a fresh price typed seconds ago gets eaten by
+  the publish gate.
+- StatusPill error popover and detail menus portalled to body. Anything
+  rendered inside the hero header sits in BottomNav's z-40 stacking
+  context on mobile — without portal escape the menu/popover would be
+  capped under feed cards. (Phase 45.33 lesson, codified in
+  `references/stacking-context-modal-portal.md`.)
+- New listings default to `inactive` — back-compat callers that read
+  status===`'published'` were already migrated by 46.2's mechanical
+  pass.
+
 ## 2026-06-21 — Phase 45.33: fix scrim z-index escape + redesign source picker
 
 **Objective**: qiaoxux 测试 45.32 实装后报两个 bug:

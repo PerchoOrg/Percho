@@ -141,7 +141,7 @@ export async function listLikedListings(input: {
     `,
     )
     .eq('device_id', parsed.data.deviceId)
-    .eq('listing.status', 'published')
+    .eq('listing.status', 'active')
     .order('created_at', { ascending: false })) as {
     // biome-ignore lint/suspicious/noExplicitAny: stub generated types
     data: any[] | null;

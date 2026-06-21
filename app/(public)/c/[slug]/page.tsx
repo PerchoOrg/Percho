@@ -48,11 +48,13 @@ export default async function CommunityPage({
   // biome-ignore lint/suspicious/noExplicitAny: stub generated types
   const { data: community } = (await (supabase as any)
     .from('communities')
-    .select('id, name, slug, city, state, description, created_by, cover_video_id, cover_storage_path')
+    .select('id, name, slug, city, state, description, created_by, cover_video_id, cover_storage_path, status')
     .eq('slug', slug)
-    .maybeSingle()) as { data: CommunityRow | null };
+    .maybeSingle()) as { data: (CommunityRow & { status: string }) | null };
 
-  if (!community) notFound();
+  // Phase 46: inactive communities are 404 to buyers (the creating agent
+  // sees them in /dashboard/communities so they can reactivate).
+  if (!community || community.status !== 'active') notFound();
 
   // biome-ignore lint/suspicious/noExplicitAny: stub generated types
   const { data: memberships } = (await (supabase as any)
