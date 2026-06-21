@@ -2,6 +2,26 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-06-21 — Phase 45.23: Unified three feed surfaces onto shared primitives (v0.47.0)
+
+**Objective**: phase 45.22 stopped one step short — it shared icons and `ActionButton` between BrowseFeed and CommunityVideoFeed, but CommunityCarousel kept its own copy of icons + frame markup + rail markup, and all three feeds still inlined their own outer frame, z-indices, and safe-area math. This was the root cause of the recurring "overlay invisible / rail clipped / modal behind carousel" bug class across phases 45.19–45.22: three near-copies drifting independently. Owner asked to "make the three feed pages consistent".
+
+**Actions**:
+
+- 45.23.1 — Created `app/(public)/_components/feed/constants.ts` (`FEED_FRAME_CLASS`, `FEED_VSCROLL_CLASS`, `FEED_RAIL_BOTTOM`, `FEED_CAPTION_BOTTOM`, `FEED_Z` z-stack object). Created `FeedShell.tsx` — `{ scrollerRef?, cards, children? }` API: `cards` is the snap scroll content, `children` is overlays. (API was originally `overlays` prop but writing big JSX into a prop felt unnatural — flipped on the second migration.)
+- 45.23.2 — Migrated `CommunityVideoFeed` onto `FeedShell`. 690-line file, 29+/39- diff. tsc/build clean.
+- 45.23.3 — Migrated `BrowseFeed` (1377 lines, the oldest and biggest) onto `FeedShell`. Did the small surface first to validate the API before touching this one — paid off, the API flip happened on CommunityVideoFeed where the diff was small. tsc/build clean.
+- 45.23.4 — Unified `CommunityCarousel` rail: dropped local `HeartIcon`/`BookmarkIcon`/`ShareIcon`/`CommentIcon` (60 lines of duplicated SVG) in favor of imports from `feed/icons`, swapped 3 inline rail buttons for `ActionButton` (gives Like/Save/Contact their labels for the first time), replaced inline frame class with `FEED_FRAME_CLASS`, replaced inline rail bottom calc with `FEED_RAIL_BOTTOM`, replaced inline z-20 with `FEED_Z.rail`. 24+/94- diff. Note: the carousel SVG icons changed visually — owner's local set was 22–24px with slightly different Heart/Bookmark paths; shared set is 26px BrowseFeed-style. Ratified as part of the consistency mandate (owner explicitly asked the three to look the same).
+- 45.23.5 — DEVLOG + RELEASE v0.47.0, merge to main, push prod.
+
+**Outcome**: every layout decision (frame size, rail position, safe-area inset, z-stack ordering) now lives in one file. Adding a new feed surface is `<FeedShell cards={...}>{rail/topbar/etc}</FeedShell>`. Three feeds, one source of truth.
+
+**Pitfalls hit**:
+- First attempt put overlays on a prop (`overlays={<>...</>}`); writing 30 lines of JSX into a prop expression read terribly and was a JSX-balance hazard (component-removal-playbook §C). Flipped to `cards` prop + `children` for overlays on the second migration — much cleaner.
+- BrowseFeed's `cards` prop close had to thread `})}` into the position previously held by `</div>`, plus open `>` for `children`. One tsc pass per attempt caught a missed `</FeedShell>` at line 1368.
+
+**Files**: `app/(public)/_components/feed/{constants.ts,FeedShell.tsx}` (new); `app/(public)/_components/feed/icons.tsx` (carry-over from 45.22); `app/(public)/c/[slug]/feed/CommunityVideoFeed.tsx`, `app/(public)/browse/_components/{BrowseFeed,CommunityCarousel}.tsx` (migrated).
+
 ## 2026-06-21 — Phase 45.22: Shared feed primitives + community-rail button labels
 
 **Objective**: owner reported "community tab → community → videos → click one video → I don't see all the small buttons on the screen, fix it". Three feed surfaces (BrowseFeed, CommunityVideoFeed, CommunityCarousel) had drifted in their rail-button rendering — BrowseFeed had circle+caption, the other two had bare icons — so the same Like/Save/Contact actions read as "small unlabeled mystery buttons" on the community feed. Root cause: rail markup was inlined per-feed instead of shared, so the caption pattern only existed in BrowseFeed.

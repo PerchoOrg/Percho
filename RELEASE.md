@@ -3,6 +3,16 @@
 Newest at the top. Each release covers a meaningful product change visible to users.
 Format matches the standard release template (Features / Improvements / Bug Fixes / Technical / Known Issues / Metrics).
 
+## v0.47.0 — 2026-06-21
+
+### ✨ Improvements
+
+- **All three feed surfaces now look and behave the same.** The Community-tab carousel (For You → listing → "Videos in this community") now uses the same right-rail style as the listing feed and the community video feed: circle button with a label underneath (Like / Save / Contact). Previously it was bare unlabeled circles. Same pixel position, same safe-area handling — so the iOS home indicator no longer crowds the rail on any of the three feeds.
+
+### 🔧 Technical
+
+- Phase 45.23 architectural cleanup: introduced `FeedShell` page primitive and shared layout constants (`FEED_FRAME_CLASS`, `FEED_RAIL_BOTTOM`, `FEED_Z`). Migrated `BrowseFeed`, `CommunityVideoFeed`, and `CommunityCarousel` onto the shared primitives — z-stack, safe-area math, and the 9:16 desktop frame are now defined once instead of three drifting copies. The recurring class of bugs from phases 45.19–45.22 (overlay buttons disappearing, modal hidden behind carousel, rail too close to home indicator) had a single root cause: three near-identical rail/frame implementations diverging independently. That's now fixed at the source. CommunityCarousel's local icon SVGs (`Heart` viewBox 24/size 24, `Bookmark`/`Share`/`Comment` size 22) were replaced with the shared icon set (`size 26`, identical paths to BrowseFeed) — the carousel rail icons are now slightly larger and pixel-identical to the listing feed.
+
 ## v0.46.0 — 2026-06-21
 
 ### 🐛 Bug Fixes
