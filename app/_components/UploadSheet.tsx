@@ -89,11 +89,21 @@ export function useUploadSheet() {
         role="dialog"
         aria-modal="true"
         className="absolute inset-x-0 bottom-0 rounded-t-3xl bg-surface shadow-[0_-8px_32px_rgba(0,0,0,0.18)] animate-in slide-in-from-bottom duration-200"
-        style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 1.5rem)' }}
+        style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 0.75rem)' }}
       >
         <div className="mx-auto mt-2.5 mb-1 h-1 w-10 rounded-full bg-line" aria-hidden="true" />
+        <button
+          type="button"
+          onClick={close}
+          aria-label="Close"
+          className="absolute top-3 right-3 flex h-8 w-8 items-center justify-center rounded-full text-ink2 transition active:scale-95 hover:bg-bg hover:text-ink"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M18 6 6 18M6 6l12 12" />
+          </svg>
+        </button>
         {sheet === 'source-picker' && (
-          <div className="px-5 pt-3 pb-2">
+          <div className="px-5 pt-3 pb-3">
             <h2 className="pb-3 text-center font-serif text-ink text-lg">Add video or photos</h2>
             <div className="grid grid-cols-2 gap-3">
               <SourceTile
@@ -120,30 +130,16 @@ export function useUploadSheet() {
                 }
               />
             </div>
-            <button
-              type="button"
-              onClick={close}
-              className="mt-4 w-full rounded-xl px-4 py-3 text-center text-ink2 text-sm transition active:scale-[0.99] hover:text-ink"
-            >
-              Cancel
-            </button>
           </div>
         )}
         {sheet === 'type-picker' && (
-          <div className="space-y-2 px-4 pt-3">
+          <div className="space-y-2 px-4 pt-3 pb-2">
             <h2 className="px-2 pb-1 font-serif text-ink text-lg">Upload as…</h2>
             <p className="px-2 pb-2 text-ink2 text-xs">
               {files.length} file{files.length === 1 ? '' : 's'} selected
             </p>
             <SheetRow label="Listing" onClick={() => pickType('listings')} />
             <SheetRow label="Community" onClick={() => pickType('communities')} />
-            <button
-              type="button"
-              onClick={close}
-              className="mt-2 w-full rounded-xl px-4 py-3 text-center text-ink2 text-sm transition active:scale-[0.99] hover:text-ink"
-            >
-              Cancel
-            </button>
           </div>
         )}
       </div>
