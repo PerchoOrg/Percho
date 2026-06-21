@@ -2,6 +2,38 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## Phase 47.4 — Portfolio internal rhythm (2026-06-21)
+
+Owner feedback after Phase 47.3 ship: "可以放大一点 并且同一个页面内各处间距尽量保持一致 这里是 agent profile 不需要和 grid view 里的设置一样 但是自己页面内要协调."
+
+The dense feed grid (3/4 aspect, 8px inset, 15px price, 11px sub) is correct
+for `/browse` and friends because cards are small. The portfolio's 4:5 cards
+are much larger, so the same overlay sizes felt visually under-weighted, and
+the page mixed several spacing scales (`pt-16 pb-10 md:pt-24 md:pb-14`,
+`mb-10`, `mb-12`, `gap-x-8 gap-y-14`, `py-10`) that didn't read as one
+coherent surface.
+
+Changes:
+- `app/_components/GridCard.tsx`: added optional `captionInsetClass` prop
+  (default `inset-x-2 bottom-2` — every other grid is unaffected).
+- `app/(public)/a/[agentSlug]/page.tsx`:
+  - Hero & listings sections unified to `py-20 md:py-28`.
+  - Headers `mb-8`, hero flex `gap-8`, grid `gap-8` (square rhythm — was
+    `gap-x-8 gap-y-14`), bio `mt-8`, footer `py-8`.
+  - Card overlay inset `inset-x-2 bottom-2` → `inset-x-5 bottom-5` (20px).
+  - Card caption: price `text-[15px]` → `font-serif text-[22px] md:text-[26px]`
+    (serif to echo the page's `display-md` heading); sub-lines `text-[11px]`
+    → `text-[13px] md:text-[14px]`.
+  - Replaced shared `GridCardCaption` with inline custom caption so the
+    portfolio can carry its own typography without affecting feed cards.
+
+Result: `/a/[agentSlug]` reads on a single 8px spacing scale with overlay
+text sized in proportion to its larger image. `/browse`, `/communities`,
+`/dashboard`, `/saved`, `/search`, `/nearby`, `/c/[slug]` unchanged.
+
+Files: 2 modified.
+Verification: tsc clean, biome clean (1 auto-fixed), next build success.
+
 ## 2026-06-21 — Phase 47.3: portfolio text format unified
 
 **Objective**: qiaoxux follow-up after phase47.2 — agent portfolio

@@ -1,6 +1,19 @@
 # Vicinity Release Notes
 
 Newest at the top. Each release covers a meaningful product change visible to users.
+
+## v0.51.4 — Portfolio internal rhythm (2026-06-21)
+
+- Agent portfolio (`/a/[agentSlug]`): overlay typography enlarged to match
+  the page's larger 4:5 cards — serif 22–26px price, 13–14px specs/address,
+  20px interior inset.
+- Agent portfolio: unified vertical/horizontal spacing to a single 8px
+  rhythm — hero & listings `py-20 md:py-28`, headers `mb-8`, hero flex
+  `gap-8`, grid `gap-8`, bio `mt-8`, footer `py-8`.
+- `GridCard`: new optional `captionInsetClass` prop (default unchanged) so
+  pages with larger cards can scale interior padding to match.
+- No changes to `/browse`, `/communities`, `/dashboard`, `/saved`,
+  `/search`, `/nearby`, `/c/[slug]`.
 Format matches the standard release template (Features / Improvements / Bug Fixes / Technical / Known Issues / Metrics).
 
 ## v0.51.3 — 2026-06-21 — Portfolio text matches every other grid

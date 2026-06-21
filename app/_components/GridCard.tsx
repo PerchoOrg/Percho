@@ -41,6 +41,11 @@ export type GridCardProps = {
    *  card). The agent portfolio page passes `aspect-[4/5]` to keep its
    *  editorial proportions while still using the shared overlay caption. */
   aspectClass?: string;
+  /** Tailwind inset class for the bottom-overlay caption block. Default
+   *  `inset-x-2 bottom-2` (8px) matches the dense feed grid. The portfolio
+   *  page passes `inset-x-5 bottom-5` so its larger card has matching
+   *  larger interior padding. */
+  captionInsetClass?: string;
 };
 
 export function GridCard({
@@ -53,6 +58,7 @@ export function GridCard({
   dimmed,
   alt,
   aspectClass = 'aspect-[3/4]',
+  captionInsetClass = 'inset-x-2 bottom-2',
 }: GridCardProps) {
   return (
     <Link href={href} prefetch={false} className="group block">
@@ -74,7 +80,7 @@ export function GridCard({
         {topRight && <div className="absolute top-2 right-2 z-10">{topRight}</div>}
         {/* Bottom-gradient scrim — Phase 45.26 TikTok-density overlay D. */}
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-3/5 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
-        <div className="absolute inset-x-2 bottom-2 text-surface">{caption}</div>
+        <div className={`absolute ${captionInsetClass} text-surface`}>{caption}</div>
       </div>
     </Link>
   );

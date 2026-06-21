@@ -9,7 +9,7 @@
  * RLS / data load unchanged — see DESIGN.md for the token reference.
  */
 
-import { GridCard, GridCardBadgeDark, GridCardCaption } from '@/app/_components/GridCard';
+import { GridCard, GridCardBadgeDark } from '@/app/_components/GridCard';
 import { thumbnailUrl } from '@/lib/cloudflare/stream';
 import { DEMO_MEDIA_ENABLED, demoCoverFor, demoHeadshotFor } from '@/lib/demo-media';
 import { createClient } from '@/lib/supabase/server';
@@ -134,13 +134,16 @@ export default async function AgentProfilePage({
 
   return (
     <div className="min-h-screen bg-bg text-ink">
-      {/* Hero — Aman idiom: eyebrow caps + large serif name + hairline. */}
+      {/* Hero — Aman idiom: eyebrow caps + large serif name + hairline.
+          Phase 47.4 (2026-06-21): tightened spacing to a single 8px rhythm
+          (py-20 / mb-8 / gap-8) so the page feels internally consistent
+          even though it deliberately diverges from the dense feed grid. */}
       <section>
-        <div className="mx-auto max-w-6xl px-6 pt-16 pb-10 md:pt-24 md:pb-14">
-          <div className="eyebrow mb-6">Vicinity · Listing Specialist</div>
+        <div className="mx-auto max-w-6xl px-6 py-20 md:py-28">
+          <div className="eyebrow mb-8">Vicinity · Listing Specialist</div>
 
-          <div className="flex flex-col gap-10 md:flex-row md:items-end md:justify-between">
-            <div className="flex items-center gap-6 md:items-end md:gap-8">
+          <div className="flex flex-col gap-8 md:flex-row md:items-end md:justify-between">
+            <div className="flex items-center gap-8 md:items-end">
               {(() => {
                 const headshot = demoHeadshotFor(agent.headshot_url);
                 return headshot ? (
@@ -188,7 +191,7 @@ export default async function AgentProfilePage({
           </div>
 
           {agent.bio && (
-            <p className="mt-12 max-w-2xl whitespace-pre-line text-ink2 text-base leading-[1.7]">
+            <p className="mt-8 max-w-2xl whitespace-pre-line text-ink2 text-base leading-[1.7]">
               {agent.bio}
             </p>
           )}
@@ -198,8 +201,8 @@ export default async function AgentProfilePage({
 
       {/* Listings — gallery */}
       <section>
-        <div className="mx-auto max-w-6xl px-6 py-14 md:py-20">
-          <div className="mb-10 flex items-baseline justify-between">
+        <div className="mx-auto max-w-6xl px-6 py-20 md:py-28">
+          <div className="mb-8 flex items-baseline justify-between">
             <div>
               <div className="eyebrow mb-3">The Portfolio</div>
               <h2 className="display-md">Selected residences</h2>
@@ -217,7 +220,7 @@ export default async function AgentProfilePage({
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 gap-x-8 gap-y-14 md:grid-cols-2 lg:grid-cols-3">
+            <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
               {listings.map((l, i) => (
                 <ListingCardView key={l.id} index={i} agentSlug={agent.slug} listing={l} />
               ))}
@@ -229,7 +232,7 @@ export default async function AgentProfilePage({
       {/* Footer */}
       <hr className="hairline" />
       <footer>
-        <div className="mx-auto max-w-6xl px-6 py-10 text-muted text-xs tracking-wide">
+        <div className="mx-auto max-w-6xl px-6 py-8 text-muted text-xs tracking-wide">
           <p>
             <Link href="/" className="hover:text-ink hover:underline">
               Vicinity
@@ -266,28 +269,35 @@ function ListingCardView({
     .filter(Boolean)
     .join(' · ');
 
-  // Phase 47.3 (2026-06-21): owner asked the portfolio cards to keep their
-  // editorial 4:5 aspect + 1/2/3 col / wide-gap layout, BUT to use the
-  // same text format and bottom-left overlay placement as every other
-  // grid in the app. Reuse the shared GridCard primitive with a custom
-  // aspectClass so price / specs / address render with identical font,
-  // size, and gradient as /browse, /communities, /dashboard, etc.
+  // Phase 47.4 (2026-06-21): portfolio cards keep their editorial 4:5
+  // aspect + 1/2/3-col / wide-gap layout AND bottom-left overlay format,
+  // but with larger type + larger inset to match the larger image —
+  // owner asked for the page to feel internally consistent even though
+  // it deliberately diverges from the dense feed grid.
+  const priceText = listing.price != null ? `$${formatPrice(listing.price)}` : 'Price upon request';
   return (
     <GridCard
       href={`/v/${agentSlug}/${listing.slug}`}
       coverUrl={cover}
       alt={listing.address}
       aspectClass="aspect-[4/5]"
+      captionInsetClass="inset-x-5 bottom-5"
       topRight={isDemoStock ? <GridCardBadgeDark>Stock</GridCardBadgeDark> : null}
       fallback={
         <div className="grid h-full w-full place-items-center text-muted text-xs">No cover</div>
       }
       caption={
-        <GridCardCaption
-          title={listing.price != null ? `$${formatPrice(listing.price)}` : 'Price upon request'}
-          sub={specs || null}
-          sub2={listing.address}
-        />
+        <div className="space-y-1.5">
+          <div className="font-serif text-[22px] leading-tight tracking-tight md:text-[26px]">
+            {priceText}
+          </div>
+          {specs && (
+            <div className="text-[13px] text-surface/85 leading-snug md:text-[14px]">{specs}</div>
+          )}
+          <div className="text-[13px] text-surface/85 leading-snug md:text-[14px]">
+            {listing.address}
+          </div>
+        </div>
       }
     />
   );
