@@ -2,6 +2,33 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-06-21 — Phase 46 follow-up: inline Photos tab + buyer-side active gating
+
+**Objective**: qiaoxux follow-up after phase46 merge — (1) inline the
+community Photos panel inside the new HubDetailShell instead of linking
+out to /upload, (2) buyer surfaces only show `status='active'` communities.
+
+**Changes**:
+- `app/dashboard/communities/[id]/CommunityPhotosTab.tsx` — new client
+  wrapper: CategoryPicker + CommunityPhotoPanel, mirroring the photo
+  half of /upload (same shared category drives uploads).
+- `app/dashboard/communities/[id]/page.tsx` — load `community_photos`
+  rows + sign URLs server-side (same loader path as /upload), pass to
+  CommunityPhotosTab. Photos tab is now in-place editable.
+- `lib/communities/list.ts` — `fetchCommunityListCards()` now takes
+  `{ includeInactive?: boolean }`. Default false (buyer surfaces:
+  /communities, /browse?tab=communities). Dashboard's
+  /dashboard/communities passes `includeInactive: true` so the agent
+  can still see and reactivate her own inactive communities.
+- `lib/feed/browse-cards.ts` — both community fetches gate
+  `status='active'`: the listing-feed slug lookup
+  (fetchBrowseCardsForCommunity) and the inline community-sheet hydration.
+- `app/(public)/c/[slug]/page.tsx` — selects `status` and `notFound()`
+  on non-active. Inactive communities now 404 for buyers; the creating
+  agent still sees them in /dashboard/communities.
+
+Build green; tsc clean.
+
 ## 2026-06-21 — Phase 46: agent hub rebuild (HubDetailShell + status simplification)
 
 **Objective**: qiaoxux —「let's rebuild the agent hub now」, two acceptance criteria:

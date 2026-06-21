@@ -25,9 +25,12 @@ import { redirect } from 'next/navigation';
 
 import { HubDetailShell } from '@/app/dashboard/_components/HubDetailShell';
 
+import type { CommunityPhotoRow } from './CommunityPhotoPanel';
+import { signCommunityPhotoUrls } from './photo-actions';
 import { CommunityCoverPanel } from './CommunityCoverPanel';
 import { CommunityDetailMenu } from './CommunityDetailMenu';
 import { CommunityEditor } from './CommunityEditor';
+import { CommunityPhotosTab } from './CommunityPhotosTab';
 import { CommunityStatusPill } from './CommunityStatusPill';
 import { CommunityVideoManageList, type ManageVideoRow } from './CommunityVideoManageList';
 
@@ -147,6 +150,49 @@ export default async function CommunityEditorPage({
     .filter((v) => v.status === 'ready' && v.visibility === 'public')
     .map((v) => ({ id: v.id, cf_video_id: v.cf_video_id, title: v.title }));
 
+  // Photos for the inline Photos tab — match what /upload loads. We fetch
+  // every photo for the community (RLS owns visibility) and sign their
+  // URLs in batch so the panel can render thumbs immediately.
+  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
+  const { data: photoRows } = (await (supabase as any)
+    .from('community_photos')
+    .select(
+      'id, storage_path, kind, category, school_id, poi_id, alt_text, width, height, sort_order',
+    )
+    .eq('community_id', community.id)
+    .order('sort_order', { ascending: true })) as {
+    data:
+      | Array<{
+          id: string;
+          storage_path: string;
+          kind: string;
+          category: string | null;
+          school_id: string | null;
+          poi_id: string | null;
+          alt_text: string | null;
+          width: number | null;
+          height: number | null;
+          sort_order: number;
+        }>
+      | null;
+  };
+  const dbPhotos = photoRows ?? [];
+  const signed = await signCommunityPhotoUrls(dbPhotos.map((p) => p.storage_path));
+  const urlByPath = new Map(signed.map((s) => [s.path, s.url]));
+  const initialPhotos: CommunityPhotoRow[] = dbPhotos.map((p) => ({
+    id: p.id,
+    storage_path: p.storage_path,
+    signed_url: urlByPath.get(p.storage_path) ?? null,
+    kind: p.kind,
+    category: p.category,
+    school_id: p.school_id,
+    poi_id: p.poi_id,
+    alt_text: p.alt_text,
+    width: p.width,
+    height: p.height,
+    sort_order: p.sort_order,
+  }));
+
   // Hero cover resolution — same path the buyer-facing public page uses.
   const firstReadyVideo = manageVideos.find((v) => v.status === 'ready' && v.visibility === 'public');
   const coverVideoCfId = community.cover_video_id
@@ -229,20 +275,7 @@ export default async function CommunityEditorPage({
           </section>
         ),
         photos: (
-          <section className="rounded-2xl border border-line bg-surface p-4 sm:p-6">
-            <div className="mb-3 flex items-baseline justify-between gap-3">
-              <h2 className="text-base font-semibold">Photos</h2>
-              <Link
-                href={`/dashboard/communities/${community.id}/photos`}
-                className="text-xs text-ink2 hover:text-ink"
-              >
-                Manage photos →
-              </Link>
-            </div>
-            <p className="text-ink2 text-sm">
-              Photo management lives on its own page for now. Tap the link above to upload, reorder, or delete community photos.
-            </p>
-          </section>
+          <CommunityPhotosTab communityId={community.id} initialPhotos={initialPhotos} />
         ),
         ...(isOwner
           ? {

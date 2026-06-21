@@ -3,6 +3,25 @@
 Newest at the top. Each release covers a meaningful product change visible to users.
 Format matches the standard release template (Features / Improvements / Bug Fixes / Technical / Known Issues / Metrics).
 
+## v0.50.1 — 2026-06-21 — Agent hub follow-up
+
+### 🎨 Improvements
+
+- **Community Photos tab now inline**: clicking the Photos tab inside a
+  community's detail page now shows the full photo manager (category
+  picker + dropzone + gallery) right there. No more bouncing to /upload
+  to add a photo.
+
+### 🛠️ Technical
+
+- Buyer surfaces (`/communities`, `/browse?tab=communities`,
+  `/c/<slug>`, listing-feed community sheet) gate communities on
+  `status='active'`. Inactive communities now 404 for buyers; the
+  creating agent still sees them in /dashboard/communities so they can
+  reactivate.
+- `fetchCommunityListCards({ includeInactive })` opt-in so dashboard
+  keeps full visibility.
+
 ## v0.50.0 — 2026-06-21 — Agent hub rebuild
 
 ### ✨ Features

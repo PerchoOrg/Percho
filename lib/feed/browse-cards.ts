@@ -179,6 +179,7 @@ async function assembleCards(
           .from('communities')
           .select('id, name, slug, description, city, state')
           .in('id', communityIds)
+          .eq('status', 'active')
       : Promise.resolve({ data: [] }),
     // Phase 34b (V1 redo): listingCount per community for the sheet header.
     // Counts ALL published listings, not just the ones in this card batch —
@@ -370,6 +371,7 @@ export async function fetchBrowseCardsByCommunitySlug(
     .from('communities')
     .select('id')
     .eq('slug', slug)
+    .eq('status', 'active')
     .maybeSingle()) as { data: { id: string } | null };
   if (!community) return [];
 

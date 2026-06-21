@@ -31,7 +31,7 @@ export default async function CommunitiesListPage() {
   // CommunityGrid through a wrapper that overrides the link target. Simpler:
   // CommunityGrid takes communities and links to /c/<slug>. For the dashboard
   // surface we map id-keyed editor links via a sibling overlay grid below.
-  const cards = await fetchCommunityListCards();
+  const cards = await fetchCommunityListCards({ includeInactive: true });
 
   if (cards.length === 0) {
     return (
