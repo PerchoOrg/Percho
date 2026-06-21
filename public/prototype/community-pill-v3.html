@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Vicinity — Live here / community pill, immersive variants</title>
+<style>
+  :root { --bg:#f3eee7; --ink:#1a1a1a; --ink2:#4a4a4a; --line:#e7e1d8; }
+  * { box-sizing: border-box; }
+  html, body { margin:0; background: var(--bg); color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  body { padding: 0 0 96px; }
+  .page-header { padding: 20px 16px 8px; max-width: 1500px; margin: 0 auto; }
+  .page-header h1 { font-family: "Iowan Old Style", Georgia, serif; font-size: 22px; font-weight: 500; margin: 0 0 6px; }
+  .page-header p { color: var(--ink2); font-size: 13px; margin: 0 0 4px; line-height: 1.5; }
+  .page-header ul { color: var(--ink2); font-size: 13px; margin: 6px 0 0; line-height: 1.6; padding-left: 20px; }
+
+  .stage { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; padding: 16px; max-width: 1600px; margin: 0 auto; }
+  @media (max-width: 1200px) { .stage { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 640px)  { .stage { grid-template-columns: 1fr; } }
+
+  .phone {
+    background: #000; border-radius: 28px; overflow: hidden;
+    box-shadow: 0 6px 24px rgba(0,0,0,0.12); height: 720px; position: relative; isolation: isolate;
+  }
+  .phone-label { position: absolute; bottom: -34px; left: 0; right: 0; text-align: center; font-size: 12px; color: var(--ink2); line-height: 1.4; }
+  .phone-label strong { display: block; color: var(--ink); font-size: 14px; font-weight: 600; margin-bottom: 2px; }
+
+  .frame {
+    position: absolute; inset: 0;
+    background-image: url('https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=800&q=70');
+    background-size: cover; background-position: center; filter: brightness(0.78);
+  }
+  .frame::after {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(180deg, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0) 30%, rgba(0,0,0,0) 60%, rgba(0,0,0,0.55) 100%);
+  }
+
+  .statusbar {
+    position: absolute; top: 0; left: 0; right: 0; height: 44px; padding: 14px 22px 0;
+    color: #fff; font-size: 13px; font-weight: 600;
+    display: flex; justify-content: space-between; align-items: center; z-index: 5;
+  }
+
+  .topchrome {
+    position: absolute; top: 50px; left: 12px; right: 12px;
+    display: flex; align-items: flex-start; gap: 8px; z-index: 4;
+  }
+  .icon-btn {
+    width: 38px; height: 38px; border-radius: 999px;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: rgba(0,0,0,0.45);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid rgba(255,255,255,0.16);
+    color: #fff; font-size: 18px; flex-shrink: 0;
+  }
+  .pill-slot { flex: 1; }
+
+  /* Position both Live-here and community pill at same spot:
+     left 16px, ~110px from top (just under top chrome row) */
+  .pill-place {
+    position: absolute; top: 108px; left: 16px; z-index: 4;
+  }
+
+  /* === Variant 1 — current pick C (rounded glass), kept fully pill === */
+  .v1 {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 11px 6px 10px;
+    background: rgba(0,0,0,0.30);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid rgba(255,255,255,0.14);
+    border-radius: 999px;
+    color: #fff; font-size: 12.5px; font-weight: 500;
+    white-space: nowrap; letter-spacing: 0.005em;
+  }
+  .v1 .ico { font-size: 12px; }
+  .v1 .chev { opacity: 0.6; margin-left: 2px; font-size: 12px; }
+
+  /* === Variant 2 — C with NO border, lighter scrim, lighter blur === */
+  .v2 {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 11px 6px 10px;
+    background: rgba(0,0,0,0.22);
+    backdrop-filter: blur(14px) saturate(160%);
+    -webkit-backdrop-filter: blur(14px) saturate(160%);
+    border-radius: 999px;
+    color: #fff; font-size: 12.5px; font-weight: 500;
+    white-space: nowrap; letter-spacing: 0.005em;
+  }
+  .v2 .ico { font-size: 12px; }
+  .v2 .chev { opacity: 0.55; margin-left: 2px; font-size: 12px; }
+
+  /* === Variant 3 — gradient scrim halo (no fixed shape, fades into image) === */
+  .v3 {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 14px 8px 12px;
+    background: linear-gradient(135deg, rgba(0,0,0,0.42), rgba(0,0,0,0.06));
+    backdrop-filter: blur(10px) saturate(140%);
+    -webkit-backdrop-filter: blur(10px) saturate(140%);
+    border-radius: 999px;
+    color: #fff; font-size: 12.5px; font-weight: 500;
+    white-space: nowrap; letter-spacing: 0.005em;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+  }
+  .v3 .ico { font-size: 12px; }
+  .v3 .chev { opacity: 0.55; margin-left: 2px; font-size: 12px; }
+
+  /* === Variant 4 — chrome-less: just icon + text + drop shadow,
+         no background at all (most immersive) === */
+  .v4 {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 6px 4px;
+    color: #fff; font-size: 13px; font-weight: 600;
+    white-space: nowrap;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.7), 0 0 1px rgba(0,0,0,0.5);
+    letter-spacing: 0.005em;
+  }
+  .v4 .ico {
+    font-size: 13px;
+    filter: drop-shadow(0 1px 2px rgba(0,0,0,0.6));
+  }
+  .v4 .chev { opacity: 0.85; margin-left: 1px; font-size: 12px; }
+
+  /* Bottom + actions for parity with real surface */
+  .bottom { position: absolute; left: 16px; right: 80px; bottom: 24px; color: #fff; z-index: 3; }
+  .bottom .tag {
+    display: inline-block; padding: 4px 10px; background: rgba(0,0,0,0.4);
+    backdrop-filter: blur(10px); border-radius: 999px; font-size: 12px; font-weight: 500; margin-bottom: 8px;
+  }
+  .bottom h3 { margin: 0 0 4px; font-size: 18px; font-weight: 600; }
+  .bottom p { margin: 0; font-size: 13px; opacity: 0.85; line-height: 1.4; }
+  .actions {
+    position: absolute; right: 12px; bottom: 100px; z-index: 3;
+    display: flex; flex-direction: column; gap: 16px; align-items: center;
+  }
+  .actions .act {
+    width: 44px; height: 44px; border-radius: 999px;
+    background: rgba(0,0,0,0.4);
+    backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.14);
+    display: flex; align-items: center; justify-content: center; color: #fff; font-size: 18px;
+  }
+  .actions .lbl { font-size: 10px; color: #fff; margin-top: -10px; opacity: 0.85; }
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <h1>Live here / community pill — more immersive (rounded glass kept)</h1>
+  <p>Locked in (per your call):</p>
+  <ul>
+    <li>Keep <strong>variant C</strong> base — fully rounded pill, glass, name only</li>
+    <li>"Live here" + community pill use the <strong>same position</strong> — left, ~108px from top, slightly below the top icon row</li>
+    <li>Goal: less "台方" / 更沉浸 — try lighter material, no border, gradient halo, or no chip at all</li>
+  </ul>
+  <p style="margin-top:8px;">Showing on the listing-feed surface; community page mirrors this exactly (just text changes to "Live here").</p>
+</div>
+
+<div class="stage">
+
+  <!-- Variant 1 -->
+  <div class="phone">
+    <div class="frame"></div>
+    <div class="statusbar"><span>12:32</span><span>🌙 18%</span></div>
+    <div class="topchrome">
+      <button class="icon-btn">←</button>
+      <div class="pill-slot"></div>
+      <button class="icon-btn">↗</button>
+    </div>
+    <div class="pill-place">
+      <div class="v1"><span class="ico">🏠</span><span>Peachtree Corners</span><span class="chev">›</span></div>
+    </div>
+    <div class="actions">
+      <div class="act" style="color:#ff5a72;">♥</div><div class="lbl">Like</div>
+      <div class="act">🔖</div><div class="lbl">Save</div>
+      <div class="act">💬</div><div class="lbl">Contact</div>
+    </div>
+    <div class="bottom">
+      <span class="tag">Walk the Block</span>
+      <h3>4825 Chesterfield Ct</h3>
+      <p>Suwanee, GA · 4 bd · 3.5 ba · $950K</p>
+    </div>
+    <div class="phone-label"><strong>1 — Current C (baseline)</strong>rounded · 30% scrim · hairline border</div>
+  </div>
+
+  <!-- Variant 2 -->
+  <div class="phone">
+    <div class="frame"></div>
+    <div class="statusbar"><span>12:32</span><span>🌙 18%</span></div>
+    <div class="topchrome">
+      <button class="icon-btn">←</button>
+      <div class="pill-slot"></div>
+      <button class="icon-btn">↗</button>
+    </div>
+    <div class="pill-place">
+      <div class="v2"><span class="ico">🏠</span><span>Peachtree Corners</span><span class="chev">›</span></div>
+    </div>
+    <div class="actions">
+      <div class="act" style="color:#ff5a72;">♥</div><div class="lbl">Like</div>
+      <div class="act">🔖</div><div class="lbl">Save</div>
+      <div class="act">💬</div><div class="lbl">Contact</div>
+    </div>
+    <div class="bottom">
+      <span class="tag">Walk the Block</span>
+      <h3>4825 Chesterfield Ct</h3>
+      <p>Suwanee, GA · 4 bd · 3.5 ba · $950K</p>
+    </div>
+    <div class="phone-label"><strong>2 — Lighter glass, no border</strong>22% scrim · weaker blur · borderless</div>
+  </div>
+
+  <!-- Variant 3 -->
+  <div class="phone">
+    <div class="frame"></div>
+    <div class="statusbar"><span>12:32</span><span>🌙 18%</span></div>
+    <div class="topchrome">
+      <button class="icon-btn">←</button>
+      <div class="pill-slot"></div>
+      <button class="icon-btn">↗</button>
+    </div>
+    <div class="pill-place">
+      <div class="v3"><span class="ico">🏠</span><span>Peachtree Corners</span><span class="chev">›</span></div>
+    </div>
+    <div class="actions">
+      <div class="act" style="color:#ff5a72;">♥</div><div class="lbl">Like</div>
+      <div class="act">🔖</div><div class="lbl">Save</div>
+      <div class="act">💬</div><div class="lbl">Contact</div>
+    </div>
+    <div class="bottom">
+      <span class="tag">Walk the Block</span>
+      <h3>4825 Chesterfield Ct</h3>
+      <p>Suwanee, GA · 4 bd · 3.5 ba · $950K</p>
+    </div>
+    <div class="phone-label"><strong>3 — Gradient halo</strong>scrim fades L→R into image · no border</div>
+  </div>
+
+  <!-- Variant 4 -->
+  <div class="phone">
+    <div class="frame"></div>
+    <div class="statusbar"><span>12:32</span><span>🌙 18%</span></div>
+    <div class="topchrome">
+      <button class="icon-btn">←</button>
+      <div class="pill-slot"></div>
+      <button class="icon-btn">↗</button>
+    </div>
+    <div class="pill-place">
+      <div class="v4"><span class="ico">🏠</span><span>Peachtree Corners</span><span class="chev">›</span></div>
+    </div>
+    <div class="actions">
+      <div class="act" style="color:#ff5a72;">♥</div><div class="lbl">Like</div>
+      <div class="act">🔖</div><div class="lbl">Save</div>
+      <div class="act">💬</div><div class="lbl">Contact</div>
+    </div>
+    <div class="bottom">
+      <span class="tag">Walk the Block</span>
+      <h3>4825 Chesterfield Ct</h3>
+      <p>Suwanee, GA · 4 bd · 3.5 ba · $950K</p>
+    </div>
+    <div class="phone-label"><strong>4 — No chip, just text</strong>icon + text + drop shadow · most immersive</div>
+  </div>
+
+</div>
+
+</body>
+</html>
