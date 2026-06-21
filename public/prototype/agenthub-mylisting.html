@@ -1,0 +1,580 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>AgentHub — My Listing redesign prototype</title>
+<style>
+  :root {
+    --bg: #f3eee7;
+    --surface: #fbf8f3;
+    --ink: #313131;
+    --ink2: #5a5651;
+    --muted: #8a857d;
+    --line: rgba(49, 49, 49, 0.14);
+    --line-strong: rgba(49, 49, 49, 0.28);
+    --accent-warn: #b35a2f;
+    --accent-good: #4a6b3a;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+    line-height: 1.5;
+    font-size: 14px;
+  }
+  .serif { font-family: ui-serif, Georgia, "Times New Roman", serif; letter-spacing: -0.01em; }
+  .page-wrap { max-width: 1400px; margin: 0 auto; padding: 28px 20px 80px; }
+  .page-title { font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px; }
+  .page-subtitle { font-size: 22px; margin: 0 0 26px; }
+  .page-subtitle small { color: var(--muted); font-size: 13px; font-weight: normal; margin-left: 8px; }
+
+  /* --------- DASHBOARD GRID PREVIEW (top) ---------- */
+  .dash-card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 20px 22px;
+    margin-bottom: 32px;
+  }
+  .dash-card h2 { font-size: 15px; margin: 0 0 14px; }
+  .dash-card h2 .tag { display: inline-block; padding: 2px 8px; background: var(--bg); border: 1px solid var(--line); border-radius: 999px; font-size: 11px; color: var(--ink2); font-weight: normal; margin-left: 8px; }
+  .grid-toolbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
+  .chip-row { display: flex; gap: 6px; flex-wrap: wrap; }
+  .chip {
+    border: 1px solid var(--line); background: var(--surface);
+    padding: 6px 12px; border-radius: 999px; font-size: 12.5px; color: var(--ink2);
+    cursor: pointer;
+  }
+  .chip.active { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+  .chip .num { color: var(--muted); margin-left: 6px; font-variant-numeric: tabular-nums; }
+  .chip.active .num { color: rgba(255,255,255,0.65); }
+  .grid-toolbar .right { display: flex; gap: 10px; align-items: center; font-size: 12.5px; color: var(--muted); }
+  .grid-toolbar select { font-size: 12.5px; border: 1px solid var(--line); background: var(--surface); padding: 5px 8px; border-radius: 8px; color: var(--ink2); }
+
+  .listing-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px;
+  }
+  .lcard { border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: var(--surface); }
+  .lcard .cover { aspect-ratio: 4 / 3; background: linear-gradient(135deg,#cbb89e,#8a7a64); position: relative; }
+  .lcard.inactive .cover { filter: grayscale(0.7) brightness(0.85); }
+  .lcard .pill {
+    position: absolute; top: 8px; right: 8px; padding: 2px 8px; font-size: 10.5px;
+    background: rgba(251,248,243,0.92); border: 1px solid var(--line); border-radius: 999px; color: var(--ink2);
+  }
+  .lcard .meta { padding: 10px 12px 12px; }
+  .lcard .meta h3 { font-size: 14px; margin: 0 0 2px; font-weight: 600; }
+  .lcard .meta p { margin: 0; font-size: 12px; color: var(--muted); }
+  .lcard .stats { display: flex; gap: 12px; padding: 0 12px 12px; font-size: 11.5px; color: var(--ink2); }
+  .lcard .stats span b { font-weight: 600; color: var(--ink); }
+  .empty-cta { padding: 40px; text-align: center; border: 1.5px dashed var(--line-strong); border-radius: 12px; color: var(--ink2); }
+  .empty-cta .btn { margin-top: 10px; }
+
+  /* ---------- HUB DETAIL FRAME ---------- */
+  .variants { display: grid; grid-template-columns: 1fr; gap: 28px; }
+  @media (min-width: 1100px) { .variants { grid-template-columns: 1fr 1fr; } }
+  .variant {
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    overflow: hidden;
+  }
+  .variant-label {
+    padding: 10px 16px; background: var(--ink); color: var(--surface);
+    font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.1em;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .variant-label .pickme { font-size: 11px; color: rgba(255,255,255,0.7); text-transform: none; letter-spacing: normal; }
+  .variant-body { padding: 0; }
+
+  /* hero */
+  .hero-wrap { background: var(--bg); padding: 0; }
+  .hero {
+    position: relative;
+    aspect-ratio: 5 / 2;
+    background: linear-gradient(120deg,#7a8c6e 0%, #4f6850 60%, #2f3a35 100%);
+    border-bottom-left-radius: 12px; border-bottom-right-radius: 12px;
+    overflow: hidden;
+  }
+  .hero::after {
+    content: ""; position: absolute; inset: 0;
+    background: linear-gradient(to top, rgba(0,0,0,0.55), rgba(0,0,0,0.1) 45%, transparent);
+    pointer-events: none;
+  }
+  .hero-title {
+    position: absolute; left: 18px; bottom: 14px; right: 18px; z-index: 2; color: var(--surface);
+  }
+  .hero-title h1 { font-family: ui-serif, Georgia, serif; font-weight: 600; font-size: 22px; margin: 0; text-shadow: 0 1px 2px rgba(0,0,0,0.4); }
+  .hero-title p { font-size: 12px; opacity: 0.85; margin: 2px 0 0; }
+  .hero-actions { position: absolute; top: 12px; right: 12px; z-index: 2; display: flex; gap: 8px; align-items: center; }
+  .pill-status {
+    background: rgba(251,248,243,0.95);
+    color: var(--ink); font-size: 12px; padding: 6px 12px;
+    border-radius: 999px; border: 1px solid var(--line); font-weight: 500;
+    display: inline-flex; align-items: center; gap: 6px; cursor: pointer;
+  }
+  .pill-status::before {
+    content: ""; width: 7px; height: 7px; border-radius: 50%;
+    background: var(--accent-good);
+  }
+  .icon-btn {
+    background: rgba(251,248,243,0.95); color: var(--ink); width: 32px; height: 32px;
+    border-radius: 999px; border: 1px solid var(--line); display: inline-flex;
+    align-items: center; justify-content: center; cursor: pointer; font-size: 13px;
+  }
+  .preview-btn {
+    background: rgba(251,248,243,0.95); color: var(--ink);
+    padding: 6px 12px; font-size: 12px; border-radius: 999px;
+    border: 1px solid var(--line); display: inline-flex; align-items: center; gap: 5px; cursor: pointer;
+  }
+  .preview-btn svg { width: 12px; height: 12px; }
+
+  /* stat chip rows */
+  .stat-row { display: flex; gap: 10px; padding: 14px 18px 0; flex-wrap: wrap; }
+
+  /* Variant A — inline icons */
+  .stat-inline {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 13px; color: var(--ink2);
+    padding: 8px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: 999px;
+  }
+  .stat-inline b { color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; }
+  .stat-inline .delta { font-size: 11px; color: var(--accent-good); margin-left: 4px; }
+  .stat-inline .delta.warn { color: var(--accent-warn); }
+
+  /* Variant B — mini cards */
+  .stat-card-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 14px 18px 0; }
+  .stat-card {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 10px;
+    padding: 10px 12px;
+  }
+  .stat-card .label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px; }
+  .stat-card .val { font-size: 22px; font-family: ui-serif, Georgia, serif; font-weight: 500; color: var(--ink); }
+  .stat-card .delta { font-size: 11px; color: var(--accent-good); margin-left: 6px; }
+  .stat-card .delta.warn { color: var(--accent-warn); }
+
+  /* tabs */
+  .tabs {
+    display: flex; align-items: stretch; border-bottom: 1px solid var(--line);
+    padding: 18px 18px 0; overflow-x: auto; gap: 4px; background: var(--bg);
+    margin-top: 16px;
+  }
+  .tab {
+    padding: 10px 14px; font-size: 13px; color: var(--ink2);
+    border-bottom: 2px solid transparent; cursor: pointer; white-space: nowrap;
+    display: inline-flex; align-items: center; gap: 6px;
+    margin-bottom: -1px;
+  }
+  .tab.active { color: var(--ink); font-weight: 600; border-bottom-color: var(--ink); }
+  .tab .badge {
+    background: var(--ink); color: var(--surface); font-size: 10.5px;
+    padding: 1px 7px; border-radius: 999px; font-weight: 500;
+  }
+
+  /* panel */
+  .panel { padding: 18px; }
+  .panel-card {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
+    padding: 16px 18px;
+  }
+  .panel-card + .panel-card { margin-top: 14px; }
+  .panel-card h2 {
+    font-size: 14px; margin: 0 0 4px; display: flex; align-items: center; justify-content: space-between;
+  }
+  .panel-card .hint { font-size: 11.5px; color: var(--muted); margin-bottom: 12px; }
+  .saved-tag {
+    font-size: 11px; color: var(--accent-good); display: inline-flex; align-items: center; gap: 4px;
+    font-weight: normal;
+  }
+  .saved-tag::before { content: "✓"; font-size: 10px; }
+
+  /* Details panel mock */
+  .field { display: grid; grid-template-columns: 110px 1fr; gap: 10px; padding: 8px 0; border-top: 1px dashed var(--line); align-items: center; }
+  .field:first-of-type { border-top: 0; }
+  .field label { font-size: 12px; color: var(--muted); }
+  .field .val { font-size: 13px; color: var(--ink); }
+  .field input {
+    border: 0; background: transparent; font: inherit; color: var(--ink); padding: 4px 0; width: 100%;
+  }
+
+  /* Media cover bar */
+  .cover-bar {
+    background: var(--bg); border: 1px solid var(--line); border-radius: 10px;
+    padding: 10px 12px; margin-bottom: 12px;
+    display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;
+  }
+  .cover-bar .label { font-size: 12px; color: var(--ink2); }
+  .cover-bar .label b { color: var(--ink); font-weight: 600; }
+  .cover-thumbs { display: flex; gap: 6px; }
+  .cover-thumb {
+    width: 44px; height: 30px; border-radius: 6px; border: 2px solid transparent;
+    background-size: cover; background-position: center; cursor: pointer;
+  }
+  .cover-thumb.t1 { background: linear-gradient(135deg,#7a8c6e,#4f6850); border-color: var(--ink); }
+  .cover-thumb.t2 { background: linear-gradient(135deg,#cbb89e,#8a7a64); }
+  .cover-thumb.t3 { background: linear-gradient(135deg,#a3a395,#6e6e62); }
+  .cover-thumb.t4 { background: linear-gradient(135deg,#b39d8a,#7a6a5e); }
+
+  .media-list { display: grid; gap: 8px; }
+  .media-row {
+    display: flex; align-items: center; gap: 10px; padding: 8px 10px;
+    border: 1px solid var(--line); border-radius: 10px; background: var(--bg);
+  }
+  .media-thumb { width: 60px; height: 40px; border-radius: 6px; background: linear-gradient(135deg,#7a8c6e,#4f6850); flex-shrink: 0; }
+  .media-row .grow { flex: 1; min-width: 0; }
+  .media-row .name { font-size: 12.5px; color: var(--ink); }
+  .media-row .meta { font-size: 11px; color: var(--muted); }
+  .media-row .actions { display: flex; gap: 4px; }
+  .icon-mini { width: 26px; height: 26px; border: 1px solid var(--line); background: var(--surface); border-radius: 6px; cursor: pointer; font-size: 12px; display: inline-flex; align-items: center; justify-content: center; color: var(--ink2); }
+
+  /* Analytics panel */
+  .funnel { display: grid; gap: 6px; }
+  .funnel-row { display: grid; grid-template-columns: 100px 1fr 60px; gap: 10px; align-items: center; font-size: 12px; }
+  .funnel-row .label { color: var(--ink2); }
+  .funnel-row .bar { background: var(--bg); border: 1px solid var(--line); border-radius: 6px; height: 18px; position: relative; overflow: hidden; }
+  .funnel-row .bar > i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--ink); border-radius: 6px; }
+  .funnel-row .num { font-variant-numeric: tabular-nums; color: var(--ink); text-align: right; }
+
+  /* Leads panel */
+  .lead-row {
+    display: grid; grid-template-columns: 1fr auto auto; gap: 10px; align-items: center;
+    padding: 10px 0; border-top: 1px solid var(--line);
+  }
+  .lead-row:first-of-type { border-top: 0; }
+  .lead-row .who { font-size: 13px; }
+  .lead-row .who small { color: var(--muted); display: block; font-size: 11px; }
+  .lead-row .when { font-size: 11.5px; color: var(--muted); }
+  .lead-row .new {
+    font-size: 10.5px; padding: 2px 8px; border-radius: 999px; background: var(--ink); color: var(--surface);
+  }
+
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 7px 13px; border: 1px solid var(--ink); background: var(--ink); color: var(--surface);
+    border-radius: 999px; font-size: 12.5px; cursor: pointer;
+  }
+  .btn.ghost { background: transparent; color: var(--ink); }
+
+  /* notes column — annotations */
+  .layout {
+    display: grid; gap: 36px;
+  }
+  .note-block {
+    background: var(--surface); border-left: 3px solid var(--ink); padding: 14px 18px;
+    border-radius: 0 10px 10px 0;
+    color: var(--ink2); font-size: 13px;
+  }
+  .note-block h3 { margin: 0 0 6px; font-size: 13px; color: var(--ink); }
+  .note-block ul { margin: 6px 0 0 18px; padding: 0; }
+  .note-block li { margin: 3px 0; }
+
+  /* Marketing panel sub-tabs */
+  .subtabs {
+    display: inline-flex; gap: 2px; background: var(--bg); border: 1px solid var(--line);
+    border-radius: 999px; padding: 3px; margin-bottom: 12px;
+  }
+  .subtab { padding: 5px 12px; font-size: 11.5px; border-radius: 999px; cursor: pointer; color: var(--ink2); }
+  .subtab.active { background: var(--surface); color: var(--ink); }
+</style>
+</head>
+<body>
+<div class="page-wrap">
+  <div class="page-title">Vicinity AgentHub redesign</div>
+  <h1 class="page-subtitle serif">My Listing — proposed structure
+    <small>5 changes proposed · pick variant for hero stat row</small></h1>
+
+  <!-- 1. Dashboard grid w/ filter chips & empty state -->
+  <section class="dash-card">
+    <h2>① /dashboard grid <span class="tag">filter chips + sort + per-card stats</span></h2>
+    <div class="grid-toolbar">
+      <div class="chip-row">
+        <span class="chip active">All <span class="num">7</span></span>
+        <span class="chip">Active <span class="num">4</span></span>
+        <span class="chip">Inactive <span class="num">3</span></span>
+      </div>
+      <div class="right">
+        <span>Sort</span>
+        <select>
+          <option>Recently updated</option>
+          <option>Most views</option>
+          <option>Most leads</option>
+          <option>Price (high → low)</option>
+        </select>
+        <button class="btn">+ New listing</button>
+      </div>
+    </div>
+    <div class="listing-grid">
+      <div class="lcard">
+        <div class="cover"><span class="pill">Active</span></div>
+        <div class="meta"><h3>1247 Peachtree Ln</h3><p>Peachtree Corners, GA 30092</p></div>
+        <div class="stats"><span><b>312</b> views</span><span><b>14</b> saves</span><span><b>3</b> leads</span></div>
+      </div>
+      <div class="lcard">
+        <div class="cover"><span class="pill">Active</span></div>
+        <div class="meta"><h3>88 Oak Ridge Dr</h3><p>Sandy Springs, GA</p></div>
+        <div class="stats"><span><b>184</b> views</span><span><b>9</b> saves</span><span><b>1</b> lead</span></div>
+      </div>
+      <div class="lcard inactive">
+        <div class="cover"><span class="pill">Inactive</span></div>
+        <div class="meta"><h3>4501 Magnolia Ct</h3><p>Roswell, GA</p></div>
+        <div class="stats"><span><b>—</b></span><span><b>—</b></span><span><b>—</b></span></div>
+      </div>
+      <div class="lcard">
+        <div class="cover"><span class="pill">Active</span></div>
+        <div class="meta"><h3>22 Riverbend</h3><p>Marietta, GA</p></div>
+        <div class="stats"><span><b>96</b> views</span><span><b>2</b> saves</span><span><b>0</b> leads</span></div>
+      </div>
+    </div>
+  </section>
+
+  <div class="note-block">
+    <h3>Empty state (when agent has 0 listings)</h3>
+    <div class="empty-cta">
+      <p style="margin:0 0 8px;color:var(--ink);font-size:14px;">Create your first listing</p>
+      <p style="margin:0;font-size:12.5px;">Upload your videos, add the address — buyers will see it within minutes.</p>
+      <button class="btn" style="margin-top:14px;">+ Create listing</button>
+    </div>
+  </div>
+
+  <h1 class="page-subtitle serif" style="margin-top:36px;">② Listing detail — Hero stat row variants
+    <small>same structural changes; pick A or B for the chip style</small></h1>
+
+  <!-- Side-by-side hero variants -->
+  <div class="variants">
+    <!-- VARIANT A: inline pills -->
+    <div class="variant">
+      <div class="variant-label">Variant A — inline pills <span class="pickme">numbers + icons in a single row</span></div>
+      <div class="variant-body">
+        <div class="hero-wrap">
+          <div class="hero">
+            <div class="hero-actions">
+              <button class="preview-btn">👁 Preview</button>
+              <button class="pill-status">Active ▾</button>
+              <button class="icon-btn">⋯</button>
+            </div>
+            <div class="hero-title">
+              <h1>1247 Peachtree Ln</h1>
+              <p>Peachtree Corners, GA 30092 · Riverside</p>
+            </div>
+          </div>
+        </div>
+        <div class="stat-row">
+          <span class="stat-inline">👁 <b>312</b> views <span class="delta">+18%</span></span>
+          <span class="stat-inline">❤ <b>14</b> saves <span class="delta">+3</span></span>
+          <span class="stat-inline">✉ <b>3</b> leads <span class="delta">+1 new</span></span>
+        </div>
+        <div class="tabs">
+          <span class="tab active">Details</span>
+          <span class="tab">Media</span>
+          <span class="tab">Marketing</span>
+          <span class="tab">Analytics</span>
+          <span class="tab">Leads <span class="badge">1</span></span>
+        </div>
+        <div class="panel">
+          <div class="panel-card">
+            <h2>Listing details <span class="saved-tag">Saved 14:32</span></h2>
+            <div class="hint">Auto-saves as you type</div>
+            <div class="field"><label>Price</label><div class="val"><input value="$1,250,000"/></div></div>
+            <div class="field"><label>Beds</label><div class="val"><input value="4"/></div></div>
+            <div class="field"><label>Baths</label><div class="val"><input value="3.5"/></div></div>
+            <div class="field"><label>Sqft</label><div class="val"><input value="3,420"/></div></div>
+            <div class="field"><label>Community</label><div class="val">Riverside Estates ▾</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- VARIANT B: mini cards -->
+    <div class="variant">
+      <div class="variant-label">Variant B — mini stat cards <span class="pickme">3 cards, larger numbers, more breathing room</span></div>
+      <div class="variant-body">
+        <div class="hero-wrap">
+          <div class="hero">
+            <div class="hero-actions">
+              <button class="preview-btn">👁 Preview</button>
+              <button class="pill-status">Active ▾</button>
+              <button class="icon-btn">⋯</button>
+            </div>
+            <div class="hero-title">
+              <h1>1247 Peachtree Ln</h1>
+              <p>Peachtree Corners, GA 30092 · Riverside</p>
+            </div>
+          </div>
+        </div>
+        <div class="stat-card-row">
+          <div class="stat-card"><div class="label">Views · 30d</div><div class="val">312<span class="delta">+18%</span></div></div>
+          <div class="stat-card"><div class="label">Saves</div><div class="val">14<span class="delta">+3</span></div></div>
+          <div class="stat-card"><div class="label">Leads</div><div class="val">3<span class="delta">+1 new</span></div></div>
+        </div>
+        <div class="tabs">
+          <span class="tab">Details</span>
+          <span class="tab active">Media</span>
+          <span class="tab">Marketing</span>
+          <span class="tab">Analytics</span>
+          <span class="tab">Leads <span class="badge">1</span></span>
+        </div>
+        <div class="panel">
+          <div class="panel-card">
+            <h2>Cover &amp; media <span class="saved-tag">Saved</span></h2>
+            <div class="cover-bar">
+              <div class="label">Cover image · <b>Hero video #1</b></div>
+              <div class="cover-thumbs">
+                <span class="cover-thumb t1" title="current"></span>
+                <span class="cover-thumb t2"></span>
+                <span class="cover-thumb t3"></span>
+                <span class="cover-thumb t4"></span>
+              </div>
+            </div>
+            <div class="hint" style="margin-bottom:8px;">Videos · drag to reorder</div>
+            <div class="media-list">
+              <div class="media-row">
+                <div class="media-thumb"></div>
+                <div class="grow"><div class="name">Front yard walkthrough</div><div class="meta">0:42 · ready · cover</div></div>
+                <div class="actions"><span class="icon-mini">ⓒ</span><span class="icon-mini">✎</span><span class="icon-mini">⋮</span></div>
+              </div>
+              <div class="media-row">
+                <div class="media-thumb" style="background:linear-gradient(135deg,#cbb89e,#8a7a64);"></div>
+                <div class="grow"><div class="name">Kitchen + living room</div><div class="meta">1:08 · ready</div></div>
+                <div class="actions"><span class="icon-mini">ⓒ</span><span class="icon-mini">✎</span><span class="icon-mini">⋮</span></div>
+              </div>
+              <div class="media-row">
+                <div class="media-thumb" style="background:linear-gradient(135deg,#a3a395,#6e6e62);"></div>
+                <div class="grow"><div class="name">Backyard tour</div><div class="meta">0:51 · processing…</div></div>
+                <div class="actions"><span class="icon-mini">ⓒ</span><span class="icon-mini">✎</span><span class="icon-mini">⋮</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Annotated callouts — what changed -->
+  <div style="display:grid;grid-template-columns:1fr;gap:14px;margin-top:32px;">
+    <div class="note-block">
+      <h3>Hero — what's new vs current</h3>
+      <ul>
+        <li><b>Preview button</b> moved into the hero (was: only reachable from grid thumbnail on inactive cards). One-click "see it as a buyer".</li>
+        <li><b>Status pill</b> unchanged — same Active/Inactive toggle.</li>
+        <li><b>Stat row</b> appears under the hero (NEW). Variant A = inline pills · Variant B = mini cards.</li>
+      </ul>
+    </div>
+    <div class="note-block">
+      <h3>Tabs — 4 → 5</h3>
+      <ul>
+        <li>Old: Details · Media · Social · Tour</li>
+        <li>New: Details · Media · <b>Marketing</b> (Social + Tour merged) · <b>Analytics</b> (was independent route, now inline) · <b>Leads</b> (NEW, badge counts new ones)</li>
+        <li><code>/dashboard/listings/[id]/analytics</code> 301 → <code>?tab=analytics</code> so old links still work; "screenshot for broker" still works (the panel is full-width inline).</li>
+      </ul>
+    </div>
+    <div class="note-block">
+      <h3>Details panel — "Saved 14:32" indicator</h3>
+      <ul>
+        <li>Auto-save was silent; now the card header carries a green ✓ Saved HH:MM</li>
+        <li>Updates live on each successful save · grays out + spins on in-flight save</li>
+      </ul>
+    </div>
+    <div class="note-block">
+      <h3>Media tab — explicit Cover bar</h3>
+      <ul>
+        <li>Cover thumbnail strip pinned to the top of Media (was: tiny "use ⓒ" hint).</li>
+        <li>Click any thumbnail to set cover · current cover has a dark border.</li>
+        <li>Below: same drag-to-reorder list as today.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Analytics + Leads tab previews -->
+  <h1 class="page-subtitle serif" style="margin-top:36px;">③ New tabs preview — Analytics &amp; Leads</h1>
+  <div class="variants">
+    <div class="variant">
+      <div class="variant-label">Analytics tab (was independent page)</div>
+      <div class="variant-body">
+        <div class="tabs" style="margin-top:0;border-top:1px solid var(--line);">
+          <span class="tab">Details</span><span class="tab">Media</span><span class="tab">Marketing</span>
+          <span class="tab active">Analytics</span><span class="tab">Leads <span class="badge">1</span></span>
+        </div>
+        <div class="panel">
+          <div class="panel-card">
+            <h2>Funnel · last 30 days</h2>
+            <div class="hint">page view → card view → video complete → lead</div>
+            <div class="funnel">
+              <div class="funnel-row"><span class="label">Page views</span><div class="bar"><i style="width:100%"></i></div><span class="num">312</span></div>
+              <div class="funnel-row"><span class="label">Card views</span><div class="bar"><i style="width:78%"></i></div><span class="num">244</span></div>
+              <div class="funnel-row"><span class="label">Video completes</span><div class="bar"><i style="width:31%"></i></div><span class="num">96</span></div>
+              <div class="funnel-row"><span class="label">Leads</span><div class="bar"><i style="width:1%"></i></div><span class="num">3</span></div>
+            </div>
+          </div>
+          <div class="panel-card">
+            <h2>Top cards</h2>
+            <div class="hint">most-viewed video for this listing</div>
+            <div class="media-list">
+              <div class="media-row"><div class="media-thumb"></div><div class="grow"><div class="name">Kitchen + living room</div><div class="meta">video · 142 views · 38% complete</div></div></div>
+              <div class="media-row"><div class="media-thumb" style="background:linear-gradient(135deg,#cbb89e,#8a7a64);"></div><div class="grow"><div class="name">Front yard walkthrough</div><div class="meta">video · 88 views · 64% complete</div></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="variant">
+      <div class="variant-label">Leads tab (NEW — per-listing)</div>
+      <div class="variant-body">
+        <div class="tabs" style="margin-top:0;border-top:1px solid var(--line);">
+          <span class="tab">Details</span><span class="tab">Media</span><span class="tab">Marketing</span>
+          <span class="tab">Analytics</span><span class="tab active">Leads <span class="badge">1</span></span>
+        </div>
+        <div class="panel">
+          <div class="panel-card">
+            <h2>Leads from this listing <span class="saved-tag" style="color:var(--muted);">3 total · 1 new</span></h2>
+            <div class="hint">Buyers who asked for more info on 1247 Peachtree Ln</div>
+            <div>
+              <div class="lead-row">
+                <div class="who">Sarah Chen <small>sarah.c@gmail.com · 415-555-0142</small></div>
+                <span class="when">2h ago</span><span class="new">New</span>
+              </div>
+              <div class="lead-row">
+                <div class="who">Marcus Johnson <small>mj.realestate@…</small></div>
+                <span class="when">Yesterday</span><span></span>
+              </div>
+              <div class="lead-row">
+                <div class="who">Priya Patel <small>—</small></div>
+                <span class="when">3 days ago</span><span></span>
+              </div>
+            </div>
+          </div>
+          <div class="panel-card">
+            <h2>Marketing — combined Social + Tour <span class="saved-tag" style="color:var(--muted);">preview only</span></h2>
+            <div class="subtabs">
+              <span class="subtab active">Social copy</span>
+              <span class="subtab">AI Tour video</span>
+              <span class="subtab" style="opacity:0.5;">QR card · soon</span>
+            </div>
+            <div class="hint">Marketing tab merges old Social + Tour. Sub-tabs above keep them separate inside.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <h1 class="page-subtitle serif" style="margin-top:40px;">📋 Sign-off questions</h1>
+  <div class="note-block">
+    <h3>Pick &amp; comment</h3>
+    <ul>
+      <li><b>Hero stat row:</b> Variant A (inline pills) or Variant B (mini cards)?</li>
+      <li><b>Stat dimensions:</b> Views / Saves / Leads OK, or swap one for another (Card views? Lead conversion %)?</li>
+      <li><b>Marketing merge:</b> 5 tabs as drawn, or keep Social + Tour separate (= 6 tabs, mobile horizontal scroll)?</li>
+      <li><b>Leads tab order:</b> after Analytics (current) or before (since "new lead" is the most-actionable signal)?</li>
+      <li><b>Empty state copy:</b> "Create your first listing" + 1-line subtext — sound right or swap to "Upload your first home tour"?</li>
+    </ul>
+  </div>
+
+  <p style="color:var(--muted);font-size:12px;text-align:center;margin-top:32px;">
+    Prototype only — no real data, no live links. After sign-off I'll cut a phase plan and wire each section to real Supabase queries.
+  </p>
+</div>
+</body>
+</html>
