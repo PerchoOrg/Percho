@@ -3,6 +3,12 @@
 Newest at the top. Each release covers a meaningful product change visible to users.
 Format matches the standard release template (Features / Improvements / Bug Fixes / Technical / Known Issues / Metrics).
 
+## v0.47.2 — 2026-06-21
+
+### ✨ Improvements
+
+- **Cleaner Nearby experience when location is blocked.** If you've denied your browser location to Vicinity, the Nearby tab and the Communities → Nearby tab now show a single-line message asking you to enable location access — instead of asking you to type your latitude and longitude into two input boxes, which nobody knows off the top of their head.
+
 ## v0.47.1 — 2026-06-21
 
 ### ✨ Improvements
