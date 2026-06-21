@@ -622,16 +622,15 @@ export function CommunityVideoFeed({
           aria-label={`View ${listings.length} ${
             listings.length === 1 ? 'home' : 'homes'
           } in ${community.name}`}
-          className={`absolute top-16 left-3 ${FEED_Z.caption} flex items-center gap-1.5 rounded-full border border-cream/20 bg-ink/65 py-2 pr-3 pl-3 text-cream backdrop-blur-md transition-colors hover:border-cream hover:text-cream`}
-          style={{ touchAction: 'manipulation' }}
+          className={`absolute top-16 left-3 ${FEED_Z.caption} flex items-center gap-1.5 rounded-md bg-ink/65 py-1.5 pr-[18px] pl-3 text-cream backdrop-blur-md transition-colors hover:bg-ink/75`}
+          style={{
+            touchAction: 'manipulation',
+            clipPath:
+              'polygon(0 0, calc(100% - 10px) 0, 100% 50%, calc(100% - 10px) 100%, 0 100%)',
+          }}
         >
           <span aria-hidden="true">🏠</span>
-          <span className="font-medium text-[12px]">
-            {listings.length} {listings.length === 1 ? 'home' : 'homes'} here
-          </span>
-          <span className="text-cream/60" aria-hidden="true">
-            ›
-          </span>
+          <span className="font-medium text-[12px]">Live here</span>
         </button>
       )}
 

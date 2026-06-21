@@ -2,6 +2,40 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-06-21 — Phase 45.29: top-left "Live here" banner-cut chip (shape #3)
+
+**Objective**: qiaoxux flagged the top-left community pill on the
+community video feed reads chip-y and breaks immersion against the
+right-rail circular icons (Like / Save / Contact). Round pill +
+round icons = no contrast, but switching the pill to a hard rectangle
+felt too abrupt. Wanted a shape that asserts itself differently from
+the surrounding chrome without shouting.
+
+**Decision**: ran a 6-shape prototype shootout in
+`public/prototype/community-pill-v4.html` (squircle-10, asymmetric tag,
+banner cut-edge, half-pill bleeding off-screen, underline-only,
+squircle-14 + status dot). qiaoxux picked **shape #3 — banner with
+right-side cut-edge** (clip-path polygon, arrow-tip on the right,
+6px corner radius). Reads editorial / wayfinding rather than UI chip,
+and the diagonal cut visually keys against round icon buttons without
+collision.
+
+**Surfaces unified** (same shape on both, only text changes):
+- `app/(public)/c/[slug]/feed/CommunityVideoFeed.tsx`: "🏠 N homes
+  here ›" → "🏠 Live here" (banner cut, no chevron, no border).
+- `app/(public)/browse/_components/BrowseFeed.tsx`: dual-line
+  community chip with video count → single-line community name only,
+  banner cut applied.
+
+**Material kept**: `bg-ink/65 backdrop-blur-md`, removed the cream
+border (was reading as a label outline against the new shape).
+Middle title pill (community name · city) and back/share buttons
+not touched per scope.
+
+**Prototype lineage**: v1 glass material → v2 rect (rejected: too
+square) → v3 immersive title pill (mis-scoped, owner clarified left
+button is separate) → v4 shape shootout → shape #3 wins.
+
 ## 2026-06-21 — Phase 45.28: community hero immersion pass
 
 **Objective**: qiaoxux owner pass on `/c/[slug]` — reduce friction, make

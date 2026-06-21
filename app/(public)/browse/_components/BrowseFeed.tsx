@@ -640,18 +640,15 @@ function Card({
             onOpenCommunitySheet();
           }}
           aria-label={`Explore ${card.community.name} community`}
-          className="absolute top-16 left-3 z-10 flex max-w-[70%] items-center gap-2 rounded-full border border-cream/15 bg-ink/65 py-1.5 pr-3 pl-2 text-cream backdrop-blur-md transition-colors hover:border-cream/40"
-          style={{ touchAction: 'manipulation' }}
+          className="absolute top-16 left-3 z-10 flex max-w-[70%] items-center gap-1.5 rounded-md bg-ink/65 py-1.5 pr-[18px] pl-3 text-cream backdrop-blur-md transition-colors hover:bg-ink/75"
+          style={{
+            touchAction: 'manipulation',
+            clipPath:
+              'polygon(0 0, calc(100% - 10px) 0, 100% 50%, calc(100% - 10px) 100%, 0 100%)',
+          }}
         >
-          <span className="text-base leading-none">🏘️</span>
-          <span className="flex min-w-0 flex-col text-left leading-tight">
-            <span className="truncate font-semibold text-[12px]">{card.community.name}</span>
-            <span className="text-[10px] text-cream/60">
-              {card.community.videoCount} {card.community.videoCount === 1 ? 'video' : 'videos'} ·
-              in this area
-            </span>
-          </span>
-          <span className="text-cream/50 leading-none">›</span>
+          <span aria-hidden="true">🏘️</span>
+          <span className="truncate font-medium text-[12px]">{card.community.name}</span>
         </button>
       )}
 

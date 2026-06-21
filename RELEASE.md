@@ -3,6 +3,12 @@
 Newest at the top. Each release covers a meaningful product change visible to users.
 Format matches the standard release template (Features / Improvements / Bug Fixes / Technical / Known Issues / Metrics).
 
+## v0.49.1 — 2026-06-21
+
+### ✨ Improvements
+
+- **Cleaner left-corner chip on community videos.** The top-left button on a community video feed is now a banner-cut tag reading "🏠 Live here" — opens the homes-for-sale sheet in place. Replaces the older "🏠 N homes here ›" pill. The same shape is reused on the listing feed's community chip (single-line community name), so both surfaces look like one product.
+
 ## v0.49.0 — 2026-06-21
 
 ### ✨ Improvements
