@@ -511,8 +511,22 @@ export function CommunityVideoFeed({
   return (
     <FeedShell
       scrollerRef={scrollerRef}
-      overlays={
-        <>
+      cards={Array.from({ length: totalCards }, (_, idx) => {
+        const v = videos[idx % videos.length];
+        if (!v) return null;
+        return (
+          <VideoCard
+            key={`${v.id}-${idx}`}
+            video={v}
+            shouldMount={mountWindow.has(idx)}
+            isActive={idx === activeIndex}
+            cardRef={(el) => setCardRef(idx, el)}
+            muted={muted}
+            onAutoplayBlocked={onAutoplayBlocked}
+          />
+        );
+      })}
+    >
       {/* Top header — Back + community name pill. */}
       <div className={`absolute inset-x-0 top-0 ${FEED_Z.topbar} flex items-center justify-between px-3 pt-3`}>
         <button
@@ -655,24 +669,6 @@ export function CommunityVideoFeed({
           communityId={community.id}
         />
       )}
-        </>
-      }
-    >
-      {Array.from({ length: totalCards }, (_, idx) => {
-        const v = videos[idx % videos.length];
-        if (!v) return null;
-        return (
-          <VideoCard
-            key={`${v.id}-${idx}`}
-            video={v}
-            shouldMount={mountWindow.has(idx)}
-            isActive={idx === activeIndex}
-            cardRef={(el) => setCardRef(idx, el)}
-            muted={muted}
-            onAutoplayBlocked={onAutoplayBlocked}
-          />
-        );
-      })}
     </FeedShell>
   );
 }

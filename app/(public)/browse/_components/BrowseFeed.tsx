@@ -12,6 +12,8 @@ import { LeadModal } from '../../_components/LeadModal';
 import { CommunityCarousel } from './CommunityCarousel';
 import { CommunitySheet, type CommunitySheetData } from './CommunitySheet';
 import { ActionButton } from '../../_components/feed/ActionButton';
+import { FEED_RAIL_BOTTOM, FEED_Z } from '../../_components/feed/constants';
+import { FeedShell } from '../../_components/feed/FeedShell';
 import {
   BackArrowIcon,
   BookmarkIcon,
@@ -1109,18 +1111,9 @@ export function BrowseFeed({
   }, [active, activeSource]);
 
   return (
-    <div className="relative mx-auto h-screen w-full overflow-hidden bg-black md:w-[min(430px,calc(100vh*9/16))] md:shadow-2xl md:shadow-black/50">
-      {/* Desktop: constrain feed to a phone-width portrait column centered on the
-       * page. Mobile (default): full viewport. The outer body bg-ink fills the
-       * surrounding desktop gutters — keeps a single immersive surface but stops
-       * the video from stretching into a desktop-wide letterbox banner. */}
-      {/* Logo + Back nav cluster lives top-right (see below). */}
-      <div
-        ref={scrollerRef}
-        className="h-full w-full snap-y snap-mandatory overflow-y-scroll overscroll-contain"
-        style={{ scrollSnapType: 'y mandatory' }}
-      >
-        {Array.from({ length: totalCards }, (_, idx) => {
+    <FeedShell
+      scrollerRef={scrollerRef}
+      cards={Array.from({ length: totalCards }, (_, idx) => {
           const card = cards[idx % cards.length];
           if (!card) return null;
           const id = card.listing.id;
@@ -1187,7 +1180,7 @@ export function BrowseFeed({
             />
           );
         })}
-      </div>
+    >
 
       {/* Right rail — Xiaohongshu / TikTok pattern (Phase 28, 2026-06-14).
        * All primary CTAs live here for an immersive bottom-edge: Like /
@@ -1210,8 +1203,8 @@ export function BrowseFeed({
        * thumb reach was awkward and they crowded the caption. Caption
        * stays at `bottom: 1rem` — only the rail moves up. */}
       <div
-        className="absolute right-3 z-20 flex flex-col items-center gap-3"
-        style={{ bottom: 'max(6rem, calc(env(safe-area-inset-bottom) + 5rem))' }}
+        className={`absolute right-3 ${FEED_Z.rail} flex flex-col items-center gap-3`}
+        style={{ bottom: FEED_RAIL_BOTTOM }}
       >
         <div key={likeAnimKey} className={likeAnimKey > 0 ? 'heart-pop' : ''}>
           <ActionButton label="Like" onClick={toggleLike} active={isLiked} activeColor="rose">
@@ -1250,7 +1243,7 @@ export function BrowseFeed({
        * viewing a b-roll source, Back first returns to hero; on the
        * hero we do router.back() if there's history (preserves grid
        * scroll), else push the fallback. */}
-      <div className="absolute inset-x-0 top-0 z-30 flex items-center justify-between px-3 pt-3">
+      <div className={`absolute inset-x-0 top-0 ${FEED_Z.topbar} flex items-center justify-between px-3 pt-3`}>
         <button
           type="button"
           onClick={() => {
@@ -1372,6 +1365,6 @@ export function BrowseFeed({
           </>
         );
       })()}
-    </div>
+    </FeedShell>
   );
 }

@@ -12,31 +12,31 @@ import { FEED_FRAME_CLASS, FEED_VSCROLL_CLASS } from './constants';
  * — render as siblings of the scroller so they stay fixed relative to
  * the viewport while the cards scroll/swipe underneath.
  *
- * Slot model intentionally minimal: the only thing FeedShell renders by
- * default is the frame + (optional) scroller. Each feed still controls
- * its own overlay JSX so per-feed differences (community pill vs back
- * button, homes-here chip, listings sheet) live with the feed that owns
- * the data.
+ * API shape: `cards` is the scrollable content (rendered inside the
+ * snap scroller); `children` are the overlays (rendered as siblings of
+ * the scroller, not inside it). This split means callers don't need to
+ * stuff long overlay JSX into a prop value — the natural JSX child
+ * position is for overlays, which is the bigger chunk.
  *
  * `axis === 'horizontal'` skips the inner snap scroller entirely — the
  * caller (CommunityCarousel today) provides its own swipe pager as the
- * single child.
+ * `cards` value, rendered directly under the frame.
  */
 export type FeedShellProps = {
   /** Ref forwarded to the inner snap scroller (vertical only). */
   scrollerRef?: Ref<HTMLDivElement>;
-  /** Cards / pages to scroll through. */
-  children: ReactNode;
-  /** Absolute-positioned overlays (top bar, rail, captions, chips, sheets, modals). */
-  overlays?: ReactNode;
+  /** Cards / pages rendered inside the scroller (or pager). */
+  cards: ReactNode;
+  /** Absolute-positioned overlays — siblings of the scroller. */
+  children?: ReactNode;
   /** Vertical snap scroll (default) or horizontal pager (no scroller — caller owns). */
   axis?: 'vertical' | 'horizontal';
 };
 
 export function FeedShell({
   scrollerRef,
+  cards,
   children,
-  overlays,
   axis = 'vertical',
 }: FeedShellProps) {
   return (
@@ -47,12 +47,12 @@ export function FeedShell({
           className={FEED_VSCROLL_CLASS}
           style={{ scrollSnapType: 'y mandatory' }}
         >
-          {children}
+          {cards}
         </div>
       ) : (
-        children
+        cards
       )}
-      {overlays}
+      {children}
     </div>
   );
 }
