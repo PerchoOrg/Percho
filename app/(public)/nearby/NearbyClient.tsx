@@ -15,6 +15,7 @@ interface NearbyResponse {
 
 const RADIUS_DEFAULT = 10;
 const RADIUS_STORAGE_KEY = 'vicinity:nearby_radius';
+const GEO_PROMPTED_KEY = 'vicinity:nearby_geo_prompted';
 
 function readStoredRadius(): number {
   if (typeof window === 'undefined') return RADIUS_DEFAULT;
@@ -32,15 +33,17 @@ export function NearbyClient() {
   const [data, setData] = useState<NearbyResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [geoDenied, setGeoDenied] = useState(false);
+  // Phase 45.27 (2026-06-21): first-visit soft prompt before triggering the
+  // browser's native geolocation permission UI. Without this users see a bare
+  // "allow location?" dialog with no context and reflexively deny.
+  const [showSoftPrompt, setShowSoftPrompt] = useState(false);
 
   // Step 0 — pull stored radius preference (set from /profile Preferences).
   useEffect(() => {
     setRadius(readStoredRadius());
   }, []);
 
-  // Step 1 — try geolocation on mount. If denied/unavailable, render empty
-  // state (no manual lat/lng input — owner request 2026-06-21).
-  useEffect(() => {
+  const requestGeolocation = useCallback(() => {
     if (typeof navigator === 'undefined' || !navigator.geolocation) {
       setGeoDenied(true);
       return;
@@ -54,6 +57,31 @@ export function NearbyClient() {
       },
       { enableHighAccuracy: false, timeout: 8000 },
     );
+  }, []);
+
+  // Step 1 — on mount, decide whether to show the soft prompt or go straight
+  // to the geolocation call. Skip the soft prompt if the user has already
+  // been asked once (regardless of allow/deny — the browser will remember).
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const alreadyPrompted = window.localStorage.getItem(GEO_PROMPTED_KEY) === '1';
+    if (alreadyPrompted) {
+      requestGeolocation();
+    } else {
+      setShowSoftPrompt(true);
+    }
+  }, [requestGeolocation]);
+
+  const handleEnableLocation = useCallback(() => {
+    window.localStorage.setItem(GEO_PROMPTED_KEY, '1');
+    setShowSoftPrompt(false);
+    requestGeolocation();
+  }, [requestGeolocation]);
+
+  const handleDismissPrompt = useCallback(() => {
+    window.localStorage.setItem(GEO_PROMPTED_KEY, '1');
+    setShowSoftPrompt(false);
+    setGeoDenied(true);
   }, []);
 
   const fetchNearby = useCallback(async (c: { lat: number; lng: number }, r: number) => {
@@ -80,6 +108,45 @@ export function NearbyClient() {
     if (!coords) return;
     fetchNearby(coords, radius);
   }, [coords, radius, fetchNearby]);
+
+  // Soft prompt — first visit, before native permission UI fires.
+  if (showSoftPrompt) {
+    return (
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="nearby-geo-title"
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-6 backdrop-blur-sm"
+      >
+        <div className="w-full max-w-sm rounded-2xl bg-surface p-6 shadow-xl">
+          <div className="mb-3 text-3xl" aria-hidden>📍</div>
+          <h2 id="nearby-geo-title" className="font-serif text-xl text-ink">
+            See homes near you
+          </h2>
+          <p className="mt-2 text-ink2 text-sm leading-relaxed">
+            Vicinity uses your location to show listings within your search radius.
+            Your location stays on your device — we only use it to filter what you see.
+          </p>
+          <div className="mt-6 flex flex-col gap-2">
+            <button
+              type="button"
+              onClick={handleEnableLocation}
+              className="w-full rounded-full bg-ink px-4 py-2.5 text-surface text-sm font-medium transition hover:opacity-90"
+            >
+              Enable location
+            </button>
+            <button
+              type="button"
+              onClick={handleDismissPrompt}
+              className="w-full rounded-full px-4 py-2.5 text-ink2 text-sm transition hover:text-ink"
+            >
+              Not now
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Geolocation denied / unavailable — show empty result with a one-line
   // explanation. No input boxes.

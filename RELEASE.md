@@ -3,6 +3,12 @@
 Newest at the top. Each release covers a meaningful product change visible to users.
 Format matches the standard release template (Features / Improvements / Bug Fixes / Technical / Known Issues / Metrics).
 
+## v0.48.1 — 2026-06-21
+
+### ✨ Improvements
+
+- **Nearby page asks before asking.** The first time you open Nearby, you'll see a small explanation of why we want your location and what we do with it ("only used to filter what you see, stays on your device") with an "Enable location" button. Tapping that button is what triggers the browser's native location permission prompt — so the OS dialog now arrives with context instead of out of nowhere. After the first visit, Nearby goes straight to results.
+
 ## v0.48.0 — 2026-06-21
 
 ### ✨ Improvements

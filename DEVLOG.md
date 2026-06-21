@@ -2,6 +2,36 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-06-21 — Phase 45.27: First-visit geolocation soft prompt on /nearby
+
+**Objective**: Stop the bare browser geolocation dialog from appearing the
+moment someone opens /nearby. Without context, qiaoxux flagged that users
+reflexively deny.
+**Actions**: `app/(public)/nearby/NearbyClient.tsx` — added
+`vicinity:nearby_geo_prompted` localStorage flag, `showSoftPrompt` state,
+extracted `requestGeolocation` into a `useCallback` so it can be invoked
+both on mount and from the dialog's "Enable location" button. Added a
+modal (`role="dialog"`, `bg-surface` card, ink/ink2 typography) explaining
+why we ask and what we do with the data. Two actions: "Enable location"
+(sets flag, calls `getCurrentPosition` → native prompt fires from a user
+gesture) and "Not now" (sets flag, falls through to existing geoDenied
+empty state).
+**Decisions**: Soft prompt fires once per browser (flag set on either
+action). Subsequent visits skip the modal and call geolocation directly
+— the OS/browser remembers the actual permission, so re-asking would be
+nagware. Kept the existing geoDenied copy unchanged. Did NOT add a "ask
+again" button — if the user wants to re-grant, they do it via the
+browser's site permissions UI.
+**Issues**: First patch put the modal early-return between hooks, breaking
+Rules of Hooks. Moved it after every useCallback/useEffect; tsc clean.
+**Learnings**: Conditional early returns in client components have to live
+*after* every hook declaration. `replace_all` on a duplicated block is
+not a substitute for re-reading the file.
+**Next steps**: Push, verify on Vercel preview that (a) fresh incognito
+shows the soft prompt before the OS dialog, (b) clicking "Enable" still
+triggers the native geolocation prompt as a user gesture, (c) reload
+after either choice goes straight to results / empty state.
+
 ## 2026-06-21 — Phase 45.26: TikTok-density grid view (overlay variant D)
 
 **Objective**: owner referenced TikTok's Community feed and asked for grid pages to feel more immersive — cover takes more space, less empty whitespace between feeds, all caption text on one line so a touch over 2 rows fits per screen (gesture affordance for swipe). Two prototype rounds: v1 (A/B/C) cut fields and was rejected ("保留 价 房型 大小 和 地址"); v2 (D/E/F) kept all 4 fields with three cover-density gradients. Owner picked **D** (cover 100% with bottom gradient scrim and overlaid caption).
