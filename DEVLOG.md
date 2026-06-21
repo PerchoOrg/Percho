@@ -512,3 +512,88 @@ moment someone opens /nearby. Without context, qiaoxux flagged that users
 reflexively deny.
 **Actions**: `app/(public)/nearby/NearbyClient.tsx` — added
 `vicinity:nearby_geo_prompted` localStorage flag, `showSoftPrompt` state,
+extracted `requestGeolocation` into a `useCallback` so it can be invoked
+both on mount and from the dialog's "Enable location" button. Added a
+modal (`role="dialog"`, `bg-surface` card, ink/ink2 typography) explaining
+why we ask and what we do with the data. Two actions: "Enable location"
+(sets flag, calls `getCurrentPosition` → native prompt fires from a user
+gesture) and "Not now" (sets flag, falls through to existing geoDenied
+empty state).
+**Decisions**: Soft prompt fires once per browser (flag set on either
+action). Subsequent visits skip the modal and call geolocation directly
+— the OS/browser remembers the actual permission, so re-asking would be
+nagware. Kept the existing geoDenied copy unchanged. Did NOT add a "ask
+again" button — if the user wants to re-grant, they do it via the
+browser's site permissions UI.
+**Issues**: First patch put the modal early-return between hooks, breaking
+Rules of Hooks. Moved it after every useCallback/useEffect; tsc clean.
+**Learnings**: Conditional early returns in client components have to live
+*after* every hook declaration. `replace_all` on a duplicated block is
+not a substitute for re-reading the file.
+**Next steps**: Push, verify on Vercel preview that (a) fresh incognito
+shows the soft prompt before the OS dialog, (b) clicking "Enable" still
+triggers the native geolocation prompt as a user gesture, (c) reload
+after either choice goes straight to results / empty state.
+
+## 2026-06-21 — Phase 45.26: TikTok-density grid view (overlay variant D)
+
+**Objective**: owner referenced TikTok's Community feed and asked for grid pages to feel more immersive — cover takes more space, less empty whitespace between feeds, all caption text on one line so a touch over 2 rows fits per screen (gesture affordance for swipe). Two prototype rounds: v1 (A/B/C) cut fields and was rejected ("保留 价 房型 大小 和 地址"); v2 (D/E/F) kept all 4 fields with three cover-density gradients. Owner picked **D** (cover 100% with bottom gradient scrim and overlaid caption).
+
+**Actions**:
+
+- `app/(public)/browse/page.tsx` — replaced caption-below-cover layout with overlay D. Cover is full card; gradient scrim `bg-gradient-to-t from-black/80 via-black/40 to-transparent` covers the bottom 60%; price (15px serif), specs (`X bd · Y ba · Z sqft` joined into one line via `[...].filter(Boolean).join(' · ')`), and address sit on the scrim. Grid gap dropped from `gap-x-3 gap-y-8 md:gap-x-5 md:gap-y-12` (12/32px → 20/48px) to `gap-x-1 gap-y-2 md:gap-x-1.5 md:gap-y-3` (4/8px → 6/12px).
+- `app/(public)/nearby/NearbyClient.tsx` — same edit + the existing distance pill stays at top-left (above the bottom scrim).
+- `app/(public)/saved/_components/SavedClient.tsx` — both the listings sub-grid and the communities sub-grid get the overlay; community variant shows `name` + `city, state`.
+- `app/_components/CommunityGrid.tsx` (shared by Explore + saved + community-search results) — overlay with name + location.
+- `app/(public)/c/[slug]/_components/CommunityTabs.tsx` — both `aspect-square` sub-grids (videos with category label/blurb, listings with price/specs/address) migrated.
+- `app/(public)/search/page.tsx` ListingCard — same overlay; the wrapping grid `<div>` also got the new gap classes.
+- `app/dashboard/_components/ListingsTabbedList.tsx` — agent-facing dashboard grid; the `StatusBadge` (top-right) gets `z-10` so it stays above the gradient scrim.
+- Skeletons: `app/(public)/c/[slug]/loading.tsx` (already 3:4) and the four `9/16` rounded skeletons (`browse/saved/nearby/communities` `loading.tsx`) updated to `aspect-[3/4]` with the new gap and no text-bar children — caption is now overlaid so the skeleton-vs-loaded transition has no layout shift.
+- `public/prototype/grid-tiktok.html` (v1 A/B/C) and `public/prototype/grid-tiktok-v2.html` (v2 D/E/F) used for the two sign-off rounds; left in `public/prototype/` per visual-prototype-workflow ("don't delete after merge — they double as institutional memory").
+
+**Decisions**:
+
+- **Overlay over caption-below.** Owner explicitly asked for "more immersive" + "all text in one line" — D maximises cover real estate (100%) and lets the caption sit on the image like TikTok. v1's options that dropped fields were rejected; the constraint was always "keep all 4 fields", and overlay was the only way to keep them while expanding the cover.
+- **Specs on one line via `filter(Boolean).join(' · ')`.** The previous `<span> · ` chain produced inconsistent leading dots when `beds` was null and `baths` wasn't. The join idiom keeps the separator clean regardless of which fields are present, and matches the prototype.
+- **Did not extract a shared `ListingCard` component.** Each grid has slightly different fields (community vs listing vs video, distance pill vs status badge vs nothing) and a shared component would need a half-dozen optional props. Same overlay markup is now repeated in ~6 places; if drift becomes a problem next phase the consolidation is mechanical (overlay block is identical text-byte-for-byte across files now).
+- **Kept `aspect-square` for community videos.** The 1:1 frame is intentional — videos are recorded portrait but the category cards on `/c/[slug]` are a square mosaic by design (phase 45.10 decision). Only the gap / overlay changed.
+
+**Verification**: `npx tsc --noEmit` clean. Visual sign-off via the v2 prototype on Vercel; D selected.
+
+**Learnings**:
+
+- When a redesign touches N grid pages that share a class string but not a component, doing the prototype round in `public/prototype/*.html` pays off twice: once for the design pick (D vs E vs F) and once as a literal copy-paste reference while editing the N call sites — the prototype's overlay block became the canonical snippet pasted into all 6 grids.
+- Skeletons need to match the new layout, not just the new gap. Leaving the old `text-bar` children in skeletons would produce a layout shift when the real grid (which now has zero below-image content) replaces them.
+
+**Next steps**: Owner to test on the Vercel deploy. If overlay legibility on light-cover photos is a problem, the scrim opacity (`from-black/80`) is the single knob to bump.
+
+## 2026-06-21 — Phase 45.25: Drop manual lat/lng input fallback on geolocation deny
+
+**Objective**: owner reported that when a user blocks browser geolocation, both `/browse/nearby` and `/communities/nearby` rendered an input box asking the user to type their latitude/longitude. Owner: "it is very stupid" — show empty result instead.
+
+**Actions**:
+
+- `app/(public)/nearby/NearbyClient.tsx` — removed `manualLat`, `manualLng`, `needsManual` state + the `applyManual()` handler + the input-box JSX block. Renamed remaining flag to `geoDenied`. On geo denied / unavailable, render a single-line empty state: "Enable location access in your browser to see listings near you."
+- `app/(public)/communities/nearby/CommunitiesNearbyClient.tsx` — same edits applied; copy reads "…communities near you."
+
+**Decisions**:
+
+- Did NOT add a `/profile`-Preferences-style fallback location picker. Owner's request was specifically to show empty, not to migrate the input elsewhere. Out of scope.
+- Kept `geoDenied` as a separate boolean (not folded into the no-coords branch) so the "Reading your location…" loading state still wins when geolocation is genuinely in-flight; only after the API errors out do we switch to the empty CTA.
+
+**Verification**: `npx tsc --noEmit` clean. Visual sign-off via Vercel preview on `phase45.25/nearby-empty-on-deny`.
+
+## 2026-06-21 — Phase 45.24: Full-screen feed on mobile Safari + remove swipe hints
+
+**Objective**: owner reported (with iPhone screenshot of `/v/<agent>/<listing>`) that the feed wasn't using the full screen and asked to remove the "Swipe up for more" copy on the listing/explore feed and the "← swipe →" hint on community-videos carousels.
+
+**Actions**:
+
+- `app/(public)/_components/feed/constants.ts` — `FEED_FRAME_CLASS` switched from `h-screen` / `100vh` to `h-[100dvh]` and the desktop 9:16 column math from `100vh*9/16` to `100dvh*9/16`. Updated comment on `FEED_VSCROLL_CLASS` to note children should also be `h-[100dvh]`.
+- `app/(public)/browse/_components/BrowseFeed.tsx` — both card containers (PhotoCard `<section>` and Card `<section>`) switched from `h-screen` to `h-[100dvh]`. Removed the `activeIndex === 0 && activeSource === 'hero'` "Swipe up for more" overlay (replaced with a comment block).
+- `app/(public)/c/[slug]/feed/CommunityVideoFeed.tsx` — card `<section>` switched from `h-screen` to `h-[100dvh]`.
+- `app/(public)/browse/_components/CommunityCarousel.tsx` — removed "← swipe →" hint pill on the community-videos horizontal carousel.
+- `app/(public)/c/[slug]/feed/_components/CommunityListingCarousel.tsx` — removed "← swipe →" hint pill on the community → listing carousel.
+
+**Decisions**:
+
