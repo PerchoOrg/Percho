@@ -49,6 +49,18 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { hlsUrl, thumbnailUrl } from '@/lib/cloudflare/stream';
 import { demoCoverFor, demoVideoFor } from '@/lib/demo-media';
 import type { BrowseSourceVideo } from './BrowseFeed';
+import { ActionButton } from '../../_components/feed/ActionButton';
+import {
+  FEED_FRAME_CLASS,
+  FEED_RAIL_BOTTOM,
+  FEED_Z,
+} from '../../_components/feed/constants';
+import {
+  BookmarkIcon,
+  CommentIcon,
+  HeartIcon,
+  ShareIcon,
+} from '../../_components/feed/icons';
 
 interface Props {
   open: boolean;
@@ -153,9 +165,7 @@ export function CommunityCarousel({
       onTouchStart={onTouchStart}
       onTouchEnd={onTouchEnd}
     >
-      <div
-        className="relative h-full w-full overflow-hidden bg-black md:w-[min(430px,calc(100vh*9/16))] md:shadow-2xl md:shadow-black/50"
-      >
+      <div className={FEED_FRAME_CLASS}>
         {/* Top bar: back + counter + (optional) share. */}
         <div className="absolute inset-x-0 top-0 z-10 flex items-center justify-between gap-2 px-3 pt-3">
           <button
@@ -256,46 +266,28 @@ export function CommunityCarousel({
            * from, since the carousel is anchored to that listing. */}
           {showRail && (
             <div
-              className="absolute right-3 z-20 flex flex-col items-center gap-3"
-              style={{ bottom: 'max(6rem, calc(env(safe-area-inset-bottom) + 5rem))' }}
+              className={`absolute right-3 ${FEED_Z.rail} flex flex-col items-center gap-3`}
+              style={{ bottom: FEED_RAIL_BOTTOM }}
             >
               {onToggleLike && (
-                <button
-                  type="button"
+                <ActionButton
+                  label="Like"
                   onClick={onToggleLike}
-                  aria-label="Like listing"
-                  className={`flex h-12 w-12 items-center justify-center rounded-full border backdrop-blur transition ${
-                    liked
-                      ? 'border-rose-400/70 bg-rose-400/20 text-rose-400'
-                      : 'border-cream/20 bg-ink/40 text-cream hover:border-cream/50'
-                  }`}
+                  active={liked}
+                  activeColor="rose"
                 >
                   <HeartIcon filled={liked} />
-                </button>
+                </ActionButton>
               )}
               {onToggleSave && (
-                <button
-                  type="button"
-                  onClick={onToggleSave}
-                  aria-label="Save listing"
-                  className={`flex h-12 w-12 items-center justify-center rounded-full border backdrop-blur transition ${
-                    saved
-                      ? 'border-cream/40 bg-cream/15 text-cream'
-                      : 'border-cream/20 bg-ink/40 text-cream hover:border-cream/50'
-                  }`}
-                >
+                <ActionButton label="Save" onClick={onToggleSave} active={saved}>
                   <BookmarkIcon filled={saved} />
-                </button>
+                </ActionButton>
               )}
               {onContact && (
-                <button
-                  type="button"
-                  onClick={onContact}
-                  aria-label="Contact agent"
-                  className="flex h-12 w-12 items-center justify-center rounded-full border border-cream/20 bg-ink/40 text-cream backdrop-blur transition hover:border-cream/50"
-                >
+                <ActionButton label="Contact" onClick={onContact}>
                   <CommentIcon />
-                </button>
+                </ActionButton>
               )}
             </div>
           )}
@@ -421,66 +413,4 @@ function CarouselSlide({
   );
 }
 
-/* ---------- Inline icons (kept local to avoid pulling BrowseFeed deps) ---------- */
 
-function ShareIcon() {
-  return (
-    <svg aria-hidden="true" viewBox="0 0 24 24" width={22} height={22} fill="currentColor">
-      <path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z" />
-    </svg>
-  );
-}
-
-function HeartIcon({ filled }: { filled?: boolean }) {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 24 24"
-      width={24}
-      height={24}
-      fill={filled ? 'currentColor' : 'none'}
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-    </svg>
-  );
-}
-
-function BookmarkIcon({ filled }: { filled?: boolean }) {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 24 24"
-      width={22}
-      height={22}
-      fill={filled ? 'currentColor' : 'none'}
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
-    </svg>
-  );
-}
-
-function CommentIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 24 24"
-      width={22}
-      height={22}
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-    </svg>
-  );
-}
