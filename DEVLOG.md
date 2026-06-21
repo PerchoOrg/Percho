@@ -2,6 +2,26 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-06-21 — Phase 45.24: Full-screen feed on mobile Safari + remove swipe hints
+
+**Objective**: owner reported (with iPhone screenshot of `/v/<agent>/<listing>`) that the feed wasn't using the full screen and asked to remove the "Swipe up for more" copy on the listing/explore feed and the "← swipe →" hint on community-videos carousels.
+
+**Actions**:
+
+- `app/(public)/_components/feed/constants.ts` — `FEED_FRAME_CLASS` switched from `h-screen` / `100vh` to `h-[100dvh]` and the desktop 9:16 column math from `100vh*9/16` to `100dvh*9/16`. Updated comment on `FEED_VSCROLL_CLASS` to note children should also be `h-[100dvh]`.
+- `app/(public)/browse/_components/BrowseFeed.tsx` — both card containers (PhotoCard `<section>` and Card `<section>`) switched from `h-screen` to `h-[100dvh]`. Removed the `activeIndex === 0 && activeSource === 'hero'` "Swipe up for more" overlay (replaced with a comment block).
+- `app/(public)/c/[slug]/feed/CommunityVideoFeed.tsx` — card `<section>` switched from `h-screen` to `h-[100dvh]`.
+- `app/(public)/browse/_components/CommunityCarousel.tsx` — removed "← swipe →" hint pill on the community-videos horizontal carousel.
+- `app/(public)/c/[slug]/feed/_components/CommunityListingCarousel.tsx` — removed "← swipe →" hint pill on the community → listing carousel.
+
+**Decisions**:
+
+- `100vh` on iOS Safari counts the area *behind* the URL bar, so the bottom of the feed is always partially clipped while the chrome is shown. `100dvh` (dynamic viewport height, supported in all modern mobile browsers) tracks the chrome and gives the user a true full-screen feed. This is the smallest fix consistent with the request — no changes to safe-area inset math were needed because the frame now correctly sizes to the visible viewport.
+- Did NOT touch the `← swipe →` hint inside `PhotoCard` (BrowseFeed.tsx:291) — that's the photo-only listing's horizontal photo strip, not "community videos" or "browse videos". Owner's request was specifically about the swipe-up text on browse videos and the swipe text on community videos; the photo carousel hint stays.
+- Did NOT touch the agent-share top header buttons (Back / Share circle buttons at `top-0`) — those are functional UI, not hints.
+
+**Verification**: `npx tsc --noEmit` clean. Visual sign-off is the iPhone the owner is testing on — Vercel preview will be on the branch push.
+
 ## 2026-06-21 — Phase 45.23: Unified three feed surfaces onto shared primitives (v0.47.0)
 
 **Objective**: phase 45.22 stopped one step short — it shared icons and `ActionButton` between BrowseFeed and CommunityVideoFeed, but CommunityCarousel kept its own copy of icons + frame markup + rail markup, and all three feeds still inlined their own outer frame, z-indices, and safe-area math. This was the root cause of the recurring "overlay invisible / rail clipped / modal behind carousel" bug class across phases 45.19–45.22: three near-copies drifting independently. Owner asked to "make the three feed pages consistent".
