@@ -77,8 +77,31 @@ export function CommunityBody({
           <h1 className="font-semibold text-2xl text-cream tracking-tight sm:text-3xl">
             {community.name}
           </h1>
-          <div className="mt-0.5 text-cream/75 text-sm">
-            {community.city ? `${community.city}, ${community.state}` : community.state}
+          {/* Phase 45.28.6: CTA folds back inline (variant I1).
+           *   Same line as the city, weight 600 / pure white /
+           *   1.5px underline / arrow. Loud enough to land in 1s but
+           *   still reads as a sentence, not chrome. State-flips to
+           *   "← Walk through" on the listings tab. */}
+          <div className="mt-0.5 flex flex-wrap items-baseline gap-x-2 text-sm">
+            <span className="text-cream/75">
+              {community.city ? `${community.city}, ${community.state}` : community.state}
+            </span>
+            <span className="text-cream/40" aria-hidden="true">·</span>
+            <button
+              type="button"
+              onClick={() => setTab(tab === 'videos' ? 'listings' : 'videos')}
+              className="font-semibold text-cream underline decoration-cream decoration-[1.5px] underline-offset-[3px] transition hover:decoration-cream/70"
+            >
+              {tab === 'videos' ? (
+                <>
+                  Live here <span aria-hidden="true">→</span>
+                </>
+              ) : (
+                <>
+                  <span aria-hidden="true">←</span> Walk through
+                </>
+              )}
+            </button>
           </div>
           {community.description ? (
             <p className="mt-1 max-w-2xl text-cream/80 text-xs sm:text-sm">
@@ -86,27 +109,6 @@ export function CommunityBody({
             </p>
           ) : null}
         </div>
-
-        {/* Phase 45.28.2: rounded-md (was rounded-full pill) to echo the
-         *  square feed cards' angular feel; label "Walk through" on
-         *  listings tab pairs with "Live here" as a verb→verb mirror. */}
-        <button
-          type="button"
-          onClick={() => setTab(tab === 'videos' ? 'listings' : 'videos')}
-          className="absolute top-3 right-3 inline-flex h-9 items-center gap-1 rounded-md bg-cream px-4 font-medium text-ink text-sm shadow-md transition hover:bg-cream/90 sm:top-4 sm:right-4 sm:h-10 sm:px-5"
-        >
-          {tab === 'videos' ? (
-            <>
-              Live here
-              <span aria-hidden="true">→</span>
-            </>
-          ) : (
-            <>
-              <span aria-hidden="true">←</span>
-              Walk through
-            </>
-          )}
-        </button>
       </div>
 
       {/* Body */}

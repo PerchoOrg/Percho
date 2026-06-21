@@ -8,7 +8,7 @@ Format matches the standard release template (Features / Improvements / Bug Fixe
 ### ✨ Improvements
 
 - **Community pages are more immersive.** The hero photo at the top of a community page is shorter so the videos start higher up the screen, and the two pill buttons that used to sit between the hero and the videos ("Community Videos" / "Active Listings") are gone — videos now show by default the moment the page opens.
-- **"Live here →" — one tap from a community to its homes for sale.** A small button now sits in the bottom-right corner of the community hero photo. Tap it and the videos swap out for the active listings inside that community, with a small "← Community videos" link to flip back. No detour through the global browse page.
+- **"Live here →" — one tap from a community to its homes for sale.** Right next to the city name on the community hero ("Atlanta, GA · **Live here →**"), an inline link swaps the videos for the active listings inside that community, then flips to "← Walk through" to send you back. Reads as part of the sentence, not as page chrome — and no detour through the global browse page.
 
 ## v0.48.2 — 2026-06-21
 
