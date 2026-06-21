@@ -37,6 +37,10 @@ export type GridCardProps = {
   caption: ReactNode;
   dimmed?: boolean;
   alt?: string;
+  /** Tailwind aspect class. Defaults to `aspect-[3/4]` (the unified feed
+   *  card). The agent portfolio page passes `aspect-[4/5]` to keep its
+   *  editorial proportions while still using the shared overlay caption. */
+  aspectClass?: string;
 };
 
 export function GridCard({
@@ -48,10 +52,11 @@ export function GridCard({
   caption,
   dimmed,
   alt,
+  aspectClass = 'aspect-[3/4]',
 }: GridCardProps) {
   return (
     <Link href={href} prefetch={false} className="group block">
-      <div className="relative aspect-[3/4] w-full overflow-hidden bg-surface">
+      <div className={`relative ${aspectClass} w-full overflow-hidden bg-surface`}>
         {coverUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img

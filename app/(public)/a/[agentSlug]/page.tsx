@@ -9,6 +9,7 @@
  * RLS / data load unchanged — see DESIGN.md for the token reference.
  */
 
+import { GridCard, GridCardBadgeDark, GridCardCaption } from '@/app/_components/GridCard';
 import { thumbnailUrl } from '@/lib/cloudflare/stream';
 import { DEMO_MEDIA_ENABLED, demoCoverFor, demoHeadshotFor } from '@/lib/demo-media';
 import { createClient } from '@/lib/supabase/server';
@@ -161,7 +162,9 @@ export default async function AgentProfilePage({
                   <p className="mt-3 text-ink2 text-sm tracking-wide">{agent.brokerage}</p>
                 )}
                 {agent.license_no && (
-                  <p className="mt-1 text-muted text-xs tracking-wide">License #{agent.license_no}</p>
+                  <p className="mt-1 text-muted text-xs tracking-wide">
+                    License #{agent.license_no}
+                  </p>
                 )}
               </div>
             </div>
@@ -216,12 +219,7 @@ export default async function AgentProfilePage({
           ) : (
             <div className="grid grid-cols-1 gap-x-8 gap-y-14 md:grid-cols-2 lg:grid-cols-3">
               {listings.map((l, i) => (
-                <ListingCardView
-                  key={l.id}
-                  index={i}
-                  agentSlug={agent.slug}
-                  listing={l}
-                />
+                <ListingCardView key={l.id} index={i} agentSlug={agent.slug} listing={l} />
               ))}
             </div>
           )}
@@ -248,10 +246,12 @@ export default async function AgentProfilePage({
 function ListingCardView({
   agentSlug,
   listing,
-  index,
 }: {
   agentSlug: string;
   listing: ListingCard;
+  /** index kept for backward-compat at the call site; no longer used since
+   *  Phase 47.3 dropped the "No. 01" eyebrow in favor of the unified
+   *  GridCardCaption (price → specs → address overlay on image). */
   index: number;
 }) {
   const realCover =
@@ -264,51 +264,32 @@ function ListingCardView({
     listing.sqft != null ? `${listing.sqft.toLocaleString()} sqft` : null,
   ]
     .filter(Boolean)
-    .join('  ·  ');
+    .join(' · ');
 
+  // Phase 47.3 (2026-06-21): owner asked the portfolio cards to keep their
+  // editorial 4:5 aspect + 1/2/3 col / wide-gap layout, BUT to use the
+  // same text format and bottom-left overlay placement as every other
+  // grid in the app. Reuse the shared GridCard primitive with a custom
+  // aspectClass so price / specs / address render with identical font,
+  // size, and gradient as /browse, /communities, /dashboard, etc.
   return (
-    <Link
+    <GridCard
       href={`/v/${agentSlug}/${listing.slug}`}
-      className="group block"
-    >
-      <div className="relative aspect-[4/5] w-full overflow-hidden bg-surface">
-        {cover ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={cover}
-            alt={listing.address}
-            className="h-full w-full object-cover transition duration-700 ease-out group-hover:scale-[1.02]"
-            loading="lazy"
-          />
-        ) : (
-          <div className="flex h-full w-full items-center justify-center text-muted text-xs">
-            No cover
-          </div>
-        )}
-        {isDemoStock && (
-          <span className="absolute top-3 right-3 bg-ink/85 px-2 py-1 text-[9px] tracking-[0.18em] text-surface uppercase backdrop-blur">
-            Stock
-          </span>
-        )}
-      </div>
-      <div className="pt-5">
-        <div className="flex items-baseline justify-between gap-3">
-          <span className="eyebrow">No. {String(index + 1).padStart(2, '0')}</span>
-          <span className="text-muted text-[11px] tracking-[0.18em] uppercase">
-            {listing.city}, {listing.state}
-          </span>
-        </div>
-        <div className="mt-3 font-serif text-2xl text-ink leading-tight tracking-[-0.012em]">
-          {listing.address}
-        </div>
-        <div className="mt-3 flex items-baseline justify-between">
-          <span className="text-ink text-base tracking-tight">
-            {listing.price != null ? `$${formatPrice(listing.price)}` : 'Price upon request'}
-          </span>
-          {specs && <span className="text-ink2 text-xs tracking-wide">{specs}</span>}
-        </div>
-      </div>
-    </Link>
+      coverUrl={cover}
+      alt={listing.address}
+      aspectClass="aspect-[4/5]"
+      topRight={isDemoStock ? <GridCardBadgeDark>Stock</GridCardBadgeDark> : null}
+      fallback={
+        <div className="grid h-full w-full place-items-center text-muted text-xs">No cover</div>
+      }
+      caption={
+        <GridCardCaption
+          title={listing.price != null ? `$${formatPrice(listing.price)}` : 'Price upon request'}
+          sub={specs || null}
+          sub2={listing.address}
+        />
+      }
+    />
   );
 }
 

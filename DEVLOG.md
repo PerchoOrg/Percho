@@ -2,6 +2,28 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-06-21 — Phase 47.3: portfolio text format unified
+
+**Objective**: qiaoxux follow-up after phase47.2 — agent portfolio
+page (`/a/[agentSlug]`) keeps its editorial 1/2/3-column 4:5 layout
+with wide gaps (different visual family from feed grids), but the
+card text format + placement should match every other grid: price /
+specs / address overlaid on the bottom-left of the image with the
+shared font, size, and gradient.
+
+**Approach**:
+- Added optional `aspectClass` prop to `GridCard` (default
+  `aspect-[3/4]`) so portfolio cards can pass `aspect-[4/5]` while
+  still using the shared overlay caption + gradient + hover.
+- Replaced inline `ListingCardView` markup in
+  `app/(public)/a/[agentSlug]/page.tsx` with `<GridCard>` +
+  `<GridCardCaption>` + `<GridCardBadgeDark>` (for the Stock pill).
+- Removed the "No. 01" eyebrow + "City, State" tracked-caps pair
+  and the post-image text block — text now reads price → specs →
+  address as an overlay on the cover image, identical to every
+  other grid surface.
+
+**Verification**: tsc 0, biome clean, next build success.
 ## 2026-06-21 — Phase 47.2: unify all remaining grid surfaces + flush gutters
 
 **Objective**: qiaoxux follow-up after phase47.1 — (a) make the page's

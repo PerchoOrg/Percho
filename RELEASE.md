@@ -3,6 +3,27 @@
 Newest at the top. Each release covers a meaningful product change visible to users.
 Format matches the standard release template (Features / Improvements / Bug Fixes / Technical / Known Issues / Metrics).
 
+## v0.51.3 — 2026-06-21 — Portfolio text matches every other grid
+
+### ✨ Improvements
+
+- Agent portfolio (`/a/[agentSlug]`) cards now use the same caption
+  format as every other grid in the app: price (serif, bold) →
+  specs (bd / ba / sqft) → address, all overlaid on the bottom-left
+  of the cover image with the shared dark gradient. Editorial 4:5
+  aspect and the 1 / 2 / 3-column wide-gap layout are preserved.
+- The old "No. 01" eyebrow and post-image text block are gone — the
+  card visually reads like /browse, /communities, /dashboard, etc.,
+  just at a larger scale.
+
+### 🛠️ Technical
+
+- `GridCard` now accepts an optional `aspectClass` prop so the
+  portfolio card can specify `aspect-[4/5]` while still reusing the
+  shared overlay caption + gradient + hover.
+- Inline `ListingCardView` markup in `/a/[agentSlug]/page.tsx`
+  collapsed onto `<GridCard>` + `<GridCardCaption>` (≈40 lines of
+  duplicate markup removed).
 ## v0.51.2 — 2026-06-21 — Edge-to-edge grid rhythm
 
 ### ✨ Improvements
