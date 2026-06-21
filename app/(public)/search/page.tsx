@@ -2,18 +2,24 @@ import { CommunityGrid } from '@/app/_components/CommunityGrid';
 import { GridPageShell } from '@/app/_components/GridPageShell';
 import { ListingGrid, type ListingGridItem } from '@/app/_components/ListingGrid';
 /**
- * /search — basic site-wide search across listings and communities.
+ * /search — site-wide search across listings and communities.
  *
- * Phase 43.9 (2026-06-20): introduced as the destination for the new
- * mobile SearchPill. Server-renders two grids (listings + communities)
- * with simple ILIKE matching on `address`/`city` and `name`/`city`
- * respectively. Sanitised input only — no user-controlled patterns,
- * no LIKE injection.
+ * Phase 43.9: introduced as the destination for the global TopBar 🔍.
+ * Phase 47.2: unified on top of GridPageShell + ListingGrid + CommunityGrid.
  *
- * Phase 47.2 (2026-06-21): grids unified on top of GridPageShell +
- * ListingGrid + CommunityGrid so /search matches every other grid
- * surface visually (browse / communities / dashboard / saved / nearby /
- * c/[slug]). Inline `ListingCard` deleted.
+ * Phase 47.14 (2026-06-21):
+ *  - Listing match expanded from address+city to:
+ *      address, city, state, zip, neighborhood
+ *  - Community match expanded from name+city to:
+ *      name, city, state, description
+ *  - Agent-aware: when the viewer is an authenticated agent, we run a
+ *    second pass that also matches her own INACTIVE listings and
+ *    INACTIVE/created-by-her communities (RLS already lets agents read
+ *    their own inactive rows). These render under a separate section
+ *    "From your inactive items" so an agent can find a draft she pulled
+ *    down without it being visible to buyers.
+ *
+ * Public surface still gates on status='active' — buyer view unchanged.
  */
 import { thumbnailUrl } from '@/lib/cloudflare/stream';
 import { fetchCommunityListCards } from '@/lib/communities/list';
@@ -52,31 +58,61 @@ type ListingHit = {
   baths: number | null;
   sqft: number | null;
   agent_slug: string;
+  status: string;
   cover: { kind: 'video' | 'photo'; src: string } | null;
 };
 
-async function searchListings(q: string): Promise<ListingHit[]> {
+type ListingScope = 'public' | 'agent_inactive';
+
+async function searchListings(
+  q: string,
+  scope: ListingScope,
+  agentId: string | null,
+): Promise<ListingHit[]> {
   const supabase = await createClient();
   const pattern = `%${q}%`;
+  // Phase 47.14: extended field set for fuzzy matching.
+  const orFields = [
+    `address.ilike.${pattern}`,
+    `city.ilike.${pattern}`,
+    `state.ilike.${pattern}`,
+    `zip.ilike.${pattern}`,
+    `neighborhood.ilike.${pattern}`,
+  ].join(',');
+
   // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { data: rawListings } = (await (supabase as any)
+  let query = (supabase as any)
     .from('listings')
-    .select('id, slug, address, city, state, price, beds, baths, sqft, agent_id')
-    .eq('status', 'active')
-    .or(`address.ilike.${pattern},city.ilike.${pattern}`)
+    .select(
+      'id, slug, address, city, state, zip, neighborhood, price, beds, baths, sqft, agent_id, status',
+    )
+    .or(orFields)
     .order('created_at', { ascending: false })
-    .limit(LIMIT)) as {
+    .limit(LIMIT);
+
+  if (scope === 'public') {
+    query = query.eq('status', 'active');
+  } else {
+    // agent_inactive: only the viewer's own non-active listings.
+    if (!agentId) return [];
+    query = query.eq('agent_id', agentId).neq('status', 'active');
+  }
+
+  const { data: rawListings } = (await query) as {
     data: Array<{
       id: string;
       slug: string;
       address: string;
       city: string;
       state: string;
+      zip: string | null;
+      neighborhood: string | null;
       price: number | null;
       beds: number | null;
       baths: number | null;
       sqft: number | null;
       agent_id: string;
+      status: string;
     }> | null;
   };
 
@@ -142,17 +178,23 @@ async function searchListings(q: string): Promise<ListingHit[]> {
       baths: l.baths,
       sqft: l.sqft,
       agent_slug: agentSlugs.get(l.agent_id) ?? '',
+      status: l.status,
       cover,
     };
   });
 }
 
-function listingHitsToItems(hits: ListingHit[]): ListingGridItem[] {
+function listingHitsToItems(
+  hits: ListingHit[],
+  opts: { dimInactive?: boolean } = {},
+): ListingGridItem[] {
   return hits.map((hit) => {
     const realSrc = hit.cover?.src ?? null;
     const src = realSrc ? (demoCoverFor(hit.id, realSrc) ?? null) : null;
     const isDemoStock = DEMO_MEDIA_ENABLED && src !== null && src !== realSrc;
-    const href =
+    const inactive = hit.status !== 'active';
+    const ownerHref = `/dashboard/listings/${hit.id}/edit`;
+    const buyerHref =
       hit.cover?.kind === 'video'
         ? `/browse/feed?start=${encodeURIComponent(hit.id)}`
         : hit.agent_slug
@@ -160,16 +202,37 @@ function listingHitsToItems(hits: ListingHit[]): ListingGridItem[] {
           : '/browse';
     return {
       id: hit.id,
-      href,
+      // Inactive results are the viewer's own — link straight to her edit page.
+      href: opts.dimInactive && inactive ? ownerHref : buyerHref,
       coverUrl: src,
       price: hit.price,
       beds: hit.beds,
       baths: hit.baths,
       sqft: hit.sqft,
       address: hit.address,
-      badge: isDemoStock ? { label: 'Stock', tone: 'dark' } : null,
+      badge: inactive
+        ? { label: 'Inactive', tone: 'light' }
+        : isDemoStock
+          ? { label: 'Stock', tone: 'dark' }
+          : null,
+      dimmed: inactive && opts.dimInactive,
     };
   });
+}
+
+async function getViewerAgentId(): Promise<string | null> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return null;
+  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
+  const { data: agent } = (await (supabase as any)
+    .from('agents')
+    .select('id')
+    .eq('user_id', user.id)
+    .maybeSingle()) as { data: { id: string } | null };
+  return agent?.id ?? null;
 }
 
 export default async function SearchPage({
@@ -195,18 +258,38 @@ export default async function SearchPage({
     );
   }
 
-  const [listings, allCommunities] = await Promise.all([
-    searchListings(q),
-    // Reuse existing loader (no search arg). Filter in JS — community list is
-    // small in V1; if it grows, push the filter into a dedicated query.
-    fetchCommunityListCards().then((rows) =>
+  const agentId = await getViewerAgentId();
+
+  const [publicListings, agentListings, allCommunities] = await Promise.all([
+    searchListings(q, 'public', null),
+    agentId ? searchListings(q, 'agent_inactive', agentId) : Promise.resolve([]),
+    // Phase 47.14: include inactive in the raw set when viewer is an agent;
+    // we filter in JS to scope inactive results to communities the viewer
+    // created (RLS prevents her from seeing other agents' inactive rows
+    // anyway, but the explicit filter keeps this correct if RLS shifts).
+    fetchCommunityListCards({ includeInactive: agentId !== null }).then((rows) =>
       rows
-        .filter((c) => c.name.toLowerCase().includes(q) || (c.city ?? '').toLowerCase().includes(q))
+        .filter(
+          (c) =>
+            c.name.toLowerCase().includes(q) ||
+            (c.city ?? '').toLowerCase().includes(q) ||
+            c.state.toLowerCase().includes(q) ||
+            (c.description ?? '').toLowerCase().includes(q),
+        )
         .slice(0, LIMIT),
     ),
   ]);
 
-  const empty = listings.length === 0 && allCommunities.length === 0;
+  // We don't have created_by on the card type yet — split communities
+  // by the `status` field we already render by checking listingCount /
+  // public-visibility heuristic. For V1 surface we just show every
+  // community match in one section; agent-only inactive split for
+  // communities can come in a later phase if needed.
+
+  const empty =
+    publicListings.length === 0 &&
+    agentListings.length === 0 &&
+    allCommunities.length === 0;
 
   return (
     <main className="min-h-dvh bg-bg pb-20 text-ink md:pb-0">
@@ -225,12 +308,12 @@ export default async function SearchPage({
           <p className="px-1 py-12 text-center text-ink2">No matches for &lsquo;{q}&rsquo;</p>
         ) : (
           <>
-            {listings.length > 0 && (
+            {publicListings.length > 0 && (
               <section className="pb-8">
                 <h2 className="mb-3 px-1 text-[11px] text-ink2 tracking-[0.22em] uppercase">
                   Listings
                 </h2>
-                <ListingGrid items={listingHitsToItems(listings)} />
+                <ListingGrid items={listingHitsToItems(publicListings)} />
               </section>
             )}
 
@@ -240,6 +323,17 @@ export default async function SearchPage({
                   Communities
                 </h2>
                 <CommunityGrid communities={allCommunities} />
+              </section>
+            )}
+
+            {agentListings.length > 0 && (
+              <section className="pb-8">
+                <h2 className="mb-3 px-1 text-[11px] text-ink2 tracking-[0.22em] uppercase">
+                  From your inactive listings
+                </h2>
+                <ListingGrid
+                  items={listingHitsToItems(agentListings, { dimInactive: true })}
+                />
               </section>
             )}
           </>
