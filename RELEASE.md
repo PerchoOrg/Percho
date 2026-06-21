@@ -2,6 +2,16 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.51.6 — One upload button for photos and videos (2026-06-21)
+
+### ✨ Improvements
+
+- Listing /edit Media tab: the separate "Videos" and "Photos" cards are
+  merged into a single **Content** card with one **Click to upload** button.
+  The button accepts photos *and* videos in the same pick — files are
+  routed automatically by type. Reorder, cover toggle, and delete still
+  live with each media type below.
+
 ## v0.51.5 — Delete lives in Details tab on both pages (2026-06-21)
 
 ### ✨ Improvements

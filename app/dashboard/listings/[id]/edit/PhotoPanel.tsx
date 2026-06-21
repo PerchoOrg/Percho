@@ -33,7 +33,15 @@ import {
   photoPublicUrl,
 } from '@/lib/supabase/storage';
 import { Star, Trash2, Upload } from 'lucide-react';
-import { useCallback, useEffect, useRef, useState, useTransition } from 'react';
+import {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useRef,
+  useState,
+  useTransition,
+} from 'react';
 
 export interface ListingPhotoRow {
   id: string;
@@ -56,6 +64,23 @@ interface Props {
    * handleFilesArray; subsequent prop changes are ignored.
    */
   prefillFiles?: File[];
+  /**
+   * Phase 47.x: when true, hide the internal "Add photos" button and file
+   * input. Used when MediaPanel renders a single unified upload button that
+   * covers both photos and videos, and pushes images in via the imperative
+   * handle below.
+   */
+  hideUploadButton?: boolean;
+}
+
+/**
+ * Phase 47.x — imperative handle exposed via `ref`. MediaPanel uses
+ * `addFiles()` to forward image files picked from the unified upload button
+ * into PhotoPanel's existing upload pipeline (validation + Supabase upload
+ * + recordListingPhoto), so we don't fork the upload logic.
+ */
+export interface PhotoPanelHandle {
+  addFiles: (files: File[]) => void;
 }
 
 const MAX_FILE_BYTES = 10 * 1024 * 1024; // 10 MB — matches bucket policy
@@ -68,7 +93,10 @@ interface PendingItem {
   error?: string;
 }
 
-export function PhotoPanel({ listingId, initialPhotos, initialCoverPhotoId, prefillFiles }: Props) {
+export const PhotoPanel = forwardRef<PhotoPanelHandle, Props>(function PhotoPanel(
+  { listingId, initialPhotos, initialCoverPhotoId, prefillFiles, hideUploadButton },
+  ref,
+) {
   const [photos, setPhotos] = useState<ListingPhotoRow[]>(initialPhotos);
   const [pending, setPending] = useState<PendingItem[]>([]);
   const [globalError, setGlobalError] = useState<string | null>(null);
@@ -149,6 +177,18 @@ export function PhotoPanel({ listingId, initialPhotos, initialCoverPhotoId, pref
       }
     },
     [listingId],
+  );
+
+  // Phase 47.x: expose addFiles to MediaPanel so the unified upload button
+  // can route image files through PhotoPanel's existing pipeline.
+  useImperativeHandle(
+    ref,
+    () => ({
+      addFiles: (files: File[]) => {
+        if (files.length > 0) void handleFiles(files);
+      },
+    }),
+    [handleFiles],
   );
 
   const handleDelete = useCallback(
@@ -287,7 +327,7 @@ export function PhotoPanel({ listingId, initialPhotos, initialCoverPhotoId, pref
         ))}
       </div>
 
-      <div>
+      <div className={hideUploadButton ? 'hidden' : undefined}>
         <input
           ref={inputRef}
           type="file"
@@ -313,7 +353,7 @@ export function PhotoPanel({ listingId, initialPhotos, initialCoverPhotoId, pref
       </div>
     </div>
   );
-}
+});
 
 async function readImageDimensions(src: string): Promise<{ width: number; height: number } | null> {
   return new Promise((resolve) => {

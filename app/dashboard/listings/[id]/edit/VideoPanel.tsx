@@ -35,7 +35,7 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { useCallback, useEffect, useRef, useState, useTransition } from 'react';
+import { useCallback, useEffect, useImperativeHandle, useRef, useState, useTransition, forwardRef } from 'react';
 
 export interface ListingVideoRow {
   id: string;
@@ -50,11 +50,29 @@ interface Props {
   listingId: string;
   initialVideos: ListingVideoRow[];
   initialCoverVideoId: string | null;
+  /**
+   * Phase 47.x: when true, hide the embedded VideoUploader. MediaPanel
+   * renders its own per-file VideoUploader instances and pushes successful
+   * uploads in via the imperative handle below.
+   */
+  hideUploader?: boolean;
+}
+
+/**
+ * Phase 47.x — imperative handle. MediaPanel calls `pushUploaded()` after a
+ * VideoUploader instance it owns finishes, so the row appears in the
+ * VideoPanel grid + status-poll loop just like an inline upload would.
+ */
+export interface VideoPanelHandle {
+  pushUploaded: (video: UploadedVideo) => void;
 }
 
 const POLL_INTERVAL_MS = 5000;
 
-export function VideoPanel({ listingId, initialVideos, initialCoverVideoId }: Props) {
+export const VideoPanel = forwardRef<VideoPanelHandle, Props>(function VideoPanel(
+  { listingId, initialVideos, initialCoverVideoId, hideUploader },
+  ref,
+) {
   const [videos, setVideos] = useState<ListingVideoRow[]>(initialVideos);
   const [coverVideoId, setCoverVideoId] = useState<string | null>(initialCoverVideoId);
   const [reorderError, setReorderError] = useState<string | null>(null);
@@ -135,6 +153,10 @@ export function VideoPanel({ listingId, initialVideos, initialCoverVideoId }: Pr
     });
   }, []);
 
+  // Phase 47.x: expose pushUploaded so MediaPanel-owned VideoUploaders feed
+  // successful uploads back into this panel's grid + status-poll.
+  useImperativeHandle(ref, () => ({ pushUploaded: handleUploaded }), [handleUploaded]);
+
   const handleSetCover = useCallback(
     (videoId: string | null) => {
       const previous = coverVideoId;
@@ -207,7 +229,9 @@ export function VideoPanel({ listingId, initialVideos, initialCoverVideoId }: Pr
 
   return (
     <div className="space-y-4">
-      <VideoUploader target={{ scope: 'listing', listingId }} onUploaded={handleUploaded} />
+      {hideUploader ? null : (
+        <VideoUploader target={{ scope: 'listing', listingId }} onUploaded={handleUploaded} />
+      )}
 
       {reorderError ? (
         <div className="rounded border border-red-400/40 bg-red-950/30 px-3 py-2 text-sm text-red-300">
@@ -251,7 +275,7 @@ export function VideoPanel({ listingId, initialVideos, initialCoverVideoId }: Pr
       )}
     </div>
   );
-}
+});
 
 function SortableVideoItem({
   video,

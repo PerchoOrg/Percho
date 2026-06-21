@@ -2,6 +2,62 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## Phase 47.16 — Media tab: unified upload (B2) (2026-06-21)
+
+User asked to merge the upload UI for photos and videos on the listing /edit
+Media tab — *"at end of the day they are just content"*. Picked B2 from the
+sign-off prototype (`public/prototype/media-tab-merge-v2.html`): one
+**Click to upload** button accepting both `image/*` and `video/*`, files fan
+out by MIME after pick. The existing per-video pick→title→tus pipeline and
+per-photo Supabase batch pipeline are untouched — only the entry point is
+unified.
+
+Changes:
+
+- `app/dashboard/listings/[id]/edit/MediaPanel.tsx` (new) — wrapper panel
+  rendering one `<input accept="image/*,video/*" multiple>` button.
+  - `image/*` files → forwarded to `PhotoPanel.addFiles()` via imperative
+    handle (existing `handleFiles` → Supabase upload + `recordListingPhoto`).
+  - `video/*` files → spawn one `<VideoUploader>` instance per file with
+    `initialFile` prefilled, so the agent skips the picker but still
+    confirms the title before bytes leave the device. On success,
+    `VideoPanel.pushUploaded()` registers the row optimistically.
+  - Absorbs the `?prefill=<id>` URL handling from
+    `PhotoPanelPrefillBridge` and now also routes prefilled video files
+    (previously dropped with a `console.warn`).
+- `app/dashboard/listings/[id]/edit/PhotoPanel.tsx` —
+  `forwardRef<PhotoPanelHandle>` exposes `addFiles`. New `hideUploadButton`
+  prop hides the local "Add photos" button when MediaPanel owns the entry.
+- `app/dashboard/listings/[id]/edit/VideoPanel.tsx` —
+  `forwardRef<VideoPanelHandle>` exposes `pushUploaded`. New `hideUploader`
+  prop hides the embedded `<VideoUploader>` when MediaPanel owns the entry.
+- `app/dashboard/listings/[id]/edit/page.tsx` — two stacked `<section>`s
+  ("Videos" + "Photos") collapse to one `<MediaPanel>`. Inside MediaPanel
+  the panels still render as stacked sub-sections "Videos (N)" /
+  "Photos (N)" with a hairline separator, so existing reorder/cover/delete
+  affordances are untouched.
+- `app/dashboard/listings/[id]/edit/PhotoPanelPrefillBridge.tsx` — deleted
+  (functionality absorbed by MediaPanel).
+
+Out of scope (deferred until asked): community hub `/dashboard/communities/[id]`
+where Videos and Photos are top-level tabs — not merged in this pass.
+
+Verification:
+
+- `npx tsc --noEmit` clean.
+- `npx next build` succeeds, no new pages affected.
+
+Pitfalls / things to watch:
+
+- VideoUploader's `initialFile` path is the Phase 45.16 codepath (FAB
+  prefill); this is the second consumer. If we ever change that contract
+  the unified upload breaks silently — the file would still be rendered
+  in the picker UI but the agent has to re-pick.
+- Files with non-image/non-video MIME types are skipped with an inline
+  notice listing the first three names, instead of failing silently.
+- StrictMode double-mount safe: prefill consume is lazy-init, video
+  pending-list registration is gated by a ref flag.
+
 ## Phase 47.15 — Delete consolidated to Details tab (2026-06-21)
 
 User feedback after 47.11/47.12: on community detail the Delete affordance lived

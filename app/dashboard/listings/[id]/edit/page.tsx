@@ -28,9 +28,9 @@ import { InstantStatusToggle } from '@/app/dashboard/_components/InstantStatusTo
 import { type CommunityOption, EditListingForm, type ListingContext } from './EditListingForm';
 import { GenerateTourPanel } from './GenerateTourPanel';
 import type { ListingPhotoRow } from './PhotoPanel';
-import { PhotoPanelPrefillBridge } from './PhotoPanelPrefillBridge';
+import { MediaPanel } from './MediaPanel';
+import type { ListingVideoRow } from './VideoPanel';
 import { SocialCopyPanel } from './SocialCopyPanel';
-import { type ListingVideoRow, VideoPanel } from './VideoPanel';
 import { MarketingPanel } from './MarketingPanel';
 import { ListingLeadsPanel } from './ListingLeadsPanel';
 import { AnalyticsPanel } from './AnalyticsPanel';
@@ -239,34 +239,13 @@ export default async function EditListingPage({
             </div>
           ),
           media: (
-            <div className="space-y-6">
-              <section className="rounded-2xl border border-line bg-surface p-4 sm:p-6">
-                <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
-                  <h2 className="text-base font-semibold">Videos</h2>
-                  <span className="text-muted text-xs">
-                    Drag to reorder · use ⓒ to set cover
-                  </span>
-                </div>
-                <VideoPanel
-                  listingId={listing.id}
-                  initialVideos={videos}
-                  initialCoverVideoId={initialCoverVideoId}
-                />
-              </section>
-              <section className="rounded-2xl border border-line bg-surface p-4 sm:p-6">
-                <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
-                  <h2 className="text-base font-semibold">Photos</h2>
-                  <span className="text-muted text-xs">
-                    JPEG / PNG / WebP — fallback cover when no video · use ⓒ to set cover
-                  </span>
-                </div>
-                <PhotoPanelPrefillBridge
-                  listingId={listing.id}
-                  initialPhotos={photos}
-                  initialCoverPhotoId={initialCoverPhotoId}
-                />
-              </section>
-            </div>
+            <MediaPanel
+              listingId={listing.id}
+              initialVideos={videos}
+              initialCoverVideoId={initialCoverVideoId}
+              initialPhotos={photos}
+              initialCoverPhotoId={initialCoverPhotoId}
+            />
           ),
           marketing: (
             <MarketingPanel
