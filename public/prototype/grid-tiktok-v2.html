@@ -1,0 +1,331 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Vicinity — Grid v2 · max cover, all info</title>
+<style>
+  :root {
+    --bg:        #f3eee7;
+    --surface:   #ffffff;
+    --ink:       #1a1a1a;
+    --ink2:      #4a4a4a;
+    --muted:     #8a8a8a;
+    --line:      #e7e1d8;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin:0; background: var(--bg); color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  body { padding: 0 0 64px; }
+
+  .page-header {
+    padding: 16px 16px 8px;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  .page-header h1 {
+    font-family: "Iowan Old Style", Georgia, serif;
+    font-size: 22px;
+    font-weight: 500;
+    letter-spacing: -0.012em;
+    margin: 0 0 4px;
+  }
+  .page-header p {
+    color: var(--ink2);
+    font-size: 13px;
+    margin: 0;
+    line-height: 1.4;
+  }
+
+  .stage {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+    padding: 16px;
+    max-width: 1280px;
+    margin: 0 auto;
+  }
+  @media (max-width: 900px) {
+    .stage { grid-template-columns: 1fr; }
+  }
+  .phone {
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 24px;
+    overflow: hidden;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.04);
+    height: 760px;
+    display: flex;
+    flex-direction: column;
+  }
+  .phone-label {
+    padding: 10px 14px;
+    font-size: 12px;
+    color: var(--ink2);
+    border-bottom: 1px solid var(--line);
+    background: var(--surface);
+  }
+  .phone-label strong {
+    font-size: 14px;
+    color: var(--ink);
+    font-weight: 600;
+  }
+  .phone-label .pct {
+    color: var(--muted);
+    margin-left: 6px;
+  }
+  .phone-scroll {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px 12px 24px;
+  }
+
+  /* Shared tight grid */
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    column-gap: 4px;
+    row-gap: 8px;
+  }
+  .grid .card { display: block; cursor: pointer; }
+  .grid .cover {
+    aspect-ratio: 3 / 4;
+    background: var(--surface);
+    overflow: hidden;
+    position: relative;
+  }
+  .grid .cover img {
+    width: 100%; height: 100%;
+    object-fit: cover; display: block;
+  }
+
+  /* ===== D · overlay (everything ON the cover) ===== */
+  .grid--D .cover .scrim {
+    position: absolute;
+    inset: auto 0 0 0;
+    height: 55%;
+    background: linear-gradient(to top,
+      rgba(0,0,0,0.78) 0%,
+      rgba(0,0,0,0.45) 35%,
+      rgba(0,0,0,0) 100%);
+    pointer-events: none;
+  }
+  .grid--D .cover .info {
+    position: absolute;
+    left: 8px;
+    right: 8px;
+    bottom: 8px;
+    color: #fff;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.4);
+  }
+  .grid--D .info .price {
+    font-family: "Iowan Old Style", Georgia, serif;
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    line-height: 1.1;
+  }
+  .grid--D .info .specs {
+    margin-top: 2px;
+    font-size: 11px;
+    opacity: 0.95;
+    letter-spacing: 0.01em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .grid--D .info .addr {
+    margin-top: 1px;
+    font-size: 11px;
+    opacity: 0.85;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .grid--D .meta { display: none; }
+
+  /* ===== E · two tight lines below ===== */
+  .grid--E .meta {
+    padding: 5px 4px 0;
+  }
+  .grid--E .line1 {
+    font-size: 13px;
+    line-height: 1.15;
+    color: var(--ink);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .grid--E .line1 .price {
+    font-family: "Iowan Old Style", Georgia, serif;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+  }
+  .grid--E .line1 .sep { color: var(--muted); margin: 0 5px; }
+  .grid--E .line1 .specs { color: var(--ink2); font-size: 12px; }
+  .grid--E .line2 {
+    margin-top: 1px;
+    color: var(--muted);
+    font-size: 11px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    letter-spacing: 0.01em;
+  }
+
+  /* ===== F · single ultra-dense line below ===== */
+  .grid--F .meta {
+    padding: 5px 4px 0;
+    font-size: 12px;
+    line-height: 1.15;
+    color: var(--ink2);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .grid--F .meta .price {
+    font-family: "Iowan Old Style", Georgia, serif;
+    font-weight: 500;
+    color: var(--ink);
+    letter-spacing: -0.01em;
+  }
+  .grid--F .meta .sep { color: var(--muted); margin: 0 4px; }
+
+  .credit {
+    text-align: center;
+    color: var(--muted);
+    font-size: 11px;
+    padding: 24px;
+  }
+  .legend {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 0 16px 8px;
+    color: var(--ink2);
+    font-size: 12px;
+    line-height: 1.6;
+  }
+  .legend code {
+    background: var(--surface);
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 11px;
+  }
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <h1>Grid v2 — keep price + beds/baths + sqft + address, max cover</h1>
+  <p>3 ways to fit all 4 fields without shrinking the cover.</p>
+</div>
+
+<div class="legend">
+  <strong>D · Overlay</strong> — text sits on the cover w/ gradient scrim. Cover占比 ≈ <code>100%</code> (no space below).<br/>
+  <strong>E · Two tight lines</strong> — line1 = price·specs · line2 = address. Cover占比 ≈ <code>85%</code>.<br/>
+  <strong>F · One dense line</strong> — <code>$1.25M · 3bd 2ba · 1,820 · Maple St</code>. Cover占比 ≈ <code>92%</code>, address truncates first.
+</div>
+
+<div class="stage">
+
+  <div class="phone">
+    <div class="phone-label"><strong>D · Overlay on cover</strong><span class="pct">100% cover</span></div>
+    <div class="phone-scroll">
+      <div class="grid grid--D" id="g-d"></div>
+    </div>
+  </div>
+
+  <div class="phone">
+    <div class="phone-label"><strong>E · 2 lines below</strong><span class="pct">~85% cover · most readable</span></div>
+    <div class="phone-scroll">
+      <div class="grid grid--E" id="g-e"></div>
+    </div>
+  </div>
+
+  <div class="phone">
+    <div class="phone-label"><strong>F · 1 dense line</strong><span class="pct">~92% cover · address ellipsis</span></div>
+    <div class="phone-scroll">
+      <div class="grid grid--F" id="g-f"></div>
+    </div>
+  </div>
+
+</div>
+
+<div class="credit">
+  Prototype only · public/prototype/grid-tiktok-v2.html · compare against grid-tiktok.html
+</div>
+
+<script>
+  const LISTINGS = [
+    { price: 1250000, addr: "123 Maple Street",       bd:3, ba:2,   sqft:1820, img:"https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=600&h=800&fit=crop" },
+    { price:  879000, addr: "47 Pinecrest Ave",        bd:2, ba:2,   sqft:1240, img:"https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=600&h=800&fit=crop" },
+    { price: 2450000, addr: "880 Ocean View Drive",    bd:4, ba:3.5, sqft:3100, img:"https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=600&h=800&fit=crop" },
+    { price:  650000, addr: "12 Willow Lane Apt 4B",   bd:2, ba:1,   sqft: 920, img:"https://images.unsplash.com/photo-1605276374104-dee2a0ed3cd6?w=600&h=800&fit=crop" },
+    { price: 1095000, addr: "9 Birchwood Court",       bd:3, ba:2,   sqft:2050, img:"https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=600&h=800&fit=crop" },
+    { price:  725000, addr: "201 Sunset Blvd Unit 12", bd:2, ba:2,   sqft:1100, img:"https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=600&h=800&fit=crop" },
+    { price: 1875000, addr: "55 Hillcrest Road",       bd:4, ba:3,   sqft:2680, img:"https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=600&h=800&fit=crop" },
+    { price:  525000, addr: "3 Cherry Tree Way",       bd:1, ba:1,   sqft: 740, img:"https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?w=600&h=800&fit=crop" },
+    { price: 1650000, addr: "78 Lakeshore Drive",      bd:3, ba:2.5, sqft:2300, img:"https://images.unsplash.com/photo-1572120360610-d971b9d7767c?w=600&h=800&fit=crop" },
+    { price:  899000, addr: "14 Magnolia Pl",          bd:3, ba:2,   sqft:1680, img:"https://images.unsplash.com/photo-1600573472550-8090b5e0745e?w=600&h=800&fit=crop" },
+    { price: 1395000, addr: "627 Highland Ave",        bd:3, ba:2.5, sqft:2150, img:"https://images.unsplash.com/photo-1600047509807-ba8f99d2cdde?w=600&h=800&fit=crop" },
+    { price:  775000, addr: "8 Riverside Terrace",     bd:2, ba:2,   sqft:1340, img:"https://images.unsplash.com/photo-1600585152915-d208bec867a1?w=600&h=800&fit=crop" },
+  ];
+
+  const fmtPriceFull = p => "$" + p.toLocaleString();
+  const fmtPriceShort = p => {
+    if (p >= 1000000) return "$" + (p/1000000).toFixed(p % 1000000 === 0 ? 0 : 2).replace(/\.?0+$/,"") + "M";
+    if (p >= 1000)    return "$" + Math.round(p/1000) + "K";
+    return "$" + p;
+  };
+
+  // D · overlay
+  document.getElementById("g-d").innerHTML = LISTINGS.map(L => `
+    <a class="card">
+      <div class="cover">
+        <img src="${L.img}" alt="" loading="lazy" />
+        <div class="scrim"></div>
+        <div class="info">
+          <div class="price">${fmtPriceFull(L.price)}</div>
+          <div class="specs">${L.bd} bd · ${L.ba} ba · ${L.sqft.toLocaleString()} sqft</div>
+          <div class="addr">${L.addr}</div>
+        </div>
+      </div>
+    </a>
+  `).join("");
+
+  // E · two lines below
+  document.getElementById("g-e").innerHTML = LISTINGS.map(L => `
+    <a class="card">
+      <div class="cover">
+        <img src="${L.img}" alt="" loading="lazy" />
+      </div>
+      <div class="meta">
+        <div class="line1">
+          <span class="price">${fmtPriceFull(L.price)}</span>
+          <span class="sep">·</span>
+          <span class="specs">${L.bd}bd ${L.ba}ba ${L.sqft.toLocaleString()}sf</span>
+        </div>
+        <div class="line2">${L.addr}</div>
+      </div>
+    </a>
+  `).join("");
+
+  // F · one dense line
+  document.getElementById("g-f").innerHTML = LISTINGS.map(L => `
+    <a class="card">
+      <div class="cover">
+        <img src="${L.img}" alt="" loading="lazy" />
+      </div>
+      <div class="meta">
+        <span class="price">${fmtPriceShort(L.price)}</span>
+        <span class="sep">·</span>${L.bd}bd ${L.ba}ba
+        <span class="sep">·</span>${L.sqft.toLocaleString()}
+        <span class="sep">·</span>${L.addr}
+      </div>
+    </a>
+  `).join("");
+</script>
+</body>
+</html>
