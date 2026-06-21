@@ -229,7 +229,7 @@ function VideoCard({
   return (
     <section
       ref={(el) => cardRef(el)}
-      className="relative h-screen w-full snap-start snap-always overflow-hidden bg-black"
+      className="relative h-[100dvh] w-full snap-start snap-always overflow-hidden bg-black"
     >
       {/* biome-ignore lint/a11y/useKeyWithClickEvents: tap-to-play */}
       <div className="absolute inset-0 touch-pan-y" onClick={onTap}>

@@ -254,12 +254,9 @@ export function CommunityCarousel({
             </button>
           )}
 
-          {/* Swipe hint, fades after first move. */}
-          {safeActive === 0 && total > 1 && (
-            <div className="pointer-events-none absolute bottom-24 left-1/2 z-10 -translate-x-1/2 rounded-full bg-black/40 px-3 py-1 text-[10px] text-cream/85 uppercase tracking-widest">
-              ← swipe →
-            </div>
-          )}
+          {/* Phase 45.24 (2026-06-21): "← swipe →" hint removed for the
+           * community-videos carousel — gesture is self-evident, hint was
+           * just visual noise. */}
 
           {/* Right rail — Like / Save / Contact. Mirrors BrowseFeed's
            * rail (phase 28); buttons target the listing the user came

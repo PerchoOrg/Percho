@@ -32,10 +32,15 @@ export const FEED_Z = {
 // Outer phone-shape frame, used by all three feeds. On md+ the feed is
 // constrained to a 9:16 portrait column so desktop users see the same
 // crop as mobile rather than a stretched landscape video.
+// Phase 45.24 (2026-06-21): use 100dvh (dynamic viewport height) instead of
+// h-screen / 100vh so the feed actually fills mobile Safari's visible viewport
+// when the browser's URL bar is shown. With 100vh the URL bar overlaps the
+// bottom of the feed (caption + rail get clipped); 100dvh tracks the chrome.
+// The desktop 9:16 column math also switches to dvh for consistency.
 export const FEED_FRAME_CLASS =
-  'relative mx-auto h-screen w-full overflow-hidden bg-black md:w-[min(430px,calc(100vh*9/16))] md:shadow-2xl md:shadow-black/50';
+  'relative mx-auto h-[100dvh] w-full overflow-hidden bg-black md:w-[min(430px,calc(100dvh*9/16))] md:shadow-2xl md:shadow-black/50';
 
-// Vertical snap scroller class (BrowseFeed + CommunityVideoFeed). Each
-// child page should be `h-screen w-full snap-start snap-always`.
+// Phase 45.24 (2026-06-21): each snap card uses h-[100dvh] to track the
+// dynamic viewport (mobile Safari URL bar). Keep in sync with FEED_FRAME_CLASS.
 export const FEED_VSCROLL_CLASS =
   'h-full w-full snap-y snap-mandatory overflow-y-scroll overscroll-contain';

@@ -233,7 +233,7 @@ function PhotoCard({
   return (
     <section
       ref={(el) => cardRef(el)}
-      className="relative h-screen w-full snap-start snap-always overflow-hidden bg-black"
+      className="relative h-[100dvh] w-full snap-start snap-always overflow-hidden bg-black"
     >
       <div
         className="absolute inset-0 touch-pan-y"
@@ -528,7 +528,7 @@ function Card({
       // the entire subtree (video + img poster + overlays) opts out of
       // native scrolling while in Nearby mode, so the JS swipe handler
       // owns vertical gestures uncontested.
-      className={`relative h-screen w-full snap-start snap-always overflow-hidden bg-black ${source === 'nearby' ? 'touch-none' : ''}`}
+      className={`relative h-[100dvh] w-full snap-start snap-always overflow-hidden bg-black ${source === 'nearby' ? 'touch-none' : ''}`}
     >
       {/* biome-ignore lint/a11y/useKeyWithClickEvents: tap-to-play */}
       <div
@@ -1283,13 +1283,9 @@ export function BrowseFeed({
        * into the right rail above. The caption block on the Card now
        * extends to the safe-area, giving an immersive bottom edge. */}
 
-      {activeIndex === 0 && activeSource === 'hero' && (
-        <div className="pointer-events-none absolute inset-x-0 bottom-20 z-10 text-center">
-          <span className="text-[10px] text-cream/50 uppercase tracking-widest">
-            Swipe up for more
-          </span>
-        </div>
-      )}
+      {/* Phase 45.24 (2026-06-21): "Swipe up for more" hint removed —
+       * gesture is self-evident on a TikTok-style feed and the text was
+       * crowding the bottom edge over the caption. */}
 
       {active && (
         <LeadModal

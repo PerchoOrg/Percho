@@ -3,6 +3,13 @@
 Newest at the top. Each release covers a meaningful product change visible to users.
 Format matches the standard release template (Features / Improvements / Bug Fixes / Technical / Known Issues / Metrics).
 
+## v0.47.1 — 2026-06-21
+
+### ✨ Improvements
+
+- **Feeds now use the full screen on phones.** Previously a thin strip at the bottom of the feed (the price + caption area) was hidden behind Safari's URL bar on iPhone. The feed now resizes itself to whatever the browser is showing, so the listing photo or video, the caption, and the right-rail buttons all sit inside the visible area no matter whether the URL bar is up or hidden.
+- **Removed the "Swipe up for more" hint** on the listing video / explore feed and the **"← swipe →" hint** on the community-videos carousels. The gesture is self-evident on a TikTok-style feed and the labels were just visual noise crowding the bottom edge.
+
 ## v0.47.0 — 2026-06-21
 
 ### ✨ Improvements
