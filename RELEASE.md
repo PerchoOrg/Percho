@@ -2,6 +2,31 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.52.0 — Marketing tab: more platforms, more languages (2026-06-22)
+
+### 🚀 Features
+
+- **Pick the platforms you want.** The Marketing tab's social-copy
+  generator now supports nine platforms instead of three: Facebook,
+  Instagram, Email, TikTok, X, LinkedIn, Threads, Rednote (小红书), and
+  WeChat Moments. Toggle the ones you want with pill buttons.
+- **Generate in multiple languages.** Reach the multilingual US homebuyer
+  pool: English, 简体中文, Español, Tiếng Việt, and 한국어. Each post is
+  written natively for that language, not translated word-for-word.
+- **Smarter copy from your listing.** The generator now reads your
+  listing's description, photo captions, and video titles before drafting,
+  so the posts reference real content instead of just the address and
+  price. Add optional selling points to nudge the angle.
+
+### ✨ Improvements
+
+- The Marketing tab's old three-tab strip is gone — it didn't scale past
+  3 platforms. New layout: Platforms and Languages selectors on top, then
+  one card per platform with a language sub-tab strip and a per-cell Copy
+  button.
+- One click generates every platform × language combination in a single
+  pass (cap: 6 platforms × 4 languages per click).
+
 ## v0.51.8 — Drop "Content" title from Media tab (2026-06-22)
 
 ### ✨ Improvements

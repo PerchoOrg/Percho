@@ -1,62 +1,121 @@
 'use client';
 
 /**
- * Social copy generator panel — Phase 6.3b (rebuilt 8.4 for tabbed UX).
+ * Social copy generator panel — Phase 48 (multi-platform × multi-language).
  *
- * Lives on the listing edit page below the metadata form. Calls
- * /api/generate-social with the listing id + a transient `highlights` input
- * (3-5 short selling points). Renders Facebook / Instagram / Email copy in
- * three tabs with per-tab Regenerate + Copy actions.
+ * History:
+ *   - Phase 6.3b: Facebook + Instagram only.
+ *   - Phase 8.4: Added Email, fixed 3-tab horizontal layout.
+ *   - Phase 48: Pivoted to checkbox grid — agent picks which platforms and
+ *     which languages they want, output is a 2-D map rendered as a list of
+ *     platform sections each with language sub-tabs. Tab bar broke at 5+
+ *     platforms; sections scale to 9 cleanly.
  *
- * Phase 8.4 changes:
- *   - Email tab added (replaces demo's 小红书 — V1 is English-only US market;
- *     email blasts are the actual conversion lever for US agents).
- *   - Tab UI matches `vicinity-app/src/pages/Editor.jsx` S5 visual treatment.
- *   - Per-tab regenerate button so a single bad output doesn't burn the rate
- *     limit budget for the other two — though backend still bills 1 unit per
- *     call regardless, so heads-up: regenerating any tab regenerates ALL three
- *     (the prompt produces the full triple). UI just lets you focus.
+ * Output is regenerated atomically — one button generates every selected
+ * (platform, language) cell in a single Anthropic call. The model receives
+ * the full listing description, photo alt-text, and video titles as
+ * grounding so copy references real content instead of address+price alone.
  *
- * Nothing persists. The whole component is throwaway state — refresh and
- * you start over.
+ * Nothing persists. Refresh and you start over.
  */
 
 import { Copy, Loader2, Sparkles } from 'lucide-react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 
 interface Props {
   listingId: string;
 }
 
 type GenState = 'idle' | 'loading' | 'error';
-type Platform = 'facebook' | 'instagram' | 'email';
 
-interface SocialOutput {
-  facebook: string;
-  instagram: string;
-  email: string;
-}
+type Platform =
+  | 'facebook'
+  | 'instagram'
+  | 'email'
+  | 'tiktok'
+  | 'x'
+  | 'linkedin'
+  | 'threads'
+  | 'rednote'
+  | 'wechat';
 
-const PLATFORM_LABELS: Record<Platform, string> = {
-  facebook: 'Facebook',
-  instagram: 'Instagram',
-  email: 'Email',
-};
+type Language = 'en' | 'zh' | 'es' | 'vi' | 'ko';
 
-const PLATFORM_ROWS: Record<Platform, number> = {
-  facebook: 6,
-  instagram: 4,
-  email: 10,
-};
+type Output = Partial<Record<Platform, Partial<Record<Language, string>>>>;
+
+const PLATFORMS: Array<{ id: Platform; label: string; hint: string }> = [
+  { id: 'facebook', label: 'Facebook', hint: 'Long-form post' },
+  { id: 'instagram', label: 'Instagram', hint: 'Caption + hashtags' },
+  { id: 'email', label: 'Email', hint: 'Buyer database blast' },
+  { id: 'tiktok', label: 'TikTok', hint: 'Short caption + tags' },
+  { id: 'x', label: 'X', hint: '<270 chars' },
+  { id: 'linkedin', label: 'LinkedIn', hint: 'Professional post' },
+  { id: 'threads', label: 'Threads', hint: 'Conversational' },
+  { id: 'rednote', label: 'Rednote (小红书)', hint: 'Lifestyle note' },
+  { id: 'wechat', label: 'WeChat Moments', hint: '朋友圈 post' },
+];
+
+const LANGUAGES: Array<{ id: Language; label: string }> = [
+  { id: 'en', label: 'English' },
+  { id: 'zh', label: '简体中文' },
+  { id: 'es', label: 'Español' },
+  { id: 'vi', label: 'Tiếng Việt' },
+  { id: 'ko', label: '한국어' },
+];
+
+const MAX_PLATFORMS = 6;
+const MAX_LANGUAGES = 4;
 
 export function SocialCopyPanel({ listingId }: Props) {
   const [highlightsRaw, setHighlightsRaw] = useState('');
+  const [selectedPlatforms, setSelectedPlatforms] = useState<Set<Platform>>(
+    () => new Set<Platform>(['facebook', 'instagram', 'email']),
+  );
+  const [selectedLanguages, setSelectedLanguages] = useState<Set<Language>>(
+    () => new Set<Language>(['en']),
+  );
   const [state, setState] = useState<GenState>('idle');
   const [error, setError] = useState<string | null>(null);
-  const [output, setOutput] = useState<SocialOutput | null>(null);
-  const [tab, setTab] = useState<Platform>('facebook');
+  const [output, setOutput] = useState<Output | null>(null);
+  const [activeLangByPlatform, setActiveLangByPlatform] = useState<
+    Partial<Record<Platform, Language>>
+  >({});
+
+  const platformCount = selectedPlatforms.size;
+  const languageCount = selectedLanguages.size;
+  const cellCount = platformCount * languageCount;
+  const overLimit =
+    platformCount > MAX_PLATFORMS || languageCount > MAX_LANGUAGES;
+
+  const orderedPlatforms = useMemo(
+    () => PLATFORMS.filter((p) => selectedPlatforms.has(p.id)),
+    [selectedPlatforms],
+  );
+  const orderedLanguages = useMemo(
+    () => LANGUAGES.filter((l) => selectedLanguages.has(l.id)),
+    [selectedLanguages],
+  );
+
+  function togglePlatform(id: Platform) {
+    setSelectedPlatforms((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleLanguage(id: Language) {
+    setSelectedLanguages((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
 
   async function onGenerate() {
+    if (cellCount === 0 || overLimit) return;
     setState('loading');
     setError(null);
     const highlights = highlightsRaw
@@ -71,15 +130,18 @@ export function SocialCopyPanel({ listingId }: Props) {
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
           listing_id: listingId,
+          platforms: Array.from(selectedPlatforms),
+          languages: Array.from(selectedLanguages),
           ...(highlights.length > 0 ? { highlights } : {}),
         }),
       });
       if (!res.ok) {
         const body = (await res.json().catch(() => ({}))) as { error?: string };
-        if (res.status === 429) throw new Error('Rate limit hit — try again in a minute.');
+        if (res.status === 429)
+          throw new Error('Rate limit hit — try again in a minute.');
         throw new Error(body.error ?? `HTTP ${res.status}`);
       }
-      const data = (await res.json()) as SocialOutput;
+      const data = (await res.json()) as Output;
       setOutput(data);
       setState('idle');
     } catch (err) {
@@ -89,7 +151,7 @@ export function SocialCopyPanel({ listingId }: Props) {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       {/* Highlights input */}
       <div>
         <label className="mb-1 block text-ink2 text-xs" htmlFor="sc-highlights">
@@ -105,102 +167,183 @@ export function SocialCopyPanel({ listingId }: Props) {
           maxLength={500}
         />
         <span className="mt-1 block text-muted text-xs">
-          Up to 5, comma-separated. Leave blank to let the model riff on listing details.
+          Up to 5, comma-separated. The model also uses this listing's
+          description, photo captions, and video titles as context — leave
+          blank to let it riff on those alone.
         </span>
       </div>
 
-      {/* Platform tabs */}
-      <div className="flex flex-wrap items-center gap-2">
-        {(Object.keys(PLATFORM_LABELS) as Platform[]).map((p) => (
-          <button
-            key={p}
-            type="button"
-            onClick={() => setTab(p)}
-            className={`rounded-full border px-3 py-1.5 text-xs transition ${
-              tab === p
-                ? 'border-line-strong bg-ink text-cream'
-                : 'border-line text-ink2 hover:border-line-strong hover:text-ink'
-            }`}
-          >
-            {PLATFORM_LABELS[p]}
-          </button>
-        ))}
-        {state === 'error' && (
-          <span className="ml-auto text-red-400 text-xs">{error ?? 'unknown error'}</span>
-        )}
+      {/* Platform + language selectors, side-by-side on wide screens */}
+      <div className="grid gap-4 sm:grid-cols-2">
+        <fieldset className="rounded-lg border border-line bg-bg p-3">
+          <legend className="px-1 text-ink2 text-xs">
+            Platforms{' '}
+            <span className={platformCount > MAX_PLATFORMS ? 'text-red-400' : 'text-muted'}>
+              ({platformCount}/{MAX_PLATFORMS})
+            </span>
+          </legend>
+          <div className="flex flex-wrap gap-1.5">
+            {PLATFORMS.map((p) => {
+              const on = selectedPlatforms.has(p.id);
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => togglePlatform(p.id)}
+                  title={p.hint}
+                  className={`rounded-full border px-3 py-1 text-xs transition ${
+                    on
+                      ? 'border-line-strong bg-ink text-cream'
+                      : 'border-line text-ink2 hover:border-line-strong hover:text-ink'
+                  }`}
+                >
+                  {p.label}
+                </button>
+              );
+            })}
+          </div>
+        </fieldset>
+
+        <fieldset className="rounded-lg border border-line bg-bg p-3">
+          <legend className="px-1 text-ink2 text-xs">
+            Languages{' '}
+            <span className={languageCount > MAX_LANGUAGES ? 'text-red-400' : 'text-muted'}>
+              ({languageCount}/{MAX_LANGUAGES})
+            </span>
+          </legend>
+          <div className="flex flex-wrap gap-1.5">
+            {LANGUAGES.map((l) => {
+              const on = selectedLanguages.has(l.id);
+              return (
+                <button
+                  key={l.id}
+                  type="button"
+                  onClick={() => toggleLanguage(l.id)}
+                  className={`rounded-full border px-3 py-1 text-xs transition ${
+                    on
+                      ? 'border-line-strong bg-ink text-cream'
+                      : 'border-line text-ink2 hover:border-line-strong hover:text-ink'
+                  }`}
+                >
+                  {l.label}
+                </button>
+              );
+            })}
+          </div>
+        </fieldset>
       </div>
 
-      {/* Active tab textarea */}
-      <textarea
-        readOnly={!output}
-        value={output ? output[tab] : ''}
-        onChange={() => {}}
-        rows={PLATFORM_ROWS[tab]}
-        placeholder={
-          state === 'loading'
-            ? 'Generating…'
-            : `Click Generate to produce ${PLATFORM_LABELS[tab]} copy.`
-        }
-        className={`${INPUT_CLASS} resize-y font-mono text-xs`}
-      />
-
       {/* Action row */}
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap items-center gap-3">
         <button
           type="button"
           onClick={onGenerate}
-          disabled={state === 'loading'}
+          disabled={state === 'loading' || cellCount === 0 || overLimit}
           className="inline-flex items-center gap-2 rounded-lg bg-ink px-4 py-2 font-medium text-cream text-sm transition hover:opacity-90 disabled:opacity-50"
         >
           {state === 'loading' ? (
             <>
               <Loader2 size={14} className="animate-spin" />
-              Generating…
+              Generating {cellCount} {cellCount === 1 ? 'post' : 'posts'}…
             </>
           ) : (
             <>
               <Sparkles size={14} />
-              {output ? 'Regenerate' : 'Generate copy'}
+              {output ? 'Regenerate' : 'Generate'} {cellCount}{' '}
+              {cellCount === 1 ? 'post' : 'posts'}
             </>
           )}
         </button>
-        {output && <CopyButton value={output[tab]} />}
+        {cellCount === 0 && (
+          <span className="text-muted text-xs">
+            Pick at least one platform and one language.
+          </span>
+        )}
+        {overLimit && (
+          <span className="text-red-400 text-xs">
+            Cap is {MAX_PLATFORMS} platforms × {MAX_LANGUAGES} languages per
+            run — narrow your selection.
+          </span>
+        )}
+        {state === 'error' && (
+          <span className="ml-auto text-red-400 text-xs">
+            {error ?? 'unknown error'}
+          </span>
+        )}
       </div>
 
-      {/* Compact preview of the other two tabs (collapsed) */}
+      {/* Output sections — one card per platform, language sub-tabs inside */}
       {output && (
-        <details className="rounded-lg border border-line bg-surface p-3 text-xs">
-          <summary className="cursor-pointer text-ink2 hover:text-ink">
-            See all 3 platforms side-by-side
-          </summary>
-          <div className="mt-3 grid gap-3 sm:grid-cols-3">
-            {(Object.keys(PLATFORM_LABELS) as Platform[]).map((p) => (
+        <div className="space-y-3">
+          {orderedPlatforms.map((p) => {
+            const cell = output[p.id];
+            if (!cell) return null;
+            const availableLangs = orderedLanguages.filter(
+              (l) => typeof cell[l.id] === 'string',
+            );
+            if (availableLangs.length === 0) return null;
+            const activeLang =
+              activeLangByPlatform[p.id] ?? availableLangs[0]!.id;
+            const value = cell[activeLang] ?? '';
+            return (
               <div
-                key={p}
-                className="flex flex-col rounded-lg border border-line bg-bg p-2.5"
+                key={p.id}
+                className="rounded-lg border border-line bg-bg p-3"
               >
-                <div className="mb-1.5 flex items-center justify-between">
-                  <span className="text-[10px] text-ink uppercase tracking-widest">
-                    {PLATFORM_LABELS[p]}
+                <div className="mb-2 flex flex-wrap items-center gap-2">
+                  <span className="text-ink text-sm font-medium">
+                    {p.label}
                   </span>
-                  <CopyButton value={output[p]} small />
+                  <span className="text-muted text-[11px]">{p.hint}</span>
+                  <div className="ml-auto flex flex-wrap items-center gap-1">
+                    {availableLangs.length > 1 &&
+                      availableLangs.map((l) => {
+                        const on = l.id === activeLang;
+                        return (
+                          <button
+                            key={l.id}
+                            type="button"
+                            onClick={() =>
+                              setActiveLangByPlatform((prev) => ({
+                                ...prev,
+                                [p.id]: l.id,
+                              }))
+                            }
+                            className={`rounded-full px-2 py-0.5 text-[11px] transition ${
+                              on
+                                ? 'bg-ink text-cream'
+                                : 'text-ink2 hover:bg-line/40'
+                            }`}
+                          >
+                            {l.label}
+                          </button>
+                        );
+                      })}
+                    <CopyButton value={value} small />
+                  </div>
                 </div>
                 <textarea
                   readOnly
-                  value={output[p]}
-                  rows={6}
-                  className={`${INPUT_CLASS} flex-1 resize-none font-mono text-[11px]`}
+                  value={value}
+                  rows={Math.min(12, Math.max(4, value.split('\n').length + 1))}
+                  className={`${INPUT_CLASS} resize-y font-mono text-xs`}
                 />
               </div>
-            ))}
-          </div>
-        </details>
+            );
+          })}
+        </div>
       )}
     </div>
   );
 }
 
-function CopyButton({ value, small = false }: { value: string; small?: boolean }) {
+function CopyButton({
+  value,
+  small = false,
+}: {
+  value: string;
+  small?: boolean;
+}) {
   const [copied, setCopied] = useState(false);
   async function onCopy() {
     try {
@@ -218,7 +361,7 @@ function CopyButton({ value, small = false }: { value: string; small?: boolean }
         onClick={onCopy}
         className="rounded border border-line px-1.5 py-0.5 text-[10px] text-ink hover:bg-ink2/20"
       >
-        {copied ? '✓' : 'Copy'}
+        {copied ? '✓ Copied' : 'Copy'}
       </button>
     );
   }

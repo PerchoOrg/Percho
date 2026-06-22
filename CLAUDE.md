@@ -74,15 +74,22 @@ implementation rather than after mistakes.
 
 ## 1. Positioning (do not drift)
 
-Vicinity is for **all US homebuyers**. NOT a Chinese-community platform.
+Vicinity is for **all US homebuyers**. The US homebuyer pool is multilingual —
+non-English buyers (Spanish, Chinese, Vietnamese, Korean, …) are part of the
+target audience, not a separate Chinese-community spinoff. Concretely:
 
-- No `_zh` fields. No bilingual UI. English only for V1.
-- No WeChat / 微信 references in schema, UI, or copy.
-- No Xiaohongshu / 小红书 in social copy generators.
-- Tailwind / Tailwind class names / variable names: English.
+- UI chrome / agent dashboard / listing schema: **English only** (no `_zh`
+  fields, no bilingual UI in the data layer).
+- Buyer-facing **marketing copy generators** MAY emit multiple languages
+  when the agent opts in — that's how a US listing agent reaches a
+  multilingual buyer pool. Platforms popular with those buyers (Rednote /
+  小红书, WeChat Moments) are allowed in the social copy panel for the same
+  reason. Pivot date: 2026-06-22 (Phase 48), confirmed by owner.
+- Variable / Tailwind class names: English. No Chinese identifiers in code.
 
-If you find any of the above creeping in (e.g. from copying the demo's old code),
-strip it. Surface it in the PR description.
+If any of the above creep beyond marketing copy generation (e.g. into the
+schema, dashboard chrome, or buyer-facing UI strings), strip it. Surface it
+in the PR description.
 
 ---
 
