@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * LeadsLive — three-layer freshness for the agent's lead inbox.
+ * LeadsLive — agent's lead inbox (Phase 49.2: V1 Inbox redesign).
  *
  * Layer 1 (initial): SSR-hydrated rows passed in via `initial`.
  * Layer 2 (Realtime): postgres_changes INSERT + UPDATE subscription on
@@ -9,13 +9,17 @@
  * Layer 3 (polling fallback): every 8s, refetch the most-recent leads and
  *   merge by id (last-write-wins).
  *
- * Phase 18 additions:
- * - Stats strip: This week / Pending email / Awaiting follow-up
- * - Search box (name / email / phone / message / address)
- * - Filter chips: All · Awaiting follow-up · This week · Pending email
- * - Follow-up dropdown per row: Email / Text / Mark as followed up.
- *   Email + Text auto-mark as followed up (single-click intent — Mom Test:
- *   she will not double-click to confirm she just emailed someone).
+ * Phase 49.2 redesign (V1 — Inbox):
+ *   - 4-stat strip dropped. The chips below carry the same info implicitly.
+ *   - Filter chips lose their "(N)" counts — pills only. The chip itself
+ *     filters; the count was visual noise.
+ *   - Search box + Export CSV kept (right side of controls row).
+ *   - Each lead is a single line: status dot · name · preview · time ·
+ *     email/text icon buttons. Followed-up rows fade.
+ *   - Inline action menu (Email / Text / Mark) is gone — Email + Text
+ *     icons act directly (mailto:/sms: + auto-mark followed-up). A
+ *     separate "Mark as new / Mark done" toggle remains via an explicit
+ *     check icon at the row end.
  */
 
 import { createClient } from '@/lib/supabase/client';
@@ -43,12 +47,14 @@ export type LeadRow = {
 
 type FilterKey = 'all' | 'open' | 'week' | 'pending';
 
+const OPEN_DOT_COLOR = '#6b7a5a';
+
 function timeAgo(iso: string): string {
   const sec = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 1000));
-  if (sec < 60) return `${sec}s ago`;
-  if (sec < 3600) return `${Math.floor(sec / 60)}m ago`;
-  if (sec < 86400) return `${Math.floor(sec / 3600)}h ago`;
-  return `${Math.floor(sec / 86400)}d ago`;
+  if (sec < 60) return `${sec}s`;
+  if (sec < 3600) return `${Math.floor(sec / 60)}m`;
+  if (sec < 86400) return `${Math.floor(sec / 3600)}h`;
+  return `${Math.floor(sec / 86400)}d`;
 }
 
 function isThisWeek(iso: string): boolean {
@@ -73,7 +79,6 @@ export function LeadsLive({ initial }: { initial: LeadRow[] }) {
   const [rows, setRows] = useState<LeadRow[]>(initial);
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<FilterKey>('all');
-  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const rowsRef = useRef(rows);
   rowsRef.current = rows;
 
@@ -145,26 +150,6 @@ export function LeadsLive({ initial }: { initial: LeadRow[] }) {
     };
   }, [merge]);
 
-  // Close dropdown on outside click
-  useEffect(() => {
-    if (!openMenuId) return;
-    const onDocClick = () => setOpenMenuId(null);
-    document.addEventListener('click', onDocClick);
-    return () => document.removeEventListener('click', onDocClick);
-  }, [openMenuId]);
-
-  const stats = useMemo(() => {
-    let week = 0;
-    let pendingEmail = 0;
-    let openFollow = 0;
-    for (const r of rows) {
-      if (isThisWeek(r.created_at)) week++;
-      if (!r.notified_at) pendingEmail++;
-      if (!r.followed_up_at) openFollow++;
-    }
-    return { total: rows.length, week, pendingEmail, openFollow };
-  }, [rows]);
-
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     return rows.filter((r) => {
@@ -217,28 +202,20 @@ export function LeadsLive({ initial }: { initial: LeadRow[] }) {
 
   return (
     <div>
-      {/* Stats strip */}
-      <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
-        <Stat label="Total" value={stats.total} />
-        <Stat label="This week" value={stats.week} accent />
-        <Stat label="Pending email" value={stats.pendingEmail} />
-        <Stat label="Awaiting follow-up" value={stats.openFollow} accent />
-      </div>
-
       {/* Controls */}
-      <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+      <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-wrap gap-1.5 text-xs">
           <Chip active={filter === 'all'} onClick={() => setFilter('all')}>
-            All ({rows.length})
+            All
           </Chip>
           <Chip active={filter === 'open'} onClick={() => setFilter('open')}>
-            Awaiting follow-up ({stats.openFollow})
+            Awaiting follow-up
           </Chip>
           <Chip active={filter === 'week'} onClick={() => setFilter('week')}>
-            This week ({stats.week})
+            This week
           </Chip>
           <Chip active={filter === 'pending'} onClick={() => setFilter('pending')}>
-            Pending email ({stats.pendingEmail})
+            Pending email
           </Chip>
         </div>
         <div className="flex items-center gap-2">
@@ -268,39 +245,17 @@ export function LeadsLive({ initial }: { initial: LeadRow[] }) {
           </p>
         </div>
       ) : (
-        <ul className="divide-y divide-bronze/20 rounded border border-line bg-surface">
-          {filtered.map((l) => (
+        <ul className="rounded-2xl border border-line bg-surface px-2 sm:px-3">
+          {filtered.map((l, i) => (
             <LeadItem
               key={l.id}
               lead={l}
-              menuOpen={openMenuId === l.id}
-              onToggleMenu={(e) => {
-                e.stopPropagation();
-                setOpenMenuId((prev) => (prev === l.id ? null : l.id));
-              }}
-              onMark={(value) => {
-                setOpenMenuId(null);
-                void setFollowUp(l.id, value);
-              }}
+              isFirst={i === 0}
+              onMark={(value) => void setFollowUp(l.id, value)}
             />
           ))}
         </ul>
       )}
-    </div>
-  );
-}
-
-function Stat({ label, value, accent }: { label: string; value: number; accent?: boolean }) {
-  return (
-    <div
-      className={`rounded-xl border px-3 py-2 ${
-        accent ? 'border-line-strong bg-ink/5' : 'border-line bg-surface'
-      }`}
-    >
-      <div className="text-[10px] uppercase tracking-widest text-muted">{label}</div>
-      <div className={`mt-0.5 font-serif text-2xl ${accent ? 'text-ink' : 'text-ink'}`}>
-        {value}
-      </div>
     </div>
   );
 }
@@ -331,137 +286,186 @@ function Chip({
 
 function LeadItem({
   lead,
-  menuOpen,
-  onToggleMenu,
+  isFirst,
   onMark,
 }: {
   lead: LeadRow;
-  menuOpen: boolean;
-  onToggleMenu: (e: React.MouseEvent) => void;
+  isFirst: boolean;
   onMark: (value: 'now' | null) => void;
 }) {
+  const open = !lead.followed_up_at;
   const addr = lead.listings?.address ?? '(unknown listing)';
-  const cityState =
-    lead.listings?.city && lead.listings?.state
-      ? `${lead.listings.city}, ${lead.listings.state}`
-      : '';
-  const sent = lead.notified_at != null;
-  const followed = lead.followed_up_at != null;
+  const preview = lead.message ?? addr;
   const mailto = buildMailto(lead);
   const sms = buildSms(lead);
 
   return (
     <li
-      className={`relative flex items-center justify-between gap-3 px-4 py-3 hover:bg-ink2/10 ${followed ? 'opacity-60' : ''}`}
+      className={`grid grid-cols-[10px_minmax(0,160px)_1fr_auto_auto] items-center gap-3 sm:gap-4 py-2.5 ${
+        isFirst ? '' : 'border-t border-line/60'
+      } ${open ? '' : 'opacity-55'}`}
     >
-      <Link href={`/dashboard/leads/${lead.id}`} className="min-w-0 flex-1" prefetch={false}>
-        <div className="flex flex-wrap items-center gap-2">
-          <p className="truncate text-sm font-medium text-ink">{lead.name}</p>
-          <StatusPill sent={sent} followed={followed} followedAt={lead.followed_up_at} />
-        </div>
-        <p className="truncate text-xs text-ink2">
-          {addr}
-          {cityState ? ` · ${cityState}` : ''}
-        </p>
-        {lead.message ? (
-          <p className="mt-1 line-clamp-1 text-xs text-muted">{lead.message}</p>
-        ) : null}
+      {/* Status dot */}
+      <span
+        aria-hidden
+        className="h-2 w-2 rounded-full"
+        style={
+          open
+            ? { backgroundColor: OPEN_DOT_COLOR }
+            : { border: '1px solid rgba(49,49,49,0.2)' }
+        }
+      />
+      {/* Name (linked to detail) */}
+      <Link
+        href={`/dashboard/leads/${lead.id}`}
+        prefetch={false}
+        className={`truncate text-sm hover:underline ${
+          open ? 'font-medium text-ink' : 'text-ink2'
+        }`}
+        title={lead.name}
+      >
+        {lead.name}
       </Link>
-
-      <div className="flex shrink-0 items-center gap-3">
-        <div className="text-right text-[11px] text-muted">{timeAgo(lead.created_at)}</div>
-        <div className="relative">
-          <button
-            type="button"
-            onClick={onToggleMenu}
-            className="rounded border border-line px-2.5 py-1 text-[11px] text-ink2 hover:border-line-strong hover:text-ink"
+      {/* Message preview + listing */}
+      <Link
+        href={`/dashboard/leads/${lead.id}`}
+        prefetch={false}
+        className="min-w-0 truncate text-sm text-ink2 hover:text-ink"
+        title={`${preview} — ${addr}`}
+      >
+        {preview}
+        <span className="text-muted"> · {addr}</span>
+      </Link>
+      {/* Time */}
+      <span className="shrink-0 text-muted text-[11px] tabular-nums">
+        {timeAgo(lead.created_at)}
+      </span>
+      {/* Icon actions */}
+      <div className="flex shrink-0 items-center gap-1.5">
+        {mailto ? (
+          <a
+            href={mailto}
+            onClick={() => onMark('now')}
+            aria-label={`Email ${lead.name}`}
+            title="Email (auto-marks as followed up)"
+            className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-line text-ink2 hover:border-ink/30 hover:bg-line/30 hover:text-ink"
           >
-            Follow up ▾
-          </button>
-          {menuOpen ? (
-            <div
-              role="menu"
-              className="absolute right-0 top-full z-20 mt-1 w-48 rounded-md border border-line bg-surface py-1 shadow-lg"
-              onClick={(e) => e.stopPropagation()}
-              onKeyDown={(e) => {
-                if (e.key === 'Escape') onMark(lead.followed_up_at ? null : 'now');
-              }}
-            >
-              {mailto ? (
-                <a
-                  href={mailto}
-                  onClick={() => onMark('now')}
-                  className="block px-3 py-2 text-xs text-ink hover:bg-ink2/30"
-                >
-                  📧 Email reply
-                </a>
-              ) : (
-                <span className="block px-3 py-2 text-xs text-muted">📧 No email</span>
-              )}
-              {sms ? (
-                <a
-                  href={sms}
-                  onClick={() => onMark('now')}
-                  className="block px-3 py-2 text-xs text-ink hover:bg-ink2/30"
-                >
-                  💬 Text message
-                </a>
-              ) : (
-                <span className="block px-3 py-2 text-xs text-muted">💬 No phone</span>
-              )}
-              <div className="my-1 border-t border-line" />
-              {followed ? (
-                <button
-                  type="button"
-                  onClick={() => onMark(null)}
-                  className="block w-full px-3 py-2 text-left text-xs text-ink2 hover:bg-ink2/30"
-                >
-                  ↺ Mark as new
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => onMark('now')}
-                  className="block w-full px-3 py-2 text-left text-xs text-ink2 hover:bg-ink2/30"
-                >
-                  ✓ Mark as followed up
-                </button>
-              )}
-            </div>
-          ) : null}
-        </div>
+            <EmailIcon />
+          </a>
+        ) : (
+          <span
+            aria-hidden
+            className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-line/50 text-muted/50"
+            title="No email"
+          >
+            <EmailIcon />
+          </span>
+        )}
+        {sms ? (
+          <a
+            href={sms}
+            onClick={() => onMark('now')}
+            aria-label={`Text ${lead.name}`}
+            title="Text (auto-marks as followed up)"
+            className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-line text-ink2 hover:border-ink/30 hover:bg-line/30 hover:text-ink"
+          >
+            <SmsIcon />
+          </a>
+        ) : (
+          <span
+            aria-hidden
+            className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-line/50 text-muted/50"
+            title="No phone"
+          >
+            <SmsIcon />
+          </span>
+        )}
+        <button
+          type="button"
+          onClick={() => onMark(open ? 'now' : null)}
+          aria-label={open ? 'Mark as followed up' : 'Mark as new'}
+          title={open ? 'Mark as followed up' : 'Mark as new'}
+          className={`inline-flex h-7 w-7 items-center justify-center rounded-full border text-ink2 hover:bg-line/30 hover:text-ink ${
+            open ? 'border-line' : 'border-line bg-line/20'
+          }`}
+        >
+          {open ? <CheckIcon /> : <UndoIcon />}
+        </button>
       </div>
     </li>
   );
 }
 
-function StatusPill({
-  sent,
-  followed,
-  followedAt,
-}: {
-  sent: boolean;
-  followed: boolean;
-  followedAt: string | null;
-}) {
-  if (followed) {
-    return (
-      <span
-        className="rounded border border-line bg-surface/5 px-2 py-0.5 text-[10px] font-medium uppercase text-ink2"
-        title={followedAt ? `Followed up ${timeAgo(followedAt)}` : 'Followed up'}
-      >
-        followed up
-      </span>
-    );
-  }
+function EmailIcon() {
   return (
-    <span
-      className={`rounded border px-2 py-0.5 text-[10px] font-medium uppercase ${
-        sent ? 'border-line-strong bg-ink/15 text-ink' : 'border-line bg-ink2/10 text-ink2'
-      }`}
-      title={sent ? 'Email sent — awaiting follow-up' : 'Email pending'}
+    <svg
+      width="13"
+      height="13"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
     >
-      {sent ? 'new' : 'pending'}
-    </span>
+      <rect x="3" y="5" width="18" height="14" rx="2" />
+      <path d="m3 7 9 6 9-6" />
+    </svg>
+  );
+}
+
+function SmsIcon() {
+  return (
+    <svg
+      width="13"
+      height="13"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+    </svg>
+  );
+}
+
+function CheckIcon() {
+  return (
+    <svg
+      width="13"
+      height="13"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M5 12.5 10 17l9-10" />
+    </svg>
+  );
+}
+
+function UndoIcon() {
+  return (
+    <svg
+      width="13"
+      height="13"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M9 14 4 9l5-5" />
+      <path d="M4 9h11a5 5 0 0 1 5 5v0a5 5 0 0 1-5 5h-4" />
+    </svg>
   );
 }

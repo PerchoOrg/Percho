@@ -2,6 +2,54 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## Phase 49.2 — Agent-hub My Leads + Analytics redesign (2026-06-22)
+
+**Objective**: qiaoxux clarified Phase 49/49.1 had hit the *listing-edit*
+hub by mistake. Real target: top-level agent-hub sub-tabs at
+`/dashboard/leads` and `/dashboard/analytics`. Also rename the tab from
+"Leads" to "My Leads".
+
+**Changes**:
+- `app/_components/nav-config.ts`: agent sub-tab `Leads` → `My Leads`.
+- `app/dashboard/leads/leads-live.tsx` — V1 Inbox redesign:
+  - **4-stat strip dropped** (Total / This week / Pending email /
+    Awaiting follow-up). Filter chips below carry the same scoping; the
+    strip was redundant noise above the actual data.
+  - **Counts removed from chips** ("All", "Awaiting follow-up", "This
+    week", "Pending email" — pills only). Per owner: drop the count
+    from the tab.
+  - Each lead is now a single grid row: status dot (sage `#6b7a5a` open
+    / outline followed-up) · name · message + listing meta · timeAgo ·
+    Email/Text/Mark icon buttons. Followed-up rows fade to 55%.
+  - Email + Text icon buttons auto-mark followed-up on click (one tap
+    instead of menu).
+  - Inline action menu removed; explicit Mark/Undo icon kept at row end.
+  - Search box + Export CSV moved into the controls row.
+- `app/dashboard/analytics/page.tsx` — V3 Asymmetric redesign:
+  - **Likes card removed** from the top-level rollup view (it remains
+    available per-listing). Owner-actionable performance only.
+  - **Unique sessions demoted** from a card to a sub-line under Views
+    ("N unique sessions"). It's context for Views, not a goal.
+  - Cover Views card spans 2 rows on `sm+`, with the existing 7-day
+    sparkline rendered inside it.
+  - Sidebar cards: Leads (with conversion % sub-line), Watch-through
+    ring (`videoCompletes / pageViews`, conic-gradient sage).
+  - 4-step funnel (Page views → Card views → Video completes → Leads)
+    added below KPIs. Terminal step (Leads) painted in sage.
+- Phase 49 (listing-edit hub) intentionally **left in place** per
+  owner ("All good now").
+
+**Verification**: `npx tsc --noEmit` clean; `npx next build` clean.
+`/dashboard/leads` route bundle 3.39 kB (164 kB First Load), unchanged
+order of magnitude.
+
+**Pitfalls fixed during impl**:
+- `getRollupStats` already exposes `videoCompletes`, `cardViews`,
+  `leadConversionPct` — no schema changes needed.
+- 7-day sparkline at the *agent rollup* level is honest (real
+  page_view events bucketed by date), unlike the per-listing variant
+  reverted in 49.1.
+
 ## Phase 49 — Leads + Analytics tab redesign (2026-06-22)
 
 **Objective**: qiaoxux: drop the count from the Leads tab, redesign the

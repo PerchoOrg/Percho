@@ -109,7 +109,7 @@ export function getSubTabs(pathname: string, role: ViewerRole): SubTab[] | null 
     return [
       { href: '/dashboard', label: 'My Listing' },
       { href: '/dashboard/communities', label: 'My Community' },
-      { href: '/dashboard/leads', label: 'Leads' },
+      { href: '/dashboard/leads', label: 'My Leads' },
       { href: '/dashboard/analytics', label: 'Analytics' },
     ];
   }

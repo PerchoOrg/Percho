@@ -2,6 +2,36 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.53.2 — My Leads inbox + sharper Analytics (2026-06-22)
+
+### ✨ Improvements
+
+- The agent-hub **Leads tab is now "My Leads"** — clearer label, and
+  signals it's the agent's own pipeline rather than a generic list.
+- **My Leads** got an inbox redesign:
+  - The 4-stat strip across the top (Total / This week / Pending email
+    / Awaiting follow-up) is gone — the filter chips below already
+    scope to the same buckets.
+  - Filter chips lost their parenthesized counts — pills only. Less
+    visual noise; the chip itself is the filter.
+  - Each lead is a single line now: a sage dot for "needs follow-up",
+    name, message preview, time ago, and one-tap **Email** / **Text** /
+    **Mark done** icon buttons. Email/Text auto-mark the lead as
+    followed-up so you don't have to do it twice.
+  - Followed-up leads fade slightly so your eye goes to what still
+    needs attention.
+- **Analytics** is now an at-a-glance performance view:
+  - **Views** is the cover number with the 7-day trend sparkline next
+    to it; "unique sessions" sits underneath as a sub-line instead of
+    being its own card.
+  - **Leads** card shows the conversion % only when you have at least
+    one lead (no more "0%" when you just have no traffic yet).
+  - **Watch-through** ring (video completes ÷ page views) replaces the
+    Likes card — it's a much better signal of engagement.
+  - A 4-step **Drop-off funnel** (Page views → Card views → Video
+    completes → Leads) shows where viewers fall off, with the
+    step-over-step % to the right.
+
 ## v0.53.0 — Cleaner Leads + Analytics tabs (2026-06-22)
 
 ### ✨ Improvements
