@@ -2,6 +2,14 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.51.8 — Drop "Content" title from Media tab (2026-06-22)
+
+### ✨ Improvements
+
+- Listing /edit **Media** tab: removed the redundant "Content" card title.
+  The tab name already says it; the helper line ("Photos and videos · drag
+  to reorder · use ⓒ to set cover") stays.
+
 ## v0.51.7 — Agent hub Details panel cleanup (2026-06-22)
 
 ### ✨ Improvements

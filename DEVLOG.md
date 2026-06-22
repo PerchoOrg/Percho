@@ -2,6 +2,14 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## Phase 47.18 — Drop "Content" title from Media tab (2026-06-22)
+
+**Objective**: qiaoxux — "Rename context title from agent hub media tab" → "remove it". Drop the "Content" `<h2>` from `MediaPanel`.
+
+**Actions**: removed the title `<h2>` and surrounding flex wrapper in `app/dashboard/listings/[id]/edit/MediaPanel.tsx`; kept the helper line. tsc clean.
+
+**Decisions**: tab is already labelled "Media" — the card title was redundant.
+
 ## Phase 47.17 — Agent hub Details panel cleanup (2026-06-22)
 
 User asked for a "cleanup" of the listing /edit Details panel — explicitly *"do

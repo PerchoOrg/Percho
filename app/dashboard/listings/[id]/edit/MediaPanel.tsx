@@ -146,8 +146,7 @@ export function MediaPanel({
 
   return (
     <section className="rounded-2xl border border-line bg-surface p-4 sm:p-6">
-      <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
-        <h2 className="text-base font-semibold">Content</h2>
+      <div className="mb-4">
         <span className="text-muted text-xs">
           Photos and videos · drag to reorder · use ⓒ to set cover
         </span>
