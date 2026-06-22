@@ -1,13 +1,14 @@
 /**
  * ListingLeadsPanel — per-listing leads view embedded in the edit hub.
  *
- * Phase 49 redesign (Leads B — left status bar):
- *   - Sage left bar = awaiting follow-up; muted line = followed up.
- *     Replaces the old "New" pill so status is readable at a glance.
- *   - Email + phone collapsed to one muted meta line. `source` dropped
- *     (agent already knows where their listing is shared).
- *   - Message clamped to one line.
- *   - Section header keeps `N total · M awaiting follow-up` count.
+ * Phase 49.1 redesign (Leads V1 — Inbox):
+ *   - Single-line per lead: status dot · name · message preview · time · icons.
+ *     Mental model is Gmail / Apple Mail.
+ *   - Sage dot = awaiting follow-up. Hollow dot + dimmed row = followed up.
+ *   - Email/Text are circular icon buttons (no text labels) — quieter visual,
+ *     same affordance.
+ *   - "See all leads →" pinned to the right of the section header.
+ *   - Section header: `N total · M awaiting follow-up` retained.
  *
  * Server component. Fetches leads scoped to one listing_id (RLS gates to
  * agent-owned listings). No realtime — refreshes on hub navigation, which
@@ -29,16 +30,15 @@ type LeadRow = {
 
 function timeAgo(iso: string): string {
   const sec = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 1000));
-  if (sec < 60) return `${sec}s ago`;
-  if (sec < 3600) return `${Math.floor(sec / 60)}m ago`;
-  if (sec < 86400) return `${Math.floor(sec / 3600)}h ago`;
-  return `${Math.floor(sec / 86400)}d ago`;
+  if (sec < 60) return `${sec}s`;
+  if (sec < 3600) return `${Math.floor(sec / 60)}m`;
+  if (sec < 86400) return `${Math.floor(sec / 3600)}h`;
+  return `${Math.floor(sec / 86400)}d`;
 }
 
-// Sage accent for the open-status left bar. Hardcoded — Vicinity has no
+// Sage accent for the open-status dot. Hardcoded — Vicinity has no
 // "accent" token (the legacy `accent` is aliased to ink; see tailwind config).
-// Single-purpose color, scoped to this file.
-const OPEN_BAR_COLOR = '#6b7a5a';
+const OPEN_DOT_COLOR = '#6b7a5a';
 
 export async function ListingLeadsPanel({ listingId }: { listingId: string }) {
   const supabase = await createClient();
@@ -55,17 +55,20 @@ export async function ListingLeadsPanel({ listingId }: { listingId: string }) {
   if (leads.length === 0) {
     return (
       <section className="rounded-2xl border border-line bg-surface p-6 sm:p-8">
+        <div className="mb-4 flex items-baseline justify-between">
+          <h2 className="text-base font-semibold">Leads</h2>
+          <Link
+            href="/dashboard/leads"
+            className="text-muted text-xs underline-offset-2 hover:text-ink hover:underline"
+          >
+            See all leads →
+          </Link>
+        </div>
         <div className="mx-auto max-w-md py-8 text-center">
           <p className="text-ink2 text-sm">No leads on this listing yet.</p>
           <p className="mt-1 text-muted text-xs">
             Leads from the public listing page will appear here in real time.
           </p>
-          <Link
-            href="/dashboard/leads"
-            className="mt-4 inline-block text-[13px] text-ink underline-offset-2 hover:underline"
-          >
-            See all leads
-          </Link>
         </div>
       </section>
     );
@@ -91,51 +94,79 @@ export async function ListingLeadsPanel({ listingId }: { listingId: string }) {
         </Link>
       </div>
 
-      <ul className="divide-y divide-line">
+      <ul className="divide-y divide-line/60">
         {leads.map((l) => {
           const open = !l.followed_up_at;
-          // ── Left status bar: sage when open, line-color when followed up.
-          // Inline style so we don't need a Tailwind token.
-          const barColor = open ? OPEN_BAR_COLOR : 'rgba(49, 49, 49, 0.14)';
-          const meta = [l.email, l.phone].filter(Boolean).join(' · ');
+          const preview = l.message ?? l.email ?? l.phone ?? '';
           return (
             <li
               key={l.id}
-              className="relative flex flex-col gap-2 py-3 pl-4 sm:flex-row sm:items-start sm:justify-between"
+              className={`grid grid-cols-[10px_minmax(0,140px)_1fr_auto_auto] items-center gap-3 py-2.5 sm:gap-4 ${
+                open ? '' : 'opacity-55'
+              }`}
             >
+              {/* Status dot */}
               <span
                 aria-hidden
-                className="absolute top-3 bottom-3 left-0 w-[3px] rounded-sm"
-                style={{ backgroundColor: barColor }}
+                className="h-2 w-2 rounded-full"
+                style={
+                  open
+                    ? { backgroundColor: OPEN_DOT_COLOR }
+                    : { border: '1px solid rgba(49,49,49,0.2)' }
+                }
               />
-              <div className="min-w-0 flex-1">
-                <div className="flex items-baseline gap-2">
-                  <span className={`font-medium ${open ? 'text-ink' : 'text-ink2'}`}>
-                    {l.name}
-                  </span>
-                  <span className="text-muted text-xs">{timeAgo(l.created_at)}</span>
-                </div>
-                {l.message && (
-                  <p className="mt-1 line-clamp-1 text-ink2 text-sm">{l.message}</p>
-                )}
-                {meta && <p className="mt-0.5 text-muted text-xs">{meta}</p>}
-              </div>
+              {/* Name */}
+              <span
+                className={`truncate text-sm ${open ? 'font-medium text-ink' : 'text-ink2'}`}
+                title={l.name}
+              >
+                {l.name}
+              </span>
+              {/* Message preview */}
+              <span className="truncate text-ink2 text-sm" title={preview}>
+                {preview}
+              </span>
+              {/* Time */}
+              <span className="shrink-0 text-muted text-[11px] tabular-nums">
+                {timeAgo(l.created_at)}
+              </span>
+              {/* Icon actions */}
               <div className="flex shrink-0 items-center gap-1.5">
-                {l.email && (
+                {l.email ? (
                   <a
                     href={`mailto:${l.email}`}
-                    className="rounded-full border border-line px-3 py-1 text-xs text-ink hover:bg-line/30"
+                    aria-label={`Email ${l.name}`}
+                    title="Email"
+                    className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-line text-ink2 hover:border-ink/30 hover:bg-line/30 hover:text-ink"
                   >
-                    Email
+                    <EmailIcon />
                   </a>
+                ) : (
+                  <span
+                    aria-hidden
+                    className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-line/50 text-muted/50"
+                    title="No email"
+                  >
+                    <EmailIcon />
+                  </span>
                 )}
-                {l.phone && (
+                {l.phone ? (
                   <a
                     href={`sms:${l.phone.replace(/[^+\d]/g, '')}`}
-                    className="rounded-full border border-line px-3 py-1 text-xs text-ink hover:bg-line/30"
+                    aria-label={`Text ${l.name}`}
+                    title="Text"
+                    className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-line text-ink2 hover:border-ink/30 hover:bg-line/30 hover:text-ink"
                   >
-                    Text
+                    <SmsIcon />
                   </a>
+                ) : (
+                  <span
+                    aria-hidden
+                    className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-line/50 text-muted/50"
+                    title="No phone"
+                  >
+                    <SmsIcon />
+                  </span>
                 )}
               </div>
             </li>
@@ -143,5 +174,42 @@ export async function ListingLeadsPanel({ listingId }: { listingId: string }) {
         })}
       </ul>
     </section>
+  );
+}
+
+function EmailIcon() {
+  return (
+    <svg
+      width="13"
+      height="13"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <rect x="3" y="5" width="18" height="14" rx="2" />
+      <path d="m3 7 9 6 9-6" />
+    </svg>
+  );
+}
+
+function SmsIcon() {
+  return (
+    <svg
+      width="13"
+      height="13"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+    </svg>
   );
 }

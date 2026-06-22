@@ -2,6 +2,53 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## Phase 49.1 — Leads + Analytics structural redesign (2026-06-22)
+
+**Objective**: qiaoxux follow-up: "Move see all leads to the right side, and
+redesign overall leads and analytics tab as well." Phase 49 had been
+density-tweaks within the same layout family; this round explored
+structurally different layouts. Built a second prototype with 3 layouts
+per tab — picked **Leads V1 (Inbox)** + **Analytics V3 (Asymmetric)**.
+
+**What changed**:
+
+- `ListingLeadsPanel.tsx`: rewritten as a flat single-line inbox.
+  - Each lead is one row: status dot · name · message preview · time · email
+    + text icon buttons.
+  - Sage filled dot = awaiting follow-up. Hollow dot + 55% opacity = followed
+    up. Replaces the prior left status bar.
+  - Email/Text are now circular icon buttons (no text labels). Inline SVGs
+    so we don't pull in an icon library.
+  - "See all leads →" pinned to the section header right side; same on the
+    empty state.
+- `AnalyticsPanel.tsx`: rewritten as an asymmetric KPI grid.
+  - Views is the cover number — large card spanning two rows on sm+.
+  - Leads card sits top-right with the conv-of-unique-sessions sub-line
+    (only shown when leads > 0 and uniqueSessions > 0).
+  - **Watch-through ring** is a fresh metric: `videoCompletes / pageViews`,
+    rendered as a conic-gradient ring in sage. Replaces the abstract
+    "Conv. %" — agents care about whether their videos hold attention.
+  - Compact funnel at the bottom (4 steps), terminal step in sage to keep
+    visual rhyme with the ring.
+- No backend changes — `getListingStats` / `ListingStats` shape unchanged.
+
+**Honesty cuts**: the prototype showed "▲ 18% vs prev 30d" trend lines and a
+sparkline for Views. `getListingStats` doesn't return time-series or
+prior-period data, so neither was implemented. Will revisit if/when stats
+gain a time dimension.
+
+**Sage hex**: `#6b7a5a` reused (ring fill + funnel terminal step + open dot).
+Still inline, still single-purpose, still no token added — by design.
+
+**Verification**: `npx tsc --noEmit` clean, `npx next build` clean.
+
+**Files touched**:
+- `app/dashboard/listings/[id]/edit/ListingLeadsPanel.tsx` — rewritten
+- `app/dashboard/listings/[id]/edit/AnalyticsPanel.tsx` — rewritten
+- `public/prototype/leads-analytics-redesign-v2.html` — round-2 prototype
+
+---
+
 ## Phase 49 — Leads + Analytics tab redesign (2026-06-22)
 
 **Objective**: qiaoxux: drop the count from the Leads tab, redesign the

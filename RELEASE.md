@@ -2,6 +2,33 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.53.1 — Leads + Analytics, take two (2026-06-22)
+
+### ✨ Improvements
+
+- **Leads tab** is now a clean inbox.
+  - Each lead is one line: who, what they wrote, when, and quick Email /
+    Text icons. Faster to scan when you have several waiting.
+  - A small sage dot still marks who's awaiting follow-up; followed-up
+    leads fade so they stop competing for attention.
+  - "See all leads →" is anchored to the right of the header — same place
+    you'd expect on Gmail, etc.
+- **Analytics tab** got a magazine-style layout.
+  - **Views** is now the cover number — large, with the unique-session
+    count underneath as context.
+  - **Leads** sits to the right with the conversion sub-line.
+  - **Watch-through %** replaces "Conv. %" — it's the share of visitors
+    who finished a video on your listing, which is the actual signal of
+    whether your video edit is working. Shown as a small ring.
+  - The funnel below is compact (4 steps), terminal step accented in sage.
+
+### 🧹 Honesty cuts
+
+- We removed the "▲ % vs previous 30d" trend that had appeared on the
+  prototype — the data layer doesn't yet compute prior-period numbers, so
+  showing one would have been theatre. Will return when the stats backend
+  supports it.
+
 ## v0.53.0 — Cleaner Leads + Analytics tabs (2026-06-22)
 
 ### ✨ Improvements
