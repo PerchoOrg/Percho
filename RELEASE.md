@@ -2,6 +2,16 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.54.1 — Community hub: Marketing/Analytics now visible on legacy communities (2026-06-22)
+
+### 🐛 Fix
+
+- v0.54.0 hid the new **Marketing** and **Analytics** tabs on community
+  pages whose creator wasn't recorded (legacy data — most communities
+  created before authorship was tracked). The tabs are now visible to
+  anyone who can edit the community, matching the existing edit
+  permission.
+
 ## v0.54.0 — Community hub gets Marketing & Analytics tabs (2026-06-22)
 
 ### ✨ Improvements

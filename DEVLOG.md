@@ -2,6 +2,27 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## Phase 50.1 — Community hub: Marketing/Analytics gate fix (2026-06-22)
+
+**Bug**: qiaoxux reported "only see details and media tabs from my community"
+right after Phase 50 shipped. Root cause: tabs were gated on a strict
+`isOwner = created_by != null && created_by === myAgentId`, but
+**legacy communities have `created_by = null`** (created before
+authorship was tracked). Those communities are editable by anyone
+(`canEditMetadata = true`) but failed the strict ownership check, so
+Marketing and Analytics tabs disappeared even for users actively
+managing the community.
+
+**Fix**: gate Marketing / Analytics / Cover / StatusPill on
+`canEditMetadata` instead of `isOwner`. Now:
+- legacy null-`created_by` communities → all 4 tabs visible to anyone
+  who can edit them (matches existing CommunityEditor permission).
+- modern owned communities → unchanged: only the creator sees the 4
+  tabs, contributors see Details + Media.
+
+One-liner: `isOwner` → `canEditMetadata` in 4 spots in
+`app/dashboard/communities/[id]/page.tsx`.
+
 ## Phase 50 — Community agent hub mirrors listing edit hub (2026-06-22)
 
 **Objective**: qiaoxux: "agent hub my community, select one community,

@@ -231,7 +231,7 @@ export default async function CommunityEditorPage({
       label: 'Media',
       icon: <ImageIcon className="h-5 w-5" strokeWidth={1.6} />,
     },
-    ...(isOwner
+    ...(canEditMetadata
       ? [
           {
             id: 'marketing',
@@ -254,7 +254,7 @@ export default async function CommunityEditorPage({
         title={community.name}
         subtitle={subtitle}
         controls={
-          isOwner ? (
+          canEditMetadata ? (
             <CommunityStatusPill communityId={community.id} status={community.status} />
           ) : null
         }
@@ -293,7 +293,7 @@ export default async function CommunityEditorPage({
                 myAgentId={myAgentId}
                 photos={initialPhotos}
               />
-              {isOwner && (
+              {canEditMetadata && (
                 <section className="rounded-2xl border border-line bg-surface p-4 sm:p-6">
                   <div className="mb-3">
                     <h2 className="text-base font-semibold">Cover</h2>
@@ -313,7 +313,7 @@ export default async function CommunityEditorPage({
               )}
             </div>
           ),
-          ...(isOwner
+          ...(canEditMetadata
             ? {
                 marketing: <CommunityMarketingPanel communityId={community.id} />,
                 analytics: <AnalyticsPanel entityKind="community" entityId={community.id} />,
