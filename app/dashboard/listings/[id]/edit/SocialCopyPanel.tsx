@@ -20,7 +20,7 @@
  * forward compat — we send 1-element arrays.
  */
 
-import { Copy, Loader2, Pencil, Save, Sparkles, Trash2, X } from 'lucide-react';
+import { Copy, Loader2, Pencil, Save, Sparkles, Tag, Trash2, X } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 
 interface Props {
@@ -48,6 +48,7 @@ interface Draft {
   language: Language;
   body: string;
   highlights: string[] | null;
+  title: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -98,6 +99,9 @@ export function SocialCopyPanel({ listingId }: Props) {
   // Once the user types into `output`, we set this so Regenerate forwards
   // it as `previous_drafts`. Reset whenever a fresh response comes in.
   const [outputEdited, setOutputEdited] = useState(false);
+  // Set when the API short-circuited via the saved-drafts cache so we
+  // can label the response as "loaded from saved draft, no AI call".
+  const [outputCached, setOutputCached] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [drafts, setDrafts] = useState<Draft[]>([]);
@@ -165,11 +169,12 @@ export function SocialCopyPanel({ listingId }: Props) {
       }
       const data = (await res.json()) as Partial<
         Record<Platform, Partial<Record<Language, string>>>
-      >;
+      > & { cached?: boolean };
       const text = data?.[platform]?.[language] ?? '';
       if (!text) throw new Error('Empty response');
       setOutput(text);
       setOutputEdited(false);
+      setOutputCached(Boolean(data.cached));
       setState('idle');
     } catch (err) {
       setState('error');
@@ -230,12 +235,18 @@ export function SocialCopyPanel({ listingId }: Props) {
     }
   }
 
-  async function onPatchDraft(draftId: string, body: string): Promise<string | null> {
+  async function onPatchDraft(
+    draftId: string,
+    patch: { body?: string; title?: string | null },
+  ): Promise<string | null> {
     try {
+      const payload: Record<string, unknown> = { draft_id: draftId };
+      if (patch.body !== undefined) payload.body = patch.body;
+      if (patch.title !== undefined) payload.title = patch.title ?? '';
       const res = await fetch(`/api/listings/${listingId}/social-drafts`, {
         method: 'PATCH',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ draft_id: draftId, body }),
+        body: JSON.stringify(payload),
       });
       if (!res.ok) {
         const data = (await res.json().catch(() => ({}))) as { error?: string };
@@ -258,15 +269,17 @@ export function SocialCopyPanel({ listingId }: Props) {
     }
   }
 
-  /**
-   * Pull a saved draft into the right pane for regeneration. Sets the
-   * platform/language to match so the generate call hits the same cell.
-   */
+  function onChangeOutput(v: string) {
+    setOutput(v);
+    setOutputEdited(true);
+    setOutputCached(false);
+  }
   function onRefineDraft(d: Draft) {
     setPlatform(d.platform);
     setLanguage(d.language);
     setOutput(d.body);
     setOutputEdited(true); // treat as a seed by default
+    setOutputCached(false);
     setError(null);
     setSaveError(null);
   }
@@ -391,6 +404,14 @@ export function SocialCopyPanel({ listingId }: Props) {
                     edited
                   </span>
                 )}
+                {outputCached && !outputEdited && (
+                  <span
+                    title="Loaded from your saved draft — no AI call made"
+                    className="rounded bg-emerald-500/10 px-1.5 py-0.5 text-emerald-300 text-[10px]"
+                  >
+                    cached
+                  </span>
+                )}
                 <div className="ml-auto flex items-center gap-1.5">
                   <button
                     type="button"
@@ -413,10 +434,7 @@ export function SocialCopyPanel({ listingId }: Props) {
               )}
               <textarea
                 value={output}
-                onChange={(e) => {
-                  setOutput(e.target.value);
-                  setOutputEdited(true);
-                }}
+                onChange={(e) => onChangeOutput(e.target.value)}
                 rows={Math.min(20, Math.max(8, output.split('\n').length + 1))}
                 className={`${INPUT_CLASS} resize-y font-mono text-xs`}
               />
@@ -458,7 +476,7 @@ export function SocialCopyPanel({ listingId }: Props) {
                 key={d.id}
                 draft={d}
                 onDelete={() => onDeleteDraft(d.id)}
-                onPatch={(body) => onPatchDraft(d.id, body)}
+                onPatch={(patch) => onPatchDraft(d.id, patch)}
                 onRefine={() => onRefineDraft(d)}
               />
             ))}
@@ -472,23 +490,28 @@ export function SocialCopyPanel({ listingId }: Props) {
 interface DraftRowProps {
   draft: Draft;
   onDelete: () => void;
-  onPatch: (body: string) => Promise<string | null>;
+  onPatch: (patch: { body?: string; title?: string | null }) => Promise<string | null>;
   onRefine: () => void;
 }
 
 function DraftRow({ draft, onDelete, onPatch, onRefine }: DraftRowProps) {
   const [editing, setEditing] = useState(false);
   const [buffer, setBuffer] = useState(draft.body);
+  const [renaming, setRenaming] = useState(false);
+  const [titleBuffer, setTitleBuffer] = useState(draft.title ?? '');
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
-  // Re-sync buffer when the draft prop changes (e.g. after a successful PATCH
+  // Re-sync buffers when the draft prop changes (e.g. after a successful PATCH
   // returns the updated row, or after a Refine cycle).
   useEffect(() => {
     if (!editing) setBuffer(draft.body);
   }, [draft.body, editing]);
+  useEffect(() => {
+    if (!renaming) setTitleBuffer(draft.title ?? '');
+  }, [draft.title, renaming]);
 
-  async function commit() {
+  async function commitBody() {
     if (buffer.trim().length === 0) {
       setErr('Body cannot be empty.');
       return;
@@ -499,7 +522,7 @@ function DraftRow({ draft, onDelete, onPatch, onRefine }: DraftRowProps) {
     }
     setSaving(true);
     setErr(null);
-    const result = await onPatch(buffer);
+    const result = await onPatch({ body: buffer });
     setSaving(false);
     if (result) {
       setErr(result);
@@ -508,20 +531,92 @@ function DraftRow({ draft, onDelete, onPatch, onRefine }: DraftRowProps) {
     setEditing(false);
   }
 
-  function cancel() {
+  function cancelBody() {
     setBuffer(draft.body);
     setErr(null);
     setEditing(false);
+  }
+
+  async function commitTitle() {
+    const next = titleBuffer.trim();
+    const current = draft.title ?? '';
+    if (next === current) {
+      setRenaming(false);
+      return;
+    }
+    if (next.length > 120) {
+      setErr('Title too long (max 120 characters).');
+      return;
+    }
+    setSaving(true);
+    setErr(null);
+    // Empty string clears title (server treats '' as null).
+    const result = await onPatch({ title: next });
+    setSaving(false);
+    if (result) {
+      setErr(result);
+      return;
+    }
+    setRenaming(false);
+  }
+
+  function cancelTitle() {
+    setTitleBuffer(draft.title ?? '');
+    setErr(null);
+    setRenaming(false);
   }
 
   const stamp = draft.updated_at ?? draft.created_at;
   const edited =
     draft.updated_at && draft.updated_at !== draft.created_at;
 
+  // Default heading: title if set, otherwise platform · language.
+  const heading = draft.title ?? null;
+
   return (
     <li className="rounded-lg border border-line bg-bg p-3">
+      {/* Title row (rename UI) */}
+      {renaming ? (
+        <div className="mb-2 flex flex-wrap items-center gap-2">
+          <input
+            type="text"
+            value={titleBuffer}
+            onChange={(e) => setTitleBuffer(e.target.value)}
+            placeholder="Title (optional, e.g. Open house — front yard)"
+            maxLength={120}
+            autoFocus
+            className="flex-1 min-w-[200px] rounded border border-line bg-surface px-2 py-1 text-ink text-xs placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-line-strong"
+          />
+          <button
+            type="button"
+            onClick={commitTitle}
+            disabled={saving}
+            className="inline-flex items-center gap-1 rounded border border-line px-2 py-1 text-[11px] text-ink hover:bg-ink2/20 disabled:opacity-50"
+          >
+            {saving ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />}
+            Save
+          </button>
+          <button
+            type="button"
+            onClick={cancelTitle}
+            disabled={saving}
+            className="inline-flex items-center gap-1 rounded border border-line px-2 py-1 text-[11px] text-ink2 hover:bg-ink2/20 disabled:opacity-50"
+          >
+            <X size={12} />
+            Cancel
+          </button>
+        </div>
+      ) : (
+        heading && (
+          <div className="mb-1 flex items-center gap-2">
+            <span className="text-ink text-sm font-medium">{heading}</span>
+          </div>
+        )
+      )}
+
+      {/* Meta + actions row */}
       <div className="mb-1 flex flex-wrap items-center gap-2">
-        <span className="text-ink text-xs font-medium">
+        <span className="text-ink2 text-xs">
           {platformLabel(draft.platform)}
         </span>
         <span className="text-muted text-[11px]">
@@ -532,7 +627,7 @@ function DraftRow({ draft, onDelete, onPatch, onRefine }: DraftRowProps) {
           {edited && ' (edited)'}
         </span>
         <div className="ml-auto flex items-center gap-1.5">
-          {!editing && (
+          {!editing && !renaming && (
             <>
               <button
                 type="button"
@@ -542,6 +637,15 @@ function DraftRow({ draft, onDelete, onPatch, onRefine }: DraftRowProps) {
               >
                 <Sparkles size={12} />
                 Refine
+              </button>
+              <button
+                type="button"
+                onClick={() => setRenaming(true)}
+                title={heading ? 'Rename this draft' : 'Add a title to this draft'}
+                className="inline-flex items-center gap-1 rounded border border-line px-2 py-1 text-[11px] text-ink hover:bg-ink2/20"
+              >
+                <Tag size={12} />
+                {heading ? 'Rename' : 'Title'}
               </button>
               <button
                 type="button"
@@ -567,7 +671,7 @@ function DraftRow({ draft, onDelete, onPatch, onRefine }: DraftRowProps) {
             <>
               <button
                 type="button"
-                onClick={commit}
+                onClick={commitBody}
                 disabled={saving}
                 className="inline-flex items-center gap-1 rounded border border-line px-2 py-1 text-[11px] text-ink hover:bg-ink2/20 disabled:opacity-50"
               >
@@ -580,7 +684,7 @@ function DraftRow({ draft, onDelete, onPatch, onRefine }: DraftRowProps) {
               </button>
               <button
                 type="button"
-                onClick={cancel}
+                onClick={cancelBody}
                 disabled={saving}
                 className="inline-flex items-center gap-1 rounded border border-line px-2 py-1 text-[11px] text-ink2 hover:bg-ink2/20 disabled:opacity-50"
               >

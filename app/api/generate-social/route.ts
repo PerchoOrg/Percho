@@ -20,6 +20,7 @@ import {
   type SocialPlatform,
 } from '@/lib/ai/anthropic';
 import { checkAndRecord } from '@/lib/ai/rate-limit';
+import { socialDraftHash } from '@/lib/ai/social-cache';
 import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
@@ -140,6 +141,44 @@ export async function POST(req: Request) {
   )
     .map((v) => (v.title ?? '').trim())
     .filter((s) => s.length > 0);
+
+  // Cache lookup: only when this is a fresh request (no previous_drafts seed),
+  // and only single-cell calls (the panel sends 1×1; multi-cell is forward-
+  // compat that nobody uses today and would need per-cell merge logic).
+  const isRefine =
+    parsed.data.previous_drafts &&
+    Object.keys(parsed.data.previous_drafts).length > 0;
+  const isSingleCell =
+    parsed.data.platforms.length === 1 && parsed.data.languages.length === 1;
+  if (!isRefine && isSingleCell) {
+    const platform = parsed.data.platforms[0]!;
+    const language = parsed.data.languages[0]!;
+    const hash = socialDraftHash({
+      platform,
+      language,
+      highlights: parsed.data.highlights,
+    });
+    // biome-ignore lint/suspicious/noExplicitAny: stub generated types
+    const cached = await (supabase as any)
+      .from('saved_social_drafts')
+      .select('body')
+      .eq('listing_id', parsed.data.listing_id)
+      .eq('input_hash', hash)
+      .order('updated_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (cached.data?.body) {
+      // Cache hit — no LLM call, no rate-limit charge. Surface the hit
+      // so the UI can label it ("Loaded from saved draft").
+      return NextResponse.json(
+        {
+          [platform]: { [language]: cached.data.body },
+          cached: true,
+        },
+        { status: 200 },
+      );
+    }
+  }
 
   const service = createServiceClient();
   const limit = await checkAndRecord(service, agent.id, 'social_copy');

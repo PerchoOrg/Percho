@@ -23,7 +23,7 @@ export function GenerateTourPanel({ listingId: _listingId }: { listingId: string
   return (
     <section className="rounded border border-line bg-surface p-6">
       <p className="mb-4 text-ink2 text-sm leading-relaxed">
-        Turn 10 listing photos into a 30-second home tour video.
+        Turn 10 listing photos into a 30-second home tour video — coming soon.
       </p>
 
       <button

@@ -2,6 +2,25 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.52.4 — Skip the AI when you've already got the answer (2026-06-22)
+
+### 🚀 Features
+
+- **Token cache.** When you hit **Generate** with the exact same
+  platform + language + selling points as a saved draft on this
+  listing, we now return that draft instantly — no AI call. A green
+  **cached** badge lets you know. Edit the saved draft (or click
+  **Refine**) any time you want a fresh take.
+- **Name your saved drafts.** Each saved draft now has an optional
+  title — click **Title** (or **Rename**) to label it ("Open house —
+  front yard angle", "Spanish version for Carla"). Up to 120
+  characters. Title shows as the row heading.
+
+### 🧹 Polish
+
+- Tour-video panel now ends with "— coming soon." so the disabled
+  button is clearly intentional.
+
 ## v0.52.3 — Edit drafts + refine from your edits (2026-06-22)
 
 ### 🚀 Features

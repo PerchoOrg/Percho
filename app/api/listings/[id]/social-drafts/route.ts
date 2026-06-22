@@ -25,6 +25,7 @@ import {
   type SocialPlatform,
 } from '@/lib/ai/anthropic';
 import { checkAndRecord } from '@/lib/ai/rate-limit';
+import { socialDraftHash } from '@/lib/ai/social-cache';
 import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
@@ -43,13 +44,20 @@ const SaveInput = z.object({
   language: LanguageEnum,
   body: z.string().trim().min(1).max(8192),
   highlights: z.array(z.string().trim().min(1).max(80)).max(5).optional(),
+  title: z.string().trim().min(1).max(120).optional(),
 });
 
 const PatchInput = z.object({
   draft_id: z.string().uuid(),
-  body: z.string().trim().min(1).max(8192),
+  // At least one of body / title / language must be provided.
+  body: z.string().trim().min(1).max(8192).optional(),
   language: LanguageEnum.optional(),
-});
+  // Empty string clears the title (sets it to null).
+  title: z.string().trim().max(120).optional(),
+}).refine(
+  (v) => v.body !== undefined || v.title !== undefined || v.language !== undefined,
+  { message: 'no_fields_to_update' },
+);
 
 const DeleteInput = z.object({
   draft_id: z.string().uuid(),
@@ -61,9 +69,13 @@ interface DraftRow {
   language: SocialLanguage;
   body: string;
   highlights: string[] | null;
+  title: string | null;
   created_at: string;
   updated_at: string;
 }
+
+const DRAFT_COLS =
+  'id, platform, language, body, highlights, title, created_at, updated_at';
 
 async function resolveAgentAndListing(
   listingId: string,
@@ -117,7 +129,7 @@ export async function GET(
   // biome-ignore lint/suspicious/noExplicitAny: stub generated types
   const res = await (ctx.supabase as any)
     .from('saved_social_drafts')
-    .select('id, platform, language, body, highlights, created_at, updated_at')
+    .select(DRAFT_COLS)
     .eq('listing_id', listingId)
     .order('updated_at', { ascending: false })
     .limit(60);
@@ -159,6 +171,14 @@ export async function POST(
     return NextResponse.json({ error: 'internal' }, { status: 500 });
   }
 
+  // Compute server-side cache fingerprint. Same normalization rules as
+  // the generate route — keep them in lockstep via lib/ai/social-cache.
+  const inputHash = socialDraftHash({
+    platform: parsed.data.platform,
+    language: parsed.data.language,
+    highlights: parsed.data.highlights,
+  });
+
   // biome-ignore lint/suspicious/noExplicitAny: stub generated types
   const ins = await (ctx.supabase as any)
     .from('saved_social_drafts')
@@ -169,8 +189,10 @@ export async function POST(
       language: parsed.data.language,
       body: parsed.data.body,
       highlights: parsed.data.highlights ?? null,
+      title: parsed.data.title ?? null,
+      input_hash: inputHash,
     })
-    .select('id, platform, language, body, highlights, created_at, updated_at')
+    .select(DRAFT_COLS)
     .single();
   if (ins.error) {
     // Trigger raises 'saved_drafts_cap_reached' as a check_violation.
@@ -215,8 +237,13 @@ export async function PATCH(
     return NextResponse.json({ error: 'internal' }, { status: 500 });
   }
 
-  const updates: Record<string, unknown> = { body: parsed.data.body };
-  if (parsed.data.language) updates.language = parsed.data.language;
+  const updates: Record<string, unknown> = {};
+  if (parsed.data.body !== undefined) updates.body = parsed.data.body;
+  if (parsed.data.language !== undefined) updates.language = parsed.data.language;
+  if (parsed.data.title !== undefined) {
+    // Empty string clears the title.
+    updates.title = parsed.data.title.length === 0 ? null : parsed.data.title;
+  }
 
   // RLS-gated; the listing_id filter pins the row to this listing.
   // biome-ignore lint/suspicious/noExplicitAny: stub generated types
@@ -225,7 +252,7 @@ export async function PATCH(
     .update(updates)
     .eq('id', parsed.data.draft_id)
     .eq('listing_id', listingId)
-    .select('id, platform, language, body, highlights, created_at, updated_at')
+    .select(DRAFT_COLS)
     .maybeSingle();
   if (upd.error) {
     return NextResponse.json({ error: 'internal' }, { status: 500 });

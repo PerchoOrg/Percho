@@ -2,6 +2,66 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## Phase 48.5 — Social drafts: cache + rename + tour-panel polish (2026-06-22)
+
+**Objective**: qiaoxux follow-up on 48.4.
+1. Tour panel teaser was ambiguous — needed "— coming soon." appended
+   so agents know the disabled button isn't a bug.
+2. Re-clicking Generate with identical inputs was hitting Claude every
+   time, burning tokens for a result we already had on disk as a saved
+   draft.
+3. Saved drafts list quickly accumulated rows that were
+   indistinguishable at a glance ("Facebook · English · 6/22 7:42 PM" ×
+   12). Needed user-supplied titles for triage.
+
+**Changes**:
+- `GenerateTourPanel`: blurb extended to "Turn 10 listing photos into a
+  30-second home tour video — coming soon."
+- `lib/ai/social-cache.ts` (new): server-side input fingerprint.
+  `socialDraftHash({platform, language, highlights})` normalizes
+  highlights (trim → lowercase → dedupe → sort) then sha256 of the
+  JSON payload. Server-only — clients never compute or send the hash,
+  so a malicious client can't poison or flush the cache.
+- `app/api/generate-social/route.ts`: before charging the rate limit
+  and calling Claude, check `saved_social_drafts` for a row with
+  matching `(listing_id, input_hash)`. Hit → return that body with
+  `cached: true`. Skipped on refine (`previous_drafts` present) and on
+  multi-cell calls (forward-compat, nobody uses it today).
+- `app/api/listings/[id]/social-drafts/route.ts`:
+  - POST stamps `input_hash` so the row becomes a cache target the
+    next time the agent generates with identical inputs.
+  - PATCH now accepts `title` (≤ 120 chars; empty string clears).
+    `body`/`title`/`language` are all optional — refine zod requires
+    at least one. Body edit invalidates `input_hash` via DB trigger
+    (set NULL), so a stale tweaked body never serves as the cache
+    answer for a future fresh prompt.
+  - GET returns `title` alongside the existing fields.
+- `supabase/migrations/0033_saved_social_drafts_title_and_cache.sql`:
+  adds `title text` (with 1..120 char_length check) + `input_hash text`
+  + sparse index on `(listing_id, input_hash) where input_hash is not
+  null` + trigger that nulls `input_hash` on body change.
+- `SocialCopyPanel`:
+  - Output card shows a green **cached** pill when the response was
+    served from a saved draft.
+  - Saved-draft rows now show their title (when set) as the heading,
+    with a **Title** / **Rename** button (`Tag` icon). Inline input,
+    Save/Cancel, ≤ 120 chars, empty value clears.
+  - Edit and rename are mutually exclusive (only one inline editor
+    open per row at a time) so the actions row stays sane.
+
+**Cache semantics deliberately chosen**:
+- Cache key = `(listing_id, sha256(platform, language, sorted highlights))`.
+  Listing facts (price, beds, etc.) are intentionally NOT in the key —
+  they live on the listing and a listing facts change doesn't
+  invalidate. Trade-off accepted: an agent who edits listing price and
+  hits Generate gets the old cached body. Mitigation: the cached pill
+  is visible, and the agent can click Refine to force a fresh call.
+- Edits null out `input_hash` automatically — once a row diverges from
+  "the canonical answer for this prompt", we never serve it as one.
+- Refine path always bypasses the cache (intent is to regenerate).
+
+**Migration**: 0033 to push to remote after merge.
+
 ## Phase 48.4 — Social drafts: editable + refine-from-edits (2026-06-22)
 
 **Objective**: qiaoxux follow-up on 48.3. Two pain points after the
