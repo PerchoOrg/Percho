@@ -20,7 +20,7 @@
  * hidden because they are not theirs to act on.
  *
  * Hero: HeroHeader (matches listing hub) — chromeless top-right control
- * row with the StatusPill, title/subtitle bottom-left.
+ * row with a Preview link + InstantStatusToggle, title/subtitle bottom-left.
  */
 
 import { thumbnailUrl } from '@/lib/cloudflare/stream';
@@ -32,15 +32,16 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 
 import { AnalyticsPanel } from '@/app/dashboard/_components/AnalyticsPanel';
+import { HeroControl } from '@/app/dashboard/_components/HeroControl';
 import { HeroHeader } from '@/app/dashboard/_components/HeroHeader';
 import { HubTabs } from '@/app/dashboard/_components/HubTabs';
+import { InstantStatusToggle } from '@/app/dashboard/_components/InstantStatusToggle';
 
 import { CommunityCoverPanel } from './CommunityCoverPanel';
-import { CommunityEditor } from './CommunityEditor';
+import { CommunityDangerZone, CommunityEditor } from './CommunityEditor';
 import { CommunityMarketingPanel } from './CommunityMarketingPanel';
 import { CommunityMediaPanel } from './CommunityMediaPanel';
 import type { CommunityPhotoRow } from './CommunityPhotoPanel';
-import { CommunityStatusPill } from './CommunityStatusPill';
 import type { ManageVideoRow } from './CommunityVideoManageList';
 import { signCommunityPhotoUrls } from './photo-actions';
 
@@ -254,9 +255,19 @@ export default async function CommunityEditorPage({
         title={community.name}
         subtitle={subtitle}
         controls={
-          canEditMetadata ? (
-            <CommunityStatusPill communityId={community.id} status={community.status} />
-          ) : null
+          <>
+            <HeroControl href={`/c/${community.slug}`}>
+              <span aria-hidden>↗</span>
+              <span>Preview</span>
+            </HeroControl>
+            {canEditMetadata && (
+              <InstantStatusToggle
+                kind="community"
+                id={community.id}
+                status={community.status}
+              />
+            )}
+          </>
         }
       />
 
@@ -265,25 +276,34 @@ export default async function CommunityEditorPage({
         defaultTab="details"
         panels={{
           details: (
-            <section className="rounded-2xl border border-line bg-surface p-4 sm:p-6">
-              <div className="mb-4 flex flex-wrap items-baseline justify-between gap-3">
-                <h2 className="text-base font-semibold">Community details</h2>
-                <Link
-                  href={`/c/${community.slug}`}
-                  className="inline-flex items-center gap-1 text-xs text-ink2 hover:text-ink"
-                >
-                  View public page →
-                </Link>
-              </div>
-              {canEditMetadata ? (
+            <div className="space-y-6">
+              <section className="rounded-2xl border border-line bg-surface p-4 sm:p-6">
+                <div className="mb-4 flex flex-wrap items-baseline justify-between gap-3">
+                  <div className="flex items-baseline gap-2">
+                    <h2 className="text-base font-semibold">Community details</h2>
+                    {!canEditMetadata && (
+                      <span className="rounded-full border border-line px-2 py-0.5 text-[10px] uppercase tracking-wider text-ink2">
+                        View only
+                      </span>
+                    )}
+                  </div>
+                  <Link
+                    href={`/c/${community.slug}`}
+                    className="inline-flex items-center gap-1 text-xs text-ink2 hover:text-ink"
+                  >
+                    View public page →
+                  </Link>
+                </div>
+                {!canEditMetadata && (
+                  <p className="mb-4 rounded border border-line bg-bg px-3 py-2 text-xs text-ink2">
+                    Only the agent who created this community can edit metadata. You can still
+                    upload videos and photos.
+                  </p>
+                )}
                 <CommunityEditor community={community} canEditMetadata={canEditMetadata} />
-              ) : (
-                <p className="text-ink2 text-sm">
-                  Only the creating agent can edit this community&apos;s name, city, or description.
-                  You can still manage your own videos &amp; photos.
-                </p>
-              )}
-            </section>
+              </section>
+              {canEditMetadata && <CommunityDangerZone communityId={community.id} />}
+            </div>
           ),
           media: (
             <div className="space-y-4">

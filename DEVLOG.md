@@ -2,6 +2,59 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## Phase 50.2 — Community hub: hero parity + flatten Details (2026-06-22)
+
+**Trigger**: qiaoxux on community detail page — "Preview and state at top
+right - reuse the same logic from my listing hero page. Nested box should
+be removed, you can check how my listing page is implemented."
+
+**Hero parity.** Listing hero had `Preview ↗` + `InstantStatusToggle`
+(chromeless, frosted hover, instant flip + missing-fields popover for
+listings). Community hero had only the older `CommunityStatusPill` →
+`StatusPill` bridge, with an outline pill style and no Preview link.
+
+Fix: extended `InstantStatusToggle` with a `kind: 'listing' | 'community'`
+prop. The component now branches between listing publish actions and
+community status actions internally. Community hero now renders the same
+`<HeroControl href="/c/{slug}">↗ Preview</HeroControl>` + toggle pair as
+the listing hero. Visually identical.
+
+`StatusPill.tsx` and the `CommunityStatusPill` bridge file deleted — no
+remaining consumers (verified via grep).
+
+**Flatten Details.** Details panel rendered:
+```
+<section> ─ "Community details" + View public page →
+  <CommunityEditor>
+    └─ <section> ─ "Community details"  ← duplicate inner box + heading
+       <form>...</form>
+    └─ <DangerZone>
+```
+
+Refactor: `CommunityEditor` now renders only the form content (no outer
+section, no duplicate heading), matching how `EditListingForm` is shaped.
+The `DangerZone` was lifted out of `CommunityEditor` and renamed
+`CommunityDangerZone` (still in the same file). Page-level `details` panel
+now mirrors the listing layout: outer section card with heading + "View
+public page" link, form inside, `<CommunityDangerZone>` as a sibling
+section below — identical to listing's `details: { <section>EditListingForm + <DangerZone> }`.
+
+The "View only" badge + non-owner "you can still upload" notice migrated
+from inside CommunityEditor up to the page-level details panel since the
+form no longer owns its frame.
+
+**Files**:
+- `app/dashboard/_components/InstantStatusToggle.tsx` — added `kind` prop +
+  community branch (calls `setCommunityStatus`).
+- `app/dashboard/communities/[id]/page.tsx` — hero controls now mirror
+  listing; details panel flattened, DangerZone lifted out.
+- `app/dashboard/communities/[id]/CommunityEditor.tsx` — section/heading
+  removed, DangerZone exported as `CommunityDangerZone`.
+- `app/dashboard/communities/[id]/CommunityStatusPill.tsx` — deleted.
+- `app/dashboard/_components/StatusPill.tsx` — deleted.
+
+**Verify**: `npx tsc --noEmit` clean, `npm run build` clean.
+
 ## Phase 50.1 — Community hub: Marketing/Analytics gate fix (2026-06-22)
 
 **Bug**: qiaoxux reported "only see details and media tabs from my community"

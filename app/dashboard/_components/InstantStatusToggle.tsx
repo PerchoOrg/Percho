@@ -1,17 +1,22 @@
 'use client';
 
 /**
- * InstantStatusToggle — one-click active/inactive switch for the listing hero.
+ * InstantStatusToggle — one-click active/inactive switch for the hero of
+ * listing AND community detail pages (phase 50, 2026-06-22).
  *
- * Phase 47.11: replaces the older StatusPill on the hero. Behavior:
- *   - Active → Inactive: fires unpublishListing immediately, no "deactivate"
- *     wording or confirm prompts. The pill just flips.
- *   - Inactive → Active: fires publishListing. If validation fails, surfaces
- *     the missing-fields popover (same UX as before).
+ * Behavior:
+ *   - Active → Inactive: fires the deactivate action immediately, no confirm.
+ *   - Inactive → Active: fires the activate action. For listings, validation
+ *     may surface missing-fields (price/beds/baths/media); we render those
+ *     inline in a portaled popover. Communities have no publish gate.
  *
- * The chromeless variant (no border / hover frosted glass) is used so it
- * blends into the cover image; an explicit "outline" variant is kept for
- * places that need a visible chip.
+ * The chromeless variant blends into the cover image; an "outline" variant is
+ * kept for places that need a visible chip.
+ *
+ * `kind` selects which server actions to call. The shared toggle UX (instant
+ * flip, missing-field popover, frosted-hover) used to live only on listings;
+ * communities had a heavier `StatusPill` that didn't match the listing hero
+ * visual language. Phase 50 collapsed both into this single component.
  */
 
 import { useEffect, useRef, useState, useTransition } from 'react';
@@ -22,6 +27,7 @@ import {
   publishListing,
   unpublishListing,
 } from '@/app/dashboard/listings/[id]/edit/publish-actions';
+import { setCommunityStatus } from '@/app/dashboard/communities/[id]/status-actions';
 
 const MISSING_LABELS: Record<string, string> = {
   address: 'Property address',
@@ -32,13 +38,21 @@ const MISSING_LABELS: Record<string, string> = {
   'at least one ready video': '≥1 ready video',
 };
 
+type Kind = 'listing' | 'community';
+
 type Props = {
   id: string;
   status: string;
+  kind?: Kind;
   variant?: 'hero' | 'outline';
 };
 
-export function InstantStatusToggle({ id, status, variant = 'hero' }: Props) {
+export function InstantStatusToggle({
+  id,
+  status,
+  kind = 'listing',
+  variant = 'hero',
+}: Props) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [missing, setMissing] = useState<string[] | null>(null);
@@ -72,20 +86,28 @@ export function InstantStatusToggle({ id, status, variant = 'hero' }: Props) {
       } catch {
         // no pending form on this page — ignore.
       }
-      if (isActive) {
-        // Active → Inactive: silent, instant.
-        const res = await unpublishListing(id);
+      if (kind === 'listing') {
+        if (isActive) {
+          const res = await unpublishListing(id);
+          if (res.ok) router.refresh();
+          else {
+            setErr(res.error);
+            showAt();
+          }
+        } else {
+          const res = await publishListing(id);
+          if (res.ok) router.refresh();
+          else {
+            setMissing(res.missing);
+            showAt();
+          }
+        }
+      } else {
+        // community: no publish gate, just flip.
+        const res = await setCommunityStatus(id, isActive ? 'inactive' : 'active');
         if (res.ok) router.refresh();
         else {
           setErr(res.error);
-          showAt();
-        }
-      } else {
-        // Inactive → Active: validate.
-        const res = await publishListing(id);
-        if (res.ok) router.refresh();
-        else {
-          setMissing(res.missing);
           showAt();
         }
       }
@@ -121,6 +143,8 @@ export function InstantStatusToggle({ id, status, variant = 'hero' }: Props) {
       ? 'bg-gray-400'
       : 'bg-ink2/40';
 
+  const noun = kind === 'community' ? 'community' : 'listing';
+
   return (
     <>
       <button
@@ -129,7 +153,7 @@ export function InstantStatusToggle({ id, status, variant = 'hero' }: Props) {
         onClick={handleToggle}
         disabled={pending}
         aria-busy={pending}
-        aria-label={isActive ? 'Deactivate listing' : 'Activate listing'}
+        aria-label={isActive ? `Deactivate ${noun}` : `Activate ${noun}`}
         title={isActive ? 'Click to deactivate' : 'Click to activate'}
         className={cls}
         style={isHero ? { textShadow: '0 1px 2px rgba(0,0,0,0.55)' } : undefined}

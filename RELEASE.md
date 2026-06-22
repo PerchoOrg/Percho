@@ -2,6 +2,21 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.54.2 — Community hub: matching hero + cleaner Details panel (2026-06-22)
+
+### ✨ Improvements
+
+- The community detail page now has the same hero controls as the listing
+  edit page: a **Preview ↗** link to your buyer-facing community page, plus
+  the same one-click Active / Inactive toggle. Both reuse the chromeless
+  pill style that blends into the cover image.
+- The **Details** tab no longer shows a "box inside a box" — the inner
+  framing card with the duplicate "Community details" heading is gone, so
+  the form now sits directly on the panel like the listing form does.
+- The **Delete community** button moved from inside the form to its own
+  section at the bottom of Details, matching where the listing delete
+  button lives. No behavior change — still requires confirmation.
+
 ## v0.54.1 — Community hub: Marketing/Analytics now visible on legacy communities (2026-06-22)
 
 ### 🐛 Fix
