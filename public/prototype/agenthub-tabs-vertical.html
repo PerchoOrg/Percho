@@ -145,6 +145,63 @@
   .vC-v-tab.active .chev { opacity: 0.85; }
   .vC-v-badge { margin-left: auto; font-size: 11px; background: var(--ink); color: var(--surface); border-radius: 999px; padding: 2px 7px; }
 
+  /* === VARIANT D: Amazon-style horizontal icon chips === */
+  .vD-chips {
+    display: flex; gap: 14px;
+    padding: 14px 16px 16px;
+    overflow-x: auto; scrollbar-width: none;
+    background: var(--bg);
+    border-bottom: 1px solid var(--line);
+    /* fade on right edge to hint scrollability */
+    -webkit-mask-image: linear-gradient(to right, black calc(100% - 32px), transparent);
+            mask-image: linear-gradient(to right, black calc(100% - 32px), transparent);
+  }
+  .vD-chips::-webkit-scrollbar { display: none; }
+  .vD-chip {
+    flex: 0 0 auto;
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    background: transparent; border: none; cursor: pointer;
+    padding: 0; width: 64px;
+    color: var(--ink2); font-size: 11.5px; line-height: 1.2;
+    text-align: center;
+  }
+  .vD-chip .circle {
+    width: 56px; height: 56px; border-radius: 50%;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+    transition: transform 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
+    position: relative;
+  }
+  .vD-chip:hover .circle { border-color: var(--line-strong); transform: translateY(-1px); }
+  .vD-chip.active { color: var(--ink); font-weight: 600; }
+  .vD-chip.active .circle {
+    border-color: var(--ink); border-width: 2px;
+    box-shadow: 0 2px 10px rgba(49,49,49,0.12);
+    background: var(--cream);
+  }
+  .vD-chip.active::after {
+    content: ""; display: block; width: 18px; height: 2px; background: var(--ink); border-radius: 2px; margin-top: 2px;
+  }
+  .vD-chip .badge-dot {
+    position: absolute; top: -2px; right: -2px;
+    background: #b04a3e; color: #fff;
+    font-size: 10px; font-weight: 600;
+    min-width: 18px; height: 18px; padding: 0 5px;
+    border-radius: 999px;
+    display: flex; align-items: center; justify-content: center;
+    border: 2px solid var(--bg);
+  }
+  /* desktop: same chip row, but no fade (all 5 fit) */
+  .vD-chips.desk {
+    -webkit-mask-image: none; mask-image: none;
+    justify-content: flex-start;
+    gap: 22px; padding: 16px 22px 18px;
+  }
+  .vD-chips.desk .vD-chip { width: 76px; font-size: 12.5px; }
+  .vD-chips.desk .vD-chip .circle { width: 64px; height: 64px; font-size: 26px; }
+
   /* note block */
   .note-block { background: var(--surface); border-left: 3px solid var(--ink); padding: 14px 18px; border-radius: 0 10px 10px 0; color: var(--ink2); font-size: 13px; margin-top: 24px; }
   .note-block h3 { margin: 0 0 6px; font-size: 13px; color: var(--ink); }
@@ -157,15 +214,15 @@
 <body>
 <div class="page-wrap">
   <div class="page-title">Vicinity AgentHub · my-listing tabs redesign</div>
-  <h1 class="page-h1 serif">Vertical tabs — 3 prototypes to compare</h1>
+  <h1 class="page-h1 serif">5 tabs redesign — 4 prototypes to compare</h1>
   <p class="page-lede">
-    Today the 5 sub-tabs (Details · Media · Marketing · Leads · Analytics) live in a horizontal pill row that overflows on mobile (only ~3 fit). Each variant below shows the same Desktop ↔ Mobile pair so you can pick the direction.
+    Today the 5 sub-tabs (Details · Media · Marketing · Leads · Analytics) live in a horizontal pill row that overflows on mobile (only ~3 fit). Each variant below shows the same Desktop ↔ Mobile pair so you can pick the direction. <b>A/B/C</b> explore vertical layouts; <b>D</b> stays horizontal but borrows Amazon Grocery's icon-chip pattern.
   </p>
 
   <div class="recommendation">
-    <h3 class="serif">My recommendation: Variant C (hybrid)</h3>
+    <h3 class="serif">Quick read</h3>
     <p style="margin:0;color:var(--ink2);font-size:13.5px;">
-      Going fully vertical on a 375 px phone steals horizontal real estate from the panel content. <b>C</b> keeps horizontal on desktop (where it already works) and switches to a vertical <b>stacked card list</b> on mobile — every tab is fully labelled, no overflow, no scroll-fishing. <b>A</b> and <b>B</b> are still here so you can see the alternatives.
+      Going fully vertical on a 375 px phone (<b>A</b>) steals horizontal real estate from the panel content. <b>B</b> compromises with an icon-only mobile rail but loses labels. <b>C</b> keeps horizontal on desktop and switches to a vertical stacked card list on mobile — every tab fully labelled, no overflow. <b>D</b> stays horizontal everywhere using Amazon-style circular icon chips — visually distinct from any text-tab nav above/below, but still requires mobile scroll. <b>C and D are the strongest candidates</b> — pick C if "all 5 visible no scroll" matters most, pick D if visual identity / consistency with desktop matters most.
     </p>
   </div>
 
@@ -426,6 +483,92 @@
     </div>
   </div>
 
+  <!-- =============== VARIANT D =============== -->
+  <div class="variant">
+    <div class="variant-head">
+      <span class="variant-tag">D</span>
+      <h2 class="variant-h2 serif">Amazon-style horizontal icon chips</h2>
+    </div>
+    <p class="variant-note">
+      Stay horizontal — but replace the flat text pills with <b>circular icon chips + label below</b>, like Amazon Grocery's subcategory shortcuts. Visually distinct from any text-pill nav above (BottomNav / page header), feels tactile, and the circle gives each tab its own identity. Mobile shows ~4.5 chips with a soft edge-fade hinting at scroll.
+    </p>
+    <div class="variant-pros">
+      <span class="pro">Visually distinct from text tabs above/below — clear hierarchy</span>
+      <span class="pro">Each tab gets a memorable icon identity (📝🖼📣👥📈)</span>
+      <span class="pro">Notification badge fits naturally on the circle (Leads · 3)</span>
+      <span class="con">Still requires horizontal scroll on mobile (5 chips, ~4.5 visible)</span>
+      <span class="con">Taller than current pill row (~80 px vs ~44 px) — extra vertical space cost</span>
+    </div>
+
+    <div class="frames">
+      <div class="frame">
+        <div class="frame-label">Desktop · 1280 px (all 5 chips fit, no scroll)</div>
+        <div class="desk">
+          <div class="hero">
+            <div class="hero-inner">
+              <h3>1247 Peachtree Ln</h3>
+              <div class="sub">Peachtree Corners, GA · Riverside</div>
+            </div>
+            <div class="hero-stats">
+              <div class="hero-stat"><b>312</b>views</div>
+              <div class="hero-stat"><b>14</b>saves</div>
+              <div class="hero-stat"><b>3</b>leads</div>
+            </div>
+          </div>
+          <div class="vD-chips desk" role="tablist">
+            <button class="vD-chip"><span class="circle">📝</span>Details</button>
+            <button class="vD-chip"><span class="circle">🖼</span>Media</button>
+            <button class="vD-chip active"><span class="circle">📣</span>Marketing</button>
+            <button class="vD-chip"><span class="circle">👥<span class="badge-dot">3</span></span>Leads</button>
+            <button class="vD-chip"><span class="circle">📈</span>Analytics</button>
+          </div>
+          <div class="panel-area" style="flex:1">
+            <div class="panel-card">
+              <div class="ph-title">Marketing</div>
+              <div class="ph-row med"></div>
+              <div class="ph-row"></div>
+              <div class="ph-row short"></div>
+              <div class="ph-grid"><div class="ph-tile"></div><div class="ph-tile"></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="frame">
+        <div class="frame-label">Mobile · 392 px (scroll →, edge fades)</div>
+        <div class="mob">
+          <div class="hero">
+            <div class="hero-inner">
+              <h3>1247 Peachtree Ln</h3>
+              <div class="sub">Peachtree Corners, GA · Riverside</div>
+            </div>
+            <div class="hero-stats">
+              <div class="hero-stat"><b>312</b>views</div>
+              <div class="hero-stat"><b>14</b>saves</div>
+              <div class="hero-stat"><b>3</b>leads</div>
+            </div>
+          </div>
+          <div class="vD-chips" role="tablist">
+            <button class="vD-chip"><span class="circle">📝</span>Details</button>
+            <button class="vD-chip"><span class="circle">🖼</span>Media</button>
+            <button class="vD-chip active"><span class="circle">📣</span>Marketing</button>
+            <button class="vD-chip"><span class="circle">👥<span class="badge-dot">3</span></span>Leads</button>
+            <button class="vD-chip"><span class="circle">📈</span>Analytics</button>
+          </div>
+          <div class="panel-area" style="flex:1">
+            <div class="panel-card">
+              <div class="ph-title">Marketing</div>
+              <div class="ph-row med"></div>
+              <div class="ph-row"></div>
+              <div class="ph-row short"></div>
+              <div class="ph-tile" style="margin-top:12px"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="note-block">
     <h3>Implementation footprint (any variant)</h3>
     <ul>
@@ -433,6 +576,7 @@
       <li>API stays identical — <code>HubTabs</code> still takes <code>tabs</code> + <code>panels</code> + <code>defaultTab</code>; <code>?tab=</code> URL-state preserved</li>
       <li>Variant A/B: change container from <code>flex overflow-x-auto</code> to <code>flex md:flex-row</code> with rail; add icons</li>
       <li>Variant C: keep current desktop styles; add mobile-only <code>md:hidden</code> stacked-card branch</li>
+      <li>Variant D: keep horizontal direction; replace pill <code>button</code>s with circle+label chips, add <code>overflow-x-auto</code> with edge-fade mask</li>
       <li>All variants stay inside the existing <code>--ink/--surface/--line</code> token palette — no new Tailwind tokens needed</li>
     </ul>
   </div>
