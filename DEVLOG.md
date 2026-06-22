@@ -2,6 +2,66 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## Phase 48.3 — Social drafts: persistence + tour panel polish (2026-06-22)
+
+**Objective**: qiaoxux follow-up on Phase 48.1. Tour panel still had
+dated "Q4 2026" text and a paragraph promising provider eval; selling
+points hint was a paragraph; platform/language dropdowns each carried a
+hint; generated copy was lost on refresh; save surface had no abuse
+controls.
+
+**Changes**:
+- `GenerateTourPanel`: dropped "Q4 2026" badge text → just "Coming
+  soon". Removed the "We'll evaluate the best provider this fall…"
+  blurb. Renamed CTA "Generate AI tour video" → "Create a home tour
+  video". Section title unchanged ("Create a home tour video from
+  photos"). Tooltip + button now say the same thing for consistency.
+- `SocialCopyPanel`:
+  - Selling points hint trimmed to a bare word counter:
+    "Up to 50 words (N/50)" — turns red when over. Generate disabled
+    while over the cap.
+  - Removed all hints from Platform / Language selects (no more target
+    length under platform; languages never had one).
+  - **Save** button next to Copy on the output card. Persists the
+    generated body + platform + language + highlights to a new
+    `saved_social_drafts` table.
+  - **Saved drafts** card below the L/R split, listing every saved
+    draft for this listing (newest first) with copy + delete actions.
+    Optimistic delete; rollback on failure.
+- `supabase/migrations/0031_saved_social_drafts.sql`: new table with
+  RLS scoped agent → listing → drafts. Body length capped at 8 KB at
+  the column level; per-listing 50-row cap enforced by trigger
+  (`enforce_saved_social_drafts_cap`). Insert policy joins through
+  listings → agents → user_id (defense-in-depth alongside the route
+  handler ownership check). No update policy — drafts are immutable;
+  edit means delete + re-save.
+- `app/api/listings/[id]/social-drafts/route.ts`: GET / POST / DELETE.
+  - All three require an authenticated agent.
+  - Listing ownership verified explicitly even though RLS would catch
+    it (fail-fast 404 vs. silent empty result).
+  - POST validates platform/language enums + body ≤ 8 KB; double-up
+    with DB constraints.
+  - POST shares the `social_copy` rate-limit bucket (10/min/agent) so
+    saving can't be abused as a free unbounded write surface.
+  - 409 cap_reached when the trigger fires.
+  - DELETE is RLS-gated; agent can't pass another agent's draft id.
+
+**Verification**: `npx tsc --noEmit` clean, `npx next build --no-lint`
+succeeds.
+
+**Decisions**:
+- 50 drafts per listing is plenty: 9 platforms × 5 languages = 45 cells
+  if an agent saved every variant once. Soft cap with surfaced error
+  beats silent eviction.
+- 8 KB body cap: longest legitimate single-cell output is ~2 KB
+  (Facebook long-form post in zh). 8 KB allows generous over-shoot
+  without enabling abuse.
+- Reuse `social_copy` rate bucket on save: keeps the abuse surface to
+  one knob. If a user saves at 10 req/min legitimately, they're also
+  generating, so the bucket is already warm — no UX regression.
+- Drafts stored as plain rows, not jsonb blobs, so we can later index
+  by platform/language for analytics without migration churn.
+
 ## Phase 48.1 — Marketing tab layout cleanup + tour script relocation (2026-06-22)
 
 **Objective**: qiaoxux follow-up on Phase 48. Layout was cluttered: tour

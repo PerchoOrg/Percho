@@ -2,6 +2,33 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.52.2 — Save your social drafts (2026-06-22)
+
+### 🚀 Features
+
+- **Save generated copy.** Hit **Save** next to Copy on the output
+  card and your post is persisted to this listing. Saved drafts show
+  up below the editor with copy + delete buttons — no more losing
+  good copy to a refresh.
+- Per-listing cap of 50 drafts; oldest are not auto-evicted. If you
+  hit the cap you'll see a clear message and can delete to make room.
+
+### ✨ Improvements
+
+- **Tour panel cleaned up.** Dropped the speculative "Q4 2026" date
+  and the provider-eval paragraph. Button is now just "Create a home
+  tour video" — same as the section title.
+- **Selling points hint is a word counter.** "Up to 50 words (N/50)";
+  turns red over the cap. Cleaner than the previous paragraph blurb.
+- **Platform and Language dropdowns are quieter** — hint text removed.
+
+### 🛡️ Security
+
+- Saved drafts are RLS-scoped: agents only see and write drafts for
+  their own listings. Save endpoint shares the existing 10/min
+  per-agent rate limit, body length is capped at 8 KB, and a database
+  trigger enforces the per-listing draft cap (defense in depth).
+
 ## v0.52.1 — Marketing tab layout cleanup (2026-06-22)
 
 ### ✨ Improvements
