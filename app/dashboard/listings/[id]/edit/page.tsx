@@ -21,6 +21,7 @@ import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 
 import { HubTabs } from '@/app/dashboard/_components/HubTabs';
+import { FileText, ImageIcon, Megaphone, Users, LineChart } from 'lucide-react';
 import { HeroHeader } from '@/app/dashboard/_components/HeroHeader';
 import { HeroControl } from '@/app/dashboard/_components/HeroControl';
 import { InstantStatusToggle } from '@/app/dashboard/_components/InstantStatusToggle';
@@ -192,11 +193,11 @@ export default async function EditListingPage({
 
       <HubTabs
         tabs={[
-          { id: 'details', label: 'Details' },
-          { id: 'media', label: 'Media' },
-          { id: 'marketing', label: 'Marketing' },
-          { id: 'leads', label: 'Leads' },
-          { id: 'analytics', label: 'Analytics' },
+          { id: 'details', label: 'Details', icon: <FileText className="h-5 w-5" strokeWidth={1.6} /> },
+          { id: 'media', label: 'Media', icon: <ImageIcon className="h-5 w-5" strokeWidth={1.6} /> },
+          { id: 'marketing', label: 'Marketing', icon: <Megaphone className="h-5 w-5" strokeWidth={1.6} /> },
+          { id: 'leads', label: 'Leads', icon: <Users className="h-5 w-5" strokeWidth={1.6} /> },
+          { id: 'analytics', label: 'Analytics', icon: <LineChart className="h-5 w-5" strokeWidth={1.6} /> },
         ]}
         defaultTab="details"
         panels={{

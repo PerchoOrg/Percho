@@ -2,6 +2,19 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.53.3 — My-listing tabs got icons (2026-06-22)
+
+### ✨ Improvements
+
+- The 5 sub-tabs on a listing's hub page (Details · Media · Marketing ·
+  My Leads · Analytics) now read as **circular icon shortcuts** with a
+  label underneath, instead of flat text pills. Each tab has its own
+  symbol, so the row reads at a glance and stands apart from the text
+  tabs elsewhere on the page.
+- Layout is now the **same on phone and desktop** — horizontal across
+  the top. On phone you can swipe sideways to reach Leads / Analytics;
+  a soft fade on the right edge hints there's more.
+
 ## v0.53.2 — My Leads inbox + sharper Analytics (2026-06-22)
 
 ### ✨ Improvements

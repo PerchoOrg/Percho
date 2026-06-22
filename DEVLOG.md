@@ -2,6 +2,52 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## Phase 49.3 — My-listing tabs: Amazon-style icon chips (2026-06-22)
+
+**Objective**: qiaoxux flagged the 5 sub-tabs on the listing-edit hub
+(Details · Media · Marketing · Leads · Analytics) overflow on mobile —
+only ~3 of 5 are visible in the horizontal pill row today. Goal: make
+the row visually distinct from any text-tab nav above/below, identical
+desktop and mobile, with all 5 reachable.
+
+**Approach**: built 4 prototype variants under
+`public/prototype/agenthub-tabs-vertical.html` (A vertical sidebar /
+B icon rail / C hybrid / D Amazon-chip). Owner picked **D** —
+horizontal layout on both surfaces, but the flat text pills become
+**circular icon chips with a label below**, modelled on Amazon
+Grocery's subcategory shortcuts. Icons differentiate the sub-tab row
+from sibling text-pill nav (BottomNav, page header) and give each tab
+its own identity.
+
+**Changes**:
+- `app/dashboard/_components/HubTabs.tsx`: added optional `icon: ReactNode`
+  field on `HubTab`. When *any* tab passes an icon the component
+  switches to **chip mode** (circle icon + label below + active
+  underline + soft right-edge mask hinting at scroll on mobile);
+  otherwise the original pill mode is preserved unchanged. This keeps
+  the community detail hub (`/dashboard/communities/[id]`) on the
+  existing pill row — only my-listing opts in.
+- `app/dashboard/listings/[id]/edit/page.tsx`: pass lucide icons
+  (`FileText` / `ImageIcon` / `Megaphone` / `Users` / `LineChart`) on
+  each of the 5 tabs.
+
+**Decisions**:
+- Backwards-compat over a forced rewrite: `icon` is optional, mixed
+  icon/no-icon is supported (chip mode triggers on any), so the
+  community hub keeps its current pill row with zero churn.
+- Chip size 56 px mobile / 64 px desktop — tactile target without
+  blowing up vertical space too much.
+- Active state = `border-2 border-ink` + `bg-cream` + bottom underline
+  (not a fill colour) — stays inside the muted ink/cream/surface
+  palette, no chromatic accent introduced.
+- Right-edge mask only on mobile (`sm:[mask-image:none]`) — desktop
+  fits all 5 chips without scroll, no fade needed.
+
+**Verification**: `npx tsc --noEmit` clean, `npx next build` green.
+
+**Next steps**: ship to main so qiaoxux can verify on the live deploy
+and the AgentHub demo.
+
 ## Phase 49.2 — Agent-hub My Leads + Analytics redesign (2026-06-22)
 
 **Objective**: qiaoxux clarified Phase 49/49.1 had hit the *listing-edit*
