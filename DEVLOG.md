@@ -2,6 +2,65 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## Phase 48 — Marketing tab: multi-platform × multi-language social copy (2026-06-22)
+
+**Objective**: qiaoxux — agent hub Marketing tab is poorly organised, only 3
+platforms (Facebook / Instagram / Email), English only. Add Rednote (小红书)
+plus the popular US homebuyer languages, and ground the generator in actual
+listing content (description text, photo captions, video titles) instead of
+hallucinating from address + price alone.
+
+**Positioning pivot** (CLAUDE.md §1): the US homebuyer pool is multilingual.
+Non-English buyers are part of the target audience, not a separate
+Chinese-community spinoff. Buyer-facing marketing copy generators may now
+emit multiple languages on agent opt-in; Rednote / WeChat Moments are
+allowed there for the same reason. Schema, dashboard chrome, and buyer-
+facing UI strings stay English-only — the change is scoped to the social
+copy generator. CLAUDE.md §1 rewritten to reflect this.
+
+**Actions**:
+
+- `lib/ai/anthropic.ts`: rebuilt `generateSocialCopy` to take `platforms[]`
+  and `languages[]` arrays and return a 2-D `{ [platform]: { [language]: string } }`
+  map. Added platform briefs for the 9 supported platforms (facebook,
+  instagram, email, tiktok, x, linkedin, threads, rednote, wechat) so the
+  prompt encodes platform-specific norms (URL conventions, hashtag
+  conventions, character caps for X, "no link in TikTok caption", "no
+  hashtags on WeChat Moments", etc.). Languages: en, zh, es, vi, ko.
+  `maxTokens` scales with `platforms × languages` (capped at 8000).
+- `app/api/generate-social/route.ts`: schema accepts `platforms` (1..6) and
+  `languages` (1..4) per call. Backend now also pulls `listings.description`,
+  `listing_photos.alt_text` (≤12 in sort order), and `listing_videos.title`
+  (≤12) and passes them to the model as grounding. Pure text — no vision
+  tokens. Empty values are dropped before the prompt.
+- `app/dashboard/listings/[id]/edit/SocialCopyPanel.tsx`: rebuilt UI from
+  fixed 3-tab to a checkbox grid — two side-by-side fieldsets (Platforms /
+  Languages) with pill toggles, then a Generate button that produces every
+  selected (platform, language) cell in one Anthropic call. Output renders
+  as one card per platform with a language sub-tab strip + per-cell Copy
+  button. Counter on each fieldset shows N/cap; the Generate button is
+  disabled and explains why if 0 selected or over the cap.
+- `CLAUDE.md` §1 rewritten — see "Positioning pivot" above.
+
+**Decisions**:
+
+- 6×4 caps. Hard cap is the model's max_tokens budget (8000) and the
+  agent's signal-to-noise ratio — generating 9 platforms × 5 languages = 45
+  cells per click is wasteful and produces output the agent will never
+  read. 6×4 lets the common Bay Area case (Facebook/Instagram/Email/Rednote
+  × EN/ZH/ES) fit comfortably with headroom for one more.
+- Single round-trip rather than per-cell parallel calls. Cost and consistency
+  win — same listing facts in the same prompt → consistent angle across
+  cells. Failure mode: one model hiccup loses everything; the rate limit
+  bucket charges the same regardless, so retry is cheap.
+- Light grounding (text only) per qiaoxux's call. Vision-block per cover
+  photo is a 5× token bump for marginal copy quality given that listing
+  descriptions usually already encode what's interesting about the
+  property.
+
+**Verification**: `npx tsc --noEmit` clean. Manual UI verification pending
+after Vercel preview build.
+
 ## Phase 47.18 — Drop "Content" title from Media tab (2026-06-22)
 
 **Objective**: qiaoxux — "Rename context title from agent hub media tab" → "remove it". Drop the "Content" `<h2>` from `MediaPanel`.

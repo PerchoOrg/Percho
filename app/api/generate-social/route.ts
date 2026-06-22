@@ -1,25 +1,24 @@
 /**
- * POST /api/generate-social — generate Facebook + Instagram copy for a listing.
- * Phase 6.3a.
+ * POST /api/generate-social — generate multi-platform, multi-language social
+ * copy for a listing.
  *
- * Differences from /api/generate-copy:
- *   - Takes `listing_id` (not free-form fields). Social copy needs a public
- *     URL that points at *this listing*, so we resolve the listing from the
- *     authed agent's owned set, then build the URL server-side from agent
- *     slug + listing slug. Client cannot forge listingUrl.
- *   - `highlights` is a transient UI input (3-5 short selling points). Not
- *     persisted — see CLAUDE.md §0.2 (no speculative schema). Capped at 5
- *     entries × 80 chars to bound prompt size.
- *   - Rate-limited under kind='social_copy' (separate bucket from listing
- *     copy so social retries don't starve description generation).
+ * Phase 48: replaces the Phase 6.3a fixed Facebook+Instagram+Email shape.
+ * Caller now picks platforms and languages explicitly. Backend pulls
+ * description / photo alt-text / video titles from the listing so the model
+ * has actual content to work with.
  *
- * Origin pinning: the public URL host is taken from the request's
- * `origin` header (same-origin POST from the dashboard). If unset (curl
- * with no origin), fall back to NEXT_PUBLIC_SITE_URL, then the request URL
- * origin. We never trust a client-supplied host.
+ * Origin pinning unchanged: public URL host is taken from request `origin`
+ * header, falls back to NEXT_PUBLIC_SITE_URL, then the request URL origin.
+ * Never trust a client-supplied host.
  */
 
-import { generateSocialCopy } from '@/lib/ai/anthropic';
+import {
+  generateSocialCopy,
+  SOCIAL_LANGUAGES,
+  SOCIAL_PLATFORMS,
+  type SocialLanguage,
+  type SocialPlatform,
+} from '@/lib/ai/anthropic';
 import { checkAndRecord } from '@/lib/ai/rate-limit';
 import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
@@ -27,9 +26,16 @@ import { z } from 'zod';
 
 export const runtime = 'nodejs';
 
+const PlatformEnum = z.enum(SOCIAL_PLATFORMS as readonly [SocialPlatform, ...SocialPlatform[]]);
+const LanguageEnum = z.enum(SOCIAL_LANGUAGES as readonly [SocialLanguage, ...SocialLanguage[]]);
+
 const Input = z.object({
   listing_id: z.string().uuid(),
   highlights: z.array(z.string().trim().min(1).max(80)).max(5).optional(),
+  // Soft caps: ≤ 6 platforms × ≤ 4 languages per call. Bigger requests blow
+  // through the token budget and the agent doesn't need 9 platforms at once.
+  platforms: z.array(PlatformEnum).min(1).max(6),
+  languages: z.array(LanguageEnum).min(1).max(4),
 });
 
 function originFor(req: Request): string {
@@ -73,11 +79,11 @@ export async function POST(req: Request) {
   }
 
   // RLS scopes this to the agent's own listings — no separate ownership check
-  // needed. A wrong listing_id (other agent's, or unknown) → null.
+  // needed.
   // biome-ignore lint/suspicious/noExplicitAny: stub generated types
   const listingLookup = await (supabase as any)
     .from('listings')
-    .select('slug, address, city, state, price, beds, baths')
+    .select('slug, address, city, state, price, beds, baths, sqft, description')
     .eq('id', parsed.data.listing_id)
     .maybeSingle();
   const listing = listingLookup.data as {
@@ -88,10 +94,42 @@ export async function POST(req: Request) {
     price: number | null;
     beds: number | null;
     baths: number | null;
+    sqft: number | null;
+    description: string[] | null;
   } | null;
   if (!listing) {
     return NextResponse.json({ error: 'listing_not_found' }, { status: 404 });
   }
+
+  // Pull photo alt-text and video titles in parallel — both are read-only
+  // grounding for the model. Each capped at 12 entries to bound prompt size.
+  const [photoLookup, videoLookup] = await Promise.all([
+    // biome-ignore lint/suspicious/noExplicitAny: stub generated types
+    (supabase as any)
+      .from('listing_photos')
+      .select('alt_text, sort_order')
+      .eq('listing_id', parsed.data.listing_id)
+      .order('sort_order', { ascending: true })
+      .limit(12),
+    // biome-ignore lint/suspicious/noExplicitAny: stub generated types
+    (supabase as any)
+      .from('listing_videos')
+      .select('title, sort_order')
+      .eq('listing_id', parsed.data.listing_id)
+      .order('sort_order', { ascending: true })
+      .limit(12),
+  ]);
+
+  const photoAltText: string[] = (
+    (photoLookup.data ?? []) as Array<{ alt_text: string | null }>
+  )
+    .map((p) => (p.alt_text ?? '').trim())
+    .filter((s) => s.length > 0);
+  const videoTitles: string[] = (
+    (videoLookup.data ?? []) as Array<{ title: string | null }>
+  )
+    .map((v) => (v.title ?? '').trim())
+    .filter((s) => s.length > 0);
 
   const service = createServiceClient();
   const limit = await checkAndRecord(service, agent.id, 'social_copy');
@@ -113,7 +151,13 @@ export async function POST(req: Request) {
       price: listing.price ?? undefined,
       beds: listing.beds ?? undefined,
       baths: listing.baths ?? undefined,
+      sqft: listing.sqft ?? undefined,
       highlights: parsed.data.highlights,
+      description: listing.description ?? undefined,
+      photoAltText: photoAltText.length > 0 ? photoAltText : undefined,
+      videoTitles: videoTitles.length > 0 ? videoTitles : undefined,
+      platforms: parsed.data.platforms,
+      languages: parsed.data.languages,
     });
     return NextResponse.json(out, { status: 200 });
   } catch (err) {
