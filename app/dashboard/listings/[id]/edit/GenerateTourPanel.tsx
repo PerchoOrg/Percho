@@ -23,7 +23,7 @@ export function GenerateTourPanel({ listingId: _listingId }: { listingId: string
   return (
     <section className="rounded border border-line bg-surface p-6">
       <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
-        <h2 className="font-semibold text-base">AI tour video</h2>
+        <h2 className="font-semibold text-base">Create a home tour video from photos</h2>
         <span className="text-muted text-xs">Coming soon — Q4 2026</span>
       </div>
 

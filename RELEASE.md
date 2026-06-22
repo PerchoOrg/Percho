@@ -2,6 +2,22 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.52.1 — Marketing tab layout cleanup (2026-06-22)
+
+### ✨ Improvements
+
+- **Marketing tab is calmer.** The social-copy generator now uses a
+  simple left/right split: pick selling points, platform, and language
+  on the left; output appears on the right. Pick one platform and one
+  language at a time — Regenerate to iterate, switch platform when
+  you're happy.
+- **Home tour generator moved to the Media tab.** Renamed
+  "AI tour video" → "Create a home tour video from photos" and parked
+  it as a standalone section at the bottom of Media, since it operates
+  on the photos you've uploaded. Marketing tab is now just copy.
+- **Less visual chrome.** Dropped the "Facebook + Instagram drafts"
+  header — the panel speaks for itself now.
+
 ## v0.52.0 — Marketing tab: more platforms, more languages (2026-06-22)
 
 ### 🚀 Features

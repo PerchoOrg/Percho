@@ -2,6 +2,45 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## Phase 48.1 — Marketing tab layout cleanup + tour script relocation (2026-06-22)
+
+**Objective**: qiaoxux follow-up on Phase 48. Layout was cluttered: tour
+generator card sat above the social copy in the Marketing tab; copy panel
+had a redundant "Facebook + Instagram drafts" header from before Phase 48
+that the checkbox grid replaced; checkbox grid felt like overkill when
+agents typically generate one cell at a time and pick the next platform
+manually.
+
+**Changes**:
+- `GenerateTourPanel`: relocated from Marketing tab into Media tab as a
+  standalone bottom section. Renamed "AI tour video" → "Create a home
+  tour video from photos" so the affordance is self-describing.
+- `MarketingPanel.tsx`: deleted. The Marketing tab's `marketing` slot
+  now renders `<SocialCopyPanel>` directly — no wrapper title, no
+  sub-tabs, no redundant chrome.
+- `SocialCopyPanel`: rebuilt as a 2-column L/R split.
+  - Left: Selling points input (with an upper-limit hint instead of a
+    descriptive blurb), Platform dropdown (9 options, each with its
+    target-length hint surfaced under the select), Language dropdown
+    (5 options), single Generate button.
+  - Right: single output card with Copy button. Empty state shows
+    "Generated copy will appear here."
+  - Lost the Phase 48 checkbox grid + per-platform card list. The API
+    still accepts platforms/languages arrays for forward compat — we
+    just send 1-element arrays.
+
+**Verification**: `npx tsc --noEmit` clean, `npx next build --no-lint`
+succeeds. MarketingPanel.tsx removed; only DEVLOG history references it
+now.
+
+**Reasoning for single-cell**: with 9 platforms × 5 languages, the
+checkbox grid encouraged spraying; agents reported reading one cell at a
+time anyway. Dropdown + Regenerate is fewer clicks for the common case
+(one platform, regenerate until happy, switch platform, repeat) and
+keeps the right column readable instead of scrolling through a stack of
+half-read cards. If batching becomes important again the API contract
+hasn't changed.
+
 ## Phase 48 — Marketing tab: multi-platform × multi-language social copy (2026-06-22)
 
 **Objective**: qiaoxux — agent hub Marketing tab is poorly organised, only 3

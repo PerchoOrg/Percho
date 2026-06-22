@@ -31,7 +31,6 @@ import type { ListingPhotoRow } from './PhotoPanel';
 import { MediaPanel } from './MediaPanel';
 import type { ListingVideoRow } from './VideoPanel';
 import { SocialCopyPanel } from './SocialCopyPanel';
-import { MarketingPanel } from './MarketingPanel';
 import { ListingLeadsPanel } from './ListingLeadsPanel';
 import { AnalyticsPanel } from './AnalyticsPanel';
 import { DangerZone } from './DangerZone';
@@ -239,20 +238,18 @@ export default async function EditListingPage({
             </div>
           ),
           media: (
-            <MediaPanel
-              listingId={listing.id}
-              initialVideos={videos}
-              initialCoverVideoId={initialCoverVideoId}
-              initialPhotos={photos}
-              initialCoverPhotoId={initialCoverPhotoId}
-            />
+            <div className="space-y-4">
+              <MediaPanel
+                listingId={listing.id}
+                initialVideos={videos}
+                initialCoverVideoId={initialCoverVideoId}
+                initialPhotos={photos}
+                initialCoverPhotoId={initialCoverPhotoId}
+              />
+              <GenerateTourPanel listingId={listing.id} />
+            </div>
           ),
-          marketing: (
-            <MarketingPanel
-              socialPanel={<SocialCopyPanel listingId={listing.id} />}
-              tourPanel={<GenerateTourPanel listingId={listing.id} />}
-            />
-          ),
+          marketing: <SocialCopyPanel listingId={listing.id} />,
           leads: <ListingLeadsPanel listingId={listing.id} />,
           analytics: <AnalyticsPanel listingId={listing.id} />,
         }}
