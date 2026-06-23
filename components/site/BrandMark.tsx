@@ -5,6 +5,12 @@
  * call. The V monogram tile (phase44.5) was rejected as too logo-heavy;
  * editorial-luxury idiom favors a plain tracked wordmark (Aman / Hermès).
  *
+ * 2026-06-23: stripped the hover button chrome (rounded box + gold
+ * border/tint on hover). It read as a tiny CTA in the auth-page corner and
+ * clashed with the cream/gold editorial idiom. Match the landing hero
+ * eyebrow (app/page.tsx) exactly — flat tracked caps, hover signals via
+ * subtle brightness only. No padding box, no border, no fill.
+ *
  * Note: on the landing page the eyebrow lives centered above the H1 (see
  * app/page.tsx) — that surface does NOT use BrandMark because it isn't a
  * link-back-to-home; it's a hero brand label. BrandMark is for chrome
@@ -23,7 +29,7 @@ export function BrandMark({ href = '/', className }: Props) {
     <Link
       href={href}
       aria-label="Vicinity — home"
-      className={`group inline-block rounded-md border border-transparent px-2 py-1.5 font-medium uppercase transition hover:border-[#c9a24a]/40 hover:bg-[#c9a24a]/5 focus-visible:border-[#c9a24a]/60 focus-visible:bg-[#c9a24a]/5 focus-visible:outline-none ${
+      className={`inline-block font-medium uppercase transition hover:brightness-110 focus-visible:outline-none focus-visible:underline focus-visible:underline-offset-4 ${
         className ?? ''
       }`}
       style={{

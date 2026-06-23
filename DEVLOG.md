@@ -2,6 +2,24 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## Phase 50.13 — Login page BrandMark: drop button chrome (2026-06-23)
+
+**Objective**: qiaoxux flagged that the top-left gold "VICINITY" wordmark on `/login` (the home-link) "is not fit style".
+
+**Root cause**: `<BrandMark>` (used by `app/(auth)/layout.tsx` and SiteHeader) was styled like a tiny CTA — `rounded-md`, `border-transparent`, `px-2 py-1.5`, plus hover/focus states that painted a gold-tinted bordered box (`hover:border-[#c9a24a]/40 hover:bg-[#c9a24a]/5`). Against the cream auth surface (`--bg: #f3eee7`) the wordmark already harmonizes; framing it in a button rectangle reads as a corner CTA and clashes with the editorial-luxury idiom (Aman / Hermès) that the landing hero eyebrow (`app/page.tsx`) sets — that one is flat tracked caps with no chrome at all.
+
+**Approach**: strip padding, border, rounded box, and hover/focus tint from `<BrandMark>`. Match the landing eyebrow exactly: flat tracked uppercase, gold (#c9a24a), 13px, 0.32em tracking. Hover signals via `brightness-110`; focus-visible signals via underline (kbd-only path, doesn't paint a box for mouse users). The `Link` behavior is preserved — only the chrome is removed.
+
+**Files**:
+- `components/site/BrandMark.tsx` — drop `rounded-md border border-transparent px-2 py-1.5 hover:border-… hover:bg-… focus-visible:border-… focus-visible:bg-…` and the `group` token. Replace with `hover:brightness-110 focus-visible:underline focus-visible:underline-offset-4`. Bumped doc comment with phase50.13 rationale.
+
+**Verification**:
+- `npx tsc --noEmit` clean.
+- Same component is used by SiteHeader (`app/dashboard/layout.tsx` chrome) and the auth layout — both surfaces inherit the cleaner mark, no per-route override needed.
+
+**Lessons**:
+- **Hover button chrome on a brand wordmark reads as CTA, not link.** When the same wordmark is used both as a hero label (no chrome) and as a chrome link (in SiteHeader / auth corners), the chrome version should still look identical to the hero — hover signals belong on `brightness` / `underline`, not on a painted box. A boxed-out wordmark in the corner of a login page is the visual equivalent of putting `[VICINITY]` brackets around it.
+
 ## Phase 50.12 — Community upload: kill legacy /upload page, soften buttons (2026-06-23)
 
 **Objective**: qiaoxux uploaded a video on the new hub Media tab and hit two regressions:

@@ -2,6 +2,13 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.54.14 — Login page wordmark: cleaner corner mark (2026-06-23)
+
+**For anyone visiting the login / signup / forgot-password pages:**
+
+### ✨ Improvements
+- **Top-left "VICINITY" wordmark no longer hovers into a tiny gold-bordered button.** It's now flat tracked caps — same look as the hero eyebrow on the landing page — and the link behavior is unchanged (still routes to home). Hover dims slightly; focus draws a subtle underline for keyboard users. No more CTA-style box in the auth-page corner.
+
 ## v0.54.13 — Community upload polish: lighter buttons, no more legacy page (2026-06-23)
 
 **For agents uploading videos to a community:**
