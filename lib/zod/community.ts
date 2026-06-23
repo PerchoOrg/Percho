@@ -17,6 +17,12 @@
  *   - hoa_fee_text      → hoa_fee_monthly  (int dollars/month)
  *   - price_range_text  → price_min/price_max (int dollars, min ≤ max)
  * Other 50.4 fields keep their string/array shapes.
+ *
+ * Phase 50.6 (2026-06-22): "range makes sense for some fields, but make
+ * them low-friction." Year built becomes a soft range — `year_built_end`
+ * is optional, the UI keeps a single input by default and reveals the
+ * second only when the agent clicks "+ Add end year". Price stays
+ * min/max (already a range concept buyers expect to see).
  */
 
 import { z } from 'zod';
@@ -82,6 +88,13 @@ export const UpdateCommunityInput = z.object({
     .max(2100, 'Year built must be 2100 or earlier')
     .optional()
     .nullable(),
+  year_built_end: z
+    .number()
+    .int('End year must be a whole number')
+    .min(1800, 'End year must be 1800 or later')
+    .max(2100, 'End year must be 2100 or earlier')
+    .optional()
+    .nullable(),
   hoa_fee_monthly: z
     .number()
     .int('HOA fee must be a whole number of dollars')
@@ -112,6 +125,16 @@ export const UpdateCommunityInput = z.object({
     {
       message: 'Price (from) must be less than or equal to price (to)',
       path: ['price_max'],
+    },
+  )
+  .refine(
+    (data) =>
+      data.year_built == null ||
+      data.year_built_end == null ||
+      data.year_built_end >= data.year_built,
+    {
+      message: 'End year must be greater than or equal to start year',
+      path: ['year_built_end'],
     },
   );
 export type UpdateCommunityInput = z.infer<typeof UpdateCommunityInput>;

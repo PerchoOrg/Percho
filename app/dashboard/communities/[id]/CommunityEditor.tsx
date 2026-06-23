@@ -71,6 +71,7 @@ interface CommunityRow {
   county: string | null;
   hoa_fee_monthly: number | null;
   year_built: number | null;
+  year_built_end: number | null;
   price_min: number | null;
   price_max: number | null;
   property_types: string[] | null;
@@ -109,8 +110,17 @@ export function CommunityEditor({
     initialYearBuilt === '' || initialYearInList ? 'list' : 'custom',
   );
 
+  // Phase 50.6 — phased delivery. End year is opt-in: collapsed unless the
+  // community already has a saved end-year value.
+  const initialYearBuiltEnd = community.year_built_end?.toString() ?? '';
+  const [yearBuiltEnd, setYearBuiltEnd] = useState(initialYearBuiltEnd);
+  const [yearEndShown, setYearEndShown] = useState(initialYearBuiltEnd !== '');
+
   const [priceMin, setPriceMin] = useState(community.price_min?.toString() ?? '');
   const [priceMax, setPriceMax] = useState(community.price_max?.toString() ?? '');
+  // Phase 50.6 — collapse Price max behind an opt-in toggle. If the row
+  // already has a max price, show both inputs from the start.
+  const [priceMaxShown, setPriceMaxShown] = useState(community.price_max != null);
   const [hoaFee, setHoaFee] = useState(community.hoa_fee_monthly?.toString() ?? '');
   const [website, setWebsite] = useState(community.website ?? '');
 
@@ -138,8 +148,9 @@ export function CommunityEditor({
       same(community.description, trimOrNull(description)) &&
       same(community.builder, trimOrNull(builder)) &&
       sameInt(community.year_built, yearBuilt) &&
+      sameInt(community.year_built_end, yearEndShown ? yearBuiltEnd : '') &&
       sameInt(community.price_min, priceMin) &&
-      sameInt(community.price_max, priceMax) &&
+      sameInt(community.price_max, priceMaxShown ? priceMax : '') &&
       sameInt(community.hoa_fee_monthly, hoaFee) &&
       same(community.website, trimOrNull(website)) &&
       sameArray(community.property_types, propertyTypes) &&
@@ -156,8 +167,11 @@ export function CommunityEditor({
     description,
     builder,
     yearBuilt,
+    yearBuiltEnd,
+    yearEndShown,
     priceMin,
     priceMax,
+    priceMaxShown,
     hoaFee,
     website,
     propertyTypes,
@@ -195,8 +209,9 @@ export function CommunityEditor({
         county: trimOrNull(county),
         hoa_fee_monthly: parseIntOrNull(hoaFee),
         year_built: parseIntOrNull(yearBuilt),
+        year_built_end: yearEndShown ? parseIntOrNull(yearBuiltEnd) : null,
         price_min: parseIntOrNull(priceMin),
-        price_max: parseIntOrNull(priceMax),
+        price_max: priceMaxShown ? parseIntOrNull(priceMax) : null,
         property_types: propertyTypes.length > 0 ? propertyTypes : null,
         highlights: highlights.length > 0 ? highlights : null,
         builder: trimOrNull(builder),
@@ -395,97 +410,177 @@ export function CommunityEditor({
             />
           </Field>
           {/* Year built — dual mode (select + custom input), copied from
-              EditListingForm so the two editors feel identical. */}
-          <Field label="Year built" error={fieldErrors.year_built}>
-            {yearBuiltMode === 'list' ? (
-              <select
-                value={yearBuilt}
-                onChange={(e) => {
-                  const v = e.target.value;
-                  if (v === '__custom__') {
-                    setYearBuiltMode('custom');
-                    setYearBuilt('');
-                  } else {
-                    setYearBuilt(v);
-                  }
-                  clearFieldError('year_built');
-                }}
-                disabled={!canEditMetadata}
-                aria-invalid={!!fieldErrors.year_built}
-                className={inputCls(!!fieldErrors.year_built)}
-              >
-                <option value="">— Select —</option>
-                {yearOptions.map((y) => (
-                  <option key={y} value={y}>
-                    {y}
-                  </option>
-                ))}
-                <option value="__custom__">Type a year…</option>
-              </select>
-            ) : (
-              <div className="flex gap-2">
-                <input
-                  type="number"
-                  min="1800"
-                  max="2100"
-                  value={yearBuilt}
-                  onChange={(e) => {
-                    setYearBuilt(e.target.value);
-                    clearFieldError('year_built');
-                  }}
-                  placeholder="e.g. 1998"
-                  disabled={!canEditMetadata}
-                  aria-invalid={!!fieldErrors.year_built}
-                  className={inputCls(!!fieldErrors.year_built)}
-                />
+              EditListingForm so the two editors feel identical.
+              Phase 50.6: end year is opt-in — agents click "+ Add end year"
+              when the community delivered in phases (e.g. 2019–2024). */}
+          <Field
+            label="Year built"
+            error={fieldErrors.year_built || fieldErrors.year_built_end}
+          >
+            <div className="space-y-2">
+              <div className="flex items-start gap-2">
+                <div className="flex-1">
+                  {yearBuiltMode === 'list' ? (
+                    <select
+                      value={yearBuilt}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        if (v === '__custom__') {
+                          setYearBuiltMode('custom');
+                          setYearBuilt('');
+                        } else {
+                          setYearBuilt(v);
+                        }
+                        clearFieldError('year_built');
+                        clearFieldError('year_built_end');
+                      }}
+                      disabled={!canEditMetadata}
+                      aria-invalid={!!fieldErrors.year_built}
+                      aria-label={yearEndShown ? 'Start year' : 'Year built'}
+                      className={inputCls(!!fieldErrors.year_built)}
+                    >
+                      <option value="">— Select —</option>
+                      {yearOptions.map((y) => (
+                        <option key={y} value={y}>
+                          {y}
+                        </option>
+                      ))}
+                      <option value="__custom__">Type a year…</option>
+                    </select>
+                  ) : (
+                    <div className="flex gap-2">
+                      <input
+                        type="number"
+                        min="1800"
+                        max="2100"
+                        value={yearBuilt}
+                        onChange={(e) => {
+                          setYearBuilt(e.target.value);
+                          clearFieldError('year_built');
+                          clearFieldError('year_built_end');
+                        }}
+                        placeholder="e.g. 1998"
+                        disabled={!canEditMetadata}
+                        aria-invalid={!!fieldErrors.year_built}
+                        aria-label={yearEndShown ? 'Start year' : 'Year built'}
+                        className={inputCls(!!fieldErrors.year_built)}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setYearBuiltMode('list');
+                          setYearBuilt('');
+                        }}
+                        disabled={!canEditMetadata}
+                        className="shrink-0 rounded border border-line px-2 text-xs text-ink2 hover:bg-ink2/10 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        Use list
+                      </button>
+                    </div>
+                  )}
+                </div>
+                {yearEndShown && (
+                  <>
+                    <span className="pt-2 text-ink2 text-sm">–</span>
+                    <div className="flex-1">
+                      <input
+                        type="number"
+                        min="1800"
+                        max="2100"
+                        value={yearBuiltEnd}
+                        onChange={(e) => {
+                          setYearBuiltEnd(e.target.value);
+                          clearFieldError('year_built_end');
+                        }}
+                        placeholder="e.g. 2024"
+                        disabled={!canEditMetadata}
+                        aria-invalid={!!fieldErrors.year_built_end}
+                        aria-label="End year"
+                        className={inputCls(!!fieldErrors.year_built_end)}
+                      />
+                    </div>
+                  </>
+                )}
+              </div>
+              {canEditMetadata && (
                 <button
                   type="button"
                   onClick={() => {
-                    setYearBuiltMode('list');
-                    setYearBuilt('');
+                    if (yearEndShown) {
+                      setYearEndShown(false);
+                      setYearBuiltEnd('');
+                      clearFieldError('year_built_end');
+                    } else {
+                      setYearEndShown(true);
+                    }
                   }}
-                  disabled={!canEditMetadata}
-                  className="shrink-0 rounded border border-line px-2 text-xs text-ink2 hover:bg-ink2/10 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="text-ink2 text-xs underline-offset-2 hover:underline"
                 >
-                  Use list
+                  {yearEndShown ? '− Remove end year' : '+ Add end year (phased delivery)'}
                 </button>
-              </div>
-            )}
+              )}
+            </div>
           </Field>
         </div>
 
-        {/* Price range — split into From / To, both with `$` prefix and
-            comma-grouped placeholder so agents type plain integers (450000)
-            instead of formatted strings ($450k–$1.2M). Server validates
-            min ≤ max. */}
+        {/* Price — single From input by default; "+ Add max price" reveals
+            the To input. Phase 50.6: less friction for the common case
+            ("starting at $X") while still supporting min–max ranges. */}
         <Field
-          label="Price range"
+          label="Price"
           error={fieldErrors.price_min || fieldErrors.price_max}
         >
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <DollarInput
-              value={priceMin}
-              onChange={(v) => {
-                setPriceMin(v);
-                clearFieldError('price_min');
-                clearFieldError('price_max');
-              }}
-              placeholder="450,000"
-              suffix="from"
-              disabled={!canEditMetadata}
-              hasError={!!fieldErrors.price_min}
-            />
-            <DollarInput
-              value={priceMax}
-              onChange={(v) => {
-                setPriceMax(v);
-                clearFieldError('price_max');
-              }}
-              placeholder="1,200,000"
-              suffix="to"
-              disabled={!canEditMetadata}
-              hasError={!!fieldErrors.price_max}
-            />
+          <div className="space-y-2">
+            <div
+              className={
+                priceMaxShown
+                  ? 'grid grid-cols-1 gap-3 sm:grid-cols-2'
+                  : 'grid grid-cols-1 gap-3 sm:max-w-[16rem]'
+              }
+            >
+              <DollarInput
+                value={priceMin}
+                onChange={(v) => {
+                  setPriceMin(v);
+                  clearFieldError('price_min');
+                  clearFieldError('price_max');
+                }}
+                placeholder="450,000"
+                suffix={priceMaxShown ? 'from' : 'starting at'}
+                disabled={!canEditMetadata}
+                hasError={!!fieldErrors.price_min}
+              />
+              {priceMaxShown && (
+                <DollarInput
+                  value={priceMax}
+                  onChange={(v) => {
+                    setPriceMax(v);
+                    clearFieldError('price_max');
+                  }}
+                  placeholder="1,200,000"
+                  suffix="to"
+                  disabled={!canEditMetadata}
+                  hasError={!!fieldErrors.price_max}
+                />
+              )}
+            </div>
+            {canEditMetadata && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (priceMaxShown) {
+                    setPriceMaxShown(false);
+                    setPriceMax('');
+                    clearFieldError('price_max');
+                  } else {
+                    setPriceMaxShown(true);
+                  }
+                }}
+                className="text-ink2 text-xs underline-offset-2 hover:underline"
+              >
+                {priceMaxShown ? '− Remove max price' : '+ Add max price (range)'}
+              </button>
+            )}
           </div>
         </Field>
 

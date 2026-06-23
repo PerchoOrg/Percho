@@ -60,6 +60,7 @@ interface CommunityRow {
   county: string | null;
   hoa_fee_monthly: number | null;
   year_built: number | null;
+  year_built_end: number | null;
   price_min: number | null;
   price_max: number | null;
   property_types: string[] | null;
@@ -107,7 +108,7 @@ export default async function CommunityEditorPage({
   const { data: community } = (await (supabase as any)
     .from('communities')
     .select(
-      'id, name, slug, city, state, description, status, created_by, cover_video_id, cover_storage_path, zip, county, hoa_fee_monthly, year_built, price_min, price_max, property_types, highlights, builder, website, tagline',
+      'id, name, slug, city, state, description, status, created_by, cover_video_id, cover_storage_path, zip, county, hoa_fee_monthly, year_built, year_built_end, price_min, price_max, property_types, highlights, builder, website, tagline',
     )
     .eq('id', id)
     .maybeSingle()) as { data: CommunityRow | null };

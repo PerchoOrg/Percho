@@ -2,6 +2,64 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## Phase 50.6 — Community editor: low-friction ranges (2026-06-22)
+
+**Trigger**: qiaoxux feedback on 50.5 — "actually you are right, range
+makes sense for some fields in a community, I agree, but can you make
+them easy to use? Less friction as possible."
+
+**Translation**: 50.5 forced agents to look at two empty input boxes for
+both year built and price even when 80% of communities only need one
+value (single delivery year, "starting at $X" pricing). Two boxes ≠
+free; an empty second box is visual noise that asks "should I fill this
+in?" every time.
+
+**Solution — opt-in second input:**
+
+1. **Year built** — adds optional `year_built_end int` column. Default UI
+   shows the existing single-year select (with "Type a year…" escape
+   hatch); a small "+ Add end year (phased delivery)" link below the
+   field reveals a second number input rendered to the right with a
+   `–` separator. "− Remove end year" collapses it back and clears the
+   value. Schema enforces `year_built_end >= year_built` when both
+   present (DB CHECK + zod refine).
+2. **Price** — `price_min` and `price_max` already existed. Default UI
+   now shows only the From input (suffix "starting at"). "+ Add max
+   price (range)" reveals the To input and the From suffix flips to
+   "from". Removing the max clears `price_max` to null on save.
+3. **HOA** — left as a single value (community-wide HOA ranges are rare
+   enough that adding the toggle would just be noise — YAGNI).
+
+**Friction wins**:
+- Single-delivery community: 1 click on year (was 1), 1 click on price
+  (was 2 — From and To both prompted attention). Net: same or fewer
+  decisions.
+- Phased / variable-price community: 1 extra click to expand vs. always
+  showing two inputs. Trivial cost for the minority case.
+- Default form-load shows ~2 fewer empty input boxes per visit, which
+  reads as "less work to do here."
+
+**Files**:
+- `supabase/migrations/0038_community_year_built_end.sql` — adds
+  `year_built_end int` (nullable) + range CHECK 1800–2100 + cross-field
+  CHECK `year_built_end >= year_built`. NOT VALID then VALIDATE.
+- `lib/zod/community.ts` — adds `year_built_end` (nullable int 1800–
+  2100) + cross-field `.refine()` mirroring DB constraint.
+- `app/dashboard/communities/actions.ts` — passes `year_built_end`
+  through to update.
+- `app/dashboard/communities/[id]/page.tsx` — `CommunityRow` +
+  `.select(...)` adds `year_built_end`.
+- `app/dashboard/communities/[id]/CommunityEditor.tsx` — adds
+  `yearBuiltEnd` / `yearEndShown` / `priceMaxShown` state + toggles +
+  conditional second-input rendering. `isDirty` and `onSubmit` send
+  null when toggle is off so cleared values clear the DB row.
+
+**Verification**: `npx tsc --noEmit` clean, `npm run build` clean.
+`/dashboard/communities/[id]` route 14 kB / 192 kB (was 13.5 kB —
++0.5 kB for the toggles + extra state).
+
+**Commit**: ${COMMIT_SHA_PLACEHOLDER}
+
 ## Phase 50.5 — Community editor input parity with listing (2026-06-22)
 
 **Trigger**: qiaoxux feedback on the 50.4 community editor —

@@ -167,6 +167,7 @@ export async function updateCommunity(id: string, raw: unknown): Promise<ActionR
           county: parsed.data.county ?? null,
           hoa_fee_monthly: parsed.data.hoa_fee_monthly ?? null,
           year_built: parsed.data.year_built ?? null,
+          year_built_end: parsed.data.year_built_end ?? null,
           price_min: parsed.data.price_min ?? null,
           price_max: parsed.data.price_max ?? null,
           property_types:

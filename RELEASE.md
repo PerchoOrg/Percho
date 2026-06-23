@@ -2,6 +2,27 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.54.5 — Less friction for ranges in My Community (2026-06-22)
+
+✨ **Improvements**
+- **Year built** now starts as a single picker. If the community
+  delivered in phases (e.g. 2019–2024), tap **+ Add end year** to
+  reveal a second input. Tap **− Remove end year** to go back.
+- **Price** now starts as a single "starting at $X" input. Tap **+ Add
+  max price** to turn it into a From / To range. Tap **− Remove max
+  price** to drop the upper bound.
+- **HOA** stays as one number — community-wide HOA ranges are rare
+  enough that an extra toggle would be noise.
+
+**Why**: 50.5 always showed two inputs for year and two for price, even
+for the 80% case where only one value is meaningful. Empty boxes ask
+"should I fill this in?" every visit. Now agents see fewer fields by
+default; the second one is one click away when they need it.
+
+🛡️ **Validation**
+- End year must be >= start year when both filled (DB CHECK + form
+  validation). Same min ≤ max rule for price already enforced in 50.5.
+
 ## v0.54.4 — Community editor matches the listing editor (2026-06-22)
 
 ✨ **Improvements**
