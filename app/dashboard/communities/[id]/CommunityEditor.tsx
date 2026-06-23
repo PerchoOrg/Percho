@@ -528,23 +528,29 @@ export function CommunityDangerZone({ communityId }: { communityId: string }) {
     });
   }
 
+  // Mirrors the listing DangerZone (Phase 47.12) — solid rose on the light
+  // palette so the destructive action actually reads as destructive. The old
+  // red-300/red-500-on-translucent treatment was a leftover from the
+  // dark-theme era and looked faded on cream.
   return (
-    <div className="rounded border border-red-500/40 bg-red-500/5 p-5">
-      <h3 className="font-medium text-red-300 text-sm">Danger zone</h3>
-      <p className="mt-1 text-muted text-xs">
-        Deleting a community is permanent and removes its schools, POIs, photos, videos, and saved
-        entries. Listings will be detached but not deleted.
-      </p>
-      <button
-        type="button"
-        onClick={handleDelete}
-        disabled={isPending}
-        className="mt-3 rounded border border-red-500/60 px-3 py-1.5 text-red-300 text-xs hover:bg-red-500/10 disabled:opacity-50"
-      >
-        {isPending ? 'Deleting…' : 'Delete community'}
-      </button>
-      {err && <p className="mt-2 text-red-300 text-xs">{err}</p>}
-    </div>
+    <section>
+      <div className="rounded-2xl border border-rose-300/60 bg-rose-50/40 p-5 sm:p-6">
+        <h2 className="font-semibold text-ink text-sm">Danger zone</h2>
+        <p className="mt-1 text-ink2 text-xs">
+          Deleting a community is permanent and removes its schools, POIs, photos, videos, and
+          saved entries. Listings will be detached but not deleted.
+        </p>
+        <button
+          type="button"
+          onClick={handleDelete}
+          disabled={isPending}
+          className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-rose-600 px-5 py-3 font-medium text-sm text-white transition hover:bg-rose-700 active:scale-[0.99] disabled:opacity-60 sm:w-auto sm:min-w-[240px]"
+        >
+          {isPending ? 'Deleting…' : 'Delete this community'}
+        </button>
+        {err && <p className="mt-2 text-rose-700 text-xs">{err}</p>}
+      </div>
+    </section>
   );
 }
 

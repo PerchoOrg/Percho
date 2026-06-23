@@ -100,27 +100,60 @@ export function CommunityMediaPanel({
     );
   }, []);
 
-  // Phase 50.12 (2026-06-23): consume `?prefill=<id>` from the URL once on
-  // mount — when the UploadFAB → /communities/new flow lands here, we feed
-  // the queued File[] straight into handlePicked() so videos and photos
-  // auto-flow into this same panel. We also strip the param so a refresh
-  // doesn't double-consume (consumePrefill is already one-shot, but the
-  // URL param looks suspicious otherwise).
-  const prefillId = searchParams?.get('prefill') ?? null;
-  // biome-ignore lint/correctness/useExhaustiveDependencies: handlePicked is
-  // stable enough (useCallback w/ []), and we deliberately want this effect
-  // to only fire on prefillId change — not on every photoRef/setState id.
-  useEffect(() => {
-    if (!prefillId) return;
-    const files = consumePrefill(prefillId);
-    if (files && files.length > 0) handlePicked(files);
-    // Clear the query param so a hard refresh doesn't re-trigger.
-    if (typeof window !== 'undefined') {
+  // Phase 50.12 (2026-06-23) / 50.16 (2026-06-23): consume `?prefill=<id>`
+  // synchronously during the initial render — same pattern as the listing
+  // MediaPanel (Phase 47.x). The previous useEffect-based approach was racy:
+  // by the time the effect ran, ref-mounted children (CommunityPhotoPanel)
+  // had registered, but the video pending-state initial paint was visibly
+  // empty before the effect kicked in. Lazy useState init runs on mount
+  // and the queued File[] is materialized before the first paint.
+  //
+  // Photos still need photoRef to be ready, so we capture them here and let
+  // a useEffect below forward to addFiles() once the ref is mounted.
+  const initialPrefill = useRef<File[] | null | undefined>(undefined);
+  if (initialPrefill.current === undefined) {
+    const id = searchParams?.get('prefill') ?? null;
+    initialPrefill.current = id ? consumePrefill(id) : null;
+    // Strip the param so a hard refresh doesn't carry a now-empty key.
+    if (id && typeof window !== 'undefined') {
       const url = new URL(window.location.href);
       url.searchParams.delete('prefill');
       window.history.replaceState({}, '', url.toString());
     }
-  }, [prefillId]);
+  }
+  const prefillFiles = initialPrefill.current;
+  const prefillVideos = useRef(false);
+  if (!prefillVideos.current && prefillFiles && prefillFiles.length > 0) {
+    prefillVideos.current = true;
+    const vids = prefillFiles.filter((f) => f.type.startsWith('video/'));
+    if (vids.length > 0) {
+      // Defer to after first paint so VideoUploader children mount cleanly.
+      setTimeout(() => {
+        setPendingVideos((prev) => [
+          ...prev,
+          ...vids.map((file) => ({
+            key: `prefill-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+            file,
+          })),
+        ]);
+      }, 0);
+    }
+  }
+  // Photos: forward to CommunityPhotoPanel once its handle ref is mounted.
+  const prefillImagesPushed = useRef(false);
+  useEffect(() => {
+    if (prefillImagesPushed.current) return;
+    if (!prefillFiles || prefillFiles.length === 0) return;
+    const imgs = prefillFiles.filter((f) => f.type.startsWith('image/'));
+    if (imgs.length === 0) {
+      prefillImagesPushed.current = true;
+      return;
+    }
+    if (photoRef.current) {
+      prefillImagesPushed.current = true;
+      photoRef.current.addFiles(imgs);
+    }
+  }, [prefillFiles]);
   const kind: CommunityKind = legacyKindForCategory(category);
   const videoTarget = {
     scope: 'community' as const,
