@@ -96,13 +96,12 @@ export async function createCommunity(
       revalidatePath('/dashboard/communities');
       const prefillId = options?.prefillId;
       if (prefillId) {
-        // Phase 45.16 (2026-06-20): when the agent landed here from the
-        // upload FAB with files queued, redirect straight to /upload so the
-        // CommunityPhotoPanel/CommunityVideoPanel can consume the prefill.
-        // Without this the editor page (which has no upload panel) would
-        // silently drop the queued files.
+        // Phase 50.12 (2026-06-23): land directly on the hub Media tab with
+        // the prefill query param. CommunityMediaPanel consumes it on mount
+        // and feeds the queued File[] into its single Click-to-upload path.
+        // (The legacy /upload route now just redirects here too.)
         redirect(
-          `/dashboard/communities/${created.id}/upload?prefill=${encodeURIComponent(prefillId)}`,
+          `/dashboard/communities/${created.id}?tab=media&prefill=${encodeURIComponent(prefillId)}`,
         );
       }
       redirect(`/dashboard/communities/${created.id}`);

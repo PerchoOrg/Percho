@@ -2,6 +2,38 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## Phase 50.12 — Community upload: kill legacy /upload page, soften buttons (2026-06-23)
+
+**Objective**: qiaoxux uploaded a video on the new hub Media tab and hit two regressions:
+1. The `Start upload` / `Upload another` buttons rendered near-black on the cream background.
+2. After picking a file from the FAB → "Upload as Community" → New community, the redirect landed on the OLD standalone `/upload` page (the one with the inline Address input and "Applies to both video and photos uploaded below" callout) instead of the new hub Media tab.
+
+**Root causes**:
+1. `VideoUploader.tsx` two action buttons used `style={{ background: 'var(--brand)', color: '#0c0c0c' }}`. The cream theme aliases `--brand: var(--ink)` (`#313131`), so the buttons rendered as near-black solids on cream — visually identical to the BottomNav `+` FAB and out of step with the outlined `Click to upload` button right next to them.
+2. `createCommunity()` in `app/dashboard/communities/actions.ts` redirected the prefill flow to `/dashboard/communities/[id]/upload?prefill=…`. That route is the legacy `<CommunityUploadShell>` (Phase 25/45.16) — it predates Phase 50.x's hub Media tab and still has its own Address input + sibling category callout. It was the destination of the FAB handoff because the new hub MediaPanel didn't know how to consume `?prefill=`.
+
+**Approach**:
+- **Buttons**: re-skin Start / Upload-another / Pick-another-file as `border border-line bg-bg text-ink` outlined buttons (matches the existing `Click to upload` button in `MediaPanel`/`CommunityMediaPanel`).
+- **Prefill bridge**: lift the `consumePrefill()` call from `<CommunityUploadPrefillBridge>` into `<CommunityMediaPanel>` directly. On mount, if `?prefill=<id>` is set, pull the File[] from the upload-prefill-store and feed it to the existing `handlePicked()` (which already routes images → photoRef and videos → pendingVideos). After consumption, strip the param via `history.replaceState` so a hard refresh doesn't look weird.
+- **Redirect cascade**: `createCommunity()` now redirects to `?tab=media&prefill=…` on the hub. The old `/upload` page becomes a thin server redirect to `?tab=media` (preserving any `?prefill`). Old `/photos` and `/videos` redirects already point at `/upload` so they auto-cascade.
+
+**Files**:
+- `components/dashboard/VideoUploader.tsx` — three button restyles (Start upload, Pick another file, Upload another), drop inline `--brand` styles.
+- `app/dashboard/communities/[id]/CommunityMediaPanel.tsx` — `useSearchParams` + a one-shot effect that calls `consumePrefill(prefillId)` → `handlePicked(files)` → `history.replaceState` to drop the param.
+- `app/dashboard/communities/[id]/upload/page.tsx` — collapsed from a server-component shell that loaded videos/photos/communities to a 25-line redirect: `redirect('/dashboard/communities/${id}?tab=media' + prefill)`.
+- `app/dashboard/communities/actions.ts` — `createCommunity()` prefill redirect now points at `?tab=media&prefill=…` instead of `/upload?prefill=…`.
+
+**Verification**:
+- `npx tsc --noEmit` clean.
+- `npm run build` clean.
+- `/dashboard/communities/[id]/upload` route still appears in build output as a tiny redirect — old bookmarks survive.
+- Hub Media tab consumes `?prefill=<id>` exactly like `/upload` did: photos auto-upload via `photoRef.current?.addFiles(images)`, videos appear as pending VideoUploader rows the agent confirms.
+
+**Lessons**:
+- **Inline `style={{ background: 'var(--brand)' }}` is a footgun in palette swaps.** The cream theme intentionally aliases `--brand` to `--ink` so legacy chromatic-accent code degrades to neutral, but neutral on cream looks aggressive. Buttons that used to be a green/blue accent are now near-black solids unless explicitly restyled. Audit-and-purge any remaining `var(--brand)` inline styles after a palette flip.
+- **Folding a route into a tab is a 3-step move, not 1.** When the hub Media tab supersedes a standalone `/upload` page, you have to (a) port the prefill consumer into the panel, (b) collapse the route to a redirect, AND (c) update every internal redirect (createCommunity, in this case) to skip the legacy URL. Missing (c) means the new hub looks complete in dev but the prod FAB flow still routes around it.
+- **`searchParams.get('prefill')` + `history.replaceState`** is a clean one-shot consumer pattern when the side-effect (here: handing files to handlePicked) shouldn't run twice. Prefer it over a separate bridge component when the hub panel already lives on a client boundary.
+
 ## Phase 50.11.2 — Community Media: trim CategorySpecCard to blurb only (2026-06-23)
 
 **Objective**: qiaoxux reviewed the v0.54.11 result and asked: of the four lines under the Category dropdown ("Morning Rush" / "The commute, on a real weekday" / "Must include: Dashcam timestamp must be visible." / "Applies to videos and photos uploaded next."), keep only the second line.

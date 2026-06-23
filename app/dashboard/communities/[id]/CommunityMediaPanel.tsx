@@ -31,8 +31,9 @@
  */
 
 import { Upload } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { consumePrefill } from '@/app/_components/upload-prefill-store';
 import {
   type CommunityKind,
   type UploadedVideo,
@@ -80,6 +81,7 @@ export function CommunityMediaPanel({
   canSetCover,
 }: Props) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const inputRef = useRef<HTMLInputElement | null>(null);
   const photoRef = useRef<CommunityPhotoPanelHandle | null>(null);
   const [category, setCategory] = useState<CommunityVideoCategoryId>('walk_the_block');
@@ -106,6 +108,28 @@ export function CommunityMediaPanel({
     );
   }, []);
 
+  // Phase 50.12 (2026-06-23): consume `?prefill=<id>` from the URL once on
+  // mount. This is the bridge that used to live on /upload — when the
+  // UploadFAB → /communities/new flow lands here, we feed the queued File[]
+  // straight into handlePicked() so videos and photos auto-flow into the
+  // same panel without bouncing through the legacy /upload screen. We also
+  // strip the param so a refresh doesn't double-consume (consumePrefill is
+  // already one-shot, but the URL param looks suspicious otherwise).
+  const prefillId = searchParams?.get('prefill') ?? null;
+  // biome-ignore lint/correctness/useExhaustiveDependencies: handlePicked is
+  // stable enough (useCallback w/ []), and we deliberately want this effect
+  // to only fire on prefillId change — not on every photoRef/setState id.
+  useEffect(() => {
+    if (!prefillId) return;
+    const files = consumePrefill(prefillId);
+    if (files && files.length > 0) handlePicked(files);
+    // Clear the query param so a hard refresh doesn't re-trigger.
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href);
+      url.searchParams.delete('prefill');
+      window.history.replaceState({}, '', url.toString());
+    }
+  }, [prefillId]);
   const kind: CommunityKind = legacyKindForCategory(category);
   const videoTarget = {
     scope: 'community' as const,

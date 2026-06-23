@@ -2,6 +2,15 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.54.13 — Community upload polish: lighter buttons, no more legacy page (2026-06-23)
+
+**For agents uploading videos to a community:**
+
+### 🐞 Fixes
+- **Start upload / Upload another buttons no longer turn near-black** in the cream theme. They now use the same outlined cream-and-ink style as the rest of the dashboard, matching the `Click to upload` button visually.
+- **The upload FAB and the community Media tab now land on the same screen.** Picking files from the bottom-sheet FAB → "Upload as Community" → New community used to drop you onto the legacy `/upload` page (Address field, separate Category callout). Now it lands directly on the new hub **Media** tab — same one-card layout your listings already use, queued files auto-flow into the single Click-to-upload path.
+- **Old `/upload` and `/photos` and `/videos` URLs still work** — they redirect to `?tab=media` so any saved bookmarks, agent crash-recovery URLs, or in-flight FAB redirects keep landing on the right screen.
+
 ## v0.54.12 — Community Media: trim category card to one line (2026-06-23)
 
 **For agents on `/dashboard/communities/[id]` → Media tab:**

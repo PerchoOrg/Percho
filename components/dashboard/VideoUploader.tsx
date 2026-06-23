@@ -292,16 +292,14 @@ export function VideoUploader({ target, onUploaded, initialFile }: Props) {
             <button
               type="button"
               onClick={startUpload}
-              className="rounded-lg px-4 py-2 text-sm font-medium transition hover:opacity-90"
-              style={{ background: 'var(--brand)', color: '#0c0c0c' }}
+              className="inline-flex items-center gap-2 rounded-md border border-line bg-bg px-4 py-2 text-sm font-medium text-ink transition hover:border-line-strong hover:text-ink"
             >
               Start upload
             </button>
             <button
               type="button"
               onClick={reset}
-              className="rounded-lg border px-4 py-2 text-sm font-medium transition hover:opacity-90"
-              style={{ borderColor: 'var(--border)' }}
+              className="inline-flex items-center gap-2 rounded-md border border-line bg-transparent px-4 py-2 text-sm text-ink2 transition hover:border-line-strong hover:text-ink"
             >
               Pick another file
             </button>
@@ -344,8 +342,7 @@ export function VideoUploader({ target, onUploaded, initialFile }: Props) {
           <button
             type="button"
             onClick={reset}
-            className="rounded-lg px-4 py-2 text-sm font-medium transition hover:opacity-90"
-            style={{ background: 'var(--brand)', color: '#0c0c0c' }}
+            className="inline-flex items-center gap-2 rounded-md border border-line bg-bg px-4 py-2 text-sm font-medium text-ink transition hover:border-line-strong"
           >
             Upload another
           </button>
