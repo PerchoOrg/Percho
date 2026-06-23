@@ -38,11 +38,12 @@ import {
   type UploadedVideo,
   VideoUploader,
 } from '@/components/dashboard/VideoUploader';
+import { CategoryPicker, CategorySpecCard } from './CategoryPicker';
 import {
   type CommunityVideoCategoryId,
+  getCategoryMeta,
   legacyKindForCategory,
 } from '@/lib/zod/community-video-categories';
-import { CategoryPicker } from './CategoryPicker';
 import {
   CommunityPhotoPanel,
   type CommunityPhotoPanelHandle,
@@ -167,11 +168,11 @@ export function CommunityMediaPanel({
         </span>
       </div>
 
-      {/* Phase 50.10: Category (left) + Upload (right) side-by-side. The
-          dropdown drives the category for both videos AND photos uploaded
-          next, so it lives next to the upload button instead of below.
-          Stacks on mobile (flex-wrap) so neither field gets squeezed. */}
-      <div className="mb-6 flex flex-wrap items-end gap-4">
+      {/* Phase 50.11: Category dropdown (left) + Upload button (right) on a
+          single row, items aligned to bottom so the dropdown's wider field
+          and the button bottom-edge meet. SpecCard moved below so it
+          doesn't make the Category column tower over the Upload button. */}
+      <div className="mb-3 flex flex-wrap items-end gap-3">
         <div className="min-w-[12rem] flex-1">
           <label
             htmlFor="community-media-category"
@@ -179,12 +180,14 @@ export function CommunityMediaPanel({
           >
             Category
           </label>
-          <CategoryPicker mode="create" selected={category} onPick={setCategory} />
-          <p className="mt-1.5 text-[11px] text-muted">
-            Applies to videos and photos uploaded next.
-          </p>
+          <CategoryPicker
+            mode="create"
+            selected={category}
+            onPick={setCategory}
+            hideSpec
+          />
         </div>
-        <div className="min-w-[12rem]">
+        <div>
           <input
             ref={inputRef}
             type="file"
@@ -206,13 +209,17 @@ export function CommunityMediaPanel({
             <Upload size={16} aria-hidden="true" />
             Click to upload
           </button>
-          <p className="mt-1.5 text-[11px] text-muted">
-            Photos (JPEG / PNG / WebP, up to 10 MB) and videos (MP4 / MOV, up to 2 GB).
-          </p>
-          {unsupportedNotice ? (
-            <p className="mt-1.5 text-[11px] text-red-300">{unsupportedNotice}</p>
-          ) : null}
         </div>
+      </div>
+      <p className="mb-3 text-[11px] text-muted">
+        Category applies to videos and photos uploaded next. Photos (JPEG / PNG / WebP, up to 10 MB)
+        and videos (MP4 / MOV, up to 2 GB).
+      </p>
+      {unsupportedNotice ? (
+        <p className="mb-3 text-[11px] text-red-300">{unsupportedNotice}</p>
+      ) : null}
+      <div className="mb-6">
+        <CategorySpecCard meta={getCategoryMeta(category)} />
       </div>
 
       {/* Per-file video uploaders. Each owns its own pick→title→progress flow;

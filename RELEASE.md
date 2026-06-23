@@ -2,6 +2,13 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.54.11 — Community Media: dropdown + Upload truly side by side (2026-06-23)
+
+**For agents on `/dashboard/communities/[id]` → Media tab:**
+
+### 🐛 Bug Fixes
+- **Side-by-side row was visually still stacked** in v0.54.10: the Category column included the tall "spec card" (label + blurb + must-include rule), so it towered over the small Upload button. Now only the dropdown sits on the row with Upload — the spec card moves to a separate full-width band below.
+
 ## v0.54.10 — Community Media: side-by-side controls + video descriptions (2026-06-23)
 
 **For agents on `/dashboard/communities/[id]` → Media tab:**

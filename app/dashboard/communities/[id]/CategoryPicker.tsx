@@ -32,9 +32,17 @@ export interface CategoryPickerProps {
   onPick: (id: CommunityVideoCategoryId) => void;
   /** edit mode only: while a save action is pending, gray the surface. */
   disabled?: boolean;
+  /**
+   * Phase 50.11: when caller wants to side-by-side the dropdown with another
+   * control (e.g. the Upload button on CommunityMediaPanel), the SpecCard
+   * makes the Category column much taller than its sibling. `hideSpec` lets
+   * the caller render the dropdown alone here and surface the SpecCard
+   * separately via <CategorySpecCard meta={…} /> below the row.
+   */
+  hideSpec?: boolean;
 }
 
-export function CategoryPicker({ selected, onPick, disabled }: CategoryPickerProps) {
+export function CategoryPicker({ selected, onPick, disabled, hideSpec }: CategoryPickerProps) {
   const meta = getCategoryMeta(selected);
   return (
     <div className={disabled ? 'opacity-50 pointer-events-none' : ''}>
@@ -50,12 +58,12 @@ export function CategoryPicker({ selected, onPick, disabled }: CategoryPickerPro
           </option>
         ))}
       </select>
-      <SpecCard meta={meta} />
+      {hideSpec ? null : <CategorySpecCard meta={meta} />}
     </div>
   );
 }
 
-function SpecCard({ meta }: { meta: CommunityVideoCategoryMeta }) {
+export function CategorySpecCard({ meta }: { meta: CommunityVideoCategoryMeta }) {
   return (
     <div className="mt-3 rounded-lg border border-line-strong bg-ink/[0.04] p-3">
       <div className="text-sm font-semibold text-ink">{meta.label}</div>

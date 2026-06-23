@@ -2,6 +2,26 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## Phase 50.11.1 — Community Media: SpecCard split out so dropdown can sit beside Upload (2026-06-23)
+
+**Objective**: Phase 50.11 wrapped Category + Upload in a `flex items-end` row, but qiaoxux reported "don't see the left and right change" — the Category column was still visually taller than the Upload button because `<CategoryPicker>` rendered both the dropdown AND the SpecCard (label + blurb + hard rule, ~120px tall) inside a single column. With `items-end` the Upload button hugged the bottom of a much taller sibling, so the row read as stacked.
+
+**Actions**:
+- `CategoryPicker.tsx` — added optional `hideSpec` prop and exported `<CategorySpecCard meta={…} />` separately. Dropdown alone when `hideSpec`, full bundle (current behavior) otherwise.
+- `CommunityMediaPanel.tsx` — pass `hideSpec` to `<CategoryPicker>` in the side-by-side row, then render `<CategorySpecCard meta={getCategoryMeta(category)} />` in its own full-width band below. Help text + unsupported notice also moved out of the right column to a single full-width line so the left and right columns are both ~36px tall and read as obviously side-by-side.
+
+**Decisions**:
+- *Export `CategorySpecCard` instead of inlining the markup*: keeps the CategoryPicker file as the single source of truth for the spec card visual and lets a future caller (e.g. a category sheet) reuse it.
+- *Help text moved out of the upload column*: avoids the same height-mismatch problem the SpecCard caused; the row now contains ONLY same-height controls.
+
+**Issues**: None — pure layout refactor.
+
+**Resolution**: tsc clean, build clean. v0.54.11 bumped.
+
+**Learnings**: When `flex items-end` is involved, audit children for "tall extras" that pad the column. Side-by-side intent fails silently when one column has far more content than the other — `items-end` aligns the BOTTOMS, not the rows visually. Pull tall content out into a sibling row instead.
+
+**Next steps**: Wait for qiaoxux re-verification.
+
 ## Phase 50.11 — Community Media: side-by-side controls + video descriptions (2026-06-23)
 
 **Objective**: Two follow-ups to the Phase 50.9 community Media tab refactor:
