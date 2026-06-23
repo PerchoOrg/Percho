@@ -180,7 +180,6 @@ export async function updateCommunity(id: string, raw: unknown): Promise<ActionR
               : null,
           builder: parsed.data.builder ?? null,
           website: parsed.data.website ?? null,
-          tagline: parsed.data.tagline ?? null,
         },
         { count: 'exact' },
       )

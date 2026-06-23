@@ -67,7 +67,6 @@ interface CommunityRow {
   highlights: string[] | null;
   builder: string | null;
   website: string | null;
-  tagline: string | null;
 }
 
 // Re-exported for downstream consumers (e.g. upload subpage).
@@ -108,7 +107,7 @@ export default async function CommunityEditorPage({
   const { data: community } = (await (supabase as any)
     .from('communities')
     .select(
-      'id, name, slug, city, state, description, status, created_by, cover_video_id, cover_storage_path, zip, county, hoa_fee_monthly, year_built, year_built_end, price_min, price_max, property_types, highlights, builder, website, tagline',
+      'id, name, slug, city, state, description, status, created_by, cover_video_id, cover_storage_path, zip, county, hoa_fee_monthly, year_built, year_built_end, price_min, price_max, property_types, highlights, builder, website',
     )
     .eq('id', id)
     .maybeSingle()) as { data: CommunityRow | null };

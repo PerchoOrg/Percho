@@ -1,32 +1,34 @@
 'use client';
 
 /**
- * CommunityEditor — Phase 4.4; Phase 23 (2026-06-14) trimmed; Phase 50
- * (2026-06-22) flattened; Phase 50.4 (2026-06-22) expanded with 10 metadata
- * fields; Phase 50.5 (2026-06-22) typed numerics + unit adornments to match
- * the listing editor.
+ * CommunityEditor — Phase 4.4; Phase 23 trimmed; Phase 50 flattened;
+ * Phase 50.4 expanded; Phase 50.5 typed numerics; Phase 50.6 opt-in ranges;
+ * Phase 50.7 (2026-06-22) form-level cleanup per owner.
  *
- * Phase 50.5 design notes — input parity with listing:
- *   - Year built: single year (1800–2100). Same dual-mode UI as listing —
- *     a select of recent years with a "Type a year…" escape hatch into a
- *     number input. Don't make agents reinvent format choices.
- *   - HOA fee: integer dollars/month with `$` prefix and `/month` suffix
- *     adornments, exactly like the listing HOA field.
- *   - Price: split into From / To integers, both with `$` prefix. Min ≤ max
- *     enforced server-side. Two number inputs is friendlier than free-text
- *     "$450k – $1.2M" because the agent never has to think about hyphens,
- *     "k" abbreviations, or which dash character to use.
- *   - All hints removed per owner ask 2026-06-22 — placeholders + adornments
- *     should communicate everything a hint would have. If a field needs a
- *     hint to be usable, the field's design is the bug.
- *
- * Earlier phases:
- *   - Phase 50.4: 10 metadata fields, chip inputs for property_types and
- *     highlights, isDirty Save gate, 5-section grouping (Identity / Location
- *     / Pitch / Property / Contact).
- *   - Phase 50: removed inner `<section>` wrapper + duplicate "Community
- *     details" heading. The page-level details panel is now the sole frame.
- *   - Phase 50: DangerZone moved out — page.tsx renders it as a sibling.
+ * Phase 50.7 design notes:
+ *   - **No section grouping.** "Identity / Location / Pitch / Property /
+ *     Contact" headings are gone. Owner: "Remove all categories like
+ *     identity, location…". Flat field stream — fewer visual layers, less
+ *     for the eye to parse on mobile.
+ *   - **City + ZIP required.** Both starred. Buyer-side geo filtering needs
+ *     them; agents can fix bad data faster when the form refuses to save
+ *     a community without them.
+ *   - **Year built = two optional number inputs.** Start year + End year,
+ *     both 1800–2100, both optional. The 50.5 dual-mode select (recent
+ *     years dropdown + "Type a year…" escape hatch) and the 50.6 opt-in
+ *     toggle are both gone — owner asked for "two dropdowns for start and
+ *     end, both optional", literal interpretation. End-year cross-field
+ *     check (>= start) still runs server-side.
+ *   - **Price = two optional dollar inputs.** Min + Max, both optional.
+ *     50.6 opt-in toggle removed for the same reason.
+ *   - **Tagline dropped.** Owner: "redundant with highlights and
+ *     descriptions". Migration 0039 drops the column.
+ *   - **Property types are NAR/Zillow consumer-facing labels** (Single
+ *     Family / Townhouse / Condo / Co-op / Multi-Family / Manufactured /
+ *     Land). The 50.4 list mixed type with sale-stage ("New Construction",
+ *     "Resale") and surfaced "Active Adult 55+" jargon — owner: "not sure
+ *     what is 55". Cleaner taxonomy.
+ *   - All hints stay removed; placeholders + adornments carry the load.
  */
 
 import { deleteCommunity, updateCommunity } from '@/app/dashboard/communities/actions';
@@ -43,10 +45,11 @@ function inputCls(hasError: boolean) {
   return `${INPUT_BASE} ${hasError ? INPUT_ERR : INPUT_OK}`;
 }
 
-// Mirrors the listing editor's `buildYearOptions` — current year + 24 prior
-// years + a "Type a year…" escape hatch covers the realistic "when was this
-// new community delivered" case without pretending to support 1860 colonial
-// pre-revival builds. Anything earlier falls through to the custom input.
+// Year dropdown options — current year + 24 prior years. Phase 50.7 simplified
+// from the 50.5 dual-mode "Type a year…" escape hatch: an "old" community is
+// rare in our pipeline (Vivian's set is mostly post-2000 builds) and the
+// escape hatch added a state machine for ~1% of cases. If a 1950s build
+// shows up, owner can use the listing editor or we add the escape back later.
 function buildYearOptions(): string[] {
   const now = new Date().getFullYear();
   const out: string[] = [];
@@ -78,7 +81,6 @@ interface CommunityRow {
   highlights: string[] | null;
   builder: string | null;
   website: string | null;
-  tagline: string | null;
 }
 
 export function CommunityEditor({
@@ -94,33 +96,20 @@ export function CommunityEditor({
   const [state, setState] = useState(community.state);
   const [zip, setZip] = useState(community.zip ?? '');
   const [county, setCounty] = useState(community.county ?? '');
-  const [tagline, setTagline] = useState(community.tagline ?? '');
   const [highlights, setHighlights] = useState<string[]>(community.highlights ?? []);
   const [description, setDescription] = useState(community.description ?? '');
   const [propertyTypes, setPropertyTypes] = useState<string[]>(community.property_types ?? []);
   const [builder, setBuilder] = useState(community.builder ?? '');
 
-  // Year built — dual mode like listing. Stored value is a stringified int
-  // for input compatibility; parsed to number on submit.
-  const initialYearBuilt = community.year_built?.toString() ?? '';
-  const [yearBuilt, setYearBuilt] = useState(initialYearBuilt);
+  // Year built — two optional selects (start + end). Phase 50.7 simplified
+  // from the 50.5 dual-mode + 50.6 opt-in toggle. Both fields are stringified
+  // ints for input compatibility.
   const yearOptions = useMemo(() => buildYearOptions(), []);
-  const initialYearInList = initialYearBuilt !== '' && yearOptions.includes(initialYearBuilt);
-  const [yearBuiltMode, setYearBuiltMode] = useState<'list' | 'custom'>(
-    initialYearBuilt === '' || initialYearInList ? 'list' : 'custom',
-  );
-
-  // Phase 50.6 — phased delivery. End year is opt-in: collapsed unless the
-  // community already has a saved end-year value.
-  const initialYearBuiltEnd = community.year_built_end?.toString() ?? '';
-  const [yearBuiltEnd, setYearBuiltEnd] = useState(initialYearBuiltEnd);
-  const [yearEndShown, setYearEndShown] = useState(initialYearBuiltEnd !== '');
+  const [yearBuilt, setYearBuilt] = useState(community.year_built?.toString() ?? '');
+  const [yearBuiltEnd, setYearBuiltEnd] = useState(community.year_built_end?.toString() ?? '');
 
   const [priceMin, setPriceMin] = useState(community.price_min?.toString() ?? '');
   const [priceMax, setPriceMax] = useState(community.price_max?.toString() ?? '');
-  // Phase 50.6 — collapse Price max behind an opt-in toggle. If the row
-  // already has a max price, show both inputs from the start.
-  const [priceMaxShown, setPriceMaxShown] = useState(community.price_max != null);
   const [hoaFee, setHoaFee] = useState(community.hoa_fee_monthly?.toString() ?? '');
   const [website, setWebsite] = useState(community.website ?? '');
 
@@ -144,13 +133,12 @@ export function CommunityEditor({
       same(community.state, state.trim().toUpperCase()) &&
       same(community.zip, trimOrNull(zip)) &&
       same(community.county, trimOrNull(county)) &&
-      same(community.tagline, trimOrNull(tagline)) &&
       same(community.description, trimOrNull(description)) &&
       same(community.builder, trimOrNull(builder)) &&
       sameInt(community.year_built, yearBuilt) &&
-      sameInt(community.year_built_end, yearEndShown ? yearBuiltEnd : '') &&
+      sameInt(community.year_built_end, yearBuiltEnd) &&
       sameInt(community.price_min, priceMin) &&
-      sameInt(community.price_max, priceMaxShown ? priceMax : '') &&
+      sameInt(community.price_max, priceMax) &&
       sameInt(community.hoa_fee_monthly, hoaFee) &&
       same(community.website, trimOrNull(website)) &&
       sameArray(community.property_types, propertyTypes) &&
@@ -163,15 +151,12 @@ export function CommunityEditor({
     state,
     zip,
     county,
-    tagline,
     description,
     builder,
     yearBuilt,
     yearBuiltEnd,
-    yearEndShown,
     priceMin,
     priceMax,
-    priceMaxShown,
     hoaFee,
     website,
     propertyTypes,
@@ -202,21 +187,20 @@ export function CommunityEditor({
     startTransition(async () => {
       const result = await updateCommunity(community.id, {
         name: name.trim(),
-        city: trimOrNull(city),
+        city: city.trim(),
         state: state.trim().toUpperCase(),
         description: trimOrNull(description),
-        zip: trimOrNull(zip),
+        zip: zip.trim(),
         county: trimOrNull(county),
         hoa_fee_monthly: parseIntOrNull(hoaFee),
         year_built: parseIntOrNull(yearBuilt),
-        year_built_end: yearEndShown ? parseIntOrNull(yearBuiltEnd) : null,
+        year_built_end: parseIntOrNull(yearBuiltEnd),
         price_min: parseIntOrNull(priceMin),
-        price_max: priceMaxShown ? parseIntOrNull(priceMax) : null,
+        price_max: parseIntOrNull(priceMax),
         property_types: propertyTypes.length > 0 ? propertyTypes : null,
         highlights: highlights.length > 0 ? highlights : null,
         builder: trimOrNull(builder),
         website: trimOrNull(website),
-        tagline: trimOrNull(tagline),
       });
       if (result.ok) {
         setSaveState('saved');
@@ -233,390 +217,271 @@ export function CommunityEditor({
   }
 
   return (
-    <form onSubmit={onSubmit} className="space-y-8" noValidate>
-      {/* — Identity ——————————————————————————————————————— */}
-      <FieldGroup title="Identity">
-        <Field label="Name" required error={fieldErrors.name}>
-          <input
-            type="text"
-            value={name}
-            onChange={(e) => {
-              setName(e.target.value);
-              clearFieldError('name');
-            }}
-            maxLength={120}
-            placeholder="e.g. Peachtree Corners"
-            disabled={!canEditMetadata}
-            aria-invalid={!!fieldErrors.name}
-            className={inputCls(!!fieldErrors.name)}
-          />
-        </Field>
-        <Field label="Tagline" error={fieldErrors.tagline}>
-          <input
-            type="text"
-            value={tagline}
-            onChange={(e) => {
-              setTagline(e.target.value);
-              clearFieldError('tagline');
-            }}
-            maxLength={120}
-            placeholder="e.g. Walkable new-build townhomes minutes from MARTA"
-            disabled={!canEditMetadata}
-            aria-invalid={!!fieldErrors.tagline}
-            className={inputCls(!!fieldErrors.tagline)}
-          />
-        </Field>
-      </FieldGroup>
+    <form onSubmit={onSubmit} className="space-y-5" noValidate>
+      <Field label="Name" required error={fieldErrors.name}>
+        <input
+          type="text"
+          value={name}
+          onChange={(e) => {
+            setName(e.target.value);
+            clearFieldError('name');
+          }}
+          maxLength={120}
+          placeholder="e.g. Peachtree Corners"
+          disabled={!canEditMetadata}
+          aria-invalid={!!fieldErrors.name}
+          className={inputCls(!!fieldErrors.name)}
+        />
+      </Field>
 
-      {/* — Location ——————————————————————————————————————— */}
-      <FieldGroup title="Location">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-[1fr_5rem_7rem]">
-          <Field label="City" error={fieldErrors.city}>
-            <input
-              type="text"
-              value={city}
-              onChange={(e) => {
-                setCity(e.target.value);
-                clearFieldError('city');
-              }}
-              maxLength={80}
-              placeholder="Atlanta"
-              disabled={!canEditMetadata}
-              aria-invalid={!!fieldErrors.city}
-              className={inputCls(!!fieldErrors.city)}
-            />
-          </Field>
-          <Field label="State" required error={fieldErrors.state}>
-            <input
-              type="text"
-              value={state}
-              onChange={(e) => {
-                setState(e.target.value.toUpperCase());
-                clearFieldError('state');
-              }}
-              maxLength={2}
-              placeholder="GA"
-              disabled={!canEditMetadata}
-              aria-invalid={!!fieldErrors.state}
-              className={inputCls(!!fieldErrors.state)}
-            />
-          </Field>
-          <Field label="ZIP" error={fieldErrors.zip}>
-            <input
-              type="text"
-              value={zip}
-              onChange={(e) => {
-                setZip(e.target.value);
-                clearFieldError('zip');
-              }}
-              maxLength={10}
-              placeholder="30092"
-              disabled={!canEditMetadata}
-              aria-invalid={!!fieldErrors.zip}
-              className={inputCls(!!fieldErrors.zip)}
-            />
-          </Field>
-        </div>
-        <Field label="County" error={fieldErrors.county}>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-[1fr_5rem_7rem]">
+        <Field label="City" required error={fieldErrors.city}>
           <input
             type="text"
-            value={county}
+            value={city}
             onChange={(e) => {
-              setCounty(e.target.value);
-              clearFieldError('county');
+              setCity(e.target.value);
+              clearFieldError('city');
             }}
             maxLength={80}
-            placeholder="Gwinnett County"
+            placeholder="Atlanta"
             disabled={!canEditMetadata}
-            aria-invalid={!!fieldErrors.county}
-            className={inputCls(!!fieldErrors.county)}
+            aria-invalid={!!fieldErrors.city}
+            className={inputCls(!!fieldErrors.city)}
           />
         </Field>
-      </FieldGroup>
-
-      {/* — Pitch ——————————————————————————————————————— */}
-      <FieldGroup title="Pitch">
-        <Field label="Highlights" error={fieldErrors.highlights}>
-          <ChipInput
-            values={highlights}
-            onChange={(next) => {
-              setHighlights(next);
-              clearFieldError('highlights');
-            }}
-            placeholder="e.g. Top-rated schools  (press Enter)"
-            maxItems={8}
-            maxLength={80}
-            disabled={!canEditMetadata}
-            ariaInvalid={!!fieldErrors.highlights}
-          />
-        </Field>
-        <Field label="Description" error={fieldErrors.description}>
-          <textarea
-            value={description}
+        <Field label="State" required error={fieldErrors.state}>
+          <input
+            type="text"
+            value={state}
             onChange={(e) => {
-              setDescription(e.target.value);
-              clearFieldError('description');
+              setState(e.target.value.toUpperCase());
+              clearFieldError('state');
             }}
-            rows={4}
-            maxLength={2000}
-            placeholder="Tell buyers what makes this community feel like home — vibe, who lives here, what you'd notice on a Saturday morning."
+            maxLength={2}
+            placeholder="GA"
             disabled={!canEditMetadata}
-            aria-invalid={!!fieldErrors.description}
-            className={`${inputCls(!!fieldErrors.description)} resize-y`}
+            aria-invalid={!!fieldErrors.state}
+            className={inputCls(!!fieldErrors.state)}
           />
         </Field>
-      </FieldGroup>
-
-      {/* — Property ——————————————————————————————————————— */}
-      <FieldGroup title="Property">
-        <Field label="Property types" error={fieldErrors.property_types}>
-          <div className="flex flex-wrap gap-2">
-            {COMMUNITY_PROPERTY_TYPES.map((t) => {
-              const active = propertyTypes.includes(t);
-              return (
-                <button
-                  key={t}
-                  type="button"
-                  disabled={!canEditMetadata}
-                  onClick={() => togglePropertyType(t)}
-                  aria-pressed={active}
-                  className={`rounded-full border px-3 py-1 text-xs transition disabled:cursor-not-allowed disabled:opacity-60 ${
-                    active
-                      ? 'border-ink bg-ink text-cream'
-                      : 'border-line bg-surface text-ink2 hover:border-line-strong hover:text-ink'
-                  }`}
-                >
-                  {t}
-                </button>
-              );
-            })}
-          </div>
+        <Field label="ZIP" required error={fieldErrors.zip}>
+          <input
+            type="text"
+            value={zip}
+            onChange={(e) => {
+              setZip(e.target.value);
+              clearFieldError('zip');
+            }}
+            maxLength={10}
+            placeholder="30092"
+            disabled={!canEditMetadata}
+            aria-invalid={!!fieldErrors.zip}
+            className={inputCls(!!fieldErrors.zip)}
+          />
         </Field>
+      </div>
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Field label="Builder" error={fieldErrors.builder}>
-            <input
-              type="text"
-              value={builder}
-              onChange={(e) => {
-                setBuilder(e.target.value);
-                clearFieldError('builder');
-              }}
-              maxLength={120}
-              placeholder="e.g. Pulte, Toll Brothers"
-              disabled={!canEditMetadata}
-              aria-invalid={!!fieldErrors.builder}
-              className={inputCls(!!fieldErrors.builder)}
-            />
-          </Field>
-          {/* Year built — dual mode (select + custom input), copied from
-              EditListingForm so the two editors feel identical.
-              Phase 50.6: end year is opt-in — agents click "+ Add end year"
-              when the community delivered in phases (e.g. 2019–2024). */}
-          <Field
-            label="Year built"
-            error={fieldErrors.year_built || fieldErrors.year_built_end}
-          >
-            <div className="space-y-2">
-              <div className="flex items-start gap-2">
-                <div className="flex-1">
-                  {yearBuiltMode === 'list' ? (
-                    <select
-                      value={yearBuilt}
-                      onChange={(e) => {
-                        const v = e.target.value;
-                        if (v === '__custom__') {
-                          setYearBuiltMode('custom');
-                          setYearBuilt('');
-                        } else {
-                          setYearBuilt(v);
-                        }
-                        clearFieldError('year_built');
-                        clearFieldError('year_built_end');
-                      }}
-                      disabled={!canEditMetadata}
-                      aria-invalid={!!fieldErrors.year_built}
-                      aria-label={yearEndShown ? 'Start year' : 'Year built'}
-                      className={inputCls(!!fieldErrors.year_built)}
-                    >
-                      <option value="">— Select —</option>
-                      {yearOptions.map((y) => (
-                        <option key={y} value={y}>
-                          {y}
-                        </option>
-                      ))}
-                      <option value="__custom__">Type a year…</option>
-                    </select>
-                  ) : (
-                    <div className="flex gap-2">
-                      <input
-                        type="number"
-                        min="1800"
-                        max="2100"
-                        value={yearBuilt}
-                        onChange={(e) => {
-                          setYearBuilt(e.target.value);
-                          clearFieldError('year_built');
-                          clearFieldError('year_built_end');
-                        }}
-                        placeholder="e.g. 1998"
-                        disabled={!canEditMetadata}
-                        aria-invalid={!!fieldErrors.year_built}
-                        aria-label={yearEndShown ? 'Start year' : 'Year built'}
-                        className={inputCls(!!fieldErrors.year_built)}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setYearBuiltMode('list');
-                          setYearBuilt('');
-                        }}
-                        disabled={!canEditMetadata}
-                        className="shrink-0 rounded border border-line px-2 text-xs text-ink2 hover:bg-ink2/10 disabled:cursor-not-allowed disabled:opacity-60"
-                      >
-                        Use list
-                      </button>
-                    </div>
-                  )}
-                </div>
-                {yearEndShown && (
-                  <>
-                    <span className="pt-2 text-ink2 text-sm">–</span>
-                    <div className="flex-1">
-                      <input
-                        type="number"
-                        min="1800"
-                        max="2100"
-                        value={yearBuiltEnd}
-                        onChange={(e) => {
-                          setYearBuiltEnd(e.target.value);
-                          clearFieldError('year_built_end');
-                        }}
-                        placeholder="e.g. 2024"
-                        disabled={!canEditMetadata}
-                        aria-invalid={!!fieldErrors.year_built_end}
-                        aria-label="End year"
-                        className={inputCls(!!fieldErrors.year_built_end)}
-                      />
-                    </div>
-                  </>
-                )}
-              </div>
-              {canEditMetadata && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (yearEndShown) {
-                      setYearEndShown(false);
-                      setYearBuiltEnd('');
-                      clearFieldError('year_built_end');
-                    } else {
-                      setYearEndShown(true);
-                    }
-                  }}
-                  className="text-ink2 text-xs underline-offset-2 hover:underline"
-                >
-                  {yearEndShown ? '− Remove end year' : '+ Add end year (phased delivery)'}
-                </button>
-              )}
-            </div>
-          </Field>
-        </div>
+      <Field label="County" error={fieldErrors.county}>
+        <input
+          type="text"
+          value={county}
+          onChange={(e) => {
+            setCounty(e.target.value);
+            clearFieldError('county');
+          }}
+          maxLength={80}
+          placeholder="Gwinnett County"
+          disabled={!canEditMetadata}
+          aria-invalid={!!fieldErrors.county}
+          className={inputCls(!!fieldErrors.county)}
+        />
+      </Field>
 
-        {/* Price — single From input by default; "+ Add max price" reveals
-            the To input. Phase 50.6: less friction for the common case
-            ("starting at $X") while still supporting min–max ranges. */}
-        <Field
-          label="Price"
-          error={fieldErrors.price_min || fieldErrors.price_max}
-        >
-          <div className="space-y-2">
-            <div
-              className={
-                priceMaxShown
-                  ? 'grid grid-cols-1 gap-3 sm:grid-cols-2'
-                  : 'grid grid-cols-1 gap-3 sm:max-w-[16rem]'
-              }
-            >
-              <DollarInput
-                value={priceMin}
-                onChange={(v) => {
-                  setPriceMin(v);
-                  clearFieldError('price_min');
-                  clearFieldError('price_max');
-                }}
-                placeholder="450,000"
-                suffix={priceMaxShown ? 'from' : 'starting at'}
-                disabled={!canEditMetadata}
-                hasError={!!fieldErrors.price_min}
-              />
-              {priceMaxShown && (
-                <DollarInput
-                  value={priceMax}
-                  onChange={(v) => {
-                    setPriceMax(v);
-                    clearFieldError('price_max');
-                  }}
-                  placeholder="1,200,000"
-                  suffix="to"
-                  disabled={!canEditMetadata}
-                  hasError={!!fieldErrors.price_max}
-                />
-              )}
-            </div>
-            {canEditMetadata && (
+      <Field label="Highlights" error={fieldErrors.highlights}>
+        <ChipInput
+          values={highlights}
+          onChange={(next) => {
+            setHighlights(next);
+            clearFieldError('highlights');
+          }}
+          placeholder="e.g. Top-rated schools  (press Enter)"
+          maxItems={8}
+          maxLength={80}
+          disabled={!canEditMetadata}
+          ariaInvalid={!!fieldErrors.highlights}
+        />
+      </Field>
+
+      <Field label="Description" error={fieldErrors.description}>
+        <textarea
+          value={description}
+          onChange={(e) => {
+            setDescription(e.target.value);
+            clearFieldError('description');
+          }}
+          rows={4}
+          maxLength={2000}
+          placeholder="Tell buyers what makes this community feel like home — vibe, who lives here, what you'd notice on a Saturday morning."
+          disabled={!canEditMetadata}
+          aria-invalid={!!fieldErrors.description}
+          className={`${inputCls(!!fieldErrors.description)} resize-y`}
+        />
+      </Field>
+
+      <Field label="Property types" error={fieldErrors.property_types}>
+        <div className="flex flex-wrap gap-2">
+          {COMMUNITY_PROPERTY_TYPES.map((t) => {
+            const active = propertyTypes.includes(t);
+            return (
               <button
+                key={t}
                 type="button"
-                onClick={() => {
-                  if (priceMaxShown) {
-                    setPriceMaxShown(false);
-                    setPriceMax('');
-                    clearFieldError('price_max');
-                  } else {
-                    setPriceMaxShown(true);
-                  }
-                }}
-                className="text-ink2 text-xs underline-offset-2 hover:underline"
+                disabled={!canEditMetadata}
+                onClick={() => togglePropertyType(t)}
+                aria-pressed={active}
+                className={`rounded-full border px-3 py-1 text-xs transition disabled:cursor-not-allowed disabled:opacity-60 ${
+                  active
+                    ? 'border-ink bg-ink text-cream'
+                    : 'border-line bg-surface text-ink2 hover:border-line-strong hover:text-ink'
+                }`}
               >
-                {priceMaxShown ? '− Remove max price' : '+ Add max price (range)'}
+                {t}
               </button>
-            )}
+            );
+          })}
+        </div>
+      </Field>
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <Field label="Builder" error={fieldErrors.builder}>
+          <input
+            type="text"
+            value={builder}
+            onChange={(e) => {
+              setBuilder(e.target.value);
+              clearFieldError('builder');
+            }}
+            maxLength={120}
+            placeholder="e.g. Pulte, Toll Brothers"
+            disabled={!canEditMetadata}
+            aria-invalid={!!fieldErrors.builder}
+            className={inputCls(!!fieldErrors.builder)}
+          />
+        </Field>
+        {/* Year built — two optional dropdowns. Owner ask 2026-06-22:
+            "Year built range, show two drop downs for start and end, both
+            are optional". Cross-field check (end >= start) runs in zod. */}
+        <Field
+          label="Year built"
+          error={fieldErrors.year_built || fieldErrors.year_built_end}
+        >
+          <div className="flex items-center gap-2">
+            <select
+              value={yearBuilt}
+              onChange={(e) => {
+                setYearBuilt(e.target.value);
+                clearFieldError('year_built');
+                clearFieldError('year_built_end');
+              }}
+              disabled={!canEditMetadata}
+              aria-invalid={!!fieldErrors.year_built}
+              aria-label="Start year"
+              className={inputCls(!!fieldErrors.year_built)}
+            >
+              <option value="">— Start —</option>
+              {yearOptions.map((y) => (
+                <option key={y} value={y}>
+                  {y}
+                </option>
+              ))}
+            </select>
+            <span className="shrink-0 text-ink2 text-sm">–</span>
+            <select
+              value={yearBuiltEnd}
+              onChange={(e) => {
+                setYearBuiltEnd(e.target.value);
+                clearFieldError('year_built_end');
+              }}
+              disabled={!canEditMetadata}
+              aria-invalid={!!fieldErrors.year_built_end}
+              aria-label="End year"
+              className={inputCls(!!fieldErrors.year_built_end)}
+            >
+              <option value="">— End —</option>
+              {yearOptions.map((y) => (
+                <option key={y} value={y}>
+                  {y}
+                </option>
+              ))}
+            </select>
           </div>
         </Field>
+      </div>
 
-        <Field label="HOA fee" error={fieldErrors.hoa_fee_monthly}>
+      {/* Price — two optional dollar inputs (min + max). Owner ask
+          2026-06-22: "Price range, similar [to year]". Cross-field check
+          (max >= min) runs in zod. */}
+      <Field
+        label="Price"
+        error={fieldErrors.price_min || fieldErrors.price_max}
+      >
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <DollarInput
-            value={hoaFee}
+            value={priceMin}
             onChange={(v) => {
-              setHoaFee(v);
-              clearFieldError('hoa_fee_monthly');
+              setPriceMin(v);
+              clearFieldError('price_min');
+              clearFieldError('price_max');
             }}
-            placeholder="220"
-            suffix="/month"
+            placeholder="450,000"
+            suffix="from"
             disabled={!canEditMetadata}
-            hasError={!!fieldErrors.hoa_fee_monthly}
+            hasError={!!fieldErrors.price_min}
           />
-        </Field>
-      </FieldGroup>
+          <DollarInput
+            value={priceMax}
+            onChange={(v) => {
+              setPriceMax(v);
+              clearFieldError('price_max');
+            }}
+            placeholder="1,200,000"
+            suffix="to"
+            disabled={!canEditMetadata}
+            hasError={!!fieldErrors.price_max}
+          />
+        </div>
+      </Field>
 
-      {/* — Contact ——————————————————————————————————————— */}
-      <FieldGroup title="Contact">
-        <Field label="Website" error={fieldErrors.website}>
-          <input
-            type="url"
-            value={website}
-            onChange={(e) => {
-              setWebsite(e.target.value);
-              clearFieldError('website');
-            }}
-            maxLength={500}
-            placeholder="https://peachtreecorners.example.com"
-            disabled={!canEditMetadata}
-            aria-invalid={!!fieldErrors.website}
-            className={inputCls(!!fieldErrors.website)}
-          />
-        </Field>
-      </FieldGroup>
+      <Field label="HOA fee" error={fieldErrors.hoa_fee_monthly}>
+        <DollarInput
+          value={hoaFee}
+          onChange={(v) => {
+            setHoaFee(v);
+            clearFieldError('hoa_fee_monthly');
+          }}
+          placeholder="220"
+          suffix="/month"
+          disabled={!canEditMetadata}
+          hasError={!!fieldErrors.hoa_fee_monthly}
+        />
+      </Field>
+
+      <Field label="Website" error={fieldErrors.website}>
+        <input
+          type="url"
+          value={website}
+          onChange={(e) => {
+            setWebsite(e.target.value);
+            clearFieldError('website');
+          }}
+          maxLength={500}
+          placeholder="https://peachtreecorners.example.com"
+          disabled={!canEditMetadata}
+          aria-invalid={!!fieldErrors.website}
+          className={inputCls(!!fieldErrors.website)}
+        />
+      </Field>
 
       {canEditMetadata && (
         <div className="flex items-center gap-3 border-line border-t pt-4">
@@ -685,15 +550,6 @@ export function CommunityDangerZone({ communityId }: { communityId: string }) {
 
 // ————————————————————————————————————————————————————————————————
 // Local UI helpers
-
-function FieldGroup({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <fieldset className="space-y-4">
-      <legend className="font-medium text-ink2 text-xs uppercase tracking-wide">{title}</legend>
-      {children}
-    </fieldset>
-  );
-}
 
 function Field({
   label,

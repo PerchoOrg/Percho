@@ -2,6 +2,79 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## Phase 50.10 — Community editor form-level cleanup (2026-06-23)
+
+**Owner ask in 5 lines** (Slack, 2026-06-23, Vivian):
+1. City and ZIP are required
+2. Year built range — show two dropdowns for start and end, both optional
+3. Price range — similar (two optional inputs)
+4. Remove all categories like Identity, Location…
+5. Remove tagline, redundant with Highlights and Description
+6. Property types: use official ones, not sure what "55+" is
+
+**What changed in `CommunityEditor.tsx`:**
+- **Section grouping deleted.** "Identity / Location / Pitch / Property /
+  Contact" `<FieldGroup>` headings are gone. Form is now a flat field
+  stream — fewer visual layers, less for the eye to parse on mobile.
+  The `FieldGroup` helper component itself was removed.
+- **City + ZIP required.** Both starred. zod: `city.trim().min(1)`,
+  `zip.trim().min(1)`. Sale-side geo filtering needs them; a community
+  without a ZIP is not addressable on a map.
+- **Year built = two optional `<select>` dropdowns** (start + end). The
+  Phase 50.5 dual-mode "Type a year…" escape hatch and the Phase 50.6
+  opt-in toggle (with "+ Add end year" link) are both gone — owner's ask
+  was literal: "two dropdowns for start and end, both optional". Cross-
+  field check (end >= start when both present) still runs server-side
+  via existing zod refine.
+- **Price = two optional `DollarInput`s** side-by-side. The 50.6 opt-in
+  toggle (with "+ Add max price (range)") removed for the same reason.
+  Suffix labels: "from" / "to". Cross-field check (max >= min) still
+  runs server-side.
+- **Tagline dropped.** Migration `0039_drop_community_tagline.sql` drops
+  the column. UI field, zod schema, server action insert, and `page.tsx`
+  select column list all updated.
+- **Property types swapped.** Old list mixed taxonomy levels:
+  - Building type ("Single Family", "Townhouse", "Condo")
+  - Sale stage ("New Construction", "Resale", "Custom Build")
+  - Demographic restriction ("Active Adult 55+")
+  This conflated "what kind of unit" with "who's buying" and "is it
+  brand-new". Owner: "not sure what is 55" — that's the demographic
+  category for age-restricted communities, NAR jargon.
+  New list (NAR/Zillow consumer-facing): Single Family, Townhouse,
+  Condo, Co-op, Multi-Family, Manufactured, Land. Sale stage and age
+  restriction are intentionally left out — they're properties of an
+  individual listing or a marketing tag, not a build type.
+
+**Why this overrides Phase 50.6's "less friction" opt-in design**: the
+50.6 toggle hid the second input behind a click to spare agents one
+empty box. Owner's literal ask — "show two dropdowns" — explicitly
+prefers the two-box layout. Sometimes the owner wants the empty box;
+agent-time-saved is not always the optimization that matters. Logged
+this to memory: "instructions take literal precedence over inferred
+optimization".
+
+**Verification:** `npx tsc --noEmit` clean. `npm run build` clean —
+`/dashboard/communities/[id]` route shrank from 14 kB → 11.8 kB
+(removing the dual-mode + opt-in state machines paid for itself in
+bundle size).
+
+**Migrations:** `0039_drop_community_tagline.sql` (single column drop;
+applied to remote via `npm run db:push`).
+
+**Files touched:**
+- `lib/zod/community.ts` — city min(1), drop tagline, replace
+  `COMMUNITY_PROPERTY_TYPES` list
+- `app/dashboard/communities/actions.ts` — drop tagline insert
+- `app/dashboard/communities/[id]/page.tsx` — drop tagline select +
+  interface field
+- `app/dashboard/communities/[id]/CommunityEditor.tsx` — flatten form,
+  drop FieldGroup helper, simplify year + price
+- `supabase/migrations/0039_drop_community_tagline.sql` — new
+
+**Commit:** `${COMMIT_SHA_PLACEHOLDER}`
+
+---
+
 ## Phase 50.9 — Community Media tab full parity with Listing Media (2026-06-23)
 
 **Trigger**: qiaoxux — "My community media tab: follow the same layout as

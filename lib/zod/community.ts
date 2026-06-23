@@ -27,17 +27,18 @@
 
 import { z } from 'zod';
 
-// Standard Property Types Vivian's team sees in NoVA / metro Atlanta. We let
-// the UI render this as multi-select chips and store as text[] so agents
-// can pick any combo (or leave empty).
+// Property types — Zillow-style consumer-facing labels. Phase 50.7 swap:
+// "Active Adult 55+" / "New Construction" / "Resale" / "Custom Build"
+// were industry jargon (and confusingly mixed type with sale-stage). NAR's
+// canonical residential property types are what buyers actually filter on.
 export const COMMUNITY_PROPERTY_TYPES = [
   'Single Family',
-  'Townhome',
+  'Townhouse',
   'Condo',
-  'Active Adult 55+',
-  'New Construction',
-  'Resale',
-  'Custom Build',
+  'Co-op',
+  'Multi-Family',
+  'Manufactured',
+  'Land',
 ] as const;
 export type CommunityPropertyType = (typeof COMMUNITY_PROPERTY_TYPES)[number];
 
@@ -73,13 +74,15 @@ export const UpdateCommunityInput = z.object({
     .string()
     .min(2, 'Name must be at least 2 characters')
     .max(120, 'Name must be 120 characters or fewer'),
-  city: z.string().max(80, 'City must be 80 characters or fewer').nullable(),
+  city: z.string().trim().min(1, 'City is required').max(80, 'City must be 80 characters or fewer'),
   state: z.string().length(2, 'State must be a 2-letter code (e.g. GA)'),
   description: z.string().max(2000, 'Description must be 2000 characters or fewer').nullable(),
 
   // Phase 50.4 — all optional, all nullable. Server-side normalization
   // (empty string → null, empty array → null) lives in updateCommunity().
-  zip: optionalText(10, 'ZIP'),
+  // Phase 50.7: zip is now required (with city) per owner — agents need
+  // both for buyer-side geo filtering. Tagline column dropped.
+  zip: z.string().trim().min(1, 'ZIP is required').max(10, 'ZIP must be 10 characters or fewer'),
   county: optionalText(80, 'County'),
   year_built: z
     .number()
@@ -115,7 +118,6 @@ export const UpdateCommunityInput = z.object({
     .nullable(),
   builder: optionalText(120, 'Builder'),
   website: optionalUrl,
-  tagline: optionalText(120, 'Tagline'),
 })
   .refine(
     (data) =>

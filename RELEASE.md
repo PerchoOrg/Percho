@@ -2,6 +2,33 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.54.9 — Community editor cleanup: simpler form, official property types (2026-06-23)
+
+**For agents on `/dashboard/communities/[id]`:**
+
+- **The form is flatter.** "Identity / Location / Pitch / Property /
+  Contact" section headings are gone. Just fields, top to bottom.
+- **City and ZIP are now required.** A community without a ZIP can't be
+  placed on a map; the form will block save until both are filled.
+- **Year built is two dropdowns.** Pick a start year, optionally pick an
+  end year for phased deliveries. The "Type a year…" escape hatch and
+  the "+ Add end year" toggle are gone — both are just dropdowns now.
+- **Price is two inputs.** From / To, both optional, both with `$`
+  prefix. The "+ Add max price" toggle is gone.
+- **Tagline removed.** It overlapped with Highlights and Description.
+  Saved tagline values are dropped from the database (migration 0039).
+- **Property types refreshed.** New consumer-facing list: Single Family,
+  Townhouse, Condo, Co-op, Multi-Family, Manufactured, Land. Removed
+  "Active Adult 55+" (jargon for age-restricted communities), and
+  removed "New Construction" / "Resale" / "Custom Build" — those are
+  sale-stage tags, not building types, and belong on individual
+  listings.
+
+If your community had `tagline` saved, that text is gone. Move anything
+worth keeping to Highlights or Description.
+
+---
+
 ## v0.54.8 — Community Media: cover inline, video rows simplified (2026-06-23)
 
 ✨ **Improvements**
