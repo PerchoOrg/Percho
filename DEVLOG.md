@@ -2,6 +2,24 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-06-23 06:30 UTC — Phase 50.16: community Danger Zone solid color + video prefill fix
+
+**Objective**: qiaoxux on agent hub "my community": (1) "danger zone color is fainted", (2) "video upload is not prefilled".
+
+**Actions**:
+- `app/dashboard/communities/[id]/CommunityEditor.tsx` (`CommunityDangerZone`): swapped translucent dark-theme palette (`border-red-500/40 bg-red-500/5 text-red-300`) for the same solid-rose treatment Phase 47.12 applied to listing `DangerZone.tsx` — `border-rose-300/60 bg-rose-50/40` card with a solid `bg-rose-600` button. Now visually parities the listing hub.
+- `app/dashboard/communities/[id]/CommunityMediaPanel.tsx`: replaced the `useEffect(() => consumePrefill(...), [prefillId])` async consumer with the lazy-init pattern listing `MediaPanel.tsx` uses — `useRef` captured during the first render synchronously calls `consumePrefill`, then videos go into `pendingVideos` via a deferred `setTimeout(0)` (so VideoUploader children mount cleanly) and photos forward to `photoRef.current.addFiles()` once that handle is mounted.
+
+**Decisions**:
+- Danger Zone: parity with listing was the right answer — same destructive surface, same chrome. Avoided inventing a third treatment.
+- Video prefill: the previous useEffect approach was racy. By the time the effect ran, `consumePrefill` would correctly return the File[], BUT in some hydration paths `useSearchParams()` returned `null` on the very first render and only populated on a subsequent re-render — so consumption happened *after* a paint in which photos had already been forwarded via `handlePicked` and videos skipped because of an intermediate state. Lazy `useRef` init runs once during render and matches the listing pattern that's been in production for two phases without bug reports.
+
+**Verification**: `npx tsc --noEmit` clean. `rm -rf .next && npx next build` clean — community detail page (`/dashboard/communities/[id]`) builds as a dynamic route as expected.
+
+**Learnings**: when copying the listing/community pair, always copy the *full* pattern, not the high-level idea. The original Phase 50.12 community implementation reinvented prefill consumption using `useEffect` because the author thought it was simpler — but the listing version's lazy useState/useRef init exists for a reason (hydration timing), and skipping it cost a bug report. Memory updated.
+
+**Next steps**: none.
+
 ## 2026-06-23 05:05 UTC — Remove "Community marketing copy" panel title
 
 **Objective**: qiaoxux: "remove title of Community marketing copy" on the community agent hub.

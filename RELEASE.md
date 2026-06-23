@@ -2,6 +2,14 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.54.18 — Community hub: solid Danger Zone + working video prefill (2026-06-23)
+
+**For agents managing their communities:**
+
+### 🐛 Bug Fixes
+- **Danger Zone (community Details tab) is now actually red.** Previously the box used a faded translucent red on a translucent border — it read as decorative, not destructive. Now it matches the listing Danger Zone: solid rose card with a solid rose-600 "Delete this community" button, so accidentally clicking it requires intent.
+- **Video files queued from the home upload button now prefill into the community Media tab.** Picking a video → "Upload as Community" → creating a community used to land on the Media tab with the file silently dropped (only photos prefilled). Videos now show up as a pending uploader the moment the page lands, same as on the listing side.
+
 ## v0.54.17 — Community marketing: drop redundant panel title (2026-06-23)
 
 ### ✨ Improvements
