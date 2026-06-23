@@ -2,6 +2,20 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.54.7 — Category picker is a labeled dropdown (2026-06-23)
+
+✨ **Improvements**
+- **Category picker** in the My Community Media tab (and the upload page,
+  and the video edit sheet) is now a labeled dropdown instead of a row of
+  chips. The short explanation (what to shoot, hard rule) still appears
+  underneath as soon as you pick a category — same content, less screen
+  space, easier to scan on a phone.
+
+**Why**: a 12-chip cloud took a chunk of the Media tab on mobile and made
+it harder to spot the currently-selected category at a glance. A
+dropdown collapses the choice to one line and uses the OS's native
+picker.
+
 ## v0.54.6 — Community Media tab matches Listing Media tab (2026-06-23)
 
 ✨ **Improvements**

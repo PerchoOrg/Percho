@@ -2,6 +2,41 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## Phase 50.8 — CategoryPicker becomes a labeled dropdown (2026-06-23)
+
+**Trigger**: qiaoxux — "Make category a dropdown list with explain. Can you
+follow this for video and photos and everything else."
+
+**What changed**: `CategoryPicker.tsx` swapped its 12-chip cloud for a native
+`<select>` element. The "explain" surface (label / blurb / hard rule spec
+card) underneath the field is unchanged — agents still see what each
+category means as soon as they pick it.
+
+**Why one file is enough for "video and photos and everything else"**:
+`CategoryPicker` is the single shared component used by every entry point
+that tags content with a community category — the unified Media tab
+(photos + videos), the `/upload` shell (FAB prefill flow), and the video
+edit list. So one refactor flows through every surface.
+
+**What does NOT change**:
+- The category set itself (still `COMMUNITY_VIDEO_CATEGORIES`).
+- The spec card content / styling.
+- The CategoryPicker public API (`mode` / `selected` / `onPick` /
+  `disabled`).
+- Anywhere that imports `CategoryPicker` — no call-site edits needed.
+
+**Why native `<select>` (vs. a custom popover)**: mobile is the primary
+form factor here. The OS picker is a full-height list with the right
+scroll/wheel idiom, free a11y, and doesn't require us to reimplement
+focus trapping. It also takes ~one line in a column instead of the chip
+cloud's wrapping rows.
+
+**Verification**: `npx tsc --noEmit` clean, `npx next build` clean.
+
+**Files**:
+- `app/dashboard/communities/[id]/CategoryPicker.tsx` — chip cloud → native
+  `<select>` with spec card; `Chip` helper deleted.
+
 ## Phase 50.7 — Community Media tab matches Listing Media tab (2026-06-23)
 
 **Trigger**: qiaoxux — "My community media tab: follow the same layout as

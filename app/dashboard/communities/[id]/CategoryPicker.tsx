@@ -1,24 +1,21 @@
 'use client';
 
 /**
- * CategoryPicker — phase35.3 (2026-06-17): chip cloud + spec card.
+ * CategoryPicker — phase50.8 (2026-06-23): dropdown + explanation card.
  *
- * Why this shape (after Tianrou's "想象不出来" + 4-prototype review):
- *   - 12 chips at the top, all visible at once. Tap one and the spec card
- *     below updates live to show label / blurb / hard rule.
- *   - No "Only on Vicinity vs Real look at the data" meta-framing. The
- *     bucket distinction was useful product-internal language; it leaked
- *     into the UI as noise. Agents categorize by "what did I shoot",
- *     not by "which moat does this serve".
- *   - Same component for create + edit. The only difference is whether
- *     the spec card pre-shows a default chip on mount; we always preselect
- *     `selected` so the surface never starts empty.
+ * Was a chip cloud (phase35.3). qiaoxux feedback: a 12-chip cloud takes a lot
+ * of vertical space on mobile and is harder to scan than a labeled dropdown.
+ * Switched to a native <select> with the spec card (label + blurb + hard
+ * rule) underneath the field so the agent still sees what they're picking.
  *
- * Tap target: chips are min-h-9 (36px) with px-3 padding — slightly under
- * the 44px WCAG ideal for individual hit area, but the chips wrap into a
- * cloud where neighbors aren't ambiguous (each chip carries a distinct
- * label, no precision-tap edge cases). Selected chip uses solid gold so
- * the choice is unmistakable on a small phone.
+ * Why native <select> (not a custom popover):
+ *   - Mobile OS picker is the right control here — it's full-height, uses
+ *     the OS's scroll/wheel idiom, and supports keyboard a11y for free.
+ *   - Backed by the same COMMUNITY_VIDEO_CATEGORIES list, so adding a
+ *     category still only touches one file.
+ *
+ * Same component for create + edit; the `mode` prop is preserved in the
+ * API for callers but doesn't change the UI today.
  */
 
 import {
@@ -41,39 +38,20 @@ export function CategoryPicker({ selected, onPick, disabled }: CategoryPickerPro
   const meta = getCategoryMeta(selected);
   return (
     <div className={disabled ? 'opacity-50 pointer-events-none' : ''}>
-      <div className="flex flex-wrap gap-1.5">
+      <select
+        value={selected}
+        onChange={(e) => onPick(e.target.value as CommunityVideoCategoryId)}
+        disabled={disabled}
+        className="w-full rounded border border-line bg-bg px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none focus:ring-1 focus:ring-line-strong"
+      >
         {COMMUNITY_VIDEO_CATEGORIES.map((c) => (
-          <Chip key={c.id} meta={c} selected={c.id === selected} onPick={() => onPick(c.id)} />
+          <option key={c.id} value={c.id}>
+            {c.label}
+          </option>
         ))}
-      </div>
+      </select>
       <SpecCard meta={meta} />
     </div>
-  );
-}
-
-function Chip({
-  meta,
-  selected,
-  onPick,
-}: {
-  meta: CommunityVideoCategoryMeta;
-  selected: boolean;
-  onPick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onPick}
-      aria-pressed={selected}
-      className={[
-        'inline-flex min-h-9 items-center rounded-full border px-3 text-xs transition',
-        selected
-          ? 'border-line-strong bg-ink text-cream font-semibold'
-          : 'border-line bg-surface text-ink2 hover:border-line-strong hover:text-ink',
-      ].join(' ')}
-    >
-      {meta.label}
-    </button>
   );
 }
 
