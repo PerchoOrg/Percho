@@ -2,6 +2,13 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.54.15 — Login wordmark: ink, not gold (2026-06-23)
+
+**For anyone visiting the login / signup / forgot-password pages (and the dashboard top-bar):**
+
+### ✨ Improvements
+- **Top-left "VICINITY" wordmark switched from gold to ink.** Auth and dashboard surfaces don't use any other gold accent — every other text, button, and link on the page is the same ink color — so the gold corner mark stuck out. Now matches the `Login` heading, the `Continue` button, and the `Sign up` link. Landing-page hero eyebrow keeps its gold (different surface, dark video background — that's where the gold actually earns its keep).
+
 ## v0.54.14 — Login page wordmark: cleaner corner mark (2026-06-23)
 
 **For anyone visiting the login / signup / forgot-password pages:**

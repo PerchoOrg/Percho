@@ -2,6 +2,23 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## Phase 50.14 — BrandMark: drop gold fill, use ink (2026-06-23)
+
+**Objective**: qiaoxux follow-up: 50.13 cleaned the chrome but the wordmark "颜色不搭配 其他地方没有金色的". Confirmed via prod CSS audit on `/login`: `body` text `#313131`, `h1` `#313131`, `Continue` button bg `#313131`, `Sign up` link `#313131`, `Forgot password?` `#5a5651` (muted) — gold `#c9a24a` is the only chromatic accent on the entire surface. Same situation on dashboard chrome (SiteHeader uses BrandMark too).
+
+**Approach**: drop the gold inline `color` from BrandMark, switch to `text-ink` (same `#313131` token H1/buttons/links use). Tracking + uppercase preserved — still reads as an editorial wordmark, just in the page's only ink color now. Hover opacity-70 for affordance, focus-visible underline for keyboard. Landing hero eyebrow (`app/page.tsx`) is a separate component over the dark Pexels video and KEEPS its gold — that's where the chromatic pop is earned.
+
+**Files**:
+- `components/site/BrandMark.tsx` — remove `style.color: '#c9a24a'`, add `text-ink` class. Swap `hover:brightness-110` → `hover:opacity-70` (opacity is the cleaner affordance for ink-on-cream; brightness is for chromatic colors).
+
+**Verification**:
+- `npx tsc --noEmit` clean.
+- Token check: `tailwind.config.ts` line 11 `ink: '#313131'` ✓.
+- Dashboard SiteHeader (`app/dashboard/layout.tsx`) uses the same component — auth + dashboard chrome inherit the ink wordmark together.
+
+**Lessons**:
+- **Audit the surface palette before keeping any chromatic accent.** A token color is "out of place" when it's the only one of its hue on the surface. The systematic check: dump computed `color` / `backgroundColor` of every visible element and compare hues. If your chromatic accent is a hue-of-one, it's not a palette — it's an outlier. (The Aman/Hermès idiom that justified gold in the hero earned it because it sits over a dark video where ink would be invisible. Move the same wordmark onto cream and the same gold becomes orphaned.)
+
 ## Phase 50.13 — Login page BrandMark: drop button chrome (2026-06-23)
 
 **Objective**: qiaoxux flagged that the top-left gold "VICINITY" wordmark on `/login` (the home-link) "is not fit style".
