@@ -2,6 +2,51 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## Phase 50.7 — Community Media tab matches Listing Media tab (2026-06-23)
+
+**Trigger**: qiaoxux — "My community media tab: follow the same layout as
+my listing media, plus the category tags. Do refactoring if needed."
+
+**What changed**: community Media tab is now one Content card with a
+single "Click to upload" button (image/* + video/*) and stacked Videos /
+Photos sub-sections — same shell pattern as the listing edit hub
+(`MediaPanel.tsx`). Plus what listing doesn't need: a shared
+`<CategoryPicker>` lifted to the top of the card so the same category
+tags BOTH the uploaded video and the uploaded photo batch — no more
+bouncing to `/upload` to pick one. Mixing photos and videos in a single
+file pick fans out by MIME after selection.
+
+**What does NOT change**:
+- Photo upload pipeline (Supabase batch, JPEG/PNG/WebP, 10 MB).
+- Video upload pipeline (Cloudflare Stream tus, 2 GB) + the per-video
+  "edit title before start" step (VideoUploader gets `initialFile`).
+- `CommunityVideoManageList` rich edit UX (category edit, visibility
+  toggle, archive/restore, delete) — still the bottom sub-section.
+- `/upload` subroute keeps working (FAB prefill flow goes there).
+
+**Refactors**:
+- `CommunityPhotoPanel`: now `forwardRef` exposing
+  `CommunityPhotoPanelHandle.addFiles(File[])`. New `hideUploadButton`
+  prop hides the upload UI + outer card chrome and renders photos as a
+  flat grid (no `<details>` toggle) when embedded.
+- `CommunityVideoPanel`: same treatment — `forwardRef` exposing
+  `CommunityVideoPanelHandle.pushUploaded(UploadedVideo)`. New
+  `hideUploader` prop hides the embedded VideoUploader + address input.
+  (Currently unused by the Media tab — kept for parity with listing
+  pattern; the Media tab uses `CommunityVideoManageList` for the videos
+  sub-section so it gets the visibility/archive UX.)
+- `CommunityMediaPanel`: full rewrite from a thin server wrapper into a
+  client shell that owns category state + per-file pending video
+  uploaders, and routes picked files through the existing pipelines.
+- `CommunityPhotosTab`: deleted (49 lines absorbed into the new shell).
+
+**Why a `Wrapper` element on the photo panel**: the panel ships in two
+modes — standalone (`/upload` subroute) where it renders its own
+`<section>` card with heading, and embedded (Media tab) where it would
+otherwise nest a card inside CommunityMediaPanel's outer card. Switch
+the wrapper element to `'div'` + drop the chrome when `hideUploadButton`
+is set; same component, two callsites, no fork.
+
 ## Phase 50.6 — Community editor: low-friction ranges (2026-06-22)
 
 **Trigger**: qiaoxux feedback on 50.5 — "actually you are right, range

@@ -2,6 +2,24 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.54.6 — Community Media tab matches Listing Media tab (2026-06-23)
+
+✨ **Improvements**
+- **My Community → Media tab** now uses the same one-card layout as
+  My Listings: a single "Click to upload" button accepts both photos
+  and videos in one pick. They fan out automatically by file type.
+- **Shared category picker** at the top tags both the video and the
+  photo batch with the same community category — no more bouncing to a
+  separate upload page just to pick a tag.
+- **Stacked Videos / Photos** sub-sections in one card, with the existing
+  visibility / archive / delete controls preserved on the videos list.
+
+**Why**: V1 had the Media tab split into two cards plus a "+ Upload
+video" link that bounced agents off the page. Listing's media tab
+already merged them; community now matches. The category picker is
+lifted to the top so a typical session ("walk-the-block clip + a few
+photos of the entrance") tags everything in one go.
+
 ## v0.54.5 — Less friction for ranges in My Community (2026-06-22)
 
 ✨ **Improvements**

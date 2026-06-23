@@ -29,7 +29,15 @@ import {
   legacyKindForCategory,
 } from '@/lib/zod/community-video-categories';
 import { Trash2, Upload } from 'lucide-react';
-import { useCallback, useEffect, useRef, useState, useTransition } from 'react';
+import {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useRef,
+  useState,
+  useTransition,
+} from 'react';
 
 export interface CommunityPhotoRow {
   id: string;
@@ -57,6 +65,22 @@ interface Props {
    * renders ignore the prop (consumePrefill makes it a one-shot anyway).
    */
   prefillFiles?: File[];
+  /**
+   * Phase 50.x: when true, hide the internal "Add photos as ..." button and
+   * its file input. Used when CommunityMediaPanel renders a single unified
+   * upload button covering both photos and videos and pushes images in via
+   * the imperative handle below. Mirrors `PhotoPanel`'s `hideUploadButton`.
+   */
+  hideUploadButton?: boolean;
+}
+
+/**
+ * Phase 50.x — imperative handle exposed via `ref`. The parent media shell
+ * forwards image files picked from the unified upload button into the
+ * existing handleFiles pipeline so we don't fork upload logic.
+ */
+export interface CommunityPhotoPanelHandle {
+  addFiles: (files: File[]) => void;
 }
 
 const MAX_FILE_BYTES = 10 * 1024 * 1024;
@@ -69,7 +93,11 @@ interface PendingItem {
   error?: string;
 }
 
-export function CommunityPhotoPanel({ communityId, initialPhotos, category, prefillFiles }: Props) {
+export const CommunityPhotoPanel = forwardRef<CommunityPhotoPanelHandle, Props>(
+  function CommunityPhotoPanel(
+    { communityId, initialPhotos, category, prefillFiles, hideUploadButton },
+    ref,
+  ) {
   const [photos, setPhotos] = useState<CommunityPhotoRow[]>(initialPhotos);
   const [pending, setPending] = useState<PendingItem[]>([]);
   const [globalError, setGlobalError] = useState<string | null>(null);
@@ -165,6 +193,19 @@ export function CommunityPhotoPanel({ communityId, initialPhotos, category, pref
     [communityId],
   );
 
+  // Phase 50.x: expose addFiles to the parent media shell so the unified
+  // upload button can route image files through this panel's existing
+  // handleFiles pipeline (validation + Supabase upload + recordCommunityPhoto).
+  useImperativeHandle(
+    ref,
+    () => ({
+      addFiles: (files: File[]) => {
+        if (files.length > 0) void handleFiles(files);
+      },
+    }),
+    [handleFiles],
+  );
+
   // Phase 45.16: auto-upload prefilled files once on mount. The bridge
   // consumes the upload-prefill-store key (one-shot) so re-renders won't
   // double-upload, but we still gate on a ref to be defensive against
@@ -195,17 +236,30 @@ export function CommunityPhotoPanel({ communityId, initialPhotos, category, pref
     [communityId, photos],
   );
 
+  // When embedded in the unified media shell, drop the surface chrome
+  // (heading, description, card border) so it reads as a sub-section of the
+  // parent card rather than a card-in-card. Mirrors `PhotoPanel`'s embedded
+  // shape under MediaPanel.
+  const Wrapper = hideUploadButton ? 'div' : 'section';
+  const wrapperClassName = hideUploadButton
+    ? 'space-y-4'
+    : 'rounded border border-line bg-surface p-5';
+
   return (
-    <section className="rounded border border-line bg-surface p-5">
-      <div className="mb-4 flex items-baseline justify-between">
-        <h2 className="text-base font-semibold">Photo library (private)</h2>
-        <span className="text-muted text-xs">{photos.length} uploaded</span>
-      </div>
-      <p className="mb-4 text-ink2 text-xs">
-        Photos here are <span className="text-ink2">not visible to buyers</span> — they're raw
-        material the platform can use to generate community videos later. JPEG / PNG / WebP, up to
-        10 MB each.
-      </p>
+    <Wrapper className={wrapperClassName}>
+      {hideUploadButton ? null : (
+        <>
+          <div className="mb-4 flex items-baseline justify-between">
+            <h2 className="text-base font-semibold">Photo library (private)</h2>
+            <span className="text-muted text-xs">{photos.length} uploaded</span>
+          </div>
+          <p className="mb-4 text-ink2 text-xs">
+            Photos here are <span className="text-ink2">not visible to buyers</span> — they're raw
+            material the platform can use to generate community videos later. JPEG / PNG / WebP, up
+            to 10 MB each.
+          </p>
+        </>
+      )}
 
       {globalError ? (
         <div className="mb-3 rounded border border-red-500/30 bg-red-500/10 px-3 py-2 text-red-200 text-xs">
@@ -213,7 +267,7 @@ export function CommunityPhotoPanel({ communityId, initialPhotos, category, pref
         </div>
       ) : null}
 
-      <div className="mb-4">
+      <div className={hideUploadButton ? 'hidden' : 'mb-4'}>
         <input
           ref={inputRef}
           type="file"
@@ -254,54 +308,28 @@ export function CommunityPhotoPanel({ communityId, initialPhotos, category, pref
       ) : null}
 
       {photos.length > 0 ? (
-        <details>
-          <summary className="cursor-pointer select-none text-xs uppercase tracking-wide text-ink2 hover:text-ink">
-            Already uploaded ({photos.length})
-          </summary>
+        hideUploadButton ? (
           <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
-            {photos.map((photo) => {
-              const catLabel = photo.category
-                ? (COMMUNITY_VIDEO_CATEGORIES.find((c) => c.id === photo.category)?.label ?? null)
-                : null;
-              return (
-                <div
-                  key={photo.id}
-                  className="group relative aspect-[4/3] overflow-hidden rounded border border-line bg-bg"
-                >
-                  {photo.signed_url ? (
-                    <img
-                      src={photo.signed_url}
-                      alt={photo.alt_text ?? ''}
-                      loading="lazy"
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center text-muted text-xs">
-                      (preview unavailable)
-                    </div>
-                  )}
-                  {catLabel ? (
-                    <span className="absolute bottom-1 left-1 rounded bg-bg px-1.5 py-0.5 text-[10px] text-ink2">
-                      {catLabel}
-                    </span>
-                  ) : null}
-                  <button
-                    type="button"
-                    onClick={() => handleDelete(photo.id)}
-                    aria-label="Delete photo"
-                    className="absolute top-1.5 right-1.5 hidden rounded bg-bg p-1.5 text-ink2 hover:text-red-300 group-hover:block"
-                  >
-                    <Trash2 size={14} aria-hidden="true" />
-                  </button>
-                </div>
-              );
-            })}
+            {photos.map((photo) => (
+              <PhotoCard key={photo.id} photo={photo} onDelete={handleDelete} />
+            ))}
           </div>
-        </details>
+        ) : (
+          <details>
+            <summary className="cursor-pointer select-none text-xs uppercase tracking-wide text-ink2 hover:text-ink">
+              Already uploaded ({photos.length})
+            </summary>
+            <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+              {photos.map((photo) => (
+                <PhotoCard key={photo.id} photo={photo} onDelete={handleDelete} />
+              ))}
+            </div>
+          </details>
+        )
       ) : null}
-    </section>
+    </Wrapper>
   );
-}
+});
 
 async function readImageDimensions(src: string): Promise<{ width: number; height: number } | null> {
   return new Promise((resolve) => {
@@ -310,4 +338,45 @@ async function readImageDimensions(src: string): Promise<{ width: number; height
     img.onerror = () => resolve(null);
     img.src = src;
   });
+}
+
+function PhotoCard({
+  photo,
+  onDelete,
+}: {
+  photo: CommunityPhotoRow;
+  onDelete: (id: string) => void;
+}) {
+  const catLabel = photo.category
+    ? (COMMUNITY_VIDEO_CATEGORIES.find((c) => c.id === photo.category)?.label ?? null)
+    : null;
+  return (
+    <div className="group relative aspect-[4/3] overflow-hidden rounded border border-line bg-bg">
+      {photo.signed_url ? (
+        <img
+          src={photo.signed_url}
+          alt={photo.alt_text ?? ''}
+          loading="lazy"
+          className="h-full w-full object-cover"
+        />
+      ) : (
+        <div className="flex h-full w-full items-center justify-center text-muted text-xs">
+          (preview unavailable)
+        </div>
+      )}
+      {catLabel ? (
+        <span className="absolute bottom-1 left-1 rounded bg-bg px-1.5 py-0.5 text-[10px] text-ink2">
+          {catLabel}
+        </span>
+      ) : null}
+      <button
+        type="button"
+        onClick={() => onDelete(photo.id)}
+        aria-label="Delete photo"
+        className="absolute top-1.5 right-1.5 hidden rounded bg-bg p-1.5 text-ink2 hover:text-red-300 group-hover:block"
+      >
+        <Trash2 size={14} aria-hidden="true" />
+      </button>
+    </div>
+  );
 }

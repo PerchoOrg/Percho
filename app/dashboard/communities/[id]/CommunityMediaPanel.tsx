@@ -1,34 +1,61 @@
+'use client';
+
 /**
- * CommunityMediaPanel — unified Videos + Photos card for the community
- * agent hub (Phase 50, 2026-06-22).
+ * CommunityMediaPanel — Phase 50.x (2026-06-23).
  *
- * Why: phase 50 mirrors the listing edit hub (4 icon tabs: Details / Media
- * / Marketing / Analytics). The listing hub has a single "Media" tab that
- * stacks videos and photos; this is the community equivalent. Implemented
- * as a thin server component that arranges the existing pieces:
+ * Unified Media tab, mirrors the listing edit hub's MediaPanel: one Content
+ * card with a single "Click to upload" button (image/* + video/*) and stacked
+ * Videos / Photos sub-sections. Plus what the listing version doesn't need:
+ * a shared <CategoryPicker> at the top that tags BOTH the uploaded video and
+ * the uploaded photos with the same community category. Same picker the
+ * /upload subroute uses — just lifted up to the hub so the agent doesn't
+ * bounce off the page just to add a clip.
  *
- *   ┌─ Videos (N) ─────────────────────────────────┐
- *   │   "+ Upload video" → /upload subroute        │
- *   │   <CommunityVideoManageList />               │
- *   └──────────────────────────────────────────────┘
- *   ┌─ Photos (N) ─────────────────────────────────┐
- *   │   <CommunityPhotosTab />                     │
- *   └──────────────────────────────────────────────┘
+ * Why this replaces the previous two-card layout: the agent's mental model
+ * is "this community's media", not "manage videos AND manage photos
+ * separately". Listing already merged them; community now matches.
  *
- * We deliberately keep videos in a manage-list (non-uploader) flow because
- * the community video pipeline goes through a category-picker subroute
- * (`/dashboard/communities/[id]/upload`) that doesn't fit a single inline
- * file picker. Photos remain inline (CommunityPhotosTab is already an
- * inline manager).
+ * Pipeline:
+ *   image/* → CommunityPhotoPanel.addFiles() (existing Supabase batch path)
+ *   video/* → spawn one <VideoUploader> per file (existing tus pipeline w/
+ *             category in `target`). On success we router.refresh() so the
+ *             new row shows up in CommunityVideoManageList below.
  *
- * No props this component owns — everything is forwarded.
+ * What does NOT change:
+ *   - Photo upload pipeline (Supabase batch, JPEG/PNG/WebP, 10 MB).
+ *   - Video upload pipeline (Cloudflare Stream tus, 2 GB) + the per-video
+ *     "edit title before start" step (VideoUploader gets `initialFile`).
+ *   - CommunityVideoManageList rich edit UX (category edit, visibility
+ *     toggle, archive/restore, delete) — still the bottom sub-section.
+ *   - /upload subroute keeps working (FAB prefill flow goes there).
  */
 
-import Link from 'next/link';
-
-import type { CommunityPhotoRow } from './CommunityPhotoPanel';
-import { CommunityPhotosTab } from './CommunityPhotosTab';
+import { Upload } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  type CommunityKind,
+  type UploadedVideo,
+  VideoUploader,
+} from '@/components/dashboard/VideoUploader';
+import {
+  type CommunityVideoCategoryId,
+  legacyKindForCategory,
+} from '@/lib/zod/community-video-categories';
+import { CategoryPicker } from './CategoryPicker';
+import {
+  CommunityPhotoPanel,
+  type CommunityPhotoPanelHandle,
+  type CommunityPhotoRow,
+} from './CommunityPhotoPanel';
 import { CommunityVideoManageList, type ManageVideoRow } from './CommunityVideoManageList';
+
+interface PendingVideoUpload {
+  /** Stable key for React. */
+  key: string;
+  /** The picked file fed into VideoUploader as `initialFile`. */
+  file: File;
+}
 
 interface Props {
   communityId: string;
@@ -38,31 +65,174 @@ interface Props {
 }
 
 export function CommunityMediaPanel({ communityId, videos, myAgentId, photos }: Props) {
-  return (
-    <div className="space-y-4">
-      <section className="rounded-2xl border border-line bg-surface p-4 sm:p-6">
-        <div className="mb-3 flex flex-wrap items-baseline justify-between gap-3">
-          <h2 className="text-base font-semibold">
-            Videos <span className="text-muted text-xs font-normal">({videos.length})</span>
-          </h2>
-          <Link
-            href={`/dashboard/communities/${communityId}/upload`}
-            className="rounded bg-ink px-3 py-1.5 font-medium text-cream text-xs transition hover:opacity-90"
-          >
-            + Upload video
-          </Link>
-        </div>
-        <CommunityVideoManageList communityId={communityId} videos={videos} myAgentId={myAgentId} />
-      </section>
+  const router = useRouter();
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const photoRef = useRef<CommunityPhotoPanelHandle | null>(null);
+  const [category, setCategory] = useState<CommunityVideoCategoryId>('walk_the_block');
+  const [pendingVideos, setPendingVideos] = useState<PendingVideoUpload[]>([]);
+  const [unsupportedNotice, setUnsupportedNotice] = useState<string | null>(null);
 
-      <section className="rounded-2xl border border-line bg-surface p-4 sm:p-6">
-        <div className="mb-3 flex items-baseline justify-between">
-          <h2 className="text-base font-semibold">
-            Photos <span className="text-muted text-xs font-normal">({photos.length})</span>
-          </h2>
+  // Silent geolocation on mount — same trick CommunityVideoPanel uses (Phase
+  // 23). Browser prompts once; if denied we proceed without coords. Coords
+  // get attached to per-file VideoUploader `target` so the platform-wide
+  // Nearby query keeps working without surfacing a UI control here.
+  const [lat, setLat] = useState<number | undefined>(undefined);
+  const [lng, setLng] = useState<number | undefined>(undefined);
+  useEffect(() => {
+    if (typeof navigator === 'undefined' || !navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setLat(Number(pos.coords.latitude.toFixed(6)));
+        setLng(Number(pos.coords.longitude.toFixed(6)));
+      },
+      () => {
+        // silent; coords stay undefined
+      },
+      { enableHighAccuracy: false, timeout: 8000 },
+    );
+  }, []);
+
+  const kind: CommunityKind = legacyKindForCategory(category);
+  const videoTarget = {
+    scope: 'community' as const,
+    communityId,
+    kind,
+    category,
+    ...(typeof lat === 'number' ? { lat } : {}),
+    ...(typeof lng === 'number' ? { lng } : {}),
+  };
+
+  const handlePicked = useCallback((files: FileList | File[]) => {
+    setUnsupportedNotice(null);
+    const arr = Array.from(files);
+    const images: File[] = [];
+    const vids: File[] = [];
+    const skipped: string[] = [];
+    for (const f of arr) {
+      if (f.type.startsWith('image/')) images.push(f);
+      else if (f.type.startsWith('video/')) vids.push(f);
+      else skipped.push(f.name);
+    }
+    if (skipped.length > 0) {
+      setUnsupportedNotice(
+        `Skipped ${skipped.length} unsupported file(s): ${skipped.slice(0, 3).join(', ')}${
+          skipped.length > 3 ? '…' : ''
+        }`,
+      );
+    }
+    if (images.length > 0) photoRef.current?.addFiles(images);
+    if (vids.length > 0) {
+      setPendingVideos((prev) => [
+        ...prev,
+        ...vids.map((file) => ({
+          key: `pick-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+          file,
+        })),
+      ]);
+    }
+  }, []);
+
+  const handleVideoUploaded = useCallback(
+    (key: string, _v: UploadedVideo) => {
+      // Drop the uploader after a brief 'done' display, then re-fetch the
+      // manage list so the row shows up below with edit / visibility / delete
+      // controls. router.refresh() re-runs the server component and rehydrates
+      // the `videos` prop.
+      setTimeout(() => {
+        setPendingVideos((prev) => prev.filter((p) => p.key !== key));
+        router.refresh();
+      }, 4000);
+    },
+    [router],
+  );
+
+  return (
+    <section className="rounded-2xl border border-line bg-surface p-4 sm:p-6">
+      <div className="mb-4">
+        <span className="text-muted text-xs">
+          Photos and videos · same category tags both · drag to reorder
+        </span>
+      </div>
+
+      {/* Shared category picker — drives both uploads below. */}
+      <div className="mb-6 rounded border border-line bg-bg p-4">
+        <div className="mb-3 text-sm font-medium text-ink">Category</div>
+        <CategoryPicker mode="create" selected={category} onPick={setCategory} />
+        <p className="mt-3 text-[11px] text-muted">
+          Applies to both video and photos uploaded below.
+        </p>
+      </div>
+
+      {/* Unified upload entry point. One button, both media types. */}
+      <div className="mb-6">
+        <input
+          ref={inputRef}
+          type="file"
+          accept="image/*,video/*"
+          multiple
+          className="hidden"
+          onChange={(e) => {
+            if (e.target.files && e.target.files.length > 0) {
+              handlePicked(e.target.files);
+              e.target.value = '';
+            }
+          }}
+        />
+        <button
+          type="button"
+          onClick={() => inputRef.current?.click()}
+          className="inline-flex items-center gap-2 rounded-md border border-line bg-bg px-4 py-2 text-ink2 text-sm hover:border-bronze hover:text-ink"
+        >
+          <Upload size={16} aria-hidden="true" />
+          Click to upload
+        </button>
+        <p className="mt-2 text-muted text-xs">
+          Photos (JPEG / PNG / WebP, up to 10 MB) and videos (MP4 / MOV, up to 2 GB).
+        </p>
+        {unsupportedNotice ? (
+          <p className="mt-2 text-xs text-red-300">{unsupportedNotice}</p>
+        ) : null}
+      </div>
+
+      {/* Per-file video uploaders. Each owns its own pick→title→progress flow;
+          we feed it `initialFile` so the agent skips the picker (already picked
+          above) but still confirms the title. */}
+      {pendingVideos.length > 0 ? (
+        <div className="mb-6 space-y-3">
+          {pendingVideos.map((p) => (
+            <VideoUploader
+              key={p.key}
+              target={videoTarget}
+              initialFile={p.file}
+              onUploaded={(v) => handleVideoUploaded(p.key, v)}
+            />
+          ))}
         </div>
-        <CommunityPhotosTab communityId={communityId} initialPhotos={photos} />
-      </section>
-    </div>
+      ) : null}
+
+      {/* Stacked sub-sections. Videos uses the rich manage list (visibility +
+          archive + delete); Photos uses the embedded CommunityPhotoPanel with
+          its upload button hidden — the unified button above drives it. */}
+      <div className="space-y-6">
+        <div>
+          <h3 className="mb-2 text-sm font-semibold text-ink2">Videos ({videos.length})</h3>
+          <CommunityVideoManageList
+            communityId={communityId}
+            videos={videos}
+            myAgentId={myAgentId}
+          />
+        </div>
+        <div className="border-t border-line pt-6">
+          <h3 className="mb-2 text-sm font-semibold text-ink2">Photos ({photos.length})</h3>
+          <CommunityPhotoPanel
+            ref={photoRef}
+            communityId={communityId}
+            initialPhotos={photos}
+            category={category}
+            hideUploadButton
+          />
+        </div>
+      </div>
+    </section>
   );
 }
