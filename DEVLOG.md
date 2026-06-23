@@ -58,7 +58,7 @@ in?" every time.
 `/dashboard/communities/[id]` route 14 kB / 192 kB (was 13.5 kB —
 +0.5 kB for the toggles + extra state).
 
-**Commit**: ${COMMIT_SHA_PLACEHOLDER}
+**Commit**: `236b2f0`
 
 ## Phase 50.5 — Community editor input parity with listing (2026-06-22)
 
