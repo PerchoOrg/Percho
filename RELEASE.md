@@ -2,6 +2,37 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.54.8 — Community Media: cover inline, video rows simplified (2026-06-23)
+
+✨ **Improvements**
+- **Set as cover, inline.** Each video row in My Community → Media now
+  has a "Set as cover" button; each photo card shows a ⭐ button on
+  hover. Whichever item you pick becomes the community hero on `/c/<slug>`
+  and on every community card across the app. The current cover gets a
+  "Cover" badge so you can see at a glance which one is showing.
+- **Video rows match the listing layout.** Flat row: thumbnail, title,
+  category tag, Set-as-cover, Delete. The information panel now reads
+  the same as your listing media — no more bouncing between two
+  different mental models.
+- **Upload first, Category second.** The upload button is now the first
+  thing in the Media card with the Category picker right under it, so
+  the flow reads top-to-bottom: pick what to upload → tag it → drop
+  files.
+
+✂️ **Removed**
+- The standalone "Cover" panel under Media is gone — cover lives inline now.
+- Per-video visibility / archive / restore / private buttons. **Delete is
+  now the only way to take a video off your buyer-facing community
+  page.** Existing private/archived videos stay in your list but can't
+  be flipped back to public from the dashboard.
+- Per-video category edit. Categories are set at upload time; mistakes
+  mean delete-and-reupload for now.
+
+**Why**: agents asked for the listing Media tab's UX in their community
+tab. Photo grid + flat video rows + inline cover selection now read
+identically to what you already use on listings — community keeps the
+category tag (it's the one thing communities need that listings don't).
+
 ## v0.54.7 — Category picker is a labeled dropdown (2026-06-23)
 
 ✨ **Improvements**

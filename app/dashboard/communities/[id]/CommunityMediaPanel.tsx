@@ -62,9 +62,22 @@ interface Props {
   videos: ManageVideoRow[];
   myAgentId: string | null;
   photos: CommunityPhotoRow[];
+  /** Phase 50.9: drives the Cover badge + clear/set actions per row. */
+  coverVideoId: string | null;
+  coverStoragePath: string | null;
+  /** Phase 50.9: gates the photo "Set as cover" button. */
+  canSetCover: boolean;
 }
 
-export function CommunityMediaPanel({ communityId, videos, myAgentId, photos }: Props) {
+export function CommunityMediaPanel({
+  communityId,
+  videos,
+  myAgentId,
+  photos,
+  coverVideoId,
+  coverStoragePath,
+  canSetCover,
+}: Props) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement | null>(null);
   const photoRef = useRef<CommunityPhotoPanelHandle | null>(null);
@@ -150,17 +163,8 @@ export function CommunityMediaPanel({ communityId, videos, myAgentId, photos }: 
     <section className="rounded-2xl border border-line bg-surface p-4 sm:p-6">
       <div className="mb-4">
         <span className="text-muted text-xs">
-          Photos and videos · same category tags both · drag to reorder
+          Upload videos and photos · same category tags both · pick any one as the community cover
         </span>
-      </div>
-
-      {/* Shared category picker — drives both uploads below. */}
-      <div className="mb-6 rounded border border-line bg-bg p-4">
-        <div className="mb-3 text-sm font-medium text-ink">Category</div>
-        <CategoryPicker mode="create" selected={category} onPick={setCategory} />
-        <p className="mt-3 text-[11px] text-muted">
-          Applies to both video and photos uploaded below.
-        </p>
       </div>
 
       {/* Unified upload entry point. One button, both media types. */}
@@ -194,6 +198,18 @@ export function CommunityMediaPanel({ communityId, videos, myAgentId, photos }: 
         ) : null}
       </div>
 
+      {/* Shared category picker — drives both uploads. Sits below the upload
+          button so the visual flow is "what do I want to add → tag it" — the
+          dropdown is also the in-place control if the agent wants to switch
+          tagging mid-batch. */}
+      <div className="mb-6 rounded border border-line bg-bg p-4">
+        <div className="mb-3 text-sm font-medium text-ink">Category</div>
+        <CategoryPicker mode="create" selected={category} onPick={setCategory} />
+        <p className="mt-3 text-[11px] text-muted">
+          Applies to videos and photos uploaded next.
+        </p>
+      </div>
+
       {/* Per-file video uploaders. Each owns its own pick→title→progress flow;
           we feed it `initialFile` so the agent skips the picker (already picked
           above) but still confirms the title. */}
@@ -210,9 +226,9 @@ export function CommunityMediaPanel({ communityId, videos, myAgentId, photos }: 
         </div>
       ) : null}
 
-      {/* Stacked sub-sections. Videos uses the rich manage list (visibility +
-          archive + delete); Photos uses the embedded CommunityPhotoPanel with
-          its upload button hidden — the unified button above drives it. */}
+      {/* Stacked sub-sections, listing-Media parity. Videos: flat row list with
+          Set-as-cover + Delete (Phase 50.9 trim). Photos: grid w/ ⭐ Set-as-cover
+          + 🗑 Delete on hover. */}
       <div className="space-y-6">
         <div>
           <h3 className="mb-2 text-sm font-semibold text-ink2">Videos ({videos.length})</h3>
@@ -220,6 +236,7 @@ export function CommunityMediaPanel({ communityId, videos, myAgentId, photos }: 
             communityId={communityId}
             videos={videos}
             myAgentId={myAgentId}
+            coverVideoId={coverVideoId}
           />
         </div>
         <div className="border-t border-line pt-6">
@@ -230,6 +247,8 @@ export function CommunityMediaPanel({ communityId, videos, myAgentId, photos }: 
             initialPhotos={photos}
             category={category}
             hideUploadButton
+            coverStoragePath={coverStoragePath}
+            canSetCover={canSetCover}
           />
         </div>
       </div>

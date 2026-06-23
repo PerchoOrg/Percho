@@ -8,8 +8,9 @@
  *   Details · Media · Marketing · Analytics
  *
  *   - Details   : metadata edit (CommunityEditor) + buyer link.
- *   - Media     : Videos + Photos in one card, plus the owner-only
- *                 CommunityCoverPanel folded in beneath them.
+ *   - Media     : Videos + Photos in one card. Cover selection is inline
+ *                 per row/photo (Phase 50.9, 2026-06-23) — no separate
+ *                 cover panel.
  *   - Marketing : owner-only language-only marketing copy generator
  *                 (CommunityMarketingPanel — the community sibling of
  *                 the listing SocialCopyPanel).
@@ -36,7 +37,6 @@ import { HeroHeader } from '@/app/dashboard/_components/HeroHeader';
 import { HubTabs } from '@/app/dashboard/_components/HubTabs';
 import { InstantStatusToggle } from '@/app/dashboard/_components/InstantStatusToggle';
 
-import { CommunityCoverPanel } from './CommunityCoverPanel';
 import { CommunityDangerZone, CommunityEditor } from './CommunityEditor';
 import { CommunityMarketingPanel } from './CommunityMarketingPanel';
 import { CommunityMediaPanel } from './CommunityMediaPanel';
@@ -169,9 +169,10 @@ export default async function CommunityEditorPage({
     uploaderSlug: row.uploader?.slug ?? null,
     uploaderDisplayName: row.uploader?.name ?? null,
   }));
-  const coverVideos = manageVideos
-    .filter((v) => v.status === 'ready' && v.visibility === 'public')
-    .map((v) => ({ id: v.id, cf_video_id: v.cf_video_id, title: v.title }));
+  // Phase 50.9 (2026-06-23): cover selection moved inline into the
+  // Media tab (Set as cover button per video row, ⭐ per photo). No
+  // separate `coverVideos` derivation needed — CommunityVideoManageList
+  // gates "Set as cover" on `status === 'ready'` itself.
 
   // Photos for the inline Photos tab — match what /upload loads.
   // biome-ignore lint/suspicious/noExplicitAny: stub generated types
@@ -308,25 +309,10 @@ export default async function CommunityEditorPage({
                 videos={manageVideos}
                 myAgentId={myAgentId}
                 photos={initialPhotos}
+                coverVideoId={community.cover_video_id}
+                coverStoragePath={community.cover_storage_path}
+                canSetCover={canEditMetadata}
               />
-              {canEditMetadata && (
-                <section className="rounded-2xl border border-line bg-surface p-4 sm:p-6">
-                  <div className="mb-3">
-                    <h2 className="text-base font-semibold">Cover</h2>
-                    <p className="mt-1 text-muted text-xs">
-                      Pick the hero shown on /c/{community.slug} and on the community card across
-                      the app.
-                    </p>
-                  </div>
-                  <CommunityCoverPanel
-                    communityId={community.id}
-                    canEdit={canEditMetadata}
-                    videos={coverVideos}
-                    initialCoverVideoId={community.cover_video_id}
-                    initialCoverStoragePath={community.cover_storage_path}
-                  />
-                </section>
-              )}
             </div>
           ),
           ...(canEditMetadata

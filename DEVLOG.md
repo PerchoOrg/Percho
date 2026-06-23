@@ -2,6 +2,82 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## Phase 50.9 — Community Media tab full parity with Listing Media (2026-06-23)
+
+**Trigger**: qiaoxux — "My community media tab: follow the same layout as
+my listing media, plus the category tags. Do refactoring if needed",
+followed by a 5-point reorder/trim ask: Upload first → Category next →
+flat video rows with Set-as-cover + Delete only → photo Set-as-cover →
+drop the standalone Cover panel.
+
+**What changed**:
+
+1. **CommunityMediaPanel reorder.** Upload button now sits at the top of
+   the card, Category picker directly underneath it. Visual flow reads
+   "what do I want to add → tag it → drop your files" — same as the
+   listing edit page.
+2. **CommunityVideoManageList rewrite.** Replaced the rich Phase 35.x row
+   (visibility chips, archive/restore/private buttons, uploader byline,
+   group-by-visibility, edit-category sheet) with a flat row matching
+   listing `VideoPanel`:
+
+       [thumb] · title · category pill · [Set as cover] · [Delete]
+
+   Cover badge appears next to the title for the current cover; the
+   "Set as cover" button collapses to a "Current cover" pill on that
+   row. Read-only category pill replaces the edit-category sheet.
+3. **Photo Set-as-cover.** Each photo card in `CommunityPhotoPanel` now
+   has a ⭐ button (visible on hover, owner-only) and a Cover badge for
+   the current cover photo. New server action
+   `setCommunityCoverFromPhoto` downloads the source object from the
+   private `community-photos` bucket and re-uploads to the public
+   `community-covers` bucket (cross-bucket; storage `.copy()` is
+   single-bucket only), then reuses the existing
+   `recordCommunityCoverImage` setter so prior cover cleanup +
+   revalidation are unchanged.
+4. **CommunityCoverPanel deleted.** The standalone "Cover" section in
+   the Media tab is gone — cover selection is fully inline now.
+   `page.tsx` no longer derives `coverVideos` since the video list gates
+   on `status === 'ready'` itself.
+
+**Trade-offs accepted** (concerns table approved by qiaoxux ahead of the
+rewrite):
+
+- **Visibility/archive controls dropped** from videos. Delete is now the
+  only way to take a video off buyer surfaces; archive/restore/private
+  are no longer reachable from the dashboard. Existing rows with
+  `visibility != 'public'` continue to render, just without controls to
+  flip them — agents can still delete.
+- **Photo-as-cover via storage copy, not migration to public bucket.**
+  ~1 file duplicated per cover change. We keep `community-photos`
+  private (raw photo lib never needs public read) and only the chosen
+  cover ends up in the public bucket.
+- **Video re-categorize gone** with the edit sheet. Category is set at
+  upload time via the shared CategoryPicker; mistakes mean
+  delete-and-reupload until/unless the sheet comes back.
+
+**Why this works**: photo grid + video row UX now match listing-side
+muscle memory exactly, with one exception — community keeps the category
+pill / category picker since communities have richer semantic tagging
+than listings (which have one logical "this is the listing"). Categories
+were the explicit ask, the rest of the UX collapses to listing parity.
+
+**Files**:
+- `app/dashboard/communities/[id]/cover-actions.ts` — added
+  `setCommunityCoverFromPhoto`.
+- `app/dashboard/communities/[id]/CommunityVideoManageList.tsx` —
+  full rewrite (350 → 245 lines).
+- `app/dashboard/communities/[id]/CommunityPhotoPanel.tsx` — Cover
+  badge + ⭐ button + new props (`coverStoragePath`, `canSetCover`).
+- `app/dashboard/communities/[id]/CommunityMediaPanel.tsx` — reorder
+  Upload→Category, thread cover props.
+- `app/dashboard/communities/[id]/page.tsx` — drop
+  `<CommunityCoverPanel>`, drop `coverVideos`, pass cover state
+  inline.
+- `app/dashboard/communities/[id]/CommunityCoverPanel.tsx` — DELETED.
+
+Verified: tsc clean, next build clean.
+
 ## Phase 50.8 — CategoryPicker becomes a labeled dropdown (2026-06-23)
 
 **Trigger**: qiaoxux — "Make category a dropdown list with explain. Can you

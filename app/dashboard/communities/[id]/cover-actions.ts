@@ -157,6 +157,66 @@ export async function recordCommunityCoverImage(
   return { ok: true };
 }
 
+// ─── set photo as cover (Phase 50.9, 2026-06-23) ────────────────────
+// Photos live in the PRIVATE `community-photos` bucket; buyer pages can't
+// hit a private object. Covers live in the PUBLIC `community-covers`
+// bucket. So "set this photo as cover" requires a server-side bucket COPY,
+// not a re-pointer. We download the source object once and re-upload to
+// covers under the canonical {communityId}/{uuid}.{ext} path. ~1 file
+// duplication per cover change is cheap; preserves photos-bucket privacy.
+
+const SetFromPhotoInput = z.object({
+  communityId: z.string().uuid(),
+  photoStoragePath: z.string().min(1).max(512),
+});
+
+export async function setCommunityCoverFromPhoto(
+  input: z.infer<typeof SetFromPhotoInput>,
+): Promise<SetCoverResult> {
+  const parsed = SetFromPhotoInput.safeParse(input);
+  if (!parsed.success) return { ok: false, error: 'invalid_input' };
+  const { communityId, photoStoragePath } = parsed.data;
+
+  if (!photoStoragePath.startsWith(`${communityId}/`)) {
+    return { ok: false, error: 'invalid_storage_path' };
+  }
+
+  const supabase = await createClient();
+  const auth = await authorize(supabase, communityId);
+  if (!auth.ok) return auth;
+
+  // Download from the private photos bucket, then re-upload to covers.
+  // (storage `.copy()` requires source+dest in the same bucket; cross-
+  //  bucket needs explicit download+upload.)
+  const { data: blob, error: dlErr } = await supabase.storage
+    .from('community-photos')
+    .download(photoStoragePath);
+  if (dlErr || !blob) {
+    console.error('[setCommunityCoverFromPhoto] download failed', dlErr);
+    return { ok: false, error: 'photo_not_readable' };
+  }
+
+  const ext = (photoStoragePath.split('.').pop() ?? 'jpg').toLowerCase();
+  const safeExt = ['jpg', 'jpeg', 'png', 'webp'].includes(ext) ? ext : 'jpg';
+  const newId =
+    globalThis.crypto?.randomUUID?.() ??
+    `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  const targetPath = `${communityId}/${newId}.${safeExt}`;
+  const contentType = blob.type || `image/${safeExt === 'jpg' ? 'jpeg' : safeExt}`;
+
+  const { error: upErr } = await supabase.storage
+    .from('community-covers')
+    .upload(targetPath, blob, { contentType, upsert: false });
+  if (upErr) {
+    console.error('[setCommunityCoverFromPhoto] upload failed', upErr);
+    return { ok: false, error: 'cover_upload_failed' };
+  }
+
+  // Reuse the existing setter — it cleans up any prior cover image, nulls
+  // cover_video_id, and revalidates the right paths.
+  return recordCommunityCoverImage({ communityId, storagePath: targetPath });
+}
+
 // ─── clear cover ────────────────────────────────────────────────────
 
 const ClearInput = z.object({ communityId: z.string().uuid() });

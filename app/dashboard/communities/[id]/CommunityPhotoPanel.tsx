@@ -20,6 +20,7 @@ import {
   deleteCommunityPhoto,
   recordCommunityPhoto,
 } from '@/app/dashboard/communities/[id]/photo-actions';
+import { setCommunityCoverFromPhoto } from '@/app/dashboard/communities/[id]/cover-actions';
 import { createClient } from '@/lib/supabase/client';
 import { COMMUNITY_PHOTOS_BUCKET, nextCommunityPhotoStoragePath } from '@/lib/supabase/storage';
 import {
@@ -28,7 +29,8 @@ import {
   getCategoryMeta,
   legacyKindForCategory,
 } from '@/lib/zod/community-video-categories';
-import { Trash2, Upload } from 'lucide-react';
+import { Star, Trash2, Upload } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import {
   forwardRef,
   useCallback,
@@ -72,6 +74,20 @@ interface Props {
    * the imperative handle below. Mirrors `PhotoPanel`'s `hideUploadButton`.
    */
   hideUploadButton?: boolean;
+  /**
+   * Phase 50.9 (2026-06-23): when present, drives the cover indicator (⭐
+   * badge) on the matching photo card and lets agents pick a different
+   * photo as cover. Null means no photo is currently the cover (could be
+   * a video, or no cover at all). Owner-only — non-owners never see the
+   * Set-as-cover button regardless of this prop.
+   */
+  coverStoragePath?: string | null;
+  /**
+   * Phase 50.9: gate the per-photo "Set as cover" button. The page already
+   * checks `canEditMetadata` server-side; this prop lets the parent thread
+   * the same flag through without re-deriving it.
+   */
+  canSetCover?: boolean;
 }
 
 /**
@@ -95,9 +111,10 @@ interface PendingItem {
 
 export const CommunityPhotoPanel = forwardRef<CommunityPhotoPanelHandle, Props>(
   function CommunityPhotoPanel(
-    { communityId, initialPhotos, category, prefillFiles, hideUploadButton },
+    { communityId, initialPhotos, category, prefillFiles, hideUploadButton, coverStoragePath, canSetCover },
     ref,
   ) {
+  const router = useRouter();
   const [photos, setPhotos] = useState<CommunityPhotoRow[]>(initialPhotos);
   const [pending, setPending] = useState<PendingItem[]>([]);
   const [globalError, setGlobalError] = useState<string | null>(null);
@@ -236,6 +253,31 @@ export const CommunityPhotoPanel = forwardRef<CommunityPhotoPanelHandle, Props>(
     [communityId, photos],
   );
 
+  // Phase 50.9: per-photo "Set as cover". Server action copies the file
+  // from the private community-photos bucket to the public community-covers
+  // bucket and updates communities.cover_storage_path. We router.refresh()
+  // on success so the new badge shows up + the hero hero updates.
+  const [coverBusyId, setCoverBusyId] = useState<string | null>(null);
+  const handleSetCover = useCallback(
+    (photoStoragePath: string) => {
+      setGlobalError(null);
+      setCoverBusyId(photoStoragePath);
+      startTransition(async () => {
+        const res = await setCommunityCoverFromPhoto({
+          communityId,
+          photoStoragePath,
+        });
+        setCoverBusyId(null);
+        if (!res.ok) {
+          setGlobalError(`Set cover failed: ${res.error}`);
+          return;
+        }
+        router.refresh();
+      });
+    },
+    [communityId, router],
+  );
+
   // When embedded in the unified media shell, drop the surface chrome
   // (heading, description, card border) so it reads as a sub-section of the
   // parent card rather than a card-in-card. Mirrors `PhotoPanel`'s embedded
@@ -311,7 +353,17 @@ export const CommunityPhotoPanel = forwardRef<CommunityPhotoPanelHandle, Props>(
         hideUploadButton ? (
           <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
             {photos.map((photo) => (
-              <PhotoCard key={photo.id} photo={photo} onDelete={handleDelete} />
+              <PhotoCard
+                key={photo.id}
+                photo={photo}
+                onDelete={handleDelete}
+                isCover={
+                  coverStoragePath != null && coverStoragePath === photo.storage_path
+                }
+                canSetCover={!!canSetCover}
+                onSetCover={handleSetCover}
+                coverBusy={coverBusyId === photo.storage_path}
+              />
             ))}
           </div>
         ) : (
@@ -321,7 +373,17 @@ export const CommunityPhotoPanel = forwardRef<CommunityPhotoPanelHandle, Props>(
             </summary>
             <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
               {photos.map((photo) => (
-                <PhotoCard key={photo.id} photo={photo} onDelete={handleDelete} />
+                <PhotoCard
+                  key={photo.id}
+                  photo={photo}
+                  onDelete={handleDelete}
+                  isCover={
+                    coverStoragePath != null && coverStoragePath === photo.storage_path
+                  }
+                  canSetCover={!!canSetCover}
+                  onSetCover={handleSetCover}
+                  coverBusy={coverBusyId === photo.storage_path}
+                />
               ))}
             </div>
           </details>
@@ -343,15 +405,27 @@ async function readImageDimensions(src: string): Promise<{ width: number; height
 function PhotoCard({
   photo,
   onDelete,
+  isCover,
+  canSetCover,
+  onSetCover,
+  coverBusy,
 }: {
   photo: CommunityPhotoRow;
   onDelete: (id: string) => void;
+  isCover: boolean;
+  canSetCover: boolean;
+  onSetCover: (storagePath: string) => void;
+  coverBusy: boolean;
 }) {
   const catLabel = photo.category
     ? (COMMUNITY_VIDEO_CATEGORIES.find((c) => c.id === photo.category)?.label ?? null)
     : null;
   return (
-    <div className="group relative aspect-[4/3] overflow-hidden rounded border border-line bg-bg">
+    <div
+      className={`group relative aspect-[4/3] overflow-hidden rounded border bg-bg ${
+        isCover ? 'border-line-strong' : 'border-line'
+      }`}
+    >
       {photo.signed_url ? (
         <img
           src={photo.signed_url}
@@ -364,10 +438,27 @@ function PhotoCard({
           (preview unavailable)
         </div>
       )}
+      {isCover ? (
+        <span className="absolute top-1.5 left-1.5 rounded bg-ink px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-cream">
+          Cover
+        </span>
+      ) : null}
       {catLabel ? (
         <span className="absolute bottom-1 left-1 rounded bg-bg px-1.5 py-0.5 text-[10px] text-ink2">
           {catLabel}
         </span>
+      ) : null}
+      {canSetCover && !isCover ? (
+        <button
+          type="button"
+          onClick={() => onSetCover(photo.storage_path)}
+          disabled={coverBusy}
+          aria-label="Set as cover"
+          title="Set as cover"
+          className="absolute top-1.5 right-9 hidden rounded bg-bg p-1.5 text-ink2 hover:text-ink disabled:opacity-50 group-hover:block"
+        >
+          <Star size={14} aria-hidden="true" />
+        </button>
       ) : null}
       <button
         type="button"
