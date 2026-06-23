@@ -211,10 +211,6 @@ export function CommunityMediaPanel({
           </button>
         </div>
       </div>
-      <p className="mb-3 text-[11px] text-muted">
-        Category applies to videos and photos uploaded next. Photos (JPEG / PNG / WebP, up to 10 MB)
-        and videos (MP4 / MOV, up to 2 GB).
-      </p>
       {unsupportedNotice ? (
         <p className="mb-3 text-[11px] text-red-300">{unsupportedNotice}</p>
       ) : null}

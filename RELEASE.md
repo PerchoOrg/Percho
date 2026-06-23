@@ -2,6 +2,13 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.54.12 — Community Media: trim category card to one line (2026-06-23)
+
+**For agents on `/dashboard/communities/[id]` → Media tab:**
+
+### ✨ Improvements
+- **Category card stripped to just the description** — dropped the redundant label (already shown in the dropdown), the "Must include" rule line, and the "Applies to videos and photos uploaded next" help paragraph. Now it's a single short line of guidance under the dropdown.
+
 ## v0.54.11 — Community Media: dropdown + Upload truly side by side (2026-06-23)
 
 **For agents on `/dashboard/communities/[id]` → Media tab:**

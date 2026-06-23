@@ -2,6 +2,20 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## Phase 50.11.2 — Community Media: trim CategorySpecCard to blurb only (2026-06-23)
+
+**Objective**: qiaoxux reviewed the v0.54.11 result and asked: of the four lines under the Category dropdown ("Morning Rush" / "The commute, on a real weekday" / "Must include: Dashcam timestamp must be visible." / "Applies to videos and photos uploaded next."), keep only the second line.
+
+**Actions**:
+- `CategoryPicker.tsx`: `CategorySpecCard` reduced to a single `<div className="text-xs leading-snug text-ink2">{meta.blurb}</div>`. Removed the bordered/padded card wrapper, the bold label, and the "Must include: ..." line.
+- `CommunityMediaPanel.tsx`: deleted the separate `<p>` help paragraph ("Category applies to videos and photos uploaded next. Photos (JPEG / PNG / WebP, up to 10 MB) and videos (MP4 / MOV, up to 2 GB).") that lived between the controls row and the SpecCard band.
+
+**Decisions**: Kept `meta.label` and `meta.hardRule` in the data (`category-meta.ts`) — only the rendering was stripped. Easy to surface back in a tooltip or info popover later if agents start mis-categorizing without the rule visible.
+
+**Verification**: `npx tsc --noEmit` clean. `npm run build` clean.
+
+**Next**: ship and let qiaoxux confirm the Media tab matches her listing tab layout now.
+
 ## Phase 50.11.1 — Community Media: SpecCard split out so dropdown can sit beside Upload (2026-06-23)
 
 **Objective**: Phase 50.11 wrapped Category + Upload in a `flex items-end` row, but qiaoxux reported "don't see the left and right change" — the Category column was still visually taller than the Upload button because `<CategoryPicker>` rendered both the dropdown AND the SpecCard (label + blurb + hard rule, ~120px tall) inside a single column. With `items-end` the Upload button hugged the bottom of a much taller sibling, so the row read as stacked.

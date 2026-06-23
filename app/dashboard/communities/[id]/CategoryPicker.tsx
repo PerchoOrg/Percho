@@ -64,13 +64,12 @@ export function CategoryPicker({ selected, onPick, disabled, hideSpec }: Categor
 }
 
 export function CategorySpecCard({ meta }: { meta: CommunityVideoCategoryMeta }) {
+  // Phase 50.11.2: stripped to just the blurb. Per qiaoxux:
+  // "only leave 'The commute, on a real weekday' part" — the label
+  // duplicates the dropdown selection, the Must-include rule was noise
+  // for agents who already know the category, and the help line
+  // belonged to a different section anyway.
   return (
-    <div className="mt-3 rounded-lg border border-line-strong bg-ink/[0.04] p-3">
-      <div className="text-sm font-semibold text-ink">{meta.label}</div>
-      <div className="mt-1 text-xs leading-snug text-ink2">{meta.blurb}</div>
-      <div className="mt-2 text-[11px] leading-snug text-ink/90">
-        <span className="text-ink2">Must include:</span> {meta.hardRule}
-      </div>
-    </div>
+    <div className="text-xs leading-snug text-ink2">{meta.blurb}</div>
   );
 }
