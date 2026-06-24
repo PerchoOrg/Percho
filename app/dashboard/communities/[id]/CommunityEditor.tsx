@@ -3,7 +3,16 @@
 /**
  * CommunityEditor — Phase 4.4; Phase 23 trimmed; Phase 50 flattened;
  * Phase 50.4 expanded; Phase 50.5 typed numerics; Phase 50.6 opt-in ranges;
- * Phase 50.7 (2026-06-22) form-level cleanup per owner.
+ * Phase 50.7 (2026-06-22) form-level cleanup per owner;
+ * Phase 51 (2026-06-24) auto-save parity with listing editor.
+ *
+ * Phase 51/save-button-parity (2026-06-24): added 600ms debounced auto-save
+ * mirroring the listing editor (Phase 8 pattern). The "Save changes" button
+ * is renamed to "Save" and now functions as a flush-now escape hatch — it
+ * cancels the pending debounce and round-trips immediately, useful when the
+ * agent wants explicit confirmation. The "No unsaved changes" hint is gone
+ * (the SaveBadge already conveys state). Auto-save tick failures still
+ * surface fieldErrors / formError so a typo doesn't silently fail.
  *
  * Phase 50.7 design notes:
  *   - **No section grouping.** "Identity / Location / Pitch / Property /
@@ -34,7 +43,10 @@
 import { deleteCommunity, updateCommunity } from '@/app/dashboard/communities/actions';
 import { COMMUNITY_PROPERTY_TYPES } from '@/lib/zod/community';
 import { useRouter } from 'next/navigation';
-import { useMemo, useState, useTransition } from 'react';
+import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
+
+const AUTOSAVE_DEBOUNCE_MS = 600;
+type SaveState = 'idle' | 'pending' | 'saving' | 'saved' | 'error';
 
 const INPUT_BASE =
   'w-full rounded border bg-surface px-3 py-2 text-sm text-ink placeholder:text-muted focus:outline-none focus:ring-1 disabled:cursor-not-allowed disabled:opacity-60';
@@ -113,7 +125,7 @@ export function CommunityEditor({
   const [hoaFee, setHoaFee] = useState(community.hoa_fee_monthly?.toString() ?? '');
   const [website, setWebsite] = useState(community.website ?? '');
 
-  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [saveState, setSaveState] = useState<SaveState>('idle');
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -177,35 +189,58 @@ export function CommunityEditor({
     clearFieldError('property_types');
   }
 
-  function onSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    if (!canEditMetadata) return;
+  // Refs for the auto-save state machine. `dirtyRef` tracks whether there's
+  // unsynced state since last successful save; `inflightRef` lets us serialise
+  // saves so a debounce tick that fires while a save is mid-flight queues
+  // behind it instead of racing. `initialMountRef` swallows the first effect
+  // run so we don't ship a no-op save on page load. Mirrors EditListingForm.
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const inflightRef = useRef<Promise<void> | null>(null);
+  const dirtyRef = useRef(false);
+  const initialMountRef = useRef(true);
+
+  /**
+   * Build the payload from the latest state. Centralised so both the debounce
+   * tick and the explicit Save button use the same shape.
+   */
+  function buildPayload() {
+    const trimOrNull = (v: string) => (v.trim() === '' ? null : v.trim());
+    return {
+      name: name.trim(),
+      city: city.trim(),
+      state: state.trim().toUpperCase(),
+      description: trimOrNull(description),
+      zip: zip.trim(),
+      county: trimOrNull(county),
+      hoa_fee_monthly: parseIntOrNull(hoaFee),
+      year_built: parseIntOrNull(yearBuilt),
+      year_built_end: parseIntOrNull(yearBuiltEnd),
+      price_min: parseIntOrNull(priceMin),
+      price_max: parseIntOrNull(priceMax),
+      property_types: propertyTypes.length > 0 ? propertyTypes : null,
+      highlights: highlights.length > 0 ? highlights : null,
+      builder: trimOrNull(builder),
+      website: trimOrNull(website),
+    };
+  }
+
+  /**
+   * One save round trip. Resolves on completion regardless of outcome so the
+   * flusher never hangs. `refreshOnSuccess` is true only for the explicit
+   * Save click — auto-save ticks skip router.refresh() to avoid mid-edit
+   * surface flicker.
+   */
+  async function runSave(refreshOnSuccess: boolean) {
     setSaveState('saving');
     setFieldErrors({});
     setFormError(null);
-    const trimOrNull = (v: string) => (v.trim() === '' ? null : v.trim());
-    startTransition(async () => {
-      const result = await updateCommunity(community.id, {
-        name: name.trim(),
-        city: city.trim(),
-        state: state.trim().toUpperCase(),
-        description: trimOrNull(description),
-        zip: zip.trim(),
-        county: trimOrNull(county),
-        hoa_fee_monthly: parseIntOrNull(hoaFee),
-        year_built: parseIntOrNull(yearBuilt),
-        year_built_end: parseIntOrNull(yearBuiltEnd),
-        price_min: parseIntOrNull(priceMin),
-        price_max: parseIntOrNull(priceMax),
-        property_types: propertyTypes.length > 0 ? propertyTypes : null,
-        highlights: highlights.length > 0 ? highlights : null,
-        builder: trimOrNull(builder),
-        website: trimOrNull(website),
-      });
+    try {
+      const result = await updateCommunity(community.id, buildPayload());
       if (result.ok) {
+        dirtyRef.current = false;
         setSaveState('saved');
-        setTimeout(() => setSaveState((s) => (s === 'saved' ? 'idle' : s)), 2000);
-        router.refresh();
+        setTimeout(() => setSaveState((s) => (s === 'saved' ? 'idle' : s)), 1500);
+        if (refreshOnSuccess) router.refresh();
       } else {
         setSaveState('error');
         if (result.fieldErrors) setFieldErrors(result.fieldErrors);
@@ -213,6 +248,97 @@ export function CommunityEditor({
           setFormError(result.error);
         }
       }
+    } catch (err) {
+      setSaveState('error');
+      setFormError(err instanceof Error ? err.message : 'unknown');
+    }
+  }
+
+  /**
+   * Cancel any pending debounce, await any in-flight save, then flush dirty
+   * state. Called by the explicit Save button.
+   */
+  async function flushNow(): Promise<void> {
+    if (!canEditMetadata) return;
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+      debounceRef.current = null;
+    }
+    if (inflightRef.current) await inflightRef.current;
+    if (dirtyRef.current) {
+      const p = runSave(true);
+      inflightRef.current = p.finally(() => {
+        if (inflightRef.current === p) inflightRef.current = null;
+      });
+      await p;
+    }
+  }
+
+  // Debounced auto-save. Skip the very first effect run (mount) so we don't
+  // round-trip a no-op save on page load. The form-state vars ARE the deps;
+  // runSave reads latest state via closure on each tick.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: form-state deps drive auto-save; runSave reads latest state via closure
+  useEffect(() => {
+    if (initialMountRef.current) {
+      initialMountRef.current = false;
+      return;
+    }
+    if (!canEditMetadata) return;
+    dirtyRef.current = true;
+    setSaveState('pending');
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      debounceRef.current = null;
+      const tick = async () => {
+        if (inflightRef.current) await inflightRef.current;
+        const p = runSave(false);
+        inflightRef.current = p.finally(() => {
+          if (inflightRef.current === p) inflightRef.current = null;
+        });
+      };
+      void tick();
+    }, AUTOSAVE_DEBOUNCE_MS);
+    return () => {
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current);
+        debounceRef.current = null;
+      }
+    };
+  }, [
+    name,
+    city,
+    state,
+    zip,
+    county,
+    description,
+    builder,
+    yearBuilt,
+    yearBuiltEnd,
+    priceMin,
+    priceMax,
+    hoaFee,
+    website,
+    propertyTypes,
+    highlights,
+  ]);
+
+  // Best-effort warn-on-close if there's unsaved work.
+  useEffect(() => {
+    function onBeforeUnload(e: BeforeUnloadEvent) {
+      if (dirtyRef.current || saveState === 'pending' || saveState === 'saving') {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    }
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+  }, [saveState]);
+
+  function onSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (!canEditMetadata) return;
+    startTransition(() => {
+      void flushNow();
     });
   }
 
@@ -490,12 +616,9 @@ export function CommunityEditor({
             disabled={isPending || saveState === 'saving' || !isDirty}
             className="rounded bg-ink px-4 py-2 text-sm font-medium text-cream transition hover:opacity-90 disabled:opacity-50"
           >
-            {saveState === 'saving' ? 'Saving…' : 'Save changes'}
+            {saveState === 'saving' ? 'Saving…' : 'Save'}
           </button>
           {saveState === 'saved' && <span className="text-sm text-emerald-400">✓ Saved</span>}
-          {saveState !== 'saved' && !isDirty && (
-            <span className="text-muted text-xs">No unsaved changes</span>
-          )}
           {saveState === 'error' && formError && (
             <span className="text-sm text-red-400">Error: {formError}</span>
           )}

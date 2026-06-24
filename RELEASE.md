@@ -2,6 +2,16 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.55.0 — Save button on the listing editor + auto-save on community editor (2026-06-24)
+
+**For listing agents who edit listings or communities from the hub:**
+
+### ✨ Improvements
+- **The listing editor now has a Save button.** Edits still save automatically as you type (no change there) — but the new Save button gives you an instant "save right now" option whenever you want explicit confirmation, instead of waiting for the auto-save to round-trip. (qiaoxux: "my listing details page should have a save button similar to my community page".)
+- **The community editor now auto-saves as you type.** Same 600ms debounce as the listing editor — start typing, see "Saving… → ✓ Saved" feedback in line. The Save button is still there as an explicit "save right now" escape hatch; it's no longer the only way to persist your edits.
+- **Cleaner status row on the community editor.** Removed the "No unsaved changes" text label — the Save button greying out is enough signal, the extra phrase was clutter.
+- **Renamed "Save changes" → "Save"** on the community editor for parity with the new listing button.
+
 ## v0.54.20 — Hotfix: community stub creation + Danger zone color (2026-06-24)
 
 **For agents creating a new community / staring at "Could not create — please retry.":**

@@ -2,6 +2,37 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-06-24 — Phase 51: Save button parity (listing + community auto-save)
+
+**Objective**: qiaoxux on the agent hub: "my listing details page should have a save button similar to my community page". Picked option 2 (auto-save + explicit Save button coexist) and asked to apply to both surfaces. Two follow-up constraints: button label is `Save` (not `Save changes`), and the `No unsaved changes` hint goes away.
+
+**Background — why the two surfaces drifted in the first place**: Phase 8 (2026-06-11, `listing-form-autosave`) deliberately switched the listing editor from explicit save to debounced auto-save with a SaveBadge. The community editor stayed on explicit Save changes through Phase 50.7. So the listing surface had no button at all, and the community surface had a button but no auto-save — exact mirror image of each other. Owner now wants both: instant background save **and** an explicit confirm button on both surfaces.
+
+**Actions**:
+- `app/dashboard/listings/[id]/edit/EditListingForm.tsx`: added a `Save` button next to the existing `<SaveBadge>` in the header row. Clicking calls the existing `flushNow()` (which Phase 8 already exposed for PublishPanel) — cancels any pending debounce, awaits in-flight, runs one fresh save. Disabled when `saveState ∈ {idle, saved, saving}`. File-header note appended marking Phase 51.
+- `app/dashboard/communities/[id]/CommunityEditor.tsx`: introduced the listing's auto-save state machine — `debounceRef` / `inflightRef` / `dirtyRef` / `initialMountRef`, 600ms debounce, `runSave(refreshOnSuccess)` extracted from the old `onSubmit`, `flushNow()` for the explicit-Save path, plus `beforeunload` warning. `<SaveBadge>` not added to the community surface — kept the existing inline status text (`✓ Saved` / `Error: …`) since the surface already had it and it reads fine. The submit button now flushes via `flushNow()` instead of building the payload itself; auto-save ticks skip `router.refresh()` (would flicker mid-edit), only the explicit Save click refreshes.
+- Owner asks (literal):
+  - Button label `Save changes` → `Save`. Renamed both surfaces.
+  - The `<span>No unsaved changes</span>` hint that used to render when `!isDirty && saveState !== 'saved'` is gone. The button just sits disabled — the SaveBadge / lack of activity is the signal.
+
+**Decisions**:
+- **Did NOT extract `<SaveBadge>` into a shared component.** Two surfaces, two slightly different status surfaces (listing has badge pill; community already had inline text). Sharing would force a single visual treatment on both — surgical-changes principle says don't.
+- **Auto-save tick failures still surface fieldErrors / formError on the community side.** Asked owner whether to expose them in the auto-save path; default-yes was the right call — silent invalid state on auto-save would be worse than a surfaced error pill while the agent is still typing.
+- **Did NOT touch `flush-registry`** — that's the listing↔PublishPanel handshake. Community has no publish flow, no need for the registry.
+
+**Issues**: none — tsc clean, build clean on first try.
+
+**Verification**:
+- `npx tsc --noEmit` clean
+- `npm run build` clean (Next 15.5)
+- `git log` SHA captured below
+
+**Learnings**:
+- The flush-now-as-explicit-save pattern is dead simple when auto-save already exists: the explicit button just calls the same flush path PublishPanel uses. Adding it to community took 90% rewriting the save state machine to mirror the listing's, 10% wiring the button.
+- listing/community pair drift bites again — this is exactly the case in `references/listing-community-pair-drift.md`. Two surfaces should have moved in lockstep at Phase 8; instead one got auto-save and the other didn't. Ten phases later we're paying the synchronisation cost.
+
+**Next steps**: none — feature complete on this surface. If the agent dashboard grows a third "save-while-edit" surface, the auto-save state machine should probably get extracted into a hook (`useDebouncedAutoSave`) at that point, not before.
+
 ## 2026-06-24 — Phase 50.18: hotfix `createStubCommunity` CHECK violation + Danger zone color
 
 **Objective**: kill two production bugs reported by qiaoxux on the agent hub My Community surface — (a) "Upload as Community" was failing with `Could not create — please retry.` (and the implied chain failures: "video upload is not prefilled", "photos can not be uploaded"); (b) "Danger zone color is fainted".

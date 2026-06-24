@@ -10,6 +10,12 @@
  * publishing, so an agent who edits and immediately clicks Publish doesn't
  * race the debounce.
  *
+ * Phase 51/save-button-parity (2026-06-24): added an explicit "Save" button
+ * next to the SaveBadge so agents have an instant-confirm escape hatch.
+ * Auto-save still runs on every edit; the button just calls flushNow() to
+ * cancel the debounce and round-trip immediately. Disabled when there's
+ * nothing dirty to save or a save is in flight.
+ *
  * Save status is shown as a small pill ("Saving…" / "✓ Saved" / "Error")
  * so the agent has continuous feedback that work isn't lost.
  *
@@ -348,6 +354,16 @@ export function EditListingForm({ listingId, initial, communities, listingContex
     <div className="space-y-6">
       <div className="flex items-center justify-end gap-3 text-xs text-muted">
         <SaveBadge state={saveState} error={errorMsg} />
+        <button
+          type="button"
+          onClick={() => {
+            void flushNow();
+          }}
+          disabled={saveState === 'idle' || saveState === 'saved' || saveState === 'saving'}
+          className="rounded bg-ink px-3 py-1.5 text-xs font-medium text-cream transition hover:opacity-90 disabled:opacity-40"
+        >
+          {saveState === 'saving' ? 'Saving…' : 'Save'}
+        </button>
       </div>
 
       <fieldset className="grid grid-cols-1 gap-4 sm:grid-cols-2">
