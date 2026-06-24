@@ -23,7 +23,6 @@ import { ListingGrid, type ListingGridItem } from '@/app/_components/ListingGrid
  */
 import { thumbnailUrl } from '@/lib/cloudflare/stream';
 import { fetchCommunityListCards } from '@/lib/communities/list';
-import { DEMO_MEDIA_ENABLED, demoCoverFor } from '@/lib/demo-media';
 import { createClient } from '@/lib/supabase/server';
 import { photoPublicUrl } from '@/lib/supabase/storage';
 import type { Metadata } from 'next';
@@ -189,9 +188,7 @@ function listingHitsToItems(
   opts: { dimInactive?: boolean } = {},
 ): ListingGridItem[] {
   return hits.map((hit) => {
-    const realSrc = hit.cover?.src ?? null;
-    const src = realSrc ? (demoCoverFor(hit.id, realSrc) ?? null) : null;
-    const isDemoStock = DEMO_MEDIA_ENABLED && src !== null && src !== realSrc;
+    const src = hit.cover?.src ?? null;
     const inactive = hit.status !== 'active';
     const ownerHref = `/dashboard/listings/${hit.id}/edit`;
     const buyerHref =
@@ -210,11 +207,7 @@ function listingHitsToItems(
       baths: hit.baths,
       sqft: hit.sqft,
       address: hit.address,
-      badge: inactive
-        ? { label: 'Inactive', tone: 'light' }
-        : isDemoStock
-          ? { label: 'Stock', tone: 'dark' }
-          : null,
+      badge: inactive ? { label: 'Inactive', tone: 'light' } : null,
       dimmed: inactive && opts.dimInactive,
     };
   });

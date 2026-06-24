@@ -47,7 +47,6 @@
 import Hls from 'hls.js';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { hlsUrl, thumbnailUrl } from '@/lib/cloudflare/stream';
-import { demoCoverFor, demoVideoFor } from '@/lib/demo-media';
 import type { BrowseSourceVideo } from './BrowseFeed';
 import { ActionButton } from '../../_components/feed/ActionButton';
 import {
@@ -306,17 +305,12 @@ function CarouselSlide({
   const ref = useRef<HTMLVideoElement | null>(null);
   const hlsRef = useRef<Hls | null>(null);
 
-  const demoVideoUrl = demoVideoFor(video.cfVideoId, 'nearby');
-  const isDemoVideo = demoVideoUrl !== null;
-
   const poster = useMemo(() => {
-    let p: string | null = null;
     try {
-      p = thumbnailUrl(video.cfVideoId);
+      return thumbnailUrl(video.cfVideoId);
     } catch {
-      p = null;
+      return null;
     }
-    return demoCoverFor(video.cfVideoId, p);
   }, [video.cfVideoId]);
 
   useEffect(() => {
@@ -329,10 +323,6 @@ function CarouselSlide({
     }
     v.removeAttribute('src');
     v.load();
-    if (isDemoVideo && demoVideoUrl) {
-      v.src = demoVideoUrl;
-      return;
-    }
     let src: string;
     try {
       src = hlsUrl(video.cfVideoId);
@@ -353,7 +343,7 @@ function CarouselSlide({
         hlsRef.current = null;
       }
     };
-  }, [shouldMount, video.cfVideoId, isDemoVideo, demoVideoUrl]);
+  }, [shouldMount, video.cfVideoId]);
 
   // Play only the active slide; pause siblings to save battery.
   // Sound: the carousel is opened by an explicit chip tap (user gesture),

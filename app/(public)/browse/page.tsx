@@ -1,7 +1,6 @@
 import { GridPageShell } from '@/app/_components/GridPageShell';
 import { ListingGrid, type ListingGridItem } from '@/app/_components/ListingGrid';
 import { thumbnailUrl } from '@/lib/cloudflare/stream';
-import { DEMO_MEDIA_ENABLED, demoCoverFor } from '@/lib/demo-media';
 import { fetchBrowseCards, fetchBrowseCardsByCommunitySlug } from '@/lib/feed/browse-cards';
 import { createClient } from '@/lib/supabase/server';
 import type { Metadata } from 'next';
@@ -64,12 +63,10 @@ async function RecommendedGrid({ communitySlug }: { communitySlug: string | null
   const isCommunityScoped = Boolean(scopedCards && scopedCards.length > 0);
 
   const items: ListingGridItem[] = cards.map((card) => {
-    const realSrc =
+    const src =
       card.mediaKind === 'video'
         ? thumbnailUrl(card.hero.cfVideoId)
         : (card.heroPhotoUrl as string);
-    const src = demoCoverFor(card.listing.id, realSrc) as string;
-    const isDemoStock = DEMO_MEDIA_ENABLED && src !== realSrc;
     return {
       id: card.listing.id,
       href:
@@ -84,7 +81,7 @@ async function RecommendedGrid({ communitySlug }: { communitySlug: string | null
       baths: card.listing.baths,
       sqft: card.listing.sqft,
       address: card.listing.address,
-      badge: isDemoStock ? { label: 'Stock', tone: 'dark' } : null,
+      badge: null,
     };
   });
 

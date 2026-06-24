@@ -28,7 +28,6 @@ import { GridCard, GridCardCaption } from '@/app/_components/GridCard';
 import { GridFrame } from '@/app/_components/GridFrame';
 import { ListingGrid, type ListingGridItem } from '@/app/_components/ListingGrid';
 import { thumbnailUrl } from '@/lib/cloudflare/stream';
-import { demoCoverFor } from '@/lib/demo-media';
 import { track } from '@/lib/events/track';
 import {
   COMMUNITY_VIDEO_CATEGORIES,
@@ -162,8 +161,7 @@ function VideosGrid({
     <GridFrame>
       {videos.map((v) => {
         const meta = v.category ? CATEGORY_META.get(v.category as CommunityVideoCategoryId) : null;
-        const coverUrl =
-          demoCoverFor(v.cf_video_id, thumbnailUrl(v.cf_video_id)) ?? thumbnailUrl(v.cf_video_id);
+        const coverUrl = thumbnailUrl(v.cf_video_id);
         return (
           <GridCard
             key={v.id}
@@ -208,7 +206,7 @@ function ListingsGrid({ listings }: { listings: BrowseCard[] }) {
         card.mediaKind === 'video'
           ? `/browse/feed?start=${encodeURIComponent(card.listing.id)}`
           : `/v/${card.agent.slug}/${card.listing.slug}`,
-      coverUrl: demoCoverFor(card.listing.id, realSrc) ?? null,
+      coverUrl: realSrc ?? null,
       price: card.listing.price,
       beds: card.listing.beds,
       baths: card.listing.baths,

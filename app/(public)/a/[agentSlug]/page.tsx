@@ -9,9 +9,8 @@
  * RLS / data load unchanged — see DESIGN.md for the token reference.
  */
 
-import { GridCard, GridCardBadgeDark } from '@/app/_components/GridCard';
+import { GridCard } from '@/app/_components/GridCard';
 import { thumbnailUrl } from '@/lib/cloudflare/stream';
-import { DEMO_MEDIA_ENABLED, demoCoverFor, demoHeadshotFor } from '@/lib/demo-media';
 import { createClient } from '@/lib/supabase/server';
 import type { Metadata } from 'next';
 import Link from 'next/link';
@@ -145,7 +144,7 @@ export default async function AgentProfilePage({
           <div className="flex flex-col gap-8 md:flex-row md:items-end md:justify-between">
             <div className="flex items-center gap-8 md:items-end">
               {(() => {
-                const headshot = demoHeadshotFor(agent.headshot_url);
+                const headshot = agent.headshot_url;
                 return headshot ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
@@ -259,8 +258,7 @@ function ListingCardView({
 }) {
   const realCover =
     listing.cover_url ?? (listing.hero_video_id ? thumbnailUrl(listing.hero_video_id) : null);
-  const cover = demoCoverFor(listing.id, realCover);
-  const isDemoStock = DEMO_MEDIA_ENABLED && cover !== realCover;
+  const cover = realCover;
   const specs = [
     listing.beds != null ? `${listing.beds} bd` : null,
     listing.baths != null ? `${listing.baths} ba` : null,
@@ -282,7 +280,6 @@ function ListingCardView({
       alt={listing.address}
       aspectClass="aspect-[4/5]"
       captionInsetClass="inset-x-5 bottom-5"
-      topRight={isDemoStock ? <GridCardBadgeDark>Stock</GridCardBadgeDark> : null}
       fallback={
         <div className="grid h-full w-full place-items-center text-muted text-xs">No cover</div>
       }

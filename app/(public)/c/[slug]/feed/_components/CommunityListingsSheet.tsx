@@ -18,7 +18,6 @@
 'use client';
 
 import { thumbnailUrl } from '@/lib/cloudflare/stream';
-import { demoCoverFor } from '@/lib/demo-media';
 import { useEffect } from 'react';
 import type { CommunityListingItem } from '../CommunityVideoFeed';
 
@@ -134,7 +133,6 @@ export function CommunityListingsSheet({
                   }
                 }
                 if (!poster && l.heroPhotoUrl) poster = l.heroPhotoUrl;
-                poster = demoCoverFor(l.id, poster);
 
                 return (
                   <li key={l.id}>

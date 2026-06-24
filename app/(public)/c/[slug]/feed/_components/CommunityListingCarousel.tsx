@@ -25,7 +25,6 @@
 'use client';
 
 import { hlsUrl, thumbnailUrl } from '@/lib/cloudflare/stream';
-import { demoCoverFor, demoVideoFor } from '@/lib/demo-media';
 import Hls from 'hls.js';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { CommunityListingItem } from '../CommunityVideoFeed';
@@ -197,12 +196,6 @@ function ListingSlide({
   const ref = useRef<HTMLVideoElement | null>(null);
   const hlsRef = useRef<Hls | null>(null);
 
-  // Demo override (NEXT_PUBLIC_DEMO_MEDIA). Listing-level video card inside
-  // the community feed: home pool (luxury tour clips), not nearby.
-  const demoSeed = listing.heroCfVideoId ?? listing.id;
-  const demoVideoUrl = demoVideoFor(demoSeed, 'home');
-  const isDemoVideo = demoVideoUrl !== null;
-
   const poster = useMemo(() => {
     let p: string | null = null;
     if (listing.heroCfVideoId) {
@@ -213,8 +206,8 @@ function ListingSlide({
       }
     }
     if (!p) p = listing.heroPhotoUrl ?? null;
-    return demoCoverFor(listing.id, p);
-  }, [listing.id, listing.heroCfVideoId, listing.heroPhotoUrl]);
+    return p;
+  }, [listing.heroCfVideoId, listing.heroPhotoUrl]);
 
   useEffect(() => {
     if (!shouldMount) return;
@@ -226,10 +219,6 @@ function ListingSlide({
     }
     v.removeAttribute('src');
     v.load();
-    if (isDemoVideo && demoVideoUrl) {
-      v.src = demoVideoUrl;
-      return;
-    }
     if (!listing.heroCfVideoId) return;
     let src: string;
     try {
@@ -251,7 +240,7 @@ function ListingSlide({
         hlsRef.current = null;
       }
     };
-  }, [shouldMount, listing.heroCfVideoId, isDemoVideo, demoVideoUrl]);
+  }, [shouldMount, listing.heroCfVideoId]);
 
   // Sound: chip tap is a user gesture, so unmuted autoplay should be
   // permitted. Try with sound first; fall back to muted if the browser
@@ -273,7 +262,7 @@ function ListingSlide({
     }
   }, [isActive]);
 
-  const hasVideo = !!listing.heroCfVideoId || isDemoVideo;
+  const hasVideo = !!listing.heroCfVideoId;
   const bbs: string[] = [];
   if (listing.beds != null) bbs.push(`${listing.beds} bd`);
   if (listing.baths != null) bbs.push(`${listing.baths} ba`);

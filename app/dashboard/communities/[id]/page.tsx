@@ -24,9 +24,7 @@
  * row with a Preview link + InstantStatusToggle, title/subtitle bottom-left.
  */
 
-import { thumbnailUrl } from '@/lib/cloudflare/stream';
 import { resolveCommunityCoverWithCfIds } from '@/lib/community/cover';
-import { demoCoverFor } from '@/lib/demo-media';
 import { createClient } from '@/lib/supabase/server';
 import { FileText, ImageIcon, LineChart, Megaphone } from 'lucide-react';
 import { redirect } from 'next/navigation';
@@ -230,10 +228,7 @@ export default async function CommunityEditorPage({
     cover_storage_path: community.cover_storage_path,
     fallback_video_cf_id: firstReadyVideo?.cf_video_id ?? null,
   });
-  void thumbnailUrl;
-  const heroCoverUrl = heroCover
-    ? (demoCoverFor(community.slug, heroCover.url) ?? heroCover.url)
-    : null;
+  const heroCoverUrl = heroCover ? heroCover.url : null;
 
   const subtitle = community.city ? `${community.city}, ${community.state}` : community.state;
 

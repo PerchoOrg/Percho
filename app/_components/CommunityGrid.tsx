@@ -1,5 +1,4 @@
 import type { CommunityListCard } from '@/lib/communities/list';
-import { demoCoverFor } from '@/lib/demo-media';
 /**
  * CommunityGrid — buyer-facing grid card for the communities surface.
  *
@@ -35,7 +34,7 @@ export function CommunityGrid({
   return (
     <GridFrame>
       {communities.map((c) => {
-        const coverUrl = demoCoverFor(c.id, c.cover?.url ?? null);
+        const coverUrl = c.cover?.url ?? null;
         const distanceMi = typeof c.nearestVideoMi === 'number' ? c.nearestVideoMi : null;
         return (
           <GridCard

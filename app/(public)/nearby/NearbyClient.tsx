@@ -4,7 +4,6 @@ import type { BrowseCard } from '@/app/(public)/browse/_components/BrowseFeed';
 import { GridPageShell } from '@/app/_components/GridPageShell';
 import { ListingGrid, type ListingGridItem } from '@/app/_components/ListingGrid';
 import { thumbnailUrl } from '@/lib/cloudflare/stream';
-import { demoCoverFor } from '@/lib/demo-media';
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 
@@ -245,7 +244,7 @@ export function NearbyClient() {
         card.mediaKind === 'video'
           ? `/browse/feed?start=${encodeURIComponent(card.listing.id)}`
           : `/v/${card.agent.slug}/${card.listing.slug}`,
-      coverUrl: demoCoverFor(card.listing.id, realSrc) ?? null,
+      coverUrl: realSrc ?? null,
       price: card.listing.price,
       beds: card.listing.beds,
       baths: card.listing.baths,

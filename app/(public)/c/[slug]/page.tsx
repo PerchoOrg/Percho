@@ -10,9 +10,7 @@
  * active-listings grid.
  */
 
-import { thumbnailUrl } from '@/lib/cloudflare/stream';
 import { resolveCommunityCoverWithCfIds } from '@/lib/community/cover';
-import { demoCoverFor } from '@/lib/demo-media';
 import { fetchBrowseCardsByCommunitySlug } from '@/lib/feed/browse-cards';
 import { createClient } from '@/lib/supabase/server';
 import { notFound } from 'next/navigation';
@@ -93,11 +91,8 @@ export default async function CommunityPage({
     cover_storage_path: community.cover_storage_path,
     fallback_video_cf_id: firstReadyVideo?.cf_video_id ?? null,
   });
-  void thumbnailUrl; // kept for transitive demoCoverFor needs in CommunityBody
 
-  const heroCoverUrl = heroCover
-    ? (demoCoverFor(community.slug, heroCover.url) ?? heroCover.url)
-    : null;
+  const heroCoverUrl = heroCover ? heroCover.url : null;
 
   return (
     <CommunityBody

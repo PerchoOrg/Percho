@@ -3,7 +3,6 @@ import { listSavedListingIds, saveListing, unsaveListing } from '@/app/_actions/
 import { getOrCreateDeviceId } from '@/lib/buyer/device-id';
 import { listLiked, toggleLike as toggleLikeAction } from '@/lib/buyer/likes';
 import { hlsUrl, thumbnailUrl } from '@/lib/cloudflare/stream';
-import { type DemoVideoPool, demoCoverFor, demoPhotosFor, demoVideoFor } from '@/lib/demo-media';
 import Hls from 'hls.js';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -219,10 +218,7 @@ function PhotoCard({
       : card.heroPhotoUrl
         ? [card.heroPhotoUrl]
         : [];
-  // Demo override: same kill-switch as covers + headshots + videos. Replaces
-  // the photo-only carousel with a curated luxury album so e.g. "888 Rhonda
-  // Place" doesn't show its real DB photos in the demo build.
-  const photos = demoPhotosFor(card.listing.id, realPhotos);
+  const photos = realPhotos;
   const total = photos.length;
   const idx = total > 0 ? cycleIdx % total : 0;
   const current = photos[idx];
@@ -386,43 +382,26 @@ function Card({
 
   const sel = useMemo(() => pickVideo(card, source, cycleIdx), [card, source, cycleIdx]);
 
-  // Demo media override (NEXT_PUBLIC_DEMO_MEDIA). When on, the swipe feed
-  // mounts a plain <video src=MP4> (curated luxury / nearby clip) instead
-  // of attaching HLS to the real Cloudflare Stream id. Production launch
-  // flips the flag to false and the real video shows through verbatim.
-  const demoPool: DemoVideoPool = source === 'nearby' ? 'nearby' : 'home';
-  const demoVideoUrl = demoVideoFor(sel.cfVideoId, demoPool, card.listing.id);
-  const isDemoVideo = demoVideoUrl !== null;
-
   let poster: string | null = null;
   try {
     poster = thumbnailUrl(sel.cfVideoId);
   } catch {
     poster = null;
   }
-  // Override the poster too so the loading/blurred-backdrop frame matches
-  // the demo clip instead of the real CF Stream thumbnail.
-  poster = demoCoverFor(sel.cfVideoId, poster);
 
-  // (Re)attach HLS when mount or selected video changes. In demo mode we
-  // skip HLS entirely and just set the <video> src to the curated MP4.
+  // (Re)attach HLS when mount or selected video changes.
   useEffect(() => {
     if (!shouldMount) return;
     const video = videoRef.current;
     if (!video) return;
 
-    // Tear down previous HLS attachment regardless of mode.
+    // Tear down previous HLS attachment.
     if (hlsRef.current) {
       hlsRef.current.destroy();
       hlsRef.current = null;
     }
     video.removeAttribute('src');
     video.load();
-
-    if (isDemoVideo && demoVideoUrl) {
-      video.src = demoVideoUrl;
-      return;
-    }
 
     let src: string;
     try {
@@ -462,7 +441,7 @@ function Card({
         hlsRef.current = null;
       }
     };
-  }, [shouldMount, sel.cfVideoId, isDemoVideo, demoVideoUrl]);
+  }, [shouldMount, sel.cfVideoId]);
 
   // Play/pause on active changes.
   // Try with current mute state first; if browser blocks autoplay-with-sound
