@@ -2,6 +2,28 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.57.0 — Faster Communities navigation (2026-06-24)
+
+**✨ Improvements**
+
+- Clicking **Communities** from the dashboard now feels instant. A skeleton
+  grid appears immediately on click instead of the page freezing while data
+  loads.
+- The communities grid itself loads faster — the underlying data fetches
+  now run in parallel waves instead of one after another, cutting the
+  server-side wait roughly in half.
+
+**🔧 Technical**
+
+- Added `loading.tsx` for `/dashboard/communities` so navigation paints a
+  skeleton in <100ms.
+- Reworked `fetchCommunityListCards` from 5 sequential Supabase round-trips
+  into 2 parallel waves.
+
+**Known limits.** Other surfaces (listings dashboard, public communities,
+browse) still use the old pattern — they'll be addressed in a follow-up if
+the change here is confirmed to feel right.
+
 ## v0.56.1 — Save button always enabled; dead upload-prefill code removed (2026-06-24)
 
 **UX fix.** The Save button on listing edit and community edit was disabled
