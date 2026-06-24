@@ -2,6 +2,12 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.55.2 — Auto-save now silent; Save button feedback only on click (2026-06-24)
+
+### 🛠 Behavior change
+- **Auto-save no longer flashes "Saving… / ✓ Saved" while you type.** It still runs in the background every 600ms after your last edit — your work is still being persisted continuously — but the inline status text only appears when you explicitly click the Save button. Applies to both the listing editor and the community editor. (qiaoxux: "auto save doesn't need to click the save button effect and show the saved hint, only users click the save button, then do that".)
+- **Save button enable rule unchanged in spirit:** disabled when there are no unsaved edits, enabled the moment you change anything, disabled again once a save (auto or explicit) finishes successfully.
+
 ## v0.55.1 — Listing Save button moved to bottom (2026-06-24)
 
 ### ✨ Improvements
