@@ -42,7 +42,6 @@ import { CommunityMarketingPanel } from './CommunityMarketingPanel';
 import { CommunityMediaPanel } from './CommunityMediaPanel';
 import type { CommunityPhotoRow } from './CommunityPhotoPanel';
 import type { ManageVideoRow } from './CommunityVideoManageList';
-import { PrefillUploadBanner } from './PrefillUploadBanner';
 import { signCommunityPhotoUrls } from './photo-actions';
 
 interface CommunityRow {
@@ -288,7 +287,6 @@ export default async function CommunityEditorPage({
         panels={{
           details: (
             <div className="space-y-6">
-              <PrefillUploadBanner communityId={community.id} />
               <section className="rounded-2xl border border-line bg-surface p-4 sm:p-6">
                 {!canEditMetadata && (
                   <p className="mb-4 rounded border border-line bg-bg px-3 py-2 text-xs text-ink2">

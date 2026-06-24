@@ -34,7 +34,6 @@ import { useRouter } from 'next/navigation';
 import {
   forwardRef,
   useCallback,
-  useEffect,
   useImperativeHandle,
   useRef,
   useState,
@@ -60,40 +59,26 @@ interface Props {
   initialPhotos: CommunityPhotoRow[];
   category: CommunityVideoCategoryId;
   /**
-   * Phase 45.16 (2026-06-20): files queued by UploadFAB and handed off via
-   * the upload-prefill-store. When present (and non-empty) on first mount,
-   * the panel auto-uploads them under the current category — same path as
-   * if the agent had picked them via the "Add photos" button. Subsequent
-   * renders ignore the prop (consumePrefill makes it a one-shot anyway).
-   */
-  prefillFiles?: File[];
-  /**
-   * Phase 50.x: when true, hide the internal "Add photos as ..." button and
-   * its file input. Used when CommunityMediaPanel renders a single unified
-   * upload button covering both photos and videos and pushes images in via
-   * the imperative handle below. Mirrors `PhotoPanel`'s `hideUploadButton`.
+   * When true, hide the internal "Add photos as ..." button and its file
+   * input. Used when CommunityMediaPanel renders a single unified upload
+   * button covering both photos and videos and pushes images in via the
+   * imperative handle below. Mirrors `PhotoPanel`'s `hideUploadButton`.
    */
   hideUploadButton?: boolean;
   /**
-   * Phase 50.9 (2026-06-23): when present, drives the cover indicator (⭐
-   * badge) on the matching photo card and lets agents pick a different
-   * photo as cover. Null means no photo is currently the cover (could be
-   * a video, or no cover at all). Owner-only — non-owners never see the
-   * Set-as-cover button regardless of this prop.
+   * When present, drives the cover indicator (⭐ badge) on the matching
+   * photo card and lets agents pick a different photo as cover. Null
+   * means no photo is currently the cover (could be a video, or no cover
+   * at all). Owner-only — non-owners never see the Set-as-cover button
+   * regardless of this prop.
    */
   coverStoragePath?: string | null;
   /**
-   * Phase 50.9: gate the per-photo "Set as cover" button. The page already
-   * checks `canEditMetadata` server-side; this prop lets the parent thread
-   * the same flag through without re-deriving it.
+   * Gate the per-photo "Set as cover" button. The page already checks
+   * `canEditMetadata` server-side; this prop lets the parent thread the
+   * same flag through without re-deriving it.
    */
   canSetCover?: boolean;
-  /**
-   * Phase 50.17 (2026-06-23): notify the parent each time a photo finishes
-   * (or fails) so it can update the prefill upload banner. Called once per
-   * file, with `ok` reflecting whether the upload + DB record succeeded.
-   */
-  onUploadResolved?: (ok: boolean) => void;
 }
 
 /**
@@ -121,11 +106,9 @@ export const CommunityPhotoPanel = forwardRef<CommunityPhotoPanelHandle, Props>(
       communityId,
       initialPhotos,
       category,
-      prefillFiles,
       hideUploadButton,
       coverStoragePath,
       canSetCover,
-      onUploadResolved,
     },
     ref,
   ) {
@@ -135,20 +118,12 @@ export const CommunityPhotoPanel = forwardRef<CommunityPhotoPanelHandle, Props>(
     const [globalError, setGlobalError] = useState<string | null>(null);
     const [_, startTransition] = useTransition();
     const inputRef = useRef<HTMLInputElement | null>(null);
-    // Phase 45.16: latch category at mount-time so the auto-upload effect can
-    // run with the value the FAB intended (the user may switch categories
-    // between mount and any subsequent prop change — but we already kicked
-    // off the prefill upload by then).
+    // Latch category at upload time via a ref so the upload pipeline doesn't
+    // reset on every prop change.
     const categoryRef = useRef(category);
     categoryRef.current = category;
 
     const meta = getCategoryMeta(category);
-
-    // Phase 50.17: latch onUploadResolved through a ref so handleFiles's
-    // useCallback identity stays stable. Each photo end (success or error)
-    // calls this once.
-    const onResolvedRef = useRef(onUploadResolved);
-    onResolvedRef.current = onUploadResolved;
 
     const handleFiles = useCallback(
       async (files: Iterable<File>, useCategory?: CommunityVideoCategoryId) => {
@@ -162,12 +137,10 @@ export const CommunityPhotoPanel = forwardRef<CommunityPhotoPanelHandle, Props>(
 
           if (!ALLOWED_MIMES.has(file.type)) {
             setGlobalError(`"${file.name}" — only JPEG, PNG, or WebP allowed`);
-            onResolvedRef.current?.(false);
             continue;
           }
           if (file.size > MAX_FILE_BYTES) {
             setGlobalError(`"${file.name}" — file too large (max 10 MB)`);
-            onResolvedRef.current?.(false);
             continue;
           }
 
@@ -184,7 +157,6 @@ export const CommunityPhotoPanel = forwardRef<CommunityPhotoPanelHandle, Props>(
             setPending((prev) =>
               prev.map((p) => (p.tempId === tempId ? { ...p, error: uploadErr.message } : p)),
             );
-            onResolvedRef.current?.(false);
             continue;
           }
 
@@ -209,7 +181,6 @@ export const CommunityPhotoPanel = forwardRef<CommunityPhotoPanelHandle, Props>(
             setPending((prev) =>
               prev.map((p) => (p.tempId === tempId ? { ...p, error: result.error } : p)),
             );
-            onResolvedRef.current?.(false);
             continue;
           }
 
@@ -230,15 +201,14 @@ export const CommunityPhotoPanel = forwardRef<CommunityPhotoPanelHandle, Props>(
               sort_order: result.sortOrder,
             },
           ]);
-          onResolvedRef.current?.(true);
         }
       },
       [communityId],
     );
 
-    // Phase 50.x: expose addFiles to the parent media shell so the unified
-    // upload button can route image files through this panel's existing
-    // handleFiles pipeline (validation + Supabase upload + recordCommunityPhoto).
+    // Expose addFiles to the parent media shell so the unified upload button
+    // can route image files through this panel's existing handleFiles
+    // pipeline (validation + Supabase upload + recordCommunityPhoto).
     useImperativeHandle(
       ref,
       () => ({
@@ -248,21 +218,6 @@ export const CommunityPhotoPanel = forwardRef<CommunityPhotoPanelHandle, Props>(
       }),
       [handleFiles],
     );
-
-    // Phase 45.16: auto-upload prefilled files once on mount. The bridge
-    // consumes the upload-prefill-store key (one-shot) so re-renders won't
-    // double-upload, but we still gate on a ref to be defensive against
-    // StrictMode double-invoke in dev.
-    const didConsumePrefill = useRef(false);
-    useEffect(() => {
-      if (didConsumePrefill.current) return;
-      if (!prefillFiles || prefillFiles.length === 0) return;
-      didConsumePrefill.current = true;
-      // Only photos belong here — videos go through CommunityVideoPanel.
-      const photos = prefillFiles.filter((f) => f.type.startsWith('image/'));
-      if (photos.length === 0) return;
-      void handleFiles(photos);
-    }, [prefillFiles, handleFiles]);
 
     const handleDelete = useCallback(
       (photoId: string) => {

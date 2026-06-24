@@ -2,6 +2,29 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.56.1 — Save button always enabled; dead upload-prefill code removed (2026-06-24)
+
+**UX fix.** The Save button on listing edit and community edit was disabled
+whenever the form was "clean" (no unsaved changes), which read as broken
+to agents. Save now stays enabled at all times — clicking it always flushes
+the current state to the server, even if there's nothing pending. Auto-save
+behaviour is unchanged.
+
+**Cleanup.** With the FAB → ?prefill=… upload handoff gone (Phase 52 removed
+that entry path), the supporting plumbing was dead weight. Pruned in this
+release:
+
+- `app/_components/upload-prefill-store.ts` (whole file)
+- `app/_components/upload-status-store.ts` (whole file)
+- `app/dashboard/communities/[id]/PrefillUploadBanner.tsx` (whole file)
+- The `prefillFiles` / `onUploadResolved` props on `PhotoPanel` and
+  `CommunityPhotoPanel`, plus the `prefillId` option on `createCommunity`
+- The prefill consumer block in `CommunityMediaPanel` (the `?prefill=…`
+  query-string + `useSearchParams` glue)
+
+No user-visible change beyond the Save-button behaviour above; the upload
+button on each Media tab is the only remaining entry.
+
 ## v0.56.0 — One-tap listing/community create; address moves into the edit page (2026-06-24)
 
 **Faster create flow for selling agents.** The FAB now stubs a listing or

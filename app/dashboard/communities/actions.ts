@@ -108,7 +108,6 @@ export async function createStubCommunity(): Promise<ActionResult<{ id: string }
 
 export async function createCommunity(
   raw: unknown,
-  options?: { prefillId?: string | null },
 ): Promise<ActionResult<{ id: string }>> {
   const parsed = CreateCommunityInput.safeParse(raw);
   if (!parsed.success) {
@@ -159,15 +158,6 @@ export async function createCommunity(
 
     if (!error && created) {
       revalidatePath('/dashboard/communities');
-      const prefillId = options?.prefillId;
-      if (prefillId) {
-        // Phase 50.12 (2026-06-23): land directly on the hub Media tab with
-        // the prefill query param. CommunityMediaPanel consumes it on mount
-        // and feeds the queued File[] into its single Click-to-upload path.
-        redirect(
-          `/dashboard/communities/${created.id}?tab=media&prefill=${encodeURIComponent(prefillId)}`,
-        );
-      }
       redirect(`/dashboard/communities/${created.id}`);
     }
     lastError = error;

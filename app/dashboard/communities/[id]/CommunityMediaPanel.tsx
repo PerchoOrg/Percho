@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * CommunityMediaPanel — Phase 50.x (2026-06-23).
+ * CommunityMediaPanel — community hub Media tab.
  *
  * Unified Media tab, mirrors the listing edit hub's MediaPanel: one Content
  * card with a single "Click to upload" button (image/* + video/*) and stacked
@@ -9,11 +9,8 @@
  * a shared <CategoryPicker> at the top that tags BOTH the uploaded video and
  * the uploaded photos with the same community category.
  *
- * Phase 50.15 (2026-06-23): this is now the only upload surface for
- * communities — the legacy /upload, /photos, /videos subroutes are
- * redirect-only stubs. The FAB → /communities/new → ?tab=media&prefill=…
- * handoff lands here directly and a useEffect below consumes the queued
- * File[] (see prefill consumer block).
+ * This is the only upload surface for communities — the legacy /upload,
+ * /photos, /videos subroutes are redirect-only stubs.
  *
  * Pipeline:
  *   image/* → CommunityPhotoPanel.addFiles() (existing Supabase batch path)
@@ -22,12 +19,6 @@
  *             new row shows up in CommunityVideoManageList below.
  */
 
-import { consumePrefill } from '@/app/_components/upload-prefill-store';
-import {
-  reportUploadDone,
-  reportUploadFailed,
-  setUploadTotal,
-} from '@/app/_components/upload-status-store';
 import {
   type CommunityKind,
   type UploadedVideo,
@@ -39,7 +30,7 @@ import {
   legacyKindForCategory,
 } from '@/lib/zod/community-video-categories';
 import { Upload } from 'lucide-react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { CategoryPicker, CategorySpecCard } from './CategoryPicker';
 import {
@@ -78,7 +69,6 @@ export function CommunityMediaPanel({
   canSetCover,
 }: Props) {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const inputRef = useRef<HTMLInputElement | null>(null);
   const photoRef = useRef<CommunityPhotoPanelHandle | null>(null);
   const [category, setCategory] = useState<CommunityVideoCategoryId>('walk_the_block');
@@ -105,68 +95,9 @@ export function CommunityMediaPanel({
     );
   }, []);
 
-  // Phase 50.12 (2026-06-23) / 50.16 (2026-06-23): consume `?prefill=<id>`
-  // synchronously during the initial render — same pattern as the listing
-  // MediaPanel (Phase 47.x). The previous useEffect-based approach was racy:
-  // by the time the effect ran, ref-mounted children (CommunityPhotoPanel)
-  // had registered, but the video pending-state initial paint was visibly
-  // empty before the effect kicked in. Lazy useState init runs on mount
-  // and the queued File[] is materialized before the first paint.
-  //
-  // Photos still need photoRef to be ready, so we capture them here and let
-  // a useEffect below forward to addFiles() once the ref is mounted.
-  const initialPrefill = useRef<File[] | null | undefined>(undefined);
-  if (initialPrefill.current === undefined) {
-    const id = searchParams?.get('prefill') ?? null;
-    initialPrefill.current = id ? consumePrefill(id) : null;
-    // Strip the param so a hard refresh doesn't carry a now-empty key.
-    if (id && typeof window !== 'undefined') {
-      const url = new URL(window.location.href);
-      url.searchParams.delete('prefill');
-      window.history.replaceState({}, '', url.toString());
-    }
-  }
-  const prefillFiles = initialPrefill.current;
-  // Phase 50.17 (2026-06-23): make sure the upload-status banner knows the
-  // total even on a hard refresh of the URL with prefill set (in which case
-  // UploadSheet's setUploadTotal call from a prior SPA session is gone).
-  const totalSetRef = useRef(false);
-  if (!totalSetRef.current && prefillFiles && prefillFiles.length > 0) {
-    totalSetRef.current = true;
-    setUploadTotal(communityId, prefillFiles.length);
-  }
-  const prefillVideos = useRef(false);
-  if (!prefillVideos.current && prefillFiles && prefillFiles.length > 0) {
-    prefillVideos.current = true;
-    const vids = prefillFiles.filter((f) => f.type.startsWith('video/'));
-    if (vids.length > 0) {
-      // Defer to after first paint so VideoUploader children mount cleanly.
-      setTimeout(() => {
-        setPendingVideos((prev) => [
-          ...prev,
-          ...vids.map((file) => ({
-            key: `prefill-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-            file,
-          })),
-        ]);
-      }, 0);
-    }
-  }
-  // Photos: forward to CommunityPhotoPanel once its handle ref is mounted.
-  const prefillImagesPushed = useRef(false);
-  useEffect(() => {
-    if (prefillImagesPushed.current) return;
-    if (!prefillFiles || prefillFiles.length === 0) return;
-    const imgs = prefillFiles.filter((f) => f.type.startsWith('image/'));
-    if (imgs.length === 0) {
-      prefillImagesPushed.current = true;
-      return;
-    }
-    if (photoRef.current) {
-      prefillImagesPushed.current = true;
-      photoRef.current.addFiles(imgs);
-    }
-  }, [prefillFiles]);
+  // Phase 50.12 (2026-06-23) / 50.16 (2026-06-23) — prefill consumer removed
+  // (Phase 52+: no more FAB → /communities/new → ?prefill flow). The category
+  // dropdown + per-file video uploader path is the only entry now.
   const kind: CommunityKind = legacyKindForCategory(category);
   const videoTarget = {
     scope: 'community' as const,
@@ -209,7 +140,6 @@ export function CommunityMediaPanel({
 
   const handleVideoUploaded = useCallback(
     (key: string, _v: UploadedVideo) => {
-      reportUploadDone(communityId);
       // Drop the uploader after a brief 'done' display, then re-fetch the
       // manage list so the row shows up below with edit / visibility / delete
       // controls. router.refresh() re-runs the server component and rehydrates
@@ -219,15 +149,7 @@ export function CommunityMediaPanel({
         router.refresh();
       }, 4000);
     },
-    [router, communityId],
-  );
-
-  const handlePhotoResolved = useCallback(
-    (ok: boolean) => {
-      if (ok) reportUploadDone(communityId);
-      else reportUploadFailed(communityId);
-    },
-    [communityId],
+    [router],
   );
 
   return (
@@ -322,7 +244,6 @@ export function CommunityMediaPanel({
             hideUploadButton
             coverStoragePath={coverStoragePath}
             canSetCover={canSetCover}
-            onUploadResolved={handlePhotoResolved}
           />
         </div>
       </div>

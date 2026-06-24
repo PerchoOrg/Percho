@@ -36,7 +36,6 @@ import { Star, Trash2, Upload } from 'lucide-react';
 import {
   forwardRef,
   useCallback,
-  useEffect,
   useImperativeHandle,
   useRef,
   useState,
@@ -57,18 +56,9 @@ interface Props {
   initialPhotos: ListingPhotoRow[];
   initialCoverPhotoId: string | null;
   /**
-   * Phase 43.6: optional File[] piped in from the upload-prefill-store
-   * (when the agent landed here via the BottomNav UploadFAB → /new flow).
-   * Filtered to images only — videos in the prefill are dropped with a
-   * console.warn (see TODO below). Processed once on mount via
-   * handleFilesArray; subsequent prop changes are ignored.
-   */
-  prefillFiles?: File[];
-  /**
-   * Phase 47.x: when true, hide the internal "Add photos" button and file
-   * input. Used when MediaPanel renders a single unified upload button that
-   * covers both photos and videos, and pushes images in via the imperative
-   * handle below.
+   * When true, hide the internal "Add photos" button and file input. Used
+   * when MediaPanel renders a single unified upload button covering both
+   * photos and videos and pushes images in via the imperative handle below.
    */
   hideUploadButton?: boolean;
 }
@@ -94,7 +84,7 @@ interface PendingItem {
 }
 
 export const PhotoPanel = forwardRef<PhotoPanelHandle, Props>(function PhotoPanel(
-  { listingId, initialPhotos, initialCoverPhotoId, prefillFiles, hideUploadButton },
+  { listingId, initialPhotos, initialCoverPhotoId, hideUploadButton },
   ref,
 ) {
   const [photos, setPhotos] = useState<ListingPhotoRow[]>(initialPhotos);
@@ -209,28 +199,6 @@ export const PhotoPanel = forwardRef<PhotoPanelHandle, Props>(function PhotoPane
     },
     [listingId, photos, coverPhotoId],
   );
-
-  // Phase 43.6: consume prefilled File[] from the upload-prefill-store flow.
-  // Filter to images only — videos in the prefill are dropped here. The
-  // listing video uploader is tus + Cloudflare Stream and threading a File
-  // into it is non-trivial; revisit when video prefill becomes a real ask.
-  // TODO(phase43+): wire video prefill into VideoPanel.
-  const prefillProcessedRef = useRef(false);
-  useEffect(() => {
-    if (prefillProcessedRef.current) return;
-    if (!prefillFiles || prefillFiles.length === 0) return;
-    prefillProcessedRef.current = true;
-    const images = prefillFiles.filter((f) => f.type.startsWith('image/'));
-    const videos = prefillFiles.length - images.length;
-    if (videos > 0) {
-      console.warn(
-        `[PhotoPanel] Dropped ${videos} video file(s) from prefill — listing video upload via prefill is not yet supported.`,
-      );
-    }
-    if (images.length > 0) {
-      void handleFiles(images);
-    }
-  }, [prefillFiles, handleFiles]);
 
   const handleSetCover = useCallback(
     (photoId: string | null) => {

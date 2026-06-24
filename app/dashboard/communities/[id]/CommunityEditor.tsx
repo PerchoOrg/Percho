@@ -134,12 +134,11 @@ export function CommunityEditor({
   const [formError, setFormError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  // `isDirty` is now driven by edit/save state, not by comparing to the
-  // `community` prop. After a silent auto-save we do NOT router.refresh()
-  // (avoids mid-edit flicker), so the prop stays stale and a prop-derived
-  // diff would be wrong. Set true on any field edit; cleared on save success
-  // (auto or explicit). Mirrors EditListingForm.
-  const [isDirty, setIsDirty] = useState(false);
+  // The Save button stays enabled at all times (owner ask 2026-06-24: a
+  // disabled Save button feels broken — let the agent re-trigger a flush
+  // whenever they want, even if nothing has changed). We only disable
+  // while a save is in flight. dirtyRef remains for the flush hook /
+  // auto-save tick, which DO want to know whether work is queued.
 
   function clearFieldError(field: string) {
     setFieldErrors((prev) => {
@@ -211,7 +210,6 @@ export function CommunityEditor({
       const result = await updateCommunity(community.id, buildPayload());
       if (result.ok) {
         dirtyRef.current = false;
-        setIsDirty(false);
         if (!silent) {
           setSaveState('saved');
           setTimeout(() => setSaveState((s) => (s === 'saved' ? 'idle' : s)), 1500);
@@ -260,7 +258,6 @@ export function CommunityEditor({
     }
     if (!canEditMetadata) return;
     dirtyRef.current = true;
-    setIsDirty(true);
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
       debounceRef.current = null;
@@ -588,7 +585,7 @@ export function CommunityEditor({
         <div className="flex items-center gap-3 border-line border-t pt-4">
           <button
             type="submit"
-            disabled={isPending || saveState === 'saving' || !isDirty}
+            disabled={isPending || saveState === 'saving'}
             className="rounded bg-ink px-4 py-2 text-sm font-medium text-cream transition hover:opacity-90 disabled:opacity-50"
           >
             {saveState === 'saving' ? 'Saving…' : 'Save'}

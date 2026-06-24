@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * MediaPanel — Phase 47.x (2026-06-21).
+ * MediaPanel — listing edit Media tab.
  *
  * One unified "Click to upload" surface for both photos and videos. From the
  * agent's perspective, the listing's Media tab now has a single Content card
@@ -11,36 +11,18 @@
  * Why a wrapper instead of merging Video/PhotoPanel: each panel still owns
  * its own backend pipeline (Cloudflare Stream tus for video, Supabase
  * Storage for photo), thumbnails, reorder, cover toggle, and status poll.
- * Forking those in a brand-new component would double the surface area we
- * have to maintain. Instead this component keeps both panels intact and
- * forwards files into them by MIME type:
+ * Forking those would double the surface area we have to maintain. Instead
+ * this component keeps both panels intact and forwards files into them by
+ * MIME type:
  *
- *   image/* → PhotoPanel.addFiles() (existing handleFiles → Supabase upload)
- *   video/* → spawn one <VideoUploader> instance per file (existing
- *             pick→title-confirm→tus pipeline, just driven by `initialFile`).
- *             VideoPanel.pushUploaded() registers the row optimistically
- *             once the upload finishes so it appears in the grid.
- *
- * What changes for the agent:
- *   - Two cards collapse to one Content card with two stacked sub-sections
- *     ("Videos (N)" / "Photos (N)").
- *   - The "Add photos" + "Click to select a video" buttons are replaced by
- *     one "Click to upload" button accepting `image/*,video/*` `multiple`.
- *   - Mixing photos and videos in a single pick is supported — they fan
- *     out by MIME after selection.
- *
- * What does NOT change:
- *   - Photo upload pipeline (Supabase batch, JPEG/PNG/WebP, 10 MB).
- *   - Video upload pipeline (Cloudflare Stream tus, 2 GB). The per-video
- *     "edit title before start" step is preserved — VideoUploader just
- *     gets prefilled with the file via `initialFile`.
- *   - Reorder, cover-photo selection, status polling, prefill-store.
+ *   image/* → PhotoPanel.addFiles() (Supabase upload pipeline)
+ *   video/* → spawn one <VideoUploader> per file (tus pipeline driven by
+ *             `initialFile`); VideoPanel.pushUploaded() registers the row
+ *             optimistically once the upload finishes.
  */
 
 import { Upload } from 'lucide-react';
 import { useCallback, useRef, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
-import { consumePrefill } from '@/app/_components/upload-prefill-store';
 import { type UploadedVideo, VideoUploader } from '@/components/dashboard/VideoUploader';
 import { type ListingPhotoRow, PhotoPanel, type PhotoPanelHandle } from './PhotoPanel';
 import { type ListingVideoRow, VideoPanel, type VideoPanelHandle } from './VideoPanel';
@@ -72,37 +54,6 @@ export function MediaPanel({
   const videoRef = useRef<VideoPanelHandle | null>(null);
   const [pendingVideos, setPendingVideos] = useState<PendingVideoUpload[]>([]);
   const [unsupportedNotice, setUnsupportedNotice] = useState<string | null>(null);
-
-  // Phase 43.6 prefill: the FAB → /new flow drops File[] into the
-  // upload-prefill-store and redirects with `?prefill=<id>`. We consume it
-  // here (instead of in PhotoPanelPrefillBridge) so videos in the prefill
-  // can also fan out — image/* still go to PhotoPanel, video/* spawn
-  // VideoUploader instances. Lazy-init keeps StrictMode double-mount safe.
-  const searchParams = useSearchParams();
-  const [prefillFiles] = useState<File[] | null>(() => {
-    const id = searchParams?.get('prefill');
-    if (!id) return null;
-    return consumePrefill(id);
-  });
-  const prefillImages = prefillFiles?.filter((f) => f.type.startsWith('image/')) ?? null;
-  const prefillVideosRef = useRef(false);
-  if (!prefillVideosRef.current && prefillFiles) {
-    prefillVideosRef.current = true;
-    const videos = prefillFiles.filter((f) => f.type.startsWith('video/'));
-    if (videos.length > 0) {
-      // Defer to after first paint so the panels mount before we register
-      // pending uploads against them.
-      setTimeout(() => {
-        setPendingVideos((prev) => [
-          ...prev,
-          ...videos.map((file) => ({
-            key: `prefill-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-            file,
-          })),
-        ]);
-      }, 0);
-    }
-  }
 
   const handlePicked = useCallback((files: FileList | File[]) => {
     setUnsupportedNotice(null);
@@ -183,7 +134,7 @@ export function MediaPanel({
         ) : null}
       </div>
 
-      {/* Per-file video uploaders. Each instance owns its own pick→title→
+      {/* Per-file video uploaders. Each instance owns its own
           progress flow; we just feed it `initialFile` so the agent skips
           the picker step (they already picked above) but still confirms
           the title. */}
@@ -220,7 +171,6 @@ export function MediaPanel({
             listingId={listingId}
             initialPhotos={initialPhotos}
             initialCoverPhotoId={initialCoverPhotoId}
-            prefillFiles={prefillImages ?? undefined}
             hideUploadButton
           />
         </div>

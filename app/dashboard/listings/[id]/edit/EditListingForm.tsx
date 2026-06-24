@@ -17,8 +17,13 @@
  * the "✓ Saved" flash react ONLY to explicit Save clicks. Owner ask
  * 2026-06-24: "auto save doesn't need to click the save button effect and
  * show the saved hint, only users click the save button, then do that".
- * The button enable is driven by a separate `isDirty` state, set when the
- * user edits a field and cleared on any successful save (auto or explicit).
+ *
+ * Phase 52 follow-up (2026-06-24): the Save button is always enabled (owner
+ * ask: "let save button always be available"). Disabling it whenever the
+ * form was clean made the button feel broken in the common case where
+ * auto-save had already flushed. We only block clicks while a save is in
+ * flight; otherwise pressing Save is a no-op flush that the user can hit
+ * any time.
  *
  * UI conventions otherwise unchanged from phase 8/listing-form-ux:
  * Required/Optional badges, dropdowns for beds/baths/style with escape
@@ -167,12 +172,11 @@ export function EditListingForm({ listingId, initial, communities, listingContex
   const [description, setDescription] = useState(initial.description.join('\n\n'));
   const [communityId, setCommunityId] = useState<string>(initial.community_id ?? '');
 
-  // `saveState` only reflects EXPLICIT Save-button clicks. Silent auto-save
-  // does not flip it (owner ask 2026-06-24). `isDirty` is the separate
-  // tri-state we need for the button's disabled prop, since saveState='idle'
-  // can no longer be relied on as "nothing to save".
+  // `saveState` reflects EXPLICIT Save-button clicks only — silent
+  // auto-save never touches it (owner ask 2026-06-24). The Save button
+  // stays enabled at all times so the agent can re-trigger a flush
+  // whenever they want; we only disable while a save is in flight.
   const [saveState, setSaveState] = useState<SaveState>('idle');
-  const [isDirty, setIsDirty] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const [genState, setGenState] = useState<GenState>('idle');
@@ -234,7 +238,6 @@ export function EditListingForm({ listingId, initial, communities, listingContex
       const result = await updateListing(listingId, buildPayload());
       if (result.ok) {
         dirtyRef.current = false;
-        setIsDirty(false);
         if (!silent) {
           setSaveState('saved');
           // brief "Saved" flash, then back to idle
@@ -304,7 +307,6 @@ export function EditListingForm({ listingId, initial, communities, listingContex
       return;
     }
     dirtyRef.current = true;
-    setIsDirty(true);
     setErrorMsg(null);
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
@@ -708,7 +710,7 @@ export function EditListingForm({ listingId, initial, communities, listingContex
           onClick={() => {
             void saveNow();
           }}
-          disabled={!isDirty || saveState === 'saving'}
+          disabled={saveState === 'saving'}
           className="rounded bg-ink px-4 py-2 text-sm font-medium text-cream transition hover:opacity-90 disabled:opacity-50"
         >
           {saveState === 'saving' ? 'Saving…' : 'Save'}

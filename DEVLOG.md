@@ -2,6 +2,60 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-06-24 — Phase 52.1: Save button always-on + delete dead upload-prefill plumbing
+
+**Trigger.** Owner: "两个 detail 页面自动保存 save button 不可用 这样用户体验
+不好 让 save button 永远可用" + "用不到的都删掉 随时做重构增加代码可读性
+记住这个."
+
+**Bug.** Both edit pages disabled the explicit Save button whenever the form
+was "clean" (`!isDirty`). To agents this looked broken: auto-save had
+already flushed, the button was dimmed, and there was no obvious way to
+re-confirm. Fix: drop the dirty check from the disabled prop entirely.
+Save is now always enabled (except mid-saving) — clicking it always calls
+`runSave({ silent: false })`, which is idempotent on a clean form. The
+`isDirty` state itself is gone from `EditListingForm` (and the equivalent
+in `CommunityEditor`); `dirtyRef` stays because the auto-save flush still
+needs it.
+
+**Cleanup pass.** Phase 52 left a pile of dead prefill / upload-status
+plumbing — code that the FAB → `/listings/new`?prefill=… handoff used to
+need before Phase 52 collapsed everything to stub-then-redirect. Owner
+codified the workflow rule: "用不到的都删掉,随时做重构增加可读性,不单开
+cleanup phase." So this batch:
+
+- **Deleted files**:
+  - `app/_components/upload-prefill-store.ts`
+  - `app/_components/upload-status-store.ts`
+  - `app/dashboard/communities/[id]/PrefillUploadBanner.tsx`
+- **Pruned props / signatures**:
+  - `PhotoPanel` (listings) — removed `prefillFiles?` prop + the
+    `consumePrefill` useEffect that auto-uploaded queued photos.
+  - `CommunityPhotoPanel` — removed `prefillFiles?` and
+    `onUploadResolved?` props plus the `onResolvedRef` plumbing that
+    routed each per-file outcome into the (now-deleted) upload status
+    banner.
+  - `CommunityMediaPanel` — removed the `?prefill=<id>` consumer block
+    (`useSearchParams` + `consumePrefill` + `setUploadTotal` /
+    `reportUploadDone` / `reportUploadFailed`) and the
+    `handlePhotoResolved` callback that fed it.
+  - `createCommunity` (server action) — removed the `options.prefillId`
+    argument; nothing left in the codebase passes it.
+- **Imports**: stripped `useEffect` from `PhotoPanel` and
+  `CommunityPhotoPanel` (no longer used), `useSearchParams` from
+  `CommunityMediaPanel`, and the `PrefillUploadBanner` import in
+  `app/dashboard/communities/[id]/page.tsx`.
+
+`tsc --noEmit` ✅, `npm run build` ✅. No new routes or props surfaces. The
+only behavioural change is the always-on Save button.
+
+**Lesson.** When the entry path that fed a piece of plumbing gets removed,
+delete the plumbing in the same pass — leaving it dormant ("we'll do a
+cleanup phase") just makes future readers wonder if it's still load-bearing.
+Skill `subagent-driven-development.md` already captures the "delete dead
+code immediately" stance; reinforced here for prefill-style multi-component
+plumbing where the dead surface spans 4 files.
+
 ## 2026-06-24 — Phase 52: stub-first listing/community create flow
 
 **Trigger.** Owner ask: "重新设计上传视频/照片 + 新建 listing/community 的交互,
