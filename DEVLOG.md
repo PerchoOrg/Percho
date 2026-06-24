@@ -2,6 +2,65 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-06-24 — Phase 53: Community nav perceived-perf (Phase A — skeleton + parallel queries)
+
+**Trigger.** Owner: "Let's improve the performance/responsiveness, all button
+click take seconds instead of ms to load … click community for the first time
+it loads super slow." Confirmed prod, not dev. Scoped to Phase A: minimal,
+high-ROI changes on `/dashboard/communities` first to validate the pattern
+before fanning out to other surfaces.
+
+**Root cause.** The "button" wasn't slow — Next.js App Router waits for the
+server component to finish rendering before swapping the view, so the click
+freezes the UI for the full server time. Two compounding issues:
+
+1. `fetchCommunityListCards` issued **5 sequential Supabase round-trips**
+   (`auth.getUser` → communities → memberships → videos → listings).
+   At ~100ms each that's 500–800ms of pure network serialization, all
+   blocking the navigation.
+2. `app/dashboard/communities/` had **no `loading.tsx`**. Once the user is
+   already inside `/dashboard`, the parent `app/dashboard/loading.tsx`
+   doesn't re-trigger for a sibling segment, so the user sees zero feedback
+   for the entire server time — that's the "frozen button" feeling.
+
+**Fix (Phase A).**
+
+- Added `app/dashboard/communities/loading.tsx` — same skeleton metrics as
+  the public `/communities/loading.tsx` so the layout doesn't shift when the
+  real grid renders. Click-to-skeleton is now <100ms; perceived freeze gone.
+- Rewrote `lib/communities/list.ts` into **two parallel waves**:
+  - Wave 1 (no inter-dep): `Promise.all([communities, memberships])`
+  - Wave 2 (uses Wave-1 ids): `Promise.all([videos, listings])`
+  - Net: 5 sequential trips → 2 wave-max trips. Expected server time
+    drop from ~500–800ms to ~200–300ms.
+
+**Tradeoffs surfaced to owner before coding.**
+
+- Skeleton is observational only — TTI doesn't drop, only TTFP feels
+  instant. Acceptable because the freeze was the actual UX complaint.
+- `Promise.all` short-circuits on any rejection. Kept that behaviour
+  rather than `allSettled`-with-defaults — if memberships fail we'd
+  rather show an error boundary than silently render a grid with all
+  videoCount=0. Reassess if Supabase reliability becomes an issue.
+- `Promise.all` opens multiple Supabase connections concurrently per
+  request. At current traffic this is irrelevant; flag for revisit if we
+  hit pool limits.
+- Did NOT add `unstable_cache`, edge runtime, or RPC consolidation —
+  Phase B candidates pending data on whether Phase A is sufficient.
+
+**Verification.** `npm run typecheck` clean; `npm run build` clean.
+Visual verification deferred until Vercel preview.
+
+**Out of scope for Phase A** (deliberately). `/dashboard/listings`, public
+`/communities`, `/browse`, `<Link>` vs `router.push` audit. Phase B will
+fan out the pattern after confirming the perceived-perf delta on
+`/dashboard/communities`.
+
+**Next.** Push branch → Vercel preview → owner verifies "click → instant
+skeleton → real grid <300ms". If yes, Phase B (fan-out + maybe
+`unstable_cache`). If still feels slow, escalate to RPC consolidation or
+caching.
+
 ## 2026-06-24 — Phase 52.1: Save button always-on + delete dead upload-prefill plumbing
 
 **Trigger.** Owner: "两个 detail 页面自动保存 save button 不可用 这样用户体验
