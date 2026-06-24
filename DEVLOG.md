@@ -2,6 +2,34 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-06-24 — Phase 51 follow-up #2: silent auto-save (feedback only on explicit Save click)
+
+**Objective**: qiaoxux: "Both - auto save doesn't need to click the save button effect and show the saved hint, only users click the save button, then do that". After Phase 51 added an explicit Save button alongside auto-save, both code paths drove the same `saveState` machine — so every keystroke triggered the "Saving… / ✓ Saved" pill at the bottom of the form, even though the user never asked for it. Owner wants auto-save to be invisible; the visible status text should be reserved for explicit Save clicks.
+
+**Actions**:
+- `app/dashboard/listings/[id]/edit/EditListingForm.tsx`:
+  - Refactored `runSave()` to take a `silent: boolean` parameter. Silent path never touches `saveState` (no `'pending' | 'saving' | 'saved' | 'error'` flips), so the bottom-of-form status row stays quiet during background ticks. Errors during silent save still update `errorMsg` (non-silent invalid edits would be worse).
+  - Added a separate `isDirty` useState (boolean), set true on any field edit and cleared on save success (auto or explicit). This drives the Save button's `disabled` prop — `saveState` alone can no longer be relied on as a "nothing to save" signal once auto-save is silent.
+  - Split saver into two functions: `flushNow()` (silent, kept for PublishPanel handshake — publish doesn't want a "Saved" flash to flicker before publish takes over) and `saveNow()` (visible, drives `saveState`, called by the Save button onClick).
+  - Auto-save useEffect: removed `setSaveState('pending')`; replaced with `setIsDirty(true)`. Calls `runSave(true)` (silent).
+  - beforeunload: dropped `'pending'` from the unsaved-work check (no longer set by auto-save); kept `dirtyRef.current || saveState === 'saving'` as the guard.
+  - Bottom save row button: `onClick={() => void saveNow()}`, `disabled={!isDirty || saveState === 'saving'}`.
+- `app/dashboard/communities/[id]/CommunityEditor.tsx`:
+  - Same `runSave(silent)` refactor. Silent path skips `setSaveState`, skips `setFieldErrors({})` / `setFormError(null)` reset, and skips `router.refresh()`. fieldErrors and formError ARE still surfaced from a silent-save server response — silent ≠ swallow validation, an invalid form field needs to be visible regardless of which code path triggered the request.
+  - Removed the prop-derived `useMemo`-based `isDirty` (lines 136-176 in the prior file). Replaced with state-driven `isDirty` + `setIsDirty`. Rationale: silent auto-save never calls `router.refresh()`, so the `community` prop passed in from the server component stays stale after a successful background save — a prop-vs-state diff would keep returning true even though the form is in sync with the database. State-driven `isDirty` reads "is there an edit since the last save?" which is what the button actually wants to know.
+  - Renamed the now-redundant `flushNow()` away — only the visible explicit-click path is kept (`saveNow()`); `onSubmit` calls `saveNow()` instead of `flushNow()`. Community has no PublishPanel, so there was no external caller of the silent flush.
+  - Auto-save useEffect: `setSaveState('pending')` → `setIsDirty(true)`; `runSave(false)` → `runSave(true)`.
+  - beforeunload guard: dropped `'pending'`.
+- `RELEASE.md` — added v0.55.2 entry.
+
+**Verification**: `npx tsc --noEmit` clean. `npm run build` clean (Next 15.5, First Load JS shared 87.3 kB).
+
+**Result**: Auto-save behavior is unchanged from the user's perspective except the "Saving… / ✓ Saved" pill no longer flashes at the bottom while typing. Click the Save button → see "Saving…" → "✓ Saved" → idle. Identical UX on both surfaces.
+
+**Notes for next time**:
+- The pair-drift convention (`references/listing-community-pair-drift.md`) held — same change shape applied verbatim to both surfaces. Confirmed worth keeping the explicit "if you change one, change the other" rule.
+- Memory pitfall to remember: when auto-save skips `router.refresh()` (deliberate, to avoid mid-edit flicker), any `useMemo` on the server-component prop becomes a stale-data trap. State-driven dirty flag is the right primitive. Filed as candidate for the React/Next.js pitfalls section.
+
 ## 2026-06-24 — Phase 51 follow-up: move listing Save button to the bottom
 
 **Objective**: qiaoxux: "My listing - move the save button to the end of the inputs. Similar to my community page! Also when clicking save, show something indicating the changes are saved." Initial Phase 51 put the Save button + SaveBadge in the header (above the inputs); owner wants the community-style footer placement.

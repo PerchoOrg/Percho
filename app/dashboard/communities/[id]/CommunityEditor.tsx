@@ -125,55 +125,21 @@ export function CommunityEditor({
   const [hoaFee, setHoaFee] = useState(community.hoa_fee_monthly?.toString() ?? '');
   const [website, setWebsite] = useState(community.website ?? '');
 
+  // `saveState` only reflects EXPLICIT Save-button clicks. Silent auto-save
+  // does not flip it (owner ask 2026-06-24: "auto save doesn't need to click
+  // the save button effect and show the saved hint, only users click the
+  // save button, then do that").
   const [saveState, setSaveState] = useState<SaveState>('idle');
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  // Track whether the form has any unsaved changes vs. the loaded row. Lets
-  // us disable the Save button when there's nothing to save — small thing
-  // but quietly removes a "did it actually save?" foot-gun.
-  const isDirty = useMemo(() => {
-    const trimOrNull = (v: string) => (v.trim() === '' ? null : v.trim());
-    const same = (a: string | null, b: string | null) => (a ?? null) === (b ?? null);
-    const sameInt = (a: number | null, b: string) => (a ?? null) === parseIntOrNull(b);
-    const sameArray = (a: string[] | null, b: string[]) =>
-      JSON.stringify(a ?? []) === JSON.stringify(b);
-    return !(
-      same(community.name, name.trim()) &&
-      same(community.city, trimOrNull(city)) &&
-      same(community.state, state.trim().toUpperCase()) &&
-      same(community.zip, trimOrNull(zip)) &&
-      same(community.county, trimOrNull(county)) &&
-      same(community.description, trimOrNull(description)) &&
-      same(community.builder, trimOrNull(builder)) &&
-      sameInt(community.year_built, yearBuilt) &&
-      sameInt(community.year_built_end, yearBuiltEnd) &&
-      sameInt(community.price_min, priceMin) &&
-      sameInt(community.price_max, priceMax) &&
-      sameInt(community.hoa_fee_monthly, hoaFee) &&
-      same(community.website, trimOrNull(website)) &&
-      sameArray(community.property_types, propertyTypes) &&
-      sameArray(community.highlights, highlights)
-    );
-  }, [
-    community,
-    name,
-    city,
-    state,
-    zip,
-    county,
-    description,
-    builder,
-    yearBuilt,
-    yearBuiltEnd,
-    priceMin,
-    priceMax,
-    hoaFee,
-    website,
-    propertyTypes,
-    highlights,
-  ]);
+  // `isDirty` is now driven by edit/save state, not by comparing to the
+  // `community` prop. After a silent auto-save we do NOT router.refresh()
+  // (avoids mid-edit flicker), so the prop stays stale and a prop-derived
+  // diff would be wrong. Set true on any field edit; cleared on save success
+  // (auto or explicit). Mirrors EditListingForm.
+  const [isDirty, setIsDirty] = useState(false);
 
   function clearFieldError(field: string) {
     setFieldErrors((prev) => {
@@ -226,52 +192,61 @@ export function CommunityEditor({
 
   /**
    * One save round trip. Resolves on completion regardless of outcome so the
-   * flusher never hangs. `refreshOnSuccess` is true only for the explicit
-   * Save click — auto-save ticks skip router.refresh() to avoid mid-edit
-   * surface flicker.
+   * flusher never hangs.
+   *
+   * `silent=true` (auto-save path): never touches `saveState`. fieldErrors
+   *   and formError ARE still surfaced — silent ≠ swallow validation. Skips
+   *   router.refresh() to avoid mid-edit surface flicker.
+   * `silent=false` (explicit Save click): drives saveState through
+   *   saving → saved → idle for the visible "Saving…" / "✓ Saved" feedback.
+   *   Calls router.refresh() so any read-only surfaces update.
    */
-  async function runSave(refreshOnSuccess: boolean) {
-    setSaveState('saving');
-    setFieldErrors({});
-    setFormError(null);
+  async function runSave(silent: boolean) {
+    if (!silent) {
+      setSaveState('saving');
+      setFieldErrors({});
+      setFormError(null);
+    }
     try {
       const result = await updateCommunity(community.id, buildPayload());
       if (result.ok) {
         dirtyRef.current = false;
-        setSaveState('saved');
-        setTimeout(() => setSaveState((s) => (s === 'saved' ? 'idle' : s)), 1500);
-        if (refreshOnSuccess) router.refresh();
+        setIsDirty(false);
+        if (!silent) {
+          setSaveState('saved');
+          setTimeout(() => setSaveState((s) => (s === 'saved' ? 'idle' : s)), 1500);
+          router.refresh();
+        }
       } else {
-        setSaveState('error');
+        if (!silent) setSaveState('error');
         if (result.fieldErrors) setFieldErrors(result.fieldErrors);
         if (!result.fieldErrors || Object.keys(result.fieldErrors).length === 0) {
           setFormError(result.error);
         }
       }
     } catch (err) {
-      setSaveState('error');
+      if (!silent) setSaveState('error');
       setFormError(err instanceof Error ? err.message : 'unknown');
     }
   }
 
   /**
-   * Cancel any pending debounce, await any in-flight save, then flush dirty
-   * state. Called by the explicit Save button.
+   * Explicit Save-button click. Cancels any pending debounce, awaits any
+   * in-flight save, then runs a VISIBLE save: drives saveState so the
+   * button shows "Saving…" then "✓ Saved".
    */
-  async function flushNow(): Promise<void> {
+  async function saveNow(): Promise<void> {
     if (!canEditMetadata) return;
     if (debounceRef.current) {
       clearTimeout(debounceRef.current);
       debounceRef.current = null;
     }
     if (inflightRef.current) await inflightRef.current;
-    if (dirtyRef.current) {
-      const p = runSave(true);
-      inflightRef.current = p.finally(() => {
-        if (inflightRef.current === p) inflightRef.current = null;
-      });
-      await p;
-    }
+    const p = runSave(false);
+    inflightRef.current = p.finally(() => {
+      if (inflightRef.current === p) inflightRef.current = null;
+    });
+    await p;
   }
 
   // Debounced auto-save. Skip the very first effect run (mount) so we don't
@@ -285,13 +260,13 @@ export function CommunityEditor({
     }
     if (!canEditMetadata) return;
     dirtyRef.current = true;
-    setSaveState('pending');
+    setIsDirty(true);
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
       debounceRef.current = null;
       const tick = async () => {
         if (inflightRef.current) await inflightRef.current;
-        const p = runSave(false);
+        const p = runSave(true);
         inflightRef.current = p.finally(() => {
           if (inflightRef.current === p) inflightRef.current = null;
         });
@@ -325,7 +300,7 @@ export function CommunityEditor({
   // Best-effort warn-on-close if there's unsaved work.
   useEffect(() => {
     function onBeforeUnload(e: BeforeUnloadEvent) {
-      if (dirtyRef.current || saveState === 'pending' || saveState === 'saving') {
+      if (dirtyRef.current || saveState === 'saving') {
         e.preventDefault();
         e.returnValue = '';
       }
@@ -338,7 +313,7 @@ export function CommunityEditor({
     e.preventDefault();
     if (!canEditMetadata) return;
     startTransition(() => {
-      void flushNow();
+      void saveNow();
     });
   }
 

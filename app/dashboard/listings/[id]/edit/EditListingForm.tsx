@@ -12,12 +12,13 @@
  *
  * Phase 51/save-button-parity (2026-06-24): added an explicit "Save" button
  * at the bottom of the form (matching the community editor layout) so agents
- * have an instant-confirm escape hatch. Auto-save still runs on every edit;
- * the button just calls flushNow() to cancel the debounce and round-trip
- * immediately. On success, an inline "✓ Saved" flash appears next to the
- * button. The earlier top-of-form SaveBadge pill was removed in favour of
- * this footer pattern (owner ask 2026-06-24: "move the save button to the
- * end of the inputs. Similar to my community page!").
+ * have an instant-confirm escape hatch. Auto-save still runs on every edit
+ * but is now SILENT — it never touches `saveState`, so the button label and
+ * the "✓ Saved" flash react ONLY to explicit Save clicks. Owner ask
+ * 2026-06-24: "auto save doesn't need to click the save button effect and
+ * show the saved hint, only users click the save button, then do that".
+ * The button enable is driven by a separate `isDirty` state, set when the
+ * user edits a field and cleared on any successful save (auto or explicit).
  *
  * UI conventions otherwise unchanged from phase 8/listing-form-ux:
  * Required/Optional badges, dropdowns for beds/baths/style with escape
@@ -166,7 +167,12 @@ export function EditListingForm({ listingId, initial, communities, listingContex
   const [description, setDescription] = useState(initial.description.join('\n\n'));
   const [communityId, setCommunityId] = useState<string>(initial.community_id ?? '');
 
+  // `saveState` only reflects EXPLICIT Save-button clicks. Silent auto-save
+  // does not flip it (owner ask 2026-06-24). `isDirty` is the separate
+  // tri-state we need for the button's disabled prop, since saveState='idle'
+  // can no longer be relied on as "nothing to save".
   const [saveState, setSaveState] = useState<SaveState>('idle');
+  const [isDirty, setIsDirty] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const [genState, setGenState] = useState<GenState>('idle');
@@ -210,27 +216,38 @@ export function EditListingForm({ listingId, initial, communities, listingContex
   const initialMountRef = useRef(true);
 
   /**
-   * Run a single save round trip. Resolves on completion regardless of
-   * outcome so the flusher never hangs.
+   * Run a single save round trip.
+   *
+   * `silent=true` (auto-save path): never touches `saveState`. Errors still
+   *   surface via `errorMsg` so an invalid edit doesn't fail invisibly.
+   * `silent=false` (explicit Save click): drives saveState through
+   *   saving → saved → idle so the button label and "✓ Saved" flash react.
+   *
+   * Resolves on completion regardless of outcome so the flusher never hangs.
    */
-  async function runSave() {
-    setSaveState('saving');
-    setErrorMsg(null);
+  async function runSave(silent: boolean) {
+    if (!silent) {
+      setSaveState('saving');
+      setErrorMsg(null);
+    }
     try {
       const result = await updateListing(listingId, buildPayload());
       if (result.ok) {
         dirtyRef.current = false;
-        setSaveState('saved');
-        // brief "Saved" flash, then back to idle
-        setTimeout(() => {
-          setSaveState((s) => (s === 'saved' ? 'idle' : s));
-        }, 1500);
+        setIsDirty(false);
+        if (!silent) {
+          setSaveState('saved');
+          // brief "Saved" flash, then back to idle
+          setTimeout(() => {
+            setSaveState((s) => (s === 'saved' ? 'idle' : s));
+          }, 1500);
+        }
       } else {
-        setSaveState('error');
+        if (!silent) setSaveState('error');
         setErrorMsg(result.error);
       }
     } catch (err) {
-      setSaveState('error');
+      if (!silent) setSaveState('error');
       setErrorMsg(err instanceof Error ? err.message : 'unknown');
     }
   }
@@ -238,6 +255,8 @@ export function EditListingForm({ listingId, initial, communities, listingContex
   /**
    * Cancel any pending debounce, flush whatever's dirty, await any in-flight
    * save. Called by PublishPanel before publish; also exposed for unmount.
+   * Always silent — publish flow doesn't want a "Saved" flash to flicker
+   * before the publish action takes over.
    */
   async function flushNow(): Promise<void> {
     if (debounceRef.current) {
@@ -248,12 +267,31 @@ export function EditListingForm({ listingId, initial, communities, listingContex
       await inflightRef.current;
     }
     if (dirtyRef.current) {
-      const p = runSave();
+      const p = runSave(true);
       inflightRef.current = p.finally(() => {
         if (inflightRef.current === p) inflightRef.current = null;
       });
       await p;
     }
+  }
+
+  /**
+   * Explicit Save-button click. Same as flushNow but VISIBLE: drives
+   * saveState so the button shows "Saving…" then "✓ Saved".
+   */
+  async function saveNow(): Promise<void> {
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+      debounceRef.current = null;
+    }
+    if (inflightRef.current) {
+      await inflightRef.current;
+    }
+    const p = runSave(false);
+    inflightRef.current = p.finally(() => {
+      if (inflightRef.current === p) inflightRef.current = null;
+    });
+    await p;
   }
 
   // Debounced auto-save. Skip the very first effect run (mount) so we don't
@@ -266,7 +304,7 @@ export function EditListingForm({ listingId, initial, communities, listingContex
       return;
     }
     dirtyRef.current = true;
-    setSaveState('pending');
+    setIsDirty(true);
     setErrorMsg(null);
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
@@ -274,7 +312,7 @@ export function EditListingForm({ listingId, initial, communities, listingContex
       // If a save is already in flight, wait for it before kicking the next.
       const tick = async () => {
         if (inflightRef.current) await inflightRef.current;
-        const p = runSave();
+        const p = runSave(true);
         inflightRef.current = p.finally(() => {
           if (inflightRef.current === p) inflightRef.current = null;
         });
@@ -301,7 +339,7 @@ export function EditListingForm({ listingId, initial, communities, listingContex
   // the user if there's unsaved work.
   useEffect(() => {
     function onBeforeUnload(e: BeforeUnloadEvent) {
-      if (dirtyRef.current || saveState === 'pending' || saveState === 'saving') {
+      if (dirtyRef.current || saveState === 'saving') {
         e.preventDefault();
         e.returnValue = '';
       }
@@ -668,9 +706,9 @@ export function EditListingForm({ listingId, initial, communities, listingContex
         <button
           type="button"
           onClick={() => {
-            void flushNow();
+            void saveNow();
           }}
-          disabled={saveState === 'idle' || saveState === 'saved' || saveState === 'saving'}
+          disabled={!isDirty || saveState === 'saving'}
           className="rounded bg-ink px-4 py-2 text-sm font-medium text-cream transition hover:opacity-90 disabled:opacity-50"
         >
           {saveState === 'saving' ? 'Saving…' : 'Save'}
