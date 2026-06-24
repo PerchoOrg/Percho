@@ -19,7 +19,7 @@ import {
   CreateCommunityInput,
   UpdateCommunityInput,
 } from '@/lib/zod/community';
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, revalidateTag } from 'next/cache';
 import { redirect } from 'next/navigation';
 
 export type FieldErrors = Record<string, string>;
@@ -95,6 +95,7 @@ export async function createStubCommunity(): Promise<ActionResult<{ id: string }
 
     if (!error && created) {
       revalidatePath('/dashboard/communities');
+      revalidateTag('community-cards');
       return { ok: true, data: { id: created.id } };
     }
     if (error?.code !== '23505') {
@@ -158,6 +159,7 @@ export async function createCommunity(
 
     if (!error && created) {
       revalidatePath('/dashboard/communities');
+      revalidateTag('community-cards');
       redirect(`/dashboard/communities/${created.id}`);
     }
     lastError = error;
@@ -247,6 +249,7 @@ export async function updateCommunity(id: string, raw: unknown): Promise<ActionR
       if (count === 0) return { ok: false, error: 'forbidden' };
       revalidatePath(`/dashboard/communities/${id}`);
       revalidatePath('/dashboard/communities');
+      revalidateTag('community-cards');
       return { ok: true };
     }
     lastError = error;
@@ -293,6 +296,7 @@ export async function deleteCommunity(id: string): Promise<ActionResult> {
 
   revalidatePath('/dashboard/communities');
   revalidatePath('/communities');
+  revalidateTag('community-cards');
   return { ok: true };
 }
 

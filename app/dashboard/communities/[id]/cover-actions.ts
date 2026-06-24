@@ -17,7 +17,7 @@
  */
 
 import { createClient } from '@/lib/supabase/server';
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, revalidateTag } from 'next/cache';
 import { z } from 'zod';
 
 async function authorize(
@@ -56,6 +56,7 @@ function revalidate(communityId: string, slug?: string | null) {
   revalidatePath(`/dashboard/communities/${communityId}`);
   revalidatePath('/communities');
   if (slug) revalidatePath(`/c/${slug}`);
+  revalidateTag('community-cards');
 }
 
 // ─── set video as cover ─────────────────────────────────────────────

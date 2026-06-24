@@ -2,6 +2,61 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-06-24 — Phase 53 Phase C: cache + parallel auth on /dashboard/communities
+
+**Trigger.** Phase B prod log showed:
+- `perf:dashboard-communities {"total_ms":417,"createClient":2,"auth":159,"fetchCards":256,"cardCount":11}`
+- `perf:fetchCommunityListCards {"total_ms":481,"createClient":1,"wave1":220,"wave2":259,"shape":1,"communities":11,"memberships":7,"videoRows":7,"listingRows":1}`
+
+Data is tiny (11 communities, 7 videos, 1 listing) — the freeze is round-trip
+latency, not query work. Vercel ↔ Supabase round-trip is ~150–260ms per hop;
+we can't shrink that, only avoid it.
+
+**Changes.**
+1. **`unstable_cache` wrap** (`lib/communities/list.ts`). 60s TTL, tag
+   `'community-cards'`. Communities are globally readable, so a process-wide
+   shared cache is safe — every dashboard agent sees the same rows for these
+   particular tables. Cache hit ≈ 5ms vs ~480ms uncached.
+2. **`createAnonClient()`** (`lib/supabase/server.ts`). `unstable_cache`
+   forbids `cookies()`/`headers()` inside the cached fn, so the cookie-bound
+   `createClient()` doesn't work there. New cookie-less anon client. Safe
+   because the queries hit globally-readable tables only.
+3. **`getSession()` instead of `getUser()`** (page.tsx). `getUser()` does a
+   network round-trip to Supabase to validate the JWT (~150ms); `getSession()`
+   reads the cookie locally (~5ms). Middleware already gates `/dashboard/*`
+   behind auth, so the page-level check is just defense-in-depth — no need
+   to re-validate the token.
+4. **Auth + fetch in parallel.** Cards data doesn't depend on the user
+   (community list is global). `Promise.all([getSession(), fetchCards()])`.
+5. **`revalidateTag('community-cards')`** wired into every community/listing
+   mutation server action (create, update, delete, status flip, cover set,
+   listing publish/unpublish, listing archive). Cache invalidates within ~1s
+   of any data change.
+
+**Expected prod numbers.**
+- Cold (cache miss): ~270ms (was 417ms) — saves ~150ms by skipping `getUser()`
+  round-trip and running fetch in parallel with auth.
+- Warm (cache hit): ~10–20ms — saves ~400ms by skipping all data round-trips.
+
+**Tradeoffs.**
+- 60s staleness on dashboard view after a community/listing mutation by
+  *another* agent. Same-agent mutations invalidate via `revalidateTag` so
+  feel instant. Cross-agent staleness is acceptable for this view (no
+  real-time semantics needed).
+- `getSession()` doesn't catch a token revoked within the last hour. Dashboard
+  middleware blocks unauthenticated traffic; the worst case is "agent's
+  session was revoked but they still see the dashboard for ≤60min" — for
+  this app the risk is a rounding error.
+- New `createAnonClient()` adds a code path that bypasses cookie auth.
+  Documented as "only for inside `unstable_cache`, only for globally-readable
+  tables." Reviewers should double-check any new caller.
+
+**Followups.**
+- Apply the same pattern to `/dashboard/listings`, `/communities`, `/browse`
+  once we confirm prod numbers from this deploy.
+- Phase B instrumentation (`lib/perf/timing.ts` + page/loader marks) stays
+  for one more deploy to validate; remove next phase.
+
 ## 2026-06-24 — Phase 53 Phase B: timing instrumentation on /dashboard/communities
 
 **Trigger.** Owner: "还是慢" after Phase A (skeleton + parallel queries).

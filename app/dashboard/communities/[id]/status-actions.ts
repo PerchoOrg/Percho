@@ -9,7 +9,7 @@
  */
 
 import { createClient } from '@/lib/supabase/server';
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, revalidateTag } from 'next/cache';
 
 export type CommunityStatusResult = { ok: true } | { ok: false; error: string };
 
@@ -52,6 +52,7 @@ export async function setCommunityStatus(
   revalidatePath(`/dashboard/communities/${communityId}`);
   revalidatePath('/dashboard/communities');
   revalidatePath(`/c/${row.slug}`);
+  revalidateTag('community-cards');
   return { ok: true };
 }
 
@@ -86,5 +87,6 @@ export async function deleteCommunityAction(communityId: string): Promise<Commun
   if (error) return { ok: false, error: error.message };
 
   revalidatePath('/dashboard/communities');
+  revalidateTag('community-cards');
   return { ok: true };
 }

@@ -29,7 +29,7 @@
 
 import { isDraftAddress } from '@/app/dashboard/listings/draft';
 import { createClient } from '@/lib/supabase/server';
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, revalidateTag } from 'next/cache';
 
 export type PublishResult = { ok: true; status: 'active' } | { ok: false; missing: string[] };
 
@@ -112,6 +112,7 @@ export async function publishListing(listingId: string): Promise<PublishResult> 
   if (agent?.slug) {
     revalidatePath(`/v/${agent.slug}/${listing.slug}`);
   }
+  revalidateTag('community-cards');
 
   return { ok: true, status: 'active' };
 }
@@ -148,6 +149,7 @@ export async function unpublishListing(
   if (agent?.slug) {
     revalidatePath(`/v/${agent.slug}/${listing.slug}`);
   }
+  revalidateTag('community-cards');
 
   return { ok: true };
 }

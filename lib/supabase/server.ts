@@ -55,3 +55,22 @@ export function createServiceClient() {
     { auth: { persistSession: false, autoRefreshToken: false } },
   );
 }
+
+/**
+ * Anon, cookie-less Supabase client for use inside `unstable_cache` callbacks.
+ *
+ * `unstable_cache` forbids the cached fn from touching dynamic APIs
+ * (`cookies()`, `headers()`), so the normal `createClient()` (which reads
+ * the auth cookie) is unusable inside it. This client carries no auth
+ * context — RLS evaluates as anon. Only use it for data that is safe to
+ * expose without authentication (e.g. globally-readable community lists).
+ *
+ * Phase 53 Phase C (2026-06-24): added for cached community-list reads.
+ */
+export function createAnonClient() {
+  return createPlainClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    { auth: { persistSession: false, autoRefreshToken: false } },
+  );
+}

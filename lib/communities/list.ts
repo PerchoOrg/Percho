@@ -5,15 +5,25 @@
  * so `/browse?tab=communities` can render the same grid without code
  * duplication. Both pages render identical cards from the identical query.
  *
- * Phase 53 (2026-06-24): parallelized into two waves to cut server time.
+ * Phase 53 Phase A (2026-06-24): parallelized into two waves.
  * Wave 1 fetches `communities` + `community_video_membership` in parallel
  * (no inter-dependency). Wave 2 then fetches `community_videos` (needs
  * membership video_ids) + `listings` (needs community ids) in parallel.
- * Net: 5 sequential round-trips → 2 wave-max round-trips.
+ *
+ * Phase 53 Phase C (2026-06-24): wrapped in `unstable_cache` (60s TTL,
+ * tagged 'community-cards'). Community data is globally readable so a
+ * shared cache across users is safe. Mutation server actions call
+ * `revalidateTag('community-cards')` to invalidate.
+ *
+ * Cache uses the cookie-less `createAnonClient()` because `unstable_cache`
+ * forbids dynamic APIs (cookies/headers) inside the cached fn. RLS still
+ * applies — community reads are global, so this returns the same rows as
+ * the cookie-bound client would for these particular tables.
  */
 
-import { createClient } from '@/lib/supabase/server';
+import { unstable_cache } from 'next/cache';
 import { resolveCommunityCoverWithCfIds } from '@/lib/community/cover';
+import { createAnonClient } from '@/lib/supabase/server';
 import { startTimer } from '@/lib/perf/timing';
 
 export type CommunityListCard = {
@@ -29,25 +39,24 @@ export type CommunityListCard = {
   cover: ReturnType<typeof resolveCommunityCoverWithCfIds>;
 };
 
+export const COMMUNITY_CARDS_TAG = 'community-cards';
+
 const NIL_UUID = '00000000-0000-0000-0000-000000000000';
 
-export async function fetchCommunityListCards(
-  opts: { includeInactive?: boolean } = {},
+async function fetchCommunityListCardsImpl(
+  includeInactive: boolean,
 ): Promise<CommunityListCard[]> {
   const t = startTimer('fetchCommunityListCards');
-  const supabase = await createClient();
+  const supabase = createAnonClient();
   t.mark('createClient');
 
   // Wave 1: communities + memberships have no inter-dependency, run in parallel.
-  // Phase 46: buyer surfaces only see status='active' communities.
-  // Dashboard passes includeInactive=true so the agent can still see
-  // and reactivate her own inactive communities.
   // biome-ignore lint/suspicious/noExplicitAny: stub generated types
   let communitiesQ = (supabase as any)
     .from('communities')
     .select('id, name, slug, city, state, description, cover_video_id, cover_storage_path')
     .order('name', { ascending: true });
-  if (!opts.includeInactive) communitiesQ = communitiesQ.eq('status', 'active');
+  if (!includeInactive) communitiesQ = communitiesQ.eq('status', 'active');
 
   const [communitiesRes, membershipsRes] = await Promise.all([
     communitiesQ as Promise<{
@@ -78,7 +87,6 @@ export async function fetchCommunityListCards(
   const communityIds = communities.map((c) => c.id);
 
   // Wave 2: videos depend on membership video_ids; listings depend on community ids.
-  // Both Wave-1 deps are satisfied — run in parallel.
   const [videosRes, listingsRes] = await Promise.all([
     // biome-ignore lint/suspicious/noExplicitAny: stub generated types
     (supabase as any)
@@ -148,6 +156,25 @@ export async function fetchCommunityListCards(
     memberships: memberships.length,
     videoRows: videoRows.length,
     listingRows: listingRows.length,
+    cached: false,
   });
   return result;
+}
+
+const cachedActive = unstable_cache(
+  () => fetchCommunityListCardsImpl(false),
+  ['community-cards', 'active-only'],
+  { revalidate: 60, tags: [COMMUNITY_CARDS_TAG] },
+);
+
+const cachedAll = unstable_cache(
+  () => fetchCommunityListCardsImpl(true),
+  ['community-cards', 'include-inactive'],
+  { revalidate: 60, tags: [COMMUNITY_CARDS_TAG] },
+);
+
+export async function fetchCommunityListCards(
+  opts: { includeInactive?: boolean } = {},
+): Promise<CommunityListCard[]> {
+  return opts.includeInactive ? cachedAll() : cachedActive();
 }

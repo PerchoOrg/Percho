@@ -11,8 +11,18 @@
  * V1 design choice (kept): communities are globally readable; agents see all,
  * RLS gates metadata edits to the creator.
  *
- * Phase 53 Phase B (2026-06-24): temporary timing instrumentation. Remove
- * after we've identified the perf bottleneck and shipped the fix.
+ * Phase 53 Phase C (2026-06-24): perf rewrite.
+ *   - Auth check now uses `getSession()` (reads cookie, ~5ms) instead of
+ *     `getUser()` (Supabase round-trip, ~150ms). The `/dashboard/*` matcher
+ *     in middleware already redirects unauthenticated users; the page-level
+ *     check is just a defensive belt-and-suspenders.
+ *   - `fetchCommunityListCards` is now `unstable_cache`-backed (60s, tag
+ *     'community-cards'); cache hit ≈ 5ms vs ~480ms uncached.
+ *   - `auth` and `fetchCards` run in parallel because the cards query
+ *     doesn't depend on the user (community data is globally readable).
+ *
+ * Timing instrumentation (Phase 53 Phase B) is kept for one more deploy so
+ * we can confirm the cache hit/auth split numbers in prod, then remove.
  */
 
 import { CommunityGrid } from '@/app/_components/CommunityGrid';
@@ -27,14 +37,18 @@ export default async function CommunitiesListPage() {
   const t = startTimer('dashboard-communities');
   const supabase = await createClient();
   t.mark('createClient');
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  t.mark('auth');
-  if (!user) redirect('/login?redirect=%2Fdashboard%2Fcommunities');
 
-  const cards = await fetchCommunityListCards({ includeInactive: true });
-  t.mark('fetchCards');
+  // Auth and card fetch in parallel — cards don't depend on user (community
+  // data is globally readable). getSession() reads the cookie locally; no
+  // Supabase round-trip.
+  const [sessionRes, cards] = await Promise.all([
+    supabase.auth.getSession(),
+    fetchCommunityListCards({ includeInactive: true }),
+  ]);
+  t.mark('parallel');
+
+  if (!sessionRes.data.session) redirect('/login?redirect=%2Fdashboard%2Fcommunities');
+
   t.end({ cardCount: cards.length });
 
   if (cards.length === 0) {

@@ -9,7 +9,7 @@
 
 import 'server-only';
 import { redirect } from 'next/navigation';
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, revalidateTag } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 
 export type DeleteListingResult = { ok: true } | { ok: false; error: string };
@@ -28,6 +28,7 @@ export async function deleteListing(listingId: string): Promise<DeleteListingRes
     .eq('id', listingId);
   if (error) return { ok: false, error: error.message };
   revalidatePath('/dashboard');
+  revalidateTag('community-cards');
   return { ok: true };
 }
 

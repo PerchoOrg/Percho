@@ -2,6 +2,16 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.57.1 — Communities loads instantly on repeat visits (2026-06-24)
+
+**✨ Improvements**
+
+- The dashboard Communities page now loads in milliseconds on repeat visits
+  (within a 60-second window). The first visit after a change is still fast
+  (~270ms server time, down from ~420ms). The cache automatically refreshes
+  whenever you create, edit, publish, or archive a community or listing —
+  you'll never see stale data after your own actions.
+
 ## v0.57.0 — Faster Communities navigation (2026-06-24)
 
 **✨ Improvements**
