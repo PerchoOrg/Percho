@@ -27,6 +27,8 @@ import { HeroControl } from '@/app/dashboard/_components/HeroControl';
 import { InstantStatusToggle } from '@/app/dashboard/_components/InstantStatusToggle';
 
 import { type CommunityOption, EditListingForm, type ListingContext } from './EditListingForm';
+import { DraftAddressPanel } from './DraftAddressPanel';
+import { isDraftAddress } from '@/app/dashboard/listings/draft';
 import { GenerateTourPanel } from './GenerateTourPanel';
 import type { ListingPhotoRow } from './PhotoPanel';
 import { MediaPanel } from './MediaPanel';
@@ -162,10 +164,15 @@ export default async function EditListingPage({
     heroCover = photoPublicUrl(photos[0].storage_path);
   }
 
-  const subtitle =
-    [listing.city, listing.state].filter(Boolean).join(', ') +
-    (listing.zip ? ` ${listing.zip}` : '') +
-    (listing.neighborhood ? ` · ${listing.neighborhood}` : '');
+  const draft = isDraftAddress(listing.address);
+
+  const subtitle = draft
+    ? 'Draft — set an address to continue'
+    : [listing.city, listing.state].filter(Boolean).join(', ') +
+      (listing.zip ? ` ${listing.zip}` : '') +
+      (listing.neighborhood ? ` · ${listing.neighborhood}` : '');
+
+  const heroTitle = draft ? 'New listing' : listing.address;
 
   const listingContext: ListingContext = {
     address: listing.address,
@@ -178,7 +185,7 @@ export default async function EditListingPage({
     <>
       <HeroHeader
         coverUrl={heroCover}
-        title={listing.address}
+        title={heroTitle}
         subtitle={subtitle}
         controls={
           <>
@@ -201,7 +208,9 @@ export default async function EditListingPage({
         ]}
         defaultTab="details"
         panels={{
-          details: (
+          details: draft ? (
+            <DraftAddressPanel listingId={listing.id} />
+          ) : (
             <div className="space-y-6">
               <section className="rounded-2xl border border-line bg-surface p-4 sm:p-6">
                 <EditListingForm
@@ -225,7 +234,9 @@ export default async function EditListingPage({
               <DangerZone listingId={listing.id} />
             </div>
           ),
-          media: (
+          media: draft ? (
+            <DraftLockedNotice />
+          ) : (
             <div className="space-y-4">
               <MediaPanel
                 listingId={listing.id}
@@ -237,11 +248,23 @@ export default async function EditListingPage({
               <GenerateTourPanel listingId={listing.id} />
             </div>
           ),
-          marketing: <SocialCopyPanel listingId={listing.id} />,
-          leads: <ListingLeadsPanel listingId={listing.id} />,
-          analytics: <AnalyticsPanel entityKind="listing" entityId={listing.id} />,
+          marketing: draft ? <DraftLockedNotice /> : <SocialCopyPanel listingId={listing.id} />,
+          leads: draft ? <DraftLockedNotice /> : <ListingLeadsPanel listingId={listing.id} />,
+          analytics: draft ? (
+            <DraftLockedNotice />
+          ) : (
+            <AnalyticsPanel entityKind="listing" entityId={listing.id} />
+          ),
         }}
       />
     </>
+  );
+}
+
+function DraftLockedNotice() {
+  return (
+    <section className="rounded-2xl border border-line bg-surface p-6 text-center">
+      <p className="text-ink2 text-sm">Set an address on the Details tab to unlock this section.</p>
+    </section>
   );
 }

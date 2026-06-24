@@ -2,6 +2,86 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-06-24 — Phase 52: stub-first listing/community create flow
+
+**Trigger.** Owner ask: "重新设计上传视频/照片 + 新建 listing/community 的交互,
+对 selling agent 要足够友好." The previous flow had three separate
+entry shapes — `UploadSheet` (album/camera/source picker → file
+prefill), `/dashboard/listings/new` (address + price + beds + baths +
+sqft form), and `createStubCommunity` (one-tap stub → hub). For agents
+who think in "build a listing slowly" rather than "TikTok-style
+upload-and-go", this was friction without payoff: agents would hit the
+new-listing form, abandon when they didn't have all five fields handy,
+and never come back. Communities had no equivalent friction — the stub
+flow there worked well.
+
+**Decision.** Mirror communities for listings. The FAB sheet collapses
+to two equal tiles (Listing / Community); both call a stub action that
+inserts a row immediately and pushes the agent to the edit page. No
+file prefill, no source picker, no entry-form gate. Media tab stays
+separate (owner ask: "media tab 还是保留" — visual prototype had
+proposed merging it into the details tab, but the owner reverted).
+
+**Schema fit.** `listings.address` is NOT NULL (migration 0001) and
+`(agent_id, slug)` is UNIQUE. We can't omit address at insert time, so
+`createStubListing` writes a placeholder `__draft__-<rand>` to both
+columns. A new helper module `app/dashboard/listings/draft.ts` exports
+`DRAFT_ADDRESS_PREFIX` + `isDraftAddress(s)` — split out of the
+`'use server'` action file because async server actions can't co-export
+synchronous constants. Status defaults to `inactive` (the
+post-migration-0030 two-state world), so drafts never leak to `/browse`
+or the swipe feed (both already filter `status='active'`).
+
+**Address commit on first save.** `updateListingAddress(id, input)`
+guards on `isDraftAddress(current.address)` — once you've committed a
+real address it refuses further address edits, because the slug is
+already published at `/v/<agent>/<slug>` and rewriting it would break
+shared links. On the first commit it re-derives the slug from the real
+address via `deriveSlug` and handles 23505 collisions with `nextCandidate`
+up to 20 retries. The publish gate (`publishListing`) was tightened to
+also reject `isDraftAddress(address)` so a draft can't accidentally be
+flipped active.
+
+**UI.** A new `DraftAddressPanel.tsx` renders on the edit page when
+`isDraftAddress(listing.address)` is true; it does the same Place
+Details autocomplete + resolve dance the deleted NewListingForm did,
+then calls `updateListingAddress` and `router.refresh()`. The other
+tabs (Media / Marketing / Leads / Analytics) render a "Set an address
+to unlock this section" notice in draft state to avoid loading photo
+panels against a placeholder URL. The dashboard grid shows
+"Untitled draft" + a Draft badge for these rows.
+
+**Deletions.** Removed `app/dashboard/listings/new/` (page + form +
+actions). `UploadSheet.tsx` was rewritten from 12,866 → 7,678 bytes,
+dropping the album/camera tile, the file prefill flow, and the
+`stashFiles` call. The prefill store + 18 `stashFiles | peekPrefillCount
+| takePrefillFiles | consumePrefill` references on the listing /
+community panels are now dead code (consume always returns null) but
+left in place to keep this phase scope-bounded; cleanup belongs in a
+separate dead-code pass.
+
+**Files touched.**
+
+- new: `app/dashboard/listings/draft.ts` (497 B), `app/dashboard/listings/actions.ts`
+  (`createStubListing`), `app/dashboard/listings/[id]/edit/DraftAddressPanel.tsx`
+- rewritten: `app/_components/UploadSheet.tsx` (two-tile sheet)
+- patched: `app/dashboard/listings/[id]/edit/actions.ts`
+  (`updateListingAddress`), `app/dashboard/listings/[id]/edit/publish-actions.ts`
+  (draft gate), `app/dashboard/listings/[id]/edit/page.tsx` (draft branch
+  + locked tabs), `app/dashboard/page.tsx` ("Untitled draft" + Draft badge)
+- deleted: `app/dashboard/listings/new/`
+
+**Pitfalls hit.**
+
+1. `'use server'` files cannot export non-async constants — the helper
+   has to live in a separate module.
+2. `listings.address NOT NULL` means we cannot insert a real "draft"
+   row without a placeholder string; the sentinel approach (matching
+   `__draft__-<rand>` prefix) avoids a schema migration.
+3. Browse / `/v/<slug>` already filter `status='active'`, so the draft
+   placeholder address can never reach a public surface — the gate is
+   schema-level, not just application-level.
+
 ## 2026-06-24 — Phase 51 follow-up #2: silent auto-save (feedback only on explicit Save click)
 
 **Objective**: qiaoxux: "Both - auto save doesn't need to click the save button effect and show the saved hint, only users click the save button, then do that". After Phase 51 added an explicit Save button alongside auto-save, both code paths drove the same `saveState` machine — so every keystroke triggered the "Saving… / ✓ Saved" pill at the bottom of the form, even though the user never asked for it. Owner wants auto-save to be invisible; the visible status text should be reserved for explicit Save clicks.

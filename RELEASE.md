@@ -2,6 +2,39 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.56.0 — One-tap listing/community create; address moves into the edit page (2026-06-24)
+
+**Faster create flow for selling agents.** The FAB now stubs a listing or
+community immediately and drops you on its edit page — no separate "new"
+form to fill out before you can see anything. Pick **Listing** or
+**Community** and you land on the hub with every field laid out: address,
+photos, video, price, beds/baths, description, marketing, leads. Fill
+them in any order; auto-save handles persistence.
+
+**What's new on the edit page**
+
+- New listings open with a **Set the address** card on the Details tab.
+  Pick an address from the Google Places autocomplete and the slug
+  (the public `/v/<agent>/<slug>` URL) gets generated from the real
+  address — no more pre-committing to address + price before you've
+  even seen the editor.
+- Until the address is set, the listing is marked **Draft** in your
+  dashboard grid and the Media / Marketing / Leads / Analytics tabs
+  show a "Set an address to unlock" notice. This avoids accidentally
+  loading photos against a placeholder URL.
+- Publishing is gated as before — address, price, beds, baths, and at
+  least one ready photo or video are still required to flip the listing
+  to Active. Draft listings cannot be published until an address is set.
+
+**What's gone**
+
+- The dedicated `/dashboard/listings/new` page (address + price + beds +
+  baths + sqft up front) has been retired. Those fields all live on the
+  edit page now.
+- The FAB no longer asks for "from album" vs "from camera" before
+  starting. Just pick what you're creating; upload media on the Media
+  tab when you're ready.
+
 ## v0.55.2 — Auto-save now silent; Save button feedback only on click (2026-06-24)
 
 ### 🛠 Behavior change
