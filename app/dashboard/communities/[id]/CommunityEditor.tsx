@@ -528,13 +528,14 @@ export function CommunityDangerZone({ communityId }: { communityId: string }) {
     });
   }
 
-  // Mirrors the listing DangerZone (Phase 47.12) — solid rose on the light
-  // palette so the destructive action actually reads as destructive. The old
-  // red-300/red-500-on-translucent treatment was a leftover from the
-  // dark-theme era and looked faded on cream.
+  // Mirrors the listing DangerZone — solid rose on the light palette so the
+  // destructive action actually reads as destructive. Phase 50.18 (2026-06-24):
+  // bumped border to rose-400 and bg from rose-50/40 → rose-50 (no opacity)
+  // because the translucent treatment looked faded against the cream surface
+  // — qiaoxux feedback "danger zone color is fainted".
   return (
     <section>
-      <div className="rounded-2xl border border-rose-300/60 bg-rose-50/40 p-5 sm:p-6">
+      <div className="rounded-2xl border border-rose-400 bg-rose-50 p-5 sm:p-6">
         <h2 className="font-semibold text-ink text-sm">Danger zone</h2>
         <p className="mt-1 text-ink2 text-xs">
           Deleting a community is permanent and removes its schools, POIs, photos, videos, and

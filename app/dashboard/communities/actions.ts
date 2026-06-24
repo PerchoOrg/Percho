@@ -48,10 +48,15 @@ function zodToFieldErrors(error: import('zod').ZodError): FieldErrors {
  * on the Details tab; queued media (videos, photos) auto-uploads in the
  * background via the Media tab (eager-mounted under HubTabs).
  *
- * Status defaults to `draft` so unfinished stubs don't leak into public
- * listings. `updateCommunity` will re-derive the slug once the agent
- * renames it. Slug collisions are essentially impossible with a random
- * suffix per stub but we still retry once on the off chance.
+ * Status defaults to `inactive` so unfinished stubs don't leak into the
+ * public communities grid (`browse-cards.ts` filters on `status='active'`).
+ * The CHECK constraint added in migration 0030 only allows `active`/`inactive`
+ * — there is no `draft` slot — so we use `inactive` and let the agent flip
+ * to `active` via the InstantStatusToggle once the metadata is filled in.
+ *
+ * `updateCommunity` will re-derive the slug once the agent renames it.
+ * Slug collisions are essentially impossible with a random suffix per stub
+ * but we still retry once on the off chance.
  */
 export async function createStubCommunity(): Promise<ActionResult<{ id: string }>> {
   const supabase = await createClient();
@@ -79,7 +84,7 @@ export async function createStubCommunity(): Promise<ActionResult<{ id: string }
         name: 'Untitled community',
         slug,
         state: 'GA',
-        status: 'draft',
+        status: 'inactive',
         created_by: createdBy,
       })
       .select('id')

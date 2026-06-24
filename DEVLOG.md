@@ -2,6 +2,37 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-06-24 — Phase 50.18: hotfix `createStubCommunity` CHECK violation + Danger zone color
+
+**Objective**: kill two production bugs reported by qiaoxux on the agent hub My Community surface — (a) "Upload as Community" was failing with `Could not create — please retry.` (and the implied chain failures: "video upload is not prefilled", "photos can not be uploaded"); (b) "Danger zone color is fainted".
+
+**Root causes**:
+- (a) Phase 50.17's `createStubCommunity` server action inserts a row with `status='draft'`. But `supabase/migrations/0030_simplify_status.sql` redefined `communities.status` with `check (status in ('active', 'inactive'))` — there is no `'draft'` slot. Every stub insert therefore returns a CHECK constraint violation (Postgres SQLSTATE `23514`), the action returns `{ ok: false, error: 'insert_failed' }`, the FAB shows the red error, no row exists for `?prefill=` to land on, and both video prefill + photo upload fail downstream because they require the stub row.
+- (b) The DangerZone block on both the listing edit page and the community hub used `border-rose-300/60` + `bg-rose-50/40`. The `/40` opacity over the cream `bg-bg` surface drains the rose almost to invisible — visually neighbours an info card more than a destructive warning.
+
+**Actions**:
+- `app/dashboard/communities/actions.ts`: `createStubCommunity` now inserts `status='inactive'` instead of `'draft'`. Updated the doc comment to spell out the CHECK constraint and the public-grid filter (`status='active'` in `lib/feed/browse-cards.ts`) so future contributors don't repeat the same trap. Stubs remain hidden from the public communities grid because that grid filters on `active`, and the agent can promote the row by flipping the InstantStatusToggle once the metadata is filled in.
+- `app/dashboard/listings/[id]/edit/DangerZone.tsx` + `app/dashboard/communities/[id]/CommunityEditor.tsx` (`CommunityDangerZone`): bumped border `rose-300/60 → rose-400` and bg `rose-50/40 → rose-50` (no opacity). Listing + community changed in lockstep per the listing/community pair-drift convention; the in-code "mirrors the listing DangerZone" comment now tracks Phase 50.18.
+
+**Decisions**:
+- Use `inactive` (not invent a new status). Adding a `'draft'` slot would require a migration + grid filter update; `inactive` already exists and already does the right thing for the public grid.
+- No DB migration. Pure app-layer fix.
+- Pair-drift fix: change both listing and community DangerZone, even though qiaoxux only mentioned the community surface. They're meant to look identical; if we only fixed one, listing would drift to "fainted" the next time someone notices.
+
+**Pitfalls / lessons**:
+- **Always run a schema/CHECK-constraint check when introducing a literal status string in code.** Phase 50.17 added a `status='draft'` literal without grepping migrations for `check (status in …)`. This is the second time this kind of trap has bitten the project (saved a memory note + added it to the `schema-vs-ui-status-simplification.md` skill notes).
+- The 50.17 build passed because tsc has no awareness of DB CHECK constraints, and there's no integration test that actually exercises the FAB → stub → hub flow against a real Supabase instance. Worth a follow-up smoke test (out of scope for this hotfix).
+
+**Verification**:
+- `npx tsc --noEmit` clean
+- `npx next build` clean (bundle sizes unchanged)
+- Visual sanity: the community hub Danger zone now reads as a clearly dangerous block on the cream surface; `Could not create` error path no longer triggered.
+
+**Files**:
+- `app/dashboard/communities/actions.ts` — `'draft' → 'inactive'` + comment
+- `app/dashboard/listings/[id]/edit/DangerZone.tsx` — class fix
+- `app/dashboard/communities/[id]/CommunityEditor.tsx` — class fix + comment refresh
+
 ## 2026-06-23 07:30 UTC — Phase 50.17: fold `/communities/new` into the community Hub
 
 **Objective**: collapse the two-step "FAB → /new form → Hub" community-creation flow into a single hop "FAB → Hub", with the queued media auto-uploading in the background while the agent edits Details. Also kills two pesky bugs that surfaced after 50.16: the very first click on Create-community didn't always navigate (server action + `redirect()` racing with the prefill stash), and video prefill was still empirically flaky on slow hydration paths.

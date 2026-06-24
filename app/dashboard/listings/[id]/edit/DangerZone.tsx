@@ -39,7 +39,7 @@ export function DangerZone({ listingId }: { listingId: string }) {
 
   return (
     <section>
-      <div className="rounded-2xl border border-rose-300/60 bg-rose-50/40 p-5 sm:p-6">
+      <div className="rounded-2xl border border-rose-400 bg-rose-50 p-5 sm:p-6">
         <h2 className="font-semibold text-ink text-sm">Danger zone</h2>
         <p className="mt-1 text-ink2 text-xs">
           Permanently delete this listing. Videos, photos, leads and analytics

@@ -2,6 +2,14 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.54.20 — Hotfix: community stub creation + Danger zone color (2026-06-24)
+
+**For agents creating a new community / staring at "Could not create — please retry.":**
+
+### 🐛 Fixes
+- **"Upload as Community" no longer fails with `Could not create — please retry.`** Phase 50.17's stub insert tried to set `status='draft'`, but the `communities.status` CHECK constraint added in migration 0030 only allows `active`/`inactive` — so every stub creation got rejected by the database, which in turn broke video prefill and photo uploads (the whole flow chain depended on the stub row existing). Stubs now insert with `status='inactive'` (still hidden from the public grid, since that filters on `status='active'`), and the agent can flip the InstantStatusToggle to active once the metadata is filled in. (qiaoxux: "video upload is not prefilled" / "photos can not be uploaded" — same root cause.)
+- **Danger zone now actually looks dangerous.** The "Delete this community" / "Delete this listing" warning blocks were drawn with `bg-rose-50/40` (40% opacity over the cream surface) and `border-rose-300/60`, which faded out into the background. Bumped to a fully opaque `bg-rose-50` and a stronger `border-rose-400` on both surfaces so destructive intent reads at a glance. (qiaoxux: "danger zone color is fainted".)
+
 ## v0.54.19 — Folded "New community" into the community hub (2026-06-23)
 
 **For agents creating a new community:**
