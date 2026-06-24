@@ -27,6 +27,7 @@
  * activate/deactivate now.
  */
 
+import { isDraftAddress } from '@/app/dashboard/listings/draft';
 import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
 
@@ -78,7 +79,7 @@ export async function publishListing(listingId: string): Promise<PublishResult> 
     )) as { count: number | null };
 
   const missing: string[] = [];
-  if (!listing.address) missing.push('address');
+  if (!listing.address || isDraftAddress(listing.address)) missing.push('address');
   if (listing.price == null || listing.price <= 0) missing.push('price');
   if (listing.beds == null) missing.push('beds');
   if (listing.baths == null || listing.baths <= 0) missing.push('baths');

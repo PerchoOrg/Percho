@@ -18,6 +18,8 @@
  *    sends a single string; we split on blank lines and trim/empty-filter.
  */
 
+import { isDraftAddress } from '@/app/dashboard/listings/draft';
+import { deriveSlug, nextCandidate } from '@/lib/listings/slug';
 import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
@@ -34,6 +36,107 @@ const UpdateListingInput = z.object({
   description: z.string().max(20000),
   community_id: z.string().uuid().nullable(),
 });
+
+/**
+ * Phase 52 (2026-06-24): Address is now editable while the listing is
+ * still in draft state — that is, the address column still equals the
+ * `__draft__-<rand>` placeholder written by `createStubListing`. Once
+ * the agent picks a real Place Details address, we re-derive the slug
+ * and lock further address edits (re-editing post-publish would break
+ * shared `/v/<agent>/<slug>` links).
+ *
+ * Place Details is resolved client-side; we receive the parsed pieces
+ * and re-validate them server-side, never trusting the client.
+ */
+const UpdateAddressInput = z.object({
+  address: z.string().min(3).max(200),
+  city: z.string().min(1).max(80),
+  state: z.string().length(2),
+  zip: z.string().max(10).optional().nullable(),
+  neighborhood: z.string().max(120).optional().nullable(),
+  lat: z.number().gte(-90).lte(90),
+  lng: z.number().gte(-180).lte(180),
+});
+
+export type UpdateAddressInput = z.infer<typeof UpdateAddressInput>;
+export type UpdateAddressResult =
+  | { ok: true; slug: string }
+  | { ok: false; error: string; fieldErrors?: Record<string, string[]> };
+
+const MAX_SLUG_ATTEMPTS = 20;
+
+export async function updateListingAddress(
+  id: string,
+  input: UpdateAddressInput,
+): Promise<UpdateAddressResult> {
+  const parsed = UpdateAddressInput.safeParse(input);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: 'invalid_input',
+      fieldErrors: parsed.error.flatten().fieldErrors as Record<string, string[]>,
+    };
+  }
+  const data = parsed.data;
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: 'unauthorized' };
+
+  // Read current row under RLS so we can (a) check ownership and
+  // (b) gate the address edit to draft listings only.
+  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
+  const { data: current } = (await (supabase as any)
+    .from('listings')
+    .select('id, agent_id, address, slug')
+    .eq('id', id)
+    .maybeSingle()) as {
+    data: { id: string; agent_id: string; address: string; slug: string } | null;
+  };
+  if (!current) return { ok: false, error: 'not_found_or_forbidden' };
+  if (!isDraftAddress(current.address)) {
+    return { ok: false, error: 'address_locked' };
+  }
+
+  const baseSlug = deriveSlug(data.address);
+
+  for (let attempt = 0; attempt < MAX_SLUG_ATTEMPTS; attempt++) {
+    const slug = nextCandidate(baseSlug, attempt);
+    // biome-ignore lint/suspicious/noExplicitAny: stub generated types
+    const { data: updated, error } = (await (supabase as any)
+      .from('listings')
+      .update({
+        address: data.address,
+        city: data.city,
+        state: data.state,
+        zip: data.zip ?? null,
+        neighborhood: data.neighborhood ?? null,
+        lat: data.lat,
+        lng: data.lng,
+        slug,
+      })
+      .eq('id', id)
+      .select('id, slug')
+      .maybeSingle()) as {
+      data: { id: string; slug: string } | null;
+      error: { code?: string; message?: string } | null;
+    };
+
+    if (updated) {
+      revalidatePath(`/dashboard/listings/${id}/edit`);
+      return { ok: true, slug: updated.slug };
+    }
+    if (error && error.code !== '23505') {
+      console.error('[updateListingAddress] update failed', error);
+      return { ok: false, error: 'update_failed' };
+    }
+    // 23505 → unique (agent_id, slug) collision, try base-2, base-3, …
+  }
+
+  return { ok: false, error: 'slug_exhaustion' };
+}
 
 export type UpdateListingInput = z.infer<typeof UpdateListingInput>;
 export type UpdateListingResult = { ok: true } | { ok: false; error: string };

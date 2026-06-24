@@ -20,6 +20,7 @@ import {
   DashboardListingGrid,
   type DashboardItem,
 } from '@/app/dashboard/_components/DashboardListingGrid';
+import { isDraftAddress } from '@/app/dashboard/listings/draft';
 import { thumbnailUrl } from '@/lib/cloudflare/stream';
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
@@ -107,6 +108,12 @@ export default async function DashboardHomePage() {
 
   const items: DashboardItem[] = rows.map((l) => {
     const isInactive = l.status === 'inactive';
+    const isDraft = isDraftAddress(l.address);
+    const badge = isDraft
+      ? { label: 'Draft', tone: 'light' as const }
+      : isInactive
+        ? { label: 'Inactive', tone: 'light' as const }
+        : null;
     return {
       id: l.id,
       href: `/dashboard/listings/${l.id}/edit`,
@@ -115,8 +122,8 @@ export default async function DashboardHomePage() {
       beds: l.beds,
       baths: l.baths,
       sqft: l.sqft,
-      address: l.address,
-      badge: isInactive ? { label: 'Inactive', tone: 'light' } : null,
+      address: isDraft ? 'Untitled draft' : l.address,
+      badge,
       dimmed: isInactive,
       rawStatus: l.status,
       updatedAt: l.updated_at,

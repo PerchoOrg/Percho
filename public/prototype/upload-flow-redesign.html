@@ -1,0 +1,544 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Upload &amp; create flow — v3 (simplified)</title>
+<style>
+  :root {
+    --bg: #f7f6f2;
+    --surface: #ffffff;
+    --line: #e7e3da;
+    --line-strong: #cfc8b8;
+    --ink: #1a1a1a;
+    --ink2: #6b6b66;
+    --muted: #9a958a;
+    --rose: #c1432e;
+    --green: #527a3f;
+    --gold: #b08a2e;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--ink); font-family: -apple-system, BlinkMacSystemFont, "Inter", "Helvetica Neue", sans-serif; -webkit-font-smoothing: antialiased; }
+  .page { padding: 32px 24px 60px; max-width: 1280px; margin: 0 auto; }
+  h1 { font-family: Georgia, serif; font-weight: 500; font-size: 22px; margin: 0 0 6px; }
+  .lede { color: var(--ink2); font-size: 13px; line-height: 1.55; max-width: 720px; margin: 0; }
+  .lede strong { color: var(--ink); }
+
+  .row {
+    display: flex;
+    gap: 24px;
+    overflow-x: auto;
+    padding: 24px 0 32px;
+    align-items: flex-start;
+  }
+  .row::-webkit-scrollbar { height: 8px; }
+  .row::-webkit-scrollbar-thumb { background: var(--line-strong); border-radius: 4px; }
+
+  .frame { flex: 0 0 auto; width: 320px; }
+  .frame .caption { font-size: 11px; color: var(--ink2); margin-bottom: 8px; padding-left: 4px; display: flex; align-items: center; gap: 8px; }
+  .frame .caption .step { background: var(--ink); color: #fff; border-radius: 50%; width: 18px; height: 18px; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; }
+  .frame .caption .label { font-weight: 600; color: var(--ink); }
+  .frame .annot { font-size: 11px; color: var(--ink2); margin-top: 10px; padding-left: 4px; line-height: 1.5; }
+  .frame .annot strong { color: var(--ink); font-weight: 600; }
+
+  .device {
+    width: 320px;
+    height: 720px;
+    background: var(--bg);
+    border-radius: 32px;
+    border: 1px solid var(--line-strong);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.06);
+    overflow: hidden;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+  }
+  .device.tall { height: 1120px; }
+
+  .statusbar { height: 28px; display: flex; align-items: center; justify-content: space-between; padding: 0 18px; font-size: 11px; font-weight: 600; color: var(--ink); flex: 0 0 auto; }
+  .topbar { padding: 6px 14px 10px; border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: 8px; background: var(--bg); flex: 0 0 auto; }
+  .topbar .back { width: 26px; height: 26px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; color: var(--ink); font-size: 18px; }
+  .topbar h2 { font-family: Georgia, serif; font-weight: 500; font-size: 15px; margin: 0; }
+  .topbar .right { margin-left: auto; font-size: 11px; color: var(--ink2); }
+  .topbar .right .save { color: var(--green); }
+
+  .body { flex: 1; overflow-y: auto; padding: 12px 14px; position: relative; }
+  .bottomnav { height: 50px; background: var(--surface); border-top: 1px solid var(--line); display: flex; align-items: center; justify-content: space-around; flex: 0 0 auto; }
+  .bottomnav .item { display: flex; flex-direction: column; align-items: center; font-size: 10px; color: var(--ink2); gap: 1px; }
+  .bottomnav .item.active { color: var(--ink); }
+  .bottomnav .fab { width: 44px; height: 44px; background: var(--ink); color: var(--surface); border-radius: 14px; display: inline-flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 300; box-shadow: 0 4px 10px rgba(0,0,0,0.16); }
+  .bottomnav .item.fab-wrap { transform: translateY(-6px); }
+
+  .pulse { animation: pulse 1.6s infinite; }
+  @keyframes pulse { 0%,100% { box-shadow: 0 0 0 2px rgba(26,26,26,0.55); } 50% { box-shadow: 0 0 0 5px rgba(26,26,26,0.15); } }
+
+  /* List grid */
+  .grid-2x2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .mini-card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 7px; }
+  .mini-card .ph { aspect-ratio: 4/3; background: linear-gradient(135deg, #d8d2c0 0%, #b6ad95 100%); border-radius: 5px; }
+  .mini-card .lbl { font-size: 11px; font-weight: 600; margin-top: 5px; }
+  .mini-card .lbl .meta { color: var(--ink2); font-weight: 400; font-size: 10px; }
+
+  /* Sheet */
+  .scrim { position: absolute; inset: 0; background: rgba(20,20,20,0.45); backdrop-filter: blur(2px); display: flex; align-items: flex-end; }
+  .sheet { width: 100%; background: var(--surface); border-radius: 22px 22px 0 0; padding: 12px 14px 18px; box-shadow: 0 -8px 22px rgba(0,0,0,0.12); }
+  .sheet .grabber { width: 40px; height: 4px; background: var(--line); border-radius: 4px; margin: 4px auto 12px; }
+  .sheet h3 { font-family: Georgia, serif; font-weight: 500; font-size: 16px; text-align: center; margin: 0 0 12px; }
+  .sheet .sub { font-size: 11px; color: var(--ink2); text-align: center; margin-top: -6px; margin-bottom: 12px; }
+  .tile-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .tile {
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 18px 10px 14px;
+    display: flex; flex-direction: column; align-items: center; gap: 5px;
+    text-align: center;
+  }
+  .tile .icon { width: 30px; height: 30px; }
+  .tile .name { font-size: 13px; font-weight: 600; }
+  .tile .hint { font-size: 10px; color: var(--ink2); }
+
+  /* Detail page form */
+  .section { margin-bottom: 22px; }
+  .section .section-h {
+    font-family: Georgia, serif;
+    font-weight: 500;
+    font-size: 13px;
+    color: var(--ink);
+    margin: 0 0 8px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--line);
+    display: flex; align-items: center; gap: 6px;
+  }
+  .section .section-h .badge {
+    font-size: 9px; font-weight: 600; letter-spacing: 0.04em;
+    background: var(--bg); color: var(--ink2);
+    padding: 2px 6px; border-radius: 999px;
+    border: 1px solid var(--line);
+  }
+  .field { margin-bottom: 10px; }
+  .field label { display: block; font-size: 11px; font-weight: 500; color: var(--ink2); margin-bottom: 4px; }
+  .field input, .field textarea, .field select {
+    width: 100%; background: var(--surface); border: 1px solid var(--line);
+    border-radius: 8px; padding: 8px 10px; font-size: 12.5px; color: var(--ink);
+    font-family: inherit;
+  }
+  .field textarea { resize: none; min-height: 50px; }
+  .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .field-row.three { grid-template-columns: 1fr 1fr 1fr; }
+  .field .hint { font-size: 10px; color: var(--ink2); margin-top: 4px; }
+
+  .pred { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; margin-top: 4px; }
+  .pred .item { padding: 6px 10px; border-bottom: 1px solid var(--line); font-size: 11px; }
+  .pred .item:last-child { border-bottom: 0; }
+  .pred .item.hover { background: var(--bg); }
+
+  /* Media drop area */
+  .media-drop {
+    border: 1.5px dashed var(--line-strong);
+    border-radius: 12px;
+    padding: 20px 14px;
+    text-align: center;
+    background: var(--surface);
+  }
+  .media-drop .drop-icon { font-size: 28px; color: var(--muted); margin-bottom: 6px; }
+  .media-drop .drop-h { font-size: 12px; font-weight: 600; color: var(--ink); margin-bottom: 3px; }
+  .media-drop .drop-s { font-size: 10.5px; color: var(--ink2); margin-bottom: 10px; line-height: 1.4; }
+  .media-drop .btn-row { display: inline-flex; gap: 6px; }
+  .media-drop .btn-primary {
+    background: var(--ink); color: #fff;
+    padding: 7px 12px; border-radius: 9px;
+    font-size: 11.5px; font-weight: 600;
+    display: inline-flex; align-items: center; gap: 5px;
+  }
+  .media-drop .btn-secondary {
+    background: var(--bg); color: var(--ink); border: 1px solid var(--line);
+    padding: 7px 12px; border-radius: 9px;
+    font-size: 11.5px; font-weight: 500;
+  }
+
+  .media-grid {
+    display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px;
+    margin-bottom: 10px;
+  }
+  .media-grid .cell {
+    aspect-ratio: 1;
+    background: linear-gradient(135deg, #d8d2c0 0%, #b6ad95 100%);
+    border-radius: 6px;
+    position: relative;
+    overflow: hidden;
+  }
+  .media-grid .cell.uploading::after {
+    content: "↑";
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 22px;
+    background: rgba(0,0,0,0.35);
+  }
+  .media-grid .cell.queued {
+    background: repeating-linear-gradient(45deg,#ddd,#ddd 4px,#eee 4px,#eee 8px);
+  }
+  .media-grid .cell .pill {
+    position: absolute; top: 4px; left: 4px;
+    background: rgba(0,0,0,0.6); color: #fff;
+    font-size: 9px; padding: 1px 5px; border-radius: 4px; font-weight: 600;
+  }
+  .media-grid .cell.add {
+    background: var(--bg); border: 1.5px dashed var(--line-strong);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--muted); font-size: 24px; font-weight: 300;
+  }
+
+  .save-pill {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 10px; color: var(--green);
+  }
+  .save-pill .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); }
+
+  .publish-card {
+    background: linear-gradient(135deg, #f4ead4 0%, #e8dcb4 100%);
+    border: 1px solid var(--gold);
+    border-radius: 12px;
+    padding: 12px;
+    margin-top: 4px;
+  }
+  .publish-card .pc-h { font-size: 12px; font-weight: 700; color: #5b4615; display: flex; align-items: center; gap: 6px; }
+  .publish-card .pc-b { font-size: 11px; color: #6b5520; margin: 4px 0 9px; line-height: 1.4; }
+  .publish-card .pc-cta {
+    display: inline-flex; align-items: center; gap: 4px;
+    background: var(--ink); color: #fff;
+    padding: 7px 12px; border-radius: 9px;
+    font-size: 11.5px; font-weight: 600;
+  }
+
+  .arrow-flow { display: flex; align-items: center; padding: 280px 4px 0; color: var(--muted); font-size: 28px; flex: 0 0 auto; }
+
+  .compare { padding: 22px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; margin-top: 16px; }
+  .compare h2 { font-family: Georgia, serif; font-weight: 500; font-size: 16px; margin: 0 0 14px; }
+  .compare table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  .compare th { text-align: left; padding: 9px 11px; background: var(--bg); border: 1px solid var(--line); font-weight: 600; }
+  .compare td { padding: 9px 11px; border: 1px solid var(--line); vertical-align: top; line-height: 1.45; }
+  .compare td.h { color: var(--ink2); width: 24%; }
+  .compare td.old { background: #fdf6f4; }
+  .compare td.new { background: #f4f8f1; }
+  .compare code { font-family: ui-monospace, monospace; font-size: 11.5px; background: rgba(0,0,0,0.04); padding: 1px 5px; border-radius: 3px; }
+
+  .delete-list {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
+    padding: 16px; margin-top: 16px;
+  }
+  .delete-list h3 { font-family: Georgia, serif; font-weight: 500; font-size: 14px; margin: 0 0 8px; }
+  .delete-list ul { margin: 0; padding-left: 20px; font-size: 12.5px; color: var(--ink2); line-height: 1.6; }
+  .delete-list code { font-family: ui-monospace, monospace; font-size: 11.5px; background: rgba(0,0,0,0.04); padding: 1px 5px; border-radius: 3px; }
+  .delete-list .strike { text-decoration: line-through; color: var(--muted); }
+</style>
+</head>
+<body>
+
+<div class="page">
+
+<h1>Upload &amp; create — v3 (simplified)</h1>
+<p class="lede">
+  <strong>Three steps. One screen.</strong>
+  FAB asks Listing or Community → stub created automatically → drops into the
+  Detail page where every field, plus media, lives in one scrollable form.
+  No <code>/listings/new</code>, no <code>/communities/new</code>, no entity picker, no
+  source picker.
+</p>
+
+<div class="row">
+
+  <!-- ───────── 1. Tap FAB ───────── -->
+  <div class="frame">
+    <div class="caption"><span class="step">1</span><span class="label">Tap FAB</span></div>
+    <div class="device">
+      <div class="statusbar"><span>9:41</span><span>●●●</span></div>
+      <div class="topbar"><h2>My listings</h2><span class="right">3 active</span></div>
+      <div class="body" style="opacity:0.55;">
+        <div class="grid-2x2">
+          <div class="mini-card"><div class="ph"></div><div class="lbl">12 Maple St<div class="meta">$1.25M · 4bd</div></div></div>
+          <div class="mini-card"><div class="ph"></div><div class="lbl">88 Oak Ave<div class="meta">$890k · 3bd</div></div></div>
+          <div class="mini-card"><div class="ph"></div><div class="lbl">5 Pine Ct<div class="meta">Draft</div></div></div>
+          <div class="mini-card"><div class="ph"></div><div class="lbl">301 River Rd<div class="meta">$2.1M · 5bd</div></div></div>
+        </div>
+      </div>
+      <div class="bottomnav">
+        <div class="item active">⌂<span>Home</span></div>
+        <div class="item">▤<span>Listings</span></div>
+        <div class="item fab-wrap"><span class="fab pulse">+</span></div>
+        <div class="item">⊙<span>Leads</span></div>
+        <div class="item">◷<span>Me</span></div>
+      </div>
+    </div>
+    <div class="annot">FAB position unchanged.</div>
+  </div>
+
+  <div class="arrow-flow">→</div>
+
+  <!-- ───────── 2. Type picker ───────── -->
+  <div class="frame">
+    <div class="caption"><span class="step">2</span><span class="label">Pick type</span></div>
+    <div class="device">
+      <div class="statusbar"><span>9:41</span><span>●●●</span></div>
+      <div class="topbar" style="opacity:0.4;"><h2>My listings</h2></div>
+      <div class="body" style="padding:0;">
+        <div class="scrim">
+          <div class="sheet">
+            <div class="grabber"></div>
+            <h3>What are you creating?</h3>
+            <div class="sub">Tap outside to cancel</div>
+            <div class="tile-row">
+              <div class="tile">
+                <div class="icon">
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 4l9 6.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1Z"/></svg>
+                </div>
+                <div class="name">Listing</div>
+                <div class="hint">A property you're selling</div>
+              </div>
+              <div class="tile">
+                <div class="icon">
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="11" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3 20c0-3 2.7-5 6-5s6 2 6 5"/><path d="M14 20c0-2.3 1.7-4 3.5-4s3.5 1.7 3.5 4"/></svg>
+                </div>
+                <div class="name">Community</div>
+                <div class="hint">A neighborhood you cover</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="annot">Two equal tiles. That's the whole sheet.</div>
+  </div>
+
+  <div class="arrow-flow">→</div>
+
+  <!-- ───────── 3. Detail page (long, single scroll) ───────── -->
+  <div class="frame">
+    <div class="caption"><span class="step">3</span><span class="label">Detail page · single form</span></div>
+    <div class="device tall">
+      <div class="statusbar"><span>9:41</span><span>●●●</span></div>
+      <div class="topbar">
+        <div class="back">‹</div>
+        <h2>New listing</h2>
+        <span class="right"><span class="save-pill"><span class="dot"></span>saved</span></span>
+      </div>
+      <div class="body">
+
+        <!-- Address section -->
+        <div class="section">
+          <div class="section-h">Address <span class="badge">required</span></div>
+          <div class="field">
+            <input value="12 Maple" placeholder="Start typing an address…" />
+            <div class="pred">
+              <div class="item hover">12 Maple St, Bellevue, WA 98005</div>
+              <div class="item">12 Maple Ave, Redmond, WA 98052</div>
+              <div class="item">12 Maple Ln, Kirkland, WA 98033</div>
+            </div>
+            <div class="hint">Pick from the list — fills city, state, zip automatically.</div>
+          </div>
+        </div>
+
+        <!-- Basics section -->
+        <div class="section">
+          <div class="section-h">Basics <span class="badge">required to publish</span></div>
+          <div class="field">
+            <label>List price (USD)</label>
+            <input type="text" placeholder="e.g. 1,250,000" />
+          </div>
+          <div class="field-row three">
+            <div class="field">
+              <label>Beds</label>
+              <input placeholder="4" />
+            </div>
+            <div class="field">
+              <label>Baths</label>
+              <input placeholder="3" />
+            </div>
+            <div class="field">
+              <label>Sqft</label>
+              <input placeholder="3,200" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Description -->
+        <div class="section">
+          <div class="section-h">Description <span class="badge">optional</span></div>
+          <div class="field">
+            <textarea placeholder="Bullet points that the marketing copy can pull from…"></textarea>
+          </div>
+        </div>
+
+        <!-- Media section -->
+        <div class="section">
+          <div class="section-h">Photos &amp; video <span class="badge">at least one video to publish</span></div>
+          <div class="media-drop">
+            <div class="drop-icon">▤</div>
+            <div class="drop-h">No media yet</div>
+            <div class="drop-s">Add photos and at least one video.</div>
+            <div class="btn-row">
+              <span class="btn-primary">+ Album</span>
+              <span class="btn-secondary">Camera</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+      <div class="bottomnav">
+        <div class="item active">≡<span>Detail</span></div>
+        <div class="item">↗<span>Promote</span></div>
+        <div class="item fab-wrap"><span class="fab">+</span></div>
+        <div class="item">⊙<span>Leads</span></div>
+        <div class="item">◷<span>Me</span></div>
+      </div>
+    </div>
+    <div class="annot"><strong>Stub auto-created on FAB → Listing</strong>. Address still empty, draft saved with a temporary id, agent lands here. Saves auto-flush on every blur.</div>
+  </div>
+
+  <div class="arrow-flow">→</div>
+
+  <!-- ───────── 4. Detail page after upload — same screen ───────── -->
+  <div class="frame">
+    <div class="caption"><span class="step">4</span><span class="label">Same screen · after upload</span></div>
+    <div class="device tall">
+      <div class="statusbar"><span>9:43</span><span>●●●</span></div>
+      <div class="topbar">
+        <div class="back">‹</div>
+        <h2>12 Maple St</h2>
+        <span class="right"><span class="save-pill"><span class="dot"></span>saved</span></span>
+      </div>
+      <div class="body">
+
+        <div class="section">
+          <div class="section-h">Address</div>
+          <div class="field">
+            <input value="12 Maple St, Bellevue, WA 98005" readonly style="background: var(--bg); color: var(--ink); border-style: dashed;" />
+            <div class="hint">Tap to change — re-runs lookup.</div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-h">Basics</div>
+          <div class="field">
+            <label>List price (USD)</label>
+            <input value="1,250,000" />
+          </div>
+          <div class="field-row three">
+            <div class="field"><label>Beds</label><input value="4" /></div>
+            <div class="field"><label>Baths</label><input value="3" /></div>
+            <div class="field"><label>Sqft</label><input value="3,200" /></div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-h">Description</div>
+          <div class="field">
+            <textarea>Mid-century 4-bed in walkable Bellevue. Updated kitchen, large yard…</textarea>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-h">Photos &amp; video</div>
+          <div class="media-grid">
+            <div class="cell"><span class="pill">cover</span></div>
+            <div class="cell" style="background:linear-gradient(135deg,#c9c0a6,#a89c7d);"></div>
+            <div class="cell" style="background:linear-gradient(135deg,#dcd5c0,#b6ac8c);"></div>
+            <div class="cell" style="background:linear-gradient(135deg,#cbc4a8,#a89e83);"><span class="pill">▶ 02:14</span></div>
+            <div class="cell uploading"></div>
+            <div class="cell add">+</div>
+          </div>
+          <div class="hint" style="font-size:10.5px; color:var(--ink2);">Drag to reorder · tap to set cover · long-press to delete</div>
+        </div>
+
+        <div class="publish-card">
+          <div class="pc-h">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20 6 9 17l-5-5"/></svg>
+            Ready to publish
+          </div>
+          <div class="pc-b">All required fields are filled and 1 video is ready. Buyers can start swiping this listing as soon as you publish.</div>
+          <div class="pc-cta">Publish now →</div>
+        </div>
+
+      </div>
+      <div class="bottomnav">
+        <div class="item active">≡<span>Detail</span></div>
+        <div class="item">↗<span>Promote</span></div>
+        <div class="item fab-wrap"><span class="fab">+</span></div>
+        <div class="item">⊙<span>Leads</span></div>
+        <div class="item">◷<span>Me</span></div>
+      </div>
+    </div>
+    <div class="annot"><strong>Same page, scrolled down</strong>. Media block sits below the fields. When required-fields-complete + 1 video uploaded → publish card appears at the bottom.</div>
+  </div>
+
+</div>
+
+<!-- ───────── Old vs New ───────── -->
+<div class="compare">
+  <h2>Old → new at a glance</h2>
+  <table>
+    <thead>
+      <tr>
+        <th style="width:24%;">Step</th>
+        <th>Today</th>
+        <th>Proposed</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="h">FAB sheet</td>
+        <td class="old">Album/Camera → file picker → "Listing or Community?" type sheet</td>
+        <td class="new">"Listing or Community?" — one sheet, two tiles, done</td>
+      </tr>
+      <tr>
+        <td class="h">Listing creation</td>
+        <td class="old"><code>/listings/new</code> form (address + price + beds + baths + sqft) → edit page</td>
+        <td class="new"><strong>Deleted.</strong> FAB → Listing stubs a draft and goes straight to detail.</td>
+      </tr>
+      <tr>
+        <td class="h">Community creation</td>
+        <td class="old"><code>createStubCommunity</code> → hub (already stub-first)</td>
+        <td class="new">Same. Listing now matches.</td>
+      </tr>
+      <tr>
+        <td class="h">Where media lives</td>
+        <td class="old">Separate Media tab on edit page</td>
+        <td class="new">Same page as the fields, scrolled below them.</td>
+      </tr>
+      <tr>
+        <td class="h">Where price/beds/baths/sqft live</td>
+        <td class="old">Two places: <code>/listings/new</code> + edit page</td>
+        <td class="new">One place: detail page.</td>
+      </tr>
+      <tr>
+        <td class="h">Publish prompt</td>
+        <td class="old">Quiet — agent has to find the publish button</td>
+        <td class="new">Card appears at the bottom of the detail page when all required fields are filled.</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ───────── What gets deleted ───────── -->
+<div class="delete-list">
+  <h3>Files / routes deleted</h3>
+  <ul>
+    <li><code class="strike">app/dashboard/listings/new/page.tsx</code></li>
+    <li><code class="strike">app/dashboard/listings/new/NewListingForm.tsx</code></li>
+    <li><code class="strike">app/dashboard/listings/new/actions.ts</code> (the <code>createListing</code> action moves to <code>/listings/actions.ts</code> as <code>createStubListing</code>, mirroring <code>createStubCommunity</code>)</li>
+    <li>UploadSheet's source picker (Album/Camera) and entity picker — collapses to a single type-picker sheet</li>
+    <li>Media tab on the listing edit page — merged into the detail page form</li>
+  </ul>
+  <h3 style="margin-top:14px;">Files added / changed</h3>
+  <ul>
+    <li><code>app/dashboard/listings/actions.ts</code> — new <code>createStubListing()</code> server action (returns <code>{ id }</code>, redirects to detail)</li>
+    <li><code>app/_components/UploadSheet.tsx</code> — strip down to type-picker only; on tap, call the matching <code>createStub*</code> action and <code>router.push</code> to the detail page</li>
+    <li><code>app/dashboard/listings/[id]/edit/page.tsx</code> + <code>EditListingForm.tsx</code> — pull <code>PhotoPanel</code> / <code>VideoPanel</code> / <code>MediaPanel</code> in as a <code>&lt;section&gt;</code> below the fields. Same components, new layout.</li>
+    <li><code>app/dashboard/listings/[id]/edit/EditListingForm.tsx</code> — add a "Ready to publish" inline card that renders when all required fields pass + ≥1 video is ready</li>
+  </ul>
+</div>
+
+</div>
+
+</body>
+</html>
