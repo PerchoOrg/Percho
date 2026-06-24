@@ -14,6 +14,7 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { resolveCommunityCoverWithCfIds } from '@/lib/community/cover';
+import { startTimer } from '@/lib/perf/timing';
 
 export type CommunityListCard = {
   id: string;
@@ -33,7 +34,9 @@ const NIL_UUID = '00000000-0000-0000-0000-000000000000';
 export async function fetchCommunityListCards(
   opts: { includeInactive?: boolean } = {},
 ): Promise<CommunityListCard[]> {
+  const t = startTimer('fetchCommunityListCards');
   const supabase = await createClient();
+  t.mark('createClient');
 
   // Wave 1: communities + memberships have no inter-dependency, run in parallel.
   // Phase 46: buyer surfaces only see status='active' communities.
@@ -66,6 +69,7 @@ export async function fetchCommunityListCards(
       data: Array<{ community_id: string; video_id: string }> | null;
     }>,
   ]);
+  t.mark('wave1');
 
   const communities = communitiesRes.data ?? [];
   const memberships = membershipsRes.data ?? [];
@@ -94,6 +98,7 @@ export async function fetchCommunityListCards(
       data: Array<{ community_id: string | null }> | null;
     }>,
   ]);
+  t.mark('wave2');
 
   const videoRows = videosRes.data ?? [];
   const listingRows = listingsRes.data ?? [];
@@ -121,7 +126,7 @@ export async function fetchCommunityListCards(
     );
   }
 
-  return communities.map((c) => ({
+  const result = communities.map((c) => ({
     id: c.id,
     name: c.name,
     slug: c.slug,
@@ -137,4 +142,12 @@ export async function fetchCommunityListCards(
       fallback_video_cf_id: firstVideoCfByCommunity.get(c.id) ?? null,
     }),
   }));
+  t.mark('shape');
+  t.end({
+    communities: communities.length,
+    memberships: memberships.length,
+    videoRows: videoRows.length,
+    listingRows: listingRows.length,
+  });
+  return result;
 }

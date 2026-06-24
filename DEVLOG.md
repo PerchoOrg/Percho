@@ -2,6 +2,38 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-06-24 — Phase 53 Phase B: timing instrumentation on /dashboard/communities
+
+**Trigger.** Owner: "还是慢" after Phase A (skeleton + parallel queries).
+Before guessing at the next optimization (cache / RPC / edge runtime), we
+need actual numbers. Phase A was theory-driven; Phase B is data-driven.
+
+**Change.** Added `lib/perf/timing.ts` — a tiny `startTimer(label)` helper
+that emits a single JSON line per request to stdout (visible in Vercel
+function logs). Instrumented two surfaces:
+
+- `app/dashboard/communities/page.tsx`: `createClient` → `auth` → `fetchCards`
+- `lib/communities/list.ts`: `createClient` → `wave1` → `wave2` → `shape`
+
+Each emits one log line, e.g.:
+`perf:dashboard-communities {"total_ms":612,"createClient":4,"auth":180,"fetchCards":428,"cardCount":12}`
+
+**Why this shape.** Two separate timers (page + loader) so we can attribute
+time to (a) Supabase auth, (b) Wave 1 query, (c) Wave 2 query, (d) JS
+shaping. If Wave 1 dominates → memberships scan is the issue (full-table
+scan on `community_video_membership`). If `auth` dominates → the actual
+freeze is auth, not data, and `unstable_cache` won't help. If everything
+is fast (~50ms each) → the freeze is somewhere else (middleware, JS bundle,
+RSC payload size).
+
+**Tradeoff.** One extra `console.log` per request. Negligible cost; will
+remove once we've made the next call.
+
+**Next.** Owner clicks Communities a few times in prod, we read the Vercel
+logs, then decide between `unstable_cache` (data slow), middleware audit
+(auth slow), or `<Link>` audit / bundle work (everything fast → freeze is
+client-side).
+
 ## 2026-06-24 — Phase 53: Community nav perceived-perf (Phase A — skeleton + parallel queries)
 
 **Trigger.** Owner: "Let's improve the performance/responsiveness, all button

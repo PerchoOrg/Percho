@@ -10,23 +10,32 @@
  *
  * V1 design choice (kept): communities are globally readable; agents see all,
  * RLS gates metadata edits to the creator.
+ *
+ * Phase 53 Phase B (2026-06-24): temporary timing instrumentation. Remove
+ * after we've identified the perf bottleneck and shipped the fix.
  */
 
 import { CommunityGrid } from '@/app/_components/CommunityGrid';
 import { GridPageShell } from '@/app/_components/GridPageShell';
 import { fetchCommunityListCards } from '@/lib/communities/list';
+import { startTimer } from '@/lib/perf/timing';
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import { CreateCommunityButton } from './CreateCommunityButton';
 
 export default async function CommunitiesListPage() {
+  const t = startTimer('dashboard-communities');
   const supabase = await createClient();
+  t.mark('createClient');
   const {
     data: { user },
   } = await supabase.auth.getUser();
+  t.mark('auth');
   if (!user) redirect('/login?redirect=%2Fdashboard%2Fcommunities');
 
   const cards = await fetchCommunityListCards({ includeInactive: true });
+  t.mark('fetchCards');
+  t.end({ cardCount: cards.length });
 
   if (cards.length === 0) {
     return (
