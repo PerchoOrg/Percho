@@ -23,9 +23,12 @@ import { BottomNav, type ViewerRole } from './BottomNav';
 
 export async function BottomNavWrapper() {
   const supabase = await createClient();
+  // Phase 53D: getSession() reads cookie locally (~5ms) vs getUser() round-trip (~150ms).
+  // Middleware re-validates on each request — chrome doesn't need fresh JWT validation.
   const {
-    data: { user },
-  } = await supabase.auth.getUser();
+    data: { session },
+  } = await supabase.auth.getSession();
+  const user = session?.user ?? null;
 
   let role: ViewerRole = 'anon';
   if (user) {

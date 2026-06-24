@@ -27,9 +27,13 @@ import { redirect } from 'next/navigation';
 
 export default async function DashboardHomePage() {
   const supabase = await createClient();
+  // Phase 53D: getSession() reads cookie locally (~5ms) instead of round-tripping
+  // to Supabase to validate the JWT (~150ms). Middleware re-validates on each
+  // request — page-level check is defense-in-depth, not the source of truth.
   const {
-    data: { user },
-  } = await supabase.auth.getUser();
+    data: { session },
+  } = await supabase.auth.getSession();
+  const user = session?.user ?? null;
   if (!user) redirect('/login');
 
   // biome-ignore lint/suspicious/noExplicitAny: stub generated types

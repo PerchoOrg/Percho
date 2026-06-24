@@ -10,9 +10,13 @@ export default async function LoginPage({
   searchParams: SearchParams;
 }) {
   const supabase = await createClient();
+  // Phase 53D: getSession() reads cookie locally (~5ms) instead of round-tripping
+  // to Supabase to validate the JWT (~150ms). Middleware re-validates on each
+  // request — page-level check is defense-in-depth, not the source of truth.
   const {
-    data: { user },
-  } = await supabase.auth.getUser();
+    data: { session },
+  } = await supabase.auth.getSession();
+  const user = session?.user ?? null;
 
   const safeRedirect =
     searchParams.redirect?.startsWith('/') && !searchParams.redirect.startsWith('//')

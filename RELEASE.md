@@ -2,6 +2,16 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.57.2 — Site-wide responsiveness boost (2026-06-24)
+
+**✨ Improvements**
+
+- Every page across the site (dashboard, public, auth) now loads roughly
+  150–300ms faster. The auth check on each render no longer makes a network
+  round-trip to validate your session — it reads the local cookie instead.
+  Most noticeable on the dashboard, where every navigation previously did
+  this twice (once for the page, once for the nav chrome).
+
 ## v0.57.1 — Communities loads instantly on repeat visits (2026-06-24)
 
 **✨ Improvements**

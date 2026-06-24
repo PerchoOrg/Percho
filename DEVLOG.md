@@ -2,6 +2,72 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-06-24 — Phase 53 Phase D: getSession() sweep across all render paths
+
+**Trigger.** Phase C proved swapping `getUser()` → `getSession()` saves ~150ms
+on `/dashboard/communities`. Same pattern applies to every page and chrome
+wrapper that renders behind middleware-enforced auth: middleware already
+validates the JWT on every request, so the page-level `getUser()` call is a
+redundant ~150ms round-trip to Supabase.
+
+**Change.** Mass swap across **16 files**:
+
+Pages (12):
+- `app/page.tsx` (landing)
+- `app/(auth)/login/page.tsx`, `app/(auth)/signup/page.tsx`
+- `app/(public)/profile/page.tsx`, `app/(public)/search/page.tsx`
+- `app/dashboard/page.tsx`, `app/dashboard/analytics/page.tsx`
+- `app/dashboard/leads/page.tsx`, `app/dashboard/leads/[id]/page.tsx`
+- `app/dashboard/communities/[id]/page.tsx`
+- `app/dashboard/listings/[id]/edit/page.tsx`, `app/dashboard/listings/[id]/preview/page.tsx`
+
+Chrome (4):
+- `app/dashboard/layout.tsx`
+- `app/_components/BottomNavWrapper.tsx`
+- `app/_components/DesktopSidebarWrapper.tsx`
+- `app/_components/TopBarWrapper.tsx`
+
+Each call site replaces:
+```ts
+const { data: { user } } = await supabase.auth.getUser();
+```
+with:
+```ts
+const { data: { session } } = await supabase.auth.getSession();
+const user = session?.user ?? null;
+```
+
+The `user` local var is preserved so downstream `if (!user)` / `user.id` /
+`user.email` reads work unchanged. `getSession()` reads only the cookie —
+no network call.
+
+**Why chrome matters most.** `BottomNavWrapper` / `DesktopSidebarWrapper` /
+`TopBarWrapper` mount on the root layout, so they fire on **every page
+render** alongside the page's own `getUser()`. On dashboard routes this
+was 2× round-trips (chrome + page) ≈ 300ms before any data fetch. Both
+are now cookie-only.
+
+**Expected impact.** Dashboard pages: ~300ms shaved off TTFB (chrome 150ms +
+page 150ms). Public/auth pages: ~150ms.
+
+**Scope chosen.**
+- ✅ Swapped: server components on the render path (pages + chrome wrappers).
+- ❌ Kept `getUser()`: server actions (mutations) and API routes. These run
+  on writes/POSTs where revalidating the JWT is a meaningful security
+  boundary; the latency is paid once per action, not per render.
+
+**Tradeoff.** Same as Phase C: a token revoked within the last hour will
+still authorize a render. Middleware blocks unauthenticated traffic outright;
+the only window is "revoked but cookie still presents a valid session" —
+acceptable for this app.
+
+**Followups.**
+- Apply `unstable_cache` to per-user data with a user-scoped cache key
+  (`['agent-row', user.id]` etc.) once we see the next round of prod numbers
+  and identify the bottleneck. Per-user caching is more complex than
+  per-table caching — wait for evidence before adding it.
+- Remove Phase B instrumentation after this deploy if the numbers confirm.
+
 ## 2026-06-24 — Phase 53 Phase C: cache + parallel auth on /dashboard/communities
 
 **Trigger.** Phase B prod log showed:
