@@ -16,8 +16,8 @@ import { CommunityGrid } from '@/app/_components/CommunityGrid';
 import { GridPageShell } from '@/app/_components/GridPageShell';
 import { fetchCommunityListCards } from '@/lib/communities/list';
 import { createClient } from '@/lib/supabase/server';
-import Link from 'next/link';
 import { redirect } from 'next/navigation';
+import { CreateCommunityButton } from './CreateCommunityButton';
 
 export default async function CommunitiesListPage() {
   const supabase = await createClient();
@@ -33,11 +33,7 @@ export default async function CommunitiesListPage() {
       <GridPageShell>
         <div className="rounded border border-dashed border-line bg-surface px-6 py-12 text-center">
           <p className="text-sm text-ink2">
-            No communities yet.{' '}
-            <Link href="/dashboard/communities/new" className="underline hover:text-ink">
-              Create one
-            </Link>{' '}
-            to start adding schools and POIs.
+            No communities yet. <CreateCommunityButton /> to start adding schools and POIs.
           </p>
         </div>
       </GridPageShell>

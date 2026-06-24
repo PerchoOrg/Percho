@@ -23,10 +23,12 @@
  * the original sheet was 太难看 and required tapping Cancel.
  */
 
+import { createStubCommunity } from '@/app/dashboard/communities/actions';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { stashFiles } from './upload-prefill-store';
+import { setUploadTotal } from './upload-status-store';
 
 type SheetState = 'closed' | 'source-picker' | 'type-picker';
 
@@ -45,12 +47,16 @@ export function useUploadSheet() {
     setMounted(true);
   }, []);
 
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
+
   function open() {
     setSheet('source-picker');
   }
   function close() {
     setSheet('closed');
     setFiles([]);
+    setCreateError(null);
   }
   function onFilesPicked(e: React.ChangeEvent<HTMLInputElement>) {
     const list = e.target.files;
@@ -59,14 +65,38 @@ export function useUploadSheet() {
     setSheet('type-picker');
     e.target.value = '';
   }
-  function pickType(type: 'listings' | 'communities') {
+  async function pickType(type: 'listings' | 'communities') {
     if (files.length === 0) {
       close();
       return;
     }
-    const id = stashFiles(files);
-    close();
-    router.push(`/dashboard/${type}/new?prefill=${encodeURIComponent(id)}`);
+    if (type === 'listings') {
+      const id = stashFiles(files);
+      close();
+      router.push(`/dashboard/listings/new?prefill=${encodeURIComponent(id)}`);
+      return;
+    }
+    // Phase 50.17 (2026-06-23): communities go straight to a stub hub —
+    // no /new form. Create the row server-side, stash the files, push to
+    // /communities/[id]?prefill=… and let the eager-mounted Media tab
+    // auto-upload while the agent edits Details.
+    setCreateError(null);
+    setCreating(true);
+    try {
+      const result = await createStubCommunity();
+      if (!result.ok) {
+        setCreateError('Could not create — please retry.');
+        return;
+      }
+      const prefillId = stashFiles(files);
+      setUploadTotal(result.data.id, files.length);
+      close();
+      router.push(
+        `/dashboard/communities/${result.data.id}?prefill=${encodeURIComponent(prefillId)}`,
+      );
+    } finally {
+      setCreating(false);
+    }
   }
 
   // The hidden file inputs stay in the local component tree (they need
@@ -98,7 +128,16 @@ export function useUploadSheet() {
           aria-label="Close"
           className="absolute top-3 right-3 flex h-8 w-8 items-center justify-center rounded-full text-ink2 transition active:scale-95 hover:bg-bg hover:text-ink"
         >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
             <path d="M18 6 6 18M6 6l12 12" />
           </svg>
         </button>
@@ -111,7 +150,16 @@ export function useUploadSheet() {
                 hint="Pick from library"
                 onClick={() => albumRef.current?.click()}
                 icon={
-                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <svg
+                    width="28"
+                    height="28"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
                     <rect x="3" y="3" width="18" height="18" rx="2" />
                     <circle cx="9" cy="9" r="2" />
                     <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
@@ -123,7 +171,16 @@ export function useUploadSheet() {
                 hint="Take photo or video"
                 onClick={() => cameraRef.current?.click()}
                 icon={
-                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <svg
+                    width="28"
+                    height="28"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
                     <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3Z" />
                     <circle cx="12" cy="13" r="3.5" />
                   </svg>
@@ -138,8 +195,23 @@ export function useUploadSheet() {
             <p className="px-2 pb-2 text-ink2 text-xs">
               {files.length} file{files.length === 1 ? '' : 's'} selected
             </p>
-            <SheetRow label="Listing" onClick={() => pickType('listings')} />
-            <SheetRow label="Community" onClick={() => pickType('communities')} />
+            <SheetRow
+              label="Listing"
+              onClick={() => {
+                void pickType('listings');
+              }}
+              disabled={creating}
+            />
+            <SheetRow
+              label={creating ? 'Creating community…' : 'Community'}
+              onClick={() => {
+                void pickType('communities');
+              }}
+              disabled={creating}
+            />
+            {createError ? (
+              <p className="px-2 pt-1 text-[11px] text-rose-600">{createError}</p>
+            ) : null}
           </div>
         )}
       </div>
@@ -153,8 +225,22 @@ export function useUploadSheet() {
           action sheet (Photo Library / Take Photo / Choose Files) but
           explicit extensions can route directly into the Photos picker.
           Not guaranteed across iOS versions — see Phase 45.36 DEVLOG. */}
-      <input ref={albumRef} type="file" accept=".jpg,.jpeg,.png,.heic,.heif,.webp,.gif,.mp4,.mov,.m4v" multiple className="hidden" onChange={onFilesPicked} />
-      <input ref={cameraRef} type="file" accept="image/*,video/*" capture="environment" className="hidden" onChange={onFilesPicked} />
+      <input
+        ref={albumRef}
+        type="file"
+        accept=".jpg,.jpeg,.png,.heic,.heif,.webp,.gif,.mp4,.mov,.m4v"
+        multiple
+        className="hidden"
+        onChange={onFilesPicked}
+      />
+      <input
+        ref={cameraRef}
+        type="file"
+        accept="image/*,video/*"
+        capture="environment"
+        className="hidden"
+        onChange={onFilesPicked}
+      />
       {mounted && sheetUI ? createPortal(sheetUI, document.body) : null}
     </>
   );
@@ -186,12 +272,21 @@ function SourceTile({
   );
 }
 
-function SheetRow({ label, onClick }: { label: string; onClick: () => void }) {
+function SheetRow({
+  label,
+  onClick,
+  disabled,
+}: {
+  label: string;
+  onClick: () => void;
+  disabled?: boolean;
+}) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className="w-full rounded-xl border border-line bg-bg px-4 py-3 text-left text-ink text-sm transition active:scale-[0.99] hover:border-line-strong"
+      disabled={disabled}
+      className="w-full rounded-xl border border-line bg-bg px-4 py-3 text-left text-ink text-sm transition active:scale-[0.99] hover:border-line-strong disabled:cursor-not-allowed disabled:opacity-60"
     >
       {label}
     </button>

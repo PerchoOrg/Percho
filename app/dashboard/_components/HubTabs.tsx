@@ -25,7 +25,7 @@
  */
 
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useCallback, useMemo, type ReactNode } from 'react';
+import { type ReactNode, useCallback, useMemo } from 'react';
 
 export type HubTab = {
   id: string;
@@ -38,10 +38,20 @@ export function HubTabs({
   tabs,
   panels,
   defaultTab,
+  eagerMount = false,
 }: {
   tabs: HubTab[];
   panels: Record<string, ReactNode>;
   defaultTab?: string;
+  /**
+   * When true, render every panel in the DOM and toggle visibility with
+   * `display:none`. Default is the historical lazy behaviour where only
+   * the active panel is mounted. Phase 50.17 (2026-06-23): the community
+   * hub turns this on so the Media tab can auto-consume queued prefill
+   * files from the FAB while the agent edits the Details tab — without
+   * visiting the Media tab first.
+   */
+  eagerMount?: boolean;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -89,9 +99,7 @@ export function HubTabs({
                   aria-selected={isActive}
                   onClick={() => onSelect(t.id)}
                   className={`group flex w-16 shrink-0 flex-col items-center gap-1.5 bg-transparent text-center text-[11.5px] leading-tight transition sm:w-20 sm:text-xs ${
-                    isActive
-                      ? 'font-semibold text-ink'
-                      : 'text-ink2 hover:text-ink'
+                    isActive ? 'font-semibold text-ink' : 'text-ink2 hover:text-ink'
                   }`}
                 >
                   <span
@@ -130,9 +138,7 @@ export function HubTabs({
                   aria-selected={isActive}
                   onClick={() => onSelect(t.id)}
                   className={`relative shrink-0 px-4 py-3 text-sm transition ${
-                    isActive
-                      ? 'font-medium text-ink'
-                      : 'text-ink2 hover:text-ink'
+                    isActive ? 'font-medium text-ink' : 'text-ink2 hover:text-ink'
                   }`}
                 >
                   {t.label}
@@ -147,7 +153,18 @@ export function HubTabs({
       </div>
 
       <div className="mx-auto max-w-6xl px-3 py-6 sm:px-6 sm:py-8">
-        {panels[activeId] ?? null}
+        {eagerMount
+          ? tabs.map((t) => (
+              <div
+                key={t.id}
+                role="tabpanel"
+                aria-hidden={t.id !== activeId}
+                hidden={t.id !== activeId}
+              >
+                {panels[t.id] ?? null}
+              </div>
+            ))
+          : (panels[activeId] ?? null)}
       </div>
     </>
   );

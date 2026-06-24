@@ -2,6 +2,22 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.54.19 — Folded "New community" into the community hub (2026-06-23)
+
+**For agents creating a new community:**
+
+### ✨ Improvements
+- **One-step community creation from the home upload button.** Tapping the upload FAB → picking a video/photo → "Upload as Community" used to land you on a separate `/communities/new` form first. Now it lands you directly on the new community's Hub at the **Details** tab, with the queued media auto-uploading in the background. A blue progress banner at the top of Details tells you "Uploading your N files…", flipping to "Uploaded N files to your Media tab" when done.
+- **Empty-state "Create one" button.** The `/dashboard/communities` empty page link is now a real button that creates a stub community in one click and drops you in the hub — same flow as the FAB so there's only one mental model.
+- **Renaming is now the first thing.** You land on Details with the community sitting at "Untitled community" — type the real name, save, and the URL slug auto-rewrites. Until you save a name, the community stays as a hidden draft (not visible on the public communities grid).
+
+### 🧹 Cleanup
+- Removed the standalone `/dashboard/communities/new` page and its dedicated form. Two creation paths collapsed into one (Hub Details + auto-upload Media).
+
+### 🐛 Fixes folded in
+- The "first click on Create doesn't navigate" bug from the old `/new` form is gone — there's no form to submit. Click → stub created → navigate, every time.
+- The video prefill that broke twice this week is now structurally impossible: the Media tab is mounted alongside Details from the moment the page renders (display:none toggling), so the queued File[] gets consumed on mount no matter which tab you're looking at.
+
 ## v0.54.18 — Community hub: solid Danger Zone + working video prefill (2026-06-23)
 
 **For agents managing their communities:**

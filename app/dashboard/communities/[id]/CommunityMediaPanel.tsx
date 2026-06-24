@@ -22,21 +22,26 @@
  *             new row shows up in CommunityVideoManageList below.
  */
 
-import { Upload } from 'lucide-react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { useCallback, useEffect, useRef, useState } from 'react';
 import { consumePrefill } from '@/app/_components/upload-prefill-store';
+import {
+  reportUploadDone,
+  reportUploadFailed,
+  setUploadTotal,
+} from '@/app/_components/upload-status-store';
 import {
   type CommunityKind,
   type UploadedVideo,
   VideoUploader,
 } from '@/components/dashboard/VideoUploader';
-import { CategoryPicker, CategorySpecCard } from './CategoryPicker';
 import {
   type CommunityVideoCategoryId,
   getCategoryMeta,
   legacyKindForCategory,
 } from '@/lib/zod/community-video-categories';
+import { Upload } from 'lucide-react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { CategoryPicker, CategorySpecCard } from './CategoryPicker';
 import {
   CommunityPhotoPanel,
   type CommunityPhotoPanelHandle,
@@ -122,6 +127,14 @@ export function CommunityMediaPanel({
     }
   }
   const prefillFiles = initialPrefill.current;
+  // Phase 50.17 (2026-06-23): make sure the upload-status banner knows the
+  // total even on a hard refresh of the URL with prefill set (in which case
+  // UploadSheet's setUploadTotal call from a prior SPA session is gone).
+  const totalSetRef = useRef(false);
+  if (!totalSetRef.current && prefillFiles && prefillFiles.length > 0) {
+    totalSetRef.current = true;
+    setUploadTotal(communityId, prefillFiles.length);
+  }
   const prefillVideos = useRef(false);
   if (!prefillVideos.current && prefillFiles && prefillFiles.length > 0) {
     prefillVideos.current = true;
@@ -196,6 +209,7 @@ export function CommunityMediaPanel({
 
   const handleVideoUploaded = useCallback(
     (key: string, _v: UploadedVideo) => {
+      reportUploadDone(communityId);
       // Drop the uploader after a brief 'done' display, then re-fetch the
       // manage list so the row shows up below with edit / visibility / delete
       // controls. router.refresh() re-runs the server component and rehydrates
@@ -205,7 +219,15 @@ export function CommunityMediaPanel({
         router.refresh();
       }, 4000);
     },
-    [router],
+    [router, communityId],
+  );
+
+  const handlePhotoResolved = useCallback(
+    (ok: boolean) => {
+      if (ok) reportUploadDone(communityId);
+      else reportUploadFailed(communityId);
+    },
+    [communityId],
   );
 
   return (
@@ -228,12 +250,7 @@ export function CommunityMediaPanel({
           >
             Category
           </label>
-          <CategoryPicker
-            mode="create"
-            selected={category}
-            onPick={setCategory}
-            hideSpec
-          />
+          <CategoryPicker mode="create" selected={category} onPick={setCategory} hideSpec />
         </div>
         <div>
           <input
@@ -305,6 +322,7 @@ export function CommunityMediaPanel({
             hideUploadButton
             coverStoragePath={coverStoragePath}
             canSetCover={canSetCover}
+            onUploadResolved={handlePhotoResolved}
           />
         </div>
       </div>

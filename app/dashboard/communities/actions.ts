@@ -41,6 +41,66 @@ function zodToFieldErrors(error: import('zod').ZodError): FieldErrors {
   return out;
 }
 
+/**
+ * Phase 50.17 (2026-06-23): create an empty "Untitled" stub so the
+ * FAB → community Hub → Details flow can land on a real row immediately,
+ * with no intermediate /new form. The agent fills in name/city/zip/etc.
+ * on the Details tab; queued media (videos, photos) auto-uploads in the
+ * background via the Media tab (eager-mounted under HubTabs).
+ *
+ * Status defaults to `draft` so unfinished stubs don't leak into public
+ * listings. `updateCommunity` will re-derive the slug once the agent
+ * renames it. Slug collisions are essentially impossible with a random
+ * suffix per stub but we still retry once on the off chance.
+ */
+export async function createStubCommunity(): Promise<ActionResult<{ id: string }>> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: 'unauthorized' };
+
+  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
+  const { data: agentRow } = (await (supabase as any)
+    .from('agents')
+    .select('id')
+    .eq('user_id', user.id)
+    .maybeSingle()) as { data: { id: string } | null };
+  const createdBy = agentRow?.id ?? null;
+
+  // Generate a unique-ish slug: "untitled-<6 random chars>". updateCommunity()
+  // will re-derive a real slug from the agent's chosen name on first edit.
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const slug = `untitled-${Math.random().toString(36).slice(2, 8)}`;
+    // biome-ignore lint/suspicious/noExplicitAny: stub generated types
+    const { data: created, error } = (await (supabase as any)
+      .from('communities')
+      .insert({
+        name: 'Untitled community',
+        slug,
+        state: 'GA',
+        status: 'draft',
+        created_by: createdBy,
+      })
+      .select('id')
+      .single()) as {
+      data: { id: string } | null;
+      error: { code?: string; message?: string } | null;
+    };
+
+    if (!error && created) {
+      revalidatePath('/dashboard/communities');
+      return { ok: true, data: { id: created.id } };
+    }
+    if (error?.code !== '23505') {
+      console.error('[createStubCommunity] insert failed', error);
+      return { ok: false, error: 'insert_failed' };
+    }
+    // 23505 → slug collision, retry
+  }
+  return { ok: false, error: 'insert_failed' };
+}
+
 export async function createCommunity(
   raw: unknown,
   options?: { prefillId?: string | null },

@@ -2,6 +2,40 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-06-23 07:30 UTC — Phase 50.17: fold `/communities/new` into the community Hub
+
+**Objective**: collapse the two-step "FAB → /new form → Hub" community-creation flow into a single hop "FAB → Hub", with the queued media auto-uploading in the background while the agent edits Details. Also kills two pesky bugs that surfaced after 50.16: the very first click on Create-community didn't always navigate (server action + `redirect()` racing with the prefill stash), and video prefill was still empirically flaky on slow hydration paths.
+
+**Actions**:
+- `app/dashboard/communities/actions.ts`: added `createStubCommunity()` server action — inserts a `status='draft'` row with `name='Untitled community'` and `slug='untitled-<rand6>'` (collision retry). No zod validation, no redirect; returns `{ ok: true, data: { id } }`. Status `draft` keeps stubs out of the public communities grid until renamed.
+- `app/_components/upload-status-store.ts` (NEW): module-level pub/sub keyed by `communityId`. `setUploadTotal(id, n)` / `reportUploadDone(id)` / `reportUploadFailed(id)` plus a `useUploadStatus(id)` React hook. Mirrors the `upload-prefill-store` pattern.
+- `app/dashboard/communities/[id]/PrefillUploadBanner.tsx` (NEW): client banner shown at the top of the Details tab. Subscribes via `useUploadStatus`, shows amber spinner while in flight, emerald ✅ on success (auto-dismiss after 8 s), rose ⚠️ on partial failure. Hidden when total = 0.
+- `app/dashboard/communities/CreateCommunityButton.tsx` (NEW): client button replacing the empty-state `<Link href="/communities/new">`. `useTransition` + `createStubCommunity` + `router.push` to the new hub. Shows inline error on failure.
+- `app/_components/UploadSheet.tsx`: `pickType('communities')` now `await`s `createStubCommunity()`, calls `setUploadTotal(id, files.length)`, then pushes to `/dashboard/communities/<id>?prefill=…`. The "Community" sheet row disables and renames to "Creating community…" while the action is in flight; on failure shows an inline rose error and keeps the files queued so the agent can retry. `pickType('listings')` is unchanged.
+- `app/dashboard/_components/HubTabs.tsx`: added optional `eagerMount` prop. When true, renders every panel in the DOM, hidden via `hidden` attribute on a wrapping `<div role="tabpanel">`. Default behaviour (lazy: only the active panel renders) is preserved for the listing hub.
+- `app/dashboard/communities/[id]/page.tsx`: turned on `eagerMount`, set `defaultTab="details"`, dropped `<PrefillUploadBanner />` at the top of the Details panel.
+- `app/dashboard/communities/[id]/CommunityMediaPanel.tsx`: imported `setUploadTotal/reportUploadDone/reportUploadFailed` from the status store. On first render with prefill files, calls `setUploadTotal(communityId, prefillFiles.length)` (idempotent — guarded by a ref) so a hard refresh of the URL still wires the banner totals. `handleVideoUploaded` now reports done; new `handlePhotoResolved` callback funnels per-photo success/failure into the store.
+- `app/dashboard/communities/[id]/CommunityPhotoPanel.tsx`: added optional `onUploadResolved?: (ok: boolean) => void` prop, latched through a ref so `handleFiles` keeps a stable identity. Each file end (validation reject, upload error, recordCommunityPhoto error, or success) fires the callback exactly once.
+- `app/dashboard/communities/new/` (DIR): deleted entirely (`page.tsx` + `NewCommunityForm.tsx`). The only import of `createCommunity` was here, so the existing action is now dead code we can prune in a follow-up — kept for now in case any test references it.
+
+**Decisions**:
+- **eagerMount over lifting state**: the alternative was lifting prefill consumption out of `CommunityMediaPanel` into the page, but that drags photo/video state across the tab boundary and complicates `CommunityPhotoPanel`'s imperative handle wiring. Eager-mount with `display:none` is one prop and zero behaviour change for non-eager callers (listing hub).
+- **status='draft' stubs**: deliberately dirty — yes, an agent who closes the tab mid-create leaves an "Untitled community" in their dashboard list. The Danger Zone in the Details tab can delete it; the public grid never sees it because of `status='draft'`. Cheaper than a server-side cron sweep.
+- **Slug = `untitled-<rand6>`**: `updateCommunity` already auto-rewrites the slug when the agent saves a name change, with collision retry. So renaming "Untitled community" → "Buckhead" rewrites the slug to `buckhead` (or `buckhead-2` etc). No follow-up migration needed.
+- **No toast system**: the project has no shared toast utility (grep returned 0 matches), so the banner is a tab-local component. Living in Details tab is right because that's where the agent's eyes are while the upload happens.
+- **First-click-doesn't-navigate fix is structural**: the previous `/new` form did `await createCommunity(...)` server-side, then called `redirect()` which threw a `NEXT_REDIRECT` error. Sometimes that fired before the `useFormState` Promise resolved and the SPA never re-rendered. The new flow is `await action()` from a client component → `router.push` — no thrown redirect, no race. Both empty-state and FAB share the same code path.
+- **Video prefill fix is structural**: the Media tab now mounts on every Hub render (eagerMount), so `consumePrefill` runs synchronously during the first paint regardless of which tab the agent looks at. No more "is `useSearchParams()` populated yet" hydration races.
+
+**Verification**:
+- `npx tsc --noEmit` (after `rm -rf .next`): clean.
+- `npx biome check` on the 9 touched + new files: clean (the 4 errors in `UploadSheet.tsx` are pre-existing svg-title / role-status warnings, verified via `git stash`).
+- `npx next build`: succeeds. Bundle size unchanged for `/dashboard/communities/[id]` (the eager-mount panels were already in the closure for that route).
+- Manual e2e to follow on Vercel preview.
+
+**Pitfalls noted**:
+- `setUploadTotal` is called twice in the FAB path (once in UploadSheet pre-navigation, once on Media panel mount via the idempotent guard). The second call resets `done`/`failed` to 0 — this is fine in the FAB case (banner hasn't seen any reports yet) but would clobber state if the agent navigates away and back. Refs guard against that for the SPA lifetime; a hard refresh wipes it anyway because the prefill File[] is gone too.
+- The eagerMount `hidden` attribute on `<div>` is the simple way; if any panel relies on `IntersectionObserver` or measures DOM dimensions it'll see `display:none` and behave wrong. Spot-checked: none of the four panels do that.
+
 ## 2026-06-23 06:30 UTC — Phase 50.16: community Danger Zone solid color + video prefill fix
 
 **Objective**: qiaoxux on agent hub "my community": (1) "danger zone color is fainted", (2) "video upload is not prefilled".

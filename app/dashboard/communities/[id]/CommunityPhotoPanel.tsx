@@ -16,11 +16,11 @@
  * The picker stays sticky between uploads.
  */
 
+import { setCommunityCoverFromPhoto } from '@/app/dashboard/communities/[id]/cover-actions';
 import {
   deleteCommunityPhoto,
   recordCommunityPhoto,
 } from '@/app/dashboard/communities/[id]/photo-actions';
-import { setCommunityCoverFromPhoto } from '@/app/dashboard/communities/[id]/cover-actions';
 import { createClient } from '@/lib/supabase/client';
 import { COMMUNITY_PHOTOS_BUCKET, nextCommunityPhotoStoragePath } from '@/lib/supabase/storage';
 import {
@@ -88,6 +88,12 @@ interface Props {
    * the same flag through without re-deriving it.
    */
   canSetCover?: boolean;
+  /**
+   * Phase 50.17 (2026-06-23): notify the parent each time a photo finishes
+   * (or fails) so it can update the prefill upload banner. Called once per
+   * file, with `ok` reflecting whether the upload + DB record succeeded.
+   */
+  onUploadResolved?: (ok: boolean) => void;
 }
 
 /**
@@ -111,287 +117,304 @@ interface PendingItem {
 
 export const CommunityPhotoPanel = forwardRef<CommunityPhotoPanelHandle, Props>(
   function CommunityPhotoPanel(
-    { communityId, initialPhotos, category, prefillFiles, hideUploadButton, coverStoragePath, canSetCover },
+    {
+      communityId,
+      initialPhotos,
+      category,
+      prefillFiles,
+      hideUploadButton,
+      coverStoragePath,
+      canSetCover,
+      onUploadResolved,
+    },
     ref,
   ) {
-  const router = useRouter();
-  const [photos, setPhotos] = useState<CommunityPhotoRow[]>(initialPhotos);
-  const [pending, setPending] = useState<PendingItem[]>([]);
-  const [globalError, setGlobalError] = useState<string | null>(null);
-  const [_, startTransition] = useTransition();
-  const inputRef = useRef<HTMLInputElement | null>(null);
-  // Phase 45.16: latch category at mount-time so the auto-upload effect can
-  // run with the value the FAB intended (the user may switch categories
-  // between mount and any subsequent prop change — but we already kicked
-  // off the prefill upload by then).
-  const categoryRef = useRef(category);
-  categoryRef.current = category;
+    const router = useRouter();
+    const [photos, setPhotos] = useState<CommunityPhotoRow[]>(initialPhotos);
+    const [pending, setPending] = useState<PendingItem[]>([]);
+    const [globalError, setGlobalError] = useState<string | null>(null);
+    const [_, startTransition] = useTransition();
+    const inputRef = useRef<HTMLInputElement | null>(null);
+    // Phase 45.16: latch category at mount-time so the auto-upload effect can
+    // run with the value the FAB intended (the user may switch categories
+    // between mount and any subsequent prop change — but we already kicked
+    // off the prefill upload by then).
+    const categoryRef = useRef(category);
+    categoryRef.current = category;
 
-  const meta = getCategoryMeta(category);
+    const meta = getCategoryMeta(category);
 
-  const handleFiles = useCallback(
-    async (files: Iterable<File>, useCategory?: CommunityVideoCategoryId) => {
-      setGlobalError(null);
-      const supabase = createClient();
-      const cat = useCategory ?? categoryRef.current;
-      const kind = legacyKindForCategory(cat);
+    // Phase 50.17: latch onUploadResolved through a ref so handleFiles's
+    // useCallback identity stays stable. Each photo end (success or error)
+    // calls this once.
+    const onResolvedRef = useRef(onUploadResolved);
+    onResolvedRef.current = onUploadResolved;
 
-      for (const file of Array.from(files)) {
-        const tempId = `tmp-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const handleFiles = useCallback(
+      async (files: Iterable<File>, useCategory?: CommunityVideoCategoryId) => {
+        setGlobalError(null);
+        const supabase = createClient();
+        const cat = useCategory ?? categoryRef.current;
+        const kind = legacyKindForCategory(cat);
 
-        if (!ALLOWED_MIMES.has(file.type)) {
-          setGlobalError(`"${file.name}" — only JPEG, PNG, or WebP allowed`);
-          continue;
-        }
-        if (file.size > MAX_FILE_BYTES) {
-          setGlobalError(`"${file.name}" — file too large (max 10 MB)`);
-          continue;
-        }
+        for (const file of Array.from(files)) {
+          const tempId = `tmp-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
-        const preview = URL.createObjectURL(file);
-        setPending((prev) => [...prev, { tempId, fileName: file.name, preview }]);
+          if (!ALLOWED_MIMES.has(file.type)) {
+            setGlobalError(`"${file.name}" — only JPEG, PNG, or WebP allowed`);
+            onResolvedRef.current?.(false);
+            continue;
+          }
+          if (file.size > MAX_FILE_BYTES) {
+            setGlobalError(`"${file.name}" — file too large (max 10 MB)`);
+            onResolvedRef.current?.(false);
+            continue;
+          }
 
-        const path = nextCommunityPhotoStoragePath(communityId, file.name);
-        const { error: uploadErr } = await supabase.storage
-          .from(COMMUNITY_PHOTOS_BUCKET)
-          .upload(path, file, { contentType: file.type, upsert: false });
+          const preview = URL.createObjectURL(file);
+          setPending((prev) => [...prev, { tempId, fileName: file.name, preview }]);
 
-        if (uploadErr) {
-          console.error('[CommunityPhotoPanel] upload failed', uploadErr);
-          setPending((prev) =>
-            prev.map((p) => (p.tempId === tempId ? { ...p, error: uploadErr.message } : p)),
-          );
-          continue;
-        }
+          const path = nextCommunityPhotoStoragePath(communityId, file.name);
+          const { error: uploadErr } = await supabase.storage
+            .from(COMMUNITY_PHOTOS_BUCKET)
+            .upload(path, file, { contentType: file.type, upsert: false });
 
-        const dims = await readImageDimensions(preview);
+          if (uploadErr) {
+            console.error('[CommunityPhotoPanel] upload failed', uploadErr);
+            setPending((prev) =>
+              prev.map((p) => (p.tempId === tempId ? { ...p, error: uploadErr.message } : p)),
+            );
+            onResolvedRef.current?.(false);
+            continue;
+          }
 
-        const result = await recordCommunityPhoto({
-          communityId,
-          storagePath: path,
-          kind,
-          category: cat,
-          schoolId: null,
-          poiId: null,
-          lat: null,
-          lng: null,
-          width: dims?.width ?? null,
-          height: dims?.height ?? null,
-          altText: null,
-        });
+          const dims = await readImageDimensions(preview);
 
-        if (!result.ok) {
-          await supabase.storage.from(COMMUNITY_PHOTOS_BUCKET).remove([path]);
-          setPending((prev) =>
-            prev.map((p) => (p.tempId === tempId ? { ...p, error: result.error } : p)),
-          );
-          continue;
-        }
-
-        setPending((prev) => prev.filter((p) => p.tempId !== tempId));
-        setPhotos((prev) => [
-          ...prev,
-          {
-            id: result.id,
-            storage_path: path,
-            signed_url: preview,
+          const result = await recordCommunityPhoto({
+            communityId,
+            storagePath: path,
             kind,
             category: cat,
-            school_id: null,
-            poi_id: null,
-            alt_text: null,
+            schoolId: null,
+            poiId: null,
+            lat: null,
+            lng: null,
             width: dims?.width ?? null,
             height: dims?.height ?? null,
-            sort_order: result.sortOrder,
-          },
-        ]);
-      }
-    },
-    [communityId],
-  );
+            altText: null,
+          });
 
-  // Phase 50.x: expose addFiles to the parent media shell so the unified
-  // upload button can route image files through this panel's existing
-  // handleFiles pipeline (validation + Supabase upload + recordCommunityPhoto).
-  useImperativeHandle(
-    ref,
-    () => ({
-      addFiles: (files: File[]) => {
-        if (files.length > 0) void handleFiles(files);
+          if (!result.ok) {
+            await supabase.storage.from(COMMUNITY_PHOTOS_BUCKET).remove([path]);
+            setPending((prev) =>
+              prev.map((p) => (p.tempId === tempId ? { ...p, error: result.error } : p)),
+            );
+            onResolvedRef.current?.(false);
+            continue;
+          }
+
+          setPending((prev) => prev.filter((p) => p.tempId !== tempId));
+          setPhotos((prev) => [
+            ...prev,
+            {
+              id: result.id,
+              storage_path: path,
+              signed_url: preview,
+              kind,
+              category: cat,
+              school_id: null,
+              poi_id: null,
+              alt_text: null,
+              width: dims?.width ?? null,
+              height: dims?.height ?? null,
+              sort_order: result.sortOrder,
+            },
+          ]);
+          onResolvedRef.current?.(true);
+        }
       },
-    }),
-    [handleFiles],
-  );
+      [communityId],
+    );
 
-  // Phase 45.16: auto-upload prefilled files once on mount. The bridge
-  // consumes the upload-prefill-store key (one-shot) so re-renders won't
-  // double-upload, but we still gate on a ref to be defensive against
-  // StrictMode double-invoke in dev.
-  const didConsumePrefill = useRef(false);
-  useEffect(() => {
-    if (didConsumePrefill.current) return;
-    if (!prefillFiles || prefillFiles.length === 0) return;
-    didConsumePrefill.current = true;
-    // Only photos belong here — videos go through CommunityVideoPanel.
-    const photos = prefillFiles.filter((f) => f.type.startsWith('image/'));
-    if (photos.length === 0) return;
-    void handleFiles(photos);
-  }, [prefillFiles, handleFiles]);
+    // Phase 50.x: expose addFiles to the parent media shell so the unified
+    // upload button can route image files through this panel's existing
+    // handleFiles pipeline (validation + Supabase upload + recordCommunityPhoto).
+    useImperativeHandle(
+      ref,
+      () => ({
+        addFiles: (files: File[]) => {
+          if (files.length > 0) void handleFiles(files);
+        },
+      }),
+      [handleFiles],
+    );
 
-  const handleDelete = useCallback(
-    (photoId: string) => {
-      startTransition(async () => {
-        const prev = photos;
-        setPhotos((p) => p.filter((x) => x.id !== photoId));
-        const res = await deleteCommunityPhoto({ communityId, photoId });
-        if (!res.ok) {
-          setGlobalError(`Delete failed: ${res.error}`);
-          setPhotos(prev);
-        }
-      });
-    },
-    [communityId, photos],
-  );
+    // Phase 45.16: auto-upload prefilled files once on mount. The bridge
+    // consumes the upload-prefill-store key (one-shot) so re-renders won't
+    // double-upload, but we still gate on a ref to be defensive against
+    // StrictMode double-invoke in dev.
+    const didConsumePrefill = useRef(false);
+    useEffect(() => {
+      if (didConsumePrefill.current) return;
+      if (!prefillFiles || prefillFiles.length === 0) return;
+      didConsumePrefill.current = true;
+      // Only photos belong here — videos go through CommunityVideoPanel.
+      const photos = prefillFiles.filter((f) => f.type.startsWith('image/'));
+      if (photos.length === 0) return;
+      void handleFiles(photos);
+    }, [prefillFiles, handleFiles]);
 
-  // Phase 50.9: per-photo "Set as cover". Server action copies the file
-  // from the private community-photos bucket to the public community-covers
-  // bucket and updates communities.cover_storage_path. We router.refresh()
-  // on success so the new badge shows up + the hero hero updates.
-  const [coverBusyId, setCoverBusyId] = useState<string | null>(null);
-  const handleSetCover = useCallback(
-    (photoStoragePath: string) => {
-      setGlobalError(null);
-      setCoverBusyId(photoStoragePath);
-      startTransition(async () => {
-        const res = await setCommunityCoverFromPhoto({
-          communityId,
-          photoStoragePath,
+    const handleDelete = useCallback(
+      (photoId: string) => {
+        startTransition(async () => {
+          const prev = photos;
+          setPhotos((p) => p.filter((x) => x.id !== photoId));
+          const res = await deleteCommunityPhoto({ communityId, photoId });
+          if (!res.ok) {
+            setGlobalError(`Delete failed: ${res.error}`);
+            setPhotos(prev);
+          }
         });
-        setCoverBusyId(null);
-        if (!res.ok) {
-          setGlobalError(`Set cover failed: ${res.error}`);
-          return;
-        }
-        router.refresh();
-      });
-    },
-    [communityId, router],
-  );
+      },
+      [communityId, photos],
+    );
 
-  // When embedded in the unified media shell, drop the surface chrome
-  // (heading, description, card border) so it reads as a sub-section of the
-  // parent card rather than a card-in-card. Mirrors `PhotoPanel`'s embedded
-  // shape under MediaPanel.
-  const Wrapper = hideUploadButton ? 'div' : 'section';
-  const wrapperClassName = hideUploadButton
-    ? 'space-y-4'
-    : 'rounded border border-line bg-surface p-5';
+    // Phase 50.9: per-photo "Set as cover". Server action copies the file
+    // from the private community-photos bucket to the public community-covers
+    // bucket and updates communities.cover_storage_path. We router.refresh()
+    // on success so the new badge shows up + the hero hero updates.
+    const [coverBusyId, setCoverBusyId] = useState<string | null>(null);
+    const handleSetCover = useCallback(
+      (photoStoragePath: string) => {
+        setGlobalError(null);
+        setCoverBusyId(photoStoragePath);
+        startTransition(async () => {
+          const res = await setCommunityCoverFromPhoto({
+            communityId,
+            photoStoragePath,
+          });
+          setCoverBusyId(null);
+          if (!res.ok) {
+            setGlobalError(`Set cover failed: ${res.error}`);
+            return;
+          }
+          router.refresh();
+        });
+      },
+      [communityId, router],
+    );
 
-  return (
-    <Wrapper className={wrapperClassName}>
-      {hideUploadButton ? null : (
-        <>
-          <div className="mb-4 flex items-baseline justify-between">
-            <h2 className="text-base font-semibold">Photo library (private)</h2>
-            <span className="text-muted text-xs">{photos.length} uploaded</span>
-          </div>
-          <p className="mb-4 text-ink2 text-xs">
-            Photos here are <span className="text-ink2">not visible to buyers</span> — they're raw
-            material the platform can use to generate community videos later. JPEG / PNG / WebP, up
-            to 10 MB each.
-          </p>
-        </>
-      )}
+    // When embedded in the unified media shell, drop the surface chrome
+    // (heading, description, card border) so it reads as a sub-section of the
+    // parent card rather than a card-in-card. Mirrors `PhotoPanel`'s embedded
+    // shape under MediaPanel.
+    const Wrapper = hideUploadButton ? 'div' : 'section';
+    const wrapperClassName = hideUploadButton
+      ? 'space-y-4'
+      : 'rounded border border-line bg-surface p-5';
 
-      {globalError ? (
-        <div className="mb-3 rounded border border-red-500/30 bg-red-500/10 px-3 py-2 text-red-200 text-xs">
-          {globalError}
-        </div>
-      ) : null}
-
-      <div className={hideUploadButton ? 'hidden' : 'mb-4'}>
-        <input
-          ref={inputRef}
-          type="file"
-          accept="image/jpeg,image/png,image/webp"
-          multiple
-          className="hidden"
-          onChange={(e) => {
-            if (e.target.files && e.target.files.length > 0) {
-              void handleFiles(Array.from(e.target.files));
-              e.target.value = '';
-            }
-          }}
-        />
-        <button
-          type="button"
-          onClick={() => inputRef.current?.click()}
-          className="inline-flex items-center gap-2 rounded-md border border-line bg-bg px-4 py-2 text-ink2 text-sm hover:border-bronze hover:text-ink"
-        >
-          <Upload size={16} aria-hidden="true" />
-          Add photos as “{meta.label}”
-        </button>
-      </div>
-
-      {pending.length > 0 ? (
-        <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
-          {pending.map((p) => (
-            <div
-              key={p.tempId}
-              className="relative aspect-[4/3] overflow-hidden rounded border border-line bg-bg"
-            >
-              <img src={p.preview} alt="" className="h-full w-full object-cover opacity-50" />
-              <div className="absolute inset-0 flex items-center justify-center text-ink2 text-xs">
-                {p.error ? <span className="text-red-300">{p.error}</span> : 'Uploading…'}
-              </div>
+    return (
+      <Wrapper className={wrapperClassName}>
+        {hideUploadButton ? null : (
+          <>
+            <div className="mb-4 flex items-baseline justify-between">
+              <h2 className="text-base font-semibold">Photo library (private)</h2>
+              <span className="text-muted text-xs">{photos.length} uploaded</span>
             </div>
-          ))}
-        </div>
-      ) : null}
+            <p className="mb-4 text-ink2 text-xs">
+              Photos here are <span className="text-ink2">not visible to buyers</span> — they're raw
+              material the platform can use to generate community videos later. JPEG / PNG / WebP,
+              up to 10 MB each.
+            </p>
+          </>
+        )}
 
-      {photos.length > 0 ? (
-        hideUploadButton ? (
-          <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
-            {photos.map((photo) => (
-              <PhotoCard
-                key={photo.id}
-                photo={photo}
-                onDelete={handleDelete}
-                isCover={
-                  coverStoragePath != null && coverStoragePath === photo.storage_path
-                }
-                canSetCover={!!canSetCover}
-                onSetCover={handleSetCover}
-                coverBusy={coverBusyId === photo.storage_path}
-              />
+        {globalError ? (
+          <div className="mb-3 rounded border border-red-500/30 bg-red-500/10 px-3 py-2 text-red-200 text-xs">
+            {globalError}
+          </div>
+        ) : null}
+
+        <div className={hideUploadButton ? 'hidden' : 'mb-4'}>
+          <input
+            ref={inputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            multiple
+            className="hidden"
+            onChange={(e) => {
+              if (e.target.files && e.target.files.length > 0) {
+                void handleFiles(Array.from(e.target.files));
+                e.target.value = '';
+              }
+            }}
+          />
+          <button
+            type="button"
+            onClick={() => inputRef.current?.click()}
+            className="inline-flex items-center gap-2 rounded-md border border-line bg-bg px-4 py-2 text-ink2 text-sm hover:border-bronze hover:text-ink"
+          >
+            <Upload size={16} aria-hidden="true" />
+            Add photos as “{meta.label}”
+          </button>
+        </div>
+
+        {pending.length > 0 ? (
+          <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+            {pending.map((p) => (
+              <div
+                key={p.tempId}
+                className="relative aspect-[4/3] overflow-hidden rounded border border-line bg-bg"
+              >
+                <img src={p.preview} alt="" className="h-full w-full object-cover opacity-50" />
+                <div className="absolute inset-0 flex items-center justify-center text-ink2 text-xs">
+                  {p.error ? <span className="text-red-300">{p.error}</span> : 'Uploading…'}
+                </div>
+              </div>
             ))}
           </div>
-        ) : (
-          <details>
-            <summary className="cursor-pointer select-none text-xs uppercase tracking-wide text-ink2 hover:text-ink">
-              Already uploaded ({photos.length})
-            </summary>
+        ) : null}
+
+        {photos.length > 0 ? (
+          hideUploadButton ? (
             <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
               {photos.map((photo) => (
                 <PhotoCard
                   key={photo.id}
                   photo={photo}
                   onDelete={handleDelete}
-                  isCover={
-                    coverStoragePath != null && coverStoragePath === photo.storage_path
-                  }
+                  isCover={coverStoragePath != null && coverStoragePath === photo.storage_path}
                   canSetCover={!!canSetCover}
                   onSetCover={handleSetCover}
                   coverBusy={coverBusyId === photo.storage_path}
                 />
               ))}
             </div>
-          </details>
-        )
-      ) : null}
-    </Wrapper>
-  );
-});
+          ) : (
+            <details>
+              <summary className="cursor-pointer select-none text-xs uppercase tracking-wide text-ink2 hover:text-ink">
+                Already uploaded ({photos.length})
+              </summary>
+              <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+                {photos.map((photo) => (
+                  <PhotoCard
+                    key={photo.id}
+                    photo={photo}
+                    onDelete={handleDelete}
+                    isCover={coverStoragePath != null && coverStoragePath === photo.storage_path}
+                    canSetCover={!!canSetCover}
+                    onSetCover={handleSetCover}
+                    coverBusy={coverBusyId === photo.storage_path}
+                  />
+                ))}
+              </div>
+            </details>
+          )
+        ) : null}
+      </Wrapper>
+    );
+  },
+);
 
 async function readImageDimensions(src: string): Promise<{ width: number; height: number } | null> {
   return new Promise((resolve) => {
