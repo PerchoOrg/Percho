@@ -110,6 +110,10 @@ function VideoCard({
   const videoElRef = useRef<HTMLVideoElement | null>(null);
   const hlsRef = useRef<Hls | null>(null);
   const [paused, setPaused] = useState(true);
+  // Phase 55 (2026-06-25): see BrowseFeed for rationale. Only the user's
+  // explicit tap-to-pause shows the central play button. Auto-paused
+  // (loading, autoplay-blocked, off-screen) does not.
+  const [userPaused, setUserPaused] = useState(false);
 
   let poster: string | null = null;
   try {
@@ -171,6 +175,8 @@ function VideoCard({
     const v = videoElRef.current;
     if (!v) return;
     if (isActive && shouldMount) {
+      // Fresh card — clear any stale tap-to-pause from a prior interaction.
+      setUserPaused(false);
       v.muted = muted;
       v.play()
         .then(() => setPaused(false))
@@ -203,11 +209,15 @@ function VideoCard({
     if (!v) return;
     if (v.paused) {
       v.play()
-        .then(() => setPaused(false))
+        .then(() => {
+          setPaused(false);
+          setUserPaused(false);
+        })
         .catch(() => {});
     } else {
       v.pause();
       setPaused(true);
+      setUserPaused(true);
     }
   };
 
@@ -254,7 +264,7 @@ function VideoCard({
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-72 bg-gradient-to-t from-black/85 via-black/50 to-transparent" />
 
       {/* Pause indicator. */}
-      {paused && shouldMount && (
+      {userPaused && shouldMount && (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
           <div className="flex h-20 w-20 items-center justify-center rounded-full bg-black/40 text-cream backdrop-blur">
             <svg viewBox="0 0 24 24" width={36} height={36} fill="currentColor" aria-hidden="true">
@@ -354,19 +364,31 @@ export function CommunityVideoFeed({
   }, [community.id]);
 
   // First-interaction unmute (TikTok-style).
+  // Phase 55 (2026-06-25): match BrowseFeed — also listen for `touchstart`
+  // (iOS swipes can miss `pointerdown`) and proactively call play() on the
+  // active <video> so audio kicks in on the first gesture instead of after
+  // a few back-and-forth swipes.
   useEffect(() => {
     if (!muted || !wasAutoplayBlockedRef.current) return;
     const unmuteOnce = () => {
       wasAutoplayBlockedRef.current = false;
       setMuted(false);
+      const activeEl = cardRefs.current.get(activeIndex);
+      const v = activeEl?.querySelector('video');
+      if (v) {
+        v.muted = false;
+        void v.play().catch(() => {});
+      }
     };
     window.addEventListener('pointerdown', unmuteOnce, { once: true, passive: true });
+    window.addEventListener('touchstart', unmuteOnce, { once: true, passive: true });
     window.addEventListener('keydown', unmuteOnce, { once: true });
     return () => {
       window.removeEventListener('pointerdown', unmuteOnce);
+      window.removeEventListener('touchstart', unmuteOnce);
       window.removeEventListener('keydown', unmuteOnce);
     };
-  }, [muted]);
+  }, [muted, activeIndex]);
 
   // Intersection observer → activeIndex. Re-runs when totalCards changes so
   // newly-appended loop copies get observed.

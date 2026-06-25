@@ -2,6 +2,31 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-06-25 — Phase 55: feed autoplay UX polish (no play button on swipe + reliable first-tap unmute)
+
+**Objective**: Vivian feedback on `/browse` and `/c/.../feed`:
+1. "向下滑视频 直接播放就好 不要出现播放键" — every swipe to a new card briefly flashed (or permanently showed, when autoplay-with-sound was blocked) the central play button.
+2. "有时候没有声音 来回滑几次就有声音了" — after the autoplay-blocked → muted fallback, audio took multiple swipes to come back instead of unmuting on the first gesture (TikTok pattern).
+
+**Actions**:
+- `app/(public)/browse/_components/BrowseFeed.tsx` Card: introduced `userPaused` local state. The central PlayIcon now renders only when `userPaused && shouldMount` (was `paused && shouldMount`). `userPaused` flips true only on `onTap` while currently playing; cleared on tap-to-resume and on every `isActive` re-entry. Auto-paused-but-loading and autoplay-blocked-fallback no longer surface the indicator.
+- BrowseFeed parent: first-interaction unmute listener now also subscribes to `touchstart { passive: true, once: true }` (iOS Safari can miss `pointerdown` during a passive scroll-glide), and on fire calls `v.muted = false; v.play()` directly on the active card's `<video>` so audio kicks in on the same gesture instead of waiting for the next render+sync.
+- Same two changes mirrored in `app/(public)/c/[slug]/feed/CommunityVideoFeed.tsx` (community feed has identical VideoCard / autoplay-block plumbing).
+- Removed orphan `paused` prop on Card (only consumer was the old play-icon condition); `pausedActive` parent state kept (setter still used by the community-sheet open handler) but the read is destructured into `_` since nothing renders from it anymore.
+
+**Decisions**:
+- Chose "show play button only on user-tap-pause" (TikTok / Xiaohongshu pattern) over "remove play button entirely". Vivian's literal phrasing was "不要出现播放键" but on follow-up she confirmed the latter — keep the indicator for the explicit tap-to-pause affordance, just don't flash it on swipe.
+- Did not introduce a videoElRef array on the parent; reused `cardRefs.get(activeIndex).querySelector('video')` to avoid plumbing a second ref map.
+
+**Issues / Resolution**:
+- Initial pass left the now-unused `paused` Card prop in place — TS was happy but the prop became dead weight. Cleaned the prop + the call-site, kept `setPaused` because the community-sheet open path still calls it through `setPausedActive`.
+
+**Learnings**:
+- `pointerdown` is unreliable as the sole "first user gesture" signal on iOS during scroll/swipe. Pair it with `touchstart` whenever the unmute pattern is used.
+- Distinguish *userPaused* (explicit tap) from *paused* (any reason the video isn't playing) when driving UI affordances. Conflating them is what caused the play button to flash on every fresh card.
+
+**Next steps**: Verify on Vivian's iOS device; if any residual "no sound on first card" reports, consider also unmuting on the IntersectionObserver activeIndex change when `wasAutoplayBlockedRef` is set and a recent gesture exists.
+
 ## 2026-06-24 — Phase 54: delete demo-media fake-data layer
 
 **Objective**: User asked to "删除所有 fake data 和测试数据". Confirmed scope =

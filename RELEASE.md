@@ -2,6 +2,15 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.59.0 — Smoother feed playback (2026-06-25)
+
+### ✨ Improvements
+- Swipe to a new video and it just plays — the central play button no longer flashes on every new card. The button now only shows up when you've explicitly tapped to pause, the way TikTok and Xiaohongshu behave.
+- When the browser blocks autoplay-with-sound and the feed falls back to muted, your first swipe (or tap, or scroll) now turns the sound on right away. Previously you sometimes had to swipe a few times back and forth before audio came back.
+
+### 🐛 Bug Fixes
+- Fixed a case on iPhone where the first gesture didn't unmute the video on a few of the supported browsers, leaving the feed silent until you found the sound button.
+
 ## v0.58.0 — Real listings show real media (2026-06-24)
 
 ### 🔧 Technical

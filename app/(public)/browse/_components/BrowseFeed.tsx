@@ -147,7 +147,6 @@ interface CardProps {
   shouldMount: boolean;
   isActive: boolean;
   cardRef: (el: HTMLElement | null) => void;
-  paused: boolean;
   setPaused: (b: boolean) => void;
   onSwipe: (delta: 1 | -1) => void;
   poolSize: number;
@@ -368,7 +367,6 @@ function Card({
   shouldMount,
   isActive,
   cardRef,
-  paused,
   setPaused,
   onSwipe,
   poolSize,
@@ -379,6 +377,16 @@ function Card({
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const hlsRef = useRef<Hls | null>(null);
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
+  // Phase 55 (2026-06-25): the central play button used to fire whenever
+  // `paused` was truthy — but `paused` is true while the browser is still
+  // spinning up `v.play()` (~100-300ms after a swipe), AND it stays true
+  // forever when autoplay-with-sound is blocked, so buyers saw a play
+  // button on the next card every time they swiped down. Vivian's
+  // feedback: "向下滑视频 直接播放就好 不要出现播放键". Fix: only show
+  // the central play indicator when the user explicitly tapped to pause
+  // (TikTok / Xiaohongshu pattern). Auto-paused-but-loading or
+  // autoplay-blocked-fallback no longer renders a play button.
+  const [userPaused, setUserPaused] = useState(false);
 
   const sel = useMemo(() => pickVideo(card, source, cycleIdx), [card, source, cycleIdx]);
 
@@ -452,6 +460,10 @@ function Card({
     const v = videoRef.current;
     if (!v) return;
     if (isActive && shouldMount) {
+      // Becoming active = fresh card. Clear any stale tap-to-pause flag
+      // from a previous user interaction so the play button doesn't carry
+      // across cards.
+      setUserPaused(false);
       v.muted = muted;
       v.play()
         .then(() => setPaused(false))
@@ -486,11 +498,15 @@ function Card({
     if (!v) return;
     if (v.paused) {
       v.play()
-        .then(() => setPaused(false))
+        .then(() => {
+          setPaused(false);
+          setUserPaused(false);
+        })
         .catch(() => {});
     } else {
       v.pause();
       setPaused(true);
+      setUserPaused(true);
     }
   };
 
@@ -667,7 +683,7 @@ function Card({
         </>
       )}
 
-      {paused && shouldMount && (
+      {userPaused && shouldMount && (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
           <div className="flex h-20 w-20 items-center justify-center rounded-full bg-black/40 text-cream backdrop-blur">
             <PlayIcon />
@@ -840,7 +856,12 @@ export function BrowseFeed({
   // per-card source + cycle index. key = listing.id
   const [sourceByCard, setSourceByCard] = useState<Record<string, Source>>({});
   const [cycleByCard, setCycleByCard] = useState<Record<string, number>>({});
-  const [pausedActive, setPausedActive] = useState(true);
+  // Phase 55 (2026-06-25): only setPausedActive is read — `pausedActive`
+  // itself was used to drive the central play indicator, which now lives
+  // as a per-Card `userPaused` (tap-to-pause only). Setter is still
+  // needed by the community-sheet open handler to halt audio under the
+  // sheet, so we keep the state but ignore the value.
+  const [, setPausedActive] = useState(true);
   // Global mute state. We optimistically start UNMUTED — if the user arrived
   // via a click on the Landing "Explore" CTA (or any in-app navigation), the
   // browser's sticky activation lets us autoplay with sound. If the user
@@ -854,19 +875,42 @@ export function BrowseFeed({
   // to unmuted — TikTok-style "first interaction enables sound" so users
   // don't have to find the Sound button.
   const wasAutoplayBlockedRef = useRef(false);
+  // Phase 55 (2026-06-25): TikTok-style first-interaction unmute. Two
+  // tweaks vs. earlier impl:
+  //   1. listen for `touchstart` too — iOS Safari fires it on every swipe
+  //      even when the touch glides into a scroll, where `pointerdown` may
+  //      not fire (or fires late, passive-only). Without this, buyers had
+  //      to swipe several times before audio came back, which is exactly
+  //      the bug Vivian reported ("有时候没有声音 来回滑几次才有声音").
+  //   2. on unmute, also call `v.play()` on the active <video> with
+  //      `muted=false` directly. The existing muted-sync effect already
+  //      flips the attribute, but on some browsers the audio track only
+  //      starts on a fresh play() call — re-issuing it here makes the
+  //      switch to audible playback feel instant.
   useEffect(() => {
     if (!muted || !wasAutoplayBlockedRef.current) return;
     const unmuteOnce = () => {
       wasAutoplayBlockedRef.current = false;
       setMuted(false);
+      // Try to nudge the currently-active <video> back into audible
+      // playback immediately. Safe to swallow rejection — the muted-sync
+      // effect on each Card will pick it up on next render either way.
+      const activeEl = cardRefs.current.get(activeIndex);
+      const v = activeEl?.querySelector('video');
+      if (v) {
+        v.muted = false;
+        void v.play().catch(() => {});
+      }
     };
     window.addEventListener('pointerdown', unmuteOnce, { once: true, passive: true });
+    window.addEventListener('touchstart', unmuteOnce, { once: true, passive: true });
     window.addEventListener('keydown', unmuteOnce, { once: true });
     return () => {
       window.removeEventListener('pointerdown', unmuteOnce);
+      window.removeEventListener('touchstart', unmuteOnce);
       window.removeEventListener('keydown', unmuteOnce);
     };
-  }, [muted]);
+  }, [muted, activeIndex]);
   const [leadOpen, setLeadOpen] = useState(false);
   const cardRefs = useRef<Map<number, HTMLElement>>(new Map());
   const scrollerRef = useRef<HTMLDivElement | null>(null);
@@ -1126,7 +1170,6 @@ export function BrowseFeed({
               shouldMount={Math.abs(idx - activeIndex) <= 1}
               isActive={isThisActive}
               cardRef={(el) => setCardRef(idx, el)}
-              paused={isThisActive ? pausedActive : true}
               setPaused={isThisActive ? setPausedActive : () => {}}
               poolSize={poolFor(card, cardSource)}
               muted={muted}
