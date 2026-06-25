@@ -2,6 +2,37 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-06-25 — Phase 55 ROLLBACK: feed autoplay polish broke first-paint
+
+**Objective**: Revert phase55 (commit `22f754e`) — Vivian reported "全是黑屏 视频和声音都没有 过几秒才都出现". Phase55 made playback start observably slower / blanker on the first card.
+
+**Actions**:
+- `git revert -m 1 22f754e` → commit `9b2caab` on main, pushed.
+- Build + tsc clean post-revert.
+
+**Issues / Resolution (root-cause hypothesis, NOT yet verified — fix-forward attempt deferred)**:
+- Most likely culprit: the new `setUserPaused(false)` inside the `[isActive, shouldMount, muted, ...]` effect on Card / VideoCard. Combined with `cardRefs.current.get(activeIndex).querySelector('video')` from the parent unmute listener (also depends on `activeIndex`), this re-runs the play/pause effect every time the active card changes. On a fresh card mount the order becomes: setUserPaused(false) → setState re-render → effect re-runs → muted re-applied → play() retried. That extra re-render before `v.play()` resolves is what produces the visible black-frame gap on iOS Safari.
+- Secondary suspect: the unmute listener's `activeIndex` dep means the listener tears down + re-installs every swipe. When `wasAutoplayBlockedRef=true` AND a touchstart is mid-flight during the swipe, the once-listener can fire on the swipe gesture itself (not on a subsequent tap), unmuting + calling `v.play()` on a card that's still loading HLS → race against the IntersectionObserver-driven play call.
+- Touchstart + pointerdown both passive once-listeners with `activeIndex` in dep array also means TWO unmute attempts can land back-to-back during a single swipe (touch fires first, pointer second on some Safari versions), each calling `v.play()` and `v.muted=false` on the active video → second play() can interrupt the first's loading, surfacing a black frame.
+
+**Decisions**:
+- Roll back first, diagnose second. Vivian was actively testing and a regression on first-paint is worse than the original two-swipe sound bug.
+- Don't fix-forward in the same session — re-design needs a real device session, not blind patches.
+
+**Learnings**:
+- Adding state writes inside the play/pause effect (even cheap `setUserPaused(false)`) can introduce a render gap before `v.play()` on iOS Safari. The original `paused` boolean was driven by play().then/catch resolution, which kept the visible state coupled to actual playback readiness. Splitting `userPaused` out as eager-cleared state decoupled it from playback readiness — exactly the wrong direction for first-paint timing.
+- Don't re-issue `v.play()` from a window-level unmute listener while the IntersectionObserver-driven effect is also calling play() during a swipe transition. Two callers racing on the same `<video>` element produces black frames.
+- Anti-pattern recorded: "eager state-clear in play/pause effect" + "passive once-listener with re-binding deps that include the active index". Both touch the video element across renders in ways that defeat browser playback-readiness heuristics.
+
+**Next steps**:
+- Re-design without these two patterns. Possible approaches:
+  1. Drive `userPaused` purely from `<video>` element events (`onpause` with a "was the pause caused by user tap?" flag) instead of useState writes inside the play/pause effect.
+  2. Drop the `activeIndex` from the unmute listener deps; install once on mount and read activeIndex through a ref. Pick `touchstart` OR `pointerdown` (not both) to avoid double-fire.
+  3. Or: leave the original behavior and accept the play-button flash + occasional swipe-to-unmute. Vivian's bug is real but the cure was worse than the disease.
+- Confirm with Vivian whether to retry with a redesigned pass or leave as-is.
+
+(Note: phase55 originally had its own DEVLOG entry; the revert removed it along with the code. See commit `348c6b5` for the original implementation diff if you need to study what went wrong.)
+
 ## 2026-06-24 — Phase 54: delete demo-media fake-data layer
 
 **Objective**: User asked to "删除所有 fake data 和测试数据". Confirmed scope =
