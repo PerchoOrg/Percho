@@ -2,6 +2,31 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-06-26 — Phase 56: leads.listing_id missing ON DELETE CASCADE
+
+**Objective**: Fix "server-side exception (digest 881108286)" Vivian hit when deleting her last listing from `/dashboard/listings/[id]/edit` Danger zone. Reported as "last listing can not be deleted", but the actual trigger is "any listing that has ever received a lead".
+
+**Root cause**: `supabase/migrations/0001_init.sql:283` declared `leads.listing_id uuid not null references public.listings` — a plain FK, no `on delete cascade`. Every other listing-child table in the schema (`listing_videos`, `listing_photos`, `photos`, `events`, `favorites`, `saved_listings`, `saved_social_drafts`) does cascade. Leads was the only oversight from the original init migration. Result: `DELETE FROM listings WHERE id=…` raised an FK violation on any listing with at least one lead row → `deleteListing()` returned `{ ok: false, error }` → `deleteListingAndRedirect` re-threw → Next.js wrapped it as a server-side exception. Vivian's "last" listing was the one that had accumulated test leads.
+
+**Actions**:
+- New migration `supabase/migrations/0041_leads_cascade_on_listing_delete.sql`: drop + re-add `leads_listing_id_fkey` with `on delete cascade`.
+- `supabase db push` against prod — applied cleanly.
+- `npx tsc --noEmit` clean (pure SQL change, no TS surface touched).
+
+**Decisions**:
+- Cascade rather than `set null` or app-level pre-delete cleanup. Reasoning: a lead's only meaningful context is the listing it was sent about; orphaning it (set null) would leave a buyer message attached to nothing. Cascade also matches what the DangerZone confirm copy already promises ("Videos, photos, leads and analytics will be removed") — the schema was just lying.
+- One-line constraint swap, no app code change. Considered also fixing the Danger zone error UX (current `alert()` is easy to miss on iOS), but that's a P2 and the user only asked for the actual-delete path to work.
+
+**Issues**: None. SQL applied first try.
+
+**Resolution**: Push branch → verify Vercel preview → ask Vivian to retry deletion on the listing that previously errored.
+
+**Learnings**:
+- Whenever a child table has `not null references parent`, the cascade behaviour MUST be specified explicitly. Postgres defaults to `NO ACTION` (which behaves like `RESTRICT` here) — silent footgun for any "delete the parent" UX. Audit during schema review: every `references` line should explicitly say `on delete cascade` or `on delete set null` (or have a comment explaining why RESTRICT is intentional).
+- The "last listing won't delete" framing was misleading — could equally have been "first listing with leads won't delete". Worth probing for "did this listing ever receive a buyer message?" next time a delete-listing bug comes in, before chasing list-empty-state hypotheses.
+
+**Next steps**: Merge to main once Vivian confirms a delete works on a leads-bearing listing in preview.
+
 ## 2026-06-25 — Phase 55 ROLLBACK: feed autoplay polish broke first-paint
 
 **Objective**: Revert phase55 (commit `22f754e`) — Vivian reported "全是黑屏 视频和声音都没有 过几秒才都出现". Phase55 made playback start observably slower / blanker on the first card.
