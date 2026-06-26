@@ -40,6 +40,10 @@ type ListingRow = {
   description: string[] | null;
   community_id: string | null;
   agent_id: string;
+  // Phase 60 (2026-06-26): cover_url joins the projection so the grid
+  // thumbnail can honour the agent's "Set as cover" pick (photo or
+  // video) regardless of mediaKind.
+  cover_url: string | null;
   lat?: number | null;
   lng?: number | null;
 };
@@ -292,6 +296,12 @@ async function assembleCards(
       mediaKind: hero ? 'video' : 'photo',
       hero: { cfVideoId: hero?.cf_video_id ?? '' },
       heroPhotoUrl: hero ? undefined : photoPublicUrl((heroPhoto as ListingPhotoRow).storage_path),
+      // Phase 60 (2026-06-26): grid thumbnail honours the agent's
+      // explicit `cover_url`. Grid consumers prefer this over the
+      // mediaKind-derived hero. We fall through to undefined when
+      // cover_url is null so callers default to the existing
+      // mediaKind branch (no behavioural change for un-set covers).
+      gridCoverUrl: l.cover_url ?? undefined,
       categoryVideos,
       listing: {
         id: l.id,
@@ -342,7 +352,7 @@ export async function fetchBrowseCards(): Promise<BrowseCard[]> {
   const { data: rawListings } = (await (supabase as any)
     .from('listings')
     .select(
-      'id, slug, address, city, state, price, beds, baths, sqft, description, community_id, agent_id',
+      'id, slug, address, city, state, price, beds, baths, sqft, description, community_id, agent_id, cover_url',
     )
     .eq('status', 'active')
     .order('created_at', { ascending: false })
@@ -379,7 +389,7 @@ export async function fetchBrowseCardsByCommunitySlug(
   const { data: rawListings } = (await (supabase as any)
     .from('listings')
     .select(
-      'id, slug, address, city, state, price, beds, baths, sqft, description, community_id, agent_id',
+      'id, slug, address, city, state, price, beds, baths, sqft, description, community_id, agent_id, cover_url',
     )
     .eq('status', 'active')
     .eq('community_id', community.id)
@@ -403,7 +413,7 @@ export async function fetchBrowseCardsByIds(ids: string[]): Promise<BrowseCard[]
   const { data: rawListings } = (await (supabase as any)
     .from('listings')
     .select(
-      'id, slug, address, city, state, price, beds, baths, sqft, description, community_id, agent_id',
+      'id, slug, address, city, state, price, beds, baths, sqft, description, community_id, agent_id, cover_url',
     )
     .in('id', ids)
     .eq('status', 'active')) as { data: ListingRow[] | null };
@@ -436,7 +446,7 @@ export async function fetchNearbyCards(args: {
     const r = (await (supabase as any)
       .from('listings')
       .select(
-        'id, slug, address, city, state, price, beds, baths, sqft, description, community_id, agent_id, lat, lng',
+        'id, slug, address, city, state, price, beds, baths, sqft, description, community_id, agent_id, cover_url, lat, lng',
       )
       .eq('status', 'active')
       .not('lat', 'is', null)

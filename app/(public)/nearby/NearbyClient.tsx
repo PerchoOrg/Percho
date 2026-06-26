@@ -234,10 +234,12 @@ export function NearbyClient() {
   // /dashboard, /dashboard/communities, /saved exactly. Distance pill
   // routes through ListingGridItem.distanceMi → GridCard topLeft slot.
   const items: ListingGridItem[] = cards.map((card) => {
+    // Phase 60: agent's cover_url wins over the mediaKind hero.
     const realSrc =
-      card.mediaKind === 'video'
+      card.gridCoverUrl ??
+      (card.mediaKind === 'video'
         ? thumbnailUrl(card.hero.cfVideoId)
-        : (card.heroPhotoUrl as string);
+        : (card.heroPhotoUrl as string));
     return {
       id: card.listing.id,
       href:

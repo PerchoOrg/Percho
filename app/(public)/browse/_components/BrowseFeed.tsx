@@ -51,6 +51,17 @@ export type BrowseCard = {
   /** Set when mediaKind === 'photo'. Public Supabase Storage URL. */
   heroPhotoUrl?: string;
   /**
+   * Phase 60 (2026-06-26): grid thumbnail override sourced from
+   * `listings.cover_url`. When the agent picks "Set as cover" on either
+   * a photo or a video, this URL flows through. Grid consumers (`/browse`,
+   * `/saved`, `/nearby`, `/c/[slug]`) prefer this over the
+   * mediaKind-derived hero so the cover the agent picked actually shows
+   * up on the buyer side. The swipe feed (`mediaKind`) is unchanged on
+   * purpose — picking a photo cover for a video listing still lets the
+   * buyer enter the video swipe; only the grid card is re-skinned.
+   */
+  gridCoverUrl?: string;
+  /**
    * Phase 20 (2026-06-13): full photo URL list for the photo branch of the
    * detail page. Only set when mediaKind === 'photo' AND we want a swipeable
    * carousel (not just a grid cover). `/browse` grid leaves this undefined.

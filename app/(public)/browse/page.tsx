@@ -63,10 +63,14 @@ async function RecommendedGrid({ communitySlug }: { communitySlug: string | null
   const isCommunityScoped = Boolean(scopedCards && scopedCards.length > 0);
 
   const items: ListingGridItem[] = cards.map((card) => {
+    // Phase 60: prefer the agent-set cover_url over the mediaKind hero.
+    // Falls through to the prior video-thumbnail / photo-hero branch
+    // when cover_url is unset.
     const src =
-      card.mediaKind === 'video'
+      card.gridCoverUrl ??
+      (card.mediaKind === 'video'
         ? thumbnailUrl(card.hero.cfVideoId)
-        : (card.heroPhotoUrl as string);
+        : (card.heroPhotoUrl as string));
     return {
       id: card.listing.id,
       href:

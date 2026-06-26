@@ -118,7 +118,9 @@ function ListingsView({ cards }: { cards: BrowseCard[] }) {
         ? `/browse/feed?start=${encodeURIComponent(card.listing.id)}`
         : `/v/${card.agent.slug}/${card.listing.slug}`,
     coverUrl:
-      card.mediaKind === 'video' ? thumbnailUrl(card.hero.cfVideoId) : (card.heroPhotoUrl ?? null),
+      // Phase 60: agent's cover_url wins over the mediaKind-derived hero.
+      card.gridCoverUrl ??
+      (card.mediaKind === 'video' ? thumbnailUrl(card.hero.cfVideoId) : (card.heroPhotoUrl ?? null)),
     price: card.listing.price,
     beds: card.listing.beds,
     baths: card.listing.baths,

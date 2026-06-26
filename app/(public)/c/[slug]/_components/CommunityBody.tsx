@@ -196,10 +196,12 @@ function ListingsGrid({ listings }: { listings: BrowseCard[] }) {
     );
   }
   const items: ListingGridItem[] = listings.map((card) => {
+    // Phase 60: agent's cover_url wins over the mediaKind hero.
     const realSrc =
-      card.mediaKind === 'video'
+      card.gridCoverUrl ??
+      (card.mediaKind === 'video'
         ? thumbnailUrl(card.hero.cfVideoId)
-        : (card.heroPhotoUrl as string);
+        : (card.heroPhotoUrl as string));
     return {
       id: card.listing.id,
       href:

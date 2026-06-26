@@ -2,6 +2,28 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-06-26 — Phase 60: cover_url drives buyer grid thumbnails
+
+**Objective**: Owner re-tested Phase 59 with a *photo* cover on a listing that also has video. The grid thumbnail on `/browse` still showed the video poster, not the picked photo. Phase 59 only fixed the case where the cover and the hero were the same media kind.
+
+**Root cause**: `lib/feed/browse-cards.ts` decides `mediaKind` purely on whether the listing has any ready video — `mediaKind = hero ? 'video' : 'photo'`. With both video + photo present, every grid surface forced video poster; `cover_url` was ignored on buyer side. Phase 59's `listing_photos` reorder ran but the buyer code path never visited the photo branch.
+
+**Actions**:
+- `lib/feed/browse-cards.ts`: select `cover_url` on the 4 listing queries (`fetchBrowseCards`, `fetchBrowseCardsByCommunitySlug`, `fetchBrowseCardsByIds`, `fetchNearbyCards`); attach as new optional `BrowseCard.gridCoverUrl`.
+- `app/(public)/browse/_components/BrowseFeed.tsx`: declare `gridCoverUrl?: string` on `BrowseCard` with a doc-comment spelling out the grid-only override semantics.
+- Grid consumers — `app/(public)/browse/page.tsx`, `app/(public)/saved/_components/SavedClient.tsx`, `app/(public)/nearby/NearbyClient.tsx`, `app/(public)/c/[slug]/_components/CommunityBody.tsx` — prefer `card.gridCoverUrl` over the mediaKind-derived hero src.
+- `app/(public)/search/page.tsx`: same shape — read `cover_url` in the listings projection, override `cover.src` when set; keep `cover.kind` tied to whether the listing has any video so the click target still routes to `/browse/feed` for video listings.
+- `app/dashboard/listings/[id]/edit/actions.ts`: both cover setters now also `revalidatePath('/browse'|'/saved'|'/nearby'|'/search')` so the new `cover_url` hits the buyer side immediately even with intermediate route caches.
+
+**Decisions**:
+- **Option B**: cover only re-skins the *grid card*, not the swipe feed. A photo-cover video listing still enters the video swipe when tapped (`mediaKind === 'video'`, route stays `/browse/feed?start=…`). User explicitly preferred this over Option A (photo cover demotes the listing to a photo-only swipe) because it preserves the video tour.
+- Did **not** touch `mediaKind` — that still drives the swipe feed and the click target. Only the thumbnail src is overridden.
+- Did **not** drop the Phase 59 `listing_videos` / `listing_photos` reorder. It still helps when an agent picks a non-first video as cover (the swipe also leads with it), and it's harmless in the photo-cover case.
+
+**Issues**: None — `tsc --noEmit` clean, `next build` green.
+
+**Next steps**: Owner verification — set a photo as cover on a listing with both video + photo, confirm `/browse` thumb shows that photo, confirm tapping the card still enters the video swipe.
+
 ## 2026-06-26 — Phase 59: Set Cover propagates to buyer surfaces
 
 **Objective**: Owner bug report: "agent hub my listing — Set Cover is only visible from My Listing, not from buyer Explore." Picking a video/photo as cover updated the agent's `/dashboard` tile and the public listing's og:image, but `/browse`, `/saved`, `/nearby`, `/search`, and the swipe feed all kept showing whatever was uploaded first.

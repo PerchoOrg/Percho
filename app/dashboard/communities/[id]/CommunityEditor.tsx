@@ -403,7 +403,7 @@ export function CommunityEditor({
             setHighlights(next);
             clearFieldError('highlights');
           }}
-          placeholder="e.g. Top-rated schools  (press Enter)"
+          placeholder="e.g. Top-rated schools"
           maxItems={8}
           maxLength={80}
           disabled={!canEditMetadata}

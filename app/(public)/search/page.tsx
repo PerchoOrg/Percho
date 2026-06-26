@@ -83,7 +83,7 @@ async function searchListings(
   let query = (supabase as any)
     .from('listings')
     .select(
-      'id, slug, address, city, state, zip, neighborhood, price, beds, baths, sqft, agent_id, status',
+      'id, slug, address, city, state, zip, neighborhood, price, beds, baths, sqft, agent_id, status, cover_url',
     )
     .or(orFields)
     .order('created_at', { ascending: false })
@@ -112,6 +112,7 @@ async function searchListings(
       sqft: number | null;
       agent_id: string;
       status: string;
+      cover_url: string | null;
     }> | null;
   };
 
@@ -166,6 +167,15 @@ async function searchListings(
     let cover: ListingHit['cover'] = null;
     if (vid) cover = { kind: 'video', src: thumbnailUrl(vid) };
     else if (ph) cover = { kind: 'photo', src: photoPublicUrl(ph) };
+    // Phase 60 (2026-06-26): if the agent set an explicit cover_url
+    // (Set as cover from the dashboard — photo or video), it wins over
+    // the sort_order-derived hero. We keep `kind` matched to whether
+    // the underlying listing has a video at all (so the grid still
+    // routes to /browse/feed for video listings); only the thumbnail
+    // src is overridden.
+    if (l.cover_url) {
+      cover = { kind: vid ? 'video' : 'photo', src: l.cover_url };
+    }
     return {
       id: l.id,
       slug: l.slug,

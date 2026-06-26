@@ -2,6 +2,16 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.62.0 — Photo cover on a video listing now shows up in the grid (2026-06-26)
+
+### 🐛 Bug Fixes
+- If your listing has both photos and a video, picking a *photo* as the
+  cover now actually shows that photo on the For You grid, Saved, Nearby,
+  Search, and community pages. Before, video listings always showed the
+  first video's still as the thumbnail, no matter which photo you set as
+  cover. Tapping the card still enters the video swipe — only the
+  thumbnail switches.
+
 ## v0.61.0 — Set Cover now shows up everywhere (2026-06-26)
 
 ### 🐛 Bug Fixes

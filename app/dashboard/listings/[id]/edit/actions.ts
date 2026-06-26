@@ -326,7 +326,15 @@ export async function setListingCover(
     }
   }
 
+  // Phase 60 (2026-06-26): cover now drives buyer grid thumbnails too.
+  // Force-dynamic on those pages means SSR re-renders every request, but
+  // we also revalidate explicitly so any bfcache / route-cache layer in
+  // front of them picks up the new cover_url immediately.
   revalidatePath(`/dashboard/listings/${parsed.data.listingId}/edit`);
+  revalidatePath('/browse');
+  revalidatePath('/saved');
+  revalidatePath('/nearby');
+  revalidatePath('/search');
   return { ok: true, coverUrl };
 }
 
@@ -423,7 +431,12 @@ export async function setListingCoverPhoto(
     }
   }
 
+  // Phase 60 (2026-06-26): same buyer-grid revalidation as setListingCover.
   revalidatePath(`/dashboard/listings/${parsed.data.listingId}/edit`);
+  revalidatePath('/browse');
+  revalidatePath('/saved');
+  revalidatePath('/nearby');
+  revalidatePath('/search');
   return { ok: true, coverUrl };
 }
 
