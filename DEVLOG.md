@@ -2,6 +2,30 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-06-26 — Phase 63: Share button on L3 carousel, drop top progress bar
+
+**Objective**: Qiaoxu's follow-up after Phase 62 ship: (a) add a Share button to the L3 listing carousel right rail (BrowseFeed L0 has one — parity gap), (b) remove the top segmented progress bar — those ticks are the convention for horizontal pagers but Phase 62 made this surface a vertical snap feed, so the bar reads as wrong-axis affordance.
+
+**Decisions**:
+- Share URL is `/v/[agentSlug]/[listingSlug]` (same scheme BrowseFeed `onShare` uses). To build it inside the carousel we needed `agentSlug` per listing — currently `CommunityListingItem` only carried agent-less listing fields.
+- Plumbed `agentSlug` through the type by joining `agents` in `page.tsx` (existing `agent_id` on the listing → `slug` lookup, in-set query, single round trip). This is light: agents-per-community is ≤ N listings ≤ ~tens, no realistic blow-up.
+- Share button hidden when `agentSlug` is null (rare; covers the legacy gap where a listing's `agent_id` doesn't resolve in the agents table). Same conservatism rule used for the Contact button when there's no community owner.
+- Implementation mirrors `BrowseFeed.onShare`: `navigator.share({ title, url })` with try/catch, clipboard fallback. No extra UI for "copied!" toast — keeping rail interactions silent like BrowseFeed.
+- Top progress bar: deleted the JSX block entirely. The "i / N" counter in the top bar conveys the same position info without implying a horizontal scroll. Inline comment explains the removal so a future contributor doesn't reflexively add it back.
+
+**Files**:
+- `app/(public)/c/[slug]/feed/CommunityVideoFeed.tsx` — add `agentSlug: string | null` to `CommunityListingItem`.
+- `app/(public)/c/[slug]/feed/page.tsx` — select `agent_id`, fetch `agents.slug` via `in()` query, pass `agentSlug` per listing.
+- `app/(public)/c/[slug]/feed/_components/CommunityListingCarousel.tsx` — add `ShareIcon` import, `onShare` callback, Share `ActionButton` in rail (after Contact), delete progress-bar block, leave a comment explaining why.
+
+**Verification**: `npx tsc --noEmit` clean; `npx next build` green; all routes compile. Live verification waits on Vercel preview.
+
+**Carry-forward**:
+- If we later add Share to other surfaces (e.g. CommunityVideoFeed for community-level share), the same `navigator.share + clipboard fallback` pattern applies; consider extracting `useNativeShare(title, url)` hook if a third call site appears.
+- `agent_id` on `listings` is non-null in the schema, but `agents.slug` could in theory be missing if agent rows get out of sync. Belt-and-suspenders: render-time `if (!active.agentSlug) return` in `onShare` and conditional Share button rendering. No client crash if data is bad.
+
+**Commits**: `9c7527d` (code) → merge `e3d5831` to main.
+
 ## 2026-06-26 — Phase 62: CommunityListingCarousel goes vertical with rail
 
 **Objective**: Qiaoxu reported that entering listings via the community feed → "Live here" chip used a horizontal pager and lacked the right-rail (Like / Save / Contact) the other two feed surfaces have. Three feed surfaces, three different gesture/affordance shapes — bad consistency story for buyers.

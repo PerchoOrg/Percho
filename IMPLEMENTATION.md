@@ -240,6 +240,13 @@ Shipped:
 Next:
 - none queued.
 
+### 2026-06-26 (phase63)
+Shipped:
+- phase63: L3 listing carousel — added Share button on the right rail (uses `navigator.share` with clipboard fallback; URL is `/v/[agentSlug]/[listingSlug]`); removed the top segmented progress bar (it implied horizontal pagination; the surface is now vertical).
+- Plumbed `agentSlug` through `CommunityListingItem` via an `agents.id → slug` lookup in `page.tsx`.
+Next:
+- Wait on Vercel preview sign-off; consider extracting `useNativeShare(title, url)` if Share appears on a 3rd surface.
+
 ---
 
 ## Phase 21 — Persistent Save (anonymous device-id, scope C+X) — ✅ done 2026-06-13

@@ -2,6 +2,23 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.65.0 — Share button on the L3 listing carousel; horizontal-pager bar removed (2026-06-26)
+
+### ✨ Improvements
+- The listing-by-listing view you reach from a community's **Live here**
+  chip now has a **Share** button on the right rail. Tap it to send a
+  link straight to a friend (uses your phone's native share sheet on
+  iOS / Android, falls back to copying the link to your clipboard on
+  desktop). Hidden on the rare community where the listing's owner
+  can't be resolved.
+- Removed the segmented progress bar across the top. Those ticks are
+  the convention for left/right swiping; this surface scrolls up/down
+  now, so the bar was misleading. The "i / N" counter at the top
+  still tells you where you are in the stack.
+
+### 🛠 Fixes
+- (No bug fixes in this release.)
+
 ## v0.64.0 — Listings from a community now swipe up/down with Like / Save / Contact (2026-06-26)
 
 ### ✨ Improvements
