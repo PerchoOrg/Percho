@@ -433,14 +433,14 @@ function ListingSlide({
           ref={ref}
           // biome-ignore lint/a11y/useMediaCaption: HLS source has no caption track.
           poster={poster ?? undefined}
-          className="h-full w-full bg-black object-contain"
+          className="relative h-full w-full bg-black object-cover md:object-contain"
           playsInline
           loop
           preload="metadata"
         />
       ) : poster ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={poster} alt={listing.address} className="h-full w-full bg-black object-contain" />
+        <img src={poster} alt={listing.address} className="h-full w-full bg-black object-cover md:object-contain" />
       ) : null}
 
       {/* Bottom overlay: price + address + bbs (real fields only). */}
