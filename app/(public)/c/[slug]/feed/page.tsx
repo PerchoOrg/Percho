@@ -167,7 +167,7 @@ export default async function CommunityFeedPage({
   // biome-ignore lint/suspicious/noExplicitAny: stub generated types
   const { data: listingRows } = (await (supabase as any)
     .from('listings')
-    .select('id, slug, address, city, state, price, beds, baths, sqft, created_at')
+    .select('id, slug, address, city, state, price, beds, baths, sqft, agent_id, created_at')
     .eq('community_id', community.id)
     .eq('status', 'active')
     .order('created_at', { ascending: false })) as {
@@ -181,6 +181,7 @@ export default async function CommunityFeedPage({
       beds: number | null;
       baths: number | null;
       sqft: number | null;
+      agent_id: string;
       created_at: string;
     }> | null;
   };
@@ -222,6 +223,23 @@ export default async function CommunityFeedPage({
     if (!heroPhotoByListing.has(p.listing_id)) heroPhotoByListing.set(p.listing_id, p.storage_path);
   }
 
+  // Phase 63 (2026-06-26): resolve agent_id → slug for each listing so the
+  // L3 carousel can build a Share URL (`/v/[agentSlug]/[listingSlug]`).
+  const agentIdsForListings = Array.from(
+    new Set((listingRows ?? []).map((r) => r.agent_id).filter((x): x is string => !!x)),
+  );
+  const agentSlugById = new Map<string, string>();
+  if (agentIdsForListings.length > 0) {
+    // biome-ignore lint/suspicious/noExplicitAny: stub generated types
+    const { data: agentRows } = (await (supabase as any)
+      .from('agents')
+      .select('id, slug')
+      .in('id', agentIdsForListings)) as {
+      data: Array<{ id: string; slug: string }> | null;
+    };
+    for (const a of agentRows ?? []) agentSlugById.set(a.id, a.slug);
+  }
+
   const listings: CommunityListingItem[] = (listingRows ?? [])
     .map((l) => {
       const heroCf = heroVideoByListing.get(l.id) ?? null;
@@ -241,6 +259,7 @@ export default async function CommunityFeedPage({
         sqft: l.sqft,
         heroCfVideoId: heroCf,
         heroPhotoUrl: heroPhotoPath ? photoPublicUrl(heroPhotoPath) : null,
+        agentSlug: agentSlugById.get(l.agent_id) ?? null,
       };
     })
     .filter((x): x is CommunityListingItem => x !== null);

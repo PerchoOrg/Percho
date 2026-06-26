@@ -71,6 +71,10 @@ export type CommunityListingItem = {
   sqft: number | null;
   heroCfVideoId: string | null;
   heroPhotoUrl: string | null;
+  /** Phase 63 (2026-06-26): owning agent's slug — used to build the public
+   *  listing URL (`/v/[agentSlug]/[listingSlug]`) for the Share rail button.
+   *  Null when the agent row is missing (rare; Share is hidden in that case). */
+  agentSlug: string | null;
 };
 
 export type CommunityFeedCommunity = {

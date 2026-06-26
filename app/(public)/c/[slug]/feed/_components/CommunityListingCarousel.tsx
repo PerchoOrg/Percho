@@ -31,6 +31,7 @@ import {
   BookmarkIcon,
   CommentIcon,
   HeartIcon,
+  ShareIcon,
 } from '../../../../_components/feed/icons';
 import type { CommunityListingItem } from '../CommunityVideoFeed';
 
@@ -227,6 +228,25 @@ export function CommunityListingCarousel({
 
   const openContact = useCallback(() => setLeadOpen(true), []);
 
+  const onShare = useCallback(async () => {
+    if (!active) return;
+    if (!active.agentSlug) return;
+    const url = `${window.location.origin}/v/${active.agentSlug}/${active.slug}`;
+    if (typeof navigator !== 'undefined' && navigator.share) {
+      try {
+        await navigator.share({ title: active.address, url });
+        return;
+      } catch {
+        /* fall through to clipboard */
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+    } catch {
+      /* swallow */
+    }
+  }, [active]);
+
   if (!open || listings.length === 0) return null;
 
   const total = listings.length;
@@ -274,17 +294,10 @@ export function CommunityListingCarousel({
           </div>
         </div>
 
-        {/* Progress bar */}
-        <div className={`absolute inset-x-3 top-16 ${FEED_Z.topbar} flex gap-1`}>
-          {listings.map((l, i) => (
-            <div
-              key={`${l.id}-prog`}
-              className={`h-0.5 flex-1 rounded-full ${
-                i <= safeActive ? 'bg-cream' : 'bg-cream/20'
-              }`}
-            />
-          ))}
-        </div>
+        {/* Phase 63 (2026-06-26): top progress bar removed — those segmented
+            ticks read as a horizontal-pager affordance, but this surface is a
+            vertical snap feed (parity with Browse / Community video feed).
+            The "i / N" counter in the top bar already conveys position. */}
 
         {/* Right rail */}
         <div
@@ -300,6 +313,11 @@ export function CommunityListingCarousel({
           {agentName && (
             <ActionButton onClick={openContact} label="Contact">
               <CommentIcon />
+            </ActionButton>
+          )}
+          {active?.agentSlug && (
+            <ActionButton onClick={onShare} label="Share">
+              <ShareIcon />
             </ActionButton>
           )}
         </div>
