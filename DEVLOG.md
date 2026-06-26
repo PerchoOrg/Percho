@@ -2,7 +2,24 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
-## 2026-06-26 — Phase 64: L3 carousel video fill-frame parity with L0
+## 2026-06-26 — Phase 65: object-contain everywhere (reverts + extends phase64)
+
+**Objective**: User correction on phase64. Original intent was "L3 should look like L0" — I read the L0 cover-on-mobile pattern as the target. User clarified the actual principle: **horizontal video should play horizontal, black bars are fine, picture integrity is priority #1, do not force fill the screen.** That makes the L0 cover-on-mobile pattern the bug, not L3's contain. Reverse direction: extend `object-contain` to L0 + BrowseFeed instead of bringing cover to L3.
+
+**Changes**:
+- `CommunityListingCarousel`: revert phase64, back to `object-contain` (video + photo).
+- `CommunityVideoFeed`: video + photo `object-cover md:object-contain` → `object-contain`.
+- `BrowseFeed`: same on the photo carousel cell + the L0 hero video + the L0 hero photo (3 sites, replace_all patch).
+
+**Trade-off (now flipped)**: portrait 9:16 video still fills the mobile frame fine (its aspect matches). Landscape 16:9 walkthroughs now letterbox on mobile too. User explicitly chose this — buyers see the full composition the agent shot, not a center-cropped slice. This matches how TikTok/Instagram display non-portrait video as well (small letterbox over destructive crop).
+
+**Lesson**: when the user says "match X to Y" on a visual property, ask which direction is the truth before assuming. I assumed L0 was the model and propagated cover-on-mobile to L3; user's actual model was L3's contain. Cost was cheap because phase64 was 1-line, but on a bigger refactor this would have been an expensive misread. Save as a memory hint: ambiguous "match A to B" = ask which side is canonical, especially on aesthetics where both sides have shipped.
+
+**Verification**: `npx tsc --noEmit` clean.
+
+**Commits**: `264ca5d` (code) → merge `3914bcf` to main.
+
+## 2026-06-26 — Phase 64: L3 carousel video fill-frame parity with L0 (reverted by phase65)
 
 **Objective**: Qiaoxu reported the same listing video looks "partial / not original / smaller" in the L3 listing carousel vs the L0 community video feed — the community feed shows it edge-to-edge but the carousel had black letterbox bars around it.
 

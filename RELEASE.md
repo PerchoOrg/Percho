@@ -2,6 +2,17 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.67.0 — Videos always show the full picture (letterbox over crop) (2026-06-26)
+
+### 🛠 Fixes
+- All listing/community video feeds now show the **complete picture** of
+  every video. Landscape walkthroughs play landscape with thin black
+  bars on top/bottom rather than getting cropped to fit the portrait
+  frame. Portrait videos still fill the screen as before.
+- This is a project-wide principle now, not just one feed: For You,
+  community video feed, and the Live-here listing carousel all behave
+  the same way.
+
 ## v0.66.0 — Listing carousel videos fill the frame on mobile (no more letterbox) (2026-06-26)
 
 ### 🛠 Fixes

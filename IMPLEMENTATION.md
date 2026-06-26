@@ -253,6 +253,12 @@ Shipped:
 Next:
 - none queued.
 
+### 2026-06-26 (phase65)
+Shipped:
+- phase65: **reverted phase64 + extended `object-contain` to L0 + BrowseFeed.** User principle: horizontal video plays horizontal, letterbox OK, picture integrity > fill. Was a misread on which surface was canonical.
+Next:
+- none queued.
+
 ---
 
 ## Phase 21 — Persistent Save (anonymous device-id, scope C+X) — ✅ done 2026-06-13
