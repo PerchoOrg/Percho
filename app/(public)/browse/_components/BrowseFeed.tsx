@@ -727,6 +727,12 @@ function Card({
 /**
  * Expandable description — collapsed shows first paragraph clamped to 2
  * lines with a "more" toggle; expanded reveals all paragraphs.
+ *
+ * Phase 61 (2026-06-26): the "more" button was previously rendered inside
+ * the `line-clamp-2` <p>, so when the first paragraph overflowed 2 lines
+ * (exactly when "more" matters) the clamp clipped the button itself —
+ * nothing was tappable. Moved the button onto its own line below the
+ * clamped paragraph so it's always visible and hit-targetable.
  */
 function DescriptionBlock({ paragraphs }: { paragraphs: string[] }) {
   const [expanded, setExpanded] = useState(false);
@@ -746,15 +752,15 @@ function DescriptionBlock({ paragraphs }: { paragraphs: string[] }) {
                 e.stopPropagation();
                 setExpanded(false);
               }}
-              className="text-cream/60 hover:text-cream"
+              className="mt-1 text-cream/60 hover:text-cream"
             >
               less
             </button>
           )}
         </div>
       ) : (
-        <p className="line-clamp-2">
-          {first}
+        <div>
+          <p className="line-clamp-2">{first}</p>
           {hasMore && (
             <button
               type="button"
@@ -762,12 +768,12 @@ function DescriptionBlock({ paragraphs }: { paragraphs: string[] }) {
                 e.stopPropagation();
                 setExpanded(true);
               }}
-              className="ml-1 text-cream/60 hover:text-cream"
+              className="mt-0.5 text-cream/60 hover:text-cream"
             >
               ... more
             </button>
           )}
-        </p>
+        </div>
       )}
     </div>
   );

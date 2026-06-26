@@ -2,6 +2,14 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.63.0 — Listing description "more" can actually expand now (2026-06-26)
+
+### 🐛 Bug Fixes
+- On the buyer feed, the description at the bottom of each listing card now
+  expands when you tap "more". Before, "more" was visible but tapping it
+  did nothing — the button was being hidden behind the same two-line clip
+  that hid the rest of the description.
+
 ## v0.62.0 — Photo cover on a video listing now shows up in the grid (2026-06-26)
 
 ### 🐛 Bug Fixes

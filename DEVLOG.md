@@ -2,6 +2,23 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-06-26 — Phase 61: feed description "more" toggle is tappable
+
+**Objective**: Tianrou reported the bottom-of-card description on the buyer feed (`/browse/feed`) couldn't be expanded. Caption is in the right place but the "more" affordance does nothing.
+
+**Root cause**: In `DescriptionBlock` (BrowseFeed.tsx), the collapsed branch put the `<button>... more</button>` *inside* the same `<p className="line-clamp-2">` that wraps the description text. CSS `line-clamp` works by clipping overflow on the block — when the first paragraph overflowed two lines (which is exactly the case where "more" is needed), the clamp cut off the button along with the overflow text. Button was in the DOM, just not visible/tappable.
+
+**Actions**:
+- `app/(public)/browse/_components/BrowseFeed.tsx`: split the collapsed branch — `<p className="line-clamp-2">{first}</p>` for the text, and a sibling `<button>... more</button>` underneath inside a wrapping `<div>`. Added `mt-0.5` for tight spacing. Same shape for "less" (now `mt-1` on its own line for symmetry).
+
+**Decisions**:
+- Keep the existing `hasMore` heuristic (`paragraphs.length > 1 || first.length > 90`) — accurate enough; measuring real clamp overflow would require a layout-effect ResizeObserver and isn't worth the complexity for a caption.
+- Did not move the toggle into the right rail or use a sheet; current inline expand/collapse matches the Xiaohongshu pattern the rest of the caption follows.
+
+**Verification**: `npx tsc --noEmit` clean. Visual sign-off after Vercel preview.
+
+**Next steps**: None planned — this is a 1-line behavioral fix.
+
 ## 2026-06-26 — Phase 60: cover_url drives buyer grid thumbnails
 
 **Objective**: Owner re-tested Phase 59 with a *photo* cover on a listing that also has video. The grid thumbnail on `/browse` still showed the video poster, not the picked photo. Phase 59 only fixed the case where the cover and the hero were the same media kind.
