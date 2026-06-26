@@ -247,6 +247,12 @@ Shipped:
 Next:
 - Wait on Vercel preview sign-off; consider extracting `useNativeShare(title, url)` if Share appears on a 3rd surface.
 
+### 2026-06-26 (phase64)
+Shipped:
+- phase64: L3 listing carousel video / photo fallback now use `object-cover md:object-contain` (was `object-contain` on all breakpoints) — fixes letterbox bars on mobile that made the same video look smaller/cropped vs the L0 community video feed.
+Next:
+- none queued.
+
 ---
 
 ## Phase 21 — Persistent Save (anonymous device-id, scope C+X) — ✅ done 2026-06-13

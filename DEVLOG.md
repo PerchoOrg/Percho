@@ -2,6 +2,20 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-06-26 — Phase 64: L3 carousel video fill-frame parity with L0
+
+**Objective**: Qiaoxu reported the same listing video looks "partial / not original / smaller" in the L3 listing carousel vs the L0 community video feed — the community feed shows it edge-to-edge but the carousel had black letterbox bars around it.
+
+**Root cause**: L3 carousel `<video>` and photo `<img>` used `object-contain` on all breakpoints. Landscape walkthroughs (16:9) inside a 9:16 mobile frame letterbox. The L0 `CommunityVideoFeed` uses `object-cover md:object-contain` — mobile fills, desktop preserves aspect inside the bordered viewport. L3 should match.
+
+**Fix**: One-line breakpoint change — `object-cover md:object-contain` on both video and image fallback. Also added `relative` on the video element to match the L0 element (already on top of `bg-black` so it's a no-op visually but keeps DOM shape consistent).
+
+**Trade-off**: `object-cover` will crop edges on landscape video. Acceptable: the user's primary frame is the 9:16 mobile portrait, and the L0 feed already commits to this trade-off; consistency wins. Buyers who want the full aspect can pinch out / rotate landscape (browser default behavior).
+
+**Verification**: `npx tsc --noEmit` clean.
+
+**Commits**: `e049ac3` (code) → merge `bb706ec` to main.
+
 ## 2026-06-26 — Phase 63: Share button on L3 carousel, drop top progress bar
 
 **Objective**: Qiaoxu's follow-up after Phase 62 ship: (a) add a Share button to the L3 listing carousel right rail (BrowseFeed L0 has one — parity gap), (b) remove the top segmented progress bar — those ticks are the convention for horizontal pagers but Phase 62 made this surface a vertical snap feed, so the bar reads as wrong-axis affordance.

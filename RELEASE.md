@@ -2,6 +2,15 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.66.0 — Listing carousel videos fill the frame on mobile (no more letterbox) (2026-06-26)
+
+### 🛠 Fixes
+- The Live-here listing carousel was showing landscape walkthrough
+  videos with black bars on top and bottom, making them look smaller /
+  cropped than the same video in the community feed. Mobile now fills
+  the 9:16 frame edge-to-edge (same behavior as the community video
+  feed). Desktop keeps the full aspect inside the bordered viewport.
+
 ## v0.65.0 — Share button on the L3 listing carousel; horizontal-pager bar removed (2026-06-26)
 
 ### ✨ Improvements
