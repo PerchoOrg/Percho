@@ -2,6 +2,25 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-06-26 — Phase 59: Set Cover propagates to buyer surfaces
+
+**Objective**: Owner bug report: "agent hub my listing — Set Cover is only visible from My Listing, not from buyer Explore." Picking a video/photo as cover updated the agent's `/dashboard` tile and the public listing's og:image, but `/browse`, `/saved`, `/nearby`, `/search`, and the swipe feed all kept showing whatever was uploaded first.
+
+**Root cause**: `setListingCover` / `setListingCoverPhoto` only wrote `listings.cover_url`. Buyer-facing surfaces never read that column — they fetch `listing_videos` (or `listing_photos` as fallback) ordered by `sort_order asc` and use the first row as the hero. The cover pick and the buyer hero were two independent concepts.
+
+**Actions**:
+- `app/dashboard/listings/[id]/edit/actions.ts`: after writing `cover_url`, both setters now reorder the underlying media table — chosen row to `sort_order=0`, every other row pushed down one slot (relative order preserved). No-op when clearing the cover (`videoId`/`photoId === null`) or when the chosen row is already first.
+- Single-phase rewrite (no negative-space staging) — there's no unique constraint on `(listing_id, sort_order)`, same shape as the existing `reorderListingVideos`.
+- Doc-comment updated on `setListingCover` to call out the buyer-side coupling so future readers don't reintroduce the split.
+
+**Decisions**:
+- Option B from the bug-triage write-up: "Set as cover" means *this is the listing's face everywhere* — grid thumb, og:image, and feed hero all align. Decoupling them (option C) would have required teaching every buyer surface to check `cover_url` first and fall back to `sort_order`, ~6 read paths' worth of churn for no user-visible benefit.
+- Photo cover and video cover still share the single `cover_url` column. Whichever the agent picks last wins on the agent surfaces; on buyer surfaces the matching media table reorder is the source of truth.
+
+**Issues**: None — `tsc --noEmit` clean, `next build` green.
+
+**Next steps**: Owner verification on Vercel preview — pick a non-first video as cover on an existing listing, then check `/browse` and the swipe feed both lead with that video.
+
 ## 2026-06-26 — Phase 58.2 reverted: community State/City/County dropdowns
 
 **Objective**: Roll back v0.60.0. Owner feedback after seeing the deployed UI: "it's too much in the drop list, I don't think we should do this." The City suggestion lists in particular (CA = 1,602 items, GA = 675) were too long to scan — typing was faster than picking.

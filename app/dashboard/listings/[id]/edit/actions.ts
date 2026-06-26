@@ -239,6 +239,16 @@ export type SetListingCoverResult =
  * The chosen video's `cf_video_id` is read under RLS, so we don't need a
  * separate ownership check — Supabase returns null if the caller can't see
  * the row.
+ *
+ * Phase 59 (2026-06-26): `cover_url` alone only fed agent-side surfaces
+ * (`/dashboard`, `/v/...` og:image). Buyer grids and the swipe feed (`/browse`,
+ * `/saved`, `/nearby`, `/search`, `/browse/feed`) all pick the hero by
+ * `listing_videos` sorted ascending on `sort_order` — they never read
+ * `cover_url`. So the same action now also reorders `listing_videos` so
+ * the chosen video sits at `sort_order=0`, with every other video pushed
+ * one slot down (their relative order preserved). Buyer surfaces now show
+ * exactly what the agent picked, without each surface needing a custom
+ * cover-aware lookup.
  */
 export async function setListingCover(
   listingId: string,
@@ -282,6 +292,38 @@ export async function setListingCover(
   if (error) {
     console.error('[setListingCover] update failed', { error });
     return { ok: false, error: 'update_failed' };
+  }
+
+  // Phase 59: also push the chosen video to sort_order=0 so buyer-side
+  // surfaces (which read listing_videos by sort_order asc and never
+  // consult cover_url) treat it as the hero. When clearing the cover
+  // (videoId === null) we leave the existing video order alone — buyers
+  // simply fall back to whatever was already first.
+  if (parsed.data.videoId !== null) {
+    // biome-ignore lint/suspicious/noExplicitAny: stub generated types
+    const { data: rows } = (await (supabase as any)
+      .from('listing_videos')
+      .select('id, sort_order')
+      .eq('listing_id', parsed.data.listingId)
+      .order('sort_order', { ascending: true })) as {
+      data: { id: string; sort_order: number }[] | null;
+    };
+    const order = (rows ?? []).map((r) => r.id);
+    const chosenIdx = order.indexOf(parsed.data.videoId);
+    if (chosenIdx > 0) {
+      order.splice(chosenIdx, 1);
+      order.unshift(parsed.data.videoId);
+      // No unique constraint on (listing_id, sort_order), so a single-phase
+      // rewrite is fine — same shape as reorderListingVideos.
+      for (let i = 0; i < order.length; i++) {
+        // biome-ignore lint/suspicious/noExplicitAny: stub generated types
+        await (supabase as any)
+          .from('listing_videos')
+          .update({ sort_order: i })
+          .eq('id', order[i])
+          .eq('listing_id', parsed.data.listingId);
+      }
+    }
   }
 
   revalidatePath(`/dashboard/listings/${parsed.data.listingId}/edit`);
@@ -351,6 +393,34 @@ export async function setListingCoverPhoto(
   if (error) {
     console.error('[setListingCoverPhoto] update failed', { error });
     return { ok: false, error: 'update_failed' };
+  }
+
+  // Phase 59: mirror setListingCover — push the chosen photo to
+  // sort_order=0 so buyer-side photo-fallback (`/browse`, `/saved`,
+  // photo-only swipe path) renders the same hero image the agent picked.
+  if (parsed.data.photoId !== null) {
+    // biome-ignore lint/suspicious/noExplicitAny: stub generated types
+    const { data: rows } = (await (supabase as any)
+      .from('listing_photos')
+      .select('id, sort_order')
+      .eq('listing_id', parsed.data.listingId)
+      .order('sort_order', { ascending: true })) as {
+      data: { id: string; sort_order: number }[] | null;
+    };
+    const order = (rows ?? []).map((r) => r.id);
+    const chosenIdx = order.indexOf(parsed.data.photoId);
+    if (chosenIdx > 0) {
+      order.splice(chosenIdx, 1);
+      order.unshift(parsed.data.photoId);
+      for (let i = 0; i < order.length; i++) {
+        // biome-ignore lint/suspicious/noExplicitAny: stub generated types
+        await (supabase as any)
+          .from('listing_photos')
+          .update({ sort_order: i })
+          .eq('id', order[i])
+          .eq('listing_id', parsed.data.listingId);
+      }
+    }
   }
 
   revalidatePath(`/dashboard/listings/${parsed.data.listingId}/edit`);

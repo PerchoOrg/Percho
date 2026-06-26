@@ -2,6 +2,15 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.61.0 — Set Cover now shows up everywhere (2026-06-26)
+
+### 🐛 Bug Fixes
+- Picking a cover photo or cover video on a listing now actually changes
+  the cover that buyers see on the home grid, the swipe feed, and the
+  saved-listings page — not just the agent's own dashboard. Before, the
+  cover only updated for you; buyers kept seeing whatever was uploaded
+  first.
+
 ## v0.60.1 — Reverted: community State/City/County dropdowns (2026-06-26)
 
 ### 🔧 Technical
