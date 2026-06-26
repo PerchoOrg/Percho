@@ -276,7 +276,7 @@ function PhotoCard({
           <img
             src={current}
             alt={`${card.listing.address} — ${idx + 1} of ${total}`}
-            className="relative h-full w-full object-cover md:object-contain"
+            className="relative h-full w-full object-contain"
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center text-cream/40 text-sm">
@@ -577,7 +577,7 @@ function Card({
           <video
             ref={videoRef}
             poster={poster ?? undefined}
-            className="relative h-full w-full object-cover md:object-contain"
+            className="relative h-full w-full object-contain"
             playsInline
             muted
             loop
@@ -587,7 +587,7 @@ function Card({
           <img
             src={poster}
             alt=""
-            className="relative h-full w-full object-cover md:object-contain"
+            className="relative h-full w-full object-contain"
           />
         ) : null}
       </div>

@@ -236,7 +236,7 @@ function VideoCard({
           <video
             ref={videoElRef}
             poster={poster ?? undefined}
-            className="relative h-full w-full object-cover md:object-contain"
+            className="relative h-full w-full object-contain"
             playsInline
             muted
             loop
@@ -247,7 +247,7 @@ function VideoCard({
             <img
               src={poster}
               alt={video.title ?? 'Community video'}
-              className="relative h-full w-full object-cover md:object-contain"
+              className="relative h-full w-full object-contain"
             />
           )
         )}
