@@ -17,7 +17,7 @@ import { useState, useTransition } from 'react';
 import { Plus } from 'lucide-react';
 
 import { createStubCommunity } from './actions';
-import { HUB_CTA_CLASS } from '@/app/dashboard/_components/EmptyHubState';
+import { HUB_CTA_CLASS } from '@/app/_components/EmptyHubState';
 
 export function CreateCommunityButton() {
   const router = useRouter();

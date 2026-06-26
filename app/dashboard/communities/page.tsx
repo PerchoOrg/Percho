@@ -33,7 +33,7 @@ import { startTimer } from '@/lib/perf/timing';
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import { CreateCommunityButton } from './CreateCommunityButton';
-import { EmptyHubState } from '@/app/dashboard/_components/EmptyHubState';
+import { EmptyHubState } from '@/app/_components/EmptyHubState';
 
 export default async function CommunitiesListPage() {
   const t = startTimer('dashboard-communities');

@@ -2,6 +2,31 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-06-26 — Phase 58: extend EmptyHubState to buyer surfaces (For You + Communities)
+
+**Objective**: Vivian's follow-up after phase57: the buyer-side "No listings yet" (For You / `/browse`) and "No communities yet" (`/communities`) pages still looked nothing like the agent-side hubs — a single sentence on a blank cream background or a thin pill-shaped notice. She asked for the same friendly treatment across all four list surfaces.
+
+**Actions**:
+- Promoted `EmptyHubState` (and `HUB_CTA_CLASS`) from `app/dashboard/_components/` to `app/_components/` so buyer-side grids can import it without crossing the dashboard boundary. CTA prop is now optional — buyers don't create listings/communities, so the dashed-border card stands alone on those surfaces. Updated three existing imports (`DashboardListingGrid`, `CreateListingButton`, `CreateCommunityButton`, `dashboard/communities/page`) to the new path.
+- `app/_components/ListingGrid.tsx`: replaced the inline `<p>No listings yet…</p>` default empty state with `<EmptyHubState icon={<Home/>} headline="No listings yet" sub="Check back soon — agents are uploading new tours."/>`. The `emptyState` prop override (used by Saved → Listings) still wins.
+- `app/_components/CommunityGrid.tsx`: replaced the thin `<p>` notice with `<EmptyHubState icon={<Building2/>} headline="No communities yet" sub="Check back soon — agents are adding new neighborhoods."/>`. Dashboard's `/dashboard/communities/page.tsx` already branches around `CommunityGrid` for its empty state (with create CTA), so it isn't affected.
+- TypeScript clean, `next build` clean.
+
+**Decisions**:
+- Buyer empty states ship without a CTA (vs agent empty states' pill button). Buyers can't create content here; offering a non-action would be confusing. The icon disc + headline + sub copy alone is enough to make the page feel intentional rather than broken.
+- One shared component, two copy variants (sub-text differs by audience: "create your first…" for agents, "check back soon…" for buyers). Headlines are identical across audience for the same noun ("No listings yet" / "No communities yet") — keeps brand voice tight.
+- Did not touch `app/(public)/saved/_components/SavedClient.tsx` (Saved Listings) — it already passes a custom `emptyState` to `ListingGrid` with the right "Save listings to see them here" copy.
+
+**Issues**: None.
+
+**Resolution**: All four list-surface empty states (For You, Communities, My Listing, My Community) now share chrome. Buyer surfaces are visually consistent with agent surfaces minus the create CTA.
+
+**Learnings**:
+- When promoting a component from a feature-scoped folder to a shared one, always grep the qualified import path first — there were four call sites here, easy to miss.
+- "Optional CTA" is the cleanest way to support both buyer and agent variants without forking the component or adding a `variant` prop.
+
+**Next steps**: Add an EmptyHubState to My Leads when that surface gets one; if Saved Listings ever needs a refresh, swap its custom emptyState for the shared component.
+
 ## 2026-06-26 — Phase 57: unify hub empty states (Listing + Community)
 
 **Objective**: Vivian shipped phase56 fix, deleted her last listing → landed on `/dashboard` empty state. Two complaints: (1) the listing empty state had no clickable CTA — just a "tap + New listing" instruction pointing at the FAB, (2) listing vs community empty states looked nothing alike (different copy, different layout, community had an inline `Create one` text link, listing had nothing).

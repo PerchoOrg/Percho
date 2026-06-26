@@ -18,7 +18,7 @@ import { Home } from 'lucide-react';
 
 import { ListingGrid, type ListingGridItem } from '@/app/_components/ListingGrid';
 import { CreateListingButton } from './CreateListingButton';
-import { EmptyHubState } from './EmptyHubState';
+import { EmptyHubState } from '@/app/_components/EmptyHubState';
 
 export type DashboardItem = ListingGridItem & {
   rawStatus: string;

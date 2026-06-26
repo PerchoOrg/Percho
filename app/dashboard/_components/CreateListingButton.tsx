@@ -14,7 +14,7 @@ import { useState, useTransition } from 'react';
 import { Plus } from 'lucide-react';
 
 import { createStubListing } from '@/app/dashboard/listings/actions';
-import { HUB_CTA_CLASS } from './EmptyHubState';
+import { HUB_CTA_CLASS } from '@/app/_components/EmptyHubState';
 
 export function CreateListingButton() {
   const router = useRouter();

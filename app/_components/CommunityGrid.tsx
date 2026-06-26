@@ -10,6 +10,9 @@ import type { CommunityListCard } from '@/lib/communities/list';
  * the per-card data slots differ. Future tweaks to the visual shell
  * happen in app/_components/GridCard.tsx (one place).
  */
+import { Building2 } from 'lucide-react';
+
+import { EmptyHubState } from './EmptyHubState';
 import { GridCard, GridCardBadgeDark, GridCardCaption } from './GridCard';
 import { GridFrame } from './GridFrame';
 
@@ -25,9 +28,11 @@ export function CommunityGrid({
 }) {
   if (communities.length === 0) {
     return (
-      <p className="rounded-lg border border-line bg-surface px-4 py-6 text-ink2 text-sm">
-        No communities yet.
-      </p>
+      <EmptyHubState
+        icon={<Building2 className="h-6 w-6" strokeWidth={1.5} />}
+        headline="No communities yet"
+        sub="Check back soon — agents are adding new neighborhoods."
+      />
     );
   }
 

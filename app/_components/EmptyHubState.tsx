@@ -1,14 +1,18 @@
 /**
- * EmptyHubState — shared empty state for agent hub list pages
- * (My Listing, My Community, future My Leads).
+ * EmptyHubState — shared empty state chrome for hub-style list pages.
  *
- * Phase 57 (2026-06-26): unifies what used to be two ad-hoc dashed-border
- * boxes with inconsistent copy and CTA shapes.
+ * Phase 57 (2026-06-26): introduced for agent-side hubs (My Listing,
+ * My Community).
+ * Phase 58 (2026-06-26): promoted to app/_components/ and reused on
+ * buyer surfaces (For You /browse, /communities) so all four list
+ * pages share the same icon-disc + headline + sub copy. CTA is
+ * optional — buyers don't create listings or communities, so on
+ * those surfaces the dashed-border card stands alone.
  *
- * Visual: a centered icon disc, a one-line headline, a one-line subhead,
- * and a single ink pill button as the primary CTA. The CTA itself is
- * supplied by the caller (so it can wire the right server action) — this
- * component owns the chrome only.
+ * Visual: a centered icon disc, a one-line headline, a one-line
+ * subhead, and an optional ink pill button as the primary CTA. The
+ * CTA itself is supplied by the caller (so it can wire the right
+ * server action) — this component owns the chrome only.
  */
 
 import type { ReactNode } from 'react';
@@ -22,7 +26,7 @@ export function EmptyHubState({
   icon: ReactNode;
   headline: string;
   sub: string;
-  cta: ReactNode;
+  cta?: ReactNode;
 }) {
   return (
     <div className="mx-auto flex max-w-md flex-col items-center rounded-2xl border border-line border-dashed bg-surface px-8 py-16 text-center">
@@ -31,7 +35,7 @@ export function EmptyHubState({
       </div>
       <h2 className="font-semibold text-ink text-base">{headline}</h2>
       <p className="mt-1.5 text-ink2 text-sm">{sub}</p>
-      <div className="mt-6">{cta}</div>
+      {cta ? <div className="mt-6">{cta}</div> : null}
     </div>
   );
 }

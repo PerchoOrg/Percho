@@ -2,6 +2,16 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.59.2 — Friendlier empty states on For You and Communities (2026-06-26)
+
+### ✨ Improvements
+- The buyer-side "No listings yet" (For You) and "No communities yet"
+  (Communities) pages now use the same icon-disc + headline + subhead
+  card as the agent-side My Listing and My Community empty states, so
+  all four list surfaces feel consistent. No CTA on the buyer side —
+  buyers don't create listings or communities — but the page no longer
+  reads as a stray sentence on a blank background.
+
 ## v0.59.1 — Friendlier empty states for My Listing and My Community (2026-06-26)
 
 ### ✨ Improvements

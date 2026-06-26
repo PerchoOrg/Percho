@@ -8,6 +8,9 @@
  * happens here; cover/caption rendering happens inside GridCard.
  */
 
+import { Home } from 'lucide-react';
+
+import { EmptyHubState } from './EmptyHubState';
 import { GridCard, GridCardBadgeDark, GridCardBadgeLight, GridCardCaption } from './GridCard';
 import { GridFrame } from './GridFrame';
 
@@ -62,11 +65,11 @@ export function ListingGrid({
   if (items.length === 0) {
     if (emptyState !== undefined) return <>{emptyState}</>;
     return (
-      <div className="mx-auto max-w-md px-6 py-24 text-center">
-        <p className="text-ink2">
-          No listings yet. Check back soon — agents are uploading new tours.
-        </p>
-      </div>
+      <EmptyHubState
+        icon={<Home className="h-6 w-6" strokeWidth={1.5} />}
+        headline="No listings yet"
+        sub="Check back soon — agents are uploading new tours."
+      />
     );
   }
 
