@@ -2,7 +2,15 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
-## 2026-06-26 — Phase 58.1: passive-voice copy on buyer empty states
+## 2026-06-26 — Phase 58.2 reverted: community State/City/County dropdowns
+
+**Objective**: Roll back v0.60.0. Owner feedback after seeing the deployed UI: "it's too much in the drop list, I don't think we should do this." The City suggestion lists in particular (CA = 1,602 items, GA = 675) were too long to scan — typing was faster than picking.
+
+**Actions**: `git revert -m 1 a461bc4` → commit `108b043`, pushed to main. Removes `app/api/geo/`, `lib/data/us-states.ts`, `lib/data/us-geo.json`; restores the original free-text City / State (2-char) / County inputs in `CommunityEditor.tsx`.
+
+**Learnings**: Long-tail reference data (cities, ~20k US incorporated places) is a poor fit for a `<datalist>` even sliced by state — the slice is still hundreds of items for the populous states an agent actually uses. If we revisit this, the right shape is probably (a) a 50-state dropdown only, leaving City + County free-text, or (b) typeahead that filters to the top N matches as the user types. **Don't ship full per-state lists.**
+
+## 2026-06-26 — Phase 58.2: State / City / County dropdowns on community form
 
 **Objective**: Vivian's quick follow-up: don't say "agents are uploading…" — buyers don't think about who's behind the platform. Use passive voice.
 

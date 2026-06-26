@@ -2,6 +2,13 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.60.1 — Reverted: community State/City/County dropdowns (2026-06-26)
+
+### 🔧 Technical
+- Reverted v0.60.0. The dropdown suggestion lists (especially for City)
+  were too long to be useful — picking out one community from a 1500+
+  row list is slower than just typing it. Back to the free-text inputs.
+
 ## v0.59.3 — Buyer empty-state copy: passive voice (2026-06-26)
 
 ### ✨ Improvements
