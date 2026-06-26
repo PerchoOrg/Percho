@@ -2,6 +2,15 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.59.0 — Listings with leads can now be deleted (2026-06-26)
+
+### 🐛 Bug Fixes
+- Fixed a server error that prevented deleting any listing that had ever
+  received a buyer lead. The Danger zone "Delete this listing" button now
+  works for listings with leads — leads attached to the deleted listing
+  are removed alongside it, matching what the confirmation copy already
+  promised.
+
 ## v0.58.0 — Real listings show real media (2026-06-24)
 
 ### 🔧 Technical
