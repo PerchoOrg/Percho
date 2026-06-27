@@ -2,6 +2,11 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.71.0 — Lead detail goes back to where you came from (2026-06-27)
+
+- **Back link on a lead detail page** is now source-aware. A listing lead sends you back to *that listing's* edit hub, not the global inbox. A community lead sends you back to *that community*. No more losing your place when you triage one lead and want to handle the next on the same listing.
+- **Per-listing leads panel** (inside the listing edit hub) drops the "See all leads →" cross-link — the panel scope is the listing, and the global inbox is one nav-rail click away.
+
 ## v0.70.0 — Clickable lead rows + listing-level inbox parity (2026-06-27)
 
 - **Click anywhere on a lead row** to open it — not just the name. Email / SMS icons and the ✓ Mark toggle still do their own thing without navigating away. Cmd-click / middle-click still open in a new tab.

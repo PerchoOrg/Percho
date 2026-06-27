@@ -2,6 +2,20 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-06-27 — Phase 67.4: Listing-scoped back links on lead detail + panel
+
+**Asked** (Qiaoxu, Slack): listing leads page should only show listing-level leads link and return link, not all-leads link and return link.
+
+**Changes**:
+- `app/dashboard/leads/[id]/page.tsx` — Top "← All leads" link replaced with a source-aware back link: listing leads → `← Back to {address}` pointing to `/dashboard/listings/{id}/edit` (the listing edit hub where the per-listing leads panel lives); community leads → `← Back to {community}` pointing to `/c/{slug}`; orphaned leads → fallback to `/dashboard/leads`.
+- `app/dashboard/listings/[id]/edit/ListingLeadsPanel.tsx` — Removed the "See all leads →" cross-link from the panel header (the empty-state still keeps it as the only meaningful action when there are no rows).
+
+**Why**: agents arrive at a lead from the listing edit hub, fix the lead, then want to go *back to that listing* — not jump to the global inbox. Same logic for communities. Keeps the navigation context-local.
+
+**Verification**: `npx tsc --noEmit` clean, `npx next build` compiled successfully.
+
+---
+
 ## 2026-06-27 — Phase 67.3: Hotfix listing-edit leads panel runtime error
 
 **Reported** (Qiaoxu, Slack): listing-level leads section throws an Application error after 67.2 deploy.

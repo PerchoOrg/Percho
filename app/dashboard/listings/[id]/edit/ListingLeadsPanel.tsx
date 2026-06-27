@@ -56,7 +56,7 @@ export async function ListingLeadsPanel({ listingId }: { listingId: string }) {
 
   return (
     <section className="rounded-2xl border border-line bg-surface p-4 sm:p-6">
-      <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
+      <div className="mb-4">
         <h2 className="text-base font-semibold">
           Leads
           <span className="ml-2 text-muted text-sm font-normal">
@@ -64,12 +64,6 @@ export async function ListingLeadsPanel({ listingId }: { listingId: string }) {
             {openCount > 0 ? ` · ${openCount} awaiting follow-up` : ''}
           </span>
         </h2>
-        <Link
-          href="/dashboard/leads"
-          className="text-muted text-xs underline-offset-2 hover:text-ink hover:underline"
-        >
-          See all leads →
-        </Link>
       </div>
       <ListingLeadsRows leads={leads} />
     </section>

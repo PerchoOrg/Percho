@@ -93,13 +93,30 @@ export default async function LeadDetailPage({ params }: PageProps) {
       : null;
   const tel = lead.phone != null ? `tel:${lead.phone.replace(/[^+\d]/g, '')}` : null;
 
+  // Phase 67.4: scope the back-link to the lead's source.
+  // - Listing leads → back to that listing's edit hub (where the per-listing
+  //   leads panel lives).
+  // - Community leads → back to the public community page.
+  // - Fallback (orphaned lead) → all-leads inbox.
+  const communitySlug = lead.communities?.slug ?? null;
+  const backHref = lead.listing_id
+    ? `/dashboard/listings/${lead.listing_id}/edit`
+    : communitySlug
+      ? `/c/${communitySlug}`
+      : '/dashboard/leads';
+  const backLabel = lead.listing_id
+    ? `← Back to ${addr ?? 'listing'}`
+    : isCommunityLead
+      ? `← Back to ${communityName ?? 'community'}`
+      : '← All leads';
+
   return (
     <div className="mx-auto max-w-2xl px-4 py-8">
       <Link
-        href="/dashboard/leads"
+        href={backHref}
         className="mb-4 inline-block text-xs text-ink2 hover:text-ink"
       >
-        ← All leads
+        {backLabel}
       </Link>
 
       <div className="rounded-2xl border border-line bg-surface p-6">
