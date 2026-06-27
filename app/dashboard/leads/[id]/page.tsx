@@ -15,6 +15,7 @@ import { FollowUpToggle } from './follow-up-toggle';
 
 interface PageProps {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ back?: string }>;
 }
 
 type LeadDetail = {
@@ -48,8 +49,9 @@ function formatDate(iso: string): string {
   });
 }
 
-export default async function LeadDetailPage({ params }: PageProps) {
+export default async function LeadDetailPage({ params, searchParams }: PageProps) {
   const { id } = await params;
+  const { back } = await searchParams;
   const supabase = await createClient();
   // Phase 53D: getSession() reads cookie locally (~5ms) instead of round-tripping
   // to Supabase to validate the JWT (~150ms). Middleware re-validates on each
@@ -93,22 +95,37 @@ export default async function LeadDetailPage({ params }: PageProps) {
       : null;
   const tel = lead.phone != null ? `tel:${lead.phone.replace(/[^+\d]/g, '')}` : null;
 
-  // Phase 67.4: scope the back-link to the lead's source.
-  // - Listing leads → back to that listing's edit hub (where the per-listing
-  //   leads panel lives).
-  // - Community leads → back to the public community page.
-  // - Fallback (orphaned lead) → all-leads inbox.
-  const communitySlug = lead.communities?.slug ?? null;
-  const backHref = lead.listing_id
-    ? `/dashboard/listings/${lead.listing_id}/edit`
-    : communitySlug
-      ? `/c/${communitySlug}`
-      : '/dashboard/leads';
-  const backLabel = lead.listing_id
-    ? `← Back to ${addr ?? 'listing'}`
-    : isCommunityLead
-      ? `← Back to ${communityName ?? 'community'}`
-      : '← All leads';
+  // Phase 67.5: referrer-aware back link.
+  // The row link in `leads-live.tsx` (My Leads inbox) sets `?back=inbox`;
+  // the row link in the listing edit hub's leads tab sets
+  // `?back=listing:<id>`. We resolve those to safe internal hrefs here.
+  // - Whitelist parsing: never trust the param to construct an arbitrary URL.
+  // - UUID regex on the listing id keeps the redirect target locked to a
+  //   resource the agent can already see.
+  // - Fallback (no/unknown `back`) → /dashboard/leads inbox.
+  const UUID_RE =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  let backHref = '/dashboard/leads';
+  let backLabel = '← All leads';
+  if (back === 'inbox') {
+    // explicit inbox referrer — same as default but keeps the round-trip
+    // intent visible.
+    backHref = '/dashboard/leads';
+    backLabel = '← All leads';
+  } else if (back?.startsWith('listing:')) {
+    const referrerListingId = back.slice('listing:'.length);
+    if (UUID_RE.test(referrerListingId)) {
+      backHref = `/dashboard/listings/${referrerListingId}/edit?tab=leads`;
+      // Label uses *this* lead's listing address only when the referrer
+      // matches — otherwise we fall back to a generic label. (The referrer
+      // listing id might differ from `lead.listing_id` for community leads
+      // surfaced in a per-listing search; rare but possible.)
+      backLabel =
+        lead.listing_id === referrerListingId && addr
+          ? `← Back to ${addr}`
+          : '← Back to listing';
+    }
+  }
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-8">

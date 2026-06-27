@@ -344,7 +344,7 @@ function LeadItem({
           so they handle their own clicks. Aria-hidden because the visible
           name link still announces the destination to screen readers. */}
       <Link
-        href={`/dashboard/leads/${lead.id}`}
+        href={`/dashboard/leads/${lead.id}?back=inbox`}
         prefetch={false}
         aria-hidden
         tabIndex={-1}

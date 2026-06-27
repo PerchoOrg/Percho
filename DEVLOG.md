@@ -2,6 +2,27 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-06-27 — Phase 67.5: Referrer-aware back link (replaces 67.4 source-aware)
+
+**Asked** (Qiaoxu, Slack, correcting 67.4): "not source aware, the *last page* aware". Lead detail's back link should follow the page the agent came from — `/dashboard/leads` → back to inbox; listing edit leads tab → back to that listing's leads tab.
+
+**Mistake to learn from**: 67.4 inferred destination from `lead.listing_id` (data-driven) when the user wanted destination from referrer (navigation-driven). Same lead can be reached from two pages — the right "back" depends on *how you got here*, not what the row contains.
+
+**Implementation**:
+- Both row link sources now thread a `?back=` query param:
+  - `app/dashboard/leads/leads-live.tsx` → `?back=inbox`
+  - `app/dashboard/listings/[id]/edit/ListingLeadsPanel.client.tsx` → `?back=listing:<listingId>` (listing id passed down from the server panel via a new `listingId` prop)
+- `app/dashboard/leads/[id]/page.tsx` reads `searchParams.back`, parses it through a small whitelist (literal `inbox` or `listing:<uuid>`; UUID regex prevents arbitrary redirects), and emits the matching label/href:
+  - `inbox` (or unknown/missing) → `← All leads` → `/dashboard/leads`
+  - `listing:<uuid>` → `← Back to {address}` → `/dashboard/listings/{id}/edit?tab=leads` (the leads tab of the edit hub, not the default Details tab)
+- Address label only used when the referrer listing matches `lead.listing_id` — otherwise `← Back to listing` (rare cross-link case).
+
+**Why query param vs `Referer` header**: works on hard reload + bookmarks + back/forward, doesn't depend on browser sending Referer (privacy modes strip it), survives middleware redirects.
+
+**Verification**: `npx tsc --noEmit` clean, `npx next build` compiled successfully.
+
+---
+
 ## 2026-06-27 — Phase 67.4: Listing-scoped back links on lead detail + panel
 
 **Asked** (Qiaoxu, Slack): listing leads page should only show listing-level leads link and return link, not all-leads link and return link.

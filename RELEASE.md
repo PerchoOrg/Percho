@@ -2,6 +2,10 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.71.1 — Lead detail back link follows where you came from (2026-06-27)
+
+- **Back link** on a lead detail page now reflects the page you arrived from, not where the data lives. Open a lead from **My Leads** → "← All leads" sends you back to the inbox. Open a lead from a listing's **Leads** tab → "← Back to {address}" sends you back to that listing's Leads tab. Same lead, two paths, two correct destinations.
+
 ## v0.71.0 — Lead detail goes back to where you came from (2026-06-27)
 
 - **Back link on a lead detail page** is now source-aware. A listing lead sends you back to *that listing's* edit hub, not the global inbox. A community lead sends you back to *that community*. No more losing your place when you triage one lead and want to handle the next on the same listing.
