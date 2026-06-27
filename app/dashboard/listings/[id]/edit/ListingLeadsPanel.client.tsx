@@ -31,7 +31,13 @@ function timeAgo(iso: string): string {
   return `${Math.floor(sec / 86400)}d`;
 }
 
-export function ListingLeadsRows({ leads }: { leads: ListingLeadRow[] }) {
+export function ListingLeadsRows({
+  leads,
+  listingId,
+}: {
+  leads: ListingLeadRow[];
+  listingId: string;
+}) {
   return (
     <div className="overflow-hidden rounded-xl border border-line/60">
       {/* Desktop column header */}
@@ -59,7 +65,7 @@ export function ListingLeadsRows({ leads }: { leads: ListingLeadRow[] }) {
               }`}
             >
               <Link
-                href={`/dashboard/leads/${l.id}`}
+                href={`/dashboard/leads/${l.id}?back=listing:${listingId}`}
                 prefetch={false}
                 aria-hidden
                 tabIndex={-1}

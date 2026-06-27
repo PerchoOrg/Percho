@@ -65,7 +65,7 @@ export async function ListingLeadsPanel({ listingId }: { listingId: string }) {
           </span>
         </h2>
       </div>
-      <ListingLeadsRows leads={leads} />
+      <ListingLeadsRows leads={leads} listingId={listingId} />
     </section>
   );
 }
