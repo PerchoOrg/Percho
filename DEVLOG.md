@@ -2,6 +2,16 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-06-27 — Phase 67.8: Hero back link uses HeroControl style
+
+**Asked**: "use same style as preview link". The 67.7 chip used a plain `bg-black/35` chip; switch to `HeroControl` so it matches the Preview/share buttons (chromeless transparent + frosted-glass hover).
+
+**Implementation**: `HeroHeader.tsx` — back link now `<HeroControl href={backHref}>{backLabel}</HeroControl>`. Drops the local `Link` import.
+
+**Verification**: tsc + next build clean.
+
+---
+
 ## 2026-06-27 — Phase 67.7: Hero back link on listing/community detail
 
 **Asked**: "Add back link to the top left of my listing / my community hero page, so we can return to the grid view".

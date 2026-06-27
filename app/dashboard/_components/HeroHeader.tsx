@@ -11,8 +11,9 @@
  * Server-renderable; interactive children (StatusPill, delete button) are
  * passed in as `controls`.
  */
-import Link from 'next/link';
 import type { ReactNode } from 'react';
+
+import { HeroControl } from './HeroControl';
 
 type Props = {
   coverUrl: string | null;
@@ -66,13 +67,7 @@ export function HeroHeader({ coverUrl, title, subtitle, controls, backHref, back
         {/* §1 — controls (top: back-link left, controls right) */}
         <div className="relative z-10 flex items-center justify-between gap-1">
           {backHref ? (
-            <Link
-              href={backHref}
-              prefetch={false}
-              className="inline-flex items-center rounded-md bg-black/35 px-2 py-1 text-xs font-medium text-surface drop-shadow hover:bg-black/50 focus:outline-none focus:ring-2 focus:ring-surface/60"
-            >
-              {backLabel}
-            </Link>
+            <HeroControl href={backHref}>{backLabel}</HeroControl>
           ) : (
             <span aria-hidden />
           )}

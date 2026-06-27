@@ -2,6 +2,10 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.72.1 — Hero back link matches Preview style (2026-06-27)
+
+- The hero "← Back" chip now uses the same chromeless / frosted-glass-on-hover style as the Preview link, so the top row reads as one consistent control bar.
+
 ## v0.72.0 — Hero "← Back" on listing/community detail (2026-06-27)
 
 - The listing and community detail pages now show a "← Back" chip in the top-left of the hero image. Tapping it returns you to the grid view (My listings / My communities) so you can browse to the next item without using the browser back button.
