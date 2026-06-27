@@ -2,6 +2,16 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-06-27 — Phase 67.6: Back label is just "← Back"
+
+**Asked**: 'Just use "back"'. Drop the dynamic label ("← All leads" / "← Back to {address}") in favor of a literal "← Back" everywhere on the lead detail page.
+
+**Implementation**: `app/dashboard/leads/[id]/page.tsx` — `backLabel` is now const `'← Back'`. The href resolution from 67.5 stays (inbox vs `?tab=leads` on the referrer listing).
+
+**Verification**: tsc + next build clean.
+
+---
+
 ## 2026-06-27 — Phase 67.5: Referrer-aware back link (replaces 67.4 source-aware)
 
 **Asked** (Qiaoxu, Slack, correcting 67.4): "not source aware, the *last page* aware". Lead detail's back link should follow the page the agent came from — `/dashboard/leads` → back to inbox; listing edit leads tab → back to that listing's leads tab.

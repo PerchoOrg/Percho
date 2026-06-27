@@ -2,6 +2,10 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.71.2 — Lead detail back link is just "← Back" (2026-06-27)
+
+- The lead detail back link now reads "← Back" everywhere instead of mirroring the destination ("← All leads" / "← Back to {address}"). Destination still follows where you came from — only the label changed.
+
 ## v0.71.1 — Lead detail back link follows where you came from (2026-06-27)
 
 - **Back link** on a lead detail page now reflects the page you arrived from, not where the data lives. Open a lead from **My Leads** → "← All leads" sends you back to the inbox. Open a lead from a listing's **Leads** tab → "← Back to {address}" sends you back to that listing's Leads tab. Same lead, two paths, two correct destinations.

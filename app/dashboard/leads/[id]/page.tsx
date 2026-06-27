@@ -99,31 +99,15 @@ export default async function LeadDetailPage({ params, searchParams }: PageProps
   // The row link in `leads-live.tsx` (My Leads inbox) sets `?back=inbox`;
   // the row link in the listing edit hub's leads tab sets
   // `?back=listing:<id>`. We resolve those to safe internal hrefs here.
-  // - Whitelist parsing: never trust the param to construct an arbitrary URL.
-  // - UUID regex on the listing id keeps the redirect target locked to a
-  //   resource the agent can already see.
-  // - Fallback (no/unknown `back`) → /dashboard/leads inbox.
+  // Phase 67.6: label is always literal "← Back" (user pref).
   const UUID_RE =
     /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   let backHref = '/dashboard/leads';
-  let backLabel = '← All leads';
-  if (back === 'inbox') {
-    // explicit inbox referrer — same as default but keeps the round-trip
-    // intent visible.
-    backHref = '/dashboard/leads';
-    backLabel = '← All leads';
-  } else if (back?.startsWith('listing:')) {
+  const backLabel = '← Back';
+  if (back?.startsWith('listing:')) {
     const referrerListingId = back.slice('listing:'.length);
     if (UUID_RE.test(referrerListingId)) {
       backHref = `/dashboard/listings/${referrerListingId}/edit?tab=leads`;
-      // Label uses *this* lead's listing address only when the referrer
-      // matches — otherwise we fall back to a generic label. (The referrer
-      // listing id might differ from `lead.listing_id` for community leads
-      // surfaced in a per-listing search; rare but possible.)
-      backLabel =
-        lead.listing_id === referrerListingId && addr
-          ? `← Back to ${addr}`
-          : '← Back to listing';
     }
   }
 
