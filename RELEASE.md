@@ -2,6 +2,16 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.68.0 — "Mark as followed up" actually sticks (2026-06-27)
+
+### 🐛 Bug Fixes
+- On **My Leads**, clicking the ✓ "Mark as followed up" icon (or the
+  toggle on the lead detail page) used to flip the row briefly and then
+  snap back to unfollowed-up — the change never actually saved. It now
+  saves and stays followed up across reloads.
+- Also fixes the same revert when using the Email or Text icons, which
+  auto-mark a lead as followed up after you contact the buyer.
+
 ## v0.67.0 — Videos always show the full picture (letterbox over crop) (2026-06-26)
 
 ### 🛠 Fixes
