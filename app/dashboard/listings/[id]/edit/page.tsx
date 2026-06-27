@@ -191,6 +191,7 @@ export default async function EditListingPage({
         coverUrl={heroCover}
         title={heroTitle}
         subtitle={subtitle}
+        backHref="/dashboard"
         controls={
           <>
             <HeroControl href={`/dashboard/listings/${listing.id}/preview`}>

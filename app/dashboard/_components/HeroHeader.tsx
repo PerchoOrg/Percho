@@ -11,6 +11,7 @@
  * Server-renderable; interactive children (StatusPill, delete button) are
  * passed in as `controls`.
  */
+import Link from 'next/link';
 import type { ReactNode } from 'react';
 
 type Props = {
@@ -19,9 +20,17 @@ type Props = {
   subtitle?: string;
   /** Right-aligned control row (Preview button, status toggle, delete). */
   controls?: ReactNode;
+  /**
+   * Phase 67.7: top-left back link to the parent grid view.
+   * Listing detail → `/dashboard` (my listings).
+   * Community detail → `/dashboard/communities`.
+   * Omit to hide.
+   */
+  backHref?: string;
+  backLabel?: string;
 };
 
-export function HeroHeader({ coverUrl, title, subtitle, controls }: Props) {
+export function HeroHeader({ coverUrl, title, subtitle, controls, backHref, backLabel = '← Back' }: Props) {
   return (
     <header className="mx-auto max-w-6xl">
       <div
@@ -54,9 +63,20 @@ export function HeroHeader({ coverUrl, title, subtitle, controls }: Props) {
           }}
         />
 
-        {/* §1 — controls (top, right) */}
-        <div className="relative z-10 flex items-center justify-end gap-1">
-          {controls}
+        {/* §1 — controls (top: back-link left, controls right) */}
+        <div className="relative z-10 flex items-center justify-between gap-1">
+          {backHref ? (
+            <Link
+              href={backHref}
+              prefetch={false}
+              className="inline-flex items-center rounded-md bg-black/35 px-2 py-1 text-xs font-medium text-surface drop-shadow hover:bg-black/50 focus:outline-none focus:ring-2 focus:ring-surface/60"
+            >
+              {backLabel}
+            </Link>
+          ) : (
+            <span aria-hidden />
+          )}
+          <div className="flex items-center gap-1">{controls}</div>
         </div>
 
         {/* §2 — home info (bottom, left, vertically centered in remaining space) */}

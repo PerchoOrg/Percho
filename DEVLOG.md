@@ -2,6 +2,19 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-06-27 — Phase 67.7: Hero back link on listing/community detail
+
+**Asked**: "Add back link to the top left of my listing / my community hero page, so we can return to the grid view".
+
+**Implementation**:
+- `app/dashboard/_components/HeroHeader.tsx`: top-control row changed from `justify-end` to `justify-between`. New optional props `backHref` + `backLabel` (default `← Back`); when `backHref` is set, renders a chip-style `<Link>` on the left (`bg-black/35` → `hover:bg-black/50`, white text, focus ring) so it stays legible on bright covers without breaking the chromeless aesthetic. When omitted, an empty span keeps controls right-aligned (no layout shift on pages that opt out).
+- `app/dashboard/listings/[id]/edit/page.tsx`: `backHref="/dashboard"`.
+- `app/dashboard/communities/[id]/page.tsx`: `backHref="/dashboard/communities"`.
+
+**Verification**: tsc + next build clean.
+
+---
+
 ## 2026-06-27 — Phase 67.6: Back label is just "← Back"
 
 **Asked**: 'Just use "back"'. Drop the dynamic label ("← All leads" / "← Back to {address}") in favor of a literal "← Back" everywhere on the lead detail page.

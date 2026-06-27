@@ -266,6 +266,7 @@ export default async function CommunityEditorPage({
         coverUrl={heroCoverUrl}
         title={community.name}
         subtitle={subtitle}
+        backHref="/dashboard/communities"
         controls={
           <>
             <HeroControl href={`/c/${community.slug}`}>

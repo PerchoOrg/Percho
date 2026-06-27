@@ -2,6 +2,10 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.72.0 — Hero "← Back" on listing/community detail (2026-06-27)
+
+- The listing and community detail pages now show a "← Back" chip in the top-left of the hero image. Tapping it returns you to the grid view (My listings / My communities) so you can browse to the next item without using the browser back button.
+
 ## v0.71.2 — Lead detail back link is just "← Back" (2026-06-27)
 
 - The lead detail back link now reads "← Back" everywhere instead of mirroring the destination ("← All leads" / "← Back to {address}"). Destination still follows where you came from — only the label changed.
