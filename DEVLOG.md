@@ -2,6 +2,20 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-06-27 — Phase 67.3: Hotfix listing-edit leads panel runtime error
+
+**Reported** (Qiaoxu, Slack): listing-level leads section throws an Application error after 67.2 deploy.
+
+**Root cause**: phase 67.2 added `onClick={(e) => e.stopPropagation()}` to the Email/SMS anchors inside `ListingLeadsPanel.tsx`, but that file is a Server Component (called by the listing edit hub server tree, uses `createClient` from `@/lib/supabase/server`). React rejects event handlers on server-rendered nodes — manifests as a runtime client-side hydration / Application error in production. The other refactor (`leads-live.tsx`) was already a `'use client'` component so it didn't blow up.
+
+**Fix**: split into two files. `ListingLeadsPanel.tsx` keeps the SSR shell (data fetch, empty state, header) and delegates row rendering to a new `ListingLeadsPanel.client.tsx` (`'use client'`) that owns the row UI + onClick handlers. Pure presentational client component, no state.
+
+**Lesson learned**: when adding event handlers to a file, check the top of the file for `'use client'`. If absent and the file imports from `@/lib/supabase/server` or is consumed by a server tree, splitting is mandatory.
+
+**Verification**: `npx tsc --noEmit` clean, `npx next build` compiled successfully.
+
+---
+
 ## 2026-06-27 — Phase 67.2: Leads parity + clickable rows + source enum
 
 **Asked** (Qiaoxu, Slack): per-listing leads view should follow the same pattern as `/dashboard/leads`; Source should be a 2-value enum (Listing / Community); the row should be clickable, not just the name.
