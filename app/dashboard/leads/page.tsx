@@ -31,7 +31,7 @@ export default async function LeadsPage() {
   const { data } = (await (supabase as any)
     .from('leads')
     .select(
-      'id, name, email, phone, message, source, notified_at, followed_up_at, created_at, listing_id, listings(address, city, state, slug)',
+      'id, name, email, phone, message, source, notified_at, followed_up_at, created_at, listing_id, community_id, listings(address, city, state, slug), communities(name, slug)',
     )
     .order('created_at', { ascending: false })
     .limit(200)) as { data: LeadRow[] | null };

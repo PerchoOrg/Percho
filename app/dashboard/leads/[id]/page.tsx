@@ -27,11 +27,16 @@ type LeadDetail = {
   notified_at: string | null;
   followed_up_at: string | null;
   created_at: string;
-  listing_id: string;
+  listing_id: string | null;
+  community_id: string | null;
   listings: {
     address: string | null;
     city: string | null;
     state: string | null;
+    slug: string | null;
+  } | null;
+  communities: {
+    name: string | null;
     slug: string | null;
   } | null;
 };
@@ -59,22 +64,27 @@ export default async function LeadDetailPage({ params }: PageProps) {
   const { data: lead } = (await (supabase as any)
     .from('leads')
     .select(
-      'id, name, email, phone, message, source, notified_at, followed_up_at, created_at, listing_id, listings(address, city, state, slug)',
+      'id, name, email, phone, message, source, notified_at, followed_up_at, created_at, listing_id, community_id, listings(address, city, state, slug), communities(name, slug)',
     )
     .eq('id', id)
     .maybeSingle()) as { data: LeadDetail | null };
 
   if (!lead) notFound();
 
-  const addr = lead.listings?.address ?? '(unknown listing)';
+  const addr = lead.listings?.address ?? null;
   const cityState =
     lead.listings?.city && lead.listings?.state
       ? `${lead.listings.city}, ${lead.listings.state}`
       : '';
+  const communityName = lead.communities?.name ?? null;
+  const isCommunityLead = lead.community_id != null;
+  const target = isCommunityLead
+    ? (communityName ?? 'a community')
+    : (addr ?? '(unknown listing)');
 
-  // Pre-filled mailto. Subject + body reference the listing.
-  const subject = `Re: your inquiry about ${addr}`;
-  const body = `Hi ${lead.name.split(' ')[0] ?? lead.name},\n\nThanks for reaching out about ${addr}${cityState ? `, ${cityState}` : ''}. I'd be glad to share more details and answer any questions.\n\nWhen would be a good time for a quick call or showing?\n\nBest,\n`;
+  // Pre-filled mailto. Subject + body reference the listing or community.
+  const subject = `Re: your inquiry about ${target}`;
+  const body = `Hi ${lead.name.split(' ')[0] ?? lead.name},\n\nThanks for reaching out about ${target}${cityState ? `, ${cityState}` : ''}. I'd be glad to share more details and answer any questions.\n\nWhen would be a good time for a quick call or showing?\n\nBest,\n`;
   const mailto =
     lead.email != null
       ? `mailto:${encodeURIComponent(lead.email)}?subject=${encodeURIComponent(
@@ -116,20 +126,40 @@ export default async function LeadDetailPage({ params }: PageProps) {
         </div>
 
         <dl className="grid grid-cols-[120px_1fr] gap-y-3 text-sm">
-          <dt className="text-muted">Listing</dt>
-          <dd>
-            {lead.listings?.slug ? (
-              <Link
-                href={`/dashboard/listings/${lead.listing_id}/edit`}
-                className="text-ink hover:underline"
-              >
-                {addr}
-              </Link>
-            ) : (
-              <span>{addr}</span>
-            )}
-            {cityState ? <span className="text-ink2"> · {cityState}</span> : null}
-          </dd>
+          {isCommunityLead ? (
+            <>
+              <dt className="text-muted">Community</dt>
+              <dd>
+                {lead.communities?.slug ? (
+                  <Link
+                    href={`/c/${lead.communities.slug}`}
+                    className="text-ink hover:underline"
+                  >
+                    {communityName ?? '(unknown community)'}
+                  </Link>
+                ) : (
+                  <span>{communityName ?? '(unknown community)'}</span>
+                )}
+              </dd>
+            </>
+          ) : (
+            <>
+              <dt className="text-muted">Listing</dt>
+              <dd>
+                {lead.listings?.slug && lead.listing_id ? (
+                  <Link
+                    href={`/dashboard/listings/${lead.listing_id}/edit`}
+                    className="text-ink hover:underline"
+                  >
+                    {addr ?? '(unknown listing)'}
+                  </Link>
+                ) : (
+                  <span>{addr ?? '(unknown listing)'}</span>
+                )}
+                {cityState ? <span className="text-ink2"> · {cityState}</span> : null}
+              </dd>
+            </>
+          )}
 
           {lead.email ? (
             <>
