@@ -2,6 +2,40 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-06-27 — Phase 66: leads UPDATE RLS policy — "Mark as followed up" silently no-op'd
+
+**Reported**: Qiaoxu — "my leads → Mark as followed up doesn't work; refresh and it goes back" (Slack thread).
+
+**Repro**: agent in `/dashboard/leads` clicks ✓ on a row → row visually flips to followed-up → snaps back almost immediately. Same on the detail-page toggle. Same when using the Email/Text icons (which call `onMark('now')`).
+
+**Root cause**: `public.leads` has RLS enabled but `0001_init.sql` only shipped SELECT + INSERT policies — never an UPDATE policy. `0014_leads_followed_up.sql`'s header asserted "existing per-listing policies on public.leads cover this column — SELECT/UPDATE are already gated" — that was wrong; the comment described a policy that didn't exist. With RLS on and no matching UPDATE policy, every `UPDATE public.leads` from a logged-in agent silently affects 0 rows. The API route at `/api/leads/[id]/follow-up` then sees `data == null` from `.maybeSingle()` and returns 404; the client (`leads-live.tsx` `setFollowUp` and the detail-page `FollowUpToggle`) reverts the optimistic update on `!res.ok`. UX read like "it un-marks on refresh" but the revert actually fired the moment the fetch resolved.
+
+This means **followed-up tracking has been completely broken since Phase 18 shipped** (2025 timeframe). Either no one tried it post-launch, or they assumed it was meant to be display-only. It was not.
+
+**Fix**: `supabase/migrations/0042_leads_agent_update_policy.sql` — add per-agent UPDATE policy mirroring the SELECT policy:
+```
+create policy "agent updates own leads" on public.leads
+  for update
+  using (agent_id in (select id from public.agents where user_id = auth.uid()))
+  with check (agent_id in (select id from public.agents where user_id = auth.uid()));
+```
+Identical USING and WITH CHECK so agents can't reassign a lead to a different agent by editing `agent_id`. No DELETE policy added — leads stay append-only; cleanup remains via the listing-cascade in 0041.
+
+**Also**: corrected the misleading comment in `app/api/leads/[id]/follow-up/route.ts` to point at migration 0042 instead of repeating the false claim from 0014.
+
+**Decisions**:
+- Considered service-role bypass + manual ownership check in the API route. Rejected: the rest of the app uses RLS-everywhere; mixing service-role for one route makes the security model messier. Adding the missing policy is the correct shape.
+- Considered also adding RLS for community lead visibility (community owners reading leads via `0029_leads_community.sql`). Out of scope — the bug report was specifically about UPDATE; SELECT for community leads is a separate axis.
+
+**Verification**:
+- `supabase db push --include-all --linked` — applied 0042 cleanly to remote prod DB.
+- `npx tsc --noEmit` — clean.
+- Deployment verification waits on Vercel preview + Qiaoxu confirming the toggle sticks.
+
+**Lesson**: a comment claiming "RLS already covers this" is not a substitute for actually grepping the migrations for the policy. Migration 0014 wrote that comment, no one tested an actual UPDATE end-to-end, and the bug shipped. When adding a column gated by RLS, write the smallest possible round-trip test that actually mutates a row from the same client the production code uses.
+
+**Commits**: pending.
+
 ## 2026-06-26 — Phase 65: object-contain everywhere (reverts + extends phase64)
 
 **Objective**: User correction on phase64. Original intent was "L3 should look like L0" — I read the L0 cover-on-mobile pattern as the target. User clarified the actual principle: **horizontal video should play horizontal, black bars are fine, picture integrity is priority #1, do not force fill the screen.** That makes the L0 cover-on-mobile pattern the bug, not L3's contain. Reverse direction: extend `object-contain` to L0 + BrowseFeed instead of bringing cover to L3.

@@ -5,10 +5,10 @@
  *   - "now"  → set `followed_up_at = now()` (idempotent)
  *   - null   → clear `followed_up_at` (used by the "Mark as new" detail toggle)
  *
- * Auth: Supabase server client. RLS already gates `update on leads` to leads
- * whose listing belongs to the calling agent — we don't re-check ownership
- * here. If the row isn't visible/updatable, the update affects 0 rows and
- * we return 404 (don't leak that the id exists).
+ * Auth: Supabase server client. RLS gates UPDATE via the per-agent policy
+ * added in migration 0042 (`agent updates own leads`). If the row isn't
+ * visible/updatable to the caller, the update affects 0 rows and we return
+ * 404 (don't leak that the id exists).
  */
 
 import { createClient } from '@/lib/supabase/server';
