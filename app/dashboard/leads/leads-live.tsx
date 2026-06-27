@@ -262,14 +262,12 @@ export function LeadsLive({ initial }: { initial: LeadRow[] }) {
           </p>
         </div>
       ) : (
-        // Phase 67: real table with sticky header. Grid template is shared
-        // between the header row and each data row so columns line up.
-        // Columns:
-        //   ·  | Name | Listing | Contact | Source | Received | actions
-        //  10  | 160  | 1fr     | auto    | auto   | auto     | auto
+        // Phase 67: responsive layout.
+        //   < sm  → stacked cards (header hidden — too cramped on phone)
+        //   ≥ sm  → grid table with sticky column header
         <div className="overflow-hidden rounded-2xl border border-line bg-surface">
           <div
-            className="grid grid-cols-[10px_minmax(0,160px)_minmax(0,1fr)_auto_auto_auto_auto] items-center gap-3 border-b border-line/60 bg-surface px-3 py-2 text-[11px] uppercase tracking-wide text-muted sm:gap-4"
+            className="hidden sm:grid grid-cols-[10px_minmax(0,180px)_minmax(0,1fr)_auto_minmax(0,140px)_auto_auto] items-center gap-4 border-b border-line/60 bg-surface px-3 py-2 text-[11px] uppercase tracking-wide text-muted"
             role="row"
           >
             <span aria-hidden />
@@ -339,106 +337,190 @@ function LeadItem({
 
   return (
     <li
-      className={`grid grid-cols-[10px_minmax(0,160px)_minmax(0,1fr)_auto_auto_auto_auto] items-center gap-3 sm:gap-4 border-t border-line/60 px-3 py-2.5 first:border-t-0 ${
+      className={`block sm:grid sm:grid-cols-[10px_minmax(0,180px)_minmax(0,1fr)_auto_minmax(0,140px)_auto_auto] sm:items-center sm:gap-4 border-t border-line/60 px-3 py-3 first:border-t-0 ${
         open ? '' : 'opacity-55'
       }`}
     >
-      {/* Status dot */}
-      <span
-        aria-hidden
-        className="h-2 w-2 rounded-full"
-        style={
-          open
-            ? { backgroundColor: OPEN_DOT_COLOR }
-            : { border: '1px solid rgba(49,49,49,0.2)' }
-        }
-      />
-      {/* Name (linked to detail) + message preview as sub-line */}
-      <div className="min-w-0">
-        <Link
-          href={`/dashboard/leads/${lead.id}`}
-          prefetch={false}
-          className={`block truncate text-sm hover:underline ${
-            open ? 'font-medium text-ink' : 'text-ink2'
-          }`}
-          title={lead.name}
+      {/* MOBILE LAYOUT: stacked card. Hidden ≥ sm. */}
+      <div className="sm:hidden">
+        <div className="flex items-start gap-2">
+          <span
+            aria-hidden
+            className="mt-1.5 h-2 w-2 shrink-0 rounded-full"
+            style={
+              open
+                ? { backgroundColor: OPEN_DOT_COLOR }
+                : { border: '1px solid rgba(49,49,49,0.2)' }
+            }
+          />
+          <div className="min-w-0 flex-1">
+            <Link
+              href={`/dashboard/leads/${lead.id}`}
+              prefetch={false}
+              className={`block truncate text-sm hover:underline ${
+                open ? 'font-medium text-ink' : 'text-ink2'
+              }`}
+              title={lead.name}
+            >
+              {lead.name}
+            </Link>
+            {/* Listing line (or community) */}
+            <p className="truncate text-[11px] text-ink2" title={listingCell}>
+              {lead.community_id
+                ? (lead.communities?.name ?? 'Community')
+                : listingCell}
+            </p>
+            {/* Source + received as small muted line */}
+            <p className="text-[11px] text-muted">
+              {sourceLabel(lead)} · {timeAgo(lead.created_at)}
+            </p>
+            {preview && preview !== listingCell ? (
+              <p className="mt-1 truncate text-[11px] text-muted" title={preview}>
+                {preview}
+              </p>
+            ) : null}
+          </div>
+          {/* Right-aligned action cluster */}
+          <div className="flex shrink-0 items-center gap-1.5">
+            {mailto ? (
+              <a
+                href={mailto}
+                onClick={() => onMark('now')}
+                aria-label={`Email ${lead.name}`}
+                title={`Email ${lead.email}`}
+                className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-line text-ink2 hover:border-ink/30 hover:bg-line/30 hover:text-ink"
+              >
+                <EmailIcon />
+              </a>
+            ) : null}
+            {sms ? (
+              <a
+                href={sms}
+                onClick={() => onMark('now')}
+                aria-label={`Text ${lead.name}`}
+                title={`Text ${lead.phone}`}
+                className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-line text-ink2 hover:border-ink/30 hover:bg-line/30 hover:text-ink"
+              >
+                <SmsIcon />
+              </a>
+            ) : null}
+            <button
+              type="button"
+              onClick={() => onMark(open ? 'now' : null)}
+              aria-label={open ? 'Mark as followed up' : 'Mark as new'}
+              title={open ? 'Mark as followed up' : 'Mark as new'}
+              className={`inline-flex h-8 w-8 items-center justify-center rounded-full border text-ink2 hover:bg-line/30 hover:text-ink ${
+                open ? 'border-line' : 'border-line bg-line/20'
+              }`}
+            >
+              {open ? <CheckIcon /> : <UndoIcon />}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* DESKTOP LAYOUT: grid row. Hidden < sm — uses contents so cells go straight into the parent grid. */}
+      <div className="contents max-sm:hidden">
+        {/* Status dot */}
+        <span
+          aria-hidden
+          className="hidden sm:block h-2 w-2 rounded-full"
+          style={
+            open
+              ? { backgroundColor: OPEN_DOT_COLOR }
+              : { border: '1px solid rgba(49,49,49,0.2)' }
+          }
+        />
+        {/* Name + preview */}
+        <div className="hidden sm:block min-w-0">
+          <Link
+            href={`/dashboard/leads/${lead.id}`}
+            prefetch={false}
+            className={`block truncate text-sm hover:underline ${
+              open ? 'font-medium text-ink' : 'text-ink2'
+            }`}
+            title={lead.name}
+          >
+            {lead.name}
+          </Link>
+          {preview ? (
+            <p className="truncate text-[11px] text-muted" title={preview}>
+              {preview}
+            </p>
+          ) : null}
+        </div>
+        {/* Listing */}
+        <span
+          className="hidden sm:block min-w-0 truncate text-sm text-ink2"
+          title={listingCell}
         >
-          {lead.name}
-        </Link>
-        {preview ? (
-          <p className="truncate text-[11px] text-muted" title={preview}>
-            {preview}
-          </p>
-        ) : null}
+          {listingCell}
+        </span>
+        {/* Contact icons */}
+        <div className="hidden sm:flex shrink-0 items-center gap-1.5">
+          {mailto ? (
+            <a
+              href={mailto}
+              onClick={() => onMark('now')}
+              aria-label={`Email ${lead.name}`}
+              title={`Email ${lead.email} (auto-marks as followed up)`}
+              className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-line text-ink2 hover:border-ink/30 hover:bg-line/30 hover:text-ink"
+            >
+              <EmailIcon />
+            </a>
+          ) : (
+            <span
+              aria-hidden
+              className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-line/50 text-muted/50"
+              title="No email"
+            >
+              <EmailIcon />
+            </span>
+          )}
+          {sms ? (
+            <a
+              href={sms}
+              onClick={() => onMark('now')}
+              aria-label={`Text ${lead.name}`}
+              title={`Text ${lead.phone} (auto-marks as followed up)`}
+              className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-line text-ink2 hover:border-ink/30 hover:bg-line/30 hover:text-ink"
+            >
+              <SmsIcon />
+            </a>
+          ) : (
+            <span
+              aria-hidden
+              className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-line/50 text-muted/50"
+              title="No phone"
+            >
+              <SmsIcon />
+            </span>
+          )}
+        </div>
+        {/* Source */}
+        <span
+          className="hidden sm:block min-w-0 truncate text-xs text-ink2"
+          title={sourceLabel(lead)}
+        >
+          {sourceLabel(lead)}
+        </span>
+        {/* Received */}
+        <span className="hidden sm:block shrink-0 text-muted text-[11px] tabular-nums">
+          {timeAgo(lead.created_at)}
+        </span>
+        {/* Mark toggle */}
+        <button
+          type="button"
+          onClick={() => onMark(open ? 'now' : null)}
+          aria-label={open ? 'Mark as followed up' : 'Mark as new'}
+          title={open ? 'Mark as followed up' : 'Mark as new'}
+          className={`hidden sm:inline-flex h-7 w-7 items-center justify-center rounded-full border text-ink2 hover:bg-line/30 hover:text-ink ${
+            open ? 'border-line' : 'border-line bg-line/20'
+          }`}
+        >
+          {open ? <CheckIcon /> : <UndoIcon />}
+        </button>
       </div>
-      {/* Listing */}
-      <span
-        className="min-w-0 truncate text-sm text-ink2"
-        title={listingCell}
-      >
-        {listingCell}
-      </span>
-      {/* Contact: Email + Phone icon buttons, each independently active */}
-      <div className="flex shrink-0 items-center gap-1.5">
-        {mailto ? (
-          <a
-            href={mailto}
-            onClick={() => onMark('now')}
-            aria-label={`Email ${lead.name}`}
-            title={`Email ${lead.email} (auto-marks as followed up)`}
-            className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-line text-ink2 hover:border-ink/30 hover:bg-line/30 hover:text-ink"
-          >
-            <EmailIcon />
-          </a>
-        ) : (
-          <span
-            aria-hidden
-            className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-line/50 text-muted/50"
-            title="No email"
-          >
-            <EmailIcon />
-          </span>
-        )}
-        {sms ? (
-          <a
-            href={sms}
-            onClick={() => onMark('now')}
-            aria-label={`Text ${lead.name}`}
-            title={`Text ${lead.phone} (auto-marks as followed up)`}
-            className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-line text-ink2 hover:border-ink/30 hover:bg-line/30 hover:text-ink"
-          >
-            <SmsIcon />
-          </a>
-        ) : (
-          <span
-            aria-hidden
-            className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-line/50 text-muted/50"
-            title="No phone"
-          >
-            <SmsIcon />
-          </span>
-        )}
-      </div>
-      {/* Source — community name for community leads, raw source for listing leads */}
-      <span className="shrink-0 truncate text-xs text-ink2 max-w-[140px]" title={sourceLabel(lead)}>
-        {sourceLabel(lead)}
-      </span>
-      {/* Received */}
-      <span className="shrink-0 text-muted text-[11px] tabular-nums">
-        {timeAgo(lead.created_at)}
-      </span>
-      {/* Mark toggle */}
-      <button
-        type="button"
-        onClick={() => onMark(open ? 'now' : null)}
-        aria-label={open ? 'Mark as followed up' : 'Mark as new'}
-        title={open ? 'Mark as followed up' : 'Mark as new'}
-        className={`inline-flex h-7 w-7 items-center justify-center rounded-full border text-ink2 hover:bg-line/30 hover:text-ink ${
-          open ? 'border-line' : 'border-line bg-line/20'
-        }`}
-      >
-        {open ? <CheckIcon /> : <UndoIcon />}
-      </button>
     </li>
   );
 }
