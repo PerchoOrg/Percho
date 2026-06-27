@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * LeadsLive — agent's lead inbox (Phase 49.2: V1 Inbox redesign).
+ * LeadsLive — agent's lead inbox (Phase 67: table redesign).
  *
  * Layer 1 (initial): SSR-hydrated rows passed in via `initial`.
  * Layer 2 (Realtime): postgres_changes INSERT + UPDATE subscription on
@@ -9,17 +9,18 @@
  * Layer 3 (polling fallback): every 8s, refetch the most-recent leads and
  *   merge by id (last-write-wins).
  *
- * Phase 49.2 redesign (V1 — Inbox):
- *   - 4-stat strip dropped. The chips below carry the same info implicitly.
- *   - Filter chips lose their "(N)" counts — pills only. The chip itself
- *     filters; the count was visual noise.
- *   - Search box + Export CSV kept (right side of controls row).
- *   - Each lead is a single line: status dot · name · preview · time ·
- *     email/text icon buttons. Followed-up rows fade.
- *   - Inline action menu (Email / Text / Mark) is gone — Email + Text
- *     icons act directly (mailto:/sms: + auto-mark followed-up). A
- *     separate "Mark as new / Mark done" toggle remains via an explicit
- *     check icon at the row end.
+ * Phase 67 redesign (table form):
+ *   - Sticky column header: Name / Listing / Contact / Source / Received / ·
+ *   - Listing column shows the listing address; community leads show "—"
+ *     (community has no listing — its name lives in Source instead).
+ *   - Contact column has both Email AND Phone icons side by side; each
+ *     enabled only if the lead actually filled that field. Both auto-mark
+ *     followed-up when clicked. The Mark ✓ toggle stays as the trailing
+ *     action.
+ *   - Source column shows the community name for community-routed leads
+ *     (overrides the raw `source` string), and the lead's `source` tag
+ *     for listing-routed leads (e.g. "listing-page").
+ *   - Followed-up rows fade to opacity-55 (kept from Phase 49.2).
  */
 
 import { createClient } from '@/lib/supabase/client';
@@ -36,11 +37,16 @@ export type LeadRow = {
   notified_at: string | null;
   followed_up_at: string | null;
   created_at: string;
-  listing_id: string;
+  listing_id: string | null;
+  community_id: string | null;
   listings: {
     address: string | null;
     city: string | null;
     state: string | null;
+    slug: string | null;
+  } | null;
+  communities: {
+    name: string | null;
     slug: string | null;
   } | null;
 };
@@ -48,6 +54,11 @@ export type LeadRow = {
 type FilterKey = 'all' | 'open' | 'week' | 'pending';
 
 const OPEN_DOT_COLOR = '#6b7a5a';
+
+// Columns selected from `leads` joined with listings + communities. Kept as a
+// constant so the SSR page, realtime refetch, and polling fallback agree.
+const LEAD_SELECT =
+  'id, name, email, phone, message, source, notified_at, followed_up_at, created_at, listing_id, community_id, listings(address, city, state, slug), communities(name, slug)';
 
 function timeAgo(iso: string): string {
   const sec = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 1000));
@@ -63,16 +74,25 @@ function isThisWeek(iso: string): boolean {
 
 function buildMailto(l: LeadRow): string | null {
   if (!l.email) return null;
-  const addr = l.listings?.address ?? 'your inquiry';
+  const target = l.listings?.address ?? l.communities?.name ?? 'your inquiry';
   const firstName = l.name.split(' ')[0] ?? l.name;
-  const subject = `Re: your inquiry about ${addr}`;
-  const body = `Hi ${firstName},\n\nThanks for reaching out about ${addr}. I'd be glad to share more details and answer any questions.\n\nWhen would be a good time for a quick call or showing?\n\nBest,\n`;
+  const subject = `Re: your inquiry about ${target}`;
+  const body = `Hi ${firstName},\n\nThanks for reaching out about ${target}. I'd be glad to share more details and answer any questions.\n\nWhen would be a good time for a quick call or showing?\n\nBest,\n`;
   return `mailto:${encodeURIComponent(l.email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 }
 
 function buildSms(l: LeadRow): string | null {
   if (!l.phone) return null;
   return `sms:${l.phone.replace(/[^+\d]/g, '')}`;
+}
+
+function sourceLabel(l: LeadRow): string {
+  // Community leads: show the community name; the raw `source` field is
+  // typically the literal string "community-feed" which doesn't help an
+  // agent triage. Listing leads keep the raw source tag (e.g. "listing-page",
+  // utm strings). Falls back to "—" when neither is present.
+  if (l.community_id) return l.communities?.name ?? 'Community';
+  return l.source ?? '—';
 }
 
 export function LeadsLive({ initial }: { initial: LeadRow[] }) {
@@ -106,9 +126,7 @@ export function LeadsLive({ initial }: { initial: LeadRow[] }) {
           // biome-ignore lint/suspicious/noExplicitAny: stub generated types
           const { data } = (await (supabase as any)
             .from('leads')
-            .select(
-              'id, name, email, phone, message, source, notified_at, followed_up_at, created_at, listing_id, listings(address, city, state, slug)',
-            )
+            .select(LEAD_SELECT)
             .eq('id', id)
             .maybeSingle()) as { data: LeadRow | null };
           if (data) merge([data]);
@@ -136,9 +154,7 @@ export function LeadsLive({ initial }: { initial: LeadRow[] }) {
       // biome-ignore lint/suspicious/noExplicitAny: stub generated types
       const { data } = (await (supabase as any)
         .from('leads')
-        .select(
-          'id, name, email, phone, message, source, notified_at, followed_up_at, created_at, listing_id, listings(address, city, state, slug)',
-        )
+        .select(LEAD_SELECT)
         .order('created_at', { ascending: false })
         .limit(50)) as { data: LeadRow[] | null };
       if (!cancelled && data) merge(data);
@@ -159,8 +175,9 @@ export function LeadsLive({ initial }: { initial: LeadRow[] }) {
       if (!q) return true;
       const addr = r.listings?.address ?? '';
       const city = r.listings?.city ?? '';
+      const community = r.communities?.name ?? '';
       const hay =
-        `${r.name} ${r.email ?? ''} ${r.phone ?? ''} ${r.message ?? ''} ${addr} ${city}`.toLowerCase();
+        `${r.name} ${r.email ?? ''} ${r.phone ?? ''} ${r.message ?? ''} ${addr} ${city} ${community}`.toLowerCase();
       return hay.includes(q);
     });
   }, [rows, query, filter]);
@@ -221,10 +238,10 @@ export function LeadsLive({ initial }: { initial: LeadRow[] }) {
         <div className="flex items-center gap-2">
           <input
             type="search"
-            placeholder="Search name, email, listing…"
+            placeholder="Search name, email, listing, community…"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            className="w-full rounded-full border border-line bg-surface px-3 py-1.5 text-xs text-ink placeholder-cream/40 focus:border-line-strong focus:outline-none sm:w-64"
+            className="w-full rounded-full border border-line bg-surface px-3 py-1.5 text-xs text-ink placeholder-cream/40 focus:border-line-strong focus:outline-none sm:w-72"
           />
           <a
             href="/api/leads/export"
@@ -245,16 +262,34 @@ export function LeadsLive({ initial }: { initial: LeadRow[] }) {
           </p>
         </div>
       ) : (
-        <ul className="rounded-2xl border border-line bg-surface px-2 sm:px-3">
-          {filtered.map((l, i) => (
-            <LeadItem
-              key={l.id}
-              lead={l}
-              isFirst={i === 0}
-              onMark={(value) => void setFollowUp(l.id, value)}
-            />
-          ))}
-        </ul>
+        // Phase 67: real table with sticky header. Grid template is shared
+        // between the header row and each data row so columns line up.
+        // Columns:
+        //   ·  | Name | Listing | Contact | Source | Received | actions
+        //  10  | 160  | 1fr     | auto    | auto   | auto     | auto
+        <div className="overflow-hidden rounded-2xl border border-line bg-surface">
+          <div
+            className="grid grid-cols-[10px_minmax(0,160px)_minmax(0,1fr)_auto_auto_auto_auto] items-center gap-3 border-b border-line/60 bg-surface px-3 py-2 text-[11px] uppercase tracking-wide text-muted sm:gap-4"
+            role="row"
+          >
+            <span aria-hidden />
+            <span>Name</span>
+            <span>Listing</span>
+            <span className="text-center">Contact</span>
+            <span>Source</span>
+            <span>Received</span>
+            <span aria-hidden />
+          </div>
+          <ul>
+            {filtered.map((l) => (
+              <LeadItem
+                key={l.id}
+                lead={l}
+                onMark={(value) => void setFollowUp(l.id, value)}
+              />
+            ))}
+          </ul>
+        </div>
       )}
     </div>
   );
@@ -286,24 +321,27 @@ function Chip({
 
 function LeadItem({
   lead,
-  isFirst,
   onMark,
 }: {
   lead: LeadRow;
-  isFirst: boolean;
   onMark: (value: 'now' | null) => void;
 }) {
   const open = !lead.followed_up_at;
-  const addr = lead.listings?.address ?? '(unknown listing)';
-  const preview = lead.message ?? addr;
+  const listingAddr = lead.listings?.address ?? null;
+  // Community leads have no listing column — show em-dash. Listing leads
+  // without a resolvable address (legacy / deleted listing) show "(unknown)".
+  const listingCell = lead.community_id
+    ? '—'
+    : (listingAddr ?? '(unknown listing)');
+  const preview = lead.message ?? listingAddr ?? lead.communities?.name ?? '';
   const mailto = buildMailto(lead);
   const sms = buildSms(lead);
 
   return (
     <li
-      className={`grid grid-cols-[10px_minmax(0,160px)_1fr_auto_auto] items-center gap-3 sm:gap-4 py-2.5 ${
-        isFirst ? '' : 'border-t border-line/60'
-      } ${open ? '' : 'opacity-55'}`}
+      className={`grid grid-cols-[10px_minmax(0,160px)_minmax(0,1fr)_auto_auto_auto_auto] items-center gap-3 sm:gap-4 border-t border-line/60 px-3 py-2.5 first:border-t-0 ${
+        open ? '' : 'opacity-55'
+      }`}
     >
       {/* Status dot */}
       <span
@@ -315,39 +353,39 @@ function LeadItem({
             : { border: '1px solid rgba(49,49,49,0.2)' }
         }
       />
-      {/* Name (linked to detail) */}
-      <Link
-        href={`/dashboard/leads/${lead.id}`}
-        prefetch={false}
-        className={`truncate text-sm hover:underline ${
-          open ? 'font-medium text-ink' : 'text-ink2'
-        }`}
-        title={lead.name}
+      {/* Name (linked to detail) + message preview as sub-line */}
+      <div className="min-w-0">
+        <Link
+          href={`/dashboard/leads/${lead.id}`}
+          prefetch={false}
+          className={`block truncate text-sm hover:underline ${
+            open ? 'font-medium text-ink' : 'text-ink2'
+          }`}
+          title={lead.name}
+        >
+          {lead.name}
+        </Link>
+        {preview ? (
+          <p className="truncate text-[11px] text-muted" title={preview}>
+            {preview}
+          </p>
+        ) : null}
+      </div>
+      {/* Listing */}
+      <span
+        className="min-w-0 truncate text-sm text-ink2"
+        title={listingCell}
       >
-        {lead.name}
-      </Link>
-      {/* Message preview + listing */}
-      <Link
-        href={`/dashboard/leads/${lead.id}`}
-        prefetch={false}
-        className="min-w-0 truncate text-sm text-ink2 hover:text-ink"
-        title={`${preview} — ${addr}`}
-      >
-        {preview}
-        <span className="text-muted"> · {addr}</span>
-      </Link>
-      {/* Time */}
-      <span className="shrink-0 text-muted text-[11px] tabular-nums">
-        {timeAgo(lead.created_at)}
+        {listingCell}
       </span>
-      {/* Icon actions */}
+      {/* Contact: Email + Phone icon buttons, each independently active */}
       <div className="flex shrink-0 items-center gap-1.5">
         {mailto ? (
           <a
             href={mailto}
             onClick={() => onMark('now')}
             aria-label={`Email ${lead.name}`}
-            title="Email (auto-marks as followed up)"
+            title={`Email ${lead.email} (auto-marks as followed up)`}
             className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-line text-ink2 hover:border-ink/30 hover:bg-line/30 hover:text-ink"
           >
             <EmailIcon />
@@ -366,7 +404,7 @@ function LeadItem({
             href={sms}
             onClick={() => onMark('now')}
             aria-label={`Text ${lead.name}`}
-            title="Text (auto-marks as followed up)"
+            title={`Text ${lead.phone} (auto-marks as followed up)`}
             className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-line text-ink2 hover:border-ink/30 hover:bg-line/30 hover:text-ink"
           >
             <SmsIcon />
@@ -380,18 +418,27 @@ function LeadItem({
             <SmsIcon />
           </span>
         )}
-        <button
-          type="button"
-          onClick={() => onMark(open ? 'now' : null)}
-          aria-label={open ? 'Mark as followed up' : 'Mark as new'}
-          title={open ? 'Mark as followed up' : 'Mark as new'}
-          className={`inline-flex h-7 w-7 items-center justify-center rounded-full border text-ink2 hover:bg-line/30 hover:text-ink ${
-            open ? 'border-line' : 'border-line bg-line/20'
-          }`}
-        >
-          {open ? <CheckIcon /> : <UndoIcon />}
-        </button>
       </div>
+      {/* Source — community name for community leads, raw source for listing leads */}
+      <span className="shrink-0 truncate text-xs text-ink2 max-w-[140px]" title={sourceLabel(lead)}>
+        {sourceLabel(lead)}
+      </span>
+      {/* Received */}
+      <span className="shrink-0 text-muted text-[11px] tabular-nums">
+        {timeAgo(lead.created_at)}
+      </span>
+      {/* Mark toggle */}
+      <button
+        type="button"
+        onClick={() => onMark(open ? 'now' : null)}
+        aria-label={open ? 'Mark as followed up' : 'Mark as new'}
+        title={open ? 'Mark as followed up' : 'Mark as new'}
+        className={`inline-flex h-7 w-7 items-center justify-center rounded-full border text-ink2 hover:bg-line/30 hover:text-ink ${
+          open ? 'border-line' : 'border-line bg-line/20'
+        }`}
+      >
+        {open ? <CheckIcon /> : <UndoIcon />}
+      </button>
     </li>
   );
 }
@@ -446,7 +493,7 @@ function CheckIcon() {
       strokeLinejoin="round"
       aria-hidden
     >
-      <path d="M5 12.5 10 17l9-10" />
+      <path d="M20 6 9 17l-5-5" />
     </svg>
   );
 }
@@ -464,8 +511,8 @@ function UndoIcon() {
       strokeLinejoin="round"
       aria-hidden
     >
-      <path d="M9 14 4 9l5-5" />
-      <path d="M4 9h11a5 5 0 0 1 5 5v0a5 5 0 0 1-5 5h-4" />
+      <path d="M3 7v6h6" />
+      <path d="M3 13a9 9 0 1 0 3-7.7L3 8" />
     </svg>
   );
 }

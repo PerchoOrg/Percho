@@ -2,6 +2,33 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-06-27 — Phase 67: My Leads table redesign
+
+**Asked** (Qiaoxu, Slack): show listing name per row, add column headers, allow both phone and email for contact, community contact doesn't need listing and source is community name.
+
+**Decisions** (locked with user):
+- Two contact channels in the buyer-facing LeadModal — split single "Phone or email" textbox into two distinct inputs (Email / Phone). At least one required (server `LeadCreate` already enforces). A buyer can submit both.
+- Message preview stays as the row's sub-line under name; no dedicated message column (would push table to 7 wide).
+
+**Server changes**:
+- `app/dashboard/leads/page.tsx` SSR query now selects `community_id, communities(name, slug)` alongside the listing join. `LeadRow` exports `listing_id: string | null` + `community_id: string | null` + `communities` shape. Polling fallback and realtime refetch share one `LEAD_SELECT` constant so SSR and client stay in lockstep.
+- `app/dashboard/leads/[id]/page.tsx` mirrors the new shape. Detail page now shows a `Community` row (linked to `/c/<slug>`) for community-routed leads instead of the dummy "(unknown listing)" Listing row.
+- `app/api/leads/export/route.ts` adds `kind` (listing/community) + `community` columns to the CSV. Existing columns unchanged for backward-compatible spreadsheets — the new ones append in the middle but the old positions still mean what they did.
+
+**Buyer-facing form**: `app/(public)/_components/LeadModal.tsx` split into two inputs. The client-side validator now rejects each field independently (bad email is "Enter a valid email", bad phone is "Enter a valid phone"). Helper line under the inputs makes the "either is fine" rule explicit so a buyer doesn't feel they have to share both. Server `LeadCreate` schema already supported this — no API change.
+
+**Table redesign** (`leads-live.tsx`):
+- Switched from a borderless list of cards to a single CSS grid with shared column template between the sticky header row and each data row. Columns: status dot · Name · Listing · Contact · Source · Received · action.
+- Header row has uppercase 11px column labels.
+- Listing column shows the listing address; community-routed leads display em-dash there (the community name lives in Source for that case, so we don't waste a column).
+- Contact column: side-by-side Email + SMS icon buttons. Each renders disabled (greyed border, no link) when the lead didn't supply that channel; renders as a real `<a>` when present and auto-marks the row as followed-up via `onMark('now')` on click.
+- Source column: shows `communities.name` for community leads (overrides the literal `community-feed` source string which is useless for triage), and the raw `source` tag for listing leads. Truncates with title-tooltip at 140px.
+- Search field updated placeholder to mention community; it now greps `communities.name` along with the existing fields.
+
+**TypeScript / build**: `npx tsc --noEmit` clean. `npx next build` clean.
+
+**Why this matters**: until phase 45.18 every lead came from a listing, so the old single-card layout was fine. Once communities started accepting leads (community owner = lead recipient) the source string `community-feed` made it impossible to tell *which* community a lead came from from the inbox. Phase 67 makes the inbox actually scannable for an agent juggling listings + communities.
+
 ## 2026-06-27 — Phase 66: leads UPDATE RLS policy — "Mark as followed up" silently no-op'd
 
 **Reported**: Qiaoxu — "my leads → Mark as followed up doesn't work; refresh and it goes back" (Slack thread).

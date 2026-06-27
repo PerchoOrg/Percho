@@ -9,6 +9,12 @@
  * either). On success: shows inline confirmation, auto-closes after 1.5s.
  * On failure: surfaces the server error inline; user can retry.
  *
+ * Phase 67 (2026-06-27): split single "Phone or email" field into two
+ * separate inputs (Email / Phone). Either one alone is sufficient (server
+ * schema requires at least one); both can be supplied if the buyer wants
+ * to give the agent two channels. Buyers who only want to share one field
+ * leave the other blank.
+ *
  * Mobile: bottom-sheet (slides up from bottom, full-width, rounded top).
  * Desktop: centered card.
  */
@@ -49,7 +55,8 @@ export function LeadModal({
   const defaultMessage = `Hi ${firstName}, I'm interested in ${target}.`;
 
   const [name, setName] = useState('');
-  const [contact, setContact] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
   const [message, setMessage] = useState(defaultMessage);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -60,7 +67,8 @@ export function LeadModal({
   useEffect(() => {
     if (open) {
       setName('');
-      setContact('');
+      setEmail('');
+      setPhone('');
       setMessage(defaultMessage);
       setError(null);
       setSubmitting(false);
@@ -87,9 +95,11 @@ export function LeadModal({
 
   function validate(): string | null {
     if (!name.trim()) return 'Name is required';
-    const c = contact.trim();
-    if (!c) return 'Please provide phone or email';
-    if (!EMAIL_RE.test(c) && !PHONE_RE.test(c)) return 'Enter a valid phone or email';
+    const e = email.trim();
+    const p = phone.trim();
+    if (!e && !p) return 'Please provide phone or email';
+    if (e && !EMAIL_RE.test(e)) return 'Enter a valid email';
+    if (p && !PHONE_RE.test(p)) return 'Enter a valid phone';
     return null;
   }
 
@@ -103,14 +113,14 @@ export function LeadModal({
     setError(null);
     setSubmitting(true);
 
-    const c = contact.trim();
-    const isEmail = EMAIL_RE.test(c);
+    const trimmedEmail = email.trim();
+    const trimmedPhone = phone.trim();
     const payload = {
       listing_id: listingId ?? null,
       community_id: communityId ?? null,
       name: name.trim(),
-      email: isEmail ? c : null,
-      phone: isEmail ? null : c,
+      email: trimmedEmail || null,
+      phone: trimmedPhone || null,
       message: message.trim() || null,
       source: communityId ? 'community-feed' : 'listing-page',
     };
@@ -208,17 +218,32 @@ export function LeadModal({
               />
             </label>
             <label className="block">
-              <span className="mb-1 block text-ink2 text-xs">Phone or email</span>
+              <span className="mb-1 block text-ink2 text-xs">Email</span>
               <input
-                type="text"
-                value={contact}
-                onChange={(e) => setContact(e.target.value)}
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 className="w-full rounded-md border border-line bg-bg px-3 py-2 text-ink text-sm placeholder:text-muted focus:border-line-strong focus:outline-none"
-                placeholder="(555) 123-4567 or jane@example.com"
+                placeholder="jane@example.com"
                 autoComplete="email"
                 inputMode="email"
               />
             </label>
+            <label className="block">
+              <span className="mb-1 block text-ink2 text-xs">Phone</span>
+              <input
+                type="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                className="w-full rounded-md border border-line bg-bg px-3 py-2 text-ink text-sm placeholder:text-muted focus:border-line-strong focus:outline-none"
+                placeholder="(555) 123-4567"
+                autoComplete="tel"
+                inputMode="tel"
+              />
+            </label>
+            <p className="-mt-1 text-[11px] text-muted">
+              At least one is required. Leave blank what you'd rather not share.
+            </p>
             <label className="block">
               <span className="mb-1 block text-ink2 text-xs">Message</span>
               <textarea

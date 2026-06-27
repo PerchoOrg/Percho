@@ -24,7 +24,9 @@ type Row = {
   notified_at: string | null;
   followed_up_at: string | null;
   created_at: string;
+  community_id: string | null;
   listings: { address: string | null; city: string | null; state: string | null } | null;
+  communities: { name: string | null } | null;
 };
 
 function csvEscape(v: string | null | undefined): string {
@@ -45,7 +47,7 @@ export async function GET() {
   const { data } = (await (supabase as any)
     .from('leads')
     .select(
-      'id, name, email, phone, message, source, notified_at, followed_up_at, created_at, listings(address, city, state)',
+      'id, name, email, phone, message, source, notified_at, followed_up_at, created_at, community_id, listings(address, city, state), communities(name)',
     )
     .order('created_at', { ascending: false })) as { data: Row[] | null };
 
@@ -55,9 +57,11 @@ export async function GET() {
     'name',
     'email',
     'phone',
+    'kind',
     'listing_address',
     'city',
     'state',
+    'community',
     'message',
     'source',
     'email_status',
@@ -66,15 +70,18 @@ export async function GET() {
   ];
   const lines = [header.join(',')];
   for (const r of rows) {
+    const kind = r.community_id ? 'community' : 'listing';
     lines.push(
       [
         r.created_at,
         r.name,
         r.email ?? '',
         r.phone ?? '',
+        kind,
         r.listings?.address ?? '',
         r.listings?.city ?? '',
         r.listings?.state ?? '',
+        r.communities?.name ?? '',
         r.message ?? '',
         r.source ?? '',
         r.notified_at ? 'sent' : 'pending',

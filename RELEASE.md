@@ -2,6 +2,13 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.69.0 — Lead inbox table + dual contact fields (2026-06-27)
+
+- **My Leads is now a real table**: column headers (Name · Listing · Contact · Source · Received), per-row listing address, per-row source — community leads show the community name instead of the literal "community-feed" tag.
+- **Contact column** has separate Email and SMS icons; each lights up only if the lead actually shared that channel. Both auto-mark the row as followed-up when clicked.
+- **Buyer contact form** now has two fields (Email / Phone) instead of one combined textbox. Either alone is fine; both together is fine; the form makes that explicit.
+- **CSV export** adds `kind` (listing/community) and `community` columns.
+
 ## v0.68.0 — "Mark as followed up" actually sticks (2026-06-27)
 
 ### 🐛 Bug Fixes
