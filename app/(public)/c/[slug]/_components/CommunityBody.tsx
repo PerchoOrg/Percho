@@ -33,6 +33,7 @@ import {
   COMMUNITY_VIDEO_CATEGORIES,
   type CommunityVideoCategoryId,
 } from '@/lib/zod/community-video-categories';
+import { HeroControl } from '@/app/dashboard/_components/HeroControl';
 import { useEffect, useState } from 'react';
 
 const CATEGORY_META = new Map(COMMUNITY_VIDEO_CATEGORIES.map((m) => [m.id, m] as const));
@@ -89,6 +90,12 @@ export function CommunityBody({
           <div className="absolute inset-0 bg-gradient-to-br from-bronze/30 to-ink" />
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-ink via-ink/60 to-ink/10" />
+        {/* Phase 67.9: top-left ← Back chip — same HeroControl style as the
+            agent dashboard hero, returning the buyer to the /communities
+            grid (Explore tab). */}
+        <div className="absolute left-3 top-3 z-10 sm:left-5 sm:top-5">
+          <HeroControl href="/communities">← Back</HeroControl>
+        </div>
         <div className="absolute inset-x-0 bottom-0 px-4 py-3 sm:px-6 sm:py-4">
           <h1 className="font-semibold text-2xl text-cream tracking-tight sm:text-3xl">
             {community.name}

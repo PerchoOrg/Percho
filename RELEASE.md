@@ -2,6 +2,10 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.72.2 — Explore community page back link (2026-06-27)
+
+- The buyer-facing community page (`/c/<slug>`, reached from Explore → Community grid) now shows a top-left "← Back" chip in the hero, matching the dashboard style. Tapping it returns to the Explore community grid.
+
 ## v0.72.1 — Hero back link matches Preview style (2026-06-27)
 
 - The hero "← Back" chip now uses the same chromeless / frosted-glass-on-hover style as the Preview link, so the top row reads as one consistent control bar.

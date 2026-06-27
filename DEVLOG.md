@@ -2,6 +2,16 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-06-27 — Phase 67.9: Explore community hero ← Back
+
+**Asked**: "also add back link to community explore tab hero pic" — i.e. the buyer-facing `/c/[slug]` page reached from the Explore community grid.
+
+**Implementation**: `app/(public)/c/[slug]/_components/CommunityBody.tsx` — top-left absolute-positioned chip inside the existing 5/2 hero, using the same `HeroControl` (`@/app/dashboard/_components/HeroControl`) the dashboard hero uses, so dashboard + buyer hero buttons read identically. Target: `/communities` (Explore grid). Position `left-3 top-3 sm:left-5 sm:top-5 z-10`. The `HeroControl` import works fine across the (public)/dashboard tree boundary — both files are `'use client'` and the component has no server-only deps.
+
+**Verification**: tsc + next build clean.
+
+---
+
 ## 2026-06-27 — Phase 67.8: Hero back link uses HeroControl style
 
 **Asked**: "use same style as preview link". The 67.7 chip used a plain `bg-black/35` chip; switch to `HeroControl` so it matches the Preview/share buttons (chromeless transparent + frosted-glass hover).
