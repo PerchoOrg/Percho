@@ -2,6 +2,13 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.66.1 — Cleaner Me page (2026-07-02)
+
+### ✨ Improvements
+- Nearby radius preference removed from the **Me** page — it was left over from before Nearby was retired.
+- **Sign out** is now visually separated from the other buttons (View public profile / Analytics / Explore) so it doesn't sit in the same stack as your primary actions.
+- Password change copy on **Me** rewritten — instead of "Forgot password" (which reads oddly when you're already signed in), it now says "To change your password we'll email you a reset link · Send password reset email".
+
 ## v0.66.0 — Fewer distractions, "Neighborhood" everywhere (2026-07-02)
 
 ### ✨ Improvements

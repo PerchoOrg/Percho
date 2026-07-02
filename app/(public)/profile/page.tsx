@@ -20,7 +20,10 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { EditableAgentIdentity } from './_components/EditableAgentIdentity';
 import { EditableBuyerIdentity } from './_components/EditableBuyerIdentity';
-import { NearbyRadiusPref } from './_components/NearbyRadiusPref';
+// Phase 66.1 (2026-07-02): NearbyRadiusPref removed from Me per owner
+// (笑云 feedback — reduce distractions; Nearby is no longer surfaced in
+// the buyer chrome as of phase 66). Component file kept in the repo in
+// case Nearby comes back.
 
 export const metadata: Metadata = {
   title: 'Profile · Vicinity',
@@ -46,9 +49,7 @@ export default async function ProfilePage() {
     return (
       <main className="min-h-dvh bg-bg text-ink">
         <section className="mx-auto max-w-md px-6 py-8">
-          <NearbyRadiusPref />
-
-          <div className="mt-6 rounded-xl border border-line bg-surface p-5">
+          <div className="rounded-xl border border-line bg-surface p-5">
             <div className="font-serif text-lg text-ink">Sign in to save your work</div>
             <p className="mt-1 text-ink2 text-sm">
               Log in or create an account to save listings, follow neighborhoods, and (for
@@ -100,18 +101,14 @@ export default async function ProfilePage() {
             initialAvatarUrl={agent.headshot_url}
           />
 
-          <div className="mt-6">
-            <NearbyRadiusPref />
-          </div>
-
           <div className="mt-6 rounded-xl border border-line bg-surface p-4 text-xs text-ink2">
             <div className="font-medium text-ink2">Account settings</div>
             <div className="mt-1">
-              Need to change your password? Use{' '}
+              To change your password we'll email you a reset link.{' '}
               <Link href="/forgot-password" className="text-ink hover:underline">
-                Forgot password
-              </Link>{' '}
-              to send yourself a one-time code.
+                Send password reset email
+              </Link>
+              .
             </div>
           </div>
 
@@ -141,10 +138,17 @@ export default async function ProfilePage() {
             </Link>
             {/* Phase 36 (2026-06-18): "Preview as buyer" removed — agents
              * already share the buyer surface as their default. */}
+          </div>
+
+          {/* Phase 66.1 (2026-07-02): Sign out visually separated from the
+           * other CTAs per owner — the destructive action shouldn't sit in
+           * the same stack as View public profile / Analytics. Divider +
+           * larger top margin makes the boundary obvious. */}
+          <div className="mt-10 border-t border-line pt-6">
             <form action="/api/auth/signout" method="post">
               <button
                 type="submit"
-                className="w-full rounded-full border border-line px-6 py-3 text-ink2 text-sm transition hover:text-ink"
+                className="w-full rounded-full border border-line px-6 py-3 text-ink2 text-sm transition hover:border-rose-400 hover:text-rose-600"
               >
                 Sign out
               </button>
@@ -177,18 +181,14 @@ export default async function ProfilePage() {
           initialAvatarUrl={buyer?.avatar_url ?? null}
         />
 
-        <div className="mt-6">
-          <NearbyRadiusPref />
-        </div>
-
         <div className="mt-6 rounded-xl border border-line bg-surface p-4 text-xs text-ink2">
           <div className="font-medium text-ink2">Account settings</div>
           <div className="mt-1">
-            Need to change your password? Use{' '}
+            To change your password we'll email you a reset link.{' '}
             <Link href="/forgot-password" className="text-ink hover:underline">
-              Forgot password
-            </Link>{' '}
-            to send yourself a one-time code.
+              Send password reset email
+            </Link>
+            .
           </div>
         </div>
 
@@ -199,10 +199,14 @@ export default async function ProfilePage() {
           >
             Explore listings
           </Link>
+        </div>
+
+        {/* Phase 66.1 (2026-07-02): Sign out separated from primary CTAs. */}
+        <div className="mt-10 border-t border-line pt-6">
           <form action="/api/auth/signout" method="post">
             <button
               type="submit"
-              className="w-full rounded-full border border-line px-6 py-3 text-ink2 text-sm transition hover:text-ink"
+              className="w-full rounded-full border border-line px-6 py-3 text-ink2 text-sm transition hover:border-rose-400 hover:text-rose-600"
             >
               Sign out
             </button>

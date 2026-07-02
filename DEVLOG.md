@@ -2,6 +2,25 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-07-02 — Phase 66.1: Me page cleanup — drop Nearby pref, separate Sign out, rewrite password copy
+
+**Asked** (owner, follow-up on phase 66):
+1. Remove the Nearby-radius preference card from `/profile` (Me) — Nearby was demoted from the chrome in phase 66 so keeping the pref in Me is dead surface.
+2. Sign out button should be visually separated from the other CTAs, not in the same stack as "View public profile" / "Analytics".
+3. The "Forgot password" link on Me reads wrong for someone already signed in — it makes it sound like they've forgotten it, when what they actually want is to change it.
+
+**Implementation** (`app/(public)/profile/page.tsx`, all three variants — anon, agent, buyer):
+- Removed the `<NearbyRadiusPref />` mount from anon, agent, and buyer variants. Import commented out; component file itself kept in `_components/` in case Nearby comes back.
+- Sign-out `<form>` moved out of the primary CTA `flex-col gap-2` stack into its own container with `mt-10 border-t border-line pt-6` — thin divider + larger top margin so the destructive action reads as separate. Hover state changes to `hover:border-rose-400 hover:text-rose-600` (subtle red-on-hover; the resting state is still neutral so it doesn't scream "danger" on load).
+- "Account settings" copy rewritten from `"Need to change your password? Use Forgot password to send yourself a one-time code."` (implies you've forgotten it) to `"To change your password we'll email you a reset link. Send password reset email."` (framed as an intentional change, not a recovery). Link target unchanged (`/forgot-password`), so the underlying flow still works — Supabase's OTP-based password reset is the same code path whether you call it "forgot" or "change".
+
+**Not touched**: `/forgot-password` page itself. If we want to fully split "reset" vs "change" flows we'd add a signed-in-only `/change-password` page that reuses the same Supabase `resetPasswordForEmail` call — deferred, current one-page copy update covers 笑云's ask.
+
+**Verification**: `npx tsc --noEmit` clean. `npx next build` clean.
+
+**Learnings**:
+- LSP `Cannot find name 'NearbyRadiusPref'` diagnostics after removing an import are lag from the language server, not real errors — always re-run `tsc --noEmit` before assuming a lint diag is a real regression. Saved a wasted round-trip here.
+
 ## 2026-07-02 — Phase 66: Reduce agent friction — drop Nearby, Community→Neighborhood, move Analytics to Me
 
 **Asked** (owner, after 笑云 tested as agent):
