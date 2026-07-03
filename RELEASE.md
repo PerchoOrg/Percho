@@ -2,6 +2,13 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.68.4 — Neighborhood button matches the other rail buttons now (2026-07-03)
+
+### ✨ Improvements
+- **Neighborhood button is now a circle**, same size and style as Like/Save/Contact/Share, sitting at the top of the right-side action stack.
+- 🏘️ icon with a **red count badge** — reads at a glance as "N videos of this neighborhood, tap to explore".
+- No more text label on the pill; the whole right column reads as one clean icon stack.
+
 ## v0.68.3 — Fix: neighborhood pill was covering the Like button (2026-07-03)
 
 ### 🐛 Fixes

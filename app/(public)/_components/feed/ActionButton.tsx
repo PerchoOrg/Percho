@@ -24,6 +24,7 @@ export function ActionButton({
   activeColor,
   disabled,
   badge,
+  badgeColor,
   children,
 }: {
   onClick?: () => void;
@@ -38,6 +39,13 @@ export function ActionButton({
   activeColor?: 'gold' | 'rose';
   disabled?: boolean;
   badge?: string | number;
+  /**
+   * Phase 68.4: optional badge palette. 'cream' (default) matches the
+   * original cream-on-ink treatment; 'red' renders as a notification
+   * badge (Xiaohongshu/IG/WeChat convention) — used for the neighborhood
+   * button's video-count so the number pops as "there's more here".
+   */
+  badgeColor?: 'cream' | 'red';
   children: ReactNode;
 }) {
   const activeCls =
@@ -51,12 +59,16 @@ export function ActionButton({
         ? 'border-cream/10 bg-ink/30 text-cream/30'
         : 'border-cream/20 bg-ink/40 text-cream hover:border-cream/50'
   }`;
+  const badgeCls =
+    badgeColor === 'red'
+      ? '-right-1 -top-1 absolute rounded-full bg-red-500 px-1.5 py-0.5 font-semibold text-[9px] text-white leading-none tabular-nums'
+      : '-right-1 -top-1 absolute rounded-full bg-cream px-1.5 py-0.5 font-semibold text-[9px] text-ink leading-none tabular-nums';
   const inner = (
     <div className="flex flex-col items-center gap-1">
       <span className="relative">
         <span className={cls}>{children}</span>
         {badge ? (
-          <span className="-right-1 -top-1 absolute rounded-full bg-cream px-1.5 py-0.5 font-semibold text-[9px] text-ink leading-none tabular-nums">
+          <span className={badgeCls}>
             {badge}
           </span>
         ) : null}

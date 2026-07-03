@@ -616,42 +616,11 @@ function Card({
         </div>
       )}
 
-      {/* Phase 68.3 (2026-07-03): fixes overlap with Like button + name
-       * truncation from 68.2. Rail height was miscalculated as 228px in
-       * 68.2 — actual per-ActionButton height is ~66px (48px circle + 4px
-       * gap-1 + ~14px label), so 4 buttons + 3×gap-3 = 4×66 + 36 = 300px.
-       * Chip's `bottom` bumped from +228px → +300px + 8px cushion = 308px.
-       * Also dropped `w-14 truncate` — chip now shrink-wraps content
-       * (whitespace-nowrap on name row) so full neighborhood name renders,
-       * per owner "不要省略 neighbor name". Chip is right-anchored so it
-       * grows leftward from the right edge and never fights the rail width. */}
-      {source === 'hero' && card.community && onOpenCommunitySheet && (
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onOpenCommunitySheet();
-          }}
-          aria-label={`Explore ${card.community.name} neighborhood — ${card.community.videoCount} videos`}
-          className="absolute right-3 z-10 flex flex-col items-center gap-0.5 rounded-[10px] bg-ink/65 px-2 py-1.5 text-cream backdrop-blur-md transition-colors hover:bg-ink/75"
-          style={{
-            bottom: 'calc(max(1rem, env(safe-area-inset-bottom) + 0.5rem) + 308px)',
-            touchAction: 'manipulation',
-          }}
-        >
-          <span className="flex items-center gap-1 leading-none">
-            <span aria-hidden="true" className="text-[14px]">🏘️</span>
-            {card.community.videoCount > 0 && (
-              <span className="rounded-full bg-red-500 px-1 py-0.5 font-semibold text-[10px] text-white leading-none tabular-nums">
-                {card.community.videoCount}
-              </span>
-            )}
-          </span>
-          <span className="whitespace-nowrap font-medium text-[10px] leading-tight">
-            {card.community.name}
-          </span>
-        </button>
-      )}
+      {/* Phase 68.4 (2026-07-03): chip finally simplified to a circular
+       * ActionButton (matches Like/Save/Contact/Share visually) with the
+       * video count as the badge. Owner: "不好看 做成一个圆形加数字 不要文字了".
+       * Positioned inline as the first child of the right rail below —
+       * this replaces the absolute-positioned chip. See rail block. */}
 
       {/* Phase 28.2 (2026-06-15): desktop nav arrows for the Nearby pool.
        * Touch events don't fire on a Mac mouse, so the vertical-swipe
@@ -1210,6 +1179,25 @@ export function BrowseFeed({
         className={`absolute right-3 ${FEED_Z.rail} flex flex-col items-center gap-3`}
         style={{ bottom: 'max(1rem, calc(env(safe-area-inset-bottom) + 0.5rem))' }}
       >
+        {/* Phase 68.4 (2026-07-03): community chip replaced with a circular
+         * ActionButton at the top of the rail — same visual weight as
+         * Like/Save/Contact/Share so the whole column reads as one design.
+         * Uses ActionButton's built-in badge to show video count in red.
+         * Owner: "不好看 做成一个圆形加数字 不要文字了 放在 like 上面". */}
+        {active?.community && (
+          <ActionButton
+            label="Nearby"
+            onClick={() => {
+              setSheetCardId(active.id);
+              setSheetOpen(true);
+              setPausedActive(true);
+            }}
+            badge={active.community.videoCount > 0 ? active.community.videoCount : undefined}
+            badgeColor="red"
+          >
+            <span aria-hidden="true" className="text-[20px] leading-none">🏘️</span>
+          </ActionButton>
+        )}
         <div key={likeAnimKey} className={likeAnimKey > 0 ? 'heart-pop' : ''}>
           <ActionButton label="Like" onClick={toggleLike} active={isLiked} activeColor="rose">
             <HeartIcon filled={isLiked} />

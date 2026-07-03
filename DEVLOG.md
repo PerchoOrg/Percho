@@ -2,6 +2,27 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-07-03 — Phase 68.4: Chip → circular ActionButton at top of rail (owner: "不好看")
+
+**Objective**: Owner rejected the two-line chip look. Ask: "做成一个圆形加数字 不要文字了 放在 like 上面". Convert the neighborhood chip into a circular ActionButton matching Like/Save/Contact/Share, placed at the top of the rail with the video count as a red notification badge.
+
+**Actions**:
+- `app/(public)/_components/feed/ActionButton.tsx`: added `badgeColor?: 'cream' | 'red'` prop. Default stays cream-on-ink (backward compatible with any existing badge users). `red` renders `bg-red-500 text-white` — a notification badge (Xiaohongshu / IG / WeChat convention).
+- `app/(public)/browse/_components/BrowseFeed.tsx`:
+  - Deleted the entire absolute-positioned two-line chip block from the Card render.
+  - Added a new `ActionButton` at the top of the right rail (before Like), rendered when `active?.community` exists. Icon = 🏘️ emoji at 20px, label = "Nearby", `onClick` opens CommunitySheet (same handler as before), `badge={videoCount}` `badgeColor="red"`.
+- Rail order top→bottom: **Neighborhood** → Like → Save → Contact → Share.
+
+**Decisions**:
+- **Rail-level not Card-level**: chip previously lived in `Card` scope; moving to rail (which is in `BrowseFeed` scope) means using `active` (the currently-visible card) instead of the per-card `card` prop. This is fine because at any moment only the active card's rail is visually meaningful — the label matches whatever's on screen. Trade-off: as the user swipes the button re-mounts with new state, but this was already the pattern for Like/Save/Contact/Share so it's consistent.
+- **Emoji not custom SVG icon**: 🏘️ is close to what the previous chip had; keeps the "houses / neighborhood" semantic. If it renders inconsistently across iOS/Android/desktop, swap for a proper `HouseIcon` in the icons module later.
+- **Label "Nearby" not "Neighborhood"**: fits within the ActionButton's ~48px width without truncation. "Neighborhood" would either wrap or need shrunken text. "Nearby" also matches historical naming (there was a "Nearby" button on the rail pre-phase-34b.1). Semantic drift is small — both mean "explore this area".
+- **badgeColor as ActionButton prop, not chip-specific**: cheaper and reusable — anywhere else in the app can now have a red-badge action button.
+
+**Verification**: `npx tsc --noEmit` clean; `npm run build` clean.
+
+**Next steps**: Send Vercel preview to 笑云. This is now the same visual design language as the other rail buttons, so if she still doesn't tap it, the problem isn't visual — it's semantic (does "🏘️ + Nearby + red 6" communicate "6 videos of this neighborhood"?). Fallback would be a first-time-user tooltip.
+
 ## 2026-07-03 — Phase 68.3: Fix chip overlap with Like + drop name truncation
 
 **Root cause of 68.2 overlap**: I calculated rail height as `4×48 + 3×12 = 228px`, but each `ActionButton` is not 48px — it's the 48px circle **plus** a 4px gap-1 **plus** the ~14px "Like"/"Save"/"Contact"/"Share" label below it. Actual per-button height ~66px. Rail is `4×66 + 3×12 = 300px`. Chip at `+228px` from rail bottom therefore sat ~72px INSIDE the rail's top, right on top of the Like circle — exactly what the screenshot showed.
