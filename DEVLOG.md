@@ -2,6 +2,23 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-07-03 — Phase 67: Me page collapsed to two-stack layout (笑云 feedback)
+
+**Objective**: Reduce distractions on `/profile` per owner (笑云 testing feedback continued).
+
+**Actions**:
+- `AvatarPicker.tsx`: "Change avatar" → "Change profile photo" (both roles).
+- `EditableAgentIdentity.tsx` / `EditableBuyerIdentity.tsx`: dropped the "SIGNED IN" / "SIGNED IN AS AGENT" uppercase label — it was redundant with being on the Me tab.
+- `profile/page.tsx` buyer branch: removed the "Explore listings" gold CTA (redundant with For You bottom nav) and the Account settings info card. Bottom stack now = Change password + Sign out.
+- `profile/page.tsx` agent branch: middle stack = Public profile + View analytics. Bottom stack = Change password + Sign out. "Account settings" info card folded into the Change password button (same `/forgot-password` destination).
+- Anonymous view untouched per owner.
+
+**Decisions**: Change password links to `/forgot-password` (unchanged flow — same "we'll email you a reset link" mechanism, just presented as a button instead of an info card). "View public profile" shortened to "Public profile" so both middle-stack buttons match the new symmetric layout ("Public profile" / "View analytics").
+
+**Verification**: `npx tsc --noEmit` clean; `npm run build` clean.
+
+**Next steps**: Ship. MLS auto-populate for listing details is still the outstanding item from the same feedback session (笑云 working on it tomorrow per owner).
+
 ## 2026-07-02 — Phase 66.1: Me page cleanup — drop Nearby pref, separate Sign out, rewrite password copy
 
 **Asked** (owner, follow-up on phase 66):

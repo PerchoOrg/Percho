@@ -101,50 +101,35 @@ export default async function ProfilePage() {
             initialAvatarUrl={agent.headshot_url}
           />
 
-          <div className="mt-6 rounded-xl border border-line bg-surface p-4 text-xs text-ink2">
-            <div className="font-medium text-ink2">Account settings</div>
-            <div className="mt-1">
-              To change your password we'll email you a reset link.{' '}
-              <Link href="/forgot-password" className="text-ink hover:underline">
-                Send password reset email
-              </Link>
-              .
-            </div>
-          </div>
-
+          {/* Phase 67 (2026-07-03): 笑云 feedback — reduce distractions on Me.
+           * Middle stack = agent-specific CTAs (public profile, view analytics).
+           * Bottom stack = account actions (change password, sign out). The
+           * "Account settings" info card was collapsed into a Change password
+           * button per owner — the copy was redundant with the button label. */}
           <div className="mt-8 flex flex-col gap-2">
-            {/* Phase 36.1 (2026-06-18): "Open dashboard" CTA removed.
-             * The bottom-nav "Workspace" tab (slot 4) is now the canonical
-             * entry to /dashboard for agents — keeping a second entry here
-             * recreates the duplication Tianrou caught 2026-06-18. */}
             {agent.slug ? (
               <Link
                 href={`/a/${agent.slug}`}
                 className="btn-gold inline-flex items-center justify-center rounded-full px-6 py-3 text-sm"
               >
-                View public profile
+                Public profile
               </Link>
             ) : null}
-            {/* Phase 66 (2026-07-02): Analytics moved off Agent Hub sub-tabs
-             * and lives here per owner (笑云 feedback — reduce Agent Hub
-             * frictions). Simple link, not a sub-tab. Destination URL is
-             * unchanged (/dashboard/analytics) so the analytics page and
-             * its data pipes stay put. */}
             <Link
               href="/dashboard/analytics"
               className="w-full rounded-full border border-line px-6 py-3 text-center text-ink2 text-sm transition hover:text-ink"
             >
-              Analytics
+              View analytics
             </Link>
-            {/* Phase 36 (2026-06-18): "Preview as buyer" removed — agents
-             * already share the buyer surface as their default. */}
           </div>
 
-          {/* Phase 66.1 (2026-07-02): Sign out visually separated from the
-           * other CTAs per owner — the destructive action shouldn't sit in
-           * the same stack as View public profile / Analytics. Divider +
-           * larger top margin makes the boundary obvious. */}
-          <div className="mt-10 border-t border-line pt-6">
+          <div className="mt-10 border-t border-line pt-6 flex flex-col gap-2">
+            <Link
+              href="/forgot-password"
+              className="w-full rounded-full border border-line px-6 py-3 text-center text-ink2 text-sm transition hover:text-ink"
+            >
+              Change password
+            </Link>
             <form action="/api/auth/signout" method="post">
               <button
                 type="submit"
@@ -181,28 +166,17 @@ export default async function ProfilePage() {
           initialAvatarUrl={buyer?.avatar_url ?? null}
         />
 
-        <div className="mt-6 rounded-xl border border-line bg-surface p-4 text-xs text-ink2">
-          <div className="font-medium text-ink2">Account settings</div>
-          <div className="mt-1">
-            To change your password we'll email you a reset link.{' '}
-            <Link href="/forgot-password" className="text-ink hover:underline">
-              Send password reset email
-            </Link>
-            .
-          </div>
-        </div>
-
-        <div className="mt-8 flex flex-col gap-2">
+        {/* Phase 67 (2026-07-03): 笑云 feedback — buyer Me collapses to two
+         * account actions. "Explore listings" removed (redundant with the
+         * For You bottom-nav tab); the Account settings info card was
+         * folded into a Change password button. */}
+        <div className="mt-10 flex flex-col gap-2">
           <Link
-            href="/browse"
-            className="btn-gold inline-flex items-center justify-center rounded-full px-6 py-3 text-sm"
+            href="/forgot-password"
+            className="w-full rounded-full border border-line px-6 py-3 text-center text-ink2 text-sm transition hover:text-ink"
           >
-            Explore listings
+            Change password
           </Link>
-        </div>
-
-        {/* Phase 66.1 (2026-07-02): Sign out separated from primary CTAs. */}
-        <div className="mt-10 border-t border-line pt-6">
           <form action="/api/auth/signout" method="post">
             <button
               type="submit"

@@ -62,7 +62,7 @@ export function AvatarPicker({
         className="inline-flex items-center gap-1.5 rounded-full border border-line bg-bg px-3 py-1.5 text-ink2 text-xs hover:border-line-strong hover:text-ink"
       >
         <Camera size={14} aria-hidden="true" />
-        Change avatar
+        Change profile photo
       </button>
       {open ? (
         <PickerModal

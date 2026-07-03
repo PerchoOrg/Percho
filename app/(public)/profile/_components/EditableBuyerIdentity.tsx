@@ -54,9 +54,7 @@ export function EditableBuyerIdentity({
 
   return (
     <div className="rounded-xl border border-line bg-surface p-5">
-      <div className="text-ink2 text-xs uppercase tracking-wider">Signed in</div>
-
-      <div className="mt-3">
+      <div>
         <AvatarPicker
           initialUrl={initialAvatarUrl}
           userId={userId}

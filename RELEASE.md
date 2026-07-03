@@ -2,6 +2,14 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.67.0 — Me page collapsed to essentials (2026-07-03)
+
+### ✨ Improvements
+- **Me** page for signed-in buyers is now just profile photo, name, email — plus two buttons: **Change password** and **Sign out**. The redundant "Signed in" label, "Explore listings" button, and account settings info card are gone.
+- **Me** page for signed-in agents shows two clean stacks: **Public profile** and **View analytics** on top; **Change password** and **Sign out** at the bottom. Same actions as before, just less clutter.
+- **"Change avatar"** renamed to **"Change profile photo"** — clearer wording.
+- The signed-out Me page is unchanged.
+
 ## v0.66.1 — Cleaner Me page (2026-07-02)
 
 ### ✨ Improvements
