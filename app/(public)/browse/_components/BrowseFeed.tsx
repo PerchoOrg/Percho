@@ -633,7 +633,7 @@ function Card({
             onOpenCommunitySheet();
           }}
           aria-label={`Explore ${card.community.name} neighborhood — ${card.community.videoCount} videos`}
-          className="absolute top-3 right-3 z-10 flex max-w-[70%] items-center gap-2 rounded-[10px] bg-ink/65 px-3 py-1.5 text-cream backdrop-blur-md transition-colors hover:bg-ink/75"
+          className="absolute top-[42%] right-3 z-10 flex max-w-[70%] items-center gap-2 rounded-[10px] bg-ink/65 px-3 py-1.5 text-cream backdrop-blur-md transition-colors hover:bg-ink/75"
           style={{ touchAction: 'manipulation' }}
         >
           <span
@@ -644,7 +644,7 @@ function Card({
           <span aria-hidden="true">🏘️</span>
           <span className="truncate font-medium text-[12px]">{card.community.name}</span>
           {card.community.videoCount > 0 && (
-            <span className="rounded-full bg-cream/20 px-1.5 py-0.5 font-semibold text-[10px] text-cream leading-none tabular-nums">
+            <span className="rounded-full bg-red-500 px-1.5 py-0.5 font-semibold text-[10px] text-white leading-none tabular-nums">
               {card.community.videoCount}
             </span>
           )}
@@ -1206,7 +1206,7 @@ export function BrowseFeed({
        * stays at `bottom: 1rem` — only the rail moves up. */}
       <div
         className={`absolute right-3 ${FEED_Z.rail} flex flex-col items-center gap-3`}
-        style={{ bottom: FEED_RAIL_BOTTOM }}
+        style={{ bottom: 'max(1rem, calc(env(safe-area-inset-bottom) + 0.5rem))' }}
       >
         <div key={likeAnimKey} className={likeAnimKey > 0 ? 'heart-pop' : ''}>
           <ActionButton label="Like" onClick={toggleLike} active={isLiked} activeColor="rose">

@@ -2,6 +2,25 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-07-03 — Phase 68.1: Rail dropped to bottom, chip re-anchored to right-middle, count → red
+
+**Objective**: Follow-up to phase 68 — owner: (1) shift the whole right rail down one slot so the last button (Share) hugs the bottom safe-area, (2) move the neighborhood chip out of the top-right corner into the right-side middle-ish area (slightly above middle), keeping visible gap from the buttons below, (3) count pill from cream → red so it reads like a badge.
+
+**Actions** (`app/(public)/browse/_components/BrowseFeed.tsx`, single file):
+- Chip: `top-3 right-3` → `top-[42%] right-3` (right-side, slightly above vertical middle — sits with clear whitespace above the Like/Save/Contact/Share stack). Count pill classes flipped from `bg-cream/20 text-cream` → `bg-red-500 text-white`, styled like an unread notification badge.
+- Right rail: `bottom` inline style flipped from `FEED_RAIL_BOTTOM` (`max(6rem, safe-area+5rem)`, the "thumb-height with iOS home-indicator clearance" value from phase 45.21) to `max(1rem, calc(env(safe-area-inset-bottom) + 0.5rem))`. Now the bottom button (Share) sits ~1rem above the safe-area baseline — level with the caption block on its left.
+- `FEED_RAIL_BOTTOM` in `constants.ts` is untouched — CommunityVideoFeed and CommunityCarousel still use the previous inset (they weren't part of this feedback).
+
+**Decisions**:
+- **Chip at 42% not 50%**: owner said "middle位置稍微偏上一点" — slightly above middle. `top-[42%]` reads as center-biased-upward without needing extra flex gymnastics.
+- **Left the top-header alone this round**: back button stays at top-left; the top-right slot remains empty (the chip vacated it). Kept the "Right slot intentionally empty" comment updated.
+- **Reverted rail from thumb-height to bottom-hugging**: phase 45.21 comment predicted the opposite (buttons "sat too low, thumb reach was awkward"), but owner is asking the opposite now — likely because the neighborhood chip moving down into the right-middle slot creates enough visual weight in that region that the rail sitting higher would fight it. If future testing brings the "thumb reach" complaint back, the fix is to nudge the rail up by ~1-2rem, not to revert the whole change.
+- **Red badge**: red is the universal "count / unread / new" color (Xiaohongshu, Instagram, WeChat) — makes the number act as a hook rather than a passive label.
+
+**Verification**: `npx tsc --noEmit` clean; `npm run build` clean.
+
+**Next steps**: Send updated build to 笑云. If she taps into a community and comes back, the vertical journey should feel: eye lands on chip mid-height (badge draws it) → tap → community sheet → back → hand naturally falls to Like/Save/Contact/Share now sitting at the bottom.
+
 ## 2026-07-03 — Phase 68: Neighborhood chip moved from top-left to top-right, Share into rail (笑云 feedback)
 
 **Objective**: 笑云 tested v0.67 as a buyer and reported "根本没看到" the top-left neighborhood button on the listing feed. Owner: move the chip to the right side alongside the other action buttons, and add a video-count so its purpose ("more videos of this neighborhood") is legible. Also: keep chip style, don't shove it into the circular action-icon column — it stays a chip.

@@ -2,6 +2,15 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.68.1 — Right-side layout tuned: rail hugs the bottom, neighborhood chip sits mid-height (2026-07-03)
+
+### ✨ Improvements
+- **Like / Save / Contact / Share now sit at the bottom-right**, one continuous stack with the last button hugging the bottom edge — thumb-friendly and out of the way of the video.
+- **Neighborhood pill moved to the right-middle**, slightly above center, with clear space between it and the buttons below. Its video count is now a **red badge** so it reads at a glance as "there's more here".
+
+### 🎯 Why
+Continued follow-up on 笑云's testing — position + color together should make the chip impossible to miss, and the right column now reads as one clean vertical: neighborhood → actions.
+
 ## v0.68.0 — Neighborhood button moved to the right side (2026-07-03)
 
 ### ✨ Improvements
