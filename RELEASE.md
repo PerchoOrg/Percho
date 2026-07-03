@@ -2,6 +2,15 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.68.0 — Neighborhood button moved to the right side (2026-07-03)
+
+### ✨ Improvements
+- **Neighborhood button is now on the right**, above the Like / Save / Contact / Share column, so it sits with the other action buttons instead of tucked away in the top-left corner. It's the same neighborhood pill you'd expect — with the neighborhood name and a small number showing how many videos are one tap away.
+- **Share moved into the right column too**, at the bottom, so social actions all live in one place.
+
+### 🎯 Why
+Buyers testing the app told us the old top-left neighborhood button was easy to miss. Right side + a video count makes it obvious that tapping it opens more videos of the same neighborhood.
+
 ## v0.67.0 — Me page collapsed to essentials (2026-07-03)
 
 ### ✨ Improvements
