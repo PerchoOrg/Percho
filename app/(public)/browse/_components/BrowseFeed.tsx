@@ -616,12 +616,15 @@ function Card({
         </div>
       )}
 
-      {/* Phase 34b (V1 redo): top-left community chip — Scenario A. Only on
-       * the hero source (the listing video itself); switching into Nearby
-       * pool replaces this slot with the gold category pill above. Tapping
-       * opens CommunitySheet at the parent level. Pulse animation on first
-       * appearance per session draws first-time attention without obstructing
-       * the bottom listing meta or the right rail. */}
+      {/* Phase 68 (2026-07-03): community chip moved from top-left to top-right
+       * (笑云 feedback: "根本没看到" left-corner button). Now sits above the
+       * right rail (Like/Save/Contact/Share) so navigation-context and social
+       * actions read as one vertical column — top = "explore this
+       * neighborhood", middle = actions, bottom = share (see rail below).
+       * `videoCount` pill added so the chip advertises "N videos of this
+       * neighborhood are one tap away", the strongest click driver in the
+       * prototype comparison. Pulse animation retained. Same tap semantics
+       * (opens CommunitySheet — does not navigate). */}
       {source === 'hero' && card.community && onOpenCommunitySheet && (
         <button
           type="button"
@@ -629,8 +632,8 @@ function Card({
             e.stopPropagation();
             onOpenCommunitySheet();
           }}
-          aria-label={`Explore ${card.community.name} neighborhood`}
-          className="absolute top-20 left-3 z-10 flex max-w-[70%] items-center gap-2 rounded-[10px] bg-ink/65 px-3 py-1.5 text-cream backdrop-blur-md transition-colors hover:bg-ink/75"
+          aria-label={`Explore ${card.community.name} neighborhood — ${card.community.videoCount} videos`}
+          className="absolute top-3 right-3 z-10 flex max-w-[70%] items-center gap-2 rounded-[10px] bg-ink/65 px-3 py-1.5 text-cream backdrop-blur-md transition-colors hover:bg-ink/75"
           style={{ touchAction: 'manipulation' }}
         >
           <span
@@ -640,6 +643,11 @@ function Card({
           />
           <span aria-hidden="true">🏘️</span>
           <span className="truncate font-medium text-[12px]">{card.community.name}</span>
+          {card.community.videoCount > 0 && (
+            <span className="rounded-full bg-cream/20 px-1.5 py-0.5 font-semibold text-[10px] text-cream leading-none tabular-nums">
+              {card.community.videoCount}
+            </span>
+          )}
         </button>
       )}
 
@@ -1211,6 +1219,13 @@ export function BrowseFeed({
         <ActionButton label="Contact" onClick={openContact}>
           <CommentIcon />
         </ActionButton>
+        {/* Phase 68 (2026-07-03): Share moved from top-header right-slot into
+         * the bottom of the right rail. Frees the top-right for the community
+         * chip (笑云 feedback: chip in the top-left was invisible), and puts
+         * social/outbound actions in one column. */}
+        <ActionButton label="Share" onClick={onShare}>
+          <ShareIcon />
+        </ActionButton>
         {/* Phase 34b.1 (2026-06-17): right-rail "Nearby" button removed. The
          * top-left community chip already opens the same set of community
          * videos via CommunitySheet → CommunityCarousel — keeping both
@@ -1231,12 +1246,13 @@ export function BrowseFeed({
        * in the Nearby pool, and the right-rail Nearby button is in its
        * active gold state, so the standalone label was redundant. */}
 
-      {/* Top header — Xiaohongshu video pattern: [Back] ... [Share].
-       * Phase 35.3: Search button removed (was a same-destination
-       * duplicate of Back wired to a "coming soon" placeholder). When
-       * viewing a b-roll source, Back first returns to hero; on the
-       * hero we do router.back() if there's history (preserves grid
-       * scroll), else push the fallback. */}
+      {/* Top header — Xiaohongshu video pattern. Phase 68 (2026-07-03):
+       * Share button moved out of the top-right and into the bottom of
+       * the right rail (see below). The community chip now occupies the
+       * top-right slot instead. Only Back remains here. When viewing a
+       * b-roll source, Back first returns to hero; on the hero we do
+       * router.back() if there's history (preserves grid scroll), else
+       * push the fallback. */}
       <div className={`absolute inset-x-0 top-0 ${FEED_Z.topbar} flex items-center justify-between px-3 pt-3`}>
         <button
           type="button"
@@ -1260,17 +1276,8 @@ export function BrowseFeed({
         >
           <BackArrowIcon />
         </button>
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={onShare}
-            aria-label="Share listing"
-            className="flex h-11 w-11 items-center justify-center rounded-full border border-cream/20 bg-ink/55 text-cream backdrop-blur-md transition-colors hover:border-cream hover:text-cream"
-            style={{ touchAction: 'manipulation' }}
-          >
-            <ShareIcon />
-          </button>
-        </div>
+        {/* Right slot intentionally empty — community chip renders at
+         * top-3 right-3 inside the Card, above the right rail. */}
       </div>
 
       {/* Phase 28 (2026-06-14): the bottom Like/Save/Contact bar moved

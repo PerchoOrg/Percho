@@ -2,6 +2,26 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-07-03 — Phase 68: Neighborhood chip moved from top-left to top-right, Share into rail (笑云 feedback)
+
+**Objective**: 笑云 tested v0.67 as a buyer and reported "根本没看到" the top-left neighborhood button on the listing feed. Owner: move the chip to the right side alongside the other action buttons, and add a video-count so its purpose ("more videos of this neighborhood") is legible. Also: keep chip style, don't shove it into the circular action-icon column — it stays a chip.
+
+**Actions** (`app/(public)/browse/_components/BrowseFeed.tsx`, single file):
+- Chip position: `top-20 left-3` → `top-3 right-3`. Same rounded-[10px] chip skin, same pulse dot + 🏘️ + name, plus a new count pill (`bg-cream/20`, `tabular-nums`, only rendered when `videoCount > 0`). aria-label updated to include the count.
+- Top-header right slot: Share button removed. Comment updated to explain the empty right slot (chip renders inside the Card at top-3 right-3, above the rail).
+- Right rail: Share button added at the BOTTOM (below Contact). Existing `ActionButton` wrapper — no new component. Middle stack (Like / Save / Contact) untouched per owner ("不要向上移动其他按钮").
+
+**Decisions**:
+- **Chip vs. circular icon**: prototype (`/tmp/vicinity-proto/neighborhood-button.html`) compared 3 variants — chip+count / chip+arrow / icon+badge. Owner picked chip+count because it is visually distinct from the circular Like/Save/Share stack (avoids the "I scanned past it" failure again) AND because the count itself ("N videos here") is the strongest click driver.
+- **Only edited BrowseFeed.tsx**: `VideoFeed.tsx` under `/v/[agentSlug]/[listingSlug]/` is a pass-through to BrowseFeed, so the change lands on both `/browse` and `/v/…` surfaces automatically. `CommunityVideoFeed.tsx` (community feed at `/c/[slug]`) is a separate surface with its own header — owner's ask was scoped to the listing feed only.
+- **`videoCount` was already on the type** (`community.videoCount`, phase 34b) — no data-loading change needed.
+
+**Verification**: `npx tsc --noEmit` clean; `npm run build` clean.
+
+**Merged to main**: (see commit SHA below after push)
+
+**Next steps**: Owner to send updated build to 笑云 for a second-round tap-through test. If she still miss-taps or doesn't understand what the chip does, next iteration is a first-time tooltip ("Tap to explore this neighborhood — N videos"), gated on localStorage.
+
 ## 2026-07-03 — Phase 67: Me page collapsed to two-stack layout (笑云 feedback)
 
 **Objective**: Reduce distractions on `/profile` per owner (笑云 testing feedback continued).
