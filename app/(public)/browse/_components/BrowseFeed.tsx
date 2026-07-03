@@ -616,15 +616,12 @@ function Card({
         </div>
       )}
 
-      {/* Phase 68 (2026-07-03): community chip moved from top-left to top-right
-       * (笑云 feedback: "根本没看到" left-corner button). Now sits above the
-       * right rail (Like/Save/Contact/Share) so navigation-context and social
-       * actions read as one vertical column — top = "explore this
-       * neighborhood", middle = actions, bottom = share (see rail below).
-       * `videoCount` pill added so the chip advertises "N videos of this
-       * neighborhood are one tap away", the strongest click driver in the
-       * prototype comparison. Pulse animation retained. Same tap semantics
-       * (opens CommunitySheet — does not navigate). */}
+      {/* Phase 68.2 (2026-07-03): chip repositioned again — 笑云 feedback
+       * "一行太长了". Now a two-line vertical stack (row 1 = 🏘️ + red count
+       * badge, row 2 = neighborhood name), anchored directly above the
+       * right rail (Like/Save/Contact/Share). Rail height ≈ 4×48 + 3×12 =
+       * 228px, sits at max(1rem, safe-area+0.5rem). Chip's `bottom` adds
+       * 228px so it hugs the top of the rail with no gap. */}
       {source === 'hero' && card.community && onOpenCommunitySheet && (
         <button
           type="button"
@@ -633,21 +630,23 @@ function Card({
             onOpenCommunitySheet();
           }}
           aria-label={`Explore ${card.community.name} neighborhood — ${card.community.videoCount} videos`}
-          className="absolute top-[42%] right-3 z-10 flex max-w-[70%] items-center gap-2 rounded-[10px] bg-ink/65 px-3 py-1.5 text-cream backdrop-blur-md transition-colors hover:bg-ink/75"
-          style={{ touchAction: 'manipulation' }}
+          className="absolute right-3 z-10 flex w-14 flex-col items-center gap-0.5 rounded-[10px] bg-ink/65 px-1.5 py-1.5 text-cream backdrop-blur-md transition-colors hover:bg-ink/75"
+          style={{
+            bottom: 'calc(max(1rem, env(safe-area-inset-bottom) + 0.5rem) + 228px)',
+            touchAction: 'manipulation',
+          }}
         >
-          <span
-            aria-hidden="true"
-            className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-cream"
-            style={{ boxShadow: '0 0 6px rgba(255, 255, 255, 0.8)' }}
-          />
-          <span aria-hidden="true">🏘️</span>
-          <span className="truncate font-medium text-[12px]">{card.community.name}</span>
-          {card.community.videoCount > 0 && (
-            <span className="rounded-full bg-red-500 px-1.5 py-0.5 font-semibold text-[10px] text-white leading-none tabular-nums">
-              {card.community.videoCount}
-            </span>
-          )}
+          <span className="flex items-center gap-1 leading-none">
+            <span aria-hidden="true" className="text-[14px]">🏘️</span>
+            {card.community.videoCount > 0 && (
+              <span className="rounded-full bg-red-500 px-1 py-0.5 font-semibold text-[10px] text-white leading-none tabular-nums">
+                {card.community.videoCount}
+              </span>
+            )}
+          </span>
+          <span className="w-full truncate text-center font-medium text-[10px] leading-tight">
+            {card.community.name}
+          </span>
         </button>
       )}
 

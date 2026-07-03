@@ -2,6 +2,16 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.68.2 — Neighborhood pill: two lines, tucked right above the buttons (2026-07-03)
+
+### ✨ Improvements
+- **Compact two-line pill** — 🏘️ + count on top, neighborhood name below. No more one-line-too-long overflow.
+- **Sits directly on top of Like/Save/Contact/Share** — reads as one continuous vertical column on the right edge.
+- Removed the animated dot; the red count badge is enough of a "there's more here" hook.
+
+### 🎯 Why
+Third pass on 笑云's testing — first two rounds found the button but "一行太长了". Two-line stack keeps the neighborhood name readable while shrinking the horizontal footprint.
+
 ## v0.68.1 — Right-side layout tuned: rail hugs the bottom, neighborhood chip sits mid-height (2026-07-03)
 
 ### ✨ Improvements

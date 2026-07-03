@@ -2,6 +2,25 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-07-03 — Phase 68.2: Chip → 2-line stack above rail, zero gap
+
+**Objective**: 笑云 feedback "一行太长了". Fix: (1) chip becomes a compact 2-line vertical stack — row 1 = 🏘️ + red count (**no pulse dot**, owner: "不要加点"), row 2 = neighborhood name, (2) chip hugs the top of the right rail with zero gap between it and the Like button.
+
+**Actions** (`app/(public)/browse/_components/BrowseFeed.tsx`, single file):
+- Chip: dropped `top-[42%] right-3` mid-height anchoring, moved to `absolute right-3` with `bottom: calc(max(1rem, env(safe-area-inset-bottom) + 0.5rem) + 228px)`. The 228px offset = rail visible height (4 buttons × 48px + 3 gaps × 12px = 228px). Chip's `bottom` = rail's `bottom` + rail height, so the chip's bottom edge sits flush against the rail's top edge — visually a single vertical column with no daylight between chip and Like.
+- Layout: `flex w-14 flex-col items-center gap-0.5` — width matches the ActionButton (`w-12` = 48px) plus a bit of padding for the count badge. Row 1 uses `flex items-center gap-1` for 🏘️ + badge; row 2 is the truncated name at `text-[10px] leading-tight`.
+- **Removed the pulse dot** (`animate-pulse` white dot from phase 68). Owner: "不要加点". Red count badge is doing the "there's more here" work now.
+- Kept red count badge from 68.1 (`bg-red-500 text-white`).
+
+**Decisions**:
+- **Absolute `bottom` calc, not flex-into-rail**: chip lives inside `Card` component (has access to `card` / `source` / `onOpenCommunitySheet` from props). The rail lives inside `BrowseFeed` outer scope where those props aren't available. Instead of restructuring both components to share state, kept chip at the Card level and matched positions via `bottom` arithmetic. If rail height changes (Share removed / new button added / gap changed), the 228px hardcode needs updating — flagged in the comment.
+- **Two-line stack width `w-14` (56px)** vs rail button `w-12` (48px): the 8px overhang on the chip body accommodates the count badge without truncating the neighborhood name. Feels visually anchored (chip slightly wider than the buttons below reads as "context header" — same trick as YouTube channel avatars sitting slightly wider than action buttons).
+- **No animation**: pulse dot dropped per owner. If discovery is still an issue after this round, a first-time-only tooltip is the next safe intervention (never permanent motion).
+
+**Verification**: `npx tsc --noEmit` clean; `npm run build` clean.
+
+**Next steps**: Send Vercel preview to 笑云. If she still doesn't see the chip, the problem isn't position/style anymore — it's a first-time-user education gap and the fix is a one-shot tooltip on first `/browse` visit.
+
 ## 2026-07-03 — Phase 68.1: Rail dropped to bottom, chip re-anchored to right-middle, count → red
 
 **Objective**: Follow-up to phase 68 — owner: (1) shift the whole right rail down one slot so the last button (Share) hugs the bottom safe-area, (2) move the neighborhood chip out of the top-right corner into the right-side middle-ish area (slightly above middle), keeping visible gap from the buttons below, (3) count pill from cream → red so it reads like a badge.
