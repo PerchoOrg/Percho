@@ -117,7 +117,7 @@ export default async function ProfilePage() {
             ) : null}
             <Link
               href="/dashboard/analytics"
-              className="w-full rounded-full border border-line px-6 py-3 text-center text-ink2 text-sm transition hover:text-ink"
+              className="btn-gold inline-flex items-center justify-center rounded-full px-6 py-3 text-sm"
             >
               View analytics
             </Link>
