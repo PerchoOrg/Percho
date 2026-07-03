@@ -2,6 +2,12 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.68.3 — Fix: neighborhood pill was covering the Like button (2026-07-03)
+
+### 🐛 Fixes
+- **Neighborhood pill no longer overlaps the Like button** — the pill was sitting on top of the heart. Corrected the vertical offset so the pill floats cleanly above the four action buttons.
+- **Full neighborhood names show** — no more "Peacht..." ellipsis. The pill now expands leftward to fit whatever the community is called.
+
 ## v0.68.2 — Neighborhood pill: two lines, tucked right above the buttons (2026-07-03)
 
 ### ✨ Improvements

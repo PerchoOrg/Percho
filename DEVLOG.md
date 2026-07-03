@@ -2,6 +2,21 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-07-03 — Phase 68.3: Fix chip overlap with Like + drop name truncation
+
+**Root cause of 68.2 overlap**: I calculated rail height as `4×48 + 3×12 = 228px`, but each `ActionButton` is not 48px — it's the 48px circle **plus** a 4px gap-1 **plus** the ~14px "Like"/"Save"/"Contact"/"Share" label below it. Actual per-button height ~66px. Rail is `4×66 + 3×12 = 300px`. Chip at `+228px` from rail bottom therefore sat ~72px INSIDE the rail's top, right on top of the Like circle — exactly what the screenshot showed.
+
+**Fixes** (`app/(public)/browse/_components/BrowseFeed.tsx`, single file):
+- Chip `bottom` offset: `+228px` → `+308px` (300px rail + 8px visual cushion). Chip now sits fully above the rail with 8px daylight above the "Like" text label.
+- Removed `w-14 truncate` on the chip. Chip now shrink-wraps content; the name row is `whitespace-nowrap` so it renders in full ("Peachtree Corners" instead of "Peacht..."). Because chip is right-anchored (`right-3`), it grows leftward from the right edge — no risk of colliding with the rail on the horizontal axis, and long neighborhood names get natural width.
+- Added `px-2` for a bit more horizontal breathing room around the wider name.
+
+**Verification lesson**: Never trust a hardcoded pixel offset without measuring the DOM. `ActionButton` has been `48px circle + label` for months, but I only counted the circle. Next time chip position is tied to rail height, either (a) query the rail's actual `getBoundingClientRect().height` at runtime and set the chip via CSS variable, or (b) restructure to make chip a flex sibling of the rail buttons (harder — chip lives in `Card`, rail in `BrowseFeed`, different scopes for `card`/`onOpenCommunitySheet` props).
+
+**Verification**: `npx tsc --noEmit` clean; `npm run build` clean.
+
+**Next steps**: Send Vercel preview to 笑云. If chip still overlaps in her Safari but not desktop preview, iOS `env(safe-area-inset-bottom)` may be adding extra to the calc — currently the chip anchors relative to the same `bottom` calc as the rail, so any safe-area bump moves both together. Should be robust.
+
 ## 2026-07-03 — Phase 68.2: Chip → 2-line stack above rail, zero gap
 
 **Objective**: 笑云 feedback "一行太长了". Fix: (1) chip becomes a compact 2-line vertical stack — row 1 = 🏘️ + red count (**no pulse dot**, owner: "不要加点"), row 2 = neighborhood name, (2) chip hugs the top of the right rail with zero gap between it and the Like button.

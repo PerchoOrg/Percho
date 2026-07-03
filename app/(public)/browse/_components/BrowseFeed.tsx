@@ -616,12 +616,15 @@ function Card({
         </div>
       )}
 
-      {/* Phase 68.2 (2026-07-03): chip repositioned again — 笑云 feedback
-       * "一行太长了". Now a two-line vertical stack (row 1 = 🏘️ + red count
-       * badge, row 2 = neighborhood name), anchored directly above the
-       * right rail (Like/Save/Contact/Share). Rail height ≈ 4×48 + 3×12 =
-       * 228px, sits at max(1rem, safe-area+0.5rem). Chip's `bottom` adds
-       * 228px so it hugs the top of the rail with no gap. */}
+      {/* Phase 68.3 (2026-07-03): fixes overlap with Like button + name
+       * truncation from 68.2. Rail height was miscalculated as 228px in
+       * 68.2 — actual per-ActionButton height is ~66px (48px circle + 4px
+       * gap-1 + ~14px label), so 4 buttons + 3×gap-3 = 4×66 + 36 = 300px.
+       * Chip's `bottom` bumped from +228px → +300px + 8px cushion = 308px.
+       * Also dropped `w-14 truncate` — chip now shrink-wraps content
+       * (whitespace-nowrap on name row) so full neighborhood name renders,
+       * per owner "不要省略 neighbor name". Chip is right-anchored so it
+       * grows leftward from the right edge and never fights the rail width. */}
       {source === 'hero' && card.community && onOpenCommunitySheet && (
         <button
           type="button"
@@ -630,9 +633,9 @@ function Card({
             onOpenCommunitySheet();
           }}
           aria-label={`Explore ${card.community.name} neighborhood — ${card.community.videoCount} videos`}
-          className="absolute right-3 z-10 flex w-14 flex-col items-center gap-0.5 rounded-[10px] bg-ink/65 px-1.5 py-1.5 text-cream backdrop-blur-md transition-colors hover:bg-ink/75"
+          className="absolute right-3 z-10 flex flex-col items-center gap-0.5 rounded-[10px] bg-ink/65 px-2 py-1.5 text-cream backdrop-blur-md transition-colors hover:bg-ink/75"
           style={{
-            bottom: 'calc(max(1rem, env(safe-area-inset-bottom) + 0.5rem) + 228px)',
+            bottom: 'calc(max(1rem, env(safe-area-inset-bottom) + 0.5rem) + 308px)',
             touchAction: 'manipulation',
           }}
         >
@@ -644,7 +647,7 @@ function Card({
               </span>
             )}
           </span>
-          <span className="w-full truncate text-center font-medium text-[10px] leading-tight">
+          <span className="whitespace-nowrap font-medium text-[10px] leading-tight">
             {card.community.name}
           </span>
         </button>
