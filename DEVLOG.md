@@ -2,6 +2,24 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-07-04 — Phase 70.11: Seed 10 mock listings under a real agent account + external mp4 support in listing_videos
+
+**Objective**: Owner wants the 10 mock Atlanta listings to actually appear in the buyer swipe feed under his own agent account — not just on the /demo/autofill pitch page. Requires the schema to accept the local mp4 URLs (currently `listing_videos.cf_video_id` is NOT NULL, only Cloudflare Stream) and a seed page that drops the listings + photos + videos into Supabase under the currently-logged-in agent.
+
+**Actions**:
+- `supabase/migrations/20260704120000_listing_video_external_url.sql` — makes `cf_video_id` nullable, adds `external_url text`, replaces the table-level UNIQUE with a partial unique index (unique WHERE cf_video_id IS NOT NULL so multiple external-only rows don't collide on NULL), adds a CHECK requiring at least one source (`cf_video_id IS NOT NULL OR external_url IS NOT NULL`). Applied via `supabase db push` before code deploy.
+- `lib/listing-feed/load.ts` + `lib/feed/browse-cards.ts` — added `external_url` to the ListingVideo query + type; propagated `externalUrl` through the outbound card shape (both hero video and per-video sources). Community videos left Cloudflare-only.
+- `app/(public)/browse/_components/BrowseFeed.tsx` — extended `BrowseSourceVideo` and `BrowseCard.hero` types with optional `externalUrl`. In the Card component, the source-attach effect branches: if `externalUrl` is set, poster falls back to `heroPhotoUrl` (no CF thumbnail available), and video source is set directly (`video.src = sel.externalUrl`) — HLS/hls.js path skipped entirely. Both effects re-key on `sel.externalUrl` too so React re-runs on source-identity changes.
+- `app/(public)/v/[agentSlug]/[listingSlug]/page.tsx` — guarded `thumbnailUrl(listingVideos[0].cf_video_id)` in the OG metadata builder since it's now nullable.
+- `app/internal/seed-mock-listings/page.tsx` (NEW) — server component. Auth check → agent lookup → status table showing which of the 10 mocks are already seeded (by slug `mls-{mls_number}`) → single-button form.
+- `app/internal/seed-mock-listings/actions.ts` (NEW) — `seedMockListings()` server action. Iterates 10 MOCK_LISTINGS from `lib/mls/mock-data.ts`. Per listing: (1) upsert-by-slug idempotent, (2) fetch each of the 10 Unsplash photo_urls → upload to `listing-photos` Storage bucket → insert `listing_photos` row, (3) set `listings.cover_url` = public URL of first uploaded photo, (4) insert single `listing_videos` row with `external_url = mock.videoUrl`, `cf_video_id = null`, `kind = 'walkthrough'`, `status = 'ready'`. Per-listing try/catch. Returns `{seeded, skipped, errors}`. Revalidates `/browse`, `/browse/feed`, `/a/{slug}`.
+
+**Decisions**: `status: 'active'` on insert so buyers see them immediately (owner asked). RLS uses the caller's session (no service-role key needed) — the "agent manages own listings" / listing_videos / listing_photos policies + storage RLS on `listing-photos` all scope by `agent_id ↔ auth.uid()`. Seed is idempotent by slug so accidentally clicking the button twice just returns skipped=10.
+
+**Deploy order**: migration first (`supabase db push`) then code push. Otherwise `select('external_url')` on the old schema would 500 the `/browse` page.
+
+**Known limitation**: Videos are served from `/demo/listings/{mls}.mp4` (relative to the app origin), so they only work on `vicinities.cc`. Fine for the pitch — production will move to Cloudflare Stream when the CF token lands.
+
 ## 2026-07-04 — Phase 70.10: Per-listing videos for all 10 mock listings + 10-photo grid
 
 **Objective**: Owner asked to (a) generate a Ken Burns video for every mock listing (not just flagship), (b) show all 10 photos on the demo page grid, (c) use the room-order pattern 1 exterior → 2 living → 1 kitchen → 3 bedroom → 2 bathroom → 1 backyard.

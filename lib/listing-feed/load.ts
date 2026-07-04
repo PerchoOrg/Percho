@@ -53,7 +53,8 @@ export type ListingForFeed = {
 type Community = { id: string; name: string; description: string | null };
 type ListingVideo = {
   id: string;
-  cf_video_id: string;
+  cf_video_id: string | null;
+  external_url: string | null;
   kind: string;
   title: string | null;
   sort_order: number;
@@ -98,7 +99,7 @@ async function fetchAroundListing(
 
   const { data: listingVideos } = (await supabase
     .from('listing_videos')
-    .select('id, cf_video_id, kind, title, sort_order')
+    .select('id, cf_video_id, external_url, kind, title, sort_order')
     .eq('listing_id', listing.id)
     .eq('status', 'ready')
     .order('sort_order', { ascending: true })) as { data: ListingVideo[] | null };
@@ -261,7 +262,8 @@ export async function buildListingCards(
   if (!hero) return [];
 
   const heroVideos = listingVideos.map((v) => ({
-    cfVideoId: v.cf_video_id,
+    cfVideoId: v.cf_video_id ?? '',
+    externalUrl: v.external_url ?? null,
     line1: v.title ?? listing.address,
     line2: `${listing.city}, ${listing.state}`,
   }));
@@ -293,9 +295,9 @@ export async function buildListingCards(
   });
 
   const card: BrowseCard = {
-    id: hero.cf_video_id,
+    id: hero.cf_video_id ?? `ext:${hero.id}`,
     mediaKind: 'video',
-    hero: { cfVideoId: hero.cf_video_id },
+    hero: { cfVideoId: hero.cf_video_id ?? '', externalUrl: hero.external_url ?? null },
     heroVideos: heroVideos.length > 1 ? heroVideos : undefined,
     categoryVideos,
     listing: {

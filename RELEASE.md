@@ -2,6 +2,16 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.70.7 — 10 mock listings now live in the buyer swipe feed (2026-07-04)
+
+### ✨ Improvements
+- **Buyer swipe feed**: the 10 Atlanta mock listings ($389k–$3.25M) can now be seeded into a logged-in agent's account with one click at `/internal/seed-mock-listings`. Buyers see them in `/browse` grid + `/browse/feed` swipe with real 24-second Ken Burns videos, all 10 photos, price/beds/baths, and address.
+- **Video source flexibility**: `listing_videos` now supports either a Cloudflare Stream ID **or** an external mp4 URL, so the same swipe player works for both stock demo videos and future MLS-generated content.
+
+### 🔧 Under the hood
+- New migration `20260704120000_listing_video_external_url.sql`: `cf_video_id` nullable + `external_url text` + CHECK "at least one source".
+- Player now branches on `externalUrl` — mp4 direct, no HLS.
+
 ## v0.70.6 — Every mock listing now has its own video + full 10-photo grid (2026-07-04)
 
 ### ✨ Improvements

@@ -58,7 +58,8 @@ type AgentRow = {
 
 type ListingVideoRow = {
   listing_id: string;
-  cf_video_id: string;
+  cf_video_id: string | null;
+  external_url: string | null;
   title: string | null;
   kind: string;
   sort_order: number;
@@ -139,7 +140,7 @@ async function assembleCards(
   ] = await Promise.all([
     supabase
       .from('listing_videos')
-      .select('listing_id, cf_video_id, title, kind, sort_order')
+      .select('listing_id, cf_video_id, external_url, title, kind, sort_order')
       .in('listing_id', listingIds)
       .eq('status', 'ready')
       .order('sort_order', { ascending: true }),
@@ -292,9 +293,12 @@ async function assembleCards(
     });
 
     const card: BrowseCard = {
-      id: hero ? hero.cf_video_id : `photo:${l.id}`,
+      id: hero ? (hero.cf_video_id ?? `ext:${l.id}`) : `photo:${l.id}`,
       mediaKind: hero ? 'video' : 'photo',
-      hero: { cfVideoId: hero?.cf_video_id ?? '' },
+      hero: {
+        cfVideoId: hero?.cf_video_id ?? '',
+        externalUrl: hero?.external_url ?? null,
+      },
       heroPhotoUrl: hero ? undefined : photoPublicUrl((heroPhoto as ListingPhotoRow).storage_path),
       // Phase 60 (2026-06-26): grid thumbnail honours the agent's
       // explicit `cover_url`. Grid consumers prefer this over the

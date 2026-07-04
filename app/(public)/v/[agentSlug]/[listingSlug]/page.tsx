@@ -54,7 +54,7 @@ export async function generateMetadata({
   const description = [priceText, specs, `Listed by ${agent.name}`].filter(Boolean).join(' — ');
 
   let imageUrl: string | null = listing.cover_url ?? null;
-  if (!imageUrl && listingVideos[0]) {
+  if (!imageUrl && listingVideos[0]?.cf_video_id) {
     try {
       imageUrl = thumbnailUrl(listingVideos[0].cf_video_id);
     } catch {

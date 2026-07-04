@@ -25,6 +25,13 @@ import {
 
 export type BrowseSourceVideo = {
   cfVideoId: string;
+  /**
+   * Phase 70.11 (2026-07-04): direct mp4 URL for demo/mock listings that
+   * bypass Cloudflare Stream. When set, the Card plays this URL as a
+   * plain <video src>; `cfVideoId` is ignored (typically empty). At most
+   * one of {cfVideoId, externalUrl} carries a real value.
+   */
+  externalUrl?: string | null;
   line1: string;
   line2?: string;
   /**
@@ -47,7 +54,7 @@ export type BrowseCard = {
    *   - 'photo' → use `heroPhotoUrl` directly. `hero.cfVideoId` is empty.
    */
   mediaKind: 'video' | 'photo';
-  hero: { cfVideoId: string };
+  hero: { cfVideoId: string; externalUrl?: string | null };
   /** Set when mediaKind === 'photo'. Public Supabase Storage URL. */
   heroPhotoUrl?: string;
   /**
@@ -196,6 +203,7 @@ function pickVideo(card: BrowseCard, source: Source, cycleIdx: number): BrowseSo
   }
   return {
     cfVideoId: card.hero.cfVideoId,
+    externalUrl: card.hero.externalUrl ?? null,
     line1: card.listing.address,
     line2: `${card.listing.city}, ${card.listing.state}`,
   };
@@ -393,11 +401,16 @@ function Card({
 
   const sel = useMemo(() => pickVideo(card, source, cycleIdx), [card, source, cycleIdx]);
 
+  const isExternal = !!sel.externalUrl;
   let poster: string | null = null;
-  try {
-    poster = thumbnailUrl(sel.cfVideoId);
-  } catch {
-    poster = null;
+  if (isExternal) {
+    poster = card.heroPhotoUrl ?? null;
+  } else {
+    try {
+      poster = thumbnailUrl(sel.cfVideoId);
+    } catch {
+      poster = null;
+    }
   }
 
   // (Re)attach HLS when mount or selected video changes.
@@ -413,6 +426,17 @@ function Card({
     }
     video.removeAttribute('src');
     video.load();
+
+    // Phase 70.11: external mp4 path — set video.src directly, skip HLS.
+    if (isExternal && sel.externalUrl) {
+      video.src = sel.externalUrl;
+      return () => {
+        if (hlsRef.current) {
+          hlsRef.current.destroy();
+          hlsRef.current = null;
+        }
+      };
+    }
 
     let src: string;
     try {
@@ -452,7 +476,7 @@ function Card({
         hlsRef.current = null;
       }
     };
-  }, [shouldMount, sel.cfVideoId]);
+  }, [shouldMount, sel.cfVideoId, sel.externalUrl, isExternal]);
 
   // Play/pause on active changes.
   // Try with current mute state first; if browser blocks autoplay-with-sound
@@ -482,7 +506,7 @@ function Card({
       v.pause();
       setPaused(true);
     }
-  }, [isActive, shouldMount, setPaused, sel.cfVideoId]);
+  }, [isActive, shouldMount, setPaused, sel.cfVideoId, sel.externalUrl]);
 
   // Keep <video>.muted in sync with the global mute toggle while the card
   // is mounted (parent flips it from the Sound button).
