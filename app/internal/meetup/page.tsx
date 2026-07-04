@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import Link from 'next/link';
 import type { Metadata } from 'next';
+import { MeetupSearch } from './MeetupSearch.client';
 
 export const metadata: Metadata = {
   title: 'Internal — Meetup packet',
@@ -102,33 +103,7 @@ export default function MeetupIndexPage() {
         </div>
       </header>
 
-      {groups.map((g) => (
-        <section key={g.slug} id={g.slug} className="space-y-3 scroll-mt-6">
-          <h2 className="text-xl font-serif tracking-tighter border-b border-line pb-1">
-            {g.title}
-          </h2>
-          {g.entries.length === 0 ? (
-            <p className="text-sm text-muted">No markdown files.</p>
-          ) : (
-            <ul className="space-y-3">
-              {g.entries.map((e) => (
-                <li key={e.slug}>
-                  <Link
-                    href={`/internal/meetup/${e.slug}`}
-                    className="block rounded border border-line bg-surface px-4 py-3 hover:border-line-strong"
-                  >
-                    <div className="font-medium">{e.title}</div>
-                    {e.preview && (
-                      <div className="mt-1 text-sm text-ink2 line-clamp-2">{e.preview}</div>
-                    )}
-                    <div className="mt-1 text-xs text-muted font-mono">{e.slug}.md</div>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-      ))}
+      <MeetupSearch groups={groups} />
     </div>
   );
 }

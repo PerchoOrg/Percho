@@ -2,6 +2,22 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-07-04 — Phase 70.6: /internal/meetup — client-side search box
+
+**Objective**: Overnight iteration. Meetup index has 3 folders totaling ~15 md files and will grow before Tuesday. Owner scanning on his phone should be able to type a keyword ("Q&A", "pricing", "one-pager") and jump straight to the right doc without scrolling three folders.
+
+**Actions**:
+- `app/internal/meetup/MeetupSearch.client.tsx` (new): `'use client'` component that owns the search input + filter state. Empty query renders the original grouped-per-folder layout (preserves phase 70.2's `id={g.slug}` anchor targets for breadcrumb deep-links). Non-empty query flattens all matches into a single list with folder title as an eyebrow above each hit.
+- `app/internal/meetup/page.tsx`: server component still reads the filesystem via `listMd()`, still applies the phase 70.1 OVERNIGHT-SUMMARY / README pin, then hands `groups` to `<MeetupSearch>`. Removed the inline `groups.map(...)` render.
+
+**Decisions**: split into server shell + `.client.tsx` sibling per the app-router-pitfalls skill §1 — the page still does fs reads server-side (no browser-fs shenanigans), only the input state is client. Case-insensitive substring match on `title + preview + slug` — the slug is included so agents can search by filename fragment ("business-card", "pitch-30s") too. Match count shown under the input for feedback. Did NOT reach for fuse.js / fuzzy matching — 15 files, substring is enough, and any client-side lib pulls weight into the internal-only bundle.
+
+**Issues**: none. `npx tsc --noEmit` clean, `npm run build` clean. `/internal/meetup` first-load JS went from ~87 kB shared to 97.1 kB total (+~10 kB for the client component + React state) — acceptable for an internal-only route.
+
+**Learnings**: when adding search to a page that already has anchor deep-links, keep the empty-state layout byte-identical to before — otherwise phase-70.2's breadcrumb `?back=…#folder-slug` links start missing their targets. Empty-query branch of `MeetupSearch` preserves `id={g.slug}` on each `<section>` for exactly that reason.
+
+**Next steps**: iteration 7 candidates still open — footer link to `/internal/meetup` (SiteFooter is intentionally minimal per 2026-06-20 product call, so leave it), sitemap stub (no `app/sitemap.ts` exists yet, low priority), or wait for owner input.
+
 ## 2026-07-04 — Phase 70.5: /internal/meetup — print stylesheet for Cmd-P → PDF
 
 **Objective**: Overnight iteration. Owner may want to Cmd-P a doc off `/internal/meetup/[...slug]` into a PDF to hand out or annotate before Tuesday. Default browser print of the current layout drags in the amber "internal — unlisted" banner, the top nav row, the breadcrumb chip, the mono `docs/<rel>.md` path label, and the bottom "← All docs" link — all of which are chrome, not content.
