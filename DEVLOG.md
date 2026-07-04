@@ -2,6 +2,26 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-07-04 — Phase 69.1: CommunityCarousel — Share to rail bottom
+
+**Objective**: Owner: "listing feed 进去 nearby video 右上角还有分享按钮". Phase 69 caught three of four feed surfaces; the browse-feed-launched community-videos carousel (`CommunityCarousel`, opened by tapping the 🏘️ button on a listing card) was still rendering Share in the top-right header.
+
+**Actions**:
+- `app/(public)/browse/_components/CommunityCarousel.tsx`:
+  - Deleted the top-right `Share listing` circular button (was next to the `i / N` counter).
+  - Added `<ActionButton label="Share" onClick={onShare}>` at the bottom of the right rail, after Contact — same treatment as the other three feed surfaces after phase 69.
+- No API change: `onShare` was already an optional prop on `CommunityCarousel`, and the rail's `showRail` guard already included `!!onShare`, so a rail renders even when Share is the only action wired up.
+
+**Decisions**: same "match BrowseFeed" pattern as phase 69. No prototype needed — owner language is a specific position complaint on a surface I'd already ported for the other three feeds.
+
+**Issues**: none. `npx tsc --noEmit` clean, `npm run build` clean.
+
+**Learnings**:
+- Phase 69's mental model was "the three feed surfaces" (BrowseFeed / CommunityVideoFeed / CommunityListingCarousel) — but there are actually **four** video feed surfaces on the site: those three plus `CommunityCarousel`, which is the modal opened when tapping the 🏘️ button on a listing card in `/browse`. It has its own top bar and its own right rail, and it drifted from the phase-69 pass because I framed it as "not a top-level feed page". Add `CommunityCarousel.tsx` to the mental checklist for any future "all feeds" ask.
+- The rail-only `showRail` guard was already correct — it OR-ed all optional handlers, so wiring `onShare` alone still renders the rail. Nice pre-existing invariant.
+
+**Next steps**: push branch, verify Vercel preview on `/browse` → tap community chip → verify no Share top-right and Share is at bottom of rail. Merge to main.
+
 ## 2026-07-04 — Phase 69: All feeds — Share to rail bottom, half-hug rail
 
 **Objective**: Owner: "所有 feed 右上的分享都放到最底下 并且要贴底!! 都按照 browse feed 里的半贴底做就行". Bring CommunityVideoFeed and CommunityListingCarousel in line with BrowseFeed's phase-68 rail layout: Share as the last button on the rail (not in the top header), and the whole rail hugs the bottom of the frame at BrowseFeed's inset.
