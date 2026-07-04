@@ -1,0 +1,17 @@
+[Unit]
+Description=Vicinity render worker (agent-generated home tour videos)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/Vicinity
+ExecStart=/usr/bin/python3 scripts/render-worker/worker.py
+Restart=always
+RestartSec=5
+StandardOutput=append:/var/log/vicinity-render-worker.log
+StandardError=append:/var/log/vicinity-render-worker.log
+
+[Install]
+WantedBy=multi-user.target

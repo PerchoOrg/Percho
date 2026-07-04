@@ -2,6 +2,15 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.71.0 — Agents can now generate a home tour video from listing photos (2026-07-05)
+
+### 🚀 Features
+- **Generate home tour video** button on the listing edit page (Media tab) is now live. One click turns the listing's photos into a 30-second Ken Burns walkthrough with price, beds/baths, and address overlays on the first three clips, plus the standard Vicinity ending card. Rendering runs off-page on the render box and takes about two minutes end-to-end; the button shows queued → rendering → done inline.
+- Requires at least 3 photos on the listing. If a walkthrough was already generated, clicking again re-renders and replaces the previous version.
+
+### 🔧 Under the hood
+- New `render_jobs` queue table + Python render worker (`scripts/render-worker/worker.py`) that polls the queue, downloads photos from Supabase Storage, runs the Ken Burns generator, uploads the MP4 to Cloudflare Stream, and attaches it as a `listing_videos` walkthrough row. Ships with a systemd unit template for the EC2 render box.
+
 ## v0.70.7 — 10 mock listings now live in the buyer swipe feed (2026-07-04)
 
 ### ✨ Improvements

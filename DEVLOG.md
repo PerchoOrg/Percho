@@ -2,6 +2,33 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-07-05 — Phase 71: Agent-generated home tour videos (CF Stream + EC2 render worker)
+
+**Objective**: Wire up the "Create a home tour video" button on the listing edit page (Media tab) to actually produce a Ken Burns MP4 from the listing's photos, host it on Cloudflare Stream, and attach it as a `listing_videos` row. Replaces the Phase 12 501 stub / Phase 48 disabled UI. Architecture C2: manual trigger → API enqueues job → out-of-process EC2 render worker (Python) polls, renders via `scripts/ken-burns/generate.py`, uploads to CF Stream, updates the row.
+
+**Actions**:
+- `supabase/migrations/20260705000000_render_jobs.sql` (NEW) — `render_jobs` queue table. FK to `listings` and `listing_videos` (both cascade delete). `status ∈ (queued|running|done|failed)`, `error text`, `attempts int`. Index on `(status, created_at)` for worker polling. RLS: agent SELECT/INSERT via listing→agent chain (worker uses service role, bypasses RLS). `updated_at` trigger reuses existing `touch_updated_at()`. Applied via `supabase db push --include-all`.
+- `app/api/listings/[id]/generate-tour/route.ts` — replaced 501 stub. POST: auth + ownership (listing→agent), photo count ≥3 guard, delete existing walkthrough row (both CF Stream video and DB row) to allow re-render, insert placeholder `listing_videos` row (`cf_video_id=null`, `external_url='pending://render'` sentinel to satisfy the source-present CHECK from phase70.11, `status='processing'`, `kind='walkthrough'`, `sort_order=max+1`), insert `render_jobs` row queued, return 202 `{jobId, videoRowId}`. GET: status polling by `?jobId=`.
+- `app/dashboard/listings/[id]/edit/GenerateTourPanel.tsx` — activated. Button disabled if `<3` photos with tooltip. On click POSTs, then polls GET every 5s until `done|failed`. Inline status: queued / rendering / done (prompt to reload) / failed (with error).
+- `app/dashboard/listings/[id]/edit/page.tsx` — pass `photoCount={photos.length}` to `GenerateTourPanel`.
+- `scripts/render-worker/worker.py` (NEW, 319 lines) — long-running poller. Loads `.env.local` via minimal parser (no python-dotenv dep). Uses PostgREST + Storage HTTP APIs directly with service role key (no supabase-py dep). Optimistic claim (`UPDATE ... WHERE status='queued'`), downloads photos from `listing-photos` bucket in `sort_order`, builds overlay JSON matching `flagship-overlay.json` schema, runs `generate.py --input-dir /tmp/render-<jobid> --listing-overlay overlay.json --ending-card ending-card.json`, uploads MP4 via CF Stream simple-upload endpoint (`POST /accounts/{id}/stream` multipart, fine <200MB), updates `listing_videos.cf_video_id + status='ready'` and clears the `external_url` sentinel, marks job done. On any exception: job → failed, video → error. Idle poll 5s.
+- `scripts/render-worker/vicinity-render-worker.service` (NEW) — systemd unit template. `User=ubuntu`, `Restart=always`, logs to `/var/log/vicinity-render-worker.log`.
+- `scripts/render-worker/README.md` (NEW) — install/run instructions.
+
+**Decisions**:
+- Direct HTTP against PostgREST + Storage over pulling in `supabase-py` — the worker uses the service role and only touches 3 tables + 1 bucket. Fewer deps to install on the render box.
+- Simple upload endpoint over tus — MP4s are ~5-20 MB from a 30s slideshow, tus is over-engineering here. Keep option open if we ever hit the 200MB threshold.
+- Placeholder `listing_videos` row inserted at enqueue time (not at completion) so the UI has a stable id to link/poll against, and so re-clicks are idempotent (existing walkthrough row is deleted first). `external_url='pending://render'` is a sentinel — the source-present CHECK constraint from phase70.11 requires either `cf_video_id` or `external_url` non-null, and we don't have the CF id yet. Worker nulls it on completion.
+- API allows re-render (delete + re-enqueue) rather than blocking on existing walkthrough — owner explicitly asked for this.
+
+**Issues**:
+- No worker daemon started this session — user will `systemctl enable --now` on the render box. This session only lays the code down.
+- ffmpeg + Python requests must be present on the render host — README calls this out. `generate.py` already has these as prereqs (Phase 70.9).
+
+**Verification**: `npx tsc --noEmit` clean; `npm run build` clean (all 40+ routes compile). Migration applied to remote DB. Worker not run.
+
+**Next steps**: (1) copy the systemd unit to `/etc/systemd/system/` on the EC2 render box and `enable --now`. (2) End-to-end smoke: click Generate on a real listing with ≥3 photos, watch the job flip queued → running → done, verify the CF video plays back on the buyer feed. (3) Consider surfacing a "re-render" affordance vs. the current implicit "click again to re-render" — TBD after user testing.
+
 ## 2026-07-04 — Phase 70.11: Seed 10 mock listings under a real agent account + external mp4 support in listing_videos
 
 **Objective**: Owner wants the 10 mock Atlanta listings to actually appear in the buyer swipe feed under his own agent account — not just on the /demo/autofill pitch page. Requires the schema to accept the local mp4 URLs (currently `listing_videos.cf_video_id` is NOT NULL, only Cloudflare Stream) and a seed page that drops the listings + photos + videos into Supabase under the currently-logged-in agent.

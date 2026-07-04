@@ -250,7 +250,7 @@ export default async function EditListingPage({
                 initialPhotos={photos}
                 initialCoverPhotoId={initialCoverPhotoId}
               />
-              <GenerateTourPanel listingId={listing.id} />
+              <GenerateTourPanel listingId={listing.id} photoCount={photos.length} />
             </div>
           ),
           marketing: draft ? <DraftLockedNotice /> : <SocialCopyPanel listingId={listing.id} />,
