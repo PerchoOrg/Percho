@@ -2,6 +2,13 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.69.0 — Share button lives with the other rail buttons on every feed (2026-07-04)
+
+### ✨ Improvements
+- **Community feed** (`/c/[slug]`): the Share button in the top-right corner is gone. It now sits at the bottom of the right-side action stack, matching the browse feed. Outbound-social actions live in one column instead of scattered across two corners.
+- **Every feed's action stack now hugs the bottom of the frame** at the same tight margin the browse feed has been using. The community feed and neighborhood-listing carousel used to float their action buttons about a thumb-length above the bottom edge; they now sit low, right above the phone's home indicator, matching the browse feed.
+- No visual changes to the browse feed itself — it was already the reference design.
+
 ## v0.68.4b — All feed pages share the same right-rail design (2026-07-03)
 
 ### ✨ Improvements

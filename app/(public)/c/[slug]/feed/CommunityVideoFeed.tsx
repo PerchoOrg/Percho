@@ -539,15 +539,12 @@ export function CommunityVideoFeed({
             </span>
           )}
         </div>
-        <button
-          type="button"
-          onClick={onShare}
-          aria-label="Share neighborhood"
-          className="flex h-11 w-11 items-center justify-center rounded-full border border-cream/20 bg-ink/55 text-cream backdrop-blur-md transition-colors hover:border-cream hover:text-cream"
-          style={{ touchAction: 'manipulation' }}
-        >
-          <ShareIcon />
-        </button>
+        {/* Phase 69 (2026-07-04): Share moved from top-right into the
+         * right-rail bottom, matching BrowseFeed's phase-68 layout so
+         * all three feeds put outbound-social actions in one column.
+         * Empty 11x11 spacer keeps the community-name pill visually
+         * centered between Back and the right edge. */}
+        <div className="h-11 w-11" aria-hidden="true" />
       </div>
 
       {/* Right rail: Like / Save / Listings / Mute.
@@ -602,6 +599,13 @@ export function CommunityVideoFeed({
             <CommentIcon />
           </ActionButton>
         )}
+        {/* Phase 69 (2026-07-04): Share moved out of the top-right header
+         * into the bottom of the right rail — matches BrowseFeed's
+         * phase-68 layout so all three feeds have Share as the last
+         * rail button. */}
+        <ActionButton onClick={onShare} label="Share">
+          <ShareIcon />
+        </ActionButton>
         {/* Phase 34b.1 (V1 redo, 2026-06-17): the right-rail HouseIcon was
          * removed in favor of a top-left "🏠 N homes here" chip that
          * opens an in-place listings sheet (L2) instead of navigating
