@@ -2,6 +2,40 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-07-04 — Phase 70: KW Atlanta agent meetup — full pitch stack
+
+**Objective**: Owner has a KW Atlanta agent meetup on Tuesday. He wanted an overnight run to prep everything: demo video, landing page for agent waitlist, live-demo tool, printable materials, and an FMLS scaffold that flips on when broker paperwork lands. Second iteration: mount the whole doc packet inside the site so the owner can read it from `vicinities.cc` on his phone, and push everything to `main` without breaking existing routes.
+
+**Actions** (5 commits, additive-only, zero edits to existing routes):
+- `phase70: FMLS/Bridge scaffold + Atlanta MLS data model` — `lib/mls/*` (bridge-client, address-autofill, sync-worker, reso-types, mock-data), `app/api/mls/autofill` route (returns 501 without `BRIDGE_SERVER_TOKEN` — inert until env is set), `__tests__/mls/*` (network mocked), `supabase/migrations/20260704075823_mls_tables.sql`, `docs/mls-integration/{README,data-model,compliance-checklist}.md`, `.env.example` gains `BRIDGE_SERVER_TOKEN`/`BRIDGE_DATASET_ID`/`BRIDGE_BASE_URL`.
+- `phase70: /agents waitlist landing + POST /api/agents/waitlist + internal review` — `app/(public)/agents/`, `app/api/agents/waitlist`, `app/dashboard/agents/waitlist`, `supabase/migrations/20260704090000_agent_waitlist.sql` with anon-insert-only RLS.
+- `phase70: /demo/autofill live pitch demo (mock data, noindex)` — `app/(public)/demo/autofill/` uses `lib/mls/mock-data.ts` (10 curated Atlanta listings across Buckhead / Midtown / West End / Sandy Springs) so we can demo "type an address → autofill" on stage without live Bridge creds. Amber DEMO banner, `robots: noindex`. Same UI shape as the real endpoint, so we swap in `/api/mls/autofill` post-approval by changing one URL.
+- `phase70: Ken Burns slideshow generator + Atlanta demo config` — `scripts/ken-burns/{generate.py,reproduce-demo.sh,lambda-wrapper.py,README.md}`, `docs/ken-burns/{pitch-notes.md,demo/ending-card.json}`. `.gitignore` keeps mp4/mp3/photos/pdf/qr binaries out of git; source-only in tree.
+- `phase70: KW meetup packet + /internal/meetup docs viewer` — `docs/meetup-kw-atlanta/` (13 md — pitch scripts 30s/2min/5min, Q&A playbook, discovery questions, one-pager, business card md+svg, QR + signage html, meetup notes template, OVERNIGHT-SUMMARY.md as entry doc). `app/internal/meetup/` server-renders every md under the 3 doc folders (`react-markdown` + `remark-gfm`, prose Tailwind classes, path-traversal guard, 404 on miss). Layout: light theme, top nav to `/agents` + `/demo/autofill`, unlisted banner, `robots: noindex`.
+
+**Decisions**:
+- **Additive only, zero touches to existing routes** — every existing page (`/browse`, `/c/[slug]`, dashboard, community feed) is unchanged. New surface area lives at `/agents`, `/demo/autofill`, `/internal/meetup`, plus new APIs and lib modules.
+- **`/internal/meetup` sits at `app/internal/`, not `app/(public)/internal/`** — it's an internal-only reader, not part of the marketing design system, and I don't want it inheriting public marketing chrome. Robots noindex + top-of-page banner instead of auth for now.
+- **`/demo/autofill` uses mock data even after Bridge lands** — it's a demo surface, not the real product. Repro-demo script must not silently start hitting live FMLS.
+- **Bridge scaffold ships inert** — `/api/mls/autofill` returns 501 without env. No accidental live calls; Bridge auth is HTTP header (`Authorization: Server-Token …`), never on the wire in dev.
+- **Photos gitignored** — Bridge terms only allow hotlinking their CDN, so we never store MLS media. The 8 slideshow demo photos are Unsplash public-domain but still stay out of git for repo hygiene (regenerate via `reproduce-demo.sh`).
+- **`react-markdown` + `remark-gfm` run server-side only** — the doc viewer is a server component, no client JS shipped for markdown rendering.
+
+**Issues / Resolution**:
+- **Ending-card renders had dead space in v1–v3** — root cause was `docs/ken-burns/demo/ending-card.json` missing `wordmark` and `cta` fields, which get rendered by `generate.py` as overlay text on the final card. `reproduce-demo.sh` uses a heredoc that overwrites `ending-card.json` on every run, so my patches got clobbered until I edited both the heredoc and the JSON. Fix: added the fields to both. v4 vision-QA passes: coral CTA arrow + gold V·Vicinity wordmark visible.
+- **A condo-variant demo attempted** — sourced photos from picsum/unsplash-source since I don't have MLS access yet. Vision QA showed pure haze frames, not real estate. Killed the variant; better to walk in with one solid demo than two and one embarrassing.
+- **Local dev returned 500 on new routes** — middleware (`middleware.ts`) calls `updateSession()` from `lib/supabase/middleware.ts`, which requires `NEXT_PUBLIC_SUPABASE_URL` + `_ANON_KEY`. My local `.env.local` only has `SUPABASE_DB_PASSWORD`, so middleware short-circuits with 500 on every route. Not a code bug — `npm run build` compiles cleanly and every route appears in the manifest. Vercel preview will not have this issue.
+
+**Learnings**:
+- When a demo overlay looks broken, check the *config JSON's* schema first, not the renderer. My `generate.py` didn't complain about missing `wordmark`/`cta` — it just skipped drawing them. Good renderers should warn on missing optional fields the demo owner clearly wanted.
+- `reproduce-demo.sh` shouldn't heredoc a config file that a human might edit between runs. Made a note in the script header.
+- For "make docs browsable in-site" tasks, a 3-file server-component viewer (`layout.tsx` + `page.tsx` + `[...slug]/page.tsx`) with `react-markdown` is the right size. Don't reach for a static-site generator or a CMS.
+
+**Next steps**:
+- Owner: fill business-card `[PLACEHOLDER]` fields, print QR table sign, back-pocket the 30-second pitch, verify preview URL on phone before Tuesday.
+- Post-meetup: pull `agent_waitlist` rows for follow-up, look at which `/demo/autofill` addresses agents typed as directional data on demand.
+- When Bridge creds land: set env, flip `/demo/autofill` client to hit `/api/mls/autofill` for a "real listing" mode toggle.
+
 ## 2026-07-04 — Phase 69.1: CommunityCarousel — Share to rail bottom
 
 **Objective**: Owner: "listing feed 进去 nearby video 右上角还有分享按钮". Phase 69 caught three of four feed surfaces; the browse-feed-launched community-videos carousel (`CommunityCarousel`, opened by tapping the 🏘️ button on a listing card) was still rendering Share in the top-right header.

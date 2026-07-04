@@ -2,6 +2,24 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.70.0 — Agent waitlist, live autofill demo, and in-site doc reader (2026-07-04)
+
+### 🚀 Features
+- **Agent waitlist page** at `vicinities.cc/agents` — a landing page for real-estate agents to sign up. Explains what Vicinity does for agents and captures name/brokerage/email/phone/city into a waitlist. Prep for the Keller Williams Atlanta meetup this Tuesday — hand out the QR, agents scan, they're on the list.
+- **Live autofill demo** at `vicinities.cc/demo/autofill` — type any Atlanta address and watch it auto-populate a listing card. Backed by 10 curated Atlanta listings across Buckhead, Midtown, West End and Sandy Springs. Marked with a DEMO banner so nobody mistakes it for a real MLS search.
+- **In-site doc reader** at `vicinities.cc/internal/meetup` — the whole meetup packet (pitch scripts, Q&A playbook, discovery questions, one-pager) is now readable from a phone browser. Not indexed by search engines; the URL is unlisted and only shared with people who need it.
+
+### ✨ Improvements
+- **Behind the scenes**: pipeline for pulling real Atlanta listings from FMLS via Bridge is scaffolded. Waiting on brokerage paperwork; when that lands we flip a switch and `/demo/autofill` starts hitting real data.
+- **Slideshow generator**: internal tool that turns 6–8 listing photos into a 24-second Ken Burns-style vertical video with music and an ending card. Used to make the demo we're bringing to Tuesday's meetup.
+
+### 🐛 Bug Fixes
+- Slideshow ending card no longer renders empty space where the wordmark and call-to-action should be.
+
+### ⚠️ Known Issues
+- The waitlist admin view under `/dashboard/agents/waitlist` is intentionally minimalist — it lists rows with links, no filtering. That's enough for meetup follow-up.
+- `/demo/autofill` results are curated demo data, not live MLS. This is deliberate for the pitch and clearly labelled.
+
 ## v0.69.1 — Share button also moved on the neighborhood-videos carousel (2026-07-04)
 
 ### 🐛 Bug Fixes
