@@ -2,6 +2,11 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.70.2 — More Atlanta neighborhoods in the live demo (2026-07-04)
+
+### ✨ Improvements
+- **Live autofill demo**: added Old Fourth Ward, Grant Park, Inman Park, Decatur, and East Atlanta Village to the demo listings. Agents typing those neighborhood names on stage will now see relevant homes come up instead of an empty result.
+
 ## v0.70.1 — Small polish on the agent landing page (2026-07-04)
 
 ### ✨ Improvements

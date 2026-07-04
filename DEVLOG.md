@@ -2,6 +2,21 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-07-04 — Phase 70.4: /demo/autofill — 5 more Atlanta neighborhoods in the mock data
+
+**Objective**: Overnight iteration. `/demo/autofill` shipped with 10 curated listings clustered in Buckhead / Midtown / West End / Sandy Springs. On stage Tuesday, if an agent types "Old Fourth Ward" or "Decatur" — very common Atlanta search terms — the demo returns nothing and the pitch stalls. Broaden coverage without changing the demo shape.
+
+**Actions**:
+- `lib/mls/mock-data.ts`: added 5 entries — Old Fourth Ward (660 Glen Iris Dr NE), Grant Park (532 Cherokee Ave SE), Inman Park (1044 Edgewood Ave NE), Decatur (318 W Ponce de Leon Ave), East Atlanta Village (1289 Metropolitan Ave SE). Same `MockListing` shape, MLS numbers continue the 74xxxxxx sequence, photos reuse existing `HOUSE_PHOTOS_A/B/C/D` pools (Bridge terms bar us from storing MLS media anyway; demo photos are Unsplash hotlinks).
+
+**Decisions**: kept prices spread across the same $479k–$985k band so the demo shows range, not one segment. Skipped adding a new photo pool — 4 pools × 15 listings gives enough variety on stage and keeps this a mock-data expansion, not a media refresh. No test / route / component changes — `searchMockListings` already substring-matches on address/city/zip/MLS so new rows are indexed automatically.
+
+**Issues**: none. `npx tsc --noEmit` clean, `npm run build` clean. No test broke — nothing asserts `MOCK_LISTINGS.length`.
+
+**Learnings**: for a live demo, coverage of the *terms the audience will type* beats depth per neighborhood. Owner is on stage in front of Atlanta agents — Old Fourth Ward and Decatur are dinner-table terms in that room, not Buckhead-tier trophy addresses.
+
+**Next steps**: iteration 5 candidates still open — footer link to `/internal/meetup` (needs footer-component risk check first), print stylesheet for docs viewer, Q&A search box on meetup index.
+
 ## 2026-07-04 — Phase 70.3: /agents — "See a demo →" link under hero CTA
 
 **Objective**: Overnight iteration. `/agents` hero had the primary CTA (Join the Atlanta beta) and a secondary "Not an agent? Browse Atlanta homes" line, but no path from the landing page to `/demo/autofill` — the live autofill demo we built for the Tuesday meetup. Agent scanning the QR on their phone might want to see the product in motion before dropping their email.

@@ -240,6 +240,101 @@ export const MOCK_LISTINGS: MockListing[] = [
       'Executive home minutes to GA-400 and Northside Hospital. Chef’s kitchen, finished basement, and a saltwater pool.',
     photo_urls: HOUSE_PHOTOS_B,
   },
+
+  // ── Old Fourth Ward ─────────────────────────────────────────────
+  {
+    address: '660 Glen Iris Dr NE',
+    city: 'Atlanta',
+    state: 'GA',
+    zip: '30308',
+    price: 799_000,
+    beds: 3,
+    baths: 2.5,
+    sqft: 2050,
+    lot_size: 0.11,
+    year_built: 2014,
+    mls_number: '74204518',
+    days_on_market: 8,
+    description:
+      'Modern O4W townhome with rooftop deck and skyline views. Walk to Ponce City Market, Krog Street, and the Beltline Eastside Trail.',
+    photo_urls: HOUSE_PHOTOS_C,
+  },
+
+  // ── Grant Park ──────────────────────────────────────────────────
+  {
+    address: '532 Cherokee Ave SE',
+    city: 'Atlanta',
+    state: 'GA',
+    zip: '30312',
+    price: 665_000,
+    beds: 3,
+    baths: 2,
+    sqft: 1780,
+    lot_size: 0.16,
+    year_built: 1908,
+    mls_number: '74211074',
+    days_on_market: 15,
+    description:
+      'Restored Victorian across from Grant Park with original details, chef’s kitchen, and a private garden. Zoo Atlanta at your doorstep.',
+    photo_urls: HOUSE_PHOTOS_D,
+  },
+
+  // ── Inman Park ──────────────────────────────────────────────────
+  {
+    address: '1044 Edgewood Ave NE',
+    city: 'Atlanta',
+    state: 'GA',
+    zip: '30307',
+    price: 985_000,
+    beds: 4,
+    baths: 3.5,
+    sqft: 2640,
+    lot_size: 0.14,
+    year_built: 1905,
+    mls_number: '74218653',
+    days_on_market: 21,
+    description:
+      'Iconic Inman Park Victorian with wraparound porch and carriage house. One block to Krog Street Market and the Beltline.',
+    photo_urls: HOUSE_PHOTOS_A,
+  },
+
+  // ── Decatur ─────────────────────────────────────────────────────
+  {
+    address: '318 W Ponce de Leon Ave',
+    city: 'Decatur',
+    state: 'GA',
+    zip: '30030',
+    price: 875_000,
+    beds: 4,
+    baths: 3,
+    sqft: 2480,
+    lot_size: 0.19,
+    year_built: 1938,
+    mls_number: '74225198',
+    days_on_market: 5,
+    description:
+      'Classic Decatur bungalow inside the city-schools district. Walk to Decatur Square, MARTA, and the Saturday farmers market.',
+    photo_urls: HOUSE_PHOTOS_B,
+  },
+
+  // ── East Atlanta Village ────────────────────────────────────────
+  {
+    address: '1289 Metropolitan Ave SE',
+    city: 'Atlanta',
+    state: 'GA',
+    zip: '30316',
+    price: 479_000,
+    beds: 3,
+    baths: 2,
+    sqft: 1590,
+    lot_size: 0.2,
+    year_built: 1946,
+    mls_number: '74232841',
+    days_on_market: 11,
+    description:
+      'Renovated craftsman in East Atlanta Village. Screened porch, fenced yard, and a short walk to the EAV strip and Brownwood Park.',
+    photo_urls: HOUSE_PHOTOS_C,
+  },
 ];
 
 /**
