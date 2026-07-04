@@ -1,0 +1,12 @@
+{
+  "price": "$685,000",
+  "beds": 4,
+  "baths": 3,
+  "sqft": "2,800",
+  "address": "123 Peachtree Ln, Atlanta GA",
+  "agent_name": "Sample Agent",
+  "wordmark": "V \u00b7 Vicinity",
+  "cta": "Watch more at vicinities.cc",
+  "footer": "Powered by Vicinity",
+  "demo": true
+}

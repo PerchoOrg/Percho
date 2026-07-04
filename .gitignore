@@ -43,3 +43,12 @@ coverage/
 # Vercel
 .vercel
 package-lock.json
+
+# Meetup / demo assets
+docs/ken-burns/demo/*.mp4
+docs/ken-burns/demo-condo/*.mp4
+docs/ken-burns/demo/photos/*.jpg
+docs/ken-burns/demo-condo/photos/*.jpg
+docs/ken-burns/demo/bgm.mp3
+docs/meetup-kw-atlanta/business-card.pdf
+docs/meetup-kw-atlanta/qr/vicinities-cc-agents.png
