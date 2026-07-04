@@ -26,7 +26,13 @@ export default function AutofillDemoPage() {
       </div>
 
       <section className="mx-auto max-w-3xl px-5 pt-10 pb-6 sm:pt-14">
-        <p className="text-xs uppercase tracking-eyebrow text-muted">Vicinity autofill</p>
+        <a
+          href="/agents"
+          className="text-sm text-muted underline underline-offset-2 hover:text-ink2"
+        >
+          ← Back to Vicinity for Agents
+        </a>
+        <p className="mt-4 text-xs uppercase tracking-eyebrow text-muted">Vicinity autofill</p>
         <h1 className="mt-4 font-serif text-3xl leading-tight text-ink sm:text-4xl">
           Type an address. We fill everything.
         </h1>

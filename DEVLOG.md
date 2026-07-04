@@ -2,6 +2,21 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-07-04 — Phase 70.7: /demo/autofill — back link to /agents
+
+**Objective**: Overnight iteration. Priority list 1–10 is done (owner's list checked against DEVLOG 70.1–70.6). Picked own polish: `/demo/autofill` had no return path in the UI. Agent who tapped the phase 70.3 "See a demo →" link from `/agents` currently has to hit browser-back to get to the waitlist form — non-obvious on a phone during a live pitch, and if they landed on `/demo/autofill` from the QR-shared URL directly there is no discoverable path to the beta signup.
+
+**Actions**:
+- `app/(public)/demo/autofill/page.tsx`: added a small `← Back to Vicinity for Agents` text link at the top of the hero section (above the "Vicinity autofill" eyebrow). Uses `text-muted underline` weight — clearly a nav aid, not a competing CTA.
+
+**Decisions**: kept it as a plain `<a href="/agents">` (page is a server component, no client interactivity needed). Placed it above the eyebrow rather than below the demo banner so it doesn't visually merge with the amber "Demo — mock data" strip. Text-only, no chip / button — the primary action on this page is still "type an address, watch autofill fire", back-nav should not compete.
+
+**Issues**: none. `npx tsc --noEmit` clean, `npm run build` clean.
+
+**Learnings**: any secondary landing page reachable from a marketing hero (`/agents` → `/demo/autofill`) needs an explicit return path in the UI, not just browser-back. Especially on mobile where the back gesture varies by browser and nav mode. Cheap to add, closes a loop.
+
+**Next steps**: iteration 8 candidates — no obvious ones without owner input. Meetup Tuesday, so remaining polish should probably wait for owner review of what's shipped.
+
 ## 2026-07-04 — Phase 70.6: /internal/meetup — client-side search box
 
 **Objective**: Overnight iteration. Meetup index has 3 folders totaling ~15 md files and will grow before Tuesday. Owner scanning on his phone should be able to type a keyword ("Q&A", "pricing", "one-pager") and jump straight to the right doc without scrolling three folders.

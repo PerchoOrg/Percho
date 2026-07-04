@@ -2,6 +2,11 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.70.3 — Back link on the live demo page (2026-07-04)
+
+### ✨ Improvements
+- **Live autofill demo**: added a small "← Back to Vicinity for Agents" link at the top of the demo page. Agents who tap "See a demo" from the agent landing page (or land on the demo directly from a shared link) can now get back to the sign-up page without hitting browser-back.
+
 ## v0.70.2 — More Atlanta neighborhoods in the live demo (2026-07-04)
 
 ### ✨ Improvements
