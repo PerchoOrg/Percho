@@ -37,6 +37,13 @@ export default function AgentsLandingPage() {
           Join the Atlanta beta →
         </a>
 
+        <p className="mt-3 text-sm text-muted">
+          Curious first?{' '}
+          <a href="/demo/autofill" className="text-ink2 underline hover:text-ink">
+            See a demo →
+          </a>
+        </p>
+
         <p className="mt-4 text-sm text-muted">
           Not an agent?{' '}
           <a href="/browse" className="text-ink underline hover:text-ink/80">

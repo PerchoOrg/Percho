@@ -2,6 +2,21 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-07-04 — Phase 70.3: /agents — "See a demo →" link under hero CTA
+
+**Objective**: Overnight iteration. `/agents` hero had the primary CTA (Join the Atlanta beta) and a secondary "Not an agent? Browse Atlanta homes" line, but no path from the landing page to `/demo/autofill` — the live autofill demo we built for the Tuesday meetup. Agent scanning the QR on their phone might want to see the product in motion before dropping their email.
+
+**Actions**:
+- `app/(public)/agents/page.tsx`: added a small "Curious first? See a demo →" line between the primary gold CTA and the existing "Not an agent?" fallback. Uses `text-ink2 underline` weight — clearly secondary to the beta CTA, doesn't compete visually. Points at `/demo/autofill`.
+
+**Decisions**: kept the phrasing short ("Curious first?") so the ordering reads as CTA → fallback for undecided → fallback for wrong-audience. Did NOT put it in the hero button row — the gold Join CTA is the intended primary action and needs to stay uncontested.
+
+**Issues**: none. `npx tsc --noEmit` clean, `npm run build` clean.
+
+**Learnings**: on a landing page with one primary CTA, secondary paths belong under it as text links, never as a second button. Two buttons of near-equal weight = decision paralysis on a phone.
+
+**Next steps**: iteration 4 candidates still open — footer link to `/internal/meetup`, /demo/autofill neighborhood expansion, print stylesheet for docs viewer.
+
 ## 2026-07-04 — Phase 70.2: /internal/meetup — breadcrumbs on doc pages
 
 **Objective**: Overnight iteration. Doc pages under `/internal/meetup/[...slug]` had only a "← All docs" link at the bottom — no visual sense of which folder a doc belonged to, and no way to jump back to that folder's section on the index. Owner is scrolling on his phone Tuesday; a breadcrumb at the top makes the packet feel less like a flat file dump.

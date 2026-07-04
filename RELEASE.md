@@ -2,6 +2,11 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.70.1 — Small polish on the agent landing page (2026-07-04)
+
+### ✨ Improvements
+- **Agent landing page**: added a small "Curious first? See a demo →" link right under the main sign-up button. Agents scanning the QR at the meetup can now peek at the live autofill demo before deciding whether to join the waitlist.
+
 ## v0.70.0 — Agent waitlist, live autofill demo, and in-site doc reader (2026-07-04)
 
 ### 🚀 Features
