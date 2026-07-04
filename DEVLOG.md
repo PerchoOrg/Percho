@@ -2,6 +2,33 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-07-04 — Phase 69: All feeds — Share to rail bottom, half-hug rail
+
+**Objective**: Owner: "所有 feed 右上的分享都放到最底下 并且要贴底!! 都按照 browse feed 里的半贴底做就行". Bring CommunityVideoFeed and CommunityListingCarousel in line with BrowseFeed's phase-68 rail layout: Share as the last button on the rail (not in the top header), and the whole rail hugs the bottom of the frame at BrowseFeed's inset.
+
+**Actions**:
+- `app/(public)/_components/feed/constants.ts`: `FEED_RAIL_BOTTOM` was `max(6rem, calc(env(safe-area-inset-bottom) + 5rem))` — now `max(1rem, calc(env(safe-area-inset-bottom) + 0.5rem))`, matching the value BrowseFeed has been inlining since phase 68.1. Both other feed surfaces read from this constant, so they inherit the new bottom-hug automatically.
+- `app/(public)/c/[slug]/feed/CommunityVideoFeed.tsx`:
+  - Removed the top-right `Share neighborhood` circular button from the header row.
+  - Replaced with an empty `h-11 w-11` spacer so the community-name pill stays centered between Back and the right edge (matches BrowseFeed's empty right slot).
+  - Added `<ActionButton onClick={onShare} label="Share">` as the last item on the right rail, after Contact — same visual treatment as BrowseFeed's Share.
+- No changes to `CommunityListingCarousel` — it already had Share at the bottom of its rail (added phase 45.22 alongside the ActionButton migration); it just picks up the new `FEED_RAIL_BOTTOM` value.
+- No changes to `BrowseFeed` — it was already the reference layout.
+
+**Decisions**:
+- Went with the constant edit rather than inlining `max(1rem, …)` at each of the three call sites. `FEED_RAIL_BOTTOM` exists precisely to prevent the three feeds drifting (phase 45.23 rationale) — using it here keeps that discipline. BrowseFeed's own inline value is left untouched per §0.3 surgical (would be a wider refactor and it already renders the exact same math).
+- Empty `<div className="h-11 w-11">` spacer in the header is uglier than a `justify-start`/dropped item, but preserves BrowseFeed's exact header geometry (Back left, empty right slot); keeps the two feeds visually aligned frame-to-frame.
+
+**Issues**: none.
+
+**Resolution**: `npx tsc --noEmit` clean; `npm run build` clean.
+
+**Learnings**:
+- `FEED_RAIL_BOTTOM` had drifted — BrowseFeed was inlining the desired value while the constant was still on the phase-45.21 (thumb-height) setting. Any time an owner asks for a "match X" style change and the target is a shared surface, check the constants file first for a mismatched central value.
+- Owner language "所有 feed" = literally all three feed surfaces. Community listing carousel was silent-pass because it was already correct; called that out here rather than skipping it in the log.
+
+**Next steps**: push branch, wait for Vercel preview on `phase69/…`, verify on `/browse`, `/c/wallingford/feed`, and a listing carousel in `/c/wallingford/feed` → tap 🏠. Merge to `main` after visual check.
+
 ## 2026-07-03 — Phase 68.4b: Unify CommunityVideoFeed with new rail pattern
 
 **Objective**: Owner: "按照这个样式 现在盖其他几个 feed 页面 让他们都统一". Extend the 68.4 circular-rail-button pattern to the other feed surfaces.
