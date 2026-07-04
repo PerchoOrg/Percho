@@ -2,6 +2,11 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.71.1 — Render worker hotfix + first live E2E (2026-07-04)
+
+### 🔧 Fixed
+- Render worker was passing `--input-dir` to the Ken Burns generator, which expects `--photos`. First real click failed with "arguments are required: --photos"; the fix and a requeue produced the first end-to-end job: 8 photos → 24s / 4.7 MB → Cloudflare Stream `884c7a5c…`, `listing_videos.status='ready'`.
+
 ## v0.71.0 — Agents can now generate a home tour video from listing photos (2026-07-05)
 
 ### 🚀 Features

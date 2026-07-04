@@ -241,7 +241,7 @@ def process_job(job: dict[str, Any]) -> None:
         cmd = [
             "python3",
             str(GENERATE_SCRIPT),
-            "--input-dir",
+            "--photos",
             str(workdir),
             "--output",
             str(out_mp4),

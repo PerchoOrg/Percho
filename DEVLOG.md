@@ -2,6 +2,23 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-07-04 — Phase 71.1: Render worker hotfix + first live E2E
+
+**Objective**: Actually run the render daemon on this EC2 box (user: "你去跑daemon") and verify the pipeline produces a real Cloudflare Stream video.
+
+**Actions**:
+- Installed the systemd unit at `/etc/systemd/system/vicinity-render-worker.service`, `daemon-reload`, `enable --now`. Log path: `/var/log/vicinity-render-worker.log` (chown ubuntu).
+- First real job (`e59ee010…` on listing `f0857cec…`, 8 photos) failed immediately: `generate.py: error: the following arguments are required: --photos`. The worker was passing `--input-dir` — a subagent hallucinated the flag name.
+- Patched `scripts/render-worker/worker.py` `--input-dir` → `--photos`, restarted daemon, requeued the failed job (PATCH `render_jobs.status='queued'`, `listing_videos.status='processing'`) via PostgREST.
+- Second attempt succeeded end-to-end: 8 photos → 24s / 4.7 MB MP4 → CF Stream simple-upload → `cf_video_id=884c7a5c92efa95efb0f988cdde3feb7` → `listing_videos.status='ready'`, `external_url` sentinel cleared, `duration_sec=24`, `render_jobs.status='done'`.
+
+**Verification**: DB row inspected via PostgREST; log tail shows `[ken-burns] done` + `uploaded to CF: 884c7a5c…` + `[job …] done`. Feed selects `.eq('status','ready')` so the video is now live in the buyer swipe feed for that listing.
+
+**Issues**:
+- Sibling-subagent flag hallucination — `generate.py --help` was never re-checked before wiring. Cheap fix but should have been caught in the delegation's own smoke test. Mitigation for next time: worker README should include a `--dry-run` mode that exec's `generate.py --help` on install.
+
+**Next steps**: click Generate from the live UI on a second listing to confirm auth path + polling UI end-to-end (this run bypassed the API and requeued via PostgREST).
+
 ## 2026-07-05 — Phase 71: Agent-generated home tour videos (CF Stream + EC2 render worker)
 
 **Objective**: Wire up the "Create a home tour video" button on the listing edit page (Media tab) to actually produce a Ken Burns MP4 from the listing's photos, host it on Cloudflare Stream, and attach it as a `listing_videos` row. Replaces the Phase 12 501 stub / Phase 48 disabled UI. Architecture C2: manual trigger → API enqueues job → out-of-process EC2 render worker (Python) polls, renders via `scripts/ken-burns/generate.py`, uploads to CF Stream, updates the row.
