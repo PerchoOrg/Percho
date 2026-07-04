@@ -21,6 +21,7 @@ export interface MockListing {
   days_on_market: number;
   description: string;
   photo_urls: string[];
+  videoUrl?: string;
 }
 
 // Curated Unsplash photo IDs of homes/interiors — hotlinked at ?w=800.
@@ -80,6 +81,7 @@ export const MOCK_LISTINGS: MockListing[] = [
     description:
       'Modern Buckhead estate with chef’s kitchen, primary-on-main, and a resort-style backyard. Walk to Phipps Plaza and Lenox.',
     photo_urls: HOUSE_PHOTOS_A,
+    videoUrl: '/demo/vicinity-slideshow-demo.mp4',
   },
   {
     address: '2870 W Paces Ferry Rd NW',

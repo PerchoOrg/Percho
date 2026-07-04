@@ -104,8 +104,82 @@ def pick_mode(index: int, zoom_mode: str) -> str:
     return ["pan-lr", "zoom-in", "pan-tb", "zoom-out"][index % 4]
 
 
-def render_clip(src: str, dst: str, duration: float, mode: str, w: int, h: int) -> None:
+def listing_overlay_filter(overlay: dict, w: int, h: int) -> str:
+    """
+    Build a filter chain that draws a bottom gradient bar + listing details.
+    Approximates a linear alpha gradient (0 at top → 0.65 at bottom) via
+    stacked semi-transparent drawboxes, then two columns of drawtext.
+    """
+    price = overlay.get("price_display", "")
+    specs = overlay.get("specs", "")
+    address = overlay.get("address", "")
+    neighborhood = overlay.get("neighborhood", "")
+
+    bar_h = 150
+    bar_top = h - bar_h
+    bands = 15
+    band_h = bar_h // bands  # 10px
+
+    font_bold_candidates = [
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+        "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
+    ]
+    font_reg_candidates = [
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+        "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
+    ]
+    font_bold = next((f for f in font_bold_candidates if os.path.exists(f)), None)
+    font_reg = next((f for f in font_reg_candidates if os.path.exists(f)), None)
+
+    parts = []
+    for i in range(bands):
+        alpha = 0.65 * (i + 1) / bands
+        y = bar_top + i * band_h
+        parts.append(
+            f"drawbox=x=0:y={y}:w={w}:h={band_h}:color=black@{alpha:.3f}:t=fill"
+        )
+
+    def _draw(text, size, color, x_expr, y, bold=True):
+        if not text:
+            return None
+        d = [
+            f"text='{escape_drawtext(text)}'",
+            f"fontsize={size}",
+            f"fontcolor={color}",
+            f"x={x_expr}",
+            f"y={y}",
+        ]
+        f = font_bold if bold else font_reg
+        if f:
+            d.append(f"fontfile={f}")
+        return "drawtext=" + ":".join(d)
+
+    # Left column
+    left_x = 60
+    price_y = bar_top + 30
+    specs_y = bar_top + 95
+    # Right column (right-aligned via w-tw)
+    right_pad = 60
+    addr_y = bar_top + 42
+    hood_y = bar_top + 100
+
+    for d in [
+        _draw(price, 48, "white", left_x, price_y, bold=True),
+        _draw(specs, 26, "0xd9dde8", left_x, specs_y, bold=False),
+        _draw(address, 28, "white", f"w-tw-{right_pad}", addr_y, bold=True),
+        _draw(neighborhood, 22, "0xa9b1c6", f"w-tw-{right_pad}", hood_y, bold=False),
+    ]:
+        if d:
+            parts.append(d)
+
+    return ",".join(parts)
+
+
+def render_clip(src: str, dst: str, duration: float, mode: str, w: int, h: int,
+                overlay: dict | None = None) -> None:
     vf = kenburns_filter(mode, duration, w, h)
+    if overlay:
+        vf = vf + "," + listing_overlay_filter(overlay, w, h)
     cmd = [
         "ffmpeg", "-y", "-loop", "1", "-i", src,
         "-t", f"{duration:.3f}",
@@ -298,6 +372,8 @@ def main() -> None:
     p.add_argument("--bgm", default=None, help="Path to background music (mp3/m4a/wav)")
     p.add_argument("--ending-card", default=None,
                    help="Path to JSON with {price,beds,baths,sqft,address,agent_name}")
+    p.add_argument("--listing-overlay", default=None,
+                   help="Path to JSON with {price_display,specs,address,neighborhood,show_on_clips}")
     p.add_argument("--transition", default="crossfade", choices=["crossfade"])
     p.add_argument("--zoom-mode", default="auto",
                    choices=["auto", "pan-lr", "pan-tb", "zoom-in", "zoom-out"])
@@ -331,6 +407,13 @@ def main() -> None:
         with open(args.ending_card) as f:
             ending = json.load(f)
 
+    listing_overlay = None
+    overlay_clips: set[int] = set()
+    if args.listing_overlay:
+        with open(args.listing_overlay) as f:
+            listing_overlay = json.load(f)
+        overlay_clips = set(listing_overlay.get("show_on_clips", []) or [])
+
     print(f"[ken-burns] {len(photos)} photos, {per}s each, {w}x{h}, xfade={xfade}s")
 
     with tempfile.TemporaryDirectory(prefix="kenburns-") as tmp:
@@ -338,8 +421,11 @@ def main() -> None:
         for i, ph in enumerate(photos):
             mode = pick_mode(i, args.zoom_mode)
             out = os.path.join(tmp, f"clip_{i:03d}.mp4")
-            print(f"[ken-burns] ({i+1}/{len(photos)}) rendering {ph.name} → {mode}")
-            render_clip(str(ph), out, per, mode, w, h)
+            # show_on_clips is 1-indexed by convention
+            clip_overlay = listing_overlay if (i + 1) in overlay_clips else None
+            tag = f" +overlay" if clip_overlay else ""
+            print(f"[ken-burns] ({i+1}/{len(photos)}) rendering {ph.name} → {mode}{tag}")
+            render_clip(str(ph), out, per, mode, w, h, overlay=clip_overlay)
             clips.append(out)
 
         if ending is not None:

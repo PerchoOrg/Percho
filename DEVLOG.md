@@ -2,6 +2,23 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-07-04 — Phase 70.9: Per-listing video generation pipeline + flagship demo re-render with listing overlay
+
+**Objective**: Owner wants each MLS-autofilled listing to auto-generate a professional-looking video (like Zillow reels) with room order (exterior → living → kitchen → bedroom → bathroom → backyard) and non-intrusive overlay of price/beds/baths/address.
+
+**Actions**:
+- `scripts/ken-burns/generate.py` — new `--listing-overlay PATH` flag. Loads a JSON with `price_display`, `specs`, `address`, `neighborhood`, and `show_on_clips` (1-indexed list). Renders a bottom-of-frame two-column overlay via ffmpeg drawtext + a stacked-drawbox alpha gradient (0 → 0.65). Overlay is gated per clip — only the first N clips get info; the rest stay clean for immersion.
+- `docs/ken-burns/demo/flagship-overlay.json` — flagship listing metadata: $1,895,000 · 5bd/4.5ba/4820sqft · 3520 Peachtree Rd NE · Buckhead · Atlanta. `show_on_clips: [1,2,3]`.
+- `public/demo/vicinity-slideshow-demo.mp4` — re-rendered from 6 photos in industry-standard order (exterior → living → kitchen → bedroom → bathroom → backyard, skipping dining and office to tighten pacing to 23.8s @ 1080×1920 · 8.0 MB · h264+aac).
+- `lib/mls/mock-data.ts` — added optional `videoUrl?: string` to `MockListing`. Populated ONLY on the flagship Buckhead listing (`/demo/vicinity-slideshow-demo.mp4`); the other 14 listings leave it undefined.
+- `app/(public)/demo/autofill/_components/AutofillDemo.tsx` — top of the result card now renders either an inline `<video controls playsInline autoPlay muted>` (9:16, `max-w-xs`) when `videoUrl` is set, OR a placeholder box with the first photo as background + a "Video generating…" pill and "Auto-render pipeline queued" subtitle. Preserves existing spec sheet below.
+
+**Decisions**: 1 flagship listing gets a real video, 14 get "generating" placeholders — honest about pipeline vs finished-samples split. Overlay only on first 3 clips (info) to avoid visual fatigue on later immersive clips. Ken Burns stays pan/zoom-only, no music-cue tricks. Flagship JSON lives in `docs/` next to source photos so the whole render is reproducible from repo checkouts.
+
+**Vision QA (single-frame sample)**: exterior + overlay clip scored 8.5/10 for "professional Zillow/Redfin reel" — clean two-column layout, tasteful gradient, no cropping. Later immersion clips confirmed clean (no overlay drift). Minor nit called out: right-column baseline slightly below left-column second row, gradient could extend a hair higher — deferred, not shipping-blocking.
+
+**Followup**: `scripts/ken-burns/reproduce-demo.sh` still uses the old flow (no `--listing-overlay`, no 6-photo subset). Its heredoc will overwrite `ending-card.json` on next run. Update the shell script when we do the next Ken Burns iteration so this render is one-command reproducible.
+
 ## 2026-07-04 — Phase 70.8: Demo video hosted at public/demo/, embedded on /internal/meetup
 
 **Objective**: Owner asked to put the KW-meetup demo mp4 on the site so he can pull it up on his phone at the meetup, and asked directly "who can see it if I put it on the server".

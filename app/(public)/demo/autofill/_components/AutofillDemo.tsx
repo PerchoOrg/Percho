@@ -103,6 +103,36 @@ export function AutofillDemo() {
           </div>
 
           <div className="p-5 sm:p-6">
+            {/* Video / placeholder */}
+            <div className="mb-5 flex justify-center">
+              {selected.videoUrl ? (
+                <video
+                  key={selected.videoUrl}
+                  controls
+                  playsInline
+                  autoPlay
+                  muted
+                  className="w-full max-w-xs rounded-lg aspect-[9/16] bg-black"
+                  src={selected.videoUrl}
+                />
+              ) : (
+                <div
+                  className="relative w-full max-w-xs overflow-hidden rounded-lg aspect-[9/16] bg-cover bg-center"
+                  style={{ backgroundImage: `url(${selected.photo_urls[0]})` }}
+                >
+                  <div className="absolute inset-0 bg-black/40" />
+                  <div className="absolute inset-0 flex flex-col items-center justify-center px-4 text-center">
+                    <div className="rounded-full bg-black/70 px-3 py-1 text-xs font-medium text-white">
+                      Video generating…
+                    </div>
+                    <div className="mt-2 text-[11px] text-white/80">
+                      Auto-render pipeline queued
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
             <div className="flex items-start justify-between gap-4">
               <div>
                 <h2 className="font-serif text-2xl text-ink sm:text-3xl">

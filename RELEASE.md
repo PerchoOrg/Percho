@@ -2,6 +2,13 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.70.5 — Per-listing video generation pipeline (2026-07-04)
+
+### ✨ Improvements
+- **Autofill demo**: the flagship Buckhead listing ($1,895,000 · 3520 Peachtree Rd NE) now shows a real 24-second Ken Burns video at the top of the result card — exterior → living → kitchen → bedroom → bathroom → backyard, with a subtle price/beds/baths overlay on the first 3 clips only.
+- **Other 14 listings**: show a "Video generating…" placeholder over the first photo, so the demo honestly conveys "the pipeline is running, this listing's video is queued" instead of pretending every home has a finished reel.
+- **Ken Burns generator**: extended with a `--listing-overlay` flag so future auto-generated videos can imprint listing metadata without touching the ending card.
+
 ## v0.70.4 — Demo video embedded on the meetup docs hub (2026-07-04)
 
 ### ✨ Improvements
