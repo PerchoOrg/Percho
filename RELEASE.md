@@ -2,6 +2,16 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.71.2 — Ken Burns: full-photo composition, no more center-crop (2026-07-04)
+
+### 🎨 Improved
+- Home tour videos now show the **entire listing photo** instead of cropping the center 40%. Previously landscape source photos (1920×1280) were force-cropped to 1080×1920 and then zoomed in by 1.5×, leaving only the middle at low effective resolution — users complained the videos looked pixelated and zoomed-in.
+- New composition: the source photo is placed inside a blurred, dimmed version of itself (TikTok/Reels style). The full photo is always visible; the blurred backdrop fills the vertical canvas without black bars. Ken Burns pan/zoom is retained but reduced from 1.5× to 1.10× so most of the photo stays in frame throughout each clip.
+- Foreground has a 150px alpha fade at top and bottom so it blends into the blurred backdrop instead of showing a hard seam.
+
+### 🧹 Chores
+- Deleted the 10 `mock-atlanta-*` demo listings and their `pending://render` / `public/demo/*.mp4` walkthroughs. Meetup demos will use real listings only.
+
 ## v0.71.1 — Render worker hotfix + first live E2E (2026-07-04)
 
 ### 🔧 Fixed

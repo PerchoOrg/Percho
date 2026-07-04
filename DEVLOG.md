@@ -2,6 +2,39 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-07-04 — Phase 71.2: Ken Burns full-photo composition + mock listing purge
+
+**Trigger**: User reviewed the first live E2E render (`884c7a5c…`) and complained: "生成的视频里每个照片都只截取了中间部分 像素低 你能不能尽量用原图尺寸".
+
+**Root cause** (`scripts/ken-burns/generate.py:56` `kenburns_filter`):
+- Old filter did `scale=(4w)×(4h):force_original_aspect_ratio=increase, crop=(4w)×(4h)` — force-fill the vertical 1080×1920 canvas by cropping. Landscape source photos (typical MLS: 1920×1280 or 4000×3000, aspect ~1.5) get their left/right ~60% chopped off, only the center strip survives.
+- Then `zoompan` with `zoom_max=1.5` further magnifies that center strip. Effective visible area of the source photo ≈ 25%. That's why the output looked "cropped to the middle" and "pixelated" — very little of the original photo actually reached the viewer.
+
+**Fix** (blur-letterbox composition, TikTok/Reels style):
+1. `split=2` — one copy for background, one for foreground.
+2. Background: cover-crop to 1080×1920 → `boxblur=r=80:p=2` (heavily blurred, no discernible detail) → `eq brightness=-0.20 saturation=0.70` (dim + desaturate, so bg doesn't compete with fg).
+3. Foreground: `scale=1080:1920:force_original_aspect_ratio=decrease` — the entire photo fits inside the canvas (letterboxed, aspect preserved). Then `format=yuva420p, geq(a=fade top/bottom 150px)` for a soft alpha fade so fg blends into bg instead of showing a hard seam.
+4. `overlay` fg on bg, then upscale to 4× canvas with `flags=lanczos` for smooth zoompan motion.
+5. Zoom range reduced: `zoom-in`/`zoom-out` max from 1.5 → 1.10; pan constant zoom from 1.25 → 1.08. Motion is still visible but doesn't magnify away most of the photo.
+
+**Verification**:
+- Local smoke test with 4 seed photos (`docs/ken-burns/demo/photos/*.jpg`, 1920×1280 landscape) → 10.5s / 2.52 MB output.
+- Vision AI on two sample frames (exterior + interior): confirmed foreground fully visible on all four edges, no crop; blur strong enough that bg content is not identifiable; seam basically invisible after 150px alpha fade. Verdict on exterior frame: "排版合格,可用于发布".
+- Alpha channel spot-checked: `y=0 alpha=0`, `y=30 alpha=0x7f`, `y=60 alpha=0xff` (fade ramp working correctly).
+
+**Also** (user directive: "不用给那10个假的做了 你直接删除那10个listing … 下周meetup我要用真数据"):
+- Deleted the 10 `mock-atlanta-*` demo listings and their walkthrough rows (`listing_videos` where `external_url LIKE 'pending://%'` OR references `/demo/listings/*.mp4`). Meetup will run entirely off real MLS data + agent-generated tours.
+
+**Not touched**:
+- No frontend changes. `<video>` player is source-agnostic; only the byte content of new renders differs.
+- Overlays (drawtext price/beds/baths on first 3 clips) still applied on top of the composite — position math unchanged.
+
+**Files**: `scripts/ken-burns/generate.py` (kenburns_filter rewritten, +41/-16), `RELEASE.md` (v0.71.2), `DEVLOG.md` (this section).
+
+**Commit**: (see git).
+
+---
+
 ## 2026-07-04 — Phase 71.1: Render worker hotfix + first live E2E
 
 **Objective**: Actually run the render daemon on this EC2 box (user: "你去跑daemon") and verify the pipeline produces a real Cloudflare Stream video.

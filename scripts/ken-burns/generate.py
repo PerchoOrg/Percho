@@ -55,47 +55,72 @@ def ffprobe_duration(path: str) -> float:
 
 def kenburns_filter(mode: str, duration: float, w: int, h: int) -> str:
     """
-    Build a Ken Burns zoompan filter for a given mode.
+    Build a Ken Burns filter for a given mode with a "blur letterbox" composition:
 
-    We upscale the source to a large canvas so zoompan (which works in integer
-    pixel steps at output size) has smooth motion. Output is always w x h.
+      - Background layer: source scaled to cover w×h (crop overflow), heavily
+        blurred and dimmed. Fills the vertical canvas without introducing
+        black bars for landscape photos.
+      - Foreground layer: source scaled to fit inside w×h (aspect preserved,
+        no crop). The full photo is always visible, centered.
+      - Composite layer: overlay fg on bg, then apply a mild pan/zoom
+        (max 1.10x) so most of the photo stays visible throughout the clip.
+
+    This replaces the older "increase + crop" approach that cropped ~60% off
+    landscape source photos and revealed only the center at low effective
+    resolution. Users complained the resulting videos looked pixelated and
+    zoomed-in — now the full image is always in frame.
     """
     frames = int(duration * FPS)
-    # Upscale factor for smoothness (zoompan jitter mitigation).
+    # Upscale factor for smooth zoompan motion (integer-pixel steps at output size).
     scale_w = w * 4
     scale_h = h * 4
-    base = (
-        f"scale={scale_w}:{scale_h}:force_original_aspect_ratio=increase,"
-        f"crop={scale_w}:{scale_h},setsar=1,"
+
+    # Compose the letterbox-blur canvas at target w×h, then upscale for zoompan.
+    # Foreground gets a wide alpha fade at top/bottom (150px) so the seam with
+    # the blur background disappears. Background is blurred heavily and dimmed
+    # so the seam contrast is minimized and viewer focus stays on the foreground.
+    fade_px = 150
+    compose = (
+        f"split=2[__bg][__fg];"
+        f"[__bg]scale={w}:{h}:force_original_aspect_ratio=increase,"
+        f"crop={w}:{h},setsar=1,boxblur=luma_radius=80:luma_power=2,"
+        f"eq=brightness=-0.20:saturation=0.70[__bgo];"
+        f"[__fg]scale={w}:{h}:force_original_aspect_ratio=decrease,setsar=1,"
+        f"format=yuva420p,"
+        f"geq=r='r(X,Y)':g='g(X,Y)':b='b(X,Y)':"
+        f"a='if(lt(Y,{fade_px}),255*Y/{fade_px},"
+        f"if(gt(Y,H-{fade_px}),255*(H-Y)/{fade_px},255))'[__fgo];"
+        f"[__bgo][__fgo]overlay=(W-w)/2:(H-h)/2,"
+        f"scale={scale_w}:{scale_h}:flags=lanczos,setsar=1"
     )
 
+    # Milder motion than before (max zoom 1.10 instead of 1.5) so most of the
+    # composite (and therefore the fully-visible foreground photo) stays in frame.
     if mode == "zoom-in":
-        z = "min(zoom+0.0015,1.5)"
+        z = "min(zoom+0.0009,1.10)"
         x = "iw/2-(iw/zoom/2)"
         y = "ih/2-(ih/zoom/2)"
     elif mode == "zoom-out":
-        # start zoomed, ease out
-        z = f"if(lte(zoom,1.0),1.5,max(1.001,zoom-0.0015))"
+        z = f"if(lte(zoom,1.0),1.10,max(1.001,zoom-0.0009))"
         x = "iw/2-(iw/zoom/2)"
         y = "ih/2-(ih/zoom/2)"
     elif mode == "pan-lr":
-        z = "1.25"
+        z = "1.08"
         x = f"(iw-iw/zoom)*on/{max(frames-1,1)}"
         y = "(ih-ih/zoom)/2"
     elif mode == "pan-tb":
-        z = "1.25"
+        z = "1.08"
         x = "(iw-iw/zoom)/2"
         y = f"(ih-ih/zoom)*on/{max(frames-1,1)}"
     else:
-        # fallback slow zoom-in
-        z = "min(zoom+0.001,1.3)"
+        z = "min(zoom+0.0006,1.08)"
         x = "iw/2-(iw/zoom/2)"
         y = "ih/2-(ih/zoom/2)"
 
     zp = (
         f"zoompan=z='{z}':x='{x}':y='{y}':d={frames}:s={w}x{h}:fps={FPS}"
     )
-    return base + zp + f",format=yuv420p"
+    return compose + "," + zp + f",format=yuv420p"
 
 
 def pick_mode(index: int, zoom_mode: str) -> str:
