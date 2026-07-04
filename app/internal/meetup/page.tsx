@@ -103,7 +103,7 @@ export default function MeetupIndexPage() {
       </header>
 
       {groups.map((g) => (
-        <section key={g.slug} className="space-y-3">
+        <section key={g.slug} id={g.slug} className="space-y-3 scroll-mt-6">
           <h2 className="text-xl font-serif tracking-tighter border-b border-line pb-1">
             {g.title}
           </h2>

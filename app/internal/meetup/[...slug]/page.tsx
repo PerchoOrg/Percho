@@ -13,6 +13,12 @@ export const metadata: Metadata = {
 const DOCS_ROOT = path.join(process.cwd(), 'docs');
 const ALLOWED_ROOTS = ['meetup-kw-atlanta', 'mls-integration', 'ken-burns'];
 
+const FOLDER_TITLES: Record<string, string> = {
+  'meetup-kw-atlanta': 'Meetup — KW Atlanta',
+  'mls-integration': 'MLS Integration',
+  'ken-burns': 'Ken Burns',
+};
+
 function resolveMd(slugParts: string[]): string | null {
   if (!slugParts.length) return null;
   const root = slugParts[0];
@@ -30,9 +36,23 @@ export default function MdPage({ params }: { params: { slug: string[] } }) {
   if (!full) notFound();
   const md = fs.readFileSync(full, 'utf8');
   const rel = params.slug.join('/');
+  const folder = params.slug[0] ?? '';
+  const folderTitle = FOLDER_TITLES[folder] ?? folder;
+  const fileBase = params.slug[params.slug.length - 1] ?? '';
 
   return (
     <article className="space-y-6">
+      <nav className="text-xs text-muted flex flex-wrap items-center gap-1.5" aria-label="Breadcrumb">
+        <Link href="/internal/meetup" className="underline hover:text-ink2">
+          Docs
+        </Link>
+        <span aria-hidden>/</span>
+        <Link href={`/internal/meetup#${folder}`} className="underline hover:text-ink2">
+          {folderTitle}
+        </Link>
+        <span aria-hidden>/</span>
+        <span className="font-mono text-ink2">{fileBase}</span>
+      </nav>
       <div className="text-xs text-muted font-mono">docs/{rel}.md</div>
       <div
         className="

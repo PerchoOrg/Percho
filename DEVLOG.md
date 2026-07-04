@@ -2,6 +2,22 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-07-04 — Phase 70.2: /internal/meetup — breadcrumbs on doc pages
+
+**Objective**: Overnight iteration. Doc pages under `/internal/meetup/[...slug]` had only a "← All docs" link at the bottom — no visual sense of which folder a doc belonged to, and no way to jump back to that folder's section on the index. Owner is scrolling on his phone Tuesday; a breadcrumb at the top makes the packet feel less like a flat file dump.
+
+**Actions**:
+- `app/internal/meetup/[...slug]/page.tsx`: added a top breadcrumb nav — `Docs / <folder-title> / <filename>`. Folder link points to `/internal/meetup#<folder-slug>` so it deep-links to that section on the index. Introduced a small `FOLDER_TITLES` map (dup of the one in `page.tsx` — 3 entries, not worth hoisting to a shared module).
+- `app/internal/meetup/page.tsx`: added `id={g.slug}` + `scroll-mt-6` on each `<section>` so the anchor jump lands at the section header, not glued to the top of the viewport.
+
+**Decisions**: kept the existing "← All docs" bottom link — it's fine as a fallback and doesn't compete with the breadcrumb visually (bottom vs top, different affordance). Considered making the breadcrumb replace the `docs/<rel>.md` mono line but that line is genuinely useful for anyone copy-pasting a path, so kept both.
+
+**Issues**: none. `npx tsc --noEmit` clean, `npm run build` clean.
+
+**Learnings**: `scroll-mt-*` is the right knob for anchor-jump offset in a page with a sticky header — don't reach for JS `scrollIntoView` when a Tailwind margin utility gets it done.
+
+**Next steps**: iteration 3 target is `/agents` hero copy sync from `docs/meetup-kw-atlanta/landing-page-copy.md`.
+
 ## 2026-07-04 — Phase 70.1: /internal/meetup — pin OVERNIGHT-SUMMARY / README to top of each folder
 
 **Objective**: Overnight polish loop iteration. Doc index at `/internal/meetup` sorted every folder alphabetically, so `OVERNIGHT-SUMMARY.md` (the entry doc) landed mid-list under `meetup-kw-atlanta` behind `business-card`, `discovery-questions`, etc. Owner opens the packet on his phone Tuesday and should see the summary first.
