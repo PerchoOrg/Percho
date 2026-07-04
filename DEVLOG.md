@@ -2,6 +2,21 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-07-04 — Phase 70.8: Demo video hosted at public/demo/, embedded on /internal/meetup
+
+**Objective**: Owner asked to put the KW-meetup demo mp4 on the site so he can pull it up on his phone at the meetup, and asked directly "who can see it if I put it on the server".
+
+**Actions**:
+- `public/demo/vicinity-slideshow-demo.mp4` — copied 8.6 MB mp4 out of the gitignored `docs/ken-burns/demo/` into `public/`.
+- `.gitignore` — added `!public/demo/*.mp4` negation so the served copy stays tracked (source under `docs/ken-burns/demo/` remains ignored).
+- `app/internal/meetup/page.tsx` — added a "Demo video" section above the search box with a native `<video controls playsInline>` player, a "Download MP4" link, and a plain-language warning that the URL is public.
+
+**Decisions**: served from `public/`, not Supabase Storage or a signed URL. Anyone with the URL can view/download — explicit tradeoff, meetup crew shares the phone screen so no auth needed. Track the mp4 in git via a gitignore negation rather than git-lfs; 8.6 MB is well under GitHub's 100 MB blob limit. Warned in-copy on the page so the owner doesn't have to remember exposure model.
+
+**Issues**: none. `tsc --noEmit` clean, `npm run build` clean.
+
+**Learnings**: When "put a demo on the server" is the ask, spell out the exposure surface before writing code — three protection tiers (public / hidden URL / signed URL) with different tradeoffs, let the owner pick. Don't silently pick "auth-protected" and slow him down; don't silently pick "public" and expose an asset he wanted private.
+
 ## 2026-07-04 — Phase 70.7: /demo/autofill — back link to /agents
 
 **Objective**: Overnight iteration. Priority list 1–10 is done (owner's list checked against DEVLOG 70.1–70.6). Picked own polish: `/demo/autofill` had no return path in the UI. Agent who tapped the phase 70.3 "See a demo →" link from `/agents` currently has to hit browser-back to get to the waitlist form — non-obvious on a phone during a live pitch, and if they landed on `/demo/autofill` from the QR-shared URL directly there is no discoverable path to the beta signup.

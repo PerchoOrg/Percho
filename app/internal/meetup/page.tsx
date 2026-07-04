@@ -103,6 +103,30 @@ export default function MeetupIndexPage() {
         </div>
       </header>
 
+      <section className="space-y-3">
+        <h2 className="text-xl font-serif tracking-tight">Demo video</h2>
+        <p className="text-ink2 text-sm">
+          24s Ken Burns slideshow for Tuesday&apos;s pitch. Direct link is public — anyone with
+          the URL can view. Do not share outside the meetup crew.
+        </p>
+        <video
+          controls
+          playsInline
+          preload="metadata"
+          className="w-full max-w-sm rounded border border-line bg-black"
+          src="/demo/vicinity-slideshow-demo.mp4"
+        />
+        <p className="text-ink2 text-xs">
+          <a
+            href="/demo/vicinity-slideshow-demo.mp4"
+            className="underline hover:text-ink"
+            download
+          >
+            Download MP4 (8.6 MB)
+          </a>
+        </p>
+      </section>
+
       <MeetupSearch groups={groups} />
     </div>
   );

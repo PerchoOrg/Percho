@@ -2,6 +2,12 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.70.4 — Demo video embedded on the meetup docs hub (2026-07-04)
+
+### ✨ Improvements
+- The 24-second Ken Burns slideshow now plays inline at the top of the internal docs hub. Tap to preview on any phone; there's a Download MP4 link right below.
+- The video URL is public — anyone the link is shared with can view. That's called out on the page so nothing is hidden.
+
 ## v0.70.3 — Back link on the live demo page (2026-07-04)
 
 ### ✨ Improvements
