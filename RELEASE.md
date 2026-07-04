@@ -2,6 +2,13 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.68.4b — All feed pages share the same right-rail design (2026-07-03)
+
+### ✨ Improvements
+- **Community feed** (`/c/[slug]`) now uses the same circular-button rail as the browse feed. The "🏠 Live here" pill in the top-left is replaced by a 🏠 button at the top of the right stack with a red count badge showing how many homes are in this neighborhood.
+- **Listing feed** (`/v/[agent]/[listing]`) inherits the same design automatically.
+- All three feed pages now speak with one visual voice — top of stack = "explore this collection", the rest = social actions.
+
 ## v0.68.4 — Neighborhood button matches the other rail buttons now (2026-07-03)
 
 ### ✨ Improvements

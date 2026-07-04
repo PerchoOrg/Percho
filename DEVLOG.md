@@ -2,6 +2,29 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-07-03 — Phase 68.4b: Unify CommunityVideoFeed with new rail pattern
+
+**Objective**: Owner: "按照这个样式 现在盖其他几个 feed 页面 让他们都统一". Extend the 68.4 circular-rail-button pattern to the other feed surfaces.
+
+**Actions**:
+- `/v/[agentSlug]/[listingSlug]` — VideoFeed is a pass-through to BrowseFeed (see phase-27 hotfix), so it inherits 68.4 automatically. No changes needed.
+- `/c/[slug]` (CommunityVideoFeed):
+  - Deleted the `top-20 left-3` "🏠 Live here" chip (with the pulse dot).
+  - Added an `ActionButton` at the top of the right rail (before Like), rendered when `listings.length > 0`. Icon = 🏠 emoji, label = "Homes", `onClick` opens `CommunityListingsSheet`, `badge={listings.length}` `badgeColor="red"`.
+  - Rail order top→bottom: **Homes** → Like → Save → Contact.
+- All three feed surfaces (`/browse`, `/v/*`, `/c/*`) now share:
+  - No top-left chip (dead zone eliminated).
+  - Rail-only navigation with the "explore this collection" button as a red-badge ActionButton at the top.
+
+**Decisions**:
+- **Label = "Homes" not "Live here"**: fits under the 48px circle. "Live here" would truncate. "Homes" + red count communicates "N homes in this collection" cleanly.
+- **Kept community chip on individual listing cards inside CommunityVideoFeed?** — n/a; CommunityVideoFeed doesn't render Card, it's a flat community-level feed.
+- **Pulse dot dropped**: the red count badge already draws the eye — same reason we dropped the pulse in phase 68.2 on BrowseFeed. Consistent across surfaces.
+
+**Verification**: `npx tsc --noEmit` clean; `npm run build` clean.
+
+**Next steps**: Deploy → verify all three feeds side-by-side in Vercel preview → send to 笑云.
+
 ## 2026-07-03 — Phase 68.4: Chip → circular ActionButton at top of rail (owner: "不好看")
 
 **Objective**: Owner rejected the two-line chip look. Ask: "做成一个圆形加数字 不要文字了 放在 like 上面". Convert the neighborhood chip into a circular ActionButton matching Like/Save/Contact/Share, placed at the top of the rail with the video count as a red notification badge.

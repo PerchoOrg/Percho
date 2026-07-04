@@ -570,6 +570,22 @@ export function CommunityVideoFeed({
         className={`absolute right-3 ${FEED_Z.rail} flex flex-col items-center gap-3`}
         style={{ bottom: FEED_RAIL_BOTTOM }}
       >
+        {/* Phase 68.4 (2026-07-03): unify with BrowseFeed rail. The
+         * "🏠 Live here" chip that used to live top-left is replaced by
+         * a circular ActionButton at the top of the rail with the
+         * listings count as a red notification badge — mirrors the
+         * neighborhood ActionButton pattern owner just approved on
+         * BrowseFeed so all three feed surfaces read identically. */}
+        {listings.length > 0 && (
+          <ActionButton
+            onClick={() => setListingsSheetOpen(true)}
+            label="Homes"
+            badge={listings.length}
+            badgeColor="red"
+          >
+            <span aria-hidden="true" className="text-[20px] leading-none">🏠</span>
+          </ActionButton>
+        )}
         <ActionButton onClick={toggleLike} label="Like" active={liked} activeColor="rose">
           <HeartIcon filled={liked} />
         </ActionButton>
@@ -596,32 +612,11 @@ export function CommunityVideoFeed({
          * chip on /browse — same corner, same job. */}
       </div>
 
-      {/* Top-left "homes here" chip — Scenario B · L1 trigger.
-       * Positioned at top-16 (just under the top header) to mirror the
-       * listing-card community chip on /browse — same corner, same job:
-       * cross-collection sheet → carousel. Hidden when the community has
-       * 0 listings (no fake data). Tap opens CommunityListingsSheet (L2).
-       * Phase 34b.1 (2026-06-17): moved from bottom-left to top-left for
-       * consistency with the listing chip the user already learned. */}
-      {listings.length > 0 && (
-        <button
-          type="button"
-          onClick={() => setListingsSheetOpen(true)}
-          aria-label={`View ${listings.length} ${
-            listings.length === 1 ? 'home' : 'homes'
-          } in ${community.name}`}
-          className={`absolute top-20 left-3 ${FEED_Z.caption} flex items-center gap-2 rounded-[10px] bg-ink/65 px-3 py-1.5 text-cream backdrop-blur-md transition-colors hover:bg-ink/75`}
-          style={{ touchAction: 'manipulation' }}
-        >
-          <span
-            aria-hidden="true"
-            className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-cream"
-            style={{ boxShadow: '0 0 6px rgba(255, 255, 255, 0.8)' }}
-          />
-          <span aria-hidden="true">🏠</span>
-          <span className="font-medium text-[12px]">Live here</span>
-        </button>
-      )}
+      {/* Phase 68.4 (2026-07-03): top-left "Live here" chip removed —
+       * replaced by the 🏠 ActionButton at the top of the right rail
+       * (see rail block above). Unifies with BrowseFeed neighborhood
+       * button and eliminates the top-left corner as a dead zone
+       * users learned to ignore. */}
 
       <CommunityListingsSheet
         open={listingsSheetOpen && !listingCarouselOpen}
