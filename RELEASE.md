@@ -2,6 +2,11 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.69.1 — Share button also moved on the neighborhood-videos carousel (2026-07-04)
+
+### 🐛 Bug Fixes
+- **Nearby-videos carousel** (opens when you tap the neighborhood button on a listing card in the browse feed): the Share button was still in the top-right corner. It's now at the bottom of the right-side action stack, matching every other feed on the site.
+
 ## v0.69.0 — Share button lives with the other rail buttons on every feed (2026-07-04)
 
 ### ✨ Improvements

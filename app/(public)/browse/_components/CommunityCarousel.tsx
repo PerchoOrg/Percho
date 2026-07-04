@@ -186,17 +186,11 @@ export function CommunityCarousel({
             <div className="flex h-9 items-center rounded-full border border-cream/20 bg-ink/55 px-3 font-medium text-[12px] text-cream backdrop-blur-md tabular-nums">
               {safeActive + 1} / {total}
             </div>
-            {onShare && (
-              <button
-                type="button"
-                onClick={onShare}
-                aria-label="Share listing"
-                className="flex h-11 w-11 items-center justify-center rounded-full border border-cream/20 bg-ink/55 text-cream backdrop-blur-md transition-colors hover:border-cream hover:text-cream"
-                style={{ touchAction: 'manipulation' }}
-              >
-                <ShareIcon />
-              </button>
-            )}
+            {/* Phase 69.1 (2026-07-04): Share moved from top-right into
+             * the right-rail bottom, matching BrowseFeed / CommunityVideoFeed
+             * / CommunityListingCarousel. Owner: "listing feed 进去 nearby
+             * video 右上角还有分享按钮" — this was the last surface still
+             * putting Share in the top header. */}
           </div>
         </div>
 
@@ -283,6 +277,11 @@ export function CommunityCarousel({
               {onContact && (
                 <ActionButton label="Contact" onClick={onContact}>
                   <CommentIcon />
+                </ActionButton>
+              )}
+              {onShare && (
+                <ActionButton label="Share" onClick={onShare}>
+                  <ShareIcon />
                 </ActionButton>
               )}
             </div>
