@@ -50,6 +50,10 @@ docs/ken-burns/demo-condo/*.mp4
 docs/ken-burns/demo/photos/*.jpg
 docs/ken-burns/demo-condo/photos/*.jpg
 docs/ken-burns/demo/bgm.mp3
+
+# render-worker BGM library (Kevin MacLeod, incompetech.com, CC-BY 4.0).
+# Fetched at deploy time via scripts/render-worker/bgm/fetch.sh, not tracked in git.
+scripts/render-worker/bgm/*.mp3
 docs/meetup-kw-atlanta/business-card.pdf
 docs/meetup-kw-atlanta/qr/vicinities-cc-agents.png
 # NOTE: public/demo/*.mp4 is the served copy; keep tracked in git.

@@ -2,6 +2,62 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-07-04 — Phase 71.3: Real-photo endings + random BGM library
+
+### Trigger
+User feedback after the mock purge (v0.71.2): "去掉生成视频里的所有关于demo的信息 这是真照片和视频 / 去掉视频里最后一张照片的价格啥的 / 加背景音 最好有10个背景音可以随机配."
+
+Interpreted as three concrete asks:
+1. Purge every "DEMO / NOT A REAL LISTING" code path — the mock listings are gone, no reason for the fallback to survive.
+2. Do not append a synthetic ending card. Let the last real photo be the last frame.
+3. Score each render with a random BGM pick from a 10-track library.
+
+### Change
+
+**worker.py**
+- Dropped the `--ending-card` argument from the `generate.py` invocation. `ENDING_CARD` constant removed. The render is now four Ken-Burns clips crossfaded end-to-end — nothing after clip 4.
+- Added `pick_bgm()` that returns a `random.choice()` over `scripts/render-worker/bgm/*.mp3` (or `None` if the directory is empty). Passed as `--bgm` when a track is picked. Empty directory falls back to a silent video so a fresh EC2 host without the fetch script still works.
+
+**generate.py**
+- Removed the `demo_flag` field, the "DEMO — NOT A REAL LISTING" `drawtext` line, and the DEMO-referring comments. `render_ending_card()` still exists (it's a general-purpose helper) but no code path calls it any more.
+
+**scripts/render-worker/bgm/**
+- New directory holding the 10-track BGM library. Not committed.
+- `fetch.sh` — idempotent bash script pulling 10 curated Kevin MacLeod tracks from `incompetech.com`. All CC-BY 4.0. Total ~120 MB.
+- `README.md` — track manifest + license + attribution requirement.
+- `.gitignore` updated so `scripts/render-worker/bgm/*.mp3` is ignored.
+
+### Track list (curated for real-estate walkthroughs — gentle ambient / cinematic, no aggressive percussion)
+| # | Title | Duration |
+|---|-------|----------|
+| 01 | Cambodian Odyssey | 74s |
+| 02 | Ether Vox | 206s |
+| 03 | Long Note Two | 462s |
+| 04 | Tranquility Base | 1109s |
+| 05 | Peaceful Desolation | 91s |
+| 06 | Meditation Impromptu 01 | 213s |
+| 07 | Meditation Impromptu 02 | 249s |
+| 08 | Nowhere Land | 132s |
+| 09 | Long Note Three | 192s |
+| 10 | Long Note Four | 600s |
+
+All ≥ 74s so any typical 12–24s home tour can loop cleanly on the fade-out.
+
+### Verification
+Local smoke test with the four demo photos (`docs/ken-burns/demo/photos/0[1-4]-*.jpg`), duration 3s each, random BGM pick landed on `04-tranquility-base.mp3`:
+- Output: 10.5s, 2.73 MB, h264 + aac ✓
+- Vision AI on last frame: real kitchen photo with blur letterbox, **no ending card, no price/beds overlay, no DEMO text** ✓
+- Vision AI on mid frame: real photo with **price/beds/address/neighborhood overlay** (real data from `overlay.json`), **no DEMO text** ✓
+
+### Deploy
+- Committed and pushed to `main`.
+- BGM library fetched locally with `bash scripts/render-worker/bgm/fetch.sh`. Same command needs to run once on the EC2 render host; already-present files are skipped.
+- `sudo systemctl restart vicinity-render-worker` after code + BGM landed on the host.
+
+### Follow-ups
+- Add BGM attribution to `vicinities.cc/legal`: "Music by Kevin MacLeod (incompetech.com) — Creative Commons: By Attribution 4.0 License."
+- If a track feels wrong for some listings later (e.g. luxury-modern vs. rustic-cottage), the next iteration is per-listing "mood" filtering rather than pure random — but not for this meetup.
+
 ## 2026-07-04 — Phase 71.2: Ken Burns full-photo composition + mock listing purge
 
 **Trigger**: User reviewed the first live E2E render (`884c7a5c…`) and complained: "生成的视频里每个照片都只截取了中间部分 像素低 你能不能尽量用原图尺寸".

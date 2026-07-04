@@ -239,7 +239,6 @@ def render_ending_card(dst: str, card: dict, duration: float, w: int, h: int) ->
     sqft = card.get("sqft", "")
     address = card.get("address", "")
     agent = card.get("agent_name", "")
-    demo_flag = card.get("demo", False)
     wordmark = card.get("wordmark", "")
     cta = card.get("cta", "")
     footer = card.get("footer", "Powered by Vicinity")
@@ -259,13 +258,11 @@ def render_ending_card(dst: str, card: dict, duration: float, w: int, h: int) ->
         f"x0=0:y0=0:x1={w}:y1={h}:duration={duration}:speed=0.00001"
     )
 
-    # Layout: DEMO banner pinned near the top, footer pinned near the bottom,
-    # everything else centered as a tight block around the vertical midpoint.
-    # y_expr uses ffmpeg expressions ((h-text_h)/2 or absolute) for placement.
+    # Layout: footer pinned near the bottom, everything else centered as a tight
+    # block around the vertical midpoint. y_expr uses ffmpeg expressions
+    # ((h-text_h)/2 or absolute) for placement.
     lines: list[tuple[str, int, str, str]] = []
     # (text, fontsize, y_expr, color) — absolute y coords for a 1920-tall canvas
-    if demo_flag:
-        lines.append(("DEMO — NOT A REAL LISTING", 36, "80", "0xff8888"))
     if wordmark:
         # Brand header wordmark, bright gold-tan, near top.
         lines.append((wordmark, 64, "280", "0xc9a961"))
@@ -304,7 +301,7 @@ def render_ending_card(dst: str, card: dict, duration: float, w: int, h: int) ->
             parts.append(f"fontfile={fontfile}")
         draws.append("drawtext=" + ":".join(parts))
 
-    # Thin divider between DEMO banner and wordmark to visually segment header.
+    # Thin divider under the wordmark to visually segment the header.
     divider_w = 420
     divider = (
         f"drawbox=x=(iw-{divider_w})/2:y=180:w={divider_w}:h=2:"

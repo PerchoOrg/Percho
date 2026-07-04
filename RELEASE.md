@@ -2,6 +2,17 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.71.3 — Real-photo endings + random BGM library (2026-07-04)
+
+### 🎨 Improved
+- Home tour videos now **end on the last real listing photo** instead of a dark "V · Vicinity" ending card. Real photos in, real photos out — no synthetic frame at the tail.
+- Every generated video is scored with a **randomly-selected background music track** from a 10-track library (Kevin MacLeod / incompetech.com, CC-BY 4.0). Two videos of the same listing will typically pick different tracks so a rapid-fire demo doesn't feel repetitive. If the BGM library is missing the worker still produces a valid silent video.
+
+### 🧹 Chores
+- Removed the "DEMO — NOT A REAL LISTING" banner code path from `generate.py`. The render worker never triggered it (mock listings were already deleted in v0.71.2), but the code and copy are now gone entirely.
+- Added `scripts/render-worker/bgm/fetch.sh` — idempotent script to pull the 10-track library on any host; files are gitignored (~120MB total) and refetched on demand.
+- BGM attribution ("Music by Kevin MacLeod, incompetech.com, CC-BY 4.0") to be added to `vicinities.cc/legal` in a follow-up.
+
 ## v0.71.2 — Ken Burns: full-photo composition, no more center-crop (2026-07-04)
 
 ### 🎨 Improved

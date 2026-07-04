@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import json
 import os
+import random
 import shutil
 import subprocess
 import sys
@@ -38,8 +39,8 @@ import requests
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 ENV_PATH = REPO_ROOT / ".env.local"
+BGM_DIR = Path(__file__).resolve().parent / "bgm"
 GENERATE_SCRIPT = REPO_ROOT / "scripts" / "ken-burns" / "generate.py"
-ENDING_CARD = REPO_ROOT / "docs" / "ken-burns" / "demo" / "ending-card.json"
 
 POLL_IDLE_SEC = 5
 PHOTO_BUCKET = "listing-photos"
@@ -169,6 +170,18 @@ def format_specs(beds: Any, baths: Any, sqft: Any) -> str:
     return " · ".join(parts)
 
 
+def pick_bgm() -> Path | None:
+    """Return a random .mp3 from BGM_DIR, or None if the directory is empty
+    or missing. The worker still produces a valid (silent) video in that case.
+    """
+    if not BGM_DIR.exists():
+        return None
+    tracks = sorted(BGM_DIR.glob("*.mp3"))
+    if not tracks:
+        return None
+    return random.choice(tracks)
+
+
 def build_overlay(listing: dict[str, Any], photo_count: int) -> dict[str, Any]:
     address = listing.get("address") or ""
     city = listing.get("city") or ""
@@ -237,6 +250,8 @@ def process_job(job: dict[str, Any]) -> None:
         overlay_path.write_text(json.dumps(overlay, indent=2))
 
         # 5. Run generate.py.
+        # No ending card: user prefers real photos to end the video (Phase 71.3).
+        # Random BGM: pick one .mp3 from ./bgm/ if any exist.
         out_mp4 = workdir / "out.mp4"
         cmd = [
             "python3",
@@ -247,9 +262,13 @@ def process_job(job: dict[str, Any]) -> None:
             str(out_mp4),
             "--listing-overlay",
             str(overlay_path),
-            "--ending-card",
-            str(ENDING_CARD),
         ]
+        bgm_choice = pick_bgm()
+        if bgm_choice:
+            cmd += ["--bgm", str(bgm_choice)]
+            print(f"[job {job['id']}] bgm={bgm_choice.name}", flush=True)
+        else:
+            print(f"[job {job['id']}] no bgm (empty {BGM_DIR})", flush=True)
         print(f"[job {job['id']}] running: {' '.join(cmd)}", flush=True)
         subprocess.run(cmd, check=True, cwd=str(REPO_ROOT))
 
