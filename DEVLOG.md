@@ -2,6 +2,21 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-07-04 — Phase 70.1: /internal/meetup — pin OVERNIGHT-SUMMARY / README to top of each folder
+
+**Objective**: Overnight polish loop iteration. Doc index at `/internal/meetup` sorted every folder alphabetically, so `OVERNIGHT-SUMMARY.md` (the entry doc) landed mid-list under `meetup-kw-atlanta` behind `business-card`, `discovery-questions`, etc. Owner opens the packet on his phone Tuesday and should see the summary first.
+
+**Actions**:
+- `app/internal/meetup/page.tsx`: `listMd()` sort now pins `OVERNIGHT-SUMMARY.md` first, then `README.md`, then everything else alphabetical. Pure additive — no other behavior change.
+
+**Decisions**: kept the priority list as a local const inside `listMd`, not a top-level export. Two files, unlikely to grow, no reason to hoist.
+
+**Issues**: none. `npx tsc --noEmit` clean, `npm run build` clean.
+
+**Learnings**: for internal docs viewers, `readdirSync().sort()` will always burn you the first time a folder gets more than 3 files — pin the entry docs from day one.
+
+**Next steps**: subsequent overnight iterations will pick from the priority list (breadcrumbs, /agents copy sync from `landing-page-copy.md`, etc.).
+
 ## 2026-07-04 — Phase 70: KW Atlanta agent meetup — full pitch stack
 
 **Objective**: Owner has a KW Atlanta agent meetup on Tuesday. He wanted an overnight run to prep everything: demo video, landing page for agent waitlist, live-demo tool, printable materials, and an FMLS scaffold that flips on when broker paperwork lands. Second iteration: mount the whole doc packet inside the site so the owner can read it from `vicinities.cc` on his phone, and push everything to `main` without breaking existing routes.

@@ -55,10 +55,18 @@ function extractMeta(md: string, fallback: string): { title: string; preview: st
 function listMd(folder: string): Entry[] {
   const dir = path.join(DOCS_ROOT, folder);
   if (!fs.existsSync(dir)) return [];
+  const PRIORITY = ['OVERNIGHT-SUMMARY.md', 'README.md'];
   const files = fs
     .readdirSync(dir)
     .filter((f) => f.toLowerCase().endsWith('.md'))
-    .sort();
+    .sort((a, b) => {
+      const ai = PRIORITY.indexOf(a);
+      const bi = PRIORITY.indexOf(b);
+      if (ai !== -1 || bi !== -1) {
+        return (ai === -1 ? Infinity : ai) - (bi === -1 ? Infinity : bi);
+      }
+      return a.localeCompare(b);
+    });
   return files.map((file) => {
     const full = path.join(dir, file);
     const md = fs.readFileSync(full, 'utf8');
