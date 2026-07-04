@@ -2,6 +2,13 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.70.6 — Every mock listing now has its own video + full 10-photo grid (2026-07-04)
+
+### ✨ Improvements
+- **Autofill demo**: all 10 mock listings now play their own 24-second Ken Burns video with the correct price, beds/baths, and address in the overlay. No more single-flagship placeholder — every listing plays.
+- **Photo grid**: expanded from 5 photos to 9 (3×3). Combined with the hero photo above, agents see all 10 photos per listing.
+- **Photo variety**: mock photos now drawn from six room-type Unsplash pools (exterior/living/kitchen/bedroom/bathroom/backyard) so each listing shows a plausible home tour instead of repeated stock shots.
+
 ## v0.70.5 — Per-listing video generation pipeline (2026-07-04)
 
 ### ✨ Improvements

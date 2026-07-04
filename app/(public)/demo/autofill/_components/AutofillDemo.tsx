@@ -166,8 +166,8 @@ export function AutofillDemo() {
             <p className="mt-5 text-sm text-ink2 sm:text-base">{selected.description}</p>
 
             {/* Photo grid */}
-            <div className="mt-5 grid grid-cols-3 gap-2 sm:grid-cols-6">
-              {selected.photo_urls.slice(1, 7).map((url, i) => (
+            <div className="mt-5 grid grid-cols-3 gap-2">
+              {selected.photo_urls.slice(1, 10).map((url, i) => (
                 <div
                   key={url}
                   className="aspect-square overflow-hidden rounded-md bg-bg2"

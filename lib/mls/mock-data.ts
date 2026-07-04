@@ -24,47 +24,12 @@ export interface MockListing {
   videoUrl?: string;
 }
 
-// Curated Unsplash photo IDs of homes/interiors — hotlinked at ?w=800.
-const P = (id: string) => `https://images.unsplash.com/photo-${id}?w=800`;
-
-const HOUSE_PHOTOS_A = [
-  P('1600585154340-be6161a56a0c'),
-  P('1600607687939-ce8a6c25118c'),
-  P('1600566753190-17f0baa2a6c3'),
-  P('1600585154526-990dced4db0d'),
-  P('1600607687644-c7171b42498f'),
-  P('1512917774080-9991f1c4c750'),
-];
-
-const HOUSE_PHOTOS_B = [
-  P('1613490493576-7fde63acd811'),
-  P('1600566753086-00f18fe6ba46'),
-  P('1600607687920-4e2a09cf159d'),
-  P('1600566752355-35792bedcfea'),
-  P('1560448204-e02f11c3d0e2'),
-  P('1580587771525-78b9dba3b914'),
-];
-
-const HOUSE_PHOTOS_C = [
-  P('1568605114967-8130f3a36994'),
-  P('1600585152220-90363fe7e115'),
-  P('1600047509807-ba8f99d2cdde'),
-  P('1600210492486-724fe5c67fb0'),
-  P('1600607687644-c7171b42498f'),
-  P('1600566753376-12c8ab7fb75b'),
-];
-
-const HOUSE_PHOTOS_D = [
-  P('1600596542815-ffad4c1539a9'),
-  P('1600585154526-990dced4db0d'),
-  P('1600566753051-6057a1ec1362'),
-  P('1600585154363-67eb9e2e2099'),
-  P('1600566753104-685f4f24cb4d'),
-  P('1600566753190-17f0baa2a6c3'),
-];
+// Curated Unsplash real-estate photos, grouped by room type.
+// Hotlinked at ?w=1600&q=80 for high-quality video render.
+// Pools kept for reference / future rotation; per-listing arrays are
+// materialized inline below so they can be scanned/edited directly.
 
 export const MOCK_LISTINGS: MockListing[] = [
-  // ── Buckhead ($1M+) ─────────────────────────────────────────────
   {
     address: '3520 Peachtree Rd NE',
     city: 'Atlanta',
@@ -80,8 +45,19 @@ export const MOCK_LISTINGS: MockListing[] = [
     days_on_market: 12,
     description:
       'Modern Buckhead estate with chef’s kitchen, primary-on-main, and a resort-style backyard. Walk to Phipps Plaza and Lenox.',
-    photo_urls: HOUSE_PHOTOS_A,
-    videoUrl: '/demo/vicinity-slideshow-demo.mp4',
+    photo_urls: [
+      'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1600&q=80',
+      'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=1600&q=80',
+      'https://images.unsplash.com/photo-1600585154363-67eb9e2e2099?w=1600&q=80',
+      'https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?w=1600&q=80',
+      'https://images.unsplash.com/photo-1616594039964-ae9021a400a0?w=1600&q=80',
+      'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=1600&q=80',
+      'https://images.unsplash.com/photo-1560185127-6ed189bf02f4?w=1600&q=80',
+      'https://images.unsplash.com/photo-1552321554-5fefe8c9ef14?w=1600&q=80',
+      'https://images.unsplash.com/photo-1600566753104-685f4f24cb4d?w=1600&q=80',
+      'https://images.unsplash.com/photo-1600047509807-ba8f99d2cdde?w=1600&q=80',
+    ],
+    videoUrl: '/demo/listings/74102834.mp4',
   },
   {
     address: '2870 W Paces Ferry Rd NW',
@@ -98,7 +74,19 @@ export const MOCK_LISTINGS: MockListing[] = [
     days_on_market: 34,
     description:
       'Gated Tuxedo Park compound behind mature magnolias. Two-story marble foyer, wine cellar, and pool with cabana.',
-    photo_urls: HOUSE_PHOTOS_B,
+    photo_urls: [
+      'https://images.unsplash.com/photo-1600607687644-c7171b42498f?w=1600&q=80',
+      'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=1600&q=80',
+      'https://images.unsplash.com/photo-1493809842364-78817add7ffb?w=1600&q=80',
+      'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=1600&q=80',
+      'https://images.unsplash.com/photo-1541123437800-1bb1317badc2?w=1600&q=80',
+      'https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?w=1600&q=80',
+      'https://images.unsplash.com/photo-1615874959474-d609969a20ed?w=1600&q=80',
+      'https://images.unsplash.com/photo-1620626011761-996317b8d101?w=1600&q=80',
+      'https://images.unsplash.com/photo-1552321554-5fefe8c9ef14?w=1600&q=80',
+      'https://images.unsplash.com/photo-1600607687644-c7171b42498f?w=1600&q=80',
+    ],
+    videoUrl: '/demo/listings/74118902.mp4',
   },
   {
     address: '415 Blackland Rd NW',
@@ -115,10 +103,20 @@ export const MOCK_LISTINGS: MockListing[] = [
     days_on_market: 6,
     description:
       'Renovated brick traditional in prime Buckhead. Screened porch, flat backyard, and Sarah Smith Elementary district.',
-    photo_urls: HOUSE_PHOTOS_C,
+    photo_urls: [
+      'https://images.unsplash.com/photo-1600607687920-4e2a09cf159d?w=1600&q=80',
+      'https://images.unsplash.com/photo-1567767292278-a4f21aa2d36e?w=1600&q=80',
+      'https://images.unsplash.com/photo-1583847268964-b28dc8f51f92?w=1600&q=80',
+      'https://images.unsplash.com/photo-1556912173-3bb406ef7e77?w=1600&q=80',
+      'https://images.unsplash.com/photo-1631679706909-1844bbd07221?w=1600&q=80',
+      'https://images.unsplash.com/photo-1560185893-a55cbc8c57e8?w=1600&q=80',
+      'https://images.unsplash.com/photo-1590490360182-c33d57733427?w=1600&q=80',
+      'https://images.unsplash.com/photo-1600566753104-685f4f24cb4d?w=1600&q=80',
+      'https://images.unsplash.com/photo-1620626011761-996317b8d101?w=1600&q=80',
+      'https://images.unsplash.com/photo-1600047509807-ba8f99d2cdde?w=1600&q=80',
+    ],
+    videoUrl: '/demo/listings/74130471.mp4',
   },
-
-  // ── Midtown ($500-800k) ─────────────────────────────────────────
   {
     address: '905 Juniper St NE #412',
     city: 'Atlanta',
@@ -134,24 +132,19 @@ export const MOCK_LISTINGS: MockListing[] = [
     days_on_market: 18,
     description:
       'Corner condo with skyline views, floor-to-ceiling glass, and one block to Piedmont Park. Rooftop pool + concierge.',
-    photo_urls: HOUSE_PHOTOS_D,
-  },
-  {
-    address: '1130 Piedmont Ave NE #302',
-    city: 'Atlanta',
-    state: 'GA',
-    zip: '30309',
-    price: 549_000,
-    beds: 2,
-    baths: 2,
-    sqft: 1290,
-    lot_size: 0,
-    year_built: 2007,
-    mls_number: '74151067',
-    days_on_market: 41,
-    description:
-      'Hardwoods, chef’s kitchen with quartz, and a private balcony overlooking the park. Deeded garage parking.',
-    photo_urls: HOUSE_PHOTOS_A,
+    photo_urls: [
+      'https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=1600&q=80',
+      'https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?w=1600&q=80',
+      'https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?w=1600&q=80',
+      'https://images.unsplash.com/photo-1600566752355-35792bedcfea?w=1600&q=80',
+      'https://images.unsplash.com/photo-1616594039964-ae9021a400a0?w=1600&q=80',
+      'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=1600&q=80',
+      'https://images.unsplash.com/photo-1560185127-6ed189bf02f4?w=1600&q=80',
+      'https://images.unsplash.com/photo-1552321554-5fefe8c9ef14?w=1600&q=80',
+      'https://images.unsplash.com/photo-1600566753104-685f4f24cb4d?w=1600&q=80',
+      'https://images.unsplash.com/photo-1600607687644-c7171b42498f?w=1600&q=80',
+    ],
+    videoUrl: '/demo/listings/74145238.mp4',
   },
   {
     address: '620 Peachtree St NE #2201',
@@ -168,10 +161,20 @@ export const MOCK_LISTINGS: MockListing[] = [
     days_on_market: 9,
     description:
       'High-floor 3BR in the heart of Midtown with unobstructed downtown views. Walkable to MARTA, Fox Theatre, and Ponce City Market.',
-    photo_urls: HOUSE_PHOTOS_B,
+    photo_urls: [
+      'https://images.unsplash.com/photo-1600585152220-90363fe7e115?w=1600&q=80',
+      'https://images.unsplash.com/photo-1502005229762-cf1b2da7c5d6?w=1600&q=80',
+      'https://images.unsplash.com/photo-1554995207-c18c203602cb?w=1600&q=80',
+      'https://images.unsplash.com/photo-1571066811602-716837d681de?w=1600&q=80',
+      'https://images.unsplash.com/photo-1541123437800-1bb1317badc2?w=1600&q=80',
+      'https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?w=1600&q=80',
+      'https://images.unsplash.com/photo-1615874959474-d609969a20ed?w=1600&q=80',
+      'https://images.unsplash.com/photo-1620626011761-996317b8d101?w=1600&q=80',
+      'https://images.unsplash.com/photo-1552321554-5fefe8c9ef14?w=1600&q=80',
+      'https://images.unsplash.com/photo-1600047509807-ba8f99d2cdde?w=1600&q=80',
+    ],
+    videoUrl: '/demo/listings/74162983.mp4',
   },
-
-  // ── West End ($300-500k) ────────────────────────────────────────
   {
     address: '812 Ashby Grove SW',
     city: 'Atlanta',
@@ -187,27 +190,20 @@ export const MOCK_LISTINGS: MockListing[] = [
     days_on_market: 22,
     description:
       'Renovated West End craftsman bungalow with original heart-pine floors and a modern kitchen. Steps to the Beltline Westside Trail.',
-    photo_urls: HOUSE_PHOTOS_C,
+    photo_urls: [
+      'https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=1600&q=80',
+      'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=1600&q=80',
+      'https://images.unsplash.com/photo-1600585154363-67eb9e2e2099?w=1600&q=80',
+      'https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?w=1600&q=80',
+      'https://images.unsplash.com/photo-1631679706909-1844bbd07221?w=1600&q=80',
+      'https://images.unsplash.com/photo-1560185893-a55cbc8c57e8?w=1600&q=80',
+      'https://images.unsplash.com/photo-1590490360182-c33d57733427?w=1600&q=80',
+      'https://images.unsplash.com/photo-1600566753104-685f4f24cb4d?w=1600&q=80',
+      'https://images.unsplash.com/photo-1620626011761-996317b8d101?w=1600&q=80',
+      'https://images.unsplash.com/photo-1600607687644-c7171b42498f?w=1600&q=80',
+    ],
+    videoUrl: '/demo/listings/74177412.mp4',
   },
-  {
-    address: '1247 Ralph David Abernathy Blvd SW',
-    city: 'Atlanta',
-    state: 'GA',
-    zip: '30310',
-    price: 445_000,
-    beds: 4,
-    baths: 3,
-    sqft: 2100,
-    lot_size: 0.22,
-    year_built: 1918,
-    mls_number: '74183990',
-    days_on_market: 14,
-    description:
-      'Fully restored Victorian with wraparound porch, high ceilings, and a rebuilt carriage house. Historic West End at its best.',
-    photo_urls: HOUSE_PHOTOS_D,
-  },
-
-  // ── Sandy Springs ───────────────────────────────────────────────
   {
     address: '6420 Roswell Rd',
     city: 'Sandy Springs',
@@ -223,27 +219,20 @@ export const MOCK_LISTINGS: MockListing[] = [
     days_on_market: 27,
     description:
       'Bright transitional in the heart of Sandy Springs. Open plan, two-car garage, and a fenced backyard for the kids and dogs.',
-    photo_urls: HOUSE_PHOTOS_A,
+    photo_urls: [
+      'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=1600&q=80',
+      'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=1600&q=80',
+      'https://images.unsplash.com/photo-1493809842364-78817add7ffb?w=1600&q=80',
+      'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=1600&q=80',
+      'https://images.unsplash.com/photo-1616594039964-ae9021a400a0?w=1600&q=80',
+      'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=1600&q=80',
+      'https://images.unsplash.com/photo-1560185127-6ed189bf02f4?w=1600&q=80',
+      'https://images.unsplash.com/photo-1552321554-5fefe8c9ef14?w=1600&q=80',
+      'https://images.unsplash.com/photo-1600566753104-685f4f24cb4d?w=1600&q=80',
+      'https://images.unsplash.com/photo-1600047509807-ba8f99d2cdde?w=1600&q=80',
+    ],
+    videoUrl: '/demo/listings/74192145.mp4',
   },
-  {
-    address: '105 Glenridge Point Pkwy',
-    city: 'Sandy Springs',
-    state: 'GA',
-    zip: '30342',
-    price: 1_150_000,
-    beds: 5,
-    baths: 4.5,
-    sqft: 4200,
-    lot_size: 0.6,
-    year_built: 2010,
-    mls_number: '74198776',
-    days_on_market: 3,
-    description:
-      'Executive home minutes to GA-400 and Northside Hospital. Chef’s kitchen, finished basement, and a saltwater pool.',
-    photo_urls: HOUSE_PHOTOS_B,
-  },
-
-  // ── Old Fourth Ward ─────────────────────────────────────────────
   {
     address: '660 Glen Iris Dr NE',
     city: 'Atlanta',
@@ -259,10 +248,20 @@ export const MOCK_LISTINGS: MockListing[] = [
     days_on_market: 8,
     description:
       'Modern O4W townhome with rooftop deck and skyline views. Walk to Ponce City Market, Krog Street, and the Beltline Eastside Trail.',
-    photo_urls: HOUSE_PHOTOS_C,
+    photo_urls: [
+      'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=1600&q=80',
+      'https://images.unsplash.com/photo-1567767292278-a4f21aa2d36e?w=1600&q=80',
+      'https://images.unsplash.com/photo-1583847268964-b28dc8f51f92?w=1600&q=80',
+      'https://images.unsplash.com/photo-1556912173-3bb406ef7e77?w=1600&q=80',
+      'https://images.unsplash.com/photo-1541123437800-1bb1317badc2?w=1600&q=80',
+      'https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?w=1600&q=80',
+      'https://images.unsplash.com/photo-1615874959474-d609969a20ed?w=1600&q=80',
+      'https://images.unsplash.com/photo-1620626011761-996317b8d101?w=1600&q=80',
+      'https://images.unsplash.com/photo-1552321554-5fefe8c9ef14?w=1600&q=80',
+      'https://images.unsplash.com/photo-1600607687644-c7171b42498f?w=1600&q=80',
+    ],
+    videoUrl: '/demo/listings/74204518.mp4',
   },
-
-  // ── Grant Park ──────────────────────────────────────────────────
   {
     address: '532 Cherokee Ave SE',
     city: 'Atlanta',
@@ -278,10 +277,20 @@ export const MOCK_LISTINGS: MockListing[] = [
     days_on_market: 15,
     description:
       'Restored Victorian across from Grant Park with original details, chef’s kitchen, and a private garden. Zoo Atlanta at your doorstep.',
-    photo_urls: HOUSE_PHOTOS_D,
+    photo_urls: [
+      'https://images.unsplash.com/photo-1580587771525-78b9dba3b914?w=1600&q=80',
+      'https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?w=1600&q=80',
+      'https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?w=1600&q=80',
+      'https://images.unsplash.com/photo-1600566752355-35792bedcfea?w=1600&q=80',
+      'https://images.unsplash.com/photo-1631679706909-1844bbd07221?w=1600&q=80',
+      'https://images.unsplash.com/photo-1560185893-a55cbc8c57e8?w=1600&q=80',
+      'https://images.unsplash.com/photo-1590490360182-c33d57733427?w=1600&q=80',
+      'https://images.unsplash.com/photo-1600566753104-685f4f24cb4d?w=1600&q=80',
+      'https://images.unsplash.com/photo-1620626011761-996317b8d101?w=1600&q=80',
+      'https://images.unsplash.com/photo-1600047509807-ba8f99d2cdde?w=1600&q=80',
+    ],
+    videoUrl: '/demo/listings/74211074.mp4',
   },
-
-  // ── Inman Park ──────────────────────────────────────────────────
   {
     address: '1044 Edgewood Ave NE',
     city: 'Atlanta',
@@ -297,45 +306,19 @@ export const MOCK_LISTINGS: MockListing[] = [
     days_on_market: 21,
     description:
       'Iconic Inman Park Victorian with wraparound porch and carriage house. One block to Krog Street Market and the Beltline.',
-    photo_urls: HOUSE_PHOTOS_A,
-  },
-
-  // ── Decatur ─────────────────────────────────────────────────────
-  {
-    address: '318 W Ponce de Leon Ave',
-    city: 'Decatur',
-    state: 'GA',
-    zip: '30030',
-    price: 875_000,
-    beds: 4,
-    baths: 3,
-    sqft: 2480,
-    lot_size: 0.19,
-    year_built: 1938,
-    mls_number: '74225198',
-    days_on_market: 5,
-    description:
-      'Classic Decatur bungalow inside the city-schools district. Walk to Decatur Square, MARTA, and the Saturday farmers market.',
-    photo_urls: HOUSE_PHOTOS_B,
-  },
-
-  // ── East Atlanta Village ────────────────────────────────────────
-  {
-    address: '1289 Metropolitan Ave SE',
-    city: 'Atlanta',
-    state: 'GA',
-    zip: '30316',
-    price: 479_000,
-    beds: 3,
-    baths: 2,
-    sqft: 1590,
-    lot_size: 0.2,
-    year_built: 1946,
-    mls_number: '74232841',
-    days_on_market: 11,
-    description:
-      'Renovated craftsman in East Atlanta Village. Screened porch, fenced yard, and a short walk to the EAV strip and Brownwood Park.',
-    photo_urls: HOUSE_PHOTOS_C,
+    photo_urls: [
+      'https://images.unsplash.com/photo-1600585154526-990dced4db0d?w=1600&q=80',
+      'https://images.unsplash.com/photo-1502005229762-cf1b2da7c5d6?w=1600&q=80',
+      'https://images.unsplash.com/photo-1554995207-c18c203602cb?w=1600&q=80',
+      'https://images.unsplash.com/photo-1571066811602-716837d681de?w=1600&q=80',
+      'https://images.unsplash.com/photo-1616594039964-ae9021a400a0?w=1600&q=80',
+      'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=1600&q=80',
+      'https://images.unsplash.com/photo-1560185127-6ed189bf02f4?w=1600&q=80',
+      'https://images.unsplash.com/photo-1552321554-5fefe8c9ef14?w=1600&q=80',
+      'https://images.unsplash.com/photo-1600566753104-685f4f24cb4d?w=1600&q=80',
+      'https://images.unsplash.com/photo-1600607687644-c7171b42498f?w=1600&q=80',
+    ],
+    videoUrl: '/demo/listings/74218653.mp4',
   },
 ];
 

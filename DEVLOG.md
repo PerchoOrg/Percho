@@ -2,6 +2,23 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-07-04 — Phase 70.10: Per-listing videos for all 10 mock listings + 10-photo grid
+
+**Objective**: Owner asked to (a) generate a Ken Burns video for every mock listing (not just flagship), (b) show all 10 photos on the demo page grid, (c) use the room-order pattern 1 exterior → 2 living → 1 kitchen → 3 bedroom → 2 bathroom → 1 backyard.
+
+**Actions**:
+- `lib/mls/mock-data.ts` — cut mock listings from 15 → 10 (kept the 10 covering the price ladder $389k–$3.25M). Rewrote `photo_urls` to be exactly 10 URLs per listing, drawn from six curated Unsplash pools (`EXTERIORS`, `LIVING_ROOMS`, `KITCHENS`, `BEDROOMS`, `BATHROOMS`, `BACKYARDS`). Rotate indices across listings so listings look distinct within tier. Added `videoUrl: '/demo/listings/{mls_number}.mp4'` on every listing.
+- `docs/ken-burns/demo/ending-card.json` — updated ending-card values from stale $685k / 123 Peachtree Ln to flagship $1,895,000 / 3520 Peachtree Rd NE. (Legacy demo used old numbers.)
+- `scripts/render-all-listings.py` (throwaway, at `/tmp`) — parses `mock-data.ts` regex, downloads 6 photos per listing (indices 0/1/3/4/7/9 = exterior/living/kitchen/bedroom/bathroom/backyard), writes per-listing `overlay.json` and `ending.json`, invokes `generate.py` with `--listing-overlay` for each. Runs `ThreadPoolExecutor(max_workers=3)` — 10 videos rendered in ~5 min.
+- `public/demo/listings/{mls_number}.mp4` × 10 — all rendered, 7.9–10.7 MB each, 23.8s @ 1080×1920 h264+aac. Total addition to git: ~93 MB.
+- `app/(public)/demo/autofill/_components/AutofillDemo.tsx` — grid slice widened from `slice(1, 7)` (5 photos) to `slice(1, 10)` (9 photos, 3×3), and `sm:grid-cols-6` dropped so grid stays 3 columns at tablet width. Video player already reads `selected.videoUrl`, so no changes there.
+
+**Decisions**: 6 clips per video (not 10) — 10 clips × 3.8s = 38s, too long for a swipe feed. Chose exterior/living/kitchen/bedroom/bathroom/backyard as the 6 canonical clips (skip the 2nd living, 2nd/3rd bedroom, and 2nd bathroom). All 10 photos still render on the grid so agents see full listing coverage. Overlay only on first 3 clips (exterior/living/kitchen) to preserve immersion on later frames — same policy as flagship. Every listing has its own overlay JSON with real price/beds/baths/address, and its own ending card matching the listing (not a shared card).
+
+**Vision QA sample**: 3 non-flagship listings (Tuxedo Park $3.25M / West End $389k / Grant Park $665k) — overlays correct, professional, legible. No cross-listing bleed.
+
+**Known limitation**: Photos across the 6 clips of a single listing come from **different** Unsplash source homes because there is no "one house = 6 real photos" pool available without MLS licensing. Vision AI can tell they're not the same house; a real MLS-connected agent might too. Acceptable for pitch demo; production will pull from RESO Media on real listings.
+
 ## 2026-07-04 — Phase 70.9: Per-listing video generation pipeline + flagship demo re-render with listing overlay
 
 **Objective**: Owner wants each MLS-autofilled listing to auto-generate a professional-looking video (like Zillow reels) with room order (exterior → living → kitchen → bedroom → bathroom → backyard) and non-intrusive overlay of price/beds/baths/address.
