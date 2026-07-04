@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Vicinity business card — standalone SVG.
+  Renders as ONE file containing FRONT (top) and BACK (bottom), stacked
+  vertically for review. Each face is 1050x600 px (3.5in x 2in @ 300dpi).
+  Total canvas: 1050 x 1240 (600 + 40 gap + 600).
+
+  For print, split into two 1050x600 SVGs or export each <g id="front"> /
+  <g id="back"> group individually.
+
+  Placeholders marked TODO must be filled by the founder before printing.
+-->
+<svg xmlns="http://www.w3.org/2000/svg"
+     viewBox="0 0 1050 1240"
+     width="1050" height="1240"
+     font-family="Inter, 'Helvetica Neue', Arial, sans-serif">
+
+  <defs>
+    <style>
+      .bg      { fill: #FFFFFF; }
+      .ink     { fill: #111111; }
+      .muted   { fill: #555555; }
+      .accent  { fill: #2563EB; }
+      .rule    { stroke: #2563EB; stroke-width: 4; }
+      .cut     { fill: none; stroke: #DDDDDD; stroke-dasharray: 6 6; stroke-width: 1; }
+    </style>
+  </defs>
+
+  <!-- ============ FRONT ============ -->
+  <g id="front">
+    <rect class="bg" x="0" y="0" width="1050" height="600"/>
+    <rect class="cut" x="0.5" y="0.5" width="1049" height="599"/>
+
+    <!-- Logo wordmark (left) -->
+    <g transform="translate(70, 260)">
+      <text class="ink" font-size="72" font-weight="800" letter-spacing="-2">Vicinity</text>
+      <line class="rule" x1="4" y1="26" x2="140" y2="26"/>
+      <text class="muted" font-size="20" y="70" font-weight="500" letter-spacing="4">ATLANTA · BETA</text>
+    </g>
+
+    <!-- Contact block (right, right-aligned) -->
+    <g transform="translate(980, 180)" text-anchor="end">
+      <text class="ink"    font-size="34" font-weight="700">TODO: FOUNDER NAME</text>
+      <text class="accent" font-size="20" y="42" font-weight="600">TODO: Title (e.g. Founder)</text>
+
+      <text class="ink"   font-size="22" y="130">TODO: founder@vicinities.cc</text>
+      <text class="ink"   font-size="22" y="170">TODO: +1 (XXX) XXX-XXXX</text>
+      <text class="accent" font-size="24" y="230" font-weight="700">vicinities.cc</text>
+    </g>
+  </g>
+
+  <!-- ============ GAP ============ -->
+  <rect x="0" y="600" width="1050" height="40" fill="#F4F4F4"/>
+
+  <!-- ============ BACK ============ -->
+  <g id="back" transform="translate(0, 640)">
+    <rect class="bg" x="0" y="0" width="1050" height="600"/>
+    <rect class="cut" x="0.5" y="0.5" width="1049" height="599"/>
+
+    <!-- QR placeholder square -->
+    <g transform="translate(420, 60)">
+      <rect x="0" y="0" width="210" height="210" fill="#FFFFFF" stroke="#111111" stroke-width="4"/>
+      <!-- fake QR pattern so placeholder reads as "QR" visually -->
+      <g fill="#111111">
+        <rect x="15" y="15"  width="45" height="45"/>
+        <rect x="150" y="15" width="45" height="45"/>
+        <rect x="15" y="150" width="45" height="45"/>
+        <rect x="25" y="25" width="25" height="25" fill="#FFFFFF"/>
+        <rect x="160" y="25" width="25" height="25" fill="#FFFFFF"/>
+        <rect x="25" y="160" width="25" height="25" fill="#FFFFFF"/>
+        <rect x="80"  y="30" width="12" height="12"/>
+        <rect x="100" y="45" width="12" height="12"/>
+        <rect x="120" y="30" width="12" height="12"/>
+        <rect x="80"  y="80" width="12" height="12"/>
+        <rect x="105" y="95" width="12" height="12"/>
+        <rect x="130" y="80" width="12" height="12"/>
+        <rect x="80"  y="130" width="12" height="12"/>
+        <rect x="105" y="115" width="12" height="12"/>
+        <rect x="80"  y="160" width="12" height="12"/>
+        <rect x="105" y="175" width="12" height="12"/>
+        <rect x="130" y="160" width="12" height="12"/>
+        <rect x="155" y="130" width="12" height="12"/>
+        <rect x="175" y="115" width="12" height="12"/>
+        <rect x="155" y="90"  width="12" height="12"/>
+      </g>
+      <text class="muted" x="105" y="240" text-anchor="middle" font-size="14"
+            font-weight="600" letter-spacing="2">TODO: REPLACE WITH REAL QR</text>
+      <text class="muted" x="105" y="262" text-anchor="middle" font-size="13">
+        vicinities.cc/agents
+      </text>
+    </g>
+
+    <!-- Tagline -->
+    <text class="ink" x="525" y="410" text-anchor="middle"
+          font-size="30" font-weight="700">
+      Video-first home discovery for Atlanta.
+    </text>
+
+    <!-- One-line pitch -->
+    <text class="muted" x="525" y="470" text-anchor="middle"
+          font-size="20" font-weight="500">
+      Enter the address. Upload one video.
+    </text>
+    <text class="muted" x="525" y="500" text-anchor="middle"
+          font-size="20" font-weight="500">
+      We deliver it to Atlanta buyers.
+    </text>
+
+    <!-- Footer URL -->
+    <text class="accent" x="525" y="560" text-anchor="middle"
+          font-size="18" font-weight="700" letter-spacing="2">
+      VICINITIES.CC
+    </text>
+  </g>
+</svg>
