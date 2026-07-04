@@ -41,8 +41,8 @@ export default function MdPage({ params }: { params: { slug: string[] } }) {
   const fileBase = params.slug[params.slug.length - 1] ?? '';
 
   return (
-    <article className="space-y-6">
-      <nav className="text-xs text-muted flex flex-wrap items-center gap-1.5" aria-label="Breadcrumb">
+    <article className="space-y-6 print:space-y-3">
+      <nav className="text-xs text-muted flex flex-wrap items-center gap-1.5 print:hidden" aria-label="Breadcrumb">
         <Link href="/internal/meetup" className="underline hover:text-ink2">
           Docs
         </Link>
@@ -53,7 +53,7 @@ export default function MdPage({ params }: { params: { slug: string[] } }) {
         <span aria-hidden>/</span>
         <span className="font-mono text-ink2">{fileBase}</span>
       </nav>
-      <div className="text-xs text-muted font-mono">docs/{rel}.md</div>
+      <div className="text-xs text-muted font-mono print:hidden">docs/{rel}.md</div>
       <div
         className="
           [&>h1]:text-3xl [&>h1]:font-serif [&>h1]:tracking-tighter [&>h1]:mt-2 [&>h1]:mb-4
@@ -78,7 +78,7 @@ export default function MdPage({ params }: { params: { slug: string[] } }) {
       >
         <ReactMarkdown remarkPlugins={[remarkGfm]}>{md}</ReactMarkdown>
       </div>
-      <div className="pt-6 border-t border-line">
+      <div className="pt-6 border-t border-line print:hidden">
         <Link href="/internal/meetup" className="text-sm underline">
           ← All docs
         </Link>

@@ -2,6 +2,22 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-07-04 — Phase 70.5: /internal/meetup — print stylesheet for Cmd-P → PDF
+
+**Objective**: Overnight iteration. Owner may want to Cmd-P a doc off `/internal/meetup/[...slug]` into a PDF to hand out or annotate before Tuesday. Default browser print of the current layout drags in the amber "internal — unlisted" banner, the top nav row, the breadcrumb chip, the mono `docs/<rel>.md` path label, and the bottom "← All docs" link — all of which are chrome, not content.
+
+**Actions**:
+- `app/internal/layout.tsx`: added `print:hidden` to the amber unlisted banner and the top nav row.
+- `app/internal/meetup/[...slug]/page.tsx`: added `print:hidden` to the breadcrumb nav, the `docs/<rel>.md` mono label, and the bottom "← All docs" back link. Tightened article top-level `space-y-6` → `print:space-y-3` to reduce dead space at the top of a printed page.
+
+**Decisions**: used Tailwind's built-in `print:hidden` variant instead of a hand-written `@media print` block — smaller diff, no new stylesheet, and the utility is already in the compiled CSS since other prose surfaces use `print:*` (checked with `grep -r 'print:' app/`). Only touched files under `app/internal/`; existing marketing / dashboard / feed print behavior is unchanged. Did NOT hide the article's markdown body or force a serif print font — leaving native browser print rendering alone means the doc looks the same on paper as on screen minus the chrome, which is the least surprising outcome.
+
+**Issues**: none. `npx tsc --noEmit` clean, `npm run build` clean.
+
+**Learnings**: `print:hidden` on chrome elements is the smallest possible print-stylesheet — no `@media print` block, no font overrides, no page-break rules unless a specific doc turns out to need them. Ship the minimum, wait for a real pain point before adding more.
+
+**Next steps**: iteration 6 candidates still open — footer link to `/internal/meetup` (needs risk check on `SiteFooter.tsx`), Q&A search box on meetup index, sitemap stub (currently no `app/sitemap.ts`).
+
 ## 2026-07-04 — Phase 70.4: /demo/autofill — 5 more Atlanta neighborhoods in the mock data
 
 **Objective**: Overnight iteration. `/demo/autofill` shipped with 10 curated listings clustered in Buckhead / Midtown / West End / Sandy Springs. On stage Tuesday, if an agent types "Old Fourth Ward" or "Decatur" — very common Atlanta search terms — the demo returns nothing and the pitch stalls. Broaden coverage without changing the demo shape.
