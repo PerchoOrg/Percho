@@ -266,8 +266,9 @@ function VideoCard({
               ref={videoElRef}
               className="relative h-full w-full object-contain"
               style={{
+                // Phase 74.11 (2026-07-06): fade-in only — see BrowseFeed 74.11.
                 opacity: hasFirstFrame ? 1 : 0,
-                transition: 'opacity 150ms',
+                transition: hasFirstFrame ? 'opacity 150ms' : 'none',
               }}
               playsInline
               muted
