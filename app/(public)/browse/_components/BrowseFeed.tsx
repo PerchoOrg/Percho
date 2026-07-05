@@ -612,6 +612,24 @@ function Card({
 
   const sel = useMemo(() => pickVideo(card, source, cycleIdx), [card, source, cycleIdx]);
 
+  // Phase 71.25 (2026-07-06): fullscreen only — rAF-poll `videoRef.current.paused`
+  // as an authoritative fallback for the play glyph. iOS Safari doesn't always
+  // fire a `play` event when the HLS pipeline resumes after a src swap to the
+  // landscape uid, so React `paused` state stays true and the glyph never
+  // hides. rAF poll catches that case. Non-fullscreen path relies on the 71.15
+  // media event listener which is sufficient there.
+  useEffect(() => {
+    if (!isFullscreen) return;
+    let raf = 0;
+    function tick() {
+      const v = videoRef.current;
+      if (v && v.paused !== paused) setPaused(v.paused);
+      raf = requestAnimationFrame(tick);
+    }
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [isFullscreen, paused, setPaused]);
+
   // Phase 71.7: pick the effective CF uid based on fullscreen state.
   // `cfVideoIdLandscape` is optional; fullscreen is only enterable when set.
   const hasLandscape = !!sel.cfVideoIdLandscape;

@@ -2,6 +2,16 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## Phase 71.25 (2026-07-06) — 71.24 拆过头,rAF poll 加回来(fullscreen only)
+
+**Trigger**:71.24 部署后横屏视频播放键"播了不消失"复现。
+
+**根因**:71.15 media event listener 在非全屏路径充分(portrait 模式 src 稳定,`play/playing/pause` 事件都发)。但 fullscreen 切 src 到 landscape uid 时 iOS Safari HLS pipeline 内部 resume 有时不 fire `play` 事件 → React `paused` 卡在 true。71.21 rAF poll 就是为这个引入的,71.24 我误判"事件够用"拆掉了。
+
+**修复**:加回 rAF poll,**只在 `isFullscreen` 时跑**,依赖 `[isFullscreen, paused, setPaused]`。只在 `v.paused !== paused` 时 setState 避免每帧无谓 re-render。
+
+**教训**(第二次):**同一个诊断/兜底两次拆两次踩** = 该保留但没标好保留原因。以后重构决定拆什么时,如果引入 phase 有明确 bug 触发,不能只看当前是否"够用",要问"什么条件会让原引入 bug 复现"。
+
 ## Phase 71.24 (2026-07-06) — 全屏诊断脚手架清理
 
 **Trigger**:71.23 audio 问题解决后,BrowseFeed.tsx 里堆了三个星期的排障代码需要收工。
