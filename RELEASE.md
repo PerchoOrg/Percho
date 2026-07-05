@@ -2,6 +2,11 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.74.15 — 2026-07-06
+
+### 🐛 Bug Fixes
+- **Fullscreen no longer shows a small landscape thumbnail overlapping the playing video.** 74.14's poster overlay was rendered unconditionally in fullscreen, assuming z-index would keep it hidden behind the `<video>`. In practice on iOS Safari the overlay peeked out from under the video as a small centered landscape image. Fixed by unmounting the overlay the moment the landscape video paints its first frame; it now only appears during the actual black-frame gap of the HLS source swap.
+
 ## v0.74.14 — 2026-07-06
 
 ### 🐛 Bug Fixes

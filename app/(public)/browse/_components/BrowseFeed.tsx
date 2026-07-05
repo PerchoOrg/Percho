@@ -1089,16 +1089,24 @@ function Card({
               />
             )}
             {/* Phase 74.14 (2026-07-06): fullscreen rotated poster overlay.
-             * Sits at zIndex 9999 (below the <video> at 10000), rendered
-             * unconditionally in fullscreen — no gate. Video paints on
-             * top the moment its first frame arrives; before that, this
-             * <img> covers the fullscreen box with the landscape
-             * thumbnail via objectFit: cover (which the native
-             * poster attribute cannot do on iOS Safari, causing the
-             * letterboxed "小图" symptom). Uses the LANDSCAPE poster
-             * so aspect actually matches the box, not the portrait
-             * poster (which would still look wrong). */}
-            {isFullscreen && hasLandscape && vp.w > 0 && landscapePoster && (
+             * Sits at zIndex 9999 (below the <video> at 10000).
+             * Phase 74.15 (2026-07-06): GATED on !hasFirstFrame — the
+             * "no gate" design in 74.14 caused the overlay to persist
+             * as a "small landscape image overlapping the fullscreen
+             * video" (owner: "还是有小图出现在大屏上 overlap"). Even at
+             * zIndex 9999 vs video's 10000 — likely due to iOS Safari
+             * rotate/sizing quirks the <img> was rendering slightly off
+             * and peeking out. Simplest fix: unmount the overlay the
+             * moment the landscape video has a first frame. `hasFirstFrame`
+             * is reset to false in the HLS attach effect (line ~741) on
+             * effectiveCfId change (portrait→landscape uid), and set true
+             * again on the video's onPlaying/onLoadedData (see reveal
+             * effect ~L868), so the overlay stays visible only during
+             * the actual src-swap window.
+             * Uses the LANDSCAPE poster URL so aspect matches the box,
+             * with objectFit: cover (native <video poster> can't do this
+             * on iOS Safari — see hls-video-ios-safari-pitfalls §15). */}
+            {isFullscreen && hasLandscape && vp.w > 0 && landscapePoster && !hasFirstFrame && (
               <img
                 src={landscapePoster}
                 alt=""
@@ -1259,14 +1267,26 @@ function Card({
             // until the effect fired one paint later.
             //
             // Phase 74.13 (2026-07-06): 74.10's setHasFirstFrame(false)
-            // sync reset is REMOVED. It was needed only because 74.9's
-            // rotated <img> overlay in fullscreen was gated on
-            // !hasFirstFrame — which we've since deleted (74.13). With
-            // the native `poster=` back on <video>, iOS handles the
-            // src-swap transition itself and no gate reset is needed.
+            // sync reset was REMOVED because fullscreen video had an
+            // opacity gate that would fade out on reset.
+            //
+            // Phase 74.15 (2026-07-06): sync setHasFirstFrame(false) is
+            // BACK — but for a different reason and now safe. 74.14's
+            // rotated <img> overlay (gated on !hasFirstFrame in 74.15)
+            // must be mounted on the very first fullscreen render, so we
+            // reset hasFirstFrame synchronously with the fullscreen flip.
+            // Without this the HLS re-attach effect only fires post-
+            // render, so render #1 would have hasFirstFrame=true (from
+            // portrait video) → overlay skipped → user briefly sees a
+            // stretched portrait last-frame or empty video. The 74.10
+            // sync-reset was harmful because fullscreen video style
+            // still had opacity/transition; 74.13 deleted that, so the
+            // sync reset now only mounts/unmounts the overlay <img>,
+            // which is exactly what we want.
             const w = Math.round(window.innerWidth);
             const h = Math.round(window.innerHeight);
             if (w > 0 && h > 0) setVp({ w, h });
+            setHasFirstFrame(false);
             setIsFullscreen(true);
           }}
           aria-label="View landscape fullscreen"
