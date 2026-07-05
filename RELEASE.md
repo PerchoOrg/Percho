@@ -2,6 +2,12 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.71.6 — Upbeat home-tour BGM (2026-07-04)
+
+### 🎵 Improved
+- **Background music refresh.** The old cinematic-ambient library felt too moody for a house tour. Swapped in 10 lighter, upbeat tracks — think HGTV / lifestyle vlog rather than documentary: *Carefree*, *Cheery Monday*, *Wallpaper*, *Life of Riley*, *Cool Vibes*, *Bright Wish*, *Amazing Plan*, *Wholesome*, *Daily Beetle*, *Perspectives*.
+- Still Kevin MacLeod / incompetech.com / CC-BY 4.0. Attribution owed on `vicinities.cc/legal` when that page ships.
+
 ## v0.71.5 — Fully text-free videos (2026-07-04)
 
 ### 🎨 Improved

@@ -8,8 +8,7 @@
 # Attribution requirement: Any project that ships videos rendered with these
 # tracks must credit "Music by Kevin MacLeod (incompetech.com), licensed under
 # CC-BY 4.0" somewhere the viewer can reach (about page, video description,
-# credits reel, etc.). Videos generated for the KW Atlanta agent meetup will
-# carry this line in the site footer at vicinities.cc/legal.
+# credits reel, etc.).
 #
 # Files land in ./ next to this script and are gitignored (see .gitignore).
 # Idempotent: re-running skips existing files.
@@ -17,20 +16,27 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
+# Track picks are curated for real-estate walkthroughs — light, upbeat,
+# HGTV / lifestyle-vlog vibe. Not moody / cinematic ambient (the previous
+# set felt too serious for a home tour).
 declare -A tracks=(
-  ["01-cambodian-odyssey.mp3"]="Cambodian%20Odyssey.mp3"
-  ["02-ether-vox.mp3"]="Ether%20Vox.mp3"
-  ["03-long-note-two.mp3"]="Long%20Note%20Two.mp3"
-  ["04-tranquility-base.mp3"]="Tranquility%20Base.mp3"
-  ["05-peaceful-desolation.mp3"]="Peaceful%20Desolation.mp3"
-  ["06-meditation-impromptu-01.mp3"]="Meditation%20Impromptu%2001.mp3"
-  ["07-meditation-impromptu-02.mp3"]="Meditation%20Impromptu%2002.mp3"
-  ["08-nowhere-land.mp3"]="Nowhere%20Land.mp3"
-  ["09-long-note-three.mp3"]="Long%20Note%20Three.mp3"
-  ["10-long-note-four.mp3"]="Long%20Note%20Four.mp3"
+  ["01-carefree.mp3"]="Carefree.mp3"
+  ["02-cheery-monday.mp3"]="Cheery Monday.mp3"
+  ["03-wallpaper.mp3"]="Wallpaper.mp3"
+  ["04-life-of-riley.mp3"]="Life of Riley.mp3"
+  ["05-cool-vibes.mp3"]="Cool Vibes.mp3"
+  ["06-bright-wish.mp3"]="Bright Wish.mp3"
+  ["07-amazing-plan.mp3"]="Amazing Plan.mp3"
+  ["08-wholesome.mp3"]="Wholesome.mp3"
+  ["09-daily-beetle.mp3"]="Daily Beetle.mp3"
+  ["10-perspectives.mp3"]="Perspectives.mp3"
 )
 
 BASE="https://incompetech.com/music/royalty-free/mp3-royaltyfree"
+
+url_encode() {
+  python3 -c "import urllib.parse,sys; print(urllib.parse.quote(sys.argv[1]))" "$1"
+}
 
 for local in "${!tracks[@]}"; do
   if [ -f "$local" ] && [ "$(stat -c%s "$local")" -gt 100000 ]; then
@@ -38,8 +44,9 @@ for local in "${!tracks[@]}"; do
     continue
   fi
   remote="${tracks[$local]}"
+  enc=$(url_encode "$remote")
   echo "GET   $local"
-  curl -fsSL --retry 3 -o "$local" -H "User-Agent: Mozilla/5.0" "$BASE/$remote"
+  curl -fsSL --retry 3 -o "$local" -H "User-Agent: Mozilla/5.0" "$BASE/$enc"
 done
 
 echo

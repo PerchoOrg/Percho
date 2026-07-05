@@ -2,6 +2,49 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-07-04 — Phase 71.6: Upbeat BGM library
+
+### Trigger
+User: "音乐有点严肃 换成轻快点的适合看房的背景音"
+
+The 71.3 track picks (Cambodian Odyssey, Ether Vox, Long Note ×3, Tranquility Base, Peaceful Desolation, Meditation Impromptu ×2, Nowhere Land) are all cinematic ambient — great for a documentary, wrong for a home tour. User wants HGTV / lifestyle-vlog vibe.
+
+### Change
+Swapped the 10-track library under `scripts/render-worker/bgm/` for upbeat / feel-good picks, all still Kevin MacLeod / CC-BY 4.0:
+
+| # | Title | Vibe |
+|---|-------|------|
+| 01 | Carefree | breezy ukulele |
+| 02 | Cheery Monday | bouncy piano |
+| 03 | Wallpaper | bright acoustic + whistle |
+| 04 | Life of Riley | classic corporate-chill |
+| 05 | Cool Vibes | jazzy laid-back |
+| 06 | Bright Wish | soft, hopeful |
+| 07 | Amazing Plan | playful mid-tempo |
+| 08 | Wholesome | warm strings, feel-good |
+| 09 | Daily Beetle | folky cheerful |
+| 10 | Perspectives | mellow contrast slot |
+
+All ≥ 40s. Total 90 MB. `fetch.sh` and `README.md` rewritten (URL-encode via python `urllib.parse.quote` because filenames like "Cheery Monday.mp3" have spaces).
+
+`worker.py` unchanged — `pick_bgm()` `random.choice()` over the directory just picks from the new set.
+
+### Verification
+- All 10 URLs return 200 from incompetech.com
+- ffprobe: all durations valid, 40s–718s
+- Smoke render 8-photo tour with `02-cheery-monday.mp3` → 20.5s h264+aac 2.7MB, mux path clean
+- daemon restart → active (PID 629882)
+
+### Files touched
+- `scripts/render-worker/bgm/*.mp3` × 10 (gitignored, replaced on disk)
+- `scripts/render-worker/bgm/fetch.sh` — new track map + URL encoding helper
+- `scripts/render-worker/bgm/README.md` — new track table + vibe notes
+
+### Commit
+_pending — will be filled after `git commit` runs_
+
+---
+
 ## 2026-07-04 — Phase 71.5: Fully text-free videos
 
 ### Trigger
