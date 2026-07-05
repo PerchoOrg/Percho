@@ -55,6 +55,12 @@ async function fetchCommunityListCardsImpl(
   let communitiesQ = (supabase as any)
     .from('communities')
     .select('id, name, slug, city, state, description, cover_video_id, cover_storage_path')
+    // Phase 72 (2026-07-05): never surface the upload-flow `Untitled community`
+    // stub in ANY grid — public buyer grid, agent dashboard grid, or browse.
+    // Owner has never touched it (name still = stub), so it's just noise.
+    // Real inactive communities (name changed but not activated) still show
+    // in the agent's own dashboard so they can go back and activate.
+    .neq('name', 'Untitled community')
     .order('name', { ascending: true });
   if (!includeInactive) communitiesQ = communitiesQ.eq('status', 'active');
 

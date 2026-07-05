@@ -2,6 +2,35 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-07-05 — Phase 72.1: hide Untitled stub from every grid
+
+### Trigger
+Owner: "listing edit 里的下拉看不到了 my neighborhood grid view 里还有."
+
+### Root cause
+Phase 72 fixed the listing-edit dropdown by filtering to `status='active'`,
+but the agent dashboard `/dashboard/communities` intentionally passes
+`includeInactive: true` so agents can see their own drafts and go back to
+finish activating them. That means the `'Untitled community'` upload-flow
+stub — which the owner has never touched — was still leaking into the
+agent's own grid.
+
+### Change
+`lib/communities/list.ts`: added `.neq('name', 'Untitled community')` to
+the base community query, applied to BOTH cache branches (active-only for
+public/buyer, and include-inactive for agent dashboard).
+
+Real inactive communities (agents who renamed but haven't hit "activate"
+yet) still show in the dashboard grid so they can go back and complete
+them. Only the stub name — which nothing except the upload-flow stub row
+ever holds — is filtered out.
+
+### Verification
+- `npx tsc --noEmit` clean.
+- Existing 60s `unstable_cache` will pick up the code change on next
+  cache boundary; `revalidateTag('community-cards')` on any community
+  mutation forces immediate refresh.
+
 ## 2026-07-05 — Phase 72: community activate gate + Untitled leak fix
 
 ### Trigger
