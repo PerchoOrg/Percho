@@ -651,8 +651,23 @@ function Card({
   // Phase 71.7: pick the effective CF uid based on fullscreen state.
   // `cfVideoIdLandscape` is optional; fullscreen is only enterable when set.
   const hasLandscape = !!sel.cfVideoIdLandscape;
-  const effectiveCfId =
-    isFullscreen && sel.cfVideoIdLandscape ? sel.cfVideoIdLandscape : sel.cfVideoId;
+  // Phase 74.17 (2026-07-06): use landscape uid whenever available, in
+  // BOTH the vertical feed and fullscreen. This is the fundamental
+  // architectural fix that makes 74.13-74.16's cascade of overlays and
+  // gates unnecessary. Owner report:「刚才修的是横滑的问题 竖滑也会有
+  // 黑屏 很快闪现一个小视频带播放键的页面」— that was the iOS Safari
+  // native `<video poster>` big-play-button flashing during the
+  // portrait→landscape HLS src swap on tap. By using landscape uid
+  // from the moment the card mounts, tapping fullscreen does NOT
+  // re-attach HLS (effectiveCfId doesn't change), so there is no
+  // src-swap window, no black frame, no poster flash, no overlays
+  // needed. The feed shows the landscape video with `object-contain`
+  // (letterbox top/bottom is acceptable per phase65 rule); fullscreen
+  // just rotates + sizes the same <video> element to fill the
+  // horizontal viewport. Owner: "有没有可能就一个横屏视频 竖屏播放
+  // 就上下空着保证视频质量,如果是横屏播放就全屏,因为本身就是横屏视频,
+  // 这样不用多个视频 节省成本 避免黑屏".
+  const effectiveCfId = sel.cfVideoIdLandscape ?? sel.cfVideoId;
 
   // Phase 71.13/71.14: aggressively play on fullscreen. iOS Safari native
   // HLS (Apple HLS via <video src>) reloads the media pipeline on src
@@ -997,15 +1012,16 @@ function Card({
           <>
             <video
               ref={videoRef}
-              // Phase 74.13 (2026-07-06): restore native poster on video —
-              // BUT only for non-fullscreen. In fullscreen, native
-              // <video poster> letterboxes to the rotated box's aspect
-              // (CSS object-fit does NOT apply to the poster attribute
-              // on iOS Safari), producing the "小图" frame owner reported
-              // in "黑屏 → 小图 → 大播放". Phase 74.14 replaces it with
-              // a rotated <img> overlay + objectFit: cover so the
-              // landscape thumbnail actually fills the fullscreen box.
-              poster={isFullscreen && hasLandscape ? undefined : (poster ?? undefined)}
+              // Phase 74.17 (2026-07-06): NO native poster attribute
+              // on any branch. Skill §1 canonical (iOS Safari) — the
+              // poster attribute renders the native big-play-button
+              // synchronously on <video> mount. The 74.7 <img> overlay
+              // below (gated on !hasFirstFrame) covers the vertical-feed
+              // first-swipe gap in a way iOS actually respects. Since
+              // 74.17 uses landscape uid in BOTH feed and fullscreen,
+              // fullscreen tap does NOT re-attach HLS, so no separate
+              // fullscreen poster/overlay machinery is needed.
+              poster={undefined}
               style={
                 // Phase 71.14: rotate-90 fullscreen — measure the visual
                 // viewport in JS and set width/height as raw pixels. Setting
@@ -1088,62 +1104,13 @@ function Card({
                 className="pointer-events-none absolute inset-0 h-full w-full bg-black object-contain"
               />
             )}
-            {/* Phase 74.14 (2026-07-06): fullscreen rotated poster overlay.
-             * Sits at zIndex 9999 (below the <video> at 10000).
-             * Phase 74.15 (2026-07-06): GATED on !hasFirstFrame — the
-             * "no gate" design in 74.14 caused the overlay to persist
-             * as a "small landscape image overlapping the fullscreen
-             * video" (owner: "还是有小图出现在大屏上 overlap"). Even at
-             * zIndex 9999 vs video's 10000 — likely due to iOS Safari
-             * rotate/sizing quirks the <img> was rendering slightly off
-             * and peeking out. Simplest fix: unmount the overlay the
-             * moment the landscape video has a first frame. `hasFirstFrame`
-             * is reset to false in the HLS attach effect (line ~741) on
-             * effectiveCfId change (portrait→landscape uid), and set true
-             * again on the video's onPlaying/onLoadedData (see reveal
-             * effect ~L868), so the overlay stays visible only during
-             * the actual src-swap window.
-             * Uses the LANDSCAPE poster URL so aspect matches the box,
-             * with objectFit: cover (native <video poster> can't do this
-             * on iOS Safari — see hls-video-ios-safari-pitfalls §15). */}
-            {isFullscreen && hasLandscape && vp.w > 0 && landscapePoster && !hasFirstFrame && (
-              <img
-                src={landscapePoster}
-                alt=""
-                aria-hidden="true"
-                style={{
-                  position: 'fixed',
-                  top: '50%',
-                  left: '50%',
-                  width: `${vp.h}px`,
-                  height: `${vp.w}px`,
-                  maxWidth: 'none',
-                  maxHeight: 'none',
-                  minWidth: 0,
-                  minHeight: 0,
-                  transform: 'translate(-50%, -50%) rotate(90deg)',
-                  objectFit: 'cover',
-                  zIndex: 9999,
-                  pointerEvents: 'none',
-                  background: 'black',
-                }}
-              />
-            )}
-            {/* Phase 74.14: preload the landscape thumbnail into the
-             * browser's image cache while the card is still in the
-             * portrait feed. This eliminates the "黑屏" first frame in
-             * fullscreen — the <img> above renders instantly from
-             * cache instead of waiting for a network round trip.
-             * Hidden via display:none but src is fetched. */}
-            {!isFullscreen && landscapePoster && (
-              <img
-                src={landscapePoster}
-                alt=""
-                aria-hidden="true"
-                style={{ display: 'none' }}
-                loading="eager"
-              />
-            )}
+            {/* Phase 74.17 (2026-07-06): 74.14 rotated overlay + 74.14
+             * hidden preload have both been REMOVED. Since 74.17 uses
+             * the landscape uid in the vertical feed too, tapping
+             * fullscreen no longer swaps HLS src, so there is no
+             * black-frame gap to cover in fullscreen. The 74.7 <img>
+             * overlay above still covers the vertical-feed first-swipe
+             * mount gap for both landscape and portrait cards. */}
           </>
         ) : poster ? (
           <img
@@ -1266,27 +1233,17 @@ function Card({
             // → it collapsed to intrinsic size (a "small" landscape tile)
             // until the effect fired one paint later.
             //
-            // Phase 74.13 (2026-07-06): 74.10's setHasFirstFrame(false)
-            // sync reset was REMOVED because fullscreen video had an
-            // opacity gate that would fade out on reset.
-            //
-            // Phase 74.15 (2026-07-06): sync setHasFirstFrame(false) is
-            // BACK — but for a different reason and now safe. 74.14's
-            // rotated <img> overlay (gated on !hasFirstFrame in 74.15)
-            // must be mounted on the very first fullscreen render, so we
-            // reset hasFirstFrame synchronously with the fullscreen flip.
-            // Without this the HLS re-attach effect only fires post-
-            // render, so render #1 would have hasFirstFrame=true (from
-            // portrait video) → overlay skipped → user briefly sees a
-            // stretched portrait last-frame or empty video. The 74.10
-            // sync-reset was harmful because fullscreen video style
-            // still had opacity/transition; 74.13 deleted that, so the
-            // sync reset now only mounts/unmounts the overlay <img>,
-            // which is exactly what we want.
+            // Phase 74.17 (2026-07-06): 74.10/74.15's sync
+            // setHasFirstFrame(false) has been REMOVED. Since 74.17
+            // uses the landscape uid in both feed and fullscreen,
+            // tapping fullscreen does NOT swap HLS src — the video is
+            // already playing with a first frame. Resetting
+            // hasFirstFrame here would spuriously mount the 74.7
+            // <img> overlay on top of an already-playing fullscreen
+            // video for a frame or two.
             const w = Math.round(window.innerWidth);
             const h = Math.round(window.innerHeight);
             if (w > 0 && h > 0) setVp({ w, h });
-            setHasFirstFrame(false);
             setIsFullscreen(true);
           }}
           aria-label="View landscape fullscreen"

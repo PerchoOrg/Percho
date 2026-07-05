@@ -2,6 +2,38 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## Phase 74.17 (2026-07-06) — 架构级 fix:landscape uid 从 feed 就用,拆掉 74.13-74.16 全部脚手架
+
+**Trigger:** owner 澄清:
+1. 之前的「小视频带播放键」不是竖滑换卡时,而是**点全屏后横屏时闪一下的中央小图**
+2. owner 提出 fix 方向:「有没有可能就一个横屏视频 竖屏播放就上下空着保证视频质量,如果是横屏播放就全屏,因为本身就是横屏视频,这样不用多个视频 节省成本 避免黑屏」
+
+**根因(总结 74.13-74.16 cascade 为什么修不好):**
+真正的病根是 **fullscreen tap 会触发 HLS src swap(portrait uid → landscape uid)**。这个 swap 期间 `<video>` 元素被 iOS Safari 内部 clear,产生 200-500ms 的黑屏 gap。74.13 到 74.16 每一版都在往这个 gap 上叠不同 overlay 遮盖:74.13 用 native poster attr(触发 native big-play-button);74.14 换成 rotated `<img>` overlay(z-stack 缝隙 + rotate/vp 竞态);74.15 加 gate(仍然闪 sizing 崩掉的小图);74.16 kill poster attr(overlay unbind + 更糟)。**每一 fix 都在治闪现的 symptom,不治 swap 本身**。
+
+**Fix (74.17):** 消灭 swap,不治闪现。
+- `effectiveCfId = sel.cfVideoIdLandscape ?? sel.cfVideoId` —— 有 landscape 就 feed 里就用 landscape,fullscreen 也是 landscape,同一个 uid
+- feed 里 landscape 视频 `object-contain` 上下 letterbox(符合 phase65「video/photo 一律 object-contain,横屏 letterbox 接受」)
+- fullscreen tap 只 rotate + resize `<video>` 元素,**HLS 完全不 re-attach**,没有黑屏 gap,没有需要遮盖的东西
+- **拆掉 74.13-74.16 全部代码**:74.13 poster attr / 74.14 rotated overlay / 74.14 hidden preload / 74.15 sync setHasFirstFrame(false) —— 全部 delete
+- 保留 74.7 non-fullscreen `<img>` overlay(独立 fix,竖滑换卡时的 first-swipe 遮盖,不涉及 fullscreen)
+
+**教训 - **cascade 反模式**:「叠 overlay 遮盖 async gap」这条路是死路。iOS Safari 的 z-stack + rotate + fixed 有太多 quirks(74.14 z-stack 泄漏、74.15 gate 竞态、74.16 sizing 竞态),没法靠 CSS 稳定叠出「遮住任意 async 时间窗」的效果。**架构级删掉 gap 才是唯一稳定方案。**
+- **架构决策听 owner**:「一个横屏视频 竖屏也用横屏」这个思路是 owner 提的,不是我诊断出来的。我 74.13-74.16 一直在自己的架构假设(portrait 卡里必须播 portrait video)里挣扎。owner 的 domain 视角一句话拆了这个假设。
+- **skill § 后续应该加**:「fullscreen tap = src swap = 不该做。single uid 播两种 aspect」是 canonical。
+
+**Files:**
+- `app/(public)/browse/_components/BrowseFeed.tsx`
+  - L653-670 `effectiveCfId` 用 landscape uid always
+  - L1013-1023 `poster={undefined}`(canonical)
+  - L1107-1113 rotated overlay + preload block 全删
+  - L1234-1246 tap handler 删掉 sync `setHasFirstFrame(false)`
+- 净变化:-58 行 +18 行
+
+## Phase 74.16 (2026-07-06) — 竖滑 feed 黑屏 + 小视频带播放键闪现根因(74.13 回归)【已 revert】
+
+**Note:** 74.16 已被 revert(误诊 owner 报的问题为竖滑换卡,实际是全屏 tap 时的中央小图闪现)。见 74.17 真正的 fix。
+
 ## Phase 74.15 (2026-07-06) — 74.14 overlay gate 回归
 
 **Trigger:** owner 测 74.14:「有进步 全屏之后出大屏 大屏没有退 但是还是有小图出现在大屏上 overlap...小图的位置在中央 小图的内容是Landscape缩略图 手机」
