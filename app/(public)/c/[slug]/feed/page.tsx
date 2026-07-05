@@ -167,7 +167,7 @@ export default async function CommunityFeedPage({
   // biome-ignore lint/suspicious/noExplicitAny: stub generated types
   const { data: listingRows } = (await (supabase as any)
     .from('listings')
-    .select('id, slug, address, city, state, price, beds, baths, sqft, agent_id, created_at')
+    .select('id, slug, address, city, state, zip, price, beds, baths, sqft, agent_id, created_at')
     .eq('community_id', community.id)
     .eq('status', 'active')
     .order('created_at', { ascending: false })) as {
@@ -177,6 +177,7 @@ export default async function CommunityFeedPage({
       address: string;
       city: string;
       state: string;
+      zip: string | null;
       price: number | null;
       beds: number | null;
       baths: number | null;
@@ -253,6 +254,7 @@ export default async function CommunityFeedPage({
         address: l.address,
         city: l.city,
         state: l.state,
+        zip: l.zip ?? null,
         price: l.price,
         beds: l.beds,
         baths: l.baths,

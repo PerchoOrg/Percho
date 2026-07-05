@@ -48,9 +48,7 @@ interface Props {
 
 function formatPrice(n: number | null): string {
   if (n == null) return '';
-  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(2).replace(/\.?0+$/, '')}M`;
-  if (n >= 1_000) return `$${Math.round(n / 1_000)}K`;
-  return `$${n.toLocaleString()}`;
+  return `$${n.toLocaleString('en-US')}`;
 }
 
 export function CommunityListingCarousel({
@@ -484,22 +482,28 @@ function ListingSlide({
         <img src={poster} alt={listing.address} className="h-full w-full bg-black object-contain" />
       ) : null}
 
-      {/* Bottom overlay: price + address + bbs (real fields only). */}
+      {/* Phase 74.9: overlay 与主 browse feed CaptionCard 对齐 —
+       * price 26px bold + specs / address 13px regular,单行地址带 zip,
+       * 无 gradient scrim(text-shadow 提供对比度)。`right-20` 让位给
+       * 右侧 rail(即使 community feed 目前无 rail,保留一致 gutter)。 */}
       <div
-        className={`absolute inset-x-0 bottom-0 ${FEED_Z.caption} bg-gradient-to-t from-black/85 via-black/45 to-transparent px-5 pt-16 pb-10 pr-20`}
+        className="absolute right-20 left-4 z-30 text-cream"
+        style={{
+          bottom: 'max(1rem, env(safe-area-inset-bottom))',
+          textShadow: '0 2px 8px rgba(0,0,0,0.7), 0 1px 2px rgba(0,0,0,0.5)',
+        }}
       >
         {listing.price != null && (
-          <div className="font-serif text-2xl text-cream leading-tight drop-shadow">
+          <div className="font-bold text-[26px] leading-none tracking-tight tabular-nums">
             {formatPrice(listing.price)}
           </div>
         )}
-        <div className="mt-1 text-[14px] text-cream/85 drop-shadow">{listing.address}</div>
-        <div className="text-[12px] text-cream/70 drop-shadow">
-          {listing.city}, {listing.state}
-        </div>
         {bbs.length > 0 && (
-          <div className="mt-1.5 text-[12px] text-cream/70 drop-shadow">{bbs.join(' · ')}</div>
+          <div className="mt-1.5 text-[13px] leading-snug">{bbs.join(' · ')}</div>
         )}
+        <div className="mt-1 text-[13px] leading-snug">
+          {`${listing.address}, ${listing.city}, ${listing.state}${listing.zip ? ` ${listing.zip}` : ''}`}
+        </div>
       </div>
     </section>
   );

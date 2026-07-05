@@ -158,17 +158,18 @@ export function CommunityListingsSheet({
                       </div>
                       <div className="min-w-0 flex-1">
                         {l.price != null && (
-                          <div className="font-semibold text-ink text-base">
+                          <div className="font-semibold text-ink text-[15px]">
                             {formatPrice(l.price)}
                           </div>
                         )}
-                        <div className="mt-0.5 truncate text-[13px] text-ink2">{l.address}</div>
-                        <div className="truncate text-[12px] text-ink2">
-                          {l.city}, {l.state}
-                        </div>
                         {(l.beds != null || l.baths != null || l.sqft != null) && (
-                          <div className="mt-1 text-[12px] text-ink2">{formatBedBathSqft(l)}</div>
+                          <div className="mt-0.5 truncate text-[11px] text-ink2 tracking-wide">
+                            {formatBedBathSqft(l)}
+                          </div>
                         )}
+                        <div className="mt-0.5 truncate text-[11px] text-ink2 tracking-wide">
+                          {`${l.address}, ${l.city}, ${l.state}`}
+                        </div>
                       </div>
                       <div className="text-muted" aria-hidden="true">
                         ›

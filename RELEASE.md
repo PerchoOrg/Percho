@@ -2,6 +2,14 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.74.10 — 2026-07-05
+
+- **全站 grid + feed 地址/字号统一 (audit)**: owner "扫描所有 grid view 和 feed view 的 listing 都按照这个格式更改 保持统一"。 aligned 3 遗留 surface:
+  - `app/(public)/c/[slug]/feed/_components/CommunityListingCarousel.tsx`(community 全屏 feed):去 gradient scrim + 去 K/M 缩写,price 26px bold + 单行 `street, city, state zip` + specs 13px,与主 browse feed CaptionCard 完全对称
+  - `app/(public)/c/[slug]/feed/_components/CommunityListingsSheet.tsx`(社区 listing 列表卡):去两行 address,合并成 `street, city, state`(sheet 密度紧,不带 zip);specs 移到 address 前面
+  - `app/(public)/a/[agentSlug]/page.tsx`(agent portfolio editorial grid):address 单行拼 city/state/zip(editorial 22/26px 字号保留 —— owner 74.4 特批)
+- Zip 字段一并加进 `CommunityListingItem` 类型 + `c/[slug]/feed/page.tsx` supabase select + row-typing + mapper,以及 `/a/[agentSlug]` 的 `ListingCard` type + select
+
 ## v0.74.9 — 2026-07-05
 
 - **Bottom sheet(点 more 弹的浮层)排版清理**:第二行 specs 和第三行 address 现在字号/粗细一致(15px regular),不再一个 medium 一个更粗;底部 "Listed by" 从 avatar chip 改成右下角单行链接 `Listed by <name>`,占位小很多。

@@ -65,6 +65,11 @@ export type CommunityListingItem = {
   address: string;
   city: string;
   state: string;
+  /** Phase 74.9: zip added so community feed carousel can render the
+   *  canonical `${street}, ${city}, ${state} ${zip}` line matching the
+   *  main browse feed. Nullable — legacy rows without zip render without
+   *  the trailing space+zip. */
+  zip: string | null;
   price: number | null;
   beds: number | null;
   baths: number | null;

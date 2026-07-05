@@ -38,6 +38,9 @@ type ListingCard = {
   address: string;
   city: string;
   state: string;
+  /** Phase 74.9: agent portfolio address line 与全站对齐,渲染
+   *  `${street}, ${city}, ${state} ${zip}`。zip 缺失 fallback。 */
+  zip: string | null;
   price: number | null;
   beds: number | null;
   baths: number | null;
@@ -64,7 +67,7 @@ async function fetchListings(agentId: string): Promise<ListingCard[]> {
   // biome-ignore lint/suspicious/noExplicitAny: stub generated types
   const { data: rawListings } = (await (supabase as any)
     .from('listings')
-    .select('id, slug, address, city, state, price, beds, baths, sqft, cover_url, created_at')
+    .select('id, slug, address, city, state, zip, price, beds, baths, sqft, cover_url, created_at')
     .eq('agent_id', agentId)
     .eq('status', 'active')
     .order('created_at', { ascending: false })) as {
@@ -292,7 +295,7 @@ function ListingCardView({
             <div className="text-[13px] text-surface/85 leading-snug md:text-[14px]">{specs}</div>
           )}
           <div className="text-[13px] text-surface/85 leading-snug md:text-[14px]">
-            {listing.address}
+            {`${listing.address}, ${listing.city}, ${listing.state}${listing.zip ? ` ${listing.zip}` : ''}`}
           </div>
         </div>
       }
