@@ -2,6 +2,15 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.71.10 — 2026-07-06
+
+### ✨ Improvements
+- Fullscreen button on the video feed now sits at the bottom of the vertical video with a "Full screen" label instead of a bare corner-arrows icon.
+- The centered play/pause indicator is now visible at all times while a horizontal listing plays in fullscreen — no more guessing whether the video is playing.
+
+### 🐛 Bug Fixes
+- Removed the "please rotate your phone" Chinese hint that briefly appeared over horizontal videos in fullscreen.
+
 ## v0.71.9 — 2026-07-06
 
 - **横版全屏真的横了**:owner "点击全屏 视频还是竖着播放 并且周围的按键都没有了"。71.7 全屏按钮虽然切到了横版 src,但手机竖屏视口把 16:9 视频塞在中间一小条,视觉上还是"竖屏播放上下留黑边"。这次改成:进全屏后视频转 90°、边到边填满整屏;顶部会短暂弹一个"请把手机横过来"提示。用户把手机横过来看画面立即变正、无黑边。iPad 横放 / desktop 视口自动免转,直接横放。周围的 like/save/share 按钮在全屏里被沉浸式覆盖是刻意的 —— 按 X 或 ESC 退出即可恢复。

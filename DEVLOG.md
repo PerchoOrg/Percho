@@ -2,6 +2,24 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## Phase 71.10 — Fullscreen polish: labeled button, always-on center control, no rotate hint (2026-07-06)
+
+Owner:
+> 全屏按钮要在竖的视频下边缘下边 并且有文字 Full screen
+> 横的视频要占满屏幕
+> 横的视频播放键一直在中间显示
+> 横的视频播放前有个中文提示 去掉
+
+**Actions** (`app/(public)/browse/_components/BrowseFeed.tsx`):
+- 全屏按钮:`bottom-[38%]` → `bottom-6`(挪到竖视频下缘/屏底);从 44px 圆形纯图标改为 pill:图标 + `Full screen` 文字。
+- 中心播放控件:原来只在 `paused` 时才渲染 —— 现在改成 `paused || (isFullscreen && hasLandscape)` 时渲染。播放中显示暗化的 pause glyph(70% opacity),暂停中显示 PlayIcon。全屏 landscape 下始终能看到中间的播放状态指示。
+- 删除"请把手机横过来"提示 pill、`showRotateHint` state、2.5s auto-fade useEffect —— 全部移除。
+- 视频占满屏幕:71.9 的 rotate-90 逻辑保留(竖屏视口下横视频转 90° 铺满 100vw × 100vh 已经是 edge-to-edge)。
+
+**Verify**: tsc noEmit 干净,`npm run build` 通过,First Load JS shared 87.3 kB。
+
+---
+
 ## Phase 71.9 — Fullscreen 横版视频转 90° 撑满竖屏 (2026-07-06)
 
 Owner: "点击全屏 视频还是竖着播放 并且周围的按键都没有了"。
