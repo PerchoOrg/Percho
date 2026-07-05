@@ -2,6 +2,12 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.71.13 — 2026-07-06
+
+### 🐛 Bug Fixes
+- Fullscreen horizontal video now truly fills the phone screen with no black bars on top or bottom (previous fix only covered the sides on iOS Safari).
+- Video now auto-plays reliably when you tap the "Full screen" button — no more paused play button stuck in the middle.
+
 ## v0.71.12 — 2026-07-06
 
 ### 🐛 Bug Fixes
