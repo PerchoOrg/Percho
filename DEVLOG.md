@@ -2,7 +2,23 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
-## Phase 71.17 (2026-07-06) — Fullscreen: measure section rect, not window.innerHeight
+## Phase 71.19 (2026-07-06) — 找到黑边真凶:Tailwind Preflight
+
+诊断 pill (71.18) 揭露真相:`vp=428×781, vid rect=428×428, natural=1920×1080`。
+inline 给的 `width:781px, height:428px` 被硬 clamp 到 428×428 → rotate 后视频
+只占中央 428×428 方块,上下各留 ~20% 黑边。
+
+**根因:Tailwind Preflight 全局注入** `img, video { max-width: 100%; height: auto; }`,
+把 JS 测量的 px 尺寸压回父容器宽度。
+
+**修复(1 行):**inline style 加 `maxWidth:'none', maxHeight:'none', minWidth:0, minHeight:0`,
+压过 Preflight。设备无关,任何手机都吃这个 preflight 规则。
+
+**71.14/71.15/71.16/71.17 全都在正确的方向上** — 测量对了、rotate 对了、
+inline px 对了 —— 但被 Preflight 拦截,看起来像"完全没生效"。诊断 pill 是唯一
+线索,没它这题真解不出来。
+
+
 
 **Root cause found via on-screen diagnostic (71.16 pill).** iPhone Plus / Pro
 Max reported `vp=428×781, 100vh=781` while `fixed inset-0` covers the *layout*

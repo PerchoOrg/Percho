@@ -2,6 +2,13 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.71.19 — 2026-07-06
+
+Fullscreen 视频黑边彻底解决。真凶是 Tailwind Preflight 的全局
+`img, video { max-width: 100%; height: auto; }` 把我们 JS 测量的 rotate box
+硬 clamp 到父容器宽度。inline style 加 `maxWidth/maxHeight: none` 压过
+preflight,rotate 后视频精确铺满视口。
+
 ## v0.71.17 — 2026-07-06
 
 Fullscreen sizing now measures the actual container rect (via
