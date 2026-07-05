@@ -2,6 +2,25 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-07-05 — Phase 73.2: Back button 单行化
+
+### Trigger
+Owner:"community 左上的 back 按钮 不要放到两行 并到一行 检查所有的 back 都放到一行"。两行结构(`Back` 上,`<address>` 下)在窄屏挤成两行,视觉噪。
+
+### Change
+`CommunityCarousel.tsx`(browse listing → nearby video carousel)+ `CommunityListingCarousel.tsx`(community feed → listing carousel)——两处都从 `<span flex-col>` 换成 `<span flex items-center gap-1.5>`,`Back` · `<address>` 一行显示,label 从 10px 提到 11px,truncate 从 40vw 缩到 38vw 以留分隔符空间。
+
+其他 back 按钮(`CommunityVideoFeed`、`BrowseFeed`)本来就是纯图标 44×44,不涉及。
+
+### Files
+- `app/(public)/browse/_components/CommunityCarousel.tsx`
+- `app/(public)/c/[slug]/feed/_components/CommunityListingCarousel.tsx`
+
+### Test
+tsc + build clean。
+
+---
+
 ## 2026-07-05 — Phase 73.1: community carousel → native scroll-snap
 
 ### Trigger

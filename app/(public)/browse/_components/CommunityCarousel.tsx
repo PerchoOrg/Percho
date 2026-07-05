@@ -231,9 +231,10 @@ export function CommunityCarousel({
             style={{ touchAction: 'manipulation' }}
           >
             <span className="text-xl leading-none">‹</span>
-            <span className="flex flex-col text-left leading-tight">
+            <span className="flex items-center gap-1.5 text-left leading-none">
               <span className="text-[12px] font-semibold">Back</span>
-              <span className="max-w-[40vw] truncate text-[10px] text-cream/70">
+              <span className="text-cream/50">·</span>
+              <span className="max-w-[38vw] truncate text-[11px] text-cream/70">
                 {backLabel}
               </span>
             </span>
