@@ -612,56 +612,6 @@ function Card({
 
   const sel = useMemo(() => pickVideo(card, source, cycleIdx), [card, source, cycleIdx]);
 
-  // Phase 71.21 (2026-07-06): DOM `<video>.paused` is the source of truth
-  // for play-glyph visibility. React `paused` prop was going out of sync
-  // with the media element (icon staying visible while video played, or
-  // audio continuing while paused=true). Poll v.paused each rAF frame.
-  const [domPaused, setDomPaused] = useState<boolean>(true);
-  useEffect(() => {
-    if (!shouldMount) return;
-    let raf = 0;
-    function tick() {
-      const v = videoRef.current;
-      if (v) setDomPaused(v.paused);
-      raf = requestAnimationFrame(tick);
-    }
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-  }, [shouldMount]);
-
-  // Phase 71.21 (2026-07-06): diagnostic — video element's actual bounding
-  // rect + natural dimensions. Refresh on loadedmetadata + interval so pill
-  // shows current post-render numbers.
-  const [videoDiag, setVideoDiag] = useState<string>('video: pending');
-  useEffect(() => {
-    if (!isFullscreen) return;
-    const v = videoRef.current;
-    if (!v) return;
-    function update() {
-      const el = videoRef.current;
-      if (!el) return;
-      const r = el.getBoundingClientRect();
-      // Phase 71.22: also enumerate ALL <video> elements on the page.
-      // If domPaused=true muted=true here but user still hears audio, the
-      // sound comes from a sibling video (adjacent card preloaded, or a
-      // stale HLS attach that never got cleaned up).
-      const all = Array.from(document.querySelectorAll('video')) as HTMLVideoElement[];
-      const others = all
-        .map((av, i) => `v${i}:p=${av.paused ? 'T' : 'F'} m=${av.muted ? 'T' : 'F'} vol=${av.volume.toFixed(1)} ct=${av.currentTime.toFixed(1)}`)
-        .join('\n');
-      setVideoDiag(
-        `vid rect=${Math.round(r.width)}×${Math.round(r.height)} · natural=${el.videoWidth}×${el.videoHeight}\nreactPaused=${paused} domPaused=${el.paused} muted=${el.muted} vol=${el.volume.toFixed(2)}\ntotal videos=${all.length}\n${others}`,
-      );
-    }
-    update();
-    const iv = window.setInterval(update, 500);
-    v.addEventListener('loadedmetadata', update);
-    return () => {
-      window.clearInterval(iv);
-      v.removeEventListener('loadedmetadata', update);
-    };
-  }, [isFullscreen]);
-
   // Phase 71.7: pick the effective CF uid based on fullscreen state.
   // `cfVideoIdLandscape` is optional; fullscreen is only enterable when set.
   const hasLandscape = !!sel.cfVideoIdLandscape;
@@ -859,15 +809,12 @@ function Card({
   const onTap = () => {
     const v = videoRef.current;
     if (!v) return;
-    // Phase 71.21 (2026-07-06): use DOM v.paused as truth. Also aggressively
-    // stop audio: HLS.js keeps pumping audio buffer even after `video.pause()`
-    // in some iOS Safari builds. Nudging currentTime forces a resync; muting
-    // as a safety net if user reports audio continues.
     if (v.paused) {
-      // Phase 71.23: undo the 71.22 nuclear mute on the current video so
-      // audio comes back when user resumes. Volume was zeroed and muted
-      // was flipped true; restore both to the parent-controlled state.
-      try { v.volume = 1; } catch {}
+      // Phase 71.23: restore audio state that 71.22 zeroed on last pause.
+      // Without this, resuming plays silent.
+      try {
+        v.volume = 1;
+      } catch {}
       v.muted = muted;
       const p = v.play();
       if (p && typeof p.then === 'function') {
@@ -876,20 +823,24 @@ function Card({
         setPaused(false);
       }
     } else {
-      v.pause();
-      // Force audio silence in case HLS buffer keeps emitting.
-      try {
-        v.currentTime = v.currentTime;
-      } catch {}
-      // Phase 71.22: nuclear option — pause + mute EVERY <video> on the
-      // page. If the audio comes from a sibling card that we didn't know
-      // about (preloaded neighbor, stale HLS instance), this shuts it up.
+      // Phase 71.22: `v.pause()` alone doesn't stop audio on iOS Safari when
+      // HLS.js is driving the media pipeline — the audio buffer keeps
+      // flushing. Belt-and-suspenders: pause + mute + zero-volume every
+      // <video> on the page. Any element (current or preloaded neighbor)
+      // that was still emitting sound goes silent. `onTap` play branch
+      // above restores volume/muted on resume.
       try {
         const all = Array.from(document.querySelectorAll('video')) as HTMLVideoElement[];
         for (const av of all) {
-          try { av.pause(); } catch {}
-          try { av.muted = true; } catch {}
-          try { av.volume = 0; } catch {}
+          try {
+            av.pause();
+          } catch {}
+          try {
+            av.muted = true;
+          } catch {}
+          try {
+            av.volume = 0;
+          } catch {}
         }
       } catch {}
       setPaused(true);
@@ -1098,7 +1049,7 @@ function Card({
         </>
       )}
 
-      {shouldMount && domPaused && (
+      {shouldMount && paused && (
         <div
           className="pointer-events-none flex items-center justify-center"
           style={
@@ -1163,35 +1114,13 @@ function Card({
       )}
       {isFullscreen && (
         <>
-          {/* Phase 71.16: temporary on-screen diagnostic — shows the
-              measured viewport px + CSS 100vh so we can see what iOS
-              Safari is actually reporting. Remove after confirmation. */}
-          <div
-            style={{
-              position: 'fixed',
-              top: 8,
-              left: 8,
-              zIndex: 10001,
-              background: 'rgba(0,0,0,0.7)',
-              color: '#fff',
-              padding: '4px 8px',
-              fontSize: 11,
-              fontFamily: 'monospace',
-              borderRadius: 4,
-              whiteSpace: 'pre-line',
-              pointerEvents: 'none',
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsFullscreen(false);
             }}
-          >
-            vp={vp.w}×{vp.h}
-{'\n'}{videoDiag}
-          </div>
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            setIsFullscreen(false);
-          }}
-          aria-label="Exit fullscreen"
+            aria-label="Exit fullscreen"
           className="flex h-11 w-11 items-center justify-center rounded-full border border-cream/40 bg-ink/80 text-cream backdrop-blur transition-colors hover:border-cream hover:bg-ink/90"
           style={{
             // Phase 71.20: X button was hidden BEHIND the fullscreen video
