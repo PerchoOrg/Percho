@@ -2,6 +2,36 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-07-05 — Phase 74.11: dashboard hub + community sheet 补齐 audit
+
+### Trigger
+Owner:"agent hub my listing grid view 需要改 / 截图里的 homes in xxx community 也要改"。74.10 audit miss 了两处:
+1. Dashboard `/dashboard` my listings grid 只喂 street 到 `ListingGrid`,`formatFullAddress` fallback 到 street-only(和 draft `Untitled draft` fallback 走同一分支)—— 但正常 listing 应该拼 city/state。
+2. Community "Homes in XXX" sheet(截图里的 `CommunityListingsSheet`)74.10 只重排版没换 `formatPrice`,`$2.5M/$465K` 还是 K/M 缩写。
+
+### Change
+- `app/dashboard/page.tsx`:supabase select 加 `city, state, zip`,行类型加三字段,mapper 传给 `ListingGrid`(draft 保持 street-only)
+- `app/(public)/c/[slug]/feed/_components/CommunityListingsSheet.tsx`:`formatPrice` 从 K/M 缩写换成 `$${n.toLocaleString('en-US')}`
+
+### Verification
+- tsc clean
+- next build green
+
+### Lesson
+Full-file audit(74.10)只 grep 了 address 拼接,没 grep price formatter。下次 audit 一起 grep `formatPrice` 里的 K/M 分支 —— 任何 buyer surface(不含 dashboard 密度显示)都必须走 `toLocaleString('en-US')`。已经 update `feed-caption-ui-conventions.md` 里"Full-digit price"规则时提及,但没写"grep formatPrice 定义处" —— 下次改 skill。
+
+## 2026-07-05 — Phase 74.10: Listed by 加可点击视觉
+
+### Trigger
+Owner:"listed by这部分设计一下让人觉得是可以点击的"。74.9 改成右下角单行灰字后没有 affordance,看起来像 label。
+
+### Change
+- `CaptionCard.tsx` sheet Listed by:agent name 加 `text-[#8b6b3f]` (Vicinity brand tan) + underline decoration (`#c4a584/50` → hover `#8b6b3f`) + `font-medium` + 尾部 `›` chevron with `group-hover:translate-x-0.5` micro-interaction。整块 hover 从 `black/60` → `black/90`。
+- 保持右下 flex justify-end,不再显 heading/avatar,单行不变。
+
+### Verification
+- tsc clean
+
 ## 2026-07-05 — Phase 74.9: bottom sheet specs/address 去粗体 + Listed by 单行右下
 
 ### Trigger

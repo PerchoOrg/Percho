@@ -230,9 +230,18 @@ export function CaptionCard({
               <section className="mt-5 flex justify-end">
                 <Link
                   href={`/a/${agent.slug}`}
-                  className="text-[13px] text-black/60 hover:text-black/80"
+                  className="group inline-flex items-center gap-1 text-[13px] text-black/60 transition-colors hover:text-black/90"
                 >
-                  Listed by <span className="text-black/80">{agent.name}</span>
+                  <span>Listed by</span>
+                  <span className="font-medium text-[#8b6b3f] underline decoration-[#c4a584]/50 decoration-1 underline-offset-[3px] group-hover:decoration-[#8b6b3f]">
+                    {agent.name}
+                  </span>
+                  <span
+                    aria-hidden
+                    className="text-[#8b6b3f] transition-transform group-hover:translate-x-0.5"
+                  >
+                    ›
+                  </span>
                 </Link>
               </section>
             </div>
