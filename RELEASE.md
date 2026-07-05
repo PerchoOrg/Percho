@@ -2,6 +2,11 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.71.11 — 2026-07-06
+
+### ✨ Improvements
+- The "Full screen" button now sits just below the horizontal photo frame inside the vertical video (at the black-bar boundary), instead of at the very bottom of the page.
+
 ## v0.71.10 — 2026-07-06
 
 ### ✨ Improvements

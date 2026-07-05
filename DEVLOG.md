@@ -2,6 +2,21 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## Phase 71.11 — Fullscreen button anchored to landscape frame edge, not viewport bottom (2026-07-06)
+
+Owner: "full screen 按键放在竖的视频里的真实视频的下方 横视频和黑色背景交界处下方 不是整个页面的下方"。
+
+71.10 把按钮放在 `bottom-6`(视口底缘),owner 想要它跟着"竖视频里的横视频"的下缘走,视觉上贴着 letterbox 黑边分界线。
+
+**数学**:portrait 视频 1080×1920,里面的 3:2 横照片框占中央 37.5% 高度(1080×3/2 = 720 → 720/1920 = 37.5%),黑边上下各 ~31%。所以横片下缘 ≈ 视口底往上 31%,按钮定位 `bottom-[26%]`(黑边分界线再往下一点点的黑边区)。
+
+**Actions** (`app/(public)/browse/_components/BrowseFeed.tsx`):
+- 全屏 pill 按钮 `bottom-6` → `bottom-[26%]`。
+
+**Verify**: tsc + build clean.
+
+---
+
 ## Phase 71.10 — Fullscreen polish: labeled button, always-on center control, no rotate hint (2026-07-06)
 
 Owner:

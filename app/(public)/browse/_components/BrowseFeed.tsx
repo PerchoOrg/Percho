@@ -908,7 +908,7 @@ function Card({
             setIsFullscreen(true);
           }}
           aria-label="View landscape fullscreen"
-          className="-translate-x-1/2 absolute bottom-6 left-1/2 z-20 flex items-center gap-2 rounded-full border border-cream/30 bg-ink/70 px-4 py-2 text-cream text-sm backdrop-blur transition-colors hover:border-cream hover:bg-ink/85"
+          className="-translate-x-1/2 absolute bottom-[26%] left-1/2 z-20 flex items-center gap-2 rounded-full border border-cream/30 bg-ink/70 px-4 py-2 text-cream text-sm backdrop-blur transition-colors hover:border-cream hover:bg-ink/85"
           style={{ touchAction: 'manipulation' }}
         >
           {/* corner-arrows expand icon */}
