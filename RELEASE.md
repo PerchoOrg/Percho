@@ -2,6 +2,12 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.74.15 — 2026-07-05
+
+- **Feed 里 More 展开后视频不再被完全挡住**: owner "listing feed 里的 more 拉出来的框框太大遮住了视频全部 搞一半多一点 黄金分割线左右 留一部分视频还可以继续播放"。两处修:
+  - **详情框收到黄金比例**:原本占屏 82%,现在 62%(≈黄金分割 0.618)。上部约 38% 让给视频。
+  - **移除全屏半透明遮罩**:原本 More 展开后整块屏幕会盖一层半透明黑,视频虽然还在放但被罩得看不见。现在直接删掉遮罩,视频画面清清楚楚地继续播,详情框自己带上边缘阴影做视觉分层。要关闭详情走右上角 ✕。
+
 ## v0.74.14 — 2026-07-05
 
 - **Public agent profile 大瘦身:hero 压缩 + grid 对齐全站 canonical**: owner "public profile 里的 grid view 也要改,并且 profile 第一部分的空白太多 减少 尽量多的展现房子内容"。

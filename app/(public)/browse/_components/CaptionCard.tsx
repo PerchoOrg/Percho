@@ -143,11 +143,10 @@ export function CaptionCard({
           className="absolute right-0 bottom-0 left-0 z-50 flex max-h-[62%] flex-col rounded-t-3xl bg-[#FBF8F3] text-ink shadow-[0_-20px_60px_rgba(0,0,0,0.4)]"
           onClick={(e) => e.stopPropagation()}
         >
-          <div>
-            <div
-              className="mx-auto mt-2.5 h-[5px] w-10 flex-shrink-0 rounded-full bg-black/20"
-              aria-hidden
-            />
+          <div
+            className="mx-auto mt-2.5 h-[5px] w-10 flex-shrink-0 rounded-full bg-black/20"
+            aria-hidden
+          />
             <div className="flex flex-shrink-0 items-baseline justify-between gap-3 border-black/[.08] border-b px-5 pt-3 pb-3">
               <div className="font-bold text-[24px] leading-none tabular-nums">
                 {formatPriceFull(listing.price)}
@@ -236,7 +235,6 @@ export function CaptionCard({
                 </Link>
               </section>
             </div>
-          </div>
         </div>
       )}
     </>

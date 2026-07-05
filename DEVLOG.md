@@ -2,6 +2,24 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## Phase 74.15 — feed sheet 缩到黄金比例 + 干掉全屏 dimmer 让视频继续播 (2026-07-05)
+
+Owner: "listing feed 里的 more 拉出来的框框太大遮住了视频全部 搞一半多一点 黄金分割线左右 留一部分视频还可以继续播放"。
+
+两个动作,`app/(public)/browse/_components/CaptionCard.tsx`:
+
+1. **Sheet 高度 `max-h-[82%]` → `max-h-[62%]`**:黄金比例 0.618。上部约 38% 视频区继续可见并保持播放。
+2. **删掉 `bg-black/40 backdrop-blur-sm` 全屏 dimmer**:这是 pitfall #5 早就明令禁止的模式("do NOT add a full-screen backdrop dimmer that covers the media"),74.1 immersive 落地时残留了没清。它才是"遮住视频全部"的真凶——视频本身没被 pause,只是被这个半透明 layer 罩死了看不见。删掉后:
+   - 上部媒体区域完全裸露,视频继续播放
+   - Sheet 靠 `shadow-[0_-20px_60px_rgba(0,0,0,0.4)]` 上边缘阴影产生分层感(这是 skill 里明确的替代方案)
+   - Sheet 外点击关闭:改为点击父级 dialog 之外(即视频区域)自然触发 BrowseFeed 已有的 tap-to-pause,不再劫持成关闭动作。要关闭走右上角 ✕ 或再点一次 More 按钮的语义(实际上 More 按钮有 `stopPropagation`,只能通过 ✕ 关)。这与 owner 意图一致——他要"视频继续播",不是要"点视频关 sheet"。
+3. **DOM 结构精简**:原本三层嵌套 `dialog wrapper > backdrop button > sheet card`,现在 sheet card 直接就是 dialog 元素,少一层 div。
+
+**Skill 引用**:`feed-caption-ui-conventions.md` pitfall #5 早就写死这条,74.1 immersive 落地时该删没删——这次补齐。
+
+Files: `app/(public)/browse/_components/CaptionCard.tsx` (-13 / +5)
+TSC: 通过
+
 ## Phase 74.14 — public agent profile: hero -40% whitespace + grid ↔ canonical (2026-07-05)
 
 Owner: "public profile 里的 grid view 也要改 并且 profile 第一部分的空白太多 减少 尽量多的展现房子内容"。两件事一次做:hero 大瘦身 + portfolio grid 对齐全站 canonical。
