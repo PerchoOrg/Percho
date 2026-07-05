@@ -2,6 +2,9 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.73.3 — 2026-07-05
+Two fixes: (1) The top-right counter pill in the community-video and community-listing carousels is now the same height (44px) as the top-left Back button — the header reads as a single aligned row instead of two mismatched pills. (2) The community-listing carousel's video is now tap-to-pause: tap once to pause (a play indicator appears in the center), tap again to resume. Swiping to a new card always autoplays fresh.
+
 ## v0.73.2 — 2026-07-05
 Back button in the community-video and community-listing carousels is now a single line — "Back · <address>" instead of stacked "Back" over the address. Cleaner header, less visual noise.
 

@@ -2,6 +2,36 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-07-05 — Phase 73.3: header 高度对齐 + community listing 视频 tap-to-pause
+
+### Trigger
+Owner phase 73.2 之后:"左上角的 back 和右上角的计数按钮的高度要一致 / community listing carousel 里的视频我没法暂停"。
+
+### Change 1 — 计数 pill h-9 → h-11
+两处 counter pill(`CommunityCarousel` + `CommunityListingCarousel`)`h-9 px-3` → `h-11 px-3.5`。左边 back 本来就是 `h-11`,现在两边完全对齐。
+
+### Change 2 — CommunityListingCarousel 视频 tap-to-pause
+`ListingSlide` `<video>` 是叶子节点无 click handler,tap 被外层 snap 容器吃掉,owner 无法暂停。改法参照 BrowseFeed VideoSlide:
+1. `manuallyPaused` state
+2. 视频包 `<button onClick={onVideoTap}>`,tap 切 play/pause
+3. 暂停时中央 64px 圆形毛玻璃 ▶ overlay
+4. `isActive` useEffect 里 reset `manuallyPaused=false` — swipe 到新卡永远重新自动播
+
+### Files
+- `app/(public)/browse/_components/CommunityCarousel.tsx`
+- `app/(public)/c/[slug]/feed/_components/CommunityListingCarousel.tsx`
+
+### Test
+tsc + build clean。commit `28bfe04` on main。
+
+### Notes
+BrowseFeed VideoSlide 的 `paused` state 提到 parent(要跟 mute button 联动),这里 slide 自包含,局部 state 就够。
+
+### Pitfall — 并发进程搅乱 git
+中途发现 repo 有另一 agent(prototypes 分支)在同时操作,cherry-pick 里 tsx 变动被吞了,commit 只带 md。教训:每次 push 前 `git log --stat HEAD` 确认改动数,不能只看 exit code。
+
+---
+
 ## 2026-07-05 — Phase 73.2: Back button 单行化
 
 ### Trigger
