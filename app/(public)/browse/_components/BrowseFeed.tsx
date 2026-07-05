@@ -577,23 +577,25 @@ function Card({
   const [vp, setVp] = useState<{ w: number; h: number }>({ w: 0, h: 0 });
   useEffect(() => {
     if (!isFullscreen) return;
-    const el = sectionRef.current;
-    if (!el) return;
+    // Phase 74.12 (2026-07-06): measure the VIEWPORT, not sectionRef.
+    // sectionRef is the feed <section> which keeps its non-fullscreen
+    // layout even when the fullscreen `fixed inset-0 z-[9999]` overlay
+    // is on top. Measuring section on the isFullscreen effect fired
+    // AFTER the tap handler's sync setVp(window inner{Width,Height}),
+    // overwriting the correct viewport dims with the smaller section
+    // dims → user saw "big → small → big" as ResizeObserver later
+    // resettled. window.innerWidth/Height matches the fullscreen
+    // container's actual size (fixed inset-0), matches the tap
+    // handler, single source of truth.
     function measure() {
-      const el2 = sectionRef.current;
-      if (!el2) return;
-      const r = el2.getBoundingClientRect();
-      setVp({ w: Math.round(r.width), h: Math.round(r.height) });
+      setVp({ w: window.innerWidth, h: window.innerHeight });
     }
     measure();
-    const ro = new ResizeObserver(measure);
-    ro.observe(el);
     window.addEventListener('resize', measure);
     window.addEventListener('orientationchange', measure);
     const vv = window.visualViewport;
     vv?.addEventListener('resize', measure);
     return () => {
-      ro.disconnect();
       window.removeEventListener('resize', measure);
       window.removeEventListener('orientationchange', measure);
       vv?.removeEventListener('resize', measure);

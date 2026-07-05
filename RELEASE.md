@@ -2,6 +2,11 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.74.12 — 2026-07-06
+
+### 🐛 Bug Fixes
+- **Fullscreen video no longer flickers "big → small → big" on tap.** The viewport size state had two competing writers: the tap handler wrote the correct fullscreen dimensions synchronously, but a follow-up effect immediately overwrote it with the underlying feed section's smaller size, then a resize observer eventually corrected it back. Consolidated to a single source of truth (`window.innerWidth`/`Height`) so the fullscreen video renders at the correct size on the very first paint.
+
 ## v0.74.11 — 2026-07-06
 
 ### 🐛 Bug Fixes
