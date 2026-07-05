@@ -2,6 +2,11 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.74.3 — 2026-07-05
+
+### 🐛 Bug Fixes
+- 横滑时顶部的计数(如 `3 / 8`)和分段进度条不再延迟 — 现在跟着手指实时走。影响两处:listing 卡片里的照片横滑,以及 community 视频轮播。
+
 ## v0.74.2 — 2026-07-05
 
 Caption 微调:price 从 30px 降到 26px(不晃眼);address 和 city/state 合并成一行 `7920 NE 26th St Medina, WA`;新增 description 前 40 字符 preview + `… more` toggle,展开走 bottom sheet。

@@ -2,6 +2,42 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-07-05 — Phase 74.2b: horizontal-swipe counter/progress unlagged
+
+### Trigger
+Owner: "两处需要横滑的 feed 都有一个问题,滑动后页面和上面的计数不 sync,上面的横杠和计数有延迟"。The two horizontal-swipe surfaces are `BrowseFeed` PhotoCard (photo strip inside a listing card) and `CommunityCarousel` (community-video overlay).
+
+### Root cause
+Phase 73/73.1 fixed swipe jank by debouncing `setActive` to 100ms of scroll quiescence — parent state stays stable while the compositor animates, no image/HLS re-mount mid-swipe. Correct for perf. But the counter pill (`{i+1} / N`) and segmented progress bar are bound to the same `active` state, so they inherited the 100ms lag. Header visibly falls behind the finger.
+
+### Change
+Split display state from parent commit in both components.
+
+`BrowseFeed.tsx` PhotoCard (~L275):
+- Add `displayIdx` local state + `displayRafRef`
+- `onScroll`: rAF-coalesced read of `scrollLeft` → `setDisplayIdx` (immediate, local only), alongside the existing 100ms-debounced parent commit
+- `useEffect([idx])`: also `setDisplayIdx(idx)` so programmatic jumps stay in sync
+- Counter + progress bar switch from `idx` → `displayIdx`
+
+`CommunityCarousel.tsx` (~L118):
+- Add `displayActive` + `displayRafRef` (mirror pattern)
+- `onScroll`: rAF display update + debounced parent `setActive`
+- `useEffect([active, open])`: sync `displayActive`
+- Counter + progress bar switch from `safeActive` → `safeDisplayActive`
+- `CarouselSlide isActive` still keys off `active` — video mount/HLS attach unchanged, still gated by 100ms debounce
+
+### Why not scrollend / no debounce
+- `scrollend` is iOS 18+ / Chrome 114+; pre-17 fallback would need the same rAF path anyway
+- Removing the 100ms debounce brings phase 73's swipe jank back — the debounce is what keeps `<img>`/HLS re-mount off the compositor
+
+### Verify
+- `npx tsc --noEmit` clean (only pre-existing `formatPrice` errors on CaptionCard callsites, not touched here)
+- `npx next build` green
+
+### Files
+- `app/(public)/browse/_components/BrowseFeed.tsx`
+- `app/(public)/browse/_components/CommunityCarousel.tsx`
+
 ## 2026-07-05 — Phase 74.2: caption tuning (price 26px, address one-line, desc preview)
 
 ### Trigger

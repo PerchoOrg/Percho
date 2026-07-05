@@ -274,8 +274,28 @@ function PhotoCard({
   const scrollSettleTimerRef = useRef<number | null>(null);
   const settleDebounceRef = useRef<number | null>(null);
 
-  // External idx change → programmatic scroll.
+  // Phase 74.2 (2026-07-05): split display state from parent commit.
+  // Owner: "滑动后页面和上面的计数不 sync — 上面的横杠和计数有延迟".
+  //
+  // Phase 73's 100ms settle debounce is what keeps the img/decode side
+  // quiet during a swipe (see the ranting comment above), and we do NOT
+  // want to lose that. But the counter pill + segmented progress bar are
+  // pure visual feedback — they can (and should) track the finger in
+  // real time. So we keep the parent commit debounced (still gates
+  // decode/mount work), and drive the header UI off a lightweight local
+  // `displayIdx` that we update from onScroll immediately.
+  //
+  // rAF-throttled read of scrollLeft → nearest slide → local setState.
+  // Only the counter pill + segmented bar re-render, and they render as
+  // sibling <div>s over the scroller — the scroller itself and every
+  // <img> inside it depend on `idx` (parent-owned, still debounced), so
+  // the compositor stays undisturbed.
+  const [displayIdx, setDisplayIdx] = useState(idx);
+  const displayRafRef = useRef<number | null>(null);
+
+  // External idx change → programmatic scroll + resync display.
   useEffect(() => {
+    setDisplayIdx(idx);
     const el = scrollerRef.current;
     if (!el) return;
     const w = el.clientWidth || 1;
@@ -301,10 +321,30 @@ function PhotoCard({
   // React tree is stable while the compositor is animating. Every
   // scroll event just resets a 100ms watchdog; the parent only hears
   // about the change once the user has stopped for a full frame budget.
+  //
+  // Also (phase 74.2): rAF-throttled local `displayIdx` update so the
+  // counter/progress pill tracks the finger without waiting for settle.
   const onScroll = useCallback(() => {
     if (isProgrammaticScrollRef.current) return;
     const el = scrollerRef.current;
     if (!el || total <= 1) return;
+
+    // Live display update (rAF-coalesced, local state only).
+    if (displayRafRef.current == null) {
+      displayRafRef.current = window.requestAnimationFrame(() => {
+        displayRafRef.current = null;
+        const el2 = scrollerRef.current;
+        if (!el2) return;
+        const w = el2.clientWidth || 1;
+        const nearest = Math.max(
+          0,
+          Math.min(total - 1, Math.round(el2.scrollLeft / w)),
+        );
+        setDisplayIdx((prev) => (prev === nearest ? prev : nearest));
+      });
+    }
+
+    // Parent commit (debounced, drives img mount / decode).
     if (settleDebounceRef.current) window.clearTimeout(settleDebounceRef.current);
     settleDebounceRef.current = window.setTimeout(() => {
       const w = el.clientWidth || 1;
@@ -322,6 +362,10 @@ function PhotoCard({
       if (settleDebounceRef.current) {
         window.clearTimeout(settleDebounceRef.current);
         settleDebounceRef.current = null;
+      }
+      if (displayRafRef.current != null) {
+        window.cancelAnimationFrame(displayRafRef.current);
+        displayRafRef.current = null;
       }
     };
   }, []);
@@ -419,14 +463,14 @@ function PhotoCard({
       {poolSize > 1 && total > 1 && (
         <>
           <div className="pointer-events-none absolute top-3 right-3 z-10 flex h-9 items-center rounded-full border border-cream/20 bg-ink/55 px-3 font-medium text-[12px] text-cream backdrop-blur-md tabular-nums">
-            {idx + 1} / {total}
+            {displayIdx + 1} / {total}
           </div>
           <div className="pointer-events-none absolute inset-x-3 top-16 z-10 flex gap-1">
             {photos.map((p, i) => (
               <div
                 key={`${p}-prog`}
                 className={`h-0.5 flex-1 rounded-full transition-colors ${
-                  i <= idx ? 'bg-cream' : 'bg-cream/20'
+                  i <= displayIdx ? 'bg-cream' : 'bg-cream/20'
                 }`}
               />
             ))}

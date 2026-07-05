@@ -118,11 +118,20 @@ export function CommunityCarousel({
   const scrollSettleDebounceRef = useRef<number | null>(null);
   const lastReportedIdxRef = useRef(0);
 
+  // Phase 74.2 (2026-07-05): live display state for the counter/progress
+  // bar so they track the finger without waiting for the 100ms scroll
+  // settle. `active` still owns video mount/HLS attach — that stays
+  // debounced. `displayActive` owns purely visual chrome. See
+  // BrowseFeed.tsx PhotoCard for the same split (phase 74.2).
+  const [displayActive, setDisplayActive] = useState(0);
+  const displayRafRef = useRef<number | null>(null);
+
   // Sync active index when the overlay opens at a new starting position.
   useEffect(() => {
     if (open) {
       const clamped = Math.max(0, Math.min(startIndex, videos.length - 1));
       setActive(clamped);
+      setDisplayActive(clamped);
       lastReportedIdxRef.current = clamped;
     }
   }, [open, startIndex, videos.length]);
@@ -151,6 +160,7 @@ export function CommunityCarousel({
   // onScroll handler so it doesn't ricochet the change back.
   useEffect(() => {
     if (!open) return;
+    setDisplayActive(active);
     const el = scrollerRef.current;
     if (!el) return;
     const w = el.clientWidth || 1;
@@ -176,10 +186,30 @@ export function CommunityCarousel({
   // User scroll → active. Debounced to 100ms of quiescence so React
   // doesn't re-render during compositor animation. Fires setActive once
   // per settled gesture, not per rAF.
+  //
+  // Phase 74.2: rAF-throttled `displayActive` update alongside so the
+  // counter pill / segmented progress track the finger in real time,
+  // without triggering video mount churn.
   const onScroll = useCallback(() => {
     if (isProgrammaticScrollRef.current) return;
     const el = scrollerRef.current;
     if (!el || videos.length <= 1) return;
+
+    // Live display update (rAF-coalesced, local state only).
+    if (displayRafRef.current == null) {
+      displayRafRef.current = window.requestAnimationFrame(() => {
+        displayRafRef.current = null;
+        const el2 = scrollerRef.current;
+        if (!el2) return;
+        const w = el2.clientWidth || 1;
+        const nearest = Math.max(
+          0,
+          Math.min(videos.length - 1, Math.round(el2.scrollLeft / w)),
+        );
+        setDisplayActive((prev) => (prev === nearest ? prev : nearest));
+      });
+    }
+
     if (scrollSettleDebounceRef.current)
       window.clearTimeout(scrollSettleDebounceRef.current);
     scrollSettleDebounceRef.current = window.setTimeout(() => {
@@ -200,6 +230,10 @@ export function CommunityCarousel({
         window.clearTimeout(scrollSettleDebounceRef.current);
         scrollSettleDebounceRef.current = null;
       }
+      if (displayRafRef.current != null) {
+        window.cancelAnimationFrame(displayRafRef.current);
+        displayRafRef.current = null;
+      }
     };
   }, []);
 
@@ -207,6 +241,7 @@ export function CommunityCarousel({
 
   const total = videos.length;
   const safeActive = Math.min(active, total - 1);
+  const safeDisplayActive = Math.min(displayActive, total - 1);
   const showRail =
     !!onShare || !!onToggleLike || !!onToggleSave || !!onContact;
 
@@ -241,7 +276,7 @@ export function CommunityCarousel({
           </button>
           <div className="flex items-center gap-2">
             <div className="flex h-10 items-center rounded-full border border-cream/20 bg-ink/55 px-3 font-medium text-[12px] text-cream backdrop-blur-md tabular-nums">
-              {safeActive + 1} / {total}
+              {safeDisplayActive + 1} / {total}
             </div>
             {/* Phase 69.1 (2026-07-04): Share moved from top-right into
              * the right-rail bottom, matching BrowseFeed / CommunityVideoFeed
@@ -257,7 +292,7 @@ export function CommunityCarousel({
             <div
               key={`${v.cfVideoId}-prog`}
               className={`h-0.5 flex-1 rounded-full ${
-                i <= safeActive ? 'bg-cream' : 'bg-cream/20'
+                i <= safeDisplayActive ? 'bg-cream' : 'bg-cream/20'
               }`}
             />
           ))}
