@@ -2,6 +2,43 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## Phase 71.7 — 横屏照片专用横版视频 + in-page 全屏切换 (2026-07-06)
+
+Owner: "自动生成的视频是竖屏的 如果照片是横着 那结果上下就会空着 不好 有没有解决方案"。
+
+现状 pipeline 用 blur-letterbox 把横向照片塞进 1080x1920 的竖屏画布,虽然不是纯黑,但横片上下仍有约 30% 的模糊留白 —— owner 判定"不好"。方案:renderer 检测输入照片的方向占比,当 ≥80% 是横向照片时额外渲染一份 1920x1080 的横版视频,前端 feed 默认播竖版,遇到横版存在的 listing 显示一个全屏按钮,点了切到横版并撑满整屏。
+
+**决策(与 owner 对齐)**:
+- 阈值 80%(owner: "合适")—— 混合方向的 listing 竖版体验反而更连贯,不做双渲染
+- 全屏按钮位置:中间偏下,横向照片下方(owner: "点击全屏 放在中间偏下的位置 大概在横着的照片下方")
+- 自定义 in-page fullscreen(`fixed inset-0 z-[9999]`)而非 iOS 原生 `webkitEnterFullscreen` —— 后者会撕掉 <video>.src 触发 HLS.js 重挂,src-swap 就废了
+
+**改动六处**:
+
+1. `supabase/migrations/20260706000000_listing_video_landscape.sql` — 加 `cf_video_id_landscape text nullable` + partial unique index。已 `supabase db push` 过(migration list 显示 remote 有 `20260706000000`)。
+2. `scripts/ken-burns/generate.py` — `--resolution` 变成 optional override,新增 `--orientation portrait|landscape`,默认 portrait 保持向后兼容。landscape → 1920x1080。
+3. `scripts/render-worker/worker.py` — 每张下载后 `probe_orientation` (ffprobe 读 stream=width,height),`photos_are_mostly_landscape` 判 ≥80%,内部 `render(orientation, out)` 闭包共享 BGM,portrait 必渲染,landscape 条件性渲染,两者独立 CF Stream 上传,更新 `cf_video_id` + `cf_video_id_landscape` 到同一 listing_videos 行。日志加 `landscape_ratio=... want_landscape=...` 便于事后核对。
+4. **数据 4 层 pipe**(memory 里那条"select+row type+mapper+component type"警报正是这里):
+   - `lib/feed/browse-cards.ts` — `ListingVideoRow` 加 `cf_video_id_landscape`,`.select()` 补列,mapper 里 `hero.cfVideoIdLandscape` 从 `hero?.cf_video_id_landscape ?? null` 取。
+   - `lib/listing-feed/load.ts` — 同上(`ListingVideo` type + select + heroVideos mapper + hero mapper)。
+5. `app/(public)/browse/_components/BrowseFeed.tsx`:
+   - `BrowseSourceVideo` + `BrowseCard.hero` 加 `cfVideoIdLandscape?: string | null`。
+   - `pickVideo` 传递 `cfVideoIdLandscape`(hero fallback 分支)。
+   - Card 组件加 `isFullscreen` state + ESC 键 handler。
+   - `effectiveCfId = isFullscreen && sel.cfVideoIdLandscape ? ... : sel.cfVideoId` —— poster、HLS effect、play/pause effect 三处 deps 全从 `sel.cfVideoId` 换成 `effectiveCfId`,src 切换走既有 `hls.destroy() → new Hls().loadSource()` 路径。
+   - `<section>` className 有 fullscreen 分支:`fixed inset-0 z-[9999]`(z 值取自 memory 里的 pattern) vs 原来的 `relative h-[100dvh] w-full snap-start snap-always`。
+   - 全屏按钮:圆形 44px,`bottom-[38%] left-1/2 -translate-x-1/2`,corner-arrows expand icon。仅在 `hasLandscape && !isFullscreen && shouldMount` 时显示。
+   - 全屏内右上角 X 关闭按钮 z-30。
+
+**没动**:
+- 已有 listing_videos(portrait-only)不迁移 —— `cf_video_id_landscape` 是 nullable,老数据前端 `hasLandscape=false` 走原路径。想给旧 listing 补横版重跑 render job 就行。
+- CommunityVideoFeed / heroVideos pool / photo card 都不涉及全屏切换 —— 全屏是"listing 主视频"的功能,category 视频没有横版对应。
+- generate.py 的 blur-letterbox 逻辑不动,竖版遇到零星横片仍走 blur;横版遇到零星竖片同样走 blur —— 保持视觉语言一致。
+
+**验证**:tsc 干净,`npm run build` 通过。运行时端到端(mock 全横 listing → 触发 dual render → feed 出全屏按钮)留待 preview 部署上验证。
+
+TSC + build:通过。
+
 ## Phase 74.16 — sheet 支持 tap-outside 关闭 (2026-07-05)
 
 Owner: "点击 more 出来框框 点击 x 收起 也应该允许点击其他地方自动收起框框"。

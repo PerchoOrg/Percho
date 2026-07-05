@@ -45,6 +45,44 @@ GENERATE_SCRIPT = REPO_ROOT / "scripts" / "ken-burns" / "generate.py"
 POLL_IDLE_SEC = 5
 PHOTO_BUCKET = "listing-photos"
 
+# Phase 71.7: threshold at which we render an additional 1920x1080 landscape
+# version of the video for the fullscreen toggle. If ≥80% of the listing's
+# photos are landscape (width > height), horizontal photos would waste ~30%
+# of the vertical canvas as blur letterbox — a landscape render fills the
+# frame properly. Below this threshold the portrait video works fine and we
+# skip the extra 30-60s CPU + upload.
+LANDSCAPE_THRESHOLD = 0.8
+
+
+def probe_orientation(path: Path) -> str:
+    """Return 'landscape' | 'portrait' | 'square' for an image via ffprobe."""
+    try:
+        out = subprocess.run(
+            [
+                "ffprobe", "-v", "error", "-select_streams", "v:0",
+                "-show_entries", "stream=width,height",
+                "-of", "csv=p=0", str(path),
+            ],
+            capture_output=True, text=True, check=True, timeout=15,
+        )
+        w_str, h_str = out.stdout.strip().split(",")[:2]
+        w, h = int(w_str), int(h_str)
+        if w > h:
+            return "landscape"
+        if h > w:
+            return "portrait"
+        return "square"
+    except Exception:
+        # If probing fails, treat as portrait (matches source-photo default).
+        return "portrait"
+
+
+def photos_are_mostly_landscape(photo_paths: list[Path]) -> bool:
+    if not photo_paths:
+        return False
+    landscape_count = sum(1 for p in photo_paths if probe_orientation(p) == "landscape")
+    return (landscape_count / len(photo_paths)) >= LANDSCAPE_THRESHOLD
+
 
 # ── env loading ─────────────────────────────────────────────────────────
 
@@ -237,60 +275,98 @@ def process_job(job: dict[str, Any]) -> None:
             raise RuntimeError(f"only {len(photos)} photos, need >=3")
 
         # 3. Download photos.
+        photo_paths: list[Path] = []
         for i, p in enumerate(photos, start=1):
             path = p["storage_path"]
             ext = Path(path).suffix or ".jpg"
             dest = workdir / f"{i:02d}-photo{ext}"
             storage_download(PHOTO_BUCKET, path, dest)
+            photo_paths.append(dest)
             print(f"[job {job['id']}] downloaded {dest.name}", flush=True)
+
+        # 3b. Decide whether to also render a landscape version.
+        want_landscape = photos_are_mostly_landscape(photo_paths)
+        landscape_ratio = sum(1 for p in photo_paths if probe_orientation(p) == "landscape") / len(photo_paths)
+        print(
+            f"[job {job['id']}] landscape_ratio={landscape_ratio:.2f} "
+            f"want_landscape={want_landscape}",
+            flush=True,
+        )
 
         # 4. Write overlay JSON.
         overlay = build_overlay(listing, len(photos))
         overlay_path = workdir / "overlay.json"
         overlay_path.write_text(json.dumps(overlay, indent=2))
 
-        # 5. Run generate.py.
-        # No ending card: user prefers real photos to end the video (Phase 71.3).
-        # Random BGM: pick one .mp3 from ./bgm/ if any exist.
-        out_mp4 = workdir / "out.mp4"
-        cmd = [
-            "python3",
-            str(GENERATE_SCRIPT),
-            "--photos",
-            str(workdir),
-            "--output",
-            str(out_mp4),
-            "--listing-overlay",
-            str(overlay_path),
-        ]
+        # 5. Run generate.py — portrait always, landscape conditionally.
+        # Both orientations share the same BGM pick so the two versions feel
+        # like the same reel.
         bgm_choice = pick_bgm()
-        if bgm_choice:
-            cmd += ["--bgm", str(bgm_choice)]
-            print(f"[job {job['id']}] bgm={bgm_choice.name}", flush=True)
-        else:
-            print(f"[job {job['id']}] no bgm (empty {BGM_DIR})", flush=True)
-        print(f"[job {job['id']}] running: {' '.join(cmd)}", flush=True)
-        subprocess.run(cmd, check=True, cwd=str(REPO_ROOT))
 
-        if not out_mp4.exists():
-            raise RuntimeError("generate.py did not produce out.mp4")
+        def render(orientation: str, out_path: Path) -> None:
+            cmd = [
+                "python3",
+                str(GENERATE_SCRIPT),
+                "--photos",
+                str(workdir),
+                "--output",
+                str(out_path),
+                "--orientation",
+                orientation,
+                "--listing-overlay",
+                str(overlay_path),
+            ]
+            if bgm_choice:
+                cmd += ["--bgm", str(bgm_choice)]
+            print(f"[job {job['id']}] running ({orientation}): {' '.join(cmd)}", flush=True)
+            subprocess.run(cmd, check=True, cwd=str(REPO_ROOT))
+            if not out_path.exists():
+                raise RuntimeError(f"generate.py did not produce {out_path.name}")
+
+        out_portrait = workdir / "out_portrait.mp4"
+        render("portrait", out_portrait)
+
+        out_landscape: Path | None = None
+        if want_landscape:
+            out_landscape = workdir / "out_landscape.mp4"
+            render("landscape", out_landscape)
 
         # 6. Upload to Cloudflare Stream.
         cf_video_id = cf_upload(
-            out_mp4,
+            out_portrait,
             meta={
                 "name": f"{listing.get('address', 'Listing')} — home tour",
                 "listing_id": listing_id,
+                "orientation": "portrait",
             },
         )
-        print(f"[job {job['id']}] uploaded to CF: {cf_video_id}", flush=True)
+        print(f"[job {job['id']}] uploaded portrait to CF: {cf_video_id}", flush=True)
 
-        # 7. Update listing_videos: set cf_video_id, clear the sentinel
-        #    external_url, mark ready.
+        cf_video_id_landscape: str | None = None
+        if out_landscape is not None:
+            cf_video_id_landscape = cf_upload(
+                out_landscape,
+                meta={
+                    "name": f"{listing.get('address', 'Listing')} — home tour (landscape)",
+                    "listing_id": listing_id,
+                    "orientation": "landscape",
+                },
+            )
+            print(f"[job {job['id']}] uploaded landscape to CF: {cf_video_id_landscape}", flush=True)
+
+        # 7. Update listing_videos: set cf_video_id (+ landscape when present),
+        #    clear the sentinel external_url, mark ready.
+        patch_body: dict[str, Any] = {
+            "cf_video_id": cf_video_id,
+            "external_url": None,
+            "status": "ready",
+        }
+        if cf_video_id_landscape is not None:
+            patch_body["cf_video_id_landscape"] = cf_video_id_landscape
         sb_patch(
             "listing_videos",
             {"id": f"eq.{video_row_id}"},
-            {"cf_video_id": cf_video_id, "external_url": None, "status": "ready"},
+            patch_body,
         )
 
         # 8. Mark job done.

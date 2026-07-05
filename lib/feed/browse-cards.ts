@@ -60,6 +60,7 @@ type AgentRow = {
 type ListingVideoRow = {
   listing_id: string;
   cf_video_id: string | null;
+  cf_video_id_landscape: string | null;
   external_url: string | null;
   title: string | null;
   kind: string;
@@ -141,7 +142,7 @@ async function assembleCards(
   ] = await Promise.all([
     supabase
       .from('listing_videos')
-      .select('listing_id, cf_video_id, external_url, title, kind, sort_order')
+      .select('listing_id, cf_video_id, cf_video_id_landscape, external_url, title, kind, sort_order')
       .in('listing_id', listingIds)
       .eq('status', 'ready')
       .order('sort_order', { ascending: true }),
@@ -302,6 +303,7 @@ async function assembleCards(
       mediaKind: hero ? 'video' : 'photo',
       hero: {
         cfVideoId: hero?.cf_video_id ?? '',
+        cfVideoIdLandscape: hero?.cf_video_id_landscape ?? null,
         externalUrl: hero?.external_url ?? null,
       },
       heroPhotoUrl: hero ? undefined : photoPublicUrl((heroPhoto as ListingPhotoRow).storage_path),

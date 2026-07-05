@@ -390,7 +390,11 @@ def main() -> None:
     p.add_argument("--photos", required=True, help="Directory of input photos")
     p.add_argument("--output", required=True, help="Output mp4 path")
     p.add_argument("--duration-per-photo", type=float, default=3.0)
-    p.add_argument("--resolution", default="1080x1920")
+    p.add_argument("--resolution", default=None,
+                   help="Explicit output resolution (WxH). Overrides --orientation.")
+    p.add_argument("--orientation", default="portrait",
+                   choices=["portrait", "landscape"],
+                   help="portrait=1080x1920 (default, feed), landscape=1920x1080 (fullscreen)")
     p.add_argument("--bgm", default=None, help="Path to background music (mp3/m4a/wav)")
     p.add_argument("--ending-card", default=None,
                    help="Path to JSON with {price,beds,baths,sqft,address,agent_name}")
@@ -418,7 +422,12 @@ def main() -> None:
     if not photos:
         die(f"no .jpg/.jpeg/.png photos found in {photos_dir}")
 
-    w, h = parse_resolution(args.resolution)
+    if args.resolution:
+        w, h = parse_resolution(args.resolution)
+    elif args.orientation == "landscape":
+        w, h = 1920, 1080
+    else:
+        w, h = 1080, 1920
     per = float(args.duration_per_photo)
     xfade = min(args.xfade_duration, per / 2 - 0.1)
     if xfade < 0.1:
