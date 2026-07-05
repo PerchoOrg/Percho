@@ -27,6 +27,13 @@ import {
 export type BrowseSourceVideo = {
   cfVideoId: string;
   /**
+   * Phase 71.7 (2026-07-06): optional 1920x1080 landscape variant of the
+   * same auto-rendered reel. Set when the render worker detects ≥80%
+   * landscape source photos and produces a horizontal companion video.
+   * The feed player exposes a fullscreen toggle when this is present.
+   */
+  cfVideoIdLandscape?: string | null;
+  /**
    * Phase 70.11 (2026-07-04): direct mp4 URL for demo/mock listings that
    * bypass Cloudflare Stream. When set, the Card plays this URL as a
    * plain <video src>; `cfVideoId` is ignored (typically empty). At most
@@ -55,7 +62,7 @@ export type BrowseCard = {
    *   - 'photo' → use `heroPhotoUrl` directly. `hero.cfVideoId` is empty.
    */
   mediaKind: 'video' | 'photo';
-  hero: { cfVideoId: string; externalUrl?: string | null };
+  hero: { cfVideoId: string; cfVideoIdLandscape?: string | null; externalUrl?: string | null };
   /** Set when mediaKind === 'photo'. Public Supabase Storage URL. */
   heroPhotoUrl?: string;
   /**
@@ -205,6 +212,7 @@ function pickVideo(card: BrowseCard, source: Source, cycleIdx: number): BrowseSo
   }
   return {
     cfVideoId: card.hero.cfVideoId,
+    cfVideoIdLandscape: card.hero.cfVideoIdLandscape ?? null,
     externalUrl: card.hero.externalUrl ?? null,
     line1: card.listing.address,
     line2: `${card.listing.city}, ${card.listing.state}`,
@@ -536,7 +544,36 @@ function Card({
   const hlsRef = useRef<Hls | null>(null);
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
 
+  // Phase 71.7 (2026-07-06): in-page fullscreen for the landscape variant.
+  // Only exposed when the current selection carries a `cfVideoIdLandscape`
+  // (populated by the render worker for listings whose photos are ≥80%
+  // horizontal). Toggling flips the container to `fixed inset-0 z-[9999]`
+  // and swaps the HLS source to the landscape uid — same BGM, same
+  // Ken-Burns pass, just letterbox-free horizontal composition.
+  //
+  // Custom in-page fullscreen (not the native Fullscreen API) because
+  // iOS Safari's `webkitEnterFullscreen` on <video> tears down the src
+  // and re-attaches at a fixed player, which breaks HLS.js and the
+  // src-swap trick we depend on. A plain overlay div works everywhere.
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  // ESC exits fullscreen — desktop keyboards and iPad Magic Keyboards.
+  useEffect(() => {
+    if (!isFullscreen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsFullscreen(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [isFullscreen]);
+
   const sel = useMemo(() => pickVideo(card, source, cycleIdx), [card, source, cycleIdx]);
+
+  // Phase 71.7: pick the effective CF uid based on fullscreen state.
+  // `cfVideoIdLandscape` is optional; fullscreen is only enterable when set.
+  const hasLandscape = !!sel.cfVideoIdLandscape;
+  const effectiveCfId =
+    isFullscreen && sel.cfVideoIdLandscape ? sel.cfVideoIdLandscape : sel.cfVideoId;
 
   const isExternal = !!sel.externalUrl;
   let poster: string | null = null;
@@ -544,7 +581,7 @@ function Card({
     poster = card.heroPhotoUrl ?? null;
   } else {
     try {
-      poster = thumbnailUrl(sel.cfVideoId);
+      poster = thumbnailUrl(effectiveCfId);
     } catch {
       poster = null;
     }
@@ -577,7 +614,7 @@ function Card({
 
     let src: string;
     try {
-      src = hlsUrl(sel.cfVideoId);
+      src = hlsUrl(effectiveCfId);
     } catch {
       return;
     }
@@ -613,7 +650,7 @@ function Card({
         hlsRef.current = null;
       }
     };
-  }, [shouldMount, sel.cfVideoId, sel.externalUrl, isExternal]);
+  }, [shouldMount, effectiveCfId, sel.externalUrl, isExternal]);
 
   // Play/pause on active changes.
   // Try with current mute state first; if browser blocks autoplay-with-sound
@@ -643,7 +680,7 @@ function Card({
       v.pause();
       setPaused(true);
     }
-  }, [isActive, shouldMount, setPaused, sel.cfVideoId, sel.externalUrl]);
+  }, [isActive, shouldMount, setPaused, effectiveCfId, sel.externalUrl]);
 
   // Keep <video>.muted in sync with the global mute toggle while the card
   // is mounted (parent flips it from the Sound button).
@@ -679,7 +716,7 @@ function Card({
       // the entire subtree (video + img poster + overlays) opts out of
       // native scrolling while in Nearby mode, so the JS swipe handler
       // owns vertical gestures uncontested.
-      className={`relative h-[100dvh] w-full snap-start snap-always overflow-hidden bg-black ${source === 'nearby' ? 'touch-none' : ''}`}
+      className={`${isFullscreen ? 'fixed inset-0 z-[9999]' : 'relative h-[100dvh] w-full snap-start snap-always'} overflow-hidden bg-black ${source === 'nearby' ? 'touch-none' : ''}`}
     >
       {/* biome-ignore lint/a11y/useKeyWithClickEvents: tap-to-play */}
       <div
@@ -824,6 +861,72 @@ function Card({
             <PlayIcon />
           </div>
         </div>
+      )}
+
+      {/* Phase 71.7 (2026-07-06): fullscreen toggle. Shown only when the
+       * render worker produced a landscape companion (i.e. ≥80% horizontal
+       * source photos). In portrait mode the button sits mid-lower over
+       * the letterbox area (below where the horizontal frame ends);
+       * tapping enters an in-page fullscreen overlay that swaps the HLS
+       * source to the 1920x1080 landscape uid. Uses custom overlay rather
+       * than the native Fullscreen API to avoid iOS Safari's
+       * webkitEnterFullscreen tearing down HLS.js. */}
+      {shouldMount && hasLandscape && !isFullscreen && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsFullscreen(true);
+          }}
+          aria-label="View landscape fullscreen"
+          className="-translate-x-1/2 absolute bottom-[38%] left-1/2 z-20 flex h-11 w-11 items-center justify-center rounded-full border border-cream/30 bg-ink/60 text-cream backdrop-blur transition-colors hover:border-cream hover:bg-ink/80"
+          style={{ touchAction: 'manipulation' }}
+        >
+          {/* corner-arrows expand icon */}
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M4 9V4h5" />
+            <path d="M20 9V4h-5" />
+            <path d="M4 15v5h5" />
+            <path d="M20 15v5h-5" />
+          </svg>
+        </button>
+      )}
+      {isFullscreen && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsFullscreen(false);
+          }}
+          aria-label="Exit fullscreen"
+          className="absolute top-4 right-4 z-30 flex h-10 w-10 items-center justify-center rounded-full border border-cream/30 bg-ink/60 text-cream backdrop-blur transition-colors hover:border-cream hover:bg-ink/80"
+          style={{ touchAction: 'manipulation' }}
+        >
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M18 6 6 18" />
+            <path d="m6 6 12 12" />
+          </svg>
+        </button>
       )}
 
       {/* Bottom caption — Phase 74 (2026-07-05): floating glass card
