@@ -557,6 +557,27 @@ function Card({
   // src-swap trick we depend on. A plain overlay div works everywhere.
   const [isFullscreen, setIsFullscreen] = useState(false);
 
+  // Phase 71.14 (2026-07-06): measure the actual viewport in pixels so the
+  // rotate-90 video box is sized in raw px instead of relying on dvw/dvh
+  // (which either fell back silently or wasn't emitted by Tailwind's JIT
+  // in prod on some builds — the previous fill fix had zero visible
+  // effect). window.innerWidth/innerHeight are the SMALL/visual viewport
+  // on iOS Safari — exactly what `fixed inset-0` renders inside.
+  const [vp, setVp] = useState<{ w: number; h: number }>({ w: 0, h: 0 });
+  useEffect(() => {
+    if (!isFullscreen) return;
+    function measure() {
+      setVp({ w: window.innerWidth, h: window.innerHeight });
+    }
+    measure();
+    window.addEventListener('resize', measure);
+    window.addEventListener('orientationchange', measure);
+    return () => {
+      window.removeEventListener('resize', measure);
+      window.removeEventListener('orientationchange', measure);
+    };
+  }, [isFullscreen]);
+
   // ESC exits fullscreen — desktop keyboards and iPad Magic Keyboards.
   useEffect(() => {
     if (!isFullscreen) return;
@@ -575,28 +596,35 @@ function Card({
   const effectiveCfId =
     isFullscreen && sel.cfVideoIdLandscape ? sel.cfVideoIdLandscape : sel.cfVideoId;
 
-  // Phase 71.13 (2026-07-06): after entering fullscreen the src swaps to the
-  // landscape uid; iOS Safari's native HLS occasionally leaves the <video>
-  // paused after the load. Watch loadedmetadata once and issue a muted play
-  // so the centre play glyph doesn't stick around.
+  // Phase 71.13/71.14: aggressively play on fullscreen. iOS Safari native
+  // HLS (Apple HLS via <video src>) reloads the media pipeline on src
+  // change; the play() call from the shared effect (line ~660) can race
+  // and silently no-op. Retry on multiple lifecycle events, muted (which
+  // always satisfies autoplay policy under playsInline).
   useEffect(() => {
     if (!isFullscreen) return;
     const v = videoRef.current;
     if (!v) return;
     let cancelled = false;
+    let attempts = 0;
     function tryPlay() {
-      if (cancelled || !v) return;
+      if (cancelled || !v || attempts > 6) return;
+      attempts += 1;
       v.muted = true;
-      v.play().then(() => setPaused(false)).catch(() => {});
+      const p = v.play();
+      if (p && typeof p.then === 'function') {
+        p.then(() => setPaused(false)).catch(() => {});
+      }
     }
-    if (v.readyState >= 1) {
-      tryPlay();
-    } else {
-      v.addEventListener('loadedmetadata', tryPlay, { once: true });
-    }
+    tryPlay();
+    v.addEventListener('loadedmetadata', tryPlay);
+    v.addEventListener('canplay', tryPlay);
+    v.addEventListener('loadeddata', tryPlay);
     return () => {
       cancelled = true;
       v.removeEventListener('loadedmetadata', tryPlay);
+      v.removeEventListener('canplay', tryPlay);
+      v.removeEventListener('loadeddata', tryPlay);
     };
   }, [isFullscreen, effectiveCfId, setPaused]);
 
@@ -804,24 +832,32 @@ function Card({
           <video
             ref={videoRef}
             poster={poster ?? undefined}
+            style={
+              // Phase 71.14: rotate-90 fullscreen — measure the visual
+              // viewport in JS and set width/height as raw pixels. Setting
+              // `width = viewportHeight` and `height = viewportWidth`
+              // BEFORE rotate-90 means after the CSS rotate lands the box
+              // occupies exactly viewportWidth × viewportHeight — zero
+              // black bars on any phone aspect ratio.
+              isFullscreen && hasLandscape && vp.w > 0
+                ? {
+                    position: 'absolute',
+                    top: '50%',
+                    left: '50%',
+                    width: `${vp.h}px`,
+                    height: `${vp.w}px`,
+                    transform: 'translate(-50%, -50%) rotate(90deg)',
+                    objectFit: 'cover',
+                  }
+                : undefined
+            }
             className={
               isFullscreen && hasLandscape
-                ? // Phase 71.9 (2026-07-06): landscape fullscreen on a portrait
-                  // viewport = rotate the 16:9 video 90° so it fills the phone
-                  // screen edge-to-edge.
-                  //
-                  // Phase 71.13 (2026-07-06): switched vw/vh → dvw/dvh.
-                  // On iOS Safari, `vh` refers to the LARGE viewport (as if
-                  // URL bar is hidden) but the fullscreen overlay
-                  // (`fixed inset-0`) sits inside the SMALL/dynamic viewport.
-                  // The mismatch left thin black bars on top/bottom of the
-                  // rotated video (its `w-[100vh]` was slightly bigger than
-                  // the actual viewport height, but the box `top-1/2 -
-                  // translate-y-1/2` centered it inside the smaller box, so
-                  // the video's rotated width fell short of edge). `dvw/dvh`
-                  // are the DYNAMIC viewport units — always match what the
-                  // user actually sees.
-                  'absolute top-1/2 left-1/2 h-[100dvw] w-[100dvh] -translate-x-1/2 -translate-y-1/2 rotate-90 object-cover landscape:h-full landscape:w-full landscape:translate-x-0 landscape:translate-y-0 landscape:rotate-0 landscape:top-0 landscape:left-0 landscape:object-contain'
+                ? // Phase 71.14 (2026-07-06): styles are inline (see `style`
+                  // above). Keep className empty for the fullscreen branch
+                  // to avoid Tailwind's arbitrary-vw/vh utilities racing
+                  // with inline sizing.
+                  ''
                 : 'relative h-full w-full object-contain'
             }
             playsInline
