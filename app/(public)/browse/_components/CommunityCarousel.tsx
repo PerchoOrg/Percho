@@ -425,6 +425,12 @@ function CarouselSlide({
   // fallback). Reset the flag every time we swap `isActive` so the next
   // load also gets covered. Same idiom BrowseFeed uses — parity fix.
   const [hasFirstFrame, setHasFirstFrame] = useState(false);
+  // Phase 74.5 (2026-07-06): tap-to-pause. Was never implemented on
+  // the community carousel — user could only start/stop by leaving.
+  // Local per-slide paused state, resets to false whenever isActive
+  // flips true so a fresh slide never inherits the previous slide's
+  // paused position.
+  const [userPaused, setUserPaused] = useState(false);
 
   const poster = useMemo(() => {
     try {
@@ -506,19 +512,31 @@ function CarouselSlide({
     const v = ref.current;
     if (!v) return;
     if (isActive) {
+      // Reset paused state on becoming active — a new slide always
+      // starts playing.
+      setUserPaused(false);
+      // Restore audio state clobbered by the pause branch below.
       try {
         v.volume = 1;
       } catch {}
-      v.muted = false;
+      // Phase 74.5: always try unmuted first on every retry. 74.4's
+      // tryPlay() left `v.muted=true` sticky after the first fallback,
+      // so the canplay retry re-entered muted and the slide silently
+      // stayed muted until unmount. Reset muted=false at the top of
+      // every attempt so canplay/loadeddata fallbacks get a fresh
+      // unmuted shot; only fall back to muted per-attempt if the
+      // browser rejects.
       const tryPlay = () => {
+        if (userPausedRef.current) return;
+        v.muted = false;
         v.play()
           .then(() => {
             /* unmuted play OK */
           })
           .catch(() => {
             // Autoplay-with-sound blocked (scroll ≠ user gesture on iOS).
-            // Retry muted — always allowed, unblocks `playing` event so
-            // the poster overlay can fade.
+            // Retry muted for THIS attempt only. Next canplay retry
+            // resets muted=false and tries again.
             v.muted = true;
             void v.play().catch(() => {
               /* swallow — canplay listener below will retry */
@@ -528,10 +546,11 @@ function CarouselSlide({
       tryPlay();
       // Belt-and-suspenders: if the HLS manifest wasn't parsed when the
       // first .play() ran, retry on canplay/loadeddata. Without this the
-      // slide sits on the poster overlay indefinitely.
+      // slide sits on the poster overlay indefinitely. Not `once` — we
+      // want each event to give unmuted another shot.
       const retry = () => tryPlay();
-      v.addEventListener('canplay', retry, { once: true });
-      v.addEventListener('loadeddata', retry, { once: true });
+      v.addEventListener('canplay', retry);
+      v.addEventListener('loadeddata', retry);
       return () => {
         v.removeEventListener('canplay', retry);
         v.removeEventListener('loadeddata', retry);
@@ -548,6 +567,50 @@ function CarouselSlide({
       } catch {}
     }
   }, [isActive]);
+
+  // Phase 74.5: keep a ref to userPaused so the tryPlay closure inside
+  // the isActive effect can bail out if the user paused mid-load.
+  const userPausedRef = useRef(false);
+  useEffect(() => {
+    userPausedRef.current = userPaused;
+  }, [userPaused]);
+
+  // Phase 74.5: apply userPaused state to the video element. Tap-to-pause
+  // fires the nuclear pattern locally (v.pause + mute + volume=0) because
+  // iOS Safari HLS.js v.pause() doesn't stop audio. Tap-to-resume restores
+  // volume and calls play() with the same unmuted-first fallback chain.
+  useEffect(() => {
+    const v = ref.current;
+    if (!v || !isActive) return;
+    if (userPaused) {
+      try {
+        v.pause();
+      } catch {}
+      // Nuclear silence — same as sibling pause, needed on iOS/HLS.
+      // Also sweep every other <video> on the page in case a preload
+      // sibling is what's leaking audio (defense-in-depth vs. 71.22).
+      try {
+        document.querySelectorAll('video').forEach((av) => {
+          try {
+            av.pause();
+          } catch {}
+          try {
+            (av as HTMLVideoElement).muted = true;
+            (av as HTMLVideoElement).volume = 0;
+          } catch {}
+        });
+      } catch {}
+    } else {
+      try {
+        v.volume = 1;
+      } catch {}
+      v.muted = false;
+      v.play().catch(() => {
+        v.muted = true;
+        void v.play().catch(() => {});
+      });
+    }
+  }, [userPaused, isActive]);
 
   return (
     <>
@@ -587,12 +650,46 @@ function CarouselSlide({
         />
       ) : null}
 
+      {/* Phase 74.5: tap-to-pause layer. Covers the whole slide but sits
+       * BELOW the top bar / rail / desktop arrows (those are z-10+ on
+       * the parent phone-column, outside this fragment). Non-scroll
+       * taps toggle userPaused; scroll-snap drags fire touchcancel so
+       * onClick doesn't misfire on swipe. */}
+      {shouldMount && isActive && (
+        <button
+          type="button"
+          aria-label={userPaused ? 'Play video' : 'Pause video'}
+          onClick={() => setUserPaused((p) => !p)}
+          className="absolute inset-0 z-[5] cursor-pointer bg-transparent"
+          style={{ touchAction: 'manipulation' }}
+        />
+      )}
+
+      {/* Center pause/play glyph — only shows while paused. Same visual
+       * language as BrowseFeed's play glyph. */}
+      {shouldMount && isActive && userPaused && (
+        <div className="pointer-events-none absolute inset-0 z-[6] flex items-center justify-center">
+          <div className="flex h-20 w-20 items-center justify-center rounded-full bg-ink/40 backdrop-blur-md">
+            <svg
+              width="34"
+              height="34"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+              className="ml-1 text-cream"
+              aria-hidden
+            >
+              <path d="M8 5v14l11-7z" />
+            </svg>
+          </div>
+        </div>
+      )}
+
       {/* Category label */}
-      <div className="absolute top-24 left-4 inline-flex items-center rounded-full border border-cream/30 bg-ink/40 px-3 py-1 text-[11px] font-medium text-cream uppercase tracking-wider backdrop-blur-md">
+      <div className="pointer-events-none absolute top-24 left-4 z-[7] inline-flex items-center rounded-full border border-cream/30 bg-ink/40 px-3 py-1 text-[11px] font-medium text-cream uppercase tracking-wider backdrop-blur-md">
         {video.line1}
       </div>
       {video.line2 && (
-        <div className="absolute right-20 bottom-8 left-4 text-[13px] text-cream/85 leading-snug drop-shadow">
+        <div className="pointer-events-none absolute right-20 bottom-8 left-4 z-[7] text-[13px] text-cream/85 leading-snug drop-shadow">
           {video.line2}
         </div>
       )}

@@ -2,6 +2,32 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## Phase 74.5 (2026-07-06) — 74.4 后 4th slide 静音 + 视频不能暂停
+
+**Trigger:** owner 测 74.4:"滑到第四个视频时不时地会没有声音了 来回滑几次又有了 而且视频都不能暂停"
+
+**Root cause 1 (静音漂移):** 74.4 的 `tryPlay()` 在 unmuted 失败的 catch 里 `v.muted=true` 后就再没被复位。当 `canplay` `{once:true}` 兜底触发第二次 `tryPlay()`,函数体第一句是 `v.play()` —— `v.muted` 依旧是 true,静音成功,`.then` 直接返回,永远没机会试 unmuted。第 4 个 slide 是 preload 边界,manifest 常在 first `tryPlay` 之后才 ready,所以恰好落进兜底静音路径。来回滑触发 slide unmount/remount 才把 `v.muted=false` 重置。
+
+**Root cause 2 (不能暂停):** `CarouselSlide` 从来没实现 tap-to-pause,只有 `isActive → play` / `!isActive → nuclear pause` 两态。BrowseFeed 早就有(phase 34b/71 系列),CommunityCarousel 一直漂移未跟上。
+
+**修复:**
+1. `tryPlay()` 每次进入函数第一句先 `v.muted=false`,让 canplay/loadeddata 兜底每次都从 unmuted 重试;muted 只作为**当次尝试**的 per-attempt fallback,不粘。
+2. `canplay` / `loadeddata` listener 从 `{once:true}` 改成常驻(cleanup 里摘),保证 HLS manifest late-parse / segment late-buffer 都能触发 unmuted 重试。
+3. 加 `userPaused` state + `userPausedRef`(closure 用)。tap 层是 `<button>` 铺满 slide,`z-[5]` 低于 category 标签(`z-[7]`)。tap 切换 userPaused。
+4. userPaused effect 应用状态:pause 分支跑 nuclear + `document.querySelectorAll('video')` sweep(defense-in-depth,兜底任何 preload sibling 音轨);resume 分支恢复 `volume=1` + `muted=false` + play(unmuted-first fallback chain 同 isActive)。
+5. isActive 变 true 时 `setUserPaused(false)` 复位,新 slide 永远不继承前一 slide 的 paused 位。
+6. tryPlay 里加 `if (userPausedRef.current) return;` —— 用户在 loading 中间按 pause,兜底 canplay retry 不会覆盖用户意图。
+
+**教训:**
+- **muted retry 必须 per-attempt 复位**:HLS `<video>` 的 muted 是粘性状态,任何"unmuted → muted fallback"链在 retry 边界必须显式 reset,否则第二次 retry 会静默漂进静音路径。这是 74.4 的 subtle bug 触发根源。
+- **兜底 listener 用 `{once:true}` 有陷阱**:once 保证只触发一次,但如果第一次触发时前置状态还错(如 muted 粘性),就没有第二次机会。改成常驻 + cleanup 更稳。
+- **iOS Safari HLS pause nuclear 要 sweep 全局**:仅对当前 `<video>` nuclear 不够,preload sibling(隔壁 slide 的 offscreen `<video>`)偶尔会"接过"音轨。tap-to-pause 分支加 `querySelectorAll('video')` 全体扫盲——这也是 phase 71.22 nuclear pattern 的完整版。
+- **z-index 分层**:tap 层必须 `pointer-events: auto` 且 z 在 poster 之上、标签之下。旧代码 category label 无 z 且无 pointer-events-none,tap 层若不设 z 会被 label 挡住。全部标签补 `pointer-events-none`。
+
+**Verify:**
+- tsc clean
+- 手机验证四条:(a) 前 5 个 slide 全部 unmuted 播;(b) tap slide 中央 pause,pause glyph 显示,音频完全停,包括 sibling;(c) tap 再次 resume unmuted 播;(d) 滑到下一 slide 自动 unpause 新 slide。
+
 ## Phase 74.4 (2026-07-06) — 74.3 修完只第一个视频播 + 声音串
 
 **Trigger**:74.3 部署后 owner "现在没有黑屏 但是只有第一个视频播放 滑动以后不播放 而且声音继续还是第一个视频的"。
