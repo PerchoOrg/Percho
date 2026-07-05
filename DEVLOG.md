@@ -2,6 +2,28 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## Phase 71.8 — Media tab 显示 Landscape badge (2026-07-06)
+
+Owner: "如果有横版 要标记一下 让agent知道"。
+
+上一 phase(71.7)搞定了双方向渲染 + 前端全屏切换,但 dashboard media tab 里 agent 完全看不出这个 listing 到底有没有横版 —— `cf_video_id_landscape` 只在 browse feed 用来决定要不要显示全屏按钮,edit 页面不 select 这个字段,VideoPanel 卡片也不展示。
+
+**决策(与 owner 对齐)**:
+- 位置:视频卡片标题旁,和现有 Cover badge 并列
+- 视觉:蓝色小 pill(`bg-blue-500/15 text-blue-300`),`Landscape` 全大写 —— 与黑色 Cover badge 有差异,agent 一眼分辨
+- 只有 `cf_video_id_landscape != null` 时才渲染,老 listing 无横版自然不显示
+- Hover title 里加英文说明:横版可用,viewer 在 browse feed 可切全屏 —— 让新 agent 知道 badge 的含义
+
+**改动四处**:
+
+1. `app/dashboard/listings/[id]/edit/page.tsx` — server-side select 加 `cf_video_id_landscape`,通过 `initialVideos` 传给 VideoPanel。
+2. `app/dashboard/listings/[id]/edit/VideoPanel.tsx` — `ListingVideoRow` type 加字段;卡片渲染 Cover badge 后紧跟一个条件 Landscape badge;optimistic upload 新行也补 `cf_video_id_landscape: null`;poll shape 加字段并 merge 回 state,这样 render worker 完成横版后 agent 无需刷新页面就能看到 badge 出现。
+3. `app/api/video/list/route.ts` — poll 端点(listing 侧)select 补上这列,数组 type 补上字段。community 侧不动(社区视频没有横版对应)。
+
+**踩过的坑**:VideoPanel poll merge 之前只 spread `status/title`,新加字段必须显式 merge 才能 flip。忘了会有"cf_video_id_landscape 永远是 initialVideos 里的初值"的 silent-null。
+
+**Verification**:tsc 干净 + build 通过。手动核实:1619 Tide Mill Rd(8/8 横片)重跑 render 后应该在 media tab 看到 Landscape badge。
+
 ## Phase 71.7 — 横屏照片专用横版视频 + in-page 全屏切换 (2026-07-06)
 
 Owner: "自动生成的视频是竖屏的 如果照片是横着 那结果上下就会空着 不好 有没有解决方案"。

@@ -40,6 +40,7 @@ import { useCallback, useEffect, useImperativeHandle, useRef, useState, useTrans
 export interface ListingVideoRow {
   id: string;
   cf_video_id: string;
+  cf_video_id_landscape: string | null;
   kind: string;
   title: string | null;
   status: string;
@@ -107,6 +108,7 @@ export const VideoPanel = forwardRef<VideoPanelHandle, Props>(function VideoPane
             videos: Array<{
               id: string;
               cf_video_id: string;
+              cf_video_id_landscape: string | null;
               kind: string;
               title: string | null;
               status: string;
@@ -121,7 +123,14 @@ export const VideoPanel = forwardRef<VideoPanelHandle, Props>(function VideoPane
               .filter((v) => serverById.has(v.id))
               .map((v) => {
                 const s = serverById.get(v.id);
-                return s ? { ...v, status: s.status, title: s.title } : v;
+                return s
+                  ? {
+                      ...v,
+                      status: s.status,
+                      title: s.title,
+                      cf_video_id_landscape: s.cf_video_id_landscape ?? null,
+                    }
+                  : v;
               });
           });
         }
@@ -144,6 +153,7 @@ export const VideoPanel = forwardRef<VideoPanelHandle, Props>(function VideoPane
       const optimistic: ListingVideoRow = {
         id: v.rowId,
         cf_video_id: v.videoId,
+        cf_video_id_landscape: null,
         kind: v.kind,
         title: v.title,
         status: 'processing',
@@ -349,6 +359,14 @@ function SortableVideoItem({
           {isCover ? (
             <span className="flex-shrink-0 rounded bg-ink px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-cream">
               Cover
+            </span>
+          ) : null}
+          {video.cf_video_id_landscape ? (
+            <span
+              className="flex-shrink-0 rounded bg-blue-500/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-blue-300"
+              title="A landscape (16:9) version is also available. Viewers can toggle full-screen in the browse feed."
+            >
+              Landscape
             </span>
           ) : null}
         </div>
