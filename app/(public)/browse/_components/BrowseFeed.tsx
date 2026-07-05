@@ -563,7 +563,17 @@ function Card({
   // in prod on some builds — the previous fill fix had zero visible
   // effect). window.innerWidth/innerHeight are the SMALL/visual viewport
   // on iOS Safari — exactly what `fixed inset-0` renders inside.
-  const [vp, setVp] = useState<{ w: number; h: number }>({ w: 0, h: 0 });
+  //
+  // Phase 71.15 (2026-07-06): initialise from window immediately so first
+  // paint after fullscreen toggle already has valid px. Previous 0/0
+  // initial + measure-in-effect meant the rotate branch fell through the
+  // `vp.w > 0` guard on the render pass that mattered, so the <video>
+  // stayed unstyled and looked identical to the non-fullscreen state.
+  const [vp, setVp] = useState<{ w: number; h: number }>(() =>
+    typeof window === 'undefined'
+      ? { w: 0, h: 0 }
+      : { w: window.innerWidth, h: window.innerHeight },
+  );
   useEffect(() => {
     if (!isFullscreen) return;
     function measure() {
@@ -746,6 +756,30 @@ function Card({
     if (!v) return;
     v.muted = muted;
   }, [muted]);
+
+  // Phase 71.15 (2026-07-06): keep React `paused` state in sync with the
+  // actual <video> pause/play events. Previously we only set paused via
+  // `.play()` / `.pause()` promise callbacks, which missed cases where
+  // iOS Safari internally paused the media (buffer stall, src-swap
+  // reload) — audio continued but UI showed play glyph, or vice versa.
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v) return;
+    function onPlay() {
+      setPaused(false);
+    }
+    function onPause() {
+      setPaused(true);
+    }
+    v.addEventListener('play', onPlay);
+    v.addEventListener('playing', onPlay);
+    v.addEventListener('pause', onPause);
+    return () => {
+      v.removeEventListener('play', onPlay);
+      v.removeEventListener('playing', onPlay);
+      v.removeEventListener('pause', onPause);
+    };
+  }, [setPaused, shouldMount]);
 
   const onTap = () => {
     const v = videoRef.current;

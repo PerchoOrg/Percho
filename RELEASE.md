@@ -2,6 +2,12 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.71.15 — 2026-07-06
+
+### 🐛 Bug Fixes
+- Fullscreen fill: initialise viewport size on the first render pass so the rotate branch actually applies (previous version's initial 0/0 state let the video render before measurement finished, keeping it looking like the non-fullscreen view).
+- Play/pause indicator now stays in sync with the real video state — if iOS Safari pauses the picture but keeps audio playing (buffer stall, src reload), the UI reflects that instead of getting stuck.
+
 ## v0.71.14 — 2026-07-06
 
 ### 🐛 Bug Fixes
