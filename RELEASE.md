@@ -2,6 +2,10 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.74.4 — 2026-07-05
+
+Caption 层次:只有价格粗体,specs / 地址改 medium。地址加逗号 + zipcode:`1619 Tide Mill Road, Cumming, GA 30040`。原本 DB 一直有 zip 字段,只是 feed 层没拉,现在补上。
+
 ## v0.74.3 — 2026-07-05
 
 ### 🐛 Bug Fixes

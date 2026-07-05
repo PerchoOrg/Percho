@@ -116,6 +116,7 @@ export type BrowseCard = {
     address: string;
     city: string;
     state: string;
+    zip: string | null;
     price: number | null;
     beds: number | null;
     baths: number | null;

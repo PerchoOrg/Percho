@@ -2,6 +2,20 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-07-05 — Phase 74.4: caption weight + zip
+
+### Trigger
+Owner:"只有第一行价格粗体 底下的不要粗体 并且city之前有逗号 州之后有zipcode"。
+
+### Change
+- `CaptionCard.tsx`:specs / address / sheet inner rows 从 `font-semibold` → `font-medium`;price 保持 bold(唯一)
+- Address 格式:`${address}, ${city}, ${state}${zip ? ` ${zip}` : ''}` —— city 前逗号,state 后接 zip(有的话)
+- `BrowseCard.listing` type + `ListingRow` + 4 处 supabase select 加 `zip`
+- `lib/listing-feed/load.ts` 两处 photo/video card 拼装加 `zip`
+
+### DB
+`listings.zip` 一直存在(0001_init.sql:92),只是 feed pipe 没拉。migration 无。
+
 ## 2026-07-05 — Phase 74.2b: horizontal-swipe counter/progress unlagged
 
 ### Trigger

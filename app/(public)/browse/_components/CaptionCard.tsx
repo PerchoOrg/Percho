@@ -17,6 +17,7 @@ type Listing = {
   address: string;
   city: string;
   state: string;
+  zip: string | null;
   price: number | null;
   beds: number | null;
   baths: number | null;
@@ -79,7 +80,7 @@ export function CaptionCard({
     .filter(Boolean)
     .join(' · ');
 
-  const addressLine = `${listing.address} ${listing.city}, ${listing.state}`.trim();
+  const addressLine = `${listing.address}, ${listing.city}, ${listing.state}${listing.zip ? ` ${listing.zip}` : ''}`.trim();
 
   const openSheet = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -101,10 +102,10 @@ export function CaptionCard({
         <div className="font-bold text-[26px] leading-none tracking-tight tabular-nums">
           {formatPriceFull(listing.price)}
         </div>
-        <div className="mt-1.5 font-semibold text-[15px] leading-snug">
+        <div className="mt-1.5 font-medium text-[15px] leading-snug">
           {specs}
         </div>
-        <div className="mt-1 font-semibold text-[15px] leading-snug">
+        <div className="mt-1 font-medium text-[15px] leading-snug">
           {addressLine}
         </div>
         {hasDescription && preview.length > 0 && (
@@ -170,10 +171,10 @@ export function CaptionCard({
               </button>
             </div>
             <div className="flex-1 overflow-auto px-5 pt-4 pb-8">
-              <div className="font-semibold text-[15px] leading-snug">
+              <div className="font-medium text-[15px] leading-snug">
                 {specs}
               </div>
-              <div className="mt-2 font-semibold text-[17px] leading-snug">
+              <div className="mt-2 font-medium text-[17px] leading-snug">
                 {addressLine}
               </div>
 

@@ -33,6 +33,7 @@ type ListingRow = {
   address: string;
   city: string;
   state: string;
+  zip: string | null;
   price: number | null;
   beds: number | null;
   baths: number | null;
@@ -327,6 +328,7 @@ async function assembleCards(
         address: l.address,
         city: l.city,
         state: l.state,
+        zip: l.zip,
         price: l.price,
         beds: l.beds,
         baths: l.baths,
@@ -370,7 +372,7 @@ export async function fetchBrowseCards(): Promise<BrowseCard[]> {
   const { data: rawListings } = (await (supabase as any)
     .from('listings')
     .select(
-      'id, slug, address, city, state, price, beds, baths, sqft, description, community_id, agent_id, cover_url',
+      'id, slug, address, city, state, zip, price, beds, baths, sqft, description, community_id, agent_id, cover_url',
     )
     .eq('status', 'active')
     .order('created_at', { ascending: false })
@@ -407,7 +409,7 @@ export async function fetchBrowseCardsByCommunitySlug(
   const { data: rawListings } = (await (supabase as any)
     .from('listings')
     .select(
-      'id, slug, address, city, state, price, beds, baths, sqft, description, community_id, agent_id, cover_url',
+      'id, slug, address, city, state, zip, price, beds, baths, sqft, description, community_id, agent_id, cover_url',
     )
     .eq('status', 'active')
     .eq('community_id', community.id)
@@ -431,7 +433,7 @@ export async function fetchBrowseCardsByIds(ids: string[]): Promise<BrowseCard[]
   const { data: rawListings } = (await (supabase as any)
     .from('listings')
     .select(
-      'id, slug, address, city, state, price, beds, baths, sqft, description, community_id, agent_id, cover_url',
+      'id, slug, address, city, state, zip, price, beds, baths, sqft, description, community_id, agent_id, cover_url',
     )
     .in('id', ids)
     .eq('status', 'active')) as { data: ListingRow[] | null };
@@ -464,7 +466,7 @@ export async function fetchNearbyCards(args: {
     const r = (await (supabase as any)
       .from('listings')
       .select(
-        'id, slug, address, city, state, price, beds, baths, sqft, description, community_id, agent_id, cover_url, lat, lng',
+        'id, slug, address, city, state, zip, price, beds, baths, sqft, description, community_id, agent_id, cover_url, lat, lng',
       )
       .eq('status', 'active')
       .not('lat', 'is', null)
