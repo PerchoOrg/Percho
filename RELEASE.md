@@ -2,6 +2,11 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.71.4 — Clean opener frame (2026-07-04)
+
+### 🎨 Improved
+- The **first photo of every home tour is now text-free** — no price, address, or specs overlaid on the opening shot. Overlays now start on photo 2 and continue on photo 3, so the video hooks the viewer with a clean visual before any listing info appears.
+
 ## v0.71.3 — Real-photo endings + random BGM library (2026-07-04)
 
 ### 🎨 Improved

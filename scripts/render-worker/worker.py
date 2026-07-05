@@ -193,8 +193,9 @@ def build_overlay(listing: dict[str, Any], photo_count: int) -> dict[str, Any]:
     if state and state not in location_line:
         location_line = f"{location_line}, {state}" if location_line else state
 
-    # Overlay first three clips (or all if fewer). 1-indexed per generate.py.
-    show_on = list(range(1, min(3, photo_count) + 1))
+    # Overlay clips 2 and 3 (skip clip 1 — user wants the opener uncluttered).
+    # 1-indexed per generate.py; if there are fewer than 3 photos, cap the range.
+    show_on = [i for i in (2, 3) if i <= photo_count]
 
     return {
         "price_display": format_price(listing.get("price")),

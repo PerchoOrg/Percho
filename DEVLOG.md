@@ -2,6 +2,22 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-07-04 — Phase 71.4: Clean opener frame
+
+### Trigger
+User: "生成的视频第一页低下不要加字 地址和价格啥的"
+
+### Change
+`worker.py::build_overlay` — `show_on_clips` was `[1, 2, 3]`, now `[2, 3]`. First photo has no listing overlay; overlays start on photo 2. If a listing has < 3 photos the range is capped so we never point at a nonexistent clip.
+
+### Verification
+Local smoke render on the 4 demo photos with the new overlay JSON:
+- vision AI on clip 1 frame → **no text overlay of any kind** ✓
+- vision AI on clip 2 frame → price/beds/address/neighborhood overlay all present ✓
+
+### Follow-ups
+None — one-line behavior change.
+
 ## 2026-07-04 — Phase 71.3: Real-photo endings + random BGM library
 
 ### Trigger
