@@ -641,8 +641,16 @@ function Card({
       const el = videoRef.current;
       if (!el) return;
       const r = el.getBoundingClientRect();
+      // Phase 71.22: also enumerate ALL <video> elements on the page.
+      // If domPaused=true muted=true here but user still hears audio, the
+      // sound comes from a sibling video (adjacent card preloaded, or a
+      // stale HLS attach that never got cleaned up).
+      const all = Array.from(document.querySelectorAll('video')) as HTMLVideoElement[];
+      const others = all
+        .map((av, i) => `v${i}:p=${av.paused ? 'T' : 'F'} m=${av.muted ? 'T' : 'F'} vol=${av.volume.toFixed(1)} ct=${av.currentTime.toFixed(1)}`)
+        .join('\n');
       setVideoDiag(
-        `vid rect=${Math.round(r.width)}×${Math.round(r.height)} · natural=${el.videoWidth}×${el.videoHeight}\nreactPaused=${paused} domPaused=${el.paused} muted=${el.muted} vol=${el.volume.toFixed(2)}`,
+        `vid rect=${Math.round(r.width)}×${Math.round(r.height)} · natural=${el.videoWidth}×${el.videoHeight}\nreactPaused=${paused} domPaused=${el.paused} muted=${el.muted} vol=${el.volume.toFixed(2)}\ntotal videos=${all.length}\n${others}`,
       );
     }
     update();
@@ -867,6 +875,17 @@ function Card({
       // Force audio silence in case HLS buffer keeps emitting.
       try {
         v.currentTime = v.currentTime;
+      } catch {}
+      // Phase 71.22: nuclear option — pause + mute EVERY <video> on the
+      // page. If the audio comes from a sibling card that we didn't know
+      // about (preloaded neighbor, stale HLS instance), this shuts it up.
+      try {
+        const all = Array.from(document.querySelectorAll('video')) as HTMLVideoElement[];
+        for (const av of all) {
+          try { av.pause(); } catch {}
+          try { av.muted = true; } catch {}
+          try { av.volume = 0; } catch {}
+        }
       } catch {}
       setPaused(true);
     }
