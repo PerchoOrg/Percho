@@ -2,6 +2,9 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.74.0 — 2026-07-05
+The listing caption on both photo and video swipes was redesigned for readability. Price, address, specs and the listing agent now sit on a floating frosted-glass card with larger, higher-contrast text — no more thin white text getting lost on bright rooms. Tap "More ↑" to open a light-cream bottom sheet with the full description, nearby schools and points of interest, and the agent card. The sheet slides over the media instead of covering it inline, so you can always see the photo or video underneath while reading. All text meets accessibility standards for size and contrast.
+
 ## v0.73.4 — 2026-07-05
 Header pills in the community-video and community-listing carousels are 4px shorter (44px → 40px), a lighter touch on the visual weight. Left and right pills remain aligned.
 

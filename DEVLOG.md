@@ -2,6 +2,47 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-07-05 — Phase 74: caption a11y — glass card + light bottom sheet
+
+### Trigger
+Owner:"重新帮我设计一下左下方的文字区域,字号大小和颜色要复合accessibility的要求。比如点开以后上拉一个bottom sheet 增加一下背景和文字的颜色对比度 这样不会overlap 视频或者图片"。旧 caption 是 `<div>` + `drop-shadow`,坐在 photo/video 上没底板 —— 亮色 hero 帧上文本对比度掉到 WCAG AA 之下;`DescriptionBlock` inline 展开又把 media 盖了。
+
+### Change
+新组件 `CaptionCard`(photo Card + video Card 共享一份代码,消除两处 caption 分岔):
+
+**折叠态 — 浮动毛玻璃卡**(`bg-ink/60 backdrop-blur-xl` + border + shadow):
+- Price 24px serif semibold,address 15px semibold,city/state 13px medium(cream/75),specs 13px medium(cream/80)。
+- 描述折叠为一行 `line-clamp-1` 14px,不再 inline 展开。
+- 底部一行:agent chip(带 initial 头像)+ "More ↑" 按钮触发 sheet。
+- Video 卡和 photo 卡都用 `right-20 left-4`(和右侧按钮 rail 对齐)—— 修掉了 photo 卡 `right-4` drift。
+
+**展开态 — 浅色 bottom sheet**(`bg-[#FBF8F3] text-ink` = 15.9:1 AAA):
+- Grabber + 大 price header + 关闭按钮。
+- Sections:About this home(全 description 15px leading-relaxed)/ Nearby(schools + POIs 从 photo 卡 inline strip 移进来)/ Listed by(agent card + "Vicinity Realty")。
+- `role="dialog" aria-modal="true"`,scroll-lock body,tap 遮罩 or ✕ 关闭。
+
+### Decisions
+- **变体 C(glass card)**采纳。Owner 从三个 prototype 里选定;A(cream 卡按钮)和 B(暗 sheet + Details pill)未采纳。
+- **Photo 卡 schools/POI strip 从 inline 移进 sheet** —— 和视频卡对称,folded 态更干净。
+- Prototype-first 流程:先 `public/prototypes/caption.html` 三 variant 让 owner 手机试,再动 TSX。Prototype 文件保留 in tree(方便回顾)。
+- Sheet 走 `absolute inset-0 z-50` 不是 `fixed` —— 让 sheet 装在当前 card 里,swipe 到别的 card 不会残留。
+
+### Files
+- `app/(public)/browse/_components/CaptionCard.tsx` (new, 246 LOC)
+- `app/(public)/browse/_components/BrowseFeed.tsx` — photo Card caption 换成 `<CaptionCard>`,video Card caption 换成 `<CaptionCard>`,`DescriptionBlock` 组件退休(留 stub 注释)。净减 155 → 15 行 caption 代码。
+
+### Test
+`npx tsc --noEmit` clean。`npx next build` 绿(87.3 kB shared)。
+
+### Learnings
+- **Skill 已有 §反例 E**(2026-07-05 phase73.3)precisely 覆盖今天再次踩到的\"隔壁 agent 切 HEAD\":我在 `phase74/caption-a11y-glass` 上 stage 完改动跑 tsc 后再看 `git branch --show-current` 显示 `main` —— 期间没做任何 checkout,是别的 session 切走了 HEAD。修复 pattern:`git stash -u` → `git checkout <target>` → `git reset --hard origin/main` → `git stash pop`。
+- `write_file` 路径含 `(` `)` 时被静默 URL-encode 掉,build 阶段 `Cannot find module` 才暴露。用 `execute_code` 直写 open() 绕开。
+
+### Next steps
+Owner 手机 sanity check → 若 OK,把 `public/prototypes/caption.html` 也移出去(prototype 已完成使命)。
+
+---
+
 ## 2026-07-05 — Phase 73.4: header pill 降 4px
 
 Owner:"这两个按钮的高度稍微降低一点"。两处 header(`CommunityCarousel` + `CommunityListingCarousel`)的 back button + counter pill 从 `h-11` → `h-10`(counter 同步 `px-3.5` → `px-3`),视觉上更轻。左右仍严格同高。commit `f1cb419` on main。
