@@ -864,6 +864,11 @@ function Card({
     // in some iOS Safari builds. Nudging currentTime forces a resync; muting
     // as a safety net if user reports audio continues.
     if (v.paused) {
+      // Phase 71.23: undo the 71.22 nuclear mute on the current video so
+      // audio comes back when user resumes. Volume was zeroed and muted
+      // was flipped true; restore both to the parent-controlled state.
+      try { v.volume = 1; } catch {}
+      v.muted = muted;
       const p = v.play();
       if (p && typeof p.then === 'function') {
         p.then(() => setPaused(false)).catch(() => {});
