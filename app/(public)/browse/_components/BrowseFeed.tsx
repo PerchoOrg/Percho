@@ -612,23 +612,25 @@ function Card({
 
   const sel = useMemo(() => pickVideo(card, source, cycleIdx), [card, source, cycleIdx]);
 
-  // Phase 71.25 (2026-07-06): fullscreen only — rAF-poll `videoRef.current.paused`
-  // as an authoritative fallback for the play glyph. iOS Safari doesn't always
-  // fire a `play` event when the HLS pipeline resumes after a src swap to the
-  // landscape uid, so React `paused` state stays true and the glyph never
-  // hides. rAF poll catches that case. Non-fullscreen path relies on the 71.15
-  // media event listener which is sufficient there.
+  // Phase 71.26 (2026-07-06): local `domPaused` state driven by rAF poll of
+  // `videoRef.current.paused`. Play glyph binds to this local state, not the
+  // parent-owned `paused` prop. Reason 71.25 didn't fix it: rAF was calling
+  // parent's `setPaused` with a value that closes over stale `paused` prop
+  // (React doesn't re-invoke the effect between prop syncs), so the parent
+  // ping-pong never converged. Local state is authoritative and re-renders
+  // only this card.
+  const [domPaused, setDomPaused] = useState<boolean>(true);
   useEffect(() => {
-    if (!isFullscreen) return;
+    if (!shouldMount) return;
     let raf = 0;
     function tick() {
       const v = videoRef.current;
-      if (v && v.paused !== paused) setPaused(v.paused);
+      if (v) setDomPaused(v.paused);
       raf = requestAnimationFrame(tick);
     }
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, [isFullscreen, paused, setPaused]);
+  }, [shouldMount]);
 
   // Phase 71.7: pick the effective CF uid based on fullscreen state.
   // `cfVideoIdLandscape` is optional; fullscreen is only enterable when set.
@@ -1067,7 +1069,7 @@ function Card({
         </>
       )}
 
-      {shouldMount && paused && (
+      {shouldMount && domPaused && (
         <div
           className="pointer-events-none flex items-center justify-center"
           style={
