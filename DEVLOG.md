@@ -2,6 +2,28 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## Phase 71.15 — Fullscreen truly fills + paused sync (2026-07-06)
+
+Owner:"重新开了页面还是一样的问题 上下还是没有占满 中间的播放键一直在 并且是竖屏的播放键方向 点击后视频会暂停 但是按键还在 声音不受影响 一直在放"。
+
+**关键新信号解读**:
+1. "声音一直在放,画面显示 paused 播放键"→ React 的 `paused` state 与 `<video>` 真实状态脱同步。71.14 只在 `.play()`/`.pause()` promise 回调里 setPaused,iOS Safari 内部 pause/resume(buffer stall / src reload)不触发 React 更新。
+2. "上下没占满" → 71.14 的 `useState({w:0,h:0})` + measure-in-effect,首个 render pass 命中 `vp.w > 0` 判 false → inline style 是 undefined,className fullscreen 分支置空 → `<video>` 完全无尺寸约束,继续按 flex parent 大小渲染,视觉上和非全屏一样。等 measure fire 触发 rerender 时,可能已经因布局塌陷或 CSS specificity 无法恢复。
+
+**决策**:
+- vp state 用 lazy initializer 从 window 读初值:SSR 兼容 (`typeof window`),CSR 首个 render 就有真实尺寸,rotate 分支立即生效。
+- 加通用 `<video>` play/pause/playing 事件 listener,所有真实播放状态变化直接 → setPaused。UI 永不脱同步。
+
+**Actions** (`app/(public)/browse/_components/BrowseFeed.tsx`):
+- `useState<{w,h}>` 改 lazy initializer 从 `window.innerWidth/innerHeight` 读
+- 加新 useEffect 挂 play/playing/pause listeners,deps `[setPaused, shouldMount]`
+
+**Verify**: tsc + build clean。
+
+**Learnings**: measure-in-effect 模式对首次 render 关键路径不适用,必须 lazy init state。React `<video>` 状态跟踪要监听 media events,不能依赖 API 调用回调。
+
+---
+
 ## Phase 71.14 — Fullscreen fill: raw-pixel sizing + aggressive play retry (2026-07-06)
 
 Owner:"没有变化 问题还在"—— 71.13 的 dvw/dvh 完全没生效。
