@@ -1,16 +1,20 @@
 'use client';
 
 /**
- * CaptionCard — floating glass caption + a11y bottom sheet, shared by
- * the photo Card and the video Card in BrowseFeed.
+ * CaptionCard — sits on top of the photo/video with no card chrome
+ * (immersive), then opens a light bottom sheet with the full details.
  *
- * Phase 74 (2026-07-05, variant C):
- *   - Compact frosted-glass card holds price / address / specs / agent.
- *   - "More ↑" opens a light bottom sheet (surface #FBF8F3, ink text
- *     ~ 15.9:1 AAA) with the full description, nearby schools/POIs,
- *     and an agent card. Sheet drapes over the media instead of
- *     expanding inline.
- *   - Type sizes lifted to WCAG AA.
+ * Phase 74.1 (2026-07-05): owner "feed 里不要这个框 要嵌入 要沉浸".
+ * Redesigned per Redfin listing screenshot supplied by owner:
+ *   Line 1 — full price digits ($8,750,000), NOT abbreviated M/K, bold.
+ *   Line 2 — bd · ba · sqft.
+ *   Line 3 — address (street), then city/state on line 4.
+ * All three lines get a `drop-shadow` so text stays legible over any
+ * hero frame; no floating card, no border, no backdrop-blur.
+ *
+ * "More ↑" opens a light bottom sheet (surface #FBF8F3, ink text
+ * ~ 15.9:1 AAA) with the description, nearby schools/POIs, and a
+ * plain agent link (no fake brokerage line).
  */
 
 import Link from 'next/link';
@@ -31,22 +35,25 @@ type Agent = { slug: string; name: string };
 type School = { name: string; grades: string | null; rating: number | null };
 type Poi = { name: string; distance_text: string | null };
 
+/** Full digits, e.g. 8_750_000 -> "$8,750,000". No M/K abbreviation. */
+function formatPriceFull(n: number | null): string {
+  if (n == null) return '';
+  return `$${n.toLocaleString('en-US')}`;
+}
+
 export function CaptionCard({
   listing,
   agent,
   schools,
   pois,
-  formatPrice,
 }: {
   listing: Listing;
   agent: Agent;
   schools?: School[];
   pois?: Poi[];
-  formatPrice: (n: number | null) => string;
 }) {
   const [open, setOpen] = useState(false);
   const hasDescription = listing.description.length > 0;
-  const firstDesc = listing.description[0] ?? '';
   const hasSchools = (schools?.length ?? 0) > 0;
   const hasPois = (pois?.length ?? 0) > 0;
 
@@ -59,71 +66,51 @@ export function CaptionCard({
     };
   }, [open]);
 
+  const specs = [
+    listing.beds != null ? `${listing.beds} bd` : null,
+    listing.baths != null ? `${listing.baths} ba` : null,
+    listing.sqft != null ? `${listing.sqft.toLocaleString()} sqft` : null,
+  ]
+    .filter(Boolean)
+    .join(' · ');
+
   return (
     <>
+      {/* Immersive caption — no card, no border, just text with a strong
+       * drop-shadow. `right-20` reserves the right rail for the action
+       * icons. */}
       <div
-        className="absolute right-20 left-4 z-30"
-        style={{ bottom: 'max(1rem, env(safe-area-inset-bottom))' }}
+        className="absolute right-20 left-4 z-30 text-cream"
+        style={{
+          bottom: 'max(1rem, env(safe-area-inset-bottom))',
+          textShadow: '0 2px 8px rgba(0,0,0,0.7), 0 1px 2px rgba(0,0,0,0.5)',
+        }}
       >
-        <div
-          className="rounded-2xl border border-cream/10 bg-ink/60 px-4 py-3 text-cream shadow-[0_10px_40px_rgba(0,0,0,0.35)] backdrop-blur-xl backdrop-saturate-150"
-          style={{ WebkitBackdropFilter: 'blur(24px) saturate(1.5)' }}
-        >
-          <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-            <div className="font-serif font-semibold text-2xl leading-none tracking-tight">
-              {formatPrice(listing.price)}
-            </div>
-            <div className="font-medium text-[13px] text-cream/80 leading-tight tracking-wide">
-              {[
-                listing.beds != null ? `${listing.beds} bd` : null,
-                listing.baths != null ? `${listing.baths} ba` : null,
-                listing.sqft != null ? `${listing.sqft.toLocaleString()} sqft` : null,
-              ]
-                .filter(Boolean)
-                .join(' · ')}
-            </div>
-          </div>
-          <div className="mt-1 font-semibold text-[15px] leading-snug">
-            {listing.address}
-          </div>
-          <div className="font-medium text-[13px] text-cream/75 leading-snug">
-            {listing.city}, {listing.state}
-          </div>
-
-          {hasDescription && (
-            <div className="mt-2 line-clamp-1 text-[14px] text-cream/90 leading-snug">
-              {firstDesc}
-            </div>
-          )}
-
-          <div className="mt-2 flex items-center justify-between gap-2 border-cream/10 border-t pt-2">
-            <Link
-              href={`/a/${agent.slug}`}
-              className="inline-flex items-center gap-2 font-medium text-[13px] text-cream/85 hover:text-cream"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <span
-                className="flex h-5 w-5 items-center justify-center rounded-full bg-cream/20 font-semibold text-[10px]"
-                aria-hidden
-              >
-                {(agent.name[0] ?? 'A').toUpperCase()}
-              </span>
-              Listed by {agent.name}
-            </Link>
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                setOpen(true);
-              }}
-              className="inline-flex items-center gap-1 rounded-full font-semibold text-[13px] text-cream hover:opacity-80"
-              aria-haspopup="dialog"
-              aria-expanded={open}
-            >
-              More <span aria-hidden>↑</span>
-            </button>
-          </div>
+        <div className="font-bold text-[30px] leading-none tracking-tight tabular-nums">
+          {formatPriceFull(listing.price)}
         </div>
+        <div className="mt-1.5 font-semibold text-[15px] leading-snug">
+          {specs}
+        </div>
+        <div className="mt-1 font-semibold text-[15px] leading-snug">
+          {listing.address}
+        </div>
+        <div className="font-medium text-[13px] text-cream/85 leading-snug">
+          {listing.city}, {listing.state}
+        </div>
+
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            setOpen(true);
+          }}
+          className="mt-2 inline-flex items-center gap-1 font-semibold text-[13px] text-cream/95 hover:text-cream"
+          aria-haspopup="dialog"
+          aria-expanded={open}
+        >
+          More <span aria-hidden>↑</span>
+        </button>
       </div>
 
       {open && (
@@ -149,8 +136,8 @@ export function CaptionCard({
               aria-hidden
             />
             <div className="flex flex-shrink-0 items-baseline justify-between gap-3 border-black/[.08] border-b px-5 pt-3 pb-3">
-              <div className="font-serif font-semibold text-[26px] leading-none">
-                {formatPrice(listing.price)}
+              <div className="font-bold text-[24px] leading-none tabular-nums">
+                {formatPriceFull(listing.price)}
               </div>
               <button
                 type="button"
@@ -162,7 +149,10 @@ export function CaptionCard({
               </button>
             </div>
             <div className="flex-1 overflow-auto px-5 pt-4 pb-8">
-              <div className="font-semibold text-[17px] leading-snug">
+              <div className="font-semibold text-[15px] leading-snug">
+                {specs}
+              </div>
+              <div className="mt-2 font-semibold text-[17px] leading-snug">
                 {listing.address}
               </div>
               <div className="mt-0.5 font-medium text-[15px] text-black/65 leading-snug">
@@ -224,17 +214,12 @@ export function CaptionCard({
                 </h3>
                 <Link
                   href={`/a/${agent.slug}`}
-                  className="mt-2 flex items-center gap-3 rounded-2xl bg-black/[.04] p-3 hover:bg-black/[.06]"
+                  className="mt-2 inline-flex items-center gap-3 rounded-2xl bg-black/[.04] px-3 py-2.5 hover:bg-black/[.06]"
                 >
-                  <span className="flex h-11 w-11 items-center justify-center rounded-full bg-[#c4a584] font-semibold text-[16px] text-white">
+                  <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#c4a584] font-semibold text-[14px] text-white">
                     {(agent.name[0] ?? 'A').toUpperCase()}
                   </span>
-                  <div>
-                    <div className="font-semibold text-[15px]">{agent.name}</div>
-                    <div className="mt-0.5 font-medium text-[13px] text-black/60">
-                      Vicinity Realty
-                    </div>
-                  </div>
+                  <span className="font-semibold text-[15px]">{agent.name}</span>
                 </Link>
               </section>
             </div>

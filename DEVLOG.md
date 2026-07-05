@@ -2,6 +2,32 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-07-05 — Phase 74.1: caption immersive redesign (Redfin-style)
+
+### Trigger
+Owner 看了 phase 74 上线后的 glass card:"feed 里不要这个框 要嵌入 要沉浸 第一行写数字 不要用字母 M,粗体;第二行bd,ba,sqft啥的;第三行地址。你参考截图。用户点击more出框框是合理的 要包括之前feed里的信息 不要加vicinity realty 乱搞 简单点"。附 Redfin 8638 NE 19th Pl listing 截图。
+
+### Change
+`CaptionCard.tsx` folded 态从毛玻璃卡改成沉浸式 pure-text overlay:
+- 去掉 `bg-ink/60 backdrop-blur-xl border shadow` 容器 —— 直接文本 + `text-shadow` (0 2px 8px rgba(0,0,0,0.7))
+- **Line 1**:price 30px bold `tabular-nums`,**完整数字** `$8,750,000`(Redfin 风格),不再 `$8.75M` 缩写。加 `formatPriceFull` 用 `toLocaleString('en-US')`
+- **Line 2**:`bd · ba · sqft`(15px semibold)
+- **Line 3**:street address(15px semibold)
+- **Line 4**:city, state(13px medium cream/85)
+- 折叠态 agent chip / description preview / schools strip **全砍**,只留 "More ↑" 按钮
+- Sheet 里 "Listed by" section 去掉硬编码 "Vicinity Realty" 副标题(owner 明令"不要加vicinity realty 乱搞")
+- Sheet 保留 About this home + Nearby(schools/POIs)+ Listed by(纯 agent name,无 brokerage)
+
+`BrowseFeed.tsx` 两处 `<CaptionCard>` 去掉 `formatPrice={formatPrice}` prop —— CaptionCard 自持 `formatPriceFull`。
+
+### Verification
+`tsc --noEmit` clean;`next build` green(shared 87.3 kB 未变)。
+
+### Notes
+- 沉浸式无卡的可读性靠双层 text-shadow 撑,亮色 hero 帧极端 case 可能仍不够 —— 等 owner 手机看
+- price 从 24 → 30px,line-height leading-none,视觉冲击 Redfin 那样
+- 折叠态砍掉 description preview 是明确 owner 意图("要沉浸")—— 折叠信息量更少更干净
+
 ## 2026-07-05 — Phase 74: caption a11y — glass card + light bottom sheet
 
 ### Trigger

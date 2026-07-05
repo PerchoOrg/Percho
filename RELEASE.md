@@ -2,6 +2,12 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.74.1 — 2026-07-05
+
+Feed 上的 caption 从毛玻璃卡换成沉浸式 pure-text — 不再有边框、背景、阴影卡。第一行 `$8,750,000` 完整数字加粗(不再 `$8.75M`);第二行 `bd · ba · sqft`;第三行街道;第四行 city/state。文本靠双层 shadow 保对比度。
+
+点 More ↑ 才弹浅色 bottom sheet:price / specs / address / About this home / Nearby / Listed by(纯 agent 名,不再硬编码 brokerage)。
+
 ## v0.74.0 — 2026-07-05
 The listing caption on both photo and video swipes was redesigned for readability. Price, address, specs and the listing agent now sit on a floating frosted-glass card with larger, higher-contrast text — no more thin white text getting lost on bright rooms. Tap "More ↑" to open a light-cream bottom sheet with the full description, nearby schools and points of interest, and the agent card. The sheet slides over the media instead of covering it inline, so you can always see the photo or video underneath while reading. All text meets accessibility standards for size and contrast.
 

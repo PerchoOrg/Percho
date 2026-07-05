@@ -467,7 +467,6 @@ function PhotoCard({
         agent={card.agent}
         schools={card.photoSchools}
         pois={card.photoPois}
-        formatPrice={formatPrice}
       />
     </section>
   );
@@ -789,7 +788,6 @@ function Card({
       <CaptionCard
         listing={card.listing}
         agent={card.agent}
-        formatPrice={formatPrice}
       />
     </section>
   );
