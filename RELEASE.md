@@ -2,6 +2,11 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.74.5 — 2026-07-06
+
+### 🐛 Bug Fixes
+- **Community video swipe (follow-up to 0.74.4).** Fixed two issues: (1) around the 4th slide the audio would sometimes vanish and only come back after swiping back and forth — the `canplay` fallback was retrying with the video still muted from a previous fallback. (2) Community videos now support **tap-to-pause / tap-to-play** — before this release you couldn't stop a playing community video without leaving the carousel.
+
 ## v0.74.4 — 2026-07-06
 
 ### 🐛 Bug Fixes
