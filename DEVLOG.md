@@ -2,6 +2,29 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## Phase 74.16 (2026-07-06) — 竖滑 feed 黑屏 + 小视频带播放键闪现根因(74.13 回归)
+
+**Trigger:** owner:「刚才修的是横滑的问题 竖滑也会有黑屏 很快闪现一个小视频带播放键的页面 然后再开始播放feed 这个问题在所有竖滑的feed里都有 尤其是第一次刷到」
+
+**根因:** 74.13 违反 skill §1 canonical。skill 明确说过 iOS Safari 上永远不能设 `<video poster=…>` attribute —— iOS 会在 `<video>` mount 时**同步**渲染 poster + native big-play-button 三角图标(~200-500ms),这就是 owner 说的「小视频带播放键」。74.7 的 fix 就是 kill 掉 attribute + 用 `<img>` overlay + `!hasFirstFrame` gate 替代。**74.13 为了修 fullscreen 三帧,把 `poster=` 加回去了**,只 gate 掉 fullscreen+landscape 一支:
+
+```tsx
+poster={isFullscreen && hasLandscape ? undefined : (poster ?? undefined)}
+```
+
+结果 non-fullscreen(所有竖滑 feed 卡)+ fullscreen 无 landscape 都在裸走 native `poster=`。虽然 74.7 的 `<img>` overlay 还在,但 React mount 顺序上 `<video poster>` 先渲染 → iOS 立刻显示 poster + 大 play button → 下一帧 sibling `<img>` overlay 才盖上。owner 感知到的就是「黑屏(HLS attach)→ 小视频带播放键(native poster+play triangle 泄漏)→ feed(overlay 盖住)」三帧闪现。第一次刷到最明显是因为 poster 没缓存,fetch 时间更长。
+
+**Fix:**
+1. `poster={undefined}`(所有分支永远不设 native poster attr,回归 skill §1 canonical)
+2. `<img>` overlay gate 从 `!isFullscreen` 扩到 `!(isFullscreen && hasLandscape)` —— 覆盖 non-fullscreen + fullscreen 无 landscape 两种情况(portrait 视频进 fullscreen 也走 object-contain,复用同一个 overlay);fullscreen+landscape 单独由 74.14 rotated overlay 处理。
+
+**教训(74.13 → 74.16 cascade):**
+- **skill 里明写的 canonical 不能局部违反**,即使新 bug 迫使你想「就这一支加回去」。skill §1 讲的就是这类回归。
+- **74.13 修 fullscreen 三帧时应该「加 fullscreen 分支的 `<img>` overlay」而不是「回滚 74.7」**。修新 branch 不能砍老 branch 的 fix。
+- 「所有 X 都有」= 全局 render code path 层面的问题,不是特定卡数据问题 → 直接看 `<video>` element 层。
+
+**File:** `app/(public)/browse/_components/BrowseFeed.tsx`(L1008 `poster={undefined}`,L1083 overlay gate 改)
+
 ## Phase 74.15 (2026-07-06) — 74.14 overlay gate 回归
 
 **Trigger:** owner 测 74.14:「有进步 全屏之后出大屏 大屏没有退 但是还是有小图出现在大屏上 overlap...小图的位置在中央 小图的内容是Landscape缩略图 手机」
