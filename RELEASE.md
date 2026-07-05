@@ -2,6 +2,11 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.74.9 — 2026-07-06
+
+### 🐛 Bug Fixes
+- **Fullscreen tap now transitions straight to the landscape video with no small-tile or black-screen intermediate.** Follow-up to v0.74.8. Two overlapping bugs: (1) the fullscreen video was rendering at intrinsic size for one paint because the viewport measurement lived in a post-render effect — fixed by measuring the viewport synchronously in the tap handler before flipping fullscreen state; (2) the black gap during the HLS source swap to the landscape uid was uncovered — fixed by adding a rotated poster overlay that mirrors the fullscreen video's transform, so the landscape thumbnail fills the screen until the first real frame paints.
+
 ## v0.74.8 — 2026-07-06
 
 ### 🐛 Bug Fixes
