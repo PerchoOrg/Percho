@@ -2,6 +2,12 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.71.14 — 2026-07-06
+
+### 🐛 Bug Fixes
+- Fullscreen fill really works now: video is sized in raw pixels from the actual visual viewport (previous dvw/dvh attempt didn't take effect on iOS Safari — Tailwind arbitrary units either fell back to vw/vh or weren't emitted).
+- Play button no longer sticks in the middle: the fullscreen player now retries `.play()` across multiple media events (loadedmetadata, canplay, loadeddata), covering iOS Safari's native HLS reload race.
+
 ## v0.71.13 — 2026-07-06
 
 ### 🐛 Bug Fixes

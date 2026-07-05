@@ -2,6 +2,29 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## Phase 71.14 — Fullscreen fill: raw-pixel sizing + aggressive play retry (2026-07-06)
+
+Owner:"没有变化 问题还在"—— 71.13 的 dvw/dvh 完全没生效。
+
+**根因(黑边)**:Tailwind v3.4 的 arbitrary values `[100dvw]`/`[100dvh]` 在生产 build 里可能:(a) 被 JIT emit 成 CSS var 但 iOS Safari 不认;(b) 编译器 fallback 到 vw/vh;(c) safelist 未覆盖 dv 单位。任何一种都让上一版视觉上零变化。
+
+**根因(播放键)**:71.13 只监听 `loadedmetadata`,若那个事件在 effect attach 之前已经 fire,监听器永不触发。iOS Safari native HLS 生命周期事件顺序也不稳。
+
+**决策**:
+- **完全绕过 Tailwind arbitrary viewport 单位**:`useEffect` 里读 `window.innerWidth/innerHeight` 存 state,直接 inline `style={{ width: ${vp.h}px, height: ${vp.w}px, ... }}`。这是浏览器 native 支持的 CSS pixel unit,零 fallback 空间。resize/orientationchange 重新测。
+- **播放重试策略**:`.play()` 立即调一次,再监听 `loadedmetadata` + `canplay` + `loadeddata` 三个事件都触发,attempts cap=6 防死循环。muted 保证 autoplay policy 通过。
+
+**Actions** (`app/(public)/browse/_components/BrowseFeed.tsx`):
+- 加 `vp: {w,h}` state + measure useEffect(resize/orientationchange listeners)
+- `<video>` 加 inline `style={...}`(fullscreen+landscape+vp.w>0 时启用),className fullscreen 分支置空
+- fullscreen play useEffect:即时 tryPlay + 三事件监听 + attempts 限流
+
+**Verify**: tsc + build clean。
+
+**Learnings**: 关键 iOS Safari 尺寸不要走 Tailwind arbitrary,直接 JS + inline style 最稳。src swap 后 play 用多事件监听更 robust。
+
+---
+
 ## Phase 71.13 — Fullscreen fill fix: dvw/dvh + auto-play on src swap (2026-07-06)
 
 Owner 附截图 + 反馈:"有进步 一边铺开了 另一边还没有 并且中间的播放键还一直在"。
