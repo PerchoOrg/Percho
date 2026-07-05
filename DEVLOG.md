@@ -2,6 +2,19 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-07-05 — Phase 74.8: feed folded caption 层次拉平到 description
+
+### Trigger
+Owner:"feed里除了价格粗体 其他都正常 第二和第三行字体可以再小点跟description一样"。
+
+### Change
+- `CaptionCard.tsx` folded 视图 specs / address:`text-[15px] font-medium` → `text-[13px]`(去 medium)
+- 只 price 保 26px bold,其他三行 13px regular 平级(specs / address / description preview 完全对称)
+- Bottom sheet 内的字号不动 —— sheet 有 `#FBF8F3` 浅色背景 + 高对比度,15px medium 可读性 OK
+
+### Verification
+- tsc clean
+
 ## 2026-07-05 — Phase 74.7: grid 3rd line 撤 zip,字号回 11px
 
 ### Trigger

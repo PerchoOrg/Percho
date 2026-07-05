@@ -102,10 +102,10 @@ export function CaptionCard({
         <div className="font-bold text-[26px] leading-none tracking-tight tabular-nums">
           {formatPriceFull(listing.price)}
         </div>
-        <div className="mt-1.5 font-medium text-[15px] leading-snug">
+        <div className="mt-1.5 text-[13px] leading-snug">
           {specs}
         </div>
-        <div className="mt-1 font-medium text-[15px] leading-snug">
+        <div className="mt-1 text-[13px] leading-snug">
           {addressLine}
         </div>
         {hasDescription && preview.length > 0 && (

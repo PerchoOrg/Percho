@@ -2,6 +2,10 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.74.8 — 2026-07-05
+
+- **Feed folded caption 第二/三行 15px → 13px**: owner "feed里除了价格粗体 其他都正常 第二和第三行字体可以再小点跟description一样"。specs / address 从 `text-[15px] font-medium` → `text-[13px]`(去 medium),与 description preview 完全对齐。价格 26px bold 保留。Bottom sheet 内不动(sheet 有背景对比,15/17px 保持可读)。
+
 ## v0.74.7 — 2026-07-05
 
 - **Grid caption revert to 11px + drop zip**: owner reviewed 74.6 手机截图,决定 grid 4-up 卡不装 zip,第三行字号回到 11px,和第二行(specs)一致。Feed swipe 卡 + bottom sheet 保留 zip(有横向空间)。`app/_components/GridCard.tsx` sub2 → `text-[11px] tracking-wide opacity-95`。`ListingGrid.formatFullAddress()` 拆掉 zip 分支,输出 `street, city, state`。DB 已核 11 条 active listing 全 zip 有值,feed 的 `${zip ? ' '+zip : ''}` 逻辑无需改。
