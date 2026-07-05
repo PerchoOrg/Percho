@@ -2,6 +2,34 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## Phase 74.13 (2026-07-06) — 全屏 regression 根因回溯:74.7 gate 不该套到 fullscreen
+
+**Trigger:** owner:「没修好 你仔细看看 之前都好着的 为啥会横屏播放一开始出现小视频界面 又迅速恢复」
+
+**根因(74.7 就走错了):** 74.7 的目标是**竖滑 feed 首刷卡片**在 iOS Safari 出现 poster+play-button 闪现 —— 这只是 non-fullscreen 分支的 bug。修法是 kill `poster=` attr + `<img>` overlay + `hasFirstFrame` gate。**但这套 gate 逻辑被无差别应用到了 fullscreen 分支上 —— 而 fullscreen 分支根本没有那个 bug**(用户点全屏时视频已经在播放,`.play()` 早就调过,native poster 不会闪现)。
+
+74.8 起的每一次「全屏 regression 修复」都在这个错误铺垫上打补丁:
+- 74.8:fullscreen skip overlay → 露黑屏
+- 74.9:fullscreen 独立 rotated overlay + sync setVp → sync 又埋新雷
+- 74.10:sync setHasFirstFrame(false) → 触发 74.11 的 opacity fade 雷
+- 74.11:asymmetric transition
+- 74.12:vp 单 writer
+- 每 fix 一层引入下一层雷。owner 每次说「还有闪」都对,因为根本就不该有这套机器。
+
+**Fix(74.13):** 
+1. **恢复 `<video poster={poster ?? undefined}>` 属性** —— iOS native 的 last-frame-hold 是 fullscreen 场景下最好的 transition,74.7 之前一直好用。
+2. **删除 fullscreen 分支的 opacity gate**(fullscreen `style` 不再返回 opacity/transition)。
+3. **删除 fullscreen 独立 rotated `<img>` overlay**(74.9 加的)。
+4. **删除 tap handler 里的 `setHasFirstFrame(false)`**(74.10 加的,只为配合 74.9 overlay)。
+5. **保留** non-fullscreen 分支的 74.7 gate + 74.11 asymmetric transition + 非全屏 `<img>` overlay —— 那是 74.7 真正修的 bug,竖滑首刷生效。
+6. **保留** 74.9 tap handler 里的 sync setVp + 74.12 单 writer measure —— fullscreen 尺寸计算独立于 gate,那一层是对的。
+
+**教训(重大):** 「修 bug X 时顺手把方案套到相邻分支 Y」是 regression 的常见来源。每一层 conditional 都应该问「Y 分支真的有 X 的问题吗?」74.7 时应该问:「fullscreen 有 poster+play-button flash 吗?没有 —— 因为进 fullscreen 时视频已在播放。」问了这一句就不会有 74.8-74.12 五次连锁回归。**bug fix 覆盖面必须精确到症状实际存在的 code path,不无脑扩展。**
+
+**教训 2:** owner 说「之前都好着的」是最强 root-cause signal,一定要立刻 `git log` 找出 regression 起点,回退到 last-known-good 基线上重构,不要在 broken 基础上继续叠 fix。
+
+**File:** `app/(public)/browse/_components/BrowseFeed.tsx`(fullscreen video style + tap handler + 删 fullscreen overlay)
+
 ## Phase 74.12 (2026-07-06) — 全屏「大→小→中→大」多帧过渡:vp state 双 writer 抢
 
 **Trigger:** owner:「全屏还是先大再小再大」

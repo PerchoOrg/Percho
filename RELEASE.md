@@ -2,6 +2,11 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.74.13 — 2026-07-06
+
+### 🐛 Bug Fixes
+- **Fullscreen video restored to its pre-74.7 clean transition.** Root-cause analysis of the "fullscreen flashes a mini window" regression traced back to v0.74.7 — where a fix for the vertical-feed first-swipe placeholder was accidentally extended to the fullscreen path, which never had that bug in the first place. Every subsequent 74.8-74.12 patch layered another workaround on top. This release removes the gate/overlay machinery from the fullscreen branch and restores the native `poster=` attribute, giving fullscreen the same seamless transition it had before 74.7. The vertical-feed first-swipe fix is preserved for the portrait tile branch where it belongs.
+
 ## v0.74.12 — 2026-07-06
 
 ### 🐛 Bug Fixes
