@@ -2,6 +2,9 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.73.1 — 2026-07-05
+Community-video swipe now uses the same native iOS momentum-scroll physics as the photo swipe. Both swipes feel identical: your finger drags the track directly, hard flicks carry through multiple slides, and there's no mid-swipe stutter. Videos still auto-play/pause as they become active, and only the neighbouring three ever mount.
+
 ## v0.73.0 — 2026-07-05
 Photo swipe stays on native iOS momentum-scroll but the mid-swipe stutter is fixed. Swipe is now debounced to scroll-settle (React tree stays still while your finger is moving), neighbouring photos preload one further, decode runs off the main thread, and every slide is on its own GPU layer. Same physics as before, without the frame drops.
 
