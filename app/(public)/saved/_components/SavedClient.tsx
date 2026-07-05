@@ -126,6 +126,9 @@ function ListingsView({ cards }: { cards: BrowseCard[] }) {
     baths: card.listing.baths,
     sqft: card.listing.sqft,
     address: card.listing.address,
+    city: card.listing.city,
+    state: card.listing.state,
+    zip: card.listing.zip,
   }));
   return (
     <GridPageShell>

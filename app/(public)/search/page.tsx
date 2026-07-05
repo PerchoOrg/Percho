@@ -52,6 +52,7 @@ type ListingHit = {
   address: string;
   city: string;
   state: string;
+  zip: string | null;
   price: number | null;
   beds: number | null;
   baths: number | null;
@@ -182,6 +183,7 @@ async function searchListings(
       address: l.address,
       city: l.city,
       state: l.state,
+      zip: l.zip,
       price: l.price,
       beds: l.beds,
       baths: l.baths,
@@ -217,6 +219,9 @@ function listingHitsToItems(
       baths: hit.baths,
       sqft: hit.sqft,
       address: hit.address,
+      city: hit.city,
+      state: hit.state,
+      zip: hit.zip,
       badge: inactive ? { label: 'Inactive', tone: 'light' } : null,
       dimmed: inactive && opts.dimInactive,
     };

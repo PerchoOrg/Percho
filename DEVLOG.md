@@ -2,6 +2,31 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-07-05 — Phase 74.5: grid caption 对齐 feed(street, city, state zip)
+
+### Trigger
+Owner:"city前还是没有逗号； grid view里的第三行也按照这个格式"。手机截图看:swipe feed 卡的地址代码是 `${address}, ${city}, ${state}`,但 15px 一行放不下,浏览器在 `Road, ` 后的空格处折行,逗号视觉留在行末不明显 —— **实际问题是 `/browse` grid 卡第三行只显示 `item.address`(street-only),没有 city/state**,所以 city 前当然没有逗号可看。
+
+### Change
+- `ListingGridItem` 新增 `city / state / zip`(全 optional,drafts / legacy 可 null)
+- `ListingGrid.tsx` 加 `formatFullAddress()` —— 输出 `street, city, state zip`,和 CaptionCard 同一 shape;street 缺失退化为 geo tail,全空 `(no address)`
+- `sub2={formatFullAddress(item)}` 替 `item.address ?? '(no address)'`
+- 4 处 buyer 生产者透传 city/state/zip:`/browse`、`/saved`、`/nearby`、`/c/[slug]` —— 底层 `BrowseCard.listing` 74.4 已经带这些字段,只是 grid mapper 没读
+- `/search`:`ListingHit` 加 `zip`,select 早已有,只是 type 缺;`listingHitsToItems` 补三个字段
+- Dashboard 保持不变(draft 不改,街道 fallback `Untitled draft` 不需要 city/state)
+
+### Verification
+- `npx tsc --noEmit`:clean
+- `npx next build`:green,shared 87.3 kB 未变
+
+### Files
+- `app/_components/ListingGrid.tsx`
+- `app/(public)/browse/page.tsx`
+- `app/(public)/saved/_components/SavedClient.tsx`
+- `app/(public)/nearby/NearbyClient.tsx`
+- `app/(public)/c/[slug]/_components/CommunityBody.tsx`
+- `app/(public)/search/page.tsx`
+
 ## 2026-07-05 — Phase 74.4: caption weight + zip
 
 ### Trigger

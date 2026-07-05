@@ -23,6 +23,16 @@ export type ListingGridItem = {
   baths: number | null;
   sqft: number | null;
   address: string | null;
+  /**
+   * Phase 74.5 (2026-07-05): city / state / zip surfaced so the grid
+   * caption's third line renders the full address in the same shape as
+   * the swipe feed CaptionCard: `street, city, state zip`. Any of them
+   * can be null (drafts, legacy rows) — the formatter drops missing
+   * segments gracefully.
+   */
+  city?: string | null;
+  state?: string | null;
+  zip?: string | null;
   /** Optional top-right badge — { label: 'Stock' } on demo cards, { label:
    *  'Inactive', tone: 'light' } on owner-side dimmed cards. */
   badge?: { label: string; tone?: 'dark' | 'light' } | null;
@@ -52,6 +62,26 @@ function specsLine(item: ListingGridItem): string {
   ]
     .filter(Boolean)
     .join(' · ');
+}
+
+/**
+ * Phase 74.5: mirror the swipe feed CaptionCard address shape.
+ * Format: `street, city, state zip`. If street is null we surface just
+ * the geo tail; if there's nothing at all we return `(no address)` so
+ * the caller doesn't have to null-check. Draft placeholders like
+ * "Untitled draft" are passed through untouched (no city/state/zip).
+ */
+function formatFullAddress(item: ListingGridItem): string {
+  const street = item.address?.trim() || null;
+  const city = item.city?.trim() || null;
+  const state = item.state?.trim() || null;
+  const zip = item.zip?.trim() || null;
+  if (!street && !city && !state) return '(no address)';
+  // If there's no city/state, the street stands alone (drafts, legacy).
+  if (!city && !state) return street ?? '(no address)';
+  const geoTail = [city, state].filter(Boolean).join(', ');
+  const withZip = zip ? `${geoTail} ${zip}` : geoTail;
+  return street ? `${street}, ${withZip}` : withZip;
 }
 
 export function ListingGrid({
@@ -107,7 +137,7 @@ export function ListingGrid({
               <GridCardCaption
                 title={fmtPrice(item.price)}
                 sub={specs || null}
-                sub2={item.address ?? '(no address)'}
+                sub2={formatFullAddress(item)}
               />
             }
           />
