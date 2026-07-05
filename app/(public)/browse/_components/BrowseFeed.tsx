@@ -997,21 +997,15 @@ function Card({
           <>
             <video
               ref={videoRef}
-              // Phase 74.16 (2026-07-06): NEVER set native `poster=` —
-              // this is skill §1 canonical for iOS Safari, and 74.13
-              // violated it by re-adding the attribute for the
-              // non-fullscreen branch. Owner: "竖滑也会有黑屏 很快闪现
-              // 一个小视频带播放键的页面 然后再开始播放feed 这个问题在
-              // 所有竖滑的feed里都有 尤其是第一次刷到" — that is exactly
-              // the iOS `<video poster>` big-play-button flash the 74.7
-              // fix originally killed. iOS renders the poster attribute
-              // + the native big-play triangle synchronously the moment
-              // the <video> mounts, before the sibling <img> overlay
-              // paints — producing a ~200-500ms poster+play-button flash.
-              // Fix: kill the attribute for ALL branches; rely entirely
-              // on the <img> overlays below (74.7 non-fullscreen, 74.14
-              // fullscreen+landscape rotated, 74.16 fullscreen no-landscape).
-              poster={undefined}
+              // Phase 74.13 (2026-07-06): restore native poster on video —
+              // BUT only for non-fullscreen. In fullscreen, native
+              // <video poster> letterboxes to the rotated box's aspect
+              // (CSS object-fit does NOT apply to the poster attribute
+              // on iOS Safari), producing the "小图" frame owner reported
+              // in "黑屏 → 小图 → 大播放". Phase 74.14 replaces it with
+              // a rotated <img> overlay + objectFit: cover so the
+              // landscape thumbnail actually fills the fullscreen box.
+              poster={isFullscreen && hasLandscape ? undefined : (poster ?? undefined)}
               style={
                 // Phase 71.14: rotate-90 fullscreen — measure the visual
                 // viewport in JS and set width/height as raw pixels. Setting
@@ -1081,18 +1075,12 @@ function Card({
               preload="auto"
             />
             {/* Phase 74.7 (skill ref §1): poster overlay covers the <video>
-             * until the first real frame paints. This is the canonical
-             * fix for the iOS `<video poster>` big-play-button flash.
-             * Phase 74.16 (2026-07-06): extended to cover BOTH the
-             * non-fullscreen branch AND the fullscreen-without-landscape
-             * branch (portrait video played back inside the rotated
-             * fullscreen box — same className/sizing as the non-fullscreen
-             * card). Only the fullscreen+landscape branch uses the 74.14
-             * rotated overlay below (needs different sizing / objectFit:
-             * cover to fill the rotated box). Without this extension,
-             * killing native `poster=` (74.16) would leave the fullscreen
-             * no-landscape branch with no cover during src-swap. */}
-            {poster && !hasFirstFrame && !(isFullscreen && hasLandscape) && (
+             * until the first real frame paints. Only rendered in the
+             * non-fullscreen branch — this is the bug 74.7 was solving
+             * (vertical-feed first-swipe poster+play-button flash on iOS
+             * Safari). In fullscreen, native `poster=` handles the src-swap
+             * transition; no overlay needed (see 74.13 above). */}
+            {poster && !hasFirstFrame && !isFullscreen && (
               <img
                 src={poster}
                 alt=""

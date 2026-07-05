@@ -2,11 +2,6 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
-## v0.74.16 — 2026-07-06
-
-### 🐛 Bug Fixes
-- **Vertical video feed no longer flashes a black frame + a small video with a play-button before playback starts.** Owner report: "竖滑也会有黑屏 很快闪现一个小视频带播放键的页面 然后再开始播放feed 这个问题在所有竖滑的feed里都有 尤其是第一次刷到". Root cause: v0.74.13 re-introduced the `<video poster=…>` attribute for the non-fullscreen branch, which iOS Safari renders synchronously with a native big-play-button overlay for ~200-500ms before the sibling `<img>` cover paints — exactly the flash v0.74.7 originally killed. Fixed by removing the native `poster=` attribute on all branches and extending the `<img>` cover overlay to also cover the fullscreen no-landscape branch. Fullscreen with landscape swap continues to use the rotated overlay from v0.74.14.
-
 ## v0.74.15 — 2026-07-06
 
 ### 🐛 Bug Fixes
