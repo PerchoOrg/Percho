@@ -2,6 +2,10 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.71.25 — 2026-07-06
+
+71.24 拆过头了 —— 横屏全屏播放键回到"播了不消失"。71.15 media event listener 在非全屏够用,但全屏切 src 到 landscape uid 时 iOS Safari 有时不 fire `play` 事件。加回 rAF poll,但**只在 `isFullscreen` 时跑**,非全屏保持 event listener 单驱动。
+
 ## v0.71.24 — 2026-07-06
 
 清理 71.16 → 71.22 三个星期堆积的诊断代码 —— 左上角 `vp/vid rect/reactPaused/domPaused/muted/vol` 半透明 pill、`videoDiag` 500ms interval poll、`domPaused` rAF poll 全部拆掉;`onTap` 里 71.21 试过没用的 `currentTime = currentTime` nudge 也删了。71.15 media event listener 已经把 `paused` React state 同步得足够准,rAF poll 是冗余兜底。行为一字未改,只是把排障脚手架卸了。
