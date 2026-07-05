@@ -2,6 +2,22 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.71.24 — 2026-07-06
+
+清理 71.16 → 71.22 三个星期堆积的诊断代码 —— 左上角 `vp/vid rect/reactPaused/domPaused/muted/vol` 半透明 pill、`videoDiag` 500ms interval poll、`domPaused` rAF poll 全部拆掉;`onTap` 里 71.21 试过没用的 `currentTime = currentTime` nudge 也删了。71.15 media event listener 已经把 `paused` React state 同步得足够准,rAF poll 是冗余兜底。行为一字未改,只是把排障脚手架卸了。
+
+## v0.71.23 — 2026-07-06
+
+暂停后声音停,再播放却哑巴 —— 71.22 核选项把当前视频 `muted=true, volume=0` 后没解绑。tap 播放分支加两行,`v.play()` 前恢复 `volume=1` + `muted=父级 prop`。
+
+## v0.71.22 — 2026-07-06
+
+暂停后声音继续 —— 诊断显示 `domPaused=true muted=true vol=1.00`,当前 video 已闭嘴,声源必然在别处(邻居预加载卡片或 HLS 残留 audio track)。核选项:tap 暂停时 `document.querySelectorAll('video')` 拿全部视频,每个都 `pause()` + `muted=true` + `volume=0`。
+
+## v0.71.21 — 2026-07-06
+
+播放键播放中不消失(React `paused` state 没跟 DOM 同步)+ 声音跟不上暂停。加 `domPaused` rAF poll 直读 `videoRef.current.paused` 作为播放键 truth,onTap pause 加 `currentTime = currentTime` nudge。诊断 pill 扩展 `reactPaused/domPaused/muted/vol`。(播放键 fix 有效;audio 问题实际由 71.22/71.23 解决。)
+
 ## v0.71.20 — 2026-07-06
 
 全屏体验 3 个后遗症修好:X 关闭按钮从视频后面出来了(zIndex 10002 fixed)、

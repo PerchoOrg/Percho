@@ -2,6 +2,65 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## Phase 71.24 (2026-07-06) — 全屏诊断脚手架清理
+
+**Trigger**:71.23 audio 问题解决后,BrowseFeed.tsx 里堆了三个星期的排障代码需要收工。
+
+**改动**(`app/(public)/browse/_components/BrowseFeed.tsx`):
+1. 拆诊断 pill(左上角 `vp={W}×{H} · vid rect=... · natural=... · reactPaused/domPaused/muted/vol · total videos=N · v0/v1/v2...`)
+2. 拆 `videoDiag` state + 500ms interval useEffect
+3. 拆 `domPaused` state + rAF poll useEffect(71.21 引入)
+4. 播放键判断从 `domPaused` 改回 `paused`(React state,由 71.15 media event listener 同步)
+5. 拆 71.21 `v.currentTime = v.currentTime` nudge(实测无效,已被 71.22/71.23 覆盖)
+6. 重新排缩进(71.16 pill 拆掉后 X 按钮 JSX 缩进错位)
+
+**保留**(不能拆):
+- `<video>` inline `maxWidth/maxHeight:'none' minWidth/minHeight:0`(71.19 preflight 修复,黑边根因)
+- fullscreen X `zIndex:10002` / 播放键 `fixed zIndex:10001 rotate(90deg)` / `<video>` `pointerEvents:'none'`(71.20)
+- `sectionRef` measure vp(fullscreen inline w/h 需要,device-agnostic)
+- 71.15 media event listener(play/playing/pause → setPaused,替代 rAF poll)
+- 71.17 fullscreen play retry effect(canplay/loadeddata + started flag)
+- 71.22 nuclear pause+mute all videos on tap-pause + 71.23 restore on tap-play
+
+**教训**:诊断代码堆多了会掩盖真凶。71.16 → 71.22 六个 phase 迭代找 audio bug,几个 useEffect 交叉污染,如果早在 71.19 修好黑边后就拆诊断,71.21 rAF poll 可能都不需要引入。以后:每拿到决定性诊断数据就该拆诊断,不该继续堆。
+
+**Verify**:tsc + build clean;fullscreen / play / pause(声音停)/ resume(声音回)/ X 关闭全部再走一遍。
+
+## Phase 71.23 (2026-07-06) — 播放后声音丢
+
+**Trigger**:71.22 核选项修好暂停后音,但再播放画面动、声音没了。
+
+**根因**:71.22 暂停时把当前 video 也 `muted=true, volume=0` 干掉了,tap 恢复播放没解绑。
+
+**修复**(`onTap` play 分支):
+```ts
+try { v.volume = 1; } catch {}
+v.muted = muted;  // 同步父级 sound button state
+```
+
+## Phase 71.22 (2026-07-06) — 声音源不在当前 video
+
+**Trigger**:71.21 后诊断 pill 显示 `domPaused=true muted=true vol=1.00`,当前 video 已经暂停+静音,理论上不发声,但用户仍听到音。
+
+**推理**:声源必然是**别的** `<video>` — feed preload 的邻居卡片,或 fullscreen 切 src 时旧 HLS 残留的 audio track。
+
+**修复**(`onTap` pause 分支):
+1. 诊断 pill 扩展枚举 `document.querySelectorAll('video')` 显示每个的 pause/mute/vol/currentTime
+2. 核选项:tap 暂停时对页面**每一个** `<video>` 都 `pause()` + `muted=true` + `volume=0`
+
+**结果**:声音立即停 ✓ — 证实声源是当前 video 之外的元素(具体是谁 71.24 收工时没深追,反正 nuclear 生效)。
+
+## Phase 71.21 (2026-07-06) — 播放键 + 音频不同步的双重问题
+
+**Trigger**:71.20 修好全屏控件后,用户反馈"播放键播放中一直显示 + 暂停后声音继续"。
+
+**修复**:
+1. `domPaused` state + rAF poll `videoRef.current.paused`,播放键判断改用 domPaused(React `paused` prop 没跟 DOM 同步)
+2. `onTap` pause 加 `v.currentTime = v.currentTime` nudge(实测无效,71.22 覆盖)
+3. 诊断 pill 扩展 `reactPaused/domPaused/muted/vol`
+
+**部分有效**:播放键问题解决(rAF poll 拿准了 DOM state);audio 问题未解决,交给 71.22。71.24 拆掉 rAF poll,回退到 71.15 event listener(它其实一直够用,当时误判为不同步)。
+
 ## Phase 71.20 (2026-07-06) — 全屏三个 zIndex 后遗症
 
 71.19 用 `position:fixed zIndex:10000` 让 `<video>` 逃出父容器 stacking context 后带来三坑:
