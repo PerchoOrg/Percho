@@ -9,7 +9,7 @@
  * RLS / data load unchanged — see DESIGN.md for the token reference.
  */
 
-import { GridCard } from '@/app/_components/GridCard';
+import { ListingGrid, type ListingGridItem } from '@/app/_components/ListingGrid';
 import { thumbnailUrl } from '@/lib/cloudflare/stream';
 import { createClient } from '@/lib/supabase/server';
 import type { Metadata } from 'next';
@@ -136,16 +136,18 @@ export default async function AgentProfilePage({
 
   return (
     <div className="min-h-screen bg-bg text-ink">
-      {/* Hero — Aman idiom: eyebrow caps + large serif name + hairline.
-          Phase 47.4 (2026-06-21): tightened spacing to a single 8px rhythm
-          (py-20 / mb-8 / gap-8) so the page feels internally consistent
-          even though it deliberately diverges from the dense feed grid. */}
+      {/* Hero — Aman idiom: eyebrow caps + serif name + hairline.
+          Phase 74.14 (2026-07-05): owner asked to compress the hero so the
+          portfolio grid shows more homes above the fold. Vertical padding
+          halved (py-20/28 → py-8/12), eyebrow mb-8 → mb-3, headshot / row
+          gap-8 → gap-5, bio mt-8 → mt-4. Same information density, roughly
+          40% less whitespace. */}
       <section>
-        <div className="mx-auto max-w-6xl px-6 py-20 md:py-28">
-          <div className="eyebrow mb-8">Vicinity · Listing Specialist</div>
+        <div className="mx-auto max-w-6xl px-6 py-8 md:py-12">
+          <div className="eyebrow mb-3">Vicinity · Listing Specialist</div>
 
-          <div className="flex flex-col gap-8 md:flex-row md:items-end md:justify-between">
-            <div className="flex items-center gap-8 md:items-end">
+          <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+            <div className="flex items-center gap-5 md:items-end">
               {(() => {
                 const headshot = agent.headshot_url;
                 return headshot ? (
@@ -153,38 +155,38 @@ export default async function AgentProfilePage({
                   <img
                     src={headshot}
                     alt={agent.name}
-                    className="h-20 w-20 rounded-full object-cover md:h-24 md:w-24"
+                    className="h-16 w-16 rounded-full object-cover md:h-20 md:w-20"
                   />
                 ) : (
-                  <div className="flex h-20 w-20 items-center justify-center rounded-full border border-line font-serif text-3xl text-ink2 md:h-24 md:w-24">
+                  <div className="flex h-16 w-16 items-center justify-center rounded-full border border-line font-serif text-2xl text-ink2 md:h-20 md:w-20">
                     {agent.name.slice(0, 1)}
                   </div>
                 );
               })()}
               <div>
-                <h1 className="display-xl">{agent.name}</h1>
+                <h1 className="display-md md:display-xl">{agent.name}</h1>
                 {agent.brokerage && (
-                  <p className="mt-3 text-ink2 text-sm tracking-wide">{agent.brokerage}</p>
+                  <p className="mt-1.5 text-ink2 text-sm tracking-wide">{agent.brokerage}</p>
                 )}
                 {agent.license_no && (
-                  <p className="mt-1 text-muted text-xs tracking-wide">
+                  <p className="mt-0.5 text-muted text-xs tracking-wide">
                     License #{agent.license_no}
                   </p>
                 )}
               </div>
             </div>
 
-            <div className="flex flex-wrap gap-3">
+            <div className="flex flex-wrap gap-2.5">
               <a
                 href={`mailto:${agent.email}`}
-                className="inline-flex items-center justify-center bg-ink px-6 py-3 text-[12px] tracking-[0.18em] text-surface uppercase transition hover:bg-[#1f1f1f]"
+                className="inline-flex items-center justify-center bg-ink px-5 py-2.5 text-[11px] tracking-[0.18em] text-surface uppercase transition hover:bg-[#1f1f1f]"
               >
                 Email {firstName}
               </a>
               {agent.phone && (
                 <a
                   href={`tel:${agent.phone}`}
-                  className="inline-flex items-center justify-center border border-line-strong px-6 py-3 text-[12px] tracking-[0.18em] text-ink uppercase transition hover:border-ink"
+                  className="inline-flex items-center justify-center border border-line-strong px-5 py-2.5 text-[11px] tracking-[0.18em] text-ink uppercase transition hover:border-ink"
                 >
                   {formatPhone(agent.phone)}
                 </a>
@@ -193,7 +195,7 @@ export default async function AgentProfilePage({
           </div>
 
           {agent.bio && (
-            <p className="mt-8 max-w-2xl whitespace-pre-line text-ink2 text-base leading-[1.7]">
+            <p className="mt-4 max-w-2xl whitespace-pre-line text-ink2 text-[15px] leading-[1.65]">
               {agent.bio}
             </p>
           )}
@@ -201,12 +203,18 @@ export default async function AgentProfilePage({
         <hr className="hairline" />
       </section>
 
-      {/* Listings — gallery */}
+      {/* Listings — gallery.
+          Phase 74.14 (2026-07-05): switched from the editorial 22/26 serif
+          `ListingCardView` (3-col, 4:5, gap-8) to the site-wide `ListingGrid`
+          (4-up, 15/11/11 canonical). Owner: "public profile grid view 也要
+          改 ... 尽量多展现房子内容." This overrides the phase-74.4 editorial
+          exception — portfolio now matches browse / dashboard / community.
+          Section vertical rhythm also halved to bring the grid up. */}
       <section>
-        <div className="mx-auto max-w-6xl px-6 py-20 md:py-28">
-          <div className="mb-8 flex items-baseline justify-between">
+        <div className="mx-auto max-w-6xl px-6 py-8 md:py-12">
+          <div className="mb-5 flex items-baseline justify-between">
             <div>
-              <div className="eyebrow mb-3">The Portfolio</div>
+              <div className="eyebrow mb-2">The Portfolio</div>
               <h2 className="display-md">Selected residences</h2>
             </div>
             <span className="text-muted text-xs tracking-[0.18em] uppercase">
@@ -214,20 +222,7 @@ export default async function AgentProfilePage({
             </span>
           </div>
 
-          {listings.length === 0 ? (
-            <div className="border border-line py-20 text-center">
-              <p className="text-ink2">No live listings right now.</p>
-              <p className="mt-2 text-muted text-sm">
-                Check back soon or reach out directly above.
-              </p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
-              {listings.map((l, i) => (
-                <ListingCardView key={l.id} index={i} agentSlug={agent.slug} listing={l} />
-              ))}
-            </div>
-          )}
+          <ListingGrid items={listings.map((l) => toGridItem(l, agent.slug))} />
         </div>
       </section>
 
@@ -248,65 +243,28 @@ export default async function AgentProfilePage({
   );
 }
 
-function ListingCardView({
-  agentSlug,
-  listing,
-}: {
-  agentSlug: string;
-  listing: ListingCard;
-  /** index kept for backward-compat at the call site; no longer used since
-   *  Phase 47.3 dropped the "No. 01" eyebrow in favor of the unified
-   *  GridCardCaption (price → specs → address overlay on image). */
-  index: number;
-}) {
-  const realCover =
+/**
+ * Phase 74.14 (2026-07-05): portfolio → ListingGrid adapter.
+ * Full-digit price via ListingGrid's own `fmtPrice` (no K/M — buyer-surface
+ * hard rule from 74.10). Address expands to `street, city, state` inside the
+ * grid card (74.7 canonical, no zip in dense grid).
+ */
+function toGridItem(listing: ListingCard, agentSlug: string): ListingGridItem {
+  const cover =
     listing.cover_url ?? (listing.hero_video_id ? thumbnailUrl(listing.hero_video_id) : null);
-  const cover = realCover;
-  const specs = [
-    listing.beds != null ? `${listing.beds} bd` : null,
-    listing.baths != null ? `${listing.baths} ba` : null,
-    listing.sqft != null ? `${listing.sqft.toLocaleString()} sqft` : null,
-  ]
-    .filter(Boolean)
-    .join(' · ');
-
-  // Phase 47.4 (2026-06-21): portfolio cards keep their editorial 4:5
-  // aspect + 1/2/3-col / wide-gap layout AND bottom-left overlay format,
-  // but with larger type + larger inset to match the larger image —
-  // owner asked for the page to feel internally consistent even though
-  // it deliberately diverges from the dense feed grid.
-  const priceText = listing.price != null ? `$${formatPrice(listing.price)}` : 'Price upon request';
-  return (
-    <GridCard
-      href={`/v/${agentSlug}/${listing.slug}`}
-      coverUrl={cover}
-      alt={listing.address}
-      aspectClass="aspect-[4/5]"
-      captionInsetClass="inset-x-5 bottom-5"
-      fallback={
-        <div className="grid h-full w-full place-items-center text-muted text-xs">No cover</div>
-      }
-      caption={
-        <div className="space-y-1.5">
-          <div className="font-serif text-[22px] leading-tight tracking-tight md:text-[26px]">
-            {priceText}
-          </div>
-          {specs && (
-            <div className="text-[13px] text-surface/85 leading-snug md:text-[14px]">{specs}</div>
-          )}
-          <div className="text-[13px] text-surface/85 leading-snug md:text-[14px]">
-            {`${listing.address}, ${listing.city}, ${listing.state}${listing.zip ? ` ${listing.zip}` : ''}`}
-          </div>
-        </div>
-      }
-    />
-  );
-}
-
-function formatPrice(price: number): string {
-  if (price >= 1_000_000) return `${(price / 1_000_000).toFixed(2).replace(/\.?0+$/, '')}M`;
-  if (price >= 1_000) return `${Math.round(price / 1_000)}k`;
-  return price.toLocaleString();
+  return {
+    id: listing.id,
+    href: `/v/${agentSlug}/${listing.slug}`,
+    coverUrl: cover,
+    price: listing.price,
+    beds: listing.beds,
+    baths: listing.baths,
+    sqft: listing.sqft,
+    address: listing.address,
+    city: listing.city,
+    state: listing.state,
+    zip: listing.zip,
+  };
 }
 
 function formatPhone(raw: string): string {

@@ -2,6 +2,37 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## Phase 74.14 — public agent profile: hero -40% whitespace + grid ↔ canonical (2026-07-05)
+
+Owner: "public profile 里的 grid view 也要改 并且 profile 第一部分的空白太多 减少 尽量多的展现房子内容"。两件事一次做:hero 大瘦身 + portfolio grid 对齐全站 canonical。
+
+**Hero compression** — `app/(public)/a/[agentSlug]/page.tsx`:
+
+| token | before | after |
+|-------|--------|-------|
+| section padding | `py-20 md:py-28` (80/112) | `py-8 md:py-12` (32/48) |
+| eyebrow → row | `mb-8` | `mb-3` |
+| headshot | 20×20 / 24×24 | 16×16 / 20×20 |
+| name h1 | `display-xl`(全尺寸) | `display-md md:display-xl` |
+| flex gap | `gap-8 md:gap-8` | `gap-4 md:gap-5` |
+| CTA button | `px-6 py-3 12px` | `px-5 py-2.5 11px` |
+| bio | `mt-8 text-base 1.7` | `mt-4 text-[15px] 1.65` |
+| listings section | `py-20 md:py-28` + `mb-8` | `py-8 md:py-12` + `mb-5` |
+
+第一屏空白约 **-40%**,portfolio 卡从"要滚半屏"到上折内直接可见。
+
+**Grid alignment** — 之前 portfolio 用独立 editorial `ListingCardView`(3-col × 4:5 × `font-serif 22/26 md` × gap-8),74.4 owner 特批的编辑感路线。74.14 owner 明确"grid 也要改 保持统一",换成全站 `ListingGrid`(4-up × `aspect-square` × 15 semibold + 11/11 + 更紧 gap)。同时废弃本地 K/M `formatPrice` —— 走 `ListingGrid.fmtPrice` full-digit,守住 74.10 hard rule("buyer surface 一律 full-digit")。地址走 `formatFullAddress` → `street, city, state`(no zip in dense grid,74.7 canonical)。
+
+**Editorial 22/26 特批被 override** — 74.4 特批的路线在 74.14 owner 反悔;canonical 表现在只保留:
+- Feed swipe → `CaptionCard` 26 bold + 13/13/13 with zip
+- 其他所有 buyer grid(browse / dashboard / community / **agent portfolio** / saved / nearby / search)→ `ListingGrid` 15/11/11 without zip
+
+结论:全站 buyer surface 现在**只有两种 caption 形态**,不再有第三条 editorial 例外。
+
+**Files touched**: `app/(public)/a/[agentSlug]/page.tsx`(-79 net,单文件搞定)。tsc clean, next build green。
+
+**Pitfall 记录**: 首轮把 h1 改成 `display-lg`、h2 改成 `display-sm` — 两个 utility 都不存在(globals.css 只定义 xl/lg/md)。改前 `grep display- app/globals.css` 一眼看清 utility set,不要凭直觉造 tailwind class。
+
 ## 2026-07-05 — Phase 74.13: dashboard hub + community sheet 补齐 audit
 
 ### Trigger

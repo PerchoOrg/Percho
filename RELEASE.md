@@ -2,6 +2,14 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.74.14 — 2026-07-05
+
+- **Public agent profile 大瘦身:hero 压缩 + grid 对齐全站 canonical**: owner "public profile 里的 grid view 也要改,并且 profile 第一部分的空白太多 减少 尽量多的展现房子内容"。
+  - **Hero 压缩**(`app/(public)/a/[agentSlug]/page.tsx`):`py-20 md:py-28`(80/112px)→ `py-8 md:py-12`(32/48px);eyebrow `mb-8` → `mb-3`;头像 20×20 / 24×24 → 16×16 / 20×20;name `display-xl` → `display-md md:display-xl`(移动端不再顶天);内部 `gap-8` → `gap-4/5`;CTA button `px-6 py-3 12px` → `px-5 py-2.5 11px`;bio `mt-8 text-base` → `mt-4 text-[15px]`。整块空白约 **-40%**,portfolio 卡从"要滚半屏"变成上折内可见。
+  - **Grid 对齐 canonical**:portfolio 之前跑独立 editorial `ListingCardView`(3-col × `aspect-[4/5]` × `font-serif 22/26 md` × gap-8),74.4 owner 特批的路线;现在 owner 明确要求"grid 也要改 保持统一",换成全站 `ListingGrid`(4-up × 15/11/11 × 更紧 gap)。同时废弃本地 `formatPrice`(K/M 缩写)—— 走 ListingGrid 内置 full-digit,守住 74.10 buyer-surface hard rule。地址走 `formatFullAddress` → `street, city, state`(no zip in dense grid,74.7 canonical)。
+- **Editorial 22/26 特批取消**:74.4 那次 owner 想要的是"portfolio 要有编辑感",但 74.14 明确"尽量多展现房子内容"→ 密度优先。canonical 表现在只保留 CaptionCard 26/13/13/13(feed swipe)+ GridCard 15/11/11(其他所有 buyer surface,含 portfolio)。
+- **构建**: tsc 无错,next build 干净。
+
 ## v0.74.13 — 2026-07-05
 
 - **Dashboard "my listings" hub + community "Homes in XXX" sheet 补齐 audit**: owner "agent hub my listing grid view 需要改 / 截图里的 homes in xxx community 也要改"。74.10 miss 了两处:

@@ -137,22 +137,13 @@ export function CaptionCard({
 
       {open && (
         <div
-          className="absolute inset-0 z-50"
           role="dialog"
           aria-modal="true"
           aria-label={`Details for ${listing.address}`}
+          className="absolute right-0 bottom-0 left-0 z-50 flex max-h-[62%] flex-col rounded-t-3xl bg-[#FBF8F3] text-ink shadow-[0_-20px_60px_rgba(0,0,0,0.4)]"
           onClick={(e) => e.stopPropagation()}
         >
-          <button
-            type="button"
-            aria-label="Close details"
-            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-            onClick={() => setOpen(false)}
-          />
-          <div
-            className="absolute right-0 bottom-0 left-0 flex max-h-[82%] flex-col rounded-t-3xl bg-[#FBF8F3] text-ink shadow-[0_-20px_60px_rgba(0,0,0,0.4)]"
-            onClick={(e) => e.stopPropagation()}
-          >
+          <div>
             <div
               className="mx-auto mt-2.5 h-[5px] w-10 flex-shrink-0 rounded-full bg-black/20"
               aria-hidden
