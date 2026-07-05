@@ -978,6 +978,25 @@ function Card({
           <>
             <video
               ref={videoRef}
+              // Phase 74.13 (2026-07-06): restore native poster on video.
+              // 74.7 killed this to fix the vertical-feed-first-swipe
+              // poster+play-button flash on iOS Safari via an <img>
+              // overlay + hasFirstFrame gate. The gate correctly covers
+              // the non-fullscreen (portrait tile) branch. But 74.8-74.12
+              // extended the gate machinery into the fullscreen branch,
+              // where video is already playing before the fullscreen tap
+              // (native poster shows nothing — .play() has already been
+              // called). Piling opacity gates + rotated <img> overlays +
+              // sync state resets on top of the fullscreen path caused
+              // the "big → small → big" and "flash mini window" regressions
+              // owner reported through 74.8-74.12. Owner: "之前都好着的".
+              // Restoring poster attr means iOS uses its native
+              // last-frame-hold during HLS src swap in fullscreen,
+              // which "just works". The <img> overlay below still
+              // covers the same poster in the non-fullscreen branch
+              // when hasFirstFrame is false, so the vertical-feed
+              // first-swipe fix is preserved.
+              poster={poster ?? undefined}
               style={
                 // Phase 71.14: rotate-90 fullscreen — measure the visual
                 // viewport in JS and set width/height as raw pixels. Setting
@@ -1014,23 +1033,20 @@ function Card({
                       // play glyph are separately positioned above with
                       // their own hit boxes so they still receive clicks.
                       pointerEvents: 'none',
-                      // Phase 74.7 (skill ref §1): opacity gate — video stays
-                      // hidden behind the poster overlay below until the
-                      // first real frame paints (see reveal effect above).
-                      // Phase 74.11 (2026-07-06): transition ONLY on
-                      // fade-in (hasFirstFrame true). Bidirectional
-                      // 150ms transition meant that when fullscreen tap
-                      // sync-flipped hasFirstFrame back to false, the
-                      // <video> spent 150ms fading out — during which
-                      // its stale portrait frame was stretched into the
-                      // rotated landscape box (owner: "闪现小画面").
-                      // false → 0 must be instant; true → 1 keeps the
-                      // smooth reveal.
-                      opacity: hasFirstFrame ? 1 : 0,
-                      transition: hasFirstFrame ? 'opacity 150ms' : 'none',
+                      // Phase 74.13: NO opacity gate in fullscreen. The
+                      // gate was pointless here (video is already playing
+                      // before entering fullscreen) and its interaction
+                      // with poster overlay + rotate-90 was the root
+                      // cause of every 74.8-74.12 regression.
                     }
                   : {
-                      // Phase 74.7 / 74.11: same asymmetric transition.
+                      // Phase 74.7 (skill ref §1): opacity gate — video stays
+                      // hidden behind the <img> poster overlay below until
+                      // the first real frame paints. Only applied to the
+                      // non-fullscreen branch (first-swipe portrait tile),
+                      // which is the actual bug 74.7 was solving.
+                      // Phase 74.11: asymmetric transition — smooth
+                      // fade-in on first frame, instant on hide.
                       opacity: hasFirstFrame ? 1 : 0,
                       transition: hasFirstFrame ? 'opacity 150ms' : 'none',
                     }
@@ -1050,46 +1066,17 @@ function Card({
               preload="auto"
             />
             {/* Phase 74.7 (skill ref §1): poster overlay covers the <video>
-             * until the first real frame paints. Killing the `poster=` attr
-             * on <video> means iOS Safari never shows its system big-play
-             * placeholder. Layer sits above <video> (which is opacity:0)
-             * and is unmounted the moment hasFirstFrame flips true.
-             *
-             * Phase 74.9 (2026-07-06): fullscreen branch gets its own
-             * overlay that mirrors the <video>'s rotate-90/px sizing so
-             * the poster fills the fullscreen box while HLS swaps to the
-             * landscape uid. Owner: "不要黑屏". Requires vp.w > 0, which
-             * 74.9's synchronous measure in the fullscreen tap handler
-             * guarantees on first render. */}
+             * until the first real frame paints. Only rendered in the
+             * non-fullscreen branch — this is the bug 74.7 was solving
+             * (vertical-feed first-swipe poster+play-button flash on iOS
+             * Safari). In fullscreen, native `poster=` handles the src-swap
+             * transition; no overlay needed (see 74.13 above). */}
             {poster && !hasFirstFrame && !isFullscreen && (
               <img
                 src={poster}
                 alt=""
                 aria-hidden="true"
                 className="pointer-events-none absolute inset-0 h-full w-full bg-black object-contain"
-              />
-            )}
-            {poster && !hasFirstFrame && isFullscreen && hasLandscape && vp.w > 0 && (
-              <img
-                src={poster}
-                alt=""
-                aria-hidden="true"
-                style={{
-                  position: 'fixed',
-                  top: '50%',
-                  left: '50%',
-                  width: `${vp.h}px`,
-                  height: `${vp.w}px`,
-                  maxWidth: 'none',
-                  maxHeight: 'none',
-                  minWidth: 0,
-                  minHeight: 0,
-                  transform: 'translate(-50%, -50%) rotate(90deg)',
-                  objectFit: 'cover',
-                  zIndex: 10001,
-                  pointerEvents: 'none',
-                  background: 'black',
-                }}
               />
             )}
           </>
@@ -1204,37 +1191,25 @@ function Card({
           type="button"
           onClick={(e) => {
             e.stopPropagation();
-            // Phase 74.9 (2026-07-06): synchronously measure the section
+            // Phase 74.9 (2026-07-06): synchronously measure the viewport
             // BEFORE flipping isFullscreen so the very first fullscreen
             // render already has valid vp.w/vp.h and can apply the
-            // rotate-90/px-sized inline style. Without this, the
-            // useEffect-based ResizeObserver only fires post-render, so
-            // the first render's `vp` was still {0,0} → the fullscreen
-            // <video> got neither Tailwind sizing (className is '' in
-            // fullscreen branch) nor inline width/height → it collapsed
-            // to intrinsic size (a "small" landscape tile) until the
-            // effect fired one paint later. Owner-reported symptom:
-            // "点击全屏 → 横屏的小视频 → 短暂黑屏 → 横屏全屏".
+            // rotate-90/px-sized inline style. Without this, the useEffect
+            // measure only fires post-render, so the first render's `vp`
+            // was still {0,0} → the fullscreen <video> got neither Tailwind
+            // sizing (className is '' in fullscreen) nor inline width/height
+            // → it collapsed to intrinsic size (a "small" landscape tile)
+            // until the effect fired one paint later.
             //
-            // We compute the target box the way visualViewport-based
-            // measure() would, using window.innerWidth/innerHeight as a
-            // safe stand-in for the eventual `fixed inset-0` bounds.
+            // Phase 74.13 (2026-07-06): 74.10's setHasFirstFrame(false)
+            // sync reset is REMOVED. It was needed only because 74.9's
+            // rotated <img> overlay in fullscreen was gated on
+            // !hasFirstFrame — which we've since deleted (74.13). With
+            // the native `poster=` back on <video>, iOS handles the
+            // src-swap transition itself and no gate reset is needed.
             const w = Math.round(window.innerWidth);
             const h = Math.round(window.innerHeight);
             if (w > 0 && h > 0) setVp({ w, h });
-            // Phase 74.10 (2026-07-06): also sync-reset hasFirstFrame
-            // BEFORE the fullscreen render commits. The HLS attach
-            // effect that resets this flag is async — it fires post-
-            // render, so the first fullscreen render was still using
-            // the stale `true` from portrait playback → poster overlay
-            // was hidden → the <video> DOM element (still holding the
-            // old portrait src's live frame) got stretched into the
-            // landscape rotate box for one paint before the effect
-            // swapped src and hid the video. Owner symptom: "先横屏
-            // 拉满 → 闪现小视频窗口 → 正常播放". Setting the flag
-            // synchronously here ensures the poster overlay covers
-            // the <video> from render 1.
-            setHasFirstFrame(false);
             setIsFullscreen(true);
           }}
           aria-label="View landscape fullscreen"
