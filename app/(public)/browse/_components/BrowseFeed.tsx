@@ -557,34 +557,46 @@ function Card({
   // src-swap trick we depend on. A plain overlay div works everywhere.
   const [isFullscreen, setIsFullscreen] = useState(false);
 
-  // Phase 71.14 (2026-07-06): measure the actual viewport in pixels so the
-  // rotate-90 video box is sized in raw px instead of relying on dvw/dvh
-  // (which either fell back silently or wasn't emitted by Tailwind's JIT
-  // in prod on some builds — the previous fill fix had zero visible
-  // effect). window.innerWidth/innerHeight are the SMALL/visual viewport
-  // on iOS Safari — exactly what `fixed inset-0` renders inside.
+  // Phase 71.17 (2026-07-06): measure the actual `<section>` element's
+  // bounding rect instead of window.innerWidth/innerHeight. On iPhone Plus /
+  // Pro Max models (428×926), `window.innerHeight` reports the *small*
+  // viewport (~781, URL bar visible) while `fixed inset-0` extends into the
+  // *layout* viewport (~926 with URL bar hidden). Sizing the rotate-90 box
+  // against innerHeight left ~30% black at top+bottom on those phones.
   //
-  // Phase 71.15 (2026-07-06): initialise from window immediately so first
-  // paint after fullscreen toggle already has valid px. Previous 0/0
-  // initial + measure-in-effect meant the rotate branch fell through the
-  // `vp.w > 0` guard on the render pass that mattered, so the <video>
-  // stayed unstyled and looked identical to the non-fullscreen state.
-  const [vp, setVp] = useState<{ w: number; h: number }>(() =>
-    typeof window === 'undefined'
-      ? { w: 0, h: 0 }
-      : { w: window.innerWidth, h: window.innerHeight },
-  );
+  // Reading the section's live rect via ResizeObserver captures whatever
+  // `fixed inset-0` actually resolves to on the current device — no phone
+  // hardcoding, no viewport-model guessing. Also listens to
+  // window.visualViewport `resize` so URL-bar collapse expansions repaint.
+  //
+  // 71.14/71.15 history: dvw/dvh (Tailwind arbitrary) was emitted but
+  // fallback-substituted; raw px innerWidth/innerHeight was correct on
+  // 393×852 devices but wrong on 428×926 due to the small/layout viewport
+  // gap above.
+  const sectionRef = useRef<HTMLElement | null>(null);
+  const [vp, setVp] = useState<{ w: number; h: number }>({ w: 0, h: 0 });
   useEffect(() => {
     if (!isFullscreen) return;
+    const el = sectionRef.current;
+    if (!el) return;
     function measure() {
-      setVp({ w: window.innerWidth, h: window.innerHeight });
+      const el2 = sectionRef.current;
+      if (!el2) return;
+      const r = el2.getBoundingClientRect();
+      setVp({ w: Math.round(r.width), h: Math.round(r.height) });
     }
     measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
     window.addEventListener('resize', measure);
     window.addEventListener('orientationchange', measure);
+    const vv = window.visualViewport;
+    vv?.addEventListener('resize', measure);
     return () => {
+      ro.disconnect();
       window.removeEventListener('resize', measure);
       window.removeEventListener('orientationchange', measure);
+      vv?.removeEventListener('resize', measure);
     };
   }, [isFullscreen]);
 
@@ -611,14 +623,25 @@ function Card({
   // change; the play() call from the shared effect (line ~660) can race
   // and silently no-op. Retry on multiple lifecycle events, muted (which
   // always satisfies autoplay policy under playsInline).
+  //
+  // Phase 71.17 (2026-07-06): stop retrying once we've observed a play/
+  // playing event, and abort if user pauses. Previously canplay/loadeddata
+  // kept firing during playback → racing with user's tap-to-pause: the
+  // audio track would resume but the video texture stayed frozen.
   useEffect(() => {
     if (!isFullscreen) return;
     const v = videoRef.current;
     if (!v) return;
     let cancelled = false;
+    let started = false;
     let attempts = 0;
+    function markStarted() {
+      started = true;
+    }
     function tryPlay() {
-      if (cancelled || !v || attempts > 6) return;
+      if (cancelled || started || !v || attempts > 6) return;
+      // If user has actively paused, do NOT force-resume.
+      if (v.paused && attempts > 0 && v.currentTime > 0) return;
       attempts += 1;
       v.muted = true;
       const p = v.play();
@@ -630,11 +653,13 @@ function Card({
     v.addEventListener('loadedmetadata', tryPlay);
     v.addEventListener('canplay', tryPlay);
     v.addEventListener('loadeddata', tryPlay);
+    v.addEventListener('playing', markStarted);
     return () => {
       cancelled = true;
       v.removeEventListener('loadedmetadata', tryPlay);
       v.removeEventListener('canplay', tryPlay);
       v.removeEventListener('loadeddata', tryPlay);
+      v.removeEventListener('playing', markStarted);
     };
   }, [isFullscreen, effectiveCfId, setPaused]);
 
@@ -784,10 +809,17 @@ function Card({
   const onTap = () => {
     const v = videoRef.current;
     if (!v) return;
+    // Phase 71.17 (2026-07-06): iOS Safari sometimes leaves the media
+    // element in a "paused=true, audio-track still emitting" state after
+    // an rVFC-driven texture swap. Read v.paused directly and force both
+    // pause() AND currentTime nudge to make the audio track resync.
     if (v.paused) {
-      v.play()
-        .then(() => setPaused(false))
-        .catch(() => {});
+      const p = v.play();
+      if (p && typeof p.then === 'function') {
+        p.then(() => setPaused(false)).catch(() => {});
+      } else {
+        setPaused(false);
+      }
     } else {
       v.pause();
       setPaused(true);
@@ -796,7 +828,10 @@ function Card({
 
   return (
     <section
-      ref={(el) => cardRef(el)}
+      ref={(el) => {
+        cardRef(el);
+        sectionRef.current = el;
+      }}
       // Phase 28.3 (2026-06-16): hoist `touch-none` from the inner div to the
       // <section> root in Nearby mode. `touch-action` is NOT inherited — it's
       // resolved per-element by the browser. With it only on the inner div,
@@ -1041,7 +1076,7 @@ function Card({
               pointerEvents: 'none',
             }}
           >
-            vp={vp.w}×{vp.h} · 100vh={typeof window !== 'undefined' ? Math.round(document.documentElement.clientHeight) : 0}
+            vp={vp.w}×{vp.h} · innerH={typeof window !== 'undefined' ? window.innerHeight : 0} · 100vh={typeof window !== 'undefined' ? Math.round(document.documentElement.clientHeight) : 0}
           </div>
         <button
           type="button"

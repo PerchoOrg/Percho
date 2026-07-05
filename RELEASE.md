@@ -2,6 +2,16 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.71.17 — 2026-07-06
+
+Fullscreen sizing now measures the actual container rect (via
+`getBoundingClientRect` + `ResizeObserver` + `visualViewport`) instead of
+`window.innerWidth/innerHeight`. Fixes the ~30% black bar that appeared on
+iPhone Plus/Pro Max (and any device where URL-bar collapse expands the
+layout viewport past `innerHeight`). Also fixes tap-to-pause leaving audio
+running: fullscreen play-retry effect now stops after playback starts and
+respects a user-initiated pause.
+
 ## v0.71.15 — 2026-07-06
 
 ### 🐛 Bug Fixes
