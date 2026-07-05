@@ -2,6 +2,12 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.71.20 — 2026-07-06
+
+全屏体验 3 个后遗症修好:X 关闭按钮从视频后面出来了(zIndex 10002 fixed)、
+播放键跟着视频一起横躺(rotate 90 + fixed 10001)、点视频真的会暂停音画同步
+(`<video>` 加 pointer-events:none 让 tap 穿透到父 div 的 onTap handler)。
+
 ## v0.71.19 — 2026-07-06
 
 Fullscreen 视频黑边彻底解决。真凶是 Tailwind Preflight 的全局

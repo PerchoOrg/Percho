@@ -954,6 +954,14 @@ function Card({
                     transform: 'translate(-50%, -50%) rotate(90deg)',
                     objectFit: 'cover',
                     zIndex: 10000,
+                    // Phase 71.20: video was intercepting taps because its
+                    // `position:fixed` at zIndex 10000 sat above the parent
+                    // div that owns onTap. `pointer-events: none` lets taps
+                    // pass through to the transparent inner div below,
+                    // which has onClick={onTap} for pause/play. The X and
+                    // play glyph are separately positioned above with
+                    // their own hit boxes so they still receive clicks.
+                    pointerEvents: 'none',
                   }
                 : undefined
             }
@@ -1046,7 +1054,23 @@ function Card({
       )}
 
       {shouldMount && paused && (
-        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+        <div
+          className="pointer-events-none flex items-center justify-center"
+          style={
+            isFullscreen && hasLandscape
+              ? {
+                  // Phase 71.20: play glyph must live above the fullscreen
+                  // <video> (zIndex 10000) and rotate 90deg so its
+                  // orientation matches the rotated video the user is
+                  // watching.
+                  position: 'fixed',
+                  inset: 0,
+                  zIndex: 10001,
+                  transform: 'rotate(90deg)',
+                }
+              : { position: 'absolute', inset: 0 }
+          }
+        >
           <div className="flex h-20 w-20 items-center justify-center rounded-full bg-black/40 text-cream backdrop-blur">
             <PlayIcon />
           </div>
@@ -1122,8 +1146,19 @@ function Card({
             setIsFullscreen(false);
           }}
           aria-label="Exit fullscreen"
-          className="absolute top-4 right-4 z-30 flex h-10 w-10 items-center justify-center rounded-full border border-cream/30 bg-ink/60 text-cream backdrop-blur transition-colors hover:border-cream hover:bg-ink/80"
-          style={{ touchAction: 'manipulation' }}
+          className="flex h-11 w-11 items-center justify-center rounded-full border border-cream/40 bg-ink/80 text-cream backdrop-blur transition-colors hover:border-cream hover:bg-ink/90"
+          style={{
+            // Phase 71.20: X button was hidden BEHIND the fullscreen video
+            // because the video sits at zIndex 10000 (needed to escape the
+            // parent stacking context). Bump X to 10002 (also above the
+            // 10001 play glyph). Position via `fixed` so it doesn't inherit
+            // the section's stacking-context ceiling.
+            position: 'fixed',
+            top: 16,
+            right: 16,
+            zIndex: 10002,
+            touchAction: 'manipulation',
+          }}
         >
           <svg
             width="18"

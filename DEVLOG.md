@@ -2,7 +2,17 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
-## Phase 71.19 (2026-07-06) — 找到黑边真凶:Tailwind Preflight
+## Phase 71.20 (2026-07-06) — 全屏三个 zIndex 后遗症
+
+71.19 用 `position:fixed zIndex:10000` 让 `<video>` 逃出父容器 stacking context 后带来三坑:
+
+1. **X 关闭按钮不可见**:原 `absolute top-4 right-4 z-30`,10000 视频压过去。改 `position:fixed zIndex:10002`。
+2. **播放键方向 & 位置错**:未 rotate + inset-0 无 z 层级。改 `position:fixed zIndex:10001` + `transform:rotate(90deg)`,匹配横躺视频视觉方向。
+3. **点击不暂停(声音继续)**:视频抢了 tap,`onClick={onTap}` 挂在父 div 上收不到。给 fullscreen `<video>` 加 `pointerEvents:'none'`,tap 穿透到父 div,X/播放键各有独立 hit box 不受影响。
+
+**教训:任何 `position:fixed + 高 zIndex` 的元素配套要重排 sibling 层级,不能只顾 escape parent。**
+
+## Phase 71.19 (2026-07-06)
 
 诊断 pill (71.18) 揭露真相:`vp=428×781, vid rect=428×428, natural=1920×1080`。
 inline 给的 `width:781px, height:428px` 被硬 clamp 到 428×428 → rotate 后视频
