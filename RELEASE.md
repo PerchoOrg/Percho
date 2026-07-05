@@ -2,6 +2,11 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.72.6 — Native photo swipe (2026-07-05)
+
+### ✨ Improved
+- **Photo swipe now feels native.** The custom drag animation from v0.72.5 was replaced with the browser's own scroll physics — same technique Instagram, Airbnb, and Zillow use for their photo galleries. Momentum, edge bounce, and rubber-band all come from iOS/Android directly, so the motion matches every other swipe on your phone. Fewer moving parts under the hood, better feel on top.
+
 ## v0.72.5 — Photo swipe polish (2026-07-05)
 
 ### 🐛 Bug Fixes
