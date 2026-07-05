@@ -556,16 +556,27 @@ function Card({
   // and re-attaches at a fixed player, which breaks HLS.js and the
   // src-swap trick we depend on. A plain overlay div works everywhere.
   const [isFullscreen, setIsFullscreen] = useState(false);
+  // Phase 71.9 (2026-07-06): rotate-phone hint. Shows for ~2.5s after
+  // entering fullscreen on a portrait viewport, then fades. Landscape
+  // viewports (tablet/desktop) never see it.
+  const [showRotateHint, setShowRotateHint] = useState(false);
 
   // ESC exits fullscreen — desktop keyboards and iPad Magic Keyboards.
   useEffect(() => {
     if (!isFullscreen) return;
-    const onKey = (e: KeyboardEvent) => {
+    function onKey(e: KeyboardEvent) {
       if (e.key === 'Escape') setIsFullscreen(false);
-    };
+    }
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [isFullscreen]);
+
+  // Phase 71.9: rotate-phone hint fades out after 2.5s.
+  useEffect(() => {
+    if (!showRotateHint) return;
+    const t = setTimeout(() => setShowRotateHint(false), 2500);
+    return () => clearTimeout(t);
+  }, [showRotateHint]);
 
   const sel = useMemo(() => pickVideo(card, source, cycleIdx), [card, source, cycleIdx]);
 
@@ -775,7 +786,19 @@ function Card({
           <video
             ref={videoRef}
             poster={poster ?? undefined}
-            className="relative h-full w-full object-contain"
+            className={
+              isFullscreen && hasLandscape
+                ? // Phase 71.9 (2026-07-06): landscape fullscreen on a portrait
+                  // viewport = rotate the 16:9 video 90° so it fills the phone
+                  // screen edge-to-edge. Sized as (100vw × 100vh) BEFORE
+                  // rotation and then rotated around its centre — after the
+                  // rotate, the box lands exactly on the viewport with no
+                  // letterbox. On a landscape viewport (tablet horizontal or
+                  // desktop) the `landscape:` variants restore normal
+                  // orientation and the video just object-contains normally.
+                  'absolute top-1/2 left-1/2 h-[100vw] w-[100vh] -translate-x-1/2 -translate-y-1/2 rotate-90 object-contain landscape:h-full landscape:w-full landscape:translate-x-0 landscape:translate-y-0 landscape:rotate-0 landscape:top-0 landscape:left-0'
+                : 'relative h-full w-full object-contain'
+            }
             playsInline
             muted
             loop
@@ -877,6 +900,7 @@ function Card({
           onClick={(e) => {
             e.stopPropagation();
             setIsFullscreen(true);
+            setShowRotateHint(true);
           }}
           aria-label="View landscape fullscreen"
           className="-translate-x-1/2 absolute bottom-[38%] left-1/2 z-20 flex h-11 w-11 items-center justify-center rounded-full border border-cream/30 bg-ink/60 text-cream backdrop-blur transition-colors hover:border-cream hover:bg-ink/80"
@@ -927,6 +951,34 @@ function Card({
             <path d="m6 6 12 12" />
           </svg>
         </button>
+      )}
+
+      {/* Phase 71.9 (2026-07-06): rotate-phone hint. Only shown during
+       * fullscreen on portrait viewports (landscape:hidden). Fades in for
+       * 2.5s after entering fullscreen so the user knows to turn the
+       * device sideways for the rotated 16:9 video. */}
+      {isFullscreen && showRotateHint && (
+        <div className="pointer-events-none absolute inset-x-0 top-8 z-30 flex justify-center landscape:hidden">
+          <div className="flex items-center gap-2 rounded-full border border-cream/30 bg-ink/70 px-4 py-2 text-cream text-sm backdrop-blur">
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <rect x="5" y="2" width="14" height="20" rx="2" />
+              <path d="M9 22h6" />
+              <path d="m20 8 2 2-2 2" />
+              <path d="M14 10h8" />
+            </svg>
+            <span>请把手机横过来</span>
+          </div>
+        </div>
       )}
 
       {/* Bottom caption — Phase 74 (2026-07-05): floating glass card
