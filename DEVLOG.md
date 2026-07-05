@@ -2,6 +2,28 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## Phase 74.11 (2026-07-06) — 74.10 全屏 follow-up:opacity 150ms fade-out 露出老 portrait 帧
+
+**Trigger:** owner 测 74.10:「还是闪现小画面了」
+
+**Root cause(74.7 埋的雷,74.10 才炸):** 74.7 给 `<video>` 加了 `transition: 'opacity 150ms'`,双向都 transition。74.10 sync-flip `hasFirstFrame` 为 `false` 让 poster overlay 从第一帧覆盖 —— 但 `<video>` 自己**并不瞬间隐藏**,而是从 opacity 1 走 150ms 淡出到 0。
+
+这 150ms 期间:
+- `<video>` 半透明 → poster overlay(zIndex 10001)在上面覆盖了没错
+- **但 `<video>` 本身尺寸已经切成 fullscreen rotate/px(74.9 sync 的 vp)**,老 portrait src 的 last-frame(HLS 换 src 前那一帧)还在 element buffer 里
+- Poster overlay 是 `pointer-events: none` + `zIndex: 10001`,盖 video ok。但如果 poster URL 加载慢(cross-origin thumbnail,首次访问未 cache)/或者 `poster` prop 因 render 时机还没跟上更新到 landscape thumbnail → overlay 短暂显示 portrait 尺寸的 poster / 或者干脆延迟一 tick 才 mount
+
+owner 看到的「小画面」= 淡出中的老 portrait 视频帧被 stretch 到 landscape rotate box。上一轮我以为 sync `hasFirstFrame` 就够,忽略了 CSS transition 是异步的。
+
+**Fix:** transition **只在 fade-in 方向**启用(hasFirstFrame true 时 150ms),fade-out 方向瞬间(`transition: 'none'`)。语义:视频出场平滑,消失瞬间。三个竖滑组件全部同步。
+
+**教训(升级规则 C):** 「同步一致状态」= JS state 同步 + CSS transition 也要瞬间跟上,不是只看 setState。凡是给 opacity/transform 加 transition 又用它做 gate 的场景,都要审视双向:遮盖用的方向必须瞬间,展示用的方向可以过渡。
+
+**File:**
+- `app/(public)/browse/_components/BrowseFeed.tsx`
+- `app/(public)/c/[slug]/feed/CommunityVideoFeed.tsx`
+- `app/(public)/c/[slug]/feed/_components/CommunityListingCarousel.tsx`
+
 ## Phase 74.10 (2026-07-06) — 74.9 全屏 follow-up:先拉满再闪小视频窗口
 
 **Trigger:** owner 测 74.9:「点击全屏后确实直接横屏拉满了 但是突然闪现了小视频窗口才接着正常播放的」

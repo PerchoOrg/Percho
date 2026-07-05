@@ -2,6 +2,11 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.74.11 — 2026-07-06
+
+### 🐛 Bug Fixes
+- **No more flash of the previous portrait frame when tapping fullscreen.** Follow-up to v0.74.10. Even after resetting the "first frame" flag synchronously, the video was still fading out over 150ms — during which its stale portrait-source frame was visible, stretched into the rotated landscape box. Fixed by making the fade asymmetric: video reveals with a smooth 150ms fade-in on the first frame, but hides instantly when the flag flips back off. Applied to all three vertical feeds.
+
 ## v0.74.10 — 2026-07-06
 
 ### 🐛 Bug Fixes

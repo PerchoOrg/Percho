@@ -1015,13 +1015,22 @@ function Card({
                       // Phase 74.7 (skill ref §1): opacity gate — video stays
                       // hidden behind the poster overlay below until the
                       // first real frame paints (see reveal effect above).
+                      // Phase 74.11 (2026-07-06): transition ONLY on
+                      // fade-in (hasFirstFrame true). Bidirectional
+                      // 150ms transition meant that when fullscreen tap
+                      // sync-flipped hasFirstFrame back to false, the
+                      // <video> spent 150ms fading out — during which
+                      // its stale portrait frame was stretched into the
+                      // rotated landscape box (owner: "闪现小画面").
+                      // false → 0 must be instant; true → 1 keeps the
+                      // smooth reveal.
                       opacity: hasFirstFrame ? 1 : 0,
-                      transition: 'opacity 150ms',
+                      transition: hasFirstFrame ? 'opacity 150ms' : 'none',
                     }
                   : {
-                      // Phase 74.7 (skill ref §1): opacity gate — see above.
+                      // Phase 74.7 / 74.11: same asymmetric transition.
                       opacity: hasFirstFrame ? 1 : 0,
-                      transition: 'opacity 150ms',
+                      transition: hasFirstFrame ? 'opacity 150ms' : 'none',
                     }
               }
               className={
