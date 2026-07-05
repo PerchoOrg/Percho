@@ -2,7 +2,7 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
-## 2026-07-05 — Phase 74.11: dashboard hub + community sheet 补齐 audit
+## 2026-07-05 — Phase 74.13: dashboard hub + community sheet 补齐 audit
 
 ### Trigger
 Owner:"agent hub my listing grid view 需要改 / 截图里的 homes in xxx community 也要改"。74.10 audit miss 了两处:

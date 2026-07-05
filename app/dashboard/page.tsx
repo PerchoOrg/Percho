@@ -49,7 +49,7 @@ export default async function DashboardHomePage() {
       ((await (supabase as any)
         .from('listings')
         .select(
-          'id, slug, address, status, price, beds, baths, sqft, cover_url, created_at, updated_at',
+          'id, slug, address, city, state, zip, status, price, beds, baths, sqft, cover_url, created_at, updated_at',
         )
         .eq('agent_id', agentId)
         .order('updated_at', { ascending: false })) as {
@@ -57,6 +57,9 @@ export default async function DashboardHomePage() {
           id: string;
           slug: string;
           address: string | null;
+          city: string | null;
+          state: string | null;
+          zip: string | null;
           status: string;
           price: number | null;
           beds: number | null;
@@ -127,6 +130,12 @@ export default async function DashboardHomePage() {
       baths: l.baths,
       sqft: l.sqft,
       address: isDraft ? 'Untitled draft' : l.address,
+      // Phase 74.11: dashboard hub 也走 ListingGrid 的 formatFullAddress
+      // → 需要 city/state/zip。Draft 无 city/state,fallback 到
+      // "Untitled draft" street-only(见 74.5 dashboard 例外)。
+      city: isDraft ? null : l.city,
+      state: isDraft ? null : l.state,
+      zip: isDraft ? null : l.zip,
       badge,
       dimmed: isInactive,
       rawStatus: l.status,

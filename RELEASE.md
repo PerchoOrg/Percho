@@ -2,6 +2,12 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.74.13 — 2026-07-05
+
+- **Dashboard "my listings" hub + community "Homes in XXX" sheet 补齐 audit**: owner "agent hub my listing grid view 需要改 / 截图里的 homes in xxx community 也要改"。74.10 miss 了两处:
+  - `app/dashboard/page.tsx`:my listings grid 之前只喂 `address`(street-only),现在 select + 行类型 + mapper 都加 city/state/zip,走 `ListingGrid.formatFullAddress` → `street, city, state`。Draft 保持 `Untitled draft` fallback。
+  - `app/(public)/c/[slug]/feed/_components/CommunityListingsSheet.tsx`:74.10 只重排版没换 formatter,`$2.5M/$465K` 仍是 K/M 缩写 —— `formatPrice` 换成 `toLocaleString('en-US')`,和全站 full-digit 规则统一。
+
 ## v0.74.12 — 2026-07-05
 
 - **Sheet 里 "Listed by <name>" 现在长得像可点**:agent 名字换成品牌 tan 色 + 下划线,尾巴挂了个 `›` 箭头(hover 时会往右挪一点)。之前纯灰字看起来像 label,不像链接。点进去还是 `/a/<slug>` agent 页。
