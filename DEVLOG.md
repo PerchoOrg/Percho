@@ -2,6 +2,21 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## Phase 74.16 — sheet 支持 tap-outside 关闭 (2026-07-05)
+
+Owner: "点击 more 出来框框 点击 x 收起 也应该允许点击其他地方自动收起框框"。
+
+74.15 刚删掉全屏 dimmer 时把关闭方式限制成了"只能点 ✕",owner 反馈要恢复 tap-outside 关闭。做法:透明 catcher(z-40)+ sheet(z-50)+ `stopPropagation`。
+
+- Catcher 是全屏透明 `<button>`,视觉上看不见,但吃掉视频区的 click。
+- Catcher 的 onClick 里 `e.stopPropagation()` 防止事件冒泡到视频层 —— 关 sheet 时**视频不会因此暂停/播放切换**,保持当前状态,与 owner 之前"视频继续播"的诉求一致。
+- Sheet 自己 stopPropagation,所以点 sheet 内不触发 catcher。
+
+**Skill 更新**:pitfall #5 里 74.15 那条"关闭走 ✕,不要 tap-outside"改成"tap-outside 用透明 catcher 关闭 sheet 且不要触发视频 pause"。这是 74.15 → 74.16 的方向修正。
+
+Files: `app/(public)/browse/_components/CaptionCard.tsx` (+15 / -6)
+TSC: 通过
+
 ## Phase 74.15 — feed sheet 缩到黄金比例 + 干掉全屏 dimmer 让视频继续播 (2026-07-05)
 
 Owner: "listing feed 里的 more 拉出来的框框太大遮住了视频全部 搞一半多一点 黄金分割线左右 留一部分视频还可以继续播放"。

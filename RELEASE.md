@@ -2,6 +2,10 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.74.16 — 2026-07-05
+
+- **点击 sheet 外的空白也能收起 More 详情框**: owner "点击 more 出来框框 点击 x 收起 也应该允许点击其他地方自动收起框框"。之前只能点右上角 ✕ 关,现在点上部视频区域(sheet 外的任何地方)也会关掉 sheet。视频不会因此暂停——sheet 关掉后视频保持当前播放状态。技术实现:sheet 外覆盖一层透明 tap catcher(z-40),点它触发关闭并阻止事件冒到视频层的 tap-to-pause。
+
 ## v0.74.15 — 2026-07-05
 
 - **Feed 里 More 展开后视频不再被完全挡住**: owner "listing feed 里的 more 拉出来的框框太大遮住了视频全部 搞一半多一点 黄金分割线左右 留一部分视频还可以继续播放"。两处修:

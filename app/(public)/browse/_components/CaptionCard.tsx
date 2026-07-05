@@ -136,13 +136,27 @@ export function CaptionCard({
       </div>
 
       {open && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label={`Details for ${listing.address}`}
-          className="absolute right-0 bottom-0 left-0 z-50 flex max-h-[62%] flex-col rounded-t-3xl bg-[#FBF8F3] text-ink shadow-[0_-20px_60px_rgba(0,0,0,0.4)]"
-          onClick={(e) => e.stopPropagation()}
-        >
+        <>
+          {/* Tap-outside catcher: transparent full-screen button above the
+           * sheet (z-40) that closes the sheet without triggering video's
+           * tap-to-pause. Sheet sits at z-50 with stopPropagation so its
+           * own clicks don't bubble here. */}
+          <button
+            type="button"
+            aria-label="Close details"
+            className="absolute inset-0 z-40 cursor-default bg-transparent"
+            onClick={(e) => {
+              e.stopPropagation();
+              setOpen(false);
+            }}
+          />
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label={`Details for ${listing.address}`}
+            className="absolute right-0 bottom-0 left-0 z-50 flex max-h-[62%] flex-col rounded-t-3xl bg-[#FBF8F3] text-ink shadow-[0_-20px_60px_rgba(0,0,0,0.4)]"
+            onClick={(e) => e.stopPropagation()}
+          >
           <div
             className="mx-auto mt-2.5 h-[5px] w-10 flex-shrink-0 rounded-full bg-black/20"
             aria-hidden
@@ -235,7 +249,8 @@ export function CaptionCard({
                 </Link>
               </section>
             </div>
-        </div>
+          </div>
+        </>
       )}
     </>
   );
