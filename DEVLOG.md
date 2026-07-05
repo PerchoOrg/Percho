@@ -2,6 +2,31 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## Phase 74.14 (2026-07-06) — 全屏「黑屏 → 小图 → 大播放」三帧根因
+
+**Trigger:** owner 测 74.13:「点击全屏后 黑屏 小图 然后再变大播放」
+
+**根因分析(具体到每帧):**
+
+| 帧 | 现象 | 根因 |
+|---|---|---|
+| 1 | **黑屏** | tap → `effectiveCfId` 从 portrait uid 换到 landscape uid → HLS effect re-attach(async)→ 期间 `<video>` 空。native `poster` 属性此时**没显示**是因为 iOS Safari 在 HLS src swap 中会 briefly clear video element 内容。 |
+| 2 | **小图** | HLS metadata 到达,`<video poster>` 开始渲染。**BUT native `<video poster>` 不服从 CSS `object-fit: cover`(iOS Safari 已知)** → poster 按 poster 图片自身 aspect(landscape 16:9)letterbox 到 rotate-90 的 h×w 竖箱 → 上下黑边 = owner 看到的「小图」。 |
+| 3 | **大播放** | HLS 首帧到达,`<video>` 用 inline `objectFit: 'cover'` 撑满(video 元素本身服从 CSS object-fit,只是 poster 属性不服从) |
+
+**74.13 的错误假设:** 「fullscreen 时 video 已在播,poster 不显示」。但没考虑 `effectiveCfId` 换 uid 触发 HLS re-attach,期间 poster 重新出场 —— 而 native poster 在 rotate-90 box 里 CSS 无法控制 aspect。
+
+**Fix(74.14 —— 精确 scoped,不重蹈 74.7 覆辙):**
+1. **fullscreen 分支** `<video>` 删 `poster=` attr(`isFullscreen && hasLandscape ? undefined : poster`)—— 避免 native poster 无 CSS 控制 letterbox。**non-fullscreen 分支保留 native poster + 74.7 gate**,一分一毫不动。
+2. **fullscreen 加 rotated `<img>` overlay,`objectFit: cover`**,zIndex 9999(video 10000 下)。**不 gate**(no `hasFirstFrame` 依赖)—— video 一有内容自然盖上,不引入 74.8-74.12 的 gate 联动坑。用 **landscape uid 的 poster URL**(`landscapePoster` = `thumbnailUrl(sel.cfVideoIdLandscape)`),aspect 天然匹配,不 letterbox。
+3. **non-fullscreen render 时预加载 landscape thumbnail**(hidden `display:none` `<img loading="eager">`)—— 消除 tap 瞬间 network round-trip 造成的第 1 帧黑屏。用户竖滑期间浏览器已 warm up 了每张卡的 landscape poster。
+
+**Why not 74.9's overlay?** 74.9 那版用 `poster`(portrait uid 的 thumbnail),用 `!hasFirstFrame` gate,gate 引入 74.10-74.12 联动坑。74.14 用 landscape uid poster + 无 gate + 预加载,精确到「消除第 1 帧黑屏 + 第 2 帧 letterbox 小图」两个具体症状。
+
+**教训:** 「native `<video poster>` 不服从 CSS `object-fit`」是 iOS Safari 老坑。凡是给 `<video>` 应用 rotate/transform/非默认 aspect box 的场景,都要用 `<img>` overlay 替代 poster attr。加进 `hls-video-ios-safari-pitfalls` skill(第 15 条)。
+
+**File:** `app/(public)/browse/_components/BrowseFeed.tsx`(landscapePoster 计算 + fullscreen video poster 条件 + rotated overlay + preload img)
+
 ## Phase 74.13 (2026-07-06) — 全屏 regression 根因回溯:74.7 gate 不该套到 fullscreen
 
 **Trigger:** owner:「没修好 你仔细看看 之前都好着的 为啥会横屏播放一开始出现小视频界面 又迅速恢复」
