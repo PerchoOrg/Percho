@@ -2,6 +2,45 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-07-05 — Phase 73.1: community carousel → native scroll-snap
+
+### Trigger
+Owner phase 73 真机验证 photo swipe 后:"做得不错!现在应用到 community 那边的横滑"。把 phase 73 的 native scroll-snap + jank-fix 组合从 photo(BrowseFeed PhotoCard)apply 到 video(CommunityCarousel)。
+
+### Before
+`CommunityCarousel` 用 JS translateX 手势(`onTouchStart` / `onTouchEnd` + 40px threshold + `transition-transform 300ms ease-out`)——就是 phase 72.9 photo 试过、被 owner 否决的方案。跟 photo 手感不一致(photo 已换成 native + iOS momentum)。
+
+### Change
+`app/(public)/browse/_components/CommunityCarousel.tsx`:
+1. **删** `onTouchStart` / `onTouchEnd` handler 和 40px threshold
+2. **删** `transition-transform 300ms ease-out` + inline `translateX(-${safeActive*100}%)`
+3. **加** native scroll container:`snap-x snap-mandatory overflow-x-auto` + `WebkitOverflowScrolling: touch` + `willChange: transform` + `overscroll-x-contain`
+4. **加** onScroll 100ms debounce → 用户停后才 fire `setActive(nearest)`,滑动过程中 React 树静止(和 phase 73 photo 一样的 jank fix)
+5. **加** `isProgrammaticScrollRef` 400ms gate:外部改 `active`(键盘 arrow 或桌面按钮)时用 `scrollTo` 平滑滚,同时 gate 掉 `onScroll` 反弹馈环
+6. **加** 每 slide `transform: translateZ(0)` GPU 层
+7. **加** poster `<img decoding="async"`
+8. 保留 `shouldMount = |i - active| <= 1` mount gate(只挂 3 个 `<video>` 标签防网络爆炸)+ isActive-driven play/pause——都是正确性,不是 perf
+9. 保留桌面 `‹` `›` 按钮和键盘 ArrowLeft/Right;它们改的是 `active`,自动触发 useEffect 里的 `scrollTo`
+
+### Impact
+- Photo swipe 和 video swipe 手感统一,都是 native iOS momentum
+- video 的 mount gate 保留 → 单张卡上 videos.length 可以任意大,永远只 3 个 `<video>` element
+- 快 flick 可以连翻多张(no `snap-always`)
+- 桌面按钮点击仍然 smooth 滚一格,arrow 键仍然一键跳一张
+
+### Test
+- `npx tsc --noEmit` clean
+- `npx next build` clean
+- 待真机验证:community carousel 从 listing 卡片打开(点 nearby video chip),左右 swipe 应该跟 photo 一样顺滑,active video 自动 unmute + play,siblings pause
+
+### Files
+- `app/(public)/browse/_components/CommunityCarousel.tsx`(重写 gesture 层,slide 从 `<div class=basis-full>` wrapper 挪到 outer scroller 的 `<div snap-center>`,`CarouselSlide` return 简化为 fragment)
+
+### Notes
+Skill `native-scroll-snap-carousel` 的 debounce + GPU 层教训在 photo(phase 73)已加过。community 这个改动是同一 recipe 的第二次 apply,验证了 skill 的复用性。
+
+---
+
 ## 2026-07-05 — Phase 73: photo scroll-snap jank fix (still native)
 
 ### Trigger

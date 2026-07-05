@@ -45,7 +45,7 @@
 'use client';
 
 import Hls from 'hls.js';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { hlsUrl, thumbnailUrl } from '@/lib/cloudflare/stream';
 import type { BrowseSourceVideo } from './BrowseFeed';
 import { ActionButton } from '../../_components/feed/ActionButton';
@@ -98,12 +98,32 @@ export function CommunityCarousel({
   saved,
 }: Props) {
   const [active, setActive] = useState(0);
-  const trackRef = useRef<HTMLDivElement | null>(null);
+
+  // Phase 73.1 (2026-07-05): swap the JS translateX + 40px-threshold
+  // gesture for the same native scroll-snap pattern that BrowseFeed's
+  // PhotoCard uses (phase 73). Owner: "做得不错!现在应用到 community 那边
+  // 的横滑". Same jank fixes apply:
+  //   1. onScroll debounced to 100ms settle → parent setActive fires only
+  //      once per gesture so React tree stays static during compositor
+  //      animation
+  //   2. GPU hoist: translateZ(0) per slide + willChange:transform on the
+  //      scroller
+  //   3. -webkit-overflow-scrolling: touch → explicit iOS momentum
+  // Kept: `shouldMount = |i - active| <= 1` mount gating (only 3 <video>
+  // tags at a time) + isActive-driven play/pause; those are correctness,
+  // not perf.
+  const scrollerRef = useRef<HTMLDivElement | null>(null);
+  const isProgrammaticScrollRef = useRef(false);
+  const programmaticSettleTimerRef = useRef<number | null>(null);
+  const scrollSettleDebounceRef = useRef<number | null>(null);
+  const lastReportedIdxRef = useRef(0);
 
   // Sync active index when the overlay opens at a new starting position.
   useEffect(() => {
     if (open) {
-      setActive(Math.max(0, Math.min(startIndex, videos.length - 1)));
+      const clamped = Math.max(0, Math.min(startIndex, videos.length - 1));
+      setActive(clamped);
+      lastReportedIdxRef.current = clamped;
     }
   }, [open, startIndex, videos.length]);
 
@@ -125,25 +145,63 @@ export function CommunityCarousel({
     };
   }, [open, videos.length, onClose]);
 
-  // Touch swipe — horizontal only, ignore vertical scrolls.
-  const touchStart = useRef<{ x: number; y: number } | null>(null);
-  function onTouchStart(e: React.TouchEvent) {
-    const t = e.touches[0];
-    if (!t) return;
-    touchStart.current = { x: t.clientX, y: t.clientY };
-  }
-  function onTouchEnd(e: React.TouchEvent) {
-    const start = touchStart.current;
-    touchStart.current = null;
-    if (!start) return;
-    const t = e.changedTouches[0];
-    if (!t) return;
-    const dx = t.clientX - start.x;
-    const dy = t.clientY - start.y;
-    if (Math.abs(dx) < 40 || Math.abs(dx) < Math.abs(dy)) return;
-    if (dx < 0) setActive((i) => Math.min(videos.length - 1, i + 1));
-    else setActive((i) => Math.max(0, i - 1));
-  }
+  // External `active` change → scroll the container to that slide.
+  // `auto` for jumps > 1 (keyboard / arrow buttons that skip more than
+  // one), `smooth` otherwise. `isProgrammaticScrollRef` gates the
+  // onScroll handler so it doesn't ricochet the change back.
+  useEffect(() => {
+    if (!open) return;
+    const el = scrollerRef.current;
+    if (!el) return;
+    const w = el.clientWidth || 1;
+    const target = active * w;
+    if (Math.abs(el.scrollLeft - target) < 2) return;
+    isProgrammaticScrollRef.current = true;
+    lastReportedIdxRef.current = active;
+    const diff = Math.abs(active - Math.round(el.scrollLeft / w));
+    el.scrollTo({ left: target, behavior: diff > 1 ? 'auto' : 'smooth' });
+    if (programmaticSettleTimerRef.current)
+      window.clearTimeout(programmaticSettleTimerRef.current);
+    programmaticSettleTimerRef.current = window.setTimeout(() => {
+      isProgrammaticScrollRef.current = false;
+    }, 400);
+    return () => {
+      if (programmaticSettleTimerRef.current) {
+        window.clearTimeout(programmaticSettleTimerRef.current);
+        programmaticSettleTimerRef.current = null;
+      }
+    };
+  }, [active, open]);
+
+  // User scroll → active. Debounced to 100ms of quiescence so React
+  // doesn't re-render during compositor animation. Fires setActive once
+  // per settled gesture, not per rAF.
+  const onScroll = useCallback(() => {
+    if (isProgrammaticScrollRef.current) return;
+    const el = scrollerRef.current;
+    if (!el || videos.length <= 1) return;
+    if (scrollSettleDebounceRef.current)
+      window.clearTimeout(scrollSettleDebounceRef.current);
+    scrollSettleDebounceRef.current = window.setTimeout(() => {
+      const w = el.clientWidth || 1;
+      const nearest = Math.max(
+        0,
+        Math.min(videos.length - 1, Math.round(el.scrollLeft / w)),
+      );
+      if (nearest === lastReportedIdxRef.current) return;
+      lastReportedIdxRef.current = nearest;
+      setActive(nearest);
+    }, 100);
+  }, [videos.length]);
+
+  useEffect(() => {
+    return () => {
+      if (scrollSettleDebounceRef.current) {
+        window.clearTimeout(scrollSettleDebounceRef.current);
+        scrollSettleDebounceRef.current = null;
+      }
+    };
+  }, []);
 
   if (!open || videos.length === 0) return null;
 
@@ -161,8 +219,6 @@ export function CommunityCarousel({
       aria-modal="true"
       aria-label={`${videos[safeActive]?.line1 ?? 'Neighborhood'} video carousel`}
       className="fixed inset-0 z-[60] flex items-center justify-center bg-bg"
-      onTouchStart={onTouchStart}
-      onTouchEnd={onTouchEnd}
     >
       <div className={FEED_FRAME_CLASS}>
         {/* Top bar: back + counter + (optional) share. */}
@@ -206,20 +262,31 @@ export function CommunityCarousel({
           ))}
         </div>
 
-        {/* Track — translateX animates between active slides. */}
+        {/* Track — native horizontal scroll-snap (phase 73.1). Same
+         * container recipe as BrowseFeed PhotoCard: iOS momentum, snap
+         * to slide boundaries, isolate horizontal from parent scroll. */}
         <div className="relative h-full w-full overflow-hidden">
           <div
-            ref={trackRef}
-            className="flex h-full transition-transform duration-300 ease-out"
-            style={{ transform: `translateX(-${safeActive * 100}%)` }}
+            ref={scrollerRef}
+            onScroll={onScroll}
+            className="scrollbar-hide flex h-full w-full snap-x snap-mandatory overflow-x-auto overflow-y-hidden overscroll-x-contain"
+            style={{
+              willChange: 'transform',
+              WebkitOverflowScrolling: 'touch',
+            }}
           >
             {videos.map((v, i) => (
-              <CarouselSlide
+              <div
                 key={`${v.cfVideoId}-${i}`}
-                video={v}
-                shouldMount={Math.abs(i - safeActive) <= 1}
-                isActive={i === safeActive}
-              />
+                className="relative h-full w-full flex-shrink-0 snap-center"
+                style={{ transform: 'translateZ(0)' }}
+              >
+                <CarouselSlide
+                  video={v}
+                  shouldMount={Math.abs(i - safeActive) <= 1}
+                  isActive={i === safeActive}
+                />
+              </div>
             ))}
           </div>
 
@@ -370,7 +437,7 @@ function CarouselSlide({
   }, [isActive]);
 
   return (
-    <div className="relative h-full w-full shrink-0 basis-full">
+    <>
       {shouldMount ? (
         <video
           ref={ref}
@@ -383,7 +450,12 @@ function CarouselSlide({
         />
       ) : poster ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={poster} alt="" className="h-full w-full bg-black object-cover" />
+        <img
+          src={poster}
+          alt=""
+          className="h-full w-full bg-black object-cover"
+          decoding="async"
+        />
       ) : null}
 
       {/* Category label */}
@@ -395,7 +467,7 @@ function CarouselSlide({
           {video.line2}
         </div>
       )}
-    </div>
+    </>
   );
 }
 
