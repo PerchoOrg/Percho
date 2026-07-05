@@ -2,6 +2,11 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.74.18 — 2026-07-06
+
+### 🐛 Bug Fixes
+- **Tapping fullscreen now auto-plays the video immediately.** Previously if the tapped card wasn't already playing, the center play button would appear on the fullscreen video and require a second tap. Now the fullscreen tap itself starts playback (with sound if the browser allows, muted otherwise).
+
 ## v0.74.17 — 2026-07-06
 
 ### 🐛 Bug Fixes

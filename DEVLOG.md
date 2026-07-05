@@ -2,6 +2,15 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## Phase 74.18 (2026-07-06) — 全屏 tap 用户手势直接 `.play()`,消灭中央播放键
+
+**Trigger:** owner「全屏之后流畅 最后有一个问题还需要解决播放键 一开始还在视频上 我需要自动播放全屏之后的视频」。74.17 之后 fullscreen tap 不再有闪现,但如果 tap 时 video 处于 paused 状态(比如 tap 的不是 active 卡,或 autoplay 之前被 gesture 阻断),中央 play glyph(L1189 `domPaused` 触发)会 rotate 90° 显示在视频中央。
+
+**Fix:** tap handler 里同步调 `videoRef.current.play()`,复用 74.5 unmuted-first + muted-fallback 链。tap 是 user gesture → sticky activation → unmuted 允许。play 后 `domPaused` 会由 71.26 rAF poll 翻 false → play glyph 消失。
+
+**Files:**
+- `app/(public)/browse/_components/BrowseFeed.tsx` L1244+ tap handler 里加 `.play()` 调用
+
 ## Phase 74.17 (2026-07-06) — 架构级 fix:landscape uid 从 feed 就用,拆掉 74.13-74.16 全部脚手架
 
 **Trigger:** owner 澄清:

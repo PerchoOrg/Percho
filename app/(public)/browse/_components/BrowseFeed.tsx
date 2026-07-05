@@ -1241,6 +1241,29 @@ function Card({
             // hasFirstFrame here would spuriously mount the 74.7
             // <img> overlay on top of an already-playing fullscreen
             // video for a frame or two.
+            // Phase 74.18 (2026-07-06): trigger `.play()` synchronously
+            // in the tap handler. Owner: "全屏之后流畅 最后有一个问题
+            // 还需要解决播放键 一开始还在视频上 我需要自动播放全屏之后
+            // 的视频". Because 74.17 uses the same landscape uid in
+            // both feed and fullscreen, if the card wasn't the active
+            // scroll-snap slide when tapped (the fullscreen button is
+            // reachable outside the isActive branch's autoplay logic)
+            // the video is still paused. Calling `.play()` in the tap
+            // handler leverages the user gesture — iOS Safari treats
+            // this as sticky activation, so unmuted play is allowed.
+            const v = videoRef.current;
+            if (v) {
+              v.muted = muted;
+              v.play().catch(() => {
+                // Same fallback chain as the isActive autoplay effect
+                // (see line ~831): retry muted if unmuted was blocked.
+                if (!v.muted) {
+                  v.muted = true;
+                  onAutoplayBlocked?.();
+                  v.play().catch(() => {});
+                }
+              });
+            }
             const w = Math.round(window.innerWidth);
             const h = Math.round(window.innerHeight);
             if (w > 0 && h > 0) setVp({ w, h });
