@@ -940,6 +940,17 @@ function Card({
                     left: '50%',
                     width: `${vp.h}px`,
                     height: `${vp.w}px`,
+                    // Phase 71.19 (2026-07-06): Tailwind Preflight injects
+                    // `img,video { max-width: 100%; height: auto; }` globally,
+                    // which was clamping our 781×428 rotate box back down to
+                    // the parent's 428px width — leaving a 428×428 <video>
+                    // and ~20% top/bottom black bars after rotate. Explicit
+                    // maxWidth/maxHeight/minWidth/minHeight none overrides
+                    // Preflight so our JS-measured px sizes actually win.
+                    maxWidth: 'none',
+                    maxHeight: 'none',
+                    minWidth: 0,
+                    minHeight: 0,
                     transform: 'translate(-50%, -50%) rotate(90deg)',
                     objectFit: 'cover',
                     zIndex: 10000,
