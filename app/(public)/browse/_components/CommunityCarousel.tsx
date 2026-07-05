@@ -486,28 +486,66 @@ function CarouselSlide({
     };
   }, [shouldMount, video.cfVideoId]);
 
-  // Play only the active slide; pause siblings to save battery.
-  // Sound: the carousel is opened by an explicit chip tap (user gesture),
-  // so browsers grant autoplay-with-sound. Try unmuted first; if the browser
-  // still blocks it (some iOS/strict policies), fall back to muted so the
-  // video at least plays. Default-on volume mirrors the main feeds — the
-  // user's system volume keys are the volume control. (phase34b.1 fix:
-  // chip-launched videos used to be silent because we forced muted=true.)
+  // Play only the active slide; pause + fully silence siblings.
+  //
+  // Phase 74.4 (2026-07-06): two fixes on top of phase 34b.1's unmuted
+  // play:
+  //  (a) On slide-change (scroll), iOS Safari doesn't count the scroll
+  //      gesture as user activation, so `.play()` unmuted is silently
+  //      blocked and `playing` never fires — 74.3's overlay stayed up
+  //      forever and the video looked frozen. Retry chain now:
+  //      unmuted → muted → give up gracefully; the muted retry always
+  //      succeeds and the poster overlay fades out on `playing`.
+  //  (b) `v.pause()` on iOS Safari HLS.js does NOT stop audio (see
+  //      phase 71.22 in BrowseFeed). Nuclear pattern: on every
+  //      isActive-flip, pause + mute + volume=0 the previous slide's
+  //      element, and reset volume=1 on the new one before .play(). The
+  //      previous "voice keeps playing from slide 0" bug was slide 0's
+  //      audio track surviving `.pause()` on scroll.
   useEffect(() => {
     const v = ref.current;
     if (!v) return;
     if (isActive) {
+      try {
+        v.volume = 1;
+      } catch {}
       v.muted = false;
-      v.play().catch(() => {
-        // Autoplay-with-sound blocked → retry muted so the user at least
-        // sees the video play.
-        v.muted = true;
-        void v.play().catch(() => {
-          /* swallow */
-        });
-      });
+      const tryPlay = () => {
+        v.play()
+          .then(() => {
+            /* unmuted play OK */
+          })
+          .catch(() => {
+            // Autoplay-with-sound blocked (scroll ≠ user gesture on iOS).
+            // Retry muted — always allowed, unblocks `playing` event so
+            // the poster overlay can fade.
+            v.muted = true;
+            void v.play().catch(() => {
+              /* swallow — canplay listener below will retry */
+            });
+          });
+      };
+      tryPlay();
+      // Belt-and-suspenders: if the HLS manifest wasn't parsed when the
+      // first .play() ran, retry on canplay/loadeddata. Without this the
+      // slide sits on the poster overlay indefinitely.
+      const retry = () => tryPlay();
+      v.addEventListener('canplay', retry, { once: true });
+      v.addEventListener('loadeddata', retry, { once: true });
+      return () => {
+        v.removeEventListener('canplay', retry);
+        v.removeEventListener('loadeddata', retry);
+      };
     } else {
-      v.pause();
+      // Nuclear pause: pause + mute + zero volume so the sibling's
+      // audio track can't leak through iOS Safari's HLS.js pipeline.
+      try {
+        v.pause();
+      } catch {}
+      try {
+        v.muted = true;
+        v.volume = 0;
+      } catch {}
     }
   }, [isActive]);
 

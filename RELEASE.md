@@ -2,6 +2,11 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.74.4 — 2026-07-06
+
+### 🐛 Bug Fixes
+- **Community video swipe (follow-up to 0.74.3).** After swiping to the next community video, the video now actually plays and the previous slide's audio stops. Previously only the first slide played and its voice kept going.
+
 ## v0.74.3 — 2026-07-06
 
 ### 🐛 Bug Fixes

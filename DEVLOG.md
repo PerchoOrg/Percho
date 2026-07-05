@@ -2,6 +2,27 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## Phase 74.4 (2026-07-06) — 74.3 修完只第一个视频播 + 声音串
+
+**Trigger**:74.3 部署后 owner "现在没有黑屏 但是只有第一个视频播放 滑动以后不播放 而且声音继续还是第一个视频的"。
+
+**两个 bug 一起冒**:
+
+1. **只 slide 0 播**:74.3 的 poster overlay 靠 `playing` 事件揭开。开卡片时 slide 0 是 chip tap(user gesture)触发的 unmuted play,通过。滑到 slide 1,`isActive` effect 调 `.play()` unmuted → **iOS Safari 不把 scroll 当 user activation** → autoplay 被静默 reject → `playing` 永不 fire → `hasFirstFrame` 一直 false → poster 一直盖着,视觉上"没在播"。
+2. **声音一直是 slide 0**:phase 71.22 老坑 —— iOS Safari HLS.js `v.pause()` 不停 audio track。原代码 else 分支只 `v.pause()`,slide 0 的音继续泄露。
+
+**修复**(`app/(public)/browse/_components/CommunityCarousel.tsx` `CarouselSlide` `isActive` effect):
+
+- **Play 分支**:unmuted play → catch → muted retry(scroll ≠ user gesture 时也能过);再监 `canplay` + `loadeddata` `{ once: true }` 兜底 retry(HLS manifest 未 parse 完就 play 的 race)。cleanup 里摘 listener 防泄漏。
+- **Pause 分支(核选项,71.22 pattern)**:`v.pause()` + `v.muted=true` + `v.volume=0`,三管齐下,才能真的把 iOS Safari HLS 的 audio track 灭掉。
+- 进 active 时先 `v.volume=1`,把 pause 分支灭过的音量恢复。
+
+**教训**:
+1. **74.3 那种 opacity gate on `playing` 是脆弱设计** —— 一旦 play() 被静默 reject(iOS scroll、tab hidden、低电量模式),UI 就永久卡在 loading 态。muted retry 是必备。canplay/loadeddata retry 是兜底。
+2. **HLS `<video>.pause()` 不停音这个坑,BrowseFeed 71.22 修过,CarouselSlide 独立组件没跟上** —— 类似"两处 video 逻辑漂移"。以后新加/改 HLS video 组件先看 BrowseFeed 的 pause pattern。
+
+**Verify**:tsc clean;需 owner 上手机再走一次:swipe 切换视频 → 新视频要开始播、旧视频音要停。
+
 ## Phase 74.3 (2026-07-06) — 社区视频横滑闪画面/黑屏
 
 **Trigger**:owner "listing feed 进入 community 视频横滑的时候会闪现视频画面 然后黑屏 然后再放视频"。
