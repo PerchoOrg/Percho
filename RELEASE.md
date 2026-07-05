@@ -2,6 +2,10 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.71.26 — 2026-07-06
+
+71.25 rAF 用父组件 `setPaused` 通知,但 `paused` prop 在 effect closure 里是旧值,ping-pong 不收敛,播放键还是不消失。改成本地 `domPaused` state,rAF 直写本地,播放键绑本地。父级 `paused` prop 保留给外部逻辑(sound button、swipe 手势等)使用。
+
 ## v0.71.25 — 2026-07-06
 
 71.24 拆过头了 —— 横屏全屏播放键回到"播了不消失"。71.15 media event listener 在非全屏够用,但全屏切 src 到 landscape uid 时 iOS Safari 有时不 fire `play` 事件。加回 rAF poll,但**只在 `isFullscreen` 时跑**,非全屏保持 event listener 单驱动。

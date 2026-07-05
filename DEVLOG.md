@@ -2,6 +2,16 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## Phase 71.26 (2026-07-06) — 71.25 修错方向,用本地 state 替代 prop 通知
+
+**Trigger**:71.25 部署后横屏播放键仍然不消失。
+
+**根因**:71.25 rAF `if (v.paused !== paused) setPaused(v.paused)` 里的 `paused` 是父组件 prop。effect 依赖 `[isFullscreen, paused, setPaused]`,但 rAF tick 是 60Hz 循环,tick 内闭包的 `paused` 是 effect 建立时的值。React 拿到 setPaused 会 schedule 父组件 re-render,父再传新 prop 下来 → 触发 effect cleanup+重建 → 新的 rAF closure。理论上收敛,但实测不收敛,可能因为父组件用了 memo/reducer 导致 re-render 被 batch。
+
+**修复**:引入本地 `domPaused` state,rAF 只写本地。播放键 JSX 从 `paused` 改用 `domPaused`。父级 `paused` prop 保留(swipe 手势、sound 按钮等外部逻辑仍需要)。
+
+**教训**:**跨组件的状态同步不该走 rAF poll**。rAF 是本地 tick 循环,天然适合本地 state;要通知父级,应该用 event 而非 poll。71.21 原设计就是本地 state,71.25 我为了"精简"改成通知父级,反而破坏了 rAF 的语义。以后 rAF poll → 本地 state,一步到位。
+
 ## Phase 71.25 (2026-07-06) — 71.24 拆过头,rAF poll 加回来(fullscreen only)
 
 **Trigger**:71.24 部署后横屏视频播放键"播了不消失"复现。
