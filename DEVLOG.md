@@ -2,6 +2,27 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## Phase 74.12 (2026-07-06) — 全屏「大→小→中→大」多帧过渡:vp state 双 writer 抢
+
+**Trigger:** owner:「全屏还是先大再小再大」
+
+**Root cause:** `vp` state 有两个 writer,setState 拉锯:
+1. **Tap handler(74.9 加)** sync 写 `{w: window.innerWidth, h: window.innerHeight}` → 大(全屏 `fixed inset-0` 尺寸)
+2. **useEffect(isFullscreen)** fire → `measure()` 读 `sectionRef.current.getBoundingClientRect()` → section 是 feed `<section>` 元素,fullscreen overlay 是它上面的 `fixed inset-0` 层,section 本身**没变尺寸** → 拿到 non-fullscreen section 尺寸(受 grid / max-w 约束)= **小**
+3. ResizeObserver 后续 fire / iOS URL bar 收起再触发 measure → 稳定 → **大**
+
+三帧「大 → 小 → 大」精确对应这个拉锯序列。74.9 引入 sync setVp 时忽略了 useEffect 里的 measure 会立刻覆盖 —— 我 fix 了 initial paint 但 RO 又抢走了。
+
+**Fix:** measure() 全部改用 `window.innerWidth/Height`,跟 tap handler 一致 —— 单一 source of truth,匹配 fullscreen 容器的实际尺寸(`fixed inset-0`)。删掉 ResizeObserver(观察 sectionRef 已无意义,section 尺寸不代表 fullscreen viewport)。保留 resize / orientationchange / visualViewport resize 三个 window-level listener,处理 iOS URL bar 收起 / 旋转 / DevTools 切换等真正 viewport 变化。
+
+**教训(升级规则 C 再次):** 「同步一致状态」= 
+- setState 同步 ✓(74.10)
+- CSS transition 单向 ✓(74.11)  
+- **同一 state 只能有一个 writer / 或多个 writer 全部同源**(74.12)—— 否则 sync 写完后 async writer 会覆盖回错的值。
+Ref 什么、观察什么、read 什么都要审:sectionRef.getBoundingClientRect() 在 fullscreen 语境下语义是「非全屏 section 尺寸」,不是「viewport 尺寸」。
+
+**File:** `app/(public)/browse/_components/BrowseFeed.tsx` L577-604
+
 ## Phase 74.11 (2026-07-06) — 74.10 全屏 follow-up:opacity 150ms fade-out 露出老 portrait 帧
 
 **Trigger:** owner 测 74.10:「还是闪现小画面了」
