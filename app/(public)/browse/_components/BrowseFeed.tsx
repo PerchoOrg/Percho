@@ -875,13 +875,14 @@ function Card({
               // black bars on any phone aspect ratio.
               isFullscreen && hasLandscape && vp.w > 0
                 ? {
-                    position: 'absolute',
+                    position: 'fixed',
                     top: '50%',
                     left: '50%',
                     width: `${vp.h}px`,
                     height: `${vp.w}px`,
                     transform: 'translate(-50%, -50%) rotate(90deg)',
                     objectFit: 'cover',
+                    zIndex: 10000,
                   }
                 : undefined
             }
@@ -1021,6 +1022,27 @@ function Card({
         </button>
       )}
       {isFullscreen && (
+        <>
+          {/* Phase 71.16: temporary on-screen diagnostic — shows the
+              measured viewport px + CSS 100vh so we can see what iOS
+              Safari is actually reporting. Remove after confirmation. */}
+          <div
+            style={{
+              position: 'fixed',
+              top: 8,
+              left: 8,
+              zIndex: 10001,
+              background: 'rgba(0,0,0,0.7)',
+              color: '#fff',
+              padding: '4px 8px',
+              fontSize: 11,
+              fontFamily: 'monospace',
+              borderRadius: 4,
+              pointerEvents: 'none',
+            }}
+          >
+            vp={vp.w}×{vp.h} · 100vh={typeof window !== 'undefined' ? Math.round(document.documentElement.clientHeight) : 0}
+          </div>
         <button
           type="button"
           onClick={(e) => {
@@ -1046,6 +1068,7 @@ function Card({
             <path d="m6 6 12 12" />
           </svg>
         </button>
+        </>
       )}
 
       {/* Bottom caption — Phase 74 (2026-07-05): floating glass card
