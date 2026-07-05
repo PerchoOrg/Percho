@@ -243,28 +243,37 @@ function PhotoCard({
   const idx = total > 0 ? cycleIdx % total : 0;
   const current = photos[idx];
 
-  // Phase 72.6 (2026-07-05): native horizontal scroll-snap replaces the
-  // custom JS drag from Phase 72.5 (owner: "拖拽这个功能感觉还是太突兀").
-  // This is how Instagram / Airbnb / Zillow do photo carousels — the
-  // browser owns momentum, edge bounce, and 60fps rubber-band, we just
-  // arrange the slides and read scrollLeft. Result: iOS-native feel with
-  // ~1/10 the code and no touch-event math.
+  // Phase 73 (2026-07-05): native horizontal scroll-snap, tuned to remove
+  // the "卡顿" the owner reported on 72.6/72.7. Same iOS-native container
+  // (owner: "还是要用 native scroll snap"), fixes below apply here AND to
+  // CommunityCarousel afterwards.
   //
-  // Sync model:
-  //   - `idx` (from parent's cycleIdx) is the source of truth.
-  //   - When `idx` changes externally (arrow buttons, keyboard) we
-  //     programmatically scroll the container to that slide.
-  //   - When the user scrolls, `onScroll` computes the settled index from
-  //     scrollLeft/slideWidth and fires `onSwipe(delta)` for the diff so
-  //     the parent's cycleIdx catches up.
+  // Sources of jank identified:
+  //   1. onScroll → setState-in-parent (via onSwipe) fired on every raf
+  //      of the scroll → forces React re-render → img re-render → decode
+  //      restart → main-thread stall while GPU is trying to compose the
+  //      swipe. Fix: onScroll only writes to a ref; parent idx is
+  //      updated once the scroll SETTLES (rAF-debounced, ~100ms of
+  //      quiescence).
+  //   2. Neighbouring images not decoded before flick → compositor waits
+  //      on a raster tile mid-swipe → visible stutter. Fix: eager range
+  //      widened from ±1 to ±2 and `decoding="async"` on every img so
+  //      decode work is off-thread.
+  //   3. Each slide had `object-contain` on a raw <img> without GPU
+  //      hoist. Fix: `translate3d(0,0,0)` on each slide + `will-change:
+  //      transform` on the scroller so the browser keeps them on
+  //      compositor layers instead of rasterising per-frame.
+  //   4. `overscroll-x-contain` was the whole story for gesture
+  //      handoff; keep it. Do NOT reintroduce `snap-always` (kills
+  //      flick momentum, phase 72.7) or container-level
+  //      `scrollBehavior: smooth` (kills user-driven feel, phase 72.7).
   const scrollerRef = useRef<HTMLDivElement | null>(null);
   const lastReportedIdxRef = useRef(idx);
   const isProgrammaticScrollRef = useRef(false);
   const scrollSettleTimerRef = useRef<number | null>(null);
+  const settleDebounceRef = useRef<number | null>(null);
 
-  // External idx change → programmatic scroll. `instant` on first mount /
-  // when the difference is > 1 (keyboard jump) so we don't animate a
-  // long slide; smooth otherwise.
+  // External idx change → programmatic scroll.
   useEffect(() => {
     const el = scrollerRef.current;
     if (!el) return;
@@ -275,7 +284,6 @@ function PhotoCard({
     lastReportedIdxRef.current = idx;
     const diff = Math.abs(idx - Math.round(el.scrollLeft / w));
     el.scrollTo({ left: target, behavior: diff > 1 ? 'auto' : 'smooth' });
-    // Release the flag after the smooth-scroll settles.
     if (scrollSettleTimerRef.current) window.clearTimeout(scrollSettleTimerRef.current);
     scrollSettleTimerRef.current = window.setTimeout(() => {
       isProgrammaticScrollRef.current = false;
@@ -288,21 +296,34 @@ function PhotoCard({
     };
   }, [idx]);
 
-  // User scroll → parent cycleIdx. Debounced to when the scroll settles.
+  // User scroll → parent idx, but **debounced to scroll-settle** so the
+  // React tree is stable while the compositor is animating. Every
+  // scroll event just resets a 100ms watchdog; the parent only hears
+  // about the change once the user has stopped for a full frame budget.
   const onScroll = useCallback(() => {
     if (isProgrammaticScrollRef.current) return;
     const el = scrollerRef.current;
     if (!el || total <= 1) return;
-    const w = el.clientWidth || 1;
-    const nearest = Math.round(el.scrollLeft / w);
-    if (nearest === lastReportedIdxRef.current) return;
-    // Fire one delta per step so the parent's modular arithmetic stays
-    // consistent regardless of pool size.
-    const rawDiff = nearest - lastReportedIdxRef.current;
-    lastReportedIdxRef.current = nearest;
-    const step: 1 | -1 = rawDiff > 0 ? 1 : -1;
-    for (let i = 0; i < Math.abs(rawDiff); i++) onSwipe(step);
+    if (settleDebounceRef.current) window.clearTimeout(settleDebounceRef.current);
+    settleDebounceRef.current = window.setTimeout(() => {
+      const w = el.clientWidth || 1;
+      const nearest = Math.round(el.scrollLeft / w);
+      if (nearest === lastReportedIdxRef.current) return;
+      const rawDiff = nearest - lastReportedIdxRef.current;
+      lastReportedIdxRef.current = nearest;
+      const step: 1 | -1 = rawDiff > 0 ? 1 : -1;
+      for (let i = 0; i < Math.abs(rawDiff); i++) onSwipe(step);
+    }, 100);
   }, [onSwipe, total]);
+
+  useEffect(() => {
+    return () => {
+      if (settleDebounceRef.current) {
+        window.clearTimeout(settleDebounceRef.current);
+        settleDebounceRef.current = null;
+      }
+    };
+  }, []);
 
   const goPrev = () => onSwipe(-1);
   const goNext = () => onSwipe(1);
@@ -345,6 +366,7 @@ function PhotoCard({
         ref={scrollerRef}
         onScroll={onScroll}
         className="scrollbar-hide absolute inset-0 flex snap-x snap-mandatory overflow-x-auto overflow-y-hidden overscroll-x-contain"
+        style={{ willChange: 'transform', WebkitOverflowScrolling: 'touch' }}
       >
         {total === 0 && (
           <div className="flex h-full w-full flex-shrink-0 snap-center items-center justify-center text-cream/40 text-sm">
@@ -355,6 +377,7 @@ function PhotoCard({
           <div
             key={`${src}-${i}`}
             className="relative h-full w-full flex-shrink-0 snap-center"
+            style={{ transform: 'translateZ(0)' }}
           >
             <img
               src={src}
@@ -364,9 +387,12 @@ function PhotoCard({
                   : ''
               }
               className="h-full w-full object-contain"
-              // Only the first + neighbours load eagerly; the rest lazy
-              // so a 20-photo listing doesn't blow bandwidth on load.
-              loading={Math.abs(i - idx) <= 1 ? 'eager' : 'lazy'}
+              // Phase 73: eager range widened ±1 → ±2 so a fast flick
+              // never lands on an undecoded neighbour. `decoding=async`
+              // moves decode off the main thread so it can't stall
+              // compositing mid-swipe.
+              loading={Math.abs(i - idx) <= 2 ? 'eager' : 'lazy'}
+              decoding="async"
               draggable={false}
             />
           </div>
