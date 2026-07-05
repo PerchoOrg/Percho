@@ -2,6 +2,11 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.74.6 — 2026-07-06
+
+### 🐛 Bug Fixes
+- **Community video tap-to-pause (follow-up to 0.74.5).** 74.5 shipped a tap-to-pause button but taps didn't actually stop playback — HLS buffering silently resumed the video within ~200ms. Root cause: the pause state and the play retry listeners lived in separate effects, so pausing didn't tear down the retry chain. Rewrote as a single unified play/pause effect matching BrowseFeed's model. Tap-to-pause now works on the community carousel exactly like on `/browse`.
+
 ## v0.74.5 — 2026-07-06
 
 ### 🐛 Bug Fixes
