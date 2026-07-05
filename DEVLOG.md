@@ -2,6 +2,31 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## Phase 71.17 (2026-07-06) — Fullscreen: measure section rect, not window.innerHeight
+
+**Root cause found via on-screen diagnostic (71.16 pill).** iPhone Plus / Pro
+Max reported `vp=428×781, 100vh=781` while `fixed inset-0` covers the *layout*
+viewport (~926 with URL bar collapsed). `window.innerHeight` returns the SMALL
+viewport (URL bar visible), sizing the rotate-90 box against it left ~30% top+
+bottom black. Not a per-device tunable — a viewport-model mismatch that hits
+every phone whose small vs layout viewport differ (Plus/Pro Max most, but any
+mobile Safari/Chrome under URL-bar shrink).
+
+**Fix (device-agnostic):** measure the actual `<section>` element's
+`getBoundingClientRect()` and observe it via `ResizeObserver` +
+`window.visualViewport.resize`. The rect always equals whatever `fixed inset-0`
+resolves to on the current device — no innerWidth/innerHeight, no phone
+hardcoding, no viewport-model guessing.
+
+**Also fixed:** picture-freezes-audio-continues bug. The 71.14 fullscreen play
+retry effect kept re-firing on `canplay`/`loadeddata` during playback; if user
+tapped-to-pause, the retry immediately resumed audio but the video texture
+stayed frozen. Now: `started` flag on `playing` event caps retries; if user
+paused after playback started, retry aborts.
+
+**Diagnostic pill retained** (now shows `vp × innerH × 100vh`) — remove after
+next confirmation.
+
 ## Phase 71.15 — Fullscreen truly fills + paused sync (2026-07-06)
 
 Owner:"重新开了页面还是一样的问题 上下还是没有占满 中间的播放键一直在 并且是竖屏的播放键方向 点击后视频会暂停 但是按键还在 声音不受影响 一直在放"。
