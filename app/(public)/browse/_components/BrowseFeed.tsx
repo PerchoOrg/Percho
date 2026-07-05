@@ -1042,8 +1042,17 @@ function Card({
              * until the first real frame paints. Killing the `poster=` attr
              * on <video> means iOS Safari never shows its system big-play
              * placeholder. Layer sits above <video> (which is opacity:0)
-             * and is unmounted the moment hasFirstFrame flips true. */}
-            {poster && !hasFirstFrame && (
+             * and is unmounted the moment hasFirstFrame flips true.
+             *
+             * Phase 74.8 (2026-07-06): skip overlay when entering fullscreen.
+             * The overlay's static CSS (`inset-0`) doesn't follow the
+             * <video>'s fullscreen rotate/px sizing, so on fullscreen enter
+             * users saw a portrait poster in the parent card box before the
+             * landscape src attached — reported as "竖屏小视频 → 横屏小视频 → 播放".
+             * User initiated the fullscreen tap, so a brief bg-black gap
+             * during landscape swap is acceptable and less jarring than a
+             * mis-rotated poster flash. */}
+            {poster && !hasFirstFrame && !isFullscreen && (
               <img
                 src={poster}
                 alt=""

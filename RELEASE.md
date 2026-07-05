@@ -2,6 +2,11 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.74.8 — 2026-07-06
+
+### 🐛 Bug Fixes
+- **Fullscreen video no longer flashes a portrait then landscape mini-tile before playing.** Regression from v0.74.7. Tapping the fullscreen button on a `/browse` card briefly showed a portrait-sized poster tile, then a landscape-sized poster tile, then finally the rotated fullscreen video. Cause: v0.74.7's poster overlay was pinned to the card's original bounding box, so it didn't follow the video's fullscreen rotate/resize transform. Fix: skip the poster overlay entirely in fullscreen — the video element still fades in cleanly on first frame, and the transition to landscape is now smooth.
+
 ## v0.74.7 — 2026-07-06
 
 ### 🐛 Bug Fixes
