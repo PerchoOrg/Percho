@@ -632,6 +632,20 @@ function Card({
     return () => cancelAnimationFrame(raf);
   }, [shouldMount]);
 
+  // Phase 74.7 (2026-07-06): poster-attribute anti-pattern (skill ref §1).
+  // Symptom: on first swipe to a card, iOS Safari flashes the <video>
+  // poster with the system big-play-button overlay for ~200-500ms before
+  // the video actually starts. Root cause: `<video poster=…>` renders
+  // that placeholder until `.play()` is called, and the browser's HLS
+  // pipeline needs 200-500ms to decode the first segment before the
+  // real frame paints. The CommunityCarousel already fixed this in 74.3
+  // via an <img> overlay + hasFirstFrame gate; BrowseFeed drifted.
+  //
+  // Fix: kill the `poster=` attribute, render the thumbnail as an
+  // absolute <img> overlay while !hasFirstFrame, reveal the <video>
+  // via opacity on `playing` / `loadeddata`. Reset the flag on src swap.
+  const [hasFirstFrame, setHasFirstFrame] = useState(false);
+
   // Phase 71.7: pick the effective CF uid based on fullscreen state.
   // `cfVideoIdLandscape` is optional; fullscreen is only enterable when set.
   const hasLandscape = !!sel.cfVideoIdLandscape;
@@ -700,6 +714,10 @@ function Card({
     if (!shouldMount) return;
     const video = videoRef.current;
     if (!video) return;
+
+    // Phase 74.7: hide <video> layer behind poster overlay until the
+    // first real frame paints on this new src.
+    setHasFirstFrame(false);
 
     // Tear down previous HLS attachment.
     if (hlsRef.current) {
@@ -826,6 +844,22 @@ function Card({
     };
   }, [setPaused, shouldMount]);
 
+  // Phase 74.7 (skill ref §1): reveal <video> layer only after the first
+  // real frame paints. `playing` fires post-decode+composite; `loadeddata`
+  // is a defensive fallback for paused-preload siblings.
+  useEffect(() => {
+    if (!shouldMount) return;
+    const v = videoRef.current;
+    if (!v) return;
+    const reveal = () => setHasFirstFrame(true);
+    v.addEventListener('playing', reveal);
+    v.addEventListener('loadeddata', reveal);
+    return () => {
+      v.removeEventListener('playing', reveal);
+      v.removeEventListener('loadeddata', reveal);
+    };
+  }, [shouldMount, effectiveCfId]);
+
   const onTap = () => {
     const v = videoRef.current;
     if (!v) return;
@@ -939,10 +973,10 @@ function Card({
           />
         )}
         {shouldMount ? (
-          <video
-            ref={videoRef}
-            poster={poster ?? undefined}
-            style={
+          <>
+            <video
+              ref={videoRef}
+              style={
               // Phase 71.14: rotate-90 fullscreen — measure the visual
               // viewport in JS and set width/height as raw pixels. Setting
               // `width = viewportHeight` and `height = viewportWidth`
@@ -978,8 +1012,13 @@ function Card({
                     // play glyph are separately positioned above with
                     // their own hit boxes so they still receive clicks.
                     pointerEvents: 'none',
+                    opacity: hasFirstFrame ? 1 : 0,
+                    transition: 'opacity 150ms',
                   }
-                : undefined
+                : {
+                    opacity: hasFirstFrame ? 1 : 0,
+                    transition: 'opacity 150ms',
+                  }
             }
             className={
               isFullscreen && hasLandscape
@@ -993,8 +1032,22 @@ function Card({
             playsInline
             muted
             loop
-            preload="metadata"
+            preload="auto"
           />
+          {/* Phase 74.7 (skill ref §1): poster overlay covers the <video>
+           * until the first real frame paints. Killing the `poster=` attr
+           * on <video> means iOS Safari never shows its system big-play
+           * placeholder. Layer sits above <video> (which is opacity:0)
+           * and is unmounted the moment hasFirstFrame flips true. */}
+          {poster && !hasFirstFrame && (
+            <img
+              src={poster}
+              alt=""
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 h-full w-full bg-black object-contain"
+            />
+          )}
+          </>
         ) : poster ? (
           <img
             src={poster}

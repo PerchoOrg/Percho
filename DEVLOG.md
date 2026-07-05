@@ -2,6 +2,41 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## Phase 74.7 (2026-07-06) — 竖滑 feed 首刷黑屏闪现小视频+播放键(BrowseFeed / CommunityVideoFeed / CommunityListingCarousel)
+
+**Trigger:** owner 测 74.6 后:「刚才修的是横滑的问题 竖滑也会有黑屏 很快闪现一个小视频带播放键的页面 然后再开始播放feed 这个问题在所有竖滑的feed里都有 尤其是第一次刷到」
+
+**Root cause (skill ref §1 poster-attribute anti-pattern):** 74.3 修横滑 CommunityCarousel 时把 `<video poster=…>` 换成了 `<img>` overlay + `hasFirstFrame` gate,但**竖滑三个 feed 全部漂移未跟上**:
+- `BrowseFeed.tsx` L944 `<video poster={poster}>`
+- `CommunityVideoFeed.tsx` L243 `<video poster={poster}>`
+- `CommunityListingCarousel.tsx` L459 `<video poster={poster}>`
+
+`<video poster=>` 的 iOS Safari 行为:在 `.play()` 调用前渲染 poster,并**在 poster 上叠加系统级大播放按钮**(那个"小视频带播放键"就是它)。`.play()` 一调用 poster 立即被浏览器隐藏,但 HLS 首段 segment 还要 200-500ms 解码 → `<video>` 元素透明期间 `bg-black` 露出 → 看到黑屏。所以视觉序列是:**poster+播放键闪现(未 play) → 黑屏(play 已调用+首帧未到) → 视频出现**。第一次刷到最明显是因为后续同 slide `hasFirstFrame` 已 true,不重演。
+
+**修复:三个组件全部按 skill ref §1 canonical 改造:**
+1. 移除 `<video>` 的 `poster=` 属性
+2. 加 `hasFirstFrame` state,HLS attach effect 里 src 换时 `setHasFirstFrame(false)`
+3. 新加 useEffect 挂 `playing` + `loadeddata` listener 触发 `setHasFirstFrame(true)`
+4. `<video>` 加 inline `style={{ opacity: hasFirstFrame ? 1 : 0, transition: 'opacity 150ms' }}`
+5. Fragment 兄弟位加 `{poster && !hasFirstFrame && <img … absolute inset-0 pointer-events-none bg-black object-contain>}`
+6. `preload="metadata"` → `preload="auto"`,让邻居 slide 预热首段
+
+BrowseFeed 全屏 rotate 分支合并 opacity gate 到 fullscreen inline style;非全屏走独立 opacity style。
+
+**教训:**
+- **skill ref §1 已经写清 canonical 实现**,74.3 只在 CommunityCarousel 落一份就完事,没做 repo-wide sweep。owner 反馈"这个功能应该对所有的 feed 都是通用的 一致的"—— 74.6 教训还没热。任何触及 HLS `<video>` 的组件必须**全站 audit**,不是就近修一个。
+- 「第一次刷最明显」= `hasFirstFrame` 首次 mount 未 true 的窗口暴露,是判断 poster-flash 的诊断信号。下次听到"第一次刷/首屏/首次进入"+"黑屏/闪一下"关键词直接怀疑 poster gate。
+- 系统大播放按钮不是 UI 层加的,是 iOS Safari 给 `<video poster=>` 未播放态默认叠的。**唯一避免方式:不用 `poster=` 属性。**
+
+**Verify:**
+- tsc clean
+- 手机 4 条:(a) 首次进 `/browse` 竖滑第一个视频不再看到「小视频带播放键」闪现;(b) `/c/[slug]/feed` 同上;(c) `/c/[slug]/feed` 里的 listing 竖滑同上;(d) 每次滑到新 slide 不看到黑屏中间态,poster 静止画面直接过渡到视频。
+
+**File changes:**
+- `app/(public)/browse/_components/BrowseFeed.tsx`(+ hasFirstFrame state / reveal effect / opacity gate / poster overlay,- `poster=` attr)
+- `app/(public)/c/[slug]/feed/CommunityVideoFeed.tsx`(同上)
+- `app/(public)/c/[slug]/feed/_components/CommunityListingCarousel.tsx`(同上)
+
 ## Phase 74.6 (2026-07-06) — 74.5 tap-to-pause 假功能:HLS canplay listener race
 
 **Trigger:** owner 测 74.5:"声音好了 但是还是不能停止视频 这个功能应该对所有的feed都是通用的 一致的 你看看别的地方如何实现"
