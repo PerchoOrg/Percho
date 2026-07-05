@@ -29,6 +29,7 @@ import { CommunityGrid } from '@/app/_components/CommunityGrid';
 import { GridPageShell } from '@/app/_components/GridPageShell';
 import { Building2 } from 'lucide-react';
 import { fetchCommunityListCards } from '@/lib/communities/list';
+import { getViewerAgentId } from '@/lib/auth/viewer';
 import { startTimer } from '@/lib/perf/timing';
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
@@ -43,13 +44,18 @@ export default async function CommunitiesListPage() {
   // Auth and card fetch in parallel — cards don't depend on user (community
   // data is globally readable). getSession() reads the cookie locally; no
   // Supabase round-trip.
-  const [sessionRes, cards] = await Promise.all([
+  const [sessionRes, agentId] = await Promise.all([
     supabase.auth.getSession(),
-    fetchCommunityListCards({ includeInactive: true }),
+    getViewerAgentId(),
   ]);
-  t.mark('parallel');
+  t.mark('auth');
 
   if (!sessionRes.data.session) redirect('/login?redirect=%2Fdashboard%2Fcommunities');
+
+  // Phase 72.2 (2026-07-05): only the viewer's own inactive communities
+  // show up alongside the active ones. Other agents' drafts stay hidden.
+  const cards = await fetchCommunityListCards({ viewerAgentId: agentId });
+  t.mark('cards');
 
   t.end({ cardCount: cards.length });
 

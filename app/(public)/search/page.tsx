@@ -274,7 +274,7 @@ export default async function SearchPage({
     // we filter in JS to scope inactive results to communities the viewer
     // created (RLS prevents her from seeing other agents' inactive rows
     // anyway, but the explicit filter keeps this correct if RLS shifts).
-    fetchCommunityListCards({ includeInactive: agentId !== null }).then((rows) =>
+    fetchCommunityListCards({ viewerAgentId: agentId }).then((rows) =>
       rows
         .filter(
           (c) =>

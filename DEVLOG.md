@@ -2,6 +2,62 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-07-05 — Phase 72.2: scope inactive-community visibility to owner
+
+### Trigger
+Owner: "没有激活的 community 只有 owner 才能看到 其他人不应该看到."
+
+### Root cause
+Phase 34b made `communities` globally readable (RLS `select using (true)`)
+so buyers could browse them without auth. Phase 46 then added a status
+gate at every buyer surface (`status='active'` filter). But the agent
+dashboard grid needed to show agents their own drafts, so it opted out of
+the status filter with `fetchCommunityListCards({ includeInactive: true })`.
+
+Because the underlying query ignored ownership, that opt-out returned
+every inactive community system-wide — one agent could see another
+agent's unfinished drafts in the dashboard grid and in `/search`. The
+Phase 47.14 comment on `/search` even acknowledged this ("RLS prevents
+her from seeing other agents' inactive rows anyway"), but that comment
+was wrong: the RLS policy is `for select using (true)`, no ownership
+predicate.
+
+### Change
+`lib/communities/list.ts` — API reshaped:
+
+- OLD: `fetchCommunityListCards({ includeInactive?: boolean })`, either
+  cached-active-only or cached-include-everything.
+- NEW: `fetchCommunityListCards({ viewerAgentId?: string | null })`.
+  - Active set is still shared-cached (60s, tag `community-cards`).
+  - Viewer's own inactive is fetched uncached (per-viewer, cheap) via a
+    new `.eq('created_by', agentId)` query.
+  - Union de-duped by id, sorted by name.
+  - No viewer / non-agent viewer → active only.
+
+Extracted `getViewerAgentId()` from `app/(public)/search/page.tsx` into
+`lib/auth/viewer.ts` so both callers share one implementation.
+
+Callers updated:
+- `app/dashboard/communities/page.tsx` — resolves `viewerAgentId` in
+  parallel with the auth check, then fetches cards.
+- `app/(public)/search/page.tsx` — passes the same `viewerAgentId` it
+  already resolves for listing scoping.
+- `app/dashboard/listings/[id]/edit/page.tsx` — untouched; already
+  filters to `status='active'` (Phase 72).
+
+### Verification
+- `npx tsc --noEmit` clean.
+- `npm run build` clean.
+- Grep `includeInactive` in code: zero hits (only historical DEVLOG /
+  RELEASE mentions remain).
+
+### Follow-ups
+None. RLS itself stays permissive because the community details page
+`/c/[slug]` still needs to 404 (not 403) inactive rows for buyers, and
+the buyer surfaces already gate on `status='active'` at the query level.
+
+---
+
 ## 2026-07-05 — Phase 72.1: hide Untitled stub from every grid
 
 ### Trigger
