@@ -65,23 +65,20 @@ function specsLine(item: ListingGridItem): string {
 }
 
 /**
- * Phase 74.5: mirror the swipe feed CaptionCard address shape.
- * Format: `street, city, state zip`. If street is null we surface just
- * the geo tail; if there's nothing at all we return `(no address)` so
- * the caller doesn't have to null-check. Draft placeholders like
- * "Untitled draft" are passed through untouched (no city/state/zip).
+ * Phase 74.5/74.7: grid caption 3rd line — mirror the swipe feed
+ * shape but WITHOUT zip (owner: "grid view 不显示 zipcode"). Format:
+ * `street, city, state`. Draft placeholders (no city/state) fall
+ * through as street-only. Zip stays on the swipe feed + bottom sheet
+ * because those have room; the 4-up grid does not.
  */
 function formatFullAddress(item: ListingGridItem): string {
   const street = item.address?.trim() || null;
   const city = item.city?.trim() || null;
   const state = item.state?.trim() || null;
-  const zip = item.zip?.trim() || null;
   if (!street && !city && !state) return '(no address)';
-  // If there's no city/state, the street stands alone (drafts, legacy).
   if (!city && !state) return street ?? '(no address)';
   const geoTail = [city, state].filter(Boolean).join(', ');
-  const withZip = zip ? `${geoTail} ${zip}` : geoTail;
-  return street ? `${street}, ${withZip}` : withZip;
+  return street ? `${street}, ${geoTail}` : geoTail;
 }
 
 export function ListingGrid({

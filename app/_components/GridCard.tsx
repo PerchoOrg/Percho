@@ -105,7 +105,7 @@ export function GridCardCaption({
         <div className="mt-0.5 truncate text-[11px] tracking-wide opacity-95">{sub}</div>
       )}
       {sub2 != null && (
-        <div className="truncate text-[10px] leading-tight opacity-80">{sub2}</div>
+        <div className="mt-0.5 truncate text-[11px] tracking-wide opacity-95">{sub2}</div>
       )}
     </>
   );

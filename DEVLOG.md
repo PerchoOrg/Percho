@@ -2,6 +2,24 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-07-05 — Phase 74.7: grid 3rd line 撤 zip,字号回 11px
+
+### Trigger
+Owner:"第三行还是跟第二行一样的 grid view 不显示 zipcode。feed 里第二行末尾要显示 zipcode more 里同样的地方也要显示 zipcode"。74.6 把 grid 第三行降到 10px 硬装 zip,owner 决定不值得 —— grid 卡宽度紧,zip 会挤 city;feed 沉浸卡 + bottom sheet 有空间保 zip。
+
+### Change
+- `GridCard.tsx` sub2:`text-[10px] leading-tight opacity-80` → `text-[11px] tracking-wide opacity-95`(和第二行 specs 完全对称,视觉更耐看)
+- `ListingGrid.tsx` `formatFullAddress()` 拆掉 zip 分支,输出 `street, city, state`;drafts / legacy 单 street fallback 不动
+- Feed swipe CaptionCard folded 第二行末尾 zip:74.4 已在(`${listing.zip ? ' '+listing.zip : ''}`),不动
+- Bottom sheet `addressLine`:complex helper 复用同一 template,zip 已带,不动
+- DB 核过 11 条 active listing 全 zip 有值,`browse-cards.ts` select 已含 zip 字段;若 feed 上没显示 zip,是 Vercel edge cache 或旧数据,重新部署即可
+
+### Verification
+- tsc clean, next build green,shared 87.3 kB 未变
+- Grid: `1619 Tide Mill Road, Cumming, GA` — 11px 一行
+- Feed: `1619 Tide Mill Road, Cumming, GA 30040` — 15px 一行(有 zip)
+- Sheet: 打开后 About/Nearby 前那行地址也带 zip
+
 ## 2026-07-05 — Phase 74.6: grid 第三行 10px 单行
 
 ### Trigger
