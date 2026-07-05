@@ -376,21 +376,33 @@ function PhotoCard({
       <div className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-black/70 via-black/30 to-transparent" />
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-72 bg-gradient-to-t from-black/85 via-black/50 to-transparent" />
 
-      {/* Segmented dashed progress + tabular counter (Phase 72.5). */}
+      {/* Phase 72.8 (2026-07-05): header alignment with CommunityCarousel
+       * (video swipe). Owner: "仿照 listing feed 里的 community 视频里的
+       * 格式,左上返回,右上计数,第二行才是虚线".
+       *
+       * Row 1 = header row (top-3, height 11) — the parent BrowseFeed
+       * shell already renders the Back button in the left slot at
+       * `top-0 pt-3`. We put the counter pill in the right slot at the
+       * same vertical rhythm so the two align visually.
+       * Row 2 = dashed segmented progress at `top-16`, below the header.
+       *
+       * Progress style is now cumulative (`i <= idx` filled) matching
+       * CommunityCarousel — a progress bar, not a "current-only" tick,
+       * so the buyer can see how deep they are into the reel. */}
       {poolSize > 1 && total > 1 && (
         <>
-          <div className="pointer-events-none absolute inset-x-16 top-6 z-10 flex gap-1">
+          <div className="pointer-events-none absolute top-3 right-3 z-10 flex h-9 items-center rounded-full border border-cream/20 bg-ink/55 px-3 font-medium text-[12px] text-cream backdrop-blur-md tabular-nums">
+            {idx + 1} / {total}
+          </div>
+          <div className="pointer-events-none absolute inset-x-3 top-16 z-10 flex gap-1">
             {photos.map((p, i) => (
               <div
                 key={`${p}-prog`}
                 className={`h-0.5 flex-1 rounded-full transition-colors ${
-                  i === idx ? 'bg-cream' : 'bg-cream/25'
+                  i <= idx ? 'bg-cream' : 'bg-cream/20'
                 }`}
               />
             ))}
-          </div>
-          <div className="pointer-events-none absolute top-8 right-5 z-10 font-medium text-[11px] text-cream/70 tabular-nums">
-            {String(idx + 1).padStart(2, '0')} / {String(total).padStart(2, '0')}
           </div>
         </>
       )}

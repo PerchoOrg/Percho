@@ -2,6 +2,9 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.72.8 — 2026-07-05
+Photo swipe header re-aligned to match the community-video swipe layout: Back button top-left, counter pill top-right on the same row, dashed segmented progress on a second row below. Progress is now cumulative (fills as you swipe through) instead of a single-tick indicator.
+
 ## v0.72.7 — Smoother photo swipe (2026-07-05)
 
 ### ✨ Improved
