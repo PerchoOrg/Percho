@@ -612,6 +612,31 @@ function Card({
 
   const sel = useMemo(() => pickVideo(card, source, cycleIdx), [card, source, cycleIdx]);
 
+  // Phase 71.18 (2026-07-06): diagnostic — video element's actual bounding
+  // rect + natural dimensions. Refresh on loadedmetadata + interval so pill
+  // shows current post-render numbers.
+  const [videoDiag, setVideoDiag] = useState<string>('video: pending');
+  useEffect(() => {
+    if (!isFullscreen) return;
+    const v = videoRef.current;
+    if (!v) return;
+    function update() {
+      const el = videoRef.current;
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      setVideoDiag(
+        `vid rect=${Math.round(r.width)}×${Math.round(r.height)} · natural=${el.videoWidth}×${el.videoHeight}`,
+      );
+    }
+    update();
+    const iv = window.setInterval(update, 500);
+    v.addEventListener('loadedmetadata', update);
+    return () => {
+      window.clearInterval(iv);
+      v.removeEventListener('loadedmetadata', update);
+    };
+  }, [isFullscreen]);
+
   // Phase 71.7: pick the effective CF uid based on fullscreen state.
   // `cfVideoIdLandscape` is optional; fullscreen is only enterable when set.
   const hasLandscape = !!sel.cfVideoIdLandscape;
@@ -1076,7 +1101,8 @@ function Card({
               pointerEvents: 'none',
             }}
           >
-            vp={vp.w}×{vp.h} · innerH={typeof window !== 'undefined' ? window.innerHeight : 0} · 100vh={typeof window !== 'undefined' ? Math.round(document.documentElement.clientHeight) : 0}
+            vp={vp.w}×{vp.h}<br/>
+            {videoDiag}
           </div>
         <button
           type="button"
