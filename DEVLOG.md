@@ -2,6 +2,30 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## Phase 74.8 (2026-07-06) — 74.7 全屏 regression:竖屏小视频 → 横屏小视频 → 播放
+
+**Trigger:** owner 测 74.7 后:「全屏功能有regression 点击后会出现一个竖屏的小视频 再切成横屏的小视频 再播放横屏的全屏」
+
+**Root cause:** 74.7 给 BrowseFeed 加的 poster overlay `<img className="absolute inset-0 ...">` **只用了 card 尺寸的静态 CSS**,没跟 `<video>` 的 fullscreen rotate-90 / px 尺寸(71.14 那套)一起切。所以点全屏时序:
+1. `isFullscreen` 翻 true → `effectiveCfId` 从 vertical uid 换成 `cfVideoIdLandscape`
+2. HLS effect fires `setHasFirstFrame(false)` + tear down + reattach
+3. Overlay 挂上,但用的是 **card 内的 portrait poster URL**(还没换)+ **portrait card 尺寸** → 视觉上「竖屏小视频」在原 card box
+4. React 下一 render `poster` prop 用 landscape thumbnail URL,overlay src 换 → 「横屏小视频」但**仍在 card box(不 rotate)**
+5. HLS 首段解码 → `hasFirstFrame` true → overlay 消失,`<video>` 展开成 rotate-90 全屏 landscape → 播放
+
+「小」= 停留在 card box 尺寸没跟 rotate。三步序列吻合。
+
+**Fix:** overlay 加 `!isFullscreen` 门。全屏由 owner 主动点触发,transition 期间的 bg-black gap 可接受,比 mis-rotated poster flash 体验好。全屏态里 `<video>` 依然有 opacity gate 防 iOS Safari system placeholder,只是不叠 poster `<img>`。
+
+**替代方案(未采用):** 让 overlay 也跟 rotate + vp.h/vp.w 尺寸走。会重复 71.14/71.19/71.20 里的坐标数学,ROI 低。
+
+**教训:**
+- 加视觉 overlay 时必须过一遍**所有** state transition,不只 mount/unmount。BrowseFeed 有三种视觉 mode(shouldMount 前 poster fallback、竖屏播放、rotate 全屏),74.7 只想到前两种。
+- 「组件有 fullscreen rotate 分支」= red flag,任何 absolute-positioned sibling 都要 audit。
+
+**File changes:**
+- `app/(public)/browse/_components/BrowseFeed.tsx`(overlay 条件加 `&& !isFullscreen`)
+
 ## Phase 74.7 (2026-07-06) — 竖滑 feed 首刷黑屏闪现小视频+播放键(BrowseFeed / CommunityVideoFeed / CommunityListingCarousel)
 
 **Trigger:** owner 测 74.6 后:「刚才修的是横滑的问题 竖滑也会有黑屏 很快闪现一个小视频带播放键的页面 然后再开始播放feed 这个问题在所有竖滑的feed里都有 尤其是第一次刷到」
