@@ -407,6 +407,25 @@ function CarouselSlide({
   const ref = useRef<HTMLVideoElement | null>(null);
   const hlsRef = useRef<Hls | null>(null);
 
+  // Phase 74.3 (2026-07-05): overlay a poster <img> on top of the <video>
+  // and only fade it out once the first video frame has actually rendered.
+  //
+  // Bug being fixed: horizontal-swiping between community videos flashed
+  // the previous frame, then went black for ~200-500ms, then the new
+  // video appeared. Root cause is that assigning a fresh HLS source to
+  // the same <video> element (mount effect on `cfVideoId` change) tears
+  // down the current media pipeline; the browser hides the `poster=`
+  // attribute the moment `.play()` is called, but the first HLS segment
+  // hasn't been decoded yet → the naked `bg-black` behind the element
+  // shows through until decode finishes.
+  //
+  // Approach: don't rely on the `poster` attribute at all. Render the
+  // thumbnail as an absolute-positioned <img> layer that stays visible
+  // until the video fires `playing` (or `loadeddata` as a defensive
+  // fallback). Reset the flag every time we swap `isActive` so the next
+  // load also gets covered. Same idiom BrowseFeed uses — parity fix.
+  const [hasFirstFrame, setHasFirstFrame] = useState(false);
+
   const poster = useMemo(() => {
     try {
       return thumbnailUrl(video.cfVideoId);
@@ -419,6 +438,9 @@ function CarouselSlide({
     if (!shouldMount) return;
     const v = ref.current;
     if (!v) return;
+    // New src → hide the video layer behind the poster until the first
+    // frame renders. Otherwise `<video>` sits blank/black over the poster.
+    setHasFirstFrame(false);
     if (hlsRef.current) {
       hlsRef.current.destroy();
       hlsRef.current = null;
@@ -444,6 +466,23 @@ function CarouselSlide({
         hlsRef.current.destroy();
         hlsRef.current = null;
       }
+    };
+  }, [shouldMount, video.cfVideoId]);
+
+  // Reveal the video layer only after the first real frame paints. Use
+  // `playing` as the primary signal (fires after decode + composite);
+  // `loadeddata` as belt-and-suspenders in case the browser buffers a
+  // frame without moving to `playing` (e.g. paused sibling).
+  useEffect(() => {
+    if (!shouldMount) return;
+    const v = ref.current;
+    if (!v) return;
+    const reveal = () => setHasFirstFrame(true);
+    v.addEventListener('playing', reveal);
+    v.addEventListener('loadeddata', reveal);
+    return () => {
+      v.removeEventListener('playing', reveal);
+      v.removeEventListener('loadeddata', reveal);
     };
   }, [shouldMount, video.cfVideoId]);
 
@@ -475,15 +514,31 @@ function CarouselSlide({
   return (
     <>
       {shouldMount ? (
-        <video
-          ref={ref}
-          // biome-ignore lint/a11y/useMediaCaption: HLS source has no caption track.
-          poster={poster ?? undefined}
-          className="h-full w-full bg-black object-cover"
-          playsInline
-          loop
-          preload="metadata"
-        />
+        <>
+          <video
+            ref={ref}
+            // biome-ignore lint/a11y/useMediaCaption: HLS source has no caption track.
+            className={`h-full w-full bg-black object-cover transition-opacity duration-150 ${
+              hasFirstFrame ? 'opacity-100' : 'opacity-0'
+            }`}
+            playsInline
+            loop
+            preload="auto"
+          />
+          {/* Poster overlay — covers the black gap between src swap and
+           * first-frame decode. Fades out once `playing`/`loadeddata`
+           * fires. Non-interactive so it doesn't eat the parent onClick. */}
+          {poster && !hasFirstFrame && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={poster}
+              alt=""
+              aria-hidden
+              className="pointer-events-none absolute inset-0 h-full w-full bg-black object-cover"
+              decoding="async"
+            />
+          )}
+        </>
       ) : poster ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img

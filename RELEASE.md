@@ -2,6 +2,11 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.74.3 — 2026-07-06
+
+### 🐛 Bug Fixes
+- **Community video swipe.** Swiping between community videos on a listing no longer flashes the previous frame or shows a black gap before the new video starts — the neighborhood thumbnail now covers the transition until the first real frame is ready.
+
 ## v0.71.26 — 2026-07-06
 
 71.25 rAF 用父组件 `setPaused` 通知,但 `paused` prop 在 effect closure 里是旧值,ping-pong 不收敛,播放键还是不消失。改成本地 `domPaused` state,rAF 直写本地,播放键绑本地。父级 `paused` prop 保留给外部逻辑(sound button、swipe 手势等)使用。
