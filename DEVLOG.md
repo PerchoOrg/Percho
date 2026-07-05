@@ -2,6 +2,26 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## Phase 74.3 (2026-07-06) — 社区视频横滑闪画面/黑屏
+
+**Trigger**:owner "listing feed 进入 community 视频横滑的时候会闪现视频画面 然后黑屏 然后再放视频"。
+
+**表面**:`/browse` feed 里点开 `CommunityCarousel`(社区视频横滑),从一个视频滑到下一个,先闪一下上一帧,再黑一段,才是新视频。
+
+**根因**:`CarouselSlide` 里 `<video>` 用了 `poster=` 属性 + `bg-black`。`isActive` 切换 → 挂载 effect 用同一 `<video>` 元素装载新 HLS src → 浏览器一调 `.play()` 立即隐藏 poster,但首帧还没解码,`bg-black` 露出来 → 视觉上就是「闪(旧帧)→ 黑(bg-black)→ 新画面(首帧)」。iOS Safari 尤其明显。BrowseFeed 主 feed 没这个问题因为它有 canplay retry 兜底,CarouselSlide 缺一层。
+
+**修复**(`app/(public)/browse/_components/CommunityCarousel.tsx`):
+1. 去掉 `<video poster=>` 属性 —— 它是黑屏元凶。
+2. 引入 `hasFirstFrame` 本地 state,src 换了立即置回 false。
+3. 监听 video 的 `playing` + `loadeddata`(belt-and-suspenders),任一 fire 就置 true。
+4. 用绝对定位 `<img>` 覆盖同区域,`hasFirstFrame=false` 时可见,同时 `<video>` `opacity-0`;首帧到达后 img 卸载,`<video>` `opacity-100`(150ms 淡入)。
+5. `preload` 从 `metadata` 提到 `auto`,邻居 slide 预热更多。
+6. img 加 `pointer-events:none` 防止吃父级 onClick。
+
+**教训**:HLS 视频用 `poster` 属性 + 只 `bg-black` 底层,src 切换必闪黑。规范:任何 HLS `<video>` 都要么用 img 覆盖 + 首帧事件揭开,要么保证首帧前不 `.play()`(BrowseFeed 那套 canplay retry)。这条应该抽到 SKILL 里。
+
+**Verify**:tsc clean;需要在移动端手动过 swipe 视觉。
+
 ## Phase 71.26 (2026-07-06) — 71.25 修错方向,用本地 state 替代 prop 通知
 
 **Trigger**:71.25 部署后横屏播放键仍然不消失。
