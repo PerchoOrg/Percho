@@ -223,14 +223,19 @@ function PhotoCard({
   cardRef,
   onSwipe,
   poolSize,
+  isActive,
 }: {
   card: BrowseCard;
   cycleIdx: number;
   cardRef: (el: HTMLElement | null) => void;
   onSwipe: (delta: 1 | -1) => void;
   poolSize: number;
+  isActive: boolean;
 }) {
-  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
+  const touchStartRef = useRef<{ x: number; y: number; t: number } | null>(null);
+  const [dragDx, setDragDx] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const [showHint, setShowHint] = useState(false);
   const realPhotos =
     card.photos && card.photos.length > 0
       ? card.photos
@@ -241,9 +246,36 @@ function PhotoCard({
   const total = photos.length;
   const idx = total > 0 ? cycleIdx % total : 0;
   const current = photos[idx];
+  const prevPhoto = total > 1 ? photos[(idx - 1 + total) % total] : undefined;
+  const nextPhoto = total > 1 ? photos[(idx + 1) % total] : undefined;
+
+  // Phase 72.5 (2026-07-05): first-time-visitor swipe hint. Shakes the
+  // stack ~10px right→left→center once when this photo card first
+  // becomes active, then stops forever (localStorage). Skipped for
+  // single-photo listings and for keyboard/desktop users (no hover on
+  // the touch path).
+  useEffect(() => {
+    if (!isActive || total <= 1) return;
+    if (typeof window === 'undefined') return;
+    try {
+      if (window.localStorage.getItem('vicinity:photo-swipe-hint') === '1') return;
+      window.localStorage.setItem('vicinity:photo-swipe-hint', '1');
+    } catch {
+      // localStorage may throw in private mode — just skip the hint.
+      return;
+    }
+    setShowHint(true);
+    const t = window.setTimeout(() => setShowHint(false), 1400);
+    return () => window.clearTimeout(t);
+  }, [isActive, total]);
 
   const goPrev = () => onSwipe(-1);
   const goNext = () => onSwipe(1);
+
+  // Segmented indicator: 1 dash per photo, current fully lit, others faded.
+  // Sits at the top of the card (mirrors the community-video carousel
+  // style — Phase 45.24). `← swipe →` chip removed; the dashes are the
+  // affordance.
 
   return (
     <section
@@ -255,21 +287,65 @@ function PhotoCard({
         onTouchStart={(e) => {
           if (e.touches.length !== 1) return;
           const t = e.touches[0];
-          if (t) touchStartRef.current = { x: t.clientX, y: t.clientY };
+          if (t) {
+            touchStartRef.current = { x: t.clientX, y: t.clientY, t: performance.now() };
+          }
+        }}
+        onTouchMove={(e) => {
+          const start = touchStartRef.current;
+          if (!start) return;
+          const t = e.touches[0];
+          if (!t) return;
+          const dx = t.clientX - start.x;
+          const dy = t.clientY - start.y;
+          // Only start dragging horizontally once the gesture is clearly
+          // horizontal — otherwise let the vertical snap-scroll take it.
+          if (!isDragging && Math.abs(dx) > 8 && Math.abs(dx) > Math.abs(dy) * 1.2) {
+            setIsDragging(true);
+          }
+          if (isDragging || (Math.abs(dx) > 8 && Math.abs(dx) > Math.abs(dy))) {
+            // Rubber-band at the ends.
+            const width = e.currentTarget.clientWidth || 1;
+            let capped = dx;
+            if (total <= 1) capped = dx * 0.25;
+            setDragDx(capped);
+            // Prevent the vertical snap scroll from stealing horizontal
+            // gestures while we're clearly panning left/right.
+            if (Math.abs(dx) > 20) e.stopPropagation();
+          }
         }}
         onTouchEnd={(e) => {
           const start = touchStartRef.current;
           touchStartRef.current = null;
+          const wasDragging = isDragging;
+          setIsDragging(false);
+          setDragDx(0);
           if (!start) return;
           const t = e.changedTouches[0];
           if (!t) return;
           const dx = t.clientX - start.x;
           const dy = t.clientY - start.y;
-          if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+          const dt = Math.max(1, performance.now() - start.t);
+          const velocity = dx / dt; // px per ms
+          const width = (e.currentTarget as HTMLElement).clientWidth || 1;
+          const distanceThreshold = width * 0.25;
+          const flick = Math.abs(velocity) > 0.4;
+          const horizontal = Math.abs(dx) > Math.abs(dy) * 1.2;
+          if (
+            (wasDragging || horizontal) &&
+            total > 1 &&
+            (Math.abs(dx) > distanceThreshold || flick) &&
+            horizontal
+          ) {
             e.preventDefault();
             e.stopPropagation();
             onSwipe(dx < 0 ? 1 : -1);
           }
+        }}
+        onTouchCancel={() => {
+          touchStartRef.current = null;
+          setIsDragging(false);
+          setDragDx(0);
         }}
       >
         {current && (
@@ -280,31 +356,79 @@ function PhotoCard({
             className="pointer-events-none absolute inset-0 hidden h-full w-full scale-110 object-cover opacity-60 blur-2xl md:block"
           />
         )}
-        {current ? (
-          <img
-            src={current}
-            alt={`${card.listing.address} — ${idx + 1} of ${total}`}
-            className="relative h-full w-full object-contain"
-          />
-        ) : (
-          <div className="flex h-full w-full items-center justify-center text-cream/40 text-sm">
-            No photo
-          </div>
-        )}
+        {/* Drag-follow stack: prev on the left, current in the middle,
+         * next on the right; translated together by dragDx while the
+         * finger is down, then springs back / advances on release. */}
+        <div
+          className="relative flex h-full w-full items-stretch"
+          style={{
+            transform: `translate3d(${
+              (isDragging ? dragDx : 0) + (showHint ? -12 : 0)
+            }px, 0, 0)`,
+            transition: isDragging
+              ? 'none'
+              : showHint
+                ? 'transform 300ms cubic-bezier(.4,0,.2,1)'
+                : 'transform 260ms cubic-bezier(.2,.8,.2,1)',
+          }}
+        >
+          {prevPhoto && (
+            <img
+              src={prevPhoto}
+              alt=""
+              aria-hidden="true"
+              className="-left-full pointer-events-none absolute inset-y-0 h-full w-full object-contain"
+            />
+          )}
+          {current ? (
+            <img
+              src={current}
+              alt={`${card.listing.address} — ${idx + 1} of ${total}`}
+              className="relative h-full w-full flex-shrink-0 object-contain"
+            />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center text-cream/40 text-sm">
+              No photo
+            </div>
+          )}
+          {nextPhoto && (
+            <img
+              src={nextPhoto}
+              alt=""
+              aria-hidden="true"
+              className="-right-full pointer-events-none absolute inset-y-0 h-full w-full object-contain"
+            />
+          )}
+        </div>
       </div>
 
       <div className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-black/70 via-black/30 to-transparent" />
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-72 bg-gradient-to-t from-black/85 via-black/50 to-transparent" />
 
-      {/* Photo counter — top-left, mirrors the source overlay slot the
-       * video card uses. Hidden when there's a single photo. */}
-      {poolSize > 1 && (
-        <div className="absolute top-16 left-5 rounded-lg border border-cream/20 bg-ink/60 px-3 py-2 backdrop-blur">
-          <div className="font-medium text-cream/90 text-xs tabular-nums">
-            {idx + 1} / {total}
+      {/* Phase 72.5 (2026-07-05): segmented dashed progress indicator.
+       * Replaces the old "N / M   ← SWIPE →" pill (too easy to miss,
+       * see-only-once affordance). One dash per photo, current fully
+       * lit cream, others faded — mirrors CommunityCarousel's top
+       * progress bar so the swipe gesture reads consistently across
+       * community-video and photo-listing feeds. */}
+      {poolSize > 1 && total > 1 && (
+        <>
+          <div className="pointer-events-none absolute inset-x-16 top-6 z-10 flex gap-1">
+            {photos.map((p, i) => (
+              <div
+                key={`${p}-prog`}
+                className={`h-0.5 flex-1 rounded-full transition-colors ${
+                  i === idx ? 'bg-cream' : 'bg-cream/25'
+                }`}
+              />
+            ))}
           </div>
-          <div className="mt-1 text-[10px] text-cream/40 uppercase tracking-wider">← swipe →</div>
-        </div>
+          {/* Compact tabular counter — sits under the dashes, tabular-nums
+           * so digits don't jitter as idx advances. */}
+          <div className="pointer-events-none absolute top-8 right-5 z-10 font-medium text-[11px] text-cream/70 tabular-nums">
+            {String(idx + 1).padStart(2, '0')} / {String(total).padStart(2, '0')}
+          </div>
+        </>
       )}
 
       {/* Desktop-only left/right arrows. Mobile uses swipe. */}
@@ -1125,6 +1249,7 @@ export function BrowseFeed({
                 cycleIdx={cardCycle}
                 cardRef={(el) => setCardRef(idx, el)}
                 poolSize={poolFor(card, cardSource)}
+                isActive={idx === activeIndex}
                 onSwipe={(delta) => {
                   const pool = poolFor(card, cardSource);
                   if (pool <= 1) return;

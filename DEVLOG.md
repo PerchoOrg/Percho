@@ -2,6 +2,71 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-07-05 — Phase 72.5: photo swipe polish (indicator + drag + bug fix)
+
+### Trigger
+Owner (screenshots): "两个连续的 listing feed，都是含有多个照片的 feed，没有视频，几个问题
+- 4/9 swipe 在左上角不够明显 做成虚线风格的 跟多个 community 视频可以左右滑一样 并且滑动的感觉很生硬 做的更有交互一点
+- 第二个 listing 也是多照片类型但是没有这个 swipe 选项 bug 要 fix"
+
+### Root cause (bug)
+Photo-only listings enter the swipe feed via two loaders that produced
+different `BrowseCard` shapes:
+- `/browse` grid → `/browse/feed?start=<id>` uses `fetchBrowseCards()`
+  in `lib/feed/browse-cards.ts`. It queried `listing_photos` for the
+  hero-photo fallback but only wrote `heroPhotoUrl` — never `photos[]`.
+- `/v/[agent]/[slug]` share URL uses `buildListingCards()` in
+  `lib/listing-feed/load.ts:231` and does fill `photos[]`.
+
+`PhotoCard` in `BrowseFeed.tsx` reads `poolFor(card, 'hero')` which
+returns `Math.max(1, card.photos?.length ?? 1)`. Grid entries got `1`,
+so `poolSize > 1` gated the counter and swipe out — user saw a single
+photo with no indicator. Alpharetta listing (opened via share link)
+worked; Cumming/Melrose listing (opened from the grid) didn't. Same
+DB rows, different loader.
+
+### Actions
+1. `lib/feed/browse-cards.ts`: build `photosByListing` map from the
+   already-fetched `listingPhotos` and set `card.photos` for photo-only
+   cards, matching `buildListingCards`. No extra query.
+2. `app/(public)/browse/_components/BrowseFeed.tsx` — `PhotoCard`
+   rewrite:
+   - Replaced the "N / M   ← SWIPE →" pill with a segmented dashed
+     progress bar at the top (mirrors `CommunityCarousel` Phase 45.24)
+     plus a compact zero-padded counter (`04 / 09`) in the top-right.
+     The old pill was too easy to miss and the "← swipe →" text was
+     redundant next to the actual swipeable stack.
+   - Drag-follow: `onTouchMove` now sets a live `dragDx` state and the
+     photo stack (prev / current / next, prev and next absolutely
+     positioned at ±100%) translates in real time. Release commits on
+     distance ≥ 25% width OR flick velocity > 0.4 px/ms; otherwise
+     springs back with a `cubic-bezier(.2,.8,.2,1)` 260ms transition.
+     Vertical snap-scroll still wins if the gesture is more vertical
+     than horizontal.
+   - First-visit hint: on the first photo card that becomes active in
+     a session, the stack shakes ~12px left once, gated by
+     `localStorage['vicinity:photo-swipe-hint']`. Skipped for
+     single-photo listings and for private-mode users where
+     localStorage throws.
+   - Passes `isActive={idx === activeIndex}` from the parent so the
+     hint effect only fires for the currently-visible card.
+
+### Verification
+- `npx tsc --noEmit` clean.
+- `npm run build` clean (Next 15 production build).
+- Not yet browser-verified; owner will smoke on Vercel preview.
+
+### Learnings
+- Two loaders producing the same client-side shape need to stay in
+  sync. `buildListingCards` and `fetchBrowseCards` both feed
+  `PhotoCard`; a photo-carousel field only wired in one of them is a
+  latent bug that shows up whichever entry point is exercised first.
+  Consider consolidating photo projection into a shared helper next
+  time this diverges.
+
+### Next steps
+- After preview verification, merge to main and update RELEASE.md.
+
 ## 2026-07-05 — Phase 72.2: scope inactive-community visibility to owner
 
 ### Trigger

@@ -220,8 +220,12 @@ async function assembleCards(
     if (!heroByListing.has(v.listing_id)) heroByListing.set(v.listing_id, v);
   }
   const heroPhotoByListing = new Map<string, ListingPhotoRow>();
+  const photosByListing = new Map<string, ListingPhotoRow[]>();
   for (const p of listingPhotos) {
     if (!heroPhotoByListing.has(p.listing_id)) heroPhotoByListing.set(p.listing_id, p);
+    const arr = photosByListing.get(p.listing_id) ?? [];
+    arr.push(p);
+    photosByListing.set(p.listing_id, arr);
   }
   const agentsById = new Map(agents.map((a) => [a.id, a] as const));
   const communitiesById = new Map(communities.map((c) => [c.id, c] as const));
@@ -300,6 +304,16 @@ async function assembleCards(
         externalUrl: hero?.external_url ?? null,
       },
       heroPhotoUrl: hero ? undefined : photoPublicUrl((heroPhoto as ListingPhotoRow).storage_path),
+      // Phase 72.5 (2026-07-05): fill full photo carousel for photo-only
+      // listings so PhotoCard's swipe indicator shows N/N and horizontal
+      // swipe cycles through every photo. Prior to this the grid loader
+      // only set `heroPhotoUrl`, so listings entered via `/browse` had a
+      // total of 1 (indicator hidden, swipe no-op) while the same listing
+      // entered via `/v/[agent]/[slug]` (buildListingCards) worked. Order
+      // matches `listing_photos.sort_order` (query above).
+      photos: hero
+        ? undefined
+        : (photosByListing.get(l.id) ?? []).map((p) => photoPublicUrl(p.storage_path)),
       // Phase 60 (2026-06-26): grid thumbnail honours the agent's
       // explicit `cover_url`. Grid consumers prefer this over the
       // mediaKind-derived hero. We fall through to undefined when

@@ -2,6 +2,15 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.72.5 — Photo swipe polish (2026-07-05)
+
+### 🐛 Bug Fixes
+- **Photo listings opened from the grid now show the photo counter and swipe correctly.** Some photo-only listings (like the Cumming home) had no counter and swiping did nothing when opened from `/browse`. The same listing opened via a share link worked — two different loaders were producing different card shapes. Now consistent everywhere.
+
+### ✨ Improved
+- **Redesigned photo counter.** The old "4 / 9   ← SWIPE →" pill in the top-left is replaced by a slim segmented progress bar across the top of the photo (one dash per photo, current one lit) plus a compact `04 / 09` counter in the top-right. Reads at a glance and matches the community-videos carousel style.
+- **Photo swipe now feels alive.** The photo follows your finger as you drag, with a light rubber-band on the edges. Release with any decent flick — or drag past a quarter of the screen — and it snaps to the next photo; otherwise it springs back. First time you open a multi-photo listing, the stack does a quick shake to hint that it swipes.
+
 ## v0.72.2 — Your drafts are yours only (2026-07-05)
 
 ### 🔒 Fixed
