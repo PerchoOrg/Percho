@@ -2,6 +2,10 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.71.8 — 2026-07-06
+
+- **Media tab 里能看出哪些 listing 有横版**:owner "如果有横版 要标记一下 让agent知道"。之前 71.7 上线双方向视频后,agent 在 dashboard 看到的还是一个视频卡片,没法判断这个 listing 是不是已经生成了横版。现在:视频卡片标题旁边、Cover badge 旁边多一个蓝色的小标 **Landscape**(hover 有英文说明)。只有真的生成过横版才显示,老 listing / 竖片为主的 listing 不显示。轮询期间横版渲染完毕后,标签会自动出现,不需要刷新页面。
+
 ## v0.71.7 — 2026-07-06
 
 - **横向照片 listing 出全屏横版视频**: owner "自动生成的视频是竖屏的 如果照片是横着 那结果上下就会空着 不好 有没有解决方案"。之前所有自动视频都渲染成竖屏 1080x1920,横向房源照片被 blur letterbox 塞进去,上下有一大片模糊留白,画面利用率低。现在:

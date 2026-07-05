@@ -100,7 +100,7 @@ export default async function EditListingPage({
   // biome-ignore lint/suspicious/noExplicitAny: stub generated types
   const { data: videosRaw } = (await (supabase as any)
     .from('listing_videos')
-    .select('id, cf_video_id, kind, title, status, sort_order')
+    .select('id, cf_video_id, cf_video_id_landscape, kind, title, status, sort_order')
     .eq('listing_id', listing.id)
     .order('sort_order', { ascending: true })
     .order('created_at', { ascending: true })) as { data: ListingVideoRow[] | null };

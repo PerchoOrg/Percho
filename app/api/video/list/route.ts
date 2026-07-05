@@ -28,12 +28,13 @@ export async function GET(req: Request) {
   if (listingId) {
     const { data, error } = (await supabase
       .from('listing_videos')
-      .select('id, cf_video_id, kind, title, status, created_at')
+      .select('id, cf_video_id, cf_video_id_landscape, kind, title, status, created_at')
       .eq('listing_id', listingId)
       .order('created_at', { ascending: false })) as {
       data: Array<{
         id: string;
         cf_video_id: string;
+        cf_video_id_landscape: string | null;
         kind: string;
         title: string | null;
         status: string;
