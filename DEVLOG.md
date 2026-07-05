@@ -2,6 +2,29 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## Phase 71.12 — Fullscreen: object-cover for edge-to-edge, remove always-on play indicator, hide caption card (2026-07-06)
+
+Owner 附截图:"点击全屏后长这个样子 视频还是没有拉满屏幕 播放键一直在"。
+
+看图确认三个问题:
+1. **视频没拉满** — iPhone 长宽比 ≈ 2.16:1,rotate 后的 100vw × 100vh box 里放 16:9 (=1.78:1) 视频用 `object-contain` 必然上下留黑边(数学:16:9 塞进 2.16:1 box → 上下各 8.7% 黑边)。
+2. **播放键一直在** — 71.10 加的"横片全屏 fullscreen 时中心播放键常驻"设计错了,owner 打回。
+3. **底部 CaptionCard**(price/address/agent)在 immersive fullscreen overlay 里还在显示,喧宾夺主。
+
+**决策**:
+- rotate box 里 `object-contain` → `object-cover` —— 视频铺满,轻微裁边(≤8% 单侧)。房产视频广角平移,边缘可裁性远大于电影/竖屏内容。
+- 中心播放控件恢复 71.9 之前的 `paused && shouldMount` 条件,不再绑 fullscreen。
+- fullscreen 时不渲染 `<CaptionCard>` —— 沉浸模式视频独占,X 关闭后回来 caption 自然出现。
+
+**Actions** (`app/(public)/browse/_components/BrowseFeed.tsx`):
+- 视频 className:`object-contain` → `object-cover`;landscape viewport 变体加 `landscape:object-contain`(iPad/desktop 保留原 letterbox 行为)。
+- 中心播放圆:condition 回到 `paused && shouldMount`,删除 pause glyph 分支。
+- CaptionCard:包一层 `!isFullscreen && (...)`。
+
+**Verify**: tsc + build clean。
+
+---
+
 ## Phase 71.11 — Fullscreen button anchored to landscape frame edge, not viewport bottom (2026-07-06)
 
 Owner: "full screen 按键放在竖的视频里的真实视频的下方 横视频和黑色背景交界处下方 不是整个页面的下方"。

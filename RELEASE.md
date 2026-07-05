@@ -2,6 +2,13 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.71.12 — 2026-07-06
+
+### 🐛 Bug Fixes
+- Fullscreen horizontal video now truly fills the phone screen edge-to-edge (previously left thin black bars on tall phones).
+- Removed the always-visible play button that was overlaying the fullscreen video — the play indicator now only appears when the video is paused, matching the rest of the feed.
+- Property price / address / agent card no longer show over the video while in fullscreen; they reappear when you exit fullscreen.
+
 ## v0.71.11 — 2026-07-06
 
 ### ✨ Improvements
