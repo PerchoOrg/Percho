@@ -2,6 +2,10 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.74.2 — 2026-07-05
+
+Caption 微调:price 从 30px 降到 26px(不晃眼);address 和 city/state 合并成一行 `7920 NE 26th St Medina, WA`;新增 description 前 40 字符 preview + `… more` toggle,展开走 bottom sheet。
+
 ## v0.74.1 — 2026-07-05
 
 Feed 上的 caption 从毛玻璃卡换成沉浸式 pure-text — 不再有边框、背景、阴影卡。第一行 `$8,750,000` 完整数字加粗(不再 `$8.75M`);第二行 `bd · ba · sqft`;第三行街道;第四行 city/state。文本靠双层 shadow 保对比度。

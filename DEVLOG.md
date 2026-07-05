@@ -2,6 +2,22 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-07-05 — Phase 74.2: caption tuning (price 26px, address one-line, desc preview)
+
+### Trigger
+Owner 手机看 74.1 后:"price感觉有点晃眼睛;第三行按照这个格式 7920 NE 26th St Medina, WA 98039;第四行留description前40字符再加more"。
+
+### Change
+`CaptionCard.tsx`:
+- Price 30 → 26px(依然 bold tabular-nums,晃眼投诉)
+- Address + city/state 合并成**一行**:`{address} {city}, {state}` —— schema 无 zip 字段,不带 98039
+- 新第四行:`firstDescriptionLine()` 取 description 首段前 40 字符(在最后空格断词),后接 `… more` 按钮 —— tap 弹 sheet
+- 无 description 的 listing fallback 到旧 "More ↑" chip
+- Sheet 里 city/state 也合并进 address 一行(和 folded 态统一)
+
+### Verification
+`tsc --noEmit` clean,`next build` green。
+
 ## 2026-07-05 — Phase 74.1: caption immersive redesign (Redfin-style)
 
 ### Trigger

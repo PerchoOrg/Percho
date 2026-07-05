@@ -1,20 +1,13 @@
 'use client';
 
 /**
- * CaptionCard — sits on top of the photo/video with no card chrome
- * (immersive), then opens a light bottom sheet with the full details.
+ * CaptionCard — immersive text overlay + light bottom sheet.
  *
- * Phase 74.1 (2026-07-05): owner "feed 里不要这个框 要嵌入 要沉浸".
- * Redesigned per Redfin listing screenshot supplied by owner:
- *   Line 1 — full price digits ($8,750,000), NOT abbreviated M/K, bold.
- *   Line 2 — bd · ba · sqft.
- *   Line 3 — address (street), then city/state on line 4.
- * All three lines get a `drop-shadow` so text stays legible over any
- * hero frame; no floating card, no border, no backdrop-blur.
- *
- * "More ↑" opens a light bottom sheet (surface #FBF8F3, ink text
- * ~ 15.9:1 AAA) with the description, nearby schools/POIs, and a
- * plain agent link (no fake brokerage line).
+ * Phase 74.2 (2026-07-05): owner tuning after 74.1 landed.
+ *   - Price 30 -> 26px, "有点晃眼睛"
+ *   - Merge address + city/state into ONE line: "7920 NE 26th St Medina, WA"
+ *   - Line 4: first ~40 chars of description + "...more" toggle
+ * (schema has no zip -> we omit the trailing 98039 from owner's example.)
  */
 
 import Link from 'next/link';
@@ -35,10 +28,21 @@ type Agent = { slug: string; name: string };
 type School = { name: string; grades: string | null; rating: number | null };
 type Poi = { name: string; distance_text: string | null };
 
-/** Full digits, e.g. 8_750_000 -> "$8,750,000". No M/K abbreviation. */
+const DESCRIPTION_PREVIEW_CHARS = 40;
+
 function formatPriceFull(n: number | null): string {
   if (n == null) return '';
   return `$${n.toLocaleString('en-US')}`;
+}
+
+function firstDescriptionLine(paragraphs: string[]): string {
+  const raw = paragraphs.find((p) => p.trim().length > 0);
+  if (!raw) return '';
+  const collapsed = raw.replace(/\s+/g, ' ').trim();
+  if (collapsed.length <= DESCRIPTION_PREVIEW_CHARS) return collapsed;
+  const cut = collapsed.slice(0, DESCRIPTION_PREVIEW_CHARS);
+  const lastSpace = cut.lastIndexOf(' ');
+  return (lastSpace > 20 ? cut.slice(0, lastSpace) : cut).trimEnd();
 }
 
 export function CaptionCard({
@@ -54,6 +58,7 @@ export function CaptionCard({
 }) {
   const [open, setOpen] = useState(false);
   const hasDescription = listing.description.length > 0;
+  const preview = firstDescriptionLine(listing.description);
   const hasSchools = (schools?.length ?? 0) > 0;
   const hasPois = (pois?.length ?? 0) > 0;
 
@@ -74,6 +79,13 @@ export function CaptionCard({
     .filter(Boolean)
     .join(' · ');
 
+  const addressLine = `${listing.address} ${listing.city}, ${listing.state}`.trim();
+
+  const openSheet = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setOpen(true);
+  };
+
   return (
     <>
       {/* Immersive caption — no card, no border, just text with a strong
@@ -86,31 +98,40 @@ export function CaptionCard({
           textShadow: '0 2px 8px rgba(0,0,0,0.7), 0 1px 2px rgba(0,0,0,0.5)',
         }}
       >
-        <div className="font-bold text-[30px] leading-none tracking-tight tabular-nums">
+        <div className="font-bold text-[26px] leading-none tracking-tight tabular-nums">
           {formatPriceFull(listing.price)}
         </div>
         <div className="mt-1.5 font-semibold text-[15px] leading-snug">
           {specs}
         </div>
         <div className="mt-1 font-semibold text-[15px] leading-snug">
-          {listing.address}
+          {addressLine}
         </div>
-        <div className="font-medium text-[13px] text-cream/85 leading-snug">
-          {listing.city}, {listing.state}
-        </div>
-
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            setOpen(true);
-          }}
-          className="mt-2 inline-flex items-center gap-1 font-semibold text-[13px] text-cream/95 hover:text-cream"
-          aria-haspopup="dialog"
-          aria-expanded={open}
-        >
-          More <span aria-hidden>↑</span>
-        </button>
+        {hasDescription && preview.length > 0 && (
+          <div className="mt-1.5 text-[13px] text-cream/95 leading-snug">
+            <span>{preview}</span>
+            <button
+              type="button"
+              onClick={openSheet}
+              className="ml-1 font-semibold text-cream/95 hover:text-cream"
+              aria-haspopup="dialog"
+              aria-expanded={open}
+            >
+              … more
+            </button>
+          </div>
+        )}
+        {(!hasDescription || preview.length === 0) && (
+          <button
+            type="button"
+            onClick={openSheet}
+            className="mt-2 inline-flex items-center gap-1 font-semibold text-[13px] text-cream/95 hover:text-cream"
+            aria-haspopup="dialog"
+            aria-expanded={open}
+          >
+            More <span aria-hidden>↑</span>
+          </button>
+        )}
       </div>
 
       {open && (
@@ -153,10 +174,7 @@ export function CaptionCard({
                 {specs}
               </div>
               <div className="mt-2 font-semibold text-[17px] leading-snug">
-                {listing.address}
-              </div>
-              <div className="mt-0.5 font-medium text-[15px] text-black/65 leading-snug">
-                {listing.city}, {listing.state}
+                {addressLine}
               </div>
 
               {hasDescription && (
