@@ -2,6 +2,11 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.74.17 — 2026-07-06
+
+### 🐛 Bug Fixes
+- **Landscape videos now play as landscape from the start of the feed, and tapping fullscreen no longer causes any flash or transition artifact.** Previously the feed played a portrait companion of the same video and swapped to the landscape source only when you tapped fullscreen — that source-swap window was the root cause of every 74.8-74.16 regression (black frame, "small video with play button", overlapping thumbnails, etc). This release lets a single landscape video handle both views: cards with a landscape source play landscape in the vertical feed with letterbox top/bottom (per the object-contain visual rule), and tapping fullscreen just rotates the same video element to fill the screen — no HLS re-attach, no black gap, no overlays. Portrait-only cards keep their existing behavior with no fullscreen button. All the 74.13-74.16 workarounds have been removed.
+
 ## v0.74.15 — 2026-07-06
 
 ### 🐛 Bug Fixes
