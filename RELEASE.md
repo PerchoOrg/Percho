@@ -2,6 +2,11 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.74.7 — 2026-07-06
+
+### 🐛 Bug Fixes
+- **Vertical feeds no longer flash a black screen with a small video + play button on first swipe.** Affected all vertical-swipe feeds — the main `/browse` feed, community video feed (`/c/[slug]/feed`), and the community listings carousel. Symptom was most visible the first time a card came on-screen: a placeholder tile with the system play glyph would flicker for a fraction of a second, then a black screen briefly, then the video would start. Root cause was iOS Safari's default behavior for the video `poster` attribute — the browser overlays a big system play button on it and reveals the black background while the video decodes its first frame. Replaced the `poster` attribute across all vertical feeds with an image overlay that stays visible until the first real frame paints, mirroring the fix v0.74.3 shipped for the horizontal community carousel.
+
 ## v0.74.6 — 2026-07-06
 
 ### 🐛 Bug Fixes

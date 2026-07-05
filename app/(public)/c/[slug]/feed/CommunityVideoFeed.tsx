@@ -119,6 +119,11 @@ function VideoCard({
   const videoElRef = useRef<HTMLVideoElement | null>(null);
   const hlsRef = useRef<Hls | null>(null);
   const [paused, setPaused] = useState(true);
+  // Phase 74.7 (skill ref §1): poster-attribute anti-pattern. See
+  // BrowseFeed 74.7 comment. Overlay a poster <img> until first
+  // real frame paints, kill <video poster=> to prevent iOS Safari
+  // from flashing its system big-play placeholder before HLS decodes.
+  const [hasFirstFrame, setHasFirstFrame] = useState(false);
 
   let poster: string | null = null;
   try {
@@ -132,6 +137,9 @@ function VideoCard({
     if (!shouldMount) return;
     const el = videoElRef.current;
     if (!el) return;
+
+    // Phase 74.7: hide <video> layer until first frame paints on new src.
+    setHasFirstFrame(false);
 
     if (hlsRef.current) {
       hlsRef.current.destroy();
@@ -207,6 +215,21 @@ function VideoCard({
     v.muted = muted;
   }, [muted]);
 
+  // Phase 74.7 (skill ref §1): reveal <video> layer only after the first
+  // real frame paints.
+  useEffect(() => {
+    if (!shouldMount) return;
+    const v = videoElRef.current;
+    if (!v) return;
+    const reveal = () => setHasFirstFrame(true);
+    v.addEventListener('playing', reveal);
+    v.addEventListener('loadeddata', reveal);
+    return () => {
+      v.removeEventListener('playing', reveal);
+      v.removeEventListener('loadeddata', reveal);
+    };
+  }, [shouldMount, video.cfVideoId]);
+
   const onTap = () => {
     const v = videoElRef.current;
     if (!v) return;
@@ -238,15 +261,29 @@ function VideoCard({
           />
         )}
         {shouldMount ? (
-          <video
-            ref={videoElRef}
-            poster={poster ?? undefined}
-            className="relative h-full w-full object-contain"
-            playsInline
-            muted
-            loop
-            preload="metadata"
-          />
+          <>
+            <video
+              ref={videoElRef}
+              className="relative h-full w-full object-contain"
+              style={{
+                opacity: hasFirstFrame ? 1 : 0,
+                transition: 'opacity 150ms',
+              }}
+              playsInline
+              muted
+              loop
+              preload="auto"
+            />
+            {/* Phase 74.7 (skill ref §1): poster overlay until first frame. */}
+            {poster && !hasFirstFrame && (
+              <img
+                src={poster}
+                alt=""
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-0 h-full w-full bg-black object-contain"
+              />
+            )}
+          </>
         ) : (
           poster && (
             <img

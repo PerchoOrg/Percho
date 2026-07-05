@@ -632,6 +632,20 @@ function Card({
     return () => cancelAnimationFrame(raf);
   }, [shouldMount]);
 
+  // Phase 74.7 (2026-07-06): poster-attribute anti-pattern (skill ref §1).
+  // Symptom: on first swipe to a card, iOS Safari flashes the <video>
+  // poster with the system big-play-button overlay for ~200-500ms before
+  // the video actually starts. Root cause: `<video poster=…>` renders
+  // that placeholder until `.play()` is called, and the browser's HLS
+  // pipeline needs 200-500ms to decode the first segment before the
+  // real frame paints. The CommunityCarousel already fixed this in 74.3
+  // via an <img> overlay + hasFirstFrame gate; BrowseFeed drifted.
+  //
+  // Fix: kill the `poster=` attribute, render the thumbnail as an
+  // absolute <img> overlay while !hasFirstFrame, reveal the <video>
+  // via opacity on `playing` / `loadeddata`. Reset the flag on src swap.
+  const [hasFirstFrame, setHasFirstFrame] = useState(false);
+
   // Phase 71.7: pick the effective CF uid based on fullscreen state.
   // `cfVideoIdLandscape` is optional; fullscreen is only enterable when set.
   const hasLandscape = !!sel.cfVideoIdLandscape;
@@ -700,6 +714,10 @@ function Card({
     if (!shouldMount) return;
     const video = videoRef.current;
     if (!video) return;
+
+    // Phase 74.7: hide <video> layer behind poster overlay until the
+    // first real frame paints on this new src.
+    setHasFirstFrame(false);
 
     // Tear down previous HLS attachment.
     if (hlsRef.current) {
@@ -826,6 +844,22 @@ function Card({
     };
   }, [setPaused, shouldMount]);
 
+  // Phase 74.7 (skill ref §1): reveal <video> layer only after the first
+  // real frame paints. `playing` fires post-decode+composite; `loadeddata`
+  // is a defensive fallback for paused-preload siblings.
+  useEffect(() => {
+    if (!shouldMount) return;
+    const v = videoRef.current;
+    if (!v) return;
+    const reveal = () => setHasFirstFrame(true);
+    v.addEventListener('playing', reveal);
+    v.addEventListener('loadeddata', reveal);
+    return () => {
+      v.removeEventListener('playing', reveal);
+      v.removeEventListener('loadeddata', reveal);
+    };
+  }, [shouldMount, effectiveCfId]);
+
   const onTap = () => {
     const v = videoRef.current;
     if (!v) return;
@@ -939,62 +973,85 @@ function Card({
           />
         )}
         {shouldMount ? (
-          <video
-            ref={videoRef}
-            poster={poster ?? undefined}
-            style={
-              // Phase 71.14: rotate-90 fullscreen — measure the visual
-              // viewport in JS and set width/height as raw pixels. Setting
-              // `width = viewportHeight` and `height = viewportWidth`
-              // BEFORE rotate-90 means after the CSS rotate lands the box
-              // occupies exactly viewportWidth × viewportHeight — zero
-              // black bars on any phone aspect ratio.
-              isFullscreen && hasLandscape && vp.w > 0
-                ? {
-                    position: 'fixed',
-                    top: '50%',
-                    left: '50%',
-                    width: `${vp.h}px`,
-                    height: `${vp.w}px`,
-                    // Phase 71.19 (2026-07-06): Tailwind Preflight injects
-                    // `img,video { max-width: 100%; height: auto; }` globally,
-                    // which was clamping our 781×428 rotate box back down to
-                    // the parent's 428px width — leaving a 428×428 <video>
-                    // and ~20% top/bottom black bars after rotate. Explicit
-                    // maxWidth/maxHeight/minWidth/minHeight none overrides
-                    // Preflight so our JS-measured px sizes actually win.
-                    maxWidth: 'none',
-                    maxHeight: 'none',
-                    minWidth: 0,
-                    minHeight: 0,
-                    transform: 'translate(-50%, -50%) rotate(90deg)',
-                    objectFit: 'cover',
-                    zIndex: 10000,
-                    // Phase 71.20: video was intercepting taps because its
-                    // `position:fixed` at zIndex 10000 sat above the parent
-                    // div that owns onTap. `pointer-events: none` lets taps
-                    // pass through to the transparent inner div below,
-                    // which has onClick={onTap} for pause/play. The X and
-                    // play glyph are separately positioned above with
-                    // their own hit boxes so they still receive clicks.
-                    pointerEvents: 'none',
-                  }
-                : undefined
-            }
-            className={
-              isFullscreen && hasLandscape
-                ? // Phase 71.14 (2026-07-06): styles are inline (see `style`
-                  // above). Keep className empty for the fullscreen branch
-                  // to avoid Tailwind's arbitrary-vw/vh utilities racing
-                  // with inline sizing.
-                  ''
-                : 'relative h-full w-full object-contain'
-            }
-            playsInline
-            muted
-            loop
-            preload="metadata"
-          />
+          <>
+            <video
+              ref={videoRef}
+              style={
+                // Phase 71.14: rotate-90 fullscreen — measure the visual
+                // viewport in JS and set width/height as raw pixels. Setting
+                // `width = viewportHeight` and `height = viewportWidth`
+                // BEFORE rotate-90 means after the CSS rotate lands the box
+                // occupies exactly viewportWidth × viewportHeight — zero
+                // black bars on any phone aspect ratio.
+                isFullscreen && hasLandscape && vp.w > 0
+                  ? {
+                      position: 'fixed',
+                      top: '50%',
+                      left: '50%',
+                      width: `${vp.h}px`,
+                      height: `${vp.w}px`,
+                      // Phase 71.19 (2026-07-06): Tailwind Preflight injects
+                      // `img,video { max-width: 100%; height: auto; }` globally,
+                      // which was clamping our 781×428 rotate box back down to
+                      // the parent's 428px width — leaving a 428×428 <video>
+                      // and ~20% top/bottom black bars after rotate. Explicit
+                      // maxWidth/maxHeight/minWidth/minHeight none overrides
+                      // Preflight so our JS-measured px sizes actually win.
+                      maxWidth: 'none',
+                      maxHeight: 'none',
+                      minWidth: 0,
+                      minHeight: 0,
+                      transform: 'translate(-50%, -50%) rotate(90deg)',
+                      objectFit: 'cover',
+                      zIndex: 10000,
+                      // Phase 71.20: video was intercepting taps because its
+                      // `position:fixed` at zIndex 10000 sat above the parent
+                      // div that owns onTap. `pointer-events: none` lets taps
+                      // pass through to the transparent inner div below,
+                      // which has onClick={onTap} for pause/play. The X and
+                      // play glyph are separately positioned above with
+                      // their own hit boxes so they still receive clicks.
+                      pointerEvents: 'none',
+                      // Phase 74.7 (skill ref §1): opacity gate — video stays
+                      // hidden behind the poster overlay below until the
+                      // first real frame paints (see reveal effect above).
+                      opacity: hasFirstFrame ? 1 : 0,
+                      transition: 'opacity 150ms',
+                    }
+                  : {
+                      // Phase 74.7 (skill ref §1): opacity gate — see above.
+                      opacity: hasFirstFrame ? 1 : 0,
+                      transition: 'opacity 150ms',
+                    }
+              }
+              className={
+                isFullscreen && hasLandscape
+                  ? // Phase 71.14 (2026-07-06): styles are inline (see `style`
+                    // above). Keep className empty for the fullscreen branch
+                    // to avoid Tailwind's arbitrary-vw/vh utilities racing
+                    // with inline sizing.
+                    ''
+                  : 'relative h-full w-full object-contain'
+              }
+              playsInline
+              muted
+              loop
+              preload="auto"
+            />
+            {/* Phase 74.7 (skill ref §1): poster overlay covers the <video>
+             * until the first real frame paints. Killing the `poster=` attr
+             * on <video> means iOS Safari never shows its system big-play
+             * placeholder. Layer sits above <video> (which is opacity:0)
+             * and is unmounted the moment hasFirstFrame flips true. */}
+            {poster && !hasFirstFrame && (
+              <img
+                src={poster}
+                alt=""
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-0 h-full w-full bg-black object-contain"
+              />
+            )}
+          </>
         ) : poster ? (
           <img
             src={poster}

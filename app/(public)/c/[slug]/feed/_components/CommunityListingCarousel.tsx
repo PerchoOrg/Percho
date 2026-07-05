@@ -355,6 +355,9 @@ function ListingSlide({
   // still drives autoplay when swiping to a new card, but a fresh visit
   // resets manuallyPaused so playback resumes.
   const [manuallyPaused, setManuallyPaused] = useState(false);
+  // Phase 74.7 (skill ref §1): poster-attribute anti-pattern. See
+  // BrowseFeed 74.7. Overlay poster <img> until first frame paints.
+  const [hasFirstFrame, setHasFirstFrame] = useState(false);
 
   const poster = useMemo(() => {
     let p: string | null = null;
@@ -373,6 +376,8 @@ function ListingSlide({
     if (!shouldMount) return;
     const v = ref.current;
     if (!v) return;
+    // Phase 74.7: hide <video> layer until first frame paints on new src.
+    setHasFirstFrame(false);
     if (hlsRef.current) {
       hlsRef.current.destroy();
       hlsRef.current = null;
@@ -399,6 +404,20 @@ function ListingSlide({
         hlsRef.current.destroy();
         hlsRef.current = null;
       }
+    };
+  }, [shouldMount, listing.heroCfVideoId]);
+
+  // Phase 74.7 (skill ref §1): reveal <video> only after first frame.
+  useEffect(() => {
+    if (!shouldMount) return;
+    const v = ref.current;
+    if (!v) return;
+    const reveal = () => setHasFirstFrame(true);
+    v.addEventListener('playing', reveal);
+    v.addEventListener('loadeddata', reveal);
+    return () => {
+      v.removeEventListener('playing', reveal);
+      v.removeEventListener('loadeddata', reveal);
     };
   }, [shouldMount, listing.heroCfVideoId]);
 
@@ -456,12 +475,25 @@ function ListingSlide({
           <video
             ref={ref}
             // biome-ignore lint/a11y/useMediaCaption: HLS source has no caption track.
-            poster={poster ?? undefined}
             className="relative h-full w-full bg-black object-contain"
+            style={{
+              opacity: hasFirstFrame ? 1 : 0,
+              transition: 'opacity 150ms',
+            }}
             playsInline
             loop
-            preload="metadata"
+            preload="auto"
           />
+          {/* Phase 74.7 (skill ref §1): poster overlay until first frame. */}
+          {poster && !hasFirstFrame && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={poster}
+              alt=""
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 h-full w-full bg-black object-contain"
+            />
+          )}
           {manuallyPaused && (
             <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
               <div className="flex h-16 w-16 items-center justify-center rounded-full bg-ink/55 text-cream backdrop-blur-md">
