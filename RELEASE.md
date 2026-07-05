@@ -2,6 +2,11 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.72.7 — Smoother photo swipe (2026-07-05)
+
+### ✨ Improved
+- **Photo swipe no longer stalls halfway.** After releasing your finger the swipe used to slow to a fixed speed for the second half of the animation — now it just uses your phone's native momentum from start to finish, and hard flicks can carry through multiple photos.
+
 ## v0.72.6 — Native photo swipe (2026-07-05)
 
 ### ✨ Improved

@@ -330,12 +330,21 @@ function PhotoCard({
        * us system momentum + edge bounce; `snap-x snap-mandatory` locks
        * every release onto a slide boundary; `overscroll-x-contain`
        * stops the swipe from chaining to the parent (which is the
-       * vertical feed scroll). Scrollbar hidden via utility. */}
+       * vertical feed scroll). Scrollbar hidden via utility.
+       *
+       * Phase 72.7 (2026-07-05): removed `scrollBehavior: 'smooth'`
+       * inline style — it forced every user-driven snap alignment
+       * through a 150ms constant CSS curve, which is what caused the
+       * "first half follows finger, second half resets to fixed
+       * speed" feel the owner reported. Smooth is now applied only
+       * inside `scrollTo({ behavior: 'smooth' })` for programmatic
+       * jumps (arrow buttons / keyboard). Also dropped `snap-always`
+       * on individual slides so momentum can naturally advance more
+       * than one slide on a hard flick. */}
       <div
         ref={scrollerRef}
         onScroll={onScroll}
         className="scrollbar-hide absolute inset-0 flex snap-x snap-mandatory overflow-x-auto overflow-y-hidden overscroll-x-contain"
-        style={{ scrollBehavior: 'smooth' }}
       >
         {total === 0 && (
           <div className="flex h-full w-full flex-shrink-0 snap-center items-center justify-center text-cream/40 text-sm">
@@ -345,7 +354,7 @@ function PhotoCard({
         {photos.map((src, i) => (
           <div
             key={`${src}-${i}`}
-            className="relative h-full w-full flex-shrink-0 snap-center snap-always"
+            className="relative h-full w-full flex-shrink-0 snap-center"
           >
             <img
               src={src}

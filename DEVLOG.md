@@ -2,6 +2,49 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-07-05 — Phase 72.7: fix "half-follow, half-reset" scroll snap feel
+
+### Trigger
+Owner: "已经好很多了 但是感觉手指滑动后有点卡顿 才到下一张 似乎是前半部分跟手指滑动的速度一样 过了一半又重制速度？要更丝滑."
+
+### Root cause
+Two CSS scroll-snap traps applied together in phase 72.6:
+
+1. **`style={{ scrollBehavior: 'smooth' }}` on the container.** This
+   forces *every* scroll — including the browser's native snap
+   alignment after a user's finger release — through the CSS smooth-
+   scroll curve (a fixed ~150ms cubic curve). Result: first half is
+   real touch tracking (no scrollBehavior applied while finger is
+   down), second half is the constant-speed CSS animation. That's
+   exactly the "过了一半又重制速度" symptom.
+2. **`snap-always` on individual slides.** With `snap-mandatory` +
+   `snap-always`, momentum from a hard flick is capped at one slide
+   even when the user clearly wanted to fly through several. Removes
+   the "flick to blast" mode that native carousels have.
+
+### Actions
+- Removed `style={{ scrollBehavior: 'smooth' }}` from the scroll
+  container. Programmatic `scrollTo({ behavior: 'smooth' })` calls
+  (arrow buttons / keyboard sync) still animate; user-driven scrolls
+  now use pure browser momentum + snap.
+- Dropped `snap-always` from slide `div`s (kept `snap-center`). Hard
+  flicks can now advance multiple slides — matches Instagram/Zillow.
+
+### Verification
+- `npx tsc --noEmit` clean.
+- `npm run build` clean.
+- Committed straight to main (single-line CSS fix, no risk).
+
+### Learnings
+- **`scroll-behavior: smooth` on a snap container is a trap.** It
+  overrides native release physics with a constant CSS curve. Only
+  use it as a per-call option in `scrollTo({ behavior })`, never as
+  a container-wide style.
+- **`snap-always` = no flick momentum.** Use it only when you *need*
+  every scroll to lock (e.g. a full-page vertical feed). Photo
+  carousels want `snap-mandatory` alone so momentum can carry across
+  boundaries.
+
 ## 2026-07-05 — Phase 72.6: native scroll-snap for photo carousel
 
 ### Trigger
