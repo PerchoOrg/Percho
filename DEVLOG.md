@@ -2,6 +2,18 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-07-05 — Phase 74.9: bottom sheet specs/address 去粗体 + Listed by 单行右下
+
+### Trigger
+Owner:"listing feed 点击more 第二行和第三行格式一致 不要粗体 最后的listed by 放在一行 放到右下角"。sheet 展开后 specs (15px medium) 和 address (17px medium) 字号+粗细 都不一致,owner 要两行同格式无粗体;底部 Listed by 之前是带 avatar 的 rounded card,占大块。
+
+### Change
+- `CaptionCard.tsx` sheet: specs `text-[15px] font-medium` → `text-[15px]`(去 medium);address `text-[17px] font-medium` → `text-[15px]`(降 17→15,去 medium)—— 和 description 15px `leading-relaxed` 完全对称
+- Listed by section:去 `<h3>` heading + avatar chip + rounded card,改 `flex justify-end` + 单行 link `Listed by <name>` 13px `text-black/60` 挂右下
+
+### Verification
+- tsc clean
+
 ## 2026-07-05 — Phase 74.8: feed folded caption 层次拉平到 description
 
 ### Trigger

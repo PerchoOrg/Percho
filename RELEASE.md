@@ -2,6 +2,10 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.74.9 — 2026-07-05
+
+- **Bottom sheet(点 more 弹的浮层)排版清理**:第二行 specs 和第三行 address 现在字号/粗细一致(15px regular),不再一个 medium 一个更粗;底部 "Listed by" 从 avatar chip 改成右下角单行链接 `Listed by <name>`,占位小很多。
+
 ## v0.74.8 — 2026-07-05
 
 - **Feed folded caption 第二/三行 15px → 13px**: owner "feed里除了价格粗体 其他都正常 第二和第三行字体可以再小点跟description一样"。specs / address 从 `text-[15px] font-medium` → `text-[13px]`(去 medium),与 description preview 完全对齐。价格 26px bold 保留。Bottom sheet 内不动(sheet 有背景对比,15/17px 保持可读)。

@@ -171,10 +171,10 @@ export function CaptionCard({
               </button>
             </div>
             <div className="flex-1 overflow-auto px-5 pt-4 pb-8">
-              <div className="font-medium text-[15px] leading-snug">
+              <div className="text-[15px] leading-snug">
                 {specs}
               </div>
-              <div className="mt-2 font-medium text-[17px] leading-snug">
+              <div className="mt-2 text-[15px] leading-snug">
                 {addressLine}
               </div>
 
@@ -227,18 +227,12 @@ export function CaptionCard({
                 </section>
               )}
 
-              <section className="mt-5">
-                <h3 className="font-semibold text-[12px] text-black/60 uppercase tracking-[0.06em]">
-                  Listed by
-                </h3>
+              <section className="mt-5 flex justify-end">
                 <Link
                   href={`/a/${agent.slug}`}
-                  className="mt-2 inline-flex items-center gap-3 rounded-2xl bg-black/[.04] px-3 py-2.5 hover:bg-black/[.06]"
+                  className="text-[13px] text-black/60 hover:text-black/80"
                 >
-                  <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#c4a584] font-semibold text-[14px] text-white">
-                    {(agent.name[0] ?? 'A').toUpperCase()}
-                  </span>
-                  <span className="font-semibold text-[15px]">{agent.name}</span>
+                  Listed by <span className="text-black/80">{agent.name}</span>
                 </Link>
               </section>
             </div>
