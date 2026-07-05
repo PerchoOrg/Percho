@@ -2,6 +2,28 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## Phase 71.9 — Fullscreen 横版视频转 90° 撑满竖屏 (2026-07-06)
+
+Owner: "点击全屏 视频还是竖着播放 并且周围的按键都没有了"。
+
+71.7 让全屏按钮切到 landscape uid 之后,视频 src 是 1920×1080 但容器还是手机竖屏视口(9:16),`object-contain` 把 16:9 塞进去,视频在中间只占一小条,上下巨大黑边 —— owner 感觉"视频还是竖着的"。这是同一个 letterbox 问题的镜像 —— 前次 phase 只解决了"竖屏视口播竖版",没解决"竖屏视口播横版"的显示物理约束。
+
+**根因物理约束**:phone 竖屏视口天然是 9:16;16:9 视频要在这个视口里做到"边到边",数学上必须旋转 90°(TikTok/YouTube 横视频全屏走的都是这条路)。
+
+**决策**:
+- 全屏 + 竖屏视口:视频 CSS `rotate-90 h-[100vw] w-[100vh]`(旋转前的 box 是 vh×vw,旋转后正好卡满 vw×vh 视口)—— 边到边填满,零黑边
+- 全屏 + 横屏视口(iPad 横放 / desktop):`landscape:` 变体撤销所有 rotate/w/h/translate,视频回到普通 `h-full w-full object-contain`
+- 用户提示:进全屏顶部弹一个"请把手机横过来"提示 pill,2.5s 后自动淡出;landscape 视口用 `landscape:hidden` 屏蔽这个提示
+
+**改动一处**:`app/(public)/browse/_components/BrowseFeed.tsx`
+- `<video>` 的 className 换成条件三元:`isFullscreen && hasLandscape` 时用长串 rotate/absolute-center + `landscape:` 撤销;否则原样 `object-contain`
+- 新 state `showRotateHint`,进入全屏时置 true,useEffect 挂 setTimeout 2.5s 清 false
+- 新 overlay:`absolute top-8 z-30 landscape:hidden`,pill + phone-rotate icon + `请把手机横过来`
+
+**踩过的坑**:第一版尝试转容器,连按钮/rail 一起转了很难看。改成只转 `<video>` 元素本身,overlay 和退出 X 按钮保持竖直;rail(like/save/share)在全屏时依然被 `fixed inset-0 z-[9999]` 盖住 —— 这是刻意的沉浸模式,不算 bug。
+
+**Verification**:tsc + build 干净。手机预期:portrait 竖着看 = 转 90° 视频占中央、需侧躺看;转横 = 视频立即变正、边到边填满。
+
 ## Phase 71.8 — Media tab 显示 Landscape badge (2026-07-06)
 
 Owner: "如果有横版 要标记一下 让agent知道"。

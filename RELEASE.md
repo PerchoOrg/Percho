@@ -2,6 +2,10 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.71.9 — 2026-07-06
+
+- **横版全屏真的横了**:owner "点击全屏 视频还是竖着播放 并且周围的按键都没有了"。71.7 全屏按钮虽然切到了横版 src,但手机竖屏视口把 16:9 视频塞在中间一小条,视觉上还是"竖屏播放上下留黑边"。这次改成:进全屏后视频转 90°、边到边填满整屏;顶部会短暂弹一个"请把手机横过来"提示。用户把手机横过来看画面立即变正、无黑边。iPad 横放 / desktop 视口自动免转,直接横放。周围的 like/save/share 按钮在全屏里被沉浸式覆盖是刻意的 —— 按 X 或 ESC 退出即可恢复。
+
 ## v0.71.8 — 2026-07-06
 
 - **Media tab 里能看出哪些 listing 有横版**:owner "如果有横版 要标记一下 让agent知道"。之前 71.7 上线双方向视频后,agent 在 dashboard 看到的还是一个视频卡片,没法判断这个 listing 是不是已经生成了横版。现在:视频卡片标题旁边、Cover badge 旁边多一个蓝色的小标 **Landscape**(hover 有英文说明)。只有真的生成过横版才显示,老 listing / 竖片为主的 listing 不显示。轮询期间横版渲染完毕后,标签会自动出现,不需要刷新页面。
