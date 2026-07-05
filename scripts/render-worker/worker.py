@@ -193,9 +193,8 @@ def build_overlay(listing: dict[str, Any], photo_count: int) -> dict[str, Any]:
     if state and state not in location_line:
         location_line = f"{location_line}, {state}" if location_line else state
 
-    # Overlay clips 2 and 3 (skip clip 1 — user wants the opener uncluttered).
-    # 1-indexed per generate.py; if there are fewer than 3 photos, cap the range.
-    show_on = [i for i in (2, 3) if i <= photo_count]
+    # No text overlays anywhere — user wants a fully clean video (Phase 71.5).
+    show_on: list[int] = []
 
     return {
         "price_display": format_price(listing.get("price")),

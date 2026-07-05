@@ -2,6 +2,11 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.71.5 — Fully text-free videos (2026-07-04)
+
+### 🎨 Improved
+- **Home tour videos now have zero text overlays anywhere.** The photo speaks for itself — no price, address, or specs painted onto any frame. Same photos + same Ken Burns motion + same random BGM, just clean.
+
 ## v0.71.4 — Clean opener frame (2026-07-04)
 
 ### 🎨 Improved

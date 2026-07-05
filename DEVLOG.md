@@ -2,6 +2,19 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-07-04 — Phase 71.5: Fully text-free videos
+
+### Trigger
+User: "视频第一页没有字了 但是后面几页还是有 你再查一下 视频里都不要字"
+
+Follow-up to 71.4 which only cleared clip 1. User wants **every clip** clean.
+
+### Change
+`worker.py::build_overlay` — `show_on_clips = []`. Empty list means `generate.py` never applies the listing overlay filter to any clip. All other overlay fields (price/specs/address/neighborhood) still populated so the JSON is valid, but they're unreachable.
+
+### Verification
+Local smoke render, vision AI on frames from clip 2 and clip 3 → both **zero text overlay** ✓ (clip 1 already verified in 71.4).
+
 ## 2026-07-04 — Phase 71.4: Clean opener frame
 
 ### Trigger
