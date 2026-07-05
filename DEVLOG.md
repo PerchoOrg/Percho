@@ -2,6 +2,31 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## Phase 71.13 — Fullscreen fill fix: dvw/dvh + auto-play on src swap (2026-07-06)
+
+Owner 附截图 + 反馈:"有进步 一边铺开了 另一边还没有 并且中间的播放键还一直在"。
+
+**Vision 报告**:phone top/bottom 各留大黑边(约 20-25% 高),left/right 铺满。视频占屏幕高度 ~50%,水平铺满,垂直没铺满。
+
+**根因 1(黑边)**:iOS Safari 的 `100vh` = LARGE viewport(URL 栏隐藏时的高度),但 `fixed inset-0` overlay sits inside the SMALL/dynamic viewport(URL 栏可见时)。rotate-90 视频宽度 = `100vh` ≈ 890px,但实际可见视口高度 ≈ 800px。数学上宽度小于视口高度 → rotate 后视频"高度"(=旋转前 width)不足 → 上下留黑边。
+
+**根因 2(播放键一直在)**:`fullscreen enter` → `effectiveCfId` 变 → HLS effect 重新 attachMedia + `.load()` → 视频进入 loading 状态,paused=true 由 tap 之外的地方保留。iOS Safari native HLS(canPlayType `apple.mpegurl` 分支)在 src 切换后需要等 `loadedmetadata` 才能可靠 `.play()`。原来的 play useEffect 虽在 `effectiveCfId` deps 里,但 fire 时视频还没 metadata,`.play()` 静默失败,没重试。
+
+**决策**:
+- vw/vh → dvw/dvh:动态视口单位,全屏 overlay 里精确匹配用户实际可见区。
+- 加专用 fullscreen play useEffect:enter fullscreen + effectiveCfId 变化时,监听 `loadedmetadata`(或 readyState≥1 立即),`.play()` 一次。cancel via return cleanup。
+
+**Actions** (`app/(public)/browse/_components/BrowseFeed.tsx`):
+- 视频 className:`h-[100vw] w-[100vh]` → `h-[100dvw] w-[100dvh]`。
+- 加 fullscreen-scoped play useEffect(loadedmetadata + readyState 双 gate)。
+- Reorder:`sel`/`hasLandscape`/`effectiveCfId` 挪到 ESC useEffect 之后、新 play useEffect 之前(依赖顺序)。
+
+**Verify**: tsc + build clean。
+
+**Learnings**: 在 iOS Safari 里,任何 `fixed inset-0` fullscreen overlay 里的 100vh/100vw 都要用 `dvh/dvw` 替换。native HLS src swap 需要 loadedmetadata gate 才能 reliable play。
+
+---
+
 ## Phase 71.12 — Fullscreen: object-cover for edge-to-edge, remove always-on play indicator, hide caption card (2026-07-06)
 
 Owner 附截图:"点击全屏后长这个样子 视频还是没有拉满屏幕 播放键一直在"。

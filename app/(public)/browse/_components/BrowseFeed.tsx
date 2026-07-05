@@ -575,6 +575,31 @@ function Card({
   const effectiveCfId =
     isFullscreen && sel.cfVideoIdLandscape ? sel.cfVideoIdLandscape : sel.cfVideoId;
 
+  // Phase 71.13 (2026-07-06): after entering fullscreen the src swaps to the
+  // landscape uid; iOS Safari's native HLS occasionally leaves the <video>
+  // paused after the load. Watch loadedmetadata once and issue a muted play
+  // so the centre play glyph doesn't stick around.
+  useEffect(() => {
+    if (!isFullscreen) return;
+    const v = videoRef.current;
+    if (!v) return;
+    let cancelled = false;
+    function tryPlay() {
+      if (cancelled || !v) return;
+      v.muted = true;
+      v.play().then(() => setPaused(false)).catch(() => {});
+    }
+    if (v.readyState >= 1) {
+      tryPlay();
+    } else {
+      v.addEventListener('loadedmetadata', tryPlay, { once: true });
+    }
+    return () => {
+      cancelled = true;
+      v.removeEventListener('loadedmetadata', tryPlay);
+    };
+  }, [isFullscreen, effectiveCfId, setPaused]);
+
   const isExternal = !!sel.externalUrl;
   let poster: string | null = null;
   if (isExternal) {
@@ -656,7 +681,11 @@ function Card({
   // Try with current mute state first; if browser blocks autoplay-with-sound
   // (no sticky activation), fall back to muted and signal parent to flip
   // the global mute state so the Sound button reflects reality.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: sel.cfVideoId triggers replay after source switch
+  // Phase 71.13 (2026-07-06): re-run when effectiveCfId flips too — entering
+  // fullscreen swaps the HLS source to the landscape uid; without this the
+  // <video> stays paused after the src attach and the centre play glyph
+  // sticks around.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: effectiveCfId triggers replay after source switch
   useEffect(() => {
     const v = videoRef.current;
     if (!v) return;
@@ -779,19 +808,20 @@ function Card({
               isFullscreen && hasLandscape
                 ? // Phase 71.9 (2026-07-06): landscape fullscreen on a portrait
                   // viewport = rotate the 16:9 video 90° so it fills the phone
-                  // screen edge-to-edge. Sized as (100vw × 100vh) BEFORE
-                  // rotation and then rotated around its centre — after the
-                  // rotate, the box lands exactly on the viewport with no
-                  // letterbox. On a landscape viewport (tablet horizontal or
-                  // desktop) the `landscape:` variants restore normal
-                  // orientation and the video just object-contains normally.
+                  // screen edge-to-edge.
                   //
-                  // Phase 71.12 (2026-07-06): `object-cover` (was
-                  // `object-contain`) so the 16:9 video stretches to fill the
-                  // rotated 100vw × 100vh box edge-to-edge on any phone
-                  // aspect ratio. Trades a tiny left/right crop for zero
-                  // black bars, which owner explicitly asked for.
-                  'absolute top-1/2 left-1/2 h-[100vw] w-[100vh] -translate-x-1/2 -translate-y-1/2 rotate-90 object-cover landscape:h-full landscape:w-full landscape:translate-x-0 landscape:translate-y-0 landscape:rotate-0 landscape:top-0 landscape:left-0 landscape:object-contain'
+                  // Phase 71.13 (2026-07-06): switched vw/vh → dvw/dvh.
+                  // On iOS Safari, `vh` refers to the LARGE viewport (as if
+                  // URL bar is hidden) but the fullscreen overlay
+                  // (`fixed inset-0`) sits inside the SMALL/dynamic viewport.
+                  // The mismatch left thin black bars on top/bottom of the
+                  // rotated video (its `w-[100vh]` was slightly bigger than
+                  // the actual viewport height, but the box `top-1/2 -
+                  // translate-y-1/2` centered it inside the smaller box, so
+                  // the video's rotated width fell short of edge). `dvw/dvh`
+                  // are the DYNAMIC viewport units — always match what the
+                  // user actually sees.
+                  'absolute top-1/2 left-1/2 h-[100dvw] w-[100dvh] -translate-x-1/2 -translate-y-1/2 rotate-90 object-cover landscape:h-full landscape:w-full landscape:translate-x-0 landscape:translate-y-0 landscape:rotate-0 landscape:top-0 landscape:left-0 landscape:object-contain'
                 : 'relative h-full w-full object-contain'
             }
             playsInline
