@@ -2,6 +2,23 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-07-05 — Phase 72.8: photo-swipe header aligned with CommunityCarousel
+
+### Trigger
+Owner (笑云) after 72.7 landed:"你仿照 listing feed 里的 community 视频里的格式,左上返回,右上技术,第二行才是虚线".
+
+### Symptom
+Photo card 之前 counter (`04 / 09` tick) 在 `top-8 right-5`, segmented progress 在 `top-6 inset-x-16` — 同一 vertical band 里两个东西叠着,读起来是"图片上的水印"而不是"header + progress"两层结构。CommunityCarousel(video swipe)用的是 pill 化 header + row2 progress 的 pattern,visual weight 完全不同。
+
+### Fix
+`BrowseFeed.tsx` PhotoCard progress/counter 段一并重写(单文件,~15 行):
+- Counter: tick → pill,`top-3 right-3 h-9 rounded-full border border-cream/20 bg-ink/55 px-3 backdrop-blur-md tabular-nums`,和 parent shell 上 `top-0 pt-3` 的 Back 按钮同高对齐,数字 `1 / 9`(去掉 zero-pad)
+- Progress: `inset-x-3 top-16 flex gap-1 h-0.5 rounded-full`,从 CommunityCarousel 抄过来的坐标
+- Fill rule: `i === idx`(只亮当前)→ `i <= idx`(累进),读作进度条
+
+### Verify
+`npx tsc --noEmit` clean · `npm run build` clean · 待真机验证 header/progress 视觉对齐
+
 ## 2026-07-05 — Phase 72.7: fix "half-follow, half-reset" scroll snap feel
 
 ### Trigger
