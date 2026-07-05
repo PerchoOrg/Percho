@@ -785,7 +785,13 @@ function Card({
                   // letterbox. On a landscape viewport (tablet horizontal or
                   // desktop) the `landscape:` variants restore normal
                   // orientation and the video just object-contains normally.
-                  'absolute top-1/2 left-1/2 h-[100vw] w-[100vh] -translate-x-1/2 -translate-y-1/2 rotate-90 object-contain landscape:h-full landscape:w-full landscape:translate-x-0 landscape:translate-y-0 landscape:rotate-0 landscape:top-0 landscape:left-0'
+                  //
+                  // Phase 71.12 (2026-07-06): `object-cover` (was
+                  // `object-contain`) so the 16:9 video stretches to fill the
+                  // rotated 100vw × 100vh box edge-to-edge on any phone
+                  // aspect ratio. Trades a tiny left/right crop for zero
+                  // black bars, which owner explicitly asked for.
+                  'absolute top-1/2 left-1/2 h-[100vw] w-[100vh] -translate-x-1/2 -translate-y-1/2 rotate-90 object-cover landscape:h-full landscape:w-full landscape:translate-x-0 landscape:translate-y-0 landscape:rotate-0 landscape:top-0 landscape:left-0 landscape:object-contain'
                 : 'relative h-full w-full object-contain'
             }
             playsInline
@@ -867,27 +873,10 @@ function Card({
         </>
       )}
 
-      {shouldMount && (paused || (isFullscreen && hasLandscape)) && (
+      {shouldMount && paused && (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
           <div className="flex h-20 w-20 items-center justify-center rounded-full bg-black/40 text-cream backdrop-blur">
-            {paused ? (
-              <PlayIcon />
-            ) : (
-              // Playing indicator — pause glyph, dimmed so it doesn't fight
-              // the video. Owner: fullscreen landscape must always show a
-              // centre control so the play state is legible.
-              <svg
-                width="28"
-                height="28"
-                viewBox="0 0 24 24"
-                fill="currentColor"
-                aria-hidden="true"
-                className="opacity-70"
-              >
-                <rect x="6" y="5" width="4" height="14" rx="1" />
-                <rect x="14" y="5" width="4" height="14" rx="1" />
-              </svg>
-            )}
+            <PlayIcon />
           </div>
         </div>
       )}
@@ -962,11 +951,15 @@ function Card({
       {/* Bottom caption — Phase 74 (2026-07-05): floating glass card
        * with description + agent card in a light bottom sheet (AAA
        * contrast) so nothing overlaps the video. Right rail lives at
-       * `right-3`; the card reserves right-20 to clear it. */}
-      <CaptionCard
-        listing={card.listing}
-        agent={card.agent}
-      />
+       * `right-3`; the card reserves right-20 to clear it.
+       * Phase 71.12 (2026-07-06): hidden in fullscreen — immersive mode
+       * is video-only, price/address/agent card have no place there. */}
+      {!isFullscreen && (
+        <CaptionCard
+          listing={card.listing}
+          agent={card.agent}
+        />
+      )}
     </section>
   );
 }
