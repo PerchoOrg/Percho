@@ -19,6 +19,15 @@
  * forbids dynamic APIs (cookies/headers) inside the cached fn. RLS still
  * applies — community reads are global, so this returns the same rows as
  * the cookie-bound client would for these particular tables.
+ *
+ * Phase 72.2 (2026-07-05): visibility rule tightened. Previously any
+ * caller could pass `includeInactive: true` and get every inactive
+ * community system-wide (agent dashboard did this). That leaked one
+ * agent's drafts to other agents. New shape:
+ *   fetchCommunityListCards({ viewerAgentId }) →
+ *     union of (all active) ∪ (viewer's own inactive), de-duped by id.
+ * Active set is still shared-cached; the per-viewer inactive fetch is
+ * uncached because it's cheap and viewer-specific.
  */
 
 import { unstable_cache } from 'next/cache';
@@ -43,56 +52,41 @@ export const COMMUNITY_CARDS_TAG = 'community-cards';
 
 const NIL_UUID = '00000000-0000-0000-0000-000000000000';
 
-async function fetchCommunityListCardsImpl(
-  includeInactive: boolean,
+type CommunityRow = {
+  id: string;
+  name: string;
+  slug: string;
+  city: string | null;
+  state: string;
+  description: string | null;
+  cover_video_id: string | null;
+  cover_storage_path: string | null;
+};
+
+/**
+ * Given a set of community rows, hydrate them with videoCount / listingCount
+ * / cover. Split out so the shared "all active" pass and the per-viewer
+ * "your inactive" pass can share the same enrichment code.
+ */
+async function hydrateCommunityCards(
+  communities: CommunityRow[],
 ): Promise<CommunityListCard[]> {
-  const t = startTimer('fetchCommunityListCards');
+  if (communities.length === 0) return [];
   const supabase = createAnonClient();
-  t.mark('createClient');
-
-  // Wave 1: communities + memberships have no inter-dependency, run in parallel.
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  let communitiesQ = (supabase as any)
-    .from('communities')
-    .select('id, name, slug, city, state, description, cover_video_id, cover_storage_path')
-    // Phase 72 (2026-07-05): never surface the upload-flow `Untitled community`
-    // stub in ANY grid — public buyer grid, agent dashboard grid, or browse.
-    // Owner has never touched it (name still = stub), so it's just noise.
-    // Real inactive communities (name changed but not activated) still show
-    // in the agent's own dashboard so they can go back and activate.
-    .neq('name', 'Untitled community')
-    .order('name', { ascending: true });
-  if (!includeInactive) communitiesQ = communitiesQ.eq('status', 'active');
-
-  const [communitiesRes, membershipsRes] = await Promise.all([
-    communitiesQ as Promise<{
-      data: Array<{
-        id: string;
-        name: string;
-        slug: string;
-        city: string | null;
-        state: string;
-        description: string | null;
-        cover_video_id: string | null;
-        cover_storage_path: string | null;
-      }> | null;
-    }>,
-    // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-    (supabase as any)
-      .from('community_video_membership')
-      .select('community_id, video_id') as Promise<{
-      data: Array<{ community_id: string; video_id: string }> | null;
-    }>,
-  ]);
-  t.mark('wave1');
-
-  const communities = communitiesRes.data ?? [];
-  const memberships = membershipsRes.data ?? [];
-
-  const allVideoIds = Array.from(new Set(memberships.map((m) => m.video_id)));
   const communityIds = communities.map((c) => c.id);
 
-  // Wave 2: videos depend on membership video_ids; listings depend on community ids.
+  // Wave 1: memberships (needed to compute videoCount + fallback cover cf id).
+  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
+  const { data: memberships } = (await (supabase as any)
+    .from('community_video_membership')
+    .select('community_id, video_id')
+    .in('community_id', communityIds)) as {
+    data: Array<{ community_id: string; video_id: string }> | null;
+  };
+  const memberRows = memberships ?? [];
+  const allVideoIds = Array.from(new Set(memberRows.map((m) => m.video_id)));
+
+  // Wave 2: videos (ready+public only) + listings (active), in parallel.
   const [videosRes, listingsRes] = await Promise.all([
     // biome-ignore lint/suspicious/noExplicitAny: stub generated types
     (supabase as any)
@@ -108,11 +102,10 @@ async function fetchCommunityListCardsImpl(
       .from('listings')
       .select('community_id')
       .eq('status', 'active')
-      .in('community_id', communityIds.length > 0 ? communityIds : [NIL_UUID]) as Promise<{
+      .in('community_id', communityIds) as Promise<{
       data: Array<{ community_id: string | null }> | null;
     }>,
   ]);
-  t.mark('wave2');
 
   const videoRows = videosRes.data ?? [];
   const listingRows = listingsRes.data ?? [];
@@ -122,7 +115,7 @@ async function fetchCommunityListCardsImpl(
 
   const countByCommunity = new Map<string, number>();
   const firstVideoCfByCommunity = new Map<string, string>();
-  for (const m of memberships) {
+  for (const m of memberRows) {
     const cf = cfById.get(m.video_id);
     if (!cf) continue;
     countByCommunity.set(m.community_id, (countByCommunity.get(m.community_id) ?? 0) + 1);
@@ -140,7 +133,7 @@ async function fetchCommunityListCardsImpl(
     );
   }
 
-  const result = communities.map((c) => ({
+  return communities.map((c) => ({
     id: c.id,
     name: c.name,
     slug: c.slug,
@@ -156,31 +149,84 @@ async function fetchCommunityListCardsImpl(
       fallback_video_cf_id: firstVideoCfByCommunity.get(c.id) ?? null,
     }),
   }));
-  t.mark('shape');
-  t.end({
-    communities: communities.length,
-    memberships: memberships.length,
-    videoRows: videoRows.length,
-    listingRows: listingRows.length,
-    cached: false,
-  });
-  return result;
+}
+
+async function fetchActiveCommunitiesImpl(): Promise<CommunityListCard[]> {
+  const t = startTimer('fetchActiveCommunities');
+  const supabase = createAnonClient();
+  t.mark('createClient');
+
+  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
+  const { data } = (await (supabase as any)
+    .from('communities')
+    .select('id, name, slug, city, state, description, cover_video_id, cover_storage_path')
+    // Phase 72 (2026-07-05): never surface the upload-flow `Untitled community`
+    // stub — owner has never touched it (name still = stub), so it's just noise.
+    .neq('name', 'Untitled community')
+    .eq('status', 'active')
+    .order('name', { ascending: true })) as { data: CommunityRow[] | null };
+  t.mark('query');
+
+  const rows = data ?? [];
+  const cards = await hydrateCommunityCards(rows);
+  t.end({ communities: rows.length, cached: false });
+  return cards;
 }
 
 const cachedActive = unstable_cache(
-  () => fetchCommunityListCardsImpl(false),
+  () => fetchActiveCommunitiesImpl(),
   ['community-cards', 'active-only'],
   { revalidate: 60, tags: [COMMUNITY_CARDS_TAG] },
 );
 
-const cachedAll = unstable_cache(
-  () => fetchCommunityListCardsImpl(true),
-  ['community-cards', 'include-inactive'],
-  { revalidate: 60, tags: [COMMUNITY_CARDS_TAG] },
-);
+/**
+ * Uncached, viewer-scoped: this agent's own inactive/draft communities.
+ * Not cached because it's per-viewer and cheap (bounded by rows the agent
+ * created). Still filters out the `Untitled community` upload stub — that
+ * one is noise even to its owner until they touch it (at which point the
+ * name changes and it starts showing up here).
+ */
+async function fetchOwnInactiveCommunities(agentId: string): Promise<CommunityListCard[]> {
+  const t = startTimer('fetchOwnInactiveCommunities');
+  const supabase = createAnonClient();
 
+  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
+  const { data } = (await (supabase as any)
+    .from('communities')
+    .select('id, name, slug, city, state, description, cover_video_id, cover_storage_path')
+    .neq('status', 'active')
+    .neq('name', 'Untitled community')
+    .eq('created_by', agentId)
+    .order('name', { ascending: true })) as { data: CommunityRow[] | null };
+
+  const rows = data ?? [];
+  const cards = await hydrateCommunityCards(rows);
+  t.end({ communities: rows.length, agentId });
+  return cards;
+}
+
+/**
+ * Public entry point.
+ *
+ * - No viewer, or viewer isn't an agent → active only (cached).
+ * - Agent viewer → active ∪ (viewer's own inactive), de-duped by id.
+ *
+ * Result is sorted by name so the union feels natural in the grid.
+ */
 export async function fetchCommunityListCards(
-  opts: { includeInactive?: boolean } = {},
+  opts: { viewerAgentId?: string | null } = {},
 ): Promise<CommunityListCard[]> {
-  return opts.includeInactive ? cachedAll() : cachedActive();
+  const active = await cachedActive();
+  const viewerAgentId = opts.viewerAgentId ?? null;
+  if (!viewerAgentId) return active;
+
+  const own = await fetchOwnInactiveCommunities(viewerAgentId);
+  if (own.length === 0) return active;
+
+  const byId = new Map<string, CommunityListCard>();
+  for (const c of active) byId.set(c.id, c);
+  for (const c of own) byId.set(c.id, c);
+  return Array.from(byId.values()).sort((a, b) =>
+    a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }),
+  );
 }

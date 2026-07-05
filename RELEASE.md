@@ -2,6 +2,11 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.72.2 — Your drafts are yours only (2026-07-05)
+
+### 🔒 Fixed
+- **Inactive neighborhoods are now visible only to their owner.** Previously any agent could see every other agent's unfinished drafts in the dashboard grid and in search. Now the dashboard grid shows all active neighborhoods plus the viewing agent's own inactive drafts — nothing else. Buyer-facing surfaces (`/communities`, `/browse`, community detail pages) are unchanged: still active-only.
+
 ## v0.71.6 — Upbeat home-tour BGM (2026-07-04)
 
 ### 🎵 Improved
