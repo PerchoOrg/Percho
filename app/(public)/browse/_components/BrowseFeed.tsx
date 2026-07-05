@@ -612,7 +612,24 @@ function Card({
 
   const sel = useMemo(() => pickVideo(card, source, cycleIdx), [card, source, cycleIdx]);
 
-  // Phase 71.18 (2026-07-06): diagnostic — video element's actual bounding
+  // Phase 71.21 (2026-07-06): DOM `<video>.paused` is the source of truth
+  // for play-glyph visibility. React `paused` prop was going out of sync
+  // with the media element (icon staying visible while video played, or
+  // audio continuing while paused=true). Poll v.paused each rAF frame.
+  const [domPaused, setDomPaused] = useState<boolean>(true);
+  useEffect(() => {
+    if (!shouldMount) return;
+    let raf = 0;
+    function tick() {
+      const v = videoRef.current;
+      if (v) setDomPaused(v.paused);
+      raf = requestAnimationFrame(tick);
+    }
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [shouldMount]);
+
+  // Phase 71.21 (2026-07-06): diagnostic — video element's actual bounding
   // rect + natural dimensions. Refresh on loadedmetadata + interval so pill
   // shows current post-render numbers.
   const [videoDiag, setVideoDiag] = useState<string>('video: pending');
@@ -625,7 +642,7 @@ function Card({
       if (!el) return;
       const r = el.getBoundingClientRect();
       setVideoDiag(
-        `vid rect=${Math.round(r.width)}×${Math.round(r.height)} · natural=${el.videoWidth}×${el.videoHeight}`,
+        `vid rect=${Math.round(r.width)}×${Math.round(r.height)} · natural=${el.videoWidth}×${el.videoHeight}\nreactPaused=${paused} domPaused=${el.paused} muted=${el.muted} vol=${el.volume.toFixed(2)}`,
       );
     }
     update();
@@ -834,10 +851,10 @@ function Card({
   const onTap = () => {
     const v = videoRef.current;
     if (!v) return;
-    // Phase 71.17 (2026-07-06): iOS Safari sometimes leaves the media
-    // element in a "paused=true, audio-track still emitting" state after
-    // an rVFC-driven texture swap. Read v.paused directly and force both
-    // pause() AND currentTime nudge to make the audio track resync.
+    // Phase 71.21 (2026-07-06): use DOM v.paused as truth. Also aggressively
+    // stop audio: HLS.js keeps pumping audio buffer even after `video.pause()`
+    // in some iOS Safari builds. Nudging currentTime forces a resync; muting
+    // as a safety net if user reports audio continues.
     if (v.paused) {
       const p = v.play();
       if (p && typeof p.then === 'function') {
@@ -847,6 +864,10 @@ function Card({
       }
     } else {
       v.pause();
+      // Force audio silence in case HLS buffer keeps emitting.
+      try {
+        v.currentTime = v.currentTime;
+      } catch {}
       setPaused(true);
     }
   };
@@ -1053,7 +1074,7 @@ function Card({
         </>
       )}
 
-      {shouldMount && paused && (
+      {shouldMount && domPaused && (
         <div
           className="pointer-events-none flex items-center justify-center"
           style={
@@ -1133,11 +1154,12 @@ function Card({
               fontSize: 11,
               fontFamily: 'monospace',
               borderRadius: 4,
+              whiteSpace: 'pre-line',
               pointerEvents: 'none',
             }}
           >
-            vp={vp.w}×{vp.h}<br/>
-            {videoDiag}
+            vp={vp.w}×{vp.h}
+{'\n'}{videoDiag}
           </div>
         <button
           type="button"
