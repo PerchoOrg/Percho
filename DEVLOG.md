@@ -2,6 +2,34 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## Phase 74.6 (2026-07-06) — 74.5 tap-to-pause 假功能:HLS canplay listener race
+
+**Trigger:** owner 测 74.5:"声音好了 但是还是不能停止视频 这个功能应该对所有的feed都是通用的 一致的 你看看别的地方如何实现"
+
+**Root cause:** 74.5 加的 tap-to-pause 有 effect race。架构上分了两个 useEffect:
+1. `useEffect([isActive])`:isActive 变 true 时挂 `canplay/loadeddata` retry listener 常驻 —— 74.5 为了修 muted 漂移,retry 从 `{once:true}` 改成常驻
+2. `useEffect([userPaused, isActive])`:userPaused 变 true 时 nuclear pause
+
+用户 tap → `setUserPaused(true)` → effect 2 pause 视频。**但 effect 1 的 canplay listener 依然挂着**(依赖只有 isActive,userPaused 变化不重跑)。HLS.js 继续 buffer 下个 segment → 触发 `canplay` → `tryPlay()` 里的 `userPausedRef.current` guard 因 React render → ref sync 有 gap 有时慢一步,或者干脆没 guard 到位 → 视频又 play 起来。
+
+**关键教训:任何"多 effect 各管一部分状态,且都碰同一个 imperative 资源(video element + listener)"的架构必然有 race。**
+
+**修复:合并成单一 useEffect,依赖 `[isActive, userPaused]`。任何一个变化都触发 cleanup + 重新挂载,canplay listener 自动摘掉,不留悬挂状态。三态清晰:
+- `!isActive`:nuclear pause 当前 video
+- `isActive && userPaused`:nuclear pause + 全站 sweep
+- `isActive && !userPaused`:play + unmuted-first + canplay retry(此时才挂 listener)
+
+Cleanup 只在 play 分支返回 unregister,其他两分支直接 return —— React effect 会自动清理旧 listener,新分支没挂新 listener 也就没有再触发的可能。
+
+**教训:**
+- **单一状态机 > 多 effect 拼接**:一个 imperative 资源(video + listener + play state)必须由**单一 effect** 管所有状态转移。BrowseFeed 的 `onTap` handler 就是纯 imperative + 单点 effect 同步 —— 那才是"能工作"的模式,不是我 74.5 拼的双 effect。参考 BrowseFeed line 829 `onTap` 和 line 771-795 的 play/pause effect,该抄的时候就抄。
+- **常驻 listener + 状态 guard 是 anti-pattern**:如果 listener 需要根据 state 决定要不要执行,90% 的场景下正确做法是把 state 加到 effect 依赖数组让 listener 生命周期跟 state 走,不是留 listener + 用 ref guard(ref 有 update 时序问题,且 refactor 时容易漏掉 guard)。
+- **user-facing 交互功能必须跨 feed 一致**:owner 明确说了"应该对所有的feed都是通用的 一致的"。tap-to-pause 是核心交互,新组件默认就该抄 BrowseFeed 的模式,而不是重新发明轮子。下次做 video component 前先 grep BrowseFeed 里的 `onTap` / play/pause pattern,然后照抄。
+
+**Verify:**
+- tsc clean
+- 手机 4 条:(a) tap 中央 → 立刻停,包括音频,不再 200ms 后自己接着播;(b) 再 tap → resume unmuted;(c) 4th slide 静音修复(74.5)不回归;(d) 滑到下一 slide 自动 unpause。
+
 ## Phase 74.5 (2026-07-06) — 74.4 后 4th slide 静音 + 视频不能暂停
 
 **Trigger:** owner 测 74.4:"滑到第四个视频时不时地会没有声音了 来回滑几次又有了 而且视频都不能暂停"

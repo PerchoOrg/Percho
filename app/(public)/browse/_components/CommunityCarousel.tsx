@@ -508,56 +508,19 @@ function CarouselSlide({
   //      element, and reset volume=1 on the new one before .play(). The
   //      previous "voice keeps playing from slide 0" bug was slide 0's
   //      audio track surviving `.pause()` on scroll.
+  // Phase 74.6 (2026-07-06): unified play/pause effect. Depends on both
+  // `isActive` and `userPaused` so a tap-to-pause fully tears down the
+  // canplay/loadeddata retry listeners — otherwise HLS buffering after a
+  // user pause re-fires the retry chain and quietly resumes playback
+  // (74.5's race). Mirrors BrowseFeed's imperative onTap model.
   useEffect(() => {
     const v = ref.current;
     if (!v) return;
-    if (isActive) {
-      // Reset paused state on becoming active — a new slide always
-      // starts playing.
-      setUserPaused(false);
-      // Restore audio state clobbered by the pause branch below.
-      try {
-        v.volume = 1;
-      } catch {}
-      // Phase 74.5: always try unmuted first on every retry. 74.4's
-      // tryPlay() left `v.muted=true` sticky after the first fallback,
-      // so the canplay retry re-entered muted and the slide silently
-      // stayed muted until unmount. Reset muted=false at the top of
-      // every attempt so canplay/loadeddata fallbacks get a fresh
-      // unmuted shot; only fall back to muted per-attempt if the
-      // browser rejects.
-      const tryPlay = () => {
-        if (userPausedRef.current) return;
-        v.muted = false;
-        v.play()
-          .then(() => {
-            /* unmuted play OK */
-          })
-          .catch(() => {
-            // Autoplay-with-sound blocked (scroll ≠ user gesture on iOS).
-            // Retry muted for THIS attempt only. Next canplay retry
-            // resets muted=false and tries again.
-            v.muted = true;
-            void v.play().catch(() => {
-              /* swallow — canplay listener below will retry */
-            });
-          });
-      };
-      tryPlay();
-      // Belt-and-suspenders: if the HLS manifest wasn't parsed when the
-      // first .play() ran, retry on canplay/loadeddata. Without this the
-      // slide sits on the poster overlay indefinitely. Not `once` — we
-      // want each event to give unmuted another shot.
-      const retry = () => tryPlay();
-      v.addEventListener('canplay', retry);
-      v.addEventListener('loadeddata', retry);
-      return () => {
-        v.removeEventListener('canplay', retry);
-        v.removeEventListener('loadeddata', retry);
-      };
-    } else {
-      // Nuclear pause: pause + mute + zero volume so the sibling's
-      // audio track can't leak through iOS Safari's HLS.js pipeline.
+
+    // Not the active slide → nuclear pause (pause + mute + volume=0)
+    // to keep sibling audio from leaking through iOS Safari's HLS.js
+    // pipeline. See phase 71.22.
+    if (!isActive) {
       try {
         v.pause();
       } catch {}
@@ -565,30 +528,20 @@ function CarouselSlide({
         v.muted = true;
         v.volume = 0;
       } catch {}
+      return;
     }
-  }, [isActive]);
 
-  // Phase 74.5: keep a ref to userPaused so the tryPlay closure inside
-  // the isActive effect can bail out if the user paused mid-load.
-  const userPausedRef = useRef(false);
-  useEffect(() => {
-    userPausedRef.current = userPaused;
-  }, [userPaused]);
-
-  // Phase 74.5: apply userPaused state to the video element. Tap-to-pause
-  // fires the nuclear pattern locally (v.pause + mute + volume=0) because
-  // iOS Safari HLS.js v.pause() doesn't stop audio. Tap-to-resume restores
-  // volume and calls play() with the same unmuted-first fallback chain.
-  useEffect(() => {
-    const v = ref.current;
-    if (!v || !isActive) return;
+    // Active slide, user pressed pause → nuclear-pause THIS video and
+    // sweep every other <video> on the page too, since a preload
+    // sibling can carry audio on iOS.
     if (userPaused) {
       try {
         v.pause();
       } catch {}
-      // Nuclear silence — same as sibling pause, needed on iOS/HLS.
-      // Also sweep every other <video> on the page in case a preload
-      // sibling is what's leaking audio (defense-in-depth vs. 71.22).
+      try {
+        v.muted = true;
+        v.volume = 0;
+      } catch {}
       try {
         document.querySelectorAll('video').forEach((av) => {
           try {
@@ -600,17 +553,41 @@ function CarouselSlide({
           } catch {}
         });
       } catch {}
-    } else {
-      try {
-        v.volume = 1;
-      } catch {}
+      return;
+    }
+
+    // Active + not paused → play. Restore audio state clobbered by any
+    // prior pause branch, then unmuted-first with per-attempt muted
+    // fallback (iOS scroll ≠ user gesture, so unmuted play may reject).
+    try {
+      v.volume = 1;
+    } catch {}
+    const tryPlay = () => {
       v.muted = false;
       v.play().catch(() => {
         v.muted = true;
         void v.play().catch(() => {});
       });
-    }
-  }, [userPaused, isActive]);
+    };
+    tryPlay();
+    // Belt-and-suspenders: manifest may not be parsed by first .play().
+    // Not `once` — every canplay retries unmuted from scratch. Because
+    // this effect depends on [isActive, userPaused], a user pause tears
+    // down these listeners, so no race with tap-to-pause.
+    const retry = () => tryPlay();
+    v.addEventListener('canplay', retry);
+    v.addEventListener('loadeddata', retry);
+    return () => {
+      v.removeEventListener('canplay', retry);
+      v.removeEventListener('loadeddata', retry);
+    };
+  }, [isActive, userPaused]);
+
+  // Reset userPaused every time this slide (re-)becomes active, so a
+  // fresh slide never inherits the previous slide's paused state.
+  useEffect(() => {
+    if (isActive) setUserPaused(false);
+  }, [isActive]);
 
   return (
     <>
