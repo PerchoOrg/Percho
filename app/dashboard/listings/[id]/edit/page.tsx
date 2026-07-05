@@ -120,9 +120,13 @@ export default async function EditListingPage({
   const photos = photosResp.data ?? [];
 
   // biome-ignore lint/suspicious/noExplicitAny: stub generated types
+  // Phase 72: only surface active communities in the listing → community
+  // dropdown. Draft stubs ('Untitled community') and any inactive/incomplete
+  // community (no cover, no name) must not leak into the picker.
   const { data: communitiesRaw } = (await (supabase as any)
     .from('communities')
     .select('id, name, city, state')
+    .eq('status', 'active')
     .order('name', { ascending: true })) as { data: CommunityOption[] | null };
   const communities = communitiesRaw ?? [];
 

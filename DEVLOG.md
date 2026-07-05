@@ -2,6 +2,64 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-07-05 — Phase 72: community activate gate + Untitled leak fix
+
+### Trigger
+User (owner): "看到一个 untitled community 在 neighborhood dropdown list 这不合理. active 的 neighborhood 必须要有名字和必填信息 和最少一张图片或者视频."
+
+### Root cause
+Two bugs stacked:
+
+1. **Listing edit → community dropdown had NO status filter** (`app/dashboard/listings/[id]/edit/page.tsx:123-126`). Any row in `communities` — including `status='draft'` stubs and `status='inactive'` — showed up in the picker. This is what the owner saw.
+
+2. **Community activate had no publish gate** (`status-actions.ts:setCommunityStatus`). The comment even said "communities have no publish gate" — an agent could flip a completely empty stub to `active` and it would appear in the buyer-facing communities grid + the listing dropdown.
+
+Listings have had a full publish gate since Phase 46 (address / price / beds / baths / ≥1 media). Communities were never brought up to parity.
+
+### Change
+
+**Server action gate** (`app/dashboard/communities/[id]/status-actions.ts`):
+- On `setCommunityStatus(id, 'active')`, check name/city/state + count of photos/ready-public-videos.
+- Return `{ ok:false, error, missing:[...] }` when the gate fails, mirroring the `publishListing` return shape. Deactivate stays unconditional.
+
+Gate criteria (matches listing publish gate style):
+- `name` set and not the `'Untitled community'` stub
+- `city` set (trimmed non-empty)
+- `state` set (trimmed non-empty)
+- ≥1 `community_photo` OR ≥1 `community_video` with `status='ready' AND visibility='public'`
+
+**Toggle UI** (`app/dashboard/_components/InstantStatusToggle.tsx`):
+- Community branch now checks `res.missing` and populates the same portaled "Almost there — fill in the missing fields" popover the listing branch already uses. Zero new UI code.
+- Extended `MISSING_LABELS` map with community keys (`name`, `city`, `state`, `at least one photo or ready video`).
+
+**Dropdown source fix** (`app/dashboard/listings/[id]/edit/page.tsx`):
+- Added `.eq('status', 'active')` to the community picker query. Draft stubs and inactive rows can never leak in again — this is the fix that kills what the owner saw.
+
+**One-shot sweep migration** (`supabase/migrations/20260705120000_community_activate_gate_sweep.sql`):
+- `UPDATE communities SET status='inactive'` for any row currently active that fails the new gate. Idempotent.
+- Owner requested this over grandfathering — buyer grid + agent dropdown must be clean immediately.
+
+### Data audit before deploy
+Prod snapshot pulled via REST (SR key), state before deploy:
+- 1 active community: **Peachtree Corners** (Atlanta, GA) — 1 photo, 6 ready+public videos → passes gate, unaffected.
+- 1 inactive community: **Untitled community** (GA, no city) — already inactive; sweep is a no-op.
+
+The dropdown was rendering that inactive stub because the query didn't filter by status. `.eq('status','active')` alone would have fixed the visible symptom, but the gate + sweep close the underlying door.
+
+### Verification
+- `npx tsc --noEmit` clean.
+- `npm run build` clean.
+- Sweep migration is idempotent and no-op on current prod data. Will run on next `supabase db push`.
+
+### Files changed
+- `app/dashboard/communities/[id]/status-actions.ts` — activate gate.
+- `app/dashboard/_components/InstantStatusToggle.tsx` — surface `missing[]` for communities.
+- `app/dashboard/listings/[id]/edit/page.tsx` — filter dropdown to `status='active'`.
+- `supabase/migrations/20260705120000_community_activate_gate_sweep.sql` — one-shot sweep.
+
+### Next steps
+- Owner runs `supabase db push` (or waits for CI) to apply sweep. No-op on current data but important going forward.
+
 ## 2026-07-04 — Phase 71.6: Upbeat BGM library
 
 ### Trigger

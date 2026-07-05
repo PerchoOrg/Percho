@@ -36,6 +36,11 @@ const MISSING_LABELS: Record<string, string> = {
   baths: 'Bathrooms',
   'at least one ready video or photo': '≥1 ready video or photo',
   'at least one ready video': '≥1 ready video',
+  // Community activate gate (phase 72):
+  name: 'Neighborhood name',
+  city: 'City',
+  state: 'State',
+  'at least one photo or ready video': '≥1 photo or ready video',
 };
 
 type Kind = 'listing' | 'community';
@@ -103,11 +108,13 @@ export function InstantStatusToggle({
           }
         }
       } else {
-        // community: no publish gate, just flip.
+        // community: activate gate (phase 72) mirrors the listing publish
+        // gate — name/city/state + ≥1 media. Deactivate is unconditional.
         const res = await setCommunityStatus(id, isActive ? 'inactive' : 'active');
         if (res.ok) router.refresh();
         else {
-          setErr(res.error);
+          if (res.missing && res.missing.length > 0) setMissing(res.missing);
+          else setErr(res.error);
           showAt();
         }
       }
