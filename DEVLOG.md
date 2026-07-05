@@ -2,6 +2,21 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## Phase 74.15 (2026-07-06) — 74.14 overlay gate 回归
+
+**Trigger:** owner 测 74.14:「有进步 全屏之后出大屏 大屏没有退 但是还是有小图出现在大屏上 overlap...小图的位置在中央 小图的内容是Landscape缩略图 手机」
+
+**根因:** 74.14 的 rotated `<img>` overlay(zIndex 9999)设计成「不 gate,永远 render」,假设 zIndex 10000 的 `<video>` 会永远盖住它。**iOS Safari 实际不这样** —— overlay 的 rotate/px sizing 有轻微 offset,或 fixed-position stacking context 有 quirks,overlay 从 video 底下露出来变成中央 landscape 小图 overlap。
+
+**Fix:**
+1. **overlay 加 `!hasFirstFrame` gate** —— video 首帧到就 unmount,从此不 overlap。反正 overlay 存在的意义就是遮盖 HLS re-attach 期间的黑屏,首帧一到就该退场。
+2. **tap handler sync `setHasFirstFrame(false)`** —— 保证 fullscreen 第 1 帧 overlay 就 mount。HLS effect 会在 render 后再 reset,不能等它。
+3. `hasFirstFrame` 会在 video 的 `onPlaying/onLoadedData` 自动 set true(reveal effect ~L868),overlay 就此 unmount。
+
+**为什么 74.10 sync reset 有害而 74.15 无害:** 74.10 时 fullscreen video style 还带 `opacity/transition`,sync reset 会触发 fade 露老 portrait 帧。74.13 已删 fullscreen opacity gate(fullscreen video style 只包含 rotate/sizing,不含 opacity),此时 sync reset 只影响 overlay `<img>` 的 mount/unmount,没有联动坑。
+
+**File:** `app/(public)/browse/_components/BrowseFeed.tsx`(overlay gate 加 `&& !hasFirstFrame` + tap handler 加 sync setHasFirstFrame(false))
+
 ## Phase 74.14 (2026-07-06) — 全屏「黑屏 → 小图 → 大播放」三帧根因
 
 **Trigger:** owner 测 74.13:「点击全屏后 黑屏 小图 然后再变大播放」
