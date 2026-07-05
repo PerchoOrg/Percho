@@ -2,6 +2,21 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-07-05 — Phase 74.6: grid 第三行 10px 单行
+
+### Trigger
+Owner:"grid view里zipcode写不下现在是… 字体再小点放在一行如何"。74.5 让 grid 显示完整地址后,`1619 Tide Mill Road, Cumming, GA 30040` 在 4-up grid 卡宽度下溢出被 `truncate` 切成 `1619 Tide Mill Road, Cummi…`。
+
+### Change
+- `GridCardCaption.sub2`:`text-[11px]` → `text-[10px]`,`mt-px` → 去掉、加 `leading-tight` —— 让完整地址一行装下,truncate 保底
+- 只改 `GridCard.tsx` 里 sub2 一处;title(price)15px semibold + sub(specs)11px 不变
+
+### Verification
+- tsc clean, next build green
+
+### Files
+- `app/_components/GridCard.tsx`
+
 ## 2026-07-05 — Phase 74.5: grid caption 对齐 feed(street, city, state zip)
 
 ### Trigger

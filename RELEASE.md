@@ -2,6 +2,10 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.74.6 — 2026-07-05
+
+Grid 卡第三行地址字体 11 → 10px + `leading-tight`,让 `{street}, {city}, {state} {zip}` 完整地址在一行内 truncate,不再折行截字。
+
 ## v0.74.5 — 2026-07-05
 
 Grid 卡第三行地址对齐 swipe feed:`1619 Tide Mill Road, Cumming, GA 30040` —— street 后加逗号,city 后逗号,state 后 zip。之前 grid 只显示 street,city 前当然没有逗号可看,是根源。`/browse`、`/saved`、`/nearby`、`/c/[slug]`、`/search` 五个入口一并对齐。
