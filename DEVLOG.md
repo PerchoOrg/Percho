@@ -2,6 +2,12 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-07-05 — Phase 73.4: header pill 降 4px
+
+Owner:"这两个按钮的高度稍微降低一点"。两处 header(`CommunityCarousel` + `CommunityListingCarousel`)的 back button + counter pill 从 `h-11` → `h-10`(counter 同步 `px-3.5` → `px-3`),视觉上更轻。左右仍严格同高。commit `f1cb419` on main。
+
+---
+
 ## 2026-07-05 — Phase 73.3: header 高度对齐 + community listing 视频 tap-to-pause
 
 ### Trigger

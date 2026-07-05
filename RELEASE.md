@@ -2,6 +2,9 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.73.4 — 2026-07-05
+Header pills in the community-video and community-listing carousels are 4px shorter (44px → 40px), a lighter touch on the visual weight. Left and right pills remain aligned.
+
 ## v0.73.3 — 2026-07-05
 Two fixes: (1) The top-right counter pill in the community-video and community-listing carousels is now the same height (44px) as the top-left Back button — the header reads as a single aligned row instead of two mismatched pills. (2) The community-listing carousel's video is now tap-to-pause: tap once to pause (a play indicator appears in the center), tap again to resume. Swiping to a new card always autoplays fresh.
 
