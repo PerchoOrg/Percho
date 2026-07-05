@@ -290,7 +290,7 @@ export function CommunityListingCarousel({
               <span className="max-w-[38vw] truncate text-[11px] text-cream/70">{backLabel}</span>
             </span>
           </button>
-          <div className="flex h-9 items-center rounded-full border border-cream/20 bg-ink/55 px-3 font-medium text-[12px] text-cream backdrop-blur-md tabular-nums">
+          <div className="flex h-11 items-center rounded-full border border-cream/20 bg-ink/55 px-3.5 font-medium text-[12px] text-cream backdrop-blur-md tabular-nums">
             {safeActive + 1} / {total}
           </div>
         </div>
@@ -353,6 +353,10 @@ function ListingSlide({
 }) {
   const ref = useRef<HTMLVideoElement | null>(null);
   const hlsRef = useRef<Hls | null>(null);
+  // Phase 73.3: manual paused state — user tap toggles play/pause. isActive
+  // still drives autoplay when swiping to a new card, but a fresh visit
+  // resets manuallyPaused so playback resumes.
+  const [manuallyPaused, setManuallyPaused] = useState(false);
 
   const poster = useMemo(() => {
     let p: string | null = null;
@@ -405,6 +409,7 @@ function ListingSlide({
     const v = ref.current;
     if (!v) return;
     if (isActive) {
+      setManuallyPaused(false);
       v.muted = false;
       v.play().catch(() => {
         v.muted = true;
@@ -416,6 +421,19 @@ function ListingSlide({
       v.pause();
     }
   }, [isActive]);
+
+  const onVideoTap = () => {
+    const v = ref.current;
+    if (!v) return;
+    if (v.paused) {
+      v.play()
+        .then(() => setManuallyPaused(false))
+        .catch(() => {});
+    } else {
+      v.pause();
+      setManuallyPaused(true);
+    }
+  };
 
   const hasVideo = !!listing.heroCfVideoId;
   const bbs: string[] = [];
@@ -430,15 +448,37 @@ function ListingSlide({
       className="relative h-[100dvh] w-full snap-start snap-always bg-black"
     >
       {hasVideo && shouldMount ? (
-        <video
-          ref={ref}
-          // biome-ignore lint/a11y/useMediaCaption: HLS source has no caption track.
-          poster={poster ?? undefined}
-          className="relative h-full w-full bg-black object-contain"
-          playsInline
-          loop
-          preload="metadata"
-        />
+        <button
+          type="button"
+          onClick={onVideoTap}
+          aria-label={manuallyPaused ? 'Play video' : 'Pause video'}
+          className="absolute inset-0 h-full w-full cursor-default"
+          style={{ touchAction: 'manipulation' }}
+        >
+          <video
+            ref={ref}
+            // biome-ignore lint/a11y/useMediaCaption: HLS source has no caption track.
+            poster={poster ?? undefined}
+            className="relative h-full w-full bg-black object-contain"
+            playsInline
+            loop
+            preload="metadata"
+          />
+          {manuallyPaused && (
+            <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-ink/55 text-cream backdrop-blur-md">
+                <svg
+                  aria-hidden="true"
+                  viewBox="0 0 24 24"
+                  className="h-7 w-7 translate-x-[2px]"
+                  fill="currentColor"
+                >
+                  <path d="M8 5v14l11-7z" />
+                </svg>
+              </div>
+            </div>
+          )}
+        </button>
       ) : poster ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={poster} alt={listing.address} className="h-full w-full bg-black object-contain" />

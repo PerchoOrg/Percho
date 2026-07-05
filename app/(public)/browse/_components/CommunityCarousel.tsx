@@ -240,7 +240,7 @@ export function CommunityCarousel({
             </span>
           </button>
           <div className="flex items-center gap-2">
-            <div className="flex h-9 items-center rounded-full border border-cream/20 bg-ink/55 px-3 font-medium text-[12px] text-cream backdrop-blur-md tabular-nums">
+            <div className="flex h-11 items-center rounded-full border border-cream/20 bg-ink/55 px-3.5 font-medium text-[12px] text-cream backdrop-blur-md tabular-nums">
               {safeActive + 1} / {total}
             </div>
             {/* Phase 69.1 (2026-07-04): Share moved from top-right into
