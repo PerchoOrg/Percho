@@ -41,7 +41,7 @@ All ≥ 40s. Total 90 MB. `fetch.sh` and `README.md` rewritten (URL-encode via p
 - `scripts/render-worker/bgm/README.md` — new track table + vibe notes
 
 ### Commit
-_pending — will be filled after `git commit` runs_
+`28fae1b phase71.6: upbeat BGM library (HGTV/vlog vibe)`
 
 ---
 
