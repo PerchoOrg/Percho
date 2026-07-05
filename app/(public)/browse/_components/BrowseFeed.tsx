@@ -8,6 +8,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { LeadModal } from '../../_components/LeadModal';
+import { CaptionCard } from './CaptionCard';
 import { CommunityCarousel } from './CommunityCarousel';
 import { CommunitySheet, type CommunitySheetData } from './CommunitySheet';
 import { ActionButton } from '../../_components/feed/ActionButton';
@@ -457,51 +458,17 @@ function PhotoCard({
         </>
       )}
 
-      {/* Bottom caption — same shape as video Card. Photo cards additionally
-       * surface a plain-text schools + POI strip below the description (no
-       * source rail to switch into, so the info has to live in-frame). */}
-      <div className="absolute bottom-20 left-4 right-4 text-cream">
-        <div className="font-serif text-2xl text-cream leading-tight tracking-tight drop-shadow">
-          {formatPrice(card.listing.price)}
-        </div>
-        <div className="mt-1 text-cream text-sm leading-snug drop-shadow">
-          {card.listing.address}
-        </div>
-        <div className="text-cream/80 text-xs">
-          {card.listing.city}, {card.listing.state}
-        </div>
-        <div className="mt-1 flex items-center gap-2 text-cream/80 text-xs">
-          {card.listing.beds != null && <span>{card.listing.beds} bd</span>}
-          {card.listing.baths != null && <span>· {card.listing.baths} ba</span>}
-          {card.listing.sqft != null && <span>· {card.listing.sqft.toLocaleString()} sqft</span>}
-        </div>
-        {card.listing.description.length > 0 && (
-          <DescriptionBlock paragraphs={card.listing.description} />
-        )}
-        {((card.photoSchools?.length ?? 0) > 0 || (card.photoPois?.length ?? 0) > 0) && (
-          <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-cream/70 text-[11px]">
-            {card.photoSchools?.map((s) => (
-              <span key={`sch:${s.name}`}>
-                🏫 {s.name}
-                {s.rating != null ? ` · ${s.rating}/10` : ''}
-              </span>
-            ))}
-            {card.photoPois?.map((p) => (
-              <span key={`poi:${p.name}`}>
-                📍 {p.name}
-                {p.distance_text ? ` · ${p.distance_text}` : ''}
-              </span>
-            ))}
-          </div>
-        )}
-        <Link
-          href={`/a/${card.agent.slug}`}
-          className="mt-2 inline-block text-cream/80 text-xs hover:text-cream"
-          onClick={(e) => e.stopPropagation()}
-        >
-          Listed by {card.agent.name}
-        </Link>
-      </div>
+      {/* Bottom caption — Phase 74 (2026-07-05): unified glass card
+       * shared with the video Card. Description + schools/POIs live in
+       * a light bottom sheet (WCAG AAA on the sheet, AA on the card
+       * over any hero frame) instead of overlapping the photo inline. */}
+      <CaptionCard
+        listing={card.listing}
+        agent={card.agent}
+        schools={card.photoSchools}
+        pois={card.photoPois}
+        formatPrice={formatPrice}
+      />
     </section>
   );
 }
@@ -815,40 +782,15 @@ function Card({
         </div>
       )}
 
-      {/* Bottom caption block — Xiaohongshu/Douyin pattern. Phase 28
-       * (2026-06-14): the bottom action bar is gone, so the caption
-       * extends to the safe-area edge for an immersive look. The right
-       * rail (Like / Save / Contact / Nearby / Sound) lives over the
-       * gradient at right-3. */}
-      <div
-        className="absolute left-4 right-20 text-cream"
-        style={{ bottom: 'max(1rem, env(safe-area-inset-bottom))' }}
-      >
-        <div className="font-serif text-2xl text-cream leading-tight tracking-tight drop-shadow">
-          {formatPrice(card.listing.price)}
-        </div>
-        <div className="mt-1 text-cream text-sm leading-snug drop-shadow">
-          {card.listing.address}
-        </div>
-        <div className="text-cream/80 text-xs">
-          {card.listing.city}, {card.listing.state}
-        </div>
-        <div className="mt-1 flex items-center gap-2 text-cream/80 text-xs">
-          {card.listing.beds != null && <span>{card.listing.beds} bd</span>}
-          {card.listing.baths != null && <span>· {card.listing.baths} ba</span>}
-          {card.listing.sqft != null && <span>· {card.listing.sqft.toLocaleString()} sqft</span>}
-        </div>
-        {card.listing.description.length > 0 && (
-          <DescriptionBlock paragraphs={card.listing.description} />
-        )}
-        <Link
-          href={`/a/${card.agent.slug}`}
-          className="mt-2 inline-block text-cream/80 text-xs hover:text-cream"
-          onClick={(e) => e.stopPropagation()}
-        >
-          Listed by {card.agent.name}
-        </Link>
-      </div>
+      {/* Bottom caption — Phase 74 (2026-07-05): floating glass card
+       * with description + agent card in a light bottom sheet (AAA
+       * contrast) so nothing overlaps the video. Right rail lives at
+       * `right-3`; the card reserves right-20 to clear it. */}
+      <CaptionCard
+        listing={card.listing}
+        agent={card.agent}
+        formatPrice={formatPrice}
+      />
     </section>
   );
 }
