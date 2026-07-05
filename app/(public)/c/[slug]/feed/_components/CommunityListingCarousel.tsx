@@ -280,7 +280,7 @@ export function CommunityListingCarousel({
             type="button"
             onClick={onClose}
             aria-label="Back to neighborhood"
-            className="flex h-11 items-center gap-2 rounded-full border border-cream/20 bg-ink/55 pr-3 pl-2 text-cream backdrop-blur-md transition-colors hover:border-cream hover:text-cream"
+            className="flex h-10 items-center gap-2 rounded-full border border-cream/20 bg-ink/55 pr-3 pl-2 text-cream backdrop-blur-md transition-colors hover:border-cream hover:text-cream"
             style={{ touchAction: 'manipulation' }}
           >
             <BackArrowIcon />
@@ -290,7 +290,7 @@ export function CommunityListingCarousel({
               <span className="max-w-[38vw] truncate text-[11px] text-cream/70">{backLabel}</span>
             </span>
           </button>
-          <div className="flex h-11 items-center rounded-full border border-cream/20 bg-ink/55 px-3.5 font-medium text-[12px] text-cream backdrop-blur-md tabular-nums">
+          <div className="flex h-10 items-center rounded-full border border-cream/20 bg-ink/55 px-3 font-medium text-[12px] text-cream backdrop-blur-md tabular-nums">
             {safeActive + 1} / {total}
           </div>
         </div>
