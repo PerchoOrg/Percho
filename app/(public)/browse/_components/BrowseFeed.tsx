@@ -1211,6 +1211,19 @@ function Card({
             const w = Math.round(window.innerWidth);
             const h = Math.round(window.innerHeight);
             if (w > 0 && h > 0) setVp({ w, h });
+            // Phase 74.10 (2026-07-06): also sync-reset hasFirstFrame
+            // BEFORE the fullscreen render commits. The HLS attach
+            // effect that resets this flag is async — it fires post-
+            // render, so the first fullscreen render was still using
+            // the stale `true` from portrait playback → poster overlay
+            // was hidden → the <video> DOM element (still holding the
+            // old portrait src's live frame) got stretched into the
+            // landscape rotate box for one paint before the effect
+            // swapped src and hid the video. Owner symptom: "先横屏
+            // 拉满 → 闪现小视频窗口 → 正常播放". Setting the flag
+            // synchronously here ensures the poster overlay covers
+            // the <video> from render 1.
+            setHasFirstFrame(false);
             setIsFullscreen(true);
           }}
           aria-label="View landscape fullscreen"

@@ -2,6 +2,11 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.74.10 — 2026-07-06
+
+### 🐛 Bug Fixes
+- **Fullscreen tap now shows the poster overlay from the first frame — no more flash of the old portrait video stretched into the landscape box.** Follow-up to v0.74.9. The rotated poster overlay was correctly sized but its visibility gate depended on a state flag that only reset in a post-render effect, so for one paint the fullscreen render still saw the old "already playing" flag and revealed the raw `<video>` element (still holding the portrait source's live frame). Fixed by resetting the flag synchronously in the tap handler, alongside the viewport measurement, so the overlay covers the swap from render 1.
+
 ## v0.74.9 — 2026-07-06
 
 ### 🐛 Bug Fixes

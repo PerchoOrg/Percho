@@ -2,6 +2,23 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## Phase 74.10 (2026-07-06) — 74.9 全屏 follow-up:先拉满再闪小视频窗口
+
+**Trigger:** owner 测 74.9:「点击全屏后确实直接横屏拉满了 但是突然闪现了小视频窗口才接着正常播放的」
+
+**Root cause:** 74.9 sync 了 `vp`,忘了 sync `hasFirstFrame`。时序:
+1. Tap → `setVp` + `setIsFullscreen(true)`,但 `hasFirstFrame` 依然是 portrait 播放留下的 `true`
+2. Render 1(fullscreen 首帧):rotate/px 尺寸对了,但 `hasFirstFrame=true` → poster overlay(74.9 加的 gate 是 `!hasFirstFrame`)**不显示** + `<video>` opacity=1 → 用户看到 `<video>` DOM 元素(还挂着老 portrait src 的 live 播放帧)被 rotate/stretch 到 landscape box = 「小视频窗口」
+3. Post-render useEffect(HLS 换 src)fires → 里面调 `setHasFirstFrame(false)` → Render 2 poster overlay 覆盖 → src 切 landscape → 首帧到 → 平滑播放
+
+Bug 在 React reset 顺序:74.9 只把 vp 提前到 handler(sync),`hasFirstFrame` 的 reset 依然依赖 useEffect(post-render)。同一 pattern 又栽一次。
+
+**Fix:** handler 里 `setHasFirstFrame(false)` 也 sync,和 setVp 一起。三个 setState 在同一 batch 里,Render 1 就已 gate,poster overlay 从第一帧起覆盖。HLS effect 保留 reset(兜底 slide 切换等其他 src swap 场景)。
+
+**教训(升级 74.9 的规则 C):** 「用户交互瞬间要同步一致状态」的 pattern 涉及**多个 state**,handler 里必须**全部** sync,不能只 sync 一个。React 18 batch 保证同一 render 但不保证你 imagine 的 order —— 只要有一个 state 落在 useEffect 里就撕开一 paint 的窗口。
+
+**File:** `app/(public)/browse/_components/BrowseFeed.tsx` — fullscreen tap handler 加 `setHasFirstFrame(false)` 在 setIsFullscreen 前。
+
 ## Phase 74.9 (2026-07-06) — 74.8 全屏 follow-up:横屏小视频 + 短暂黑屏
 
 **Trigger:** owner 测 74.8 后:「没有竖屏的小视频了 但是还有横屏的小视频和短暂黑屏 点击全屏你需要直接切换到横屏的全屏 不要黑屏」
