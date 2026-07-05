@@ -2,6 +2,71 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-07-05 — Phase 72.6: native scroll-snap for photo carousel
+
+### Trigger
+Owner: "拖拽这个功能 你去看看其他 app 怎么做的 感觉还是太突兀."
+
+### Root cause
+Phase 72.5 shipped a hand-rolled JS drag-follow (touchmove →
+`translate3d`, touchend → threshold+velocity commit or spring back).
+Even with a 260ms cubic-bezier release it feels wrong on iOS: the
+"following" phase runs at React state-update rate rather than the
+compositor rate, there's no OS-native rubber-band at the ends, and the
+release curve doesn't match Safari's own scroll physics — so the
+motion reads as "an animation of a swipe" instead of "a swipe."
+
+That's why every serious photo carousel (Instagram feed, Airbnb PDP,
+Zillow gallery, Stories) uses native `overflow-x-auto` + CSS
+scroll-snap: the browser owns momentum, edge bounce, and 60fps
+physics. You just arrange slides and read `scrollLeft`.
+
+### Actions
+Rewrote `PhotoCard` in `BrowseFeed.tsx`:
+
+- **Track**: single scroll container with `flex overflow-x-auto snap-x
+  snap-mandatory overflow-y-hidden overscroll-x-contain scrollbar-hide`.
+  All N photos sit inside as `flex-shrink-0 w-full snap-center` slides.
+  `overscroll-x-contain` prevents the horizontal swipe from chaining to
+  the vertical feed scroll.
+- **Sync (idx → scroll)**: `useEffect` on `idx` calls
+  `scrollerRef.current.scrollTo({ left: idx*width, behavior })` when
+  the source-of-truth `cycleIdx` changes externally (arrow buttons,
+  keyboard). `behavior: 'auto'` on jumps > 1 slide, `'smooth'`
+  otherwise. `isProgrammaticScrollRef` gates the reverse handler for
+  400ms so the smooth-scroll doesn't feed back into `onSwipe`.
+- **Sync (scroll → idx)**: `onScroll` computes
+  `Math.round(scrollLeft / width)`, diffs against last-reported, and
+  fires `onSwipe(±1)` per step so the parent's modular arithmetic (used
+  for cycling within pool sizes) stays consistent regardless of how
+  fast the user flicks.
+- **Lazy loading**: `loading={|i - idx| ≤ 1 ? 'eager' : 'lazy'}` so a
+  20-photo listing doesn't blow bandwidth on load.
+- **Removed**: `touchStartRef`, `dragDx`, `isDragging`, `showHint`
+  state; all touch handlers; the prev/current/next translated stack;
+  the first-visit shake-hint + localStorage flag. Segmented dashed
+  progress + tabular counter kept unchanged.
+
+### Verification
+- `npx tsc --noEmit` clean.
+- `npm run build` clean.
+- Not yet browser-verified; owner will smoke on Vercel preview.
+
+### Learnings
+- **Custom drag ≠ native swipe**, no matter how good the release
+  curve. If iOS Safari can do it with `overflow-x-auto snap-x`, use
+  that; anything else feels like an animation. Save custom touch code
+  for gestures the browser doesn't express (drag-to-dismiss, pinch,
+  multi-finger).
+- Utility class in this project is `scrollbar-hide`, not
+  `no-scrollbar` (`app/globals.css:152`). Grep before assuming.
+
+### Next steps
+- Preview verify on iOS + Android; owner to smoke.
+- If desktop drag-with-mouse is desired, a small
+  `pointerdown → scrollBy(-dx)` handler can be added — not shipped
+  here because desktop already has ‹ › arrow buttons.
+
 ## 2026-07-05 — Phase 72.5: photo swipe polish (indicator + drag + bug fix)
 
 ### Trigger

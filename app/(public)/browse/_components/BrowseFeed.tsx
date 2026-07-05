@@ -232,10 +232,6 @@ function PhotoCard({
   poolSize: number;
   isActive: boolean;
 }) {
-  const touchStartRef = useRef<{ x: number; y: number; t: number } | null>(null);
-  const [dragDx, setDragDx] = useState(0);
-  const [isDragging, setIsDragging] = useState(false);
-  const [showHint, setShowHint] = useState(false);
   const realPhotos =
     card.photos && card.photos.length > 0
       ? card.photos
@@ -246,171 +242,132 @@ function PhotoCard({
   const total = photos.length;
   const idx = total > 0 ? cycleIdx % total : 0;
   const current = photos[idx];
-  const prevPhoto = total > 1 ? photos[(idx - 1 + total) % total] : undefined;
-  const nextPhoto = total > 1 ? photos[(idx + 1) % total] : undefined;
 
-  // Phase 72.5 (2026-07-05): first-time-visitor swipe hint. Shakes the
-  // stack ~10px right→left→center once when this photo card first
-  // becomes active, then stops forever (localStorage). Skipped for
-  // single-photo listings and for keyboard/desktop users (no hover on
-  // the touch path).
+  // Phase 72.6 (2026-07-05): native horizontal scroll-snap replaces the
+  // custom JS drag from Phase 72.5 (owner: "拖拽这个功能感觉还是太突兀").
+  // This is how Instagram / Airbnb / Zillow do photo carousels — the
+  // browser owns momentum, edge bounce, and 60fps rubber-band, we just
+  // arrange the slides and read scrollLeft. Result: iOS-native feel with
+  // ~1/10 the code and no touch-event math.
+  //
+  // Sync model:
+  //   - `idx` (from parent's cycleIdx) is the source of truth.
+  //   - When `idx` changes externally (arrow buttons, keyboard) we
+  //     programmatically scroll the container to that slide.
+  //   - When the user scrolls, `onScroll` computes the settled index from
+  //     scrollLeft/slideWidth and fires `onSwipe(delta)` for the diff so
+  //     the parent's cycleIdx catches up.
+  const scrollerRef = useRef<HTMLDivElement | null>(null);
+  const lastReportedIdxRef = useRef(idx);
+  const isProgrammaticScrollRef = useRef(false);
+  const scrollSettleTimerRef = useRef<number | null>(null);
+
+  // External idx change → programmatic scroll. `instant` on first mount /
+  // when the difference is > 1 (keyboard jump) so we don't animate a
+  // long slide; smooth otherwise.
   useEffect(() => {
-    if (!isActive || total <= 1) return;
-    if (typeof window === 'undefined') return;
-    try {
-      if (window.localStorage.getItem('vicinity:photo-swipe-hint') === '1') return;
-      window.localStorage.setItem('vicinity:photo-swipe-hint', '1');
-    } catch {
-      // localStorage may throw in private mode — just skip the hint.
-      return;
-    }
-    setShowHint(true);
-    const t = window.setTimeout(() => setShowHint(false), 1400);
-    return () => window.clearTimeout(t);
-  }, [isActive, total]);
+    const el = scrollerRef.current;
+    if (!el) return;
+    const w = el.clientWidth || 1;
+    const target = idx * w;
+    if (Math.abs(el.scrollLeft - target) < 2) return;
+    isProgrammaticScrollRef.current = true;
+    lastReportedIdxRef.current = idx;
+    const diff = Math.abs(idx - Math.round(el.scrollLeft / w));
+    el.scrollTo({ left: target, behavior: diff > 1 ? 'auto' : 'smooth' });
+    // Release the flag after the smooth-scroll settles.
+    if (scrollSettleTimerRef.current) window.clearTimeout(scrollSettleTimerRef.current);
+    scrollSettleTimerRef.current = window.setTimeout(() => {
+      isProgrammaticScrollRef.current = false;
+    }, 400);
+    return () => {
+      if (scrollSettleTimerRef.current) {
+        window.clearTimeout(scrollSettleTimerRef.current);
+        scrollSettleTimerRef.current = null;
+      }
+    };
+  }, [idx]);
+
+  // User scroll → parent cycleIdx. Debounced to when the scroll settles.
+  const onScroll = useCallback(() => {
+    if (isProgrammaticScrollRef.current) return;
+    const el = scrollerRef.current;
+    if (!el || total <= 1) return;
+    const w = el.clientWidth || 1;
+    const nearest = Math.round(el.scrollLeft / w);
+    if (nearest === lastReportedIdxRef.current) return;
+    // Fire one delta per step so the parent's modular arithmetic stays
+    // consistent regardless of pool size.
+    const rawDiff = nearest - lastReportedIdxRef.current;
+    lastReportedIdxRef.current = nearest;
+    const step: 1 | -1 = rawDiff > 0 ? 1 : -1;
+    for (let i = 0; i < Math.abs(rawDiff); i++) onSwipe(step);
+  }, [onSwipe, total]);
 
   const goPrev = () => onSwipe(-1);
   const goNext = () => onSwipe(1);
-
-  // Segmented indicator: 1 dash per photo, current fully lit, others faded.
-  // Sits at the top of the card (mirrors the community-video carousel
-  // style — Phase 45.24). `← swipe →` chip removed; the dashes are the
-  // affordance.
 
   return (
     <section
       ref={(el) => cardRef(el)}
       className="relative h-[100dvh] w-full snap-start snap-always overflow-hidden bg-black"
     >
+      {/* Blurred backdrop — uses the current photo, kept in sync via
+       * `key` so it swaps as the user scrolls. Desktop only; mobile
+       * gets pure black to avoid the double-image effect at low
+       * resolution. */}
+      {current && (
+        <img
+          key={`bg-${idx}`}
+          src={current}
+          alt=""
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 hidden h-full w-full scale-110 object-cover opacity-60 blur-2xl md:block"
+        />
+      )}
+
+      {/* Native horizontal scroll-snap track. `overflow-x-auto` gives
+       * us system momentum + edge bounce; `snap-x snap-mandatory` locks
+       * every release onto a slide boundary; `overscroll-x-contain`
+       * stops the swipe from chaining to the parent (which is the
+       * vertical feed scroll). Scrollbar hidden via utility. */}
       <div
-        className="absolute inset-0 touch-pan-y"
-        onTouchStart={(e) => {
-          if (e.touches.length !== 1) return;
-          const t = e.touches[0];
-          if (t) {
-            touchStartRef.current = { x: t.clientX, y: t.clientY, t: performance.now() };
-          }
-        }}
-        onTouchMove={(e) => {
-          const start = touchStartRef.current;
-          if (!start) return;
-          const t = e.touches[0];
-          if (!t) return;
-          const dx = t.clientX - start.x;
-          const dy = t.clientY - start.y;
-          // Only start dragging horizontally once the gesture is clearly
-          // horizontal — otherwise let the vertical snap-scroll take it.
-          if (!isDragging && Math.abs(dx) > 8 && Math.abs(dx) > Math.abs(dy) * 1.2) {
-            setIsDragging(true);
-          }
-          if (isDragging || (Math.abs(dx) > 8 && Math.abs(dx) > Math.abs(dy))) {
-            // Rubber-band at the ends.
-            const width = e.currentTarget.clientWidth || 1;
-            let capped = dx;
-            if (total <= 1) capped = dx * 0.25;
-            setDragDx(capped);
-            // Prevent the vertical snap scroll from stealing horizontal
-            // gestures while we're clearly panning left/right.
-            if (Math.abs(dx) > 20) e.stopPropagation();
-          }
-        }}
-        onTouchEnd={(e) => {
-          const start = touchStartRef.current;
-          touchStartRef.current = null;
-          const wasDragging = isDragging;
-          setIsDragging(false);
-          setDragDx(0);
-          if (!start) return;
-          const t = e.changedTouches[0];
-          if (!t) return;
-          const dx = t.clientX - start.x;
-          const dy = t.clientY - start.y;
-          const dt = Math.max(1, performance.now() - start.t);
-          const velocity = dx / dt; // px per ms
-          const width = (e.currentTarget as HTMLElement).clientWidth || 1;
-          const distanceThreshold = width * 0.25;
-          const flick = Math.abs(velocity) > 0.4;
-          const horizontal = Math.abs(dx) > Math.abs(dy) * 1.2;
-          if (
-            (wasDragging || horizontal) &&
-            total > 1 &&
-            (Math.abs(dx) > distanceThreshold || flick) &&
-            horizontal
-          ) {
-            e.preventDefault();
-            e.stopPropagation();
-            onSwipe(dx < 0 ? 1 : -1);
-          }
-        }}
-        onTouchCancel={() => {
-          touchStartRef.current = null;
-          setIsDragging(false);
-          setDragDx(0);
-        }}
+        ref={scrollerRef}
+        onScroll={onScroll}
+        className="scrollbar-hide absolute inset-0 flex snap-x snap-mandatory overflow-x-auto overflow-y-hidden overscroll-x-contain"
+        style={{ scrollBehavior: 'smooth' }}
       >
-        {current && (
-          <img
-            src={current}
-            alt={card.listing.address}
-            aria-hidden="true"
-            className="pointer-events-none absolute inset-0 hidden h-full w-full scale-110 object-cover opacity-60 blur-2xl md:block"
-          />
+        {total === 0 && (
+          <div className="flex h-full w-full flex-shrink-0 snap-center items-center justify-center text-cream/40 text-sm">
+            No photo
+          </div>
         )}
-        {/* Drag-follow stack: prev on the left, current in the middle,
-         * next on the right; translated together by dragDx while the
-         * finger is down, then springs back / advances on release. */}
-        <div
-          className="relative flex h-full w-full items-stretch"
-          style={{
-            transform: `translate3d(${
-              (isDragging ? dragDx : 0) + (showHint ? -12 : 0)
-            }px, 0, 0)`,
-            transition: isDragging
-              ? 'none'
-              : showHint
-                ? 'transform 300ms cubic-bezier(.4,0,.2,1)'
-                : 'transform 260ms cubic-bezier(.2,.8,.2,1)',
-          }}
-        >
-          {prevPhoto && (
+        {photos.map((src, i) => (
+          <div
+            key={`${src}-${i}`}
+            className="relative h-full w-full flex-shrink-0 snap-center snap-always"
+          >
             <img
-              src={prevPhoto}
-              alt=""
-              aria-hidden="true"
-              className="-left-full pointer-events-none absolute inset-y-0 h-full w-full object-contain"
+              src={src}
+              alt={
+                i === idx
+                  ? `${card.listing.address} — ${i + 1} of ${total}`
+                  : ''
+              }
+              className="h-full w-full object-contain"
+              // Only the first + neighbours load eagerly; the rest lazy
+              // so a 20-photo listing doesn't blow bandwidth on load.
+              loading={Math.abs(i - idx) <= 1 ? 'eager' : 'lazy'}
+              draggable={false}
             />
-          )}
-          {current ? (
-            <img
-              src={current}
-              alt={`${card.listing.address} — ${idx + 1} of ${total}`}
-              className="relative h-full w-full flex-shrink-0 object-contain"
-            />
-          ) : (
-            <div className="flex h-full w-full items-center justify-center text-cream/40 text-sm">
-              No photo
-            </div>
-          )}
-          {nextPhoto && (
-            <img
-              src={nextPhoto}
-              alt=""
-              aria-hidden="true"
-              className="-right-full pointer-events-none absolute inset-y-0 h-full w-full object-contain"
-            />
-          )}
-        </div>
+          </div>
+        ))}
       </div>
 
       <div className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-black/70 via-black/30 to-transparent" />
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-72 bg-gradient-to-t from-black/85 via-black/50 to-transparent" />
 
-      {/* Phase 72.5 (2026-07-05): segmented dashed progress indicator.
-       * Replaces the old "N / M   ← SWIPE →" pill (too easy to miss,
-       * see-only-once affordance). One dash per photo, current fully
-       * lit cream, others faded — mirrors CommunityCarousel's top
-       * progress bar so the swipe gesture reads consistently across
-       * community-video and photo-listing feeds. */}
+      {/* Segmented dashed progress + tabular counter (Phase 72.5). */}
       {poolSize > 1 && total > 1 && (
         <>
           <div className="pointer-events-none absolute inset-x-16 top-6 z-10 flex gap-1">
@@ -423,15 +380,13 @@ function PhotoCard({
               />
             ))}
           </div>
-          {/* Compact tabular counter — sits under the dashes, tabular-nums
-           * so digits don't jitter as idx advances. */}
           <div className="pointer-events-none absolute top-8 right-5 z-10 font-medium text-[11px] text-cream/70 tabular-nums">
             {String(idx + 1).padStart(2, '0')} / {String(total).padStart(2, '0')}
           </div>
         </>
       )}
 
-      {/* Desktop-only left/right arrows. Mobile uses swipe. */}
+      {/* Desktop-only left/right arrows. Mobile uses the native swipe. */}
       {poolSize > 1 && (
         <>
           <button
