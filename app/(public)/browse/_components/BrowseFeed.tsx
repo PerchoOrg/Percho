@@ -1044,20 +1044,41 @@ function Card({
              * placeholder. Layer sits above <video> (which is opacity:0)
              * and is unmounted the moment hasFirstFrame flips true.
              *
-             * Phase 74.8 (2026-07-06): skip overlay when entering fullscreen.
-             * The overlay's static CSS (`inset-0`) doesn't follow the
-             * <video>'s fullscreen rotate/px sizing, so on fullscreen enter
-             * users saw a portrait poster in the parent card box before the
-             * landscape src attached — reported as "竖屏小视频 → 横屏小视频 → 播放".
-             * User initiated the fullscreen tap, so a brief bg-black gap
-             * during landscape swap is acceptable and less jarring than a
-             * mis-rotated poster flash. */}
+             * Phase 74.9 (2026-07-06): fullscreen branch gets its own
+             * overlay that mirrors the <video>'s rotate-90/px sizing so
+             * the poster fills the fullscreen box while HLS swaps to the
+             * landscape uid. Owner: "不要黑屏". Requires vp.w > 0, which
+             * 74.9's synchronous measure in the fullscreen tap handler
+             * guarantees on first render. */}
             {poster && !hasFirstFrame && !isFullscreen && (
               <img
                 src={poster}
                 alt=""
                 aria-hidden="true"
                 className="pointer-events-none absolute inset-0 h-full w-full bg-black object-contain"
+              />
+            )}
+            {poster && !hasFirstFrame && isFullscreen && hasLandscape && vp.w > 0 && (
+              <img
+                src={poster}
+                alt=""
+                aria-hidden="true"
+                style={{
+                  position: 'fixed',
+                  top: '50%',
+                  left: '50%',
+                  width: `${vp.h}px`,
+                  height: `${vp.w}px`,
+                  maxWidth: 'none',
+                  maxHeight: 'none',
+                  minWidth: 0,
+                  minHeight: 0,
+                  transform: 'translate(-50%, -50%) rotate(90deg)',
+                  objectFit: 'cover',
+                  zIndex: 10001,
+                  pointerEvents: 'none',
+                  background: 'black',
+                }}
               />
             )}
           </>
@@ -1172,6 +1193,24 @@ function Card({
           type="button"
           onClick={(e) => {
             e.stopPropagation();
+            // Phase 74.9 (2026-07-06): synchronously measure the section
+            // BEFORE flipping isFullscreen so the very first fullscreen
+            // render already has valid vp.w/vp.h and can apply the
+            // rotate-90/px-sized inline style. Without this, the
+            // useEffect-based ResizeObserver only fires post-render, so
+            // the first render's `vp` was still {0,0} → the fullscreen
+            // <video> got neither Tailwind sizing (className is '' in
+            // fullscreen branch) nor inline width/height → it collapsed
+            // to intrinsic size (a "small" landscape tile) until the
+            // effect fired one paint later. Owner-reported symptom:
+            // "点击全屏 → 横屏的小视频 → 短暂黑屏 → 横屏全屏".
+            //
+            // We compute the target box the way visualViewport-based
+            // measure() would, using window.innerWidth/innerHeight as a
+            // safe stand-in for the eventual `fixed inset-0` bounds.
+            const w = Math.round(window.innerWidth);
+            const h = Math.round(window.innerHeight);
+            if (w > 0 && h > 0) setVp({ w, h });
             setIsFullscreen(true);
           }}
           aria-label="View landscape fullscreen"

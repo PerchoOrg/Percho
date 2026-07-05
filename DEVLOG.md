@@ -2,6 +2,33 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## Phase 74.9 (2026-07-06) — 74.8 全屏 follow-up:横屏小视频 + 短暂黑屏
+
+**Trigger:** owner 测 74.8 后:「没有竖屏的小视频了 但是还有横屏的小视频和短暂黑屏 点击全屏你需要直接切换到横屏的全屏 不要黑屏」
+
+**两个独立 bug 叠加:**
+
+**Bug A(横屏小视频):** 全屏 tap → `setIsFullscreen(true)` → 首次 render 时 `<video>` fullscreen 分支 className 是 `''`(见 71.14 注释,靠 inline style 撑开),而 inline style 里 rotate/px 尺寸的门是 `isFullscreen && hasLandscape && vp.w > 0`。**`vp` state 初始 `{w:0, h:0}`**,靠 useEffect + ResizeObserver 测量;effect 只在 render 之后才跑。所以首次 fullscreen render:
+- className `''` → 无 Tailwind 尺寸
+- vp.w === 0 → inline style 走 fallback(`{opacity, transition}`,不含 width/height/rotate)
+- `<video>` 拿不到任何尺寸 → 塌成 intrinsic size = 「横屏的小视频」
+- 一 paint 后 effect 跑,`vp` 更新 → 下一 render 应用 rotate + px → 展开全屏
+
+**Fix A:** fullscreen tap handler **同步**读 `window.innerWidth/innerHeight` 塞进 `vp`,再 flip `isFullscreen`。这样第一次 fullscreen render 已有有效 `vp.w/vp.h`,直接展开正确尺寸。ResizeObserver 保留兜底后续 orientation change / viewport resize。
+
+**Bug B(短暂黑屏):** 74.8 决定 fullscreen 不显示 poster overlay,依赖 `<video>` 自己的 opacity gate。但 opacity=0 期间 `<video>` 透明,后面就是 `bg-black` → HLS 换 src + 首段解码 200-500ms 全露黑。owner 明确「不要黑屏」= 必须补 poster 覆盖。
+
+**Fix B:** fullscreen 分支加**独立** poster overlay,尺寸/rotate 完全 mirror `<video>` 的 fullscreen inline style(vp.h × vp.w、rotate-90、position:fixed、zIndex:10001 盖在 video 上)。`poster` 已经跟随 `effectiveCfId` 切成 landscape thumbnail —— overlay 自然显示 landscape 静止画,首帧到即消失。74.8 说「ROI 低」不做,现在明确需求就是要做,复读那点坐标数学值这个体验。
+
+**File changes:**
+- `app/(public)/browse/_components/BrowseFeed.tsx`
+  - fullscreen tap handler:同步 setVp 再 setIsFullscreen
+  - 加第二个 poster overlay `<img>` 走 fullscreen rotate/px sizing
+
+**教训:**
+- 「useEffect 里测量 → 塞 state → 首次 render 是 0」这个 pattern 遇到「用户交互瞬间需要精确尺寸」的场景必挂。要么在事件 handler 里同步测(74.9 做法),要么用 useLayoutEffect(在 paint 前 sync 跑)。前者更安全 —— useLayoutEffect 依然在 render 之后。
+- 74.8 用「owner 主动点全屏,黑屏可接受」偷懒决定,owner 立刻打脸。**不要替 owner 做体验降级判断**,owner 体验标准是零容忍。写进 memory 前置。
+
 ## Phase 74.8 (2026-07-06) — 74.7 全屏 regression:竖屏小视频 → 横屏小视频 → 播放
 
 **Trigger:** owner 测 74.7 后:「全屏功能有regression 点击后会出现一个竖屏的小视频 再切成横屏的小视频 再播放横屏的全屏」
