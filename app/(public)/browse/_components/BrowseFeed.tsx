@@ -711,6 +711,25 @@ function Card({
     }
   }
 
+  // Phase 74.14 (2026-07-06): landscape poster URL for fullscreen preload +
+  // overlay. When the card has a landscape companion, we compute the poster
+  // for that separate uid too, independently of `effectiveCfId`. The
+  // non-fullscreen render preloads it (hidden <link>/<img>) so the poster is
+  // in cache the moment the user taps fullscreen — kills the "black frame"
+  // gap while the landscape HLS pipeline re-attaches. The fullscreen branch
+  // uses this in a rotated <img> overlay with objectFit: cover, because
+  // native `<video poster>` letterboxes to the box's aspect (CSS
+  // object-fit does NOT apply to the poster attribute on iOS Safari) —
+  // that letterbox is what owner saw as "小图" in "黑屏 → 小图 → 大播放".
+  let landscapePoster: string | null = null;
+  if (!isExternal && sel.cfVideoIdLandscape) {
+    try {
+      landscapePoster = thumbnailUrl(sel.cfVideoIdLandscape);
+    } catch {
+      landscapePoster = null;
+    }
+  }
+
   // (Re)attach HLS when mount or selected video changes.
   useEffect(() => {
     if (!shouldMount) return;
@@ -978,25 +997,15 @@ function Card({
           <>
             <video
               ref={videoRef}
-              // Phase 74.13 (2026-07-06): restore native poster on video.
-              // 74.7 killed this to fix the vertical-feed-first-swipe
-              // poster+play-button flash on iOS Safari via an <img>
-              // overlay + hasFirstFrame gate. The gate correctly covers
-              // the non-fullscreen (portrait tile) branch. But 74.8-74.12
-              // extended the gate machinery into the fullscreen branch,
-              // where video is already playing before the fullscreen tap
-              // (native poster shows nothing — .play() has already been
-              // called). Piling opacity gates + rotated <img> overlays +
-              // sync state resets on top of the fullscreen path caused
-              // the "big → small → big" and "flash mini window" regressions
-              // owner reported through 74.8-74.12. Owner: "之前都好着的".
-              // Restoring poster attr means iOS uses its native
-              // last-frame-hold during HLS src swap in fullscreen,
-              // which "just works". The <img> overlay below still
-              // covers the same poster in the non-fullscreen branch
-              // when hasFirstFrame is false, so the vertical-feed
-              // first-swipe fix is preserved.
-              poster={poster ?? undefined}
+              // Phase 74.13 (2026-07-06): restore native poster on video —
+              // BUT only for non-fullscreen. In fullscreen, native
+              // <video poster> letterboxes to the rotated box's aspect
+              // (CSS object-fit does NOT apply to the poster attribute
+              // on iOS Safari), producing the "小图" frame owner reported
+              // in "黑屏 → 小图 → 大播放". Phase 74.14 replaces it with
+              // a rotated <img> overlay + objectFit: cover so the
+              // landscape thumbnail actually fills the fullscreen box.
+              poster={isFullscreen && hasLandscape ? undefined : (poster ?? undefined)}
               style={
                 // Phase 71.14: rotate-90 fullscreen — measure the visual
                 // viewport in JS and set width/height as raw pixels. Setting
@@ -1077,6 +1086,54 @@ function Card({
                 alt=""
                 aria-hidden="true"
                 className="pointer-events-none absolute inset-0 h-full w-full bg-black object-contain"
+              />
+            )}
+            {/* Phase 74.14 (2026-07-06): fullscreen rotated poster overlay.
+             * Sits at zIndex 9999 (below the <video> at 10000), rendered
+             * unconditionally in fullscreen — no gate. Video paints on
+             * top the moment its first frame arrives; before that, this
+             * <img> covers the fullscreen box with the landscape
+             * thumbnail via objectFit: cover (which the native
+             * poster attribute cannot do on iOS Safari, causing the
+             * letterboxed "小图" symptom). Uses the LANDSCAPE poster
+             * so aspect actually matches the box, not the portrait
+             * poster (which would still look wrong). */}
+            {isFullscreen && hasLandscape && vp.w > 0 && landscapePoster && (
+              <img
+                src={landscapePoster}
+                alt=""
+                aria-hidden="true"
+                style={{
+                  position: 'fixed',
+                  top: '50%',
+                  left: '50%',
+                  width: `${vp.h}px`,
+                  height: `${vp.w}px`,
+                  maxWidth: 'none',
+                  maxHeight: 'none',
+                  minWidth: 0,
+                  minHeight: 0,
+                  transform: 'translate(-50%, -50%) rotate(90deg)',
+                  objectFit: 'cover',
+                  zIndex: 9999,
+                  pointerEvents: 'none',
+                  background: 'black',
+                }}
+              />
+            )}
+            {/* Phase 74.14: preload the landscape thumbnail into the
+             * browser's image cache while the card is still in the
+             * portrait feed. This eliminates the "黑屏" first frame in
+             * fullscreen — the <img> above renders instantly from
+             * cache instead of waiting for a network round trip.
+             * Hidden via display:none but src is fetched. */}
+            {!isFullscreen && landscapePoster && (
+              <img
+                src={landscapePoster}
+                alt=""
+                aria-hidden="true"
+                style={{ display: 'none' }}
+                loading="eager"
               />
             )}
           </>

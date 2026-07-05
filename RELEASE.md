@@ -2,6 +2,11 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.74.14 — 2026-07-06
+
+### 🐛 Bug Fixes
+- **Fullscreen video no longer shows a "black → letterboxed thumbnail → full playback" sequence.** iOS Safari's native `<video poster>` does not respect CSS `object-fit`, so the poster was letterboxing to the rotated fullscreen box's aspect (owner: "黑屏 → 小图 → 大播放"). Fixed by replacing the native poster in fullscreen with a rotated `<img>` overlay that uses `object-fit: cover` and the correct landscape thumbnail. Also preloads the landscape thumbnail while the card is still in the vertical feed, so tapping fullscreen shows the poster instantly instead of waiting for a network round trip. The vertical feed's non-fullscreen behavior is untouched.
+
 ## v0.74.13 — 2026-07-06
 
 ### 🐛 Bug Fixes
