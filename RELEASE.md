@@ -2,6 +2,9 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.73.0 — 2026-07-05
+Photo swipe stays on native iOS momentum-scroll but the mid-swipe stutter is fixed. Swipe is now debounced to scroll-settle (React tree stays still while your finger is moving), neighbouring photos preload one further, decode runs off the main thread, and every slide is on its own GPU layer. Same physics as before, without the frame drops.
+
 ## v0.72.8 — 2026-07-05
 Photo swipe header re-aligned to match the community-video swipe layout: Back button top-left, counter pill top-right on the same row, dashed segmented progress on a second row below. Progress is now cumulative (fills as you swipe through) instead of a single-tick indicator.
 

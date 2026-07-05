@@ -2,6 +2,29 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-07-05 — Phase 73: photo scroll-snap jank fix (still native)
+
+### Trigger
+Owner:"手感不要仿照 community。你还是要用 native scroll snap 但是不要卡顿。做好了之后 community 那边的横滑也要这么做" —— 明确否掉 72.9 的 translateX 方案(72.9 分支已 delete),回到 native `overflow-x-auto snap-x snap-mandatory`,把卡顿单独 fix。
+
+### Root cause of "卡顿" on native scroll-snap
+1. `onScroll` → `onSwipe(delta)` 每帧触发 parent setState → parent 重渲染整个 feed → PhotoCard 重新 render → `<img>` 每帧被 diff → decode restart → 主线程堵住 → GPU 合成 swipe 卡帧
+2. 邻近图片只 eager `±1`,快 flick 到第 2 张时前面还没解码完 → 合成器等 raster tile → 视觉停顿
+3. 每张 slide 是普通 `<img>` 没进 GPU 层 → iOS 每帧重新 raster
+4. `img decoding` 默认 sync → 解码占主线程
+
+### Fix(BrowseFeed.tsx PhotoCard,单文件)
+- **onScroll debounce 到 settle**:每次 scroll 只 reset 一个 100ms watchdog timer,parent 只在用户停 100ms 后才收到 idx 更新。滑动过程中 React 树完全静止,合成器独占 GPU。
+- **eager 范围 ±1 → ±2**:快 flick 落到 neighbour 时保证已解码
+- **`decoding="async"` on every img**:解码永远走 off-thread
+- **Slide `transform: translateZ(0)`**:hoist 到 compositor layer
+- **Scroller `willChange: transform` + `WebkitOverflowScrolling: touch`**:暗示浏览器保留 layer,并显式启用 iOS momentum
+
+保留 72.7 的物理:无 `snap-always`(不杀 flick momentum),无容器级 `scrollBehavior: smooth`(不覆盖用户驱动)。
+
+### Verify
+`npx tsc --noEmit` clean · `npm run build` clean · 待真机验证滑动是否不再卡顿。CommunityCarousel 暂不动,等 photo 验证过再改(用户选 C)。
+
 ## 2026-07-05 — Phase 72.8: photo-swipe header aligned with CommunityCarousel
 
 ### Trigger
