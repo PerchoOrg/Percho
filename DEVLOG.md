@@ -2,6 +2,24 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## Phase 74.20 (2026-07-06) — 元凶不是我们的 glyph,是 iOS Safari 原生 `<video>` chrome
+
+**Trigger:** 74.19 后 owner 报「点击全屏之后**声音在播放**,图还是出现一个播放键,点击播放键**声音停止**,再点击播放键图像和声音才开始了」。
+
+**74.19 的诊断错在哪:** 我假设「播放键出现」= 我们自己的 `domPaused`-driven glyph。但 owner 明确说「**声音在播放**」—— 这意味着 `v.paused === false`。既然 `v.paused=false`,`domPaused` 也 false → 我们的 glyph **根本没 mount**。看到的播放键必然是别的东西。而 74.19 加的 `fullscreenSettling` gate 只在挡我们自己的 glyph,和 owner 症状无关,所以 owner 说「问题还是没有解决」。
+
+**真正根因:** iOS Safari 即使 `<video>` **不加** `controls` 属性,rotate-90 + fixed-position 布局大改期间会**短暂 mount 原生的 pseudo-element 播放按钮**(`::-webkit-media-controls-start-playback-button` / `::-webkit-media-controls-overlay-play-button`)。音频轨走 HLS.js MSE 不受影响继续放,而按钮叠在视频层上。用户第一次 tap 命中原生按钮 → **原生 pause** → 声音停;第二次 tap 才落到 outer div `onTap` → play 恢复图+声。这也解释了 owner 「声音在放、图上有键、点了先停声再点全来」的完整因果链。
+
+**Fix (74.20):** `app/globals.css` 全局 `display: none !important; pointer-events: none !important` 屏蔽 `::-webkit-media-controls-start-playback-button` / `::-webkit-media-controls-overlay-play-button` / `::-webkit-media-controls-panel`。全局施加因为 HLS.js pipeline attach 时也可能短暂闪 —— 我们所有 pause/play UI 都是自己画的,原生 chrome 从来不该显示。同时 revert 74.19 的 `fullscreenSettling` state + effect(误诊产物,原本 gate 恢复为 `shouldMount && domPaused`)。
+
+**Skill lesson:** 见 `hls-video-ios-safari-pitfalls.md` §17 —— 「owner 的每个描述细节都是重要 signal」。声音状态 vs 视频状态 vs 播放键状态,任何一个不吻合我原有假设 → 假设不成立,别叠 fix,回原点。
+
+**Files:**
+- `app/globals.css` L152+ 加全局 webkit media controls 隐藏
+- `app/(public)/browse/_components/BrowseFeed.tsx`
+  - 删 74.19 `fullscreenSettling` state + effect(L716-733)
+  - Play glyph gate 恢复为 `shouldMount && domPaused`(L1189)
+
 ## Phase 74.19 (2026-07-06) — 全屏进入瞬间的假 paused 信号 → 播放键闪现 → tap 变暂停
 
 **Trigger:** owner「全屏之后还是没有自动播放,点击播放键暂停了之后,然后再点击播放键才开始播放」。74.18 的 `.play()` in tap handler 事实上跑了,但 owner 观察到 UI 上仍有播放键+首次点是暂停+再点才播的行为。
