@@ -2,6 +2,11 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.74.19 — 2026-07-06
+
+### 🐛 Bug Fixes
+- **Fullscreen no longer flashes a play button that pauses the video when tapped.** After tapping fullscreen, iOS Safari transiently reported the video as paused during the style/rotation recalc, which briefly showed the center play button. Tapping it landed on the pause/play toggle after the video had already resumed, so it paused instead of playing. The play button is now suppressed for a short settle window right after entering fullscreen.
+
 ## v0.74.18 — 2026-07-06
 
 ### 🐛 Bug Fixes
