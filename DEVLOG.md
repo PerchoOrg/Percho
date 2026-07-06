@@ -2,6 +2,37 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## Phase 75 (2026-07-06 23:48 UTC) — 单方向渲染:每 listing 只留一个视频
+
+**Trigger:** owner 74.17 后追问「render worker 还需要生成 2 个视频吗 横竖都用的一个视频源」。审阅后确认:74.17 之后 feed 和 fullscreen 都用 landscape uid,portrait 版本对 landscape listing 是纯浪费(CF Stream 存储 + 编码成本)。owner 拍板:「两种情况下,都只有一个视频」+「一起做」(含清理旧 double-write)。
+
+**Objective:** worker 严格一次只渲染一个方向。≥80% 横向照片 → 只出 landscape;否则只出 portrait。前端逻辑保持不变(`cfVideoIdLandscape` 存在 = 显示 fullscreen 按钮),同时清理已有的 3 条 double-write 数据。
+
+**Actions:**
+- `supabase/migrations/20260707000000_listing_video_landscape_only.sql`:放宽 `listing_videos_source_present_check` CHECK 到 `cf_video_id OR cf_video_id_landscape OR external_url`,允许 landscape-only 行。旧 constraint 只认 `cf_video_id OR external_url`,新 landscape-only 行会被拒。
+- `scripts/render-worker/worker.py:287-370`:去掉 portrait 永远渲染的分支,改成 `orientation = "landscape" if want_landscape else "portrait"`,只跑一次 `render()` + 一次 `cf_upload()`。patch_body 用三元表达式显式把另一列写 NULL(处理 re-render 换方向的场景,老 uid 不残留)。
+- `lib/feed/browse-cards.ts:302,305` 和 `lib/listing-feed/load.ts:301,304`:mapping 层给 `cfVideoId` 加 `?? cf_video_id_landscape` fallback,同时 `id` fallback 链也补上 landscape。这样所有旧消费者(grid `thumbnailUrl(card.hero.cfVideoId)`、carousel key)对 landscape-only 行「自然工作」,不用改二十处 UI 代码。
+- `scripts/render-worker/backfill_single_orientation.py`:一次性脚本,找出所有 `cf_video_id NOT NULL AND cf_video_id_landscape NOT NULL` 行 → 通过 CF Stream DELETE API 干掉 portrait asset → `UPDATE listing_videos SET cf_video_id = NULL`。dry-run 默认,`--apply` 执行。幂等(404 视为 success)。
+- 前端播放路径 `BrowseFeed.tsx` **不改**:74.17 的 `effectiveCfId = cfVideoIdLandscape ?? cfVideoId` 已经处理两种形态,mapping 层的 fallback 让 landscape-only 行的 `cfVideoId` 字段自动指向 landscape uid,老 `hero.cfVideoId` 消费者也 OK。
+
+**Decisions:**
+- **Schema 走 (a) 最小改动**:owner 选 (a),不合并 `cf_video_id`+`cf_video_id_landscape` 成一列 `+ orientation` enum。理由:74.17 刚落地,现在核心是省 CF 成本,schema 洁癖后面找机会。两列都 nullable + CHECK 保证至少一个 non-null 即可。
+- **Mapping 层做 fallback,不改所有 UI 消费者**:如果只把 DB 列变成可 null,前端十几处 `thumbnailUrl(cfVideoId)` 都要加判空,面广。改成 mapping 层 `cf_video_id ?? cf_video_id_landscape`,把复杂度锁在两个文件里,`hero.cfVideoId` 契约不变(总是有 uid),`cfVideoIdLandscape != null` 继续表示「显示 fullscreen 按钮」。这是最小侵入面。
+- **Dry-run + 幂等 backfill**:CF DELETE 是不可逆的,先打印再执行。3 条旧 row 数据小,一条命令跑完;idempotent 是防手抖再跑一次。
+
+**Issues:** 无。dry-run 打印出 3 条 double-write row(f5002469 / d55e9251 / c74b9eea),预期。
+
+**Resolution:** 待 push → Vercel preview → merge → 跑 backfill --apply → **restart daemon(必须晚于 merge time)**。风险:merge 后 restart 之前的短窗口,新 job 若命中会用旧 worker(仍双写);因为流量小,可接受。
+
+**Learnings:**
+- **74.17 是 architectural fix,74.14–74.16 的 overlay/poster/gate 一堆代码后面都可以逐步删掉**(现在都是 dead code,`hasLandscape` 只用于「是否显示 fullscreen 按钮」)。本次不动,遵守 §0.3 surgical。
+- **CF Stream DELETE API 404 视为 success**:让 backfill 幂等,避免重跑挂在半路 row 上。
+- Owner 明确要求「schema 洁癖后面再说」→ 记下技术债:`cf_video_id` + `cf_video_id_landscape` 两列本质是「一列 uid + 一位 orientation flag」,合并可以简化 mapping/API/前端,但 breaking change 面积大,等下个 schema 迁移窗口。
+
+**Next steps:**
+- Push `phase75/single-orientation-video` → 等 preview → merge --no-ff → push main → 跑 backfill --apply → restart daemon → verify `systemctl status vicinity-render-worker | grep Active` 时间 > merge 时间 → 观察 `/var/log/vicinity-render-worker.log` 下一个 job 打印 `orientation=landscape/portrait` 而不是 `want_landscape=`。
+- 后续机会:74.14–74.16 的 landscape overlay/poster/hasFirstFrame gate 代码清理(现在 74.17 之后都是 dead code,`effectiveCfId` 从 mount 起就是 landscape uid,不再有 src swap)。
+
 ## Phase 74.23 (2026-07-06) — 全屏隐藏播放键 + 持续 play retry
 
 **Trigger:** owner 74.22 HUD 截屏反馈「点击全屏之后,页面中间有播放按键,需要按两次才能播放」→「接着修!全屏后不要有播放键!!」。HUD 数据(3 秒采样)锁定关键读数:`p=T`(paused=true 全程)、`ct=3.075`(冻结)、`r=4`(HAVE_ENOUGH_DATA)、`428x781`。

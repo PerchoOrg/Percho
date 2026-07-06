@@ -299,10 +299,10 @@ async function assembleCards(
     });
 
     const card: BrowseCard = {
-      id: hero ? (hero.cf_video_id ?? `ext:${l.id}`) : `photo:${l.id}`,
+      id: hero ? (hero.cf_video_id ?? hero.cf_video_id_landscape ?? `ext:${l.id}`) : `photo:${l.id}`,
       mediaKind: hero ? 'video' : 'photo',
       hero: {
-        cfVideoId: hero?.cf_video_id ?? '',
+        cfVideoId: hero?.cf_video_id ?? hero?.cf_video_id_landscape ?? '',
         cfVideoIdLandscape: hero?.cf_video_id_landscape ?? null,
         externalUrl: hero?.external_url ?? null,
       },

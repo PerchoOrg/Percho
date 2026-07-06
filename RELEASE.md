@@ -2,6 +2,12 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.75.0 — 2026-07-06
+
+### 🔧 Technical
+- 视频渲染改为「一 listing 一个视频」:如果房源照片以横向为主,只生成横屏视频(feed 中带黑边显示,点全屏铺满);否则只生成竖屏视频(feed 中铺满,不再显示全屏按钮)。此前会同时生成两版,存储和编码成本翻倍。
+- 清理了历史遗留的 3 条房源:删除多余的竖屏版本,只保留正在使用的横屏版本。用户看到的画面不变。
+
 ## v0.74.23 — 2026-07-06
 
 ### 🎬 全屏播放
