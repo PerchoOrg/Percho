@@ -2,6 +2,11 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.74.20 — 2026-07-06
+
+### 🐛 Bug Fixes
+- **Fullscreen tap now plays the video on the first tap.** Previously, a native iOS Safari play button briefly appeared over the video after entering fullscreen (audio was already playing at that moment); tapping it paused the audio, and only a second tap resumed both audio and video. The native browser video-control chrome is now globally hidden so all pause/play UI is app-drawn and behaves consistently.
+
 ## v0.74.19 — 2026-07-06
 
 ### 🐛 Bug Fixes
