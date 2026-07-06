@@ -714,104 +714,61 @@ function Card({
     };
   }, [isFullscreen, effectiveCfId, setPaused]);
 
-  // Phase 74.22 (2026-07-06): stronger fullscreen decoder kick + on-screen
-  // HUD for iOS Safari real-device diagnosis. See DEVLOG for full context.
+  // Phase 74.23 (2026-07-06): sustained play retry after fullscreen enter.
   //
-  // 74.21 tried setTimeout(200) + `currentTime += 0.001` — owner reported
-  // "全屏后视频不播放 只有声音在放", so the micro-seek either didn't fire
-  // or iOS optimized it away (same-value seeks can be no-ops).
+  // Diagnosis history:
+  //   - 74.21: setTimeout(200) + `currentTime += 0.001` micro-seek — no effect
+  //   - 74.22: double rAF + seek(-0.05) + 300ms fallback pause+play — no effect
+  //   - 74.22 HUD proved `p=T` (paused=true) for the full 3s sample window
+  //     with `ct=3.075` frozen and `r=4` (HAVE_ENOUGH_DATA). So decoder is
+  //     ready and buffered, but every `.play()` we issue silently no-ops.
+  //   - Meanwhile owner said "按两次才能播放". Turns out tap 1 landed on our
+  //     own centre play glyph (74.20 gate `shouldMount && domPaused`),
+  //     which mounted because domPaused stayed true throughout. See
+  //     BrowseFeed.tsx §Phase 74.23 gate — glyph now hidden in fullscreen.
   //
-  // Strategy:
-  //   1. Wait for rotate/resize style to actually commit via double
-  //      rAF (more precise than setTimeout — the second frame is guaranteed
-  //      post-layout).
-  //   2. Seek by a visible delta (-0.05s, clamped to 0). iOS Safari does
-  //      not optimize away seeks >~30ms.
-  //   3. If 300ms later currentTime hasn't advanced (video still frozen),
-  //      escalate: pause() + play(). The paused→playing transition is the
-  //      strongest known way to force iOS to re-kick a stalled decoder.
+  // With the glyph gone, we need play to actually start on its own. Since
+  // one-shot `.play()` calls in the tap handler + one delayed kick both
+  // no-op, the working theory is that iOS Safari's user activation from
+  // the tap handler expires during the CSS rotate/layout commit window.
+  // Solution: keep re-issuing `.play()` on a 200ms interval until either
+  // `!v.paused` (success) or 5s elapse (giving up — user can tap the
+  // video area to trigger native play as a last resort).
   useEffect(() => {
     if (!isFullscreen) return;
     const v = videoRef.current;
     if (!v) return;
-    let raf1 = 0;
-    let raf2 = 0;
-    let checkTimer = 0;
-    let ctAtKick = NaN;
-    raf1 = requestAnimationFrame(() => {
-      raf2 = requestAnimationFrame(() => {
-        try {
-          if (Number.isFinite(v.currentTime) && v.readyState >= 1) {
-            ctAtKick = v.currentTime;
-            v.currentTime = Math.max(0, ctAtKick - 0.05);
-          }
-        } catch {}
-        checkTimer = window.setTimeout(() => {
-          try {
-            // If ct hasn't advanced past ctAtKick within 300ms, decoder
-            // is still stalled — escalate to pause+play transition.
-            if (
-              Number.isFinite(ctAtKick) &&
-              Number.isFinite(v.currentTime) &&
-              v.currentTime <= ctAtKick + 0.001 &&
-              !v.ended
-            ) {
-              const wasPaused = v.paused;
-              v.pause();
-              const p = v.play();
-              if (p && typeof p.then === 'function') {
-                p.catch(() => {
-                  // muted retry
-                  v.muted = true;
-                  void v.play().catch(() => {});
-                });
-              }
-              // preserve user intent if they had paused (unlikely 300ms
-              // in but be safe)
-              if (wasPaused) {
-                try {
-                  v.pause();
-                } catch {}
-              }
-            }
-          } catch {}
-        }, 300);
-      });
-    });
-    return () => {
-      cancelAnimationFrame(raf1);
-      cancelAnimationFrame(raf2);
-      window.clearTimeout(checkTimer);
-    };
-  }, [isFullscreen]);
-
-  // Phase 74.22: on-screen HUD for real-device iOS Safari diagnosis.
-  // Samples <video> state + fullscreen dims every 50ms for 3s after
-  // fullscreen enter. Rendered fixed bottom-right so owner can screenshot
-  // the actual timing/state signals (Vercel preview + iPhone Safari has
-  // no accessible console). Auto-clears on fullscreen exit.
-  const [hudLog, setHudLog] = useState<string[]>([]);
-  useEffect(() => {
-    if (!isFullscreen) {
-      setHudLog([]);
-      return;
-    }
-    const v = videoRef.current;
-    if (!v) return;
     const t0 = performance.now();
-    const lines: string[] = [];
-    const iv = window.setInterval(() => {
-      const dt = Math.round(performance.now() - t0);
-      const w = Math.round(window.innerWidth);
-      const h = Math.round(window.innerHeight);
-      const ct = Number.isFinite(v.currentTime) ? v.currentTime.toFixed(3) : 'NaN';
-      lines.push(
-        `+${String(dt).padStart(4, '0')}ms p=${v.paused ? 'T' : 'F'} r=${v.readyState} ct=${ct} ${w}x${h}`,
-      );
-      setHudLog([...lines]);
-      if (dt >= 3000) window.clearInterval(iv);
-    }, 50);
-    return () => window.clearInterval(iv);
+    let iv = 0;
+    const attempt = () => {
+      if (!v.paused) {
+        window.clearInterval(iv);
+        return;
+      }
+      if (performance.now() - t0 > 5000) {
+        window.clearInterval(iv);
+        return;
+      }
+      const p = v.play();
+      if (p && typeof p.then === 'function') {
+        p.catch(() => {
+          // Fallback: try muted. Autoplay policy allows muted play
+          // without user gesture; the parent onAutoplayBlocked already
+          // handles UI mute state elsewhere.
+          if (!v.muted) {
+            v.muted = true;
+            void v.play().catch(() => {});
+          }
+        });
+      }
+    };
+    // First attempt immediately (still inside the tap-handler activation
+    // frame in most cases), then poll.
+    attempt();
+    iv = window.setInterval(attempt, 200);
+    return () => {
+      window.clearInterval(iv);
+    };
   }, [isFullscreen]);
 
   const isExternal = !!sel.externalUrl;
@@ -1286,14 +1243,17 @@ function Card({
         </>
       )}
 
-      {/* Phase 74.20 (2026-07-06): revert to original gate. 74.19's
-       * `fullscreenSettling` window was based on a wrong diagnosis —
-       * owner reported "声音在播放,图上有播放键" which means
-       * `v.paused=false` and our domPaused-driven glyph is NOT the
-       * one showing. The actual culprit is iOS Safari's native
-       * `-webkit-media-controls-start-playback-button` which is
-       * globally hidden via CSS in globals.css §Phase 74.20. */}
-      {shouldMount && domPaused && (
+      {/* Phase 74.23 (2026-07-06): NEVER render our center play glyph
+       * during fullscreen. Owner: "全屏后不要有播放键". 74.22 HUD proved
+       * `p=T` (paused=true) throughout fullscreen enter — that IS our
+       * own domPaused-driven glyph mounting on top of the video. Users
+       * had to tap it (pointer-events-none passes through, but iOS
+       * treats the tap-through as a user gesture on `<video>`) to get
+       * play, hence "按两次". By gating on `!isFullscreen`, the
+       * fullscreen overlay renders zero UI over the video besides the
+       * X close button; the 74.23 setInterval play retry (see
+       * useEffect near line 720) drives play state without user action. */}
+      {shouldMount && domPaused && !isFullscreen && (
         <div
           className="pointer-events-none flex items-center justify-center"
           style={
@@ -1438,30 +1398,6 @@ function Card({
             <path d="m6 6 12 12" />
           </svg>
         </button>
-        {/* Phase 74.22 diagnostic HUD — remove after 74.22 verified. */}
-        {hudLog.length > 0 && (
-          <div
-            style={{
-              position: 'fixed',
-              bottom: 8,
-              right: 8,
-              zIndex: 10003,
-              maxWidth: '70vw',
-              maxHeight: '50vh',
-              overflow: 'auto',
-              padding: '6px 8px',
-              background: 'rgba(0,0,0,0.75)',
-              color: '#0f0',
-              font: '10px/1.25 ui-monospace, Menlo, monospace',
-              borderRadius: 6,
-              pointerEvents: 'none',
-              whiteSpace: 'pre',
-            }}
-            aria-hidden
-          >
-            {hudLog.join('\n')}
-          </div>
-        )}
         </>
       )}
 

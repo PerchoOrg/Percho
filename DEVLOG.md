@@ -2,6 +2,32 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## Phase 74.23 (2026-07-06) — 全屏隐藏播放键 + 持续 play retry
+
+**Trigger:** owner 74.22 HUD 截屏反馈「点击全屏之后,页面中间有播放按键,需要按两次才能播放」→「接着修!全屏后不要有播放键!!」。HUD 数据(3 秒采样)锁定关键读数:`p=T`(paused=true 全程)、`ct=3.075`(冻结)、`r=4`(HAVE_ENOUGH_DATA)、`428x781`。
+
+**诊断反转(74.22 之前推理链全废):**
+- 之前一直以为 owner 说的「播放键」= iOS 原生 `-webkit-media-controls-*`(74.20 CSS 已屏蔽)。HUD 证明不是。
+- HUD 显示 `p=T` 全程 → **我们自己的** center play glyph(BrowseFeed.tsx:1296,`shouldMount && domPaused` gate 驱动 `<PlayIcon />` 大黑圆)在 fullscreen 期间 mount 出来,叠在 rotate-90 <video> 上,zIndex 10001。
+- 「按两次」= tap 1 落 glyph(pointer-events-none 穿透到底下 <video>,iOS 把这次 pass-through 当 tap-to-play user gesture 处理,启动 native play)→ tap 2 才是真正的用户点击。
+- `p=T + r=4 + ct 冻结` → 解码器就绪 + 数据充足,但每次 `.play()` 静默 no-op。工作假设:74.18 tap-handler 里的 `.play()` 拿到的 user activation,在 CSS rotate/layout commit window 期间被 iOS revoke 了。
+
+**Actions:**
+1. **glyph gate 加 `!isFullscreen`**(BrowseFeed.tsx:1296)—— fullscreen 期间彻底不 mount 我们的 center play glyph。owner 直接需求:「全屏后不要有播放键」。
+2. **74.22 强化 kick useEffect 换成持续 play retry**(BrowseFeed.tsx line 720 起):200ms 间隔 `.play()` retry 直到 `!v.paused` 或 5 秒超时。首次 attempt 立即执行(尽量落在 tap-handler activation frame 内),之后 setInterval 兜底。muted fallback 保留。
+3. **拆 74.22 HUD**:hudLog state、采样 useEffect、fixed bottom-right `<div>` 全部移除。
+
+**Decisions:**
+- 走 B(持续 retry)而非 A(拆 rotate)—— owner 明确「接着修」。若 74.23 仍失败,74.24 强制走 A。
+- glyph 隐藏是零风险改动 —— fullscreen 只有 X 关闭按钮,配合 auto-play retry 无需用户交互。
+- 200ms 间隔 × 5 秒 = 25 次 attempt 上限,不会无限 spam。
+
+**Learnings(写入 skill §21 candidate):**
+- HUD `p=T` 全程 = 我们自己的 domPaused-driven UI 在 fullscreen 期间 mount 是个持续陷阱。任何 `paused` 驱动的 UI overlay 在 fullscreen 里都要显式 `!isFullscreen` gate。
+- iOS Safari user activation 在 CSS transform/layout commit 期间可能被 revoke —— 一次性 `.play()` 从 tap handler 出发不可靠,需持续 retry。
+
+**Next:** owner 真机验证 → glyph 消失 & 单 tap 全屏自动播放 → merge to main → bump v0.74.23。若仍 `p=T` → 74.24 走 A(拆 rotate,skill §17 canonical)。
+
 ## Phase 74.22 (2026-07-06) — 全屏后画面不动:强化 kick + 真机 HUD 诊断
 
 **Trigger:** 74.21 setTimeout(200) + `currentTime += 0.001` merged 后 owner 立刻报「还是有问题 全屏后视频不播放 只有声音在放」。要么 setTimeout 没跑到 useEffect body,要么 iOS 优化掉了 same-value seek(相同 currentTime 赋值可以是 no-op)。
