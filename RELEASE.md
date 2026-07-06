@@ -2,6 +2,15 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.74.23 — 2026-07-06
+
+### 🎬 全屏播放
+- 点击全屏后不再出现中间的播放按键,视频会在全屏后自动开始播放,不需要再手动点第二下。
+- 拆掉了上一版右下角的诊断信息条。
+
+### ⚠️ Known Issues
+- 若真机测试仍出现全屏后画面不动,下一版会切换到「不旋转、上下留黑边」的方案,以 iOS 系统级横屏为准。
+
 ## v0.74.22 — 2026-07-06
 
 ### 🔧 Technical
