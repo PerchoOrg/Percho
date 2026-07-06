@@ -2,6 +2,33 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## Phase 74.22 (2026-07-06) — 全屏后画面不动:强化 kick + 真机 HUD 诊断
+
+**Trigger:** 74.21 setTimeout(200) + `currentTime += 0.001` merged 后 owner 立刻报「还是有问题 全屏后视频不播放 只有声音在放」。要么 setTimeout 没跑到 useEffect body,要么 iOS 优化掉了 same-value seek(相同 currentTime 赋值可以是 no-op)。
+
+**元规则反思(skill §17):** fullscreen enter 类 bug 已到第 5 层脚手架。owner 决定继续修 rotate 方案,不重构架构。同意但按 §17 stop-叠层要求,这轮**先拿真机 signal**,不再盲加。
+
+**Actions:**
+1. **Strong kick(替换 74.21):** 双 rAF(第二 frame 保证 post-layout,比 setTimeout 稳)→ seek 到 `Math.max(0, ct - 0.05)`(iOS 不优化 >30ms delta)→ 300ms 后如 currentTime 未前进,`pause()+play()` transition 大招。
+2. **On-screen HUD:** `useState<string[]>` `hudLog`,fullscreen 进入后 3s 每 50ms 采样 `paused/readyState/currentTime/w×h`,画在 fixed 右下 zIndex 10003 的 `<div>`(monospace,green on 75% black,`pointer-events-none`)。真机 iOS Safari 无 console,截屏就能拿全部 signal。fullscreen exit 自动清空。
+3. tsc `--noEmit` exit 0.
+
+**Decisions:**
+- **HUD 而非 console:** Vercel preview + iPhone Safari,console 只有 macOS 有线 inspector 能看,owner 手边不便。fixed overlay 最直接。
+- **HUD 半透明遮盖 video 一角:** 视觉牺牲可接受,74.22 验证完立刻拆。
+- **Strong kick 三段式:** double rAF 治「时机」,seek delta 治「iOS 优化」,pause+play 兜底治「seek 也不 kick 的极端场景」。三条线独立,不重叠 74.21。
+
+**Learnings:**
+- Same-value 或极小 delta 的 `currentTime` 赋值在 iOS Safari **可能被优化**;实测数据缺失时用 ≥50ms delta。
+- setTimeout 相对 style-commit 的定时不精确,double rAF 是「等 layout 完成」的正确原语。
+- 真机诊断类 bug **优先加 HUD,不加 console**;下次同类先建 HUD 再加 fix,避免盲叠。
+
+**Next steps:**
+- push branch → Vercel preview → owner 真机截屏 HUD → 根据 signal 决定 74.23:
+  - 如果 kick 后 HUD 显示 ct 前进 + 画面不动 → decoder 层面外的 compositor 冻结,考虑 §17 拆 rotate 架构
+  - 如果 ct 一直不动即使 pause+play → HLS.js pipeline 与 rotate 布局根本不兼容
+  - 如果 ct 前进且画面动 → fix 生效,拆 HUD merge 74.23
+
 ## Phase 74.21 (2026-07-06) — 全屏后声音播放但画面冻结,首次 tap 变暂停
 
 **Trigger:** 74.20 CSS 屏蔽了 iOS 原生 `<video>` chrome 之后,owner 报「全屏之后声音播放画面不动,需要连续点击播放键两次,第一次点击暂停声音,第二次点击声音和动画一起继续」。

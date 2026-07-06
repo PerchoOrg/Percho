@@ -2,6 +2,14 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.74.22 — 2026-07-06
+
+### 🔧 Technical
+- 全屏播放画面冻结问题诊断中:强化了解冻手法(布局稳定后再做可见 seek + 兜底重启),并在全屏右下角加了一小块诊断信息(3 秒后消失),用于真机截屏收集数据。此版本本质是诊断版,若确认修复后会拆掉信息条再发正式版。
+
+### ⚠️ Known Issues
+- iOS Safari 全屏后仍可能出现「有声音无画面」;若遇到,截图右下角信息条发给团队。
+
 ## v0.74.21 — 2026-07-06
 
 ### 🐛 Bug Fixes

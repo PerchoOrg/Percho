@@ -714,39 +714,104 @@ function Card({
     };
   }, [isFullscreen, effectiveCfId, setPaused]);
 
-  // Phase 74.21 (2026-07-06): kick the video decoder after fullscreen enter.
-  // Symptom (owner): "全屏之后声音播放画面不动，需要连续点击播放键两次" —
-  // audio track keeps flowing (v.paused=false) but video texture stays
-  // frozen on the last portrait frame. First tap goes to onTap → v.paused
-  // is false → PAUSE branch (kills sound). Second tap → paused=true →
-  // PLAY branch → .play() re-kicks decoder → both resume.
+  // Phase 74.22 (2026-07-06): stronger fullscreen decoder kick + on-screen
+  // HUD for iOS Safari real-device diagnosis. See DEVLOG for full context.
   //
-  // Root cause: iOS Safari's rotate-90 + fixed-position style recalc
-  // freezes the video composite layer even though HLS.js MSE keeps
-  // pushing audio samples. The 74.18 tap-handler .play() runs BEFORE
-  // the style commits, so the decoder gets kicked on the wrong layout
-  // and stalls once rotate applies. .play() by itself doesn't re-kick
-  // an already-playing element.
+  // 74.21 tried setTimeout(200) + `currentTime += 0.001` — owner reported
+  // "全屏后视频不播放 只有声音在放", so the micro-seek either didn't fire
+  // or iOS optimized it away (same-value seeks can be no-ops).
   //
-  // Fix: after isFullscreen flips true, wait ~200ms for the rotate
-  // transform + resize to settle, then micro-seek (currentTime += 0.001).
-  // A seek forces the video decoder to render a new frame regardless of
-  // play state — this is a well-known iOS Safari trick for unfreezing
-  // <video> after layout mutations.
+  // Strategy:
+  //   1. Wait for rotate/resize style to actually commit via double
+  //      rAF (more precise than setTimeout — the second frame is guaranteed
+  //      post-layout).
+  //   2. Seek by a visible delta (-0.05s, clamped to 0). iOS Safari does
+  //      not optimize away seeks >~30ms.
+  //   3. If 300ms later currentTime hasn't advanced (video still frozen),
+  //      escalate: pause() + play(). The paused→playing transition is the
+  //      strongest known way to force iOS to re-kick a stalled decoder.
   useEffect(() => {
     if (!isFullscreen) return;
     const v = videoRef.current;
     if (!v) return;
-    const t = window.setTimeout(() => {
-      try {
-        // Only seek if we have valid metadata; guarding against
-        // NaN/Infinity currentTime if HLS is mid-attach.
-        if (Number.isFinite(v.currentTime) && v.readyState >= 1) {
-          v.currentTime = v.currentTime + 0.001;
-        }
-      } catch {}
-    }, 200);
-    return () => window.clearTimeout(t);
+    let raf1 = 0;
+    let raf2 = 0;
+    let checkTimer = 0;
+    let ctAtKick = NaN;
+    raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(() => {
+        try {
+          if (Number.isFinite(v.currentTime) && v.readyState >= 1) {
+            ctAtKick = v.currentTime;
+            v.currentTime = Math.max(0, ctAtKick - 0.05);
+          }
+        } catch {}
+        checkTimer = window.setTimeout(() => {
+          try {
+            // If ct hasn't advanced past ctAtKick within 300ms, decoder
+            // is still stalled — escalate to pause+play transition.
+            if (
+              Number.isFinite(ctAtKick) &&
+              Number.isFinite(v.currentTime) &&
+              v.currentTime <= ctAtKick + 0.001 &&
+              !v.ended
+            ) {
+              const wasPaused = v.paused;
+              v.pause();
+              const p = v.play();
+              if (p && typeof p.then === 'function') {
+                p.catch(() => {
+                  // muted retry
+                  v.muted = true;
+                  void v.play().catch(() => {});
+                });
+              }
+              // preserve user intent if they had paused (unlikely 300ms
+              // in but be safe)
+              if (wasPaused) {
+                try {
+                  v.pause();
+                } catch {}
+              }
+            }
+          } catch {}
+        }, 300);
+      });
+    });
+    return () => {
+      cancelAnimationFrame(raf1);
+      cancelAnimationFrame(raf2);
+      window.clearTimeout(checkTimer);
+    };
+  }, [isFullscreen]);
+
+  // Phase 74.22: on-screen HUD for real-device iOS Safari diagnosis.
+  // Samples <video> state + fullscreen dims every 50ms for 3s after
+  // fullscreen enter. Rendered fixed bottom-right so owner can screenshot
+  // the actual timing/state signals (Vercel preview + iPhone Safari has
+  // no accessible console). Auto-clears on fullscreen exit.
+  const [hudLog, setHudLog] = useState<string[]>([]);
+  useEffect(() => {
+    if (!isFullscreen) {
+      setHudLog([]);
+      return;
+    }
+    const v = videoRef.current;
+    if (!v) return;
+    const t0 = performance.now();
+    const lines: string[] = [];
+    const iv = window.setInterval(() => {
+      const dt = Math.round(performance.now() - t0);
+      const w = Math.round(window.innerWidth);
+      const h = Math.round(window.innerHeight);
+      const ct = Number.isFinite(v.currentTime) ? v.currentTime.toFixed(3) : 'NaN';
+      lines.push(
+        `+${String(dt).padStart(4, '0')}ms p=${v.paused ? 'T' : 'F'} r=${v.readyState} ct=${ct} ${w}x${h}`,
+      );
+      setHudLog([...lines]);
+      if (dt >= 3000) window.clearInterval(iv);
+    }, 50);
+    return () => window.clearInterval(iv);
   }, [isFullscreen]);
 
   const isExternal = !!sel.externalUrl;
@@ -1373,6 +1438,30 @@ function Card({
             <path d="m6 6 12 12" />
           </svg>
         </button>
+        {/* Phase 74.22 diagnostic HUD — remove after 74.22 verified. */}
+        {hudLog.length > 0 && (
+          <div
+            style={{
+              position: 'fixed',
+              bottom: 8,
+              right: 8,
+              zIndex: 10003,
+              maxWidth: '70vw',
+              maxHeight: '50vh',
+              overflow: 'auto',
+              padding: '6px 8px',
+              background: 'rgba(0,0,0,0.75)',
+              color: '#0f0',
+              font: '10px/1.25 ui-monospace, Menlo, monospace',
+              borderRadius: 6,
+              pointerEvents: 'none',
+              whiteSpace: 'pre',
+            }}
+            aria-hidden
+          >
+            {hudLog.join('\n')}
+          </div>
+        )}
         </>
       )}
 
