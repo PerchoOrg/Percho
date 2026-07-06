@@ -714,6 +714,26 @@ function Card({
     };
   }, [isFullscreen, effectiveCfId, setPaused]);
 
+  // Phase 74.19 (2026-07-06): fullscreen-entry settle window (~600ms).
+  // Suppresses the paused-play-glyph while iOS Safari's transient
+  // `v.paused=true` reading during rotate-90 + resize style recalc
+  // would otherwise cause a spurious tap-to-pause. See the play
+  // glyph JSX for full context. 600ms covers the observed 1-2 frame
+  // pause plus HLS re-buffer without unduly delaying a genuine
+  // user-initiated pause after fullscreen entry.
+  const [fullscreenSettling, setFullscreenSettling] = useState(false);
+  useEffect(() => {
+    if (!isFullscreen) {
+      setFullscreenSettling(false);
+      return;
+    }
+    setFullscreenSettling(true);
+    const t = window.setTimeout(() => setFullscreenSettling(false), 600);
+    return () => {
+      window.clearTimeout(t);
+    };
+  }, [isFullscreen]);
+
   const isExternal = !!sel.externalUrl;
   let poster: string | null = null;
   if (isExternal) {
@@ -1186,7 +1206,27 @@ function Card({
         </>
       )}
 
-      {shouldMount && domPaused && (
+      {/* Phase 74.19 (2026-07-06): play glyph suppressed during
+       * fullscreen-entry settle window. Owner: "全屏之后还是没有
+       * 自动播放,点击播放键暂停了之后,然后再点击播放键才开始播放".
+       * Root cause: entering fullscreen changes the <video>'s CSS
+       * drastically (rotate-90 + fixed + pixel width/height), and iOS
+       * Safari transiently reports `v.paused=true` for a frame or two
+       * during style recalc even though the media is about to resume.
+       * The rAF-driven `domPaused` picks up that transient true and
+       * mounts this play glyph. The user taps what they see — the tap
+       * lands on the outer div's onTap (glyph is `pointer-events-none`)
+       * — but by then iOS has resumed playback, so `v.paused=false`
+       * → onTap runs the PAUSE branch and actually pauses the video.
+       * A second tap is needed to resume.
+       *
+       * Fix: `fullscreenSettling` (see effect ~L942) is true for
+       * ~600ms after `isFullscreen` flips true; the fullscreen retry
+       * effect (~L682) drives `.play()` back on. During this window
+       * we hide the glyph so a stale-paused reading can't provoke
+       * the toggle-back-off tap. `hasFirstFrame` also gates so we
+       * never show the glyph before initial playback starts. */}
+      {shouldMount && domPaused && hasFirstFrame && !fullscreenSettling && (
         <div
           className="pointer-events-none flex items-center justify-center"
           style={

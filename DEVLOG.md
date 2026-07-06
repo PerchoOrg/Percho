@@ -2,6 +2,24 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## Phase 74.19 (2026-07-06) — 全屏进入瞬间的假 paused 信号 → 播放键闪现 → tap 变暂停
+
+**Trigger:** owner「全屏之后还是没有自动播放,点击播放键暂停了之后,然后再点击播放键才开始播放」。74.18 的 `.play()` in tap handler 事实上跑了,但 owner 观察到 UI 上仍有播放键+首次点是暂停+再点才播的行为。
+
+**根因:** `isFullscreen` flip 那瞬间 `<video>` 的 style 从 `object-contain h-full w-full` 换成 `position: fixed; rotate(90deg); width/height: NNNpx`(rotate-90 重构 stacking + 强制 layout),iOS Safari 会在 style-recalc 期间**短暂**把媒体元素置为 `paused=true`(观察到 1-2 帧,~200-500ms,恰好和 HLS 重 buffer 期重合)。而我们的 play glyph 由 rAF poll 驱动的 `domPaused` state 触发(74.11 加的,71.26 定型),只要 `v.paused` 为 true 一帧就 mount。用户看到中央播放键 → tap → 打到底下 outer div `onTap`(glyph `pointer-events-none`)—— 而**这时 iOS 已经把 video 恢复播了**(`v.paused=false`)→ `onTap` 走 PAUSE 分支真的暂停 → 得再 tap 一次才播。
+
+**Fix (74.19):** 加 `fullscreenSettling` state,`isFullscreen` flip 后 600ms 内 true,gate play glyph 在这个窗口不 mount。600ms 覆盖观察到的 style-recalc 假 paused + HLS 重 buffer,同时不至于让全屏后真的用户暂停也被吞。同时 gate 加 `hasFirstFrame`(视频还没起来时也不显示 glyph)。
+
+**Alternatives considered:**
+- 让 `onTap` 全屏内屏蔽 pause 动作:破坏用户主动暂停能力,砍功能不可接受
+- 把 rAF poll 改成 debounce:非全屏进入的正常 pause/play 也会被延迟,面积过大
+- 加 `hasFirstFrame` 单一 gate:hasFirstFrame 在 feed 已经 true,进 fullscreen 时不会翻 false(74.17 已删同步 reset),gate 不起作用 —— 所以需要独立的 settle window
+
+**Files:**
+- `app/(public)/browse/_components/BrowseFeed.tsx`
+  - L716-733 加 `fullscreenSettling` state + effect
+  - L1189-1210 play glyph gate 加 `hasFirstFrame && !fullscreenSettling`
+
 ## Phase 74.18 (2026-07-06) — 全屏 tap 用户手势直接 `.play()`,消灭中央播放键
 
 **Trigger:** owner「全屏之后流畅 最后有一个问题还需要解决播放键 一开始还在视频上 我需要自动播放全屏之后的视频」。74.17 之后 fullscreen tap 不再有闪现,但如果 tap 时 video 处于 paused 状态(比如 tap 的不是 active 卡,或 autoplay 之前被 gesture 阻断),中央 play glyph(L1189 `domPaused` 触发)会 rotate 90° 显示在视频中央。
