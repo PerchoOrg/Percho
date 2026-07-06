@@ -298,10 +298,10 @@ export async function buildListingCards(
   });
 
   const card: BrowseCard = {
-    id: hero.cf_video_id ?? `ext:${hero.id}`,
+    id: hero.cf_video_id ?? hero.cf_video_id_landscape ?? `ext:${hero.id}`,
     mediaKind: 'video',
     hero: {
-      cfVideoId: hero.cf_video_id ?? '',
+      cfVideoId: hero.cf_video_id ?? hero.cf_video_id_landscape ?? '',
       cfVideoIdLandscape: hero.cf_video_id_landscape ?? null,
       externalUrl: hero.external_url ?? null,
     },

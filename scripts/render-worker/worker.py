@@ -284,12 +284,20 @@ def process_job(job: dict[str, Any]) -> None:
             photo_paths.append(dest)
             print(f"[job {job['id']}] downloaded {dest.name}", flush=True)
 
-        # 3b. Decide whether to also render a landscape version.
+        # 3b. Decide orientation. Phase 75 (2026-07-07): strictly one-or-the-
+        # other. ≥80% horizontal photos → landscape only (feed uses it with
+        # object-contain letterbox, fullscreen fills). Otherwise portrait
+        # only (no fullscreen button in feed). Prior to phase 75 we always
+        # rendered portrait and optionally added landscape on top — that
+        # double-render wasted CF Stream storage/encode for every landscape
+        # listing because 74.17 made the feed use the landscape uid whenever
+        # available. Owner: "两种情况下，都只有一个视频".
         want_landscape = photos_are_mostly_landscape(photo_paths)
         landscape_ratio = sum(1 for p in photo_paths if probe_orientation(p) == "landscape") / len(photo_paths)
+        orientation = "landscape" if want_landscape else "portrait"
         print(
             f"[job {job['id']}] landscape_ratio={landscape_ratio:.2f} "
-            f"want_landscape={want_landscape}",
+            f"orientation={orientation}",
             flush=True,
         )
 
@@ -298,9 +306,7 @@ def process_job(job: dict[str, Any]) -> None:
         overlay_path = workdir / "overlay.json"
         overlay_path.write_text(json.dumps(overlay, indent=2))
 
-        # 5. Run generate.py — portrait always, landscape conditionally.
-        # Both orientations share the same BGM pick so the two versions feel
-        # like the same reel.
+        # 5. Run generate.py — one orientation only (see 3b).
         bgm_choice = pick_bgm()
 
         def render(orientation: str, out_path: Path) -> None:
@@ -323,46 +329,30 @@ def process_job(job: dict[str, Any]) -> None:
             if not out_path.exists():
                 raise RuntimeError(f"generate.py did not produce {out_path.name}")
 
-        out_portrait = workdir / "out_portrait.mp4"
-        render("portrait", out_portrait)
+        out_path = workdir / f"out_{orientation}.mp4"
+        render(orientation, out_path)
 
-        out_landscape: Path | None = None
-        if want_landscape:
-            out_landscape = workdir / "out_landscape.mp4"
-            render("landscape", out_landscape)
-
-        # 6. Upload to Cloudflare Stream.
-        cf_video_id = cf_upload(
-            out_portrait,
+        # 6. Upload to Cloudflare Stream (one asset only).
+        cf_uid = cf_upload(
+            out_path,
             meta={
-                "name": f"{listing.get('address', 'Listing')} — home tour",
+                "name": f"{listing.get('address', 'Listing')} — home tour"
+                + (" (landscape)" if orientation == "landscape" else ""),
                 "listing_id": listing_id,
-                "orientation": "portrait",
+                "orientation": orientation,
             },
         )
-        print(f"[job {job['id']}] uploaded portrait to CF: {cf_video_id}", flush=True)
+        print(f"[job {job['id']}] uploaded {orientation} to CF: {cf_uid}", flush=True)
 
-        cf_video_id_landscape: str | None = None
-        if out_landscape is not None:
-            cf_video_id_landscape = cf_upload(
-                out_landscape,
-                meta={
-                    "name": f"{listing.get('address', 'Listing')} — home tour (landscape)",
-                    "listing_id": listing_id,
-                    "orientation": "landscape",
-                },
-            )
-            print(f"[job {job['id']}] uploaded landscape to CF: {cf_video_id_landscape}", flush=True)
-
-        # 7. Update listing_videos: set cf_video_id (+ landscape when present),
+        # 7. Update listing_videos: set the appropriate uid column, clear
+        #    the other one (in case of a re-render swapping orientations),
         #    clear the sentinel external_url, mark ready.
         patch_body: dict[str, Any] = {
-            "cf_video_id": cf_video_id,
+            "cf_video_id": cf_uid if orientation == "portrait" else None,
+            "cf_video_id_landscape": cf_uid if orientation == "landscape" else None,
             "external_url": None,
             "status": "ready",
         }
-        if cf_video_id_landscape is not None:
-            patch_body["cf_video_id_landscape"] = cf_video_id_landscape
         sb_patch(
             "listing_videos",
             {"id": f"eq.{video_row_id}"},
