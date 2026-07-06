@@ -2,6 +2,11 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.74.21 — 2026-07-06
+
+### 🐛 Bug Fixes
+- 全屏播放:点击全屏进入横屏后,现在图像和声音一起流畅播放。之前会出现「声音在放画面冻住,需要点两下播放键才能全部恢复」,首次点还会误暂停。
+
 ## v0.74.20 — 2026-07-06
 
 ### 🐛 Bug Fixes
