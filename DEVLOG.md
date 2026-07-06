@@ -2,6 +2,30 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## Phase 74.21 (2026-07-06) — 全屏后声音播放但画面冻结,首次 tap 变暂停
+
+**Trigger:** 74.20 CSS 屏蔽了 iOS 原生 `<video>` chrome 之后,owner 报「全屏之后声音播放画面不动,需要连续点击播放键两次,第一次点击暂停声音,第二次点击声音和动画一起继续」。
+
+**关键 signal:** 「声音播放**画面不动**」→ `v.paused=false`(audio HLS.js MSE 在放),但 video texture 冻在最后一帧。这已经不是 74.20 修的 native chrome 拦截 tap,也不是 74.19 的 rAF 抓瞬时假 paused。是**新一层**病:iOS Safari 在 rotate-90 + fixed-position style-recalc 期间**video composite layer 冻结**,而 audio pipeline 不受影响继续走。
+
+**Tap 序列被冻结画面误导:**
+1. 首次 tap → outer `onTap` → `v.paused=false` → PAUSE 分支 → nuclear pause 全站 → 声音停(画面本来就停)
+2. 二次 tap → `v.paused=true` → PLAY 分支 → `.play()` 重新 kick decoder → 声音+画面全恢复
+
+74.18 tap handler 里的 `.play()` 事实上跑了(声音就是这么起来的),但那 `.play()` 发生在 rotate-90 style **commit 之前**,decoder 在旧 layout 上启动,layout 大改瞬间又被卡住,只留 audio 继续 flush。`.play()` 对 already-playing 元素不 re-kick decoder。
+
+**Fix (74.21):** `useEffect([isFullscreen])`,fullscreen 变 true 后 setTimeout 200ms 让 rotate transform + resize 稳定,然后 `v.currentTime += 0.001` micro-seek 强制 decoder re-render 一帧。iOS Safari 已知 trick —— seek 无论 play 状态都强制解出一帧。200ms 覆盖观察到的 style-recalc 窗口,微小到用户听不到 audio glitch。
+
+**Alternatives considered:**
+- rAF × 2 后 kick(A):没有 timeout 稳,style commit 时机受 iOS 内部调度影响
+- `v.pause(); v.play()` 强制重启(B):副作用大,可能触发 audio 短暂断续 + 我们自己 rAF poll 观察到 paused 又 mount play glyph(74.19 那层病重演)
+- 早期 kick(不加延迟):74.18 就是这个,decoder 在旧 layout kick 后又被 rotate 卡住
+
+**Skill lesson:** 见 `hls-video-ios-safari-pitfalls.md` §20(新)——iOS Safari `<video>` audio pipeline 和 video decoder 在 style-recalc 期间**独立**表现,audio 继续 video 冻结的组合会让 `.play()` 及 `v.paused` state-based 决策全部误判。任何 rotate/resize/fullscreen 大变化的交互,layout 稳定后必须 micro-seek kick decoder。
+
+**Files:**
+- `app/(public)/browse/_components/BrowseFeed.tsx` L716+ 加 fullscreen decoder-kick useEffect
+
 ## Phase 74.20 (2026-07-06) — 元凶不是我们的 glyph,是 iOS Safari 原生 `<video>` chrome
 
 **Trigger:** 74.19 后 owner 报「点击全屏之后**声音在播放**,图还是出现一个播放键,点击播放键**声音停止**,再点击播放键图像和声音才开始了」。

@@ -714,6 +714,41 @@ function Card({
     };
   }, [isFullscreen, effectiveCfId, setPaused]);
 
+  // Phase 74.21 (2026-07-06): kick the video decoder after fullscreen enter.
+  // Symptom (owner): "全屏之后声音播放画面不动，需要连续点击播放键两次" —
+  // audio track keeps flowing (v.paused=false) but video texture stays
+  // frozen on the last portrait frame. First tap goes to onTap → v.paused
+  // is false → PAUSE branch (kills sound). Second tap → paused=true →
+  // PLAY branch → .play() re-kicks decoder → both resume.
+  //
+  // Root cause: iOS Safari's rotate-90 + fixed-position style recalc
+  // freezes the video composite layer even though HLS.js MSE keeps
+  // pushing audio samples. The 74.18 tap-handler .play() runs BEFORE
+  // the style commits, so the decoder gets kicked on the wrong layout
+  // and stalls once rotate applies. .play() by itself doesn't re-kick
+  // an already-playing element.
+  //
+  // Fix: after isFullscreen flips true, wait ~200ms for the rotate
+  // transform + resize to settle, then micro-seek (currentTime += 0.001).
+  // A seek forces the video decoder to render a new frame regardless of
+  // play state — this is a well-known iOS Safari trick for unfreezing
+  // <video> after layout mutations.
+  useEffect(() => {
+    if (!isFullscreen) return;
+    const v = videoRef.current;
+    if (!v) return;
+    const t = window.setTimeout(() => {
+      try {
+        // Only seek if we have valid metadata; guarding against
+        // NaN/Infinity currentTime if HLS is mid-attach.
+        if (Number.isFinite(v.currentTime) && v.readyState >= 1) {
+          v.currentTime = v.currentTime + 0.001;
+        }
+      } catch {}
+    }, 200);
+    return () => window.clearTimeout(t);
+  }, [isFullscreen]);
+
   const isExternal = !!sel.externalUrl;
   let poster: string | null = null;
   if (isExternal) {
