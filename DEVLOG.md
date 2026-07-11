@@ -7,6 +7,44 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-07-11 07:45 UTC — Cleanup post-rebrand: purge mock/test data + archive design mocks
+
+**Objective**: Owner directive "delete all mock / test data, always use real data". Also folded in earlier-agreed cleanup: archive HTML design mocks to `docs/design-history/`, delete orphan plan, rename render-worker systemd unit vicinity→percho.
+
+**Actions**:
+- Deleted `lib/mls/mock-data.ts` + all consumers: `app/internal/seed-mock-listings/`, `app/api/demo/autofill/`, `app/(public)/demo/` (whole route tree — only `autofill/` was inside).
+- Deleted `public/demo/` (11 mp4s, ~98MB) — 10 mock Atlanta listing walkthroughs + orphan `vicinity-slideshow-demo.mp4`.
+- Moved `public/prototype/`, `public/prototypes/`, `public/design-mocks/` → `docs/design-history/` with a `README.md` explaining they're archived HTML sign-off mocks, not live code.
+- Deleted `.hermes/plans/2026-06-20_205142-unify-three-feeds.md` (implemented plan doc).
+- Renamed `scripts/render-worker/vicinity-render-worker.service` → `percho-render-worker.service` (systemd Unit description already said "Percho render worker" — no in-file content change).
+- Fixed dangling links/imports created by the deletions:
+  - `app/internal/layout.tsx`: removed `/demo/autofill` nav entry
+  - `app/internal/meetup/page.tsx`: removed "Review /demo/autofill →" link
+  - `app/(public)/agents/page.tsx`: removed "See a demo →" CTA that pointed at `/demo/autofill`
+- `.gitignore`: block `*.mp4`, `*.mov`, `*.webm`, `*.mkv` globally; removed `!public/demo/*.mp4` whitelist and its NOTE. Videos live on Supabase Storage / CF Stream only now. Kept the existing `docs/ken-burns/demo*` lines as-is (still relevant local-only paths).
+
+**Decisions**: `/demo/autofill` was the KW Atlanta meetup pitch page — owner confirmed switching to real MLS makes it obsolete. DB rows for the 10 mock listings were already dropped in an earlier phase; this commit removes the last of the code paths and static video assets. Meetup page's static `/demo/percho-slideshow-demo.mp4` `<video>` element left in place — file is gone so it'll 404, but that page is internal-only and the owner will decide separately whether to keep/replace/remove the meetup packet.
+
+**Verification**:
+- `tsc --noEmit`: 0 errors (had to wipe stale `.next/` first to clear cached type shims for deleted routes).
+- `rg 'mock-data|MOCK_LISTINGS|searchMockListings|seed-mock-listings|/demo/autofill|/demo/listings'` excluding node_modules/.next/DEVLOG/RELEASE → 0 matches.
+- `git ls-files | grep -iE '\.(mp4|mov|webm|mkv)$'` → 0 tracked video files.
+- `npm run build`: succeeds, exit 0.
+
+**Issues**: None — everything clean.
+
+**Follow-up (owner action, EC2)**: the running systemd unit on the box is still `vicinity-render-worker.service`. Before the next render job, owner needs to:
+```
+sudo systemctl stop vicinity-render-worker
+sudo mv /etc/systemd/system/vicinity-render-worker.service /etc/systemd/system/percho-render-worker.service
+sudo systemctl daemon-reload
+sudo systemctl enable --now percho-render-worker
+```
+
+**Repo size**: reduced by ~98MB (video assets); tracked mp4 count 11 → 0.
+
+**Branch / PR**: `chore/cleanup-post-rebrand-mock-purge` — PR opened for owner review, NOT merged.
+
 ## 2026-07-11 04:20 UTC — Rebrand cleanup pt.2: localStorage keys (no users → no migration needed)
 
 **Objective:** owner 说没有真实用户,不要留 tech debt。上一次(Phase 75.2 / 04:14)保留的 2 个 localStorage key `vicinity_device_id` / `vicinity_session_id` 现在可以直接 rename,不需要写 migration。
