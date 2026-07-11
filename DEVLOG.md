@@ -1,8 +1,31 @@
-# Vicinity — Development Log
+# Percho — Development Log
+
+> The product was renamed from **Vicinity** to **Percho** on **2026-07-11**.
+> Historical entries below preserve the original name in-place — the DEVLOG is
+> a record of what was worked on under the product's name at the time.
+
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
-**Correction (2026-07-11 later):** owner 实际拿的域名是 `percho.co`(不是 `.com`)。本 commit amend:22 files 内 `percho.com` → `percho.co`、`PERCHO.COM` → `PERCHO.CO`;QR png rename `percho-com-agents.png` → `percho-co-agents.png`(3 处 ref 同步)。0 处 `percho.com` 残留,TSC 0 error。
+## 2026-07-11 04:14 UTC — Rebrand cleanup: DEVLOG/RELEASE titles + .env.example header
+
+**Objective:** owner 扫了一眼 GitHub 发现 `DEVLOG.md` / `RELEASE.md` 顶部标题还写着 `Vicinity`,`.env.example` header comment 同样。历史 body 条目不动(保真产品史),但当前指向的文件标题+活模板 header 必须是 Percho。
+
+**Actions:**
+- `DEVLOG.md` L1: `# Vicinity — Development Log` → `# Percho — Development Log`,加 3 行 blockquote 说明历史条目原名保留
+- `RELEASE.md` L1: `# Vicinity Release Notes` → `# Percho Release Notes`,同样加 blockquote
+- `.env.example` L2: header comment `Vicinity` → `Percho`
+
+**Decisions:**
+- 历史 body 中 48 处 `vicinity` 全部保留(Phase 75.2 已定的约定 —— 改 = 篡改产品史)
+- `lib/buyer/device-id.ts` `'vicinity_device_id'` 和 `lib/events/track.ts` `'vicinity_session_id'` 保留(localStorage key,改了老用户全部重新分配 device_id、analytics 事件流断层,rebrand 前后数据无法关联)
+- 品牌变更的说明性 blockquote 放在标题下面而不是文末,读者第一眼就知道"为什么下面还有一堆 Vicinity"
+
+**Verification:** `grep -rli vicinity --exclude-dir=.git --exclude-dir=node_modules --exclude-dir=.next` 剩余文件符合预期(2 md 历史 + 2 localStorage keys)。
+
+## 2026-07-11 — Correction
+
+ owner 实际拿的域名是 `percho.co`(不是 `.com`)。本 commit amend:22 files 内 `percho.com` → `percho.co`、`PERCHO.COM` → `PERCHO.CO`;QR png rename `percho-com-agents.png` → `percho-co-agents.png`(3 处 ref 同步)。0 处 `percho.com` 残留,TSC 0 error。
 
 ## Phase 75.2 (2026-07-11) — Rebrand → Percho (Phase 2+3 combined: everything except infra)
 
