@@ -365,7 +365,7 @@ export async function generateSocialCopy(
 //
 // Phase 50 (2026-06-22). Communities are a different shape from
 // listings — there is no platform axis (a community is browsed on
-// vicinities.cc, not posted to TikTok). Agents want one general-
+// percho.co, not posted to TikTok). Agents want one general-
 // purpose marketing blurb per language they speak, suitable for
 // pasting into a buyer email, a WeChat message, or a printed
 // handout. Hence: language-only, no platform brief.
@@ -427,7 +427,7 @@ const COMMUNITY_CATEGORY_VOCABULARY: ReadonlyArray<{
   label: string;
   blurb: string;
 }> = [
-  // Bucket A — Only on Vicinity
+  // Bucket A — Only on Percho
   {
     bucket: 'a',
     id: 'walk_the_block',
@@ -517,7 +517,7 @@ function communityMarketingSystemPrompt(languages: SocialLanguage[]): string {
     '- Do not invent specific facts (school ratings, crime stats, commute times).',
     '  Use only what the user payload provides.',
     '',
-    'CATEGORY VOCABULARY (Bucket A — only on Vicinity):',
+    'CATEGORY VOCABULARY (Bucket A — only on Percho):',
     bucketA,
     'CATEGORY VOCABULARY (Bucket B — real look at the data):',
     bucketB,

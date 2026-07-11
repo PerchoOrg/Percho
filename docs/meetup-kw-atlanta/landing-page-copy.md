@@ -1,4 +1,4 @@
-# Landing Page Copy — vicinities.cc/agents
+# Landing Page Copy — percho.co/agents
 
 Final English copy for the public agent-waitlist landing page. Short,
 punchy, US-agent-appropriate. Written for a listing agent scrolling on
@@ -15,7 +15,7 @@ Tone: confident but not hype-y. No "revolutionize." No "AI-powered." No
 **Your listings deserve better than a photo grid.**
 
 ### Subhead
-Vicinity is a video-first, swipe-based feed for Atlanta home-buyers. Enter
+Percho is a video-first, swipe-based feed for Atlanta home-buyers. Enter
 the address, upload one video, and we deliver it to buyers who match.
 Free during beta. 100% of leads are yours.
 
@@ -25,7 +25,7 @@ Free during beta. 100% of leads are yours.
 *(Anchors to the waitlist form below.)*
 
 ### Secondary CTA (small, under button)
-Not an agent? [Browse Atlanta homes →](https://vicinities.cc)
+Not an agent? [Browse Atlanta homes →](https://percho.co)
 
 ---
 
@@ -95,7 +95,7 @@ your info. Unsubscribe anytime.
 
 - **Is this free?** Yes — free during beta. Beta agents get grandfathered
   pricing when we introduce paid tiers.
-- **Do I need to pull my listings from Zillow?** No. Vicinity is
+- **Do I need to pull my listings from Zillow?** No. Percho is
   non-exclusive.
 - **Where does the data come from?** FMLS, via Bridge Interactive.
 - **What markets?** Atlanta metro only right now.
@@ -106,17 +106,17 @@ your info. Unsubscribe anytime.
 ## Footer CTA (bottom of page, for people who scrolled past the form)
 
 **Still thinking?** Grab our one-pager or email the founder directly.
-[**Download one-pager (PDF)**] · founder@vicinities.cc
+[**Download one-pager (PDF)**] · founder@percho.co
 
 ---
 
 ## Meta / SEO
 
-- **Title tag:** Vicinity for Agents — Video-first home discovery for Atlanta
+- **Title tag:** Percho for Agents — Video-first home discovery for Atlanta
 - **Meta description:** Join the Atlanta beta. Enter an address, upload one
   video, reach real Atlanta home-buyers. Free, non-exclusive, 100% of leads
   are yours.
-- **OG image:** phone mockup showing the swipe feed, "Vicinity for Atlanta
+- **OG image:** phone mockup showing the swipe feed, "Percho for Atlanta
   Agents" wordmark bottom-left, no lifestyle stock photos.
 
 ---
@@ -132,7 +132,7 @@ your info. Unsubscribe anytime.
 
 **标题：** 你的房源，值得比图片九宫格更好的呈现方式。
 
-**副标题：** Vicinity 是面向 Atlanta 购房者的视频优先、滑动式房源信息流。
+**副标题：** Percho 是面向 Atlanta 购房者的视频优先、滑动式房源信息流。
 输入地址，上传一段视频，我们把它精准推送给匹配的买家。测试期免费，
 100% 的客源归你所有。
 
@@ -191,7 +191,7 @@ FMLS 数据来自 Bridge Interactive · 符合 IDX 合规要求 · 非独家 · 
 ## FAQ 折叠区
 
 - **收费吗？** 内测期免费，内测经纪人享受未来付费版的老用户特惠。
-- **需要从 Zillow 下架房源吗？** 不需要，Vicinity 是非独家的。
+- **需要从 Zillow 下架房源吗？** 不需要，Percho 是非独家的。
 - **数据从哪里来？** FMLS，通过 Bridge Interactive。
 - **覆盖哪些城市？** 目前仅覆盖 Atlanta 都市区。
 - **上传的视频版权归谁？** 归你所有。
@@ -201,12 +201,12 @@ FMLS 数据来自 Bridge Interactive · 符合 IDX 合规要求 · 非独家 · 
 ## 页脚 CTA
 
 **还在犹豫？** 下载我们的一页介绍，或直接联系创始人。
-[下载一页介绍（PDF）] · founder@vicinities.cc
+[下载一页介绍（PDF）] · founder@percho.co
 
 ---
 
 ## Meta / SEO 中文对照
 
-- **Title：** Vicinity 经纪人版 — 面向 Atlanta 的视频优先房源发现平台
+- **Title：** Percho 经纪人版 — 面向 Atlanta 的视频优先房源发现平台
 - **描述：** 加入 Atlanta 内测。输入地址，上传视频，直接触达真实的
   Atlanta 购房者。免费、非独家、客源 100% 归你。

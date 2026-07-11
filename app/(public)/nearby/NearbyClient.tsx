@@ -14,8 +14,8 @@ interface NearbyResponse {
 }
 
 const RADIUS_DEFAULT = 10;
-const RADIUS_STORAGE_KEY = 'vicinity:nearby_radius';
-const GEO_PROMPTED_KEY = 'vicinity:nearby_geo_prompted';
+const RADIUS_STORAGE_KEY = 'percho:nearby_radius';
+const GEO_PROMPTED_KEY = 'percho:nearby_geo_prompted';
 
 function readStoredRadius(): number {
   if (typeof window === 'undefined') return RADIUS_DEFAULT;

@@ -9,7 +9,7 @@
 --     IDX terms. Anything user-facing is proxied through app code that
 --     applies the compliance filters (see compliance-checklist.md).
 --   * mls_listings.our_listing_id links a mirrored MLS record to its
---     Vicinity `listings` row when the listing agent is on Vicinity;
+--     Percho `listings` row when the listing agent is on Percho;
 --     nullable because most FMLS records won't have a match.
 
 create extension if not exists pgcrypto;

@@ -1,7 +1,7 @@
 # KW Atlanta Meetup — Notes Template
 
 **Date:** ______________________  **Location:** ______________________
-**Attendees (Vicinity side):** ______________________
+**Attendees (Percho side):** ______________________
 **Approx. # of agents in room:** ______________________
 
 Fill in during the event where possible; complete within 24 hours after.
@@ -95,7 +95,7 @@ than a fake-warm memory next month.
 
 | Signal | Rating (1–5) | Notes |
 |--------|--------------|-------|
-| Energy in the room toward Vicinity | ___ / 5 |  |
+| Energy in the room toward Percho | ___ / 5 |  |
 | "This solves a real problem" reactions | ___ / 5 |  |
 | Willingness to give email / sign up on the spot | ___ / 5 |  |
 | Quality of questions asked | ___ / 5 |  |

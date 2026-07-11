@@ -26,7 +26,7 @@ Prep materials for the Keller Williams Atlanta agent meetup (Tuesday).
 
 ## 🔗 Related folders elsewhere in the repo
 
-- **Demo video** — `docs/ken-burns/demo/vicinity-slideshow-demo.mp4` (8.5MB, ~30s)
+- **Demo video** — `docs/ken-burns/demo/percho-slideshow-demo.mp4` (8.5MB, ~30s)
 - **Ken Burns generator** — `scripts/ken-burns/`
 - **Landing page code** — `app/(public)/agents/`
 - **Waitlist API** — `app/api/agents/waitlist/`

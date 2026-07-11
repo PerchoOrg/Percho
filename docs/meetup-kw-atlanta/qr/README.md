@@ -1,11 +1,11 @@
 # QR Code Assets — KW Atlanta Meetup
 
 Print-ready QR code assets that point to the agent waitlist landing page:
-**https://vicinities.cc/agents**
+**https://percho.co/agents**
 
 ## Files
 
-- `vicinities-cc-agents.png` — 800×800 PNG QR code, error correction level H
+- `percho-co-agents.png` — 800×800 PNG QR code, error correction level H
   (~30% recovery). Safe to overlay a small logo later if desired.
 - `table-sign.html` — printable 8.5×11 letter-size sign with headline, subhead,
   QR, URL, and three benefits. Open in a browser and use **File → Print** (or
@@ -36,18 +36,18 @@ python3 <<'PY'
 import qrcode
 from qrcode.constants import ERROR_CORRECT_H
 qr = qrcode.QRCode(error_correction=ERROR_CORRECT_H, box_size=40, border=2)
-qr.add_data("https://vicinities.cc/agents")
+qr.add_data("https://percho.co/agents")
 qr.make(fit=True)
 img = qr.make_image(fill_color="black", back_color="white").convert("RGB")
-img.resize((800, 800)).save("vicinities-cc-agents.png")
+img.resize((800, 800)).save("percho-co-agents.png")
 PY
 ```
 
 Or, no-install fallback via qrserver.com:
 
 ```bash
-curl -o vicinities-cc-agents.png \
-  "https://api.qrserver.com/v1/create-qr-code/?size=800x800&ecc=H&data=https%3A%2F%2Fvicinities.cc%2Fagents"
+curl -o percho-co-agents.png \
+  "https://api.qrserver.com/v1/create-qr-code/?size=800x800&ecc=H&data=https%3A%2F%2Fpercho.co%2Fagents"
 ```
 
 ## Scan reliability tips

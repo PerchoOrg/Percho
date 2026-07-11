@@ -3,7 +3,7 @@
 -- Replace the 3-value `kind` enum (school | poi | neighborhood) with a richer
 -- 12-category taxonomy split into two buckets:
 --
---   Bucket A — "Only on Vicinity" (scarce content, no other platform has it)
+--   Bucket A — "Only on Percho" (scarce content, no other platform has it)
 --     walk_the_block, listen_here, morning_rush, after_dark, hidden_spot, local_pick
 --
 --   Bucket B — "Real look at the data" (data exists elsewhere, we add the
@@ -58,7 +58,7 @@ alter table public.community_videos
 alter table public.community_videos
   add constraint community_videos_category_check
   check (category in (
-    -- Bucket A — Only on Vicinity
+    -- Bucket A — Only on Percho
     'walk_the_block',
     'listen_here',
     'morning_rush',

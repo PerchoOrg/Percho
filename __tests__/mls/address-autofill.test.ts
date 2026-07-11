@@ -32,7 +32,7 @@ const RAW_LISTING = {
   LotSizeAcres: 0.25,
   YearBuilt: 1998,
   PublicRemarks: 'Beautiful home',
-  ListOfficeName: 'Vicinity Realty',
+  ListOfficeName: 'Percho Realty',
   ListAgentFullName: 'Jane Agent',
   ListAgentMlsId: 'A1',
   DaysOnMarket: 5,
@@ -104,7 +104,7 @@ describe('autofillListingByAddress', () => {
       expect(result.listing.listing_key).toBe('FMLS-1');
       expect(result.listing.list_price).toBe(750000);
       expect(result.listing.photos).toEqual(['https://cdn.bridge.test/1.jpg']);
-      expect(result.listing.list_office_name).toBe('Vicinity Realty');
+      expect(result.listing.list_office_name).toBe('Percho Realty');
     });
 
     it('returns not_in_fmls when Bridge returns zero hits', async () => {

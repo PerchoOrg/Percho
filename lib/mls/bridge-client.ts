@@ -4,7 +4,7 @@
  *
  * This module is transport-only: it builds URLs, adds auth, retries on
  * 429/5xx, and returns parsed JSON. It does NOT touch Supabase and does
- * NOT know about Vicinity's normalized shape (see reso-types.ts).
+ * NOT know about Percho's normalized shape (see reso-types.ts).
  *
  * Auth: Bridge server-token, header `Authorization: Bearer <token>`.
  * The token identifies both the caller and which dataset(s) they can

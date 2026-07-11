@@ -15,30 +15,30 @@ export default function ContactPage() {
 
       <h2>General</h2>
       <p>
-        <a href="mailto:hello@vicinities.cc">hello@vicinities.cc</a> — product questions, feedback,
+        <a href="mailto:hello@percho.co">hello@percho.co</a> — product questions, feedback,
         partnership ideas.
       </p>
 
       <h2>For agents</h2>
       <p>
-        <a href="mailto:agents@vicinities.cc">agents@vicinities.cc</a> — listing a home, claiming an
+        <a href="mailto:agents@percho.co">agents@percho.co</a> — listing a home, claiming an
         agent profile, payout questions.
       </p>
 
       <h2>Press</h2>
       <p>
-        <a href="mailto:press@vicinities.cc">press@vicinities.cc</a> — media and press inquiries.
+        <a href="mailto:press@percho.co">press@percho.co</a> — media and press inquiries.
       </p>
 
       <h2>Legal &amp; privacy</h2>
       <p>
-        <a href="mailto:legal@vicinities.cc">legal@vicinities.cc</a> — DMCA notices, privacy
+        <a href="mailto:legal@percho.co">legal@percho.co</a> — DMCA notices, privacy
         requests, fair-housing concerns.
       </p>
 
       <h2>Mailing address</h2>
       <p>
-        Vicinity, Inc.
+        Percho, Inc.
         <br />
         (Mailing address available on request.)
       </p>

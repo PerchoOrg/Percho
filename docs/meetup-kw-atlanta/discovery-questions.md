@@ -94,7 +94,7 @@ center. Tells you whether you need to build a broker-facing pitch too.)*
 
 ### 10. Referral / community
 
-**"If Vicinity turned out to actually work for you, who's the first
+**"If Percho turned out to actually work for you, who's the first
 Atlanta agent friend you'd tell?"**
 *(Two purposes: (a) tests real interest — a lukewarm agent won't name
 anyone, (b) surfaces the real influencers in the KW Atlanta network.
@@ -118,7 +118,7 @@ Move that into the notes template at the end of the night.
 ## What NOT to do
 
 - Don't argue when they trash-talk Zillow. Just nod and take notes.
-- Don't correct their misconception about Vicinity mid-vent — write it down
+- Don't correct their misconception about Percho mid-vent — write it down
   and address it in the follow-up email.
 - Don't offer discounts, exclusive deals, or special treatment on the spot.
   We don't have pricing to discount.

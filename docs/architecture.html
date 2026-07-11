@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Vicinity V1 · Architecture</title>
+  <title>Percho V1 · Architecture</title>
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
@@ -65,7 +65,7 @@
     <div class="header">
       <div class="header-row">
         <div class="pulse-dot"></div>
-        <h1>Vicinity V1 — Architecture</h1>
+        <h1>Percho V1 — Architecture</h1>
       </div>
       <p class="subtitle">面向全美购房者的房产 swipe 平台 · 全视频 feed · 一人 + Claude 4 周上线</p>
       <p class="meta">v1.1 · 2026-06-07 · 栈: Next.js · Supabase · Cloudflare Stream · Vercel</p>
@@ -322,7 +322,7 @@
         <ul>
           <li>MLS/IDX feed → ContentSource 抽象</li>
           <li>Premier Agent slot → schema 留空</li>
-          <li>真域名 → ACM SAN 留 vicinity.homes</li>
+          <li>真域名 → ACM SAN 留 percho.homes</li>
         </ul>
       </div>
     </div>
@@ -330,7 +330,7 @@
     <h2>一、背景与约束</h2>
 
     <h3>产品定位</h3>
-    <p>Vicinity V1 是面向 listing agent 的内容工具,服务全美购房者,不是双边平台。三条核心链路:</p>
+    <p>Percho V1 是面向 listing agent 的内容工具,服务全美购房者,不是双边平台。三条核心链路:</p>
     <ul class="body-list">
       <li><strong>Listing 展示页</strong> — 公开可分享,视频优先,移动端沉浸式</li>
       <li><strong>Agent Dashboard</strong> — 创建/编辑 listing,查看数据,收 lead 通知</li>
@@ -381,7 +381,7 @@
     <p>一人 + Claude 用 Vercel 4 周能上线,Fargate 同样工作量 6–8 周。代价是 vendor lock —— 但 Next.js 是开源,真要切 self-host(Docker + ALB)是 1–2 周不是重写,这个 tech debt 可接受。</p>
 
     <h2>三、项目结构</h2>
-    <pre><code>vicinity/
+    <pre><code>percho/
 ├── app/
 │   ├── (public)/v/[agentSlug]/[listingSlug]/page.tsx   <span class="comment"># Listing SSR + ISR</span>
 │   ├── (auth)/login/page.tsx
@@ -624,7 +624,7 @@ Buyer 端 listing 页直接播 HLS manifest
 <span class="keyword">export async function</span> generateMetadata({ params }) {
   <span class="keyword">const</span> listing = <span class="keyword">await</span> getListing(params);
   <span class="keyword">return</span> {
-    title: <span class="string">`</span>${listing.address}<span class="string"> | Vicinity`</span>,
+    title: <span class="string">`</span>${listing.address}<span class="string"> | Percho`</span>,
     openGraph: {
       images: [listing.cover_url],
       description: listing.description[<span class="num">0</span>],
@@ -680,7 +680,7 @@ Dashboard 站内通知(Supabase Realtime WS 推送)</code></pre>
     </span>${lead.email ? <span class="string">`&lt;p&gt;&lt;strong&gt;Email&lt;/strong&gt;: </span>${lead.email}<span class="string">&lt;/p&gt;`</span> : <span class="string">''</span>}<span class="string">
     </span>${lead.phone ? <span class="string">`&lt;p&gt;&lt;strong&gt;Phone&lt;/strong&gt;: </span>${lead.phone}<span class="string">&lt;/p&gt;`</span> : <span class="string">''</span>}<span class="string">
     </span>${lead.message ? <span class="string">`&lt;p&gt;&lt;strong&gt;Message&lt;/strong&gt;: </span>${lead.message}<span class="string">&lt;/p&gt;`</span> : <span class="string">''</span>}<span class="string">
-    &lt;a href="https://vicinity.app/dashboard"
+    &lt;a href="https://percho.app/dashboard"
        style="background: #c9a227; color: white; padding: 12px 24px;
               text-decoration: none; border-radius: 8px; display: inline-block;
               margin-top: 16px;"&gt;
@@ -797,7 +797,7 @@ Dashboard 站内通知(Supabase Realtime WS 推送)</code></pre>
 
     <h2>十二、从 Demo 迁移的关键决策</h2>
 
-    <p>Demo (<code>vicinity-app</code>) 是 React + Vite 纯前端,数据来自 mock。迁移到生产:</p>
+    <p>Demo (<code>percho-app</code>) 是 React + Vite 纯前端,数据来自 mock。迁移到生产:</p>
     <table>
       <tr><th>Demo 组件</th><th>迁移方案</th></tr>
       <tr><td><code>VideoFeed.tsx</code> + <code>Card.tsx</code></td><td>直接复用,仅替换数据源(mock → API)</td></tr>
@@ -817,12 +817,12 @@ Dashboard 站内通知(Supabase Realtime WS 推送)</code></pre>
         <li>MLS/IDX feed 接入 → listings 表加 <code>content_source</code> 字段(<code>manual_upload</code> / <code>mls_feed</code>)</li>
         <li>Premier Agent 推广 → schema 预留 <code>promotion_slots</code> 表</li>
         <li>Enrichment 自动化 → schools/pois 加 <code>provider</code> 字段(<code>manual</code> / <code>google_places</code> / <code>greatschools</code>)</li>
-        <li>真域名 → ACM/SSL 证书 SAN 留 <code>*.vicinity.homes</code></li>
+        <li>真域名 → ACM/SSL 证书 SAN 留 <code>*.percho.homes</code></li>
         <li>多租户 broker → Supabase Auth 升 Cognito 是 1–2 周不是重写</li>
       </ul>
     </div>
 
-    <p class="footer">Vicinity V1 · v1.1 · 2026-06-07 · 面向全美购房者</p>
+    <p class="footer">Percho V1 · v1.1 · 2026-06-07 · 面向全美购房者</p>
   </div>
 </body>
 </html>

@@ -5,7 +5,7 @@
  *
  * Buyers are anonymous in V1 — there's no `user_preferences` table to
  * persist this server-side. We store a single integer in `localStorage`
- * under `vicinity:nearby_radius` and `/nearby` reads it on mount. If the
+ * under `percho:nearby_radius` and `/nearby` reads it on mount. If the
  * key is missing or invalid, the default is 10 mi.
  *
  * 2026-06-14: Replaced 5-bucket select with a drag slider, range 1–100 mi
@@ -14,7 +14,7 @@
 
 import { useEffect, useState } from 'react';
 
-const STORAGE_KEY = 'vicinity:nearby_radius';
+const STORAGE_KEY = 'percho:nearby_radius';
 const DEFAULT_RADIUS = 10;
 const MIN_RADIUS = 1;
 const MAX_RADIUS = 100;

@@ -158,7 +158,7 @@ already supports this without a schema break.
 ```
 lib/mls/
   bridge-client.ts       # RESO Web API transport (retry, auth, timeout)
-  reso-types.ts          # Raw RESO shapes + normalized Vicinity shape
+  reso-types.ts          # Raw RESO shapes + normalized Percho shape
   address-autofill.ts    # Public entry point for autofill route
   sync-worker.ts         # CLI batch sync (Fly/Railway/cron)
 

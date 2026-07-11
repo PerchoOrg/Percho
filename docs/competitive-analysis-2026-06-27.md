@@ -1,13 +1,13 @@
-# Vicinity 竞品分析
+# Percho 竞品分析
 
 **日期**:2026-06-27 · **核对方式**:直接抓取竞品官网/pricing 页(`curl`,User-Agent 仿 Chrome),非搜索引擎二手数据
-**Vicinity 定位**(以此为锚):*Zillow 的视频抖音 — 给买家的房产 swipe 平台 + 给 listing agent 的私域引流和生意放大工具*
+**Percho 定位**(以此为锚):*Zillow 的视频抖音 — 给买家的房产 swipe 平台 + 给 listing agent 的私域引流和生意放大工具*
 
 ---
 
 ## 0. 核心结论(TL;DR)
 
-1. **形式上没有活着的直接竞品**。"竖屏 swipe + 房产" 这个 form factor 喊的人很多,2024-2026 之间 HomeTok / homerun.fun / swipehomes / playhouseapp / hometok.app 一批域名全部 404 或 parking。**这不是 Vicinity 的优势,这是个警告信号** — 同样的赌注前面已经死了一茬,得想清楚为什么。
+1. **形式上没有活着的直接竞品**。"竖屏 swipe + 房产" 这个 form factor 喊的人很多,2024-2026 之间 HomeTok / homerun.fun / swipehomes / playhouseapp / hometok.app 一批域名全部 404 或 parking。**这不是 Percho 的优势,这是个警告信号** — 同样的赌注前面已经死了一茬,得想清楚为什么。
 2. **真实竞争是两个完全不同的市场叠加**:
    - **C 端**:Zillow / Redfin / Realtor.com / Homes.com / Compass — 你抢的是买家的发现入口,正面打不过,只能侧翼(视频/算法/swipe UX)。
    - **B 端**:RealScout / kvCORE / Chime / Real Geeks / Follow Up Boss / BoomTown — 你抢的是 listing agent 的工具预算 $70-$500/月。
@@ -21,7 +21,7 @@
 
 两轴:**横 = 内容形式**(图文/视频),**纵 = 服务对象**(C 端发现 ↔ B 端 agent 工具)
 
-| 桶 | 代表 | ACV | 与 Vicinity 关系 |
+| 桶 | 代表 | ACV | 与 Percho 关系 |
 |---|---|---|---|
 | **C 端房源 portal 巨头** | Zillow, Redfin, Realtor.com, Homes.com, Compass | 广告/referral 抽佣 | **正面,打不过;侧翼可** |
 | **C 端 swipe / video 同形式** | HomeTok (404), homerun.fun (404), swipehomes (404), playhouse.ai(影视不是房产), Reelhouse(影视) | — | **同 form factor 但全死** |
@@ -32,7 +32,7 @@
 | **新房 3D/showroom** | hauzd.com (拉美), Matterport, Giraffe360 | 工程报价 | **错位** |
 | **iBuyer / 全栈交易** | Orchard, Flyhomes, Curbio | 交易抽佣 | **错位**(他们要交易,你要发现) |
 
-**Vicinity 自己坐在哪**:横轴最靠右(全视频),纵轴**两端都占一点** — C 端 swipe + B 端 listing 工具。这是个非典型的双边市场赌注。
+**Percho 自己坐在哪**:横轴最靠右(全视频),纵轴**两端都占一点** — C 端 swipe + B 端 listing 工具。这是个非典型的双边市场赌注。
 
 ---
 
@@ -52,9 +52,9 @@
   1. UX 是图文 + 静态地图,**视频是边缘 feature**(Zillow TikTok 自己运营,但 app 里没有 swipe-video 主 feed)。
   2. lead 是"flow"模式,买家给完联系方式就完了,没有持续的私域沉淀。
   3. agent 抱怨 "lead 质量参差,价格逐年涨"(参考各 agent subreddit)。
-- **对 Vicinity**:**直接竞争 V2**。Vicinity V2 = Premier Agent 视频版 = 直接对线。Zillow 抄 swipe UX 容易,但抄不动"listing agent 主动上传私域内容"这个供给侧 motion(Zillow 数据来自 MLS feed,他们不愿意让 agent 上传内容稀释 SEO)。
+- **对 Percho**:**直接竞争 V2**。Percho V2 = Premier Agent 视频版 = 直接对线。Zillow 抄 swipe UX 容易,但抄不动"listing agent 主动上传私域内容"这个供给侧 motion(Zillow 数据来自 MLS feed,他们不愿意让 agent 上传内容稀释 SEO)。
 - **可借鉴**:ZIP code 拍卖是 V2 商业化的**已经验证模板**,直接抄即可。
-- **必须避免**:不要做 lead resale 中介,Vicinity 的承诺是 "lead 归 agent"。一旦反悔会立刻失去 B 端信任。
+- **必须避免**:不要做 lead resale 中介,Percho 的承诺是 "lead 归 agent"。一旦反悔会立刻失去 B 端信任。
 
 ### 2.2 RealScout —— B 端 listing agent 工具的直接对手
 
@@ -70,9 +70,9 @@
   1. 完全没有视频/swipe,卖的是 email funnel + 网页搜索体验。
   2. 价格不透明,SMB agent 望而却步。
   3. 依赖 agent 自己的旧 contact 数据库 —— **冷启动给不了价值**。
-- **对 Vicinity**:**B 端直接竞争**,但产品形态完全错位。Vicinity 帮 agent 做"内容 → 公域捞新 lead",RealScout 帮 agent 做"邮件 → 私域唤醒老 lead"。两个可以互补,但 agent 预算只有一份。
-- **可借鉴**:**白标到 agent 品牌**这一招 — listing agent 不愿用一个让自己变 "Zillow 流量打工人"的工具,Vicinity 要从 V1 就把 "lead 归你 + 你的品牌可见" 焊死。
-- **必须避免**:不要走 RealScout 的"先要你 1000 个旧客户名单"路径 — Vicinity 是双边市场,要靠 C 端流量给 B 端供货,不是吃 B 端自带数据。
+- **对 Percho**:**B 端直接竞争**,但产品形态完全错位。Percho 帮 agent 做"内容 → 公域捞新 lead",RealScout 帮 agent 做"邮件 → 私域唤醒老 lead"。两个可以互补,但 agent 预算只有一份。
+- **可借鉴**:**白标到 agent 品牌**这一招 — listing agent 不愿用一个让自己变 "Zillow 流量打工人"的工具,Percho 要从 V1 就把 "lead 归你 + 你的品牌可见" 焊死。
+- **必须避免**:不要走 RealScout 的"先要你 1000 个旧客户名单"路径 — Percho 是双边市场,要靠 C 端流量给 B 端供货,不是吃 B 端自带数据。
 
 ### 2.3 BoomTown / kvCORE / Chime —— Listing agent 的"操作系统"
 
@@ -88,9 +88,9 @@
   1. **没有视频原生集成**。BoomTown / kvCORE 把视频当做 "上传一个文件附在 listing 上"。
   2. UX 老气(都是 2014-2018 的网页范式),agent 自己也吐槽。
   3. 价格高,SMB agent 用 Chime/$70,中型 team 才碰 BoomTown/$1000+。
-- **对 Vicinity**:**B 端直接竞争**,但 Vicinity 是"内容驱动获客"(像 TikTok),他们是"漏斗管理"(像 Salesforce)。**同一份 agent 预算的争夺**。
+- **对 Percho**:**B 端直接竞争**,但 Percho 是"内容驱动获客"(像 TikTok),他们是"漏斗管理"(像 Salesforce)。**同一份 agent 预算的争夺**。
 - **可借鉴**:**SMB 价格档要存在**(Chime $70 这一档证明了底部市场有人付钱)。
-- **必须避免**:不要变成又一个 "all-in-one 操作系统",那是个 2018 年已经被 5 家公司打烂的红海。Vicinity 的 wedge 必须保持窄。
+- **必须避免**:不要变成又一个 "all-in-one 操作系统",那是个 2018 年已经被 5 家公司打烂的红海。Percho 的 wedge 必须保持窄。
 
 ---
 
@@ -114,11 +114,11 @@
 - 商业化提前打不开:swipe 是 lean-back UX,很难硬塞付费功能。
 - Zillow/Redfin 已经把 "找房" 这件事 eat 干净,差异化空间小于体感。
 
-**Vicinity 必须明确回答**:为什么这次不一样?(候选答案:**不靠 C 端冷启动跑量,而靠 listing agent 私域分发**给自己客户当工具用 — 这是死亡名单里那批 C-only 玩家没跑通的路径。)
+**Percho 必须明确回答**:为什么这次不一样?(候选答案:**不靠 C 端冷启动跑量,而靠 listing agent 私域分发**给自己客户当工具用 — 这是死亡名单里那批 C-only 玩家没跑通的路径。)
 
 ---
 
-## 4. 对 Vicinity 的战略 implications
+## 4. 对 Percho 的战略 implications
 
 1. **B 端先于 C 端成立** — 你的护城河是 listing agent 上传的内容飞轮,不是 swipe 算法。先用 V1 跑通 100 个 agent 主动上传 + 看到 lead 效果,再谈 C 端规模。这条路也是 swipe 死亡名单里没人走通的差异点。
 2. **定价窗口是 $70-$300/月/agent**,介于 Chime 和 RealScout 之间。再低没法养工程,再高 SMB agent 不付。**V2 必须有一个公开 pricing,不能学 RealScout 的 "Talk to sales"** —— 透明定价是 SMB agent 工具的入场券。
@@ -126,7 +126,7 @@
    - Zillow 不让 agent 上传私域视频(稀释自己的 SEO)。
    - Zillow 没有 lead 100% 归 agent 的承诺(Premier Agent 是反向的)。
    - Zillow 的视频玩法只在 TikTok 上,不在 app 里 —— 入口不连通。
-4. **小区数据 overlay 是隐藏 SEO 杠杆**。AreaVibes/Niche/GreatSchools 是免费数据源,Vicinity 把它们 overlay 到视频上,既是用户价值,也是**为每个 listing 自动生成 1000+ 长尾 SEO 词**(`<community> homes for sale video`)。这是 Zillow 因为 own MLS feed 反而做不动的,他们的 SEO 是 listing-level 不是 community-level。
+4. **小区数据 overlay 是隐藏 SEO 杠杆**。AreaVibes/Niche/GreatSchools 是免费数据源,Percho 把它们 overlay 到视频上,既是用户价值,也是**为每个 listing 自动生成 1000+ 长尾 SEO 词**(`<community> homes for sale video`)。这是 Zillow 因为 own MLS feed 反而做不动的,他们的 SEO 是 listing-level 不是 community-level。
 5. **V1 度量**:不是 DAU,而是 **(a) listing agent 主动上传内容数 / 周;(b) 视频 → DM/电话 lead 转化率;(c) agent 推荐另一个 agent 的比例**。这三个指标比 swipe 数据更早判断 V2 商业化能不能成立。
 
 ---
@@ -134,7 +134,7 @@
 ## 5. 下一步 — 三个选项
 
 a) **深扒 Zillow Premier Agent 的真实 ACV 和 churn**(需要爬 agent forum / 投资者电话会议),写一份 V2 商业化定价 spike。
-b) **本地市场 listing agent 用户访谈 5 家**,问 "Chime/BoomTown/RealScout 你用哪个,愿意为 Vicinity 付多少",拉真实价格信号。
+b) **本地市场 listing agent 用户访谈 5 家**,问 "Chime/BoomTown/RealScout 你用哪个,愿意为 Percho 付多少",拉真实价格信号。
 c) **一个能跑的 V2 商业化 prototype**(ZIP-code 推广位 + agent 主页广告位)的产品 spec。
 
 你选 a / b / c,或全要。

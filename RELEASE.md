@@ -2,6 +2,11 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.75.2 — 2026-07-11
+
+🚀 Features
+- **Rebrand to Percho — everything except infrastructure.** Legal terms, privacy policy, contact page, agents landing, marketing docs, design mocks, and all internal code comments now say Percho. Email addresses and web address will move once DNS is switched. Company name is now written as Percho, Inc. — the legal filing follows separately.
+
 ## v0.75.1 — 2026-07-11
 
 🚀 Features

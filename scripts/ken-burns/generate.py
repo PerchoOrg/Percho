@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Ken Burns slideshow generator for Vicinity listings.
+Ken Burns slideshow generator for Percho listings.
 
 Reads a directory of listing photos, generates a vertical (1080x1920) MP4
 with alternating pan/zoom effects, crossfade transitions, optional BGM,
@@ -241,7 +241,7 @@ def render_ending_card(dst: str, card: dict, duration: float, w: int, h: int) ->
     agent = card.get("agent_name", "")
     wordmark = card.get("wordmark", "")
     cta = card.get("cta", "")
-    footer = card.get("footer", "Powered by Vicinity")
+    footer = card.get("footer", "Powered by Percho")
 
     stats = " · ".join(
         [x for x in [

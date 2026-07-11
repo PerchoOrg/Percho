@@ -75,7 +75,7 @@ NAR IDX with regional additions; when in doubt, over-comply.
 
 ## Ownership
 
-Broker of record is responsible for compliance signoff. Vicinity's
+Broker of record is responsible for compliance signoff. Percho's
 role is to make the technical enforcement automatic (filters,
 attribution, freshness gates) so a code change can't accidentally
 publish non-compliant data. Any change that touches this list should

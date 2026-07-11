@@ -1,4 +1,4 @@
-# Vicinity Q&A Playbook — KW Atlanta Meetup
+# Percho Q&A Playbook — KW Atlanta Meetup
 
 Anticipated agent questions with concise, truthful answers. When in doubt,
 under-promise. If you don't know, say "I don't know yet — that's the kind of
@@ -17,7 +17,7 @@ No. Sign up, upload, leave whenever. No exclusivity, no minimum term.
 
 **Q: Are you going to end up like Zillow — reselling my leads back to me?**
 No. That model is exactly what we're not building. Every lead a buyer
-generates on Vicinity goes 100% to the agent whose listing they contacted.
+generates on Percho goes 100% to the agent whose listing they contacted.
 We do not resell, share, auction, or route buyer contacts to third parties.
 
 ---
@@ -25,7 +25,7 @@ We do not resell, share, auction, or route buyer contacts to third parties.
 ## Exclusivity & channel conflict
 
 **Q: Do I have to pull my listing from Zillow / Redfin / Realtor.com?**
-No. Vicinity is non-exclusive and additive. Keep every current channel.
+No. Percho is non-exclusive and additive. Keep every current channel.
 
 **Q: Can I use my own listing videos I already shot for Instagram/TikTok?**
 Yes. As long as you have the rights to the video, upload whatever you have.
@@ -41,11 +41,11 @@ info to you and log it in your dashboard. We don't retain a lead-broker
 relationship in the middle.
 
 **Q: Do you sell buyer data to anyone?**
-No. Buyer signups are used to run Vicinity — matching, notifications,
+No. Buyer signups are used to run Percho — matching, notifications,
 support. Not sold.
 
 **Q: Who owns the video I upload?**
-You do. You grant Vicinity a license to display it on our platform while
+You do. You grant Percho a license to display it on our platform while
 the listing is active. Take it down anytime and the license ends.
 
 ---
@@ -63,12 +63,12 @@ Three things:
 3. **Lead economics:** leads go straight to the listing agent, no resale.
 
 **Q: How is this different from Redfin?**
-Redfin is a brokerage first, portal second. We're not a brokerage. Vicinity
+Redfin is a brokerage first, portal second. We're not a brokerage. Percho
 doesn't compete for the buyer — the agent does.
 
 **Q: Isn't this just Instagram Reels for houses?**
 Instagram doesn't know a buyer's price band, neighborhood shortlist, or
-that they're actually house-hunting. Vicinity does — because the content
+that they're actually house-hunting. Percho does — because the content
 *is* real listings with structured MLS data behind every clip. Matching is
 the point.
 
@@ -112,11 +112,11 @@ MVP is one primary video per listing. Multi-video is on the roadmap.
 ## Signup & onboarding
 
 **Q: How do I sign up?**
-Scan our QR or go to **vicinities.cc/agents**. Fill in name, email, phone,
+Scan our QR or go to **percho.co/agents**. Fill in name, email, phone,
 brokerage, MLS association. We verify your license and FMLS membership,
 then send you a dashboard invite. Usually 1–2 business days during beta.
 
-**Q: Do I need a Vicinity buyer account too?**
+**Q: Do I need a Percho buyer account too?**
 No — separate agent dashboard. Web-based today.
 
 **Q: What happens after I upload my first listing?**
@@ -158,7 +158,7 @@ without installing anything.
 
 **Q: "I don't have time to shoot videos."**
 Totally fair. One phone-shot walkthrough per listing is the ask — most
-agents already do this for Instagram. If that's still too much, Vicinity
+agents already do this for Instagram. If that's still too much, Percho
 isn't for you today, and I'd rather you know that upfront.
 
 **Q: "I've heard this pitch from ten startups."**

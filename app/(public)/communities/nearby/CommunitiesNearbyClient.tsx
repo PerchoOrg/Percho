@@ -4,7 +4,7 @@
  * CommunitiesNearbyClient — geolocation-driven communities-by-distance grid.
  *
  * Phase 45 (2026-06-20). Mirrors NearbyClient's geolocation/preference
- * flow exactly (radius from `vicinity:nearby_radius`); when geolocation is
+ * flow exactly (radius from `percho:nearby_radius`); when geolocation is
  * denied/unavailable, renders an empty result (no manual lat/lng input —
  * owner request 2026-06-21).
  *
@@ -28,7 +28,7 @@ interface NearbyResponse {
 }
 
 const RADIUS_DEFAULT = 10;
-const RADIUS_STORAGE_KEY = 'vicinity:nearby_radius';
+const RADIUS_STORAGE_KEY = 'percho:nearby_radius';
 
 function readStoredRadius(): number {
   if (typeof window === 'undefined') return RADIUS_DEFAULT;

@@ -32,7 +32,7 @@ business-card.md           card copy (has [PLACEHOLDER]s)
 business-card.svg          card design (logo is placeholder)
 landing-page-copy.md       source copy for /agents
 qr-and-signage.md          table sign + QR code notes
-qr/                        vicinities-cc-agents.png (800x800), table-sign.html (letter-size printable), README.md
+qr/                        percho-co-agents.png (800x800), table-sign.html (letter-size printable), README.md
 business-card.pdf          print-ready PDF from SVG
 meetup-notes-template.md   fill in during/after meeting
 ```
@@ -60,7 +60,7 @@ scripts/ken-burns/lambda-wrapper.py   AWS Lambda entrypoint
 scripts/ken-burns/reproduce-demo.sh   one-command demo rebuild
 scripts/ken-burns/README.md           usage
 docs/ken-burns/pitch-notes.md         talking points about the video
-docs/ken-burns/demo/vicinity-slideshow-demo.mp4   ← 8.5MB, THE demo video
+docs/ken-burns/demo/percho-slideshow-demo.mp4   ← 8.5MB, THE demo video
 docs/ken-burns/demo/photos/           source stills
 docs/ken-burns/demo/bgm.mp3           background music
 docs/ken-burns/demo/ending-card.json  end-frame config (wordmark + CTA)
@@ -92,7 +92,7 @@ supabase/migrations/…_agent_waitlist.sql         waitlist table + RLS
 
 - `tsc --noEmit` clean across all new TS files.
 - `__tests__/mls/*` — bridge-client + address-autofill unit tests pass (mocked network).
-- `docs/ken-burns/demo/vicinity-slideshow-demo.mp4` — renders end-to-end via `reproduce-demo.sh`; playable, 8.5MB, ~30s.
+- `docs/ken-burns/demo/percho-slideshow-demo.mp4` — renders end-to-end via `reproduce-demo.sh`; playable, 8.5MB, ~30s.
 - `POST /api/agents/waitlist` — smoke-tested locally, returns 200 with valid payload, 400 on missing email.
 - Migrations parse (`supabase db lint` clean); not yet applied to remote.
 
@@ -102,7 +102,7 @@ supabase/migrations/…_agent_waitlist.sql         waitlist table + RLS
 
 - [ ] Fill placeholders in `business-card.md` and `business-card.svg` (name, phone, WeChat ID, real logo).
 - [ ] Print `docs/meetup-kw-atlanta/qr/table-sign.html` (open in browser, ⌘P → letter size). QR PNG + PDF business card also ready under `qr/` and `business-card.pdf`.
-- [ ] Airdrop `docs/ken-burns/demo/vicinity-slideshow-demo.mp4` to your phone. Play it once. Confirm audio + video both work.
+- [ ] Airdrop `docs/ken-burns/demo/percho-slideshow-demo.mp4` to your phone. Play it once. Confirm audio + video both work.
 - [ ] Set `BRIDGE_ACCESS_TOKEN` and `BRIDGE_DATASET_ID` in `.env.local` — **won't actually connect until broker paperwork is signed**, but keeps tsc happy.
 - [ ] Decide: run `supabase db push` locally now, or wait until you merge? (Recommend: apply waitlist migration now so `/agents` works on preview.)
 - [ ] Read `app/(public)/agents/page.tsx` copy end-to-end. Change any wording that sounds AI-written.
@@ -120,7 +120,7 @@ supabase/migrations/…_agent_waitlist.sql         waitlist table + RLS
    - Files: `lib/mls/**`, `app/api/mls/**`, `__tests__/mls/**`, `supabase/migrations/*mls*`, `docs/mls-integration/**`, `.env.example`
 5. **Commit meetup docs + Ken Burns generator.** Docs and scripts only.
    - Files: `docs/meetup-kw-atlanta/**`, `docs/ken-burns/**` (excluding the mp4 — keep binary out of git), `scripts/ken-burns/**`
-6. **Do not commit `vicinity-slideshow-demo.mp4`.** 8.5MB binary — keep it on your phone. Add to `.gitignore` if needed.
+6. **Do not commit `percho-slideshow-demo.mp4`.** 8.5MB binary — keep it on your phone. Add to `.gitignore` if needed.
 
 ---
 
@@ -148,5 +148,5 @@ supabase/migrations/…_agent_waitlist.sql         waitlist table + RLS
 
 ## 📁 Final file paths
 
-- `/home/ubuntu/Vicinity/docs/meetup-kw-atlanta/OVERNIGHT-SUMMARY.md`
-- `/home/ubuntu/Vicinity/docs/meetup-kw-atlanta/README.md`
+- `/home/ubuntu/Percho/docs/meetup-kw-atlanta/OVERNIGHT-SUMMARY.md`
+- `/home/ubuntu/Percho/docs/meetup-kw-atlanta/README.md`

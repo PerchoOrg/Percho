@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# Reproduce the Vicinity Ken Burns demo end-to-end.
+# Reproduce the Percho Ken Burns demo end-to-end.
 #
 # - Downloads 8 permissively-licensed real-estate photos from Pexels if
 #   they aren't already cached under docs/ken-burns/demo/photos/.
 # - Attempts to fetch a CC0 short ambient BGM track from Pixabay.
-# - Runs generate.py to produce vicinity-slideshow-demo.mp4.
+# - Runs generate.py to produce percho-slideshow-demo.mp4.
 #
 # Idempotent: safe to re-run.
 set -euo pipefail
@@ -14,7 +14,7 @@ DEMO_DIR="$REPO_ROOT/docs/ken-burns/demo"
 PHOTOS_DIR="$DEMO_DIR/photos"
 BGM_PATH="$DEMO_DIR/bgm.mp3"
 CARD_PATH="$DEMO_DIR/ending-card.json"
-OUT_PATH="$DEMO_DIR/vicinity-slideshow-demo.mp4"
+OUT_PATH="$DEMO_DIR/percho-slideshow-demo.mp4"
 
 mkdir -p "$PHOTOS_DIR"
 

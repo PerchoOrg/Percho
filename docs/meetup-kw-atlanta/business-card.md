@@ -1,4 +1,4 @@
-# Business Card Spec — Vicinity
+# Business Card Spec — Percho
 
 Standard US business card: **3.5 in × 2 in** at 300 dpi = **1050 × 600 px**.
 Bleed: add 0.125 in on each side if sending to a print shop that requires it
@@ -14,12 +14,12 @@ to a print shop that accepts vector.
 
 **Layout:** left 40% = logo mark; right 60% = contact block, right-aligned.
 
-- **Logo:** "Vicinity" wordmark placeholder (top-left).
+- **Logo:** "Percho" wordmark placeholder (top-left).
 - **Founder name:** [TODO: FOUNDER FULL NAME]
 - **Title:** [TODO: e.g. "Founder" or "Founder & CEO"]
-- **Email:** [TODO: founder@vicinities.cc]
+- **Email:** [TODO: founder@percho.co]
 - **Phone:** [TODO: +1 (XXX) XXX-XXXX]
-- **URL:** vicinities.cc
+- **URL:** percho.co
 
 **Colors:**
 - Background: white (#FFFFFF)
@@ -37,13 +37,13 @@ to a print shop that accepts vector.
 **Layout:** centered vertical stack.
 
 - **QR code square:** ~1.1 in × 1.1 in, top-center. Points to
-  `https://vicinities.cc/agents`. Use ECC level M or Q; add a 4-module quiet
+  `https://percho.co/agents`. Use ECC level M or Q; add a 4-module quiet
   zone. Generate per instructions in `qr-and-signage.md`.
 - **Tagline (below QR):** *Video-first home discovery for Atlanta.*
 - **One-line pitch (bottom):** *Enter the address. Upload one video. We
   deliver it to Atlanta buyers.*
 
-Optional: tiny "vicinities.cc/agents" URL under the QR for people who
+Optional: tiny "percho.co/agents" URL under the QR for people who
 won't scan.
 
 ---

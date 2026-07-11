@@ -4,7 +4,7 @@
  * Phase 37 (2026-06-18): the standalone /nearby grid was folded into the
  * Explore page as a sub-tab (Douyin 推荐/同城 model). The route is kept as
  * a permanent redirect so external links, profile shortcuts, and the
- * `vicinity:nearby_radius` localStorage flow (handed off to <NearbyClient>
+ * `percho:nearby_radius` localStorage flow (handed off to <NearbyClient>
  * unchanged inside /browse) keep working.
  *
  * The `NearbyClient` component itself still lives at

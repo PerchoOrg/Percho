@@ -9,8 +9,8 @@ export default function TermsPage() {
   return (
     <LegalLayout eyebrow="Legal" title="Terms of Service" updated="June 20, 2026">
       <p>
-        These Terms of Service (&ldquo;Terms&rdquo;) govern your access to and use of vicinities.cc
-        and related services operated by Vicinity, Inc. (&ldquo;Percho&rdquo;, &ldquo;we&rdquo;,
+        These Terms of Service (&ldquo;Terms&rdquo;) govern your access to and use of percho.co
+        and related services operated by Percho, Inc. (&ldquo;Percho&rdquo;, &ldquo;we&rdquo;,
         &ldquo;us&rdquo;).
       </p>
       <p>
@@ -90,7 +90,7 @@ export default function TermsPage() {
 
       <h2>11. Contact</h2>
       <p>
-        Questions: <a href="mailto:legal@vicinities.cc">legal@vicinities.cc</a>.
+        Questions: <a href="mailto:legal@percho.co">legal@percho.co</a>.
       </p>
     </LegalLayout>
   );

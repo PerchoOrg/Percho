@@ -2,9 +2,54 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+**Correction (2026-07-11 later):** owner 实际拿的域名是 `percho.co`(不是 `.com`)。本 commit amend:22 files 内 `percho.com` → `percho.co`、`PERCHO.COM` → `PERCHO.CO`;QR png rename `percho-com-agents.png` → `percho-co-agents.png`(3 处 ref 同步)。0 处 `percho.com` 残留,TSC 0 error。
+
+## Phase 75.2 (2026-07-11) — Rebrand → Percho (Phase 2+3 combined: everything except infra)
+
+**Trigger:** owner 决定"全改"—— 公司注册、render service 名、DNS 都会切,不再走保守 3 阶段策略。Phase 1 已 merge (`8eabd25`);本阶段一次性把剩余 343 处 `vicinit*` 引用全部收掉,除历史文档、systemd service filename、和 2 个 localStorage key(见 Decisions)之外。
+
+**Objective:** repo 内所有代码 identifier、注释、文档、design mocks、marketing 材料、法律实体名 `Vicinity, Inc.` → `Percho, Inc.`、域名字符串 `vicinities.cc` → `percho.co`、邮箱域 `@vicinities.cc` → `@percho.co` 全部改到位。留给 sudo/infra layer 只剩 3 件事:systemd unit rename、log path 迁移、DNS/MX 切换。
+
+**Actions:**
+- 89 files 处理,87 files 实际修改;replace 规则(protected 顺序):
+  - `Vicinity, Inc.` → `Percho, Inc.` (legal entity)
+  - `vicinities.cc` → `percho.co` (domain, includes mailto:legal@ etc.)
+  - `Vicinity-app` → `Percho-app` (MLS reso-types 注释)
+  - `vicinity-app` → `percho-app`
+  - `\bVICINITY\b` → `PERCHO`, `\bVicinity\b` → `Percho`, `\bvicinity\b` → `percho`(word-boundary)
+- Top-modified: `docs/competitive-analysis-2026-06-27.md` (19), meetup-kw-atlanta bundle (pitch/qa/qr/one-pager/business-card ~60 hits total), `docs/architecture.html` (10), `scripts/render-worker/README.md` + `worker.py`, `scripts/admin/production-smoke.sh`, `supabase/functions/notify-lead/index.ts`, `lib/ai/anthropic.ts` marketing copy prompts, `public/design-mocks/*` and `public/prototypes/*`.
+- Renamed asset:`docs/meetup-kw-atlanta/qr/vicinities-cc-agents.png` → `percho-com-agents.png`,更新 3 处引用(table-sign.html、README.md、OVERNIGHT-SUMMARY.md)。
+- `CLAUDE.md` positioning header + `business-card.svg` 内嵌 `VICINITIES.CC` wordmark → `PERCHO.CO`。
+- `scripts/render-worker/vicinity-render-worker.service` 文件**内容**里的 `Vicinity` 注释已替换,但**文件名保留**——rename 需要 sudo (`systemctl stop/disable/enable/start` + 迁移 `/var/log/vicinity-render-worker.log` → `/var/log/percho-render-worker.log`),归为 Step C infra 任务。
+
+**Decisions:**
+- **`DEVLOG.md` + `RELEASE.md` 历史条目保留不改**(48 处 `vicinity`)—— 改了 = 伪造历史。这些是过去写的实况记录,`vicinity-app`、`vicinity-render-worker` 等词在历史语境中是正确的。
+- **2 处 localStorage key 保留**:`lib/events/track.ts` 的 `SESSION_KEY = 'vicinity_session_id'` 和 `lib/buyer/device-id.ts` 的 `STORAGE_KEY = 'vicinity_device_id'`。改字符串 = 现有用户浏览器分配新 device_id → analytics 视为新用户 → 事件流断层,回头分析 rebrand 前后数据无法关联。零用户可见影响。如果要改需要写 localStorage migration(读老 key → 写新 key → 删老 key),不值得在 rebrand 主 PR 里做。可另开 issue。
+- `Vicinity, Inc.` → `Percho, Inc.`:代码里改了,但实际公司注册变更是法律流程(state 注册文件、EIN 关联、bank account、insurance),owner 需要单独走。terms/privacy 现在写 `Percho, Inc.` 是"prospective statement"——一旦 rebrand 完成 legal 层就一致,如果法律流程延后,可能需要临时改回 `Vicinity, Inc. (dba Percho)` 表述。
+
+**Verification:** `npx tsc --noEmit` 0 error;剩余 `vicinit` grep: DEVLOG(31) + RELEASE(17) + 2 storage keys —— 全部有意保留。
+
+**Next steps (Step C — sudo/infra,owner 侧协作):**
+1. **DNS/DNS/MX 切换**:owner 侧,percho.co A/AAAA 指 Vercel,MX 指邮箱 provider,vicinities.cc 加 302→percho.co。
+2. **Systemd service rename**(需要 sudo):
+   ```bash
+   sudo systemctl stop vicinity-render-worker
+   sudo systemctl disable vicinity-render-worker
+   sudo mv /etc/systemd/system/vicinity-render-worker.service /etc/systemd/system/percho-render-worker.service
+   # patch service file: WorkingDirectory 可保留 /home/ubuntu/Vicinity(除非 repo 目录也 rename),StandardOutput=append: log path 改到 /var/log/percho-render-worker.log
+   sudo systemctl daemon-reload
+   sudo systemctl enable percho-render-worker
+   sudo systemctl start percho-render-worker
+   # verify Active > merge 时间
+   ```
+3. **GitHub repo rename**:`vicinity-homes/Vicinity` → 新 org/repo(owner 决定 org 名)—— GitHub 会自动重定向 clone URL 一段时间,但 CI env vars、Vercel git integration、任何 CODEOWNERS 硬编码引用需要更新。
+4. **Supabase auth redirect URLs**、**Cloudflare Stream webhook URL** 白名单更新到 percho.co。
+5. **公司法律实体**:owner 侧 state 注册变更 → 通知 IRS/bank/insurance。
+6. **邮箱迁移**:percho.co MX 配好后,`hello@` / `legal@` / `agents@` / `founder@` / `press@` 别名重建。
+
 ## Phase 75.1 (2026-07-11) — Rebrand → Percho (Phase 1: UI-facing text)
 
-**Trigger:** owner 决定应用改名 Percho,域名 percho.com 已拿(DNS 未切)。三阶段策略:Phase 1 = UI/user-visible text;Phase 2 = 代码 identifier + 文档 + design mocks;Phase 3 = systemd service / DB / log path / 邮箱域 / 法律实体 —— 等域名切完再动。
+**Trigger:** owner 决定应用改名 Percho,域名 percho.co 已拿(DNS 未切)。三阶段策略:Phase 1 = UI/user-visible text;Phase 2 = 代码 identifier + 文档 + design mocks;Phase 3 = systemd service / DB / log path / 邮箱域 / 法律实体 —— 等域名切完再动。
 
 **Objective:** 所有用户可见的品牌词 `Vicinity` → `Percho`、`VICINITY` → `PERCHO`。**不动**:`vicinities.cc` 域名(邮箱 MX 还在,DNS 未切);`Vicinity, Inc.` 法律实体名(公司注册未改);代码 identifier / DB / service 名 / lib 注释(Phase 2)。
 

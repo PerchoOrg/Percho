@@ -1,7 +1,7 @@
 /**
  * RESO Web API types for Bridge Interactive / FMLS integration.
  *
- * Only the ~30 fields Vicinity actually needs are modeled here. Full RESO
+ * Only the ~30 fields Percho actually needs are modeled here. Full RESO
  * Data Dictionary has hundreds of fields — we intentionally do not import
  * them all. See docs/mls-integration/data-model.md for the shortlist and
  * the reasoning.
@@ -10,7 +10,7 @@
  *   - `ResoProperty` / `ResoMedia` / `ResoOffice` / `ResoMember` — raw
  *     shapes as returned by the Bridge OData endpoints (PascalCase, RESO
  *     naming).
- *   - `NormalizedListing` — snake_case Vicinity-app shape suitable for
+ *   - `NormalizedListing` — snake_case Percho-app shape suitable for
  *     writing into `mls_listings` and for feeding the address-autofill UI.
  *
  * `normalizeReso()` converts raw → normalized. It does not do IDX
@@ -73,7 +73,7 @@ export interface ResoMember {
 }
 
 /**
- * Vicinity-app shape. Snake_case, nullable-safe. This is what gets written
+ * Percho-app shape. Snake_case, nullable-safe. This is what gets written
  * to Postgres and returned to the address-autofill client. Photo URLs are
  * kept as an ordered array of Bridge CDN URLs (we hotlink for MVP; see
  * README.md for the mirroring decision).

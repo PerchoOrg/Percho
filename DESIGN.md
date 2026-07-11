@@ -1,10 +1,10 @@
-# Vicinity Design System — Aman direction (v3)
+# Percho Design System — Aman direction (v3)
 
 Adopted: 2026-06-18. Replaces the dark ink + gold tokens that lived since pre-launch demo.
 
 ## Why Aman
 Top-tier luxury sites (Aman, 111 W 57, Naftali, Related) audited 2026-06.
-Common signal: full-bleed media, **no chromatic accent color**, display serif + tracked-caps sans, B&W or warm-cream palette. Vicinity v3 follows.
+Common signal: full-bleed media, **no chromatic accent color**, display serif + tracked-caps sans, B&W or warm-cream palette. Percho v3 follows.
 
 ## Palette (light, warm)
 | Token        | Value                       | Use                                      |

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Vicinity render worker (Phase 71, 2026-07-05).
+Percho render worker (Phase 71, 2026-07-05).
 
 Long-running poller that:
   1. SELECTs one queued render_jobs row (optimistic lock: UPDATE where
@@ -18,7 +18,7 @@ calls, so no supabase-py dependency. Env is read from .env.local via a
 minimal parser (no python-dotenv dependency).
 
 Run manually:  python3 scripts/render-worker/worker.py
-Systemd unit:  scripts/render-worker/vicinity-render-worker.service
+Systemd unit:  scripts/render-worker/percho-render-worker.service
 """
 
 from __future__ import annotations
