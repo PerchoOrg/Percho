@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+<title>Browse — Percho</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{--bg:#0b1422;--gold:#c9a96b;--gold2:#e6cf9c;--cream:#f1e9d9;--muted:#94a2b8;--line:rgba(255,255,255,0.12)}
+  *{box-sizing:border-box} html,body{margin:0;background:#000;color:#fff;font-family:'Inter',sans-serif;font-weight:300;-webkit-font-smoothing:antialiased;overscroll-behavior:none}
+  .serif{font-family:'Playfair Display',Georgia,serif}
+  a{color:inherit;text-decoration:none}
+
+  .deck{height:100dvh;width:100vw;position:relative;overflow:hidden;background:var(--bg);display:flex;justify-content:center}
+  .stage{position:relative;width:min(540px,100%);height:100%;overflow:hidden;background:#000}
+
+  .card{position:absolute;inset:0;transition:transform .5s ease,opacity .5s ease}
+  .card .img{position:absolute;inset:0;background-size:cover;background-position:center;animation:kb 14s ease-in-out infinite alternate;filter:brightness(0.85) contrast(1.05) saturate(1.05)}
+  @keyframes kb{from{transform:scale(1.05)}to{transform:scale(1.18) translate(2%,-2%)}}
+  .card::before{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(11,20,34,0.55) 0%,rgba(11,20,34,0.0) 22%,rgba(11,20,34,0.05) 55%,rgba(11,20,34,0.95) 100%);z-index:1}
+
+  /* TOP — luxury brokerage chrome */
+  .top{position:absolute;top:0;left:0;right:0;z-index:10;padding:env(safe-area-inset-top,18px) 22px 14px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(255,255,255,0.06);background:linear-gradient(180deg,rgba(11,20,34,0.6) 0%,rgba(11,20,34,0) 100%);backdrop-filter:blur(8px) saturate(120%)}
+  .top .brand{font-family:'Playfair Display',serif;font-size:22px;letter-spacing:0.02em}
+  .top .brand .dot{color:var(--gold)}
+  .top .filters{display:flex;gap:8px;font-size:10px;letter-spacing:0.22em;text-transform:uppercase;color:rgba(255,255,255,0.85)}
+  .top .filters a{padding:6px 12px;border:1px solid rgba(255,255,255,0.18);border-radius:2px}
+  .top .filters a.on{background:var(--gold);color:#0b1422;border-color:var(--gold)}
+  .top .menu{font-size:12px;letter-spacing:0.22em;text-transform:uppercase;color:var(--gold)}
+
+  /* progress dots — gold luxury */
+  .progress{position:absolute;top:calc(env(safe-area-inset-top,18px) + 56px);left:0;right:0;z-index:11;display:flex;gap:4px;padding:0 22px}
+  .progress span{flex:1;height:2px;background:rgba(255,255,255,0.14);border-radius:1px}
+  .progress span.on{background:var(--gold)}
+
+  /* AGENT card — premium tag */
+  .agent-tag{position:absolute;top:90px;left:22px;z-index:9;display:flex;align-items:center;gap:12px;background:rgba(11,20,34,0.55);backdrop-filter:blur(14px) saturate(140%);border:1px solid var(--line);border-radius:0;padding:8px 16px 8px 8px}
+  .agent-tag img{width:34px;height:34px;border-radius:50%;object-fit:cover;border:1px solid var(--gold)}
+  .agent-tag .label{font-size:9px;letter-spacing:0.32em;text-transform:uppercase;color:var(--gold);line-height:1}
+  .agent-tag .name{font-family:'Playfair Display',serif;font-size:15px;font-weight:400;line-height:1.2;margin-top:3px}
+
+  /* META — bottom-left structured */
+  .meta{position:absolute;left:24px;right:96px;bottom:140px;z-index:5}
+  .meta .badge{display:inline-block;font-size:9px;letter-spacing:0.32em;text-transform:uppercase;background:var(--gold);color:#0b1422;padding:5px 10px;font-weight:600;margin-bottom:14px}
+  .meta .hood{font-size:10px;letter-spacing:0.36em;text-transform:uppercase;color:var(--gold);margin-bottom:12px}
+  .meta .price{font-family:'Playfair Display',serif;font-weight:400;font-size:54px;line-height:1;letter-spacing:-0.015em;color:var(--gold2)}
+  .meta .addr{font-family:'Playfair Display',serif;font-weight:400;font-size:22px;color:#fff;margin-top:8px;letter-spacing:-0.005em}
+  .meta .specs{font-size:12px;color:rgba(255,255,255,0.78);margin-top:10px;letter-spacing:0.06em}
+  .meta .tagchips{display:flex;gap:6px;margin-top:14px;flex-wrap:wrap}
+  .meta .tagchips span{font-size:10px;letter-spacing:0.18em;text-transform:uppercase;color:rgba(255,255,255,0.85);border:1px solid var(--line);padding:5px 10px;backdrop-filter:blur(6px)}
+
+  /* RAIL */
+  .rail{position:absolute;right:18px;bottom:140px;z-index:6;display:flex;flex-direction:column;gap:14px;align-items:center}
+  .rail .btn{width:50px;height:50px;border-radius:0;background:rgba(11,20,34,0.55);backdrop-filter:blur(14px) saturate(140%);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;color:var(--gold2);cursor:pointer;font-size:13px;letter-spacing:0.06em}
+  .rail .btn:hover{border-color:var(--gold)}
+  .rail .l{font-size:9px;letter-spacing:0.18em;text-transform:uppercase;color:var(--muted);margin-top:4px;text-align:center}
+
+  /* ACTIONS */
+  .actions{position:absolute;left:0;right:0;bottom:0;z-index:7;padding:14px 22px calc(env(safe-area-inset-bottom,18px) + 14px);display:flex;justify-content:space-between;align-items:center;gap:14px;background:linear-gradient(180deg,rgba(0,0,0,0) 0%,rgba(11,20,34,0.85) 60%,rgba(11,20,34,0.95) 100%)}
+  .actions .pass,.actions .save{width:56px;height:56px;border-radius:0;display:flex;align-items:center;justify-content:center;font-size:20px;cursor:pointer;background:rgba(255,255,255,0.06);border:1px solid var(--line);color:#fff}
+  .actions .like{flex:1;height:56px;border-radius:0;background:var(--gold);color:#0b1422;display:flex;align-items:center;justify-content:center;gap:10px;font-family:'Playfair Display',serif;font-size:16px;font-weight:500;letter-spacing:0.16em;text-transform:uppercase;cursor:pointer;font-style:italic}
+
+  .hint{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:20;font-family:'Playfair Display',serif;font-style:italic;font-size:13px;color:var(--gold);letter-spacing:0.22em;text-transform:uppercase;pointer-events:none;animation:fade 4s ease-out forwards}
+  @keyframes fade{0%{opacity:0}20%{opacity:1}80%{opacity:1}100%{opacity:0}}
+
+  .behind1{transform:scale(0.96) translateY(8px);opacity:.5;filter:blur(2px)}
+  .behind2{transform:scale(0.92) translateY(16px);opacity:.25;filter:blur(4px)}
+
+  @media(min-width:900px){
+    .stage{box-shadow:0 40px 100px rgba(0,0,0,0.7);margin:24px;height:calc(100% - 48px)}
+    .deck{align-items:center;background:radial-gradient(ellipse at 50% 30%,#1a2742 0%,#06101e 80%)}
+  }
+</style></head><body>
+
+<div class="deck">
+  <main class="stage" id="stage">
+    <div class="top">
+      <div class="brand">Percho<span class="dot">.</span></div>
+      <div class="filters"><a class="on">Curated</a><a>$3M+</a><a>Eastside</a></div>
+      <div class="menu">⌕</div>
+    </div>
+    <div class="progress" id="progress"></div>
+    <div class="hint">— Tap to advance —</div>
+  </main>
+</div>
+
+<script src="_data.js"></script>
+<script src="_swipe_data.js"></script>
+<script>
+  const stage=document.getElementById('stage'); const prog=document.getElementById('progress');
+  let active=0; const N=SWIPE_FEED.length;
+  prog.innerHTML=SWIPE_FEED.map((_,i)=>`<span class="${i===0?'on':''}"></span>`).join('');
+  function render(){
+    stage.querySelectorAll('.card').forEach(n=>n.remove());
+    for(let off=2;off>=0;off--){
+      const idx=(active+off)%N; const L=SWIPE_FEED[idx];
+      const cls=off===0?'':(off===1?'behind1':'behind2');
+      const card=document.createElement('div'); card.className='card '+cls;
+      card.innerHTML=`
+        <div class="img" style="background-image:url(${L.angles[0].replace('w=1600','w=1800')})"></div>
+        ${off===0?`
+        <div class="agent-tag"><img src="${L.agent.avatar}" alt=""/>
+          <div><div class="label">Listed By</div><div class="name">${L.agent.name}</div></div>
+        </div>
+        <div class="meta">
+          ${L.status==='Just Listed'?`<span class="badge">Just Listed</span><br/>`:''}
+          <div class="hood">${L.community} · ${L.city.split(',')[0]}</div>
+          <div class="price">${fmtPrice(L.price)}</div>
+          <div class="addr">${L.address}</div>
+          <div class="specs">${L.beds} BD · ${L.baths} BA · ${L.sqft.toLocaleString()} SQFT · ${L.style}</div>
+          <div class="tagchips"><span>${L.schools}</span><span>${L.commute}</span></div>
+        </div>
+        <div class="rail">
+          <div><div class="btn">S</div><div class="l">School</div></div>
+          <div><div class="btn">C</div><div class="l">Commute</div></div>
+          <div><div class="btn">P</div><div class="l">Parks</div></div>
+          <div><div class="btn">M</div><div class="l">Map</div></div>
+        </div>
+        <div class="actions">
+          <div class="pass">✕</div>
+          <div class="like">♥ Save</div>
+          <div class="save">▶</div>
+        </div>`:''}
+      `;
+      stage.appendChild(card);
+    }
+    prog.innerHTML=SWIPE_FEED.map((_,i)=>`<span class="${i===active?'on':''}"></span>`).join('');
+  }
+  render();
+  stage.addEventListener('click',e=>{if(e.target.closest('.actions')||e.target.closest('.rail')||e.target.closest('.top'))return; active=(active+1)%N;render();});
+  let acc=0;
+  stage.addEventListener('wheel',e=>{acc+=e.deltaY;if(acc>120){active=(active+1)%N;render();acc=0}else if(acc<-120){active=(active-1+N)%N;render();acc=0}});
+</script></body></html>

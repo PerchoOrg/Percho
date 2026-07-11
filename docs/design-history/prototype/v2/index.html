@@ -1,0 +1,481 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<title>Percho · Community UX Prototype v2</title>
+<style>
+  :root{--bg:#0a0a0b;--ink:#0f0f12;--card:#161618;--line:#26262a;--mute:#9ca3af;--brand:#22d3ee}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;background:var(--bg);color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display',sans-serif}
+  body{min-height:100vh;padding:14px}
+  h1{font-size:18px;margin:0 0 4px}
+  .lede{color:var(--mute);font-size:13px;margin:0 0 14px;line-height:1.5}
+  .lede b{color:#22d3ee}
+  .scenario-bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+  .scenario-bar button{background:var(--card);border:1px solid var(--line);color:#e5e7eb;padding:8px 14px;border-radius:999px;font-size:13px;cursor:pointer}
+  .scenario-bar button.active{background:var(--brand);color:#062229;border-color:var(--brand);font-weight:600}
+  .row{display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap}
+  .phone{width:380px;height:780px;background:#000;border-radius:38px;border:6px solid #1f2024;position:relative;overflow:hidden;flex-shrink:0;box-shadow:0 30px 80px rgba(0,0,0,.45)}
+  .notch{position:absolute;top:0;left:50%;transform:translateX(-50%);width:120px;height:24px;background:#000;border-radius:0 0 18px 18px;z-index:50}
+  .screen{position:absolute;inset:0;background:#0b0b0d;overflow:hidden}
+  .topbar{height:34px;display:flex;align-items:center;justify-content:space-between;padding:0 14px;color:#9ca3af;font-size:13px;font-variant-numeric:tabular-nums;flex-shrink:0;position:relative;z-index:2}
+  .bottombar{position:absolute;bottom:0;left:0;right:0;height:62px;background:rgba(15,15,18,.92);backdrop-filter:blur(20px);border-top:1px solid var(--line);display:flex;justify-content:space-around;align-items:center;font-size:11px;color:#9ca3af;z-index:30}
+  .bottombar .tab{display:flex;flex-direction:column;align-items:center;gap:2px}
+  .bottombar .tab.active{color:#fff}
+  .bottombar .ic{font-size:20px}
+  .side{flex:1;min-width:280px;max-width:480px}
+  .side h2{font-size:16px;margin:0 0 8px;color:#fff}
+  .side p{font-size:13px;line-height:1.6;color:#cbd5e1;margin:0 0 10px}
+  .side ol{font-size:13px;line-height:1.7;color:#cbd5e1;padding-left:20px;margin:0 0 12px}
+  .side ol b{color:#fff}
+  .side code{background:#1a1b20;padding:2px 6px;border-radius:4px;font-size:11px;color:#22d3ee}
+  .legend{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+  .pill{font-size:11px;padding:4px 10px;border-radius:999px;background:#171a1f;color:#9ca3af;border:1px solid var(--line)}
+  .pill.green{background:rgba(34,211,238,.12);color:#22d3ee;border-color:rgba(34,211,238,.4)}
+  .scene{display:none}
+  .scene.active{display:block}
+  .v2-banner{display:inline-block;background:linear-gradient(90deg,#22d3ee,#34d399);color:#062229;font-size:11px;font-weight:700;padding:3px 10px;border-radius:4px;letter-spacing:.5px;margin-bottom:10px}
+
+  /* L0 listing feed (A2) */
+  .l0-vid{position:absolute;inset:0;background-size:cover;background-position:center}
+  .l0-vid::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.35) 0%,rgba(0,0,0,0) 25%,rgba(0,0,0,0) 55%,rgba(0,0,0,.92) 100%)}
+  .l0-meta{position:absolute;left:16px;right:80px;bottom:80px;color:#fff;z-index:2}
+  .l0-meta .price{font-size:24px;font-weight:700}
+  .l0-meta .addr{font-size:14px;color:#e5e7eb;margin-top:4px}
+  .l0-meta .stats{font-size:13px;color:#cbd5e1;margin-top:6px}
+  .l0-rail{position:absolute;right:12px;bottom:130px;display:flex;flex-direction:column;gap:18px;z-index:2;align-items:center}
+  .l0-rail .b{width:44px;height:44px;border-radius:50%;background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;font-size:18px;color:#fff}
+  .l0-rail .lbl{font-size:10px;color:#fff;margin-top:-12px}
+  .chip{
+    position:absolute;left:16px;top:48px;z-index:5;
+    display:flex;align-items:center;gap:10px;
+    padding:8px 14px 8px 8px;border-radius:999px;
+    background:rgba(15,15,18,.78);backdrop-filter:blur(12px);
+    border:1px solid rgba(255,255,255,.14);cursor:pointer;color:#fff
+  }
+  .chip .ico{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#22d3ee,#a855f7);display:flex;align-items:center;justify-content:center;font-size:14px}
+  .chip .name{font-size:13px;font-weight:600}
+  .chip .sub{font-size:11px;color:#9ca3af;margin-top:1px}
+  .chip .arrow{margin-left:6px;color:#9ca3af;font-size:14px}
+
+  /* Search screen (B2 L0) */
+  .search-screen{position:absolute;top:34px;left:0;right:0;bottom:62px;padding:14px;overflow-y:auto}
+  .search-input{display:flex;align-items:center;gap:8px;background:#171a1f;border:1px solid var(--line);padding:10px 14px;border-radius:14px;font-size:14px;color:var(--mute);margin-bottom:12px}
+  .seg{display:flex;background:#171a1f;border:1px solid var(--line);border-radius:10px;padding:3px;margin-bottom:14px}
+  .seg button{flex:1;background:transparent;border:0;color:#9ca3af;padding:8px 0;font-size:13px;border-radius:8px;cursor:pointer}
+  .seg button.active{background:#262830;color:#fff}
+  .comm-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .comm-card{background:#171a1f;border:1px solid var(--line);border-radius:14px;overflow:hidden;cursor:pointer}
+  .comm-card .cover{aspect-ratio:1.4/1;background-size:cover;background-position:center;position:relative}
+  .comm-card .badge{position:absolute;left:8px;bottom:8px;background:rgba(0,0,0,.7);color:#fff;font-size:10px;padding:3px 8px;border-radius:999px}
+  .comm-card .meta{padding:8px 10px}
+  .comm-card .name{font-size:13px;font-weight:600;color:#fff}
+  .comm-card .stat{font-size:11px;color:#9ca3af;margin-top:2px}
+
+  /* Generic vertical-swipe feed (used for A2 community feed and B2 listing feed) */
+  .feed{
+    position:absolute;inset:0;z-index:20;
+    background:#000;display:flex;flex-direction:column;
+    transform:translateY(100%);transition:transform .3s cubic-bezier(.32,.72,.32,1);
+    pointer-events:none
+  }
+  .feed.open{transform:translateY(0);pointer-events:auto}
+  /* Sticky top header — shows where you are + back */
+  .feed-top{
+    position:absolute;top:0;left:0;right:0;height:62px;flex-shrink:0;display:flex;align-items:center;gap:10px;
+    padding:24px 14px 0;background:linear-gradient(180deg,rgba(0,0,0,.6) 0%,rgba(0,0,0,0) 100%);
+    color:#fff;z-index:6;pointer-events:none
+  }
+  .feed-top > *{pointer-events:auto}
+  .feed-top .back{display:flex;align-items:center;gap:4px;cursor:pointer;color:#fff;font-weight:600;font-size:14px;background:rgba(0,0,0,.4);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.14);padding:6px 12px 6px 8px;border-radius:999px}
+  .feed-top .back .arr{font-size:18px}
+  .feed-top .ctx{display:flex;align-items:center;gap:6px;background:rgba(0,0,0,.4);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.14);padding:6px 12px;border-radius:999px;font-size:12px}
+  .feed-top .ctx .dot{width:6px;height:6px;border-radius:50%;background:#22d3ee}
+  .feed-top .counter{margin-left:auto;font-size:11px;color:#cbd5e1;font-variant-numeric:tabular-nums;background:rgba(0,0,0,.4);padding:5px 10px;border-radius:999px;backdrop-filter:blur(10px)}
+  /* Vertical track */
+  .feed-body{flex:1;position:relative;overflow:hidden}
+  .vtrack{position:absolute;inset:0;display:flex;flex-direction:column;transition:transform .3s cubic-bezier(.32,.72,.32,1);will-change:transform;touch-action:pan-x}
+  .vslide{flex:0 0 100%;height:100%;position:relative}
+  .vhint{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);color:rgba(255,255,255,.55);font-size:12px;pointer-events:none;animation:fade 2.6s ease-in-out 1;z-index:1}
+  @keyframes fade{0%,100%{opacity:0}25%,75%{opacity:1}}
+  /* Listings chip on community video (B2 only) */
+  .l-chip{
+    position:absolute;left:16px;bottom:24px;z-index:3;
+    display:flex;align-items:center;gap:10px;
+    padding:8px 14px 8px 8px;border-radius:999px;
+    background:rgba(15,15,18,.85);backdrop-filter:blur(12px);
+    border:1px solid rgba(255,255,255,.18);cursor:pointer;color:#fff
+  }
+  .l-chip .ico{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#34d399,#22d3ee);display:flex;align-items:center;justify-content:center;font-size:14px}
+  .l-chip .name{font-size:13px;font-weight:600}
+  .l-chip .sub{font-size:11px;color:#cbd5e1;margin-top:1px}
+  .l-chip .arrow{margin-left:6px;color:#cbd5e1;font-size:14px}
+
+  /* HUD (kept for review, smaller) */
+  .hud{
+    position:absolute;top:8px;left:50%;transform:translateX(-50%);z-index:99;
+    background:rgba(34,211,238,.92);color:#062229;font-size:10px;font-weight:700;
+    padding:3px 10px;border-radius:999px;letter-spacing:.5px;font-family:ui-monospace,monospace;
+    pointer-events:none
+  }
+</style>
+</head>
+<body>
+  <h1>Percho · Community UX Prototype <span class="v2-banner">V2 · Simplified</span></h1>
+  <p class="lede">
+    <b>v2 改动</b>:砍掉所有 bottom sheet 中间页;chip 点了直接进上下滑 feed,统一交互方向(全部上下滑,横滑只用于图集)。
+    顶部 sticky pill 显示当前 context + back,不靠 HUD 也能知道在哪。
+    对比 v1:<a href="/prototype/" style="color:#22d3ee">/prototype/</a>
+  </p>
+  <div class="scenario-bar" id="bar">
+    <button data-s="A2" class="active">📱 A2 · Listing → Community feed</button>
+    <button data-s="B2">🔍 B2 · Search → Community → Listings</button>
+  </div>
+
+  <!-- ==================== A2 ==================== -->
+  <section class="scene active" data-scene="A2">
+    <div class="row">
+      <div class="phone">
+        <div class="notch"></div>
+        <div class="screen">
+          <div class="topbar"><span>9:41</span><span></span></div>
+
+          <!-- L0: listing feed (one slide visible for prototype) -->
+          <div class="l0-vid" style="background-image:url('https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=1200&q=70')"></div>
+          <div class="l0-meta">
+            <div class="price">$1.48M</div>
+            <div class="addr">14207 NE 23rd Pl · Bellevue, WA</div>
+            <div class="stats">4 bd · 3 ba · 2,840 sqft</div>
+          </div>
+          <div class="l0-rail">
+            <div><div class="b">❤️</div><div class="lbl">Save</div></div>
+            <div><div class="b">💬</div><div class="lbl">Ask</div></div>
+            <div><div class="b">↗</div><div class="lbl">Share</div></div>
+            <div><div class="b">🔇</div></div>
+          </div>
+          <div class="chip" id="chipA2">
+            <div class="ico">🏘️</div>
+            <div>
+              <div class="name">Bellevue Eastside</div>
+              <div class="sub">⭐ 4.8 · 5 community videos</div>
+            </div>
+            <div class="arrow">›</div>
+          </div>
+
+          <!-- L1: community video vertical feed -->
+          <div class="feed" id="feedA2">
+            <div class="feed-top">
+              <div class="back" id="backA2"><span class="arr">‹</span> Back</div>
+              <div class="ctx"><span class="dot"></span> Bellevue Eastside</div>
+              <div class="counter" id="counterA2">1 / 5</div>
+            </div>
+            <div class="feed-body">
+              <div class="vtrack" id="trackA2"></div>
+              <div class="vhint">↑ swipe to next ↓</div>
+            </div>
+          </div>
+
+          <div class="hud" id="hudA2">L0 · LISTING</div>
+          <div class="bottombar">
+            <div class="tab active"><div class="ic">🏠</div>For You</div>
+            <div class="tab"><div class="ic">🔍</div>Search</div>
+            <div class="tab"><div class="ic">❤️</div>Saved</div>
+            <div class="tab"><div class="ic">👤</div>Me</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="side">
+        <h2>A2 · Listing → Community feed (passive buyer)</h2>
+        <p><b>Buyer 类型</b>:已锚定 listing,想了解周边 → 不想换房,只想看环境。</p>
+        <ol>
+          <li><b>L0 · Listing video</b>:左上 chip <code>🏘️ Bellevue Eastside</code></li>
+          <li><b>L1 · Community feed</b>:点 chip → <b>从下方滑入</b>,5 个 community 视频上下滑</li>
+          <li><b>Back</b>:点 ← 直接回 listing(永远回 L0)</li>
+        </ol>
+        <p><b>vs v1</b>:砍掉 community sheet 中间页(原本 sheet 里讲 stats / 学区 / 中位价 → 现在叠在第一个视频元数据上)。少一层,少一次 tap。</p>
+        <p><b>不加 listings chip</b>:A 用户已锚 listing,跨链稀释意图。要换房请回主 feed。</p>
+        <div class="legend">
+          <span class="pill green">2 层 (L0 → L1)</span>
+          <span class="pill green">无 sheet</span>
+          <span class="pill">全部上下滑</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== B2 ==================== -->
+  <section class="scene" data-scene="B2">
+    <div class="row">
+      <div class="phone">
+        <div class="notch"></div>
+        <div class="screen">
+          <div class="topbar"><span>9:41</span><span></span></div>
+
+          <!-- L0: community grid (Search → Communities) -->
+          <div class="search-screen">
+            <div class="search-input">🔍 <span>Search homes, communities, agents…</span></div>
+            <div class="seg">
+              <button>Homes</button>
+              <button class="active">Communities</button>
+              <button>Agents</button>
+            </div>
+            <div style="font-size:13px;color:#9ca3af;margin-bottom:10px">Browse by neighborhood — 412 communities</div>
+            <div class="comm-grid" id="commGridB2">
+              <div class="comm-card" data-comm="bellevue">
+                <div class="cover" style="background-image:url('https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=500&q=70')"><div class="badge">5 vids · ⭐4.8</div></div>
+                <div class="meta"><div class="name">Bellevue Eastside</div><div class="stat">$1.4M · 47 homes</div></div>
+              </div>
+              <div class="comm-card" data-comm="bellevue">
+                <div class="cover" style="background-image:url('https://images.unsplash.com/photo-1605276373954-0c4a0dac5b12?w=500&q=70')"><div class="badge">17 vids · ⭐4.6</div></div>
+                <div class="meta"><div class="name">Kirkland Houghton</div><div class="stat">$1.1M · 32 homes</div></div>
+              </div>
+              <div class="comm-card" data-comm="bellevue">
+                <div class="cover" style="background-image:url('https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=500&q=70')"><div class="badge">31 vids · ⭐4.9</div></div>
+                <div class="meta"><div class="name">Mercer Island</div><div class="stat">$2.3M · 18 homes</div></div>
+              </div>
+              <div class="comm-card" data-comm="bellevue">
+                <div class="cover" style="background-image:url('https://images.unsplash.com/photo-1598228723793-52759bba239c?w=500&q=70')"><div class="badge">12 vids · ⭐4.5</div></div>
+                <div class="meta"><div class="name">Redmond Education Hill</div><div class="stat">$1.2M · 41 homes</div></div>
+              </div>
+              <div class="comm-card" data-comm="bellevue">
+                <div class="cover" style="background-image:url('https://images.unsplash.com/photo-1542317854-04a7a8523b3a?w=500&q=70')"><div class="badge">19 vids · ⭐4.7</div></div>
+                <div class="meta"><div class="name">Sammamish Plateau</div><div class="stat">$1.6M · 28 homes</div></div>
+              </div>
+              <div class="comm-card" data-comm="bellevue">
+                <div class="cover" style="background-image:url('https://images.unsplash.com/photo-1545209463-e2825498edbf?w=500&q=70')"><div class="badge">14 vids · ⭐4.4</div></div>
+                <div class="meta"><div class="name">Issaquah Highlands</div><div class="stat">$1.0M · 35 homes</div></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- L1: community video feed -->
+          <div class="feed" id="feedB1">
+            <div class="feed-top">
+              <div class="back" id="backB1"><span class="arr">‹</span> Back</div>
+              <div class="ctx"><span class="dot"></span> Bellevue Eastside · About</div>
+              <div class="counter" id="counterB1">1 / 5</div>
+            </div>
+            <div class="feed-body">
+              <div class="vtrack" id="trackB1"></div>
+              <div class="vhint">↑ swipe community videos ↓</div>
+            </div>
+          </div>
+
+          <!-- L2: listing video feed (no sheet, direct from chip) -->
+          <div class="feed" id="feedB2" style="z-index:25">
+            <div class="feed-top">
+              <div class="back" id="backB2"><span class="arr">‹</span> Back</div>
+              <div class="ctx"><span class="dot" style="background:#34d399"></span> Bellevue Eastside · Homes</div>
+              <div class="counter" id="counterB2">1 / 8</div>
+            </div>
+            <div class="feed-body">
+              <div class="vtrack" id="trackB2"></div>
+              <div class="vhint">↑ swipe homes ↓</div>
+            </div>
+          </div>
+
+          <div class="hud" id="hudB">L0 · COMMUNITY GRID</div>
+          <div class="bottombar">
+            <div class="tab"><div class="ic">🏠</div>For You</div>
+            <div class="tab active"><div class="ic">🔍</div>Search</div>
+            <div class="tab"><div class="ic">❤️</div>Saved</div>
+            <div class="tab"><div class="ic">👤</div>Me</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="side">
+        <h2>B2 · Search → Community → Homes (active buyer)</h2>
+        <p><b>Buyer 类型</b>:还没锚定 listing,先选区,再看里面的房。</p>
+        <ol>
+          <li><b>L0 · Community grid</b>:Search → Communities → 6 张卡片</li>
+          <li><b>L1 · Community feed</b>:点卡片 → 5 个 community 视频上下滑,底部挂 <code>🏠 47 homes here</code> chip</li>
+          <li><b>L2 · Listing feed</b>:点 chip → 直接进 8 个 listing 视频上下滑(像 For You,但筛到这个 community)</li>
+          <li><b>Back</b>:每层回上一层(L2 → L1 → L0)</li>
+        </ol>
+        <p><b>vs v1</b>:砍掉 listings sheet 中间页。Chip 不再"弹列表让你选",直接<b>喂</b>视频 — 这才是 TikTok 思路。</p>
+        <p><b>统一上下滑</b>:三层视频 feed 都上下滑(For You / community / listing-in-community)= 同一种肌肉记忆。</p>
+        <div class="legend">
+          <span class="pill green">3 层 (L0 → L1 → L2)</span>
+          <span class="pill green">无 sheet</span>
+          <span class="pill green">全部上下滑</span>
+          <span class="pill">Listings chip 只在 B</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+<script>
+  // Scenario switcher
+  const bar = document.getElementById('bar');
+  const scenes = document.querySelectorAll('.scene');
+  bar.addEventListener('click', e => {
+    const btn = e.target.closest('button[data-s]');
+    if (!btn) return;
+    bar.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    scenes.forEach(sc => sc.classList.toggle('active', sc.dataset.scene === btn.dataset.s));
+  });
+
+  // ---------- shared data ----------
+  const COMM_VIDS = [
+    { title:'Schools tour',     img:'https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=900&q=70', sub:'Top-rated Bellevue School District walkthrough', stat:'⭐ 4.8 · 2.3k views' },
+    { title:'Commute · SR-520', img:'https://images.unsplash.com/photo-1545209463-e2825498edbf?w=900&q=70', sub:'22 min to Seattle, 18 min to Microsoft',          stat:'⭐ 4.7 · 1.8k views' },
+    { title:'Bellevue Park',    img:'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=900&q=70', sub:'Trails, downtown park, weekend farmers market',  stat:'⭐ 4.9 · 3.1k views' },
+    { title:'Dining intro',     img:'https://images.unsplash.com/photo-1542317854-04a7a8523b3a?w=900&q=70', sub:'Crossroads, Old Bellevue, neighborhood favorites',stat:'⭐ 4.6 · 1.2k views' },
+    { title:'Nightlife',        img:'https://images.unsplash.com/photo-1519501025264-65ba15a82390?w=900&q=70', sub:'Bars, late-night, what 10pm looks like',         stat:'⭐ 4.5 · 980 views'  },
+  ];
+  const LISTINGS = [
+    { price:'$1.29M', addr:'1421 NE 22nd St',  bb:'3 bd · 2 ba · 1,640 sqft', img:'https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=1200&q=70' },
+    { price:'$1.65M', addr:'14530 NE 24th St', bb:'4 bd · 3 ba · 2,240 sqft', img:'https://images.unsplash.com/photo-1598228723793-52759bba239c?w=1200&q=70' },
+    { price:'$2.10M', addr:'14102 NE 25th Pl', bb:'5 bd · 4 ba · 3,180 sqft', img:'https://images.unsplash.com/photo-1605276373954-0c4a0dac5b12?w=1200&q=70' },
+    { price:'$1.48M', addr:'14207 NE 23rd Pl', bb:'4 bd · 3 ba · 2,840 sqft', img:'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=1200&q=70' },
+    { price:'$1.89M', addr:'1320 NE 28th St',  bb:'4 bd · 3 ba · 2,610 sqft', img:'https://images.unsplash.com/photo-1576941089067-2de3c901e126?w=1200&q=70' },
+    { price:'$1.35M', addr:'14808 NE 21st St', bb:'3 bd · 2 ba · 1,820 sqft', img:'https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=1200&q=70' },
+    { price:'$2.45M', addr:'1455 NE 26th Ave', bb:'5 bd · 4 ba · 3,520 sqft', img:'https://images.unsplash.com/photo-1583608205776-bfb35f0d9f83?w=1200&q=70' },
+    { price:'$1.55M', addr:'14620 NE 22nd Pl', bb:'4 bd · 2 ba · 2,100 sqft', img:'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=1200&q=70' },
+  ];
+
+  // ---------- generic vertical-feed controller ----------
+  function makeVFeed({ track, counter, items, slideHTML }) {
+    let cur = 0;
+    track.innerHTML = items.map((it, i) => `<div class="vslide" data-i="${i}">${slideHTML(it, i)}</div>`).join('');
+    function render() {
+      track.style.transform = `translateY(-${cur * 100}%)`;
+      counter.textContent = `${cur + 1} / ${items.length}`;
+    }
+    function set(i) { cur = Math.max(0, Math.min(items.length-1, i)); render(); }
+    // Swipe
+    let drag=0, start=0, down=false;
+    function onStart(y){ start=y; drag=0; down=true; track.style.transition='none'; }
+    function onMove(y){ if(!down) return; drag = y - start; track.style.transform = `translateY(calc(-${cur*100}% + ${drag}px))`; }
+    function onEnd(){ if(!down) return; down=false; track.style.transition='';
+      const h = track.clientHeight;
+      if (drag < -h*0.18 && cur < items.length-1) cur++;
+      else if (drag > h*0.18 && cur > 0) cur--;
+      render();
+    }
+    track.addEventListener('touchstart', e => onStart(e.touches[0].clientY), {passive:true});
+    track.addEventListener('touchmove',  e => onMove(e.touches[0].clientY), {passive:true});
+    track.addEventListener('touchend',   onEnd);
+    track.addEventListener('mousedown',  e => onStart(e.clientY));
+    window.addEventListener('mousemove', e => onMove(e.clientY));
+    window.addEventListener('mouseup',   onEnd);
+    render();
+    return { set, render };
+  }
+
+  // ============================================================
+  // A2 — Listing → Community feed
+  // ============================================================
+  const chipA2 = document.getElementById('chipA2');
+  const feedA2 = document.getElementById('feedA2');
+  const backA2 = document.getElementById('backA2');
+  const trackA2 = document.getElementById('trackA2');
+  const counterA2 = document.getElementById('counterA2');
+  const hudA2 = document.getElementById('hudA2');
+
+  makeVFeed({
+    track: trackA2,
+    counter: counterA2,
+    items: COMM_VIDS,
+    slideHTML: (v) => `
+      <div class="l0-vid" style="background-image:url('${v.img}')"></div>
+      <div class="l0-meta">
+        <div class="price">${v.title}</div>
+        <div class="addr">${v.sub}</div>
+        <div class="stats">${v.stat} · Bellevue Eastside</div>
+      </div>
+      <div class="l0-rail">
+        <div><div class="b">❤️</div></div>
+        <div><div class="b">💬</div></div>
+        <div><div class="b">↗</div></div>
+      </div>
+    `,
+  });
+
+  chipA2.addEventListener('click', () => { feedA2.classList.add('open'); hudA2.textContent = 'L1 · COMMUNITY FEED'; });
+  backA2.addEventListener('click', () => { feedA2.classList.remove('open'); hudA2.textContent = 'L0 · LISTING'; });
+
+  // ============================================================
+  // B2 — Search → Community feed → Listing feed
+  // ============================================================
+  const commGridB2 = document.getElementById('commGridB2');
+  const feedB1 = document.getElementById('feedB1');
+  const backB1 = document.getElementById('backB1');
+  const trackB1 = document.getElementById('trackB1');
+  const counterB1 = document.getElementById('counterB1');
+  const feedB2 = document.getElementById('feedB2');
+  const backB2 = document.getElementById('backB2');
+  const trackB2 = document.getElementById('trackB2');
+  const counterB2 = document.getElementById('counterB2');
+  const hudB = document.getElementById('hudB');
+
+  // Build community feed (B1) — same data as A2, but with listings chip
+  makeVFeed({
+    track: trackB1,
+    counter: counterB1,
+    items: COMM_VIDS,
+    slideHTML: (v) => `
+      <div class="l0-vid" style="background-image:url('${v.img}')"></div>
+      <div class="l0-meta">
+        <div class="price">${v.title}</div>
+        <div class="addr">${v.sub}</div>
+        <div class="stats">${v.stat} · Bellevue Eastside</div>
+      </div>
+      <div class="l0-rail">
+        <div><div class="b">❤️</div></div>
+        <div><div class="b">💬</div></div>
+        <div><div class="b">↗</div></div>
+      </div>
+      <div class="l-chip" data-listings>
+        <div class="ico">🏠</div>
+        <div>
+          <div class="name">47 homes in Bellevue Eastside</div>
+          <div class="sub">Tap to swipe through</div>
+        </div>
+        <div class="arrow">›</div>
+      </div>
+    `,
+  });
+
+  // Build listing feed (B2)
+  makeVFeed({
+    track: trackB2,
+    counter: counterB2,
+    items: LISTINGS,
+    slideHTML: (l) => `
+      <div class="l0-vid" style="background-image:url('${l.img}')"></div>
+      <div class="l0-meta">
+        <div class="price">${l.price}</div>
+        <div class="addr">${l.addr}</div>
+        <div class="stats">${l.bb}</div>
+      </div>
+      <div class="l0-rail">
+        <div><div class="b">❤️</div></div>
+        <div><div class="b">💬</div></div>
+        <div><div class="b">↗</div></div>
+      </div>
+    `,
+  });
+
+  // L0 grid → open community feed
+  commGridB2.addEventListener('click', e => {
+    if (!e.target.closest('[data-comm]')) return;
+    feedB1.classList.add('open');
+    hudB.textContent = 'L1 · COMMUNITY FEED';
+  });
+  backB1.addEventListener('click', () => { feedB1.classList.remove('open'); hudB.textContent = 'L0 · COMMUNITY GRID'; });
+
+  // Listings chip on B1 video → open listing feed
+  trackB1.addEventListener('click', e => {
+    if (!e.target.closest('[data-listings]')) return;
+    feedB2.classList.add('open');
+    hudB.textContent = 'L2 · LISTING FEED';
+  });
+  backB2.addEventListener('click', () => { feedB2.classList.remove('open'); hudB.textContent = 'L1 · COMMUNITY FEED'; });
+</script>
+</body>
+</html>

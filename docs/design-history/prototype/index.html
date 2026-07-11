@@ -1,0 +1,1037 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1" />
+<title>Percho UX Prototype — A + B</title>
+<style>
+  :root{
+    --bg:#0b0b0c; --panel:#141416; --line:#26262a; --ink:#f4f4f5; --mute:#a1a1aa;
+    --brand:#22d3ee; --brand2:#a78bfa; --good:#34d399; --warn:#fbbf24;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);font:16px/1.4 -apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif}
+  a{color:var(--brand)}
+  .wrap{max-width:1200px;margin:0 auto;padding:24px 16px 80px}
+  h1{font-size:22px;margin:0 0 4px}
+  .lede{color:var(--mute);font-size:14px;margin:0 0 24px}
+  .scenario-bar{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+  .scenario-bar button{
+    background:var(--panel);color:var(--ink);border:1px solid var(--line);
+    padding:10px 14px;border-radius:999px;font-size:14px;cursor:pointer
+  }
+  .scenario-bar button.active{background:var(--brand);color:#062229;border-color:var(--brand);font-weight:600}
+  .row{display:flex;flex-wrap:wrap;gap:32px;align-items:flex-start}
+  .side{flex:1 1 320px;min-width:300px;max-width:420px}
+  .side h2{font-size:16px;margin:0 0 8px;color:var(--brand2)}
+  .side p, .side li{font-size:14px;color:var(--mute);line-height:1.55}
+  .side ul{padding-left:18px;margin:8px 0}
+
+  /* Phone frame */
+  .phone{
+    width:390px;max-width:100%;height:780px;background:#000;border:8px solid #1a1a1d;
+    border-radius:42px;box-shadow:0 30px 80px rgba(0,0,0,.6);overflow:hidden;
+    position:relative;display:flex;flex-direction:column;margin:0 auto
+  }
+  .phone .notch{position:absolute;top:8px;left:50%;transform:translateX(-50%);width:120px;height:28px;background:#000;border-radius:0 0 16px 16px;z-index:50}
+  .screen{flex:1;overflow:hidden;position:relative;background:#000;display:flex;flex-direction:column}
+
+  /* Common nav */
+  .topbar{height:44px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;color:#fff;font-weight:600}
+  .bottombar{
+    height:64px;display:flex;background:#0a0a0c;border-top:1px solid #1d1d20;
+    flex-shrink:0;align-items:center;justify-content:space-around;color:#9ca3af;font-size:11px
+  }
+  .bottombar .tab{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 10px}
+  .bottombar .tab.active{color:#fff}
+  .bottombar .tab .ic{font-size:20px}
+
+  /* Feed video */
+  .feed{flex:1;position:relative;overflow:hidden;background:#111}
+  .feed .vid{
+    position:absolute;inset:0;
+    background-image:url('https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=900&q=70');
+    background-size:cover;background-position:center
+  }
+  .feed .vid::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.3) 0%,rgba(0,0,0,0) 25%,rgba(0,0,0,0) 55%,rgba(0,0,0,.85) 100%)}
+
+  .listing-meta{position:absolute;left:16px;right:96px;bottom:88px;z-index:5}
+  .listing-meta .price{font-size:24px;font-weight:700}
+  .listing-meta .addr{font-size:14px;color:#e5e7eb;margin-top:2px}
+  .listing-meta .stats{font-size:13px;color:#cbd5e1;margin-top:6px}
+  .listing-meta .agent{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:13px}
+  .listing-meta .agent .av{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#22d3ee,#a78bfa)}
+
+  .right-rail{position:absolute;right:12px;bottom:120px;display:flex;flex-direction:column;gap:18px;z-index:5;align-items:center}
+  .right-rail .btn{width:44px;height:44px;border-radius:50%;background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;font-size:18px}
+  .right-rail .lbl{font-size:11px;color:#fff;margin-top:-12px}
+
+  /* Community chip — top-left, under status bar */
+  .chip{
+    position:absolute;left:16px;top:56px;z-index:6;
+    display:flex;align-items:center;gap:10px;
+    padding:8px 14px 8px 8px;border-radius:999px;
+    background:rgba(15,15,18,.78);backdrop-filter:blur(12px);
+    border:1px solid rgba(255,255,255,.14);cursor:pointer;
+    animation:chipPulse 2.5s ease-in-out 1.5s 2
+  }
+  @keyframes chipPulse{0%,100%{box-shadow:0 0 0 0 rgba(34,211,238,.55)}50%{box-shadow:0 0 0 10px rgba(34,211,238,0)}}
+  .chip .ico{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#22d3ee,#a78bfa);display:flex;align-items:center;justify-content:center;font-size:14px}
+  .chip .name{font-size:13px;font-weight:600}
+  .chip .sub{font-size:11px;color:#9ca3af;margin-top:1px}
+  .chip .arrow{margin-left:6px;color:#9ca3af;font-size:14px}
+
+  /* Bottom sheet */
+  .sheet-mask{position:absolute;inset:0;background:rgba(0,0,0,.55);opacity:0;pointer-events:none;transition:opacity .25s;z-index:10}
+  .sheet-mask.open{opacity:1;pointer-events:auto}
+  .sheet{
+    position:absolute;left:0;right:0;bottom:0;z-index:11;
+    background:#1a1a1d;border-radius:20px 20px 0 0;
+    transform:translateY(100%);transition:transform .3s cubic-bezier(.32,.72,.32,1);
+    max-height:78%;overflow:hidden;display:flex;flex-direction:column
+  }
+  .sheet.open{transform:translateY(0)}
+  .sheet .grip{width:36px;height:4px;background:#3f3f46;border-radius:2px;margin:8px auto 4px}
+  .sheet .head{padding:12px 16px 8px;display:flex;justify-content:space-between;align-items:flex-start;border-bottom:1px solid #26262a}
+  .sheet .head .title{font-size:18px;font-weight:700}
+  .sheet .head .sub{font-size:13px;color:#9ca3af;margin-top:2px}
+  .sheet .head .close{font-size:22px;color:#9ca3af;cursor:pointer;line-height:1;padding:4px 8px;margin-right:-8px}
+  .sheet .body{overflow-y:auto;padding:14px 16px}
+  .sheet .stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
+  .sheet .stat{background:#222226;border-radius:10px;padding:10px;text-align:center}
+  .sheet .stat .v{font-size:15px;font-weight:700}
+  .sheet .stat .k{font-size:11px;color:#9ca3af;margin-top:2px}
+  .sheet .desc{font-size:13px;color:#d4d4d8;line-height:1.5;margin-bottom:14px}
+  .sheet h4{font-size:13px;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px;margin:6px 0 8px;font-weight:600}
+  .sheet .vid-strip{display:flex;gap:8px;overflow-x:auto;padding-bottom:6px;margin:0 -16px 14px;padding-left:16px}
+  .sheet .vid-strip .v{flex:0 0 130px;height:170px;border-radius:10px;background-size:cover;background-position:center;position:relative;overflow:hidden}
+  .sheet .vid-strip .v .lab{position:absolute;left:8px;bottom:8px;font-size:11px;color:#fff;font-weight:600;text-shadow:0 1px 2px rgba(0,0,0,.8)}
+  .sheet .vid-strip .v::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,0) 50%,rgba(0,0,0,.7) 100%)}
+  .sheet .vid-strip .v{cursor:pointer}
+  .sheet .vid-strip .v .play{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:36px;height:36px;border-radius:50%;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;font-size:14px;color:#fff;z-index:2}
+  .sheet .listings-mini{display:flex;gap:8px;overflow-x:auto;padding-bottom:6px;margin:0 -16px 14px;padding-left:16px}
+  .sheet .listings-mini .l{flex:0 0 150px;background:#222226;border-radius:10px;overflow:hidden;cursor:pointer}
+  .sheet .listings-mini .l .img{height:90px;background-size:cover;background-position:center}
+  .sheet .listings-mini .l .info{padding:8px}
+  .sheet .listings-mini .l .p{font-size:14px;font-weight:700}
+  .sheet .listings-mini .l .a{font-size:11px;color:#9ca3af;margin-top:2px}
+  .sheet .cta{
+    width:100%;padding:14px;border-radius:12px;background:var(--brand);color:#062229;
+    font-weight:700;font-size:15px;border:0;margin-top:8px;cursor:pointer
+  }
+
+  /* B: Search tab */
+  .search-screen{flex:1;overflow-y:auto;padding:0 16px 12px}
+  .search-input{
+    background:#1a1a1d;border:1px solid #26262a;border-radius:12px;
+    padding:12px 14px;display:flex;align-items:center;gap:8px;color:#a1a1aa;font-size:15px;margin-top:8px
+  }
+  .seg{display:flex;background:#1a1a1d;border-radius:10px;padding:4px;margin:14px 0}
+  .seg button{flex:1;background:transparent;border:0;color:#a1a1aa;padding:8px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer}
+  .seg button.active{background:#2d2d31;color:#fff}
+  .comm-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .comm-card{background:#1a1a1d;border-radius:14px;overflow:hidden;border:1px solid #26262a;cursor:pointer}
+  .comm-card .cover{height:110px;background-size:cover;background-position:center;position:relative}
+  .comm-card .cover::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,0) 50%,rgba(0,0,0,.7) 100%)}
+  .comm-card .badge{position:absolute;left:8px;top:8px;background:rgba(0,0,0,.55);color:#fff;font-size:11px;padding:3px 8px;border-radius:999px}
+  .comm-card .meta{padding:10px}
+  .comm-card .name{font-size:14px;font-weight:600}
+  .comm-card .stat{font-size:12px;color:#9ca3af;margin-top:3px}
+
+  /* Agent dashboard */
+  .agent-screen{flex:1;overflow-y:auto;padding:12px 16px}
+  .agent-header{font-size:20px;font-weight:700;margin-bottom:4px}
+  .agent-sub{font-size:13px;color:#9ca3af;margin-bottom:16px}
+  .panel-card{background:#141416;border:1px solid #26262a;border-radius:14px;padding:14px;margin-bottom:12px}
+  .panel-card .ph{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+  .panel-card .ph .t{font-size:14px;font-weight:600}
+  .panel-card .ph .add{font-size:12px;color:var(--brand);font-weight:600;cursor:pointer}
+  .vid-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+  .vid-grid .t{aspect-ratio:9/16;border-radius:8px;background-size:cover;background-position:center;position:relative;overflow:hidden}
+  .vid-grid .t .l{position:absolute;left:6px;bottom:6px;font-size:10px;color:#fff;font-weight:600;text-shadow:0 1px 2px rgba(0,0,0,.7)}
+  .vid-grid .t::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,0) 60%,rgba(0,0,0,.7) 100%)}
+  .vid-grid .empty{aspect-ratio:9/16;border-radius:8px;border:2px dashed #3f3f46;display:flex;align-items:center;justify-content:center;color:#52525b;font-size:24px}
+  .listings-row{display:flex;gap:8px;overflow-x:auto;margin:0 -14px;padding:0 14px}
+  .listings-row .l{flex:0 0 130px}
+  .listings-row .l .img{height:80px;border-radius:8px;background-size:cover;background-position:center}
+  .listings-row .l .p{font-size:13px;font-weight:700;margin-top:5px}
+  .listings-row .l .a{font-size:11px;color:#9ca3af;margin-top:1px}
+  .listings-row .l .by{font-size:10px;color:#6b7280;margin-top:2px}
+  .stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px}
+  .stats-grid .s{background:#0a0a0c;border-radius:10px;padding:10px;text-align:center}
+  .stats-grid .s .v{font-size:18px;font-weight:700;color:var(--brand)}
+  .stats-grid .s .k{font-size:11px;color:#9ca3af;margin-top:3px}
+
+  /* Create wizard */
+  .wiz-screen{flex:1;overflow-y:auto;padding:16px}
+  .wiz-step{font-size:12px;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+  .wiz-title{font-size:22px;font-weight:700;margin-bottom:4px}
+  .wiz-help{font-size:14px;color:#9ca3af;margin-bottom:18px}
+  .wiz-field{margin-bottom:14px}
+  .wiz-field label{font-size:13px;font-weight:600;display:block;margin-bottom:6px}
+  .wiz-field input,.wiz-field textarea{
+    width:100%;background:#1a1a1d;border:1px solid #26262a;border-radius:10px;
+    color:#fff;padding:12px;font-size:16px;font-family:inherit
+  }
+  .wiz-field textarea{resize:vertical;min-height:80px}
+  .wiz-map{height:160px;background:linear-gradient(135deg,#1e3a5f 0%,#1a4d4f 100%);border-radius:10px;display:flex;align-items:center;justify-content:center;color:#9ca3af;font-size:13px;margin-top:6px;position:relative;overflow:hidden}
+  .wiz-map::before{content:"";position:absolute;inset:0;background:radial-gradient(circle at 50% 50%, rgba(34,211,238,.25) 0%, transparent 60%)}
+  .wiz-map .pin{position:relative;z-index:2;font-size:30px}
+  .wiz-progress{display:flex;gap:6px;margin-bottom:18px}
+  .wiz-progress span{flex:1;height:4px;border-radius:2px;background:#26262a}
+  .wiz-progress span.done{background:var(--brand)}
+  .wiz-cta-row{display:flex;gap:8px;margin-top:20px}
+  .wiz-cta-row button{flex:1;padding:14px;border-radius:12px;font-size:15px;font-weight:700;border:0;cursor:pointer}
+  .wiz-cta-row .ghost{background:transparent;border:1px solid #3f3f46;color:#fff}
+  .wiz-cta-row .primary{background:var(--brand);color:#062229}
+
+  /* Old-form scare side */
+  .old-form{flex:1;overflow-y:auto;padding:16px;background:#0a0a0c}
+  .old-form .lbl{font-size:11px;color:#71717a;display:block;margin-bottom:4px;margin-top:10px;text-transform:uppercase}
+  .old-form select,.old-form input{
+    width:100%;background:#fff;color:#000;border:1px solid #ccc;border-radius:4px;padding:6px 8px;font-size:13px
+  }
+
+  .legend{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+  .legend .pill{font-size:11px;padding:3px 8px;border-radius:999px;background:#1a1a1d;border:1px solid #26262a;color:#a1a1aa}
+
+  .scene{display:none}
+  .scene.active{display:block}
+
+  /* L2 fullscreen page (community feed / listing detail) — slides over the screen */
+  .l2{
+    position:absolute;inset:0;z-index:20;
+    background:#000;display:flex;flex-direction:column;
+    transform:translateX(100%);transition:transform .28s cubic-bezier(.32,.72,.32,1);
+    pointer-events:none
+  }
+  .l2.open{transform:translateX(0);pointer-events:auto}
+  .l2 .l2-top{
+    height:48px;flex-shrink:0;display:flex;align-items:center;gap:8px;
+    padding:0 14px;background:rgba(0,0,0,.55);backdrop-filter:blur(10px);
+    color:#fff;font-size:13px;border-bottom:1px solid rgba(255,255,255,.08);z-index:5
+  }
+  .l2 .l2-top .back{display:flex;align-items:center;gap:6px;cursor:pointer;color:#fff;font-weight:600}
+  .l2 .l2-top .back .arr{font-size:18px}
+  .l2 .l2-top .back .lab{font-size:12px;color:#cbd5e1}
+  .l2 .l2-top .counter{margin-left:auto;font-size:12px;color:#cbd5e1;font-variant-numeric:tabular-nums}
+  .l2 .l2-progress{height:3px;display:flex;gap:3px;padding:0 14px;background:rgba(0,0,0,.55);flex-shrink:0}
+  .l2 .l2-progress span{flex:1;background:rgba(255,255,255,.18);border-radius:2px;transition:background .2s}
+  .l2 .l2-progress span.active{background:#fff}
+  .l2 .l2-body{flex:1;position:relative;overflow:hidden}
+  /* Horizontal carousel track inside L2 */
+  .l2 .track{position:absolute;inset:0;display:flex;transition:transform .3s cubic-bezier(.32,.72,.32,1);will-change:transform;touch-action:pan-y}
+  .l2 .slide{flex:0 0 100%;height:100%;position:relative}
+  .l2 .l2-vid{position:absolute;inset:0;background-size:cover;background-position:center}
+  .l2 .l2-vid::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.3) 0%,rgba(0,0,0,0) 30%,rgba(0,0,0,0) 60%,rgba(0,0,0,.85) 100%)}
+  .l2 .l2-meta{position:absolute;left:16px;right:80px;bottom:90px;color:#fff;z-index:2}
+  .l2 .l2-meta .t{font-size:20px;font-weight:700}
+  .l2 .l2-meta .s{font-size:13px;color:#e5e7eb;margin-top:4px}
+  .l2 .l2-meta .stats{font-size:13px;color:#cbd5e1;margin-top:6px}
+  .l2 .l2-rail{position:absolute;right:12px;bottom:160px;display:flex;flex-direction:column;gap:18px;z-index:2;align-items:center}
+  .l2 .l2-rail .b{width:44px;height:44px;border-radius:50%;background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;font-size:18px;color:#fff}
+  /* Cross-link chip on L2 (e.g. listings chip on community video) */
+  .l2 .l2-chip{
+    position:absolute;left:16px;bottom:24px;z-index:3;
+    display:flex;align-items:center;gap:10px;
+    padding:8px 14px 8px 8px;border-radius:999px;
+    background:rgba(15,15,18,.78);backdrop-filter:blur(12px);
+    border:1px solid rgba(255,255,255,.14);cursor:pointer;color:#fff
+  }
+  .l2 .l2-chip .ico{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#34d399,#22d3ee);display:flex;align-items:center;justify-content:center;font-size:14px}
+  .l2 .l2-chip .name{font-size:13px;font-weight:600}
+  .l2 .l2-chip .sub{font-size:11px;color:#9ca3af;margin-top:1px}
+  .l2 .l2-chip .arrow{margin-left:6px;color:#9ca3af;font-size:14px}
+  .l2 .swipe-hint{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);color:rgba(255,255,255,.6);font-size:12px;pointer-events:none;animation:fade 2.2s ease-in-out 1;z-index:1}
+  @keyframes fade{0%,100%{opacity:0}30%,70%{opacity:1}}
+
+  /* Debug HUD — shows current layer */
+  .hud{
+    position:absolute;top:8px;left:50%;transform:translateX(-50%);z-index:99;
+    background:rgba(34,211,238,.92);color:#062229;font-size:10px;font-weight:700;
+    padding:3px 10px;border-radius:999px;letter-spacing:.5px;font-family:ui-monospace,monospace;
+    pointer-events:none
+  }
+
+  .compare-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:8px}
+  .compare-grid .col h3{font-size:13px;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px;margin:0 0 8px}
+  .compare-grid .phone-mini{height:560px;width:100%;max-width:330px;border-radius:32px;border-width:6px;margin:0 auto}
+
+  @media (max-width:760px){
+    .row{flex-direction:column}
+    .side{max-width:none}
+    .compare-grid{grid-template-columns:1fr}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Percho — UX Prototype</h1>
+  <p class="lede">A + B 都做 · 不同 buyer 旅程互补 · 静态原型,真代码改动前先看效果</p>
+
+  <div class="scenario-bar" id="bar">
+    <button data-s="A" class="active">📱 方案 A · Listing + Community Chip</button>
+    <button data-s="B">🔍 方案 B · Search 里独立按小区浏览</button>
+    <button data-s="DASH">🏗️ Agent 运营台</button>
+    <button data-s="WIZ">✨ Create Community 三步化</button>
+  </div>
+
+  <!-- ==================== SCENE A ==================== -->
+  <section class="scene active" data-scene="A">
+    <div class="row">
+      <div class="phone">
+        <div class="notch"></div>
+        <div class="screen">
+          <div class="topbar"><span style="font-size:13px;color:#9ca3af">9:41</span><span></span></div>
+          <div class="feed">
+            <div class="vid"></div>
+            <div class="listing-meta">
+              <div class="price">$1,485,000</div>
+              <div class="addr">14207 NE 23rd Pl, Bellevue WA</div>
+              <div class="stats">4 bd · 3 ba · 2,840 sqft · Built 2018</div>
+              <div class="agent">
+                <div class="av"></div>
+                <div>
+                  <div style="font-weight:600">Sarah Chen</div>
+                  <div style="font-size:11px;color:#9ca3af">Realtor · Eastside</div>
+                </div>
+              </div>
+            </div>
+            <div class="right-rail">
+              <div><div class="btn">❤️</div><div class="lbl">Save</div></div>
+              <div><div class="btn">💬</div><div class="lbl">Ask</div></div>
+              <div><div class="btn">↗</div><div class="lbl">Share</div></div>
+              <div><div class="btn">🔇</div></div>
+            </div>
+            <div class="chip" id="chipA">
+              <div class="ico">🏘️</div>
+              <div>
+                <div class="name">Bellevue Eastside</div>
+                <div class="sub">⭐ 4.8 · 23 videos · in this area</div>
+              </div>
+              <div class="arrow">›</div>
+            </div>
+
+            <div class="sheet-mask" id="maskA"></div>
+            <div class="sheet" id="sheetA">
+              <div class="grip"></div>
+              <div class="head">
+                <div>
+                  <div class="title">Bellevue Eastside</div>
+                  <div class="sub">Bellevue, WA · 12 sq mi · 23 videos</div>
+                </div>
+                <div class="close" id="closeA">×</div>
+              </div>
+              <div class="body">
+                <div class="stats-row">
+                  <div class="stat"><div class="v">9.2</div><div class="k">School</div></div>
+                  <div class="stat"><div class="v">22 min</div><div class="k">to Seattle</div></div>
+                  <div class="stat"><div class="v">$1.4M</div><div class="k">Median</div></div>
+                </div>
+                <div class="desc">
+                  Quiet residential district near Microsoft, walkable to top-rated Bellevue School District.
+                  Hosted by <b>Mark Liu</b> · 8 yrs in area.
+                </div>
+
+                <h4>Community Videos · 5</h4>
+                <div class="vid-strip" id="stripA">
+                  <div class="v" data-idx="0" style="background-image:url('https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=400&q=70')"><div class="play">▶</div><div class="lab">Schools</div></div>
+                  <div class="v" data-idx="1" style="background-image:url('https://images.unsplash.com/photo-1545209463-e2825498edbf?w=400&q=70')"><div class="play">▶</div><div class="lab">Commute</div></div>
+                  <div class="v" data-idx="2" style="background-image:url('https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=400&q=70')"><div class="play">▶</div><div class="lab">Parks</div></div>
+                  <div class="v" data-idx="3" style="background-image:url('https://images.unsplash.com/photo-1542317854-04a7a8523b3a?w=400&q=70')"><div class="play">▶</div><div class="lab">Dining</div></div>
+                  <div class="v" data-idx="4" style="background-image:url('https://images.unsplash.com/photo-1519501025264-65ba15a82390?w=400&q=70')"><div class="play">▶</div><div class="lab">Nightlife</div></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- L2 fullscreen: community video carousel (horizontal swipe) -->
+            <div class="l2" id="l2A">
+              <div class="l2-top">
+                <div class="back" id="backA">
+                  <span class="arr">‹</span>
+                  <div>
+                    <div style="font-weight:600;font-size:13px">Back</div>
+                    <div class="lab">14207 NE 23rd Pl</div>
+                  </div>
+                </div>
+                <div class="counter" id="counterA">1 / 5</div>
+              </div>
+              <div class="l2-progress" id="progA"></div>
+              <div class="l2-body">
+                <div class="track" id="trackA"></div>
+                <div class="swipe-hint">← swipe →</div>
+              </div>
+            </div>
+
+            <div class="hud" id="hudA">L0 · LISTING FEED</div>
+          </div>
+          <div class="bottombar">
+            <div class="tab active"><div class="ic">🏠</div>For You</div>
+            <div class="tab"><div class="ic">🔍</div>Search</div>
+            <div class="tab"><div class="ic">❤️</div>Saved</div>
+            <div class="tab"><div class="ic">👤</div>Me</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="side">
+        <h2>方案 A · Listing 视频流里浮 Community Chip</h2>
+        <p>**目标 buyer**:被动派发型 — 想刷视频,不想做选区决策。Listing 视频是主轴,community 是上下文。</p>
+        <ul>
+          <li>左下角:listing 元数据(房价、地址、户型、agent)— 卖房买房主线永不消失</li>
+          <li><b>左上角</b>浮一个 <b>community chip</b>(脉冲动画引导第一次注意,不挡 listing 元数据)</li>
+          <li>点击 chip → 底部 sheet 弹起(L1)— sheet 只装信息和缩略图,**不在 sheet 内播视频**</li>
+          <li>Sheet 内点 community 视频缩略图 / 房源 / "Browse all" → 跳转**全屏新页 L2**,顶部明示返回路径 <code>← 14207 NE 23rd Pl</code></li>
+          <li>顶部 HUD 实时显示 L0 / L1 / L2,验证不会迷路</li>
+        </ul>
+        <div class="legend">
+          <span class="pill">L0 listing feed → L1 sheet → L2 全屏页</span>
+          <span class="pill">每层都有明确返回路径</span>
+          <span class="pill">没有 modal 内播全屏视频</span>
+        </div>
+        <p style="margin-top:14px;color:#34d399"><b>试一下:</b> 点左上 chip → 进 sheet → 点任意 community 视频缩略图 / 房源缩略图 → 看顶部 ← 14207 NE 23rd Pl 把你带回原 listing。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== SCENE B ==================== -->
+  <section class="scene" data-scene="B">
+    <div class="row">
+      <div class="phone">
+        <div class="notch"></div>
+        <div class="screen">
+          <div class="topbar"><span style="font-size:13px;color:#9ca3af">9:41</span><span></span></div>
+          <div class="search-screen">
+            <div class="search-input">🔍 <span>Search homes, communities, agents…</span></div>
+            <div class="seg">
+              <button>Homes</button>
+              <button class="active">Communities</button>
+              <button>Agents</button>
+            </div>
+            <div style="font-size:13px;color:#9ca3af;margin-bottom:10px">Browse by neighborhood — 412 communities</div>
+            <div class="comm-grid" id="commGridB">
+              <div class="comm-card" data-comm="bellevue">
+                <div class="cover" style="background-image:url('https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=500&q=70')"><div class="badge">5 vids · ⭐4.8</div></div>
+                <div class="meta"><div class="name">Bellevue Eastside</div><div class="stat">$1.4M · School 9.2 · 47 homes</div></div>
+              </div>
+              <div class="comm-card" data-comm="kirkland">
+                <div class="cover" style="background-image:url('https://images.unsplash.com/photo-1605276373954-0c4a0dac5b12?w=500&q=70')"><div class="badge">17 vids · ⭐4.6</div></div>
+                <div class="meta"><div class="name">Kirkland Houghton</div><div class="stat">$1.1M · School 8.7</div></div>
+              </div>
+              <div class="comm-card" data-comm="mercer">
+                <div class="cover" style="background-image:url('https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=500&q=70')"><div class="badge">31 vids · ⭐4.9</div></div>
+                <div class="meta"><div class="name">Mercer Island</div><div class="stat">$2.3M · School 9.5</div></div>
+              </div>
+              <div class="comm-card" data-comm="redmond">
+                <div class="cover" style="background-image:url('https://images.unsplash.com/photo-1598228723793-52759bba239c?w=500&q=70')"><div class="badge">12 vids · ⭐4.5</div></div>
+                <div class="meta"><div class="name">Redmond Education Hill</div><div class="stat">$1.2M · School 9.0</div></div>
+              </div>
+              <div class="comm-card" data-comm="sammamish">
+                <div class="cover" style="background-image:url('https://images.unsplash.com/photo-1542317854-04a7a8523b3a?w=500&q=70')"><div class="badge">19 vids · ⭐4.7</div></div>
+                <div class="meta"><div class="name">Sammamish Plateau</div><div class="stat">$1.6M · School 9.3</div></div>
+              </div>
+              <div class="comm-card" data-comm="issaquah">
+                <div class="cover" style="background-image:url('https://images.unsplash.com/photo-1545209463-e2825498edbf?w=500&q=70')"><div class="badge">14 vids · ⭐4.4</div></div>
+                <div class="meta"><div class="name">Issaquah Highlands</div><div class="stat">$1.0M · School 8.8</div></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- L1_B: Community video feed (vertical swipe) -->
+          <div class="l2" id="l1B">
+            <div class="l2-top">
+              <div class="back" id="backB1">
+                <span class="arr">‹</span>
+                <div>
+                  <div style="font-weight:600;font-size:13px">Back</div>
+                  <div class="lab">Communities</div>
+                </div>
+              </div>
+              <div class="counter" id="counterB1">1 / 5</div>
+            </div>
+            <div class="l2-progress" id="progB1"></div>
+            <div class="l2-body">
+              <div class="track" id="trackB1" style="flex-direction:column;touch-action:pan-x"></div>
+              <div class="swipe-hint">↑ swipe ↓</div>
+            </div>
+          </div>
+
+          <!-- L2_B: Listings bottom sheet (above L1 overlay, so z-index >20) -->
+          <div class="sheet-mask" id="maskB2" style="z-index:25"></div>
+          <div class="sheet" id="sheetB2" style="z-index:26">
+            <div class="grip"></div>
+            <div class="head">
+              <div>
+                <div class="title">Homes in Bellevue Eastside</div>
+                <div class="sub">47 active listings · sorted by newest</div>
+              </div>
+              <div class="close" id="closeB2">×</div>
+            </div>
+            <div class="body">
+              <div class="listings-mini" id="listingsB2"></div>
+            </div>
+          </div>
+
+          <!-- L3_B: Listing carousel (horizontal) -->
+          <div class="l2" id="l3B">
+            <div class="l2-top">
+              <div class="back" id="backB3">
+                <span class="arr">‹</span>
+                <div>
+                  <div style="font-weight:600;font-size:13px">Back</div>
+                  <div class="lab">All homes here</div>
+                </div>
+              </div>
+              <div class="counter" id="counterB3">1 / 8</div>
+            </div>
+            <div class="l2-progress" id="progB3"></div>
+            <div class="l2-body">
+              <div class="track" id="trackB3"></div>
+              <div class="swipe-hint">← swipe →</div>
+            </div>
+          </div>
+
+          <div class="hud" id="hudB">L0 · COMMUNITY GRID</div>
+          <div class="bottombar">
+            <div class="tab"><div class="ic">🏠</div>For You</div>
+            <div class="tab active"><div class="ic">🔍</div>Search</div>
+            <div class="tab"><div class="ic">❤️</div>Saved</div>
+            <div class="tab"><div class="ic">👤</div>Me</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="side">
+        <h2>Scenario B · Search → Communities → Videos → Homes</h2>
+        <p><b>Buyer 类型</b>:主动选区 — 还没锚定 listing,先比较 community,再看里面的房。</p>
+        <ol>
+          <li><b>L0 · Community Grid</b>:Search → segmented "Communities" → 412 个小区卡片</li>
+          <li><b>L1 · Community Feed</b>:点卡片进 community 视频 feed(<b>上下滑</b> 切 5 个视频),底部挂 <code>🏠 47 homes here</code> chip</li>
+          <li><b>L2 · Listings Sheet</b>:点 chip → bottom sheet 列出 47 个 listing</li>
+          <li><b>L3 · Listing Carousel</b>:点 listing → 全屏 listing 详情(<b>左右滑</b> 切 listings)</li>
+        </ol>
+        <p><b>Back 路径</b>:每层都回上一层(L3 → L2 → L1 → L0),不跳层。</p>
+        <p><b>关键差异 vs A</b>:Listings chip 只在 B 里出现 —— 因为 B 用户没有锚定 listing,跨链是自然的转化路径;A 用户已经锚 listing,跨链反而稀释意图。</p>
+        <div class="legend">
+          <span class="pill">L1 上下滑 · L3 左右滑</span>
+          <span class="pill">Listings chip 只在 B</span>
+          <span class="pill">闭环回 community feed</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== SCENE DASH ==================== -->
+  <section class="scene" data-scene="DASH">
+    <div class="row">
+      <div class="phone">
+        <div class="notch"></div>
+        <div class="screen">
+          <div class="topbar"><span style="font-size:13px;color:#9ca3af">9:41</span><span style="font-size:13px;color:var(--brand)">Agent</span></div>
+          <div class="agent-screen">
+            <div class="agent-header">Bellevue Eastside</div>
+            <div class="agent-sub">📍 You manage this community · 12 sq mi</div>
+
+            <div class="panel-card">
+              <div class="ph">
+                <div class="t">📹 Community Videos · 5</div>
+                <div class="add">+ Upload</div>
+              </div>
+              <div class="vid-grid">
+                <div class="t" style="background-image:url('https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=300&q=70')"><div class="l">Schools tour</div></div>
+                <div class="t" style="background-image:url('https://images.unsplash.com/photo-1545209463-e2825498edbf?w=300&q=70')"><div class="l">Commute SR-520</div></div>
+                <div class="t" style="background-image:url('https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=300&q=70')"><div class="l">Bellevue Park</div></div>
+                <div class="t" style="background-image:url('https://images.unsplash.com/photo-1542317854-04a7a8523b3a?w=300&q=70')"><div class="l">Dining intro</div></div>
+                <div class="t" style="background-image:url('https://images.unsplash.com/photo-1605276373954-0c4a0dac5b12?w=300&q=70')"><div class="l">Winter feel</div></div>
+                <div class="empty">+</div>
+              </div>
+            </div>
+
+            <div class="panel-card">
+              <div class="ph">
+                <div class="t">🏠 Listings in this area · 47</div>
+                <div class="add" style="color:#9ca3af">auto-aggregated</div>
+              </div>
+              <div class="listings-row">
+                <div class="l"><div class="img" style="background-image:url('https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=300&q=70')"></div><div class="p">$1.29M</div><div class="a">3 bd · 2 ba</div><div class="by">by you</div></div>
+                <div class="l"><div class="img" style="background-image:url('https://images.unsplash.com/photo-1598228723793-52759bba239c?w=300&q=70')"></div><div class="p">$1.65M</div><div class="a">4 bd · 3 ba</div><div class="by">by Mark Liu</div></div>
+                <div class="l"><div class="img" style="background-image:url('https://images.unsplash.com/photo-1605276373954-0c4a0dac5b12?w=300&q=70')"></div><div class="p">$2.10M</div><div class="a">5 bd · 4 ba</div><div class="by">by Jenny Park</div></div>
+                <div class="l"><div class="img" style="background-image:url('https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=300&q=70')"></div><div class="p">$1.48M</div><div class="a">4 bd · 3 ba</div><div class="by">by you</div></div>
+              </div>
+            </div>
+
+            <div class="panel-card">
+              <div class="ph"><div class="t">📊 This month</div></div>
+              <div class="stats-grid">
+                <div class="s"><div class="v">2,847</div><div class="k">Video views</div></div>
+                <div class="s"><div class="v">14</div><div class="k">Leads</div></div>
+                <div class="s"><div class="v">3</div><div class="k">→ Listings</div></div>
+              </div>
+            </div>
+          </div>
+          <div class="bottombar">
+            <div class="tab"><div class="ic">📊</div>Dashboard</div>
+            <div class="tab"><div class="ic">📹</div>Listings</div>
+            <div class="tab active"><div class="ic">🏘️</div>Communities</div>
+            <div class="tab"><div class="ic">💬</div>Leads</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="side">
+        <h2>Agent Community 运营台</h2>
+        <p>替代当前残废版本(只能 edit metadata,看不到视频)。</p>
+        <ul>
+          <li><b>Community 视频面板</b>:9:16 grid + Upload 按钮 — agent 直接管理自己拍的小区内容</li>
+          <li><b>该区域 Listing 视频</b>:按地理自动聚合,**含其他 agent 的房源** — 让 community owner 看到自己地盘上的全部活跃房源</li>
+          <li><b>本月数据</b>:曝光 / lead / 转 listing — 让 community 经营有 ROI 反馈</li>
+          <li>"Preview as buyer" 按钮放在每个面板右上(不再做成顶级 tab 切换)</li>
+        </ul>
+        <div class="legend">
+          <span class="pill">取消 Agent View / User View 顶部切换</span>
+          <span class="pill">Public Profile 入口去重</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== SCENE WIZ ==================== -->
+  <section class="scene" data-scene="WIZ">
+    <div class="compare-grid">
+      <div class="col">
+        <h3>❌ 现在 · 20+ 字段一屏炸</h3>
+        <div class="phone phone-mini">
+          <div class="notch"></div>
+          <div class="screen">
+            <div class="topbar"><span style="font-size:13px;color:#9ca3af">Create Community</span><span></span></div>
+            <div class="old-form">
+              <span class="lbl">Name</span><input value="" />
+              <span class="lbl">Slug</span><input />
+              <span class="lbl">City</span><select><option>Select…</option></select>
+              <span class="lbl">State</span><select><option>Select…</option></select>
+              <span class="lbl">ZIP codes</span><input placeholder="98004, 98005…" />
+              <span class="lbl">Boundary type</span><select><option>Polygon</option></select>
+              <span class="lbl">Geographic radius</span><input placeholder="miles" />
+              <span class="lbl">School district</span><select><option>Bellevue SD</option></select>
+              <span class="lbl">Median price</span><input />
+              <span class="lbl">Median rent</span><input />
+              <span class="lbl">Walk score</span><input />
+              <span class="lbl">Transit score</span><input />
+              <span class="lbl">Tags</span><select multiple><option>Family</option><option>Tech</option></select>
+              <span class="lbl">Description</span><input />
+              <span class="lbl">Cover photo</span><input type="file" />
+              <span class="lbl">Visibility</span><select><option>Public</option></select>
+              <span class="lbl">Allow membership</span><select><option>Yes</option></select>
+              <span class="lbl">Featured agents</span><input />
+              <span class="lbl">External links</span><input />
+              <span class="lbl">Notes</span><input />
+              <div style="height:14px"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col">
+        <h3>✅ 新 · 3 步,每步 1-2 题</h3>
+        <div class="phone phone-mini">
+          <div class="notch"></div>
+          <div class="screen">
+            <div class="topbar"><span style="font-size:13px;color:#9ca3af">New Community</span><span style="font-size:13px;color:#9ca3af">Step 1 of 3</span></div>
+            <div class="wiz-screen">
+              <div class="wiz-progress"><span class="done"></span><span></span><span></span></div>
+              <div class="wiz-step">Step 1</div>
+              <div class="wiz-title">What's the neighborhood?</div>
+              <div class="wiz-help">Just enough to find it on a map. Everything else later.</div>
+
+              <div class="wiz-field">
+                <label>Name</label>
+                <input value="Bellevue Eastside" />
+              </div>
+              <div class="wiz-field">
+                <label>Boundary</label>
+                <div class="wiz-map"><span class="pin">📍</span></div>
+                <div style="font-size:12px;color:#9ca3af;margin-top:6px">Tap to draw a polygon. Or pick from ZIP codes.</div>
+              </div>
+
+              <div class="wiz-cta-row">
+                <button class="ghost">Skip</button>
+                <button class="primary">Next →</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="max-width:760px;margin:24px auto 0">
+      <h2 style="color:var(--brand2);font-size:16px;margin:0 0 8px">Create Community 三步化</h2>
+      <ul style="font-size:14px;color:var(--mute);line-height:1.6">
+        <li><b>Step 1:</b> Name + 地图画范围 (or ZIP codes) — 必填</li>
+        <li><b>Step 2:</b> 1 句描述 + 1 张封面图 — 必填</li>
+        <li><b>Step 3:</b> [Skip] 或 高级设置(学区/walk score/tags 等)— 全部选填,默认值兜底,创建后随时改</li>
+      </ul>
+      <p style="font-size:13px;color:#71717a;margin-top:12px">
+        <b>设计原则</b>:用户还没体验过 community 是什么时,不让他在表单里炸晕。其余 17 个字段全部推到 community 详情页"⚙️ Settings"里渐进披露。
+      </p>
+    </div>
+  </section>
+
+  <p style="text-align:center;color:#52525b;font-size:12px;margin-top:60px">
+    Static prototype · No real data · Built 2026-06-17
+  </p>
+</div>
+
+<script>
+  // Scenario switcher
+  const bar = document.getElementById('bar');
+  const scenes = document.querySelectorAll('.scene');
+  bar.addEventListener('click', e => {
+    const btn = e.target.closest('button[data-s]');
+    if (!btn) return;
+    bar.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const s = btn.dataset.s;
+    scenes.forEach(sc => sc.classList.toggle('active', sc.dataset.scene === s));
+  });
+
+  // Sheet open/close (Scene A — Layer 1)
+  const chipA = document.getElementById('chipA');
+  const sheetA = document.getElementById('sheetA');
+  const maskA = document.getElementById('maskA');
+  const closeA = document.getElementById('closeA');
+  const hudA = document.getElementById('hudA');
+  const l2A = document.getElementById('l2A');
+  const trackA = document.getElementById('trackA');
+  const progA = document.getElementById('progA');
+  const counterA = document.getElementById('counterA');
+  const backA = document.getElementById('backA');
+  const stripA = document.getElementById('stripA');
+
+  // Community video collection (5 videos)
+  const COMM_VIDS = [
+    { title: 'Schools tour',    img: 'https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=900&q=70', stat: '⭐ 4.8 · 2.3k views', sub: 'Top-rated Bellevue School District walkthrough' },
+    { title: 'Commute · SR-520',img: 'https://images.unsplash.com/photo-1545209463-e2825498edbf?w=900&q=70', stat: '⭐ 4.7 · 1.8k views', sub: '22 min drive to Seattle, 18 min to Microsoft' },
+    { title: 'Bellevue Park',   img: 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=900&q=70', stat: '⭐ 4.9 · 3.1k views', sub: 'Trails, downtown park, weekend farmers market' },
+    { title: 'Dining intro',    img: 'https://images.unsplash.com/photo-1542317854-04a7a8523b3a?w=900&q=70', stat: '⭐ 4.6 · 1.2k views', sub: 'Crossroads, Old Bellevue, neighborhood favorites' },
+    { title: 'Nightlife',       img: 'https://images.unsplash.com/photo-1519501025264-65ba15a82390?w=900&q=70', stat: '⭐ 4.5 · 980 views',  sub: 'Bars, late-night, what the area looks like at 10pm' },
+  ];
+
+  let cur = 0;
+
+  function setHUD(label) { hudA.textContent = label; }
+  function openSheet() { sheetA.classList.add('open'); maskA.classList.add('open'); setHUD('L1 · COMMUNITY SHEET'); }
+  function closeSheet() { sheetA.classList.remove('open'); maskA.classList.remove('open'); if (!l2A.classList.contains('open')) setHUD('L0 · LISTING FEED'); }
+
+  // Build carousel slides once
+  function buildTrack() {
+    trackA.innerHTML = COMM_VIDS.map((v, i) => `
+      <div class="slide" data-i="${i}">
+        <div class="l2-vid" style="background-image:url('${v.img}')"></div>
+        <div class="l2-meta">
+          <div class="t">${v.title}</div>
+          <div class="s">${v.sub}</div>
+          <div class="stats">${v.stat}</div>
+        </div>
+        <div class="l2-rail">
+          <div class="b">❤️</div>
+          <div class="b">💬</div>
+          <div class="b">↗</div>
+        </div>
+      </div>
+    `).join('');
+    progA.innerHTML = COMM_VIDS.map(() => '<span></span>').join('');
+  }
+  buildTrack();
+
+  function renderCarousel() {
+    trackA.style.transform = `translateX(-${cur * 100}%)`;
+    counterA.textContent = `${cur + 1} / ${COMM_VIDS.length}`;
+    progA.querySelectorAll('span').forEach((s, i) => s.classList.toggle('active', i === cur));
+  }
+
+  function openL2(idx) {
+    cur = idx || 0;
+    renderCarousel();
+    l2A.classList.add('open');
+    setHUD('L2 · COMMUNITY VIDEO');
+  }
+  function closeL2() {
+    l2A.classList.remove('open');
+    // Always returns to L0 listing — the home anchor (per user request)
+    setHUD(sheetA.classList.contains('open') ? 'L1 · COMMUNITY SHEET' : 'L0 · LISTING FEED');
+  }
+
+  // Horizontal swipe on track
+  let dragX = 0, startX = 0, dragging = false;
+  trackA.addEventListener('touchstart', e => { startX = e.touches[0].clientX; dragX = 0; dragging = true; trackA.style.transition = 'none'; }, {passive:true});
+  trackA.addEventListener('touchmove', e => {
+    if (!dragging) return;
+    dragX = e.touches[0].clientX - startX;
+    const w = trackA.clientWidth;
+    trackA.style.transform = `translateX(calc(-${cur * 100}% + ${dragX}px))`;
+  }, {passive:true});
+  trackA.addEventListener('touchend', () => {
+    dragging = false;
+    trackA.style.transition = '';
+    const w = trackA.clientWidth;
+    if (dragX < -w * 0.18 && cur < COMM_VIDS.length - 1) cur++;
+    else if (dragX > w * 0.18 && cur > 0) cur--;
+    renderCarousel();
+  });
+
+  // Mouse drag (desktop preview)
+  let mDown = false;
+  trackA.addEventListener('mousedown', e => { mDown = true; startX = e.clientX; dragX = 0; trackA.style.transition='none'; });
+  window.addEventListener('mousemove', e => {
+    if (!mDown) return;
+    dragX = e.clientX - startX;
+    trackA.style.transform = `translateX(calc(-${cur * 100}% + ${dragX}px))`;
+  });
+  window.addEventListener('mouseup', () => {
+    if (!mDown) return; mDown = false; trackA.style.transition='';
+    const w = trackA.clientWidth;
+    if (dragX < -w * 0.18 && cur < COMM_VIDS.length - 1) cur++;
+    else if (dragX > w * 0.18 && cur > 0) cur--;
+    renderCarousel();
+  });
+
+  chipA.addEventListener('click', openSheet);
+  closeA.addEventListener('click', closeSheet);
+  maskA.addEventListener('click', closeSheet);
+  backA.addEventListener('click', closeL2);
+
+  // Sheet thumbnails → open carousel at that index
+  stripA.addEventListener('click', e => {
+    const el = e.target.closest('[data-idx]');
+    if (!el) return;
+    openL2(parseInt(el.dataset.idx, 10));
+  });
+
+  // ============================================================
+  // SCENARIO B — Communities-first browsing
+  // L0 grid → L1 community feed (vertical) → L2 listings sheet → L3 listing carousel (horizontal)
+  // ============================================================
+  const hudB = document.getElementById('hudB');
+  const commGridB = document.getElementById('commGridB');
+  const l1B = document.getElementById('l1B');
+  const trackB1 = document.getElementById('trackB1');
+  const progB1 = document.getElementById('progB1');
+  const counterB1 = document.getElementById('counterB1');
+  const backB1 = document.getElementById('backB1');
+  const sheetB2 = document.getElementById('sheetB2');
+  const maskB2 = document.getElementById('maskB2');
+  const closeB2 = document.getElementById('closeB2');
+  const listingsB2 = document.getElementById('listingsB2');
+  const l3B = document.getElementById('l3B');
+  const trackB3 = document.getElementById('trackB3');
+  const progB3 = document.getElementById('progB3');
+  const counterB3 = document.getElementById('counterB3');
+  const backB3 = document.getElementById('backB3');
+
+  function setHUDB(label) { hudB.textContent = label; }
+
+  // Community → its videos. Bellevue is the only one wired up; others reuse Bellevue's set for demo.
+  const COMMUNITIES_B = {
+    bellevue: {
+      name: 'Bellevue Eastside',
+      listingsCount: 47,
+      videos: [
+        { title: 'Schools tour',    img: 'https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=900&q=70', sub: 'Top-rated Bellevue School District walkthrough', stat: '⭐ 4.8 · 2.3k views' },
+        { title: 'Commute · SR-520',img: 'https://images.unsplash.com/photo-1545209463-e2825498edbf?w=900&q=70', sub: '22 min to Seattle, 18 min to Microsoft',           stat: '⭐ 4.7 · 1.8k views' },
+        { title: 'Bellevue Park',   img: 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=900&q=70', sub: 'Trails, downtown park, weekend farmers market',  stat: '⭐ 4.9 · 3.1k views' },
+        { title: 'Dining intro',    img: 'https://images.unsplash.com/photo-1542317854-04a7a8523b3a?w=900&q=70', sub: 'Crossroads, Old Bellevue, neighborhood favorites', stat: '⭐ 4.6 · 1.2k views' },
+        { title: 'Nightlife',       img: 'https://images.unsplash.com/photo-1519501025264-65ba15a82390?w=900&q=70', sub: 'Bars, late-night, what 10pm looks like',         stat: '⭐ 4.5 · 980 views'  },
+      ],
+    },
+  };
+
+  // 8 demo listings for the listings sheet + carousel
+  const LISTINGS_B = [
+    { price:'$1.29M', addr:'1421 NE 22nd St',    bb:'3 bd · 2 ba · 1,640 sqft', img:'https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=900&q=70' },
+    { price:'$1.65M', addr:'14530 NE 24th St',   bb:'4 bd · 3 ba · 2,240 sqft', img:'https://images.unsplash.com/photo-1598228723793-52759bba239c?w=900&q=70' },
+    { price:'$2.10M', addr:'14102 NE 25th Pl',   bb:'5 bd · 4 ba · 3,180 sqft', img:'https://images.unsplash.com/photo-1605276373954-0c4a0dac5b12?w=900&q=70' },
+    { price:'$1.48M', addr:'14207 NE 23rd Pl',   bb:'4 bd · 3 ba · 2,840 sqft', img:'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=900&q=70' },
+    { price:'$1.89M', addr:'1320 NE 28th St',    bb:'4 bd · 3 ba · 2,610 sqft', img:'https://images.unsplash.com/photo-1576941089067-2de3c901e126?w=900&q=70' },
+    { price:'$1.35M', addr:'14808 NE 21st St',   bb:'3 bd · 2 ba · 1,820 sqft', img:'https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=900&q=70' },
+    { price:'$2.45M', addr:'1455 NE 26th Ave',   bb:'5 bd · 4 ba · 3,520 sqft', img:'https://images.unsplash.com/photo-1583608205776-bfb35f0d9f83?w=900&q=70' },
+    { price:'$1.55M', addr:'14620 NE 22nd Pl',   bb:'4 bd · 2 ba · 2,100 sqft', img:'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=900&q=70' },
+  ];
+
+  let curB = null;     // active community key
+  let curB1 = 0;       // index in community feed
+  let curB3 = 0;       // index in listing carousel
+
+  // --- L1: Community video feed (vertical) ---
+  function buildB1() {
+    const c = COMMUNITIES_B[curB] || COMMUNITIES_B.bellevue;
+    trackB1.innerHTML = c.videos.map((v, i) => `
+      <div class="slide" data-i="${i}" style="flex:0 0 100%">
+        <div class="l2-vid" style="background-image:url('${v.img}')"></div>
+        <div class="l2-meta">
+          <div class="t">${v.title}</div>
+          <div class="s">${v.sub}</div>
+          <div class="stats">${v.stat}</div>
+        </div>
+        <div class="l2-rail"><div class="b">❤️</div><div class="b">💬</div><div class="b">↗</div></div>
+        <div class="l2-chip" data-link="listings">
+          <div class="ico">🏠</div>
+          <div>
+            <div class="name">${c.listingsCount} homes in ${c.name}</div>
+            <div class="sub">Tap to browse listings</div>
+          </div>
+          <div class="arrow">›</div>
+        </div>
+      </div>
+    `).join('');
+    progB1.innerHTML = c.videos.map(() => '<span></span>').join('');
+    counterB1.textContent = `1 / ${c.videos.length}`;
+  }
+  function renderB1() {
+    trackB1.style.transform = `translateY(-${curB1 * 100}%)`;
+    const c = COMMUNITIES_B[curB] || COMMUNITIES_B.bellevue;
+    counterB1.textContent = `${curB1 + 1} / ${c.videos.length}`;
+    progB1.querySelectorAll('span').forEach((s, i) => s.classList.toggle('active', i === curB1));
+  }
+  function openB1(commKey) {
+    curB = commKey in COMMUNITIES_B ? commKey : 'bellevue';
+    curB1 = 0;
+    buildB1();
+    renderB1();
+    l1B.classList.add('open');
+    setHUDB('L1 · COMMUNITY FEED');
+  }
+  function closeB1() {
+    l1B.classList.remove('open');
+    setHUDB('L0 · COMMUNITY GRID');
+  }
+
+  // Vertical swipe on B1
+  let b1Drag=0, b1Start=0, b1Down=false;
+  trackB1.addEventListener('touchstart', e => { b1Start = e.touches[0].clientY; b1Drag=0; b1Down=true; trackB1.style.transition='none'; }, {passive:true});
+  trackB1.addEventListener('touchmove', e => {
+    if (!b1Down) return;
+    b1Drag = e.touches[0].clientY - b1Start;
+    trackB1.style.transform = `translateY(calc(-${curB1*100}% + ${b1Drag}px))`;
+  }, {passive:true});
+  trackB1.addEventListener('touchend', () => {
+    if (!b1Down) return; b1Down=false; trackB1.style.transition='';
+    const h = trackB1.clientHeight;
+    const c = COMMUNITIES_B[curB] || COMMUNITIES_B.bellevue;
+    if (b1Drag < -h*0.18 && curB1 < c.videos.length-1) curB1++;
+    else if (b1Drag > h*0.18 && curB1 > 0) curB1--;
+    renderB1();
+  });
+  trackB1.addEventListener('mousedown', e => { b1Down=true; b1Start=e.clientY; b1Drag=0; trackB1.style.transition='none'; });
+  window.addEventListener('mousemove', e => {
+    if (!b1Down) return;
+    b1Drag = e.clientY - b1Start;
+    trackB1.style.transform = `translateY(calc(-${curB1*100}% + ${b1Drag}px))`;
+  });
+  window.addEventListener('mouseup', () => {
+    if (!b1Down) return; b1Down=false; trackB1.style.transition='';
+    const h = trackB1.clientHeight;
+    const c = COMMUNITIES_B[curB] || COMMUNITIES_B.bellevue;
+    if (b1Drag < -h*0.18 && curB1 < c.videos.length-1) curB1++;
+    else if (b1Drag > h*0.18 && curB1 > 0) curB1--;
+    renderB1();
+  });
+
+  // L0 grid card → open community feed
+  commGridB.addEventListener('click', e => {
+    const card = e.target.closest('[data-comm]');
+    if (!card) return;
+    openB1(card.dataset.comm);
+  });
+  backB1.addEventListener('click', closeB1);
+
+  // --- L2: Listings sheet ---
+  function buildListingsSheet() {
+    listingsB2.innerHTML = LISTINGS_B.map((l, i) => `
+      <div class="l" data-i="${i}">
+        <div class="img" style="background-image:url('${l.img.replace('w=900','w=400')}')"></div>
+        <div class="info"><div class="p">${l.price}</div><div class="a">${l.bb.split('·').slice(0,2).join('·').trim()}</div></div>
+      </div>
+    `).join('');
+  }
+  buildListingsSheet();
+
+  function openSheetB2() { sheetB2.classList.add('open'); maskB2.classList.add('open'); setHUDB('L2 · LISTINGS SHEET'); }
+  function closeSheetB2() { sheetB2.classList.remove('open'); maskB2.classList.remove('open'); setHUDB('L1 · COMMUNITY FEED'); }
+
+  // Listings chip on L1 video → open sheet
+  trackB1.addEventListener('click', e => {
+    if (e.target.closest('[data-link="listings"]')) openSheetB2();
+  });
+  closeB2.addEventListener('click', closeSheetB2);
+  maskB2.addEventListener('click', closeSheetB2);
+
+  // --- L3: Listing carousel ---
+  function buildB3() {
+    trackB3.innerHTML = LISTINGS_B.map((l, i) => `
+      <div class="slide" data-i="${i}">
+        <div class="l2-vid" style="background-image:url('${l.img}')"></div>
+        <div class="l2-meta">
+          <div class="t">${l.price}</div>
+          <div class="s">${l.addr}</div>
+          <div class="stats">${l.bb}</div>
+        </div>
+        <div class="l2-rail"><div class="b">❤️</div><div class="b">💬</div><div class="b">↗</div></div>
+      </div>
+    `).join('');
+    progB3.innerHTML = LISTINGS_B.map(() => '<span></span>').join('');
+  }
+  buildB3();
+  function renderB3() {
+    trackB3.style.transform = `translateX(-${curB3*100}%)`;
+    counterB3.textContent = `${curB3+1} / ${LISTINGS_B.length}`;
+    progB3.querySelectorAll('span').forEach((s, i) => s.classList.toggle('active', i === curB3));
+  }
+  function openB3(idx) {
+    curB3 = idx || 0;
+    renderB3();
+    l3B.classList.add('open');
+    setHUDB('L3 · LISTING DETAIL');
+  }
+  function closeB3() {
+    l3B.classList.remove('open');
+    setHUDB(sheetB2.classList.contains('open') ? 'L2 · LISTINGS SHEET' : 'L1 · COMMUNITY FEED');
+  }
+  // Sheet listing → open carousel
+  listingsB2.addEventListener('click', e => {
+    const el = e.target.closest('[data-i]');
+    if (!el) return;
+    openB3(parseInt(el.dataset.i, 10));
+  });
+  backB3.addEventListener('click', closeB3);
+
+  // Horizontal swipe on B3
+  let b3Drag=0, b3Start=0, b3Down=false;
+  trackB3.addEventListener('touchstart', e => { b3Start=e.touches[0].clientX; b3Drag=0; b3Down=true; trackB3.style.transition='none'; }, {passive:true});
+  trackB3.addEventListener('touchmove', e => {
+    if (!b3Down) return;
+    b3Drag = e.touches[0].clientX - b3Start;
+    trackB3.style.transform = `translateX(calc(-${curB3*100}% + ${b3Drag}px))`;
+  }, {passive:true});
+  trackB3.addEventListener('touchend', () => {
+    if (!b3Down) return; b3Down=false; trackB3.style.transition='';
+    const w = trackB3.clientWidth;
+    if (b3Drag < -w*0.18 && curB3 < LISTINGS_B.length-1) curB3++;
+    else if (b3Drag > w*0.18 && curB3 > 0) curB3--;
+    renderB3();
+  });
+  trackB3.addEventListener('mousedown', e => { b3Down=true; b3Start=e.clientX; b3Drag=0; trackB3.style.transition='none'; });
+  window.addEventListener('mousemove', e => {
+    if (!b3Down) return;
+    b3Drag = e.clientX - b3Start;
+    trackB3.style.transform = `translateX(calc(-${curB3*100}% + ${b3Drag}px))`;
+  });
+  window.addEventListener('mouseup', () => {
+    if (!b3Down) return; b3Down=false; trackB3.style.transition='';
+    const w = trackB3.clientWidth;
+    if (b3Drag < -w*0.18 && curB3 < LISTINGS_B.length-1) curB3++;
+    else if (b3Drag > w*0.18 && curB3 > 0) curB3--;
+    renderB3();
+  });
+</script>
+</body>
+</html>

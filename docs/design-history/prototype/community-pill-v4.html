@@ -1,0 +1,313 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Percho — left action button shapes</title>
+<style>
+  :root { --bg:#f3eee7; --ink:#1a1a1a; --ink2:#4a4a4a; }
+  * { box-sizing: border-box; }
+  html, body { margin:0; background: var(--bg); color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  body { padding: 0 0 96px; }
+  .page-header { padding: 20px 16px 8px; max-width: 1500px; margin: 0 auto; }
+  .page-header h1 { font-family: "Iowan Old Style", Georgia, serif; font-size: 22px; font-weight: 500; margin: 0 0 6px; }
+  .page-header p { color: var(--ink2); font-size: 13px; margin: 0 0 4px; line-height: 1.5; }
+  .page-header ul { color: var(--ink2); font-size: 13px; margin: 6px 0 0; line-height: 1.6; padding-left: 20px; }
+
+  .stage { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; padding: 16px; max-width: 1400px; margin: 0 auto; }
+  @media (max-width: 1100px) { .stage { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 700px)  { .stage { grid-template-columns: 1fr; } }
+
+  .phone {
+    background: #000; border-radius: 28px; overflow: hidden;
+    box-shadow: 0 6px 24px rgba(0,0,0,0.12); height: 700px; position: relative; isolation: isolate;
+  }
+  .phone-label { position: absolute; bottom: -38px; left: 0; right: 0; text-align: center; font-size: 12px; color: var(--ink2); line-height: 1.4; }
+  .phone-label strong { display: block; color: var(--ink); font-size: 14px; font-weight: 600; margin-bottom: 2px; }
+
+  .frame {
+    position: absolute; inset: 0;
+    background-image: url('https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=800&q=70');
+    background-size: cover; background-position: center; filter: brightness(0.78);
+  }
+  .frame::after {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(180deg, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0) 30%, rgba(0,0,0,0) 60%, rgba(0,0,0,0.55) 100%);
+  }
+
+  .statusbar {
+    position: absolute; top: 0; left: 0; right: 0; height: 44px; padding: 14px 22px 0;
+    color: #fff; font-size: 13px; font-weight: 600;
+    display: flex; justify-content: space-between; align-items: center; z-index: 5;
+  }
+
+  .topchrome {
+    position: absolute; top: 50px; left: 12px; right: 12px;
+    display: flex; align-items: flex-start; gap: 8px; z-index: 4;
+  }
+  /* circular icon buttons (existing tokens — round, white-on-glass) */
+  .icon-btn {
+    width: 38px; height: 38px; border-radius: 999px;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: rgba(0,0,0,0.45);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid rgba(255,255,255,0.16);
+    color: #fff; font-size: 18px; flex-shrink: 0;
+  }
+  .pill-slot { flex: 1; display: flex; justify-content: center; min-width: 0; }
+
+  /* === Center-top title (variant C, locked — for reference only) === */
+  .title-pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 11px;
+    background: rgba(0,0,0,0.30);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid rgba(255,255,255,0.14);
+    border-radius: 999px;
+    color: #fff; font-size: 12.5px; font-weight: 500;
+    white-space: nowrap; max-width: 220px; overflow: hidden; text-overflow: ellipsis;
+  }
+
+  /* Where the LEFT action button sits — same anchor for community + listing surfaces */
+  .left-place { position: absolute; top: 108px; left: 16px; z-index: 4; }
+
+  /* ==== Common base for left pill ==== */
+  .lp {
+    display: inline-flex; align-items: center; gap: 7px;
+    color: #fff; font-size: 13px; font-weight: 500;
+    white-space: nowrap; letter-spacing: 0.005em;
+    padding: 8px 13px;
+    background: rgba(0,0,0,0.36);
+    backdrop-filter: blur(18px) saturate(170%);
+    -webkit-backdrop-filter: blur(18px) saturate(170%);
+    border: 1px solid rgba(255,255,255,0.14);
+  }
+  .lp .ico { font-size: 13px; }
+  .lp .chev { opacity: 0.65; margin-left: 2px; font-size: 12px; }
+
+  /* === Variant 1 — Squircle (10px) ===
+     Soft enough to feel modern, square enough to contrast round icon-btn. */
+  .v1 { border-radius: 10px; }
+
+  /* === Variant 2 — Soft tag (12px + asymmetric notch on the LEFT) ===
+     Reads like a "label tag" attached to the surface. */
+  .v2 {
+    border-radius: 12px 12px 12px 4px;
+  }
+
+  /* === Variant 3 — Banner with cut corner (top-right cut diagonally) ===
+     Editorial feel. Built with clip-path. */
+  .v3 {
+    border-radius: 6px;
+    clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 50%, calc(100% - 10px) 100%, 0 100%);
+    padding-right: 18px;
+    border: none;
+  }
+
+  /* === Variant 4 — Stadium with one flat side (left) ===
+     Half-pill: rounded right, flat left → "sticking out from edge". */
+  .v4 {
+    border-radius: 0 999px 999px 0;
+    border-left: none;
+    margin-left: -16px;
+    padding-left: 22px;
+    padding-right: 14px;
+  }
+
+  /* === Variant 5 — Underline only (no chip) ===
+     Most immersive: text + a soft underline + glass on hover only. */
+  .v5 {
+    background: transparent;
+    border: none;
+    padding: 4px 2px;
+    font-weight: 600;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.7), 0 0 1px rgba(0,0,0,0.4);
+    border-radius: 0;
+    position: relative;
+  }
+  .v5::after {
+    content: ''; position: absolute; left: 2px; right: 18px; bottom: 2px;
+    height: 1px; background: rgba(255,255,255,0.55);
+  }
+
+  /* === Variant 6 — Soft squircle 14px + dot leader ===
+     A bit larger radius than v1, with a dot-prefix indicator. */
+  .v6 {
+    border-radius: 14px;
+    padding: 7px 13px 7px 11px;
+  }
+  .v6 .dot {
+    width: 5px; height: 5px; background: #fff; border-radius: 50%;
+    margin-right: 2px; opacity: 0.85;
+  }
+
+  /* Bottom + actions decoration */
+  .bottom { position: absolute; left: 16px; right: 80px; bottom: 24px; color: #fff; z-index: 3; }
+  .bottom .tag {
+    display: inline-block; padding: 4px 10px; background: rgba(0,0,0,0.4);
+    backdrop-filter: blur(10px); border-radius: 999px; font-size: 12px; font-weight: 500; margin-bottom: 8px;
+  }
+  .bottom h3 { margin: 0 0 4px; font-size: 18px; font-weight: 600; }
+  .bottom p { margin: 0; font-size: 13px; opacity: 0.85; line-height: 1.4; }
+  .actions {
+    position: absolute; right: 12px; bottom: 100px; z-index: 3;
+    display: flex; flex-direction: column; gap: 16px; align-items: center;
+  }
+  .actions .act {
+    width: 44px; height: 44px; border-radius: 999px;
+    background: rgba(0,0,0,0.4);
+    backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.14);
+    display: flex; align-items: center; justify-content: center; color: #fff; font-size: 18px;
+  }
+  .actions .lbl { font-size: 10px; color: #fff; margin-top: -10px; opacity: 0.85; }
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <h1>Left action button — shape variants</h1>
+  <p>Locked: <strong>C is the center-top title pill</strong> only. The LEFT button (community pill on listing feed / "Live here" on community page) is what we're picking now.</p>
+  <ul>
+    <li>Constraint: shape must <strong>contrast</strong> with round icon-btn (←, ↗) — full pill = no contrast</li>
+    <li>Constraint: also can't be <strong>too sharp</strong> — pure rectangle = 太突兀</li>
+    <li>Same shape used on both surfaces (listing feed → community pill / community page → "Live here")</li>
+  </ul>
+</div>
+
+<div class="stage">
+
+  <!-- v1 Squircle -->
+  <div class="phone">
+    <div class="frame"></div>
+    <div class="statusbar"><span>12:32</span><span>🌙 18%</span></div>
+    <div class="topchrome">
+      <button class="icon-btn">←</button>
+      <div class="pill-slot"><div class="title-pill">Peachtree Corners · Atlanta, GA</div></div>
+      <button class="icon-btn">↗</button>
+    </div>
+    <div class="left-place">
+      <div class="lp v1"><span class="ico">🏠</span><span>Peachtree Corners</span><span class="chev">›</span></div>
+    </div>
+    <div class="actions">
+      <div class="act" style="color:#ff5a72;">♥</div><div class="lbl">Like</div>
+      <div class="act">🔖</div><div class="lbl">Save</div>
+      <div class="act">💬</div><div class="lbl">Contact</div>
+    </div>
+    <div class="bottom"><span class="tag">Walk the Block</span><h3>4825 Chesterfield Ct</h3><p>Suwanee, GA · 4 bd · 3.5 ba · $950K</p></div>
+    <div class="phone-label"><strong>1 — Squircle 10px</strong>soft rect · contrasts round icons cleanly</div>
+  </div>
+
+  <!-- v2 Soft tag -->
+  <div class="phone">
+    <div class="frame"></div>
+    <div class="statusbar"><span>12:32</span><span>🌙 18%</span></div>
+    <div class="topchrome">
+      <button class="icon-btn">←</button>
+      <div class="pill-slot"><div class="title-pill">Peachtree Corners · Atlanta, GA</div></div>
+      <button class="icon-btn">↗</button>
+    </div>
+    <div class="left-place">
+      <div class="lp v2"><span class="ico">🏠</span><span>Peachtree Corners</span><span class="chev">›</span></div>
+    </div>
+    <div class="actions">
+      <div class="act" style="color:#ff5a72;">♥</div><div class="lbl">Like</div>
+      <div class="act">🔖</div><div class="lbl">Save</div>
+      <div class="act">💬</div><div class="lbl">Contact</div>
+    </div>
+    <div class="bottom"><span class="tag">Walk the Block</span><h3>4825 Chesterfield Ct</h3><p>Suwanee, GA · 4 bd · 3.5 ba · $950K</p></div>
+    <div class="phone-label"><strong>2 — Asymmetric tag</strong>3 corners 12px · bottom-left 4px</div>
+  </div>
+
+  <!-- v3 Banner with cut -->
+  <div class="phone">
+    <div class="frame"></div>
+    <div class="statusbar"><span>12:32</span><span>🌙 18%</span></div>
+    <div class="topchrome">
+      <button class="icon-btn">←</button>
+      <div class="pill-slot"><div class="title-pill">Peachtree Corners · Atlanta, GA</div></div>
+      <button class="icon-btn">↗</button>
+    </div>
+    <div class="left-place">
+      <div class="lp v3"><span class="ico">🏠</span><span>Peachtree Corners</span></div>
+    </div>
+    <div class="actions">
+      <div class="act" style="color:#ff5a72;">♥</div><div class="lbl">Like</div>
+      <div class="act">🔖</div><div class="lbl">Save</div>
+      <div class="act">💬</div><div class="lbl">Contact</div>
+    </div>
+    <div class="bottom"><span class="tag">Walk the Block</span><h3>4825 Chesterfield Ct</h3><p>Suwanee, GA · 4 bd · 3.5 ba · $950K</p></div>
+    <div class="phone-label"><strong>3 — Banner cut-edge</strong>arrow-tip on right · editorial feel</div>
+  </div>
+
+  <!-- v4 Stadium edge -->
+  <div class="phone">
+    <div class="frame"></div>
+    <div class="statusbar"><span>12:32</span><span>🌙 18%</span></div>
+    <div class="topchrome">
+      <button class="icon-btn">←</button>
+      <div class="pill-slot"><div class="title-pill">Peachtree Corners · Atlanta, GA</div></div>
+      <button class="icon-btn">↗</button>
+    </div>
+    <div class="left-place" style="left:0;">
+      <div class="lp v4"><span class="ico">🏠</span><span>Peachtree Corners</span><span class="chev">›</span></div>
+    </div>
+    <div class="actions">
+      <div class="act" style="color:#ff5a72;">♥</div><div class="lbl">Like</div>
+      <div class="act">🔖</div><div class="lbl">Save</div>
+      <div class="act">💬</div><div class="lbl">Contact</div>
+    </div>
+    <div class="bottom"><span class="tag">Walk the Block</span><h3>4825 Chesterfield Ct</h3><p>Suwanee, GA · 4 bd · 3.5 ba · $950K</p></div>
+    <div class="phone-label"><strong>4 — Edge-anchored half-pill</strong>flush left edge · sticking out · clear contrast w/ free-floating round buttons</div>
+  </div>
+
+  <!-- v5 Text only -->
+  <div class="phone">
+    <div class="frame"></div>
+    <div class="statusbar"><span>12:32</span><span>🌙 18%</span></div>
+    <div class="topchrome">
+      <button class="icon-btn">←</button>
+      <div class="pill-slot"><div class="title-pill">Peachtree Corners · Atlanta, GA</div></div>
+      <button class="icon-btn">↗</button>
+    </div>
+    <div class="left-place">
+      <div class="lp v5"><span class="ico">🏠</span><span>Peachtree Corners</span><span class="chev">›</span></div>
+    </div>
+    <div class="actions">
+      <div class="act" style="color:#ff5a72;">♥</div><div class="lbl">Like</div>
+      <div class="act">🔖</div><div class="lbl">Save</div>
+      <div class="act">💬</div><div class="lbl">Contact</div>
+    </div>
+    <div class="bottom"><span class="tag">Walk the Block</span><h3>4825 Chesterfield Ct</h3><p>Suwanee, GA · 4 bd · 3.5 ba · $950K</p></div>
+    <div class="phone-label"><strong>5 — Text + underline</strong>no chip · most immersive · contrast = no shape vs round shape</div>
+  </div>
+
+  <!-- v6 Squircle 14 with dot -->
+  <div class="phone">
+    <div class="frame"></div>
+    <div class="statusbar"><span>12:32</span><span>🌙 18%</span></div>
+    <div class="topchrome">
+      <button class="icon-btn">←</button>
+      <div class="pill-slot"><div class="title-pill">Peachtree Corners · Atlanta, GA</div></div>
+      <button class="icon-btn">↗</button>
+    </div>
+    <div class="left-place">
+      <div class="lp v6"><span class="dot"></span><span>Peachtree Corners</span><span class="chev">›</span></div>
+    </div>
+    <div class="actions">
+      <div class="act" style="color:#ff5a72;">♥</div><div class="lbl">Like</div>
+      <div class="act">🔖</div><div class="lbl">Save</div>
+      <div class="act">💬</div><div class="lbl">Contact</div>
+    </div>
+    <div class="bottom"><span class="tag">Walk the Block</span><h3>4825 Chesterfield Ct</h3><p>Suwanee, GA · 4 bd · 3.5 ba · $950K</p></div>
+    <div class="phone-label"><strong>6 — Squircle 14px + dot</strong>softer rect · live-indicator dot vs emoji</div>
+  </div>
+
+</div>
+
+</body>
+</html>

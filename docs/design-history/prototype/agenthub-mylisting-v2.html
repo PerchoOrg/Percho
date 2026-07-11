@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>AgentHub — My Listing v2 (immersive stats)</title>
+<style>
+  :root {
+    --bg: #f3eee7;
+    --surface: #fbf8f3;
+    --ink: #313131;
+    --ink2: #5a5651;
+    --muted: #8a857d;
+    --line: rgba(49, 49, 49, 0.14);
+    --line-strong: rgba(49, 49, 49, 0.28);
+    --accent-good: #4a6b3a;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+    background: var(--bg); color: var(--ink); -webkit-font-smoothing: antialiased; line-height: 1.5; font-size: 14px;
+  }
+  .serif { font-family: ui-serif, Georgia, "Times New Roman", serif; letter-spacing: -0.01em; }
+  .page-wrap { max-width: 1400px; margin: 0 auto; padding: 28px 20px 80px; }
+  .page-title { font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px; }
+  .page-subtitle { font-size: 22px; margin: 0 0 26px; }
+  .page-subtitle small { color: var(--muted); font-size: 13px; font-weight: normal; margin-left: 8px; }
+
+  .variants { display: grid; grid-template-columns: 1fr; gap: 28px; }
+  @media (min-width: 1100px) { .variants { grid-template-columns: 1fr 1fr; } }
+  .variant { background: var(--bg); border: 1px solid var(--line); border-radius: 18px; overflow: hidden; }
+  .variant-label {
+    padding: 10px 16px; background: var(--ink); color: var(--surface);
+    font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.1em;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .variant-label .pickme { font-size: 11px; color: rgba(255,255,255,0.7); text-transform: none; letter-spacing: normal; }
+
+  /* shared hero */
+  .hero {
+    position: relative;
+    aspect-ratio: 5 / 2;
+    background:
+      linear-gradient(120deg,#7a8c6e 0%, #4f6850 60%, #2f3a35 100%);
+    border-bottom-left-radius: 12px; border-bottom-right-radius: 12px;
+    overflow: hidden;
+  }
+  .hero::after {
+    content: ""; position: absolute; inset: 0;
+    background: linear-gradient(to top, rgba(0,0,0,0.65), rgba(0,0,0,0.15) 50%, transparent 75%);
+    pointer-events: none;
+  }
+  .hero-actions { position: absolute; top: 12px; right: 12px; z-index: 3; display: flex; gap: 8px; align-items: center; }
+  .pill-status {
+    background: rgba(251,248,243,0.95); color: var(--ink); font-size: 12px; padding: 6px 12px;
+    border-radius: 999px; border: 1px solid var(--line); font-weight: 500;
+    display: inline-flex; align-items: center; gap: 6px; cursor: pointer;
+  }
+  .pill-status::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--accent-good); }
+  .icon-btn {
+    background: rgba(251,248,243,0.95); color: var(--ink); width: 32px; height: 32px;
+    border-radius: 999px; border: 1px solid var(--line); display: inline-flex;
+    align-items: center; justify-content: center; cursor: pointer; font-size: 13px;
+  }
+  .preview-btn {
+    background: rgba(251,248,243,0.95); color: var(--ink);
+    padding: 6px 12px; font-size: 12px; border-radius: 999px;
+    border: 1px solid var(--line); display: inline-flex; align-items: center; gap: 5px; cursor: pointer;
+  }
+
+  /* === V2-1: glass stat tiles overlaid on hero bottom === */
+  .hero.v1 .title-band {
+    position: absolute; left: 18px; right: 18px; bottom: 14px; z-index: 2; color: var(--surface);
+  }
+  .hero.v1 h1 { font-family: ui-serif, Georgia, serif; font-size: 22px; margin: 0 0 2px; text-shadow: 0 1px 3px rgba(0,0,0,0.5); }
+  .hero.v1 .sub { font-size: 12px; opacity: 0.9; }
+  .glass-stats {
+    position: absolute; left: 18px; right: 18px; bottom: 14px; z-index: 4;
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+  }
+  .glass-stat {
+    background: rgba(251, 248, 243, 0.18);
+    backdrop-filter: blur(14px) saturate(140%);
+    -webkit-backdrop-filter: blur(14px) saturate(140%);
+    border: 1px solid rgba(255,255,255,0.22);
+    border-radius: 10px;
+    padding: 8px 10px; color: var(--surface);
+  }
+  .glass-stat .label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.07em; opacity: 0.75; margin-bottom: 1px; }
+  .glass-stat .val { font-family: ui-serif, Georgia, serif; font-size: 22px; font-weight: 500; line-height: 1; display: flex; align-items: baseline; gap: 6px; }
+  .glass-stat .delta { font-size: 11px; opacity: 0.85; font-family: -apple-system, sans-serif; font-weight: normal; }
+  .hero.v1 .title-only {
+    position: absolute; left: 18px; right: 18px; top: 18px; z-index: 2; color: var(--surface);
+    max-width: 60%;
+  }
+  .hero.v1 .title-only h1 { font-family: ui-serif, Georgia, serif; font-size: 22px; margin: 0 0 2px; text-shadow: 0 1px 3px rgba(0,0,0,0.5); }
+  .hero.v1 .title-only .sub { font-size: 12px; opacity: 0.9; }
+
+  /* === V2-2: bottom band — flat numbers baked into gradient (no card chrome) === */
+  .hero.v2 .title-only {
+    position: absolute; left: 18px; right: 18px; bottom: 56px; z-index: 2; color: var(--surface);
+  }
+  .hero.v2 h1 { font-family: ui-serif, Georgia, serif; font-size: 22px; margin: 0 0 2px; text-shadow: 0 1px 3px rgba(0,0,0,0.5); }
+  .hero.v2 .sub { font-size: 12px; opacity: 0.9; }
+  .baked-band {
+    position: absolute; left: 0; right: 0; bottom: 0; z-index: 3;
+    padding: 10px 18px;
+    display: flex; gap: 22px; color: var(--surface);
+    border-top: 1px solid rgba(255,255,255,0.18);
+    background: linear-gradient(to top, rgba(0,0,0,0.45), rgba(0,0,0,0.15));
+    backdrop-filter: blur(6px);
+  }
+  .baked-stat { display: flex; flex-direction: column; gap: 1px; }
+  .baked-stat .label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; opacity: 0.7; }
+  .baked-stat .val { font-family: ui-serif, Georgia, serif; font-size: 20px; line-height: 1; display: flex; align-items: baseline; gap: 6px; }
+  .baked-stat .delta { font-size: 11px; opacity: 0.85; font-family: -apple-system, sans-serif; }
+  .baked-divider { width: 1px; background: rgba(255,255,255,0.18); margin: 4px 0; }
+
+  /* tabs */
+  .tabs {
+    display: flex; align-items: stretch; border-bottom: 1px solid var(--line);
+    padding: 14px 18px 0; overflow-x: auto; gap: 4px; background: var(--bg);
+  }
+  .tab {
+    padding: 10px 14px; font-size: 13px; color: var(--ink2);
+    border-bottom: 2px solid transparent; cursor: pointer; white-space: nowrap;
+    display: inline-flex; align-items: center; gap: 6px; margin-bottom: -1px;
+  }
+  .tab.active { color: var(--ink); font-weight: 600; border-bottom-color: var(--ink); }
+  .tab .badge { background: var(--ink); color: var(--surface); font-size: 10.5px; padding: 1px 7px; border-radius: 999px; font-weight: 500; }
+
+  .panel { padding: 18px; }
+  .panel-card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; }
+  .panel-card h2 { font-size: 14px; margin: 0 0 4px; display: flex; align-items: center; justify-content: space-between; }
+  .panel-card .hint { font-size: 11.5px; color: var(--muted); margin-bottom: 12px; }
+  .saved-tag { font-size: 11px; color: var(--accent-good); display: inline-flex; align-items: center; gap: 4px; font-weight: normal; }
+  .saved-tag::before { content: "✓"; font-size: 10px; }
+  .field { display: grid; grid-template-columns: 110px 1fr; gap: 10px; padding: 8px 0; border-top: 1px dashed var(--line); align-items: center; }
+  .field:first-of-type { border-top: 0; }
+  .field label { font-size: 12px; color: var(--muted); }
+  .field input { border: 0; background: transparent; font: inherit; color: var(--ink); padding: 4px 0; width: 100%; }
+
+  .note-block { background: var(--surface); border-left: 3px solid var(--ink); padding: 14px 18px; border-radius: 0 10px 10px 0; color: var(--ink2); font-size: 13px; }
+  .note-block h3 { margin: 0 0 6px; font-size: 13px; color: var(--ink); }
+  .note-block ul { margin: 6px 0 0 18px; padding: 0; }
+  .note-block li { margin: 3px 0; }
+
+  .empty-cta { padding: 40px; text-align: center; border: 1.5px dashed var(--line-strong); border-radius: 12px; color: var(--ink2); }
+  .btn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 13px; border: 1px solid var(--ink); background: var(--ink); color: var(--surface); border-radius: 999px; font-size: 12.5px; cursor: pointer; }
+</style>
+</head>
+<body>
+<div class="page-wrap">
+  <div class="page-title">Percho AgentHub redesign · v2</div>
+  <h1 class="page-subtitle serif">Stats baked into the hero — no jump, immersive
+    <small>v1 floated stats below in a separate band; v2 brings them inside the cover image. Pick B1 or B2.</small></h1>
+
+  <div class="variants">
+    <!-- B1 — glass tiles overlaid on hero bottom -->
+    <div class="variant">
+      <div class="variant-label">B1 — Glass stat tiles
+        <span class="pickme">3 frosted-glass cards floating over hero bottom · title pinned top-left</span>
+      </div>
+      <div class="hero v1">
+        <div class="hero-actions">
+          <button class="preview-btn">👁 Preview</button>
+          <button class="pill-status">Active ▾</button>
+          <button class="icon-btn">⋯</button>
+        </div>
+        <div class="title-only">
+          <h1>1247 Peachtree Ln</h1>
+          <div class="sub">Peachtree Corners, GA · Riverside</div>
+        </div>
+        <div class="glass-stats">
+          <div class="glass-stat"><div class="label">Views · 30d</div><div class="val">312<span class="delta">+18%</span></div></div>
+          <div class="glass-stat"><div class="label">Saves</div><div class="val">14<span class="delta">+3</span></div></div>
+          <div class="glass-stat"><div class="label">Leads</div><div class="val">3<span class="delta">+1 new</span></div></div>
+        </div>
+      </div>
+      <div class="tabs">
+        <span class="tab active">Details</span>
+        <span class="tab">Media</span>
+        <span class="tab">Marketing</span>
+        <span class="tab">Leads <span class="badge">1</span></span>
+        <span class="tab">Analytics</span>
+      </div>
+      <div class="panel">
+        <div class="panel-card">
+          <h2>Listing details <span class="saved-tag">Saved 14:32</span></h2>
+          <div class="hint">Auto-saves as you type</div>
+          <div class="field"><label>Price</label><div><input value="$1,250,000"/></div></div>
+          <div class="field"><label>Beds / Baths</label><div><input value="4 bd · 3.5 ba"/></div></div>
+          <div class="field"><label>Sqft</label><div><input value="3,420"/></div></div>
+          <div class="field"><label>Community</label><div>Riverside Estates ▾</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- B2 — bottom band, no card chrome -->
+    <div class="variant">
+      <div class="variant-label">B2 — Bottom band (no chrome)
+        <span class="pickme">Stats live in a translucent band at the very bottom · numbers belong to the hero, not after it</span>
+      </div>
+      <div class="hero v2">
+        <div class="hero-actions">
+          <button class="preview-btn">👁 Preview</button>
+          <button class="pill-status">Active ▾</button>
+          <button class="icon-btn">⋯</button>
+        </div>
+        <div class="title-only">
+          <h1>1247 Peachtree Ln</h1>
+          <div class="sub">Peachtree Corners, GA · Riverside</div>
+        </div>
+        <div class="baked-band">
+          <div class="baked-stat"><div class="label">Views · 30d</div><div class="val">312 <span class="delta">+18%</span></div></div>
+          <div class="baked-divider"></div>
+          <div class="baked-stat"><div class="label">Saves</div><div class="val">14 <span class="delta">+3</span></div></div>
+          <div class="baked-divider"></div>
+          <div class="baked-stat"><div class="label">Leads</div><div class="val">3 <span class="delta">+1 new</span></div></div>
+        </div>
+      </div>
+      <div class="tabs">
+        <span class="tab">Details</span>
+        <span class="tab">Media</span>
+        <span class="tab">Marketing</span>
+        <span class="tab active">Leads <span class="badge">1</span></span>
+        <span class="tab">Analytics</span>
+      </div>
+      <div class="panel">
+        <div class="panel-card">
+          <h2>Leads from this listing <span class="saved-tag" style="color:var(--muted);">3 total · 1 new</span></h2>
+          <div class="hint">Buyers who asked for more info on 1247 Peachtree Ln</div>
+          <div style="display:grid;gap:10px;margin-top:6px;">
+            <div style="display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center;padding:10px 0;border-top:1px solid var(--line);">
+              <div style="font-size:13px;">Sarah Chen<br/><small style="color:var(--muted);font-size:11px;">sarah.c@gmail.com · 415-555-0142</small></div>
+              <span style="font-size:11.5px;color:var(--muted);">2h ago</span>
+              <span style="font-size:10.5px;padding:2px 8px;border-radius:999px;background:var(--ink);color:var(--surface);">New</span>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center;padding:10px 0;border-top:1px solid var(--line);">
+              <div style="font-size:13px;">Marcus Johnson<br/><small style="color:var(--muted);font-size:11px;">mj.realestate@…</small></div>
+              <span style="font-size:11.5px;color:var(--muted);">Yesterday</span><span></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="note-block" style="margin-top:28px;">
+    <h3>Locked decisions from v1 review</h3>
+    <ul>
+      <li>✅ Stat cards (B style) — kept; <b>now embedded in hero</b>, not floating below</li>
+      <li>✅ Stat dimensions: <b>Views · Saves · Leads</b> with delta</li>
+      <li>✅ Marketing tab — Social + Tour merged</li>
+      <li>✅ Tab order: Details · Media · Marketing · <b>Leads</b> · Analytics (Leads moved before Analytics)</li>
+      <li>✅ Empty state copy: <b>"Upload your first home tour"</b></li>
+    </ul>
+  </div>
+
+  <h1 class="page-subtitle serif" style="margin-top:36px;">Empty state · final copy</h1>
+  <div class="empty-cta">
+    <p style="margin:0 0 8px;color:var(--ink);font-size:15px;font-family:ui-serif,Georgia,serif;">Upload your first home tour</p>
+    <p style="margin:0;font-size:12.5px;">Record on your phone, drop it in — buyers will see it within minutes.</p>
+    <button class="btn" style="margin-top:14px;">+ New listing</button>
+  </div>
+
+  <h1 class="page-subtitle serif" style="margin-top:36px;">📋 Sign-off</h1>
+  <div class="note-block">
+    <h3>Pick one</h3>
+    <ul>
+      <li><b>B1</b> — frosted-glass tiles. More structured, each stat reads as its own object. Slightly heavier visually.</li>
+      <li><b>B2</b> — bottom band, no card chrome. Numbers feel native to the hero — most "immersive". Slightly less hierarchy.</li>
+    </ul>
+    <p style="margin-top:10px;">Reply <b>B1</b> / <b>B2</b> / <b>tweak X</b> and I cut the phase plan.</p>
+  </div>
+
+  <p style="color:var(--muted);font-size:12px;text-align:center;margin-top:32px;">
+    v2 prototype · superseded v1 stat row. After sign-off → real Supabase wiring.
+  </p>
+</div>
+</body>
+</html>

@@ -1,0 +1,528 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Listing edit — Media tab merge v2</title>
+<style>
+  :root {
+    --bg: #f3eee7;
+    --surface: #fbf8f3;
+    --ink: #313131;
+    --ink2: #5a5651;
+    --muted: #8a857d;
+    --line: rgba(49, 49, 49, 0.14);
+    --line-strong: rgba(49, 49, 49, 0.32);
+    --cream: #fbf8f3;
+    --accent: #313131;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Inter', system-ui, sans-serif;
+    background: #e8e2d8;
+    color: var(--ink);
+    padding: 28px 16px 60px;
+    font-size: 14px;
+  }
+  .page-h1 {
+    font-family: 'Source Serif 4', Georgia, serif;
+    font-weight: 500;
+    font-size: 22px;
+    margin: 0 0 4px;
+    text-align: center;
+  }
+  .page-sub {
+    color: var(--ink2); font-size: 13px; margin-bottom: 26px;
+    text-align: center;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    max-width: 1700px;
+    margin: 0 auto;
+  }
+  @media (max-width: 1300px) { .grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 720px) { .grid { grid-template-columns: 1fr; } }
+  .col h2 {
+    font-family: 'Source Serif 4', Georgia, serif;
+    font-weight: 500;
+    font-size: 16px;
+    margin: 0 0 4px;
+  }
+  .col .desc {
+    font-size: 12px;
+    color: var(--ink2);
+    margin-bottom: 12px;
+    min-height: 60px;
+    line-height: 1.5;
+  }
+  .col .pros {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 12px;
+    line-height: 1.55;
+    padding: 10px 12px;
+    border-left: 2px solid var(--line);
+  }
+  .col .pros b { color: var(--ink2); font-weight: 600; }
+  .frame {
+    background: var(--bg);
+    border-radius: 14px;
+    padding: 12px;
+    border: 1px solid var(--line);
+    overflow: hidden;
+  }
+  .tabs {
+    display: flex; gap: 0; border-bottom: 1px solid var(--line);
+    margin-bottom: 12px; font-size: 11px;
+  }
+  .tab { padding: 7px 9px; color: var(--ink2); }
+  .tab.active { color: var(--ink); font-weight: 500; border-bottom: 2px solid var(--ink); }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 12px;
+    margin-bottom: 12px;
+  }
+  .card-h {
+    display: flex; justify-content: space-between; align-items: baseline;
+    margin-bottom: 10px;
+  }
+  .card-h h3 {
+    margin: 0; font-size: 13px; font-weight: 600;
+  }
+  .card-h .hint { font-size: 10px; color: var(--muted); }
+
+  .sub-h {
+    display: flex; justify-content: space-between; align-items: baseline;
+    margin: 14px 0 8px;
+    padding-top: 14px;
+    border-top: 1px solid var(--line);
+  }
+  .sub-h:first-child { margin-top: 0; padding-top: 0; border-top: 0; }
+  .sub-h h4 {
+    margin: 0; font-size: 12px; font-weight: 600;
+    display: flex; align-items: baseline; gap: 6px;
+  }
+  .sub-h h4 .count { color: var(--muted); font-weight: 400; font-size: 11px; }
+  .sub-h .hint { font-size: 10px; color: var(--muted); }
+
+  .video-drop {
+    border: 1.5px dashed var(--line-strong);
+    border-radius: 10px;
+    padding: 18px 14px;
+    text-align: center;
+    background: var(--bg);
+    margin-bottom: 12px;
+  }
+  .video-drop .ic { font-size: 16px; margin-bottom: 4px; }
+  .video-drop .lbl { font-size: 12px; font-weight: 500; }
+  .video-drop .hint { font-size: 10px; color: var(--muted); margin-top: 2px; }
+
+  /* Mixed list rows */
+  .vrow {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px;
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    margin-bottom: 5px;
+    background: var(--surface);
+  }
+  .vrow .grip { color: var(--muted); cursor: grab; font-size: 12px; padding: 0 2px; }
+  .vrow .idx { color: var(--muted); font-size: 10px; width: 14px; }
+  .vrow .thumb {
+    width: 50px; height: 32px; background: #d6cdbf; border-radius: 4px;
+    flex-shrink: 0;
+    background-image: linear-gradient(135deg, #c8bba8 25%, #d6cdbf 25%, #d6cdbf 50%, #c8bba8 50%, #c8bba8 75%, #d6cdbf 75%);
+    background-size: 8px 8px;
+    position: relative;
+  }
+  .vrow .thumb.is-photo {
+    background-image: linear-gradient(135deg, #b8c5a8 25%, #c8d4b8 25%, #c8d4b8 50%, #b8c5a8 50%, #b8c5a8 75%, #c8d4b8 75%);
+    background-size: 8px 8px;
+  }
+  .vrow .thumb .kind-icon {
+    position: absolute; bottom: 2px; right: 2px;
+    background: rgba(0,0,0,0.6); color: white;
+    font-size: 8px; padding: 1px 3px; border-radius: 2px;
+  }
+  .vrow .meta { flex: 1; min-width: 0; }
+  .vrow .meta .t { font-size: 11px; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .vrow .meta .k { font-size: 9px; color: var(--muted); }
+  .vrow .badge {
+    background: var(--ink); color: var(--cream);
+    font-size: 8px; padding: 1px 4px; border-radius: 3px;
+    text-transform: uppercase; letter-spacing: 0.04em; font-weight: 600;
+    margin-left: 4px;
+  }
+  .vrow .actions { display: flex; gap: 3px; }
+  .vrow .btn {
+    font-size: 9px; padding: 2px 5px;
+    border: 1px solid var(--line); border-radius: 4px;
+    background: transparent; color: var(--ink2); white-space: nowrap;
+  }
+  .vrow .btn.del { color: #b54343; }
+
+  .pgrid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 5px;
+    margin-bottom: 8px;
+  }
+  .ptile {
+    aspect-ratio: 4/3;
+    border-radius: 5px;
+    background-image: linear-gradient(135deg, #b8c5a8 25%, #c8d4b8 25%, #c8d4b8 50%, #b8c5a8 50%, #b8c5a8 75%, #c8d4b8 75%);
+    background-size: 8px 8px;
+    border: 1px solid var(--line);
+    position: relative;
+  }
+  .ptile.cover { border: 1.5px solid var(--ink); }
+  .ptile.cover::before {
+    content: 'COVER';
+    position: absolute; top: 3px; left: 3px;
+    background: var(--ink); color: var(--cream);
+    font-size: 7px; padding: 1px 3px; border-radius: 2px;
+    font-weight: 600; letter-spacing: 0.05em;
+  }
+
+  .photo-add-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    border: 1px solid var(--line);
+    background: var(--bg);
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    color: var(--ink2);
+  }
+
+  /* B2 single button */
+  .one-btn {
+    display: block; width: 100%;
+    background: var(--ink); color: var(--cream);
+    padding: 12px;
+    border-radius: 9px;
+    font-size: 13px; font-weight: 500;
+    border: 0; text-align: center; cursor: pointer;
+    margin-bottom: 12px;
+  }
+  .one-btn .sub { display: block; font-size: 10px; font-weight: 400; opacity: 0.75; margin-top: 3px; }
+
+  /* B3 mega dropzone */
+  .mega-drop {
+    border: 2px dashed var(--line-strong);
+    border-radius: 12px;
+    padding: 28px 14px;
+    text-align: center;
+    background: var(--bg);
+    margin-bottom: 14px;
+  }
+  .mega-drop .ic { font-size: 24px; margin-bottom: 6px; }
+  .mega-drop .lbl { font-size: 13px; font-weight: 500; }
+  .mega-drop .hint { font-size: 10px; color: var(--muted); margin-top: 4px; line-height: 1.5; }
+  .mega-drop .or {
+    margin: 8px 0; color: var(--muted); font-size: 10px;
+  }
+  .mega-drop .browse-btn {
+    display: inline-block;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    padding: 5px 12px;
+    border-radius: 5px;
+    font-size: 11px;
+    color: var(--ink);
+  }
+
+  /* Video naming inline (B3) */
+  .name-prompt {
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    padding: 8px;
+    margin-bottom: 6px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .name-prompt .thumb { width: 40px; height: 26px; background: #d6cdbf; border-radius: 3px; flex-shrink: 0;
+    background-image: linear-gradient(135deg, #c8bba8 25%, #d6cdbf 25%, #d6cdbf 50%, #c8bba8 50%, #c8bba8 75%, #d6cdbf 75%);
+    background-size: 6px 6px;
+  }
+  .name-prompt .input-stack { flex: 1; min-width: 0; }
+  .name-prompt .file-name { font-size: 9px; color: var(--muted); }
+  .name-prompt input {
+    width: 100%; border: 1px solid var(--line);
+    background: var(--surface);
+    padding: 3px 6px; font-size: 11px;
+    border-radius: 4px;
+    color: var(--ink);
+    font-family: inherit;
+  }
+  .name-prompt .upload-btn {
+    background: var(--ink); color: var(--cream);
+    border: 0; padding: 5px 10px; font-size: 10px;
+    border-radius: 4px; cursor: pointer;
+  }
+
+  .progress-row {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px;
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    margin-bottom: 5px;
+    background: var(--surface);
+    opacity: 0.85;
+  }
+  .progress-row .thumb {
+    width: 50px; height: 32px; background: #d6cdbf; border-radius: 4px; flex-shrink: 0;
+    background-image: linear-gradient(135deg, #c8bba8 25%, #d6cdbf 25%, #d6cdbf 50%, #c8bba8 50%, #c8bba8 75%, #d6cdbf 75%);
+    background-size: 8px 8px;
+  }
+  .progress-row .meta { flex: 1; }
+  .progress-row .t { font-size: 10px; color: var(--ink2); }
+  .progress-row .bar { height: 3px; background: var(--bg); border-radius: 2px; margin-top: 4px; overflow: hidden; }
+  .progress-row .bar > span { display: block; height: 100%; background: var(--ink); }
+
+  .footer-note {
+    max-width: 1100px; margin: 28px auto 0;
+    font-size: 12px; color: var(--ink2); text-align: center; line-height: 1.6;
+  }
+</style>
+</head>
+<body>
+  <h1 class="page-h1">Listing edit · Media tab — merge v2</h1>
+  <p class="page-sub">Per ask: B2 collapsed to one button; new B3 (true unified dropzone). Current + B1 kept for comparison.</p>
+
+  <div class="grid">
+
+    <!-- =========== CURRENT =========== -->
+    <div class="col">
+      <h2>Current</h2>
+      <p class="desc">Two cards, two headers. Today's shipped layout.</p>
+
+      <div class="frame">
+        <div class="tabs">
+          <span class="tab">Details</span><span class="tab active">Media</span><span class="tab">Marketing</span><span class="tab">Leads</span><span class="tab">Analytics</span>
+        </div>
+        <div class="card">
+          <div class="card-h"><h3>Videos</h3><span class="hint">Drag · ⓒ for cover</span></div>
+          <div class="video-drop">
+            <div class="ic">▶</div>
+            <div class="lbl">Click to select a video</div>
+            <div class="hint">MP4, MOV up to 2 GB</div>
+          </div>
+          <div class="vrow">
+            <span class="grip">⋮⋮</span><span class="idx">1</span>
+            <div class="thumb"><span class="kind-icon">▶</span></div>
+            <div class="meta"><div class="t">Front exterior <span class="badge">Cover</span></div><div class="k">Ready</div></div>
+            <div class="actions"><button class="btn">Clear</button><button class="btn del">×</button></div>
+          </div>
+          <div class="vrow">
+            <span class="grip">⋮⋮</span><span class="idx">2</span>
+            <div class="thumb"><span class="kind-icon">▶</span></div>
+            <div class="meta"><div class="t">Backyard tour</div><div class="k">Ready</div></div>
+            <div class="actions"><button class="btn">Cover</button><button class="btn del">×</button></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-h"><h3>Photos</h3><span class="hint">Fallback cover · ⓒ</span></div>
+          <div class="pgrid">
+            <div class="ptile cover"></div>
+            <div class="ptile"></div><div class="ptile"></div><div class="ptile"></div><div class="ptile"></div><div class="ptile"></div>
+          </div>
+          <button class="photo-add-btn">⤴ Add photos</button>
+        </div>
+      </div>
+
+      <div class="pros">
+        <b>Status:</b> shipped today.<br>
+        <b>Reads as:</b> two separate concerns.
+      </div>
+    </div>
+
+    <!-- =========== B1 =========== -->
+    <div class="col">
+      <h2>B1 — one card, two sub-sections</h2>
+      <p class="desc">One Content card. Video uploader + photo button stacked at top. Below: Videos / Photos sub-headers, existing grids.</p>
+
+      <div class="frame">
+        <div class="tabs">
+          <span class="tab">Details</span><span class="tab active">Media</span><span class="tab">Marketing</span><span class="tab">Leads</span><span class="tab">Analytics</span>
+        </div>
+        <div class="card">
+          <div class="card-h"><h3>Content</h3><span class="hint">Videos &amp; photos · ⓒ for cover</span></div>
+          <div class="video-drop">
+            <div class="ic">▶</div>
+            <div class="lbl">Click to select a video</div>
+            <div class="hint">MP4, MOV up to 2 GB</div>
+          </div>
+          <button class="photo-add-btn" style="margin-bottom: 10px;">⤴ Add photos · JPEG / PNG / WebP</button>
+
+          <div class="sub-h"><h4>Videos <span class="count">(2)</span></h4><span class="hint">Drag to reorder</span></div>
+          <div class="vrow">
+            <span class="grip">⋮⋮</span><span class="idx">1</span>
+            <div class="thumb"><span class="kind-icon">▶</span></div>
+            <div class="meta"><div class="t">Front exterior <span class="badge">Cover</span></div><div class="k">Ready</div></div>
+            <div class="actions"><button class="btn">Clear</button><button class="btn del">×</button></div>
+          </div>
+          <div class="vrow">
+            <span class="grip">⋮⋮</span><span class="idx">2</span>
+            <div class="thumb"><span class="kind-icon">▶</span></div>
+            <div class="meta"><div class="t">Backyard tour</div><div class="k">Ready</div></div>
+            <div class="actions"><button class="btn">Cover</button><button class="btn del">×</button></div>
+          </div>
+
+          <div class="sub-h"><h4>Photos <span class="count">(6)</span></h4><span class="hint">Hover for actions</span></div>
+          <div class="pgrid">
+            <div class="ptile"></div><div class="ptile"></div><div class="ptile"></div><div class="ptile"></div><div class="ptile"></div><div class="ptile"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="pros">
+        <b>Visual:</b> one card, one header. Two upload entries (still feel separate).<br>
+        <b>Code:</b> ~30-line diff in <code>edit/page.tsx</code>. No panel changes.<br>
+        <b>Risk:</b> tiny.
+      </div>
+    </div>
+
+    <!-- =========== B2 (revised) =========== -->
+    <div class="col">
+      <h2>B2 — one upload button</h2>
+      <p class="desc">Single "Click to upload" button. Native file picker accepts <i>both</i> images and video. Files are routed by MIME type behind the scenes.</p>
+
+      <div class="frame">
+        <div class="tabs">
+          <span class="tab">Details</span><span class="tab active">Media</span><span class="tab">Marketing</span><span class="tab">Leads</span><span class="tab">Analytics</span>
+        </div>
+        <div class="card">
+          <div class="card-h"><h3>Content</h3><span class="hint">Videos &amp; photos · ⓒ for cover</span></div>
+
+          <button class="one-btn">
+            ⤴ Click to upload
+            <span class="sub">Photos &amp; videos · pick multiple at once</span>
+          </button>
+
+          <div class="sub-h"><h4>Videos <span class="count">(2)</span></h4><span class="hint">Drag to reorder</span></div>
+          <div class="vrow">
+            <span class="grip">⋮⋮</span><span class="idx">1</span>
+            <div class="thumb"><span class="kind-icon">▶</span></div>
+            <div class="meta"><div class="t">Front exterior <span class="badge">Cover</span></div><div class="k">Ready</div></div>
+            <div class="actions"><button class="btn">Clear</button><button class="btn del">×</button></div>
+          </div>
+          <div class="vrow">
+            <span class="grip">⋮⋮</span><span class="idx">2</span>
+            <div class="thumb"><span class="kind-icon">▶</span></div>
+            <div class="meta"><div class="t">Backyard tour</div><div class="k">Ready</div></div>
+            <div class="actions"><button class="btn">Cover</button><button class="btn del">×</button></div>
+          </div>
+
+          <div class="sub-h"><h4>Photos <span class="count">(6)</span></h4><span class="hint">Hover for actions</span></div>
+          <div class="pgrid">
+            <div class="ptile cover"></div>
+            <div class="ptile"></div><div class="ptile"></div><div class="ptile"></div><div class="ptile"></div><div class="ptile"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="pros">
+        <b>Visual:</b> single primary action. Cleanest entry point.<br>
+        <b>Behavior:</b> file picker has <code>accept="image/*,video/*"</code> + <code>multiple</code>. Each selected file: video → CF Stream pipeline (auto-named from filename); image → Supabase batch.<br>
+        <b>Tradeoffs:</b> no in-page drop target for click-only users (drag-and-drop onto the page can still work as a layered enhancement). Video title default = filename, editable inline after upload.<br>
+        <b>Code:</b> ~120 lines. Wraps existing two pipelines behind one entry; refactors VideoUploader to accept a pre-picked file (it already exposes <code>initialFile</code> — read in code).<br>
+        <b>Risk:</b> medium. Needs a small VideoUploader entry refactor.
+      </div>
+    </div>
+
+    <!-- =========== B3 =========== -->
+    <div class="col">
+      <h2>B3 — true unified dropzone</h2>
+      <p class="desc">One big drag-and-drop zone. Drop a stack of mixed files; videos + photos shown together in one timeline below.</p>
+
+      <div class="frame">
+        <div class="tabs">
+          <span class="tab">Details</span><span class="tab active">Media</span><span class="tab">Marketing</span><span class="tab">Leads</span><span class="tab">Analytics</span>
+        </div>
+        <div class="card">
+          <div class="card-h"><h3>Content</h3><span class="hint">Drop anything · ⓒ for cover</span></div>
+
+          <div class="mega-drop">
+            <div class="ic">⤴</div>
+            <div class="lbl">Drag photos &amp; videos here</div>
+            <div class="or">or</div>
+            <span class="browse-btn">Click to browse</span>
+            <div class="hint">JPEG / PNG / WebP up to 10 MB · MP4 / MOV up to 2 GB</div>
+          </div>
+
+          <!-- Inline naming for in-flight video -->
+          <div class="name-prompt">
+            <div class="thumb"></div>
+            <div class="input-stack">
+              <div class="file-name">backyard_tour_final_v3.mov</div>
+              <input value="Backyard tour" placeholder="Name this video" />
+            </div>
+            <button class="upload-btn">Start →</button>
+          </div>
+
+          <!-- In-flight photo -->
+          <div class="progress-row">
+            <div class="thumb"></div>
+            <div class="meta">
+              <div class="t">kitchen-2.jpg · uploading</div>
+              <div class="bar"><span style="width:62%"></span></div>
+            </div>
+          </div>
+
+          <div class="sub-h" style="margin-top: 16px;"><h4>All content <span class="count">(8)</span></h4><span class="hint">Drag to reorder · click ⓒ to set cover</span></div>
+
+          <div class="vrow">
+            <span class="grip">⋮⋮</span><span class="idx">1</span>
+            <div class="thumb is-photo"></div>
+            <div class="meta"><div class="t">Front exterior shot <span class="badge">Cover</span></div><div class="k">PHOTO</div></div>
+            <div class="actions"><button class="btn">Clear</button><button class="btn del">×</button></div>
+          </div>
+          <div class="vrow">
+            <span class="grip">⋮⋮</span><span class="idx">2</span>
+            <div class="thumb"><span class="kind-icon">▶</span></div>
+            <div class="meta"><div class="t">Front exterior walkthrough</div><div class="k">VIDEO · Ready</div></div>
+            <div class="actions"><button class="btn">Cover</button><button class="btn del">×</button></div>
+          </div>
+          <div class="vrow">
+            <span class="grip">⋮⋮</span><span class="idx">3</span>
+            <div class="thumb is-photo"></div>
+            <div class="meta"><div class="t">Living room</div><div class="k">PHOTO</div></div>
+            <div class="actions"><button class="btn">Cover</button><button class="btn del">×</button></div>
+          </div>
+          <div class="vrow">
+            <span class="grip">⋮⋮</span><span class="idx">4</span>
+            <div class="thumb"><span class="kind-icon">▶</span></div>
+            <div class="meta"><div class="t">Backyard tour</div><div class="k">VIDEO · Ready</div></div>
+            <div class="actions"><button class="btn">Cover</button><button class="btn del">×</button></div>
+          </div>
+          <div class="vrow">
+            <span class="grip">⋮⋮</span><span class="idx">5</span>
+            <div class="thumb is-photo"></div>
+            <div class="meta"><div class="t">Master bedroom</div><div class="k">PHOTO</div></div>
+            <div class="actions"><button class="btn">Cover</button><button class="btn del">×</button></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="pros">
+        <b>Visual:</b> the strongest "they are just content" reading. One dropzone, one mixed list.<br>
+        <b>Behavior:</b> drop a folder, every file uploads. Video gets an inline "name this" prompt before kick-off (or auto-names from filename — UX call). Single sortable list mixes photos &amp; videos by sort_order; cover can be either.<br>
+        <b>Schema impact:</b> the mixed list needs a unified ordering. Today <code>listing_videos.sort_order</code> and <code>listing_photos.sort_order</code> are independent. Two ways: (a) keep separate, render mixed in UI but reorder still bucket-scoped (less honest); (b) add a unified <code>media_position</code> column / view (true mix).<br>
+        <b>Code:</b> ~250+ lines, new <code>MediaPanel</code> replacing the two panels. Touches reorder server actions.<br>
+        <b>Risk:</b> bigger. Real refactor.
+      </div>
+    </div>
+
+  </div>
+
+  <p class="footer-note">
+    All variants use the same Cloudflare Stream upload pipeline for video and the same Supabase Storage batch upload for photos. Cover-photo selection, drag-reorder, and delete behaviors are unchanged unless noted. The B3 unified-list option is the only one that changes the data model meaningfully.
+  </p>
+</body>
+</html>

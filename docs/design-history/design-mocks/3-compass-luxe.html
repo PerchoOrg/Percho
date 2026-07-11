@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Vivian Zhang — Percho</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0b1422; --bg-2:#0f1a2c; --paper:#f5efe4; --ink:#0b1422;
+    --gold:#c9a96b; --gold-2:#e6cf9c; --line:rgba(255,255,255,0.08); --muted:#94a2b8;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:#e8eef7;font-family:'Inter',sans-serif;font-weight:300;-webkit-font-smoothing:antialiased}
+  a{color:inherit;text-decoration:none}
+  .serif{font-family:'Playfair Display',Georgia,serif}
+  .container{max-width:1480px;margin:0 auto;padding:0 56px}
+  @media(max-width:720px){.container{padding:0 22px}}
+  .gold{color:var(--gold)}
+
+  nav.top{position:sticky;top:0;z-index:20;background:rgba(11,20,34,0.85);backdrop-filter:saturate(140%) blur(14px);border-bottom:1px solid var(--line)}
+  nav.top .row{display:flex;align-items:center;justify-content:space-between;padding:18px 0}
+  nav.top .brand{font-family:'Playfair Display',serif;font-size:22px;letter-spacing:0.02em}
+  nav.top .brand .dot{color:var(--gold)}
+  nav.top ul{display:flex;gap:40px;list-style:none;margin:0;padding:0;font-size:12px;letter-spacing:0.18em;text-transform:uppercase;color:#bfcadd}
+  nav.top a.cta{font-size:12px;letter-spacing:0.22em;text-transform:uppercase;color:var(--gold);border:1px solid var(--gold);padding:10px 18px}
+
+  /* Hero */
+  .hero{position:relative;height:88vh;min-height:680px;overflow:hidden}
+  .hero .img{position:absolute;inset:0;background-size:cover;background-position:center;filter:brightness(0.55) contrast(1.05)}
+  .hero::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(11,20,34,0.4) 0%,rgba(11,20,34,0.1) 35%,rgba(11,20,34,0.95) 100%)}
+  .hero .content{position:relative;z-index:1;display:flex;flex-direction:column;justify-content:flex-end;height:100%;padding-bottom:80px}
+  .hero .eyebrow{font-size:11px;letter-spacing:0.36em;text-transform:uppercase;color:var(--gold);margin-bottom:24px}
+  .hero h1{font-family:'Playfair Display',serif;font-weight:500;font-size:clamp(64px,9vw,144px);line-height:0.96;letter-spacing:-0.02em;margin:0;color:#fff;max-width:14ch}
+  .hero h1 .it{font-style:italic;font-weight:400;color:var(--gold-2)}
+  .hero .lede{max-width:60ch;font-family:'Playfair Display',serif;font-style:italic;font-size:22px;font-weight:400;color:#dde6f4;margin-top:30px;line-height:1.5}
+  .hero .row2{display:flex;justify-content:space-between;align-items:center;margin-top:48px;flex-wrap:wrap;gap:24px}
+  .hero .stats{display:flex;gap:56px}
+  .hero .stats .n{font-family:'Playfair Display',serif;font-size:48px;font-weight:500;color:#fff}
+  .hero .stats .n .gold{font-style:italic}
+  .hero .stats .l{font-size:10px;letter-spacing:0.32em;text-transform:uppercase;color:var(--muted);margin-top:4px}
+  .hero .actions{display:flex;gap:12px}
+  .btn{padding:14px 26px;font-size:12px;letter-spacing:0.22em;text-transform:uppercase}
+  .btn.gold{background:var(--gold);color:var(--ink);border:1px solid var(--gold)}
+  .btn.ghost{border:1px solid rgba(255,255,255,0.4);color:#fff}
+
+  /* Section header */
+  .sec-head{padding:120px 0 56px;border-bottom:1px solid var(--line)}
+  .sec-head .label{font-size:11px;letter-spacing:0.36em;text-transform:uppercase;color:var(--gold)}
+  .sec-head h2{font-family:'Playfair Display',serif;font-weight:400;font-size:clamp(40px,6vw,76px);margin:18px 0 0;line-height:1;letter-spacing:-0.015em;color:#fff}
+  .sec-head h2 .it{font-style:italic;color:var(--gold-2)}
+  .sec-head .sub{display:flex;justify-content:space-between;align-items:flex-end;margin-top:32px}
+  .sec-head .sub p{max-width:62ch;color:#bfcadd;font-size:15px;line-height:1.6}
+  .sec-head .sub .filters{display:flex;gap:24px;font-size:11px;letter-spacing:0.22em;text-transform:uppercase;color:var(--muted)}
+
+  /* Listings — luxury card */
+  .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:32px;padding:48px 0 24px}
+  .grid.three{grid-template-columns:repeat(3,1fr)}
+  @media(max-width:900px){.grid,.grid.three{grid-template-columns:1fr}}
+  .lcard{background:var(--bg-2);border:1px solid var(--line);overflow:hidden;cursor:pointer;transition:transform .4s,border-color .3s}
+  .lcard:hover{transform:translateY(-4px);border-color:rgba(201,169,107,0.5)}
+  .lcard .photo{aspect-ratio:4/3;background-size:cover;background-position:center;position:relative}
+  .lcard .photo::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,0) 60%,rgba(11,20,34,0.7) 100%)}
+  .lcard .badge{position:absolute;top:18px;left:18px;background:var(--gold);color:var(--ink);font-size:10px;letter-spacing:0.28em;text-transform:uppercase;padding:6px 12px;font-weight:500;z-index:1}
+  .lcard .body{padding:28px 30px 30px;display:flex;justify-content:space-between;align-items:flex-start;gap:18px}
+  .lcard .left .hood{font-size:10px;letter-spacing:0.28em;text-transform:uppercase;color:var(--gold);margin-bottom:10px}
+  .lcard .left .addr{font-family:'Playfair Display',serif;font-weight:400;font-size:24px;letter-spacing:-0.01em;color:#fff}
+  .lcard .left .specs{font-size:13px;color:var(--muted);margin-top:10px;letter-spacing:0.04em}
+  .lcard .right .price{font-family:'Playfair Display',serif;font-weight:400;font-size:30px;color:var(--gold-2);text-align:right;letter-spacing:-0.01em}
+  .lcard .right .style{font-size:10px;letter-spacing:0.24em;text-transform:uppercase;color:var(--muted);text-align:right;margin-top:8px}
+
+  /* Featured large card */
+  .featured{margin:48px 0;position:relative;height:560px;overflow:hidden}
+  .featured .img{position:absolute;inset:0;background-size:cover;background-position:center}
+  .featured::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(11,20,34,0.85) 0%,rgba(11,20,34,0.2) 60%,rgba(11,20,34,0.6) 100%)}
+  .featured .body{position:relative;z-index:1;height:100%;display:flex;flex-direction:column;justify-content:flex-end;padding:48px}
+  .featured .eyebrow{font-size:11px;letter-spacing:0.36em;text-transform:uppercase;color:var(--gold);margin-bottom:14px}
+  .featured h3{font-family:'Playfair Display',serif;font-weight:400;font-size:54px;line-height:1.05;color:#fff;margin:0;max-width:18ch;letter-spacing:-0.015em}
+  .featured h3 .it{font-style:italic;color:var(--gold-2)}
+  .featured .row{display:flex;justify-content:space-between;align-items:flex-end;margin-top:32px;gap:24px;flex-wrap:wrap}
+  .featured .price{font-family:'Playfair Display',serif;font-size:48px;color:var(--gold-2)}
+  .featured .specs{font-size:13px;color:#bfcadd;letter-spacing:0.04em}
+
+  /* CTA band */
+  .cta-band{padding:160px 0;text-align:center;background:linear-gradient(180deg,var(--bg) 0%,#091020 100%);border-top:1px solid var(--line)}
+  .cta-band .label{font-size:11px;letter-spacing:0.36em;text-transform:uppercase;color:var(--gold);margin-bottom:24px}
+  .cta-band h3{font-family:'Playfair Display',serif;font-weight:400;font-size:clamp(48px,7vw,96px);margin:0;color:#fff;letter-spacing:-0.02em;line-height:1.05}
+  .cta-band h3 .it{font-style:italic;color:var(--gold-2)}
+  .cta-band .actions{margin-top:48px;display:inline-flex;gap:14px;flex-wrap:wrap;justify-content:center}
+
+  footer.foot{padding:36px 0;border-top:1px solid var(--line);font-size:11px;letter-spacing:0.22em;text-transform:uppercase;color:var(--muted);display:flex;justify-content:space-between}
+</style>
+</head>
+<body>
+
+<nav class="top"><div class="container row">
+  <a class="brand" href="#">Percho<span class="dot">.</span></a>
+  <ul><li>The Portfolio</li><li>About Vivian</li><li>Sold Archive</li><li>Press</li></ul>
+  <a class="cta" href="#">Schedule a Call</a>
+</div></nav>
+
+<section class="hero">
+  <div class="img" id="hero-img"></div>
+  <div class="container content">
+    <div class="eyebrow">Listing Specialist · Eastside Washington · WA #135-291</div>
+    <h1 class="serif">Vivian Zhang &mdash; <span class="it">a portfolio of consequence.</span></h1>
+    <p class="lede" id="lede"></p>
+    <div class="row2">
+      <div class="stats">
+        <div><div class="n" id="s1"></div><div class="l">Homes Sold</div></div>
+        <div><div class="n" id="s2"></div><div class="l">Avg DOM</div></div>
+        <div><div class="n" id="s3"></div><div class="l">Years Selling</div></div>
+        <div><div class="n">4.96<span class="gold">★</span></div><div class="l" id="s4"></div></div>
+      </div>
+      <div class="actions">
+        <a class="btn gold" href="#">View Active Listings</a>
+        <a class="btn ghost" href="#">Request Valuation</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="container sec-head">
+  <div class="label">— The Portfolio — </div>
+  <h2 class="serif">Active Listings, <span class="it">curated</span></h2>
+  <div class="sub">
+    <p>Every home below was photographed, filmed, and marketed by Vivian's studio. Tap any property for the full cinematic walkthrough.</p>
+    <div class="filters"><span>All</span><span>Bellevue</span><span>Kirkland</span><span>Medina</span><span>Seattle</span></div>
+  </div>
+</section>
+
+<section class="container">
+  <div class="grid" id="grid-top"></div>
+  <div class="featured" id="featured"></div>
+  <div class="grid" id="grid-bot"></div>
+</section>
+
+<section class="cta-band container">
+  <div class="label">— Selling on the Eastside —</div>
+  <h3 class="serif">Your home <span class="it">deserves the same.</span></h3>
+  <div class="actions">
+    <a class="btn gold" href="#">Request a Valuation</a>
+    <a class="btn ghost" href="#">Book a 20-min Call</a>
+  </div>
+</section>
+
+<footer class="foot container">
+  <span>© Percho 2026 · Demo</span>
+  <span>Bellevue · Kirkland · Medina · Madison Park · Clyde Hill</span>
+</footer>
+
+<script src="_data.js"></script>
+<script>
+  document.getElementById('hero-img').style.backgroundImage = `url(${LISTINGS[2].cover.replace('w=1600','w=2400')})`;
+  document.getElementById('lede').textContent = AGENT.bio;
+  document.getElementById('s1').innerHTML = AGENT.sold;
+  document.getElementById('s2').innerHTML = AGENT.avg_dom + '<span class="gold" style="font-size:0.55em"> d</span>';
+  document.getElementById('s3').textContent = AGENT.years;
+  document.getElementById('s4').textContent = AGENT.reviews + ' Reviews';
+
+  const card = (L) => `
+    <a class="lcard" href="#">
+      <div class="photo" style="background-image:url(${L.cover})">
+        ${L.status==='Just Listed'?`<span class="badge">Just Listed</span>`:''}
+      </div>
+      <div class="body">
+        <div class="left">
+          <div class="hood">${L.neighborhood} · ${L.city.split(',')[0]}</div>
+          <div class="addr">${L.address}</div>
+          <div class="specs">${L.beds} BD &nbsp;·&nbsp; ${L.baths} BA &nbsp;·&nbsp; ${L.sqft.toLocaleString()} SQFT</div>
+        </div>
+        <div class="right">
+          <div class="price">${fmtPrice(L.price)}</div>
+          <div class="style">${L.style}</div>
+        </div>
+      </div>
+    </a>`;
+
+  document.getElementById('grid-top').innerHTML = [LISTINGS[0],LISTINGS[1]].map(card).join('');
+
+  const F = LISTINGS[2];
+  document.getElementById('featured').innerHTML = `
+    <div class="img" style="background-image:url(${F.cover.replace('w=1600','w=2400')})"></div>
+    <div class="container body">
+      <div class="eyebrow">— Featured · Estate Series —</div>
+      <h3 class="serif">${F.address} &mdash; <span class="it">${F.neighborhood}</span></h3>
+      <div class="row">
+        <div>
+          <div class="price">${fmtPrice(F.price)}</div>
+          <div class="specs">${F.beds} BD · ${F.baths} BA · ${F.sqft.toLocaleString()} SQFT · ${F.style}</div>
+        </div>
+        <a class="btn gold" href="#">Watch Walkthrough</a>
+      </div>
+    </div>`;
+
+  document.getElementById('grid-bot').innerHTML = LISTINGS.slice(3).map(card).join('');
+</script>
+</body>
+</html>

@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+<title>Browse — Percho</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root{--bg:#1a1612;--cream:#f5efe4;--gold:#c9a37a;--ink:#1a1612;--muted:rgba(245,239,228,0.65)}
+  *{box-sizing:border-box} html,body{margin:0;background:#000;color:var(--cream);font-family:'Inter',sans-serif;font-weight:300;-webkit-font-smoothing:antialiased;overscroll-behavior:none}
+  .serif{font-family:'Cormorant Garamond',serif}
+  a{color:inherit;text-decoration:none}
+
+  .deck{height:100dvh;width:100vw;position:relative;overflow:hidden;display:flex;justify-content:center;background:radial-gradient(circle at 50% 30%,#2a2218 0%,#0e0a06 80%)}
+  .stage{position:relative;width:min(540px,100%);height:100%;background:#000;overflow:hidden;border-left:1px solid rgba(245,239,228,0.06);border-right:1px solid rgba(245,239,228,0.06)}
+
+  .card{position:absolute;inset:0;transition:transform .55s ease,opacity .55s ease}
+  .card .img{position:absolute;inset:0;background-size:cover;background-position:center;animation:kb 16s ease-in-out infinite alternate}
+  @keyframes kb{from{transform:scale(1.06)}to{transform:scale(1.18) translate(-2%,2%)}}
+  .card::before{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(20,15,10,0.6) 0%,rgba(20,15,10,0.05) 28%,rgba(20,15,10,0) 55%,rgba(20,15,10,0.85) 100%);z-index:1}
+
+  /* TOP — pixieset style brand wordmark */
+  .top{position:absolute;top:0;left:0;right:0;z-index:10;padding:env(safe-area-inset-top,18px) 22px 14px;display:flex;align-items:center;justify-content:space-between}
+  .top .brand{font-family:'Cormorant Garamond',serif;font-style:italic;font-size:24px;letter-spacing:0.04em}
+  .top .filters{display:flex;gap:18px;font-size:10px;letter-spacing:0.32em;text-transform:uppercase;color:var(--muted)}
+  .top .filters a.on{color:var(--cream);border-bottom:1px solid var(--cream);padding-bottom:2px}
+  .top .menu{font-family:'Cormorant Garamond',serif;font-style:italic;font-size:14px;color:var(--muted);letter-spacing:0.16em}
+
+  /* progress bar — thin gold underline */
+  .progress{position:absolute;top:env(safe-area-inset-top,18px);left:50%;transform:translateX(-50%);z-index:11;display:flex;gap:3px;padding-top:54px}
+  .progress span{width:14px;height:1px;background:rgba(245,239,228,0.22)}
+  .progress span.on{background:var(--gold)}
+
+  /* Centered editorial caption block — feels like print */
+  .meta{position:absolute;left:24px;right:24px;bottom:140px;z-index:5;text-align:center}
+  .meta .ornament{font-family:'Cormorant Garamond',serif;font-style:italic;color:var(--gold);font-size:13px;letter-spacing:0.32em;text-transform:uppercase;margin-bottom:18px}
+  .meta .badge{display:inline-block;font-family:'Cormorant Garamond',serif;font-style:italic;font-size:14px;letter-spacing:0.18em;color:var(--gold);border-top:1px solid var(--gold);border-bottom:1px solid var(--gold);padding:6px 18px;margin-bottom:18px;text-transform:uppercase;background:rgba(20,15,10,0.4);backdrop-filter:blur(4px)}
+  .meta .price{font-family:'Cormorant Garamond',serif;font-weight:400;font-size:64px;line-height:0.95;letter-spacing:-0.005em;color:var(--cream)}
+  .meta .addr{font-family:'Cormorant Garamond',serif;font-style:italic;font-weight:300;font-size:24px;color:var(--cream);margin-top:14px;letter-spacing:0.005em}
+  .meta hr{border:0;border-top:1px solid rgba(245,239,228,0.32);max-width:60px;margin:18px auto 14px}
+  .meta .specs{font-size:11px;letter-spacing:0.32em;text-transform:uppercase;color:var(--muted)}
+  .meta .by{font-family:'Cormorant Garamond',serif;font-style:italic;font-size:14px;color:var(--muted);margin-top:18px;letter-spacing:0.04em}
+  .meta .by b{color:var(--cream);font-weight:400}
+
+  /* RIGHT RAIL — softer, lower contrast, no emoji */
+  .rail{position:absolute;right:14px;top:50%;transform:translateY(-50%);z-index:6;display:flex;flex-direction:column;gap:18px;align-items:center}
+  .rail .btn{width:46px;height:46px;border-radius:50%;background:rgba(245,239,228,0.08);backdrop-filter:blur(12px) saturate(140%);border:1px solid rgba(245,239,228,0.22);display:flex;align-items:center;justify-content:center;color:var(--cream);cursor:pointer;font-family:'Cormorant Garamond',serif;font-style:italic;font-size:13px;letter-spacing:0.04em}
+  .rail .btn:hover{background:rgba(245,239,228,0.16)}
+  .rail .l{font-size:9px;letter-spacing:0.24em;text-transform:uppercase;color:var(--muted);margin-top:4px;text-align:center;font-family:'Inter',sans-serif}
+
+  /* BOTTOM ACTIONS */
+  .actions{position:absolute;left:0;right:0;bottom:0;z-index:7;padding:14px 28px calc(env(safe-area-inset-bottom,18px) + 18px);display:flex;justify-content:center;align-items:center;gap:18px;background:linear-gradient(180deg,rgba(0,0,0,0) 0%,rgba(20,15,10,0.85) 100%)}
+  .actions .pass,.actions .save{width:56px;height:56px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer;font-family:'Cormorant Garamond',serif;font-style:italic;color:var(--cream)}
+  .actions .pass{background:rgba(245,239,228,0.06);border:1px solid rgba(245,239,228,0.22)}
+  .actions .like{padding:0 38px;height:56px;border-radius:999px;background:var(--cream);color:var(--ink);display:flex;align-items:center;justify-content:center;gap:10px;font-family:'Cormorant Garamond',serif;font-style:italic;font-size:18px;font-weight:400;letter-spacing:0.02em;cursor:pointer}
+  .actions .like::before{content:"♥";font-style:normal;color:var(--gold)}
+  .actions .save{background:rgba(245,239,228,0.06);border:1px solid rgba(245,239,228,0.22)}
+
+  /* hint */
+  .hint{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:20;font-family:'Cormorant Garamond',serif;font-style:italic;font-size:14px;color:rgba(245,239,228,0.65);letter-spacing:0.06em;pointer-events:none;animation:fade 4s ease-out forwards}
+  @keyframes fade{0%{opacity:0}20%{opacity:1}80%{opacity:1}100%{opacity:0}}
+
+  .behind1{transform:scale(0.96) translateY(8px);opacity:.5;filter:blur(2px)}
+  .behind2{transform:scale(0.92) translateY(16px);opacity:.25;filter:blur(4px)}
+
+  @media(min-width:900px){
+    .stage{box-shadow:0 30px 80px rgba(0,0,0,0.6);border-radius:8px;margin:24px;height:calc(100% - 48px)}
+    .deck{align-items:center}
+  }
+</style></head><body>
+
+<div class="deck">
+  <main class="stage" id="stage">
+    <div class="progress" id="progress"></div>
+
+    <div class="top">
+      <div class="brand">Percho</div>
+      <div class="filters"><a class="on">Curated</a><a>Eastside</a><a>$3M+</a></div>
+      <div class="menu">— Saved (3)</div>
+    </div>
+
+    <div class="hint">— tap or swipe up for the next —</div>
+  </main>
+</div>
+
+<script src="_data.js"></script>
+<script src="_swipe_data.js"></script>
+<script>
+  const stage = document.getElementById('stage');
+  const prog = document.getElementById('progress');
+  let active = 0; const N = SWIPE_FEED.length;
+  prog.innerHTML = SWIPE_FEED.map((_,i)=>`<span class="${i===0?'on':''}"></span>`).join('');
+
+  function render(){
+    stage.querySelectorAll('.card').forEach(n=>n.remove());
+    for(let off=2; off>=0; off--){
+      const idx = (active + off) % N;
+      const L = SWIPE_FEED[idx];
+      const cls = off===0 ? '' : (off===1?'behind1':'behind2');
+      const card = document.createElement('div'); card.className = 'card '+cls;
+      card.innerHTML = `
+        <div class="img" style="background-image:url(${L.angles[0].replace('w=1600','w=1800')})"></div>
+        ${off===0 ? `
+        <div class="meta">
+          <div class="ornament">— ${L.style} · ${L.community} —</div>
+          ${L.status==='Just Listed'?`<div class="badge">Just Listed</div>`:''}
+          <div class="price serif">${fmtPrice(L.price)}</div>
+          <div class="addr">${L.address}</div>
+          <hr/>
+          <div class="specs">${L.beds} bd &nbsp;·&nbsp; ${L.baths} ba &nbsp;·&nbsp; ${L.sqft.toLocaleString()} sf</div>
+          <div class="by">listed by <b>${L.agent.name}</b></div>
+        </div>
+        <div class="rail">
+          <div><div class="btn">S</div><div class="l">School</div></div>
+          <div><div class="btn">C</div><div class="l">Commute</div></div>
+          <div><div class="btn">P</div><div class="l">Parks</div></div>
+          <div><div class="btn">M</div><div class="l">Map</div></div>
+        </div>
+        <div class="actions">
+          <div class="pass">✕</div>
+          <div class="like">Save to shortlist</div>
+          <div class="save">▶</div>
+        </div>` : ''}
+      `;
+      stage.appendChild(card);
+    }
+    prog.innerHTML = SWIPE_FEED.map((_,i)=>`<span class="${i===active?'on':''}"></span>`).join('');
+  }
+  render();
+  stage.addEventListener('click',(e)=>{ if(e.target.closest('.actions')||e.target.closest('.rail')||e.target.closest('.top'))return; active=(active+1)%N;render(); });
+  let acc=0;
+  stage.addEventListener('wheel',e=>{acc+=e.deltaY;if(acc>120){active=(active+1)%N;render();acc=0}else if(acc<-120){active=(active-1+N)%N;render();acc=0}});
+</script></body></html>

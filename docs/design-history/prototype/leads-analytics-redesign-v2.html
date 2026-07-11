@@ -1,0 +1,789 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Leads + Analytics redesign v2 — structurally different directions</title>
+<style>
+  :root {
+    --bg: #f3eee7;
+    --surface: #fbf8f3;
+    --ink: #313131;
+    --ink2: #5a5651;
+    --muted: #8a857d;
+    --line: rgba(49, 49, 49, 0.14);
+    --line2: rgba(49, 49, 49, 0.08);
+    --accent: #6b7a5a;
+    --accent-soft: rgba(107,122,90,0.14);
+    --warn: #b56a3a;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+    background: var(--bg); color: var(--ink); -webkit-font-smoothing: antialiased;
+    line-height: 1.5; font-size: 14px;
+  }
+  .serif { font-family: ui-serif, Georgia, "Times New Roman", serif; letter-spacing: -0.01em; }
+  .page { max-width: 1480px; margin: 0 auto; padding: 28px 20px 80px; }
+  h1 { font-size: 22px; margin: 0 0 4px; font-weight: 600; }
+  .page-sub { color: var(--muted); margin: 0 0 28px; font-size: 13px; }
+  h2.row-label {
+    margin: 36px 0 12px; font-size: 12px; text-transform: uppercase;
+    letter-spacing: 0.12em; color: var(--muted);
+  }
+  .grid3 {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px;
+  }
+  @media (max-width: 1100px) { .grid3 { grid-template-columns: 1fr; } }
+
+  .col-tag {
+    font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em;
+    color: var(--muted); margin-bottom: 6px;
+  }
+  .col-tag b { color: var(--ink); }
+  .panel {
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: 14px; padding: 16px; min-height: 100%;
+  }
+  .footnote { color: var(--muted); font-size: 11px; margin-top: 14px; line-height: 1.5; }
+
+  /* tab bar */
+  .tabbar {
+    display: flex; gap: 18px; border-bottom: 1px solid var(--line);
+    padding: 0 4px; margin: -6px -4px 14px;
+    overflow-x: auto;
+  }
+  .tabbar button {
+    background: none; border: 0; padding: 10px 2px; font: inherit;
+    color: var(--ink2); cursor: default; position: relative; white-space: nowrap;
+  }
+  .tabbar button.active { color: var(--ink); font-weight: 500; }
+  .tabbar button.active::after {
+    content: ""; position: absolute; left: 0; right: 0; bottom: -1px;
+    height: 2px; background: var(--ink); border-radius: 2px;
+  }
+
+  /* ============================================================
+     LEADS — shared
+     ============================================================ */
+  .panel-head {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; margin-bottom: 14px;
+  }
+  .panel-h {
+    font-size: 16px; font-weight: 600; margin: 0;
+    font-family: ui-serif, Georgia, "Times New Roman", serif;
+    letter-spacing: -0.01em;
+  }
+  .meta-line { color: var(--muted); font-size: 12px; margin-top: 2px; }
+
+  .btn-link {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 12px; color: var(--ink2); text-decoration: none;
+    padding: 6px 12px; border: 1px solid var(--line); border-radius: 999px;
+    background: transparent;
+  }
+  .btn-link:hover { color: var(--ink); border-color: rgba(49,49,49,0.3); }
+
+  .btn-pill {
+    border: 1px solid var(--line); border-radius: 999px; background: transparent;
+    padding: 5px 12px; font-size: 12px; color: var(--ink); cursor: default;
+    text-decoration: none; display: inline-block;
+  }
+  .btn-pill:hover { background: rgba(49,49,49,0.04); }
+
+  /* ============================================================
+     LEADS V1 — Inbox (Gmail/HEY-style flat list)
+     ============================================================ */
+  .inbox-row {
+    display: grid;
+    grid-template-columns: 8px 140px 1fr auto auto;
+    gap: 10px; align-items: center;
+    padding: 11px 4px;
+    border-bottom: 1px solid var(--line2);
+    font-size: 13px;
+  }
+  .inbox-row:last-child { border-bottom: 0; }
+  .inbox-row.followed { color: var(--muted); }
+  .inbox-row.followed .inbox-name { color: var(--ink2); font-weight: 400; }
+  .inbox-dot {
+    width: 8px; height: 8px; border-radius: 50%; background: var(--accent);
+  }
+  .inbox-row.followed .inbox-dot { background: transparent; border: 1px solid var(--line); }
+  .inbox-name { font-weight: 500; color: var(--ink); }
+  .inbox-msg {
+    color: var(--ink2); white-space: nowrap; overflow: hidden;
+    text-overflow: ellipsis; min-width: 0;
+  }
+  .inbox-time { color: var(--muted); font-size: 11.5px; min-width: 60px; text-align: right; }
+  .inbox-actions { display: flex; gap: 4px; }
+  .inbox-actions a {
+    width: 28px; height: 28px; border-radius: 50%;
+    border: 1px solid var(--line); display: inline-flex;
+    align-items: center; justify-content: center;
+    color: var(--ink2); text-decoration: none; font-size: 13px;
+  }
+  .inbox-actions a:hover { background: rgba(49,49,49,0.04); color: var(--ink); }
+
+  /* ============================================================
+     LEADS V2 — Status board (grouped by open / followed)
+     ============================================================ */
+  .group-head {
+    display: flex; align-items: baseline; gap: 8px;
+    margin: 10px 0 8px; padding-bottom: 6px;
+    border-bottom: 1px solid var(--line2);
+  }
+  .group-h {
+    font-size: 11.5px; text-transform: uppercase;
+    letter-spacing: 0.1em; color: var(--muted);
+  }
+  .group-h.open { color: var(--accent); }
+  .group-count { color: var(--muted); font-size: 11px; }
+
+  .board-card {
+    border: 1px solid var(--line); border-radius: 10px;
+    background: var(--bg);
+    padding: 12px 14px; margin-bottom: 8px;
+    display: flex; gap: 12px; align-items: flex-start;
+    justify-content: space-between;
+  }
+  .board-card.followed { background: transparent; border-color: var(--line2); opacity: 0.65; }
+  .board-card .name { font-weight: 500; }
+  .board-card .time { color: var(--muted); font-size: 11.5px; margin-left: 6px; }
+  .board-card .msg {
+    color: var(--ink2); font-size: 13px; margin: 4px 0 4px;
+    display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .board-card .meta { color: var(--muted); font-size: 11.5px; }
+
+  /* ============================================================
+     LEADS V3 — Cards (strong CTA on the right)
+     ============================================================ */
+  .lead-card {
+    border: 1px solid var(--line); border-radius: 12px;
+    background: var(--bg);
+    padding: 14px; margin-bottom: 10px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 14px; align-items: center;
+  }
+  .lead-card.followed { background: transparent; opacity: 0.55; }
+  .lead-card .top { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+  .lead-card .name { font-weight: 600; font-size: 14.5px; }
+  .lead-card .pill {
+    font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em;
+    background: var(--accent-soft); color: var(--accent);
+    padding: 2px 8px; border-radius: 999px;
+  }
+  .lead-card .time { color: var(--muted); font-size: 11.5px; margin-left: auto; }
+  .lead-card .msg { color: var(--ink2); font-size: 13px; margin-top: 6px;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .lead-card .meta { color: var(--muted); font-size: 11.5px; margin-top: 4px; }
+  .lead-card .cta {
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .lead-card .cta-primary {
+    background: var(--ink); color: var(--surface);
+    padding: 8px 16px; border-radius: 999px; font-size: 12.5px;
+    text-decoration: none; text-align: center; font-weight: 500;
+  }
+  .lead-card .cta-secondary {
+    background: transparent; border: 1px solid var(--line);
+    color: var(--ink); padding: 6px 16px; border-radius: 999px;
+    font-size: 12px; text-decoration: none; text-align: center;
+  }
+
+  /* ============================================================
+     ANALYTICS V1 — Hero number + skinny funnel
+     ============================================================ */
+  .hero-stats {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 14px;
+    margin-bottom: 16px;
+  }
+  .hero-card {
+    border: 1px solid var(--line); border-radius: 14px;
+    background: var(--bg);
+    padding: 18px 18px 14px;
+  }
+  .hero-card .label { color: var(--muted); font-size: 11px;
+    text-transform: uppercase; letter-spacing: 0.1em; }
+  .hero-card .value {
+    font-size: 38px; line-height: 1.1; margin-top: 6px;
+    font-family: ui-serif, Georgia, "Times New Roman", serif;
+    font-variant-numeric: tabular-nums;
+  }
+  .hero-card .trend { font-size: 11.5px; color: var(--muted); margin-top: 4px; }
+  .hero-card .trend.up { color: var(--accent); }
+  .skinny-funnel {
+    border: 1px solid var(--line); border-radius: 12px;
+    background: var(--bg);
+    padding: 14px;
+  }
+  .skinny-funnel .head {
+    display: flex; justify-content: space-between; align-items: baseline;
+    margin-bottom: 10px;
+  }
+  .skinny-funnel .head h4 { margin: 0; font-size: 13px; font-weight: 500; }
+  .skinny-funnel .head span { color: var(--muted); font-size: 11px; }
+  .skinny-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 4px 0; font-size: 12px;
+  }
+  .skinny-row .lbl { width: 100px; color: var(--ink2); flex-shrink: 0; }
+  .skinny-row .bar {
+    flex: 1; height: 4px; background: var(--line2);
+    border-radius: 999px; overflow: hidden;
+  }
+  .skinny-row .bar i {
+    display: block; height: 100%; background: var(--ink);
+    border-radius: 999px;
+  }
+  .skinny-row .num {
+    width: 60px; text-align: right;
+    font-variant-numeric: tabular-nums; color: var(--ink);
+  }
+  .skinny-row .pct {
+    width: 44px; text-align: right; color: var(--muted);
+    font-size: 11px; font-variant-numeric: tabular-nums;
+  }
+
+  /* ============================================================
+     ANALYTICS V2 — Funnel-as-the-story (no separate KPI cards)
+     ============================================================ */
+  .big-funnel {
+    background: var(--bg); border: 1px solid var(--line);
+    border-radius: 14px; padding: 20px;
+  }
+  .big-funnel .head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 16px; }
+  .big-funnel .head h3 { margin: 0; font-family: ui-serif, Georgia, "Times New Roman", serif;
+    font-size: 18px; font-weight: 400; letter-spacing: -0.01em; }
+  .big-funnel .head .stamp { color: var(--muted); font-size: 11px; }
+
+  .step {
+    display: grid; grid-template-columns: 110px 1fr 110px;
+    align-items: center; gap: 12px;
+    padding: 10px 0; border-bottom: 1px solid var(--line2);
+  }
+  .step:last-child { border-bottom: 0; }
+  .step .step-name { font-size: 12.5px; color: var(--ink2); }
+  .step .step-name.bold { color: var(--ink); font-weight: 600; font-size: 13.5px; }
+  .step .step-bar {
+    height: 26px; background: var(--line2); border-radius: 6px;
+    overflow: hidden; position: relative;
+  }
+  .step .step-bar i {
+    display: block; height: 100%;
+    background: linear-gradient(90deg, rgba(49,49,49,0.36) 0%, rgba(49,49,49,0.18) 100%);
+  }
+  .step .step-bar.terminal i {
+    background: var(--accent);
+  }
+  .step .step-bar span {
+    position: absolute; inset: 0; display: flex; align-items: center;
+    justify-content: flex-end; padding-right: 10px;
+    font-size: 12px; color: var(--ink); font-variant-numeric: tabular-nums;
+  }
+  .step .step-bar.terminal span { color: var(--surface); font-weight: 500; }
+  .step .step-side {
+    text-align: right; font-size: 11px; color: var(--muted);
+    font-variant-numeric: tabular-nums;
+  }
+  .step .step-side b {
+    display: block; color: var(--ink); font-size: 13px; font-weight: 500;
+  }
+
+  /* ============================================================
+     ANALYTICS V3 — Asymmetric grid (Views big, completion ring)
+     ============================================================ */
+  .asym {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    grid-template-rows: auto auto;
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+  .asym .views-big {
+    grid-row: span 2;
+    border: 1px solid var(--line); border-radius: 14px;
+    background: var(--bg); padding: 18px;
+    display: flex; flex-direction: column; justify-content: space-between;
+  }
+  .asym .views-big .label { color: var(--muted); font-size: 11px;
+    text-transform: uppercase; letter-spacing: 0.1em; }
+  .asym .views-big .value {
+    font-size: 56px; line-height: 1; margin-top: 8px;
+    font-family: ui-serif, Georgia, "Times New Roman", serif;
+    font-variant-numeric: tabular-nums;
+  }
+  .asym .views-big .spark {
+    display: flex; gap: 3px; align-items: flex-end; height: 30px;
+    margin-top: 14px;
+  }
+  .asym .views-big .spark i {
+    flex: 1; background: rgba(49,49,49,0.22); border-radius: 2px 2px 0 0;
+  }
+  .asym .leads-card, .asym .ring-card {
+    border: 1px solid var(--line); border-radius: 12px;
+    background: var(--bg); padding: 14px;
+  }
+  .asym .leads-card .label { color: var(--muted); font-size: 11px;
+    text-transform: uppercase; letter-spacing: 0.1em; }
+  .asym .leads-card .value {
+    font-size: 30px; margin-top: 4px;
+    font-family: ui-serif, Georgia, "Times New Roman", serif;
+  }
+  .asym .leads-card .trend { font-size: 11.5px; color: var(--accent); }
+
+  .ring-card { display: flex; align-items: center; gap: 12px; }
+  .ring {
+    width: 56px; height: 56px; border-radius: 50%;
+    background: conic-gradient(var(--accent) 0% 46%, var(--line2) 46% 100%);
+    position: relative; flex-shrink: 0;
+  }
+  .ring::after {
+    content: ""; position: absolute; inset: 6px;
+    background: var(--bg); border-radius: 50%;
+  }
+  .ring-card .ring-info { position: relative; z-index: 1; }
+  .ring-card .ring-info .label { color: var(--muted); font-size: 11px;
+    text-transform: uppercase; letter-spacing: 0.08em; }
+  .ring-card .ring-info .value {
+    font-family: ui-serif, Georgia, "Times New Roman", serif;
+    font-size: 18px; font-variant-numeric: tabular-nums;
+  }
+  .ring-card .ring-info .sub { color: var(--muted); font-size: 11px; }
+  .ring-pct {
+    position: absolute; inset: 0; display: flex; align-items: center;
+    justify-content: center; font-size: 12px; font-variant-numeric: tabular-nums;
+    z-index: 2; color: var(--ink); font-weight: 500;
+  }
+
+  .v3-funnel {
+    border: 1px solid var(--line); border-radius: 12px;
+    background: var(--bg); padding: 14px;
+  }
+  .v3-funnel h4 { margin: 0 0 12px; font-size: 12.5px; font-weight: 500; color: var(--ink2); }
+  .v3-bars { display: flex; gap: 6px; align-items: flex-end; height: 60px; }
+  .v3-bars .seg {
+    flex: 1; background: rgba(49,49,49,0.22); border-radius: 3px 3px 0 0;
+    position: relative;
+  }
+  .v3-bars .seg.last { background: var(--accent); }
+  .v3-labels {
+    display: flex; gap: 6px; margin-top: 6px;
+    font-size: 10.5px; color: var(--muted); text-align: center;
+  }
+  .v3-labels span { flex: 1; }
+  .v3-nums {
+    display: flex; gap: 6px; margin-top: 2px;
+    font-size: 11.5px; text-align: center; color: var(--ink);
+    font-variant-numeric: tabular-nums;
+  }
+  .v3-nums span { flex: 1; }
+
+  code { background: rgba(49,49,49,0.06); padding: 1px 5px; border-radius: 3px; font-size: 12.5px; }
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>Leads + Analytics — overall redesign (round 2)</h1>
+  <p class="page-sub">
+    Three structurally different layouts for each tab. Same fake listing &amp; numbers across all six panels.
+    Pick like before: <em>"leads X, analytics Y"</em>. "See all leads" is anchored to the right in every leads variant.
+  </p>
+
+  <!-- ============================================================
+       LEADS — 3 directions
+       ============================================================ -->
+  <h2 class="row-label">Leads — 3 directions</h2>
+  <div class="grid3">
+
+    <!-- ===== V1: Inbox ===== -->
+    <div>
+      <div class="col-tag"><b>V1 · Inbox</b> — flat row, contact icons on right</div>
+      <div class="panel">
+        <div class="tabbar">
+          <button>Details</button><button>Media</button><button>Marketing</button>
+          <button class="active">Leads</button><button>Analytics</button>
+        </div>
+
+        <div class="panel-head">
+          <div>
+            <h3 class="panel-h">Leads</h3>
+            <p class="meta-line">5 total · <span style="color:var(--accent)">3 awaiting follow-up</span></p>
+          </div>
+          <a href="#" class="btn-link">See all leads →</a>
+        </div>
+
+        <div class="inbox-row">
+          <span class="inbox-dot"></span>
+          <span class="inbox-name">Sarah Chen</span>
+          <span class="inbox-msg">Saw the school tour video — still available this weekend? Pre-approved.</span>
+          <span class="inbox-time">2h</span>
+          <div class="inbox-actions">
+            <a href="#" title="Email">✉</a><a href="#" title="Text">💬</a>
+          </div>
+        </div>
+        <div class="inbox-row">
+          <span class="inbox-dot"></span>
+          <span class="inbox-name">Marcus Rivera</span>
+          <span class="inbox-msg">Interested in floor plan — can you send disclosures?</span>
+          <span class="inbox-time">5h</span>
+          <div class="inbox-actions">
+            <a href="#" title="Email">✉</a><a href="#" style="opacity:.3" title="No phone">💬</a>
+          </div>
+        </div>
+        <div class="inbox-row">
+          <span class="inbox-dot"></span>
+          <span class="inbox-name">Priya Natarajan</span>
+          <span class="inbox-msg">Love the commute card. Are pets allowed?</span>
+          <span class="inbox-time">1d</span>
+          <div class="inbox-actions">
+            <a href="#" style="opacity:.3" title="No email">✉</a><a href="#" title="Text">💬</a>
+          </div>
+        </div>
+        <div class="inbox-row followed">
+          <span class="inbox-dot"></span>
+          <span class="inbox-name">David Park</span>
+          <span class="inbox-msg">Followed up — tour scheduled Saturday 11am.</span>
+          <span class="inbox-time">3d</span>
+          <div class="inbox-actions">
+            <a href="#" title="Email">✉</a><a href="#" title="Text">💬</a>
+          </div>
+        </div>
+        <div class="inbox-row followed">
+          <span class="inbox-dot"></span>
+          <span class="inbox-name">Anna Goldberg</span>
+          <span class="inbox-msg">Made an offer last week — closing 7/15.</span>
+          <span class="inbox-time">5d</span>
+          <div class="inbox-actions">
+            <a href="#" title="Email">✉</a><a href="#" title="Text">💬</a>
+          </div>
+        </div>
+
+        <p class="footnote">Single-line per lead. Email/Text are circular icons (no text, no border noise). Followed-up rows fade. "See all leads" pinned to top-right pill, never wraps. Closest to Gmail/Apple Mail mental model.</p>
+      </div>
+    </div>
+
+    <!-- ===== V2: Status board ===== -->
+    <div>
+      <div class="col-tag"><b>V2 · Status board</b> — grouped by Open / Followed</div>
+      <div class="panel">
+        <div class="tabbar">
+          <button>Details</button><button>Media</button><button>Marketing</button>
+          <button class="active">Leads</button><button>Analytics</button>
+        </div>
+
+        <div class="panel-head">
+          <div>
+            <h3 class="panel-h">Leads</h3>
+            <p class="meta-line">5 total</p>
+          </div>
+          <a href="#" class="btn-link">See all leads →</a>
+        </div>
+
+        <div class="group-head">
+          <span class="group-h open">▸ Awaiting follow-up</span>
+          <span class="group-count">3</span>
+        </div>
+
+        <div class="board-card">
+          <div style="min-width:0">
+            <div><span class="name">Sarah Chen</span><span class="time">2h ago</span></div>
+            <p class="msg">Saw the school tour video — still available this weekend?</p>
+            <p class="meta">sarah.chen@gmail.com · (415) 555-0142</p>
+          </div>
+          <div style="display:flex;gap:6px;flex-shrink:0"><a class="btn-pill" href="#">Email</a><a class="btn-pill" href="#">Text</a></div>
+        </div>
+        <div class="board-card">
+          <div style="min-width:0">
+            <div><span class="name">Marcus Rivera</span><span class="time">5h ago</span></div>
+            <p class="msg">Interested in the floor plan. Can you send disclosures?</p>
+            <p class="meta">m.rivera@outlook.com</p>
+          </div>
+          <div style="display:flex;gap:6px;flex-shrink:0"><a class="btn-pill" href="#">Email</a></div>
+        </div>
+        <div class="board-card">
+          <div style="min-width:0">
+            <div><span class="name">Priya Natarajan</span><span class="time">1d ago</span></div>
+            <p class="msg">Hi! Love the commute card. Are pets allowed?</p>
+            <p class="meta">(650) 555-0188</p>
+          </div>
+          <div style="display:flex;gap:6px;flex-shrink:0"><a class="btn-pill" href="#">Text</a></div>
+        </div>
+
+        <div class="group-head" style="margin-top:18px">
+          <span class="group-h">▸ Followed up</span>
+          <span class="group-count">2</span>
+        </div>
+
+        <div class="board-card followed">
+          <div style="min-width:0">
+            <div><span class="name">David Park</span><span class="time">3d ago</span></div>
+            <p class="msg">Followed up — tour scheduled Saturday 11am.</p>
+          </div>
+          <div style="display:flex;gap:6px;flex-shrink:0"><a class="btn-pill" href="#">Email</a></div>
+        </div>
+        <div class="board-card followed">
+          <div style="min-width:0">
+            <div><span class="name">Anna Goldberg</span><span class="time">5d ago</span></div>
+            <p class="msg">Made an offer last week — closing 7/15.</p>
+          </div>
+          <div style="display:flex;gap:6px;flex-shrink:0"><a class="btn-pill" href="#">Email</a></div>
+        </div>
+
+        <p class="footnote">Two clear sections. Open leads sit prominent at top with full meta; followed-up are dimmed below (still scannable, no clicks needed to expand). Best when agent's mental model is "what do I owe people".</p>
+      </div>
+    </div>
+
+    <!-- ===== V3: Action cards ===== -->
+    <div>
+      <div class="col-tag"><b>V3 · Action cards</b> — primary CTA on the right</div>
+      <div class="panel">
+        <div class="tabbar">
+          <button>Details</button><button>Media</button><button>Marketing</button>
+          <button class="active">Leads</button><button>Analytics</button>
+        </div>
+
+        <div class="panel-head">
+          <div>
+            <h3 class="panel-h">Leads</h3>
+            <p class="meta-line">5 total · <span style="color:var(--accent)">3 awaiting follow-up</span></p>
+          </div>
+          <a href="#" class="btn-link">See all leads →</a>
+        </div>
+
+        <div class="lead-card">
+          <div style="min-width:0">
+            <div class="top">
+              <span class="name">Sarah Chen</span>
+              <span class="pill">New</span>
+              <span class="time">2h ago</span>
+            </div>
+            <p class="msg">Saw the school tour video — is this still available for an in-person showing this weekend? We're pre-approved.</p>
+            <p class="meta">sarah.chen@gmail.com · (415) 555-0142</p>
+          </div>
+          <div class="cta">
+            <a href="#" class="cta-primary">Reply</a>
+            <a href="#" class="cta-secondary">Mark done</a>
+          </div>
+        </div>
+
+        <div class="lead-card">
+          <div style="min-width:0">
+            <div class="top">
+              <span class="name">Marcus Rivera</span>
+              <span class="pill">New</span>
+              <span class="time">5h ago</span>
+            </div>
+            <p class="msg">Interested in the floor plan. Can you send the disclosures?</p>
+            <p class="meta">m.rivera@outlook.com</p>
+          </div>
+          <div class="cta">
+            <a href="#" class="cta-primary">Reply</a>
+            <a href="#" class="cta-secondary">Mark done</a>
+          </div>
+        </div>
+
+        <div class="lead-card">
+          <div style="min-width:0">
+            <div class="top">
+              <span class="name">Priya Natarajan</span>
+              <span class="pill">New</span>
+              <span class="time">1d ago</span>
+            </div>
+            <p class="msg">Hi! Love the commute card. Are pets allowed?</p>
+            <p class="meta">(650) 555-0188</p>
+          </div>
+          <div class="cta">
+            <a href="#" class="cta-primary">Reply</a>
+            <a href="#" class="cta-secondary">Mark done</a>
+          </div>
+        </div>
+
+        <div class="lead-card followed">
+          <div style="min-width:0">
+            <div class="top"><span class="name">David Park</span><span class="time">3d ago</span></div>
+            <p class="msg">Followed up — scheduled tour Saturday 11am.</p>
+          </div>
+          <div class="cta">
+            <a href="#" class="cta-secondary">Reply</a>
+          </div>
+        </div>
+
+        <p class="footnote">Each lead is a self-contained card with one obvious CTA. "Reply" opens a popover with Email/Text options (mailto/sms link). Best when agent thinks "give me one button to deal with this".</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       ANALYTICS — 3 directions
+       ============================================================ -->
+  <h2 class="row-label">Analytics — 3 directions</h2>
+  <div class="grid3">
+
+    <!-- ===== V1: Hero KPIs + skinny funnel ===== -->
+    <div>
+      <div class="col-tag"><b>V1 · Hero numbers</b> — big Views/Leads, funnel as thin reference</div>
+      <div class="panel">
+        <div class="tabbar">
+          <button>Details</button><button>Media</button><button>Marketing</button>
+          <button>Leads</button><button class="active">Analytics</button>
+        </div>
+
+        <div class="panel-head">
+          <div>
+            <h3 class="panel-h">Performance</h3>
+            <p class="meta-line">Last 30 days · realtime</p>
+          </div>
+        </div>
+
+        <div class="hero-stats">
+          <div class="hero-card">
+            <div class="label">Views</div>
+            <div class="value">1,284</div>
+            <div class="trend up">▲ 18% vs prev 30d</div>
+          </div>
+          <div class="hero-card">
+            <div class="label">Leads</div>
+            <div class="value">14</div>
+            <div class="trend up">▲ 4 vs prev 30d</div>
+          </div>
+        </div>
+
+        <div class="skinny-funnel">
+          <div class="head">
+            <h4>Where viewers drop off</h4>
+            <span>step retention</span>
+          </div>
+          <div class="skinny-row"><span class="lbl">Page views</span><span class="bar"><i style="width:100%"></i></span><span class="num">1,284</span><span class="pct">—</span></div>
+          <div class="skinny-row"><span class="lbl">Watched a card</span><span class="bar"><i style="width:88%"></i></span><span class="num">1,130</span><span class="pct">88%</span></div>
+          <div class="skinny-row"><span class="lbl">Completed video</span><span class="bar"><i style="width:46%"></i></span><span class="num">587</span><span class="pct">52%</span></div>
+          <div class="skinny-row"><span class="lbl">Submitted lead</span><span class="bar"><i style="width:1%; min-width:3px"></i></span><span class="num">14</span><span class="pct">2.4%</span></div>
+        </div>
+
+        <p class="footnote">Two big numbers do most of the talking. Funnel is thin (no big bars) — supports the headline rather than competing with it. Conv% intentionally NOT a third hero card (it's derived; right column of funnel covers it).</p>
+      </div>
+    </div>
+
+    <!-- ===== V2: Funnel as the story ===== -->
+    <div>
+      <div class="col-tag"><b>V2 · Funnel-first</b> — one chart, no separate KPI cards</div>
+      <div class="panel">
+        <div class="tabbar">
+          <button>Details</button><button>Media</button><button>Marketing</button>
+          <button>Leads</button><button class="active">Analytics</button>
+        </div>
+
+        <div class="panel-head">
+          <div>
+            <h3 class="panel-h">Performance</h3>
+            <p class="meta-line">Last 30 days · realtime</p>
+          </div>
+        </div>
+
+        <div class="big-funnel">
+          <div class="head">
+            <h3>Viewer journey</h3>
+            <span class="stamp">unique viewers</span>
+          </div>
+
+          <div class="step">
+            <span class="step-name bold">Views</span>
+            <div class="step-bar"><i style="width:100%"></i><span>1,284</span></div>
+            <div class="step-side"><b>1,284</b>arrived</div>
+          </div>
+          <div class="step">
+            <span class="step-name">Watched a card</span>
+            <div class="step-bar"><i style="width:88%"></i><span>1,130</span></div>
+            <div class="step-side"><b>88%</b>kept</div>
+          </div>
+          <div class="step">
+            <span class="step-name">Completed a video</span>
+            <div class="step-bar"><i style="width:46%"></i><span>587</span></div>
+            <div class="step-side"><b>52%</b>kept</div>
+          </div>
+          <div class="step">
+            <span class="step-name bold">Leads</span>
+            <div class="step-bar terminal"><i style="width:6%; min-width:18px"></i><span>14</span></div>
+            <div class="step-side"><b>2.4%</b>convert</div>
+          </div>
+        </div>
+
+        <p class="footnote">Funnel IS the analytics tab. Top + bottom rows are bold (the two numbers agents quote). Right column tells the story step-by-step — no need for separate KPI cards. Removes redundancy: every number in the old 6-KPI grid is somewhere in this funnel.</p>
+      </div>
+    </div>
+
+    <!-- ===== V3: Asymmetric grid ===== -->
+    <div>
+      <div class="col-tag"><b>V3 · Asymmetric</b> — Views dominant, leads + completion ring secondary</div>
+      <div class="panel">
+        <div class="tabbar">
+          <button>Details</button><button>Media</button><button>Marketing</button>
+          <button>Leads</button><button class="active">Analytics</button>
+        </div>
+
+        <div class="panel-head">
+          <div>
+            <h3 class="panel-h">Performance</h3>
+            <p class="meta-line">Last 30 days · realtime</p>
+          </div>
+        </div>
+
+        <div class="asym">
+          <div class="views-big">
+            <div>
+              <div class="label">Views · 30d</div>
+              <div class="value">1,284</div>
+            </div>
+            <div>
+              <div style="font-size:11.5px;color:var(--accent);margin-bottom:4px">▲ 18% vs previous 30d</div>
+              <div class="spark">
+                <i style="height:30%"></i><i style="height:42%"></i><i style="height:55%"></i>
+                <i style="height:48%"></i><i style="height:70%"></i><i style="height:80%"></i><i style="height:100%"></i>
+              </div>
+            </div>
+          </div>
+          <div class="leads-card">
+            <div class="label">Leads</div>
+            <div class="value">14</div>
+            <div class="trend">▲ 4 vs prev 30d</div>
+          </div>
+          <div class="ring-card" style="position:relative">
+            <div class="ring"></div>
+            <div class="ring-pct">46%</div>
+            <div class="ring-info">
+              <div class="label">Watch-through</div>
+              <div class="sub">587 viewers completed a video</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="v3-funnel">
+          <h4>Drop-off</h4>
+          <div class="v3-bars">
+            <div class="seg" style="height:100%"></div>
+            <div class="seg" style="height:88%"></div>
+            <div class="seg" style="height:46%"></div>
+            <div class="seg last" style="height:6%; min-height:6px"></div>
+          </div>
+          <div class="v3-nums"><span>1,284</span><span>1,130</span><span>587</span><span>14</span></div>
+          <div class="v3-labels"><span>Views</span><span>Card</span><span>Complete</span><span>Lead</span></div>
+        </div>
+
+        <p class="footnote">Magazine-style asymmetric grid: Views is the cover number, Leads + Watch-through ring are sidebars, mini funnel grounds the page. Watch-through ring is a fresh metric (% of viewers who completed any video) — replaces the abstract "Conv. %".</p>
+      </div>
+    </div>
+  </div>
+
+  <p class="page-sub" style="margin-top:48px">
+    <strong>To pick:</strong> reply <em>"leads X, analytics Y"</em>. I'll then rebuild the panels, drop the
+    old code, push to <code>phase49.1/...</code>, build/tsc, and merge to main.
+  </p>
+</div>
+</body>
+</html>

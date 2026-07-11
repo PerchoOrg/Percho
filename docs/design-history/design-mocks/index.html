@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Percho — Site Redesign</title>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,300;0,400;1,300&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  body{margin:0;background:#f3eee7;color:#313131;font-family:'Inter',sans-serif;font-weight:400;padding:64px 32px;-webkit-font-smoothing:antialiased;line-height:1.6}
+  .wrap{max-width:1180px;margin:0 auto}
+  .eyebrow{font-size:11px;letter-spacing:0.22em;text-transform:uppercase;color:#5a5651;font-weight:500}
+  h1{font-family:'Source Serif 4',serif;font-weight:300;font-size:64px;letter-spacing:-0.02em;margin:14px 0 24px;line-height:1.05;color:#313131}
+  h1 .it{font-style:italic}
+  .lede{color:#5a5651;max-width:62ch;font-size:17px;line-height:1.65;margin-bottom:64px}
+  .lede b{color:#313131;font-weight:500}
+
+  .style-block{background:#fff;border:1px solid rgba(49,49,49,0.12);padding:40px;margin-bottom:24px;display:grid;grid-template-columns:0.95fr 1.05fr;gap:48px;align-items:center}
+  @media(max-width:880px){.style-block{grid-template-columns:1fr;padding:28px;gap:28px}}
+  .left .num{font-family:'Inter',sans-serif;font-size:11px;letter-spacing:0.22em;text-transform:uppercase;color:#8a857d;font-weight:500}
+  .left h2{font-family:'Source Serif 4',serif;font-weight:300;font-size:42px;letter-spacing:-0.015em;margin:8px 0 16px;line-height:1.1;color:#313131}
+  .left h2 .it{font-style:italic}
+  .left .desc{color:#5a5651;line-height:1.65;font-size:15px;margin:0 0 18px}
+  .left .pros{font-family:'Inter',sans-serif;font-size:13px;color:#313131;line-height:1.6;border-left:2px solid #313131;padding-left:14px;margin-top:18px}
+  .left .pros b{font-weight:500}
+  .left .ref{font-family:'Inter',sans-serif;font-size:10px;color:#8a857d;letter-spacing:0.18em;margin-top:24px;text-transform:uppercase;font-weight:500}
+  .links{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .links a{display:block;background:#f3eee7;border:1px solid rgba(49,49,49,0.14);padding:24px;text-decoration:none;color:#313131;transition:all .2s}
+  .links a:hover{border-color:#313131;background:#fff}
+  .links a .lbl{font-family:'Inter',sans-serif;font-size:9px;letter-spacing:0.22em;color:#8a857d;text-transform:uppercase;font-weight:500}
+  .links a .ttl{margin-top:8px;font-family:'Source Serif 4',serif;font-weight:400;font-size:18px;letter-spacing:-0.01em}
+  .links a .arr{font-family:'Source Serif 4',serif;font-weight:300;font-size:22px;float:right;margin-top:-4px}
+
+  .archive{margin-top:64px;padding-top:32px;border-top:1px solid rgba(49,49,49,0.16)}
+  .archive .eyebrow{margin-bottom:14px}
+  .archive p{color:#8a857d;font-size:13px;margin:0 0 14px;max-width:60ch}
+  .archive .row{display:flex;gap:18px;flex-wrap:wrap;font-size:12px}
+  .archive .row a{color:#5a5651;text-decoration:underline;text-decoration-color:rgba(49,49,49,0.2);text-underline-offset:3px}
+  .archive .row a:hover{color:#313131;text-decoration-color:#313131}
+
+  .foot{margin-top:48px;padding-top:24px;border-top:1px solid rgba(49,49,49,0.16);color:#8a857d;font-size:12px;line-height:1.7;font-family:'Inter',sans-serif}
+  .foot b{color:#313131;font-weight:500}
+</style></head><body>
+<div class="wrap">
+  <div class="eyebrow">— Percho · Site Redesign · v3</div>
+  <h1>Two directions,<br/><span class="it">benchmarked</span> against the segment.</h1>
+  <p class="lede">After auditing five top-tier developer & residence sites — <b>Aman</b>, <b>111 West 57th (Steinway Tower)</b>, <b>53W53</b>, <b>Naftali Group</b>, <b>Related</b> — three rules emerged: full-bleed hero media, two-typeface system (display serif + tracked all-caps sans), and zero chromatic accent. Both directions below follow them. Both are light.</p>
+
+  <div class="style-block" style="background:#f3eee7">
+    <div class="left">
+      <div class="num">[ Direction A · The Hotel ]</div>
+      <h2>Quietly considered.<br/><span class="it">Like a private hotel.</span></h2>
+      <p class="desc">Cream <code>#f3eee7</code> background, Source Serif 4 doing nearly all the work, warm grey <code>#313131</code> text. Asymmetric residence grid like an exhibition catalog. Italic pull-quotes, tracked-caps eyebrows, no accent color.</p>
+      <div class="pros"><b>Best when:</b> Vivian's positioning is quiet conviction, off-market access, "buyers come after they've stopped looking on Zillow." Warmest, most distinctive on the page — but the most refined; needs the copy to back it up.</div>
+      <div class="ref">REF: Aman Residences · The Mark Hotel · Cereal Magazine</div>
+    </div>
+    <div class="links">
+      <a href="5-aman-hotel.html"><span class="arr">→</span><div class="lbl">Surface · Profile</div><div class="ttl">/a/vivian-zhang</div></a>
+      <a href="swipe-5-aman-hotel.html"><span class="arr">→</span><div class="lbl">Surface · Swipe Feed</div><div class="ttl">/browse</div></a>
+    </div>
+  </div>
+
+  <div class="style-block" style="background:#fafaf9">
+    <div class="left">
+      <div class="num">[ Direction B · The Brokerage ]</div>
+      <h2>Modern, didone,<br/><span class="it">institutional.</span></h2>
+      <p class="desc">Off-white <code>#fafaf9</code> + Bodoni Moda + Inter tracked caps. Numbered residence rows like a quarterly portfolio report. Oversized italic Bodoni numerals (01 / 06) on swipe cards. Dense data strip — beds, baths, sf, $/sf — beneath each home.</p>
+      <div class="pros"><b>Best when:</b> Percho needs to read as the institution itself, not just a directory. Most data-forward, easiest for sellers to "buy" Vivian's credibility. Slightly colder than A — but better for the $5M+ luxury seller demo.</div>
+      <div class="ref">REF: Naftali Group · 53W53 · Compass Development Marketing</div>
+    </div>
+    <div class="links">
+      <a href="6-naftali-light.html"><span class="arr">→</span><div class="lbl">Surface · Profile</div><div class="ttl">/a/vivian-zhang</div></a>
+      <a href="swipe-6-naftali-light.html"><span class="arr">→</span><div class="lbl">Surface · Swipe Feed</div><div class="ttl">/browse</div></a>
+    </div>
+  </div>
+
+  <div class="archive">
+    <div class="eyebrow">— Archive (v1 · superseded)</div>
+    <p>Earlier four directions are kept for reference. v1 either had a chromatic accent (gold/lime) or used a dark theme — both removed in v3.</p>
+    <div class="row">
+      <a href="1-editorial-mono.html">01 Editorial Mono</a>
+      <a href="2-pixieset-gallery.html">02 Pixieset</a>
+      <a href="3-compass-luxe.html">03 Compass-Luxe (gold)</a>
+      <a href="4-cinematic-runway.html">04 Cinematic Runway (dark)</a>
+    </div>
+  </div>
+
+  <div class="foot">
+    <b>Mock data:</b> Vivian Zhang + 6 Eastside listings ($2.89M – $12.50M). Photos are demo-only (Unsplash). Production replaces with CF Stream &lt;video&gt; tags behind <code>FF_DEMO_STOCK_FOOTAGE</code> flag.<br/>
+    <b>Once you pick A or B</b> I lock the design tokens, write DESIGN.md, run a WCAG 2.1 AA audit, then roll out across <code>/a/[slug]</code>, <code>/v/[slug]/[listing]</code>, <code>/browse</code>, <code>/lander</code>, dashboard.
+  </div>
+</div>
+</body></html>

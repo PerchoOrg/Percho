@@ -15,9 +15,6 @@ export default function InternalLayout({ children }: { children: ReactNode }) {
           <Link href="/agents" className="text-ink2 hover:underline">
             Landing page /agents
           </Link>
-          <Link href="/demo/autofill" className="text-ink2 hover:underline">
-            Autofill demo /demo/autofill
-          </Link>
         </div>
       </nav>
       <main className="mx-auto max-w-3xl px-4 py-8">{children}</main>

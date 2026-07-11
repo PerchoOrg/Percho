@@ -7,6 +7,15 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.75.3 — 2026-07-11 — Housekeeping
+
+### 🔧 Technical
+- Retired the /demo/autofill pitch page and its 10 sample Atlanta listings — the product now runs entirely on real MLS data (or agent-uploaded listings). No user-facing change.
+- Archived old HTML design mockups to internal docs. Cleaner repo.
+
+### ⚠️ Known Issues
+- None.
+
 ## v0.75.2 — 2026-07-11
 
 🚀 Features

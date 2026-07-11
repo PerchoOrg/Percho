@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>A inline — louder, still inline</title>
+<style>
+  :root { --bg:#f3eee7; --surface:#fbf8f3; --ink:#313131; --ink2:#5a5651; --muted:#8a857d; --line:rgba(49,49,49,0.14); --serif:'Source Serif 4',Georgia,serif; }
+  * { box-sizing: border-box; }
+  html, body { margin:0; background:var(--bg); color:var(--ink); font-family:-apple-system,system-ui,sans-serif; }
+  body { padding: 32px 16px 64px; }
+  h1 { font-family: var(--serif); font-weight:600; font-size:28px; margin:0 0 8px; }
+  .lede { color:var(--ink2); font-size:14px; margin:0 0 32px; max-width:720px; }
+  .grid { display:grid; grid-template-columns:repeat(4,1fr); gap:20px; }
+  @media (max-width:1100px){ .grid{grid-template-columns:repeat(2,1fr);} }
+  @media (max-width:640px){ .grid{grid-template-columns:1fr;} }
+  .col h3 { font-family:var(--serif); font-weight:600; font-size:16px; margin:0 0 4px; }
+  .col .sub { color:var(--ink2); font-size:12px; margin:0 0 12px; line-height:1.4; min-height:76px; }
+  .col .tag { display:inline-block; font-size:10px; letter-spacing:0.12em; text-transform:uppercase; color:var(--muted); background:var(--surface); padding:2px 8px; border-radius:999px; margin-bottom:8px; border:1px solid var(--line); }
+  .phone { background:var(--bg); border:1px solid var(--line); border-radius:18px; overflow:hidden; width:100%; aspect-ratio:9/19; display:flex; flex-direction:column; }
+  .topbar { background:var(--bg); padding:8px 12px; display:flex; align-items:center; justify-content:space-between; font-size:11px; color:var(--ink2); border-bottom:1px solid var(--line); }
+  .topbar .icon { width:16px; height:16px; border-radius:50%; background:var(--ink); opacity:0.7; }
+  .hero { position:relative; width:100%; aspect-ratio:5/2; overflow:hidden; background:#222; }
+  .hero img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
+  .hero .gradient { position:absolute; inset:0; background:linear-gradient(to top,rgba(49,49,49,0.95),rgba(49,49,49,0.45) 50%,rgba(49,49,49,0.05)); }
+  .hero .text { position:absolute; left:0; right:0; bottom:0; padding:8px 12px 10px; color:var(--surface); }
+  .hero .text h2 { font-family:var(--serif); font-weight:600; font-size:16px; margin:0; letter-spacing:-0.01em; }
+  .hero .text .meta { font-size:10px; opacity:0.92; margin-top:2px; display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+  .hero .text .desc { font-size:9px; opacity:0.85; margin-top:3px; max-width:80%; line-height:1.35; }
+  .hero .text .dot { opacity:0.4; }
+  .feed { flex:1; padding:6px 6px 0; display:grid; grid-template-columns:1fr 1fr; gap:4px; background:var(--bg); }
+  .card { aspect-ratio:1/1; background:#888; position:relative; overflow:hidden; }
+  .card img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
+  .card .overlay { position:absolute; inset:0; background:linear-gradient(to top,rgba(0,0,0,0.7),rgba(0,0,0,0.2) 50%,transparent); }
+  .card .label { position:absolute; left:8px; right:8px; bottom:6px; color:var(--surface); font-family:var(--serif); font-weight:600; font-size:11px; line-height:1.2; }
+  .card .label .blurb { font-family:-apple-system; font-weight:400; font-size:9px; opacity:0.9; margin-top:2px; }
+  .tabbar { border-top:1px solid var(--line); background:var(--bg); height:36px; display:flex; align-items:center; justify-content:space-around; font-size:9px; color:var(--muted); }
+
+  /* === Inline CTA variants — all replace the original 9px text after "Atlanta, GA ·" === */
+
+  /* I0 reference — original tiny */
+  .vI0 .cta { color:var(--surface); font-size:9px; font-weight:500; border-bottom:1px solid rgba(255,255,255,0.55); padding-bottom:1px; }
+
+  /* I1 — bigger + bolder + brighter underline */
+  .vI1 .meta { font-size: 11px; }
+  .vI1 .cta { color:#fff; font-size:11px; font-weight:600; border-bottom:1.5px solid #fff; padding-bottom:1px; letter-spacing:0.01em; }
+  .vI1 .cta .arrow { display:inline-block; margin-left:3px; }
+
+  /* I2 — pulsing arrow chip after the link (animated dot) */
+  .vI2 .meta { font-size: 11px; }
+  .vI2 .cta { color:#fff; font-size:11px; font-weight:600; border-bottom:1.5px solid #fff; padding-bottom:1px; }
+  .vI2 .pulse-arrow {
+    display:inline-flex; align-items:center; justify-content:center;
+    margin-left:5px;
+    width:14px; height:14px; border-radius:50%;
+    background:#fff; color:var(--ink);
+    font-size:9px; font-weight:700; line-height:1;
+    box-shadow:0 0 0 0 rgba(255,255,255,0.85);
+    animation: pulse 2s ease-out infinite;
+  }
+  @keyframes pulse {
+    0% { box-shadow:0 0 0 0 rgba(255,255,255,0.7); }
+    70% { box-shadow:0 0 0 8px rgba(255,255,255,0); }
+    100% { box-shadow:0 0 0 0 rgba(255,255,255,0); }
+  }
+
+  /* I3 — count-driven CTA: "12 homes →" — info, not chrome */
+  .vI3 .meta { font-size: 11px; }
+  .vI3 .cta { color:#fff; font-size:11px; font-weight:600; border-bottom:1.5px solid #fff; padding-bottom:1px; }
+  .vI3 .cta b { font-weight:700; }
+  .vI3 .cta .arrow { margin-left:3px; }
+
+  /* I4 — inline, text becomes warm accent color (cream-tinted) for color separation */
+  .vI4 .meta { font-size: 11px; }
+  .vI4 .cta { color:#f3d9b1; font-size:11px; font-weight:600; border-bottom:1.5px solid #f3d9b1; padding-bottom:1px; }
+
+  .pick-row { margin-top:24px; padding:16px; background:var(--surface); border:1px solid var(--line); border-radius:8px; }
+  .pick-row strong { font-family:var(--serif); }
+  code { background:var(--bg); padding:2px 6px; border-radius:4px; font-size:12px; }
+  .note { color:var(--ink2); font-size:12px; margin-top:8px; }
+</style>
+</head>
+<body>
+
+<h1>Inline CTA — same place, louder</h1>
+<p class="lede">All 4 keep the original A0 position (right after "Atlanta, GA ·") — nothing moves to a new line, nothing becomes a button. Differs only in <em>how loud</em> the inline link reads. Pick <strong>I1 / I2 / I3 / I4</strong>.</p>
+
+<div class="grid">
+
+  <!-- I0 reference -->
+  <div class="col vI0">
+    <span class="tag">I0</span>
+    <h3>Original (reference)</h3>
+    <p class="sub">9px inline. Confirmed too quiet.</p>
+    <div class="phone">
+      <div class="topbar"><div class="icon"></div><span>Log in</span></div>
+      <div class="hero">
+        <img src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800&q=70" />
+        <div class="gradient"></div>
+        <div class="text">
+          <h2>Peachtree Corners</h2>
+          <div class="meta" style="font-size:9px"><span>Atlanta, GA</span> <span class="dot">·</span> <span class="cta">Live here →</span></div>
+          <p class="desc">Discover what it's really like to live in Peachtree Corners.</p>
+        </div>
+      </div>
+      <div class="feed">
+        <div class="card"><img src="https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=400&q=60" /><div class="overlay"></div><div class="label">Walk the Block<div class="blurb">A real walk</div></div></div>
+        <div class="card"><img src="https://images.unsplash.com/photo-1554995207-c18c203602cb?w=400&q=60" /><div class="overlay"></div><div class="label">Eating Out<div class="blurb">Where you go</div></div></div>
+        <div class="card"><img src="https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=400&q=60" /><div class="overlay"></div><div class="label">School Run<div class="blurb">Drive to schools</div></div></div>
+        <div class="card"><img src="https://images.unsplash.com/photo-1613977257363-707ba9348227?w=400&q=60" /><div class="overlay"></div><div class="label">School Run<div class="blurb">Drive to schools</div></div></div>
+      </div>
+      <div class="tabbar"><span>For You</span><span>Community</span><span>Favorites</span><span>Me</span></div>
+    </div>
+  </div>
+
+  <!-- I1 -->
+  <div class="col vI1">
+    <span class="tag">I1</span>
+    <h3>Brighter + bolder, same place</h3>
+    <p class="sub">Same line, same inline position. Bumped to 11px / weight 600 / pure white / 1.5px underline. Pure typographic confidence — no extra elements.</p>
+    <div class="phone">
+      <div class="topbar"><div class="icon"></div><span>Log in</span></div>
+      <div class="hero">
+        <img src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800&q=70" />
+        <div class="gradient"></div>
+        <div class="text">
+          <h2>Peachtree Corners</h2>
+          <div class="meta"><span>Atlanta, GA</span> <span class="dot">·</span> <span class="cta">Live here<span class="arrow">→</span></span></div>
+          <p class="desc">Discover what it's really like to live in Peachtree Corners.</p>
+        </div>
+      </div>
+      <div class="feed">
+        <div class="card"><img src="https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=400&q=60" /><div class="overlay"></div><div class="label">Walk the Block<div class="blurb">A real walk</div></div></div>
+        <div class="card"><img src="https://images.unsplash.com/photo-1554995207-c18c203602cb?w=400&q=60" /><div class="overlay"></div><div class="label">Eating Out<div class="blurb">Where you go</div></div></div>
+        <div class="card"><img src="https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=400&q=60" /><div class="overlay"></div><div class="label">School Run<div class="blurb">Drive to schools</div></div></div>
+        <div class="card"><img src="https://images.unsplash.com/photo-1613977257363-707ba9348227?w=400&q=60" /><div class="overlay"></div><div class="label">School Run<div class="blurb">Drive to schools</div></div></div>
+      </div>
+      <div class="tabbar"><span>For You</span><span>Community</span><span>Favorites</span><span>Me</span></div>
+    </div>
+  </div>
+
+  <!-- I2 -->
+  <div class="col vI2">
+    <span class="tag">I2</span>
+    <h3>Bold + pulsing dot</h3>
+    <p class="sub">I1 + a small white circle holding the arrow that gently pulses. Motion catches the eye for ~1 cycle then settles. Used sparingly elsewhere on Percho? Risk of feeling promotional.</p>
+    <div class="phone">
+      <div class="topbar"><div class="icon"></div><span>Log in</span></div>
+      <div class="hero">
+        <img src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800&q=70" />
+        <div class="gradient"></div>
+        <div class="text">
+          <h2>Peachtree Corners</h2>
+          <div class="meta"><span>Atlanta, GA</span> <span class="dot">·</span> <span class="cta">Live here</span><span class="pulse-arrow">→</span></div>
+          <p class="desc">Discover what it's really like to live in Peachtree Corners.</p>
+        </div>
+      </div>
+      <div class="feed">
+        <div class="card"><img src="https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=400&q=60" /><div class="overlay"></div><div class="label">Walk the Block<div class="blurb">A real walk</div></div></div>
+        <div class="card"><img src="https://images.unsplash.com/photo-1554995207-c18c203602cb?w=400&q=60" /><div class="overlay"></div><div class="label">Eating Out<div class="blurb">Where you go</div></div></div>
+        <div class="card"><img src="https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=400&q=60" /><div class="overlay"></div><div class="label">School Run<div class="blurb">Drive to schools</div></div></div>
+        <div class="card"><img src="https://images.unsplash.com/photo-1613977257363-707ba9348227?w=400&q=60" /><div class="overlay"></div><div class="label">School Run<div class="blurb">Drive to schools</div></div></div>
+      </div>
+      <div class="tabbar"><span>For You</span><span>Community</span><span>Favorites</span><span>Me</span></div>
+    </div>
+  </div>
+
+  <!-- I3 -->
+  <div class="col vI3">
+    <span class="tag">I3</span>
+    <h3>Count-driven inline</h3>
+    <p class="sub">"12 homes →" instead of "Live here →". Same inline place. The number IS the noticeability — it's specific information, not a label, so the eye lands on it as fact, not chrome.</p>
+    <div class="phone">
+      <div class="topbar"><div class="icon"></div><span>Log in</span></div>
+      <div class="hero">
+        <img src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800&q=70" />
+        <div class="gradient"></div>
+        <div class="text">
+          <h2>Peachtree Corners</h2>
+          <div class="meta"><span>Atlanta, GA</span> <span class="dot">·</span> <span class="cta"><b>12</b> homes for sale<span class="arrow">→</span></span></div>
+          <p class="desc">Discover what it's really like to live in Peachtree Corners.</p>
+        </div>
+      </div>
+      <div class="feed">
+        <div class="card"><img src="https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=400&q=60" /><div class="overlay"></div><div class="label">Walk the Block<div class="blurb">A real walk</div></div></div>
+        <div class="card"><img src="https://images.unsplash.com/photo-1554995207-c18c203602cb?w=400&q=60" /><div class="overlay"></div><div class="label">Eating Out<div class="blurb">Where you go</div></div></div>
+        <div class="card"><img src="https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=400&q=60" /><div class="overlay"></div><div class="label">School Run<div class="blurb">Drive to schools</div></div></div>
+        <div class="card"><img src="https://images.unsplash.com/photo-1613977257363-707ba9348227?w=400&q=60" /><div class="overlay"></div><div class="label">School Run<div class="blurb">Drive to schools</div></div></div>
+      </div>
+      <div class="tabbar"><span>For You</span><span>Community</span><span>Favorites</span><span>Me</span></div>
+    </div>
+  </div>
+
+  <!-- I4 -->
+  <div class="col vI4">
+    <span class="tag">I4</span>
+    <h3>Warm accent color</h3>
+    <p class="sub">I1 styling + warm cream tint instead of pure white. The CTA pops because it's the only non-white text in the hero overlay — color carries the noticeability instead of weight.</p>
+    <div class="phone">
+      <div class="topbar"><div class="icon"></div><span>Log in</span></div>
+      <div class="hero">
+        <img src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800&q=70" />
+        <div class="gradient"></div>
+        <div class="text">
+          <h2>Peachtree Corners</h2>
+          <div class="meta"><span>Atlanta, GA</span> <span class="dot">·</span> <span class="cta">Live here →</span></div>
+          <p class="desc">Discover what it's really like to live in Peachtree Corners.</p>
+        </div>
+      </div>
+      <div class="feed">
+        <div class="card"><img src="https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=400&q=60" /><div class="overlay"></div><div class="label">Walk the Block<div class="blurb">A real walk</div></div></div>
+        <div class="card"><img src="https://images.unsplash.com/photo-1554995207-c18c203602cb?w=400&q=60" /><div class="overlay"></div><div class="label">Eating Out<div class="blurb">Where you go</div></div></div>
+        <div class="card"><img src="https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=400&q=60" /><div class="overlay"></div><div class="label">School Run<div class="blurb">Drive to schools</div></div></div>
+        <div class="card"><img src="https://images.unsplash.com/photo-1613977257363-707ba9348227?w=400&q=60" /><div class="overlay"></div><div class="label">School Run<div class="blurb">Drive to schools</div></div></div>
+      </div>
+      <div class="tabbar"><span>For You</span><span>Community</span><span>Favorites</span><span>Me</span></div>
+    </div>
+  </div>
+
+</div>
+
+<div class="pick-row">
+  <strong>How to decide</strong> · 哪个能让眼睛在 1 秒内 land 上去,但仍然不像一个 button?<br/>
+  我的偏好:<strong>I3 ≥ I1 &gt; I4 &gt; I2</strong>。<br/>
+  · I3 是我最喜欢的方向 —— 用 <em>实际数据</em>(N homes for sale)做 noticeability,买家直接看到供给量,文案 + 信息一举两得。<br/>
+  · I1 是无依赖的 baseline,改 1 行 className 就能上。<br/>
+  · I4 看背景色,在某些浅色 hero 照片上可能不如 I1 显眼。<br/>
+  · I2 的脉冲会 work,但 immersive 项目里加 motion 是最后一招。<br/>
+  回 <code>I1</code> / <code>I2</code> / <code>I3</code> / <code>I4</code>,或者混(例如 "I3 的文案 + I1 的样式")。
+</div>
+
+</body>
+</html>

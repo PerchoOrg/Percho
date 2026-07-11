@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Vivian Zhang — Percho</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,300&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#fafaf7; --ink:#0e0e0c; --muted:#6f6f6a; --line:#e3e1da;
+    --accent:#0e0e0c;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);font-family:'Inter',system-ui,sans-serif;font-weight:400;-webkit-font-smoothing:antialiased}
+  a{color:inherit;text-decoration:none}
+  .serif{font-family:'Fraunces',Georgia,serif;font-weight:400;letter-spacing:-0.01em}
+  .eyebrow{font-size:11px;letter-spacing:0.22em;text-transform:uppercase;color:var(--muted);font-weight:500}
+  .container{max-width:1440px;margin:0 auto;padding:0 48px}
+  @media(max-width:720px){.container{padding:0 22px}}
+
+  /* Nav */
+  nav.top{display:flex;align-items:center;justify-content:space-between;padding:24px 48px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--bg);z-index:10;backdrop-filter:saturate(120%) blur(8px)}
+  nav.top .brand{font-family:'Fraunces',serif;font-size:22px;letter-spacing:-0.02em}
+  nav.top ul{display:flex;gap:36px;list-style:none;margin:0;padding:0;font-size:13px;color:var(--muted)}
+  nav.top .cta{font-size:13px;border:1px solid var(--ink);padding:10px 18px;border-radius:999px;color:var(--ink)}
+
+  /* Hero */
+  .hero{padding:88px 0 56px;border-bottom:1px solid var(--line)}
+  .hero-grid{display:grid;grid-template-columns:1.1fr 1fr;gap:64px;align-items:end}
+  .hero h1{font-family:'Fraunces',serif;font-weight:300;font-size:clamp(56px,8vw,124px);line-height:0.92;letter-spacing:-0.035em;margin:24px 0 0}
+  .hero h1 em{font-style:italic;font-weight:300;color:var(--muted)}
+  .hero .lede{font-family:'Fraunces',serif;font-weight:300;font-size:22px;line-height:1.45;color:#2a2a26;max-width:46ch;margin:36px 0 0}
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:24px;margin-top:64px;padding-top:32px;border-top:1px solid var(--line)}
+  .stats .n{font-family:'Fraunces',serif;font-size:42px;font-weight:400;letter-spacing:-0.02em}
+  .stats .l{font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:var(--muted);margin-top:6px}
+  .portrait{aspect-ratio:4/5;background:#222 center/cover no-repeat;border-radius:2px}
+
+  /* Section heading */
+  .section-head{display:flex;align-items:flex-end;justify-content:space-between;padding:96px 0 32px;border-bottom:1px solid var(--line)}
+  .section-head h2{font-family:'Fraunces',serif;font-weight:300;font-size:64px;letter-spacing:-0.025em;margin:0}
+  .section-head .meta{font-size:12px;letter-spacing:0.18em;text-transform:uppercase;color:var(--muted)}
+
+  /* Gallery */
+  .gallery{padding:48px 0 96px}
+  .row{display:grid;gap:48px;margin-bottom:80px}
+  .row.two{grid-template-columns:1.4fr 1fr}
+  .row.solo{grid-template-columns:1fr}
+  .row.three{grid-template-columns:1fr 1fr 1fr}
+  .card{display:block;cursor:pointer}
+  .card .img{width:100%;aspect-ratio:4/5;background:#222 center/cover no-repeat;border-radius:2px;transition:opacity .4s}
+  .card.tall .img{aspect-ratio:3/4.5}
+  .card.wide .img{aspect-ratio:16/10}
+  .card:hover .img{opacity:0.92}
+  .card .meta{display:flex;justify-content:space-between;margin-top:18px;align-items:flex-start;gap:24px}
+  .card .left .num{font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:var(--muted)}
+  .card .left .addr{font-family:'Fraunces',serif;font-size:22px;letter-spacing:-0.01em;margin-top:4px}
+  .card .left .hood{font-size:13px;color:var(--muted);margin-top:2px}
+  .card .right .price{font-family:'Fraunces',serif;font-size:22px;letter-spacing:-0.01em;text-align:right}
+  .card .right .specs{font-size:12px;color:var(--muted);text-align:right;margin-top:4px}
+  .badge{display:inline-block;font-size:10px;letter-spacing:0.18em;text-transform:uppercase;padding:4px 10px;border:1px solid var(--ink);border-radius:999px;margin-bottom:10px}
+
+  /* Pull quote */
+  .quote{padding:120px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);text-align:center}
+  .quote q{font-family:'Fraunces',serif;font-style:italic;font-weight:300;font-size:clamp(28px,4vw,52px);line-height:1.25;letter-spacing:-0.02em;quotes:"“" "”";display:inline-block;max-width:24ch}
+  .quote .by{margin-top:32px;font-size:11px;letter-spacing:0.22em;text-transform:uppercase;color:var(--muted)}
+
+  /* Footer CTA */
+  footer.cta{padding:120px 0;text-align:center}
+  footer.cta h3{font-family:'Fraunces',serif;font-weight:300;font-size:clamp(40px,6vw,84px);letter-spacing:-0.03em;margin:0}
+  footer.cta .actions{display:inline-flex;gap:12px;margin-top:40px}
+  footer.cta a{font-size:13px;padding:14px 22px;border-radius:999px;border:1px solid var(--ink)}
+  footer.cta a.solid{background:var(--ink);color:var(--bg)}
+  footer.colophon{padding:32px 0;border-top:1px solid var(--line);font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:var(--muted);display:flex;justify-content:space-between}
+
+  @media(max-width:900px){
+    .hero-grid{grid-template-columns:1fr;gap:32px}
+    .row.two,.row.three{grid-template-columns:1fr}
+    .stats{grid-template-columns:repeat(2,1fr)}
+    nav.top ul{display:none}
+  }
+</style>
+</head>
+<body>
+
+<nav class="top">
+  <a class="brand" href="#">Percho</a>
+  <ul>
+    <li>The Work</li><li>About</li><li>Press</li><li>Contact</li>
+  </ul>
+  <a class="cta" href="#">Inquire</a>
+</nav>
+
+<header class="hero">
+  <div class="container hero-grid">
+    <div>
+      <span class="eyebrow">Listing Agent · Eastside, WA</span>
+      <h1 class="serif">Vivian <em>Zhang</em></h1>
+      <p class="lede" id="lede"></p>
+      <div class="stats">
+        <div><div class="n" id="s_sold"></div><div class="l">Homes Sold</div></div>
+        <div><div class="n" id="s_dom"></div><div class="l">Avg Days on Market</div></div>
+        <div><div class="n" id="s_yrs"></div><div class="l">Years Selling</div></div>
+        <div><div class="n" id="s_rev"></div><div class="l">Reviews · 4.96★</div></div>
+      </div>
+    </div>
+    <div class="portrait" id="portrait"></div>
+  </div>
+</header>
+
+<section class="container section-head">
+  <h2 class="serif">The Portfolio</h2>
+  <span class="meta" id="count_label">— Listings —</span>
+</section>
+
+<section class="container gallery" id="gallery"></section>
+
+<section class="quote">
+  <div class="container">
+    <q>She doesn't just list houses. She makes them inevitable.</q>
+    <div class="by">— Buyer · Closed 2026, Medina</div>
+  </div>
+</section>
+
+<footer class="cta container">
+  <h3 class="serif">Selling in the Eastside?</h3>
+  <div class="actions">
+    <a class="solid" href="#">Request a valuation</a>
+    <a href="#">Book a 20-min call</a>
+  </div>
+</footer>
+<div class="colophon container">
+  <span>© Percho · Demo</span><span>Bellevue · Kirkland · Medina · Madison Park</span>
+</div>
+
+<script src="_data.js"></script>
+<script>
+  // Hero
+  document.getElementById('lede').textContent = AGENT.bio;
+  document.getElementById('portrait').style.backgroundImage = `url(${AGENT.avatar.replace('w=400&h=400','w=900&h=1200')})`;
+  document.getElementById('s_sold').textContent = AGENT.sold;
+  document.getElementById('s_dom').textContent = AGENT.avg_dom + 'd';
+  document.getElementById('s_yrs').textContent = AGENT.years;
+  document.getElementById('s_rev').textContent = AGENT.reviews;
+  document.getElementById('count_label').textContent = `— ${LISTINGS.length} Active —`;
+
+  // Gallery: editorial layout — alternating rows
+  const g = document.getElementById('gallery');
+  const rows = [
+    {cls:'two', items:[0,1], shapes:['','tall']},
+    {cls:'solo', items:[2], shapes:['wide']},
+    {cls:'two', items:[3,4], shapes:['tall','']},
+    {cls:'solo', items:[5], shapes:['wide']},
+  ];
+  let n = 1;
+  rows.forEach(r => {
+    const div = document.createElement('div');
+    div.className = 'row ' + r.cls;
+    r.items.forEach((idx,i) => {
+      const L = LISTINGS[idx]; if(!L) return;
+      const num = String(n++).padStart(2,'0');
+      div.insertAdjacentHTML('beforeend', `
+        <a class="card ${r.shapes[i]||''}" href="#">
+          <div class="img" style="background-image:url(${L.cover})"></div>
+          <div class="meta">
+            <div class="left">
+              ${L.status==='Just Listed'?`<span class="badge">Just Listed</span><br/>`:''}
+              <div class="num">No. ${num}</div>
+              <div class="addr">${L.address}</div>
+              <div class="hood">${L.neighborhood} · ${L.city}</div>
+            </div>
+            <div class="right">
+              <div class="price">${fmtPrice(L.price)}</div>
+              <div class="specs">${L.beds} bd · ${L.baths} ba · ${L.sqft.toLocaleString()} sf</div>
+            </div>
+          </div>
+        </a>`);
+    });
+    g.appendChild(div);
+  });
+</script>
+</body>
+</html>

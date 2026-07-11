@@ -1,0 +1,406 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Upload sheet — variants</title>
+<style>
+  :root {
+    --bg: #f3eee7;
+    --surface: #fbf8f3;
+    --ink: #313131;
+    --ink2: #5a5651;
+    --muted: #8a857d;
+    --line: rgba(49, 49, 49, 0.14);
+    --line-strong: rgba(49, 49, 49, 0.32);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Inter', system-ui, sans-serif;
+    background: #e8e2d8;
+    color: var(--ink);
+    padding: 40px 20px;
+  }
+  h1 {
+    font-family: 'Source Serif 4', Georgia, serif;
+    font-weight: 400;
+    font-size: 22px;
+    letter-spacing: -0.01em;
+    margin: 0 0 6px;
+  }
+  .sub { color: var(--ink2); font-size: 13px; margin-bottom: 28px; }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+    max-width: 1500px;
+    margin: 0 auto;
+  }
+  @media (max-width: 1100px) { .grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 600px) { .grid { grid-template-columns: 1fr; } }
+  .col h2 {
+    font-family: 'Source Serif 4', Georgia, serif;
+    font-weight: 400;
+    font-size: 17px;
+    margin: 0 0 4px;
+  }
+  .col .desc { font-size: 12px; color: var(--ink2); margin-bottom: 14px; min-height: 48px; line-height: 1.45; }
+  .col .pros { font-size: 11px; color: var(--muted); margin-top: 12px; line-height: 1.5; }
+
+  /* Phone frame */
+  .phone {
+    width: 100%;
+    aspect-ratio: 9 / 19.5;
+    background: var(--bg);
+    border-radius: 32px;
+    border: 1px solid var(--line-strong);
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 8px 32px rgba(49, 49, 49, 0.12);
+  }
+  .status {
+    height: 38px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 22px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  /* Background stub: just a dim grid hint */
+  .bg-hint {
+    position: absolute; inset: 38px 0 0 0;
+    padding: 8px 12px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .bg-card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    aspect-ratio: 1;
+    opacity: 0.55;
+  }
+  /* Backdrop */
+  .scrim {
+    position: absolute; inset: 0;
+    background: rgba(49, 49, 49, 0.42);
+    backdrop-filter: blur(2px);
+  }
+  .scrim.scrim-hint::after {
+    content: 'Tap anywhere to close';
+    position: absolute;
+    top: 18%;
+    left: 50%;
+    transform: translateX(-50%);
+    color: rgba(255,255,255,0.78);
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    font-weight: 500;
+  }
+
+  /* ---------- Variant: Current ---------- */
+  .v-current .sheet {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    background: var(--bg);
+    border-top: 1px solid var(--line);
+    border-radius: 16px 16px 0 0;
+    padding: 14px 16px 28px;
+  }
+  .v-current .grabber {
+    width: 40px; height: 4px; border-radius: 2px;
+    background: var(--line);
+    margin: 0 auto 12px;
+  }
+  .v-current .title {
+    font-family: 'Source Serif 4', Georgia, serif;
+    font-size: 17px;
+    padding: 0 8px 8px;
+  }
+  .v-current .btn {
+    display: block;
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 13px 16px;
+    text-align: left;
+    font-size: 14px;
+    color: var(--ink);
+    margin-top: 8px;
+  }
+  .v-current .btn.muted { background: var(--bg); color: var(--ink2); }
+
+  /* ---------- Variant A: iOS grouped ---------- */
+  .v-a .sheet {
+    position: absolute; left: 8px; right: 8px; bottom: 8px;
+  }
+  .v-a .group {
+    background: var(--surface);
+    border-radius: 14px;
+    overflow: hidden;
+    border: 1px solid var(--line);
+  }
+  .v-a .group + .group { margin-top: 8px; }
+  .v-a .row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 16px;
+    font-size: 15px;
+    color: var(--ink);
+  }
+  .v-a .row + .row { border-top: 1px solid var(--line); }
+  .v-a .row .icn {
+    width: 22px; height: 22px;
+    color: var(--ink2);
+    flex-shrink: 0;
+  }
+  .v-a .row.cancel {
+    justify-content: center;
+    font-weight: 500;
+    color: var(--ink);
+  }
+
+  /* ---------- Variant B: icon grid + explicit close ---------- */
+  .v-b .sheet {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    background: var(--bg);
+    border-top: 1px solid var(--line);
+    border-radius: 20px 20px 0 0;
+    padding: 8px 16px 28px;
+  }
+  .v-b .grabber { width: 40px; height: 4px; border-radius: 2px; background: var(--line); margin: 0 auto 8px; }
+  .v-b .head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 4px 4px 14px;
+  }
+  .v-b .head h3 {
+    font-family: 'Source Serif 4', Georgia, serif;
+    font-weight: 400;
+    font-size: 17px;
+    margin: 0;
+  }
+  .v-b .x {
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--ink2);
+  }
+  .v-b .row3 {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+  }
+  .v-b .tile {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 18px 8px 14px;
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+    font-size: 12px;
+    color: var(--ink);
+  }
+  .v-b .tile .icn {
+    width: 26px; height: 26px;
+    color: var(--ink);
+  }
+
+  /* ---------- Variant C: inline pill bar above FAB ---------- */
+  .v-c .scrim { background: rgba(49, 49, 49, 0.18); backdrop-filter: blur(1px); }
+  .v-c .pillbar {
+    position: absolute;
+    left: 50%;
+    bottom: 92px;
+    transform: translateX(-50%);
+    display: flex; gap: 8px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 8px;
+    box-shadow: 0 8px 24px rgba(49,49,49,0.18);
+  }
+  .v-c .pill {
+    display: flex; flex-direction: column; align-items: center;
+    gap: 4px;
+    padding: 10px 14px;
+    background: var(--bg);
+    border-radius: 999px;
+    font-size: 11px;
+    color: var(--ink);
+    min-width: 70px;
+  }
+  .v-c .pill .icn { width: 22px; height: 22px; color: var(--ink); }
+  .v-c .fab {
+    position: absolute;
+    left: 50%;
+    bottom: 24px;
+    transform: translateX(-50%) rotate(45deg);
+    width: 52px; height: 52px;
+    border-radius: 50%;
+    background: var(--ink);
+    color: var(--bg);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 28px;
+    font-weight: 300;
+    box-shadow: 0 6px 18px rgba(49,49,49,0.3);
+  }
+
+  .footer-bar {
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    height: 64px;
+    background: var(--surface);
+    border-top: 1px solid var(--line);
+  }
+
+</style>
+</head>
+<body>
+
+<h1>Upload sheet — Current vs A / B / C</h1>
+<p class="sub">Same fake content. Pick by saying "current" / "A" / "B" / "C". Light theme · token-accurate.</p>
+
+<div class="grid">
+
+  <!-- ============ CURRENT ============ -->
+  <div class="col">
+    <h2>Current</h2>
+    <div class="desc">4 same-shape rectangles stacked. Cancel = same weight as actions. Backdrop tap works but no visual hint.</div>
+    <div class="phone v-current">
+      <div class="status"><span>1:32</span><span>22%</span></div>
+      <div class="bg-hint">
+        <div class="bg-card"></div><div class="bg-card"></div>
+        <div class="bg-card"></div><div class="bg-card"></div>
+      </div>
+      <div class="scrim"></div>
+      <div class="sheet">
+        <div class="grabber"></div>
+        <div class="title">Upload</div>
+        <button class="btn">Choose from album</button>
+        <button class="btn">Video</button>
+        <button class="btn">Photo</button>
+        <button class="btn muted">Cancel</button>
+      </div>
+    </div>
+    <div class="pros">
+      ✓ familiar · ✗ visually flat · ✗ Cancel is the only clear close · ✗ wastes vertical space
+    </div>
+  </div>
+
+  <!-- ============ A: iOS grouped ============ -->
+  <div class="col">
+    <h2>A — iOS-grouped</h2>
+    <div class="desc">Native-feeling action sheet. Three actions in one card with dividers; Cancel as a separate card with a gap (iOS convention = "this is the escape hatch"). Icons added.</div>
+    <div class="phone v-a">
+      <div class="status"><span>1:32</span><span>22%</span></div>
+      <div class="bg-hint">
+        <div class="bg-card"></div><div class="bg-card"></div>
+        <div class="bg-card"></div><div class="bg-card"></div>
+      </div>
+      <div class="scrim scrim-hint"></div>
+      <div class="sheet">
+        <div class="group">
+          <div class="row">
+            <svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="18" height="14" rx="2"/><path d="M3 14l5-5 4 4 3-3 6 6"/></svg>
+            Choose from album
+          </div>
+          <div class="row">
+            <svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2" y="6" width="14" height="12" rx="2"/><path d="M22 7l-6 5 6 5z"/></svg>
+            Video
+          </div>
+          <div class="row">
+            <svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 7h3l2-2h6l2 2h3a1 1 0 011 1v10a1 1 0 01-1 1H4a1 1 0 01-1-1V8a1 1 0 011-1z"/><circle cx="12" cy="13" r="3.5"/></svg>
+            Photo
+          </div>
+        </div>
+        <div class="group">
+          <div class="row cancel">Cancel</div>
+        </div>
+      </div>
+    </div>
+    <div class="pros">
+      ✓ instantly readable iOS pattern · ✓ icons add scannability · ✓ Cancel visually demoted · ✓ scrim hint label · — still has Cancel row
+    </div>
+  </div>
+
+  <!-- ============ B: icon grid + X ============ -->
+  <div class="col">
+    <h2>B — Icon grid + ✕</h2>
+    <div class="desc">3 large icon tiles in a horizontal row. Title "Upload" with explicit ✕ close button on the right. No Cancel row. Sheet height roughly half.</div>
+    <div class="phone v-b">
+      <div class="status"><span>1:32</span><span>22%</span></div>
+      <div class="bg-hint">
+        <div class="bg-card"></div><div class="bg-card"></div>
+        <div class="bg-card"></div><div class="bg-card"></div>
+      </div>
+      <div class="scrim scrim-hint"></div>
+      <div class="sheet">
+        <div class="grabber"></div>
+        <div class="head">
+          <h3>Upload</h3>
+          <div class="x">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg>
+          </div>
+        </div>
+        <div class="row3">
+          <div class="tile">
+            <svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="14" rx="2"/><path d="M3 14l5-5 4 4 3-3 6 6"/></svg>
+            Album
+          </div>
+          <div class="tile">
+            <svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 7h3l2-2h6l2 2h3a1 1 0 011 1v10a1 1 0 01-1 1H4a1 1 0 01-1-1V8a1 1 0 011-1z"/><circle cx="12" cy="13" r="3.5"/></svg>
+            Photo
+          </div>
+          <div class="tile">
+            <svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="6" width="14" height="12" rx="2"/><path d="M22 7l-6 5 6 5z"/></svg>
+            Video
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="pros">
+      ✓ compact (≈half height) · ✓ ✕ + scrim + grabber = 3 ways to close · ✓ icons primary, label secondary · — slightly less convention-bound
+    </div>
+  </div>
+
+  <!-- ============ C: inline pill bar ============ -->
+  <div class="col">
+    <h2>C — Inline pill bar</h2>
+    <div class="desc">No bottom sheet. FAB rotates to ✕; 3 pills float above it. Tap pill = pick. Tap ✕ or anywhere outside = close. Lightest interaction surface possible.</div>
+    <div class="phone v-c">
+      <div class="status"><span>1:32</span><span>22%</span></div>
+      <div class="bg-hint">
+        <div class="bg-card"></div><div class="bg-card"></div>
+        <div class="bg-card"></div><div class="bg-card"></div>
+      </div>
+      <div class="footer-bar"></div>
+      <div class="scrim"></div>
+      <div class="pillbar">
+        <div class="pill">
+          <svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="18" height="14" rx="2"/><path d="M3 14l5-5 4 4 3-3 6 6"/></svg>
+          Album
+        </div>
+        <div class="pill">
+          <svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 7h3l2-2h6l2 2h3a1 1 0 011 1v10a1 1 0 01-1 1H4a1 1 0 01-1-1V8a1 1 0 011-1z"/><circle cx="12" cy="13" r="3.5"/></svg>
+          Photo
+        </div>
+        <div class="pill">
+          <svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2" y="6" width="14" height="12" rx="2"/><path d="M22 7l-6 5 6 5z"/></svg>
+          Video
+        </div>
+      </div>
+      <div class="fab">+</div>
+    </div>
+    <div class="pros">
+      ✓ no sheet at all · ✓ FAB = ✕ when open (clear close affordance) · ✓ feels playful · — only triggers from FAB (desktop sidebar "+ New" still needs a sheet)
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>
