@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { CommunitiesNearbyClient } from './CommunitiesNearbyClient';
 
 export const metadata: Metadata = {
-  title: 'Nearby Neighborhoods · Vicinity',
+  title: 'Nearby Neighborhoods · Percho',
   description: 'Neighborhoods with videos near your current location.',
 };
 

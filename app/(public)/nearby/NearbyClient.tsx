@@ -147,7 +147,7 @@ export function NearbyClient() {
             See homes near you
           </h2>
           <p className="mt-2 text-ink2 text-sm leading-relaxed">
-            Vicinity uses your location to show listings within your search radius. Your location
+            Percho uses your location to show listings within your search radius. Your location
             stays on your device — we only use it to filter what you see.
           </p>
           <div className="mt-6 flex flex-col gap-2">

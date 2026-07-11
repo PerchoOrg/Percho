@@ -28,7 +28,7 @@ import { photoPublicUrl } from '@/lib/supabase/storage';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Search · Vicinity',
+  title: 'Search · Percho',
 };
 
 export const dynamic = 'force-dynamic';

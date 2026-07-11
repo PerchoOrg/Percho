@@ -77,7 +77,7 @@ export function SignupForm({ redirect }: { redirect: string }) {
   return (
     <form onSubmit={handleSubmit} className="rounded-2xl border border-line bg-surface p-8">
       <h1 className="font-serif text-3xl text-ink">Create account</h1>
-      <p className="mt-1 text-sm text-muted">Join Vicinity in seconds.</p>
+      <p className="mt-1 text-sm text-muted">Join Percho in seconds.</p>
 
       <fieldset className="mt-6">
         <legend className="text-xs text-ink2">I am a…</legend>

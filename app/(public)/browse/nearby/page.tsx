@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { NearbyClient } from '../../nearby/NearbyClient';
 
 export const metadata: Metadata = {
-  title: 'Nearby · Vicinity',
+  title: 'Nearby · Percho',
   description: 'Listings near your current location.',
 };
 

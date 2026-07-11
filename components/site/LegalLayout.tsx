@@ -23,7 +23,7 @@ export function LegalLayout({
       <header className="border-b border-line">
         <div className="max-w-3xl mx-auto px-6 pt-16 pb-8">
           <Link href="/" className="font-serif text-xl text-ink hover:text-ink2">
-            Vicinity<span className="text-ink">.</span>
+            Percho<span className="text-ink">.</span>
           </Link>
         </div>
       </header>

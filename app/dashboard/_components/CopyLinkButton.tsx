@@ -32,7 +32,7 @@ export function CopyLinkButton({ path, display }: Props) {
       try {
         await (navigator as Navigator & { share: (data: ShareData) => Promise<void> }).share({
           url,
-          title: 'Vicinity listing',
+          title: 'Percho listing',
         });
         return;
       } catch {

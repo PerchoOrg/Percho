@@ -9,7 +9,7 @@ import type { Metadata } from 'next';
 import { SavedClient } from './_components/SavedClient';
 
 export const metadata: Metadata = {
-  title: 'Favorites · Vicinity',
+  title: 'Favorites · Percho',
   description: 'Listings and neighborhoods you have saved or liked while browsing.',
 };
 

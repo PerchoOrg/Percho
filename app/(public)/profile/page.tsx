@@ -26,7 +26,7 @@ import { EditableBuyerIdentity } from './_components/EditableBuyerIdentity';
 // case Nearby comes back.
 
 export const metadata: Metadata = {
-  title: 'Profile · Vicinity',
+  title: 'Profile · Percho',
   description: 'Account and settings.',
 };
 

@@ -1,5 +1,5 @@
 /**
- * BrandMark — global Vicinity wordmark used in SiteHeader and auth chrome.
+ * BrandMark — global Percho wordmark used in SiteHeader and auth chrome.
  *
  * 2026-06-20 phase44.7: reverted to pure tracked-caps wordmark per product
  * call. The V monogram tile (phase44.5) was rejected as too logo-heavy;
@@ -32,7 +32,7 @@ export function BrandMark({ href = '/', className }: Props) {
   return (
     <Link
       href={href}
-      aria-label="Vicinity — home"
+      aria-label="Percho — home"
       className={`inline-block font-medium uppercase text-ink transition hover:opacity-70 focus-visible:outline-none focus-visible:underline focus-visible:underline-offset-4 ${
         className ?? ''
       }`}
@@ -41,7 +41,7 @@ export function BrandMark({ href = '/', className }: Props) {
         fontSize: '13px',
       }}
     >
-      VICINITY
+      PERCHO
     </Link>
   );
 }

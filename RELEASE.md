@@ -2,6 +2,11 @@
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
+## v0.75.1 — 2026-07-11
+
+🚀 Features
+- **We're now Percho.** The app has been renamed from Vicinity to Percho. Same team, same product, new name. All UI, page titles, and footers now say Percho. Emails and web address haven't changed yet — those will move in the next couple of releases.
+
 ## v0.75.0 — 2026-07-06
 
 ### 🔧 Technical
