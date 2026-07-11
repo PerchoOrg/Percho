@@ -21,7 +21,7 @@ import { getRollupStats } from '@/lib/analytics/listing-stats';
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 
-export const metadata = { title: 'Analytics · Vicinity' };
+export const metadata = { title: 'Analytics · Percho' };
 
 const RING_ACCENT = '#6b7a5a';
 

@@ -3,7 +3,7 @@ import { MapPin, Users, Video } from 'lucide-react';
 import { WaitlistForm } from './_components/WaitlistForm';
 
 export const metadata: Metadata = {
-  title: 'Vicinity for Agents — Video-first home discovery for Atlanta',
+  title: 'Percho for Agents — Video-first home discovery for Atlanta',
   description:
     'Join the Atlanta beta. Enter an address, upload one video, reach real Atlanta home-buyers. Free, non-exclusive, 100% of leads are yours.',
 };
@@ -20,12 +20,12 @@ export default function AgentsLandingPage() {
     <div className="min-h-dvh bg-bg text-ink">
       {/* Hero */}
       <section className="mx-auto max-w-3xl px-5 pt-14 pb-10 sm:pt-20">
-        <p className="text-xs uppercase tracking-eyebrow text-muted">Vicinity for Agents</p>
+        <p className="text-xs uppercase tracking-eyebrow text-muted">Percho for Agents</p>
         <h1 className="mt-4 font-serif text-4xl leading-tight text-ink sm:text-5xl">
           Your listings deserve better than a photo grid.
         </h1>
         <p className="mt-5 text-base text-ink2 sm:text-lg">
-          Vicinity is a video-first, swipe-based feed for Atlanta home-buyers. Enter the address,
+          Percho is a video-first, swipe-based feed for Atlanta home-buyers. Enter the address,
           upload one video, and we deliver it to buyers who match. Free during beta. 100% of leads
           are yours.
         </p>
@@ -112,7 +112,7 @@ export default function AgentsLandingPage() {
           />
           <Faq
             q="Do I need to pull my listings from Zillow?"
-            a="No. Vicinity is non-exclusive."
+            a="No. Percho is non-exclusive."
           />
           <Faq q="Where does the data come from?" a="FMLS, via Bridge Interactive." />
           <Faq q="What markets?" a="Atlanta metro only right now." />
@@ -133,7 +133,7 @@ export default function AgentsLandingPage() {
       {/* Footer */}
       <footer className="border-t border-line py-8">
         <div className="mx-auto flex max-w-5xl flex-col items-center gap-3 px-5 text-sm text-ink2 sm:flex-row sm:justify-between">
-          <p>© {new Date().getFullYear()} Vicinity</p>
+          <p>© {new Date().getFullYear()} Percho</p>
           <nav className="flex gap-5">
             <a href="/privacy" className="hover:text-ink">
               Privacy

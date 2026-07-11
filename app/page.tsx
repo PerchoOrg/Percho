@@ -62,7 +62,7 @@ export default async function HomePage() {
               fontSize: '12px',
             }}
           >
-            VICINITY
+            PERCHO
           </div>
           <h1 className="display-xl max-w-4xl text-white drop-shadow-[0_2px_24px_rgba(0,0,0,0.5)]">
             {LANDING_TAGLINE}

@@ -108,14 +108,14 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { agentSlug } = await params;
   const agent = await fetchAgent(agentSlug);
-  if (!agent) return { title: 'Agent not found | Vicinity' };
-  const brokerage = agent.brokerage ?? 'Vicinity';
+  if (!agent) return { title: 'Agent not found | Percho' };
+  const brokerage = agent.brokerage ?? 'Percho';
   return {
-    title: `${agent.name} — ${brokerage} | Vicinity`,
-    description: agent.bio ?? `See ${agent.name}'s listings on Vicinity.`,
+    title: `${agent.name} — ${brokerage} | Percho`,
+    description: agent.bio ?? `See ${agent.name}'s listings on Percho.`,
     openGraph: {
       title: `${agent.name} — ${brokerage}`,
-      description: agent.bio ?? `${agent.name}'s listings on Vicinity.`,
+      description: agent.bio ?? `${agent.name}'s listings on Percho.`,
       images: agent.headshot_url ? [{ url: agent.headshot_url }] : undefined,
     },
   };
@@ -144,7 +144,7 @@ export default async function AgentProfilePage({
           40% less whitespace. */}
       <section>
         <div className="mx-auto max-w-6xl px-6 py-8 md:py-12">
-          <div className="eyebrow mb-3">Vicinity · Listing Specialist</div>
+          <div className="eyebrow mb-3">Percho · Listing Specialist</div>
 
           <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
             <div className="flex items-center gap-5 md:items-end">
@@ -232,7 +232,7 @@ export default async function AgentProfilePage({
         <div className="mx-auto max-w-6xl px-6 py-8 text-muted text-xs tracking-wide">
           <p>
             <Link href="/" className="hover:text-ink hover:underline">
-              Vicinity
+              Percho
             </Link>{' '}
             · Equal Housing Opportunity. All listings shown are submitted by the agent and are
             subject to verification.

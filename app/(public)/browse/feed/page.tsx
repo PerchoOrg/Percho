@@ -6,7 +6,7 @@ import {
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Explore · Vicinity',
+  title: 'Explore · Percho',
   description: 'Swipe through homes for sale. Video-first listing tours.',
 };
 

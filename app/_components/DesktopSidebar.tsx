@@ -6,7 +6,7 @@
  * Phase 45 (2026-06-20). Vertical sidebar pinned to the left edge. Primary
  * tabs as a vertical column.
  *
- * Phase 45.9 (2026-06-20): VICINITY brandmark removed per owner. Agent
+ * Phase 45.9 (2026-06-20): PERCHO brandmark removed per owner. Agent
  * "+ New" promoted to the first slot (top-left). + New now opens the same
  * Choose-from-album / Video / Photo source picker the mobile UploadFAB
  * uses (shared via useUploadSheet hook).

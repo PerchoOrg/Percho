@@ -1,8 +1,8 @@
 import { LegalLayout } from '@/components/site/LegalLayout';
 
 export const metadata = {
-  title: 'Terms of Service — Vicinity',
-  description: 'The terms governing your use of Vicinity.',
+  title: 'Terms of Service — Percho',
+  description: 'The terms governing your use of Percho.',
 };
 
 export default function TermsPage() {
@@ -10,7 +10,7 @@ export default function TermsPage() {
     <LegalLayout eyebrow="Legal" title="Terms of Service" updated="June 20, 2026">
       <p>
         These Terms of Service (&ldquo;Terms&rdquo;) govern your access to and use of vicinities.cc
-        and related services operated by Vicinity, Inc. (&ldquo;Vicinity&rdquo;, &ldquo;we&rdquo;,
+        and related services operated by Vicinity, Inc. (&ldquo;Percho&rdquo;, &ldquo;we&rdquo;,
         &ldquo;us&rdquo;).
       </p>
       <p>
@@ -33,14 +33,14 @@ export default function TermsPage() {
 
       <h2>3. Not a brokerage</h2>
       <p>
-        Vicinity is a technology platform. We do not represent buyers or sellers, do not list or
+        Percho is a technology platform. We do not represent buyers or sellers, do not list or
         sell homes, and do not provide legal, tax, or real estate advice. All transactions occur
         off-platform between buyers, sellers, and their licensed representatives.
       </p>
 
       <h2>4. User content</h2>
       <p>
-        Agents retain ownership of content they upload. By uploading, you grant Vicinity a
+        Agents retain ownership of content they upload. By uploading, you grant Percho a
         worldwide, non-exclusive, royalty-free license to host, display, reformat, and distribute
         that content as part of the Service.
       </p>
@@ -72,7 +72,7 @@ export default function TermsPage() {
 
       <h2>8. Limitation of liability</h2>
       <p>
-        To the maximum extent permitted by law, Vicinity is not liable for indirect, incidental, or
+        To the maximum extent permitted by law, Percho is not liable for indirect, incidental, or
         consequential damages arising from your use of the Service.
       </p>
 

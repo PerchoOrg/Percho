@@ -1,15 +1,15 @@
 import { LegalLayout } from '@/components/site/LegalLayout';
 
 export const metadata = {
-  title: 'Contact — Vicinity',
-  description: 'Get in touch with the Vicinity team.',
+  title: 'Contact — Percho',
+  description: 'Get in touch with the Percho team.',
 };
 
 export default function ContactPage() {
   return (
     <LegalLayout eyebrow="Contact" title="Get in touch.">
       <p>
-        Vicinity is a small team. We read every message; we may not reply to every one. Use the
+        Percho is a small team. We read every message; we may not reply to every one. Use the
         address that fits.
       </p>
 

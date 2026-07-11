@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/server';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'For You · Vicinity',
+  title: 'For You · Percho',
   description: 'Listings recommended for you. Tap a card to start a video tour.',
 };
 

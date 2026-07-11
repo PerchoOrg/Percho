@@ -1,9 +1,9 @@
 import { LegalLayout } from '@/components/site/LegalLayout';
 
 export const metadata = {
-  title: 'Fair Housing — Vicinity',
+  title: 'Fair Housing — Percho',
   description:
-    'Vicinity is committed to equal housing opportunity. Learn about your rights and our policies.',
+    'Percho is committed to equal housing opportunity. Learn about your rights and our policies.',
 };
 
 export default function FairHousingPage() {
@@ -14,7 +14,7 @@ export default function FairHousingPage() {
       updated="June 20, 2026"
     >
       <p>
-        Vicinity supports equal housing opportunity and complies with the federal Fair Housing Act
+        Percho supports equal housing opportunity and complies with the federal Fair Housing Act
         and applicable state and local laws.
       </p>
 
@@ -36,7 +36,7 @@ export default function FairHousingPage() {
         </li>
       </ul>
 
-      <h2>What this means on Vicinity</h2>
+      <h2>What this means on Percho</h2>
       <ul>
         <li>
           Listing copy, video voice-over, and agent profiles must not state preferences or
@@ -53,7 +53,7 @@ export default function FairHousingPage() {
       </ul>
 
       <h2>Reporting a violation</h2>
-      <p>If you believe a listing, agent, or buyer on Vicinity has violated fair-housing law:</p>
+      <p>If you believe a listing, agent, or buyer on Percho has violated fair-housing law:</p>
       <ul>
         <li>
           Email us at <a href="mailto:legal@vicinities.cc">legal@vicinities.cc</a> with the listing
@@ -70,7 +70,7 @@ export default function FairHousingPage() {
 
       <h2>Our role</h2>
       <p>
-        Vicinity is a technology platform, not a real estate broker. We moderate listings and agent
+        Percho is a technology platform, not a real estate broker. We moderate listings and agent
         profiles for compliance and remove content that violates these policies. We do not arbitrate
         transactions between buyers and agents.
       </p>

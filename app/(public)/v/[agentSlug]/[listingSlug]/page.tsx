@@ -39,7 +39,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { agentSlug, listingSlug } = await params;
   const data = await loadListingFeedBySlug(agentSlug, listingSlug);
-  if (!data) return { title: 'Listing not found · Vicinity' };
+  if (!data) return { title: 'Listing not found · Percho' };
   const { listing, agent, listingVideos } = data;
 
   const title = `${listing.address} · ${listing.city}, ${listing.state}`;
@@ -73,7 +73,7 @@ export async function generateMetadata({
       description,
       url,
       type: 'website',
-      siteName: 'Vicinity',
+      siteName: 'Percho',
       images,
     },
     twitter: {

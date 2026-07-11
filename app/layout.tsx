@@ -22,7 +22,7 @@ const serifDisplay = Source_Serif_4({
 });
 
 export const metadata: Metadata = {
-  title: { default: 'Vicinity', template: '%s | Vicinity' },
+  title: { default: 'Percho', template: '%s | Percho' },
   description: 'Property swipe platform for US homebuyers — vertical video feed for listings.',
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'),
 };

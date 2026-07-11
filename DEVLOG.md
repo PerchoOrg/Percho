@@ -2,6 +2,26 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## Phase 75.1 (2026-07-11) — Rebrand → Percho (Phase 1: UI-facing text)
+
+**Trigger:** owner 决定应用改名 Percho,域名 percho.com 已拿(DNS 未切)。三阶段策略:Phase 1 = UI/user-visible text;Phase 2 = 代码 identifier + 文档 + design mocks;Phase 3 = systemd service / DB / log path / 邮箱域 / 法律实体 —— 等域名切完再动。
+
+**Objective:** 所有用户可见的品牌词 `Vicinity` → `Percho`、`VICINITY` → `PERCHO`。**不动**:`vicinities.cc` 域名(邮箱 MX 还在,DNS 未切);`Vicinity, Inc.` 法律实体名(公司注册未改);代码 identifier / DB / service 名 / lib 注释(Phase 2)。
+
+**Actions:**
+- 28 files across `app/` + `components/`,62 处 brand-word 替换。核心 surface:`app/layout.tsx` (`<title>` 模板)、`components/site/BrandMark.tsx` (wordmark)、`components/site/SiteFooter.tsx` (© + disclaimer)、terms/privacy/contact/fair-housing/about、agents landing、v/a/c dynamic pages 的 metadata。
+- 保护规则(Python regex + 占位符 protect/restore):`\bVicinity\b`→`Percho`、`\bVICINITY\b`→`PERCHO`,但先把 `vicinities.cc` / `Vicinity, Inc.` / `Vicinity-app`(注释里的 app-shape 术语)替换为占位符,处理完再恢复。lowercase `vicinity`(基本都是代码/URL 片段)本轮不动。
+- 3 处 `Vicinity, Inc.` 保留(terms.tsx:13、contact.tsx:41、privacy.tsx:12)—— terms/privacy 里现在读起来是 `operated by Vicinity, Inc. ("Percho", "we")`,法律上略拗口但技术正确(公司注册名未改)。Phase 3 若 Percho, Inc. 完成登记再统一。
+
+**Decisions:**
+- 分 3 阶段而非 big-bang:上次 74.7 教训是 push≠merge≠restart,一次性 395 处替换涵盖代码/service/DB,一次爆炸难 rollback。Phase 1 只碰渲染层文本,worst-case 视觉回滚。
+- 邮箱 `@vicinities.cc` 保留:改了收不到信,MX 未切前不能动。
+- Systemd `vicinity-render-worker.service` 保留:重命名 = disable/enable + log path 迁移,风险与 UI rebrand 无关,归 Phase 3。
+
+**Verification:** `npx tsc --noEmit` 0 error。剩余 `Vicinity` 引用 grep 只剩 3 处 `Vicinity, Inc.` 法律实体,符合预期。
+
+**Next steps:** push branch → Vercel preview → owner 肉眼扫 landing/feed/footer/terms → merge to main → Phase 2 kick off(代码 identifier + docs + design mocks)。
+
 ## Phase 75 (2026-07-06 23:48 UTC) — 单方向渲染:每 listing 只留一个视频
 
 **Trigger:** owner 74.17 后追问「render worker 还需要生成 2 个视频吗 横竖都用的一个视频源」。审阅后确认:74.17 之后 feed 和 fullscreen 都用 landscape uid,portrait 版本对 landscape listing 是纯浪费(CF Stream 存储 + 编码成本)。owner 拍板:「两种情况下,都只有一个视频」+「一起做」(含清理旧 double-write)。

@@ -1,15 +1,15 @@
 import { LegalLayout } from '@/components/site/LegalLayout';
 
 export const metadata = {
-  title: 'Privacy Policy — Vicinity',
-  description: 'How Vicinity collects, uses, and protects your information.',
+  title: 'Privacy Policy — Percho',
+  description: 'How Percho collects, uses, and protects your information.',
 };
 
 export default function PrivacyPage() {
   return (
     <LegalLayout eyebrow="Legal" title="Privacy Policy" updated="June 20, 2026">
       <p>
-        This Privacy Policy describes how Vicinity, Inc. (&ldquo;Vicinity&rdquo;, &ldquo;we&rdquo;,
+        This Privacy Policy describes how Vicinity, Inc. (&ldquo;Percho&rdquo;, &ldquo;we&rdquo;,
         &ldquo;us&rdquo;) collects, uses, and shares information when you use vicinities.cc and
         related services (the &ldquo;Service&rdquo;).
       </p>

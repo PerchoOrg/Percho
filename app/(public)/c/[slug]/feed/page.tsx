@@ -47,7 +47,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   return {
-    title: `${slug} · Vicinity`,
+    title: `${slug} · Percho`,
     description: 'Swipe through the neighborhood — schools, walks, food.',
   };
 }

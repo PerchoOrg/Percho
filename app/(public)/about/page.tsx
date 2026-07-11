@@ -1,16 +1,16 @@
 import { LegalLayout } from '@/components/site/LegalLayout';
 
 export const metadata = {
-  title: 'About — Vicinity',
+  title: 'About — Percho',
   description:
-    'Vicinity is a swipe-first home-discovery platform. Real listings, real video, real neighborhoods.',
+    'Percho is a swipe-first home-discovery platform. Real listings, real video, real neighborhoods.',
 };
 
 export default function AboutPage() {
   return (
     <LegalLayout eyebrow="About" title="A quieter way to find a home.">
       <p>
-        Vicinity is what TikTok would look like if it were built for buying a home. Real listings
+        Percho is what TikTok would look like if it were built for buying a home. Real listings
         from real agents — shown as video, with real neighborhood context — instead of a spreadsheet
         of beds, baths, and zip codes.
       </p>
@@ -44,7 +44,7 @@ export default function AboutPage() {
 
       <h2>Who we are</h2>
       <p>
-        Vicinity is a small team based in the United States. We are not a brokerage. We do not buy
+        Percho is a small team based in the United States. We are not a brokerage. We do not buy
         or sell homes. We build the platform that lets agents and buyers find each other.
       </p>
 
