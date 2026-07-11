@@ -1,4 +1,9 @@
-# Vicinity Release Notes
+# Percho Release Notes
+
+> The product was renamed from **Vicinity** to **Percho** on **2026-07-11**.
+> Historical entries below preserve the original name in-place — release notes
+> are a record of what was shipped under the product's name at the time.
+
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
