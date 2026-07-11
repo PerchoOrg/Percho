@@ -7,6 +7,23 @@
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
+## 2026-07-11 04:20 UTC — Rebrand cleanup pt.2: localStorage keys (no users → no migration needed)
+
+**Objective:** owner 说没有真实用户,不要留 tech debt。上一次(Phase 75.2 / 04:14)保留的 2 个 localStorage key `vicinity_device_id` / `vicinity_session_id` 现在可以直接 rename,不需要写 migration。
+
+**Actions:**
+- `lib/buyer/device-id.ts` L15: `STORAGE_KEY = 'vicinity_device_id'` → `'percho_device_id'`
+- `lib/events/track.ts` L33: `SESSION_KEY = 'vicinity_session_id'` → `'percho_session_id'`
+- `tsc --noEmit`: 0 error
+- 全 repo grep `vicinity_device_id|vicinity_session_id` (excl `.next` build 产物、`node_modules`) 0 匹配
+
+**Decisions:**
+- **Straight rename,不写 migration**。migration 逻辑(读老 key → 写新 key → 删老 key)是为了保 pre-rebrand 用户的 device_id 连续性;既然没有 pre-rebrand 用户(还没上线),下次访问 `getBuyerDeviceId()` 会 fallback 到 UUID 生成路径,写入新 key,和第一次访问的新用户体验完全一致。
+- `.next/static/chunks/*` 里仍有老 key 字符串,那是 build cache,下次 `npm run build` / Vercel deploy 自动重生成。**不清理** —— 不是源码。
+- 历史 DEVLOG entry (line 21, 50) 保留提到老 key 名 —— 那是当时的事实。
+
+**Verification:** `grep -rn 'vicinity_device_id\|vicinity_session_id' --include='*.ts' --include='*.tsx' --include='*.js' --include='*.sql' --include='*.py' --exclude-dir=.next --exclude-dir=node_modules` 返回空。
+
 ## 2026-07-11 04:14 UTC — Rebrand cleanup: DEVLOG/RELEASE titles + .env.example header
 
 **Objective:** owner 扫了一眼 GitHub 发现 `DEVLOG.md` / `RELEASE.md` 顶部标题还写着 `Vicinity`,`.env.example` header comment 同样。历史 body 条目不动(保真产品史),但当前指向的文件标题+活模板 header 必须是 Percho。
