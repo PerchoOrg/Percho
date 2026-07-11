@@ -44,6 +44,12 @@ coverage/
 .vercel
 package-lock.json
 
+# Videos — never commit to git, host on Supabase Storage / CF Stream
+*.mp4
+*.mov
+*.webm
+*.mkv
+
 # Meetup / demo assets
 docs/ken-burns/demo/*.mp4
 docs/ken-burns/demo-condo/*.mp4
@@ -56,5 +62,3 @@ docs/ken-burns/demo/bgm.mp3
 scripts/render-worker/bgm/*.mp3
 docs/meetup-kw-atlanta/business-card.pdf
 docs/meetup-kw-atlanta/qr/vicinities-cc-agents.png
-# NOTE: public/demo/*.mp4 is the served copy; keep tracked in git.
-!public/demo/*.mp4
