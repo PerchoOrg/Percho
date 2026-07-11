@@ -30,7 +30,7 @@ export type EventInput = {
 
 type QueuedEvent = EventInput & { session_id: string };
 
-const SESSION_KEY = 'vicinity_session_id';
+const SESSION_KEY = 'percho_session_id';
 const ENDPOINT = '/api/events';
 const FLUSH_INTERVAL_MS = 5000;
 
