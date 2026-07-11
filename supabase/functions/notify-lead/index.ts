@@ -24,7 +24,7 @@
 //   RESEND_FROM       — sending address. Defaults to onboarding@resend.dev
 //                       (works without domain verify; not production).
 //   PUBLIC_APP_URL    — base URL for the dashboard CTA. Defaults to
-//                       https://vicinities.cc.
+//                       https://percho.co.
 //   SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY are auto-injected by the runtime.
 
 // @ts-expect-error — Deno std URL import resolved at runtime.
@@ -37,9 +37,9 @@ const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
 // @ts-expect-error — Deno global is available inside Edge Functions.
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY') ?? '';
 // @ts-expect-error — Deno global is available inside Edge Functions.
-const RESEND_FROM = Deno.env.get('RESEND_FROM') ?? 'Vicinity <onboarding@resend.dev>';
+const RESEND_FROM = Deno.env.get('RESEND_FROM') ?? 'Percho <onboarding@resend.dev>';
 // @ts-expect-error — Deno global is available inside Edge Functions.
-const PUBLIC_APP_URL = Deno.env.get('PUBLIC_APP_URL') ?? 'https://vicinities.cc';
+const PUBLIC_APP_URL = Deno.env.get('PUBLIC_APP_URL') ?? 'https://percho.co';
 
 type Lead = {
   id: string;
@@ -77,7 +77,7 @@ function buildEmail(lead: Lead, listing: Listing, agent: Agent) {
     '',
     `Reply in your dashboard: ${ctaUrl}`,
     '',
-    '— Vicinity',
+    '— Percho',
   ].join('\n');
 
   // Minimal inline HTML — keeps deliverability high (no remote assets, no
@@ -91,7 +91,7 @@ ${lead.email ? `<p>Email: <a href="mailto:${esc(lead.email)}">${esc(lead.email)}
 ${lead.phone ? `<p>Phone: ${esc(lead.phone)}</p>` : ''}
 ${lead.message ? `<p style="background:#f4f4f4;padding:12px;border-radius:6px;white-space:pre-wrap">${esc(lead.message)}</p>` : ''}
 <p><a href="${esc(ctaUrl)}" style="display:inline-block;background:#c9a86a;color:#111;padding:10px 16px;border-radius:6px;text-decoration:none;font-weight:600">Reply in dashboard</a></p>
-<p style="color:#666;font-size:12px">— Vicinity</p>
+<p style="color:#666;font-size:12px">— Percho</p>
 </body></html>`;
 
   return { subject, text, html };

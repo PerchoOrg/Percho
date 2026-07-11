@@ -1,6 +1,6 @@
 # MLS data model
 
-Four mirror tables + one sync-state table. Only the RESO fields Vicinity
+Four mirror tables + one sync-state table. Only the RESO fields Percho
 actually needs are mirrored — full RESO Data Dictionary has hundreds of
 fields; adding them later is a non-breaking migration.
 
@@ -11,7 +11,7 @@ Migration source of truth: `supabase/migrations/*_mls_tables.sql`.
 - **PK**: synthetic `uuid` (`gen_random_uuid()`).
 - **Natural key**: `(source_system, <vendor_key>)` unique constraint.
   `source_system = 'fmls_bridge'` is the only value today.
-- **Column style**: snake_case, matching the rest of Vicinity's schema.
+- **Column style**: snake_case, matching the rest of Percho's schema.
   RESO PascalCase is only used at the transport boundary (see
   `lib/mls/reso-types.ts`).
 - **Nullability**: nearly every field is nullable. Bridge routinely

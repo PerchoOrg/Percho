@@ -70,7 +70,7 @@ auth code changes.
 Setup (once per run):
 1. Use a real inbox you can read (Gmail/iCloud). Supabase deduplicates by
    email; if you've used this address before, either pick a `+tag` variant
-   (e.g. `you+vicinity-test1@gmail.com`) or first delete the existing user in
+   (e.g. `you+percho-test1@gmail.com`) or first delete the existing user in
    Supabase SQL Editor:
    `delete from auth.users where email = '<addr>';`
    (the `agents` row cascades automatically — see §1.3).
@@ -130,7 +130,7 @@ entry with the preview URL and the test email used.
 
 ## Phase 5 — lead capture + email notification (5s e2e)
 
-Goal: a non-Vicinity buyer fills the lead form on a published listing page,
+Goal: a non-Percho buyer fills the lead form on a published listing page,
 the agent receives an email within 5 seconds, and the lead appears live in
 `/dashboard/leads` without a page refresh.
 
@@ -138,8 +138,8 @@ Setup (once per Resend domain change):
 1. Confirm `RESEND_API_KEY` is set in Vercel (Production + Preview env).
 2. Confirm `supabase secrets list` (Mac) shows `RESEND_API_KEY` for the
    Edge Function runtime.
-3. Confirm `RESEND_FROM` — defaults to `Vicinity <onboarding@resend.dev>`
-   while domain verify pending; switch to `noreply@vicinities.cc` once
+3. Confirm `RESEND_FROM` — defaults to `Percho <onboarding@resend.dev>`
+   while domain verify pending; switch to `noreply@percho.co` once
    Cloudflare DNS records (SPF / DKIM / DMARC) verify in Resend.
 4. Migrations 0006 + 0007 + 0008 + 0009 applied (`supabase db push`).
 5. Edge Function `notify-lead` deployed (`supabase functions deploy notify-lead`).
@@ -176,12 +176,12 @@ Setup (once per Resend domain change):
 ### 5.4 — email delivered
 
 7. Check the agent's inbox (the email tied to the agent owning the listing).
-   **Expect**: within 5s, an email from `Vicinity <…>` with subject
+   **Expect**: within 5s, an email from `Percho <…>` with subject
    `New inquiry · <listing address>`. Body has buyer name, contact info,
    message, and a "Reply in dashboard" CTA pointing at
-   `https://vicinities.cc/dashboard/leads/<id>`.
+   `https://percho.co/dashboard/leads/<id>`.
    **Spam check**: lands in primary inbox, not spam (only valid once
-   `vicinities.cc` is domain-verified in Resend; `onboarding@resend.dev`
+   `percho.co` is domain-verified in Resend; `onboarding@resend.dev`
    often spam-flags).
 8. Click the CTA → lands on the lead detail page (after dashboard auth
    redirect if needed).

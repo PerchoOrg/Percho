@@ -1,4 +1,4 @@
-# Vicinity 竞品大表 (2026-06-27)
+# Percho 竞品大表 (2026-06-27)
 
 数据来源:Wikipedia 信息框、各公司 /about 与 /investors 页、SEC 10-K(Z/COMP/CSGP/MTTR)、TechCrunch/Inman/GeekWire 收购报道、Wayback Machine。
 "unknown" 表示公开渠道未披露,**未猜测**。Crunchbase 多处被 Cloudflare 拦截,私营小公司员工数为公开区间估计。
@@ -54,7 +54,7 @@
 
 ---
 
-## 表 4 — 死亡名单:形式上对标 Vicinity 的"swipe 房产"域名(2026-06-27 实测)
+## 表 4 — 死亡名单:形式上对标 Percho 的"swipe 房产"域名(2026-06-27 实测)
 
 | 域名 | 原概念 | 成立年 | 死因 | 当前状态 |
 |---|---|---|---|---|
@@ -76,11 +76,11 @@
 ## 关键观察(给决策用)
 
 1. **C 端 portal 全亏**:Zillow / Compass / 收购前的 Redfin / Matterport 都 GAAP 亏损;唯一稳定盈利的 CoStar 是 B2B 数据公司不是 C 端。**这个市场不天然产生利润,只产生流量,流量再卖给 B 端**。
-2. **B 端是真正的现金牛**,但**正在猛烈整合**:Zillow 2023 收 Follow Up Boss + Aryeo;Inside Real Estate 2023 收 BoomTown(已经持有 kvCORE);Frontier Growth 拿下 Real Geeks。**未来 12-18 个月会再有一轮整合**,Vicinity 要么被收要么被排挤。
+2. **B 端是真正的现金牛**,但**正在猛烈整合**:Zillow 2023 收 Follow Up Boss + Aryeo;Inside Real Estate 2023 收 BoomTown(已经持有 kvCORE);Frontier Growth 拿下 Real Geeks。**未来 12-18 个月会再有一轮整合**,Percho 要么被收要么被排挤。
 3. **swipe 房产形式全军覆没**(表 4):12 个域名 0 个活产品,证据强。
-4. **Zillow 是最重的影子** — 收 Follow Up Boss/$400M + Aryeo 表明 Zillow 正在把 listing-agent 工作流彻底闭环。Vicinity 的私域承诺正好打它的软肋,但也意味着 Zillow 一旦觉得你威胁,可以直接收。**早期就要想好 acqui-hire vs build 的分叉**。
-5. **真正的盈利样本**:BoxBrownie(自筹)、Virtual Staging AI(YC,据称盈利)、Hommati(加盟)、Real Geeks(传盈利)、ReferralExchange(据报盈利)。**共同点:模式简单 + 单位经济清晰 + 不烧 VC 钱**。Vicinity 如果选 VC 路线,就要接受亏损 5-7 年;如果选盈利路线,就要早收 listing agent 月费。
+4. **Zillow 是最重的影子** — 收 Follow Up Boss/$400M + Aryeo 表明 Zillow 正在把 listing-agent 工作流彻底闭环。Percho 的私域承诺正好打它的软肋,但也意味着 Zillow 一旦觉得你威胁,可以直接收。**早期就要想好 acqui-hire vs build 的分叉**。
+5. **真正的盈利样本**:BoxBrownie(自筹)、Virtual Staging AI(YC,据称盈利)、Hommati(加盟)、Real Geeks(传盈利)、ReferralExchange(据报盈利)。**共同点:模式简单 + 单位经济清晰 + 不烧 VC 钱**。Percho 如果选 VC 路线,就要接受亏损 5-7 年;如果选盈利路线,就要早收 listing agent 月费。
 
 ---
 
-*核对日期: 2026-06-27 · 报告路径: `/home/ubuntu/Vicinity/docs/competitive-analysis-table-2026-06-27.md`*
+*核对日期: 2026-06-27 · 报告路径: `/home/ubuntu/Percho/docs/competitive-analysis-table-2026-06-27.md`*

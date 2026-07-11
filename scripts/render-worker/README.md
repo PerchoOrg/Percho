@@ -1,4 +1,4 @@
-# Vicinity render worker
+# Percho render worker
 
 Long-running poller on the EC2 render box. Turns queued `render_jobs` rows
 into Cloudflare Stream videos.
@@ -11,14 +11,14 @@ page → `POST /api/listings/[id]/generate-tour` inserts a placeholder
 
 - Python 3 with `requests` (stdlib for the rest — no supabase-py, no dotenv).
 - `ffmpeg` in `PATH` (used by `scripts/ken-burns/generate.py`).
-- Repo checked out at `/home/ubuntu/Vicinity` with `.env.local` containing
+- Repo checked out at `/home/ubuntu/Percho` with `.env.local` containing
   `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`,
   `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_STREAM_API_TOKEN`.
 
 ## Manual run (for testing)
 
 ```bash
-cd /home/ubuntu/Vicinity
+cd /home/ubuntu/Percho
 python3 scripts/render-worker/worker.py
 ```
 
@@ -27,19 +27,19 @@ Ctrl-C to stop. Idle polls every 5s.
 ## Install as systemd service
 
 ```bash
-sudo cp scripts/render-worker/vicinity-render-worker.service \
-        /etc/systemd/system/vicinity-render-worker.service
+sudo cp scripts/render-worker/percho-render-worker.service \
+        /etc/systemd/system/percho-render-worker.service
 sudo systemctl daemon-reload
-sudo systemctl enable --now vicinity-render-worker
-sudo systemctl status vicinity-render-worker
+sudo systemctl enable --now percho-render-worker
+sudo systemctl status percho-render-worker
 ```
 
 Logs:
 
 ```bash
-sudo tail -f /var/log/vicinity-render-worker.log
+sudo tail -f /var/log/percho-render-worker.log
 # or
-journalctl -u vicinity-render-worker -f
+journalctl -u percho-render-worker -f
 ```
 
 ## What a job does

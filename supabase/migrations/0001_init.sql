@@ -1,5 +1,5 @@
 -- ─────────────────────────────────────────────────────────────────
--- 0001_init.sql — Vicinity V1 schema
+-- 0001_init.sql — Percho V1 schema
 --
 -- Tables (in dependency order):
 --   agents, communities, listings,

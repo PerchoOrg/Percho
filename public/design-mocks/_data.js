@@ -13,7 +13,7 @@ window.AGENT = {
   reviews: 127,
   bio: "I sell the Eastside the way it deserves — with cinematography, patient buyer matching, and a closing record that speaks for itself. Every listing on this page was shot, edited, and marketed by my team.",
   avatar: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&h=400&fit=crop",
-  contact: { phone: "(425) 555-0144", email: "vivian@vicinity.homes" },
+  contact: { phone: "(425) 555-0144", email: "vivian@percho.homes" },
 };
 
 window.LISTINGS = [

@@ -7,7 +7,7 @@ before Tuesday.
 
 ## 1. QR code
 
-**Target URL:** `https://vicinities.cc/agents`
+**Target URL:** `https://percho.co/agents`
 
 **Recommended settings:**
 - Error correction level: **Q (25%)** — survives partial print smudges and
@@ -24,19 +24,19 @@ before Tuesday.
 
 ```bash
 # using `qrencode` (brew install qrencode  /  apt install qrencode)
-qrencode -o vicinity-agents-qr.png -s 20 -m 4 -l Q \
-  "https://vicinities.cc/agents"
+qrencode -o percho-agents-qr.png -s 20 -m 4 -l Q \
+  "https://percho.co/agents"
 
 # SVG version (better for print)
-qrencode -o vicinity-agents-qr.svg -t SVG -l Q \
-  "https://vicinities.cc/agents"
+qrencode -o percho-agents-qr.svg -t SVG -l Q \
+  "https://percho.co/agents"
 ```
 
 **B. Python one-liner:**
 
 ```bash
 pip install "qrcode[pil]"
-python -c "import qrcode; qrcode.make('https://vicinities.cc/agents').save('vicinity-agents-qr.png')"
+python -c "import qrcode; qrcode.make('https://percho.co/agents').save('percho-agents-qr.png')"
 ```
 
 **C. Web:** qr-code-generator.com or qrcode-monkey.com. Choose PNG 1024px,
@@ -53,7 +53,7 @@ error correction "Q", download.
 
 **UTM-tagged URL (optional):**
 ```
-https://vicinities.cc/agents?utm_source=kw-atlanta&utm_medium=meetup&utm_campaign=first-touch
+https://percho.co/agents?utm_source=kw-atlanta&utm_medium=meetup&utm_campaign=first-touch
 ```
 
 ---
@@ -73,7 +73,7 @@ Placed on the founder's table / booth spot at the meetup. One-way facing.
 
 ```
 ┌──────────────────────────────────────────┐
-│  Vicinity                                │  ← wordmark, bold
+│  Percho                                │  ← wordmark, bold
 │  Video-first home discovery for Atlanta  │  ← tagline
 │                                          │
 │         ┌───────────────┐                │
@@ -82,7 +82,7 @@ Placed on the founder's table / booth spot at the meetup. One-way facing.
 │         │               │                │
 │         └───────────────┘                │
 │      Scan to join the beta               │
-│      vicinities.cc/agents                │
+│      percho.co/agents                │
 │                                          │
 │  Free during beta · Non-exclusive        │
 │  100% of leads go to you                 │
@@ -108,7 +108,7 @@ minimal.
 
 ```
 ┌────────────────────────────┐
-│  Vicinity                  │  ← small wordmark, top-left
+│  Percho                  │  ← small wordmark, top-left
 │                            │
 │  Hi, I'm                   │
 │  [ FOUNDER NAME ]          │  ← handwrite, or preprint per person
@@ -133,7 +133,7 @@ minimal.
 - [ ] 1 A4 backup sign (in case of counter/booth setup)
 - [ ] 4 wearable name-tag stickers (2 per person, in case one falls off)
 - [ ] 20 printed one-pagers (`one-pager.md` → PDF)
-- [ ] Phone with the Vicinity buyer feed loaded and 3–5 sample videos ready
+- [ ] Phone with the Percho buyer feed loaded and 3–5 sample videos ready
       to demo (offline-cached if possible — venue wifi may be flaky)
 - [ ] Notebook + pen for `meetup-notes-template.md`
 - [ ] Battery pack — you'll be demoing on your phone all night

@@ -114,11 +114,11 @@ export default function MeetupIndexPage() {
           playsInline
           preload="metadata"
           className="w-full max-w-sm rounded border border-line bg-black"
-          src="/demo/vicinity-slideshow-demo.mp4"
+          src="/demo/percho-slideshow-demo.mp4"
         />
         <p className="text-ink2 text-xs">
           <a
-            href="/demo/vicinity-slideshow-demo.mp4"
+            href="/demo/percho-slideshow-demo.mp4"
             className="underline hover:text-ink"
             download
           >

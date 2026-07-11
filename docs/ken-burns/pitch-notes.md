@@ -1,12 +1,12 @@
 # Ken Burns demo — pitch notes
 
 Talking points for showing the Tuesday KW meetup demo. The demo video
-lives at `docs/ken-burns/demo/vicinity-slideshow-demo.mp4` — save it to
+lives at `docs/ken-burns/demo/percho-slideshow-demo.mp4` — save it to
 your camera roll before the meetup.
 
 ## 1. This is fully automatic, ~30 seconds per listing.
 
-"An agent uploads their listing photos, hits publish, and Vicinity
+"An agent uploads their listing photos, hits publish, and Percho
 generates this video in the background — no editing app, no template
 picking, no music licensing." Emphasize that every listing on the
 platform gets a swipeable video from day one.

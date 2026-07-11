@@ -1,16 +1,16 @@
 #!/usr/bin/env bash
 # Production smoke test — phase7.0a
 #
-# Runs a handful of unauthenticated HTTP checks against a deployed Vicinity
+# Runs a handful of unauthenticated HTTP checks against a deployed Percho
 # instance to verify the public surface is alive after a phase merge or
 # infra change (Vercel domain alias, env var rotation, etc).
 #
 # Usage:
-#   BASE_URL=https://vicinities.cc scripts/admin/production-smoke.sh
-#   scripts/admin/production-smoke.sh                 # defaults to vicinities.cc
+#   BASE_URL=https://percho.co scripts/admin/production-smoke.sh
+#   scripts/admin/production-smoke.sh                 # defaults to percho.co
 #
 # What it checks (all unauthenticated):
-#   1. GET /              → 200, body contains "Vicinity"
+#   1. GET /              → 200, body contains "Percho"
 #   2. GET /login         → 200, body contains "Agent login"
 #   3. GET /dashboard     → 307 redirect to /login (middleware gate)
 #   4. GET /auth/callback → 307 redirect (no code → /login?error=auth_failed)
@@ -27,7 +27,7 @@
 
 set -u
 
-BASE_URL="${BASE_URL:-https://www.vicinities.cc}"
+BASE_URL="${BASE_URL:-https://www.percho.co}"
 BASE_URL="${BASE_URL%/}"
 
 PASS=0
@@ -51,7 +51,7 @@ fetch() {
   local path="$1"
   curl -sS -o /tmp/smoke-body.$$ -w '%{http_code}' \
     --max-time 15 \
-    -H 'User-Agent: vicinity-smoke/1.0' \
+    -H 'User-Agent: percho-smoke/1.0' \
     "$BASE_URL$path" 2>/dev/null || echo "000"
 }
 
@@ -60,7 +60,7 @@ fetch_no_follow() {
   local path="$1"
   curl -sS -o /dev/null -D /tmp/smoke-headers.$$ -w '%{http_code}' \
     --max-time 15 \
-    -H 'User-Agent: vicinity-smoke/1.0' \
+    -H 'User-Agent: percho-smoke/1.0' \
     "$BASE_URL$path" 2>/dev/null || echo "000"
 }
 
@@ -69,8 +69,8 @@ echo
 
 # 1. Landing
 status=$(fetch '/')
-if [[ "$status" == "200" ]] && grep -q 'Vicinity' /tmp/smoke-body.$$; then
-  check "GET /" yes "200 + body contains 'Vicinity'"
+if [[ "$status" == "200" ]] && grep -q 'Percho' /tmp/smoke-body.$$; then
+  check "GET /" yes "200 + body contains 'Percho'"
 else
   check "GET /" no  "got status=$status, body grep miss"
 fi

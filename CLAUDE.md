@@ -76,7 +76,7 @@ implementation rather than after mistakes.
 
 ## 1. Positioning (do not drift)
 
-Vicinity is for **all US homebuyers**. The US homebuyer pool is multilingual —
+Percho is for **all US homebuyers**. The US homebuyer pool is multilingual —
 non-English buyers (Spanish, Chinese, Vietnamese, Korean, …) are part of the
 target audience, not a separate Chinese-community spinoff. Concretely:
 

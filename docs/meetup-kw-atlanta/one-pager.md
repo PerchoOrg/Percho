@@ -1,19 +1,19 @@
-# Vicinity — For Atlanta Agents
+# Percho — For Atlanta Agents
 
 **Video-first home discovery for Atlanta.**
-vicinities.cc
+percho.co
 
 ---
 
-## What is Vicinity?
+## What is Percho?
 
-Vicinity is a swipe-based video feed for Atlanta home listings — think TikTok,
+Percho is a swipe-based video feed for Atlanta home listings — think TikTok,
 but every clip is a real home, listed by a real local agent. Buyers scroll,
 tap, and reach out to *you* directly.
 
 **The agent workflow, in one sentence:**
 You just enter the address, we auto-fill all listing info from FMLS, all you
-need to do is upload one video, and Vicinity precisely delivers it to Atlanta
+need to do is upload one video, and Percho precisely delivers it to Atlanta
 home-buyers.
 
 ---
@@ -45,7 +45,7 @@ know who they're touring with before they tap.
 
 ---
 
-## What Vicinity is *not*
+## What Percho is *not*
 
 - **Not exclusive.** Keep your listings on Zillow, Redfin, everywhere.
 - **Not a lead broker.** We don't stand between you and the buyer.
@@ -61,7 +61,7 @@ know who they're touring with before they tap.
 license + FMLS membership (1–2 business days) → **4.** You get a dashboard
 invite and can upload your first listing.
 
-**Waitlist:** https://vicinities.cc/agents
+**Waitlist:** https://percho.co/agents
 
 `[QR CODE — insert generated PNG here at ~1 inch square, high contrast]`
 
@@ -70,14 +70,14 @@ invite and can upload your first listing.
 ## Talk to a human
 
 **Founder:** [TODO: FOUNDER NAME]
-**Email:** [TODO: FOUNDER@vicinities.cc]
+**Email:** [TODO: FOUNDER@percho.co]
 **Phone / text:** [TODO: +1 (XXX) XXX-XXXX]
-**Web:** https://vicinities.cc
+**Web:** https://percho.co
 
 Happy to jump on a 15-minute call, meet at a coffee shop, or dial in your
 broker/compliance officer directly.
 
 ---
 
-*Vicinity is an Atlanta-first, FMLS-sourced, IDX-compliant listing
+*Percho is an Atlanta-first, FMLS-sourced, IDX-compliant listing
 discovery platform. MVP as of 2026. VOW-side access on roadmap.*

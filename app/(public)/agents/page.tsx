@@ -124,8 +124,8 @@ export default function AgentsLandingPage() {
       <section className="mx-auto max-w-3xl px-5 py-12 text-center">
         <p className="text-base text-ink2">
           <span className="text-ink">Still thinking?</span> Email the founder directly:{' '}
-          <a href="mailto:founder@vicinities.cc" className="text-ink underline hover:text-ink/80">
-            founder@vicinities.cc
+          <a href="mailto:founder@percho.co" className="text-ink underline hover:text-ink/80">
+            founder@percho.co
           </a>
         </p>
       </section>

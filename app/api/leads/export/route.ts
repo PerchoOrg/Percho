@@ -98,7 +98,7 @@ export async function GET() {
   return new NextResponse(csv, {
     headers: {
       'content-type': 'text/csv; charset=utf-8',
-      'content-disposition': `attachment; filename="vicinity-leads-${stamp}.csv"`,
+      'content-disposition': `attachment; filename="percho-leads-${stamp}.csv"`,
       'cache-control': 'no-store',
     },
   });

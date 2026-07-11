@@ -4,7 +4,7 @@
  * Replaces the old 3-value `kind` axis (school | poi | neighborhood) with 12
  * categories split across two buckets:
  *
- *   Bucket A — "Only on Vicinity":
+ *   Bucket A — "Only on Percho":
  *     scarce content nobody else has. The product moat.
  *
  *   Bucket B — "Real look at the data":
@@ -30,7 +30,7 @@
 import { z } from 'zod';
 
 export const COMMUNITY_VIDEO_CATEGORIES = [
-  // ─── Bucket A — Only on Vicinity ────────────────────────────────
+  // ─── Bucket A — Only on Percho ────────────────────────────────
   {
     id: 'walk_the_block',
     bucket: 'a',

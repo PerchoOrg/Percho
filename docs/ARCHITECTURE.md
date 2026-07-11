@@ -1,6 +1,6 @@
-# Vicinity — Architecture (V1)
+# Percho — Architecture (V1)
 
-> **Positioning**: Vicinity is a property swipe platform for **all US homebuyers**.
+> **Positioning**: Percho is a property swipe platform for **all US homebuyers**.
 > Vertical-video feed of listings + community context (schools, POIs, neighborhood).
 > NOT a Chinese-community platform. English only. No WeChat. No bilingual UI.
 

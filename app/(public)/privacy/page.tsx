@@ -9,8 +9,8 @@ export default function PrivacyPage() {
   return (
     <LegalLayout eyebrow="Legal" title="Privacy Policy" updated="June 20, 2026">
       <p>
-        This Privacy Policy describes how Vicinity, Inc. (&ldquo;Percho&rdquo;, &ldquo;we&rdquo;,
-        &ldquo;us&rdquo;) collects, uses, and shares information when you use vicinities.cc and
+        This Privacy Policy describes how Percho, Inc. (&ldquo;Percho&rdquo;, &ldquo;we&rdquo;,
+        &ldquo;us&rdquo;) collects, uses, and shares information when you use percho.co and
         related services (the &ldquo;Service&rdquo;).
       </p>
       <p>
@@ -62,7 +62,7 @@ export default function PrivacyPage() {
         <li>You can delete your account at any time from your profile settings.</li>
         <li>
           You can request a copy of your data by emailing{' '}
-          <a href="mailto:legal@vicinities.cc">legal@vicinities.cc</a>.
+          <a href="mailto:legal@percho.co">legal@percho.co</a>.
         </li>
         <li>
           California residents have rights under the CCPA; EU/UK residents under GDPR. Email us to
@@ -90,7 +90,7 @@ export default function PrivacyPage() {
 
       <h2>8. Contact</h2>
       <p>
-        Email <a href="mailto:legal@vicinities.cc">legal@vicinities.cc</a> with privacy questions or
+        Email <a href="mailto:legal@percho.co">legal@percho.co</a> with privacy questions or
         requests.
       </p>
     </LegalLayout>

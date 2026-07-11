@@ -56,7 +56,7 @@ export default function FairHousingPage() {
       <p>If you believe a listing, agent, or buyer on Percho has violated fair-housing law:</p>
       <ul>
         <li>
-          Email us at <a href="mailto:legal@vicinities.cc">legal@vicinities.cc</a> with the listing
+          Email us at <a href="mailto:legal@percho.co">legal@percho.co</a> with the listing
           URL or agent profile and a brief description.
         </li>
         <li>

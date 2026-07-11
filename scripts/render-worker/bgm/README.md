@@ -11,7 +11,7 @@ All tracks are by **Kevin MacLeod** (https://incompetech.com), released under
 the **Creative Commons Attribution 4.0 International (CC-BY 4.0)** license.
 
 - License text: https://creativecommons.org/licenses/by/4.0/
-- Attribution required (to be added to `vicinities.cc/legal`):
+- Attribution required (to be added to `percho.co/legal`):
 
   > Music by Kevin MacLeod (incompetech.com) — Licensed under Creative
   > Commons: By Attribution 4.0 License

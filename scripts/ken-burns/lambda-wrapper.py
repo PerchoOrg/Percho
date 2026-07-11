@@ -6,9 +6,9 @@ Trigger: an S3 event or a direct invoke with a payload of the shape:
 
   {
     "listing_id": "abc123",
-    "photos_bucket": "vicinity-listing-photos",
+    "photos_bucket": "percho-listing-photos",
     "photos_prefix": "listings/abc123/photos/",
-    "output_bucket": "vicinity-generated-videos",
+    "output_bucket": "percho-generated-videos",
     "output_key": "listings/abc123/slideshow.mp4",
     "ending_card": { "price": "$685,000", ... }
   }
@@ -140,14 +140,14 @@ def handler(event: dict, _context) -> dict:
 #       Architectures: [x86_64]
 #       Environment:
 #         Variables:
-#           OUTPUT_BUCKET: vicinity-generated-videos
+#           OUTPUT_BUCKET: percho-generated-videos
 #           OUTPUT_S3_ENDPOINT_URL: https://<accountid>.r2.cloudflarestorage.com
 #           OUTPUT_AWS_ACCESS_KEY_ID: !Ref R2AccessKey
 #           OUTPUT_AWS_SECRET_ACCESS_KEY: !Ref R2SecretKey
-#           OUTPUT_PUBLIC_BASE_URL: https://cdn.vicinity.example
+#           OUTPUT_PUBLIC_BASE_URL: https://cdn.percho.example
 #       Policies:
-#         - S3ReadPolicy: { BucketName: vicinity-listing-photos }
-#         - S3WritePolicy: { BucketName: vicinity-generated-videos }
+#         - S3ReadPolicy: { BucketName: percho-listing-photos }
+#         - S3WritePolicy: { BucketName: percho-generated-videos }
 #       Events:
 #         PhotosUploaded:
 #           Type: S3
