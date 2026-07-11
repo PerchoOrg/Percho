@@ -94,12 +94,6 @@ export default function MeetupIndexPage() {
           >
             Review /agents landing →
           </Link>
-          <Link
-            href="/demo/autofill"
-            className="rounded border border-line px-3 py-1.5 hover:bg-surface"
-          >
-            Review /demo/autofill →
-          </Link>
         </div>
       </header>
 
