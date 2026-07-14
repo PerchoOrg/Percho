@@ -4,6 +4,23 @@
 > Historical entries below preserve the original name in-place — release notes
 > are a record of what was shipped under the product's name at the time.
 
+## Phase 76 · POI content pipeline v1 — schema + Media tab UI (2026-07-14)
+
+**What ships**
+- Nearby POI section in the listing edit → Media tab. Click **Discover POIs** and the system pulls up to ~120 nearby places from Google (restaurants, parks, schools, grocery, cafes, gyms) inside a 5-mile radius, grouped into intent buckets (Walkable / Daily drive / Lifestyle).
+- Per-POI approve / reject with an inline **Fetch photos** action that pulls up to 10 Google Places photos each, presented as a tile grid for approve / reject per photo (with attribution).
+- All review actions land in a new `review_events` table together with any AI prediction that produced them — training data for future auto-approval.
+
+**Why**
+- POIs + photos are stored globally (deduped by Google's `place_id` / `photo_name`), so the same Publix used by 100 listings costs 1 Google Places fetch, not 100. Warm-cache spend per new listing ≈ **$2.65** vs cold **$4.42**.
+- Review is intent-driven, not radius-driven: buyers care about "what can I walk to" and "what's a 5-min drive away", not "everything in a circle".
+
+**Design doc**: `docs/poi-content-pipeline.md`
+
+**Next phase (77)**: Directions API for real drive-time buckets + Claude Sonnet 4.5 vision tag + quality score, wired into `review_events.ai_prediction` so we can start comparing model output to human review.
+
+
+
 
 Newest at the top. Each release covers a meaningful product change visible to users.
 
