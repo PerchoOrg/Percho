@@ -15,6 +15,8 @@
  */
 import { notFound } from 'next/navigation';
 import { fetchMobileAgent } from '@/lib/reelestate/agent';
+import { fetchAgentListings } from '@/lib/reelestate/agentListings';
+import { AgentProfileTabs } from '@/components/reelestate/AgentProfileTabs';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,6 +29,7 @@ export default async function MobileAgentProfilePage({ params }: AgentPageProps)
   const agent = await fetchMobileAgent(handle);
   if (!agent) notFound();
 
+  const listings = await fetchAgentListings(agent.id);
   const initial = agent.name.slice(0, 1).toUpperCase();
 
   return (
@@ -65,6 +68,9 @@ export default async function MobileAgentProfilePage({ params }: AgentPageProps)
           {agent.bio}
         </p>
       ) : null}
+
+      {/* A4.2: Reels | Properties tab bar with a 2-col grid per tab. */}
+      <AgentProfileTabs listings={listings} />
     </main>
   );
 }
