@@ -50,7 +50,7 @@ interface Props {
   initialPois: NearbyPoiForListing[];
   /** Public Supabase storage host, so we can render photos by storage_path. */
   supabaseStorageBase: string;
-  /** Bucket name where poi photos live (default: "photos"). */
+  /** Bucket name where poi photos live (default: "listing-photos"). */
   photoBucket?: string;
 }
 
@@ -58,7 +58,7 @@ export function NearbyPoiPanel({
   listingId,
   initialPois,
   supabaseStorageBase,
-  photoBucket = 'photos',
+  photoBucket = 'listing-photos',
 }: Props) {
   const [pois, setPois] = useState<NearbyPoiForListing[]>(initialPois);
   const [pending, startTransition] = useTransition();

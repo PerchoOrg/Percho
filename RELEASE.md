@@ -4,6 +4,11 @@
 > Historical entries below preserve the original name in-place — release notes
 > are a record of what was shipped under the product's name at the time.
 
+## v0.76.3 · POI photo review tiles now load (2026-07-14)
+
+**🐛 Bug Fixes**
+- **POI review tiles now show the actual photos.** Follow-up to v0.76.2 — the imported photos were saved correctly, but the review grid pointed to the wrong storage location so tiles showed broken image icons. Fixed.
+
 ## v0.76.2 · Nearby POI photo import (2026-07-14)
 
 **🐛 Bug Fixes**
