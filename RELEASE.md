@@ -4,6 +4,10 @@
 > Historical entries below preserve the original name in-place — release notes
 > are a record of what was shipped under the product's name at the time.
 
+## v0.76.4 · Fullscreen photo review (2026-07-14)
+
+- **Tap a POI photo to review it fullscreen.** The old tile approve/reject icons were tiny and hover-only — impossible to hit on mobile. Now a tap opens the photo full-screen with big Approve / Reject buttons and auto-advances to the next photo, so triaging 10+ POI photos takes seconds. Keyboard shortcuts (← → to browse, A / X to decide, Esc to close) and swipe-to-navigate on mobile.
+
 ## v0.76.3 · POI photo review tiles now load (2026-07-14)
 
 **🐛 Bug Fixes**
