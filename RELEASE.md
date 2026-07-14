@@ -4,6 +4,11 @@
 > Historical entries below preserve the original name in-place — release notes
 > are a record of what was shipped under the product's name at the time.
 
+## v0.76.2 · Nearby POI photo import (2026-07-14)
+
+**🐛 Bug Fixes**
+- **Nearby POIs → Refresh now actually imports photos.** Previously every attempt reported "10 skipped" and no photos landed on the Media tab. Photos now load and appear in pending state for review.
+
 ## Phase 76 · POI content pipeline v1 — schema + Media tab UI (2026-07-14)
 
 **What ships**
