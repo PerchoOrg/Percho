@@ -4,6 +4,16 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-14 — Phase 76.4 · Fullscreen lightbox for POI photo review
+
+**Problem**: Approve/reject buttons on POI photo tiles were tiny (14px) hover-only icons — unusable on mobile, and the tile itself was too small to see the photo well before deciding.
+
+**Fix**: Tile becomes a tap target that opens a fullscreen lightbox. Photo fills viewport (`object-contain`, letterbox per UI conventions). Big Approve (green) / Reject buttons at bottom, 56px tall — thumb-friendly. Auto-advances to next photo after a decision so 10+ photos can be triaged in seconds. Keyboard: `←`/`→` nav, `A` approve, `X` reject, `Esc` close. Swipe left/right on mobile. Counter `n / total`, prev/next arrow buttons, status badge, body scroll locked.
+
+**File**: `app/dashboard/listings/[id]/edit/NearbyPoiPanel.tsx` — replaced `PhotoTile` hover overlay with tap-to-open button + corner status badge; added `PhotoReviewGrid` wrapper (owns lightbox state, keyboard, auto-advance) and `PhotoLightbox` component.
+
+**Verification**: `npx tsc --noEmit` clean, `next build` green.
+
 ## 2026-07-14 — Phase 76.3 · Fix POI photo review tile 404 (same wrong-bucket bug, UI side)
 
 **Problem**: After 76.2 fixed upload, tiles in the "Show N photos" expander would still 404 because `NearbyPoiPanel`'s `photoBucket` prop defaulted to `"photos"` (same nonexistent bucket) and `MediaPanel` doesn't pass one, so the constructed URL was `.../public/photos/poi/<id>/<hash>.jpg` → 404.
