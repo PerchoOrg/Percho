@@ -140,6 +140,9 @@ export const CHROME_HIDDEN_PREFIXES = [
   '/listings/',
   // ReelEstate mobile agent profile (A4.1) — same full-bleed mobile canvas.
   '/agents/',
+  // ReelEstate mobile Create wizard (C6.1) — full-bleed mobile canvas owns
+  // its own header + step tracker.
+  '/create/',
   '/login',
   '/signup',
   '/forgot-password',
