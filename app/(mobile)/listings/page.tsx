@@ -13,9 +13,12 @@
  *    renders in cyan as the accent per §2.2.
  *  - Address uses the canonical `{street}, {city}, {state}${zip?' '+zip:''}`
  *    template (memory).
- *  - No filter bar yet (L3.2 will add it), no line-height refinement yet
- *    (L3.3 will land the 15/11/11 canonical caption rig). Caption sizing here
- *    is a neutral placeholder that L3.3 will tune — no `text-[15/11/11]` yet.
+ *  - Filter bar landed in L3.2.
+ *  - L3.3: caption typography now matches the canonical 15/11/11 grid rig
+ *    (memory §74.14 — memory wins over any README sketch). Price sits at
+ *    15px semibold in cyan, specs and address at 11px each. Line-heights
+ *    match the font size (tight caption, no descender room) so the three
+ *    lines stack visually like the reference tile in §2.2.
  *
  * Data: `fetchMobileListings` (real Supabase, anon RLS, unstable_cache 60s).
  * Empty query → empty state string, no seed/mock fallback.
@@ -94,12 +97,16 @@ function ListingTile({ listing }: { listing: MobileListingCard }) {
           </div>
         )}
       </div>
-      <div className="flex flex-col gap-1 px-3 py-2.5">
+      <div className="px-3 py-2.5">
         {priceLabel ? (
-          <p className="font-semibold tabular-nums text-cyan">{priceLabel}</p>
+          <p className="text-[15px] font-semibold leading-[15px] tabular-nums text-cyan">
+            {priceLabel}
+          </p>
         ) : null}
-        {specs ? <p className="text-white/70">{specs}</p> : null}
-        <p className="text-white/50">{addressLine}</p>
+        {specs ? (
+          <p className="mt-1.5 text-[11px] leading-[11px] text-white/70">{specs}</p>
+        ) : null}
+        <p className="mt-1 text-[11px] leading-[11px] text-white/50">{addressLine}</p>
       </div>
     </Link>
   );
