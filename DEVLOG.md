@@ -4,6 +4,48 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-14 — POI content pipeline v1 · Phase A (schema + Media tab UI)
+
+**Objective**: 落 nearby POI 挖矿 pipeline 的骨架 —— 全局 POI 表(Google place_id 索引,跨 listing 复用)+ per-listing join(每 listing 独立 approve/reject 状态)+ review_events(训练数据积累)+ Media tab 内的审核 UI。
+
+**Design doc**: [`docs/poi-content-pipeline.md`](docs/poi-content-pipeline.md) — 10 sections,intent-driven(walkable / daily_drive / lifestyle / commute)不是 radius-driven,learning loop 4 阶段 (v0 全人工 → v3 全自动),Claude Sonnet 4.5 做所有 vision(不引入 Gemini)。
+
+**Actions**:
+- Migration `20260714000000_poi_content_pipeline.sql`:7 张新表(`pois` / `poi_photos` / `listing_pois` / `listing_poi_photos` / `poi_traffic` / `review_events` / `generated_videos`),legacy `pois` 表被替换(0 数据 + 0 引用,community_photos/community_videos 的 `poi_id` 列废弃)。
+- `lib/poi/`:`types.ts` + `google-places.ts`(searchNearby / photo media 二进制拉取 + haversine + intent bucket) + `actions.ts`(6 个 server actions:discover / fetchPhotos / setPoi/setPhoto status / logReviewEvent / loadNearbyPoisForListing)。
+- UI:`app/dashboard/listings/[id]/edit/NearbyPoiPanel.tsx` + MediaPanel 挂载点,page.tsx SSR 预加载 nearby POIs。
+- Ownership check:所有 write action 先验 `listings.agent_id → agents.user_id === auth.uid()`,和其他 listing action 一致。
+
+**Decisions**:
+- D1: POI + photo 全局唯一(Google place_id / photo_name 去重),同一个 Publix 被 100 listing 引用只拉一次,Claude vision tag 也只跑一次 → 单 listing 冷启动 ~$4.42, warm cache(40% 复用)~$2.65。
+- D2: 每个 review action(approve/reject/edit)落 `review_events` 表带 `ai_prediction jsonb`,~200 listing 后 fit 三个 classifier(POI selection / photo quality / tag correctness)开 auto-approve A/B。
+- D3: Intent bucket 由 straight-line distance 判定(v0),v1 换 driving time(Directions API,$0.005/pair)。
+- D4: Types 层跟随项目现有约定 —— `database.types.ts` 是 stub,server action 用 `(client as any).from(...)` + 手动 cast,不改动 typegen 流程(SUPABASE_ACCESS_TOKEN 未配)。
+
+**Files**: docs/poi-content-pipeline.md · supabase/migrations/20260714000000_poi_content_pipeline.sql · lib/poi/{types.ts,google-places.ts,actions.ts} · app/dashboard/listings/[id]/edit/{NearbyPoiPanel.tsx,MediaPanel.tsx,page.tsx}
+
+**Verification**: `supabase db push --linked` 成功;`\dt public.*` 确认 7 张新表存在;`npx tsc --noEmit` 零错;`npx next build` 零错零警告。
+
+**Next**: Phase B — Directions API 打真实通勤时间 + Claude Sonnet 4.5 vision 打 photo tag / 5-star quality score,把 `ai_prediction` 落进 review_events 供后续 classifier 训练。
+
+## 2026-07-12 — Content pipeline v1 design doc (docs-only)
+
+**Objective**: 应 owner 要求,把「照片→结构化视频」的两条 pipeline(listing tour + community batch)写成落地文档,含 API 成本表,竖屏为主横屏为辅,P0 二选一 = 全自动 or agent 上传替换/补充,编排 UI 推 P1.
+
+**Actions**: 新增 `docs/pipelines/content-pipeline-v1.md`. 未改 app/, 未加依赖, 未改 schema — 只是 design doc, 后续 Phase G 实施时再动 schema.sql.
+
+**Decisions** (见 doc §9):
+- D1: Listing tour 用硬编码 4 套 template(single_family/condo/townhouse/luxury),LLM 不参与 narrative 排序
+- D2: Photo tagging 走 Sonnet 4.5 vision 单次调用,$0.0072/photo, ~$0.18/listing
+- D3: 竖屏默认(1080×1920),横屏只给 community 深度视频
+- D4: Community P0 = 5 类 🟢 全自动 (schools/dining/commute/parks/demographics) + 1 类 🟡 数据视图 vibe 兜底 + 5 空槽让 agent 拍 Bucket A
+- D5: Agent P0 只能"整条替换"或"追加",不做编排 UI
+- D6: GreatSchools 前期用 dev key,有客户再签 $99/mo 合同
+
+**Cost summary**: P0 稳态 ~$200/mo(含平台固定 $65),前 20 GA nbhd bootstrap 一次性 ~$27.
+
+**Next steps**: 等 owner sign-off → Phase G kickoff,先做 schema 加 `listing_photos` + photo_templates,然后 vision tagger endpoint.
+
 
 Institutional memory for the project. Updated incrementally, not at session end.
 
