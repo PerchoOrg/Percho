@@ -37,12 +37,16 @@
  * Supabase and show them as the next-step chooser.
  */
 import { useState } from 'react';
+import Link from 'next/link';
 import { ChevronRight, Images, Upload } from 'lucide-react';
 
 type Source = 'listing-photos' | 'custom-upload';
 
 export function CreateReelSourcePicker() {
   const [source, setSource] = useState<Source | null>(null);
+
+  const nextClass =
+    'mt-2 inline-flex h-12 w-full items-center justify-center gap-1 rounded-full bg-grad-cta text-[15px] font-semibold text-cyan-ink shadow-glow-cyan transition disabled:cursor-not-allowed disabled:bg-none disabled:bg-bg-elevated disabled:text-white/30 disabled:shadow-none';
 
   return (
     <div className="flex flex-col gap-4 px-4 pb-8">
@@ -62,15 +66,26 @@ export function CreateReelSourcePicker() {
         subtitle="Use a walkthrough you already filmed. MP4 / MOV, up to 2 GB."
       />
 
-      <button
-        type="button"
-        disabled={source === null}
-        className="mt-2 inline-flex h-12 w-full items-center justify-center gap-1 rounded-full bg-grad-cta text-[15px] font-semibold text-cyan-ink shadow-glow-cyan transition disabled:cursor-not-allowed disabled:bg-none disabled:bg-bg-elevated disabled:text-white/30 disabled:shadow-none"
-        aria-label="Continue to step 2"
-      >
-        Next
-        <ChevronRight className="h-4 w-4" strokeWidth={2.5} />
-      </button>
+      {source === null ? (
+        <button
+          type="button"
+          disabled
+          className={nextClass}
+          aria-label="Continue to step 2"
+        >
+          Next
+          <ChevronRight className="h-4 w-4" strokeWidth={2.5} />
+        </button>
+      ) : (
+        <Link
+          href={{ pathname: '/create/reel/step-2', query: { source } }}
+          className={nextClass}
+          aria-label="Continue to step 2"
+        >
+          Next
+          <ChevronRight className="h-4 w-4" strokeWidth={2.5} />
+        </Link>
+      )}
     </div>
   );
 }
