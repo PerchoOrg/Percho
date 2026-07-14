@@ -1,0 +1,200 @@
+[
+  {
+    "filename": "Curving_Over_Decatur_Georgia_50876334811_jpg.jpg",
+    "L1": "streetscape",
+    "L2": "quiet-suburban",
+    "L3": {
+      "neighborhood_slug": "decatur"
+    },
+    "confidence": 0.6
+  },
+  {
+    "filename": "Decatur_GA_Courthouse_jpg.jpg",
+    "L1": "event",
+    "L2": "quiet-suburban",
+    "L3": {
+      "neighborhood_slug": "decatur"
+    },
+    "confidence": 0.6
+  },
+  {
+    "filename": "Decatur_Georgia_WV_banner_JPG.jpg",
+    "L1": "streetscape",
+    "L2": "walkable",
+    "L3": {
+      "neighborhood_slug": "decatur"
+    },
+    "confidence": 0.6
+  },
+  {
+    "filename": "Decatur_MARTA_Station_platforms_jpg.jpg",
+    "L1": "streetscape",
+    "L2": "quiet-suburban",
+    "L3": {
+      "neighborhood_slug": "decatur"
+    },
+    "confidence": 0.6
+  },
+  {
+    "filename": "Decatur_Square_JPG.jpg",
+    "L1": "streetscape",
+    "L2": "walkable",
+    "L3": {
+      "neighborhood_slug": "decatur"
+    },
+    "confidence": 0.6
+  },
+  {
+    "filename": "Eddiesattic_png.png",
+    "L1": "streetscape",
+    "L2": "nightlife",
+    "L3": {
+      "neighborhood_slug": "decatur"
+    },
+    "confidence": 0.6
+  },
+  {
+    "filename": "Raging_Burrito_on_Decatur_Square_in_Decatur_Georgia_July_2015_jpg.jpg",
+    "L1": "streetscape",
+    "L2": "quiet-suburban",
+    "L3": {
+      "neighborhood_slug": "decatur"
+    },
+    "confidence": 0.6
+  },
+  {
+    "filename": "Scottish_Rite_Hospital_Decatur_DeKalb_County_Georgia_ca_1915_1918_jpg.jpg",
+    "L1": "streetscape",
+    "L2": "quiet-suburban",
+    "L3": {
+      "neighborhood_slug": "decatur"
+    },
+    "confidence": 0.6
+  },
+  {
+    "filename": "Street_musician_entertaining_a_passerby_on_Decatur_Square_in_Decatur_Georgia_jpg.jpg",
+    "L1": "streetscape",
+    "L2": "walkable",
+    "L3": {
+      "neighborhood_slug": "decatur"
+    },
+    "confidence": 0.6
+  },
+  {
+    "filename": "Street_scene_including_Brick_Store_Pub_and_Sweet_Melissa_s_on_Decatur_Square_in_.jpg",
+    "L1": "streetscape",
+    "L2": "walkable",
+    "L3": {
+      "neighborhood_slug": "decatur"
+    },
+    "confidence": 0.6
+  },
+  {
+    "filename": "The_Depeaux_Restaurant_Decatur_GA_jpg.jpg",
+    "L1": "restaurant",
+    "L2": "quiet-suburban",
+    "L3": {
+      "neighborhood_slug": "decatur"
+    },
+    "confidence": 0.6
+  },
+  {
+    "filename": "The_Gazebo_on_Decatur_Square_in_Decatur_Georgia_jpg.jpg",
+    "L1": "event",
+    "L2": "family",
+    "L3": {
+      "neighborhood_slug": "decatur"
+    },
+    "confidence": 0.6
+  },
+  {
+    "filename": "Decatur_GA_Gazebo_JPG.jpg",
+    "L1": "streetscape",
+    "L2": "quiet-suburban",
+    "L3": {
+      "neighborhood_slug": "decatur"
+    },
+    "confidence": 0.6
+  },
+  {
+    "filename": "Decatur_Square_Bandstand_jpg.jpg",
+    "L1": "streetscape",
+    "L2": "walkable",
+    "L3": {
+      "neighborhood_slug": "decatur"
+    },
+    "confidence": 0.6
+  },
+  {
+    "filename": "Portion_of_the_inscription_of_the_DeKalb_County_Confederate_Monument_in_Decatur_.jpg",
+    "L1": "streetscape",
+    "L2": "quiet-suburban",
+    "L3": {
+      "neighborhood_slug": "decatur"
+    },
+    "confidence": 0.6
+  },
+  {
+    "filename": "Stone_marker_with_mounted_cannon_inscribed_Relic_of_the_Indian_War_of_1836_in_De.jpg",
+    "L1": "streetscape",
+    "L2": "quiet-suburban",
+    "L3": {
+      "neighborhood_slug": "decatur"
+    },
+    "confidence": 0.6
+  },
+  {
+    "filename": "View_from_the_Gazebo_looking_east_across_the_plaza_of_Decatur_s_Historic_Courtho.jpg",
+    "L1": "listing-exterior",
+    "L2": "quiet-suburban",
+    "L3": {
+      "neighborhood_slug": "decatur"
+    },
+    "confidence": 0.6
+  },
+  {
+    "filename": "View_of_storefronts_along_Sycamore_Street_adjacent_to_Decatur_Square_June_2015_j.jpg",
+    "L1": "streetscape",
+    "L2": "walkable",
+    "L3": {
+      "neighborhood_slug": "decatur"
+    },
+    "confidence": 0.6
+  },
+  {
+    "filename": "DeKalb_County_Georgia_Court_House_JPG.jpg",
+    "L1": "listing-exterior",
+    "L2": "quiet-suburban",
+    "L3": {
+      "neighborhood_slug": "decatur"
+    },
+    "confidence": 0.6
+  },
+  {
+    "filename": "DeKalb_County_Georgia_Courthouse_jpg.jpg",
+    "L1": "listing-exterior",
+    "L2": "quiet-suburban",
+    "L3": {
+      "neighborhood_slug": "decatur"
+    },
+    "confidence": 0.6
+  },
+  {
+    "filename": "Dekalb_County_Courthouse_Decatur_Georgia_Detail_jpg.jpg",
+    "L1": "listing-exterior",
+    "L2": "quiet-suburban",
+    "L3": {
+      "neighborhood_slug": "decatur"
+    },
+    "confidence": 0.6
+  },
+  {
+    "filename": "Historic_DeKalb_County_Courthouse_Decatur_Georgia_Thanksgiving_weekend_2015_jpg.jpg",
+    "L1": "listing-exterior",
+    "L2": "quiet-suburban",
+    "L3": {
+      "neighborhood_slug": "decatur"
+    },
+    "confidence": 0.6
+  }
+]

@@ -1,0 +1,116 @@
+[
+  {
+    "file": "/home/ubuntu/Percho/docs/pipelines/poc-output/assets/Gateway_to_Peachtree_Corners_JPG.jpg",
+    "seconds": 3.0,
+    "caption": "3 GA homes · Just listed",
+    "slot": "hook"
+  },
+  {
+    "file": "/home/ubuntu/Percho/docs/pipelines/poc-output/mock-listings/listing-001-alpharetta/01-exterior.jpg",
+    "seconds": 3.0,
+    "caption": "Alpharetta · $875K · 4bd/3.5ba",
+    "slot": "listing"
+  },
+  {
+    "file": "/home/ubuntu/Percho/docs/pipelines/poc-output/mock-listings/listing-001-alpharetta/02-kitchen.jpg",
+    "seconds": 3.0,
+    "caption": "Alpharetta · $875K · 4bd/3.5ba",
+    "slot": "listing"
+  },
+  {
+    "file": "/home/ubuntu/Percho/docs/pipelines/poc-output/mock-listings/listing-001-alpharetta/03-living.jpg",
+    "seconds": 3.0,
+    "caption": "Alpharetta · $875K · 4bd/3.5ba",
+    "slot": "listing"
+  },
+  {
+    "file": "/home/ubuntu/Percho/docs/pipelines/poc-output/mock-listings/listing-001-alpharetta/04-bedroom.jpg",
+    "seconds": 3.0,
+    "caption": "Alpharetta · $875K · 4bd/3.5ba",
+    "slot": "listing"
+  },
+  {
+    "file": "/home/ubuntu/Percho/docs/pipelines/poc-output/mock-listings/listing-001-alpharetta/05-backyard.jpg",
+    "seconds": 3.0,
+    "caption": "Alpharetta · $875K · 4bd/3.5ba",
+    "slot": "listing"
+  },
+  {
+    "file": "/home/ubuntu/Percho/docs/pipelines/poc-output/assets/Georgia_State_Route_141_Peachtree_Corners_Dec_2020_jpg.jpg",
+    "seconds": 2.0,
+    "caption": "Fulton County",
+    "slot": "broll"
+  },
+  {
+    "file": "/home/ubuntu/Percho/docs/pipelines/poc-output/mock-listings/listing-002-decatur/01-exterior.jpg",
+    "seconds": 3.0,
+    "caption": "Decatur · $645K · 3bd/2ba",
+    "slot": "listing"
+  },
+  {
+    "file": "/home/ubuntu/Percho/docs/pipelines/poc-output/mock-listings/listing-002-decatur/02-kitchen.jpg",
+    "seconds": 3.0,
+    "caption": "Decatur · $645K · 3bd/2ba",
+    "slot": "listing"
+  },
+  {
+    "file": "/home/ubuntu/Percho/docs/pipelines/poc-output/mock-listings/listing-002-decatur/03-living.jpg",
+    "seconds": 3.0,
+    "caption": "Decatur · $645K · 3bd/2ba",
+    "slot": "listing"
+  },
+  {
+    "file": "/home/ubuntu/Percho/docs/pipelines/poc-output/mock-listings/listing-002-decatur/04-bedroom.jpg",
+    "seconds": 3.0,
+    "caption": "Decatur · $645K · 3bd/2ba",
+    "slot": "listing"
+  },
+  {
+    "file": "/home/ubuntu/Percho/docs/pipelines/poc-output/mock-listings/listing-002-decatur/05-backyard.jpg",
+    "seconds": 3.0,
+    "caption": "Decatur · $645K · 3bd/2ba",
+    "slot": "listing"
+  },
+  {
+    "file": "/home/ubuntu/Percho/docs/pipelines/poc-output/assets/Peachtree_Corners_Town_Center_Dec_2020_1_jpg.jpg",
+    "seconds": 2.0,
+    "caption": "Walkable neighborhoods",
+    "slot": "broll"
+  },
+  {
+    "file": "/home/ubuntu/Percho/docs/pipelines/poc-output/mock-listings/listing-003-peachtree-corners/01-exterior.jpg",
+    "seconds": 3.0,
+    "caption": "Peachtree Corners · $1.12M · 5bd/4ba",
+    "slot": "listing"
+  },
+  {
+    "file": "/home/ubuntu/Percho/docs/pipelines/poc-output/mock-listings/listing-003-peachtree-corners/02-kitchen.jpg",
+    "seconds": 3.0,
+    "caption": "Peachtree Corners · $1.12M · 5bd/4ba",
+    "slot": "listing"
+  },
+  {
+    "file": "/home/ubuntu/Percho/docs/pipelines/poc-output/mock-listings/listing-003-peachtree-corners/03-living.jpg",
+    "seconds": 3.0,
+    "caption": "Peachtree Corners · $1.12M · 5bd/4ba",
+    "slot": "listing"
+  },
+  {
+    "file": "/home/ubuntu/Percho/docs/pipelines/poc-output/mock-listings/listing-003-peachtree-corners/04-bedroom.jpg",
+    "seconds": 3.0,
+    "caption": "Peachtree Corners · $1.12M · 5bd/4ba",
+    "slot": "listing"
+  },
+  {
+    "file": "/home/ubuntu/Percho/docs/pipelines/poc-output/mock-listings/listing-003-peachtree-corners/05-backyard.jpg",
+    "seconds": 3.0,
+    "caption": "Peachtree Corners · $1.12M · 5bd/4ba",
+    "slot": "listing"
+  },
+  {
+    "file": "/home/ubuntu/Percho/docs/pipelines/poc-output/assets/Gwinnett_Library_Peachtree_Corners_branch_jpg.jpg",
+    "seconds": 5.0,
+    "caption": "See homes → percho.com",
+    "slot": "cta"
+  }
+]

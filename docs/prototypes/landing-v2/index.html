@@ -1,0 +1,364 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Percho — The Atlanta home tour, in your pocket. (v2 differentiation)</title>
+<style>
+  :root{
+    --bg:#F7F5F0; --bg-elev:#FFFFFF; --border:#E8E1D3;
+    --ink:#26241F; --ink-2:#5C574C; --ink-3:#928B7C;
+    --peach:#EF7C57; --peach-deep:#D9603C;
+    --forest:#3C6E52; --forest-soft:#B8D1C0;
+    --gold:#D4A64A; --cream:#F0E9D8;
+    --shadow:0 12px 40px rgba(38,36,31,.08);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Inter",system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased;font-size:16px;line-height:1.55}
+  img,video{max-width:100%;display:block;object-fit:contain}
+  a{color:inherit;text-decoration:none}
+  .wrap{max-width:1220px;margin:0 auto;padding:0 28px}
+  .eyebrow{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--forest);font-weight:700}
+  h1,h2,h3{font-family:"Fraunces","Playfair Display","Georgia",serif;letter-spacing:-0.015em;line-height:1.05;font-weight:600}
+  h1{font-size:80px}
+  h2{font-size:48px;margin:14px 0 14px}
+  h3{font-size:22px;font-family:"Inter",system-ui,sans-serif;font-weight:700;letter-spacing:-0.01em}
+  p.lead{font-size:19px;color:var(--ink-2);max-width:640px}
+  .btn{display:inline-flex;align-items:center;gap:10px;padding:14px 24px;border-radius:999px;font-weight:600;font-size:15px;transition:all .18s;font-family:"Inter",sans-serif}
+  .btn-primary{background:var(--ink);color:#fff}
+  .btn-primary:hover{background:var(--peach-deep)}
+  .btn-ghost{background:transparent;color:var(--ink);border:1.5px solid var(--ink)}
+  .btn-ghost:hover{background:var(--ink);color:#fff}
+  /* nav */
+  nav{position:sticky;top:0;background:rgba(247,245,240,.9);backdrop-filter:blur(12px);z-index:20;border-bottom:1px solid var(--border)}
+  nav .wrap{display:flex;align-items:center;justify-content:space-between;padding:18px 28px}
+  .logo{display:flex;align-items:center;gap:10px;font-family:"Fraunces",serif;font-weight:600;font-size:22px}
+  .logo-mark{width:32px;height:32px;background:var(--peach);border-radius:10px;display:grid;place-items:center;color:#fff;font-weight:800;font-family:"Inter",sans-serif;font-size:16px}
+  nav .links{display:flex;gap:8px;align-items:center}
+  nav .links a{font-size:14px;color:var(--ink-2);padding:8px 14px}
+  /* hero */
+  .hero{padding:70px 0 40px}
+  .hero-top{display:grid;grid-template-columns:1.1fr .9fr;gap:60px;align-items:center}
+  .ga-badge{display:inline-flex;align-items:center;gap:8px;background:var(--cream);border:1px solid var(--border);padding:8px 14px;border-radius:999px;font-size:13px;color:var(--forest);font-weight:600}
+  .ga-badge .dot{width:8px;height:8px;background:var(--forest);border-radius:50%}
+  .hero .cta-row{display:flex;gap:12px;margin-top:28px;flex-wrap:wrap}
+  .hero .microline{margin-top:24px;font-size:13px;color:var(--ink-3);display:flex;gap:16px;flex-wrap:wrap;align-items:center}
+  .hero .microline b{color:var(--ink);font-weight:600}
+  .phone-mock{background:var(--cream);border-radius:38px;padding:14px;box-shadow:var(--shadow);width:100%;aspect-ratio:9/16;max-width:360px;margin:0 auto;position:relative;overflow:hidden}
+  .phone-mock img,.phone-mock video{width:100%;height:100%;object-fit:contain;background:var(--cream);border-radius:26px;display:block}
+  .phone-mock .cap{position:absolute;left:18px;right:18px;bottom:28px;color:#fff;text-shadow:0 2px 10px rgba(0,0,0,.85),0 1px 3px rgba(0,0,0,.9);z-index:2}
+  .phone-mock::after{content:"";position:absolute;left:14px;right:14px;bottom:14px;height:45%;border-radius:0 0 26px 26px;background:linear-gradient(180deg,transparent 0%,rgba(0,0,0,.55) 65%,rgba(0,0,0,.75) 100%);pointer-events:none}
+  .phone-mock .cap .neigh{font-size:13px;letter-spacing:.14em;text-transform:uppercase;opacity:.9}
+  .phone-mock .cap .price{font-size:28px;font-weight:800;margin-top:2px}
+  .phone-mock .cap .meta{font-size:13px;opacity:.92}
+  /* GA county strip */
+  .county-strip{margin-top:56px;padding:24px 0;border-top:1px dashed var(--border);border-bottom:1px dashed var(--border)}
+  .county-strip .row{display:flex;gap:32px;align-items:center;flex-wrap:wrap;justify-content:space-between}
+  .county-strip .num{font-family:"Fraunces",serif;font-size:34px;font-weight:600;color:var(--forest)}
+  .county-strip .lbl{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);margin-top:2px}
+  /* section */
+  section{padding:96px 0;border-top:1px solid var(--border)}
+  .section-head{max-width:680px;margin-bottom:52px}
+  .grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+  .card{background:var(--bg-elev);border:1px solid var(--border);border-radius:18px;padding:30px;transition:all .2s;position:relative}
+  .card:hover{transform:translateY(-3px);box-shadow:var(--shadow);border-color:var(--forest-soft)}
+  .card .ico{width:48px;height:48px;background:var(--cream);border-radius:14px;display:grid;place-items:center;font-size:22px;margin-bottom:18px}
+  .card.feature-hero{grid-column:span 2;background:linear-gradient(135deg,var(--forest-soft) 0%,var(--cream) 100%);border-color:var(--forest-soft)}
+  .card.feature-hero .ico{background:var(--bg-elev)}
+  .card h3{margin-bottom:8px}
+  .card p{color:var(--ink-2);font-size:15px}
+  /* neighborhood spotlight */
+  .neigh-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+  .neigh-card{background:var(--bg-elev);border:1px solid var(--border);border-radius:18px;overflow:hidden;transition:all .2s}
+  .neigh-card:hover{transform:translateY(-4px);box-shadow:var(--shadow)}
+  .neigh-card .thumb{aspect-ratio:4/3;background:var(--cream);position:relative;overflow:hidden}
+  .neigh-card .thumb img{width:100%;height:100%;object-fit:contain;background:var(--cream)}
+  .neigh-card .body{padding:22px}
+  .neigh-card .body h3{font-family:"Fraunces",serif;font-weight:600;font-size:22px;margin-bottom:4px}
+  .neigh-card .tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px}
+  .neigh-card .tag{font-size:11px;padding:4px 10px;background:var(--cream);border-radius:999px;color:var(--forest);font-weight:600;letter-spacing:.04em}
+  .neigh-card .stat{margin-top:14px;font-size:13px;color:var(--ink-3);display:flex;justify-content:space-between}
+  /* pipeline explainer */
+  .pipe{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;align-items:stretch;margin-top:32px}
+  .pipe-step{background:var(--bg-elev);border:1px solid var(--border);border-radius:14px;padding:20px;position:relative;font-size:14px}
+  .pipe-step .n{font-family:"Fraunces",serif;font-size:32px;color:var(--peach-deep);line-height:1;margin-bottom:8px}
+  .pipe-step h4{font-size:14px;font-weight:700;margin-bottom:4px}
+  .pipe-step p{color:var(--ink-2);font-size:13px}
+  /* pricing */
+  .prices{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;align-items:stretch}
+  .price-card{background:var(--bg-elev);border:1px solid var(--border);border-radius:18px;padding:36px;display:flex;flex-direction:column}
+  .price-card.featured{border:2px solid var(--forest);background:linear-gradient(180deg,var(--forest-soft) 0%,#fff 40%)}
+  .price-card .pill{display:inline-block;font-size:11px;letter-spacing:.14em;text-transform:uppercase;background:var(--cream);color:var(--forest);padding:5px 12px;border-radius:999px;margin-bottom:14px;font-weight:700;align-self:flex-start}
+  .price-card.featured .pill{background:var(--forest);color:#fff}
+  .price-card h3{font-family:"Fraunces",serif;font-weight:600;font-size:26px}
+  .price-card .amount{font-family:"Fraunces",serif;font-size:52px;font-weight:600;margin:20px 0 6px}
+  .price-card .amount small{font-size:15px;color:var(--ink-3);font-family:"Inter",sans-serif;font-weight:500}
+  .price-card .yearly{color:var(--ink-3);font-size:13px}
+  .price-card ul{list-style:none;margin:22px 0;padding:0;flex:1}
+  .price-card li{padding:6px 0;font-size:14px;color:var(--ink-2);display:flex;gap:10px}
+  .price-card li::before{content:"◆";color:var(--peach);font-size:10px;margin-top:5px}
+  /* CTA */
+  .cta-final{text-align:center;padding:140px 0;background:linear-gradient(180deg,transparent 0%,var(--cream) 100%)}
+  .cta-final h2{font-size:64px;max-width:800px;margin:0 auto}
+  footer{padding:48px 0 64px;color:var(--ink-3);font-size:14px;border-top:1px solid var(--border)}
+  footer .wrap{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:32px}
+  footer h4{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink);margin-bottom:12px}
+  footer a{display:block;padding:4px 0;color:var(--ink-3)}
+  @media (max-width:900px){
+    h1{font-size:48px}h2{font-size:34px}
+    .hero-top{grid-template-columns:1fr}
+    .grid-3,.neigh-grid,.prices{grid-template-columns:1fr}
+    .pipe{grid-template-columns:1fr 1fr}
+    .card.feature-hero{grid-column:span 1}
+    .cta-final h2{font-size:38px}
+    footer .wrap{grid-template-columns:1fr 1fr}
+  }
+  /* mobile <768px: single column, tighter chrome, phone-mock scales down */
+  @media (max-width:767px){
+    .wrap{padding:0 18px}
+    h1{font-size:38px;line-height:1.08}
+    h2{font-size:28px}
+    h3{font-size:19px}
+    p.lead{font-size:16px}
+    nav .wrap{padding:12px 18px}
+    nav .links a:not(.btn){display:none}
+    nav .links .btn{padding:10px 16px;font-size:14px}
+    .logo{font-size:18px}
+    .logo-mark{width:28px;height:28px;font-size:14px}
+    .hero{padding:36px 0 24px}
+    .hero-top{gap:32px}
+    .hero .cta-row{margin-top:20px;gap:10px}
+    .hero .cta-row .btn{flex:1;justify-content:center;padding:12px 16px;font-size:14px}
+    .hero .microline{margin-top:18px;font-size:12px;gap:10px}
+    .phone-mock{max-width:260px;padding:10px;border-radius:30px}
+    .phone-mock img{border-radius:22px}
+    .phone-mock .cap{left:14px;right:14px;bottom:20px}
+    .phone-mock .cap .price{font-size:22px}
+    .phone-mock .cap .meta{font-size:12px}
+    section{padding:56px 0}
+    .section-head{margin-bottom:32px}
+    .county-strip{margin-top:36px;padding:18px 0}
+    .county-strip .row{gap:18px 24px;justify-content:flex-start}
+    .county-strip .num{font-size:26px}
+    .county-strip .lbl{font-size:10px}
+    /* feature grid, neighborhoods, pricing → single column */
+    .grid-3,.neigh-grid,.prices,.pipe{grid-template-columns:1fr;gap:14px}
+    .card{padding:22px}
+    .card .ico{width:42px;height:42px;font-size:19px;margin-bottom:14px}
+    .neigh-card .body{padding:18px}
+    .price-card{padding:26px}
+    .price-card .amount{font-size:42px;margin:14px 0 4px}
+    .cta-final{padding:80px 0}
+    .cta-final h2{font-size:30px}
+    footer{padding:36px 0 48px}
+    footer .wrap{grid-template-columns:1fr;gap:24px}
+  }
+</style>
+</head>
+<body>
+<nav><div class="wrap">
+  <a class="logo" href="#"><span class="logo-mark">P</span> Percho</a>
+  <div class="links">
+    <a href="#neighborhoods">Neighborhoods</a>
+    <a href="#agents">For agents</a>
+    <a href="#pricing">Pricing</a>
+    <a class="btn btn-primary" href="#pricing">Start trial</a>
+  </div>
+</div></nav>
+
+<header class="hero"><div class="wrap">
+  <div class="hero-top">
+    <div>
+      <span class="ga-badge"><span class="dot"></span>Made in Georgia · Atlanta ↔ Savannah</span>
+      <h1 style="margin-top:20px">The Atlanta<br/>home tour,<br/><span style="color:var(--peach-deep);font-style:italic">in your pocket.</span></h1>
+      <p class="lead" style="margin-top:22px">Every listing in Georgia, turned into a 30-second reel. Every neighborhood, told as a story. Made for GA agents who know Buckhead is not East Atlanta — and buyers who want to feel the block before they book the showing.</p>
+      <div class="cta-row">
+        <a class="btn btn-primary" href="#pricing">Try free for 7 days</a>
+        <a class="btn btn-ghost" href="#feed">Watch Atlanta reels →</a>
+      </div>
+      <div class="microline">
+        <span><b>142</b> GA agents onboarded</span>
+        <span>·</span>
+        <span><b>18</b> counties live</span>
+        <span>·</span>
+        <span>Free for buyers, always</span>
+      </div>
+    </div>
+    <div class="phone-mock">
+      <video src="hero.mp4" poster="hero-poster.jpg" autoplay muted loop playsinline preload="metadata" aria-label="Percho reel for a Peachtree Corners home"></video>
+      <div class="cap">
+        <div class="neigh">Peachtree Corners · Gwinnett</div>
+        <div class="price">$675,000</div>
+        <div class="meta">4 bd · 3 ba · 2,540 sqft · walk to Town Center</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="county-strip"><div class="row">
+    <div><div class="num">18</div><div class="lbl">GA counties live</div></div>
+    <div><div class="num">4,200+</div><div class="lbl">Reels published</div></div>
+    <div><div class="num">142</div><div class="lbl">Agents onboarded</div></div>
+    <div><div class="num">31</div><div class="lbl">Neighborhood stories</div></div>
+    <div><div class="num">5</div><div class="lbl">Languages (EN·ES·ZH·VI·KO)</div></div>
+  </div></div>
+</div></header>
+
+<section id="agents">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="eyebrow">Why Percho for GA agents</span>
+      <h2>Built for one state.<br/>That's how we win.</h2>
+      <p class="lead">Zillow is a directory. Instagram is a hobby. Percho is a Georgia-specialist growth stack — GA MLS integration, GA county-level neighborhood pages, GA-fluent AI copy, and the buyer pool that already lives in Atlanta.</p>
+    </div>
+    <div class="grid-3">
+      <div class="card feature-hero">
+        <div class="ico">🏘️</div>
+        <h3>Neighborhood-first browsing</h3>
+        <p>Every listing lives inside its neighborhood — Buckhead, Decatur, Peachtree Corners, Alpharetta. Buyers scroll by vibe (walkable, quiet-suburban, family, nightlife), not just zip code. This is what Zillow can't do.</p>
+      </div>
+      <div class="card"><div class="ico">📸</div><h3>Photos → reels, automatically</h3><p>Upload MLS photos. We compose a 30-second reel with neighborhood B-roll, subtitles, and light music. No filming required.</p></div>
+      <div class="card"><div class="ico">✧</div><h3>AI listing import</h3><p>Paste an MLS PDF. Gemini parses price, beds, baths, sqft, and address — you review and publish in 90 seconds.</p></div>
+      <div class="card"><div class="ico">◈</div><h3>Brokerage seats</h3><p>One code, whole office. GA brokerages get shared analytics + team-branded reels + neighborhood coverage maps.</p></div>
+      <div class="card"><div class="ico">🌐</div><h3>Multilingual reach</h3><p>Auto-generate captions in Spanish, Chinese, Vietnamese, Korean. Share to Rednote / WeChat Moments. Reach GA's real buyer pool.</p></div>
+      <div class="card"><div class="ico">📊</div><h3>Weekend tour reels</h3><p>QR-scan open house check-ins turn into a Monday recap reel automatically. Show the seller what happened.</p></div>
+      <div class="card"><div class="ico">📥</div><h3>MLS photos, direct pipe</h3><p>Photos flow straight from FMLS/GAMLS into your reels — no shooting, no re-uploading, no gimbal. Agent's phone stays in their pocket while the pipeline works.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="neighborhoods" style="background:var(--cream)">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="eyebrow">Neighborhoods</span>
+      <h2>Communities, not families.</h2>
+      <p class="lead">Percho "community" means the block, the coffee shop, the park, the school pickup line — the vibe you actually move into. Not a private chat with your in-laws. Buyers scroll neighborhoods the way they scroll TikTok.</p>
+    </div>
+    <div class="neigh-grid">
+      <div class="neigh-card">
+        <div class="thumb"><img src="https://images.unsplash.com/photo-1449844908441-8829872d2607?w=800&auto=format" alt="Peachtree Corners neighborhood"/></div>
+        <div class="body">
+          <span class="eyebrow" style="color:var(--peach-deep)">Gwinnett</span>
+          <h3>Peachtree Corners</h3>
+          <p style="color:var(--ink-2);font-size:14px">Tech-forward suburb with walkable Town Green, Level Creek trails, top-3 GA schools.</p>
+          <div class="tags"><span class="tag">walkable</span><span class="tag">family</span><span class="tag">nature</span></div>
+          <div class="stat"><span>42 listings live</span><span>Median $675K</span></div>
+        </div>
+      </div>
+      <div class="neigh-card">
+        <div class="thumb"><img src="https://images.unsplash.com/photo-1596644462291-3d3ef5216d7e?w=800&auto=format" alt="Decatur Square walkable downtown"/></div>
+        <div class="body">
+          <span class="eyebrow" style="color:var(--peach-deep)">DeKalb</span>
+          <h3>Decatur Square</h3>
+          <p style="color:var(--ink-2);font-size:14px">City-block density with an indie bookstore, Saturday market, and Decatur schools that families uproot for.</p>
+          <div class="tags"><span class="tag">walkable</span><span class="tag">nightlife</span><span class="tag">culture</span></div>
+          <div class="stat"><span>28 listings live</span><span>Median $795K</span></div>
+        </div>
+      </div>
+      <div class="neigh-card">
+        <div class="thumb"><img src="https://images.unsplash.com/photo-1502005229762-cf1b2da7c5d6?w=800&auto=format" alt="Alpharetta neighborhood"/></div>
+        <div class="body">
+          <span class="eyebrow" style="color:var(--peach-deep)">Fulton</span>
+          <h3>Alpharetta Avalon</h3>
+          <p style="color:var(--ink-2);font-size:14px">Mixed-use luxury pocket — walk to Avalon shops, backup GA-400 access, corporate-family favorite.</p>
+          <div class="tags"><span class="tag">walkable</span><span class="tag">family</span><span class="tag">luxury</span></div>
+          <div class="stat"><span>19 listings live</span><span>Median $1.1M</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="section-head">
+      <span class="eyebrow">How the reels get made</span>
+      <h2>Photos in.<br/>Neighborhood story out.</h2>
+      <p class="lead">Our differentiator: we don't need you to film. We compose reels from your MLS photos + our GA neighborhood B-roll library, tagged and licensed. This is how a Percho agent posts 12 listings a week without owning a gimbal.</p>
+    </div>
+    <div class="pipe">
+      <div class="pipe-step"><div class="n">01</div><h4>Source</h4><p>MLS photos + our GA neighborhood library (Wikimedia, licensed vloggers, agent uploads).</p></div>
+      <div class="pipe-step"><div class="n">02</div><h4>Tag</h4><p>CLIP + GPT-4V label each shot: interior, street, park, school, restaurant, event.</p></div>
+      <div class="pipe-step"><div class="n">03</div><h4>Rank</h4><p>Match listing → nearest neighborhood assets by mood + walk-score + price band.</p></div>
+      <div class="pipe-step"><div class="n">04</div><h4>Compose</h4><p>Hook → vibe → 3–5 listing shots → school/park → CTA. 45–60s, 9:16, subtitled.</p></div>
+      <div class="pipe-step"><div class="n">05</div><h4>Publish</h4><p>Percho feed + IG Reels + TikTok + Rednote + WeChat, all deep-linked back to the listing.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="pricing">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="eyebrow">Pricing</span>
+      <h2>Priced for GA depth,<br/>not national breadth.</h2>
+      <p class="lead">Free forever for buyers. Agents pay for a GA-native growth stack — MLS integration, neighborhood library, multilingual reach. Cheaper than a photographer, faster than DIY.</p>
+    </div>
+    <div class="prices">
+      <div class="price-card">
+        <span class="pill">Solo Agent</span>
+        <h3>The GA agent doing it themselves.</h3>
+        <div class="amount">$19 <small>/ month</small></div>
+        <div class="yearly">$179/year — save 22%</div>
+        <ul>
+          <li>Unlimited listings & reels</li>
+          <li>Full GA neighborhood library</li>
+          <li>AI listing import</li>
+          <li>Multilingual captions (5 languages)</li>
+          <li>Open house QR + recap reel</li>
+        </ul>
+        <a class="btn btn-ghost" href="#" style="margin-top:auto">Start 7-day trial</a>
+      </div>
+      <div class="price-card featured">
+        <span class="pill">Team (Most popular)</span>
+        <h3>Boutique GA teams and small brokerages.</h3>
+        <div class="amount">$79 <small>/ month · up to 10 seats</small></div>
+        <div class="yearly">$749/year — save 21%</div>
+        <ul>
+          <li>Everything in Solo</li>
+          <li>10 agent seats, one billing code</li>
+          <li>Team-branded reel intros / outros</li>
+          <li>Team analytics + coverage map</li>
+          <li>Priority support (GA-based)</li>
+        </ul>
+        <a class="btn btn-primary" href="#" style="margin-top:auto">Start team trial</a>
+      </div>
+      <div class="price-card">
+        <span class="pill">Brokerage</span>
+        <h3>Multi-office GA brokerages, 25–50 seats.</h3>
+        <div class="amount">$299 <small>/ month · up to 50 seats</small></div>
+        <div class="yearly">or annual pricing on request</div>
+        <ul>
+          <li>Everything in Team</li>
+          <li>Up to 50 agent seats</li>
+          <li>Custom neighborhood coverage (add counties)</li>
+          <li>MLS bulk import + white-label domain</li>
+          <li>Dedicated GA account manager</li>
+        </ul>
+        <a class="btn btn-ghost" href="#" style="margin-top:auto">Talk to us</a>
+      </div>
+    </div>
+    <p style="text-align:center;margin-top:36px;color:var(--ink-3);font-size:14px">Buyers browse free forever · Optional <b style="color:var(--ink)">$2.99/mo Pro Alerts</b> for zip-code-level new-listing pings.</p>
+  </div>
+</section>
+
+<section class="cta-final">
+  <div class="wrap">
+    <span class="eyebrow">Get started</span>
+    <h2>Georgia is scrolling.<br/>Get in the feed.</h2>
+    <p class="lead" style="margin:16px auto 28px">7 days free. No credit card up front. Cancel any time.</p>
+    <a class="btn btn-primary" href="#pricing">Start trial</a>
+  </div>
+</section>
+
+<footer><div class="wrap">
+  <div>
+    <a class="logo" href="#"><span class="logo-mark">P</span> Percho</a>
+    <p style="margin-top:12px;max-width:340px">Georgia real estate, on reels.<br/>Made in Atlanta · © 2026 Percho</p>
+  </div>
+  <div><h4>Product</h4><a href="#">Feed</a><a href="#">Neighborhoods</a><a href="#">For agents</a><a href="#">Pricing</a></div>
+  <div><h4>Counties</h4><a href="#">Fulton</a><a href="#">Gwinnett</a><a href="#">DeKalb</a><a href="#">Cobb</a><a href="#">+14 more</a></div>
+  <div><h4>Legal</h4><a href="#">Privacy</a><a href="#">Terms</a><a href="#">Support</a><a href="#">中文 · ES · VI · KO</a></div>
+</div></footer>
+</body>
+</html>

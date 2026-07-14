@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Percho — Georgia homes, on reels. (v1 baseline)</title>
+<style>
+  :root{
+    --bg:#FBFAF7; --bg-elev:#FFFFFF; --border:#EEE8DE;
+    --ink:#1F1D1A; --ink-2:#5B564E; --ink-3:#8B857B;
+    --peach:#F28C6E; --peach-deep:#E36F4F;
+    --sage:#8AB39A; --cream:#F5EFE3;
+    --shadow:0 8px 30px rgba(31,29,26,.06);
+    --radius:14px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Inter","SF Pro Text",system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased;font-size:16px;line-height:1.55}
+  img,video{max-width:100%;display:block;object-fit:contain}
+  a{color:inherit;text-decoration:none}
+  .wrap{max-width:1180px;margin:0 auto;padding:0 24px}
+  .eyebrow{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--peach-deep);font-weight:600}
+  h1,h2,h3{font-family:"Inter","SF Pro Display",system-ui,sans-serif;letter-spacing:-0.02em;line-height:1.1}
+  h1{font-size:64px;font-weight:800}
+  h2{font-size:42px;font-weight:800;margin:14px 0 12px}
+  h3{font-size:22px;font-weight:700}
+  p.lead{font-size:18px;color:var(--ink-2);max-width:640px}
+  .btn{display:inline-flex;align-items:center;gap:10px;padding:14px 22px;border-radius:999px;font-weight:600;font-size:15px;transition:transform .15s,box-shadow .15s}
+  .btn-primary{background:var(--ink);color:#fff}
+  .btn-primary:hover{transform:translateY(-1px);box-shadow:var(--shadow)}
+  .btn-ghost{background:var(--bg-elev);color:var(--ink);border:1px solid var(--border)}
+  /* nav */
+  nav{position:sticky;top:0;background:rgba(251,250,247,.85);backdrop-filter:blur(10px);z-index:10;border-bottom:1px solid var(--border)}
+  nav .wrap{display:flex;align-items:center;justify-content:space-between;padding-top:16px;padding-bottom:16px}
+  .logo{display:flex;align-items:center;gap:8px;font-weight:800;font-size:18px}
+  .logo-mark{width:26px;height:26px;background:var(--peach);border-radius:8px;display:grid;place-items:center;color:#fff;font-weight:900}
+  /* hero */
+  .hero{padding:80px 0 60px;display:grid;grid-template-columns:1.15fr .85fr;gap:60px;align-items:center}
+  .hero .trial{margin-top:22px;font-size:13px;color:var(--ink-3)}
+  .hero .cta-row{display:flex;gap:12px;margin-top:28px;flex-wrap:wrap}
+  .phone-mock{background:var(--cream);border-radius:36px;padding:14px;box-shadow:var(--shadow);width:100%;aspect-ratio:9/16;max-width:340px;margin:0 auto;position:relative;overflow:hidden}
+  .phone-mock img{width:100%;height:100%;object-fit:contain;background:var(--cream);border-radius:24px}
+  .phone-mock .caption{position:absolute;left:16px;right:16px;bottom:22px;color:#fff;text-shadow:0 2px 8px rgba(0,0,0,.5)}
+  .phone-mock .caption .price{font-size:26px;font-weight:800}
+  .phone-mock .caption .meta{font-size:13px;opacity:.9}
+  /* sections */
+  section{padding:80px 0;border-top:1px solid var(--border)}
+  .section-head{max-width:640px;margin-bottom:44px}
+  .grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:24px}
+  .grid-2{display:grid;grid-template-columns:repeat(2,1fr);gap:24px}
+  .card{background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius);padding:28px;transition:transform .2s,box-shadow .2s}
+  .card:hover{transform:translateY(-3px);box-shadow:var(--shadow)}
+  .card .ico{width:44px;height:44px;background:var(--cream);border-radius:12px;display:grid;place-items:center;font-size:22px;margin-bottom:16px}
+  .card h3{margin-bottom:8px}
+  .card p{color:var(--ink-2);font-size:15px}
+  /* screenshot grid */
+  .shot-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+  .shot{aspect-ratio:9/16;background:var(--cream);border-radius:14px;overflow:hidden;box-shadow:var(--shadow)}
+  .shot img{width:100%;height:100%;object-fit:contain;background:var(--cream)}
+  /* two-sided */
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+  .two .card ul{margin-top:14px;list-style:none;padding:0}
+  .two .card li{padding:8px 0;color:var(--ink-2);font-size:15px;display:flex;gap:10px}
+  .two .card li::before{content:"→";color:var(--peach-deep)}
+  /* pricing */
+  .price-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start}
+  .price-card{background:var(--bg-elev);border:1px solid var(--border);border-radius:var(--radius);padding:32px}
+  .price-card .pill{display:inline-block;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--peach-deep);background:var(--cream);padding:5px 10px;border-radius:999px;margin-bottom:12px}
+  .price-card .amount{font-size:44px;font-weight:800;margin-top:8px}
+  .price-card .amount small{font-size:16px;font-weight:500;color:var(--ink-3)}
+  .price-card .yearly{color:var(--ink-3);font-size:13px;margin-top:4px}
+  .office-tiers{margin-top:20px;border-top:1px solid var(--border)}
+  .office-tier{display:grid;grid-template-columns:1.1fr 1fr 1.2fr;gap:12px;padding:14px 0;border-bottom:1px solid var(--border);font-size:14px;align-items:center}
+  .office-tier b{font-size:15px}
+  .office-tier .seats{color:var(--ink-3)}
+  .office-tier .cost{text-align:right;font-variant-numeric:tabular-nums}
+  /* CTA final */
+  .cta-final{text-align:center;padding:120px 0}
+  .cta-final h2{font-size:56px}
+  footer{padding:40px 0 60px;color:var(--ink-3);font-size:14px;border-top:1px solid var(--border)}
+  footer .wrap{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px}
+  footer a{margin-right:18px}
+  @media (max-width:900px){
+    h1{font-size:44px}h2{font-size:32px}
+    .hero{grid-template-columns:1fr;padding:48px 0}
+    .grid-3,.shot-grid{grid-template-columns:repeat(2,1fr)}
+    .two,.price-grid{grid-template-columns:1fr}
+    .cta-final h2{font-size:38px}
+  }
+</style>
+</head>
+<body>
+<nav><div class="wrap">
+  <a class="logo" href="#"><span class="logo-mark">P</span> Percho</a>
+  <a class="btn btn-primary" href="#pricing">Start free trial</a>
+</div></nav>
+
+<header class="hero wrap">
+  <div>
+    <span class="eyebrow">Georgia real estate · on reels</span>
+    <h1 style="margin-top:12px">Georgia homes,<br/><span style="color:var(--peach-deep)">on reels.</span></h1>
+    <p class="lead" style="margin-top:20px">Turn every Atlanta listing into a short-form video tour. Built for GA agents who already think in stories — and for buyers who want to actually <em>see</em> the home before scrolling past.</p>
+    <div class="cta-row">
+      <a class="btn btn-primary" href="#pricing">Start 7-day trial</a>
+      <a class="btn btn-ghost" href="#feed">See Atlanta reels →</a>
+    </div>
+    <p class="trial">● 7-day free trial · cancel anytime · free for buyers</p>
+  </div>
+  <div class="phone-mock">
+    <img src="https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=680&auto=format" alt="Sample Atlanta listing reel"/>
+    <div class="caption">
+      <div class="price">$635,000</div>
+      <div class="meta">Atlanta, GA · 4 bd · 3 ba · 2,540 sqft</div>
+    </div>
+  </div>
+</header>
+
+<section id="features">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="eyebrow">Why Percho</span>
+      <h2>The whole pipeline, one app.</h2>
+      <p class="lead">Listings, reels, messaging, open houses, and brokerage management — all under one subscription. No more screenshot-and-edit dance between five tools.</p>
+    </div>
+    <div class="grid-3">
+      <div class="card"><div class="ico">▶</div><h3>Vertical reels for every listing</h3><p>Record a property, add voice narration, auto-generate subtitles, and post. Every reel deep-links back to the full listing.</p></div>
+      <div class="card"><div class="ico">✧</div><h3>AI listing import</h3><p>Snap an MLS sheet or paste a PDF. Gemini pulls out price, beds, baths, sqft, and address — you review and publish.</p></div>
+      <div class="card"><div class="ico">◈</div><h3>Brokerage seats</h3><p>Office owners subscribe once and invite agents with a single code. Full access via the office's seat — no separate billing.</p></div>
+      <div class="card"><div class="ico">✉</div><h3>Real-time messaging</h3><p>Direct messages, group threads, and listing inquiries that already know which property they're about. No lost context.</p></div>
+      <div class="card"><div class="ico">◐</div><h3>Open houses</h3><p>Schedule, generate a QR code for check-in, and watch attendance roll in. Built-in analytics tell you who showed and what they cared about.</p></div>
+      <div class="card"><div class="ico">◉</div><h3>Circles for buyers</h3><p>Private circles to co-shop with your partner, parents, agent, or roommates. Vote on properties, share notes, decide together.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="inside">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="eyebrow">Inside the app</span>
+      <h2>A real estate suite that doesn't look like one.</h2>
+      <p class="lead">Designed for GA agents who care how their brand shows up. Warm light UI, gentle motion, made-for-mobile.</p>
+    </div>
+    <div class="shot-grid">
+      <div class="shot"><img src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=600&auto=format" alt="Property detail"/></div>
+      <div class="shot"><img src="https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=600&auto=format" alt="Feed"/></div>
+      <div class="shot"><img src="https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=600&auto=format" alt="Office profile"/></div>
+      <div class="shot"><img src="https://images.unsplash.com/photo-1600566753376-12c8ab7fb75b?w=600&auto=format" alt="Agent profile"/></div>
+      <div class="shot"><img src="https://images.unsplash.com/photo-1600585154526-990dced4db0d?w=600&auto=format" alt="Create reel"/></div>
+      <div class="shot"><img src="https://images.unsplash.com/photo-1600607687644-c7171b42498b?w=600&auto=format" alt="Commute"/></div>
+      <div class="shot"><img src="https://images.unsplash.com/photo-1600566753104-685f4f24cb4d?w=600&auto=format" alt="New listing"/></div>
+      <div class="shot"><img src="https://images.unsplash.com/photo-1600585152915-d208bec867a1?w=600&auto=format" alt="Messages"/></div>
+    </div>
+  </div>
+</section>
+
+<section id="two-sided">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="eyebrow">Two-sided by design</span>
+      <h2>Free for buyers. Pro tools for agents.</h2>
+      <p class="lead">Anyone can browse listings, watch reels, follow agents, and DM about a property — completely free. Agents pay for the tools that grow their business.</p>
+    </div>
+    <div class="two">
+      <div class="card">
+        <span class="eyebrow">Buyer / Renter</span>
+        <h3 style="margin-top:10px">Free.</h3>
+        <ul>
+          <li>Browse the full feed of GA reels</li>
+          <li>View every listing in detail</li>
+          <li>Save properties and follow agents</li>
+          <li>Message agents directly</li>
+          <li>Create circles with family or partner</li>
+        </ul>
+      </div>
+      <div class="card">
+        <span class="eyebrow">Agent / Office</span>
+        <h3 style="margin-top:10px">7-day free trial.</h3>
+        <ul>
+          <li>Post unlimited listings & reels</li>
+          <li>AI listing import from MLS sheets & PDFs</li>
+          <li>Open houses with QR check-in & analytics</li>
+          <li>Direct & group messaging with inquiry context</li>
+          <li>Office tiers grant seats to your whole team</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="pricing">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="eyebrow">Pricing</span>
+      <h2>Built for solo agents and offices alike.</h2>
+      <p class="lead">All plans start with a 7-day free trial. Office plans get cheaper per seat as you scale.</p>
+    </div>
+    <div class="price-grid">
+      <div class="price-card">
+        <span class="pill">Individual Agent</span>
+        <h3>Solo agents or independent practitioners.</h3>
+        <div class="amount">$9.99 <small>/ month</small></div>
+        <div class="yearly">or $79.99/year — save 33%</div>
+        <p style="margin-top:20px;color:var(--ink-2);font-size:14px">7-day free trial</p>
+        <a class="btn btn-primary" href="#" style="margin-top:22px">Start trial</a>
+      </div>
+      <div class="price-card">
+        <span class="pill">Office Tiers</span>
+        <h3>Admin pays once, invites agents with a single code.</h3>
+        <div class="office-tiers">
+          <div class="office-tier"><b>Starter</b><span class="seats">up to 5 agents</span><span class="cost">$34.99/mo · $349.99/yr</span></div>
+          <div class="office-tier"><b>Growth</b><span class="seats">up to 10 agents</span><span class="cost">$59.99/mo · $599.99/yr</span></div>
+          <div class="office-tier"><b>Pro</b><span class="seats">up to 25 agents</span><span class="cost">$124.99/mo · $999.99/yr</span></div>
+          <div class="office-tier"><b>Enterprise</b><span class="seats">up to 50 agents</span><span class="cost">$229.99/mo</span></div>
+        </div>
+        <p style="margin-top:20px;color:var(--ink-3);font-size:13px">7-day free trial on every tier</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="cta-final">
+  <div class="wrap">
+    <span class="eyebrow">Get it</span>
+    <h2>Start your 7 free days.</h2>
+    <p class="lead" style="margin:12px auto 24px">Sign up as a buyer for free, or as an agent to start your trial. Office? Subscribe once and bring your whole team.</p>
+    <a class="btn btn-primary" href="#pricing">Start trial</a>
+  </div>
+</section>
+
+<footer><div class="wrap">
+  <span>© 2026 Percho · Georgia real estate, on reels.</span>
+  <div><a href="#">Privacy</a><a href="#">Terms</a><a href="#">Support</a></div>
+</div></footer>
+</body>
+</html>

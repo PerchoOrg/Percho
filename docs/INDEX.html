@@ -1,0 +1,93 @@
+<!doctype html><html lang="zh"><head><meta charset="utf-8"><title>Percho 8h 产出索引</title><meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+:root{--bg:#faf6f0;--ink:#242018;--ink2:#6b6255;--peach:#e4a982;--peach-deep:#c47a4b;--forest:#3d5a3f;--card:#fff;--border:#eadfd0}
+*{box-sizing:border-box}body{margin:0;font-family:-apple-system,system-ui,sans-serif;background:var(--bg);color:var(--ink);line-height:1.55;padding:40px 24px 80px}
+.wrap{max-width:960px;margin:0 auto}
+h1{font-size:36px;margin:0 0 4px}h1 em{color:var(--peach-deep);font-style:italic}
+.sub{color:var(--ink2);margin:0 0 32px}
+h2{font-size:22px;margin:36px 0 12px;padding-bottom:6px;border-bottom:2px solid var(--peach)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px 18px;transition:transform .12s}
+.card:hover{transform:translateY(-2px);border-color:var(--peach-deep)}
+.card a{color:var(--ink);text-decoration:none;font-weight:600;font-size:15px;display:block}
+.card .desc{color:var(--ink2);font-size:13px;margin-top:6px}
+.card .kind{display:inline-block;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--forest);background:#e6ece5;padding:3px 8px;border-radius:4px;margin-bottom:8px}
+.hero{background:linear-gradient(135deg,#fbf1e3 0%,#f4e2c9 100%);border-radius:16px;padding:28px 32px;margin-bottom:24px}
+.hero p{margin:6px 0;color:var(--ink2)}
+.big{font-size:14px}.big b{color:var(--peach-deep)}
+video{max-width:280px;border-radius:12px;background:#000;margin-top:8px}
+</style></head><body><div class="wrap">
+<h1>Percho <em>8h 自主推进</em> 产出索引</h1>
+<p class="sub">2026-07-11 · cron job <code>4258ddf0ed04</code> · 22/24 tick 完成</p>
+
+<div class="hero">
+<p class="big"><b>3 个 landing 原型</b> — v2 推荐落地</p>
+<p class="big"><b>3 条 60s POC reel</b> — Peachtree Corners / Decatur / listing-focused</p>
+<p class="big"><b>Pipeline 生产化设计</b> — schema.sql + TS interface + orchestration + cost model</p>
+<p class="big"><b>竞品拆解 + Decatur 复用率报告</b> — 逻辑 85% 复用,配置面 40%,N=3 起 refactor 破 shim</p>
+</div>
+
+<h2>🎬 三条 POC 视频</h2>
+<div class="grid">
+<div class="card"><span class="kind">Neighborhood-first · 60s</span><a href="pipelines/poc-output/peachtree-corners-v1.mp4">Peachtree Corners v1</a><div class="desc">14 素材,河景+town center,首个 POC(2.5MB)</div></div>
+<div class="card"><span class="kind">Second neighborhood · 60s</span><a href="pipelines/poc-output/decatur-v1.mp4">Decatur v1</a><div class="desc">22 素材,streetscape-heavy,验证复用 shim(2.9MB)</div></div>
+<div class="card"><span class="kind">Listing-focused · 60s</span><a href="pipelines/poc-output/listing-reel-v1.mp4">Listing reel v1</a><div class="desc">3 mock listing + PTC b-roll,agent 免拍摄 flow(2.9MB)</div></div>
+</div>
+
+<h2>🌐 三个 Landing 原型</h2>
+<div class="grid">
+<div class="card"><span class="kind">Baseline</span><a href="prototypes/landing-v1/">v1 — 抄 reelestate 骨架</a><div class="desc">安全对照,peach/sage 浅色骨架</div></div>
+<div class="card"><span class="kind">⭐ 推荐</span><a href="prototypes/landing-v2/">v2 — Differentiation</a><div class="desc">Fraunces serif,GA-depth 定位,6 feature 卡,3 pricing 档;hero 视频 loop</div></div>
+<div class="card"><span class="kind">Radical</span><a href="prototypes/landing-v3/">v3 — Neighborhood-first</a><div class="desc">clay/moss/sky,"Move to a neighborhood, not a listing."</div></div>
+</div>
+
+<h2>📊 竞品 & 决策</h2>
+<div class="grid">
+<div class="card"><span class="kind">Teardown</span><a href="competitive/reelestate-teardown.md">reelestate.dev 全维度拆解</a><div class="desc">IA / 色系 / copy / 定价 / iOS / GA 空白点</div></div>
+<div class="card"><span class="kind">Decisions</span><a href="competitive/percho-vs-reelestate-decisions.md">抄/改/弃决策表</a><div class="desc">推荐落地 v2 组合</div></div>
+<div class="card"><span class="kind">QA</span><a href="prototypes/landing-v2/QA.md">v2 QA 报告 (7 issue)</a><div class="desc">P0/P1/P2 分级,memory 冲突登记</div></div>
+</div>
+
+<h2>🧩 组件抽取(React 迁移草稿)</h2>
+<div class="grid">
+<div class="card"><span class="kind">Server Component</span><a href="prototypes/v2-components/Hero.tsx">Hero.tsx</a></div>
+<div class="card"><span class="kind">Server Component</span><a href="prototypes/v2-components/FeatureGrid.tsx">FeatureGrid.tsx</a></div>
+<div class="card"><span class="kind">Server Component</span><a href="prototypes/v2-components/NeighborhoodCards.tsx">NeighborhoodCards.tsx</a></div>
+<div class="card"><span class="kind">Server Component</span><a href="prototypes/v2-components/Pricing.tsx">Pricing.tsx</a></div>
+<div class="card"><span class="kind">Migration</span><a href="prototypes/v2-components/README.md">README — 8 步迁进 app/</a></div>
+<div class="card"><span class="kind">Diff</span><a href="prototypes/v2-components/DIFF-app.md">DIFF vs 当前 app/page.tsx</a><div class="desc">10 条 blocker + 4 PR 顺序</div></div>
+</div>
+
+<h2>🏗️ Pipeline 生产化设计</h2>
+<div class="grid">
+<div class="card"><span class="kind">v1 架构</span><a href="pipelines/architecture.md">architecture.md</a><div class="desc">Source→Fetcher→Tagger→Ranker→Composer→Publisher 6 层</div></div>
+<div class="card"><span class="kind">v2 重构</span><a href="pipelines/architecture-v2.md">architecture-v2.md</a><div class="desc">承认 v1 "只加 config" 破产,给参数化重构方案</div></div>
+<div class="card"><span class="kind">DB</span><a href="pipelines/schema.sql">schema.sql</a><div class="desc">5 表 + GA-only CHECK + plan jsonb + RLS</div></div>
+<div class="card"><span class="kind">Contracts</span><a href="pipelines/interfaces.md">interfaces.md</a><div class="desc">TS interface 6 层输入输出契约</div></div>
+<div class="card"><span class="kind">Ops</span><a href="pipelines/orchestration.md">orchestration.md</a><div class="desc">CF Worker vs EC2 render-worker vs Supabase edge</div></div>
+<div class="card"><span class="kind">$</span><a href="pipelines/cost-model.md">cost-model.md</a><div class="desc">100/1000/10000 reel/月三档端到端成本</div></div>
+</div>
+
+<h2>🧪 Pipeline 内容 & 复用</h2>
+<div class="grid">
+<div class="card"><a href="pipelines/content-taxonomy.md">content-taxonomy.md</a><div class="desc">L1 内容 / L2 mood / L3 listing 关联</div></div>
+<div class="card"><a href="pipelines/neighborhood-content-sources.md">neighborhood-content-sources.md</a><div class="desc">Wikimedia/CC/Places 素材源合规评分</div></div>
+<div class="card"><a href="pipelines/video-composition.md">video-composition.md</a><div class="desc">60s 分镜规则 + PTC vs Decatur 复盘</div></div>
+<div class="card"><a href="pipelines/reuse-report.md">reuse-report.md</a><div class="desc">core 279 LOC 零改动;glue 174 LOC;N=3 break-even</div></div>
+<div class="card"><a href="pipelines/neighborhoods/decatur.yaml">decatur.yaml</a><div class="desc">第二 neighborhood config</div></div>
+<div class="card"><a href="pipelines/neighborhoods/decatur-c1-attempt.md">decatur-c1-attempt.md</a><div class="desc">"只加 config" 破产 4 点</div></div>
+</div>
+
+<h2>📦 MLS 照片 → Reel 路径</h2>
+<div class="grid">
+<div class="card"><a href="pipelines/reel-formats.md">reel-formats.md</a><div class="desc">neighborhood-focused vs listing-focused 节奏差异</div></div>
+<div class="card"><a href="pipelines/agent-upload-flow.md">agent-upload-flow.md</a><div class="desc">拖拽 UI + Supabase Storage + 事件模型</div></div>
+</div>
+
+<h2>📋 全部 tick 进度</h2>
+<div class="grid">
+<div class="card"><a href="pipelines/.cron-plan.md">.cron-plan.md — 22/24 打勾 + tick log</a></div>
+</div>
+
+<p style="margin-top:48px;color:var(--ink2);font-size:13px;text-align:center">Percho · GA/Atlanta selling-only · 2026-07-11</p>
+</div></body></html>

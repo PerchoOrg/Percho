@@ -1,0 +1,50 @@
+ID: decatur
+name: Decatur
+state: GA
+county: DeKalb
+slug: decatur
+
+# Wikimedia Commons 查询词(与 fetch_wikimedia.py QUERIES 同结构)
+# 顺序 = 抓取优先级,前面命中够 TARGET 就短路
+wikimedia_queries:
+  - "Decatur Georgia"
+  - "Decatur square Georgia"
+  - "DeKalb County Georgia courthouse"
+  - "Agnes Scott College"
+  - "Emory University"           # Decatur 边界外一点,但 buyer 眼里同一带
+  - "Oakhurst Decatur"
+  - "MARTA Decatur station"
+
+target_asset_count: 22   # 与 Peachtree Corners POC 对齐
+
+# 素材路径隔离,不与 Peachtree Corners 混
+output_dir: /home/ubuntu/Percho/docs/pipelines/poc-output/decatur/assets
+
+# 打标 hints(给 tag_rules.py 用)
+tag_hints:
+  landmark:
+    - "square"
+    - "courthouse"
+    - "college"
+    - "university"
+    - "MARTA"
+  street_scene:
+    - "downtown"
+    - "street"
+    - "sidewalk"
+  park:
+    - "park"
+    - "trail"
+  # buyer-facing 卖点 (memory: GA-only + selling-only)
+  selling_points:
+    - "walkable downtown"
+    - "top-rated schools (City Schools of Decatur)"
+    - "MARTA access to Atlanta"
+    - "Agnes Scott / Emory 学区外圈"
+
+# reel 组曲结构(compose.py 消费)
+reel:
+  duration_sec: 60
+  target_res: [1080, 1920]
+  hook_asset_role: "landmark"       # 第 1 s 用地标 hero
+  cta_text: "Decatur homes on Percho.com · GA-only, agent-vetted"

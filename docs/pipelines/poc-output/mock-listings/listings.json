@@ -1,0 +1,108 @@
+{
+  "_meta": {
+    "purpose": "E1 — 3 mock GA listings for pipeline testing. NOT REAL LISTINGS. Photos from Unsplash (CC0-ish, free-use) used in lieu of MLS photos we cannot legally redistribute yet.",
+    "generated": "2026-07-11T18:37:00Z",
+    "tick": "E1",
+    "state_filter": "GA (memory: GA-only)",
+    "intent_filter": "for-sale (memory: selling-only, no rentals)",
+    "photo_source": "images.unsplash.com — all photos flagged mock=true, do NOT ship to real agent UI"
+  },
+  "listings": [
+    {
+      "id": "mock-001",
+      "mock": true,
+      "mls_number": "GAMLS-MOCK-1001",
+      "address": {
+        "street": "3421 Preston Ridge Rd",
+        "city": "Alpharetta",
+        "state": "GA",
+        "zip": "30022",
+        "neighborhood": "Preston Ridge"
+      },
+      "intent": "for-sale",
+      "list_price_usd": 875000,
+      "beds": 4,
+      "baths": 3.5,
+      "sqft": 3480,
+      "year_built": 2015,
+      "lot_size_acres": 0.42,
+      "school_district": "Fulton County",
+      "agent": {
+        "name": "Mock Agent A",
+        "brokerage": "Percho Test Brokerage",
+        "phone": "770-555-0101"
+      },
+      "photos": [
+        {"role": "exterior_front",  "file": "listing-001-alpharetta/01-exterior.jpg"},
+        {"role": "kitchen",         "file": "listing-001-alpharetta/02-kitchen.jpg"},
+        {"role": "living_room",     "file": "listing-001-alpharetta/03-living.jpg"},
+        {"role": "primary_bedroom", "file": "listing-001-alpharetta/04-bedroom.jpg"},
+        {"role": "backyard",        "file": "listing-001-alpharetta/05-backyard.jpg"}
+      ]
+    },
+    {
+      "id": "mock-002",
+      "mock": true,
+      "mls_number": "FMLS-MOCK-2002",
+      "address": {
+        "street": "512 Adams St",
+        "city": "Decatur",
+        "state": "GA",
+        "zip": "30030",
+        "neighborhood": "Oakhurst"
+      },
+      "intent": "for-sale",
+      "list_price_usd": 645000,
+      "beds": 3,
+      "baths": 2,
+      "sqft": 1980,
+      "year_built": 1948,
+      "lot_size_acres": 0.18,
+      "school_district": "City Schools of Decatur",
+      "agent": {
+        "name": "Mock Agent B",
+        "brokerage": "Percho Test Brokerage",
+        "phone": "404-555-0202"
+      },
+      "photos": [
+        {"role": "exterior_front",  "file": "listing-002-decatur/01-exterior.jpg"},
+        {"role": "kitchen",         "file": "listing-002-decatur/02-kitchen.jpg"},
+        {"role": "living_room",     "file": "listing-002-decatur/03-living.jpg"},
+        {"role": "primary_bedroom", "file": "listing-002-decatur/04-bedroom.jpg"},
+        {"role": "backyard",        "file": "listing-002-decatur/05-backyard.jpg"}
+      ]
+    },
+    {
+      "id": "mock-003",
+      "mock": true,
+      "mls_number": "FMLS-MOCK-3003",
+      "address": {
+        "street": "6180 Peachtree Industrial Blvd",
+        "city": "Peachtree Corners",
+        "state": "GA",
+        "zip": "30092",
+        "neighborhood": "The Forum area"
+      },
+      "intent": "for-sale",
+      "list_price_usd": 1120000,
+      "beds": 5,
+      "baths": 4,
+      "sqft": 4210,
+      "year_built": 2019,
+      "lot_size_acres": 0.55,
+      "school_district": "Gwinnett County",
+      "agent": {
+        "name": "Mock Agent C",
+        "brokerage": "Percho Test Brokerage",
+        "phone": "678-555-0303"
+      },
+      "photos": [
+        {"role": "exterior_front",  "file": "listing-003-peachtree-corners/01-exterior.jpg"},
+        {"role": "kitchen",         "file": "listing-003-peachtree-corners/02-kitchen.jpg"},
+        {"role": "living_room",     "file": "listing-003-peachtree-corners/03-living.jpg"},
+        {"role": "primary_bedroom", "file": "listing-003-peachtree-corners/04-bedroom.jpg"},
+        {"role": "backyard",        "file": "listing-003-peachtree-corners/05-backyard.jpg"}
+      ]
+    }
+  ]
+}

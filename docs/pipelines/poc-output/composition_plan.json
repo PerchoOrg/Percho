@@ -1,0 +1,86 @@
+[
+  {
+    "file": "Gateway_to_Peachtree_Corners_JPG.jpg",
+    "seconds": 3.0,
+    "caption": "Peachtree Corners",
+    "slot": "hook"
+  },
+  {
+    "file": "Georgia_State_Route_141_Peachtree_Corners_Dec_2020_jpg.jpg",
+    "seconds": 4.0,
+    "caption": "Where Atlanta lives quietly",
+    "slot": "vibe"
+  },
+  {
+    "file": "Gwinnett_Library_Peachtree_Corners_branch_jpg.jpg",
+    "seconds": 4.0,
+    "caption": "Where Atlanta lives quietly",
+    "slot": "vibe"
+  },
+  {
+    "file": "Peachtree_Corners_Logo_png.png",
+    "seconds": 4.0,
+    "caption": "Where Atlanta lives quietly",
+    "slot": "vibe"
+  },
+  {
+    "file": "Peachtree_Corners_Seal_png.png",
+    "seconds": 5.0,
+    "caption": "Town Center · Live–Work–Play",
+    "slot": "list1"
+  },
+  {
+    "file": "Peachtree_Corners_Street_Sign_jpg.jpg",
+    "seconds": 5.0,
+    "caption": "Town Center · Live–Work–Play",
+    "slot": "list1"
+  },
+  {
+    "file": "Georgia_I85nb_GA_378_Overpass_jpg.jpg",
+    "seconds": 5.0,
+    "caption": "Town Center · Live–Work–Play",
+    "slot": "list1"
+  },
+  {
+    "file": "Peachtree_Corners_Town_Center_Dec_2020_1_jpg.jpg",
+    "seconds": 5.0,
+    "caption": "The Forum · walkable retail",
+    "slot": "list2"
+  },
+  {
+    "file": "Peachtree_Corners_Town_Center_Dec_2020_3_jpg.jpg",
+    "seconds": 5.0,
+    "caption": "The Forum · walkable retail",
+    "slot": "list2"
+  },
+  {
+    "file": "5550_Triangle_Parkway_Peachtree_Corners_Georgia_jpg.jpg",
+    "seconds": 4.0,
+    "caption": "Chattahoochee greenway",
+    "slot": "park"
+  },
+  {
+    "file": "Peachtree_Corners_City_Hall_jpg.jpg",
+    "seconds": 4.0,
+    "caption": "Chattahoochee greenway",
+    "slot": "park"
+  },
+  {
+    "file": "College_Street_Norcross_March_2017_jpg.jpg",
+    "seconds": 4.0,
+    "caption": "Simpson Elementary · Norcross HS",
+    "slot": "school"
+  },
+  {
+    "file": "Peachtree_Corners_Festival_jpg.jpg",
+    "seconds": 4.0,
+    "caption": "Simpson Elementary · Norcross HS",
+    "slot": "school"
+  },
+  {
+    "file": "Georgia_I85sb_GA317_Lawrenceville_Suwannee_Rd_Overpass_jpg.jpg",
+    "seconds": 5.0,
+    "caption": "See homes → percho.com/ptc",
+    "slot": "cta"
+  }
+]

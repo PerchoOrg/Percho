@@ -1,0 +1,343 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Percho — Move to a neighborhood, not a listing. (v3 radical)</title>
+<style>
+  :root{
+    --bg:#FAF6EE; --ink:#1A1917; --ink-2:#4A463F; --ink-3:#8A8477;
+    --border:#E5DDCA;
+    --clay:#B8503A; --clay-soft:#F0D2C5;
+    --moss:#5F7A4E; --moss-soft:#D6DFC4;
+    --sky:#6B8FA3; --sky-soft:#CFDBE0;
+    --sand:#EED9AC; --paper:#FFFFFF;
+    --shadow:0 20px 60px rgba(26,25,23,.08);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--bg);color:var(--ink);
+    font-family:"Inter",-apple-system,system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased;font-size:16px;line-height:1.55}
+  img,video{max-width:100%;display:block;object-fit:contain}
+  a{color:inherit;text-decoration:none}
+  .wrap{max-width:1280px;margin:0 auto;padding:0 32px}
+  .display{font-family:"Fraunces","Playfair Display",Georgia,serif;font-weight:500;letter-spacing:-0.02em;line-height:1;font-style:italic}
+  .eyebrow{font-size:11px;letter-spacing:.24em;text-transform:uppercase;font-weight:700;color:var(--clay)}
+  h2{font-family:"Fraunces",serif;font-weight:500;letter-spacing:-0.015em;line-height:1.05;font-size:56px}
+  h3{font-size:20px;font-weight:700;letter-spacing:-0.01em}
+  p.lead{font-size:20px;color:var(--ink-2);max-width:680px;line-height:1.55}
+  .btn{display:inline-flex;align-items:center;gap:8px;padding:15px 26px;border-radius:8px;font-weight:600;font-size:15px;transition:all .18s}
+  .btn-primary{background:var(--ink);color:var(--paper)}
+  .btn-primary:hover{background:var(--clay)}
+  .btn-ghost{background:transparent;color:var(--ink);border:1.5px solid var(--ink)}
+  .btn-ghost:hover{background:var(--ink);color:var(--paper)}
+  /* nav */
+  nav{position:sticky;top:0;background:rgba(250,246,238,.92);backdrop-filter:blur(14px);z-index:30;border-bottom:1px solid var(--border)}
+  nav .wrap{display:flex;align-items:center;justify-content:space-between;padding:18px 32px}
+  .logo{font-family:"Fraunces",serif;font-style:italic;font-weight:500;font-size:24px}
+  nav .links{display:flex;gap:6px}
+  nav .links a{font-size:14px;padding:8px 14px;color:var(--ink-2)}
+  /* radical hero: neighborhood grid IS the hero */
+  .hero-radical{padding:60px 0 40px}
+  .hero-headline{display:grid;grid-template-columns:1fr auto;align-items:end;gap:40px;margin-bottom:44px}
+  .hero-radical h1{font-family:"Fraunces",serif;font-weight:400;font-size:112px;letter-spacing:-0.03em;line-height:.92}
+  .hero-radical h1 em{font-style:italic;color:var(--clay)}
+  .hero-side{max-width:340px;font-size:16px;color:var(--ink-2);padding-bottom:18px}
+  .hero-side .cta-row{display:flex;gap:10px;margin-top:22px;flex-wrap:wrap}
+  /* neighborhood mosaic: TikTok/Pinterest cross */
+  .mosaic{display:grid;grid-template-columns:repeat(6,1fr);grid-auto-rows:190px;gap:14px}
+  .m-tile{border-radius:20px;overflow:hidden;position:relative;background:var(--sand);transition:transform .2s}
+  .m-tile:hover{transform:scale(1.015)}
+  .m-tile img{width:100%;height:100%;object-fit:contain;background:var(--sand)}
+  .m-tile .overlay{position:absolute;inset:0;background:linear-gradient(180deg,transparent 40%,rgba(26,25,23,.72) 100%);pointer-events:none}
+  .m-tile .label{position:absolute;left:16px;right:16px;bottom:14px;color:var(--paper);z-index:2}
+  .m-tile .label .n{font-family:"Fraunces",serif;font-style:italic;font-size:22px;font-weight:500;line-height:1.1}
+  .m-tile .label .m{font-size:11px;letter-spacing:.16em;text-transform:uppercase;opacity:.85;margin-top:4px}
+  .m-tile .badge{position:absolute;top:14px;left:14px;background:rgba(255,255,255,.92);color:var(--ink);font-size:11px;font-weight:700;padding:5px 10px;border-radius:999px;letter-spacing:.06em;z-index:2}
+  .m-1{grid-column:span 3;grid-row:span 2}
+  .m-2{grid-column:span 2;grid-row:span 1}
+  .m-3{grid-column:span 1;grid-row:span 1}
+  .m-4{grid-column:span 2;grid-row:span 1}
+  .m-5{grid-column:span 3;grid-row:span 1}
+  .m-6{grid-column:span 3;grid-row:span 1}
+
+  /* Manifesto */
+  .manifesto{padding:120px 0 100px;text-align:center}
+  .manifesto h2{max-width:900px;margin:14px auto 0;font-size:64px}
+  .manifesto p{max-width:640px;margin:26px auto 0;font-size:19px;color:var(--ink-2)}
+  .manifesto .strike{position:relative;color:var(--ink-3)}
+  .manifesto .strike::after{content:"";position:absolute;left:-4px;right:-4px;top:52%;height:6px;background:var(--clay);opacity:.65;border-radius:3px;transform:rotate(-2deg)}
+
+  /* Neighborhood-first grid (features) */
+  section{padding:100px 0;border-top:1px solid var(--border)}
+  .section-head{max-width:720px;margin-bottom:56px}
+  .neigh-first-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:stretch}
+  .nfg-card{background:var(--paper);border:1px solid var(--border);border-radius:22px;padding:36px;display:flex;flex-direction:column;gap:14px;min-height:340px}
+  .nfg-card.big{grid-column:span 2;background:var(--moss-soft);border-color:var(--moss-soft);flex-direction:row;align-items:center;min-height:280px}
+  .nfg-card.big > div:first-child{flex:1;padding-right:24px}
+  .nfg-card.big > div:last-child{flex:1;aspect-ratio:4/3;border-radius:14px;overflow:hidden;background:var(--sand)}
+  .nfg-card.big img{width:100%;height:100%;object-fit:contain;background:var(--sand)}
+  .nfg-card .ico{width:52px;height:52px;background:var(--sand);border-radius:14px;display:grid;place-items:center;font-size:24px}
+  .nfg-card p{color:var(--ink-2);font-size:15px}
+
+  /* Comparison strip */
+  .versus{background:var(--paper);border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
+  .versus .wrap{display:grid;grid-template-columns:1fr 1fr;gap:0;padding:0}
+  .versus-col{padding:80px 60px}
+  .versus-col.right{background:var(--sand);border-left:1px solid var(--border)}
+  .versus-col h3{font-family:"Fraunces",serif;font-weight:500;font-style:italic;font-size:34px;margin-bottom:20px}
+  .versus-col .row{padding:14px 0;border-bottom:1px solid var(--border);color:var(--ink-2);font-size:15px}
+  .versus-col.right .row{border-color:rgba(26,25,23,.12)}
+  .versus-col .row b{color:var(--ink);font-weight:700}
+
+  /* Pricing – unusual layout: neighborhood-based add-ons */
+  .pricing{background:var(--bg)}
+  .pricing-grid{display:grid;grid-template-columns:1.2fr 1fr;gap:32px;align-items:stretch}
+  .price-hero{background:linear-gradient(135deg,var(--clay-soft) 0%,var(--sand) 100%);border-radius:24px;padding:48px}
+  .price-hero h3{font-family:"Fraunces",serif;font-weight:500;font-size:40px;line-height:1.1}
+  .price-hero .amount{font-family:"Fraunces",serif;font-size:80px;font-weight:500;line-height:1;margin-top:24px}
+  .price-hero .amount small{font-family:"Inter",sans-serif;font-size:16px;color:var(--ink-3);font-weight:500}
+  .price-hero ul{margin-top:24px;list-style:none;padding:0}
+  .price-hero li{padding:8px 0;font-size:15px;display:flex;gap:10px}
+  .price-hero li::before{content:"✦";color:var(--clay)}
+  .price-tiers{display:flex;flex-direction:column;gap:16px}
+  .price-tier{background:var(--paper);border:1px solid var(--border);border-radius:18px;padding:26px;display:grid;grid-template-columns:1fr auto;align-items:center;gap:16px}
+  .price-tier h4{font-family:"Fraunces",serif;font-weight:500;font-size:22px}
+  .price-tier .sub{color:var(--ink-3);font-size:13px;margin-top:2px}
+  .price-tier .cost{font-family:"Fraunces",serif;font-size:28px;font-weight:500;text-align:right}
+  .price-tier .cost small{font-family:"Inter",sans-serif;font-size:12px;color:var(--ink-3);font-weight:500;display:block}
+  /* CTA final */
+  .cta-final{text-align:center;padding:160px 0}
+  .cta-final h2{font-size:88px;font-family:"Fraunces",serif;font-weight:400}
+  .cta-final h2 em{font-style:italic;color:var(--clay)}
+  footer{padding:56px 0 80px;color:var(--ink-3);font-size:14px;border-top:1px solid var(--border)}
+  footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:20px}
+  footer a{margin-right:20px}
+
+  @media (max-width:1000px){
+    .hero-headline{grid-template-columns:1fr}
+    .hero-radical h1{font-size:64px}
+    .mosaic{grid-template-columns:repeat(2,1fr);grid-auto-rows:180px}
+    .m-1,.m-2,.m-4,.m-5,.m-6{grid-column:span 2;grid-row:span 1}
+    .m-3{grid-column:span 2}
+    h2{font-size:38px}
+    .cta-final h2{font-size:48px}
+    .neigh-first-grid{grid-template-columns:1fr}
+    .nfg-card.big{grid-column:span 1;flex-direction:column}
+    .nfg-card.big > div:first-child{padding-right:0}
+    .versus .wrap{grid-template-columns:1fr}
+    .versus-col{padding:56px 32px}
+    .versus-col.right{border-left:0;border-top:1px solid var(--border)}
+    .pricing-grid{grid-template-columns:1fr}
+  }
+</style>
+</head>
+<body>
+<nav><div class="wrap">
+  <a class="logo" href="#">Percho.</a>
+  <div class="links">
+    <a href="#neighborhoods">Neighborhoods</a>
+    <a href="#how">How it works</a>
+    <a href="#agents">For agents</a>
+    <a href="#pricing">Pricing</a>
+  </div>
+</div></nav>
+
+<header class="hero-radical"><div class="wrap">
+  <div class="hero-headline">
+    <h1>Move to a<br/><em>neighborhood.</em><br/>Not a listing.</h1>
+    <div class="hero-side">
+      <p>Percho is Georgia's neighborhood-first home platform. Scroll the block, meet the community, then find the house.</p>
+      <div class="cta-row">
+        <a class="btn btn-primary" href="#neighborhoods">Explore GA →</a>
+        <a class="btn btn-ghost" href="#agents">For agents</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="mosaic">
+    <div class="m-tile m-1">
+      <img src="https://images.unsplash.com/photo-1449844908441-8829872d2607?w=1200&auto=format" alt="Peachtree Corners"/>
+      <div class="badge">42 homes · $675K median</div>
+      <div class="overlay"></div>
+      <div class="label"><div class="n">Peachtree Corners</div><div class="m">walkable · family · tech</div></div>
+    </div>
+    <div class="m-tile m-2">
+      <img src="https://images.unsplash.com/photo-1571771019784-3ff35f4f4277?w=900&auto=format" alt="Decatur"/>
+      <div class="badge">28 homes</div>
+      <div class="overlay"></div>
+      <div class="label"><div class="n">Decatur Square</div><div class="m">walkable · culture · nightlife</div></div>
+    </div>
+    <div class="m-tile m-3">
+      <img src="https://images.unsplash.com/photo-1502005229762-cf1b2da7c5d6?w=600&auto=format" alt="Alpharetta"/>
+      <div class="overlay"></div>
+      <div class="label"><div class="n">Alpharetta</div><div class="m">luxury</div></div>
+    </div>
+    <div class="m-tile m-4">
+      <img src="https://images.unsplash.com/photo-1602343168117-bb8ffe3e2e9f?w=900&auto=format" alt="Buckhead"/>
+      <div class="badge">$1.4M median</div>
+      <div class="overlay"></div>
+      <div class="label"><div class="n">Buckhead</div><div class="m">luxury · nightlife</div></div>
+    </div>
+    <div class="m-tile m-5">
+      <img src="https://images.unsplash.com/photo-1580587771525-78b9dba3b914?w=1200&auto=format" alt="East Atlanta"/>
+      <div class="badge">19 homes · $480K median</div>
+      <div class="overlay"></div>
+      <div class="label"><div class="n">East Atlanta Village</div><div class="m">walkable · culture · indie</div></div>
+    </div>
+    <div class="m-tile m-6">
+      <img src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1200&auto=format" alt="Marietta"/>
+      <div class="badge">37 homes</div>
+      <div class="overlay"></div>
+      <div class="label"><div class="n">Marietta Square</div><div class="m">quiet-suburban · family</div></div>
+    </div>
+  </div>
+</div></header>
+
+<section class="manifesto">
+  <span class="eyebrow">The Percho position</span>
+  <h2 class="display">Zillow shows you <span class="strike">houses.</span><br/>We show you where you'll live.</h2>
+  <p>Because you're not buying four walls. You're buying the walk to coffee, the school pickup line, the Sunday farmer's market, the neighbor who waves. Georgia has 300+ of these neighborhoods. We film each one.</p>
+</section>
+
+<section id="how">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="eyebrow">How Percho works</span>
+      <h2>Scroll the vibe.<br/>Then find the home.</h2>
+      <p class="lead">A radical inversion of the real estate funnel. Instead of filtering listings by zip, buyers land on a neighborhood reel — 30 seconds of block, coffee shop, park, school — and 3-5 matching homes slide in at the end.</p>
+    </div>
+    <div class="neigh-first-grid">
+      <div class="nfg-card big">
+        <div>
+          <span class="eyebrow">The core loop</span>
+          <h3 style="font-family:'Fraunces',serif;font-weight:500;font-size:32px;letter-spacing:-.01em;margin:8px 0 10px">Neighborhood-first, not listing-first.</h3>
+          <p style="font-size:16px">Every reel opens on the neighborhood (3s hook), then community vibe (10s), then 3-5 listings quick-cut, then school/park close-out, then CTA. Buyers commit to the block first — conversion is 3× a raw listing reel.</p>
+        </div>
+        <div><img src="https://images.unsplash.com/photo-1502005229762-cf1b2da7c5d6?w=800&auto=format" alt="Neighborhood mosaic"/></div>
+      </div>
+      <div class="nfg-card">
+        <div class="ico">🎬</div>
+        <h3>Photos → reels, no filming</h3>
+        <p>Upload MLS photos. Our composer stitches them with our GA neighborhood B-roll library. No gimbal, no editor, no voiceover. Just publish.</p>
+      </div>
+      <div class="nfg-card">
+        <div class="ico">🗺️</div>
+        <h3>Every GA neighborhood, filmed</h3>
+        <p>300+ Georgia neighborhoods with CC-licensed B-roll (Wikimedia, Flickr, licensed vloggers). Growing weekly. Alpharetta today, Athens tomorrow.</p>
+      </div>
+      <div class="nfg-card">
+        <div class="ico">🏷️</div>
+        <h3>Mood-tagged, not zip-filtered</h3>
+        <p>Search by "walkable + culture + $500-800K" instead of a zip code. Percho matches vibe → listing, not the other way.</p>
+      </div>
+      <div class="nfg-card">
+        <div class="ico">🌐</div>
+        <h3>Multilingual by default</h3>
+        <p>Neighborhood reels auto-caption in EN · ES · ZH · VI · KO. Distribute to Rednote, WeChat, IG, TikTok. Reach GA's real buyer pool.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="versus"><div class="wrap">
+  <div class="versus-col">
+    <span class="eyebrow">Traditional real estate app</span>
+    <h3>Listing-first funnel</h3>
+    <div class="row"><b>Buyer opens app</b> → sees zip-filtered listing grid</div>
+    <div class="row"><b>Discovery</b> → 20 minutes of scrolling similar houses</div>
+    <div class="row"><b>Neighborhood</b> → an afterthought, a map pin</div>
+    <div class="row"><b>Community</b> → nowhere</div>
+    <div class="row"><b>Agent</b> → films 12 listings/week with a gimbal</div>
+    <div class="row"><b>Content</b> → walkthrough after walkthrough after walkthrough</div>
+  </div>
+  <div class="versus-col right">
+    <span class="eyebrow">Percho</span>
+    <h3>Neighborhood-first funnel</h3>
+    <div class="row"><b>Buyer opens app</b> → sees a neighborhood mosaic (18 GA blocks)</div>
+    <div class="row"><b>Discovery</b> → 30-second vibe reels, mood-tagged</div>
+    <div class="row"><b>Neighborhood</b> → the primary object of interest</div>
+    <div class="row"><b>Community</b> → block-level story: coffee, park, school, market</div>
+    <div class="row"><b>Agent</b> → uploads MLS photos, we compose the reel</div>
+    <div class="row"><b>Content</b> → hook · vibe · listings · school · CTA</div>
+  </div>
+</div></section>
+
+<section id="pricing" class="pricing">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="eyebrow">Pricing</span>
+      <h2>Own the neighborhood.</h2>
+      <p class="lead">Agents pay for coverage, not seats. Every subscription includes 1 neighborhood-per-month reel (composed from your listings + our B-roll). Add more neighborhoods as you grow.</p>
+    </div>
+    <div class="pricing-grid">
+      <div class="price-hero">
+        <span class="eyebrow">Solo Agent</span>
+        <h3>The GA agent who wants to own a block.</h3>
+        <div class="amount">$29 <small>/ month</small></div>
+        <p style="color:var(--ink-3);font-size:13px;margin-top:6px">$279/year — save 20%</p>
+        <ul>
+          <li>1 neighborhood reel/month (composed for you)</li>
+          <li>Unlimited listing uploads → auto-reels</li>
+          <li>Multilingual captions (5 languages)</li>
+          <li>Rednote / WeChat / IG / TikTok publishing</li>
+          <li>Open house QR + Monday recap reel</li>
+          <li>Add-on neighborhood reel: <b>$9/each</b></li>
+        </ul>
+        <a class="btn btn-primary" href="#" style="margin-top:24px">Start 7-day trial</a>
+      </div>
+      <div class="price-tiers">
+        <div class="price-tier">
+          <div>
+            <h4>Team</h4>
+            <div class="sub">Up to 10 agents · 3 neighborhoods/month included</div>
+          </div>
+          <div class="cost">$99<small>per month</small></div>
+        </div>
+        <div class="price-tier">
+          <div>
+            <h4>Brokerage</h4>
+            <div class="sub">Up to 50 agents · unlimited neighborhood reels</div>
+          </div>
+          <div class="cost">$399<small>per month</small></div>
+        </div>
+        <div class="price-tier">
+          <div>
+            <h4>Neighborhood exclusive</h4>
+            <div class="sub">Own 1 GA neighborhood — your face on every reel from that block, 6-month lock</div>
+          </div>
+          <div class="cost">$249<small>per neighborhood / month</small></div>
+        </div>
+        <div class="price-tier" style="background:var(--sand);border-color:var(--sand)">
+          <div>
+            <h4>Buyer</h4>
+            <div class="sub">Browse every reel, save neighborhoods, follow agents. Free forever.</div>
+          </div>
+          <div class="cost">$0</div>
+        </div>
+      </div>
+    </div>
+    <p style="margin-top:36px;color:var(--ink-3);font-size:14px;text-align:center">The <b style="color:var(--ink)">neighborhood exclusive</b> tier is the one competitors can't copy. Zillow can't sell you a monopoly on East Atlanta Village. We can.</p>
+  </div>
+</section>
+
+<section class="cta-final">
+  <div class="wrap">
+    <span class="eyebrow">Come find your block</span>
+    <h2>Georgia is <em>scrolling.</em></h2>
+    <p class="lead" style="margin:20px auto 32px">Neighborhood reels drop every Sunday. Buyers watch free. Agents pay to be in them.</p>
+    <a class="btn btn-primary" href="#neighborhoods" style="padding:18px 36px;font-size:17px">Explore Georgia →</a>
+  </div>
+</section>
+
+<footer><div class="wrap">
+  <div>
+    <a class="logo" href="#">Percho.</a>
+    <div style="margin-top:6px">Move to a neighborhood, not a listing. · Made in Atlanta · © 2026</div>
+  </div>
+  <div>
+    <a href="#">Neighborhoods</a><a href="#">Agents</a><a href="#">Pricing</a><a href="#">Privacy</a><a href="#">Terms</a><a href="#">中文 · ES · VI · KO</a>
+  </div>
+</div></footer>
+</body>
+</html>

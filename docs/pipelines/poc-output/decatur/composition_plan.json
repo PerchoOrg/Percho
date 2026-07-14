@@ -1,0 +1,86 @@
+[
+  {
+    "file": "Curving_Over_Decatur_Georgia_50876334811_jpg.jpg",
+    "seconds": 3.0,
+    "caption": "Decatur, GA",
+    "slot": "hook"
+  },
+  {
+    "file": "Decatur_Georgia_WV_banner_JPG.jpg",
+    "seconds": 4.0,
+    "caption": "Walkable downtown, real neighbors",
+    "slot": "vibe"
+  },
+  {
+    "file": "Decatur_MARTA_Station_platforms_jpg.jpg",
+    "seconds": 4.0,
+    "caption": "Walkable downtown, real neighbors",
+    "slot": "vibe"
+  },
+  {
+    "file": "Decatur_Square_JPG.jpg",
+    "seconds": 4.0,
+    "caption": "Walkable downtown, real neighbors",
+    "slot": "vibe"
+  },
+  {
+    "file": "View_from_the_Gazebo_looking_east_across_the_plaza_of_Decatur_s_Historic_Courtho.jpg",
+    "seconds": 5.0,
+    "caption": "The Square · Live-Work-Play",
+    "slot": "list1"
+  },
+  {
+    "file": "DeKalb_County_Georgia_Court_House_JPG.jpg",
+    "seconds": 5.0,
+    "caption": "The Square · Live-Work-Play",
+    "slot": "list1"
+  },
+  {
+    "file": "DeKalb_County_Georgia_Courthouse_jpg.jpg",
+    "seconds": 5.0,
+    "caption": "The Square · Live-Work-Play",
+    "slot": "list1"
+  },
+  {
+    "file": "The_Depeaux_Restaurant_Decatur_GA_jpg.jpg",
+    "seconds": 5.0,
+    "caption": "MARTA-connected · Atlanta in 20 min",
+    "slot": "list2"
+  },
+  {
+    "file": "Eddiesattic_png.png",
+    "seconds": 5.0,
+    "caption": "MARTA-connected · Atlanta in 20 min",
+    "slot": "list2"
+  },
+  {
+    "file": "Decatur_GA_Courthouse_jpg.jpg",
+    "seconds": 4.0,
+    "caption": "City Schools of Decatur · top-rated",
+    "slot": "schools"
+  },
+  {
+    "file": "The_Gazebo_on_Decatur_Square_in_Decatur_Georgia_jpg.jpg",
+    "seconds": 4.0,
+    "caption": "City Schools of Decatur · top-rated",
+    "slot": "schools"
+  },
+  {
+    "file": "Dekalb_County_Courthouse_Decatur_Georgia_Detail_jpg.jpg",
+    "seconds": 4.0,
+    "caption": "Historic bungalows, quiet streets",
+    "slot": "homes"
+  },
+  {
+    "file": "Historic_DeKalb_County_Courthouse_Decatur_Georgia_Thanksgiving_weekend_2015_jpg.jpg",
+    "seconds": 4.0,
+    "caption": "Historic bungalows, quiet streets",
+    "slot": "homes"
+  },
+  {
+    "file": "Raging_Burrito_on_Decatur_Square_in_Decatur_Georgia_July_2015_jpg.jpg",
+    "seconds": 5.0,
+    "caption": "See Decatur homes → percho.com/decatur",
+    "slot": "cta"
+  }
+]
