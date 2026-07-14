@@ -197,7 +197,12 @@ export async function discoverPoisForListing(
 
 // ─── photo fetch ────────────────────────────────────────────────────────────
 
-export type PhotoFetchResult = { fetched: number; reused: number; skipped: number };
+export type PhotoFetchResult = {
+  fetched: number;
+  reused: number;
+  skipped: number;
+  skippedReasons?: string[]; // human-readable, first few failures for UI display
+};
 
 /**
  * Pull up to `max` photos for a POI (default 10 = Google's per-place cap).
@@ -235,13 +240,22 @@ export async function fetchPhotosForPoi(
   let fetched = 0;
   let reused = 0;
   let skipped = 0;
+  const skippedReasons: string[] = [];
+  const noteSkip = (reason: string) => {
+    skipped += 1;
+    if (skippedReasons.length < 3) skippedReasons.push(reason);
+  };
 
   for (const photo of targets) {
-    const { data: existingPhoto } = (await admin
+    const { data: existingPhoto, error: lookupErr } = (await admin
       .from("poi_photos")
       .select("id")
       .eq("google_photo_name", photo.name)
-      .maybeSingle()) as { data: { id: string } | null };
+      .maybeSingle()) as { data: { id: string } | null; error: unknown };
+
+    if (lookupErr) {
+      console.error(`[poi] poi_photos lookup for ${photo.name} errored:`, lookupErr);
+    }
 
     let poiPhotoId: string;
 
@@ -254,7 +268,7 @@ export async function fetchPhotosForPoi(
         blob = await fetchPhotoBinary(photo.name, { maxHeightPx: opts.maxHeightPx ?? 1200 });
       } catch (err) {
         console.error(`[poi] fetch photo ${photo.name} failed:`, err);
-        skipped += 1;
+        noteSkip(`Google Places fetch: ${(err as Error).message ?? "unknown"}`);
         continue;
       }
 
@@ -267,32 +281,50 @@ export async function fetchPhotosForPoi(
         });
       if (upErr) {
         console.error(`[poi] storage upload failed:`, upErr);
-        skipped += 1;
+        noteSkip(`Storage upload: ${(upErr as { message?: string }).message ?? "unknown"}`);
         continue;
       }
 
-      const { data: inserted, error: insErr } = (await admin
+      // Upsert on google_photo_name (UNIQUE). If a concurrent request or a
+      // silent lookup miss already inserted this row, we treat it as reused
+      // instead of skipped — the storage blob is a harmless overwrite (upsert
+      // above) and the row's `id` is what we need next.
+      const { data: upserted, error: upsertErr } = (await admin
         .from("poi_photos")
-        .insert({
-          poi_id: poi.id,
-          source: "google_places",
-          google_photo_name: photo.name,
-          storage_path: storagePath,
-          width_px: photo.widthPx ?? null,
-          height_px: photo.heightPx ?? null,
-          bytes: blob.bytes.length,
-          attribution: { authorAttributions: photo.authorAttributions ?? [] },
-        })
-        .select("id")
-        .single()) as { data: { id: string } | null; error: unknown };
+        .upsert(
+          {
+            poi_id: poi.id,
+            source: "google_places",
+            google_photo_name: photo.name,
+            storage_path: storagePath,
+            width_px: photo.widthPx ?? null,
+            height_px: photo.heightPx ?? null,
+            bytes: blob.bytes.length,
+            attribution: { authorAttributions: photo.authorAttributions ?? [] },
+          },
+          { onConflict: "google_photo_name" },
+        )
+        .select("id, created_at")
+        .single()) as {
+        data: { id: string; created_at: string } | null;
+        error: unknown;
+      };
 
-      if (insErr || !inserted) {
-        console.error(`[poi] insert poi_photos failed:`, insErr);
-        skipped += 1;
+      if (upsertErr || !upserted) {
+        console.error(`[poi] upsert poi_photos failed:`, upsertErr, {
+          photo_name: photo.name,
+          storage_path: storagePath,
+        });
+        noteSkip(`DB upsert: ${(upsertErr as { message?: string })?.message ?? "unknown"}`);
         continue;
       }
-      poiPhotoId = inserted.id;
-      fetched += 1;
+      poiPhotoId = upserted.id;
+      // If the row's created_at is within the last few seconds, we just
+      // inserted it → count as fetched. Otherwise the upsert hit an existing
+      // row (the earlier lookup was a false-null) → count as reused.
+      const ageMs = Date.now() - new Date(upserted.created_at).getTime();
+      if (ageMs < 5_000) fetched += 1;
+      else reused += 1;
     }
 
     const { data: existingLink } = (await admin
@@ -312,7 +344,7 @@ export async function fetchPhotosForPoi(
   }
 
   revalidatePath(`/dashboard/listings/${listingId}/edit`);
-  return { fetched, reused, skipped };
+  return { fetched, reused, skipped, ...(skippedReasons.length ? { skippedReasons } : {}) };
 }
 
 // ─── review actions ─────────────────────────────────────────────────────────
