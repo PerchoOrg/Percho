@@ -415,6 +415,15 @@ export async function setListingPhotoStatus(
   });
 
   revalidatePath(`/dashboard/listings/${listingId}/edit`);
+
+  // Phase 77.2: fire-and-forget vision tagging on approve. We don't await —
+  // this typically takes 1-3s and shouldn't block the user's decisive UI tap.
+  // Errors are swallowed inside tagPoiPhoto (logged, never thrown).
+  if (status === "approved") {
+    import("@/lib/poi/vision-tagger")
+      .then(({ tagPoiPhoto }) => tagPoiPhoto(poiPhotoId))
+      .catch((err) => console.error("[poi] vision tag dispatch failed:", err));
+  }
 }
 
 // ─── review event log (training data) ──────────────────────────────────────
