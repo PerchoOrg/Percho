@@ -10,6 +10,7 @@
  * the `/feed` prefix added to `isChromeHidden` — the reel is full-bleed.
  */
 import { Suspense } from 'react';
+import { ReelCard } from '@/components/reelestate/ReelCard';
 import { ReelFeed, ReelFeedSkeleton, type ReelFeedItem } from '@/components/reelestate/ReelFeed';
 import { fetchReelFeedListings } from '@/lib/reelestate/feed';
 
@@ -27,16 +28,7 @@ async function FeedContent() {
   const listings = await fetchReelFeedListings();
   const items: ReelFeedItem[] = listings.map((l) => ({
     id: l.id,
-    // F1.2 will replace this placeholder with <ReelCard listing={l} />.
-    node: <FeedSlidePlaceholder addressLine={`${l.address}, ${l.city}, ${l.state}`} />,
+    node: <ReelCard listing={l} />,
   }));
   return <ReelFeed items={items} />;
-}
-
-function FeedSlidePlaceholder({ addressLine }: { addressLine: string }) {
-  return (
-    <div className="flex h-full w-full items-end justify-start p-6">
-      <p className="max-w-[80%] text-sm text-white/70">{addressLine}</p>
-    </div>
-  );
 }
