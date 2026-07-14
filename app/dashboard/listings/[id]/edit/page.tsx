@@ -172,6 +172,17 @@ export default async function EditListingPage({
     heroCover = photoPublicUrl(photos[0].storage_path);
   }
 
+  // Phase 76: nearby POIs pre-loaded server-side so the Media tab renders
+  // synchronously. Empty on first visit — agent clicks "Discover POIs" to
+  // populate. Cheap query (join on already-indexed listing_id).
+  const { loadNearbyPoisForListing } = await import('@/lib/poi/actions');
+  let initialNearbyPois: Awaited<ReturnType<typeof loadNearbyPoisForListing>> = [];
+  try {
+    initialNearbyPois = await loadNearbyPoisForListing(listing.id);
+  } catch (err) {
+    console.error('[listing edit] loadNearbyPoisForListing failed:', err);
+  }
+
   const draft = isDraftAddress(listing.address);
 
   const subtitle = draft
@@ -253,6 +264,8 @@ export default async function EditListingPage({
                 initialCoverVideoId={initialCoverVideoId}
                 initialPhotos={photos}
                 initialCoverPhotoId={initialCoverPhotoId}
+                initialNearbyPois={initialNearbyPois}
+                supabaseStorageBase={process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''}
               />
               <GenerateTourPanel listingId={listing.id} photoCount={photos.length} />
             </div>
