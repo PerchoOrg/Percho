@@ -31,6 +31,9 @@ export interface MobileListingAgent {
   slug: string;
   name: string;
   headshot_url: string | null;
+  brokerage: string | null;
+  phone: string | null;
+  email: string | null;
 }
 
 export interface MobileListingPhoto {
@@ -90,7 +93,7 @@ async function fetchMobileListingImpl(id: string): Promise<MobileListing | null>
   const { data: row, error } = (await (supabase as any)
     .from('listings')
     .select(
-      'id, slug, address, city, state, zip, price, beds, baths, sqft, year_built, description, cover_url, status, agents ( id, slug, name, headshot_url )',
+      'id, slug, address, city, state, zip, price, beds, baths, sqft, year_built, description, cover_url, status, agents ( id, slug, name, headshot_url, brokerage, phone, email )',
     )
     .eq('id', id)
     .eq('status', 'active')

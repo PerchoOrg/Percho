@@ -23,6 +23,7 @@ import { notFound } from 'next/navigation';
 import { fetchMobileListing } from '@/lib/reelestate/listing';
 import { PhotoGallery } from '@/components/reelestate/PhotoGallery';
 import { SpecsAndDescription } from '@/components/reelestate/SpecsAndDescription';
+import { AgentCard } from '@/components/reelestate/AgentCard';
 import { formatPrice } from '@/lib/format/price';
 
 export const dynamic = 'force-dynamic';
@@ -82,6 +83,12 @@ export default async function MobileListingDetailPage({ params }: DetailPageProp
         sqft={listing.sqft}
         description={listing.description}
       />
+
+      {/* Agent card + Message / Call / Save CTAs (D2.5). Renders only when
+          the listing has a joined agent — no empty-slot fallback. */}
+      {listing.agent ? (
+        <AgentCard agent={listing.agent} listingId={listing.id} />
+      ) : null}
     </main>
   );
 }
