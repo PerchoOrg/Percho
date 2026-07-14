@@ -297,6 +297,19 @@ export async function generateBucketVideo(
     };
   }
 
+  // Phase 77.4: supersede any existing 'ready' row for this (listing, bucket)
+  // so its input_photo_ids stop counting against cross-bucket dedup on the
+  // NEXT generate for other buckets. The 'superseded' status is enum-allowed
+  // via migration 20260714120000; check remains outside the dedup filter
+  // (see allocator §status list).
+  await admin
+    .from("generated_videos")
+    .update({ status: "superseded" } as never)
+    .eq("listing_id", listingId)
+    .eq("scope", "intent_bucket")
+    .eq("intent_bucket", bucket)
+    .eq("status", "ready");
+
   const { data: inserted, error: insErr } = (await admin
     .from("generated_videos")
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

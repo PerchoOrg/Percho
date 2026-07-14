@@ -4,6 +4,41 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-14 — Phase 77 · Vision-tagged, cross-bucket-deduped video allocator
+
+**Problem**: 76.6 shipped bucket videos but the allocator was naïve — insertion-order slicing per bucket. With no cross-bucket dedup, the same photo could land in all 4 buckets. No quality signal, no portrait preference, no POI diversity. Result: 4 near-identical slideshows.
+
+**Ship (77.1–77.4 merged as one on `phase77.1`)**:
+
+- **77.1** — Migration `20260714120000_poi_photos_buckets.sql`. Adds `poi_photos.applicable_buckets text[]` (GIN indexed, subset of `INTENT_BUCKETS`) that the vision tagger fills. Adds `'superseded'` to the `generated_videos.status` enum so regenerate can release photos.
+
+- **77.2** — `lib/poi/vision-tagger.ts` new. `tagPoiPhoto(id)` downloads the JPEG from Supabase Storage, base64-encodes, calls Claude Sonnet 4.5 vision with a bucket-labeling prompt (returns `description / primary_category / tags[] / mood / usable / applicable_buckets[] / score`), and writes back to `poi_photos.ai_tags` / `ai_score` / `ai_model` / `tagged_at` / `applicable_buckets`. Idempotent (skips if `tagged_at` set), non-throwing (fire-and-forget safe). `lib/poi/actions.ts::setListingPhotoStatus` dynamically imports and calls this on `status='approved'` — never awaited, so it can't stall the user's decisive UI tap. Cost: ~$0.005/photo, ~$0.50 for a 100-photo listing.
+
+- **77.3** — `lib/poi/video-actions.ts` allocator rewrite. Rules:
+  1. Hard cross-bucket dedup: exclude any `poi_photo_id` claimed by another `generated_videos` row on this listing in `pending / processing / ready` status. `superseded / failed / rejected` release their claims.
+  2. Bucket filter: if photo is vision-tagged (`tagged_at` set), only include if `applicable_buckets` contains this bucket. Untagged photos fall back to POI's `intent_bucket` for backfill-window compatibility.
+  3. Round-robin across POIs (POIs with more photos start earlier so we drain deep POIs while touching shallow ones).
+  4. Per-POI sort: portrait first (`h > w`), then `ai_score DESC` (default 0.5), then `poi_photo_id` for stability.
+  5. `MAX_PHOTOS_PER_VIDEO`: 24 → 15 (so 4 buckets × 15 fits in ~60 unique approved photos).
+
+- **77.4** — Regenerate path in `generateBucketVideo`: before inserting the new `pending` row, mark any existing `ready` row for the same `(listing, bucket, scope='intent_bucket')` as `superseded`. This releases its `input_photo_ids[]` back to the pool for future generates of *other* buckets.
+
+**Not shipping in 77 (deferred)**:
+
+- Backfill script for already-approved photos with no vision tags — the allocator's untagged-fallback path handles them safely. If needed, `tagPoiPhoto(id)` can be called in a loop from a script.
+- UI surface for `poi_photos.ai_tags` / score — decision to defer to §26.
+- Community-scope videos — `community` is a content strategy layer, not an `INTENT_BUCKETS` value. Separate phase.
+
+**Files**:
+- `supabase/migrations/20260714120000_poi_photos_buckets.sql` (new)
+- `lib/poi/vision-tagger.ts` (new, +291 lines)
+- `lib/poi/actions.ts` (+9)
+- `lib/poi/video-actions.ts` (+130 / −18)
+
+**Prerequisite**: `ANTHROPIC_API_KEY` present in env (already set for listing-copy). Optional override `ANTHROPIC_VISION_MODEL` (default `claude-sonnet-4-5`).
+
+**Testing plan**: Ship + observe. On next photo approve in the UI, watch server logs for `[vision-tagger]` — no output = success. Then generate a bucket video and inspect `generated_videos.input_photo_ids` + cross-check `poi_photos.applicable_buckets`.
+
 ## 2026-07-14 — Phase 76.6 · Buyer-question bucket videos (a+b+c together)
 
 **Problem**: 76.5 designed ≤6 videos/listing, one per buyer-question bucket (walkable / daily_drive / lifestyle / commute). Missing: the actual pipeline. No way for an agent to trigger a bucket video, no worker to render it, no place to play it back.

@@ -4,6 +4,12 @@
 > Historical entries below preserve the original name in-place — release notes
 > are a record of what was shipped under the product's name at the time.
 
+## v0.77 · Smarter photo picks per bucket video (2026-07-14)
+
+- **Each bucket video gets a fresh 15-photo slate, no duplicates across buckets.** Approved POI photos are now vision-tagged by Claude Sonnet 4.5 as they're approved (~$0.005/photo), which decides which buyer-question buckets each photo actually strengthens. When you generate a bucket video, the allocator round-robins across POIs so one photo-rich place can't hog the video, prefers portrait shots (feed is 9:16), higher-scored photos first, and caps at 15. Hard cross-bucket dedup — a photo used by any live bucket video is excluded from the others, so 4 buckets = ~60 unique photos, not 4× the same slideshow.
+
+- **Regenerate now actually frees up photos.** When you regenerate a bucket, the old `ready` video is marked superseded, releasing its photos back to the pool for the other buckets. Previously the old row kept claiming its photos forever.
+
 ## v0.76.6 · Buyer-question bucket videos (2026-07-14)
 
 - **Generate a video per bucket, right on the Media tab.** Each POI bucket header (Walkable / Daily drive / Lifestyle / Commute) has a **Generate video** button. It stitches your approved POI photos in that bucket into a portrait 9:16 slideshow, renders on the EC2 worker, uploads to Cloudflare Stream, and swaps in a **Play video** button when ready. Buyers see the "what can I walk to" story instead of a spreadsheet of nearby places. ≤6 videos per listing, one per buyer question.
