@@ -379,6 +379,180 @@ def process_job(job: dict[str, Any]) -> None:
         shutil.rmtree(workdir, ignore_errors=True)
 
 
+# ── bucket-video pipeline (Phase 76.6, 2026-07-14) ──────────────────────
+
+
+BUCKET_LABELS = {
+    "walkable": "Walkable",
+    "daily_drive": "Daily drive",
+    "lifestyle": "Lifestyle",
+    "commute": "Commute",
+}
+
+
+def claim_bucket_job() -> dict[str, Any] | None:
+    """Pick oldest pending generated_videos row (scope='intent_bucket') and
+    flip to 'processing' atomically. Same optimistic-lock pattern as
+    claim_job(): filter status='pending' on both SELECT and PATCH so a
+    concurrent worker cannot double-claim.
+    """
+    rows = sb_get(
+        "generated_videos",
+        {
+            "select": "id,listing_id,intent_bucket,input_photo_ids",
+            "scope": "eq.intent_bucket",
+            "status": "eq.pending",
+            "order": "created_at.asc",
+            "limit": "1",
+        },
+    )
+    if not rows:
+        return None
+    job = rows[0]
+    updated = sb_patch(
+        "generated_videos",
+        {"id": f"eq.{job['id']}", "status": "eq.pending"},
+        {"status": "processing"},
+    )
+    if not updated:
+        return None
+    return job
+
+
+def process_bucket_job(job: dict[str, Any]) -> None:
+    video_id = job["id"]
+    listing_id = job["listing_id"]
+    bucket = job["intent_bucket"]
+    input_photo_ids: list[str] = job.get("input_photo_ids") or []
+    workdir = Path(tempfile.mkdtemp(prefix=f"bucket-{video_id[:8]}-"))
+    print(
+        f"[bucket-job {video_id}] listing={listing_id} bucket={bucket} "
+        f"photos={len(input_photo_ids)} workdir={workdir}",
+        flush=True,
+    )
+
+    try:
+        if len(input_photo_ids) < 3:
+            raise RuntimeError(f"only {len(input_photo_ids)} input photos, need >=3")
+
+        # 1. Resolve poi_photos rows.
+        id_list = ",".join(input_photo_ids)
+        photo_rows = sb_get(
+            "poi_photos",
+            {"select": "id,storage_path", "id": f"in.({id_list})"},
+        )
+        by_id = {p["id"]: p for p in photo_rows}
+        missing = [pid for pid in input_photo_ids if pid not in by_id]
+        if missing:
+            raise RuntimeError(
+                f"{len(missing)} input photo ids not found in poi_photos: {missing[:3]}"
+            )
+
+        # 2. Download in the exact order the server action selected them.
+        photo_paths: list[Path] = []
+        for i, pid in enumerate(input_photo_ids, start=1):
+            path = by_id[pid]["storage_path"]
+            ext = Path(path).suffix or ".jpg"
+            dest = workdir / f"{i:02d}-photo{ext}"
+            storage_download(PHOTO_BUCKET, path, dest)
+            photo_paths.append(dest)
+            print(f"[bucket-job {video_id}] downloaded {dest.name}", flush=True)
+
+        # 3. Bucket videos are always portrait 9:16 (buyer feed is vertical
+        # and POI thumbnails are orientation-mixed). No landscape variant.
+        orientation = "portrait"
+
+        # 4. Overlay — reuse the listing overlay builder but override the
+        # neighborhood line with the bucket label so the video reads e.g.
+        # "Daily drive". Overlays are hidden anyway (71.5), but the JSON is
+        # still logged for provenance.
+        listings = sb_get(
+            "listings",
+            {
+                "select": "id,address,city,state,neighborhood,price,beds,baths,sqft",
+                "id": f"eq.{listing_id}",
+            },
+        )
+        if not listings:
+            raise RuntimeError(f"listing {listing_id} not found")
+        listing = listings[0]
+        overlay = build_overlay(listing, len(photo_paths))
+        overlay["neighborhood"] = BUCKET_LABELS.get(bucket, bucket)
+        overlay["show_on_clips"] = []
+        overlay_path = workdir / "overlay.json"
+        overlay_path.write_text(json.dumps(overlay, indent=2))
+
+        # 5. Render.
+        bgm_choice = pick_bgm()
+        out_path = workdir / f"bucket_{bucket}.mp4"
+        cmd = [
+            "python3", str(GENERATE_SCRIPT),
+            "--photos", str(workdir),
+            "--output", str(out_path),
+            "--orientation", orientation,
+            "--listing-overlay", str(overlay_path),
+        ]
+        if bgm_choice:
+            cmd += ["--bgm", str(bgm_choice)]
+        print(f"[bucket-job {video_id}] running: {' '.join(cmd)}", flush=True)
+        subprocess.run(cmd, check=True, cwd=str(REPO_ROOT))
+        if not out_path.exists():
+            raise RuntimeError(f"generate.py did not produce {out_path.name}")
+
+        # 6. Upload to CF Stream.
+        cf_uid = cf_upload(
+            out_path,
+            meta={
+                "name": f"{listing.get('address', 'Listing')} — {BUCKET_LABELS.get(bucket, bucket)}",
+                "listing_id": listing_id,
+                "scope": "intent_bucket",
+                "intent_bucket": bucket,
+            },
+        )
+        print(f"[bucket-job {video_id}] uploaded to CF: {cf_uid}", flush=True)
+
+        # 7. Duration via ffprobe.
+        try:
+            probe = subprocess.run(
+                [
+                    "ffprobe", "-v", "error", "-show_entries",
+                    "format=duration", "-of", "csv=p=0", str(out_path),
+                ],
+                capture_output=True, text=True, check=True, timeout=15,
+            )
+            duration_s: float | None = round(float(probe.stdout.strip()), 2)
+        except Exception:
+            duration_s = None
+
+        # 8. Ready.
+        sb_patch(
+            "generated_videos",
+            {"id": f"eq.{video_id}"},
+            {
+                "status": "ready",
+                "cf_stream_uid": cf_uid,
+                "duration_s": duration_s,
+                "error": None,
+            },
+        )
+        print(f"[bucket-job {video_id}] done", flush=True)
+
+    except Exception as e:
+        err = f"{type(e).__name__}: {e}"
+        print(f"[bucket-job {video_id}] FAILED: {err}", flush=True)
+        traceback.print_exc()
+        try:
+            sb_patch(
+                "generated_videos",
+                {"id": f"eq.{video_id}"},
+                {"status": "failed", "error": err[:1000]},
+            )
+        except Exception:
+            traceback.print_exc()
+    finally:
+        shutil.rmtree(workdir, ignore_errors=True)
+
+
 def main() -> None:
     print(f"[worker] starting, polling every {POLL_IDLE_SEC}s", flush=True)
     while True:
@@ -389,11 +563,27 @@ def main() -> None:
             time.sleep(POLL_IDLE_SEC)
             continue
 
-        if job is None:
+        if job is not None:
+            process_job(job)
+            continue
+
+        # Phase 76.6b (2026-07-14): after listing_videos tour jobs, also poll
+        # bucket-video jobs (generated_videos.scope='intent_bucket', status
+        # 'pending'). Same worker box, same ffmpeg + CF path — the only diff
+        # is the photo source (poi_photos referenced by input_photo_ids)
+        # and the destination row (generated_videos, not listing_videos).
+        try:
+            bucket_job = claim_bucket_job()
+        except Exception:
+            traceback.print_exc()
             time.sleep(POLL_IDLE_SEC)
             continue
 
-        process_job(job)
+        if bucket_job is not None:
+            process_bucket_job(bucket_job)
+            continue
+
+        time.sleep(POLL_IDLE_SEC)
 
 
 if __name__ == "__main__":

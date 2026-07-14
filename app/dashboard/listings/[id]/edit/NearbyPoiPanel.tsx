@@ -23,7 +23,7 @@
  * Types stay lightweight — the server action's return type flows through.
  */
 
-import { Loader2, MapPinned, ImagePlus, Check, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Loader2, MapPinned, ImagePlus, Check, X, ChevronLeft, ChevronRight, Video, Play } from 'lucide-react';
 import Image from 'next/image';
 import { useCallback, useEffect, useState, useTransition } from 'react';
 import {
@@ -34,6 +34,12 @@ import {
   setListingPoiStatus,
   type NearbyPoiForListing,
 } from '@/lib/poi/actions';
+import {
+  generateBucketVideo,
+  getBucketVideoStatus,
+  type BucketVideoStatus,
+} from '@/lib/poi/video-actions';
+import { streamIframeUrl } from '@/lib/cloudflare/stream';
 import type { IntentBucket } from '@/lib/poi/types';
 
 const BUCKET_LABELS: Record<IntentBucket, string> = {
@@ -188,9 +194,12 @@ export function NearbyPoiPanel({
             if (rows.length === 0) return null;
             return (
               <section key={bucket}>
-                <h4 className="mb-2 text-xs font-medium uppercase tracking-wide text-muted">
-                  {BUCKET_LABELS[bucket]} · {rows.length}
-                </h4>
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <h4 className="text-xs font-medium uppercase tracking-wide text-muted">
+                    {BUCKET_LABELS[bucket]} · {rows.length}
+                  </h4>
+                  <BucketVideoControl listingId={listingId} bucket={bucket} />
+                </div>
                 <ul className="space-y-2">
                   {rows.map((row) => (
                     <PoiRow
@@ -651,6 +660,158 @@ function PhotoLightbox({
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+// ─── bucket-video control (Phase 76.6c) ──────────────────────────────────
+//
+// One instance per bucket. Shows a "Generate video" button when no video
+// exists (or a terminal state). While pending/processing we poll every 5s
+// for status. When ready, we swap in a CF Stream <iframe> player.
+//
+// Design: docs/poi-content-pipeline.md §1.1 — one bucket = one video.
+// generateBucketVideo only enqueues; render happens on the EC2 worker.
+
+function BucketVideoControl({
+  listingId,
+  bucket,
+}: {
+  listingId: string;
+  bucket: IntentBucket;
+}) {
+  const [status, setStatus] = useState<BucketVideoStatus>(null);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const [expandedPlayer, setExpandedPlayer] = useState(false);
+
+  // Initial load + polling while a render is in flight.
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      const next = await getBucketVideoStatus(listingId, bucket);
+      if (!cancelled) setStatus(next);
+      return next;
+    };
+    load().then((s) => {
+      if (cancelled) return;
+      if (s?.status === 'pending' || s?.status === 'processing') {
+        const t = setInterval(async () => {
+          const cur = await load();
+          if (
+            !cur ||
+            (cur.status !== 'pending' && cur.status !== 'processing')
+          ) {
+            clearInterval(t);
+          }
+        }, 5000);
+        return () => clearInterval(t);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [listingId, bucket]);
+
+  const handleGenerate = async () => {
+    setBusy(true);
+    setErr(null);
+    try {
+      const res = await generateBucketVideo(listingId, bucket);
+      if (!res.ok) {
+        setErr(res.message);
+        return;
+      }
+      // Optimistic: mark pending so the polling loop kicks in on next render.
+      setStatus({
+        video_id: res.video_id,
+        status: res.status,
+        cf_stream_uid: null,
+        duration_s: null,
+        photo_count: res.photo_count,
+        error: null,
+        created_at: new Date().toISOString(),
+      });
+      // Kick off polling immediately.
+      const t = setInterval(async () => {
+        const cur = await getBucketVideoStatus(listingId, bucket);
+        setStatus(cur);
+        if (cur && cur.status !== 'pending' && cur.status !== 'processing') {
+          clearInterval(t);
+        }
+      }, 5000);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // Rendering
+  if (status?.status === 'ready' || status?.status === 'approved') {
+    if (!status.cf_stream_uid) {
+      return <span className="text-[10px] text-muted">ready (no uid)</span>;
+    }
+    return (
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => setExpandedPlayer((v) => !v)}
+          className="inline-flex items-center gap-1 rounded-md border border-line bg-bg px-2 py-1 text-[11px] text-ink hover:bg-line/40"
+        >
+          <Play className="h-3 w-3" />
+          {expandedPlayer ? 'Hide' : 'Play'} video
+          {status.duration_s ? ` · ${Math.round(status.duration_s)}s` : ''}
+        </button>
+        <button
+          type="button"
+          onClick={handleGenerate}
+          disabled={busy}
+          title="Regenerate from current approved photos"
+          className="inline-flex items-center gap-1 rounded-md border border-line bg-bg px-2 py-1 text-[11px] text-muted hover:text-ink disabled:opacity-50"
+        >
+          <Video className="h-3 w-3" />
+          Regenerate
+        </button>
+        {expandedPlayer ? (
+          <div className="absolute left-0 right-0 mt-8 z-10">
+            <div className="aspect-[9/16] max-w-[360px] mx-auto rounded-lg overflow-hidden border border-line bg-black">
+              <iframe
+                src={streamIframeUrl(status.cf_stream_uid)}
+                allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;"
+                allowFullScreen
+                style={{ width: '100%', height: '100%', border: 'none' }}
+              />
+            </div>
+          </div>
+        ) : null}
+      </div>
+    );
+  }
+
+  if (status?.status === 'pending' || status?.status === 'processing') {
+    return (
+      <span className="inline-flex items-center gap-1 text-[11px] text-muted">
+        <Loader2 className="h-3 w-3 animate-spin" />
+        Rendering {status.photo_count} photos… ({status.status})
+      </span>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-2">
+      {(status?.status === 'failed' || err) ? (
+        <span className="text-[10px] text-red-600 truncate max-w-[200px]" title={status?.error ?? err ?? ''}>
+          {status?.status === 'failed' ? 'Failed' : ''} {err ?? status?.error ?? ''}
+        </span>
+      ) : null}
+      <button
+        type="button"
+        onClick={handleGenerate}
+        disabled={busy}
+        className="inline-flex items-center gap-1 rounded-md border border-line bg-bg px-2 py-1 text-[11px] text-ink hover:bg-line/40 disabled:opacity-50"
+      >
+        {busy ? <Loader2 className="h-3 w-3 animate-spin" /> : <Video className="h-3 w-3" />}
+        Generate video
+      </button>
     </div>
   );
 }

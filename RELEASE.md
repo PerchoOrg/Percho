@@ -4,6 +4,10 @@
 > Historical entries below preserve the original name in-place — release notes
 > are a record of what was shipped under the product's name at the time.
 
+## v0.76.6 · Buyer-question bucket videos (2026-07-14)
+
+- **Generate a video per bucket, right on the Media tab.** Each POI bucket header (Walkable / Daily drive / Lifestyle / Commute) has a **Generate video** button. It stitches your approved POI photos in that bucket into a portrait 9:16 slideshow, renders on the EC2 worker, uploads to Cloudflare Stream, and swaps in a **Play video** button when ready. Buyers see the "what can I walk to" story instead of a spreadsheet of nearby places. ≤6 videos per listing, one per buyer question.
+
 ## v0.76.4 · Fullscreen photo review (2026-07-14)
 
 - **Tap a POI photo to review it fullscreen.** The old tile approve/reject icons were tiny and hover-only — impossible to hit on mobile. Now a tap opens the photo full-screen with big Approve / Reject buttons and auto-advances to the next photo, so triaging 10+ POI photos takes seconds. Keyboard shortcuts (← → to browse, A / X to decide, Esc to close) and swipe-to-navigate on mobile.

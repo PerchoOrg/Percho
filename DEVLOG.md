@@ -4,6 +4,30 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-14 — Phase 76.6 · Buyer-question bucket videos (a+b+c together)
+
+**Problem**: 76.5 designed ≤6 videos/listing, one per buyer-question bucket (walkable / daily_drive / lifestyle / commute). Missing: the actual pipeline. No way for an agent to trigger a bucket video, no worker to render it, no place to play it back.
+
+**Ship (three sub-phases merged as one)**:
+
+- **76.6a** — `lib/poi/video-actions.ts` new. `generateBucketVideo(listingId, bucket)` server action: verifies caller owns the listing, collects approved POI photos in that bucket (join `listing_pois` → `listing_poi_photos` → `poi_photos`), enforces `≥3 photos`, inserts a `generated_videos` row with `scope='intent_bucket'`, `status='pending'`, `input_photo_ids[]`. Idempotent-ish: if a `pending`/`processing` row already exists for the (listing, bucket) pair, returns it instead of enqueueing a duplicate. `getBucketVideoStatus(listingId, bucket)` server action for polling.
+
+- **76.6b** — `scripts/render-worker/worker.py`. After the existing `listing_videos` tour job path returns idle, the worker polls `generated_videos where scope='intent_bucket' and status='pending'` (ordered by `created_at`), atomically flips to `processing`, resolves `input_photo_ids[]` → `poi_photos.storage_path`, downloads from Supabase `listing-photos` bucket in insertion order, renders portrait 9:16 via `scripts/ken-burns/generate.py` (no landscape variant — POI thumbnails are orientation-mixed, feed is vertical), uploads to CF Stream, writes `cf_stream_uid` + `duration_s`, flips row to `ready`. Failure path flips to `failed` with truncated error. **Not** wired through `render_jobs` because that table's FK is to `listing_videos` — `generated_videos` is its own queue.
+
+- **76.6c** — `NearbyPoiPanel.tsx`. New `BucketVideoControl` component mounted in each bucket header (right of the "Walkable · 12" title). Shows a **Generate video** button when no row exists. While `pending`/`processing`, shows a spinner + photo count and polls status every 5s. When `ready`, shows a **Play video** toggle that mounts a CF Stream iframe player (9:16, letterbox), plus a **Regenerate** button. Uses `streamIframeUrl(uid)` (new helper in `lib/cloudflare/stream.ts`) so the CF customer subdomain env var is centralized.
+
+**Files**:
+- `lib/poi/video-actions.ts` (new, +309 lines)
+- `scripts/render-worker/worker.py` (+180 lines — `claim_bucket_job` + `process_bucket_job` + poll fallback in `main()`)
+- `app/dashboard/listings/[id]/edit/NearbyPoiPanel.tsx` (+140 lines — imports, header layout, `BucketVideoControl`)
+- `lib/cloudflare/stream.ts` (+4 lines — `streamIframeUrl` export)
+
+**Verification**: `npx tsc --noEmit` clean. End-to-end smoke test pending in 76.6d against the Jones Bridge daily_drive bucket.
+
+**Deploy**: Worker code lives on EC2 (`percho-render-worker` systemd unit). Merge to `main` on this box → `git pull` on the render worker → `sudo systemctl restart percho-render-worker`. Web UI ships via normal Vercel deploy.
+
+**Design ref**: `docs/poi-content-pipeline.md` §1.1 — one bucket = one video, ≤6/listing.
+
 ## 2026-07-14 — Phase 76.4 · Fullscreen lightbox for POI photo review
 
 **Problem**: Approve/reject buttons on POI photo tiles were tiny (14px) hover-only icons — unusable on mobile, and the tile itself was too small to see the photo well before deciding.

@@ -83,6 +83,10 @@ export function thumbnailUrl(videoId: string): string {
  * — both formats appear in the wild depending on where the value was copied
  * from in the Cloudflare dashboard.
  */
+export function streamIframeUrl(videoId: string): string {
+  return `https://${streamHost()}/${videoId}/iframe`;
+}
+
 function streamHost(): string {
   const raw = process.env.NEXT_PUBLIC_CLOUDFLARE_STREAM_CUSTOMER_SUBDOMAIN;
   if (!raw) throw new Error('NEXT_PUBLIC_CLOUDFLARE_STREAM_CUSTOMER_SUBDOMAIN not set');
