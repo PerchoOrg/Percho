@@ -451,9 +451,13 @@ export type NearbyPoiForListing = {
 /**
  * Full snapshot for the Media tab's Nearby POI panel:
  *   - all listing_pois grouped by intent bucket
- *   - photo counts + status breakdown per POI
+ *   - photos linked via listing_poi_photos → poi_photos, stitched in JS
  *
- * Returns already-shaped for UI, not a raw join.
+ * Two queries + client-side join instead of a PostgREST embed, because
+ * `listing_pois` and `listing_poi_photos` share `listing_id`+`poi_id` (via
+ * `poi_photos.poi_id`) but have no direct FK — PostgREST can't infer that
+ * relationship and errors out with PGRST200. The two-query pattern is O(N)
+ * with N ≤ ~120, so no perf concern.
  */
 export async function loadNearbyPoisForListing(
   listingId: string,
@@ -462,23 +466,72 @@ export async function loadNearbyPoisForListing(
   // biome-ignore lint/suspicious/noExplicitAny: stub generated types
   const supabase: any = await createClient();
 
-  const { data, error } = (await supabase
+  // Query 1: listing_pois joined to the global pois row.
+  const { data: rows, error } = (await supabase
     .from("listing_pois")
     .select(
       `
       poi_id, intent_bucket, distance_m, drive_time_s, status, ai_score, discovered_at, reviewed_at,
-      pois!inner(id, display_name, formatted_address, primary_type, rating, user_ratings_total),
-      photos:listing_poi_photos(status, poi_photo_id, poi_photos!inner(storage_path, attribution))
+      pois!inner(id, display_name, formatted_address, primary_type, rating, user_ratings_total)
     `,
     )
     .eq("listing_id", listingId)
     .order("distance_m", { ascending: true })) as {
-    data: NearbyPoiForListing[] | null;
+    data: Array<Omit<NearbyPoiForListing, "photos">> | null;
     error: unknown;
   };
 
   if (error) throw error;
-  return data ?? [];
+  if (!rows || rows.length === 0) return [];
+
+  // Query 2: photos for this listing, joined to their poi_photos (which
+  // carries poi_id so we can group).
+  const { data: photoRows, error: photoErr } = (await supabase
+    .from("listing_poi_photos")
+    .select(
+      `
+      status, poi_photo_id,
+      poi_photos!inner(poi_id, storage_path, attribution)
+    `,
+    )
+    .eq("listing_id", listingId)) as {
+    data: Array<{
+      status: PhotoStatus;
+      poi_photo_id: string;
+      poi_photos: {
+        poi_id: string;
+        storage_path: string;
+        attribution: Record<string, unknown> | null;
+      };
+    }> | null;
+    error: unknown;
+  };
+
+  if (photoErr) throw photoErr;
+
+  // Bucket photos by poi_id for O(1) lookup while stitching.
+  const photosByPoi = new Map<
+    string,
+    NearbyPoiForListing["photos"]
+  >();
+  for (const p of photoRows ?? []) {
+    const poiId = p.poi_photos.poi_id;
+    const list = photosByPoi.get(poiId) ?? [];
+    list.push({
+      status: p.status,
+      poi_photo_id: p.poi_photo_id,
+      poi_photos: {
+        storage_path: p.poi_photos.storage_path,
+        attribution: p.poi_photos.attribution,
+      },
+    });
+    photosByPoi.set(poiId, list);
+  }
+
+  return rows.map((r) => ({
+    ...r,
+    photos: photosByPoi.get(r.poi_id) ?? [],
+  }));
 }
 
 // ─── util ──────────────────────────────────────────────────────────────────

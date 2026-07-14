@@ -4,6 +4,25 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-14 — Phase 76.1 · Fix PGRST200 on Nearby POI load
+
+**Problem**: On the Media tab, `loadNearbyPoisForListing` raised
+`PGRST200: Could not find a relationship between 'listing_pois' and
+'listing_poi_photos'`. Root cause: the two per-listing tables share
+`listing_id` + `poi_id` but do not have a **direct** FK — PostgREST
+requires an explicit FK to resolve `.select('photos:listing_poi_photos(...)')`
+embeds and errors out otherwise.
+
+**Fix**: Split into two queries + JS stitch (`photosByPoi` map keyed by
+`poi_id`). O(N) with N ≤ ~120, no perf concern. See `lib/poi/actions.ts`
+`loadNearbyPoisForListing`.
+
+**Lesson learned for future POI-related joins**: PostgREST embeds only
+follow declared foreign keys, not "shared column" relationships. When two
+tables share a composite key that connects them logically (like
+`listing_id` + `poi_id`), you either need a direct FK between them or a
+two-query stitch. Never assume PostgREST can infer transitive relationships.
+
 ## 2026-07-14 — POI content pipeline v1 · Phase A (schema + Media tab UI)
 
 **Objective**: 落 nearby POI 挖矿 pipeline 的骨架 —— 全局 POI 表(Google place_id 索引,跨 listing 复用)+ per-listing join(每 listing 独立 approve/reject 状态)+ review_events(训练数据积累)+ Media tab 内的审核 UI。
