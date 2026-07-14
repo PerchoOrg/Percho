@@ -4,6 +4,18 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+
+## 2026-07-14 08:30 UTC — Phase 77.6 · Fix vision-tagger column name (`pois.name` → `pois.display_name`)
+
+**Objective**: unblock vision tagging — Phase 77.2 shipped `tagPoiPhoto()` with the wrong column name.
+
+**Actions**: `lib/poi/vision-tagger.ts` — `.select("id, name, primary_type")` → `.select("id, display_name, primary_type")` (line 189); `poi?.name` → `poi?.display_name` when building the user prompt (line 221).
+
+**Root cause**: the `pois` table uses `display_name`, not `name`. Every `tagPoiPhoto()` call was silently returning a POI row with `name: undefined` → the Anthropic user prompt read `POI context — name: "unknown"`. The vision model still produced tags but without POI context disambiguation (e.g. couldn't distinguish deli food photos from restaurant food photos).
+
+**Resolution**: single-branch hotfix on top of Phase 77. TSC clean.
+
+**Next steps**: backfill vision tags for the 10 already-approved Jones Bridge Park photos, then trigger walkable bucket video to verify allocator end-to-end.
 ## 2026-07-14 — Phase 77 · Vision-tagged, cross-bucket-deduped video allocator
 
 **Problem**: 76.6 shipped bucket videos but the allocator was naïve — insertion-order slicing per bucket. With no cross-bucket dedup, the same photo could land in all 4 buckets. No quality signal, no portrait preference, no POI diversity. Result: 4 near-identical slideshows.

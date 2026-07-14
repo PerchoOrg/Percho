@@ -186,7 +186,7 @@ export async function tagPoiPhoto(poiPhotoId: string): Promise<{
   // a grocery deli counter → daily_drive).
   const { data: poi } = await admin
     .from("pois")
-    .select("id, name, primary_type")
+    .select("id, display_name, primary_type")
     .eq("id", photo.poi_id)
     .maybeSingle();
 
@@ -218,7 +218,7 @@ export async function tagPoiPhoto(poiPhotoId: string): Promise<{
       imageBase64,
       mediaType: "image/jpeg",
       userPrompt: userPromptForPoi({
-        name: poi?.name ?? "unknown",
+        name: poi?.display_name ?? "unknown",
         primary_type: poi?.primary_type ?? null,
         intent_bucket: (lp?.intent_bucket as IntentBucket | null) ?? null,
       }),
