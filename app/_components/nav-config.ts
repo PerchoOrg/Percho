@@ -135,6 +135,9 @@ export const CHROME_HIDDEN_PREFIXES = [
   '/v/',
   '/browse/feed',
   '/feed',
+  // ReelEstate mobile detail (D2.1) — full-bleed mobile canvas owns its
+  // own bottom nav via `app/(mobile)/layout.tsx`.
+  '/listings/',
   '/login',
   '/signup',
   '/forgot-password',
