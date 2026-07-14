@@ -22,6 +22,7 @@
 import { notFound } from 'next/navigation';
 import { fetchMobileListing } from '@/lib/reelestate/listing';
 import { PhotoGallery } from '@/components/reelestate/PhotoGallery';
+import { SpecsAndDescription } from '@/components/reelestate/SpecsAndDescription';
 import { formatPrice } from '@/lib/format/price';
 
 export const dynamic = 'force-dynamic';
@@ -72,6 +73,15 @@ export default async function MobileListingDetailPage({ params }: DetailPageProp
           {fullAddress}
         </h1>
       </header>
+
+      {/* Specs row + description accordion (D2.4). Handles its own empty
+          state so header spacing stays clean when a listing lacks specs. */}
+      <SpecsAndDescription
+        beds={listing.beds}
+        baths={listing.baths}
+        sqft={listing.sqft}
+        description={listing.description}
+      />
     </main>
   );
 }
