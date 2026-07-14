@@ -17,6 +17,7 @@ import { notFound } from 'next/navigation';
 import { fetchMobileAgent } from '@/lib/reelestate/agent';
 import { fetchAgentListings } from '@/lib/reelestate/agentListings';
 import { AgentProfileTabs } from '@/components/reelestate/AgentProfileTabs';
+import { AgentContactCTAs, VerifiedBadge } from '@/components/reelestate/AgentContactCTAs';
 
 export const dynamic = 'force-dynamic';
 
@@ -53,8 +54,9 @@ export default async function MobileAgentProfilePage({ params }: AgentPageProps)
           </div>
         </div>
 
-        <h1 className="text-[20px] font-semibold leading-tight tracking-tight text-white">
+        <h1 className="flex items-center gap-1.5 text-[20px] font-semibold leading-tight tracking-tight text-white">
           {agent.name}
+          <VerifiedBadge verified={agent.verified} />
         </h1>
         {agent.brokerage ? (
           <p className="-mt-2 text-[13px] leading-tight text-white/60">
@@ -68,6 +70,9 @@ export default async function MobileAgentProfilePage({ params }: AgentPageProps)
           {agent.bio}
         </p>
       ) : null}
+
+      {/* A4.3: Message | Call | Website CTA row. */}
+      <AgentContactCTAs agent={agent} />
 
       {/* A4.2: Reels | Properties tab bar with a 2-col grid per tab. */}
       <AgentProfileTabs listings={listings} />

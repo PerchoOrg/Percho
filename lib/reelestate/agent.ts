@@ -34,6 +34,14 @@ export interface MobileAgent {
   bio: string | null;
   phone: string | null;
   email: string | null;
+  // Optional fields intentionally NOT selected from the DB today — the
+  // `agents` table (migration 0001_init) has no `website` or `verified`
+  // column yet. A4.3 renders Website CTA + verified badge only when these
+  // are non-null, so the code path stays dormant until a schema migration
+  // (deferred: CLAUDE.md §8 requires owner approval before schema changes)
+  // adds the columns and this SELECT is extended. No mock defaults.
+  website?: string | null;
+  verified?: boolean | null;
 }
 
 interface RawAgentRow {
