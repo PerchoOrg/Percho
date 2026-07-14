@@ -26,6 +26,7 @@
 import Link from 'next/link';
 import { fetchMobileListings, type MobileListingCard } from '@/lib/reelestate/list';
 import { formatPrice } from '@/lib/format/price';
+import { ListingsFilterBar } from '@/components/reelestate/ListingsFilterBar';
 
 export const dynamic = 'force-dynamic';
 
@@ -34,18 +35,20 @@ export default async function MobileListingsPage() {
 
   return (
     <main className="mx-auto flex w-full max-w-md flex-col px-3 pt-4 pb-8">
-      <header className="mb-4 px-1">
+      <header className="mb-3 px-1">
         <h1 className="text-[22px] font-semibold leading-tight tracking-tight text-white">
           Properties
         </h1>
       </header>
+
+      <ListingsFilterBar />
 
       {listings.length === 0 ? (
         <p className="mt-8 px-2 text-center text-sm text-white/50">
           No active listings yet.
         </p>
       ) : (
-        <ul className="grid grid-cols-2 gap-3">
+        <ul className="mt-3 grid grid-cols-2 gap-3">
           {listings.map((l) => (
             <li key={l.id}>
               <ListingTile listing={l} />
