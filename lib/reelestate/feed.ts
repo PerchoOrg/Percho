@@ -33,6 +33,8 @@ export interface ReelFeedListing {
   sqft: number | null;
   cover_url: string | null;
   agent: ReelFeedAgent | null;
+  like_count: number;
+  save_count: number;
 }
 
 const REEL_FEED_LIMIT = 5;
@@ -69,9 +71,39 @@ export async function fetchReelFeedListings(): Promise<ReelFeedListing[]> {
     .limit(REEL_FEED_LIMIT)) as { data: RawReelFeedListing[] | null; error: unknown };
 
   if (error || !data) return [];
+
+  const ids = data.map((r) => r.id);
+  // Public aggregate views (see migrations 0016 + 0028). Anon-readable —
+  // safe from RSC without service-role.
+  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
+  const [likeCountsRes, saveCountsRes] = await Promise.all([
+    (supabase as any)
+      .from('listing_like_counts')
+      .select('listing_id, like_count')
+      .in('listing_id', ids),
+    // biome-ignore lint/suspicious/noExplicitAny: stub generated types
+    (supabase as any)
+      .from('saved_listing_counts')
+      .select('listing_id, save_count')
+      .in('listing_id', ids),
+  ]);
+  const likeMap = new Map<string, number>();
+  for (const r of (likeCountsRes.data ?? []) as { listing_id: string; like_count: number }[]) {
+    likeMap.set(r.listing_id, Number(r.like_count) || 0);
+  }
+  const saveMap = new Map<string, number>();
+  for (const r of (saveCountsRes.data ?? []) as { listing_id: string; save_count: number }[]) {
+    saveMap.set(r.listing_id, Number(r.save_count) || 0);
+  }
+
   return data.map((row) => {
     const agent = Array.isArray(row.agents) ? (row.agents[0] ?? null) : row.agents;
     const { agents: _agents, ...rest } = row;
-    return { ...rest, agent };
+    return {
+      ...rest,
+      agent,
+      like_count: likeMap.get(row.id) ?? 0,
+      save_count: saveMap.get(row.id) ?? 0,
+    };
   });
 }

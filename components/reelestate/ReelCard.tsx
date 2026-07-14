@@ -22,6 +22,7 @@
  * the visual layout only.
  */
 import type { ReelFeedListing } from '@/lib/reelestate/feed';
+import { ReelActionRail } from './ReelActionRail';
 
 interface ReelCardProps {
   listing: ReelFeedListing;
@@ -49,12 +50,15 @@ export function ReelCard({ listing }: ReelCardProps) {
         <AgentChip agent={listing.agent} />
       </div>
 
-      {/* Right action rail placeholder (F1.3 fills this) */}
-      <div
-        aria-hidden
-        data-testid="reel-card-action-rail"
-        className="pointer-events-none absolute right-3 bottom-[calc(env(safe-area-inset-bottom,0px)+140px)] flex w-14 flex-col items-center gap-4"
-      />
+      {/* Right action rail (like / comment / share / save) */}
+      <div className="pointer-events-none absolute right-3 bottom-[calc(env(safe-area-inset-bottom,0px)+140px)] flex flex-col items-center">
+        <ReelActionRail
+          listingId={listing.id}
+          listingSlug={listing.slug}
+          initialLikeCount={listing.like_count}
+          initialSaveCount={listing.save_count}
+        />
+      </div>
 
       {/* Bottom-left: address block */}
       <div className="pointer-events-auto absolute left-4 right-20 bottom-[calc(env(safe-area-inset-bottom,0px)+24px)]">
