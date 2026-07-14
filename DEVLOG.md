@@ -4,6 +4,14 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-14 — Phase 76.3 · Fix POI photo review tile 404 (same wrong-bucket bug, UI side)
+
+**Problem**: After 76.2 fixed upload, tiles in the "Show N photos" expander would still 404 because `NearbyPoiPanel`'s `photoBucket` prop defaulted to `"photos"` (same nonexistent bucket) and `MediaPanel` doesn't pass one, so the constructed URL was `.../public/photos/poi/<id>/<hash>.jpg` → 404.
+
+**Fix**: Change the default to `"listing-photos"`. `MediaPanel` still doesn't need to pass it — the default now matches the upload target.
+
+**Lesson**: When you hardcode a magic string like a bucket name, `grep` the whole repo for the string (not just the constant) before you're "done". `POI_PHOTO_BUCKET` looked centralized but the same literal was duplicated as a component default.
+
 ## 2026-07-14 — Phase 76.2 · Fix POI photo import "10 skipped" (wrong bucket)
 
 **Problem**: Media tab → Nearby POIs → Refresh reported `Photos: +0 new, 0 reused, 10 skipped.` for every POI. Google Places photo bytes were fetching fine (200 OK, ~500KB JPEGs); the failure was on the Supabase Storage upload.
