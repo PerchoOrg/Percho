@@ -4,6 +4,16 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-14 — Phase 76.2 · Fix POI photo import "10 skipped" (wrong bucket)
+
+**Problem**: Media tab → Nearby POIs → Refresh reported `Photos: +0 new, 0 reused, 10 skipped.` for every POI. Google Places photo bytes were fetching fine (200 OK, ~500KB JPEGs); the failure was on the Supabase Storage upload.
+
+**Root cause**: `lib/poi/actions.ts` set `POI_PHOTO_BUCKET = "photos"`, but no bucket named `photos` exists in this project. The actual buckets are `listing-photos` / `community-photos` / `avatars` / `community-covers`. Every upload returned `Bucket not found (404)` → caught by the `if (upErr)` branch → `skipped += 1` → continue. Ten photos per POI, all skipped, always.
+
+**Fix**: One-line change — `POI_PHOTO_BUCKET = "listing-photos"`. Path prefix `poi/<poi_id>/<hash>.jpg` keeps POI photos namespaced away from real listing photos (`{listing_id}/{filename}`). Verified via service-role upload probe: JPEG upload to `listing-photos/poi/…` returns OK. Storage RLS on `listing-photos` fences INSERT/DELETE by first path segment being a listing UUID owned by the caller — service-role bypasses RLS so `poi/…` uploads succeed, and the bucket is public so signed URLs aren't needed for reads.
+
+**Lesson**: When introducing a new file-storage code path, list existing buckets first — don't invent a name. `supabase.storage.listBuckets()` in a 5-line probe would have caught this pre-merge.
+
 ## 2026-07-14 — Phase 76.1 · Fix PGRST200 on Nearby POI load
 
 **Problem**: On the Media tab, `loadNearbyPoisForListing` raised

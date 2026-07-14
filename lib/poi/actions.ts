@@ -35,7 +35,7 @@ import {
 } from "./google-places";
 import type { IntentBucket, PhotoStatus, PoiStatus, ReviewAction } from "./types";
 
-const POI_PHOTO_BUCKET = "photos"; // reuse existing listing photo bucket; path prefix distinguishes
+const POI_PHOTO_BUCKET = "listing-photos"; // reuse existing listing photo bucket; poi/ path prefix distinguishes
 
 type ListingRow = {
   id: string;
