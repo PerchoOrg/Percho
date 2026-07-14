@@ -17,9 +17,13 @@
  * root; each layer opts into `pointer-events-auto` since the wrapper is
  * `pointer-events-none` (parent handles scroll-snap on the section itself).
  *
- * Line-heights on the address block are intentionally NOT the canonical
- * 26/13/13/13 rig from §2.1 caption card — that's F1.4's job. Here we ship
- * the visual layout only.
+ * F1.4: caption typography now matches the canonical 26/13/13/13 rig from
+ * `app/(public)/browse/_components/CaptionCard.tsx` (per memory §74.14 —
+ * memory wins over README §2.1's 19/15/14 sketch). The bottom-left caption
+ * carries price (26) / specs (13) / address (13). Feed listings don't
+ * currently expose description, so the 4th line is intentionally omitted
+ * rather than filled with placeholder text. Top-left PriceChip removed to
+ * avoid duplicate price render.
  */
 import type { ReelFeedListing } from '@/lib/reelestate/feed';
 import { ReelActionRail } from './ReelActionRail';
@@ -29,7 +33,14 @@ interface ReelCardProps {
 }
 
 export function ReelCard({ listing }: ReelCardProps) {
-  const cityState = `${listing.city}, ${listing.state}${listing.zip ? ` ${listing.zip}` : ''}`;
+  const addressLine = `${listing.address}, ${listing.city}, ${listing.state}${listing.zip ? ` ${listing.zip}` : ''}`;
+  const specs = [
+    listing.beds != null ? `${listing.beds} bd` : null,
+    listing.baths != null ? `${listing.baths} ba` : null,
+    listing.sqft != null ? `${listing.sqft.toLocaleString('en-US')} sqft` : null,
+  ]
+    .filter(Boolean)
+    .join(' · ');
   return (
     <div className="pointer-events-none relative h-full w-full">
       <MediaLayer coverUrl={listing.cover_url} address={listing.address} />
@@ -39,11 +50,6 @@ export function ReelCard({ listing }: ReelCardProps) {
         aria-hidden
         className="absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-black/80 via-black/40 to-transparent"
       />
-
-      {/* Top-left: price chip */}
-      <div className="pointer-events-auto absolute left-4 top-[calc(env(safe-area-inset-top,0px)+16px)]">
-        <PriceChip price={listing.price} />
-      </div>
 
       {/* Top-right: agent chip */}
       <div className="pointer-events-auto absolute right-4 top-[calc(env(safe-area-inset-top,0px)+16px)]">
@@ -60,12 +66,19 @@ export function ReelCard({ listing }: ReelCardProps) {
         />
       </div>
 
-      {/* Bottom-left: address block */}
-      <div className="pointer-events-auto absolute left-4 right-20 bottom-[calc(env(safe-area-inset-bottom,0px)+24px)]">
-        <p className="text-[20px] font-semibold leading-[26px] text-white drop-shadow">
-          {listing.address}
-        </p>
-        <p className="mt-1 text-[13px] leading-[13px] text-white/75">{cityState}</p>
+      {/* Bottom-left caption — canonical 26/13/13/13 rig (memory §74.14).
+       * Feed listings expose no description → 4th line omitted, not filled. */}
+      <div
+        className="pointer-events-auto absolute left-4 right-20 bottom-[calc(env(safe-area-inset-bottom,0px)+24px)] text-white"
+        style={{ textShadow: '0 2px 8px rgba(0,0,0,0.7), 0 1px 2px rgba(0,0,0,0.5)' }}
+      >
+        {listing.price != null && (
+          <div className="font-bold text-[26px] leading-none tracking-tight tabular-nums">
+            {formatPriceFull(listing.price)}
+          </div>
+        )}
+        {specs && <div className="mt-1.5 text-[13px] leading-[13px]">{specs}</div>}
+        <div className="mt-1 text-[13px] leading-[13px]">{addressLine}</div>
       </div>
     </div>
   );
@@ -88,15 +101,6 @@ function MediaLayer({ coverUrl, address }: { coverUrl: string | null; address: s
       decoding="async"
       className="absolute inset-0 h-full w-full object-cover"
     />
-  );
-}
-
-function PriceChip({ price }: { price: number | null }) {
-  if (price == null) return null;
-  return (
-    <span className="inline-flex items-center rounded-full bg-grad-cta px-3 py-1.5 text-[15px] font-bold tracking-chip text-white shadow-glow-cyan">
-      {formatPriceFull(price)}
-    </span>
   );
 }
 
