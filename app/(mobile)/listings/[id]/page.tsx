@@ -19,6 +19,7 @@
  */
 import { notFound } from 'next/navigation';
 import { fetchMobileListing } from '@/lib/reelestate/listing';
+import { PhotoGallery } from '@/components/reelestate/PhotoGallery';
 
 export const dynamic = 'force-dynamic';
 
@@ -40,11 +41,24 @@ export default async function MobileListingDetailPage({ params }: DetailPageProp
   }`;
 
   return (
-    <main className="mx-auto flex w-full max-w-md flex-col gap-4 px-4 pb-8 pt-6">
-      {/* Info block — README §2.3 point 2. Hero + gallery (D2.2), stats
-          card (D2.4), watch-reel CTA + about + neighborhood + commute +
-          agent card (D2.5) mount around this block in later tasks. */}
-      <header className="flex flex-col gap-1">
+    <main className="mx-auto flex w-full max-w-md flex-col pb-8">
+      {/* Hero photo gallery (D2.2) — full-bleed above the info block; falls
+          back to a neutral placeholder frame when a listing has no ready
+          photos so the layout doesn't collapse. */}
+      {listing.photos.length > 0 ? (
+        <PhotoGallery photos={listing.photos} address={listing.address} />
+      ) : (
+        <div
+          aria-hidden
+          className="w-full bg-white/[0.04]"
+          style={{ aspectRatio: '4 / 3' }}
+        />
+      )}
+
+      {/* Info block — README §2.3 point 2. Stats card (D2.4), watch-reel
+          CTA + about + neighborhood + commute + agent card (D2.5) mount
+          around this block in later tasks. */}
+      <header className="mt-4 flex flex-col gap-1 px-4">
         {listing.price != null ? (
           <p className="text-[38px] font-bold leading-none tracking-tight text-white tabular-nums">
             {formatPriceFull(listing.price)}
