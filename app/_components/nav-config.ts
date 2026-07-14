@@ -134,6 +134,7 @@ export function isSubTabActive(pathname: string, sub: SubTab, all: SubTab[]): bo
 export const CHROME_HIDDEN_PREFIXES = [
   '/v/',
   '/browse/feed',
+  '/feed',
   '/login',
   '/signup',
   '/forgot-password',
