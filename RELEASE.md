@@ -2010,3 +2010,7 @@ Format matches the standard release template (Features / Improvements / Bug Fixe
   full-screen video feed buyers see, with a banner at the top reminding
   you it's a draft and only you can see it. Archived listings open the
   same preview with a muted banner explaining the public link is
+
+## v0.76.7 — POI photo import surfaces skip reasons + heals conflicts
+- Re-clicking Refresh on a POI whose photos were already imported no longer silently reports "10 skipped". Now: rows that already exist are correctly counted as `reused` (via upsert-on-conflict on `google_photo_name`).
+- When a photo genuinely can't be imported, the notice now shows *why* — first failure reason inline (Google fetch / Storage upload / DB upsert error message).

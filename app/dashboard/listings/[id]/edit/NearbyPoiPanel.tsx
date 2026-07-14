@@ -103,7 +103,12 @@ export function NearbyPoiPanel({
     startTransition(async () => {
       try {
         const r = await fetchPhotosForPoi(listingId, poiId);
-        setNotice(`Photos: +${r.fetched} new, ${r.reused} reused, ${r.skipped} skipped.`);
+        const reasons = r.skippedReasons?.length
+          ? ` — first reason: ${r.skippedReasons[0]}`
+          : '';
+        setNotice(
+          `Photos: +${r.fetched} new, ${r.reused} reused, ${r.skipped} skipped.${reasons}`,
+        );
         await refresh();
       } catch (err) {
         setNotice(`Photo fetch failed: ${(err as Error).message}`);

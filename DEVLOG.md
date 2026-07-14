@@ -5800,3 +5800,21 @@ after either choice goes straight to results / empty state.
 
 **Decisions**:
 
+
+## v0.76.7 — 2026-07-14 — POI photo import: expose skip reasons + upsert-on-conflict
+
+**Bug**: When re-clicking "Refresh" on a POI whose 10 photos were already imported, the UI showed `Photos: +0 new, 0 reused, 10 skipped.` — silent failure, no clue why.
+
+**Root cause diagnosis is still open** — local repro against Supabase does the correct thing (existing row is found via `.maybeSingle()`, loop counts 10 reused / 0 skipped). Production must be hitting one of three failure modes silently: (a) `.maybeSingle()` returns `null` despite the row existing, and the `insert` then trips the `google_photo_name` UNIQUE constraint; (b) Google Places binary fetch fails; (c) Supabase Storage upload fails. All three were counted as `skipped` with no reason surfaced.
+
+**Fix (surface + heal)**:
+1. `fetchPhotosForPoi` now captures the `lookupErr` from `.maybeSingle()` and logs it (was ignored).
+2. Replaced the `insert` with `upsert(..., { onConflict: 'google_photo_name' })`. If the row already exists (lookup was a false-null, or a concurrent request beat us), we now recover: fetch its `id`, count as `reused` if `created_at` is stale, `fetched` if we just inserted.
+3. New `skippedReasons: string[]` on the return payload, capped at 3 entries. Each `skipped++` is replaced with `noteSkip(reason)` that captures the actual error message (fetch / storage / upsert).
+4. UI now appends `— first reason: <msg>` when `skippedReasons.length > 0`, so the notice bar tells the user *why* photos were skipped instead of a silent count.
+
+**Files**:
+- `lib/poi/actions.ts` (`fetchPhotosForPoi`, `PhotoFetchResult`)
+- `app/dashboard/listings/[id]/edit/NearbyPoiPanel.tsx` (`handleFetchPhotos`)
+
+**Verification**: TSC clean. Local repro against Supabase confirms upsert path returns `reused: 10` instead of `skipped: 10` when the lookup would have missed. Real user-side verification: click Refresh on Jones Bridge Park and confirm the notice says `+0 new, 10 reused, 0 skipped.` (not skipped). If skipped > 0, the reason is now surfaced inline.
