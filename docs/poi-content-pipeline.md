@@ -9,6 +9,8 @@
 
 Every listing needs a rich "neighborhood story" that a video pipeline can render into feed clips. Rather than treat Google Places as a photo gallery, we treat **nearby** as a raw signal pool from which the system extracts, ranks, and narrates the assets a buyer cares about — walkability, daily-drive convenience, lifestyle amenities, and commute realities.
 
+**Output shape**: **≤6 videos per listing**, one per buyer question (walkable / daily-drive / lifestyle / commute / community/vibe). Each video is stitched from many approved POIs. **Never one video per POI** — a listing with 200 POIs still ships ≤6 videos. See §1.1 for why.
+
 **End state**: Fully automated. Given a listing address, the system produces approved photo sets + tagged narratives + rendered vertical videos with zero human involvement.
 
 **Current stage**: Human-in-the-loop review. Every human decision is captured as structured training data so the selection / tagging / video-generation models improve monotonically toward auto-approval.
@@ -17,7 +19,30 @@ Every listing needs a rich "neighborhood story" that a video pipeline can render
 
 ## 1. Philosophy
 
-### 1.1 Narrative, not gallery
+### 1.1 One video per buyer question, not one video per POI
+
+**Fundamental rule**: A listing has hundreds of POIs. We never generate hundreds of videos. Buyers do not want a per-POI ad reel — they want a small number of **question-answering videos**, each one focused on a decision they actually make.
+
+The video output is a **fixed, small set of buyer-question videos per listing**, each stitched from many POIs:
+
+| Video | Buyer question it answers | POIs it consumes |
+|---|---|---|
+| **"Can I walk anywhere from this house?"** | Walkable life | All approved POIs in the ≤0.5 mi bucket, ranked by tag + rating |
+| **"What's my daily life look like here?"** | Daily drive | Grocery + elementary school + gym + urgent care POIs, ≤2–3 mi |
+| **"Where do I go for fun on the weekend?"** | Lifestyle | Restaurants + entertainment + shopping in the 3–10 mi ring |
+| **"How's the commute?"** | Commute | Highway ramps + MARTA + timed Directions API to metro anchors |
+| **"What kind of neighborhood is this?"** | Community/vibe | Subdivision entrance + street-view sweep + parks + community gathering places |
+
+Rule of thumb: **≤6 videos per listing**, regardless of POI count. If we ever have 20 POIs feeding one video, the video is 45s with 20 short clips — not 20 separate 45s videos.
+
+**Why this matters**:
+- Buyers scroll a feed. Six per listing is browsable; sixty is spam.
+- Each video has a single narrative spine (voiceover / caption arc). Per-POI clips have no spine — just a slideshow.
+- The scarce resource is buyer attention, not POI coverage. A video that gets skipped in 2s is worse than no video.
+
+**Implication for the pipeline**: The unit of video generation is a **buyer-question template** (walkable / daily-drive / lifestyle / commute / community), not a POI. `generateVideo` takes a `(listing_id, question_template)` — never a `poi_id`. Approved POI photos are the *inputs* to whichever templates they qualify for; a Publix approved for "daily drive" contributes 2 clips to that video, not its own video.
+
+### 1.2 Narrative, not gallery
 
 `3 miles` and `5 miles` are the wrong axis. Buyer questions are:
 
@@ -30,7 +55,7 @@ Every listing needs a rich "neighborhood story" that a video pipeline can render
 
 Radius is a **derived filter**, not a user-facing dial. The user picks intent; the system picks distance.
 
-### 1.2 Human review = training data
+### 1.3 Human review = training data
 
 The current manual review flow is not the product. It is the **labelling substrate**. Every approve / reject / tag-edit / narrative-edit is written as a structured `review_event` and used to train:
 
@@ -41,7 +66,7 @@ The current manual review flow is not the product. It is the **labelling substra
 
 A review UI that captures only "approved / rejected" without structured reasons is useless. Reasons must be an enum + free text.
 
-### 1.3 Automation ladder
+### 1.4 Automation ladder
 
 | Stage | Human role | Gate to next |
 |---|---|---|
@@ -251,17 +276,18 @@ The listing edit "Media" area gets a new inner tab bar:
 │ │ [Refresh from Google] [Fetch drive times]                 │
 │ └────────────────────────────────────────────────────────── │
 │                                                              │
-│ ┌ Intent buckets (accordion)                                 │
-│ │ ▸ 🚶 Walkable (3 POI)                                       │
-│ │ ▾ 🚗 Daily drive (18 POI)                                   │
+│ ┌ Intent buckets (accordion) — each bucket = one buyer-question video │
+│ │ ▸ 🚶 Walkable (3 POI · 8 photos approved) [▶ Generate video]│
+│ │ ▾ 🚗 Daily drive (18 POI · 32 photos approved) [▶ Generate video]│
 │ │    ┌ POI card ────────────────────────────────────────┐   │
 │ │    │ Publix at The Forum · 0.6mi · ★4.4 (450)         │   │
 │ │    │ [10 photos: 6 approved, 2 rejected, 2 pending]   │   │
 │ │    │ Tags: grocery, upscale, plaza                    │   │
-│ │    │ [Review photos] [Generate video] [Skip POI]      │   │
+│ │    │ [Review photos] [Skip POI]                       │   │
 │ │    └──────────────────────────────────────────────────┘   │
-│ │ ▸ 🌆 Lifestyle (14 POI)                                    │
-│ │ ▸ 🛣 Commute (2 anchors)                                    │
+│ │ ▸ 🌆 Lifestyle (14 POI · 22 photos approved) [▶ Generate video]│
+│ │ ▸ 🛣 Commute (2 anchors) [▶ Generate video]                 │
+│ │ ▸ 🏘 Community/vibe (subdivision + parks) [▶ Generate video]│
 │ └────────────────────────────────────────────────────────── │
 └────────────────────────────────────────────────────────────────┘
 ```
@@ -301,7 +327,8 @@ lib/poi/actions.ts
   fetchStreetView(listingId, target)   → 4 headings for address or POI
   fetchDriveTimes(listingId)           → Directions API for all approved POIs
   recordReview(payload)                → insert review_events + update entity status
-  generatePoiVideo(poiId)              → enqueue video job
+  generateBucketVideo(listingId, bucket)  → enqueue video job for one buyer-question
+                                            bucket ∈ {walkable, daily_drive, lifestyle, commute, community}
 
 Async jobs (Cron via percho-render-worker OR API-triggered):
   tag-poi-photos                       → Claude/Gemini vision batch
@@ -385,7 +412,7 @@ First 10k calls/month/SKU are free (Google), so first ~40 listings/month are ~fr
 | **B. Photo fetch + review** | `fetchPoiPhotos`, review drawer, `recordReview` | 3 listings fully reviewed, ≥100 photo review_events |
 | **C. Street View + Directions** | `fetchStreetView`, `fetchDriveTimes`, commute anchor config | Traffic panel renders, all 4 intent buckets populated |
 | **D. Vision tagging** | Batch Gemini job, ai_tags rendered in review UI | Tags on 500+ photos, tag-edit review_events flowing |
-| **E. Video generation v0** | ffmpeg slideshow per POI, 30–60s vertical | 5 POI videos rendered, human approval flow works |
+| **E. Buyer-question videos v0** | ffmpeg slideshow per **bucket** (walkable / daily_drive / lifestyle / commute / community), 30–60s vertical, stitched from N approved POIs. **Never per-POI.** | 3 listings each ship ≤6 videos, human approval flow works |
 | **F. Learning loop** | Fit selection + photo classifiers weekly; expose `ai_score`, sort UI by it | Precision ≥0.7 at recall ≥0.8 on held-out reviews |
 | **G. Semi-auto** | UI defaults to "approve top-N" per POI; human overrides | Median reviewer time / listing <5 min |
 | **H. Auto** | Sampling QA only | Sampled precision ≥0.95 for 30d |
@@ -404,6 +431,7 @@ First 10k calls/month/SKU are free (Google), so first ~40 listings/month are ~fr
 
 ## 9. Not doing (explicit non-goals)
 
+- **No per-POI video output.** POIs are inputs. Videos are per buyer-question (bucket). One listing ships ≤6 videos total, no matter how many POIs get approved. See §1.1.
 - **No radius input.** Ever. If we're wrong, fix the intent-bucket→radius map in code.
 - **No blanket auto-fetch on listing create.** Manual trigger only until cost model is stable in prod.
 - **No video generation before photos are approved.** Videos consume approved photos, they do not produce their own.
