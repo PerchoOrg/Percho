@@ -4,6 +4,12 @@
 > Historical entries below preserve the original name in-place — release notes
 > are a record of what was shipped under the product's name at the time.
 
+## v0.83.0 · Fresher background music in generated videos (2026-07-15)
+
+- **Listing videos now pick from 26 tracks instead of 10, organized by vibe.** The auto-generated Home tour used to loop through the same handful of songs; now every render pulls from a curated pool grouped into five moods (Warm Acoustic, Modern Corporate, Luxury Ambient, Chill Electronic, Cinematic) — 2.6× more variety, and no more "wait, I've heard this one already" feeling on the second video you generate for a listing.
+- **Music selection now follows a strict SOP.** No jazz, no pop, no vocals, no EDM drops — all tracks are instrumental, 80–100 BPM, and structured to fade out naturally rather than loop. The point is that the music supports the home tour instead of overpowering it.
+- Chill Electronic and Cinematic buckets are set up but not yet stocked — coming in the next round of library expansion.
+
 ## v86 — 2026-07-15 — Nearby POI videos: no more black bars during pan
 
 - Bucket videos (Schools, Dining, Errands, etc.) no longer show dark letterbox bars on the left/right as photos slide across the frame.

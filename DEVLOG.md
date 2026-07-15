@@ -238,6 +238,31 @@ select conname, pg_get_constraintdef(oid) from pg_constraint
 ```
 Peachtree Corners no longer appears in `public.communities`, its 6 videos are gone from `public.community_videos`, no orphan rows in `public.leads`.
 
+## 2026-07-15 — Phase 75: BGM library rebuild, 5 SOP-aligned vibe buckets
+
+**Motivation.** The render worker was picking BGM from a flat 10-track folder — same handful of Kevin MacLeod songs looping across every generated listing video. Owner shared a curated 网易云 vlog-editor playlist (113 commercial tracks — can't relicense) plus a written SOP defining what real-estate video music should sound like: instrumental, 80-100 BPM, Intro→Verse→Outro (no loops), 5 vibe families (warm-acoustic / modern-corporate / luxury-ambient / chill-electronic / cinematic), and hard bans on Jazz, Pop, HipHop, Rock, Vocals, EDM drops. A cron-driven build had already fetched 50 KML tracks into 6 legacy buckets before the SOP arrived — half of them violated it.
+
+**Changes.**
+- **Directory rebuild.** Old buckets `a-warm-acoustic / b-tropical / c-lofi / d-uplift / e-cn-fusion / f-ambient` → new buckets `warm-acoustic / modern-corporate / luxury-ambient / chill-electronic / cinematic`. Mapping: keep `a-warm-acoustic` (10) → `warm-acoustic`; `d-uplift` (8) → `modern-corporate`; `f-ambient` (8) → `luxury-ambient`. Archive `b-tropical` (music dominates the video), `c-lofi` (KML "lofi" turned out to be jazz swing — SOP-banned), and `e-cn-fusion` (Asian-instrumental fusion frames Percho as a Chinese-community spinoff, violating positioning §1). Archived tracks move to `scripts/render-worker/bgm/_archive/{tropical,lofi-jazz,cn-fusion}/` — files stay on disk (mp3 is gitignored) for reference, but the runtime picker skips them.
+- **`worker.py::pick_bgm`.** Was `random.choice(BGM_DIR.rglob("*.mp3"))`. Now filters out any path whose parts contain `_archive` before sampling. Behavior preserved when BGM_DIR is empty or missing (returns None → silent video).
+- **`scripts/render-worker/bgm/manifest.json`.** Rewritten. 26 active tracks (all Kevin MacLeod, CC-BY 4.0) grouped by the 5 new buckets. Owner-visible attribution text baked into `manifest.attribution` — will get piped into video descriptions in a follow-up.
+- **`docs/bgm/vibe-map.md`.** Full rewrite: SOP verbatim, 5-bucket table with property-fit hints, current-inventory snapshot (`warm-acoustic 10/10, modern-corporate 8/15, luxury-ambient 8/8, chill-electronic 0/8, cinematic 0/8`), archive rationale, source-license notes.
+- **`scripts/render-worker/bgm/README.md` & `fetch.sh`.** Updated to the 5-bucket layout; fetch.sh now downloads only the 26 SOP-compliant KML titles.
+- **Tests.** New `scripts/render-worker/tests/test_pick_bgm.py` — 5 pure-function cases (recurses into buckets, skips `_archive/**`, returns None on empty / archive-only / missing). No DB, no network.
+
+**Decisions.**
+- **Ship 26 active tracks, not 50.** Enough variety (2.6× the old library) to feel non-repetitive; better than shipping 50 including SOP-violating tracks. Remaining 26 slots (7 modern-corporate + 8 chill-electronic + 8 cinematic + 3 headroom) tracked as `bgm-lib-expand-round-2` — needs a Pixabay CC0 pass for organic-electronic (KML has no clean coverage of that vibe).
+- **Weighted routing by property_type / price NOT shipped yet.** Cron agent scoped it in mid-run; pulled back per §0.3. Uniform random across the 26 active tracks is the minimum change; we'll observe repetition patterns on real generated videos before adding a routing table.
+- **Epidemic Sound ($19/mo) deferred.** Zero paying agents; can't justify the burn. KML + Pixabay CC0 covers the library.
+- **`_archive/` instead of `git rm`.** The mp3s are gitignored regardless and the disk cost is trivial; leaving them with a `_archive/README.md` prevents someone from re-fetching them next time.
+
+**Verify.**
+- `python3 -m pytest scripts/render-worker/tests/test_pick_bgm.py -q` → 5 passed.
+- On the render-worker host, `bash scripts/render-worker/bgm/fetch.sh` should populate `warm-acoustic/`, `modern-corporate/`, `luxury-ambient/` to 10/8/8 (26 total). `chill-electronic/` and `cinematic/` remain empty until round 2.
+- Generate a fresh listing video → confirm BGM is one of the 26 active tracks, never anything from `_archive/`.
+
+**Next steps.** `bgm-lib-expand-round-2` — buy 7 more modern-corporate (KML), 8 chill-electronic (Pixabay CC0), 8 cinematic (KML curation). Then evaluate whether repetition is still noticeable at 49 tracks; if yes, add property_type-weighted routing.
+
 ## 2026-07-15 — Video row polish: walkthrough tag + thumbnail 404 fallback
 
 **Motivation.** Owner screenshot showed two issues on the Media-tab video row:
