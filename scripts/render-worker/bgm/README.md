@@ -24,20 +24,24 @@ Not tracked in git (see repo `.gitignore`). Fetch on each host with:
 bash scripts/render-worker/bgm/fetch.sh
 ```
 
-Track list:
+Track list (grouped by vibe bucket — subdirectory shown in `Path`):
 
-| # | Title | Vibe |
-|---|-------|------|
-| 01 | Carefree | breezy ukulele, HGTV |
-| 02 | Cheery Monday | bouncy piano, morning-vibe |
-| 03 | Wallpaper | bright acoustic, whistle |
-| 04 | Life of Riley | classic upbeat corporate-chill |
-| 05 | Cool Vibes | jazzy, laid-back cool |
-| 06 | Bright Wish | soft, hopeful, clean |
-| 07 | Amazing Plan | playful, mid-tempo, positive |
-| 08 | Wholesome | warm strings, feel-good |
-| 09 | Daily Beetle | acoustic, folky, cheerful |
-| 10 | Perspectives | mellow, slightly reflective (contrast slot) |
+| # | Title | Vibe | Path |
+|---|-------|------|------|
+| 01 | Carefree | breezy ukulele, HGTV | `a-warm-acoustic/` |
+| 02 | Cheery Monday | bouncy piano, morning-vibe | `a-warm-acoustic/` |
+| 03 | Wallpaper | bright acoustic, whistle | `a-warm-acoustic/` |
+| 07 | Amazing Plan | playful, mid-tempo, positive | `a-warm-acoustic/` |
+| 08 | Wholesome | warm strings, feel-good | `a-warm-acoustic/` |
+| 09 | Daily Beetle | acoustic, folky, cheerful | `a-warm-acoustic/` |
+| 05 | Cool Vibes | jazzy, laid-back cool | `c-lofi/` |
+| 04 | Life of Riley | classic upbeat corporate-chill | `d-uplift/` |
+| 06 | Bright Wish | soft, hopeful, clean | `d-uplift/` |
+| 10 | Perspectives | mellow, slightly reflective (contrast slot) | `f-ambient/` |
+
+Buckets `b-tropical/` and `e-cn-fusion/` are empty in this seed batch and will
+be filled by Phase B fetches (Pixabay / Bensound). See `docs/bgm/vibe-map.md`
+for full bucket definitions.
 
 All ≥ 40s so any typical 10–24s home tour can loop cleanly on the fade-out.
 
