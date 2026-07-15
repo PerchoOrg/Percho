@@ -4,7 +4,39 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-15 — Phase 83.2: Shared community model + auto-associate on save
+
+Reversal of the phase 83.1 direction. The user's mental model was misread: communities are **not** agent-owned resources to claim; they're shared reference data (like schools or POIs) that agents draw on when they list a home. "Claim" happens implicitly through `listings.community_id`, and edit rights follow business interest (an active listing in the community) rather than first-touch ownership.
+
+**Model changes**
+- Communities are public reference data. All 731 Nextdoor seeds flipped to `status='active'` — visible to buyer, agent dashboard, and guest surfaces.
+- Community edit RLS broadened from "creator only" to "creator OR any agent with an active listing in this community OR unowned seed". Migration `20260715120000_communities_share_model.sql`.
+- No claim step for communities. `claim_community(uuid)` RPC from phase 83's seed migration is left in place but dead (removing would churn migration timestamps).
+
+**Auto-associate on listing save**
+- New `lib/geo/point-in-polygon.ts` — GeoJSON `Polygon`/`MultiPolygon` ray-cast + bbox prefilter. No PostGIS: 731 polygons × median 157 vertices = <5ms per lookup in JS.
+- New `lib/geo/find-community.ts` — `findCommunityForPoint(lat, lng)`. Loads all boundaries once, cached 5min under `community-boundaries` tag. When multiple polygons contain the point (nested seed data), picks the smallest bbox — subdivision beats neighborhood, matching Percho's community anchor convention.
+- `updateListingAddress` (server action) now calls the matcher after geocoding and writes `community_id` in the same UPDATE that persists lat/lng. Non-fatal on error.
+
+**Phase 83.1 rollback**
+- Deleted `app/dashboard/communities/claim/` (3 files: `page.tsx`, `actions.ts`, `ClaimGrid.tsx`).
+- Removed the "Browse unclaimed →" entry point from `/dashboard/communities` (both populated-grid header and empty-state CTA).
+- Kept `claim_community` RPC in the DB (dead code, no callers).
+
+**Files**
+- new: `lib/geo/point-in-polygon.ts`, `lib/geo/find-community.ts`, `supabase/migrations/20260715120000_communities_share_model.sql`
+- modified: `app/dashboard/listings/[id]/edit/actions.ts` (import + auto-associate hook), `app/dashboard/communities/page.tsx` (drop claim entry point)
+- deleted: `app/dashboard/communities/claim/*` (3 files)
+
+**Verification**
+- `npm run build` clean, tsc clean.
+- Prod DB check: `content-range: 0-0/731` on `communities?source=eq.nextdoor&status=eq.active` — all seeds visible.
+
+---
+
 ## 2026-07-15 — Phase 83.1: Claim UI for seeded neighborhoods
+
+**(Superseded by 83.2. Kept for history — files were deleted, the model was wrong.)**
 
 Follow-up to phase 83. The 731 seed rows landed with `created_by IS NULL` + `status='inactive'`, correctly hidden from both surfaces (buyer grid = phase 72 activate gate; agent dashboard = phase 72.2 owner-scoped inactive filter) — but there was no way to *claim* them because they didn't appear anywhere the agent could click.
 

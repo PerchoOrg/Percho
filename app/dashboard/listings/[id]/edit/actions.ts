@@ -19,6 +19,7 @@
  */
 
 import { isDraftAddress } from '@/app/dashboard/listings/draft';
+import { findCommunityForPoint } from '@/lib/geo/find-community';
 import { deriveSlug, nextCandidate } from '@/lib/listings/slug';
 import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
@@ -102,6 +103,18 @@ export async function updateListingAddress(
 
   const baseSlug = deriveSlug(data.address);
 
+  // Phase 83.2 (2026-07-15): auto-associate to a seeded community by
+  // point-in-polygon. Runs before the update loop so we can write
+  // community_id in the same UPDATE. Errors here are non-fatal — leaving
+  // community_id null is fine, the agent can still pick manually.
+  let matchedCommunityId: string | null = null;
+  try {
+    const match = await findCommunityForPoint(data.lat, data.lng);
+    if (match) matchedCommunityId = match.id;
+  } catch (e) {
+    console.warn('[updateListingAddress] community match failed', e);
+  }
+
   for (let attempt = 0; attempt < MAX_SLUG_ATTEMPTS; attempt++) {
     const slug = nextCandidate(baseSlug, attempt);
     // biome-ignore lint/suspicious/noExplicitAny: stub generated types
@@ -116,6 +129,7 @@ export async function updateListingAddress(
         lat: data.lat,
         lng: data.lng,
         slug,
+        ...(matchedCommunityId ? { community_id: matchedCommunityId } : {}),
       })
       .eq('id', id)
       .select('id, slug')
