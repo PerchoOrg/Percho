@@ -355,14 +355,20 @@ export async function generateBucketVideo(
 
 function bucketLabel(bucket: IntentBucket): string {
   switch (bucket) {
-    case "walkable":
-      return "Walkable";
-    case "daily_drive":
-      return "Daily drive";
-    case "lifestyle":
-      return "Lifestyle";
-    case "commute":
-      return "Commute";
+    case "schools": return "Schools";
+    case "dining": return "Dining";
+    case "nightlife": return "Nightlife";
+    case "shopping": return "Shopping";
+    case "outdoor": return "Outdoor";
+    case "fitness": return "Fitness";
+    case "kids": return "Kids & Family";
+    case "asian_community": return "Asian Community";
+    case "daily_errands": return "Daily Errands";
+    case "faith": return "Faith";
+    case "work_hubs": return "Work Hubs";
+    case "healthcare": return "Healthcare";
+    case "pets": return "Pets";
+    case "transit": return "Transit";
   }
 }
 

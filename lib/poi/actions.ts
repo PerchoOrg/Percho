@@ -26,14 +26,14 @@
 import { revalidatePath } from "next/cache";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import {
-  bucketByDistance,
   DEFAULT_INCLUDED_TYPES,
+  bucketByPlaceType,
   fetchPhotoBinary,
   haversineMeters,
   searchNearby,
   type PlaceResult,
 } from "./google-places";
-import type { IntentBucket, PhotoStatus, PoiStatus, ReviewAction } from "./types";
+import { INTENT_BUCKETS, type IntentBucket, type PhotoStatus, type PoiStatus, type ReviewAction } from "./types";
 
 const POI_PHOTO_BUCKET = "listing-photos"; // reuse existing listing photo bucket; poi/ path prefix distinguishes
 
@@ -97,12 +97,9 @@ export async function discoverPoisForListing(
   // biome-ignore lint/suspicious/noExplicitAny: stub generated types
   const admin: any = createServiceClient();
 
-  const buckets: Record<IntentBucket, number> = {
-    walkable: 0,
-    daily_drive: 0,
-    lifestyle: 0,
-    commute: 0,
-  };
+  const buckets: Record<IntentBucket, number> = Object.fromEntries(
+    INTENT_BUCKETS.map((b) => [b, 0]),
+  ) as Record<IntentBucket, number>;
 
   // Fan out one search per category — Google's searchNearby caps includedTypes
   // to a homogeneous request, and mixing all six in one call biases toward the
@@ -162,7 +159,8 @@ export async function discoverPoisForListing(
         lng: place.location.longitude,
       }),
     );
-    const bucket = bucketByDistance(dMeters);
+    const bucket = bucketByPlaceType(place.primaryType, place.types) as IntentBucket | null;
+    if (!bucket) continue; // POI type doesn't map to any bucket — skip
 
     const { data: existing } = (await admin
       .from("listing_pois")

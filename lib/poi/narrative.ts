@@ -37,13 +37,20 @@ export type VideoNarrative = {
 };
 
 const BUCKET_HOOKS: Record<IntentBucket, string> = {
-  walkable:
-    "the walkable pockets a buyer could reach on foot in under ten minutes",
-  daily_drive:
-    "the daily-drive essentials a buyer will use every week — grocery, coffee, gym",
-  lifestyle:
-    "the lifestyle destinations that make a weekend here — restaurants, parks, culture",
-  commute: "the commute + regional-access story from this location",
+  schools: "the schools a buyer's kids would attend and what the campus feels like",
+  dining: "the dining scene a buyer would enjoy — restaurants, cafes, bakeries",
+  nightlife: "the nightlife and entertainment a buyer would spend evenings on",
+  shopping: "the shopping a buyer has within reach — malls, department stores, boutiques",
+  outdoor: "the outdoor life around this home — parks, trails, greenspace",
+  fitness: "the fitness and wellness options a buyer would build a routine around",
+  kids: "the kids-and-family activities a buyer with children would use every week",
+  asian_community: "the Asian community amenities — supermarkets, restaurants, cultural anchors",
+  daily_errands: "the daily-errand runs a buyer will do every week — grocery, pharmacy",
+  faith: "the faith communities near this home",
+  work_hubs: "the work hubs and coworking near this home for hybrid or remote workers",
+  healthcare: "the healthcare access from this home — hospitals, urgent care, clinics",
+  pets: "the pet-friendly amenities near this home — vets, pet stores, dog-friendly spots",
+  transit: "the transit and commute story from this home — stations, highways, airport",
 };
 
 function buildPrompt(

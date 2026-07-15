@@ -45,20 +45,55 @@ import { streamIframeUrl } from '@/lib/cloudflare/stream';
 import type { IntentBucket } from '@/lib/poi/types';
 
 const BUCKET_LABELS: Record<IntentBucket, string> = {
-  walkable: 'Walkable (≤0.5 mi)',
-  daily_drive: 'Daily drive (≤2 mi)',
-  lifestyle: 'Lifestyle (≤5 mi)',
-  commute: 'Commute',
+  schools: 'Schools',
+  dining: 'Dining',
+  nightlife: 'Nightlife & Entertainment',
+  shopping: 'Shopping',
+  outdoor: 'Outdoor & Trails',
+  fitness: 'Fitness & Wellness',
+  kids: 'Kids & Family',
+  asian_community: 'Asian Community',
+  daily_errands: 'Daily Errands',
+  faith: 'Faith Communities',
+  work_hubs: 'Work Hubs',
+  healthcare: 'Healthcare',
+  pets: 'Pets',
+  transit: 'Transit & Commute',
 };
 
 const BUCKET_SHORT: Record<IntentBucket, string> = {
-  walkable: 'Walkable',
-  daily_drive: 'Daily drive',
-  lifestyle: 'Lifestyle',
-  commute: 'Commute',
+  schools: 'Schools',
+  dining: 'Dining',
+  nightlife: 'Nightlife',
+  shopping: 'Shopping',
+  outdoor: 'Outdoor',
+  fitness: 'Fitness',
+  kids: 'Kids',
+  asian_community: 'Asian',
+  daily_errands: 'Errands',
+  faith: 'Faith',
+  work_hubs: 'Work',
+  healthcare: 'Health',
+  pets: 'Pets',
+  transit: 'Transit',
 };
 
-const BUCKET_ORDER: IntentBucket[] = ['walkable', 'daily_drive', 'lifestyle', 'commute'];
+const BUCKET_ORDER: IntentBucket[] = [
+  'schools',
+  'dining',
+  'nightlife',
+  'shopping',
+  'outdoor',
+  'fitness',
+  'kids',
+  'asian_community',
+  'daily_errands',
+  'faith',
+  'work_hubs',
+  'healthcare',
+  'pets',
+  'transit',
+];
 
 interface Props {
   listingId: string;
@@ -81,12 +116,9 @@ export function NearbyPoiPanel({
   const [notice, setNotice] = useState<string | null>(null);
 
   // ── grouping ────────────────────────────────────────────────────────────
-  const grouped: Record<IntentBucket, NearbyPoiForListing[]> = {
-    walkable: [],
-    daily_drive: [],
-    lifestyle: [],
-    commute: [],
-  };
+  const grouped: Record<IntentBucket, NearbyPoiForListing[]> = Object.fromEntries(
+    BUCKET_ORDER.map((b) => [b, [] as NearbyPoiForListing[]]),
+  ) as Record<IntentBucket, NearbyPoiForListing[]>;
   for (const p of pois) grouped[p.intent_bucket].push(p);
 
   // ── actions ─────────────────────────────────────────────────────────────
@@ -100,10 +132,16 @@ export function NearbyPoiPanel({
     startTransition(async () => {
       try {
         const r = await discoverPoisForListing(listingId);
+        const topBuckets = BUCKET_ORDER
+          .map((b) => ({ b, n: r.buckets[b] ?? 0 }))
+          .filter((x) => x.n > 0)
+          .sort((a, b) => b.n - a.n)
+          .slice(0, 4)
+          .map((x) => `${BUCKET_SHORT[x.b]} ${x.n}`)
+          .join(' · ');
         setNotice(
-          `Discovered ${r.discovered} new POIs (${r.reused} already known). ` +
-            `Walkable ${r.buckets.walkable} · Daily ${r.buckets.daily_drive} · ` +
-            `Lifestyle ${r.buckets.lifestyle}.`,
+          `Discovered ${r.discovered} new POIs (${r.reused} already known)` +
+            (topBuckets ? `. Top: ${topBuckets}.` : '.'),
         );
         await refresh();
       } catch (err) {

@@ -12,7 +12,30 @@
 
 // ─── enums (mirrored in DB check constraints) ───────────────────────────────
 
-export const INTENT_BUCKETS = ["walkable", "daily_drive", "lifestyle", "commute"] as const;
+/**
+ * Buyer-persona intent buckets. Ordered by UI priority (owner spec,
+ * 2026-07-15). Schools sits first because in GA suburbia it's the #1
+ * decision driver even though it has thin Google Places photo coverage.
+ * S+A photo-tier buckets follow (positions 2-8), then B-tier, then
+ * C-tier (healthcare/pets/transit) — the last three use alternate data
+ * sources (info cards / Mapbox animations) rather than Places photos.
+ */
+export const INTENT_BUCKETS = [
+  "schools",
+  "dining",
+  "nightlife",
+  "shopping",
+  "outdoor",
+  "fitness",
+  "kids",
+  "asian_community",
+  "daily_errands",
+  "faith",
+  "work_hubs",
+  "healthcare",
+  "pets",
+  "transit",
+] as const;
 export type IntentBucket = (typeof INTENT_BUCKETS)[number];
 
 export const POI_STATUSES = ["candidate", "approved", "rejected", "archived"] as const;

@@ -4,6 +4,14 @@
 > Historical entries below preserve the original name in-place — release notes
 > are a record of what was shipped under the product's name at the time.
 
+## v0.79.0 · Nearby POI: 14 buyer-persona buckets (2026-07-15)
+
+The Nearby panel used to bucket POIs by straight-line distance — walkable / daily-drive / lifestyle / commute. That answered "how do I get there?" but not "does this house fit my life?". Reworked the taxonomy from a buyer-decision angle to 14 persona buckets:
+
+**Schools · Dining · Nightlife · Shopping · Outdoor · Fitness · Kids & Family · Asian Community · Daily Errands · Faith · Work Hubs · Healthcare · Pets · Transit**
+
+Ordered by prominence (schools first — GA suburb #1 driver). Bucket assignment now reads Google Places `primaryType` instead of computing distance, so a Publix 3 mi away lands in "Daily Errands" and a Whole Foods 4 mi away lands in the same bucket — where buyers actually think about it. `Asian Community` and `Work Hubs` are enum-reserved and get Text-Search filling in a follow-up.
+
 ## v0.78.3 · Community delete no longer fails when the community has any leads (2026-07-15)
 
 - **🐛 Bug Fix.** Deleting a community from the dashboard used to fail with a server error if that community had ever received a "Contact" lead from its feed page. Fixed — deleting a community now correctly removes its associated leads along with its videos and photos.

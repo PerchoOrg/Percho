@@ -57,10 +57,20 @@ Your job is to decide:
 4. Whether the photo is usable at all (blurry / obstructed / has faces / has license plates → usable=false).
 
 BUCKETS (a photo can strengthen 0, 1, or many):
-- walkable      : places within a short walk — school entrance, park path, cafe storefront
-- daily_drive   : errand runs — grocery interior/exterior, big-box store, drive-through
-- lifestyle     : dining out, aesthetic experiences, weekend activities, ambient food/interior shots
-- commute       : major roads, transit, highway signage, commuter-relevant infrastructure
+- schools         : school campuses, buildings, entrances (privacy: no kids' faces)
+- dining          : restaurants, cafes, bakeries — food + interior + storefront
+- nightlife       : bars, clubs, movie theaters, evening/night ambience
+- shopping        : malls, department stores, boutiques, retail interiors
+- outdoor         : parks, trails, greenspace, water, tourist attractions
+- fitness         : gyms, yoga studios, spa, wellness spaces
+- kids            : amusement parks, aquariums, zoos, libraries, kid-friendly venues
+- asian_community : Asian supermarkets, Asian restaurants, cultural anchors
+- daily_errands   : grocery stores, pharmacies, supermarkets — errand-run locations
+- faith           : churches, mosques, synagogues, temples — sanctuary or exterior
+- work_hubs       : coworking, office parks, business complexes
+- healthcare      : hospitals, clinics, medical buildings (usually info-card only)
+- pets            : vets, pet stores, dog parks, pet-friendly spaces
+- transit         : train / subway stations, highways, airport, transit infrastructure
 
 Set applicable_buckets = [] if the photo doesn't strengthen any bucket (e.g. a menu closeup, a generic wall).
 
@@ -88,7 +98,7 @@ Return STRICT JSON only, no prose:
   "mood": "inviting" | null,
   "usable": true,
   "reason": null,
-  "applicable_buckets": ["daily_drive"],
+  "applicable_buckets": ["dining"],
   "score": 0.85
 }`;
 

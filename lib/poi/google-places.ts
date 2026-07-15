@@ -14,15 +14,56 @@
 
 const PLACES_BASE = "https://places.googleapis.com/v1";
 
-/** Six default categories tuned for US suburban listings. */
-export const DEFAULT_INCLUDED_TYPES = [
-  "restaurant",
-  "cafe",
-  "grocery_store",
-  "primary_school",
-  "park",
-  "gym",
-] as const;
+/**
+ * Google Places `type` values for each buyer-persona bucket. Used by
+ * `discoverPoisForListing` to fan out one nearbySearch per type and to
+ * assign a POI to a bucket based on its `primaryType`.
+ *
+ * Photo-tier notes (see chat 2026-07-15 for scoring):
+ *  - S+A: bucket has enough Places photos to auto-compose videos
+ *  - B  : bucket needs sub-type filtering (e.g. daily_errands = grocery only)
+ *  - C  : bucket uses alternate data source (info card / Mapbox); we still
+ *         index POIs so we can render distance/name, we just don't try to
+ *         make a photo video for them
+ *
+ * `asian_community` and `work_hubs` don't map cleanly to Places types — they
+ * need Text Search ("chinese school", "wework") which we'll wire up in a
+ * follow-up phase. For now `BUCKET_PLACES_TYPES[bucket] = []` means the
+ * discover fanout skips that bucket automatically.
+ */
+export const BUCKET_PLACES_TYPES: Record<string, readonly string[]> = {
+  schools: ["school", "primary_school", "secondary_school"],
+  dining: ["restaurant", "cafe", "bakery"],
+  nightlife: ["bar", "night_club", "movie_theater"],
+  shopping: ["shopping_mall", "department_store", "clothing_store"],
+  outdoor: ["park", "campground", "tourist_attraction"],
+  fitness: ["gym", "spa"],
+  kids: ["amusement_park", "aquarium", "zoo", "library"],
+  asian_community: [], // Text Search follow-up
+  daily_errands: ["supermarket", "grocery_store", "pharmacy"],
+  faith: ["church", "mosque", "synagogue", "hindu_temple"],
+  work_hubs: [], // Text Search follow-up (WeWork / Regus / office parks)
+  healthcare: ["hospital", "doctor"],
+  pets: ["veterinary_care", "pet_store"],
+  transit: ["subway_station", "train_station", "transit_station", "airport"],
+};
+
+/**
+ * Reverse index: Google `type` -> bucket. First bucket wins if a type maps
+ * to more than one (Places returns types[] with the most specific first).
+ */
+const PLACES_TYPE_TO_BUCKET: Record<string, string> = (() => {
+  const map: Record<string, string> = {};
+  for (const [bucket, types] of Object.entries(BUCKET_PLACES_TYPES)) {
+    for (const t of types) if (!map[t]) map[t] = bucket;
+  }
+  return map;
+})();
+
+/** Union of every Places type across every bucket — the default fanout. */
+export const DEFAULT_INCLUDED_TYPES = Object.values(BUCKET_PLACES_TYPES)
+  .flat()
+  .filter((t, i, a) => a.indexOf(t) === i);
 
 export type NearbySearchInput = {
   center: { lat: number; lng: number };
@@ -181,11 +222,20 @@ export function haversineMeters(
 }
 
 /**
- * Assign an intent bucket based on straight-line distance (v0 heuristic).
- * Phase B refines with actual drive time from Directions API.
+ * Assign an intent bucket to a place by matching its `primaryType` (and
+ * fallback `types[]`) against `BUCKET_PLACES_TYPES`. Returns `null` when
+ * nothing matches — caller decides whether to drop the POI or bucket it as
+ * "other".
  */
-export function bucketByDistance(meters: number): "walkable" | "daily_drive" | "lifestyle" {
-  if (meters <= 800) return "walkable"; // ~0.5 mi
-  if (meters <= 3200) return "daily_drive"; // ~2 mi
-  return "lifestyle"; // up to 8 km / ~5 mi
+export function bucketByPlaceType(
+  primaryType: string | null | undefined,
+  types: string[] | null | undefined,
+): string | null {
+  if (primaryType && PLACES_TYPE_TO_BUCKET[primaryType]) {
+    return PLACES_TYPE_TO_BUCKET[primaryType];
+  }
+  for (const t of types ?? []) {
+    if (PLACES_TYPE_TO_BUCKET[t]) return PLACES_TYPE_TO_BUCKET[t];
+  }
+  return null;
 }
