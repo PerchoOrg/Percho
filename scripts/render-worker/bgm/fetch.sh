@@ -43,8 +43,15 @@ declare -A KML_TRACKS=(
   ["b-tropical/07-salty-ditty.mp3"]="Salty Ditty"
   ["b-tropical/08-bumba-crossing.mp3"]="Bumba Crossing"
 
-  # Bucket C — lofi / jazzy chill (existing seed only for now)
+  # Bucket C — lofi / jazzy chill (target 8)
   ["c-lofi/05-cool-vibes.mp3"]="Cool Vibes"
+  ["c-lofi/15-george-street-shuffle.mp3"]="George Street Shuffle"
+  ["c-lofi/16-groove-grove.mp3"]="Groove Grove"
+  ["c-lofi/17-hep-cats.mp3"]="Hep Cats"
+  ["c-lofi/18-jazz-brunch.mp3"]="Jazz Brunch"
+  ["c-lofi/19-smooth-lovin.mp3"]="Smooth Lovin"
+  ["c-lofi/20-local-forecast-elevator.mp3"]="Local Forecast - Elevator"
+  ["c-lofi/21-faceoff.mp3"]="Faceoff"
 
   # Bucket D — uplift (existing seed only for now)
   ["d-uplift/04-life-of-riley.mp3"]="Life of Riley"

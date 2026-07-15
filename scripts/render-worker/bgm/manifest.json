@@ -36,7 +36,14 @@
     "c-lofi": {
       "description": "Lofi / jazzy chill — urban condo, evening.",
       "tracks": [
-        {"file": "c-lofi/05-cool-vibes.mp3", "title": "Cool Vibes", "artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Cool%20Vibes.mp3", "duration_s": 226}
+        {"file": "c-lofi/05-cool-vibes.mp3",              "title": "Cool Vibes",              "artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Cool%20Vibes.mp3",              "duration_s": 226},
+        {"file": "c-lofi/15-george-street-shuffle.mp3",   "title": "George Street Shuffle",   "artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/George%20Street%20Shuffle.mp3",   "duration_s": 268},
+        {"file": "c-lofi/16-groove-grove.mp3",            "title": "Groove Grove",            "artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Groove%20Grove.mp3",            "duration_s": 206},
+        {"file": "c-lofi/17-hep-cats.mp3",                "title": "Hep Cats",                "artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Hep%20Cats.mp3",                "duration_s": 251},
+        {"file": "c-lofi/18-jazz-brunch.mp3",             "title": "Jazz Brunch",             "artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Jazz%20Brunch.mp3",             "duration_s": 323},
+        {"file": "c-lofi/19-smooth-lovin.mp3",            "title": "Smooth Lovin",            "artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Smooth%20Lovin.mp3",            "duration_s": 259},
+        {"file": "c-lofi/20-local-forecast-elevator.mp3", "title": "Local Forecast - Elevator", "artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Local%20Forecast%20-%20Elevator.mp3", "duration_s": 189},
+        {"file": "c-lofi/21-faceoff.mp3",                 "title": "Faceoff",                 "artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Faceoff.mp3",                 "duration_s": 73}
       ]
     },
     "d-uplift": {
