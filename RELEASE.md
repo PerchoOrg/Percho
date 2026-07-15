@@ -4,6 +4,12 @@
 > Historical entries below preserve the original name in-place — release notes
 > are a record of what was shipped under the product's name at the time.
 
+## v87 — 2026-07-15 — Every community now has a cover
+
+- All 731 Atlanta communities now show a cover photo on browse and detail pages — no more blank tiles.
+- Most covers are real neighborhood photos scraped from Nextdoor (tree-lined streets, homes, greenery). A minority share Nextdoor's site-wide default (the Atlanta skyline).
+- If a community truly has no photo, the app now generates a colored logo mark from the community's boundary shape as a last-resort fallback.
+
 ## v86 — 2026-07-15 — Nearby POI videos: no more black bars during pan
 
 - Bucket videos (Schools, Dining, Errands, etc.) no longer show dark letterbox bars on the left/right as photos slide across the frame.

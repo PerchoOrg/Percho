@@ -74,7 +74,7 @@ async function fetchCommunityCardsByIds(ids: string[]): Promise<SavedCommunityCa
   // biome-ignore lint/suspicious/noExplicitAny: stub generated types
   const { data: communities } = (await (supabase as any)
     .from('communities')
-    .select('id, slug, name, city, state, cover_video_id, cover_storage_path')
+    .select('id, slug, name, city, state, cover_video_id, cover_storage_path, boundary')
     .in('id', ids)) as {
     data: Array<{
       id: string;
@@ -84,6 +84,7 @@ async function fetchCommunityCardsByIds(ids: string[]): Promise<SavedCommunityCa
       state: string;
       cover_video_id: string | null;
       cover_storage_path: string | null;
+      boundary: unknown;
     }> | null;
   };
   if (!communities || communities.length === 0) return [];
@@ -139,6 +140,8 @@ async function fetchCommunityCardsByIds(ids: string[]): Promise<SavedCommunityCa
       cover_video_cf_id: c.cover_video_id ? (readyById.get(c.cover_video_id) ?? null) : null,
       cover_storage_path: c.cover_storage_path,
       fallback_video_cf_id: cfList[0] ?? null,
+      name: c.name,
+      boundary: (c.boundary as import('@/lib/community/logo-cover').BoundaryGeoJSON | null) ?? null,
     });
     result.push({
       id: c.id,

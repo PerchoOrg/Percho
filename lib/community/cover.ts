@@ -16,6 +16,7 @@
  */
 
 import { thumbnailUrl } from '@/lib/cloudflare/stream';
+import { type BoundaryGeoJSON, buildCommunityLogoDataUri } from './logo-cover';
 
 const COVERS_BUCKET = 'community-covers';
 
@@ -27,7 +28,7 @@ export interface CommunityCoverInput {
 }
 
 export interface ResolvedCover {
-  kind: 'video-poster' | 'image' | 'fallback-video';
+  kind: 'video-poster' | 'image' | 'fallback-video' | 'logo';
   url: string;
 }
 
@@ -79,6 +80,9 @@ export function resolveCommunityCoverWithCfIds(input: {
   cover_video_cf_id: string | null;
   cover_storage_path: string | null;
   fallback_video_cf_id: string | null;
+  /** Phase 83.4: name + boundary → generated logo SVG as final fallback. */
+  name?: string | null;
+  boundary?: BoundaryGeoJSON | null;
 }): ResolvedCover | null {
   if (input.cover_video_id && input.cover_video_cf_id) {
     return { kind: 'video-poster', url: thumbnailUrl(input.cover_video_cf_id) };
@@ -88,6 +92,12 @@ export function resolveCommunityCoverWithCfIds(input: {
   }
   if (input.fallback_video_cf_id) {
     return { kind: 'fallback-video', url: thumbnailUrl(input.fallback_video_cf_id) };
+  }
+  // Phase 83.4: last-resort generated cover — always renders SOMETHING as long
+  // as we have a name. Boundary is optional (monogram fallback inside).
+  if (input.name) {
+    const dataUri = buildCommunityLogoDataUri(input.name, input.boundary ?? null);
+    if (dataUri) return { kind: 'logo', url: dataUri };
   }
   return null;
 }

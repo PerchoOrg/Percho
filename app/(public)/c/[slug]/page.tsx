@@ -26,6 +26,7 @@ interface CommunityRow {
   created_by: string | null;
   cover_video_id: string | null;
   cover_storage_path: string | null;
+  boundary: unknown;
 }
 
 interface VideoRow {
@@ -47,7 +48,7 @@ export default async function CommunityPage({
   const { data: community } = (await (supabase as any)
     .from('communities')
     .select(
-      'id, name, slug, city, state, description, created_by, cover_video_id, cover_storage_path, status',
+      'id, name, slug, city, state, description, created_by, cover_video_id, cover_storage_path, boundary, status',
     )
     .eq('slug', slug)
     .maybeSingle()) as { data: (CommunityRow & { status: string }) | null };
@@ -90,6 +91,8 @@ export default async function CommunityPage({
     cover_video_cf_id: coverVideoCfId,
     cover_storage_path: community.cover_storage_path,
     fallback_video_cf_id: firstReadyVideo?.cf_video_id ?? null,
+    name: community.name,
+    boundary: (community.boundary as import('@/lib/community/logo-cover').BoundaryGeoJSON | null) ?? null,
   });
 
   const heroCoverUrl = heroCover ? heroCover.url : null;
