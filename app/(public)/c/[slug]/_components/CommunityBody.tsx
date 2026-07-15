@@ -53,6 +53,7 @@ export function CommunityBody({
   community,
   heroCoverUrl,
   boundary,
+  nearby,
   videos,
   listings,
 }: {
@@ -72,6 +73,7 @@ export function CommunityBody({
   };
   heroCoverUrl: string | null;
   boundary: GeoJsonPolygonLike | null;
+  nearby: Array<{ name: string; city: string | null; state: string; href: string | null }>;
   videos: CommunityVideo[];
   listings: BrowseCard[];
 }) {
@@ -116,10 +118,10 @@ export function CommunityBody({
            *   still reads as a sentence, not chrome. State-flips to
            *   "← Walk through" on the listings tab. */}
           <div className="mt-0.5 flex flex-wrap items-baseline gap-x-2 text-sm">
-            <span className="text-cream/75">
+            <span className="text-cream/90">
               {community.city ? `${community.city}, ${community.state}` : community.state}
             </span>
-            <span className="text-cream/40" aria-hidden="true">
+            <span className="text-cream/60" aria-hidden="true">
               ·
             </span>
             <button
@@ -146,10 +148,9 @@ export function CommunityBody({
         </div>
       </div>
 
-      {/* Phase 87.1: Nextdoor demographics + tags — surface data we already
-          have in the DB so buyers get a feel for the community beyond the
-          name + description. Each stat only renders if present (all optional
-          on the row). */}
+      {/* Phase 87.1 / 87.2: Nextdoor demographics + tag chips + nearby.
+          Data we already have in the DB, rendered as three white-card
+          sections. Anything empty collapses — we don't fabricate. */}
       <CommunityStats
         residents={community.residents_count}
         income={community.avg_income}
@@ -157,6 +158,7 @@ export function CommunityBody({
         homeowners={community.homeowners_pct}
         attributes={community.attributes}
         interests={community.interests}
+        nearby={nearby}
       />
 
       {/* Body — Phase 47.2: padding aligned with grid gap (px-1 md:px-1.5)
@@ -269,13 +271,18 @@ function ListingsGrid({ listings }: { listings: BrowseCard[] }) {
 }
 
 /**
- * Phase 87.1: community stats + tag chips.
+ * Phase 87.1 / 87.2: community stats + tag chips + nearby.
  *
- * Renders demographics (residents / income / age / homeowners) as a compact
- * 4-cell grid, and Nextdoor's neighborhood tags (attributes + interests) as
- * two chip rows below. Every value is optional — the whole block is skipped
- * if there's literally nothing to show. Values are pre-formatted strings on
- * the row ('4,361', '$151K', '73%') so we render them verbatim.
+ * Layout mirrors the buyer-detail mock at
+ *   videos-anytime-get-plugin.trycloudflare.com/detail.html
+ * where each surface (stats grid / vibe / interests / nearby) sits in its own
+ * white card so the eye can parse them independently. Nextdoor's demographic
+ * values are pre-formatted strings on the row ('4,361', '$151K', '73%') — we
+ * render them verbatim. Age gets a 'yrs' suffix because the raw value is
+ * unit-less. Attributes and interests use different chip fills so buyers
+ * can tell "what locals say" apart from "what they do".
+ *
+ * Every block is optional; if the whole record is bare we return null.
  */
 function CommunityStats({
   residents,
@@ -284,6 +291,7 @@ function CommunityStats({
   homeowners,
   attributes,
   interests,
+  nearby,
 }: {
   residents: string | null;
   income: string | null;
@@ -291,37 +299,52 @@ function CommunityStats({
   homeowners: string | null;
   attributes: string[] | null;
   interests: string[] | null;
+  nearby: Array<{ name: string; city: string | null; state: string; href: string | null }>;
 }) {
-  const stats: Array<{ label: string; value: string }> = [];
-  if (residents) stats.push({ label: 'Residents', value: residents });
-  if (income) stats.push({ label: 'Avg income', value: income });
-  if (age) stats.push({ label: 'Median age', value: age });
-  if (homeowners) stats.push({ label: 'Homeowners', value: homeowners });
+  type Stat = { icon: string; label: string; value: string };
+  const stats: Stat[] = [];
+  if (residents) stats.push({ icon: '👥', label: 'Residents', value: residents });
+  if (homeowners) stats.push({ icon: '🏠', label: 'Homeowners', value: homeowners });
+  if (income) stats.push({ icon: '💵', label: 'Avg income', value: income });
+  if (age) stats.push({ icon: '🎂', label: 'Median age', value: `${age} yrs` });
 
-  const hasTags = (attributes && attributes.length > 0) || (interests && interests.length > 0);
-  if (stats.length === 0 && !hasTags) return null;
+  const attrs = (attributes ?? []).slice(0, 10);
+  const ints = (interests ?? []).slice(0, 10);
+  const nrb = nearby.slice(0, 6);
+
+  const hasAnything =
+    stats.length > 0 || attrs.length > 0 || ints.length > 0 || nrb.length > 0;
+  if (!hasAnything) return null;
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-5 sm:py-6">
+    <div className="mx-auto max-w-3xl space-y-3 px-4 py-5 sm:py-6">
       {stats.length > 0 ? (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           {stats.map((s) => (
-            <div key={s.label} className="rounded-lg border border-line bg-surface/30 px-3 py-2.5">
-              <div className="font-semibold text-ink text-lg sm:text-xl">{s.value}</div>
-              <div className="mt-0.5 text-muted text-xs">{s.label}</div>
+            <div
+              key={s.label}
+              className="rounded-xl border border-line bg-surface px-3 py-2.5"
+            >
+              <div className="text-muted text-xs">
+                <span className="mr-1">{s.icon}</span>
+                {s.label}
+              </div>
+              <div className="mt-0.5 font-semibold text-ink text-lg sm:text-xl">
+                {s.value}
+              </div>
             </div>
           ))}
         </div>
       ) : null}
 
-      {attributes && attributes.length > 0 ? (
-        <div className="mt-4">
-          <div className="mb-1.5 text-muted text-xs uppercase tracking-wide">What locals say</div>
+      {attrs.length > 0 ? (
+        <div className="rounded-xl border border-line bg-surface p-4">
+          <div className="mb-2 font-semibold text-ink text-sm">Vibe</div>
           <div className="flex flex-wrap gap-1.5">
-            {attributes.map((a) => (
+            {attrs.map((a) => (
               <span
                 key={a}
-                className="rounded-full border border-line bg-surface/30 px-2.5 py-1 text-ink2 text-xs"
+                className="rounded-full border border-line bg-bg px-2.5 py-1 text-ink2 text-xs"
               >
                 {a}
               </span>
@@ -330,18 +353,58 @@ function CommunityStats({
         </div>
       ) : null}
 
-      {interests && interests.length > 0 ? (
-        <div className="mt-3">
-          <div className="mb-1.5 text-muted text-xs uppercase tracking-wide">Popular interests</div>
+      {ints.length > 0 ? (
+        <div className="rounded-xl border border-line bg-surface p-4">
+          <div className="mb-2 font-semibold text-ink text-sm">
+            What neighbors are into
+          </div>
           <div className="flex flex-wrap gap-1.5">
-            {interests.map((i) => (
+            {ints.map((i) => (
               <span
                 key={i}
-                className="rounded-full border border-line bg-surface/30 px-2.5 py-1 text-ink2 text-xs"
+                className="rounded-full border border-line bg-bg px-2.5 py-1 text-ink2 text-xs"
               >
                 {i}
               </span>
             ))}
+          </div>
+        </div>
+      ) : null}
+
+      {nrb.length > 0 ? (
+        <div className="rounded-xl border border-line bg-surface p-4">
+          <div className="mb-2 font-semibold text-ink text-sm">
+            Nearby neighborhoods
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            {nrb.map((n) => {
+              const inner = (
+                <>
+                  <div className="truncate font-medium text-ink text-sm">
+                    {n.name}
+                  </div>
+                  <div className="truncate text-muted text-xs">
+                    {n.city ? `${n.city}, ${n.state}` : n.state}
+                  </div>
+                </>
+              );
+              return n.href ? (
+                <a
+                  key={n.name}
+                  href={n.href}
+                  className="rounded-lg border border-line bg-bg p-2 transition hover:border-bronze"
+                >
+                  {inner}
+                </a>
+              ) : (
+                <div
+                  key={n.name}
+                  className="rounded-lg border border-line bg-bg p-2 opacity-70"
+                >
+                  {inner}
+                </div>
+              );
+            })}
           </div>
         </div>
       ) : null}

@@ -4,6 +4,26 @@
 > Historical entries below preserve the original name in-place — release notes
 > are a record of what was shipped under the product's name at the time.
 
+## v88.2 — 2026-07-15 — A proper community page
+
+We took the community detail page all the way to the buyer-side mock:
+
+- **Demographics** now lead with a small icon (👥 🏠 💵 🎂), reordered so the
+  human numbers come first, and age reads as "50 yrs" instead of a bare 50.
+- **Vibe** and **What neighbors are into** each get their own card so the
+  eye can tell the two taxonomies apart while sharing one calm chip style.
+- **Nearby neighborhoods** — a new 2-column card of up to six neighbors,
+  each one linking straight to that neighborhood's page when we've seeded
+  it, so a buyer looking at Ansley Park can hop to Ardmore Park or
+  Brookwood in one tap.
+- **Neighborhood map** now uses a slightly more colored basemap and a blue
+  boundary so the shape lands the moment your eye reaches it.
+- Small readability polish: the city label under the neighborhood name is
+  brighter on the hero for better contrast on darker photos.
+
+None of the numbers are invented; anything Nextdoor didn't give us stays
+hidden.
+
 ## v88.1 — 2026-07-15 — Neighborhood at a glance
 
 - Community pages now show real Nextdoor data for the neighborhood: number of residents, average household income, median age, and homeowner rate — right under the hero.

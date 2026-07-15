@@ -23,8 +23,8 @@ import { bboxOf } from '@/lib/geo/point-in-polygon';
 // MapLibre CSS is loaded via the sibling <link> we inject on mount so we
 // don't force the whole app to import the stylesheet.
 const MAPLIBRE_CSS_HREF = 'https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css';
-const CARTO_POSITRON =
-  'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json';
+const CARTO_VOYAGER =
+  'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json';
 
 export function CommunityBoundaryMap({
   boundary,
@@ -58,7 +58,7 @@ export function CommunityBoundaryMap({
 
       map = new maplibregl.Map({
         container: ref.current,
-        style: CARTO_POSITRON,
+        style: CARTO_VOYAGER,
         center,
         zoom: 12,
         attributionControl: { compact: true },
@@ -75,13 +75,13 @@ export function CommunityBoundaryMap({
           id: 'boundary-fill',
           type: 'fill',
           source: 'boundary',
-          paint: { 'fill-color': '#c76b3d', 'fill-opacity': 0.18 },
+          paint: { 'fill-color': '#3b82f6', 'fill-opacity': 0.2 },
         });
         map.addLayer({
           id: 'boundary-line',
           type: 'line',
           source: 'boundary',
-          paint: { 'line-color': '#c76b3d', 'line-width': 2 },
+          paint: { 'line-color': '#2563eb', 'line-width': 2.5 },
         });
         if (bbox) {
           map.fitBounds(

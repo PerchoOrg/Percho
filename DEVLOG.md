@@ -4,6 +4,41 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-15 — Phase 87.2: community detail mock parity — nearby + polish
+
+**Files touched:**
+- `app/(public)/c/[slug]/page.tsx` — select `nearby`, resolve raw entries against
+  `communities.nextdoor_slug` so cards with a seeded match render as real
+  `/c/[slug]` anchors, unresolved ones stay as static labels.
+- `app/(public)/c/[slug]/_components/CommunityBody.tsx`
+  - Stats cells: added emoji icon prefix (👥 🏠 💵 🎂), reordered to
+    Residents / Homeowners / Income / Age, appended `yrs` to median age so
+    the raw unit-less integer reads as an age.
+  - Vibe + interests: each wrapped in its own bordered card (`rounded-xl
+    border bg-surface p-4`) with a bolder section header. Pills unified —
+    both use the same outlined chip so buyers see two parallel taxonomies
+    (was inconsistent dark-fill vs outline briefly, dropped after vision
+    flagged the split).
+  - New `Nearby neighborhoods` card: 2-col grid, up to 6 entries, anchors
+    when the nextdoor_slug resolves to a seeded community.
+  - Hero subtitle contrast: bumped city text `text-cream/75 → /90` and the
+    dot separator `/40 → /60` for WCAG AA.
+- `app/(public)/c/[slug]/_components/CommunityBoundaryMap.tsx` — swapped
+  Carto Positron → Voyager and the boundary color from bronze `#c76b3d`
+  → mock's blue `#3b82f6/#2563eb`, so the shape reads at a glance on a
+  slightly more colored basemap.
+
+**Not surfaced (0/731 coverage):** `median_home_value`, `friendliness_score`,
+`affordability_score` — the mock renders these but the DB doesn't have
+values, so we skip rather than fabricate.
+
+**Rationale:** the buyer-detail mock at
+`videos-anytime-get-plugin.trycloudflare.com/detail.html` was the source
+of truth; we brought /c/[slug] to parity with it modulo Aman theme
+(cream + neutrals instead of slate/blue-tinted cards).
+
+---
+
 ## 2026-07-15 — Phase 87.1: surface Nextdoor demographics on community pages
 
 The Nextdoor scrape already put `residents_count`, `avg_income`, `avg_age`,

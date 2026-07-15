@@ -48,7 +48,7 @@ export default async function CommunityPage({
   const { data: community } = (await (supabase as any)
     .from('communities')
     .select(
-      'id, name, slug, city, state, description, created_by, cover_video_id, cover_storage_path, status, residents_count, avg_income, avg_age, homeowners_pct, attributes, interests, boundary',
+      'id, name, slug, city, state, description, created_by, cover_video_id, cover_storage_path, status, residents_count, avg_income, avg_age, homeowners_pct, attributes, interests, nearby, boundary',
     )
     .eq('slug', slug)
     .maybeSingle()) as { data: (CommunityRow & { status: string }) | null };
@@ -80,6 +80,37 @@ export default async function CommunityPage({
   // Active listings inside this community — reuse the browse-card builder
   // so cards match the global feed shape exactly (BrowseCard type).
   const listings = await fetchBrowseCardsByCommunitySlug(community.slug);
+
+  // Phase 87.2: resolve `nearby` — each entry carries a `slug` from Nextdoor
+  // (i.e. nextdoor_slug), plus name/city/state/lat/lng. We look up which of
+  // those neighborhoods we've actually seeded (status=active) so we can render
+  // real /c/[slug] links; unresolved names still show as static labels.
+  type NearbyRaw = { name: string; slug?: string; city?: string; state?: string };
+  const rawNearby = Array.isArray((community as any).nearby)
+    ? ((community as any).nearby as NearbyRaw[]).slice(0, 6)
+    : [];
+  const nearbyNdSlugs = rawNearby.map((n) => n.slug).filter((s): s is string => !!s);
+  let nearbyLookup = new Map<string, { slug: string; name: string; city: string | null; state: string }>();
+  if (nearbyNdSlugs.length > 0) {
+    // biome-ignore lint/suspicious/noExplicitAny: stub generated types
+    const { data: nrows } = (await (supabase as any)
+      .from('communities')
+      .select('slug, name, city, state, nextdoor_slug')
+      .in('nextdoor_slug', nearbyNdSlugs)
+      .eq('status', 'active')) as {
+      data: Array<{ slug: string; name: string; city: string | null; state: string; nextdoor_slug: string }> | null;
+    };
+    nearbyLookup = new Map((nrows ?? []).map((r) => [r.nextdoor_slug, r]));
+  }
+  const nearbyCards = rawNearby.map((n) => {
+    const hit = n.slug ? nearbyLookup.get(n.slug) : undefined;
+    return {
+      name: hit?.name ?? n.name,
+      city: hit?.city ?? n.city ?? null,
+      state: hit?.state ?? n.state ?? community.state,
+      href: hit ? `/c/${hit.slug}` : null,
+    };
+  });
 
   // Hero cover.
   const firstReadyVideo = videos[0] ?? null;
@@ -115,6 +146,7 @@ export default async function CommunityPage({
       }}
       heroCoverUrl={heroCoverUrl}
       boundary={(community.boundary as import('@/lib/geo/point-in-polygon').GeoJsonPolygonLike | null) ?? null}
+      nearby={nearbyCards}
       videos={videos}
       listings={listings}
     />
