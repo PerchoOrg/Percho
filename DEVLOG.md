@@ -4,6 +4,32 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-15 — Phase 78 · Dedicated Nearby tab + bucket-video narratives
+
+**Motivation.** Nearby POI was buried inside the Media tab and the four generated bucket videos had no human-readable description to hand off to TTS. Agents also had no easy way to spot-check what the vision tagger wrote for each approved photo.
+
+**Changes.**
+- **New "Nearby" tab** between Media and Marketing on the listing edit page (`app/dashboard/listings/[id]/edit/page.tsx` — added `MapPinned` icon, 6th `HubTabs` entry). `MediaPanel.tsx` no longer mounts `NearbyPoiPanel` — Media is now pure Videos + Photos.
+- **`NearbyPoiPanel` restructured into two sections:**
+  1. **Generated Videos** (new `GeneratedVideosSection` + `BucketVideoCard`): 4-up card grid, one per intent bucket (walkable / daily_drive / lifestyle / commute). Each card shows a status pill, inline CF Stream player (when ready), Generate / Regenerate video controls, and an English structured description block.
+  2. **Nearby POIs**: unchanged POI-list flow, but per-photo tiles now render `ai_tags.description` (line-clamp-3) + `primary_category` chip under approved photos. Photos still tagging show "Analyzing…".
+- **Narrative pipeline** (`lib/poi/narrative.ts`): fetches the video's `input_photo_ids` in order, joins each to its `poi_photos.ai_tags.description` + `pois.display_name`, sends one Anthropic text-only call (Sonnet 4.5, ~$0.01/video) that returns `{ intro, scenes:[{poi_name, beat}], closing, voiceover }`. Result stitched back onto scenes by name (positional fallback) and written to `generated_videos.narrative` jsonb. **Manual trigger only** — the "Generate/Regenerate" button on each video card — to keep Anthropic spend predictable. No schema change; `narrative` column existed since Phase 76 migration.
+- **Server action** `regenerateBucketVideoNarrative(videoId)` in `lib/poi/video-actions.ts`: RLS ownership check → invoke `generateBucketVideoNarrative` → revalidate edit path. Also extended `BucketVideoStatus` to carry `narrative` back to the client, and extended `NearbyPoiForListing.photos[].poi_photos` with `ai_tags` + `tagged_at` in `lib/poi/actions.ts` so the panel can render captions.
+
+**Design decisions the user signed off on:**
+1. Tab order = `Details · Media · Nearby · Marketing · Leads · Analytics` (Nearby right after Media).
+2. Narrative language = **English only** (no `voiceover_zh` for now — US buyers).
+3. Trigger = **manual click**, never auto (Anthropic spend hygiene).
+
+**Files touched.**
+- `app/dashboard/listings/[id]/edit/page.tsx`
+- `app/dashboard/listings/[id]/edit/MediaPanel.tsx`
+- `app/dashboard/listings/[id]/edit/NearbyPoiPanel.tsx`
+- `lib/poi/actions.ts`
+- `lib/poi/video-actions.ts`
+- `lib/poi/narrative.ts` (new)
+
+**Verification.** `npx tsc --noEmit` clean. `npx next build` green — `/dashboard/listings/[id]/edit` route builds at 40.6 kB.
 
 ## 2026-07-14 08:30 UTC — Phase 77.6 · Fix vision-tagger column name (`pois.name` → `pois.display_name`)
 

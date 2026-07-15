@@ -1,29 +1,30 @@
 'use client';
 
 /**
- * NearbyPoiPanel — Nearby POI section inside the Media tab.
+ * NearbyPoiPanel — dedicated "Nearby" tab (Phase 78, 2026-07-15).
  *
- * Phase 76 (2026-07-14). Companion to `MediaPanel`. Mounted below the Videos +
- * Photos sub-sections on the listing edit page.
+ * Two sections:
+ *   1. Generated Videos — 4 bucket cards (walkable / daily / lifestyle /
+ *      commute). Each card shows the rendered CF Stream video (when ready),
+ *      an English structured description synthesized from the tagged photos
+ *      (for TTS later), and Generate / Regenerate / Regenerate-description
+ *      controls.
+ *   2. POI list — auto-discovered places grouped by bucket. Approved photos
+ *      show their vision-tagged description underneath so the agent can
+ *      spot-check the caption pipeline.
  *
- * Flow (v0):
- *   1. Agent clicks "Discover POIs" → server discovers ≤120 places via
- *      Google Places, upserts globals, registers per-listing rows.
- *   2. Server returns bucket counts + a fresh snapshot. Panel renders POIs
- *      grouped by intent bucket (walkable / daily drive / lifestyle).
- *   3. Per POI, agent can:
- *        • Approve / reject the POI (registers a review_event)
- *        • Fetch photos (≤10 via Google Places Photo API)
- *        • Per photo: approve / reject
+ * Server-action contract:
+ *   - Approve/reject POIs + photos → `lib/poi/actions.ts`.
+ *   - Bucket-video generation + status → `lib/poi/video-actions.ts`.
+ *   - Video narrative synthesis (Anthropic, manual click, English) →
+ *     `regenerateBucketVideoNarrative` in `lib/poi/video-actions.ts`.
  *
- * All state mutations flow through server actions in `lib/poi/actions.ts`
- * which revalidate this page's path, so we `useTransition` + refetch after
- * each successful call.
- *
- * Types stay lightweight — the server action's return type flows through.
+ * Photos already carry `ai_tags.description` (500-char cap) written by the
+ * fire-and-forget vision tagger on approve. If a photo has no description
+ * yet, we show "Analyzing…" so the agent knows tagging is in flight.
  */
 
-import { Loader2, MapPinned, ImagePlus, Check, X, ChevronLeft, ChevronRight, Video, Play } from 'lucide-react';
+import { Loader2, MapPinned, ImagePlus, Check, X, ChevronLeft, ChevronRight, Video, Play, Sparkles, RefreshCw } from 'lucide-react';
 import Image from 'next/image';
 import { useCallback, useEffect, useState, useTransition } from 'react';
 import {
@@ -37,6 +38,7 @@ import {
 import {
   generateBucketVideo,
   getBucketVideoStatus,
+  regenerateBucketVideoNarrative,
   type BucketVideoStatus,
 } from '@/lib/poi/video-actions';
 import { streamIframeUrl } from '@/lib/cloudflare/stream';
@@ -46,6 +48,13 @@ const BUCKET_LABELS: Record<IntentBucket, string> = {
   walkable: 'Walkable (≤0.5 mi)',
   daily_drive: 'Daily drive (≤2 mi)',
   lifestyle: 'Lifestyle (≤5 mi)',
+  commute: 'Commute',
+};
+
+const BUCKET_SHORT: Record<IntentBucket, string> = {
+  walkable: 'Walkable',
+  daily_drive: 'Daily drive',
+  lifestyle: 'Lifestyle',
   commute: 'Commute',
 };
 
@@ -150,75 +159,80 @@ export function NearbyPoiPanel({
   const totalPois = pois.length;
 
   return (
-    <div>
-      <div className="mb-3 flex items-center justify-between gap-3">
-        <div>
-          <h3 className="text-sm font-semibold text-ink2">
-            Nearby POIs ({totalPois})
-          </h3>
-          <p className="text-xs text-muted">
-            Auto-discovered points of interest within 5 miles. Approve the ones you'd want a
-            buyer to see in the neighborhood story.
+    <div className="space-y-8">
+      {/* ─── Section 1: Generated Videos ──────────────────────────────────── */}
+      <GeneratedVideosSection listingId={listingId} />
+
+      {/* ─── Section 2: Nearby POI list ───────────────────────────────────── */}
+      <div>
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <div>
+            <h3 className="text-sm font-semibold text-ink2">
+              Nearby POIs ({totalPois})
+            </h3>
+            <p className="text-xs text-muted">
+              Auto-discovered points of interest within 5 miles. Approve the ones you'd want a
+              buyer to see in the neighborhood story.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={handleDiscover}
+            disabled={pending}
+            className="inline-flex items-center gap-2 rounded-md border border-line bg-bg px-3 py-1.5 text-ink2 text-xs hover:border-bronze hover:text-ink disabled:opacity-50"
+          >
+            {pending ? (
+              <Loader2 size={14} className="animate-spin" aria-hidden />
+            ) : (
+              <MapPinned size={14} aria-hidden />
+            )}
+            {totalPois === 0 ? 'Discover POIs' : 'Refresh'}
+          </button>
+        </div>
+
+        {notice ? (
+          <p className="mb-3 rounded border border-line bg-bg px-3 py-2 text-xs text-ink2">
+            {notice}
           </p>
-        </div>
-        <button
-          type="button"
-          onClick={handleDiscover}
-          disabled={pending}
-          className="inline-flex items-center gap-2 rounded-md border border-line bg-bg px-3 py-1.5 text-ink2 text-xs hover:border-bronze hover:text-ink disabled:opacity-50"
-        >
-          {pending ? (
-            <Loader2 size={14} className="animate-spin" aria-hidden />
-          ) : (
-            <MapPinned size={14} aria-hidden />
-          )}
-          {totalPois === 0 ? 'Discover POIs' : 'Refresh'}
-        </button>
+        ) : null}
+
+        {totalPois === 0 ? (
+          <p className="text-xs text-muted italic">
+            Click "Discover POIs" to search Google Places for nearby restaurants, parks,
+            schools, grocery stores, cafes, and gyms.
+          </p>
+        ) : (
+          <div className="space-y-4">
+            {BUCKET_ORDER.map((bucket) => {
+              const rows = grouped[bucket];
+              if (rows.length === 0) return null;
+              return (
+                <section key={bucket}>
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <h4 className="text-xs font-medium uppercase tracking-wide text-muted">
+                      {BUCKET_LABELS[bucket]} · {rows.length}
+                    </h4>
+                  </div>
+                  <ul className="space-y-2">
+                    {rows.map((row) => (
+                      <PoiRow
+                        key={row.poi_id}
+                        row={row}
+                        busy={busyPoi === row.poi_id || pending}
+                        onFetchPhotos={() => handleFetchPhotos(row.poi_id)}
+                        onDecide={(approved) => handlePoiDecision(row.poi_id, approved)}
+                        onPhotoDecide={handlePhotoDecision}
+                        storageBase={supabaseStorageBase}
+                        bucket={photoBucket}
+                      />
+                    ))}
+                  </ul>
+                </section>
+              );
+            })}
+          </div>
+        )}
       </div>
-
-      {notice ? (
-        <p className="mb-3 rounded border border-line bg-bg px-3 py-2 text-xs text-ink2">
-          {notice}
-        </p>
-      ) : null}
-
-      {totalPois === 0 ? (
-        <p className="text-xs text-muted italic">
-          Click "Discover POIs" to search Google Places for nearby restaurants, parks,
-          schools, grocery stores, cafes, and gyms.
-        </p>
-      ) : (
-        <div className="space-y-4">
-          {BUCKET_ORDER.map((bucket) => {
-            const rows = grouped[bucket];
-            if (rows.length === 0) return null;
-            return (
-              <section key={bucket}>
-                <div className="mb-2 flex items-center justify-between gap-2">
-                  <h4 className="text-xs font-medium uppercase tracking-wide text-muted">
-                    {BUCKET_LABELS[bucket]} · {rows.length}
-                  </h4>
-                  <BucketVideoControl listingId={listingId} bucket={bucket} />
-                </div>
-                <ul className="space-y-2">
-                  {rows.map((row) => (
-                    <PoiRow
-                      key={row.poi_id}
-                      row={row}
-                      busy={busyPoi === row.poi_id || pending}
-                      onFetchPhotos={() => handleFetchPhotos(row.poi_id)}
-                      onDecide={(approved) => handlePoiDecision(row.poi_id, approved)}
-                      onPhotoDecide={handlePhotoDecision}
-                      storageBase={supabaseStorageBase}
-                      bucket={photoBucket}
-                    />
-                  ))}
-                </ul>
-              </section>
-            );
-          })}
-        </div>
-      )}
     </div>
   );
 }
@@ -408,7 +422,7 @@ function PhotoReviewGrid({
 
   return (
     <>
-      <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-5">
+      <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
         {photos.map((p, i) => (
           <PhotoTile
             key={p.poi_photo_id}
@@ -417,6 +431,8 @@ function PhotoReviewGrid({
             path={p.poi_photos.storage_path}
             attribution={p.poi_photos.attribution}
             status={p.status}
+            aiTags={p.poi_photos.ai_tags}
+            taggedAt={p.poi_photos.tagged_at}
             onOpen={() => setOpenIdx(i)}
           />
         ))}
@@ -452,6 +468,8 @@ function PhotoTile({
   path,
   attribution,
   status,
+  aiTags,
+  taggedAt,
   onOpen,
 }: {
   storageBase: string;
@@ -459,6 +477,8 @@ function PhotoTile({
   path: string;
   attribution: Record<string, unknown> | null;
   status: 'pending' | 'approved' | 'rejected';
+  aiTags?: { description?: string; primary_category?: string } | null;
+  taggedAt?: string | null;
   onOpen: () => void;
 }) {
   const url = `${storageBase}/storage/v1/object/public/${bucket}/${path}`;
@@ -473,33 +493,58 @@ function PhotoTile({
         ? 'opacity-40 ring-2 ring-red-400'
         : 'ring-1 ring-line';
 
+  // Phase 78: expose the vision-tagger caption under approved photos so the
+  // agent can spot-check the pipeline. Rejected/pending photos stay quiet —
+  // clutter would drown the triage view.
+  const showCaption = status === 'approved';
+  const description = aiTags?.description?.trim() ?? '';
+  const analyzing = !aiTags || (!description && !taggedAt);
+
   return (
-    <button
-      type="button"
-      onClick={onOpen}
-      aria-label={author ? `Review photo by ${author}` : 'Review photo'}
-      className={`group relative block overflow-hidden rounded ${ring} focus:outline-none focus:ring-2 focus:ring-bronze`}
-    >
-      <div className="relative aspect-square">
-        <Image
-          src={url}
-          alt={author ? `Photo by ${author}` : 'POI photo'}
-          fill
-          sizes="120px"
-          className="object-cover"
-          unoptimized
-        />
-      </div>
-      {status !== 'pending' ? (
-        <span
-          className={`absolute top-1 right-1 flex h-5 w-5 items-center justify-center rounded-full ${
-            status === 'approved' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
-          }`}
-        >
-          {status === 'approved' ? <Check size={12} /> : <X size={12} />}
-        </span>
+    <figure className="flex flex-col gap-1.5">
+      <button
+        type="button"
+        onClick={onOpen}
+        aria-label={author ? `Review photo by ${author}` : 'Review photo'}
+        className={`group relative block overflow-hidden rounded ${ring} focus:outline-none focus:ring-2 focus:ring-bronze`}
+      >
+        <div className="relative aspect-square">
+          <Image
+            src={url}
+            alt={author ? `Photo by ${author}` : 'POI photo'}
+            fill
+            sizes="160px"
+            className="object-cover"
+            unoptimized
+          />
+        </div>
+        {status !== 'pending' ? (
+          <span
+            className={`absolute top-1 right-1 flex h-5 w-5 items-center justify-center rounded-full ${
+              status === 'approved' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
+            }`}
+          >
+            {status === 'approved' ? <Check size={12} /> : <X size={12} />}
+          </span>
+        ) : null}
+      </button>
+      {showCaption ? (
+        <figcaption className="text-[10.5px] leading-snug text-muted">
+          {description ? (
+            <span className="line-clamp-3">{description}</span>
+          ) : analyzing ? (
+            <span className="italic text-muted/70">Analyzing…</span>
+          ) : (
+            <span className="italic text-muted/70">No description</span>
+          )}
+          {aiTags?.primary_category ? (
+            <span className="ml-1 inline-flex rounded bg-line/50 px-1 text-[9px] uppercase tracking-wide text-ink2/70">
+              {aiTags.primary_category}
+            </span>
+          ) : null}
+        </figcaption>
       ) : null}
-    </button>
+    </figure>
   );
 }
 
@@ -664,16 +709,40 @@ function PhotoLightbox({
   );
 }
 
-// ─── bucket-video control (Phase 76.6c) ──────────────────────────────────
+// ─── Generated Videos section (Phase 78) ─────────────────────────────────
 //
-// One instance per bucket. Shows a "Generate video" button when no video
-// exists (or a terminal state). While pending/processing we poll every 5s
-// for status. When ready, we swap in a CF Stream <iframe> player.
+// One card per intent bucket. Each card shows:
+//   - CF Stream player when the render is ready
+//   - Status pill (idle / rendering / ready / failed)
+//   - Structured description (intro + scene beats + closing) synthesized
+//     from the photos' vision-tagged captions. Manual "Regenerate description"
+//     button — never auto-fires to keep Anthropic spend predictable.
+//   - Generate / Regenerate video button (unchanged wiring — enqueues a
+//     `generated_videos` row, the EC2 worker picks it up).
 //
-// Design: docs/poi-content-pipeline.md §1.1 — one bucket = one video.
-// generateBucketVideo only enqueues; render happens on the EC2 worker.
+// The 4-up grid stays visible even when no buckets have rendered yet, so the
+// agent always sees the full slate and knows what's missing.
 
-function BucketVideoControl({
+function GeneratedVideosSection({ listingId }: { listingId: string }) {
+  return (
+    <div>
+      <div className="mb-3">
+        <h3 className="text-sm font-semibold text-ink2">Generated videos</h3>
+        <p className="text-xs text-muted">
+          One 30–60s slideshow per intent bucket, stitched from approved POI photos.
+          Each video comes with an English description you can send to TTS later.
+        </p>
+      </div>
+      <div className="grid gap-3 md:grid-cols-2">
+        {BUCKET_ORDER.map((bucket) => (
+          <BucketVideoCard key={bucket} listingId={listingId} bucket={bucket} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function BucketVideoCard({
   listingId,
   bucket,
 }: {
@@ -682,10 +751,13 @@ function BucketVideoControl({
 }) {
   const [status, setStatus] = useState<BucketVideoStatus>(null);
   const [busy, setBusy] = useState(false);
+  const [narrativeBusy, setNarrativeBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
-  const [expandedPlayer, setExpandedPlayer] = useState(false);
+  const [narrativeErr, setNarrativeErr] = useState<string | null>(null);
+  const [showPlayer, setShowPlayer] = useState(false);
+  const [showFullScript, setShowFullScript] = useState(false);
 
-  // Initial load + polling while a render is in flight.
+  // Initial load + polling while render is in flight (unchanged wiring).
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
@@ -722,7 +794,6 @@ function BucketVideoControl({
         setErr(res.message);
         return;
       }
-      // Optimistic: mark pending so the polling loop kicks in on next render.
       setStatus({
         video_id: res.video_id,
         status: res.status,
@@ -731,8 +802,8 @@ function BucketVideoControl({
         photo_count: res.photo_count,
         error: null,
         created_at: new Date().toISOString(),
+        narrative: null,
       });
-      // Kick off polling immediately.
       const t = setInterval(async () => {
         const cur = await getBucketVideoStatus(listingId, bucket);
         setStatus(cur);
@@ -745,73 +816,192 @@ function BucketVideoControl({
     }
   };
 
-  // Rendering
-  if (status?.status === 'ready' || status?.status === 'approved') {
-    if (!status.cf_stream_uid) {
-      return <span className="text-[10px] text-muted">ready (no uid)</span>;
+  const handleRegenerateNarrative = async () => {
+    if (!status?.video_id) return;
+    setNarrativeBusy(true);
+    setNarrativeErr(null);
+    try {
+      const res = await regenerateBucketVideoNarrative(status.video_id);
+      if (!res.ok) {
+        setNarrativeErr(res.message);
+        return;
+      }
+      setStatus((prev) => (prev ? { ...prev, narrative: res.narrative } : prev));
+    } finally {
+      setNarrativeBusy(false);
     }
-    return (
-      <div className="flex items-center gap-2">
-        <button
-          type="button"
-          onClick={() => setExpandedPlayer((v) => !v)}
-          className="inline-flex items-center gap-1 rounded-md border border-line bg-bg px-2 py-1 text-[11px] text-ink hover:bg-line/40"
-        >
-          <Play className="h-3 w-3" />
-          {expandedPlayer ? 'Hide' : 'Play'} video
-          {status.duration_s ? ` · ${Math.round(status.duration_s)}s` : ''}
-        </button>
-        <button
-          type="button"
-          onClick={handleGenerate}
-          disabled={busy}
-          title="Regenerate from current approved photos"
-          className="inline-flex items-center gap-1 rounded-md border border-line bg-bg px-2 py-1 text-[11px] text-muted hover:text-ink disabled:opacity-50"
-        >
-          <Video className="h-3 w-3" />
-          Regenerate
-        </button>
-        {expandedPlayer ? (
-          <div className="absolute left-0 right-0 mt-8 z-10">
-            <div className="aspect-[9/16] max-w-[360px] mx-auto rounded-lg overflow-hidden border border-line bg-black">
-              <iframe
-                src={streamIframeUrl(status.cf_stream_uid)}
-                allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;"
-                allowFullScreen
-                style={{ width: '100%', height: '100%', border: 'none' }}
-              />
-            </div>
-          </div>
-        ) : null}
-      </div>
-    );
-  }
+  };
 
-  if (status?.status === 'pending' || status?.status === 'processing') {
+  const isReady = status?.status === 'ready' || status?.status === 'approved';
+  const isRendering = status?.status === 'pending' || status?.status === 'processing';
+  const isFailed = status?.status === 'failed';
+  const narrative = status?.narrative ?? null;
+
+  return (
+    <div className="rounded-lg border border-line bg-bg p-3">
+      {/* header */}
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <Video className="h-4 w-4 text-ink2" aria-hidden />
+          <span className="text-sm font-medium text-ink">{BUCKET_SHORT[bucket]}</span>
+          <StatusPill status={status?.status ?? null} />
+        </div>
+        <div className="flex items-center gap-1.5">
+          {isReady && status?.cf_stream_uid ? (
+            <button
+              type="button"
+              onClick={() => setShowPlayer((v) => !v)}
+              className="inline-flex items-center gap-1 rounded-md border border-line bg-surface px-2 py-1 text-[11px] text-ink hover:bg-line/40"
+            >
+              <Play className="h-3 w-3" />
+              {showPlayer ? 'Hide' : 'Play'}
+              {status.duration_s ? ` · ${Math.round(status.duration_s)}s` : ''}
+            </button>
+          ) : null}
+          <button
+            type="button"
+            onClick={handleGenerate}
+            disabled={busy || isRendering}
+            title={isReady ? 'Regenerate from current approved photos' : 'Generate video'}
+            className="inline-flex items-center gap-1 rounded-md border border-line bg-surface px-2 py-1 text-[11px] text-ink hover:bg-line/40 disabled:opacity-50"
+          >
+            {busy ? (
+              <Loader2 className="h-3 w-3 animate-spin" />
+            ) : (
+              <RefreshCw className="h-3 w-3" />
+            )}
+            {isReady ? 'Regenerate' : 'Generate'}
+          </button>
+        </div>
+      </div>
+
+      {/* status/error line */}
+      {isRendering ? (
+        <p className="mb-2 flex items-center gap-1 text-[11px] text-muted">
+          <Loader2 className="h-3 w-3 animate-spin" />
+          Rendering {status?.photo_count} photos… ({status?.status})
+        </p>
+      ) : null}
+      {(isFailed || err) ? (
+        <p
+          className="mb-2 truncate text-[11px] text-red-600"
+          title={status?.error ?? err ?? ''}
+        >
+          {isFailed ? 'Failed: ' : ''}
+          {err ?? status?.error ?? ''}
+        </p>
+      ) : null}
+
+      {/* inline player */}
+      {isReady && status?.cf_stream_uid && showPlayer ? (
+        <div className="mb-3 aspect-[9/16] w-full max-w-[280px] overflow-hidden rounded-lg border border-line bg-black">
+          <iframe
+            src={streamIframeUrl(status.cf_stream_uid)}
+            allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;"
+            allowFullScreen
+            style={{ width: '100%', height: '100%', border: 'none' }}
+          />
+        </div>
+      ) : null}
+
+      {/* narrative / description block */}
+      <div className="rounded border border-line/70 bg-surface p-2.5">
+        <div className="mb-1.5 flex items-center justify-between gap-2">
+          <span className="text-[10px] font-medium uppercase tracking-wide text-muted">
+            Description (English · for TTS)
+          </span>
+          <button
+            type="button"
+            onClick={handleRegenerateNarrative}
+            disabled={narrativeBusy || !status?.video_id || (!isReady && !isFailed)}
+            title={
+              !status?.video_id
+                ? 'Generate the video first'
+                : narrative
+                  ? 'Regenerate description from tagged photos'
+                  : 'Generate a description from tagged photos'
+            }
+            className="inline-flex items-center gap-1 rounded-md border border-line bg-bg px-2 py-0.5 text-[10.5px] text-ink hover:bg-line/40 disabled:opacity-40"
+          >
+            {narrativeBusy ? (
+              <Loader2 className="h-3 w-3 animate-spin" />
+            ) : (
+              <Sparkles className="h-3 w-3" />
+            )}
+            {narrative ? 'Regenerate' : 'Generate'}
+          </button>
+        </div>
+        {narrativeErr ? (
+          <p className="mb-1 text-[11px] text-red-600">{narrativeErr}</p>
+        ) : null}
+        {narrative ? (
+          <div className="space-y-1.5 text-[11.5px] leading-relaxed text-ink2">
+            {narrative.intro ? (
+              <p className="italic">{narrative.intro}</p>
+            ) : null}
+            {narrative.scenes && narrative.scenes.length > 0 ? (
+              <ol className="list-decimal space-y-0.5 pl-4 text-ink2/90">
+                {narrative.scenes.map((s, i) => (
+                  <li key={`${i}-${s.poi_name}`}>
+                    <span className="font-medium text-ink">{s.poi_name}</span>
+                    {s.beat ? <span className="text-ink2/80"> — {s.beat}</span> : null}
+                  </li>
+                ))}
+              </ol>
+            ) : null}
+            {narrative.closing ? (
+              <p className="italic text-ink2/90">{narrative.closing}</p>
+            ) : null}
+            {narrative.voiceover ? (
+              <details
+                open={showFullScript}
+                onToggle={(e) => setShowFullScript((e.currentTarget as HTMLDetailsElement).open)}
+                className="mt-2 border-t border-line/60 pt-1.5"
+              >
+                <summary className="cursor-pointer text-[10px] uppercase tracking-wide text-muted hover:text-ink2">
+                  Voiceover script ({narrative.voiceover.split(/\s+/).length} words)
+                </summary>
+                <p className="mt-1 whitespace-pre-wrap text-[11px] leading-relaxed text-ink">
+                  {narrative.voiceover}
+                </p>
+              </details>
+            ) : null}
+          </div>
+        ) : (
+          <p className="text-[11px] italic text-muted">
+            {isReady
+              ? 'Click Generate to synthesize a description from the tagged photos.'
+              : isRendering
+                ? 'Description generates once the render finishes.'
+                : 'Generate the video first.'}
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function StatusPill({ status }: { status: string | null }) {
+  if (!status) {
     return (
-      <span className="inline-flex items-center gap-1 text-[11px] text-muted">
-        <Loader2 className="h-3 w-3 animate-spin" />
-        Rendering {status.photo_count} photos… ({status.status})
+      <span className="rounded-full bg-line/40 px-2 py-0.5 text-[10px] uppercase tracking-wide text-muted">
+        Not started
       </span>
     );
   }
-
+  const styles: Record<string, string> = {
+    pending: 'bg-amber-100 text-amber-800',
+    processing: 'bg-amber-100 text-amber-800',
+    ready: 'bg-green-100 text-green-800',
+    approved: 'bg-green-100 text-green-800',
+    failed: 'bg-red-100 text-red-800',
+    rejected: 'bg-red-100 text-red-800',
+  };
   return (
-    <div className="flex items-center gap-2">
-      {(status?.status === 'failed' || err) ? (
-        <span className="text-[10px] text-red-600 truncate max-w-[200px]" title={status?.error ?? err ?? ''}>
-          {status?.status === 'failed' ? 'Failed' : ''} {err ?? status?.error ?? ''}
-        </span>
-      ) : null}
-      <button
-        type="button"
-        onClick={handleGenerate}
-        disabled={busy}
-        className="inline-flex items-center gap-1 rounded-md border border-line bg-bg px-2 py-1 text-[11px] text-ink hover:bg-line/40 disabled:opacity-50"
-      >
-        {busy ? <Loader2 className="h-3 w-3 animate-spin" /> : <Video className="h-3 w-3" />}
-        Generate video
-      </button>
-    </div>
+    <span
+      className={`rounded-full px-2 py-0.5 text-[10px] uppercase tracking-wide ${styles[status] ?? 'bg-line/40 text-muted'}`}
+    >
+      {status}
+    </span>
   );
 }
