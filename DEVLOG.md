@@ -51,8 +51,20 @@ Places types listed in `BUCKET_PLACES_TYPES` — extend the map when new
 types show up in production. Rendered in the caption `type` field for all
 6 archetypes.
 
-**89.2 — pending**: LLM-generated quote/why/title/chapter (extend
-`lib/poi/narrative.ts`, write to `generated_videos.narrative.scenes[].caption_fields`).
+**89.2 — LLM caption_fields (quote/why/title/chapter)**
+
+Extended `lib/poi/narrative.ts` with a `CAPTION_ARCHETYPE` map (mirror of
+worker.py, 14 buckets → 6 archetypes) and an archetype-specific
+`caption_fields` schema fragment injected into the Anthropic prompt:
+LIFESTYLE gets `why` (≤12 words), NARRATIVE gets `quote` (≤8 words),
+MAGAZINE gets `title` (≤6) + `chapter` (2-3 words). TRUST/UTILITY/MAP
+skip LLM fields (data-driven — TRUST uses Apify in 89.3, UTILITY/MAP use
+distance/mode). Parser word-caps each field, strips surrounding quotes,
+drops empties. Worker reads
+`generated_videos.narrative.scenes[].caption_fields` into
+`narrative_caption_fields_by_poi` and now prefers the LLM value over the
+Phase 88 hardcodes (`"Where the day begins."` etc.), falling back to POI
+name — never to a fabricated rating or review.
 
 **89.3 — pending**: Apify GreatSchools scraper → `communities.schools_json`
 → TRUST badges (rating / zoned / programs).

@@ -622,17 +622,22 @@ def process_bucket_job(job: dict[str, Any]) -> None:
         # One entry per input photo, in the same order the photos were downloaded.
         # Optional narrative "beat" from generated_videos.narrative overrides
         # the default name-only caption when present.
-        narrative_beats_by_poi: dict[str, str] = {}
         vid_rows = sb_get(
             "generated_videos",
             {"select": "narrative", "id": f"eq.{video_id}"},
         )
+        narrative_beats_by_poi: dict[str, str] = {}
+        narrative_caption_fields_by_poi: dict[str, dict] = {}
         if vid_rows and vid_rows[0].get("narrative"):
             for scene in (vid_rows[0]["narrative"].get("scenes") or []):
                 pid = scene.get("poi_id")
                 beat = scene.get("beat")
                 if pid and beat:
                     narrative_beats_by_poi[pid] = beat
+                # Phase 89.2: per-scene caption_fields (why/quote/title/chapter)
+                cf = scene.get("caption_fields")
+                if pid and isinstance(cf, dict) and cf:
+                    narrative_caption_fields_by_poi[pid] = cf
 
         def _fmt_distance_mi(m: float | None) -> float | None:
             if m is None:
@@ -663,6 +668,8 @@ def process_bucket_job(job: dict[str, Any]) -> None:
             dist_mi = _fmt_distance_mi(dist_m)
             drive = _fmt_drive_min(dist_m)
             beat = narrative_beats_by_poi.get(poi_id, "") if poi_id else ""
+            # Phase 89.2: LLM-authored caption fields (why/quote/title/chapter)
+            cf = narrative_caption_fields_by_poi.get(poi_id, {}) if poi_id else {}
             poi_name = (poi.get("display_name") or "").strip()
             # Phase 89.1: Map google_places.types → human label; fallback to bucket_label.
             type_label = poi_type_label(
@@ -677,17 +684,25 @@ def process_bucket_job(job: dict[str, Any]) -> None:
                 "drive": drive,
             }
             if archetype == "TRUST":
-                # Placeholder badges — Phase 89 GreatSchools / GoodRx / etc.
+                # Placeholder badges — Phase 89.3 GreatSchools / GoodRx / etc.
                 entry["badges"] = [{"t": bucket_label, "c": "gold"}]
             elif archetype == "LIFESTYLE":
-                entry["why"] = beat or f"Where the day begins."
+                # Phase 89.2: LLM `why` overrides; fall back to POI name (never fabricate).
+                entry["why"] = cf.get("why") or poi_name or bucket_label
                 entry["chapter"] = f"{i:02d} / {len(input_photo_ids):02d}"
             elif archetype == "NARRATIVE":
-                entry["quote"] = beat or poi_name
+                # Phase 89.2: LLM `quote` overrides; fall back to POI name.
+                entry["quote"] = cf.get("quote") or poi_name
             elif archetype == "MAGAZINE":
                 entry["section"] = "The Neighborhood"
-                entry["chapter"] = f"Chapter {['I','II','III','IV','V','VI'][min(i-1,5)]}"
-                entry["title"] = beat or poi_name
+                # Phase 89.2: LLM `chapter` overrides roman-numeral placeholder.
+                entry["chapter"] = (
+                    f"Chapter {cf['chapter']}"
+                    if cf.get("chapter")
+                    else f"Chapter {['I','II','III','IV','V','VI'][min(i-1,5)]}"
+                )
+                # Phase 89.2: LLM `title` overrides; fall back to POI name.
+                entry["title"] = cf.get("title") or poi_name
                 entry["credit"] = f"{type_label.upper()} · {dist_mi or '—'} MI · {(drive or '—').upper()}"
             elif archetype == "MAP":
                 entry["mode"] = "Drive"
