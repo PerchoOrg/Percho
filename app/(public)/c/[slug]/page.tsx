@@ -108,6 +108,7 @@ export default async function CommunityPage({
         description: community.description,
       }}
       heroCoverUrl={heroCoverUrl}
+      boundary={(community.boundary as import('@/lib/geo/point-in-polygon').GeoJsonPolygonLike | null) ?? null}
       videos={videos}
       listings={listings}
     />

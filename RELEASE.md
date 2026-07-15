@@ -4,6 +4,12 @@
 > Historical entries below preserve the original name in-place — release notes
 > are a record of what was shipped under the product's name at the time.
 
+## v88 — 2026-07-15 — See the shape of your neighborhood
+
+- Every community page now shows a map of the neighborhood boundary below the videos/listings — you can see exactly what area a "community" refers to instead of guessing from the name.
+- Uses a clean, muted street map (Carto Positron) with an orange highlight over the neighborhood shape. Loads only when you visit a community page, so there's no cost to browsing.
+- Removed two placeholder "friendliness" and "affordability" scores that were seeded from Nextdoor but never shown in the app — we won't publish subjective scores until we have real data behind them.
+
 ## v87 — 2026-07-15 — Every community now has a cover
 
 - All 731 Atlanta communities now show a cover photo on browse and detail pages — no more blank tiles.
