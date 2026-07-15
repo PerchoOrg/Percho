@@ -37,6 +37,7 @@ import {
 } from '@/lib/poi/actions';
 import {
   generateBucketVideo,
+  getBucketEligiblePhotoCount,
   getBucketVideoStatus,
   regenerateBucketVideoNarrative,
   type BucketVideoStatus,
@@ -847,6 +848,7 @@ function BucketVideoCard({
   bucket: IntentBucket;
 }) {
   const [status, setStatus] = useState<BucketVideoStatus>(null);
+  const [eligibleCount, setEligibleCount] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
   const [narrativeBusy, setNarrativeBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -858,8 +860,14 @@ function BucketVideoCard({
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
-      const next = await getBucketVideoStatus(listingId, bucket);
-      if (!cancelled) setStatus(next);
+      const [next, elig] = await Promise.all([
+        getBucketVideoStatus(listingId, bucket),
+        getBucketEligiblePhotoCount(listingId, bucket),
+      ]);
+      if (!cancelled) {
+        setStatus(next);
+        setEligibleCount(elig);
+      }
       return next;
     };
     load().then((s) => {
@@ -958,8 +966,14 @@ function BucketVideoCard({
           <button
             type="button"
             onClick={handleGenerate}
-            disabled={busy || isRendering}
-            title={isReady ? 'Regenerate from current approved photos' : 'Generate video'}
+            disabled={busy || isRendering || (eligibleCount != null && eligibleCount < 3 && !isReady)}
+            title={
+              isReady
+                ? `Regenerate from ${eligibleCount ?? '?'} approved photos`
+                : eligibleCount != null && eligibleCount < 3
+                  ? `Need at least 3 approved photos (${eligibleCount} eligible)`
+                  : `Generate video from ${eligibleCount ?? '?'} approved photos`
+            }
             className="inline-flex items-center gap-1 rounded-md border border-line bg-surface px-2 py-1 text-[11px] text-ink hover:bg-line/40 disabled:opacity-50"
           >
             {busy ? (
@@ -968,6 +982,13 @@ function BucketVideoCard({
               <RefreshCw className="h-3 w-3" />
             )}
             {isReady ? 'Regenerate' : 'Generate'}
+            {eligibleCount != null ? (
+              <span className="text-muted">
+                {isReady && status?.photo_count
+                  ? ` · ${status.photo_count}/${eligibleCount}`
+                  : ` · ${eligibleCount}`}
+              </span>
+            ) : null}
           </button>
         </div>
       </div>
