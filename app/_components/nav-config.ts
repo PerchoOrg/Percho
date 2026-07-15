@@ -134,15 +134,6 @@ export function isSubTabActive(pathname: string, sub: SubTab, all: SubTab[]): bo
 export const CHROME_HIDDEN_PREFIXES = [
   '/v/',
   '/browse/feed',
-  '/feed',
-  // ReelEstate mobile detail (D2.1) — full-bleed mobile canvas owns its
-  // own bottom nav via `app/(mobile)/layout.tsx`.
-  '/listings/',
-  // ReelEstate mobile agent profile (A4.1) — same full-bleed mobile canvas.
-  '/agents/',
-  // ReelEstate mobile Create wizard (C6.1) — full-bleed mobile canvas owns
-  // its own header + step tracker.
-  '/create/',
   '/login',
   '/signup',
   '/forgot-password',
