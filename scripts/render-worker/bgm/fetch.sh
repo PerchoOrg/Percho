@@ -53,9 +53,15 @@ declare -A KML_TRACKS=(
   ["c-lofi/20-local-forecast-elevator.mp3"]="Local Forecast - Elevator"
   ["c-lofi/21-faceoff.mp3"]="Faceoff"
 
-  # Bucket D — uplift (existing seed only for now)
+  # Bucket D — uplift / corporate-optimistic (target 8)
   ["d-uplift/04-life-of-riley.mp3"]="Life of Riley"
   ["d-uplift/06-bright-wish.mp3"]="Bright Wish"
+  ["d-uplift/22-inspired.mp3"]="Inspired"
+  ["d-uplift/23-fluffing-a-duck.mp3"]="Fluffing a Duck"
+  ["d-uplift/24-feelin-good.mp3"]="Feelin Good"
+  ["d-uplift/25-ready-aim-fire.mp3"]="Ready Aim Fire"
+  ["d-uplift/26-new-direction.mp3"]="New Direction"
+  ["d-uplift/27-enter-the-party.mp3"]="Enter the Party"
 
   # Bucket F — ambient (existing seed only for now)
   ["f-ambient/10-perspectives.mp3"]="Perspectives"

@@ -49,8 +49,14 @@
     "d-uplift": {
       "description": "Uplift / corporate-optimistic — luxury, new-build.",
       "tracks": [
-        {"file": "d-uplift/04-life-of-riley.mp3", "title": "Life of Riley", "artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Life%20of%20Riley.mp3", "duration_s": 168},
-        {"file": "d-uplift/06-bright-wish.mp3",   "title": "Bright Wish",   "artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Bright%20Wish.mp3",   "duration_s": 92}
+        {"file": "d-uplift/04-life-of-riley.mp3",      "title": "Life of Riley",      "artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Life%20of%20Riley.mp3",      "duration_s": 168},
+        {"file": "d-uplift/06-bright-wish.mp3",        "title": "Bright Wish",        "artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Bright%20Wish.mp3",        "duration_s": 92},
+        {"file": "d-uplift/22-inspired.mp3",           "title": "Inspired",           "artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Inspired.mp3",           "duration_s": 286},
+        {"file": "d-uplift/23-fluffing-a-duck.mp3",    "title": "Fluffing a Duck",    "artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Fluffing%20a%20Duck.mp3",    "duration_s": 67},
+        {"file": "d-uplift/24-feelin-good.mp3",        "title": "Feelin Good",        "artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Feelin%20Good.mp3",        "duration_s": 225},
+        {"file": "d-uplift/25-ready-aim-fire.mp3",     "title": "Ready Aim Fire",     "artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Ready%20Aim%20Fire.mp3",     "duration_s": 216},
+        {"file": "d-uplift/26-new-direction.mp3",      "title": "New Direction",      "artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/New%20Direction.mp3",      "duration_s": 679},
+        {"file": "d-uplift/27-enter-the-party.mp3",    "title": "Enter the Party",    "artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Enter%20the%20Party.mp3",    "duration_s": 188}
       ]
     },
     "e-cn-fusion":   {"description": "Instrumental East-Asian fusion (guzheng, bamboo flute). No vocals.", "tracks": []},
