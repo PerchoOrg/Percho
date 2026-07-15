@@ -4,6 +4,13 @@
 > Historical entries below preserve the original name in-place — release notes
 > are a record of what was shipped under the product's name at the time.
 
+## v83.2 — 2026-07-15 — Shared communities, auto-associate
+
+- 731 Atlanta neighborhoods are now public reference data. Buyers, agents, and guests all see them.
+- When an agent saves a listing's address, we auto-link it to the neighborhood polygon that contains its lat/lng. No manual community picker needed for the common case.
+- Community edit rights now follow business interest: any agent with an active listing in a neighborhood can edit its metadata, not just the creator.
+- Removed the "claim community" browse page — the model shifted from claim-to-own to shared-reference.
+
 ## v0.82.0 · Video: sound, walk-in POI order, photo counter (2026-07-15)
 
 Three fixes to the bucket-video pipeline based on watching the first real renders:
