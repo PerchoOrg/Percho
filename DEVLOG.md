@@ -4,6 +4,66 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-15 — Phase 92: community-owned nearby videos + fix stretched landscape / text-only dining
+
+Two-part change.
+
+**Part A — bug fix on today's dining/landscape output.** Owner flagged two
+regressions on freshly rendered bucket videos:
+
+1. **Landscape POI photos stretched / squeezed into a narrow band.** Bucket
+   videos hard-coded `orientation = "portrait"` (worker.py:627), which forced
+   every landscape source photo through the blur-letterbox path — the actual
+   photo occupied ~42% of the 9:16 canvas, the rest was blurred padding.
+   Users read this as "stretched." Fix: probe the input photos and switch to
+   `landscape` output when the pool is majority landscape, mirroring the
+   listing worker's `LANDSCAPE_THRESHOLD` policy. `photos_are_mostly_landscape`
+   already existed — the bucket path just wasn't calling it.
+2. **Dining videos showed only text, no photos.** LIFESTYLE archetype (used
+   by `dining`, `fitness`) rendered `.LIFE-title` on clip 1 — `position:
+   absolute; inset: 0` with an opaque `linear-gradient(#1e293b, #0f172a)`
+   background. Phase 90 had already relaxed clips 2+ to a bottom-sheet, but
+   clip 1 still covered the photo entirely. On a 3-clip render that's ~33%
+   "no photo visible." Phase 92 finishes the job: all LIFESTYLE clips use
+   the bottom-sheet, photo readable throughout.
+
+**Part B — community-owned pipeline (Phase 91/92 schema + backend).** Nearby
+POI content moves off individual listings onto the community. Same house
+gets the same "Dining" video as its neighbor because they share a
+subdivision. Landed:
+
+- Migration `20260715204205_community_videos_intent_bucket.sql`: 14
+  `intent_bucket` values (schools/dining/nightlife/…) replace the legacy 12
+  categories on `community_videos`; `is_primary` + partial unique index picks
+  one video per (community, bucket); `generated_videos` gets a nullable
+  `community_id` with XOR-check against `listing_id`; scope-check widened
+  to include `community_intent_bucket`; seed rows wiped.
+- Migration `20260715205542_community_pois_and_photos.sql`: mirror tables
+  `community_pois` + `community_poi_photos` so photo discovery + agent
+  review runs at community level. Old listing-scoped `listing_pois` /
+  `listing_poi_photos` stay for now; Phase 93 UI cutover will retire them.
+- `lib/poi/community-actions.ts` + `community-video-actions.ts`: server
+  actions parallel to the listing pipeline, keyed on `community_id`.
+- `scripts/render-worker/worker.py`: `claim_bucket_job` accepts both
+  `scope='intent_bucket'` (legacy) and `scope='community_intent_bucket'`
+  (new). Community-scoped jobs pull POIs from `community_pois`, resolve
+  overlays via `communities` (name only — no address/price), and on
+  successful render publish a `community_videos` row + demote any prior
+  primary in one transaction. Introduced `sb_post` helper.
+
+Not in this phase (deferred to Phase 93): flipping the UI trigger point from
+`app/dashboard/listings/[id]/edit/NearbyPoiPanel.tsx` to a community page,
+and updating the listing feed reader to read `community_videos` via the
+listing's community_id. Legacy listing-scoped path still works.
+
+Files:
+- `supabase/migrations/20260715204205_community_videos_intent_bucket.sql` (new)
+- `supabase/migrations/20260715205542_community_pois_and_photos.sql` (new)
+- `lib/poi/community-actions.ts` (new)
+- `lib/poi/community-video-actions.ts` (new)
+- `scripts/render-worker/worker.py` (bucket path: scope branching, orientation auto-detect, community_videos publish)
+- `scripts/caption-render/overlay.html` (LIFESTYLE clip 1 drops full-screen card)
+
 ## 2026-07-15 — Phase 90: fix nearby videos — dining photos hidden + landscape crop
 
 Two bugs on bucket-video output the owner flagged after Phase 89.2 shipped:

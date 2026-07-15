@@ -131,6 +131,15 @@ def sb_patch(table: str, params: dict[str, str], body: dict[str, Any]) -> list[d
     return r.json()
 
 
+def sb_post(table: str, body: dict[str, Any]) -> list[dict[str, Any]]:
+    """Insert one row via PostgREST. Phase 92: used by the community-video
+    publish sidecar so bucket renders land in `community_videos`."""
+    headers = {**SB_HEADERS, "Prefer": "return=representation"}
+    r = requests.post(f"{REST}/{table}", headers=headers, json=body, timeout=30)
+    r.raise_for_status()
+    return r.json()
+
+
 def storage_download(bucket: str, path: str, dest: Path) -> None:
     # Service role can read from any bucket regardless of RLS.
     url = f"{STORAGE}/object/{bucket}/{path}"
@@ -507,16 +516,19 @@ CAPTION_ARCHETYPE_MAP = {
 
 
 def claim_bucket_job() -> dict[str, Any] | None:
-    """Pick oldest pending generated_videos row (scope='intent_bucket') and
-    flip to 'processing' atomically. Same optimistic-lock pattern as
-    claim_job(): filter status='pending' on both SELECT and PATCH so a
-    concurrent worker cannot double-claim.
+    """Pick oldest pending generated_videos row (scope in {intent_bucket,
+    community_intent_bucket}) and flip to 'processing' atomically. Phase 92
+    (2026-07-15): widened to cover community-scoped rows — same render path,
+    different owner column (community_id vs listing_id).
+
+    Same optimistic-lock pattern as claim_job(): filter status='pending' on
+    both SELECT and PATCH so a concurrent worker cannot double-claim.
     """
     rows = sb_get(
         "generated_videos",
         {
-            "select": "id,listing_id,intent_bucket,input_photo_ids",
-            "scope": "eq.intent_bucket",
+            "select": "id,listing_id,community_id,scope,intent_bucket,input_photo_ids",
+            "scope": "in.(intent_bucket,community_intent_bucket)",
             "status": "eq.pending",
             "order": "created_at.asc",
             "limit": "1",
@@ -537,12 +549,16 @@ def claim_bucket_job() -> dict[str, Any] | None:
 
 def process_bucket_job(job: dict[str, Any]) -> None:
     video_id = job["id"]
-    listing_id = job["listing_id"]
+    scope = job.get("scope") or "intent_bucket"
+    is_community = scope == "community_intent_bucket"
+    listing_id = job.get("listing_id")
+    community_id = job.get("community_id")
     bucket = job["intent_bucket"]
     input_photo_ids: list[str] = job.get("input_photo_ids") or []
     workdir = Path(tempfile.mkdtemp(prefix=f"bucket-{video_id[:8]}-"))
+    owner_desc = f"community={community_id}" if is_community else f"listing={listing_id}"
     print(
-        f"[bucket-job {video_id}] listing={listing_id} bucket={bucket} "
+        f"[bucket-job {video_id}] scope={scope} {owner_desc} bucket={bucket} "
         f"photos={len(input_photo_ids)} workdir={workdir}",
         flush=True,
     )
@@ -550,6 +566,11 @@ def process_bucket_job(job: dict[str, Any]) -> None:
     try:
         if len(input_photo_ids) < 3:
             raise RuntimeError(f"only {len(input_photo_ids)} input photos, need >=3")
+
+        if is_community and not community_id:
+            raise RuntimeError("community_intent_bucket scope but community_id is null")
+        if not is_community and not listing_id:
+            raise RuntimeError("intent_bucket scope but listing_id is null")
 
         # 1. Resolve poi_photos rows (with POI join for captions).
         id_list = ",".join(input_photo_ids)
@@ -561,17 +582,24 @@ def process_bucket_job(job: dict[str, Any]) -> None:
             },
         )
         by_id = {p["id"]: p for p in photo_rows}
-        # Per-listing distance lives on listing_pois. Fetch once, index by poi_id.
+        # Distance source depends on scope: community_pois vs listing_pois.
+        # Fetch once, index by poi_id.
         distinct_poi_ids: list[str] = list(
             {p["poi_id"] for p in photo_rows if p.get("poi_id")}
         )
         distance_by_poi: dict[str, float] = {}
         if distinct_poi_ids:
+            dist_table = "community_pois" if is_community else "listing_pois"
+            owner_filter = (
+                {"community_id": f"eq.{community_id}"}
+                if is_community
+                else {"listing_id": f"eq.{listing_id}"}
+            )
             lp_rows = sb_get(
-                "listing_pois",
+                dist_table,
                 {
                     "select": "poi_id,distance_m",
-                    "listing_id": f"eq.{listing_id}",
+                    **owner_filter,
                     "poi_id": f"in.({','.join(distinct_poi_ids)})",
                 },
             )
@@ -594,24 +622,55 @@ def process_bucket_job(job: dict[str, Any]) -> None:
             photo_paths.append(dest)
             print(f"[bucket-job {video_id}] downloaded {dest.name}", flush=True)
 
-        # 3. Bucket videos are always portrait 9:16 (buyer feed is vertical
-        # and POI thumbnails are orientation-mixed). No landscape variant.
-        orientation = "portrait"
+        # 3. Bucket orientation — Phase 92 (2026-07-15) fix: previously
+        # hard-coded portrait, which forced landscape POI photos (dining
+        # storefronts, wide-angle shopping shots) into a 9:16 canvas via blur
+        # letterbox. Users read this as "stretched / weird band". Now: if
+        # photos are majority landscape, render 16:9 output natively — same
+        # policy the listing worker uses (see LANDSCAPE_THRESHOLD, line 313).
+        orientation = (
+            "landscape" if photos_are_mostly_landscape(photo_paths) else "portrait"
+        )
+        print(
+            f"[bucket-job {video_id}] orientation={orientation} "
+            f"(landscape_count={sum(1 for p in photo_paths if probe_orientation(p) == 'landscape')}/{len(photo_paths)})",
+            flush=True,
+        )
 
         # 4. Overlay — reuse the listing overlay builder but override the
         # neighborhood line with the bucket label so the video reads e.g.
         # "Daily drive". Overlays are hidden anyway (71.5), but the JSON is
-        # still logged for provenance.
-        listings = sb_get(
-            "listings",
-            {
-                "select": "id,address,city,state,neighborhood,price,beds,baths,sqft",
-                "id": f"eq.{listing_id}",
-            },
-        )
-        if not listings:
-            raise RuntimeError(f"listing {listing_id} not found")
-        listing = listings[0]
+        # still logged for provenance. Phase 92: community-scoped jobs pull
+        # from `communities` instead — no address/price, just the name.
+        if is_community:
+            comms = sb_get(
+                "communities",
+                {"select": "id,name,city,state", "id": f"eq.{community_id}"},
+            )
+            if not comms:
+                raise RuntimeError(f"community {community_id} not found")
+            community = comms[0]
+            listing = {
+                "address": community.get("name") or "",
+                "city": community.get("city") or "",
+                "state": community.get("state") or "",
+                "neighborhood": community.get("name") or "",
+                "price": None,
+                "beds": None,
+                "baths": None,
+                "sqft": None,
+            }
+        else:
+            listings = sb_get(
+                "listings",
+                {
+                    "select": "id,address,city,state,neighborhood,price,beds,baths,sqft",
+                    "id": f"eq.{listing_id}",
+                },
+            )
+            if not listings:
+                raise RuntimeError(f"listing {listing_id} not found")
+            listing = listings[0]
         overlay = build_overlay(listing, len(photo_paths))
         overlay["neighborhood"] = BUCKET_LABELS.get(bucket, bucket)
         overlay["show_on_clips"] = []
@@ -737,15 +796,20 @@ def process_bucket_job(job: dict[str, Any]) -> None:
             raise RuntimeError(f"generate.py did not produce {out_path.name}")
 
         # 6. Upload to CF Stream.
-        cf_uid = cf_upload(
-            out_path,
-            meta={
-                "name": f"{listing.get('address', 'Listing')} — {BUCKET_LABELS.get(bucket, bucket)}",
-                "listing_id": listing_id,
-                "scope": "intent_bucket",
-                "intent_bucket": bucket,
-            },
-        )
+        cf_meta: dict[str, str] = {
+            "name": (
+                f"{community['name']} — {BUCKET_LABELS.get(bucket, bucket)}"
+                if is_community
+                else f"{listing.get('address', 'Listing')} — {BUCKET_LABELS.get(bucket, bucket)}"
+            ),
+            "scope": scope,
+            "intent_bucket": bucket,
+        }
+        if is_community and community_id:
+            cf_meta["community_id"] = community_id
+        elif listing_id:
+            cf_meta["listing_id"] = listing_id
+        cf_uid = cf_upload(out_path, meta=cf_meta)
         print(f"[bucket-job {video_id}] uploaded to CF: {cf_uid}", flush=True)
 
         # 7. Duration via ffprobe.
@@ -772,6 +836,49 @@ def process_bucket_job(job: dict[str, Any]) -> None:
                 "error": None,
             },
         )
+
+        # Phase 92 (2026-07-15): community-scoped jobs also publish into
+        # `community_videos` so the neighborhood-shared reader path
+        # (listing feed nearbyVideos, browse feed) can pick them up. Per
+        # §Phase 91 owner rule, allow multiple history rows per (community,
+        # bucket) — the newest ready one becomes primary, prior primaries
+        # get demoted to is_primary=false (still queryable as history).
+        if is_community and community_id:
+            community_name = community["name"] if is_community else ""
+            try:
+                # Demote any prior primary for this (community, bucket).
+                sb_patch(
+                    "community_videos",
+                    {
+                        "community_id": f"eq.{community_id}",
+                        "intent_bucket": f"eq.{bucket}",
+                        "is_primary": "eq.true",
+                    },
+                    {"is_primary": False},
+                )
+                # Insert this render as the new primary. NOTE column names:
+                # community_videos uses `cf_video_id` (not cf_stream_uid) and
+                # `duration_sec` (not duration_s) — see supabase/migrations/
+                # 0001_init.sql:174 and 20260715204205.
+                sb_post(
+                    "community_videos",
+                    {
+                        "community_id": community_id,
+                        "intent_bucket": bucket,
+                        "cf_video_id": cf_uid,
+                        "duration_sec": int(duration_s) if duration_s else None,
+                        "status": "ready",
+                        "is_primary": True,
+                        "kind": "poi",
+                        "title": f"{community['name']} — {BUCKET_LABELS.get(bucket, bucket)}",
+                    },
+                )
+            except Exception:
+                # Never fail the whole job just because the sidecar publish
+                # slipped — generated_videos.status='ready' already reflects
+                # the successful render. Log so we notice.
+                traceback.print_exc()
+
         print(f"[bucket-job {video_id}] done", flush=True)
 
     except Exception as e:
