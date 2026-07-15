@@ -4,6 +4,29 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-15 — Phase 82: video sound + walk-in POI order + photo counter
+
+Three fixes to the bucket-video pipeline surfaced while reviewing the first real batch of `schools` renders:
+
+**Bug 1 — silent videos.** BGM was live on paper: `worker.py::pick_bgm()` was calling `BGM_DIR.glob("*.mp3")` and passing the result to `generate.py --bgm`, and `mux_bgm()` (ffmpeg amix loop) was doing its job. The bug: Phase 75 had reorganized the 14 Kevin MacLeod tracks into vibe subfolders (`a-warm-acoustic/`, `c-lofi/`, `d-uplift/`, `f-ambient/`) but nobody updated the picker — top-level `*.mp3` returned zero files, `pick_bgm()` returned `None`, `--bgm` was skipped, and renders shipped muted. Fix is one word: `glob` → `rglob`. Whole tree searched, all 14 tracks eligible again. Kept the vibe subdirs on disk for future per-bucket vibe mapping (not yet wired — a straight recurse is uniformly random for now, which is fine as a starting point).
+
+**Bug 2 — jumpy POI order in the video.** The old selection ran round-robin across POIs sorted by "how many photos this POI has, desc." Rationale at the time: coverage-first, drain deep POIs while touching shallow ones. Watching real videos, this felt like flipping through a deck — Chick-fil-A, then a school, then a Publix, back to Chick-fil-A. The user's ask was concrete: play each POI's photos as a coherent block, and play POIs from outside-in (far→near). This is a much better story shape for a homebuyer — you scan the neighborhood boundary first, then zoom into the immediate surroundings. Rewrote `generateBucketVideo`'s selection block:
+- POIs are now sorted by `distance_m DESC` (from `listing_pois`), with unknown-distance POIs (backfill fallback) sinking to the end.
+- Inside each POI, photos are sorted by `(portrait?, ai_score DESC, id)` — best-scoring shot leads, portrait preference retained for 9:16 crop safety.
+- Selection concatenates POI blocks in order until `MAX_PHOTOS_PER_VIDEO` (15). No more interleaving.
+- Pulled `distance_m` into the `bucketPois` query and built a `distanceByPoi` map. Zero extra roundtrip.
+
+**Feature — Generate button shows photo count.** The video card previously said just `Generate` or `Regenerate` with no signal about how many photos would go in or whether new approvals had accumulated. Added a new server action `getBucketEligiblePhotoCount(listingId, bucket)` that runs the same eligibility rules as the generator (approved + (tagged for bucket OR untagged with POI in bucket)) and returns the raw pool size. `BucketVideoCard` fetches it alongside `getBucketVideoStatus` in a `Promise.all` on mount, and renders:
+- Fresh state: `Generate · 14` (14 eligible)
+- After a render: `Regenerate · 9/14` (9 baked in, 14 eligible now — 5 new approvals)
+- < 3 eligible: disabled with tooltip "Need at least 3 approved photos"
+
+The `X/Y` display doubles as the regenerate signal the user was originally asking about (Phase 81 leftover) — when the numerator diverges from the denominator, click Regenerate. If in a future phase we want to make this louder (e.g. "⚡ 5 new" chip), the data is already flowing.
+
+**Not touched.** BGM vibe→bucket mapping (schools/kids → warm, nightlife → lofi, outdoor → ambient) is a follow-up. Also skipped: photo description strengthening (Phase 84's second half) — waiting to see if the walk-in order alone is enough narrative before adding on-screen text.
+
+**Files touched.** `scripts/render-worker/worker.py` (rglob), `lib/poi/video-actions.ts` (selection rewrite + new action), `app/dashboard/listings/[id]/edit/NearbyPoiPanel.tsx` (button counter + eligibility fetch).
+
 ## 2026-07-15 — Phase 81: photo approve/reject — optimistic, no refresh
 
 **Bug.** In the lightbox photo-triage flow, tapping Approve would auto-advance to the next photo (correct), then *feel* like it skipped that next photo when the user tapped again. Root cause: `handlePhotoDecision` ran inside `startTransition` and awaited `refresh()` (which re-loads *all* listing POIs — 300-800ms roundtrip). During that window `pending=true` → the lightbox's Approve/Reject buttons went `disabled`, silently swallowing the user's next tap. Auto-advance had already moved to photo N+1, so from the user's POV they "approved photo N, saw photo N+1 briefly, tapped, and landed on N+2" — a phantom skip.

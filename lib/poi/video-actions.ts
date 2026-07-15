@@ -153,15 +153,23 @@ export async function generateBucketVideo(
   }
 
   // Which POIs belong to this bucket? (Fallback compat for untagged photos.)
+  // Phase 82: also pull distance_m so we can order POIs outer→inner (far→near)
+  // in the video — buyer intuitively scans the neighborhood from wide radius
+  // in toward the house.
   const poiIds = Array.from(new Set(photoRows.map((r) => r.poi_photos.poi_id)));
   const { data: bucketPois, error: bucketErr } = (await admin
     .from("listing_pois")
-    .select("poi_id, intent_bucket, status")
+    .select("poi_id, intent_bucket, status, distance_m")
     .eq("listing_id", listingId)
     .eq("intent_bucket", bucket)
     .eq("status", "approved")
     .in("poi_id", poiIds)) as {
-    data: Array<{ poi_id: string; intent_bucket: string; status: string }> | null;
+    data: Array<{
+      poi_id: string;
+      intent_bucket: string;
+      status: string;
+      distance_m: number | null;
+    }> | null;
     error: { message: string } | null;
   };
 
@@ -175,6 +183,12 @@ export async function generateBucketVideo(
   }
 
   const bucketPoiSet = new Set((bucketPois ?? []).map((p) => p.poi_id));
+  // Phase 82: distance map for POI ordering (POIs in this bucket only).
+  const distanceByPoi = new Map<string, number>(
+    (bucketPois ?? [])
+      .filter((p) => p.distance_m != null)
+      .map((p) => [p.poi_id, p.distance_m as number]),
+  );
 
   // Photos claimed by other LIVE bucket videos on this listing (hard dedup).
   // We include rows that are pending/processing/ready — anything that a user
@@ -224,11 +238,21 @@ export async function generateBucketVideo(
     };
   }
 
-  // ─── selection: round-robin by POI + portrait pref + score pref ─────────
+  // ─── selection: outer→inner by POI, score-desc within each POI ─────────
   //
-  // 1. Compute per-photo sort key: (portrait?, ai_score, photo_id).
-  // 2. Bucket photos by POI, sort each POI's list by that key.
-  // 3. Round-robin: pop head of each POI list until we hit MAX_PHOTOS.
+  // Phase 82 (2026-07-15): switch from coverage-first round-robin to a
+  // "narrative walk-in" order — outer POIs (highest distance_m) come first,
+  // camera moves inward toward the listing. Inside each POI, photos are
+  // ordered by ai_score desc so the best shot leads the POI's segment.
+  // Portrait-orientation preference kept as a soft co-sort key so 9:16
+  // renders don't crop the strongest shot to the letterbox.
+  //
+  //   1. Group photos by POI.
+  //   2. Sort each POI's photos by (portrait?, ai_score desc, id).
+  //   3. Sort POIs by distance_m DESC (far → near). POIs with no distance
+  //      (backfill fallback, tagger-only) sink to the end so they don't
+  //      break the walk-in feel.
+  //   4. Concatenate each POI's ordered photos, cap at MAX_PHOTOS.
 
   const isPortrait = (r: (typeof eligible)[number]) => {
     const w = r.poi_photos.width_px ?? 0;
@@ -257,23 +281,26 @@ export async function generateBucketVideo(
     });
   }
 
-  // Round-robin. POI iteration order = descending POI-list length (POIs with
-  // more photos start earlier so we drain the deep POIs while also touching
-  // the shallow ones — the effect: coverage-first, depth-second).
-  const poiOrder = Array.from(byPoi.entries()).sort((a, b) => b[1].length - a[1].length);
+  // POI order: farthest → nearest. Unknown distance goes to the very end.
+  const poiOrder = Array.from(byPoi.entries()).sort(([aId], [bId]) => {
+    const da = distanceByPoi.get(aId);
+    const db = distanceByPoi.get(bId);
+    // both known → far first (desc)
+    if (da != null && db != null) return db - da;
+    // one known → known comes first
+    if (da != null) return -1;
+    if (db != null) return 1;
+    // both unknown → stable
+    return aId.localeCompare(bId);
+  });
+
   const selected: typeof eligible = [];
-  let hadMore = true;
-  while (hadMore && selected.length < MAX_PHOTOS_PER_VIDEO) {
-    hadMore = false;
-    for (const [, arr] of poiOrder) {
-      if (arr.length === 0) continue;
-      const next = arr.shift();
-      if (next) {
-        selected.push(next);
-        hadMore = true;
-        if (selected.length >= MAX_PHOTOS_PER_VIDEO) break;
-      }
+  for (const [, arr] of poiOrder) {
+    for (const photo of arr) {
+      if (selected.length >= MAX_PHOTOS_PER_VIDEO) break;
+      selected.push(photo);
     }
+    if (selected.length >= MAX_PHOTOS_PER_VIDEO) break;
   }
 
   const inputPhotoIds = selected.map((r) => r.poi_photo_id);
@@ -483,4 +510,61 @@ export async function regenerateBucketVideoNarrative(
 
   revalidatePath(`/dashboard/listings/${owned.listing_id}/edit`);
   return { ok: true, narrative: res.narrative };
+}
+
+/**
+ * Phase 82: cheap read for the video card — how many approved photos are
+ * eligible for this bucket right now? UI shows this next to the Generate
+ * button so the agent knows what will get baked in before spending compute,
+ * and can spot "N new photos since last render" once compared to
+ * `status.photo_count`.
+ *
+ * Kept small and separate from `getBucketVideoStatus` so we don't bloat that
+ * hot polling path. Mirrors the eligibility rules in `generateBucketVideo`
+ * but stops short of the round-robin cap — we want the raw pool size.
+ */
+export async function getBucketEligiblePhotoCount(
+  listingId: string,
+  bucket: IntentBucket,
+): Promise<number> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return 0;
+
+  // Approved photos on this listing (RLS enforces ownership).
+  const { data: approved } = (await supabase
+    .from("listing_poi_photos")
+    .select("poi_photo_id, poi_photos!inner(poi_id, applicable_buckets)")
+    .eq("listing_id", listingId)
+    .eq("status", "approved")) as {
+    data: Array<{
+      poi_photo_id: string;
+      poi_photos: { poi_id: string; applicable_buckets: string[] | null };
+    }> | null;
+  };
+  if (!approved || approved.length === 0) return 0;
+
+  const poiIds = Array.from(new Set(approved.map((r) => r.poi_photos.poi_id)));
+  const { data: bucketPois } = (await supabase
+    .from("listing_pois")
+    .select("poi_id")
+    .eq("listing_id", listingId)
+    .eq("intent_bucket", bucket)
+    .eq("status", "approved")
+    .in("poi_id", poiIds)) as { data: Array<{ poi_id: string }> | null };
+  const bucketPoiSet = new Set((bucketPois ?? []).map((p) => p.poi_id));
+
+  // Eligible = tagged for this bucket OR untagged and POI is in bucket.
+  let count = 0;
+  for (const r of approved) {
+    const tags = r.poi_photos.applicable_buckets;
+    if (tags && tags.length > 0) {
+      if (tags.includes(bucket)) count += 1;
+    } else if (bucketPoiSet.has(r.poi_photos.poi_id)) {
+      count += 1;
+    }
+  }
+  return count;
 }

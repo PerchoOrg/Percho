@@ -209,12 +209,15 @@ def format_specs(beds: Any, baths: Any, sqft: Any) -> str:
 
 
 def pick_bgm() -> Path | None:
-    """Return a random .mp3 from BGM_DIR, or None if the directory is empty
-    or missing. The worker still produces a valid (silent) video in that case.
+    """Return a random .mp3 from BGM_DIR (recursive), or None if none exist.
+
+    Phase 75 grouped tracks into vibe subdirs (a-warm-acoustic/, c-lofi/, …),
+    so we recurse. If BGM_DIR is empty/missing the worker still produces a
+    valid (silent) video.
     """
     if not BGM_DIR.exists():
         return None
-    tracks = sorted(BGM_DIR.glob("*.mp3"))
+    tracks = sorted(BGM_DIR.rglob("*.mp3"))
     if not tracks:
         return None
     return random.choice(tracks)

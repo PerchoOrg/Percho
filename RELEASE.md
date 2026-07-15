@@ -4,6 +4,14 @@
 > Historical entries below preserve the original name in-place — release notes
 > are a record of what was shipped under the product's name at the time.
 
+## v0.82.0 · Video: sound, walk-in POI order, photo counter (2026-07-15)
+
+Three fixes to the bucket-video pipeline based on watching the first real renders:
+
+- **Videos have sound again.** The BGM library was reorganized into vibe subfolders (`a-warm-acoustic/`, `c-lofi/`, `d-uplift/`, `f-ambient/`) in Phase 75, but the worker's picker was still only looking at the top-level directory — which was empty. Renders were silently going out muted. Picker now recurses through all subfolders so the 14 licensed Kevin MacLeod tracks are back in the pool.
+- **Video POI order now walks buyer-side into the neighborhood.** Previously photos round-robined across POIs by "how many photos this POI has" — coverage-first, but jumpy in narrative. Now the video visits POIs from farthest to nearest by `distance_m`, and within each POI plays the highest AI-scored shots first. Feels like the camera drives into the community rather than shuffling a deck.
+- **Generate/Regenerate buttons show the photo count.** The button now displays `Generate · 14` (eligible pool) or `Regenerate · 9/14` (9 already baked in, 14 currently eligible) so agents can spot when new approvals have accumulated and it's worth re-rendering. Disabled with a tooltip when fewer than 3 photos are eligible.
+
 ## v0.81.0 · Photo approve no longer skips the next one (2026-07-15)
 
 - **Fixed the "approve → skip a photo" glitch.** Tapping Approve in the lightbox used to freeze the buttons for ~500ms while the whole POI list re-loaded — a second tap during that window was silently swallowed, making it look like a photo got skipped. Approvals are now optimistic: the ✓ shows instantly, the next photo is immediately tappable, and the server sync happens in the background.
