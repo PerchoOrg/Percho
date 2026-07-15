@@ -63,6 +63,16 @@ declare -A KML_TRACKS=(
   ["d-uplift/26-new-direction.mp3"]="New Direction"
   ["d-uplift/27-enter-the-party.mp3"]="Enter the Party"
 
+  # Bucket E — instrumental East-Asian fusion (target 8, NO vocals)
+  ["e-cn-fusion/01-cambodian-odyssey.mp3"]="Cambodian Odyssey"
+  ["e-cn-fusion/02-anguish.mp3"]="Anguish"
+  ["e-cn-fusion/03-water-lily.mp3"]="Water Lily"
+  ["e-cn-fusion/04-meditation-impromptu-01.mp3"]="Meditation Impromptu 01"
+  ["e-cn-fusion/05-meditation-impromptu-02.mp3"]="Meditation Impromptu 02"
+  ["e-cn-fusion/06-meditation-impromptu-03.mp3"]="Meditation Impromptu 03"
+  ["e-cn-fusion/07-jalandhar.mp3"]="Jalandhar"
+  ["e-cn-fusion/08-long-note-one.mp3"]="Long Note One"
+
   # Bucket F — ambient (existing seed only for now)
   ["f-ambient/10-perspectives.mp3"]="Perspectives"
 )

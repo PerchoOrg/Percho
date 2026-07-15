@@ -59,7 +59,19 @@
         {"file": "d-uplift/27-enter-the-party.mp3",    "title": "Enter the Party",    "artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Enter%20the%20Party.mp3",    "duration_s": 188}
       ]
     },
-    "e-cn-fusion":   {"description": "Instrumental East-Asian fusion (guzheng, bamboo flute). No vocals.", "tracks": []},
+    "e-cn-fusion": {
+      "description": "Instrumental East-Asian fusion (guzheng, bamboo flute, meditative pads). No vocals.",
+      "tracks": [
+        {"file": "e-cn-fusion/01-cambodian-odyssey.mp3",       "title": "Cambodian Odyssey",       "artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Cambodian%20Odyssey.mp3",       "duration_s": 74},
+        {"file": "e-cn-fusion/02-anguish.mp3",                 "title": "Anguish",                 "artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Anguish.mp3",                 "duration_s": 239},
+        {"file": "e-cn-fusion/03-water-lily.mp3",              "title": "Water Lily",              "artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Water%20Lily.mp3",              "duration_s": 144},
+        {"file": "e-cn-fusion/04-meditation-impromptu-01.mp3", "title": "Meditation Impromptu 01", "artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Meditation%20Impromptu%2001.mp3", "duration_s": 212},
+        {"file": "e-cn-fusion/05-meditation-impromptu-02.mp3", "title": "Meditation Impromptu 02", "artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Meditation%20Impromptu%2002.mp3", "duration_s": 249},
+        {"file": "e-cn-fusion/06-meditation-impromptu-03.mp3", "title": "Meditation Impromptu 03", "artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Meditation%20Impromptu%2003.mp3", "duration_s": 255},
+        {"file": "e-cn-fusion/07-jalandhar.mp3",               "title": "Jalandhar",               "artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Jalandhar.mp3",               "duration_s": 248},
+        {"file": "e-cn-fusion/08-long-note-one.mp3",           "title": "Long Note One",           "artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Long%20Note%20One.mp3",           "duration_s": 440}
+      ]
+    },
     "f-ambient": {
       "description": "Ambient / reflective — luxury slow-pan, twilight.",
       "tracks": [
