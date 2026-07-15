@@ -73,8 +73,15 @@ declare -A KML_TRACKS=(
   ["e-cn-fusion/07-jalandhar.mp3"]="Jalandhar"
   ["e-cn-fusion/08-long-note-one.mp3"]="Long Note One"
 
-  # Bucket F — ambient (existing seed only for now)
+  # Bucket F — ambient / reflective (target 8)
   ["f-ambient/10-perspectives.mp3"]="Perspectives"
+  ["f-ambient/28-ossuary-1-a-beginning.mp3"]="Ossuary 1 - A Beginning"
+  ["f-ambient/29-ossuary-5-rest.mp3"]="Ossuary 5 - Rest"
+  ["f-ambient/30-ossuary-6-air.mp3"]="Ossuary 6 - Air"
+  ["f-ambient/31-deep-haze.mp3"]="Deep Haze"
+  ["f-ambient/32-dream-culture.mp3"]="Dream Culture"
+  ["f-ambient/33-path-of-the-goblin-king.mp3"]="The Path of the Goblin King"
+  ["f-ambient/34-autumn-day.mp3"]="Autumn Day"
 )
 
 KML_BASE="https://incompetech.com/music/royalty-free/mp3-royaltyfree"

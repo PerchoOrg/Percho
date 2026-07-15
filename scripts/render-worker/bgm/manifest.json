@@ -75,7 +75,14 @@
     "f-ambient": {
       "description": "Ambient / reflective — luxury slow-pan, twilight.",
       "tracks": [
-        {"file": "f-ambient/10-perspectives.mp3", "title": "Perspectives", "artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Perspectives.mp3", "duration_s": 425}
+        {"file": "f-ambient/10-perspectives.mp3",              "title": "Perspectives",              "artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Perspectives.mp3",              "duration_s": 425},
+        {"file": "f-ambient/28-ossuary-1-a-beginning.mp3",     "title": "Ossuary 1 - A Beginning",   "artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Ossuary%201%20-%20A%20Beginning.mp3",     "duration_s": 188},
+        {"file": "f-ambient/29-ossuary-5-rest.mp3",            "title": "Ossuary 5 - Rest",          "artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Ossuary%205%20-%20Rest.mp3",            "duration_s": 235},
+        {"file": "f-ambient/30-ossuary-6-air.mp3",             "title": "Ossuary 6 - Air",           "artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Ossuary%206%20-%20Air.mp3",             "duration_s": 250},
+        {"file": "f-ambient/31-deep-haze.mp3",                 "title": "Deep Haze",                 "artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Deep%20Haze.mp3",                 "duration_s": 122},
+        {"file": "f-ambient/32-dream-culture.mp3",             "title": "Dream Culture",             "artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Dream%20Culture.mp3",             "duration_s": 214},
+        {"file": "f-ambient/33-path-of-the-goblin-king.mp3",   "title": "The Path of the Goblin King","artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/The%20Path%20of%20the%20Goblin%20King.mp3", "duration_s": 206},
+        {"file": "f-ambient/34-autumn-day.mp3",                "title": "Autumn Day",                "artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Autumn%20Day.mp3",                "duration_s": 184}
       ]
     }
   }
