@@ -38,6 +38,94 @@ export const INTENT_BUCKETS = [
 ] as const;
 export type IntentBucket = (typeof INTENT_BUCKETS)[number];
 
+/**
+ * Human-readable label for a Google Places `primary_type` / `types[]` value.
+ *
+ * Used by the caption pipeline (Phase 89) to render "Public High School" /
+ * "Southern Bistro" / "Neighborhood Park" instead of the bucket label.
+ * Callers pass a POI's `primary_type` first, then fall back through `types[]`
+ * in order (Places returns most-specific first). If nothing matches, callers
+ * should fall back to the bucket label — do NOT invent a generic label here.
+ *
+ * The keys must stay lowercase-with-underscores (Places API convention).
+ * Only include types that appear in `BUCKET_PLACES_TYPES` or that Google
+ * commonly returns as a `types[]` companion to those (e.g. `food`, `store`).
+ * We deliberately skip generic `point_of_interest` / `establishment` — those
+ * would defeat the fallback and produce meaningless labels.
+ */
+export const POI_TYPE_LABEL: Record<string, string> = {
+  // schools bucket
+  primary_school: "Elementary School",
+  secondary_school: "High School",
+  school: "School",
+  university: "University",
+  // dining bucket
+  restaurant: "Restaurant",
+  cafe: "Cafe",
+  bakery: "Bakery",
+  meal_takeaway: "Takeout",
+  meal_delivery: "Delivery",
+  // nightlife bucket
+  bar: "Bar",
+  night_club: "Nightclub",
+  movie_theater: "Movie Theater",
+  // shopping bucket
+  shopping_mall: "Shopping Mall",
+  department_store: "Department Store",
+  clothing_store: "Clothing Store",
+  // outdoor bucket
+  park: "Park",
+  campground: "Campground",
+  tourist_attraction: "Attraction",
+  // fitness bucket
+  gym: "Gym",
+  spa: "Spa",
+  // kids bucket
+  amusement_park: "Amusement Park",
+  aquarium: "Aquarium",
+  zoo: "Zoo",
+  library: "Library",
+  // daily_errands bucket
+  supermarket: "Supermarket",
+  grocery_store: "Grocery Store",
+  pharmacy: "Pharmacy",
+  convenience_store: "Convenience Store",
+  // faith bucket
+  church: "Church",
+  mosque: "Mosque",
+  synagogue: "Synagogue",
+  hindu_temple: "Hindu Temple",
+  // healthcare bucket
+  hospital: "Hospital",
+  doctor: "Doctor",
+  dentist: "Dentist",
+  // pets bucket
+  veterinary_care: "Veterinary Clinic",
+  pet_store: "Pet Store",
+  // transit bucket
+  subway_station: "Subway Station",
+  train_station: "Train Station",
+  transit_station: "Transit Station",
+  airport: "Airport",
+  bus_station: "Bus Station",
+};
+
+/**
+ * Given a POI's `primary_type` and `types[]` (both from Google Places),
+ * return the most-specific human label, or `null` if nothing matches. The
+ * caller is responsible for the bucket-label fallback.
+ */
+export function poiTypeLabel(
+  primaryType: string | null | undefined,
+  types: string[] | null | undefined,
+): string | null {
+  if (primaryType && POI_TYPE_LABEL[primaryType]) return POI_TYPE_LABEL[primaryType];
+  for (const t of types ?? []) {
+    if (POI_TYPE_LABEL[t]) return POI_TYPE_LABEL[t];
+  }
+  return null;
+}
+
 export const POI_STATUSES = ["candidate", "approved", "rejected", "archived"] as const;
 export type PoiStatus = (typeof POI_STATUSES)[number];
 

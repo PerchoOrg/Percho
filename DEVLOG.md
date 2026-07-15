@@ -4,6 +4,32 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-15 — Phase 89: caption data sources (LLM + Apify + type map)
+
+Phase 88 shipped the caption visual pipeline with hardcoded placeholders.
+Phase 89 replaces those placeholders with real data sources so buyers see
+meaningful copy instead of `bucket_label` repeats and canned "Where the day
+begins." lines.
+
+**89.1 — google_places.types → human label**
+
+Added `POI_TYPE_LABEL` map + `poiTypeLabel()` in `lib/poi/types.ts` (Google
+Places `primary_type`/`types[]` → "Elementary School", "Bar", "Park",
+etc.). Mirror map + `poi_type_label()` helper in
+`scripts/render-worker/worker.py`. Bucket-video caption builder now selects
+`pois.primary_type, pois.types` via the `poi_photos!inner(...)` join and
+resolves the most-specific label per POI, falling back to `bucket_label`
+when nothing matches (no "Point of Interest" filler). Covers the 40-ish
+Places types listed in `BUCKET_PLACES_TYPES` — extend the map when new
+types show up in production. Rendered in the caption `type` field for all
+6 archetypes.
+
+**89.2 — pending**: LLM-generated quote/why/title/chapter (extend
+`lib/poi/narrative.ts`, write to `generated_videos.narrative.scenes[].caption_fields`).
+
+**89.3 — pending**: Apify GreatSchools scraper → `communities.schools_json`
+→ TRUST badges (rating / zoned / programs).
+
 ## 2026-07-15 — Phase 88: HTML→PNG caption overlay pipeline
 
 Phase 85 shipped a 6-archetype (TRUST/LIFESTYLE/UTILITY/NARRATIVE/MAGAZINE/MAP)

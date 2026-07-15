@@ -416,6 +416,78 @@ BUCKET_LABELS = {
 # Phase 85: 14 nearby buckets → 6 video-template archetypes.
 # See lib/poi/types.ts INTENT_BUCKETS for the canonical bucket list.
 # Archetypes drive caption layout in scripts/ken-burns/generate.py.
+# Phase 89.1: Google Places `type` → human-readable label.
+# Mirror of lib/poi/types.ts POI_TYPE_LABEL. Keep in sync.
+# Falls back to bucket_label when nothing matches — do NOT invent generic
+# labels like "Point of Interest" here.
+POI_TYPE_LABEL = {
+    # schools
+    "primary_school": "Elementary School",
+    "secondary_school": "High School",
+    "school": "School",
+    "university": "University",
+    # dining
+    "restaurant": "Restaurant",
+    "cafe": "Cafe",
+    "bakery": "Bakery",
+    "meal_takeaway": "Takeout",
+    "meal_delivery": "Delivery",
+    # nightlife
+    "bar": "Bar",
+    "night_club": "Nightclub",
+    "movie_theater": "Movie Theater",
+    # shopping
+    "shopping_mall": "Shopping Mall",
+    "department_store": "Department Store",
+    "clothing_store": "Clothing Store",
+    # outdoor
+    "park": "Park",
+    "campground": "Campground",
+    "tourist_attraction": "Attraction",
+    # fitness
+    "gym": "Gym",
+    "spa": "Spa",
+    # kids
+    "amusement_park": "Amusement Park",
+    "aquarium": "Aquarium",
+    "zoo": "Zoo",
+    "library": "Library",
+    # daily_errands
+    "supermarket": "Supermarket",
+    "grocery_store": "Grocery Store",
+    "pharmacy": "Pharmacy",
+    "convenience_store": "Convenience Store",
+    # faith
+    "church": "Church",
+    "mosque": "Mosque",
+    "synagogue": "Synagogue",
+    "hindu_temple": "Hindu Temple",
+    # healthcare
+    "hospital": "Hospital",
+    "doctor": "Doctor",
+    "dentist": "Dentist",
+    # pets
+    "veterinary_care": "Veterinary Clinic",
+    "pet_store": "Pet Store",
+    # transit
+    "subway_station": "Subway Station",
+    "train_station": "Train Station",
+    "transit_station": "Transit Station",
+    "airport": "Airport",
+    "bus_station": "Bus Station",
+}
+
+
+def poi_type_label(primary_type, types, fallback):
+    """Return the most-specific human label for a POI, else fallback."""
+    if primary_type and primary_type in POI_TYPE_LABEL:
+        return POI_TYPE_LABEL[primary_type]
+    for t in types or []:
+        if t in POI_TYPE_LABEL:
+            return POI_TYPE_LABEL[t]
+    return fallback
+
+
 CAPTION_ARCHETYPE_MAP = {
     "schools": "TRUST",
     "healthcare": "TRUST",
@@ -484,7 +556,7 @@ def process_bucket_job(job: dict[str, Any]) -> None:
         photo_rows = sb_get(
             "poi_photos",
             {
-                "select": "id,storage_path,poi_id,pois!inner(display_name)",
+                "select": "id,storage_path,poi_id,pois!inner(display_name,primary_type,types)",
                 "id": f"in.({id_list})",
             },
         )
@@ -592,8 +664,10 @@ def process_bucket_job(job: dict[str, Any]) -> None:
             drive = _fmt_drive_min(dist_m)
             beat = narrative_beats_by_poi.get(poi_id, "") if poi_id else ""
             poi_name = (poi.get("display_name") or "").strip()
-            # Map google_places.types → human label (v1 uses bucket_label fallback)
-            type_label = bucket_label
+            # Phase 89.1: Map google_places.types → human label; fallback to bucket_label.
+            type_label = poi_type_label(
+                poi.get("primary_type"), poi.get("types"), bucket_label
+            )
 
             entry: dict = {
                 "clip": i,
