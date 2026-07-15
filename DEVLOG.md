@@ -4,6 +4,20 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-15 — Video row polish: walkthrough tag + thumbnail 404 fallback
+
+**Motivation.** Owner screenshot showed two issues on the Media-tab video row:
+1. Thumbnail rendered as the browser's broken-image "?" glyph. Cloudflare Stream `.../thumbnails/thumbnail.jpg` 404s for a window (~10-60s) after the video's status flips to `ready` — CF generates the thumbnail lazily. We had no `onError` fallback.
+2. `walkthrough` was still plain text in the meta line — owner wants it as a tag alongside `Auto` / `Landscape`.
+
+**Changes.** `app/dashboard/listings/[id]/edit/VideoPanel.tsx`:
+- Thumbnail `<img>` now has `onError` that hides itself and reveals a sibling neutral film-icon SVG placeholder. Placeholder container is always rendered but display-toggled — cheap, no state, no re-render loop.
+- All row chips consolidated onto the title line: `Cover · <kind> · Auto? · Landscape?`. `kind` (walkthrough / etc) rendered as the same neutral `bg-ink/10` chip as `Auto`.
+- Meta line below title now only appears when `status !== 'ready'` (shows the StatusText) — otherwise fully removed. Ready rows are cleaner.
+
+**Scope.** Pure UI polish, no API/DB changes.
+**Verify.** Reload the listing edit page → the auto-generated Home tour row shows `Home tour  [WALKTHROUGH] [AUTO] [LANDSCAPE]` and either a real thumbnail or the film-icon placeholder — no broken-image "?" glyph.
+
 ## 2026-07-15 — Video row: "Auto" tag instead of "(auto-generated)" in title
 
 **Motivation.** Owner feedback on the Media tab video row: the title `Home tour (auto-generated)` looked noisy and truncated on mobile. Move the "auto-generated" signal into a compact tag alongside `walkthrough`.

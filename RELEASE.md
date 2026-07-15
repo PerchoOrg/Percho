@@ -4,6 +4,11 @@
 > Historical entries below preserve the original name in-place — release notes
 > are a record of what was shipped under the product's name at the time.
 
+## v0.78.2 · Video row polish (2026-07-15)
+
+- **No more broken-image "?" on new video thumbnails.** Cloudflare takes up to a minute to generate the still after a video finishes processing; during that window the row now shows a neutral film-icon placeholder instead of the browser's broken-image glyph.
+- **`walkthrough` is now a proper tag.** The video row's tag line reads `Home tour  [WALKTHROUGH] [AUTO] [LANDSCAPE]` — all chips share the same look, no more mixed plain-text + tags.
+
 ## v0.78.1 · Cleaner auto-video label (2026-07-15)
 
 - The Media-tab video row no longer says "Home tour (auto-generated)" in the title. It now shows just "Home tour" with a small **Auto** tag next to `walkthrough` in the meta line — matches the existing Cover / Landscape chip style and stops the title from truncating on phones.

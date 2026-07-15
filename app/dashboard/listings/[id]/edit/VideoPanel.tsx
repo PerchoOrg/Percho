@@ -346,12 +346,45 @@ function SortableVideoItem({
         {thumb ? (
           // CF Stream thumbnails are external; using next/image needs remotePatterns
           // config and adds no win for a 80×48 dashboard preview. Plain <img> here.
-          <img src={thumb} alt="" className="h-full w-full object-cover" />
-        ) : (
-          <div className="flex h-full w-full items-center justify-center text-xs text-muted">
-            {video.status === 'processing' ? '…' : '—'}
-          </div>
-        )}
+          // CF thumbnail generation lags ~10-60s behind status='ready', so if the
+          // URL 404s the browser would render a broken "?" glyph — swap it to an
+          // inline SVG film icon instead so the row stays clean.
+          <img
+            src={thumb}
+            alt=""
+            className="h-full w-full object-cover"
+            onError={(e) => {
+              const el = e.currentTarget;
+              el.style.display = 'none';
+              const sibling = el.nextElementSibling as HTMLElement | null;
+              if (sibling) sibling.style.display = 'flex';
+            }}
+          />
+        ) : null}
+        <div
+          className="flex h-full w-full items-center justify-center text-xs text-muted"
+          style={{ display: thumb ? 'none' : 'flex' }}
+          aria-hidden
+        >
+          {video.status === 'processing' ? (
+            '…'
+          ) : (
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <rect x="2" y="4" width="20" height="16" rx="2" />
+              <path d="M2 8h4M18 8h4M2 16h4M18 16h4M8 4v16M16 4v16" />
+            </svg>
+          )}
+        </div>
       </div>
       <div className="min-w-0 flex-1 basis-[8rem]">
         <div className="flex items-center gap-2">
@@ -363,6 +396,19 @@ function SortableVideoItem({
               Cover
             </span>
           ) : null}
+          {video.kind ? (
+            <span className="flex-shrink-0 rounded bg-ink/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-ink2">
+              {video.kind}
+            </span>
+          ) : null}
+          {/(auto-generated)/i.test(video.title ?? '') ? (
+            <span
+              className="flex-shrink-0 rounded bg-ink/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-ink2"
+              title="Auto-generated from listing photos"
+            >
+              Auto
+            </span>
+          ) : null}
           {video.cf_video_id_landscape ? (
             <span
               className="flex-shrink-0 rounded bg-blue-500/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-blue-300"
@@ -372,23 +418,11 @@ function SortableVideoItem({
             </span>
           ) : null}
         </div>
-        <div className="flex items-center gap-1.5 truncate text-xs text-muted">
-          <span>{video.kind}</span>
-          {/(auto-generated)/i.test(video.title ?? '') ? (
-            <span
-              className="flex-shrink-0 rounded bg-ink/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-ink2"
-              title="Auto-generated from listing photos"
-            >
-              Auto
-            </span>
-          ) : null}
-          {video.status !== 'ready' ? (
-            <>
-              <span>·</span>
-              <StatusText status={video.status} />
-            </>
-          ) : null}
-        </div>
+        {video.status !== 'ready' ? (
+          <div className="truncate text-xs text-muted">
+            <StatusText status={video.status} />
+          </div>
+        ) : null}
       </div>
       <div className="flex w-full flex-shrink-0 items-center gap-2 sm:w-auto">
         {isCover ? (
