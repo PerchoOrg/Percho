@@ -4,6 +4,18 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-15 — Phase 83.1: Claim UI for seeded neighborhoods
+
+Follow-up to phase 83. The 731 seed rows landed with `created_by IS NULL` + `status='inactive'`, correctly hidden from both surfaces (buyer grid = phase 72 activate gate; agent dashboard = phase 72.2 owner-scoped inactive filter) — but there was no way to *claim* them because they didn't appear anywhere the agent could click.
+
+Added `/dashboard/communities/claim`:
+- Server page selects `communities` where `created_by IS NULL AND source='nextdoor'`, hitting the `communities_unclaimed_idx` partial index. Ordered by name, cap 1000.
+- Client `ClaimGrid` cards: hero image, name, city/state, description, demographic snippet (residents / income / friendliness), attribute chips, per-card Claim button. Client-side name/city/attribute search.
+- `claimCommunity(id)` server action wraps the `claim_community(uuid)` RPC. Maps Postgres codes: `42501 → not-an-agent`, `P0002 → already-claimed`. On success: `revalidateTag('community-cards')` + `revalidatePath` both surfaces + router.push to `/dashboard/communities/[id]`.
+- Entry point: `Browse unclaimed →` on `/dashboard/communities` (populated grid + empty state).
+
+Build clean, TSC clean. Route: `ƒ /dashboard/communities/claim  1.65 kB / 89 kB`.
+
 ## 2026-07-15 — Phase 83: Nextdoor Atlanta neighborhood seed + agent claim
 
 Bulk-seeded **731 Atlanta neighborhoods** into `communities` from public Nextdoor pages so agents have real geography to claim from day one instead of an empty picker.
