@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "description": "Active BGM library for Percho render worker. Tracks in _archive/ are excluded (see _archive/README.md).",
+  "source": "Kevin MacLeod \u2014 https://incompetech.com/",
+  "license": "CC BY 4.0 \u2014 https://creativecommons.org/licenses/by/4.0/",
+  "attribution": "Music: Kevin MacLeod (incompetech.com), Licensed under Creative Commons: By Attribution 4.0 License",
+  "buckets": {
+    "warm-acoustic": {
+      "count": 10,
+      "tracks": [
+        "01-carefree.mp3",
+        "02-cheery-monday.mp3",
+        "03-wallpaper.mp3",
+        "07-amazing-plan.mp3",
+        "08-wholesome.mp3",
+        "09-daily-beetle.mp3",
+        "11-happy-alley.mp3",
+        "12-balloon-game.mp3",
+        "13-take-a-chance.mp3",
+        "14-pookatori-and-friends.mp3"
+      ]
+    },
+    "modern-corporate": {
+      "count": 8,
+      "tracks": [
+        "04-life-of-riley.mp3",
+        "06-bright-wish.mp3",
+        "22-inspired.mp3",
+        "23-fluffing-a-duck.mp3",
+        "24-feelin-good.mp3",
+        "25-ready-aim-fire.mp3",
+        "26-new-direction.mp3",
+        "27-enter-the-party.mp3"
+      ]
+    },
+    "luxury-ambient": {
+      "count": 8,
+      "tracks": [
+        "10-perspectives.mp3",
+        "28-ossuary-1-a-beginning.mp3",
+        "29-ossuary-5-rest.mp3",
+        "30-ossuary-6-air.mp3",
+        "31-deep-haze.mp3",
+        "32-dream-culture.mp3",
+        "33-path-of-the-goblin-king.mp3",
+        "34-autumn-day.mp3"
+      ]
+    },
+    "chill-electronic": {
+      "count": 0,
+      "tracks": []
+    },
+    "cinematic": {
+      "count": 0,
+      "tracks": []
+    }
+  },
+  "total_active_tracks": 26
+}

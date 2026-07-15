@@ -1,29 +1,19 @@
-# Render-worker BGM library
+# Render-worker BGM
 
-10 curated instrumental tracks that the render worker randomly picks from when
-generating a listing walkthrough video. Vibe: **light, upbeat, HGTV /
-lifestyle-vlog** — not moody/cinematic ambient. First iteration used ambient
-tracks and the owner said they felt too serious for house tours.
-
-## Source & license
-
-All tracks are by **Kevin MacLeod** (https://incompetech.com), released under
-the **Creative Commons Attribution 4.0 International (CC-BY 4.0)** license.
-
-- License text: https://creativecommons.org/licenses/by/4.0/
-- Attribution required (to be added to `percho.co/legal`):
-
-  > Music by Kevin MacLeod (incompetech.com) — Licensed under Creative
-  > Commons: By Attribution 4.0 License
-
-## Files
-
-Not tracked in git (see repo `.gitignore`). Fetch on each host with:
+Background music for generated listing videos. `worker.pick_bgm()`
+picks one track at random from any non-archive bucket below.
 
 ```
-bash scripts/render-worker/bgm/fetch.sh
+bgm/
+├── warm-acoustic/       # Cozy, human — family homes
+├── modern-corporate/    # Clean piano, uplifting — modern homes
+├── luxury-ambient/      # Sparse, spacious — high-end
+├── chill-electronic/    # Organic electronic — urban condo   (empty, TODO)
+├── cinematic/           # Sweeping strings — waterfront      (empty, TODO)
+└── _archive/            # Excluded at runtime (see _archive/README.md)
 ```
 
+<<<<<<< Updated upstream
 Track list:
 
 | # | Title | Vibe |
@@ -46,3 +36,11 @@ All ≥ 40s so any typical 10–24s home tour can loop cleanly on the fade-out.
 `worker.py` calls `random.choice()` over the `*.mp3` files in this directory
 and passes the winning path to `generate.py --bgm`. If the directory is empty
 the worker falls back to no music (silent video).
+=======
+- **Which tracks / why these buckets** → `docs/bgm/vibe-map.md`
+- **License / attribution** → `manifest.json`
+- **How to add more** → `fetch.sh` (curl script; mp3 is gitignored)
+
+**Do not commit mp3 files.** The `.gitignore` at the repo root blocks
+`*.mp3` and `*.mp4`. Tracks are re-fetched on each host via `fetch.sh`.
+>>>>>>> Stashed changes
