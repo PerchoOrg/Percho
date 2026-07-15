@@ -1,9 +1,9 @@
 {
   "version": 1,
   "attribution": {
-    "kevin_macleod": "Music by Kevin MacLeod (incompetech.com), licensed under CC-BY 4.0 (https://creativecommons.org/licenses/by/4.0/).",
-    "bensound": "Music by www.bensound.com — Bensound Free License (attribution required)."
+    "kevin_macleod": "Music by Kevin MacLeod (incompetech.com), licensed under CC-BY 4.0 (https://creativecommons.org/licenses/by/4.0/)."
   },
+  "total_tracks": 50,
   "buckets": {
     "a-warm-acoustic": {
       "description": "Light, upbeat acoustic — HGTV / lifestyle-vlog vibe. Default bucket.",
