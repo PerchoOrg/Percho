@@ -1,54 +1,72 @@
 #!/usr/bin/env bash
-# Fetch the 10-track background-music library used by the render worker.
+# Fetch the render-worker background-music library, organized into 6 vibe
+# buckets (see docs/bgm/vibe-map.md).
 #
-# Source: incompetech.com by Kevin MacLeod (kevinmacleod.com).
-# License: Creative Commons Attribution 4.0 International (CC-BY 4.0).
-# https://creativecommons.org/licenses/by/4.0/
+# Sources:
+#   - Kevin MacLeod (incompetech.com) — CC-BY 4.0
+#     Attribution required: "Music by Kevin MacLeod (incompetech.com),
+#     licensed under CC-BY 4.0" (https://creativecommons.org/licenses/by/4.0/).
+#   - Bensound (bensound.com) — Free license, attribution required.
+#     Attribution: "Music by www.bensound.com".
 #
-# Attribution requirement: Any project that ships videos rendered with these
-# tracks must credit "Music by Kevin MacLeod (incompetech.com), licensed under
-# CC-BY 4.0" somewhere the viewer can reach (about page, video description,
+# Any project shipping videos rendered with these tracks must credit the
+# artists in a viewer-reachable location (about page, video description,
 # credits reel, etc.).
 #
-# Files land in ./ next to this script and are gitignored (see .gitignore).
-# Idempotent: re-running skips existing files.
+# Files land in the appropriate bucket subdir and are gitignored
+# (see repo .gitignore: **/*.mp3). Idempotent: re-running skips existing.
 
 set -euo pipefail
 cd "$(dirname "$0")"
 
-# Track picks are curated for real-estate walkthroughs — light, upbeat,
-# HGTV / lifestyle-vlog vibe. Not moody / cinematic ambient (the previous
-# set felt too serious for a home tour).
-declare -A tracks=(
-  ["01-carefree.mp3"]="Carefree.mp3"
-  ["02-cheery-monday.mp3"]="Cheery Monday.mp3"
-  ["03-wallpaper.mp3"]="Wallpaper.mp3"
-  ["04-life-of-riley.mp3"]="Life of Riley.mp3"
-  ["05-cool-vibes.mp3"]="Cool Vibes.mp3"
-  ["06-bright-wish.mp3"]="Bright Wish.mp3"
-  ["07-amazing-plan.mp3"]="Amazing Plan.mp3"
-  ["08-wholesome.mp3"]="Wholesome.mp3"
-  ["09-daily-beetle.mp3"]="Daily Beetle.mp3"
-  ["10-perspectives.mp3"]="Perspectives.mp3"
+# path-relative-to-this-script  =  incompetech remote filename (no .mp3 base)
+declare -A KML_TRACKS=(
+  # Bucket A — warm acoustic (target 10)
+  ["a-warm-acoustic/01-carefree.mp3"]="Carefree"
+  ["a-warm-acoustic/02-cheery-monday.mp3"]="Cheery Monday"
+  ["a-warm-acoustic/03-wallpaper.mp3"]="Wallpaper"
+  ["a-warm-acoustic/07-amazing-plan.mp3"]="Amazing Plan"
+  ["a-warm-acoustic/08-wholesome.mp3"]="Wholesome"
+  ["a-warm-acoustic/09-daily-beetle.mp3"]="Daily Beetle"
+  ["a-warm-acoustic/11-happy-alley.mp3"]="Happy Alley"
+  ["a-warm-acoustic/12-balloon-game.mp3"]="Balloon Game"
+  ["a-warm-acoustic/13-take-a-chance.mp3"]="Take a Chance"
+  ["a-warm-acoustic/14-pookatori-and-friends.mp3"]="Pookatori and Friends"
+
+  # Bucket C — lofi / jazzy chill (existing seed only for now)
+  ["c-lofi/05-cool-vibes.mp3"]="Cool Vibes"
+
+  # Bucket D — uplift (existing seed only for now)
+  ["d-uplift/04-life-of-riley.mp3"]="Life of Riley"
+  ["d-uplift/06-bright-wish.mp3"]="Bright Wish"
+
+  # Bucket F — ambient (existing seed only for now)
+  ["f-ambient/10-perspectives.mp3"]="Perspectives"
 )
 
-BASE="https://incompetech.com/music/royalty-free/mp3-royaltyfree"
+KML_BASE="https://incompetech.com/music/royalty-free/mp3-royaltyfree"
 
 url_encode() {
   python3 -c "import urllib.parse,sys; print(urllib.parse.quote(sys.argv[1]))" "$1"
 }
 
-for local in "${!tracks[@]}"; do
-  if [ -f "$local" ] && [ "$(stat -c%s "$local")" -gt 100000 ]; then
-    echo "SKIP  $local (already present)"
-    continue
+fetch_one() {
+  local dest="$1" remote="$2" base="$3"
+  if [ -f "$dest" ] && [ "$(stat -c%s "$dest")" -gt 100000 ]; then
+    echo "SKIP  $dest"
+    return 0
   fi
-  remote="${tracks[$local]}"
-  enc=$(url_encode "$remote")
-  echo "GET   $local"
-  curl -fsSL --retry 3 -o "$local" -H "User-Agent: Mozilla/5.0" "$BASE/$enc"
+  mkdir -p "$(dirname "$dest")"
+  local enc
+  enc=$(url_encode "$remote.mp3")
+  echo "GET   $dest"
+  curl -fsSL --retry 3 -o "$dest" -H "User-Agent: Mozilla/5.0" "$base/$enc"
+}
+
+for dest in "${!KML_TRACKS[@]}"; do
+  fetch_one "$dest" "${KML_TRACKS[$dest]}" "$KML_BASE"
 done
 
 echo
-echo "Done. Files:"
-ls -lh *.mp3
+echo "Done. Library contents:"
+find . -name '*.mp3' -printf '%p  %s bytes\n' | sort

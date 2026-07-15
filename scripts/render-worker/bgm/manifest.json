@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "attribution": {
+    "kevin_macleod": "Music by Kevin MacLeod (incompetech.com), licensed under CC-BY 4.0 (https://creativecommons.org/licenses/by/4.0/).",
+    "bensound": "Music by www.bensound.com — Bensound Free License (attribution required)."
+  },
+  "buckets": {
+    "a-warm-acoustic": {
+      "description": "Light, upbeat acoustic — HGTV / lifestyle-vlog vibe. Default bucket.",
+      "tracks": [
+        {"file": "a-warm-acoustic/01-carefree.mp3",              "title": "Carefree",              "artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Carefree.mp3",              "duration_s": 205},
+        {"file": "a-warm-acoustic/02-cheery-monday.mp3",         "title": "Cheery Monday",         "artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Cheery%20Monday.mp3",         "duration_s": 80},
+        {"file": "a-warm-acoustic/03-wallpaper.mp3",             "title": "Wallpaper",             "artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Wallpaper.mp3",             "duration_s": 220},
+        {"file": "a-warm-acoustic/07-amazing-plan.mp3",          "title": "Amazing Plan",          "artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Amazing%20Plan.mp3",          "duration_s": 87},
+        {"file": "a-warm-acoustic/08-wholesome.mp3",             "title": "Wholesome",             "artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Wholesome.mp3",             "duration_s": 364},
+        {"file": "a-warm-acoustic/09-daily-beetle.mp3",          "title": "Daily Beetle",          "artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Daily%20Beetle.mp3",          "duration_s": 317},
+        {"file": "a-warm-acoustic/11-happy-alley.mp3",           "title": "Happy Alley",           "artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Happy%20Alley.mp3",           "duration_s": 80},
+        {"file": "a-warm-acoustic/12-balloon-game.mp3",          "title": "Balloon Game",          "artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Balloon%20Game.mp3",          "duration_s": 222},
+        {"file": "a-warm-acoustic/13-take-a-chance.mp3",         "title": "Take a Chance",         "artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Take%20a%20Chance.mp3",         "duration_s": 37},
+        {"file": "a-warm-acoustic/14-pookatori-and-friends.mp3", "title": "Pookatori and Friends", "artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Pookatori%20and%20Friends.mp3", "duration_s": 248}
+      ]
+    },
+    "b-tropical":    {"description": "Tropical / island / bossa — sunbelt & waterfront.",         "tracks": []},
+    "c-lofi": {
+      "description": "Lofi / jazzy chill — urban condo, evening.",
+      "tracks": [
+        {"file": "c-lofi/05-cool-vibes.mp3", "title": "Cool Vibes", "artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Cool%20Vibes.mp3", "duration_s": 226}
+      ]
+    },
+    "d-uplift": {
+      "description": "Uplift / corporate-optimistic — luxury, new-build.",
+      "tracks": [
+        {"file": "d-uplift/04-life-of-riley.mp3", "title": "Life of Riley", "artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Life%20of%20Riley.mp3", "duration_s": 168},
+        {"file": "d-uplift/06-bright-wish.mp3",   "title": "Bright Wish",   "artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Bright%20Wish.mp3",   "duration_s": 92}
+      ]
+    },
+    "e-cn-fusion":   {"description": "Instrumental East-Asian fusion (guzheng, bamboo flute). No vocals.", "tracks": []},
+    "f-ambient": {
+      "description": "Ambient / reflective — luxury slow-pan, twilight.",
+      "tracks": [
+        {"file": "f-ambient/10-perspectives.mp3", "title": "Perspectives", "artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Perspectives.mp3", "duration_s": 425}
+      ]
+    }
+  }
+}
