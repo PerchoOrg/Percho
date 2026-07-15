@@ -984,9 +984,7 @@ function BucketVideoCard({
             {isReady ? 'Regenerate' : 'Generate'}
             {eligibleCount != null ? (
               <span className="text-muted">
-                {isReady && status?.photo_count
-                  ? ` · ${status.photo_count}/${eligibleCount}`
-                  : ` · ${eligibleCount}`}
+                {` · ${Math.min(eligibleCount, 15)}`}
               </span>
             ) : null}
           </button>
