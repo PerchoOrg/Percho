@@ -4,6 +4,33 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-15 — Phase 89.1: admin revalidate endpoint
+
+**Context**
+Nextdoor metro backfill (~8.7k neighborhoods across 109 Atlanta metro cities)
+streams rows into `communities` via a live importer script. Even after
+upsert, `/communities` kept rendering the pre-backfill snapshot because
+`fetchActiveCommunitiesImpl` sits behind `unstable_cache` with tag
+`community-cards` — full-route cache holds until an in-process
+`revalidateTag('community-cards')` call fires. Server actions do that for
+UI mutations, but the seeder writes straight to Supabase and can't
+piggyback on those actions.
+
+**Change**
+- Added `POST /api/admin/revalidate?tag=<tag>` route guarded by
+  `x-admin-token` header = `SUPABASE_SERVICE_ROLE_KEY` (server-only).
+- Route calls `revalidateTag(tag)` and returns `{ok, tag}`.
+- `force-dynamic` so Vercel doesn't cache the route itself.
+
+**Why service-role key as the guard**
+The service-role key is already the strongest secret in the stack; anyone
+with it can already mutate the DB directly. Reusing it avoids adding
+another env var and matches how the backfill scripts already authenticate.
+
+**Follow-ups**
+- Wire `05_live_import.py` to POST this endpoint after every successful
+  flush so the grid updates without the 60s wait.
+
 ## 2026-07-15 — Phase 89: caption data sources (LLM + Apify + type map)
 
 Phase 88 shipped the caption visual pipeline with hardcoded placeholders.

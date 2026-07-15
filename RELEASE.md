@@ -4,6 +4,14 @@
 > Historical entries below preserve the original name in-place — release notes
 > are a record of what was shipped under the product's name at the time.
 
+## v88.3 — 2026-07-15 — Admin cache-bust endpoint
+
+Backfill scripts can now nudge the community grid to refresh without
+waiting for the natural cache window. A tiny protected endpoint clears
+the community-cards cache tag on demand.
+
+---
+
 ## v88.2 — 2026-07-15 — A proper community page
 
 We took the community detail page all the way to the buyer-side mock:
