@@ -4,6 +4,23 @@
 > Historical entries below preserve the original name in-place — release notes
 > are a record of what was shipped under the product's name at the time.
 
+## v90 — 2026-07-15 — Nearby videos: dining photos back, landscape shots keep their shape
+
+### 🐛 Bug Fixes
+- **Dining nearby videos now show the restaurant photos.** A regression this
+  morning made those videos render as a full-screen title card on every clip
+  with the photos hidden behind it. Only the first clip is a title card now;
+  the rest show the photo with a text card along the bottom edge.
+- **Wide (landscape) POI photos are no longer cropped.** Storefronts, park
+  wide-shots, and other horizontal photos were losing about 40% of the image
+  to a center-crop. They now show the full picture with a soft blurred
+  backdrop filling the rest of the vertical frame.
+
+### 🔧 Technical
+- Motion on nearby videos is limited to slow zoom-in / zoom-out for now.
+  Horizontal and vertical pans are temporarily off; they were interacting
+  badly with the blurred backdrop.
+
 ## v88.3 — 2026-07-15 — Admin cache-bust endpoint
 
 Backfill scripts can now nudge the community grid to refresh without

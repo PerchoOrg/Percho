@@ -75,15 +75,32 @@ def kenburns_filter(mode: str, duration: float, w: int, h: int) -> str:
     scale_w = w * 4
     scale_h = h * 4
 
-    # Phase 86 (2026-07-15): fill-crop only. The photo is scaled to cover the
-    # entire target frame (aspect_ratio=increase + crop=w:h), so pan/zoom moves
-    # within a fully-filled canvas — no letterbox, no blur bg, no black edges
-    # when pan-lr slides horizontally. Landscape photos lose some left/right
-    # content; portrait photos lose some top/bottom. Center-cropped in both
-    # cases so the composition's focal area stays visible.
-    compose = (
+    # Phase 90 (2026-07-15): fit-within + blur letterbox. Landscape photos
+    # (POI thumbnails, exterior shots) keep their full width — we scale to
+    # fit inside w×h without cropping and fill the remaining vertical space
+    # with a heavily blurred+dimmed copy of the same photo. Portrait photos
+    # fit the height and get a blurred left/right (rarely visible in practice).
+    #
+    # We only apply zoom-in/zoom-out motion here (pan disabled — see
+    # pick_mode below). Zoom is center-symmetric so the blur seam stays put
+    # instead of sliding across the frame like a dark bar.
+    #
+    # Phase 86 tried the opposite trade-off (fill-crop, no letterbox) but
+    # sacrificed ~44% of every landscape photo's horizontal content, which
+    # dining/storefront/wide-angle POI shots cannot afford.
+    bg = (
         f"scale={w}:{h}:force_original_aspect_ratio=increase,"
-        f"crop={w}:{h},setsar=1,"
+        f"crop={w}:{h},"
+        f"boxblur=40:2,eq=brightness=-0.15:saturation=0.85,setsar=1"
+    )
+    fg = (
+        f"scale={w}:{h}:force_original_aspect_ratio=decrease,setsar=1"
+    )
+    compose = (
+        f"split=2[bgsrc][fgsrc];"
+        f"[bgsrc]{bg}[bg];"
+        f"[fgsrc]{fg}[fg];"
+        f"[bg][fg]overlay=(W-w)/2:(H-h)/2,setsar=1,"
         f"scale={scale_w}:{scale_h}:flags=lanczos,setsar=1"
     )
 
@@ -119,7 +136,11 @@ def kenburns_filter(mode: str, duration: float, w: int, h: int) -> str:
 def pick_mode(index: int, zoom_mode: str) -> str:
     if zoom_mode != "auto":
         return zoom_mode
-    return ["pan-lr", "zoom-in", "pan-tb", "zoom-out"][index % 4]
+    # Phase 90: only zoom modes in the blur-letterbox composition. Pan modes
+    # slide the fg image across the frame, dragging the blurred seam through
+    # the center and making it read as a dark bar. Zoom is center-symmetric
+    # so the seam stays put on both sides.
+    return ["zoom-in", "zoom-out"][index % 2]
 
 
 def listing_overlay_filter(overlay: dict, w: int, h: int) -> str:

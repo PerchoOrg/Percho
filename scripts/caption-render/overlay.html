@@ -51,6 +51,21 @@
   .LIFE-badge { position: absolute; bottom: 90px; left: 56px; z-index: 10;
     padding: 16px 30px; border-radius: 999px; background: rgba(0,0,0,0.55);
     color: #fff; font-size: 34px; font-weight: 500; }
+  /* Phase 90: LIFESTYLE bottom-sheet (clips 2+). Full-screen .LIFE-title
+     is intro-only on clip 1 so the photo is visible on subsequent clips. */
+  .LIFE-sheet { position: absolute; bottom: 0; left: 0; right: 0; z-index: 10;
+    background: linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.7) 42%, rgba(0,0,0,0.88) 100%);
+    padding: 210px 56px 90px; color: #fff; }
+  .LIFE-sheet .num { font-size: 26px; letter-spacing: 0.15em; color: #FCD34D;
+    margin-bottom: 18px; font-weight: 600; }
+  .LIFE-sheet .name { font-size: 60px; font-weight: 700; letter-spacing: -0.01em;
+    line-height: 1.15; margin-bottom: 10px; }
+  .LIFE-sheet .type { font-size: 30px; color: rgba(255,255,255,0.72); margin-bottom: 22px; }
+  .LIFE-sheet .why { font-size: 38px; line-height: 1.35; color: #E2E8F0;
+    font-style: italic; font-family: "Charter","Georgia",serif; margin-bottom: 24px; }
+  .LIFE-sheet .dist { font-size: 28px; color: rgba(255,255,255,0.75);
+    display: flex; align-items: center; gap: 14px; }
+  .LIFE-sheet .dist b { color: #fff; font-size: 34px; font-weight: 600; margin-right: 4px; }
 
   /* ---------- UTILITY — Chip + Drive ---------- */
   .UTIL-chip { position: absolute; top: 190px; left: 50px; z-index: 10;
@@ -155,7 +170,11 @@ if (arch === 'TRUST') {
   stage.appendChild(sheet);
 
 } else if (arch === 'LIFESTYLE') {
-  if (c.why) {
+  // Phase 90: only clip 1 uses the full-screen title card as an intro.
+  // Clips 2+ use a bottom-sheet so the photo stays visible. Prior behavior
+  // (every clip = full-screen card) completely covered dining photos.
+  const isIntro = (c.clip_index || 1) === 1;
+  if (isIntro && c.why) {
     const t = el(`<div class="LIFE-title">
       <div class="num">${esc(c.chapter || '')}</div>
       <div class="name">${esc(c.poi)}</div>
@@ -164,6 +183,15 @@ if (arch === 'TRUST') {
       <div class="dist"><b>${esc(c.dist)}</b>mi · ${esc(c.drive || '')} drive</div>
     </div>`);
     stage.appendChild(t);
+  } else if (c.why) {
+    const s = el(`<div class="LIFE-sheet">
+      <div class="num">${esc(c.chapter || '')}</div>
+      <div class="name">${esc(c.poi)}</div>
+      <div class="type">${esc(c.type || '')}</div>
+      <div class="why">"${esc(c.why)}"</div>
+      <div class="dist"><b>${esc(c.dist)}</b>mi · ${esc(c.drive || '')} drive</div>
+    </div>`);
+    stage.appendChild(s);
   } else {
     stage.appendChild(el(`<div class="LIFE-badge">${esc(c.poi)}</div>`));
   }

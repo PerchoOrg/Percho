@@ -4,6 +4,61 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-15 — Phase 90: fix nearby videos — dining photos hidden + landscape crop
+
+Two bugs on bucket-video output the owner flagged after Phase 89.2 shipped:
+
+**Bug 1 — dining videos showed text only, no photos.** Phase 88's HTML
+overlay defined `.LIFE-title` with `position: absolute; inset: 0` — a full-
+screen solid-gradient card. Phase 89.2 then started populating `caption_fields.why`
+for every LIFESTYLE clip (dining, fitness), so the JS branch that renders
+`.LIFE-title` was hit on all N clips, covering 100% of the photo. Only
+LIFESTYLE was affected — TRUST/UTILITY/MAP/MAGAZINE render bottom cards or
+transparent scrims, so schools/park/outdoor videos still showed photos.
+
+Fix: split LIFESTYLE into intro + body. Clip 1 (`clip_index === 1`) keeps the
+full-screen `.LIFE-title` as an intro card (the "chapter opener" look the
+overlay was designed for). Clips 2+ render a new `.LIFE-sheet` bottom card —
+same fields (chapter/name/type/why/dist), same typography, but only the
+bottom ~40% of the frame with a linear scrim so the photo is visible above.
+Verified via alpha sampling on rendered PNGs: clip 1 has α=255 at all
+y-positions (fully opaque intro card); clips 2+ have α=0 up to y≈900 and
+grade to α=208 at y=1800 (bottom sheet).
+
+**Bug 2 — landscape POI photos looked cropped/zoomed-in.** Phase 86 (this
+morning) traded fit-within + blur letterbox for `force_original_aspect_ratio=increase + crop=w:h`
+to kill dark seams during `pan-lr`. Side effect: every landscape POI photo
+(dining storefronts, wide-angle park shots, exteriors) lost ~44% of its
+horizontal content to the center crop. Users read this as "the photo is
+zoomed in and pixelated" even though resolution was actually fine — the
+composition was just cropped.
+
+Fix: restore fit-within + blur-letterbox, but disable pan modes. The Phase 86
+regression was specifically caused by `pan-lr`/`pan-tb` sliding the fg image
+across the frame and dragging the blurred seam through the center (reads as a
+dark bar). Zoom-in and zoom-out are center-symmetric, so the blur seam stays
+put on both sides and looks like an intentional soft backdrop.
+
+`kenburns_filter` now builds bg = fill-cropped + `boxblur=40:2` +
+`eq=brightness=-0.15:saturation=0.85`, fg = fit-within (aspect preserved,
+no crop), and overlays fg centered on bg. `pick_mode` narrowed from
+4 modes (pan-lr, zoom-in, pan-tb, zoom-out) to 2 (zoom-in, zoom-out).
+
+Verified: 2000×1000 red/yellow/green test image renders at 1080×1920 with
+the yellow left band and green right band both present in the center row
+(x=10 → yellow, x=1070 → green), and no black pixels at the top/bottom
+letterbox (blurred dim red instead, RGB≈194,0,0).
+
+**Files.**
+- `scripts/caption-render/overlay.html` — new `.LIFE-sheet` CSS + JS branch
+- `scripts/ken-burns/generate.py` — `kenburns_filter` fit-within+blur, `pick_mode` zoom-only
+
+**Follow-ups.**
+- Home listing (interior room) videos still use the same pipeline. Owner
+  wants a separate Zillow/Redfin-style motion template set (Push In / Pull
+  Back / Push+Pan / Static mix, vision-driven per room type) as a distinct
+  phase — do not roll into 90.
+
 ## 2026-07-15 — Phase 89.1: admin revalidate endpoint
 
 **Context**
