@@ -4,6 +4,10 @@
 > Historical entries below preserve the original name in-place — release notes
 > are a record of what was shipped under the product's name at the time.
 
+## v0.78.3 · Community delete no longer fails when the community has any leads (2026-07-15)
+
+- **🐛 Bug Fix.** Deleting a community from the dashboard used to fail with a server error if that community had ever received a "Contact" lead from its feed page. Fixed — deleting a community now correctly removes its associated leads along with its videos and photos.
+
 ## v0.78.2 · Video row polish (2026-07-15)
 
 - **No more broken-image "?" on new video thumbnails.** Cloudflare takes up to a minute to generate the still after a video finishes processing; during that window the row now shows a neutral film-icon placeholder instead of the browser's broken-image glyph.
