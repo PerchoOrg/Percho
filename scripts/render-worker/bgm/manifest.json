@@ -1,89 +1,59 @@
 {
-  "version": 1,
-  "attribution": {
-    "kevin_macleod": "Music by Kevin MacLeod (incompetech.com), licensed under CC-BY 4.0 (https://creativecommons.org/licenses/by/4.0/)."
-  },
-  "total_tracks": 50,
+  "schema_version": 1,
+  "description": "Active BGM library for Percho render worker. Tracks in _archive/ are excluded (see _archive/README.md).",
+  "source": "Kevin MacLeod \u2014 https://incompetech.com/",
+  "license": "CC BY 4.0 \u2014 https://creativecommons.org/licenses/by/4.0/",
+  "attribution": "Music: Kevin MacLeod (incompetech.com), Licensed under Creative Commons: By Attribution 4.0 License",
   "buckets": {
-    "a-warm-acoustic": {
-      "description": "Light, upbeat acoustic — HGTV / lifestyle-vlog vibe. Default bucket.",
+    "warm-acoustic": {
+      "count": 10,
       "tracks": [
-        {"file": "a-warm-acoustic/01-carefree.mp3",              "title": "Carefree",              "artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Carefree.mp3",              "duration_s": 205},
-        {"file": "a-warm-acoustic/02-cheery-monday.mp3",         "title": "Cheery Monday",         "artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Cheery%20Monday.mp3",         "duration_s": 80},
-        {"file": "a-warm-acoustic/03-wallpaper.mp3",             "title": "Wallpaper",             "artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Wallpaper.mp3",             "duration_s": 220},
-        {"file": "a-warm-acoustic/07-amazing-plan.mp3",          "title": "Amazing Plan",          "artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Amazing%20Plan.mp3",          "duration_s": 87},
-        {"file": "a-warm-acoustic/08-wholesome.mp3",             "title": "Wholesome",             "artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Wholesome.mp3",             "duration_s": 364},
-        {"file": "a-warm-acoustic/09-daily-beetle.mp3",          "title": "Daily Beetle",          "artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Daily%20Beetle.mp3",          "duration_s": 317},
-        {"file": "a-warm-acoustic/11-happy-alley.mp3",           "title": "Happy Alley",           "artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Happy%20Alley.mp3",           "duration_s": 80},
-        {"file": "a-warm-acoustic/12-balloon-game.mp3",          "title": "Balloon Game",          "artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Balloon%20Game.mp3",          "duration_s": 222},
-        {"file": "a-warm-acoustic/13-take-a-chance.mp3",         "title": "Take a Chance",         "artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Take%20a%20Chance.mp3",         "duration_s": 37},
-        {"file": "a-warm-acoustic/14-pookatori-and-friends.mp3", "title": "Pookatori and Friends", "artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Pookatori%20and%20Friends.mp3", "duration_s": 248}
+        "01-carefree.mp3",
+        "02-cheery-monday.mp3",
+        "03-wallpaper.mp3",
+        "07-amazing-plan.mp3",
+        "08-wholesome.mp3",
+        "09-daily-beetle.mp3",
+        "11-happy-alley.mp3",
+        "12-balloon-game.mp3",
+        "13-take-a-chance.mp3",
+        "14-pookatori-and-friends.mp3"
       ]
     },
-    "b-tropical": {
-      "description": "Tropical / island / bossa — sunbelt & waterfront.",
+    "modern-corporate": {
+      "count": 8,
       "tracks": [
-        {"file": "b-tropical/01-bossa-antigua.mp3",   "title": "Bossa Antigua",   "artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Bossa%20Antigua.mp3",   "duration_s": 283},
-        {"file": "b-tropical/02-rainbows.mp3",        "title": "Rainbows",        "artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Rainbows.mp3",        "duration_s": 219},
-        {"file": "b-tropical/03-beach-party.mp3",     "title": "Beach Party",     "artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Beach%20Party.mp3",     "duration_s": 49},
-        {"file": "b-tropical/04-latin-industries.mp3","title": "Latin Industries","artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Latin%20Industries.mp3","duration_s": 200},
-        {"file": "b-tropical/05-samba-isobel.mp3",    "title": "Samba Isobel",    "artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Samba%20Isobel.mp3",    "duration_s": 250},
-        {"file": "b-tropical/06-cuban-sandwich.mp3",  "title": "Cuban Sandwich",  "artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Cuban%20Sandwich.mp3",  "duration_s": 195},
-        {"file": "b-tropical/07-salty-ditty.mp3",     "title": "Salty Ditty",     "artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Salty%20Ditty.mp3",     "duration_s": 128},
-        {"file": "b-tropical/08-bumba-crossing.mp3",  "title": "Bumba Crossing",  "artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Bumba%20Crossing.mp3",  "duration_s": 276}
+        "04-life-of-riley.mp3",
+        "06-bright-wish.mp3",
+        "22-inspired.mp3",
+        "23-fluffing-a-duck.mp3",
+        "24-feelin-good.mp3",
+        "25-ready-aim-fire.mp3",
+        "26-new-direction.mp3",
+        "27-enter-the-party.mp3"
       ]
     },
-    "c-lofi": {
-      "description": "Lofi / jazzy chill — urban condo, evening.",
+    "luxury-ambient": {
+      "count": 8,
       "tracks": [
-        {"file": "c-lofi/05-cool-vibes.mp3",              "title": "Cool Vibes",              "artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Cool%20Vibes.mp3",              "duration_s": 226},
-        {"file": "c-lofi/15-george-street-shuffle.mp3",   "title": "George Street Shuffle",   "artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/George%20Street%20Shuffle.mp3",   "duration_s": 268},
-        {"file": "c-lofi/16-groove-grove.mp3",            "title": "Groove Grove",            "artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Groove%20Grove.mp3",            "duration_s": 206},
-        {"file": "c-lofi/17-hep-cats.mp3",                "title": "Hep Cats",                "artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Hep%20Cats.mp3",                "duration_s": 251},
-        {"file": "c-lofi/18-jazz-brunch.mp3",             "title": "Jazz Brunch",             "artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Jazz%20Brunch.mp3",             "duration_s": 323},
-        {"file": "c-lofi/19-smooth-lovin.mp3",            "title": "Smooth Lovin",            "artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Smooth%20Lovin.mp3",            "duration_s": 259},
-        {"file": "c-lofi/20-local-forecast-elevator.mp3", "title": "Local Forecast - Elevator", "artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Local%20Forecast%20-%20Elevator.mp3", "duration_s": 189},
-        {"file": "c-lofi/21-faceoff.mp3",                 "title": "Faceoff",                 "artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Faceoff.mp3",                 "duration_s": 73}
+        "10-perspectives.mp3",
+        "28-ossuary-1-a-beginning.mp3",
+        "29-ossuary-5-rest.mp3",
+        "30-ossuary-6-air.mp3",
+        "31-deep-haze.mp3",
+        "32-dream-culture.mp3",
+        "33-path-of-the-goblin-king.mp3",
+        "34-autumn-day.mp3"
       ]
     },
-    "d-uplift": {
-      "description": "Uplift / corporate-optimistic — luxury, new-build.",
-      "tracks": [
-        {"file": "d-uplift/04-life-of-riley.mp3",      "title": "Life of Riley",      "artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Life%20of%20Riley.mp3",      "duration_s": 168},
-        {"file": "d-uplift/06-bright-wish.mp3",        "title": "Bright Wish",        "artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Bright%20Wish.mp3",        "duration_s": 92},
-        {"file": "d-uplift/22-inspired.mp3",           "title": "Inspired",           "artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Inspired.mp3",           "duration_s": 286},
-        {"file": "d-uplift/23-fluffing-a-duck.mp3",    "title": "Fluffing a Duck",    "artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Fluffing%20a%20Duck.mp3",    "duration_s": 67},
-        {"file": "d-uplift/24-feelin-good.mp3",        "title": "Feelin Good",        "artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Feelin%20Good.mp3",        "duration_s": 225},
-        {"file": "d-uplift/25-ready-aim-fire.mp3",     "title": "Ready Aim Fire",     "artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Ready%20Aim%20Fire.mp3",     "duration_s": 216},
-        {"file": "d-uplift/26-new-direction.mp3",      "title": "New Direction",      "artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/New%20Direction.mp3",      "duration_s": 679},
-        {"file": "d-uplift/27-enter-the-party.mp3",    "title": "Enter the Party",    "artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Enter%20the%20Party.mp3",    "duration_s": 188}
-      ]
+    "chill-electronic": {
+      "count": 0,
+      "tracks": []
     },
-    "e-cn-fusion": {
-      "description": "Instrumental East-Asian fusion (guzheng, bamboo flute, meditative pads). No vocals.",
-      "tracks": [
-        {"file": "e-cn-fusion/01-cambodian-odyssey.mp3",       "title": "Cambodian Odyssey",       "artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Cambodian%20Odyssey.mp3",       "duration_s": 74},
-        {"file": "e-cn-fusion/02-anguish.mp3",                 "title": "Anguish",                 "artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Anguish.mp3",                 "duration_s": 239},
-        {"file": "e-cn-fusion/03-water-lily.mp3",              "title": "Water Lily",              "artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Water%20Lily.mp3",              "duration_s": 144},
-        {"file": "e-cn-fusion/04-meditation-impromptu-01.mp3", "title": "Meditation Impromptu 01", "artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Meditation%20Impromptu%2001.mp3", "duration_s": 212},
-        {"file": "e-cn-fusion/05-meditation-impromptu-02.mp3", "title": "Meditation Impromptu 02", "artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Meditation%20Impromptu%2002.mp3", "duration_s": 249},
-        {"file": "e-cn-fusion/06-meditation-impromptu-03.mp3", "title": "Meditation Impromptu 03", "artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Meditation%20Impromptu%2003.mp3", "duration_s": 255},
-        {"file": "e-cn-fusion/07-jalandhar.mp3",               "title": "Jalandhar",               "artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Jalandhar.mp3",               "duration_s": 248},
-        {"file": "e-cn-fusion/08-long-note-one.mp3",           "title": "Long Note One",           "artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Long%20Note%20One.mp3",           "duration_s": 440}
-      ]
-    },
-    "f-ambient": {
-      "description": "Ambient / reflective — luxury slow-pan, twilight.",
-      "tracks": [
-        {"file": "f-ambient/10-perspectives.mp3",              "title": "Perspectives",              "artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Perspectives.mp3",              "duration_s": 425},
-        {"file": "f-ambient/28-ossuary-1-a-beginning.mp3",     "title": "Ossuary 1 - A Beginning",   "artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Ossuary%201%20-%20A%20Beginning.mp3",     "duration_s": 188},
-        {"file": "f-ambient/29-ossuary-5-rest.mp3",            "title": "Ossuary 5 - Rest",          "artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Ossuary%205%20-%20Rest.mp3",            "duration_s": 235},
-        {"file": "f-ambient/30-ossuary-6-air.mp3",             "title": "Ossuary 6 - Air",           "artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Ossuary%206%20-%20Air.mp3",             "duration_s": 250},
-        {"file": "f-ambient/31-deep-haze.mp3",                 "title": "Deep Haze",                 "artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Deep%20Haze.mp3",                 "duration_s": 122},
-        {"file": "f-ambient/32-dream-culture.mp3",             "title": "Dream Culture",             "artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Dream%20Culture.mp3",             "duration_s": 214},
-        {"file": "f-ambient/33-path-of-the-goblin-king.mp3",   "title": "The Path of the Goblin King","artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/The%20Path%20of%20the%20Goblin%20King.mp3", "duration_s": 206},
-        {"file": "f-ambient/34-autumn-day.mp3",                "title": "Autumn Day",                "artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Autumn%20Day.mp3",                "duration_s": 184}
-      ]
+    "cinematic": {
+      "count": 0,
+      "tracks": []
     }
-  }
+  },
+  "total_active_tracks": 26
 }
