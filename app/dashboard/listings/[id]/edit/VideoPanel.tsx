@@ -387,10 +387,10 @@ function SortableVideoItem({
         </div>
       </div>
       <div className="min-w-0 flex-1 basis-[8rem]">
-        <div className="flex items-center gap-2">
-          <span className="truncate text-sm text-ink">
-            {(video.title ?? video.cf_video_id).replace(/\s*\(auto-generated\)\s*$/i, '')}
-          </span>
+        <div className="truncate text-sm text-ink">
+          {(video.title ?? video.cf_video_id).replace(/\s*\(auto-generated\)\s*$/i, '')}
+        </div>
+        <div className="mt-1 flex flex-wrap items-center gap-1">
           {isCover ? (
             <span className="flex-shrink-0 rounded bg-ink px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-cream">
               Cover
@@ -417,12 +417,12 @@ function SortableVideoItem({
               Landscape
             </span>
           ) : null}
+          {video.status !== 'ready' ? (
+            <span className="text-xs text-muted">
+              <StatusText status={video.status} />
+            </span>
+          ) : null}
         </div>
-        {video.status !== 'ready' ? (
-          <div className="truncate text-xs text-muted">
-            <StatusText status={video.status} />
-          </div>
-        ) : null}
       </div>
       <div className="flex w-full flex-shrink-0 items-center gap-2 sm:w-auto">
         {isCover ? (
