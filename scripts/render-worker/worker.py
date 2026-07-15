@@ -390,10 +390,47 @@ def process_job(job: dict[str, Any]) -> None:
 
 
 BUCKET_LABELS = {
+    # Legacy 4 (pre-Phase-85 buckets, kept for old rows in DB).
     "walkable": "Walkable",
     "daily_drive": "Daily drive",
     "lifestyle": "Lifestyle",
     "commute": "Commute",
+    # Phase 85: canonical 14 from lib/poi/types.ts INTENT_BUCKETS.
+    "schools": "Schools",
+    "healthcare": "Healthcare",
+    "dining": "Dining",
+    "fitness": "Fitness & Wellness",
+    "shopping": "Shopping",
+    "daily_errands": "Daily Errands",
+    "pets": "Pets",
+    "nightlife": "Nightlife",
+    "outdoor": "Outdoors & Parks",
+    "transit": "Transit & Commute",
+    "work_hubs": "Work Hubs",
+    "kids": "Kids & Family",
+    "asian_community": "Asian Community",
+    "faith": "Faith Communities",
+}
+
+
+# Phase 85: 14 nearby buckets → 6 video-template archetypes.
+# See lib/poi/types.ts INTENT_BUCKETS for the canonical bucket list.
+# Archetypes drive caption layout in scripts/ken-burns/generate.py.
+CAPTION_ARCHETYPE_MAP = {
+    "schools": "TRUST",
+    "healthcare": "TRUST",
+    "dining": "LIFESTYLE",
+    "fitness": "LIFESTYLE",
+    "shopping": "UTILITY",
+    "daily_errands": "UTILITY",
+    "pets": "UTILITY",
+    "nightlife": "NARRATIVE",
+    "outdoor": "MAP",
+    "transit": "MAP",
+    "work_hubs": "MAP",
+    "kids": "MAGAZINE",
+    "asian_community": "MAGAZINE",
+    "faith": "MAGAZINE",
 }
 
 
@@ -442,13 +479,33 @@ def process_bucket_job(job: dict[str, Any]) -> None:
         if len(input_photo_ids) < 3:
             raise RuntimeError(f"only {len(input_photo_ids)} input photos, need >=3")
 
-        # 1. Resolve poi_photos rows.
+        # 1. Resolve poi_photos rows (with POI join for captions).
         id_list = ",".join(input_photo_ids)
         photo_rows = sb_get(
             "poi_photos",
-            {"select": "id,storage_path", "id": f"in.({id_list})"},
+            {
+                "select": "id,storage_path,poi_id,pois!inner(display_name)",
+                "id": f"in.({id_list})",
+            },
         )
         by_id = {p["id"]: p for p in photo_rows}
+        # Per-listing distance lives on listing_pois. Fetch once, index by poi_id.
+        distinct_poi_ids: list[str] = list(
+            {p["poi_id"] for p in photo_rows if p.get("poi_id")}
+        )
+        distance_by_poi: dict[str, float] = {}
+        if distinct_poi_ids:
+            lp_rows = sb_get(
+                "listing_pois",
+                {
+                    "select": "poi_id,distance_m",
+                    "listing_id": f"eq.{listing_id}",
+                    "poi_id": f"in.({','.join(distinct_poi_ids)})",
+                },
+            )
+            for r in lp_rows:
+                if r.get("distance_m") is not None:
+                    distance_by_poi[r["poi_id"]] = float(r["distance_m"])
         missing = [pid for pid in input_photo_ids if pid not in by_id]
         if missing:
             raise RuntimeError(
@@ -489,15 +546,65 @@ def process_bucket_job(job: dict[str, Any]) -> None:
         overlay_path = workdir / "overlay.json"
         overlay_path.write_text(json.dumps(overlay, indent=2))
 
+        # 4b. Phase 85: per-clip captions from POI display names + distance.
+        # One entry per input photo, in the same order the photos were downloaded.
+        # Optional narrative "beat" from generated_videos.narrative overrides
+        # the default name-only caption when present.
+        narrative_beats_by_poi: dict[str, str] = {}
+        vid_rows = sb_get(
+            "generated_videos",
+            {"select": "narrative", "id": f"eq.{video_id}"},
+        )
+        if vid_rows and vid_rows[0].get("narrative"):
+            for scene in (vid_rows[0]["narrative"].get("scenes") or []):
+                pid = scene.get("poi_id")
+                beat = scene.get("beat")
+                if pid and beat:
+                    narrative_beats_by_poi[pid] = beat
+
+        def _fmt_distance(m: float | None) -> str:
+            if m is None:
+                return ""
+            mi = m / 1609.34
+            if mi < 0.1:
+                return "< 0.1 mi"
+            if mi < 10:
+                return f"{mi:.1f} mi"
+            return f"{round(mi)} mi"
+
+        captions = []
+        for i, pid in enumerate(input_photo_ids, start=1):
+            row = by_id[pid]
+            poi = row.get("pois") or {}
+            poi_id = row.get("poi_id")
+            captions.append({
+                "clip": i,
+                "title": (poi.get("display_name") or "").strip(),
+                "distance": _fmt_distance(
+                    distance_by_poi.get(poi_id) if poi_id else None
+                ),
+                "beat": narrative_beats_by_poi.get(poi_id, "") if poi_id else "",
+            })
+        captions_path = workdir / "captions.json"
+        captions_path.write_text(json.dumps({
+            "archetype": CAPTION_ARCHETYPE_MAP.get(bucket, "TRUST"),
+            "bucket": bucket,
+            "bucket_label": BUCKET_LABELS.get(bucket, bucket),
+            "clips": captions,
+        }, indent=2))
+
         # 5. Render.
         bgm_choice = pick_bgm()
         out_path = workdir / f"bucket_{bucket}.mp4"
+        archetype = CAPTION_ARCHETYPE_MAP.get(bucket, "TRUST")
         cmd = [
             "python3", str(GENERATE_SCRIPT),
             "--photos", str(workdir),
             "--output", str(out_path),
             "--orientation", orientation,
             "--listing-overlay", str(overlay_path),
+            "--archetype", archetype,
+            "--captions", str(captions_path),
         ]
         if bgm_choice:
             cmd += ["--bgm", str(bgm_choice)]

@@ -194,10 +194,16 @@ def listing_overlay_filter(overlay: dict, w: int, h: int) -> str:
 
 
 def render_clip(src: str, dst: str, duration: float, mode: str, w: int, h: int,
-                overlay: dict | None = None) -> None:
+                overlay: dict | None = None,
+                caption: dict | None = None,
+                archetype: str = "TRUST") -> None:
     vf = kenburns_filter(mode, duration, w, h)
     if overlay:
         vf = vf + "," + listing_overlay_filter(overlay, w, h)
+    if caption:
+        cap_vf = build_archetype_caption(archetype, caption, w, h)
+        if cap_vf:
+            vf = vf + "," + cap_vf
     cmd = [
         "ffmpeg", "-y", "-loop", "1", "-i", src,
         "-t", f"{duration:.3f}",
@@ -219,6 +225,189 @@ def escape_drawtext(s: str) -> str:
         .replace("'", r"\'")
         .replace("%", r"\%")
     )
+
+
+# ---------------------------------------------------------------------------
+# Phase 85: archetype caption renderers.
+#
+# Each archetype builds a per-clip drawtext filter chain that paints the POI
+# name/distance in a distinct visual language. Inputs:
+#   caption: {"title": str, "distance": str, "beat": str}  (all optional)
+#   w, h:    output frame size (portrait 1080x1920 or landscape 1920x1080)
+# Returns: comma-joined ffmpeg filter fragment (no leading comma).
+# Empty title → returns "" (no caption rendered on that clip).
+# ---------------------------------------------------------------------------
+
+def _fonts():
+    bold_candidates = [
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+        "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
+    ]
+    reg_candidates = [
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+        "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
+    ]
+    return (
+        next((f for f in bold_candidates if os.path.exists(f)), None),
+        next((f for f in reg_candidates if os.path.exists(f)), None),
+    )
+
+
+def _dt(text: str, size: int, color: str, x: str, y: str,
+        font: str | None, box: bool = False, box_color: str = "black@0.5",
+        box_border: int = 20) -> str:
+    d = [
+        f"text='{escape_drawtext(text)}'",
+        f"fontsize={size}",
+        f"fontcolor={color}",
+        f"x={x}",
+        f"y={y}",
+    ]
+    if font:
+        d.append(f"fontfile={font}")
+    if box:
+        d += [f"box=1", f"boxcolor={box_color}", f"boxborderw={box_border}"]
+    return "drawtext=" + ":".join(d)
+
+
+def _caption_trust(cap: dict, w: int, h: int) -> str:
+    """TRUST (schools, healthcare): bottom sheet, institutional feel.
+    Full-width dark bar + large name + small distance line."""
+    title = (cap.get("title") or "").strip()
+    if not title:
+        return ""
+    dist = (cap.get("distance") or "").strip()
+    font_b, font_r = _fonts()
+    sheet_h = int(h * 0.14)
+    y_top = h - sheet_h
+    parts = [f"drawbox=x=0:y={y_top}:w={w}:h={sheet_h}:color=black@0.55:t=fill"]
+    parts.append(_dt(title, 54, "white", "(w-tw)/2", f"{y_top + 28}", font_b))
+    if dist:
+        parts.append(_dt(dist, 30, "0xcfd6e4", "(w-tw)/2", f"{y_top + 100}", font_r))
+    return ",".join(parts)
+
+
+def _caption_lifestyle(cap: dict, w: int, h: int) -> str:
+    """LIFESTYLE (dining, fitness): chapter card. Centered warm-tinted card,
+    editorial. Title medium, small caps kicker with distance."""
+    title = (cap.get("title") or "").strip()
+    if not title:
+        return ""
+    dist = (cap.get("distance") or "").strip()
+    font_b, font_r = _fonts()
+    card_w = int(w * 0.78)
+    card_h = 200
+    x0 = (w - card_w) // 2
+    y0 = int(h * 0.72)
+    parts = [
+        f"drawbox=x={x0}:y={y0}:w={card_w}:h={card_h}:color=0xe8b878@0.85:t=fill",
+        _dt(title, 52, "0x1a1a1a", "(w-tw)/2", f"{y0 + 60}", font_b),
+    ]
+    if dist:
+        # Bumped from 0x333 (low contrast on amber) to full black
+        parts.append(_dt(dist.upper(), 24, "0x0a0a0a", "(w-tw)/2", f"{y0 + 140}", font_r))
+    return ",".join(parts)
+
+
+def _caption_utility(cap: dict, w: int, h: int) -> str:
+    """UTILITY (shopping, errands, pets): compact top chip pill.
+    Minimal — 'NAME · 0.4 mi' style, doesn't cover main image."""
+    title = (cap.get("title") or "").strip()
+    if not title:
+        return ""
+    dist = (cap.get("distance") or "").strip()
+    font_b, _ = _fonts()
+    text = f"{title} · {dist}" if dist else title
+    y0 = 60
+    return _dt(text, 34, "white", "(w-tw)/2", str(y0),
+               font_b, box=True, box_color="black@0.6", box_border=18)
+
+
+def _caption_narrative(cap: dict, w: int, h: int) -> str:
+    """NARRATIVE (nightlife): full-screen big statement mid-frame.
+    Beat text if present, otherwise title. Cinematic. Distance appended below."""
+    beat = (cap.get("beat") or "").strip()
+    title = (cap.get("title") or "").strip()
+    dist = (cap.get("distance") or "").strip()
+    text = beat or title
+    if not text:
+        return ""
+    font_b, font_r = _fonts()
+    # Bigger, darker band for readability on light-wall backgrounds
+    band_h = 260 if dist else 200
+    band_y = h // 2 - band_h // 2
+    parts = [
+        f"drawbox=x=0:y={band_y}:w={w}:h={band_h}:color=black@0.6:t=fill",
+        _dt(text, 46, "white", "(w-tw)/2", f"{band_y + 60}", font_b),
+    ]
+    if dist:
+        parts.append(_dt(dist, 30, "0xcfd6e4", "(w-tw)/2",
+                         f"{band_y + band_h - 70}", font_r))
+    return ",".join(parts)
+
+
+def _caption_magazine(cap: dict, w: int, h: int) -> str:
+    """MAGAZINE (kids, asian_community, faith): editorial masthead.
+    Large all-caps title top, thin rule, small kicker with distance."""
+    title = (cap.get("title") or "").strip().upper()
+    if not title:
+        return ""
+    dist = (cap.get("distance") or "").strip()
+    font_b, font_r = _fonts()
+    y0 = int(h * 0.08)
+    parts = [
+        _dt(title, 44, "white", "(w-tw)/2", str(y0), font_b,
+            box=True, box_color="black@0.7", box_border=24),
+    ]
+    # Thicker, brighter rule beneath (was 2px 0.9)
+    parts.append(
+        f"drawbox=x={w // 2 - 80}:y={y0 + 100}:w=160:h=4:color=white:t=fill"
+    )
+    if dist:
+        # Boxed for guaranteed contrast — was floating light-gray text over image
+        parts.append(_dt(dist, 24, "white", "(w-tw)/2", f"{y0 + 120}", font_r,
+                         box=True, box_color="black@0.7", box_border=12))
+    return ",".join(parts)
+
+
+def _caption_map(cap: dict, w: int, h: int) -> str:
+    """MAP (outdoor, transit, work_hubs): coordinate/waypoint overlay.
+    Top-left pin marker feel with title + distance stacked."""
+    title = (cap.get("title") or "").strip()
+    if not title:
+        return ""
+    dist = (cap.get("distance") or "").strip()
+    font_b, font_r = _fonts()
+    x0 = 60
+    y0 = int(h * 0.08)
+    # Bigger, brighter red pin dot for legibility
+    parts = [
+        f"drawbox=x={x0}:y={y0 + 16}:w=22:h=22:color=0xff3b3b@1.0:t=fill",
+        _dt(title, 40, "white", f"{x0 + 42}", str(y0),
+            font_b, box=True, box_color="black@0.65", box_border=14),
+    ]
+    if dist:
+        # White text on dark pill (was red-on-red — vision caught unreadable)
+        parts.append(
+            _dt(dist, 26, "white", f"{x0 + 42}", f"{y0 + 74}", font_r,
+                box=True, box_color="black@0.65", box_border=10)
+        )
+    return ",".join(parts)
+
+
+CAPTION_RENDERERS = {
+    "TRUST": _caption_trust,
+    "LIFESTYLE": _caption_lifestyle,
+    "UTILITY": _caption_utility,
+    "NARRATIVE": _caption_narrative,
+    "MAGAZINE": _caption_magazine,
+    "MAP": _caption_map,
+}
+
+
+def build_archetype_caption(archetype: str, cap: dict, w: int, h: int) -> str:
+    renderer = CAPTION_RENDERERS.get(archetype, _caption_trust)
+    return renderer(cap, w, h)
 
 
 def render_ending_card(dst: str, card: dict, duration: float, w: int, h: int) -> None:
@@ -405,6 +594,13 @@ def main() -> None:
     p.add_argument("--zoom-mode", default="auto",
                    choices=["auto", "pan-lr", "pan-tb", "zoom-in", "zoom-out"])
     p.add_argument("--xfade-duration", type=float, default=0.5)
+    p.add_argument("--archetype", default="TRUST",
+                   choices=["TRUST", "LIFESTYLE", "UTILITY", "NARRATIVE", "MAGAZINE", "MAP"],
+                   help="Caption template family (Phase 85). NARRATIVE deferred; "
+                        "unknown falls back to TRUST layout.")
+    p.add_argument("--captions", default=None,
+                   help="Path to JSON with {archetype, clips:[{clip,title,distance,beat}]}. "
+                        "clip is 1-indexed. Empty title on a clip → no caption for it.")
     args = p.parse_args()
 
     if not shutil.which("ffmpeg"):
@@ -446,6 +642,16 @@ def main() -> None:
             listing_overlay = json.load(f)
         overlay_clips = set(listing_overlay.get("show_on_clips", []) or [])
 
+    captions_by_clip: dict[int, dict] = {}
+    caption_archetype = args.archetype
+    if args.captions:
+        with open(args.captions) as f:
+            captions_data = json.load(f)
+        caption_archetype = captions_data.get("archetype", args.archetype)
+        for c in captions_data.get("clips", []) or []:
+            if isinstance(c.get("clip"), int):
+                captions_by_clip[c["clip"]] = c
+
     print(f"[ken-burns] {len(photos)} photos, {per}s each, {w}x{h}, xfade={xfade}s")
 
     with tempfile.TemporaryDirectory(prefix="kenburns-") as tmp:
@@ -455,9 +661,15 @@ def main() -> None:
             out = os.path.join(tmp, f"clip_{i:03d}.mp4")
             # show_on_clips is 1-indexed by convention
             clip_overlay = listing_overlay if (i + 1) in overlay_clips else None
+            clip_caption = captions_by_clip.get(i + 1)
             tag = f" +overlay" if clip_overlay else ""
+            if clip_caption and (clip_caption.get("title") or clip_caption.get("beat")):
+                tag += f" +cap[{caption_archetype}]"
             print(f"[ken-burns] ({i+1}/{len(photos)}) rendering {ph.name} → {mode}{tag}")
-            render_clip(str(ph), out, per, mode, w, h, overlay=clip_overlay)
+            render_clip(str(ph), out, per, mode, w, h,
+                        overlay=clip_overlay,
+                        caption=clip_caption,
+                        archetype=caption_archetype)
             clips.append(out)
 
         if ending is not None:
