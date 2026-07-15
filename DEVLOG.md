@@ -4,6 +4,30 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-15 — Phase 86: ffmpeg fill-crop (kill letterbox black edges during pan)
+
+**Problem.** Bucket videos showed a dark blurred letterbox band on the left/right
+during `pan-lr` — the composite used `force_original_aspect_ratio=decrease`
+(fit-within) plus a heavily dimmed (`brightness=-0.20`) blur background, and the
+alpha fade only handled the top/bottom seam (150px). Landscape-oriented POI
+photos rendered into a 1080x1920 portrait canvas therefore always exposed the
+dark blur strip on both sides, and it looked like a black bar during the slide.
+
+**Fix.** `scripts/ken-burns/generate.py::build_ken_burns_filter()` now uses a
+single-source `force_original_aspect_ratio=increase + crop=w:h` pass — the
+photo covers the entire target frame, so pan/zoom moves within a fully-filled
+canvas. No split, no blur bg, no `eq`, no `geq` alpha fade, no overlay.
+Landscape photos lose some horizontal content (center-cropped); portrait
+photos lose some vertical (center-cropped). Filter is 3 lines vs. 12.
+
+**Verification.** Local smoke test at `/tmp/smoke86` with a 2000×1000 test
+image (red fill + yellow left band + green right band + LEFT/RIGHT labels)
+rendered at 1080×1920. Sampled 6 border points × 3 frames (start/mid/end of
+the 3s clip) — 18/18 samples returned `rgb(253,0,0)` (red fill), zero black
+edges. pan-lr now slides within a filled canvas.
+
+**Files.** `scripts/ken-burns/generate.py` (build_ken_burns_filter, lines 78–89).
+
 ## 2026-07-15 — Phase 83.3: Scope `/dashboard/communities` to "my neighborhoods"
 
 Bug on top of 83.2. After flipping the 731 Nextdoor seeds to `status='active'`, the agent dashboard was rendering the full shared pool — because it kept calling `fetchCommunityListCards()`, which returns *all* active communities. That loader is the buyer/public surface, not the agent surface.

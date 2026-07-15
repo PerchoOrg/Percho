@@ -75,22 +75,15 @@ def kenburns_filter(mode: str, duration: float, w: int, h: int) -> str:
     scale_w = w * 4
     scale_h = h * 4
 
-    # Compose the letterbox-blur canvas at target w×h, then upscale for zoompan.
-    # Foreground gets a wide alpha fade at top/bottom (150px) so the seam with
-    # the blur background disappears. Background is blurred heavily and dimmed
-    # so the seam contrast is minimized and viewer focus stays on the foreground.
-    fade_px = 150
+    # Phase 86 (2026-07-15): fill-crop only. The photo is scaled to cover the
+    # entire target frame (aspect_ratio=increase + crop=w:h), so pan/zoom moves
+    # within a fully-filled canvas — no letterbox, no blur bg, no black edges
+    # when pan-lr slides horizontally. Landscape photos lose some left/right
+    # content; portrait photos lose some top/bottom. Center-cropped in both
+    # cases so the composition's focal area stays visible.
     compose = (
-        f"split=2[__bg][__fg];"
-        f"[__bg]scale={w}:{h}:force_original_aspect_ratio=increase,"
-        f"crop={w}:{h},setsar=1,boxblur=luma_radius=80:luma_power=2,"
-        f"eq=brightness=-0.20:saturation=0.70[__bgo];"
-        f"[__fg]scale={w}:{h}:force_original_aspect_ratio=decrease,setsar=1,"
-        f"format=yuva420p,"
-        f"geq=r='r(X,Y)':g='g(X,Y)':b='b(X,Y)':"
-        f"a='if(lt(Y,{fade_px}),255*Y/{fade_px},"
-        f"if(gt(Y,H-{fade_px}),255*(H-Y)/{fade_px},255))'[__fgo];"
-        f"[__bgo][__fgo]overlay=(W-w)/2:(H-h)/2,"
+        f"scale={w}:{h}:force_original_aspect_ratio=increase,"
+        f"crop={w}:{h},setsar=1,"
         f"scale={scale_w}:{scale_h}:flags=lanczos,setsar=1"
     )
 
