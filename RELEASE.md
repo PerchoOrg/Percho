@@ -4,6 +4,12 @@
 > Historical entries below preserve the original name in-place — release notes
 > are a record of what was shipped under the product's name at the time.
 
+## v88.1 — 2026-07-15 — Neighborhood at a glance
+
+- Community pages now show real Nextdoor data for the neighborhood: number of residents, average household income, median age, and homeowner rate — right under the hero.
+- Two tag rows below the stats: "What locals say" (Historic, Walkable, Dog Friendly…) and "Popular interests" (Dogs, Gardening, Hiking…) — pulled from what actual residents say about the area on Nextdoor.
+- Fields hide themselves when Nextdoor didn't have data for that community — we don't invent numbers.
+
 ## v88 — 2026-07-15 — See the shape of your neighborhood
 
 - Every community page now shows a map of the neighborhood boundary below the videos/listings — you can see exactly what area a "community" refers to instead of guessing from the name.

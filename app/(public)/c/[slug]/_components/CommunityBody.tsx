@@ -63,6 +63,12 @@ export function CommunityBody({
     city: string | null;
     state: string;
     description: string | null;
+    residents_count: string | null;
+    avg_income: string | null;
+    avg_age: string | null;
+    homeowners_pct: string | null;
+    attributes: string[] | null;
+    interests: string[] | null;
   };
   heroCoverUrl: string | null;
   boundary: GeoJsonPolygonLike | null;
@@ -139,6 +145,19 @@ export function CommunityBody({
           ) : null}
         </div>
       </div>
+
+      {/* Phase 87.1: Nextdoor demographics + tags — surface data we already
+          have in the DB so buyers get a feel for the community beyond the
+          name + description. Each stat only renders if present (all optional
+          on the row). */}
+      <CommunityStats
+        residents={community.residents_count}
+        income={community.avg_income}
+        age={community.avg_age}
+        homeowners={community.homeowners_pct}
+        attributes={community.attributes}
+        interests={community.interests}
+      />
 
       {/* Body — Phase 47.2: padding aligned with grid gap (px-1 md:px-1.5)
           so the outer margin matches inter-card gutters and matches
@@ -247,4 +266,85 @@ function ListingsGrid({ listings }: { listings: BrowseCard[] }) {
     };
   });
   return <ListingGrid items={items} />;
+}
+
+/**
+ * Phase 87.1: community stats + tag chips.
+ *
+ * Renders demographics (residents / income / age / homeowners) as a compact
+ * 4-cell grid, and Nextdoor's neighborhood tags (attributes + interests) as
+ * two chip rows below. Every value is optional — the whole block is skipped
+ * if there's literally nothing to show. Values are pre-formatted strings on
+ * the row ('4,361', '$151K', '73%') so we render them verbatim.
+ */
+function CommunityStats({
+  residents,
+  income,
+  age,
+  homeowners,
+  attributes,
+  interests,
+}: {
+  residents: string | null;
+  income: string | null;
+  age: string | null;
+  homeowners: string | null;
+  attributes: string[] | null;
+  interests: string[] | null;
+}) {
+  const stats: Array<{ label: string; value: string }> = [];
+  if (residents) stats.push({ label: 'Residents', value: residents });
+  if (income) stats.push({ label: 'Avg income', value: income });
+  if (age) stats.push({ label: 'Median age', value: age });
+  if (homeowners) stats.push({ label: 'Homeowners', value: homeowners });
+
+  const hasTags = (attributes && attributes.length > 0) || (interests && interests.length > 0);
+  if (stats.length === 0 && !hasTags) return null;
+
+  return (
+    <div className="mx-auto max-w-3xl px-4 py-5 sm:py-6">
+      {stats.length > 0 ? (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
+          {stats.map((s) => (
+            <div key={s.label} className="rounded-lg border border-line bg-surface/30 px-3 py-2.5">
+              <div className="font-semibold text-ink text-lg sm:text-xl">{s.value}</div>
+              <div className="mt-0.5 text-muted text-xs">{s.label}</div>
+            </div>
+          ))}
+        </div>
+      ) : null}
+
+      {attributes && attributes.length > 0 ? (
+        <div className="mt-4">
+          <div className="mb-1.5 text-muted text-xs uppercase tracking-wide">What locals say</div>
+          <div className="flex flex-wrap gap-1.5">
+            {attributes.map((a) => (
+              <span
+                key={a}
+                className="rounded-full border border-line bg-surface/30 px-2.5 py-1 text-ink2 text-xs"
+              >
+                {a}
+              </span>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      {interests && interests.length > 0 ? (
+        <div className="mt-3">
+          <div className="mb-1.5 text-muted text-xs uppercase tracking-wide">Popular interests</div>
+          <div className="flex flex-wrap gap-1.5">
+            {interests.map((i) => (
+              <span
+                key={i}
+                className="rounded-full border border-line bg-surface/30 px-2.5 py-1 text-ink2 text-xs"
+              >
+                {i}
+              </span>
+            ))}
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
 }

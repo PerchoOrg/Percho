@@ -48,7 +48,7 @@ export default async function CommunityPage({
   const { data: community } = (await (supabase as any)
     .from('communities')
     .select(
-      'id, name, slug, city, state, description, created_by, cover_video_id, cover_storage_path, boundary, status',
+      'id, name, slug, city, state, description, created_by, cover_video_id, cover_storage_path, status, residents_count, avg_income, avg_age, homeowners_pct, attributes, interests, boundary',
     )
     .eq('slug', slug)
     .maybeSingle()) as { data: (CommunityRow & { status: string }) | null };
@@ -106,6 +106,12 @@ export default async function CommunityPage({
         city: community.city,
         state: community.state,
         description: community.description,
+        residents_count: (community as any).residents_count ?? null,
+        avg_income: (community as any).avg_income ?? null,
+        avg_age: (community as any).avg_age ?? null,
+        homeowners_pct: (community as any).homeowners_pct ?? null,
+        attributes: (community as any).attributes ?? null,
+        interests: (community as any).interests ?? null,
       }}
       heroCoverUrl={heroCoverUrl}
       boundary={(community.boundary as import('@/lib/geo/point-in-polygon').GeoJsonPolygonLike | null) ?? null}

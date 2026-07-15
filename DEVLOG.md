@@ -4,6 +4,29 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-15 — Phase 87.1: surface Nextdoor demographics on community pages
+
+The Nextdoor scrape already put `residents_count`, `avg_income`, `avg_age`,
+`homeowners_pct`, `attributes` (neighborhood tags) and `interests` (resident
+interests) on every `communities` row. `/c/[slug]/page.tsx` never selected
+those columns, so the data was invisible.
+
+Added a `CommunityStats` block to `CommunityBody`, sitting between the hero
+and the videos/listings grid:
+- 4-cell stat grid (residents / avg income / median age / homeowners) —
+  values are pre-formatted strings on the row so we render them verbatim
+  ("4,361", "$151K", "50", "73%").
+- Two chip rows below — "What locals say" (attributes) and
+  "Popular interests" (interests).
+- Every field is optional; the whole block collapses if there's nothing
+  to show. No fabricated fallback.
+
+Known follow-ups (from vision review):
+- Label contrast on the muted subtitles is soft on cream.
+- No unit on "Median age" ("50" reads ambiguous).
+- Chip rows are visually identical between attributes and interests —
+  could differentiate.
+
 ## 2026-07-15 — Phase 87: community boundary map + cleanup
 
 Two things:
