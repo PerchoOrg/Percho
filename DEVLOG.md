@@ -4,6 +4,48 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-15 — Phase 92.3: community Nearby tab UI (owner triage + video panel)
+
+Phase 92 backend landed the community-scoped POI + bucket-video actions, but
+the dashboard had no way to trigger them — the "Nearby" tab only existed on
+the listing edit page. Phase 92.3 mirrors that tab under **community edit**
+so the neighborhood is the actual system of record for nearby content.
+
+Changes:
+
+- **New client component** `app/dashboard/communities/[id]/CommunityNearbyPanel.tsx`
+  — direct copy of `NearbyPoiPanel` with imports swapped to
+  `community-actions.ts` / `community-video-actions.ts` and `listingId` →
+  `communityId` throughout. Same 14-bucket layout, same POI review grid,
+  same 4-arc lightbox triage, same `GeneratedVideosSection`.
+- **Three helpers added** to `lib/poi/community-video-actions.ts` so the
+  panel has a status-poll surface that matches the listing side:
+  `getCommunityBucketVideoStatus`, `getCommunityBucketEligiblePhotoCount`,
+  `regenerateCommunityBucketVideoNarrative`. All key on `community_id` +
+  `scope='community_intent_bucket'`.
+- **Narrative regenerator** (`lib/poi/narrative.ts`) now accepts both
+  `intent_bucket` and `community_intent_bucket` scopes — the photo/POI join
+  is identical, only the video-row filter changes.
+- **Community edit page** (`app/dashboard/communities/[id]/page.tsx`) gains
+  a `Nearby` tab between Media and Marketing, owner-only (discovery /
+  render both cost external $). Server-side loads `initialNearbyPois` via
+  `loadNearbyPoisForCommunity`.
+
+Reader impact: none needed. The bucket worker (Phase 92) already publishes
+into `community_videos` with `status='ready'`, `visibility` defaulting to
+`public`, and `is_primary=true` after demoting prior rows. Every existing
+public reader (`lib/listing-feed/load.ts`, `lib/feed/browse-cards.ts`)
+selects on `status='ready' AND visibility='public'`, so the new rows show up
+without a query change. When we want reader UIs to *prefer* the primary
+pick and hide the history rows, we'll add a `.eq('is_primary', true)` — but
+until Phase 93 introduces a fallback story, letting all ready rows through
+is the safer default (a missing primary would otherwise cause a blank card).
+
+Result: an agent on `dashboard/communities/<id>` can discover POIs, review
+photos, and generate the 14 bucket videos exactly the way they do on a
+listing today, except the output is shared by every listing inside the
+community.
+
 ## 2026-07-15 — Phase 92: community-owned nearby videos + fix stretched landscape / text-only dining
 
 Two-part change.

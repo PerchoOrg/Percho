@@ -383,3 +383,159 @@ export async function listCommunityBucketVideos(
     created_at: r.created_at,
   }));
 }
+
+
+// ─── panel-facing helpers (Phase 92.3) ─────────────────────────────────────
+
+/**
+ * Mirror of `getBucketVideoStatus` but for community-scoped bucket videos.
+ * Returns the latest (community, bucket) row so the UI can poll during
+ * render and show status. Narrative is validated the same way — only
+ * llm-generated narratives with a `voiceover` string count.
+ */
+export type CommunityBucketVideoStatus = {
+  video_id: string;
+  status: "pending" | "processing" | "ready" | "approved" | "rejected" | "failed";
+  cf_stream_uid: string | null;
+  duration_s: number | null;
+  photo_count: number;
+  error: string | null;
+  created_at: string;
+  narrative?:
+    | (import("./narrative").VideoNarrative & { source?: string })
+    | null;
+} | null;
+
+export async function getCommunityBucketVideoStatus(
+  communityId: string,
+  bucket: IntentBucket,
+): Promise<CommunityBucketVideoStatus> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  const { data } = (await supabase
+    .from("generated_videos")
+    .select(
+      "id, status, cf_stream_uid, duration_s, input_photo_ids, error, created_at, narrative",
+    )
+    .eq("community_id", communityId)
+    .eq("scope", "community_intent_bucket")
+    .eq("intent_bucket", bucket)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle()) as {
+    data: {
+      id: string;
+      status: string;
+      cf_stream_uid: string | null;
+      duration_s: number | null;
+      input_photo_ids: string[] | null;
+      error: string | null;
+      created_at: string;
+      narrative: Record<string, unknown> | null;
+    } | null;
+  };
+
+  if (!data) return null;
+
+  const narr =
+    data.narrative && typeof (data.narrative as { voiceover?: unknown }).voiceover === "string"
+      ? (data.narrative as unknown as NonNullable<CommunityBucketVideoStatus>["narrative"])
+      : null;
+
+  return {
+    video_id: data.id,
+    status: data.status as NonNullable<CommunityBucketVideoStatus>["status"],
+    cf_stream_uid: data.cf_stream_uid,
+    duration_s: data.duration_s,
+    photo_count: data.input_photo_ids?.length ?? 0,
+    error: data.error,
+    created_at: data.created_at,
+    narrative: narr,
+  };
+}
+
+/**
+ * Raw pool size of approved photos eligible for this community x bucket,
+ * before the round-robin cap. Mirrors `getBucketEligiblePhotoCount`.
+ */
+export async function getCommunityBucketEligiblePhotoCount(
+  communityId: string,
+  bucket: IntentBucket,
+): Promise<number> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return 0;
+
+  const { data: approved } = (await supabase
+    .from("community_poi_photos")
+    .select("poi_photo_id, poi_photos!inner(poi_id, applicable_buckets)")
+    .eq("community_id", communityId)
+    .eq("status", "approved")) as {
+    data: Array<{
+      poi_photo_id: string;
+      poi_photos: { poi_id: string; applicable_buckets: string[] | null };
+    }> | null;
+  };
+  if (!approved || approved.length === 0) return 0;
+
+  const poiIds = Array.from(new Set(approved.map((r) => r.poi_photos.poi_id)));
+  const { data: bucketPois } = (await supabase
+    .from("community_pois")
+    .select("poi_id")
+    .eq("community_id", communityId)
+    .eq("intent_bucket", bucket)
+    .eq("status", "approved")
+    .in("poi_id", poiIds)) as { data: Array<{ poi_id: string }> | null };
+  const bucketPoiSet = new Set((bucketPois ?? []).map((p) => p.poi_id));
+
+  let count = 0;
+  for (const r of approved) {
+    const tags = r.poi_photos.applicable_buckets;
+    if (tags && tags.length > 0) {
+      if (tags.includes(bucket)) count += 1;
+    } else if (bucketPoiSet.has(r.poi_photos.poi_id)) {
+      count += 1;
+    }
+  }
+  return count;
+}
+
+/**
+ * Phase 92.3: manual "Regenerate description" trigger for community videos.
+ * Same Anthropic-narrative pipeline as the listing version - narrative.ts
+ * accepts both scopes now. Revalidates the community page instead of the
+ * listing edit page.
+ */
+export async function regenerateCommunityBucketVideoNarrative(
+  videoId: string,
+): Promise<
+  | { ok: true; narrative: NonNullable<CommunityBucketVideoStatus>["narrative"] }
+  | { ok: false; message: string }
+> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, message: "Not signed in." };
+
+  const { data: owned } = (await supabase
+    .from("generated_videos")
+    .select("id, community_id")
+    .eq("id", videoId)
+    .maybeSingle()) as { data: { id: string; community_id: string | null } | null };
+  if (!owned || !owned.community_id)
+    return { ok: false, message: "Video not found or not owned by you." };
+
+  const { generateBucketVideoNarrative } = await import("./narrative");
+  const res = await generateBucketVideoNarrative(videoId);
+  if (!res.ok) return { ok: false, message: res.message };
+
+  revalidatePath(`/dashboard/communities/${owned.community_id}`);
+  return { ok: true, narrative: res.narrative };
+}
