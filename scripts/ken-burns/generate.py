@@ -345,7 +345,15 @@ def concat_with_crossfade(clips: list[str], dst: str, xfade: float, w: int, h: i
         "-map", f"[{prev}]",
         "-r", str(FPS),
         "-c:v", "libx264", "-preset", "medium", "-crf", "20",
+        "-profile:v", "high", "-level", "4.0",
         "-pix_fmt", "yuv420p",
+        # Phase 86.1: explicit color metadata so CF Stream transcoder
+        # doesn't add safety pillarbox for "unknown color range" inputs.
+        "-color_range", "tv",
+        "-colorspace", "bt709",
+        "-color_primaries", "bt709",
+        "-color_trc", "bt709",
+        "-movflags", "+faststart",
         dst,
     ]
     run(cmd)
