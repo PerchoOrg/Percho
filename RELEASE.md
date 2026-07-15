@@ -4,6 +4,10 @@
 > Historical entries below preserve the original name in-place — release notes
 > are a record of what was shipped under the product's name at the time.
 
+## v0.81.0 · Photo approve no longer skips the next one (2026-07-15)
+
+- **Fixed the "approve → skip a photo" glitch.** Tapping Approve in the lightbox used to freeze the buttons for ~500ms while the whole POI list re-loaded — a second tap during that window was silently swallowed, making it look like a photo got skipped. Approvals are now optimistic: the ✓ shows instantly, the next photo is immediately tappable, and the server sync happens in the background.
+
 ## v0.80.0 · Top-10 per bucket by rating (2026-07-15)
 
 - **Each POI category defaults to its 10 best-rated places.** Discovery can pull 15-30 restaurants or 20+ shops for a busy address — showing them all buried the highlights. Every bucket now shows the top 10 by star rating (ties broken by review count) and offers a "Show all N (M more)" button to expand on demand.
