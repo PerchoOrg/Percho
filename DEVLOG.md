@@ -4,6 +4,19 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-15 — Phase 80: top-10 per bucket by rating
+
+**Motivation.** With 14 buckets live (Phase 79), a busy listing can surface 100+ POIs on the edit panel — noise that hides the signal. Owner directive: default each bucket to the top 10 by rating, hide the rest behind a toggle.
+
+**Changes.** `app/dashboard/listings/[id]/edit/NearbyPoiPanel.tsx`:
+- Sort each bucket by `pois.rating` desc, `user_ratings_total` desc as tiebreaker, null ratings pushed to the end.
+- Default render caps each bucket at 10 rows. Bucket header shows `LABEL · N (top 10 by rating)` when truncated.
+- "Show all N (M more)" button toggles the bucket into full view (per-bucket `Set<IntentBucket>` in local state). Toggle flips back to "Show top 10 only".
+
+**Tradeoffs.** Sort key is `rating` only; `user_ratings_total` is a tiebreaker, not a co-weight. A 4.9★ (5 reviews) will out-rank a 4.7★ (2000 reviews). Acceptable for MVP because Google Places rarely returns <10-review venues in `searchNearby`; revisit if we start seeing gimmick rows floating.
+
+**Verify.** `npx tsc --noEmit` clean, `npm run build` clean, `/dashboard/listings/[id]/edit` route size unchanged.
+
 ## 2026-07-15 — Phase 79: nearby POI taxonomy → 14 buyer-persona buckets
 
 **What / Why**: The original 4 buckets modeled *access* — `walkable / daily_drive / lifestyle / commute` — bucketing every POI by straight-line distance. That works for "can I get there?" but not for "does this house fit my life?". Owner asked to rework the taxonomy from a buyer's-decision angle (families, seniors, foodies, Asian community, etc.), so we swapped in 14 persona buckets, ordered by UI priority.
