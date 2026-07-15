@@ -33,6 +33,16 @@ declare -A KML_TRACKS=(
   ["a-warm-acoustic/13-take-a-chance.mp3"]="Take a Chance"
   ["a-warm-acoustic/14-pookatori-and-friends.mp3"]="Pookatori and Friends"
 
+  # Bucket B — tropical / island / bossa (target 8)
+  ["b-tropical/01-bossa-antigua.mp3"]="Bossa Antigua"
+  ["b-tropical/02-rainbows.mp3"]="Rainbows"
+  ["b-tropical/03-beach-party.mp3"]="Beach Party"
+  ["b-tropical/04-latin-industries.mp3"]="Latin Industries"
+  ["b-tropical/05-samba-isobel.mp3"]="Samba Isobel"
+  ["b-tropical/06-cuban-sandwich.mp3"]="Cuban Sandwich"
+  ["b-tropical/07-salty-ditty.mp3"]="Salty Ditty"
+  ["b-tropical/08-bumba-crossing.mp3"]="Bumba Crossing"
+
   # Bucket C — lofi / jazzy chill (existing seed only for now)
   ["c-lofi/05-cool-vibes.mp3"]="Cool Vibes"
 

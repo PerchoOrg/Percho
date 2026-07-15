@@ -20,7 +20,19 @@
         {"file": "a-warm-acoustic/14-pookatori-and-friends.mp3", "title": "Pookatori and Friends", "artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Pookatori%20and%20Friends.mp3", "duration_s": 248}
       ]
     },
-    "b-tropical":    {"description": "Tropical / island / bossa — sunbelt & waterfront.",         "tracks": []},
+    "b-tropical": {
+      "description": "Tropical / island / bossa — sunbelt & waterfront.",
+      "tracks": [
+        {"file": "b-tropical/01-bossa-antigua.mp3",   "title": "Bossa Antigua",   "artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Bossa%20Antigua.mp3",   "duration_s": 283},
+        {"file": "b-tropical/02-rainbows.mp3",        "title": "Rainbows",        "artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Rainbows.mp3",        "duration_s": 219},
+        {"file": "b-tropical/03-beach-party.mp3",     "title": "Beach Party",     "artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Beach%20Party.mp3",     "duration_s": 49},
+        {"file": "b-tropical/04-latin-industries.mp3","title": "Latin Industries","artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Latin%20Industries.mp3","duration_s": 200},
+        {"file": "b-tropical/05-samba-isobel.mp3",    "title": "Samba Isobel",    "artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Samba%20Isobel.mp3",    "duration_s": 250},
+        {"file": "b-tropical/06-cuban-sandwich.mp3",  "title": "Cuban Sandwich",  "artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Cuban%20Sandwich.mp3",  "duration_s": 195},
+        {"file": "b-tropical/07-salty-ditty.mp3",     "title": "Salty Ditty",     "artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Salty%20Ditty.mp3",     "duration_s": 128},
+        {"file": "b-tropical/08-bumba-crossing.mp3",  "title": "Bumba Crossing",  "artist": "Kevin MacLeod", "license": "CC-BY 4.0", "source_url": "https://incompetech.com/music/royalty-free/mp3-royaltyfree/Bumba%20Crossing.mp3",  "duration_s": 276}
+      ]
+    },
     "c-lofi": {
       "description": "Lofi / jazzy chill — urban condo, evening.",
       "tracks": [
