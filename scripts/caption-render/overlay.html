@@ -170,20 +170,14 @@ if (arch === 'TRUST') {
   stage.appendChild(sheet);
 
 } else if (arch === 'LIFESTYLE') {
-  // Phase 90: only clip 1 uses the full-screen title card as an intro.
-  // Clips 2+ use a bottom-sheet so the photo stays visible. Prior behavior
-  // (every clip = full-screen card) completely covered dining photos.
-  const isIntro = (c.clip_index || 1) === 1;
-  if (isIntro && c.why) {
-    const t = el(`<div class="LIFE-title">
-      <div class="num">${esc(c.chapter || '')}</div>
-      <div class="name">${esc(c.poi)}</div>
-      <div class="type">${esc(c.type || '')}</div>
-      <div class="why">"${esc(c.why)}"</div>
-      <div class="dist"><b>${esc(c.dist)}</b>mi · ${esc(c.drive || '')} drive</div>
-    </div>`);
-    stage.appendChild(t);
-  } else if (c.why) {
+  // Phase 92 (2026-07-15): all clips use the bottom-sheet — photo stays
+  // visible on every clip including clip 1. Previously clip 1 rendered a
+  // full-screen dark card that completely covered the photo (users read
+  // "dining video has only text, no photos"). Phase 90 had already relaxed
+  // clips 2+; Phase 92 finishes the job on clip 1 by dropping the intro
+  // .LIFE-title branch entirely. The sheet carries chapter + name + why +
+  // distance — same information density, photo still readable.
+  if (c.why) {
     const s = el(`<div class="LIFE-sheet">
       <div class="num">${esc(c.chapter || '')}</div>
       <div class="name">${esc(c.poi)}</div>

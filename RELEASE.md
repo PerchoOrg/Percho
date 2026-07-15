@@ -4,6 +4,39 @@
 > Historical entries below preserve the original name in-place — release notes
 > are a record of what was shipped under the product's name at the time.
 
+## v92 — 2026-07-15 — Nearby videos: same content across your whole subdivision + fewer text-only frames
+
+### 🎯 What's new
+- **Neighborhood videos are now shared across the community.** When you and
+  your neighbor sit in the same subdivision, you now see the *same* "Dining",
+  "Schools", "Daily errands" videos — no more per-listing regeneration for
+  content that describes the same street. Groundwork ships in this release
+  (data model + backend + worker); the UI trigger point moves to the
+  community page in the next release.
+- **14 lifestyle categories** replace the old 12. New ones surface things
+  buyers actually ask about: `asian_community`, `faith`, `work_hubs`,
+  `pets`, `daily_errands`, `healthcare`, `transit`.
+
+### 🐛 Bug fixes
+- **Landscape photos no longer get squeezed into a narrow band.** Bucket
+  videos were rendered vertical 9:16 regardless of the source photo shape,
+  so landscape dining/storefront/park shots ended up as ~42% photo + ~58%
+  blurred padding. If the input pool is majority landscape, the video is
+  now rendered 16:9 natively — the photo fills the frame.
+- **Dining videos actually show photos on clip 1 now.** The LIFESTYLE intro
+  card on the first clip covered the photo with a full-screen dark
+  gradient. All clips now use the bottom-sheet layout, so the photo is
+  visible from second one.
+
+### 🧱 Under the hood
+- New tables `community_pois`, `community_poi_photos`; new columns
+  `community_videos.intent_bucket` + `is_primary`,
+  `generated_videos.community_id` (XOR with `listing_id`).
+- Two new server actions modules (`lib/poi/community-actions.ts`,
+  `lib/poi/community-video-actions.ts`) mirror the listing pipeline.
+- Render worker handles both listing- and community-scoped bucket jobs.
+- Legacy per-listing bucket path still works (dual-write during Phase 93).
+
 ## v90 — 2026-07-15 — Nearby videos: dining photos back, landscape shots keep their shape
 
 ### 🐛 Bug Fixes
