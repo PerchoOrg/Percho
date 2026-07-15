@@ -4,6 +4,19 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-15 — Phase 81: photo approve/reject — optimistic, no refresh
+
+**Bug.** In the lightbox photo-triage flow, tapping Approve would auto-advance to the next photo (correct), then *feel* like it skipped that next photo when the user tapped again. Root cause: `handlePhotoDecision` ran inside `startTransition` and awaited `refresh()` (which re-loads *all* listing POIs — 300-800ms roundtrip). During that window `pending=true` → the lightbox's Approve/Reject buttons went `disabled`, silently swallowing the user's next tap. Auto-advance had already moved to photo N+1, so from the user's POV they "approved photo N, saw photo N+1 briefly, tapped, and landed on N+2" — a phantom skip.
+
+**Fix.** `NearbyPoiPanel.tsx`:
+- `handlePhotoDecision` is now optimistic: immediately mutate the local `pois` state (flip that photo's `status` in place), fire the server action *outside* `startTransition`, and only touch state again if the action throws (roll back to the snapshot).
+- No `refresh()` — the POI list, count badges, and generated-video state don't need the whole listing re-loaded for a single photo status flip.
+- Lightbox Approve/Reject buttons no longer gate on `pending`, so consecutive taps land on consecutive photos.
+
+**Non-fix.** Approve/Reject at the *POI* row level still uses `startTransition + refresh` because those flips can gate discovery/photos and the count needs an authoritative re-read. Only photo-level decisions were changed.
+
+**Verify.** `npx tsc --noEmit` clean, `npm run build` clean. Reload edit page → open lightbox → rapidly tap Approve — should feel snappy, no phantom skips.
+
 ## 2026-07-15 — Phase 80: top-10 per bucket by rating
 
 **Motivation.** With 14 buckets live (Phase 79), a busy listing can surface 100+ POIs on the edit panel — noise that hides the signal. Owner directive: default each bucket to the top 10 by rating, hide the rest behind a toggle.

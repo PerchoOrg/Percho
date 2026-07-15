@@ -206,14 +206,31 @@ export function NearbyPoiPanel({
   };
 
   const handlePhotoDecision = (poiPhotoId: string, approved: boolean) => {
-    startTransition(async () => {
+    // Optimistic update: flip the photo's status locally so the lightbox
+    // reacts instantly. Fire the server action without startTransition so
+    // the auto-advanced next photo's buttons aren't disabled during the
+    // 300-800ms server roundtrip (which caused a perceived "skip a photo"
+    // when the user's next tap arrived while the button was disabled).
+    const nextStatus: 'approved' | 'rejected' = approved ? 'approved' : 'rejected';
+    let prevSnapshot: NearbyPoiForListing[] | null = null;
+    setPois((current) => {
+      prevSnapshot = current;
+      return current.map((poi) => ({
+        ...poi,
+        photos: poi.photos.map((p) =>
+          p.poi_photo_id === poiPhotoId ? { ...p, status: nextStatus } : p,
+        ),
+      }));
+    });
+    void (async () => {
       try {
-        await setListingPhotoStatus(listingId, poiPhotoId, approved ? 'approved' : 'rejected');
-        await refresh();
+        await setListingPhotoStatus(listingId, poiPhotoId, nextStatus);
       } catch (err) {
+        // Roll back optimistic update on failure.
+        if (prevSnapshot) setPois(prevSnapshot);
         setNotice(`Photo decision failed: ${(err as Error).message}`);
       }
-    });
+    })();
   };
 
   // ── render ──────────────────────────────────────────────────────────────
