@@ -4,6 +4,28 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-15 — Fix: community delete blocked by community-scoped leads
+
+**Motivation.** Owner tried to delete the Peachtree Corners community from the dashboard (which also removes its 6 auto-generated neighborhood videos in one shot via cascade). Delete failed with a server-side exception; digest surfaced check-constraint `leads_target_chk` violation.
+
+**Root cause.** Migration `0029_leads_community.sql` declared `leads.community_id` FK as `ON DELETE SET NULL`, but the sibling `leads_target_chk` requires exactly one of (`listing_id`, `community_id`) to be non-null. So cascading a community delete flipped `community_id` to null on a community-scoped lead → both target columns null → check violates → whole tx rolled back → community delete fails.
+
+Phase 56 (migration 0041) had already fixed the mirror case for `leads.listing_id`. Every other child-of-community FK (community_photos, community_videos, saved_communities, favorites, events, saved_social_drafts, community_video_extra_links) was already `ON DELETE CASCADE`. `leads.community_id` was the last oversight.
+
+**Changes.**
+- New migration `supabase/migrations/20260715040000_leads_community_cascade.sql`: drop and recreate `leads_community_id_fkey` with `ON DELETE CASCADE`. Product semantics: a lead is *about* a specific community; if the community is gone, the lead has no target and cannot be routed.
+- Applied to remote DB via EC2 `psql` (Hermes-managed, path B in vicinity/references/migration-deployment.md), version row inserted into `supabase_migrations.schema_migrations`.
+- One-time cleanup: deleted the single existing community-scoped lead (id `8c104422…`, name `王天柔`, message "Hi Qiaoxuan, I'm interested in Peachtree Corners.") — this was a seed/demo row from earlier testing (memory rule: no mock in prod DB). After the cleanup + cascade fix, the Peachtree Corners community + its 6 auto-generated neighborhood videos + community_video_extra_links + photos were removed cleanly from the DB by the owner-initiated dashboard delete.
+
+**Scope.** Migration-only change on the git side; no app code touched (FK is DB-level, dashboard `deleteCommunity()` server action already promises full cascade).
+**Verify.**
+```
+select conname, pg_get_constraintdef(oid) from pg_constraint
+ where conrelid='public.leads'::regclass and conname='leads_community_id_fkey';
+-- FOREIGN KEY (community_id) REFERENCES communities(id) ON DELETE CASCADE
+```
+Peachtree Corners no longer appears in `public.communities`, its 6 videos are gone from `public.community_videos`, no orphan rows in `public.leads`.
+
 ## 2026-07-15 — Video row polish: walkthrough tag + thumbnail 404 fallback
 
 **Motivation.** Owner screenshot showed two issues on the Media-tab video row:
