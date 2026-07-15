@@ -315,10 +315,16 @@ function SortableVideoItem({
 
   let thumb: string | null = null;
   if (video.status === 'ready') {
-    try {
-      thumb = thumbnailUrl(video.cf_video_id);
-    } catch {
-      thumb = null;
+    // Prefer portrait (main cf_video_id). Some auto-generated rows have only
+    // the landscape variant populated — fall back so the row still shows a
+    // real thumbnail instead of the film-icon placeholder.
+    const thumbId = video.cf_video_id ?? video.cf_video_id_landscape;
+    if (thumbId) {
+      try {
+        thumb = thumbnailUrl(thumbId);
+      } catch {
+        thumb = null;
+      }
     }
   }
 
