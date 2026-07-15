@@ -4,6 +4,10 @@
 > Historical entries below preserve the original name in-place — release notes
 > are a record of what was shipped under the product's name at the time.
 
+## v0.78.1 · Cleaner auto-video label (2026-07-15)
+
+- The Media-tab video row no longer says "Home tour (auto-generated)" in the title. It now shows just "Home tour" with a small **Auto** tag next to `walkthrough` in the meta line — matches the existing Cover / Landscape chip style and stops the title from truncating on phones.
+
 ## v0.78 · Nearby tab with per-bucket video descriptions (2026-07-15)
 
 Nearby POI moves out of the Media tab into its own **Nearby** tab (between Media and Marketing). The new tab has two sections:

@@ -355,7 +355,9 @@ function SortableVideoItem({
       </div>
       <div className="min-w-0 flex-1 basis-[8rem]">
         <div className="flex items-center gap-2">
-          <span className="truncate text-sm text-ink">{video.title ?? video.cf_video_id}</span>
+          <span className="truncate text-sm text-ink">
+            {(video.title ?? video.cf_video_id).replace(/\s*\(auto-generated\)\s*$/i, '')}
+          </span>
           {isCover ? (
             <span className="flex-shrink-0 rounded bg-ink px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-cream">
               Cover
@@ -370,11 +372,19 @@ function SortableVideoItem({
             </span>
           ) : null}
         </div>
-        <div className="truncate text-xs text-muted">
-          {video.kind}
+        <div className="flex items-center gap-1.5 truncate text-xs text-muted">
+          <span>{video.kind}</span>
+          {/(auto-generated)/i.test(video.title ?? '') ? (
+            <span
+              className="flex-shrink-0 rounded bg-ink/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-ink2"
+              title="Auto-generated from listing photos"
+            >
+              Auto
+            </span>
+          ) : null}
           {video.status !== 'ready' ? (
             <>
-              {' · '}
+              <span>·</span>
               <StatusText status={video.status} />
             </>
           ) : null}

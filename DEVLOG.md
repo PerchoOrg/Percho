@@ -4,6 +4,17 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-15 — Video row: "Auto" tag instead of "(auto-generated)" in title
+
+**Motivation.** Owner feedback on the Media tab video row: the title `Home tour (auto-generated)` looked noisy and truncated on mobile. Move the "auto-generated" signal into a compact tag alongside `walkthrough`.
+
+**Changes.** `app/dashboard/listings/[id]/edit/VideoPanel.tsx`:
+- Strip trailing `(auto-generated)` from the displayed title (data unchanged — only the render layer trims).
+- Meta row (below title) now shows `walkthrough · Auto · Processing…` when the title contains `(auto-generated)`. `Auto` is a small uppercase tag styled to match existing `Cover` / `Landscape` chips (neutral bg-ink/10, text-ink2).
+
+**Scope.** Pure UI, no data/API changes. Only affects listing edit Media tab rows.
+**Verify.** Vercel preview → open a listing with an auto-generated Home tour → title reads "Home tour", meta row reads "walkthrough · Auto · …".
+
 ## 2026-07-15 — Phase 78 · Dedicated Nearby tab + bucket-video narratives
 
 **Motivation.** Nearby POI was buried inside the Media tab and the four generated bucket videos had no human-readable description to hand off to TTS. Agents also had no easy way to spot-check what the vision tagger wrote for each approved photo.
