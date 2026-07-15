@@ -61,6 +61,7 @@ type CommunityRow = {
   description: string | null;
   cover_video_id: string | null;
   cover_storage_path: string | null;
+  boundary: unknown;
 };
 
 /**
@@ -147,6 +148,8 @@ async function hydrateCommunityCards(
       cover_video_cf_id: c.cover_video_id ? cfById.get(c.cover_video_id) ?? null : null,
       cover_storage_path: c.cover_storage_path,
       fallback_video_cf_id: firstVideoCfByCommunity.get(c.id) ?? null,
+      name: c.name,
+      boundary: (c.boundary as import('@/lib/community/logo-cover').BoundaryGeoJSON | null) ?? null,
     }),
   }));
 }
@@ -159,7 +162,7 @@ async function fetchActiveCommunitiesImpl(): Promise<CommunityListCard[]> {
   // biome-ignore lint/suspicious/noExplicitAny: stub generated types
   const { data } = (await (supabase as any)
     .from('communities')
-    .select('id, name, slug, city, state, description, cover_video_id, cover_storage_path')
+    .select('id, name, slug, city, state, description, cover_video_id, cover_storage_path, boundary')
     // Phase 72 (2026-07-05): never surface the upload-flow `Untitled community`
     // stub — owner has never touched it (name still = stub), so it's just noise.
     .neq('name', 'Untitled community')
@@ -193,7 +196,7 @@ async function fetchOwnInactiveCommunities(agentId: string): Promise<CommunityLi
   // biome-ignore lint/suspicious/noExplicitAny: stub generated types
   const { data } = (await (supabase as any)
     .from('communities')
-    .select('id, name, slug, city, state, description, cover_video_id, cover_storage_path')
+    .select('id, name, slug, city, state, description, cover_video_id, cover_storage_path, boundary')
     .neq('status', 'active')
     .neq('name', 'Untitled community')
     .eq('created_by', agentId)
@@ -232,7 +235,7 @@ async function fetchAgentScopedCommunities(agentId: string): Promise<CommunityLi
     // biome-ignore lint/suspicious/noExplicitAny: stub generated types
     (supabase as any)
       .from('communities')
-      .select('id, name, slug, city, state, description, cover_video_id, cover_storage_path')
+      .select('id, name, slug, city, state, description, cover_video_id, cover_storage_path, boundary')
       .eq('created_by', agentId)
       .neq('name', 'Untitled community') as Promise<{ data: CommunityRow[] | null }>,
     // biome-ignore lint/suspicious/noExplicitAny: stub generated types
@@ -259,7 +262,7 @@ async function fetchAgentScopedCommunities(agentId: string): Promise<CommunityLi
     // biome-ignore lint/suspicious/noExplicitAny: stub generated types
     const { data } = (await (supabase as any)
       .from('communities')
-      .select('id, name, slug, city, state, description, cover_video_id, cover_storage_path')
+      .select('id, name, slug, city, state, description, cover_video_id, cover_storage_path, boundary')
       .in('id', needIds)) as { data: CommunityRow[] | null };
     linkedRows = data ?? [];
   }

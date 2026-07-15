@@ -4,6 +4,26 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-15 — Phase 83.4: community cover — Nextdoor photos + SVG logo fallback
+
+Every community now has a cover:
+
+1. **`lib/community/logo-cover.ts`** — SVG generator that renders the boundary
+   polygon as a rounded/palette-tinted mark, with initials-monogram fallback
+   when the shape is too slivered to read. Deterministic (hash of name →
+   palette + jitter). 10 unit tests.
+2. **`lib/community/cover.ts`** — resolver extended: after
+   `cover_video_id / cover_storage_path / first-ready-video` fall through,
+   emit the SVG logo as a data-URI. Signature now takes `name` + `boundary`;
+   updated all 5 call sites (`list.ts`, `saved/_actions.ts`, `c/[slug]`,
+   `dashboard/communities/[id]`).
+3. **Nextdoor hero backfill** — scraped `og:image` from all 731 nextdoor
+   seed pages and uploaded to Supabase Storage `community-covers/nextdoor/{slug}.jpg`.
+   594 legit street-level photos, 137 fell back to Nextdoor's site-wide
+   default (BoA skyline) — we kept those; a repeated stock photo is still
+   better than 137 SVG blocks. Path stored as `nextdoor/{slug}.jpg` (bucket
+   is added by resolver).
+
 ## 2026-07-15 — Phase 86: ffmpeg fill-crop (kill letterbox black edges during pan)
 
 **Problem.** Bucket videos showed a dark blurred letterbox band on the left/right

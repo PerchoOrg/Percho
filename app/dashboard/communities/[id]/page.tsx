@@ -53,6 +53,7 @@ interface CommunityRow {
   created_by: string | null;
   cover_video_id: string | null;
   cover_storage_path: string | null;
+  boundary: unknown;
   // Phase 50.4 — expanded metadata.
   zip: string | null;
   county: string | null;
@@ -109,7 +110,7 @@ export default async function CommunityEditorPage({
   const { data: community } = (await (supabase as any)
     .from('communities')
     .select(
-      'id, name, slug, city, state, description, status, created_by, cover_video_id, cover_storage_path, zip, county, hoa_fee_monthly, year_built, year_built_end, price_min, price_max, property_types, highlights, builder, website',
+      'id, name, slug, city, state, description, status, created_by, cover_video_id, cover_storage_path, boundary, zip, county, hoa_fee_monthly, year_built, year_built_end, price_min, price_max, property_types, highlights, builder, website',
     )
     .eq('id', id)
     .maybeSingle()) as { data: CommunityRow | null };
@@ -227,6 +228,8 @@ export default async function CommunityEditorPage({
     cover_video_cf_id: coverVideoCfId,
     cover_storage_path: community.cover_storage_path,
     fallback_video_cf_id: firstReadyVideo?.cf_video_id ?? null,
+    name: community.name,
+    boundary: (community.boundary as import('@/lib/community/logo-cover').BoundaryGeoJSON | null) ?? null,
   });
   const heroCoverUrl = heroCover ? heroCover.url : null;
 
