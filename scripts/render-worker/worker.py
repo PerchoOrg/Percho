@@ -397,6 +397,27 @@ BUCKET_LABELS = {
 }
 
 
+# Phase 85: 14 nearby buckets → 6 video-template archetypes.
+# See lib/poi/types.ts INTENT_BUCKETS for the canonical bucket list.
+# Archetypes drive caption layout in scripts/ken-burns/generate.py.
+CAPTION_ARCHETYPE_MAP = {
+    "schools": "TRUST",
+    "healthcare": "TRUST",
+    "dining": "LIFESTYLE",
+    "fitness": "LIFESTYLE",
+    "shopping": "UTILITY",
+    "daily_errands": "UTILITY",
+    "pets": "UTILITY",
+    "nightlife": "NARRATIVE",
+    "outdoor": "MAP",
+    "transit": "MAP",
+    "work_hubs": "MAP",
+    "kids": "MAGAZINE",
+    "asian_community": "MAGAZINE",
+    "faith": "MAGAZINE",
+}
+
+
 def claim_bucket_job() -> dict[str, Any] | None:
     """Pick oldest pending generated_videos row (scope='intent_bucket') and
     flip to 'processing' atomically. Same optimistic-lock pattern as
@@ -492,12 +513,14 @@ def process_bucket_job(job: dict[str, Any]) -> None:
         # 5. Render.
         bgm_choice = pick_bgm()
         out_path = workdir / f"bucket_{bucket}.mp4"
+        archetype = CAPTION_ARCHETYPE_MAP.get(bucket, "TRUST")
         cmd = [
             "python3", str(GENERATE_SCRIPT),
             "--photos", str(workdir),
             "--output", str(out_path),
             "--orientation", orientation,
             "--listing-overlay", str(overlay_path),
+            "--archetype", archetype,
         ]
         if bgm_choice:
             cmd += ["--bgm", str(bgm_choice)]

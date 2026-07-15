@@ -405,6 +405,10 @@ def main() -> None:
     p.add_argument("--zoom-mode", default="auto",
                    choices=["auto", "pan-lr", "pan-tb", "zoom-in", "zoom-out"])
     p.add_argument("--xfade-duration", type=float, default=0.5)
+    p.add_argument("--archetype", default="TRUST",
+                   choices=["TRUST", "LIFESTYLE", "UTILITY", "NARRATIVE", "MAGAZINE", "MAP"],
+                   help="Caption template family (Phase 85). NARRATIVE deferred; "
+                        "unknown falls back to TRUST layout.")
     args = p.parse_args()
 
     if not shutil.which("ffmpeg"):
