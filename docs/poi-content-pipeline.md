@@ -1,7 +1,13 @@
 # POI Content Pipeline — Design Doc v1
 
-**Status**: Draft · **Owner**: Percho · **Last updated**: 2026-07-14
+**Status**: Draft · **Owner**: Percho · **Last updated**: 2026-07-15
 **Related**: `content-pipeline-v1` (Phase G), Skills: `content-pipeline-design-anchoring.md`, `neighborhood-content` conventions (memory §25).
+
+> **⚠ Phase 79 update (2026-07-15)** — the 4-bucket taxonomy referenced throughout this doc (walkable / daily_drive / lifestyle / commute) was replaced by **14 buyer-persona buckets** in `lib/poi/types.ts`:
+>
+> `schools · dining · nightlife · shopping · outdoor · fitness · kids · asian_community · daily_errands · faith · work_hubs · healthcare · pets · transit`
+>
+> Rationale: distance-based buckets modeled *access* ("how do I get there?"). The new taxonomy models *buyer decisions* ("what matters to my life?"). Bucket → Google Places `type[]` mapping lives in `BUCKET_PLACES_TYPES` (`lib/poi/google-places.ts`). Sections below that reference the old 4 buckets are historical — replace mentally with the new taxonomy until this doc is rewritten in Phase 80.
 
 ---
 

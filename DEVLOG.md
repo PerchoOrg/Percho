@@ -4,7 +4,42 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
-## 2026-07-15 — Fix: community delete blocked by community-scoped leads
+## 2026-07-15 — Phase 79: nearby POI taxonomy → 14 buyer-persona buckets
+
+**What / Why**: The original 4 buckets modeled *access* — `walkable / daily_drive / lifestyle / commute` — bucketing every POI by straight-line distance. That works for "can I get there?" but not for "does this house fit my life?". Owner asked to rework the taxonomy from a buyer's-decision angle (families, seniors, foodies, Asian community, etc.), so we swapped in 14 persona buckets, ordered by UI priority.
+
+**New taxonomy** (ordered by owner spec — schools pinned first even though its Places photo pool is thin, because it's the #1 GA suburban decision driver):
+
+```
+1  schools           2  dining              3  nightlife         4  shopping
+5  outdoor           6  fitness             7  kids              8  asian_community
+9  daily_errands    10  faith              11  work_hubs        12  healthcare
+13 pets             14  transit
+```
+
+**Bucketing rule change**: `bucketByDistance(meters)` → `bucketByPlaceType(primaryType, types)`. The classifier now reads Google Places `primaryType` (fallback `types[]`) and maps against `BUCKET_PLACES_TYPES` in `lib/poi/google-places.ts`. POIs whose types don't map to any bucket are dropped from discovery.
+
+**Text-Search-only buckets**: `asian_community` and `work_hubs` don't map cleanly to Google Places categories — the enum reserves the slot but `BUCKET_PLACES_TYPES[b] = []`, so `discoverPoisForListing` currently skips them. Follow-up phase will wire Text Search queries ("chinese school", "wework", "H Mart") to populate them.
+
+**Files touched**:
+- `lib/poi/types.ts` — `INTENT_BUCKETS` 4 → 14, added JSDoc explaining photo-tier ranking
+- `lib/poi/google-places.ts` — `BUCKET_PLACES_TYPES` map, `bucketByPlaceType`, `DEFAULT_INCLUDED_TYPES` now derived
+- `lib/poi/actions.ts` — discover uses new classifier, buckets initialized generically over `INTENT_BUCKETS`
+- `lib/poi/narrative.ts` — `BUCKET_HOOKS` 14 entries
+- `lib/poi/vision-tagger.ts` — system prompt bucket descriptions
+- `lib/poi/video-actions.ts` — `bucketLabel` 14 cases
+- `app/dashboard/listings/[id]/edit/NearbyPoiPanel.tsx` — labels/short/order + generic grouping loop + notice summarizes top-4 buckets
+- `supabase/migrations/20260715050000_intent_buckets_14.sql` — replaces check constraint on `listing_pois.intent_bucket`, clears the (pre-launch, discoverable) rows on old buckets
+- `docs/poi-content-pipeline.md` — Phase 79 banner at top; body still references old buckets, will be rewritten in Phase 80
+
+**Verification**: `npx tsc --noEmit` clean · `npm run build` clean (`/dashboard/listings/[id]/edit` at 41.1 kB — unchanged size, no dead code shipped).
+
+**Not yet done**:
+- Photo-tier UI treatment (S/A/B/C rendering — info cards for C-tier healthcare/transit, sub-chip filters for B-tier daily_errands/faith)
+- Text Search fallback for `asian_community` + `work_hubs`
+- Schools alternate data source (GreatSchools API + aerial imagery)
+
+
 
 **Motivation.** Owner tried to delete the Peachtree Corners community from the dashboard (which also removes its 6 auto-generated neighborhood videos in one shot via cascade). Delete failed with a server-side exception; digest surfaced check-constraint `leads_target_chk` violation.
 
