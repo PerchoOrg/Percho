@@ -28,7 +28,7 @@
 import { CommunityGrid } from '@/app/_components/CommunityGrid';
 import { GridPageShell } from '@/app/_components/GridPageShell';
 import { Building2 } from 'lucide-react';
-import { fetchCommunityListCards } from '@/lib/communities/list';
+import { fetchMyCommunityCards } from '@/lib/communities/list';
 import { getViewerAgentId } from '@/lib/auth/viewer';
 import { startTimer } from '@/lib/perf/timing';
 import { createClient } from '@/lib/supabase/server';
@@ -52,9 +52,11 @@ export default async function CommunitiesListPage() {
 
   if (!sessionRes.data.session) redirect('/login?redirect=%2Fdashboard%2Fcommunities');
 
-  // Phase 72.2 (2026-07-05): only the viewer's own inactive communities
-  // show up alongside the active ones. Other agents' drafts stay hidden.
-  const cards = await fetchCommunityListCards({ viewerAgentId: agentId });
+  // Phase 83.2 (2026-07-15): "My neighborhoods" is agent-scoped.
+  // Only communities the agent created OR has an active listing in.
+  // The 731 shared Nextdoor seeds live on /communities (public).
+  if (!agentId) redirect('/login?redirect=%2Fdashboard%2Fcommunities');
+  const cards = await fetchMyCommunityCards(agentId);
   t.mark('cards');
 
   t.end({ cardCount: cards.length });
