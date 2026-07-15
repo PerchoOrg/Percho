@@ -562,48 +562,82 @@ def process_bucket_job(job: dict[str, Any]) -> None:
                 if pid and beat:
                     narrative_beats_by_poi[pid] = beat
 
-        def _fmt_distance(m: float | None) -> str:
+        def _fmt_distance_mi(m: float | None) -> float | None:
+            if m is None:
+                return None
+            return round(m / 1609.34, 1)
+
+        def _fmt_drive_min(m: float | None) -> str:
             if m is None:
                 return ""
             mi = m / 1609.34
-            if mi < 0.1:
-                return "< 0.1 mi"
-            if mi < 10:
-                return f"{mi:.1f} mi"
-            return f"{round(mi)} mi"
+            # crude: assume 25 mph average = 2.4 min/mi in suburbs
+            mins = max(1, int(round(mi * 2.4)))
+            return f"{mins} min"
 
+        archetype = CAPTION_ARCHETYPE_MAP.get(bucket, "TRUST")
+        bucket_label = BUCKET_LABELS.get(bucket, bucket)
+
+        # Phase 88: build per-clip caption metadata in the new schema
+        # consumed by scripts/caption-render/overlay.html. Fields depend on
+        # archetype; unfilled narrative fields (why/quote/title/etc.) fall
+        # back to hardcoded placeholders until Phase 89 LLM populates them.
         captions = []
         for i, pid in enumerate(input_photo_ids, start=1):
             row = by_id[pid]
             poi = row.get("pois") or {}
             poi_id = row.get("poi_id")
-            captions.append({
+            dist_m = distance_by_poi.get(poi_id) if poi_id else None
+            dist_mi = _fmt_distance_mi(dist_m)
+            drive = _fmt_drive_min(dist_m)
+            beat = narrative_beats_by_poi.get(poi_id, "") if poi_id else ""
+            poi_name = (poi.get("display_name") or "").strip()
+            # Map google_places.types → human label (v1 uses bucket_label fallback)
+            type_label = bucket_label
+
+            entry: dict = {
                 "clip": i,
-                "title": (poi.get("display_name") or "").strip(),
-                "distance": _fmt_distance(
-                    distance_by_poi.get(poi_id) if poi_id else None
-                ),
-                "beat": narrative_beats_by_poi.get(poi_id, "") if poi_id else "",
-            })
+                "poi": poi_name,
+                "type": type_label,
+                "dist": dist_mi,
+                "drive": drive,
+            }
+            if archetype == "TRUST":
+                # Placeholder badges — Phase 89 GreatSchools / GoodRx / etc.
+                entry["badges"] = [{"t": bucket_label, "c": "gold"}]
+            elif archetype == "LIFESTYLE":
+                entry["why"] = beat or f"Where the day begins."
+                entry["chapter"] = f"{i:02d} / {len(input_photo_ids):02d}"
+            elif archetype == "NARRATIVE":
+                entry["quote"] = beat or poi_name
+            elif archetype == "MAGAZINE":
+                entry["section"] = "The Neighborhood"
+                entry["chapter"] = f"Chapter {['I','II','III','IV','V','VI'][min(i-1,5)]}"
+                entry["title"] = beat or poi_name
+                entry["credit"] = f"{type_label.upper()} · {dist_mi or '—'} MI · {(drive or '—').upper()}"
+            elif archetype == "MAP":
+                entry["mode"] = "Drive"
+                entry["time"] = drive
+            # UTILITY needs no extras — {poi, type, dist, drive} is enough
+            captions.append(entry)
+
         captions_path = workdir / "captions.json"
         captions_path.write_text(json.dumps({
-            "archetype": CAPTION_ARCHETYPE_MAP.get(bucket, "TRUST"),
+            "archetype": archetype,
             "bucket": bucket,
-            "bucket_label": BUCKET_LABELS.get(bucket, bucket),
+            "bucket_label": bucket_label,
             "clips": captions,
         }, indent=2))
 
         # 5. Render.
         bgm_choice = pick_bgm()
         out_path = workdir / f"bucket_{bucket}.mp4"
-        archetype = CAPTION_ARCHETYPE_MAP.get(bucket, "TRUST")
         cmd = [
             "python3", str(GENERATE_SCRIPT),
             "--photos", str(workdir),
             "--output", str(out_path),
             "--orientation", orientation,
             "--listing-overlay", str(overlay_path),
-            "--archetype", archetype,
             "--captions", str(captions_path),
         ]
         if bgm_choice:

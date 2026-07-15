@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Percho Caption Overlay</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin:0; padding:0; width:1080px; height:1920px; background: transparent;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased; color: #fff; }
+  .stage { position: relative; width: 1080px; height: 1920px; overflow: hidden; }
+
+  /* Scale factor vs mock (mock screen ~324x588 → 1080x1920 ≈ 3.27–3.35x).
+     We use 3.2x for horizontal legibility on real photos. */
+
+  /* Universal top progress bars — 6 clips assumed default; script may override count */
+  .progress { position: absolute; top: 44px; left: 40px; right: 40px; z-index: 15;
+    display: flex; gap: 10px; }
+  .progress span { flex: 1; height: 8px; background: rgba(255,255,255,0.3); border-radius: 6px;
+    overflow: hidden; position: relative; }
+  .progress span.done { background: rgba(255,255,255,0.9); }
+  .progress span.now::after { content:""; position:absolute; left:0; top:0; height:100%; width:60%;
+    background: rgba(255,255,255,0.95); }
+
+  /* ---------- TRUST — Bottom Sheet + Badges ---------- */
+  .TRUST-sheet { position: absolute; bottom: 0; left: 0; right: 0; z-index: 10;
+    background: linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.75) 40%, rgba(0,0,0,0.9) 100%);
+    padding: 200px 56px 90px; color: #fff; }
+  .TRUST-sheet .name { font-size: 64px; font-weight: 700; letter-spacing: -0.01em; line-height: 1.15; }
+  .TRUST-sheet .meta { font-size: 36px; color: rgba(255,255,255,0.75); margin-top: 14px; }
+  .TRUST-badges { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 32px; }
+  .TRUST-badges .b { padding: 14px 26px; border-radius: 18px;
+    background: rgba(255,255,255,0.15); border: 2px solid rgba(255,255,255,0.2);
+    font-size: 32px; font-weight: 600; color: #fff; display: inline-flex; align-items: center; gap: 10px; }
+  .TRUST-badges .b.gold { background: rgba(252,211,77,0.22); border-color: rgba(252,211,77,0.5); color: #FCD34D; }
+  .TRUST-badges .b.green { background: rgba(74,222,128,0.22); border-color: rgba(74,222,128,0.5); color: #86EFAC; }
+
+  /* ---------- LIFESTYLE — Chapter Cards + POI badge ---------- */
+  .LIFE-title { position: absolute; inset: 0; z-index: 12;
+    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+    display: flex; flex-direction: column; justify-content: center; align-items: flex-start;
+    padding: 220px 90px; color: #fff; }
+  .LIFE-title .num { font-size: 32px; letter-spacing: 0.15em; color: #FCD34D; margin-bottom: 36px; font-weight: 600; }
+  .LIFE-title .name { font-size: 82px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1;
+    margin-bottom: 24px; font-family: "Charter","Georgia",serif; }
+  .LIFE-title .type { font-size: 40px; color: #94A3B8; margin-bottom: 60px; }
+  .LIFE-title .why { font-size: 48px; line-height: 1.4; color: #E2E8F0; font-style: italic; }
+  .LIFE-title .dist { margin-top: 72px; padding-top: 56px; border-top: 2px solid rgba(255,255,255,0.15);
+    font-size: 34px; color: #94A3B8; display: flex; align-items: center; gap: 20px; }
+  .LIFE-title .dist b { color: #fff; font-size: 42px; font-weight: 600; margin-right: 4px; }
+  .LIFE-badge { position: absolute; bottom: 90px; left: 56px; z-index: 10;
+    padding: 16px 30px; border-radius: 999px; background: rgba(0,0,0,0.55);
+    color: #fff; font-size: 34px; font-weight: 500; }
+
+  /* ---------- UTILITY — Chip + Drive ---------- */
+  .UTIL-chip { position: absolute; top: 190px; left: 50px; z-index: 10;
+    display: inline-flex; align-items: center; gap: 16px;
+    padding: 18px 34px; border-radius: 999px; background: rgba(0,0,0,0.6);
+    color: #fff; font-size: 38px; font-weight: 500; }
+  .UTIL-chip svg { width: 34px; height: 34px; }
+  .UTIL-chip .dot { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,0.5); }
+  .UTIL-drive { position: absolute; bottom: 90px; right: 50px; z-index: 10;
+    padding: 16px 30px; border-radius: 18px; background: rgba(0,0,0,0.6);
+    color: #fff; font-size: 34px; font-weight: 500;
+    display: inline-flex; align-items: center; gap: 12px; }
+  .UTIL-drive svg { width: 30px; height: 30px; }
+
+  /* ---------- NARRATIVE — Full-Screen Poem ---------- */
+  .NARR-scrim { position: absolute; inset: 0; z-index: 8;
+    background: linear-gradient(180deg, rgba(0,0,0,0.65) 0%, rgba(0,0,0,0.25) 40%, rgba(0,0,0,0.85) 100%); }
+  .NARR-quote { position: absolute; left: 88px; right: 88px; top: 44%; transform: translateY(-50%); z-index: 12;
+    color: #fff; text-align: left; font-family: "Charter","Georgia",serif;
+    font-size: 82px; font-weight: 500; line-height: 1.24; letter-spacing: -0.01em;
+    text-shadow: 0 6px 30px rgba(0,0,0,0.7), 0 2px 6px rgba(0,0,0,0.5); }
+  .NARR-quote::before { content: "\201C"; font-size: 200px; line-height: 0.4;
+    color: rgba(255,255,255,0.55); position: absolute; left: -24px; top: 38px; }
+  .NARR-attr { position: absolute; bottom: 90px; left: 88px; right: 88px; z-index: 12;
+    color: rgba(255,255,255,0.9); font-size: 34px; letter-spacing: 0.1em;
+    text-transform: uppercase; font-weight: 600; }
+  .NARR-attr .dot { margin: 0 16px; opacity: 0.5; }
+
+  /* ---------- MAGAZINE — Editorial Masthead ---------- */
+  .MAG-scrim { position: absolute; inset: 0; z-index: 8;
+    background: linear-gradient(180deg, rgba(0,0,0,0.45) 0%, transparent 25%, transparent 55%, rgba(0,0,0,0.75) 100%); }
+  .MAG-mast { position: absolute; top: 170px; left: 0; right: 0; z-index: 12; padding: 0 72px; color: #fff; }
+  .MAG-mast .rule { height: 2px; background: rgba(255,255,255,0.55); margin: 22px 0; }
+  .MAG-mast .row { display: flex; justify-content: space-between; align-items: baseline;
+    font-family: "Charter","Georgia",serif; font-size: 30px; letter-spacing: 0.18em; text-transform: uppercase; }
+  .MAG-caption { position: absolute; bottom: 90px; left: 72px; right: 72px; z-index: 12; color: #fff; }
+  .MAG-caption .num { font-family: "Charter","Georgia",serif; font-style: italic;
+    font-size: 42px; margin-bottom: 20px; color: rgba(255,255,255,0.9); }
+  .MAG-caption .title { font-family: "Charter","Georgia",serif; font-size: 66px; font-weight: 700;
+    line-height: 1.2; margin-bottom: 22px; letter-spacing: -0.01em; }
+  .MAG-caption .credit { font-size: 30px; letter-spacing: 0.1em;
+    color: rgba(255,255,255,0.85); text-transform: uppercase; font-weight: 500; }
+
+  /* ---------- MAP — Overlay Card ---------- */
+  .MAP-card { position: absolute; bottom: 90px; left: 50px; right: 50px; z-index: 12;
+    background: #fff; border-radius: 40px; padding: 36px 42px 30px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.35);
+    display: flex; align-items: stretch; gap: 34px; }
+  .MAP-mini { width: 232px; height: 232px; border-radius: 28px;
+    background: #E5F3FF; position: relative; overflow: hidden; flex-shrink: 0;
+    border: 3px solid #DBEAFE; }
+  .MAP-mini::before { content:""; position:absolute; inset:0;
+    background: radial-gradient(circle at 30% 40%, #93C5FD 0, transparent 40%),
+                radial-gradient(circle at 70% 70%, #A7F3D0 0, transparent 45%);
+    opacity: 0.6; }
+  .MAP-mini .road-h { position:absolute; left:0; right:0; top: 45%; height: 12px; background:#fff; opacity: 0.9; }
+  .MAP-mini .road-v { position:absolute; top:0; bottom:0; left: 55%; width: 9px; background:#fff; opacity: 0.9; }
+  .MAP-mini .pin { position:absolute; top: 34%; left: 52%; transform: translate(-50%, -100%);
+    width: 48px; height: 60px; }
+  .MAP-mini .pin::before { content:""; position:absolute; inset:0;
+    background: #EF4444; border-radius: 50% 50% 50% 0; transform: rotate(-45deg);
+    border: 6px solid #fff; box-shadow: 0 6px 18px rgba(0,0,0,0.25); }
+  .MAP-mini .dot-home { position:absolute; bottom: 18%; right: 20%;
+    width: 24px; height: 24px; border-radius: 50%; background: #0F172A; border: 6px solid #fff; }
+  .MAP-info { flex: 1; display: flex; flex-direction: column; justify-content: space-between; min-width: 0; }
+  .MAP-info .name { font-size: 42px; font-weight: 700; color: #0F172A; line-height: 1.2; letter-spacing: -0.01em; }
+  .MAP-info .type { font-size: 30px; color: #64748B; margin-top: 8px; }
+  .MAP-info .rows { display: flex; gap: 40px; margin-top: 26px; }
+  .MAP-info .rows .k { color: #94A3B8; font-weight: 500; text-transform: uppercase; letter-spacing: 0.07em; font-size: 26px; }
+  .MAP-info .rows .v { color: #0F172A; font-weight: 700; font-size: 38px; margin-top: 4px; }
+</style>
+</head>
+<body>
+<div class="stage" id="stage"></div>
+<script>
+// Read clip JSON from window.CLIP (injected by Playwright add_init_script)
+const c = window.CLIP;
+const stage = document.getElementById('stage');
+const arch = c.archetype;
+
+function el(html) { const d = document.createElement('div'); d.innerHTML = html.trim(); return d.firstChild; }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+
+// Progress bars (universal)
+const total = c.total_clips || 1, cur = (c.clip_index || 1) - 1;
+const prog = el('<div class="progress"></div>');
+for (let i = 0; i < total; i++) {
+  const s = document.createElement('span');
+  if (i < cur) s.className = 'done';
+  else if (i === cur) s.className = 'now';
+  prog.appendChild(s);
+}
+stage.appendChild(prog);
+
+if (arch === 'TRUST') {
+  const sheet = el(`<div class="TRUST-sheet">
+    <div class="name">${esc(c.poi)}</div>
+    <div class="meta">${esc(c.type || '')} · ${esc(c.dist)} mi · ${esc(c.drive || '')}</div>
+    <div class="TRUST-badges">${(c.badges||[]).map(b =>
+      `<span class="b ${esc(b.c||'')}">${esc(b.t)}</span>`).join('')}</div>
+  </div>`);
+  stage.appendChild(sheet);
+
+} else if (arch === 'LIFESTYLE') {
+  if (c.why) {
+    const t = el(`<div class="LIFE-title">
+      <div class="num">${esc(c.chapter || '')}</div>
+      <div class="name">${esc(c.poi)}</div>
+      <div class="type">${esc(c.type || '')}</div>
+      <div class="why">"${esc(c.why)}"</div>
+      <div class="dist"><b>${esc(c.dist)}</b>mi · ${esc(c.drive || '')} drive</div>
+    </div>`);
+    stage.appendChild(t);
+  } else {
+    stage.appendChild(el(`<div class="LIFE-badge">${esc(c.poi)}</div>`));
+  }
+
+} else if (arch === 'UTILITY') {
+  stage.appendChild(el(`<div class="UTIL-chip">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2C8 2 5 5 5 9c0 5 7 13 7 13s7-8 7-13c0-4-3-7-7-7z"/><circle cx="12" cy="9" r="2.5" fill="currentColor"/></svg>
+    <span>${esc(c.poi)}</span><span class="dot"></span><span>${esc(c.dist)} mi</span>
+  </div>`));
+  stage.appendChild(el(`<div class="UTIL-drive">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+    <span>${esc(c.drive || '')}</span>
+  </div>`));
+
+} else if (arch === 'NARRATIVE') {
+  stage.appendChild(el(`<div class="NARR-scrim"></div>`));
+  stage.appendChild(el(`<div class="NARR-quote">${esc(c.quote || '')}</div>`));
+  stage.appendChild(el(`<div class="NARR-attr"><span>${esc(c.poi)}</span><span class="dot">·</span><span>${esc(c.dist)} mi</span></div>`));
+
+} else if (arch === 'MAGAZINE') {
+  stage.appendChild(el(`<div class="MAG-scrim"></div>`));
+  stage.appendChild(el(`<div class="MAG-mast">
+    <div class="rule"></div>
+    <div class="row"><span>Percho · Vol. 07</span><span>${esc(c.section || 'The Neighborhood')}</span></div>
+    <div class="rule"></div>
+  </div>`));
+  stage.appendChild(el(`<div class="MAG-caption">
+    <div class="num">${esc(c.chapter || '')}</div>
+    <div class="title">${esc(c.title || c.poi)}</div>
+    <div class="credit">${esc(c.credit || (c.type + ' · ' + c.dist + ' MI').toUpperCase())}</div>
+  </div>`));
+
+} else if (arch === 'MAP') {
+  stage.appendChild(el(`<div class="MAP-card">
+    <div class="MAP-mini"><div class="road-h"></div><div class="road-v"></div><div class="pin"></div><div class="dot-home"></div></div>
+    <div class="MAP-info">
+      <div><div class="name">${esc(c.poi)}</div><div class="type">${esc(c.type || '')}</div></div>
+      <div class="rows">
+        <div><div class="k">Distance</div><div class="v">${esc(c.dist)} mi</div></div>
+        <div><div class="k">${esc(c.mode || 'Drive')}</div><div class="v">${esc(c.time || c.drive || '')}</div></div>
+      </div>
+    </div>
+  </div>`));
+}
+window.__READY__ = true;
+</script>
+</body>
+</html>
