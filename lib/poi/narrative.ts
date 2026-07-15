@@ -206,7 +206,10 @@ export async function generateBucketVideoNarrative(
   if (vErr || !video) {
     return { ok: false, error: "not_found", message: vErr?.message ?? "Video not found" };
   }
-  if (video.scope !== "intent_bucket" || !video.intent_bucket) {
+  if (
+    (video.scope !== "intent_bucket" && video.scope !== "community_intent_bucket") ||
+    !video.intent_bucket
+  ) {
     return {
       ok: false,
       error: "wrong_scope",

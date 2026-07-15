@@ -26,7 +26,7 @@
 
 import { resolveCommunityCoverWithCfIds } from '@/lib/community/cover';
 import { createClient } from '@/lib/supabase/server';
-import { FileText, ImageIcon, LineChart, Megaphone } from 'lucide-react';
+import { FileText, ImageIcon, LineChart, MapPinned, Megaphone } from 'lucide-react';
 import { redirect } from 'next/navigation';
 
 import { AnalyticsPanel } from '@/app/dashboard/_components/AnalyticsPanel';
@@ -38,6 +38,7 @@ import { InstantStatusToggle } from '@/app/dashboard/_components/InstantStatusTo
 import { CommunityDangerZone, CommunityEditor } from './CommunityEditor';
 import { CommunityMarketingPanel } from './CommunityMarketingPanel';
 import { CommunityMediaPanel } from './CommunityMediaPanel';
+import { CommunityNearbyPanel } from './CommunityNearbyPanel';
 import type { CommunityPhotoRow } from './CommunityPhotoPanel';
 import type { ManageVideoRow } from './CommunityVideoManageList';
 import { signCommunityPhotoUrls } from './photo-actions';
@@ -235,7 +236,20 @@ export default async function CommunityEditorPage({
 
   const subtitle = community.city ? `${community.city}, ${community.state}` : community.state;
 
-  // Tabs — Details + Media always; Marketing + Analytics owner-only.
+  // Phase 92: nearby POIs load — owner-only since discover/generate cost $.
+  let initialNearbyPois: Awaited<
+    ReturnType<typeof import('@/lib/poi/community-actions').loadNearbyPoisForCommunity>
+  > = [];
+  if (canEditMetadata) {
+    try {
+      const { loadNearbyPoisForCommunity } = await import('@/lib/poi/community-actions');
+      initialNearbyPois = await loadNearbyPoisForCommunity(community.id);
+    } catch (err) {
+      console.error('[community edit] loadNearbyPoisForCommunity failed:', err);
+    }
+  }
+
+  // Tabs — Details + Media always; Nearby + Marketing + Analytics owner-only.
   const tabs = [
     {
       id: 'details',
@@ -249,6 +263,11 @@ export default async function CommunityEditorPage({
     },
     ...(canEditMetadata
       ? [
+          {
+            id: 'nearby',
+            label: 'Nearby',
+            icon: <MapPinned className="h-5 w-5" strokeWidth={1.6} />,
+          },
           {
             id: 'marketing',
             label: 'Marketing',
@@ -317,6 +336,15 @@ export default async function CommunityEditorPage({
           ),
           ...(canEditMetadata
             ? {
+                nearby: (
+                  <section className="rounded-2xl border border-line bg-surface p-4 sm:p-6">
+                    <CommunityNearbyPanel
+                      communityId={community.id}
+                      initialPois={initialNearbyPois}
+                      supabaseStorageBase={process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''}
+                    />
+                  </section>
+                ),
                 marketing: <CommunityMarketingPanel communityId={community.id} />,
                 analytics: <AnalyticsPanel entityKind="community" entityId={community.id} />,
               }

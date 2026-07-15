@@ -4,6 +4,31 @@
 > Historical entries below preserve the original name in-place — release notes
 > are a record of what was shipped under the product's name at the time.
 
+## v92.3 — 2026-07-15 — Nearby videos: run the workflow from the community page
+
+### 🎯 What's new
+- **New "Nearby" tab on every community you own.** Same triage UI you know
+  from a listing — discover POIs within 5 miles, tap through the photo
+  lightbox to approve/reject, hit Generate on any of the 14 buckets. The
+  render lands once and every listing inside the neighborhood serves it.
+
+### 🧠 Why
+- Phase 92 already made nearby videos community-shared under the hood, but
+  the only way to actually produce them was still through a listing edit
+  page. That was misleading — the output belonged to the neighborhood, not
+  to any one house. Now the trigger surface matches the ownership model.
+
+### 🔧 Under the hood
+- Copied `NearbyPoiPanel` into `CommunityNearbyPanel` with community-scoped
+  server actions (`community-actions.ts` / `community-video-actions.ts`).
+- Added three panel-facing helpers on the community-video actions module
+  (`getCommunityBucketVideoStatus`, `getCommunityBucketEligiblePhotoCount`,
+  `regenerateCommunityBucketVideoNarrative`) so the status-poll + narrative
+  regenerate wiring works the same as the listing side.
+- Taught `regenerateBucketVideoNarrative` to accept both
+  `intent_bucket` (legacy listing) and `community_intent_bucket` (new).
+- Owner-only tab (discovery/render both cost external $$).
+
 ## v92 — 2026-07-15 — Nearby videos: same content across your whole subdivision + fewer text-only frames
 
 ### 🎯 What's new
