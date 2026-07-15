@@ -206,12 +206,91 @@ async function fetchOwnInactiveCommunities(agentId: string): Promise<CommunityLi
 }
 
 /**
- * Public entry point.
+ * Phase 83.2 (2026-07-15): viewer-scoped "my neighborhoods" for the
+ * agent dashboard.
  *
- * - No viewer, or viewer isn't an agent → active only (cached).
- * - Agent viewer → active ∪ (viewer's own inactive), de-duped by id.
+ * The buyer/public `/communities` grid shows every active community
+ * (including the 731 Nextdoor seeds — public reference data).
+ * The agent dashboard needs a narrower view: neighborhoods the agent
+ * actually cares about. Those are:
+ *   (a) communities the agent created (any status)
+ *   (b) communities where the agent has an active listing
+ *       (via `listings.community_id`, auto-associated on address save)
  *
- * Result is sorted by name so the union feels natural in the grid.
+ * Union, de-duped by id, sorted by name.
+ *
+ * Uncached because it's per-viewer and cheap: an agent has O(10) rows,
+ * not O(1000).
+ */
+async function fetchAgentScopedCommunities(agentId: string): Promise<CommunityListCard[]> {
+  const t = startTimer('fetchAgentScopedCommunities');
+  const supabase = createAnonClient();
+
+  // Query 1: communities the agent created.
+  // Query 2: distinct community_ids from the agent's active listings.
+  const [createdRes, listingRes] = await Promise.all([
+    // biome-ignore lint/suspicious/noExplicitAny: stub generated types
+    (supabase as any)
+      .from('communities')
+      .select('id, name, slug, city, state, description, cover_video_id, cover_storage_path')
+      .eq('created_by', agentId)
+      .neq('name', 'Untitled community') as Promise<{ data: CommunityRow[] | null }>,
+    // biome-ignore lint/suspicious/noExplicitAny: stub generated types
+    (supabase as any)
+      .from('listings')
+      .select('community_id')
+      .eq('agent_id', agentId)
+      .eq('status', 'active')
+      .not('community_id', 'is', null) as Promise<{
+      data: Array<{ community_id: string | null }> | null;
+    }>,
+  ]);
+
+  const createdRows = createdRes.data ?? [];
+  const listingCommunityIds = Array.from(
+    new Set((listingRes.data ?? []).map((r) => r.community_id).filter((x): x is string => !!x)),
+  );
+
+  // Fetch any community-by-listing rows that aren't already in the
+  // created-by set. Skip DB round-trip when there's nothing to load.
+  const needIds = listingCommunityIds.filter((id) => !createdRows.some((r) => r.id === id));
+  let linkedRows: CommunityRow[] = [];
+  if (needIds.length > 0) {
+    // biome-ignore lint/suspicious/noExplicitAny: stub generated types
+    const { data } = (await (supabase as any)
+      .from('communities')
+      .select('id, name, slug, city, state, description, cover_video_id, cover_storage_path')
+      .in('id', needIds)) as { data: CommunityRow[] | null };
+    linkedRows = data ?? [];
+  }
+
+  const byId = new Map<string, CommunityRow>();
+  for (const r of createdRows) byId.set(r.id, r);
+  for (const r of linkedRows) byId.set(r.id, r);
+
+  const merged = Array.from(byId.values()).sort((a, b) =>
+    a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }),
+  );
+
+  const cards = await hydrateCommunityCards(merged);
+  t.end({
+    communities: cards.length,
+    created: createdRows.length,
+    viaListing: linkedRows.length,
+    agentId,
+  });
+  return cards;
+}
+
+/**
+ * Public entry point — **buyer / public surface**.
+ *
+ * Returns all active communities (the 731 Nextdoor seeds are visible
+ * here). If a `viewerAgentId` is supplied we also union in that agent's
+ * own inactive drafts so their in-progress work shows up alongside the
+ * shared pool.
+ *
+ * Sorted by name.
  */
 export async function fetchCommunityListCards(
   opts: { viewerAgentId?: string | null } = {},
@@ -229,4 +308,18 @@ export async function fetchCommunityListCards(
   return Array.from(byId.values()).sort((a, b) =>
     a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }),
   );
+}
+
+/**
+ * Agent-scoped entry point — **dashboard "my neighborhoods"**.
+ *
+ * Returns only communities the agent is involved in:
+ *  - created by them (any status), or
+ *  - has an active listing pointing at (via `listings.community_id`).
+ *
+ * The 731 shared Nextdoor seeds do NOT appear here unless the agent
+ * has a listing in one.
+ */
+export async function fetchMyCommunityCards(agentId: string): Promise<CommunityListCard[]> {
+  return fetchAgentScopedCommunities(agentId);
 }

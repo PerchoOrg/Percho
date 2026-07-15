@@ -4,6 +4,23 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-15 — Phase 83.3: Scope `/dashboard/communities` to "my neighborhoods"
+
+Bug on top of 83.2. After flipping the 731 Nextdoor seeds to `status='active'`, the agent dashboard was rendering the full shared pool — because it kept calling `fetchCommunityListCards()`, which returns *all* active communities. That loader is the buyer/public surface, not the agent surface.
+
+**Split the loader**
+- `fetchCommunityListCards({ viewerAgentId })` — buyer/public. Still returns all active + the viewer's own inactive drafts. Backs `/communities`, `/browse?tab=communities`, `/search`, `/api/communities/nearby`.
+- `fetchMyCommunityCards(agentId)` — new. Only communities the agent created OR has an active listing in (via `listings.community_id`, populated by the 83.2 auto-associate). Backs `/dashboard/communities` only.
+
+The 731 shared seeds no longer appear in the agent dashboard unless the agent has a listing inside one — matching the user's expectation that "my neighborhoods" is *their* neighborhoods, not a directory.
+
+**On cover photos** — seed payload was boundary + demographic only, so the 731 rows have `cover_video_id = null` and `cover_storage_path = null`. They render with the CommunityGrid's null-cover placeholder on `/communities`. Cover populates when an agent adds a community video or (later) a listing photo bleeds through.
+
+**Files**
+- modified: `lib/communities/list.ts` (add `fetchMyCommunityCards` + `fetchAgentScopedCommunities`), `app/dashboard/communities/page.tsx` (swap to new loader)
+
+---
+
 ## 2026-07-15 — Phase 83.2: Shared community model + auto-associate on save
 
 Reversal of the phase 83.1 direction. The user's mental model was misread: communities are **not** agent-owned resources to claim; they're shared reference data (like schools or POIs) that agents draw on when they list a home. "Claim" happens implicitly through `listings.community_id`, and edit rights follow business interest (an active listing in the community) rather than first-touch ownership.
