@@ -27,6 +27,7 @@ import type { BrowseCard } from '@/app/(public)/browse/_components/BrowseFeed';
 import { GridCard, GridCardCaption } from '@/app/_components/GridCard';
 import { GridFrame } from '@/app/_components/GridFrame';
 import { ListingGrid, type ListingGridItem } from '@/app/_components/ListingGrid';
+import type { GeoJsonPolygonLike } from '@/lib/geo/point-in-polygon';
 import { thumbnailUrl } from '@/lib/cloudflare/stream';
 import { track } from '@/lib/events/track';
 import {
@@ -35,6 +36,7 @@ import {
 } from '@/lib/zod/community-video-categories';
 import { HeroControl } from '@/app/dashboard/_components/HeroControl';
 import { useEffect, useState } from 'react';
+import { CommunityBoundaryMap } from './CommunityBoundaryMap';
 
 const CATEGORY_META = new Map(COMMUNITY_VIDEO_CATEGORIES.map((m) => [m.id, m] as const));
 
@@ -50,6 +52,7 @@ type Tab = 'videos' | 'listings';
 export function CommunityBody({
   community,
   heroCoverUrl,
+  boundary,
   videos,
   listings,
 }: {
@@ -62,6 +65,7 @@ export function CommunityBody({
     description: string | null;
   };
   heroCoverUrl: string | null;
+  boundary: GeoJsonPolygonLike | null;
   videos: CommunityVideo[];
   listings: BrowseCard[];
 }) {
@@ -146,6 +150,22 @@ export function CommunityBody({
           <ListingsGrid listings={listings} />
         )}
       </div>
+
+      {/* Phase 87: neighborhood boundary map, so buyers can see the actual
+          shape of the community they are considering. Lazy-loaded MapLibre
+          + Carto Positron — no vendor token, no bill. */}
+      {boundary ? (
+        <div className="px-1 pb-6 md:px-1.5">
+          <div className="mb-2 flex items-baseline justify-between">
+            <h2 className="font-semibold text-ink text-sm">Neighborhood map</h2>
+            <span className="text-muted text-xs">Boundary from Nextdoor</span>
+          </div>
+          <CommunityBoundaryMap
+            boundary={boundary}
+            className="h-72 w-full overflow-hidden rounded-lg border border-line sm:h-96"
+          />
+        </div>
+      ) : null}
     </div>
   );
 }

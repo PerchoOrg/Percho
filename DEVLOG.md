@@ -4,6 +4,30 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-15 — Phase 87: community boundary map + cleanup
+
+Two things:
+
+1. **Neighborhood map on /c/[slug]** using MapLibre GL + Carto Positron.
+   No vendor token, no per-load quota. `CommunityBoundaryMap` is a client
+   island that lazy-imports `maplibre-gl`, subscribes to the community's
+   `boundary` GeoJSON, drops it as a fill+line layer at 18% opacity in
+   Percho's bronze, and `fitBounds` to the polygon bbox. Positron gives
+   us a neutral gray basemap so the neighborhood shape reads without
+   fighting the street network. Bundle: ~200KB gzipped, only paid on
+   the community detail route.
+
+2. **Drop `friendliness_score` / `affordability_score`** from
+   `communities`. Seeded during the Nextdoor import but never surfaced
+   in the UI — subjective scores are a footgun until we have real data
+   to back them. Migration `20260715130000_communities_drop_subjective_scores.sql`.
+
+3. **Unit tests for the auto-associate geometry** (`lib/geo/point-in-polygon.test.ts`).
+   14 cases — square / hole / MultiPolygon / diamond edge case /
+   Atlanta-shaped realistic polygon / lng-lat argument order guard.
+   Guards against silent regressions in the ray-cast implementation and
+   the `(lng, lat)` argument convention.
+
 ## 2026-07-15 — Phase 83.4: community cover — Nextdoor photos + SVG logo fallback
 
 Every community now has a cover:
