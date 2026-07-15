@@ -4,6 +4,52 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-15 — Phase 88: HTML→PNG caption overlay pipeline
+
+Phase 85 shipped a 6-archetype (TRUST/LIFESTYLE/UTILITY/NARRATIVE/MAGAZINE/MAP)
+caption system built entirely on ffmpeg `drawtext`+`drawbox`. The output was
+functionally correct — text on frame, correct data per bucket — but visually
+did not match the mock (masthead rules, mini-map thumbnails, curly pull-quote
+glyphs, backdrop-blur pills, serif Charter typography). drawtext cannot do
+those.
+
+Phase 88 replaces the whole caption stack with an HTML→PNG→ffmpeg-overlay
+pipeline:
+
+1. `scripts/caption-render/overlay.html` — a single self-contained HTML+CSS
+   file that renders any of the six archetypes into a 1080×1920 transparent
+   canvas. Each archetype is a `.stage[data-archetype="…"]` block with the
+   design system baked in (fonts, colors, gradients, `::before` decorators).
+2. `scripts/caption-render/render.py` — Playwright driver. Reads
+   `captions.json`, screenshots `overlay.html?d=<json>` per clip, saves
+   `clip_<n>.png` with transparent background.
+3. `scripts/ken-burns/generate.py` — the P85 drawtext caption block
+   (`_caption_trust`/`_caption_lifestyle`/… + `build_archetype_caption`) is
+   deleted. `render_clip()` now takes a `caption_png` path and composites
+   via `overlay=0:0` after the Ken Burns pan/zoom filter chain. If the
+   caller passes `--captions`, generate.py calls `render_caption_pngs()`
+   internally before iterating clips.
+4. `scripts/render-worker/worker.py` — the caption JSON schema changed
+   from `{title, distance, beat}` to the new per-archetype schema
+   (`{poi, type, dist, drive, badges|why|quote|title|chapter|credit|...}`).
+   Placeholder values are filled in for TRUST badges / LIFESTYLE why /
+   NARRATIVE quote / MAGAZINE title until Phase 89 wires the LLM.
+
+Playwright + chromium are installed via `pip install --break-system-packages
+playwright && playwright install chromium`. The chromium binary lives in
+`~/.cache/ms-playwright/`. First run cold-starts a browser (~1s per JSON
+render), subsequent clips reuse the process.
+
+Verified end-to-end with 3 photos + a TRUST captions.json → 6.5s MP4 at
+2.22MB, all overlay elements composited correctly on the Ken Burns pan.
+
+Deferred to Phase 89:
+- LLM generation of quote/why/title/chapter/emotional_headline per clip
+  (extend `lib/poi/narrative.ts` bucket-aware prompt).
+- Real GreatSchools rating + zoned district for TRUST badges (Apify).
+- google_places.types → human `type_label` mapping (fallback to
+  bucket_label for now).
+- mini-map thumbnail for MAP archetype (currently a CSS grid stand-in).
 ## 2026-07-15 — Phase 87.2: community detail mock parity — nearby + polish
 
 **Files touched:**
