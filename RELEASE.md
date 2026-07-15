@@ -4,6 +4,10 @@
 > Historical entries below preserve the original name in-place — release notes
 > are a record of what was shipped under the product's name at the time.
 
+## v0.80.0 · Top-10 per bucket by rating (2026-07-15)
+
+- **Each POI category defaults to its 10 best-rated places.** Discovery can pull 15-30 restaurants or 20+ shops for a busy address — showing them all buried the highlights. Every bucket now shows the top 10 by star rating (ties broken by review count) and offers a "Show all N (M more)" button to expand on demand.
+
 ## v0.79.0 · Nearby POI: 14 buyer-persona buckets (2026-07-15)
 
 The Nearby panel used to bucket POIs by straight-line distance — walkable / daily-drive / lifestyle / commute. That answered "how do I get there?" but not "does this house fit my life?". Reworked the taxonomy from a buyer-decision angle to 14 persona buckets:

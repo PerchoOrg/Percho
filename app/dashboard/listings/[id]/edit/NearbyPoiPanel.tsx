@@ -114,12 +114,35 @@ export function NearbyPoiPanel({
   const [pending, startTransition] = useTransition();
   const [busyPoi, setBusyPoi] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [expandedBuckets, setExpandedBuckets] = useState<Set<IntentBucket>>(new Set());
+
+  const BUCKET_DEFAULT_LIMIT = 10;
 
   // ── grouping ────────────────────────────────────────────────────────────
+  // Sort each bucket by rating quality (rating desc, review-count desc as
+  // tiebreaker, null ratings pushed to the end). Panel then shows only the
+  // top BUCKET_DEFAULT_LIMIT per bucket, with a "Show all (N)" toggle.
   const grouped: Record<IntentBucket, NearbyPoiForListing[]> = Object.fromEntries(
     BUCKET_ORDER.map((b) => [b, [] as NearbyPoiForListing[]]),
   ) as Record<IntentBucket, NearbyPoiForListing[]>;
   for (const p of pois) grouped[p.intent_bucket].push(p);
+  for (const b of BUCKET_ORDER) {
+    grouped[b].sort((a, b) => {
+      const ra = a.pois.rating ?? -1;
+      const rb = b.pois.rating ?? -1;
+      if (rb !== ra) return rb - ra;
+      return (b.pois.user_ratings_total ?? 0) - (a.pois.user_ratings_total ?? 0);
+    });
+  }
+
+  const toggleBucket = (b: IntentBucket) => {
+    setExpandedBuckets((prev) => {
+      const next = new Set(prev);
+      if (next.has(b)) next.delete(b);
+      else next.add(b);
+      return next;
+    });
+  };
 
   // ── actions ─────────────────────────────────────────────────────────────
   const refresh = async () => {
@@ -244,15 +267,23 @@ export function NearbyPoiPanel({
             {BUCKET_ORDER.map((bucket) => {
               const rows = grouped[bucket];
               if (rows.length === 0) return null;
+              const isExpanded = expandedBuckets.has(bucket);
+              const visibleRows = isExpanded ? rows : rows.slice(0, BUCKET_DEFAULT_LIMIT);
+              const hiddenCount = rows.length - visibleRows.length;
               return (
                 <section key={bucket}>
                   <div className="mb-2 flex items-center justify-between gap-2">
                     <h4 className="text-xs font-medium uppercase tracking-wide text-muted">
                       {BUCKET_LABELS[bucket]} · {rows.length}
+                      {rows.length > BUCKET_DEFAULT_LIMIT && !isExpanded ? (
+                        <span className="ml-1 text-muted/70 normal-case">
+                          (top {BUCKET_DEFAULT_LIMIT} by rating)
+                        </span>
+                      ) : null}
                     </h4>
                   </div>
                   <ul className="space-y-2">
-                    {rows.map((row) => (
+                    {visibleRows.map((row) => (
                       <PoiRow
                         key={row.poi_id}
                         row={row}
@@ -265,6 +296,17 @@ export function NearbyPoiPanel({
                       />
                     ))}
                   </ul>
+                  {rows.length > BUCKET_DEFAULT_LIMIT ? (
+                    <button
+                      type="button"
+                      onClick={() => toggleBucket(bucket)}
+                      className="mt-2 text-xs text-accent hover:underline"
+                    >
+                      {isExpanded
+                        ? `Show top ${BUCKET_DEFAULT_LIMIT} only`
+                        : `Show all ${rows.length} (${hiddenCount} more)`}
+                    </button>
+                  ) : null}
                 </section>
               );
             })}
