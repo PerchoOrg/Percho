@@ -4,6 +4,49 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-15 — Phase 83: Nextdoor Atlanta neighborhood seed + agent claim
+
+Bulk-seeded **731 Atlanta neighborhoods** into `communities` from public Nextdoor pages so agents have real geography to claim from day one instead of an empty picker.
+
+**Data source.** Every Nextdoor neighborhood URL (`nextdoor.com/neighborhood/<slug>--<city>--<state>/`) SSR-renders a Next.js page with a `<script id="__NEXT_DATA__">` payload that embeds the full Apollo cache, including the **exact MultiPolygon GeoJSON boundary** of the neighborhood as a JSON string under `apolloState['Neighborhood:neighborhood_XXX'].geometry.geometry`. No login, no cookies — 200 OK on public `curl`. This is dramatically better than OSM `place=neighbourhood` (which is centroid-only for most Atlanta rows) or Zillow ZNB (which is stale + no metadata). What we harvested per row: name, slug, centroid lat/lng, MultiPolygon boundary (5–2486 vertices, median 157), one-line description, hero image, and the SEO stats block (`residents_count`, `avg_income`, `avg_age`, `homeowners_pct`, `friendliness_score`, `attributes[]`, `interests[]`, `nearby[]`). Coverage: 731/731 = 100% with geometry, 0 failures, 136 s wall (6-way concurrent `curl`, no rate limiting needed).
+
+**Metro coverage caveat — Atlanta only, not full metro.** The seed page for the state (`/find-neighborhood/ga/`) lists 541 GA cities, and 109 of those overlap Atlanta metro. But when you follow Nextdoor's suburb links (Roswell, Marietta, Sandy Springs, Alpharetta, Decatur, Smyrna) you land on a **Flask-rendered client shell with no `__NEXT_DATA__`** — the neighborhood pages themselves also degrade to the same client shell for anything outside `--atlanta--ga`. Only the 731 slugs whose slug ends in `--atlanta--ga` were reachable via SSR-scrape. Options considered:
+- **B.** Playwright-render the suburb pages to force React hydration (10× slower, ~30 min for the tail, cookie-required about half the time).
+- **C.** Backfill suburbs from OSM Overpass + city-of-Atlanta ArcGIS Hub as a mixed-source `boundary_source`.
+
+Chose **A** (Atlanta-731 only) for this seed: enough neighborhood density inside the city limits to prove out the claim flow, and the suburbs can land in a follow-up phase when we have agents asking for them.
+
+**Schema — reused `communities`, not a new `neighborhoods` table.** Percho's data model treats a "community" as the anchor for photos, videos, POIs, and leads. A "seeded Nextdoor neighborhood" is functionally a pre-populated community row awaiting an agent claim + enrichment. Sharing the table means claim = zero data migration; the existing `updateCommunity` server action, community photo pipeline, POI walk-in generator, etc. all keep working unchanged after claim.
+
+Migration `20260715115000_communities_nextdoor_seed.sql` adds:
+- **Provenance:** `source ('agent'|'nextdoor')`, `nextdoor_id UNIQUE`, `nextdoor_slug`, `nextdoor_url`, `seeded_at`. The unique constraint on `nextdoor_id` is a full `UNIQUE` (not a partial index) because PostgREST's `on_conflict=` cannot target partial indexes — burned an iteration on this.
+- **Geo:** `lat`, `lng`, `boundary jsonb` (constrained to `Polygon | MultiPolygon` at the DB level), `boundary_source text` (constrained to `nextdoor | osm | zillow | manual | arcgis` for future mixed-source imports).
+- **Demographics:** `residents_count`, `median_home_value`, `avg_income`, `avg_age`, `homeowners_pct` all kept as `text` — Nextdoor stats arrive as `"$88K"`, `"1,639"`, `"64%"` and typing them right now would force a lossy parse before agents even see the data. Cheap to type later once we know which fields the UI actually filters on.
+- **Scores + arrays:** `friendliness_score int`, `affordability_score int`, `attributes text[]`, `interests text[]`, `hero_image_url text`, `nearby jsonb`.
+- **Unclaimed index:** partial index `communities_unclaimed_idx (state, city) WHERE created_by IS NULL`, keyed for the "browse unclaimed" agent-facing page.
+- **`claim_community(uuid)` RPC:** `SECURITY DEFINER`, `authenticated`-only. Resolves caller → agent row, runs `UPDATE ... SET created_by = :agent WHERE id = :cid AND created_by IS NULL` atomically. If two agents race, the loser gets an exception (code `P0002`) and the UI can render "already claimed." Non-authenticated callers → `42501`.
+
+**Pipeline as-shipped** (`~/percho-nextdoor-seed/`, gitignored — raw JSON kept out of the repo per the "no videos/no bulky mocks in git" rule):
+1. `01_scrape_cities.py` (retained for future BFS but unused — Flask shells).
+2. `02_scrape_neighborhoods.py` — 6-way concurrent `curl` on the 731 slugs, `__NEXT_DATA__` extractor pulls geometry + SEO block + nearby list.
+3. `03_sanity_check.py` — samples 12 random polygons, renders on a Leaflet map at `sanity_check.html`. Eyeball verification: all 12 polygons showed proper street-following shapes, no degenerate points or map-covering blobs, positions matched their Nextdoor URL locations.
+4. `04_import_to_percho.py` — `POST /rest/v1/communities?on_conflict=nextdoor_id`, batches of 50, service_role key. Full run: **731 rows in 11.2 s**. Idempotent — re-running merges on `nextdoor_id`.
+5. Post-import cleanup: 1 row had `" Olde Ivy at Vinings "` leading/trailing spaces (Nextdoor's own data), stripped via a one-shot `PATCH`.
+
+**Verification** (via REST count-exact):
+- 731 rows with `source='nextdoor'`
+- 731 with `boundary IS NOT NULL`
+- 731 with `status='inactive'` (unclaimed rows start dark on the buyer grid)
+- 731 with `created_by IS NULL`
+- 4 pre-existing `source='agent'` rows untouched
+
+**Follow-up (not in this phase):**
+- Agent claim UI: `/dashboard/communities/claim` — grid of unclaimed rows with map preview using the stored `boundary`, one-click Claim button calling `claim_community(id)`.
+- Suburb backfill (Playwright or OSM) once agent demand appears.
+- Sweep: after ~a week of agent claims, decide whether unclaimed `status='inactive'` rows should surface on the buyer grid as "coming soon" or stay hidden.
+
+Migration file: `supabase/migrations/20260715115000_communities_nextdoor_seed.sql`. Seed scripts kept at `~/percho-nextdoor-seed/` (outside repo).
+
 ## 2026-07-15 — Phase 82: video sound + walk-in POI order + photo counter
 
 Three fixes to the bucket-video pipeline surfaced while reviewing the first real batch of `schools` renders:
