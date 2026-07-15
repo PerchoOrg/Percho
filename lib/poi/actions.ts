@@ -485,7 +485,13 @@ export type NearbyPoiForListing = {
   photos: Array<{
     status: PhotoStatus;
     poi_photo_id: string;
-    poi_photos: { storage_path: string; attribution: Record<string, unknown> | null };
+    poi_photos: {
+      storage_path: string;
+      attribution: Record<string, unknown> | null;
+      /** Phase 78: vision-tagger output — description surfaced under approved photos. */
+      ai_tags: { description?: string; primary_category?: string } | null;
+      tagged_at: string | null;
+    };
   }>;
 };
 
@@ -532,7 +538,7 @@ export async function loadNearbyPoisForListing(
     .select(
       `
       status, poi_photo_id,
-      poi_photos!inner(poi_id, storage_path, attribution)
+      poi_photos!inner(poi_id, storage_path, attribution, ai_tags, tagged_at)
     `,
     )
     .eq("listing_id", listingId)) as {
@@ -543,6 +549,8 @@ export async function loadNearbyPoisForListing(
         poi_id: string;
         storage_path: string;
         attribution: Record<string, unknown> | null;
+        ai_tags: { description?: string; primary_category?: string } | null;
+        tagged_at: string | null;
       };
     }> | null;
     error: unknown;
@@ -564,6 +572,8 @@ export async function loadNearbyPoisForListing(
       poi_photos: {
         storage_path: p.poi_photos.storage_path,
         attribution: p.poi_photos.attribution,
+        ai_tags: p.poi_photos.ai_tags,
+        tagged_at: p.poi_photos.tagged_at,
       },
     });
     photosByPoi.set(poiId, list);

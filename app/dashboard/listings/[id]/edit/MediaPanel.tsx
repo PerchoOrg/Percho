@@ -24,8 +24,6 @@
 import { Upload } from 'lucide-react';
 import { useCallback, useRef, useState } from 'react';
 import { type UploadedVideo, VideoUploader } from '@/components/dashboard/VideoUploader';
-import type { NearbyPoiForListing } from '@/lib/poi/actions';
-import { NearbyPoiPanel } from './NearbyPoiPanel';
 import { type ListingPhotoRow, PhotoPanel, type PhotoPanelHandle } from './PhotoPanel';
 import { type ListingVideoRow, VideoPanel, type VideoPanelHandle } from './VideoPanel';
 
@@ -42,9 +40,6 @@ interface Props {
   initialCoverVideoId: string | null;
   initialPhotos: ListingPhotoRow[];
   initialCoverPhotoId: string | null;
-  /** Phase 76: nearby POIs pre-loaded server-side (see docs/poi-content-pipeline.md). */
-  initialNearbyPois: NearbyPoiForListing[];
-  supabaseStorageBase: string;
 }
 
 export function MediaPanel({
@@ -53,8 +48,6 @@ export function MediaPanel({
   initialCoverVideoId,
   initialPhotos,
   initialCoverPhotoId,
-  initialNearbyPois,
-  supabaseStorageBase,
 }: Props) {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const photoRef = useRef<PhotoPanelHandle | null>(null);
@@ -179,13 +172,6 @@ export function MediaPanel({
             initialPhotos={initialPhotos}
             initialCoverPhotoId={initialCoverPhotoId}
             hideUploadButton
-          />
-        </div>
-        <div className="border-t border-line pt-6">
-          <NearbyPoiPanel
-            listingId={listingId}
-            initialPois={initialNearbyPois}
-            supabaseStorageBase={supabaseStorageBase}
           />
         </div>
       </div>

@@ -378,6 +378,14 @@ export type BucketVideoStatus = {
   photo_count: number;
   error: string | null;
   created_at: string;
+  /**
+   * Phase 78: structured narrative for TTS. Populated by
+   * `regenerateBucketVideoNarrative` (manual "Regenerate description" click).
+   * Undefined = never generated. Voiceover field is the ready-to-TTS prose.
+   */
+  narrative?:
+    | (import("./narrative").VideoNarrative & { source?: string })
+    | null;
 } | null;
 
 export async function getBucketVideoStatus(
@@ -393,7 +401,7 @@ export async function getBucketVideoStatus(
   // RLS on `generated_videos` enforces agent ownership via listing_id → listings → agents.
   const { data } = (await supabase
     .from("generated_videos")
-    .select("id, status, cf_stream_uid, duration_s, input_photo_ids, error, created_at")
+    .select("id, status, cf_stream_uid, duration_s, input_photo_ids, error, created_at, narrative")
     .eq("listing_id", listingId)
     .eq("scope", "intent_bucket")
     .eq("intent_bucket", bucket)
@@ -408,10 +416,20 @@ export async function getBucketVideoStatus(
       input_photo_ids: string[] | null;
       error: string | null;
       created_at: string;
+      narrative: Record<string, unknown> | null;
     } | null;
   };
 
   if (!data) return null;
+
+  // narrative is jsonb — validate it's a "generated" narrative (has voiceover)
+  // vs the tiny "manual_trigger" bootstrap stub that `generateBucketVideo`
+  // writes on insert. Only the LLM-generated shape carries `voiceover`.
+  const narr =
+    data.narrative && typeof (data.narrative as { voiceover?: unknown }).voiceover === "string"
+      ? (data.narrative as unknown as NonNullable<BucketVideoStatus>["narrative"])
+      : null;
+
   return {
     video_id: data.id,
     status: data.status as NonNullable<BucketVideoStatus>["status"],
@@ -420,5 +438,43 @@ export async function getBucketVideoStatus(
     photo_count: data.input_photo_ids?.length ?? 0,
     error: data.error,
     created_at: data.created_at,
+    narrative: narr,
   };
+}
+
+/**
+ * Phase 78: manual "Regenerate description" trigger. Calls the narrative
+ * generator (Anthropic text-only, ~$0.005-0.01) and writes back into
+ * `generated_videos.narrative`. Ownership-checked via the same listing chain.
+ *
+ * Requires the video to have `input_photo_ids`; status can be anything (we
+ * even allow regenerating the description for a `failed` render — the user
+ * might want to see the intended story before deciding whether to retry).
+ */
+export async function regenerateBucketVideoNarrative(
+  videoId: string,
+): Promise<
+  | { ok: true; narrative: NonNullable<BucketVideoStatus>["narrative"] }
+  | { ok: false; message: string }
+> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, message: "Not signed in." };
+
+  // Ownership check via RLS-scoped read.
+  const { data: owned } = (await supabase
+    .from("generated_videos")
+    .select("id, listing_id")
+    .eq("id", videoId)
+    .maybeSingle()) as { data: { id: string; listing_id: string } | null };
+  if (!owned) return { ok: false, message: "Video not found or not owned by you." };
+
+  const { generateBucketVideoNarrative } = await import("./narrative");
+  const res = await generateBucketVideoNarrative(videoId);
+  if (!res.ok) return { ok: false, message: res.message };
+
+  revalidatePath(`/dashboard/listings/${owned.listing_id}/edit`);
+  return { ok: true, narrative: res.narrative };
 }

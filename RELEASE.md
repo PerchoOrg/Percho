@@ -4,6 +4,16 @@
 > Historical entries below preserve the original name in-place — release notes
 > are a record of what was shipped under the product's name at the time.
 
+## v0.78 · Nearby tab with per-bucket video descriptions (2026-07-15)
+
+Nearby POI moves out of the Media tab into its own **Nearby** tab (between Media and Marketing). The new tab has two sections:
+
+- **Generated videos** — one card per intent bucket (walkable, daily drive, lifestyle, commute). Each card carries the CF Stream player, generate/regenerate controls, and a manually-triggered **English structured description** synthesized from the tagged photos (intro + numbered scene beats + closing + voiceover script). Ready to hand off to TTS.
+- **Nearby POIs** — the existing approve/reject flow, but each approved photo now shows the vision-tagger's caption underneath the thumbnail so agents can spot-check what the model actually sees.
+
+Description generation is a one-click Anthropic call (~$0.01/video). Never auto-fires. No schema change — reuses the existing `generated_videos.narrative` jsonb column.
+
+
 ## v0.77 · Smarter photo picks per bucket video (2026-07-14)
 
 - **Each bucket video gets a fresh 15-photo slate, no duplicates across buckets.** Approved POI photos are now vision-tagged by Claude Sonnet 4.5 as they're approved (~$0.005/photo), which decides which buyer-question buckets each photo actually strengthens. When you generate a bucket video, the allocator round-robins across POIs so one photo-rich place can't hog the video, prefers portrait shots (feed is 9:16), higher-scored photos first, and caps at 15. Hard cross-bucket dedup — a photo used by any live bucket video is excluded from the others, so 4 buckets = ~60 unique photos, not 4× the same slideshow.
