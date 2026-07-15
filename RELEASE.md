@@ -4,6 +4,12 @@
 > Historical entries below preserve the original name in-place — release notes
 > are a record of what was shipped under the product's name at the time.
 
+## v86 — 2026-07-15 — Nearby POI videos: no more black bars during pan
+
+- Bucket videos (Schools, Dining, Errands, etc.) no longer show dark letterbox bars on the left/right as photos slide across the frame.
+- Every photo now fills the full 9:16 canvas, center-cropped — the same treatment Reels/TikTok use. Pan/zoom moves within a filled canvas so nothing at the edges reveals blur or blackness.
+- Landscape POI photos will lose some horizontal content at the edges (kept the center), portrait photos lose some vertical. The subject stays in frame.
+
 ## v83.2 — 2026-07-15 — Shared communities, auto-associate
 
 - 731 Atlanta neighborhoods are now public reference data. Buyers, agents, and guests all see them.
