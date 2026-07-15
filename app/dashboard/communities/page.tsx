@@ -28,6 +28,7 @@
 import { CommunityGrid } from '@/app/_components/CommunityGrid';
 import { GridPageShell } from '@/app/_components/GridPageShell';
 import { Building2 } from 'lucide-react';
+import Link from 'next/link';
 import { fetchCommunityListCards } from '@/lib/communities/list';
 import { getViewerAgentId } from '@/lib/auth/viewer';
 import { startTimer } from '@/lib/perf/timing';
@@ -65,8 +66,18 @@ export default async function CommunitiesListPage() {
         <EmptyHubState
           icon={<Building2 size={24} strokeWidth={1.6} aria-hidden />}
           headline="No neighborhoods yet"
-          sub="Create your first neighborhood to start adding schools, POIs and tours."
-          cta={<CreateCommunityButton />}
+          sub="Create your first neighborhood, or claim one from the seeded pool."
+          cta={
+            <div className="flex flex-col items-center gap-2">
+              <CreateCommunityButton />
+              <Link
+                href="/dashboard/communities/claim"
+                className="text-sm text-cream/70 underline underline-offset-4 hover:text-cream"
+              >
+                Browse unclaimed neighborhoods →
+              </Link>
+            </div>
+          }
         />
       </GridPageShell>
     );
@@ -74,6 +85,14 @@ export default async function CommunitiesListPage() {
 
   return (
     <GridPageShell>
+      <div className="mb-4 flex justify-end">
+        <Link
+          href="/dashboard/communities/claim"
+          className="rounded-md border border-cream/15 bg-ink/40 px-3 py-1.5 text-sm text-cream/80 transition hover:border-bronze hover:text-cream"
+        >
+          Browse unclaimed →
+        </Link>
+      </div>
       <CommunityGrid communities={cards} hrefBuilder={(c) => `/dashboard/communities/${c.id}`} />
     </GridPageShell>
   );
