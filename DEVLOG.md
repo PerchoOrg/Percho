@@ -4,6 +4,63 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-16 — Phase 93.2: vision-driven listing home-tour shot planner
+
+**Objective**: Old listing home-tour render walked all N photos in
+`sort_order` with an identical zoom-in / crossfade recipe — long, generic,
+often boring, and the on-frame drawtext was ugly. This phase lands the
+vision → planner → renderer pipeline: per-photo Claude Sonnet 4.5 labels
+(room / hero / subject bbox / style signals), quota-based selection of
+8-14 clips in narrative order (exterior → living → kitchen → dining →
+bedrooms → baths → outdoor), style-aware motion pool, and a Phase-93 v2
+ken-burns filter (fg-animated + blur-letterbox background + subtle
+per-clip caption). Bucket / community-Nearby pipeline is unchanged.
+
+**Actions**:
+- New `scripts/render-worker/photo_tagger.py` — importable Claude vision
+  tagger, promoted from `scripts/spikes/vision_tag_listing.py`
+  (which stays as a debugging tool). ThreadPoolExecutor with 8 workers;
+  per-photo JSON schema unchanged from spike; style aggregation on top-6
+  hero photos with the listing price / beds / baths / sqft as text hint.
+- New `scripts/render-worker/photo_selector.py` (already on branch):
+  `build_plan(photos, style, listing_id)` returns 8-14 shots with
+  `duration_s / mode / subject_bbox / hero_score`. `caption_for_shot` maps
+  the tag output to a short 1-3 word label (Kitchen Island, Master Suite,
+  Backyard, …).
+- `scripts/ken-burns/generate.py` (already on branch): `--shot-plan JSON`
+  argument, `kenburns_filter_v2` (animated fg + blur bg letterbox), plus
+  `v2_caption` drawtext that reads `shot["caption"]`.
+- `scripts/render-worker/worker.py`:
+  - Fetch `id + width + height` alongside `storage_path` when reading
+    `listing_photos`.
+  - Rename downloaded files to `{sort_order:03d}_{id}{ext}` so
+    generate.py's shot-plan loader can match by sort_order OR id.
+  - Between overlay JSON and the ffmpeg call: run vision tagger → build
+    shot plan → write `shot_plan.json` → pass `--shot-plan` to generate.py.
+  - Wrap the whole vision block in try/except: **any** failure (missing
+    `ANTHROPIC_API_KEY`, network, JSON parse) logs `shot plan disabled: <e>`
+    and the renderer falls back to the legacy full-length path. Videos
+    never fail to ship because vision is down.
+- Delete accidental symlink `scripts/render-worker/bgm/bgm/` (self-loop
+  from an earlier experiment).
+
+**Cost & performance**:
+- ~$0.50–$1.00 per listing at Sonnet-4.5 pricing (75 photos × ~1k input
+  tokens each + one style-aggregation call). Runs concurrently with S3
+  photo download, adds ~30-60s wall time to the render.
+- Output video length drops from N×3s to 8-14 clips (30-45s target), with
+  the strongest photos held longer.
+
+**Not covered here** (deferred):
+- Live A/B against the old flow — merged direct per owner "直接合并".
+- Persisting `photos.ai_tags` back to `listing_photos` — planner just uses
+  the in-memory result per render. Add the column if we want to skip
+  re-tagging on re-renders.
+- HTML→PNG caption archetypes (the "which of the 4 sketch variants wins"
+  thread from earlier today) — still pending; the v2 filter's drawtext
+  is a placeholder we can swap for an overlay PNG later.
+
+
 ## 2026-07-16 — Phase 93.1: drop dead listing-level POI tables
 
 **Objective**: Phase 93 removed all code references to `listing_pois` /

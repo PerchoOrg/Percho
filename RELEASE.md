@@ -4,6 +4,18 @@
 > Historical entries below preserve the original name in-place — release notes
 > are a record of what was shipped under the product's name at the time.
 
+## v93.2 — 2026-07-16 — Home tour videos are shorter and smarter
+
+Listing home-tour videos now use Claude vision to pick the best 8-14
+photos in a proper narrative order (exterior → living → kitchen → dining
+→ bedrooms → baths → outdoor) instead of walking every photo in upload
+order. Master bedrooms, kitchen islands, fireplaces and pools get held
+longer. The frame keeps a soft blurred background with the photo
+animated in front, and a small caption tag ("Kitchen Island", "Master
+Suite", …) appears on each clip. If the vision service is unavailable
+the renderer transparently falls back to the old full-length flow — no
+video ever fails because of it.
+
 ## v93.1 — 2026-07-16 — Cleanup: retire dead listing-level POI tables
 
 Followup to v93.0. The listing-scoped POI tables have been dropped from the

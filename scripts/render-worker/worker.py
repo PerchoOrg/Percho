@@ -37,6 +37,10 @@ from typing import Any
 
 import requests
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from photo_selector import build_plan, caption_for_shot  # type: ignore  # noqa: E402
+from photo_tagger import tag_listing_photos  # type: ignore  # noqa: E402
+
 REPO_ROOT = Path(__file__).resolve().parents[2]
 ENV_PATH = REPO_ROOT / ".env.local"
 BGM_DIR = Path(__file__).resolve().parent / "bgm"
@@ -278,11 +282,11 @@ def process_job(job: dict[str, Any]) -> None:
             raise RuntimeError(f"listing {listing_id} not found")
         listing = listings[0]
 
-        # 2. Fetch photos in sort order.
+        # 2. Fetch photos in sort order (with id + dimensions for tagger).
         photos = sb_get(
             "listing_photos",
             {
-                "select": "storage_path,sort_order",
+                "select": "id,storage_path,sort_order,width,height",
                 "listing_id": f"eq.{listing_id}",
                 "order": "sort_order.asc",
             },
@@ -290,14 +294,27 @@ def process_job(job: dict[str, Any]) -> None:
         if len(photos) < 3:
             raise RuntimeError(f"only {len(photos)} photos, need >=3")
 
-        # 3. Download photos.
+        # 3. Download photos. Filename encodes sort_order + photo id so the
+        #    Phase 93 shot planner (which references photos by sort_order or
+        #    id) can match them back inside generate.py's --shot-plan loader.
         photo_paths: list[Path] = []
-        for i, p in enumerate(photos, start=1):
+        photo_records: list[dict[str, Any]] = []
+        for p in photos:
             path = p["storage_path"]
+            sort_i = int(p.get("sort_order") or 0)
+            pid = p["id"]
             ext = Path(path).suffix or ".jpg"
-            dest = workdir / f"{i:02d}-photo{ext}"
+            dest = workdir / f"{sort_i:03d}_{pid}{ext}"
             storage_download(PHOTO_BUCKET, path, dest)
             photo_paths.append(dest)
+            photo_records.append({
+                "id": pid,
+                "sort_order": sort_i,
+                "local_path": str(dest),
+                "storage_path": path,
+                "width": p.get("width"),
+                "height": p.get("height"),
+            })
             print(f"[job {job['id']}] downloaded {dest.name}", flush=True)
 
         # 3b. Decide orientation. Phase 75 (2026-07-07): strictly one-or-the-
@@ -322,6 +339,38 @@ def process_job(job: dict[str, Any]) -> None:
         overlay_path = workdir / "overlay.json"
         overlay_path.write_text(json.dumps(overlay, indent=2))
 
+        # 4b. Phase 93: vision-driven shot plan for listing home tours.
+        #    Runs Claude Sonnet 4.5 on every photo, then photo_selector picks
+        #    the 8-14 best in narrative order. Any failure (missing API key,
+        #    network, bad JSON) falls back to the legacy “all photos in
+        #    sort_order” path — the video still ships.
+        shot_plan_path: Path | None = None
+        try:
+            if not os.environ.get("ANTHROPIC_API_KEY"):
+                raise RuntimeError("ANTHROPIC_API_KEY not set — skipping vision plan")
+            print(f"[job {job['id']}] tagging {len(photo_records)} photos w/ Claude vision", flush=True)
+            tag_result = tag_listing_photos(photo_records, listing)
+            tagged = tag_result["photos"]
+            style_info = tag_result["style"]
+            style = style_info.get("style", "modern")
+            plan = build_plan(tagged, style, listing_id)
+            for shot in plan:
+                shot["caption"] = caption_for_shot(shot)
+            shot_plan_path = workdir / "shot_plan.json"
+            shot_plan_path.write_text(json.dumps({
+                "plan": plan,
+                "listing": listing,
+                "style": style_info,
+            }, indent=2))
+            print(
+                f"[job {job['id']}] shot plan: style={style} "
+                f"clips={len(plan)} (of {len(tagged)} tagged)",
+                flush=True,
+            )
+        except Exception as e:  # noqa: BLE001
+            print(f"[job {job['id']}] shot plan disabled: {e} — falling back to legacy path", flush=True)
+            shot_plan_path = None
+
         # 5. Run generate.py — one orientation only (see 3b).
         bgm_choice = pick_bgm()
 
@@ -340,6 +389,8 @@ def process_job(job: dict[str, Any]) -> None:
             ]
             if bgm_choice:
                 cmd += ["--bgm", str(bgm_choice)]
+            if shot_plan_path is not None:
+                cmd += ["--shot-plan", str(shot_plan_path)]
             print(f"[job {job['id']}] running ({orientation}): {' '.join(cmd)}", flush=True)
             subprocess.run(cmd, check=True, cwd=str(REPO_ROOT))
             if not out_path.exists():
