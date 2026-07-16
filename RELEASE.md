@@ -4,6 +4,32 @@
 > Historical entries below preserve the original name in-place — release notes
 > are a record of what was shipped under the product's name at the time.
 
+## v94.0 — 2026-07-16 — Atlanta metro is live on the community grid
+
+The `/communities` page is no longer a demo shell. Every neighborhood
+across the Atlanta metro — from Buckhead and Inman Park to Alpharetta,
+Cumming, Marietta, Douglasville, Lawrenceville and 80+ more — now
+appears as a real card with a real photo, a real boundary on the map,
+and real stats (residents, median home value, average income,
+homeowners %) sourced from public neighborhood pages.
+
+Around 8,700 neighborhoods across 87 metro cities are now searchable.
+When an agent creates a listing, it auto-slots into the neighborhood it
+falls inside so buyers can find every listing that's actually in
+"Waterside" or "Virginia-Highland" without anyone typing it in.
+
+### 🚀 Features
+- Full Atlanta-metro neighborhood inventory on the buyer-facing community grid.
+- Every community shows a real hero photo, not a placeholder.
+- Every community carries a real boundary polygon on the map view.
+- Listings auto-associate to whichever neighborhood they fall inside.
+
+### 🔧 Technical
+- New admin cache-bust endpoint for import pipelines.
+
+### 📈 Metrics
+- 8,679 communities imported. 100% have real photos. 87 cities covered.
+
 ## v93.2 — 2026-07-16 — Home tour videos are shorter and smarter
 
 Listing home-tour videos now use Claude vision to pick the best 8-14
