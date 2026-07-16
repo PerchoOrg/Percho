@@ -1,0 +1,4 @@
+# Runtime output — cached JSON pages, logs, per-run artifacts.
+# These are recreated by re-running the pipeline. Do not commit.
+_out/
+*.log
