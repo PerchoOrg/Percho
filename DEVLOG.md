@@ -4,6 +4,52 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-16 — Phase 93: retire listing-level Nearby (POI moves to community/neighborhood)
+
+**Objective**: user asked to drop the "Nearby" sub-tab from the listing edit
+page (`/dashboard/listings/[id]/edit`). POI content is neighborhood-scoped, not
+per-listing — the community page already owns the full discover / review /
+bucket-video pipeline (Phase 92). Keeping a parallel per-listing pipeline was
+just duplicated data + code.
+
+**Actions**:
+- `app/dashboard/listings/[id]/edit/page.tsx`: removed `nearby` from HubTabs,
+  removed `NearbyPoiPanel` import, removed server-side
+  `loadNearbyPoisForListing` preload, dropped unused `MapPinned` icon import.
+- Deleted `app/dashboard/listings/[id]/edit/NearbyPoiPanel.tsx` (client panel).
+- Deleted `lib/poi/actions.ts` — listing-level POI server actions
+  (`discoverPoisForListing`, `fetchPhotosForPoi`, `setListingPoiStatus`,
+  `setListingPhotoStatus`, `logReviewEvent`, `loadNearbyPoisForListing`). Grep
+  confirmed nothing outside `NearbyPoiPanel.tsx` imported from it.
+- Deleted `lib/poi/video-actions.ts` — listing-scoped bucket video generation.
+  Also only referenced from the deleted panel. Bucket video generation now
+  lives exclusively in `lib/poi/community-video-actions.ts`.
+- `lib/poi/vision-tagger.ts`: bucket-hint query switched from `listing_pois`
+  → `community_pois` (same intent_bucket column, pois are global). Updated
+  header comment to reference `community-actions.ts` instead of the deleted
+  `actions.ts::setListingPhotoStatus`.
+
+**Decisions**:
+- **Kept the DB tables** (`listing_pois`, `listing_poi_photos`) untouched this
+  pass. Code no longer reads or writes them. Follow-up: single migration that
+  drops both tables + related RLS policies, once we verify no residual read
+  path in production (esp. the `pois` RLS policy at
+  `20260714000000_poi_content_pipeline.sql:136` which references
+  `listing_pois`). Filing as tech debt — non-urgent, DB is idle.
+- **No listing-level POI recovery path.** If per-listing POI ever comes back
+  (e.g. "custom pin on the drive to work"), it'll be a new feature scoped
+  to that need, not a resurrection of this pipeline.
+
+**Verification**: `npx tsc --noEmit` clean. Biome diagnostic count dropped
+from 52 → 39 (only removals, no new lint hits).
+
+**Risks / follow-up**:
+- `listing_pois` / `listing_poi_photos` tables still in DB and still have
+  RLS + FK from `pois` policy. Drop migration owed.
+- If any prod agent has already discovered listing-level POIs on a listing,
+  those photos are now orphaned in storage. Cleanup script can enumerate via
+  `listing_pois` before the drop migration lands.
+
 ## 2026-07-15 — Phase 92.4: landscape caption overlay fix (schools "no template" bug)
 
 **Bug** — user reported schools nearby video "只有图片没有模版". Root cause:

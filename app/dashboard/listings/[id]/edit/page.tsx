@@ -6,6 +6,8 @@
  * (Views / Saves / Leads). No absolute positioning. No overlap risk.
  *
  * Tabs (5): Details · Media · Marketing · Leads · Analytics.
+ *   - Nearby lives on the community page (Phase 93 cleanup, 2026-07-16) —
+ *     POI content is neighborhood-scoped, not per-listing.
  *   - "Marketing" merges the old Social + Tour tabs (sub-tabs inside).
  *   - "Leads" is a per-listing slice of the global lead inbox.
  *   - "Analytics" inlines what used to live at /dashboard/listings/[id]/analytics
@@ -21,7 +23,7 @@ import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 
 import { HubTabs } from '@/app/dashboard/_components/HubTabs';
-import { FileText, ImageIcon, MapPinned, Megaphone, Users, LineChart } from 'lucide-react';
+import { FileText, ImageIcon, Megaphone, Users, LineChart } from 'lucide-react';
 import { HeroHeader } from '@/app/dashboard/_components/HeroHeader';
 import { HeroControl } from '@/app/dashboard/_components/HeroControl';
 import { InstantStatusToggle } from '@/app/dashboard/_components/InstantStatusToggle';
@@ -32,7 +34,6 @@ import { isDraftAddress } from '@/app/dashboard/listings/draft';
 import { GenerateTourPanel } from './GenerateTourPanel';
 import type { ListingPhotoRow } from './PhotoPanel';
 import { MediaPanel } from './MediaPanel';
-import { NearbyPoiPanel } from './NearbyPoiPanel';
 import type { ListingVideoRow } from './VideoPanel';
 import { SocialCopyPanel } from './SocialCopyPanel';
 import { ListingLeadsPanel } from './ListingLeadsPanel';
@@ -173,17 +174,6 @@ export default async function EditListingPage({
     heroCover = photoPublicUrl(photos[0].storage_path);
   }
 
-  // Phase 76: nearby POIs pre-loaded server-side so the Media tab renders
-  // synchronously. Empty on first visit — agent clicks "Discover POIs" to
-  // populate. Cheap query (join on already-indexed listing_id).
-  const { loadNearbyPoisForListing } = await import('@/lib/poi/actions');
-  let initialNearbyPois: Awaited<ReturnType<typeof loadNearbyPoisForListing>> = [];
-  try {
-    initialNearbyPois = await loadNearbyPoisForListing(listing.id);
-  } catch (err) {
-    console.error('[listing edit] loadNearbyPoisForListing failed:', err);
-  }
-
   const draft = isDraftAddress(listing.address);
 
   const subtitle = draft
@@ -223,7 +213,6 @@ export default async function EditListingPage({
         tabs={[
           { id: 'details', label: 'Details', icon: <FileText className="h-5 w-5" strokeWidth={1.6} /> },
           { id: 'media', label: 'Media', icon: <ImageIcon className="h-5 w-5" strokeWidth={1.6} /> },
-          { id: 'nearby', label: 'Nearby', icon: <MapPinned className="h-5 w-5" strokeWidth={1.6} /> },
           { id: 'marketing', label: 'Marketing', icon: <Megaphone className="h-5 w-5" strokeWidth={1.6} /> },
           { id: 'leads', label: 'Leads', icon: <Users className="h-5 w-5" strokeWidth={1.6} /> },
           { id: 'analytics', label: 'Analytics', icon: <LineChart className="h-5 w-5" strokeWidth={1.6} /> },
@@ -269,17 +258,6 @@ export default async function EditListingPage({
               />
               <GenerateTourPanel listingId={listing.id} photoCount={photos.length} />
             </div>
-          ),
-          nearby: draft ? (
-            <DraftLockedNotice />
-          ) : (
-            <section className="rounded-2xl border border-line bg-surface p-4 sm:p-6">
-              <NearbyPoiPanel
-                listingId={listing.id}
-                initialPois={initialNearbyPois}
-                supabaseStorageBase={process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''}
-              />
-            </section>
           ),
           marketing: draft ? <DraftLockedNotice /> : <SocialCopyPanel listingId={listing.id} />,
           leads: draft ? <DraftLockedNotice /> : <ListingLeadsPanel listingId={listing.id} />,

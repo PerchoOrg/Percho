@@ -4,6 +4,17 @@
 > Historical entries below preserve the original name in-place — release notes
 > are a record of what was shipped under the product's name at the time.
 
+## v93.0 — 2026-07-16 — Nearby moves to the neighborhood level
+
+The "Nearby" tab on the listing editor is gone. Neighborhood spots (schools,
+dining, shopping, and the rest) now live on the community page, where you
+review photos and generate bucket videos once for the whole neighborhood
+instead of listing by listing. Every listing inside that community
+automatically benefits — same videos, no per-listing duplicate work.
+
+Nothing changes on the buyer side. If you had listing-level nearby content in
+the works, hop over to the community page and pick it up there.
+
 ## v92.4 — 2026-07-15 — landscape caption fix
 
 Landscape nearby videos (schools, outdoor, shopping — any bucket where the
