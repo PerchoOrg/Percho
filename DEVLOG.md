@@ -4,6 +4,23 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-16 09:20 UTC — Split video pipeline doc into 1 README + 7 per-archetype files
+
+**Objective**: `docs/pipelines/video-generation-master.md` 单一文件承载了公共基础设施 + Listing + 6 nearby archetype 的所有内容,读的时候要在一个文件里跳,改一个 archetype 会碰另一个的 diff。
+
+**Actions**: 拆成 `docs/pipelines/`:
+- `README.md` — 总纲(公共设施、POI 底座、14→6 表、铁律、7 doc 索引)
+- `video-listing.md` — Listing 15 步 + LISTING archetype 字幕
+- `video-nearby-{trust,lifestyle,utility,narrative,magazine,map}.md` — 6 archetype 各一份,每份含 captions.json schema / overlay.html DOM 分支 / 决策要点 / 已知坑
+- `video-generation-master.md` — 保留为 stub,内容全部指向 README,避免 DEVLOG 历史引用断链
+
+**Decisions**:
+- 14→6 映射**以 `worker.py:679 CAPTION_ARCHETYPE_MAP` 为准**,原 doc 里的映射表(`nightlife→LIFESTYLE`, `outdoor→NARRATIVE`, `faith→TRUST`)与代码不符,已按代码修正:`nightlife→NARRATIVE`, `outdoor→MAP`, `faith→MAGAZINE`
+- 通用 nearby 渲染流程只在 TRUST 文档写一次,其余 5 份链过去,避免六处复制
+- LISTING archetype v97.0 内容原封搬到 `video-listing.md`,包括 backdrop-filter 陷阱、V3-5 定案 CSS、drawtext fallback gate
+
+**Learnings**: 之前的 monolithic doc 里 14→6 映射表和代码 drift 了都没人发现,拆开后每份 doc 领一个 archetype,后续 patch code 时更可能顺带修 doc。
+
 ## 2026-07-16 08:05 UTC — Phase 100: per-photo AI caption on listing videos (LISTING archetype, V3-5 local blur band)
 
 **Objective**: Listing tour videos had no per-photo text. Owner wanted the
