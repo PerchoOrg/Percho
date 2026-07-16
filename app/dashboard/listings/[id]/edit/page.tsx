@@ -112,7 +112,7 @@ export default async function EditListingPage({
   // biome-ignore lint/suspicious/noExplicitAny: stub generated types
   const photosResp = (await (supabase as any)
     .from('listing_photos')
-    .select('id, storage_path, alt_text, width, height, sort_order')
+    .select('id, storage_path, alt_text, width, height, sort_order, ai_tags')
     .eq('listing_id', listing.id)
     .order('sort_order', { ascending: true })
     .then(

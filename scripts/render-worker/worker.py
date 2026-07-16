@@ -32,6 +32,7 @@ import sys
 import tempfile
 import time
 import traceback
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -39,7 +40,14 @@ import requests
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from photo_selector import build_plan, caption_for_shot  # type: ignore  # noqa: E402
-from photo_tagger import tag_listing_photos  # type: ignore  # noqa: E402
+from photo_tagger import MODEL as TAGGER_MODEL, tag_listing_photos  # type: ignore  # noqa: E402
+
+
+def _now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+MODEL_NAME = TAGGER_MODEL
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 ENV_PATH = REPO_ROOT / ".env.local"
@@ -274,7 +282,7 @@ def process_job(job: dict[str, Any]) -> None:
         listings = sb_get(
             "listings",
             {
-                "select": "id,address,city,state,neighborhood,price,beds,baths,sqft",
+                "select": "id,address,city,state,neighborhood,price,beds,baths,sqft,ai_style",
                 "id": f"eq.{listing_id}",
             },
         )
@@ -283,10 +291,12 @@ def process_job(job: dict[str, Any]) -> None:
         listing = listings[0]
 
         # 2. Fetch photos in sort order (with id + dimensions for tagger).
+        #    Phase 95: also pull `ai_tags`/`tagged_at` so we can reuse prior
+        #    vision labels and avoid re-billing Claude on repeat renders.
         photos = sb_get(
             "listing_photos",
             {
-                "select": "id,storage_path,sort_order,width,height",
+                "select": "id,storage_path,sort_order,width,height,ai_tags,tagged_at",
                 "listing_id": f"eq.{listing_id}",
                 "order": "sort_order.asc",
             },
@@ -314,6 +324,10 @@ def process_job(job: dict[str, Any]) -> None:
                 "storage_path": path,
                 "width": p.get("width"),
                 "height": p.get("height"),
+                # Phase 95: pre-loaded ai_tags (may be None). Used below to
+                # skip re-tagging already-labeled photos.
+                "cached_ai_tags": p.get("ai_tags"),
+                "tagged_at": p.get("tagged_at"),
             })
             print(f"[job {job['id']}] downloaded {dest.name}", flush=True)
 
@@ -344,14 +358,97 @@ def process_job(job: dict[str, Any]) -> None:
         #    the 8-14 best in narrative order. Any failure (missing API key,
         #    network, bad JSON) falls back to the legacy “all photos in
         #    sort_order” path — the video still ships.
+        #
+        #    Phase 95: results are now persisted to `listing_photos.ai_tags`
+        #    and `listings.ai_style`. Photos with `tagged_at IS NOT NULL`
+        #    reuse the cached tags — repeat renders of the same listing do
+        #    zero Claude calls unless new photos are uploaded.
         shot_plan_path: Path | None = None
         try:
             if not os.environ.get("ANTHROPIC_API_KEY"):
                 raise RuntimeError("ANTHROPIC_API_KEY not set — skipping vision plan")
-            print(f"[job {job['id']}] tagging {len(photo_records)} photos w/ Claude vision", flush=True)
-            tag_result = tag_listing_photos(photo_records, listing)
-            tagged = tag_result["photos"]
-            style_info = tag_result["style"]
+
+            # Split cached vs. needs-tagging.
+            need_tag = [p for p in photo_records if not p.get("tagged_at")]
+            cached_tagged: list[dict[str, Any]] = []
+            for p in photo_records:
+                if p.get("tagged_at") and isinstance(p.get("cached_ai_tags"), dict):
+                    row = dict(p["cached_ai_tags"])
+                    row["id"] = p["id"]
+                    row["_id"] = p["id"]
+                    row["sort_order"] = p["sort_order"]
+                    row["_sort_order"] = p["sort_order"]
+                    cached_tagged.append(row)
+
+            newly_tagged: list[dict[str, Any]] = []
+            style_info: dict[str, Any] | None = None
+            if need_tag:
+                print(
+                    f"[job {job['id']}] tagging {len(need_tag)} new photos w/ Claude vision "
+                    f"(reusing {len(cached_tagged)} cached)",
+                    flush=True,
+                )
+                tag_result = tag_listing_photos(need_tag, listing)
+                newly_tagged = tag_result["photos"]
+                style_info = tag_result["style"]
+
+                # Persist per-photo results. `ai_score` = quality * hero_score
+                # (POI convention). Any per-photo call that errored has
+                # `{"error": ...}` in the tag dict — we still stamp
+                # `tagged_at` so we don't infinitely retry a broken frame,
+                # but leave `ai_tags` null.
+                now = _now_iso()
+                for r in newly_tagged:
+                    pid = r.get("id")
+                    if not pid:
+                        continue
+                    if "error" in r:
+                        # Mark as attempted so the next render doesn't retry
+                        # the same broken frame. `ai_tags` stays null.
+                        sb_patch(
+                            "listing_photos",
+                            {"id": f"eq.{pid}"},
+                            {
+                                "tagged_at": now,
+                                "ai_model": MODEL_NAME,
+                            },
+                        )
+                        continue
+                    ai_tags = {
+                        k: v for k, v in r.items()
+                        if not k.startswith("_") and k not in ("id", "sort_order")
+                    }
+                    q = float(r.get("quality") or 0.0)
+                    hs = float(r.get("hero_score") or 0.0)
+                    ai_score = round(q * hs, 2)
+                    sb_patch(
+                        "listing_photos",
+                        {"id": f"eq.{pid}"},
+                        {
+                            "ai_tags": ai_tags,
+                            "ai_score": ai_score,
+                            "ai_model": MODEL_NAME,
+                            "tagged_at": now,
+                        },
+                    )
+
+            # Style: prefer freshly-computed (based on new hero photos), else
+            # fall back to cached listing.ai_style, else default.
+            if style_info is None:
+                cached_style = listing.get("ai_style") if isinstance(listing, dict) else None
+                style_info = cached_style if isinstance(cached_style, dict) else {
+                    "style": "modern",
+                    "confidence": 0.0,
+                }
+            elif style_info and isinstance(style_info, dict):
+                # Persist listing-level style aggregation.
+                sb_patch(
+                    "listings",
+                    {"id": f"eq.{listing_id}"},
+                    {"ai_style": style_info},
+                )
+
+            tagged = cached_tagged + newly_tagged
             style = style_info.get("style", "modern")
             plan = build_plan(tagged, style, listing_id)
             for shot in plan:
