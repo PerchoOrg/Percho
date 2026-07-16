@@ -4,6 +4,13 @@
 > Historical entries below preserve the original name in-place — release notes
 > are a record of what was shipped under the product's name at the time.
 
+## v93.1 — 2026-07-16 — Cleanup: retire dead listing-level POI tables
+
+Followup to v93.0. The listing-scoped POI tables have been dropped from the
+database now that nothing reads or writes them. No user-visible change —
+this closes out the migration you started when we moved Nearby to the
+neighborhood layer.
+
 ## v93.0 — 2026-07-16 — Nearby moves to the neighborhood level
 
 The "Nearby" tab on the listing editor is gone. Neighborhood spots (schools,
