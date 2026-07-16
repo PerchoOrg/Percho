@@ -1131,6 +1131,23 @@ function Card({
                       // fade-in on first frame, instant on hide.
                       opacity: hasFirstFrame ? 1 : 0,
                       transition: hasFirstFrame ? 'opacity 150ms' : 'none',
+                      // Phase 97 (2026-07-16): same Preflight override as
+                      // the 71.19 fullscreen branch. Tailwind Preflight
+                      // injects `video { max-width: 100%; height: auto }`
+                      // globally, which beats our `h-full w-full` on
+                      // landscape sources — a 1920×1080 video ends up
+                      // rendered as a small 16:9 box centered inside the
+                      // 9:19.5 viewport instead of letterboxing across
+                      // the full viewport width. Explicit none/0
+                      // overrides let the className sizing actually win.
+                      // Portrait videos are unaffected (their height:auto
+                      // already exceeds the viewport). Only relevant
+                      // since Phase 75 put landscape videos directly in
+                      // the vertical feed with object-contain.
+                      maxWidth: 'none',
+                      maxHeight: 'none',
+                      minWidth: 0,
+                      minHeight: 0,
                     }
               }
               className={

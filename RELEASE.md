@@ -4,6 +4,14 @@
 > Historical entries below preserve the original name in-place — release notes
 > are a record of what was shipped under the product's name at the time.
 
+## v96.1 — 2026-07-16 — Tour video now fills the screen properly
+
+Fixed a bug where an auto-generated tour video was rendering as a small
+box floating in the middle of the screen instead of filling the width
+with a normal top/bottom letterbox. Landscape-shot listings (most of
+them, since real estate photos are usually horizontal) now display
+edge-to-edge on the phone the way they should.
+
 ## v96.0 — 2026-07-16 — Media tab: tour-video generator collapses into an inline button
 
 The "Generate tour video" card on a listing's Media tab has been removed

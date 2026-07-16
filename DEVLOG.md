@@ -4,6 +4,43 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-16 — Phase 97: Feed landscape video — Tailwind Preflight was clamping height:auto
+
+**Objective**: Owner reported that the auto-generated tour video on
+5122 Lower Creek Street rendered as a "tiny video-in-a-video" — the 16:9
+frame sat in the middle of the vertical feed with visible gaps on ALL
+FOUR sides, not just top/bottom letterbox. Screenshot showed the
+landscape source rendered at roughly its intrinsic 16:9 aspect ratio
+inside the 9:19.5 viewport, small and centered.
+
+**Investigation**:
+- listing_videos row has `cf_video_id_landscape` only (Phase 75 policy:
+  ≥80% landscape photos → single 1920×1080 render, no portrait companion).
+- BrowseFeed feeds the landscape uid as `effectiveCfId` in both feed and
+  fullscreen since Phase 74.17.
+- Video className in non-fullscreen branch: `relative h-full w-full
+  object-contain`. Parent is `h-[100dvh] w-full`. Should letterbox.
+- Root cause: Tailwind Preflight injects
+  `video { max-width: 100%; height: auto }` globally. Same trap Phase
+  71.19 hit in the fullscreen rotate-90 branch — `height: auto` beats
+  `h-full` in cascade order, so a 16:9 source renders at
+  `width: 100vw; height: 100vw × 9/16` — a small centered 16:9 box.
+  71.19 fixed it for the fullscreen branch only. Phase 75 (2026-07-07)
+  was the first time landscape videos actually entered the vertical
+  feed, so the non-fullscreen branch's exposure to this bug is very
+  recent — nobody's caught it until now.
+
+**Actions**:
+- `app/(public)/browse/_components/BrowseFeed.tsx` L1124: added inline
+  `maxWidth: 'none', maxHeight: 'none', minWidth: 0, minHeight: 0` to
+  the non-fullscreen branch of the video `style` prop. Mirrors the 71.19
+  fullscreen fix. Portrait videos unaffected (their intrinsic
+  height:auto already exceeds viewport height, so h-full binds first).
+
+**Verification plan**: Owner tests on 5122 Lower Creek after main
+deploy. Success = landscape video letterboxes across full viewport
+width (thin top/bottom bars only) instead of small centered box.
+
 ## 2026-07-16 — Phase 96: Media tab — "Generate tour video" collapses to a button next to Videos header
 
 **Objective**: The Media tab used to have a dedicated "Generate tour video"
