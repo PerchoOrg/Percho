@@ -4,6 +4,19 @@
 > Historical entries below preserve the original name in-place — release notes
 > are a record of what was shipped under the product's name at the time.
 
+## v95.0 — 2026-07-16 — AI photo descriptions on the Media tab
+
+Every photo on a listing's Media tab now shows a one-sentence AI
+description ("Bright kitchen with marble island and open floor plan")
+and up to three quick tags (room type + style signals like "hardwood",
+"large_windows", "open_plan") right under the thumbnail. Agents can see
+at a glance what each photo actually contains without opening it.
+
+The descriptions are generated during the first video render, so once
+you've made a video for the listing the whole gallery gets captioned.
+Adding new photos later? Only those new photos are analyzed — no
+double-billing on the same shots.
+
 ## v94.0 — 2026-07-16 — Atlanta metro is live on the community grid
 
 The `/communities` page is no longer a demo shell. Every neighborhood

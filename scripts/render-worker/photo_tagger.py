@@ -34,6 +34,7 @@ PER_PHOTO_SYSTEM = """You are labeling ONE photo from a residential real estate 
 
 Return STRICT JSON only, no prose:
 {
+  "caption": "short factual sentence, <=15 words, e.g. 'Bright kitchen with marble island and stainless appliances'",
   "room_type": "exterior|living|kitchen|dining|bedroom|bathroom|office|backyard|pool|balcony|garage|hallway|closet|laundry|basement|floorplan|other",
   "is_master": true/false,
   "subject_label": "bed|island|range|fireplace|window_view|pool|door|stairs|mirror|vanity|null",
@@ -48,6 +49,7 @@ Return STRICT JSON only, no prose:
 }
 
 Rules:
+- caption: 1 sentence, <=15 words, factual (what the photo shows, not marketing fluff). This is displayed under the thumbnail on the agent's Media tab.
 - subject_bbox: normalized [0..1], (x,y) is TOP-LEFT of bbox, (w,h) size. Point at THE thing worth panning to (bed, island, window with view, fireplace). If nothing specific → subject_label=null, bbox=[0.25,0.25,0.5,0.5].
 - hero_score: how well this photo could open or close a video (0.9+ = strong exterior/wide living/kitchen/pool at prime time; 0.3- = closet, laundry, blank hall).
 - quality: photographic quality only (sharp, well-lit, well-framed). Independent of hero_score.

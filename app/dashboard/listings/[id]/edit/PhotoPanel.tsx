@@ -36,11 +36,27 @@ import { Star, Trash2, Upload } from 'lucide-react';
 import {
   forwardRef,
   useCallback,
+  useEffect,
   useImperativeHandle,
   useRef,
   useState,
   useTransition,
 } from 'react';
+
+/**
+ * Phase 95: shape of `listing_photos.ai_tags` (see
+ * supabase/migrations/20260716140000_listing_photos_ai_tags.sql). Only the
+ * two fields the Media tab renders are typed strictly; the rest are along
+ * for the ride so future surfaces can read them without another migration.
+ */
+export interface ListingPhotoAiTags {
+  caption?: string;
+  room_type?: string;
+  style_signals?: string[];
+  hero_score?: number;
+  usable?: boolean;
+  [key: string]: unknown;
+}
 
 export interface ListingPhotoRow {
   id: string;
@@ -49,6 +65,7 @@ export interface ListingPhotoRow {
   width: number | null;
   height: number | null;
   sort_order: number;
+  ai_tags?: ListingPhotoAiTags | null;
 }
 
 interface Props {
@@ -218,6 +235,37 @@ export const PhotoPanel = forwardRef<PhotoPanelHandle, Props>(function PhotoPane
     [coverPhotoId, listingId],
   );
 
+  // Phase 95: Realtime — the render worker writes `ai_tags` back to
+  // listing_photos rows during the shot-planner step. Subscribe so the
+  // Media tab flips from "no description" to captioned thumbnails without
+  // a page refresh. `listing_photos` was already added to the
+  // `supabase_realtime` publication in migration 0011.
+  useEffect(() => {
+    const supabase = createClient();
+    const channel = supabase
+      .channel(`listing-photos-ai:${listingId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'listing_photos',
+          filter: `listing_id=eq.${listingId}`,
+        },
+        (payload: { new: { id?: string; ai_tags?: ListingPhotoAiTags | null } }) => {
+          const next = payload.new;
+          if (!next?.id) return;
+          setPhotos((prev) =>
+            prev.map((p) => (p.id === next.id ? { ...p, ai_tags: next.ai_tags ?? null } : p)),
+          );
+        },
+      )
+      .subscribe();
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [listingId]);
+
   return (
     <div className="space-y-4">
       {globalError ? (
@@ -235,48 +283,81 @@ export const PhotoPanel = forwardRef<PhotoPanelHandle, Props>(function PhotoPane
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
         {photos.map((photo) => {
           const isCover = coverPhotoId === photo.id;
+          const ai = photo.ai_tags ?? null;
+          const caption = ai?.caption?.trim() || null;
+          const tagChips: string[] = [];
+          if (ai?.room_type && ai.room_type !== 'other') tagChips.push(ai.room_type);
+          for (const s of ai?.style_signals ?? []) {
+            if (tagChips.length >= 3) break;
+            if (typeof s === 'string' && s.length) tagChips.push(s);
+          }
           return (
-            <div
-              key={photo.id}
-              className={`group relative aspect-[4/3] overflow-hidden rounded border bg-bg ${
-                isCover ? 'border-line-strong ring-1 ring-line-strong' : 'border-line'
-              }`}
-            >
-              {/* Cross-origin Supabase URL — next/image domain config out of scope. */}
-              <img
-                src={photoPublicUrl(photo.storage_path)}
-                alt={photo.alt_text ?? ''}
-                loading="lazy"
-                className="h-full w-full object-cover"
-              />
-
-              {isCover ? (
-                <span className="absolute top-1.5 left-1.5 rounded bg-ink px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-cream">
-                  Cover
-                </span>
-              ) : null}
-
-              <button
-                type="button"
-                onClick={() => handleSetCover(isCover ? null : photo.id)}
-                disabled={coverPending}
-                aria-label={isCover ? 'Clear cover' : 'Set as cover'}
-                title={isCover ? 'Clear cover' : 'Set as cover'}
-                className={`absolute top-1.5 right-9 rounded bg-bg p-1.5 disabled:opacity-50 ${
-                  isCover ? 'text-ink block' : 'hidden text-ink2 hover:text-ink group-hover:block'
+            <div key={photo.id} className="space-y-1.5">
+              <div
+                className={`group relative aspect-[4/3] overflow-hidden rounded border bg-bg ${
+                  isCover ? 'border-line-strong ring-1 ring-line-strong' : 'border-line'
                 }`}
               >
-                <Star size={14} aria-hidden="true" fill={isCover ? 'currentColor' : 'none'} />
-              </button>
+                {/* Cross-origin Supabase URL — next/image domain config out of scope. */}
+                <img
+                  src={photoPublicUrl(photo.storage_path)}
+                  alt={photo.alt_text ?? caption ?? ''}
+                  loading="lazy"
+                  className="h-full w-full object-cover"
+                />
 
-              <button
-                type="button"
-                onClick={() => handleDelete(photo.id)}
-                aria-label="Delete photo"
-                className="absolute top-1.5 right-1.5 hidden rounded bg-bg p-1.5 text-ink2 hover:text-red-300 group-hover:block"
-              >
-                <Trash2 size={14} aria-hidden="true" />
-              </button>
+                {isCover ? (
+                  <span className="absolute top-1.5 left-1.5 rounded bg-ink px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-cream">
+                    Cover
+                  </span>
+                ) : null}
+
+                <button
+                  type="button"
+                  onClick={() => handleSetCover(isCover ? null : photo.id)}
+                  disabled={coverPending}
+                  aria-label={isCover ? 'Clear cover' : 'Set as cover'}
+                  title={isCover ? 'Clear cover' : 'Set as cover'}
+                  className={`absolute top-1.5 right-9 rounded bg-bg p-1.5 disabled:opacity-50 ${
+                    isCover ? 'text-ink block' : 'hidden text-ink2 hover:text-ink group-hover:block'
+                  }`}
+                >
+                  <Star size={14} aria-hidden="true" fill={isCover ? 'currentColor' : 'none'} />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleDelete(photo.id)}
+                  aria-label="Delete photo"
+                  className="absolute top-1.5 right-1.5 hidden rounded bg-bg p-1.5 text-ink2 hover:text-red-300 group-hover:block"
+                >
+                  <Trash2 size={14} aria-hidden="true" />
+                </button>
+              </div>
+
+              {/* Phase 95: AI caption + tag chips. Empty until the render
+                  worker's Claude vision pass writes ai_tags back. */}
+              {caption ? (
+                <p className="line-clamp-2 text-[11px] text-ink2 leading-snug" title={caption}>
+                  {caption}
+                </p>
+              ) : (
+                <p className="text-[11px] text-muted italic">
+                  AI description appears after first video render
+                </p>
+              )}
+              {tagChips.length > 0 ? (
+                <div className="flex flex-wrap gap-1">
+                  {tagChips.map((t) => (
+                    <span
+                      key={t}
+                      className="rounded border border-line bg-cream px-1.5 py-0.5 text-[10px] text-ink2"
+                    >
+                      {t.replace(/_/g, ' ')}
+                    </span>
+                  ))}
+                </div>
+              ) : null}
             </div>
           );
         })}

@@ -4,6 +4,81 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-16 — Phase 95: Persist listing-photo AI vision tags for the Media tab
+
+**Objective**: Surface the Claude Sonnet 4.5 vision descriptions and tags
+(already computed by the render worker during video shot-planning) on the
+agent's Media tab in the listing editor. Persist them so a repeat render
+of the same listing does zero vision calls — before this the tagger's
+output only lived in a temp `shot_plan.json` in the render workdir and was
+thrown away after each job, so every render re-billed Claude for the same
+photos.
+
+**Actions**:
+- `supabase/migrations/20260716140000_listing_photos_ai_tags.sql` (new).
+  Adds `ai_tags jsonb`, `ai_score numeric(3,2)`, `ai_model text`,
+  `tagged_at timestamptz` to `listing_photos`, plus `ai_style jsonb` on
+  `listings` for the aggregated style-classifier result. Schema mirrors
+  the POI photo pipeline (see `20260714000000_poi_content_pipeline.sql`
+  lines 115-126) for consistency.
+- `scripts/render-worker/photo_tagger.py`. Added a `caption` field to the
+  per-photo prompt (≤15 words, factual — this is what the Media tab
+  displays under each thumbnail). Everything else in the vision schema
+  (room_type, hero_score, subject_bbox, style_signals, quality) is
+  unchanged.
+- `scripts/render-worker/worker.py`. Before invoking the tagger, split
+  photos into `tagged_at IS NULL` (needs vision) vs. cached (reuse
+  ai_tags). Only call Claude for the un-tagged subset. After tagging,
+  PATCH each row back with `ai_tags`, `ai_score = quality * hero_score`
+  (POI convention), `ai_model`, `tagged_at`. Errored photos still get
+  `tagged_at` stamped (with `ai_tags` null) so a broken frame doesn't
+  infinitely retry. Listing-level style is written to `listings.ai_style`
+  and reused when no new photos need tagging.
+- `app/dashboard/listings/[id]/edit/page.tsx`. Extended the listing_photos
+  SELECT to include `ai_tags`.
+- `app/dashboard/listings/[id]/edit/PhotoPanel.tsx`. Each thumbnail now
+  renders the AI caption (2-line clamp) plus up to 3 tag chips
+  (room_type + top style_signals). Empty state reads "AI description
+  appears after first video render". Added a realtime subscription
+  (`postgres_changes` UPDATE on `listing_photos` filtered by listing_id)
+  so tags flip in during a render without a page refresh —
+  `listing_photos` was already in the `supabase_realtime` publication
+  from migration 0011.
+
+**Decisions**:
+- Trigger stays at render-time (not upload-time / not a manual button)
+  because: (a) the tagger already runs there for the shot planner, so we
+  get the labels for free; (b) if an agent uploads photos but never
+  renders, we don't spend vision tokens on a listing that may never ship.
+- Idempotency via `tagged_at` sentinel matches how POI vision-tagger
+  works. Cost profile: first render pays ~$0.005/photo × N photos plus
+  one style call. Re-renders pay $0 vision unless the agent uploaded new
+  photos. Adding a new photo pays only for that photo.
+- `ai_score = quality * hero_score` (same product rule POI uses) rather
+  than storing quality/hero separately at the column level — the raw
+  fields are still in the jsonb blob for anything that needs them.
+- Kept the fallback: any vision failure prints and drops to the legacy
+  "all photos in sort_order" path; the video always ships.
+- Realtime channel is filtered `listing_id=eq.${listingId}` — a
+  single-listing Media tab does not need cross-listing updates.
+
+**Issues / Learnings**:
+- The tagger already returned `id` on each per-photo row (added in Phase
+  93 via `_tag_one(photo_path, sort_order, photo_id)`), so the writeback
+  just picks off `r["id"]`.
+- No `bg-bg-alt` token in Tailwind config — used `bg-cream` for the tag
+  chips (matches the paper aesthetic elsewhere).
+
+**Next steps**:
+- Run the migration on the linked Supabase project before merging so
+  Vercel preview + prod both see the columns.
+- First render of any existing listing will backfill its own photos.
+  If we want to backfill listings without kicking new renders, a follow-
+  up cron could scan `tagged_at IS NULL` and call the tagger directly.
+
+---
+
+
 ## 2026-07-16 — Phase 94: Atlanta-metro Nextdoor seed (8679 communities, 100% covers)
 
 **Objective**: Populate the `communities` table with real Atlanta-metro
