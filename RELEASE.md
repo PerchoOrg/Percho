@@ -4,6 +4,15 @@
 > Historical entries below preserve the original name in-place — release notes
 > are a record of what was shipped under the product's name at the time.
 
+## v92.4 — 2026-07-15 — landscape caption fix
+
+Landscape nearby videos (schools, outdoor, shopping — any bucket where the
+majority of photos are horizontal) were rendering with the archetype template
+card missing from every clip. Root cause: caption PNGs were hard-coded to a
+portrait canvas, so on a 1920×1080 output canvas the bottom sheet fell off
+screen. Now: caption canvas matches video canvas, with landscape-specific
+CSS to keep sheets inside the 1080px-tall frame.
+
 ## v92.3 — 2026-07-15 — Nearby videos: run the workflow from the community page
 
 ### 🎯 What's new

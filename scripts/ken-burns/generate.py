@@ -270,8 +270,13 @@ CAPTION_RENDER_SCRIPT = os.path.join(
 )
 
 
-def render_caption_pngs(captions_path: str, out_dir: str) -> dict[int, str]:
+def render_caption_pngs(captions_path: str, out_dir: str,
+                        width: int = 1080, height: int = 1920) -> dict[int, str]:
     """Invoke scripts/caption-render/render.py to build per-clip caption PNGs.
+
+    Phase 92.4: pass canvas dimensions so landscape videos (1920x1080) get a
+    matching PNG. Previously hard-coded to portrait, causing bottom sheets to
+    fall off-canvas in landscape output.
 
     Returns {clip_index: png_path}. Missing clips (no entry in captions.json)
     are simply absent from the returned dict — render_clip() treats
@@ -283,6 +288,8 @@ def render_caption_pngs(captions_path: str, out_dir: str) -> dict[int, str]:
         os.path.abspath(CAPTION_RENDER_SCRIPT),
         "--captions", captions_path,
         "--out-dir", out_dir,
+        "--width", str(width),
+        "--height", str(height),
     ]
     run(cmd)
     with open(captions_path) as f:
@@ -545,7 +552,8 @@ def main() -> None:
         if args.captions:
             tmp_caption_dir = os.path.join(tmp, "captions")
             print(f"[ken-burns] rendering captions PNGs → {tmp_caption_dir}")
-            caption_pngs = render_caption_pngs(args.captions, tmp_caption_dir)
+            caption_pngs = render_caption_pngs(args.captions, tmp_caption_dir,
+                                                width=w, height=h)
 
         clips = []
         for i, ph in enumerate(photos):
