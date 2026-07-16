@@ -58,6 +58,20 @@
     + zoompan;支持 `push_in / pull_back / pan_lr / pan_rl / tilt_td / pan_to_subject / static`;
     zoom 1.00 → 1.15;`pan_to_subject` 用 subject_bbox 中心
 11. **字幕**: ffmpeg `drawtext` (150px 底部黑色渐变条 + 左价格/右地址 + `v2_caption` 房间标签)
+    - **Per-photo AI caption 版式(2026-07-16 决议)**: 底部锚定 · **Local blur band**
+      样式(定案,PR 前更新此段):
+      - 位置:`bottom:0; left:0; right:0`,padding `60px 22px 28px`,固定底部,不按 bbox 移动
+      - 底色:`backdrop-filter: blur(22px) saturate(130%) brightness(.72)`(读取图本身模糊成软 canvas,无色块无边框)
+      - 顶边:`mask-image: linear-gradient(to bottom, transparent 0%, black 45%)` 羽化,消除硬边
+      - 排版:kicker(Charter italic,11px,letter-spacing .24em,`#facc15`) + body(Charter 19px/1.28,白,`text-shadow: 0 1px 2px rgba(0,0,0,.35)` 兜底) + 24×1px 金色 rule
+      - VO headroom:caption 只占底部 ~30%,VO 字幕层叠在其上方或替换该带
+      - 降级:老 Android 不支持 backdrop-filter → 带子透明,text-shadow 保底可读性(可接受;主要设备是 iOS Safari)
+      - 原型:`/tmp/caption-proto/v3.html` V3-5 tab,live https://percho-captions.surge.sh/v3.html
+    - **落地**: `caption-render/overlay.html` 新增 `LISTING` archetype(2026-07-16),`worker.py` listing 路径生成 `captions.json`(archetype=`LISTING`,per-clip `{kicker, txt}`),`generate.py` 当 `caption_png` 存在时 skip `v2_caption` drawtext(避免双字幕)。
+    - **⚠ Playwright + 透明底陷阱**: 当前 render.py 输出**透明 PNG**再 ffmpeg overlay。
+      `backdrop-filter` 需要 DOM 底下有像素,透明底截 blur 出**空气**——**决议改用 linear-gradient 近似**:`background: linear-gradient(to top, rgba(0,0,0,.85), rgba(0,0,0,.72) 35%, rgba(0,0,0,.35) 75%, transparent 100%)`。视觉近 V3-5 blur+brightness(.72)(后者本质就是暗化 scrim),零流程改动。
+    - **预览**: https://percho-captions.surge.sh/listing.html(生产 CSS 完整复刻)
+
 12. **拼接**: `concat_with_crossfade` xfade 0.5s,ffprobe 每段实际时长
 13. **BGM 混音**: 拼接后 mux
 14. **上传**: `cf_upload()` → Cloudflare Stream 拿 uid

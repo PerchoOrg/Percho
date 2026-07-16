@@ -364,6 +364,7 @@ def process_job(job: dict[str, Any]) -> None:
         #    reuse the cached tags — repeat renders of the same listing do
         #    zero Claude calls unless new photos are uploaded.
         shot_plan_path: Path | None = None
+        listing_captions_path: Path | None = None
         try:
             if not os.environ.get("ANTHROPIC_API_KEY"):
                 raise RuntimeError("ANTHROPIC_API_KEY not set — skipping vision plan")
@@ -459,6 +460,33 @@ def process_job(job: dict[str, Any]) -> None:
                 "listing": listing,
                 "style": style_info,
             }, indent=2))
+
+            # Phase 100 (2026-07-16): per-photo AI caption band. Reuses the
+            # HTML→PNG caption renderer (bucket videos use it too, archetype
+            # dispatch happens in overlay.html). LISTING archetype writes a
+            # bottom scrim band; `txt` is the ai_tags.caption vision output,
+            # `kicker` is a room label derived from photo_selector.
+            # Empty txt (missing/short caption) → overlay renderer emits an
+            # empty transparent PNG, ffmpeg overlay is a no-op for that clip.
+            listing_captions = []
+            for i, shot in enumerate(plan, start=1):
+                raw = (shot.get("ai_caption") or "").strip()
+                # room label kicker: use caption_for_shot output (already
+                # room/subject-aware). Fall back to room_type in Title Case.
+                kicker = (shot.get("caption") or "").strip()
+                if not kicker:
+                    rt = (shot.get("room_type") or "").replace("_", " ").strip()
+                    kicker = rt.title() if rt else ""
+                listing_captions.append({
+                    "clip": i,
+                    "kicker": kicker.upper(),
+                    "txt": raw,
+                })
+            listing_captions_path = workdir / "captions.json"
+            listing_captions_path.write_text(json.dumps({
+                "archetype": "LISTING",
+                "clips": listing_captions,
+            }, indent=2))
             print(
                 f"[job {job['id']}] shot plan: style={style} "
                 f"clips={len(plan)} (of {len(tagged)} tagged)",
@@ -467,6 +495,7 @@ def process_job(job: dict[str, Any]) -> None:
         except Exception as e:  # noqa: BLE001
             print(f"[job {job['id']}] shot plan disabled: {e} — falling back to legacy path", flush=True)
             shot_plan_path = None
+            listing_captions_path = None
 
         # 5. Run generate.py — one orientation only (see 3b).
         bgm_choice = pick_bgm()
@@ -488,6 +517,8 @@ def process_job(job: dict[str, Any]) -> None:
                 cmd += ["--bgm", str(bgm_choice)]
             if shot_plan_path is not None:
                 cmd += ["--shot-plan", str(shot_plan_path)]
+            if listing_captions_path is not None:
+                cmd += ["--captions", str(listing_captions_path)]
             print(f"[job {job['id']}] running ({orientation}): {' '.join(cmd)}", flush=True)
             subprocess.run(cmd, check=True, cwd=str(REPO_ROOT))
             if not out_path.exists():

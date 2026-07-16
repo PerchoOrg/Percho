@@ -423,7 +423,11 @@ def render_clip(src: str, dst: str, duration: float, mode: str, w: int, h: int,
         else:
             fg_w, fg_h = fit_inside(src_w, src_h, w, h, no_upscale=True)
             vf = kenburns_filter_v2(mode, duration, w, h, fg_w, fg_h, bbox=bbox)
-        if v2_caption:
+        if v2_caption and not caption_png:
+            # Phase 100 (2026-07-16): when a caption_png overlay is present
+            # (listing videos now use HTML→PNG LISTING archetype for
+            # per-photo AI captions), skip the ffmpeg drawtext label — the
+            # PNG band supersedes it and dual captions look terrible.
             cap_vf = v2_caption_filter(v2_caption, w, h)
             if cap_vf:
                 vf = vf + "," + cap_vf

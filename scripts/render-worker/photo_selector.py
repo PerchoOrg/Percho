@@ -353,6 +353,7 @@ def build_plan(
             "is_master": bool(p.get("is_master")),
             "subject_label": p.get("subject_label"),
             "subject_bbox": p.get("subject_bbox"),
+            "ai_caption": p.get("caption"),
             "hero_score": p.get("hero_score", 0),
             "quality": p.get("quality", 0),
             "duration_s": round(durations[i], 2),

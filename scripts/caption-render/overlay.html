@@ -179,6 +179,36 @@
   body.landscape .MAP-info .rows { margin-top: 18px; gap: 32px; }
   body.landscape .MAP-info .rows .k { font-size: 20px; }
   body.landscape .MAP-info .rows .v { font-size: 30px; }
+
+  /* ---------- LISTING — Per-photo AI caption (2026-07-16 V3-5 Local blur) ----------
+     Bottom-anchored band. Because caption PNG is transparent (composed by
+     ffmpeg overlay over the kenburns video), we can't use backdrop-filter —
+     no pixels underneath at render time. Approximation: linear-gradient
+     dark→transparent + mask feather. Visually near-identical to true blur
+     for this darkness (.72 brightness) + colour desaturation is negligible
+     because the gradient is neutral. VO subtitle layer will sit above this. */
+  .LIST-band { position: absolute; left: 0; right: 0; bottom: 0; z-index: 12;
+    padding: 120px 60px 90px;
+    background: linear-gradient(to top,
+      rgba(0,0,0,0.85) 0%,
+      rgba(0,0,0,0.72) 35%,
+      rgba(0,0,0,0.35) 75%,
+      rgba(0,0,0,0) 100%);
+    color: #fff; }
+  .LIST-band .kicker { font-family: "Charter","Georgia",serif; font-style: italic;
+    font-size: 34px; letter-spacing: 0.24em; text-transform: uppercase;
+    color: #facc15; opacity: 0.95; }
+  .LIST-band .txt { margin-top: 18px; font-family: "Charter","Georgia",serif;
+    font-size: 62px; line-height: 1.24; font-weight: 500; color: #fff;
+    text-shadow: 0 2px 6px rgba(0,0,0,0.45); max-width: 92%; }
+  .LIST-band .rule { width: 84px; height: 3px; background: #facc15;
+    opacity: 0.85; margin-top: 30px; }
+
+  /* Landscape (1920x1080): tighter padding, smaller type, keep proportions. */
+  body.landscape .LIST-band { padding: 70px 70px 50px; }
+  body.landscape .LIST-band .kicker { font-size: 22px; letter-spacing: 0.22em; }
+  body.landscape .LIST-band .txt { font-size: 42px; margin-top: 12px; }
+  body.landscape .LIST-band .rule { width: 60px; height: 2px; margin-top: 20px; }
 </style>
 </head>
 <body>
@@ -200,16 +230,18 @@ if (isLandscape) document.body.classList.add('landscape');
 function el(html) { const d = document.createElement('div'); d.innerHTML = html.trim(); return d.firstChild; }
 function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
 
-// Progress bars (universal)
+// Progress bars (universal, except LISTING which is a photo tour — no bucket-video progress semantics)
 const total = c.total_clips || 1, cur = (c.clip_index || 1) - 1;
-const prog = el('<div class="progress"></div>');
-for (let i = 0; i < total; i++) {
-  const s = document.createElement('span');
-  if (i < cur) s.className = 'done';
-  else if (i === cur) s.className = 'now';
-  prog.appendChild(s);
+if (arch !== 'LISTING') {
+  const prog = el('<div class="progress"></div>');
+  for (let i = 0; i < total; i++) {
+    const s = document.createElement('span');
+    if (i < cur) s.className = 'done';
+    else if (i === cur) s.className = 'now';
+    prog.appendChild(s);
+  }
+  stage.appendChild(prog);
 }
-stage.appendChild(prog);
 
 if (arch === 'TRUST') {
   const sheet = el(`<div class="TRUST-sheet">
@@ -280,6 +312,16 @@ if (arch === 'TRUST') {
       </div>
     </div>
   </div>`));
+} else if (arch === 'LISTING') {
+  // Per-photo AI caption. Fields: {kicker, txt}. Empty txt → render nothing
+  // (transparent PNG → ffmpeg overlay is a no-op).
+  if (c.txt) {
+    stage.appendChild(el(`<div class="LIST-band">
+      <div class="kicker">${esc(c.kicker || '')}</div>
+      <div class="txt">${esc(c.txt)}</div>
+      <div class="rule"></div>
+    </div>`));
+  }
 }
 window.__READY__ = true;
 </script>
