@@ -4,6 +4,53 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-16 — Phase 94.1: Nextdoor seed pipeline checked into repo
+
+**Objective**: Phase 94's Atlanta seed was executed from an out-of-repo
+scratch dir (`~/percho-nextdoor-seed/`). Move the code into the main
+Percho repo so re-running it (for another metro, or to rebuild Atlanta)
+is one clone away, and document the anti-detection recipe / failure
+modes so the next operator doesn't have to rediscover them.
+
+**Actions**:
+- New directory `scripts/nextdoor-seed/` with the five shipped scripts
+  (`01_scrape_cities.py`, `02b_scrape_batched.py`, `03_sanity_check.py`,
+  `05_live_import.py`, `06_upload_covers.py`), the Atlanta seed inputs
+  (`atl_metro_cities.json`, `seed_slugs.json` = 8,679 slugs / 972 KB),
+  and a `README.md`.
+- README covers: when to reach for the tool, pipeline shape, prereqs,
+  running against a new metro, resuming Atlanta, parallel-launch
+  recommendation, the v3 anti-detection recipe (batch/sleep/cooldown
+  numbers + UA rotation + random probe slug), documented failure modes
+  (soft-CAPTCHA, 20-consec-fail early abort, Storage 403 Invalid JWS,
+  revalidate 308), data model touched, intentionally dropped pieces,
+  and the legal note (Nextdoor ToS — one-shot demo only, do not
+  productionize).
+- Path indirection: all scripts now read `SEED_OUT_DIR` env (default
+  `scripts/nextdoor-seed/_out/`) and `PERCHO_ENV` (default
+  `<repo>/.env.local`) instead of the hardcoded
+  `/home/ubuntu/percho-nextdoor-seed/` and `/home/ubuntu/Percho/.env.local`.
+- `.gitignore` excludes `_out/` (cache) and `*.log` — pipeline artifacts
+  are never committed.
+
+**Decisions**:
+- Kept the retired `02_scrape_neighborhoods.py` (parallel worker that
+  CAPTCHA'd within 400 slugs) and `04_import_to_percho.py` (one-shot
+  importer replaced by the live watcher) OUT of the repo. The README
+  mentions them so the numbering gaps aren't confusing.
+- Committed the 972 KB `seed_slugs.json` on purpose — it makes Atlanta
+  re-runs turnkey, and 1 MB of JSON isn't worth the ergonomic tax of
+  a bootstrap step.
+
+**Learnings**:
+- The value of this pipeline is 30 % the code and 70 % the anti-detection
+  recipe + failure-mode notes. The README is what makes it re-usable;
+  the scripts by themselves are unremarkable.
+
+**Next steps**: Add a `re_scrape_missing.py` if a residential proxy
+becomes available, so we can pick up the ~500 slugs Nextdoor didn't
+index publicly.
+
 ## 2026-07-16 — Phase 94: Atlanta-metro Nextdoor seed (8679 communities, 100% covers)
 
 **Objective**: Populate the `communities` table with real Atlanta-metro
