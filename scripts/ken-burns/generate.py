@@ -133,6 +133,133 @@ def kenburns_filter(mode: str, duration: float, w: int, h: int) -> str:
     return compose + "," + zp + f",format=yuv420p"
 
 
+def ffprobe_wh(path: str) -> tuple[int, int]:
+    out = subprocess.run(
+        ["ffprobe", "-v", "error", "-select_streams", "v:0",
+         "-show_entries", "stream=width,height",
+         "-of", "csv=p=0:s=x", path],
+        capture_output=True, text=True, check=True,
+    )
+    w, h = out.stdout.strip().split("x")
+    return int(w), int(h)
+
+
+def fit_inside(src_w: int, src_h: int, box_w: int, box_h: int,
+               no_upscale: bool = True) -> tuple[int, int]:
+    """Return the largest w×h that fits inside box while preserving aspect.
+    If no_upscale=True, never scale >1.0 (keeps native pixels for small photos).
+    Rounded to even numbers (yuv420p requirement)."""
+    scale = min(box_w / src_w, box_h / src_h)
+    if no_upscale:
+        scale = min(scale, 1.0)
+    fw = int(round(src_w * scale)) & ~1
+    fh = int(round(src_h * scale)) & ~1
+    return max(fw, 2), max(fh, 2)
+
+
+def kenburns_filter_v2(mode: str, duration: float, w: int, h: int,
+                       fg_w: int, fg_h: int,
+                       bbox: list[float] | None = None) -> str:
+    """
+    Phase 93.1 filter for LISTING videos. Blur-letterbox composition so
+    landscape photos keep their FULL width (no crop) at their native
+    resolution (no upscale). The bg layer is a heavily blurred cover-fit
+    copy of the same photo, filling the vertical canvas.
+
+    Key fix vs Phase 90: bg layer is COMPLETELY STATIC — only the fg layer
+    animates on top of it via zoompan. The blurred seam therefore stays
+    fixed in the frame instead of sliding with the pan, which is what
+    Phase 90 got wrong (it zoompan'd the composited image so both layers
+    moved together).
+
+    Modes: push_in, push_in_slow, pull_back (center-zoom fg),
+           pan_lr, pan_rl (horizontal fg pan across the blurred bg),
+           tilt_td (vertical fg pan),
+           push_pan_lr, push_pan_rl (combined),
+           pan_to_subject (drift fg's zoom target toward subject bbox),
+           static (fg locked, no motion).
+    """
+    frames = int(duration * FPS)
+    fl = max(frames - 1, 1)
+
+    if bbox and len(bbox) == 4 and bbox[2] > 0.01 and bbox[3] > 0.01:
+        bx, by, bw, bh = bbox
+        subj_cx = max(0.0, min(1.0, bx + bw / 2))
+        subj_cy = max(0.0, min(1.0, by + bh / 2))
+    else:
+        subj_cx, subj_cy = 0.5, 0.5
+
+    x_center = "iw/2-(iw/zoom/2)"
+    y_center = "ih/2-(ih/zoom/2)"
+
+    # Gentler motion than the fill-crop v2 draft: we're zoompan'ing the fg
+    # (which is a fit-inside scale, so the fg's zoom=1.0 already leaves
+    # letterbox around it). Push to 1.10 max keeps most of the photo in view.
+    if mode == "push_in":
+        z = "min(zoom+0.0007,1.10)"; x = x_center; y = y_center
+    elif mode == "push_in_slow":
+        z = "min(zoom+0.0005,1.08)"; x = x_center; y = y_center
+    elif mode == "pull_back":
+        z = "if(lte(zoom,1.0),1.10,max(1.001,zoom-0.0007))"
+        x = x_center; y = y_center
+    elif mode == "pan_lr":
+        z = "1.10"
+        x = f"(iw-iw/zoom)*on/{fl}"
+        y = y_center
+    elif mode == "pan_rl":
+        z = "1.10"
+        x = f"(iw-iw/zoom)*(1-on/{fl})"
+        y = y_center
+    elif mode == "push_pan_lr":
+        z = f"min(1.0+on/{fl}*0.10,1.10)"
+        x = f"(iw-iw/zoom)*on/{fl}"
+        y = y_center
+    elif mode == "push_pan_rl":
+        z = f"min(1.0+on/{fl}*0.10,1.10)"
+        x = f"(iw-iw/zoom)*(1-on/{fl})"
+        y = y_center
+    elif mode == "tilt_td":
+        z = "1.10"
+        x = x_center
+        y = f"(ih-ih/zoom)*on/{fl}"
+    elif mode == "pan_to_subject":
+        z = f"min(1.0+on/{fl}*0.10,1.10)"
+        sx1 = f"clip({subj_cx}*iw-(iw/zoom/2),0,iw-iw/zoom)"
+        sy1 = f"clip({subj_cy}*ih-(ih/zoom/2),0,ih-ih/zoom)"
+        t = f"(on/{fl})"
+        x = f"({x_center})*(1-{t})+({sx1})*{t}"
+        y = f"({y_center})*(1-{t})+({sy1})*{t}"
+    elif mode == "static":
+        z = "1.001"; x = x_center; y = y_center
+    else:
+        z = "min(zoom+0.0005,1.08)"; x = x_center; y = y_center
+
+    # BG: static, cover-scaled to w×h, blurred and dimmed.
+    bg = (
+        f"scale={w}:{h}:force_original_aspect_ratio=increase,"
+        f"crop={w}:{h},boxblur=40:2,eq=brightness=-0.15:saturation=0.85,setsar=1"
+    )
+    # FG: fit-inside so the whole photo stays visible at NATIVE PIXEL SCALE
+    # (no upscaling, no cropping). We scale directly to fg_w × fg_h (the
+    # aspect-preserving fit-inside dimensions for a w×h box), then zoompan
+    # renders motion into that same fg_w × fg_h canvas at 30fps.
+    # zoompan's zoom=1.0 shows the full photo; zoom=1.10 shows the middle 90%.
+    fg = (
+        f"scale={fg_w}:{fg_h}:flags=lanczos,setsar=1,"
+        f"zoompan=z='{z}':x='{x}':y='{y}':d={frames}:s={fg_w}x{fg_h}:fps={FPS}"
+    )
+    # Compose: overlay fg centered over the blurred static bg.
+    ox = (w - fg_w) // 2
+    oy = (h - fg_h) // 2
+    compose = (
+        f"split=2[bgsrc][fgsrc];"
+        f"[bgsrc]{bg}[bg];"
+        f"[fgsrc]{fg}[fg];"
+        f"[bg][fg]overlay={ox}:{oy}:format=auto,format=yuv420p"
+    )
+    return compose
+
+
 def pick_mode(index: int, zoom_mode: str) -> str:
     if zoom_mode != "auto":
         return zoom_mode
@@ -214,17 +341,64 @@ def listing_overlay_filter(overlay: dict, w: int, h: int) -> str:
     return ",".join(parts)
 
 
+def v2_caption_filter(text: str, w: int, h: int) -> str:
+    """Bottom-left caption for Phase 93 listing videos.
+    Semi-transparent black gradient bar + white DejaVu Bold text.
+    Text is UTF-8; ffmpeg drawtext requires escaping ':' and '\\'."""
+    if not text:
+        return ""
+    safe = text.replace("\\", "\\\\").replace(":", "\\:").replace("'", "\\'")
+    fonts = [
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+        "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
+    ]
+    font = next((f for f in fonts if os.path.exists(f)), None)
+    if not font:
+        return ""
+    # Position: 60px from left, 180px from bottom (above where listing overlay
+    # would sit if present, but v1 doesn't add that overlay).
+    x = 60
+    y = h - 260
+    box_w = 720
+    box_h = 96
+    # Semi-transparent black rounded-ish bar + text
+    bar = f"drawbox=x={x-24}:y={y-24}:w={box_w}:h={box_h}:color=black@0.55:t=fill"
+    txt = (
+        f"drawtext=fontfile={font}:text='{safe}':"
+        f"fontcolor=white:fontsize=52:x={x}:y={y}:"
+        f"shadowcolor=black@0.7:shadowx=2:shadowy=2"
+    )
+    return f"{bar},{txt}"
+
+
 def render_clip(src: str, dst: str, duration: float, mode: str, w: int, h: int,
                 overlay: dict | None = None,
-                caption_png: str | None = None) -> None:
+                caption_png: str | None = None,
+                bbox: list[float] | None = None,
+                use_v2: bool = False,
+                v2_caption: str | None = None) -> None:
     """Render one Ken Burns clip.
 
     Phase 88: caption is now a pre-rendered transparent PNG overlay produced
     by scripts/caption-render/render.py (HTML → PNG via Playwright). The
     caller passes `caption_png` and we compose it with ffmpeg overlay filter.
     Old drawtext archetype path (P85) is removed.
+
+    Phase 93: `use_v2=True` picks the blur-letterbox+animated-fg v2 filter
+    (listings). Default stays on the blur-letterbox v1 (POI bucket videos,
+    unchanged). `v2_caption` overlays a lightweight drawtext label
+    (Kitchen Island, Master Suite …) on v2 clips only.
     """
-    vf = kenburns_filter(mode, duration, w, h)
+    if use_v2:
+        src_w, src_h = ffprobe_wh(src)
+        fg_w, fg_h = fit_inside(src_w, src_h, w, h, no_upscale=True)
+        vf = kenburns_filter_v2(mode, duration, w, h, fg_w, fg_h, bbox=bbox)
+        if v2_caption:
+            cap_vf = v2_caption_filter(v2_caption, w, h)
+            if cap_vf:
+                vf = vf + "," + cap_vf
+    else:
+        vf = kenburns_filter(mode, duration, w, h)
     if overlay:
         vf = vf + "," + listing_overlay_filter(overlay, w, h)
 
@@ -487,6 +661,11 @@ def main() -> None:
     p.add_argument("--transition", default="crossfade", choices=["crossfade"])
     p.add_argument("--zoom-mode", default="auto",
                    choices=["auto", "pan-lr", "pan-tb", "zoom-in", "zoom-out"])
+    p.add_argument("--shot-plan", default=None,
+                   help="Phase 93: JSON from photo_selector.build_plan(). When set, "
+                        "photos are matched by sort_order or filename and per-clip "
+                        "duration/mode/bbox come from the plan (overrides "
+                        "--duration-per-photo and --zoom-mode).")
     p.add_argument("--xfade-duration", type=float, default=0.5)
     p.add_argument("--archetype", default="TRUST",
                    choices=["TRUST", "LIFESTYLE", "UTILITY", "NARRATIVE", "MAGAZINE", "MAP"],
@@ -512,6 +691,43 @@ def main() -> None:
     )
     if not photos:
         die(f"no .jpg/.jpeg/.png photos found in {photos_dir}")
+
+    # Phase 93: shot plan overrides sequence + per-clip params.
+    shot_plan: list[dict] | None = None
+    if args.shot_plan:
+        with open(args.shot_plan) as f:
+            plan_data = json.load(f)
+        shot_plan = plan_data.get("plan", plan_data if isinstance(plan_data, list) else []) or []
+        # Map available photos by their sort_order prefix (worker writes
+        # {sort:03d}_{id}.jpg) OR by filename stem, then reorder per plan.
+        by_sort: dict[int, Path] = {}
+        by_stem: dict[str, Path] = {}
+        for p in photos:
+            stem = p.stem
+            by_stem[stem] = p
+            head = stem.split("_", 1)[0]
+            if head.isdigit():
+                by_sort[int(head)] = p
+        ordered: list[Path] = []
+        matched_plan: list[dict] = []
+        for shot in shot_plan:
+            sort_order = shot.get("sort_order")
+            pid = str(shot.get("id") or "")
+            match = None
+            if sort_order is not None and int(sort_order) in by_sort:
+                match = by_sort[int(sort_order)]
+            elif pid and pid in by_stem:
+                match = by_stem[pid]
+            if match is None:
+                print(f"[ken-burns] WARN: no photo for plan entry sort={sort_order} id={pid}", file=sys.stderr)
+                continue
+            ordered.append(match)
+            matched_plan.append(shot)
+        if not ordered:
+            die("shot plan matched zero photos in --photos directory")
+        photos = ordered
+        shot_plan = matched_plan
+        print(f"[ken-burns] shot plan: {len(shot_plan)} clips (v2 filter, listing mode)")
 
     if args.resolution:
         w, h = parse_resolution(args.resolution)
@@ -557,7 +773,19 @@ def main() -> None:
 
         clips = []
         for i, ph in enumerate(photos):
-            mode = pick_mode(i, args.zoom_mode)
+            if shot_plan:
+                shot = shot_plan[i]
+                mode = shot["mode"]
+                clip_dur = float(shot["duration_s"])
+                bbox = shot.get("subject_bbox")
+                use_v2 = True
+                v2_cap = shot.get("caption") or ""
+            else:
+                mode = pick_mode(i, args.zoom_mode)
+                clip_dur = per
+                bbox = None
+                use_v2 = False
+                v2_cap = ""
             out = os.path.join(tmp, f"clip_{i:03d}.mp4")
             # show_on_clips is 1-indexed by convention
             clip_overlay = listing_overlay if (i + 1) in overlay_clips else None
@@ -565,10 +793,13 @@ def main() -> None:
             tag = f" +overlay" if clip_overlay else ""
             if clip_cap_png:
                 tag += f" +cap[{caption_archetype}]"
-            print(f"[ken-burns] ({i+1}/{len(photos)}) rendering {ph.name} → {mode}{tag}")
-            render_clip(str(ph), out, per, mode, w, h,
+            print(f"[ken-burns] ({i+1}/{len(photos)}) rendering {ph.name} → {mode} {clip_dur:.2f}s{tag}")
+            render_clip(str(ph), out, clip_dur, mode, w, h,
                         overlay=clip_overlay,
-                        caption_png=clip_cap_png)
+                        caption_png=clip_cap_png,
+                        bbox=bbox,
+                        use_v2=use_v2,
+                        v2_caption=v2_cap)
             clips.append(out)
 
         if ending is not None:
