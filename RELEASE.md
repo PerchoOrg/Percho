@@ -4,6 +4,21 @@
 > Historical entries below preserve the original name in-place — release notes
 > are a record of what was shipped under the product's name at the time.
 
+## v97.0 — 2026-07-16 — Tour videos now show a caption for every photo
+
+Home tour videos used to be silent visuals — photos panning past with no
+text. Now each shot gets a bottom-anchored caption: the room name
+(e.g. "KITCHEN ISLAND") in italic gold, followed by a one-sentence
+description of what makes that photo interesting ("Marble waterfall
+island seats six, pendant lights hang above").
+
+Style is cinematic — full-width gradient scrim so the text stays readable
+on bright white kitchens, serif type (Charter), gold accent rule under
+each caption. Room is left below the caption band for a future voice-over
+subtitle layer.
+
+Re-generate any tour to see the new captions.
+
 ## v96.3 — 2026-07-16 — Tour video generation now handles PNG photos
 
 Generating a tour video was failing with a "Render failed" error on

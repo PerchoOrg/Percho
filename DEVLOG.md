@@ -4,6 +4,52 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-16 08:05 UTC — Phase 100: per-photo AI caption on listing videos (LISTING archetype, V3-5 local blur band)
+
+**Objective**: Listing tour videos had no per-photo text. Owner wanted the
+vision-tagged `ai_tags.caption` (≤15-word factual room description) to render
+on-screen per shot, bottom-anchored, cinematic feel, leaving headroom for a
+future voice-over subtitle layer.
+
+**Prototype pass**: Deployed 3 iterations to `percho-captions.surge.sh` for
+mobile review — index (5 archetype directions), v3 (5 bottom-anchored
+variants), listing (production-CSS complete replica with real photos + real
+vision captions). Owner picked **V3-5 "Local blur band"**: full-width bottom
+gradient scrim, italic gold kicker (Charter serif) + gold rule + white serif
+txt. No card outline, no color box, mask-feathered top edge.
+
+**Pipeline**: Listing videos previously used `v2_caption_filter()` ffmpeg
+drawtext (bottom-left black bar). Switched to the existing HTML→PNG caption
+pipeline that bucket videos already use — added `LISTING` as the 7th archetype
+in `scripts/caption-render/overlay.html`, wired worker.py to build
+`captions.json {archetype: "LISTING", clips: [{clip, kicker, txt}]}` per shot,
+and gated the legacy drawtext on `not caption_png` to avoid dual captions.
+`kicker` = `caption_for_shot()` uppercased (e.g. "KITCHEN ISLAND"), `txt` =
+`ai_tags.caption`. Empty txt → empty transparent PNG → ffmpeg overlay no-op.
+
+**Transparent-PNG trap**: `backdrop-filter: blur` needs pixels under the DOM;
+the caption renderer outputs transparent PNG that ffmpeg composites over
+kenburns video, so blur has nothing to blur. Shipped a linear-gradient
+approximation (rgba(0,0,0,0.85) → transparent) — visually near-equivalent to
+blur(22)+brightness(.72), zero pipeline change.
+
+**Files**:
+- `scripts/caption-render/overlay.html` — `.LIST-band` CSS + landscape variant
+  + `else if (arch === 'LISTING')` dispatch; progress bar suppressed on LISTING.
+- `scripts/render-worker/worker.py` — `listing_captions_path` init, build
+  captions.json from shot plan, append `--captions` to generate.py cmd.
+- `scripts/render-worker/photo_selector.py` — forward `ai_tags.caption` as
+  `ai_caption` in shot plan.
+- `scripts/ken-burns/generate.py` — gate v2_caption drawtext on `not caption_png`.
+- `docs/pipelines/video-generation-master.md` — V3-5 spec + gradient-approximation
+  decision + preview URL.
+
+**Smoke test**: Job `f2d5985f` for listing `f0857cec` (1619 Tide Mill Rd,
+Cumming GA) → status=done, no error, landscape video
+`3cf6d2927d67cd2ead8ee426b90179be` uploaded to Cloudflare Stream. Commit `aeaf56d`.
+
+---
+
 ## 2026-07-16 07:20 UTC — Phase 99: photo_tagger media_type sniff (PNG/WebP listings)
 
 **Objective**: Owner tried to generate a tour on another listing
