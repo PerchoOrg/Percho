@@ -159,7 +159,8 @@ def fit_inside(src_w: int, src_h: int, box_w: int, box_h: int,
 
 def kenburns_filter_v2(mode: str, duration: float, w: int, h: int,
                        fg_w: int, fg_h: int,
-                       bbox: list[float] | None = None) -> str:
+                       bbox: list[float] | None = None,
+                       cover: bool = False) -> str:
     """
     Phase 93.1 filter for LISTING videos. Blur-letterbox composition so
     landscape photos keep their FULL width (no crop) at their native
@@ -171,6 +172,14 @@ def kenburns_filter_v2(mode: str, duration: float, w: int, h: int,
     fixed in the frame instead of sliding with the pan, which is what
     Phase 90 got wrong (it zoompan'd the composited image so both layers
     moved together).
+
+    Phase 98 (2026-07-16): `cover=True` switches to a cover-crop composition
+    with NO blur letterbox — the source is scaled to cover w×h and
+    center-cropped so the video fills the entire canvas edge-to-edge.
+    Used for landscape output (1920×1080) where the blur-letterbox
+    filter was producing a small centered image with heavy left/right
+    blur pillarbox — see DEVLOG 2026-07-16 Phase 98. Portrait output
+    (1080×1920) keeps the blur-letterbox path unchanged.
 
     Modes: push_in, push_in_slow, pull_back (center-zoom fg),
            pan_lr, pan_rl (horizontal fg pan across the blurred bg),
@@ -233,6 +242,18 @@ def kenburns_filter_v2(mode: str, duration: float, w: int, h: int,
         z = "1.001"; x = x_center; y = y_center
     else:
         z = "min(zoom+0.0005,1.08)"; x = x_center; y = y_center
+
+    # Phase 98: cover-crop composition for landscape canvas (1920×1080).
+    # Scale source to COVER w×h (no letterbox), center-crop, then zoompan
+    # on the full w×h canvas. Video fills the entire frame edge-to-edge —
+    # no blur pillarbox seams. Used when the caller passes cover=True.
+    if cover:
+        return (
+            f"scale={w}:{h}:force_original_aspect_ratio=increase:flags=lanczos,"
+            f"crop={w}:{h},setsar=1,"
+            f"zoompan=z='{z}':x='{x}':y='{y}':d={frames}:s={w}x{h}:fps={FPS},"
+            f"format=yuv420p"
+        )
 
     # BG: static, cover-scaled to w×h, blurred and dimmed.
     bg = (
@@ -391,8 +412,17 @@ def render_clip(src: str, dst: str, duration: float, mode: str, w: int, h: int,
     """
     if use_v2:
         src_w, src_h = ffprobe_wh(src)
-        fg_w, fg_h = fit_inside(src_w, src_h, w, h, no_upscale=True)
-        vf = kenburns_filter_v2(mode, duration, w, h, fg_w, fg_h, bbox=bbox)
+        # Phase 98: landscape canvas (w > h) uses cover-crop — no blur letterbox
+        # (was producing a small centered image with left/right blur pillarbox
+        # when a landscape photo was fit inside a landscape canvas). Portrait
+        # canvas keeps the fit-inside + blur-bg path.
+        landscape_canvas = w > h
+        if landscape_canvas:
+            fg_w, fg_h = w, h
+            vf = kenburns_filter_v2(mode, duration, w, h, fg_w, fg_h, bbox=bbox, cover=True)
+        else:
+            fg_w, fg_h = fit_inside(src_w, src_h, w, h, no_upscale=True)
+            vf = kenburns_filter_v2(mode, duration, w, h, fg_w, fg_h, bbox=bbox)
         if v2_caption:
             cap_vf = v2_caption_filter(v2_caption, w, h)
             if cap_vf:

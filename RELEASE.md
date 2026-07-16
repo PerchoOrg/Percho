@@ -4,6 +4,18 @@
 > Historical entries below preserve the original name in-place — release notes
 > are a record of what was shipped under the product's name at the time.
 
+## v96.2 — 2026-07-16 — Tour videos now fill the screen edge-to-edge
+
+Auto-generated tour videos for listings with landscape photos were
+rendering with heavy blurred bars on both sides of the picture — a
+small clear image in the middle with a smeared version of the same
+photo padding the left and right. Fixed the video renderer so
+landscape output fills the full 16:9 frame edge-to-edge, cinema style.
+Portrait tour videos are unchanged.
+
+Existing videos on affected listings need to be regenerated once from
+the dashboard for the fix to show up on that listing.
+
 ## v96.1 — 2026-07-16 — Tour video now fills the screen properly
 
 Fixed a bug where an auto-generated tour video was rendering as a small

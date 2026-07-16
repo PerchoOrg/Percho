@@ -4,6 +4,54 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-16 — Phase 98: Ken Burns landscape canvas — cover-crop instead of blur letterbox
+
+**Objective**: Phase 97's CSS fix didn't actually fix 5122 Lower Creek.
+Owner re-tested: the video is *still* a small clear picture floating in
+the middle with heavy blurred pillarbox on the left and right sides. A
+Cloudflare Stream frame download at t=15s confirmed the pillarbox is
+baked into the 1920×1080 MP4 itself — not a CSS problem. Phase 97 was
+a real bug but a different one; keeping the fix since it's harmless
+belt-and-braces defense.
+
+**Root cause**: `kenburns_filter_v2` in `scripts/ken-burns/generate.py`
+was designed for the **portrait** 1080×1920 canvas — a landscape photo
+fit-inside a portrait canvas is 1080 wide with a little top/bottom blur.
+When Phase 75 (2026-07-07) started routing ≥80%-landscape listings to a
+1920×1080 canvas *only*, the same filter got reused on a landscape
+canvas. A 4:3 photo fit-inside 1920×1080 becomes 1440×1080 → 240px of
+blurred+dimmed pillarbox on each side, which reads as "video in a
+video." The blur-letterbox aesthetic makes sense when the source and
+canvas aspects differ dramatically (landscape → portrait); it's wrong
+when both are landscape and close in aspect.
+
+**Actions**:
+- `scripts/ken-burns/generate.py`:
+  - `kenburns_filter_v2` gained a `cover: bool = False` param. When
+    `cover=True` it emits a single-stage `scale …
+    force_original_aspect_ratio=increase, crop w×h, zoompan on w×h` —
+    the source covers the canvas edge-to-edge and center-crops any
+    overflow. No blur bg, no letterbox, no compose overlay.
+  - `build_shot` (the entry point) now branches on `w > h`: landscape
+    canvas → `cover=True`, portrait canvas → existing blur-letterbox
+    (unchanged, correct for that orientation).
+- All zoom/pan/tilt modes work the same in cover mode — the zoompan
+  operates directly on the full-canvas frame instead of on a
+  fit-inside sub-frame.
+
+**Aspect-ratio tradeoff** (accepted): with cover-crop, a 4:3 source on
+1920×1080 canvas crops ~12% off the top and bottom of the photo; a 3:2
+source crops ~3%. Real-estate listing photos are usually shot with the
+subject centered, so center-cropping is the standard cinematic solution
+(YouTube, Netflix, TV do the same thing).
+
+**Verification**: needs re-render of the 5122 Lower Creek landscape
+video. Existing `cf_video_id_landscape=651465eb213b443a4c7fadf9e1a9c3b7`
+will keep serving the broken version until backfilled — the fix only
+affects newly-generated videos. Owner will kick off a re-render via
+the dashboard "Regenerate" flow (or a targeted backfill script) after
+this deploys.
+
 ## 2026-07-16 — Phase 97: Feed landscape video — Tailwind Preflight was clamping height:auto
 
 **Objective**: Owner reported that the auto-generated tour video on
