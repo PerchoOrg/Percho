@@ -9,9 +9,9 @@
  *   tagged_at     timestamptz
  *   applicable_buckets text[]  — subset of {walkable, daily_drive, lifestyle, commute}
  *
- * Called as fire-and-forget from lib/poi/actions.ts::setListingPhotoStatus on
- * approve (see phase77.2). Idempotent: if tagged_at is set we skip. Errors are
- * logged but never thrown — tagging failures should NEVER block user actions.
+ * Called as fire-and-forget from lib/poi/community-actions.ts on photo approve.
+ * Idempotent: if tagged_at is set we skip. Errors are logged but never thrown —
+ * tagging failures should NEVER block user actions.
  *
  * Cost: ~$0.005 per photo (Claude Sonnet 4.5, ~1200px input). A full listing
  * refresh (~100 photos) is ~$0.50.
@@ -200,11 +200,12 @@ export async function tagPoiPhoto(poiPhotoId: string): Promise<{
     .eq("id", photo.poi_id)
     .maybeSingle();
 
-  // Look up any listing_pois row for bucket hint (any listing works — pois
+  // Look up any community_pois row for bucket hint (any community works — pois
   // are global, and bucket is a distance thing that hints at "walkable place
-  // vs highway thing").
+  // vs highway thing"). Phase 93: switched from listing_pois → community_pois
+  // when listing-level POI pipeline was retired.
   const { data: lp } = await admin
-    .from("listing_pois")
+    .from("community_pois")
     .select("intent_bucket")
     .eq("poi_id", photo.poi_id)
     .limit(1)
