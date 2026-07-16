@@ -57,20 +57,17 @@
 10. **渲染 (`kenburns_filter_v2`)**: 单层 fill-crop(`force_original_aspect_ratio=increase, crop`)
     + zoompan;支持 `push_in / pull_back / pan_lr / pan_rl / tilt_td / pan_to_subject / static`;
     zoom 1.00 → 1.15;`pan_to_subject` 用 subject_bbox 中心
-11. **字幕**: ffmpeg `drawtext` (150px 底部黑色渐变条 + 左价格/右地址 + `v2_caption` 房间标签)
-    - **Per-photo AI caption 版式(2026-07-16 决议)**: 底部锚定 · **Local blur band**
-      样式(定案,PR 前更新此段):
-      - 位置:`bottom:0; left:0; right:0`,padding `60px 22px 28px`,固定底部,不按 bbox 移动
-      - 底色:`backdrop-filter: blur(22px) saturate(130%) brightness(.72)`(读取图本身模糊成软 canvas,无色块无边框)
-      - 顶边:`mask-image: linear-gradient(to bottom, transparent 0%, black 45%)` 羽化,消除硬边
-      - 排版:kicker(Charter italic,11px,letter-spacing .24em,`#facc15`) + body(Charter 19px/1.28,白,`text-shadow: 0 1px 2px rgba(0,0,0,.35)` 兜底) + 24×1px 金色 rule
+11. **字幕(v97.0 起,2026-07-16)**: **Per-photo AI caption**,底部锚定 · **V3-5 Local blur band** archetype = `LISTING`
+    - **管线**: `photo_selector.py` 把 `ai_tags.caption`(vision tagger 出的 ≤15 词事实句)透传到 shot plan 的 `ai_caption` → `worker.py` 用 `caption_for_shot()` 生成 uppercase kicker(如 `KITCHEN ISLAND`)+ `ai_caption` 作 txt → 落 `captions.json {archetype:"LISTING", clips:[{clip,kicker,txt}]}` → `generate.py --captions` 触发 `caption-render/render.py`(Playwright)按 `overlay.html` 的 `LISTING` 分支为每个 clip 截**透明 PNG** → ffmpeg overlay 到 zoompan 层上。空 `txt` → 空透明 PNG → overlay no-op(安全 skip)。
+    - **样式(定案,`overlay.html .LIST-band`)**:
+      - 位置:`position:absolute; left:0; right:0; bottom:0`,portrait padding `120px 60px 90px`,landscape `70px 70px 50px`
+      - 底色:`linear-gradient(to top, rgba(0,0,0,.85) 0%, rgba(0,0,0,.72) 35%, rgba(0,0,0,.35) 75%, transparent 100%)` — 全宽底部 scrim,顶边天然羽化
+      - 排版:kicker(Charter italic 34px portrait / 22px landscape,letter-spacing .24em,`#facc15`) + body(Charter 500 62px/1.24 portrait / 42px landscape,白,`text-shadow: 0 2px 6px rgba(0,0,0,.45)`) + `84×3px`(portrait)/ `60×2px`(landscape)金色 rule
+      - LISTING archetype 不渲染 progress bar(12+ 张照片视觉过挤 + bucket 语义无关)
       - VO headroom:caption 只占底部 ~30%,VO 字幕层叠在其上方或替换该带
-      - 降级:老 Android 不支持 backdrop-filter → 带子透明,text-shadow 保底可读性(可接受;主要设备是 iOS Safari)
-      - 原型:`/tmp/caption-proto/v3.html` V3-5 tab,live https://percho-captions.surge.sh/v3.html
-    - **落地**: `caption-render/overlay.html` 新增 `LISTING` archetype(2026-07-16),`worker.py` listing 路径生成 `captions.json`(archetype=`LISTING`,per-clip `{kicker, txt}`),`generate.py` 当 `caption_png` 存在时 skip `v2_caption` drawtext(避免双字幕)。
-    - **⚠ Playwright + 透明底陷阱**: 当前 render.py 输出**透明 PNG**再 ffmpeg overlay。
-      `backdrop-filter` 需要 DOM 底下有像素,透明底截 blur 出**空气**——**决议改用 linear-gradient 近似**:`background: linear-gradient(to top, rgba(0,0,0,.85), rgba(0,0,0,.72) 35%, rgba(0,0,0,.35) 75%, transparent 100%)`。视觉近 V3-5 blur+brightness(.72)(后者本质就是暗化 scrim),零流程改动。
-    - **预览**: https://percho-captions.surge.sh/listing.html(生产 CSS 完整复刻)
+    - **⚠ 透明底 + backdrop-filter 陷阱(务必读)**: 早期 V3-5 原型用 `backdrop-filter: blur(22px) brightness(.72)`。但 render.py 输出的是**透明 PNG**再由 ffmpeg 复合到 kenburns 视频上,DOM 底下没有像素——blur 出的是**空气**,视觉等同没效果。决议改用 `linear-gradient` 近似(上面样式段),视觉近似 `blur+brightness(.72)`(后者本质就是暗化 scrim),零流程改动。
+    - **Fallback / 旧版**: `v2_caption_filter()`(ffmpeg drawtext,`generate.py:365`,150px 底部黑条 + 房间标签)保留但被 `generate.py:426` 用 `if v2_caption and not caption_png` gate 关掉——只有 captions.json 缺失时才会走(避免双字幕)。左价格/右地址覆盖层由 `--listing-overlay` 单独处理,与本 caption 层无关。
+    - **原型 / 预览**: https://percho-captions.surge.sh(index V1–V5)· `/v3.html`(V3-1..V3-5 底部变体)· `/listing.html`(生产 CSS 完整复刻,真实照片 + 真实 vision caption)
 
 12. **拼接**: `concat_with_crossfade` xfade 0.5s,ffprobe 每段实际时长
 13. **BGM 混音**: 拼接后 mux
