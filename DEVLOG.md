@@ -4,6 +4,70 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-16 07:20 UTC — Phase 99: photo_tagger media_type sniff (PNG/WebP listings)
+
+**Objective**: Owner tried to generate a tour on another listing
+(f0857cec, 8 photos) — worker failed with `error: shot plan matched zero
+photos in --photos directory` and `CalledProcessError` bubbled to the
+Media tab.
+
+**Root cause**: `scripts/render-worker/photo_tagger.py` hard-coded
+`media_type="image/jpeg"` when base64-encoding photos for the Anthropic
+vision API. All 8 photos on the failing listing were `.png`. Anthropic
+rejects PNG bytes labeled as JPEG (400 per photo). Every `_tag_one` call
+raised, tagger returned `{"error": ...}` for every photo. worker.py's
+Phase 95 persistence path then stamped `tagged_at` on each row **but
+left `ai_tags` NULL** (correct: prevent infinite retry on broken
+frames). On the next render, `photo_selector.build_plan()` produced an
+empty shot plan (`clips=0 of 0 tagged`), generate.py loaded the plan,
+matched zero photos in the workdir, and `die()`d.
+
+DB check on failing listing:
+```
+#0..#7 tags=null tagged_at=2026-07-16T06:24:06 model=claude-sonnet-4-5
+```
+
+Contrast: 5122 Lower Creek (JPEGs) tagged fine → `clips=24 of 75
+tagged`.
+
+**Actions**:
+- `scripts/render-worker/photo_tagger.py`:
+  - New `_sniff_media_type(raw)` magic-byte detector for PNG / GIF /
+    WebP, defaults to JPEG for anything unrecognized (including files
+    truncated to <12 bytes — a safe fallback since Anthropic still
+    accepts most JPEG-labeled bytes for real JPEG content).
+  - `_call_vision` now accepts `list[bytes]` (raw image bytes) and
+    sniffs media_type per image; legacy `list[str]` (pre-encoded base64)
+    still works via the `media_type` kwarg for callers that had already
+    encoded.
+  - `_tag_one` and `tag_listing_photos`'s style-aggregation branch both
+    switched to passing raw bytes.
+- Cleared `tagged_at` on the 8 stuck photos of listing f0857cec so the
+  next render call re-tags them properly.
+
+**Decisions**:
+- Sniff by magic bytes rather than `Path.suffix.lower()` because we've
+  seen `.jpg` files that were actually PNG (screenshots renamed). Magic
+  bytes never lie.
+- Kept Phase 95's "stamp tagged_at even on error" semantics unchanged.
+  The root cause was that tagger was raising on 100% of photos for
+  perfectly valid PNGs — a mis-classification of "broken frame". Fixing
+  media_type detection restores the invariant that `tagged_at + null
+  ai_tags` = actually broken frame, worth persisting.
+
+**Verification**: Locally called `_sniff_media_type` against all four
+magic-byte families + a random fallback — all 5 cases correct.
+End-to-end verified by re-queueing a render_job for listing f0857cec
+and confirming the video finishes with `clips > 0`.
+
+**Learnings**: Phase 95's persistence layer amplified an intermittent
+transient (per-render tagging failure) into a permanent one. If a tag
+attempt returns `{"error": ...}` for **every** photo in a batch, that's
+a signal of systemic failure (auth, quota, media_type, model outage) —
+not per-frame corruption. Consider skipping the `tagged_at` stamp in
+that "batch-wide error" case in a future phase so systemic outages
+don't silently poison listings.
+
 ## 2026-07-16 — Phase 98: Ken Burns landscape canvas — cover-crop instead of blur letterbox
 
 **Objective**: Phase 97's CSS fix didn't actually fix 5122 Lower Creek.

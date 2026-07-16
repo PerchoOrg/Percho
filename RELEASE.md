@@ -4,6 +4,16 @@
 > Historical entries below preserve the original name in-place — release notes
 > are a record of what was shipped under the product's name at the time.
 
+## v96.3 — 2026-07-16 — Tour video generation now handles PNG photos
+
+Generating a tour video was failing with a "Render failed" error on
+listings that had PNG photos (screenshots, illustrations, or photos
+saved as PNG). Fixed the photo-analysis step so it correctly identifies
+each image format — PNG, JPEG, WebP, and GIF all work now.
+
+If a listing hit this bug, delete the old failed tour and click
+"Generate tour video" again — it should work now.
+
 ## v96.2 — 2026-07-16 — Tour videos now fill the screen edge-to-edge
 
 Auto-generated tour videos for listings with landscape photos were

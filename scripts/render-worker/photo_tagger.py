@@ -89,13 +89,36 @@ def _dhash(image_path: Path) -> int:
     return bits
 
 
-def _call_vision(system: str, user_prompt: str, image_b64_list: list[str],
-                 media_type: str = "image/jpeg", timeout: int = 90) -> dict[str, Any]:
+def _sniff_media_type(raw: bytes) -> str:
+    """Phase 99: detect image media type from magic bytes so PNG/WebP/GIF
+    listings aren't sent to Anthropic as image/jpeg (400s otherwise).
+    Falls back to jpeg for anything unrecognized."""
+    if raw.startswith(b"\x89PNG\r\n\x1a\n"):
+        return "image/png"
+    if raw.startswith(b"GIF87a") or raw.startswith(b"GIF89a"):
+        return "image/gif"
+    if raw[:4] == b"RIFF" and raw[8:12] == b"WEBP":
+        return "image/webp"
+    return "image/jpeg"
+
+
+def _call_vision(system: str, user_prompt: str,
+                 images: list[bytes] | list[str],
+                 media_type: str | None = None, timeout: int = 90) -> dict[str, Any]:
+    """images: list of raw image bytes (preferred — media_type auto-sniffed
+    per image) OR list of pre-encoded base64 strings (legacy — uses
+    media_type arg or defaults to jpeg)."""
     content: list[dict[str, Any]] = []
-    for b64 in image_b64_list:
+    for item in images:
+        if isinstance(item, bytes):
+            mt = _sniff_media_type(item)
+            b64 = base64.b64encode(item).decode()
+        else:
+            mt = media_type or "image/jpeg"
+            b64 = item
         content.append({
             "type": "image",
-            "source": {"type": "base64", "media_type": media_type, "data": b64},
+            "source": {"type": "base64", "media_type": mt, "data": b64},
         })
     content.append({"type": "text", "text": user_prompt})
 
@@ -125,12 +148,12 @@ def _call_vision(system: str, user_prompt: str, image_b64_list: list[str],
 
 
 def _tag_one(photo_path: Path, sort_order: int, photo_id: str) -> dict[str, Any]:
-    b64 = base64.b64encode(photo_path.read_bytes()).decode()
+    raw = photo_path.read_bytes()
     try:
         tags = _call_vision(
             PER_PHOTO_SYSTEM,
             f"Photo sort_order={sort_order}. Label it.",
-            [b64],
+            [raw],
         )
         tags["id"] = photo_id
         tags["_id"] = photo_id
@@ -176,14 +199,14 @@ def tag_listing_photos(
     # Style aggregation on top-6 hero photos (by hero_score).
     valid = [r for r in tagged if "hero_score" in r]
     top = sorted(valid, key=lambda r: -r["hero_score"])[:6]
-    b64s: list[str] = []
+    raws: list[bytes] = []
     id_to_path = {p["id"]: Path(p["local_path"]) for p in photos}
     for r in top:
         pth = id_to_path.get(r["id"])
         if pth and pth.exists():
-            b64s.append(base64.b64encode(pth.read_bytes()).decode())
+            raws.append(pth.read_bytes())
     style: dict[str, Any]
-    if b64s:
+    if raws:
         price = listing.get("price") or 0
         user = (
             f"Listing price ${price:,}, "
@@ -193,7 +216,7 @@ def tag_listing_photos(
             f"Classify overall style."
         )
         try:
-            style = _call_vision(STYLE_SYSTEM, user, b64s)
+            style = _call_vision(STYLE_SYSTEM, user, raws)
         except Exception as e:  # noqa: BLE001
             style = {"style": "modern", "confidence": 0.0, "error": str(e)}
     else:
