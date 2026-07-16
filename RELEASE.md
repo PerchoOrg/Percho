@@ -4,6 +4,16 @@
 > Historical entries below preserve the original name in-place — release notes
 > are a record of what was shipped under the product's name at the time.
 
+## v96.0 — 2026-07-16 — Media tab: tour-video generator collapses into an inline button
+
+The "Generate tour video" card on a listing's Media tab has been removed
+as a standalone section. It's now a compact button that sits directly
+next to the **Videos (N)** header, so the media grid gets its full width
+back and the action feels like part of the videos panel — not a separate
+workflow. Behavior is unchanged: it still needs at least 3 photos, still
+renders a ~2-minute Ken Burns tour, and still shows queued / rendering /
+done status inline.
+
 ## v95.0 — 2026-07-16 — AI photo descriptions on the Media tab
 
 Every photo on a listing's Media tab now shows a one-sentence AI

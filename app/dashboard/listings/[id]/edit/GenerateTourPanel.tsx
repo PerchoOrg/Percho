@@ -9,6 +9,11 @@
  * from listing_photos, uploads to Cloudflare Stream, and updates the
  * placeholder listing_videos row this API creates.
  *
+ * Phase 96 (2026-07-16): re-shaped as an inline button that lives next to the
+ * "Videos (N)" header inside MediaPanel — no longer its own card section.
+ * Status messages surface via a small popover below the button so the header
+ * row stays compact.
+ *
  * Disabled if <3 photos.
  */
 
@@ -85,48 +90,39 @@ export function GenerateTourPanel({
     ? `Need at least ${MIN_PHOTOS} photos (currently ${photoCount}).`
     : busy
       ? 'Rendering in progress…'
-      : undefined;
+      : 'Turn your listing photos into a 30-second Ken Burns home tour video (~2 min).';
 
   return (
-    <section className="rounded border border-line bg-surface p-6">
-      <p className="mb-4 text-ink2 text-sm leading-relaxed">
-        Turn your listing photos into a 30-second Ken Burns home tour video with price and address
-        overlays. Rendering takes ~2 minutes.
-      </p>
-
+    <div className="relative">
       <button
         type="button"
         onClick={onClick}
         disabled={!enoughPhotos || busy}
         title={disabledReason}
         aria-disabled={!enoughPhotos || busy}
-        className="inline-flex items-center gap-2 rounded-md border border-line bg-bg px-4 py-2 text-ink text-sm hover:bg-surface2 disabled:cursor-not-allowed disabled:text-muted"
+        className="inline-flex items-center gap-1.5 rounded-md border border-line bg-bg px-3 py-1.5 text-ink2 text-xs hover:border-bronze hover:text-ink disabled:cursor-not-allowed disabled:text-muted"
       >
-        <Sparkles size={16} aria-hidden="true" />
-        {busy ? 'Rendering…' : 'Generate home tour video'}
+        <Sparkles size={14} aria-hidden="true" />
+        {busy ? 'Rendering…' : 'Generate tour video'}
       </button>
 
       {status !== 'idle' && (
-        <div className="mt-4 text-sm">
-          {status === 'queued' && <p className="text-ink2">Queued — waiting for render worker…</p>}
-          {status === 'running' && <p className="text-ink2">Rendering video (this takes ~2 min)…</p>}
+        <div className="mt-1 text-xs">
+          {status === 'queued' && (
+            <span className="text-ink2">Queued — waiting for render worker…</span>
+          )}
+          {status === 'running' && <span className="text-ink2">Rendering (~2 min)…</span>}
           {status === 'done' && (
-            <p className="text-emerald-600">
-              Done. Reload this page — the new tour video is at the top of the Media list.
-            </p>
+            <span className="text-emerald-600">Done. Reload to see the new tour video.</span>
           )}
           {status === 'failed' && (
-            <p className="text-red-600">
-              Render failed{error ? `: ${error}` : '.'} You can try again.
-            </p>
+            <span className="text-red-600">Render failed{error ? `: ${error}` : '.'}</span>
           )}
-          {jobId && (
-            <p className="mt-1 font-mono text-muted text-xs">
-              job {jobId.slice(0, 8)}…
-            </p>
+          {jobId && status !== 'done' && (
+            <span className="ml-2 font-mono text-muted">job {jobId.slice(0, 8)}…</span>
           )}
         </div>
       )}
-    </section>
+    </div>
   );
 }

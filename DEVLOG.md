@@ -4,6 +4,40 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-16 — Phase 96: Media tab — "Generate tour video" collapses to a button next to Videos header
+
+**Objective**: The Media tab used to have a dedicated "Generate tour video"
+card sitting below the media list. It was visually competing with the
+primary content (video/photo grid) for a workflow that only fires a couple
+of times per listing. Owner asked to remove the standalone section and
+turn it into an inline button next to the "Videos (N)" sub-header inside
+MediaPanel.
+
+**Actions**:
+- `app/dashboard/listings/[id]/edit/GenerateTourPanel.tsx`: kept the API
+  wiring / poll loop identical, dropped the outer `<section>` chrome and
+  the descriptive paragraph, shrunk the button to xs sizing so it fits on
+  the sub-header row, and moved the status messages to a small caption
+  block underneath the button.
+- `app/dashboard/listings/[id]/edit/MediaPanel.tsx`: the "Videos (N)"
+  sub-header is now a flex row with the header on the left and the
+  `<GenerateTourPanel>` on the right. Panel receives `initialPhotos.length`
+  as `photoCount` so the button knows whether the ≥3-photo gate is met.
+- `app/dashboard/listings/[id]/edit/page.tsx`: removed the standalone
+  `<GenerateTourPanel>` render and the wrapping `space-y-4` div — MediaPanel
+  now hosts the button internally.
+
+**Decisions**: kept the file name `GenerateTourPanel.tsx` even though it's
+now a button — renaming would break git history for a component whose API
+contract (props, endpoints, poll behavior) is unchanged.
+
+**Issues**: none. `npx tsc --noEmit` clean; biome auto-formatted the two
+touched files.
+
+**Next steps**: verify visually on the Vercel preview that the button sits
+flush with the Videos header and the disabled tooltip ("Need at least 3
+photos…") still surfaces on hover.
+
 ## 2026-07-16 — Phase 95: Persist listing-photo AI vision tags for the Media tab
 
 **Objective**: Surface the Claude Sonnet 4.5 vision descriptions and tags

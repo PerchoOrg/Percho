@@ -31,7 +31,6 @@ import { InstantStatusToggle } from '@/app/dashboard/_components/InstantStatusTo
 import { type CommunityOption, EditListingForm, type ListingContext } from './EditListingForm';
 import { DraftAddressPanel } from './DraftAddressPanel';
 import { isDraftAddress } from '@/app/dashboard/listings/draft';
-import { GenerateTourPanel } from './GenerateTourPanel';
 import type { ListingPhotoRow } from './PhotoPanel';
 import { MediaPanel } from './MediaPanel';
 import type { ListingVideoRow } from './VideoPanel';
@@ -248,16 +247,13 @@ export default async function EditListingPage({
           media: draft ? (
             <DraftLockedNotice />
           ) : (
-            <div className="space-y-4">
-              <MediaPanel
-                listingId={listing.id}
-                initialVideos={videos}
-                initialCoverVideoId={initialCoverVideoId}
-                initialPhotos={photos}
-                initialCoverPhotoId={initialCoverPhotoId}
-              />
-              <GenerateTourPanel listingId={listing.id} photoCount={photos.length} />
-            </div>
+            <MediaPanel
+              listingId={listing.id}
+              initialVideos={videos}
+              initialCoverVideoId={initialCoverVideoId}
+              initialPhotos={photos}
+              initialCoverPhotoId={initialCoverPhotoId}
+            />
           ),
           marketing: draft ? <DraftLockedNotice /> : <SocialCopyPanel listingId={listing.id} />,
           leads: draft ? <DraftLockedNotice /> : <ListingLeadsPanel listingId={listing.id} />,
