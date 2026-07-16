@@ -5,10 +5,10 @@
 <title>Percho Caption Overlay</title>
 <style>
   * { box-sizing: border-box; }
-  html, body { margin:0; padding:0; width:1080px; height:1920px; background: transparent;
+  html, body { margin:0; padding:0; width:var(--canvas-w, 1080px); height:var(--canvas-h, 1920px); background: transparent;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     -webkit-font-smoothing: antialiased; color: #fff; }
-  .stage { position: relative; width: 1080px; height: 1920px; overflow: hidden; }
+  .stage { position: relative; width: var(--canvas-w, 1080px); height: var(--canvas-h, 1920px); overflow: hidden; }
 
   /* Scale factor vs mock (mock screen ~324x588 → 1080x1920 ≈ 3.27–3.35x).
      We use 3.2x for horizontal legibility on real photos. */
@@ -136,6 +136,49 @@
   .MAP-info .rows { display: flex; gap: 40px; margin-top: 26px; }
   .MAP-info .rows .k { color: #94A3B8; font-weight: 500; text-transform: uppercase; letter-spacing: 0.07em; font-size: 26px; }
   .MAP-info .rows .v { color: #0F172A; font-weight: 700; font-size: 38px; margin-top: 4px; }
+
+  /* ---------- Phase 92.4: Landscape (1920x1080) overrides ---------- */
+  /* Canvas is 1080px tall (vs 1920 portrait). Bottom sheets need lighter
+     padding, top bar sits closer, sidebar layout for TRUST/LIFESTYLE. */
+  body.landscape .progress { top: 30px; left: 40px; right: 40px; }
+  body.landscape .TRUST-sheet { padding: 90px 60px 50px;
+    background: linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.7) 30%, rgba(0,0,0,0.9) 100%); }
+  body.landscape .TRUST-sheet .name { font-size: 52px; }
+  body.landscape .TRUST-sheet .meta { font-size: 30px; margin-top: 10px; }
+  body.landscape .TRUST-badges { margin-top: 22px; }
+  body.landscape .TRUST-badges .b { padding: 10px 20px; font-size: 26px; }
+
+  body.landscape .LIFE-sheet { padding: 90px 60px 50px;
+    background: linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.65) 30%, rgba(0,0,0,0.88) 100%); }
+  body.landscape .LIFE-sheet .num { font-size: 22px; margin-bottom: 12px; }
+  body.landscape .LIFE-sheet .name { font-size: 48px; margin-bottom: 6px; }
+  body.landscape .LIFE-sheet .type { font-size: 26px; margin-bottom: 14px; }
+  body.landscape .LIFE-sheet .why { font-size: 30px; margin-bottom: 16px; }
+  body.landscape .LIFE-sheet .dist { font-size: 24px; }
+  body.landscape .LIFE-sheet .dist b { font-size: 28px; }
+  body.landscape .LIFE-badge { bottom: 60px; left: 60px; padding: 12px 24px; font-size: 28px; }
+
+  body.landscape .UTIL-chip { top: 80px; left: 60px; padding: 14px 26px; font-size: 30px; }
+  body.landscape .UTIL-drive { bottom: 60px; right: 60px; padding: 12px 24px; font-size: 28px; }
+
+  body.landscape .NARR-quote { left: 100px; right: 100px; top: 44%; font-size: 60px; }
+  body.landscape .NARR-quote::before { font-size: 140px; top: 26px; }
+  body.landscape .NARR-attr { bottom: 60px; left: 100px; right: 100px; font-size: 26px; }
+
+  body.landscape .MAG-mast { top: 80px; padding: 0 80px; }
+  body.landscape .MAG-mast .row { font-size: 24px; }
+  body.landscape .MAG-caption { bottom: 60px; left: 80px; right: 80px; }
+  body.landscape .MAG-caption .num { font-size: 30px; margin-bottom: 12px; }
+  body.landscape .MAG-caption .title { font-size: 48px; margin-bottom: 14px; }
+  body.landscape .MAG-caption .credit { font-size: 24px; }
+
+  body.landscape .MAP-card { bottom: 60px; left: 60px; right: 60px; padding: 28px 34px 24px; gap: 26px; }
+  body.landscape .MAP-mini { width: 180px; height: 180px; border-radius: 22px; }
+  body.landscape .MAP-info .name { font-size: 34px; }
+  body.landscape .MAP-info .type { font-size: 24px; margin-top: 6px; }
+  body.landscape .MAP-info .rows { margin-top: 18px; gap: 32px; }
+  body.landscape .MAP-info .rows .k { font-size: 20px; }
+  body.landscape .MAP-info .rows .v { font-size: 30px; }
 </style>
 </head>
 <body>
@@ -145,6 +188,14 @@
 const c = window.CLIP;
 const stage = document.getElementById('stage');
 const arch = c.archetype;
+
+// Phase 92.4: apply canvas dimensions from window.CLIP so landscape output
+// (1920x1080) gets a matching caption PNG. Defaults to 1080x1920 portrait.
+const CW = c.canvas_w || 1080, CH = c.canvas_h || 1920;
+document.documentElement.style.setProperty('--canvas-w', CW + 'px');
+document.documentElement.style.setProperty('--canvas-h', CH + 'px');
+const isLandscape = CW > CH;
+if (isLandscape) document.body.classList.add('landscape');
 
 function el(html) { const d = document.createElement('div'); d.innerHTML = html.trim(); return d.firstChild; }
 function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }

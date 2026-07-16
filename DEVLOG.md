@@ -4,6 +4,39 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-15 — Phase 92.4: landscape caption overlay fix (schools "no template" bug)
+
+**Bug** — user reported schools nearby video "只有图片没有模版". Root cause:
+caption PNGs from `scripts/caption-render/render.py` were hard-coded to
+1080×1920 (portrait). When Phase 92 flipped landscape-heavy buckets to a
+1920×1080 output canvas, ffmpeg composited the portrait PNG at (0,0), pushing
+the bottom-sheet template (TRUST/LIFESTYLE/UTILITY/etc.) off-canvas — only the
+top-progress bar survived because it lives at `top: 44px`. Users saw the
+photos with a bare progress bar and read that as "no template".
+
+**Fix** — caption canvas is now sized to match the video canvas:
+
+- `scripts/caption-render/render.py`: `--width` / `--height` CLI args
+  (default portrait); Playwright viewport + screenshot clip use them.
+- `scripts/caption-render/overlay.html`: `html/body/.stage` sized via
+  `--canvas-w` / `--canvas-h` CSS custom props; JS reads `window.CLIP.canvas_w`
+  / `canvas_h` and toggles a `body.landscape` class when `w > h`.
+- `overlay.html` landscape overrides (all 6 archetypes): TRUST / LIFESTYLE
+  bottom sheets get lighter padding (90px vs 200/210px), UTIL / NARR / MAG /
+  MAP position offsets shrunk from `bottom: 90px` → `60px`, font sizes reduced
+  ~20-30% to fit the 1080px-tall canvas without wrapping onto the photo.
+- `scripts/ken-burns/generate.py`: `render_caption_pngs()` accepts
+  `width`/`height`, called with `w, h` derived from `--orientation`.
+
+**Verified locally** — TRUST caption rendered at 1920×1080, bottom sheet
+(name + meta + badges) lands in the bottom 25% of the canvas as designed.
+Next community-scope schools job should show the archetype card on every clip.
+
+Files:
+- `scripts/caption-render/render.py`
+- `scripts/caption-render/overlay.html`
+- `scripts/ken-burns/generate.py`
+
 ## 2026-07-15 — Phase 92.3: community Nearby tab UI (owner triage + video panel)
 
 Phase 92 backend landed the community-scoped POI + bucket-video actions, but

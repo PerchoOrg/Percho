@@ -1,22 +1,14 @@
 #!/usr/bin/env python3
-"""Render caption overlay PNGs (1080x1920, transparent) from a captions.json file.
+"""Render caption overlay PNGs (transparent) from a captions.json file.
 
 Usage:
-    render.py --captions <path> --out-dir <dir>
+    render.py --captions <path> --out-dir <dir> [--width 1080] [--height 1920]
 
-captions.json schema:
-    {
-      "archetype": "TRUST|LIFESTYLE|UTILITY|NARRATIVE|MAGAZINE|MAP",
-      "bucket": "schools",
-      "clips": [
-        { "clip": 1, "poi": "...", "type": "...", "dist": 2.4, "drive": "6 min",
-          "badges": [{"t":"⭐ 9/10","c":"gold"}], "why": "...", "chapter": "...",
-          "quote": "...", "section": "...", "title": "...", "credit": "...",
-          "mode": "Drive", "time": "6 min" }
-      ]
-    }
-
-Output: <out-dir>/clip_1.png ... clip_N.png (1080x1920 RGBA, transparent background)
+Phase 92.4 (2026-07-15): caption PNG dimensions are now parameterised so the
+overlay matches the video canvas. Previously hard-coded to 1080x1920 which
+worked for portrait output; landscape videos (1920x1080) got a portrait PNG
+composited at (0,0) via ffmpeg — bottom sheets fell off-canvas, users saw
+"schools video has only photos, no template" (2026-07-15 bug report).
 """
 from __future__ import annotations
 import argparse, json, sys
@@ -27,7 +19,8 @@ HERE = Path(__file__).resolve().parent
 OVERLAY = HERE / "overlay.html"
 
 
-def render_all(captions_path: Path, out_dir: Path) -> list[Path]:
+def render_all(captions_path: Path, out_dir: Path,
+               width: int = 1080, height: int = 1920) -> list[Path]:
     data = json.loads(captions_path.read_text())
     archetype = data["archetype"]
     clips = data["clips"]
@@ -38,7 +31,7 @@ def render_all(captions_path: Path, out_dir: Path) -> list[Path]:
         browser = pw.chromium.launch(args=["--no-sandbox"])
         try:
             ctx = browser.new_context(
-                viewport={"width": 1080, "height": 1920},
+                viewport={"width": width, "height": height},
                 device_scale_factor=1,
             )
             for i, clip in enumerate(clips, start=1):
@@ -46,6 +39,8 @@ def render_all(captions_path: Path, out_dir: Path) -> list[Path]:
                 payload["archetype"] = archetype
                 payload["clip_index"] = i
                 payload["total_clips"] = total
+                payload["canvas_w"] = width
+                payload["canvas_h"] = height
                 page = ctx.new_page()
                 page.add_init_script(f"window.CLIP = {json.dumps(payload)};")
                 # transparent background via omit_background=True at screenshot time
@@ -53,7 +48,7 @@ def render_all(captions_path: Path, out_dir: Path) -> list[Path]:
                 page.wait_for_function("window.__READY__ === true", timeout=5000)
                 out = out_dir / f"clip_{i}.png"
                 page.screenshot(path=str(out), omit_background=True, full_page=False,
-                                clip={"x": 0, "y": 0, "width": 1080, "height": 1920})
+                                clip={"x": 0, "y": 0, "width": width, "height": height})
                 page.close()
                 written.append(out)
         finally:
@@ -65,8 +60,13 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--captions", required=True)
     ap.add_argument("--out-dir", required=True)
+    ap.add_argument("--width", type=int, default=1080,
+                    help="Caption canvas width in px (must match video output).")
+    ap.add_argument("--height", type=int, default=1920,
+                    help="Caption canvas height in px (must match video output).")
     args = ap.parse_args()
-    written = render_all(Path(args.captions), Path(args.out_dir))
+    written = render_all(Path(args.captions), Path(args.out_dir),
+                         width=args.width, height=args.height)
     for p in written:
         print(p)
     return 0
