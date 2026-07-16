@@ -4,6 +4,61 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-16 — Phase 93.1: drop dead listing-level POI tables
+
+**Objective**: Phase 93 removed all code references to `listing_pois` /
+`listing_poi_photos`. This phase drops the tables themselves — the phase-B
+half of the two-phase decommission (per `supabase-migration-workflow` §10.6).
+
+**Actions**:
+- Blast-radius audit before writing the migration:
+  - `grep listing_pois` across `supabase/migrations/` — only `20260714*` (self)
+    and `20260715050000_intent_buckets_14.sql` (bucket rename, no active DDL).
+  - `grep listing_pois` across `.ts` / `.tsx` — clean (Phase 93 already
+    swept `lib/poi/vision-tagger.ts` to `community_pois`).
+  - RLS policies that sub-select `listing_pois`:
+    - `poi_photos."agent reads poi_photos for referenced pois"` — user-facing
+      SELECT path. Replaced with a `community_pois`-scoped equivalent.
+    - `pois."agent reads pois referenced by own listings"` — dropped, not
+      replaced. `0001_init` already has `public reads pois using (true)`
+      covering it.
+  - FK check: `poi_photos.poi_id → pois.id` (NOT to `listing_pois`).
+    Dropping listing tables leaves photo rows + Storage objects intact.
+- Wrote `supabase/migrations/20260716120000_drop_listing_pois_tables.sql`:
+  `drop table if exists ... cascade` for both tables (dependency order:
+  `listing_poi_photos` before `listing_pois`), followed by a `do $$ if not
+  exists` guard creating the community-scoped `poi_photos` SELECT policy.
+- `supabase db push --linked` — NOTICE: drop cascades to 2 other objects
+  (the two dead RLS policies, exactly as audited).
+- REST verification post-push: `listing_pois` / `listing_poi_photos` return
+  PGRST205 (not found). `poi_photos` (371), `community_pois` (175),
+  `community_poi_photos` (72), `pois` (1310) all still reachable.
+
+**Row counts wiped**:
+- `listing_pois`: 1160 rows (all dev/seed)
+- `listing_poi_photos`: 298 rows (all dev/seed)
+No production data — Phase 93 landed while the POI pipeline was still
+pre-launch, and community_pois has been the only writer since 07-15.
+
+**Decisions**:
+- **Replace `poi_photos` policy, don't drop it**. Even though all server
+  callers use `createServiceClient()` (RLS-bypassed), leaving an authenticated
+  client without ANY read policy on `poi_photos` is a footgun — the next
+  time somebody reads it from a browser context it'll silently 0-row.
+  New policy: `poi_id in (select poi_id from community_pois)`. Since
+  `community_pois` is shared across all authenticated agents (per the
+  07-15 share model), the join is trivial.
+- **Don't touch the 975 orphan `pois` rows** (in `listing_pois` but not
+  in `community_pois`). They're POI catalog data; harmless to keep,
+  and a future prune can enumerate `pois left join community_pois where
+  cp is null` once we care.
+- **No Storage cleanup needed**. `poi_photos` rows point at Storage objects
+  and were NOT cascade-deleted. If a future prune removes orphan `pois`,
+  the Storage objects come with them via `poi_photos.poi_id` cascade.
+
+**Risks / follow-up**: none. Migration ran clean; REST verified.
+Two-phase decommission fully closed.
+
 ## 2026-07-16 — Phase 93: retire listing-level Nearby (POI moves to community/neighborhood)
 
 **Objective**: user asked to drop the "Nearby" sub-tab from the listing edit
