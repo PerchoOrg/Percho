@@ -78,7 +78,7 @@ export default async function ProfilePage() {
   // biome-ignore lint/suspicious/noExplicitAny: agents typing not in stub yet (TODO phase1-end db:types)
   const { data: agent } = (await (supabase as any)
     .from('agents')
-    .select('name, brokerage, slug, headshot_url')
+    .select('name, brokerage, slug, headshot_url, is_admin')
     .eq('user_id', user.id)
     .maybeSingle()) as {
     data: {
@@ -86,6 +86,7 @@ export default async function ProfilePage() {
       brokerage: string | null;
       slug: string | null;
       headshot_url: string | null;
+      is_admin: boolean | null;
     } | null;
   };
 
@@ -121,6 +122,14 @@ export default async function ProfilePage() {
             >
               View analytics
             </Link>
+            {agent.is_admin ? (
+              <Link
+                href="/admin/pipeline"
+                className="inline-flex items-center justify-center rounded-full border border-line px-6 py-3 text-sm text-ink transition hover:border-ink"
+              >
+                Admin console
+              </Link>
+            ) : null}
           </div>
 
           <div className="mt-10 border-t border-line pt-6 flex flex-col gap-2">
