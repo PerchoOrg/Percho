@@ -179,6 +179,80 @@ These are mandated by the owner. Breaking any of them ends the session badly:
 
 ---
 
+## 2.5 Multi-agent workspace protocol (READ BEFORE EDITING FILES)
+
+**Do NOT edit files under `~/Percho` directly.** It's the shared reference
+worktree pinned on `main`. Multiple agents (Claude Code, Codex, Hermes
+subagents, humans) run in parallel — writing to `~/Percho` causes merge
+conflicts and lost work.
+
+Instead, claim one of ten dedicated worktrees (`~/Percho-ws1` … `~/Percho-ws10`),
+each with its own long-lived branch `agent/wsN` and its own `node_modules`.
+All share `~/Percho/.git`, so `git fetch` in one updates all.
+
+**Registry:** `~/Percho-workspaces.json` (flock-guarded — never hand-edit while
+agents are running).
+**CLI:** `ws` (installed at `~/bin/ws`, on PATH).
+
+### At session start
+
+```bash
+# 1. Check the pool
+ws list
+
+# 2. Claim an idle workspace. Prints the path. Non-zero exit if all busy.
+path=$(ws claim <task-slug> --by <agent-name>)  # e.g. --by codex, --by claude-code
+cd "$path"
+
+# 3. Fetch latest and branch off origin/main for the actual phase work
+git fetch origin
+git checkout -B phaseN/<slug> origin/main
+```
+
+The `agent/wsN` branch is just the workspace's parking slot — real work goes on
+a phase branch as usual (see §2.1 rule 3).
+
+### At session end / after merge to main
+
+```bash
+# From inside the worktree, after your phase branch is merged and pushed:
+git checkout agent/wsN
+git reset --hard origin/main
+ws release "$path"    # verifies clean + synced with origin/main → idle
+                      # if uncommitted work remains → marks 'dirty' for human review
+```
+
+### States
+
+| State     | Meaning                                                    |
+|-----------|------------------------------------------------------------|
+| `idle`    | Free. `ws claim` will hand this one out.                   |
+| `claimed` | An agent is actively working here. Look before touching.   |
+| `dirty`   | Uncommitted work or unpushed commits. Needs human review.  |
+| `broken`  | Manual fix required (bad rebase, corrupted deps, etc.).    |
+
+### Rules
+
+1. **Always `ws claim` before writing files.** Never assume a worktree is free
+   because it "looks clean" — check the registry.
+2. **Never claim `~/Percho` itself.** It's not in the pool. Treat it as read-only.
+3. **Never operate on someone else's `claimed` worktree.** If you need it,
+   ask the human. `ws show <id>` tells you who has it and what they're doing.
+4. **If `ws claim` fails (all busy)** — stop and ask the human. Do NOT fall
+   back to `~/Percho`.
+5. **Don't `git branch -D agent/wsN`** — it's the parking slot. Only the
+   phase branches you create are yours to delete.
+
+### Debug commands
+
+```bash
+ws show 3                     # JSON for ws3
+ws status 3 dirty --task foo  # manual override (state: idle|claimed|dirty|broken)
+git worktree list             # ground truth of what git thinks exists
+```
+
+---
+
 ## 3. Security — non-negotiable
 
 These are the rules that, if broken, the user will be very unhappy:
