@@ -1472,7 +1472,7 @@ function Card({
  */
 
 export function BrowseFeed({
-  cards,
+  cards: initialCards,
   initialIndex = 0,
 }: {
   cards: BrowseCard[];
@@ -1482,6 +1482,15 @@ export function BrowseFeed({
    */
   initialIndex?: number;
 }) {
+  // Phase 111 (2026-07-17): true pagination. SSR ships the first page
+  // (~30 cards) for fast paint; we fetch subsequent pages from
+  // /api/browse/feed?offset=N as the swipe nears the end. When the API
+  // returns done=true (or an empty page), we stop appending and the
+  // existing infinite-loop wraps whatever we've collected so far.
+  const [cards, setCards] = useState<BrowseCard[]>(initialCards);
+  const [feedExhausted, setFeedExhausted] = useState(initialCards.length < 30);
+  const fetchingRef = useRef(false);
+  const seenIdsRef = useRef<Set<string>>(new Set(initialCards.map((c) => c.listing.id)));
   const router = useRouter();
   const searchParams = useSearchParams();
   // Phase 35.3 (2026-06-17): Back semantics fix.
@@ -1580,19 +1589,48 @@ export function BrowseFeed({
   const cardRefs = useRef<Map<number, HTMLElement>>(new Map());
   const scrollerRef = useRef<HTMLDivElement | null>(null);
 
-  // Phase 27.9 (2026-06-16): infinite swipe — repeat the cards array as the
-  // user nears the end. Keyed-by-listing.id state (saved / liked / source /
-  // cycle) is intentionally shared across loop copies; a buyer landing on
-  // copy #2 of the same listing sees its existing Like / Save state. Cap
-  // 50 loops to bound DOM growth.
-  const [loops, setLoops] = useState(2);
+  // Phase 27.9 (2026-06-16) → Phase 111 (2026-07-17): swipe expansion.
+  // First, fetch more real pages from /api/browse/feed until the DB is
+  // exhausted. Only after that do we fall back to looping the collected
+  // cards for infinite swipe. Trigger next-page fetch when the buyer is
+  // within 5 cards of the current tail.
+  const [loops, setLoops] = useState(1);
   const totalCards = cards.length === 0 ? 0 : cards.length * loops;
+
   useEffect(() => {
+    if (feedExhausted) return;
+    if (fetchingRef.current) return;
+    if (cards.length === 0) return;
+    if (activeIndex < cards.length - 5) return;
+
+    fetchingRef.current = true;
+    (async () => {
+      try {
+        const res = await fetch(`/api/browse/feed?offset=${cards.length}&limit=30`);
+        if (!res.ok) {
+          setFeedExhausted(true);
+          return;
+        }
+        const body = (await res.json()) as { cards: BrowseCard[]; done: boolean };
+        const fresh = (body.cards ?? []).filter((c) => !seenIdsRef.current.has(c.listing.id));
+        for (const c of fresh) seenIdsRef.current.add(c.listing.id);
+        if (fresh.length > 0) setCards((prev) => [...prev, ...fresh]);
+        if (body.done || fresh.length === 0) setFeedExhausted(true);
+      } catch {
+        setFeedExhausted(true);
+      } finally {
+        fetchingRef.current = false;
+      }
+    })();
+  }, [activeIndex, cards.length, feedExhausted]);
+
+  useEffect(() => {
+    if (!feedExhausted) return;
     if (cards.length === 0) return;
     if (activeIndex >= (loops - 1) * cards.length && loops < 50) {
       setLoops((l) => l + 1);
     }
-  }, [activeIndex, loops, cards.length]);
+  }, [activeIndex, loops, cards.length, feedExhausted]);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: re-attach on totalCards growth
   useEffect(() => {
