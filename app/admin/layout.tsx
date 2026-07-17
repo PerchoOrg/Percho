@@ -68,23 +68,25 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         </div>
       </header>
 
-      <div className="mx-auto flex max-w-7xl gap-6 px-4 py-6 sm:px-6">
-        <aside className="w-56 shrink-0">
-          <nav className="sticky top-4 space-y-1">
+      <div className="mx-auto flex max-w-7xl flex-col gap-6 px-3 py-4 sm:px-6 sm:py-6 lg:flex-row">
+        <aside className="lg:w-56 lg:shrink-0">
+          <nav className="flex gap-2 overflow-x-auto pb-2 lg:sticky lg:top-4 lg:flex-col lg:gap-1 lg:overflow-visible lg:pb-0">
             {NAV.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
-                className="block rounded-lg border border-transparent px-3 py-2 hover:border-line hover:bg-surface"
+                className="block shrink-0 rounded-lg border border-transparent px-3 py-2 hover:border-line hover:bg-surface lg:shrink"
               >
-                <div className="text-sm font-medium">{item.label}</div>
-                <div className="text-ink2 text-xs">{item.blurb}</div>
+                <div className="whitespace-nowrap text-sm font-medium lg:whitespace-normal">
+                  {item.label}
+                </div>
+                <div className="text-ink2 hidden text-xs lg:block">{item.blurb}</div>
               </Link>
             ))}
           </nav>
         </aside>
 
-        <main className="min-w-0 flex-1">{children}</main>
+        <main className="min-w-0 flex-1 overflow-x-hidden">{children}</main>
       </div>
     </div>
   );

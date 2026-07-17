@@ -4,6 +4,15 @@
 > Historical entries below preserve the original name in-place — release notes
 > are a record of what was shipped under the product's name at the time.
 
+## v98.2 — 2026-07-16 — Admin console: Me-tab entry + mobile fix
+
+- Profile ("Me") page shows an **Admin console** button when the signed-in
+  agent has `is_admin = true`. No more URL-typing to reach `/admin`.
+- `/admin/*` layout is now mobile-friendly: sidebar collapses to a
+  horizontal scroll strip at < lg, and every table wraps in
+  `overflow-x-auto` with a 640 px min-width — content no longer clips off
+  the right edge on iPhone.
+
 ## v98.1 — 2026-07-16 — Admin pipeline console
 
 Nearby POI discovery, AI photo tagging, and bucket video generation are

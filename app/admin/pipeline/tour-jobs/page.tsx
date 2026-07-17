@@ -64,8 +64,8 @@ export default async function TourJobsPage({
         ))}
       </nav>
 
-      <div className="overflow-hidden rounded-2xl border border-line bg-surface">
-        <table className="w-full text-sm">
+      <div className="overflow-x-auto rounded-2xl border border-line bg-surface">
+        <table className="w-full min-w-[640px] text-sm">
           <thead className="border-b border-line bg-bg/40 text-left text-xs uppercase tracking-wide text-ink2">
             <tr>
               <th className="p-3">Job</th>
