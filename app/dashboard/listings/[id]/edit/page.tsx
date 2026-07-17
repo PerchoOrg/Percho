@@ -23,7 +23,7 @@ import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 
 import { HubTabs } from '@/app/dashboard/_components/HubTabs';
-import { FileText, ImageIcon, Megaphone, Users, LineChart, MapPinned } from 'lucide-react';
+import { FileText, ImageIcon, Megaphone, Users, LineChart } from 'lucide-react';
 import { HeroHeader } from '@/app/dashboard/_components/HeroHeader';
 import { HeroControl } from '@/app/dashboard/_components/HeroControl';
 import { InstantStatusToggle } from '@/app/dashboard/_components/InstantStatusToggle';
@@ -38,7 +38,6 @@ import { SocialCopyPanel } from './SocialCopyPanel';
 import { ListingLeadsPanel } from './ListingLeadsPanel';
 import { AnalyticsPanel } from '@/app/dashboard/_components/AnalyticsPanel';
 import { DangerZone } from './DangerZone';
-import { ListingNearbyPanel } from './ListingNearbyPanel';
 
 interface ListingRow {
   id: string;
@@ -191,21 +190,6 @@ export default async function EditListingPage({
     neighborhood: listing.neighborhood,
   };
 
-  // Phase 101: preload listing-scoped nearby POIs for the Nearby tab.
-  // Empty array when the listing has no lat/lng yet — the panel shows
-  // a "Discover POIs" CTA to seed it.
-  let initialNearbyPois: Awaited<
-    ReturnType<typeof import('@/lib/poi/listing-actions').loadNearbyPoisForListing>
-  > = [];
-  if (!draft) {
-    try {
-      const { loadNearbyPoisForListing } = await import('@/lib/poi/listing-actions');
-      initialNearbyPois = await loadNearbyPoisForListing(listing.id);
-    } catch (err) {
-      console.error('[listing edit] loadNearbyPoisForListing failed:', err);
-    }
-  }
-
   return (
     <>
       <HeroHeader
@@ -228,7 +212,6 @@ export default async function EditListingPage({
         tabs={[
           { id: 'details', label: 'Details', icon: <FileText className="h-5 w-5" strokeWidth={1.6} /> },
           { id: 'media', label: 'Media', icon: <ImageIcon className="h-5 w-5" strokeWidth={1.6} /> },
-          { id: 'nearby', label: 'Nearby', icon: <MapPinned className="h-5 w-5" strokeWidth={1.6} /> },
           { id: 'marketing', label: 'Marketing', icon: <Megaphone className="h-5 w-5" strokeWidth={1.6} /> },
           { id: 'leads', label: 'Leads', icon: <Users className="h-5 w-5" strokeWidth={1.6} /> },
           { id: 'analytics', label: 'Analytics', icon: <LineChart className="h-5 w-5" strokeWidth={1.6} /> },
@@ -271,17 +254,6 @@ export default async function EditListingPage({
               initialPhotos={photos}
               initialCoverPhotoId={initialCoverPhotoId}
             />
-          ),
-          nearby: draft ? (
-            <DraftLockedNotice />
-          ) : (
-            <section className="rounded-2xl border border-line bg-surface p-4 sm:p-6">
-              <ListingNearbyPanel
-                listingId={listing.id}
-                initialPois={initialNearbyPois}
-                supabaseStorageBase={process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''}
-              />
-            </section>
           ),
           marketing: draft ? <DraftLockedNotice /> : <SocialCopyPanel listingId={listing.id} />,
           leads: draft ? <DraftLockedNotice /> : <ListingLeadsPanel listingId={listing.id} />,

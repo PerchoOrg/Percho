@@ -4,6 +4,57 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-16 20:00 UTC — Phase 101b: pipeline surfaces move to /admin
+
+**Problem** — Phase 101 mounted the Nearby review UI as a tab on the
+listing agent hub. That's wrong: nearby POI discovery + AI photo tagging +
+bucket video generation are platform automation — eventually zero-touch —
+and shouldn't live inside an agent-facing surface. Agents shouldn't need
+to know the machinery exists; they should just see the finished videos.
+
+**Solution** — new admin surface at `/admin/*`, gated by `agents.is_admin`.
+
+Schema (`20260716200000_agents_is_admin.sql`):
+- `agents.is_admin boolean not null default false` — single-bit role for
+  now; RLS already scopes reads to own row, so no policy change. Bootstrap
+  the first admin manually: `update public.agents set is_admin = true
+  where email = '<you>'`.
+
+Auth (`lib/auth/require-admin.ts`):
+- Server-side `requireAdmin()` reads the current user's `agents` row via
+  the RLS-scoped client (no service role — that would defeat the point).
+
+Layout (`app/admin/layout.tsx`):
+- Wraps every `/admin/*` route with a single `requireAdmin` gate + left
+  nav. Non-admins get redirected to `/dashboard`. Child pages don't need
+  to re-check.
+
+Pages under `/admin/pipeline/`:
+- `page.tsx` — landing card grid with live counts (listings missing
+  community, pending/failed bucket jobs, tour jobs).
+- `listing-nearby/` — filterable table of every listing (default filter:
+  no-community) → per-listing panel that reuses `ListingNearbyPanel`.
+- `community-nearby/` — community index with bucket-video counts.
+- `bucket-jobs/` — cross-scope `generated_videos` queue for
+  `listing_intent_bucket` + `community_intent_bucket`, filterable by
+  status, links to the Cloudflare Stream dashboard.
+- `tour-jobs/` — LISTING archetype (`listing_videos`) render queue.
+- `poi-library/` — global `pois` + `poi_photos` audit with search +
+  tagged/untagged filter. Enforces the "one POI, one AI-tag, one photo
+  set" contract by making it inspectable.
+- `worker-health/` — derived signals (pending/processing/failed 24 h,
+  last successful/failed render, stall banner when > 30 min without a
+  ready). Placeholder until we ship `worker_heartbeats`.
+
+Listing edit hub cleanup (`app/dashboard/listings/[id]/edit/page.tsx`):
+- Reverted the Phase 101 Nearby tab. `ListingNearbyPanel` stays as a
+  reusable component; its only mount point now is `/admin/pipeline/
+  listing-nearby/[id]`.
+
+**Result** — automation UI lives where automation belongs. Agent hub
+goes back to Details / Media / Marketing / Leads / Analytics — five
+buyer-facing surfaces, zero pipeline knobs.
+
 ## 2026-07-16 18:00 UTC — Phase 101: listing-scoped nearby video pipeline
 
 **Problem** — nearby videos previously required the listing to be inside a
