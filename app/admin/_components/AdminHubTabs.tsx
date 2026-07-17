@@ -58,7 +58,7 @@ export function AdminHubTabs({ tabs }: { tabs: AdminHubTab[] }) {
               >
                 {t.icon}
               </span>
-              <span className="line-clamp-1">{t.label}</span>
+              <span className="line-clamp-2">{t.label}</span>
               <span
                 className={`h-0.5 w-4 rounded-full transition ${
                   isActive ? 'bg-ink' : 'bg-transparent'

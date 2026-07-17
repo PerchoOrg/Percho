@@ -1,6 +1,14 @@
 /**
- * /admin/pipeline/tour-jobs — LISTING archetype render queue
- * (listing_videos table).
+ * /admin/pipeline/tour-jobs — Home Tour hub.
+ *
+ * Phase 104 (2026-07-17): reshaped from a flat listing_videos queue
+ * into a per-listing index. Rows now link to
+ * /admin/pipeline/tour-jobs/[id] where an admin can browse all photos
+ * + tour videos for a home and (re)trigger the Ken Burns render.
+ *
+ * The old flat-queue view was redundant with Video Jobs (which covers
+ * bucket videos); the walkthrough queue is small enough that grouping
+ * by listing is more useful.
  */
 
 import { createServiceClient } from '@/lib/supabase/server';
@@ -8,56 +16,108 @@ import Link from 'next/link';
 
 export const dynamic = 'force-dynamic';
 
-type Row = {
+type ListingRow = {
   id: string;
-  listing_id: string;
-  cf_video_id: string | null;
-  kind: string;
-  title: string | null;
-  duration_sec: number | null;
+  address: string;
+  city: string;
+  state: string;
   status: string;
-  created_at: string;
+  agents: { name: string } | null;
 };
 
-const STATUS_FILTERS = ['all', 'processing', 'ready', 'error'] as const;
+type PhotoRow = { listing_id: string };
+type VideoRow = { listing_id: string; kind: string; status: string };
 
-export default async function TourJobsPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ status?: string }>;
-}) {
-  const { status = 'all' } = await searchParams;
+type Stat = {
+  photos: number;
+  walkthrough: 'none' | 'processing' | 'ready' | 'error';
+  totalVideos: number;
+};
+
+async function loadListings(filter: string) {
   const supabase = createServiceClient();
-
   let q = supabase
-    .from('listing_videos')
-    .select('id, listing_id, cf_video_id, kind, title, duration_sec, status, created_at')
+    .from('listings')
+    .select('id, address, city, state, status, agents(name)')
+    .neq('status', 'archived')
     .order('created_at', { ascending: false })
     .limit(200);
-  if (status !== 'all') q = q.eq('status', status);
-  const { data } = (await q) as { data: Row[] | null };
+  if (filter === 'no-tour') q = q; // filter post-fetch (subquery ergonomics)
+  const { data } = (await q) as { data: ListingRow[] | null };
   const rows = data ?? [];
+  const ids = rows.map((r) => r.id);
+  const stats = new Map<string, Stat>();
+  if (ids.length === 0) return { rows, stats };
+
+  const [photoRes, videoRes] = await Promise.all([
+    supabase.from('listing_photos').select('listing_id').in('listing_id', ids) as unknown as Promise<{
+      data: PhotoRow[] | null;
+    }>,
+    supabase
+      .from('listing_videos')
+      .select('listing_id, kind, status')
+      .in('listing_id', ids) as unknown as Promise<{ data: VideoRow[] | null }>,
+  ]);
+
+  for (const p of photoRes.data ?? []) {
+    const s = stats.get(p.listing_id) ?? { photos: 0, walkthrough: 'none', totalVideos: 0 };
+    s.photos += 1;
+    stats.set(p.listing_id, s);
+  }
+  for (const v of videoRes.data ?? []) {
+    const s = stats.get(v.listing_id) ?? { photos: 0, walkthrough: 'none', totalVideos: 0 };
+    s.totalVideos += 1;
+    if (v.kind === 'walkthrough') {
+      if (v.status === 'ready' || v.status === 'approved') s.walkthrough = 'ready';
+      else if (v.status === 'failed') s.walkthrough = 'error';
+      else if (s.walkthrough === 'none') s.walkthrough = 'processing';
+    }
+    stats.set(v.listing_id, s);
+  }
+  return { rows, stats };
+}
+
+const FILTERS = [
+  { id: 'all', label: 'All' },
+  { id: 'no-tour', label: 'No tour yet' },
+  { id: 'has-tour', label: 'Has tour' },
+] as const;
+
+export default async function TourJobsIndex({
+  searchParams,
+}: {
+  searchParams: Promise<{ filter?: string }>;
+}) {
+  const { filter = 'all' } = await searchParams;
+  const { rows, stats } = await loadListings(filter);
+
+  const filtered = rows.filter((r) => {
+    const s = stats.get(r.id) ?? { photos: 0, walkthrough: 'none' as const, totalVideos: 0 };
+    if (filter === 'no-tour') return s.walkthrough === 'none';
+    if (filter === 'has-tour') return s.walkthrough !== 'none';
+    return true;
+  });
 
   return (
     <div className="space-y-4">
       <header>
-        <h1 className="text-2xl font-semibold">Tour Video Jobs</h1>
+        <h1 className="text-2xl font-semibold">Home Tour</h1>
         <p className="text-ink2 mt-1 text-sm">
-          LISTING archetype renders — the primary walkthrough / exterior tour videos on the listing
-          itself.
+          Per-listing photo + tour video hub. Click any listing to see every photo and video, and
+          to trigger a fresh Ken Burns walkthrough render.
         </p>
       </header>
 
       <nav className="flex gap-2 text-sm">
-        {STATUS_FILTERS.map((s) => (
+        {FILTERS.map((f) => (
           <Link
-            key={s}
-            href={`/admin/pipeline/tour-jobs?status=${s}`}
-            className={`rounded-full border px-3 py-1 capitalize ${
-              status === s ? 'border-ink bg-ink text-bg' : 'border-line text-ink2 hover:text-ink'
+            key={f.id}
+            href={`/admin/pipeline/tour-jobs?filter=${f.id}`}
+            className={`rounded-full border px-3 py-1 ${
+              filter === f.id ? 'border-ink bg-ink text-bg' : 'border-line text-ink2 hover:text-ink'
             }`}
           >
-            {s}
+            {f.label}
           </Link>
         ))}
       </nav>
@@ -66,46 +126,64 @@ export default async function TourJobsPage({
         <table className="w-full min-w-[640px] text-sm">
           <thead className="border-b border-line bg-bg/40 text-left text-xs uppercase tracking-wide text-ink2">
             <tr>
-              <th className="p-3">Job</th>
               <th className="p-3">Listing</th>
-              <th className="p-3">Kind</th>
-              <th className="p-3">Status</th>
-              <th className="p-3 text-right">Duration</th>
-              <th className="p-3">Created</th>
-              <th className="p-3">Stream</th>
+              <th className="p-3">Agent</th>
+              <th className="p-3 text-right">Photos</th>
+              <th className="p-3 text-right">Videos</th>
+              <th className="p-3">Tour</th>
+              <th className="p-3" />
             </tr>
           </thead>
           <tbody>
-            {rows.length === 0 && (
+            {filtered.length === 0 && (
               <tr>
-                <td colSpan={7} className="p-6 text-center text-ink2">
-                  No tour jobs match this filter.
+                <td colSpan={6} className="p-6 text-center text-ink2">
+                  No listings match this filter.
                 </td>
               </tr>
             )}
-            {rows.map((r) => (
-              <tr key={r.id} className="border-b border-line last:border-0">
-                <td className="p-3 font-mono text-xs">{r.id.slice(0, 8)}</td>
-                <td className="p-3">
-                  <Link
-                    href={`/dashboard/listings/${r.listing_id}/edit`}
-                    className="text-blue-500 hover:underline"
-                  >
-                    {r.listing_id.slice(0, 8)}
-                  </Link>
-                  {r.title && <div className="text-ink2 text-xs">{r.title}</div>}
-                </td>
-                <td className="p-3">{r.kind}</td>
-                <td className="p-3">{r.status}</td>
-                <td className="p-3 text-right text-ink2">
-                  {r.duration_sec ? `${r.duration_sec}s` : '—'}
-                </td>
-                <td className="p-3 text-ink2 text-xs">{new Date(r.created_at).toLocaleString()}</td>
-                <td className="p-3 font-mono text-xs">
-                  {r.cf_video_id ? r.cf_video_id.slice(0, 10) : '—'}
-                </td>
-              </tr>
-            ))}
+            {filtered.map((r) => {
+              const s = stats.get(r.id) ?? {
+                photos: 0,
+                walkthrough: 'none' as const,
+                totalVideos: 0,
+              };
+              return (
+                <tr key={r.id} className="border-b border-line last:border-0">
+                  <td className="p-3">
+                    <div className="font-medium">{r.address}</div>
+                    <div className="text-ink2 text-xs">
+                      {r.city}, {r.state} · {r.status}
+                    </div>
+                  </td>
+                  <td className="p-3 text-ink2">{r.agents?.name ?? '—'}</td>
+                  <td className="p-3 text-right">{s.photos}</td>
+                  <td className="p-3 text-right">{s.totalVideos}</td>
+                  <td className="p-3">
+                    {s.walkthrough === 'ready' && (
+                      <span className="text-emerald-500 text-xs">ready</span>
+                    )}
+                    {s.walkthrough === 'processing' && (
+                      <span className="text-amber-500 text-xs">processing</span>
+                    )}
+                    {s.walkthrough === 'error' && (
+                      <span className="text-red-500 text-xs">error</span>
+                    )}
+                    {s.walkthrough === 'none' && (
+                      <span className="text-ink2 text-xs">—</span>
+                    )}
+                  </td>
+                  <td className="p-3 text-right">
+                    <Link
+                      href={`/admin/pipeline/tour-jobs/${r.id}`}
+                      className="text-sm text-blue-500 hover:underline"
+                    >
+                      Open →
+                    </Link>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
