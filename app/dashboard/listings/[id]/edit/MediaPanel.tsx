@@ -24,7 +24,6 @@
 import { type UploadedVideo, VideoUploader } from '@/components/dashboard/VideoUploader';
 import { Upload } from 'lucide-react';
 import { useCallback, useRef, useState } from 'react';
-import { GenerateTourPanel } from './GenerateTourPanel';
 import { type ListingPhotoRow, PhotoPanel, type PhotoPanelHandle } from './PhotoPanel';
 import { type ListingVideoRow, VideoPanel, type VideoPanelHandle } from './VideoPanel';
 
@@ -156,9 +155,8 @@ export function MediaPanel({
           buttons hidden — the unified one above replaces them. */}
       <div className="space-y-6">
         <div>
-          <div className="mb-2 flex items-start justify-between gap-3">
+          <div className="mb-2">
             <h3 className="text-sm font-semibold text-ink2">Videos ({initialVideos.length})</h3>
-            <GenerateTourPanel listingId={listingId} photoCount={initialPhotos.length} />
           </div>
           <VideoPanel
             ref={videoRef}
