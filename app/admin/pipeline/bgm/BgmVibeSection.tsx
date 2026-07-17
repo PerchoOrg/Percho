@@ -50,16 +50,56 @@ export function BgmVibeSection({ vibe, tracks }: { vibe: BgmVibe; tracks: BgmTra
     setError(null);
     setUploading(true);
     try {
-      const fd = new FormData();
-      fd.append('vibe', vibe);
-      for (const f of Array.from(files)) fd.append('files', f);
-      const res = await fetch('/api/admin/bgm/upload', { method: 'POST', body: fd });
-      const json = await res.json();
-      if (!res.ok || json.uploaded === 0) {
-        const first = json?.results?.find((r: { status: string }) => r.status === 'error');
-        throw new Error(first?.error ?? json?.error ?? 'upload failed');
+      const fileList = Array.from(files);
+      // Step 1: ask the server for signed upload URLs (one per file). This is a
+      // tiny JSON request, so it's safe against Vercel's ~4.5MB serverless body
+      // cap (the cap is what caused the old multipart route to return a plain
+      // "Request Entity Too Large" text response that broke res.json()).
+      const signRes = await fetch('/api/admin/bgm/upload-sign', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ vibe, filenames: fileList.map((f) => f.name) }),
+      });
+      if (!signRes.ok) {
+        const text = await signRes.text();
+        throw new Error(`sign failed (${signRes.status}): ${text.slice(0, 200)}`);
       }
+      const signJson = (await signRes.json()) as {
+        results: Array<
+          | { file: string; status: 'ok'; path: string; token: string }
+          | { file: string; status: 'error'; error: string }
+        >;
+      };
+
+      // Step 2: upload each file's bytes DIRECTLY to Supabase Storage from the
+      // browser, using the signed token. No Vercel round-trip for the payload.
+      const { createClient } = await import('@/lib/supabase/client');
+      const supa = createClient();
+      const errors: string[] = [];
+      let uploaded = 0;
+      for (const f of fileList) {
+        const type = f.type || 'audio/mpeg';
+        if (!type.startsWith('audio/')) {
+          errors.push(`${f.name}: not audio (${type})`);
+          continue;
+        }
+        const signed = signJson.results.find((r) => r.file === f.name);
+        if (!signed || signed.status !== 'ok') {
+          errors.push(`${f.name}: ${signed && 'error' in signed ? signed.error : 'no signed url'}`);
+          continue;
+        }
+        const { error } = await supa.storage
+          .from('bgm')
+          .uploadToSignedUrl(signed.path, signed.token, f, { contentType: 'audio/mpeg' });
+        if (error) {
+          errors.push(`${f.name}: ${error.message}`);
+          continue;
+        }
+        uploaded += 1;
+      }
+      if (uploaded === 0) throw new Error(errors[0] ?? 'upload failed');
       if (fileInput.current) fileInput.current.value = '';
+      if (errors.length > 0) setError(`Partial: ${errors.join('; ')}`);
       router.refresh();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
