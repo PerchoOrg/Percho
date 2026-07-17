@@ -4,6 +4,52 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-16 18:00 UTC — Phase 101: listing-scoped nearby video pipeline
+
+**Problem** — nearby videos previously required the listing to be inside a
+curated community. Listings that fell outside any community polygon (a
+growing set as we bring on independent agents) had zero nearby videos.
+Buyer feedback: nobody cares whether a home is in a *named* community;
+they care about POIs ranked by distance. Coverage must be 100 %.
+
+**Solution** — parallel listing-anchored pipeline mirroring community's,
+sharing the same global `pois` / `poi_photos` tables (dedup by
+`google_place_id` / `google_photo_name` — no re-fetch, no re-AI-tag ever).
+
+New schema (`20260716180000_listing_scoped_nearby.sql`):
+- `listing_pois` — per-listing POI membership + status + intent_bucket
+- `listing_poi_photos` — per-listing photo approval, same shape as
+  `community_poi_photos`
+- `generated_videos.scope` gains `'listing_intent_bucket'` (XOR with
+  `community_intent_bucket` via CHECK)
+
+New TS actions:
+- `lib/poi/listing-actions.ts` — `discoverPoisForListing`,
+  `fetchPhotosForListingPoi`, `setListingPoiStatus`,
+  `setListingPhotoStatus`, `loadNearbyPoisForListing`
+- `lib/poi/listing-video-actions.ts` — `generateListingBucketVideo`,
+  `listListingBucketVideos`, `getListingBucketVideoStatus`,
+  `getListingBucketEligiblePhotoCount`,
+  `regenerateListingBucketVideoNarrative`
+
+Worker (`scripts/render-worker/worker.py`) — `claim_bucket_job` filter
+now includes `listing_intent_bucket`; the existing listing branch
+(`is_community=False`) already reads `listing_pois` because the new
+scope shares the branch with legacy `intent_bucket`.
+
+Dashboard — new **Nearby** tab on `/dashboard/listings/[id]/edit`
+mounting `ListingNearbyPanel` (clone of `CommunityNearbyPanel`, same
+triage UX + generated-videos cards).
+
+Feed (`lib/listing-feed/load.ts`) — when `listing.community_id` is null,
+the loader unions `generated_videos` with `scope='listing_intent_bucket'`
+into the same `communityVideos` collection the card builder already
+consumes, so `/v/[agent]/[listing]` shows nearby cards regardless of
+community coverage. Every listing now guarantees nearby video capacity.
+
+Anchor is `listings.lat/lng` with the existing ~3 km radius. Dynamic
+radius / per-bucket adaptive expansion deferred.
+
 ## 2026-07-16 09:20 UTC — Split video pipeline doc into 1 README + 7 per-archetype files
 
 **Objective**: `docs/pipelines/video-generation-master.md` 单一文件承载了公共基础设施 + Listing + 6 nearby archetype 的所有内容,读的时候要在一个文件里跳,改一个 archetype 会碰另一个的 diff。

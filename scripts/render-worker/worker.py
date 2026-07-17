@@ -696,9 +696,10 @@ CAPTION_ARCHETYPE_MAP = {
 
 def claim_bucket_job() -> dict[str, Any] | None:
     """Pick oldest pending generated_videos row (scope in {intent_bucket,
-    community_intent_bucket}) and flip to 'processing' atomically. Phase 92
-    (2026-07-15): widened to cover community-scoped rows — same render path,
-    different owner column (community_id vs listing_id).
+    community_intent_bucket, listing_intent_bucket}) and flip to 'processing'
+    atomically. Phase 92 (2026-07-15) added community-scoped rows; Phase 101
+    (2026-07-16) added listing_intent_bucket — same render path as the legacy
+    intent_bucket scope (both anchor on a listing), same listing_pois table.
 
     Same optimistic-lock pattern as claim_job(): filter status='pending' on
     both SELECT and PATCH so a concurrent worker cannot double-claim.
@@ -707,7 +708,7 @@ def claim_bucket_job() -> dict[str, Any] | None:
         "generated_videos",
         {
             "select": "id,listing_id,community_id,scope,intent_bucket,input_photo_ids",
-            "scope": "in.(intent_bucket,community_intent_bucket)",
+            "scope": "in.(intent_bucket,community_intent_bucket,listing_intent_bucket)",
             "status": "eq.pending",
             "order": "created_at.asc",
             "limit": "1",
