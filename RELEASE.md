@@ -4,6 +4,18 @@
 > Historical entries below preserve the original name in-place — release notes
 > are a record of what was shipped under the product's name at the time.
 
+## v100.2 — Tapping a home in the grid now opens the right home (2026-07-17)
+
+**🐛 Bug Fixes**
+
+On the For You grid, tapping a listing further down the page (like 5122 Lower Creek Street) would sometimes open the swipe view on a *different* home instead. The grid was loading up to 500 homes, but the swipe view was only loading the newest 30 — so if the home you tapped wasn't in that first 30, the swipe view silently fell back to whatever was at the top of its list.
+
+What changes visibly:
+- Tapping any home in the For You grid now opens the swipe view on that exact home, no matter how far down the grid it sits.
+- The swipe view now loads the full pool of active listings for browsing, matching the grid.
+- 5122 Lower Creek Street specifically now opens on itself when tapped.
+- No change to what listings appear or how they're ordered — just the deep-link accuracy.
+
 ## v100.1 — Nearby video: drop the top progress dashes (2026-07-17)
 
 **✨ Improvements**

@@ -24,7 +24,17 @@ import {
   type CommunityVideoCategoryId,
 } from '@/lib/zod/community-video-categories';
 
-const FEED_LIMIT = 30;
+// Phase 111.1 (2026-07-17): removed the old `FEED_LIMIT = 30` cap.
+// Both the grid and the swipe feed now request the full active-listing
+// set in one shot (bounded by PostgREST's default 1000-row ceiling).
+// The 30-card window was leftover from the pre-grid pivot when /browse
+// itself was the swipe feed and lazy-loaded pages of 30. Post-pivot,
+// deep-linking from the grid into the feed with `?start=<id>` broke
+// whenever the target listing sat beyond position 30 — findIndex
+// returned -1 and the feed silently opened on card 0 (a different
+// home). The API route `/api/browse/feed` still paginates for the
+// client-side "append as you swipe" path; that page size is intentional
+// and stays local to the route.
 const NEARBY_MAX_ROWS = 200;
 
 type ListingRow = {
@@ -441,7 +451,7 @@ async function assembleCards(
   return cards;
 }
 
-export async function fetchBrowseCards(offset = 0, limit = FEED_LIMIT): Promise<BrowseCard[]> {
+export async function fetchBrowseCards(offset = 0, limit = 1000): Promise<BrowseCard[]> {
   const supabase = await createClient();
 
   // biome-ignore lint/suspicious/noExplicitAny: stub generated types
@@ -489,8 +499,7 @@ export async function fetchBrowseCardsByCommunitySlug(
     )
     .eq('status', 'active')
     .eq('community_id', community.id)
-    .order('created_at', { ascending: false })
-    .limit(FEED_LIMIT)) as { data: ListingRow[] | null };
+    .order('created_at', { ascending: false })) as { data: ListingRow[] | null };
 
   return assembleCards(rawListings ?? [], supabase);
 }

@@ -4,6 +4,62 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-17 23:10 UTC — Phase 113: uncap browse feed — grid → swipe deep-link on tail listings was opening the wrong home
+
+**Report**: `qiaoxux` — "listing grid view when I click 5122 Lower Creek
+Street it goes to a feed for different home!"
+
+**Root cause**: `FEED_LIMIT = 30` in `lib/feed/browse-cards.ts`. Post FMLS
+import there are hundreds of active listings. `/browse` (grid) already
+patched around this by calling `fetchBrowseCards(0, 500)` (Phase 111,
+`f7b6028`), but `/browse/feed` still used the default `FEED_LIMIT=30`.
+Grid links out to `?start=<listing-id>` and `feed/page.tsx:58` does
+`cards.findIndex((c) => c.listing.id === start)` — for any card past
+position 30 in the grid, findIndex returned -1, `initialIndex` silently
+fell back to 0, and the swipe opened on whatever listing happened to be
+first in the 30-card window. That's the "different home" the user saw.
+
+The 30-cap is a leftover from the pre-grid-pivot world (Phase 9) when
+`/browse` itself was the swipe feed and lazy-paged in 30s. Grid-first
+pivot made it obsolete; we just never removed it. Owner: "取消这个 limit,
+everywhere".
+
+**Fix**: `lib/feed/browse-cards.ts`
+1. Removed `const FEED_LIMIT = 30` (replaced with an explanatory
+   comment).
+2. `fetchBrowseCards(offset = 0, limit = 1000)` — new default matches
+   PostgREST's built-in row ceiling; every SSR call now returns the
+   full active-listing set in one shot.
+3. `fetchBrowseCardsByCommunitySlug`: dropped `.limit(FEED_LIMIT)` — a
+   community should never be big enough to hit the 1000-row ceiling.
+
+Grid call site simplified: `app/(public)/browse/page.tsx` —
+`fetchBrowseCards(0, 500)` → `fetchBrowseCards()` (now takes the new
+default). Other SSR consumers (`/browse/feed`, `/v/fmls/[sourceId]`,
+`/v/[agentSlug]/[listingSlug]`) already call `fetchBrowseCards()` bare
+and inherit the new default with no code change.
+
+Left `/api/browse/feed` untouched — that route still paginates because
+`BrowseFeed` (client) fetches the next page as the swipe nears the
+tail. That page size is a client-side chunk (30/req, capped at 60), not
+a feature-level cap. SSR ships the whole feed, so exhaustion happens on
+the first API call (`offset >= total → 0 rows → done=true`). One
+harmless extra roundtrip; kept for now because ripping out the append
+path is orthogonal to this bug.
+
+**Verify**: `npx tsc --noEmit` clean. Next: Vercel preview, click
+5122 Lower Creek from the grid, confirm the swipe feed lands on that
+listing (not on a random head-of-list home).
+
+**Learnings**: any time a component reads server-side data via
+`findIndex(id)`, that data must come from the same fetcher as whatever
+produced the id. Grid and feed diverged for 3 weeks (Phase 111 patched
+grid without patching feed). Follow-up worth considering: have
+`/browse/feed` accept `?slug=<agent>/<listing>` and load by slug
+directly, so the swipe view is a real deep-linkable route instead of
+an index lookup into a shared cache. Not doing that now — surgical
+fix only.
+
 ## 2026-07-17 22:35 UTC — Phase 112.2: remove dashed progress bar from listing-nearby carousel
 
 **Report**: `qiaoxux` — "同时去掉 listing nearby 上面的虚线 只显示数字来看进度就行 太乱了".
