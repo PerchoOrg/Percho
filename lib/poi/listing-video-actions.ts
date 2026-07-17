@@ -132,7 +132,6 @@ export async function generateListingBucketVideo(
     .select("poi_id, intent_bucket, status, distance_m")
     .eq("listing_id", listingId)
     .eq("intent_bucket", bucket)
-    .eq("status", "approved")
     .in("poi_id", poiIds)) as {
     data: Array<{
       poi_id: string;
@@ -475,7 +474,6 @@ export async function getListingBucketEligiblePhotoCount(
     .select("poi_id")
     .eq("listing_id", listingId)
     .eq("intent_bucket", bucket)
-    .eq("status", "approved")
     .in("poi_id", poiIds)) as { data: Array<{ poi_id: string }> | null };
   const bucketPoiSet = new Set((bucketPois ?? []).map((p) => p.poi_id));
 

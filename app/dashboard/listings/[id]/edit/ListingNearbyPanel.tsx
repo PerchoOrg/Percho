@@ -34,7 +34,6 @@ import {
   fetchPhotosForListingPoi,
   loadNearbyPoisForListing,
   setListingPhotoStatus,
-  setListingPoiStatus,
   type NearbyPoiForListing,
 } from '@/lib/poi/listing-actions';
 import {
@@ -211,17 +210,6 @@ export function ListingNearbyPanel({
     })();
   };
 
-  const handlePoiDecision = (poiId: string, approved: boolean) => {
-    startTransition(async () => {
-      try {
-        await setListingPoiStatus(listingId, poiId, approved ? 'approved' : 'rejected');
-        await refresh();
-      } catch (err) {
-        setNotice(`Decision failed: ${(err as Error).message}`);
-      }
-    });
-  };
-
   const handlePhotoDecision = (poiPhotoId: string, approved: boolean) => {
     // Optimistic update: flip the photo's status locally so the lightbox
     // reacts instantly. Fire the server action without startTransition so
@@ -323,7 +311,6 @@ export function ListingNearbyPanel({
                         row={row}
                         busy={busyPois.has(row.poi_id) || pending}
                         onFetchPhotos={() => handleFetchPhotos(row.poi_id)}
-                        onDecide={(approved) => handlePoiDecision(row.poi_id, approved)}
                         onPhotoDecide={handlePhotoDecision}
                         storageBase={supabaseStorageBase}
                         bucket={photoBucket}
@@ -357,7 +344,6 @@ function PoiRow({
   row,
   busy,
   onFetchPhotos,
-  onDecide,
   onPhotoDecide,
   storageBase,
   bucket,
@@ -365,7 +351,6 @@ function PoiRow({
   row: NearbyPoiForListing;
   busy: boolean;
   onFetchPhotos: () => void;
-  onDecide: (approved: boolean) => void;
   onPhotoDecide: (poiPhotoId: string, approved: boolean) => void;
   storageBase: string;
   bucket: string;
@@ -398,17 +383,6 @@ function PoiRow({
             </p>
           ) : null}
           <div className="mt-1 flex items-center gap-2 text-xs text-muted">
-            <span
-              className={
-                row.status === 'approved'
-                  ? 'text-green-400'
-                  : row.status === 'rejected'
-                    ? 'text-red-400'
-                    : 'text-muted'
-              }
-            >
-              {row.status}
-            </span>
             {photoCount > 0 ? (
               <button
                 type="button"
@@ -424,24 +398,6 @@ function PoiRow({
         </div>
 
         <div className="flex shrink-0 items-center gap-1">
-          <button
-            type="button"
-            aria-label="Approve POI"
-            onClick={() => onDecide(true)}
-            disabled={busy}
-            className="rounded p-1 text-muted hover:bg-surface hover:text-green-400 disabled:opacity-40"
-          >
-            <Check size={16} />
-          </button>
-          <button
-            type="button"
-            aria-label="Reject POI"
-            onClick={() => onDecide(false)}
-            disabled={busy}
-            className="rounded p-1 text-muted hover:bg-surface hover:text-red-400 disabled:opacity-40"
-          >
-            <X size={16} />
-          </button>
           <button
             type="button"
             aria-label={photoCount > 0 ? 'Sync photos' : 'Fetch photos'}

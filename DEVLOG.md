@@ -4,6 +4,26 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-17 16:00 UTC — POI approval derived from photo approvals (button removed)
+
+**Objective**: Owner asked to remove the explicit "Approve POI / Reject POI" buttons. Semantic: if any photo inside a POI is approved, the POI is approved. No separate gate.
+
+**Fact check first**: video pipeline was already photo-gated. `listing_poi_photos.status = 'approved'` (`lib/poi/listing-video-actions.ts:87`) is the primary filter — a POI with zero approved photos never contributed to a video regardless of `listing_pois.status`. The `listing_pois.status = 'approved'` filter later in the same file (`:135`, `:478`) and the mirror in `community-video-actions.ts` (`:135`, `:495`) was redundant: no approved photos ⇒ empty photo pool ⇒ POI never reached that filter anyway. Removing the button therefore does not change video output for any POI that had at least one approved photo.
+
+**Actions**:
+- `app/dashboard/listings/[id]/edit/ListingNearbyPanel.tsx`: dropped `setListingPoiStatus` import, `handlePoiDecision`, `onDecide` prop wire-through, the Approve/Reject POI buttons in `PoiRow`, and the `row.status` pill. Kept the `(N ✓)` approved-photo counter as the visible signal.
+- `app/dashboard/communities/[id]/CommunityNearbyPanel.tsx`: same treatment, mirror.
+- `lib/poi/listing-video-actions.ts`, `lib/poi/community-video-actions.ts`: dropped the redundant `.eq("status", "approved")` filter on `{listing,community}_pois` in both the pool query (`generate…`) and the eligible-count helper (`getListingBucketEligiblePhotoCount` / community equivalent). Bucket + POI membership still filtered; approval derives from the photo query above.
+
+**Decisions**:
+- A1 (no escape hatch): to skip a POI, reject its photos one by one. No "Hide POI" toggle — keeps the UI simple.
+- B1 (no backfill): legacy `listing_pois.status = 'approved'` rows with zero approved photos silently stop counting. Zero-user stage, not worth compat code.
+- Left the `listing_pois.status` / `community_pois.status` columns and the `setListingPoiStatus` / `setCommunityPoiStatus` server actions in place (unused). Cleaner cleanup can happen in a later migration if we want.
+
+**Verification**: `npx tsc --noEmit` clean.
+
+**Next steps**: after Vercel preview, spot-check a listing edit page — POI row should now show only Fetch/Sync icon + expandable photo strip; no green check / red X on the row itself.
+
 ## 2026-07-17 15:30 UTC — Nearby POI Fetch button → shows Sync icon when photos already exist
 
 **Objective**: Owner asked "if a POI already has photos, show Sync" — the same button icon (📷+) was displayed whether the POI had never been fetched or had 20 photos already, making it easy to mistakenly assume clicking re-costs API tokens.

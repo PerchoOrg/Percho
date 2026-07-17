@@ -132,7 +132,6 @@ export async function generateCommunityBucketVideo(
     .select("poi_id, intent_bucket, status, distance_m")
     .eq("community_id", communityId)
     .eq("intent_bucket", bucket)
-    .eq("status", "approved")
     .in("poi_id", poiIds)) as {
     data: Array<{
       poi_id: string;
@@ -492,7 +491,6 @@ export async function getCommunityBucketEligiblePhotoCount(
     .select("poi_id")
     .eq("community_id", communityId)
     .eq("intent_bucket", bucket)
-    .eq("status", "approved")
     .in("poi_id", poiIds)) as { data: Array<{ poi_id: string }> | null };
   const bucketPoiSet = new Set((bucketPois ?? []).map((p) => p.poi_id));
 

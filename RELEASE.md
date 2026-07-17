@@ -4,6 +4,19 @@
 > Historical entries below preserve the original name in-place — release notes
 > are a record of what was shipped under the product's name at the time.
 
+## v99.5 — Nearby POI: no more separate "Approve POI" button — photo approvals speak for themselves (2026-07-17)
+
+**✨ Improvements**
+
+The green-check / red-X buttons on each Nearby POI row are gone. Approving one or more photos inside a POI now implicitly counts as approving that POI — that's what the video pipeline was actually using anyway, and having two buttons for one decision was creating confusion about which one mattered.
+
+What changes visibly:
+- POI row now shows just the Fetch/Sync icon plus the expandable photo strip.
+- The `(N ✓)` counter next to "Show N photos" is the source of truth for how many photos survived review for that POI.
+- To keep a POI out of videos, reject its photos instead of the POI.
+
+Applies to both the Listing edit → Media → Nearby POIs panel and the Community edit → Nearby POIs panel.
+
 ## v99.4 — Nearby POI: Fetch button becomes Sync once photos are cached (2026-07-17)
 
 The Fetch (📷+) button on each Nearby POI row now switches to a Sync (🔄) icon as soon as that POI has photos in the library. Behavior is unchanged — the click has always been idempotent under the hood (cached photos are re-used, already-tagged photos skip Anthropic vision) — but the icon now makes it obvious you've been here already, so you don't wonder whether tapping it a second time costs another round of tokens.
