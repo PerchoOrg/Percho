@@ -67,7 +67,8 @@ export function CommunityMediaPanel({
   canSetCover,
 }: Props) {
   const router = useRouter();
-  const inputRef = useRef<HTMLInputElement | null>(null);
+  const videoInputRef = useRef<HTMLInputElement | null>(null);
+  const photoInputRef = useRef<HTMLInputElement | null>(null);
   const photoRef = useRef<CommunityPhotoPanelHandle | null>(null);
   const [category, setCategory] = useState<CommunityVideoCategoryId>('walk_the_block');
   const [pendingVideos, setPendingVideos] = useState<PendingVideoUpload[]>([]);
@@ -106,25 +107,22 @@ export function CommunityMediaPanel({
     ...(typeof lng === 'number' ? { lng } : {}),
   };
 
-  const handlePicked = useCallback((files: FileList | File[]) => {
+  const handlePickedVideos = useCallback((files: FileList | File[]) => {
     setUnsupportedNotice(null);
     const arr = Array.from(files);
-    const images: File[] = [];
     const vids: File[] = [];
     const skipped: string[] = [];
     for (const f of arr) {
-      if (f.type.startsWith('image/')) images.push(f);
-      else if (f.type.startsWith('video/')) vids.push(f);
+      if (f.type.startsWith('video/')) vids.push(f);
       else skipped.push(f.name);
     }
     if (skipped.length > 0) {
       setUnsupportedNotice(
-        `Skipped ${skipped.length} unsupported file(s): ${skipped.slice(0, 3).join(', ')}${
+        `Skipped ${skipped.length} non-video file(s): ${skipped.slice(0, 3).join(', ')}${
           skipped.length > 3 ? '…' : ''
         }`,
       );
     }
-    if (images.length > 0) photoRef.current?.addFiles(images);
     if (vids.length > 0) {
       setPendingVideos((prev) => [
         ...prev,
@@ -134,6 +132,25 @@ export function CommunityMediaPanel({
         })),
       ]);
     }
+  }, []);
+
+  const handlePickedPhotos = useCallback((files: FileList | File[]) => {
+    setUnsupportedNotice(null);
+    const arr = Array.from(files);
+    const images: File[] = [];
+    const skipped: string[] = [];
+    for (const f of arr) {
+      if (f.type.startsWith('image/')) images.push(f);
+      else skipped.push(f.name);
+    }
+    if (skipped.length > 0) {
+      setUnsupportedNotice(
+        `Skipped ${skipped.length} non-image file(s): ${skipped.slice(0, 3).join(', ')}${
+          skipped.length > 3 ? '…' : ''
+        }`,
+      );
+    }
+    if (images.length > 0) photoRef.current?.addFiles(images);
   }, []);
 
   const handleVideoUploaded = useCallback(
@@ -152,33 +169,32 @@ export function CommunityMediaPanel({
 
   return (
     <section className="rounded-2xl border border-line bg-surface p-4 sm:p-6">
-      {/* Phase 101g (2026-07-17): manual Category selection removed — uploads
-          default to `walk_the_block`. Category is still passed to the child
-          panels so the DB tag column stays populated; admin can retag later
-          from /admin if needed. */}
-      <div className="mb-4">
-        <input
-          ref={inputRef}
-          type="file"
-          accept="image/*,video/*"
-          multiple
-          className="hidden"
-          onChange={(e) => {
-            if (e.target.files && e.target.files.length > 0) {
-              handlePicked(e.target.files);
-              e.target.value = '';
-            }
-          }}
-        />
-        <button
-          type="button"
-          onClick={() => inputRef.current?.click()}
-          className="inline-flex items-center gap-2 rounded-md border border-line bg-bg px-4 py-2 text-ink2 text-sm hover:border-bronze hover:text-ink"
-        >
-          <Upload size={16} aria-hidden="true" />
-          Click to upload
-        </button>
-      </div>
+      <input
+        ref={videoInputRef}
+        type="file"
+        accept="video/*"
+        multiple
+        className="hidden"
+        onChange={(e) => {
+          if (e.target.files && e.target.files.length > 0) {
+            handlePickedVideos(e.target.files);
+            e.target.value = '';
+          }
+        }}
+      />
+      <input
+        ref={photoInputRef}
+        type="file"
+        accept="image/*"
+        multiple
+        className="hidden"
+        onChange={(e) => {
+          if (e.target.files && e.target.files.length > 0) {
+            handlePickedPhotos(e.target.files);
+            e.target.value = '';
+          }
+        }}
+      />
       {unsupportedNotice ? (
         <p className="mb-3 text-[11px] text-red-300">{unsupportedNotice}</p>
       ) : null}
@@ -199,12 +215,20 @@ export function CommunityMediaPanel({
         </div>
       ) : null}
 
-      {/* Stacked sub-sections, listing-Media parity. Videos: flat row list with
-          Set-as-cover + Delete (Phase 50.9 trim). Photos: grid w/ ⭐ Set-as-cover
-          + 🗑 Delete on hover. */}
+      {/* Stacked sub-sections. Each header hosts its own upload button. */}
       <div className="space-y-6">
         <div>
-          <h3 className="mb-2 text-sm font-semibold text-ink2">Videos ({videos.length})</h3>
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <h3 className="text-sm font-semibold text-ink2">Videos ({videos.length})</h3>
+            <button
+              type="button"
+              onClick={() => videoInputRef.current?.click()}
+              className="inline-flex items-center gap-2 rounded-md border border-line bg-bg px-3 py-1.5 text-ink2 text-xs hover:border-bronze hover:text-ink"
+            >
+              <Upload size={14} aria-hidden="true" />
+              Upload
+            </button>
+          </div>
           <CommunityVideoManageList
             communityId={communityId}
             videos={videos}
@@ -213,7 +237,17 @@ export function CommunityMediaPanel({
           />
         </div>
         <div className="border-t border-line pt-6">
-          <h3 className="mb-2 text-sm font-semibold text-ink2">Photos ({photos.length})</h3>
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <h3 className="text-sm font-semibold text-ink2">Photos ({photos.length})</h3>
+            <button
+              type="button"
+              onClick={() => photoInputRef.current?.click()}
+              className="inline-flex items-center gap-2 rounded-md border border-line bg-bg px-3 py-1.5 text-ink2 text-xs hover:border-bronze hover:text-ink"
+            >
+              <Upload size={14} aria-hidden="true" />
+              Upload
+            </button>
+          </div>
           <CommunityPhotoPanel
             ref={photoRef}
             communityId={communityId}
