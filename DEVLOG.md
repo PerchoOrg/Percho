@@ -4,6 +4,68 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-17 09:00 UTC — Phase 105: admin Music tab — add + delete
+
+**Objective**: Owner follow-up on Phase 104: "add add and delete function to
+music tab." Operators should be able to upload new tracks and remove existing
+ones directly from `/admin/pipeline/bgm`, no SSH required.
+
+**Actions**:
+- Extracted BGM constants + helpers into `lib/bgm/storage.ts` (bucket name,
+  vibe list, per-vibe copy, public URL builder, title prettifier, filename
+  slugifier). The route handlers, the server page, and the client section all
+  import from here — single source of truth.
+- Added `POST /api/admin/bgm/upload` — multipart, admin-gated, service-role
+  Storage write. Slugifies each uploaded filename and prefixes it with the
+  next `NN-` number across the whole bucket (matches the existing
+  `07-amazing-plan.mp3` convention). Rejects non-audio and >20MB files.
+  Returns per-file result so partial-success surfaces the first error string.
+- Added `POST /api/admin/bgm/delete` — single-track removal, path validated
+  against the known vibe list before `.remove()` is called (defensive: an
+  admin cookie can't be used to delete outside `bgm/<vibe>/`).
+- Rewrote `/admin/pipeline/bgm/page.tsx` — Storage is now canonical for the
+  admin UI. Server component lists each vibe folder via the service-role
+  client (public bucket has no anon list policy). Manifest.json is retained
+  strictly for the render worker's local cache.
+- Added `BgmVibeSection.tsx` client component — per-section **Upload** button
+  (hidden file input), per-row trash icon with inline confirm/cancel,
+  `router.refresh()` after every mutation so the server re-lists Storage.
+- Added `scripts/render-worker/pull-bgm.sh` — one-shot rsync-style helper for
+  the render host. Lists Storage per vibe, `curl`-downloads missing/changed
+  mp3s, deletes local files no longer in Storage, then calls
+  `upload.py --manifest-only` to rebuild `manifest.json` from disk truth.
+- Added `--manifest-only` flag to `upload.py` (regenerate manifest without
+  hitting Storage) — used by `pull-bgm.sh`.
+
+**Rationale for Storage-canonical**: two-way sync would need a queue.
+One-way (admin → Storage → `pull-bgm.sh` → worker disk) keeps the worker's
+existing fast local-file read path and adds a single command to close the
+loop. Full worker refactor to stream from Storage is a separate phase — not
+worth the render-latency tradeoff for a library that changes quarterly.
+
+**Files touched**:
+- `lib/bgm/storage.ts` (new, 3.1k) — shared constants + helpers
+- `app/api/admin/bgm/upload/route.ts` (new, 3.7k) — multipart upload
+- `app/api/admin/bgm/delete/route.ts` (new, 1.4k) — single delete
+- `app/admin/pipeline/bgm/page.tsx` (rewritten, ~3k) — Storage-canonical list
+- `app/admin/pipeline/bgm/BgmVibeSection.tsx` (new, ~6.6k) — client actions
+- `scripts/render-worker/pull-bgm.sh` (new, ~3.4k) — Storage → worker sync
+- `scripts/upload-bgm/upload.py` — added `--manifest-only` flag
+
+**Verified**: `npx tsc --noEmit` clean.
+
+**Next steps**:
+- After add/delete via admin UI, someone still has to run `pull-bgm.sh` on
+  the render host before the next render — otherwise the worker plays a
+  now-stale library. Long-term fix would be to have the worker pull-on-boot
+  or fetch a track URL at render-time instead of caching to disk. Not worth
+  it until library edits happen more than monthly.
+- No worker restart needed for delete-only (worker rebuilds its file
+  listing at process start; systemd only restarts on new render job pickup
+  when it re-reads the dir). Confirm on next real add.
+
+---
+
 ## 2026-07-17 06:30 UTC — Phase 104: admin console — Music tab
 
 **Objective**: Give operators a place inside `/admin` to see and audition every
