@@ -130,6 +130,39 @@ async function fetchAroundListing(
     pois = po.data ?? [];
   }
 
+  // Phase 101 (2026-07-16): listings without a covering community still get
+  // nearby videos via listing-scoped bucket generation. Union those into
+  // communityVideos so the card builder sees them as normal category cards.
+  // We only union when the listing has no community_id — mixing both would
+  // double up the same POIs (community wins because it aggregates across
+  // siblings).
+  if (!listing.community_id) {
+    const { data: lgv } = (await supabase
+      .from('generated_videos')
+      .select('id, cf_stream_uid, intent_bucket, narrative')
+      .eq('listing_id', listing.id)
+      .eq('scope', 'listing_intent_bucket')
+      .eq('status', 'ready')) as {
+      data: Array<{
+        id: string;
+        cf_stream_uid: string | null;
+        intent_bucket: string | null;
+        narrative: { title?: string; voiceover?: string } | null;
+      }> | null;
+    };
+    communityVideos = (lgv ?? [])
+      .filter((r) => r.cf_stream_uid)
+      .map((r) => ({
+        id: r.id,
+        cf_video_id: r.cf_stream_uid as string,
+        kind: 'poi',
+        title: r.narrative?.title ?? null,
+        category: null,
+        school_id: null,
+        poi_id: null,
+      }));
+  }
+
   return {
     agent,
     listing,

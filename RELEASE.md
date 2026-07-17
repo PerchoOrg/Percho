@@ -4,6 +4,24 @@
 > Historical entries below preserve the original name in-place — release notes
 > are a record of what was shipped under the product's name at the time.
 
+## v98.0 — 2026-07-16 — Every listing now shows nearby videos
+
+Nearby videos (Schools, Dining, Outdoor, Fitness, etc.) used to require a
+listing to be part of a curated neighborhood. Homes that fell outside
+any neighborhood — a growing set as we bring on more agents — showed
+none of that context. Now every listing has its own nearby: the
+platform discovers POIs within ~3 km of the home itself, ranks them by
+distance, and generates the same bucket videos buyers see for
+neighborhood-listed homes.
+
+For agents there's a new **Nearby** tab in the listing editor with the
+same POI triage, photo approval and video-generation controls the
+neighborhood editor already has. Photos and POI data stay pooled across
+the whole platform so nothing is fetched or AI-tagged twice.
+
+For buyers, the change is invisible in the best way: nearby video cards
+appear on every published listing.
+
 ## v97.0 — 2026-07-16 — Tour videos now show a caption for every photo
 
 Home tour videos used to be silent visuals — photos panning past with no
