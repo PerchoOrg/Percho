@@ -4,6 +4,41 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-17 21:00 UTC — Phase 111: Nearby button shows for community-less listings
+
+**Report**: `qiaoxux` — "还是看不到 nearby 里的视频 5122 Lower Creek Street"
+after Phase 110 (RLS fix) shipped. Buyer opens `/v/royxue812/5122-lower-creek-street`,
+sees hero video, but no Nearby chip and no way to reach the 5 ready POI videos.
+
+**Root cause**: BrowseFeed only renders the 🏘️ Nearby ActionButton when
+`active?.community` is truthy (BrowseFeed.tsx:1901, Phase 34b). This listing has
+`community_id = null` in the DB — Phase 101 moved the nearby pipeline to be
+listing-scoped, so `categoryVideos` correctly hydrates to 5 entries in the
+initial payload, but the button gate never changed. Also `sheetData` returns
+null when no community, so even if the button were shown, tapping it would
+open nothing.
+
+**Fix**: two-part UI patch to BrowseFeed.tsx.
+1. Button predicate: `active?.community || (active && active.categoryVideos.length > 0)`.
+   Badge count falls back to `categoryVideos.length` when no community.
+2. `sheetData` builder: when card has no community but has nearby videos,
+   synthesize a minimal `CommunitySheetData` using the listing's own address
+   (`name: 'Nearby'`, city/state from listing). CommunitySheet renders the
+   preview strip identically; CommunityCarousel doesn't care.
+
+**Verified**: `tsc --noEmit` clean. Data confirmed via anon curl — Phase 110
+RLS is doing its job (5 rows visible). UI fix needs a Vercel deploy to verify
+in production.
+
+**Files**: app/(public)/browse/_components/BrowseFeed.tsx
+
+**Learnings**: Phase 101 shifted the anchor from community → listing, but the
+V1 buyer chrome (Phase 34b) still assumed community was the only nearby
+entrypoint. When you move a data anchor, grep for every UI gate that reads
+the old anchor. Community and listing-nearby now share the same button /
+sheet / carousel path with parallel truthiness — worth revisiting once the
+community-nearby pipeline is fully deprecated.
+
 ## 2026-07-17 19:30 UTC — Phase 110: buyers can now see nearby videos (RLS fix)
 
 **Report from owner:** "还是看不到 nearby 里的视频 5122 Lower Creek Street" —

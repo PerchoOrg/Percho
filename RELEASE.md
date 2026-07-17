@@ -4,6 +4,16 @@
 > Historical entries below preserve the original name in-place — release notes
 > are a record of what was shipped under the product's name at the time.
 
+## v99.8 — Nearby button now shows for listings without a community (2026-07-17)
+
+**🐛 Bug Fixes**
+
+For listings that aren't yet part of a "community" grouping in our system, the Nearby button was missing from the right rail on the public listing page — even when those listings had 5+ generated Nearby videos ready to play. Buyers had no way to reach that content.
+
+What changes visibly:
+- Every listing with generated Nearby videos now shows the 🏘️ Nearby button on the right rail with a red count badge, regardless of whether it belongs to a community.
+- Tapping the button opens the same neighborhood sheet + fullscreen carousel used on community-backed listings.
+
 ## v99.7 — Nearby videos now actually visible to buyers (2026-07-17)
 
 **🐛 Bug Fixes**
