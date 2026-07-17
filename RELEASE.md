@@ -4,6 +4,15 @@
 > Historical entries below preserve the original name in-place — release notes
 > are a record of what was shipped under the product's name at the time.
 
+## v99.7 — Nearby videos now actually visible to buyers (2026-07-17)
+
+**🐛 Bug Fixes**
+
+Even after the previous release, buyers browsing `/v/…` still couldn't see any Nearby videos — the code path was right but a database permission was silently hiding the rows from anonymous visitors. Only the signed-in owning agent could see them.
+
+What changes visibly:
+- Nearby video carousel now renders for logged-out visitors on every published listing that has generated Nearby content (confirmed on 5122 Lower Creek Street).
+
 ## v99.6 — Nearby videos now show up on the listing page (2026-07-17)
 
 **🐛 Bug Fixes**
