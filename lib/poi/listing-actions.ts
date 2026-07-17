@@ -381,9 +381,30 @@ export type NearbyPoiForListing = {
 export async function loadNearbyPoisForListing(
   listingId: string,
 ): Promise<NearbyPoiForListing[]> {
-  await requireOwnedListing(listingId);
+  // Admin bypass: /admin/pipeline/listing-nearby/[id] is reachable by any
+  // is_admin=true agent, but the listing_pois SELECT policy scopes rows to
+  // the owning agent. Without a bypass the panel loads empty and the
+  // reviewer can't pick photos. See DEVLOG 2026-07-17.
+  const userClient = await createClient();
+  const {
+    data: { user },
+  } = await userClient.auth.getUser();
+  if (!user) throw new Error("not authenticated");
+
   // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const supabase: any = await createClient();
+  const { data: agent } = (await (userClient as any)
+    .from("agents")
+    .select("is_admin")
+    .eq("user_id", user.id)
+    .maybeSingle()) as { data: { is_admin: boolean } | null };
+
+  const isAdmin = !!agent?.is_admin;
+  if (!isAdmin) {
+    await requireOwnedListing(listingId);
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
+  const supabase: any = isAdmin ? createServiceClient() : userClient;
 
   const { data: rows, error } = (await supabase
     .from("listing_pois")
