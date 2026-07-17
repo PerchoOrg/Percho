@@ -7,7 +7,6 @@
 import { ListingNearbyPanel } from '@/app/dashboard/listings/[id]/edit/ListingNearbyPanel';
 import { loadNearbyPoisForListing } from '@/lib/poi/listing-actions';
 import { createServiceClient } from '@/lib/supabase/server';
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
 export const dynamic = 'force-dynamic';
@@ -46,19 +45,8 @@ export default async function AdminListingNearbyPage({
 
   return (
     <div className="space-y-4">
-      <div className="text-ink2 text-sm">
-        <Link href="/admin/pipeline/listing-nearby" className="hover:text-ink">
-          ← Listing Nearby
-        </Link>
-      </div>
-
       <header className="rounded-2xl border border-line bg-surface p-4 sm:p-5">
         <h1 className="text-xl font-semibold">{listing.address}</h1>
-        <p className="text-ink2 mt-1 text-sm">
-          {listing.city}, {listing.state} · {listing.status}
-          {listing.community_id ? ' · community-scoped' : ' · no community'}
-          {listing.agents?.name && ` · agent ${listing.agents.name}`}
-        </p>
       </header>
 
       <section className="rounded-2xl border border-line bg-surface p-4 sm:p-5">

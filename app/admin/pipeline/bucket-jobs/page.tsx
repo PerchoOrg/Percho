@@ -52,13 +52,6 @@ export default async function BucketJobsPage() {
 
   return (
     <div className="space-y-4">
-      <header>
-        <h1 className="text-2xl font-semibold">Bucket Video Jobs</h1>
-        <p className="text-ink2 mt-1 text-sm">
-          Nearby bucket renders across every listing + community. The render worker polls this table
-          every {process.env.RENDER_WORKER_POLL_SEC ?? '5'} s.
-        </p>
-      </header>
       <BucketJobsTable rows={rows} />
     </div>
   );

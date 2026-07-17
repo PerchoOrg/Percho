@@ -58,22 +58,14 @@ export default async function PoiLibraryPage() {
 
   return (
     <div className="space-y-4">
-      <header>
-        <h1 className="text-2xl font-semibold">POI Library</h1>
-        <p className="text-ink2 mt-1 text-sm">
-          Global `pois` table — deduped by{' '}
-          <code className="font-mono text-xs">google_place_id</code>. Every listing / community
-          references POIs by id, so the photo binaries and AI tags are fetched exactly once.
-        </p>
-        <div className="mt-3 flex gap-4 text-sm text-ink2">
-          <span>
-            <b className="text-ink">{count ?? 0}</b> POIs
-          </span>
-          <span>
-            <b className="text-ink">{photoAgg.count ?? 0}</b> photos
-          </span>
-        </div>
-      </header>
+      <div className="flex gap-4 text-sm text-ink2">
+        <span>
+          <b className="text-ink">{count ?? 0}</b> POIs
+        </span>
+        <span>
+          <b className="text-ink">{photoAgg.count ?? 0}</b> photos
+        </span>
+      </div>
       <PoiLibraryTable rows={rows} />
     </div>
   );

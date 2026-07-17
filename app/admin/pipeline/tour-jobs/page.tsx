@@ -41,7 +41,10 @@ async function loadListings(): Promise<TourJobRow[]> {
   if (ids.length === 0) return [];
 
   const [photoRes, videoRes] = await Promise.all([
-    supabase.from('listing_photos').select('listing_id').in('listing_id', ids) as unknown as Promise<{
+    supabase
+      .from('listing_photos')
+      .select('listing_id')
+      .in('listing_id', ids) as unknown as Promise<{
       data: PhotoRow[] | null;
     }>,
     supabase
@@ -88,13 +91,6 @@ export default async function TourJobsIndex() {
   const rows = await loadListings();
   return (
     <div className="space-y-4">
-      <header>
-        <h1 className="text-2xl font-semibold">Home Tour</h1>
-        <p className="text-ink2 mt-1 text-sm">
-          Per-listing photo + tour video hub. Click any listing to see every photo and video, and
-          to trigger a fresh Ken Burns walkthrough render.
-        </p>
-      </header>
       <TourJobsTable rows={rows} />
     </div>
   );

@@ -64,13 +64,6 @@ export default async function CommunityNearbyIndex() {
   const rows = await loadCommunities();
   return (
     <div className="space-y-4">
-      <header>
-        <h1 className="text-2xl font-semibold">Neighborhood Nearby</h1>
-        <p className="text-ink2 mt-1 text-sm">
-          Per-community POI discovery + bucket videos. Shared by every listing inside the
-          community — POIs are fetched around the subdivision entrance.
-        </p>
-      </header>
       <CommunityNearbyTable rows={rows} />
     </div>
   );
