@@ -4,15 +4,17 @@
  * the agent hub. Admin-scoped now.
  */
 
-import Link from 'next/link';
-import { notFound } from 'next/navigation';
-import { createServiceClient } from '@/lib/supabase/server';
 import { ListingNearbyPanel } from '@/app/dashboard/listings/[id]/edit/ListingNearbyPanel';
 import { loadNearbyPoisForListing } from '@/lib/poi/listing-actions';
+import { createServiceClient } from '@/lib/supabase/server';
+import Link from 'next/link';
+import { notFound } from 'next/navigation';
 
 export const dynamic = 'force-dynamic';
 
-interface Params { id: string }
+interface Params {
+  id: string;
+}
 
 export default async function AdminListingNearbyPage({
   params,
@@ -27,17 +29,15 @@ export default async function AdminListingNearbyPage({
     .select('id, address, city, state, status, community_id, agents(name, slug)')
     .eq('id', id)
     .maybeSingle()) as {
-    data:
-      | {
-          id: string;
-          address: string;
-          city: string;
-          state: string;
-          status: string;
-          community_id: string | null;
-          agents: { name: string; slug: string } | null;
-        }
-      | null;
+    data: {
+      id: string;
+      address: string;
+      city: string;
+      state: string;
+      status: string;
+      community_id: string | null;
+      agents: { name: string; slug: string } | null;
+    } | null;
   };
 
   if (!listing) notFound();

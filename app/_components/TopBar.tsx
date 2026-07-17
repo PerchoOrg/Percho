@@ -120,6 +120,11 @@ function SectionTitle({ pathname }: { pathname: string }) {
     // The bottom-nav tab is "Neighborhood"; the middle slot on the
     // top-level page keeps the same visual verb the buyer expects.
     title = 'Explore';
+  } else if (pathname === '/admin' || pathname.startsWith('/admin/')) {
+    // Phase 102 (2026-07-17): admin label lives in the top bar middle
+    // slot — the /admin layout used to render a separate standalone
+    // "Admin" band beneath the TopBar; removed per owner.
+    title = 'ADMIN';
   }
   if (!title) return null;
   return (

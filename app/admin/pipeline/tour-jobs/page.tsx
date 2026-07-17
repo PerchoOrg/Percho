@@ -3,8 +3,8 @@
  * (listing_videos table).
  */
 
-import Link from 'next/link';
 import { createServiceClient } from '@/lib/supabase/server';
+import Link from 'next/link';
 
 export const dynamic = 'force-dynamic';
 
@@ -54,9 +54,7 @@ export default async function TourJobsPage({
             key={s}
             href={`/admin/pipeline/tour-jobs?status=${s}`}
             className={`rounded-full border px-3 py-1 capitalize ${
-              status === s
-                ? 'border-ink bg-ink text-bg'
-                : 'border-line text-ink2 hover:text-ink'
+              status === s ? 'border-ink bg-ink text-bg' : 'border-line text-ink2 hover:text-ink'
             }`}
           >
             {s}
@@ -102,9 +100,7 @@ export default async function TourJobsPage({
                 <td className="p-3 text-right text-ink2">
                   {r.duration_sec ? `${r.duration_sec}s` : '—'}
                 </td>
-                <td className="p-3 text-ink2 text-xs">
-                  {new Date(r.created_at).toLocaleString()}
-                </td>
+                <td className="p-3 text-ink2 text-xs">{new Date(r.created_at).toLocaleString()}</td>
                 <td className="p-3 font-mono text-xs">
                   {r.cf_video_id ? r.cf_video_id.slice(0, 10) : '—'}
                 </td>

@@ -81,10 +81,13 @@ export async function generateListingBucketVideo(
   const { data: approvedPhotos, error: photosErr } = (await admin
     .from("listing_poi_photos")
     .select(
-      "poi_photo_id, poi_photos!inner(id, poi_id, storage_path, attribution, width_px, height_px, applicable_buckets, ai_score, tagged_at)",
+      "poi_photo_id, poi_photos!inner(id, poi_id, storage_path, attribution, width_px, height_px, applicable_buckets, ai_score, tagged_at, status)",
     )
     .eq("listing_id", listingId)
-    .eq("status", "approved")) as {
+    .eq("status", "approved")
+    // Phase 103: skip photos an admin globally rejected (bad crop, wrong
+    // subject, etc.). Per-scope approval remains the primary curator.
+    .neq("poi_photos.status", "rejected")) as {
     data:
       | Array<{
           poi_photo_id: string;
