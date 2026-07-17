@@ -385,9 +385,29 @@ export type NearbyPoiForCommunity = {
 export async function loadNearbyPoisForCommunity(
   communityId: string,
 ): Promise<NearbyPoiForCommunity[]> {
-  await requireAuthedCommunity(communityId);
+  // Admin bypass — same reason as loadNearbyPoisForListing (DEVLOG 2026-07-17).
+  // community_pois SELECT policy scopes to shared/owned communities; an admin
+  // reviewing another agent's community sees empty results without bypass.
+  const userClient = await createClient();
+  const {
+    data: { user },
+  } = await userClient.auth.getUser();
+  if (!user) throw new Error("not authenticated");
+
   // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const supabase: any = await createClient();
+  const { data: agent } = (await (userClient as any)
+    .from("agents")
+    .select("is_admin")
+    .eq("user_id", user.id)
+    .maybeSingle()) as { data: { is_admin: boolean } | null };
+
+  const isAdmin = !!agent?.is_admin;
+  if (!isAdmin) {
+    await requireAuthedCommunity(communityId);
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
+  const supabase: any = isAdmin ? createServiceClient() : userClient;
 
   const { data: rows, error } = (await supabase
     .from("community_pois")

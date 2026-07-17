@@ -61,9 +61,7 @@
 
 **Root cause**: `loadNearbyPoisForListing` used the RLS-scoped user client. The `listing_pois` SELECT policy (migration `20260716180000_listing_scoped_nearby.sql`) scopes rows to `l.agent_id = auth.uid()` chain. An admin browsing another agent's listing sees zero rows even though `discoverPoisForListing` (service role) wrote them fine.
 
-**Fix**: In `lib/poi/listing-actions.ts::loadNearbyPoisForListing`, check `agents.is_admin` for the current user; if true, use `createServiceClient()` to bypass RLS. Non-admins keep the existing owner check (`requireOwnedListing`) — no privilege escalation for regular agents.
-
-**Not touched**: (n/a — both listing and community `load*` fixed together per owner request)
+**Fix**: In `lib/poi/listing-actions.ts::loadNearbyPoisForListing` and `lib/poi/community-actions.ts::loadNearbyPoisForCommunity`, check `agents.is_admin` for the current user; if true, use `createServiceClient()` to bypass RLS. Non-admins keep the existing owner check (`requireOwnedListing` / `requireAuthedCommunity`) — no privilege escalation for regular agents.
 
 **Verify**: TS clean via `npx tsc --noEmit`. Manual: as admin, open `/admin/pipeline/listing-nearby/<id>` and `/admin/pipeline/community-nearby/<id>`, click Discover, list should populate.
 
