@@ -4,6 +4,57 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-17 18:15 UTC — admin tour-jobs detail: play landscape variant
+
+**Objective**: `qiaoxux` reported the admin tour-jobs detail page
+(`/admin/pipeline/tour-jobs/03fc78cd-…`) shows the video tile as
+un-playable while the same video plays fine in the buyer-facing feed.
+
+**Investigation**:
+- DB row `3b31e98d-…`: `cf_video_id=null`, `cf_video_id_landscape=dd78d…`,
+  `status=ready`. Render worker (`worker.py:547`) writes exactly one uid
+  column per orientation, and this listing's render happened to produce
+  only the landscape asset.
+- `BrowseFeed.tsx:670` already handles this with
+  `effectiveCfId = cfVideoIdLandscape ?? cfVideoId`.
+- The admin page (`app/admin/pipeline/tour-jobs/[id]/page.tsx`) selected
+  only `cf_video_id` and rendered a `<img>` thumbnail (or the status
+  string when null). No `cf_video_id_landscape`, no player. So the tile
+  fell into the `{v.status}` text branch — user saw "ready" in a blank
+  box.
+
+**Actions**:
+- `app/admin/pipeline/tour-jobs/[id]/page.tsx`
+  - Add `cf_video_id_landscape` to the select + type.
+  - `effectiveCfId = cf_video_id ?? cf_video_id_landscape` (mirror
+    BrowseFeed:670).
+  - Swap the `<img>`-only tile for a Cloudflare Stream iframe player
+    (`streamIframeUrl(effectiveCfId)`), with the thumbnail as a
+    secondary fallback and the status string as tertiary.
+  - Container aspect ratio flips to `aspect-video` when the row is
+    landscape-only; portrait keeps `aspect-[9/16]`.
+  - Row footer prints `walkthrough · landscape · ready` so it's obvious
+    which variant rendered.
+
+**Decisions**: Went with the CF iframe (`/{uid}/iframe`) rather than
+copying BrowseFeed's ~500 lines of hls.js + gesture handling. Admin
+consumption is diagnostic, not swipe-first — iframe is the smallest
+change that plays the video and gives us fullscreen/mute/scrub for
+free. Alternative rejected: teach the render worker to always produce
+both orientations (bigger change, separate bug — surfaced but not
+fixed here).
+
+**Learnings**: When the feed handles a data shape that admin doesn't,
+grep `cf_video_id_landscape` (or the field's canonical fallback
+site) across all consumers before shipping — the render worker's
+one-orientation-only behaviour is a latent trap for any UI that only
+reads `cf_video_id`.
+
+**Next steps**: Owner may still want a separate fix so render worker
+produces both portrait + landscape (or the admin page kicks a
+backfill via `backfill_single_orientation.py`). Out of scope for this
+patch.
+
 ## 2026-07-17 17:00 UTC — Phase 102: nearby videos always follow the listing
 
 **Objective**: Owner: "关联规则不对 不应该根据 community 来找. 现阶段只看
