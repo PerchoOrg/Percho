@@ -4,6 +4,41 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-17 22:20 UTC — Phase 112.1: remove bucket tag + blurb from listing-nearby video overlay
+
+**Report**: `qiaoxux` — screenshot of 5122 Lower Creek Street, slide 3/6 in
+the Nearby carousel. Category pill "EATING OUT" (top-left, gold) plus the
+bucket blurb "Where you actually go for dinner" (bottom-left, over the
+video) both read as boilerplate now that each card has a proper bottom info
+card (title / category / distance / drive). Ask: "remove the old tag and
+description".
+
+**Fix**: Two identical overlays existed in two components — both stripped.
+
+1. `app/(public)/browse/_components/CommunityCarousel.tsx` L664–672: dropped
+   `video.line1` pill (top-24 left-4, cream-on-ink) + `video.line2` blurb
+   (bottom-8 right-20 left-4). This is the L2 fullscreen carousel opened
+   from the Nearby button — matches the screenshot exactly (3/6 counter +
+   segmented progress bar at top).
+
+2. `app/(public)/browse/_components/BrowseFeed.tsx` L1240–1251: dropped the
+   sibling `sel.line1` "EATING OUT" pill that renders when Nearby is
+   toggled on the listing feed itself (source==='nearby'). Same visual, so
+   removing one and leaving the other would inconsistently pop the label
+   back the moment the user drops out of the carousel.
+
+`BrowseSourceVideo.line1/line2` fields stay on the type — still consumed by
+`pickVideo`'s hero fallback path (address + city/state) if that ever needs
+to render. No data-layer change; loader-side blurb still flows through, we
+just don't paint it.
+
+**Verify**: `npx tsc --noEmit` clean. Preview after push: navigate to a
+listing feed with nearby videos, tap 🏘️ Nearby → carousel opens → no
+"EATING OUT" pill, no "Where you actually go for dinner" blurb. Bottom info
+card + top progress bar remain.
+
+**Next**: push to main, verify on Vercel preview.
+
 ## 2026-07-17 22:00 UTC — Phase 112: /browse/feed loader unions listing-scoped nearby videos
 
 **Report**: `qiaoxux` — "还是看不到 nearby 里的视频 5122 Lower Creek Street" with

@@ -1236,19 +1236,13 @@ function Card({
        * the same pill so the user knows their position in the feed.
        * Phase 28.2 (2026-06-15): the per-category blurb (sel.line2) is
        * dropped — the title alone reads cleaner and the blurb was
-       * pushing the pill into a multi-line wrap on long captions. */}
-      {source === 'nearby' && sel.category && (
-        <div className="absolute top-16 left-5 z-10 inline-flex items-center gap-2 rounded-full border border-cream/40 bg-cream/15 px-3 py-1 backdrop-blur">
-          <span className="font-medium text-[11px] text-cream uppercase tracking-wider">
-            {sel.line1}
-          </span>
-          {poolSize > 1 && (
-            <span className="rounded-full bg-cream/15 px-1.5 py-0.5 font-medium text-[10px] text-cream/90 tabular-nums">
-              {(cycleIdx % poolSize) + 1}/{poolSize}
-            </span>
-          )}
-        </div>
-      )}
+       * pushing the pill into a multi-line wrap on long captions.
+       * Phase 112 (2026-07-17): category label removed too. The bottom
+       * info card (title / category / distance / drive) already tells
+       * the buyer what the video is about; the "EATING OUT" bucket
+       * label was boilerplate. The pool counter (N/M) is preserved via
+       * the segmented progress bar at the top. Owner: remove the old
+       * tag and description on the listing-feed nearby video. */}
 
       {/* Phase 68.4 (2026-07-03): chip finally simplified to a circular
        * ActionButton (matches Like/Save/Contact/Share visually) with the

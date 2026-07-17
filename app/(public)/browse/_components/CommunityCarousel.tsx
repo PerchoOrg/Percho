@@ -661,15 +661,12 @@ function CarouselSlide({
         </div>
       )}
 
-      {/* Category label */}
-      <div className="pointer-events-none absolute top-24 left-4 z-[7] inline-flex items-center rounded-full border border-cream/30 bg-ink/40 px-3 py-1 text-[11px] font-medium text-cream uppercase tracking-wider backdrop-blur-md">
-        {video.line1}
-      </div>
-      {video.line2 && (
-        <div className="pointer-events-none absolute right-20 bottom-8 left-4 z-[7] text-[13px] text-cream/85 leading-snug drop-shadow">
-          {video.line2}
-        </div>
-      )}
+      {/* Phase 112 (2026-07-17): category label pill + blurb removed.
+       * The bottom info card (title / category / distance / drive) already
+       * conveys what the video is about — the "EATING OUT" pill and
+       * "Where you actually go for dinner" tagline were the old
+       * bucket-metadata surface and read as boilerplate now. Owner: remove
+       * the old tag and description on the listing-feed nearby video. */}
     </>
   );
 }

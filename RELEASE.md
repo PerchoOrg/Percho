@@ -4,6 +4,18 @@
 > Historical entries below preserve the original name in-place — release notes
 > are a record of what was shipped under the product's name at the time.
 
+## v100.0 — Cleaner Nearby video overlay (2026-07-17)
+
+**✨ Improvements**
+
+Cleaned up the Nearby video player. Removed the category tag pill (e.g. "EATING OUT") from the top-left and the tagline blurb (e.g. "Where you actually go for dinner") from over the video. Both were leftovers from when the video card didn't yet carry its own info card — now that every clip has a proper white info card at the bottom with title, category, distance, and drive time, the extra labels were just noise stacked on top of a busy frame.
+
+What changes visibly:
+- No more all-caps category pill in the upper-left of the Nearby video.
+- No more short tagline blurb sitting above the info card.
+- The pagination bars at the top and the "3 / 6" counter still tell the buyer where they are in the pool.
+- The bottom white info card (title / category / distance / drive) is unchanged.
+
 ## v99.9 — Nearby button on Explore feed too (2026-07-17)
 
 **🐛 Bug Fixes**
