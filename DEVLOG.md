@@ -4,6 +4,48 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-17 19:30 UTC — Phase 110: buyers can now see nearby videos (RLS fix)
+
+**Report from owner:** "还是看不到 nearby 里的视频 5122 Lower Creek Street" —
+the /v/royxue812/5122-lower-creek-street page still rendered a bare hero with
+no nearby carousel, even after Phase 101/102 union code shipped.
+
+**Root cause:** `generated_videos` had only agent-scoped SELECT policies
+(from `20260714000000_poi_content_pipeline.sql` and
+`20260715204205_community_videos_intent_bucket.sql`). The public listing
+page runs `loadListingFeedBySlug` under the anon SSR client, so the union
+of `scope='listing_intent_bucket'` / `scope='community_intent_bucket'` rows
+came back empty. Confirmed with anon curl vs service-role curl against the
+same listing_id — 5 ready rows visible to service, 0 to anon. Phase 101's
+listing-scoped nearby pipeline never became buyer-visible; Phase 102's
+`categoryVideos` union was correct code sitting on top of an RLS hole.
+
+**Fix:** New migration `20260717120000_generated_videos_public_read.sql`
+adds `public reads generated_videos for active listings` policy — anon may
+SELECT a row iff its `listing_id` points to an `active` listing OR its
+`community_id` points to an `active` community. Mirrors the stance already
+used for `listing_videos` (0030) and `community_videos` (0026). Insert /
+update paths (service role, owner agent) unchanged.
+
+**Verified:**
+- Applied against remote linked project (had to
+  `supabase migration repair --status reverted 20260717091600` first — a
+  stale untracked entry was blocking `db push`).
+- Anon REST `select ... from generated_videos where listing_id=<5122>` now
+  returns 5 ready rows (was 0).
+- `curl https://percho.co/v/royxue812/5122-lower-creek-street | grep
+  fb4e12b52eb7872335ba23fc4c8c196b` — cf_stream_uid now embedded in the
+  rendered page.
+
+**Files:**
+- `supabase/migrations/20260717120000_generated_videos_public_read.sql` (NEW).
+
+**Learnings:** any new (or newly-buyer-facing) table needs its RLS
+cross-checked against the `listing_videos` / `listing_photos` public-read
+policies. Agent-scoped policies alone are the default and will silently
+return `[]` under anon without any error — no 401, no log line, just an
+empty feed.
+
 ## 2026-07-17 18:15 UTC — admin tour-jobs detail: play landscape variant
 
 **Objective**: `qiaoxux` reported the admin tour-jobs detail page
