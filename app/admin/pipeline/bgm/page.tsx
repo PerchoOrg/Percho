@@ -1,11 +1,12 @@
 /**
- * /admin/pipeline/bgm — background music library browser + editor.
+ * /admin/pipeline/bgm — background music library browser + curator.
  *
  * Phase 104 (2026-07-17): viewer with <audio controls>.
- * Phase 105 (2026-07-17): add + delete. Storage is now canonical for the
- * admin UI (list objects live per vibe). Manifest.json is retained but only
- * used by the render worker's local cache — `scripts/render-worker/pull-bgm.sh`
- * syncs Storage → worker disk.
+ * Phase 105 (2026-07-17): add + delete. Storage-canonical.
+ * Phase 106 (2026-07-17): `cinematic` bucket retired. Per-track hard-delete
+ * replaced with soft **reject** — rejected tracks stay in Storage (grouped
+ * at the bottom of each vibe, dimmed) but the render worker skips
+ * downloading them via `pull-bgm.sh`. One-click Approve restores.
  *
  * requireAdmin() runs in the parent layout; this page uses the service-role
  * client because the `bgm` bucket has no authed select policy (public reads
@@ -15,13 +16,14 @@
 
 import { requireAdmin } from '@/lib/auth/require-admin';
 import { BGM_BUCKET, BGM_VIBES, type BgmVibe, bgmPublicUrl } from '@/lib/bgm/storage';
+import { readBgmState } from '@/lib/bgm/state-store';
 import { createServiceClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import { BgmVibeSection, type BgmTrack } from './BgmVibeSection';
 
 export const dynamic = 'force-dynamic';
 
-async function listVibe(vibe: BgmVibe): Promise<BgmTrack[]> {
+async function listVibe(vibe: BgmVibe, rejected: Set<string>): Promise<BgmTrack[]> {
   const svc = createServiceClient();
   const { data } = await svc.storage.from(BGM_BUCKET).list(vibe, {
     limit: 1000,
@@ -29,28 +31,46 @@ async function listVibe(vibe: BgmVibe): Promise<BgmTrack[]> {
   });
   return (data ?? [])
     .filter((o) => /\.mp3$/i.test(o.name))
-    .map((o) => ({ name: o.name, url: bgmPublicUrl(vibe, o.name) }));
+    .map((o) => ({
+      name: o.name,
+      url: bgmPublicUrl(vibe, o.name),
+      rejected: rejected.has(`${vibe}/${o.name}`),
+    }));
 }
 
 export default async function BgmLibraryPage() {
   const admin = await requireAdmin();
   if (!admin) redirect('/dashboard');
 
-  const byVibe = await Promise.all(BGM_VIBES.map((v) => listVibe(v).then((t) => [v, t] as const)));
-  const total = byVibe.reduce((n, [, t]) => n + t.length, 0);
+  const state = await readBgmState();
+  const rejected = new Set(state.rejected);
+  const byVibe = await Promise.all(
+    BGM_VIBES.map((v) => listVibe(v, rejected).then((t) => [v, t] as const)),
+  );
+  const active = byVibe.reduce((n, [, t]) => n + t.filter((x) => !x.rejected).length, 0);
+  const rejectedCount = byVibe.reduce((n, [, t]) => n + t.filter((x) => x.rejected).length, 0);
 
   return (
     <div className="space-y-6">
       <header className="space-y-1">
         <h1 className="font-semibold text-xl text-ink">Background music</h1>
         <p className="text-ink2 text-sm">
-          {total} tracks across {BGM_VIBES.length} vibe buckets. The render worker picks one at
-          random per video. Upload an mp3 to add a track, or delete one to remove it from
-          rotation.
+          <span className="font-medium text-ink">{active}</span> approved tracks across{' '}
+          {BGM_VIBES.length} vibe buckets
+          {rejectedCount > 0 ? (
+            <span className="text-ink2">
+              {' '}
+              · <span className="font-medium">{rejectedCount}</span> rejected (hidden from worker)
+            </span>
+          ) : null}
+          . The render worker picks one approved track at random per video.
         </p>
         <p className="text-ink2 text-xs">
-          After add/delete, run <code className="rounded bg-cream px-1 py-0.5">pull-bgm.sh</code>{' '}
-          on the render host so the worker's local cache matches Storage before the next render.
+          Use <span className="font-medium">Reject</span> to keep a track in Storage but stop the
+          worker from picking it. Use <span className="font-medium">Import</span> in a section
+          header to upload one or many new mp3s. After edits, run{' '}
+          <code className="rounded bg-cream px-1 py-0.5">pull-bgm.sh</code> on the render host so
+          the worker's local cache catches up.
         </p>
       </header>
 

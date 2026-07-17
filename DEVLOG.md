@@ -4,6 +4,75 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-17 10:30 UTC — Phase 106: BGM — retire cinematic, soft-reject, per-vibe import
+
+**Objective**: Owner feedback on Phase 105:
+> "cinematic 整个类别的音乐都太阴沉 去掉这个类目并且删除音乐. 对每一个音乐 删除不好 加功能 approve or reject 这样不会再下载已经 reject 的音乐. 再对每个类别里加一个 import button 可以批量加入新的音乐."
+
+Translation:
+1. `cinematic` vibe is too somber — drop the entire category and delete its tracks.
+2. Per-track hard-delete is too destructive — replace with **approve/reject**
+   so rejected tracks stay in Storage but the worker stops downloading them.
+3. Each vibe section gets an **Import** button for bulk uploads (Phase 105's
+   Upload button already handled multi-file — this is a rename + language fix).
+
+**Actions**:
+- `lib/bgm/storage.ts`: dropped `cinematic` from `BGM_VIBES`, removed its
+  `BGM_VIBE_META` entry, added `BGM_STATE_PATH` (= `_state/state.json`) and
+  `BgmState` / `emptyBgmState()` helpers.
+- `lib/bgm/state-store.ts` (new): read/write the rejected-list sidecar at
+  `bgm/_state/state.json` via the service-role client. Kept in Storage
+  instead of a Postgres table — two consumers (admin UI + `pull-bgm.sh`),
+  no relational queries, and the worker can fetch it with one HTTP call.
+- `app/api/admin/bgm/reject/route.ts` (new): `POST { path, rejected: bool }`
+  toggles a track in the sidecar. `admin`-gated. Sorted, deduped.
+- `app/api/admin/bgm/delete/route.ts` (deleted): per-track hard delete is
+  gone from the UI. The Storage `.remove()` primitive still exists — used
+  in this phase's one-shot cinematic wipe via inline REST call.
+- `app/admin/pipeline/bgm/page.tsx`: reads rejected set once, passes down.
+  Header now shows approved / rejected counts. Rename mentions from
+  "click Delete" → "Reject".
+- `app/admin/pipeline/bgm/BgmVibeSection.tsx`: Upload → **Import** button,
+  Trash icon → **Reject** button (XCircle icon), rejected tracks render
+  below approved ones in a dimmed / strike-through style with an
+  **Approve** button (CheckCircle2, green) to bring them back. Extracted
+  `TrackRow` sub-component to keep the two lists DRY.
+- `scripts/render-worker/pull-bgm.sh`: fetches `state.json` first, filters
+  out rejected paths on both delete and download passes. Purges any
+  local `cinematic/` folder unconditionally (retired vibes list).
+- `scripts/render-worker/worker.py`: docstring comment on `pick_bgm()`
+  updated (cinematic removed).
+- **One-shot Storage cleanup**: called Supabase DELETE on the 6 cinematic
+  mp3s that were in Storage (fewer than local disk — Phase 105 hadn't
+  round-tripped after later disk edits). Removed the local
+  `scripts/render-worker/bgm/cinematic/` folder (8 mp3s on disk).
+  Manifest regenerated: 41 active tracks across 4 vibes.
+
+**Design note — reject not delete**: rejects are a soft-delete stored in a
+per-bucket sidecar. Reasons:
+- Curator can flip a wrong call in one click without re-hunting the source.
+- No DB migration needed.
+- `pull-bgm.sh` learns about rejects with one GET, no per-track lookup.
+Concurrent writer note: two admins clicking reject at the same time could
+clobber the list. Acceptable for a single-operator tool; revisit only if
+curation ever has more than one hand on the wheel.
+
+**Verified**:
+- `npx tsc --noEmit` clean.
+- `pytest scripts/render-worker/tests/test_pick_bgm.py` — 5/5 pass.
+- Local dev machine IS the render host (per memory), so cinematic mp3s
+  gone from both Storage and disk.
+
+**Next steps**:
+- Owner still needs to run `pull-bgm.sh` after future admin edits (until
+  the worker refactors to pull-at-render-time). No change from Phase 105.
+- If the "worker fetches state.json at render time" pattern is preferred
+  over the sync script, easy follow-up: read the sidecar in `pick_bgm()`
+  and filter in memory. Deferred — one-way sync is still cheapest for a
+  library that changes quarterly.
+
+---
+
 ## 2026-07-17 09:00 UTC — Phase 105: admin Music tab — add + delete
 
 **Objective**: Owner follow-up on Phase 104: "add add and delete function to

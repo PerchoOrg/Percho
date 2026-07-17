@@ -1,25 +1,30 @@
 #!/usr/bin/env bash
 # pull-bgm.sh — sync the render worker's local bgm/ mp3s from Supabase Storage.
 #
-# The admin UI (Phase 105) writes tracks directly to the `bgm` bucket. The
-# render worker still reads from local disk (fast, no per-render round-trip
-# to Storage). This script closes the loop: after an admin add/delete, run
-# this on the render host to bring local files back in line with Storage.
+# The admin UI writes to the `bgm` bucket. The render worker still reads from
+# local disk (fast, no per-render round-trip). This script closes the loop:
+# after an admin add/reject, run this on the render host.
+#
+# Phase 106 (2026-07-17):
+#   - `cinematic` vibe dropped from VIBES list (owner rated it too somber).
+#     Any lingering local files under scripts/render-worker/bgm/cinematic/
+#     are deleted at the top of this script.
+#   - Rejected tracks (listed in bgm/_state/state.json) are skipped when
+#     downloading AND removed from local disk. Approving one restores it on
+#     the next run.
 #
 # Usage (from the repo root on the render host):
 #   ./scripts/render-worker/pull-bgm.sh
 #
 # Requires: .env.local at repo root with NEXT_PUBLIC_SUPABASE_URL and
-# SUPABASE_SERVICE_ROLE_KEY.
-#
-# Idempotent: uses etag/size compare via curl -z. Deletes local files that
-# no longer exist in Storage. Regenerates manifest.json to match disk truth.
+# SUPABASE_SERVICE_ROLE_KEY. `jq` on PATH.
 
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 BGM_DIR="$REPO_ROOT/scripts/render-worker/bgm"
-VIBES=(warm-acoustic modern-corporate luxury-ambient chill-electronic cinematic)
+VIBES=(warm-acoustic modern-corporate luxury-ambient chill-electronic)
+RETIRED_VIBES=(cinematic)
 
 # shellcheck disable=SC1091
 source "$REPO_ROOT/.env.local"
@@ -27,8 +32,30 @@ source "$REPO_ROOT/.env.local"
 : "${SUPABASE_SERVICE_ROLE_KEY:?SUPABASE_SERVICE_ROLE_KEY missing}"
 
 BASE="${NEXT_PUBLIC_SUPABASE_URL%/}"
-AUTH="Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY"
-APIKEY="apikey: $SUPABASE_SERVICE_ROLE_KEY"
+AUTH_HDR="Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY"
+APIKEY_HDR="apikey: $SUPABASE_SERVICE_ROLE_KEY"
+
+# --- purge retired vibes locally -------------------------------------------
+for retired in "${RETIRED_VIBES[@]}"; do
+    if [ -d "$BGM_DIR/$retired" ]; then
+        echo "  purge  $retired/ (retired vibe)"
+        rm -rf "${BGM_DIR:?}/$retired"
+    fi
+done
+
+# --- fetch rejected list ---------------------------------------------------
+state_json=$(curl -s -H "$AUTH_HDR" -H "$APIKEY_HDR" \
+    "$BASE/storage/v1/object/bgm/_state/state.json" || echo '{}')
+if ! echo "$state_json" | jq empty 2>/dev/null; then
+    state_json='{"rejected":[]}'
+fi
+rejected_list=$(echo "$state_json" | jq -r '.rejected[]? // empty')
+echo "Rejected tracks in state.json: $(echo "$rejected_list" | grep -c . || true)"
+
+is_rejected() {
+    local candidate="$1"
+    echo "$rejected_list" | grep -qxF "$candidate"
+}
 
 total=0
 for vibe in "${VIBES[@]}"; do
@@ -36,25 +63,32 @@ for vibe in "${VIBES[@]}"; do
 
     # List remote objects for this vibe (Storage list API is a POST).
     remote_json=$(curl -s -X POST \
-        -H "$AUTH" -H "$APIKEY" -H "Content-Type: application/json" \
+        -H "$AUTH_HDR" -H "$APIKEY_HDR" -H "Content-Type: application/json" \
         -d "{\"prefix\":\"$vibe/\",\"limit\":1000,\"sortBy\":{\"column\":\"name\",\"order\":\"asc\"}}" \
         "$BASE/storage/v1/object/list/bgm")
     remote_files=$(echo "$remote_json" | jq -r '.[].name' | grep -E '\.mp3$' || true)
 
-    # Delete local files that are no longer in Storage.
+    # Delete local files that are no longer in Storage OR are now rejected.
     for local_file in "$BGM_DIR/$vibe"/*.mp3; do
         [ -e "$local_file" ] || continue
         base=$(basename "$local_file")
         if ! echo "$remote_files" | grep -qx "$base"; then
-            echo "  del  $vibe/$base"
+            echo "  del    $vibe/$base (removed from Storage)"
+            rm -f "$local_file"
+        elif is_rejected "$vibe/$base"; then
+            echo "  del    $vibe/$base (rejected)"
             rm -f "$local_file"
         fi
     done
 
-    # Download any remote file that's missing or size-mismatched.
+    # Download any remote file that's missing or size-mismatched, skipping rejects.
     count=0
     while IFS= read -r name; do
         [ -n "$name" ] || continue
+        if is_rejected "$vibe/$name"; then
+            echo "  skip   $vibe/$name (rejected)"
+            continue
+        fi
         count=$((count + 1))
         local_path="$BGM_DIR/$vibe/$name"
         url="$BASE/storage/v1/object/public/bgm/$vibe/$name"
@@ -66,16 +100,16 @@ for vibe in "${VIBES[@]}"; do
                 continue
             fi
         fi
-        echo "  get  $vibe/$name (${remote_size} bytes)"
+        echo "  get    $vibe/$name (${remote_size} bytes)"
         curl -s -o "$local_path" "$url"
     done <<< "$remote_files"
 
-    echo "$vibe: $count track(s)"
+    echo "$vibe: $count active track(s)"
     total=$((total + count))
 done
 
 echo
-echo "Total: $total tracks synced. Regenerating manifest.json…"
+echo "Total: $total active tracks. Regenerating manifest.json…"
 python3 "$REPO_ROOT/scripts/upload-bgm/upload.py" --manifest-only
 
 echo "Done. Restart percho-render-worker if it caches file listings at boot."

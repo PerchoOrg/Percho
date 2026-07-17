@@ -4,6 +4,25 @@
 > Historical entries below preserve the original name in-place — release notes
 > are a record of what was shipped under the product's name at the time.
 
+## v98.9 — BGM: retire cinematic, soft-reject, import per vibe (2026-07-17)
+
+- **Cinematic vibe retired** — all 14 tracks (6 in Storage, 8 on the render
+  disk) deleted after the owner rated the whole bucket too somber. The tab
+  now shows four vibes: warm-acoustic, modern-corporate, luxury-ambient,
+  chill-electronic. **41 active tracks** total.
+- **Per-track delete → Reject / Approve.** Reject keeps the mp3 in Storage
+  but tells the render worker to stop downloading it. One-click **Approve**
+  restores. Rejected tracks render dimmed at the bottom of each vibe so
+  they're always recoverable.
+- **Import button** on every vibe section — same multi-file upload as
+  Phase 105, clearer label. Drop one or many mp3s at once.
+
+**Operator note**: after admin add/reject/approve, run
+`scripts/render-worker/pull-bgm.sh` on the render host so the worker's
+local mp3 cache and `manifest.json` catch up before the next render.
+
+---
+
 ## v98.8 — Admin restructure: Home Tour hub, split Nearby, POI photos filter (2026-07-17)
 
 Three admin console upgrades:

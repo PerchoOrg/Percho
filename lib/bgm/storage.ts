@@ -7,24 +7,34 @@
  *     modern-corporate/*.mp3
  *     luxury-ambient/*.mp3
  *     chill-electronic/*.mp3
- *     cinematic/*.mp3
+ *     _state/state.json  ← Phase 106: rejected-track sidecar (soft-delete)
  *
  * Phase 104 (2026-07-17): bucket created, admin-tab viewer added.
  * Phase 105 (2026-07-17): Storage is now canonical for the admin UI
  * (add/delete goes through Storage; manifest.json is only used by the
  * render worker for its local mp3 cache — kept in sync via
  * `scripts/render-worker/pull-bgm.sh`).
+ * Phase 106 (2026-07-17): `cinematic` vibe removed (owner: "too somber");
+ * per-track "delete" replaced with soft **reject** (mp3 stays in Storage
+ * for a possible restore; worker skips downloading it).
  */
 
 export const BGM_BUCKET = 'bgm';
 
-/** The five vibe buckets, in canonical display order. */
+/**
+ * The four vibe buckets, in canonical display order.
+ *
+ * Phase 106 (2026-07-17): `cinematic` removed — owner rated the whole
+ * bucket "too somber". Tracks were deleted from Storage in the same
+ * phase; the folder is no longer created for new tracks. If you resurrect
+ * a similar vibe later, pick a new name to avoid confusion with the
+ * archived files.
+ */
 export const BGM_VIBES = [
   'warm-acoustic',
   'modern-corporate',
   'luxury-ambient',
   'chill-electronic',
-  'cinematic',
 ] as const;
 
 export type BgmVibe = (typeof BGM_VIBES)[number];
@@ -55,12 +65,26 @@ export const BGM_VIBE_META: Record<BgmVibe, { label: string; blurb: string; fit:
     blurb: 'Organic electronic, mellow beats (not lo-fi jazz).',
     fit: 'Urban condo, loft, downtown.',
   },
-  cinematic: {
-    label: 'Cinematic',
-    blurb: 'Sweeping strings + piano, no drops.',
-    fit: 'Waterfront, view lots, hero shots.',
-  },
 };
+
+/**
+ * State sidecar path in Storage. Content: { "rejected": ["<vibe>/<file>.mp3", …] }.
+ * Rejected tracks stay in Storage but the render worker skips downloading them
+ * (see `scripts/render-worker/pull-bgm.sh`). Admin UI shows them dimmed with
+ * an "Approve" toggle to bring them back.
+ */
+export const BGM_STATE_PATH = '_state/state.json';
+export const BGM_STATE_BUCKET_PATH = `${BGM_BUCKET}/${BGM_STATE_PATH}`;
+
+export type BgmState = {
+  schema_version: 1;
+  rejected: string[];
+  updated_at: string;
+};
+
+export function emptyBgmState(): BgmState {
+  return { schema_version: 1, rejected: [], updated_at: new Date().toISOString() };
+}
 
 /** Public streaming URL for a track in the `bgm` bucket. */
 export function bgmPublicUrl(vibe: string, file: string): string {
