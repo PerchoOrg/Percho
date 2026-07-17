@@ -114,7 +114,10 @@ def main() -> int:
         print(f"ERR  {BGM_ROOT} not found", file=sys.stderr)
         return 1
 
-    ensure_bucket()
+    manifest_only = "--manifest-only" in sys.argv[1:]
+
+    if not manifest_only:
+        ensure_bucket()
 
     manifest: dict = {
         "schema_version": 2,
@@ -133,6 +136,8 @@ def main() -> int:
         vibe = vibe_dir.name
         tracks = sorted(p.name for p in vibe_dir.glob("*.mp3"))
         manifest["buckets"][vibe] = {"count": len(tracks), "tracks": tracks}
+        if manifest_only:
+            continue
         for name in tracks:
             path = f"{vibe}/{name}"
             if object_exists(path):

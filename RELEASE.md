@@ -4,6 +4,21 @@
 > Historical entries below preserve the original name in-place — release notes
 > are a record of what was shipped under the product's name at the time.
 
+## v98.7 — Admin Music tab: add + delete (2026-07-17)
+
+The **Music** tab now supports uploading new tracks and deleting existing
+ones. Each vibe section has an **Upload** button (accepts one or many mp3s)
+and every row has a trash icon with an inline confirm step.
+
+Storage is now canonical for the admin view — the tab lists what's actually
+in the `bgm` bucket, not what the checked-in manifest says.
+
+**Operator note**: after admin add/delete, run `scripts/render-worker/pull-bgm.sh`
+on the render host so the worker's local mp3 cache and `manifest.json` catch
+up before the next video renders.
+
+---
+
 ## v98.6 — Admin console: Music tab (2026-07-17)
 
 Admin now has a sixth tab: **Music**. It lists every background-music track
