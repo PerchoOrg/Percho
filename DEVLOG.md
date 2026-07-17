@@ -4,6 +4,25 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-17 13:20 UTC — Phase 108: BGM Upload — signed URL direct-to-Storage (fix >4.5MB)
+
+**Objective**: Fix admin BGM Upload failing with `Unexpected token 'R', "Request En"... is not valid JSON` when picking a local mp3.
+
+**Root cause**: `/api/admin/bgm/upload` accepted the mp3 as multipart on a Vercel serverless function. Vercel caps the request body at ~4.5MB, so anything larger got a plain-text `Request Entity Too Large` (413) response — our client did `res.json()` unconditionally on it and blew up. The route's own 20MB check never ran, because the platform rejected the body before it reached the handler.
+
+**Actions**:
+- New route `app/api/admin/bgm/upload-sign/route.ts`: takes `{ vibe, filenames[] }` as JSON (tiny, no cap), computes the same `NN-slug.mp3` path, and returns `{ path, token }` per file via `createSignedUploadUrl`.
+- `BgmVibeSection.tsx` `handleUpload`: (1) POST filenames → get signed tokens, (2) browser calls `supa.storage.from('bgm').uploadToSignedUrl(path, token, file)` — bytes go straight to Supabase Storage, bypassing Vercel. Also switched error surfacing to `res.text().slice(0,200)` instead of blind `res.json()` so future non-JSON errors are legible.
+- Deleted the old multipart route (orphaned by the switch).
+
+**Decisions**: Signed URL direct-to-Storage over raising Vercel body limits — same pattern we already use for video uploads, and the ~4.5MB cap on Hobby/Pro is not lifted without moving to Edge/Enterprise. NN- numbering still runs server-side so numbering conventions stay consistent.
+
+**Verification**: `pnpm tsc --noEmit` clean. Merged to `main` as `57b06bd`, pushed. Real-device upload test to follow.
+
+**Learnings**: When a fetch client parses `res.json()` unconditionally, a platform-level 413/504 turns into a garbage `SyntaxError` at the parse site. Guard with `if (!res.ok) throw new Error(await res.text())` before parsing — costs nothing and makes future platform-layer failures debuggable.
+
+---
+
 ## 2026-07-17 11:30 UTC — Phase 107: BGM — Approve+Reject per row · Import (web) split from Upload (local)
 
 **Owner feedback on Phase 106:**

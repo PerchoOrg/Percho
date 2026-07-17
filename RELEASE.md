@@ -4,6 +4,13 @@
 > Historical entries below preserve the original name in-place — release notes
 > are a record of what was shipped under the product's name at the time.
 
+## v99.1 — Admin BGM upload fix: large mp3s (2026-07-17)
+
+### 🐛 Bug Fixes
+- Uploading a background-music mp3 from local no longer fails with a cryptic "Unexpected token" error. Larger files now upload straight from the browser to storage without hitting a size ceiling on the intermediate hop.
+
+---
+
 ## v99.0 — Admin BGM: Import (web catalog) + Upload (local) split, dual-button Approve/Reject (2026-07-17)
 
 **Admin › Pipeline › Music**
