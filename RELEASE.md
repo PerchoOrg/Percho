@@ -4,6 +4,20 @@
 > Historical entries below preserve the original name in-place — release notes
 > are a record of what was shipped under the product's name at the time.
 
+## v98.3 — 2026-07-17 — Community Nearby moves to /admin
+
+- **CommunityNearbyPanel** is now mounted at
+  `/admin/pipeline/community-nearby/[id]`, matching where listing nearby
+  lives. The Nearby tab on the agent-facing `/dashboard/communities/[id]`
+  hub is removed — automation infra is admin-only.
+- `/admin/pipeline/community-nearby` index and `bucket-jobs` anchor links
+  now point at the admin detail page (previously deep-linked into the
+  agent hub Nearby tab).
+- Admin console button on **Me** page adopts the `btn-gold` pill style
+  used by Public profile / View analytics — consistent primary-action
+  treatment; account actions (Change password / Sign out) stay as the
+  outlined variant.
+
 ## v98.2 — 2026-07-16 — Admin console: Me-tab entry + mobile fix
 
 - Profile ("Me") page shows an **Admin console** button when the signed-in
