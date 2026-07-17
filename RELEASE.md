@@ -4,6 +4,12 @@
 > Historical entries below preserve the original name in-place — release notes
 > are a record of what was shipped under the product's name at the time.
 
+## v100.1 — Nearby video: drop the top progress dashes (2026-07-17)
+
+**✨ Improvements**
+
+Removed the segmented dashed progress bar from the top of the Nearby video player. The "3 / 6" style counter pill in the top-right already tells the buyer where they are in the pool, and the dashes on top of the busy video hero were adding visual noise without adding information.
+
 ## v100.0 — Cleaner Nearby video overlay (2026-07-17)
 
 **✨ Improvements**

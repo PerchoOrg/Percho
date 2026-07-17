@@ -4,6 +4,22 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-17 22:35 UTC — Phase 112.2: remove dashed progress bar from listing-nearby carousel
+
+**Report**: `qiaoxux` — "同时去掉 listing nearby 上面的虚线 只显示数字来看进度就行 太乱了".
+After 112.1 stripped the bucket tag + blurb, the segmented dashed track at
+`top-16` still felt like noise stacked on the "N / M" counter pill.
+
+**Fix**: `app/(public)/browse/_components/CommunityCarousel.tsx` L289–299 —
+removed the `videos.map()` progress bar block. The "safeDisplayActive + 1
+/ total" pill at top-right stays (owner: "只显示数字").
+
+Left the PhotoCard's own segmented bar in `BrowseFeed.tsx` L508 untouched
+— that's the horizontal photo-carousel-inside-a-listing-card, a different
+surface than the listing-nearby video the user is describing.
+
+**Verify**: `tsc --noEmit` clean.
+
 ## 2026-07-17 22:20 UTC — Phase 112.1: remove bucket tag + blurb from listing-nearby video overlay
 
 **Report**: `qiaoxux` — screenshot of 5122 Lower Creek Street, slide 3/6 in

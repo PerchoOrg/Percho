@@ -286,17 +286,11 @@ export function CommunityCarousel({
           </div>
         </div>
 
-        {/* Segmented progress bar */}
-        <div className="absolute inset-x-3 top-16 z-10 flex gap-1">
-          {videos.map((v, i) => (
-            <div
-              key={`${v.cfVideoId}-prog`}
-              className={`h-0.5 flex-1 rounded-full ${
-                i <= safeDisplayActive ? 'bg-cream' : 'bg-cream/20'
-              }`}
-            />
-          ))}
-        </div>
+        {/* Phase 112.2 (2026-07-17): segmented progress bar removed.
+         * Owner: "去掉 listing nearby 上面的虚线 只显示数字来看进度就行 太乱了".
+         * The "N / M" counter pill in the top-right already conveys
+         * position; the dashed track added visual clutter over the
+         * hero frame. */}
 
         {/* Track — native horizontal scroll-snap (phase 73.1). Same
          * container recipe as BrowseFeed PhotoCard: iOS momentum, snap
