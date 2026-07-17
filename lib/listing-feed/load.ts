@@ -159,7 +159,9 @@ async function fetchAroundListing(
       .select('id, cf_video_id, kind, title, category, school_id, poi_id')
       .eq('community_id', listing.community_id)
       .eq('status', 'ready')
-      .eq('visibility', 'public')) as { data: CommunityVideo[] | null };
+      .eq('visibility', 'public')
+      // Phase 92: skip history renders (is_primary=false).
+      .eq('is_primary', true)) as { data: CommunityVideo[] | null };
     for (const v of cv.data ?? []) {
       if (seenCfIds.has(v.cf_video_id)) continue;
       seenCfIds.add(v.cf_video_id);

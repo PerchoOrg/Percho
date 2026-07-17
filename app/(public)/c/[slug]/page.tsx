@@ -73,7 +73,11 @@ export default async function CommunityPage({
       .select('id, cf_video_id, title, category')
       .in('id', videoIds)
       .eq('status', 'ready')
-      .eq('visibility', 'public')) as { data: VideoRow[] | null };
+      .eq('visibility', 'public')
+      // Phase 92: worker keeps prior renders as history with is_primary=false.
+      // Only the current primary per (community, intent_bucket) should surface
+      // in the grid — otherwise buyers see the same POI archetype twice.
+      .eq('is_primary', true)) as { data: VideoRow[] | null };
     videos = rows ?? [];
   }
 

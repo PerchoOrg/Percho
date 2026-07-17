@@ -138,6 +138,9 @@ export default async function CommunityFeedPage({
       .in('id', videoIds)
       .eq('status', 'ready')
       .eq('visibility', 'public')
+      // Phase 92: only surface primary renders — history rows
+      // (is_primary=false) are queryable but must not appear in the feed.
+      .eq('is_primary', true)
       .order('created_at', { ascending: false })) as { data: VideoRow[] | null };
     videos = rows ?? [];
   }

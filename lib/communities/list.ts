@@ -140,7 +140,9 @@ async function hydrateCommunityCards(
             .select('id, cf_video_id, status')
             .in('id', batch)
             .eq('status', 'ready')
-            .eq('visibility', 'public'),
+            .eq('visibility', 'public')
+            // Phase 92: skip history renders.
+            .eq('is_primary', true),
         ),
     chunkedIn<{ community_id: string | null }>(
       // biome-ignore lint/suspicious/noExplicitAny: stub generated types

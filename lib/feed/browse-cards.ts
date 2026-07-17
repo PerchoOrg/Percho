@@ -187,6 +187,8 @@ async function assembleCards(
           .in('community_id', communityIds)
           .eq('status', 'ready')
           .eq('visibility', 'public')
+          // Phase 92: skip history renders.
+          .eq('is_primary', true)
       : Promise.resolve({ data: [] }),
     communityIds.length > 0
       ? supabase
