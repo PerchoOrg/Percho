@@ -4,6 +4,27 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-17 15:30 UTC — Nearby POI Fetch button → shows Sync icon when photos already exist
+
+**Objective**: Owner asked "if a POI already has photos, show Sync" — the same button icon (📷+) was displayed whether the POI had never been fetched or had 20 photos already, making it easy to mistakenly assume clicking re-costs API tokens.
+
+**Fact check (backend is already idempotent, this is purely a UI clarity fix)**:
+- `fetchPhotosForListingPoi` (`lib/poi/listing-actions.ts:188`) dedups on `poi_photos.google_photo_name` unique → cached rows return `reused` without Google binary fetch, storage upload, or DB write.
+- `tagPoiPhoto` (`lib/poi/vision-tagger.ts:190`) short-circuits on `tagged_at IS NOT NULL` → no Anthropic vision call for already-tagged photos.
+- So repeat clicks are essentially free — but the UI didn't tell the user that.
+
+**Change**:
+- `PoiRow` in both `ListingNearbyPanel.tsx` and `CommunityNearbyPanel.tsx`: swap `ImagePlus` (📷+) → `RefreshCw` (🔄) when `photoCount > 0`, plus `aria-label`/`title` = "Sync photos" vs "Fetch photos".
+- Button remains clickable in both states — click still safe (backend dedups), just now visually communicates "you've been here already".
+
+**Files**:
+- `app/dashboard/listings/[id]/edit/ListingNearbyPanel.tsx` — L444-462
+- `app/dashboard/communities/[id]/CommunityNearbyPanel.tsx` — L447-465
+
+**Not changed**: no schema, no API, no fetching behavior — pure UI signaling.
+
+---
+
 ## 2026-07-17 15:00 UTC — Nearby POI panel — unblock UI while fetching photos
 
 **Objective**: Owner reported that clicking "Fetch photos" on a POI froze the whole panel for several seconds — couldn't approve/reject other POIs or click Fetch on another one in parallel.

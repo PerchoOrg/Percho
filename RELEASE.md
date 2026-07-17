@@ -4,6 +4,12 @@
 > Historical entries below preserve the original name in-place — release notes
 > are a record of what was shipped under the product's name at the time.
 
+## v99.4 — Nearby POI: Fetch button becomes Sync once photos are cached (2026-07-17)
+
+The Fetch (📷+) button on each Nearby POI row now switches to a Sync (🔄) icon as soon as that POI has photos in the library. Behavior is unchanged — the click has always been idempotent under the hood (cached photos are re-used, already-tagged photos skip Anthropic vision) — but the icon now makes it obvious you've been here already, so you don't wonder whether tapping it a second time costs another round of tokens.
+
+Applies to both the Listing edit → Media → Nearby POIs panel and the Community edit → Nearby POIs panel.
+
 ## v99.3 — Fetch photos no longer freezes the Nearby panel (2026-07-17)
 
 **🐛 Bug Fixes**

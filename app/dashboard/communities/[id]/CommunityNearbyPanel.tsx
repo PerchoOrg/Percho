@@ -446,12 +446,19 @@ function PoiRow({
           </button>
           <button
             type="button"
-            aria-label="Fetch photos"
+            aria-label={photoCount > 0 ? 'Sync photos' : 'Fetch photos'}
+            title={photoCount > 0 ? 'Photos already fetched — tap to sync any new ones' : 'Fetch photos'}
             onClick={onFetchPhotos}
             disabled={busy}
             className="rounded p-1 text-muted hover:bg-surface hover:text-bronze disabled:opacity-40"
           >
-            {busy ? <Loader2 size={16} className="animate-spin" /> : <ImagePlus size={16} />}
+            {busy ? (
+              <Loader2 size={16} className="animate-spin" />
+            ) : photoCount > 0 ? (
+              <RefreshCw size={16} />
+            ) : (
+              <ImagePlus size={16} />
+            )}
           </button>
         </div>
       </div>
