@@ -53,8 +53,7 @@ def ffprobe_duration(path: str) -> float:
     return float(out.stdout.strip())
 
 
-def kenburns_filter(mode: str, duration: float, w: int, h: int,
-                    fg_w: int | None = None, fg_h: int | None = None) -> str:
+def kenburns_filter(mode: str, duration: float, w: int, h: int) -> str:
     """
     Build a Ken Burns filter for a given mode with a "blur letterbox" composition:
 
@@ -72,6 +71,9 @@ def kenburns_filter(mode: str, duration: float, w: int, h: int,
     zoomed-in — now the full image is always in frame.
     """
     frames = int(duration * FPS)
+    # Upscale factor for smooth zoompan motion (integer-pixel steps at output size).
+    scale_w = w * 4
+    scale_h = h * 4
 
     # Phase 90 (2026-07-15): fit-within + blur letterbox. Landscape photos
     # (POI thumbnails, exterior shots) keep their full width — we scale to
@@ -79,29 +81,27 @@ def kenburns_filter(mode: str, duration: float, w: int, h: int,
     # with a heavily blurred+dimmed copy of the same photo. Portrait photos
     # fit the height and get a blurred left/right (rarely visible in practice).
     #
-    # Phase 107 (2026-07-17): fg layer no longer upscales. Small POI photos
-    # (Google Places sometimes returns 480–720px wide storefronts) were being
-    # force-scaled to 1080 wide + a further 1.10× zoom, producing 2–2.5×
-    # effective upsampling and visibly soft "zoomed-in" output. When fg_w/fg_h
-    # (aspect-preserving fit-inside dimensions computed by the caller with
-    # no_upscale=True) are passed, fg keeps native pixels and sits centered
-    # over the blurred bg — matching kenburns_filter_v2's behaviour. Zoompan
-    # runs on the fg canvas so zoom crops into native pixels rather than
-    # zooming into upscaled ones. Falls back to old behaviour (upscale fg to
-    # full w×h) when fg_w/fg_h not supplied, for callers that haven't been
-    # migrated yet.
-    #
     # We only apply zoom-in/zoom-out motion here (pan disabled — see
     # pick_mode below). Zoom is center-symmetric so the blur seam stays put
     # instead of sliding across the frame like a dark bar.
-    use_native = fg_w is not None and fg_h is not None
-    if not use_native:
-        fg_w, fg_h = w, h
-
+    #
+    # Phase 86 tried the opposite trade-off (fill-crop, no letterbox) but
+    # sacrificed ~44% of every landscape photo's horizontal content, which
+    # dining/storefront/wide-angle POI shots cannot afford.
     bg = (
         f"scale={w}:{h}:force_original_aspect_ratio=increase,"
         f"crop={w}:{h},"
         f"boxblur=40:2,eq=brightness=-0.15:saturation=0.85,setsar=1"
+    )
+    fg = (
+        f"scale={w}:{h}:force_original_aspect_ratio=decrease,setsar=1"
+    )
+    compose = (
+        f"split=2[bgsrc][fgsrc];"
+        f"[bgsrc]{bg}[bg];"
+        f"[fgsrc]{fg}[fg];"
+        f"[bg][fg]overlay=(W-w)/2:(H-h)/2,setsar=1,"
+        f"scale={scale_w}:{scale_h}:flags=lanczos,setsar=1"
     )
 
     # Milder motion than before (max zoom 1.10 instead of 1.5) so most of the
@@ -127,37 +127,6 @@ def kenburns_filter(mode: str, duration: float, w: int, h: int,
         x = "iw/2-(iw/zoom/2)"
         y = "ih/2-(ih/zoom/2)"
 
-    if use_native:
-        assert fg_w is not None and fg_h is not None
-        # crops into native pixels, not upscaled ones. Overlay centered on the
-        # blurred bg. Matches kenburns_filter_v2 blur-letterbox path.
-        fg = (
-            f"scale={fg_w}:{fg_h}:flags=lanczos,setsar=1,"
-            f"zoompan=z='{z}':x='{x}':y='{y}':d={frames}:s={fg_w}x{fg_h}:fps={FPS}"
-        )
-        ox = (w - fg_w) // 2
-        oy = (h - fg_h) // 2
-        return (
-            f"split=2[bgsrc][fgsrc];"
-            f"[bgsrc]{bg}[bg];"
-            f"[fgsrc]{fg}[fg];"
-            f"[bg][fg]overlay={ox}:{oy}:format=auto,format=yuv420p"
-        )
-
-    # Legacy path (no source dims supplied): old fit-inside upscale behaviour,
-    # kept only as a safety net for callers that haven't been migrated.
-    scale_w = w * 4
-    scale_h = h * 4
-    fg = (
-        f"scale={w}:{h}:force_original_aspect_ratio=decrease,setsar=1"
-    )
-    compose = (
-        f"split=2[bgsrc][fgsrc];"
-        f"[bgsrc]{bg}[bg];"
-        f"[fgsrc]{fg}[fg];"
-        f"[bg][fg]overlay=(W-w)/2:(H-h)/2,setsar=1,"
-        f"scale={scale_w}:{scale_h}:flags=lanczos,setsar=1"
-    )
     zp = (
         f"zoompan=z='{z}':x='{x}':y='{y}':d={frames}:s={w}x{h}:fps={FPS}"
     )
@@ -463,14 +432,7 @@ def render_clip(src: str, dst: str, duration: float, mode: str, w: int, h: int,
             if cap_vf:
                 vf = vf + "," + cap_vf
     else:
-        # Phase 107 (2026-07-17): pass source dims so v1 fg layer uses
-        # native-pixel fit-inside (no upscale), matching v2 behaviour. Small
-        # POI photos no longer get force-scaled to 1080 wide + zoom on top,
-        # which was producing soft "zoomed-in" output for storefronts with
-        # sub-1000px source width.
-        src_w, src_h = ffprobe_wh(src)
-        fg_w, fg_h = fit_inside(src_w, src_h, w, h, no_upscale=True)
-        vf = kenburns_filter(mode, duration, w, h, fg_w=fg_w, fg_h=fg_h)
+        vf = kenburns_filter(mode, duration, w, h)
     if overlay:
         vf = vf + "," + listing_overlay_filter(overlay, w, h)
 

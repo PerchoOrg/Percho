@@ -4,43 +4,34 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
-## 2026-07-17 19:19 UTC — Phase 115: v1 ken-burns filter — stop upscaling small POI photos ("nearby videos 有 zoom-in 有点模糊")
+## 2026-07-17 19:58 UTC — Phase 115 REVERT (commit 273f54e)
 
-**Report**: `qiaoxux` — "2438 Figaro Drive 的 nearby videos 为啥有 zoom-in
-了，有点模糊。5122 Lower Creek Street 的 nearby 就正常。就一条：横屏照片
-不要拉满竖屏，保持照片的原始比例。"
+Reverted phase115 (commit 9a7d5dc). It was solving the wrong problem and
+introduced jitter.
 
-**Root cause**: `scripts/ken-burns/generate.py::kenburns_filter` (the v1
-blur-letterbox path used by POI/bucket/nearby videos) built its fg layer
-with `scale={w}:{h}:force_original_aspect_ratio=decrease` — i.e. always
-scaled to fit inside 1080×1920, including UPSCALING when the source was
-smaller than that. Then zoompan applied a 1.10× zoom on top. For Figaro's
-POI photos the source widths ran 540–4800 (min 540 on `outdoor`, min 480
-on `dining`), so the smallest ones got a 1080/540 = 2× upscale + 1.10×
-zoom = ~2.2× effective magnification of ~540px source → visibly soft.
-Lower Creek's POI photos were 2000–4096px wide, so the same math was
-under 1× upscale and stayed sharp.
+**User feedback:** "所有视频里的照片必须横向拉满 / 视频 figaro 里的画面一直在抖动"
 
-**Fix**: v1 fg layer now uses fit-inside-no-upscale, matching v2. `kenburns_filter`
-gains optional `fg_w`/`fg_h` params; caller (`render_clip`) computes them
-via `fit_inside(src_w, src_h, w, h, no_upscale=True)` and passes them
-through. fg scales to those fit-inside dims (never larger than native),
-zoompan runs on the fg canvas so zoom crops into native pixels, and the
-result is overlaid centered on the blurred bg. Small photos now sit at
-their native size inside the frame with a blurred letterbox around them
-— the user's stated rule: "保持照片的原始比例，不要拉满竖屏".
+**What phase115 got wrong:**
+1. Interpreted "zoomed in + blurry" as "upscaled fg → soft pixels". Real
+   priority was "照片必须横向拉满" — fg must fill 1080 width, not sit
+   at native resolution centered on blur bg.
+2. Removed the 4× upscale that gave zoompan sub-pixel smoothness. Zoompan
+   on a small native fg canvas steps in integer pixels → visible jitter.
 
-**Files**: `scripts/ken-burns/generate.py`.
+**v1 filter is back to phase90 behaviour:**
+- fg: `scale=1080:1920:force_original_aspect_ratio=decrease` → landscape
+  photos fill 1080 width, blur letterbox top/bottom
+- compose upscales to 4320×7680 (4×) → zoompan at that resolution →
+  downscale to 1080×1920 = smooth sub-pixel motion, no jitter
 
-**Verify**: re-render Figaro's 5 nearby buckets (`daily_errands`,
-`shopping`, `outdoor`, `schools`, `dining`) after deploy. Sub-1000px
-source photos should render at their native size centered on the
-blurred bg, not filling the full 1080 wide.
+**Trade-off accepted:** small POI photos (Google Places sometimes returns
+480–720px wide) still get upscaled to fit 1080 width and may look slightly
+soft. Fixing that belongs at the source (raise `maxWidthPx` in `lib/poi/*`
+Google Places fetch, re-fetch photos) — not at the render layer where it
+breaks the "fill width" rule.
 
-**Next**: separate follow-up — Google Places `maxWidthPx` in the POI
-photo fetcher should be raised so we get bigger source photos in the
-first place. This fix stops the pipeline from making bad output worse,
-but doesn't help photos where Google Places only has small images.
+**Next:** re-queue the 5 Figaro bucket videos so worker picks up reverted
+filter.
 
 ## 2026-07-17 23:45 UTC — Phase 114: /communities still empty — top-level query timed out on `boundary`
 
