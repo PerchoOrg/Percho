@@ -31,16 +31,20 @@ type Agent = {
   name: string;
   email: string | null;
   phone: string | null;
+  // Phase 94 (2026-07-17): set only for synthesised external (FMLS) agents.
+  office?: string | null;
+  isExternal?: boolean;
 };
 
 export type ListingForFeed = {
   id: string;
   slug: string;
-  agent_id: string;
+  agent_id: string | null;
   community_id: string | null;
   address: string;
   city: string;
   state: string;
+  zip?: string | null;
   price: number | null;
   beds: number | null;
   baths: number | null;
@@ -48,6 +52,12 @@ export type ListingForFeed = {
   cover_url: string | null;
   description: string[] | null;
   status: string;
+  // Phase 94: external attribution + provenance.
+  external_agent_name?: string | null;
+  external_agent_phone?: string | null;
+  external_office?: string | null;
+  source?: string | null;
+  source_id?: string | null;
 };
 
 type Community = { id: string; name: string; description: string | null };
@@ -208,6 +218,46 @@ async function fetchAroundListing(
 }
 
 /**
+ * Phase 94 (2026-07-17): external listing loader — `/v/{source}/{sourceId}`.
+ * Looks up an FMLS (or other externally-sourced) listing by its provenance
+ * key.  Synthesises an in-memory `Agent` from `external_agent_name/phone/office`
+ * so the downstream `buildListingCards` path can render identically to
+ * agent-owned listings (with `isExternal=true` gating the caption card).
+ */
+export async function loadListingFeedBySource(
+  source: string,
+  sourceId: string,
+  opts: { statuses?: string[] } = {},
+): Promise<ListingFeedBundle | null> {
+  const statuses = opts.statuses ?? ['active'];
+  const supabase = await createClient();
+
+  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
+  const { data: listing } = (await (supabase as any)
+    .from('listings')
+    .select(
+      'id, slug, agent_id, community_id, address, city, state, zip, price, beds, baths, sqft, cover_url, description, status, external_agent_name, external_agent_phone, external_office, source, source_id',
+    )
+    .eq('source', source)
+    .eq('source_id', sourceId)
+    .in('status', statuses)
+    .maybeSingle()) as { data: ListingForFeed | null };
+  if (!listing) return null;
+
+  const agent: Agent = {
+    id: '',
+    slug: '',
+    name: listing.external_agent_name ?? 'FMLS Agent',
+    email: null,
+    phone: listing.external_agent_phone ?? null,
+    office: listing.external_office ?? null,
+    isExternal: true,
+  };
+
+  return fetchAroundListing(supabase, agent, listing);
+}
+
+/**
  * Public-page entry. Loads agent → listing (filtered by status) → related
  * data. Returns null if any of agent/listing not found.
  */
@@ -231,7 +281,7 @@ export async function loadListingFeedBySlug(
   const { data: listing } = (await (supabase as any)
     .from('listings')
     .select(
-      'id, slug, agent_id, community_id, address, city, state, price, beds, baths, sqft, cover_url, description, status',
+      'id, slug, agent_id, community_id, address, city, state, zip, price, beds, baths, sqft, cover_url, description, status, external_agent_name, external_agent_phone, external_office, source, source_id',
     )
     .eq('agent_id', agent.id)
     .eq('slug', listingSlug)
@@ -253,11 +303,16 @@ export async function loadListingFeedById(listingId: string): Promise<ListingFee
   const { data: listing } = (await (supabase as any)
     .from('listings')
     .select(
-      'id, slug, agent_id, community_id, address, city, state, price, beds, baths, sqft, cover_url, description, status',
+      'id, slug, agent_id, community_id, address, city, state, zip, price, beds, baths, sqft, cover_url, description, status, external_agent_name, external_agent_phone, external_office, source, source_id',
     )
     .eq('id', listingId)
     .maybeSingle()) as { data: ListingForFeed | null };
   if (!listing) return null;
+
+  // Phase 94 (2026-07-17): dashboard preview is Percho-agent only. External
+  // listings (FMLS) have agent_id IS NULL and aren't editable via dashboard,
+  // so bail if we land here.
+  if (!listing.agent_id) return null;
 
   // biome-ignore lint/suspicious/noExplicitAny: stub generated types
   const { data: agent } = (await (supabase as any)
@@ -345,12 +400,16 @@ export async function buildListingCards(
         baths: listing.baths,
         sqft: listing.sqft,
         description: (listing.description ?? []).filter((s) => s && s.trim().length > 0),
+        source: listing.source ?? null,
+        sourceId: listing.source_id ?? null,
       },
       agent: {
         slug: agent.slug,
         name: agent.name,
         email: agent.email,
         phone: agent.phone,
+        office: agent.office ?? null,
+        isExternal: agent.isExternal ?? false,
       },
     };
     return [photoCard];

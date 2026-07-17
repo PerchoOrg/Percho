@@ -20,6 +20,7 @@
  * device_id lives in browser storage — pure client component.
  */
 
+import { linkForCard } from '@/lib/feed/link-for-card';
 import type { BrowseCard } from '@/app/(public)/browse/_components/BrowseFeed';
 import { GridCard, GridCardCaption } from '@/app/_components/GridCard';
 import { GridFrame } from '@/app/_components/GridFrame';
@@ -116,7 +117,7 @@ function ListingsView({ cards }: { cards: BrowseCard[] }) {
     href:
       card.mediaKind === 'video'
         ? `/browse/feed?start=${encodeURIComponent(card.listing.id)}`
-        : `/v/${card.agent.slug}/${card.listing.slug}`,
+        : linkForCard(card),
     coverUrl:
       // Phase 60: agent's cover_url wins over the mediaKind-derived hero.
       card.gridCoverUrl ??

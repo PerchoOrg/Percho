@@ -40,13 +40,19 @@ type ListingRow = {
   sqft: number | null;
   description: string[] | null;
   community_id: string | null;
-  agent_id: string;
+  agent_id: string | null;
   // Phase 60 (2026-06-26): cover_url joins the projection so the grid
   // thumbnail can honour the agent's "Set as cover" pick (photo or
   // video) regardless of mediaKind.
   cover_url: string | null;
   lat?: number | null;
   lng?: number | null;
+  // Phase 94 (2026-07-17): external attribution for FMLS-imported listings.
+  external_agent_name: string | null;
+  external_agent_phone: string | null;
+  external_office: string | null;
+  source: string | null;
+  source_id: string | null;
 };
 
 type AgentRow = {
@@ -125,7 +131,9 @@ async function assembleCards(
   if (listings.length === 0) return [];
 
   const listingIds = listings.map((l) => l.id);
-  const agentIds = Array.from(new Set(listings.map((l) => l.agent_id)));
+  const agentIds = Array.from(
+    new Set(listings.map((l) => l.agent_id).filter((x): x is string => !!x)),
+  );
   const communityIds = Array.from(
     new Set(listings.map((l) => l.community_id).filter((x): x is string => !!x)),
   );
@@ -247,7 +255,23 @@ async function assembleCards(
   for (const l of listings) {
     const hero = heroByListing.get(l.id);
     const heroPhoto = heroPhotoByListing.get(l.id);
-    const agent = agentsById.get(l.agent_id);
+    // Phase 94 (2026-07-17): agent can be null for external (FMLS) listings.
+    // Synthesise a placeholder agent shape from external_agent_name / office
+    // so downstream card rendering stays identical; caption card decides
+    // whether to link or render plain text based on `agent.isExternal`.
+    const isExternal = !l.agent_id;
+    const aid = l.agent_id;
+    const agent = aid
+      ? agentsById.get(aid)
+      : ({
+          id: '',
+          slug: '',
+          name: l.external_agent_name ?? 'FMLS Agent',
+          email: null,
+          phone: l.external_agent_phone,
+          office: l.external_office,
+          isExternal: true,
+        } as AgentRow & { office: string | null; isExternal: true });
     if (!agent) continue;
     if (!hero && !heroPhoto) continue;
 
@@ -336,12 +360,16 @@ async function assembleCards(
         baths: l.baths,
         sqft: l.sqft,
         description: (l.description ?? []).filter((s) => s && s.trim().length > 0),
+        source: l.source,
+        sourceId: l.source_id,
       },
       agent: {
         slug: agent.slug,
         name: agent.name,
         email: agent.email,
         phone: agent.phone,
+        office: (agent as { office?: string | null }).office ?? null,
+        isExternal,
       },
     };
     if (community) {
@@ -374,7 +402,7 @@ export async function fetchBrowseCards(): Promise<BrowseCard[]> {
   const { data: rawListings } = (await (supabase as any)
     .from('listings')
     .select(
-      'id, slug, address, city, state, zip, price, beds, baths, sqft, description, community_id, agent_id, cover_url',
+      'id, slug, address, city, state, zip, price, beds, baths, sqft, description, community_id, agent_id, cover_url, external_agent_name, external_agent_phone, external_office, source, source_id',
     )
     .eq('status', 'active')
     .order('created_at', { ascending: false })
@@ -411,7 +439,7 @@ export async function fetchBrowseCardsByCommunitySlug(
   const { data: rawListings } = (await (supabase as any)
     .from('listings')
     .select(
-      'id, slug, address, city, state, zip, price, beds, baths, sqft, description, community_id, agent_id, cover_url',
+      'id, slug, address, city, state, zip, price, beds, baths, sqft, description, community_id, agent_id, cover_url, external_agent_name, external_agent_phone, external_office, source, source_id',
     )
     .eq('status', 'active')
     .eq('community_id', community.id)
@@ -435,7 +463,7 @@ export async function fetchBrowseCardsByIds(ids: string[]): Promise<BrowseCard[]
   const { data: rawListings } = (await (supabase as any)
     .from('listings')
     .select(
-      'id, slug, address, city, state, zip, price, beds, baths, sqft, description, community_id, agent_id, cover_url',
+      'id, slug, address, city, state, zip, price, beds, baths, sqft, description, community_id, agent_id, cover_url, external_agent_name, external_agent_phone, external_office, source, source_id',
     )
     .in('id', ids)
     .eq('status', 'active')) as { data: ListingRow[] | null };
@@ -468,7 +496,7 @@ export async function fetchNearbyCards(args: {
     const r = (await (supabase as any)
       .from('listings')
       .select(
-        'id, slug, address, city, state, zip, price, beds, baths, sqft, description, community_id, agent_id, cover_url, lat, lng',
+        'id, slug, address, city, state, zip, price, beds, baths, sqft, description, community_id, agent_id, cover_url, external_agent_name, external_agent_phone, external_office, source, source_id, lat, lng',
       )
       .eq('status', 'active')
       .not('lat', 'is', null)

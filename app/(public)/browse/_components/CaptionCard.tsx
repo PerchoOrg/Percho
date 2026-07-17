@@ -25,7 +25,14 @@ type Listing = {
   description: string[];
 };
 
-type Agent = { slug: string; name: string };
+type Agent = {
+  slug: string;
+  name: string;
+  /** Phase 94: FMLS office for external listings. */
+  office?: string | null;
+  /** Phase 94: true when listing is externally sourced (no Percho agent). */
+  isExternal?: boolean;
+};
 type School = { name: string; grades: string | null; rating: number | null };
 type Poi = { name: string; distance_text: string | null };
 
@@ -232,21 +239,34 @@ export function CaptionCard({
               )}
 
               <section className="mt-5 flex justify-end">
-                <Link
-                  href={`/a/${agent.slug}`}
-                  className="group inline-flex items-center gap-1 text-[13px] text-black/60 transition-colors hover:text-black/90"
-                >
-                  <span>Listed by</span>
-                  <span className="font-medium text-[#8b6b3f] underline decoration-[#c4a584]/50 decoration-1 underline-offset-[3px] group-hover:decoration-[#8b6b3f]">
-                    {agent.name}
-                  </span>
-                  <span
-                    aria-hidden
-                    className="text-[#8b6b3f] transition-transform group-hover:translate-x-0.5"
+                {agent.isExternal ? (
+                  <div className="inline-flex flex-wrap items-center justify-end gap-1 text-[13px] text-black/60">
+                    <span>Listed by</span>
+                    <span className="font-medium text-black/80">{agent.name}</span>
+                    {agent.office && (
+                      <>
+                        <span aria-hidden className="text-black/30">·</span>
+                        <span className="text-black/60">{agent.office}</span>
+                      </>
+                    )}
+                  </div>
+                ) : (
+                  <Link
+                    href={`/a/${agent.slug}`}
+                    className="group inline-flex items-center gap-1 text-[13px] text-black/60 transition-colors hover:text-black/90"
                   >
-                    ›
-                  </span>
-                </Link>
+                    <span>Listed by</span>
+                    <span className="font-medium text-[#8b6b3f] underline decoration-[#c4a584]/50 decoration-1 underline-offset-[3px] group-hover:decoration-[#8b6b3f]">
+                      {agent.name}
+                    </span>
+                    <span
+                      aria-hidden
+                      className="text-[#8b6b3f] transition-transform group-hover:translate-x-0.5"
+                    >
+                      ›
+                    </span>
+                  </Link>
+                )}
               </section>
             </div>
           </div>

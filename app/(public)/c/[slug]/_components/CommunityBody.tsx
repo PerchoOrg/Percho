@@ -23,6 +23,7 @@
  * caption/badge styling. Inline aspect-square card markup deleted.
  */
 
+import { linkForCard } from '@/lib/feed/link-for-card';
 import type { BrowseCard } from '@/app/(public)/browse/_components/BrowseFeed';
 import { GridCard, GridCardCaption } from '@/app/_components/GridCard';
 import { GridFrame } from '@/app/_components/GridFrame';
@@ -255,7 +256,7 @@ function ListingsGrid({ listings }: { listings: BrowseCard[] }) {
       href:
         card.mediaKind === 'video'
           ? `/browse/feed?start=${encodeURIComponent(card.listing.id)}`
-          : `/v/${card.agent.slug}/${card.listing.slug}`,
+          : linkForCard(card),
       coverUrl: realSrc ?? null,
       price: card.listing.price,
       beds: card.listing.beds,

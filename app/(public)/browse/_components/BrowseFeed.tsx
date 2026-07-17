@@ -3,6 +3,7 @@ import { listSavedListingIds, saveListing, unsaveListing } from '@/app/_actions/
 import { getOrCreateDeviceId } from '@/lib/buyer/device-id';
 import { listLiked, toggleLike as toggleLikeAction } from '@/lib/buyer/likes';
 import { hlsUrl, thumbnailUrl } from '@/lib/cloudflare/stream';
+import { linkForCard } from '@/lib/feed/link-for-card';
 import Hls from 'hls.js';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -133,12 +134,42 @@ export type BrowseCard = {
      * rendered as the bottom caption (Xiaohongshu-style), expandable on tap.
      */
     description: string[];
+    /**
+     * Phase 94 (2026-07-17): provenance for externally-sourced listings.
+     * Internal (agent-owned) listings leave both null. When `source === 'fmls'`,
+     * the listing belongs to an external MLS agent (see `agent` below for the
+     * verbatim FMLS attribution) and the detail-page link uses
+     * `/v/fmls/{sourceId}` — NOT `/v/{agent.slug}/{listing.slug}` because
+     * external listings have no Percho agent slug.
+     */
+    source?: string | null;
+    sourceId?: string | null;
   };
   agent: {
+    /**
+     * For internal listings: the Percho agent's slug (used to build
+     * `/v/{slug}/{listingSlug}` and `/a/{slug}`).
+     * For external listings (Phase 94): empty string — the card should route
+     * via `linkFor(card)` which checks `listing.source` and skips agent.slug.
+     * Never render `/a/{agent.slug}` when the agent has no Percho account.
+     */
     slug: string;
+    /** External listings: verbatim FMLS list_agent name. */
     name: string;
     email: string | null;
+    /** External listings: verbatim FMLS list_agent_phone (see external flag). */
     phone: string | null;
+    /**
+     * Phase 94: FMLS office (broker) name — set only for external listings.
+     * Rendered as "Listed by {name} · {office}" in CaptionCard, no link.
+     */
+    office?: string | null;
+    /**
+     * Phase 94: true when this listing is externally-sourced (FMLS import).
+     * Caption card renders name+office as plain text (no /a/{slug} link)
+     * and the phone is intentionally not shown (see phase 94 decision log).
+     */
+    isExternal?: boolean;
   };
   /**
    * Phase 34b (V1 buyer redo): set when the listing belongs to a community.
@@ -1682,7 +1713,7 @@ export function BrowseFeed({
 
   const onShare = useCallback(async () => {
     if (!active) return;
-    const url = `${window.location.origin}/v/${active.agent.slug}/${active.listing.slug}`;
+    const url = `${window.location.origin}${linkForCard(active)}`;
     if (typeof navigator !== 'undefined' && navigator.share) {
       try {
         await navigator.share({ title: active.listing.address, url });

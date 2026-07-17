@@ -2,6 +2,7 @@ import { GridPageShell } from '@/app/_components/GridPageShell';
 import { ListingGrid, type ListingGridItem } from '@/app/_components/ListingGrid';
 import { thumbnailUrl } from '@/lib/cloudflare/stream';
 import { fetchBrowseCards, fetchBrowseCardsByCommunitySlug } from '@/lib/feed/browse-cards';
+import { linkForCard } from '@/lib/feed/link-for-card';
 import { createClient } from '@/lib/supabase/server';
 import type { Metadata } from 'next';
 
@@ -78,7 +79,7 @@ async function RecommendedGrid({ communitySlug }: { communitySlug: string | null
           ? `/browse/feed?${
               isCommunityScoped ? `community=${encodeURIComponent(communitySlug as string)}&` : ''
             }start=${encodeURIComponent(card.listing.id)}`
-          : `/v/${card.agent.slug}/${card.listing.slug}`,
+          : linkForCard(card),
       coverUrl: src,
       price: card.listing.price,
       beds: card.listing.beds,

@@ -1,6 +1,7 @@
 'use client';
 
 import type { BrowseCard } from '@/app/(public)/browse/_components/BrowseFeed';
+import { linkForCard } from '@/lib/feed/link-for-card';
 import { GridPageShell } from '@/app/_components/GridPageShell';
 import { ListingGrid, type ListingGridItem } from '@/app/_components/ListingGrid';
 import { thumbnailUrl } from '@/lib/cloudflare/stream';
@@ -245,7 +246,7 @@ export function NearbyClient() {
       href:
         card.mediaKind === 'video'
           ? `/browse/feed?start=${encodeURIComponent(card.listing.id)}`
-          : `/v/${card.agent.slug}/${card.listing.slug}`,
+          : linkForCard(card),
       coverUrl: realSrc ?? null,
       price: card.listing.price,
       beds: card.listing.beds,
