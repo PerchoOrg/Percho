@@ -26,13 +26,11 @@ import {
 } from '@/components/dashboard/VideoUploader';
 import {
   type CommunityVideoCategoryId,
-  getCategoryMeta,
   legacyKindForCategory,
 } from '@/lib/zod/community-video-categories';
 import { Upload } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { CategoryPicker, CategorySpecCard } from './CategoryPicker';
 import {
   CommunityPhotoPanel,
   type CommunityPhotoPanelHandle,
@@ -154,56 +152,36 @@ export function CommunityMediaPanel({
 
   return (
     <section className="rounded-2xl border border-line bg-surface p-4 sm:p-6">
+      {/* Phase 101g (2026-07-17): manual Category selection removed — uploads
+          default to `walk_the_block`. Category is still passed to the child
+          panels so the DB tag column stays populated; admin can retag later
+          from /admin if needed. */}
       <div className="mb-4">
-        <span className="text-muted text-xs">
-          Upload videos and photos · same category tags both · pick any one as the neighborhood cover
-        </span>
-      </div>
-
-      {/* Phase 50.11: Category dropdown (left) + Upload button (right) on a
-          single row, items aligned to bottom so the dropdown's wider field
-          and the button bottom-edge meet. SpecCard moved below so it
-          doesn't make the Category column tower over the Upload button. */}
-      <div className="mb-3 flex flex-wrap items-end gap-3">
-        <div className="min-w-[12rem] flex-1">
-          <label
-            htmlFor="community-media-category"
-            className="mb-1.5 block text-xs font-medium text-ink2"
-          >
-            Category
-          </label>
-          <CategoryPicker mode="create" selected={category} onPick={setCategory} hideSpec />
-        </div>
-        <div>
-          <input
-            ref={inputRef}
-            type="file"
-            accept="image/*,video/*"
-            multiple
-            className="hidden"
-            onChange={(e) => {
-              if (e.target.files && e.target.files.length > 0) {
-                handlePicked(e.target.files);
-                e.target.value = '';
-              }
-            }}
-          />
-          <button
-            type="button"
-            onClick={() => inputRef.current?.click()}
-            className="inline-flex items-center gap-2 rounded-md border border-line bg-bg px-4 py-2 text-ink2 text-sm hover:border-bronze hover:text-ink"
-          >
-            <Upload size={16} aria-hidden="true" />
-            Click to upload
-          </button>
-        </div>
+        <input
+          ref={inputRef}
+          type="file"
+          accept="image/*,video/*"
+          multiple
+          className="hidden"
+          onChange={(e) => {
+            if (e.target.files && e.target.files.length > 0) {
+              handlePicked(e.target.files);
+              e.target.value = '';
+            }
+          }}
+        />
+        <button
+          type="button"
+          onClick={() => inputRef.current?.click()}
+          className="inline-flex items-center gap-2 rounded-md border border-line bg-bg px-4 py-2 text-ink2 text-sm hover:border-bronze hover:text-ink"
+        >
+          <Upload size={16} aria-hidden="true" />
+          Click to upload
+        </button>
       </div>
       {unsupportedNotice ? (
         <p className="mb-3 text-[11px] text-red-300">{unsupportedNotice}</p>
       ) : null}
-      <div className="mb-6">
-        <CategorySpecCard meta={getCategoryMeta(category)} />
-      </div>
 
       {/* Per-file video uploaders. Each owns its own pick→title→progress flow;
           we feed it `initialFile` so the agent skips the picker (already picked

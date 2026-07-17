@@ -97,12 +97,6 @@ export function MediaPanel({
 
   return (
     <section className="rounded-2xl border border-line bg-surface p-4 sm:p-6">
-      <div className="mb-4">
-        <span className="text-muted text-xs">
-          Photos and videos · drag to reorder · use ⓒ to set cover
-        </span>
-      </div>
-
       {/* Unified upload entry point. One button, both media types. */}
       <div className="mb-6">
         <input
@@ -126,9 +120,6 @@ export function MediaPanel({
           <Upload size={16} aria-hidden="true" />
           Click to upload
         </button>
-        <p className="mt-2 text-muted text-xs">
-          Photos (JPEG / PNG / WebP, up to 10 MB) and videos (MP4 / MOV, up to 2 GB).
-        </p>
         {unsupportedNotice ? (
           <p className="mt-2 text-xs text-red-300">{unsupportedNotice}</p>
         ) : null}
