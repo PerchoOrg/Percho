@@ -4,6 +4,64 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-17 23:45 UTC — Phase 114: /communities still empty — top-level query timed out on `boundary`
+
+**Report**: `qiaoxux` — "communities 里没有内容了 你看看是不是新的问题" —
+after phase111 (`5e6df55`) shipped, `/communities` still rendered the
+`EmptyHubState` ("No communities yet"). Phase111 was only half the fix.
+
+**Root cause**: The main `communities` list query selects `boundary`
+(a per-community GeoJSON polygon used as final logo fallback). With
+8679 active communities post-FMLS import — many of them dense Nextdoor
+seed multipolygons — PostgREST hits Postgres `statement_timeout`
+(SQLSTATE `57014`) trying to stream the full payload. Reproduced
+directly against `/rest/v1/communities?…&select=…,boundary`:
+
+```
+HTTP 500  {"code":"57014","message":"canceling statement due to statement timeout"}
+```
+
+Same query without `boundary`: HTTP 200, 456KB, 1000 rows in 0.22s.
+`fetchActiveCommunitiesImpl` therefore got `data = null` from Supabase,
+hydrated 0 cards, and `CommunityGrid` fell through to `EmptyHubState`.
+
+Phase111 fixed the *inner* `.in()` chunking (URL length on 8k id
+batches) but left the outer boundary-inline `.select()` untouched — the
+real bottleneck.
+
+**Fix**: `lib/communities/list.ts`
+1. `CommunityRow`: dropped `boundary` field. All four top-level
+   `communities` selects (`fetchActiveCommunitiesImpl`,
+   `fetchOwnInactiveCommunities`, `fetchAgentScopedCommunities` × 2)
+   now select only lightweight scalar columns. Query returns fast.
+2. `hydrateCommunityCards`: after the video/listing hydration, compute
+   which rows would fall through to the logo-SVG cover (no
+   `cover_video_id` AND no `cover_storage_path`). Only those need
+   boundary. Fetch it via `chunkedInField('id', boundaryIds)` — reuses
+   the phase111 chunking helper. Map by id, thread into
+   `resolveCommunityCoverWithCfIds`.
+3. `rankByRelevance`: new sort. Alphabetical order surfaced 731+ empty
+   Nextdoor seeds first ("` River Summit`", `12 Mile`, `1250 West`…) —
+   buyers saw nothing above the fold. New tiers: (1) has ≥1 active
+   listing, (2) has ≥1 community video, (3) empty seed. Alphabetical
+   within each tier. Applied at both `cachedActive()` and the merged
+   own-inactive union path.
+
+**Verify**: `npx tsc --noEmit` clean. Next: push, Vercel preview,
+confirm `/communities` shows populated grid, top of grid = listings-
+bearing neighborhoods, tail = Nextdoor seeds.
+
+**Learnings**: Payload-size timeouts look identical to "no results" at
+the app layer — a 500 with `data=null` from postgrest-js is
+indistinguishable from an empty result set unless you inspect the
+`error` field (loader doesn't). Worth adding an `error` log-and-throw
+in the shared list helper so the next payload-size regression is loud
+instead of a silent empty page. Not in scope for this fix.
+
+**Next steps**: consider (a) surfacing `error` on hydrate loaders as
+above; (b) an alerting probe on `/communities` grid card count
+(`count > 0` on prod as a canary).
+
 ## 2026-07-17 23:10 UTC — Phase 113: uncap browse feed — grid → swipe deep-link on tail listings was opening the wrong home
 
 **Report**: `qiaoxux` — "listing grid view when I click 5122 Lower Creek

@@ -61,8 +61,19 @@ type CommunityRow = {
   description: string | null;
   cover_video_id: string | null;
   cover_storage_path: string | null;
-  boundary: unknown;
 };
+
+/**
+ * Phase 114 (2026-07-17): `boundary` is intentionally NOT selected in the
+ * top-level list query. Boundary is a per-community GeoJSON polygon (often
+ * multi-KB — the Nextdoor seeds are dense multipolygons). PostgREST was
+ * hitting `statement_timeout` (Postgres 57014) trying to stream ~8k rows
+ * with `boundary` inline, so `/communities` returned nothing at all
+ * (see phase111 → phase114 sequence). We now fetch boundary lazily in
+ * `hydrateCommunityCards`, only for the rows whose cover falls all the way
+ * through to the logo-SVG fallback (no cover_video_id AND no
+ * cover_storage_path).
+ */
 
 /**
  * Given a set of community rows, hydrate them with videoCount / listingCount
@@ -165,6 +176,28 @@ async function hydrateCommunityCards(
     );
   }
 
+  // Phase 114 (2026-07-17): lazily fetch `boundary` only for rows that
+  // fall all the way to the logo-svg fallback (no cover_video_id AND no
+  // cover_storage_path). Selecting boundary inline for all ~8k active
+  // communities was timing out the top-level query at PostgREST
+  // (statement_timeout / Postgres 57014).
+  const needsBoundaryIds = communities
+    .filter((c) => !c.cover_video_id && !c.cover_storage_path)
+    .map((c) => c.id);
+  const boundaryByCommunity = new Map<string, unknown>();
+  if (needsBoundaryIds.length > 0) {
+    const boundaryRows = await chunkedInField<{ id: string; boundary: unknown }>(
+      needsBoundaryIds,
+      // biome-ignore lint/suspicious/noExplicitAny: stub generated types
+      (batch) =>
+        (supabase as any)
+          .from('communities')
+          .select('id, boundary')
+          .in('id', batch),
+    );
+    for (const r of boundaryRows) boundaryByCommunity.set(r.id, r.boundary);
+  }
+
   return communities.map((c) => ({
     id: c.id,
     name: c.name,
@@ -180,9 +213,29 @@ async function hydrateCommunityCards(
       cover_storage_path: c.cover_storage_path,
       fallback_video_cf_id: firstVideoCfByCommunity.get(c.id) ?? null,
       name: c.name,
-      boundary: (c.boundary as import('@/lib/community/logo-cover').BoundaryGeoJSON | null) ?? null,
+      boundary: (boundaryByCommunity.get(c.id) as import('@/lib/community/logo-cover').BoundaryGeoJSON | null) ?? null,
     }),
   }));
+}
+
+/**
+ * Phase 114 (2026-07-17): rank order for the public buyer grid — surface
+ * meaningful neighborhoods first. The 731 Nextdoor seeds with 0 listings /
+ * 0 videos otherwise dominate the top of an alphabetical list (starts with
+ * " River Summit", "12 Mile", "1250 West"…) so buyers see nothing but
+ * empty tiles above the fold.
+ *
+ * Tiers, high → low:
+ *   1. has ≥1 active listing (there are homes to buy here)
+ *   2. has ≥1 community video (some content, even without a listing)
+ *   3. nothing yet (Nextdoor seed reference data)
+ * Within each tier, alphabetical by name.
+ */
+function rankByRelevance(a: CommunityListCard, b: CommunityListCard): number {
+  const tierA = a.listingCount > 0 ? 0 : a.videoCount > 0 ? 1 : 2;
+  const tierB = b.listingCount > 0 ? 0 : b.videoCount > 0 ? 1 : 2;
+  if (tierA !== tierB) return tierA - tierB;
+  return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
 }
 
 async function fetchActiveCommunitiesImpl(): Promise<CommunityListCard[]> {
@@ -193,7 +246,7 @@ async function fetchActiveCommunitiesImpl(): Promise<CommunityListCard[]> {
   // biome-ignore lint/suspicious/noExplicitAny: stub generated types
   const { data } = (await (supabase as any)
     .from('communities')
-    .select('id, name, slug, city, state, description, cover_video_id, cover_storage_path, boundary')
+    .select('id, name, slug, city, state, description, cover_video_id, cover_storage_path')
     // Phase 72 (2026-07-05): never surface the upload-flow `Untitled community`
     // stub — owner has never touched it (name still = stub), so it's just noise.
     .neq('name', 'Untitled community')
@@ -203,6 +256,7 @@ async function fetchActiveCommunitiesImpl(): Promise<CommunityListCard[]> {
 
   const rows = data ?? [];
   const cards = await hydrateCommunityCards(rows);
+  cards.sort(rankByRelevance);
   t.end({ communities: rows.length, cached: false });
   return cards;
 }
@@ -227,7 +281,7 @@ async function fetchOwnInactiveCommunities(agentId: string): Promise<CommunityLi
   // biome-ignore lint/suspicious/noExplicitAny: stub generated types
   const { data } = (await (supabase as any)
     .from('communities')
-    .select('id, name, slug, city, state, description, cover_video_id, cover_storage_path, boundary')
+    .select('id, name, slug, city, state, description, cover_video_id, cover_storage_path')
     .neq('status', 'active')
     .neq('name', 'Untitled community')
     .eq('created_by', agentId)
@@ -266,7 +320,7 @@ async function fetchAgentScopedCommunities(agentId: string): Promise<CommunityLi
     // biome-ignore lint/suspicious/noExplicitAny: stub generated types
     (supabase as any)
       .from('communities')
-      .select('id, name, slug, city, state, description, cover_video_id, cover_storage_path, boundary')
+      .select('id, name, slug, city, state, description, cover_video_id, cover_storage_path')
       .eq('created_by', agentId)
       .neq('name', 'Untitled community') as Promise<{ data: CommunityRow[] | null }>,
     // biome-ignore lint/suspicious/noExplicitAny: stub generated types
@@ -293,7 +347,7 @@ async function fetchAgentScopedCommunities(agentId: string): Promise<CommunityLi
     // biome-ignore lint/suspicious/noExplicitAny: stub generated types
     const { data } = (await (supabase as any)
       .from('communities')
-      .select('id, name, slug, city, state, description, cover_video_id, cover_storage_path, boundary')
+      .select('id, name, slug, city, state, description, cover_video_id, cover_storage_path')
       .in('id', needIds)) as { data: CommunityRow[] | null };
     linkedRows = data ?? [];
   }
@@ -339,9 +393,7 @@ export async function fetchCommunityListCards(
   const byId = new Map<string, CommunityListCard>();
   for (const c of active) byId.set(c.id, c);
   for (const c of own) byId.set(c.id, c);
-  return Array.from(byId.values()).sort((a, b) =>
-    a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }),
-  );
+  return Array.from(byId.values()).sort(rankByRelevance);
 }
 
 /**

@@ -4,6 +4,16 @@
 > Historical entries below preserve the original name in-place — release notes
 > are a record of what was shipped under the product's name at the time.
 
+## v100.3 — Neighborhoods page is populated again (2026-07-17)
+
+**🐛 Bug Fixes**
+
+The Neighborhoods page (`/communities`) was showing "No communities yet" even though the pool now has thousands of neighborhoods. The page was trying to load too much data per row for the server to return in time, so the whole request came back empty and the page fell to its empty state.
+
+What changes visibly:
+- The Neighborhoods grid is populated again — no more "No communities yet" on the buyer surface.
+- The order of the grid has also been improved: neighborhoods that actually have homes for sale come first, then neighborhoods with videos, then reference-only neighborhoods (seeded from Nextdoor with no listing or video yet). Alphabetical within each group. Buyers now see the useful stuff above the fold instead of a wall of empty tiles that happen to start with a number.
+
 ## v100.2 — Tapping a home in the grid now opens the right home (2026-07-17)
 
 **🐛 Bug Fixes**
