@@ -4,6 +4,20 @@
 > Historical entries below preserve the original name in-place — release notes
 > are a record of what was shipped under the product's name at the time.
 
+## v99.2 — Admin tables: search, sort, and pagination on every list (2026-07-17)
+
+**Admin › Pipeline**
+
+Every list view in the admin console (Home Tour, Home Nearby, Neighborhood Nearby, Bucket Video Jobs, POI Library) now has the same three controls:
+
+- **Search box, top-right.** Type to filter the visible rows instantly — matches across the row's key fields (address / name / status / notes, whichever applies to the table).
+- **Sort by clicking any column header.** First click = ascending, second click = descending, third click clears sort. Works on every column, including counts and dates.
+- **20 rows per page.** Prev / Next buttons at the bottom, with a "N–M of T" counter. Cranks through hundreds of listings without one giant scroll.
+
+**Old filter buttons removed** — the search + sortable columns cover the same ground, so the header chips ("All / No tour / Has tour", status chips on Bucket Jobs, "No community / Has community", the POI tagged/photos dropdowns) are gone for a cleaner top strip. If any of those specific filters get missed in practice, they can come back later.
+
+---
+
 ## v99.1 — Admin BGM upload fix: large mp3s (2026-07-17)
 
 ### 🐛 Bug Fixes
