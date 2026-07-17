@@ -22,9 +22,9 @@ type Row = {
 export default async function PoiLibraryPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; tagged?: string }>;
+  searchParams: Promise<{ q?: string; tagged?: string; photos?: string }>;
 }) {
-  const { q = '', tagged = 'all' } = await searchParams;
+  const { q = '', tagged = 'all', photos = 'all' } = await searchParams;
   const supabase = createServiceClient();
 
   let query = supabase
@@ -39,12 +39,25 @@ export default async function PoiLibraryPage({
   if (tagged === 'tagged') query = query.not('tagged_at', 'is', null);
   if (tagged === 'untagged') query = query.is('tagged_at', null);
 
-  const [{ data, count }, photoAgg] = await Promise.all([
+  const [{ data, count }, photoAgg, poiIdsWithPhotos] = await Promise.all([
     query as unknown as Promise<{ data: Row[] | null; count: number | null }>,
     supabase.from('poi_photos').select('id', { count: 'exact', head: true }),
+    // Pull the set of poi_ids that have at least one photo row so we
+    // can filter in-memory (avoids a bulky sub-select or RPC).
+    supabase.from('poi_photos').select('poi_id').limit(20000) as unknown as Promise<{
+      data: Array<{ poi_id: string }> | null;
+    }>,
   ]);
 
-  const rows = data ?? [];
+  const withPhotos = new Set<string>();
+  for (const p of poiIdsWithPhotos.data ?? []) withPhotos.add(p.poi_id);
+
+  const allRows = data ?? [];
+  const rows = allRows.filter((r) => {
+    if (photos === 'with') return withPhotos.has(r.id);
+    if (photos === 'without') return !withPhotos.has(r.id);
+    return true;
+  });
 
   return (
     <div className="space-y-4">
@@ -80,6 +93,16 @@ export default async function PoiLibraryPage({
           <option value="all">All</option>
           <option value="tagged">AI-tagged</option>
           <option value="untagged">Untagged</option>
+        </select>
+        <select
+          name="photos"
+          defaultValue={photos}
+          className="rounded-lg border border-line bg-surface px-3 py-1.5"
+          title="Filter by whether the POI has any photos"
+        >
+          <option value="all">Any photos</option>
+          <option value="with">With photos</option>
+          <option value="without">No photos</option>
         </select>
         <button
           type="submit"
