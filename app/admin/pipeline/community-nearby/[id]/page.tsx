@@ -4,11 +4,11 @@
  * agent-facing community edit page. Admin-scoped now (Phase 101e).
  */
 
-import Link from 'next/link';
-import { notFound } from 'next/navigation';
-import { createServiceClient } from '@/lib/supabase/server';
 import { CommunityNearbyPanel } from '@/app/dashboard/communities/[id]/CommunityNearbyPanel';
 import { loadNearbyPoisForCommunity } from '@/lib/poi/community-actions';
+import { createServiceClient } from '@/lib/supabase/server';
+import Link from 'next/link';
+import { notFound } from 'next/navigation';
 
 export const dynamic = 'force-dynamic';
 
@@ -29,16 +29,14 @@ export default async function AdminCommunityNearbyPage({
     .select('id, name, slug, city, state, status')
     .eq('id', id)
     .maybeSingle()) as {
-    data:
-      | {
-          id: string;
-          name: string;
-          slug: string | null;
-          city: string | null;
-          state: string | null;
-          status: string;
-        }
-      | null;
+    data: {
+      id: string;
+      name: string;
+      slug: string | null;
+      city: string | null;
+      state: string | null;
+      status: string;
+    } | null;
   };
 
   if (!community) notFound();
@@ -56,8 +54,7 @@ export default async function AdminCommunityNearbyPage({
       <header className="rounded-2xl border border-line bg-surface p-4 sm:p-5">
         <h1 className="text-xl font-semibold">{community.name}</h1>
         <p className="text-ink2 mt-1 text-sm">
-          {[community.city, community.state].filter(Boolean).join(', ') || '—'} ·{' '}
-          {community.status}
+          {[community.city, community.state].filter(Boolean).join(', ') || '—'} · {community.status}
         </p>
       </header>
 

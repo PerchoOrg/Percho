@@ -3,8 +3,8 @@
  * generated_videos (nearby bucket renders).
  */
 
-import Link from 'next/link';
 import { createServiceClient } from '@/lib/supabase/server';
+import Link from 'next/link';
 
 export const dynamic = 'force-dynamic';
 
@@ -49,8 +49,8 @@ export default async function BucketJobsPage({
       <header>
         <h1 className="text-2xl font-semibold">Bucket Video Jobs</h1>
         <p className="text-ink2 mt-1 text-sm">
-          Nearby bucket renders across every listing + community. The render worker polls this
-          table every {process.env.RENDER_WORKER_POLL_SEC ?? '5'} s.
+          Nearby bucket renders across every listing + community. The render worker polls this table
+          every {process.env.RENDER_WORKER_POLL_SEC ?? '5'} s.
         </p>
       </header>
 
@@ -60,9 +60,7 @@ export default async function BucketJobsPage({
             key={s}
             href={`/admin/pipeline/bucket-jobs?status=${s}`}
             className={`rounded-full border px-3 py-1 capitalize ${
-              status === s
-                ? 'border-ink bg-ink text-bg'
-                : 'border-line text-ink2 hover:text-ink'
+              status === s ? 'border-ink bg-ink text-bg' : 'border-line text-ink2 hover:text-ink'
             }`}
           >
             {s}

@@ -82,10 +82,12 @@ export async function generateCommunityBucketVideo(
   const { data: approvedPhotos, error: photosErr } = (await admin
     .from("community_poi_photos")
     .select(
-      "poi_photo_id, poi_photos!inner(id, poi_id, storage_path, attribution, width_px, height_px, applicable_buckets, ai_score, tagged_at)",
+      "poi_photo_id, poi_photos!inner(id, poi_id, storage_path, attribution, width_px, height_px, applicable_buckets, ai_score, tagged_at, status)",
     )
     .eq("community_id", communityId)
-    .eq("status", "approved")) as {
+    .eq("status", "approved")
+    // Phase 103: skip globally-rejected photos (admin kill switch).
+    .neq("poi_photos.status", "rejected")) as {
     data:
       | Array<{
           poi_photo_id: string;

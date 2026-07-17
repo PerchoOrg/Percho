@@ -3,8 +3,8 @@
  * Shows what the discovery + AI-tag steps have produced.
  */
 
-import Link from 'next/link';
 import { createServiceClient } from '@/lib/supabase/server';
+import Link from 'next/link';
 
 export const dynamic = 'force-dynamic';
 
@@ -29,7 +29,10 @@ export default async function PoiLibraryPage({
 
   let query = supabase
     .from('pois')
-    .select('id, google_place_id, display_name, primary_type, rating, ai_summary, tagged_at, discovered_at', { count: 'exact' })
+    .select(
+      'id, google_place_id, display_name, primary_type, rating, ai_summary, tagged_at, discovered_at',
+      { count: 'exact' },
+    )
     .order('discovered_at', { ascending: false })
     .limit(200);
   if (q) query = query.ilike('display_name', `%${q}%`);
@@ -48,9 +51,9 @@ export default async function PoiLibraryPage({
       <header>
         <h1 className="text-2xl font-semibold">POI Library</h1>
         <p className="text-ink2 mt-1 text-sm">
-          Global `pois` table — deduped by <code className="font-mono text-xs">google_place_id</code>.
-          Every listing / community references POIs by id, so the photo binaries and AI tags are
-          fetched exactly once.
+          Global `pois` table — deduped by{' '}
+          <code className="font-mono text-xs">google_place_id</code>. Every listing / community
+          references POIs by id, so the photo binaries and AI tags are fetched exactly once.
         </p>
         <div className="mt-3 flex gap-4 text-sm text-ink2">
           <span>
@@ -78,7 +81,10 @@ export default async function PoiLibraryPage({
           <option value="tagged">AI-tagged</option>
           <option value="untagged">Untagged</option>
         </select>
-        <button className="rounded-lg border border-line bg-surface px-3 py-1.5 hover:border-ink">
+        <button
+          type="submit"
+          className="rounded-lg border border-line bg-surface px-3 py-1.5 hover:border-ink"
+        >
           Filter
         </button>
       </form>
@@ -92,12 +98,13 @@ export default async function PoiLibraryPage({
               <th className="p-3 text-right">Rating</th>
               <th className="p-3">AI Summary</th>
               <th className="p-3">Tagged</th>
+              <th className="p-3" />
             </tr>
           </thead>
           <tbody>
             {rows.length === 0 && (
               <tr>
-                <td colSpan={5} className="p-6 text-center text-ink2">
+                <td colSpan={6} className="p-6 text-center text-ink2">
                   No POIs found.
                 </td>
               </tr>
@@ -117,6 +124,14 @@ export default async function PoiLibraryPage({
                 </td>
                 <td className="p-3 text-ink2 text-xs">
                   {r.tagged_at ? new Date(r.tagged_at).toLocaleDateString() : '—'}
+                </td>
+                <td className="p-3 text-right">
+                  <Link
+                    href={`/admin/pipeline/poi-library/${r.id}`}
+                    className="text-sm text-blue-500 hover:underline"
+                  >
+                    Review →
+                  </Link>
                 </td>
               </tr>
             ))}

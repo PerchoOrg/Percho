@@ -4,6 +4,72 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-17 05:00 UTC — Phase 103: admin console → HubTabs chip bar + POI photo review
+
+Owner ask (mobile & desktop parity, five tabs, same shell as the agent hub):
+`Home Tour`, `Nearby`, `POI`, `Video Jobs`, `Worker Health`.
+
+**Shell swap.** `app/admin/layout.tsx` retired its left `<aside>` sidebar. In
+its place a chip-mode tab bar (`app/admin/_components/AdminHubTabs.tsx`)
+matches the agent-hub Phase 48 `HubTabs` visually — circular icon chips
+with a label — but each tab is a real route (its own server component +
+data fetch) so navigation is pathname-based (`<Link>`) rather than
+`?tab=` query state. Layout is identical desktop ↔ mobile, per ask.
+
+**Routes.**
+- `/admin` and `/admin/pipeline` → redirect to `/admin/pipeline/tour-jobs`.
+- Home Tour → `/admin/pipeline/tour-jobs` (unchanged).
+- Nearby → new `/admin/pipeline/nearby?scope=home|neighborhood`. A
+  segmented control at the top switches between per-listing (Home) and
+  per-community (Neighborhood) rollups. Deleted the legacy
+  `listing-nearby/page.tsx` and `community-nearby/page.tsx` index pages;
+  `[id]/page.tsx` detail pages under those routes are untouched — the
+  Nearby table links straight into them.
+- POI → `/admin/pipeline/poi-library`, extended with a per-POI detail
+  page at `/admin/pipeline/poi-library/[id]`.
+- Video Jobs → `/admin/pipeline/bucket-jobs` (unchanged).
+- Worker Health → `/admin/pipeline/worker-health` (unchanged).
+
+**POI photo review — data model.** `poi_photos` is globally-deduped
+(one row per `google_photo_name`, shared across every listing + community
+referencing the POI). Added a global `status` column (`pending | approved
+| rejected`) + `reviewed_at` + `reviewed_by`. `rejected` is a platform-wide
+kill switch — the video-generation pipeline filters it out in two places:
+`lib/poi/listing-video-actions.ts` and `lib/poi/community-video-actions.ts`.
+Per-scope `listing_poi_photos.status` / `community_poi_photos.status`
+remains the primary curator; the global bit sits on top as a hedge.
+
+Migration: `20260717050000_poi_photos_global_status.sql`.
+
+**POI photo review — UX.** Follows `mobile-review-triage-ui`:
+
+- Grid tiles (2/3/4/5 cols across breakpoints); ring color encodes
+  current status (line/green/red-dimmed).
+- Tap → fullscreen dark lightbox, `object-contain` image, top counter,
+  status pill, close.
+- Bottom drawer: AI description, author attribution, dimensions,
+  ai_score, primary_category, applicable_buckets pills.
+- Big Approve / Reject buttons; keyboard `A` / `X` / `←` / `→` / `Esc`;
+  swipe left/right on touch.
+- Decisions commit optimistically to `setGlobalPhotoStatus`
+  (`lib/poi/admin-photo-actions.ts`, service role + `requireAdmin()`
+  gate). On error we roll the row back and show a red toast line inline.
+- Auto-advance to the next pending photo after a successful decision.
+
+`app/admin/pipeline/poi-library/page.tsx` gained a `Review →` link column
+pointing at the detail page.
+
+Files touched:
+- add: `supabase/migrations/20260717050000_poi_photos_global_status.sql`
+- add: `app/admin/_components/AdminHubTabs.tsx`
+- add: `app/admin/pipeline/nearby/page.tsx`
+- add: `app/admin/pipeline/poi-library/[id]/page.tsx`
+- add: `app/admin/pipeline/poi-library/[id]/PhotoReviewClient.tsx`
+- add: `lib/poi/admin-photo-actions.ts`
+- edit: `app/admin/layout.tsx`, `app/admin/page.tsx`, `app/admin/pipeline/page.tsx`, `app/admin/pipeline/poi-library/page.tsx`
+- edit: `lib/poi/listing-video-actions.ts`, `lib/poi/community-video-actions.ts` (filter `poi_photos.status = 'rejected'`)
+- delete: `app/admin/pipeline/listing-nearby/page.tsx`, `app/admin/pipeline/community-nearby/page.tsx`
+
 ## 2026-07-16 20:00 UTC — Phase 101b: pipeline surfaces move to /admin
 
 **Problem** — Phase 101 mounted the Nearby review UI as a tab on the

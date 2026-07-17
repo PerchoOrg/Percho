@@ -4,6 +4,23 @@
 > Historical entries below preserve the original name in-place — release notes
 > are a record of what was shipped under the product's name at the time.
 
+## v98.5 — Admin console refresh + global photo review (2026-07-17)
+
+Admin now uses the same chip-bar layout as the my-listing agent hub —
+five tabs, identical on mobile and desktop:
+
+- **Home Tour** — listing render queue.
+- **Nearby** — Home and Neighborhood in one place, switchable via a
+  segmented control at the top of the tab.
+- **POI** — every POI in the platform, tap any row to open a review
+  page that shows every photo. Tap a photo to open a full-screen
+  reviewer with Approve / Reject buttons; a rejected photo is removed
+  from every listing and neighborhood video everywhere.
+- **Video Jobs** — nearby-video generation queue.
+- **Worker Health** — render-worker heartbeat.
+
+The old sidebar is gone; the top bar keeps the "ADMIN" label.
+
 ## v98.4 — Marketing tab out, per-section upload buttons (2026-07-17)
 
 - Listing hub: removed **Marketing** tab (tab entry + `SocialCopyPanel` mount +
