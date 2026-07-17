@@ -4,6 +4,17 @@
 > Historical entries below preserve the original name in-place — release notes
 > are a record of what was shipped under the product's name at the time.
 
+## v99.9 — Nearby button on Explore feed too (2026-07-17)
+
+**🐛 Bug Fixes**
+
+Yesterday's v99.8 fix made the Nearby button appear on the agent-specific listing page (`/v/<agent>/<listing>`), but the Explore feed (`/browse/feed`) uses a separate data loader that we didn't touch. Result: 5122 Lower Creek Street's Nearby button was still missing when reached via Explore, and a handful of other listings that used to show it there also came up blank.
+
+What changes visibly:
+- The 🏘️ Nearby button now appears on every listing card in the Explore feed that has generated Nearby videos, matching the behaviour of the direct agent listing page.
+- 5122 Lower Creek Street specifically now shows the button with its 5-video badge on both entry paths.
+- No visible change to listings that already showed Nearby correctly.
+
 ## v99.8 — Nearby button now shows for listings without a community (2026-07-17)
 
 **🐛 Bug Fixes**

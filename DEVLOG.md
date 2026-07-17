@@ -4,6 +4,55 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-17 22:00 UTC — Phase 112: /browse/feed loader unions listing-scoped nearby videos
+
+**Report**: `qiaoxux` — "还是看不到 nearby 里的视频 5122 Lower Creek Street" with
+URL `www.percho.co/browse/feed?start=c7435419-…`. Snapshot on the shared feed
+route shows **no Nearby button at all** for 5122, and 4 previously-working
+listings on that page also lack it — production evidence the previous Phase 111
+fix was surface-only, applied to the `/v/…` loader but not `/browse/feed`.
+
+**Root cause**: Two loaders feed the same `BrowseFeed` component:
+- `/v/[agent]/[slug]` → `lib/listing-feed/load.ts` (Phase 102 unions
+  `generated_videos` where `scope='listing_intent_bucket'`).
+- `/browse/feed` → `lib/feed/browse-cards.ts` (only hydrates `categoryVideos`
+  from `community_videos` via `commVidsByCommunity`, keyed by `community_id`).
+
+Community-less listings (external FMLS imports + Phase 101 pipeline output)
+hit the second loader with `community_id=null`, so `cVids=[]` → empty
+`categoryVideos` → Phase 111's `active.categoryVideos.length > 0` fallback
+still fires but sees an empty array. Button doesn't render.
+
+**Fix**: Mirror the Phase 102 union in `lib/feed/browse-cards.ts`:
+1. Add a 9th parallel query in the `Promise.all` fanning listing-scoped
+   `generated_videos` where `scope='listing_intent_bucket'`, `status='ready'`
+   for the current batch of `listingIds`.
+2. Build `bucketVidsByListing: Map<listingId, CommunityVideoRow[]>` shaped
+   like the community rows (so downstream category-tagging logic is a no-op —
+   they fall through to the default `walk_the_block` category label).
+3. Union bucket videos into `cVids` per listing before the existing
+   `categoryVideos` `.map()` — dedupe by `cf_video_id` in case a listing is
+   ever attached to both scopes (shouldn't happen but cheap belt-and-suspenders).
+
+**Verified**:
+- `npx tsc --noEmit` clean (pre-existing Phase 94 external-listing lint noise
+  in unrelated blocks unchanged; no new diagnostics from this patch).
+- 5122 Lower Creek has 5 ready `generated_videos` rows with
+  `scope='listing_intent_bucket'` (confirmed in Phase 111 investigation).
+
+**Files**:
+- `lib/feed/browse-cards.ts` — new query + `bucketVidsByListing` map + union loop.
+
+**Learnings**:
+- **Two loaders, one component.** Phase 111 assumed BrowseFeed's data source
+  was uniform. It isn't — `/browse/feed` (grid entry) and `/v/…` (agent-scoped
+  landing) hydrate from separate server-side fetchers. When surfacing a new
+  data class, grep both `listing-feed/load.ts` AND `feed/browse-cards.ts` for
+  the same field before declaring a fix shipped.
+- **`/browse/feed` is the primary entry.** Explore feed → tapping a card →
+  landing at that listing. Buyers reach 5122 through this path 100× more than
+  the `/v/…` deep link. Should have started there.
+
 ## 2026-07-17 21:00 UTC — Phase 111: Nearby button shows for community-less listings
 
 **Report**: `qiaoxux` — "还是看不到 nearby 里的视频 5122 Lower Creek Street"
