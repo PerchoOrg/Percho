@@ -73,13 +73,6 @@ export default async function ListingNearbyIndex() {
   const rows = await loadListings();
   return (
     <div className="space-y-4">
-      <header>
-        <h1 className="text-2xl font-semibold">Home Nearby</h1>
-        <p className="text-ink2 mt-1 text-sm">
-          Per-listing POI discovery + bucket videos. Used when a listing has no community assigned
-          — POIs are fetched around the listing address directly.
-        </p>
-      </header>
       <ListingNearbyTable rows={rows} />
     </div>
   );

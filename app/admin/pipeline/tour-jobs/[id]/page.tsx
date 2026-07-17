@@ -10,7 +10,6 @@
 
 import { thumbnailUrl } from '@/lib/cloudflare/stream';
 import { createServiceClient } from '@/lib/supabase/server';
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { AdminGenerateTourButton } from './AdminGenerateTourButton';
 
@@ -89,23 +88,9 @@ export default async function AdminTourJobsDetailPage({
 
   return (
     <div className="space-y-6">
-      <div>
-        <Link
-          href="/admin/pipeline/tour-jobs"
-          className="text-sm text-blue-500 hover:underline"
-        >
-          ← All listings
-        </Link>
-      </div>
-
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold">{listing.address}</h1>
-          <p className="text-ink2 mt-1 text-sm">
-            {listing.city}, {listing.state}
-            {listing.zip ? ` ${listing.zip}` : ''} · {listing.status} ·{' '}
-            {listing.agents?.name ?? 'unassigned'}
-          </p>
         </div>
         <AdminGenerateTourButton listingId={listing.id} photoCount={photos.length} />
       </header>
@@ -131,10 +116,7 @@ export default async function AdminTourJobsDetailPage({
                   })()
                 : null;
               return (
-                <li
-                  key={v.id}
-                  className="overflow-hidden rounded-xl border border-line bg-surface"
-                >
+                <li key={v.id} className="overflow-hidden rounded-xl border border-line bg-surface">
                   <div className="aspect-[9/16] w-full bg-black/40">
                     {cfThumb ? (
                       // eslint-disable-next-line @next/next/no-img-element
@@ -184,10 +166,7 @@ export default async function AdminTourJobsDetailPage({
         ) : (
           <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
             {photos.map((p) => (
-              <li
-                key={p.id}
-                className="overflow-hidden rounded-xl border border-line bg-surface"
-              >
+              <li key={p.id} className="overflow-hidden rounded-xl border border-line bg-surface">
                 <a
                   href={photoPublicUrl(p.storage_path)}
                   target="_blank"

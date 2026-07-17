@@ -83,15 +83,6 @@ export default async function WorkerHealthPage() {
 
   return (
     <div className="space-y-4">
-      <header>
-        <h1 className="text-2xl font-semibold">Worker Health</h1>
-        <p className="text-ink2 mt-1 text-sm">
-          Signals inferred from `generated_videos` timing. A future{' '}
-          <code className="font-mono text-xs">worker_heartbeats</code> table will replace this with
-          a direct signal from the systemd unit `percho-render-worker`.
-        </p>
-      </header>
-
       {stalled && (
         <div className="rounded-2xl border border-red-500/40 bg-red-500/10 p-4 text-sm text-red-500">
           ⚠ {h.pending} pending job(s) with no successful render in the last 30 minutes — worker may

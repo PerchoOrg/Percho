@@ -7,7 +7,6 @@
 import { CommunityNearbyPanel } from '@/app/dashboard/communities/[id]/CommunityNearbyPanel';
 import { loadNearbyPoisForCommunity } from '@/lib/poi/community-actions';
 import { createServiceClient } from '@/lib/supabase/server';
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
 export const dynamic = 'force-dynamic';
@@ -45,17 +44,8 @@ export default async function AdminCommunityNearbyPage({
 
   return (
     <div className="space-y-4">
-      <div className="text-ink2 text-sm">
-        <Link href="/admin/pipeline/community-nearby" className="hover:text-ink">
-          ← Community Nearby
-        </Link>
-      </div>
-
       <header className="rounded-2xl border border-line bg-surface p-4 sm:p-5">
         <h1 className="text-xl font-semibold">{community.name}</h1>
-        <p className="text-ink2 mt-1 text-sm">
-          {[community.city, community.state].filter(Boolean).join(', ') || '—'} · {community.status}
-        </p>
       </header>
 
       <section className="rounded-2xl border border-line bg-surface p-4 sm:p-5">

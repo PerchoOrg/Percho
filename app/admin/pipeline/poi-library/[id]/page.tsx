@@ -8,7 +8,6 @@
  */
 
 import { createServiceClient } from '@/lib/supabase/server';
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { PhotoReviewClient } from './PhotoReviewClient';
 
@@ -78,12 +77,6 @@ export default async function PoiDetailPage({
   return (
     <div className="space-y-6">
       <header className="space-y-2">
-        <Link
-          href="/admin/pipeline/poi-library"
-          className="text-ink2 text-xs uppercase tracking-wide hover:text-ink"
-        >
-          ← POI library
-        </Link>
         <h1 className="text-2xl font-semibold">{poi.display_name}</h1>
         <div className="text-ink2 text-sm">
           {poi.primary_type ?? '—'}
@@ -95,11 +88,6 @@ export default async function PoiDetailPage({
           )}
           {poi.formatted_address ? ` · ${poi.formatted_address}` : ''}
         </div>
-        {poi.ai_summary && (
-          <p className="max-w-3xl rounded-2xl border border-line bg-surface p-4 text-sm text-ink2">
-            {poi.ai_summary}
-          </p>
-        )}
       </header>
 
       <section>
