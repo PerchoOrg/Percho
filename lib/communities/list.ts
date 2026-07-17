@@ -76,40 +76,71 @@ async function hydrateCommunityCards(
   const supabase = createAnonClient();
   const communityIds = communities.map((c) => c.id);
 
+  // Phase 111 (2026-07-17): batch the .in() calls. At scale (8k+ active
+  // communities) a single `.in('community_id', <8000 ids>)` produces a
+  // ~300KB URL and PostgREST rejects with 400. We chunk to 500 ids per
+  // request and merge in-memory.
+  const CHUNK = 500;
+  async function chunkedIn<T>(
+    fn: (batch: string[]) => Promise<{ data: T[] | null }>,
+  ): Promise<T[]> {
+    const out: T[] = [];
+    for (let i = 0; i < communityIds.length; i += CHUNK) {
+      const batch = communityIds.slice(i, i + CHUNK);
+      const { data } = await fn(batch);
+      if (data) out.push(...data);
+    }
+    return out;
+  }
+
   // Wave 1: memberships (needed to compute videoCount + fallback cover cf id).
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { data: memberships } = (await (supabase as any)
-    .from('community_video_membership')
-    .select('community_id, video_id')
-    .in('community_id', communityIds)) as {
-    data: Array<{ community_id: string; video_id: string }> | null;
-  };
-  const memberRows = memberships ?? [];
+  const memberRows = await chunkedIn<{ community_id: string; video_id: string }>(
+    // biome-ignore lint/suspicious/noExplicitAny: stub generated types
+    (batch) =>
+      (supabase as any)
+        .from('community_video_membership')
+        .select('community_id, video_id')
+        .in('community_id', batch),
+  );
   const allVideoIds = Array.from(new Set(memberRows.map((m) => m.video_id)));
 
-  // Wave 2: videos (ready+public only) + listings (active), in parallel.
-  const [videosRes, listingsRes] = await Promise.all([
-    // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-    (supabase as any)
-      .from('community_videos')
-      .select('id, cf_video_id, status')
-      .in('id', allVideoIds.length > 0 ? allVideoIds : [NIL_UUID])
-      .eq('status', 'ready')
-      .eq('visibility', 'public') as Promise<{
-      data: Array<{ id: string; cf_video_id: string }> | null;
-    }>,
-    // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-    (supabase as any)
-      .from('listings')
-      .select('community_id')
-      .eq('status', 'active')
-      .in('community_id', communityIds) as Promise<{
-      data: Array<{ community_id: string | null }> | null;
-    }>,
-  ]);
+  // Wave 2: videos (ready+public only) + listings (active).
+  // Videos batched by video_id, listings batched by community_id.
+  async function chunkedInField<T>(
+    ids: string[],
+    fn: (batch: string[]) => Promise<{ data: T[] | null }>,
+  ): Promise<T[]> {
+    const out: T[] = [];
+    for (let i = 0; i < ids.length; i += CHUNK) {
+      const batch = ids.slice(i, i + CHUNK);
+      const { data } = await fn(batch);
+      if (data) out.push(...data);
+    }
+    return out;
+  }
 
-  const videoRows = videosRes.data ?? [];
-  const listingRows = listingsRes.data ?? [];
+  const [videoRows, listingRows] = await Promise.all([
+    allVideoIds.length === 0
+      ? Promise.resolve([] as Array<{ id: string; cf_video_id: string }>)
+      : chunkedInField<{ id: string; cf_video_id: string }>(allVideoIds, (batch) =>
+          // biome-ignore lint/suspicious/noExplicitAny: stub generated types
+          (supabase as any)
+            .from('community_videos')
+            .select('id, cf_video_id, status')
+            .in('id', batch)
+            .eq('status', 'ready')
+            .eq('visibility', 'public'),
+        ),
+    chunkedIn<{ community_id: string | null }>(
+      // biome-ignore lint/suspicious/noExplicitAny: stub generated types
+      (batch) =>
+        (supabase as any)
+          .from('listings')
+          .select('community_id')
+          .eq('status', 'active')
+          .in('community_id', batch),
+    ),
+  ]);
 
   const cfById = new Map<string, string>();
   for (const v of videoRows) cfById.set(v.id, v.cf_video_id);
