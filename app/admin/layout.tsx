@@ -8,7 +8,7 @@
  */
 
 import { requireAdmin } from '@/lib/auth/require-admin';
-import { Activity, Film, ImageIcon, ListVideo, MapPinned } from 'lucide-react';
+import { Activity, Film, ImageIcon, ListVideo, MapPinned, Music } from 'lucide-react';
 import { redirect } from 'next/navigation';
 import { type AdminHubTab, AdminHubTabs } from './_components/AdminHubTabs';
 
@@ -21,6 +21,12 @@ const TABS: AdminHubTab[] = [
     label: 'Video Jobs',
     href: '/admin/pipeline/bucket-jobs',
     icon: <ListVideo size={22} />,
+  },
+  {
+    id: 'bgm',
+    label: 'Music',
+    href: '/admin/pipeline/bgm',
+    icon: <Music size={22} />,
   },
   {
     id: 'health',
