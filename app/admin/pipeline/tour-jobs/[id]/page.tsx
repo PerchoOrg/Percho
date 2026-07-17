@@ -8,7 +8,7 @@
  * Phase 104 (2026-07-17).
  */
 
-import { thumbnailUrl } from '@/lib/cloudflare/stream';
+import { streamIframeUrl, thumbnailUrl } from '@/lib/cloudflare/stream';
 import { createServiceClient } from '@/lib/supabase/server';
 import { notFound } from 'next/navigation';
 import { AdminGenerateTourButton } from './AdminGenerateTourButton';
@@ -67,12 +67,13 @@ export default async function AdminTourJobsDetailPage({
     }>,
     supabase
       .from('listing_videos')
-      .select('id, cf_video_id, external_url, kind, status, title, sort_order, created_at')
+      .select('id, cf_video_id, cf_video_id_landscape, external_url, kind, status, title, sort_order, created_at')
       .eq('listing_id', id)
       .order('sort_order', { ascending: true }) as unknown as Promise<{
       data: Array<{
         id: string;
         cf_video_id: string | null;
+        cf_video_id_landscape: string | null;
         external_url: string | null;
         kind: string;
         status: string;
@@ -106,10 +107,23 @@ export default async function AdminTourJobsDetailPage({
         ) : (
           <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
             {videos.map((v) => {
-              const cfThumb = v.cf_video_id
+              // Feed uses landscape uid when present (BrowseFeed:670). Mirror that
+              // fallback so admin tiles play whichever variant actually rendered.
+              const effectiveCfId = v.cf_video_id ?? v.cf_video_id_landscape;
+              const isLandscape = !v.cf_video_id && !!v.cf_video_id_landscape;
+              const cfThumb = effectiveCfId
                 ? (() => {
                     try {
-                      return thumbnailUrl(v.cf_video_id);
+                      return thumbnailUrl(effectiveCfId);
+                    } catch {
+                      return null;
+                    }
+                  })()
+                : null;
+              const iframe = effectiveCfId
+                ? (() => {
+                    try {
+                      return streamIframeUrl(effectiveCfId);
                     } catch {
                       return null;
                     }
@@ -117,8 +131,16 @@ export default async function AdminTourJobsDetailPage({
                 : null;
               return (
                 <li key={v.id} className="overflow-hidden rounded-xl border border-line bg-surface">
-                  <div className="aspect-[9/16] w-full bg-black/40">
-                    {cfThumb ? (
+                  <div className={`${isLandscape ? 'aspect-video' : 'aspect-[9/16]'} w-full bg-black/40`}>
+                    {iframe ? (
+                      <iframe
+                        src={iframe}
+                        title={v.title ?? 'tour video'}
+                        allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;"
+                        allowFullScreen
+                        className="h-full w-full border-0"
+                      />
+                    ) : cfThumb ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
                         src={cfThumb}
@@ -134,7 +156,8 @@ export default async function AdminTourJobsDetailPage({
                   <div className="p-2 text-xs">
                     <div className="font-medium">{v.title ?? v.kind}</div>
                     <div className="text-ink2">
-                      {v.kind} ·{' '}
+                      {v.kind}
+                      {isLandscape ? ' · landscape' : ''} ·{' '}
                       <span
                         className={
                           v.status === 'ready' || v.status === 'approved'
