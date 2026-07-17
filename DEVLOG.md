@@ -4,6 +4,66 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-18 02:15 UTC — Phase 117: community_videos readers filter is_primary
+
+**Report**: `qiaoxux` — "duplicate videos/ photos for Ashley Crossing community"
+(https://www.percho.co/c/ashley-crossing showed each POI archetype tile twice —
+two "Schools" tiles + two "Dining" tiles in a 2×2 grid).
+
+**Root cause**: Phase 92 (2026-07-15) taught `render-worker/worker.py` to publish
+POI-bucket community renders into `community_videos` as append-only history: on
+each new render, prior rows for that `(community_id, intent_bucket)` get
+demoted to `is_primary=false`, and the new row lands as `is_primary=true`. The
+worker's insert/demote sequence is correct — the DB is in the intended shape.
+
+But the six read sites that select from `community_videos` were written before
+Phase 92 and only filter `status='ready' AND visibility='public'`. History rows
+pass those filters, so anywhere a community had been re-rendered, both the
+current primary and the demoted prior render(s) showed up. Ashley Crossing had
+been rendered twice (07-15 23:03/23:06 initial pair, 07-16 00:08/00:14 re-run)
+→ 4 rows → the observed 2×2.
+
+**Actions**: added `.eq('is_primary', true)` to every reader:
+- `app/(public)/c/[slug]/page.tsx` — the /c/[slug] grid the buyer sees.
+- `app/(public)/c/[slug]/feed/page.tsx` — the swipe feed reached from a tile.
+- `lib/listing-feed/load.ts` — listing feed's `nearbyVideos` slice.
+- `lib/feed/browse-cards.ts` — global browse feed's community card enrichment.
+- `lib/communities/list.ts` — /communities and dashboard community lists.
+- `app/api/communities/nearby/route.ts` — nearby-communities bbox lookup.
+
+Data untouched: the 4 Ashley Crossing rows stay put. `is_primary=false`
+history rows remain queryable (that's Phase 92's design) but no longer leak
+into buyer-facing surfaces.
+
+**Decisions**:
+- *Not* deleting the demoted rows. Phase 92 explicitly designed history as a
+  first-class concept ("prior primaries get demoted to is_primary=false — still
+  queryable as history"). Deleting would silently punch a hole in that.
+- *Not* adding a `UNIQUE(community_id, intent_bucket) WHERE status='ready'`
+  index. Same reason — it would forbid the exact state Phase 92 wants to
+  represent (N history rows, 1 primary per bucket).
+- Fix is at the read layer only. If a future reader needs history (e.g. an
+  admin "show all renders for this community" view), it just omits the filter.
+
+**Verification**: `npx tsc --noEmit` clean. Post-merge Vercel preview:
+/c/ashley-crossing should render exactly 2 tiles (one Schools, one Dining) —
+the 07-16 primary pair. Owner to eyeball on device.
+
+**Issues**: LSP surfaced 4 pre-existing errors in `browse-cards.ts` (409, 417)
+and `communities/list.ts` (158, 161) unrelated to this change — not touched
+per §0.3 (surgical). Flagging for a future pass.
+
+**Learnings**: whenever the write path introduces a new column that changes
+row semantics (is_primary, is_active, is_deleted, tombstones), the sibling
+readers need to be updated in the same phase. Phase 92's worker landed in
+isolation and the 6 read call sites weren't audited — hence a two-day delay
+before this surfaced as a visible bug the moment a community got re-rendered.
+
+**Next steps**: none — data is clean, filter is applied everywhere, worker
+is untouched. If Ashley Crossing needs its 07-15 pair to become the visible
+one instead, that's a `UPDATE community_videos SET is_primary = ...` toggle,
+not a code change.
+
 ## 2026-07-18 00:45 UTC — Phase 116: BGM — hard-delete rejected tracks (purge)
 
 **Report**: `qiaoxux` — "把以及reject的音乐彻底删除吧 purge as well" —

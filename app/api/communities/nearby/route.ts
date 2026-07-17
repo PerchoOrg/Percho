@@ -72,6 +72,8 @@ export async function GET(req: Request) {
     .select('id, community_id, lat, lng')
     .eq('status', 'ready')
     .eq('visibility', 'public')
+    // Phase 92: skip history renders.
+    .eq('is_primary', true)
     .not('lat', 'is', null)
     .not('lng', 'is', null)
     .gte('lat', lat - latPad)
