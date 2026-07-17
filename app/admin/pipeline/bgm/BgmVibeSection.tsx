@@ -1,32 +1,36 @@
 'use client';
 
 /**
- * BgmVibeSection — one vibe's tracks with per-row delete + section upload.
+ * BgmVibeSection — one vibe's tracks with per-row approve/reject + section import.
  *
- * Phase 105 (2026-07-17): Admin can now add/delete tracks. Storage-first;
- * `router.refresh()` after every mutation re-fetches the server list.
+ * Phase 105: per-section Upload + per-row Delete.
+ * Phase 106 (2026-07-17): Delete → Reject (soft, mp3 stays in Storage).
+ *   Upload → Import (same multipart POST, clearer label).
+ *   Rejected tracks render below approved ones, dimmed, with an Approve toggle.
  */
 
 import { BGM_VIBE_META, type BgmVibe, prettyTrackTitle } from '@/lib/bgm/storage';
-import { Loader2, Trash2, Upload } from 'lucide-react';
+import { CheckCircle2, Loader2, Upload, XCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useRef, useState } from 'react';
 
-export type BgmTrack = { name: string; url: string };
+export type BgmTrack = { name: string; url: string; rejected: boolean };
 
 export function BgmVibeSection({ vibe, tracks }: { vibe: BgmVibe; tracks: BgmTrack[] }) {
   const meta = BGM_VIBE_META[vibe];
   const router = useRouter();
   const fileInput = useRef<HTMLInputElement>(null);
-  const [uploading, setUploading] = useState(false);
-  const [deleting, setDeleting] = useState<string | null>(null);
-  const [confirmDel, setConfirmDel] = useState<string | null>(null);
+  const [importing, setImporting] = useState(false);
+  const [busyPath, setBusyPath] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  async function handleUpload(files: FileList | null) {
+  const approved = tracks.filter((t) => !t.rejected);
+  const rejected = tracks.filter((t) => t.rejected);
+
+  async function handleImport(files: FileList | null) {
     if (!files || files.length === 0) return;
     setError(null);
-    setUploading(true);
+    setImporting(true);
     try {
       const fd = new FormData();
       fd.append('vibe', vibe);
@@ -35,36 +39,35 @@ export function BgmVibeSection({ vibe, tracks }: { vibe: BgmVibe; tracks: BgmTra
       const json = await res.json();
       if (!res.ok || json.uploaded === 0) {
         const first = json?.results?.find((r: { status: string }) => r.status === 'error');
-        throw new Error(first?.error ?? json?.error ?? 'upload failed');
+        throw new Error(first?.error ?? json?.error ?? 'import failed');
       }
       if (fileInput.current) fileInput.current.value = '';
       router.refresh();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
-      setUploading(false);
+      setImporting(false);
     }
   }
 
-  async function handleDelete(path: string) {
+  async function handleReject(path: string, rejected: boolean) {
     setError(null);
-    setDeleting(path);
+    setBusyPath(path);
     try {
-      const res = await fetch('/api/admin/bgm/delete', {
+      const res = await fetch('/api/admin/bgm/reject', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ path }),
+        body: JSON.stringify({ path, rejected }),
       });
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
-        throw new Error(json?.error ?? 'delete failed');
+        throw new Error(json?.error ?? 'update failed');
       }
-      setConfirmDel(null);
       router.refresh();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
-      setDeleting(null);
+      setBusyPath(null);
     }
   }
 
@@ -77,16 +80,21 @@ export function BgmVibeSection({ vibe, tracks }: { vibe: BgmVibe; tracks: BgmTra
         </div>
         <div className="flex items-center gap-3">
           <div className="text-ink2 text-xs">
-            <span className="font-medium text-ink">{tracks.length}</span> tracks
+            <span className="font-medium text-ink">{approved.length}</span> approved
+            {rejected.length > 0 ? (
+              <>
+                {' '}· <span className="text-ink2">{rejected.length} rejected</span>
+              </>
+            ) : null}
           </div>
           <button
             type="button"
             onClick={() => fileInput.current?.click()}
-            disabled={uploading}
+            disabled={importing}
             className="inline-flex items-center gap-1.5 rounded-full border border-line bg-bg px-3 py-1 font-medium text-ink text-xs transition hover:border-ink2 disabled:opacity-60"
           >
-            {uploading ? <Loader2 size={12} className="animate-spin" /> : <Upload size={12} />}
-            {uploading ? 'Uploading…' : 'Upload'}
+            {importing ? <Loader2 size={12} className="animate-spin" /> : <Upload size={12} />}
+            {importing ? 'Importing…' : 'Import'}
           </button>
           <input
             ref={fileInput}
@@ -94,7 +102,7 @@ export function BgmVibeSection({ vibe, tracks }: { vibe: BgmVibe; tracks: BgmTra
             accept="audio/mpeg,audio/mp3,.mp3"
             multiple
             className="hidden"
-            onChange={(e) => handleUpload(e.target.files)}
+            onChange={(e) => handleImport(e.target.files)}
           />
         </div>
       </div>
@@ -106,63 +114,91 @@ export function BgmVibeSection({ vibe, tracks }: { vibe: BgmVibe; tracks: BgmTra
       ) : null}
 
       {tracks.length === 0 ? (
-        <div className="px-4 py-6 text-ink2 text-sm sm:px-5">No tracks in this bucket yet.</div>
+        <div className="px-4 py-6 text-ink2 text-sm sm:px-5">
+          No tracks yet — click Import to add one.
+        </div>
       ) : (
         <ul className="divide-y divide-line">
-          {tracks.map((t) => {
-            const path = `${vibe}/${t.name}`;
-            const isDeleting = deleting === path;
-            const isConfirming = confirmDel === path;
-            return (
-              <li
-                key={t.name}
-                className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:gap-4 sm:px-5"
-              >
-                <div className="min-w-0 flex-1">
-                  <div className="truncate font-medium text-ink text-sm">
-                    {prettyTrackTitle(t.name)}
-                  </div>
-                  <div className="truncate font-mono text-ink2 text-xs">{t.name}</div>
-                </div>
-                {/** biome-ignore lint/a11y/useMediaCaption: royalty-free instrumental, no captions */}
-                <audio controls preload="none" src={t.url} className="h-8 w-full sm:w-64">
-                  <track kind="captions" />
-                </audio>
-                {isConfirming ? (
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => handleDelete(path)}
-                      disabled={isDeleting}
-                      className="inline-flex items-center gap-1 rounded-full bg-red-600 px-3 py-1 font-medium text-white text-xs transition hover:bg-red-700 disabled:opacity-60"
-                    >
-                      {isDeleting ? <Loader2 size={12} className="animate-spin" /> : null}
-                      Confirm delete
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setConfirmDel(null)}
-                      disabled={isDeleting}
-                      className="rounded-full border border-line px-3 py-1 text-ink2 text-xs hover:text-ink"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    type="button"
-                    aria-label={`Delete ${t.name}`}
-                    onClick={() => setConfirmDel(path)}
-                    className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-line text-ink2 transition hover:border-red-500 hover:text-red-600"
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                )}
-              </li>
-            );
-          })}
+          {approved.map((t) => (
+            <TrackRow
+              key={t.name}
+              track={t}
+              vibe={vibe}
+              busy={busyPath === `${vibe}/${t.name}`}
+              onReject={() => handleReject(`${vibe}/${t.name}`, true)}
+            />
+          ))}
+          {rejected.length > 0 ? (
+            <li className="bg-cream/30 px-4 py-2 text-ink2 text-xs sm:px-5">
+              Rejected — worker skips these
+            </li>
+          ) : null}
+          {rejected.map((t) => (
+            <TrackRow
+              key={t.name}
+              track={t}
+              vibe={vibe}
+              busy={busyPath === `${vibe}/${t.name}`}
+              onReject={() => handleReject(`${vibe}/${t.name}`, false)}
+            />
+          ))}
         </ul>
       )}
     </section>
+  );
+}
+
+function TrackRow({
+  track,
+  vibe,
+  busy,
+  onReject,
+}: {
+  track: BgmTrack;
+  vibe: BgmVibe;
+  busy: boolean;
+  onReject: () => void;
+}) {
+  const isRejected = track.rejected;
+  return (
+    <li
+      className={`flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:gap-4 sm:px-5 ${
+        isRejected ? 'bg-cream/20 opacity-70' : ''
+      }`}
+    >
+      <div className="min-w-0 flex-1">
+        <div
+          className={`truncate font-medium text-sm ${isRejected ? 'text-ink2 line-through' : 'text-ink'}`}
+        >
+          {prettyTrackTitle(track.name)}
+        </div>
+        <div className="truncate font-mono text-ink2 text-xs">
+          {vibe}/{track.name}
+        </div>
+      </div>
+      {/** biome-ignore lint/a11y/useMediaCaption: royalty-free instrumental, no captions */}
+      <audio controls preload="none" src={track.url} className="h-8 w-full sm:w-64">
+        <track kind="captions" />
+      </audio>
+      <button
+        type="button"
+        onClick={onReject}
+        disabled={busy}
+        className={
+          isRejected
+            ? 'inline-flex items-center gap-1 rounded-full border border-green-600 bg-white px-3 py-1 font-medium text-green-700 text-xs transition hover:bg-green-50 disabled:opacity-60'
+            : 'inline-flex items-center gap-1 rounded-full border border-line bg-bg px-3 py-1 font-medium text-ink2 text-xs transition hover:border-red-500 hover:text-red-600 disabled:opacity-60'
+        }
+      >
+        {busy ? (
+          <Loader2 size={12} className="animate-spin" />
+        ) : isRejected ? (
+          <CheckCircle2 size={12} />
+        ) : (
+          <XCircle size={12} />
+        )}
+        {isRejected ? 'Approve' : 'Reject'}
+      </button>
+    </li>
   );
 }
