@@ -24,7 +24,7 @@ import {
   type CommunityVideoCategoryId,
 } from '@/lib/zod/community-video-categories';
 
-const FEED_LIMIT = 30;
+const FEED_LIMIT = 300;
 const NEARBY_MAX_ROWS = 200;
 
 type ListingRow = {
