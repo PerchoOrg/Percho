@@ -49,31 +49,29 @@ export function MediaPanel({
   initialPhotos,
   initialCoverPhotoId,
 }: Props) {
-  const inputRef = useRef<HTMLInputElement | null>(null);
   const photoRef = useRef<PhotoPanelHandle | null>(null);
   const videoRef = useRef<VideoPanelHandle | null>(null);
+  const videoInputRef = useRef<HTMLInputElement | null>(null);
+  const photoInputRef = useRef<HTMLInputElement | null>(null);
   const [pendingVideos, setPendingVideos] = useState<PendingVideoUpload[]>([]);
   const [unsupportedNotice, setUnsupportedNotice] = useState<string | null>(null);
 
-  const handlePicked = useCallback((files: FileList | File[]) => {
+  const handlePickedVideos = useCallback((files: FileList | File[]) => {
     setUnsupportedNotice(null);
     const arr = Array.from(files);
-    const images: File[] = [];
     const videos: File[] = [];
     const skipped: string[] = [];
     for (const f of arr) {
-      if (f.type.startsWith('image/')) images.push(f);
-      else if (f.type.startsWith('video/')) videos.push(f);
+      if (f.type.startsWith('video/')) videos.push(f);
       else skipped.push(f.name);
     }
     if (skipped.length > 0) {
       setUnsupportedNotice(
-        `Skipped ${skipped.length} unsupported file(s): ${skipped.slice(0, 3).join(', ')}${
+        `Skipped ${skipped.length} non-video file(s): ${skipped.slice(0, 3).join(', ')}${
           skipped.length > 3 ? '…' : ''
         }`,
       );
     }
-    if (images.length > 0) photoRef.current?.addFiles(images);
     if (videos.length > 0) {
       setPendingVideos((prev) => [
         ...prev,
@@ -83,6 +81,25 @@ export function MediaPanel({
         })),
       ]);
     }
+  }, []);
+
+  const handlePickedPhotos = useCallback((files: FileList | File[]) => {
+    setUnsupportedNotice(null);
+    const arr = Array.from(files);
+    const images: File[] = [];
+    const skipped: string[] = [];
+    for (const f of arr) {
+      if (f.type.startsWith('image/')) images.push(f);
+      else skipped.push(f.name);
+    }
+    if (skipped.length > 0) {
+      setUnsupportedNotice(
+        `Skipped ${skipped.length} non-image file(s): ${skipped.slice(0, 3).join(', ')}${
+          skipped.length > 3 ? '…' : ''
+        }`,
+      );
+    }
+    if (images.length > 0) photoRef.current?.addFiles(images);
   }, []);
 
   const handleVideoUploaded = useCallback((key: string, v: UploadedVideo) => {
@@ -97,33 +114,36 @@ export function MediaPanel({
 
   return (
     <section className="rounded-2xl border border-line bg-surface p-4 sm:p-6">
-      {/* Unified upload entry point. One button, both media types. */}
-      <div className="mb-6">
-        <input
-          ref={inputRef}
-          type="file"
-          accept="image/*,video/*"
-          multiple
-          className="hidden"
-          onChange={(e) => {
-            if (e.target.files && e.target.files.length > 0) {
-              handlePicked(e.target.files);
-              e.target.value = '';
-            }
-          }}
-        />
-        <button
-          type="button"
-          onClick={() => inputRef.current?.click()}
-          className="inline-flex items-center gap-2 rounded-md border border-line bg-bg px-4 py-2 text-ink2 text-sm hover:border-bronze hover:text-ink"
-        >
-          <Upload size={16} aria-hidden="true" />
-          Click to upload
-        </button>
-        {unsupportedNotice ? (
-          <p className="mt-2 text-xs text-red-300">{unsupportedNotice}</p>
-        ) : null}
-      </div>
+      <input
+        ref={videoInputRef}
+        type="file"
+        accept="video/*"
+        multiple
+        className="hidden"
+        onChange={(e) => {
+          if (e.target.files && e.target.files.length > 0) {
+            handlePickedVideos(e.target.files);
+            e.target.value = '';
+          }
+        }}
+      />
+      <input
+        ref={photoInputRef}
+        type="file"
+        accept="image/*"
+        multiple
+        className="hidden"
+        onChange={(e) => {
+          if (e.target.files && e.target.files.length > 0) {
+            handlePickedPhotos(e.target.files);
+            e.target.value = '';
+          }
+        }}
+      />
+
+      {unsupportedNotice ? (
+        <p className="mb-4 text-xs text-red-300">{unsupportedNotice}</p>
+      ) : null}
 
       {/* Per-file video uploaders. Each instance owns its own
           progress flow; we just feed it `initialFile` so the agent skips
@@ -142,12 +162,20 @@ export function MediaPanel({
         </div>
       ) : null}
 
-      {/* Stacked sub-sections. Same panels, just with their own upload
-          buttons hidden — the unified one above replaces them. */}
+      {/* Stacked sub-sections. Videos on top, Photos below. Each header
+          hosts its own upload button — feeds the shared uploaders below. */}
       <div className="space-y-6">
         <div>
-          <div className="mb-2">
+          <div className="mb-2 flex items-center justify-between gap-2">
             <h3 className="text-sm font-semibold text-ink2">Videos ({initialVideos.length})</h3>
+            <button
+              type="button"
+              onClick={() => videoInputRef.current?.click()}
+              className="inline-flex items-center gap-2 rounded-md border border-line bg-bg px-3 py-1.5 text-ink2 text-xs hover:border-bronze hover:text-ink"
+            >
+              <Upload size={14} aria-hidden="true" />
+              Upload
+            </button>
           </div>
           <VideoPanel
             ref={videoRef}
@@ -158,7 +186,17 @@ export function MediaPanel({
           />
         </div>
         <div className="border-t border-line pt-6">
-          <h3 className="mb-2 text-sm font-semibold text-ink2">Photos ({initialPhotos.length})</h3>
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <h3 className="text-sm font-semibold text-ink2">Photos ({initialPhotos.length})</h3>
+            <button
+              type="button"
+              onClick={() => photoInputRef.current?.click()}
+              className="inline-flex items-center gap-2 rounded-md border border-line bg-bg px-3 py-1.5 text-ink2 text-xs hover:border-bronze hover:text-ink"
+            >
+              <Upload size={14} aria-hidden="true" />
+              Upload
+            </button>
+          </div>
           <PhotoPanel
             ref={photoRef}
             listingId={listingId}

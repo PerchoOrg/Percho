@@ -4,6 +4,18 @@
 > Historical entries below preserve the original name in-place — release notes
 > are a record of what was shipped under the product's name at the time.
 
+## v98.4 — Marketing tab out, per-section upload buttons (2026-07-17)
+
+- Listing hub: removed **Marketing** tab (tab entry + `SocialCopyPanel` mount +
+  `Megaphone` icon import). Tabs now: Details · Media · Leads · Analytics.
+  `SocialCopyPanel.tsx` retained on disk (unmounted).
+- Community hub: removed **Marketing** tab (tab entry + `CommunityMarketingPanel`
+  mount + `Megaphone` import). Tabs now: Details · Media · Analytics (owner).
+  `CommunityMarketingPanel.tsx` retained on disk (unmounted).
+- Media tab (listing + community): unified top **Click to upload** button
+  removed. Each sub-section header (Videos / Photos) now hosts its own compact
+  **Upload** button, scoped to the correct file type — no more mixed picker.
+
 ## v98.3 — 2026-07-17 — Community Nearby moves to /admin
 
 - **CommunityNearbyPanel** is now mounted at

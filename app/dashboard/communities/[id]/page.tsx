@@ -26,7 +26,7 @@
 
 import { resolveCommunityCoverWithCfIds } from '@/lib/community/cover';
 import { createClient } from '@/lib/supabase/server';
-import { FileText, ImageIcon, LineChart, Megaphone } from 'lucide-react';
+import { FileText, ImageIcon, LineChart } from 'lucide-react';
 import { redirect } from 'next/navigation';
 
 import { AnalyticsPanel } from '@/app/dashboard/_components/AnalyticsPanel';
@@ -36,7 +36,6 @@ import { HubTabs } from '@/app/dashboard/_components/HubTabs';
 import { InstantStatusToggle } from '@/app/dashboard/_components/InstantStatusToggle';
 
 import { CommunityDangerZone, CommunityEditor } from './CommunityEditor';
-import { CommunityMarketingPanel } from './CommunityMarketingPanel';
 import { CommunityMediaPanel } from './CommunityMediaPanel';
 import type { CommunityPhotoRow } from './CommunityPhotoPanel';
 import type { ManageVideoRow } from './CommunityVideoManageList';
@@ -254,11 +253,6 @@ export default async function CommunityEditorPage({
     ...(canEditMetadata
       ? [
           {
-            id: 'marketing',
-            label: 'Marketing',
-            icon: <Megaphone className="h-5 w-5" strokeWidth={1.6} />,
-          },
-          {
             id: 'analytics',
             label: 'Analytics',
             icon: <LineChart className="h-5 w-5" strokeWidth={1.6} />,
@@ -321,7 +315,6 @@ export default async function CommunityEditorPage({
           ),
           ...(canEditMetadata
             ? {
-                marketing: <CommunityMarketingPanel communityId={community.id} />,
                 analytics: <AnalyticsPanel entityKind="community" entityId={community.id} />,
               }
             : {}),
