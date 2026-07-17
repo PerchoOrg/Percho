@@ -54,17 +54,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   return (
     <div className="min-h-screen bg-bg text-ink">
       <header className="border-b border-line bg-surface">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
-          <div className="flex items-center gap-3">
-            <Link href="/dashboard" className="text-ink2 text-sm hover:text-ink">
-              ← Dashboard
-            </Link>
-            <span className="text-ink2">/</span>
-            <span className="text-sm font-semibold uppercase tracking-wide">Admin</span>
-          </div>
-          <div className="text-ink2 text-xs">
-            {admin.name} <span className="opacity-60">({admin.email})</span>
-          </div>
+        <div className="mx-auto flex max-w-7xl items-center justify-center px-4 py-3 sm:px-6">
+          <span className="text-sm font-semibold uppercase tracking-wide">Admin</span>
         </div>
       </header>
 
