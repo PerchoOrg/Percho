@@ -5,7 +5,7 @@
  */
 
 import Link from 'next/link';
-import { createClient } from '@/lib/supabase/server';
+import { createServiceClient } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,7 +27,7 @@ type ScopeStat = {
 };
 
 async function loadData(filter: string) {
-  const supabase = await createClient();
+  const supabase = createServiceClient();
 
   let q = supabase
     .from('listings')

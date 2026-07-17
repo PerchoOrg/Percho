@@ -6,7 +6,7 @@
 
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { createClient } from '@/lib/supabase/server';
+import { createServiceClient } from '@/lib/supabase/server';
 import { ListingNearbyPanel } from '@/app/dashboard/listings/[id]/edit/ListingNearbyPanel';
 import { loadNearbyPoisForListing } from '@/lib/poi/listing-actions';
 
@@ -20,7 +20,7 @@ export default async function AdminListingNearbyPage({
   params: Promise<Params>;
 }) {
   const { id } = await params;
-  const supabase = await createClient();
+  const supabase = createServiceClient();
 
   const { data: listing } = (await supabase
     .from('listings')
