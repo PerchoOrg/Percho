@@ -124,7 +124,7 @@ function SectionTitle({ pathname }: { pathname: string }) {
     // Phase 102 (2026-07-17): admin label lives in the top bar middle
     // slot — the /admin layout used to render a separate standalone
     // "Admin" band beneath the TopBar; removed per owner.
-    title = 'ADMIN';
+    title = 'Admin';
   }
   if (!title) return null;
   return (
