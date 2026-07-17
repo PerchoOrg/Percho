@@ -66,11 +66,14 @@ export default async function BgmLibraryPage() {
           . The render worker picks one approved track at random per video.
         </p>
         <p className="text-ink2 text-xs">
-          Use <span className="font-medium">Reject</span> to keep a track in Storage but stop the
-          worker from picking it. Use <span className="font-medium">Import</span> in a section
-          header to upload one or many new mp3s. After edits, run{' '}
-          <code className="rounded bg-cream px-1 py-0.5">pull-bgm.sh</code> on the render host so
-          the worker's local cache catches up.
+          Every row has <b>Approve</b> and <b>Reject</b> — the current call
+          stays highlighted. Reject keeps the mp3 in Storage but the render
+          worker stops picking it. Each section has two intake buttons:{' '}
+          <b>Import</b> pulls from a curated Kevin MacLeod pool (server
+          fetches from incompetech, no browser CORS);{' '}
+          <b>Upload</b> takes local mp3s. After edits, run{' '}
+          <code className="rounded bg-cream px-1 py-0.5">pull-bgm.sh</code> on
+          the render host so the worker's local cache catches up.
         </p>
       </header>
 
