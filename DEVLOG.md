@@ -4,6 +4,38 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-17 11:30 UTC — Phase 107: BGM — Approve+Reject per row · Import (web) split from Upload (local)
+
+**Owner feedback on Phase 106:**
+1. Each row should show **both** Approve and Reject — one-click flip either way, active state highlighted. (106 only rendered the "opposite" action.)
+2. Each vibe section should have **two** intake buttons: **Import** = "search and download similar style music from web (that's how you downloaded the existing musics)". **Upload** = "upload from local". Phase 106 renamed Upload → Import which was the wrong direction.
+
+**Shipped:**
+- `TrackRow` now renders both buttons with `aria-pressed` reflecting current state. Active button = filled colored pill (green for approve, red for reject), disabled with `cursor-default`. Inactive button = ghost pill that hovers into the colored variant. Reject stays soft (sidecar `bgm/_state/state.json` unchanged from 106).
+- Section header exposes two buttons: **Import** (Globe icon) + **Upload** (Upload icon). Upload keeps Phase 105 behavior (local file picker → `POST /api/admin/bgm/upload`).
+- **Import is a live search over Kevin MacLeod's full incompetech catalog** (`https://incompetech.com/music/royalty-free/pieces.json`, 1,442 tracks with `title/filename/feel/bpm/instruments/length` metadata). Debounced search input, per-row inline `<audio>` preview (media element, no CORS needed), multi-select checkboxes. Server route fetches selected mp3s and uploads to Supabase Storage using the existing `NN-slug.mp3` convention. Already-imported tracks (matched by slug) are hidden from the picker.
+- Default seed query per vibe drives the picker's first render: acoustic / corporate / calming / electronic. Operator refines via search box.
+- `nextTrackNumber()` in the upload route now uses `BGM_VIBES` instead of a hardcoded 5-vibe array — retired `cinematic` was still being listed and skewing the counter.
+- `fetch.sh` had leftover Phase 71 vs Phase 75 merge-conflict markers from a stash-pop weeks ago. Cleaned + noted that Import is now the preferred flow; script survives as a bootstrap for a fresh render host.
+
+**Files:**
+- `lib/bgm/incompetech.ts` (NEW) — catalog client, mp3 URL builder, slug helper, in-memory 10-min TTL memo, `searchCatalog()` (title-first ranking across title/feel/instruments/genre).
+- `app/api/admin/bgm/candidates/route.ts` (REWRITTEN) — `GET ?vibe=&q=`, returns `{title, filename, feel, bpm, instruments, length, slug, previewUrl}[]` minus what's in bucket.
+- `app/api/admin/bgm/import/route.ts` (NEW) — `POST {vibe, filenames[]}`, sequential fetch from incompetech + upload to Storage, 30-item cap, per-item error reporting.
+- `app/admin/pipeline/bgm/BgmVibeSection.tsx` (UPDATED) — TrackRow shows both buttons, ImportPicker component with search + preview.
+- `app/admin/pipeline/bgm/page.tsx` — header copy updated to describe Import vs Upload.
+- `app/api/admin/bgm/upload/route.ts` — uses BGM_VIBES.
+- `scripts/render-worker/bgm/fetch.sh` — merge-conflict cleanup.
+
+**Verified:**
+- `npx tsc --noEmit` clean.
+- Sanity-checked incompetech URL scheme: percent-encoding (`%20`), not `+`. Tested 4 tracks, all HTTP 200.
+- Catalog fetch returns 1,442 entries; sample searches for "acoustic"/"corporate"/"calming"/"electronic" all produce >20 hits.
+
+**Deliberately not shipped:**
+- Import from other sources (Pixabay CC0, Free Music Archive). Incompetech alone covers all four vibes with hundreds of options; broaden later if we run out of KML matches.
+- Client-side catalog cache. Server-side 10-min memo already sits between the browser and incompetech; browser fetches are only ~200 lines of JSON per search.
+
 ## 2026-07-17 10:30 UTC — Phase 106: BGM — retire cinematic, soft-reject, per-vibe import
 
 **Objective**: Owner feedback on Phase 105:

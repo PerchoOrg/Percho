@@ -16,7 +16,7 @@
  */
 
 import { requireAdmin } from '@/lib/auth/require-admin';
-import { BGM_BUCKET, isBgmVibe, slugifyBgmFilename } from '@/lib/bgm/storage';
+import { BGM_BUCKET, BGM_VIBES, isBgmVibe, slugifyBgmFilename } from '@/lib/bgm/storage';
 import { createServiceClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 
@@ -30,7 +30,7 @@ async function nextTrackNumber(): Promise<number> {
   const svc = createServiceClient();
   let max = 0;
   // list each vibe folder (Storage list is per-prefix)
-  for (const vibe of ['warm-acoustic', 'modern-corporate', 'luxury-ambient', 'chill-electronic', 'cinematic']) {
+  for (const vibe of BGM_VIBES) {
     const { data } = await svc.storage.from(BGM_BUCKET).list(vibe, { limit: 1000 });
     for (const obj of data ?? []) {
       const m = /^(\d+)-/.exec(obj.name);

@@ -4,6 +4,18 @@
 > Historical entries below preserve the original name in-place — release notes
 > are a record of what was shipped under the product's name at the time.
 
+## v99.0 — Admin BGM: Import (web catalog) + Upload (local) split, dual-button Approve/Reject (2026-07-17)
+
+**Admin › Pipeline › Music**
+- Each track row now shows **Approve** and **Reject** side-by-side; the active state is highlighted in green / red so the current call is visible at a glance. One click flips between them (reject is still soft — the mp3 stays in Storage, worker skips picking).
+- Each vibe section has **two intake buttons**:
+  - **Import** — searches Kevin MacLeod's full incompetech catalog (~1,400 tracks) with metadata (feel, BPM, length, instruments). Inline audio preview per row, multi-select, server-side fetch + upload. Already-imported tracks hide from the picker. This is how the existing library was assembled originally.
+  - **Upload** — local mp3 file picker (unchanged behavior from Phase 105; Phase 106 mis-labeled it "Import").
+- Fixed a stale hardcoded vibe list in the upload counter that still referenced the retired `cinematic` bucket.
+
+**Cleanup**
+- `scripts/render-worker/bgm/fetch.sh` had leftover Phase 71/75 merge-conflict markers from an old stash-pop; cleaned up. Import in the admin UI is now the primary way to grow the library; `fetch.sh` remains as a bootstrap for fresh render hosts.
+
 ## v98.9 — BGM: retire cinematic, soft-reject, import per vibe (2026-07-17)
 
 - **Cinematic vibe retired** — all 14 tracks (6 in Storage, 8 on the render
