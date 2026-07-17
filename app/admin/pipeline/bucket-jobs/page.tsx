@@ -96,7 +96,7 @@ export default async function BucketJobsPage({
               const anchorHref = r.listing_id
                 ? `/admin/pipeline/listing-nearby/${r.listing_id}`
                 : r.community_id
-                  ? `/dashboard/communities/${r.community_id}?tab=nearby`
+                  ? `/admin/pipeline/community-nearby/${r.community_id}`
                   : null;
               return (
                 <tr key={r.id} className="border-b border-line align-top last:border-0">

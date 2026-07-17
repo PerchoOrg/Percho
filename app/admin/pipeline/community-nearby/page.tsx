@@ -85,7 +85,7 @@ export default async function CommunityNearbyIndex() {
                   </td>
                   <td className="p-3 text-right">
                     <Link
-                      href={`/dashboard/communities/${r.id}?tab=nearby`}
+                      href={`/admin/pipeline/community-nearby/${r.id}`}
                       className="text-sm text-blue-500 hover:underline"
                     >
                       Open →
