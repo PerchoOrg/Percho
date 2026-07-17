@@ -17,7 +17,7 @@
  */
 
 import { BGM_VIBE_META, type BgmVibe, prettyTrackTitle } from '@/lib/bgm/storage';
-import { CheckCircle2, Globe, Loader2, Upload, X, XCircle } from 'lucide-react';
+import { CheckCircle2, Globe, Loader2, Trash2, Upload, X, XCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 
@@ -41,6 +41,7 @@ export function BgmVibeSection({ vibe, tracks }: { vibe: BgmVibe; tracks: BgmTra
   const [busyPath, setBusyPath] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [importerOpen, setImporterOpen] = useState(false);
+  const [purging, setPurging] = useState(false);
 
   const approved = tracks.filter((t) => !t.rejected);
   const rejected = tracks.filter((t) => t.rejected);
@@ -129,6 +130,32 @@ export function BgmVibeSection({ vibe, tracks }: { vibe: BgmVibe; tracks: BgmTra
     }
   }
 
+  async function handlePurgeRejected() {
+    if (rejected.length === 0) return;
+    const ok = window.confirm(
+      `Permanently delete ${rejected.length} rejected track${rejected.length === 1 ? '' : 's'} from ${meta.label}? This cannot be undone.`,
+    );
+    if (!ok) return;
+    setError(null);
+    setPurging(true);
+    try {
+      const res = await fetch('/api/admin/bgm/purge-rejected', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ vibe }),
+      });
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        throw new Error(json?.error ?? 'purge failed');
+      }
+      router.refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setPurging(false);
+    }
+  }
+
   return (
     <section className="overflow-hidden rounded-2xl border border-line bg-surface">
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2 border-line border-b bg-cream/60 px-4 py-3 sm:px-5">
@@ -153,6 +180,17 @@ export function BgmVibeSection({ vibe, tracks }: { vibe: BgmVibe; tracks: BgmTra
             <Globe size={12} />
             Import
           </button>
+          {rejected.length > 0 ? (
+            <button
+              type="button"
+              onClick={handlePurgeRejected}
+              disabled={purging}
+              className="inline-flex items-center gap-1.5 rounded-full border border-red-200 bg-red-50 px-3 py-1 font-medium text-red-700 text-xs transition hover:border-red-400 disabled:opacity-60"
+            >
+              {purging ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}
+              {purging ? 'Purging…' : `Purge rejected (${rejected.length})`}
+            </button>
+          ) : null}
           <button
             type="button"
             onClick={() => fileInput.current?.click()}

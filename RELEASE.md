@@ -4,6 +4,16 @@
 > Historical entries below preserve the original name in-place — release notes
 > are a record of what was shipped under the product's name at the time.
 
+## v100.4 — BGM: rejected tracks are now truly deleted (2026-07-18)
+
+**✨ Improvements**
+
+Rejecting a background-music track used to keep the mp3 sitting in Storage; the worker just skipped it. That was fine as a "maybe restore later" tier, but the reject list has been steady long enough that keeping 41 unwanted mp3s around was just clutter.
+
+- **New "Purge rejected (N)" button** on every vibe section that has rejected tracks. One click, one confirm, and every rejected mp3 in that vibe is deleted from Storage and dropped from the reject list.
+- The 41 tracks already on the reject list have been purged in this release.
+- Approve/Reject on individual tracks still behaves the same — reject is still a soft-delete you can undo, purge only kicks in when you press the red button.
+
 ## v100.3 — Neighborhoods page is populated again (2026-07-17)
 
 **🐛 Bug Fixes**

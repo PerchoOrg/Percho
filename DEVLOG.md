@@ -4,6 +4,48 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-18 00:45 UTC — Phase 116: BGM — hard-delete rejected tracks (purge)
+
+**Report**: `qiaoxux` — "把以及reject的音乐彻底删除吧 purge as well" —
+Phase 106 made reject a *soft-delete* (mp3 stays in Storage, worker skips
+downloading). Owner now wants the rejects gone from Storage too, and a
+one-click way to keep the library tidy going forward.
+
+**Actions**:
+- `app/api/admin/bgm/purge-rejected/route.ts` (new): `POST { vibe? }` —
+  reads `bgm/_state/state.json`, calls `storage.from('bgm').remove(paths)`
+  for every rejected mp3 (optionally filtered by vibe), then rewrites the
+  sidecar with the purged paths removed. Admin-gated.
+- `BgmVibeSection.tsx`: header now shows a red **Purge rejected (N)** pill
+  next to Import when the vibe has rejected tracks. `window.confirm()` on
+  click, then hits the new endpoint. Purge state is per-section so the
+  spinner is local.
+- One-shot cleanup against prod: purged the 41 tracks currently on the
+  reject list (9 chill-electronic, 9 luxury-ambient, 16 modern-corporate,
+  7 warm-acoustic). Verified via `HEAD` on three sample public URLs — all
+  400 (object not found) — and `state.json.rejected` now `[]`.
+
+**Decisions**:
+- **Purge is one-way**, no undo. Rationale: reject already gives a
+  soft-delete tier with unreject. If the operator hits Purge with confirm,
+  the intent is clear. Restoring purged tracks means re-importing from
+  incompetech / re-uploading, which is a minute of work.
+- **Per-vibe scope** on the button (not "purge every vibe at once"). Keeps
+  the confirm dialog concrete ("delete 7 tracks from Warm Acoustic") and
+  reduces blast radius if the operator misclicks. The endpoint accepts
+  `{ vibe: undefined }` for a global purge if we ever need it from a
+  script, but there's no UI for it.
+- **No render-worker changes**. The worker already skips rejected paths on
+  its next `pull-bgm.sh` sync; a purged path just becomes "not present in
+  Storage", which the worker also handles.
+
+**Verification**:
+- `npx tsc --noEmit -p .` clean.
+- Prod state.json now `{"rejected": [], …}`.
+- Three sampled ex-rejected URLs return HTTP 400 (object gone).
+
+**Next steps**: none — feature is self-contained.
+
 ## 2026-07-17 19:58 UTC — Phase 115 REVERT (commit 273f54e)
 
 Reverted phase115 (commit 9a7d5dc). It was solving the wrong problem and
