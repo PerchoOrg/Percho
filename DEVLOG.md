@@ -4,6 +4,48 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-17 17:00 UTC — Phase 102: nearby videos always follow the listing
+
+**Objective**: Owner: "关联规则不对 不应该根据 community 来找. 现阶段只看
+listing 本身附近的 POI. 只要有 nearby 视频就应该显示. 如果恰好这个 nearby
+video 在某个 neighbor 里 可以一并显示." Concrete symptom: listing
+`5122-lower-creek-street` has 5 ready `generated_videos` rows (schools /
+kids / dining / shopping / outdoor, scope=`listing_intent_bucket`) but
+`/v/…` showed none of them.
+
+**Root cause**: `lib/listing-feed/load.ts` had a Phase-101 branch that read
+listing-scoped bucket videos **only when `listing.community_id` was null**.
+It also hard-coded `categoryVideos: []` on the photo-fallback card, so
+photo-only listings never rendered nearby cards even when their scoped
+bucket videos existed. 5122 happens to have `community_id=null` so the
+first bug alone shouldn't have hidden its videos — the second contributor
+was a stale `listing_videos` row (`kind='walkthrough'`, `cf_video_id=null`,
+`status='ready'`) that pushed the loader into the video branch and rendered
+an empty hero. Cleanup of that row + the `walkthrough` kind is deferred to
+Phase 103 (owner wants to scope that separately).
+
+**Actions**: `lib/listing-feed/load.ts`:
+- `fetchAroundListing`: always pull `generated_videos WHERE listing_id=X AND
+  scope='listing_intent_bucket' AND status='ready'`. If `community_id` is
+  set, additionally union (a) `community_videos` (manual agent uploads) and
+  (b) `generated_videos WHERE community_id=X AND
+  scope='community_intent_bucket' AND status='ready'`. De-dupe by
+  `cf_video_id` so a video that lives in a neighbor community doesn't
+  render twice.
+- `buildListingCards`: hoisted `categoryVideos` construction above the
+  photo/video split. Photo fallback branch now passes the real
+  `categoryVideos` array instead of `[]`.
+
+**Verify**: 5122 (`community_id=null`) → still shows the 5 listing-scoped
+videos it had before. A listing with a `community_id` set now shows its own
+listing-scoped nearby PLUS the community's `community_videos` +
+`community_intent_bucket` set. Photo-only listings with generated bucket
+videos now expose the nearby carousel.
+
+**Deferred**: Phase 103 = drop `kind='walkthrough'` from `listing_videos` +
+the two `generate-tour` routes that write it. Owner wants to review scope
+of that cleanup separately.
+
 ## 2026-07-17 16:00 UTC — POI approval derived from photo approvals (button removed)
 
 **Objective**: Owner asked to remove the explicit "Approve POI / Reject POI" buttons. Semantic: if any photo inside a POI is approved, the POI is approved. No separate gate.
