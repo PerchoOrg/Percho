@@ -115,7 +115,7 @@ export function ListingNearbyPanel({
 }: Props) {
   const [pois, setPois] = useState<NearbyPoiForListing[]>(initialPois);
   const [pending, startTransition] = useTransition();
-  const [busyPoi, setBusyPoi] = useState<string | null>(null);
+  const [busyPois, setBusyPois] = useState<Set<string>>(() => new Set());
   const [notice, setNotice] = useState<string | null>(null);
   const [expandedBuckets, setExpandedBuckets] = useState<Set<IntentBucket>>(new Set());
 
@@ -177,9 +177,19 @@ export function ListingNearbyPanel({
   };
 
   const handleFetchPhotos = (poiId: string) => {
-    setBusyPoi(poiId);
+    if (busyPois.has(poiId)) return;
+    setBusyPois((prev) => {
+      const next = new Set(prev);
+      next.add(poiId);
+      return next;
+    });
     setNotice(null);
-    startTransition(async () => {
+    // Deliberately NOT wrapped in startTransition — that made every other row's
+    // button `pending` and froze the panel while one POI's photos fetched.
+    // Each fetch tracks its own busy state via `busyPois`, so the user can
+    // click Fetch on several POIs in parallel and keep approving/rejecting
+    // POIs while requests are in flight.
+    void (async () => {
       try {
         const r = await fetchPhotosForListingPoi(listingId, poiId);
         const reasons = r.skippedReasons?.length
@@ -192,9 +202,13 @@ export function ListingNearbyPanel({
       } catch (err) {
         setNotice(`Photo fetch failed: ${(err as Error).message}`);
       } finally {
-        setBusyPoi(null);
+        setBusyPois((prev) => {
+          const next = new Set(prev);
+          next.delete(poiId);
+          return next;
+        });
       }
-    });
+    })();
   };
 
   const handlePoiDecision = (poiId: string, approved: boolean) => {
@@ -307,7 +321,7 @@ export function ListingNearbyPanel({
                       <PoiRow
                         key={row.poi_id}
                         row={row}
-                        busy={busyPoi === row.poi_id || pending}
+                        busy={busyPois.has(row.poi_id) || pending}
                         onFetchPhotos={() => handleFetchPhotos(row.poi_id)}
                         onDecide={(approved) => handlePoiDecision(row.poi_id, approved)}
                         onPhotoDecide={handlePhotoDecision}
