@@ -4,6 +4,25 @@
 > Historical entries below preserve the original name in-place — release notes
 > are a record of what was shipped under the product's name at the time.
 
+## v98.8 — Admin restructure: Home Tour hub, split Nearby, POI photos filter (2026-07-17)
+
+Three admin console upgrades:
+
+- **Home Tour** tab is now a per-listing hub. The old flat render queue
+  becomes an index of listings; tap any row to open a detail page with
+  every photo and every tour video for that home, plus a
+  **Generate new tour video** button (admin-scoped — re-renders the
+  Ken Burns walkthrough without touching agent ownership).
+- **Nearby** split into two peer tabs — **Home** (per-listing) and
+  **Neighborhood** (per-community). Chips wrap onto two lines so the
+  full label fits. Old `/admin/pipeline/nearby` links redirect
+  automatically (`?scope=neighborhood` → community tab).
+- **POI** tab: new **With photos / No photos / Any** filter next to the
+  AI-tag filter, so it's one click to see POIs still missing photos.
+
+Seven tabs now (Home Tour, Home, Neighborhood, POI, Video Jobs, Music,
+Worker); the chip strip scrolls horizontally on narrow viewports.
+
 ## v98.7 — Admin Music tab: add + delete (2026-07-17)
 
 The **Music** tab now supports uploading new tracks and deleting existing

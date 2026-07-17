@@ -131,6 +131,74 @@ end-to-end.
 - Consider a "which video used which track" join once `generated_videos` has
   a `bgm_track` column — right now the worker doesn't record its pick.
 
+## 2026-07-17 10:00 UTC — Phase 104b: admin restructure (Home Tour hub, split Nearby, POI photos filter)
+
+Three ergonomic wins on `/admin/pipeline/*`, all requested in one
+line by the owner ("go all").
+
+**Home Tour hub.** The `tour-jobs` tab was a flat `listing_videos`
+table — one row per rendered walkthrough. Owner asked to click into a
+home and see everything: photos + all videos + a fresh-render button.
+Restructured to match the Nearby / POI Library pattern:
+
+- `app/admin/pipeline/tour-jobs/page.tsx` → per-listing index. Columns:
+  address, agent, photo count, video count, walkthrough status. Left
+  filter chips (`All / No tour yet / Has tour`) so the "which homes
+  still need a tour" question is one click.
+- `app/admin/pipeline/tour-jobs/[id]/page.tsx` (new) → detail. Shows
+  every `listing_videos` row as a portrait 9:16 thumb using
+  `cloudflare/stream.thumbnailUrl()`, and every `listing_photos` row
+  as a square tile linking to the public Supabase URL
+  (`storage/v1/object/public/listing-photos/{path}`).
+- `app/admin/pipeline/tour-jobs/[id]/AdminGenerateTourButton.tsx`
+  (new, client) → posts to a new admin-scoped generate endpoint,
+  polls every 5s, calls `router.refresh()` on `done`.
+- `app/api/admin/listings/[id]/generate-tour/route.ts` (new). Same
+  shape as the existing agent route, but ownership check is replaced
+  with `requireAdmin()` — an admin can re-render any listing's tour.
+  Uses service client so RLS doesn't fight. Deletes prior walkthrough
+  row + best-effort deletes its Cloudflare video before enqueueing.
+
+**Split Nearby.** `phase103` had unified Home + Neighborhood behind a
+`?scope=` segmented control. Owner wants two peer tabs.
+
+- `app/admin/pipeline/listing-nearby/page.tsx` (new) — Home rollup
+  (the old `scope=home` branch, verbatim shape).
+- `app/admin/pipeline/community-nearby/page.tsx` (new) — Neighborhood
+  rollup (old `scope=neighborhood` branch).
+- `app/admin/pipeline/nearby/page.tsx` → redirect stub. Preserves
+  `?scope=neighborhood` deep links (→ community tab); everything else
+  → listing tab.
+- Existing `[id]/page.tsx` detail routes under both prefixes were
+  already split by phase101, so no changes there.
+
+**POI photos filter.** `app/admin/pipeline/poi-library/page.tsx` gains
+a `?photos=all|with|without` param and a `<select>` alongside the
+tagged filter. Implementation: extra parallel query pulls the set of
+`poi_photos.poi_id` (bounded 20k rows — the whole POI photo table is
+smaller than that), then a `Set.has` filter runs in-memory over the
+page's 200-row slice. Avoids the PostgREST embed-shared-key trap
+(would have needed an EXISTS subquery via RPC otherwise).
+
+**Chip layout.** `AdminHubTabs.tsx` label span: `line-clamp-1` →
+`line-clamp-2` so "Neighborhood" wraps to two lines inside the
+~80px chip instead of ellipsizing. Layout tab list grew to seven —
+Home Tour, Home, Neighborhood, POI, Video Jobs, Music, Worker — and
+the chip strip is horizontally scrollable so mobile stays clean.
+
+**Storage URL pattern.** Listing photos live in the `listing-photos`
+bucket, path `{listing_id}/{filename}`. Public URL is
+`${SUPABASE_URL}/storage/v1/object/public/listing-photos/{path}` — same
+shape the sketch variants and `vision_tag_listing.py` script use.
+
+**Files touched.** 10 total (2 modified layout/tabs, 5 new pages/
+component/route, 3 modified pages). Merged in one shot as
+`phase104b/admin-restructure`; sibling `phase105` (BGM add/delete)
+was mid-flight and its layout edits were preserved through the
+merge.
+
+---
+
 ## 2026-07-17 05:00 UTC — Phase 103: admin console → HubTabs chip bar + POI photo review
 
 Owner ask (mobile & desktop parity, five tabs, same shell as the agent hub):
