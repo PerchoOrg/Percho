@@ -4,6 +4,20 @@
 > Historical entries below preserve the original name in-place — release notes
 > are a record of what was shipped under the product's name at the time.
 
+## v98.1 — 2026-07-16 — Admin pipeline console
+
+Nearby POI discovery, AI photo tagging, and bucket video generation are
+platform automation, so their review surfaces moved off the agent hub
+and into a dedicated `/admin/*` console gated by `agents.is_admin`.
+
+- New pages: Pipeline landing, Listing Nearby, Community Nearby, Bucket
+  Jobs, Tour Jobs, POI Library, Worker Health.
+- Agent hub cleanup: Listing edit no longer has a Nearby tab (agents
+  don't need to see automation knobs — they just get the finished
+  videos on their public pages).
+- Bootstrap admin access with `update public.agents set is_admin = true
+  where email = '<you>'` after applying the migration.
+
 ## v98.0 — 2026-07-16 — Every listing now shows nearby videos
 
 Nearby videos (Schools, Dining, Outdoor, Fitness, etc.) used to require a
