@@ -1867,7 +1867,13 @@ export function BrowseFeed({
          * Like/Save/Contact/Share so the whole column reads as one design.
          * Uses ActionButton's built-in badge to show video count in red.
          * Owner: "不好看 做成一个圆形加数字 不要文字了 放在 like 上面". */}
-        {active?.community && (
+        {/* Phase 111 (2026-07-17): show Nearby button when EITHER the listing
+         * belongs to a community OR it has any listing-scoped nearby videos
+         * (Phase 101+ pipeline generates 14-bucket nearby videos anchored to
+         * the listing itself, independent of community membership). Before
+         * this, listings with community_id=null had 0-video visibility even
+         * with 5 ready nearby videos in categoryVideos. */}
+        {(active?.community || (active && active.categoryVideos.length > 0)) && (
           <ActionButton
             label="Nearby"
             onClick={() => {
@@ -1875,7 +1881,11 @@ export function BrowseFeed({
               setSheetOpen(true);
               setPausedActive(true);
             }}
-            badge={active.community.videoCount > 0 ? active.community.videoCount : undefined}
+            badge={
+              (active.community?.videoCount ?? active.categoryVideos.length) > 0
+                ? (active.community?.videoCount ?? active.categoryVideos.length)
+                : undefined
+            }
             badgeColor="red"
           >
             <span aria-hidden="true" className="text-[20px] leading-none">🏘️</span>
@@ -1979,8 +1989,11 @@ export function BrowseFeed({
        * lookup, not a stable anchor. */}
       {(() => {
         const sheetCard = sheetCardId ? (cards.find((c) => c.id === sheetCardId) ?? null) : null;
-        const sheetData: CommunitySheetData | null =
-          sheetCard && sheetCard.community
+        // Phase 111 (2026-07-17): community-less listings still get a sheet
+        // when they have listing-scoped nearby videos. Fall back to listing
+        // address/city/state so the header renders something meaningful.
+        const sheetData: CommunitySheetData | null = sheetCard
+          ? sheetCard.community
             ? {
                 slug: sheetCard.community.slug,
                 name: sheetCard.community.name,
@@ -1991,7 +2004,19 @@ export function BrowseFeed({
                 listingCount: sheetCard.community.listingCount,
                 videos: sheetCard.categoryVideos,
               }
-            : null;
+            : sheetCard.categoryVideos.length > 0
+              ? {
+                  slug: sheetCard.listing.slug,
+                  name: 'Nearby',
+                  city: sheetCard.listing.city,
+                  state: sheetCard.listing.state,
+                  description: null,
+                  videoCount: sheetCard.categoryVideos.length,
+                  listingCount: 0,
+                  videos: sheetCard.categoryVideos,
+                }
+              : null
+          : null;
         return (
           <>
             <CommunitySheet
