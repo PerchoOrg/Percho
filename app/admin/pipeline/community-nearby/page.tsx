@@ -4,7 +4,7 @@
  */
 
 import Link from 'next/link';
-import { createClient } from '@/lib/supabase/server';
+import { createServiceClient } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,7 +16,7 @@ type Row = {
 };
 
 export default async function CommunityNearbyIndex() {
-  const supabase = await createClient();
+  const supabase = createServiceClient();
   const { data } = (await supabase
     .from('communities')
     .select('id, name, city, state')

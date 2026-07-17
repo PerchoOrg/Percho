@@ -4,7 +4,7 @@
  */
 
 import Link from 'next/link';
-import { createClient } from '@/lib/supabase/server';
+import { createServiceClient } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,7 +27,7 @@ export default async function TourJobsPage({
   searchParams: Promise<{ status?: string }>;
 }) {
   const { status = 'all' } = await searchParams;
-  const supabase = await createClient();
+  const supabase = createServiceClient();
 
   let q = supabase
     .from('listing_videos')

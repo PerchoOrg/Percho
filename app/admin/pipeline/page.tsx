@@ -4,12 +4,12 @@
  */
 
 import Link from 'next/link';
-import { createClient } from '@/lib/supabase/server';
+import { createServiceClient } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
 
 async function getCounts() {
-  const supabase = await createClient();
+  const supabase = createServiceClient();
 
   const [listingsMissing, communitiesActive, bucketPending, bucketFailed, tourPending] = await Promise.all([
     supabase

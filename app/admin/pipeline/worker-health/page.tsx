@@ -6,12 +6,12 @@
  * timing of the most recent job transitions.
  */
 
-import { createClient } from '@/lib/supabase/server';
+import { createServiceClient } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
 
 async function loadHealth() {
-  const supabase = await createClient();
+  const supabase = createServiceClient();
 
   type LastReady = { id: string; updated_at: string; scope: string; intent_bucket: string | null };
   type LastFailed = LastReady & { error: string | null };

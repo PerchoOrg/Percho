@@ -6,7 +6,7 @@
 
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { createClient } from '@/lib/supabase/server';
+import { createServiceClient } from '@/lib/supabase/server';
 import { CommunityNearbyPanel } from '@/app/dashboard/communities/[id]/CommunityNearbyPanel';
 import { loadNearbyPoisForCommunity } from '@/lib/poi/community-actions';
 
@@ -22,7 +22,7 @@ export default async function AdminCommunityNearbyPage({
   params: Promise<Params>;
 }) {
   const { id } = await params;
-  const supabase = await createClient();
+  const supabase = createServiceClient();
 
   const { data: community } = (await supabase
     .from('communities')
