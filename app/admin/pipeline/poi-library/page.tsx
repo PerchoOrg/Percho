@@ -1,14 +1,19 @@
 /**
  * /admin/pipeline/poi-library — global POI + poi_photos audit.
  * Shows what the discovery + AI-tag steps have produced.
+ *
+ * Phase 108 (2026-07-17): moved rendering into <PoiLibraryTable>
+ * (shared AdminTable: search / sort / pagination). Removed the
+ * server-side search form + tagged/photos <select> filters — the
+ * new table's search + sortable columns cover the same ground.
  */
 
 import { createServiceClient } from '@/lib/supabase/server';
-import Link from 'next/link';
+import PoiLibraryTable, { type PoiRow } from './PoiLibraryTable';
 
 export const dynamic = 'force-dynamic';
 
-type Row = {
+type DbRow = {
   id: string;
   google_place_id: string;
   display_name: string;
@@ -19,31 +24,19 @@ type Row = {
   discovered_at: string;
 };
 
-export default async function PoiLibraryPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ q?: string; tagged?: string; photos?: string }>;
-}) {
-  const { q = '', tagged = 'all', photos = 'all' } = await searchParams;
+export default async function PoiLibraryPage() {
   const supabase = createServiceClient();
 
-  let query = supabase
-    .from('pois')
-    .select(
-      'id, google_place_id, display_name, primary_type, rating, ai_summary, tagged_at, discovered_at',
-      { count: 'exact' },
-    )
-    .order('discovered_at', { ascending: false })
-    .limit(200);
-  if (q) query = query.ilike('display_name', `%${q}%`);
-  if (tagged === 'tagged') query = query.not('tagged_at', 'is', null);
-  if (tagged === 'untagged') query = query.is('tagged_at', null);
-
   const [{ data, count }, photoAgg, poiIdsWithPhotos] = await Promise.all([
-    query as unknown as Promise<{ data: Row[] | null; count: number | null }>,
+    supabase
+      .from('pois')
+      .select(
+        'id, google_place_id, display_name, primary_type, rating, ai_summary, tagged_at, discovered_at',
+        { count: 'exact' },
+      )
+      .order('discovered_at', { ascending: false })
+      .limit(500) as unknown as Promise<{ data: DbRow[] | null; count: number | null }>,
     supabase.from('poi_photos').select('id', { count: 'exact', head: true }),
-    // Pull the set of poi_ids that have at least one photo row so we
-    // can filter in-memory (avoids a bulky sub-select or RPC).
     supabase.from('poi_photos').select('poi_id').limit(20000) as unknown as Promise<{
       data: Array<{ poi_id: string }> | null;
     }>,
@@ -52,12 +45,16 @@ export default async function PoiLibraryPage({
   const withPhotos = new Set<string>();
   for (const p of poiIdsWithPhotos.data ?? []) withPhotos.add(p.poi_id);
 
-  const allRows = data ?? [];
-  const rows = allRows.filter((r) => {
-    if (photos === 'with') return withPhotos.has(r.id);
-    if (photos === 'without') return !withPhotos.has(r.id);
-    return true;
-  });
+  const rows: PoiRow[] = (data ?? []).map((r) => ({
+    id: r.id,
+    google_place_id: r.google_place_id,
+    display_name: r.display_name,
+    primary_type: r.primary_type,
+    rating: r.rating,
+    ai_summary: r.ai_summary,
+    tagged_at: r.tagged_at,
+    hasPhotos: withPhotos.has(r.id),
+  }));
 
   return (
     <div className="space-y-4">
@@ -77,90 +74,7 @@ export default async function PoiLibraryPage({
           </span>
         </div>
       </header>
-
-      <form className="flex flex-wrap gap-2 text-sm" action="/admin/pipeline/poi-library">
-        <input
-          name="q"
-          defaultValue={q}
-          placeholder="Search display name…"
-          className="min-w-64 rounded-lg border border-line bg-surface px-3 py-1.5"
-        />
-        <select
-          name="tagged"
-          defaultValue={tagged}
-          className="rounded-lg border border-line bg-surface px-3 py-1.5"
-        >
-          <option value="all">All</option>
-          <option value="tagged">AI-tagged</option>
-          <option value="untagged">Untagged</option>
-        </select>
-        <select
-          name="photos"
-          defaultValue={photos}
-          className="rounded-lg border border-line bg-surface px-3 py-1.5"
-          title="Filter by whether the POI has any photos"
-        >
-          <option value="all">Any photos</option>
-          <option value="with">With photos</option>
-          <option value="without">No photos</option>
-        </select>
-        <button
-          type="submit"
-          className="rounded-lg border border-line bg-surface px-3 py-1.5 hover:border-ink"
-        >
-          Filter
-        </button>
-      </form>
-
-      <div className="overflow-x-auto rounded-2xl border border-line bg-surface">
-        <table className="w-full min-w-[640px] text-sm">
-          <thead className="border-b border-line bg-bg/40 text-left text-xs uppercase tracking-wide text-ink2">
-            <tr>
-              <th className="p-3">POI</th>
-              <th className="p-3">Type</th>
-              <th className="p-3 text-right">Rating</th>
-              <th className="p-3">AI Summary</th>
-              <th className="p-3">Tagged</th>
-              <th className="p-3" />
-            </tr>
-          </thead>
-          <tbody>
-            {rows.length === 0 && (
-              <tr>
-                <td colSpan={6} className="p-6 text-center text-ink2">
-                  No POIs found.
-                </td>
-              </tr>
-            )}
-            {rows.map((r) => (
-              <tr key={r.id} className="border-b border-line align-top last:border-0">
-                <td className="p-3">
-                  <div className="font-medium">{r.display_name}</div>
-                  <div className="text-ink2 font-mono text-xs">
-                    {r.google_place_id.slice(0, 12)}…
-                  </div>
-                </td>
-                <td className="p-3 text-ink2">{r.primary_type ?? '—'}</td>
-                <td className="p-3 text-right">{r.rating ?? '—'}</td>
-                <td className="p-3 text-ink2 text-xs">
-                  <div className="line-clamp-2 max-w-md">{r.ai_summary ?? '—'}</div>
-                </td>
-                <td className="p-3 text-ink2 text-xs">
-                  {r.tagged_at ? new Date(r.tagged_at).toLocaleDateString() : '—'}
-                </td>
-                <td className="p-3 text-right">
-                  <Link
-                    href={`/admin/pipeline/poi-library/${r.id}`}
-                    className="text-sm text-blue-500 hover:underline"
-                  >
-                    Review →
-                  </Link>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <PoiLibraryTable rows={rows} />
     </div>
   );
 }

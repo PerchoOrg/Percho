@@ -4,6 +4,37 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-17 14:00 UTC — Phase 108: Admin tables — shared search / sort / pagination
+
+**Objective**: Owner asked to add table-top search (top right), click-to-sort on every column, and 20-row pagination to every admin table, plus "remove some filter buttons for now."
+
+**Actions**:
+- New shared client component `app/admin/_components/AdminTable.tsx`: takes `rows`, a `columns` array with per-column `render` + optional `sortValue`, a `searchable(row)` string builder, and a `rowKey`. Handles search (top-right input, client-side substring match), three-state sort per column (asc → desc → none), and 20-per-page Prev/Next with a "N–M of T" counter.
+- Refactored the five data-heavy admin pages so they fetch on the server and hand rows off to a thin client wrapper that plugs into AdminTable:
+  - `app/admin/pipeline/tour-jobs/` — `TourJobsTable`
+  - `app/admin/pipeline/bucket-jobs/` — `BucketJobsTable`
+  - `app/admin/pipeline/listing-nearby/` — `ListingNearbyTable`
+  - `app/admin/pipeline/community-nearby/` — `CommunityNearbyTable`
+  - `app/admin/pipeline/poi-library/` — `PoiLibraryTable`
+- Removed filter chips / server-form filters that are now redundant with search+sort:
+  - tour-jobs: `All / No tour / Has tour` chips + `filter=` searchParam
+  - bucket-jobs: `all / pending / processing / ready / failed` status chips + `status=` searchParam
+  - listing-nearby: `No community / Has community / All` chips + `filter=` searchParam
+  - poi-library: server-side search form (name search) + `tagged` + `photos` `<select>` filters. AI-summary/tagged/photos columns are all sortable now, and the top-right search covers display_name / place_id / type / summary.
+- Bumped server-side `.limit(200)` → `.limit(500)` on those queries so pagination has something to page through; still bounded to keep the initial payload reasonable.
+
+**Decisions**:
+- Client-side search/sort/paginate instead of round-tripping to the server. Admin traffic is tiny (single-digit ops), the rows are already fetched, and 500-row DOM tables are cheap. Simpler + snappier than reworking `searchParams` for every table.
+- Kept the `worker-health` page unchanged — it renders KPI cards, not a data table.
+- Every column is sortable by default (three-state toggle); non-obvious sort keys use derived values (e.g. tour walkthrough state → rank, video counts → weighted sum favoring ready).
+- Column `render` fns live in each `<Feature>Table.tsx` client wrapper. Server page stays focused on fetch + hand-off; no cross-boundary React node serialization.
+
+**Verification**: `npx tsc --noEmit` clean. Merged to main for real-device smoke test.
+
+**Next steps**: Owner smoke-tests each admin page. If any of the removed filter chips are missed, they can come back as sortable-column defaults or a "quick filter" chip next to the search input.
+
+---
+
 ## 2026-07-17 11:30 UTC — Phase 107: BGM — Approve+Reject per row · Import (web) split from Upload (local)
 
 **Owner feedback on Phase 106:**

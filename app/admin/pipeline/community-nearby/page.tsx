@@ -4,32 +4,32 @@
  * /admin/pipeline/community-nearby/[id].
  *
  * Phase 104 (2026-07-17): split out of the unified /nearby index.
+ * Phase 108 (2026-07-17): moved rendering into <CommunityNearbyTable>
+ * (shared AdminTable: search / sort / pagination).
  */
 
 import { createServiceClient } from '@/lib/supabase/server';
-import Link from 'next/link';
+import CommunityNearbyTable, { type CommunityNearbyRow } from './CommunityNearbyTable';
 
 export const dynamic = 'force-dynamic';
 
-type CommunityRow = {
+type DbRow = {
   id: string;
   name: string;
   city: string | null;
   state: string | null;
 };
 
-type ScopeStat = { ready: number; pending: number; failed: number };
-
-async function loadCommunities() {
+async function loadCommunities(): Promise<CommunityNearbyRow[]> {
   const supabase = createServiceClient();
   const { data } = (await supabase
     .from('communities')
     .select('id, name, city, state')
     .order('name', { ascending: true })
-    .limit(200)) as { data: CommunityRow[] | null };
+    .limit(500)) as { data: DbRow[] | null };
   const rows = data ?? [];
   const ids = rows.map((r) => r.id);
-  const statsMap = new Map<string, ScopeStat>();
+  const statsMap = new Map<string, { ready: number; pending: number; failed: number }>();
   if (ids.length > 0) {
     const { data: gv } = (await supabase
       .from('generated_videos')
@@ -46,15 +46,22 @@ async function loadCommunities() {
       statsMap.set(r.community_id, s);
     }
   }
-  return rows.map((r) => ({
-    ...r,
-    stats: statsMap.get(r.id) ?? { ready: 0, pending: 0, failed: 0 },
-  }));
+  return rows.map((r) => {
+    const s = statsMap.get(r.id) ?? { ready: 0, pending: 0, failed: 0 };
+    return {
+      id: r.id,
+      name: r.name,
+      city: r.city,
+      state: r.state,
+      ready: s.ready,
+      pending: s.pending,
+      failed: s.failed,
+    };
+  });
 }
 
 export default async function CommunityNearbyIndex() {
   const rows = await loadCommunities();
-
   return (
     <div className="space-y-4">
       <header>
@@ -64,55 +71,7 @@ export default async function CommunityNearbyIndex() {
           community — POIs are fetched around the subdivision entrance.
         </p>
       </header>
-
-      <div className="overflow-x-auto rounded-2xl border border-line bg-surface">
-        <table className="w-full min-w-[640px] text-sm">
-          <thead className="border-b border-line bg-bg/40 text-left text-xs uppercase tracking-wide text-ink2">
-            <tr>
-              <th className="p-3">Community</th>
-              <th className="p-3">Location</th>
-              <th className="p-3 text-right">Videos</th>
-              <th className="p-3" />
-            </tr>
-          </thead>
-          <tbody>
-            {rows.length === 0 && (
-              <tr>
-                <td colSpan={4} className="p-6 text-center text-ink2">
-                  No communities yet.
-                </td>
-              </tr>
-            )}
-            {rows.map((r) => (
-              <tr key={r.id} className="border-b border-line last:border-0">
-                <td className="p-3 font-medium">{r.name}</td>
-                <td className="p-3 text-ink2">
-                  {[r.city, r.state].filter(Boolean).join(', ') || '—'}
-                </td>
-                <td className="p-3 text-right">
-                  <span className="text-emerald-500">{r.stats.ready}</span>
-                  <span className="text-ink2"> / </span>
-                  <span>{r.stats.pending}</span>
-                  {r.stats.failed > 0 && (
-                    <>
-                      <span className="text-ink2"> / </span>
-                      <span className="text-red-500">{r.stats.failed}</span>
-                    </>
-                  )}
-                </td>
-                <td className="p-3 text-right">
-                  <Link
-                    href={`/admin/pipeline/community-nearby/${r.id}`}
-                    className="text-sm text-blue-500 hover:underline"
-                  >
-                    Open →
-                  </Link>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <CommunityNearbyTable rows={rows} />
     </div>
   );
 }
