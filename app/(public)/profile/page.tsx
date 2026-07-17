@@ -125,7 +125,7 @@ export default async function ProfilePage() {
             {agent.is_admin ? (
               <Link
                 href="/admin/pipeline"
-                className="inline-flex items-center justify-center rounded-full border border-line px-6 py-3 text-sm text-ink transition hover:border-ink"
+                className="btn-gold inline-flex items-center justify-center rounded-full px-6 py-3 text-sm"
               >
                 Admin console
               </Link>
