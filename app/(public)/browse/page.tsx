@@ -60,7 +60,7 @@ async function RecommendedGrid({ communitySlug }: { communitySlug: string | null
   void communityLabel; // not currently rendered — header moved to TopBar
 
   const scopedCards = communitySlug ? await fetchBrowseCardsByCommunitySlug(communitySlug) : null;
-  const cards = scopedCards && scopedCards.length > 0 ? scopedCards : await fetchBrowseCards();
+  const cards = scopedCards && scopedCards.length > 0 ? scopedCards : await fetchBrowseCards(0, 500);
   const isCommunityScoped = Boolean(scopedCards && scopedCards.length > 0);
 
   const items: ListingGridItem[] = cards.map((card) => {
