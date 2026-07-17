@@ -4,6 +4,14 @@
 > Historical entries below preserve the original name in-place — release notes
 > are a record of what was shipped under the product's name at the time.
 
+## v99.3 — Fetch photos no longer freezes the Nearby panel (2026-07-17)
+
+**🐛 Bug Fixes**
+
+Clicking "Fetch photos" on a nearby POI used to freeze the whole panel for several seconds — you couldn't approve/reject other POIs or start another photo fetch until the first one finished. Now each POI's fetch runs on its own; click Fetch on several POIs in a row and they all work in parallel, and Approve/Reject on unrelated POIs stays clickable while photos load.
+
+---
+
 ## v99.2 — Admin tables: search, sort, and pagination on every list (2026-07-17)
 
 **Admin › Pipeline**

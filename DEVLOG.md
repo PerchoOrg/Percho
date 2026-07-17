@@ -4,6 +4,23 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-17 15:00 UTC — Nearby POI panel — unblock UI while fetching photos
+
+**Objective**: Owner reported that clicking "Fetch photos" on a POI froze the whole panel for several seconds — couldn't approve/reject other POIs or click Fetch on another one in parallel.
+
+**Actions**:
+- `app/dashboard/listings/[id]/edit/ListingNearbyPanel.tsx` and `app/dashboard/communities/[id]/CommunityNearbyPanel.tsx`:
+  - Replaced `const [busyPoi, setBusyPoi] = useState<string | null>` with `busyPois: Set<string>` — multiple POIs can be busy at once.
+  - Dropped `startTransition` around the `fetchPhotosFor{Listing,Community}Poi` call (it flipped the panel-wide `pending` flag, which every row's `busy` prop OR'd in — freezing all buttons). Replaced with a plain `void (async () => …)()` IIFE.
+  - Row `busy` now = `busyPois.has(row.poi_id) || pending` (Discover still owns `pending`).
+  - Added a guard so double-clicking Fetch on the same row is a no-op.
+
+**Decisions**:
+- Kept server actions single-POI. The bottleneck is Google Places photo binaries + Storage upload per photo; parallelizing those inside one POI would help too but wasn't asked for and complicates the reused/fetched accounting. Simplest fix that addresses the user pain: let the UI dispatch N single-POI fetches concurrently.
+- Kept `startTransition` on Discover and POI approve/reject — those DO revalidate the whole list and are one-at-a-time by nature.
+
+**Verify**: click Fetch on POI A, immediately click Fetch on POI B → both spinners spin, both notices land as each resolves. Approve/Reject on other POIs stays clickable throughout.
+
 ## 2026-07-17 14:00 UTC — Phase 109: Admin tables — shared search / sort / pagination
 
 **Objective**: Owner asked to add table-top search (top right), click-to-sort on every column, and 20-row pagination to every admin table, plus "remove some filter buttons for now."
