@@ -4,6 +4,17 @@
 > Historical entries below preserve the original name in-place — release notes
 > are a record of what was shipped under the product's name at the time.
 
+## v99.6 — Nearby videos now show up on the listing page (2026-07-17)
+
+**🐛 Bug Fixes**
+
+Listings with generated Nearby videos weren't rendering them on the public `/v/…` page when they belonged to a covering community — the loader was fetching community-scoped videos and skipping the listing's own set. Listings without a covering community had the reverse issue: photo-only listings hard-coded an empty nearby carousel, so their Nearby videos never surfaced either.
+
+What changes visibly:
+- Every listing now shows its own generated Nearby videos on the public feed page, regardless of whether it sits inside a community.
+- Listings that are inside a community additionally show that community's Nearby content (manual uploads + generated set), with duplicates de-duped by video ID.
+- Photo-only listings can now display Nearby videos when they exist.
+
 ## v99.5 — Nearby POI: no more separate "Approve POI" button — photo approvals speak for themselves (2026-07-17)
 
 **✨ Improvements**

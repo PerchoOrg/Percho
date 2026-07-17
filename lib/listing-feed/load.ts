@@ -105,9 +105,44 @@ async function fetchAroundListing(
     .eq('status', 'ready')
     .order('sort_order', { ascending: true })) as { data: ListingVideo[] | null };
 
-  let communityVideos: CommunityVideo[] = [];
+  const communityVideos: CommunityVideo[] = [];
   let schools: School[] = [];
   let pois: Poi[] = [];
+
+  // Phase 102 (2026-07-17): nearby videos are anchored to the listing, not
+  // the community. Owner rule: "只看 listing 本身附近的 poi. 只要有 nearby
+  // 视频就应该显示. 如果恰好这个 nearby video 在某个 neighbor 里 可以一并
+  // 显示." So we always pull listing-scoped bucket videos, and additionally
+  // union the covering community's videos (manual uploads + community-scoped
+  // bucket generation) when the listing has one.
+  const { data: listingBucketRows } = (await supabase
+    .from('generated_videos')
+    .select('id, cf_stream_uid, intent_bucket, narrative')
+    .eq('listing_id', listing.id)
+    .eq('scope', 'listing_intent_bucket')
+    .eq('status', 'ready')) as {
+    data: Array<{
+      id: string;
+      cf_stream_uid: string | null;
+      intent_bucket: string | null;
+      narrative: { title?: string; voiceover?: string } | null;
+    }> | null;
+  };
+  const seenCfIds = new Set<string>();
+  for (const r of listingBucketRows ?? []) {
+    if (!r.cf_stream_uid || seenCfIds.has(r.cf_stream_uid)) continue;
+    seenCfIds.add(r.cf_stream_uid);
+    communityVideos.push({
+      id: r.id,
+      cf_video_id: r.cf_stream_uid,
+      kind: 'poi',
+      title: r.narrative?.title ?? null,
+      category: null,
+      school_id: null,
+      poi_id: null,
+    });
+  }
+
   if (listing.community_id) {
     const cv = (await supabase
       .from('community_videos')
@@ -115,7 +150,38 @@ async function fetchAroundListing(
       .eq('community_id', listing.community_id)
       .eq('status', 'ready')
       .eq('visibility', 'public')) as { data: CommunityVideo[] | null };
-    communityVideos = cv.data ?? [];
+    for (const v of cv.data ?? []) {
+      if (seenCfIds.has(v.cf_video_id)) continue;
+      seenCfIds.add(v.cf_video_id);
+      communityVideos.push(v);
+    }
+
+    const { data: communityBucketRows } = (await supabase
+      .from('generated_videos')
+      .select('id, cf_stream_uid, intent_bucket, narrative')
+      .eq('community_id', listing.community_id)
+      .eq('scope', 'community_intent_bucket')
+      .eq('status', 'ready')) as {
+      data: Array<{
+        id: string;
+        cf_stream_uid: string | null;
+        intent_bucket: string | null;
+        narrative: { title?: string; voiceover?: string } | null;
+      }> | null;
+    };
+    for (const r of communityBucketRows ?? []) {
+      if (!r.cf_stream_uid || seenCfIds.has(r.cf_stream_uid)) continue;
+      seenCfIds.add(r.cf_stream_uid);
+      communityVideos.push({
+        id: r.id,
+        cf_video_id: r.cf_stream_uid,
+        kind: 'poi',
+        title: r.narrative?.title ?? null,
+        category: null,
+        school_id: null,
+        poi_id: null,
+      });
+    }
 
     const sc = (await supabase
       .from('schools')
@@ -128,39 +194,6 @@ async function fetchAroundListing(
       .select('id, name, poi_type, distance_text')
       .eq('community_id', listing.community_id)) as { data: Poi[] | null };
     pois = po.data ?? [];
-  }
-
-  // Phase 101 (2026-07-16): listings without a covering community still get
-  // nearby videos via listing-scoped bucket generation. Union those into
-  // communityVideos so the card builder sees them as normal category cards.
-  // We only union when the listing has no community_id — mixing both would
-  // double up the same POIs (community wins because it aggregates across
-  // siblings).
-  if (!listing.community_id) {
-    const { data: lgv } = (await supabase
-      .from('generated_videos')
-      .select('id, cf_stream_uid, intent_bucket, narrative')
-      .eq('listing_id', listing.id)
-      .eq('scope', 'listing_intent_bucket')
-      .eq('status', 'ready')) as {
-      data: Array<{
-        id: string;
-        cf_stream_uid: string | null;
-        intent_bucket: string | null;
-        narrative: { title?: string; voiceover?: string } | null;
-      }> | null;
-    };
-    communityVideos = (lgv ?? [])
-      .filter((r) => r.cf_stream_uid)
-      .map((r) => ({
-        id: r.id,
-        cf_video_id: r.cf_stream_uid as string,
-        kind: 'poi',
-        title: r.narrative?.title ?? null,
-        category: null,
-        school_id: null,
-        poi_id: null,
-      }));
   }
 
   return {
@@ -213,9 +246,7 @@ export async function loadListingFeedBySlug(
  * Dashboard preview entry. Ignores status (RLS scopes to owner's listings).
  * Joins agent through the listing.
  */
-export async function loadListingFeedById(
-  listingId: string,
-): Promise<ListingFeedBundle | null> {
+export async function loadListingFeedById(listingId: string): Promise<ListingFeedBundle | null> {
   const supabase = await createClient();
 
   // biome-ignore lint/suspicious/noExplicitAny: stub generated types
@@ -248,9 +279,41 @@ export async function loadListingFeedById(
  */
 export async function buildListingCards(
   bundle: ListingFeedBundle,
-  photos: { id: string; storage_path: string; alt_text: string | null; sort_order: number }[] | null,
+  photos:
+    | { id: string; storage_path: string; alt_text: string | null; sort_order: number }[]
+    | null,
 ): Promise<BrowseCard[]> {
   const { agent, listing, listingVideos, communityVideos, schools, pois } = bundle;
+
+  // Phase 102 (2026-07-17): categoryVideos are built the same way whether the
+  // listing hero is a video or a photo. Nearby (listing- + community-scoped)
+  // videos must render on photo-only listings too — hoisted out of the video
+  // branch so the photo fallback stops hard-coding `[]`.
+  const categoryMetaById = new Map(COMMUNITY_VIDEO_CATEGORIES.map((m) => [m.id, m] as const));
+  const categoryVideos = communityVideos.map((v) => {
+    let categoryId: CommunityVideoCategoryId | null = null;
+    if (v.category && categoryMetaById.has(v.category as CommunityVideoCategoryId)) {
+      categoryId = v.category as CommunityVideoCategoryId;
+    } else {
+      switch (v.kind.toUpperCase()) {
+        case 'SCHOOL':
+          categoryId = 'school_run';
+          break;
+        case 'NEIGHBORHOOD':
+          categoryId = 'walk_the_block';
+          break;
+        default:
+          categoryId = 'eating_out';
+      }
+    }
+    const meta = categoryMetaById.get(categoryId);
+    return {
+      cfVideoId: v.cf_video_id,
+      line1: meta?.label ?? v.title ?? 'Nearby',
+      line2: meta?.blurb,
+      category: categoryId,
+    };
+  });
 
   if (listingVideos.length === 0) {
     if (!photos || photos.length === 0) return [];
@@ -263,7 +326,7 @@ export async function buildListingCards(
       hero: { cfVideoId: '' },
       heroPhotoUrl: photoPublicUrl(heroStoragePath),
       photos: photos.map((p) => photoPublicUrl(p.storage_path)),
-      categoryVideos: [],
+      categoryVideos,
       photoSchools: schools.map((s) => ({
         name: s.name,
         grades: s.grades,
@@ -303,32 +366,6 @@ export async function buildListingCards(
     line1: v.title ?? listing.address,
     line2: `${listing.city}, ${listing.state}`,
   }));
-
-  const categoryMetaById = new Map(COMMUNITY_VIDEO_CATEGORIES.map((m) => [m.id, m] as const));
-  const categoryVideos = communityVideos.map((v) => {
-    let categoryId: CommunityVideoCategoryId | null = null;
-    if (v.category && categoryMetaById.has(v.category as CommunityVideoCategoryId)) {
-      categoryId = v.category as CommunityVideoCategoryId;
-    } else {
-      switch (v.kind.toUpperCase()) {
-        case 'SCHOOL':
-          categoryId = 'school_run';
-          break;
-        case 'NEIGHBORHOOD':
-          categoryId = 'walk_the_block';
-          break;
-        default:
-          categoryId = 'eating_out';
-      }
-    }
-    const meta = categoryMetaById.get(categoryId);
-    return {
-      cfVideoId: v.cf_video_id,
-      line1: meta?.label ?? v.title ?? 'Nearby',
-      line2: meta?.blurb,
-      category: categoryId,
-    };
-  });
 
   const card: BrowseCard = {
     id: hero.cf_video_id ?? hero.cf_video_id_landscape ?? `ext:${hero.id}`,
