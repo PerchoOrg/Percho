@@ -4,6 +4,44 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-17 19:19 UTC — Phase 115: v1 ken-burns filter — stop upscaling small POI photos ("nearby videos 有 zoom-in 有点模糊")
+
+**Report**: `qiaoxux` — "2438 Figaro Drive 的 nearby videos 为啥有 zoom-in
+了，有点模糊。5122 Lower Creek Street 的 nearby 就正常。就一条：横屏照片
+不要拉满竖屏，保持照片的原始比例。"
+
+**Root cause**: `scripts/ken-burns/generate.py::kenburns_filter` (the v1
+blur-letterbox path used by POI/bucket/nearby videos) built its fg layer
+with `scale={w}:{h}:force_original_aspect_ratio=decrease` — i.e. always
+scaled to fit inside 1080×1920, including UPSCALING when the source was
+smaller than that. Then zoompan applied a 1.10× zoom on top. For Figaro's
+POI photos the source widths ran 540–4800 (min 540 on `outdoor`, min 480
+on `dining`), so the smallest ones got a 1080/540 = 2× upscale + 1.10×
+zoom = ~2.2× effective magnification of ~540px source → visibly soft.
+Lower Creek's POI photos were 2000–4096px wide, so the same math was
+under 1× upscale and stayed sharp.
+
+**Fix**: v1 fg layer now uses fit-inside-no-upscale, matching v2. `kenburns_filter`
+gains optional `fg_w`/`fg_h` params; caller (`render_clip`) computes them
+via `fit_inside(src_w, src_h, w, h, no_upscale=True)` and passes them
+through. fg scales to those fit-inside dims (never larger than native),
+zoompan runs on the fg canvas so zoom crops into native pixels, and the
+result is overlaid centered on the blurred bg. Small photos now sit at
+their native size inside the frame with a blurred letterbox around them
+— the user's stated rule: "保持照片的原始比例，不要拉满竖屏".
+
+**Files**: `scripts/ken-burns/generate.py`.
+
+**Verify**: re-render Figaro's 5 nearby buckets (`daily_errands`,
+`shopping`, `outdoor`, `schools`, `dining`) after deploy. Sub-1000px
+source photos should render at their native size centered on the
+blurred bg, not filling the full 1080 wide.
+
+**Next**: separate follow-up — Google Places `maxWidthPx` in the POI
+photo fetcher should be raised so we get bigger source photos in the
+first place. This fix stops the pipeline from making bad output worse,
+but doesn't help photos where Google Places only has small images.
+
 ## 2026-07-17 23:45 UTC — Phase 114: /communities still empty — top-level query timed out on `boundary`
 
 **Report**: `qiaoxux` — "communities 里没有内容了 你看看是不是新的问题" —
