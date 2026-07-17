@@ -147,6 +147,7 @@ async function assembleCards(
     poisResp,
     communitiesResp,
     listingCountResp,
+    listingBucketVidsResp,
   ] = await Promise.all([
     supabase
       .from('listing_videos')
@@ -207,6 +208,15 @@ async function assembleCards(
           .in('community_id', communityIds)
           .eq('status', 'active')
       : Promise.resolve({ data: [] }),
+    // Phase 112 (2026-07-17): listing-scoped nearby bucket videos so
+    // community-less listings (external FMLS imports) still surface the
+    // Nearby rail on /browse/feed. Mirrors listing-feed/load.ts Phase 102.
+    supabase
+      .from('generated_videos')
+      .select('listing_id, cf_stream_uid, intent_bucket, narrative')
+      .in('listing_id', listingIds)
+      .eq('scope', 'listing_intent_bucket')
+      .eq('status', 'ready'),
   ]);
 
   const listingVideos = (listingVidsResp.data ?? []) as ListingVideoRow[];
@@ -249,6 +259,29 @@ async function assembleCards(
     commVidsByCommunity.set(v.community_id, arr);
   }
 
+  // Phase 112: listing-scoped bucket videos (community-less listings).
+  const listingBucketRows = (listingBucketVidsResp.data ?? []) as Array<{
+    listing_id: string;
+    cf_stream_uid: string | null;
+    intent_bucket: string | null;
+    narrative: { title?: string } | null;
+  }>;
+  const bucketVidsByListing = new Map<string, CommunityVideoRow[]>();
+  for (const r of listingBucketRows) {
+    if (!r.cf_stream_uid) continue;
+    const arr = bucketVidsByListing.get(r.listing_id) ?? [];
+    arr.push({
+      community_id: '',
+      cf_video_id: r.cf_stream_uid,
+      title: r.narrative?.title ?? null,
+      kind: 'poi',
+      category: null,
+      school_id: null,
+      poi_id: null,
+    });
+    bucketVidsByListing.set(r.listing_id, arr);
+  }
+
   const { photoPublicUrl } = await import('@/lib/supabase/storage');
 
   const cards: BrowseCard[] = [];
@@ -277,6 +310,19 @@ async function assembleCards(
 
     const community = l.community_id ? (communitiesById.get(l.community_id) ?? null) : null;
     const cVids = l.community_id ? (commVidsByCommunity.get(l.community_id) ?? []) : [];
+    // Phase 112: union listing-scoped nearby videos so community-less listings
+    // (external FMLS imports) still expose a Nearby rail. Dedupe by cf_video_id
+    // in case a listing is somehow attached to both scopes.
+    const bucketVids = bucketVidsByListing.get(l.id) ?? [];
+    if (bucketVids.length > 0) {
+      const seen = new Set(cVids.map((v) => v.cf_video_id));
+      for (const bv of bucketVids) {
+        if (!seen.has(bv.cf_video_id)) {
+          cVids.push(bv);
+          seen.add(bv.cf_video_id);
+        }
+      }
+    }
 
     const categoryMetaById = new Map(COMMUNITY_VIDEO_CATEGORIES.map((m) => [m.id, m] as const));
 
