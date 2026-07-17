@@ -4,6 +4,71 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-17 06:30 UTC — Phase 104: admin console — Music tab
+
+**Objective**: Give operators a place inside `/admin` to see and audition every
+background-music track the render worker might pick. Requested by owner: "Create
+a new tab to manage all background music, I should be able to click to listen."
+
+**Actions**:
+- Created new operator tool `scripts/upload-bgm/upload.py` — one-shot uploader
+  that mirrors the on-disk BGM library (`scripts/render-worker/bgm/<vibe>/*.mp3`,
+  gitignored) into a public Supabase Storage bucket `bgm/`. Idempotent (HEAD
+  check on public URL). Regenerates `scripts/render-worker/bgm/manifest.json`
+  from disk truth as schema_version=2 (adds `storage_bucket` field).
+- Ran the uploader — created the `bgm` bucket public, uploaded all 49 tracks
+  across five vibe buckets (warm-acoustic 10, modern-corporate 15,
+  luxury-ambient 8, chill-electronic 8, cinematic 8). Manifest committed.
+- Added `/admin/pipeline/bgm/page.tsx` — server component reads the manifest,
+  groups tracks by vibe with the per-bucket blurbs from `docs/bgm/vibe-map.md`,
+  renders each track with a native `<audio controls preload="none">` element
+  streaming from the Supabase public URL. Attribution footer per CC-BY 4.0.
+- Wired a sixth chip into `AdminHubTabs` (`app/admin/layout.tsx`) labelled
+  **Music** with the lucide `Music` icon between Video Jobs and Worker.
+  Still fits — chip bar horizontal-scrolls on narrow mobile per skill §6c.
+
+**Decisions**:
+- **Why Supabase Storage, not proxy from incompetech.com?** Mp3s are gitignored
+  and only exist on the render EC2, so Vercel can't serve them. Proxying every
+  play through a Next.js route to KML's server would be slow and abuse their
+  bandwidth. Supabase Storage is already the CDN for photos + videos here;
+  49 tracks × ~2MB ≈ 60MB, effectively free. One-shot upload beats a rsync
+  daemon for a library that changes quarterly.
+- **Manifest stays source of truth**, not a live `list objects` call. The
+  manifest is version-controlled so the admin UI can render correctly on
+  a fresh Vercel deploy without hitting Storage at request time, and any
+  drift between disk / storage / manifest is caught the next time the
+  uploader runs.
+- **Manifest was stale** — pre-run it claimed 26 tracks; disk has 49 across
+  all five buckets (chill-electronic + cinematic filled since 2026-07-15).
+  Uploader rewrote it from disk truth.
+
+**Issues**:
+- Supabase Storage returns HTTP 400 with body `{"statusCode":"404",...}` for
+  a missing bucket (not HTTP 404). Uploader now checks both. Trivial gotcha
+  but tripped the first run.
+- TSC strict-null flagged three spots — `manifest.buckets[vibe]` was typed as
+  `BucketEntry` even though index access allows `undefined`. Added `if (!entry)
+  return null` guards; `npx tsc --noEmit` clean.
+
+**Resolution**: `/admin/pipeline/bgm` renders on the admin console with an
+`<audio controls>` per track, streaming from the public Supabase bucket.
+HEAD on a public URL returned `200 audio/mpeg 6566713` — pipeline works
+end-to-end.
+
+**Learnings**:
+- Any admin page that surfaces disk-only worker assets (mp3, model weights,
+  fixtures) needs a mirror in Supabase Storage or Cloudflare R2 to be visible
+  from Vercel. `/scripts/render-worker/...` is a valid path in the repo but
+  not on the serverless host.
+
+**Next steps**:
+- If the library grows past ~10 tracks per bucket, add a "Play random from
+  this vibe" button so operators can spot-check the mix the way the worker
+  does. Not needed today.
+- Consider a "which video used which track" join once `generated_videos` has
+  a `bgm_track` column — right now the worker doesn't record its pick.
+
 ## 2026-07-17 05:00 UTC — Phase 103: admin console → HubTabs chip bar + POI photo review
 
 Owner ask (mobile & desktop parity, five tabs, same shell as the agent hub):

@@ -1,36 +1,35 @@
 {
-  "schema_version": 1,
-  "description": "Active BGM library for Percho render worker. Tracks in _archive/ are excluded (see _archive/README.md).",
+  "schema_version": 2,
+  "description": "Active BGM library streamed from Supabase Storage bucket 'bgm'.",
   "source": "Kevin MacLeod \u2014 https://incompetech.com/",
   "license": "CC BY 4.0 \u2014 https://creativecommons.org/licenses/by/4.0/",
   "attribution": "Music: Kevin MacLeod (incompetech.com), Licensed under Creative Commons: By Attribution 4.0 License",
+  "storage_bucket": "bgm",
   "buckets": {
-    "warm-acoustic": {
-      "count": 10,
-      "tracks": [
-        "01-carefree.mp3",
-        "02-cheery-monday.mp3",
-        "03-wallpaper.mp3",
-        "07-amazing-plan.mp3",
-        "08-wholesome.mp3",
-        "09-daily-beetle.mp3",
-        "11-happy-alley.mp3",
-        "12-balloon-game.mp3",
-        "13-take-a-chance.mp3",
-        "14-pookatori-and-friends.mp3"
-      ]
-    },
-    "modern-corporate": {
+    "chill-electronic": {
       "count": 8,
       "tracks": [
-        "04-life-of-riley.mp3",
-        "06-bright-wish.mp3",
-        "22-inspired.mp3",
-        "23-fluffing-a-duck.mp3",
-        "24-feelin-good.mp3",
-        "25-ready-aim-fire.mp3",
-        "26-new-direction.mp3",
-        "27-enter-the-party.mp3"
+        "55-too-cool.mp3",
+        "56-eternity.mp3",
+        "57-zigzag.mp3",
+        "58-jerry-five.mp3",
+        "59-pyro-flow.mp3",
+        "60-space-1990-b.mp3",
+        "61-investigations.mp3",
+        "62-lightless-dawn.mp3"
+      ]
+    },
+    "cinematic": {
+      "count": 8,
+      "tracks": [
+        "63-bittersweet.mp3",
+        "64-anamalie.mp3",
+        "65-atlantean-twilight.mp3",
+        "66-comfortable-mystery.mp3",
+        "67-reawakening.mp3",
+        "68-serpentine-trek.mp3",
+        "69-enchanted-journey.mp3",
+        "70-vanishing.mp3"
       ]
     },
     "luxury-ambient": {
@@ -46,14 +45,41 @@
         "34-autumn-day.mp3"
       ]
     },
-    "chill-electronic": {
-      "count": 0,
-      "tracks": []
+    "modern-corporate": {
+      "count": 15,
+      "tracks": [
+        "40-deliberate-thought.mp3",
+        "41-cool-blast.mp3",
+        "42-cut-and-run.mp3",
+        "43-cut-trance.mp3",
+        "44-constancy-part-one.mp3",
+        "45-constancy-part-two.mp3",
+        "46-consort-for-brass.mp3",
+        "47-continue-life.mp3",
+        "48-crossing-the-chasm.mp3",
+        "49-dispersion-relation.mp3",
+        "50-divertissement.mp3",
+        "51-corncob.mp3",
+        "52-constance.mp3",
+        "53-getting-it-done.mp3",
+        "54-chill-wave.mp3"
+      ]
     },
-    "cinematic": {
-      "count": 0,
-      "tracks": []
+    "warm-acoustic": {
+      "count": 10,
+      "tracks": [
+        "01-carefree.mp3",
+        "02-cheery-monday.mp3",
+        "03-wallpaper.mp3",
+        "07-amazing-plan.mp3",
+        "08-wholesome.mp3",
+        "09-daily-beetle.mp3",
+        "11-happy-alley.mp3",
+        "12-balloon-game.mp3",
+        "13-take-a-chance.mp3",
+        "14-pookatori-and-friends.mp3"
+      ]
     }
   },
-  "total_active_tracks": 26
+  "total_active_tracks": 49
 }

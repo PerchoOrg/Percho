@@ -4,6 +4,16 @@
 > Historical entries below preserve the original name in-place — release notes
 > are a record of what was shipped under the product's name at the time.
 
+## v98.6 — Admin console: Music tab (2026-07-17)
+
+Admin now has a sixth tab: **Music**. It lists every background-music track
+the render worker might pick for a generated video, grouped by vibe bucket
+(warm acoustic / modern corporate / luxury ambient / chill electronic /
+cinematic) with a short description of what each vibe fits. Every track
+has a Play button — click to preview in the browser. 49 tracks total.
+
+Attribution to Kevin MacLeod (CC BY 4.0) rendered at the bottom.
+
 ## v98.5 — Admin console refresh + global photo review (2026-07-17)
 
 Admin now uses the same chip-bar layout as the my-listing agent hub —
