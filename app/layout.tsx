@@ -13,7 +13,7 @@ const inter = Inter({
   display: 'swap',
 });
 
-// Aman direction display serif. See DESIGN.md.
+// Display serif for headings.
 const serifDisplay = Source_Serif_4({
   subsets: ['latin'],
   variable: '--font-serif-display',

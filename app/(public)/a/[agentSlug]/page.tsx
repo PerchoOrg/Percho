@@ -6,7 +6,7 @@
  * presented like a Pixieset portfolio: full-bleed cover, large serif address,
  * tracked-caps eyebrow, hairline dividers, generous whitespace.
  *
- * RLS / data load unchanged — see DESIGN.md for the token reference.
+ * RLS / data load unchanged.
  */
 
 import { ListingGrid, type ListingGridItem } from '@/app/_components/ListingGrid';
