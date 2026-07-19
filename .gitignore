@@ -61,6 +61,4 @@ docs/ken-burns/demo/bgm.mp3
 # Fetched at deploy time via scripts/render-worker/bgm/fetch.sh, not tracked in git.
 scripts/render-worker/bgm/*.mp3
 scripts/render-worker/bgm/**/*.mp3
-docs/meetup-kw-atlanta/business-card.pdf
-docs/meetup-kw-atlanta/qr/vicinities-cc-agents.png
 __pycache__
