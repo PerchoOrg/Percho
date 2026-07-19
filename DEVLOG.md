@@ -4,6 +4,90 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-19 UTC — Phase 119: Product vision v3 + listing-explore + feed card types
+
+**Objective**: Codify Tianrou's Product Direction v3 (posted Slack 07-19) as
+the canonical top-level vision doc. Add downstream `listing-explore.md` as
+the design for §4 (Listing Detail Experience). Expand `discovery-feed.md`
+with the 6-card system (Preference / Listing / Community / Trade-off /
+Challenge / Insight) and the new feed rhythm.
+
+**Actions**:
+- Added `docs/product-vision-v3.md` (~12KB, canonical vision):
+  - §1 Core Product Loop, §2 Feed Philosophy, §3 six Card Types
+  - §4 Listing Detail Experience (two-phase guided → free)
+  - §5 Personal Profile — evidence-based, no personality labels
+  - §6 Progress = reward understanding, not swiping
+  - §8 **The 30-Second Rule** ★ — 4-goal test for every feature
+  - §9 non-goals (10 items, ordered by weight)
+  - §10 lists downstream feature docs and their trace-back principles
+- Added `docs/design/listing-explore.md` (~13KB):
+  - Two-phase: Guided Tour (3–5 stops, AI-directed) → Free Explore
+  - Every stop has a WHY connected to profile evidence
+  - Every hotspot has ≥3 of 5 actions (Why / Compare / Renovate / Save /
+    Ask AI) — no descriptive-only hotspots
+  - `Stop.why: string` (required) + `Stop.evidence: EvidenceRef[]`
+    (non-empty) makes profile-less stops un-typable at signature level
+  - 4-phase rollout, A (prototype) currently open
+- Extended `docs/design/discovery-feed.md`:
+  - Header now points to product-vision-v3.md as authority
+  - New §2 Inputs entries for TRADEOFF_POOL / CHALLENGE_POOL /
+    INSIGHT_TEMPLATES
+  - New §2.5 Card types in the feed — interaction contract table (Trade-off
+    is L/R = competing dims never yes/no; Insight L = disagree, not pass;
+    Challenge supports reveal-after-swipe)
+  - New §2.6 Feed rhythm rules (listings ~40% anchor, tradeoff after 5+
+    signals, insight event-driven not scheduled, challenge ≤10% no-cluster)
+  - Pipeline diagram updated to include all 4 pools + profile input
+
+**Decisions**:
+- **Vision doc lives at `docs/`, not `docs/design/`.** Design docs are
+  feature-level implementations of the vision. Naming convention:
+  `docs/product-vision-vN.md` is the singular top-level; `docs/design/*.md`
+  is feature-level.
+- **The 30-Second Rule (§8) is load-bearing.** Codified as non-goal #2 in
+  the vision doc so every new feature has to answer "which of 4 goals does
+  this satisfy?" — a single test that replaces ad-hoc design debates.
+- **Trade-off cards break the yes/no swipe contract.** Rather than special-
+  case them as "different in the UI", the discovery-feed doc §2.5 makes it
+  a first-class interaction rule with a table. Same for Insight (L =
+  disagree) and Challenge (reveal-after-swipe). This is the swipe layer's
+  API surface, not one-off exceptions.
+- **Trade-off is gated on ≥3 preference signals.** Meaningful dim pairs
+  need some baseline profile; showing "schools vs commute" to a fresh user
+  is noise.
+- **Insight cards fire on evidence, not rhythm.** Any fixed-rhythm insight
+  is lying about learning progress. Insights are event-driven so a wrong
+  insight is impossible: if evidence hasn't crossed threshold, no insight
+  fires.
+- **`Stop.why` is a required string, not optional.** This is
+  signature-level enforcement of "every stop connects to profile" — a
+  stop without a WHY doesn't type-check.
+
+**Issues**: None (docs-only).
+
+**Resolution**: Doc merged as `phase119/product-vision-v3`. RELEASE.md not
+updated (docs-only, no user-visible impact).
+
+**Learnings**:
+- Multiple related design docs benefit from a shared vision doc one level
+  up — otherwise each doc drifts independently. §10 of vision-v3 explicitly
+  lists downstream docs and their trace-back sections; this is the audit
+  trail.
+- The three-anchor rule for a hard constraint scales up to a four-anchor
+  rule when a vision-level rule needs feature-doc enforcement: put it in
+  (a) vision §0 TL;DR, (b) vision §1.x principle, (c) vision §9 non-goal,
+  (d) feature-doc §9 non-goal (referencing the vision non-goal). The
+  30-Second Rule uses this pattern.
+
+**Next steps**:
+- Owner reviews vision v3 doc + listing-explore + updated discovery-feed.
+- Then Phase 119b: rebuild the discovery-feed prototype with all 6 card
+  types + a listing-explore demo linked from a Listing Card. Prototype
+  target: `/tmp/percho-mechanics/discovery-v3/`.
+
+---
+
 ## 2026-07-19 UTC — Phase 118: Discovery-feed design doc (docs-only)
 
 **Objective**: Capture the 07-19 Slack conversation + throwaway prototype at
