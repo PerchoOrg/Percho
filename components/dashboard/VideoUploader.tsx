@@ -3,7 +3,7 @@
 import type { CommunityVideoCategoryId } from '@/lib/zod/community-video-categories';
 import { useEffect, useRef, useState } from 'react';
 /**
- * VideoUploader — Client Component (task 2.2; extends to community).
+ * VideoUploader — Client Component. Handles listing + community video uploads.
  *
  * Flow:
  *   1. User picks a file. Reject locally if > 2 GB (server enforces too).
@@ -11,9 +11,8 @@ import { useEffect, useRef, useState } from 'react';
  *      and pre-insert a row in listing_videos OR community_videos.
  *   3. tus-js-client uploads bytes directly to Cloudflare. Browser → CF.
  *      Our server never touches the bytes.
- *   4. On success, the row stays `processing` until the CF webhook fires
- *      (task 2.3) and flips it to `ready`. UI auto-reflects via Realtime
- *      (task 2.4). For now, refresh the page to see the status flip.
+ *   4. On success, the row stays `processing` until the CF webhook flips
+ *      it to `ready`. UI auto-reflects via Realtime; refresh works too.
  *
  * Retry: tus retries on transient network errors with exponential backoff.
  */
