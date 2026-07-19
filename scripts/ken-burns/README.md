@@ -38,12 +38,9 @@ Only `--photos` and `--output` are required. `--zoom-mode auto` alternates
   "baths": 3,
   "sqft": "2,800",
   "address": "123 Peachtree Ln, Atlanta GA",
-  "agent_name": "Sample Agent",
-  "demo": true
+  "agent_name": "Sample Agent"
 }
 ```
-
-`demo: true` prints a red "DEMO — NOT A REAL LISTING" banner.
 
 ## Performance
 
@@ -71,34 +68,13 @@ await new Promise((res, rej) =>
 );
 ```
 
-## Deploying to AWS Lambda
+## Deploying
 
-The default AWS Lambda Python runtime does not include ffmpeg. Options:
-
-1. **Container image (recommended).** Build an image from
-   `public.ecr.aws/lambda/python:3.11` and `COPY` in the ffmpeg static
-   binary from https://johnvansickle.com/ffmpeg/ (Linux amd64 or arm64,
-   whichever matches your Lambda architecture).
-
-2. **Lambda layer.** Extract the ffmpeg/ffprobe binaries from the same
-   static build and package them under `layer/bin/` (must be executable).
-   Set `PATH=/opt/bin:$PATH` in the function environment.
-
-Sizing:
-- ffmpeg static (amd64) ≈ 79 MB compressed. Fits in a Lambda layer (250 MB
-  unzipped limit) but eats most of it — use container images if you want
-  headroom.
-- Memory: 2048 MB minimum for a 30s 1080x1920 render (encode is CPU-bound;
-  Lambda vCPU scales with memory). 3008 MB is faster and roughly break-even
-  on cost.
-- Timeout: 5 min. Typical run ~60-120s from cold.
-
-See `lambda-wrapper.py` for the S3-event-driven handler.
+Production runs on the EC2 `percho-render-worker` systemd service. See
+`scripts/render-worker/README.md` for the worker loop.
 
 ## Notes
 
-- The demo BGM download (Pixabay/FMA) is best-effort. If it fails the demo
-  video is produced silent — see `docs/ken-burns/demo/`.
 - ffmpeg's `zoompan` filter operates in integer pixel steps at the OUTPUT
   resolution, which causes visible jitter on slow pans. We work around this
   by upscaling the source 4x before zoompan and letting ffmpeg downsample
