@@ -66,14 +66,3 @@ export function nextAvatarStoragePath(userId: string): string {
     globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`;
   return `${userId}/${id}.webp`;
 }
-
-/** The 3 system-provided house presets (1 / 2 / 3 houses). */
-export const AVATAR_PRESETS: readonly string[] = [
-  '/avatars/preset-1.svg',
-  '/avatars/preset-2.svg',
-  '/avatars/preset-3.svg',
-];
-
-export function isPresetAvatar(url: string | null | undefined): boolean {
-  return !!url && url.startsWith('/avatars/preset-');
-}
