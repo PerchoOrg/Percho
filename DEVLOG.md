@@ -4,6 +4,55 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-19 UTC — Phase 118: Discovery-feed design doc (docs-only)
+
+**Objective**: Capture the 07-19 Slack conversation + throwaway prototype at
+`/tmp/percho-mechanics/vibe/feed.html` as a durable design doc before it drifts
+out of memory. Owner explicitly asked for docs, not code.
+
+**Actions**:
+- Added `docs/design/discovery-feed.md` (~15KB, phase-118 draft).
+- Structured per `product-design-docs` skill: TL;DR → 7 principles → pipeline
+  → wireframes → server-action signatures → 4-phase rollout → non-goals.
+- Cross-referenced `docs/pipelines/README.md` (upstream video source) and
+  `poi-content-pipeline.md` (§9 non-goal #9 anchors "no per-POI feed cards").
+
+**Decisions**:
+- **Scope of doc = discovery feed only.** ARCHITECTURE.md and
+  poi-content-pipeline.md left untouched. Cross-links only. Reason: owner
+  picked option 1 of 3, "smallest surface, largest signal-per-byte".
+- **Codified the single hard constraint in 3 anchors** (per skill): (a) §0
+  TL;DR "all preference input is one-question-per-card via swipe"; (b) §1.1
+  head principle "One question per card. Swipe answers everything"; (c) §9
+  non-goal #1 "No pickers, no chip-toggles, no multi-select UIs." This is the
+  qiaoxux 07-19 push-back; three-anchor is the anti-drift pattern.
+- **Signature-level enforcement** of multi-select: `ScopeState` typed as
+  `Record<layer, string[]>` — makes single-value-per-layer un-typable.
+- **Phased rollout is intentionally aggressive on prototype-first**: Phase A
+  (current) is the throwaway HTML tunnel review. Phase B is behind a
+  `?feed=v2` flag in main app. No production impact from this phase.
+
+**Issues**: None (docs-only).
+
+**Resolution**: Doc merged as `phase118/discovery-feed-design`. No code
+changes, no deploy. Prototype at `/tmp/percho-mechanics/vibe/feed.html` is
+still throwaway and not tracked in git per project convention (no videos, no
+prototype assets).
+
+**Learnings**:
+- Chat conversation → durable doc is a distinct handoff worth its own phase.
+- The 3-anchor rule (TL;DR + §1.x + §9) is the load-bearing pattern to keep
+  the "no pickers" constraint from drifting when Phase B implementation
+  starts. Adjacent signature-level enforcement (`ScopeState = Record<layer,
+  string[]>`) turns the constraint into a compile-time check.
+
+**Next steps**:
+- Owner reviews `docs/design/discovery-feed.md` §8 open questions (5 items).
+- After owner answers, Phase 119 opens as Phase B implementation:
+  `lib/discovery/feed.ts` + `?feed=v2` route.
+
+---
+
 ## 2026-07-18 02:15 UTC — Phase 117: community_videos readers filter is_primary
 
 **Report**: `qiaoxux` — "duplicate videos/ photos for Ashley Crossing community"
