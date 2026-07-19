@@ -57,13 +57,15 @@ export function incompetechMp3Url(filename: string): string {
  * user uploads: lowercase, `[a-z0-9-]`, no NN- prefix.
  */
 export function pieceSlug(title: string): string {
-  return title
-    .toLowerCase()
-    .normalize('NFKD')
-    // biome-ignore lint/suspicious/noMisleadingCharacterClass: intentional combining-mark strip
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
+  return (
+    title
+      .toLowerCase()
+      .normalize('NFKD')
+      // biome-ignore lint/suspicious/noMisleadingCharacterClass: intentional combining-mark strip
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+  );
 }
 
 /**

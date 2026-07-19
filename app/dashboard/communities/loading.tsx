@@ -1,4 +1,4 @@
-// Phase 53 (2026-06-24): instant skeleton for /dashboard/communities so the
+// instant skeleton for /dashboard/communities so the
 // click-through from the dashboard nav doesn't freeze on the server fetch.
 // Mirrors the public /communities skeleton so the visual layout is identical
 // (same GridPageShell + GridFrame metrics).

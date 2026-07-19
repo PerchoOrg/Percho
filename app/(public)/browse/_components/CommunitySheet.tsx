@@ -1,7 +1,7 @@
 /**
  * CommunitySheet — Scenario A · L1
  *
- * Phase 34b (V1 redo, 2026-06-17): bottom sheet that opens when a buyer
+ * bottom sheet that opens when a buyer
  * taps the community chip on a listing card. Per V1 prototype the sheet
  * does NOT play videos in-place — tapping a thumbnail pushes to L2
  * (CommunityCarousel) which is fullscreen.
@@ -23,8 +23,8 @@
  */
 'use client';
 
-import { useEffect } from 'react';
 import { thumbnailUrl } from '@/lib/cloudflare/stream';
+import { useEffect } from 'react';
 import type { BrowseSourceVideo } from './BrowseFeed';
 
 export type CommunitySheetData = {
@@ -123,13 +123,7 @@ export function CommunitySheet({ open, data, onClose, onOpenCarousel }: Props) {
             aria-label="Close"
             className="-mr-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-ink2 transition-colors hover:bg-surface/10 hover:text-ink"
           >
-            <svg
-              width="20"
-              height="20"
-              viewBox="0 0 20 20"
-              fill="none"
-              aria-hidden="true"
-            >
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
               <path
                 d="M5 5l10 10M15 5L5 15"
                 stroke="currentColor"

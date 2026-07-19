@@ -1,4 +1,4 @@
--- Phase 5.3 — notify-lead trigger.
+-- notify-lead trigger.
 --
 -- Goal: when a row lands in `public.leads`, fire off an HTTP POST to the
 -- `notify-lead` Supabase Edge Function (which calls Resend). The function

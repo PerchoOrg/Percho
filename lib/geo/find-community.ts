@@ -1,7 +1,7 @@
 /**
  * Auto-associate a listing to a seeded community by point-in-polygon.
  *
- * Phase 83.2 (2026-07-15). Given a listing lat/lng, scan every community
+ * . Given a listing lat/lng, scan every community
  * that has a `boundary` and return the id of the polygon that contains
  * the point. Returns null if no polygon matches (e.g. listing outside
  * Atlanta, or new city where we don't have seeds yet — agent can pick
@@ -17,14 +17,9 @@
  * listing in the community (see migration 20260715120000).
  */
 
-import { unstable_cache } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
-import {
-  type GeoJsonPolygonLike,
-  bboxOf,
-  pointInBbox,
-  pointInPolygon,
-} from './point-in-polygon';
+import { unstable_cache } from 'next/cache';
+import { type GeoJsonPolygonLike, bboxOf, pointInBbox, pointInPolygon } from './point-in-polygon';
 
 type CommunityBoundary = {
   id: string;
@@ -71,10 +66,7 @@ const loadBoundaries = unstable_cache(
   { revalidate: 300, tags: ['community-boundaries'] },
 );
 
-export type CommunityMatch = Pick<
-  CommunityBoundary,
-  'id' | 'slug' | 'name' | 'city' | 'state'
->;
+export type CommunityMatch = Pick<CommunityBoundary, 'id' | 'slug' | 'name' | 'city' | 'state'>;
 
 /**
  * Return the community whose polygon contains (lng, lat), or null.
@@ -93,7 +85,7 @@ export async function findCommunityForPoint(
   const rows = await loadBoundaries();
 
   let best: CommunityBoundary | null = null;
-  let bestArea = Infinity;
+  let bestArea = Number.POSITIVE_INFINITY;
   for (const c of rows) {
     if (!pointInBbox(lng, lat, c.bbox)) continue;
     if (!pointInPolygon(lng, lat, c.boundary)) continue;

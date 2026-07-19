@@ -1,6 +1,5 @@
 -- ─── 0024_saved_communities ─────────────────────────────────────────
--- Phase 27.7 (2026-06-16).
---
+-- --
 -- Buyer can save a community as an "interested in this neighborhood"
 -- bookmark — separate signal from saving an individual listing. Lets
 -- them anchor on a place first and then drill into homes inside it.

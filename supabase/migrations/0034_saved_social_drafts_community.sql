@@ -1,5 +1,5 @@
 -- ─── 0034_saved_social_drafts_community ────────────────────────────
--- Phase 50 (2026-06-22). Extend `saved_social_drafts` to also hold
+-- Extend `saved_social_drafts` to also hold
 -- community marketing drafts.
 --
 -- Listing drafts are platform × language. Community drafts are

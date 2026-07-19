@@ -1,5 +1,5 @@
 -- 0027_community_video_owner_only.sql
--- Phase 35.3 (2026-06-17). Tighten community_videos write policies so an
+-- Tighten community_videos write policies so an
 -- agent can only update / delete videos they uploaded themselves.
 --
 -- Background: the original policy in 0001_init.sql was
@@ -55,4 +55,4 @@ create policy "agents delete own community videos"
   );
 
 comment on table public.community_videos is
-  'Phase 35.3: writes locked to uploaded_by = caller''s agent.id. Reads stay open per 0026 (public visibility filter).';
+  'writes locked to uploaded_by = caller''s agent.id. Reads stay open per 0026 (public visibility filter).';

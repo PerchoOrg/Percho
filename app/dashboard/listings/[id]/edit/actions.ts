@@ -9,7 +9,7 @@
  * Address/city/state/zip/lat/lng/neighborhood are intentionally NOT editable
  * here. Re-editing the address would invalidate the slug and break any
  * already-shared `/v/<agent>/<slug>` links. If a listing is wrong-addressed,
- * archive it and create a fresh one. (Phase 4.7 covers archive.)
+ * archive it and create a fresh one.
  *
  * What this file owns:
  *  - `updateListing(id, input)` — patches mutable metadata fields.
@@ -20,7 +20,7 @@
 
 import { isDraftAddress } from '@/app/dashboard/listings/draft';
 import { findCommunityForPoint } from '@/lib/geo/find-community';
-import { deriveSlug, nextCandidate } from '@/lib/listings/slug';
+import { nextCandidate, slugify } from '@/lib/utils/slug';
 import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
@@ -39,7 +39,7 @@ const UpdateListingInput = z.object({
 });
 
 /**
- * Phase 52 (2026-06-24): Address is now editable while the listing is
+ * Address is now editable while the listing is
  * still in draft state — that is, the address column still equals the
  * `__draft__-<rand>` placeholder written by `createStubListing`. Once
  * the agent picks a real Place Details address, we re-derive the slug
@@ -101,9 +101,9 @@ export async function updateListingAddress(
     return { ok: false, error: 'address_locked' };
   }
 
-  const baseSlug = deriveSlug(data.address);
+  const baseSlug = slugify(data.address, { fallback: 'listing' });
 
-  // Phase 83.2 (2026-07-15): auto-associate to a seeded community by
+  // auto-associate to a seeded community by
   // point-in-polygon. Runs before the update loop so we can write
   // community_id in the same UPDATE. Errors here are non-fatal — leaving
   // community_id null is fine, the agent can still pick manually.
@@ -254,7 +254,7 @@ export type SetListingCoverResult =
  * separate ownership check — Supabase returns null if the caller can't see
  * the row.
  *
- * Phase 59 (2026-06-26): `cover_url` alone only fed agent-side surfaces
+ * `cover_url` alone only fed agent-side surfaces
  * (`/dashboard`, `/v/...` og:image). Buyer grids and the swipe feed (`/browse`,
  * `/saved`, `/nearby`, `/search`, `/browse/feed`) all pick the hero by
  * `listing_videos` sorted ascending on `sort_order` — they never read
@@ -308,7 +308,7 @@ export async function setListingCover(
     return { ok: false, error: 'update_failed' };
   }
 
-  // Phase 59: also push the chosen video to sort_order=0 so buyer-side
+  // also push the chosen video to sort_order=0 so buyer-side
   // surfaces (which read listing_videos by sort_order asc and never
   // consult cover_url) treat it as the hero. When clearing the cover
   // (videoId === null) we leave the existing video order alone — buyers
@@ -340,7 +340,7 @@ export async function setListingCover(
     }
   }
 
-  // Phase 60 (2026-06-26): cover now drives buyer grid thumbnails too.
+  // cover now drives buyer grid thumbnails too.
   // Force-dynamic on those pages means SSR re-renders every request, but
   // we also revalidate explicitly so any bfcache / route-cache layer in
   // front of them picks up the new cover_url immediately.
@@ -417,7 +417,7 @@ export async function setListingCoverPhoto(
     return { ok: false, error: 'update_failed' };
   }
 
-  // Phase 59: mirror setListingCover — push the chosen photo to
+  // mirror setListingCover — push the chosen photo to
   // sort_order=0 so buyer-side photo-fallback (`/browse`, `/saved`,
   // photo-only swipe path) renders the same hero image the agent picked.
   if (parsed.data.photoId !== null) {
@@ -445,7 +445,7 @@ export async function setListingCoverPhoto(
     }
   }
 
-  // Phase 60 (2026-06-26): same buyer-grid revalidation as setListingCover.
+  // same buyer-grid revalidation as setListingCover.
   revalidatePath(`/dashboard/listings/${parsed.data.listingId}/edit`);
   revalidatePath('/browse');
   revalidatePath('/saved');

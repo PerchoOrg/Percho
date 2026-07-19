@@ -1,12 +1,12 @@
 -- ─── 0010_ai_usage_log ─────────────────────────────────────────────
--- Phase 6.1a. Per-agent rate-limit ledger for AI copy generation.
+-- Per-agent rate-limit ledger for AI copy generation.
 --
 -- Why a table (vs Redis/in-memory):
 --   * V1 stack is locked to Supabase Postgres + Vercel — no Redis dep.
 --   * Vercel serverless instances don't share memory; in-process counters
 --     leak across cold starts. A row-level ledger is the simplest correct
 --     answer at our volume (~10s of generations/day during internal beta).
---   * Bonus: persisted history doubles as a cost-audit trail. Phase 7+ can
+-- * Bonus: persisted history doubles as a cost-audit trail. + can
 --     query "tokens billed per agent per month" without new infra.
 --
 -- The route handler queries last-minute count(*) per (agent_id, kind),

@@ -141,9 +141,7 @@ export function MediaPanel({
         }}
       />
 
-      {unsupportedNotice ? (
-        <p className="mb-4 text-xs text-red-300">{unsupportedNotice}</p>
-      ) : null}
+      {unsupportedNotice ? <p className="mb-4 text-xs text-red-300">{unsupportedNotice}</p> : null}
 
       {/* Per-file video uploaders. Each instance owns its own
           progress flow; we just feed it `initialFile` so the agent skips

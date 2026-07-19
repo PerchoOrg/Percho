@@ -1,6 +1,5 @@
 -- ─── 0028_favorites_split ───────────────────────────────────────────
--- Phase 43.3 (2026-06-20).
---
+-- --
 -- Likes are a SEPARATE signal from saves. Saves (`saved_listings`,
 -- `saved_communities`) = bookmark / "I want to revisit this".
 -- Likes (`listing_likes`, `community_likes`) = lightweight reaction /

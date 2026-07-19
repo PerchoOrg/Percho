@@ -1,7 +1,7 @@
 /**
  * /dashboard/listings/[id]/preview — owner-only listing preview.
  *
- * Phase 27.10 (2026-06-17): lets agents view their draft / archived /
+ * lets agents view their draft / archived /
  * published listings using the same BrowseFeed render as the public page,
  * with a status banner pinned to the top. Linked from the dashboard cover
  * thumbnail for non-published rows so clicks don't dead-end at /v/... 404.
@@ -12,11 +12,7 @@
  */
 
 import { VideoFeed } from '@/app/(public)/v/[agentSlug]/[listingSlug]/_components/VideoFeed';
-import {
-  buildListingCards,
-  loadListingFeedById,
-  loadListingPhotos,
-} from '@/lib/listing-feed/load';
+import { buildListingCards, loadListingFeedById, loadListingPhotos } from '@/lib/listing-feed/load';
 import { createClient } from '@/lib/supabase/server';
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
@@ -99,10 +95,7 @@ function StatusBanner({
             Open public ↗
           </Link>
         ) : null}
-        <Link
-          href="/dashboard"
-          className={`rounded-full border px-3 py-1 ${tone.button}`}
-        >
+        <Link href="/dashboard" className={`rounded-full border px-3 py-1 ${tone.button}`}>
           ← Dashboard
         </Link>
       </div>
@@ -114,7 +107,7 @@ export default async function DashboardListingPreviewPage({ params }: PageProps)
   const { id } = await params;
 
   const supabase = await createClient();
-  // Phase 53D: getSession() reads cookie locally (~5ms) instead of round-tripping
+  // getSession() reads cookie locally (~5ms) instead of round-tripping
   // to Supabase to validate the JWT (~150ms). Middleware re-validates on each
   // request — page-level check is defense-in-depth, not the source of truth.
   const {
@@ -135,14 +128,11 @@ export default async function DashboardListingPreviewPage({ params }: PageProps)
     .maybeSingle()) as { data: { id: string } | null };
   if (!agentRow || agentRow.id !== data.listing.agent_id) notFound();
 
-  const photos =
-    data.listingVideos.length === 0 ? await loadListingPhotos(data.listing.id) : null;
+  const photos = data.listingVideos.length === 0 ? await loadListingPhotos(data.listing.id) : null;
   const cards = await buildListingCards(data, photos);
 
   const publicHref =
-    data.listing.status === 'active'
-      ? `/v/${data.agent.slug}/${data.listing.slug}`
-      : null;
+    data.listing.status === 'active' ? `/v/${data.agent.slug}/${data.listing.slug}` : null;
 
   return (
     <>

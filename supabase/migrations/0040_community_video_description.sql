@@ -1,5 +1,4 @@
--- 0040_community_video_description — Phase 50.10 (2026-06-23).
---
+-- 0040_community_video_description — --
 -- Add an optional free-text description to community_videos so agents can
 -- write a one-line context blurb under each video (e.g. "filmed at golden
 -- hour from the corner of Main & 3rd"). Replaces the yellow "needs review"
@@ -12,4 +11,4 @@ alter table public.community_videos
   add column if not exists description text;
 
 comment on column public.community_videos.description is
-  'Optional free-text caption shown under the video in the agent management UI. Not currently rendered on the public community page (Phase 50.10).';
+  'Optional free-text caption shown under the video in the agent management UI. Not currently rendered on the public community page.';

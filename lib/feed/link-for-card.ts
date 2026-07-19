@@ -1,5 +1,5 @@
 /**
- * Phase 94 (2026-07-17): single source of truth for browse-card detail URLs.
+ * single source of truth for browse-card detail URLs.
  *
  * Internal listings (owned by a Percho agent) route as
  *   /v/{agent.slug}/{listing.slug}

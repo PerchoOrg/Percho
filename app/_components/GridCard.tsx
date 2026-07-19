@@ -4,7 +4,7 @@
  * source, the optional top-left/top-right badges, the caption block, and
  * a fallback for missing covers.
  *
- * Phase 47 (2026-06-21): extracted from /browse, /dashboard (My Listings),
+ * extracted from /browse, /dashboard (My Listings),
  * /communities, and /dashboard/communities so all four surfaces share one
  * card definition. Future tweaks to aspect ratio, hover transform, bottom
  * gradient, or text shadow happen in this one file.
@@ -78,7 +78,7 @@ export function GridCard({
         )}
         {topLeft && <div className="absolute top-2 left-2 z-10">{topLeft}</div>}
         {topRight && <div className="absolute top-2 right-2 z-10">{topRight}</div>}
-        {/* Bottom-gradient scrim — Phase 45.26 TikTok-density overlay D. */}
+        {/* Bottom-gradient scrim — TikTok-density overlay D. */}
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-3/5 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
         <div className={`absolute ${captionInsetClass} text-surface`}>{caption}</div>
       </div>

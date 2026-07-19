@@ -1,9 +1,9 @@
 'use server';
 
 /**
- * Phase 46 — community status server actions (active|inactive).
+ * community status server actions (active|inactive).
  *
- * Phase 72 (2026-07-05) — added an activate gate. Communities can no longer
+ * added an activate gate. Communities can no longer
  * be flipped active without meeting the minimum quality bar, because active
  * communities show up in the buyer-facing communities grid AND in the
  * neighborhood dropdown on the listing edit page. An "Untitled community"
@@ -27,9 +27,7 @@ import { revalidatePath, revalidateTag } from 'next/cache';
 
 const UNTITLED_STUB_NAME = 'Untitled community';
 
-export type CommunityStatusResult =
-  | { ok: true }
-  | { ok: false; error: string; missing?: string[] };
+export type CommunityStatusResult = { ok: true } | { ok: false; error: string; missing?: string[] };
 
 export async function setCommunityStatus(
   communityId: string,

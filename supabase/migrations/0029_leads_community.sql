@@ -1,6 +1,5 @@
 -- ─── 0029_leads_community ───────────────────────────────────────────
--- Phase 45.18 (2026-06-20).
---
+-- --
 -- Extend `leads` to accept community-targeted contacts. Owner rule:
 -- "if exploring community directly, contact community owner". The
 -- direct `/c/[slug]/feed` Contact button needs a place to land its

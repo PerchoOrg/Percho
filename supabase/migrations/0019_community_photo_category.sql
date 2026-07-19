@@ -1,5 +1,4 @@
--- 0019_community_photo_category — Phase 24 (2026-06-14).
---
+-- 0019_community_photo_category — --
 -- Adds the same 12-category axis to community_photos that we put on
 -- community_videos in 0017. Photos still aren't buyer-visible (private
 -- bucket, raw material for AI video generation), but tagging them at
@@ -23,6 +22,6 @@ update public.community_photos
   where category is null;
 
 comment on column public.community_photos.category is
-  'Phase 24: 12-value taxonomy — same axis as community_videos.category. '
+  '12-value taxonomy — same axis as community_videos.category. '
   'See lib/zod/community-video-categories.ts for the list. Nullable for '
   'backwards compat; new uploads should always set it.';

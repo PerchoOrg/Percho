@@ -1,9 +1,9 @@
 -- ─── 0011_listing_photos_and_geo ────────────────────────────────────
--- Phase 10 + 11 (2026-06-12).
+-- + 11 (2026-06-12).
 --
 -- Two changes bundled because they ship as one product release:
 --
--- (1) Phase 10 — listing photos. New table `listing_photos`. We did NOT
+-- (1) listing photos. New table `listing_photos`. We did NOT
 --     consolidate `listing_videos` + photos into a single `listing_media`
 --     table because:
 --       * Existing video flow (RLS, webhook, realtime, dashboard, browse)
@@ -18,7 +18,7 @@
 --     Trade-off: two tables to read in `lib/feed/browse-cards.ts`.
 --     Acceptable — already reading `community_videos` separately.
 --
--- (2) Phase 11 — geo on community_videos. The existing `community_videos`
+-- (2) geo on community_videos. The existing `community_videos`
 --     table has no lat/lng, which means we cannot answer "community
 --     content within X miles of my listing". Adding lat/lng lets the
 --     `/nearby` page query both listings and community videos by radius
@@ -60,7 +60,7 @@ create table public.listing_photos (
   status        text not null default 'ready'
                   check (status in ('ready', 'error')),
 
-  -- Phase 4.3b-style sortable position. Cover photo is the one with
+  -- -style sortable position. Cover photo is the one with
   -- min(sort_order) by default; agents can override via the cover panel
   -- (sets `listings.cover_url` directly to that photo's public URL).
   sort_order    integer not null default 0,
@@ -134,7 +134,7 @@ create policy "agent deletes own listing photos" on storage.objects
 -- Public read: bucket is public so anyone can fetch by URL. No RLS
 -- needed for SELECT — bucket-level public flag handles it.
 
--- ─── (3) Phase 11 — geo on community_videos ─────────────────────────
+-- ─── (3) geo on community_videos ─────────────────────────
 -- Why on community_videos and not on `communities` itself? A community
 -- has many videos; each video is shot at a specific point (a school
 -- entrance, a coffee shop, a park gate). Tagging each video lets the
@@ -155,7 +155,7 @@ create index community_videos_geo_idx
 -- ─── (4) Publish gate relaxation ────────────────────────────────────
 -- Existing publish flow (see app/dashboard/listings/[id]/edit/actions.ts)
 -- requires ≥1 ready listing_video before allowing status='published'.
--- Phase 10 expands this to: at least 1 ready listing_video OR 1 ready
+-- expands this to: at least 1 ready listing_video OR 1 ready
 -- listing_photo. The check is in application code, not a DB constraint
 -- (constraints can't easily reference two tables). This migration makes
 -- no DB changes for this; documented here for traceability.

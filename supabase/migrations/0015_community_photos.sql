@@ -1,8 +1,7 @@
 -- ─── 0015_community_photos ─────────────────────────────────────────
--- Phase 20.2 (2026-06-13).
---
+-- --
 -- Adds a private photo library scoped to a community. UNLIKE
--- listing_photos (Phase 10), these photos are NOT buyer-visible — they
+-- listing_photos, these photos are NOT buyer-visible — they
 -- exist solely as raw material for future AI video generation. Bucket
 -- is private, RLS denies anon read.
 --

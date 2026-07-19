@@ -1,7 +1,7 @@
 'use client';
 
+import { type AdminColumn, AdminTable } from '@/app/admin/_components/AdminTable';
 import Link from 'next/link';
-import { AdminTable, type AdminColumn } from '@/app/admin/_components/AdminTable';
 
 export type PoiRow = {
   id: string;
@@ -37,7 +37,7 @@ const columns: AdminColumn<PoiRow>[] = [
     header: 'Rating',
     align: 'right',
     sortValue: (r) => r.rating,
-    render: (r) => (r.rating ?? '—'),
+    render: (r) => r.rating ?? '—',
   },
   {
     key: 'ai_summary',

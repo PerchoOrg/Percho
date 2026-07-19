@@ -49,7 +49,7 @@ journalctl -u percho-render-worker -f
 2. Downloads all `listing_photos` from the `listing-photos` Supabase
    Storage bucket in `sort_order`, service role bypasses RLS.
 3. Builds a listing-overlay JSON (price / specs / address / neighborhood)
-   matching `docs/ken-burns/demo/flagship-overlay.json` schema.
+   with the shape `{price_display, specs, address, neighborhood, show_on_clips: [int]}`.
 4. Runs `scripts/ken-burns/generate.py` with `--listing-overlay` and
    `--ending-card`. Output: `/tmp/render-<jobid>/out.mp4`.
 5. Uploads MP4 to Cloudflare Stream (simple upload endpoint, fine

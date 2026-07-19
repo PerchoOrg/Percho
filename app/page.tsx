@@ -13,7 +13,7 @@ export default async function HomePage() {
   // If already authed, the landing's Login button is meaningless and Explore
   // should be the default — send them straight to /browse.
   const supabase = await createClient();
-  // Phase 53D: getSession() reads cookie locally (~5ms) instead of round-tripping
+  // getSession() reads cookie locally (~5ms) instead of round-tripping
   // to Supabase to validate the JWT (~150ms). Middleware re-validates on each
   // request — page-level check is defense-in-depth, not the source of truth.
   const {
@@ -52,8 +52,8 @@ export default async function HomePage() {
         <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/10 to-transparent" />
 
         <div className="relative z-10 flex h-full flex-col items-center justify-center px-6 text-center">
-          {/* Brand eyebrow — centered above H1 per截图 idiom. Not a link;
-              chrome routes use <BrandMark> for that. */}
+          {/* Brand eyebrow — centered above H1 to match the source mock.
+              Not a link; chrome routes use <BrandMark> for that. */}
           <div
             className="mb-6 font-medium uppercase"
             style={{

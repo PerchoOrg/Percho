@@ -1,7 +1,7 @@
 'use server';
 
 /**
- * Likes server actions (Phase 43.3, 2026-06-20).
+ * Likes server actions.
  *
  * Likes are a separate signal from saves. Tables `listing_likes` and
  * `community_likes` were added in migration 0028. RLS denies all access

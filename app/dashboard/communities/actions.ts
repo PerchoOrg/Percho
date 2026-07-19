@@ -1,7 +1,7 @@
 'use server';
 
 /**
- * Server actions for community CRUD (Phase 4.4).
+ * Server actions for community CRUD.
  *
  * RLS: `agents manage communities` allows any authenticated user to insert/
  * update/delete community rows. Schools and POIs require `recorded_by`,
@@ -12,7 +12,7 @@
  */
 
 import { createClient } from '@/lib/supabase/server';
-import { nameToSlug } from '@/lib/utils/slug';
+import { slugify } from '@/lib/utils/slug';
 import {
   AddPoiInput,
   AddSchoolInput,
@@ -42,7 +42,7 @@ function zodToFieldErrors(error: import('zod').ZodError): FieldErrors {
 }
 
 /**
- * Phase 50.17 (2026-06-23): create an empty "Untitled" stub so the
+ * create an empty "Untitled" stub so the
  * FAB → community Hub → Details flow can land on a real row immediately,
  * with no intermediate /new form. The agent fills in name/city/zip/etc.
  * on the Details tab; queued media (videos, photos) auto-uploads in the
@@ -107,9 +107,7 @@ export async function createStubCommunity(): Promise<ActionResult<{ id: string }
   return { ok: false, error: 'insert_failed' };
 }
 
-export async function createCommunity(
-  raw: unknown,
-): Promise<ActionResult<{ id: string }>> {
+export async function createCommunity(raw: unknown): Promise<ActionResult<{ id: string }>> {
   const parsed = CreateCommunityInput.safeParse(raw);
   if (!parsed.success) {
     return { ok: false, error: 'invalid_input', fieldErrors: zodToFieldErrors(parsed.error) };
@@ -133,9 +131,8 @@ export async function createCommunity(
   const createdBy = agentRow?.id ?? null;
 
   // Slug is system-derived from name. On collision append a short random
-  // suffix and retry once; we don't expose slug to users (Phase 25.4: agents
-  // should never type slugs — they're URL plumbing).
-  const baseSlug = nameToSlug(parsed.data.name) || 'community';
+  // suffix and retry once; we don't expose slug to users.
+  const baseSlug = slugify(parsed.data.name, { fallback: 'community' });
   const slugCandidates = [baseSlug, `${baseSlug}-${Math.random().toString(36).slice(2, 6)}`];
 
   let lastError: { code?: string; message?: string } | null = null;
@@ -196,7 +193,7 @@ export async function updateCommunity(id: string, raw: unknown): Promise<ActionR
   if (!existing) return { ok: false, error: 'not_found' };
 
   const newName = parsed.data.name;
-  const baseSlug = existing.name === newName ? existing.slug : nameToSlug(newName);
+  const baseSlug = existing.name === newName ? existing.slug : slugify(newName, { fallback: 'community' });
   const slugCandidates: string[] =
     baseSlug === existing.slug
       ? [existing.slug]
@@ -214,7 +211,7 @@ export async function updateCommunity(id: string, raw: unknown): Promise<ActionR
           city: parsed.data.city,
           state: parsed.data.state,
           description: parsed.data.description,
-          // Phase 50.4 — expanded metadata. Empty arrays collapse to NULL so
+          // expanded metadata. Empty arrays collapse to NULL so
           // we can distinguish "agent never touched this" from "agent set
           // and then cleared". Empty strings already arrive as NULL because
           // the editor normalizes before submit.
@@ -263,7 +260,7 @@ export async function updateCommunity(id: string, raw: unknown): Promise<ActionR
 }
 
 /**
- * Phase 45.14 (2026-06-20): permanent community delete.
+ * permanent community delete.
  *
  * Hard-deletes a community row. Schools, POIs, photos, videos, saved-rows
  * all cascade via FKs (`on delete cascade`). Listings reference communities
@@ -407,13 +404,13 @@ export async function deletePoi(poiId: string, communityId: string): Promise<Act
   return { ok: true };
 }
 
-// ─── community videos (Phase 4.5) ────────────────────────────────
+// ─── community videos ────────────────────────────────
 // Note: this only deletes the DB row. The underlying Cloudflare Stream asset
 // is orphaned — V1 accepted cost; a periodic reconcile job will clean those
 // up post-launch. Same approach as listing_videos (no delete UI yet).
 
 /**
- * Phase 35.3: resolve the caller's agents.id and gate writes on
+ * resolve the caller's agents.id and gate writes on
  * uploaded_by = that id. We rely on RLS (migration 0027) for the actual
  * deny — this server-side check just gives us a clean error message
  * instead of a blank "update_failed" when an agent tries to mutate
@@ -465,8 +462,8 @@ export async function deleteCommunityVideo(
   return { ok: true };
 }
 
-// ─── Phase 35.2: visibility + category edit ──────────────────────
-// Owner-only as of Phase 35.3 — see requireOwnedVideo above.
+// ─── visibility + category edit ──────────────────────
+// Owner-only as of see requireOwnedVideo above.
 
 const COMMUNITY_VIDEO_VISIBILITIES = ['public', 'private', 'archived'] as const;
 export type CommunityVideoVisibility = (typeof COMMUNITY_VIDEO_VISIBILITIES)[number];

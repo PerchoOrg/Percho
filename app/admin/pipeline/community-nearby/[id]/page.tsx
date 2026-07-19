@@ -1,7 +1,7 @@
 /**
  * /admin/pipeline/community-nearby/[id] — per-community POI + bucket video
  * review, powered by the same CommunityNearbyPanel that used to live on the
- * agent-facing community edit page. Admin-scoped now (Phase 101e).
+ * agent-facing community edit page. Admin-scoped now.
  */
 
 import { CommunityNearbyPanel } from '@/app/dashboard/communities/[id]/CommunityNearbyPanel';

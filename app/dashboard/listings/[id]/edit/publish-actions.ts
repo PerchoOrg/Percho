@@ -1,7 +1,7 @@
 'use server';
 
 /**
- * Phase 46 — activate / deactivate server actions.
+ * activate / deactivate server actions.
  *
  * Replaces the prior 3-state publish/unpublish/archive flow. Listings now
  * live in two states only: 'active' (buyer-visible) or 'inactive' (hidden).
@@ -63,7 +63,7 @@ export async function publishListing(listingId: string): Promise<PublishResult> 
     .eq('listing_id', listingId)
     .eq('status', 'ready')) as { count: number | null };
 
-  // Phase 10 (2026-06-12): photos count toward the activate gate too.
+  // photos count toward the activate gate too.
   // Either ≥1 ready video or ≥1 ready photo unblocks activation.
   // Hotfix: graceful fallback if migration 0011 is missing — count = 0
   // means activate gate falls back to "video required", matching V0 behaviour.
@@ -94,10 +94,7 @@ export async function publishListing(listingId: string): Promise<PublishResult> 
   if (!listing.published_at) update.published_at = new Date().toISOString();
 
   // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { error } = await (supabase as any)
-    .from('listings')
-    .update(update)
-    .eq('id', listingId);
+  const { error } = await (supabase as any).from('listings').update(update).eq('id', listingId);
 
   if (error) return { ok: false, missing: [`db: ${error.message}`] };
 

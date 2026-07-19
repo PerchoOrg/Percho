@@ -1,4 +1,4 @@
--- Phase 50.6 (2026-06-22): year_built_end for phased-delivery communities.
+-- year_built_end for phased-delivery communities.
 --
 -- Owner feedback after 50.5: "range makes sense for some fields in a
 -- community, I agree, but make them easy to use, less friction as possible."

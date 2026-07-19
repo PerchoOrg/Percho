@@ -1,4 +1,4 @@
--- Phase 76 (2026-07-14): POI content pipeline v1 (nearby POI + photo + review).
+-- POI content pipeline v1 (nearby POI + photo + review).
 --
 -- Design principle: POIs and their photos are GLOBAL (keyed by Google's
 -- place_id / photo_name). Same Publix used by 100 listings = 1 row in `pois`,

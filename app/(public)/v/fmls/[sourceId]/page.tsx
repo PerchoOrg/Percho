@@ -1,5 +1,5 @@
 /**
- * Phase 94 (2026-07-17): external (FMLS) listing detail page.
+ * external (FMLS) listing detail page.
  * Route: `/v/fmls/[sourceId]` — e.g. `/v/fmls/578964791`.
  *
  * Externally-sourced listings have `agent_id IS NULL` and carry provenance in

@@ -1,4 +1,4 @@
--- Phase 18 — leads.followed_up_at
+-- leads.followed_up_at
 --
 -- Vivian's lead inbox needs a way to mark "I contacted this person already"
 -- so she can see at a glance who's still owed a follow-up. We avoid a full

@@ -1,5 +1,5 @@
 -- ─── 0031_saved_social_drafts ─────────────────────────────────────
--- Phase 48.2 (2026-06-22). Persist generated social copy so agents
+-- Persist generated social copy so agents
 -- don't lose drafts on refresh.
 --
 -- Design constraints (security + abuse):

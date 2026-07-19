@@ -1,8 +1,8 @@
 # Discovery Feed — Design
 
-> Status: Draft (phase 118, 2026-07-19). Derived from 07-19 prototype at
-> `/tmp/percho-mechanics/vibe/feed.html`. Reviewed on mobile via cloudflared.
-> This doc supersedes ad-hoc discussions in Slack #product-ops. Prototype is
+> Status: Draft (phase 118, 2026-07-19; updated phase 119 for vision v3 card
+> types). Implements `docs/design/preference-learning.md` §2 (Feed Philosophy) and §3
+> (Card Types). Prototype at `/tmp/percho-mechanics/vibe/feed.html` is
 > throwaway; this doc is the durable artifact.
 
 ## 0. TL;DR
@@ -128,29 +128,90 @@ current listing pool — not by hardcoded layer order after the first 3 cards.
 
 ## 2. Inputs
 
-- **Ask pool**: 32 cards, hand-curated in `_data.js:ASK_POOL`.
+- **Ask pool** (Preference cards, `ASK_POOL`): 32+ cards, hand-curated in
+  `_data.js:ASK_POOL`.
   - 5 intent / 4 region / 5 state / 5 metro / 5 city / 8 culture / 0 style.
   - Style layer is intentionally empty in v1 — deferred until we have enough
     listings to differentiate style credibly.
+- **Trade-off pool** (`TRADEOFF_POOL`): hand-curated pairs of dimensions.
+  Each item = `{left, right, dims: [dim_a, dim_b]}`. Target ~20 pairs v1.
+- **Challenge pool** (`CHALLENGE_POOL`): guess-the-price, which-kitchen,
+  etc. Each item names the market-signal it teaches (§30-Second Rule #2).
+- **Insight bank** (`INSIGHT_TEMPLATES`): copy templates that fire when
+  profile evidence crosses a threshold. Never fires on empty evidence.
 - **Listing pool**: from `listings` + `listing_videos` (ready + published).
 - **Community pool**: from `communities` + `community_videos` (is_primary =
   true, per phase 117).
-- **User state**: `state.scope`, `state.scopeRejected`, `state.seenIds`.
-  Persisted in localStorage under `percho-vibe:state:v1`.
+- **User state**: `state.scope`, `state.scopeRejected`, `state.profile`
+  (evidence-based observations), `state.tradeoffs` (dim ordering),
+  `state.seenIds`. Persisted in localStorage under `percho-vibe:state:v1`.
+
+## 2.5 Card types in the feed
+
+Per `preference-learning.md` §3. Every card is one of six types, and each has
+a defined interaction contract with the swipe layer:
+
+| Type | Purpose | Swipe semantics | Requires WHY? |
+|---|---|---|---|
+| Preference (ask) | Learn preference | R = yes / L = no  ·  OR  L/R = binary choice | no |
+| Listing | Recommend home | R = like · L = pass · long-press = peek · tap = Explore | **yes** |
+| Community | Recommend subdivision | R = like · L = pass · long-press = peek · tap = Explore | **yes** |
+| Trade-off ★ | Force priority | L = pick left dim · R = pick right dim (never yes/no) | no |
+| Challenge | Fun / market ed | context-specific — usually 2 choice or reveal-after-swipe | no |
+| Insight | AI observation | R = agree · L = disagree · up-tap = "not sure" | n/a |
+
+**Interaction contract rules:**
+
+- **Preference cards** may repurpose left/right as two named choices (e.g.
+  "Modern ← → Classic") when the question is binary rather than yes/no.
+  When they do, the card visually labels both sides with the choice, never
+  with ✓/✗.
+- **Trade-off cards never mean yes/no.** L and R are two competing dims. The
+  card visually splits down the middle. Swipe records `(dim_left,
+  dim_right, chosen)` — updates `state.tradeoffs`, drives ranking.
+- **Insight cards** are the only card type where L is not "pass". L =
+  "disagree", which is itself high-value signal (means the AI got it wrong,
+  demote that evidence).
+- **Challenge cards** occasionally have a reveal-after-swipe pattern (guess
+  the price → after swipe the real price appears). This is the only case
+  where the card content changes post-swipe.
+
+## 2.6 Feed rhythm (updated)
+
+Per `preference-learning.md` §2.2. Target sequence:
+
+```
+Listing → Community → Preference → Listing → Trade-off →
+Listing → Insight → Challenge → Listing → …
+```
+
+Concrete rules for `generateFeed`:
+- Listings anchor at ~40% of cards (highest density, but not majority).
+- Preference cards taper: 3 pure-ask front-load (per §1.2), then ~1 in 5,
+  then ~1 in 8 once ≥3 layers are warm (per §1.8).
+- Community: ~1 in 5 once feed is warm.
+- Trade-off: ~1 in 6 once ≥3 preference signals exist. Never before
+  card 5 (needs some signal to pick meaningful dim pairs).
+- Insight: fires only when evidence crosses a threshold, not on a fixed
+  rhythm. May be absent for many cards.
+- Challenge: ≤10% of feed. Cluster-avoid — no two challenges within 6 cards.
 
 ## 3. Pipeline / architecture
 
 ```
                         ┌──────────────────────┐
                         │  ASK_POOL (32 cards) │
-                        │  hand-curated        │
+                        │  TRADEOFF_POOL       │
+                        │  CHALLENGE_POOL      │
+                        │  INSIGHT_TEMPLATES   │
                         └──────────┬───────────┘
                                    │
     listings ──┐                   │
-               ├──▶ generateFeed(state, N) ──▶ [Card, ...]
-    community ─┘         │
-                         ├── first 6: pure ask
-                         └── after: i%3 ask, i%4 community, else listing
+    community ─┼──▶ generateFeed(state, N) ──▶ [Card, ...]
+    profile ───┘         │
+                         ├── first 3: pure ask (intent/region/state|metro)
+                         ├── then interleave per §2.6 rhythm
+                         └── insights fire when evidence threshold crossed
                                                           │
                                                           ▼
                                                   ┌───────────────┐
@@ -382,14 +443,13 @@ Ordered by load-bearing weight:
 8. **No ASK_POOL DB table in v1.** Static JSON. Table-ify at >50 cards.
 9. **No per-POI video cards in the feed.** POIs render inside listing /
    community cards, not as their own feed items. (Anchors §1.1 of
-   `poi-content-pipeline.md`.)
+   `pipelines/poi-content.md`.)
 
 ## 10. Related docs
 
 - `docs/pipelines/README.md` — video generation master (upstream: produces
   the listing / community videos that this feed consumes)
-- `docs/poi-content-pipeline.md` — POI → buyer-question video pipeline
-- `docs/ARCHITECTURE.md` §1 — system diagram (feed is the buyer-facing consumer)
+- `docs/pipelines/poi-content.md` — POI → buyer-question video pipeline
 
 ## 11. Prototype reference
 

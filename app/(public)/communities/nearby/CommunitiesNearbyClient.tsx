@@ -3,13 +3,14 @@
 /**
  * CommunitiesNearbyClient — geolocation-driven communities-by-distance grid.
  *
- * Phase 45 (2026-06-20). Mirrors NearbyClient's geolocation/preference
+ * . Mirrors NearbyClient's geolocation/preference
  * flow exactly (radius from `percho:nearby_radius`); when geolocation is
  * denied/unavailable, renders an empty result (no manual lat/lng input —
  * owner request 2026-06-21).
  *
- * Owner clarification (2026-06-20): "community 没有坐标 但是里面的 video
- * 有坐标,nearby 给 videos 所在的 community". The /api/communities/nearby
+ * Owner clarification (2026-06-20): communities have no coordinates
+ * themselves, but their videos do — nearby returns communities whose
+ * videos are near the caller. The /api/communities/nearby
  * endpoint handles that mapping; this client just renders the result with
  * a "0.4 mi away" badge per card.
  */
@@ -67,10 +68,9 @@ export function CommunitiesNearbyClient() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(
-        `/api/communities/nearby?lat=${c.lat}&lng=${c.lng}&radius=${r}`,
-        { cache: 'no-store' },
-      );
+      const res = await fetch(`/api/communities/nearby?lat=${c.lat}&lng=${c.lng}&radius=${r}`, {
+        cache: 'no-store',
+      });
       if (!res.ok) {
         const body = (await res.json().catch(() => ({}))) as { error?: string };
         throw new Error(body.error ?? `nearby returned ${res.status}`);

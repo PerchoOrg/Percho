@@ -1,4 +1,4 @@
--- Phase 17 — community ownership.
+-- community ownership.
 --
 -- Adds `communities.created_by` so we can gate metadata edits to the agent
 -- who created the row. V1 left communities fully shared (any authenticated

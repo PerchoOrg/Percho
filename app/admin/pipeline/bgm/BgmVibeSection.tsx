@@ -4,10 +4,9 @@
  * BgmVibeSection — one vibe: tracks with approve/reject buttons + section
  * Import (curated web pool) + Upload (local files).
  *
- * Phase 105: per-section Upload + per-row Delete.
- * Phase 106: Delete → Reject (soft), Upload rebranded to Import.
- * Phase 107 (2026-07-17):
- *   - Row has BOTH Approve + Reject buttons; the active state is highlighted
+ * per-section Upload + per-row Delete.
+ * Delete → Reject (soft), Upload rebranded to Import.
+ * *   - Row has BOTH Approve + Reject buttons; the active state is highlighted
  *     so the operator sees the current call at a glance and can flip it in
  *     one click.
  *   - Section header has TWO buttons: **Import** (opens a picker of Kevin
@@ -168,7 +167,8 @@ export function BgmVibeSection({ vibe, tracks }: { vibe: BgmVibe; tracks: BgmTra
             <span className="font-medium text-ink">{approved.length}</span> approved
             {rejected.length > 0 ? (
               <>
-                {' '}· <span className="text-ink2">{rejected.length} rejected</span>
+                {' '}
+                · <span className="text-ink2">{rejected.length} rejected</span>
               </>
             ) : null}
           </div>
@@ -219,8 +219,8 @@ export function BgmVibeSection({ vibe, tracks }: { vibe: BgmVibe; tracks: BgmTra
 
       {tracks.length === 0 ? (
         <div className="px-4 py-6 text-ink2 text-sm sm:px-5">
-          No tracks yet — click <b>Import</b> to pull from the curated web pool or{' '}
-          <b>Upload</b> to add your own.
+          No tracks yet — click <b>Import</b> to pull from the curated web pool or <b>Upload</b> to
+          add your own.
         </div>
       ) : (
         <ul className="divide-y divide-line">
@@ -253,7 +253,11 @@ export function BgmVibeSection({ vibe, tracks }: { vibe: BgmVibe; tracks: BgmTra
       )}
 
       {importerOpen ? (
-        <ImportPicker vibe={vibe} onClose={() => setImporterOpen(false)} onDone={() => router.refresh()} />
+        <ImportPicker
+          vibe={vibe}
+          onClose={() => setImporterOpen(false)}
+          onDone={() => router.refresh()}
+        />
       ) : null}
     </section>
   );
@@ -305,7 +309,11 @@ function TrackRow({
               : 'inline-flex items-center gap-1 rounded-full border border-line bg-bg px-2.5 py-1 font-medium text-ink2 text-xs transition hover:border-green-600 hover:text-green-700 disabled:opacity-60'
           }
         >
-          {busy && isRejected ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle2 size={12} />}
+          {busy && isRejected ? (
+            <Loader2 size={12} className="animate-spin" />
+          ) : (
+            <CheckCircle2 size={12} />
+          )}
           Approve
         </button>
         <button
@@ -319,7 +327,11 @@ function TrackRow({
               : 'inline-flex items-center gap-1 rounded-full border border-line bg-bg px-2.5 py-1 font-medium text-ink2 text-xs transition hover:border-red-500 hover:text-red-600 disabled:opacity-60'
           }
         >
-          {busy && !isRejected ? <Loader2 size={12} className="animate-spin" /> : <XCircle size={12} />}
+          {busy && !isRejected ? (
+            <Loader2 size={12} className="animate-spin" />
+          ) : (
+            <XCircle size={12} />
+          )}
           Reject
         </button>
       </div>
@@ -391,7 +403,9 @@ function ImportPicker({
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json?.error ?? 'import failed');
-      const errCount = (json.results ?? []).filter((r: { status: string }) => r.status === 'error').length;
+      const errCount = (json.results ?? []).filter(
+        (r: { status: string }) => r.status === 'error',
+      ).length;
       setSummary(`Imported ${json.imported} · errors ${errCount}`);
       onDone();
       setSelected(new Set());
@@ -415,7 +429,8 @@ function ImportPicker({
           <div>
             <div className="font-semibold text-ink text-sm">Import from incompetech</div>
             <div className="text-ink2 text-xs">
-              Kevin MacLeod catalog · CC-BY 4.0 · vibe: <b>{vibe}</b> · already-imported tracks are hidden
+              Kevin MacLeod catalog · CC-BY 4.0 · vibe: <b>{vibe}</b> · already-imported tracks are
+              hidden
             </div>
           </div>
           <button
@@ -447,7 +462,9 @@ function ImportPicker({
 
         <div className="flex-1 overflow-y-auto px-2 py-2">
           {error ? (
-            <div className="mx-2 mb-2 rounded bg-red-50 px-3 py-2 text-red-700 text-xs">{error}</div>
+            <div className="mx-2 mb-2 rounded bg-red-50 px-3 py-2 text-red-700 text-xs">
+              {error}
+            </div>
           ) : null}
           {summary ? (
             <div className="mx-2 mb-2 rounded bg-green-50 px-3 py-2 text-green-700 text-xs">
@@ -491,7 +508,12 @@ function ImportPicker({
                         </div>
                       </div>
                       {/** biome-ignore lint/a11y/useMediaCaption: royalty-free instrumental */}
-                      <audio controls preload="none" src={c.previewUrl} className="h-7 w-48 shrink-0">
+                      <audio
+                        controls
+                        preload="none"
+                        src={c.previewUrl}
+                        className="h-7 w-48 shrink-0"
+                      >
                         <track kind="captions" />
                       </audio>
                     </div>

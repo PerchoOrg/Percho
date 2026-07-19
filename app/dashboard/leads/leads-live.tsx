@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * LeadsLive — agent's lead inbox (Phase 67: table redesign).
+ * LeadsLive — agent's lead inbox.
  *
  * Layer 1 (initial): SSR-hydrated rows passed in via `initial`.
  * Layer 2 (Realtime): postgres_changes INSERT + UPDATE subscription on
@@ -9,7 +9,7 @@
  * Layer 3 (polling fallback): every 8s, refetch the most-recent leads and
  *   merge by id (last-write-wins).
  *
- * Phase 67 redesign (table form):
+ * redesign (table form):
  *   - Sticky column header: Name / Listing / Contact / Source / Received / ·
  *   - Listing column shows the listing address; community leads show "—"
  *     (community has no listing — its name lives in Source instead).
@@ -20,7 +20,7 @@
  *   - Source column shows the community name for community-routed leads
  *     (overrides the raw `source` string), and the lead's `source` tag
  *     for listing-routed leads (e.g. "listing-page").
- *   - Followed-up rows fade to opacity-55 (kept from Phase 49.2).
+ * - Followed-up rows fade to opacity-55.
  */
 
 import { createClient } from '@/lib/supabase/client';
@@ -87,7 +87,7 @@ function buildSms(l: LeadRow): string | null {
 }
 
 function sourceLabel(l: LeadRow): string {
-  // Phase 67.2: Source is now a simple type enum ("Listing" / "Community")
+  // Source is now a simple type enum ("Listing" / "Community")
   // — agents already see *which* listing or community in the Listing column,
   // so collapsing source to a 2-value tag keeps the column scannable.
   return l.community_id ? 'Neighborhood' : 'Listing';
@@ -260,7 +260,7 @@ export function LeadsLive({ initial }: { initial: LeadRow[] }) {
           </p>
         </div>
       ) : (
-        // Phase 67: responsive layout.
+        // responsive layout.
         //   < sm  → stacked cards (header hidden — too cramped on phone)
         //   ≥ sm  → grid table with sticky column header
         <div className="overflow-hidden rounded-2xl border border-line bg-surface">
@@ -278,11 +278,7 @@ export function LeadsLive({ initial }: { initial: LeadRow[] }) {
           </div>
           <ul>
             {filtered.map((l) => (
-              <LeadItem
-                key={l.id}
-                lead={l}
-                onMark={(value) => void setFollowUp(l.id, value)}
-              />
+              <LeadItem key={l.id} lead={l} onMark={(value) => void setFollowUp(l.id, value)} />
             ))}
           </ul>
         </div>
@@ -324,7 +320,7 @@ function LeadItem({
 }) {
   const open = !lead.followed_up_at;
   const listingAddr = lead.listings?.address ?? null;
-  // Phase 67.2: "Listing" column doubles as the target — community leads
+  // "Listing" column doubles as the target — community leads
   // show the community name here (since Source is now just the type enum).
   const listingCell = lead.community_id
     ? (lead.communities?.name ?? '(unknown neighborhood)')
@@ -339,7 +335,7 @@ function LeadItem({
         open ? '' : 'opacity-55'
       }`}
     >
-      {/* Phase 67.2: row-level overlay link — full row navigates to detail.
+      {/* row-level overlay link — full row navigates to detail.
           Sits at z-0 underneath; action icons + name link below ride at z-10
           so they handle their own clicks. Aria-hidden because the visible
           name link still announces the destination to screen readers. */}
@@ -367,9 +363,7 @@ function LeadItem({
           />
           <div className="min-w-0 flex-1">
             <span
-              className={`block truncate text-sm ${
-                open ? 'font-medium text-ink' : 'text-ink2'
-              }`}
+              className={`block truncate text-sm ${open ? 'font-medium text-ink' : 'text-ink2'}`}
               title={lead.name}
             >
               {lead.name}
@@ -447,17 +441,13 @@ function LeadItem({
           aria-hidden
           className="hidden sm:block relative z-10 pointer-events-none h-2 w-2 rounded-full"
           style={
-            open
-              ? { backgroundColor: OPEN_DOT_COLOR }
-              : { border: '1px solid rgba(49,49,49,0.2)' }
+            open ? { backgroundColor: OPEN_DOT_COLOR } : { border: '1px solid rgba(49,49,49,0.2)' }
           }
         />
         {/* Name + preview */}
         <div className="hidden sm:block relative z-10 pointer-events-none min-w-0">
           <span
-            className={`block truncate text-sm ${
-              open ? 'font-medium text-ink' : 'text-ink2'
-            }`}
+            className={`block truncate text-sm ${open ? 'font-medium text-ink' : 'text-ink2'}`}
             title={lead.name}
           >
             {lead.name}

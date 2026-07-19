@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * Phase 25 (2026-06-14): Inline-editable agent identity card.
+ * Inline-editable agent identity card.
  *
  * Agent can change `name` and `brokerage` from the profile page. Slug stays
  * frozen — system-generated at signup from email local-part, never re-synced

@@ -1,7 +1,6 @@
 /**
  * DesktopSidebarWrapper — Server Component that resolves the viewer role
- * and renders <DesktopSidebar>. Phase 45 (2026-06-20).
- */
+ * and renders <DesktopSidebar>.  */
 
 import { createClient } from '@/lib/supabase/server';
 import { DesktopSidebar } from './DesktopSidebar';
@@ -9,7 +8,7 @@ import type { ViewerRole } from './nav-config';
 
 export async function DesktopSidebarWrapper() {
   const supabase = await createClient();
-  // Phase 53D: getSession() reads cookie locally (~5ms) vs getUser() round-trip (~150ms).
+  // getSession() reads cookie locally (~5ms) vs getUser() round-trip (~150ms).
   // Middleware re-validates on each request — chrome doesn't need fresh JWT validation.
   const {
     data: { session },

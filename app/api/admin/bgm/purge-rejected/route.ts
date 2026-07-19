@@ -13,8 +13,8 @@
  */
 
 import { requireAdmin } from '@/lib/auth/require-admin';
-import { BGM_BUCKET, isBgmVibe } from '@/lib/bgm/storage';
 import { readBgmState, writeBgmState } from '@/lib/bgm/state-store';
+import { BGM_BUCKET, isBgmVibe } from '@/lib/bgm/storage';
 import { createServiceClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 
@@ -42,10 +42,7 @@ export async function POST(req: Request) {
   const svc = createServiceClient();
   const { error } = await svc.storage.from(BGM_BUCKET).remove(targets);
   if (error) {
-    return NextResponse.json(
-      { error: `storage remove failed: ${error.message}` },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: `storage remove failed: ${error.message}` }, { status: 500 });
   }
 
   const remaining = state.rejected.filter((p) => !targets.includes(p));

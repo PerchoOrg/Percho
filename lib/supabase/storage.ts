@@ -2,8 +2,8 @@
  * Helpers for the `listing-photos` and `community-photos` Supabase
  * Storage buckets.
  *
- * Phase 10 (2026-06-12): listing-photos. Public bucket, public URLs.
- * Phase 20.2 (2026-06-13): community-photos. PRIVATE bucket — buyer
+ * listing-photos. Public bucket, public URLs.
+ * community-photos. PRIVATE bucket — buyer
  * invisible. We only build storage paths here; reads go through signed
  * URLs minted server-side.
  */
@@ -32,7 +32,7 @@ export function nextPhotoStoragePath(listingId: string, fileName: string): strin
 export const LISTING_PHOTOS_BUCKET = BUCKET;
 
 /**
- * Phase 20.2 (2026-06-13): community photo path helper. Path convention
+ * community photo path helper. Path convention
  * is `{communityId}/{uuid}.{ext}` — mirrors listing-photos so the
  * storage RLS policy can scope by `split_part(name, '/', 1)`.
  */
@@ -47,7 +47,7 @@ export function nextCommunityPhotoStoragePath(communityId: string, fileName: str
 export const COMMUNITY_PHOTOS_BUCKET = COMMUNITY_BUCKET;
 
 /**
- * Phase 27 (2026-06-14): user avatars (agents + buyers share one bucket).
+ * user avatars (agents + buyers share one bucket).
  * Path convention: `{user_id}/{uuid}.webp`. Public bucket — anyone can
  * read by URL; storage RLS scopes writes to the caller's own user_id.
  */
@@ -65,15 +65,4 @@ export function nextAvatarStoragePath(userId: string): string {
   const id =
     globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`;
   return `${userId}/${id}.webp`;
-}
-
-/** The 3 system-provided house presets (1 / 2 / 3 houses). */
-export const AVATAR_PRESETS: readonly string[] = [
-  '/avatars/preset-1.svg',
-  '/avatars/preset-2.svg',
-  '/avatars/preset-3.svg',
-];
-
-export function isPresetAvatar(url: string | null | undefined): boolean {
-  return !!url && url.startsWith('/avatars/preset-');
 }

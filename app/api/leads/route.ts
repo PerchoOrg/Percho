@@ -1,12 +1,12 @@
 /**
  * POST /api/leads — public lead capture.
  *
- * Phase 5.2. Anon-callable (no auth). The browser POSTs from LeadModal on the
+ * . Anon-callable (no auth). The browser POSTs from LeadModal on the
  * public listing page. Validates with `LeadCreate` zod schema, looks up the
  * listing's `agent_id` server-side (client never trusts that field), inserts
  * via the service-role client.
  *
- * Phase 45.18 (2026-06-20): also accepts community_id for direct
+ * also accepts community_id for direct
  * "/c/[slug]/feed" leads (Contact button → community owner). Owner rule:
  * "if exploring community directly, contact community owner". Lookup
  * pivots on which target id is present; agent_id is always derived
@@ -19,7 +19,7 @@
  * forecloses cross-listing pollution even if the schema later opens up.
  *
  * Email notification is fire-and-forget via a Postgres AFTER INSERT trigger
- * that calls the `notify-lead` Edge Function (Phase 5.3) — this route just
+ * that calls the `notify-lead` Edge Function — this route just
  * lands the row and returns. Idempotency lives in the Edge Function.
  */
 
@@ -69,7 +69,7 @@ export async function POST(req: Request) {
     listingId = listing.id;
     agentId = listing.agent_id;
   } else if (parsed.data.community_id) {
-    // Community-targeted lead (phase 45.18): agent_id from communities.created_by.
+    // Community-targeted lead: agent_id from communities.created_by.
     // Communities without an owner (legacy / unowned) cannot accept leads —
     // there's nobody to route the message to.
     // biome-ignore lint/suspicious/noExplicitAny: stub generated types

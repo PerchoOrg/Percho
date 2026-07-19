@@ -6,11 +6,11 @@
  * `app/(public)/browse/page.tsx` (where it lived inline) so the grid
  * page and feed page share a single source of truth.
  *
- * Phase 9 (2026-06-12): grid-first browse pivot. Card type extended with
+ * grid-first browse pivot. Card type extended with
  * `description` (joined from `listings.description text[]`) so the swipe
  * feed can render a longer caption at the bottom (Xiaohongshu-style).
  *
- * Phase 14 (2026-06-13): `/nearby` reuses the same card shape via
+ * `/nearby` reuses the same card shape via
  * `fetchNearbyCards({ lat, lng, radius })` so the Nearby grid is visually
  * identical to Explore (Pinterest-style, click → swipe feed). Distance is
  * the only additive, optional field on the returned card.
@@ -24,7 +24,7 @@ import {
   type CommunityVideoCategoryId,
 } from '@/lib/zod/community-video-categories';
 
-// Phase 111.1 (2026-07-17): removed the old `FEED_LIMIT = 30` cap.
+// removed the old `FEED_LIMIT = 30` cap.
 // Both the grid and the swipe feed now request the full active-listing
 // set in one shot (bounded by PostgREST's default 1000-row ceiling).
 // The 30-card window was leftover from the pre-grid pivot when /browse
@@ -51,13 +51,13 @@ type ListingRow = {
   description: string[] | null;
   community_id: string | null;
   agent_id: string | null;
-  // Phase 60 (2026-06-26): cover_url joins the projection so the grid
+  // cover_url joins the projection so the grid
   // thumbnail can honour the agent's "Set as cover" pick (photo or
   // video) regardless of mediaKind.
   cover_url: string | null;
   lat?: number | null;
   lng?: number | null;
-  // Phase 94 (2026-07-17): external attribution for FMLS-imported listings.
+  // external attribution for FMLS-imported listings.
   external_agent_name: string | null;
   external_agent_phone: string | null;
   external_office: string | null;
@@ -129,7 +129,7 @@ type CommunityRow = {
  * `BrowseCard[]`. Distance is passed in by the caller (`/nearby` only —
  * `/browse` passes `undefined`).
  *
- * Phase 14: extracted from `fetchBrowseCards()` so `fetchNearbyCards()`
+ * extracted from `fetchBrowseCards()` so `fetchNearbyCards()`
  * can reuse the join + assembly without duplicating ~150 LOC.
  */
 async function assembleCards(
@@ -161,11 +161,13 @@ async function assembleCards(
   ] = await Promise.all([
     supabase
       .from('listing_videos')
-      .select('listing_id, cf_video_id, cf_video_id_landscape, external_url, title, kind, sort_order')
+      .select(
+        'listing_id, cf_video_id, cf_video_id_landscape, external_url, title, kind, sort_order',
+      )
       .in('listing_id', listingIds)
       .eq('status', 'ready')
       .order('sort_order', { ascending: true }),
-    // Phase 10: photos parallel for photo-only fallback. If migration 0011
+    // photos parallel for photo-only fallback. If migration 0011
     // hasn't run yet, supabase-js returns { data: null, error } rather than
     // throwing — `.then` second arg is belt-and-suspenders against future
     // client revisions that throw.
@@ -187,7 +189,7 @@ async function assembleCards(
           .in('community_id', communityIds)
           .eq('status', 'ready')
           .eq('visibility', 'public')
-          // Phase 92: skip history renders.
+          // skip history renders.
           .eq('is_primary', true)
       : Promise.resolve({ data: [] }),
     communityIds.length > 0
@@ -209,7 +211,7 @@ async function assembleCards(
           .in('id', communityIds)
           .eq('status', 'active')
       : Promise.resolve({ data: [] }),
-    // Phase 34b (V1 redo): listingCount per community for the sheet header.
+    // listingCount per community for the sheet header.
     // Counts ALL published listings, not just the ones in this card batch —
     // the user opens the sheet expecting "homes in this community", not
     // "homes in current page".
@@ -220,9 +222,9 @@ async function assembleCards(
           .in('community_id', communityIds)
           .eq('status', 'active')
       : Promise.resolve({ data: [] }),
-    // Phase 112 (2026-07-17): listing-scoped nearby bucket videos so
+    // listing-scoped nearby bucket videos so
     // community-less listings (external FMLS imports) still surface the
-    // Nearby rail on /browse/feed. Mirrors listing-feed/load.ts Phase 102.
+    // Nearby rail on /browse/feed. Mirrors listing-feed/load.ts.
     supabase
       .from('generated_videos')
       .select('listing_id, cf_stream_uid, intent_bucket, narrative')
@@ -271,7 +273,7 @@ async function assembleCards(
     commVidsByCommunity.set(v.community_id, arr);
   }
 
-  // Phase 112: listing-scoped bucket videos (community-less listings).
+  // listing-scoped bucket videos (community-less listings).
   const listingBucketRows = (listingBucketVidsResp.data ?? []) as Array<{
     listing_id: string;
     cf_stream_uid: string | null;
@@ -300,7 +302,7 @@ async function assembleCards(
   for (const l of listings) {
     const hero = heroByListing.get(l.id);
     const heroPhoto = heroPhotoByListing.get(l.id);
-    // Phase 94 (2026-07-17): agent can be null for external (FMLS) listings.
+    // agent can be null for external (FMLS) listings.
     // Synthesise a placeholder agent shape from external_agent_name / office
     // so downstream card rendering stays identical; caption card decides
     // whether to link or render plain text based on `agent.isExternal`.
@@ -322,7 +324,7 @@ async function assembleCards(
 
     const community = l.community_id ? (communitiesById.get(l.community_id) ?? null) : null;
     const cVids = l.community_id ? (commVidsByCommunity.get(l.community_id) ?? []) : [];
-    // Phase 112: union listing-scoped nearby videos so community-less listings
+    // union listing-scoped nearby videos so community-less listings
     // (external FMLS imports) still expose a Nearby rail. Dedupe by cf_video_id
     // in case a listing is somehow attached to both scopes.
     const bucketVids = bucketVidsByListing.get(l.id) ?? [];
@@ -339,14 +341,14 @@ async function assembleCards(
     const categoryMetaById = new Map(COMMUNITY_VIDEO_CATEGORIES.map((m) => [m.id, m] as const));
 
     /**
-     * Phase 28 (2026-06-14): single Nearby pool. Merges the old
+     * single Nearby pool. Merges the old
      * schools / pois / neighborhood splits into one feed of community
      * videos, each tagged with its 12-category metadata. The right rail
      * has a single "Nearby" entry; tapping it enters this pool, and
      * each video's category label + blurb is shown as a pill above the
      * caption (read on the client from COMMUNITY_VIDEO_CATEGORIES).
      *
-     * Backward-compat: if a row has no `category` (pre-Phase 22 data),
+     * Backward-compat: if a row has no `category` (pre- data),
      * we synthesise one from the legacy `kind` so the pool stays
      * non-empty for older listings.
      */
@@ -381,7 +383,9 @@ async function assembleCards(
     });
 
     const card: BrowseCard = {
-      id: hero ? (hero.cf_video_id ?? hero.cf_video_id_landscape ?? `ext:${l.id}`) : `photo:${l.id}`,
+      id: hero
+        ? (hero.cf_video_id ?? hero.cf_video_id_landscape ?? `ext:${l.id}`)
+        : `photo:${l.id}`,
       mediaKind: hero ? 'video' : 'photo',
       hero: {
         cfVideoId: hero?.cf_video_id ?? hero?.cf_video_id_landscape ?? '',
@@ -389,7 +393,7 @@ async function assembleCards(
         externalUrl: hero?.external_url ?? null,
       },
       heroPhotoUrl: hero ? undefined : photoPublicUrl((heroPhoto as ListingPhotoRow).storage_path),
-      // Phase 72.5 (2026-07-05): fill full photo carousel for photo-only
+      // fill full photo carousel for photo-only
       // listings so PhotoCard's swipe indicator shows N/N and horizontal
       // swipe cycles through every photo. Prior to this the grid loader
       // only set `heroPhotoUrl`, so listings entered via `/browse` had a
@@ -399,7 +403,7 @@ async function assembleCards(
       photos: hero
         ? undefined
         : (photosByListing.get(l.id) ?? []).map((p) => photoPublicUrl(p.storage_path)),
-      // Phase 60 (2026-06-26): grid thumbnail honours the agent's
+      // grid thumbnail honours the agent's
       // explicit `cover_url`. Grid consumers prefer this over the
       // mediaKind-derived hero. We fall through to undefined when
       // cover_url is null so callers default to the existing
@@ -431,7 +435,7 @@ async function assembleCards(
       },
     };
     if (community) {
-      // Phase 34b (V1 redo): surface community on the card so BrowseFeed
+      // surface community on the card so BrowseFeed
       // can render a top-left chip; tapping the chip opens CommunitySheet
       // (L1) — does NOT navigate. videoCount is the fan-out community-video
       // pool size and seeds the sheet's "COMMUNITY VIDEOS · N" header.
@@ -471,7 +475,7 @@ export async function fetchBrowseCards(offset = 0, limit = 1000): Promise<Browse
 }
 
 /**
- * Phase 27.4 (2026-06-16): community-scoped browse feed. Used when the
+ * community-scoped browse feed. Used when the
  * buyer taps a tile on `/c/[slug]` — they should land in a swipe feed
  * filtered to active listings inside that single community. We resolve
  * the community by slug, then fan out the same join as the global
@@ -479,9 +483,7 @@ export async function fetchBrowseCards(offset = 0, limit = 1000): Promise<Browse
  * pool, agent card, etc.). Returns [] for unknown slug — the caller
  * falls back to global feed.
  */
-export async function fetchBrowseCardsByCommunitySlug(
-  slug: string,
-): Promise<BrowseCard[]> {
+export async function fetchBrowseCardsByCommunitySlug(slug: string): Promise<BrowseCard[]> {
   const supabase = await createClient();
 
   // biome-ignore lint/suspicious/noExplicitAny: stub generated types
@@ -507,7 +509,7 @@ export async function fetchBrowseCardsByCommunitySlug(
 }
 
 /**
- * Phase 21 (2026-06-13): fetch BrowseCards for a specific id set,
+ * fetch BrowseCards for a specific id set,
  * preserving the input order. Used by `/saved` to render the buyer's
  * saved listings via the same grid card shape as `/browse`. Filters
  * out non-published listings (e.g. archived after save).
@@ -532,7 +534,7 @@ export async function fetchBrowseCardsByIds(ids: string[]): Promise<BrowseCard[]
 }
 
 /**
- * Phase 14: nearby-aware cards. bbox prefilter (b-tree on lat/lng) +
+ * nearby-aware cards. bbox prefilter (b-tree on lat/lng) +
  * exact haversine in JS, sorted ascending by distance. Returns the same
  * `BrowseCard` shape as `fetchBrowseCards()` so the grid renders
  * identically; an additive `distance` field is attached for the overlay

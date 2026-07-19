@@ -1,4 +1,4 @@
--- Phase 5.5 — add leads to supabase_realtime publication so the dashboard
+-- add leads to supabase_realtime publication so the dashboard
 -- /leads page receives live INSERT events when buyers submit the public form.
 --
 -- RLS policies (defined in 0001) still apply to Realtime: clients only receive

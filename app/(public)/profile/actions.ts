@@ -1,7 +1,7 @@
 'use server';
 
 /**
- * Phase 25 (2026-06-14): Server actions for /profile.
+ * Server actions for /profile.
  *
  * Currently exposes `updateAgentIdentity` — agent renames `name` and/or
  * `brokerage`. Slug is intentionally NOT updated here (frozen at signup).
@@ -112,12 +112,12 @@ export async function updateBuyerDisplayName(input: {
 }
 
 /**
- * Phase 27 (2026-06-14): set or clear the current user's avatar URL.
+ * set or clear the current user's avatar URL.
  *
  * Detects role automatically — agents write `agents.headshot_url`, buyers
  * write `buyers.avatar_url` (DB columns kept put per the migration's note).
  * Pass `url: null` to clear. The caller is responsible for having uploaded
- * the file to Storage (or for picking a `/avatars/preset-N.svg` path).
+ * the file to Storage.
  */
 export async function updateAvatarUrl(input: {
   url: string | null;
@@ -129,7 +129,7 @@ export async function updateAvatarUrl(input: {
   if (!user) return { error: 'Not signed in.' };
 
   // Light validation — keep it simple; URL shape is whatever the picker
-  // supplies (preset path or Supabase Storage public URL).
+  // supplies (Supabase Storage public URL).
   const url = input.url;
   if (url !== null && (typeof url !== 'string' || url.length > 2048)) {
     return { error: 'Invalid avatar URL.' };

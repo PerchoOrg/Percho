@@ -45,7 +45,7 @@ export const VideoCreateUpload = z.object({
   scope: z.enum(['listing', 'community']),
   parent_id: z.string().uuid(),
   kind: z.string().min(1).max(40),
-  // Phase 22 (2026-06-14) — community-scope only. New 12-category axis.
+  // community-scope only. New 12-category axis.
   // When supplied, `category` is authoritative; the route handler will derive
   // a legacy `kind` value from it for the (still-NOT-NULL) `kind` column.
   // Old clients that only send `kind` keep working — the route handler maps
@@ -60,18 +60,18 @@ export const VideoCreateUpload = z.object({
   // Community-scope only: optional school/POI link. Validated against scope at the route handler.
   school_id: z.string().uuid().optional(),
   poi_id: z.string().uuid().optional(),
-  // Phase 11 (2026-06-12) — community-scope geo. Optional on the wire so
+  // community-scope geo. Optional on the wire so
   // older clients keep working; the route handler enforces presence for
   // community scope when we want platform-wide nearby coverage. Lat in
   // [-90, 90], lng in [-180, 180].
   lat: z.number().gte(-90).lte(90).optional(),
   lng: z.number().gte(-180).lte(180).optional(),
-  // Phase 23 (2026-06-14) — community-scope optional human-readable address.
+  // community-scope optional human-readable address.
   // When the agent types one we keep it; if blank the UI still passes lat/lng
   // (silent browser geolocation) for nearby queries but does not surface a
   // map / coords UI.
   address: z.string().max(200).optional(),
-  // Phase 27.4 (2026-06-16) — community-scope multi-tag. A video lives
+  // community-scope multi-tag. A video lives
   // primarily in `parent_id` (its "home" community via the FK on
   // community_videos.community_id) and additionally in N other
   // communities via the `community_video_extra_links` side table. Cap at

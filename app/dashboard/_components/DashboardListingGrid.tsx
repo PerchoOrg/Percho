@@ -3,7 +3,7 @@
 /**
  * DashboardListingGrid — client wrapper around ListingGrid.
  *
- * Phase 47.14 (2026-06-21): removed the local search input added in 47.13.
+ * removed the local search input added in 47.13.
  * Search lives in the global TopBar 🔍 (top-left); duplicating it here is
  * noise. Listings are shown straight in their server-supplied order; an
  * agent who needs filtering uses the global search which now includes
@@ -16,9 +16,9 @@
 
 import { Home } from 'lucide-react';
 
+import { EmptyHubState } from '@/app/_components/EmptyHubState';
 import { ListingGrid, type ListingGridItem } from '@/app/_components/ListingGrid';
 import { CreateListingButton } from './CreateListingButton';
-import { EmptyHubState } from '@/app/_components/EmptyHubState';
 
 export type DashboardItem = ListingGridItem & {
   rawStatus: string;

@@ -1,9 +1,9 @@
 /**
  * /admin/pipeline/bgm — background music library browser + curator.
  *
- * Phase 104 (2026-07-17): viewer with <audio controls>.
- * Phase 105 (2026-07-17): add + delete. Storage-canonical.
- * Phase 106 (2026-07-17): `cinematic` bucket retired. Per-track hard-delete
+ * viewer with <audio controls>.
+ * add + delete. Storage-canonical.
+ * `cinematic` bucket retired. Per-track hard-delete
  * replaced with soft **reject** — rejected tracks stay in Storage (grouped
  * at the bottom of each vibe, dimmed) but the render worker skips
  * downloading them via `pull-bgm.sh`. One-click Approve restores.

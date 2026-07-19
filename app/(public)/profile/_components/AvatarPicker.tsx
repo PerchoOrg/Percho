@@ -1,13 +1,11 @@
 'use client';
 
 /**
- * AvatarPicker — Phase 27 (2026-06-14).
- *
- * Shared avatar editor for both agents and buyers. Three sources:
- *   1. Six system-provided house presets (`/avatars/preset-N.svg`).
- *   2. Upload from device → react-easy-crop square → 256×256 WebP →
+ * AvatarPicker —
+ * Shared avatar editor for both agents and buyers. Two actions:
+ *   1. Upload from device → react-easy-crop square → 256×256 WebP →
  *      Supabase Storage `avatars` bucket at `{user_id}/{uuid}.webp`.
- *   3. Remove (sets the column back to NULL → caller falls back to the
+ *   2. Remove (sets the column back to NULL → caller falls back to the
  *      letter-initial circle).
  *
  * The picker is purely a UI control. Persisting the chosen URL goes
@@ -15,18 +13,16 @@
  *
  * UX:
  *   - Current avatar shown as a circle. Tap "Change" → modal opens.
- *   - Tabs: Presets / Upload / Remove. Selecting a preset commits
- *     immediately. Upload requires drag/zoom confirm.
+ *   - Modal shows the upload/crop panel; "Remove avatar" link at bottom
+ *     when one is currently set.
  */
 
+import { createClient } from '@/lib/supabase/client';
 import {
-  AVATAR_PRESETS,
   AVATARS_BUCKET,
   avatarPublicUrl,
-  isPresetAvatar,
   nextAvatarStoragePath,
 } from '@/lib/supabase/storage';
-import { createClient } from '@/lib/supabase/client';
 import { Camera, Loader2, Upload, X } from 'lucide-react';
 import { useCallback, useRef, useState } from 'react';
 import Cropper, { type Area } from 'react-easy-crop';
@@ -37,8 +33,6 @@ const ALLOWED_MIMES = new Set(['image/jpeg', 'image/png', 'image/webp']);
 const OUTPUT_SIZE = 256;
 const OUTPUT_TYPE = 'image/webp';
 const OUTPUT_QUALITY = 0.9;
-
-type Tab = 'presets' | 'upload';
 
 export function AvatarPicker({
   initialUrl,
@@ -123,7 +117,6 @@ function PickerModal({
   onClose: () => void;
   onChange: (url: string | null) => void;
 }) {
-  const [tab, setTab] = useState<Tab>(isPresetAvatar(currentUrl) ? 'presets' : 'presets');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -147,7 +140,7 @@ function PickerModal({
     >
       <div className="relative w-full max-w-md overflow-hidden rounded-xl border border-line bg-surface shadow-2xl">
         <div className="flex items-center justify-between border-line border-b px-4 py-3">
-          <div className="font-medium text-ink text-sm">Choose avatar</div>
+          <div className="font-medium text-ink text-sm">Change profile photo</div>
           <button
             type="button"
             onClick={onClose}
@@ -159,31 +152,14 @@ function PickerModal({
           </button>
         </div>
 
-        <div className="flex border-line border-b text-xs">
-          <TabButton active={tab === 'presets'} onClick={() => setTab('presets')}>
-            Presets
-          </TabButton>
-          <TabButton active={tab === 'upload'} onClick={() => setTab('upload')}>
-            Upload
-          </TabButton>
-        </div>
-
         <div className="p-4">
-          {tab === 'presets' ? (
-            <PresetGrid
-              currentUrl={currentUrl}
-              busy={busy}
-              onPick={(presetUrl) => void commit(presetUrl)}
-            />
-          ) : (
-            <UploadCropPanel
-              userId={userId}
-              busy={busy}
-              setBusy={setBusy}
-              setError={setError}
-              onUploaded={(publicUrl) => void commit(publicUrl)}
-            />
-          )}
+          <UploadCropPanel
+            userId={userId}
+            busy={busy}
+            setBusy={setBusy}
+            setError={setError}
+            onUploaded={(publicUrl) => void commit(publicUrl)}
+          />
 
           {error ? (
             <div className="mt-3 rounded border border-red-500/30 bg-red-500/10 px-3 py-2 text-red-200 text-xs">
@@ -205,64 +181,6 @@ function PickerModal({
           ) : null}
         </div>
       </div>
-    </div>
-  );
-}
-
-function TabButton({
-  active,
-  onClick,
-  children,
-}: {
-  active: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`flex-1 px-4 py-2 transition ${
-        active
-          ? 'border-line-strong border-b-2 text-ink'
-          : 'border-transparent border-b-2 text-muted hover:text-ink2'
-      }`}
-    >
-      {children}
-    </button>
-  );
-}
-
-function PresetGrid({
-  currentUrl,
-  busy,
-  onPick,
-}: {
-  currentUrl: string | null;
-  busy: boolean;
-  onPick: (url: string) => void;
-}) {
-  return (
-    <div className="grid grid-cols-3 gap-3">
-      {AVATAR_PRESETS.map((preset) => {
-        const selected = currentUrl === preset;
-        return (
-          <button
-            key={preset}
-            type="button"
-            disabled={busy}
-            onClick={() => onPick(preset)}
-            className={`relative aspect-square overflow-hidden rounded-full border-2 bg-bg transition ${
-              selected ? 'border-line-strong' : 'border-line hover:border-line'
-            }`}
-            aria-label="Select preset avatar"
-            aria-pressed={selected}
-          >
-            {/* biome-ignore lint/a11y/useAltText: decorative inside button label */}
-            <img src={preset} alt="" className="h-full w-full object-cover" />
-          </button>
-        );
-      })}
     </div>
   );
 }
@@ -412,17 +330,7 @@ async function renderCroppedWebp(srcUrl: string, area: Area): Promise<Blob> {
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('Canvas not supported.');
   ctx.imageSmoothingQuality = 'high';
-  ctx.drawImage(
-    img,
-    area.x,
-    area.y,
-    area.width,
-    area.height,
-    0,
-    0,
-    OUTPUT_SIZE,
-    OUTPUT_SIZE,
-  );
+  ctx.drawImage(img, area.x, area.y, area.width, area.height, 0, 0, OUTPUT_SIZE, OUTPUT_SIZE);
   return new Promise<Blob>((resolve, reject) => {
     canvas.toBlob(
       (b) => (b ? resolve(b) : reject(new Error('Encode failed.'))),

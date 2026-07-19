@@ -1,5 +1,4 @@
--- 0018_community_video_address — Phase 23 (2026-06-14).
---
+-- 0018_community_video_address — --
 -- Adds a free-text `address` to community_videos so agents can write a
 -- human-readable location ("Smith Park, 123 Main St") instead of being
 -- forced to pick a POI/school from a dropdown. lat/lng (added in 0011)
@@ -12,4 +11,4 @@ alter table public.community_videos
   add column if not exists address text;
 
 comment on column public.community_videos.address is
-  'Phase 23: human-readable address typed by uploader. May be null when only lat/lng (silent geo) is recorded.';
+  'human-readable address typed by uploader. May be null when only lat/lng (silent geo) is recorded.';

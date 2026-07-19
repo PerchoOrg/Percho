@@ -1,9 +1,9 @@
 'use client';
 
 /**
- * CommunityPhotoPanel — Phase 20.2 (2026-06-13);
- *   Phase 23 (2026-06-14): trimmed school/POI categorization.
- *   Phase 24 (2026-06-14): added 12-category picker (batch mode).
+ * CommunityPhotoPanel — (2026-06-13);
+ *   trimmed school/POI categorization.
+ *   added 12-category picker (batch mode).
  *
  * Lets an authenticated agent upload photos to a community's private
  * photo library. Photos are NOT visible to buyers — they're raw material
@@ -82,7 +82,7 @@ interface Props {
 }
 
 /**
- * Phase 50.x — imperative handle exposed via `ref`. The parent media shell
+ * .x — imperative handle exposed via `ref`. The parent media shell
  * forwards image files picked from the unified upload button into the
  * existing handleFiles pipeline so we don't fork upload logic.
  */
@@ -102,14 +102,7 @@ interface PendingItem {
 
 export const CommunityPhotoPanel = forwardRef<CommunityPhotoPanelHandle, Props>(
   function CommunityPhotoPanel(
-    {
-      communityId,
-      initialPhotos,
-      category,
-      hideUploadButton,
-      coverStoragePath,
-      canSetCover,
-    },
+    { communityId, initialPhotos, category, hideUploadButton, coverStoragePath, canSetCover },
     ref,
   ) {
     const router = useRouter();
@@ -234,7 +227,7 @@ export const CommunityPhotoPanel = forwardRef<CommunityPhotoPanelHandle, Props>(
       [communityId, photos],
     );
 
-    // Phase 50.9: per-photo "Set as cover". Server action copies the file
+    // per-photo "Set as cover". Server action copies the file
     // from the private community-photos bucket to the public community-covers
     // bucket and updates communities.cover_storage_path. We router.refresh()
     // on success so the new badge shows up + the hero hero updates.
@@ -278,8 +271,8 @@ export const CommunityPhotoPanel = forwardRef<CommunityPhotoPanelHandle, Props>(
             </div>
             <p className="mb-4 text-ink2 text-xs">
               Photos here are <span className="text-ink2">not visible to buyers</span> — they're raw
-              material the platform can use to generate neighborhood videos later. JPEG / PNG / WebP,
-              up to 10 MB each.
+              material the platform can use to generate neighborhood videos later. JPEG / PNG /
+              WebP, up to 10 MB each.
             </p>
           </>
         )}

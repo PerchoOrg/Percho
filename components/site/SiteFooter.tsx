@@ -1,11 +1,7 @@
 /**
- * SiteFooter — minimal single-line footer.
- *
- * Kept intentionally bare per product call (2026-06-20): no link columns, no
- * brand block. Only the copyright + legal disclaimer line. Disclaimer stays
- * because real-estate platforms need Fair Housing + "not a broker" language
- * for listing-agent trust — removing it makes agents wary of uploading real
- * inventory. If we ever pull legal pages live again, link them inline here.
+ * SiteFooter — minimal single-line footer: copyright + Fair Housing
+ * "not a broker" disclaimer. The disclaimer stays because real-estate
+ * platforms need it for listing-agent trust.
  */
 
 export function SiteFooter() {
@@ -15,8 +11,8 @@ export function SiteFooter() {
         <p className="text-[11px] leading-[1.7] text-ink2 tracking-[0.04em]">
           © 2026 Percho. All rights reserved. ·{' '}
           <span className="text-muted">
-            Percho is a home-discovery platform, not a licensed real estate
-            broker. Equal Housing Opportunity.
+            Percho is a home-discovery platform, not a licensed real estate broker. Equal Housing
+            Opportunity.
           </span>
         </p>
       </div>

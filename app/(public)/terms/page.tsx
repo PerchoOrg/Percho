@@ -9,8 +9,8 @@ export default function TermsPage() {
   return (
     <LegalLayout eyebrow="Legal" title="Terms of Service" updated="June 20, 2026">
       <p>
-        These Terms of Service (&ldquo;Terms&rdquo;) govern your access to and use of percho.co
-        and related services operated by Percho, Inc. (&ldquo;Percho&rdquo;, &ldquo;we&rdquo;,
+        These Terms of Service (&ldquo;Terms&rdquo;) govern your access to and use of percho.co and
+        related services operated by Percho, Inc. (&ldquo;Percho&rdquo;, &ldquo;we&rdquo;,
         &ldquo;us&rdquo;).
       </p>
       <p>
@@ -33,16 +33,16 @@ export default function TermsPage() {
 
       <h2>3. Not a brokerage</h2>
       <p>
-        Percho is a technology platform. We do not represent buyers or sellers, do not list or
-        sell homes, and do not provide legal, tax, or real estate advice. All transactions occur
+        Percho is a technology platform. We do not represent buyers or sellers, do not list or sell
+        homes, and do not provide legal, tax, or real estate advice. All transactions occur
         off-platform between buyers, sellers, and their licensed representatives.
       </p>
 
       <h2>4. User content</h2>
       <p>
-        Agents retain ownership of content they upload. By uploading, you grant Percho a
-        worldwide, non-exclusive, royalty-free license to host, display, reformat, and distribute
-        that content as part of the Service.
+        Agents retain ownership of content they upload. By uploading, you grant Percho a worldwide,
+        non-exclusive, royalty-free license to host, display, reformat, and distribute that content
+        as part of the Service.
       </p>
       <p>
         You may not upload content that is infringing, deceptive, defamatory, or that violates

@@ -1,4 +1,4 @@
--- 0017_community_video_categories.sql — Phase 22 (2026-06-14)
+-- 0017_community_video_categories.sql — (2026-06-14)
 --
 -- Replace the 3-value `kind` enum (school | poi | neighborhood) with a richer
 -- 12-category taxonomy split into two buckets:
@@ -11,7 +11,7 @@
 --     school_run, daily_errands, the_park, eating_out, get_active, transit_reality
 --
 -- Strategy: ADD COLUMN, do not drop. Old `kind` stays — old code keeps working
--- until Phase 22 is fully shipped, then we'll drop it in a later migration.
+-- until is fully shipped, then we'll drop it in a later migration.
 --
 -- Existing rows get a conservative best-effort mapping into the new system,
 -- and `category_needs_review = true` so we (or the agent who uploaded it) can
@@ -100,7 +100,7 @@ create index if not exists community_videos_needs_review_idx
 
 -- ─── 6. notes for future migrations ──────────────────────────────
 --
--- TODO once Phase 22 UI ships and prod data is reclassified:
+-- TODO once UI ships and prod data is reclassified:
 --   - drop column `kind`
 --   - drop the old kind check constraint
 --   - tighten events.card_type if we want category-level cards

@@ -1,12 +1,12 @@
 /**
  * `/profile` — role-aware profile / settings landing.
  *
- * Phase 14 (2026-06-12). Minimal V1 shell:
+ * . Minimal V1 shell:
  *   - anon  → CTA: "Log in as agent" / "Sign up as agent" + note that
  *             buyer accounts are coming soon.
  *   - agent → identity card (name, brokerage, email) + shortcut to
  *             /dashboard + Sign out form.
- *   - buyer → stub: "Buyer profiles are coming soon" (Phase 9.5). The page
+ *   - buyer → stub: "Buyer profiles are coming soon". The page
  *             still renders something so the bottom-nav Profile tab isn't
  *             a dead link for a logged-in non-agent.
  *
@@ -20,8 +20,8 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { EditableAgentIdentity } from './_components/EditableAgentIdentity';
 import { EditableBuyerIdentity } from './_components/EditableBuyerIdentity';
-// Phase 66.1 (2026-07-02): NearbyRadiusPref removed from Me per owner
-// (笑云 feedback — reduce distractions; Nearby is no longer surfaced in
+// NearbyRadiusPref removed from Me per owner
+// (per user feedback — reduce distractions; Nearby is no longer surfaced in
 // the buyer chrome as of phase 66). Component file kept in the repo in
 // case Nearby comes back.
 
@@ -34,7 +34,7 @@ export const dynamic = 'force-dynamic';
 
 export default async function ProfilePage() {
   const supabase = await createClient();
-  // Phase 53D: getSession() reads cookie locally (~5ms) instead of round-tripping
+  // getSession() reads cookie locally (~5ms) instead of round-tripping
   // to Supabase to validate the JWT (~150ms). Middleware re-validates on each
   // request — page-level check is defense-in-depth, not the source of truth.
   const {
@@ -43,7 +43,7 @@ export default async function ProfilePage() {
   const user = session?.user ?? null;
 
   if (!user) {
-    // Phase 45.10 (2026-06-20): anon Me lands here per owner. Show the
+    // anon Me lands here per owner. Show the
     // search-radius preference (so anon viewers can dial /browse/nearby
     // without an account) plus the Log in / Sign up CTA pair.
     return (
@@ -52,8 +52,8 @@ export default async function ProfilePage() {
           <div className="rounded-xl border border-line bg-surface p-5">
             <div className="font-serif text-lg text-ink">Sign in to save your work</div>
             <p className="mt-1 text-ink2 text-sm">
-              Log in or create an account to save listings, follow neighborhoods, and (for
-              agents) publish your own tours.
+              Log in or create an account to save listings, follow neighborhoods, and (for agents)
+              publish your own tours.
             </p>
             <div className="mt-4 flex flex-col gap-2">
               <Link
@@ -102,7 +102,7 @@ export default async function ProfilePage() {
             initialAvatarUrl={agent.headshot_url}
           />
 
-          {/* Phase 67 (2026-07-03): 笑云 feedback — reduce distractions on Me.
+          {/* Per user feedback — reduce distractions on Me.
            * Middle stack = agent-specific CTAs (public profile, view analytics).
            * Bottom stack = account actions (change password, sign out). The
            * "Account settings" info card was collapsed into a Change password
@@ -153,7 +153,7 @@ export default async function ProfilePage() {
     );
   }
 
-  // Logged in but no agents row — treat as buyer (V1 stub; Phase 9.5).
+  // Logged in but no agents row — treat as buyer (V1 stub; ).
   // biome-ignore lint/suspicious/noExplicitAny: buyers typing not in stub yet
   const { data: buyer } = (await (supabase as any)
     .from('buyers')
@@ -175,7 +175,7 @@ export default async function ProfilePage() {
           initialAvatarUrl={buyer?.avatar_url ?? null}
         />
 
-        {/* Phase 67 (2026-07-03): 笑云 feedback — buyer Me collapses to two
+        {/* Per user feedback — buyer Me collapses to two
          * account actions. "Explore listings" removed (redundant with the
          * For You bottom-nav tab); the Account settings info card was
          * folded into a Change password button. */}
@@ -199,5 +199,3 @@ export default async function ProfilePage() {
     </main>
   );
 }
-
-

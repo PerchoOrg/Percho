@@ -1,9 +1,8 @@
 -- ─── 0016_saved_listings ────────────────────────────────────────────
--- Phase 21 (2026-06-13).
---
+-- --
 -- Persists buyer "save" actions across page reloads / tabs. V1 uses an
 -- anonymous device-id stored in browser localStorage (no buyer login
--- yet — that is Phase 22+). When buyer auth lands, a follow-up phase
+-- yet — that is +). When buyer auth lands, a follow-up phase
 -- merges `device_id` rows into `user_id` rows for the same person.
 --
 -- Why a new table over abusing leads / contact tables: leads are

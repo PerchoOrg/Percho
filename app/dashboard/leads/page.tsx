@@ -1,14 +1,12 @@
 /**
- * Dashboard /leads — Phase 5.5 + Phase 18.
- *
+ * Dashboard /leads — +  *
  * Server-side: fetch agent's leads (RLS scopes to own agent), hydrate as
  * `initialLeads` to the LeadsLive client component which subscribes to
  * Realtime INSERT/UPDATE + polls as fallback.
  *
- * Phase 18: drop the "← Listings" backlink (TopBar nav already covers it),
+ * drop the "← Listings" backlink (TopBar nav already covers it),
  * add followed_up_at to the select set so the client gets it on first paint.
  */
-
 
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
@@ -18,7 +16,7 @@ export const dynamic = 'force-dynamic';
 
 export default async function LeadsPage() {
   const supabase = await createClient();
-  // Phase 53D: getSession() reads cookie locally (~5ms) instead of round-tripping
+  // getSession() reads cookie locally (~5ms) instead of round-tripping
   // to Supabase to validate the JWT (~150ms). Middleware re-validates on each
   // request — page-level check is defense-in-depth, not the source of truth.
   const {
@@ -40,10 +38,10 @@ export default async function LeadsPage() {
 
   return (
     <div className="mx-auto max-w-5xl px-5 py-6 sm:px-8 sm:py-12">
-      {/* Phase 45 (2026-06-20): Workspace H1 + sub-nav chips removed —
+      {/* Workspace H1 + sub-nav chips removed —
        * the global TopBar pins Listings | Communities | Leads | Analytics
        * as sub-tabs (see app/_components/nav-config.ts → getSubTabs). */}
-      {/* Phase 45.9 (2026-06-20): H1 + description removed per owner. */}
+      {/* H1 + description removed per owner. */}
       <LeadsLive initial={initial} />
     </div>
   );

@@ -1,5 +1,5 @@
 /**
- * Client-side event tracker for the public listing feed (Phase 3.7).
+ * Client-side event tracker for the public listing feed.
  *
  * In-memory queue + 5s flush interval + flush on `pagehide` / `visibilitychange:hidden`.
  * Uses `navigator.sendBeacon` (mobile-correct — `beforeunload` does not fire on iOS),
@@ -17,7 +17,7 @@
  */
 
 /**
- * Phase 50 (2026-06-22) — events now attribute to either a listing or a
+ * events now attribute to either a listing or a
  * community (not both). Caller MUST set exactly one of `listing_id` /
  * `community_id`. The server route enforces the same shape; emitting
  * both gets the batch rejected.

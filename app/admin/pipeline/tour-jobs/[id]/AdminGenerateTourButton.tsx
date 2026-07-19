@@ -28,9 +28,12 @@ export function AdminGenerateTourButton({
   const enough = photoCount >= 3;
   const busy = status === 'queued' || status === 'running';
 
-  useEffect(() => () => {
-    if (pollRef.current) clearInterval(pollRef.current);
-  }, []);
+  useEffect(
+    () => () => {
+      if (pollRef.current) clearInterval(pollRef.current);
+    },
+    [],
+  );
 
   async function pollOnce(id: string) {
     try {

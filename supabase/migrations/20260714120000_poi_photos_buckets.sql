@@ -1,4 +1,4 @@
--- Phase 77.1 — vision tagging fields for POI photo allocator
+-- vision tagging fields for POI photo allocator
 --
 -- Adds `applicable_buckets text[]` as a top-level column so the allocator can
 -- filter photos by target buyer-question bucket with a GIN index (fast) rather
@@ -33,9 +33,9 @@ create index if not exists poi_photos_applicable_buckets_idx
 -- needed since we always filter by poi_id / applicable_buckets first, but
 -- annotate the intent.
 comment on column public.poi_photos.applicable_buckets is
-  'Buckets this photo works well in (walkable/daily_drive/lifestyle/commute/community). Populated by Phase 77 vision tagger. Empty = untagged, allocator will fall back to legacy behavior.';
+  'Buckets this photo works well in (walkable/daily_drive/lifestyle/commute/community). Populated by vision tagger. Empty = untagged, allocator will fall back to legacy behavior.';
 
--- Bump generated_videos.status to include 'superseded' — Phase 77.4 regenerate
+-- Bump generated_videos.status to include 'superseded' — regenerate
 -- marks the old row superseded so its input_photo_ids are released back to
 -- the allocator pool.
 --

@@ -56,13 +56,18 @@ export async function POST(req: Request) {
   const admin = await requireAdmin();
   if (!admin) return NextResponse.json({ error: 'forbidden' }, { status: 403 });
 
-  const body = (await req.json().catch(() => null)) as { vibe?: string; filenames?: string[] } | null;
+  const body = (await req.json().catch(() => null)) as {
+    vibe?: string;
+    filenames?: string[];
+  } | null;
   const vibe = body?.vibe ?? '';
   const filenames = Array.isArray(body?.filenames) ? body.filenames : [];
 
-  if (!isBgmVibe(vibe)) return NextResponse.json({ error: `invalid vibe: ${vibe}` }, { status: 400 });
+  if (!isBgmVibe(vibe))
+    return NextResponse.json({ error: `invalid vibe: ${vibe}` }, { status: 400 });
   if (filenames.length === 0) return NextResponse.json({ error: 'no filenames' }, { status: 400 });
-  if (filenames.length > 30) return NextResponse.json({ error: 'too many (max 30)' }, { status: 400 });
+  if (filenames.length > 30)
+    return NextResponse.json({ error: 'too many (max 30)' }, { status: 400 });
 
   const catalog = await fetchIncompetechCatalog();
   const byFilename = new Map(catalog.map((p) => [p.filename, p]));

@@ -1,7 +1,7 @@
 /**
  * CommunityListingsSheet — Scenario B · L2
  *
- * Phase 34b (V1 redo, 2026-06-17). Bottom sheet that opens when the buyer
+ * . Bottom sheet that opens when the buyer
  * taps the "🏠 N homes here" chip on a community video feed. Vertical
  * scrollable list of every published listing in the community. Tapping
  * a row opens L3 (CommunityListingCarousel) at that listing.

@@ -1,8 +1,8 @@
 /**
- * Anonymous buyer device identifier (Phase 21, 2026-06-13).
+ * Anonymous buyer device identifier.
  *
  * V1 has no buyer auth — saves are scoped to a per-browser UUID stored
- * in localStorage. When buyer login ships (Phase 22+), a successful
+ * in localStorage. When buyer login ships, a successful
  * login server-action will associate the existing device_id rows with
  * the new user_id, preserving saves across devices from then on.
  *

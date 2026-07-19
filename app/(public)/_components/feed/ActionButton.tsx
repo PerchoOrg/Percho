@@ -1,5 +1,5 @@
 /**
- * Phase 45.22.2 — Shared right-rail action button.
+ * .2 — Shared right-rail action button.
  *
  * Extracted verbatim from BrowseFeed.tsx (the canonical implementation).
  * The other two feeds (CommunityVideoFeed, CommunityCarousel) inline their
@@ -32,7 +32,7 @@ export function ActionButton({
   label: string;
   active?: boolean;
   /**
-   * Phase 28: optional accent for the active state. 'gold' (default) is
+   * optional accent for the active state. 'gold' (default) is
    * used by all info actions and Save; 'rose' is used by Like to match
    * Xiaohongshu / TikTok convention.
    */
@@ -40,7 +40,7 @@ export function ActionButton({
   disabled?: boolean;
   badge?: string | number;
   /**
-   * Phase 68.4: optional badge palette. 'cream' (default) matches the
+   * optional badge palette. 'cream' (default) matches the
    * original cream-on-ink treatment; 'red' renders as a notification
    * badge (Xiaohongshu/IG/WeChat convention) — used for the neighborhood
    * button's video-count so the number pops as "there's more here".
@@ -67,11 +67,7 @@ export function ActionButton({
     <div className="flex flex-col items-center gap-1">
       <span className="relative">
         <span className={cls}>{children}</span>
-        {badge ? (
-          <span className={badgeCls}>
-            {badge}
-          </span>
-        ) : null}
+        {badge ? <span className={badgeCls}>{badge}</span> : null}
       </span>
       <span className="font-medium text-[10px] text-cream/80">{label}</span>
     </div>

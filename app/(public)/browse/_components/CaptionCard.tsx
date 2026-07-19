@@ -3,8 +3,8 @@
 /**
  * CaptionCard — immersive text overlay + light bottom sheet.
  *
- * Phase 74.2 (2026-07-05): owner tuning after 74.1 landed.
- *   - Price 30 -> 26px, "有点晃眼睛"
+ * owner tuning after 74.1 landed.
+ *   - Price 30 -> 26px (owner: too glaring at 30px)
  *   - Merge address + city/state into ONE line: "7920 NE 26th St Medina, WA"
  *   - Line 4: first ~40 chars of description + "...more" toggle
  * (schema has no zip -> we omit the trailing 98039 from owner's example.)
@@ -28,9 +28,9 @@ type Listing = {
 type Agent = {
   slug: string;
   name: string;
-  /** Phase 94: FMLS office for external listings. */
+  /** FMLS office for external listings. */
   office?: string | null;
-  /** Phase 94: true when listing is externally sourced (no Percho agent). */
+  /** true when listing is externally sourced (no Percho agent). */
   isExternal?: boolean;
 };
 type School = { name: string; grades: string | null; rating: number | null };
@@ -87,7 +87,8 @@ export function CaptionCard({
     .filter(Boolean)
     .join(' · ');
 
-  const addressLine = `${listing.address}, ${listing.city}, ${listing.state}${listing.zip ? ` ${listing.zip}` : ''}`.trim();
+  const addressLine =
+    `${listing.address}, ${listing.city}, ${listing.state}${listing.zip ? ` ${listing.zip}` : ''}`.trim();
 
   const openSheet = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -109,12 +110,8 @@ export function CaptionCard({
         <div className="font-bold text-[26px] leading-none tracking-tight tabular-nums">
           {formatPriceFull(listing.price)}
         </div>
-        <div className="mt-1.5 text-[13px] leading-snug">
-          {specs}
-        </div>
-        <div className="mt-1 text-[13px] leading-snug">
-          {addressLine}
-        </div>
+        <div className="mt-1.5 text-[13px] leading-snug">{specs}</div>
+        <div className="mt-1 text-[13px] leading-snug">{addressLine}</div>
         {hasDescription && preview.length > 0 && (
           <div className="mt-1.5 text-[13px] text-cream/95 leading-snug">
             <span>{preview}</span>
@@ -164,10 +161,10 @@ export function CaptionCard({
             className="absolute right-0 bottom-0 left-0 z-50 flex max-h-[62%] flex-col rounded-t-3xl bg-[#FBF8F3] text-ink shadow-[0_-20px_60px_rgba(0,0,0,0.4)]"
             onClick={(e) => e.stopPropagation()}
           >
-          <div
-            className="mx-auto mt-2.5 h-[5px] w-10 flex-shrink-0 rounded-full bg-black/20"
-            aria-hidden
-          />
+            <div
+              className="mx-auto mt-2.5 h-[5px] w-10 flex-shrink-0 rounded-full bg-black/20"
+              aria-hidden
+            />
             <div className="flex flex-shrink-0 items-baseline justify-between gap-3 border-black/[.08] border-b px-5 pt-3 pb-3">
               <div className="font-bold text-[24px] leading-none tabular-nums">
                 {formatPriceFull(listing.price)}
@@ -182,12 +179,8 @@ export function CaptionCard({
               </button>
             </div>
             <div className="flex-1 overflow-auto px-5 pt-4 pb-8">
-              <div className="text-[15px] leading-snug">
-                {specs}
-              </div>
-              <div className="mt-2 text-[15px] leading-snug">
-                {addressLine}
-              </div>
+              <div className="text-[15px] leading-snug">{specs}</div>
+              <div className="mt-2 text-[15px] leading-snug">{addressLine}</div>
 
               {hasDescription && (
                 <section className="mt-5">
@@ -215,9 +208,7 @@ export function CaptionCard({
                       >
                         <span>🏫 {s.name}</span>
                         {s.rating != null && (
-                          <span className="font-semibold tabular-nums">
-                            {s.rating}/10
-                          </span>
+                          <span className="font-semibold tabular-nums">{s.rating}/10</span>
                         )}
                       </div>
                     ))}
@@ -228,9 +219,7 @@ export function CaptionCard({
                       >
                         <span>📍 {p.name}</span>
                         {p.distance_text && (
-                          <span className="font-medium text-black/60">
-                            {p.distance_text}
-                          </span>
+                          <span className="font-medium text-black/60">{p.distance_text}</span>
                         )}
                       </div>
                     ))}
@@ -245,7 +234,9 @@ export function CaptionCard({
                     <span className="font-medium text-black/80">{agent.name}</span>
                     {agent.office && (
                       <>
-                        <span aria-hidden className="text-black/30">·</span>
+                        <span aria-hidden className="text-black/30">
+                          ·
+                        </span>
                         <span className="text-black/60">{agent.office}</span>
                       </>
                     )}

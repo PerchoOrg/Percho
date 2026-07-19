@@ -5,13 +5,13 @@
 # local disk (fast, no per-render round-trip). This script closes the loop:
 # after an admin add/reject, run this on the render host.
 #
-# Phase 106 (2026-07-17):
-#   - `cinematic` vibe dropped from VIBES list (owner rated it too somber).
-#     Any lingering local files under scripts/render-worker/bgm/cinematic/
-#     are deleted at the top of this script.
-#   - Rejected tracks (listed in bgm/_state/state.json) are skipped when
-#     downloading AND removed from local disk. Approving one restores it on
-#     the next run.
+# Only `warm-acoustic` is production-approved (see docs/bgm/vibe-map.md).
+# Other vibe folders (modern-corporate, luxury-ambient, chill-electronic,
+# cinematic) are purged locally on every run.
+#
+# Rejected tracks (listed in bgm/_state/state.json) are skipped when
+# downloading AND removed from local disk. Approving one restores it on
+# the next run.
 #
 # Usage (from the repo root on the render host):
 #   ./scripts/render-worker/pull-bgm.sh
@@ -23,8 +23,8 @@ set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 BGM_DIR="$REPO_ROOT/scripts/render-worker/bgm"
-VIBES=(warm-acoustic modern-corporate luxury-ambient chill-electronic)
-RETIRED_VIBES=(cinematic)
+VIBES=(warm-acoustic)
+RETIRED_VIBES=(modern-corporate luxury-ambient chill-electronic cinematic)
 
 # shellcheck disable=SC1091
 source "$REPO_ROOT/.env.local"

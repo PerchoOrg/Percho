@@ -1,7 +1,7 @@
 /**
  * ListingGrid — buyer-facing 4-up listing grid (mirrors CommunityGrid).
  *
- * Phase 47 (2026-06-21): extracted from /browse and /dashboard so My
+ * extracted from /browse and /dashboard so My
  * Listings and For You share the exact same card. Caller hands in a
  * normalized `ListingGridItem[]` (id, href, cover, price, beds, baths,
  * sqft, address, optional badge, optional dimmed). Slot composition
@@ -24,7 +24,7 @@ export type ListingGridItem = {
   sqft: number | null;
   address: string | null;
   /**
-   * Phase 74.5 (2026-07-05): city / state / zip surfaced so the grid
+   * city / state / zip surfaced so the grid
    * caption's third line renders the full address in the same shape as
    * the swipe feed CaptionCard: `street, city, state zip`. Any of them
    * can be null (drafts, legacy rows) — the formatter drops missing
@@ -65,8 +65,8 @@ function specsLine(item: ListingGridItem): string {
 }
 
 /**
- * Phase 74.5/74.7: grid caption 3rd line — mirror the swipe feed
- * shape but WITHOUT zip (owner: "grid view 不显示 zipcode"). Format:
+ * /74.7: grid caption 3rd line — mirror the swipe feed
+ * shape but WITHOUT zip (owner: grid view should not show zipcode). Format:
  * `street, city, state`. Draft placeholders (no city/state) fall
  * through as street-only. Zip stays on the swipe feed + bottom sheet
  * because those have room; the 4-up grid does not.

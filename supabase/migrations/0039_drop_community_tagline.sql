@@ -1,4 +1,4 @@
--- Phase 50.7 (2026-06-22): drop tagline.
+-- drop tagline.
 --
 -- Owner: "Remove tagline it is redundant with highlights and descriptions."
 -- It was added in 50.4 as a "buyer-facing one-liner" but in practice it

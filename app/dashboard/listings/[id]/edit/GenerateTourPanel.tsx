@@ -3,13 +3,13 @@
 /**
  * GenerateTourPanel — kicks off an agent-generated home tour video.
  *
- * Phase 71 (2026-07-05): activated. Posts to `/api/listings/[id]/generate-tour`
+ * activated. Posts to `/api/listings/[id]/generate-tour`
  * which enqueues a render_jobs row picked up by the EC2 render worker
  * (scripts/render-worker/worker.py). The worker generates a Ken Burns MP4
  * from listing_photos, uploads to Cloudflare Stream, and updates the
  * placeholder listing_videos row this API creates.
  *
- * Phase 96 (2026-07-16): re-shaped as an inline button that lives next to the
+ * re-shaped as an inline button that lives next to the
  * "Videos (N)" header inside MediaPanel — no longer its own card section.
  * Status messages surface via a small popover below the button so the header
  * row stays compact.

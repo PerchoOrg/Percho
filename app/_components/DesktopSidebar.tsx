@@ -3,10 +3,10 @@
 /**
  * DesktopSidebar — md+ left vertical rail.
  *
- * Phase 45 (2026-06-20). Vertical sidebar pinned to the left edge. Primary
+ * . Vertical sidebar pinned to the left edge. Primary
  * tabs as a vertical column.
  *
- * Phase 45.9 (2026-06-20): PERCHO brandmark removed per owner. Agent
+ * PERCHO brandmark removed per owner. Agent
  * "+ New" promoted to the first slot (top-left). + New now opens the same
  * Choose-from-album / Video / Photo source picker the mobile UploadFAB
  * uses (shared via useUploadSheet hook).
@@ -20,14 +20,14 @@
 import { Plus } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useUploadSheet } from './UploadSheet';
 import {
+  type Tab,
+  type ViewerRole,
   getPrimaryTabs,
   isChromeHidden,
   isTabActive,
-  type Tab,
-  type ViewerRole,
 } from './nav-config';
-import { useUploadSheet } from './UploadSheet';
 
 export type DesktopSidebarProps = {
   role: ViewerRole;
@@ -49,7 +49,7 @@ export function DesktopSidebar({ role }: DesktopSidebarProps) {
         {role === 'agent' ? (
           <>
             <NewButton />
-            {/* Phase 45.12 (2026-06-20): hairline separator + extra gap below
+            {/* hairline separator + extra gap below
              * "+ New" — owner round 4 said the rail felt cramped at 4–5 items.
              * Visually separates the action ("New") from navigation. */}
             <div className="my-4 border-line border-t" aria-hidden="true" />

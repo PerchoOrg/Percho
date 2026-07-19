@@ -1,5 +1,5 @@
 /**
- * Phase 78 (2026-07-15): bucket-video narrative generator.
+ * bucket-video narrative generator.
  *
  * Turns a ready bucket video's already-tagged photos into a structured
  * narrative script that we can later feed to TTS. Photos already carry
@@ -14,15 +14,15 @@
  * tab. Never fired automatically to keep spend predictable.
  */
 
-import { createServiceClient } from "@/lib/supabase/server";
-import { extractJsonObject } from "@/lib/ai/anthropic";
-import type { IntentBucket } from "./types";
+import { extractJsonObject } from '@/lib/utils/extract-json';
+import { createServiceClient } from '@/lib/supabase/server';
+import type { IntentBucket } from './types';
 
-const NARRATIVE_MODEL = process.env.ANTHROPIC_MODEL ?? "claude-sonnet-4-5";
-const API_BASE = "https://api.anthropic.com/v1/messages";
+const NARRATIVE_MODEL = process.env.ANTHROPIC_MODEL ?? 'claude-sonnet-4-5';
+const API_BASE = 'https://api.anthropic.com/v1/messages';
 
 /**
- * Per-clip caption fields (Phase 89.2). Populated by the LLM alongside the
+ * Per-clip caption fields. Populated by the LLM alongside the
  * voiceover beat and consumed by the caption overlay pipeline in
  * `scripts/caption-render/overlay.html`. All fields are optional — the
  * worker falls back to POI name / bucket label when a field is missing,
@@ -59,19 +59,19 @@ export type VideoNarrative = {
 
 const BUCKET_HOOKS: Record<IntentBucket, string> = {
   schools: "the schools a buyer's kids would attend and what the campus feels like",
-  dining: "the dining scene a buyer would enjoy — restaurants, cafes, bakeries",
-  nightlife: "the nightlife and entertainment a buyer would spend evenings on",
-  shopping: "the shopping a buyer has within reach — malls, department stores, boutiques",
-  outdoor: "the outdoor life around this home — parks, trails, greenspace",
-  fitness: "the fitness and wellness options a buyer would build a routine around",
-  kids: "the kids-and-family activities a buyer with children would use every week",
-  asian_community: "the Asian community amenities — supermarkets, restaurants, cultural anchors",
-  daily_errands: "the daily-errand runs a buyer will do every week — grocery, pharmacy",
-  faith: "the faith communities near this home",
-  work_hubs: "the work hubs and coworking near this home for hybrid or remote workers",
-  healthcare: "the healthcare access from this home — hospitals, urgent care, clinics",
-  pets: "the pet-friendly amenities near this home — vets, pet stores, dog-friendly spots",
-  transit: "the transit and commute story from this home — stations, highways, airport",
+  dining: 'the dining scene a buyer would enjoy — restaurants, cafes, bakeries',
+  nightlife: 'the nightlife and entertainment a buyer would spend evenings on',
+  shopping: 'the shopping a buyer has within reach — malls, department stores, boutiques',
+  outdoor: 'the outdoor life around this home — parks, trails, greenspace',
+  fitness: 'the fitness and wellness options a buyer would build a routine around',
+  kids: 'the kids-and-family activities a buyer with children would use every week',
+  asian_community: 'the Asian community amenities — supermarkets, restaurants, cultural anchors',
+  daily_errands: 'the daily-errand runs a buyer will do every week — grocery, pharmacy',
+  faith: 'the faith communities near this home',
+  work_hubs: 'the work hubs and coworking near this home for hybrid or remote workers',
+  healthcare: 'the healthcare access from this home — hospitals, urgent care, clinics',
+  pets: 'the pet-friendly amenities near this home — vets, pet stores, dog-friendly spots',
+  transit: 'the transit and commute story from this home — stations, highways, airport',
 };
 
 /**
@@ -79,21 +79,24 @@ const BUCKET_HOOKS: Record<IntentBucket, string> = {
  * scripts/render-worker/worker.py; keep in sync). Drives which
  * caption_fields the LLM emits.
  */
-const CAPTION_ARCHETYPE: Record<IntentBucket, "TRUST" | "LIFESTYLE" | "UTILITY" | "NARRATIVE" | "MAGAZINE" | "MAP"> = {
-  schools: "TRUST",
-  healthcare: "TRUST",
-  dining: "LIFESTYLE",
-  fitness: "LIFESTYLE",
-  shopping: "UTILITY",
-  daily_errands: "UTILITY",
-  pets: "UTILITY",
-  nightlife: "NARRATIVE",
-  outdoor: "MAP",
-  transit: "MAP",
-  work_hubs: "MAP",
-  kids: "MAGAZINE",
-  asian_community: "MAGAZINE",
-  faith: "MAGAZINE",
+const CAPTION_ARCHETYPE: Record<
+  IntentBucket,
+  'TRUST' | 'LIFESTYLE' | 'UTILITY' | 'NARRATIVE' | 'MAGAZINE' | 'MAP'
+> = {
+  schools: 'TRUST',
+  healthcare: 'TRUST',
+  dining: 'LIFESTYLE',
+  fitness: 'LIFESTYLE',
+  shopping: 'UTILITY',
+  daily_errands: 'UTILITY',
+  pets: 'UTILITY',
+  nightlife: 'NARRATIVE',
+  outdoor: 'MAP',
+  transit: 'MAP',
+  work_hubs: 'MAP',
+  kids: 'MAGAZINE',
+  asian_community: 'MAGAZINE',
+  faith: 'MAGAZINE',
 };
 
 /**
@@ -102,15 +105,13 @@ const CAPTION_ARCHETYPE: Record<IntentBucket, "TRUST" | "LIFESTYLE" | "UTILITY" 
  * cheap. TRUST/UTILITY/MAP get no LLM fields — TRUST uses Apify data,
  * UTILITY/MAP are data-driven (drive time, mode).
  */
-function captionFieldsSpec(
-  archetype: ReturnType<typeof captionArchetype>,
-): string | null {
+function captionFieldsSpec(archetype: ReturnType<typeof captionArchetype>): string | null {
   switch (archetype) {
-    case "LIFESTYLE":
+    case 'LIFESTYLE':
       return `"caption_fields": { "why": "≤12 words, emotional single line evoking why this POI matters to daily life. No stats, no addresses. Example: \\"Where morning walks turn into weekend rituals.\\"" }`;
-    case "NARRATIVE":
+    case 'NARRATIVE':
       return `"caption_fields": { "quote": "≤8 words, punchy pull-quote in the voice of a resident or a wistful narrator. No POI name inside the quote. Example: \\"The city hums after midnight.\\"" }`;
-    case "MAGAZINE":
+    case 'MAGAZINE':
       return `"caption_fields": { "title": "≤6 words, editorial headline. Example: \\"Where Sunday shopping means home.\\"", "chapter": "2-3 word chapter label. Example: \\"The Bazaar\\" or \\"Family Rites\\"" }`;
     default:
       return null;
@@ -126,10 +127,8 @@ function buildPrompt(
   scenes: Array<{ poi_name: string; description: string }>,
 ): string {
   const scenesText = scenes
-    .map(
-      (s, i) => `${i + 1}. ${s.poi_name} — ${s.description || "(no description)"}`,
-    )
-    .join("\n");
+    .map((s, i) => `${i + 1}. ${s.poi_name} — ${s.description || '(no description)'}`)
+    .join('\n');
 
   const archetype = captionArchetype(bucket);
   const fieldsSpec = captionFieldsSpec(archetype);
@@ -139,7 +138,7 @@ function buildPrompt(
 
   const fieldsRule = fieldsSpec
     ? `\n- caption_fields is REQUIRED for every scene. Follow the word caps strictly. If the description gives nothing to work with, write a generic-but-honest line — never invent ratings, awards, or reviews.`
-    : "";
+    : '';
 
   return `You are writing a short voiceover script for a real-estate video slideshow.
 
@@ -176,21 +175,20 @@ Return ONLY the JSON. No prose, no fences.`;
 export async function generateBucketVideoNarrative(
   videoId: string,
 ): Promise<
-  | { ok: true; narrative: VideoNarrative }
-  | { ok: false; error: string; message: string }
+  { ok: true; narrative: VideoNarrative } | { ok: false; error: string; message: string }
 > {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
-    return { ok: false, error: "missing_key", message: "ANTHROPIC_API_KEY not set" };
+    return { ok: false, error: 'missing_key', message: 'ANTHROPIC_API_KEY not set' };
   }
 
   const admin = createServiceClient();
 
   // biome-ignore lint/suspicious/noExplicitAny: stub generated types
   const { data: video, error: vErr } = (await (admin as any)
-    .from("generated_videos")
-    .select("id, listing_id, intent_bucket, input_photo_ids, status, scope")
-    .eq("id", videoId)
+    .from('generated_videos')
+    .select('id, listing_id, intent_bucket, input_photo_ids, status, scope')
+    .eq('id', videoId)
     .maybeSingle()) as {
     data: {
       id: string;
@@ -204,33 +202,33 @@ export async function generateBucketVideoNarrative(
   };
 
   if (vErr || !video) {
-    return { ok: false, error: "not_found", message: vErr?.message ?? "Video not found" };
+    return { ok: false, error: 'not_found', message: vErr?.message ?? 'Video not found' };
   }
   if (
-    (video.scope !== "intent_bucket" && video.scope !== "community_intent_bucket") ||
+    (video.scope !== 'intent_bucket' && video.scope !== 'community_intent_bucket') ||
     !video.intent_bucket
   ) {
     return {
       ok: false,
-      error: "wrong_scope",
-      message: "Only intent-bucket videos support narrative generation.",
+      error: 'wrong_scope',
+      message: 'Only intent-bucket videos support narrative generation.',
     };
   }
   const photoIds = video.input_photo_ids ?? [];
   if (photoIds.length === 0) {
     return {
       ok: false,
-      error: "no_photos",
-      message: "This video has no input photos.",
+      error: 'no_photos',
+      message: 'This video has no input photos.',
     };
   }
 
   // Fetch photos + ai_tags + their POI names.
   // biome-ignore lint/suspicious/noExplicitAny: stub generated types
   const { data: photos, error: pErr } = (await (admin as any)
-    .from("poi_photos")
-    .select("id, poi_id, ai_tags, pois!inner(display_name)")
-    .in("id", photoIds)) as {
+    .from('poi_photos')
+    .select('id, poi_id, ai_tags, pois!inner(display_name)')
+    .in('id', photoIds)) as {
     data: Array<{
       id: string;
       poi_id: string;
@@ -241,7 +239,7 @@ export async function generateBucketVideoNarrative(
   };
 
   if (pErr || !photos) {
-    return { ok: false, error: "photo_query_failed", message: pErr?.message ?? "" };
+    return { ok: false, error: 'photo_query_failed', message: pErr?.message ?? '' };
   }
 
   // Preserve the input_photo_ids order (that's the video's actual scene order).
@@ -252,11 +250,11 @@ export async function generateBucketVideoNarrative(
     .map((p) => ({
       poi_id: p.poi_id,
       poi_name: p.pois.display_name,
-      description: p.ai_tags?.description ?? "",
+      description: p.ai_tags?.description ?? '',
     }));
 
   if (scenes.length === 0) {
-    return { ok: false, error: "no_scenes", message: "Photos have no descriptions yet." };
+    return { ok: false, error: 'no_scenes', message: 'Photos have no descriptions yet.' };
   }
 
   const prompt = buildPrompt(video.intent_bucket, scenes);
@@ -264,31 +262,31 @@ export async function generateBucketVideoNarrative(
   let raw: string;
   try {
     const res = await fetch(API_BASE, {
-      method: "POST",
+      method: 'POST',
       headers: {
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
-        "content-type": "application/json",
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'content-type': 'application/json',
       },
       body: JSON.stringify({
         model: NARRATIVE_MODEL,
         max_tokens: 1024,
-        messages: [{ role: "user", content: prompt }],
+        messages: [{ role: 'user', content: prompt }],
       }),
     });
     if (!res.ok) {
       const body = await res.text();
-      console.error("[narrative] anthropic error:", res.status, body.slice(0, 200));
-      return { ok: false, error: "anthropic_error", message: `HTTP ${res.status}` };
+      console.error('[narrative] anthropic error:', res.status, body.slice(0, 200));
+      return { ok: false, error: 'anthropic_error', message: `HTTP ${res.status}` };
     }
     const data = (await res.json()) as { content?: Array<{ type: string; text: string }> };
-    raw = data.content?.find((c) => c.type === "text")?.text ?? "";
+    raw = data.content?.find((c) => c.type === 'text')?.text ?? '';
     if (!raw) {
-      return { ok: false, error: "empty_response", message: "Anthropic returned no text." };
+      return { ok: false, error: 'empty_response', message: 'Anthropic returned no text.' };
     }
   } catch (err) {
-    console.error("[narrative] anthropic call failed:", err);
-    return { ok: false, error: "network", message: (err as Error).message };
+    console.error('[narrative] anthropic call failed:', err);
+    return { ok: false, error: 'network', message: (err as Error).message };
   }
 
   const jsonStr = extractJsonObject(raw) ?? raw.trim();
@@ -310,8 +308,8 @@ export async function generateBucketVideoNarrative(
   try {
     parsed = JSON.parse(jsonStr);
   } catch {
-    console.error("[narrative] JSON parse failed:", raw.slice(0, 300));
-    return { ok: false, error: "parse_failed", message: "Model returned invalid JSON." };
+    console.error('[narrative] JSON parse failed:', raw.slice(0, 300));
+    return { ok: false, error: 'parse_failed', message: 'Model returned invalid JSON.' };
   }
 
   const archetype = captionArchetype(video.intent_bucket);
@@ -320,27 +318,27 @@ export async function generateBucketVideoNarrative(
   // words drop, not the whole line. Returns undefined when input is not a
   // non-empty string.
   const capWords = (val: unknown, maxWords: number): string | undefined => {
-    if (typeof val !== "string") return undefined;
-    const trimmed = val.trim().replace(/^["“”]|["“”]$/g, "");
+    if (typeof val !== 'string') return undefined;
+    const trimmed = val.trim().replace(/^["“”]|["“”]$/g, '');
     if (!trimmed) return undefined;
     const words = trimmed.split(/\s+/);
-    return words.slice(0, maxWords).join(" ");
+    return words.slice(0, maxWords).join(' ');
   };
 
   const extractCaptionFields = (
-    raw: NonNullable<typeof parsed.scenes>[number]["caption_fields"],
+    raw: NonNullable<typeof parsed.scenes>[number]['caption_fields'],
   ): CaptionFields | undefined => {
     if (!raw) return undefined;
     switch (archetype) {
-      case "LIFESTYLE": {
+      case 'LIFESTYLE': {
         const why = capWords(raw.why, 12);
         return why ? { why } : undefined;
       }
-      case "NARRATIVE": {
+      case 'NARRATIVE': {
         const quote = capWords(raw.quote, 8);
         return quote ? { quote } : undefined;
       }
-      case "MAGAZINE": {
+      case 'MAGAZINE': {
         const title = capWords(raw.title, 6);
         const chapter = capWords(raw.chapter, 3);
         if (!title && !chapter) return undefined;
@@ -355,23 +353,22 @@ export async function generateBucketVideoNarrative(
   const returnedScenes = Array.isArray(parsed.scenes) ? parsed.scenes : [];
   const stitchedScenes = scenes.map((s, i) => {
     const match =
-      returnedScenes.find((r) => (r.poi_name ?? "").trim() === s.poi_name) ??
-      returnedScenes[i];
+      returnedScenes.find((r) => (r.poi_name ?? '').trim() === s.poi_name) ?? returnedScenes[i];
     const captionFields = extractCaptionFields(match?.caption_fields);
     return {
       poi_id: s.poi_id,
       poi_name: s.poi_name,
-      beat: typeof match?.beat === "string" ? match.beat.slice(0, 240) : "",
+      beat: typeof match?.beat === 'string' ? match.beat.slice(0, 240) : '',
       ...(captionFields && { caption_fields: captionFields }),
     };
   });
 
   const narrative: VideoNarrative = {
     bucket: video.intent_bucket,
-    intro: typeof parsed.intro === "string" ? parsed.intro.slice(0, 200) : "",
+    intro: typeof parsed.intro === 'string' ? parsed.intro.slice(0, 200) : '',
     scenes: stitchedScenes,
-    closing: typeof parsed.closing === "string" ? parsed.closing.slice(0, 200) : "",
-    voiceover: typeof parsed.voiceover === "string" ? parsed.voiceover.slice(0, 800) : "",
+    closing: typeof parsed.closing === 'string' ? parsed.closing.slice(0, 200) : '',
+    voiceover: typeof parsed.voiceover === 'string' ? parsed.voiceover.slice(0, 800) : '',
     generated_at: new Date().toISOString(),
     model: NARRATIVE_MODEL,
     photo_count: scenes.length,
@@ -379,13 +376,13 @@ export async function generateBucketVideoNarrative(
 
   // biome-ignore lint/suspicious/noExplicitAny: stub generated types
   const { error: updErr } = await (admin as any)
-    .from("generated_videos")
+    .from('generated_videos')
     .update({ narrative })
-    .eq("id", videoId);
+    .eq('id', videoId);
 
   if (updErr) {
-    console.error("[narrative] update failed:", updErr);
-    return { ok: false, error: "update_failed", message: updErr.message };
+    console.error('[narrative] update failed:', updErr);
+    return { ok: false, error: 'update_failed', message: updErr.message };
   }
 
   return { ok: true, narrative };

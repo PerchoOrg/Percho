@@ -23,8 +23,11 @@ export async function readBgmState(): Promise<BgmState> {
     const parsed = JSON.parse(await data.text()) as Partial<BgmState>;
     return {
       schema_version: 1,
-      rejected: Array.isArray(parsed.rejected) ? parsed.rejected.filter((s) => typeof s === 'string') : [],
-      updated_at: typeof parsed.updated_at === 'string' ? parsed.updated_at : new Date().toISOString(),
+      rejected: Array.isArray(parsed.rejected)
+        ? parsed.rejected.filter((s) => typeof s === 'string')
+        : [],
+      updated_at:
+        typeof parsed.updated_at === 'string' ? parsed.updated_at : new Date().toISOString(),
     };
   } catch {
     return emptyBgmState();
@@ -33,11 +36,7 @@ export async function readBgmState(): Promise<BgmState> {
 
 export async function writeBgmState(state: BgmState): Promise<void> {
   const svc = createServiceClient();
-  const body = JSON.stringify(
-    { ...state, updated_at: new Date().toISOString() },
-    null,
-    2,
-  );
+  const body = JSON.stringify({ ...state, updated_at: new Date().toISOString() }, null, 2);
   const { error } = await svc.storage
     .from(BGM_BUCKET)
     .upload(BGM_STATE_PATH, new Blob([body], { type: 'application/json' }), {

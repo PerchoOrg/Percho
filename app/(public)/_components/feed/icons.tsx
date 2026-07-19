@@ -1,5 +1,5 @@
 /**
- * Phase 45.22.1 — Shared icon set for the three video feeds.
+ * .1 — Shared icon set for the three video feeds.
  *
  * These were duplicated across BrowseFeed.tsx and CommunityVideoFeed.tsx
  * (byte-identical). CommunityCarousel.tsx had its own variants with different

@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * Phase 14 (2026-06-13): Nearby radius preference.
+ * Nearby radius preference.
  *
  * Buyers are anonymous in V1 — there's no `user_preferences` table to
  * persist this server-side. We store a single integer in `localStorage`
@@ -66,8 +66,8 @@ export function NearbyRadiusPref() {
         <span>{MAX_RADIUS} mi</span>
       </div>
       <p className="mt-2 text-muted text-xs">
-        Used by <span className="text-ink2">Nearby</span> to decide which listings to show
-        around your location.
+        Used by <span className="text-ink2">Nearby</span> to decide which listings to show around
+        your location.
         {saved && <span className="ml-2 text-ink">Saved.</span>}
       </p>
     </div>

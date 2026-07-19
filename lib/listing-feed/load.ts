@@ -5,7 +5,7 @@
  *   - `/v/[agentSlug]/[listingSlug]` (public, published-only)
  *   - `/dashboard/listings/[id]/preview` (owner-only, any status)
  *
- * Extracted from the public listing page on 2026-06-17 (Phase 27.10) so
+ * Extracted from the public listing page on 2026-06-17 so
  * draft / archived previews can reuse the exact BrowseFeed render path.
  *
  * Two entry points:
@@ -31,7 +31,7 @@ type Agent = {
   name: string;
   email: string | null;
   phone: string | null;
-  // Phase 94 (2026-07-17): set only for synthesised external (FMLS) agents.
+  // set only for synthesised external (FMLS) agents.
   office?: string | null;
   isExternal?: boolean;
 };
@@ -52,7 +52,7 @@ export type ListingForFeed = {
   cover_url: string | null;
   description: string[] | null;
   status: string;
-  // Phase 94: external attribution + provenance.
+  // external attribution + provenance.
   external_agent_name?: string | null;
   external_agent_phone?: string | null;
   external_office?: string | null;
@@ -119,10 +119,11 @@ async function fetchAroundListing(
   let schools: School[] = [];
   let pois: Poi[] = [];
 
-  // Phase 102 (2026-07-17): nearby videos are anchored to the listing, not
-  // the community. Owner rule: "只看 listing 本身附近的 poi. 只要有 nearby
-  // 视频就应该显示. 如果恰好这个 nearby video 在某个 neighbor 里 可以一并
-  // 显示." So we always pull listing-scoped bucket videos, and additionally
+  // nearby videos are anchored to the listing, not
+  // the community. Owner rule: only look at POIs near the listing
+  // itself. Any nearby video should surface. If that nearby video
+  // happens to live inside a neighbor, it can be shown alongside. So
+  // we always pull listing-scoped bucket videos, and additionally
   // union the covering community's videos (manual uploads + community-scoped
   // bucket generation) when the listing has one.
   const { data: listingBucketRows } = (await supabase
@@ -160,7 +161,7 @@ async function fetchAroundListing(
       .eq('community_id', listing.community_id)
       .eq('status', 'ready')
       .eq('visibility', 'public')
-      // Phase 92: skip history renders (is_primary=false).
+      // skip history renders (is_primary=false).
       .eq('is_primary', true)) as { data: CommunityVideo[] | null };
     for (const v of cv.data ?? []) {
       if (seenCfIds.has(v.cf_video_id)) continue;
@@ -220,7 +221,7 @@ async function fetchAroundListing(
 }
 
 /**
- * Phase 94 (2026-07-17): external listing loader — `/v/{source}/{sourceId}`.
+ * external listing loader — `/v/{source}/{sourceId}`.
  * Looks up an FMLS (or other externally-sourced) listing by its provenance
  * key.  Synthesises an in-memory `Agent` from `external_agent_name/phone/office`
  * so the downstream `buildListingCards` path can render identically to
@@ -311,7 +312,7 @@ export async function loadListingFeedById(listingId: string): Promise<ListingFee
     .maybeSingle()) as { data: ListingForFeed | null };
   if (!listing) return null;
 
-  // Phase 94 (2026-07-17): dashboard preview is Percho-agent only. External
+  // dashboard preview is Percho-agent only. External
   // listings (FMLS) have agent_id IS NULL and aren't editable via dashboard,
   // so bail if we land here.
   if (!listing.agent_id) return null;
@@ -342,7 +343,7 @@ export async function buildListingCards(
 ): Promise<BrowseCard[]> {
   const { agent, listing, listingVideos, communityVideos, schools, pois } = bundle;
 
-  // Phase 102 (2026-07-17): categoryVideos are built the same way whether the
+  // categoryVideos are built the same way whether the
   // listing hero is a video or a photo. Nearby (listing- + community-scoped)
   // videos must render on photo-only listings too — hoisted out of the video
   // branch so the photo fallback stops hard-coding `[]`.

@@ -1,8 +1,7 @@
 -- ─── 0035_events_community ──────────────────────────────────────────
--- Phase 50 (2026-06-22). Extend `events` to record community-targeted
+-- Extend `events` to record community-targeted
 -- analytics events alongside the listing-targeted ones we've had since
--- Phase 1.
---
+-- --
 -- Why: the agent-hub Community detail page now has an Analytics tab
 -- mirroring the listing edit hub. To populate it we need page_view /
 -- card_view / video_complete rows attributable to a community (rather
@@ -35,7 +34,7 @@ alter table public.events
 create index if not exists events_community_idx
   on public.events (community_id, created_at desc);
 
--- Owner-read RLS extension. The Phase 1 policy reads listing-events;
+-- Owner-read RLS extension. The policy reads listing-events;
 -- this one adds the community-events path. Both stay co-resident so a
 -- single agent SELECT scans both worlds.
 drop policy if exists "agent reads own community events" on public.events;

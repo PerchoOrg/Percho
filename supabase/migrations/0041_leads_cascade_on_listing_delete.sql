@@ -1,4 +1,4 @@
--- Phase 56 (2026-06-26): backfill ON DELETE CASCADE on leads.listing_id.
+-- backfill ON DELETE CASCADE on leads.listing_id.
 --
 -- Bug: deleting a listing that had ever received a lead raised a FK
 -- violation (server-side exception, digest 881108286) because the

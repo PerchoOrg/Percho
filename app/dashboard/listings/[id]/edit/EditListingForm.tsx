@@ -1,16 +1,16 @@
 'use client';
 
 /**
- * EditListingForm — Phase 4.3a metadata editor.
+ * EditListingForm — metadata editor.
  *
- * Phase 8/listing-form-autosave (2026-06-11): switched from explicit
+ * /listing-form-autosave (2026-06-11): switched from explicit
  * "Save changes" button to debounced auto-save. Every edit kicks a 600ms
  * debounce; on tick we POST the whole payload via `updateListing`. The
  * form also registers a `flushPending` hook the PublishPanel calls before
  * publishing, so an agent who edits and immediately clicks Publish doesn't
  * race the debounce.
  *
- * Phase 51/save-button-parity (2026-06-24): added an explicit "Save" button
+ * /save-button-parity (2026-06-24): added an explicit "Save" button
  * at the bottom of the form (matching the community editor layout) so agents
  * have an instant-confirm escape hatch. Auto-save still runs on every edit
  * but is now SILENT — it never touches `saveState`, so the button label and
@@ -18,7 +18,7 @@
  * 2026-06-24: "auto save doesn't need to click the save button effect and
  * show the saved hint, only users click the save button, then do that".
  *
- * Phase 52 follow-up (2026-06-24): the Save button is always enabled (owner
+ * follow-up (2026-06-24): the Save button is always enabled (owner
  * ask: "let save button always be available"). Disabling it whenever the
  * form was clean made the button feel broken in the common case where
  * auto-save had already flushed. We only block clicks while a save is in
@@ -47,13 +47,6 @@ interface InitialValues {
   community_id: string | null;
 }
 
-export interface ListingContext {
-  address: string;
-  city: string;
-  state: string;
-  neighborhood: string | null;
-}
-
 export interface CommunityOption {
   id: string;
   name: string;
@@ -65,11 +58,9 @@ interface Props {
   listingId: string;
   initial: InitialValues;
   communities: CommunityOption[];
-  listingContext: ListingContext;
 }
 
 type SaveState = 'idle' | 'pending' | 'saving' | 'saved' | 'error';
-type GenState = 'idle' | 'loading' | 'error';
 
 const STYLE_OPTIONS = [
   'Craftsman',
@@ -128,7 +119,7 @@ function buildYearOptions(): string[] {
   return out;
 }
 
-export function EditListingForm({ listingId, initial, communities, listingContext }: Props) {
+export function EditListingForm({ listingId, initial, communities }: Props) {
   const [price, setPrice] = useState(initial.price?.toString() ?? '');
 
   const initialBeds = initial.beds?.toString() ?? '';
@@ -179,8 +170,6 @@ export function EditListingForm({ listingId, initial, communities, listingContex
   const [saveState, setSaveState] = useState<SaveState>('idle');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const [genState, setGenState] = useState<GenState>('idle');
-  const [genError, setGenError] = useState<string | null>(null);
 
   function parseIntOrNull(s: string): number | null {
     if (s.trim() === '') return null;
@@ -350,46 +339,6 @@ export function EditListingForm({ listingId, initial, communities, listingContex
     return () => window.removeEventListener('beforeunload', onBeforeUnload);
   }, [saveState]);
 
-  async function onGenerate() {
-    setGenState('loading');
-    setGenError(null);
-    try {
-      const payload: Record<string, unknown> = {
-        address: listingContext.address,
-        city: listingContext.city,
-        state: listingContext.state,
-      };
-      if (listingContext.neighborhood) payload.neighborhood = listingContext.neighborhood;
-      const priceN = parseIntOrNull(price);
-      if (priceN !== null) payload.price = priceN;
-      const bedsN = parseFloatOrNull(beds);
-      if (bedsN !== null) payload.beds = bedsN;
-      const bathsN = parseFloatOrNull(baths);
-      if (bathsN !== null) payload.baths = bathsN;
-      const sqftN = parseIntOrNull(sqft);
-      if (sqftN !== null) payload.sqft = sqftN;
-      const styleT = style.trim();
-      if (styleT) payload.style = styleT;
-
-      const res = await fetch('/api/generate-copy', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      if (!res.ok) {
-        const body = (await res.json().catch(() => ({}))) as { error?: string };
-        if (res.status === 429) throw new Error('Rate limit hit — try again in a minute.');
-        throw new Error(body.error ?? `HTTP ${res.status}`);
-      }
-      const data = (await res.json()) as { paragraphs: string[] };
-      setDescription(data.paragraphs.join('\n\n'));
-      setGenState('idle');
-    } catch (err) {
-      setGenState('error');
-      setGenError(err instanceof Error ? err.message : 'unknown');
-    }
-  }
-
   return (
     <div className="space-y-6">
       <fieldset className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -469,10 +418,7 @@ export function EditListingForm({ listingId, initial, communities, listingContex
           )}
         </Field>
 
-        <Field
-          label="Bathrooms"
-          required
-        >
+        <Field label="Bathrooms" required>
           {bathsMode === 'list' ? (
             <select
               value={baths}
@@ -658,10 +604,7 @@ export function EditListingForm({ listingId, initial, communities, listingContex
         </Field>
       </fieldset>
 
-      <Field
-        label="Neighborhood"
-        optional
-      >
+      <Field label="Neighborhood" optional>
         <select
           value={communityId}
           onChange={(e) => setCommunityId(e.target.value)}
@@ -677,24 +620,7 @@ export function EditListingForm({ listingId, initial, communities, listingContex
         </select>
       </Field>
 
-      <Field
-        label="Description"
-        optional
-      >
-        <div className="mb-2 flex items-center gap-3">
-          <button
-            type="button"
-            onClick={onGenerate}
-            disabled={genState === 'loading'}
-            className="rounded border border-line px-3 py-1 text-xs text-ink hover:bg-ink2/20 disabled:opacity-50"
-          >
-            {genState === 'loading' ? 'Generating…' : '✨ Generate description'}
-          </button>
-          {genState === 'error' && (
-            <span className="text-xs text-red-400">Error: {genError ?? 'unknown'}</span>
-          )}
-          <span className="text-xs text-muted">Overwrites current text.</span>
-        </div>
+      <Field label="Description" optional>
         <textarea
           value={description}
           onChange={(e) => setDescription(e.target.value)}

@@ -1,13 +1,13 @@
--- Phase 95 — Persist per-listing-photo AI vision tags.
+-- Persist per-listing-photo AI vision tags.
 --
 -- The render worker's photo_tagger already runs Claude Sonnet 4.5 on every
--- listing photo before the Phase 93 shot planner picks clips, but the result
+-- listing photo before the shot planner picks clips, but the result
 -- was previously thrown away after the render (only written to a temp
 -- shot_plan.json in the job workdir). Every subsequent render re-billed the
 -- same photos.
 --
 -- This migration mirrors what poi_photos already does (see
--- 20260714000000_poi_content_pipeline.sql lines 122-126 + Phase 77 tagger):
+-- 20260714000000_poi_content_pipeline.sql lines 122-126 + tagger):
 -- one jsonb column for the structured labels, plus quality score, model
 -- name, and a tagged_at sentinel for idempotency.
 --

@@ -2,7 +2,7 @@
 
 /**
  * DangerZone — full-width destructive action block at the bottom of the
- * listing edit page (Phase 47.12). Replaces the hero ⋯/Delete affordance.
+ * listing edit page. Replaces the hero ⋯/Delete affordance.
  *
  * Convention: dangerous, irreversible actions live below the fold of the
  * normal form work. The user has to scroll past everything to reach it,
@@ -42,8 +42,8 @@ export function DangerZone({ listingId }: { listingId: string }) {
       <div className="rounded-2xl border border-rose-400 bg-rose-50 p-5 sm:p-6">
         <h2 className="font-semibold text-ink text-sm">Danger zone</h2>
         <p className="mt-1 text-ink2 text-xs">
-          Permanently delete this listing. Videos, photos, leads and analytics
-          will be removed. This cannot be undone.
+          Permanently delete this listing. Videos, photos, leads and analytics will be removed. This
+          cannot be undone.
         </p>
         <button
           type="button"

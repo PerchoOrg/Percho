@@ -1,4 +1,4 @@
--- Phase 50.5 (2026-06-22): community metadata typing pass.
+-- community metadata typing pass.
 --
 -- The 0036 migration introduced free-text fields (`year_built_text`,
 -- `hoa_fee_text`, `price_range_text`) for input flexibility. Owner feedback

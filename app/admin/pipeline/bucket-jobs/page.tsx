@@ -2,7 +2,7 @@
  * /admin/pipeline/bucket-jobs — cross-scope queue view for
  * generated_videos (nearby bucket renders).
  *
- * Phase 108 (2026-07-17): moved rendering into <BucketJobsTable>
+ * moved rendering into <BucketJobsTable>
  * (shared AdminTable). Status filter chips removed — Status column
  * is sortable, and search covers status text too.
  */

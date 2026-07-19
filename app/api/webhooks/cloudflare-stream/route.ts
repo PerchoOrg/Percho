@@ -99,11 +99,15 @@ export async function POST(req: Request) {
   // Update both tables; only one will have a matching row (cf_video_id is
   // unique within each table). If neither matches, log and 200 — Cloudflare
   // retries on non-2xx, and we don't want infinite retries on a stale row.
-  // biome-ignore lint/suspicious/noExplicitAny: database.types.ts is a Phase 0 stub; regen at phase-end via `pnpm db:types`.
+  // biome-ignore lint/suspicious/noExplicitAny: database.types.ts is a stub; regen at phase-end via `pnpm db:types`.
   const sb = supabase as any;
   const [listingRes, communityRes] = await Promise.all([
     sb.from('listing_videos').update(update).eq('cf_video_id', videoId).select('id, listing_id'),
-    sb.from('community_videos').update(update).eq('cf_video_id', videoId).select('id, community_id'),
+    sb
+      .from('community_videos')
+      .update(update)
+      .eq('cf_video_id', videoId)
+      .select('id, community_id'),
   ]);
 
   // phase45.15 (2026-06-20): owner round 6 #7 — auto-pick the first

@@ -1,5 +1,5 @@
 -- ─── 0033_saved_social_drafts_title_and_cache ─────────────────────
--- Phase 48.5 (2026-06-22). Two adjacent product needs:
+-- Two adjacent product needs:
 --
 -- 1. Rename. Saved drafts get plenty of accumulation, and "Facebook ·
 --    English · 6/22 7:42 PM" doesn't scale. Add an optional `title`

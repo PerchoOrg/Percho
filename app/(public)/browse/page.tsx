@@ -16,16 +16,16 @@ export const dynamic = 'force-dynamic';
 /**
  * Browse — grid landing.
  *
- * Phase 9 (2026-06-12) pivot: Pinterest-style grid first; tapping a card
+ * pivot: Pinterest-style grid first; tapping a card
  * launches the swipe feed starting at that listing.
  *
- * Phase 27.5 (2026-06-16): also accepts `?community=<slug>` to scope the
+ * also accepts `?community=<slug>` to scope the
  * grid to a single community.
  *
- * Phase 43.7 (2026-06-20): dropped the Recommended / Nearby sub-tabs.
- * Phase 45 (2026-06-20): Nearby resurrected as a TopBar sub-tab.
+ * dropped the Recommended / Nearby sub-tabs.
+ * Nearby resurrected as a TopBar sub-tab.
  *
- * Phase 47 (2026-06-21): refactored on top of shared GridPageShell +
+ * refactored on top of shared GridPageShell +
  * ListingGrid so /browse, /dashboard, /communities, /dashboard/communities
  * all share the same card and container chrome. Per-card mapping (video
  * vs photo href, demo "Stock" badge) lives here; cover + caption shell
@@ -64,7 +64,7 @@ async function RecommendedGrid({ communitySlug }: { communitySlug: string | null
   const isCommunityScoped = Boolean(scopedCards && scopedCards.length > 0);
 
   const items: ListingGridItem[] = cards.map((card) => {
-    // Phase 60: prefer the agent-set cover_url over the mediaKind hero.
+    // prefer the agent-set cover_url over the mediaKind hero.
     // Falls through to the prior video-thumbnail / photo-hero branch
     // when cover_url is unset.
     const src =

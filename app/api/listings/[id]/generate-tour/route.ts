@@ -9,7 +9,7 @@
  *   Poll status of a queued/running job. Returns
  *   { status, videoRowId, cf_video_id?, error? }.
  *
- * Phase 71 (2026-07-05): replaces the Phase 12 501 stub.
+ * replaces the 501 stub.
  */
 
 import { createClient } from '@/lib/supabase/server';
@@ -133,10 +133,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
     );
   }
 
-  return NextResponse.json(
-    { jobId: (job as { id: string }).id, videoRowId },
-    { status: 202 },
-  );
+  return NextResponse.json({ jobId: (job as { id: string }).id, videoRowId }, { status: 202 });
 }
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
