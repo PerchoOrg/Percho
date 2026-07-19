@@ -10,7 +10,7 @@
  * active-listings grid.
  */
 
-import { resolveCommunityCoverWithCfIds } from '@/lib/community/cover';
+import { resolveCommunityCoverWithCfIds } from '@/lib/communities/cover';
 import { fetchBrowseCardsByCommunitySlug } from '@/lib/feed/browse-cards';
 import { createClient } from '@/lib/supabase/server';
 import { notFound } from 'next/navigation';
@@ -137,7 +137,7 @@ export default async function CommunityPage({
     fallback_video_cf_id: firstReadyVideo?.cf_video_id ?? null,
     name: community.name,
     boundary:
-      (community.boundary as import('@/lib/community/logo-cover').BoundaryGeoJSON | null) ?? null,
+      (community.boundary as import('@/lib/communities/logo-cover').BoundaryGeoJSON | null) ?? null,
   });
 
   const heroCoverUrl = heroCover ? heroCover.url : null;

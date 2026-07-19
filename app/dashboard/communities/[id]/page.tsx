@@ -23,7 +23,7 @@
  * row with a Preview link + InstantStatusToggle, title/subtitle bottom-left.
  */
 
-import { resolveCommunityCoverWithCfIds } from '@/lib/community/cover';
+import { resolveCommunityCoverWithCfIds } from '@/lib/communities/cover';
 import { createClient } from '@/lib/supabase/server';
 import { FileText, ImageIcon, LineChart } from 'lucide-react';
 import { redirect } from 'next/navigation';
@@ -228,7 +228,7 @@ export default async function CommunityEditorPage({
     fallback_video_cf_id: firstReadyVideo?.cf_video_id ?? null,
     name: community.name,
     boundary:
-      (community.boundary as import('@/lib/community/logo-cover').BoundaryGeoJSON | null) ?? null,
+      (community.boundary as import('@/lib/communities/logo-cover').BoundaryGeoJSON | null) ?? null,
   });
   const heroCoverUrl = heroCover ? heroCover.url : null;
 

@@ -12,7 +12,7 @@
  */
 
 import { createClient } from '@/lib/supabase/server';
-import { nameToSlug } from '@/lib/utils/slug';
+import { slugify } from '@/lib/utils/slug';
 import {
   AddPoiInput,
   AddSchoolInput,
@@ -132,7 +132,7 @@ export async function createCommunity(raw: unknown): Promise<ActionResult<{ id: 
 
   // Slug is system-derived from name. On collision append a short random
   // suffix and retry once; we don't expose slug to users.
-  const baseSlug = nameToSlug(parsed.data.name) || 'community';
+  const baseSlug = slugify(parsed.data.name, { fallback: 'community' });
   const slugCandidates = [baseSlug, `${baseSlug}-${Math.random().toString(36).slice(2, 6)}`];
 
   let lastError: { code?: string; message?: string } | null = null;
@@ -193,7 +193,7 @@ export async function updateCommunity(id: string, raw: unknown): Promise<ActionR
   if (!existing) return { ok: false, error: 'not_found' };
 
   const newName = parsed.data.name;
-  const baseSlug = existing.name === newName ? existing.slug : nameToSlug(newName);
+  const baseSlug = existing.name === newName ? existing.slug : slugify(newName, { fallback: 'community' });
   const slugCandidates: string[] =
     baseSlug === existing.slug
       ? [existing.slug]

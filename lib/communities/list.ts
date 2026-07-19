@@ -1,36 +1,30 @@
 /**
  * Shared community-grid data loader.
  *
- * extracted from `app/(public)/communities/page.tsx`
- * so `/browse?tab=communities` can render the same grid without code
- * duplication. Both pages render identical cards from the identical query.
+ * Extracted from `app/(public)/communities/page.tsx` so `/browse?tab=communities`
+ * can render the same grid without duplication. Both pages render identical
+ * cards from the identical query.
  *
- * Phase A (2026-06-24): parallelized into two waves.
- * Wave 1 fetches `communities` + `community_video_membership` in parallel
- * (no inter-dependency). Wave 2 then fetches `community_videos` (needs
- * membership video_ids) + `listings` (needs community ids) in parallel.
+ * Perf: parallelized into two waves. Wave 1 fetches `communities` +
+ * `community_video_membership` in parallel (no inter-dependency). Wave 2
+ * fetches `community_videos` (needs membership video_ids) + `listings`
+ * (needs community ids) in parallel.
  *
- * Phase C (2026-06-24): wrapped in `unstable_cache` (60s TTL,
- * tagged 'community-cards'). Community data is globally readable so a
- * shared cache across users is safe. Mutation server actions call
- * `revalidateTag('community-cards')` to invalidate.
- *
+ * Cached with `unstable_cache` (60s TTL, tagged 'community-cards'). Community
+ * data is globally readable so a shared cache across users is safe. Mutation
+ * server actions call `revalidateTag('community-cards')` to invalidate.
  * Cache uses the cookie-less `createAnonClient()` because `unstable_cache`
  * forbids dynamic APIs (cookies/headers) inside the cached fn. RLS still
  * applies — community reads are global, so this returns the same rows as
  * the cookie-bound client would for these particular tables.
  *
- * visibility rule tightened. Previously any
- * caller could pass `includeInactive: true` and get every inactive
- * community system-wide (agent dashboard did this). That leaked one
- * agent's drafts to other agents. New shape:
- *   fetchCommunityListCards({ viewerAgentId }) →
- *     union of (all active) ∪ (viewer's own inactive), de-duped by id.
- * Active set is still shared-cached; the per-viewer inactive fetch is
- * uncached because it's cheap and viewer-specific.
+ * Visibility: viewers get (all active) ∪ (their own inactive), de-duped by
+ * id. The active set is shared-cached; the per-viewer inactive fetch is
+ * uncached because it's cheap and viewer-specific. Do NOT accept a generic
+ * `includeInactive: true` — that would leak one agent's drafts to others.
  */
 
-import { resolveCommunityCoverWithCfIds } from '@/lib/community/cover';
+import { resolveCommunityCoverWithCfIds } from '@/lib/communities/cover';
 import { startTimer } from '@/lib/perf/timing';
 import { createAnonClient } from '@/lib/supabase/server';
 import { unstable_cache } from 'next/cache';
@@ -64,15 +58,13 @@ type CommunityRow = {
 };
 
 /**
- * `boundary` is intentionally NOT selected in the
- * top-level list query. Boundary is a per-community GeoJSON polygon (often
- * multi-KB — the Nextdoor seeds are dense multipolygons). PostgREST was
- * hitting `statement_timeout` (Postgres 57014) trying to stream ~8k rows
- * with `boundary` inline, so `/communities` returned nothing at all
- * (see phase111 → phase114 sequence). We now fetch boundary lazily in
- * `hydrateCommunityCards`, only for the rows whose cover falls all the way
- * through to the logo-SVG fallback (no cover_video_id AND no
- * cover_storage_path).
+ * `boundary` is intentionally NOT selected in the top-level list query.
+ * Boundary is a per-community GeoJSON polygon (often multi-KB — the
+ * Nextdoor seeds are dense multipolygons). PostgREST hits `statement_timeout`
+ * (Postgres 57014) trying to stream ~8k rows with `boundary` inline,
+ * returning nothing at all. We fetch boundary lazily in `hydrateCommunityCards`,
+ * only for the rows whose cover falls all the way through to the logo-SVG
+ * fallback (no cover_video_id AND no cover_storage_path).
  */
 
 /**
@@ -211,7 +203,7 @@ async function hydrateCommunityCards(communities: CommunityRow[]): Promise<Commu
       name: c.name,
       boundary:
         (boundaryByCommunity.get(c.id) as
-          | import('@/lib/community/logo-cover').BoundaryGeoJSON
+          | import('@/lib/communities/logo-cover').BoundaryGeoJSON
           | null) ?? null,
     }),
   }));

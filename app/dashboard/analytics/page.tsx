@@ -17,7 +17,7 @@
  * demoted from card to a sub-line under Views (it's context, not a goal).
  */
 
-import { getRollupStats } from '@/lib/analytics/listing-stats';
+import { getRollupEntityStats } from '@/lib/analytics/entity-stats';
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 
@@ -160,7 +160,10 @@ export default async function DashboardAnalyticsPage() {
     .eq('agent_id', agentRow.id)) as { data: Array<{ id: string }> | null };
   const listingIds = (listings ?? []).map((l) => l.id);
 
-  const rollup = await getRollupStats(supabase, listingIds);
+  const rollup = await getRollupEntityStats(supabase, {
+    entityType: 'listing',
+    entityIds: listingIds,
+  });
 
   // 7-day views trend
   const buckets = buildLast7Days();

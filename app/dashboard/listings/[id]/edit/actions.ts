@@ -20,7 +20,7 @@
 
 import { isDraftAddress } from '@/app/dashboard/listings/draft';
 import { findCommunityForPoint } from '@/lib/geo/find-community';
-import { deriveSlug, nextCandidate } from '@/lib/listings/slug';
+import { nextCandidate, slugify } from '@/lib/utils/slug';
 import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
@@ -101,7 +101,7 @@ export async function updateListingAddress(
     return { ok: false, error: 'address_locked' };
   }
 
-  const baseSlug = deriveSlug(data.address);
+  const baseSlug = slugify(data.address, { fallback: 'listing' });
 
   // auto-associate to a seeded community by
   // point-in-polygon. Runs before the update loop so we can write

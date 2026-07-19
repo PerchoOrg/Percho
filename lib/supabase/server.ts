@@ -64,8 +64,6 @@ export function createServiceClient() {
  * the auth cookie) is unusable inside it. This client carries no auth
  * context — RLS evaluates as anon. Only use it for data that is safe to
  * expose without authentication (e.g. globally-readable community lists).
- *
- * Phase C (2026-06-24): added for cached community-list reads.
  */
 export function createAnonClient() {
   return createPlainClient<Database>(
