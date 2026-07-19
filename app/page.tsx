@@ -52,8 +52,8 @@ export default async function HomePage() {
         <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/10 to-transparent" />
 
         <div className="relative z-10 flex h-full flex-col items-center justify-center px-6 text-center">
-          {/* Brand eyebrow — centered above H1 per截图 idiom. Not a link;
-              chrome routes use <BrandMark> for that. */}
+          {/* Brand eyebrow — centered above H1 to match the source mock.
+              Not a link; chrome routes use <BrandMark> for that. */}
           <div
             className="mb-6 font-medium uppercase"
             style={{
