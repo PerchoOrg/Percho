@@ -1,9 +1,9 @@
-# Percho — Product Direction v3
+# Percho — Preference Learning (Product Vision)
 
 > Status: Canonical product vision, 2026-07-19. Written by Tianrou Wang.
 > Supersedes any prior positioning docs at the vision layer. Feature-level
-> designs (discovery-feed, listing-explore, POI pipeline) live one level below
-> and must trace back to a principle in this doc.
+> designs (discovery-feed, listing-explore, POI pipeline) live in this
+> `design/` folder and must trace back to a principle in this doc.
 
 ## 0. TL;DR
 
@@ -117,7 +117,7 @@ Example WHY: *"You've repeatedly preferred neighborhoods with trails and
 slower traffic."*
 
 Anchor: subdivision (Waterside), not city. POI radius 3 km from subdivision
-entrance. (Anchors `poi-content-pipeline.md`.)
+entrance. (Anchors `pipelines/poi-content.md`.)
 
 ### 3.4 Trade-off Card ★
 
@@ -338,7 +338,7 @@ a §-numbered principle in this doc:
 
 - `docs/design/discovery-feed.md` — the swipe feed itself (§2, §3.1–3.6)
 - `docs/design/listing-explore.md` — Listing Detail Experience (§4)
-- `docs/pipelines/README.md` + `poi-content-pipeline.md` — video content
+- `docs/pipelines/README.md` + `pipelines/poi-content.md` — video content
   generation for listing / community cards (§3.2, §3.3)
 
 When any of the above conflicts with this doc, this doc wins.

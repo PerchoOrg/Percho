@@ -1,7 +1,7 @@
 # Discovery Feed — Design
 
 > Status: Draft (phase 118, 2026-07-19; updated phase 119 for vision v3 card
-> types). Implements `docs/product-vision-v3.md` §2 (Feed Philosophy) and §3
+> types). Implements `docs/design/preference-learning.md` §2 (Feed Philosophy) and §3
 > (Card Types). Prototype at `/tmp/percho-mechanics/vibe/feed.html` is
 > throwaway; this doc is the durable artifact.
 
@@ -148,7 +148,7 @@ current listing pool — not by hardcoded layer order after the first 3 cards.
 
 ## 2.5 Card types in the feed
 
-Per `product-vision-v3.md` §3. Every card is one of six types, and each has
+Per `preference-learning.md` §3. Every card is one of six types, and each has
 a defined interaction contract with the swipe layer:
 
 | Type | Purpose | Swipe semantics | Requires WHY? |
@@ -178,7 +178,7 @@ a defined interaction contract with the swipe layer:
 
 ## 2.6 Feed rhythm (updated)
 
-Per `product-vision-v3.md` §2.2. Target sequence:
+Per `preference-learning.md` §2.2. Target sequence:
 
 ```
 Listing → Community → Preference → Listing → Trade-off →
@@ -443,13 +443,13 @@ Ordered by load-bearing weight:
 8. **No ASK_POOL DB table in v1.** Static JSON. Table-ify at >50 cards.
 9. **No per-POI video cards in the feed.** POIs render inside listing /
    community cards, not as their own feed items. (Anchors §1.1 of
-   `poi-content-pipeline.md`.)
+   `pipelines/poi-content.md`.)
 
 ## 10. Related docs
 
 - `docs/pipelines/README.md` — video generation master (upstream: produces
   the listing / community videos that this feed consumes)
-- `docs/poi-content-pipeline.md` — POI → buyer-question video pipeline
+- `docs/pipelines/poi-content.md` — POI → buyer-question video pipeline
 
 ## 11. Prototype reference
 

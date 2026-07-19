@@ -448,7 +448,7 @@ First 10k calls/month/SKU are free (Google), so first ~40 listings/month are ~fr
 
 ## 10. Files touched (design; not yet implemented)
 
-- **New**: `docs/poi-content-pipeline.md` (this file)
+- **New**: `docs/pipelines/poi-content.md` (this file)
 - **New tables**: 5 migrations under `supabase/migrations/`
 - **New components**: `app/dashboard/listings/[id]/edit/NearbyPoiPanel.tsx`, `PoiCard.tsx`, `IntentBucketAccordion.tsx`, `PhotoReviewDrawer.tsx`, `StreetViewPanel.tsx`
 - **New lib**: `lib/poi/{actions.ts,discovery.ts,photos.ts,streetview.ts,directions.ts,review-reasons.ts,intent-buckets.ts,scoring.ts}`

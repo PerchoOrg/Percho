@@ -1,7 +1,7 @@
 # Listing Explore — Design
 
 > Status: Draft, phase 119 (2026-07-19). Feature-level implementation of
-> `docs/product-vision-v3.md` §4 (Listing Detail Experience).
+> `docs/design/preference-learning.md` §4 (Listing Detail Experience).
 > Owned by the discovery-feed team; consumes video from the POI pipeline.
 
 ## 0. TL;DR
@@ -65,7 +65,7 @@ learning; it's a high-density learning surface.
 
 ### 1.5 Fail the 30-Second Rule → cut the feature.
 
-Every element of Listing Explore is tested against `product-vision-v3.md`
+Every element of Listing Explore is tested against `preference-learning.md`
 §8. A hotspot action that satisfies none of the four goals is removed. In
 practice, the four hotspot actions map cleanly:
 
@@ -333,8 +333,8 @@ Ordered by load-bearing weight.
 
 ## 10. Related
 
-- `docs/product-vision-v3.md` §4 — the vision this doc implements
+- `docs/design/preference-learning.md` §4 — the vision this doc implements
 - `docs/design/discovery-feed.md` — upstream (Listing Card's Explore action
   triggers this flow)
-- `docs/poi-content-pipeline.md` — supplies community context for the
+- `docs/pipelines/poi-content.md` — supplies community context for the
   Community hotspot

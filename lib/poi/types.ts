@@ -7,7 +7,7 @@
  * `supabase gen types typescript --linked`), replace these with the generated
  * Row/Insert/Update triples and re-export.
  *
- * See docs/poi-content-pipeline.md §3 for schema semantics.
+ * See docs/pipelines/poi-content.md §3 for schema semantics.
  */
 
 // ─── enums (mirrored in DB check constraints) ───────────────────────────────
