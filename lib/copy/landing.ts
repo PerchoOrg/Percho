@@ -9,8 +9,7 @@ export const LANDING_TAGLINE = 'TikTok for Homebuying';
 export const LANDING_SUBTITLE = 'Listings that feel like a place, not a spreadsheet.';
 
 // Pexels free-stock luxury home tour clip used as the hero background video.
-// Hot-linked (no Vercel egress) — same asset as
-// docs/design-history/prototype/landing-v3.html so visual parity is exact.
+// Hot-linked — no Vercel egress.
 export const LANDING_HERO_VIDEO =
   'https://videos.pexels.com/video-files/7578548/7578548-uhd_2560_1440_30fps.mp4';
 
