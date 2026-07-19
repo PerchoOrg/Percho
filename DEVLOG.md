@@ -4,6 +4,29 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-19 — supabase: squash legacy 0001-0042 into baseline_v1
+
+**Objective**: Unify Supabase migration filename format. Directory had 42 four-digit legacy files (`0001_init.sql`..`0042_leads_agent_update_policy.sql`) and 24 fourteen-digit timestamped files side-by-side. Purely cosmetic — CLI executes both fine in lexicographic order — but the inconsistency was annoying.
+
+**Actions**:
+- Concat all 42 legacy files into a single `supabase/migrations/20260101000000_baseline_v1.sql` (2622 lines) with per-file section headers so future greps can locate the original DDL.
+- `git rm` the 42 legacy files. Their contents are preserved verbatim in git history and inlined into the baseline.
+- Repaired remote `supabase_migrations.schema_migrations`: `0001..0042 => reverted`, `20260101000000 => applied`, via `supabase migration repair --linked --status <state> <version>`. Repair only touches the tracking table; NO DDL ran, NO schema change on the linked remote.
+- Verified: `supabase migration list --linked` now shows 25 rows, all 14-digit, Local/Remote perfectly aligned.
+
+**Decisions**:
+- **Concat over `pg_dump`**: the 42 legacy files ARE the baseline DDL by definition (they produced the current schema). Concat is bit-exact; pg_dump would introduce catalog/system-schema noise and a lossy round-trip.
+- **Timestamp `20260101000000`** for the baseline, chosen so it sorts before the earliest real time-stamped migration (`20260704075823`). Any date < 2026-07-04 would do.
+- **No `db reset` verification** — this EC2 host doesn't run local Supabase Docker; the reset path exists for other contributors but isn't exercised here. Remote is authoritative and unchanged.
+
+**Issues**: Pooler auth flaked mid-sequence (SASL 28P01) — retry after ~60s worked. Known intermittent per `supabase-migration-workflow` skill §5.
+
+**Learnings**: `supabase migration repair` accepts multiple version arguments in one invocation (`repair --status reverted 0002 0003 ... 0042`), saves 40 round trips. Undocumented in `--help` but works.
+
+**Next steps**: New migrations MUST be created with `supabase migration new <name>` (14-digit timestamp). Any 4-digit-prefixed migration in a future PR is a bug — worth adding to CLAUDE.md if it recurs.
+
+---
+
 ## 2026-07-19 — docs: add `docs/marketing/` scaffold for parasitic distribution log
 
 **Objective**: Track daily Reddit / FB group / Quora / Zillow replies driven by Apocalypsee's cold-start playbook (post in Slack #marketing thread). Owner asked for a marketing folder under `docs/` where each day's outbound messages are logged.
