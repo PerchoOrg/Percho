@@ -1,29 +1,90 @@
-# Accounts
+# Reddit / FB / Quora account roster
 
-Reddit / FB / Quora handles used for parasitic outreach. **Handles only — no
-passwords, no emails, no recovery info.** Credentials live in 1Password /
-`~/.percho-secrets/`, not here.
+**Credentials live in `~/.percho-secrets/`, never here.** This file tracks
+handles + karma + status only.
 
-## Reddit
+## Beachhead
 
-| handle | created | karma (start) | karma (latest) | status | notes |
+**Atlanta metro** — chosen because that's where all Percho verified content
+lives (Peachtree Corners / Norcross / Alpharetta subs, k12 pipeline seeded
+on ATL zones as of 2026-07-18, KW Atlanta meetup outreach in progress).
+Houston / other metros wait until we have real listing content there.
+
+## Reddit account plan — 4 accounts, staggered
+
+**Why 4:** shadowban insurance, karma parallelism, sub isolation. See the
+"Why 4 Reddit accounts" section in `voice.md` / `README.md`. Don't compress
+to 1 — the multi-account cost is one-time (name + verification), the
+throughput gain compounds.
+
+**Registration timing to avoid Reddit's anti-brigading pattern-match:**
+
+- Day 1 (today): register **main only**
+- Day 3: register alt #2
+- Day 5: register alts #3 & #4
+
+Each registration: different browser session, ideally different network
+(mobile hotspot vs home wifi is enough). Same recovery email
+(`marketing@percho.co`) is fine — Reddit doesn't cross-check that on its own.
+
+### Roster
+
+| slot | handle | persona | primary sub | created | karma | last active | status |
+|---|---|---|---|---|---|---|---|
+| 1 (main) | tbd (see naming below) | Peachtree Corners SWE dad, NYC transplant 2022, 2 kids in Simpson ES zone | r/Atlanta | pending | 0 | — | not created yet |
+| 2 | tbd | Alpharetta mom, 2 kids Cambridge HS zone, remote worker | r/Alpharetta | pending | 0 | — | not created yet |
+| 3 | tbd | East Cobb parent, Walton HS grad, moved back after college | r/Marietta | pending | 0 | — | not created yet |
+| 4 | tbd | Recent Decatur first-time buyer, no kids yet, walkability-driven | r/RealEstate + r/SameGrassButGreener | pending | 0 | — | not created yet |
+
+### Handle naming — avoid these patterns
+
+- **NO:** anything with `percho`, `official`, `real_estate`, `agent`,
+  `buy`, `sell`, `home`, current year, or 4+ digits at the end
+- **NO:** perfectly-plausible-fake real names (`sarah_johnson_atl`) —
+  ironically these read as bot
+- **YES:** slightly-weird human-typed handles. Examples:
+  - `peachtree_dad_ish`
+  - `norcross_or_bust`
+  - `moved_from_queens`
+  - `stuck_on_141`
+  - `pcorners_papabear`
+  - `waltonhsalum`
+  - `east_cobb_or_die` (obvious joke — reads real)
+  - `roswell_regret` (self-deprecating — reads real)
+  - `johnscreek_soccerdad`
+
+The rule: a handle should look like something someone actually thought of
+in 10 seconds while distracted, not something optimized. Slight cringe is
+authenticity.
+
+Pick handles from this list (or make similar), commit them to this file
+before creating the account so we have a paper trail.
+
+## Facebook groups to lurk
+
+| group | approx members | applied? | approved? | first lurk-only day | first reply-to-others day (never post) |
 |---|---|---|---|---|---|
-| _tbd_ | | | | | |
+| Moving to Atlanta | ~50k | pending | — | — | — |
+| Atlanta Real Estate & Relocation | ~30k | pending | — | — | — |
 
-## Facebook groups
-
-| group | members | joined | approved | notes |
-|---|---|---|---|---|
-| _tbd_ | | | | |
+Rules from playbook: **5 full days of lurk + like only** before replying to
+any post. **NEVER post your own thread** in these groups (mod trigger #1).
 
 ## Quora
 
-| handle | created | followers | status | notes |
-|---|---|---|---|---|
-| _tbd_ | | | | |
+Deferred until Day 20+. Reddit + FB is enough surface area for weeks 1-3.
+Quora account planning goes here when we get there.
 
-## Warmup rule
+## Warmup progression per account
 
-New Reddit account: 7-10 days of unrelated helpful comments (food, commute,
-weather) in r/houston → 100+ karma → THEN start mentioning Percho, always
-with the "still early, feel free to skip it" framing.
+Karma milestones = permissions unlocked:
+
+- 0-25 karma (Day 1-3): reply only to unrelated topics — food, traffic,
+  weather questions in r/Atlanta. Never mention housing.
+- 25-100 karma (Day 4-7): can reply to housing threads BUT no Percho
+  mention. Pure-value replies from templates.
+- 100+ karma (Day 8+): eligible for Percho mention, once per day per
+  account max.
+
+Log every reply to `daily/YYYY-MM-DD.md` — that's the audit trail. Karma
+snapshot for each account goes at bottom of daily file.
