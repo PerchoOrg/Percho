@@ -41,16 +41,18 @@ This means:
 - **Skipping a layer is skipping N cards** — no explicit "skip this section"
   button in v1. (Deferred: swipe-up = skip layer; see §8 Q3.)
 
-### 1.2 Feed rhythm: front-load ask, then interleave.
+### 1.2 Feed rhythm: 3 pure-ask, then real content with occasional ask.
 
-Empirically the pool that works in prototype:
+Resolved 2026-07-19 (owner): front-load is **3 cards**, not 6. The pure-ask
+burst has to be short enough that it doesn't feel like a survey.
 
-- **First 6 cards**: pure ask (cold-start signal collection).
-- **After that**: `i % 3 === 0` → ask; `i % 4 === 0` → community; else listing.
-
-Roughly ⅓ ask, ⅓ community, ⅓ listing once warmed up. Front-loading ask is a
-bet: users tolerate a short onboarding-feeling burst if the payoff (relevant
-listings 30 seconds in) is immediate.
+- **First 3 cards**: pure ask — intent + region + (state or metro), in that
+  order. Highest-leverage signals only.
+- **After that**: real content (listing / community) dominates. Ask cards
+  sprinkled in occasionally (target ~1 in 5, not every third), reaching for
+  layers we still know nothing about.
+- **As scope narrows**: ask density should drop, not rise. The recommendation
+  system takes over. See §1.8.
 
 ### 1.3 Scope drives ranking, not filtering.
 
@@ -98,6 +100,31 @@ Top strip (scope chips) is capped at ~50px, z-index 50. Chip labels come from
 `ASK_POOL[id].chip` (short: "🌅 Retirement"). Each chip is a single tap-x to
 remove. No filter bar, no tabs, no search box on the feed surface. If a UI
 element isn't a card or a chip, it needs a §1.7 justification.
+
+**One exception — the "Skip" affordance on ask cards.** Ask cards render a
+small **Skip this topic** button (bottom-center, low-emphasis link style, not
+a full button) that dismisses the entire current layer. Rationale: swipe-up
+was rejected — too easy to mis-fire as a swipe-right. A visible-but-recessed
+button is the right compromise. Listing / community cards do not carry this
+button; it only appears on cards with `type === 'ask'`.
+
+### 1.8 Adaptive ask termination — ranking system, not fixed sequence.
+
+The ask pool is not a scripted onboarding. It's the **cold-start half of the
+recommendation system**. As `state.scope` accumulates signal, ask cards must
+step aside for real content that fits the accumulated scope. Concretely:
+
+- A layer with ≥3 yes-signals is considered "warm" — no more ask cards from
+  that layer.
+- A layer with 0 signals after 15 total swipes is considered "not interested"
+  — deprioritized, not re-asked unless upstream layers narrow into it.
+- Once ≥3 layers are warm, ask density drops to ≤1 in 8 cards.
+- Terminal state: user sees only listings + community cards from the
+  intersected scope. Adding a new layer requires actively tapping a scope
+  chip × to re-open.
+
+The recommender picks *what to ask next* by information gain against the
+current listing pool — not by hardcoded layer order after the first 3 cards.
 
 ## 2. Inputs
 
@@ -149,7 +176,7 @@ Ranking of listings/communities against scope happens **inside**
 
 ```
 ┌────────────────────────────────┐
-│ 🎯 YOUR PURPOSE                │  ← step tag (orange, 12px)
+│ 🎯 YOUR PURPOSE       [map ▫]  │  ← step tag + tiny map thumb (geo layers)
 │                                │
 │                                │
 │    Retiring soon?              │  ← ask-q (40px bold)
@@ -159,11 +186,26 @@ Ranking of listings/communities against scope happens **inside**
 │                                │
 │  ← Swipe left      Swipe →     │  ← hint (red/green split)
 │    No              Yes         │
+│                                │
+│         Skip this topic        │  ← low-emphasis link, layer dismiss
 └────────────────────────────────┘
 ```
 
 Background: full-bleed photo, dark gradient overlay. No back face (ask cards
 don't flip; long-press is a no-op).
+
+**Map thumb**: only on `region / state / metro / city` layers. Shows the
+geographic scope of the current question so RTP-metro vs Cary-city vs NC-state
+are visually distinguishable. Non-geo layers (intent, culture, style) show
+no thumb.
+
+**Imagery source ladder** (per §1 principles): v1 uses professional
+street / skyline / drone stock (not Unsplash). UGC layer deferred to a later
+phase once we have moderation and rights infrastructure.
+
+**Skip this topic**: dismisses all remaining cards in the current layer for
+this session. Registered as `state.scopeSkipped[layer] = true`. No effect on
+ranking of already-rendered content.
 
 ### 4.2 Scope strip (top of feed)
 
@@ -307,20 +349,16 @@ Dashboards:
 
 ## 8. Open questions
 
-1. **First 6 pure-ask cards — too much onboarding?** Alternative: interleave
-   real content from card 1, cold-start-boost ask density. Leaning toward
-   keeping pure-ask front-load; asking user.
-2. **State vs metro vs city — can the user tell them apart?** RTP (metro) vs
-   Cary (city) vs NC (state) are semantically distinct but visually similar
-   ask cards. Leaning: add a small map thumbnail per layer to disambiguate.
-3. **Swipe up = skip layer?** Currently no gesture skips a whole layer; user
-   just says no N times. Adds complexity but improves control. Asking user.
-4. **Ask card imagery — Unsplash placeholder vs real UGC / drone / street?**
-   Prototype uses Unsplash. Real UGC is highest-signal but hardest to
-   procure. Leaning: professional street/skyline in v1, UGC layer later.
-5. **Adaptive ask termination**: once user says yes to ≥3 cities, should we
-   stop asking city-layer questions and switch to city-filtered listings?
-   Leaning yes; needs an interaction study.
+_Resolved 2026-07-19 answers moved inline (§1.2, §1.7, §1.8, §4.1, §9)._
+_Section retained for future rounds._
+
+1. What does "information gain" actually compute against the listing pool for
+   §1.8 recommender? Simple heuristic first (layer coverage) or IG on scope
+   entropy? Leaning heuristic in v1.
+2. Chip × removal — does it also re-open that layer for future ask cards, or
+   is removal permanent for the session? Leaning "re-opens".
+3. When a layer is "warm" (≥3 yes) but user swipes × on all chips, does the
+   layer reset to cold, or stay warm? Leaning "reset to cold".
 
 ## 9. Not doing (non-goals)
 
@@ -339,7 +377,8 @@ Ordered by load-bearing weight:
    exists elsewhere; the feed itself is discovery, not lookup.
 6. **No style layer in v1.** Ask pool has 0 style cards. Revisit when listing
    inventory can differentiate style credibly.
-7. **No swipe-up = skip layer in v1.** Deferred pending §8 Q3 answer.
+7. **No swipe-up gestures on the feed.** Vertical gestures collide with
+   swipe-right in-fingers; layer-skip is a button (§1.7), not a swipe.
 8. **No ASK_POOL DB table in v1.** Static JSON. Table-ify at >50 cards.
 9. **No per-POI video cards in the feed.** POIs render inside listing /
    community cards, not as their own feed items. (Anchors §1.1 of
