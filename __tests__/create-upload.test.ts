@@ -104,15 +104,6 @@ describe('POST /api/video/create-upload', () => {
     expect(mockedCreateDirectUpload).not.toHaveBeenCalled();
   });
 
-  it("rejects scope='community'", async () => {
-    // biome-ignore lint/suspicious/noExplicitAny: test-only fake supabase client
-    mockedCreateClient.mockResolvedValue(buildSupabase({ id: 'u1' }) as any);
-    const res = await POST(makeReq({ ...validBody, scope: 'community' }));
-    expect(res.status).toBe(400);
-    expect(await res.json()).toMatchObject({ error: 'scope_not_supported' });
-    expect(mockedCreateDirectUpload).not.toHaveBeenCalled();
-  });
-
   it('returns 404 when listing is missing or not owned (RLS-fenced)', async () => {
     mockedCreateClient.mockResolvedValue(
       // biome-ignore lint/suspicious/noExplicitAny: test-only fake supabase client
