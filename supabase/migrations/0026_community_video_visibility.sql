@@ -1,4 +1,4 @@
--- 0026_community_video_visibility.sql — Phase 35.2 (2026-06-17)
+-- 0026_community_video_visibility.sql — (2026-06-17)
 --
 -- Add 3-state visibility to community_videos so an agent can hide a video
 -- from buyers without deleting it (or shelve it permanently as `archived`).
@@ -55,4 +55,4 @@ create index if not exists community_videos_community_visibility_idx
   on public.community_videos (community_id, visibility);
 
 comment on column public.community_videos.visibility is
-  'Phase 35.2: public (buyers see) | private (hidden from buyers, kept in agent dashboard) | archived (hidden, parked in dashboard archive lane).';
+  'public (buyers see) | private (hidden from buyers, kept in agent dashboard) | archived (hidden, parked in dashboard archive lane).';

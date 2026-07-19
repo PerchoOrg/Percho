@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * CommunityPhotoPanel — Phase 20.2 (2026-06-13);
+ * CommunityPhotoPanel — (2026-06-13);
  *   trimmed school/POI categorization.
  *   added 12-category picker (batch mode).
  *

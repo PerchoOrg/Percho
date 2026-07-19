@@ -37,7 +37,7 @@ export async function getUserRole(supabase: AnyClient, userId: string): Promise<
 /**
  * Default landing path for a given role. Agents go to their dashboard;
  * buyers go to /profile (their main control surface in V1) — saved
- * listings and messaging come in Phase 15.2/15.3.
+ * listings and messaging come in /15.3.
  */
 export function defaultLandingForRole(role: Role | null): string {
   if (role === 'agent') return '/dashboard';

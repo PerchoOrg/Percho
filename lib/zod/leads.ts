@@ -3,8 +3,7 @@
  *
  * Mirrors the `leads` table check constraint: at least one of email OR phone
  * must be present. Server route /api/leads parses every POST through
- * `LeadCreate` — Phase 5.2.
- *
+ * `LeadCreate` —  *
  * leads now accept either a listing_id OR a
  * community_id (exactly one). Listing leads land with the listing's agent;
  * community leads land with the community's `created_by` agent.

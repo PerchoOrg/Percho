@@ -12,7 +12,7 @@
 --   2. Users that signed up as 'agent' (default) and later need a buyer
 --      row — currently impossible to backfill from app code.
 --
--- Phase 25.3's inline display-name editor needs to upsert into buyers from
+-- 's inline display-name editor needs to upsert into buyers from
 -- the user's session, so we add a tightly scoped self-insert policy:
 -- buyers can ONLY insert their own row (user_id = auth.uid()).
 -- ─────────────────────────────────────────────────────────────────

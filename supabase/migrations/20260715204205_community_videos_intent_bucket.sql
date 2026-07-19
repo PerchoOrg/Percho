@@ -1,4 +1,4 @@
--- Phase 91 (2026-07-15) — nearby videos = community content, keyed by 14 intent buckets
+-- (2026-07-15) — nearby videos = community content, keyed by 14 intent buckets
 --
 -- Model change:
 --   * Nearby videos now live on `community_videos` (per-community), not on
@@ -14,9 +14,9 @@
 --
 -- What this migration does NOT do (deferred):
 --   * Drop legacy `community_videos.category`, `kind`, `bucket`, `school_id`,
---     `poi_id` columns — kept until Phase 93 readers switch over, to avoid
+-- `poi_id` columns — kept until readers switch over, to avoid
 --     breaking existing dashboards mid-deploy.
---   * Drop `generated_videos.scope='poi'` / per-POI code paths — Phase 92
+-- * Drop `generated_videos.scope='poi'` / per-POI code paths — 
 --     worker change removes the writer; column stays for now.
 
 -- ─── 1. wipe existing seed/test video rows ───────────────────────
@@ -69,7 +69,7 @@ create index if not exists community_videos_intent_bucket_idx
 -- ─── 4. generated_videos: add community_id + relax listing_id ────
 --
 -- The render worker's job row still needs SOMETHING to key ownership by.
--- Phase 91 splits `generated_videos.listing_id` into two possible owners:
+-- splits `generated_videos.listing_id` into two possible owners:
 --   * community_id set + listing_id null → bucket video (new)
 --   * listing_id set + community_id null → per-listing hero (unchanged path,
 --     though the worker doesn't currently write these here)

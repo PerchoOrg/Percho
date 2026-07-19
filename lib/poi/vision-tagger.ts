@@ -1,6 +1,5 @@
 /**
- * Vision tagger for POI photos — Phase 77.
- *
+ * Vision tagger for POI photos —  *
  * Given a poi_photos.id, downloads the JPEG from Supabase Storage, sends it to
  * Claude Sonnet 4.5 vision, and fills:
  *   ai_tags       jsonb   {description, primary_category, tags[], mood, usable, reason}
@@ -202,7 +201,7 @@ export async function tagPoiPhoto(poiPhotoId: string): Promise<{
 
   // Look up any community_pois row for bucket hint (any community works — pois
   // are global, and bucket is a distance thing that hints at "walkable place
-  // vs highway thing"). Phase 93: switched from listing_pois → community_pois
+  // vs highway thing"). switched from listing_pois → community_pois
   // when listing-level POI pipeline was retired.
   const { data: lp } = await admin
     .from('community_pois')

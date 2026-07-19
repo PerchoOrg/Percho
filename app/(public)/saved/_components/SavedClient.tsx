@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * SavedClient — Phase 21 (2026-06-13), extended Phase 27.7 / 43.4 / 45.9.
+ * SavedClient — (2026-06-13), extended / 43.4 / 45.9.
  *
  * Buyer Favorites surface (saves only).
  *

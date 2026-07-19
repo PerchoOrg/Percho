@@ -293,7 +293,7 @@ export function CommunityListingCarousel({
           </div>
         </div>
 
-        {/* Phase 63 (2026-06-26): top progress bar removed — those segmented
+        {/* top progress bar removed — those segmented
             ticks read as a horizontal-pager affordance, but this surface is a
             vertical snap feed (parity with Browse / Community video feed).
             The "i / N" counter in the top bar already conveys position. */}
@@ -485,7 +485,7 @@ function ListingSlide({
             loop
             preload="auto"
           />
-          {/* Phase 74.7 (skill ref §1): poster overlay until first frame. */}
+          {/* (skill ref §1): poster overlay until first frame. */}
           {poster && !hasFirstFrame && (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -515,7 +515,7 @@ function ListingSlide({
         <img src={poster} alt={listing.address} className="h-full w-full bg-black object-contain" />
       ) : null}
 
-      {/* Phase 74.9: overlay 与主 browse feed CaptionCard 对齐 —
+      {/* overlay 与主 browse feed CaptionCard 对齐 —
        * price 26px bold + specs / address 13px regular,单行地址带 zip,
        * 无 gradient scrim(text-shadow 提供对比度)。`right-20` 让位给
        * 右侧 rail(即使 community feed 目前无 rail,保留一致 gutter)。 */}

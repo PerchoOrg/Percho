@@ -9,7 +9,7 @@
  */
 
 // Right-rail bottom inset — hugs the bottom of the frame, clear only
-// of the iOS home indicator. Phase 69 (2026-07-04): owner "都按照
+// of the iOS home indicator. owner "都按照
 // browse feed 里的半贴底做就行" — matched to the value BrowseFeed
 // has been using inline since phase 68.1. Was 6rem pre-phase-69.
 export const FEED_RAIL_BOTTOM = 'max(1rem, calc(env(safe-area-inset-bottom) + 0.5rem))';

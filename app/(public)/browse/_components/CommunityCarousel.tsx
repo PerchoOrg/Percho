@@ -257,7 +257,7 @@ export function CommunityCarousel({
             <div className="flex h-10 items-center rounded-full border border-cream/20 bg-ink/55 px-3 font-medium text-[12px] text-cream backdrop-blur-md tabular-nums">
               {safeDisplayActive + 1} / {total}
             </div>
-            {/* Phase 69.1 (2026-07-04): Share moved from top-right into
+            {/* Share moved from top-right into
              * the right-rail bottom, matching BrowseFeed / CommunityVideoFeed
              * / CommunityListingCarousel. Owner: "listing feed 进去 nearby
              * video 右上角还有分享按钮" — this was the last surface still
@@ -265,7 +265,7 @@ export function CommunityCarousel({
           </div>
         </div>
 
-        {/* Phase 112.2 (2026-07-17): segmented progress bar removed.
+        {/* segmented progress bar removed.
          * Owner: "去掉 listing nearby 上面的虚线 只显示数字来看进度就行 太乱了".
          * The "N / M" counter pill in the top-right already conveys
          * position; the dashed track added visual clutter over the
@@ -323,7 +323,7 @@ export function CommunityCarousel({
             </button>
           )}
 
-          {/* Phase 45.24 (2026-06-21): "← swipe →" hint removed for the
+          {/* "← swipe →" hint removed for the
            * community-videos carousel — gesture is self-evident, hint was
            * just visual noise. */}
 
@@ -590,7 +590,7 @@ function CarouselSlide({
         <img src={poster} alt="" className="h-full w-full bg-black object-cover" decoding="async" />
       ) : null}
 
-      {/* Phase 74.5: tap-to-pause layer. Covers the whole slide but sits
+      {/* tap-to-pause layer. Covers the whole slide but sits
        * BELOW the top bar / rail / desktop arrows (those are z-10+ on
        * the parent phone-column, outside this fragment). Non-scroll
        * taps toggle userPaused; scroll-snap drags fire touchcancel so
@@ -624,7 +624,7 @@ function CarouselSlide({
         </div>
       )}
 
-      {/* Phase 112 (2026-07-17): category label pill + blurb removed.
+      {/* category label pill + blurb removed.
        * The bottom info card (title / category / distance / drive) already
        * conveys what the video is about — the "EATING OUT" pill and
        * "Where you actually go for dinner" tagline were the old

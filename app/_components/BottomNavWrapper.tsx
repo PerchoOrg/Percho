@@ -6,7 +6,7 @@
  *   - No Supabase session → 'anon'
  *   - Session + a row in `agents` for this user → 'agent'
  *   - Session but no agents row → 'buyer'
- *     (V1 has no buyer table yet — Phase 9.5. Anyone authenticated who isn't
+ * (V1 has no buyer table yet — Anyone authenticated who isn't
  *     an agent is treated as a buyer for nav purposes.)
  *
  * unified IA. The "Preview as buyer" mode is gone —
@@ -23,7 +23,7 @@ import { BottomNav, type ViewerRole } from './BottomNav';
 
 export async function BottomNavWrapper() {
   const supabase = await createClient();
-  // Phase 53D: getSession() reads cookie locally (~5ms) vs getUser() round-trip (~150ms).
+  // getSession() reads cookie locally (~5ms) vs getUser() round-trip (~150ms).
   // Middleware re-validates on each request — chrome doesn't need fresh JWT validation.
   const {
     data: { session },

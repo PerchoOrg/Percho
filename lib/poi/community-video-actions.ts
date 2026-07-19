@@ -13,7 +13,7 @@
  *
  * Output: inserts a `generated_videos` row with
  *   scope='community_intent_bucket', community_id set, listing_id null.
- * The EC2 render worker polls the same table (worker cutover in Phase 92.2).
+ * The EC2 render worker polls the same table (worker cutover in ).
  *
  * "Multiple videos, one primary" — per owner 07-15. So we DO NOT supersede
  * previous ready rows; we keep them and let the community_videos.is_primary
@@ -199,7 +199,7 @@ export async function generateCommunityBucketVideo(
     };
   }
 
-  // Outer→inner walk-in ordering (same as listing side, §Phase 82).
+  // Outer→inner walk-in ordering (same as listing side,).
   const isPortrait = (r: (typeof eligible)[number]) => {
     const w = r.poi_photos.width_px ?? 0;
     const h = r.poi_photos.height_px ?? 0;
@@ -245,7 +245,7 @@ export async function generateCommunityBucketVideo(
   const inputPhotoIds = selected.map((r) => r.poi_photo_id);
 
   // Concurrent-render guard: refuse a second pending/processing for the same
-  // (community, bucket). Multiple 'ready' rows are ALLOWED per §Phase 91
+  // (community, bucket). Multiple 'ready' rows are ALLOWED per
   // (owner picks primary). Regenerating a ready one is also fine.
   const { data: inflight } = (await admin
     .from('generated_videos')

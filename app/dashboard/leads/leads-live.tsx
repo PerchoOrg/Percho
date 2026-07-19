@@ -20,7 +20,7 @@
  *   - Source column shows the community name for community-routed leads
  *     (overrides the raw `source` string), and the lead's `source` tag
  *     for listing-routed leads (e.g. "listing-page").
- *   - Followed-up rows fade to opacity-55 (kept from Phase 49.2).
+ * - Followed-up rows fade to opacity-55.
  */
 
 import { createClient } from '@/lib/supabase/client';
@@ -335,7 +335,7 @@ function LeadItem({
         open ? '' : 'opacity-55'
       }`}
     >
-      {/* Phase 67.2: row-level overlay link — full row navigates to detail.
+      {/* row-level overlay link — full row navigates to detail.
           Sits at z-0 underneath; action icons + name link below ride at z-10
           so they handle their own clicks. Aria-hidden because the visible
           name link still announces the destination to screen readers. */}

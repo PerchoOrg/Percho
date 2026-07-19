@@ -1,4 +1,4 @@
--- Phase 79 — expand intent_bucket taxonomy from 4 access-based buckets
+-- expand intent_bucket taxonomy from 4 access-based buckets
 -- (walkable/daily_drive/lifestyle/commute) to 14 buyer-persona buckets,
 -- ordered by prominence for the UI:
 --

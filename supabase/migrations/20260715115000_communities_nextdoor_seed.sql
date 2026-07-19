@@ -1,4 +1,4 @@
--- Phase 76 (2026-07-15): seed Atlanta communities from Nextdoor + agent claim flow
+-- seed Atlanta communities from Nextdoor + agent claim flow
 -- Idempotent: all ALTERs guarded, constraint adds wrapped in DO blocks.
 
 -- ─── (1) Nextdoor provenance ───────────────────────────────────────

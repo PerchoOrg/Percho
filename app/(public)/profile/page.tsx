@@ -34,7 +34,7 @@ export const dynamic = 'force-dynamic';
 
 export default async function ProfilePage() {
   const supabase = await createClient();
-  // Phase 53D: getSession() reads cookie locally (~5ms) instead of round-tripping
+  // getSession() reads cookie locally (~5ms) instead of round-tripping
   // to Supabase to validate the JWT (~150ms). Middleware re-validates on each
   // request — page-level check is defense-in-depth, not the source of truth.
   const {
@@ -102,7 +102,7 @@ export default async function ProfilePage() {
             initialAvatarUrl={agent.headshot_url}
           />
 
-          {/* Phase 67 (2026-07-03): 笑云 feedback — reduce distractions on Me.
+          {/* 笑云 feedback — reduce distractions on Me.
            * Middle stack = agent-specific CTAs (public profile, view analytics).
            * Bottom stack = account actions (change password, sign out). The
            * "Account settings" info card was collapsed into a Change password
@@ -153,7 +153,7 @@ export default async function ProfilePage() {
     );
   }
 
-  // Logged in but no agents row — treat as buyer (V1 stub; Phase 9.5).
+  // Logged in but no agents row — treat as buyer (V1 stub; ).
   // biome-ignore lint/suspicious/noExplicitAny: buyers typing not in stub yet
   const { data: buyer } = (await (supabase as any)
     .from('buyers')
@@ -175,7 +175,7 @@ export default async function ProfilePage() {
           initialAvatarUrl={buyer?.avatar_url ?? null}
         />
 
-        {/* Phase 67 (2026-07-03): 笑云 feedback — buyer Me collapses to two
+        {/* 笑云 feedback — buyer Me collapses to two
          * account actions. "Explore listings" removed (redundant with the
          * For You bottom-nav tab); the Account settings info card was
          * folded into a Change password button. */}

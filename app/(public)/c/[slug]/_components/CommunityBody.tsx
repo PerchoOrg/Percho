@@ -102,7 +102,7 @@ export function CommunityBody({
           <div className="absolute inset-0 bg-gradient-to-br from-bronze/30 to-ink" />
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-ink via-ink/60 to-ink/10" />
-        {/* Phase 67.9: top-left ← Back chip — same HeroControl style as the
+        {/* top-left ← Back chip — same HeroControl style as the
             agent dashboard hero, returning the buyer to the /communities
             grid (Explore tab). */}
         <div className="absolute left-3 top-3 z-10 sm:left-5 sm:top-5">
@@ -112,7 +112,7 @@ export function CommunityBody({
           <h1 className="font-semibold text-2xl text-cream tracking-tight sm:text-3xl">
             {community.name}
           </h1>
-          {/* Phase 45.28.6: CTA folds back inline (variant I1).
+          {/* CTA folds back inline (variant I1).
            *   Same line as the city, weight 600 / pure white /
            *   1.5px underline / arrow. Loud enough to land in 1s but
            *   still reads as a sentence, not chrome. State-flips to
@@ -148,7 +148,7 @@ export function CommunityBody({
         </div>
       </div>
 
-      {/* Phase 87.1 / 87.2: Nextdoor demographics + tag chips + nearby.
+      {/* / 87.2: Nextdoor demographics + tag chips + nearby.
           Data we already have in the DB, rendered as three white-card
           sections. Anything empty collapses — we don't fabricate. */}
       <CommunityStats
@@ -161,7 +161,7 @@ export function CommunityBody({
         nearby={nearby}
       />
 
-      {/* Body — Phase 47.2: padding aligned with grid gap (px-1 md:px-1.5)
+      {/* Body — padding aligned with grid gap (px-1 md:px-1.5)
           so the outer margin matches inter-card gutters and matches
           GridPageShell elsewhere. */}
       <div className="px-1 py-4 md:px-1.5">
@@ -172,7 +172,7 @@ export function CommunityBody({
         )}
       </div>
 
-      {/* Phase 87: neighborhood boundary map, so buyers can see the actual
+      {/* neighborhood boundary map, so buyers can see the actual
           shape of the community they are considering. Lazy-loaded MapLibre
           + Carto Positron — no vendor token, no bill. */}
       {boundary ? (

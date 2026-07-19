@@ -65,7 +65,7 @@ export type CommunityListingItem = {
   address: string;
   city: string;
   state: string;
-  /** Phase 74.9: zip added so community feed carousel can render the
+  /** zip added so community feed carousel can render the
    *  canonical `${street}, ${city}, ${state} ${zip}` line matching the
    *  main browse feed. Nullable — legacy rows without zip render without
    *  the trailing space+zip. */
@@ -76,7 +76,7 @@ export type CommunityListingItem = {
   sqft: number | null;
   heroCfVideoId: string | null;
   heroPhotoUrl: string | null;
-  /** Phase 63 (2026-06-26): owning agent's slug — used to build the public
+  /** owning agent's slug — used to build the public
    *  listing URL (`/v/[agentSlug]/[listingSlug]`) for the Share rail button.
    *  Null when the agent row is missing (rare; Share is hidden in that case). */
   agentSlug: string | null;
@@ -275,7 +275,7 @@ function VideoCard({
               loop
               preload="auto"
             />
-            {/* Phase 74.7 (skill ref §1): poster overlay until first frame. */}
+            {/* (skill ref §1): poster overlay until first frame. */}
             {poster && !hasFirstFrame && (
               <img
                 src={poster}
@@ -350,7 +350,7 @@ export function CommunityVideoFeed({
   videos: CommunityFeedVideo[];
   initialIndex?: number;
   activeListingsCount?: number;
-  /** Phase 34b (V1 redo): listings to surface via the top-left chip. */
+  /** (V1 redo): listings to surface via the top-left chip. */
   listings?: CommunityListingItem[];
 }) {
   const router = useRouter();
@@ -582,7 +582,7 @@ export function CommunityVideoFeed({
             </span>
           )}
         </div>
-        {/* Phase 69 (2026-07-04): Share moved from top-right into the
+        {/* Share moved from top-right into the
          * right-rail bottom, matching BrowseFeed's phase-68 layout so
          * all three feeds put outbound-social actions in one column.
          * Empty 11x11 spacer keeps the community-name pill visually
@@ -598,7 +598,7 @@ export function CommunityVideoFeed({
        * below Save: Like → Save → Listings → Mute. Same destination as
        * the badge on `/c/[slug]` (`/browse?community=<slug>`). Hidden when
        * count is 0 (no homes for sale yet). */}
-      {/* Phase 45.22 (2026-06-21): rail migrated onto the shared
+      {/* rail migrated onto the shared
        * ActionButton primitive used by BrowseFeed. Pre-45.22 the rail
        * inlined bare circular buttons with no labels, which made them
        * read as "small mystery icons" against bright video frames —
@@ -610,7 +610,7 @@ export function CommunityVideoFeed({
         className={`absolute right-3 ${FEED_Z.rail} flex flex-col items-center gap-3`}
         style={{ bottom: FEED_RAIL_BOTTOM }}
       >
-        {/* Phase 68.4 (2026-07-03): unify with BrowseFeed rail. The
+        {/* unify with BrowseFeed rail. The
          * "🏠 Live here" chip that used to live top-left is replaced by
          * a circular ActionButton at the top of the rail with the
          * listings count as a red notification badge — mirrors the
@@ -634,7 +634,7 @@ export function CommunityVideoFeed({
         <ActionButton onClick={toggleSave} label="Save" active={saved}>
           <BookmarkIcon filled={saved} />
         </ActionButton>
-        {/* Phase 45.18 (2026-06-20): Contact button → community owner.
+        {/* Contact button → community owner.
          * Owner rule: "if exploring community directly, contact community
          * owner". Hidden for legacy/unowned communities (no owner to
          * route to). Same speech-bubble glyph as BrowseFeed Contact so
@@ -644,14 +644,14 @@ export function CommunityVideoFeed({
             <CommentIcon />
           </ActionButton>
         )}
-        {/* Phase 69 (2026-07-04): Share moved out of the top-right header
+        {/* Share moved out of the top-right header
          * into the bottom of the right rail — matches BrowseFeed's
          * phase-68 layout so all three feeds have Share as the last
          * rail button. */}
         <ActionButton onClick={onShare} label="Share">
           <ShareIcon />
         </ActionButton>
-        {/* Phase 34b.1 (V1 redo, 2026-06-17): the right-rail HouseIcon was
+        {/* (V1 redo, 2026-06-17): the right-rail HouseIcon was
          * removed in favor of a top-left "🏠 N homes here" chip that
          * opens an in-place listings sheet (L2) instead of navigating
          * away to /browse. Old right-rail entry duplicated the chip's
@@ -661,7 +661,7 @@ export function CommunityVideoFeed({
          * chip on /browse — same corner, same job. */}
       </div>
 
-      {/* Phase 68.4 (2026-07-03): top-left "Live here" chip removed —
+      {/* top-left "Live here" chip removed —
        * replaced by the 🏠 ActionButton at the top of the right rail
        * (see rail block above). Unifies with BrowseFeed neighborhood
        * button and eliminates the top-left corner as a dead zone
@@ -690,7 +690,7 @@ export function CommunityVideoFeed({
           setListingsSheetOpen(false);
         }}
       />
-      {/* Phase 45.18: lead capture modal — community-targeted. Mounts only
+      {/* lead capture modal — community-targeted. Mounts only
        * when an owner exists; LeadModal fans out to /api/leads with
        * community_id and the route resolves agent_id server-side. */}
       {owner && (

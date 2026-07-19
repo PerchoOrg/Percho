@@ -478,7 +478,7 @@ function PhotoCard({
       <div className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-black/70 via-black/30 to-transparent" />
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-72 bg-gradient-to-t from-black/85 via-black/50 to-transparent" />
 
-      {/* Phase 72.8 (2026-07-05): header alignment with CommunityCarousel
+      {/* header alignment with CommunityCarousel
        * (video swipe). Owner: "仿照 listing feed 里的 community 视频里的
        * 格式,左上返回,右上计数,第二行才是虚线".
        *
@@ -533,7 +533,7 @@ function PhotoCard({
         </>
       )}
 
-      {/* Bottom caption — Phase 74 (2026-07-05): unified glass card
+      {/* Bottom caption — unified glass card
        * shared with the video Card. Description + schools/POIs live in
        * a light bottom sheet (WCAG AAA on the sheet, AA on the card
        * over any hero frame) instead of overlapping the photo inline. */}
@@ -747,7 +747,7 @@ function Card({
   //   - Meanwhile owner said "按两次才能播放". Turns out tap 1 landed on our
   //     own centre play glyph (74.20 gate `shouldMount && domPaused`),
   //     which mounted because domPaused stayed true throughout. See
-  //     BrowseFeed.tsx §Phase 74.23 gate — glyph now hidden in fullscreen.
+  // BrowseFeed.tsx gate — glyph now hidden in fullscreen.
   //
   // With the glyph gone, we need play to actually start on its own. Since
   // one-shot `.play()` calls in the tap handler + one delayed kick both
@@ -1164,7 +1164,7 @@ function Card({
                       // overrides let the className sizing actually win.
                       // Portrait videos are unaffected (their height:auto
                       // already exceeds the viewport). Only relevant
-                      // since Phase 75 put landscape videos directly in
+                      // since put landscape videos directly in
                       // the vertical feed with object-contain.
                       maxWidth: 'none',
                       maxHeight: 'none',
@@ -1174,7 +1174,7 @@ function Card({
               }
               className={
                 isFullscreen && hasLandscape
-                  ? // Phase 71.14 (2026-07-06): styles are inline (see `style`
+                  ? // styles are inline (see `style`
                     // above). Keep className empty for the fullscreen branch
                     // to avoid Tailwind's arbitrary-vw/vh utilities racing
                     // with inline sizing.
@@ -1186,7 +1186,7 @@ function Card({
               loop
               preload="auto"
             />
-            {/* Phase 74.7 (skill ref §1): poster overlay covers the <video>
+            {/* (skill ref §1): poster overlay covers the <video>
              * until the first real frame paints. Only rendered in the
              * non-fullscreen branch — this is the bug 74.7 was solving
              * (vertical-feed first-swipe poster+play-button flash on iOS
@@ -1200,7 +1200,7 @@ function Card({
                 className="pointer-events-none absolute inset-0 h-full w-full bg-black object-contain"
               />
             )}
-            {/* Phase 74.17 (2026-07-06): 74.14 rotated overlay + 74.14
+            {/* 74.14 rotated overlay + 74.14
              * hidden preload have both been REMOVED. Since 74.17 uses
              * the landscape uid in the vertical feed too, tapping
              * fullscreen no longer swaps HLS src, so there is no
@@ -1216,7 +1216,7 @@ function Card({
       <div className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-black/70 via-black/30 to-transparent" />
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-72 bg-gradient-to-t from-black/85 via-black/50 to-transparent" />
 
-      {/* Phase 28.1 (2026-06-15): single category pill — gold-on-gold,
+      {/* single category pill — gold-on-gold,
        * top-left. Replaces the older dark-card source overlay AND the
        * bottom-caption gold pill that duplicated this same data. Only
        * shown in Nearby mode; hero is unlabelled. Pool counter sits in
@@ -1231,13 +1231,13 @@ function Card({
        * the segmented progress bar at the top. Owner: remove the old
        * tag and description on the listing-feed nearby video. */}
 
-      {/* Phase 68.4 (2026-07-03): chip finally simplified to a circular
+      {/* chip finally simplified to a circular
        * ActionButton (matches Like/Save/Contact/Share visually) with the
        * video count as the badge. Owner: "不好看 做成一个圆形加数字 不要文字了".
        * Positioned inline as the first child of the right rail below —
        * this replaces the absolute-positioned chip. See rail block. */}
 
-      {/* Phase 28.2 (2026-06-15): desktop nav arrows for the Nearby pool.
+      {/* desktop nav arrows for the Nearby pool.
        * Touch events don't fire on a Mac mouse, so the vertical-swipe
        * gesture is mobile-only. Up/Down arrows (md:flex) mirror the
        * PhotoCard's left/right arrow pattern. Hidden when pool ≤ 1 or
@@ -1272,7 +1272,7 @@ function Card({
         </>
       )}
 
-      {/* Phase 74.23 (2026-07-06): NEVER render our center play glyph
+      {/* NEVER render our center play glyph
        * during fullscreen. Owner: "全屏后不要有播放键". 74.22 HUD proved
        * `p=T` (paused=true) throughout fullscreen enter — that IS our
        * own domPaused-driven glyph mounting on top of the video. Users
@@ -1306,7 +1306,7 @@ function Card({
         </div>
       )}
 
-      {/* Phase 71.7 (2026-07-06): fullscreen toggle. Shown only when the
+      {/* fullscreen toggle. Shown only when the
        * render worker produced a landscape companion (i.e. ≥80% horizontal
        * source photos). In portrait mode the button sits mid-lower over
        * the letterbox area (below where the horizontal frame ends);
@@ -1428,7 +1428,7 @@ function Card({
         </button>
       )}
 
-      {/* Bottom caption — Phase 74 (2026-07-05): floating glass card
+      {/* Bottom caption — floating glass card
        * with description + agent card in a light bottom sheet (AAA
        * contrast) so nothing overlaps the video. Right rail lives at
        * `right-3`; the card reserves right-20 to clear it.
@@ -1563,7 +1563,7 @@ export function BrowseFeed({
   const cardRefs = useRef<Map<number, HTMLElement>>(new Map());
   const scrollerRef = useRef<HTMLDivElement | null>(null);
 
-  // → Phase 111 (2026-07-17): swipe expansion.
+  // → swipe expansion.
   // First, fetch more real pages from /api/browse/feed until the DB is
   // exhausted. Only after that do we fall back to looping the collected
   // cards for infinite swipe. Trigger next-page fetch when the buyer is
@@ -1895,7 +1895,7 @@ export function BrowseFeed({
        * inside PhotoCard caption is preserved.
        *
        * rail reverted back up to ~6rem from
-       * the safe-area baseline. Phase 45.15 had lowered it to
+       * the safe-area baseline. had lowered it to
        * `max(1rem, safe-area)` to align with the caption block, but
        * owner feedback after living with it: the buttons sat too low,
        * thumb reach was awkward and they crowded the caption. Caption
@@ -1904,12 +1904,12 @@ export function BrowseFeed({
         className={`absolute right-3 ${FEED_Z.rail} flex flex-col items-center gap-3`}
         style={{ bottom: 'max(1rem, calc(env(safe-area-inset-bottom) + 0.5rem))' }}
       >
-        {/* Phase 68.4 (2026-07-03): community chip replaced with a circular
+        {/* community chip replaced with a circular
          * ActionButton at the top of the rail — same visual weight as
          * Like/Save/Contact/Share so the whole column reads as one design.
          * Uses ActionButton's built-in badge to show video count in red.
          * Owner: "不好看 做成一个圆形加数字 不要文字了 放在 like 上面". */}
-        {/* Phase 111 (2026-07-17): show Nearby button when EITHER the listing
+        {/* show Nearby button when EITHER the listing
          * belongs to a community OR it has any listing-scoped nearby videos
          *. Before
          * this, listings with community_id=null had 0-video visibility even
@@ -1945,14 +1945,14 @@ export function BrowseFeed({
         <ActionButton label="Contact" onClick={openContact}>
           <CommentIcon />
         </ActionButton>
-        {/* Phase 68 (2026-07-03): Share moved from top-header right-slot into
+        {/* Share moved from top-header right-slot into
          * the bottom of the right rail. Frees the top-right for the community
          * chip (笑云 feedback: chip in the top-left was invisible), and puts
          * social/outbound actions in one column. */}
         <ActionButton label="Share" onClick={onShare}>
           <ShareIcon />
         </ActionButton>
-        {/* Phase 34b.1 (2026-06-17): right-rail "Nearby" button removed. The
+        {/* right-rail "Nearby" button removed. The
          * top-left community chip already opens the same set of community
          * videos via CommunitySheet → CommunityCarousel — keeping both
          * surfaces was the duplication the chip was meant to replace.
@@ -1967,13 +1967,12 @@ export function BrowseFeed({
          * first interaction unmutes). */}
       </div>
 
-      {/* Phase 28.1 (2026-06-15): centered NEARBY label removed — the
+      {/* centered NEARBY label removed — the
        * gold category pill on each card already tells the user they're
        * in the Nearby pool, and the right-rail Nearby button is in its
        * active gold state, so the standalone label was redundant. */}
 
-      {/* Top header — Xiaohongshu video pattern. Phase 68 (2026-07-03):
-       * Share button moved out of the top-right and into the bottom of
+      {/* Top header — Xiaohongshu video pattern.        * Share button moved out of the top-right and into the bottom of
        * the right rail (see below). The community chip now occupies the
        * top-right slot instead. Only Back remains here. When viewing a
        * b-roll source, Back first returns to hero; on the hero we do
@@ -2008,11 +2007,11 @@ export function BrowseFeed({
          * top-3 right-3 inside the Card, above the right rail. */}
       </div>
 
-      {/* Phase 28 (2026-06-14): the bottom Like/Save/Contact bar moved
+      {/* the bottom Like/Save/Contact bar moved
        * into the right rail above. The caption block on the Card now
        * extends to the safe-area, giving an immersive bottom edge. */}
 
-      {/* Phase 45.24 (2026-06-21): "Swipe up for more" hint removed —
+      {/* "Swipe up for more" hint removed —
        * gesture is self-evident on a TikTok-style feed and the text was
        * crowding the bottom edge over the caption. */}
 
@@ -2026,7 +2025,7 @@ export function BrowseFeed({
         />
       )}
 
-      {/* Phase 34b (V1 redo): community sheet (L1) + fullscreen carousel (L2).
+      {/* (V1 redo): community sheet (L1) + fullscreen carousel (L2).
        * Resolved once at parent level — `sheetCardId` selects which card's
        * community/data flows into the sheet. Sheet → carousel transition
        * keeps the sheet mounted underneath so closing the carousel returns

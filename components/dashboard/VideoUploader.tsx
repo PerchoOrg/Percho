@@ -3,7 +3,7 @@
 import type { CommunityVideoCategoryId } from '@/lib/zod/community-video-categories';
 import { useEffect, useRef, useState } from 'react';
 /**
- * VideoUploader — Client Component (task 2.2; Phase 4.5 extends to community).
+ * VideoUploader — Client Component (task 2.2; extends to community).
  *
  * Flow:
  *   1. User picks a file. Reject locally if > 2 GB (server enforces too).

@@ -1,6 +1,5 @@
 -- ─── 0025_community_covers ──────────────────────────────────────────
--- Phase 27.8 (2026-06-16).
---
+-- --
 -- Each community gets an editable "cover" — agent picks either one of
 -- the community's videos OR uploads an image. Cover renders on:
 --   * /communities (buyer grid card, 9:16)

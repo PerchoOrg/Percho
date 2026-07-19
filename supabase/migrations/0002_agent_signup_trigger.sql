@@ -6,7 +6,7 @@
 -- (lowercased, sanitized); the agent can change it later via the
 -- dashboard profile editor.
 --
--- This avoids a chicken-and-egg in Phase 1: the dashboard always
+-- This avoids a chicken-and-egg in the dashboard always
 -- expects an agents row to exist for auth.uid().
 -- ─────────────────────────────────────────────────────────────────
 

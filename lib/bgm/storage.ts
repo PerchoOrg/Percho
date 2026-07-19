@@ -7,7 +7,7 @@
  *     modern-corporate/*.mp3
  *     luxury-ambient/*.mp3
  *     chill-electronic/*.mp3
- *     _state/state.json  ← Phase 106: rejected-track sidecar (soft-delete)
+ * _state/state.json ← rejected-track sidecar (soft-delete)
  *
  * bucket created, admin-tab viewer added.
  * Storage is now canonical for the admin UI

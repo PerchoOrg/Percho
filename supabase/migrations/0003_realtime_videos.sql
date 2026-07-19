@@ -1,8 +1,8 @@
--- Phase 2.4: enable Realtime broadcasts on video tables.
+-- enable Realtime broadcasts on video tables.
 --
 -- Cloudflare Stream webhook flips listing_videos.status processing → ready.
 -- Subscribers (currently /dashboard/upload-test, later the agent dashboard
--- and the Phase 3 feed builder) listen on the supabase_realtime publication
+-- and the feed builder) listen on the supabase_realtime publication
 -- to render that transition without a page refresh.
 --
 -- RLS still applies to Realtime — clients only see UPDATE events for rows

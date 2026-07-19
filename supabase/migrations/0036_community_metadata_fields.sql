@@ -1,4 +1,4 @@
--- Phase 50.4 (2026-06-22): community metadata expansion.
+-- community metadata expansion.
 --
 -- Adds 10 nullable fields to `communities` so agents can capture more useful
 -- community context directly on the editor form. All optional — existing rows

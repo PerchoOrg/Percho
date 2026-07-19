@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * EditListingForm — Phase 4.3a metadata editor.
+ * EditListingForm — metadata editor.
  *
  * /listing-form-autosave (2026-06-11): switched from explicit
  * "Save changes" button to debounced auto-save. Every edit kicks a 600ms

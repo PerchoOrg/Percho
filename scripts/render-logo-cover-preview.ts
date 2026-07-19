@@ -21,7 +21,7 @@ const html = `<!DOCTYPE html><html><head><meta charset="utf-8"/><title>P3 real-d
 h1{color:#333;font-size:18px;margin-bottom:8px}
 .sub{color:#777;font-size:13px;margin-bottom:24px}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:20px}</style></head>
-<body><h1>Phase 83.4 — P3 Bold Logo cover (real seed data)</h1>
+<body><h1>P3 Bold Logo cover (real seed data)</h1>
 <div class="sub">Rendered by <code>lib/community/logo-cover.ts</code> · ${rows.length} nextdoor seeds</div>
 <div class="grid">${cards}</div></body></html>`;
 

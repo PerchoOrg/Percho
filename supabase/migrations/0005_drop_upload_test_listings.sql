@@ -1,8 +1,8 @@
--- Phase 4.6 cleanup — drop the Phase 3 upload-test seed listings.
+-- cleanup — drop the upload-test seed listings.
 --
--- Phase 3 created one listing per agent with slug='__upload_test__' so the
+-- created one listing per agent with slug='__upload_test__' so the
 -- agent could exercise the video uploader on a real row before the listing
--- CRUD UI existed. Phase 4 makes that obsolete: agents now create real
+-- CRUD UI existed. makes that obsolete: agents now create real
 -- listings via /dashboard/listings/new.
 --
 -- This deletes:

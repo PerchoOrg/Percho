@@ -2,19 +2,9 @@
 
 /**
  * Social copy generator panel — L/R split with persistent saved drafts.
- *
- * History:
- *   - Phase 6.3b: FB + IG only.
- *   - Phase 8.4: Added Email, 3-tab horizontal.
- *   - Phase 48: Multi-platform × multi-language checkbox grid.
- *   - Phase 48.1 (2026-06-22): L/R split, single platform × single
- *     language per click via dropdowns.
- *   - Phase 48.3 (2026-06-22): Save button + saved drafts list. Drafts
- *     persist to `saved_social_drafts`. Hints trimmed to word counts.
- *   - Phase 48.4 (2026-06-22): Editable output + inline edit on saved
- *     drafts. Edits feed back into Regenerate as seed (server forwards
- *     `previous_drafts` to the model so it refines instead of starting
- *     fresh — agent voice & specifics survive a regen click).
+ * Editable output + inline edits on saved drafts feed back into Regenerate
+ * as seed (server forwards `previous_drafts` to the model so it refines
+ * instead of starting fresh — agent voice & specifics survive a regen).
  *
  * Backend (`/api/generate-social`) takes platform/language arrays for
  * forward compat — we send 1-element arrays.

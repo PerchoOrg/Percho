@@ -1,8 +1,7 @@
 'use client';
 
 /**
- * CommunityVideoManageList — Phase 50.10 (2026-06-23).
- *
+ * CommunityVideoManageList —  *
  * Flat row matching listing edit MediaPanel UX, plus community-specific
  * category pill and an inline editable description:
  *

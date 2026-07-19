@@ -38,7 +38,7 @@ export default async function BrowseFeedPage({
   const finalCards = community && allCards.length === 0 ? await fetchBrowseCards() : allCards;
 
   // photo-only listings now flow into the swipe
-  // feed alongside video listings. The Phase 10 video-only constraint was
+  // feed alongside video listings. The video-only constraint was
   // an engineering boundary leaking into product — buyers experience
   // Explore as a single stream regardless of media kind. `BrowseFeed`
   // already renders `PhotoCard` for `mediaKind === 'photo'`, so no component changes

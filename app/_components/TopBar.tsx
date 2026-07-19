@@ -72,7 +72,7 @@ function TopBarInner({ role, initial, avatarUrl, pathname }: TopBarProps & { pat
       </button>
 
       {/* Middle — sub-tabs, or a centred section title on Nearby-less
-       * pages (/browse and /communities post-Phase 66). */}
+       * pages (/browse and /communities post-). */}
       <div className="min-w-0 flex-1">
         {subTabs ? (
           <SubTabRow tabs={subTabs} pathname={pathname} />
@@ -295,7 +295,7 @@ function AvatarMenu({
             <User size={16} aria-hidden="true" />
             Profile
           </Link>
-          {/* Phase 45.13 (2026-06-20): Agent Hub removed from dropdown — already
+          {/* Agent Hub removed from dropdown — already
            * a primary tab in BottomNav/DesktopSidebar. Owner round 5 #3. */}
           <form action="/api/auth/signout" method="post" className="border-line border-t">
             <button

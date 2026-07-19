@@ -11,7 +11,7 @@
  * initial letter, etc).
  *
  * The first two are explicit agent picks; the third is the legacy
- * default that pre-dates Phase 27.8. We keep it so communities created
+ * default that pre-dates We keep it so communities created
  * before this feature still look fine.
  */
 
@@ -80,7 +80,7 @@ export function resolveCommunityCoverWithCfIds(input: {
   cover_video_cf_id: string | null;
   cover_storage_path: string | null;
   fallback_video_cf_id: string | null;
-  /** Phase 83.4: name + boundary → generated logo SVG as final fallback. */
+  /** name + boundary → generated logo SVG as final fallback. */
   name?: string | null;
   boundary?: BoundaryGeoJSON | null;
 }): ResolvedCover | null {

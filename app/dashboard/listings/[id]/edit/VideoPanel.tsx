@@ -1,12 +1,12 @@
 'use client';
 
 /**
- * VideoPanel — Phase 4.3b — listing-video manager for the edit page.
+ * VideoPanel — listing-video manager for the edit page.
  *
  * Responsibilities:
  *  - Render the list of `listing_videos` for the current listing, ordered by
  *    sort_order.
- *  - Embed the existing Phase 2 `VideoUploader` so the agent can add videos
+ * - Embed the existing `VideoUploader` so the agent can add videos
  *    inline. New videos optimistic-append at the bottom (highest sort_order
  *    seen so far + 1) and poll /api/video/list for status flips.
  *  - dnd-kit drag-and-drop to reorder, persisted via `reorderListingVideos`

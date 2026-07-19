@@ -148,7 +148,7 @@ export async function generateListingCopy(input: {
 /**
  * Social copy — multi-platform, multi-language.
  *
- * replaces the Phase 8.4 fixed Facebook+Instagram+Email shape.
+ * replaces the fixed Facebook+Instagram+Email shape.
  * Now driven by the caller-supplied `platforms` and `languages` arrays so
  * the UI can offer a checkbox grid. Output is a 2-D map:
  *   { [platform]: { [language]: string } }

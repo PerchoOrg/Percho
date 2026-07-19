@@ -49,7 +49,7 @@ export function DesktopSidebar({ role }: DesktopSidebarProps) {
         {role === 'agent' ? (
           <>
             <NewButton />
-            {/* Phase 45.12 (2026-06-20): hairline separator + extra gap below
+            {/* hairline separator + extra gap below
              * "+ New" — owner round 4 said the rail felt cramped at 4–5 items.
              * Visually separates the action ("New") from navigation. */}
             <div className="my-4 border-line border-t" aria-hidden="true" />

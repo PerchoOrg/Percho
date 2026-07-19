@@ -1,4 +1,4 @@
--- Phase 72 (2026-07-05): sweep active communities that don't meet the new
+-- sweep active communities that don't meet the new
 -- activate gate back to 'inactive'.
 --
 -- The gate (enforced going forward in `setCommunityStatus`):

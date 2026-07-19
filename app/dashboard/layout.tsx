@@ -21,7 +21,7 @@ import type { ReactNode } from 'react';
 
 export default async function DashboardLayout({ children }: { children: ReactNode }) {
   const supabase = await createClient();
-  // Phase 53D: getSession() reads cookie locally (~5ms) vs getUser() round-trip (~150ms).
+  // getSession() reads cookie locally (~5ms) vs getUser() round-trip (~150ms).
   // Middleware re-validates on each request — chrome doesn't need fresh JWT validation.
   const {
     data: { session },

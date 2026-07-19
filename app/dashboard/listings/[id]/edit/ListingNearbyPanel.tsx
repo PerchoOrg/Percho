@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * ListingNearbyPanel — Phase 101 (2026-07-16). Listing-scoped sibling of
+ * ListingNearbyPanel — Listing-scoped sibling of
  * CommunityNearbyPanel. Same triage + generated-videos UI, but keyed on a
  * listing so that listings without a covering community still get nearby
  * videos. Backed by listing_pois / listing_poi_photos + listing-scoped

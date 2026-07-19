@@ -1,4 +1,4 @@
--- Phase 66 — leads.UPDATE RLS policy
+-- leads.UPDATE RLS policy
 --
 -- Bug: 0001_init.sql enabled RLS on public.leads and shipped SELECT + INSERT
 -- policies, but NEVER an UPDATE policy. 0014_leads_followed_up.sql's header

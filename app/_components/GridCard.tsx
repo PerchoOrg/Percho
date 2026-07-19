@@ -78,7 +78,7 @@ export function GridCard({
         )}
         {topLeft && <div className="absolute top-2 left-2 z-10">{topLeft}</div>}
         {topRight && <div className="absolute top-2 right-2 z-10">{topRight}</div>}
-        {/* Bottom-gradient scrim — Phase 45.26 TikTok-density overlay D. */}
+        {/* Bottom-gradient scrim — TikTok-density overlay D. */}
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-3/5 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
         <div className={`absolute ${captionInsetClass} text-surface`}>{caption}</div>
       </div>

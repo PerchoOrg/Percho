@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * HubTabs — sticky sub-tab bar for the Phase 46 agent hub detail shell.
+ * HubTabs — sticky sub-tab bar for the agent hub detail shell.
  *
  * Lives directly under the hero. Click switches the rendered panel via
  * URL `?tab=...` (router.replace, scroll: false — no server nav, no
@@ -46,7 +46,7 @@ export function HubTabs({
   /**
    * When true, render every panel in the DOM and toggle visibility with
    * `display:none`. Default is the historical lazy behaviour where only
-   * the active panel is mounted. Phase 50.17 (2026-06-23): the community
+   * the active panel is mounted. the community
    * hub turns this on so the Media tab can auto-consume queued prefill
    * files from the FAB while the agent edits the Details tab — without
    * visiting the Media tab first.

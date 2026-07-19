@@ -1,8 +1,7 @@
 'use client';
 
 /**
- * AvatarPicker — Phase 27 (2026-06-14).
- *
+ * AvatarPicker —  *
  * Shared avatar editor for both agents and buyers. Three sources:
  *   1. Six system-provided house presets (`/avatars/preset-N.svg`).
  *   2. Upload from device → react-easy-crop square → 256×256 WebP →

@@ -7,7 +7,7 @@
  * . Rationale: nearby content is neighborhood-shared,
  * so approving a Whole Foods photo for the "Waterside" subdivision benefits
  * every listing inside it. The listing-scoped tables (`listing_pois` /
- * `listing_poi_photos`) stay for Phase 92 to avoid a big-bang UI cutover;
+ * `listing_poi_photos`) stay for to avoid a big-bang UI cutover;
  * new work funnels into `community_pois` / `community_poi_photos`.
  *
  * Auth model: communities are shared per 0013 (`created_by` is metadata,

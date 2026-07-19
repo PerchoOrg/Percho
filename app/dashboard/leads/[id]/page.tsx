@@ -1,6 +1,5 @@
 /**
- * Dashboard /leads/[id] — Phase 5.6.
- *
+ * Dashboard /leads/[id] —  *
  * Detail view for a single lead. RLS scopes the result to the agent's own
  * leads — if the row doesn't exist (or doesn't belong to this agent), we 404.
  *
@@ -53,7 +52,7 @@ export default async function LeadDetailPage({ params, searchParams }: PageProps
   const { id } = await params;
   const { back } = await searchParams;
   const supabase = await createClient();
-  // Phase 53D: getSession() reads cookie locally (~5ms) instead of round-tripping
+  // getSession() reads cookie locally (~5ms) instead of round-tripping
   // to Supabase to validate the JWT (~150ms). Middleware re-validates on each
   // request — page-level check is defense-in-depth, not the source of truth.
   const {

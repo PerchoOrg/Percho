@@ -1,4 +1,4 @@
--- Phase 46: Simplify listing/community status to active|inactive only.
+-- Simplify listing/community status to active|inactive only.
 --
 -- Listings: collapse three-state (draft|published|archived) → two-state
 -- (active|inactive). Mapping:

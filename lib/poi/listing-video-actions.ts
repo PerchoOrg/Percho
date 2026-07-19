@@ -14,7 +14,7 @@
  * The EC2 render worker polls the same table (worker cutover in this same
  * phase — see scripts/render-worker/worker.py).
  *
- * "Multiple videos, one primary" policy inherited from Phase 91/92 — we do
+ * "Multiple videos, one primary" policy inherited from /92 — we do
  * not supersede previous ready rows. Cross-bucket photo dedup applies
  * against live rows for the SAME listing so we don't burn photos on a
  * bucket that's about to overwrite itself.

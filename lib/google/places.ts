@@ -5,7 +5,7 @@
  *
  *   - autocomplete(q, sessionToken): used by the new-listing address input.
  *   - placeDetails(placeId, sessionToken): resolves a chosen prediction into
- *     {formatted_address, city, state, zip, lat, lng, place_id}. Phase 4.1
+ * {formatted_address, city, state, zip, lat, lng, place_id}.
  *     uses Place Details directly so the form has every geocoded field on
  *     submit.
  *

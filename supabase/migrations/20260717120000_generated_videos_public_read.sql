@@ -1,4 +1,4 @@
--- Phase 103 (2026-07-17): expose nearby videos to buyers.
+-- expose nearby videos to buyers.
 --
 -- generated_videos has agent-scoped SELECT policies only. The public listing feed at /v/[agent]/[listing] runs under the anon
 -- SSR client and therefore sees `[]` for any listing-scoped or

@@ -38,7 +38,7 @@ type ListingCard = {
   address: string;
   city: string;
   state: string;
-  /** Phase 74.9: agent portfolio address line 与全站对齐,渲染
+  /** agent portfolio address line 与全站对齐,渲染
    *  `${street}, ${city}, ${state} ${zip}`。zip 缺失 fallback。 */
   zip: string | null;
   price: number | null;
@@ -136,12 +136,11 @@ export default async function AgentProfilePage({
 
   return (
     <div className="min-h-screen bg-bg text-ink">
-      {/* Hero — Aman idiom: eyebrow caps + serif name + hairline.
-          Phase 74.14 (2026-07-05): owner asked to compress the hero so the
-          portfolio grid shows more homes above the fold. Vertical padding
-          halved (py-20/28 → py-8/12), eyebrow mb-8 → mb-3, headshot / row
-          gap-8 → gap-5, bio mt-8 → mt-4. Same information density, roughly
-          40% less whitespace. */}
+      {/* Hero — Aman idiom: eyebrow caps + serif name + hairline. Owner
+          asked to compress the hero so the portfolio grid shows more homes
+          above the fold. Vertical padding halved (py-20/28 → py-8/12),
+          eyebrow mb-8 → mb-3, headshot / row gap-8 → gap-5, bio mt-8 → mt-4.
+          Same information density, roughly 40% less whitespace. */}
       <section>
         <div className="mx-auto max-w-6xl px-6 py-8 md:py-12">
           <div className="eyebrow mb-3">Percho · Listing Specialist</div>
@@ -203,13 +202,13 @@ export default async function AgentProfilePage({
         <hr className="hairline" />
       </section>
 
-      {/* Listings — gallery.
-          Phase 74.14 (2026-07-05): switched from the editorial 22/26 serif
+      {/* Listings — gallery. Switched from the editorial 22/26 serif
           `ListingCardView` (3-col, 4:5, gap-8) to the site-wide `ListingGrid`
-          (4-up, 15/11/11 canonical). Owner: "public profile grid view 也要
-          改 ... 尽量多展现房子内容." This overrides the phase-74.4 editorial
-          exception — portfolio now matches browse / dashboard / community.
-          Section vertical rhythm also halved to bring the grid up. */}
+          (4-up, 15/11/11 canonical). Owner asked the public profile grid to
+          match the rest of the site and surface more homes per row. This
+          overrides the earlier editorial exception — portfolio now matches
+          browse / dashboard / community. Section vertical rhythm also
+          halved to bring the grid up. */}
       <section>
         <div className="mx-auto max-w-6xl px-6 py-8 md:py-12">
           <div className="mb-5 flex items-baseline justify-between">

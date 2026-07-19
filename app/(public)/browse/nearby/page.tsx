@@ -11,8 +11,8 @@ export const dynamic = 'force-dynamic';
 /**
  * /browse/nearby — radius-bound listings around the viewer's geolocation.
  *
- * Nearby was Phase 37-collapsed into Explore as a
- * sub-tab on the same page, then Phase 43.7 dropped that split entirely.
+ * Nearby was -collapsed into Explore as a
+ * sub-tab on the same page, then dropped that split entirely.
  * Now it's resurrected as its own route under /browse/* so the global
  * TopBar can render Explore | Nearby as proper sub-tabs (per
  * nav-config.getSubTabs). The radius preference, geolocation flow, and

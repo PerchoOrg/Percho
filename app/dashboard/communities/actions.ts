@@ -462,8 +462,8 @@ export async function deleteCommunityVideo(
   return { ok: true };
 }
 
-// ─── Phase 35.2: visibility + category edit ──────────────────────
-// Owner-only as of Phase 35.3 — see requireOwnedVideo above.
+// ─── visibility + category edit ──────────────────────
+// Owner-only as of see requireOwnedVideo above.
 
 const COMMUNITY_VIDEO_VISIBILITIES = ['public', 'private', 'archived'] as const;
 export type CommunityVideoVisibility = (typeof COMMUNITY_VIDEO_VISIBILITIES)[number];

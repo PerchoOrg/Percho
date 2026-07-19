@@ -224,7 +224,7 @@ async function assembleCards(
       : Promise.resolve({ data: [] }),
     // listing-scoped nearby bucket videos so
     // community-less listings (external FMLS imports) still surface the
-    // Nearby rail on /browse/feed. Mirrors listing-feed/load.ts Phase 102.
+    // Nearby rail on /browse/feed. Mirrors listing-feed/load.ts.
     supabase
       .from('generated_videos')
       .select('listing_id, cf_stream_uid, intent_bucket, narrative')
@@ -348,7 +348,7 @@ async function assembleCards(
      * each video's category label + blurb is shown as a pill above the
      * caption (read on the client from COMMUNITY_VIDEO_CATEGORIES).
      *
-     * Backward-compat: if a row has no `category` (pre-Phase 22 data),
+     * Backward-compat: if a row has no `category` (pre- data),
      * we synthesise one from the legacy `kind` so the pool stays
      * non-empty for older listings.
      */

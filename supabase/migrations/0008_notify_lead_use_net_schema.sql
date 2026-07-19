@@ -1,4 +1,4 @@
--- Phase 5.3 fixup #2 — call pg_net via the `net` schema, not `extensions`.
+-- fixup #2 — call pg_net via the `net` schema, not `extensions`.
 --
 -- Why: pg_net's `http_post` lives in the `net` schema regardless of the
 -- `create extension ... with schema extensions` clause — the extension

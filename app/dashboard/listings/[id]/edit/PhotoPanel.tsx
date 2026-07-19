@@ -1,8 +1,7 @@
 'use client';
 
 /**
- * PhotoPanel — Phase 10 (2026-06-12).
- *
+ * PhotoPanel —  *
  * Lets an agent attach photos to a listing. Mirrors the VideoPanel layout
  * but skips dnd-kit reorder (deferred to a fast-follow — V1 ships with
  * upload-order = display-order, agent can delete + re-upload to reorder).
@@ -335,7 +334,7 @@ export const PhotoPanel = forwardRef<PhotoPanelHandle, Props>(function PhotoPane
                 </button>
               </div>
 
-              {/* Phase 95: AI caption + tag chips. Empty until the render
+              {/* AI caption + tag chips. Empty until the render
                   worker's Claude vision pass writes ai_tags back. */}
               {caption ? (
                 <p className="line-clamp-2 text-[11px] text-ink2 leading-snug" title={caption}>

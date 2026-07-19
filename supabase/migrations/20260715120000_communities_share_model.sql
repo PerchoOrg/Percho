@@ -1,4 +1,4 @@
--- Phase 83.2 (2026-07-15): shared-community model.
+-- shared-community model.
 --
 -- 1. Flip all Nextdoor seeds to status='active' so buyer + agent + guest
 --    surfaces show them. Previously seeded as 'inactive' to avoid

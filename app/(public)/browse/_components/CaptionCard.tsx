@@ -28,9 +28,9 @@ type Listing = {
 type Agent = {
   slug: string;
   name: string;
-  /** Phase 94: FMLS office for external listings. */
+  /** FMLS office for external listings. */
   office?: string | null;
-  /** Phase 94: true when listing is externally sourced (no Percho agent). */
+  /** true when listing is externally sourced (no Percho agent). */
   isExternal?: boolean;
 };
 type School = { name: string; grades: string | null; rating: number | null };

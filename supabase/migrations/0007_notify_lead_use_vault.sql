@@ -1,4 +1,4 @@
--- Phase 5.3 fixup — switch notify_lead trigger from `app.settings.*` to Supabase Vault.
+-- fixup — switch notify_lead trigger from `app.settings.*` to Supabase Vault.
 --
 -- Why: Supabase hosted Postgres does not grant the `postgres` role permission
 -- to `alter database postgres set app.settings.* = ...` (error 42501). 0006

@@ -1,4 +1,4 @@
--- Phase 94 (2026-07-17): External listings (FMLS import).
+-- External listings (FMLS import).
 --
 -- Motivation: seed 250 real FMLS listings (Alpharetta/Johns Creek/Sandy Springs/
 -- Duluth/Suwanee) for demo + ken-burns video pipeline development.  These are

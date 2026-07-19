@@ -1,10 +1,8 @@
 'use client';
 
 /**
- * CommunityEditor — Phase 4.4; Phase 23 trimmed; Phase 50 flattened;
- * expanded; Phase 50.5 typed numerics; Phase 50.6 opt-in ranges;
- * form-level cleanup per owner;
- * auto-save parity with listing editor.
+ * CommunityEditor — flattened form with typed numerics, opt-in ranges,
+ * and auto-save parity with the listing editor.
  *
  * /save-button-parity (2026-06-24): added 600ms debounced auto-save
  * mirroring the listing editor. The "Save changes" button
@@ -57,8 +55,8 @@ function inputCls(hasError: boolean) {
   return `${INPUT_BASE} ${hasError ? INPUT_ERR : INPUT_OK}`;
 }
 
-// Year dropdown options — current year + 24 prior years. Phase 50.7 simplified
-// from the 50.5 dual-mode "Type a year…" escape hatch: an "old" community is
+// Year dropdown options — current year + 24 prior years. Simplified from
+// the dual-mode "Type a year…" escape hatch: an "old" community is
 // rare in our pipeline (Vivian's set is mostly post-2000 builds) and the
 // escape hatch added a state machine for ~1% of cases. If a 1950s build
 // shows up, owner can use the listing editor or we add the escape back later.
@@ -113,8 +111,8 @@ export function CommunityEditor({
   const [propertyTypes, setPropertyTypes] = useState<string[]>(community.property_types ?? []);
   const [builder, setBuilder] = useState(community.builder ?? '');
 
-  // Year built — two optional selects (start + end). Phase 50.7 simplified
-  // from the 50.5 dual-mode + 50.6 opt-in toggle. Both fields are stringified
+  // Year built — two optional selects (start + end). Simplified from the
+  // earlier dual-mode + opt-in-toggle iteration. Both fields are stringified
   // ints for input compatibility.
   const yearOptions = useMemo(() => buildYearOptions(), []);
   const [yearBuilt, setYearBuilt] = useState(community.year_built?.toString() ?? '');
@@ -618,8 +616,8 @@ export function CommunityDangerZone({ communityId }: { communityId: string }) {
   }
 
   // Mirrors the listing DangerZone — solid rose on the light palette so the
-  // destructive action actually reads as destructive. Phase 50.18 (2026-06-24):
-  // bumped border to rose-400 and bg from rose-50/40 → rose-50 (no opacity)
+  // destructive action actually reads as destructive. Border is rose-400,
+  // background rose-50 (no opacity) so the block doesn't feel soft.
   // because the translucent treatment looked faded against the cream surface
   // — qiaoxux feedback "danger zone color is fainted".
   return (

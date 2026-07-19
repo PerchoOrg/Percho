@@ -1,7 +1,7 @@
 -- ─────────────────────────────────────────────────────────────────
 -- 0012_buyer_accounts.sql
 --
--- Phase 15.1: introduce buyer accounts alongside agent accounts.
+-- introduce buyer accounts alongside agent accounts.
 --
 -- Until now the only authenticated principal in V1 was an agent
 -- (see 0002_agent_signup_trigger.sql). This migration:
@@ -15,7 +15,7 @@
 --   3. Locks down RLS: each buyer can read/update their own row;
 --      no public reads.
 --
--- Saved-listings + messaging tables come in Phase 15.2/15.3.
+-- Saved-listings + messaging tables come in /15.3.
 -- ─────────────────────────────────────────────────────────────────
 
 -- 1. buyers table

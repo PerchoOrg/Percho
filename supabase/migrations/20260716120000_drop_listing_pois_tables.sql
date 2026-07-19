@@ -1,6 +1,6 @@
--- Phase 93.1: Drop listing-scoped POI tables (superseded by community_pois).
+-- Drop listing-scoped POI tables (superseded by community_pois).
 --
--- Context: Phase 93 removed all code references to `listing_pois` and
+-- Context: removed all code references to `listing_pois` and
 -- `listing_poi_photos`. POI discovery + photo review now lives at the
 -- community layer (community_pois / community_poi_photos, migration
 -- 20260715205542). This migration drops the dead listing-level tables.

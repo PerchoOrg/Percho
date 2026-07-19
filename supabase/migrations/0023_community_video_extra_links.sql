@@ -1,6 +1,6 @@
 -- 0023: community video N:N extra links
 --
--- Phase 27 (2026-06-16): Each community_video already has a single primary
+-- Each community_video already has a single primary
 -- community_id (the one the uploading agent picks at upload time). To support
 -- "this video also makes sense in these other communities" without forcing
 -- agents to re-upload, we add a side table that records additional memberships.
@@ -49,6 +49,6 @@ create or replace view public.community_video_membership as
     from public.community_video_extra_links;
 
 comment on table  public.community_video_extra_links is
-  'Phase 27: secondary community memberships for a community_video. The video''s primary community lives on community_videos.community_id; rows here add extra memberships. Reads: query community_video_membership view.';
+  'secondary community memberships for a community_video. The video''s primary community lives on community_videos.community_id; rows here add extra memberships. Reads: query community_video_membership view.';
 comment on view   public.community_video_membership is
-  'Phase 27: unified read of which (community_id, video_id) pairs are visible. Combines community_videos.community_id (link_kind=primary) with community_video_extra_links (link_kind=extra).';
+  'unified read of which (community_id, video_id) pairs are visible. Combines community_videos.community_id (link_kind=primary) with community_video_extra_links (link_kind=extra).';

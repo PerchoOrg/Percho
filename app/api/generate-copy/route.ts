@@ -1,7 +1,6 @@
 /**
  * POST /api/generate-copy — generate a 3-paragraph English listing description
- * via Anthropic. Phase 6.1b.
- *
+ * via Anthropic.  *
  * Auth: requires a logged-in agent (uses anon-cookie client to read auth, then
  * resolves agent_id by user_id). RLS is irrelevant here — we don't query
  * tenant data, we just need to know who's calling for rate-limit accounting.

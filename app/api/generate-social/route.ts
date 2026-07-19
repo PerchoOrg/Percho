@@ -2,7 +2,7 @@
  * POST /api/generate-social — generate multi-platform, multi-language social
  * copy for a listing.
  *
- * replaces the Phase 6.3a fixed Facebook+Instagram+Email shape.
+ * replaces the fixed Facebook+Instagram+Email shape.
  * Caller now picks platforms and languages explicitly. Backend pulls
  * description / photo alt-text / video titles from the listing so the model
  * has actual content to work with.

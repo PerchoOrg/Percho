@@ -50,10 +50,10 @@ interface Props {
   videos: ManageVideoRow[];
   myAgentId: string | null;
   photos: CommunityPhotoRow[];
-  /** Phase 50.9: drives the Cover badge + clear/set actions per row. */
+  /** drives the Cover badge + clear/set actions per row. */
   coverVideoId: string | null;
   coverStoragePath: string | null;
-  /** Phase 50.9: gates the photo "Set as cover" button. */
+  /** gates the photo "Set as cover" button. */
   canSetCover: boolean;
 }
 

@@ -1,5 +1,5 @@
 -- ─── 0021_avatars ───────────────────────────────────────────────────
--- Phase 27 (2026-06-14). User avatar picker + upload.
+-- User avatar picker + upload.
 --
 -- Scope:
 --   * Add `avatar_url` to `public.buyers` (mirrors `agents.headshot_url`

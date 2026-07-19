@@ -16,7 +16,7 @@
  * `kind` selects which server actions to call. The shared toggle UX (instant
  * flip, missing-field popover, frosted-hover) used to live only on listings;
  * communities had a heavier `StatusPill` that didn't match the listing hero
- * visual language. Phase 50 collapsed both into this single component.
+ * visual language. collapsed both into this single component.
  */
 
 import { setCommunityStatus } from '@/app/dashboard/communities/[id]/status-actions';

@@ -1,8 +1,7 @@
 'use client';
 
 /**
- * DraftAddressPanel — Phase 52 (2026-06-24).
- *
+ * DraftAddressPanel —  *
  * Renders on the listing edit page when the listing is still a fresh
  * stub (`address` column equals the `__draft__-<rand>` placeholder
  * written by `createStubListing`). The agent picks an address from

@@ -27,7 +27,7 @@
 
 import { z } from 'zod';
 
-// Property types — Zillow-style consumer-facing labels. Phase 50.7 swap:
+// Property types — Zillow-style consumer-facing labels. swap:
 // "Active Adult 55+" / "New Construction" / "Resale" / "Custom Build"
 // were industry jargon (and confusingly mixed type with sale-stage). NAR's
 // canonical residential property types are what buyers actually filter on.

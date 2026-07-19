@@ -9,7 +9,7 @@
  *   Poll status of a queued/running job. Returns
  *   { status, videoRowId, cf_video_id?, error? }.
  *
- * replaces the Phase 12 501 stub.
+ * replaces the 501 stub.
  */
 
 import { createClient } from '@/lib/supabase/server';

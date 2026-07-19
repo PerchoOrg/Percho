@@ -1,5 +1,5 @@
 -- ─── 0022_avatars_bucket ────────────────────────────────────────────
--- Phase 27 (2026-06-14). Bootstrap the `avatars` Storage bucket via SQL
+-- Bootstrap the `avatars` Storage bucket via SQL
 -- so we don't need a manual Dashboard step. Idempotent.
 -- ────────────────────────────────────────────────────────────────────
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)

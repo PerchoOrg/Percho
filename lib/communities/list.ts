@@ -43,7 +43,7 @@ export type CommunityListCard = {
   state: string;
   description: string | null;
   videoCount: number;
-  /** Phase 34b: real count of active listings (`status='active'` && `community_id`). */
+  /** real count of active listings (`status='active'` && `community_id`). */
   listingCount: number;
   cover: ReturnType<typeof resolveCommunityCoverWithCfIds>;
 };

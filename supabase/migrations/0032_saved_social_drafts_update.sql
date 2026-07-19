@@ -1,6 +1,6 @@
 -- ─── 0032_saved_social_drafts_update ──────────────────────────────
--- Phase 48.4 (2026-06-22). Allow agents to edit their own saved drafts
--- in place. Phase 48.2 made drafts immutable to keep the surface simple,
+-- Allow agents to edit their own saved drafts
+-- in place. made drafts immutable to keep the surface simple,
 -- but qiaoxux wants in-place edit so a refined post can be saved without
 -- the delete + re-save dance (which also loses the original timestamp).
 --

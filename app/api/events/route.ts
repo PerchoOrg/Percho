@@ -1,12 +1,10 @@
 /**
  * POST /api/events — bulk insert behavioral events from the public feed.
  *
- * History:
- *   - Phase 3.7: anon-callable batch insert. Listing-only.
- *   - Phase 50 (2026-06-22): events now attribute to either a listing
- *     or a community. The schema was widened in migration 0035 (one of
- *     listing_id / community_id, never both, never neither). Validation
- *     here mirrors the DB check for fast-fail.
+ * Anon-callable batch insert. Events attribute to either a listing or a
+ * community. The schema (migration 0035) enforces exactly one of
+ * listing_id / community_id — validation here mirrors that DB check for
+ * fast-fail.
  *
  * Service-role client used because the anon RLS policy permits inserts
  * but the bulk insert is faster server-side without RLS round-trips.
