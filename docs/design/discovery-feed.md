@@ -450,7 +450,6 @@ Ordered by load-bearing weight:
 - `docs/pipelines/README.md` — video generation master (upstream: produces
   the listing / community videos that this feed consumes)
 - `docs/poi-content-pipeline.md` — POI → buyer-question video pipeline
-- `docs/ARCHITECTURE.md` §1 — system diagram (feed is the buyer-facing consumer)
 
 ## 11. Prototype reference
 
