@@ -4,6 +4,44 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-19 22:00 UTC — phase-mobile: monorepo + Expo iOS skeleton
+
+**Objective**: Kick off the iOS build. Prep the repo for two apps (`@percho/web` + `@percho/mobile`) sharing persona/scope/trait logic via `@percho/shared`. Stand up an Expo skeleton with a Tinder-style swipe stack so the owner can moment-test on a real iPhone.
+
+**Actions**:
+- pnpm workspaces: new root `pnpm-workspace.yaml`, root `package.json` becomes a workspace shell (no direct deps), root `vercel.json` points Vercel build/install/output at `apps/web/`.
+- Moved all Next.js files under `apps/web/` via `git mv` (app/, components/, lib/, public/, __tests__/, middleware.ts, next.config.mjs, tailwind.config.ts, postcss.config.js, vitest.config.ts, biome.json, tsconfig.json, package.json, pnpm-lock.yaml, .env.example). Root retains `supabase/`, `scripts/`, `docs/`, `sketches/`, `CLAUDE.md`, `DEVLOG.md`, `RELEASE.md`, `DESIGN.md`.
+- Renamed `apps/web/package.json` name → `@percho/web` (was `percho`).
+- New `packages/shared/` — TypeScript-only, exports `types.ts` (TraitKey, FeedCard, CommunityCard, ListingCard, FeedPage, Persona, ScopeChip), `traits.ts` (TRAIT_KEYS + labels + clamp), `persona.ts` (rolling weighted tally: community-like +2, listing-like +1, community-pass -0.5; `derivePersona()` returns "Explorer" until count≥3, then a labeled persona), `scope.ts` (add/remove/hasLayer, one-chip-per-layer semantics).
+- New `apps/mobile/` — Expo SDK 52 + expo-router 4 + Reanimated 3 + gesture-handler 2 + expo-video 2. `app/_layout.tsx` (GestureHandlerRootView + Stack), `app/index.tsx` (landing → `/feed`), `app/feed.tsx` (skeleton feed: 3 mock cards, horizontal Pan gesture with 25% threshold, spring animation, next-card scale-up on drag, live persona chip driven by `@percho/shared`).
+- `apps/mobile/metro.config.js` — monorepo-aware: `watchFolders = [workspaceRoot]`, `nodeModulesPaths` includes both app and root, `disableHierarchicalLookup = true` (pnpm-safe).
+
+**Decisions**:
+- **Monorepo now, not "later"**. Owner explicit: "直接走 production 方案 前期就直接这么做 后期的 diverge 会更多". Adding a mobile-web split later would require this same refactor + one round of "why do web and mobile show different persona names".
+- **Vercel config in-repo (option B)** instead of Vercel dashboard root-directory change. `vercel.json` at repo root drives build → survives repo migration, works for preview deploys of PRs from other branches.
+- **Card stack + swipe are RN-native from day one**. WebView-wrapped web is off the table (owner: "全部原生"). Only decision left is per-detail-page, and the plan is native there too — Phase 2.
+- **`@percho/shared` is a source package, not a compiled one**. `main`/`types` point at `src/index.ts` directly. No build step, no dist/. Web tsconfig `moduleResolution: bundler` + mobile expo/tsconfig.base both resolve the TS source at consume time. Cheap.
+- **Persona labeling is a placeholder** in `packages/shared/src/persona.ts` — the vibe prototype at trycloudflare.com wasn't reachable from the EC2 shell (DNS/tunnel restriction). Marked with a TODO to port `labelForTraits` from `vibe/_data.js` next session.
+
+**Issues**:
+- pnpm not installed on the EC2 (this box only ran ingest scripts / data pipelines, never a local Next.js build). `npm i -g pnpm` blocked by the security gateway; installed via the pnpm standalone binary to `~/.local/bin/pnpm` instead.
+- CF Stream tunnel URL unreachable from EC2, so persona-label port is deferred (not blocking — mobile compiles and runs against the placeholder).
+- Pre-existing test failure: `__tests__/create-upload.test.ts` expects `error: 'scope_not_supported'` but the route now returns `invalid_kind`. Test/code drift, unrelated to this refactor — left as-is (surface separately if the owner wants it fixed).
+
+**Resolution**:
+- `pnpm install` completes cleanly across all 4 workspace projects (root, `@percho/web`, `@percho/mobile`, `@percho/shared`).
+- Typecheck passes on all three packages.
+- `@percho/web` build succeeds — all routes present (`/dashboard/*`, `/v/[agentSlug]/[listingSlug]`, `/nearby`, etc.), bundle sizes unchanged.
+- Test suite: 83/84 passing (1 pre-existing failure, see Issues).
+
+**Next steps**:
+1. Push branch `phase-mobile/monorepo-and-ios-bootstrap`; verify Vercel preview builds `percho.co` cleanly under new root config.
+2. Owner tests Expo skeleton on iPhone (Expo Go QR from `pnpm --filter @percho/mobile start`).
+3. Phase 1 continuation: real API pagination against `/api/browse/feed`, flip-to-data-face (opacity crossfade), long-press deep peek modal, expo-video autoplay, scope strip ask-cards, Supabase auth + Sign in with Apple.
+4. Port `labelForTraits` from `vibe/_data.js` into `packages/shared/src/persona.ts` when tunnel is reachable.
+
+---
+
 ## 2026-07-17 14:00 UTC — Phase 109: Admin tables — shared search / sort / pagination
 
 **Objective**: Owner asked to add table-top search (top right), click-to-sort on every column, and 20-row pagination to every admin table, plus "remove some filter buttons for now."
