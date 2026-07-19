@@ -29,7 +29,7 @@ interface Props {
 
 type GenState = 'idle' | 'loading' | 'error';
 
-type Language = 'en' | 'zh' | 'es' | 'vi' | 'ko';
+type Language = 'en' | 'es' | 'vi' | 'ko';
 
 interface Draft {
   id: string;
@@ -42,7 +42,6 @@ interface Draft {
 
 const LANGUAGES: Array<{ id: Language; label: string }> = [
   { id: 'en', label: 'English' },
-  { id: 'zh', label: '简体中文' },
   { id: 'es', label: 'Español' },
   { id: 'vi', label: 'Tiếng Việt' },
   { id: 'ko', label: '한국어' },

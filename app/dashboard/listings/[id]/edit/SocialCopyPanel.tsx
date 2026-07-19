@@ -36,11 +36,9 @@ type Platform =
   | 'tiktok'
   | 'x'
   | 'linkedin'
-  | 'threads'
-  | 'rednote'
-  | 'wechat';
+  | 'threads';
 
-type Language = 'en' | 'zh' | 'es' | 'vi' | 'ko';
+type Language = 'en' | 'es' | 'vi' | 'ko';
 
 interface Draft {
   id: string;
@@ -61,13 +59,10 @@ const PLATFORMS: Array<{ id: Platform; label: string }> = [
   { id: 'x', label: 'X (Twitter)' },
   { id: 'linkedin', label: 'LinkedIn' },
   { id: 'threads', label: 'Threads' },
-  { id: 'rednote', label: 'Rednote (小红书)' },
-  { id: 'wechat', label: 'WeChat Moments (朋友圈)' },
 ];
 
 const LANGUAGES: Array<{ id: Language; label: string }> = [
   { id: 'en', label: 'English' },
-  { id: 'zh', label: '简体中文' },
   { id: 'es', label: 'Español' },
   { id: 'vi', label: 'Tiếng Việt' },
   { id: 'ko', label: '한국어' },

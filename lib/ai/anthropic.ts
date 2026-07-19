@@ -153,11 +153,11 @@ export async function generateListingCopy(input: {
  * the UI can offer a checkbox grid. Output is a 2-D map:
  *   { [platform]: { [language]: string } }
  *
- * Platforms supported (US homebuyer market — bilingual buyers are real):
- *   facebook, instagram, email, tiktok, x, linkedin, threads, rednote, wechat
+ * Platforms supported (US homebuyer market):
+ *   facebook, instagram, email, tiktok, x, linkedin, threads
  *
  * Languages supported (top US homebuyer languages by buyer-side share):
- *   en, zh, es, vi, ko
+ *   en, es, vi, ko
  *
  * Light grounding: takes the listing's full description paragraphs, photo
  * alt-text, and video titles so the model has actual content to reference
@@ -172,11 +172,9 @@ export type SocialPlatform =
   | 'tiktok'
   | 'x'
   | 'linkedin'
-  | 'threads'
-  | 'rednote'
-  | 'wechat';
+  | 'threads';
 
-export type SocialLanguage = 'en' | 'zh' | 'es' | 'vi' | 'ko';
+export type SocialLanguage = 'en' | 'es' | 'vi' | 'ko';
 
 export const SOCIAL_PLATFORMS: readonly SocialPlatform[] = [
   'facebook',
@@ -186,11 +184,9 @@ export const SOCIAL_PLATFORMS: readonly SocialPlatform[] = [
   'x',
   'linkedin',
   'threads',
-  'rednote',
-  'wechat',
 ] as const;
 
-export const SOCIAL_LANGUAGES: readonly SocialLanguage[] = ['en', 'zh', 'es', 'vi', 'ko'] as const;
+export const SOCIAL_LANGUAGES: readonly SocialLanguage[] = ['en', 'es', 'vi', 'ko'] as const;
 
 const PLATFORM_BRIEF: Record<SocialPlatform, string> = {
   facebook:
@@ -206,15 +202,10 @@ const PLATFORM_BRIEF: Record<SocialPlatform, string> = {
     'LinkedIn post: 2-3 paragraphs, agent-professional voice (third-person about the property is fine), ends with listing URL. No hashtag spam — 2-3 relevant tags max.',
   threads:
     'Threads post: 1-2 short paragraphs, conversational, listing URL at end. No hashtag stacking.',
-  rednote:
-    'Rednote (小红书 / Xiaohongshu) note: lifestyle/aspirational angle, 3-5 short paragraphs with line breaks, end with 5-8 hashtags using # prefix. Listing URL on its own line at the end.',
-  wechat:
-    'WeChat Moments (微信朋友圈) post: 2-3 short paragraphs, warm and personal (朋友圈 is a friends-only feed, not broadcast), listing URL on its own line. No hashtags — they are not used on Moments.',
 };
 
 const LANGUAGE_LABEL: Record<SocialLanguage, string> = {
   en: 'English',
-  zh: 'Simplified Chinese (简体中文)',
   es: 'Spanish (Español, neutral US Latin American)',
   vi: 'Vietnamese (Tiếng Việt)',
   ko: 'Korean (한국어)',
