@@ -36,7 +36,7 @@
 | `photo_selector.py` | 去重(dHash) → 配额 → 叙事排序 → 时长曲线 → 运镜分配,产出 `shot_plan.json` |
 | `generate.py` | ffmpeg zoompan/xfade 渲染器,支持 `--shot-plan` / `--listing-overlay` / `--captions` / `--bgm` |
 | `caption-render/render.py` | Playwright 把 `overlay.html` 的 7 种 archetype 版式渲染成透明 PNG 序列 |
-| BGM | `bgm/<style-bucket>/*.mp3` × 5 桶(warm-acoustic / modern-corporate / luxury-ambient / cinematic / chill-electronic),`random.choice` 挑一首 |
+| BGM | `bgm/warm-acoustic/*.mp3` — only production-approved bucket。`worker.pick_bgm()` 从中 `random.choice` 挑一首(详见 `docs/bgm/vibe-map.md`) |
 | CF Stream | 输出上传,存 `cf_video_id`(portrait)或 `cf_video_id_landscape` 到对应 videos 表 |
 
 **统一节奏参数**: `TOTAL_CAP=60s`,`MIN_PER_PHOTO=2.5s`,`MAX_PER_PHOTO=6s`,
