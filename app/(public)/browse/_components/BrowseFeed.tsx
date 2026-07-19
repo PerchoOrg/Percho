@@ -5,25 +5,23 @@ import { listLiked, toggleLike as toggleLikeAction } from '@/lib/buyer/likes';
 import { hlsUrl, thumbnailUrl } from '@/lib/cloudflare/stream';
 import { linkForCard } from '@/lib/feed/link-for-card';
 import Hls from 'hls.js';
-import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { LeadModal } from '../../_components/LeadModal';
-import { CaptionCard } from './CaptionCard';
-import { CommunityCarousel } from './CommunityCarousel';
-import { CommunitySheet, type CommunitySheetData } from './CommunitySheet';
 import { ActionButton } from '../../_components/feed/ActionButton';
-import { FEED_RAIL_BOTTOM, FEED_Z } from '../../_components/feed/constants';
 import { FeedShell } from '../../_components/feed/FeedShell';
+import { FEED_Z } from '../../_components/feed/constants';
 import {
   BackArrowIcon,
   BookmarkIcon,
   CommentIcon,
   HeartIcon,
-  NearbyIcon,
   PlayIcon,
   ShareIcon,
 } from '../../_components/feed/icons';
+import { CaptionCard } from './CaptionCard';
+import { CommunityCarousel } from './CommunityCarousel';
+import { CommunitySheet, type CommunitySheetData } from './CommunitySheet';
 
 export type BrowseSourceVideo = {
   cfVideoId: string;
@@ -376,10 +374,7 @@ function PhotoCard({
         const el2 = scrollerRef.current;
         if (!el2) return;
         const w = el2.clientWidth || 1;
-        const nearest = Math.max(
-          0,
-          Math.min(total - 1, Math.round(el2.scrollLeft / w)),
-        );
+        const nearest = Math.max(0, Math.min(total - 1, Math.round(el2.scrollLeft / w)));
         setDisplayIdx((prev) => (prev === nearest ? prev : nearest));
       });
     }
@@ -466,11 +461,7 @@ function PhotoCard({
           >
             <img
               src={src}
-              alt={
-                i === idx
-                  ? `${card.listing.address} — ${i + 1} of ${total}`
-                  : ''
-              }
+              alt={i === idx ? `${card.listing.address} — ${i + 1} of ${total}` : ''}
               className="h-full w-full object-contain"
               // Phase 73: eager range widened ±1 → ±2 so a fast flick
               // never lands on an undecoded neighbour. `decoding=async`
@@ -824,12 +815,12 @@ function Card({
   // native `<video poster>` letterboxes to the box's aspect (CSS
   // object-fit does NOT apply to the poster attribute on iOS Safari) —
   // that letterbox is what owner saw as "小图" in "黑屏 → 小图 → 大播放".
-  let landscapePoster: string | null = null;
+  let _landscapePoster: string | null = null;
   if (!isExternal && sel.cfVideoIdLandscape) {
     try {
-      landscapePoster = thumbnailUrl(sel.cfVideoIdLandscape);
+      _landscapePoster = thumbnailUrl(sel.cfVideoIdLandscape);
     } catch {
-      landscapePoster = null;
+      _landscapePoster = null;
     }
   }
 
@@ -1218,11 +1209,7 @@ function Card({
              * mount gap for both landscape and portrait cards. */}
           </>
         ) : poster ? (
-          <img
-            src={poster}
-            alt=""
-            className="relative h-full w-full object-contain"
-          />
+          <img src={poster} alt="" className="relative h-full w-full object-contain" />
         ) : null}
       </div>
 
@@ -1403,14 +1390,13 @@ function Card({
         </button>
       )}
       {isFullscreen && (
-        <>
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              setIsFullscreen(false);
-            }}
-            aria-label="Exit fullscreen"
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsFullscreen(false);
+          }}
+          aria-label="Exit fullscreen"
           className="flex h-11 w-11 items-center justify-center rounded-full border border-cream/40 bg-ink/80 text-cream backdrop-blur transition-colors hover:border-cream hover:bg-ink/90"
           style={{
             // Phase 71.20: X button was hidden BEHIND the fullscreen video
@@ -1440,7 +1426,6 @@ function Card({
             <path d="m6 6 12 12" />
           </svg>
         </button>
-        </>
       )}
 
       {/* Bottom caption — Phase 74 (2026-07-05): floating glass card
@@ -1449,12 +1434,7 @@ function Card({
        * `right-3`; the card reserves right-20 to clear it.
        * Phase 71.12 (2026-07-06): hidden in fullscreen — immersive mode
        * is video-only, price/address/agent card have no place there. */}
-      {!isFullscreen && (
-        <CaptionCard
-          listing={card.listing}
-          agent={card.agent}
-        />
-      )}
+      {!isFullscreen && <CaptionCard listing={card.listing} agent={card.agent} />}
     </section>
   );
 }
@@ -1762,7 +1742,7 @@ export function BrowseFeed({
     }
   }, [active]);
 
-  const hasNearby = (active?.categoryVideos.length ?? 0) > 0;
+  const _hasNearby = (active?.categoryVideos.length ?? 0) > 0;
 
   // Keyboard: ←/→ cycle b-roll within current source, Esc returns to hero.
   useEffect(() => {
@@ -1832,52 +1812,22 @@ export function BrowseFeed({
     <FeedShell
       scrollerRef={scrollerRef}
       cards={Array.from({ length: totalCards }, (_, idx) => {
-          const card = cards[idx % cards.length];
-          if (!card) return null;
-          const id = card.listing.id;
-          const cardSource = sourceByCard[id] ?? 'hero';
-          const cardCycle = cycleByCard[id] ?? 0;
-          const isThisActive = idx === activeIndex;
-          if (card.mediaKind === 'photo') {
-            return (
-              <PhotoCard
-                key={`${card.id}-${idx}`}
-                card={card}
-                cycleIdx={cardCycle}
-                cardRef={(el) => setCardRef(idx, el)}
-                poolSize={poolFor(card, cardSource)}
-                isActive={idx === activeIndex}
-                onSwipe={(delta) => {
-                  const pool = poolFor(card, cardSource);
-                  if (pool <= 1) return;
-                  setCycleByCard((c) => {
-                    const cur = c[id] ?? 0;
-                    const next = (((cur + delta) % pool) + pool) % pool;
-                    return { ...c, [id]: next };
-                  });
-                }}
-              />
-            );
-          }
+        const card = cards[idx % cards.length];
+        if (!card) return null;
+        const id = card.listing.id;
+        const cardSource = sourceByCard[id] ?? 'hero';
+        const cardCycle = cycleByCard[id] ?? 0;
+        const isThisActive = idx === activeIndex;
+        if (card.mediaKind === 'photo') {
           return (
-            <Card
+            <PhotoCard
               key={`${card.id}-${idx}`}
               card={card}
-              source={cardSource}
               cycleIdx={cardCycle}
-              shouldMount={Math.abs(idx - activeIndex) <= 1}
-              isActive={isThisActive}
               cardRef={(el) => setCardRef(idx, el)}
-              paused={isThisActive ? pausedActive : true}
-              setPaused={isThisActive ? setPausedActive : () => {}}
               poolSize={poolFor(card, cardSource)}
-              muted={muted}
-              onAutoplayBlocked={() => {
-                wasAutoplayBlockedRef.current = true;
-                setMuted(true);
-              }}
+              isActive={idx === activeIndex}
               onSwipe={(delta) => {
-                // Horizontal swipe cycles within the current source's b-roll pool.
                 const pool = poolFor(card, cardSource);
                 if (pool <= 1) return;
                 setCycleByCard((c) => {
@@ -1886,21 +1836,50 @@ export function BrowseFeed({
                   return { ...c, [id]: next };
                 });
               }}
-              onOpenCommunitySheet={
-                card.community
-                  ? () => {
-                      setSheetCardId(card.id);
-                      setSheetOpen(true);
-                      // Pause the underlying listing video so the sheet has focus.
-                      setPausedActive(true);
-                    }
-                  : undefined
-              }
             />
           );
-        })}
+        }
+        return (
+          <Card
+            key={`${card.id}-${idx}`}
+            card={card}
+            source={cardSource}
+            cycleIdx={cardCycle}
+            shouldMount={Math.abs(idx - activeIndex) <= 1}
+            isActive={isThisActive}
+            cardRef={(el) => setCardRef(idx, el)}
+            paused={isThisActive ? pausedActive : true}
+            setPaused={isThisActive ? setPausedActive : () => {}}
+            poolSize={poolFor(card, cardSource)}
+            muted={muted}
+            onAutoplayBlocked={() => {
+              wasAutoplayBlockedRef.current = true;
+              setMuted(true);
+            }}
+            onSwipe={(delta) => {
+              // Horizontal swipe cycles within the current source's b-roll pool.
+              const pool = poolFor(card, cardSource);
+              if (pool <= 1) return;
+              setCycleByCard((c) => {
+                const cur = c[id] ?? 0;
+                const next = (((cur + delta) % pool) + pool) % pool;
+                return { ...c, [id]: next };
+              });
+            }}
+            onOpenCommunitySheet={
+              card.community
+                ? () => {
+                    setSheetCardId(card.id);
+                    setSheetOpen(true);
+                    // Pause the underlying listing video so the sheet has focus.
+                    setPausedActive(true);
+                  }
+                : undefined
+            }
+          />
+        );
+      })}
     >
-
       {/* Right rail — Xiaohongshu / TikTok pattern (Phase 28, 2026-06-14).
        * All primary CTAs live here for an immersive bottom-edge: Like /
        * Save / Contact / Nearby (+ Sound for video). The bottom action
@@ -1951,7 +1930,9 @@ export function BrowseFeed({
             }
             badgeColor="red"
           >
-            <span aria-hidden="true" className="text-[20px] leading-none">🏘️</span>
+            <span aria-hidden="true" className="text-[20px] leading-none">
+              🏘️
+            </span>
           </ActionButton>
         )}
         <div key={likeAnimKey} className={likeAnimKey > 0 ? 'heart-pop' : ''}>
@@ -1999,7 +1980,9 @@ export function BrowseFeed({
        * b-roll source, Back first returns to hero; on the hero we do
        * router.back() if there's history (preserves grid scroll), else
        * push the fallback. */}
-      <div className={`absolute inset-x-0 top-0 ${FEED_Z.topbar} flex items-center justify-between px-3 pt-3`}>
+      <div
+        className={`absolute inset-x-0 top-0 ${FEED_Z.topbar} flex items-center justify-between px-3 pt-3`}
+      >
         <button
           type="button"
           onClick={() => {
