@@ -172,8 +172,27 @@ These are mandated by the owner. Breaking any of them ends the session badly:
    - Follow the standard template at the bottom of RELEASE.md (🚀 Features /
    ✨ Improvements / 🐛 Bug Fixes / 🔧 Technical / ⚠️ Known Issues /
    📈 Metrics).
-   - Versioning: `v0.x.y` pre-launch. Bump `x` for a meaningful release; bump
-   `y` for a same-day follow-up. After public launch → `v1.0.0`.
+   - **Versioning (updated 2026-07-19)**: `v<major>.<minor>` only. Bump
+   `minor` for a meaningful new capability (a story you can pitch). Bump
+   `major` for a big product step. **No patch numbers. No `v0.x` — we are
+   already at v1 internally.** Bug fixes and small polish do NOT bump the
+   version; they get appended as dated bullets under the current version:
+
+   ```
+   ## v1.2 — <headline title>
+
+   Feature summary paragraph. What users can now do that they couldn't before.
+
+   ### 2026-07-15
+   - Fix upload issue on large photos
+   - Improve nearby feed load speed
+
+   ### 2026-07-14
+   - Fix login redirect on Safari
+   ```
+
+   Rationale (per owner, 2026-07-19): users understand it, marketing can
+   pitch each minor as a story, PMs don't drown in patch soup.
    - DEVLOG.md (engineer-facing) and RELEASE.md (product-facing) are both
    updated — they are NOT the same document.
 
