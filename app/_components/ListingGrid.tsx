@@ -66,7 +66,7 @@ function specsLine(item: ListingGridItem): string {
 
 /**
  * /74.7: grid caption 3rd line — mirror the swipe feed
- * shape but WITHOUT zip (owner: "grid view 不显示 zipcode"). Format:
+ * shape but WITHOUT zip (owner: grid view should not show zipcode). Format:
  * `street, city, state`. Draft placeholders (no city/state) fall
  * through as street-only. Zip stays on the swipe feed + bottom sheet
  * because those have room; the 4-up grid does not.

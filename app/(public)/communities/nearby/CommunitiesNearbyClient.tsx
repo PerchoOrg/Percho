@@ -8,8 +8,9 @@
  * denied/unavailable, renders an empty result (no manual lat/lng input —
  * owner request 2026-06-21).
  *
- * Owner clarification (2026-06-20): "community 没有坐标 但是里面的 video
- * 有坐标,nearby 给 videos 所在的 community". The /api/communities/nearby
+ * Owner clarification (2026-06-20): communities have no coordinates
+ * themselves, but their videos do — nearby returns communities whose
+ * videos are near the caller. The /api/communities/nearby
  * endpoint handles that mapping; this client just renders the result with
  * a "0.4 mi away" badge per card.
  */

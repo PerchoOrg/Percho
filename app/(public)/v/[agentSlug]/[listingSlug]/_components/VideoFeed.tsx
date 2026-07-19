@@ -5,7 +5,7 @@
  *
  * 2026-06-11 (parity hotfix v2): now a thin pass-through to BrowseFeed.
  * LeadModal moved into BrowseFeed itself so /browse and /v/ share Contact
- * UX too (per user request: "统一按照 public link 里的来").
+ * UX too (per user request: unify with the public link's version).
  *
  * page_view fires once on mount; per-card analytics deferred until
  * BrowseFeed grows that hook.

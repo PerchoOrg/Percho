@@ -130,9 +130,9 @@ export default async function DashboardHomePage() {
       baths: l.baths,
       sqft: l.sqft,
       address: isDraft ? 'Untitled draft' : l.address,
-      // dashboard hub 也走 ListingGrid 的 formatFullAddress
-      // → 需要 city/state/zip。Draft 无 city/state,fallback 到
-      // "Untitled draft" street-only(见 74.5 dashboard 例外)。
+      // Dashboard hub uses ListingGrid's formatFullAddress, which
+      // needs city/state/zip. Drafts have no city/state → fall back
+      // to "Untitled draft" street-only.
       city: isDraft ? null : l.city,
       state: isDraft ? null : l.state,
       zip: isDraft ? null : l.zip,

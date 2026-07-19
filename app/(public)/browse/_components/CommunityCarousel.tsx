@@ -92,8 +92,8 @@ export function CommunityCarousel({
 
   // swap the JS translateX + 40px-threshold
   // gesture for the same native scroll-snap pattern that BrowseFeed's
-  // PhotoCard uses. Owner: "做得不错!现在应用到 community 那边
-  // 的横滑". Same jank fixes apply:
+  // PhotoCard uses. Owner asked to port the same fix to the community
+  // horizontal carousel. Same jank fixes apply:
   //   1. onScroll debounced to 100ms settle → parent setActive fires only
   //      once per gesture so React tree stays static during compositor
   //      animation
@@ -259,14 +259,15 @@ export function CommunityCarousel({
             </div>
             {/* Share moved from top-right into
              * the right-rail bottom, matching BrowseFeed / CommunityVideoFeed
-             * / CommunityListingCarousel. Owner: "listing feed 进去 nearby
-             * video 右上角还有分享按钮" — this was the last surface still
+             * / CommunityListingCarousel. Owner reported a share button
+             * still lingering top-right on nearby videos — this was the last surface still
              * putting Share in the top header. */}
           </div>
         </div>
 
         {/* segmented progress bar removed.
-         * Owner: "去掉 listing nearby 上面的虚线 只显示数字来看进度就行 太乱了".
+         * Owner: remove the dashed progress bar on listing-nearby —
+         * just show the numeric counter, dashes are too cluttered.
          * The "N / M" counter pill in the top-right already conveys
          * position; the dashed track added visual clutter over the
          * hero frame. */}

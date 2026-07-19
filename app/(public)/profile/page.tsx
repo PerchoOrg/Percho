@@ -21,7 +21,7 @@ import Link from 'next/link';
 import { EditableAgentIdentity } from './_components/EditableAgentIdentity';
 import { EditableBuyerIdentity } from './_components/EditableBuyerIdentity';
 // NearbyRadiusPref removed from Me per owner
-// (笑云 feedback — reduce distractions; Nearby is no longer surfaced in
+// (per user feedback — reduce distractions; Nearby is no longer surfaced in
 // the buyer chrome as of phase 66). Component file kept in the repo in
 // case Nearby comes back.
 
@@ -102,7 +102,7 @@ export default async function ProfilePage() {
             initialAvatarUrl={agent.headshot_url}
           />
 
-          {/* 笑云 feedback — reduce distractions on Me.
+          {/* Per user feedback — reduce distractions on Me.
            * Middle stack = agent-specific CTAs (public profile, view analytics).
            * Bottom stack = account actions (change password, sign out). The
            * "Account settings" info card was collapsed into a Change password
@@ -175,7 +175,7 @@ export default async function ProfilePage() {
           initialAvatarUrl={buyer?.avatar_url ?? null}
         />
 
-        {/* 笑云 feedback — buyer Me collapses to two
+        {/* Per user feedback — buyer Me collapses to two
          * account actions. "Explore listings" removed (redundant with the
          * For You bottom-nav tab); the Account settings info card was
          * folded into a Change password button. */}

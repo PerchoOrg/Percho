@@ -1,8 +1,9 @@
 /**
  * GET /api/communities/nearby?lat=&lng=&radius=
  *
- * . Owner spec: "community 没有坐标 但是里面的 video
- * 有坐标,nearby 给 videos 所在的 community". So this endpoint:
+ * Owner spec: communities have no coordinates of their own, but their
+ * videos do — so /nearby returns the communities whose videos are near
+ * the caller. This endpoint:
  *
  *   1. bbox-prefilters `community_videos` by (lat, lng) within `radius` mi
  *   2. exact-haversine-filters the bbox corners

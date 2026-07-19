@@ -515,10 +515,11 @@ function ListingSlide({
         <img src={poster} alt={listing.address} className="h-full w-full bg-black object-contain" />
       ) : null}
 
-      {/* overlay 与主 browse feed CaptionCard 对齐 —
-       * price 26px bold + specs / address 13px regular,单行地址带 zip,
-       * 无 gradient scrim(text-shadow 提供对比度)。`right-20` 让位给
-       * 右侧 rail(即使 community feed 目前无 rail,保留一致 gutter)。 */}
+      {/* Overlay aligned with the main browse feed CaptionCard:
+       * price 26px bold + specs / address 13px regular, single-line
+       * address including zip, no gradient scrim (text-shadow provides
+       * contrast). `right-20` reserves space for the right rail (even
+       * though community feed has no rail today, keep the gutter consistent). */}
       <div
         className="absolute right-20 left-4 z-30 text-cream"
         style={{

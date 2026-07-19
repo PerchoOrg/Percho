@@ -101,7 +101,7 @@ function TopBarInner({ role, initial, avatarUrl, pathname }: TopBarProps & { pat
 function SectionTitle({ pathname }: { pathname: string }) {
   // centred title for pages that no longer expose
   // sub-tabs. /browse and /communities now show "Explore" centred here
-  // (owner: 笑云 feedback — dropped Nearby sub-tab). Any other route with
+  // (per user feedback — Nearby sub-tab dropped). Any other route with
   // no sub-tabs (e.g. /profile) renders nothing.
   let title: string | null = null;
   if (pathname === '/browse' || pathname.startsWith('/browse/')) {

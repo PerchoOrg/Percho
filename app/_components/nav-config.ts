@@ -71,7 +71,7 @@ export type SubTab = {
  * Resolve sub-tabs for the current pathname.
  */
 export function getSubTabs(pathname: string, role: ViewerRole): SubTab[] | null {
-  // Nearby sub-tabs removed per owner (笑云 feedback,
+  // Nearby sub-tabs removed per owner feedback (
   // "reduce frictions"). /browse and /communities used to render
   // [Explore, Nearby]; now they render nothing here — TopBar centres a
   // static "Explore" title in the middle slot instead. The /browse/nearby
@@ -94,7 +94,7 @@ export function getSubTabs(pathname: string, role: ViewerRole): SubTab[] | null 
     // "My …" prefix per owner so agents read the
     // tabs as their own inventory, not a generic catalog.
     // Analytics moved to /profile per owner
-    // (笑云 feedback). community → neighborhood UI rename.
+    // Per user feedback: community → neighborhood UI rename.
     return [
       { href: '/dashboard', label: 'My Listing' },
       { href: '/dashboard/communities', label: 'My Neighborhood' },

@@ -96,8 +96,9 @@ export default async function PublicListingPage({
   // /v/ now mirrors the explore feed so a buyer
   // who lands here from a share link can swipe up/down to neighboring
   // listings — same as if they'd found this listing inside /browse/feed.
-  // Tianrou: "explore 里别的 listing 都可以上下滑切其他 listing,为什么
-  // 这个滑不了?" — exactly. Buyer doesn't know /v/ is a separate route;
+  // Tianrou reported: other listings in explore let you swipe up/down
+  // to cycle listings — why not this one? Exactly. Buyer doesn't know
+  // /v/ is a separate route;
   // their mental model is one explore stream.
   //
   // Strategy:

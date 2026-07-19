@@ -120,9 +120,10 @@ async function fetchAroundListing(
   let pois: Poi[] = [];
 
   // nearby videos are anchored to the listing, not
-  // the community. Owner rule: "只看 listing 本身附近的 poi. 只要有 nearby
-  // 视频就应该显示. 如果恰好这个 nearby video 在某个 neighbor 里 可以一并
-  // 显示." So we always pull listing-scoped bucket videos, and additionally
+  // the community. Owner rule: only look at POIs near the listing
+  // itself. Any nearby video should surface. If that nearby video
+  // happens to live inside a neighbor, it can be shown alongside. So
+  // we always pull listing-scoped bucket videos, and additionally
   // union the covering community's videos (manual uploads + community-scoped
   // bucket generation) when the listing has one.
   const { data: listingBucketRows } = (await supabase

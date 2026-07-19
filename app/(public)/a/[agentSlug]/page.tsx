@@ -38,8 +38,9 @@ type ListingCard = {
   address: string;
   city: string;
   state: string;
-  /** agent portfolio address line 与全站对齐,渲染
-   *  `${street}, ${city}, ${state} ${zip}`。zip 缺失 fallback。 */
+  /** Agent portfolio address line, aligned with the rest of the site:
+   *  renders `${street}, ${city}, ${state} ${zip}` with a fallback when
+   *  zip is missing. */
   zip: string | null;
   price: number | null;
   beds: number | null;

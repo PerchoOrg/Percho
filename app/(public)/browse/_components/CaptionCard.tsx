@@ -4,7 +4,7 @@
  * CaptionCard — immersive text overlay + light bottom sheet.
  *
  * owner tuning after 74.1 landed.
- *   - Price 30 -> 26px, "有点晃眼睛"
+ *   - Price 30 -> 26px (owner: too glaring at 30px)
  *   - Merge address + city/state into ONE line: "7920 NE 26th St Medina, WA"
  *   - Line 4: first ~40 chars of description + "...more" toggle
  * (schema has no zip -> we omit the trailing 98039 from owner's example.)
