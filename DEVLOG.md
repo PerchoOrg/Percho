@@ -4,6 +4,22 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-19 — docs: add `docs/marketing/` scaffold for parasitic distribution log
+
+**Objective**: Track daily Reddit / FB group / Quora / Zillow replies driven by Apocalypsee's cold-start playbook (post in Slack #marketing thread). Owner asked for a marketing folder under `docs/` where each day's outbound messages are logged.
+
+**Actions**:
+- `docs/marketing/README.md` — layout, per-reply schema, playbook rules (no fresh-account links, no `utm_*`, 80/20 real-info/soft-mention, 4h response SLA on F5Bot hits).
+- `docs/marketing/daily/_template.md` — copy-per-day; fields: time, source, url, op-question, account, reply summary, link?, 24h outcome.
+- `docs/marketing/daily/2026-07-19.md` — today's file; no replies yet, only the warmup checklist (F5Bot, sub-subscribes, account warmup, template drafts).
+- `docs/marketing/templates/README.md` — five template stubs to draft: school-district-family, downtown-commute, chinese-community, first-time-400k, retirement-55plus.
+- `docs/marketing/accounts.md` — handle registry (no creds; passwords stay in `~/.percho-secrets/`).
+
+**Decisions**: Docs-only, no code / API / DB / route changes. Kept out of `docs/design/` because this is ops+outreach, not product spec.
+
+**Next steps**: Owner fills warmup checklist, then daily entries start flowing.
+
+----
 ## 2026-07-19 UTC — Phase 119: Product vision v3 + listing-explore + feed card types
 
 **Objective**: Codify Tianrou's Product Direction v3 (posted Slack 07-19) as
