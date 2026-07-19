@@ -32,7 +32,7 @@ import { AnalyticsPanel } from '@/app/dashboard/_components/AnalyticsPanel';
 import { isDraftAddress } from '@/app/dashboard/listings/draft';
 import { DangerZone } from './DangerZone';
 import { DraftAddressPanel } from './DraftAddressPanel';
-import { type CommunityOption, EditListingForm, type ListingContext } from './EditListingForm';
+import { type CommunityOption, EditListingForm } from './EditListingForm';
 import { ListingLeadsPanel } from './ListingLeadsPanel';
 import { MediaPanel } from './MediaPanel';
 import type { ListingPhotoRow } from './PhotoPanel';
@@ -182,13 +182,6 @@ export default async function EditListingPage({
 
   const heroTitle = draft ? 'New listing' : listing.address;
 
-  const listingContext: ListingContext = {
-    address: listing.address,
-    city: listing.city,
-    state: listing.state,
-    neighborhood: listing.neighborhood,
-  };
-
   return (
     <>
       <HeroHeader
@@ -248,7 +241,6 @@ export default async function EditListingPage({
                     community_id: listing.community_id,
                   }}
                   communities={communities}
-                  listingContext={listingContext}
                 />
               </section>
               <DangerZone listingId={listing.id} />

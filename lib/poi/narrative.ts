@@ -14,7 +14,7 @@
  * tab. Never fired automatically to keep spend predictable.
  */
 
-import { extractJsonObject } from '@/lib/ai/anthropic';
+import { extractJsonObject } from '@/lib/utils/extract-json';
 import { createServiceClient } from '@/lib/supabase/server';
 import type { IntentBucket } from './types';
 

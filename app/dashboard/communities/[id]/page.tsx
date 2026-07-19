@@ -1,23 +1,19 @@
 /**
  * /dashboard/communities/[id] — community detail.
  *
- * Mirrors the listing edit hub's 4-icon-tab structure so the agent's
- * dashboard reads identically across listings and communities:
+ * Mirrors the listing edit hub's tab structure so the agent's dashboard
+ * reads identically across listings and communities:
  *
- *   Details · Media · Marketing · Analytics
+ *   Details · Media · Analytics
  *
  *   - Details   : metadata edit (CommunityEditor) + buyer link.
  *   - Media     : Videos + Photos in one card. Cover selection is inline
- *                 per row/photo — no separate
- *                 cover panel.
- *   - Marketing : owner-only language-only marketing copy generator
- *                 (CommunityMarketingPanel — the community sibling of
- *                 the listing SocialCopyPanel).
+ *                 per row/photo — no separate cover panel.
  *   - Analytics : owner-only generic AnalyticsPanel (entityKind=community).
  *
  * Non-owner contributors still see Details + Media so they can manage
- * their own video/photo contributions; Marketing and Analytics are
- * hidden because they are not theirs to act on.
+ * their own video/photo contributions; Analytics is hidden because it
+ * is not theirs to act on.
  *
  * Hero: HeroHeader (matches listing hub) — chromeless top-right control
  * row with a Preview link + InstantStatusToggle, title/subtitle bottom-left.
@@ -238,7 +234,7 @@ export default async function CommunityEditorPage({
   // moved to /admin/pipeline/community-nearby/[id]
   // — kept the load path there. The Nearby tab is removed from this hub.
 
-  // Tabs — Details + Media always; Marketing + Analytics owner-only.
+  // Tabs — Details + Media always; Analytics owner-only.
   const tabs = [
     {
       id: 'details',

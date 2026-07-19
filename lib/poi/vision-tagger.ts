@@ -16,7 +16,7 @@
  * refresh (~100 photos) is ~$0.50.
  */
 
-import { extractJsonObject } from '@/lib/ai/anthropic';
+import { extractJsonObject } from '@/lib/utils/extract-json';
 import { INTENT_BUCKETS, type IntentBucket } from '@/lib/poi/types';
 import { createServiceClient } from '@/lib/supabase/server';
 

@@ -47,13 +47,6 @@ interface InitialValues {
   community_id: string | null;
 }
 
-export interface ListingContext {
-  address: string;
-  city: string;
-  state: string;
-  neighborhood: string | null;
-}
-
 export interface CommunityOption {
   id: string;
   name: string;
@@ -65,11 +58,9 @@ interface Props {
   listingId: string;
   initial: InitialValues;
   communities: CommunityOption[];
-  listingContext: ListingContext;
 }
 
 type SaveState = 'idle' | 'pending' | 'saving' | 'saved' | 'error';
-type GenState = 'idle' | 'loading' | 'error';
 
 const STYLE_OPTIONS = [
   'Craftsman',
@@ -128,7 +119,7 @@ function buildYearOptions(): string[] {
   return out;
 }
 
-export function EditListingForm({ listingId, initial, communities, listingContext }: Props) {
+export function EditListingForm({ listingId, initial, communities }: Props) {
   const [price, setPrice] = useState(initial.price?.toString() ?? '');
 
   const initialBeds = initial.beds?.toString() ?? '';
@@ -179,8 +170,6 @@ export function EditListingForm({ listingId, initial, communities, listingContex
   const [saveState, setSaveState] = useState<SaveState>('idle');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const [genState, setGenState] = useState<GenState>('idle');
-  const [genError, setGenError] = useState<string | null>(null);
 
   function parseIntOrNull(s: string): number | null {
     if (s.trim() === '') return null;
@@ -349,46 +338,6 @@ export function EditListingForm({ listingId, initial, communities, listingContex
     window.addEventListener('beforeunload', onBeforeUnload);
     return () => window.removeEventListener('beforeunload', onBeforeUnload);
   }, [saveState]);
-
-  async function onGenerate() {
-    setGenState('loading');
-    setGenError(null);
-    try {
-      const payload: Record<string, unknown> = {
-        address: listingContext.address,
-        city: listingContext.city,
-        state: listingContext.state,
-      };
-      if (listingContext.neighborhood) payload.neighborhood = listingContext.neighborhood;
-      const priceN = parseIntOrNull(price);
-      if (priceN !== null) payload.price = priceN;
-      const bedsN = parseFloatOrNull(beds);
-      if (bedsN !== null) payload.beds = bedsN;
-      const bathsN = parseFloatOrNull(baths);
-      if (bathsN !== null) payload.baths = bathsN;
-      const sqftN = parseIntOrNull(sqft);
-      if (sqftN !== null) payload.sqft = sqftN;
-      const styleT = style.trim();
-      if (styleT) payload.style = styleT;
-
-      const res = await fetch('/api/generate-copy', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      if (!res.ok) {
-        const body = (await res.json().catch(() => ({}))) as { error?: string };
-        if (res.status === 429) throw new Error('Rate limit hit — try again in a minute.');
-        throw new Error(body.error ?? `HTTP ${res.status}`);
-      }
-      const data = (await res.json()) as { paragraphs: string[] };
-      setDescription(data.paragraphs.join('\n\n'));
-      setGenState('idle');
-    } catch (err) {
-      setGenState('error');
-      setGenError(err instanceof Error ? err.message : 'unknown');
-    }
-  }
 
   return (
     <div className="space-y-6">
@@ -672,20 +621,6 @@ export function EditListingForm({ listingId, initial, communities, listingContex
       </Field>
 
       <Field label="Description" optional>
-        <div className="mb-2 flex items-center gap-3">
-          <button
-            type="button"
-            onClick={onGenerate}
-            disabled={genState === 'loading'}
-            className="rounded border border-line px-3 py-1 text-xs text-ink hover:bg-ink2/20 disabled:opacity-50"
-          >
-            {genState === 'loading' ? 'Generating…' : '✨ Generate description'}
-          </button>
-          {genState === 'error' && (
-            <span className="text-xs text-red-400">Error: {genError ?? 'unknown'}</span>
-          )}
-          <span className="text-xs text-muted">Overwrites current text.</span>
-        </div>
         <textarea
           value={description}
           onChange={(e) => setDescription(e.target.value)}
