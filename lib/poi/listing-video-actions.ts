@@ -11,10 +11,10 @@
  *
  * Output: inserts a `generated_videos` row with
  *   scope='listing_intent_bucket', listing_id set, community_id null.
- * The EC2 render worker polls the same table (worker cutover in this same
- * phase — see scripts/render-worker/worker.py).
+ * The EC2 render worker polls the same table
+ * (see scripts/render-worker/worker.py).
  *
- * "Multiple videos, one primary" policy inherited from /92 — we do
+ * "Multiple videos, one primary" policy — we do
  * not supersede previous ready rows. Cross-bucket photo dedup applies
  * against live rows for the SAME listing so we don't burn photos on a
  * bucket that's about to overwrite itself.
@@ -499,9 +499,8 @@ export async function getListingBucketEligiblePhotoCount(
 
 /**
  * manual "Regenerate description" trigger for listing-scoped
- * bucket videos. Same Anthropic-narrative pipeline as community + listing
- * legacy — narrative.ts already accepts either owner. Revalidates the
- * listing edit page.
+ * bucket videos. Same Anthropic-narrative pipeline as community —
+ * narrative.ts accepts either owner. Revalidates the listing edit page.
  */
 export async function regenerateListingBucketVideoNarrative(
   videoId: string,

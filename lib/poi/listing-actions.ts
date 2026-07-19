@@ -3,8 +3,7 @@
 /**
  * listing-scoped POI content pipeline.
  *
- * Mirror of `lib/poi/community-actions.ts` (which itself mirrors the
- * pre-Phase-92 listing-scoped pipeline). Rationale: not every listing sits
+ * Parallels `lib/poi/community-actions.ts`. Rationale: not every listing sits
  * inside a curated community, but every listing must show nearby videos.
  * When a listing has no covering community, discovery anchors on the
  * listing itself and populates `listing_pois` / `listing_poi_photos`.

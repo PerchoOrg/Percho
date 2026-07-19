@@ -27,9 +27,9 @@ const PLACES_BASE = 'https://places.googleapis.com/v1';
  *         make a photo video for them
  *
  * `asian_community` and `work_hubs` don't map cleanly to Places types — they
- * need Text Search ("chinese school", "wework") which we'll wire up in a
- * follow-up phase. For now `BUCKET_PLACES_TYPES[bucket] = []` means the
- * discover fanout skips that bucket automatically.
+ * need Text Search ("chinese school", "wework"), not yet wired up.
+ * For now `BUCKET_PLACES_TYPES[bucket] = []` means the discover fanout
+ * skips that bucket automatically.
  */
 export const BUCKET_PLACES_TYPES: Record<string, readonly string[]> = {
   schools: ['school', 'primary_school', 'secondary_school'],

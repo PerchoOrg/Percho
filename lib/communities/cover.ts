@@ -10,9 +10,8 @@
  * If none, returns null and the caller renders a fallback (gradient block,
  * initial letter, etc).
  *
- * The first two are explicit agent picks; the third is the legacy
- * default that pre-dates We keep it so communities created
- * before this feature still look fine.
+ * The first two are explicit agent picks; the third is the fallback
+ * default so communities without an explicit cover still look fine.
  */
 
 import { thumbnailUrl } from '@/lib/cloudflare/stream';

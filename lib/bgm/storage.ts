@@ -24,11 +24,10 @@ export const BGM_BUCKET = 'bgm';
 /**
  * The four vibe buckets, in canonical display order.
  *
- * `cinematic` removed — owner rated the whole
- * bucket "too somber". Tracks were deleted from Storage in the same
- * phase; the folder is no longer created for new tracks. If you resurrect
- * a similar vibe later, pick a new name to avoid confusion with the
- * archived files.
+ * `cinematic` removed — owner rated the whole bucket "too somber".
+ * Tracks were deleted from Storage; the folder is no longer created
+ * for new tracks. If you resurrect a similar vibe later, pick a new
+ * name to avoid confusion with the archived files.
  */
 export const BGM_VIBES = [
   'warm-acoustic',
@@ -74,7 +73,6 @@ export const BGM_VIBE_META: Record<BgmVibe, { label: string; blurb: string; fit:
  * an "Approve" toggle to bring them back.
  */
 export const BGM_STATE_PATH = '_state/state.json';
-export const BGM_STATE_BUCKET_PATH = `${BGM_BUCKET}/${BGM_STATE_PATH}`;
 
 export type BgmState = {
   schema_version: 1;
