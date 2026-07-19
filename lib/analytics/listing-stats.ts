@@ -1,7 +1,7 @@
 /**
  * Listing-stats compatibility shim.
  *
- * Phase 50 (2026-06-22) generalized the implementation in
+ * generalized the implementation in
  * `entity-stats.ts` (listings + communities, same shape). All call
  * sites that talked to listings keep working: the old function names
  * are re-exported as listing-bound wrappers around the generic ones.

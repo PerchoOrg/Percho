@@ -1,11 +1,11 @@
 'use client';
 
-import type { Ref, ReactNode } from 'react';
+import type { ReactNode, Ref } from 'react';
 
 import { FEED_FRAME_CLASS, FEED_VSCROLL_CLASS } from './constants';
 
 /**
- * Phase 45.23 (2026-06-21): shared shell for the three feed surfaces
+ * shared shell for the three feed surfaces
  * (BrowseFeed, CommunityVideoFeed, CommunityCarousel). Owns the outer
  * phone-shape frame and (when `axis === 'vertical'`) the inner snap
  * scroller. Overlays — top header, right rail, captions, sheets, modals
@@ -33,12 +33,7 @@ export type FeedShellProps = {
   axis?: 'vertical' | 'horizontal';
 };
 
-export function FeedShell({
-  scrollerRef,
-  cards,
-  children,
-  axis = 'vertical',
-}: FeedShellProps) {
+export function FeedShell({ scrollerRef, cards, children, axis = 'vertical' }: FeedShellProps) {
   return (
     <div className={FEED_FRAME_CLASS}>
       {axis === 'vertical' ? (

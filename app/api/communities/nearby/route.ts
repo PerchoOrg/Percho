@@ -1,7 +1,7 @@
 /**
  * GET /api/communities/nearby?lat=&lng=&radius=
  *
- * Phase 45 (2026-06-20). Owner spec: "community 没有坐标 但是里面的 video
+ * . Owner spec: "community 没有坐标 但是里面的 video
  * 有坐标,nearby 给 videos 所在的 community". So this endpoint:
  *
  *   1. bbox-prefilters `community_videos` by (lat, lng) within `radius` mi
@@ -25,18 +25,13 @@ const MIN_RADIUS_MI = 1;
 
 const EARTH_RADIUS_MI = 3958.7613;
 
-function haversineMi(
-  a: { lat: number; lng: number },
-  b: { lat: number; lng: number },
-): number {
+function haversineMi(a: { lat: number; lng: number }, b: { lat: number; lng: number }): number {
   const toRad = (d: number) => (d * Math.PI) / 180;
   const dLat = toRad(b.lat - a.lat);
   const dLng = toRad(b.lng - a.lng);
   const lat1 = toRad(a.lat);
   const lat2 = toRad(b.lat);
-  const x =
-    Math.sin(dLat / 2) ** 2 +
-    Math.sin(dLng / 2) ** 2 * Math.cos(lat1) * Math.cos(lat2);
+  const x = Math.sin(dLat / 2) ** 2 + Math.sin(dLng / 2) ** 2 * Math.cos(lat1) * Math.cos(lat2);
   return 2 * EARTH_RADIUS_MI * Math.asin(Math.sqrt(x));
 }
 
@@ -72,7 +67,7 @@ export async function GET(req: Request) {
     .select('id, community_id, lat, lng')
     .eq('status', 'ready')
     .eq('visibility', 'public')
-    // Phase 92: skip history renders.
+    // skip history renders.
     .eq('is_primary', true)
     .not('lat', 'is', null)
     .not('lng', 'is', null)
@@ -104,7 +99,11 @@ export async function GET(req: Request) {
       ...c,
       nearestVideoMi: closestByCommunity.get(c.id) ?? null,
     }))
-    .sort((a, b) => (a.nearestVideoMi ?? Infinity) - (b.nearestVideoMi ?? Infinity));
+    .sort(
+      (a, b) =>
+        (a.nearestVideoMi ?? Number.POSITIVE_INFINITY) -
+        (b.nearestVideoMi ?? Number.POSITIVE_INFINITY),
+    );
 
   return NextResponse.json({
     cards,

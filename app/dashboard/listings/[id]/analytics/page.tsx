@@ -1,12 +1,12 @@
 /**
- * /dashboard/listings/[id]/analytics — legacy redirect (Phase 47.8).
+ * /dashboard/listings/[id]/analytics — legacy redirect.
  *
  * Analytics moved inline into the edit hub as a tab. This route now
  * permanently redirects to /dashboard/listings/[id]/edit?tab=analytics
  * so any old bookmarks / shared links still land on the right view.
  */
 
-import { redirect, permanentRedirect } from 'next/navigation';
+import { permanentRedirect, redirect } from 'next/navigation';
 
 export default async function ListingAnalyticsRedirect({
   params,

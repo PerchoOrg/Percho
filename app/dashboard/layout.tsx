@@ -2,13 +2,13 @@ import { createClient } from '@/lib/supabase/server';
 /**
  * Dashboard layout — gates all /dashboard/* routes behind auth.
  *
- * Phase 26 (2026-06-14): the dashboard-specific <TopBar> is gone — the
+ * the dashboard-specific <TopBar> is gone — the
  * global <SiteHeader> in the root layout now handles desktop chrome for
  * agent routes too. This file is now just an auth gate + page wrapper.
- * Phase 36 (2026-06-18): removed the "preview as buyer" redirect — that
+ * removed the "preview as buyer" redirect — that
  * mode no longer exists under the unified IA.
  *
- * Phase 47 (2026-06-21): dropped the inner `mx-auto max-w-6xl px-6 py-8`
+ * dropped the inner `mx-auto max-w-6xl px-6 py-8`
  * <main> wrapper. Each child page now owns its own container so the
  * agent-side grids (My Listings, My Communities) can use exactly the
  * same container chrome as the buyer-side grids (For You, Communities)

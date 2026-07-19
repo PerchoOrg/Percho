@@ -1,5 +1,5 @@
 /**
- * Phase 45.23 (2026-06-21): shared layout constants for the three feed
+ * shared layout constants for the three feed
  * surfaces (BrowseFeed, CommunityVideoFeed, CommunityCarousel). Centralized
  * so a fix in z-stack or safe-area math propagates to all three at once —
  * the recurring class of bugs we kept hitting through phases 45.19–45.22
@@ -18,8 +18,7 @@ export const FEED_RAIL_BOTTOM = 'max(1rem, calc(env(safe-area-inset-bottom) + 0.
 // without burying the price/title under it.
 export const FEED_CAPTION_BOTTOM = 'max(1rem, env(safe-area-inset-bottom))';
 
-// Z-stack constants. Modal is z-[70] (phase 45.20 Bug A: previously z-50,
-// got hidden behind CommunityCarousel's z-[60] outer frame). Keep modal
+// Z-stack constants. Modal is z-[70]. Keep modal
 // above every overlay layer; nothing else here ever exceeds 40.
 export const FEED_Z = {
   content: 'z-0',
@@ -33,7 +32,7 @@ export const FEED_Z = {
 // Outer phone-shape frame, used by all three feeds. On md+ the feed is
 // constrained to a 9:16 portrait column so desktop users see the same
 // crop as mobile rather than a stretched landscape video.
-// Phase 45.24 (2026-06-21): use 100dvh (dynamic viewport height) instead of
+// use 100dvh (dynamic viewport height) instead of
 // h-screen / 100vh so the feed actually fills mobile Safari's visible viewport
 // when the browser's URL bar is shown. With 100vh the URL bar overlaps the
 // bottom of the feed (caption + rail get clipped); 100dvh tracks the chrome.
@@ -41,7 +40,7 @@ export const FEED_Z = {
 export const FEED_FRAME_CLASS =
   'relative mx-auto h-[100dvh] w-full overflow-hidden bg-black md:w-[min(430px,calc(100dvh*9/16))] md:shadow-2xl md:shadow-black/50';
 
-// Phase 45.24 (2026-06-21): each snap card uses h-[100dvh] to track the
+// each snap card uses h-[100dvh] to track the
 // dynamic viewport (mobile Safari URL bar). Keep in sync with FEED_FRAME_CLASS.
 export const FEED_VSCROLL_CLASS =
   'h-full w-full snap-y snap-mandatory overflow-y-scroll overscroll-contain';

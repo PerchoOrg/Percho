@@ -4,11 +4,10 @@ import { ListingGrid, type ListingGridItem } from '@/app/_components/ListingGrid
 /**
  * /search — site-wide search across listings and communities.
  *
- * Phase 43.9: introduced as the destination for the global TopBar 🔍.
- * Phase 47.2: unified on top of GridPageShell + ListingGrid + CommunityGrid.
+ * introduced as the destination for the global TopBar 🔍.
+ * unified on top of GridPageShell + ListingGrid + CommunityGrid.
  *
- * Phase 47.14 (2026-06-21):
- *  - Listing match expanded from address+city to:
+ * *  - Listing match expanded from address+city to:
  *      address, city, state, zip, neighborhood
  *  - Community match expanded from name+city to:
  *      name, city, state, description
@@ -71,7 +70,7 @@ async function searchListings(
 ): Promise<ListingHit[]> {
   const supabase = await createClient();
   const pattern = `%${q}%`;
-  // Phase 47.14: extended field set for fuzzy matching.
+  // extended field set for fuzzy matching.
   const orFields = [
     `address.ilike.${pattern}`,
     `city.ilike.${pattern}`,
@@ -168,7 +167,7 @@ async function searchListings(
     let cover: ListingHit['cover'] = null;
     if (vid) cover = { kind: 'video', src: thumbnailUrl(vid) };
     else if (ph) cover = { kind: 'photo', src: photoPublicUrl(ph) };
-    // Phase 60 (2026-06-26): if the agent set an explicit cover_url
+    // if the agent set an explicit cover_url
     // (Set as cover from the dashboard — photo or video), it wins over
     // the sort_order-derived hero. We keep `kind` matched to whether
     // the underlying listing has a video at all (so the grid still
@@ -275,7 +274,7 @@ export default async function SearchPage({
   const [publicListings, agentListings, allCommunities] = await Promise.all([
     searchListings(q, 'public', null),
     agentId ? searchListings(q, 'agent_inactive', agentId) : Promise.resolve([]),
-    // Phase 47.14: include inactive in the raw set when viewer is an agent;
+    // include inactive in the raw set when viewer is an agent;
     // we filter in JS to scope inactive results to communities the viewer
     // created (RLS prevents her from seeing other agents' inactive rows
     // anyway, but the explicit filter keeps this correct if RLS shifts).
@@ -299,9 +298,7 @@ export default async function SearchPage({
   // communities can come in a later phase if needed.
 
   const empty =
-    publicListings.length === 0 &&
-    agentListings.length === 0 &&
-    allCommunities.length === 0;
+    publicListings.length === 0 && agentListings.length === 0 && allCommunities.length === 0;
 
   return (
     <main className="min-h-dvh bg-bg pb-20 text-ink md:pb-0">
@@ -343,9 +340,7 @@ export default async function SearchPage({
                 <h2 className="mb-3 px-1 text-[11px] text-ink2 tracking-[0.22em] uppercase">
                   From your inactive listings
                 </h2>
-                <ListingGrid
-                  items={listingHitsToItems(agentListings, { dimInactive: true })}
-                />
+                <ListingGrid items={listingHitsToItems(agentListings, { dimInactive: true })} />
               </section>
             )}
           </>

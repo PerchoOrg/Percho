@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
+  type BoundaryGeoJSON,
   buildCommunityLogoDataUri,
   buildCommunityLogoSvg,
-  type BoundaryGeoJSON,
 } from './logo-cover';
 
 const SQUARE_POLY: BoundaryGeoJSON = {
@@ -84,7 +84,15 @@ describe('buildCommunityLogoSvg', () => {
     const multi: BoundaryGeoJSON = {
       type: 'MultiPolygon',
       coordinates: [
-        [[[-84.4, 33.7], [-84.39, 33.7], [-84.39, 33.71], [-84.4, 33.71], [-84.4, 33.7]]],
+        [
+          [
+            [-84.4, 33.7],
+            [-84.39, 33.7],
+            [-84.39, 33.71],
+            [-84.4, 33.71],
+            [-84.4, 33.7],
+          ],
+        ],
         SQUARE_POLY.coordinates,
       ],
     };

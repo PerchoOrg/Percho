@@ -2,7 +2,7 @@
  * POST /api/generate-marketing — community-level multi-language marketing
  * copy.
  *
- * Phase 50 (2026-06-22). The community sibling of `/api/generate-social`.
+ * . The community sibling of `/api/generate-social`.
  * Differences from listing copy:
  *   - language-only (no platform axis); the model returns one body per
  *     language. Posting that body to a specific channel is the agent's

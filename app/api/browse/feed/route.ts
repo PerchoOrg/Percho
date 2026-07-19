@@ -1,10 +1,10 @@
+import { fetchBrowseCards } from '@/lib/feed/browse-cards';
 /**
- * Phase 111 (2026-07-17): paginated browse feed API. BrowseFeed calls this
+ * paginated browse feed API. BrowseFeed calls this
  * to append the next page of BrowseCards as the buyer nears the end of the
  * swipe. The initial ~30 come from server-side render for fast first paint.
  */
 import { NextResponse } from 'next/server';
-import { fetchBrowseCards } from '@/lib/feed/browse-cards';
 
 export const dynamic = 'force-dynamic';
 

@@ -5,7 +5,7 @@
  * must be present. Server route /api/leads parses every POST through
  * `LeadCreate` — Phase 5.2.
  *
- * Phase 45.18 (2026-06-20): leads now accept either a listing_id OR a
+ * leads now accept either a listing_id OR a
  * community_id (exactly one). Listing leads land with the listing's agent;
  * community leads land with the community's `created_by` agent.
  */

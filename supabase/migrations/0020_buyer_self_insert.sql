@@ -1,5 +1,5 @@
 -- ─────────────────────────────────────────────────────────────────
--- 0020_buyer_self_insert.sql (Phase 25.3, 2026-06-14)
+-- 0020_buyer_self_insert.sql
 --
 -- Allow a buyer to insert their own row into public.buyers.
 --

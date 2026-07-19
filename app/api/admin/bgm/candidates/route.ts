@@ -41,7 +41,8 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const vibe = searchParams.get('vibe') ?? '';
   const q = searchParams.get('q') ?? '';
-  if (!isBgmVibe(vibe)) return NextResponse.json({ error: `invalid vibe: ${vibe}` }, { status: 400 });
+  if (!isBgmVibe(vibe))
+    return NextResponse.json({ error: `invalid vibe: ${vibe}` }, { status: 400 });
 
   let catalog: IncompetechPiece[];
   try {

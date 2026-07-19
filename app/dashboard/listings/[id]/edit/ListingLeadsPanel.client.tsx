@@ -96,16 +96,11 @@ export function ListingLeadsRows({
                       {l.name}
                     </span>
                     {l.message ? (
-                      <p
-                        className="line-clamp-1 text-[11px] text-ink2"
-                        title={l.message}
-                      >
+                      <p className="line-clamp-1 text-[11px] text-ink2" title={l.message}>
                         {l.message}
                       </p>
                     ) : null}
-                    <p className="text-[11px] text-muted">
-                      Listing · {timeAgo(l.created_at)}
-                    </p>
+                    <p className="text-[11px] text-muted">Listing · {timeAgo(l.created_at)}</p>
                   </div>
                   <div className="flex shrink-0 items-center gap-1.5 pointer-events-auto">
                     {mailto ? (

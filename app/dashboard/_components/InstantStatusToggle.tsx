@@ -2,7 +2,7 @@
 
 /**
  * InstantStatusToggle — one-click active/inactive switch for the hero of
- * listing AND community detail pages (phase 50, 2026-06-22).
+ * listing AND community detail pages.
  *
  * Behavior:
  *   - Active → Inactive: fires the deactivate action immediately, no confirm.
@@ -19,15 +19,15 @@
  * visual language. Phase 50 collapsed both into this single component.
  */
 
-import { useEffect, useRef, useState, useTransition } from 'react';
-import { useRouter } from 'next/navigation';
-import { createPortal } from 'react-dom';
+import { setCommunityStatus } from '@/app/dashboard/communities/[id]/status-actions';
 import { flushPending } from '@/app/dashboard/listings/[id]/edit/flush-registry';
 import {
   publishListing,
   unpublishListing,
 } from '@/app/dashboard/listings/[id]/edit/publish-actions';
-import { setCommunityStatus } from '@/app/dashboard/communities/[id]/status-actions';
+import { useRouter } from 'next/navigation';
+import { useEffect, useRef, useState, useTransition } from 'react';
+import { createPortal } from 'react-dom';
 
 const MISSING_LABELS: Record<string, string> = {
   address: 'Property address',
@@ -36,7 +36,7 @@ const MISSING_LABELS: Record<string, string> = {
   baths: 'Bathrooms',
   'at least one ready video or photo': '≥1 ready video or photo',
   'at least one ready video': '≥1 ready video',
-  // Community activate gate (phase 72):
+  // Community activate gate:
   name: 'Neighborhood name',
   city: 'City',
   state: 'State',
@@ -52,12 +52,7 @@ type Props = {
   variant?: 'hero' | 'outline';
 };
 
-export function InstantStatusToggle({
-  id,
-  status,
-  kind = 'listing',
-  variant = 'hero',
-}: Props) {
+export function InstantStatusToggle({ id, status, kind = 'listing', variant = 'hero' }: Props) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [missing, setMissing] = useState<string[] | null>(null);
@@ -108,7 +103,7 @@ export function InstantStatusToggle({
           }
         }
       } else {
-        // community: activate gate (phase 72) mirrors the listing publish
+        // community: activate gate mirrors the listing publish
         // gate — name/city/state + ≥1 media. Deactivate is unconditional.
         const res = await setCommunityStatus(id, isActive ? 'inactive' : 'active');
         if (res.ok) router.refresh();
@@ -144,11 +139,7 @@ export function InstantStatusToggle({
     : `inline-flex items-center gap-2 rounded-full border border-line bg-bg/95 px-3 py-1.5 text-xs font-medium uppercase tracking-wider transition hover:border-line-strong disabled:opacity-60 ${
         isActive ? 'text-ink' : 'text-ink2'
       }`;
-  const dotCls = isActive
-    ? 'bg-emerald-500'
-    : isHero
-      ? 'bg-gray-400'
-      : 'bg-ink2/40';
+  const dotCls = isActive ? 'bg-emerald-500' : isHero ? 'bg-gray-400' : 'bg-ink2/40';
 
   const noun = kind === 'community' ? 'neighborhood' : 'listing';
 

@@ -1,7 +1,7 @@
-"use server";
+'use server';
 
 /**
- * Phase 92 (2026-07-15) — community-scoped bucket video generation.
+ * community-scoped bucket video generation.
  *
  * Mirror of `lib/poi/video-actions.ts::generateBucketVideo` but keyed on
  * `community_id` instead of `listing_id`. Nearby content is neighborhood-
@@ -22,9 +22,9 @@
  * a bucket that's about to overwrite itself.
  */
 
-import { revalidatePath } from "next/cache";
-import { createClient, createServiceClient } from "@/lib/supabase/server";
-import type { IntentBucket } from "./types";
+import { createClient, createServiceClient } from '@/lib/supabase/server';
+import { revalidatePath } from 'next/cache';
+import type { IntentBucket } from './types';
 
 const MAX_PHOTOS_PER_VIDEO = 15;
 const MIN_PHOTOS_PER_VIDEO = 3;
@@ -34,16 +34,16 @@ export type GenerateCommunityBucketVideoResult =
       ok: true;
       video_id: string;
       photo_count: number;
-      status: "pending" | "processing";
+      status: 'pending' | 'processing';
     }
   | {
       ok: false;
       reason:
-        | "unauthorized"
-        | "community_not_found"
-        | "not_enough_photos"
-        | "already_in_progress"
-        | "internal_error";
+        | 'unauthorized'
+        | 'community_not_found'
+        | 'not_enough_photos'
+        | 'already_in_progress'
+        | 'internal_error';
       message: string;
       approved_count?: number;
     };
@@ -57,21 +57,21 @@ export async function generateCommunityBucketVideo(
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
-    return { ok: false, reason: "unauthorized", message: "Not signed in." };
+    return { ok: false, reason: 'unauthorized', message: 'Not signed in.' };
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: stub generated types
   const supabaseAny: any = supabase;
   const { data: community } = (await supabaseAny
-    .from("communities")
-    .select("id, name")
-    .eq("id", communityId)
+    .from('communities')
+    .select('id, name')
+    .eq('id', communityId)
     .maybeSingle()) as { data: { id: string; name: string } | null };
   if (!community) {
     return {
       ok: false,
-      reason: "community_not_found",
-      message: "Community not found.",
+      reason: 'community_not_found',
+      message: 'Community not found.',
     };
   }
 
@@ -80,38 +80,36 @@ export async function generateCommunityBucketVideo(
 
   // Approved photos + POI bucket lookup.
   const { data: approvedPhotos, error: photosErr } = (await admin
-    .from("community_poi_photos")
+    .from('community_poi_photos')
     .select(
-      "poi_photo_id, poi_photos!inner(id, poi_id, storage_path, attribution, width_px, height_px, applicable_buckets, ai_score, tagged_at, status)",
+      'poi_photo_id, poi_photos!inner(id, poi_id, storage_path, attribution, width_px, height_px, applicable_buckets, ai_score, tagged_at, status)',
     )
-    .eq("community_id", communityId)
-    .eq("status", "approved")
-    // Phase 103: skip globally-rejected photos (admin kill switch).
-    .neq("poi_photos.status", "rejected")) as {
-    data:
-      | Array<{
-          poi_photo_id: string;
-          poi_photos: {
-            id: string;
-            poi_id: string;
-            storage_path: string;
-            attribution: unknown;
-            width_px: number | null;
-            height_px: number | null;
-            applicable_buckets: string[] | null;
-            ai_score: number | null;
-            tagged_at: string | null;
-          };
-        }>
-      | null;
+    .eq('community_id', communityId)
+    .eq('status', 'approved')
+    // skip globally-rejected photos (admin kill switch).
+    .neq('poi_photos.status', 'rejected')) as {
+    data: Array<{
+      poi_photo_id: string;
+      poi_photos: {
+        id: string;
+        poi_id: string;
+        storage_path: string;
+        attribution: unknown;
+        width_px: number | null;
+        height_px: number | null;
+        applicable_buckets: string[] | null;
+        ai_score: number | null;
+        tagged_at: string | null;
+      };
+    }> | null;
     error: { message: string } | null;
   };
 
   if (photosErr) {
-    console.error("[community-bucket-video] approved photos query failed:", photosErr);
+    console.error('[community-bucket-video] approved photos query failed:', photosErr);
     return {
       ok: false,
-      reason: "internal_error",
+      reason: 'internal_error',
       message: `Photo query failed: ${photosErr.message}`,
     };
   }
@@ -120,7 +118,7 @@ export async function generateCommunityBucketVideo(
   if (photoRows.length === 0) {
     return {
       ok: false,
-      reason: "not_enough_photos",
+      reason: 'not_enough_photos',
       message: `No approved photos yet for ${community.name}. Approve photos in the ${bucketLabel(bucket)} bucket first.`,
       approved_count: 0,
     };
@@ -128,11 +126,11 @@ export async function generateCommunityBucketVideo(
 
   const poiIds = Array.from(new Set(photoRows.map((r) => r.poi_photos.poi_id)));
   const { data: bucketPois, error: bucketErr } = (await admin
-    .from("community_pois")
-    .select("poi_id, intent_bucket, status, distance_m")
-    .eq("community_id", communityId)
-    .eq("intent_bucket", bucket)
-    .in("poi_id", poiIds)) as {
+    .from('community_pois')
+    .select('poi_id, intent_bucket, status, distance_m')
+    .eq('community_id', communityId)
+    .eq('intent_bucket', bucket)
+    .in('poi_id', poiIds)) as {
     data: Array<{
       poi_id: string;
       intent_bucket: string;
@@ -143,10 +141,10 @@ export async function generateCommunityBucketVideo(
   };
 
   if (bucketErr) {
-    console.error("[community-bucket-video] community_pois query failed:", bucketErr);
+    console.error('[community-bucket-video] community_pois query failed:', bucketErr);
     return {
       ok: false,
-      reason: "internal_error",
+      reason: 'internal_error',
       message: `Bucket query failed: ${bucketErr.message}`,
     };
   }
@@ -163,12 +161,12 @@ export async function generateCommunityBucketVideo(
   // videos share the same POI photos globally — we don't dedup across
   // communities because each has its own primary pick.)
   const { data: liveVideos } = (await admin
-    .from("generated_videos")
-    .select("id, intent_bucket, input_photo_ids, status")
-    .eq("community_id", communityId)
-    .eq("scope", "community_intent_bucket")
-    .neq("intent_bucket", bucket)
-    .in("status", ["pending", "processing", "ready"])) as {
+    .from('generated_videos')
+    .select('id, intent_bucket, input_photo_ids, status')
+    .eq('community_id', communityId)
+    .eq('scope', 'community_intent_bucket')
+    .neq('intent_bucket', bucket)
+    .in('status', ['pending', 'processing', 'ready'])) as {
     data: Array<{
       id: string;
       intent_bucket: string;
@@ -195,7 +193,7 @@ export async function generateCommunityBucketVideo(
   if (eligible.length < MIN_PHOTOS_PER_VIDEO) {
     return {
       ok: false,
-      reason: "not_enough_photos",
+      reason: 'not_enough_photos',
       message: `Need at least ${MIN_PHOTOS_PER_VIDEO} approved photos in the ${bucketLabel(bucket)} bucket for ${community.name} — you have ${eligible.length} available.`,
       approved_count: eligible.length,
     };
@@ -250,52 +248,52 @@ export async function generateCommunityBucketVideo(
   // (community, bucket). Multiple 'ready' rows are ALLOWED per §Phase 91
   // (owner picks primary). Regenerating a ready one is also fine.
   const { data: inflight } = (await admin
-    .from("generated_videos")
-    .select("id, status")
-    .eq("community_id", communityId)
-    .eq("scope", "community_intent_bucket")
-    .eq("intent_bucket", bucket)
-    .in("status", ["pending", "processing"])
+    .from('generated_videos')
+    .select('id, status')
+    .eq('community_id', communityId)
+    .eq('scope', 'community_intent_bucket')
+    .eq('intent_bucket', bucket)
+    .in('status', ['pending', 'processing'])
     .maybeSingle()) as { data: { id: string; status: string } | null };
 
   if (inflight) {
     return {
       ok: false,
-      reason: "already_in_progress",
+      reason: 'already_in_progress',
       message: `A ${bucketLabel(bucket)} video for ${community.name} is already being generated (status: ${inflight.status}).`,
     };
   }
 
   const { data: inserted, error: insErr } = (await admin
-    .from("generated_videos")
+    .from('generated_videos')
     .insert({
       community_id: communityId,
       listing_id: null,
-      scope: "community_intent_bucket",
+      scope: 'community_intent_bucket',
       intent_bucket: bucket,
       input_photo_ids: inputPhotoIds,
-      generator: "ffmpeg_slideshow",
-      status: "pending",
-      aspect_ratio: "9:16",
+      generator: 'ffmpeg_slideshow',
+      status: 'pending',
+      aspect_ratio: '9:16',
       narrative: {
-        source: "manual_trigger",
+        source: 'manual_trigger',
         selected_at: new Date().toISOString(),
         photo_count: selected.length,
         bucket,
       },
     } as never)
-    .select("id, status")
+    .select('id, status')
     .single()) as {
     data: { id: string; status: string } | null;
     error: { message: string } | null;
   };
 
   if (insErr || !inserted) {
-    console.error("[community-bucket-video] insert generated_videos failed:", insErr);
+    console.error('[community-bucket-video] insert generated_videos failed:', insErr);
     return {
       ok: false,
-      reason: "internal_error",
-      message: `Enqueue failed: ${insErr?.message ?? "unknown"}`,
+      reason: 'internal_error',
+      message: `Enqueue failed: ${insErr?.message ?? 'unknown'}`,
     };
   }
 
@@ -305,26 +303,40 @@ export async function generateCommunityBucketVideo(
     ok: true,
     video_id: inserted.id,
     photo_count: selected.length,
-    status: inserted.status as "pending" | "processing",
+    status: inserted.status as 'pending' | 'processing',
   };
 }
 
 function bucketLabel(bucket: IntentBucket): string {
   switch (bucket) {
-    case "schools": return "Schools";
-    case "dining": return "Dining";
-    case "nightlife": return "Nightlife";
-    case "shopping": return "Shopping";
-    case "outdoor": return "Outdoor";
-    case "fitness": return "Fitness";
-    case "kids": return "Kids & Family";
-    case "asian_community": return "Asian Community";
-    case "daily_errands": return "Daily Errands";
-    case "faith": return "Faith";
-    case "work_hubs": return "Work Hubs";
-    case "healthcare": return "Healthcare";
-    case "pets": return "Pets";
-    case "transit": return "Transit";
+    case 'schools':
+      return 'Schools';
+    case 'dining':
+      return 'Dining';
+    case 'nightlife':
+      return 'Nightlife';
+    case 'shopping':
+      return 'Shopping';
+    case 'outdoor':
+      return 'Outdoor';
+    case 'fitness':
+      return 'Fitness';
+    case 'kids':
+      return 'Kids & Family';
+    case 'asian_community':
+      return 'Asian Community';
+    case 'daily_errands':
+      return 'Daily Errands';
+    case 'faith':
+      return 'Faith';
+    case 'work_hubs':
+      return 'Work Hubs';
+    case 'healthcare':
+      return 'Healthcare';
+    case 'pets':
+      return 'Pets';
+    case 'transit':
+      return 'Transit';
   }
 }
 
@@ -338,7 +350,7 @@ function bucketLabel(bucket: IntentBucket): string {
 export type CommunityBucketVideoRow = {
   video_id: string;
   bucket: IntentBucket;
-  status: "pending" | "processing" | "ready" | "approved" | "rejected" | "failed" | "superseded";
+  status: 'pending' | 'processing' | 'ready' | 'approved' | 'rejected' | 'failed' | 'superseded';
   cf_stream_uid: string | null;
   duration_s: number | null;
   photo_count: number;
@@ -356,11 +368,13 @@ export async function listCommunityBucketVideos(
   if (!user) return [];
 
   const { data } = (await supabase
-    .from("generated_videos")
-    .select("id, intent_bucket, status, cf_stream_uid, duration_s, input_photo_ids, error, created_at")
-    .eq("community_id", communityId)
-    .eq("scope", "community_intent_bucket")
-    .order("created_at", { ascending: false })) as {
+    .from('generated_videos')
+    .select(
+      'id, intent_bucket, status, cf_stream_uid, duration_s, input_photo_ids, error, created_at',
+    )
+    .eq('community_id', communityId)
+    .eq('scope', 'community_intent_bucket')
+    .order('created_at', { ascending: false })) as {
     data: Array<{
       id: string;
       intent_bucket: string;
@@ -376,7 +390,7 @@ export async function listCommunityBucketVideos(
   return (data ?? []).map((r) => ({
     video_id: r.id,
     bucket: r.intent_bucket as IntentBucket,
-    status: r.status as CommunityBucketVideoRow["status"],
+    status: r.status as CommunityBucketVideoRow['status'],
     cf_stream_uid: r.cf_stream_uid,
     duration_s: r.duration_s,
     photo_count: r.input_photo_ids?.length ?? 0,
@@ -385,8 +399,7 @@ export async function listCommunityBucketVideos(
   }));
 }
 
-
-// ─── panel-facing helpers (Phase 92.3) ─────────────────────────────────────
+// ─── panel-facing helpers ─────────────────────────────────────
 
 /**
  * Mirror of `getBucketVideoStatus` but for community-scoped bucket videos.
@@ -396,15 +409,13 @@ export async function listCommunityBucketVideos(
  */
 export type CommunityBucketVideoStatus = {
   video_id: string;
-  status: "pending" | "processing" | "ready" | "approved" | "rejected" | "failed";
+  status: 'pending' | 'processing' | 'ready' | 'approved' | 'rejected' | 'failed';
   cf_stream_uid: string | null;
   duration_s: number | null;
   photo_count: number;
   error: string | null;
   created_at: string;
-  narrative?:
-    | (import("./narrative").VideoNarrative & { source?: string })
-    | null;
+  narrative?: (import('./narrative').VideoNarrative & { source?: string }) | null;
 } | null;
 
 export async function getCommunityBucketVideoStatus(
@@ -418,14 +429,12 @@ export async function getCommunityBucketVideoStatus(
   if (!user) return null;
 
   const { data } = (await supabase
-    .from("generated_videos")
-    .select(
-      "id, status, cf_stream_uid, duration_s, input_photo_ids, error, created_at, narrative",
-    )
-    .eq("community_id", communityId)
-    .eq("scope", "community_intent_bucket")
-    .eq("intent_bucket", bucket)
-    .order("created_at", { ascending: false })
+    .from('generated_videos')
+    .select('id, status, cf_stream_uid, duration_s, input_photo_ids, error, created_at, narrative')
+    .eq('community_id', communityId)
+    .eq('scope', 'community_intent_bucket')
+    .eq('intent_bucket', bucket)
+    .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle()) as {
     data: {
@@ -443,13 +452,13 @@ export async function getCommunityBucketVideoStatus(
   if (!data) return null;
 
   const narr =
-    data.narrative && typeof (data.narrative as { voiceover?: unknown }).voiceover === "string"
-      ? (data.narrative as unknown as NonNullable<CommunityBucketVideoStatus>["narrative"])
+    data.narrative && typeof (data.narrative as { voiceover?: unknown }).voiceover === 'string'
+      ? (data.narrative as unknown as NonNullable<CommunityBucketVideoStatus>['narrative'])
       : null;
 
   return {
     video_id: data.id,
-    status: data.status as NonNullable<CommunityBucketVideoStatus>["status"],
+    status: data.status as NonNullable<CommunityBucketVideoStatus>['status'],
     cf_stream_uid: data.cf_stream_uid,
     duration_s: data.duration_s,
     photo_count: data.input_photo_ids?.length ?? 0,
@@ -474,10 +483,10 @@ export async function getCommunityBucketEligiblePhotoCount(
   if (!user) return 0;
 
   const { data: approved } = (await supabase
-    .from("community_poi_photos")
-    .select("poi_photo_id, poi_photos!inner(poi_id, applicable_buckets)")
-    .eq("community_id", communityId)
-    .eq("status", "approved")) as {
+    .from('community_poi_photos')
+    .select('poi_photo_id, poi_photos!inner(poi_id, applicable_buckets)')
+    .eq('community_id', communityId)
+    .eq('status', 'approved')) as {
     data: Array<{
       poi_photo_id: string;
       poi_photos: { poi_id: string; applicable_buckets: string[] | null };
@@ -487,11 +496,11 @@ export async function getCommunityBucketEligiblePhotoCount(
 
   const poiIds = Array.from(new Set(approved.map((r) => r.poi_photos.poi_id)));
   const { data: bucketPois } = (await supabase
-    .from("community_pois")
-    .select("poi_id")
-    .eq("community_id", communityId)
-    .eq("intent_bucket", bucket)
-    .in("poi_id", poiIds)) as { data: Array<{ poi_id: string }> | null };
+    .from('community_pois')
+    .select('poi_id')
+    .eq('community_id', communityId)
+    .eq('intent_bucket', bucket)
+    .in('poi_id', poiIds)) as { data: Array<{ poi_id: string }> | null };
   const bucketPoiSet = new Set((bucketPois ?? []).map((p) => p.poi_id));
 
   let count = 0;
@@ -507,7 +516,7 @@ export async function getCommunityBucketEligiblePhotoCount(
 }
 
 /**
- * Phase 92.3: manual "Regenerate description" trigger for community videos.
+ * manual "Regenerate description" trigger for community videos.
  * Same Anthropic-narrative pipeline as the listing version - narrative.ts
  * accepts both scopes now. Revalidates the community page instead of the
  * listing edit page.
@@ -515,24 +524,24 @@ export async function getCommunityBucketEligiblePhotoCount(
 export async function regenerateCommunityBucketVideoNarrative(
   videoId: string,
 ): Promise<
-  | { ok: true; narrative: NonNullable<CommunityBucketVideoStatus>["narrative"] }
+  | { ok: true; narrative: NonNullable<CommunityBucketVideoStatus>['narrative'] }
   | { ok: false; message: string }
 > {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return { ok: false, message: "Not signed in." };
+  if (!user) return { ok: false, message: 'Not signed in.' };
 
   const { data: owned } = (await supabase
-    .from("generated_videos")
-    .select("id, community_id")
-    .eq("id", videoId)
+    .from('generated_videos')
+    .select('id, community_id')
+    .eq('id', videoId)
     .maybeSingle()) as { data: { id: string; community_id: string | null } | null };
   if (!owned || !owned.community_id)
-    return { ok: false, message: "Video not found or not owned by you." };
+    return { ok: false, message: 'Video not found or not owned by you.' };
 
-  const { generateBucketVideoNarrative } = await import("./narrative");
+  const { generateBucketVideoNarrative } = await import('./narrative');
   const res = await generateBucketVideoNarrative(videoId);
   if (!res.ok) return { ok: false, message: res.message };
 

@@ -12,7 +12,7 @@
  * returns *every* field and jumps the cost bracket.
  */
 
-const PLACES_BASE = "https://places.googleapis.com/v1";
+const PLACES_BASE = 'https://places.googleapis.com/v1';
 
 /**
  * Google Places `type` values for each buyer-persona bucket. Used by
@@ -32,20 +32,20 @@ const PLACES_BASE = "https://places.googleapis.com/v1";
  * discover fanout skips that bucket automatically.
  */
 export const BUCKET_PLACES_TYPES: Record<string, readonly string[]> = {
-  schools: ["school", "primary_school", "secondary_school"],
-  dining: ["restaurant", "cafe", "bakery"],
-  nightlife: ["bar", "night_club", "movie_theater"],
-  shopping: ["shopping_mall", "department_store", "clothing_store"],
-  outdoor: ["park", "campground", "tourist_attraction"],
-  fitness: ["gym", "spa"],
-  kids: ["amusement_park", "aquarium", "zoo", "library"],
+  schools: ['school', 'primary_school', 'secondary_school'],
+  dining: ['restaurant', 'cafe', 'bakery'],
+  nightlife: ['bar', 'night_club', 'movie_theater'],
+  shopping: ['shopping_mall', 'department_store', 'clothing_store'],
+  outdoor: ['park', 'campground', 'tourist_attraction'],
+  fitness: ['gym', 'spa'],
+  kids: ['amusement_park', 'aquarium', 'zoo', 'library'],
   asian_community: [], // Text Search follow-up
-  daily_errands: ["supermarket", "grocery_store", "pharmacy"],
-  faith: ["church", "mosque", "synagogue", "hindu_temple"],
+  daily_errands: ['supermarket', 'grocery_store', 'pharmacy'],
+  faith: ['church', 'mosque', 'synagogue', 'hindu_temple'],
   work_hubs: [], // Text Search follow-up (WeWork / Regus / office parks)
-  healthcare: ["hospital", "doctor"],
-  pets: ["veterinary_care", "pet_store"],
-  transit: ["subway_station", "train_station", "transit_station", "airport"],
+  healthcare: ['hospital', 'doctor'],
+  pets: ['veterinary_care', 'pet_store'],
+  transit: ['subway_station', 'train_station', 'transit_station', 'airport'],
 };
 
 /**
@@ -98,22 +98,22 @@ export type PlaceResult = {
 
 function apiKey(): string {
   const key = process.env.GOOGLE_PLACES_API_KEY;
-  if (!key) throw new Error("GOOGLE_PLACES_API_KEY not set");
+  if (!key) throw new Error('GOOGLE_PLACES_API_KEY not set');
   return key;
 }
 
 const NEARBY_FIELD_MASK = [
-  "places.id",
-  "places.displayName",
-  "places.formattedAddress",
-  "places.primaryType",
-  "places.types",
-  "places.rating",
-  "places.userRatingCount",
-  "places.businessStatus",
-  "places.location",
-  "places.photos",
-].join(",");
+  'places.id',
+  'places.displayName',
+  'places.formattedAddress',
+  'places.primaryType',
+  'places.types',
+  'places.rating',
+  'places.userRatingCount',
+  'places.businessStatus',
+  'places.location',
+  'places.photos',
+].join(',');
 
 export async function searchNearby(input: NearbySearchInput): Promise<PlaceResult[]> {
   const body = {
@@ -128,11 +128,11 @@ export async function searchNearby(input: NearbySearchInput): Promise<PlaceResul
   };
 
   const res = await fetch(`${PLACES_BASE}/places:searchNearby`, {
-    method: "POST",
+    method: 'POST',
     headers: {
-      "Content-Type": "application/json",
-      "X-Goog-Api-Key": apiKey(),
-      "X-Goog-FieldMask": NEARBY_FIELD_MASK,
+      'Content-Type': 'application/json',
+      'X-Goog-Api-Key': apiKey(),
+      'X-Goog-FieldMask': NEARBY_FIELD_MASK,
     },
     body: JSON.stringify(body),
   });
@@ -153,11 +153,11 @@ export async function searchNearby(input: NearbySearchInput): Promise<PlaceResul
  */
 export async function searchText(query: string): Promise<PlaceResult[]> {
   const res = await fetch(`${PLACES_BASE}/places:searchText`, {
-    method: "POST",
+    method: 'POST',
     headers: {
-      "Content-Type": "application/json",
-      "X-Goog-Api-Key": apiKey(),
-      "X-Goog-FieldMask": "places.id,places.displayName,places.formattedAddress,places.location",
+      'Content-Type': 'application/json',
+      'X-Goog-Api-Key': apiKey(),
+      'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,places.location',
     },
     body: JSON.stringify({ textQuery: query, maxResultCount: 5 }),
   });
@@ -187,12 +187,12 @@ export async function fetchPhotoBinary(
   opts: { maxHeightPx?: number; maxWidthPx?: number } = {},
 ): Promise<PhotoBlob> {
   const params = new URLSearchParams();
-  if (opts.maxHeightPx) params.set("maxHeightPx", String(opts.maxHeightPx));
-  if (opts.maxWidthPx) params.set("maxWidthPx", String(opts.maxWidthPx));
-  if (!opts.maxHeightPx && !opts.maxWidthPx) params.set("maxHeightPx", "1200");
+  if (opts.maxHeightPx) params.set('maxHeightPx', String(opts.maxHeightPx));
+  if (opts.maxWidthPx) params.set('maxWidthPx', String(opts.maxWidthPx));
+  if (!opts.maxHeightPx && !opts.maxWidthPx) params.set('maxHeightPx', '1200');
 
   const url = `${PLACES_BASE}/${photoName}/media?${params.toString()}`;
-  const res = await fetch(url, { headers: { "X-Goog-Api-Key": apiKey() } });
+  const res = await fetch(url, { headers: { 'X-Goog-Api-Key': apiKey() } });
 
   if (!res.ok) {
     const err = await res.text();
@@ -200,7 +200,7 @@ export async function fetchPhotoBinary(
   }
 
   const bytes = Buffer.from(await res.arrayBuffer());
-  return { bytes, contentType: res.headers.get("content-type") ?? "image/jpeg" };
+  return { bytes, contentType: res.headers.get('content-type') ?? 'image/jpeg' };
 }
 
 /**

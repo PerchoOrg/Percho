@@ -34,13 +34,7 @@ export async function TopBarWrapper() {
 
   if (agent) {
     const source = agent.name?.trim() || user.email?.trim() || '?';
-    return (
-      <TopBar
-        role="agent"
-        initial={source.charAt(0) || '?'}
-        avatarUrl={agent.headshot_url}
-      />
-    );
+    return <TopBar role="agent" initial={source.charAt(0) || '?'} avatarUrl={agent.headshot_url} />;
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: buyers typing not in stub yet
@@ -54,10 +48,6 @@ export async function TopBarWrapper() {
 
   const source = buyer?.display_name?.trim() || user.email?.trim() || '?';
   return (
-    <TopBar
-      role="buyer"
-      initial={source.charAt(0) || '?'}
-      avatarUrl={buyer?.avatar_url ?? null}
-    />
+    <TopBar role="buyer" initial={source.charAt(0) || '?'} avatarUrl={buyer?.avatar_url ?? null} />
   );
 }

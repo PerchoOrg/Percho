@@ -1,7 +1,7 @@
 /**
  * POST /api/leads/[id]/follow-up — toggle followed_up_at.
  *
- * Phase 18. Body: `{ value: "now" | null }`.
+ * . Body: `{ value: "now" | null }`.
  *   - "now"  → set `followed_up_at = now()` (idempotent)
  *   - null   → clear `followed_up_at` (used by the "Mark as new" detail toggle)
  *

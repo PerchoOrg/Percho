@@ -2,10 +2,10 @@
  * /admin/pipeline/listing-nearby — per-listing (Home) POI + bucket
  * video queue index. Rows link to /admin/pipeline/listing-nearby/[id].
  *
- * Phase 104 (2026-07-17): split out of the unified /nearby index so
+ * split out of the unified /nearby index so
  * Home and Neighborhood are peer tabs in the admin chip bar.
  *
- * Phase 108 (2026-07-17): moved rendering into <ListingNearbyTable>
+ * moved rendering into <ListingNearbyTable>
  * (shared AdminTable). Community filter chips removed — Community
  * column is sortable + searchable.
  */

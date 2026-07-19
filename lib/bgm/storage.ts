@@ -9,12 +9,12 @@
  *     chill-electronic/*.mp3
  *     _state/state.json  ← Phase 106: rejected-track sidecar (soft-delete)
  *
- * Phase 104 (2026-07-17): bucket created, admin-tab viewer added.
- * Phase 105 (2026-07-17): Storage is now canonical for the admin UI
+ * bucket created, admin-tab viewer added.
+ * Storage is now canonical for the admin UI
  * (add/delete goes through Storage; manifest.json is only used by the
  * render worker for its local mp3 cache — kept in sync via
  * `scripts/render-worker/pull-bgm.sh`).
- * Phase 106 (2026-07-17): `cinematic` vibe removed (owner: "too somber");
+ * `cinematic` vibe removed (owner: "too somber");
  * per-track "delete" replaced with soft **reject** (mp3 stays in Storage
  * for a possible restore; worker skips downloading it).
  */
@@ -24,7 +24,7 @@ export const BGM_BUCKET = 'bgm';
 /**
  * The four vibe buckets, in canonical display order.
  *
- * Phase 106 (2026-07-17): `cinematic` removed — owner rated the whole
+ * `cinematic` removed — owner rated the whole
  * bucket "too somber". Tracks were deleted from Storage in the same
  * phase; the folder is no longer created for new tracks. If you resurrect
  * a similar vibe later, pick a new name to avoid confusion with the

@@ -7,7 +7,7 @@
  *   - placeDetails(placeId, sessionToken): resolves a chosen prediction into
  *     {formatted_address, city, state, zip, lat, lng, place_id}. Phase 4.1
  *     uses Place Details directly so the form has every geocoded field on
- *     submit (Phase 4.2 narrows to neighborhood + edge-case fixups).
+ *     submit.
  *
  * Session token: Google bills Autocomplete + Details as a single session if
  * the same UUID is passed to both calls within ~3 minutes. The form mints one

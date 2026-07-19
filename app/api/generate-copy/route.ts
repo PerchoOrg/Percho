@@ -8,8 +8,7 @@
  *
  * Rate limit: `RATE_LIMIT_PER_MIN` per agent per kind via `ai_usage_log`.
  *
- * The Anthropic call goes through `lib/ai/anthropic.ts` (Phase 0 seam — model
- * pin + max_tokens cap live there). We deliberately accept listing fields in
+ * The Anthropic call goes through `lib/ai/anthropic.ts`. We deliberately accept listing fields in
  * the request body rather than reading from the listings table: the edit form
  * has unsaved local state, and the agent should be able to preview copy
  * before persisting field changes. Server-side trust boundary is rate-limit +

@@ -1,7 +1,7 @@
 /**
- * Role detection helpers (Phase 15.1).
+ * Role detection helpers.
  *
- * Buyer accounts (Phase 15.1) live in `public.buyers`; agent accounts
+ * Buyer accounts live in `public.buyers`; agent accounts
  * in `public.agents`. Each user has at most one row across the two.
  *
  * `getUserRole` returns 'agent' | 'buyer' | null based on which table

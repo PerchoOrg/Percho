@@ -1,7 +1,7 @@
 'use server';
 
 /**
- * Saved-communities server actions (Phase 27.7, 2026-06-16).
+ * Saved-communities server actions.
  *
  * Mirror of `saved-listings.ts`. RLS denies everything on
  * `saved_communities`; all access funnels through these actions using
@@ -80,9 +80,7 @@ const DeviceInput = z.object({
  * Returns the set of community_ids saved by this device. Used by
  * the community feed and grid pages to hydrate the saved state.
  */
-export async function listSavedCommunityIds(
-  input: z.infer<typeof DeviceInput>,
-): Promise<string[]> {
+export async function listSavedCommunityIds(input: z.infer<typeof DeviceInput>): Promise<string[]> {
   const parsed = DeviceInput.safeParse(input);
   if (!parsed.success) return [];
 

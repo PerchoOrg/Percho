@@ -3,14 +3,14 @@
 /**
  * EditListingForm — Phase 4.3a metadata editor.
  *
- * Phase 8/listing-form-autosave (2026-06-11): switched from explicit
+ * /listing-form-autosave (2026-06-11): switched from explicit
  * "Save changes" button to debounced auto-save. Every edit kicks a 600ms
  * debounce; on tick we POST the whole payload via `updateListing`. The
  * form also registers a `flushPending` hook the PublishPanel calls before
  * publishing, so an agent who edits and immediately clicks Publish doesn't
  * race the debounce.
  *
- * Phase 51/save-button-parity (2026-06-24): added an explicit "Save" button
+ * /save-button-parity (2026-06-24): added an explicit "Save" button
  * at the bottom of the form (matching the community editor layout) so agents
  * have an instant-confirm escape hatch. Auto-save still runs on every edit
  * but is now SILENT — it never touches `saveState`, so the button label and
@@ -18,7 +18,7 @@
  * 2026-06-24: "auto save doesn't need to click the save button effect and
  * show the saved hint, only users click the save button, then do that".
  *
- * Phase 52 follow-up (2026-06-24): the Save button is always enabled (owner
+ * follow-up (2026-06-24): the Save button is always enabled (owner
  * ask: "let save button always be available"). Disabling it whenever the
  * form was clean made the button feel broken in the common case where
  * auto-save had already flushed. We only block clicks while a save is in
@@ -469,10 +469,7 @@ export function EditListingForm({ listingId, initial, communities, listingContex
           )}
         </Field>
 
-        <Field
-          label="Bathrooms"
-          required
-        >
+        <Field label="Bathrooms" required>
           {bathsMode === 'list' ? (
             <select
               value={baths}
@@ -658,10 +655,7 @@ export function EditListingForm({ listingId, initial, communities, listingContex
         </Field>
       </fieldset>
 
-      <Field
-        label="Neighborhood"
-        optional
-      >
+      <Field label="Neighborhood" optional>
         <select
           value={communityId}
           onChange={(e) => setCommunityId(e.target.value)}
@@ -677,10 +671,7 @@ export function EditListingForm({ listingId, initial, communities, listingContex
         </select>
       </Field>
 
-      <Field
-        label="Description"
-        optional
-      >
+      <Field label="Description" optional>
         <div className="mb-2 flex items-center gap-3">
           <button
             type="button"

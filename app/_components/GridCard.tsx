@@ -4,7 +4,7 @@
  * source, the optional top-left/top-right badges, the caption block, and
  * a fallback for missing covers.
  *
- * Phase 47 (2026-06-21): extracted from /browse, /dashboard (My Listings),
+ * extracted from /browse, /dashboard (My Listings),
  * /communities, and /dashboard/communities so all four surfaces share one
  * card definition. Future tweaks to aspect ratio, hover transform, bottom
  * gradient, or text shadow happen in this one file.

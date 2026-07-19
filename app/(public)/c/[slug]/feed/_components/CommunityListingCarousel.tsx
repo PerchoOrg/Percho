@@ -1,7 +1,7 @@
 /**
  * CommunityListingCarousel — Scenario B · L3
  *
- * Phase 62 (2026-06-26): rewritten from a horizontal pager to a vertical
+ * rewritten from a horizontal pager to a vertical
  * snap feed with the standard right-rail (Like / Save / Contact). Brings
  * this third feed surface into parity with BrowseFeed and the community
  * video feed so the buyer's interaction model is identical wherever they
@@ -16,7 +16,7 @@
  */
 'use client';
 
-import { saveListing, unsaveListing, listSavedListingIds } from '@/app/_actions/saved-listings';
+import { listSavedListingIds, saveListing, unsaveListing } from '@/app/_actions/saved-listings';
 import { getOrCreateDeviceId } from '@/lib/buyer/device-id';
 import { listLiked, toggleLike as toggleLikeAction } from '@/lib/buyer/likes';
 import { hlsUrl, thumbnailUrl } from '@/lib/cloudflare/stream';
@@ -351,11 +351,11 @@ function ListingSlide({
 }) {
   const ref = useRef<HTMLVideoElement | null>(null);
   const hlsRef = useRef<Hls | null>(null);
-  // Phase 73.3: manual paused state — user tap toggles play/pause. isActive
+  // manual paused state — user tap toggles play/pause. isActive
   // still drives autoplay when swiping to a new card, but a fresh visit
   // resets manuallyPaused so playback resumes.
   const [manuallyPaused, setManuallyPaused] = useState(false);
-  // Phase 74.7 (skill ref §1): poster-attribute anti-pattern. See
+  // poster-attribute anti-pattern. See
   // BrowseFeed 74.7. Overlay poster <img> until first frame paints.
   const [hasFirstFrame, setHasFirstFrame] = useState(false);
 
@@ -376,7 +376,7 @@ function ListingSlide({
     if (!shouldMount) return;
     const v = ref.current;
     if (!v) return;
-    // Phase 74.7: hide <video> layer until first frame paints on new src.
+    // hide <video> layer until first frame paints on new src.
     setHasFirstFrame(false);
     if (hlsRef.current) {
       hlsRef.current.destroy();
@@ -407,7 +407,7 @@ function ListingSlide({
     };
   }, [shouldMount, listing.heroCfVideoId]);
 
-  // Phase 74.7 (skill ref §1): reveal <video> only after first frame.
+  // reveal <video> only after first frame.
   useEffect(() => {
     if (!shouldMount) return;
     const v = ref.current;
@@ -477,7 +477,7 @@ function ListingSlide({
             // biome-ignore lint/a11y/useMediaCaption: HLS source has no caption track.
             className="relative h-full w-full bg-black object-contain"
             style={{
-              // Phase 74.11 (2026-07-06): fade-in only — see BrowseFeed 74.11.
+              // fade-in only — see BrowseFeed 74.11.
               opacity: hasFirstFrame ? 1 : 0,
               transition: hasFirstFrame ? 'opacity 150ms' : 'none',
             }}
@@ -531,9 +531,7 @@ function ListingSlide({
             {formatPrice(listing.price)}
           </div>
         )}
-        {bbs.length > 0 && (
-          <div className="mt-1.5 text-[13px] leading-snug">{bbs.join(' · ')}</div>
-        )}
+        {bbs.length > 0 && <div className="mt-1.5 text-[13px] leading-snug">{bbs.join(' · ')}</div>}
         <div className="mt-1 text-[13px] leading-snug">
           {`${listing.address}, ${listing.city}, ${listing.state}${listing.zip ? ` ${listing.zip}` : ''}`}
         </div>

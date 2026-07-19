@@ -2,7 +2,7 @@
  * POST /api/generate-social — generate multi-platform, multi-language social
  * copy for a listing.
  *
- * Phase 48: replaces the Phase 6.3a fixed Facebook+Instagram+Email shape.
+ * replaces the Phase 6.3a fixed Facebook+Instagram+Email shape.
  * Caller now picks platforms and languages explicitly. Backend pulls
  * description / photo alt-text / video titles from the listing so the model
  * has actual content to work with.
@@ -13,11 +13,11 @@
  */
 
 import {
-  generateSocialCopy,
   SOCIAL_LANGUAGES,
   SOCIAL_PLATFORMS,
   type SocialLanguage,
   type SocialPlatform,
+  generateSocialCopy,
 } from '@/lib/ai/anthropic';
 import { checkAndRecord } from '@/lib/ai/rate-limit';
 import { socialDraftHash } from '@/lib/ai/social-cache';
@@ -42,10 +42,7 @@ const Input = z.object({
   // the agent's edited starting point rather than generating fresh.
   // 8 KB column-cap per cell (matches saved_social_drafts), defended in lib.
   previous_drafts: z
-    .record(
-      PlatformEnum,
-      z.record(LanguageEnum, z.string().trim().min(1).max(8192)),
-    )
+    .record(PlatformEnum, z.record(LanguageEnum, z.string().trim().min(1).max(8192)))
     .optional(),
 });
 
@@ -131,14 +128,10 @@ export async function POST(req: Request) {
       .limit(12),
   ]);
 
-  const photoAltText: string[] = (
-    (photoLookup.data ?? []) as Array<{ alt_text: string | null }>
-  )
+  const photoAltText: string[] = ((photoLookup.data ?? []) as Array<{ alt_text: string | null }>)
     .map((p) => (p.alt_text ?? '').trim())
     .filter((s) => s.length > 0);
-  const videoTitles: string[] = (
-    (videoLookup.data ?? []) as Array<{ title: string | null }>
-  )
+  const videoTitles: string[] = ((videoLookup.data ?? []) as Array<{ title: string | null }>)
     .map((v) => (v.title ?? '').trim())
     .filter((s) => s.length > 0);
 
@@ -146,10 +139,8 @@ export async function POST(req: Request) {
   // and only single-cell calls (the panel sends 1×1; multi-cell is forward-
   // compat that nobody uses today and would need per-cell merge logic).
   const isRefine =
-    parsed.data.previous_drafts &&
-    Object.keys(parsed.data.previous_drafts).length > 0;
-  const isSingleCell =
-    parsed.data.platforms.length === 1 && parsed.data.languages.length === 1;
+    parsed.data.previous_drafts && Object.keys(parsed.data.previous_drafts).length > 0;
+  const isSingleCell = parsed.data.platforms.length === 1 && parsed.data.languages.length === 1;
   if (!isRefine && isSingleCell) {
     const platform = parsed.data.platforms[0]!;
     const language = parsed.data.languages[0]!;

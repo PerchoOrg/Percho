@@ -3,7 +3,7 @@
 /**
  * CommunitiesNearbyClient — geolocation-driven communities-by-distance grid.
  *
- * Phase 45 (2026-06-20). Mirrors NearbyClient's geolocation/preference
+ * . Mirrors NearbyClient's geolocation/preference
  * flow exactly (radius from `percho:nearby_radius`); when geolocation is
  * denied/unavailable, renders an empty result (no manual lat/lng input —
  * owner request 2026-06-21).
@@ -67,10 +67,9 @@ export function CommunitiesNearbyClient() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(
-        `/api/communities/nearby?lat=${c.lat}&lng=${c.lng}&radius=${r}`,
-        { cache: 'no-store' },
-      );
+      const res = await fetch(`/api/communities/nearby?lat=${c.lat}&lng=${c.lng}&radius=${r}`, {
+        cache: 'no-store',
+      });
       if (!res.ok) {
         const body = (await res.json().catch(() => ({}))) as { error?: string };
         throw new Error(body.error ?? `nearby returned ${res.status}`);

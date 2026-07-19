@@ -17,23 +17,23 @@
  * refresh (~100 photos) is ~$0.50.
  */
 
-import { INTENT_BUCKETS, type IntentBucket } from "@/lib/poi/types";
-import { createServiceClient } from "@/lib/supabase/server";
-import { extractJsonObject } from "@/lib/ai/anthropic";
+import { extractJsonObject } from '@/lib/ai/anthropic';
+import { INTENT_BUCKETS, type IntentBucket } from '@/lib/poi/types';
+import { createServiceClient } from '@/lib/supabase/server';
 
-const VISION_MODEL = process.env.ANTHROPIC_VISION_MODEL ?? "claude-sonnet-4-5";
-const API_BASE = "https://api.anthropic.com/v1/messages";
-const POI_PHOTO_BUCKET = "listing-photos";
+const VISION_MODEL = process.env.ANTHROPIC_VISION_MODEL ?? 'claude-sonnet-4-5';
+const API_BASE = 'https://api.anthropic.com/v1/messages';
+const POI_PHOTO_BUCKET = 'listing-photos';
 
 export const PHOTO_CATEGORIES = [
-  "storefront",
-  "interior",
-  "food",
-  "landscape",
-  "aerial",
-  "people",
-  "signage",
-  "other",
+  'storefront',
+  'interior',
+  'food',
+  'landscape',
+  'aerial',
+  'people',
+  'signage',
+  'other',
 ] as const;
 export type PhotoCategory = (typeof PHOTO_CATEGORIES)[number];
 
@@ -107,7 +107,7 @@ function userPromptForPoi(poi: {
   primary_type: string | null;
   intent_bucket: IntentBucket | null;
 }): string {
-  return `POI context — name: "${poi.name}", google_type: "${poi.primary_type ?? "unknown"}", assigned_bucket: "${poi.intent_bucket ?? "unknown"}".
+  return `POI context — name: "${poi.name}", google_type: "${poi.primary_type ?? 'unknown'}", assigned_bucket: "${poi.intent_bucket ?? 'unknown'}".
 
 Label this photo per the schema above.`;
 }
@@ -120,14 +120,14 @@ async function callVision(opts: {
   userPrompt: string;
 }): Promise<string> {
   const key = process.env.ANTHROPIC_API_KEY;
-  if (!key) throw new Error("ANTHROPIC_API_KEY not set");
+  if (!key) throw new Error('ANTHROPIC_API_KEY not set');
 
   const res = await fetch(API_BASE, {
-    method: "POST",
+    method: 'POST',
     headers: {
-      "x-api-key": key,
-      "anthropic-version": "2023-06-01",
-      "content-type": "application/json",
+      'x-api-key': key,
+      'anthropic-version': '2023-06-01',
+      'content-type': 'application/json',
     },
     body: JSON.stringify({
       model: VISION_MODEL,
@@ -135,17 +135,17 @@ async function callVision(opts: {
       system: SYSTEM,
       messages: [
         {
-          role: "user",
+          role: 'user',
           content: [
             {
-              type: "image",
+              type: 'image',
               source: {
-                type: "base64",
+                type: 'base64',
                 media_type: opts.mediaType,
                 data: opts.imageBase64,
               },
             },
-            { type: "text", text: opts.userPrompt },
+            { type: 'text', text: opts.userPrompt },
           ],
         },
       ],
@@ -155,8 +155,8 @@ async function callVision(opts: {
     throw new Error(`Anthropic vision ${res.status}: ${(await res.text()).slice(0, 300)}`);
   }
   const data = (await res.json()) as { content: { type: string; text: string }[] };
-  const text = data.content?.find((c) => c.type === "text")?.text;
-  if (!text) throw new Error("Anthropic vision returned no text");
+  const text = data.content?.find((c) => c.type === 'text')?.text;
+  if (!text) throw new Error('Anthropic vision returned no text');
   return text;
 }
 
@@ -168,36 +168,36 @@ async function callVision(opts: {
  */
 export async function tagPoiPhoto(poiPhotoId: string): Promise<{
   ok: boolean;
-  skipped?: "already_tagged" | "no_key";
+  skipped?: 'already_tagged' | 'no_key';
   error?: string;
 }> {
   if (!process.env.ANTHROPIC_API_KEY) {
-    return { ok: false, skipped: "no_key" };
+    return { ok: false, skipped: 'no_key' };
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: stub generated types
   const admin: any = createServiceClient();
 
   const { data: photo, error: photoErr } = await admin
-    .from("poi_photos")
-    .select("id, poi_id, storage_path, tagged_at")
-    .eq("id", poiPhotoId)
+    .from('poi_photos')
+    .select('id, poi_id, storage_path, tagged_at')
+    .eq('id', poiPhotoId)
     .maybeSingle();
   if (photoErr || !photo) {
     console.error(`[vision-tagger] photo ${poiPhotoId} not found:`, photoErr);
-    return { ok: false, error: "photo_not_found" };
+    return { ok: false, error: 'photo_not_found' };
   }
   if (photo.tagged_at) {
-    return { ok: true, skipped: "already_tagged" };
+    return { ok: true, skipped: 'already_tagged' };
   }
 
   // Look up POI context — we send POI name/type to help the model disambiguate
   // (a photo of pasta could be "food" from a restaurant → lifestyle, but from
   // a grocery deli counter → daily_drive).
   const { data: poi } = await admin
-    .from("pois")
-    .select("id, display_name, primary_type")
-    .eq("id", photo.poi_id)
+    .from('pois')
+    .select('id, display_name, primary_type')
+    .eq('id', photo.poi_id)
     .maybeSingle();
 
   // Look up any community_pois row for bucket hint (any community works — pois
@@ -205,9 +205,9 @@ export async function tagPoiPhoto(poiPhotoId: string): Promise<{
   // vs highway thing"). Phase 93: switched from listing_pois → community_pois
   // when listing-level POI pipeline was retired.
   const { data: lp } = await admin
-    .from("community_pois")
-    .select("intent_bucket")
-    .eq("poi_id", photo.poi_id)
+    .from('community_pois')
+    .select('intent_bucket')
+    .eq('poi_id', photo.poi_id)
     .limit(1)
     .maybeSingle();
 
@@ -217,26 +217,26 @@ export async function tagPoiPhoto(poiPhotoId: string): Promise<{
     .download(photo.storage_path);
   if (dlErr || !blob) {
     console.error(`[vision-tagger] storage download ${photo.storage_path} failed:`, dlErr);
-    return { ok: false, error: "download_failed" };
+    return { ok: false, error: 'download_failed' };
   }
   const buffer = Buffer.from(await blob.arrayBuffer());
-  const imageBase64 = buffer.toString("base64");
+  const imageBase64 = buffer.toString('base64');
 
   // Call the model.
   let raw: string;
   try {
     raw = await callVision({
       imageBase64,
-      mediaType: "image/jpeg",
+      mediaType: 'image/jpeg',
       userPrompt: userPromptForPoi({
-        name: poi?.display_name ?? "unknown",
+        name: poi?.display_name ?? 'unknown',
         primary_type: poi?.primary_type ?? null,
         intent_bucket: (lp?.intent_bucket as IntentBucket | null) ?? null,
       }),
     });
   } catch (err) {
     console.error(`[vision-tagger] anthropic call failed for ${poiPhotoId}:`, err);
-    return { ok: false, error: "anthropic_error" };
+    return { ok: false, error: 'anthropic_error' };
   }
 
   // Parse JSON — tolerant of fences / trailing chatter (same helper the
@@ -256,35 +256,35 @@ export async function tagPoiPhoto(poiPhotoId: string): Promise<{
     parsed = JSON.parse(jsonStr);
   } catch (err) {
     console.error(`[vision-tagger] JSON parse failed for ${poiPhotoId}; raw=`, raw.slice(0, 300));
-    return { ok: false, error: "parse_failed" };
+    return { ok: false, error: 'parse_failed' };
   }
 
   // Coerce + validate.
-  const cat = (PHOTO_CATEGORIES as readonly string[]).includes(parsed.primary_category ?? "")
+  const cat = (PHOTO_CATEGORIES as readonly string[]).includes(parsed.primary_category ?? '')
     ? (parsed.primary_category as PhotoCategory)
-    : "other";
+    : 'other';
   const applicable = Array.isArray(parsed.applicable_buckets)
     ? (parsed.applicable_buckets as unknown[]).filter((b): b is IntentBucket =>
         (INTENT_BUCKETS as readonly string[]).includes(b as string),
       )
     : [];
   const tagsList = Array.isArray(parsed.tags)
-    ? (parsed.tags as unknown[]).filter((t): t is string => typeof t === "string").slice(0, 8)
+    ? (parsed.tags as unknown[]).filter((t): t is string => typeof t === 'string').slice(0, 8)
     : [];
-  const scoreRaw = typeof parsed.score === "number" ? parsed.score : 0.5;
+  const scoreRaw = typeof parsed.score === 'number' ? parsed.score : 0.5;
   const score = Math.max(0, Math.min(1, scoreRaw));
 
   const aiTags: PhotoAiTags = {
-    description: typeof parsed.description === "string" ? parsed.description.slice(0, 500) : "",
+    description: typeof parsed.description === 'string' ? parsed.description.slice(0, 500) : '',
     primary_category: cat,
     tags: tagsList,
-    mood: typeof parsed.mood === "string" ? parsed.mood : null,
+    mood: typeof parsed.mood === 'string' ? parsed.mood : null,
     usable: parsed.usable !== false,
-    reason: typeof parsed.reason === "string" ? parsed.reason : null,
+    reason: typeof parsed.reason === 'string' ? parsed.reason : null,
   };
 
   const { error: updErr } = await admin
-    .from("poi_photos")
+    .from('poi_photos')
     .update({
       ai_tags: aiTags,
       ai_score: score,
@@ -292,11 +292,11 @@ export async function tagPoiPhoto(poiPhotoId: string): Promise<{
       tagged_at: new Date().toISOString(),
       applicable_buckets: applicable,
     })
-    .eq("id", poiPhotoId);
+    .eq('id', poiPhotoId);
 
   if (updErr) {
     console.error(`[vision-tagger] update failed for ${poiPhotoId}:`, updErr);
-    return { ok: false, error: "update_failed" };
+    return { ok: false, error: 'update_failed' };
   }
   return { ok: true };
 }

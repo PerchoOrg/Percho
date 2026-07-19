@@ -50,22 +50,22 @@ export type CommunityTarget = {
   scope: 'community';
   communityId: string;
   kind: CommunityKind;
-  // Phase 22 (2026-06-14) — preferred axis. When supplied, the server treats
+  // preferred axis. When supplied, the server treats
   // `category` as authoritative and derives `kind` from it. `kind` is still
   // sent (and required by the wire schema) for backwards compat with the
   // not-null `kind` column.
   category?: CommunityVideoCategoryId;
   schoolId?: string;
   poiId?: string;
-  // Phase 11 (2026-06-12) — geo for platform-wide nearby. Optional so
+  // geo for platform-wide nearby. Optional so
   // older callers compile; agents are encouraged to fill them in.
   lat?: number;
   lng?: number;
-  // Phase 23 (2026-06-14) — optional human-readable address. When set we
+  // optional human-readable address. When set we
   // forward it on the wire; when empty we still send lat/lng (silent geo)
   // but no address.
   address?: string;
-  // Phase 27.4 (2026-06-16) — additional community memberships. The video
+  // additional community memberships. The video
   // is primarily uploaded under `communityId`; these extra IDs cause the
   // server to also insert rows into `community_video_extra_links` so the
   // same video shows up under multiple `/c/[slug]` pages.
@@ -84,7 +84,7 @@ interface Props {
   target: UploadTarget;
   onUploaded?: (video: UploadedVideo) => void;
   /**
-   * Phase 45.16 (2026-06-20): when set on first mount, the file is treated
+   * when set on first mount, the file is treated
    * as if the agent had picked it via the file input — same validation,
    * same "picked" state. The agent still presses "Start upload" to confirm
    * and (optionally) edit the title. We intentionally don't auto-start so
@@ -102,7 +102,7 @@ export function VideoUploader({ target, onUploaded, initialFile }: Props) {
   const [title, setTitle] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Phase 45.16: when the FAB handed us a file via prefill, treat it as if
+  // when the FAB handed us a file via prefill, treat it as if
   // the agent had picked it. We don't auto-start the upload — the agent
   // confirms via the existing button so they can edit the title first.
   const didConsumeInitial = useRef(false);

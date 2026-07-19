@@ -29,14 +29,7 @@ interface Props {
 
 type GenState = 'idle' | 'loading' | 'error';
 
-type Platform =
-  | 'facebook'
-  | 'instagram'
-  | 'email'
-  | 'tiktok'
-  | 'x'
-  | 'linkedin'
-  | 'threads';
+type Platform = 'facebook' | 'instagram' | 'email' | 'tiktok' | 'x' | 'linkedin' | 'threads';
 
 type Language = 'en' | 'es' | 'vi' | 'ko';
 
@@ -104,10 +97,7 @@ export function SocialCopyPanel({ listingId }: Props) {
   const fetchDrafts = useCallback(async () => {
     setDraftsLoading(true);
     try {
-      const res = await fetch(
-        `/api/listings/${listingId}/social-drafts`,
-        { cache: 'no-store' },
-      );
+      const res = await fetch(`/api/listings/${listingId}/social-drafts`, { cache: 'no-store' });
       if (!res.ok) return;
       const data = (await res.json()) as { drafts: Draft[] };
       setDrafts(data.drafts ?? []);
@@ -137,9 +127,7 @@ export function SocialCopyPanel({ listingId }: Props) {
     // language) cell, forward it as a refine seed. The model preserves
     // their phrasing/facts and just polishes per the platform brief.
     const previous_drafts =
-      output && outputEdited
-        ? { [platform]: { [language]: output } }
-        : undefined;
+      output && outputEdited ? { [platform]: { [language]: output } } : undefined;
 
     try {
       const res = await fetch('/api/generate-social', {
@@ -155,8 +143,7 @@ export function SocialCopyPanel({ listingId }: Props) {
       });
       if (!res.ok) {
         const body = (await res.json().catch(() => ({}))) as { error?: string };
-        if (res.status === 429)
-          throw new Error('Rate limit hit — try again in a minute.');
+        if (res.status === 429) throw new Error('Rate limit hit — try again in a minute.');
         throw new Error(body.error ?? `HTTP ${res.status}`);
       }
       const data = (await res.json()) as Partial<
@@ -196,7 +183,8 @@ export function SocialCopyPanel({ listingId }: Props) {
       if (!res.ok) {
         const body = (await res.json().catch(() => ({}))) as { error?: string };
         if (res.status === 429) throw new Error('Saved too fast — wait a minute.');
-        if (res.status === 409) throw new Error('Draft cap reached for this listing (50). Delete some.');
+        if (res.status === 409)
+          throw new Error('Draft cap reached for this listing (50). Delete some.');
         throw new Error(body.error ?? `HTTP ${res.status}`);
       }
       const data = (await res.json()) as { draft: Draft };
@@ -279,10 +267,7 @@ export function SocialCopyPanel({ listingId }: Props) {
         {/* Left: inputs */}
         <div className="space-y-4 rounded-2xl border border-line bg-surface p-4 sm:p-6">
           <div>
-            <label
-              className="mb-1 block text-ink2 text-xs"
-              htmlFor="sc-highlights"
-            >
+            <label className="mb-1 block text-ink2 text-xs" htmlFor="sc-highlights">
               Selling points (optional)
             </label>
             <input
@@ -295,20 +280,14 @@ export function SocialCopyPanel({ listingId }: Props) {
               maxLength={500}
             />
             <span
-              className={`mt-1 block text-xs ${
-                highlightsOver ? 'text-red-400' : 'text-muted'
-              }`}
+              className={`mt-1 block text-xs ${highlightsOver ? 'text-red-400' : 'text-muted'}`}
             >
-              Up to {HIGHLIGHTS_MAX_WORDS} words ({highlightsWords}/
-              {HIGHLIGHTS_MAX_WORDS})
+              Up to {HIGHLIGHTS_MAX_WORDS} words ({highlightsWords}/{HIGHLIGHTS_MAX_WORDS})
             </span>
           </div>
 
           <div>
-            <label
-              className="mb-1 block text-ink2 text-xs"
-              htmlFor="sc-platform"
-            >
+            <label className="mb-1 block text-ink2 text-xs" htmlFor="sc-platform">
               Platform
             </label>
             <select
@@ -326,10 +305,7 @@ export function SocialCopyPanel({ listingId }: Props) {
           </div>
 
           <div>
-            <label
-              className="mb-1 block text-ink2 text-xs"
-              htmlFor="sc-language"
-            >
+            <label className="mb-1 block text-ink2 text-xs" htmlFor="sc-language">
               Language
             </label>
             <select
@@ -361,18 +337,12 @@ export function SocialCopyPanel({ listingId }: Props) {
               ) : (
                 <>
                   <Sparkles size={14} />
-                  {output
-                    ? outputEdited
-                      ? 'Refine from edits'
-                      : 'Regenerate'
-                    : 'Generate'}
+                  {output ? (outputEdited ? 'Refine from edits' : 'Regenerate') : 'Generate'}
                 </>
               )}
             </button>
             {state === 'error' && (
-              <span className="text-red-400 text-xs">
-                {error ?? 'unknown error'}
-              </span>
+              <span className="text-red-400 text-xs">{error ?? 'unknown error'}</span>
             )}
           </div>
         </div>
@@ -382,12 +352,8 @@ export function SocialCopyPanel({ listingId }: Props) {
           {output !== null ? (
             <>
               <div className="mb-2 flex flex-wrap items-center gap-2">
-                <span className="text-ink text-sm font-medium">
-                  {platformLabel(platform)}
-                </span>
-                <span className="text-muted text-[11px]">
-                  {languageLabel(language)}
-                </span>
+                <span className="text-ink text-sm font-medium">{platformLabel(platform)}</span>
+                <span className="text-muted text-[11px]">{languageLabel(language)}</span>
                 {outputEdited && (
                   <span className="rounded bg-ink2/15 px-1.5 py-0.5 text-ink2 text-[10px]">
                     edited
@@ -400,19 +366,13 @@ export function SocialCopyPanel({ listingId }: Props) {
                     disabled={saving}
                     className="inline-flex items-center gap-1 rounded border border-line px-2 py-1 text-[11px] text-ink hover:bg-ink2/20 disabled:opacity-50"
                   >
-                    {saving ? (
-                      <Loader2 size={12} className="animate-spin" />
-                    ) : (
-                      <Save size={12} />
-                    )}
+                    {saving ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />}
                     Save
                   </button>
                   <CopyButton value={output} />
                 </div>
               </div>
-              {saveError && (
-                <p className="mb-2 text-red-400 text-[11px]">{saveError}</p>
-              )}
+              {saveError && <p className="mb-2 text-red-400 text-[11px]">{saveError}</p>}
               <textarea
                 value={output}
                 onChange={(e) => onChangeOutput(e.target.value)}
@@ -420,8 +380,8 @@ export function SocialCopyPanel({ listingId }: Props) {
                 className={`${INPUT_CLASS} resize-y font-mono text-xs`}
               />
               <p className="mt-1 text-muted text-[11px]">
-                Edit freely. Click <strong>Refine from edits</strong> to
-                regenerate while keeping your changes as the seed.
+                Edit freely. Click <strong>Refine from edits</strong> to regenerate while keeping
+                your changes as the seed.
               </p>
             </>
           ) : (
@@ -436,19 +396,13 @@ export function SocialCopyPanel({ listingId }: Props) {
       <div className="rounded-2xl border border-line bg-surface p-4 sm:p-6">
         <div className="mb-3 flex items-baseline justify-between">
           <h3 className="text-ink text-sm font-medium">
-            Saved drafts{' '}
-            <span className="text-muted text-xs">
-              ({drafts.length})
-            </span>
+            Saved drafts <span className="text-muted text-xs">({drafts.length})</span>
           </h3>
-          {draftsLoading && (
-            <Loader2 size={12} className="animate-spin text-muted" />
-          )}
+          {draftsLoading && <Loader2 size={12} className="animate-spin text-muted" />}
         </div>
         {drafts.length === 0 ? (
           <p className="text-muted text-xs">
-            No saved drafts yet. Click <strong>Save</strong> on a generated
-            post to keep it here.
+            No saved drafts yet. Click <strong>Save</strong> on a generated post to keep it here.
           </p>
         ) : (
           <ul className="space-y-2">
@@ -548,11 +502,11 @@ function DraftRow({ draft, onDelete, onPatch, onRefine }: DraftRowProps) {
   }
 
   const stamp = draft.updated_at ?? draft.created_at;
-  const edited =
-    draft.updated_at && draft.updated_at !== draft.created_at;
+  const edited = draft.updated_at && draft.updated_at !== draft.created_at;
 
   // Heading: agent-set title, or fall back to "Platform · Language".
-  const heading = draft.title ?? `${platformLabel(draft.platform)} · ${languageLabel(draft.language)}`;
+  const heading =
+    draft.title ?? `${platformLabel(draft.platform)} · ${languageLabel(draft.language)}`;
   const hasCustomTitle = draft.title !== null && draft.title.length > 0;
 
   return (
@@ -590,9 +544,7 @@ function DraftRow({ draft, onDelete, onPatch, onRefine }: DraftRowProps) {
         </div>
       ) : (
         <div className="mb-1 flex items-center gap-2">
-          <span
-            className={`text-sm ${hasCustomTitle ? 'text-ink font-medium' : 'text-ink2'}`}
-          >
+          <span className={`text-sm ${hasCustomTitle ? 'text-ink font-medium' : 'text-ink2'}`}>
             {heading}
           </span>
         </div>
@@ -653,11 +605,7 @@ function DraftRow({ draft, onDelete, onPatch, onRefine }: DraftRowProps) {
                 disabled={saving}
                 className="inline-flex items-center gap-1 rounded border border-line px-2 py-1 text-[11px] text-ink hover:bg-ink2/20 disabled:opacity-50"
               >
-                {saving ? (
-                  <Loader2 size={12} className="animate-spin" />
-                ) : (
-                  <Save size={12} />
-                )}
+                {saving ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />}
                 Save
               </button>
               <button

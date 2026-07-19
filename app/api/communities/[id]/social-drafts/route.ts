@@ -1,7 +1,7 @@
 /**
  * GET / POST / PATCH / DELETE /api/communities/[id]/social-drafts
  *
- * Phase 50 (2026-06-22). Sibling of /api/listings/[id]/social-drafts
+ * . Sibling of /api/listings/[id]/social-drafts
  * for community marketing copy. The same `saved_social_drafts` table
  * holds both shapes, distinguished by which target FK is set:
  *   - listing drafts: listing_id set, platform set, language set

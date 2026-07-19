@@ -1,6 +1,5 @@
 /**
- * /dashboard/communities/[id] — community detail (Phase 50 rebuild,
- * 2026-06-22).
+ * /dashboard/communities/[id] — community detail.
  *
  * Mirrors the listing edit hub's 4-icon-tab structure so the agent's
  * dashboard reads identically across listings and communities:
@@ -9,7 +8,7 @@
  *
  *   - Details   : metadata edit (CommunityEditor) + buyer link.
  *   - Media     : Videos + Photos in one card. Cover selection is inline
- *                 per row/photo (Phase 50.9, 2026-06-23) — no separate
+ *                 per row/photo — no separate
  *                 cover panel.
  *   - Marketing : owner-only language-only marketing copy generator
  *                 (CommunityMarketingPanel — the community sibling of
@@ -53,7 +52,7 @@ interface CommunityRow {
   cover_video_id: string | null;
   cover_storage_path: string | null;
   boundary: unknown;
-  // Phase 50.4 — expanded metadata.
+  // expanded metadata.
   zip: string | null;
   county: string | null;
   hoa_fee_monthly: number | null;
@@ -171,7 +170,7 @@ export default async function CommunityEditorPage({
     uploaderSlug: row.uploader?.slug ?? null,
     uploaderDisplayName: row.uploader?.name ?? null,
   }));
-  // Phase 50.9 (2026-06-23): cover selection moved inline into the
+  // cover selection moved inline into the
   // Media tab (Set as cover button per video row, ⭐ per photo). No
   // separate `coverVideos` derivation needed — CommunityVideoManageList
   // gates "Set as cover" on `status === 'ready'` itself.
@@ -228,14 +227,15 @@ export default async function CommunityEditorPage({
     cover_storage_path: community.cover_storage_path,
     fallback_video_cf_id: firstReadyVideo?.cf_video_id ?? null,
     name: community.name,
-    boundary: (community.boundary as import('@/lib/community/logo-cover').BoundaryGeoJSON | null) ?? null,
+    boundary:
+      (community.boundary as import('@/lib/community/logo-cover').BoundaryGeoJSON | null) ?? null,
   });
   const heroCoverUrl = heroCover ? heroCover.url : null;
 
   const subtitle = community.city ? `${community.city}, ${community.state}` : community.state;
 
-  // Phase 92: nearby POIs load — owner-only since discover/generate cost $.
-  // Phase 101e (2026-07-17): moved to /admin/pipeline/community-nearby/[id]
+  // nearby POIs load — owner-only since discover/generate cost $.
+  // moved to /admin/pipeline/community-nearby/[id]
   // — kept the load path there. The Nearby tab is removed from this hub.
 
   // Tabs — Details + Media always; Marketing + Analytics owner-only.

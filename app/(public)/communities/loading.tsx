@@ -1,4 +1,4 @@
-// Phase 47.2 (2026-06-21): unified grid skeleton — same px / gap / aspect
+// unified grid skeleton — same px / gap / aspect
 // as GridPageShell + GridFrame.
 export default function Loading() {
   return (

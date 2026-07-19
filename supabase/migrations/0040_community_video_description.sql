@@ -12,4 +12,4 @@ alter table public.community_videos
   add column if not exists description text;
 
 comment on column public.community_videos.description is
-  'Optional free-text caption shown under the video in the agent management UI. Not currently rendered on the public community page (Phase 50.10).';
+  'Optional free-text caption shown under the video in the agent management UI. Not currently rendered on the public community page.';

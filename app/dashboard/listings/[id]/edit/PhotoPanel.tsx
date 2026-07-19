@@ -44,7 +44,7 @@ import {
 } from 'react';
 
 /**
- * Phase 95: shape of `listing_photos.ai_tags` (see
+ * shape of `listing_photos.ai_tags` (see
  * supabase/migrations/20260716140000_listing_photos_ai_tags.sql). Only the
  * two fields the Media tab renders are typed strictly; the rest are along
  * for the ride so future surfaces can read them without another migration.
@@ -81,7 +81,7 @@ interface Props {
 }
 
 /**
- * Phase 47.x — imperative handle exposed via `ref`. MediaPanel uses
+ * .x — imperative handle exposed via `ref`. MediaPanel uses
  * `addFiles()` to forward image files picked from the unified upload button
  * into PhotoPanel's existing upload pipeline (validation + Supabase upload
  * + recordListingPhoto), so we don't fork the upload logic.
@@ -186,7 +186,7 @@ export const PhotoPanel = forwardRef<PhotoPanelHandle, Props>(function PhotoPane
     [listingId],
   );
 
-  // Phase 47.x: expose addFiles to MediaPanel so the unified upload button
+  // .x: expose addFiles to MediaPanel so the unified upload button
   // can route image files through PhotoPanel's existing pipeline.
   useImperativeHandle(
     ref,
@@ -235,7 +235,7 @@ export const PhotoPanel = forwardRef<PhotoPanelHandle, Props>(function PhotoPane
     [coverPhotoId, listingId],
   );
 
-  // Phase 95: Realtime — the render worker writes `ai_tags` back to
+  // Realtime — the render worker writes `ai_tags` back to
   // listing_photos rows during the shot-planner step. Subscribe so the
   // Media tab flips from "no description" to captioned thumbnails without
   // a page refresh. `listing_photos` was already added to the

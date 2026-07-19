@@ -7,7 +7,7 @@
  * Sheet logic lives in <useUploadSheet> so DesktopSidebar's "+ New" button
  * can use the same flow.
  *
- * Phase 43.6 (2026-06-20). Phase 45.9 (2026-06-20): sheet extracted to
+ * . Phase 45.9 (2026-06-20): sheet extracted to
  * UploadSheet hook.
  */
 

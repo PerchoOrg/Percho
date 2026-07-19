@@ -9,7 +9,7 @@
  *     (V1 has no buyer table yet — Phase 9.5. Anyone authenticated who isn't
  *     an agent is treated as a buyer for nav purposes.)
  *
- * Phase 36 (2026-06-18): unified IA. The "Preview as buyer" mode is gone —
+ * unified IA. The "Preview as buyer" mode is gone —
  * agents already share the buyer's nav. The community pre-fetch for the
  * old agent FAB also moved to <AgentFloatingNewWrapper>.
  *

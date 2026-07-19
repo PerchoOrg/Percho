@@ -1,5 +1,5 @@
 /**
- * POI content pipeline types (Phase 76).
+ * POI content pipeline types.
  *
  * Hand-written companion to `lib/supabase/database.types.ts` for the tables
  * introduced in `20260714000000_poi_content_pipeline.sql`. When the user
@@ -21,27 +21,27 @@
  * sources (info cards / Mapbox animations) rather than Places photos.
  */
 export const INTENT_BUCKETS = [
-  "schools",
-  "dining",
-  "nightlife",
-  "shopping",
-  "outdoor",
-  "fitness",
-  "kids",
-  "asian_community",
-  "daily_errands",
-  "faith",
-  "work_hubs",
-  "healthcare",
-  "pets",
-  "transit",
+  'schools',
+  'dining',
+  'nightlife',
+  'shopping',
+  'outdoor',
+  'fitness',
+  'kids',
+  'asian_community',
+  'daily_errands',
+  'faith',
+  'work_hubs',
+  'healthcare',
+  'pets',
+  'transit',
 ] as const;
 export type IntentBucket = (typeof INTENT_BUCKETS)[number];
 
 /**
  * Human-readable label for a Google Places `primary_type` / `types[]` value.
  *
- * Used by the caption pipeline (Phase 89) to render "Public High School" /
+ * Used by the caption pipeline to render "Public High School" /
  * "Southern Bistro" / "Neighborhood Park" instead of the bucket label.
  * Callers pass a POI's `primary_type` first, then fall back through `types[]`
  * in order (Places returns most-specific first). If nothing matches, callers
@@ -55,59 +55,59 @@ export type IntentBucket = (typeof INTENT_BUCKETS)[number];
  */
 export const POI_TYPE_LABEL: Record<string, string> = {
   // schools bucket
-  primary_school: "Elementary School",
-  secondary_school: "High School",
-  school: "School",
-  university: "University",
+  primary_school: 'Elementary School',
+  secondary_school: 'High School',
+  school: 'School',
+  university: 'University',
   // dining bucket
-  restaurant: "Restaurant",
-  cafe: "Cafe",
-  bakery: "Bakery",
-  meal_takeaway: "Takeout",
-  meal_delivery: "Delivery",
+  restaurant: 'Restaurant',
+  cafe: 'Cafe',
+  bakery: 'Bakery',
+  meal_takeaway: 'Takeout',
+  meal_delivery: 'Delivery',
   // nightlife bucket
-  bar: "Bar",
-  night_club: "Nightclub",
-  movie_theater: "Movie Theater",
+  bar: 'Bar',
+  night_club: 'Nightclub',
+  movie_theater: 'Movie Theater',
   // shopping bucket
-  shopping_mall: "Shopping Mall",
-  department_store: "Department Store",
-  clothing_store: "Clothing Store",
+  shopping_mall: 'Shopping Mall',
+  department_store: 'Department Store',
+  clothing_store: 'Clothing Store',
   // outdoor bucket
-  park: "Park",
-  campground: "Campground",
-  tourist_attraction: "Attraction",
+  park: 'Park',
+  campground: 'Campground',
+  tourist_attraction: 'Attraction',
   // fitness bucket
-  gym: "Gym",
-  spa: "Spa",
+  gym: 'Gym',
+  spa: 'Spa',
   // kids bucket
-  amusement_park: "Amusement Park",
-  aquarium: "Aquarium",
-  zoo: "Zoo",
-  library: "Library",
+  amusement_park: 'Amusement Park',
+  aquarium: 'Aquarium',
+  zoo: 'Zoo',
+  library: 'Library',
   // daily_errands bucket
-  supermarket: "Supermarket",
-  grocery_store: "Grocery Store",
-  pharmacy: "Pharmacy",
-  convenience_store: "Convenience Store",
+  supermarket: 'Supermarket',
+  grocery_store: 'Grocery Store',
+  pharmacy: 'Pharmacy',
+  convenience_store: 'Convenience Store',
   // faith bucket
-  church: "Church",
-  mosque: "Mosque",
-  synagogue: "Synagogue",
-  hindu_temple: "Hindu Temple",
+  church: 'Church',
+  mosque: 'Mosque',
+  synagogue: 'Synagogue',
+  hindu_temple: 'Hindu Temple',
   // healthcare bucket
-  hospital: "Hospital",
-  doctor: "Doctor",
-  dentist: "Dentist",
+  hospital: 'Hospital',
+  doctor: 'Doctor',
+  dentist: 'Dentist',
   // pets bucket
-  veterinary_care: "Veterinary Clinic",
-  pet_store: "Pet Store",
+  veterinary_care: 'Veterinary Clinic',
+  pet_store: 'Pet Store',
   // transit bucket
-  subway_station: "Subway Station",
-  train_station: "Train Station",
-  transit_station: "Transit Station",
-  airport: "Airport",
-  bus_station: "Bus Station",
+  subway_station: 'Subway Station',
+  train_station: 'Train Station',
+  transit_station: 'Transit Station',
+  airport: 'Airport',
+  bus_station: 'Bus Station',
 };
 
 /**
@@ -126,47 +126,47 @@ export function poiTypeLabel(
   return null;
 }
 
-export const POI_STATUSES = ["candidate", "approved", "rejected", "archived"] as const;
+export const POI_STATUSES = ['candidate', 'approved', 'rejected', 'archived'] as const;
 export type PoiStatus = (typeof POI_STATUSES)[number];
 
-export const PHOTO_STATUSES = ["pending", "approved", "rejected"] as const;
+export const PHOTO_STATUSES = ['pending', 'approved', 'rejected'] as const;
 export type PhotoStatus = (typeof PHOTO_STATUSES)[number];
 
-export const PHOTO_SOURCES = ["google_places", "google_streetview"] as const;
+export const PHOTO_SOURCES = ['google_places', 'google_streetview'] as const;
 export type PhotoSource = (typeof PHOTO_SOURCES)[number];
 
-export const TIME_BUCKETS = ["morning_peak", "midday", "evening_peak", "weekend_noon"] as const;
+export const TIME_BUCKETS = ['morning_peak', 'midday', 'evening_peak', 'weekend_noon'] as const;
 export type TimeBucket = (typeof TIME_BUCKETS)[number];
 
 export const REVIEW_ENTITY_TYPES = [
-  "listing_poi",
-  "listing_poi_photo",
-  "tag",
-  "narrative",
-  "video",
+  'listing_poi',
+  'listing_poi_photo',
+  'tag',
+  'narrative',
+  'video',
 ] as const;
 export type ReviewEntityType = (typeof REVIEW_ENTITY_TYPES)[number];
 
 export const REVIEW_ACTIONS = [
-  "approve",
-  "reject",
-  "edit_tag",
-  "edit_narrative",
-  "reorder",
-  "comment",
+  'approve',
+  'reject',
+  'edit_tag',
+  'edit_narrative',
+  'reorder',
+  'comment',
 ] as const;
 export type ReviewAction = (typeof REVIEW_ACTIONS)[number];
 
-export const VIDEO_SCOPES = ["poi", "intent_bucket", "listing"] as const;
+export const VIDEO_SCOPES = ['poi', 'intent_bucket', 'listing'] as const;
 export type VideoScope = (typeof VIDEO_SCOPES)[number];
 
 export const VIDEO_STATUSES = [
-  "pending",
-  "processing",
-  "ready",
-  "approved",
-  "rejected",
-  "failed",
+  'pending',
+  'processing',
+  'ready',
+  'approved',
+  'rejected',
+  'failed',
 ] as const;
 export type VideoStatus = (typeof VIDEO_STATUSES)[number];
 
@@ -297,7 +297,7 @@ export type PhotoAiTags = {
   scene?: string; // e.g. "storefront", "interior", "landscape"
   mood?: string;
   subjects?: string[];
-  time_of_day?: "morning" | "afternoon" | "evening" | "night" | "unknown";
+  time_of_day?: 'morning' | 'afternoon' | 'evening' | 'night' | 'unknown';
   usable_for_video?: boolean;
   reason?: string;
 };
@@ -305,27 +305,27 @@ export type PhotoAiTags = {
 // ─── review reason enums (client-visible, mirrored in review-reasons.ts) ────
 
 export const POI_REJECT_REASONS = [
-  "too-far",
-  "wrong-vibe",
-  "commercial-noise",
-  "not-representative",
-  "duplicate-of",
-  "low-quality",
-  "wrong-demographic",
-  "chain-not-local",
-  "other",
+  'too-far',
+  'wrong-vibe',
+  'commercial-noise',
+  'not-representative',
+  'duplicate-of',
+  'low-quality',
+  'wrong-demographic',
+  'chain-not-local',
+  'other',
 ] as const;
 export type PoiRejectReason = (typeof POI_REJECT_REASONS)[number];
 
 export const PHOTO_REJECT_REASONS = [
-  "storefront-only",
-  "empty-parking-lot",
-  "night-blurry",
-  "no-people",
-  "wrong-season",
-  "logo-heavy",
-  "duplicate",
-  "low-res",
-  "other",
+  'storefront-only',
+  'empty-parking-lot',
+  'night-blurry',
+  'no-people',
+  'wrong-season',
+  'logo-heavy',
+  'duplicate',
+  'low-res',
+  'other',
 ] as const;
 export type PhotoRejectReason = (typeof PHOTO_REJECT_REASONS)[number];

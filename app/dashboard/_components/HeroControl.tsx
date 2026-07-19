@@ -1,6 +1,6 @@
 'use client';
 /**
- * HeroControl — chromeless button used inside HeroHeader Row 1 (Phase 47.5).
+ * HeroControl — chromeless button used inside HeroHeader Row 1.
  *
  * Default: transparent + text-shadow for legibility on cover photos.
  * Hover: frosted-glass surface (rgba bg + blur + thin border + soft shadow).

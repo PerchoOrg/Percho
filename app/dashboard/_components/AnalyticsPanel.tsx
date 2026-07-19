@@ -1,8 +1,8 @@
 /**
  * AnalyticsPanel — generic per-entity analytics view.
  *
- * Phase 50 (2026-06-22): generalized from the listing-only AnalyticsPanel
- * (Phase 49) so the agent-hub Community detail page can mount the same
+ * generalized from the listing-only AnalyticsPanel
+ * so the agent-hub Community detail page can mount the same
  * tab. Same KPIs, same funnel, same empty-state copy — only the noun
  * changes via `entityKind` ('listing' | 'community').
  *

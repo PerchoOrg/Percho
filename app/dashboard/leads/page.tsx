@@ -5,10 +5,9 @@
  * `initialLeads` to the LeadsLive client component which subscribes to
  * Realtime INSERT/UPDATE + polls as fallback.
  *
- * Phase 18: drop the "← Listings" backlink (TopBar nav already covers it),
+ * drop the "← Listings" backlink (TopBar nav already covers it),
  * add followed_up_at to the select set so the client gets it on first paint.
  */
-
 
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';

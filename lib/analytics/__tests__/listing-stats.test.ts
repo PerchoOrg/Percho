@@ -1,7 +1,7 @@
 /**
  * Tests for the per-entity analytics aggregator.
  *
- * Phase 50 (2026-06-22): the impl moved to `entity-stats.ts` (listing
+ * the impl moved to `entity-stats.ts` (listing
  * + community). The legacy `listing-stats` exports still work — they
  * delegate to the generic functions. We keep coverage on both call
  * shapes here.
@@ -116,7 +116,7 @@ describe('getRollupStats (listing compat)', () => {
   });
 });
 
-// ─── Community-shape (Phase 50) ───────────────────────────────────
+// ─── Community-shape ───────────────────────────────────
 describe('getEntityStats — community', () => {
   it('queries by community_id when entityType=community', async () => {
     const events: EventRow[] = [

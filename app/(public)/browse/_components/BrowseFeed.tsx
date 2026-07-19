@@ -26,14 +26,14 @@ import { CommunitySheet, type CommunitySheetData } from './CommunitySheet';
 export type BrowseSourceVideo = {
   cfVideoId: string;
   /**
-   * Phase 71.7 (2026-07-06): optional 1920x1080 landscape variant of the
+   * optional 1920x1080 landscape variant of the
    * same auto-rendered reel. Set when the render worker detects ≥80%
    * landscape source photos and produces a horizontal companion video.
    * The feed player exposes a fullscreen toggle when this is present.
    */
   cfVideoIdLandscape?: string | null;
   /**
-   * Phase 70.11 (2026-07-04): direct mp4 URL for demo/mock listings that
+   * direct mp4 URL for demo/mock listings that
    * bypass Cloudflare Stream. When set, the Card plays this URL as a
    * plain <video src>; `cfVideoId` is ignored (typically empty). At most
    * one of {cfVideoId, externalUrl} carries a real value.
@@ -42,7 +42,7 @@ export type BrowseSourceVideo = {
   line1: string;
   line2?: string;
   /**
-   * Phase 28 (2026-06-14): community-video category id (12-value enum
+   * community-video category id (12-value enum
    * from `lib/zod/community-video-categories.ts`). Set on cards in the
    * single Nearby pool so the Card overlay can render the category
    * label + blurb pill above the caption. `undefined` for hero pool.
@@ -53,7 +53,7 @@ export type BrowseSourceVideo = {
 export type BrowseCard = {
   id: string;
   /**
-   * Phase 10 (2026-06-12): listings can be photo-only (no ready video).
+   * listings can be photo-only (no ready video).
    * `mediaKind` discriminates how the grid renders the cover; the swipe
    * feed filters to `mediaKind === 'video'` because the immersive feed
    * is video-only by design ("TikTok for Homebuying" framing).
@@ -65,7 +65,7 @@ export type BrowseCard = {
   /** Set when mediaKind === 'photo'. Public Supabase Storage URL. */
   heroPhotoUrl?: string;
   /**
-   * Phase 60 (2026-06-26): grid thumbnail override sourced from
+   * grid thumbnail override sourced from
    * `listings.cover_url`. When the agent picks "Set as cover" on either
    * a photo or a video, this URL flows through. Grid consumers (`/browse`,
    * `/saved`, `/nearby`, `/c/[slug]`) prefer this over the
@@ -76,7 +76,7 @@ export type BrowseCard = {
    */
   gridCoverUrl?: string;
   /**
-   * Phase 20 (2026-06-13): full photo URL list for the photo branch of the
+   * full photo URL list for the photo branch of the
    * detail page. Only set when mediaKind === 'photo' AND we want a swipeable
    * carousel (not just a grid cover). `/browse` grid leaves this undefined.
    * Order matches `listing_photos.sort_order`. First entry is the cover.
@@ -93,7 +93,7 @@ export type BrowseCard = {
   nearbyVideos?: BrowseSourceVideo[];
   communityVideos?: BrowseSourceVideo[];
   /**
-   * Phase 28 (2026-06-14): single Nearby pool — replaces schools /
+   * single Nearby pool — replaces schools /
    * pois / neighborhood splits with one feed of community videos, each
    * carrying a 12-category id. The right rail has one "Nearby" entry;
    * tapping it switches into this pool. The legacy three arrays above
@@ -102,7 +102,7 @@ export type BrowseCard = {
    */
   categoryVideos: BrowseSourceVideo[];
   /**
-   * Phase 20 (2026-06-13): plain-text schools / POIs for the photo branch
+   * plain-text schools / POIs for the photo branch
    * of the detail page (no community videos to switch to, so the right
    * rail is hidden — buyers see this list under the photo caption block
    * instead). `/browse` grid + video cards leave these undefined.
@@ -110,7 +110,7 @@ export type BrowseCard = {
   photoSchools?: { name: string; grades: string | null; rating: number | null }[];
   photoPois?: { name: string; distance_text: string | null }[];
   /**
-   * Phase 14 (2026-06-13): present only when the card is rendered from
+   * present only when the card is rendered from
    * `/nearby` (computed via haversine from the buyer's location). Explore
    * cards leave it `undefined`. Used purely for an optional overlay line —
    * never affects sort order or click-through.
@@ -128,12 +128,12 @@ export type BrowseCard = {
     baths: number | null;
     sqft: number | null;
     /**
-     * Multi-paragraph description (Phase 9). Each entry is one paragraph;
+     * Multi-paragraph description. Each entry is one paragraph;
      * rendered as the bottom caption (Xiaohongshu-style), expandable on tap.
      */
     description: string[];
     /**
-     * Phase 94 (2026-07-17): provenance for externally-sourced listings.
+     * provenance for externally-sourced listings.
      * Internal (agent-owned) listings leave both null. When `source === 'fmls'`,
      * the listing belongs to an external MLS agent (see `agent` below for the
      * verbatim FMLS attribution) and the detail-page link uses
@@ -147,7 +147,7 @@ export type BrowseCard = {
     /**
      * For internal listings: the Percho agent's slug (used to build
      * `/v/{slug}/{listingSlug}` and `/a/{slug}`).
-     * For external listings (Phase 94): empty string — the card should route
+     * For external listings: empty string — the card should route
      * via `linkFor(card)` which checks `listing.source` and skips agent.slug.
      * Never render `/a/{agent.slug}` when the agent has no Percho account.
      */
@@ -158,19 +158,19 @@ export type BrowseCard = {
     /** External listings: verbatim FMLS list_agent_phone (see external flag). */
     phone: string | null;
     /**
-     * Phase 94: FMLS office (broker) name — set only for external listings.
+     * FMLS office (broker) name — set only for external listings.
      * Rendered as "Listed by {name} · {office}" in CaptionCard, no link.
      */
     office?: string | null;
     /**
-     * Phase 94: true when this listing is externally-sourced (FMLS import).
+     * true when this listing is externally-sourced (FMLS import).
      * Caption card renders name+office as plain text (no /a/{slug} link)
      * and the phone is intentionally not shown (see phase 94 decision log).
      */
     isExternal?: boolean;
   };
   /**
-   * Phase 34b (V1 buyer redo): set when the listing belongs to a community.
+   * set when the listing belongs to a community.
    * BrowseFeed renders a top-left chip per V1 prototype Scenario A; tapping
    * the chip opens CommunitySheet (L1) — does NOT navigate. videoCount is
    * the fan-out community-video pool size; listingCount is the number of
@@ -212,7 +212,7 @@ interface CardProps {
   /** Called if the browser blocks autoplay-with-sound and we fall back to muted. */
   onAutoplayBlocked?: () => void;
   /**
-   * Phase 34b (V1 redo): opens the community sheet at the parent level.
+   * opens the community sheet at the parent level.
    * Only fires when `card.community` is set. Chip is rendered inside this
    * Card so it's positioned over the listing video; the sheet itself is
    * a sibling overlay outside the card swiper.
@@ -249,7 +249,7 @@ function pickVideo(card: BrowseCard, source: Source, cycleIdx: number): BrowseSo
 }
 
 /**
- * Phase 20 (2026-06-13): photo-only card. Same layout language as the video
+ * photo-only card. Same layout language as the video
  * Card (gradient overlays, bottom caption, source overlay top-left, action
  * bar handled by parent), but renders an <img> carousel instead of <video>.
  * Horizontal swipe / left-right keys cycle through `card.photos[]` via the
@@ -282,7 +282,7 @@ function PhotoCard({
   const idx = total > 0 ? cycleIdx % total : 0;
   const current = photos[idx];
 
-  // Phase 73 (2026-07-05): native horizontal scroll-snap, tuned to remove
+  // native horizontal scroll-snap, tuned to remove
   // the "卡顿" the owner reported on 72.6/72.7. Same iOS-native container
   // (owner: "还是要用 native scroll snap"), fixes below apply here AND to
   // CommunityCarousel afterwards.
@@ -312,10 +312,10 @@ function PhotoCard({
   const scrollSettleTimerRef = useRef<number | null>(null);
   const settleDebounceRef = useRef<number | null>(null);
 
-  // Phase 74.2 (2026-07-05): split display state from parent commit.
+  // split display state from parent commit.
   // Owner: "滑动后页面和上面的计数不 sync — 上面的横杠和计数有延迟".
   //
-  // Phase 73's 100ms settle debounce is what keeps the img/decode side
+  // 's 100ms settle debounce is what keeps the img/decode side
   // quiet during a swipe (see the ranting comment above), and we do NOT
   // want to lose that. But the counter pill + segmented progress bar are
   // pure visual feedback — they can (and should) track the finger in
@@ -360,7 +360,7 @@ function PhotoCard({
   // scroll event just resets a 100ms watchdog; the parent only hears
   // about the change once the user has stopped for a full frame budget.
   //
-  // Also (phase 74.2): rAF-throttled local `displayIdx` update so the
+  // Also: rAF-throttled local `displayIdx` update so the
   // counter/progress pill tracks the finger without waiting for settle.
   const onScroll = useCallback(() => {
     if (isProgrammaticScrollRef.current) return;
@@ -433,7 +433,7 @@ function PhotoCard({
        * stops the swipe from chaining to the parent (which is the
        * vertical feed scroll). Scrollbar hidden via utility.
        *
-       * Phase 72.7 (2026-07-05): removed `scrollBehavior: 'smooth'`
+       * removed `scrollBehavior: 'smooth'`
        * inline style — it forced every user-driven snap alignment
        * through a 150ms constant CSS curve, which is what caused the
        * "first half follows finger, second half resets to fixed
@@ -463,7 +463,7 @@ function PhotoCard({
               src={src}
               alt={i === idx ? `${card.listing.address} — ${i + 1} of ${total}` : ''}
               className="h-full w-full object-contain"
-              // Phase 73: eager range widened ±1 → ±2 so a fast flick
+              // eager range widened ±1 → ±2 so a fast flick
               // never lands on an undecoded neighbour. `decoding=async`
               // moves decode off the main thread so it can't stall
               // compositing mid-swipe.
@@ -566,7 +566,7 @@ function Card({
   const hlsRef = useRef<Hls | null>(null);
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
 
-  // Phase 71.7 (2026-07-06): in-page fullscreen for the landscape variant.
+  // in-page fullscreen for the landscape variant.
   // Only exposed when the current selection carries a `cfVideoIdLandscape`
   // (populated by the render worker for listings whose photos are ≥80%
   // horizontal). Toggling flips the container to `fixed inset-0 z-[9999]`
@@ -579,7 +579,7 @@ function Card({
   // src-swap trick we depend on. A plain overlay div works everywhere.
   const [isFullscreen, setIsFullscreen] = useState(false);
 
-  // Phase 71.17 (2026-07-06): measure the actual `<section>` element's
+  // measure the actual `<section>` element's
   // bounding rect instead of window.innerWidth/innerHeight. On iPhone Plus /
   // Pro Max models (428×926), `window.innerHeight` reports the *small*
   // viewport (~781, URL bar visible) while `fixed inset-0` extends into the
@@ -599,7 +599,7 @@ function Card({
   const [vp, setVp] = useState<{ w: number; h: number }>({ w: 0, h: 0 });
   useEffect(() => {
     if (!isFullscreen) return;
-    // Phase 74.12 (2026-07-06): measure the VIEWPORT, not sectionRef.
+    // measure the VIEWPORT, not sectionRef.
     // sectionRef is the feed <section> which keeps its non-fullscreen
     // layout even when the fullscreen `fixed inset-0 z-[9999]` overlay
     // is on top. Measuring section on the isFullscreen effect fired
@@ -636,7 +636,7 @@ function Card({
 
   const sel = useMemo(() => pickVideo(card, source, cycleIdx), [card, source, cycleIdx]);
 
-  // Phase 71.26 (2026-07-06): local `domPaused` state driven by rAF poll of
+  // local `domPaused` state driven by rAF poll of
   // `videoRef.current.paused`. Play glyph binds to this local state, not the
   // parent-owned `paused` prop. Reason 71.25 didn't fix it: rAF was calling
   // parent's `setPaused` with a value that closes over stale `paused` prop
@@ -656,7 +656,7 @@ function Card({
     return () => cancelAnimationFrame(raf);
   }, [shouldMount]);
 
-  // Phase 74.7 (2026-07-06): poster-attribute anti-pattern (skill ref §1).
+  // poster-attribute anti-pattern (skill ref §1).
   // Symptom: on first swipe to a card, iOS Safari flashes the <video>
   // poster with the system big-play-button overlay for ~200-500ms before
   // the video actually starts. Root cause: `<video poster=…>` renders
@@ -670,10 +670,10 @@ function Card({
   // via opacity on `playing` / `loadeddata`. Reset the flag on src swap.
   const [hasFirstFrame, setHasFirstFrame] = useState(false);
 
-  // Phase 71.7: pick the effective CF uid based on fullscreen state.
+  // pick the effective CF uid based on fullscreen state.
   // `cfVideoIdLandscape` is optional; fullscreen is only enterable when set.
   const hasLandscape = !!sel.cfVideoIdLandscape;
-  // Phase 74.17 (2026-07-06): use landscape uid whenever available, in
+  // use landscape uid whenever available, in
   // BOTH the vertical feed and fullscreen. This is the fundamental
   // architectural fix that makes 74.13-74.16's cascade of overlays and
   // gates unnecessary. Owner report:「刚才修的是横滑的问题 竖滑也会有
@@ -691,13 +691,13 @@ function Card({
   // 这样不用多个视频 节省成本 避免黑屏".
   const effectiveCfId = sel.cfVideoIdLandscape ?? sel.cfVideoId;
 
-  // Phase 71.13/71.14: aggressively play on fullscreen. iOS Safari native
+  // /71.14: aggressively play on fullscreen. iOS Safari native
   // HLS (Apple HLS via <video src>) reloads the media pipeline on src
   // change; the play() call from the shared effect (line ~660) can race
   // and silently no-op. Retry on multiple lifecycle events, muted (which
   // always satisfies autoplay policy under playsInline).
   //
-  // Phase 71.17 (2026-07-06): stop retrying once we've observed a play/
+  // stop retrying once we've observed a play/
   // playing event, and abort if user pauses. Previously canplay/loadeddata
   // kept firing during playback → racing with user's tap-to-pause: the
   // audio track would resume but the video texture stayed frozen.
@@ -736,7 +736,7 @@ function Card({
     };
   }, [isFullscreen, effectiveCfId, setPaused]);
 
-  // Phase 74.23 (2026-07-06): sustained play retry after fullscreen enter.
+  // sustained play retry after fullscreen enter.
   //
   // Diagnosis history:
   //   - 74.21: setTimeout(200) + `currentTime += 0.001` micro-seek — no effect
@@ -805,7 +805,7 @@ function Card({
     }
   }
 
-  // Phase 74.14 (2026-07-06): landscape poster URL for fullscreen preload +
+  // landscape poster URL for fullscreen preload +
   // overlay. When the card has a landscape companion, we compute the poster
   // for that separate uid too, independently of `effectiveCfId`. The
   // non-fullscreen render preloads it (hidden <link>/<img>) so the poster is
@@ -830,7 +830,7 @@ function Card({
     const video = videoRef.current;
     if (!video) return;
 
-    // Phase 74.7: hide <video> layer behind poster overlay until the
+    // hide <video> layer behind poster overlay until the
     // first real frame paints on this new src.
     setHasFirstFrame(false);
 
@@ -842,7 +842,7 @@ function Card({
     video.removeAttribute('src');
     video.load();
 
-    // Phase 70.11: external mp4 path — set video.src directly, skip HLS.
+    // external mp4 path — set video.src directly, skip HLS.
     if (isExternal && sel.externalUrl) {
       video.src = sel.externalUrl;
       return () => {
@@ -897,7 +897,7 @@ function Card({
   // Try with current mute state first; if browser blocks autoplay-with-sound
   // (no sticky activation), fall back to muted and signal parent to flip
   // the global mute state so the Sound button reflects reality.
-  // Phase 71.13 (2026-07-06): re-run when effectiveCfId flips too — entering
+  // re-run when effectiveCfId flips too — entering
   // fullscreen swaps the HLS source to the landscape uid; without this the
   // <video> stays paused after the src attach and the centre play glyph
   // sticks around.
@@ -935,7 +935,7 @@ function Card({
     v.muted = muted;
   }, [muted]);
 
-  // Phase 71.15 (2026-07-06): keep React `paused` state in sync with the
+  // keep React `paused` state in sync with the
   // actual <video> pause/play events. Previously we only set paused via
   // `.play()` / `.pause()` promise callbacks, which missed cases where
   // iOS Safari internally paused the media (buffer stall, src-swap
@@ -959,7 +959,7 @@ function Card({
     };
   }, [setPaused, shouldMount]);
 
-  // Phase 74.7 (skill ref §1): reveal <video> layer only after the first
+  // reveal <video> layer only after the first
   // real frame paints. `playing` fires post-decode+composite; `loadeddata`
   // is a defensive fallback for paused-preload siblings.
   useEffect(() => {
@@ -979,7 +979,7 @@ function Card({
     const v = videoRef.current;
     if (!v) return;
     if (v.paused) {
-      // Phase 71.23: restore audio state that 71.22 zeroed on last pause.
+      // restore audio state that 71.22 zeroed on last pause.
       // Without this, resuming plays silent.
       try {
         v.volume = 1;
@@ -992,7 +992,7 @@ function Card({
         setPaused(false);
       }
     } else {
-      // Phase 71.22: `v.pause()` alone doesn't stop audio on iOS Safari when
+      // `v.pause()` alone doesn't stop audio on iOS Safari when
       // HLS.js is driving the media pipeline — the audio buffer keeps
       // flushing. Belt-and-suspenders: pause + mute + zero-volume every
       // <video> on the page. Any element (current or preloaded neighbor)
@@ -1022,7 +1022,7 @@ function Card({
         cardRef(el);
         sectionRef.current = el;
       }}
-      // Phase 28.3 (2026-06-16): hoist `touch-none` from the inner div to the
+      // hoist `touch-none` from the inner div to the
       // <section> root in Nearby mode. `touch-action` is NOT inherited — it's
       // resolved per-element by the browser. With it only on the inner div,
       // touches that landed on the <video> element (its default
@@ -1091,7 +1091,7 @@ function Card({
           <>
             <video
               ref={videoRef}
-              // Phase 74.17 (2026-07-06): NO native poster attribute
+              // NO native poster attribute
               // on any branch. Skill §1 canonical (iOS Safari) — the
               // poster attribute renders the native big-play-button
               // synchronously on <video> mount. The 74.7 <img> overlay
@@ -1102,7 +1102,7 @@ function Card({
               // fullscreen poster/overlay machinery is needed.
               poster={undefined}
               style={
-                // Phase 71.14: rotate-90 fullscreen — measure the visual
+                // rotate-90 fullscreen — measure the visual
                 // viewport in JS and set width/height as raw pixels. Setting
                 // `width = viewportHeight` and `height = viewportWidth`
                 // BEFORE rotate-90 means after the CSS rotate lands the box
@@ -1115,7 +1115,7 @@ function Card({
                       left: '50%',
                       width: `${vp.h}px`,
                       height: `${vp.w}px`,
-                      // Phase 71.19 (2026-07-06): Tailwind Preflight injects
+                      // Tailwind Preflight injects
                       // `img,video { max-width: 100%; height: auto; }` globally,
                       // which was clamping our 781×428 rotate box back down to
                       // the parent's 428px width — leaving a 428×428 <video>
@@ -1129,7 +1129,7 @@ function Card({
                       transform: 'translate(-50%, -50%) rotate(90deg)',
                       objectFit: 'cover',
                       zIndex: 10000,
-                      // Phase 71.20: video was intercepting taps because its
+                      // video was intercepting taps because its
                       // `position:fixed` at zIndex 10000 sat above the parent
                       // div that owns onTap. `pointer-events: none` lets taps
                       // pass through to the transparent inner div below,
@@ -1137,23 +1137,23 @@ function Card({
                       // play glyph are separately positioned above with
                       // their own hit boxes so they still receive clicks.
                       pointerEvents: 'none',
-                      // Phase 74.13: NO opacity gate in fullscreen. The
+                      // NO opacity gate in fullscreen. The
                       // gate was pointless here (video is already playing
                       // before entering fullscreen) and its interaction
                       // with poster overlay + rotate-90 was the root
                       // cause of every 74.8-74.12 regression.
                     }
                   : {
-                      // Phase 74.7 (skill ref §1): opacity gate — video stays
+                      // opacity gate — video stays
                       // hidden behind the <img> poster overlay below until
                       // the first real frame paints. Only applied to the
                       // non-fullscreen branch (first-swipe portrait tile),
                       // which is the actual bug 74.7 was solving.
-                      // Phase 74.11: asymmetric transition — smooth
+                      // asymmetric transition — smooth
                       // fade-in on first frame, instant on hide.
                       opacity: hasFirstFrame ? 1 : 0,
                       transition: hasFirstFrame ? 'opacity 150ms' : 'none',
-                      // Phase 97 (2026-07-16): same Preflight override as
+                      // same Preflight override as
                       // the 71.19 fullscreen branch. Tailwind Preflight
                       // injects `video { max-width: 100%; height: auto }`
                       // globally, which beats our `h-full w-full` on
@@ -1221,10 +1221,10 @@ function Card({
        * bottom-caption gold pill that duplicated this same data. Only
        * shown in Nearby mode; hero is unlabelled. Pool counter sits in
        * the same pill so the user knows their position in the feed.
-       * Phase 28.2 (2026-06-15): the per-category blurb (sel.line2) is
+       * the per-category blurb (sel.line2) is
        * dropped — the title alone reads cleaner and the blurb was
        * pushing the pill into a multi-line wrap on long captions.
-       * Phase 112 (2026-07-17): category label removed too. The bottom
+       * category label removed too. The bottom
        * info card (title / category / distance / drive) already tells
        * the buyer what the video is about; the "EATING OUT" bucket
        * label was boilerplate. The pool counter (N/M) is preserved via
@@ -1288,7 +1288,7 @@ function Card({
           style={
             isFullscreen && hasLandscape
               ? {
-                  // Phase 71.20: play glyph must live above the fullscreen
+                  // play glyph must live above the fullscreen
                   // <video> (zIndex 10000) and rotate 90deg so its
                   // orientation matches the rotated video the user is
                   // watching.
@@ -1319,7 +1319,7 @@ function Card({
           type="button"
           onClick={(e) => {
             e.stopPropagation();
-            // Phase 74.9 (2026-07-06): synchronously measure the viewport
+            // synchronously measure the viewport
             // BEFORE flipping isFullscreen so the very first fullscreen
             // render already has valid vp.w/vp.h and can apply the
             // rotate-90/px-sized inline style. Without this, the useEffect
@@ -1329,7 +1329,7 @@ function Card({
             // → it collapsed to intrinsic size (a "small" landscape tile)
             // until the effect fired one paint later.
             //
-            // Phase 74.17 (2026-07-06): 74.10/74.15's sync
+            // 74.10/74.15's sync
             // setHasFirstFrame(false) has been REMOVED. Since 74.17
             // uses the landscape uid in both feed and fullscreen,
             // tapping fullscreen does NOT swap HLS src — the video is
@@ -1337,7 +1337,7 @@ function Card({
             // hasFirstFrame here would spuriously mount the 74.7
             // <img> overlay on top of an already-playing fullscreen
             // video for a frame or two.
-            // Phase 74.18 (2026-07-06): trigger `.play()` synchronously
+            // trigger `.play()` synchronously
             // in the tap handler. Owner: "全屏之后流畅 最后有一个问题
             // 还需要解决播放键 一开始还在视频上 我需要自动播放全屏之后
             // 的视频". Because 74.17 uses the same landscape uid in
@@ -1399,7 +1399,7 @@ function Card({
           aria-label="Exit fullscreen"
           className="flex h-11 w-11 items-center justify-center rounded-full border border-cream/40 bg-ink/80 text-cream backdrop-blur transition-colors hover:border-cream hover:bg-ink/90"
           style={{
-            // Phase 71.20: X button was hidden BEHIND the fullscreen video
+            // X button was hidden BEHIND the fullscreen video
             // because the video sits at zIndex 10000 (needed to escape the
             // parent stacking context). Bump X to 10002 (also above the
             // 10001 play glyph). Position via `fixed` so it doesn't inherit
@@ -1432,7 +1432,7 @@ function Card({
        * with description + agent card in a light bottom sheet (AAA
        * contrast) so nothing overlaps the video. Right rail lives at
        * `right-3`; the card reserves right-20 to clear it.
-       * Phase 71.12 (2026-07-06): hidden in fullscreen — immersive mode
+       * hidden in fullscreen — immersive mode
        * is video-only, price/address/agent card have no place there. */}
       {!isFullscreen && <CaptionCard listing={card.listing} agent={card.agent} />}
     </section>
@@ -1440,7 +1440,7 @@ function Card({
 }
 
 /**
- * Phase 74 (2026-07-05): DescriptionBlock retired. Description now lives
+ * DescriptionBlock retired. Description now lives
  * inside the CaptionCard bottom sheet (light surface, AAA contrast), not
  * inline over the media.
  */
@@ -1451,12 +1451,12 @@ export function BrowseFeed({
 }: {
   cards: BrowseCard[];
   /**
-   * Phase 9: when launched from the grid, jump straight to the clicked card.
+   * when launched from the grid, jump straight to the clicked card.
    * Defaults to 0 (top of feed) for backwards compatibility.
    */
   initialIndex?: number;
 }) {
-  // Phase 111 (2026-07-17): true pagination. SSR ships the first page
+  // true pagination. SSR ships the first page
   // (~30 cards) for fast paint; we fetch subsequent pages from
   // /api/browse/feed?offset=N as the swipe nears the end. When the API
   // returns done=true (or an empty page), we stop appending and the
@@ -1467,7 +1467,7 @@ export function BrowseFeed({
   const seenIdsRef = useRef<Set<string>>(new Set(initialCards.map((c) => c.listing.id)));
   const router = useRouter();
   const searchParams = useSearchParams();
-  // Phase 35.3 (2026-06-17): Back semantics fix.
+  // Back semantics fix.
   //
   // Old behavior: Back pushed router.push(backHref) which was always
   // '/browse' (or '/dashboard' if ?from=dashboard). Same destination as
@@ -1495,7 +1495,7 @@ export function BrowseFeed({
   const [saved, setSaved] = useState<Record<string, boolean>>({});
   const [likeAnimKey, setLikeAnimKey] = useState(0);
 
-  // Phase 34b (V1 redo, 2026-06-17): community sheet + carousel state.
+  // community sheet + carousel state.
   // The chip on each card opens a single shared sheet at the parent level
   // (only one card can be active at a time, so a single sheet suffices).
   // Carousel is L2 (fullscreen) and pushes/pops independently.
@@ -1504,7 +1504,7 @@ export function BrowseFeed({
   const [carouselOpen, setCarouselOpen] = useState(false);
   const [carouselStartIdx, setCarouselStartIdx] = useState(0);
 
-  // Phase 21 (2026-06-13): persistent saves keyed by anonymous device id.
+  // persistent saves keyed by anonymous device id.
   // Hydrated on mount from saved_listings; toggleSave fires server actions.
   // Resolved lazily on the client (localStorage requires window).
   const deviceIdRef = useRef<string | null>(null);
@@ -1563,7 +1563,7 @@ export function BrowseFeed({
   const cardRefs = useRef<Map<number, HTMLElement>>(new Map());
   const scrollerRef = useRef<HTMLDivElement | null>(null);
 
-  // Phase 27.9 (2026-06-16) → Phase 111 (2026-07-17): swipe expansion.
+  // → Phase 111 (2026-07-17): swipe expansion.
   // First, fetch more real pages from /api/browse/feed until the DB is
   // exhausted. Only after that do we fall back to looping the collected
   // cards for infinite swipe. Trigger next-page fetch when the buyer is
@@ -1626,7 +1626,7 @@ export function BrowseFeed({
     return () => obs.disconnect();
   }, [totalCards]);
 
-  // Phase 9: when launched from the grid with ?start=<id>, jump to that
+  // when launched from the grid with ?start=<id>, jump to that
   // card without animation on first paint. Skipped when initialIndex is 0
   // (default — natural top-of-feed entry from older deep links).
   // biome-ignore lint/correctness/useExhaustiveDependencies: intentional one-shot mount effect
@@ -1757,7 +1757,7 @@ export function BrowseFeed({
       const id = active.listing.id;
       const pool = poolFor(active, activeSource);
       if (pool <= 1) return;
-      // Phase 28.1 (2026-06-15): in Nearby mode the swipe gesture is now
+      // in Nearby mode the swipe gesture is now
       // vertical, so accept ArrowUp/Down as the keyboard equivalent.
       // Left/Right are kept as a desktop power-user fallback.
       if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
@@ -1778,7 +1778,7 @@ export function BrowseFeed({
     return () => window.removeEventListener('keydown', onKey);
   }, [active, activeSource, switchSource]);
 
-  // Phase 28.2 (2026-06-15): desktop wheel/trackpad cycles the Nearby pool.
+  // desktop wheel/trackpad cycles the Nearby pool.
   // Without this, wheeling on a Mac scrolls the outer snap-y feed and jumps
   // to the next listing — the same UX bug the user reported. We intercept
   // wheel only while in Nearby mode, debounce by ignoring sub-threshold deltas
@@ -1880,7 +1880,7 @@ export function BrowseFeed({
         );
       })}
     >
-      {/* Right rail — Xiaohongshu / TikTok pattern (Phase 28, 2026-06-14).
+      {/* Right rail — Xiaohongshu / TikTok pattern.
        * All primary CTAs live here for an immersive bottom-edge: Like /
        * Save / Contact / Nearby (+ Sound for video). The bottom action
        * bar is gone; the caption block below extends to the safe-area.
@@ -1892,9 +1892,9 @@ export function BrowseFeed({
        *
        * Photo cards: same Like/Save/Contact/Nearby — only Sound is
        * hidden because there's no <video> to mute. Schools/POIs strip
-       * inside PhotoCard caption is preserved (Phase 20).
+       * inside PhotoCard caption is preserved.
        *
-       * Phase 45.21 (2026-06-20): rail reverted back up to ~6rem from
+       * rail reverted back up to ~6rem from
        * the safe-area baseline. Phase 45.15 had lowered it to
        * `max(1rem, safe-area)` to align with the caption block, but
        * owner feedback after living with it: the buttons sat too low,
@@ -1911,8 +1911,7 @@ export function BrowseFeed({
          * Owner: "不好看 做成一个圆形加数字 不要文字了 放在 like 上面". */}
         {/* Phase 111 (2026-07-17): show Nearby button when EITHER the listing
          * belongs to a community OR it has any listing-scoped nearby videos
-         * (Phase 101+ pipeline generates 14-bucket nearby videos anchored to
-         * the listing itself, independent of community membership). Before
+         *. Before
          * this, listings with community_id=null had 0-video visibility even
          * with 5 ready nearby videos in categoryVideos. */}
         {(active?.community || (active && active.categoryVideos.length > 0)) && (
@@ -1957,7 +1956,7 @@ export function BrowseFeed({
          * top-left community chip already opens the same set of community
          * videos via CommunitySheet → CommunityCarousel — keeping both
          * surfaces was the duplication the chip was meant to replace.
-         * Phase 37 (2026-06-18): /nearby tab in bottom nav was folded
+         * /nearby tab in bottom nav was folded
          * into Explore sub-nav (Recommended | Nearby) — radius search
          * lives at /browse?tab=nearby. */}
         {/* phase34a (2026-06-17): right-rail mute button removed.
@@ -2035,7 +2034,7 @@ export function BrowseFeed({
        * lookup, not a stable anchor. */}
       {(() => {
         const sheetCard = sheetCardId ? (cards.find((c) => c.id === sheetCardId) ?? null) : null;
-        // Phase 111 (2026-07-17): community-less listings still get a sheet
+        // community-less listings still get a sheet
         // when they have listing-scoped nearby videos. Fall back to listing
         // address/city/state so the header renders something meaningful.
         const sheetData: CommunitySheetData | null = sheetCard
@@ -2090,7 +2089,7 @@ export function BrowseFeed({
                 setSheetOpen(false);
                 setSheetCardId(null);
               }}
-              // Phase 45.17 (2026-06-20): rail handlers target the parent
+              // rail handlers target the parent
               // listing (the user's anchor). Reuses the same callbacks the
               // main listing feed uses, so Like/Save state is consistent
               // whether the buyer taps the rail on L0 or in the carousel.

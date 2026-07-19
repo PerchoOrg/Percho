@@ -10,8 +10,8 @@ export default function PrivacyPage() {
     <LegalLayout eyebrow="Legal" title="Privacy Policy" updated="June 20, 2026">
       <p>
         This Privacy Policy describes how Percho, Inc. (&ldquo;Percho&rdquo;, &ldquo;we&rdquo;,
-        &ldquo;us&rdquo;) collects, uses, and shares information when you use percho.co and
-        related services (the &ldquo;Service&rdquo;).
+        &ldquo;us&rdquo;) collects, uses, and shares information when you use percho.co and related
+        services (the &ldquo;Service&rdquo;).
       </p>
       <p>
         <strong>This is a placeholder draft.</strong> A finalized policy reviewed by counsel will

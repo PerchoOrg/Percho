@@ -1,5 +1,5 @@
 /**
- * Phase 48.5 — server-side input fingerprint for the social-copy cache.
+ * server-side input fingerprint for the social-copy cache.
  *
  * Why hash on the server: clients must not control the cache key, or a
  * crafted client could flush/poison the cache. We normalize then sha256.

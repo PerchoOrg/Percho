@@ -7,7 +7,7 @@
  * GET  /api/admin/listings/[id]/generate-tour?jobId=X
  *   Poll status of an admin-triggered job.
  *
- * Phase 104 (2026-07-17).
+ * .
  */
 
 import { requireAdmin } from '@/lib/auth/require-admin';
@@ -36,11 +36,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
   // biome-ignore lint/suspicious/noExplicitAny: stub generated types
   const sb = createServiceClient() as any;
 
-  const { data: listing } = await sb
-    .from('listings')
-    .select('id')
-    .eq('id', id)
-    .maybeSingle();
+  const { data: listing } = await sb.from('listings').select('id').eq('id', id).maybeSingle();
   if (!listing) {
     return NextResponse.json({ error: 'listing_not_found' }, { status: 404 });
   }
@@ -117,10 +113,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
     );
   }
 
-  return NextResponse.json(
-    { jobId: (job as { id: string }).id, videoRowId },
-    { status: 202 },
-  );
+  return NextResponse.json({ jobId: (job as { id: string }).id, videoRowId }, { status: 202 });
 }
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {

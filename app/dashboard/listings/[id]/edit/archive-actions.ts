@@ -1,6 +1,6 @@
 'use server';
 
-// Phase 46: archive concept removed. Listings are now active|inactive only.
+// archive concept removed. Listings are now active|inactive only.
 // Permanent deletion is the sole destructive action remaining.
 //
 // File kept at this path so existing imports continue to resolve; archive
@@ -8,9 +8,9 @@
 // dashboard's three-dot menu.
 
 import 'server-only';
-import { redirect } from 'next/navigation';
-import { revalidatePath, revalidateTag } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
+import { revalidatePath, revalidateTag } from 'next/cache';
+import { redirect } from 'next/navigation';
 
 export type DeleteListingResult = { ok: true } | { ok: false; error: string };
 
@@ -22,10 +22,7 @@ export type DeleteListingResult = { ok: true } | { ok: false; error: string };
 export async function deleteListing(listingId: string): Promise<DeleteListingResult> {
   const supabase = await createClient();
   // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { error } = await (supabase as any)
-    .from('listings')
-    .delete()
-    .eq('id', listingId);
+  const { error } = await (supabase as any).from('listings').delete().eq('id', listingId);
   if (error) return { ok: false, error: error.message };
   revalidatePath('/dashboard');
   revalidateTag('community-cards');

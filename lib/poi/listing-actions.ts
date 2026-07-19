@@ -1,7 +1,7 @@
-"use server";
+'use server';
 
 /**
- * Phase 101 (2026-07-16) — listing-scoped POI content pipeline.
+ * listing-scoped POI content pipeline.
  *
  * Mirror of `lib/poi/community-actions.ts` (which itself mirrors the
  * pre-Phase-92 listing-scoped pipeline). Rationale: not every listing sits
@@ -18,19 +18,19 @@
  * discovery uses the service role and bypasses RLS.
  */
 
-import { revalidatePath } from "next/cache";
-import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { createClient, createServiceClient } from '@/lib/supabase/server';
+import { revalidatePath } from 'next/cache';
 import {
   DEFAULT_INCLUDED_TYPES,
+  type PlaceResult,
   bucketByPlaceType,
   fetchPhotoBinary,
   haversineMeters,
   searchNearby,
-  type PlaceResult,
-} from "./google-places";
-import type { IntentBucket, PhotoStatus, PoiStatus } from "./types";
+} from './google-places';
+import type { IntentBucket, PhotoStatus, PoiStatus } from './types';
 
-const POI_PHOTO_BUCKET = "listing-photos";
+const POI_PHOTO_BUCKET = 'listing-photos';
 
 type ListingAnchor = {
   id: string;
@@ -42,14 +42,14 @@ type ListingAnchor = {
 async function requireOwnedListing(listingId: string): Promise<ListingAnchor> {
   const supabase = await createClient();
   const { data: userRes } = await supabase.auth.getUser();
-  if (!userRes.user) throw new Error("not authenticated");
+  if (!userRes.user) throw new Error('not authenticated');
 
   // biome-ignore lint/suspicious/noExplicitAny: stub generated types
   const supabaseAny: any = supabase;
   const { data: listing, error } = (await supabaseAny
-    .from("listings")
-    .select("id, address, lat, lng")
-    .eq("id", listingId)
+    .from('listings')
+    .select('id, address, lat, lng')
+    .eq('id', listingId)
     .maybeSingle()) as { data: ListingAnchor | null; error: unknown };
 
   if (error) throw error;
@@ -91,12 +91,10 @@ export async function discoverPoisForListing(
 
   const categoryResults = await Promise.all(
     (opts.includedTypes ?? DEFAULT_INCLUDED_TYPES).map((t) =>
-      searchNearby({ center, radius, includedTypes: [t], maxResultCount: 20 }).catch(
-        (err) => {
-          console.error(`[listing-poi] searchNearby(${t}) failed:`, err);
-          return [] as PlaceResult[];
-        },
-      ),
+      searchNearby({ center, radius, includedTypes: [t], maxResultCount: 20 }).catch((err) => {
+        console.error(`[listing-poi] searchNearby(${t}) failed:`, err);
+        return [] as PlaceResult[];
+      }),
     ),
   );
   const allPlaces = categoryResults.flat();
@@ -111,11 +109,11 @@ export async function discoverPoisForListing(
     if (!place.location) continue;
 
     const { data: poiRow, error: upsertErr } = (await admin
-      .from("pois")
+      .from('pois')
       .upsert(
         {
           google_place_id: place.id,
-          display_name: place.displayName?.text ?? "(unnamed)",
+          display_name: place.displayName?.text ?? '(unnamed)',
           formatted_address: place.formattedAddress ?? null,
           primary_type: place.primaryType ?? null,
           types: place.types ?? null,
@@ -126,9 +124,9 @@ export async function discoverPoisForListing(
           raw_place: place,
           refreshed_at: new Date().toISOString(),
         },
-        { onConflict: "google_place_id" },
+        { onConflict: 'google_place_id' },
       )
-      .select("id")
+      .select('id')
       .single()) as { data: { id: string } | null; error: unknown };
 
     if (upsertErr || !poiRow) {
@@ -146,21 +144,21 @@ export async function discoverPoisForListing(
     if (!bucket) continue;
 
     const { data: existing } = (await admin
-      .from("listing_pois")
-      .select("listing_id")
-      .eq("listing_id", listingId)
-      .eq("poi_id", poiRow.id)
+      .from('listing_pois')
+      .select('listing_id')
+      .eq('listing_id', listingId)
+      .eq('poi_id', poiRow.id)
       .maybeSingle()) as { data: { listing_id: string } | null };
 
     if (existing) {
       reused += 1;
     } else {
-      const { error: lpErr } = await admin.from("listing_pois").insert({
+      const { error: lpErr } = await admin.from('listing_pois').insert({
         listing_id: listingId,
         poi_id: poiRow.id,
         intent_bucket: bucket,
         distance_m: dMeters,
-        status: "candidate",
+        status: 'candidate',
       });
       if (lpErr) {
         console.error(`[listing-poi] insert listing_pois failed:`, lpErr);
@@ -195,9 +193,9 @@ export async function fetchPhotosForListingPoi(
   const admin: any = createServiceClient();
 
   const { data: poi, error: poiErr } = (await admin
-    .from("pois")
-    .select("id, google_place_id, raw_place")
-    .eq("id", poiId)
+    .from('pois')
+    .select('id, google_place_id, raw_place')
+    .eq('id', poiId)
     .single()) as {
     data: { id: string; google_place_id: string; raw_place: PlaceResult | null } | null;
     error: unknown;
@@ -219,9 +217,9 @@ export async function fetchPhotosForListingPoi(
 
   for (const photo of targets) {
     const { data: existingPhoto } = (await admin
-      .from("poi_photos")
-      .select("id")
-      .eq("google_photo_name", photo.name)
+      .from('poi_photos')
+      .select('id')
+      .eq('google_photo_name', photo.name)
       .maybeSingle()) as { data: { id: string } | null };
 
     let poiPhotoId: string;
@@ -235,7 +233,7 @@ export async function fetchPhotosForListingPoi(
         blob = await fetchPhotoBinary(photo.name, { maxHeightPx: opts.maxHeightPx ?? 1200 });
       } catch (err) {
         console.error(`[listing-poi] fetch photo ${photo.name} failed:`, err);
-        noteSkip(`Google Places fetch: ${(err as Error).message ?? "unknown"}`);
+        noteSkip(`Google Places fetch: ${(err as Error).message ?? 'unknown'}`);
         continue;
       }
 
@@ -245,16 +243,16 @@ export async function fetchPhotosForListingPoi(
         .upload(storagePath, blob.bytes, { contentType: blob.contentType, upsert: true });
       if (upErr) {
         console.error(`[listing-poi] storage upload failed:`, upErr);
-        noteSkip(`Storage upload: ${(upErr as { message?: string }).message ?? "unknown"}`);
+        noteSkip(`Storage upload: ${(upErr as { message?: string }).message ?? 'unknown'}`);
         continue;
       }
 
       const { data: upserted, error: upsertErr } = (await admin
-        .from("poi_photos")
+        .from('poi_photos')
         .upsert(
           {
             poi_id: poi.id,
-            source: "google_places",
+            source: 'google_places',
             google_photo_name: photo.name,
             storage_path: storagePath,
             width_px: photo.widthPx ?? null,
@@ -262,9 +260,9 @@ export async function fetchPhotosForListingPoi(
             bytes: blob.bytes.length,
             attribution: { authorAttributions: photo.authorAttributions ?? [] },
           },
-          { onConflict: "google_photo_name" },
+          { onConflict: 'google_photo_name' },
         )
-        .select("id, created_at")
+        .select('id, created_at')
         .single()) as {
         data: { id: string; created_at: string } | null;
         error: unknown;
@@ -272,7 +270,7 @@ export async function fetchPhotosForListingPoi(
 
       if (upsertErr || !upserted) {
         console.error(`[listing-poi] upsert poi_photos failed:`, upsertErr);
-        noteSkip(`DB upsert: ${(upsertErr as { message?: string })?.message ?? "unknown"}`);
+        noteSkip(`DB upsert: ${(upsertErr as { message?: string })?.message ?? 'unknown'}`);
         continue;
       }
       poiPhotoId = upserted.id;
@@ -282,17 +280,17 @@ export async function fetchPhotosForListingPoi(
     }
 
     const { data: existingLink } = (await admin
-      .from("listing_poi_photos")
-      .select("listing_id")
-      .eq("listing_id", listingId)
-      .eq("poi_photo_id", poiPhotoId)
+      .from('listing_poi_photos')
+      .select('listing_id')
+      .eq('listing_id', listingId)
+      .eq('poi_photo_id', poiPhotoId)
       .maybeSingle()) as { data: { listing_id: string } | null };
 
     if (!existingLink) {
-      await admin.from("listing_poi_photos").insert({
+      await admin.from('listing_poi_photos').insert({
         listing_id: listingId,
         poi_photo_id: poiPhotoId,
-        status: "pending",
+        status: 'pending',
       });
     }
   }
@@ -303,20 +301,16 @@ export async function fetchPhotosForListingPoi(
 
 // ─── review actions ─────────────────────────────────────────────────────────
 
-export async function setListingPoiStatus(
-  listingId: string,
-  poiId: string,
-  status: PoiStatus,
-) {
+export async function setListingPoiStatus(listingId: string, poiId: string, status: PoiStatus) {
   await requireOwnedListing(listingId);
   // biome-ignore lint/suspicious/noExplicitAny: stub generated types
   const supabase: any = await createClient();
 
   const { error } = await supabase
-    .from("listing_pois")
+    .from('listing_pois')
     .update({ status, reviewed_at: new Date().toISOString() })
-    .eq("listing_id", listingId)
-    .eq("poi_id", poiId);
+    .eq('listing_id', listingId)
+    .eq('poi_id', poiId);
   if (error) throw error;
 
   revalidatePath(`/dashboard/listings/${listingId}/edit`);
@@ -332,19 +326,19 @@ export async function setListingPhotoStatus(
   const supabase: any = await createClient();
 
   const { error } = await supabase
-    .from("listing_poi_photos")
+    .from('listing_poi_photos')
     .update({ status, reviewed_at: new Date().toISOString() })
-    .eq("listing_id", listingId)
-    .eq("poi_photo_id", poiPhotoId);
+    .eq('listing_id', listingId)
+    .eq('poi_photo_id', poiPhotoId);
   if (error) throw error;
 
   revalidatePath(`/dashboard/listings/${listingId}/edit`);
 
   // Fire-and-forget vision tagging on approve — same pattern as community side.
-  if (status === "approved") {
-    import("@/lib/poi/vision-tagger")
+  if (status === 'approved') {
+    import('@/lib/poi/vision-tagger')
       .then(({ tagPoiPhoto }) => tagPoiPhoto(poiPhotoId))
-      .catch((err) => console.error("[listing-poi] vision tag dispatch failed:", err));
+      .catch((err) => console.error('[listing-poi] vision tag dispatch failed:', err));
   }
 }
 
@@ -378,9 +372,7 @@ export type NearbyPoiForListing = {
   }>;
 };
 
-export async function loadNearbyPoisForListing(
-  listingId: string,
-): Promise<NearbyPoiForListing[]> {
+export async function loadNearbyPoisForListing(listingId: string): Promise<NearbyPoiForListing[]> {
   // Admin bypass: /admin/pipeline/listing-nearby/[id] is reachable by any
   // is_admin=true agent, but the listing_pois SELECT policy scopes rows to
   // the owning agent. Without a bypass the panel loads empty and the
@@ -389,13 +381,13 @@ export async function loadNearbyPoisForListing(
   const {
     data: { user },
   } = await userClient.auth.getUser();
-  if (!user) throw new Error("not authenticated");
+  if (!user) throw new Error('not authenticated');
 
   // biome-ignore lint/suspicious/noExplicitAny: stub generated types
   const { data: agent } = (await (userClient as any)
-    .from("agents")
-    .select("is_admin")
-    .eq("user_id", user.id)
+    .from('agents')
+    .select('is_admin')
+    .eq('user_id', user.id)
     .maybeSingle()) as { data: { is_admin: boolean } | null };
 
   const isAdmin = !!agent?.is_admin;
@@ -407,16 +399,16 @@ export async function loadNearbyPoisForListing(
   const supabase: any = isAdmin ? createServiceClient() : userClient;
 
   const { data: rows, error } = (await supabase
-    .from("listing_pois")
+    .from('listing_pois')
     .select(
       `
       poi_id, intent_bucket, distance_m, status, ai_score, discovered_at, reviewed_at,
       pois!inner(id, display_name, formatted_address, primary_type, rating, user_ratings_total)
     `,
     )
-    .eq("listing_id", listingId)
-    .order("distance_m", { ascending: true })) as {
-    data: Array<Omit<NearbyPoiForListing, "photos">> | null;
+    .eq('listing_id', listingId)
+    .order('distance_m', { ascending: true })) as {
+    data: Array<Omit<NearbyPoiForListing, 'photos'>> | null;
     error: unknown;
   };
 
@@ -424,14 +416,14 @@ export async function loadNearbyPoisForListing(
   if (!rows || rows.length === 0) return [];
 
   const { data: photoRows, error: photoErr } = (await supabase
-    .from("listing_poi_photos")
+    .from('listing_poi_photos')
     .select(
       `
       status, poi_photo_id,
       poi_photos!inner(poi_id, storage_path, attribution, ai_tags, tagged_at)
     `,
     )
-    .eq("listing_id", listingId)) as {
+    .eq('listing_id', listingId)) as {
     data: Array<{
       status: PhotoStatus;
       poi_photo_id: string;
@@ -448,7 +440,7 @@ export async function loadNearbyPoisForListing(
 
   if (photoErr) throw photoErr;
 
-  const photosByPoi = new Map<string, NearbyPoiForListing["photos"]>();
+  const photosByPoi = new Map<string, NearbyPoiForListing['photos']>();
   for (const p of photoRows ?? []) {
     const poiId = p.poi_photos.poi_id;
     const list = photosByPoi.get(poiId) ?? [];
@@ -476,5 +468,5 @@ export async function loadNearbyPoisForListing(
 function hashName(name: string): string {
   let h = 0;
   for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) | 0;
-  return (h >>> 0).toString(16).padStart(8, "0");
+  return (h >>> 0).toString(16).padStart(8, '0');
 }

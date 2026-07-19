@@ -1,7 +1,7 @@
 /**
  * Viewer resolver — cookie-bound Supabase session → agents.id.
  *
- * Phase 72.2 (2026-07-05): extracted from `app/(public)/search/page.tsx` so
+ * extracted from `app/(public)/search/page.tsx` so
  * every server surface that wants to scope inactive-community visibility to
  * the owner can share one implementation. Uses `getSession()` (cookie read,
  * ~5ms) rather than `getUser()` — middleware already validates the JWT on

@@ -1,5 +1,5 @@
 /**
- * /c/[slug]/feed — buyer-facing community video swipe feed (Phase 27.7).
+ * /c/[slug]/feed — buyer-facing community video swipe feed.
  *
  * Pure community-video feed: vertical swipe through every video that
  * belongs to this community (primary + extra memberships via the
@@ -72,12 +72,12 @@ export default async function CommunityFeedPage({
 
   if (!community) notFound();
 
-  // Phase 45.18 (2026-06-20): community owner — Contact button on the
+  // community owner — Contact button on the
   // direct community feed routes leads to `communities.created_by` per
   // the owner rule. Legacy / unowned communities (created_by NULL) get
   // no Contact button (nobody to route to).
   //
-  // Phase 45.20 (2026-06-20): legacy communities pre-phase-13 have
+  // legacy communities pre-phase-13 have
   // `created_by = NULL` but often still have an obvious owner — the
   // single agent who posted listings into them (peachtree-corners is
   // the canonical example). Falling back to "most recent published
@@ -138,7 +138,7 @@ export default async function CommunityFeedPage({
       .in('id', videoIds)
       .eq('status', 'ready')
       .eq('visibility', 'public')
-      // Phase 92: only surface primary renders — history rows
+      // only surface primary renders — history rows
       // (is_primary=false) are queryable but must not appear in the feed.
       .eq('is_primary', true)
       .order('created_at', { ascending: false })) as { data: VideoRow[] | null };
@@ -152,7 +152,7 @@ export default async function CommunityFeedPage({
     category: v.category,
   }));
 
-  // Phase 27.6 (2026-06-17): right-rail "View N listings" button on the
+  // right-rail "View N listings" button on the
   // feed needs an accurate count — same query shape as `/c/[slug]` so the
   // two surfaces never disagree. `published` (not `'active'`) per the
   // listings.status check constraint in 0001_init.sql.
@@ -163,7 +163,7 @@ export default async function CommunityFeedPage({
     .eq('community_id', community.id)
     .eq('status', 'active');
 
-  // Phase 34b (V1 redo, 2026-06-17): Scenario B — bottom-left "homes here"
+  // Scenario B — bottom-left "homes here"
   // chip opens a listings sheet (L2) for the active community. Fetch the
   // full listing rows + hero video/photo here so the sheet has everything
   // it needs without round-tripping. Sorted newest-first.
@@ -227,7 +227,7 @@ export default async function CommunityFeedPage({
     if (!heroPhotoByListing.has(p.listing_id)) heroPhotoByListing.set(p.listing_id, p.storage_path);
   }
 
-  // Phase 63 (2026-06-26): resolve agent_id → slug for each listing so the
+  // resolve agent_id → slug for each listing so the
   // L3 carousel can build a Share URL (`/v/[agentSlug]/[listingSlug]`).
   const agentIdsForListings = Array.from(
     new Set((listingRows ?? []).map((r) => r.agent_id).filter((x): x is string => !!x)),

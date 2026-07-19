@@ -19,14 +19,14 @@
  *     immediately. Upload requires drag/zoom confirm.
  */
 
+import { createClient } from '@/lib/supabase/client';
 import {
-  AVATAR_PRESETS,
   AVATARS_BUCKET,
+  AVATAR_PRESETS,
   avatarPublicUrl,
   isPresetAvatar,
   nextAvatarStoragePath,
 } from '@/lib/supabase/storage';
-import { createClient } from '@/lib/supabase/client';
 import { Camera, Loader2, Upload, X } from 'lucide-react';
 import { useCallback, useRef, useState } from 'react';
 import Cropper, { type Area } from 'react-easy-crop';
@@ -412,17 +412,7 @@ async function renderCroppedWebp(srcUrl: string, area: Area): Promise<Blob> {
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('Canvas not supported.');
   ctx.imageSmoothingQuality = 'high';
-  ctx.drawImage(
-    img,
-    area.x,
-    area.y,
-    area.width,
-    area.height,
-    0,
-    0,
-    OUTPUT_SIZE,
-    OUTPUT_SIZE,
-  );
+  ctx.drawImage(img, area.x, area.y, area.width, area.height, 0, 0, OUTPUT_SIZE, OUTPUT_SIZE);
   return new Promise<Blob>((resolve, reject) => {
     canvas.toBlob(
       (b) => (b ? resolve(b) : reject(new Error('Encode failed.'))),

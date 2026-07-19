@@ -3,21 +3,21 @@
 /**
  * CreateCommunityButton — empty-state CTA.
  *
- * Phase 50.17 (2026-06-23): replaces the `<Link href="/communities/new">`
+ * replaces the `<Link href="/communities/new">`
  * with a client button that calls the createStubCommunity server action
  * and pushes to the new hub. Mirrors the FAB flow in UploadSheet so the
  * agent has exactly one entry point pattern across the app.
  *
- * Phase 57 (2026-06-26): switched to the shared HUB_CTA_CLASS pill so
+ * switched to the shared HUB_CTA_CLASS pill so
  * Listing / Community empty states are visually identical.
  */
 
+import { Plus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
-import { Plus } from 'lucide-react';
 
-import { createStubCommunity } from './actions';
 import { HUB_CTA_CLASS } from '@/app/_components/EmptyHubState';
+import { createStubCommunity } from './actions';
 
 export function CreateCommunityButton() {
   const router = useRouter();

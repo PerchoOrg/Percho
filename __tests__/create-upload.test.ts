@@ -104,7 +104,7 @@ describe('POST /api/video/create-upload', () => {
     expect(mockedCreateDirectUpload).not.toHaveBeenCalled();
   });
 
-  it("rejects scope='community' (Phase 2 limits to listings)", async () => {
+  it("rejects scope='community'", async () => {
     // biome-ignore lint/suspicious/noExplicitAny: test-only fake supabase client
     mockedCreateClient.mockResolvedValue(buildSupabase({ id: 'u1' }) as any);
     const res = await POST(makeReq({ ...validBody, scope: 'community' }));

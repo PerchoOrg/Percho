@@ -1,8 +1,8 @@
 /**
  * Per-entity behavioral analytics aggregation.
  *
- * Phase 50 (2026-06-22). Generalizes the listing-only stats helper
- * (Phase 6.4a → 8.5) so the agent-hub Community detail page can show
+ * . Generalizes the listing-only stats helper
+ * so the agent-hub Community detail page can show
  * the same Analytics tab as the listing edit hub. The events row is
  * attributable to either a listing OR a community (see migrations
  * 0001 + 0035), and the leads row likewise (0001 + 0029). Same shape

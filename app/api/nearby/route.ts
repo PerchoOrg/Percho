@@ -1,9 +1,9 @@
 /**
  * GET /api/nearby?lat=&lng=&radius=
  *
- * Phase 11 (2026-06-12): introduced for /nearby page (listings + community
+ * introduced for /nearby page (listings + community
  * videos within radius).
- * Phase 14 (2026-06-13): rewired to return `BrowseCard[]` so /nearby renders
+ * rewired to return `BrowseCard[]` so /nearby renders
  * the same grid as /browse (Explore). Behaviour unchanged for the caller's
  * `center` + `radius` echo; payload shape now wraps `cards` instead of two
  * separate arrays. Public — no auth required.

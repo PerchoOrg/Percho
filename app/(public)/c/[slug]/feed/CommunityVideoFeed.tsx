@@ -2,7 +2,7 @@
 
 /**
  * CommunityVideoFeed — TikTok-style swipe feed for the videos that
- * belong to a single community (Phase 27.7, 2026-06-16).
+ * belong to a single community.
  *
  * Why a separate component instead of reusing BrowseFeed:
  * BrowseFeed is built around `BrowseCard` (listing + agent + nearby
@@ -54,7 +54,7 @@ export type CommunityFeedVideo = {
 };
 
 /**
- * Phase 34b (V1 redo, 2026-06-17): Scenario B data shape — listings
+ * Scenario B data shape — listings
  * surfaced via the top-left "homes here" chip on the community feed.
  * Hero is a video if available, photo as fallback. Real fields only;
  * nulls render as omissions, not placeholders.
@@ -119,7 +119,7 @@ function VideoCard({
   const videoElRef = useRef<HTMLVideoElement | null>(null);
   const hlsRef = useRef<Hls | null>(null);
   const [paused, setPaused] = useState(true);
-  // Phase 74.7 (skill ref §1): poster-attribute anti-pattern. See
+  // poster-attribute anti-pattern. See
   // BrowseFeed 74.7 comment. Overlay a poster <img> until first
   // real frame paints, kill <video poster=> to prevent iOS Safari
   // from flashing its system big-play placeholder before HLS decodes.
@@ -138,7 +138,7 @@ function VideoCard({
     const el = videoElRef.current;
     if (!el) return;
 
-    // Phase 74.7: hide <video> layer until first frame paints on new src.
+    // hide <video> layer until first frame paints on new src.
     setHasFirstFrame(false);
 
     if (hlsRef.current) {
@@ -215,7 +215,7 @@ function VideoCard({
     v.muted = muted;
   }, [muted]);
 
-  // Phase 74.7 (skill ref §1): reveal <video> layer only after the first
+  // reveal <video> layer only after the first
   // real frame paints.
   useEffect(() => {
     if (!shouldMount) return;
@@ -266,7 +266,7 @@ function VideoCard({
               ref={videoElRef}
               className="relative h-full w-full object-contain"
               style={{
-                // Phase 74.11 (2026-07-06): fade-in only — see BrowseFeed 74.11.
+                // fade-in only — see BrowseFeed 74.11.
                 opacity: hasFirstFrame ? 1 : 0,
                 transition: hasFirstFrame ? 'opacity 150ms' : 'none',
               }}
@@ -342,7 +342,7 @@ export function CommunityVideoFeed({
 }: {
   community: CommunityFeedCommunity;
   /**
-   * Phase 45.18: community owner — `created_by` agent. When present,
+   * community owner — `created_by` agent. When present,
    * the right-rail Contact button opens a LeadModal that lands a lead
    * on this agent. Null for legacy / unowned communities (no Contact).
    */
@@ -358,13 +358,13 @@ export function CommunityVideoFeed({
   const [muted, setMuted] = useState(false);
   const [liked, setLiked] = useState(false); // in-memory, V1
   const [saved, setSaved] = useState(false);
-  // Phase 34b (V1 redo): Scenario B sheet/carousel state.
+  // Scenario B sheet/carousel state.
   const [listingsSheetOpen, setListingsSheetOpen] = useState(false);
   const [listingCarouselOpen, setListingCarouselOpen] = useState(false);
   const [listingCarouselStartIdx, setListingCarouselStartIdx] = useState(0);
-  // Phase 45.18: Contact-the-community-owner LeadModal state.
+  // Contact-the-community-owner LeadModal state.
   const [leadOpen, setLeadOpen] = useState(false);
-  // Phase 27.9 (2026-06-16): infinite swipe — render the videos array
+  // infinite swipe — render the videos array
   // multiple times. Start at 2 copies; whenever the user enters the last
   // copy we append another. Capped at 50 copies (~hundreds of cards) to
   // prevent unbounded DOM growth in marathon sessions; in practice no buyer
@@ -591,7 +591,7 @@ export function CommunityVideoFeed({
       </div>
 
       {/* Right rail: Like / Save / Listings / Mute.
-       * Phase 27.7 (2026-06-17): Listings becomes a 12×12 circular icon in
+       * Listings becomes a 12×12 circular icon in
        * the same family as the other rail buttons, with the count rendered
        * as a gold badge on the top-right corner — visually consistent with
        * BrowseFeed's "Nearby" badge pattern (BrowseFeed.tsx:282). Placed
@@ -623,7 +623,9 @@ export function CommunityVideoFeed({
             badge={listings.length}
             badgeColor="red"
           >
-            <span aria-hidden="true" className="text-[20px] leading-none">🏠</span>
+            <span aria-hidden="true" className="text-[20px] leading-none">
+              🏠
+            </span>
           </ActionButton>
         )}
         <ActionButton onClick={toggleLike} label="Like" active={liked} activeColor="rose">

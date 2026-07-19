@@ -1,7 +1,7 @@
 /**
  * Public agent profile page — `/a/[agentSlug]`.
  *
- * Phase 38 (2026-06-18): redesigned in Aman direction (warm cream, no gold).
+ * redesigned in Aman direction (warm cream, no gold).
  * The profile is now the centerpiece "gallery" experience — Vivian's listings
  * presented like a Pixieset portfolio: full-bleed cover, large serif address,
  * tracked-caps eyebrow, hairline dividers, generous whitespace.
@@ -244,7 +244,7 @@ export default async function AgentProfilePage({
 }
 
 /**
- * Phase 74.14 (2026-07-05): portfolio → ListingGrid adapter.
+ * portfolio → ListingGrid adapter.
  * Full-digit price via ListingGrid's own `fmtPrice` (no K/M — buyer-surface
  * hard rule from 74.10). Address expands to `street, city, state` inside the
  * grid card (74.7 canonical, no zip in dense grid).

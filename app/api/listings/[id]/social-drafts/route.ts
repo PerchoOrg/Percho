@@ -1,7 +1,7 @@
 /**
  * GET / POST / DELETE /api/listings/[id]/social-drafts
  *
- * Phase 48.2 (2026-06-22). Persist + list + delete saved social-copy
+ * . Persist + list + delete saved social-copy
  * drafts for a listing.
  *
  * Security model:
@@ -32,12 +32,8 @@ import { z } from 'zod';
 
 export const runtime = 'nodejs';
 
-const PlatformEnum = z.enum(
-  SOCIAL_PLATFORMS as readonly [SocialPlatform, ...SocialPlatform[]],
-);
-const LanguageEnum = z.enum(
-  SOCIAL_LANGUAGES as readonly [SocialLanguage, ...SocialLanguage[]],
-);
+const PlatformEnum = z.enum(SOCIAL_PLATFORMS as readonly [SocialPlatform, ...SocialPlatform[]]);
+const LanguageEnum = z.enum(SOCIAL_LANGUAGES as readonly [SocialLanguage, ...SocialLanguage[]]);
 
 const SaveInput = z.object({
   platform: PlatformEnum,
@@ -47,17 +43,18 @@ const SaveInput = z.object({
   title: z.string().trim().min(1).max(120).optional(),
 });
 
-const PatchInput = z.object({
-  draft_id: z.string().uuid(),
-  // At least one of body / title / language must be provided.
-  body: z.string().trim().min(1).max(8192).optional(),
-  language: LanguageEnum.optional(),
-  // Empty string clears the title (sets it to null).
-  title: z.string().trim().max(120).optional(),
-}).refine(
-  (v) => v.body !== undefined || v.title !== undefined || v.language !== undefined,
-  { message: 'no_fields_to_update' },
-);
+const PatchInput = z
+  .object({
+    draft_id: z.string().uuid(),
+    // At least one of body / title / language must be provided.
+    body: z.string().trim().min(1).max(8192).optional(),
+    language: LanguageEnum.optional(),
+    // Empty string clears the title (sets it to null).
+    title: z.string().trim().max(120).optional(),
+  })
+  .refine((v) => v.body !== undefined || v.title !== undefined || v.language !== undefined, {
+    message: 'no_fields_to_update',
+  });
 
 const DeleteInput = z.object({
   draft_id: z.string().uuid(),
@@ -74,8 +71,7 @@ interface DraftRow {
   updated_at: string;
 }
 
-const DRAFT_COLS =
-  'id, platform, language, body, highlights, title, created_at, updated_at';
+const DRAFT_COLS = 'id, platform, language, body, highlights, title, created_at, updated_at';
 
 async function resolveAgentAndListing(
   listingId: string,
@@ -117,10 +113,7 @@ async function resolveAgentAndListing(
   return { ok: true, agentId: agent.id, supabase };
 }
 
-export async function GET(
-  _req: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id: listingId } = await params;
   const ctx = await resolveAgentAndListing(listingId);
   if (!ctx.ok) {
@@ -139,10 +132,7 @@ export async function GET(
   return NextResponse.json({ drafts: (res.data ?? []) as DraftRow[] });
 }
 
-export async function POST(
-  req: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id: listingId } = await params;
   let body: unknown;
   try {
@@ -205,10 +195,7 @@ export async function POST(
   return NextResponse.json({ draft: ins.data as DraftRow }, { status: 201 });
 }
 
-export async function PATCH(
-  req: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id: listingId } = await params;
   let body: unknown;
   try {
@@ -263,10 +250,7 @@ export async function PATCH(
   return NextResponse.json({ draft: upd.data as DraftRow });
 }
 
-export async function DELETE(
-  req: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id: listingId } = await params;
   let body: unknown;
   try {

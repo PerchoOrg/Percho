@@ -6,7 +6,7 @@
  * definitions so chrome can't drift across breakpoints. Add or rename a tab
  * once here; every surface picks it up.
  *
- * Phase 45.11 (2026-06-20): owner round 3 —
+ * owner round 3 —
  *   - Favorites: stays primary for buyer/anon, dropped from agent primary
  *     (agents reach saves via the avatar menu under Me).
  *   - /saved sub-tabs: Listings | Communities now live in the global TopBar
@@ -14,15 +14,7 @@
  *   - Agent "+ New" label loses the leading "+" (icon already shows the plus).
  *   - /dashboard sub-tabs renamed singular: Listing / Community.
  */
-import {
-  Bookmark,
-  Briefcase,
-  Building2,
-  Compass,
-  type LucideIcon,
-  Plus,
-  User,
-} from 'lucide-react';
+import { Bookmark, Briefcase, Building2, Compass, type LucideIcon, Plus, User } from 'lucide-react';
 
 export type ViewerRole = 'anon' | 'buyer' | 'agent';
 
@@ -47,7 +39,7 @@ export type Tab = {
  */
 export function getPrimaryTabs(role: ViewerRole): Tab[] {
   if (role === 'agent') {
-    // Phase 45.12 (2026-06-20): "+ New" moved to the center slot so the
+    // "+ New" moved to the center slot so the
     // mobile FAB lands in the middle of the 5-item BottomNav (index 2 of 5)
     // per owner — matches the visual idiom of TikTok / Instagram bottom nav.
     return [
@@ -79,17 +71,17 @@ export type SubTab = {
  * Resolve sub-tabs for the current pathname.
  */
 export function getSubTabs(pathname: string, role: ViewerRole): SubTab[] | null {
-  // Phase 66 (2026-07-02): Nearby sub-tabs removed per owner (笑云 feedback,
+  // Nearby sub-tabs removed per owner (笑云 feedback,
   // "reduce frictions"). /browse and /communities used to render
   // [Explore, Nearby]; now they render nothing here — TopBar centres a
   // static "Explore" title in the middle slot instead. The /browse/nearby
   // and /communities/nearby routes are still live but no longer navigable
   // from the chrome.
   if (pathname === '/saved' || pathname.startsWith('/saved/')) {
-    // Phase 45.11: Listing / Community are now the global TopBar sub-tabs
+    // Listing / Community are now the global TopBar sub-tabs
     // for Favorites. SavedClient no longer renders its own pill row.
-    // Phase 45.12 (2026-06-20): singular per owner ("Listing" / "Community").
-    // Phase 66 (2026-07-02): community → neighborhood UI rename.
+    // singular per owner ("Listing" / "Community").
+    // community → neighborhood UI rename.
     return [
       { href: '/saved', label: 'Saved Listing' },
       { href: '/saved/communities', label: 'Saved Neighborhood' },
@@ -99,9 +91,9 @@ export function getSubTabs(pathname: string, role: ViewerRole): SubTab[] | null 
     return null;
   }
   if (role === 'agent' && (pathname === '/dashboard' || pathname.startsWith('/dashboard'))) {
-    // Phase 45.12 (2026-06-20): "My …" prefix per owner so agents read the
+    // "My …" prefix per owner so agents read the
     // tabs as their own inventory, not a generic catalog.
-    // Phase 66 (2026-07-02): Analytics moved to /profile per owner
+    // Analytics moved to /profile per owner
     // (笑云 feedback). community → neighborhood UI rename.
     return [
       { href: '/dashboard', label: 'My Listing' },
@@ -117,9 +109,7 @@ export function getSubTabs(pathname: string, role: ViewerRole): SubTab[] | null 
  * swallow /dashboard/communities, /dashboard/leads, /dashboard/analytics.
  */
 export function isSubTabActive(pathname: string, sub: SubTab, all: SubTab[]): boolean {
-  const matches = all.filter(
-    (t) => pathname === t.href || pathname.startsWith(`${t.href}/`),
-  );
+  const matches = all.filter((t) => pathname === t.href || pathname.startsWith(`${t.href}/`));
   if (matches.length === 0) {
     return sub.href === all[0]?.href;
   }

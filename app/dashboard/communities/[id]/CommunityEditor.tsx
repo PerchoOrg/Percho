@@ -2,19 +2,19 @@
 
 /**
  * CommunityEditor — Phase 4.4; Phase 23 trimmed; Phase 50 flattened;
- * Phase 50.4 expanded; Phase 50.5 typed numerics; Phase 50.6 opt-in ranges;
- * Phase 50.7 (2026-06-22) form-level cleanup per owner;
- * Phase 51 (2026-06-24) auto-save parity with listing editor.
+ * expanded; Phase 50.5 typed numerics; Phase 50.6 opt-in ranges;
+ * form-level cleanup per owner;
+ * auto-save parity with listing editor.
  *
- * Phase 51/save-button-parity (2026-06-24): added 600ms debounced auto-save
- * mirroring the listing editor (Phase 8 pattern). The "Save changes" button
+ * /save-button-parity (2026-06-24): added 600ms debounced auto-save
+ * mirroring the listing editor. The "Save changes" button
  * is renamed to "Save" and now functions as a flush-now escape hatch — it
  * cancels the pending debounce and round-trips immediately, useful when the
  * agent wants explicit confirmation. The "No unsaved changes" hint is gone
  * (the SaveBadge already conveys state). Auto-save tick failures still
  * surface fieldErrors / formError so a typo doesn't silently fail.
  *
- * Phase 50.7 design notes:
+ * design notes:
  *   - **No section grouping.** "Identity / Location / Pitch / Property /
  *     Contact" headings are gone. Owner: "Remove all categories like
  *     identity, location…". Flat field stream — fewer visual layers, less
@@ -470,10 +470,7 @@ export function CommunityEditor({
         {/* Year built — two optional dropdowns. Owner ask 2026-06-22:
             "Year built range, show two drop downs for start and end, both
             are optional". Cross-field check (end >= start) runs in zod. */}
-        <Field
-          label="Year built"
-          error={fieldErrors.year_built || fieldErrors.year_built_end}
-        >
+        <Field label="Year built" error={fieldErrors.year_built || fieldErrors.year_built_end}>
           <div className="flex items-center gap-2">
             <select
               value={yearBuilt}
@@ -520,10 +517,7 @@ export function CommunityEditor({
       {/* Price — two optional dollar inputs (min + max). Owner ask
           2026-06-22: "Price range, similar [to year]". Cross-field check
           (max >= min) runs in zod. */}
-      <Field
-        label="Price"
-        error={fieldErrors.price_min || fieldErrors.price_max}
-      >
+      <Field label="Price" error={fieldErrors.price_min || fieldErrors.price_max}>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <DollarInput
             value={priceMin}
@@ -803,11 +797,7 @@ function ChipInput({
           className="flex-1 min-w-[8rem] bg-transparent px-1 outline-none placeholder:text-muted"
         />
       )}
-      {atCap && (
-        <span className="px-1 text-muted text-xs">
-          Max {maxItems} reached
-        </span>
-      )}
+      {atCap && <span className="px-1 text-muted text-xs">Max {maxItems} reached</span>}
     </div>
   );
 }

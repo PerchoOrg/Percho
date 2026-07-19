@@ -3,8 +3,8 @@
  * + bucket video queue index. Rows link to
  * /admin/pipeline/community-nearby/[id].
  *
- * Phase 104 (2026-07-17): split out of the unified /nearby index.
- * Phase 108 (2026-07-17): moved rendering into <CommunityNearbyTable>
+ * split out of the unified /nearby index.
+ * moved rendering into <CommunityNearbyTable>
  * (shared AdminTable: search / sort / pagination).
  */
 

@@ -1,5 +1,5 @@
 /**
- * Per-agent rate limit for AI generation routes (Phase 6.1b).
+ * Per-agent rate limit for AI generation routes.
  *
  * Strategy: count rows in `ai_usage_log` for (agent_id, kind) within the last
  * minute. If the count is at the cap, reject. Otherwise insert a marker row

@@ -154,7 +154,7 @@ end $$;
 -- 'listing_intent_bucket' — the new scope for POI-anchored videos owned
 -- by a listing directly.
 --
--- generated_videos_owner_chk (Phase 91) still enforces XOR of
+-- generated_videos_owner_chk still enforces XOR of
 -- listing_id / community_id; listing_intent_bucket rows set listing_id
 -- and leave community_id null.
 

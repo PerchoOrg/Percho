@@ -1,7 +1,7 @@
 'use server';
 
 /**
- * Phase 21 (2026-06-13): server-action wrapper that fetches saved
+ * server-action wrapper that fetches saved
  * listings as `BrowseCard[]` for the /saved page. Sequences:
  *   1. listSavedListingIds(device) → ordered listing_ids
  *   2. fetchBrowseCardsByIds(ids)   → BrowseCard rows
@@ -11,7 +11,7 @@
  * logic (cover photo / video pick, schools, POIs, communities, agent),
  * keeping a single source of truth for what a card looks like.
  *
- * Phase 27.7 (2026-06-17): saved communities — separate flow from
+ * saved communities — separate flow from
  * listings. Each saved community renders as a card with a cover
  * thumbnail (first ready video's poster) + video count + city/state.
  */

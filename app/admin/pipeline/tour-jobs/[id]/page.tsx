@@ -5,7 +5,7 @@
  * uploads) for a single listing, plus a button to regenerate the Ken
  * Burns walkthrough. Admin-scoped — bypasses agent ownership.
  *
- * Phase 104 (2026-07-17).
+ * .
  */
 
 import { streamIframeUrl, thumbnailUrl } from '@/lib/cloudflare/stream';
@@ -67,7 +67,9 @@ export default async function AdminTourJobsDetailPage({
     }>,
     supabase
       .from('listing_videos')
-      .select('id, cf_video_id, cf_video_id_landscape, external_url, kind, status, title, sort_order, created_at')
+      .select(
+        'id, cf_video_id, cf_video_id_landscape, external_url, kind, status, title, sort_order, created_at',
+      )
       .eq('listing_id', id)
       .order('sort_order', { ascending: true }) as unknown as Promise<{
       data: Array<{
@@ -131,7 +133,9 @@ export default async function AdminTourJobsDetailPage({
                 : null;
               return (
                 <li key={v.id} className="overflow-hidden rounded-xl border border-line bg-surface">
-                  <div className={`${isLandscape ? 'aspect-video' : 'aspect-[9/16]'} w-full bg-black/40`}>
+                  <div
+                    className={`${isLandscape ? 'aspect-video' : 'aspect-[9/16]'} w-full bg-black/40`}
+                  >
                     {iframe ? (
                       <iframe
                         src={iframe}

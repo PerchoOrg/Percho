@@ -65,7 +65,7 @@ export function createServiceClient() {
  * context — RLS evaluates as anon. Only use it for data that is safe to
  * expose without authentication (e.g. globally-readable community lists).
  *
- * Phase 53 Phase C (2026-06-24): added for cached community-list reads.
+ * Phase C (2026-06-24): added for cached community-list reads.
  */
 export function createAnonClient() {
   return createPlainClient<Database>(

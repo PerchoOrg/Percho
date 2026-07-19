@@ -1,7 +1,7 @@
 'use server';
 
 /**
- * Server actions for community photos (Phase 20.2, 2026-06-13).
+ * Server actions for community photos.
  *
  * Mirrors listing-photo-actions.ts shape:
  *   1. Browser uploads to private Supabase Storage `community-photos`
@@ -26,7 +26,7 @@ const RecordPhotoInput = z.object({
   communityId: z.string().uuid(),
   storagePath: z.string().min(1).max(512),
   kind: z.enum(['school', 'poi', 'neighborhood']).default('neighborhood'),
-  // Phase 24 (2026-06-14): photos now carry the same 12-category axis as
+  // photos now carry the same 12-category axis as
   // videos. Optional for backwards compat; existing legacy callers without
   // a category just get NULL in the column and the UI falls back to `kind`.
   category: CommunityVideoCategory.optional(),

@@ -94,8 +94,8 @@ export function CommunityMediaPanel({
     );
   }, []);
 
-  // Phase 50.12 (2026-06-23) / 50.16 (2026-06-23) — prefill consumer removed
-  // (Phase 52+: no more FAB → /communities/new → ?prefill flow). The category
+  // / 50.16 (2026-06-23) — prefill consumer removed
+  //. The category
   // dropdown + per-file video uploader path is the only entry now.
   const kind: CommunityKind = legacyKindForCategory(category);
   const videoTarget = {

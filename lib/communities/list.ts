@@ -1,16 +1,16 @@
 /**
  * Shared community-grid data loader.
  *
- * Phase 34b (2026-06-17): extracted from `app/(public)/communities/page.tsx`
+ * extracted from `app/(public)/communities/page.tsx`
  * so `/browse?tab=communities` can render the same grid without code
  * duplication. Both pages render identical cards from the identical query.
  *
- * Phase 53 Phase A (2026-06-24): parallelized into two waves.
+ * Phase A (2026-06-24): parallelized into two waves.
  * Wave 1 fetches `communities` + `community_video_membership` in parallel
  * (no inter-dependency). Wave 2 then fetches `community_videos` (needs
  * membership video_ids) + `listings` (needs community ids) in parallel.
  *
- * Phase 53 Phase C (2026-06-24): wrapped in `unstable_cache` (60s TTL,
+ * Phase C (2026-06-24): wrapped in `unstable_cache` (60s TTL,
  * tagged 'community-cards'). Community data is globally readable so a
  * shared cache across users is safe. Mutation server actions call
  * `revalidateTag('community-cards')` to invalidate.
@@ -20,7 +20,7 @@
  * applies — community reads are global, so this returns the same rows as
  * the cookie-bound client would for these particular tables.
  *
- * Phase 72.2 (2026-07-05): visibility rule tightened. Previously any
+ * visibility rule tightened. Previously any
  * caller could pass `includeInactive: true` and get every inactive
  * community system-wide (agent dashboard did this). That leaked one
  * agent's drafts to other agents. New shape:
@@ -30,10 +30,10 @@
  * uncached because it's cheap and viewer-specific.
  */
 
-import { unstable_cache } from 'next/cache';
 import { resolveCommunityCoverWithCfIds } from '@/lib/community/cover';
-import { createAnonClient } from '@/lib/supabase/server';
 import { startTimer } from '@/lib/perf/timing';
+import { createAnonClient } from '@/lib/supabase/server';
+import { unstable_cache } from 'next/cache';
 
 export type CommunityListCard = {
   id: string;
@@ -64,7 +64,7 @@ type CommunityRow = {
 };
 
 /**
- * Phase 114 (2026-07-17): `boundary` is intentionally NOT selected in the
+ * `boundary` is intentionally NOT selected in the
  * top-level list query. Boundary is a per-community GeoJSON polygon (often
  * multi-KB — the Nextdoor seeds are dense multipolygons). PostgREST was
  * hitting `statement_timeout` (Postgres 57014) trying to stream ~8k rows
@@ -80,14 +80,12 @@ type CommunityRow = {
  * / cover. Split out so the shared "all active" pass and the per-viewer
  * "your inactive" pass can share the same enrichment code.
  */
-async function hydrateCommunityCards(
-  communities: CommunityRow[],
-): Promise<CommunityListCard[]> {
+async function hydrateCommunityCards(communities: CommunityRow[]): Promise<CommunityListCard[]> {
   if (communities.length === 0) return [];
   const supabase = createAnonClient();
   const communityIds = communities.map((c) => c.id);
 
-  // Phase 111 (2026-07-17): batch the .in() calls. At scale (8k+ active
+  // batch the .in() calls. At scale (8k+ active
   // communities) a single `.in('community_id', <8000 ids>)` produces a
   // ~300KB URL and PostgREST rejects with 400. We chunk to 500 ids per
   // request and merge in-memory.
@@ -141,7 +139,7 @@ async function hydrateCommunityCards(
             .in('id', batch)
             .eq('status', 'ready')
             .eq('visibility', 'public')
-            // Phase 92: skip history renders.
+            // skip history renders.
             .eq('is_primary', true),
         ),
     chunkedIn<{ community_id: string | null }>(
@@ -178,7 +176,7 @@ async function hydrateCommunityCards(
     );
   }
 
-  // Phase 114 (2026-07-17): lazily fetch `boundary` only for rows that
+  // lazily fetch `boundary` only for rows that
   // fall all the way to the logo-svg fallback (no cover_video_id AND no
   // cover_storage_path). Selecting boundary inline for all ~8k active
   // communities was timing out the top-level query at PostgREST
@@ -191,11 +189,7 @@ async function hydrateCommunityCards(
     const boundaryRows = await chunkedInField<{ id: string; boundary: unknown }>(
       needsBoundaryIds,
       // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-      (batch) =>
-        (supabase as any)
-          .from('communities')
-          .select('id, boundary')
-          .in('id', batch),
+      (batch) => (supabase as any).from('communities').select('id, boundary').in('id', batch),
     );
     for (const r of boundaryRows) boundaryByCommunity.set(r.id, r.boundary);
   }
@@ -211,17 +205,20 @@ async function hydrateCommunityCards(
     listingCount: listingCountByCommunity.get(c.id) ?? 0,
     cover: resolveCommunityCoverWithCfIds({
       cover_video_id: c.cover_video_id,
-      cover_video_cf_id: c.cover_video_id ? cfById.get(c.cover_video_id) ?? null : null,
+      cover_video_cf_id: c.cover_video_id ? (cfById.get(c.cover_video_id) ?? null) : null,
       cover_storage_path: c.cover_storage_path,
       fallback_video_cf_id: firstVideoCfByCommunity.get(c.id) ?? null,
       name: c.name,
-      boundary: (boundaryByCommunity.get(c.id) as import('@/lib/community/logo-cover').BoundaryGeoJSON | null) ?? null,
+      boundary:
+        (boundaryByCommunity.get(c.id) as
+          | import('@/lib/community/logo-cover').BoundaryGeoJSON
+          | null) ?? null,
     }),
   }));
 }
 
 /**
- * Phase 114 (2026-07-17): rank order for the public buyer grid — surface
+ * rank order for the public buyer grid — surface
  * meaningful neighborhoods first. The 731 Nextdoor seeds with 0 listings /
  * 0 videos otherwise dominate the top of an alphabetical list (starts with
  * " River Summit", "12 Mile", "1250 West"…) so buyers see nothing but
@@ -249,7 +246,7 @@ async function fetchActiveCommunitiesImpl(): Promise<CommunityListCard[]> {
   const { data } = (await (supabase as any)
     .from('communities')
     .select('id, name, slug, city, state, description, cover_video_id, cover_storage_path')
-    // Phase 72 (2026-07-05): never surface the upload-flow `Untitled community`
+    // never surface the upload-flow `Untitled community`
     // stub — owner has never touched it (name still = stub), so it's just noise.
     .neq('name', 'Untitled community')
     .eq('status', 'active')
@@ -296,7 +293,7 @@ async function fetchOwnInactiveCommunities(agentId: string): Promise<CommunityLi
 }
 
 /**
- * Phase 83.2 (2026-07-15): viewer-scoped "my neighborhoods" for the
+ * viewer-scoped "my neighborhoods" for the
  * agent dashboard.
  *
  * The buyer/public `/communities` grid shows every active community

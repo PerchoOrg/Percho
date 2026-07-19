@@ -103,7 +103,11 @@ export async function POST(req: Request) {
   const sb = supabase as any;
   const [listingRes, communityRes] = await Promise.all([
     sb.from('listing_videos').update(update).eq('cf_video_id', videoId).select('id, listing_id'),
-    sb.from('community_videos').update(update).eq('cf_video_id', videoId).select('id, community_id'),
+    sb
+      .from('community_videos')
+      .update(update)
+      .eq('cf_video_id', videoId)
+      .select('id, community_id'),
   ]);
 
   // phase45.15 (2026-06-20): owner round 6 #7 — auto-pick the first

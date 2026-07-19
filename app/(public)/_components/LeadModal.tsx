@@ -3,13 +3,13 @@
 /**
  * LeadModal — contact form for the public listing page.
  *
- * Phase 3.6: UI + client-side validation + body-scroll lock + Esc/backdrop close.
- * Phase 5.1: real POST to `/api/leads` (client-side splits the single contact
+ * UI + client-side validation + body-scroll lock + Esc/backdrop close.
+ * real POST to `/api/leads` (client-side splits the single contact
  * field into email-or-phone based on regex match — server schema accepts
  * either). On success: shows inline confirmation, auto-closes after 1.5s.
  * On failure: surfaces the server error inline; user can retry.
  *
- * Phase 67 (2026-06-27): split single "Phone or email" field into two
+ * split single "Phone or email" field into two
  * separate inputs (Email / Phone). Either one alone is sufficient (server
  * schema requires at least one); both can be supplied if the buyer wants
  * to give the agent two channels. Buyers who only want to share one field
@@ -32,7 +32,7 @@ type Props = {
   /** Listing-targeted lead. Mutually exclusive with `community`. */
   listing?: LeadListing;
   listingId?: string;
-  /** Community-targeted lead (Phase 45.18 — direct community feed). */
+  /** Community-targeted lead. */
   community?: LeadCommunity;
   communityId?: string;
 };
@@ -151,7 +151,7 @@ export function LeadModal({
 
   return (
     <div
-      // Phase 45.20 (2026-06-20): z-[70] so the modal stays above the
+      // z-[70] so the modal stays above the
       // CommunityCarousel overlay (z-[60]). Previously z-50 — when a buyer
       // hit Contact from inside the carousel, the modal opened *behind*
       // the carousel and looked like a dead click.

@@ -18,7 +18,7 @@
 --   * pois table itself is community-agnostic (globally shared by google_place_id),
 --     no change needed there.
 --
--- What this migration does NOT do (Phase 93):
+-- What this migration does NOT do:
 --   * Drop listing_pois / listing_poi_photos.
 --   * Cut over the review UI.
 --   * Delete legacy `community_videos.category` / `kind` columns.

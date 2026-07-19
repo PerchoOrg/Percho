@@ -3,7 +3,7 @@
 /**
  * CommunityMarketingPanel — language-only marketing copy for a community.
  *
- * Phase 50 (2026-06-22). The community sibling of SocialCopyPanel. Unlike
+ * . The community sibling of SocialCopyPanel. Unlike
  * the listing flow, community marketing is not platform-aware — buyers
  * arrive at a single `/c/<slug>` URL regardless of channel, so the only
  * axis that matters is *language*. The agent picks a language, generates

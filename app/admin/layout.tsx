@@ -2,9 +2,9 @@
  * /admin layout — HubTabs chip bar identical to the agent hub, mobile
  * ↔ desktop. Every child route is admin-gated at this layer.
  *
- * Phase 103 (2026-07-17): sidebar retired in favor of a chip-mode tab
+ * sidebar retired in favor of a chip-mode tab
  * bar.
- * Phase 104b (2026-07-17): split Nearby into Home + Neighborhood.
+ * split Nearby into Home + Neighborhood.
  * Seven tabs now — the chip strip scrolls horizontally on narrow
  * viewports.
  */

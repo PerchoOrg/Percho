@@ -14,7 +14,7 @@
  *     to icons. Behaviour is unchanged from the original component.
  *   - **Chip mode** (when at least one tab carries an `icon`):
  *     horizontally-scrollable circular icon chips with a label below.
- *     Used by the my-listing agent hub (Phase 48) so the 5 tabs read as
+ *     Used by the my-listing agent hub so the 5 tabs read as
  *     destinations rather than text pills, are visually distinct from
  *     the BottomNav text pills, and remain identical desktop ↔ mobile.
  *     Mobile shows ~4.5 chips with a soft right-edge fade hinting at

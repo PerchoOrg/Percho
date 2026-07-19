@@ -93,7 +93,7 @@ export function resolveCommunityCoverWithCfIds(input: {
   if (input.fallback_video_cf_id) {
     return { kind: 'fallback-video', url: thumbnailUrl(input.fallback_video_cf_id) };
   }
-  // Phase 83.4: last-resort generated cover — always renders SOMETHING as long
+  // last-resort generated cover — always renders SOMETHING as long
   // as we have a name. Boundary is optional (monogram fallback inside).
   if (input.name) {
     const dataUri = buildCommunityLogoDataUri(input.name, input.boundary ?? null);

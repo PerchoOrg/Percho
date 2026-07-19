@@ -1,7 +1,7 @@
 'use server';
 
 /**
- * Phase 25 (2026-06-14): Server actions for /profile.
+ * Server actions for /profile.
  *
  * Currently exposes `updateAgentIdentity` — agent renames `name` and/or
  * `brokerage`. Slug is intentionally NOT updated here (frozen at signup).
@@ -112,7 +112,7 @@ export async function updateBuyerDisplayName(input: {
 }
 
 /**
- * Phase 27 (2026-06-14): set or clear the current user's avatar URL.
+ * set or clear the current user's avatar URL.
  *
  * Detects role automatically — agents write `agents.headshot_url`, buyers
  * write `buyers.avatar_url` (DB columns kept put per the migration's note).

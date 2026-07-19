@@ -1,12 +1,12 @@
 /**
  * `/profile` — role-aware profile / settings landing.
  *
- * Phase 14 (2026-06-12). Minimal V1 shell:
+ * . Minimal V1 shell:
  *   - anon  → CTA: "Log in as agent" / "Sign up as agent" + note that
  *             buyer accounts are coming soon.
  *   - agent → identity card (name, brokerage, email) + shortcut to
  *             /dashboard + Sign out form.
- *   - buyer → stub: "Buyer profiles are coming soon" (Phase 9.5). The page
+ *   - buyer → stub: "Buyer profiles are coming soon". The page
  *             still renders something so the bottom-nav Profile tab isn't
  *             a dead link for a logged-in non-agent.
  *
@@ -20,7 +20,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { EditableAgentIdentity } from './_components/EditableAgentIdentity';
 import { EditableBuyerIdentity } from './_components/EditableBuyerIdentity';
-// Phase 66.1 (2026-07-02): NearbyRadiusPref removed from Me per owner
+// NearbyRadiusPref removed from Me per owner
 // (笑云 feedback — reduce distractions; Nearby is no longer surfaced in
 // the buyer chrome as of phase 66). Component file kept in the repo in
 // case Nearby comes back.
@@ -43,7 +43,7 @@ export default async function ProfilePage() {
   const user = session?.user ?? null;
 
   if (!user) {
-    // Phase 45.10 (2026-06-20): anon Me lands here per owner. Show the
+    // anon Me lands here per owner. Show the
     // search-radius preference (so anon viewers can dial /browse/nearby
     // without an account) plus the Log in / Sign up CTA pair.
     return (
@@ -52,8 +52,8 @@ export default async function ProfilePage() {
           <div className="rounded-xl border border-line bg-surface p-5">
             <div className="font-serif text-lg text-ink">Sign in to save your work</div>
             <p className="mt-1 text-ink2 text-sm">
-              Log in or create an account to save listings, follow neighborhoods, and (for
-              agents) publish your own tours.
+              Log in or create an account to save listings, follow neighborhoods, and (for agents)
+              publish your own tours.
             </p>
             <div className="mt-4 flex flex-col gap-2">
               <Link
@@ -199,5 +199,3 @@ export default async function ProfilePage() {
     </main>
   );
 }
-
-

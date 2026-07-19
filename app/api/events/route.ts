@@ -10,7 +10,7 @@
  *
  * Service-role client used because the anon RLS policy permits inserts
  * but the bulk insert is faster server-side without RLS round-trips.
- * The route is intentionally minimal: no rate limiting (Phase 6), no
+ * The route is intentionally minimal: no rate limiting, no
  * PII fields (CLAUDE.md §3.6).
  */
 

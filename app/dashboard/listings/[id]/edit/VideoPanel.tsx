@@ -17,7 +17,11 @@
  * alongside this one on the same page).
  */
 
-import { deleteListingVideo, reorderListingVideos, setListingCover } from '@/app/dashboard/listings/[id]/edit/actions';
+import {
+  deleteListingVideo,
+  reorderListingVideos,
+  setListingCover,
+} from '@/app/dashboard/listings/[id]/edit/actions';
 import { type UploadedVideo, VideoUploader } from '@/components/dashboard/VideoUploader';
 import { thumbnailUrl } from '@/lib/cloudflare/stream';
 import {
@@ -35,7 +39,15 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { useCallback, useEffect, useImperativeHandle, useRef, useState, useTransition, forwardRef } from 'react';
+import {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useRef,
+  useState,
+  useTransition,
+} from 'react';
 
 export interface ListingVideoRow {
   id: string;
@@ -52,7 +64,7 @@ interface Props {
   initialVideos: ListingVideoRow[];
   initialCoverVideoId: string | null;
   /**
-   * Phase 47.x: when true, hide the embedded VideoUploader. MediaPanel
+   * .x: when true, hide the embedded VideoUploader. MediaPanel
    * renders its own per-file VideoUploader instances and pushes successful
    * uploads in via the imperative handle below.
    */
@@ -60,7 +72,7 @@ interface Props {
 }
 
 /**
- * Phase 47.x — imperative handle. MediaPanel calls `pushUploaded()` after a
+ * .x — imperative handle. MediaPanel calls `pushUploaded()` after a
  * VideoUploader instance it owns finishes, so the row appears in the
  * VideoPanel grid + status-poll loop just like an inline upload would.
  */
@@ -163,7 +175,7 @@ export const VideoPanel = forwardRef<VideoPanelHandle, Props>(function VideoPane
     });
   }, []);
 
-  // Phase 47.x: expose pushUploaded so MediaPanel-owned VideoUploaders feed
+  // .x: expose pushUploaded so MediaPanel-owned VideoUploaders feed
   // successful uploads back into this panel's grid + status-poll.
   useImperativeHandle(ref, () => ({ pushUploaded: handleUploaded }), [handleUploaded]);
 
@@ -470,7 +482,7 @@ function SortableVideoItem({
 }
 
 function StatusText({ status }: { status: string }) {
-  // Phase 35.3 (2026-06-17): humanize Cloudflare Stream lifecycle states.
+  // humanize Cloudflare Stream lifecycle states.
   // Callers are expected to skip rendering this when status === 'ready'
   // (the happy path is silent, no flag needed). We still handle it for
   // defensive rendering.

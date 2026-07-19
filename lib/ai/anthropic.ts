@@ -148,7 +148,7 @@ export async function generateListingCopy(input: {
 /**
  * Social copy — multi-platform, multi-language.
  *
- * Phase 48: replaces the Phase 8.4 fixed Facebook+Instagram+Email shape.
+ * replaces the Phase 8.4 fixed Facebook+Instagram+Email shape.
  * Now driven by the caller-supplied `platforms` and `languages` arrays so
  * the UI can offer a checkbox grid. Output is a 2-D map:
  *   { [platform]: { [language]: string } }
@@ -354,7 +354,7 @@ export async function generateSocialCopy(
 
 // ─── Community marketing copy ─────────────────────────────────────
 //
-// Phase 50 (2026-06-22). Communities are a different shape from
+// . Communities are a different shape from
 // listings — there is no platform axis (a community is browsed on
 // percho.co, not posted to TikTok). Agents want one general-
 // purpose marketing blurb per language they speak, suitable for

@@ -14,8 +14,8 @@ export default function FairHousingPage() {
       updated="June 20, 2026"
     >
       <p>
-        Percho supports equal housing opportunity and complies with the federal Fair Housing Act
-        and applicable state and local laws.
+        Percho supports equal housing opportunity and complies with the federal Fair Housing Act and
+        applicable state and local laws.
       </p>
 
       <h2>Protected classes</h2>
@@ -56,12 +56,12 @@ export default function FairHousingPage() {
       <p>If you believe a listing, agent, or buyer on Percho has violated fair-housing law:</p>
       <ul>
         <li>
-          Email us at <a href="mailto:legal@percho.co">legal@percho.co</a> with the listing
-          URL or agent profile and a brief description.
+          Email us at <a href="mailto:legal@percho.co">legal@percho.co</a> with the listing URL or
+          agent profile and a brief description.
         </li>
         <li>
           File a complaint with the U.S. Department of Housing and Urban Development at{' '}
-          <a href="https://www.hud.gov/fairhousing" rel="noopener" target="_blank">
+          <a href="https://www.hud.gov/fairhousing" rel="noreferrer noopener" target="_blank">
             hud.gov/fairhousing
           </a>
           .
