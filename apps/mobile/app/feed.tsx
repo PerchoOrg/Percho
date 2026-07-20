@@ -1,18 +1,17 @@
 /**
- * Feed skeleton — mock cards, three-face model.
+ * Feed — swipe stack with:
+ *   1. Three-face card model (front / back-data / peek modal).
+ *   2. Persona chip + toast on label change.
+ *   3. **Scope strip** — persistent yes/no filters ridden above the feed.
+ *   4. **Ask-cards** — interleaved yes/no scope questions (yes = pin chip,
+ *      no = clear).
+ *   5. **Real-data pagination** — SSR-of-sorts via `/api/mobile/feed` +
+ *      tail-fetch when within 5 cards of the end. Falls back to
+ *      ASK_POOL cycling if the API is unreachable.
  *
- * Ports the vibe/feed.html web prototype into RN:
- *   1. Front face (hero + overlays) — full-bleed, minimal chrome.
- *   2. Back face (data face) — traits, stats, POI-like blurbs.
- *      Tap card → opacity crossfade to back. Skill: NEVER use 3D rotate.
- *   4. Longpress deep peek — hold ~800ms → modal shows big hero + primary
- *      "Explore →". This is the ⭐ depth-conversion mechanic from
- *      paginated-feed-and-swipe-ui skill.
- *   +  Persona toast on label change — 1.6s bottom pill.
- *
- * NOT wired yet: video autoplay, API pagination, scope strip. Next passes.
+ * Skill: paginated-feed-and-swipe-ui (all invariants).
  */
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -21,6 +20,8 @@ import {
   Modal,
   Pressable,
   Animated as RNAnimated,
+  Image,
+  ScrollView,
 } from 'react-native';
 import { GestureDetector, Gesture } from 'react-native-gesture-handler';
 import Animated, {
@@ -33,8 +34,14 @@ import Animated, {
 } from 'react-native-reanimated';
 import {
   type FeedCard,
+  type FeedPage,
   type CommunityCard,
-  type ListingCard,
+  type AskCard,
+  type ScopeChip,
+  ASK_POOL,
+  scopeAcceptAsk,
+  scopeRejectAsk,
+  scopeRemoveLayer,
   derivePersona,
   emptyTally,
   updateTally,
@@ -43,63 +50,78 @@ import {
 const { width: SCREEN_W } = Dimensions.get('window');
 const SWIPE_THRESHOLD = SCREEN_W * 0.25;
 const LONGPRESS_MS = 800;
+const TAIL_TRIGGER = 5; // fetch next page when within 5 of tail
+const PAGE_LIMIT = 20;
+const ASK_EVERY = 4; // insert an ask-card every N real cards (after initial 3)
+const INITIAL_ASKS = 3;
 
+// Web origin for the mobile feed API. Overridable via app.json extra later.
+const API_BASE = 'https://percho.co';
+
+// Fallback mock (used only when API is unreachable — first-boot dev / offline).
 const MOCK_CARDS: FeedCard[] = [
   {
     kind: 'community',
     id: 'waterside',
     name: 'Waterside',
     city: 'Chapel Hill, NC',
-    heroUrl: 'https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=900&q=70&auto=format',
+    heroUrl:
+      'https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=900&q=70&auto=format',
     tags: ['🌳 Wooded', '👨‍👩‍👧 Family', '🏫 Top schools'],
     stats: { median: '$685K', homes: 142, vibe: 'Quiet' },
-    traits: { family: 90, walkable: 40, quiet: 85, hip: 30, schools: 95, green: 80 },
-  },
-  {
-    kind: 'listing',
-    id: 'l-5122',
-    slug: '5122-lower-creek',
-    address: '5122 Lower Creek St',
-    priceLabel: '$540K',
-    bedBathSqft: '3 bd · 2 ba · 1,840 sqft',
-    heroUrl: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=900&q=70&auto=format',
-    communityId: 'waterside',
-    matchScore: 92,
-  },
-  {
-    kind: 'community',
-    id: 'oldtown',
-    name: 'Old Town',
-    city: 'Durham, NC',
-    heroUrl: 'https://images.unsplash.com/photo-1449034446853-66c86144b0ad?w=900&q=70&auto=format',
-    tags: ['🎨 Hip', '🚶 Walkable', '🌃 Nightlife'],
-    stats: { median: '$495K', homes: 88, vibe: 'Buzzy' },
-    traits: { walkable: 90, hip: 88, nightlife: 75, quiet: 20, family: 40, schools: 60 },
-  },
-  {
-    kind: 'listing',
-    id: 'l-oldtown-1',
-    slug: '221-magnolia',
-    address: '221 Magnolia Ave',
-    priceLabel: '$465K',
-    bedBathSqft: '2 bd · 2 ba · 1,320 sqft',
-    heroUrl: 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=900&q=70&auto=format',
-    communityId: 'oldtown',
-    matchScore: 78,
+    traits: {
+      family: 90,
+      walkable: 40,
+      quiet: 85,
+      hip: 30,
+      schools: 95,
+      green: 80,
+    },
   },
 ];
 
-const COMMUNITY_TRAITS = Object.fromEntries(
-  MOCK_CARDS.filter((c): c is CommunityCard => c.kind === 'community').map((c) => [c.id, c.traits]),
-);
-
-const COMMUNITY_BY_ID = Object.fromEntries(
-  MOCK_CARDS.filter((c): c is CommunityCard => c.kind === 'community').map((c) => [c.id, c]),
-);
+// ─── Ask-card interleaving ──────────────────────────────────────────
+// Inject ask-cards at [0, 1, 2, then every ASK_EVERY]. Skip asks whose
+// scope layer is already answered. Dedupe by id via the seen-set the
+// caller passes.
+function interleaveAsks(
+  content: FeedCard[],
+  answered: Set<string>,
+  scopeLayersUsed: Set<string>,
+): FeedCard[] {
+  const remaining = ASK_POOL.filter(
+    (a) => !answered.has(a.id) && !scopeLayersUsed.has(a.scopeType),
+  );
+  let ai = 0;
+  const out: FeedCard[] = [];
+  let contentIdx = 0;
+  let overallIdx = 0;
+  while (contentIdx < content.length || ai < remaining.length) {
+    const askTurn =
+      (overallIdx < INITIAL_ASKS || overallIdx % ASK_EVERY === 0) &&
+      ai < remaining.length;
+    if (askTurn) {
+      out.push(remaining[ai++]);
+    } else if (contentIdx < content.length) {
+      out.push(content[contentIdx++]);
+    } else if (ai < remaining.length) {
+      out.push(remaining[ai++]);
+    }
+    overallIdx++;
+  }
+  return out;
+}
 
 export default function Feed() {
+  const [rawCards, setRawCards] = useState<FeedCard[]>([]);
+  const [feedExhausted, setFeedExhausted] = useState(false);
+  const fetchingRef = useRef(false);
+  const seenIdsRef = useRef<Set<string>>(new Set());
+
   const [index, setIndex] = useState(0);
   const [tally, setTally] = useState(emptyTally());
+  const [scope, setScope] = useState<ScopeChip[]>([]);
+  const [answeredAsks, setAnsweredAsks] = useState<Set<string>>(new Set());
   const [flipped, setFlipped] = useState(false);
   const [peekOpen, setPeekOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
@@ -107,28 +129,127 @@ export default function Feed() {
   const prevPersonaName = useRef<string | null>(null);
 
   const persona = useMemo(() => derivePersona(tally), [tally]);
-  const card = MOCK_CARDS[index];
-  const next = MOCK_CARDS[index + 1];
+
+  // Interleave ask-cards against real content, skipping already-answered
+  // asks + already-answered layers. Reruns whenever content or scope change.
+  const scopeLayersUsed = useMemo(
+    () => new Set(scope.map((c) => c.layer)),
+    [scope],
+  );
+  const feed = useMemo(
+    () => interleaveAsks(rawCards, answeredAsks, scopeLayersUsed),
+    [rawCards, answeredAsks, scopeLayersUsed],
+  );
+
+  const communityTraits = useMemo(() => {
+    const map: Record<string, CommunityCard['traits']> = {};
+    for (const c of rawCards) if (c.kind === 'community') map[c.id] = c.traits;
+    return map;
+  }, [rawCards]);
+
+  const card = feed[index];
+  const next = feed[index + 1];
 
   const tx = useSharedValue(0);
   const ty = useSharedValue(0);
-  const flipV = useSharedValue(0); // 0 = front, 1 = back
+  const flipV = useSharedValue(0);
 
+  // ─── Data fetch ──────────────────────────────────────────────────
+  useEffect(() => {
+    // Initial page
+    fetchPage(0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    // Tail-fetch when within TAIL_TRIGGER of the end of the *real content*
+    // (ask cards don't count against the trigger since they're synthetic).
+    if (feedExhausted || fetchingRef.current) return;
+    const realRemaining = rawCards.length - realIndexOf(feed, index, rawCards);
+    if (realRemaining <= TAIL_TRIGGER) fetchPage(rawCards.length);
+  }, [index, rawCards.length, feedExhausted, feed]);
+
+  async function fetchPage(offset: number) {
+    if (fetchingRef.current) return;
+    fetchingRef.current = true;
+    try {
+      const res = await fetch(
+        `${API_BASE}/api/mobile/feed?offset=${offset}&limit=${PAGE_LIMIT}`,
+      );
+      if (!res.ok) {
+        // Fallback: on first-load failure, seed the mock so the surface still swipes.
+        if (rawCards.length === 0) {
+          for (const c of MOCK_CARDS) seenIdsRef.current.add(c.id);
+          setRawCards(MOCK_CARDS);
+        }
+        setFeedExhausted(true);
+        return;
+      }
+      const body = (await res.json()) as FeedPage;
+      const fresh = (body.cards ?? []).filter(
+        (c) => !seenIdsRef.current.has(c.id),
+      );
+      for (const c of fresh) seenIdsRef.current.add(c.id);
+      if (fresh.length > 0) setRawCards((p) => [...p, ...fresh]);
+      if (body.done || fresh.length === 0) setFeedExhausted(true);
+    } catch {
+      if (rawCards.length === 0) {
+        for (const c of MOCK_CARDS) seenIdsRef.current.add(c.id);
+        setRawCards(MOCK_CARDS);
+      }
+      setFeedExhausted(true);
+    } finally {
+      fetchingRef.current = false;
+    }
+  }
+
+  // ─── Interaction ─────────────────────────────────────────────────
   const showToast = (msg: string) => {
     setToast(msg);
     toastAnim.setValue(0);
     RNAnimated.sequence([
-      RNAnimated.timing(toastAnim, { toValue: 1, duration: 220, useNativeDriver: true }),
+      RNAnimated.timing(toastAnim, {
+        toValue: 1,
+        duration: 220,
+        useNativeDriver: true,
+      }),
       RNAnimated.delay(1200),
-      RNAnimated.timing(toastAnim, { toValue: 0, duration: 220, useNativeDriver: true }),
+      RNAnimated.timing(toastAnim, {
+        toValue: 0,
+        duration: 220,
+        useNativeDriver: true,
+      }),
     ]).start(() => setToast(null));
+  };
+
+  const advance = () => {
+    setIndex((i) => Math.min(i + 1, feed.length));
+    setFlipped(false);
+    flipV.value = 0;
+    tx.value = 0;
+    ty.value = 0;
   };
 
   const commit = (action: 'like' | 'pass') => {
     if (!card) return;
+    if (card.kind === 'ask') {
+      // Yes → pin chip; No → clear that layer.
+      const nextScope =
+        action === 'like'
+          ? scopeAcceptAsk(scope, card)
+          : scopeRejectAsk(scope, card);
+      setScope(nextScope);
+      setAnsweredAsks((prev) => {
+        const s = new Set(prev);
+        s.add(card.id);
+        return s;
+      });
+      if (action === 'like') showToast(`+ ${card.chipLabel}`);
+      advance();
+      return;
+    }
     setTally((t) => {
-      const nextT = updateTally(t, action, card, COMMUNITY_TRAITS);
-      // check persona label change post-update
+      const nextT = updateTally(t, action, card, communityTraits);
       const nextP = derivePersona(nextT);
       if (prevPersonaName.current == null) prevPersonaName.current = nextP.name;
       else if (nextP.name !== prevPersonaName.current) {
@@ -137,24 +258,25 @@ export default function Feed() {
       }
       return nextT;
     });
-    setIndex((i) => Math.min(i + 1, MOCK_CARDS.length));
-    setFlipped(false);
-    flipV.value = 0;
-    tx.value = 0;
-    ty.value = 0;
+    advance();
   };
 
   const toggleFlip = () => {
+    if (card?.kind === 'ask') return; // ask-cards don't flip
     const nextVal = flipped ? 0 : 1;
     flipV.value = withTiming(nextVal, { duration: 320 });
     setFlipped(!flipped);
   };
 
   const openPeek = () => {
+    if (card?.kind === 'ask') return; // no peek on ask-cards
     setPeekOpen(true);
   };
 
-  // Pan gesture — disabled when flipped so user can read data face
+  const removeScope = (layer: ScopeChip['layer']) => {
+    setScope((s) => scopeRemoveLayer(s, layer));
+  };
+
   const pan = Gesture.Pan()
     .enabled(!flipped)
     .minDistance(6)
@@ -173,14 +295,12 @@ export default function Feed() {
       }
     });
 
-  // Tap → flip front↔back. Distinct from longpress by duration.
   const tap = Gesture.Tap()
     .maxDuration(250)
     .onEnd(() => {
       runOnJS(toggleFlip)();
     });
 
-  // Longpress → open peek modal. 800ms, cancels on 4px drift.
   const longPress = Gesture.LongPress()
     .minDuration(LONGPRESS_MS)
     .maxDistance(6)
@@ -188,30 +308,51 @@ export default function Feed() {
       runOnJS(openPeek)();
     });
 
-  // Priority order: pan wins if it triggers first (drift), longpress wins on
-  // stationary hold, tap wins on quick release. Exclusive is the right combo.
   const composed = Gesture.Exclusive(pan, longPress, tap);
 
   const topStyle = useAnimatedStyle(() => ({
     transform: [
       { translateX: tx.value },
       { translateY: ty.value },
-      { rotate: `${interpolate(tx.value, [-SCREEN_W, 0, SCREEN_W], [-15, 0, 15])}deg` },
+      {
+        rotate: `${interpolate(
+          tx.value,
+          [-SCREEN_W, 0, SCREEN_W],
+          [-15, 0, 15],
+        )}deg`,
+      },
     ],
   }));
 
   const nextStyle = useAnimatedStyle(() => ({
     transform: [
       {
-        scale: interpolate(Math.abs(tx.value), [0, SWIPE_THRESHOLD], [0.94, 1], 'clamp'),
+        scale: interpolate(
+          Math.abs(tx.value),
+          [0, SWIPE_THRESHOLD],
+          [0.94, 1],
+          'clamp',
+        ),
       },
     ],
-    opacity: interpolate(Math.abs(tx.value), [0, SWIPE_THRESHOLD], [0.5, 1], 'clamp'),
+    opacity: interpolate(
+      Math.abs(tx.value),
+      [0, SWIPE_THRESHOLD],
+      [0.5, 1],
+      'clamp',
+    ),
   }));
 
   const frontFaceStyle = useAnimatedStyle(() => ({ opacity: 1 - flipV.value }));
   const backFaceStyle = useAnimatedStyle(() => ({ opacity: flipV.value }));
 
+  if (!card && rawCards.length === 0 && !feedExhausted) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.done}>Loading feed…</Text>
+      </View>
+    );
+  }
   if (!card) {
     return (
       <View style={styles.container}>
@@ -225,9 +366,33 @@ export default function Feed() {
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.personaChip}>
-          {persona.name} · {persona.count.toFixed(1)}
+          {persona.name}
+          {persona.count > 0 ? ` · ${persona.count.toFixed(1)}` : ''}
         </Text>
+
+        {/* Scope strip */}
+        {scope.length > 0 && (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.scopeStrip}
+            contentContainerStyle={styles.scopeStripInner}
+            pointerEvents="box-none"
+          >
+            {scope.map((chip) => (
+              <Pressable
+                key={chip.layer}
+                onPress={() => removeScope(chip.layer)}
+                style={styles.scopePill}
+              >
+                <Text style={styles.scopePillText}>{chip.label}</Text>
+                <Text style={styles.scopePillX}> ×</Text>
+              </Pressable>
+            ))}
+          </ScrollView>
+        )}
       </View>
+
       <View style={styles.stack}>
         {next && (
           <Animated.View style={[styles.card, styles.cardNext, nextStyle]}>
@@ -236,22 +401,32 @@ export default function Feed() {
         )}
         <GestureDetector gesture={composed}>
           <Animated.View style={[styles.card, styles.cardTop, topStyle]}>
-            <Animated.View style={[styles.face, frontFaceStyle]} pointerEvents={flipped ? 'none' : 'auto'}>
+            <Animated.View
+              style={[styles.face, frontFaceStyle]}
+              pointerEvents={flipped ? 'none' : 'auto'}
+            >
               <CardFront card={card} />
             </Animated.View>
-            <Animated.View style={[styles.face, backFaceStyle]} pointerEvents={flipped ? 'auto' : 'none'}>
-              <CardBack card={card} />
-            </Animated.View>
+            {card.kind !== 'ask' && (
+              <Animated.View
+                style={[styles.face, backFaceStyle]}
+                pointerEvents={flipped ? 'auto' : 'none'}
+              >
+                <CardBack card={card} communityTraits={communityTraits} />
+              </Animated.View>
+            )}
           </Animated.View>
         </GestureDetector>
       </View>
+
       <Text style={styles.swipeHint}>
-        {flipped
-          ? 'Tap to flip back · Hold to peek'
-          : '← No     Tap: data · Hold: peek     Yes →'}
+        {card.kind === 'ask'
+          ? '← No     Swipe to answer     Yes →'
+          : flipped
+            ? 'Tap to flip back · Hold to peek'
+            : '← No     Tap: data · Hold: peek     Yes →'}
       </Text>
 
-      {/* Persona toast */}
       {toast && (
         <RNAnimated.View
           pointerEvents="none"
@@ -274,16 +449,26 @@ export default function Feed() {
         </RNAnimated.View>
       )}
 
-      {/* Deep peek modal */}
-      <Modal visible={peekOpen} transparent animationType="fade" onRequestClose={() => setPeekOpen(false)}>
+      <Modal
+        visible={peekOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setPeekOpen(false)}
+      >
         <View style={styles.peekBackdrop}>
           <View style={styles.peekCard}>
             <CardFront card={card} big />
             <View style={styles.peekActions}>
-              <Pressable style={styles.peekPrimary} onPress={() => setPeekOpen(false)}>
+              <Pressable
+                style={styles.peekPrimary}
+                onPress={() => setPeekOpen(false)}
+              >
                 <Text style={styles.peekPrimaryText}>Explore →</Text>
               </Pressable>
-              <Pressable style={styles.peekSecondary} onPress={() => setPeekOpen(false)}>
+              <Pressable
+                style={styles.peekSecondary}
+                onPress={() => setPeekOpen(false)}
+              >
                 <Text style={styles.peekSecondaryText}>Back to feed</Text>
               </Pressable>
             </View>
@@ -294,11 +479,31 @@ export default function Feed() {
   );
 }
 
+// Utility — where does the currently-displayed card map to in rawCards?
+// Used to compute "how many real content cards are left after `index`".
+function realIndexOf(
+  feed: FeedCard[],
+  displayIndex: number,
+  rawCards: FeedCard[],
+): number {
+  let real = 0;
+  for (let i = 0; i <= displayIndex && i < feed.length; i++) {
+    if (feed[i].kind !== 'ask') real++;
+  }
+  return Math.min(real, rawCards.length);
+}
+
+// ─── Card faces ─────────────────────────────────────────────────────
 function CardFront({ card, big }: { card: FeedCard; big?: boolean }) {
+  if (card.kind === 'ask') return <AskFront card={card} big={big} />;
   if (card.kind === 'community') {
     return (
       <View style={styles.faceInner}>
-        <View style={[styles.hero, { backgroundColor: '#3a4a3a' }]}>
+        <View style={styles.hero}>
+          {!!card.heroUrl && (
+            <Image source={{ uri: card.heroUrl }} style={styles.heroImg} />
+          )}
+          <View style={styles.heroDim} />
           <Text style={styles.kindChip}>COMMUNITY</Text>
           {big && <Text style={styles.peekLabel}>👁 Peek</Text>}
         </View>
@@ -321,7 +526,11 @@ function CardFront({ card, big }: { card: FeedCard; big?: boolean }) {
   }
   return (
     <View style={styles.faceInner}>
-      <View style={[styles.hero, { backgroundColor: '#2a3040' }]}>
+      <View style={styles.hero}>
+        {!!card.heroUrl && (
+          <Image source={{ uri: card.heroUrl }} style={styles.heroImg} />
+        )}
+        <View style={styles.heroDim} />
         <Text style={styles.kindChip}>LISTING</Text>
         {card.matchScore != null && (
           <Text style={styles.matchChip}>🎯 {card.matchScore}% MATCH</Text>
@@ -337,9 +546,53 @@ function CardFront({ card, big }: { card: FeedCard; big?: boolean }) {
   );
 }
 
-function CardBack({ card }: { card: FeedCard }) {
-  const community = card.kind === 'community' ? card : card.communityId ? COMMUNITY_BY_ID[card.communityId] : undefined;
-  const traits = community?.traits ?? {};
+function AskFront({ card, big }: { card: AskCard; big?: boolean }) {
+  return (
+    <View style={styles.faceInner}>
+      <View style={styles.hero}>
+        {!!card.heroUrl && (
+          <Image source={{ uri: card.heroUrl }} style={styles.heroImg} />
+        )}
+        <View style={styles.askDim} />
+        <Text style={styles.askKindChip}>QUICK ASK</Text>
+        <View style={styles.askCenter}>
+          <Text style={styles.askQ}>{card.q}</Text>
+          <Text style={styles.askSub}>{card.sub}</Text>
+        </View>
+        {big && <Text style={styles.peekLabel}>👁 Peek</Text>}
+      </View>
+      <View style={styles.askFooter}>
+        <View style={styles.askAction}>
+          <Text style={styles.askActionNo}>← No</Text>
+        </View>
+        <View style={styles.askAction}>
+          <Text style={styles.askActionYes}>Yes →</Text>
+        </View>
+      </View>
+    </View>
+  );
+}
+
+function CardBack({
+  card,
+  communityTraits,
+}: {
+  card: FeedCard;
+  communityTraits: Record<string, CommunityCard['traits']>;
+}) {
+  if (card.kind === 'ask') return null;
+  const community =
+    card.kind === 'community'
+      ? card
+      : card.communityId
+        ? undefined
+        : undefined;
+  const traits =
+    card.kind === 'community'
+      ? card.traits
+      : card.communityId
+        ? communityTraits[card.communityId] ?? {}
+        : {};
   return (
     <View style={styles.back}>
       <Text style={styles.backTitle}>
@@ -349,18 +602,22 @@ function CardBack({ card }: { card: FeedCard }) {
         {card.kind === 'community' ? card.city : card.priceLabel}
       </Text>
 
-      <Text style={styles.backSectionLabel}>Neighborhood traits</Text>
-      <View style={styles.traitList}>
-        {Object.entries(traits).map(([k, v]) => (
-          <View key={k} style={styles.traitRow}>
-            <Text style={styles.traitLabel}>{k}</Text>
-            <View style={styles.traitBarTrack}>
-              <View style={[styles.traitBarFill, { width: `${v}%` }]} />
-            </View>
-            <Text style={styles.traitValue}>{v}</Text>
+      {Object.keys(traits).length > 0 && (
+        <>
+          <Text style={styles.backSectionLabel}>Neighborhood traits</Text>
+          <View style={styles.traitList}>
+            {Object.entries(traits).map(([k, v]) => (
+              <View key={k} style={styles.traitRow}>
+                <Text style={styles.traitLabel}>{k}</Text>
+                <View style={styles.traitBarTrack}>
+                  <View style={[styles.traitBarFill, { width: `${v}%` }]} />
+                </View>
+                <Text style={styles.traitValue}>{v}</Text>
+              </View>
+            ))}
           </View>
-        ))}
-      </View>
+        </>
+      )}
 
       {card.kind === 'listing' && (
         <>
@@ -373,7 +630,8 @@ function CardBack({ card }: { card: FeedCard }) {
         <>
           <Text style={styles.backSectionLabel}>Community</Text>
           <Text style={styles.backBody}>
-            {card.stats.median} median · {card.stats.homes} homes · vibe: {card.stats.vibe}
+            {card.stats.median} median · {card.stats.homes} homes · vibe:{' '}
+            {card.stats.vibe}
           </Text>
         </>
       )}
@@ -385,7 +643,7 @@ function CardBack({ card }: { card: FeedCard }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f3eee7', paddingTop: 60 },
-  header: { paddingHorizontal: 16, paddingBottom: 12 },
+  header: { paddingHorizontal: 16, paddingBottom: 8 },
   personaChip: {
     alignSelf: 'flex-start',
     backgroundColor: '#f59e0b',
@@ -396,6 +654,19 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
   },
+  scopeStrip: { marginTop: 10, maxHeight: 34 },
+  scopeStripInner: { gap: 6, paddingRight: 20 },
+  scopePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#1a1a1a',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 999,
+  },
+  scopePillText: { color: '#f3eee7', fontSize: 12, fontWeight: '600' },
+  scopePillX: { color: '#c9c3ba', fontSize: 14, fontWeight: '700' },
+
   stack: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   card: {
     position: 'absolute',
@@ -411,9 +682,26 @@ const styles = StyleSheet.create({
   },
   cardTop: { zIndex: 5 },
   cardNext: { zIndex: 4, opacity: 0.5, transform: [{ scale: 0.94 }] },
-  face: { position: 'absolute', inset: 0, top: 0, left: 0, right: 0, bottom: 0 },
+  face: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
   faceInner: { flex: 1 },
-  hero: { flex: 1, padding: 16 },
+  hero: { flex: 1, padding: 16, backgroundColor: '#2a3040' },
+  heroImg: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    width: '100%',
+    height: '100%',
+  },
+  heroDim: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.15)',
+  },
   kindChip: {
     alignSelf: 'flex-start',
     backgroundColor: 'rgba(255,255,255,0.9)',
@@ -473,16 +761,22 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   done: { color: '#313131', fontSize: 24, textAlign: 'center', marginTop: 200 },
-  persona: { color: '#5a5651', fontSize: 15, textAlign: 'center', marginTop: 12 },
+  persona: {
+    color: '#5a5651',
+    fontSize: 15,
+    textAlign: 'center',
+    marginTop: 12,
+  },
 
   // Back face
-  back: {
-    flex: 1,
-    backgroundColor: '#1a1a1a',
-    padding: 24,
-  },
+  back: { flex: 1, backgroundColor: '#1a1a1a', padding: 24 },
   backTitle: { color: '#fff', fontSize: 22, fontWeight: '700' },
-  backSubtitle: { color: '#c9c3ba', fontSize: 14, marginTop: 4, marginBottom: 24 },
+  backSubtitle: {
+    color: '#c9c3ba',
+    fontSize: 14,
+    marginTop: 4,
+    marginBottom: 24,
+  },
   backSectionLabel: {
     color: '#f59e0b',
     fontSize: 11,
@@ -493,7 +787,12 @@ const styles = StyleSheet.create({
   },
   traitList: { gap: 8 },
   traitRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  traitLabel: { color: '#c9c3ba', fontSize: 12, width: 70, textTransform: 'capitalize' },
+  traitLabel: {
+    color: '#c9c3ba',
+    fontSize: 12,
+    width: 70,
+    textTransform: 'capitalize',
+  },
   traitBarTrack: {
     flex: 1,
     height: 6,
@@ -502,7 +801,12 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   traitBarFill: { height: 6, backgroundColor: '#f59e0b' },
-  traitValue: { color: '#f3eee7', fontSize: 12, width: 28, textAlign: 'right' },
+  traitValue: {
+    color: '#f3eee7',
+    fontSize: 12,
+    width: 28,
+    textAlign: 'right',
+  },
   backBody: { color: '#f3eee7', fontSize: 14, marginTop: 4 },
   backHint: {
     color: '#5a5651',
@@ -511,6 +815,60 @@ const styles = StyleSheet.create({
     paddingTop: 24,
     textAlign: 'center',
   },
+
+  // Ask card
+  askDim: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  askKindChip: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#f59e0b',
+    color: '#1a1a1a',
+    fontSize: 11,
+    fontWeight: '700',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+    letterSpacing: 1,
+    overflow: 'hidden',
+  },
+  askCenter: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    padding: 32,
+  },
+  askQ: {
+    color: '#fff',
+    fontSize: 30,
+    fontWeight: '700',
+    textAlign: 'center',
+    lineHeight: 36,
+  },
+  askSub: {
+    color: '#f3eee7',
+    fontSize: 15,
+    textAlign: 'center',
+    marginTop: 12,
+    opacity: 0.9,
+  },
+  askFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    padding: 20,
+    backgroundColor: 'rgba(0,0,0,0.85)',
+  },
+  askAction: { flex: 1, alignItems: 'center' },
+  askActionNo: { color: '#c9c3ba', fontSize: 15, fontWeight: '600' },
+  askActionYes: { color: '#f59e0b', fontSize: 15, fontWeight: '700' },
 
   // Toast
   toast: {

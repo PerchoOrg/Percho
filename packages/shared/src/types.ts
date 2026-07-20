@@ -3,15 +3,10 @@
  *
  * Keep this file minimal — only types that both surfaces consume via the
  * pagination API, feed cards, persona derivation, and scope strip.
- *
- * Anything web-only (Supabase Row types, Next.js response shapes, SSR
- * props) stays in @percho/web. Anything mobile-only (Expo asset URIs,
- * navigation params) stays in @percho/mobile.
  */
 
 // ─── Trait vocabulary ────────────────────────────────────────────────
 // Ported from vibe/_data.js. Trait values are 0-100 percentages.
-// Keep the union closed so downstream code can exhaustively switch.
 
 export type TraitKey =
   | 'family'
@@ -27,7 +22,7 @@ export type TraitScores = Partial<Record<TraitKey, number>>;
 
 // ─── Feed cards ──────────────────────────────────────────────────────
 
-export type CardKind = 'community' | 'listing';
+export type CardKind = 'community' | 'listing' | 'ask';
 
 export interface CommunityCard {
   kind: 'community';
@@ -55,14 +50,35 @@ export interface ListingCard {
   heroUrl: string;
   videoUrl?: string;
   communityId?: string;
-  matchScore?: number; // 0-100
+  matchScore?: number;
 }
 
-export type FeedCard = CommunityCard | ListingCard;
+// Ask-card = one yes/no question injected inline in the feed to collect
+// scope signal (intent/region/metro/culture). Swipe right = yes (chip
+// pinned to scope strip), swipe left = no (chip cleared for that layer).
+export type ScopeLayer =
+  | 'intent'
+  | 'region'
+  | 'state'
+  | 'metro'
+  | 'city'
+  | 'culture'
+  | 'style';
+
+export interface AskCard {
+  kind: 'ask';
+  id: string; // stable id for dedupe (e.g. "ask-intent-primary")
+  scopeType: ScopeLayer;
+  scopeValue: string; // e.g. "primary", "atl", "trails"
+  q: string;
+  sub: string;
+  heroUrl: string;
+  chipLabel: string; // e.g. "🏡 Primary"
+}
+
+export type FeedCard = CommunityCard | ListingCard | AskCard;
 
 // ─── Feed pagination API contract ────────────────────────────────────
-// Shape returned by GET /api/browse/feed?offset=N&limit=M.
-// See paginated-feed-and-swipe-ui skill for the pagination invariants.
 
 export interface FeedPage {
   cards: FeedCard[];
@@ -75,14 +91,12 @@ export interface FeedPage {
 
 export interface Persona {
   name: string;
+  desc: string;
   traits: TraitScores;
-  count: number; // number of swipes weighted into this persona
+  count: number;
 }
 
 // ─── Scope strip ─────────────────────────────────────────────────────
-// Persistent user-declared filters that ride above the feed.
-
-export type ScopeLayer = 'intent' | 'region' | 'metro' | 'culture';
 
 export interface ScopeChip {
   layer: ScopeLayer;

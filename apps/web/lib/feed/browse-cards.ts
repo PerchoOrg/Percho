@@ -367,7 +367,10 @@ async function assembleCards(
   return cards;
 }
 
-export async function fetchBrowseCards(): Promise<BrowseCard[]> {
+export async function fetchBrowseCards(
+  offset = 0,
+  limit = FEED_LIMIT,
+): Promise<BrowseCard[]> {
   const supabase = await createClient();
 
   // biome-ignore lint/suspicious/noExplicitAny: stub generated types
@@ -378,7 +381,7 @@ export async function fetchBrowseCards(): Promise<BrowseCard[]> {
     )
     .eq('status', 'active')
     .order('created_at', { ascending: false })
-    .limit(FEED_LIMIT)) as { data: ListingRow[] | null };
+    .range(offset, offset + limit - 1)) as { data: ListingRow[] | null };
 
   const listings = rawListings ?? [];
   return assembleCards(listings, supabase);
