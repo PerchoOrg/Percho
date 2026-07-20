@@ -1,16 +1,16 @@
 /**
- * Zod schemas for community editor (Phase 4.4; Phase 50.4 expansion).
+ * Zod schemas for community editor.
  *
  * Communities are V1-shared (no per-agent ownership), but schools/pois carry
  * `recorded_by` + `source_url` for fair-housing audit. The `source_url`
  * constraint is enforced at the DB level (`text not null`) AND here so the
  * UI can give a clear error before round-tripping.
  *
- * Phase 50.4 (2026-06-22): adds 10 optional metadata fields to
+ * adds 10 optional metadata fields to
  * UpdateCommunityInput so agents can describe communities richly without
  * being forced into rigid numeric/enum types.
  *
- * Phase 50.5 (2026-06-22): owner asked for input parity with the listing
+ * owner asked for input parity with the listing
  * editor — year built / HOA / price are all typed numerics on the listing
  * side with `$` and `/month` adornments, so we mirror that exactly:
  *   - year_built_text   → year_built       (int, 1800–2100)
@@ -18,7 +18,7 @@
  *   - price_range_text  → price_min/price_max (int dollars, min ≤ max)
  * Other 50.4 fields keep their string/array shapes.
  *
- * Phase 50.6 (2026-06-22): "range makes sense for some fields, but make
+ * "range makes sense for some fields, but make
  * them low-friction." Year built becomes a soft range — `year_built_end`
  * is optional, the UI keeps a single input by default and reveals the
  * second only when the agent clicks "+ Add end year". Price stays
@@ -27,7 +27,7 @@
 
 import { z } from 'zod';
 
-// Property types — Zillow-style consumer-facing labels. Phase 50.7 swap:
+// Property types — Zillow-style consumer-facing labels. swap:
 // "Active Adult 55+" / "New Construction" / "Resale" / "Custom Build"
 // were industry jargon (and confusingly mixed type with sale-stage). NAR's
 // canonical residential property types are what buyers actually filter on.
@@ -69,61 +69,63 @@ export const CreateCommunityInput = z.object({
 });
 export type CreateCommunityInput = z.infer<typeof CreateCommunityInput>;
 
-export const UpdateCommunityInput = z.object({
-  name: z
-    .string()
-    .min(2, 'Name must be at least 2 characters')
-    .max(120, 'Name must be 120 characters or fewer'),
-  city: z.string().trim().min(1, 'City is required').max(80, 'City must be 80 characters or fewer'),
-  state: z.string().length(2, 'State must be a 2-letter code (e.g. GA)'),
-  description: z.string().max(2000, 'Description must be 2000 characters or fewer').nullable(),
+export const UpdateCommunityInput = z
+  .object({
+    name: z
+      .string()
+      .min(2, 'Name must be at least 2 characters')
+      .max(120, 'Name must be 120 characters or fewer'),
+    city: z
+      .string()
+      .trim()
+      .min(1, 'City is required')
+      .max(80, 'City must be 80 characters or fewer'),
+    state: z.string().length(2, 'State must be a 2-letter code (e.g. GA)'),
+    description: z.string().max(2000, 'Description must be 2000 characters or fewer').nullable(),
 
-  // Phase 50.4 — all optional, all nullable. Server-side normalization
-  // (empty string → null, empty array → null) lives in updateCommunity().
-  // Phase 50.7: zip is now required (with city) per owner — agents need
-  // both for buyer-side geo filtering. Tagline column dropped.
-  zip: z.string().trim().min(1, 'ZIP is required').max(10, 'ZIP must be 10 characters or fewer'),
-  county: optionalText(80, 'County'),
-  year_built: z
-    .number()
-    .int('Year built must be a whole number')
-    .min(1800, 'Year built must be 1800 or later')
-    .max(2100, 'Year built must be 2100 or earlier')
-    .optional()
-    .nullable(),
-  year_built_end: z
-    .number()
-    .int('End year must be a whole number')
-    .min(1800, 'End year must be 1800 or later')
-    .max(2100, 'End year must be 2100 or earlier')
-    .optional()
-    .nullable(),
-  hoa_fee_monthly: z
-    .number()
-    .int('HOA fee must be a whole number of dollars')
-    .min(0, 'HOA fee cannot be negative')
-    .optional()
-    .nullable(),
-  price_min: z.number().int().min(0, 'Price cannot be negative').optional().nullable(),
-  price_max: z.number().int().min(0, 'Price cannot be negative').optional().nullable(),
-  property_types: z
-    .array(z.enum(COMMUNITY_PROPERTY_TYPES))
-    .max(COMMUNITY_PROPERTY_TYPES.length, 'Too many property types selected')
-    .optional()
-    .nullable(),
-  highlights: z
-    .array(z.string().min(1).max(80, 'Each highlight must be 80 characters or fewer'))
-    .max(8, 'You can add up to 8 highlights')
-    .optional()
-    .nullable(),
-  builder: optionalText(120, 'Builder'),
-  website: optionalUrl,
-})
+    // all optional, all nullable. Server-side normalization
+    // (empty string → null, empty array → null) lives in updateCommunity().
+    // zip is now required (with city) per owner — agents need
+    // both for buyer-side geo filtering. Tagline column dropped.
+    zip: z.string().trim().min(1, 'ZIP is required').max(10, 'ZIP must be 10 characters or fewer'),
+    county: optionalText(80, 'County'),
+    year_built: z
+      .number()
+      .int('Year built must be a whole number')
+      .min(1800, 'Year built must be 1800 or later')
+      .max(2100, 'Year built must be 2100 or earlier')
+      .optional()
+      .nullable(),
+    year_built_end: z
+      .number()
+      .int('End year must be a whole number')
+      .min(1800, 'End year must be 1800 or later')
+      .max(2100, 'End year must be 2100 or earlier')
+      .optional()
+      .nullable(),
+    hoa_fee_monthly: z
+      .number()
+      .int('HOA fee must be a whole number of dollars')
+      .min(0, 'HOA fee cannot be negative')
+      .optional()
+      .nullable(),
+    price_min: z.number().int().min(0, 'Price cannot be negative').optional().nullable(),
+    price_max: z.number().int().min(0, 'Price cannot be negative').optional().nullable(),
+    property_types: z
+      .array(z.enum(COMMUNITY_PROPERTY_TYPES))
+      .max(COMMUNITY_PROPERTY_TYPES.length, 'Too many property types selected')
+      .optional()
+      .nullable(),
+    highlights: z
+      .array(z.string().min(1).max(80, 'Each highlight must be 80 characters or fewer'))
+      .max(8, 'You can add up to 8 highlights')
+      .optional()
+      .nullable(),
+    builder: optionalText(120, 'Builder'),
+    website: optionalUrl,
+  })
   .refine(
-    (data) =>
-      data.price_min == null ||
-      data.price_max == null ||
-      data.price_min <= data.price_max,
+    (data) => data.price_min == null || data.price_max == null || data.price_min <= data.price_max,
     {
       message: 'Price (from) must be less than or equal to price (to)',
       path: ['price_max'],

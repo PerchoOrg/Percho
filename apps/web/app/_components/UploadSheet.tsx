@@ -4,7 +4,7 @@
  * UploadSheet — bottom-sheet "create" entry point shared by the mobile
  * UploadFAB (BottomNav center) and the desktop sidebar "+ New" trigger.
  *
- * Phase 52 (2026-06-24): collapsed from a 2-step flow (Album/Camera →
+ * collapsed from a 2-step flow (Album/Camera →
  * file picker → type picker) into a single type-picker. The agent now
  * answers ONE question — "Listing or Community?" — and lands on the
  * detail page of a freshly stubbed row. Photos and video upload from

@@ -1,4 +1,4 @@
--- Phase 71.7 (2026-07-06): dual-orientation rendered videos.
+-- dual-orientation rendered videos.
 --
 -- The render worker produces a portrait 1080x1920 video for the swipe feed
 -- (default). When ≥80% of the listing's photos are landscape, it also

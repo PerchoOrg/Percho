@@ -5,7 +5,7 @@
  *   - `/v/[agentSlug]/[listingSlug]` (public, published-only)
  *   - `/dashboard/listings/[id]/preview` (owner-only, any status)
  *
- * Extracted from the public listing page on 2026-06-17 (Phase 27.10) so
+ * Extracted from the public listing page on 2026-06-17 so
  * draft / archived previews can reuse the exact BrowseFeed render path.
  *
  * Two entry points:
@@ -31,16 +31,20 @@ type Agent = {
   name: string;
   email: string | null;
   phone: string | null;
+  // set only for synthesised external (FMLS) agents.
+  office?: string | null;
+  isExternal?: boolean;
 };
 
 export type ListingForFeed = {
   id: string;
   slug: string;
-  agent_id: string;
+  agent_id: string | null;
   community_id: string | null;
   address: string;
   city: string;
   state: string;
+  zip?: string | null;
   price: number | null;
   beds: number | null;
   baths: number | null;
@@ -48,6 +52,12 @@ export type ListingForFeed = {
   cover_url: string | null;
   description: string[] | null;
   status: string;
+  // external attribution + provenance.
+  external_agent_name?: string | null;
+  external_agent_phone?: string | null;
+  external_office?: string | null;
+  source?: string | null;
+  source_id?: string | null;
 };
 
 type Community = { id: string; name: string; description: string | null };
@@ -105,17 +115,86 @@ async function fetchAroundListing(
     .eq('status', 'ready')
     .order('sort_order', { ascending: true })) as { data: ListingVideo[] | null };
 
-  let communityVideos: CommunityVideo[] = [];
+  const communityVideos: CommunityVideo[] = [];
   let schools: School[] = [];
   let pois: Poi[] = [];
+
+  // nearby videos are anchored to the listing, not
+  // the community. Owner rule: only look at POIs near the listing
+  // itself. Any nearby video should surface. If that nearby video
+  // happens to live inside a neighbor, it can be shown alongside. So
+  // we always pull listing-scoped bucket videos, and additionally
+  // union the covering community's videos (manual uploads + community-scoped
+  // bucket generation) when the listing has one.
+  const { data: listingBucketRows } = (await supabase
+    .from('generated_videos')
+    .select('id, cf_stream_uid, intent_bucket, narrative')
+    .eq('listing_id', listing.id)
+    .eq('scope', 'listing_intent_bucket')
+    .eq('status', 'ready')) as {
+    data: Array<{
+      id: string;
+      cf_stream_uid: string | null;
+      intent_bucket: string | null;
+      narrative: { title?: string; voiceover?: string } | null;
+    }> | null;
+  };
+  const seenCfIds = new Set<string>();
+  for (const r of listingBucketRows ?? []) {
+    if (!r.cf_stream_uid || seenCfIds.has(r.cf_stream_uid)) continue;
+    seenCfIds.add(r.cf_stream_uid);
+    communityVideos.push({
+      id: r.id,
+      cf_video_id: r.cf_stream_uid,
+      kind: 'poi',
+      title: r.narrative?.title ?? null,
+      category: null,
+      school_id: null,
+      poi_id: null,
+    });
+  }
+
   if (listing.community_id) {
     const cv = (await supabase
       .from('community_videos')
       .select('id, cf_video_id, kind, title, category, school_id, poi_id')
       .eq('community_id', listing.community_id)
       .eq('status', 'ready')
-      .eq('visibility', 'public')) as { data: CommunityVideo[] | null };
-    communityVideos = cv.data ?? [];
+      .eq('visibility', 'public')
+      // skip history renders (is_primary=false).
+      .eq('is_primary', true)) as { data: CommunityVideo[] | null };
+    for (const v of cv.data ?? []) {
+      if (seenCfIds.has(v.cf_video_id)) continue;
+      seenCfIds.add(v.cf_video_id);
+      communityVideos.push(v);
+    }
+
+    const { data: communityBucketRows } = (await supabase
+      .from('generated_videos')
+      .select('id, cf_stream_uid, intent_bucket, narrative')
+      .eq('community_id', listing.community_id)
+      .eq('scope', 'community_intent_bucket')
+      .eq('status', 'ready')) as {
+      data: Array<{
+        id: string;
+        cf_stream_uid: string | null;
+        intent_bucket: string | null;
+        narrative: { title?: string; voiceover?: string } | null;
+      }> | null;
+    };
+    for (const r of communityBucketRows ?? []) {
+      if (!r.cf_stream_uid || seenCfIds.has(r.cf_stream_uid)) continue;
+      seenCfIds.add(r.cf_stream_uid);
+      communityVideos.push({
+        id: r.id,
+        cf_video_id: r.cf_stream_uid,
+        kind: 'poi',
+        title: r.narrative?.title ?? null,
+        category: null,
+        school_id: null,
+        poi_id: null,
+      });
+    }
 
     const sc = (await supabase
       .from('schools')
@@ -130,39 +209,6 @@ async function fetchAroundListing(
     pois = po.data ?? [];
   }
 
-  // Phase 101 (2026-07-16): listings without a covering community still get
-  // nearby videos via listing-scoped bucket generation. Union those into
-  // communityVideos so the card builder sees them as normal category cards.
-  // We only union when the listing has no community_id — mixing both would
-  // double up the same POIs (community wins because it aggregates across
-  // siblings).
-  if (!listing.community_id) {
-    const { data: lgv } = (await supabase
-      .from('generated_videos')
-      .select('id, cf_stream_uid, intent_bucket, narrative')
-      .eq('listing_id', listing.id)
-      .eq('scope', 'listing_intent_bucket')
-      .eq('status', 'ready')) as {
-      data: Array<{
-        id: string;
-        cf_stream_uid: string | null;
-        intent_bucket: string | null;
-        narrative: { title?: string; voiceover?: string } | null;
-      }> | null;
-    };
-    communityVideos = (lgv ?? [])
-      .filter((r) => r.cf_stream_uid)
-      .map((r) => ({
-        id: r.id,
-        cf_video_id: r.cf_stream_uid as string,
-        kind: 'poi',
-        title: r.narrative?.title ?? null,
-        category: null,
-        school_id: null,
-        poi_id: null,
-      }));
-  }
-
   return {
     agent,
     listing,
@@ -172,6 +218,46 @@ async function fetchAroundListing(
     schools,
     pois,
   };
+}
+
+/**
+ * external listing loader — `/v/{source}/{sourceId}`.
+ * Looks up an FMLS (or other externally-sourced) listing by its provenance
+ * key.  Synthesises an in-memory `Agent` from `external_agent_name/phone/office`
+ * so the downstream `buildListingCards` path can render identically to
+ * agent-owned listings (with `isExternal=true` gating the caption card).
+ */
+export async function loadListingFeedBySource(
+  source: string,
+  sourceId: string,
+  opts: { statuses?: string[] } = {},
+): Promise<ListingFeedBundle | null> {
+  const statuses = opts.statuses ?? ['active'];
+  const supabase = await createClient();
+
+  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
+  const { data: listing } = (await (supabase as any)
+    .from('listings')
+    .select(
+      'id, slug, agent_id, community_id, address, city, state, zip, price, beds, baths, sqft, cover_url, description, status, external_agent_name, external_agent_phone, external_office, source, source_id',
+    )
+    .eq('source', source)
+    .eq('source_id', sourceId)
+    .in('status', statuses)
+    .maybeSingle()) as { data: ListingForFeed | null };
+  if (!listing) return null;
+
+  const agent: Agent = {
+    id: '',
+    slug: '',
+    name: listing.external_agent_name ?? 'FMLS Agent',
+    email: null,
+    phone: listing.external_agent_phone ?? null,
+    office: listing.external_office ?? null,
+    isExternal: true,
+  };
+
+  return fetchAroundListing(supabase, agent, listing);
 }
 
 /**
@@ -198,7 +284,7 @@ export async function loadListingFeedBySlug(
   const { data: listing } = (await (supabase as any)
     .from('listings')
     .select(
-      'id, slug, agent_id, community_id, address, city, state, price, beds, baths, sqft, cover_url, description, status',
+      'id, slug, agent_id, community_id, address, city, state, zip, price, beds, baths, sqft, cover_url, description, status, external_agent_name, external_agent_phone, external_office, source, source_id',
     )
     .eq('agent_id', agent.id)
     .eq('slug', listingSlug)
@@ -213,20 +299,23 @@ export async function loadListingFeedBySlug(
  * Dashboard preview entry. Ignores status (RLS scopes to owner's listings).
  * Joins agent through the listing.
  */
-export async function loadListingFeedById(
-  listingId: string,
-): Promise<ListingFeedBundle | null> {
+export async function loadListingFeedById(listingId: string): Promise<ListingFeedBundle | null> {
   const supabase = await createClient();
 
   // biome-ignore lint/suspicious/noExplicitAny: stub generated types
   const { data: listing } = (await (supabase as any)
     .from('listings')
     .select(
-      'id, slug, agent_id, community_id, address, city, state, price, beds, baths, sqft, cover_url, description, status',
+      'id, slug, agent_id, community_id, address, city, state, zip, price, beds, baths, sqft, cover_url, description, status, external_agent_name, external_agent_phone, external_office, source, source_id',
     )
     .eq('id', listingId)
     .maybeSingle()) as { data: ListingForFeed | null };
   if (!listing) return null;
+
+  // dashboard preview is Percho-agent only. External
+  // listings (FMLS) have agent_id IS NULL and aren't editable via dashboard,
+  // so bail if we land here.
+  if (!listing.agent_id) return null;
 
   // biome-ignore lint/suspicious/noExplicitAny: stub generated types
   const { data: agent } = (await (supabase as any)
@@ -248,62 +337,16 @@ export async function loadListingFeedById(
  */
 export async function buildListingCards(
   bundle: ListingFeedBundle,
-  photos: { id: string; storage_path: string; alt_text: string | null; sort_order: number }[] | null,
+  photos:
+    | { id: string; storage_path: string; alt_text: string | null; sort_order: number }[]
+    | null,
 ): Promise<BrowseCard[]> {
   const { agent, listing, listingVideos, communityVideos, schools, pois } = bundle;
 
-  if (listingVideos.length === 0) {
-    if (!photos || photos.length === 0) return [];
-    const { photoPublicUrl } = await import('@/lib/supabase/storage');
-    const heroStoragePath = photos[0]?.storage_path;
-    if (!heroStoragePath) return [];
-    const photoCard: BrowseCard = {
-      id: `photo:${listing.id}`,
-      mediaKind: 'photo',
-      hero: { cfVideoId: '' },
-      heroPhotoUrl: photoPublicUrl(heroStoragePath),
-      photos: photos.map((p) => photoPublicUrl(p.storage_path)),
-      categoryVideos: [],
-      photoSchools: schools.map((s) => ({
-        name: s.name,
-        grades: s.grades,
-        rating: s.rating,
-      })),
-      photoPois: pois.map((p) => ({ name: p.name, distance_text: p.distance_text })),
-      listing: {
-        id: listing.id,
-        slug: listing.slug,
-        address: listing.address,
-        city: listing.city,
-        state: listing.state,
-        zip: (listing as any).zip ?? null,
-        price: listing.price,
-        beds: listing.beds,
-        baths: listing.baths,
-        sqft: listing.sqft,
-        description: (listing.description ?? []).filter((s) => s && s.trim().length > 0),
-      },
-      agent: {
-        slug: agent.slug,
-        name: agent.name,
-        email: agent.email,
-        phone: agent.phone,
-      },
-    };
-    return [photoCard];
-  }
-
-  const hero = listingVideos[0];
-  if (!hero) return [];
-
-  const heroVideos = listingVideos.map((v) => ({
-    cfVideoId: v.cf_video_id ?? '',
-    cfVideoIdLandscape: v.cf_video_id_landscape ?? null,
-    externalUrl: v.external_url ?? null,
-    line1: v.title ?? listing.address,
-    line2: `${listing.city}, ${listing.state}`,
-  }));
-
+  // categoryVideos are built the same way whether the
+  // listing hero is a video or a photo. Nearby (listing- + community-scoped)
+  // videos must render on photo-only listings too — hoisted out of the video
+  // branch so the photo fallback stops hard-coding `[]`.
   const categoryMetaById = new Map(COMMUNITY_VIDEO_CATEGORIES.map((m) => [m.id, m] as const));
   const categoryVideos = communityVideos.map((v) => {
     let categoryId: CommunityVideoCategoryId | null = null;
@@ -329,6 +372,62 @@ export async function buildListingCards(
       category: categoryId,
     };
   });
+
+  if (listingVideos.length === 0) {
+    if (!photos || photos.length === 0) return [];
+    const { photoPublicUrl } = await import('@/lib/supabase/storage');
+    const heroStoragePath = photos[0]?.storage_path;
+    if (!heroStoragePath) return [];
+    const photoCard: BrowseCard = {
+      id: `photo:${listing.id}`,
+      mediaKind: 'photo',
+      hero: { cfVideoId: '' },
+      heroPhotoUrl: photoPublicUrl(heroStoragePath),
+      photos: photos.map((p) => photoPublicUrl(p.storage_path)),
+      categoryVideos,
+      photoSchools: schools.map((s) => ({
+        name: s.name,
+        grades: s.grades,
+        rating: s.rating,
+      })),
+      photoPois: pois.map((p) => ({ name: p.name, distance_text: p.distance_text })),
+      listing: {
+        id: listing.id,
+        slug: listing.slug,
+        address: listing.address,
+        city: listing.city,
+        state: listing.state,
+        zip: (listing as any).zip ?? null,
+        price: listing.price,
+        beds: listing.beds,
+        baths: listing.baths,
+        sqft: listing.sqft,
+        description: (listing.description ?? []).filter((s) => s && s.trim().length > 0),
+        source: listing.source ?? null,
+        sourceId: listing.source_id ?? null,
+      },
+      agent: {
+        slug: agent.slug,
+        name: agent.name,
+        email: agent.email,
+        phone: agent.phone,
+        office: agent.office ?? null,
+        isExternal: agent.isExternal ?? false,
+      },
+    };
+    return [photoCard];
+  }
+
+  const hero = listingVideos[0];
+  if (!hero) return [];
+
+  const heroVideos = listingVideos.map((v) => ({
+    cfVideoId: v.cf_video_id ?? '',
+    cfVideoIdLandscape: v.cf_video_id_landscape ?? null,
+    externalUrl: v.external_url ?? null,
+    line1: v.title ?? listing.address,
+    line2: `${listing.city}, ${listing.state}`,
+  }));
 
   const card: BrowseCard = {
     id: hero.cf_video_id ?? hero.cf_video_id_landscape ?? `ext:${hero.id}`,

@@ -4,8 +4,7 @@
  * CommunityBody — client island that owns both the hero (so a CTA pill can sit
  * absolute inside it) and the videos/listings grid below.
  *
- * Phase 45.28 (2026-06-21, owner immersion pass):
- *   - Hero shrunk: aspect-[16/7] → aspect-[5/2] mobile (~9% shorter),
+ * *   - Hero shrunk: aspect-[16/7] → aspect-[5/2] mobile (~9% shorter),
  *     md:aspect-[21/5] → md:aspect-[5/1] desktop (~16% shorter).
  *   - Removed the [Community Videos | Active Listings] pill toggle row —
  *     videos render by default so the grid butts directly against the hero
@@ -16,7 +15,7 @@
  *   - Hero moved out of page.tsx into this client island so the CTA can
  *     drive the videos/listings tab state without a route round-trip.
  *
- * Phase 47.2 (2026-06-21): videos + listings grids refactored on top of
+ * videos + listings grids refactored on top of
  * GridFrame + GridCard / ListingGrid so /c/[slug] matches /browse,
  * /communities, /dashboard, /dashboard/communities, /saved, /nearby — all
  * grid surfaces now share aspect-[3/4], gap-1 md:gap-1.5, and identical
@@ -27,14 +26,15 @@ import type { BrowseCard } from '@/app/(public)/browse/_components/BrowseFeed';
 import { GridCard, GridCardCaption } from '@/app/_components/GridCard';
 import { GridFrame } from '@/app/_components/GridFrame';
 import { ListingGrid, type ListingGridItem } from '@/app/_components/ListingGrid';
-import type { GeoJsonPolygonLike } from '@/lib/geo/point-in-polygon';
+import { HeroControl } from '@/app/dashboard/_components/HeroControl';
 import { thumbnailUrl } from '@/lib/cloudflare/stream';
 import { track } from '@/lib/events/track';
+import { linkForCard } from '@/lib/feed/link-for-card';
+import type { GeoJsonPolygonLike } from '@/lib/geo/point-in-polygon';
 import {
   COMMUNITY_VIDEO_CATEGORIES,
   type CommunityVideoCategoryId,
 } from '@/lib/zod/community-video-categories';
-import { HeroControl } from '@/app/dashboard/_components/HeroControl';
 import { useEffect, useState } from 'react';
 import { CommunityBoundaryMap } from './CommunityBoundaryMap';
 
@@ -79,7 +79,7 @@ export function CommunityBody({
 }) {
   const [tab, setTab] = useState<Tab>('videos');
 
-  // Phase 50: fire one page_view per community visit so the agent's
+  // fire one page_view per community visit so the agent's
   // Analytics tab on /dashboard/communities/[id] has data to show. The
   // events route enforces XOR(listing_id, community_id) — we only set
   // community_id here.
@@ -102,7 +102,7 @@ export function CommunityBody({
           <div className="absolute inset-0 bg-gradient-to-br from-bronze/30 to-ink" />
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-ink via-ink/60 to-ink/10" />
-        {/* Phase 67.9: top-left ← Back chip — same HeroControl style as the
+        {/* top-left ← Back chip — same HeroControl style as the
             agent dashboard hero, returning the buyer to the /communities
             grid (Explore tab). */}
         <div className="absolute left-3 top-3 z-10 sm:left-5 sm:top-5">
@@ -112,7 +112,7 @@ export function CommunityBody({
           <h1 className="font-semibold text-2xl text-cream tracking-tight sm:text-3xl">
             {community.name}
           </h1>
-          {/* Phase 45.28.6: CTA folds back inline (variant I1).
+          {/* CTA folds back inline (variant I1).
            *   Same line as the city, weight 600 / pure white /
            *   1.5px underline / arrow. Loud enough to land in 1s but
            *   still reads as a sentence, not chrome. State-flips to
@@ -148,7 +148,7 @@ export function CommunityBody({
         </div>
       </div>
 
-      {/* Phase 87.1 / 87.2: Nextdoor demographics + tag chips + nearby.
+      {/* / 87.2: Nextdoor demographics + tag chips + nearby.
           Data we already have in the DB, rendered as three white-card
           sections. Anything empty collapses — we don't fabricate. */}
       <CommunityStats
@@ -161,7 +161,7 @@ export function CommunityBody({
         nearby={nearby}
       />
 
-      {/* Body — Phase 47.2: padding aligned with grid gap (px-1 md:px-1.5)
+      {/* Body — padding aligned with grid gap (px-1 md:px-1.5)
           so the outer margin matches inter-card gutters and matches
           GridPageShell elsewhere. */}
       <div className="px-1 py-4 md:px-1.5">
@@ -172,7 +172,7 @@ export function CommunityBody({
         )}
       </div>
 
-      {/* Phase 87: neighborhood boundary map, so buyers can see the actual
+      {/* neighborhood boundary map, so buyers can see the actual
           shape of the community they are considering. Lazy-loaded MapLibre
           + Carto Positron — no vendor token, no bill. */}
       {boundary ? (
@@ -244,7 +244,7 @@ function ListingsGrid({ listings }: { listings: BrowseCard[] }) {
     );
   }
   const items: ListingGridItem[] = listings.map((card) => {
-    // Phase 60: agent's cover_url wins over the mediaKind hero.
+    // agent's cover_url wins over the mediaKind hero.
     const realSrc =
       card.gridCoverUrl ??
       (card.mediaKind === 'video'
@@ -255,7 +255,7 @@ function ListingsGrid({ listings }: { listings: BrowseCard[] }) {
       href:
         card.mediaKind === 'video'
           ? `/browse/feed?start=${encodeURIComponent(card.listing.id)}`
-          : `/v/${card.agent.slug}/${card.listing.slug}`,
+          : linkForCard(card),
       coverUrl: realSrc ?? null,
       price: card.listing.price,
       beds: card.listing.beds,
@@ -271,7 +271,7 @@ function ListingsGrid({ listings }: { listings: BrowseCard[] }) {
 }
 
 /**
- * Phase 87.1 / 87.2: community stats + tag chips + nearby.
+ * / 87.2: community stats + tag chips + nearby.
  *
  * Layout mirrors the buyer-detail mock at
  *   videos-anytime-get-plugin.trycloudflare.com/detail.html
@@ -312,8 +312,7 @@ function CommunityStats({
   const ints = (interests ?? []).slice(0, 10);
   const nrb = nearby.slice(0, 6);
 
-  const hasAnything =
-    stats.length > 0 || attrs.length > 0 || ints.length > 0 || nrb.length > 0;
+  const hasAnything = stats.length > 0 || attrs.length > 0 || ints.length > 0 || nrb.length > 0;
   if (!hasAnything) return null;
 
   return (
@@ -321,17 +320,12 @@ function CommunityStats({
       {stats.length > 0 ? (
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           {stats.map((s) => (
-            <div
-              key={s.label}
-              className="rounded-xl border border-line bg-surface px-3 py-2.5"
-            >
+            <div key={s.label} className="rounded-xl border border-line bg-surface px-3 py-2.5">
               <div className="text-muted text-xs">
                 <span className="mr-1">{s.icon}</span>
                 {s.label}
               </div>
-              <div className="mt-0.5 font-semibold text-ink text-lg sm:text-xl">
-                {s.value}
-              </div>
+              <div className="mt-0.5 font-semibold text-ink text-lg sm:text-xl">{s.value}</div>
             </div>
           ))}
         </div>
@@ -355,9 +349,7 @@ function CommunityStats({
 
       {ints.length > 0 ? (
         <div className="rounded-xl border border-line bg-surface p-4">
-          <div className="mb-2 font-semibold text-ink text-sm">
-            What neighbors are into
-          </div>
+          <div className="mb-2 font-semibold text-ink text-sm">What neighbors are into</div>
           <div className="flex flex-wrap gap-1.5">
             {ints.map((i) => (
               <span
@@ -373,16 +365,12 @@ function CommunityStats({
 
       {nrb.length > 0 ? (
         <div className="rounded-xl border border-line bg-surface p-4">
-          <div className="mb-2 font-semibold text-ink text-sm">
-            Nearby neighborhoods
-          </div>
+          <div className="mb-2 font-semibold text-ink text-sm">Nearby neighborhoods</div>
           <div className="grid grid-cols-2 gap-2">
             {nrb.map((n) => {
               const inner = (
                 <>
-                  <div className="truncate font-medium text-ink text-sm">
-                    {n.name}
-                  </div>
+                  <div className="truncate font-medium text-ink text-sm">{n.name}</div>
                   <div className="truncate text-muted text-xs">
                     {n.city ? `${n.city}, ${n.state}` : n.state}
                   </div>
@@ -397,10 +385,7 @@ function CommunityStats({
                   {inner}
                 </a>
               ) : (
-                <div
-                  key={n.name}
-                  className="rounded-lg border border-line bg-bg p-2 opacity-70"
-                >
+                <div key={n.name} className="rounded-lg border border-line bg-bg p-2 opacity-70">
                   {inner}
                 </div>
               );

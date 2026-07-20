@@ -1,12 +1,12 @@
 /**
- * /dashboard/listings/[id]/edit — listing detail (Phase 47.5–47.8 rebuild).
+ * /dashboard/listings/[id]/edit — listing detail.
  *
  * Hero: 3-section grid header (HeroHeader) — Row 1 chromeless controls,
  * Row 2 left-aligned title/subtitle, Row 3 three frosted-glass stats
  * (Views / Saves / Leads). No absolute positioning. No overlap risk.
  *
  * Tabs (5): Details · Media · Marketing · Leads · Analytics.
- *   - Nearby lives on the community page (Phase 93 cleanup, 2026-07-16) —
+ *   - Nearby lives on the community page —
  *     POI content is neighborhood-scoped, not per-listing.
  *   - "Marketing" merges the old Social + Tour tabs (sub-tabs inside).
  *   - "Leads" is a per-listing slice of the global lead inbox.
@@ -22,21 +22,21 @@ import { thumbnailUrl } from '@/lib/cloudflare/stream';
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 
-import { HubTabs } from '@/app/dashboard/_components/HubTabs';
-import { FileText, ImageIcon, Users, LineChart } from 'lucide-react';
-import { HeroHeader } from '@/app/dashboard/_components/HeroHeader';
 import { HeroControl } from '@/app/dashboard/_components/HeroControl';
+import { HeroHeader } from '@/app/dashboard/_components/HeroHeader';
+import { HubTabs } from '@/app/dashboard/_components/HubTabs';
 import { InstantStatusToggle } from '@/app/dashboard/_components/InstantStatusToggle';
+import { FileText, ImageIcon, LineChart, Users } from 'lucide-react';
 
-import { type CommunityOption, EditListingForm, type ListingContext } from './EditListingForm';
-import { DraftAddressPanel } from './DraftAddressPanel';
-import { isDraftAddress } from '@/app/dashboard/listings/draft';
-import type { ListingPhotoRow } from './PhotoPanel';
-import { MediaPanel } from './MediaPanel';
-import type { ListingVideoRow } from './VideoPanel';
-import { ListingLeadsPanel } from './ListingLeadsPanel';
 import { AnalyticsPanel } from '@/app/dashboard/_components/AnalyticsPanel';
+import { isDraftAddress } from '@/app/dashboard/listings/draft';
 import { DangerZone } from './DangerZone';
+import { DraftAddressPanel } from './DraftAddressPanel';
+import { type CommunityOption, EditListingForm } from './EditListingForm';
+import { ListingLeadsPanel } from './ListingLeadsPanel';
+import { MediaPanel } from './MediaPanel';
+import type { ListingPhotoRow } from './PhotoPanel';
+import type { ListingVideoRow } from './VideoPanel';
 
 interface ListingRow {
   id: string;
@@ -71,7 +71,7 @@ export default async function EditListingPage({
   const { id } = await params;
   await searchParams; // tab handled client-side by HubTabs
   const supabase = await createClient();
-  // Phase 53D: getSession() reads cookie locally (~5ms) instead of round-tripping
+  // getSession() reads cookie locally (~5ms) instead of round-tripping
   // to Supabase to validate the JWT (~150ms). Middleware re-validates on each
   // request — page-level check is defense-in-depth, not the source of truth.
   const {
@@ -120,7 +120,7 @@ export default async function EditListingPage({
   const photos = photosResp.data ?? [];
 
   // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  // Phase 72: only surface active communities in the listing → community
+  // only surface active communities in the listing → community
   // dropdown. Draft stubs ('Untitled community') and any inactive/incomplete
   // community (no cover, no name) must not leak into the picker.
   const { data: communitiesRaw } = (await (supabase as any)
@@ -182,13 +182,6 @@ export default async function EditListingPage({
 
   const heroTitle = draft ? 'New listing' : listing.address;
 
-  const listingContext: ListingContext = {
-    address: listing.address,
-    city: listing.city,
-    state: listing.state,
-    neighborhood: listing.neighborhood,
-  };
-
   return (
     <>
       <HeroHeader
@@ -209,10 +202,22 @@ export default async function EditListingPage({
 
       <HubTabs
         tabs={[
-          { id: 'details', label: 'Details', icon: <FileText className="h-5 w-5" strokeWidth={1.6} /> },
-          { id: 'media', label: 'Media', icon: <ImageIcon className="h-5 w-5" strokeWidth={1.6} /> },
+          {
+            id: 'details',
+            label: 'Details',
+            icon: <FileText className="h-5 w-5" strokeWidth={1.6} />,
+          },
+          {
+            id: 'media',
+            label: 'Media',
+            icon: <ImageIcon className="h-5 w-5" strokeWidth={1.6} />,
+          },
           { id: 'leads', label: 'Leads', icon: <Users className="h-5 w-5" strokeWidth={1.6} /> },
-          { id: 'analytics', label: 'Analytics', icon: <LineChart className="h-5 w-5" strokeWidth={1.6} /> },
+          {
+            id: 'analytics',
+            label: 'Analytics',
+            icon: <LineChart className="h-5 w-5" strokeWidth={1.6} />,
+          },
         ]}
         defaultTab="details"
         panels={{
@@ -236,7 +241,6 @@ export default async function EditListingPage({
                     community_id: listing.community_id,
                   }}
                   communities={communities}
-                  listingContext={listingContext}
                 />
               </section>
               <DangerZone listingId={listing.id} />

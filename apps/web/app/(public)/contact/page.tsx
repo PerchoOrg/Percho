@@ -21,8 +21,8 @@ export default function ContactPage() {
 
       <h2>For agents</h2>
       <p>
-        <a href="mailto:agents@percho.co">agents@percho.co</a> — listing a home, claiming an
-        agent profile, payout questions.
+        <a href="mailto:agents@percho.co">agents@percho.co</a> — listing a home, claiming an agent
+        profile, payout questions.
       </p>
 
       <h2>Press</h2>
@@ -32,8 +32,8 @@ export default function ContactPage() {
 
       <h2>Legal &amp; privacy</h2>
       <p>
-        <a href="mailto:legal@percho.co">legal@percho.co</a> — DMCA notices, privacy
-        requests, fair-housing concerns.
+        <a href="mailto:legal@percho.co">legal@percho.co</a> — DMCA notices, privacy requests,
+        fair-housing concerns.
       </p>
 
       <h2>Mailing address</h2>

@@ -90,10 +90,11 @@ export function streamIframeUrl(videoId: string): string {
 function streamHost(): string {
   const raw = process.env.NEXT_PUBLIC_CLOUDFLARE_STREAM_CUSTOMER_SUBDOMAIN;
   if (!raw) throw new Error('NEXT_PUBLIC_CLOUDFLARE_STREAM_CUSTOMER_SUBDOMAIN not set');
-  const trimmed = raw.trim().replace(/^https?:\/\//, '').replace(/\/$/, '');
-  return trimmed.endsWith('.cloudflarestream.com')
-    ? trimmed
-    : `${trimmed}.cloudflarestream.com`;
+  const trimmed = raw
+    .trim()
+    .replace(/^https?:\/\//, '')
+    .replace(/\/$/, '');
+  return trimmed.endsWith('.cloudflarestream.com') ? trimmed : `${trimmed}.cloudflarestream.com`;
 }
 
 /**

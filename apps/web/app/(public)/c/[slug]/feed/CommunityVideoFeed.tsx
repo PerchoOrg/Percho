@@ -2,7 +2,7 @@
 
 /**
  * CommunityVideoFeed — TikTok-style swipe feed for the videos that
- * belong to a single community (Phase 27.7, 2026-06-16).
+ * belong to a single community.
  *
  * Why a separate component instead of reusing BrowseFeed:
  * BrowseFeed is built around `BrowseCard` (listing + agent + nearby
@@ -54,7 +54,7 @@ export type CommunityFeedVideo = {
 };
 
 /**
- * Phase 34b (V1 redo, 2026-06-17): Scenario B data shape — listings
+ * Scenario B data shape — listings
  * surfaced via the top-left "homes here" chip on the community feed.
  * Hero is a video if available, photo as fallback. Real fields only;
  * nulls render as omissions, not placeholders.
@@ -65,7 +65,7 @@ export type CommunityListingItem = {
   address: string;
   city: string;
   state: string;
-  /** Phase 74.9: zip added so community feed carousel can render the
+  /** zip added so community feed carousel can render the
    *  canonical `${street}, ${city}, ${state} ${zip}` line matching the
    *  main browse feed. Nullable — legacy rows without zip render without
    *  the trailing space+zip. */
@@ -76,7 +76,7 @@ export type CommunityListingItem = {
   sqft: number | null;
   heroCfVideoId: string | null;
   heroPhotoUrl: string | null;
-  /** Phase 63 (2026-06-26): owning agent's slug — used to build the public
+  /** owning agent's slug — used to build the public
    *  listing URL (`/v/[agentSlug]/[listingSlug]`) for the Share rail button.
    *  Null when the agent row is missing (rare; Share is hidden in that case). */
   agentSlug: string | null;
@@ -119,7 +119,7 @@ function VideoCard({
   const videoElRef = useRef<HTMLVideoElement | null>(null);
   const hlsRef = useRef<Hls | null>(null);
   const [paused, setPaused] = useState(true);
-  // Phase 74.7 (skill ref §1): poster-attribute anti-pattern. See
+  // poster-attribute anti-pattern. See
   // BrowseFeed 74.7 comment. Overlay a poster <img> until first
   // real frame paints, kill <video poster=> to prevent iOS Safari
   // from flashing its system big-play placeholder before HLS decodes.
@@ -138,7 +138,7 @@ function VideoCard({
     const el = videoElRef.current;
     if (!el) return;
 
-    // Phase 74.7: hide <video> layer until first frame paints on new src.
+    // hide <video> layer until first frame paints on new src.
     setHasFirstFrame(false);
 
     if (hlsRef.current) {
@@ -215,7 +215,7 @@ function VideoCard({
     v.muted = muted;
   }, [muted]);
 
-  // Phase 74.7 (skill ref §1): reveal <video> layer only after the first
+  // reveal <video> layer only after the first
   // real frame paints.
   useEffect(() => {
     if (!shouldMount) return;
@@ -266,7 +266,7 @@ function VideoCard({
               ref={videoElRef}
               className="relative h-full w-full object-contain"
               style={{
-                // Phase 74.11 (2026-07-06): fade-in only — see BrowseFeed 74.11.
+                // fade-in only — see BrowseFeed 74.11.
                 opacity: hasFirstFrame ? 1 : 0,
                 transition: hasFirstFrame ? 'opacity 150ms' : 'none',
               }}
@@ -275,7 +275,7 @@ function VideoCard({
               loop
               preload="auto"
             />
-            {/* Phase 74.7 (skill ref §1): poster overlay until first frame. */}
+            {/* (skill ref §1): poster overlay until first frame. */}
             {poster && !hasFirstFrame && (
               <img
                 src={poster}
@@ -342,7 +342,7 @@ export function CommunityVideoFeed({
 }: {
   community: CommunityFeedCommunity;
   /**
-   * Phase 45.18: community owner — `created_by` agent. When present,
+   * community owner — `created_by` agent. When present,
    * the right-rail Contact button opens a LeadModal that lands a lead
    * on this agent. Null for legacy / unowned communities (no Contact).
    */
@@ -350,7 +350,7 @@ export function CommunityVideoFeed({
   videos: CommunityFeedVideo[];
   initialIndex?: number;
   activeListingsCount?: number;
-  /** Phase 34b (V1 redo): listings to surface via the top-left chip. */
+  /** (V1 redo): listings to surface via the top-left chip. */
   listings?: CommunityListingItem[];
 }) {
   const router = useRouter();
@@ -358,13 +358,13 @@ export function CommunityVideoFeed({
   const [muted, setMuted] = useState(false);
   const [liked, setLiked] = useState(false); // in-memory, V1
   const [saved, setSaved] = useState(false);
-  // Phase 34b (V1 redo): Scenario B sheet/carousel state.
+  // Scenario B sheet/carousel state.
   const [listingsSheetOpen, setListingsSheetOpen] = useState(false);
   const [listingCarouselOpen, setListingCarouselOpen] = useState(false);
   const [listingCarouselStartIdx, setListingCarouselStartIdx] = useState(0);
-  // Phase 45.18: Contact-the-community-owner LeadModal state.
+  // Contact-the-community-owner LeadModal state.
   const [leadOpen, setLeadOpen] = useState(false);
-  // Phase 27.9 (2026-06-16): infinite swipe — render the videos array
+  // infinite swipe — render the videos array
   // multiple times. Start at 2 copies; whenever the user enters the last
   // copy we append another. Capped at 50 copies (~hundreds of cards) to
   // prevent unbounded DOM growth in marathon sessions; in practice no buyer
@@ -582,7 +582,7 @@ export function CommunityVideoFeed({
             </span>
           )}
         </div>
-        {/* Phase 69 (2026-07-04): Share moved from top-right into the
+        {/* Share moved from top-right into the
          * right-rail bottom, matching BrowseFeed's phase-68 layout so
          * all three feeds put outbound-social actions in one column.
          * Empty 11x11 spacer keeps the community-name pill visually
@@ -591,14 +591,14 @@ export function CommunityVideoFeed({
       </div>
 
       {/* Right rail: Like / Save / Listings / Mute.
-       * Phase 27.7 (2026-06-17): Listings becomes a 12×12 circular icon in
+       * Listings becomes a 12×12 circular icon in
        * the same family as the other rail buttons, with the count rendered
        * as a gold badge on the top-right corner — visually consistent with
        * BrowseFeed's "Nearby" badge pattern (BrowseFeed.tsx:282). Placed
        * below Save: Like → Save → Listings → Mute. Same destination as
        * the badge on `/c/[slug]` (`/browse?community=<slug>`). Hidden when
        * count is 0 (no homes for sale yet). */}
-      {/* Phase 45.22 (2026-06-21): rail migrated onto the shared
+      {/* rail migrated onto the shared
        * ActionButton primitive used by BrowseFeed. Pre-45.22 the rail
        * inlined bare circular buttons with no labels, which made them
        * read as "small mystery icons" against bright video frames —
@@ -610,7 +610,7 @@ export function CommunityVideoFeed({
         className={`absolute right-3 ${FEED_Z.rail} flex flex-col items-center gap-3`}
         style={{ bottom: FEED_RAIL_BOTTOM }}
       >
-        {/* Phase 68.4 (2026-07-03): unify with BrowseFeed rail. The
+        {/* unify with BrowseFeed rail. The
          * "🏠 Live here" chip that used to live top-left is replaced by
          * a circular ActionButton at the top of the rail with the
          * listings count as a red notification badge — mirrors the
@@ -623,7 +623,9 @@ export function CommunityVideoFeed({
             badge={listings.length}
             badgeColor="red"
           >
-            <span aria-hidden="true" className="text-[20px] leading-none">🏠</span>
+            <span aria-hidden="true" className="text-[20px] leading-none">
+              🏠
+            </span>
           </ActionButton>
         )}
         <ActionButton onClick={toggleLike} label="Like" active={liked} activeColor="rose">
@@ -632,7 +634,7 @@ export function CommunityVideoFeed({
         <ActionButton onClick={toggleSave} label="Save" active={saved}>
           <BookmarkIcon filled={saved} />
         </ActionButton>
-        {/* Phase 45.18 (2026-06-20): Contact button → community owner.
+        {/* Contact button → community owner.
          * Owner rule: "if exploring community directly, contact community
          * owner". Hidden for legacy/unowned communities (no owner to
          * route to). Same speech-bubble glyph as BrowseFeed Contact so
@@ -642,14 +644,14 @@ export function CommunityVideoFeed({
             <CommentIcon />
           </ActionButton>
         )}
-        {/* Phase 69 (2026-07-04): Share moved out of the top-right header
+        {/* Share moved out of the top-right header
          * into the bottom of the right rail — matches BrowseFeed's
          * phase-68 layout so all three feeds have Share as the last
          * rail button. */}
         <ActionButton onClick={onShare} label="Share">
           <ShareIcon />
         </ActionButton>
-        {/* Phase 34b.1 (V1 redo, 2026-06-17): the right-rail HouseIcon was
+        {/* (V1 redo, 2026-06-17): the right-rail HouseIcon was
          * removed in favor of a top-left "🏠 N homes here" chip that
          * opens an in-place listings sheet (L2) instead of navigating
          * away to /browse. Old right-rail entry duplicated the chip's
@@ -659,7 +661,7 @@ export function CommunityVideoFeed({
          * chip on /browse — same corner, same job. */}
       </div>
 
-      {/* Phase 68.4 (2026-07-03): top-left "Live here" chip removed —
+      {/* top-left "Live here" chip removed —
        * replaced by the 🏠 ActionButton at the top of the right rail
        * (see rail block above). Unifies with BrowseFeed neighborhood
        * button and eliminates the top-left corner as a dead zone
@@ -688,7 +690,7 @@ export function CommunityVideoFeed({
           setListingsSheetOpen(false);
         }}
       />
-      {/* Phase 45.18: lead capture modal — community-targeted. Mounts only
+      {/* lead capture modal — community-targeted. Mounts only
        * when an owner exists; LeadModal fans out to /api/leads with
        * community_id and the route resolves agent_id server-side. */}
       {owner && (

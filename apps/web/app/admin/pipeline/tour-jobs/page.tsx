@@ -1,12 +1,12 @@
 /**
  * /admin/pipeline/tour-jobs — Home Tour hub.
  *
- * Phase 104 (2026-07-17): reshaped from a flat listing_videos queue
+ * reshaped from a flat listing_videos queue
  * into a per-listing index. Rows link to /admin/pipeline/tour-jobs/[id]
  * where an admin can browse all photos + tour videos for a home and
  * (re)trigger the Ken Burns render.
  *
- * Phase 108 (2026-07-17): moved rendering into <TourJobsTable> so the
+ * moved rendering into <TourJobsTable> so the
  * shared AdminTable adds search / sort / pagination. Filter chips
  * removed — Tour column is sortable now.
  */

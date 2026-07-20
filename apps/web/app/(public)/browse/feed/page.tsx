@@ -1,8 +1,5 @@
 import { BrowseFeed } from '@/app/(public)/browse/_components/BrowseFeed';
-import {
-  fetchBrowseCards,
-  fetchBrowseCardsByCommunitySlug,
-} from '@/lib/feed/browse-cards';
+import { fetchBrowseCards, fetchBrowseCardsByCommunitySlug } from '@/lib/feed/browse-cards';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
@@ -15,12 +12,12 @@ export const dynamic = 'force-dynamic';
 /**
  * Browse / Swipe Feed.
  *
- * Phase 9 (2026-06-12): the grid at `/browse` links here with `?start=<id>`
+ * the grid at `/browse` links here with `?start=<id>`
  * to deep-link the swipe view to a specific listing. Without `start`, the
  * feed renders top-down (back-compat for any external links pointing at
  * the previous `/browse` URL).
  *
- * Phase 27.4 (2026-06-16): also accepts `?community=<slug>` to scope
+ * also accepts `?community=<slug>` to scope
  * the feed to active listings inside a single community. Linked from
  * `/c/[slug]` tiles. Unknown slug falls through to global feed silently.
  */
@@ -38,15 +35,13 @@ export default async function BrowseFeedPage({
   // If a community filter returned nothing (unknown slug or empty
   // community), fall back to the global feed so the user still sees
   // something rather than an empty page.
-  const finalCards =
-    community && allCards.length === 0 ? await fetchBrowseCards() : allCards;
+  const finalCards = community && allCards.length === 0 ? await fetchBrowseCards() : allCards;
 
-  // Phase 35.4 (2026-06-18): photo-only listings now flow into the swipe
-  // feed alongside video listings. The Phase 10 video-only constraint was
+  // photo-only listings now flow into the swipe
+  // feed alongside video listings. The video-only constraint was
   // an engineering boundary leaking into product — buyers experience
   // Explore as a single stream regardless of media kind. `BrowseFeed`
-  // already renders `PhotoCard` for `mediaKind === 'photo'` (Phase 20
-  // photo parity wired up the full right-rail), so no component changes
+  // already renders `PhotoCard` for `mediaKind === 'photo'`, so no component changes
   // are needed; we just stop filtering them out here.
   const cards = finalCards;
 
@@ -59,10 +54,5 @@ export default async function BrowseFeedPage({
     if (idx >= 0) initialIndex = idx;
   }
 
-  return (
-    <BrowseFeed
-      cards={cards}
-      initialIndex={initialIndex}
-    />
-  );
+  return <BrowseFeed cards={cards} initialIndex={initialIndex} />;
 }

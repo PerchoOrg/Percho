@@ -1,12 +1,12 @@
--- Phase 92 (2026-07-15) — community-owned POI/photo/video pipeline.
+-- (2026-07-15) — community-owned POI/photo/video pipeline.
 --
--- Phase 91 moved video ownership onto communities. Phase 92 does the same for
+-- moved video ownership onto communities. does the same for
 -- POI discovery + photo review. New tables mirror the listing_pois /
 -- listing_poi_photos shape but key on community_id instead of listing_id.
 --
 -- Old listing-level tables (`listing_pois`, `listing_poi_photos`) stay in
--- place for Phase 92 — the UI for reviewing photos still lives in the
--- listing dashboard, and we cut it over to community_* in Phase 93 once
+-- place for the UI for reviewing photos still lives in the
+-- listing dashboard, and we cut it over to community_* in once
 -- the community dashboard has the review UI wired. Backend server actions
 -- switch to community_* immediately in this phase.
 --
@@ -14,11 +14,11 @@
 --   * No listing_pois / listing_poi_photos rows are migrated forward. The
 --     agent will re-run POI discovery at the community level. Existing rows
 --     stay in their tables (dashboard still reads them for backward compat
---     during Phase 92 → 93 transition) but new content flows to community_*.
+-- during → 93 transition) but new content flows to community_*.
 --   * pois table itself is community-agnostic (globally shared by google_place_id),
 --     no change needed there.
 --
--- What this migration does NOT do (Phase 93):
+-- What this migration does NOT do:
 --   * Drop listing_pois / listing_poi_photos.
 --   * Cut over the review UI.
 --   * Delete legacy `community_videos.category` / `kind` columns.
@@ -90,7 +90,7 @@ create policy "agents write community_poi_photos"
 -- 3. generated_videos — extend scope enum for community-level jobs
 ------------------------------------------------------------
 --
--- Phase 91 added `community_id` + XOR check. But `scope` still enforces
+-- added `community_id` + XOR check. But `scope` still enforces
 -- (poi | intent_bucket | listing) — none of those match "community-owned
 -- intent_bucket video". Widen the enum to include 'community_intent_bucket'.
 -- Old scope values stay valid so any lingering rows survive.

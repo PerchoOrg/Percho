@@ -7,12 +7,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import {
-  type GeoJsonPolygonLike,
-  bboxOf,
-  pointInBbox,
-  pointInPolygon,
-} from './point-in-polygon';
+import { type GeoJsonPolygonLike, bboxOf, pointInBbox, pointInPolygon } from './point-in-polygon';
 
 // A unit square (0,0)–(1,1) as a GeoJSON Polygon (closed ring, ccw)
 const square: GeoJsonPolygonLike = {

@@ -4,10 +4,9 @@
  * BgmVibeSection — one vibe: tracks with approve/reject buttons + section
  * Import (curated web pool) + Upload (local files).
  *
- * Phase 105: per-section Upload + per-row Delete.
- * Phase 106: Delete → Reject (soft), Upload rebranded to Import.
- * Phase 107 (2026-07-17):
- *   - Row has BOTH Approve + Reject buttons; the active state is highlighted
+ * per-section Upload + per-row Delete.
+ * Delete → Reject (soft), Upload rebranded to Import.
+ * *   - Row has BOTH Approve + Reject buttons; the active state is highlighted
  *     so the operator sees the current call at a glance and can flip it in
  *     one click.
  *   - Section header has TWO buttons: **Import** (opens a picker of Kevin
@@ -17,7 +16,7 @@
  */
 
 import { BGM_VIBE_META, type BgmVibe, prettyTrackTitle } from '@/lib/bgm/storage';
-import { CheckCircle2, Globe, Loader2, Upload, X, XCircle } from 'lucide-react';
+import { CheckCircle2, Globe, Loader2, Trash2, Upload, X, XCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 
@@ -41,6 +40,7 @@ export function BgmVibeSection({ vibe, tracks }: { vibe: BgmVibe; tracks: BgmTra
   const [busyPath, setBusyPath] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [importerOpen, setImporterOpen] = useState(false);
+  const [purging, setPurging] = useState(false);
 
   const approved = tracks.filter((t) => !t.rejected);
   const rejected = tracks.filter((t) => t.rejected);
@@ -129,6 +129,32 @@ export function BgmVibeSection({ vibe, tracks }: { vibe: BgmVibe; tracks: BgmTra
     }
   }
 
+  async function handlePurgeRejected() {
+    if (rejected.length === 0) return;
+    const ok = window.confirm(
+      `Permanently delete ${rejected.length} rejected track${rejected.length === 1 ? '' : 's'} from ${meta.label}? This cannot be undone.`,
+    );
+    if (!ok) return;
+    setError(null);
+    setPurging(true);
+    try {
+      const res = await fetch('/api/admin/bgm/purge-rejected', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ vibe }),
+      });
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        throw new Error(json?.error ?? 'purge failed');
+      }
+      router.refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setPurging(false);
+    }
+  }
+
   return (
     <section className="overflow-hidden rounded-2xl border border-line bg-surface">
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2 border-line border-b bg-cream/60 px-4 py-3 sm:px-5">
@@ -141,7 +167,8 @@ export function BgmVibeSection({ vibe, tracks }: { vibe: BgmVibe; tracks: BgmTra
             <span className="font-medium text-ink">{approved.length}</span> approved
             {rejected.length > 0 ? (
               <>
-                {' '}· <span className="text-ink2">{rejected.length} rejected</span>
+                {' '}
+                · <span className="text-ink2">{rejected.length} rejected</span>
               </>
             ) : null}
           </div>
@@ -153,6 +180,17 @@ export function BgmVibeSection({ vibe, tracks }: { vibe: BgmVibe; tracks: BgmTra
             <Globe size={12} />
             Import
           </button>
+          {rejected.length > 0 ? (
+            <button
+              type="button"
+              onClick={handlePurgeRejected}
+              disabled={purging}
+              className="inline-flex items-center gap-1.5 rounded-full border border-red-200 bg-red-50 px-3 py-1 font-medium text-red-700 text-xs transition hover:border-red-400 disabled:opacity-60"
+            >
+              {purging ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}
+              {purging ? 'Purging…' : `Purge rejected (${rejected.length})`}
+            </button>
+          ) : null}
           <button
             type="button"
             onClick={() => fileInput.current?.click()}
@@ -181,8 +219,8 @@ export function BgmVibeSection({ vibe, tracks }: { vibe: BgmVibe; tracks: BgmTra
 
       {tracks.length === 0 ? (
         <div className="px-4 py-6 text-ink2 text-sm sm:px-5">
-          No tracks yet — click <b>Import</b> to pull from the curated web pool or{' '}
-          <b>Upload</b> to add your own.
+          No tracks yet — click <b>Import</b> to pull from the curated web pool or <b>Upload</b> to
+          add your own.
         </div>
       ) : (
         <ul className="divide-y divide-line">
@@ -215,7 +253,11 @@ export function BgmVibeSection({ vibe, tracks }: { vibe: BgmVibe; tracks: BgmTra
       )}
 
       {importerOpen ? (
-        <ImportPicker vibe={vibe} onClose={() => setImporterOpen(false)} onDone={() => router.refresh()} />
+        <ImportPicker
+          vibe={vibe}
+          onClose={() => setImporterOpen(false)}
+          onDone={() => router.refresh()}
+        />
       ) : null}
     </section>
   );
@@ -267,7 +309,11 @@ function TrackRow({
               : 'inline-flex items-center gap-1 rounded-full border border-line bg-bg px-2.5 py-1 font-medium text-ink2 text-xs transition hover:border-green-600 hover:text-green-700 disabled:opacity-60'
           }
         >
-          {busy && isRejected ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle2 size={12} />}
+          {busy && isRejected ? (
+            <Loader2 size={12} className="animate-spin" />
+          ) : (
+            <CheckCircle2 size={12} />
+          )}
           Approve
         </button>
         <button
@@ -281,7 +327,11 @@ function TrackRow({
               : 'inline-flex items-center gap-1 rounded-full border border-line bg-bg px-2.5 py-1 font-medium text-ink2 text-xs transition hover:border-red-500 hover:text-red-600 disabled:opacity-60'
           }
         >
-          {busy && !isRejected ? <Loader2 size={12} className="animate-spin" /> : <XCircle size={12} />}
+          {busy && !isRejected ? (
+            <Loader2 size={12} className="animate-spin" />
+          ) : (
+            <XCircle size={12} />
+          )}
           Reject
         </button>
       </div>
@@ -353,7 +403,9 @@ function ImportPicker({
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json?.error ?? 'import failed');
-      const errCount = (json.results ?? []).filter((r: { status: string }) => r.status === 'error').length;
+      const errCount = (json.results ?? []).filter(
+        (r: { status: string }) => r.status === 'error',
+      ).length;
       setSummary(`Imported ${json.imported} · errors ${errCount}`);
       onDone();
       setSelected(new Set());
@@ -377,7 +429,8 @@ function ImportPicker({
           <div>
             <div className="font-semibold text-ink text-sm">Import from incompetech</div>
             <div className="text-ink2 text-xs">
-              Kevin MacLeod catalog · CC-BY 4.0 · vibe: <b>{vibe}</b> · already-imported tracks are hidden
+              Kevin MacLeod catalog · CC-BY 4.0 · vibe: <b>{vibe}</b> · already-imported tracks are
+              hidden
             </div>
           </div>
           <button
@@ -409,7 +462,9 @@ function ImportPicker({
 
         <div className="flex-1 overflow-y-auto px-2 py-2">
           {error ? (
-            <div className="mx-2 mb-2 rounded bg-red-50 px-3 py-2 text-red-700 text-xs">{error}</div>
+            <div className="mx-2 mb-2 rounded bg-red-50 px-3 py-2 text-red-700 text-xs">
+              {error}
+            </div>
           ) : null}
           {summary ? (
             <div className="mx-2 mb-2 rounded bg-green-50 px-3 py-2 text-green-700 text-xs">
@@ -453,7 +508,12 @@ function ImportPicker({
                         </div>
                       </div>
                       {/** biome-ignore lint/a11y/useMediaCaption: royalty-free instrumental */}
-                      <audio controls preload="none" src={c.previewUrl} className="h-7 w-48 shrink-0">
+                      <audio
+                        controls
+                        preload="none"
+                        src={c.previewUrl}
+                        className="h-7 w-48 shrink-0"
+                      >
                         <track kind="captions" />
                       </audio>
                     </div>

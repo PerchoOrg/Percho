@@ -1,7 +1,7 @@
 'use server';
 
 /**
- * Server actions for community cover (Phase 27.8, 2026-06-16).
+ * Server actions for community cover.
  *
  * Three operations:
  *   - setCommunityCoverVideo({ communityId, videoId })  // pick from videos
@@ -158,7 +158,7 @@ export async function recordCommunityCoverImage(
   return { ok: true };
 }
 
-// ─── set photo as cover (Phase 50.9, 2026-06-23) ────────────────────
+// ─── set photo as cover ────────────────────
 // Photos live in the PRIVATE `community-photos` bucket; buyer pages can't
 // hit a private object. Covers live in the PUBLIC `community-covers`
 // bucket. So "set this photo as cover" requires a server-side bucket COPY,
@@ -200,8 +200,7 @@ export async function setCommunityCoverFromPhoto(
   const ext = (photoStoragePath.split('.').pop() ?? 'jpg').toLowerCase();
   const safeExt = ['jpg', 'jpeg', 'png', 'webp'].includes(ext) ? ext : 'jpg';
   const newId =
-    globalThis.crypto?.randomUUID?.() ??
-    `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`;
   const targetPath = `${communityId}/${newId}.${safeExt}`;
   const contentType = blob.type || `image/${safeExt === 'jpg' ? 'jpeg' : safeExt}`;
 

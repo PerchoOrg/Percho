@@ -1,15 +1,14 @@
 'use client';
 
 /**
- * CommunityVideoManageList — Phase 50.10 (2026-06-23).
- *
+ * CommunityVideoManageList —  *
  * Flat row matching listing edit MediaPanel UX, plus community-specific
  * category pill and an inline editable description:
  *
  *   thumbnail · title · category pill · [Set as cover] · [Delete]
  *   description (click to edit, Enter / blur to save, Esc to cancel)
  *
- * Phase 50.10 changes vs 50.9:
+ * changes vs 50.9:
  *   - REMOVED the yellow "needs review" pill (the flag still exists on the
  *     row for analytics, just not surfaced in the manage UI — agents can't
  *     act on it without the edit-category sheet anyway).
@@ -29,11 +28,11 @@
  * re-introduced separately if agents miss it.
  */
 
+import { setCommunityCoverVideo } from '@/app/dashboard/communities/[id]/cover-actions';
 import {
   deleteCommunityVideo,
   updateCommunityVideoDescription,
 } from '@/app/dashboard/communities/actions';
-import { setCommunityCoverVideo } from '@/app/dashboard/communities/[id]/cover-actions';
 import { thumbnailUrl } from '@/lib/cloudflare/stream';
 import { COMMUNITY_VIDEO_CATEGORIES } from '@/lib/zod/community-video-categories';
 import { useRouter } from 'next/navigation';
@@ -66,12 +65,7 @@ interface Props {
   coverVideoId: string | null;
 }
 
-export function CommunityVideoManageList({
-  communityId,
-  videos,
-  myAgentId,
-  coverVideoId,
-}: Props) {
+export function CommunityVideoManageList({ communityId, videos, myAgentId, coverVideoId }: Props) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -114,9 +108,7 @@ export function CommunityVideoManageList({
   );
 
   if (videos.length === 0) {
-    return (
-      <p className="text-sm text-muted">No videos yet. Use the upload button above.</p>
-    );
+    return <p className="text-sm text-muted">No videos yet. Use the upload button above.</p>;
   }
 
   return (
@@ -129,8 +121,7 @@ export function CommunityVideoManageList({
 
       <ul className="space-y-2">
         {videos.map((v) => {
-          const isOwner =
-            myAgentId != null && v.uploaded_by != null && v.uploaded_by === myAgentId;
+          const isOwner = myAgentId != null && v.uploaded_by != null && v.uploaded_by === myAgentId;
           const isCover = coverVideoId === v.id;
           return (
             <ManageRow
@@ -204,9 +195,7 @@ function ManageRow({
 
       <div className="min-w-0 flex-1 basis-[8rem]">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="truncate text-sm text-ink">
-            {video.title ?? '(untitled)'}
-          </span>
+          <span className="truncate text-sm text-ink">{video.title ?? '(untitled)'}</span>
           {isCover ? (
             <span className="flex-shrink-0 rounded bg-ink px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-cream">
               Cover

@@ -33,7 +33,7 @@ export interface CategoryPickerProps {
   /** edit mode only: while a save action is pending, gray the surface. */
   disabled?: boolean;
   /**
-   * Phase 50.11: when caller wants to side-by-side the dropdown with another
+   * when caller wants to side-by-side the dropdown with another
    * control (e.g. the Upload button on CommunityMediaPanel), the SpecCard
    * makes the Category column much taller than its sibling. `hideSpec` lets
    * the caller render the dropdown alone here and surface the SpecCard
@@ -64,12 +64,10 @@ export function CategoryPicker({ selected, onPick, disabled, hideSpec }: Categor
 }
 
 export function CategorySpecCard({ meta }: { meta: CommunityVideoCategoryMeta }) {
-  // Phase 50.11.2: stripped to just the blurb. Per qiaoxux:
+  // .2: stripped to just the blurb. Per qiaoxux:
   // "only leave 'The commute, on a real weekday' part" — the label
   // duplicates the dropdown selection, the Must-include rule was noise
   // for agents who already know the category, and the help line
   // belonged to a different section anyway.
-  return (
-    <div className="text-xs leading-snug text-ink2">{meta.blurb}</div>
-  );
+  return <div className="text-xs leading-snug text-ink2">{meta.blurb}</div>;
 }

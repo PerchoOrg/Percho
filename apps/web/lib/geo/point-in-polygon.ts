@@ -1,7 +1,7 @@
 /**
  * Point-in-polygon test for GeoJSON (Multi)Polygon.
  *
- * Phase 83.2 (2026-07-15): used to auto-associate a listing to a seeded
+ * used to auto-associate a listing to a seeded
  * community by matching listing lat/lng against the 731 Nextdoor
  * MultiPolygon boundaries stored in `communities.boundary`.
  *
@@ -46,8 +46,7 @@ function pointInRing(lng: number, lat: number, ring: Ring): boolean {
  * ring AND outside every inner ring of the same polygon.
  */
 export function pointInPolygon(lng: number, lat: number, geom: GeoJsonPolygonLike): boolean {
-  const polygons: Ring[][] =
-    geom.type === 'Polygon' ? [geom.coordinates] : geom.coordinates;
+  const polygons: Ring[][] = geom.type === 'Polygon' ? [geom.coordinates] : geom.coordinates;
   for (const poly of polygons) {
     if (poly.length === 0) continue;
     const outer = poly[0] as Ring;
@@ -73,10 +72,10 @@ export function pointInPolygon(lng: number, lat: number, geom: GeoJsonPolygonLik
  */
 export function bboxOf(geom: GeoJsonPolygonLike): [number, number, number, number] | null {
   const polygons = geom.type === 'Polygon' ? [geom.coordinates] : geom.coordinates;
-  let minLng = Infinity;
-  let minLat = Infinity;
-  let maxLng = -Infinity;
-  let maxLat = -Infinity;
+  let minLng = Number.POSITIVE_INFINITY;
+  let minLat = Number.POSITIVE_INFINITY;
+  let maxLng = Number.NEGATIVE_INFINITY;
+  let maxLat = Number.NEGATIVE_INFINITY;
   for (const poly of polygons) {
     for (const ring of poly) {
       for (const pt of ring) {
@@ -89,7 +88,7 @@ export function bboxOf(geom: GeoJsonPolygonLike): [number, number, number, numbe
       }
     }
   }
-  if (minLng === Infinity) return null;
+  if (minLng === Number.POSITIVE_INFINITY) return null;
   return [minLng, minLat, maxLng, maxLat];
 }
 

@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 /**
- * GET /api/video/list?listing_id=<uuid>     (Phase 2)
- * GET /api/video/list?community_id=<uuid>   (Phase 4.5)
+ * GET /api/video/list?listing_id=<uuid>
+ * GET /api/video/list?community_id=<uuid>
  *
  * Returns video rows for the given parent. Owner-fenced via RLS for listings;
  * communities are publicly readable (V1 shared-community model).

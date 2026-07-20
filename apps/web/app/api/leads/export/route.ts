@@ -1,7 +1,7 @@
 /**
  * GET /api/leads/export — CSV download of the agent's leads.
  *
- * Phase 18. RLS scopes the result to the calling agent's leads. Exported
+ * . RLS scopes the result to the calling agent's leads. Exported
  * columns: created_at (ISO), name, email, phone, listing_address, city,
  * state, message, source, email_status (sent/pending), follow_up_status.
  *

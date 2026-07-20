@@ -1,4 +1,4 @@
--- Phase 101 (2026-07-16): listing-scoped nearby pipeline.
+-- listing-scoped nearby pipeline.
 --
 -- Motivation: today the nearby (POI) content pipeline is exclusively
 -- community-scoped. Every listing must sit inside a curated community to
@@ -17,7 +17,7 @@
 --     20260716120000; row counts at drop time were dev/seed only, no live
 --     consumers. Reusing the names — no *_v2 noise.
 --   * Extend `generated_videos_scope_chk` with 'listing_intent_bucket'.
---     `generated_videos_owner_chk` (added Phase 91) already requires exactly
+-- `generated_videos_owner_chk` (added ) already requires exactly
 --     one of (listing_id, community_id); listing-scoped nearby videos set
 --     listing_id and leave community_id null.
 --   * RLS: listing_pois / listing_poi_photos are OWNER-SCOPED via the
@@ -29,7 +29,7 @@
 --
 -- Concurrent-render / cross-bucket dedup / video-superseding rules all
 -- follow the existing community-scoped pattern (community-video-actions.ts,
--- Phase 92). Listing-scoped code paths ported in follow-up commits.
+-- ). Listing-scoped code paths ported in follow-up commits.
 
 ------------------------------------------------------------
 -- 1. listing_pois — per-listing POI candidates
@@ -154,7 +154,7 @@ end $$;
 -- 'listing_intent_bucket' — the new scope for POI-anchored videos owned
 -- by a listing directly.
 --
--- generated_videos_owner_chk (Phase 91) still enforces XOR of
+-- generated_videos_owner_chk still enforces XOR of
 -- listing_id / community_id; listing_intent_bucket rows set listing_id
 -- and leave community_id null.
 

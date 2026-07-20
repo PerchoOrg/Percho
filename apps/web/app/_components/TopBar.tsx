@@ -5,7 +5,7 @@
  *
  * Layout (all breakpoints): [🔍 search] · [sub-tabs] · [avatar / sign-in]
  *
- * Phase 45 (2026-06-20): replaces the prior trio of overlapping mobile-only
+ * replaces the prior trio of overlapping mobile-only
  * pieces (SearchPill + TopRightAvatar + dashboard WorkspaceSubNav) with a
  * single chrome surface. Desktop uses the same component but pinned alongside
  * the new <DesktopSidebar> (left of it on md+, full-width on mobile).
@@ -25,12 +25,7 @@ import { LogOut, Search, User, X } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useId, useRef, useState } from 'react';
-import {
-  getSubTabs,
-  isChromeHidden,
-  isSubTabActive,
-  type ViewerRole,
-} from './nav-config';
+import { type ViewerRole, getSubTabs, isChromeHidden, isSubTabActive } from './nav-config';
 
 export type TopBarProps = {
   role: ViewerRole;
@@ -56,12 +51,7 @@ export function TopBar({ role, initial, avatarUrl }: TopBarProps) {
   );
 }
 
-function TopBarInner({
-  role,
-  initial,
-  avatarUrl,
-  pathname,
-}: TopBarProps & { pathname: string }) {
+function TopBarInner({ role, initial, avatarUrl, pathname }: TopBarProps & { pathname: string }) {
   const [searching, setSearching] = useState(false);
   const subTabs = getSubTabs(pathname, role);
 
@@ -82,7 +72,7 @@ function TopBarInner({
       </button>
 
       {/* Middle — sub-tabs, or a centred section title on Nearby-less
-        * pages (/browse and /communities post-Phase 66). */}
+       * pages (/browse and /communities post-). */}
       <div className="min-w-0 flex-1">
         {subTabs ? (
           <SubTabRow tabs={subTabs} pathname={pathname} />
@@ -109,9 +99,9 @@ function TopBarInner({
 }
 
 function SectionTitle({ pathname }: { pathname: string }) {
-  // Phase 66 (2026-07-02): centred title for pages that no longer expose
+  // centred title for pages that no longer expose
   // sub-tabs. /browse and /communities now show "Explore" centred here
-  // (owner: 笑云 feedback — dropped Nearby sub-tab). Any other route with
+  // (per user feedback — Nearby sub-tab dropped). Any other route with
   // no sub-tabs (e.g. /profile) renders nothing.
   let title: string | null = null;
   if (pathname === '/browse' || pathname.startsWith('/browse/')) {
@@ -121,7 +111,7 @@ function SectionTitle({ pathname }: { pathname: string }) {
     // top-level page keeps the same visual verb the buyer expects.
     title = 'Explore';
   } else if (pathname === '/admin' || pathname.startsWith('/admin/')) {
-    // Phase 102 (2026-07-17): admin label lives in the top bar middle
+    // admin label lives in the top bar middle
     // slot — the /admin layout used to render a separate standalone
     // "Admin" band beneath the TopBar; removed per owner.
     title = 'Admin';
@@ -141,15 +131,12 @@ function SubTabRow({
   tabs: ReturnType<typeof getSubTabs> & object;
   pathname: string;
 }) {
-  // Phase 45.9 (2026-06-20): owner — "agent hub: by default sub tabs on top
+  // owner — "agent hub: by default sub tabs on top
   // should show full names from left, not the middle ones". Left-align all
   // sub-tab rows; full-name labels (no truncation), horizontal scroll if
   // they overflow on narrow screens.
   return (
-    <nav
-      aria-label="Section"
-      className="flex items-center justify-start gap-5 overflow-x-auto"
-    >
+    <nav aria-label="Section" className="flex items-center justify-start gap-5 overflow-x-auto">
       {tabs.map((t) => {
         const active = isSubTabActive(pathname, t, tabs);
         return (
@@ -186,7 +173,7 @@ function SearchExpanded({ onClose }: { onClose: () => void }) {
     inputRef.current?.focus();
   }, []);
 
-  // Phase 45.11 (2026-06-20, owner round 3): outside-click collapses the
+  // outside-click collapses the
   // search box. Listening on `mousedown` matches the avatar menu pattern.
   useEffect(() => {
     const onClick = (e: MouseEvent) => {
@@ -214,10 +201,10 @@ function SearchExpanded({ onClose }: { onClose: () => void }) {
     >
       <Search size={18} aria-hidden="true" className="shrink-0 text-ink2" />
       {/*
-        * Phase 45.11 (2026-06-20, owner round 3): font-size pinned to 16px
-        * (`text-base`) so iOS Safari does not auto-zoom on focus. Anything
-        * <16px on a text input triggers the OS zoom behaviour.
-        */}
+       * font-size pinned to 16px
+       * (`text-base`) so iOS Safari does not auto-zoom on focus. Anything
+       * <16px on a text input triggers the OS zoom behaviour.
+       */}
       <input
         ref={inputRef}
         type="search"
@@ -308,8 +295,8 @@ function AvatarMenu({
             <User size={16} aria-hidden="true" />
             Profile
           </Link>
-          {/* Phase 45.13 (2026-06-20): Agent Hub removed from dropdown — already
-            * a primary tab in BottomNav/DesktopSidebar. Owner round 5 #3. */}
+          {/* Agent Hub removed from dropdown — already
+           * a primary tab in BottomNav/DesktopSidebar. Owner round 5 #3. */}
           <form action="/api/auth/signout" method="post" className="border-line border-t">
             <button
               type="submit"

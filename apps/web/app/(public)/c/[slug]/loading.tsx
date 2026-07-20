@@ -1,5 +1,5 @@
 /**
- * Suspense skeleton for /c/[slug]. Phase 47.2: hero kept at original ratio,
+ * Suspense skeleton for /c/[slug]. hero kept at original ratio,
  * grid uses unified px-1 md:px-1.5 + gap-1 md:gap-1.5 + 3:4 cards.
  */
 export default function Loading() {

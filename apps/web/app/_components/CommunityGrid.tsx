@@ -4,7 +4,7 @@ import type { CommunityListCard } from '@/lib/communities/list';
  *
  * Used by /communities (Explore + Nearby) and /dashboard/communities.
  *
- * Phase 47 (2026-06-21): refactored on top of the shared GridCard /
+ * refactored on top of the shared GridCard /
  * GridFrame primitives so that this grid and ListingGrid share frame,
  * gap rules, aspect ratio, hover transform, and bottom gradient. Only
  * the per-card data slots differ. Future tweaks to the visual shell

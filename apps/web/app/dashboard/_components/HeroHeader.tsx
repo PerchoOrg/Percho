@@ -1,7 +1,7 @@
 /**
  * HeroHeader — 2-section hero for the agent listing detail page.
  *
- * Phase 47.11: stats removed from hero per agent feedback ("hero pic should
+ * stats removed from hero per agent feedback ("hero pic should
  * be hero pic"). The grid is now `auto 1fr` — controls on top, home info
  * vertically centered. Stats live inline at the top of the Analytics tab.
  *
@@ -22,7 +22,7 @@ type Props = {
   /** Right-aligned control row (Preview button, status toggle, delete). */
   controls?: ReactNode;
   /**
-   * Phase 67.7: top-left back link to the parent grid view.
+   * top-left back link to the parent grid view.
    * Listing detail → `/dashboard` (my listings).
    * Community detail → `/dashboard/communities`.
    * Omit to hide.
@@ -31,7 +31,14 @@ type Props = {
   backLabel?: string;
 };
 
-export function HeroHeader({ coverUrl, title, subtitle, controls, backHref, backLabel = '← Back' }: Props) {
+export function HeroHeader({
+  coverUrl,
+  title,
+  subtitle,
+  controls,
+  backHref,
+  backLabel = '← Back',
+}: Props) {
   return (
     <header className="mx-auto max-w-6xl">
       <div
@@ -44,11 +51,7 @@ export function HeroHeader({ coverUrl, title, subtitle, controls, backHref, back
       >
         {coverUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={coverUrl}
-            alt=""
-            className="absolute inset-0 h-full w-full object-cover"
-          />
+          <img src={coverUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />
         ) : (
           <div className="absolute inset-0 grid place-items-center text-muted text-xs">
             No cover image yet
@@ -66,11 +69,7 @@ export function HeroHeader({ coverUrl, title, subtitle, controls, backHref, back
 
         {/* §1 — controls (top: back-link left, controls right) */}
         <div className="relative z-10 flex items-center justify-between gap-1">
-          {backHref ? (
-            <HeroControl href={backHref}>{backLabel}</HeroControl>
-          ) : (
-            <span aria-hidden />
-          )}
+          {backHref ? <HeroControl href={backHref}>{backLabel}</HeroControl> : <span aria-hidden />}
           <div className="flex items-center gap-1">{controls}</div>
         </div>
 
@@ -82,9 +81,7 @@ export function HeroHeader({ coverUrl, title, subtitle, controls, backHref, back
           >
             {title}
           </h1>
-          {subtitle && (
-            <p className="mt-1 text-sm text-surface/90 drop-shadow">{subtitle}</p>
-          )}
+          {subtitle && <p className="mt-1 text-sm text-surface/90 drop-shadow">{subtitle}</p>}
         </div>
       </div>
     </header>

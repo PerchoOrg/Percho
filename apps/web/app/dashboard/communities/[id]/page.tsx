@@ -1,30 +1,25 @@
 /**
- * /dashboard/communities/[id] — community detail (Phase 50 rebuild,
- * 2026-06-22).
+ * /dashboard/communities/[id] — community detail.
  *
- * Mirrors the listing edit hub's 4-icon-tab structure so the agent's
- * dashboard reads identically across listings and communities:
+ * Mirrors the listing edit hub's tab structure so the agent's dashboard
+ * reads identically across listings and communities:
  *
- *   Details · Media · Marketing · Analytics
+ *   Details · Media · Analytics
  *
  *   - Details   : metadata edit (CommunityEditor) + buyer link.
  *   - Media     : Videos + Photos in one card. Cover selection is inline
- *                 per row/photo (Phase 50.9, 2026-06-23) — no separate
- *                 cover panel.
- *   - Marketing : owner-only language-only marketing copy generator
- *                 (CommunityMarketingPanel — the community sibling of
- *                 the listing SocialCopyPanel).
+ *                 per row/photo — no separate cover panel.
  *   - Analytics : owner-only generic AnalyticsPanel (entityKind=community).
  *
  * Non-owner contributors still see Details + Media so they can manage
- * their own video/photo contributions; Marketing and Analytics are
- * hidden because they are not theirs to act on.
+ * their own video/photo contributions; Analytics is hidden because it
+ * is not theirs to act on.
  *
  * Hero: HeroHeader (matches listing hub) — chromeless top-right control
  * row with a Preview link + InstantStatusToggle, title/subtitle bottom-left.
  */
 
-import { resolveCommunityCoverWithCfIds } from '@/lib/community/cover';
+import { resolveCommunityCoverWithCfIds } from '@/lib/communities/cover';
 import { createClient } from '@/lib/supabase/server';
 import { FileText, ImageIcon, LineChart } from 'lucide-react';
 import { redirect } from 'next/navigation';
@@ -53,7 +48,7 @@ interface CommunityRow {
   cover_video_id: string | null;
   cover_storage_path: string | null;
   boundary: unknown;
-  // Phase 50.4 — expanded metadata.
+  // expanded metadata.
   zip: string | null;
   county: string | null;
   hoa_fee_monthly: number | null;
@@ -96,7 +91,7 @@ export default async function CommunityEditorPage({
   const { id } = await params;
   await searchParams;
   const supabase = await createClient();
-  // Phase 53D: getSession() reads cookie locally (~5ms) instead of round-tripping
+  // getSession() reads cookie locally (~5ms) instead of round-tripping
   // to Supabase to validate the JWT (~150ms). Middleware re-validates on each
   // request — page-level check is defense-in-depth, not the source of truth.
   const {
@@ -171,7 +166,7 @@ export default async function CommunityEditorPage({
     uploaderSlug: row.uploader?.slug ?? null,
     uploaderDisplayName: row.uploader?.name ?? null,
   }));
-  // Phase 50.9 (2026-06-23): cover selection moved inline into the
+  // cover selection moved inline into the
   // Media tab (Set as cover button per video row, ⭐ per photo). No
   // separate `coverVideos` derivation needed — CommunityVideoManageList
   // gates "Set as cover" on `status === 'ready'` itself.
@@ -228,17 +223,18 @@ export default async function CommunityEditorPage({
     cover_storage_path: community.cover_storage_path,
     fallback_video_cf_id: firstReadyVideo?.cf_video_id ?? null,
     name: community.name,
-    boundary: (community.boundary as import('@/lib/community/logo-cover').BoundaryGeoJSON | null) ?? null,
+    boundary:
+      (community.boundary as import('@/lib/communities/logo-cover').BoundaryGeoJSON | null) ?? null,
   });
   const heroCoverUrl = heroCover ? heroCover.url : null;
 
   const subtitle = community.city ? `${community.city}, ${community.state}` : community.state;
 
-  // Phase 92: nearby POIs load — owner-only since discover/generate cost $.
-  // Phase 101e (2026-07-17): moved to /admin/pipeline/community-nearby/[id]
+  // nearby POIs load — owner-only since discover/generate cost $.
+  // moved to /admin/pipeline/community-nearby/[id]
   // — kept the load path there. The Nearby tab is removed from this hub.
 
-  // Tabs — Details + Media always; Marketing + Analytics owner-only.
+  // Tabs — Details + Media always; Analytics owner-only.
   const tabs = [
     {
       id: 'details',

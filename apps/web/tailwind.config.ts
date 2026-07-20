@@ -5,7 +5,7 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Aman direction tokens — see DESIGN.md.
+        // Warm neutral palette (cream / paper / warm-ink).
         bg: '#f3eee7',
         surface: '#fbf8f3',
         ink: '#313131',

@@ -10,9 +10,8 @@
  * If none, returns null and the caller renders a fallback (gradient block,
  * initial letter, etc).
  *
- * The first two are explicit agent picks; the third is the legacy
- * default that pre-dates Phase 27.8. We keep it so communities created
- * before this feature still look fine.
+ * The first two are explicit agent picks; the third is the fallback
+ * default so communities without an explicit cover still look fine.
  */
 
 import { thumbnailUrl } from '@/lib/cloudflare/stream';
@@ -80,7 +79,7 @@ export function resolveCommunityCoverWithCfIds(input: {
   cover_video_cf_id: string | null;
   cover_storage_path: string | null;
   fallback_video_cf_id: string | null;
-  /** Phase 83.4: name + boundary → generated logo SVG as final fallback. */
+  /** name + boundary → generated logo SVG as final fallback. */
   name?: string | null;
   boundary?: BoundaryGeoJSON | null;
 }): ResolvedCover | null {
@@ -93,7 +92,7 @@ export function resolveCommunityCoverWithCfIds(input: {
   if (input.fallback_video_cf_id) {
     return { kind: 'fallback-video', url: thumbnailUrl(input.fallback_video_cf_id) };
   }
-  // Phase 83.4: last-resort generated cover — always renders SOMETHING as long
+  // last-resort generated cover — always renders SOMETHING as long
   // as we have a name. Boundary is optional (monogram fallback inside).
   if (input.name) {
     const dataUri = buildCommunityLogoDataUri(input.name, input.boundary ?? null);

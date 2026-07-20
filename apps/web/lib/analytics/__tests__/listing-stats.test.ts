@@ -1,15 +1,10 @@
 /**
- * Tests for the per-entity analytics aggregator.
- *
- * Phase 50 (2026-06-22): the impl moved to `entity-stats.ts` (listing
- * + community). The legacy `listing-stats` exports still work — they
- * delegate to the generic functions. We keep coverage on both call
- * shapes here.
+ * Tests for the entity analytics aggregator (`entity-stats.ts`).
+ * Covers both entity shapes (listing + community) and rollups.
  */
 
 import { describe, expect, it, vi } from 'vitest';
 import { type EntityStats, getEntityStats, getRollupEntityStats } from '../entity-stats';
-import { getListingStats, getRollupStats } from '../listing-stats';
 
 interface EventRow {
   event_type: string;
@@ -40,8 +35,8 @@ function fakeSupabase(events: EventRow[], leadsCount: number) {
 
 const ID = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
 
-// ─── Listing-shape (legacy compat) ────────────────────────────────
-describe('getListingStats (compat shim)', () => {
+// ─── Listing shape ────────────────────────────────────────
+describe('getEntityStats — listing', () => {
   it('counts page_view, video_complete, unique sessions, leads', async () => {
     const events: EventRow[] = [
       { event_type: 'page_view', session_id: 's1' },
@@ -55,18 +50,19 @@ describe('getListingStats (compat shim)', () => {
     ];
     const sb = fakeSupabase(events, 2);
     // biome-ignore lint/suspicious/noExplicitAny: test stub
-    const stats = await getListingStats(sb as any, ID);
+    const stats = await getEntityStats(sb as any, { entityType: 'listing', entityId: ID });
     expect(stats.pageViews).toBe(4);
     expect(stats.videoCompletes).toBe(2);
     expect(stats.uniqueSessions).toBe(4);
     expect(stats.leads).toBe(2);
     expect(stats.leadConversionPct).toBe(50);
+    expect(sb.eventsSelectChain.eq).toHaveBeenCalledWith('listing_id', ID);
   });
 
   it('handles zero events / zero leads', async () => {
     const sb = fakeSupabase([], 0);
     // biome-ignore lint/suspicious/noExplicitAny: test stub
-    const stats = await getListingStats(sb as any, ID);
+    const stats = await getEntityStats(sb as any, { entityType: 'listing', entityId: ID });
     expect(stats).toEqual<EntityStats>({
       pageViews: 0,
       uniqueSessions: 0,
@@ -85,16 +81,19 @@ describe('getListingStats (compat shim)', () => {
     }));
     const sb = fakeSupabase(events, 1);
     // biome-ignore lint/suspicious/noExplicitAny: test stub
-    const stats = await getListingStats(sb as any, ID);
+    const stats = await getEntityStats(sb as any, { entityType: 'listing', entityId: ID });
     expect(stats.leadConversionPct).toBe(14.3);
   });
 });
 
-describe('getRollupStats (listing compat)', () => {
-  it('returns zeros when listingIds is empty', async () => {
+describe('getRollupEntityStats — listing', () => {
+  it('returns zeros when entityIds is empty', async () => {
     const sb = fakeSupabase([], 0);
     // biome-ignore lint/suspicious/noExplicitAny: test stub
-    const stats = await getRollupStats(sb as any, []);
+    const stats = await getRollupEntityStats(sb as any, {
+      entityType: 'listing',
+      entityIds: [],
+    });
     expect(stats.pageViews).toBe(0);
     expect(stats.leadConversionPct).toBe(0);
     expect(sb.from).not.toHaveBeenCalled();
@@ -108,15 +107,19 @@ describe('getRollupStats (listing compat)', () => {
     ];
     const sb = fakeSupabase(events, 3);
     // biome-ignore lint/suspicious/noExplicitAny: test stub
-    const stats = await getRollupStats(sb as any, ['l1', 'l2']);
+    const stats = await getRollupEntityStats(sb as any, {
+      entityType: 'listing',
+      entityIds: ['l1', 'l2'],
+    });
     expect(stats.pageViews).toBe(2);
     expect(stats.videoCompletes).toBe(1);
     expect(stats.uniqueSessions).toBe(2);
     expect(stats.leads).toBe(3);
+    expect(sb.eventsSelectChain.in).toHaveBeenCalledWith('listing_id', ['l1', 'l2']);
   });
 });
 
-// ─── Community-shape (Phase 50) ───────────────────────────────────
+// ─── Community shape ──────────────────────────────────────
 describe('getEntityStats — community', () => {
   it('queries by community_id when entityType=community', async () => {
     const events: EventRow[] = [
@@ -133,7 +136,6 @@ describe('getEntityStats — community', () => {
     expect(stats.uniqueSessions).toBe(2);
     expect(stats.leads).toBe(1);
     expect(stats.leadConversionPct).toBe(50);
-    // Confirms the query path used the community column, not listing.
     expect(sb.eventsSelectChain.eq).toHaveBeenCalledWith('community_id', ID);
     expect(sb.leadsSelectChain.eq).toHaveBeenCalledWith('community_id', ID);
   });

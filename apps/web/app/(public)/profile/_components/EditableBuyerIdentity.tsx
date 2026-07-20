@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * Phase 25.3 (2026-06-14): Inline-editable buyer identity card.
+ * Inline-editable buyer identity card.
  *
  * Buyers can rename `display_name` from /profile. Email is read-only
  * (Supabase Auth flows). Mirrors EditableAgentIdentity but simpler — only

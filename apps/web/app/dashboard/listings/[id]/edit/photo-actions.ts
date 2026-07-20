@@ -1,7 +1,7 @@
 'use server';
 
 /**
- * Server actions for listing photos (Phase 10).
+ * Server actions for listing photos.
  *
  * Flow (matches the Cloudflare Stream pattern, but without the webhook):
  *   1. Browser picks files, uploads each to Supabase Storage bucket

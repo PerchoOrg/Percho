@@ -59,7 +59,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: `invalid vibe: ${vibe}` }, { status: 400 });
   }
 
-  const filenames = Array.isArray(body.filenames) ? body.filenames.filter((n) => typeof n === 'string') : [];
+  const filenames = Array.isArray(body.filenames)
+    ? body.filenames.filter((n) => typeof n === 'string')
+    : [];
   if (filenames.length === 0) {
     return NextResponse.json({ error: 'no filenames' }, { status: 400 });
   }

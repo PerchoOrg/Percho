@@ -1,7 +1,7 @@
 'use server';
 
 /**
- * Phase 21 (2026-06-13): server-action wrapper that fetches saved
+ * server-action wrapper that fetches saved
  * listings as `BrowseCard[]` for the /saved page. Sequences:
  *   1. listSavedListingIds(device) → ordered listing_ids
  *   2. fetchBrowseCardsByIds(ids)   → BrowseCard rows
@@ -11,7 +11,7 @@
  * logic (cover photo / video pick, schools, POIs, communities, agent),
  * keeping a single source of truth for what a card looks like.
  *
- * Phase 27.7 (2026-06-17): saved communities — separate flow from
+ * saved communities — separate flow from
  * listings. Each saved community renders as a card with a cover
  * thumbnail (first ready video's poster) + video count + city/state.
  */
@@ -20,7 +20,7 @@ import type { BrowseCard } from '@/app/(public)/browse/_components/BrowseFeed';
 import { listSavedCommunityIds } from '@/app/_actions/saved-communities';
 import { listSavedListingIds } from '@/app/_actions/saved-listings';
 import { listLiked } from '@/lib/buyer/likes';
-import { resolveCommunityCoverWithCfIds } from '@/lib/community/cover';
+import { resolveCommunityCoverWithCfIds } from '@/lib/communities/cover';
 import { fetchBrowseCardsByIds } from '@/lib/feed/browse-cards';
 import { createServiceClient } from '@/lib/supabase/server';
 
@@ -141,7 +141,7 @@ async function fetchCommunityCardsByIds(ids: string[]): Promise<SavedCommunityCa
       cover_storage_path: c.cover_storage_path,
       fallback_video_cf_id: cfList[0] ?? null,
       name: c.name,
-      boundary: (c.boundary as import('@/lib/community/logo-cover').BoundaryGeoJSON | null) ?? null,
+      boundary: (c.boundary as import('@/lib/communities/logo-cover').BoundaryGeoJSON | null) ?? null,
     });
     result.push({
       id: c.id,

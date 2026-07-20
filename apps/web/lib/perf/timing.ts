@@ -1,7 +1,7 @@
 /**
- * Phase 53 Phase B (2026-06-24): tiny timing helper for measuring server-side
- * latency on hot pages. Logs a single JSON line per request so the data is
- * grep-able in Vercel function logs.
+ * Tiny timing helper for measuring server-side latency on hot pages.
+ * Logs a single JSON line per request so the data is grep-able in Vercel
+ * function logs.
  *
  * Usage:
  *   const t = startTimer('communities-page');
@@ -9,8 +9,6 @@
  *   ...
  *   t.mark('fetch');
  *   t.end();  // emits one JSON line
- *
- * Remove after Phase B once we've identified the bottleneck.
  */
 
 export function startTimer(label: string) {
@@ -27,7 +25,9 @@ export function startTimer(label: string) {
     end(extra?: Record<string, unknown>) {
       const total = Date.now() - t0;
       // Single-line JSON so Vercel log search can filter by `perf:` prefix.
-      console.log(`perf:${label} ${JSON.stringify({ total_ms: total, ...marks, ...(extra ?? {}) })}`);
+      console.log(
+        `perf:${label} ${JSON.stringify({ total_ms: total, ...marks, ...(extra ?? {}) })}`,
+      );
     },
   };
 }

@@ -1,4 +1,4 @@
--- Phase 76 (2026-07-15): backfill ON DELETE CASCADE on leads.community_id.
+-- backfill ON DELETE CASCADE on leads.community_id.
 --
 -- Bug: deleting a community that had ever received a community-scoped lead
 -- (via /c/[slug]/feed Contact) raised a check-constraint violation:
@@ -12,7 +12,7 @@
 -- both target columns null → check violates → whole tx rolls back → user
 -- cannot delete the community.
 --
--- Phase 56 (migration 0041) already fixed the mirror case for
+-- (migration 0041) already fixed the mirror case for
 -- leads.listing_id. This is the last missing cascade — every other
 -- child-of-community FK (community_photos, community_videos, saved_communities,
 -- favorites, events, saved_social_drafts, community_video_extra_links) is

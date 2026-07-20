@@ -1,7 +1,7 @@
 /**
  * ListingLeadsPanel — per-listing leads view embedded in the edit hub.
  *
- * Phase 67.2 (2026-06-27): aligned with the redesigned `/dashboard/leads`
+ * aligned with the redesigned `/dashboard/leads`
  * inbox — column headers (≥ sm), clickable row navigates to lead detail,
  * Source column is the type enum ("Listing" — community leads never reach
  * this panel since the join is on `listing_id`), Email + SMS icon buttons
@@ -19,7 +19,7 @@
 
 import { createClient } from '@/lib/supabase/server';
 import Link from 'next/link';
-import { ListingLeadsRows, type ListingLeadRow } from './ListingLeadsPanel.client';
+import { type ListingLeadRow, ListingLeadsRows } from './ListingLeadsPanel.client';
 
 export async function ListingLeadsPanel({ listingId }: { listingId: string }) {
   const supabase = await createClient();

@@ -1,7 +1,7 @@
 /**
  * /admin/pipeline/nearby — legacy fork point.
  *
- * Phase 104 (2026-07-17): Nearby was split into two peer tabs:
+ * Nearby was split into two peer tabs:
  * /admin/pipeline/listing-nearby (Home) and
  * /admin/pipeline/community-nearby (Neighborhood). The unified
  * `?scope=` index is gone; this stub catches any lingering bookmarks

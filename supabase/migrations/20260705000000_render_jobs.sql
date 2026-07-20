@@ -1,4 +1,4 @@
--- Phase 71 (2026-07-05): render_jobs queue for agent-generated home tour
+-- render_jobs queue for agent-generated home tour
 -- videos. C2 architecture: EC2 render worker polls this table, generates
 -- Ken Burns MP4 from listing photos, uploads to Cloudflare Stream, and
 -- updates the linked `listing_videos` row. Trigger is manual (button on

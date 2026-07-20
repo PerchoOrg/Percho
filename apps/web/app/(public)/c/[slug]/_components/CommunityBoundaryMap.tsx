@@ -4,7 +4,7 @@
  * CommunityBoundaryMap — MapLibre GL + Carto Positron basemap that renders
  * a single community's polygon on top of a light street map.
  *
- * Phase 87 (2026-07-15). Why MapLibre + Carto:
+ * . Why MapLibre + Carto:
  *   - No vendor token, no per-load quota, no bill.
  *   - Positron style is neutral gray so the orange boundary reads at a
  *     glance without competing for attention.
@@ -16,15 +16,14 @@
  * so the map lands zoomed on the neighborhood without a magic zoom level.
  */
 
-import { useEffect, useRef } from 'react';
 import type { GeoJsonPolygonLike } from '@/lib/geo/point-in-polygon';
 import { bboxOf } from '@/lib/geo/point-in-polygon';
+import { useEffect, useRef } from 'react';
 
 // MapLibre CSS is loaded via the sibling <link> we inject on mount so we
 // don't force the whole app to import the stylesheet.
 const MAPLIBRE_CSS_HREF = 'https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css';
-const CARTO_VOYAGER =
-  'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json';
+const CARTO_VOYAGER = 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json';
 
 export function CommunityBoundaryMap({
   boundary,

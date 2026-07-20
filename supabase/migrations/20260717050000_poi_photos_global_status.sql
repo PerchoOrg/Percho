@@ -1,4 +1,4 @@
--- Phase 103: global reject bit on poi_photos.
+-- global reject bit on poi_photos.
 --
 -- Context: poi_photos is a globally-deduped photo pool (one row per
 -- google_photo_name, shared across every listing + community that

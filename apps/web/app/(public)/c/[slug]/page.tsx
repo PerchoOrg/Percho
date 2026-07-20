@@ -1,16 +1,16 @@
 /**
  * /c/[slug] — buyer-facing community page.
  *
- * Phase 27: shipped IA + thumbnail grid + active-listings count.
- * Phase 45.10–45.11: hero shrunk, sub-tab toggle introduced.
- * Phase 45.28 (2026-06-21, owner immersion pass): hero + grid moved into
+ * shipped IA + thumbnail grid + active-listings count.
+ * –45.11: hero shrunk, sub-tab toggle introduced.
+ * hero + grid moved into
  * <CommunityBody> client island. Hero shrunk further (5/2 mobile, 5/1
  * desktop), pill toggle row removed (videos default), and a "Live here →"
  * CTA pill in the hero's bottom-right now switches the body to the
  * active-listings grid.
  */
 
-import { resolveCommunityCoverWithCfIds } from '@/lib/community/cover';
+import { resolveCommunityCoverWithCfIds } from '@/lib/communities/cover';
 import { fetchBrowseCardsByCommunitySlug } from '@/lib/feed/browse-cards';
 import { createClient } from '@/lib/supabase/server';
 import { notFound } from 'next/navigation';
@@ -53,7 +53,7 @@ export default async function CommunityPage({
     .eq('slug', slug)
     .maybeSingle()) as { data: (CommunityRow & { status: string }) | null };
 
-  // Phase 46: inactive communities are 404 to buyers (the creating agent
+  // inactive communities are 404 to buyers (the creating agent
   // sees them in /dashboard/communities so they can reactivate).
   if (!community || community.status !== 'active') notFound();
 
@@ -73,7 +73,11 @@ export default async function CommunityPage({
       .select('id, cf_video_id, title, category')
       .in('id', videoIds)
       .eq('status', 'ready')
-      .eq('visibility', 'public')) as { data: VideoRow[] | null };
+      .eq('visibility', 'public')
+      // worker keeps prior renders as history with is_primary=false.
+      // Only the current primary per (community, intent_bucket) should surface
+      // in the grid — otherwise buyers see the same POI archetype twice.
+      .eq('is_primary', true)) as { data: VideoRow[] | null };
     videos = rows ?? [];
   }
 
@@ -81,7 +85,7 @@ export default async function CommunityPage({
   // so cards match the global feed shape exactly (BrowseCard type).
   const listings = await fetchBrowseCardsByCommunitySlug(community.slug);
 
-  // Phase 87.2: resolve `nearby` — each entry carries a `slug` from Nextdoor
+  // resolve `nearby` — each entry carries a `slug` from Nextdoor
   // (i.e. nextdoor_slug), plus name/city/state/lat/lng. We look up which of
   // those neighborhoods we've actually seeded (status=active) so we can render
   // real /c/[slug] links; unresolved names still show as static labels.
@@ -90,7 +94,10 @@ export default async function CommunityPage({
     ? ((community as any).nearby as NearbyRaw[]).slice(0, 6)
     : [];
   const nearbyNdSlugs = rawNearby.map((n) => n.slug).filter((s): s is string => !!s);
-  let nearbyLookup = new Map<string, { slug: string; name: string; city: string | null; state: string }>();
+  let nearbyLookup = new Map<
+    string,
+    { slug: string; name: string; city: string | null; state: string }
+  >();
   if (nearbyNdSlugs.length > 0) {
     // biome-ignore lint/suspicious/noExplicitAny: stub generated types
     const { data: nrows } = (await (supabase as any)
@@ -98,7 +105,13 @@ export default async function CommunityPage({
       .select('slug, name, city, state, nextdoor_slug')
       .in('nextdoor_slug', nearbyNdSlugs)
       .eq('status', 'active')) as {
-      data: Array<{ slug: string; name: string; city: string | null; state: string; nextdoor_slug: string }> | null;
+      data: Array<{
+        slug: string;
+        name: string;
+        city: string | null;
+        state: string;
+        nextdoor_slug: string;
+      }> | null;
     };
     nearbyLookup = new Map((nrows ?? []).map((r) => [r.nextdoor_slug, r]));
   }
@@ -123,7 +136,8 @@ export default async function CommunityPage({
     cover_storage_path: community.cover_storage_path,
     fallback_video_cf_id: firstReadyVideo?.cf_video_id ?? null,
     name: community.name,
-    boundary: (community.boundary as import('@/lib/community/logo-cover').BoundaryGeoJSON | null) ?? null,
+    boundary:
+      (community.boundary as import('@/lib/communities/logo-cover').BoundaryGeoJSON | null) ?? null,
   });
 
   const heroCoverUrl = heroCover ? heroCover.url : null;
@@ -145,7 +159,10 @@ export default async function CommunityPage({
         interests: (community as any).interests ?? null,
       }}
       heroCoverUrl={heroCoverUrl}
-      boundary={(community.boundary as import('@/lib/geo/point-in-polygon').GeoJsonPolygonLike | null) ?? null}
+      boundary={
+        (community.boundary as import('@/lib/geo/point-in-polygon').GeoJsonPolygonLike | null) ??
+        null
+      }
       nearby={nearbyCards}
       videos={videos}
       listings={listings}

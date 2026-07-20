@@ -1,18 +1,18 @@
 'use client';
 
 /**
- * SavedClient — Phase 21 (2026-06-13), extended Phase 27.7 / 43.4 / 45.9.
+ * SavedClient — (2026-06-13), extended / 43.4 / 45.9.
  *
  * Buyer Favorites surface (saves only).
  *
- * Phase 45.11 (2026-06-20): owner round 3 — the Listings / Communities pill
+ * owner round 3 — the Listings / Communities pill
  * row was lifted out of this client and into the global TopBar as the page's
  * sub-tabs. SavedClient now takes a `kind` prop driven by the route segment
  * (/saved → listings, /saved/communities → communities). When the bucket is
  * empty we render a centered call-to-action (Explore listings · Explore
  * communities) without the "Tap the bookmark…" hint.
  *
- * Phase 47.2 (2026-06-21): grid refactored to share GridPageShell +
+ * grid refactored to share GridPageShell +
  * ListingGrid + GridCard primitives so this surface stays visually
  * identical to /browse, /communities, /dashboard, /dashboard/communities.
  * No more inline grid/card markup.
@@ -27,6 +27,7 @@ import { GridPageShell } from '@/app/_components/GridPageShell';
 import { ListingGrid, type ListingGridItem } from '@/app/_components/ListingGrid';
 import { getOrCreateDeviceId } from '@/lib/buyer/device-id';
 import { thumbnailUrl } from '@/lib/cloudflare/stream';
+import { linkForCard } from '@/lib/feed/link-for-card';
 import { Bookmark } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
@@ -116,11 +117,13 @@ function ListingsView({ cards }: { cards: BrowseCard[] }) {
     href:
       card.mediaKind === 'video'
         ? `/browse/feed?start=${encodeURIComponent(card.listing.id)}`
-        : `/v/${card.agent.slug}/${card.listing.slug}`,
+        : linkForCard(card),
     coverUrl:
-      // Phase 60: agent's cover_url wins over the mediaKind-derived hero.
+      // agent's cover_url wins over the mediaKind-derived hero.
       card.gridCoverUrl ??
-      (card.mediaKind === 'video' ? thumbnailUrl(card.hero.cfVideoId) : (card.heroPhotoUrl ?? null)),
+      (card.mediaKind === 'video'
+        ? thumbnailUrl(card.hero.cfVideoId)
+        : (card.heroPhotoUrl ?? null)),
     price: card.listing.price,
     beds: card.listing.beds,
     baths: card.listing.baths,

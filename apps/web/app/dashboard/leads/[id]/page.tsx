@@ -1,6 +1,5 @@
 /**
- * Dashboard /leads/[id] — Phase 5.6.
- *
+ * Dashboard /leads/[id] —  *
  * Detail view for a single lead. RLS scopes the result to the agent's own
  * leads — if the row doesn't exist (or doesn't belong to this agent), we 404.
  *
@@ -53,7 +52,7 @@ export default async function LeadDetailPage({ params, searchParams }: PageProps
   const { id } = await params;
   const { back } = await searchParams;
   const supabase = await createClient();
-  // Phase 53D: getSession() reads cookie locally (~5ms) instead of round-tripping
+  // getSession() reads cookie locally (~5ms) instead of round-tripping
   // to Supabase to validate the JWT (~150ms). Middleware re-validates on each
   // request — page-level check is defense-in-depth, not the source of truth.
   const {
@@ -95,13 +94,12 @@ export default async function LeadDetailPage({ params, searchParams }: PageProps
       : null;
   const tel = lead.phone != null ? `tel:${lead.phone.replace(/[^+\d]/g, '')}` : null;
 
-  // Phase 67.5: referrer-aware back link.
+  // referrer-aware back link.
   // The row link in `leads-live.tsx` (My Leads inbox) sets `?back=inbox`;
   // the row link in the listing edit hub's leads tab sets
   // `?back=listing:<id>`. We resolve those to safe internal hrefs here.
-  // Phase 67.6: label is always literal "← Back" (user pref).
-  const UUID_RE =
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  // label is always literal "← Back" (user pref).
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   let backHref = '/dashboard/leads';
   const backLabel = '← Back';
   if (back?.startsWith('listing:')) {
@@ -113,10 +111,7 @@ export default async function LeadDetailPage({ params, searchParams }: PageProps
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-8">
-      <Link
-        href={backHref}
-        className="mb-4 inline-block text-xs text-ink2 hover:text-ink"
-      >
+      <Link href={backHref} className="mb-4 inline-block text-xs text-ink2 hover:text-ink">
         {backLabel}
       </Link>
 
@@ -149,10 +144,7 @@ export default async function LeadDetailPage({ params, searchParams }: PageProps
               <dt className="text-muted">Neighborhood</dt>
               <dd>
                 {lead.communities?.slug ? (
-                  <Link
-                    href={`/c/${lead.communities.slug}`}
-                    className="text-ink hover:underline"
-                  >
+                  <Link href={`/c/${lead.communities.slug}`} className="text-ink hover:underline">
                     {communityName ?? '(unknown neighborhood)'}
                   </Link>
                 ) : (

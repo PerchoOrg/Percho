@@ -2,7 +2,7 @@
  * /admin/pipeline/poi-library — global POI + poi_photos audit.
  * Shows what the discovery + AI-tag steps have produced.
  *
- * Phase 108 (2026-07-17): moved rendering into <PoiLibraryTable>
+ * moved rendering into <PoiLibraryTable>
  * (shared AdminTable: search / sort / pagination). Removed the
  * server-side search form + tagged/photos <select> filters — the
  * new table's search + sortable columns cover the same ground.

@@ -10,7 +10,7 @@
  * per-table so each page keeps its own cell-render logic.
  */
 
-import { useMemo, useState, type ReactNode } from 'react';
+import { type ReactNode, useMemo, useState } from 'react';
 
 export type AdminColumn<T> = {
   key: string;
@@ -72,7 +72,9 @@ export function AdminTable<T>({
     const col = columns.find((c) => c.key === sort.key);
     if (!col?.sortValue) return filtered;
     const dirMul = sort.dir === 'asc' ? 1 : -1;
-    return [...filtered].sort((a, b) => dirMul * compareValues(col.sortValue!(a), col.sortValue!(b)));
+    return [...filtered].sort(
+      (a, b) => dirMul * compareValues(col.sortValue!(a), col.sortValue!(b)),
+    );
   }, [filtered, sort, columns]);
 
   const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize));

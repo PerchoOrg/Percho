@@ -10,9 +10,9 @@ export default function AboutPage() {
   return (
     <LegalLayout eyebrow="About" title="A quieter way to find a home.">
       <p>
-        Percho is what TikTok would look like if it were built for buying a home. Real listings
-        from real agents — shown as video, with real neighborhood context — instead of a spreadsheet
-        of beds, baths, and zip codes.
+        Percho is what TikTok would look like if it were built for buying a home. Real listings from
+        real agents — shown as video, with real neighborhood context — instead of a spreadsheet of
+        beds, baths, and zip codes.
       </p>
 
       <h2>What we believe</h2>
@@ -44,8 +44,8 @@ export default function AboutPage() {
 
       <h2>Who we are</h2>
       <p>
-        Percho is a small team based in the United States. We are not a brokerage. We do not buy
-        or sell homes. We build the platform that lets agents and buyers find each other.
+        Percho is a small team based in the United States. We are not a brokerage. We do not buy or
+        sell homes. We build the platform that lets agents and buyers find each other.
       </p>
 
       <h2>Get in touch</h2>

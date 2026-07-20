@@ -1,7 +1,7 @@
 'use server';
 
 /**
- * Saved-listings server actions (Phase 21, 2026-06-13).
+ * Saved-listings server actions.
  *
  * RLS denies everything on `saved_listings` — all access funnels through
  * these actions using the service-role client. We validate the device_id

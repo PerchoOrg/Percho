@@ -1,9 +1,9 @@
 /**
  * EmptyHubState — shared empty state chrome for hub-style list pages.
  *
- * Phase 57 (2026-06-26): introduced for agent-side hubs (My Listing,
+ * introduced for agent-side hubs (My Listing,
  * My Community).
- * Phase 58 (2026-06-26): promoted to app/_components/ and reused on
+ * promoted to app/_components/ and reused on
  * buyer surfaces (For You /browse, /communities) so all four list
  * pages share the same icon-disc + headline + sub copy. CTA is
  * optional — buyers don't create listings or communities, so on

@@ -1,12 +1,12 @@
 /**
  * Dashboard home — my listings.
  *
- * Phase 47.10 (2026-06-21): added filter chips (All / Active / Inactive)
+ * added filter chips (All / Active / Inactive)
  * and sort dropdown (Recently updated / Newest / Most viewed) via the new
  * client component DashboardListingGrid. Snapshot view counts are
  * aggregated in a single events query over all owned listings.
  *
- * Phase 47 (2026-06-21): refactored on top of shared GridPageShell +
+ * refactored on top of shared GridPageShell +
  * ListingGrid. Same card markup as /browse — owner reported the two
  * grids "looked different"; root cause was duplicated card markup in
  * ListingsTabbedList.tsx. That file was deleted; this page now maps
@@ -17,8 +17,8 @@
 
 import { GridPageShell } from '@/app/_components/GridPageShell';
 import {
-  DashboardListingGrid,
   type DashboardItem,
+  DashboardListingGrid,
 } from '@/app/dashboard/_components/DashboardListingGrid';
 import { isDraftAddress } from '@/app/dashboard/listings/draft';
 import { thumbnailUrl } from '@/lib/cloudflare/stream';
@@ -27,7 +27,7 @@ import { redirect } from 'next/navigation';
 
 export default async function DashboardHomePage() {
   const supabase = await createClient();
-  // Phase 53D: getSession() reads cookie locally (~5ms) instead of round-tripping
+  // getSession() reads cookie locally (~5ms) instead of round-tripping
   // to Supabase to validate the JWT (~150ms). Middleware re-validates on each
   // request — page-level check is defense-in-depth, not the source of truth.
   const {
@@ -130,9 +130,9 @@ export default async function DashboardHomePage() {
       baths: l.baths,
       sqft: l.sqft,
       address: isDraft ? 'Untitled draft' : l.address,
-      // Phase 74.11: dashboard hub 也走 ListingGrid 的 formatFullAddress
-      // → 需要 city/state/zip。Draft 无 city/state,fallback 到
-      // "Untitled draft" street-only(见 74.5 dashboard 例外)。
+      // Dashboard hub uses ListingGrid's formatFullAddress, which
+      // needs city/state/zip. Drafts have no city/state → fall back
+      // to "Untitled draft" street-only.
       city: isDraft ? null : l.city,
       state: isDraft ? null : l.state,
       zip: isDraft ? null : l.zip,

@@ -82,48 +82,24 @@ body {
   font-weight: 400;
 }
 
-/* Scroll-snap utilities */
-.snap-y-mandatory {
-  scroll-snap-type: y mandatory;
-}
-.snap-section {
-  scroll-snap-align: start;
-}
-
-/* TikTok-style feed (Listing route) */
-.feed-scroller {
-  scroll-snap-type: y mandatory;
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior: contain;
-}
-.feed-card {
-  scroll-snap-align: start;
-  scroll-snap-stop: always;
-}
-
 @keyframes heart-pop {
-  0% { transform: scale(1); }
-  30% { transform: scale(1.4); }
-  60% { transform: scale(0.9); }
-  100% { transform: scale(1); }
+  0% {
+    transform: scale(1);
+  }
+  30% {
+    transform: scale(1.4);
+  }
+  60% {
+    transform: scale(0.9);
+  }
+  100% {
+    transform: scale(1);
+  }
 }
-.heart-pop { animation: heart-pop 0.45s ease; }
+.heart-pop {
+  animation: heart-pop 0.45s ease;
+}
 
-@keyframes btn-press {
-  0% { transform: scale(1); }
-  50% { transform: scale(0.85); }
-  100% { transform: scale(1); }
-}
-.btn-press { animation: btn-press 0.25s ease; }
-.rail-btn { transition: transform 0.15s ease; }
-.rail-btn:active { transform: scale(0.85); }
-
-/* Brand utilities — re-skinned, kept under same names so existing classes
-   in 73 files keep working without a sweep. */
-.gold-line {
-  background: var(--line);
-  height: 1px;
-}
 .btn-gold {
   background: var(--ink);
   color: #fbf8f3;
@@ -133,7 +109,7 @@ body {
   transition: background 0.18s ease;
 }
 .btn-gold:hover {
-  background: #1f1f1f;
+  background: var(--brand-dark);
 }
 .btn-ghost {
   border: 1px solid var(--line-strong);
@@ -149,24 +125,16 @@ body {
 }
 
 /* Hide scrollbars (used in horizontal carousels) */
-.scrollbar-hide::-webkit-scrollbar { display: none; }
-.scrollbar-hide { scrollbar-width: none; }
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-hide {
+  scrollbar-width: none;
+}
 
-/* Phase 74.20 (2026-07-06): globally hide iOS Safari's native <video>
- * chrome — the start-playback-button and overlay play-button. Symptom
- * (owner): entering fullscreen shows a play button on the image while
- * audio is already playing; first tap kills the audio, second tap
- * restarts both. Root cause: even without `controls`, iOS Safari
- * mounts these pseudo-element buttons for a moment during rotate-90
- * + fixed-position style recalc. Their hitboxes intercept the first
- * tap, calling native pause on the media element — audio stops
- * (video track was already frozen behind the button chrome), and
- * only the second tap reaches our onTap handler.
- *
- * Applied globally rather than scoped to the fullscreen branch
- * because these buttons can also flash briefly during HLS.js
- * pipeline attach in the feed — always safe to hide since we own
- * all pause/play UI ourselves. */
+/* Hide iOS Safari's native <video> chrome — the start-playback and overlay
+ * play buttons intercept the first tap during fullscreen recalc, killing
+ * our own play/pause handlers. We own all media UI ourselves. */
 video::-webkit-media-controls-start-playback-button,
 video::-webkit-media-controls-overlay-play-button,
 video::-webkit-media-controls-panel {
@@ -174,36 +142,6 @@ video::-webkit-media-controls-panel {
   -webkit-appearance: none;
   opacity: 0 !important;
   pointer-events: none !important;
-}
-
-/* Tooltip — used by SourceTip and similar. Re-skinned to light. */
-.tip { position: relative; }
-.tip:hover .tip-body,
-.tip:focus-within .tip-body {
-  opacity: 1;
-  pointer-events: auto;
-  transform: translateY(0);
-}
-.tip-body {
-  position: absolute;
-  bottom: calc(100% + 6px);
-  left: 50%;
-  transform: translate(-50%, 4px);
-  background: var(--surface);
-  border: 1px solid var(--line);
-  color: var(--ink);
-  padding: 8px 10px;
-  font-size: 11px;
-  border-radius: 4px;
-  white-space: normal;
-  width: max-content;
-  min-width: 220px;
-  max-width: 280px;
-  opacity: 0;
-  pointer-events: none;
-  transition: all 0.15s ease;
-  z-index: 50;
-  box-shadow: 0 10px 30px rgba(49, 49, 49, 0.14);
 }
 
 /* Focus ring — accessibility */

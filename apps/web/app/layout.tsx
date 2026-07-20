@@ -13,7 +13,7 @@ const inter = Inter({
   display: 'swap',
 });
 
-// Aman direction display serif. See DESIGN.md.
+// Display serif for headings.
 const serifDisplay = Source_Serif_4({
   subsets: ['latin'],
   variable: '--font-serif-display',
@@ -31,7 +31,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" className={`${inter.variable} ${serifDisplay.variable}`}>
       <body className="bg-bg text-ink antialiased">
-        {/* Phase 45 chrome (2026-06-20):
+        {/* Site chrome:
          *   - DesktopSidebar: md+ only, fixed 200px left rail with brand +
          *     primary tabs.
          *   - TopBar: every breakpoint, sticky [search · sub-tabs · avatar].

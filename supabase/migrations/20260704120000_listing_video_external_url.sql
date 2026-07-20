@@ -1,4 +1,4 @@
--- Phase 70.11 (2026-07-04): allow listing_videos to reference an external
+-- allow listing_videos to reference an external
 -- mp4 URL instead of a Cloudflare Stream video id. Enables demo/mock
 -- listings that ship a pre-rendered slideshow served from /public/demo/
 -- (or any external host) without going through the CF Stream pipeline.

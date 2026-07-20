@@ -1,11 +1,11 @@
 /**
- * Agent-level Analytics rollup (Phase 49.2: V3 Asymmetric redesign).
+ * Agent-level Analytics rollup.
  *
  * Aggregates across all of the calling agent's listings. Reads from
  * `events` (page_view / card_view / video_complete), `leads`, and the
  * 7-day page_view trend.
  *
- * Phase 49.2 layout:
+ * layout:
  *   - Cover card: Views (large) + sparkline + unique-sessions sub-line.
  *   - Sidebar: Leads number with conversion sub-line.
  *   - Sidebar: Watch-through ring (videoCompletes / pageViews).
@@ -17,7 +17,7 @@
  * demoted from card to a sub-line under Views (it's context, not a goal).
  */
 
-import { getRollupStats } from '@/lib/analytics/listing-stats';
+import { getRollupEntityStats } from '@/lib/analytics/entity-stats';
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 
@@ -101,8 +101,7 @@ function Funnel({
     <div className="space-y-2">
       {steps.map((s, i) => {
         const prev = i > 0 ? (steps[i - 1]?.value ?? 0) : null;
-        const stepDrop =
-          prev != null && prev > 0 ? Math.round((s.value / prev) * 1000) / 10 : null;
+        const stepDrop = prev != null && prev > 0 ? Math.round((s.value / prev) * 1000) / 10 : null;
         const widthPct = Math.max(2, Math.round((s.value / top) * 100));
         return (
           <div key={s.label} className="flex items-center gap-3">
@@ -137,7 +136,7 @@ function Funnel({
 
 export default async function DashboardAnalyticsPage() {
   const supabase = await createClient();
-  // Phase 53D: getSession() reads cookie locally (~5ms) instead of round-tripping
+  // getSession() reads cookie locally (~5ms) instead of round-tripping
   // to Supabase to validate the JWT (~150ms). Middleware re-validates on each
   // request — page-level check is defense-in-depth, not the source of truth.
   const {
@@ -161,7 +160,10 @@ export default async function DashboardAnalyticsPage() {
     .eq('agent_id', agentRow.id)) as { data: Array<{ id: string }> | null };
   const listingIds = (listings ?? []).map((l) => l.id);
 
-  const rollup = await getRollupStats(supabase, listingIds);
+  const rollup = await getRollupEntityStats(supabase, {
+    entityType: 'listing',
+    entityIds: listingIds,
+  });
 
   // 7-day views trend
   const buckets = buildLast7Days();
@@ -190,9 +192,7 @@ export default async function DashboardAnalyticsPage() {
   }
 
   const watchThroughPct =
-    rollup.pageViews > 0
-      ? Math.round((rollup.videoCompletes / rollup.pageViews) * 1000) / 10
-      : 0;
+    rollup.pageViews > 0 ? Math.round((rollup.videoCompletes / rollup.pageViews) * 1000) / 10 : 0;
   const showRing = rollup.pageViews > 0;
 
   return (
@@ -225,12 +225,8 @@ export default async function DashboardAnalyticsPage() {
 
         {/* Leads */}
         <div className="rounded-2xl border border-line bg-surface p-4 sm:col-span-2">
-          <div className="text-muted text-[11px] uppercase tracking-widest">
-            Leads
-          </div>
-          <div className="mt-1 font-serif text-3xl tabular-nums">
-            {fmtNum(rollup.leads)}
-          </div>
+          <div className="text-muted text-[11px] uppercase tracking-widest">Leads</div>
+          <div className="mt-1 font-serif text-3xl tabular-nums">{fmtNum(rollup.leads)}</div>
           {rollup.leads > 0 && rollup.uniqueSessions > 0 && (
             <div className="mt-1 text-muted text-xs">
               {rollup.leadConversionPct}% of unique sessions
@@ -247,9 +243,7 @@ export default async function DashboardAnalyticsPage() {
                 <div className="text-muted text-[11px] uppercase tracking-widest">
                   Watch-through
                 </div>
-                <div className="font-serif text-lg tabular-nums">
-                  {watchThroughPct}%
-                </div>
+                <div className="font-serif text-lg tabular-nums">{watchThroughPct}%</div>
                 <div className="text-muted text-xs">
                   {fmtNum(rollup.videoCompletes)} video{' '}
                   {rollup.videoCompletes === 1 ? 'completion' : 'completions'}
@@ -258,12 +252,8 @@ export default async function DashboardAnalyticsPage() {
             </div>
           ) : (
             <div>
-              <div className="text-muted text-[11px] uppercase tracking-widest">
-                Watch-through
-              </div>
-              <div className="mt-1 text-muted text-sm">
-                Available once viewers reach a listing.
-              </div>
+              <div className="text-muted text-[11px] uppercase tracking-widest">Watch-through</div>
+              <div className="mt-1 text-muted text-sm">Available once viewers reach a listing.</div>
             </div>
           )}
         </div>
@@ -285,8 +275,8 @@ export default async function DashboardAnalyticsPage() {
         />
         {rollup.pageViews === 0 && (
           <p className="mt-3 text-muted text-xs">
-            No traffic yet. Share your listing URLs on Facebook / Instagram /
-            Email to start collecting data.
+            No traffic yet. Share your listing URLs on Facebook / Instagram / Email to start
+            collecting data.
           </p>
         )}
       </section>

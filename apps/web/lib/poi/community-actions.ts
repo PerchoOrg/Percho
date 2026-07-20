@@ -1,13 +1,13 @@
-"use server";
+'use server';
 
 /**
  * Community-scoped POI content pipeline — mirror of `lib/poi/actions.ts`
  * but keyed on `community_id` instead of `listing_id`.
  *
- * Phase 92 (2026-07-15). Rationale: nearby content is neighborhood-shared,
+ * . Rationale: nearby content is neighborhood-shared,
  * so approving a Whole Foods photo for the "Waterside" subdivision benefits
  * every listing inside it. The listing-scoped tables (`listing_pois` /
- * `listing_poi_photos`) stay for Phase 92 to avoid a big-bang UI cutover;
+ * `listing_poi_photos`) stay for to avoid a big-bang UI cutover;
  * new work funnels into `community_pois` / `community_poi_photos`.
  *
  * Auth model: communities are shared per 0013 (`created_by` is metadata,
@@ -15,19 +15,19 @@
  * still require `auth.getUser()` so anonymous callers are rejected up-front.
  */
 
-import { revalidatePath } from "next/cache";
-import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { createClient, createServiceClient } from '@/lib/supabase/server';
+import { revalidatePath } from 'next/cache';
 import {
   DEFAULT_INCLUDED_TYPES,
+  type PlaceResult,
   bucketByPlaceType,
   fetchPhotoBinary,
   haversineMeters,
   searchNearby,
-  type PlaceResult,
-} from "./google-places";
-import type { IntentBucket, PhotoStatus, PoiStatus, ReviewAction } from "./types";
+} from './google-places';
+import type { IntentBucket, PhotoStatus, PoiStatus, ReviewAction } from './types';
 
-const POI_PHOTO_BUCKET = "listing-photos"; // shared with listing-scope pipeline
+const POI_PHOTO_BUCKET = 'listing-photos'; // shared with listing-scope pipeline
 
 type CommunityAnchor = {
   id: string;
@@ -39,13 +39,13 @@ type CommunityAnchor = {
 async function requireAuthedCommunity(communityId: string): Promise<CommunityAnchor> {
   const supabase = await createClient();
   const { data: userRes } = await supabase.auth.getUser();
-  if (!userRes.user) throw new Error("not authenticated");
+  if (!userRes.user) throw new Error('not authenticated');
 
   // biome-ignore lint/suspicious/noExplicitAny: stub generated types
   const { data: community, error } = (await (supabase as any)
-    .from("communities")
-    .select("id, name, lat, lng")
-    .eq("id", communityId)
+    .from('communities')
+    .select('id, name, lat, lng')
+    .eq('id', communityId)
     .maybeSingle()) as { data: CommunityAnchor | null; error: unknown };
 
   if (error) throw error;
@@ -87,12 +87,10 @@ export async function discoverPoisForCommunity(
 
   const categoryResults = await Promise.all(
     (opts.includedTypes ?? DEFAULT_INCLUDED_TYPES).map((t) =>
-      searchNearby({ center, radius, includedTypes: [t], maxResultCount: 20 }).catch(
-        (err) => {
-          console.error(`[community-poi] searchNearby(${t}) failed:`, err);
-          return [] as PlaceResult[];
-        },
-      ),
+      searchNearby({ center, radius, includedTypes: [t], maxResultCount: 20 }).catch((err) => {
+        console.error(`[community-poi] searchNearby(${t}) failed:`, err);
+        return [] as PlaceResult[];
+      }),
     ),
   );
   const allPlaces = categoryResults.flat();
@@ -108,11 +106,11 @@ export async function discoverPoisForCommunity(
     if (!place.location) continue;
 
     const { data: poiRow, error: upsertErr } = (await admin
-      .from("pois")
+      .from('pois')
       .upsert(
         {
           google_place_id: place.id,
-          display_name: place.displayName?.text ?? "(unnamed)",
+          display_name: place.displayName?.text ?? '(unnamed)',
           formatted_address: place.formattedAddress ?? null,
           primary_type: place.primaryType ?? null,
           types: place.types ?? null,
@@ -123,9 +121,9 @@ export async function discoverPoisForCommunity(
           raw_place: place,
           refreshed_at: new Date().toISOString(),
         },
-        { onConflict: "google_place_id" },
+        { onConflict: 'google_place_id' },
       )
-      .select("id")
+      .select('id')
       .single()) as { data: { id: string } | null; error: unknown };
 
     if (upsertErr || !poiRow) {
@@ -143,21 +141,21 @@ export async function discoverPoisForCommunity(
     if (!bucket) continue;
 
     const { data: existing } = (await admin
-      .from("community_pois")
-      .select("community_id")
-      .eq("community_id", communityId)
-      .eq("poi_id", poiRow.id)
+      .from('community_pois')
+      .select('community_id')
+      .eq('community_id', communityId)
+      .eq('poi_id', poiRow.id)
       .maybeSingle()) as { data: { community_id: string } | null };
 
     if (existing) {
       reused += 1;
     } else {
-      const { error: cpErr } = await admin.from("community_pois").insert({
+      const { error: cpErr } = await admin.from('community_pois').insert({
         community_id: communityId,
         poi_id: poiRow.id,
         intent_bucket: bucket,
         distance_m: dMeters,
-        status: "candidate",
+        status: 'candidate',
       });
       if (cpErr) {
         console.error(`[community-poi] insert community_pois failed:`, cpErr);
@@ -192,9 +190,9 @@ export async function fetchPhotosForCommunityPoi(
   const admin: any = createServiceClient();
 
   const { data: poi, error: poiErr } = (await admin
-    .from("pois")
-    .select("id, google_place_id, raw_place")
-    .eq("id", poiId)
+    .from('pois')
+    .select('id, google_place_id, raw_place')
+    .eq('id', poiId)
     .single()) as {
     data: { id: string; google_place_id: string; raw_place: PlaceResult | null } | null;
     error: unknown;
@@ -216,9 +214,9 @@ export async function fetchPhotosForCommunityPoi(
 
   for (const photo of targets) {
     const { data: existingPhoto } = (await admin
-      .from("poi_photos")
-      .select("id")
-      .eq("google_photo_name", photo.name)
+      .from('poi_photos')
+      .select('id')
+      .eq('google_photo_name', photo.name)
       .maybeSingle()) as { data: { id: string } | null };
 
     let poiPhotoId: string;
@@ -232,7 +230,7 @@ export async function fetchPhotosForCommunityPoi(
         blob = await fetchPhotoBinary(photo.name, { maxHeightPx: opts.maxHeightPx ?? 1200 });
       } catch (err) {
         console.error(`[community-poi] fetch photo ${photo.name} failed:`, err);
-        noteSkip(`Google Places fetch: ${(err as Error).message ?? "unknown"}`);
+        noteSkip(`Google Places fetch: ${(err as Error).message ?? 'unknown'}`);
         continue;
       }
 
@@ -242,16 +240,16 @@ export async function fetchPhotosForCommunityPoi(
         .upload(storagePath, blob.bytes, { contentType: blob.contentType, upsert: true });
       if (upErr) {
         console.error(`[community-poi] storage upload failed:`, upErr);
-        noteSkip(`Storage upload: ${(upErr as { message?: string }).message ?? "unknown"}`);
+        noteSkip(`Storage upload: ${(upErr as { message?: string }).message ?? 'unknown'}`);
         continue;
       }
 
       const { data: upserted, error: upsertErr } = (await admin
-        .from("poi_photos")
+        .from('poi_photos')
         .upsert(
           {
             poi_id: poi.id,
-            source: "google_places",
+            source: 'google_places',
             google_photo_name: photo.name,
             storage_path: storagePath,
             width_px: photo.widthPx ?? null,
@@ -259,9 +257,9 @@ export async function fetchPhotosForCommunityPoi(
             bytes: blob.bytes.length,
             attribution: { authorAttributions: photo.authorAttributions ?? [] },
           },
-          { onConflict: "google_photo_name" },
+          { onConflict: 'google_photo_name' },
         )
-        .select("id, created_at")
+        .select('id, created_at')
         .single()) as {
         data: { id: string; created_at: string } | null;
         error: unknown;
@@ -269,7 +267,7 @@ export async function fetchPhotosForCommunityPoi(
 
       if (upsertErr || !upserted) {
         console.error(`[community-poi] upsert poi_photos failed:`, upsertErr);
-        noteSkip(`DB upsert: ${(upsertErr as { message?: string })?.message ?? "unknown"}`);
+        noteSkip(`DB upsert: ${(upsertErr as { message?: string })?.message ?? 'unknown'}`);
         continue;
       }
       poiPhotoId = upserted.id;
@@ -280,17 +278,17 @@ export async function fetchPhotosForCommunityPoi(
 
     // Ensure per-community review row exists in pending state.
     const { data: existingLink } = (await admin
-      .from("community_poi_photos")
-      .select("community_id")
-      .eq("community_id", communityId)
-      .eq("poi_photo_id", poiPhotoId)
+      .from('community_poi_photos')
+      .select('community_id')
+      .eq('community_id', communityId)
+      .eq('poi_photo_id', poiPhotoId)
       .maybeSingle()) as { data: { community_id: string } | null };
 
     if (!existingLink) {
-      await admin.from("community_poi_photos").insert({
+      await admin.from('community_poi_photos').insert({
         community_id: communityId,
         poi_photo_id: poiPhotoId,
-        status: "pending",
+        status: 'pending',
       });
     }
   }
@@ -301,20 +299,16 @@ export async function fetchPhotosForCommunityPoi(
 
 // ─── review actions ─────────────────────────────────────────────────────────
 
-export async function setCommunityPoiStatus(
-  communityId: string,
-  poiId: string,
-  status: PoiStatus,
-) {
+export async function setCommunityPoiStatus(communityId: string, poiId: string, status: PoiStatus) {
   await requireAuthedCommunity(communityId);
   // biome-ignore lint/suspicious/noExplicitAny: stub generated types
   const supabase: any = await createClient();
 
   const { error } = await supabase
-    .from("community_pois")
+    .from('community_pois')
     .update({ status, reviewed_at: new Date().toISOString() })
-    .eq("community_id", communityId)
-    .eq("poi_id", poiId);
+    .eq('community_id', communityId)
+    .eq('poi_id', poiId);
   if (error) throw error;
 
   revalidatePath(`/dashboard/communities/${communityId}`);
@@ -330,19 +324,19 @@ export async function setCommunityPhotoStatus(
   const supabase: any = await createClient();
 
   const { error } = await supabase
-    .from("community_poi_photos")
+    .from('community_poi_photos')
     .update({ status, reviewed_at: new Date().toISOString() })
-    .eq("community_id", communityId)
-    .eq("poi_photo_id", poiPhotoId);
+    .eq('community_id', communityId)
+    .eq('poi_photo_id', poiPhotoId);
   if (error) throw error;
 
   revalidatePath(`/dashboard/communities/${communityId}`);
 
   // Fire-and-forget vision tagging on approve, same pattern as listing side.
-  if (status === "approved") {
-    import("@/lib/poi/vision-tagger")
+  if (status === 'approved') {
+    import('@/lib/poi/vision-tagger')
       .then(({ tagPoiPhoto }) => tagPoiPhoto(poiPhotoId))
-      .catch((err) => console.error("[community-poi] vision tag dispatch failed:", err));
+      .catch((err) => console.error('[community-poi] vision tag dispatch failed:', err));
   }
 }
 
@@ -392,13 +386,13 @@ export async function loadNearbyPoisForCommunity(
   const {
     data: { user },
   } = await userClient.auth.getUser();
-  if (!user) throw new Error("not authenticated");
+  if (!user) throw new Error('not authenticated');
 
   // biome-ignore lint/suspicious/noExplicitAny: stub generated types
   const { data: agent } = (await (userClient as any)
-    .from("agents")
-    .select("is_admin")
-    .eq("user_id", user.id)
+    .from('agents')
+    .select('is_admin')
+    .eq('user_id', user.id)
     .maybeSingle()) as { data: { is_admin: boolean } | null };
 
   const isAdmin = !!agent?.is_admin;
@@ -410,16 +404,16 @@ export async function loadNearbyPoisForCommunity(
   const supabase: any = isAdmin ? createServiceClient() : userClient;
 
   const { data: rows, error } = (await supabase
-    .from("community_pois")
+    .from('community_pois')
     .select(
       `
       poi_id, intent_bucket, distance_m, status, ai_score, discovered_at, reviewed_at,
       pois!inner(id, display_name, formatted_address, primary_type, rating, user_ratings_total)
     `,
     )
-    .eq("community_id", communityId)
-    .order("distance_m", { ascending: true })) as {
-    data: Array<Omit<NearbyPoiForCommunity, "photos">> | null;
+    .eq('community_id', communityId)
+    .order('distance_m', { ascending: true })) as {
+    data: Array<Omit<NearbyPoiForCommunity, 'photos'>> | null;
     error: unknown;
   };
 
@@ -427,14 +421,14 @@ export async function loadNearbyPoisForCommunity(
   if (!rows || rows.length === 0) return [];
 
   const { data: photoRows, error: photoErr } = (await supabase
-    .from("community_poi_photos")
+    .from('community_poi_photos')
     .select(
       `
       status, poi_photo_id,
       poi_photos!inner(poi_id, storage_path, attribution, ai_tags, tagged_at)
     `,
     )
-    .eq("community_id", communityId)) as {
+    .eq('community_id', communityId)) as {
     data: Array<{
       status: PhotoStatus;
       poi_photo_id: string;
@@ -451,7 +445,7 @@ export async function loadNearbyPoisForCommunity(
 
   if (photoErr) throw photoErr;
 
-  const photosByPoi = new Map<string, NearbyPoiForCommunity["photos"]>();
+  const photosByPoi = new Map<string, NearbyPoiForCommunity['photos']>();
   for (const p of photoRows ?? []) {
     const poiId = p.poi_photos.poi_id;
     const list = photosByPoi.get(poiId) ?? [];
@@ -479,7 +473,7 @@ export async function loadNearbyPoisForCommunity(
 function hashName(name: string): string {
   let h = 0;
   for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) | 0;
-  return (h >>> 0).toString(16).padStart(8, "0");
+  return (h >>> 0).toString(16).padStart(8, '0');
 }
 
 // Silence "unused" lint if a future refactor drops the helper — kept alongside

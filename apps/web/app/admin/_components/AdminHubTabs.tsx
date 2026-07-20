@@ -3,7 +3,7 @@
 /**
  * AdminHubTabs — chip-mode tab bar for the /admin console.
  *
- * Visually identical to the agent hub `HubTabs` chip mode (Phase 48),
+ * Visually identical to the agent hub `HubTabs` chip mode,
  * but the navigation model differs: each admin tab is a real route
  * (its own server component with independent data-fetching), so we
  * use pathname-based routing + <Link> instead of `?tab=` state.

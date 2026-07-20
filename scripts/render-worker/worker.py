@@ -230,20 +230,18 @@ def format_specs(beds: Any, baths: Any, sqft: Any) -> str:
 
 
 def pick_bgm() -> Path | None:
-    """Return a random .mp3 from BGM_DIR, or None if the directory is empty
-    or missing. The worker still produces a valid (silent) video in that case.
+    """Return a random .mp3 from the `warm-acoustic` bucket, or None if the
+    bucket is empty or missing. The worker still produces a valid (silent)
+    video in that case.
+
+    Only warm-acoustic is production-approved (see docs/bgm/vibe-map.md).
+    modern-corporate / luxury-ambient / chill-electronic / cinematic were
+    trialed and rejected — music must not lead the video.
     """
-    if not BGM_DIR.exists():
+    bucket = BGM_DIR / "warm-acoustic"
+    if not bucket.exists():
         return None
-    # Recurse into vibe-bucket subdirectories (warm-acoustic/, modern-corporate/,
-    # luxury-ambient/, chill-electronic/). Skip _archive/ — those are tracks
-    # that violated the SOP (jazz, tropical, non-US-neutral) but we keep the
-    # files around for reference. Phase 106 (2026-07-17): cinematic bucket
-    # retired — pull-bgm.sh purges the folder locally.
-    tracks = sorted(
-        p for p in BGM_DIR.rglob("*.mp3")
-        if "_archive" not in p.relative_to(BGM_DIR).parts
-    )
+    tracks = sorted(bucket.glob("*.mp3"))
     if not tracks:
         return None
     return random.choice(tracks)

@@ -1,8 +1,7 @@
 'use client';
 
 /**
- * CommunityNearbyPanel — community sibling of NearbyPoiPanel (Phase 92,
- * 2026-07-15). Same triage + generated-videos UI, but scoped to a community
+ * CommunityNearbyPanel — community sibling of NearbyPoiPanel. Same triage + generated-videos UI, but scoped to a community
  * so multiple listings inside the same neighborhood share one set of nearby
  * videos. Keyed on communityId and backed by community_pois /
  * community_poi_photos + community-scoped video actions.
@@ -28,26 +27,37 @@
  * yet, we show "Analyzing…" so the agent knows tagging is in flight.
  */
 
-import { Loader2, MapPinned, ImagePlus, Check, X, ChevronLeft, ChevronRight, Video, Play, Sparkles, RefreshCw } from 'lucide-react';
-import Image from 'next/image';
-import { useCallback, useEffect, useState, useTransition } from 'react';
+import { streamIframeUrl } from '@/lib/cloudflare/stream';
 import {
+  type NearbyPoiForCommunity,
   discoverPoisForCommunity,
   fetchPhotosForCommunityPoi,
   loadNearbyPoisForCommunity,
   setCommunityPhotoStatus,
-  setCommunityPoiStatus,
-  type NearbyPoiForCommunity,
 } from '@/lib/poi/community-actions';
 import {
+  type CommunityBucketVideoStatus,
   generateCommunityBucketVideo,
   getCommunityBucketEligiblePhotoCount,
   getCommunityBucketVideoStatus,
   regenerateCommunityBucketVideoNarrative,
-  type CommunityBucketVideoStatus,
 } from '@/lib/poi/community-video-actions';
-import { streamIframeUrl } from '@/lib/cloudflare/stream';
 import type { IntentBucket } from '@/lib/poi/types';
+import {
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  ImagePlus,
+  Loader2,
+  MapPinned,
+  Play,
+  RefreshCw,
+  Sparkles,
+  Video,
+  X,
+} from 'lucide-react';
+import Image from 'next/image';
+import { useCallback, useEffect, useState, useTransition } from 'react';
 
 const BUCKET_LABELS: Record<IntentBucket, string> = {
   schools: 'Schools',
@@ -117,7 +127,7 @@ export function CommunityNearbyPanel({
 }: Props) {
   const [pois, setPois] = useState<NearbyPoiForCommunity[]>(initialPois);
   const [pending, startTransition] = useTransition();
-  const [busyPoi, setBusyPoi] = useState<string | null>(null);
+  const [busyPois, setBusyPois] = useState<Set<string>>(() => new Set());
   const [notice, setNotice] = useState<string | null>(null);
   const [expandedBuckets, setExpandedBuckets] = useState<Set<IntentBucket>>(new Set());
 
@@ -160,8 +170,7 @@ export function CommunityNearbyPanel({
     startTransition(async () => {
       try {
         const r = await discoverPoisForCommunity(communityId);
-        const topBuckets = BUCKET_ORDER
-          .map((b) => ({ b, n: r.buckets[b] ?? 0 }))
+        const topBuckets = BUCKET_ORDER.map((b) => ({ b, n: r.buckets[b] ?? 0 }))
           .filter((x) => x.n > 0)
           .sort((a, b) => b.n - a.n)
           .slice(0, 4)
@@ -179,35 +188,34 @@ export function CommunityNearbyPanel({
   };
 
   const handleFetchPhotos = (poiId: string) => {
-    setBusyPoi(poiId);
+    if (busyPois.has(poiId)) return;
+    setBusyPois((prev) => {
+      const next = new Set(prev);
+      next.add(poiId);
+      return next;
+    });
     setNotice(null);
-    startTransition(async () => {
+    // Deliberately NOT wrapped in startTransition — that made every other row's
+    // button `pending` and froze the panel while one POI's photos fetched.
+    // Each fetch tracks its own busy state via `busyPois`, so the user can
+    // click Fetch on several POIs in parallel and keep approving/rejecting
+    // POIs while requests are in flight.
+    void (async () => {
       try {
         const r = await fetchPhotosForCommunityPoi(communityId, poiId);
-        const reasons = r.skippedReasons?.length
-          ? ` — first reason: ${r.skippedReasons[0]}`
-          : '';
-        setNotice(
-          `Photos: +${r.fetched} new, ${r.reused} reused, ${r.skipped} skipped.${reasons}`,
-        );
+        const reasons = r.skippedReasons?.length ? ` — first reason: ${r.skippedReasons[0]}` : '';
+        setNotice(`Photos: +${r.fetched} new, ${r.reused} reused, ${r.skipped} skipped.${reasons}`);
         await refresh();
       } catch (err) {
         setNotice(`Photo fetch failed: ${(err as Error).message}`);
       } finally {
-        setBusyPoi(null);
+        setBusyPois((prev) => {
+          const next = new Set(prev);
+          next.delete(poiId);
+          return next;
+        });
       }
-    });
-  };
-
-  const handlePoiDecision = (poiId: string, approved: boolean) => {
-    startTransition(async () => {
-      try {
-        await setCommunityPoiStatus(communityId, poiId, approved ? 'approved' : 'rejected');
-        await refresh();
-      } catch (err) {
-        setNotice(`Decision failed: ${(err as Error).message}`);
-      }
-    });
+    })();
   };
 
   const handlePhotoDecision = (poiPhotoId: string, approved: boolean) => {
@@ -250,12 +258,10 @@ export function CommunityNearbyPanel({
       <div>
         <div className="mb-3 flex items-center justify-between gap-3">
           <div>
-            <h3 className="text-sm font-semibold text-ink2">
-              Nearby POIs ({totalPois})
-            </h3>
+            <h3 className="text-sm font-semibold text-ink2">Nearby POIs ({totalPois})</h3>
             <p className="text-xs text-muted">
-              Auto-discovered points of interest within 5 miles. Approve the ones you'd want a
-              buyer to see in the neighborhood story.
+              Auto-discovered points of interest within 5 miles. Approve the ones you'd want a buyer
+              to see in the neighborhood story.
             </p>
           </div>
           <button
@@ -281,8 +287,8 @@ export function CommunityNearbyPanel({
 
         {totalPois === 0 ? (
           <p className="text-xs text-muted italic">
-            Click "Discover POIs" to search Google Places for nearby restaurants, parks,
-            schools, grocery stores, cafes, and gyms.
+            Click "Discover POIs" to search Google Places for nearby restaurants, parks, schools,
+            grocery stores, cafes, and gyms.
           </p>
         ) : (
           <div className="space-y-4">
@@ -309,9 +315,8 @@ export function CommunityNearbyPanel({
                       <PoiRow
                         key={row.poi_id}
                         row={row}
-                        busy={busyPoi === row.poi_id || pending}
+                        busy={busyPois.has(row.poi_id) || pending}
                         onFetchPhotos={() => handleFetchPhotos(row.poi_id)}
-                        onDecide={(approved) => handlePoiDecision(row.poi_id, approved)}
                         onPhotoDecide={handlePhotoDecision}
                         storageBase={supabaseStorageBase}
                         bucket={photoBucket}
@@ -345,7 +350,6 @@ function PoiRow({
   row,
   busy,
   onFetchPhotos,
-  onDecide,
   onPhotoDecide,
   storageBase,
   bucket,
@@ -353,7 +357,6 @@ function PoiRow({
   row: NearbyPoiForCommunity;
   busy: boolean;
   onFetchPhotos: () => void;
-  onDecide: (approved: boolean) => void;
   onPhotoDecide: (poiPhotoId: string, approved: boolean) => void;
   storageBase: string;
   bucket: string;
@@ -362,17 +365,14 @@ function PoiRow({
   const photoCount = row.photos?.length ?? 0;
   const approvedPhotos = row.photos?.filter((p) => p.status === 'approved').length ?? 0;
 
-  const distanceLabel =
-    row.distance_m != null ? `${(row.distance_m / 1609).toFixed(1)} mi` : '—';
+  const distanceLabel = row.distance_m != null ? `${(row.distance_m / 1609).toFixed(1)} mi` : '—';
 
   return (
     <li className="rounded-lg border border-line bg-bg p-3">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-baseline gap-x-2">
-            <span className="text-sm font-medium text-ink">
-              {row.pois.display_name}
-            </span>
+            <span className="text-sm font-medium text-ink">{row.pois.display_name}</span>
             <span className="text-xs text-muted">
               {row.pois.primary_type ?? '—'} · {distanceLabel}
               {row.pois.rating != null
@@ -381,22 +381,9 @@ function PoiRow({
             </span>
           </div>
           {row.pois.formatted_address ? (
-            <p className="mt-0.5 truncate text-xs text-muted">
-              {row.pois.formatted_address}
-            </p>
+            <p className="mt-0.5 truncate text-xs text-muted">{row.pois.formatted_address}</p>
           ) : null}
           <div className="mt-1 flex items-center gap-2 text-xs text-muted">
-            <span
-              className={
-                row.status === 'approved'
-                  ? 'text-green-400'
-                  : row.status === 'rejected'
-                    ? 'text-red-400'
-                    : 'text-muted'
-              }
-            >
-              {row.status}
-            </span>
             {photoCount > 0 ? (
               <button
                 type="button"
@@ -414,30 +401,21 @@ function PoiRow({
         <div className="flex shrink-0 items-center gap-1">
           <button
             type="button"
-            aria-label="Approve POI"
-            onClick={() => onDecide(true)}
-            disabled={busy}
-            className="rounded p-1 text-muted hover:bg-surface hover:text-green-400 disabled:opacity-40"
-          >
-            <Check size={16} />
-          </button>
-          <button
-            type="button"
-            aria-label="Reject POI"
-            onClick={() => onDecide(false)}
-            disabled={busy}
-            className="rounded p-1 text-muted hover:bg-surface hover:text-red-400 disabled:opacity-40"
-          >
-            <X size={16} />
-          </button>
-          <button
-            type="button"
-            aria-label="Fetch photos"
+            aria-label={photoCount > 0 ? 'Sync photos' : 'Fetch photos'}
+            title={
+              photoCount > 0 ? 'Photos already fetched — tap to sync any new ones' : 'Fetch photos'
+            }
             onClick={onFetchPhotos}
             disabled={busy}
             className="rounded p-1 text-muted hover:bg-surface hover:text-bronze disabled:opacity-40"
           >
-            {busy ? <Loader2 size={16} className="animate-spin" /> : <ImagePlus size={16} />}
+            {busy ? (
+              <Loader2 size={16} className="animate-spin" />
+            ) : photoCount > 0 ? (
+              <RefreshCw size={16} />
+            ) : (
+              <ImagePlus size={16} />
+            )}
           </button>
         </div>
       </div>
@@ -474,13 +452,9 @@ function PhotoReviewGrid({
   const [openIdx, setOpenIdx] = useState<number | null>(null);
 
   const close = useCallback(() => setOpenIdx(null), []);
-  const goPrev = useCallback(
-    () => setOpenIdx((i) => (i == null ? i : Math.max(0, i - 1))),
-    [],
-  );
+  const goPrev = useCallback(() => setOpenIdx((i) => (i == null ? i : Math.max(0, i - 1))), []);
   const goNext = useCallback(
-    () =>
-      setOpenIdx((i) => (i == null ? i : Math.min(photos.length - 1, i + 1))),
+    () => setOpenIdx((i) => (i == null ? i : Math.min(photos.length - 1, i + 1))),
     [photos.length],
   );
   const decideCurrent = useCallback(
@@ -595,7 +569,7 @@ function PhotoTile({
         ? 'opacity-40 ring-2 ring-red-400'
         : 'ring-1 ring-line';
 
-  // Phase 78: expose the vision-tagger caption under approved photos so the
+  // expose the vision-tagger caption under approved photos so the
   // agent can spot-check the pipeline. Rejected/pending photos stay quiet —
   // clutter would drown the triage view.
   const showCaption = status === 'approved';
@@ -811,7 +785,7 @@ function PhotoLightbox({
   );
 }
 
-// ─── Generated Videos section (Phase 78) ─────────────────────────────────
+// ─── Generated Videos section ─────────────────────────────────
 //
 // One card per intent bucket. Each card shows:
 //   - CF Stream player when the render is ready
@@ -831,8 +805,8 @@ function GeneratedVideosSection({ communityId }: { communityId: string }) {
       <div className="mb-3">
         <h3 className="text-sm font-semibold text-ink2">Generated videos</h3>
         <p className="text-xs text-muted">
-          One 30–60s slideshow per intent bucket, stitched from approved POI photos.
-          Each video comes with an English description you can send to TTS later.
+          One 30–60s slideshow per intent bucket, stitched from approved POI photos. Each video
+          comes with an English description you can send to TTS later.
         </p>
       </div>
       <div className="grid gap-3 md:grid-cols-2">
@@ -879,10 +853,7 @@ function BucketVideoCard({
       if (s?.status === 'pending' || s?.status === 'processing') {
         const t = setInterval(async () => {
           const cur = await load();
-          if (
-            !cur ||
-            (cur.status !== 'pending' && cur.status !== 'processing')
-          ) {
+          if (!cur || (cur.status !== 'pending' && cur.status !== 'processing')) {
             clearInterval(t);
           }
         }, 5000);
@@ -970,7 +941,9 @@ function BucketVideoCard({
           <button
             type="button"
             onClick={handleGenerate}
-            disabled={busy || isRendering || (eligibleCount != null && eligibleCount < 3 && !isReady)}
+            disabled={
+              busy || isRendering || (eligibleCount != null && eligibleCount < 3 && !isReady)
+            }
             title={
               isReady
                 ? `Regenerate from ${eligibleCount ?? '?'} approved photos`
@@ -987,9 +960,7 @@ function BucketVideoCard({
             )}
             {isReady ? 'Regenerate' : 'Generate'}
             {eligibleCount != null ? (
-              <span className="text-muted">
-                {` · ${Math.min(eligibleCount, 15)}`}
-              </span>
+              <span className="text-muted">{` · ${Math.min(eligibleCount, 15)}`}</span>
             ) : null}
           </button>
         </div>
@@ -1002,11 +973,8 @@ function BucketVideoCard({
           Rendering {status?.photo_count} photos… ({status?.status})
         </p>
       ) : null}
-      {(isFailed || err) ? (
-        <p
-          className="mb-2 truncate text-[11px] text-red-600"
-          title={status?.error ?? err ?? ''}
-        >
+      {isFailed || err ? (
+        <p className="mb-2 truncate text-[11px] text-red-600" title={status?.error ?? err ?? ''}>
           {isFailed ? 'Failed: ' : ''}
           {err ?? status?.error ?? ''}
         </p>
@@ -1051,14 +1019,10 @@ function BucketVideoCard({
             {narrative ? 'Regenerate' : 'Generate'}
           </button>
         </div>
-        {narrativeErr ? (
-          <p className="mb-1 text-[11px] text-red-600">{narrativeErr}</p>
-        ) : null}
+        {narrativeErr ? <p className="mb-1 text-[11px] text-red-600">{narrativeErr}</p> : null}
         {narrative ? (
           <div className="space-y-1.5 text-[11.5px] leading-relaxed text-ink2">
-            {narrative.intro ? (
-              <p className="italic">{narrative.intro}</p>
-            ) : null}
+            {narrative.intro ? <p className="italic">{narrative.intro}</p> : null}
             {narrative.scenes && narrative.scenes.length > 0 ? (
               <ol className="list-decimal space-y-0.5 pl-4 text-ink2/90">
                 {narrative.scenes.map((s, i) => (
@@ -1069,9 +1033,7 @@ function BucketVideoCard({
                 ))}
               </ol>
             ) : null}
-            {narrative.closing ? (
-              <p className="italic text-ink2/90">{narrative.closing}</p>
-            ) : null}
+            {narrative.closing ? <p className="italic text-ink2/90">{narrative.closing}</p> : null}
             {narrative.voiceover ? (
               <details
                 open={showFullScript}

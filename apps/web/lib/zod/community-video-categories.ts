@@ -1,6 +1,5 @@
 /**
- * Community video categories — Phase 22 (2026-06-14).
- *
+ * Community video categories —  *
  * Replaces the old 3-value `kind` axis (school | poi | neighborhood) with 12
  * categories split across two buckets:
  *
@@ -20,7 +19,7 @@
  *   - hardRule     : bullet about what the video MUST contain (anti-fluff guardrail)
  *
  * The hard-rule strings are the *spec*. Enforcement happens incrementally:
- *   - Phase 22 ships: shown to the agent in the picker, no automated check.
+ * - ships: shown to the agent in the picker, no automated check.
  *   - Future: light client-side checks (duration, mute, dashcam frame detection).
  *
  * IMPORTANT: this file is the single source of truth for categories. The DB
@@ -148,7 +147,7 @@ export function categoryBucket(id: CommunityVideoCategoryId): CommunityVideoBuck
 /**
  * Map a new 12-category id back to the legacy 3-value `kind`.
  * Needed only while the DB still has the `kind not null check` from 0001;
- * once we drop `kind` (post-Phase 22) this helper goes too.
+ * once we drop `kind` (post-) this helper goes too.
  */
 export function legacyKindForCategory(
   id: CommunityVideoCategoryId,

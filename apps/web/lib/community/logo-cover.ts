@@ -85,8 +85,7 @@ function toPoint(raw: number[]): Point | null {
 
 /** Extract the largest outer ring (by point count) from a Polygon/MultiPolygon. */
 function largestOuterRing(b: BoundaryGeoJSON): Point[] | null {
-  const polys: number[][][][] =
-    b.type === 'MultiPolygon' ? b.coordinates : [b.coordinates];
+  const polys: number[][][][] = b.type === 'MultiPolygon' ? b.coordinates : [b.coordinates];
   let bestRaw: number[][] | null = null;
   for (const p of polys) {
     const ring = p[0];
@@ -105,10 +104,10 @@ function largestOuterRing(b: BoundaryGeoJSON): Point[] | null {
 }
 
 function bbox(pts: Point[]) {
-  let minLng = Infinity;
-  let minLat = Infinity;
-  let maxLng = -Infinity;
-  let maxLat = -Infinity;
+  let minLng = Number.POSITIVE_INFINITY;
+  let minLat = Number.POSITIVE_INFINITY;
+  let maxLng = Number.NEGATIVE_INFINITY;
+  let maxLat = Number.NEGATIVE_INFINITY;
   for (const [lng, lat] of pts) {
     if (lng < minLng) minLng = lng;
     if (lng > maxLng) maxLng = lng;
@@ -201,10 +200,7 @@ function xmlEscape(s: string): string {
  * Build the SVG markup. Exported so callers can inline (RSC) or convert
  * to data URI (client `<img src=…>`).
  */
-export function buildCommunityLogoSvg(
-  name: string,
-  boundary: BoundaryGeoJSON | null,
-): string {
+export function buildCommunityLogoSvg(name: string, boundary: BoundaryGeoJSON | null): string {
   const [c0, c1, ink] = pickPalette(name);
   const nameEsc = xmlEscape(name);
 
@@ -215,8 +211,7 @@ export function buildCommunityLogoSvg(
       const bb = bbox(ring);
       const wSpan = bb.maxLng - bb.minLng;
       const hSpan = bb.maxLat - bb.minLat;
-      const ratio =
-        Math.max(wSpan, hSpan) / Math.max(Math.min(wSpan, hSpan), 1e-9);
+      const ratio = Math.max(wSpan, hSpan) / Math.max(Math.min(wSpan, hSpan), 1e-9);
       if (ratio <= MAX_ASPECT_RATIO) {
         const resampled = resample(ring, RESAMPLE_POINTS);
         const smoothed = chaikin(resampled, CHAIKIN_ITERATIONS);

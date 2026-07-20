@@ -1,4 +1,4 @@
--- Phase 101b (2026-07-16): admin flag for platform-ops surfaces.
+-- admin flag for platform-ops surfaces.
 --
 -- Adds a simple boolean role bit to `agents`. Anyone with is_admin=true can
 -- reach /admin/* and drive the automated photo/video pipeline (nearby POI

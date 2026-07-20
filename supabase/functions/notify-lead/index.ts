@@ -1,4 +1,4 @@
-// Phase 5.3 / 5.4 — notify-lead Edge Function.
+// / 5.4 — notify-lead Edge Function.
 //
 // Triggered by the AFTER INSERT trigger on `public.leads` (migration 0006).
 // Receives `{ lead_id }`, idempotently sends an email to the listing's agent
@@ -146,11 +146,7 @@ Deno.serve(async (req: Request) => {
       .select('id, address, city, state')
       .eq('id', lead.listing_id)
       .maybeSingle<Listing>(),
-    supabase
-      .from('agents')
-      .select('id, name, email')
-      .eq('id', lead.agent_id)
-      .maybeSingle<Agent>(),
+    supabase.from('agents').select('id, name, email').eq('id', lead.agent_id).maybeSingle<Agent>(),
   ]);
 
   if (!listing || !agent || !agent.email) {
@@ -179,10 +175,9 @@ Deno.serve(async (req: Request) => {
   if (!resendRes.ok) {
     const detail = await resendRes.text();
     console.error('[notify-lead] resend failed', resendRes.status, detail);
-    return new Response(
-      JSON.stringify({ error: 'resend_failed', status: resendRes.status }),
-      { status: 502 },
-    );
+    return new Response(JSON.stringify({ error: 'resend_failed', status: resendRes.status }), {
+      status: 502,
+    });
   }
 
   // Stamp notified_at last — only after Resend confirms acceptance. A failed

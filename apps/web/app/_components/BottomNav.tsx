@@ -6,16 +6,16 @@
  * 4-slot flat layout, single shape for all roles:
  *   Community · Explore · {Saved|Workspace} · Me
  *
- * Phase 19 (2026-06-13): introduced 5-slot mobile nav.
- * Phase 26 (2026-06-14): tab definitions moved to `nav-config.ts`.
- * Phase 27 (2026-06-16): dropped "Home" tab, buyer center became the
+ * introduced 5-slot mobile nav.
+ * tab definitions moved to `nav-config.ts`.
+ * dropped "Home" tab, buyer center became the
  *   emphasized Explore FAB. Community promoted to leftmost slot.
- * Phase 35.3 (2026-06-17): added a separate Explore tab to the agent nav so
+ * added a separate Explore tab to the agent nav so
  *   agents could see the buyer-side feed. Asymmetric 6-slot bar — wrong
  *   shape, surfaced by Tianrou.
- * Phase 36 (2026-06-18): rolled 35.3 back. Unified IA — agents share the
+ * rolled 35.3 back. Unified IA — agents share the
  *   buyer's 5-slot nav with Explore in the center.
- * Phase 37 (2026-06-18): collapsed "Nearby" tab into Explore sub-nav, dropped
+ * collapsed "Nearby" tab into Explore sub-nav, dropped
  *   the center FAB visual. Bar is now a flat 4-icon strip — see
  *   `nav-config.ts` for the full rationale.
  *

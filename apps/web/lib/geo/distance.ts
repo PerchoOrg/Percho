@@ -1,6 +1,5 @@
 /**
- * Geo helpers — Phase 11 (2026-06-12).
- *
+ * Geo helpers —  *
  * Two responsibilities:
  *   - `latLngBoundingBox(lat, lng, miles)` → { minLat, maxLat, minLng, maxLng }
  *     usable directly in `where lat between … and lng between …` predicates.

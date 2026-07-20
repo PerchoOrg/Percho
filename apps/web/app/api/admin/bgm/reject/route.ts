@@ -11,8 +11,8 @@
  */
 
 import { requireAdmin } from '@/lib/auth/require-admin';
-import { isBgmVibe } from '@/lib/bgm/storage';
 import { readBgmState, writeBgmState } from '@/lib/bgm/state-store';
+import { isBgmVibe } from '@/lib/bgm/storage';
 import { NextResponse } from 'next/server';
 
 export const runtime = 'nodejs';
@@ -21,9 +21,7 @@ export async function POST(req: Request) {
   const admin = await requireAdmin();
   if (!admin) return NextResponse.json({ error: 'forbidden' }, { status: 403 });
 
-  const body = (await req.json().catch(() => null)) as
-    | { path?: string; rejected?: boolean }
-    | null;
+  const body = (await req.json().catch(() => null)) as { path?: string; rejected?: boolean } | null;
   const path = body?.path?.trim() ?? '';
   const rejected = body?.rejected;
   if (!path || typeof rejected !== 'boolean') {

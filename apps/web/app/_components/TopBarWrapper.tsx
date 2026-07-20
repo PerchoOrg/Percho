@@ -1,7 +1,6 @@
 /**
  * TopBarWrapper — Server Component that resolves auth state + initial letter
- * + avatar URL, then renders <TopBar>. Phase 45 (2026-06-20).
- *
+ * + avatar URL, then renders <TopBar>.  *
  * Mirrors the prior SiteHeaderWrapper / TopRightAvatarWrapper resolution so
  * the visual avatar source (agent.headshot_url / buyer.avatar_url / initial)
  * stays consistent.
@@ -12,7 +11,7 @@ import { TopBar } from './TopBar';
 
 export async function TopBarWrapper() {
   const supabase = await createClient();
-  // Phase 53D: getSession() reads cookie locally (~5ms) vs getUser() round-trip (~150ms).
+  // getSession() reads cookie locally (~5ms) vs getUser() round-trip (~150ms).
   // Middleware re-validates on each request — chrome doesn't need fresh JWT validation.
   const {
     data: { session },
@@ -34,13 +33,7 @@ export async function TopBarWrapper() {
 
   if (agent) {
     const source = agent.name?.trim() || user.email?.trim() || '?';
-    return (
-      <TopBar
-        role="agent"
-        initial={source.charAt(0) || '?'}
-        avatarUrl={agent.headshot_url}
-      />
-    );
+    return <TopBar role="agent" initial={source.charAt(0) || '?'} avatarUrl={agent.headshot_url} />;
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: buyers typing not in stub yet
@@ -54,10 +47,6 @@ export async function TopBarWrapper() {
 
   const source = buyer?.display_name?.trim() || user.email?.trim() || '?';
   return (
-    <TopBar
-      role="buyer"
-      initial={source.charAt(0) || '?'}
-      avatarUrl={buyer?.avatar_url ?? null}
-    />
+    <TopBar role="buyer" initial={source.charAt(0) || '?'} avatarUrl={buyer?.avatar_url ?? null} />
   );
 }

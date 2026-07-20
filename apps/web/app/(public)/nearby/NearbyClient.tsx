@@ -4,6 +4,7 @@ import type { BrowseCard } from '@/app/(public)/browse/_components/BrowseFeed';
 import { GridPageShell } from '@/app/_components/GridPageShell';
 import { ListingGrid, type ListingGridItem } from '@/app/_components/ListingGrid';
 import { thumbnailUrl } from '@/lib/cloudflare/stream';
+import { linkForCard } from '@/lib/feed/link-for-card';
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 
@@ -34,7 +35,7 @@ export function NearbyClient() {
   const [error, setError] = useState<string | null>(null);
   const [geoDenied, setGeoDenied] = useState(false);
   const [geoError, setGeoError] = useState<string | null>(null);
-  // Phase 45.27 (2026-06-21): first-visit soft prompt before triggering the
+  // first-visit soft prompt before triggering the
   // browser's native geolocation permission UI. Without this users see a bare
   // "allow location?" dialog with no context and reflexively deny.
   const [showSoftPrompt, setShowSoftPrompt] = useState(false);
@@ -68,7 +69,7 @@ export function NearbyClient() {
         setGeoError(reason);
         setGeoDenied(true);
       },
-      // Phase 45.27.1 (2026-06-21): 8s was too tight — users were timing out
+      // .1 (2026-06-21): 8s was too tight — users were timing out
       // mid native-prompt. Bump to 30s and don't require high accuracy.
       { enableHighAccuracy: false, timeout: 30000, maximumAge: 60_000 },
     );
@@ -229,12 +230,12 @@ export function NearbyClient() {
     );
   }
 
-  // Phase 47.2 (2026-06-21): refactored to use shared GridPageShell +
+  // refactored to use shared GridPageShell +
   // ListingGrid primitives so /nearby matches /browse, /communities,
   // /dashboard, /dashboard/communities, /saved exactly. Distance pill
   // routes through ListingGridItem.distanceMi → GridCard topLeft slot.
   const items: ListingGridItem[] = cards.map((card) => {
-    // Phase 60: agent's cover_url wins over the mediaKind hero.
+    // agent's cover_url wins over the mediaKind hero.
     const realSrc =
       card.gridCoverUrl ??
       (card.mediaKind === 'video'
@@ -245,7 +246,7 @@ export function NearbyClient() {
       href:
         card.mediaKind === 'video'
           ? `/browse/feed?start=${encodeURIComponent(card.listing.id)}`
-          : `/v/${card.agent.slug}/${card.listing.slug}`,
+          : linkForCard(card),
       coverUrl: realSrc ?? null,
       price: card.listing.price,
       beds: card.listing.beds,
