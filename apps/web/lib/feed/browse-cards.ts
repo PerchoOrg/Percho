@@ -457,14 +457,10 @@ async function assembleCards(
   return cards;
 }
 
-<<<<<<< HEAD:apps/web/lib/feed/browse-cards.ts
 export async function fetchBrowseCards(
   offset = 0,
-  limit = FEED_LIMIT,
+  limit = 1000,
 ): Promise<BrowseCard[]> {
-=======
-export async function fetchBrowseCards(offset = 0, limit = 1000): Promise<BrowseCard[]> {
->>>>>>> origin/main:lib/feed/browse-cards.ts
   const supabase = await createClient();
 
   // biome-ignore lint/suspicious/noExplicitAny: stub generated types
