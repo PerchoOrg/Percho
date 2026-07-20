@@ -7,16 +7,7 @@ const workspaceRoot = path.resolve(projectRoot, '../..');
 
 const config = getDefaultConfig(projectRoot);
 
-// Watch the entire monorepo — required so metro sees @percho/shared changes.
+// Watch the entire monorepo so Metro picks up @percho/shared edits.
 config.watchFolders = [workspaceRoot];
-
-// Resolve modules from both the app's node_modules and the workspace root.
-config.resolver.nodeModulesPaths = [
-  path.resolve(projectRoot, 'node_modules'),
-  path.resolve(workspaceRoot, 'node_modules'),
-];
-
-// pnpm-safe: don't allow hoisted symlinks to escape the monorepo root.
-config.resolver.disableHierarchicalLookup = true;
 
 module.exports = config;
