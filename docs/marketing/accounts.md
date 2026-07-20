@@ -31,10 +31,15 @@ Each registration: different browser session, ideally different network
 
 | slot | handle | persona | primary sub | created | karma | last active | status |
 |---|---|---|---|---|---|---|---|
-| 1 (main) | tbd (see naming below) | Peachtree Corners SWE dad, NYC transplant 2022, 2 kids in Simpson ES zone | r/Atlanta | pending | 0 | — | not created yet |
-| 2 | tbd | Alpharetta mom, 2 kids Cambridge HS zone, remote worker | r/Alpharetta | pending | 0 | — | not created yet |
-| 3 | tbd | East Cobb parent, Walton HS grad, moved back after college | r/Marietta | pending | 0 | — | not created yet |
-| 4 | tbd | Recent Decatur first-time buyer, no kids yet, walkability-driven | r/RealEstate + r/SameGrassButGreener | pending | 0 | — | not created yet |
+| 1 (main) | `Majestic-Pizza2175` | Peachtree Corners SWE dad, NYC transplant 2022, 2 kids in Simpson ES zone | r/Atlanta | 2026-07-20 | 0 | 2026-07-20 | warmup — 3 r/SampleSize replies sent |
+| 2 | tbd | Alpharetta mom, 2 kids Cambridge HS zone, remote worker | r/Alpharetta | pending 2026-07-22 | 0 | — | not created yet |
+| 3 | tbd | East Cobb parent, Walton HS grad, moved back after college | r/Marietta | pending 2026-07-24 | 0 | — | not created yet |
+| 4 | tbd | Recent Decatur first-time buyer, no kids yet, walkability-driven | r/RealEstate + r/SameGrassButGreener | pending 2026-07-24 | 0 | — | not created yet |
+
+**Handle note for slot 1:** `Majestic-Pizza2175` is Reddit's auto-generated
+default (Adjective-Noun+4digits). Zero commercial signal, reads as "user
+didn't bother renaming" = ordinary. Kept as-is over a hand-crafted handle
+because it already has account-age accruing.
 
 ### Handle naming — avoid these patterns
 
@@ -80,7 +85,8 @@ Quora account planning goes here when we get there.
 Karma milestones = permissions unlocked:
 
 - 0-25 karma (Day 1-3): reply only to unrelated topics — food, traffic,
-  weather questions in r/Atlanta. Never mention housing.
+  weather questions in r/Atlanta, plus r/SampleSize karma-farming. Never
+  mention housing.
 - 25-100 karma (Day 4-7): can reply to housing threads BUT no Percho
   mention. Pure-value replies from templates.
 - 100+ karma (Day 8+): eligible for Percho mention, once per day per
