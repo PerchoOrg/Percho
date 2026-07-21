@@ -25,7 +25,9 @@ import {
 	updateTally,
 	whyLine,
 } from "@percho/shared";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
+import { VideoView, useVideoPlayer } from "expo-video";
 /**
  * Feed — swipe stack with:
  *   1. Three-face card model (front / back-data / peek modal).
@@ -69,6 +71,17 @@ const LONGPRESS_MS = 800;
 const TAIL_TRIGGER = 5;
 const PAGE_LIMIT = 20;
 const API_BASE = "https://percho.co";
+
+// AsyncStorage — mirror web localStorage naming (percho-v3: prefix).
+const STATE_KEY = "percho-v3:state:v1";
+const SAVE_DEBOUNCE_MS = 300;
+
+interface PersistedState {
+	swipes: number;
+	profile: EvidenceProfile;
+	tally: ReturnType<typeof emptyTally>;
+	insightsFired: DimKey[];
+}
 
 // Fallback mock (used only when API is unreachable — first-boot dev / offline).
 const MOCK_CARDS: FeedCard[] = [
@@ -197,9 +210,11 @@ export default function Feed() {
 	const seenIdsRef = useRef<Set<string>>(new Set());
 
 	const [index, setIndex] = useState(0);
+	const [swipes, setSwipes] = useState(0);
 	const [tally, setTally] = useState(emptyTally());
 	const [evidence, setEvidence] = useState<EvidenceProfile>([]);
 	const [firedInsights, setFiredInsights] = useState<DimKey[]>([]);
+	const [hydrated, setHydrated] = useState(false);
 	const [scope, setScope] = useState<ScopeChip[]>([]);
 	const [answeredAsks, setAnsweredAsks] = useState<Set<string>>(new Set());
 	const [revealedChallenges, setRevealedChallenges] = useState<
@@ -261,6 +276,45 @@ export default function Feed() {
 		fetchPage(0);
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
+
+	// Hydrate persisted user signal from AsyncStorage once on mount.
+	useEffect(() => {
+		let cancelled = false;
+		(async () => {
+			try {
+				const raw = await AsyncStorage.getItem(STATE_KEY);
+				if (!cancelled && raw) {
+					const parsed = JSON.parse(raw) as Partial<PersistedState>;
+					if (typeof parsed.swipes === "number") setSwipes(parsed.swipes);
+					if (parsed.profile) setEvidence(parsed.profile);
+					if (parsed.tally) setTally(parsed.tally);
+					if (parsed.insightsFired) setFiredInsights(parsed.insightsFired);
+				}
+			} catch {
+				// Ignore corrupt state — start fresh.
+			} finally {
+				if (!cancelled) setHydrated(true);
+			}
+		})();
+		return () => {
+			cancelled = true;
+		};
+	}, []);
+
+	// Debounced save of user signal only (not raw feed / display / seen).
+	useEffect(() => {
+		if (!hydrated) return;
+		const t = setTimeout(() => {
+			const state: PersistedState = {
+				swipes,
+				profile: evidence,
+				tally,
+				insightsFired: firedInsights,
+			};
+			AsyncStorage.setItem(STATE_KEY, JSON.stringify(state)).catch(() => {});
+		}, SAVE_DEBOUNCE_MS);
+		return () => clearTimeout(t);
+	}, [hydrated, swipes, evidence, tally, firedInsights]);
 
 	useEffect(() => {
 		if (feedExhausted || fetchingRef.current) return;
@@ -328,6 +382,7 @@ export default function Feed() {
 
 	const advance = () => {
 		setIndex((i) => i + 1);
+		setSwipes((s) => s + 1);
 		setFlipped(false);
 		flipV.value = 0;
 		tx.value = 0;
@@ -502,6 +557,13 @@ export default function Feed() {
 	const frontFaceStyle = useAnimatedStyle(() => ({ opacity: 1 - flipV.value }));
 	const backFaceStyle = useAnimatedStyle(() => ({ opacity: flipV.value }));
 
+	if (!hydrated) {
+		return (
+			<View style={styles.container}>
+				<Text style={styles.done}>Loading…</Text>
+			</View>
+		);
+	}
 	if (!card && rawCards.length === 0 && !feedExhausted) {
 		return (
 			<View style={styles.container}>
@@ -567,6 +629,7 @@ export default function Feed() {
 							<CardFront
 								card={card}
 								evidence={evidence}
+								active={!flipped}
 								revealedOpt={revealedOpt}
 								onRevealChallenge={revealChallenge}
 								onSkipAsk={skipAsk}
@@ -654,10 +717,44 @@ export default function Feed() {
 }
 
 // ─── Card faces ─────────────────────────────────────────────────────
+// CardVideo — per-card video player (own hook). Only autoplay when the
+// card is the active/top card. Falls back to poster (hero image) otherwise.
+// pointerEvents="none" so swipe gestures pass through to the card container.
+function CardVideo({
+	url,
+	poster,
+	active,
+}: {
+	url: string;
+	poster?: string;
+	active: boolean;
+}) {
+	const player = useVideoPlayer(url, (p) => {
+		p.loop = true;
+		p.muted = true;
+	});
+	useEffect(() => {
+		if (active) player.play();
+		else player.pause();
+	}, [active, player]);
+	return (
+		<View style={styles.heroImg} pointerEvents="none">
+			{!!poster && <Image source={{ uri: poster }} style={styles.heroImg} />}
+			<VideoView
+				player={player}
+				style={styles.heroImg}
+				contentFit="cover"
+				nativeControls={false}
+			/>
+		</View>
+	);
+}
+
 function CardFront({
 	card,
 	evidence,
 	big,
+	active,
 	revealedOpt,
 	onRevealChallenge,
 	onSkipAsk,
@@ -665,6 +762,7 @@ function CardFront({
 	card: FeedCard;
 	evidence: EvidenceProfile;
 	big?: boolean;
+	active?: boolean;
 	revealedOpt?: number;
 	onRevealChallenge?: (opt: number) => void;
 	onSkipAsk?: () => void;
@@ -686,8 +784,16 @@ function CardFront({
 		return (
 			<View style={styles.faceInner}>
 				<View style={styles.hero}>
-					{!!card.heroUrl && (
-						<Image source={{ uri: card.heroUrl }} style={styles.heroImg} />
+					{card.videoUrl ? (
+						<CardVideo
+							url={card.videoUrl}
+							poster={card.heroUrl}
+							active={!!active && !big}
+						/>
+					) : (
+						!!card.heroUrl && (
+							<Image source={{ uri: card.heroUrl }} style={styles.heroImg} />
+						)
 					)}
 					<View style={styles.heroDim} />
 					<Text style={styles.kindChip}>COMMUNITY</Text>
@@ -714,8 +820,16 @@ function CardFront({
 	return (
 		<View style={styles.faceInner}>
 			<View style={styles.hero}>
-				{!!card.heroUrl && (
-					<Image source={{ uri: card.heroUrl }} style={styles.heroImg} />
+				{card.videoUrl ? (
+					<CardVideo
+						url={card.videoUrl}
+						poster={card.heroUrl}
+						active={!!active && !big}
+					/>
+				) : (
+					!!card.heroUrl && (
+						<Image source={{ uri: card.heroUrl }} style={styles.heroImg} />
+					)
 				)}
 				<View style={styles.heroDim} />
 				<Text style={styles.kindChip}>LISTING</Text>

@@ -4,6 +4,28 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-21 01:45 UTC — phase-mobile: expo-video + place stub + AsyncStorage
+
+**Objective**: Three mobile enhancements in one commit — hero video playback on listing/community cards, minimal `/place/[slug]` route stub (currently `router.push` from peek explored a non-existent route), and AsyncStorage persistence of user signal across app launches.
+
+**Actions**:
+- `apps/mobile/app/feed.tsx`
+  - New `CardVideo` component owning its own `useVideoPlayer` hook (per-card, not shared). Muted + looped autoplay; only plays when `active={!flipped}` on the top card. `pointerEvents="none"` on the wrapper so swipe gestures pass through. Falls back to poster (`card.heroUrl`) if `videoUrl` missing.
+  - Wired `card.videoUrl` (already in `/api/mobile/feed` payload via `videoUrlFor` in web) into community + listing hero renders.
+  - Added AsyncStorage hydration: reads `percho-v3:state:v1` → `{swipes, profile: EvidenceProfile, tally, insightsFired}` on mount, sets `hydrated` flag. Feed renders a "Loading…" placeholder until hydrated (RootLayout / gesture-handler root stay unblocked).
+  - Debounced (300 ms) save on every change to swipes/evidence/tally/firedInsights. Does **not** persist rawCards/seenIds/display feed — only user signal, mirroring web localStorage convention.
+- New `apps/mobile/app/place/[slug].tsx` — ~40 LoC dark-themed stub with slug + "Back to feed" pressable. Fixes the previously-dangling `router.push('/place/${card.id}')` from the peek Explore CTA. Expo Router's typed route generator now recognises `/place/[slug]`.
+- `apps/mobile/package.json` — added `@react-native-async-storage/async-storage` (pinned via pnpm resolver). `expo-video` already present.
+
+**Decisions**:
+- One video player per card via a component that owns the hook — sharing a player across the stack would tear down/re-init on every swipe. Matches expo-video's docs recommendation.
+- Persistence key namespace `percho-v3:` mirrors the web prototype's localStorage naming so a future shared-state syncing layer can key uniformly.
+- Hydration gate wraps only the feed screen, not RootLayout — gesture-handler and status bar mount immediately.
+
+**Verification**: `pnpm --filter @percho/mobile typecheck` clean, `pnpm --filter @percho/mobile lint` clean (biome). Committed and pushed on `phase-mobile/monorepo-and-ios-bootstrap`.
+
+**Next steps**: Real `/place/[slug]` implementation (map, listings for the community, save-to-shortlist). Consider surfacing swipe count / persona in a small header pill.
+
 ## 2026-07-21 00:26 UTC — phase-mobile: 6-card feed parity + rhythm engine
 
 **Objective**: Bring the iOS mobile feed to full parity with the web discovery-v3 prototype (`percho-prototypes/discovery-v3-snapshot/`). Currently only ask/community/listing render; add tradeoff, challenge, insight card types plus the rhythm engine and evidence profile that the web prototype uses.
