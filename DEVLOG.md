@@ -4,6 +4,43 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-21 00:26 UTC — phase-mobile: 6-card feed parity + rhythm engine
+
+**Objective**: Bring the iOS mobile feed to full parity with the web discovery-v3 prototype (`percho-prototypes/discovery-v3-snapshot/`). Currently only ask/community/listing render; add tradeoff, challenge, insight card types plus the rhythm engine and evidence profile that the web prototype uses.
+
+**Actions**:
+- `packages/shared/src/types.ts` — added `DimKey` (11 dims), `EvidenceProfile`, `TradeoffCard`, `ChallengeCard`, `InsightCard`; extended `FeedCard` union; added optional `dims`/`hook` to community + listing cards.
+- New `packages/shared/src/dims.ts` — `DIMS` dict ported verbatim from `_data.js` `window.DIMS` (11 entries: outdoors, walkable, schools, quiet, hip, entertaining, trails, nightlife, family, move_in, space).
+- New `packages/shared/src/profile.ts` — immutable `bumpDim`, `topDims`, `whyDimFor`, `whyLine`, `pickInsight` (fires only when a dim has ≥3 evidence and hasn't fired yet).
+- New `packages/shared/src/rhythm.ts` — `RHYTHM_PLAN` + `RHYTHM_TAIL` arrays ported from `_data.js` `buildFeed`; `slotAt(pos)` returns 'preference' for 0-2 then reads from plan/tail with wrap.
+- New `packages/shared/src/pools.ts` — `TRADEOFF_POOL` + `CHALLENGE_POOL` verbatim from `_data.js`.
+- `packages/shared/src/persona.ts` — restricted `updateTally` to only listing + community cards (tradeoff/challenge/insight route to other reducers).
+- `packages/shared/src/index.ts` — re-export new modules.
+- `apps/mobile/app/feed.tsx` — replaced `interleaveAsks` with `buildDisplay` that walks `slotAt(pos)` and pulls from listing/community/ask/tradeoff/challenge queues plus dynamic insight generation. Added `TradeoffFront` (dark split L/R halves with dim labels), `ChallengeFront` (guess-price with 3 tappable options + reveal + teach line — buttons `stopPropagation` so tap-to-flip doesn't fire), `InsightFront` (purple gradient with obs text + evidence). Extended `commit()` reducer: tradeoff bumps chosen dim, challenge advances no-signal, insight R = fire+keep / L = -2 evidence penalty. Added "Skip this topic" pressable on ask cards. Listing/community likes now bump evidence for each `dims` entry. Back face augmented with `whyLine` under a "Why this fits" section. Peek modal Explore → routes to `/place/${card.id}` via `useRouter`.
+
+**Decisions**:
+- Rhythm engine uses a `while` loop with a safety cap (targetLen × 6 + 60) so a slot that can't be filled (insight not eligible, listings exhausted mid-window) advances to the next slot instead of stalling — mirrors `_data.js` `nextCard()`.
+- Insight card `id` includes the output position so re-builds don't collide when the same dim would fire twice at different positions in a session.
+- Kept `Gesture.Exclusive(pan, longPress, tap)` unchanged — swipe / longpress conflict avoidance intact. Challenge option buttons use `e.stopPropagation()` in their `onPress` so tapping "guess $749K" doesn't propagate up and trigger the card's tap-to-flip.
+- Ask cards do NOT count toward the tail-fetch trigger (tracked by counting only listing+community consumed up to `index`) — preserved.
+- Persona tally stays independent of evidence profile. Both update on listing/community likes but the persona uses trait vectors; the evidence uses dim counters.
+
+**Issues**:
+- Pre-existing merge-conflict markers in `apps/web/lib/feed/browse-cards.ts` cause `@percho/web` typecheck to fail. Not related to this work; not touched per task rules. Should be surfaced separately.
+
+**Resolution**:
+- `pnpm --filter @percho/mobile typecheck` — zero errors.
+- `pnpm --filter @percho/mobile lint` — biome clean.
+- Web typecheck fails on pre-existing conflict markers unrelated to this branch.
+
+**Next steps**:
+1. Owner runs Expo on iPhone to verify the three new card faces render correctly and swipe semantics feel right.
+2. Follow-up: `/place/[id]` route is currently a placeholder (Explore → will 404). Stub or real detail page next session.
+3. Follow-up: `pickInsight` fires from client-side evidence only; persist evidence to server once auth lands.
+
+---
+
+
 ## 2026-07-19 22:00 UTC — phase-mobile: monorepo + Expo iOS skeleton
 
 **Objective**: Kick off the iOS build. Prep the repo for two apps (`@percho/web` + `@percho/mobile`) sharing persona/scope/trait logic via `@percho/shared`. Stand up an Expo skeleton with a Tinder-style swipe stack so the owner can moment-test on a real iPhone.
