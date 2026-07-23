@@ -21,7 +21,9 @@ export function bumpDim(
     return [...profile, { dim, count: delta }];
   }
   const next = [...profile];
-  next[idx] = { dim, count: next[idx].count + delta };
+  const cur = next[idx];
+  if (!cur) return [...profile, { dim, count: delta }];
+  next[idx] = { dim, count: cur.count + delta };
   return next;
 }
 
@@ -77,6 +79,7 @@ export function pickInsight(
     .sort((a, b) => b.count - a.count);
   if (!eligible.length) return null;
   const e = eligible[0];
+  if (!e) return null;
   return {
     dim: e.dim,
     text: DIMS[e.dim].obs,

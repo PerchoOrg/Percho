@@ -15,7 +15,7 @@
  */
 
 import { NextResponse } from 'next/server';
-import { fetchBrowseCards } from '@/lib/feed/browse-cards';
+import { fetchBrowseCards, fetchBrowseCardsVideosOnly } from '@/lib/feed/browse-cards';
 import type {
   FeedCard,
   FeedPage,
@@ -78,8 +78,11 @@ export async function GET(request: Request) {
   const offset = Math.max(0, Number.parseInt(url.searchParams.get('offset') ?? '0', 10) || 0);
   const limitRaw = Number.parseInt(url.searchParams.get('limit') ?? '20', 10) || 20;
   const limit = Math.min(40, Math.max(1, limitRaw));
+  const videosOnly = url.searchParams.get('videosOnly') === '1';
 
-  const rows = await fetchBrowseCards(offset, limit);
+  const rows = videosOnly
+    ? await fetchBrowseCardsVideosOnly(offset, limit)
+    : await fetchBrowseCards(offset, limit);
   const cards: FeedCard[] = rows.map(projectListing);
 
   const body: FeedPage = {

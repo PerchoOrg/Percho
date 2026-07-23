@@ -457,14 +457,7 @@ async function assembleCards(
   return cards;
 }
 
-<<<<<<< HEAD:apps/web/lib/feed/browse-cards.ts
-export async function fetchBrowseCards(
-  offset = 0,
-  limit = FEED_LIMIT,
-): Promise<BrowseCard[]> {
-=======
 export async function fetchBrowseCards(offset = 0, limit = 1000): Promise<BrowseCard[]> {
->>>>>>> origin/main:lib/feed/browse-cards.ts
   const supabase = await createClient();
 
   // biome-ignore lint/suspicious/noExplicitAny: stub generated types
@@ -473,6 +466,48 @@ export async function fetchBrowseCards(offset = 0, limit = 1000): Promise<Browse
     .select(
       'id, slug, address, city, state, zip, price, beds, baths, sqft, description, community_id, agent_id, cover_url, external_agent_name, external_agent_phone, external_office, source, source_id',
     )
+    .eq('status', 'active')
+    .order('created_at', { ascending: false })
+    .range(offset, offset + limit - 1)) as { data: ListingRow[] | null };
+
+  const listings = rawListings ?? [];
+  return assembleCards(listings, supabase);
+}
+
+/**
+ * Mobile dev variant: return only listings that have at least one
+ * playable `listing_videos` row (real `cf_video_id`, landscape variant,
+ * or `external_url`). Same card shape as `fetchBrowseCards` so the mobile
+ * projector doesn't care. Wired behind `?videosOnly=1` on
+ * `/api/mobile/feed` — production percho.co doesn't have this route yet;
+ * this exists so Expo Go hitting a cloudflared tunnel can skip the ~200
+ * newest listings whose render pipeline hasn't caught up.
+ */
+export async function fetchBrowseCardsVideosOnly(
+  offset = 0,
+  limit = 1000,
+): Promise<BrowseCard[]> {
+  const supabase = await createClient();
+
+  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
+  const { data: vidRows } = (await (supabase as any)
+    .from('listing_videos')
+    .select('listing_id')
+    .eq('status', 'ready')
+    .or(
+      'cf_video_id.not.is.null,cf_video_id_landscape.not.is.null,external_url.not.is.null',
+    )) as { data: Array<{ listing_id: string }> | null };
+
+  const ids = Array.from(new Set((vidRows ?? []).map((r) => r.listing_id)));
+  if (ids.length === 0) return [];
+
+  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
+  const { data: rawListings } = (await (supabase as any)
+    .from('listings')
+    .select(
+      'id, slug, address, city, state, zip, price, beds, baths, sqft, description, community_id, agent_id, cover_url, external_agent_name, external_agent_phone, external_office, source, source_id',
+    )
+    .in('id', ids)
     .eq('status', 'active')
     .order('created_at', { ascending: false })
     .range(offset, offset + limit - 1)) as { data: ListingRow[] | null };

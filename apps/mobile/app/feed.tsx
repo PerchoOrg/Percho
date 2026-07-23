@@ -70,7 +70,7 @@ const SWIPE_THRESHOLD = SCREEN_W * 0.25;
 const LONGPRESS_MS = 800;
 const TAIL_TRIGGER = 5;
 const PAGE_LIMIT = 20;
-const API_BASE = "https://percho.co";
+const API_BASE = "https://rome-remaining-tourism-ambassador.trycloudflare.com";
 
 // AsyncStorage — mirror web localStorage naming (percho-v3: prefix).
 const STATE_KEY = "percho-v3:state:v1";
@@ -334,7 +334,7 @@ export default function Feed() {
 		fetchingRef.current = true;
 		try {
 			const res = await fetch(
-				`${API_BASE}/api/mobile/feed?offset=${offset}&limit=${PAGE_LIMIT}`,
+				`${API_BASE}/api/mobile/feed?offset=${offset}&limit=${PAGE_LIMIT}&videosOnly=1`,
 			);
 			if (!res.ok) {
 				if (rawCards.length === 0) {
@@ -731,7 +731,8 @@ function CardVideo({
 }) {
 	const player = useVideoPlayer(url, (p) => {
 		p.loop = true;
-		p.muted = true;
+		p.muted = false;
+		p.volume = 1.0;
 	});
 	useEffect(() => {
 		if (active) player.play();
@@ -739,7 +740,6 @@ function CardVideo({
 	}, [active, player]);
 	return (
 		<View style={styles.heroImg} pointerEvents="none">
-			{!!poster && <Image source={{ uri: poster }} style={styles.heroImg} />}
 			<VideoView
 				player={player}
 				style={styles.heroImg}
@@ -1093,7 +1093,7 @@ const styles = StyleSheet.create({
 	card: {
 		position: "absolute",
 		width: SCREEN_W - 32,
-		aspectRatio: 3 / 5,
+		aspectRatio: 16 / 9,
 		borderRadius: 24,
 		overflow: "hidden",
 		backgroundColor: "#1a1a1a",
@@ -1162,10 +1162,17 @@ const styles = StyleSheet.create({
 		borderRadius: 999,
 		overflow: "hidden",
 	},
-	footer: { padding: 20, backgroundColor: "rgba(0,0,0,0.85)" },
-	title: { color: "#fff", fontSize: 24, fontWeight: "700" },
-	subtitle: { color: "#f3eee7", fontSize: 16, marginTop: 4 },
-	stats: { color: "#c9c3ba", fontSize: 13, marginTop: 8 },
+	footer: {
+		position: "absolute",
+		left: 0,
+		right: 0,
+		bottom: 0,
+		padding: 16,
+		backgroundColor: "rgba(0,0,0,0.55)",
+	},
+	title: { color: "#fff", fontSize: 20, fontWeight: "700" },
+	subtitle: { color: "#f3eee7", fontSize: 14, marginTop: 2 },
+	stats: { color: "#c9c3ba", fontSize: 12, marginTop: 4 },
 	tagRow: { flexDirection: "row", flexWrap: "wrap", marginTop: 12, gap: 6 },
 	tag: {
 		color: "#f3eee7",
