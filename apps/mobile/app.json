@@ -1,22 +1,19 @@
 {
-  "expo": {
-    "name": "Percho",
-    "slug": "percho",
-    "scheme": "percho",
-    "version": "0.1.0",
-    "orientation": "portrait",
-    "userInterfaceStyle": "light",
-    "newArchEnabled": true,
-    "ios": {
-      "supportsTablet": false,
-      "bundleIdentifier": "co.percho.app"
-    },
-    "plugins": [
-      "expo-router",
-      "expo-video"
-    ],
-    "experiments": {
-      "typedRoutes": true
-    }
-  }
+	"expo": {
+		"name": "Percho",
+		"slug": "percho",
+		"scheme": "percho",
+		"version": "0.1.0",
+		"orientation": "portrait",
+		"userInterfaceStyle": "light",
+		"newArchEnabled": true,
+		"ios": {
+			"supportsTablet": false,
+			"bundleIdentifier": "co.percho.app"
+		},
+		"plugins": ["expo-router", "expo-video"],
+		"experiments": {
+			"typedRoutes": true
+		}
+	}
 }

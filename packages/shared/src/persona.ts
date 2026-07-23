@@ -34,7 +34,9 @@ export function updateTally(
   card: FeedCard,
   communityTraitsById: Record<string, TraitScores> = {},
 ): TraitTally {
-  if (card.kind === 'ask') return tally; // ask-cards feed scope, not persona
+  // Only listing + community cards influence the persona tally. Ask,
+  // tradeoff, challenge, and insight cards are routed to other reducers.
+  if (card.kind !== 'community' && card.kind !== 'listing') return tally;
   const traits: TraitScores | undefined =
     card.kind === 'community'
       ? card.traits

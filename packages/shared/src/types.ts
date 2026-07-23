@@ -22,7 +22,38 @@ export type TraitScores = Partial<Record<TraitKey, number>>;
 
 // ─── Feed cards ──────────────────────────────────────────────────────
 
-export type CardKind = 'community' | 'listing' | 'ask';
+export type CardKind =
+  | 'community'
+  | 'listing'
+  | 'ask'
+  | 'tradeoff'
+  | 'challenge'
+  | 'insight';
+
+// ─── Dimensions (evidence vocabulary) ────────────────────────────────
+// 11 dims ported from `percho-prototypes/discovery-v3-snapshot/_data.js`
+// `window.DIMS`. Listings, communities, tradeoffs, and asks tag against
+// these; the evidence profile is per-dim counters (see EvidenceProfile).
+export type DimKey =
+  | 'outdoors'
+  | 'walkable'
+  | 'schools'
+  | 'quiet'
+  | 'hip'
+  | 'entertaining'
+  | 'trails'
+  | 'nightlife'
+  | 'family'
+  | 'move_in'
+  | 'space';
+
+export interface EvidenceEntry {
+  dim: DimKey;
+  count: number;
+}
+
+// Ordered by count desc when queried; unordered here.
+export type EvidenceProfile = EvidenceEntry[];
 
 export interface CommunityCard {
   kind: 'community';
@@ -38,6 +69,8 @@ export interface CommunityCard {
     vibe: string;
   };
   traits: TraitScores;
+  dims?: DimKey[];
+  hook?: string;
 }
 
 export interface ListingCard {
@@ -51,6 +84,8 @@ export interface ListingCard {
   videoUrl?: string;
   communityId?: string;
   matchScore?: number;
+  dims?: DimKey[];
+  hook?: string;
 }
 
 // Ask-card = one yes/no question injected inline in the feed to collect
@@ -76,7 +111,51 @@ export interface AskCard {
   chipLabel: string; // e.g. "🏡 Primary"
 }
 
-export type FeedCard = CommunityCard | ListingCard | AskCard;
+export type FeedCard =
+  | CommunityCard
+  | ListingCard
+  | AskCard
+  | TradeoffCard
+  | ChallengeCard
+  | InsightCard;
+
+// ─── Tradeoff / Challenge / Insight cards ────────────────────────────
+// Ported from _data.js TRADEOFF_POOL, CHALLENGE_POOL, buildFeed insight.
+
+export interface TradeoffSide {
+  label: string;
+  dim: DimKey;
+}
+
+export interface TradeoffCard {
+  kind: 'tradeoff';
+  id: string;
+  L: TradeoffSide;
+  R: TradeoffSide;
+}
+
+export interface ChallengeCard {
+  kind: 'challenge';
+  id: string;
+  challengeKind: 'guess-price';
+  listingId: string;
+  prompt: string;
+  options: number[];
+  correct: number;
+  teach: string;
+  heroUrl?: string;
+}
+
+// Insight cards are computed at feed-render time from the profile — the
+// dim/text/evidence line come from pickInsight(). Kept as a card so the
+// rhythm engine can slot it.
+export interface InsightCard {
+  kind: 'insight';
+  id: string;
+  dim: DimKey;
+  text: string;
+  evidence: string;
+}
 
 // ─── Feed pagination API contract ────────────────────────────────────
 
