@@ -4,6 +4,50 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-26 23:44 UTC — task-1 step 4: fix the task-0 flip bug (§1.1 red line)
+
+**Objective**: PLAN-task-1 §7 step 4 — the task-0 edits `SwipeStack` /
+`use-swipe-card` need before the feed can mount a mixed deck on them.
+
+**Actions**:
+- `apps/mobile/lib/gesture/can-flip.ts` (new) — `canFlipCard(back)`, the §1.1
+  red line as a pure predicate.
+- `apps/mobile/components/SwipeStack.tsx` — gate the back face and the flip
+  gesture on the *rendered result* per item, via `canFlipCard`. The back face is
+  computed once per card and reused (no double `renderBack` call).
+- `apps/mobile/hooks/use-swipe-card.ts` — new `canFlip` arg (defaults true),
+  applied as `.enabled(enabled && canFlip)` on the Tap gesture and added to the
+  `useMemo` deps.
+- Tests: `can-flip.test.ts` (9). Suite 128 → 137.
+
+**Issues**: the shipped task-0 bug, confirmed at `SwipeStack.tsx:98`. The back
+face was gated on `!!renderBack` — the *callback* — which is always truthy once
+any caller passes it. A mixed deck passes ONE `renderBack` that returns null for
+the kinds with no data face (ask / tradeoff / milestone), so every card looked
+flippable. Two distinct live symptoms:
+1. An empty `Animated.View` was mounted behind every card.
+2. `useSwipeCard`'s Tap gesture flipped unconditionally, so tapping an ask card
+   crossfaded the visible face out to a blank one over 350ms — the exact failure
+   §1.1 lists as a red line, and what §1.1 asks task-1 to guarantee.
+
+**Resolution**: gate on the result, not the callback. Extracted as a pure
+predicate rather than an inline truthiness check for two reasons: the failure is
+a logic bug and deserves a test that runs without a simulator, and the falsy set
+is wider than it looks — `cond && <Face/>` yields `false`, not null, which an
+inline `!= null` check would have called flippable. `canFlipCard` handles
+null / undefined / false / true / `''` / arrays-of-nothings, recursing into
+arrays. 137 tests green (task-0's 26 gesture + funnel tests unchanged),
+typecheck 0, biome clean.
+
+**Learnings**: `!!callback` as a capability check is wrong for any callback
+shared across a heterogeneous collection — the callback's existence describes the
+*caller*, its return value describes the *item*. Worth grepping for other
+`!!render*` patterns as more card kinds land.
+
+**Next steps**: step 5 — `feed-session.ts` + `event-queue.ts` (§1.10 client
+contract, capped FIFO, drain-on-reconnect, no-op sink; no table this task per
+PLAN §4).
+
 ## 2026-07-26 23:36 UTC — task-1 step 3: the §1.7 composition engine + the §0.2 listing gate
 
 **Objective**: PLAN-task-1 §7 step 3 — `generateFeed`, the pure deterministic

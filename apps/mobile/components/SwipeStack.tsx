@@ -20,6 +20,7 @@ import { StyleSheet, View } from "react-native";
 import { GestureDetector } from "react-native-gesture-handler";
 import Animated, { useAnimatedStyle } from "react-native-reanimated";
 import { useSwipeCard } from "../hooks/use-swipe-card";
+import { canFlipCard } from "../lib/gesture/can-flip";
 import { colors, radii } from "../theme/tokens";
 
 const WINDOW = 3;
@@ -55,9 +56,19 @@ export function SwipeStack<T>({
 	const window = items.slice(activeIndex, activeIndex + WINDOW);
 	const top = window[0];
 
+	// §1.1 red line: a card with no data face must not flip. `renderBack` is one
+	// callback shared by a mixed deck and returns null for the kinds that don't
+	// flip (ask / tradeoff / milestone), so the existence of the *callback* says
+	// nothing about the *item*. Gating on the callback — the original bug — let a
+	// tap crossfade an ask card out to a blank face. Gate on the rendered result.
+	const topBack =
+		top !== undefined && renderBack ? renderBack(top, "top") : null;
+	const topCanFlip = canFlipCard(topBack);
+
 	const { gesture, topStyle, tx, frontStyle, backStyle } = useSwipeCard({
 		cardWidth,
 		enabled: enabled && !!top,
+		canFlip: topCanFlip,
 		onDecision: (decision) => {
 			if (top) onDecision(decision, top);
 		},
@@ -78,6 +89,13 @@ export function SwipeStack<T>({
 					{window.map((item, i) => {
 						const role = ROLES[i] ?? "after";
 						const isTop = role === "top";
+						// Reuse the already-computed top face rather than calling
+						// renderBack twice for the same item.
+						const back = isTop
+							? topBack
+							: renderBack
+								? renderBack(item, role)
+								: null;
 						return (
 							<Animated.View
 								key={keyExtractor(item, activeIndex + i)}
@@ -95,14 +113,14 @@ export function SwipeStack<T>({
 								>
 									{renderCard(item, role)}
 								</Animated.View>
-								{!!renderBack && (
+								{canFlipCard(back) && (
 									<Animated.View
 										style={[
 											StyleSheet.absoluteFill,
 											isTop ? backStyle : styles.faceHidden,
 										]}
 									>
-										{renderBack(item, role)}
+										{back}
 									</Animated.View>
 								)}
 							</Animated.View>

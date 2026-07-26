@@ -54,6 +54,18 @@ interface UseSwipeCardArgs {
 	enabled: boolean;
 	/** Called on the JS thread once a swipe commits. */
 	onDecision: (decision: Exclude<SwipeDecision, "none">) => void;
+	/**
+	 * Whether this card has a data face to flip to (§1.1 red line). Defaults to
+	 * true for backward compatibility with task-0's callers.
+	 *
+	 * A card with no back face must treat a tap as a NO-OP: ask / tradeoff /
+	 * milestone cards have nothing behind them, and flipping anyway crossfades
+	 * the visible face out to an empty one. `renderBack` being *supplied* is not
+	 * evidence a given item has a back — one `renderBack` serves a mixed deck
+	 * and returns null for the kinds that don't flip, so the decision has to be
+	 * made per item, by its result.
+	 */
+	canFlip?: boolean;
 }
 
 interface UseSwipeCardResult {
@@ -74,6 +86,7 @@ export function useSwipeCard({
 	cardWidth,
 	enabled,
 	onDecision,
+	canFlip = true,
 }: UseSwipeCardArgs): UseSwipeCardResult {
 	const tx = useSharedValue(0);
 	const crossedRight = useSharedValue(false);
@@ -134,7 +147,7 @@ export function useSwipeCard({
 			});
 
 		const tap = Gesture.Tap()
-			.enabled(enabled)
+			.enabled(enabled && canFlip)
 			.onEnd((_e, success) => {
 				if (!success) return;
 				const target = flipProgress.value < 0.5 ? 1 : 0;
@@ -148,7 +161,7 @@ export function useSwipeCard({
 			});
 
 		return Gesture.Exclusive(pan, tap);
-	}, [cardWidth, enabled, settle, tx, crossedRight, flipProgress]);
+	}, [cardWidth, enabled, canFlip, settle, tx, crossedRight, flipProgress]);
 
 	const topStyle = useAnimatedStyle(() => {
 		// ±8° across the drag the user can actually perform: the card commits at
