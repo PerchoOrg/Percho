@@ -4,6 +4,31 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-26 15:10 UTC — cut personal Anthropic key off this host; Claude Code → Bedrock (opus-5)
+
+**Objective**: The owner received an Anthropic billing notice that his personal API key's usage was exhausted. Root cause it, remove the key from this EC2 host entirely, and re-point Claude Code at AWS Bedrock so LLM spend bills to AWS — without giving up Claude Code as a coding agent.
+
+**Actions**:
+- Root cause confirmed: `scripts/claude-env.sh` (added in 304464e, same task-0 commit) read `ANTHROPIC_API_KEY` from `.env.local` and `exec`'d `claude` with it. A headless `claude -p` task-0 run on 2026-07-26 08:15–08:34 UTC consumed 14.6K input / 676K cache-write / **12.35M cache-read** / 347K output on opus ≈ **$55–60 in 18 minutes**. The cache-read figure is the tell: `claude -p` replays the full spec + 17KB CLAUDE.md every turn across 264 messages.
+- Backed up `.env.local` → `~/.percho-secrets/env.local.bak-20260726-150349` (chmod 600), then **removed the `ANTHROPIC_API_KEY` line**, leaving a policy comment in its place.
+- `git rm scripts/claude-env.sh`. No residual references anywhere in the repo.
+- Added `scripts/claude-bedrock.sh`: sets `CLAUDE_CODE_USE_BEDROCK=1`, `AWS_REGION=us-east-1`, `ANTHROPIC_MODEL=global.anthropic.claude-opus-5`, and also pins `ANTHROPIC_SMALL_FAST_MODEL` to opus-5 so subagent/summary calls can't silently downgrade. It **hard-unsets `ANTHROPIC_API_KEY` / `ANTHROPIC_AUTH_TOKEN`** so the key path cannot come back even if something re-exports it.
+- Added CLAUDE.md §2.1 rule 0 codifying both owner mandates: no personal API key, opus-5 only.
+
+**Verification** (real, not claimed):
+- `sts:GetCallerIdentity` → `arn:aws:sts::531543950551:assumed-role/path3-dev-role/i-000a95cbcea222ff7` — instance role, no static creds, no `~/.aws`, no `AWS_*` env vars.
+- `bedrock:ListInferenceProfiles` → `global.anthropic.claude-opus-5` ACTIVE.
+- `claude -p` through the wrapper returned `BEDROCK_WRAPPER_OK global.anthropic.claude-opus-5`, `modelUsage` keyed solely on `global.anthropic.claude-opus-5`. Run **with `ANTHROPIC_API_KEY=sk-ant-FAKE-…` deliberately set in the environment** and it still succeeded — proving the wrapper ignores the key and authenticates via IAM.
+
+**Issues / open risk**:
+1. **App runtime is now broken on this host.** `apps/web/lib/ai/anthropic.ts`, `apps/web/lib/poi/vision-tagger.ts`, `apps/web/lib/poi/narrative.ts`, `scripts/render-worker/worker.py`, `scripts/render-worker/photo_tagger.py` all read `process.env.ANTHROPIC_API_KEY` / `os.environ["ANTHROPIC_API_KEY"]` and will throw `'ANTHROPIC_API_KEY not set'`. These are POI narrative + photo/vision tagging — i.e. the nearby-video pipeline. They need porting to Bedrock (boto3 `bedrock-runtime` / `@aws-sdk/client-bedrock-runtime`), NOT a re-added personal key. **Vercel prod is unaffected** (its own env vars are separate); this is an EC2-local break.
+2. The key sat in plaintext at `~/Percho/.env.local` on a cloud host. It was never committed (`.gitignore:16`), so no history rewrite is needed, but **rotation is recommended**.
+3. Cost hygiene for future `claude -p` runs: the 12.35M cache-read came from re-sending the spec each turn. Prefer fewer, larger turns or trim what's fed in.
+
+**Learnings**: Claude Code's Bedrock mode is a drop-in — `CLAUDE_CODE_USE_BEDROCK=1` + `ANTHROPIC_MODEL=<inference-profile-id>` is the whole change; the inference-profile ID (not a bare model name) is what Bedrock wants. Also pin `ANTHROPIC_SMALL_FAST_MODEL` or the small-model calls go to a different (cheaper, non-opus) model.
+
+**Next steps**: Port the 5 runtime call sites to Bedrock. Rotate the personal Anthropic key. Then task-1 (feed) via `scripts/claude-bedrock.sh`.
+
 ## 2026-07-26 08:40 UTC — phase-ios0: spec-v3 foundation layer (task-0)
 
 **Objective**: Task-0 of the spec-v3 iOS build — the app-wide foundation every later page task (1–5) imports: design tokens, typography, the §0.5 gesture contract as a tested pure function, semantic haptics, video playback rules, funnel state machine skeleton, and 8 core presentational components. No pages, no routing.

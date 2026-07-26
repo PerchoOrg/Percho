@@ -97,9 +97,29 @@ in the PR description.
 
 ## 2. Workflow
 
-### 2.1 Three non-negotiable rules
+### 2.1 Four non-negotiable rules
 
 These are mandated by the owner. Breaking any of them ends the session badly:
+
+0. **Never use a personal Anthropic API key. Never use a model other than
+   opus-5.** All LLM spend on this host bills to AWS Bedrock via the EC2
+   instance IAM role — never to a personal `sk-ant-*` key. Concretely:
+   - Run Claude Code as `scripts/claude-bedrock.sh` (sets
+     `CLAUDE_CODE_USE_BEDROCK=1`, model `global.anthropic.claude-opus-5`, and
+     hard-unsets `ANTHROPIC_API_KEY`). Never invoke the `claude` binary bare.
+   - Do NOT add `ANTHROPIC_API_KEY` back to `.env.local` or any dotfile.
+   - Do NOT downgrade to sonnet/haiku to save money, including for
+     "small/fast" subagent calls. Opus-5 only.
+
+   Background: on 2026-07-26 an EC2 Claude Code session loaded the owner's
+   personal key from `.env.local` and burned ~$55 of it in 18 minutes on
+   opus (12.35M cache-read tokens from replaying the spec each turn). The key
+   was removed and `scripts/claude-env.sh` deleted. Don't recreate that path.
+
+   NOTE: the app runtime (`apps/web/lib/poi/*`, `scripts/render-worker/*`)
+   still reads `process.env.ANTHROPIC_API_KEY` and is currently BROKEN on
+   this host as a result. Those call sites need porting to Bedrock — see
+   DEVLOG 2026-07-26. Do not "fix" them by re-adding a personal key.
 
 1. **No false completion claims.** Never say "merged" / "pushed" / "deployed" /
    "done" without first running `git log origin/main --oneline -5` (or the
