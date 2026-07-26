@@ -4,6 +4,68 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-26 23:25 UTC — task-1 step 1: the pure feed type layer (card union, geo contract, behavior, stage mixes)
+
+**Objective**: land step 1 of the approved `docs/design/spec-v3/prompts/PLAN-task-1.md`
+§7 sequence — the pure, dependency-free foundation the rhythm engine is built
+on. No React, no RN, no expo, no zustand in `apps/mobile/lib/feed/`, so the
+whole directory lifts to `packages/shared` verbatim when server-side
+`generateDiscoveryFeed` lands (05 §5.6 item 4).
+
+**Actions**:
+- `apps/mobile/lib/feed/card-types.ts` — the v3 8-kind discriminated union
+  (`ask`/`area`/`listing`/`community`/`tradeoff`/`challenge`/`insight`/`milestone`),
+  `FunnelLayer` + §1.2 `LAYER_TAG` table, `BudgetBand`, `AskChoice`
+  (yes-no vs either-or as separate shapes).
+- `apps/mobile/lib/feed/geo-unit.ts` — `GeoUnit` / `GeoStats` +
+  `finestAvailableLevel(pool)`.
+- `apps/mobile/lib/gesture/capability.ts` — `CardCapability`
+  (`pannable`/`commits`/`maxDisplacementRatio`/`flippable`/`revealMs`).
+- `apps/mobile/lib/feed/behavior.ts` — `cardBehavior(card)` → `CardBehavior`.
+- `apps/mobile/lib/feed/ratios.ts` — the five §1.7 stage mixes as 10-slot data
+  tables + `STAGE_2_GEO_FALLBACK` + pagination constants.
+- Tests: `behavior.test.ts` (9), `geo-unit.test.ts` (7). Suite 26 → 42.
+
+**Decisions**:
+- `CardBehavior` is a **discriminated union keyed on `mode`**, not a flag bag.
+  §1.1's engineering red-line is that a handler assuming a capability exists
+  throws and loses its touch binding. A bag of optionals reproduces that hazard
+  because `revealMs` and `cta` would be optional at every call site; with a
+  union, a `ceremony` card has no `labels` to read and a `decide` card has no
+  `revealMs`, so the compiler refuses the mistake the runtime used to discover.
+- `CardCapability` lives in `lib/gesture/`, not `lib/feed/`. `useSwipeCard` and
+  `SwipeStack` are generic over the card type and must not learn feed semantics;
+  they consume a resolved capability that the feed layer decides. Net effect: no
+  gesture handler branches on a card kind at all.
+- `GeoStats` **does not declare** `schoolRating` / `commuteMinutes` /
+  `priceTrend` / `inventoryTrend` / `hoaBand`. Declaring them optional is the
+  first step toward faking them; there is no real source, so there is no field.
+  A thin unit renders a short face — no "—", no "N/A", no placeholder.
+- Stage mixes are per-slot arrays walked cyclically rather than
+  count-per-10 ratios. That makes "1 tease per 10" exactly true at any N instead
+  of true on average, which is what the §1.7 hard gate needs to be testable.
+- Kept the v3 union parallel to `packages/shared/src/types.ts` instead of
+  widening it. Only two files import `@percho/shared` today and both are
+  rewritten by this task, so blast radius is near zero — and widening would
+  force every web consumer to handle kinds it never sees.
+
+**Issues**: `challenge` in §1.7's Stage-0 mix row contradicts §1.6's "Stage 2
+起才出" (challenge needs geographic context to have a joke in it). Owner ruled
+§1.6 is the intended rule and the mix table is the error.
+
+**Resolution**: Stage 0 is `ask ×7 · trade-off ×3`, zero challenge. Recorded in
+`ratios.ts` with the reasoning; the §1.7 table in `01-feed.md` gets corrected in
+step 10 rather than worked around.
+
+**Learnings**: `finestAvailableLevel` is unit-tested on **both** readings — the
+city-only pool we ship on today and a zip-bearing pool. That is the proof that
+the deferred ~$40 reverse-geocode backfill is a no-op on the engine: same
+function, deeper pool, no code change.
+
+**Next steps**: step 2 — `signals.ts` (pure reducer, tease 0.5× weighting) +
+`stage-advance.ts` (the §1.7 promotion boundaries) with the acceptance-boundary
+tests on both sides of every threshold.
+
 ## 2026-07-26 21:05 UTC — root `node-linker=hoisted` broke web at both type and runtime layer; async-storage 3.x broke Expo Go
 
 **Objective**: two owner-reported failures. (1) Vercel deploy failing on
