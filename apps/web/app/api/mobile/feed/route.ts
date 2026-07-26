@@ -29,6 +29,7 @@
 import type { BrowseCard } from '@/app/(public)/browse/_components/BrowseFeed';
 import { fetchBrowseCards, fetchBrowseCardsVideosOnly } from '@/lib/feed/browse-cards';
 import { fetchCityGeoUnits, type GeoUnitDTO } from '@/lib/feed/geo-units';
+import { gateListings, type PoolListingDTO } from '@/lib/feed/listing-gate';
 import { parseFeedPoolQuery } from '@/lib/zod/feed-pool';
 import { NextResponse } from 'next/server';
 
@@ -36,27 +37,7 @@ export const dynamic = 'force-dynamic';
 
 const CF_STREAM_BASE = 'https://videodelivery.net';
 
-/** §1.7: one tease listing per ten cards in stages 1–2. */
-const TEASE_PER = 10;
-
-export interface PoolListingDTO {
-  id: string;
-  slug: string;
-  address: string;
-  priceLabel: string;
-  bedBathSqft: string;
-  heroUrl: string;
-  videoUrl?: string;
-  communityId?: string;
-  /** City unit this listing sits in — a tease swipe credits it (§1.7). */
-  geoUnitId?: string;
-  /** Set in stages 1–2: likeable, weighted 0.5×, match badge suppressed. */
-  tease?: true;
-  /** Set in stage 3: preview inside an already-liked community. */
-  preview?: true;
-}
-
-export interface PoolCommunityDTO {
+interface PoolCommunityDTO {
   id: string;
   slug: string;
   name: string;
@@ -68,7 +49,7 @@ export interface PoolCommunityDTO {
   listingCount?: number;
 }
 
-export interface FeedPoolResponse {
+interface FeedPoolResponse {
   stage: number;
   offset: number;
   limit: number;
@@ -161,37 +142,6 @@ function projectCommunities(cards: BrowseCard[]): PoolCommunityDTO[] {
     });
   }
   return [...bySlug.values()];
-}
-
-/**
- * §0.2 gate. Takes every eligible listing and returns only what this stage is
- * allowed to see, tagged so the client renders the right badge suppression.
- */
-export function gateListings(
-  all: PoolListingDTO[],
-  stage: number,
-  limit: number,
-  likedCommunityIds: string[],
-): PoolListingDTO[] {
-  if (stage <= 0) return [];
-
-  if (stage <= 2) {
-    const teaseCap = Math.ceil(limit / TEASE_PER);
-    return all.slice(0, teaseCap).map((l) => ({ ...l, tease: true as const }));
-  }
-
-  if (stage === 3) {
-    // Previews are scoped to communities the buyer already liked. With no
-    // liked communities there is nothing to preview — that is the correct
-    // empty result, not a reason to fall back to unfiltered listings.
-    if (likedCommunityIds.length === 0) return [];
-    const liked = new Set(likedCommunityIds);
-    return all
-      .filter((l) => l.communityId && liked.has(l.communityId))
-      .map((l) => ({ ...l, preview: true as const }));
-  }
-
-  return all;
 }
 
 export async function GET(request: Request) {
