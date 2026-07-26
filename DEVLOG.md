@@ -4,6 +4,60 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-26 23:28 UTC — task-1 step 2: signal reducer + the §1.7 promotion gates (50 boundary tests)
+
+**Objective**: PLAN-task-1 §7 step 2 — the two pure functions the whole funnel
+rests on. This is where the task-1 acceptance criteria actually live
+("晋级阈值边界(如 city 右滑 2 vs 3)"), so every threshold is tested on both sides.
+
+**Actions**:
+- `apps/mobile/lib/feed/signals.ts` — `SignalState` + `applySwipe`,
+  `applyInsightUnsure`, `applySkipLayer`, `isLayerFatigued`,
+  `isLayerSuppressed`, `layerOf`.
+- `apps/mobile/lib/feed/stage-advance.ts` — `evaluateStageAdvance` +
+  `cityFocusTallies` / `focusedUnitsAtLevel` / `countLifeSignals`, thresholds
+  as named exports (`CITY_FOCUS_RIGHT`, `CITY_FOCUS_RATE`, …).
+- Tests: `signals.test.ts` (25), `stage-advance.test.ts` (25). Suite 42 → 92.
+
+**Decisions**:
+- The 1→2 gate credits a city with **its descendants'** swipes, per §1.7's "该
+  city 及其下级右滑 ≥3". A buyer who right-swipes three zips inside Decatur has
+  focused Decatur without ever swiping Decatur itself; a naive per-unit tally
+  would miss that and stall the funnel.
+- `CITY_FOCUS_RATE` is compared with `>`, not `>=`. §1.7 says "右滑率 >50%", so
+  3-right-of-6 (exactly 50%) does NOT advance and 3-of-5 (60%) does. Both are
+  pinned as tests because it is a one-character bug either way.
+- Trade-off swipes deliberately do **not** feed any layer's dry streak. §1.7
+  says fatigue is compensated *by* trade-off cards ("靠 trade-off 侧写补偿"), so
+  letting them reset the streak would make the fatigue rule unreachable and
+  letting them increment it would fatigue layers the user never saw.
+- `dryStreak` is a consecutive counter reset by any positive signal, not a
+  15-swipe ring buffer. Same observable behavior for the spec'd rule, and it
+  survives AsyncStorage serialization as a plain number per layer.
+- Area left-swipe records a downweight and keeps the unit in the pool (§1.7
+  "软排序, 非过滤"). Hard filtering under a swipe rhythm produces an empty feed.
+- Insight "Not sure" returns the SAME object reference, not a copy. It records
+  nothing — not the dim, not the streak, not even `swipesInStage`.
+
+**Issues**: none blocking. Noted while writing the 2→3 tests: the gate's
+behavior genuinely changes when zips appear — the same city-level signal that
+opens the gate today stops opening it once zip units exist, because the finest
+level moves. That is correct (the funnel should narrow further when it can), but
+it means the zip backfill is a behavior change for a mid-funnel user, not purely
+additive.
+
+**Resolution**: pinned both directions as tests
+("city-reading (today)" / "zip-reading (post-backfill)") so the transition is a
+documented, deliberate step rather than a surprise regression.
+
+**Learnings**: writing the gates as `(stage, signals, ctx) → stage | null` with
+the geo pool passed in — rather than reading a store — is what made the
+dual-reading test possible at all. A store read would have made the finest-level
+behavior untestable without a fixture database.
+
+**Next steps**: step 3 — `generate-feed.ts`, the deterministic slot-walking
+engine, with the listing hard gate and the Stage-2 city fallback under test.
+
 ## 2026-07-26 23:25 UTC — task-1 step 1: the pure feed type layer (card union, geo contract, behavior, stage mixes)
 
 **Objective**: land step 1 of the approved `docs/design/spec-v3/prompts/PLAN-task-1.md`
