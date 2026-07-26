@@ -9,16 +9,16 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { colors } from "../theme/tokens";
-import { type } from "../theme/typography";
+import { textStyles } from "../theme/typography";
 
 export interface TabItem {
 	key: string;
 	label: string;
-	icon?: string;
 }
 
 interface TabBarProps {
-	tabs: TabItem[];
+	/** Exactly 4 (§0.6 #6). */
+	tabs: readonly [TabItem, TabItem, TabItem, TabItem];
 	activeKey: string;
 	onSelect: (key: string) => void;
 }
@@ -28,7 +28,12 @@ const BAR_HEIGHT = 62;
 export function TabBar({ tabs, activeKey, onSelect }: TabBarProps) {
 	const insets = useSafeAreaInsets();
 	return (
-		<View style={[styles.bar, { paddingBottom: insets.bottom }]}>
+		<View
+			style={[
+				styles.bar,
+				{ height: BAR_HEIGHT + insets.bottom, paddingBottom: insets.bottom },
+			]}
+		>
 			{tabs.map((t) => {
 				const active = t.key === activeKey;
 				return (
@@ -39,13 +44,6 @@ export function TabBar({ tabs, activeKey, onSelect }: TabBarProps) {
 						accessibilityRole="tab"
 						accessibilityState={{ selected: active }}
 					>
-						{!!t.icon && (
-							<Text
-								style={[styles.icon, active ? styles.active : styles.inactive]}
-							>
-								{t.icon}
-							</Text>
-						)}
 						<Text
 							style={[styles.label, active ? styles.active : styles.inactive]}
 						>
@@ -61,14 +59,12 @@ export function TabBar({ tabs, activeKey, onSelect }: TabBarProps) {
 const styles = StyleSheet.create({
 	bar: {
 		flexDirection: "row",
-		height: BAR_HEIGHT,
 		backgroundColor: colors.bg,
 		borderTopWidth: StyleSheet.hairlineWidth,
 		borderTopColor: colors.border,
 	},
 	tab: { flex: 1, alignItems: "center", justifyContent: "center", gap: 2 },
-	icon: { fontSize: 20 },
-	label: { ...type.caption },
+	label: { ...textStyles.caption },
 	active: { color: colors.ink, opacity: 1 },
 	inactive: { color: colors.ink2, opacity: 0.5 },
 });

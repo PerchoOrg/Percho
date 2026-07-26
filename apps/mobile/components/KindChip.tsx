@@ -5,7 +5,7 @@
  */
 import { StyleSheet, Text } from "react-native";
 import { colors, radii } from "../theme/tokens";
-import { type } from "../theme/typography";
+import { textStyles } from "../theme/typography";
 
 export function KindChip({ label }: { label: string }) {
 	return <Text style={styles.chip}>{label}</Text>;
@@ -13,7 +13,7 @@ export function KindChip({ label }: { label: string }) {
 
 const styles = StyleSheet.create({
 	chip: {
-		...type.caption,
+		...textStyles.caption,
 		alignSelf: "flex-start",
 		color: colors.accent,
 		backgroundColor: colors.glass,

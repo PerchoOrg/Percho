@@ -1,11 +1,20 @@
+import { resolve } from "node:path";
 import { defineConfig } from "vitest/config";
 
 // Pure-TS unit tests only (owner-approved #4) — no React Native runtime.
-// Currently: the §0.5 gesture-decision core. Keep RN-dependent code out of
-// this include glob.
+// `lib/` holds the §0.5 gesture-decision core; `state/` holds the Zustand
+// stores, which need no RN runtime once AsyncStorage is aliased to a stub.
+// Keep RN-dependent code out of this include glob.
 export default defineConfig({
 	test: {
-		include: ["lib/**/*.test.ts"],
+		include: ["{lib,state}/**/*.test.ts"],
 		environment: "node",
+		alias: {
+			// Must be absolute — vitest does not resolve relative alias targets.
+			"@react-native-async-storage/async-storage": resolve(
+				__dirname,
+				"test/async-storage-stub.ts",
+			),
+		},
 	},
 });

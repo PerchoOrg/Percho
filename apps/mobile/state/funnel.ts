@@ -10,6 +10,10 @@
  * INVARIANT (§0.2): stage NEVER auto-regresses. `promoteTo` only ever moves
  * forward. A downshift happens exclusively through an explicit user action
  * (You-tab scope removal, Search deep-link) via `resetTo`.
+ *
+ * AsyncStorage rehydrates asynchronously, so the first render always reads
+ * `stage: 0` no matter what is on disk. Consumers must gate on `hydrated`
+ * before building a deck or firing a milestone off the stage.
  */
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { create } from "zustand";
@@ -19,6 +23,8 @@ export type FunnelStage = 0 | 1 | 2 | 3 | 4;
 
 interface FunnelState {
 	stage: FunnelStage;
+	/** False until the persisted stage has been read back from AsyncStorage. */
+	hydrated: boolean;
 	/**
 	 * Advance toward a later stage. Monotonic: a target at or below the current
 	 * stage is ignored, so the funnel can never slide backward on its own.
@@ -37,6 +43,7 @@ export const useFunnelStore = create<FunnelState>()(
 	persist(
 		(set, get) => ({
 			stage: 0,
+			hydrated: false,
 			promoteTo: (target) => {
 				if (target <= get().stage) return false;
 				set({ stage: target });
@@ -48,6 +55,9 @@ export const useFunnelStore = create<FunnelState>()(
 			name: "percho-v3:funnel:v1",
 			storage: createJSONStorage(() => AsyncStorage),
 			partialize: (s) => ({ stage: s.stage }),
+			onRehydrateStorage: () => () => {
+				useFunnelStore.setState({ hydrated: true });
+			},
 		},
 	),
 );

@@ -1,14 +1,31 @@
 import { describe, expect, it } from "vitest";
-import { decideSwipe } from "./decide-swipe";
+import {
+	SWIPE_SECTOR_DEG,
+	SWIPE_THRESHOLD_RATIO,
+	SWIPE_VELOCITY_PTS,
+	decideSwipe,
+	stepThresholdLatch,
+} from "./decide-swipe";
 
-const CARD_W = 400; // 35% = 140pt
+const CARD_W = 400;
+const THRESHOLD = CARD_W * SWIPE_THRESHOLD_RATIO;
 const tanDeg = (deg: number) => Math.tan((deg * Math.PI) / 180);
 
+// Every case below is expressed in terms of the exported constants, so a silent
+// retune of any of them fails this suite instead of sliding through.
+describe("the §0.5 contract constants", () => {
+	it("are the spec values", () => {
+		expect(SWIPE_THRESHOLD_RATIO).toBe(0.35);
+		expect(SWIPE_VELOCITY_PTS).toBe(800);
+		expect(SWIPE_SECTOR_DEG).toBe(30);
+	});
+});
+
 describe("decideSwipe — 35% width threshold (§0.5)", () => {
-	it("34% of card width does not commit", () => {
+	it("one thousandth of a point short of the threshold does not commit", () => {
 		expect(
 			decideSwipe({
-				translationX: CARD_W * 0.34, // 136pt < 140pt
+				translationX: THRESHOLD - 0.001,
 				translationY: 0,
 				velocityX: 0,
 				cardWidth: CARD_W,
@@ -16,10 +33,10 @@ describe("decideSwipe — 35% width threshold (§0.5)", () => {
 		).toBe("none");
 	});
 
-	it("36% of card width commits (right)", () => {
+	it("exactly the threshold commits (contract is >=)", () => {
 		expect(
 			decideSwipe({
-				translationX: CARD_W * 0.36, // 144pt >= 140pt
+				translationX: THRESHOLD,
 				translationY: 0,
 				velocityX: 0,
 				cardWidth: CARD_W,
@@ -27,10 +44,10 @@ describe("decideSwipe — 35% width threshold (§0.5)", () => {
 		).toBe("right");
 	});
 
-	it("36% to the left commits (left)", () => {
+	it("exactly the threshold to the left commits left", () => {
 		expect(
 			decideSwipe({
-				translationX: -CARD_W * 0.36,
+				translationX: -THRESHOLD,
 				translationY: 0,
 				velocityX: 0,
 				cardWidth: CARD_W,
@@ -40,37 +57,37 @@ describe("decideSwipe — 35% width threshold (§0.5)", () => {
 });
 
 describe("decideSwipe — 800 pt/s velocity (§0.5)", () => {
-	// Small translation (below the 35% threshold) so velocity is the decider.
+	// Below the distance threshold, so velocity is the only possible decider.
 	const shortX = 10;
 
-	it("799 pt/s does not commit", () => {
+	it("exactly the velocity threshold does not commit (contract is strict >)", () => {
 		expect(
 			decideSwipe({
 				translationX: shortX,
 				translationY: 0,
-				velocityX: 799,
+				velocityX: SWIPE_VELOCITY_PTS,
 				cardWidth: CARD_W,
 			}),
 		).toBe("none");
 	});
 
-	it("801 pt/s commits (right)", () => {
+	it("one thousandth over the velocity threshold commits", () => {
 		expect(
 			decideSwipe({
 				translationX: shortX,
 				translationY: 0,
-				velocityX: 801,
+				velocityX: SWIPE_VELOCITY_PTS + 0.001,
 				cardWidth: CARD_W,
 			}),
 		).toBe("right");
 	});
 
-	it("-801 pt/s commits (left)", () => {
+	it("a fast left flick commits left", () => {
 		expect(
 			decideSwipe({
 				translationX: -shortX,
 				translationY: 0,
-				velocityX: -801,
+				velocityX: -(SWIPE_VELOCITY_PTS + 0.001),
 				cardWidth: CARD_W,
 			}),
 		).toBe("left");
@@ -78,25 +95,24 @@ describe("decideSwipe — 800 pt/s velocity (§0.5)", () => {
 });
 
 describe("decideSwipe — ±30° sector gate (§0.5)", () => {
-	// Translation X clears the 35% threshold; only the angle should decide.
-	const bigX = 200;
+	const bigX = 200; // clears the distance threshold; only the angle decides
 
-	it("29° off horizontal stays a horizontal swipe (commit)", () => {
+	it("exactly the sector limit is still a horizontal swipe (contract is > 30)", () => {
 		expect(
 			decideSwipe({
 				translationX: bigX,
-				translationY: bigX * tanDeg(29),
+				translationY: bigX * tanDeg(SWIPE_SECTOR_DEG),
 				velocityX: 0,
 				cardWidth: CARD_W,
 			}),
 		).toBe("right");
 	});
 
-	it("31° off horizontal is vertical territory (none)", () => {
+	it("a thousandth of a degree past the sector limit is vertical territory", () => {
 		expect(
 			decideSwipe({
 				translationX: bigX,
-				translationY: bigX * tanDeg(31),
+				translationY: bigX * tanDeg(SWIPE_SECTOR_DEG + 0.001),
 				velocityX: 0,
 				cardWidth: CARD_W,
 			}),
@@ -108,7 +124,44 @@ describe("decideSwipe — ±30° sector gate (§0.5)", () => {
 			decideSwipe({
 				translationX: 5,
 				translationY: 300,
-				velocityX: 1200,
+				velocityX: SWIPE_VELOCITY_PTS * 1.5,
+				cardWidth: CARD_W,
+			}),
+		).toBe("none");
+	});
+});
+
+// Spec ambiguity resolved 2026-07-26 (see DEVLOG): a decisive velocity against
+// the drag direction cancels rather than commits.
+describe("decideSwipe — velocity opposing the drag", () => {
+	it("a yank-back past the threshold cancels", () => {
+		expect(
+			decideSwipe({
+				translationX: THRESHOLD + 10,
+				translationY: 0,
+				velocityX: -(SWIPE_VELOCITY_PTS + 700),
+				cardWidth: CARD_W,
+			}),
+		).toBe("none");
+	});
+
+	it("a slow release past the threshold still commits in the drag direction", () => {
+		expect(
+			decideSwipe({
+				translationX: THRESHOLD + 10,
+				translationY: 0,
+				velocityX: -(SWIPE_VELOCITY_PTS - 100),
+				cardWidth: CARD_W,
+			}),
+		).toBe("right");
+	});
+
+	it("a card dragged left never flies out right on a fast rightward release", () => {
+		expect(
+			decideSwipe({
+				translationX: -10,
+				translationY: 0,
+				velocityX: SWIPE_VELOCITY_PTS + 100,
 				cardWidth: CARD_W,
 			}),
 		).toBe("none");
@@ -116,14 +169,77 @@ describe("decideSwipe — ±30° sector gate (§0.5)", () => {
 });
 
 describe("decideSwipe — degenerate input", () => {
-	it("no movement is none", () => {
+	it("an unmeasured card is never swipeable", () => {
 		expect(
 			decideSwipe({
-				translationX: 0,
+				translationX: 1,
 				translationY: 0,
 				velocityX: 0,
-				cardWidth: CARD_W,
+				cardWidth: 0,
 			}),
 		).toBe("none");
+	});
+
+	it("an unmeasured card is not swipeable by velocity either", () => {
+		expect(
+			decideSwipe({
+				translationX: 1,
+				translationY: 0,
+				velocityX: SWIPE_VELOCITY_PTS + 100,
+				cardWidth: 0,
+			}),
+		).toBe("none");
+	});
+});
+
+describe("stepThresholdLatch — §0.5 threshold haptic", () => {
+	const step = (translationX: number, latched: boolean) =>
+		stepThresholdLatch({ translationX, cardWidth: CARD_W, latched });
+
+	it("a left swipe never fires", () => {
+		let latched = false;
+		for (const x of [-20, -THRESHOLD, -THRESHOLD * 2]) {
+			const r = step(x, latched);
+			expect(r.fire).toBe(false);
+			latched = r.latched;
+		}
+		expect(latched).toBe(false);
+	});
+
+	it("a right swipe fires exactly once while held past the threshold", () => {
+		let latched = false;
+		let fires = 0;
+		for (const x of [10, THRESHOLD, THRESHOLD + 5, THRESHOLD + 40]) {
+			const r = step(x, latched);
+			if (r.fire) fires++;
+			latched = r.latched;
+		}
+		expect(fires).toBe(1);
+	});
+
+	it("fires once per crossing when the finger crosses back and forth", () => {
+		let latched = false;
+		let fires = 0;
+		const path = [
+			THRESHOLD, // cross
+			THRESHOLD + 20,
+			THRESHOLD - 1, // retreat
+			THRESHOLD, // cross again
+			THRESHOLD + 30,
+			0, // retreat
+			THRESHOLD, // cross again
+		];
+		for (const x of path) {
+			const r = step(x, latched);
+			if (r.fire) fires++;
+			latched = r.latched;
+		}
+		expect(fires).toBe(3);
+	});
+
+	it("never fires on an unmeasured card", () => {
+		expect(
+			stepThresholdLatch({ translationX: 1, cardWidth: 0, latched: false }),
+		).toEqual({ fire: false, latched: false });
 	});
 });
