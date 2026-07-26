@@ -4,6 +4,59 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-26 23:36 UTC — task-1 step 3: the §1.7 composition engine + the §0.2 listing gate
+
+**Objective**: PLAN-task-1 §7 step 3 — `generateFeed`, the pure deterministic
+engine that turns (stage, signals, pool, seen) into an ordered deck. Also
+switched task-1 implementation from Claude Code to Hermes directly (owner call:
+"用Claude code总是进行不下去 开发全部切回Hermes").
+
+**Actions**:
+- `apps/mobile/lib/feed/generate-feed.ts` — `generateFeed`, `mixFor`,
+  `insertMilestone`, `FeedPool`. Slot-table walk with a `rotate` cursor (no
+  `Math.random`, so paging continues the mix instead of restarting it), soft
+  geo/community/listing ranking (§1.7 软排序, 非过滤 — a left swipe sinks a unit,
+  never removes it), and a three-tier degradation: declared slot → any other
+  fill in the table → looped real card with a `seen` badge (§1.9).
+- `apps/mobile/lib/feed/insight.ts` — `earnInsight` + `INSIGHT_EVIDENCE = 6`
+  (PLAN B13). Evidence string quotes the real running weight; no insight is
+  emitted when the number isn't there.
+- Tests: `generate-feed.test.ts` (36). Suite 92 → 128.
+
+**Decisions**:
+- **`assertGate` throws instead of filtering.** §0.2 is enforced *after*
+  composition, so a future mix-table edit that leaks a listing into stage 0–2
+  fails a test rather than silently dropping the card and hiding the bug until
+  it reaches a device. This is the product's core promise ("no listings until
+  the buyer has told us something"), so it gets a post-condition, not a hope.
+- **Tease budget is `ceil(count/WINDOW)` as a CAP, not a quota.** A 12-card
+  first page emits 1 tease, not 2 — the 2 extra slots land on geo. Wrote the
+  test wrong first (asserted 2), then fixed the assertion rather than the
+  engine: the mix table is the spec, and 1-per-10 is a rate ceiling.
+- **Insight ties break on dim key** so identical signals always yield the same
+  insight. Determinism is asserted directly (same input twice, same ids).
+
+**Issues**: two real engine bugs, both caught by the fatigue/skip tests:
+1. `loopedFallback` bypassed layer suppression — a fatigued `city` layer still
+   leaked area cards through the §1.9 loop path, i.e. the exhaustion fallback
+   defeated the exact mechanism fatigue exists to provide.
+2. `pickAsk` returned the `nextBudgetAsk` card without a suppression check, so a
+   skipped `life` layer still got asked about budget (the budget sequence is
+   `layer: "life"`).
+
+**Resolution**: suppression now outranks both looping and the budget fast-path.
+Fixed, tests green (128), typecheck 0, biome clean after `--write` (3 files
+formatted).
+
+**Learnings**: writing the fatigue tests *before* believing the engine was done
+paid for itself immediately — both bugs were in fallback paths that a happy-path
+test would never reach. Every degradation path needs its own test.
+
+**Next steps**: step 4 — task-0 edits (`use-swipe-card.ts`, `SwipeStack.tsx`),
+including the `SwipeStack.tsx:98` back-face bug (gates on the `renderBack`
+function rather than its result, so tapping an ask card crossfades to a blank
+face). 26 existing gesture tests must stay green.
+
 ## 2026-07-26 23:28 UTC — task-1 step 2: signal reducer + the §1.7 promotion gates (50 boundary tests)
 
 **Objective**: PLAN-task-1 §7 step 2 — the two pure functions the whole funnel
