@@ -4,6 +4,67 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-26 19:30 UTC — make task-0's 7 acceptance criteria actually checkable on the owner's Mac
+
+**Objective**: task-0's 7 visual acceptance criteria are still PENDING-SIM (Linux
+EC2 has no iOS simulator). Owner asked how to verify on Mac mini + iPhone before
+opening task-1. Turned out the verification path was broken, not just unrun.
+
+**Issues found** (all mine, from the task-0 / task-0.1 sessions):
+1. **`app/dev-foundation.tsx` was gitignored.** It is the ONLY consumer of every
+   task-0 component — `git pull` on the Mac would not have contained the file, so
+   all 7 criteria were unverifiable by construction. I had over-read the spec's
+   *"demo 屏不进 main 导航"* (not in nav) as "not in git".
+2. **Both demo video URLs were dead** — `commondatastorage.googleapis.com/
+   gtv-videos-bucket/sample/{BigBuckBunny,ElephantsDream}.mp4` now return **403**.
+   A5 (video swap behavior) would have shown a black card and read as a CardVideo
+   bug.
+3. The A1 grep I was about to hand over scanned `app/` wholesale, so it hit the
+   pre-task-0 screens (`feed.tsx` 40+ hex, `index.tsx`, `place/[slug].tsx`) and
+   would have looked like a task-0 failure.
+4. `ExploreButton` had zero consumers — nothing rendered it, so it could not be
+   checked at all.
+
+**Actions**:
+- `apps/mobile/.gitignore`: dropped the `app/dev-foundation.tsx` rule; the screen
+  is now tracked. Still not linked from anywhere, so it stays out of nav.
+- Rewrote `app/dev-foundation.tsx` to cover each criterion explicitly, labelled
+  A1..A7 on screen: two *different* 10s videos (bunny / jellyfish, both verified
+  HTTP 200 + range-request capable) so the A5 swap is observable; an on-screen
+  event log that surfaces the 82% `onNearEnd` callback and each swipe decision;
+  `ExploreButton` mounted; MatchBadge 55/72/92 side by side; a ScrollView under
+  the card that doubles as the "pan no longer steals vertical drags" probe.
+- New `docs/design/spec-v3/VERIFY-task-0-on-mac.md` — Chinese, tick-box, per
+  criterion, with the Expo Go setup, why not `expo run:ios` (no `ios/` dir), and
+  how to reach the unlinked route (temporary `<Link>`, not deep link — `percho://`
+  doesn't work inside Expo Go and `exp://` needs a LAN IP + extra package).
+
+**Decisions**:
+- Expo Go over a dev-client build: all 4 native modules in use (expo-video,
+  expo-haptics, reanimated 4, gesture-handler 2.28) ship in SDK 54's Expo Go, so
+  a 15-min Xcode build buys nothing.
+- Documented A4 as **two** haptics on a right swipe (selection at threshold +
+  Light on settle) and the re-cross behavior — I had it wrong in the first draft
+  of the doc; corrected against `use-swipe-card.ts` / `stepThresholdLatch`.
+- Documented the reversal rule precisely: cancel requires a >800pt/s flick
+  *against* the drag, not any slow drag-back.
+
+**Verification** (this host): `pnpm mobile:test` 26/26 · `tsc --noEmit` exit 0 ·
+`biome check apps/mobile` clean, 31 files · **`npx expo export --platform ios`
+bundles 1421 modules with zero errors** — that last one is new and is the closest
+thing to a device check available here: it proves the whole task-0 layer compiles
+under real Metro (tsc alone misses runtime import problems).
+
+**Learnings**: a preview screen that is the sole consumer of a layer is part of
+the deliverable, not scratch work — gitignoring it silently made the layer
+unverifiable. And third-party sample media rots; verify every URL in a demo
+fixture with curl before handing a checklist to someone else.
+
+**Next steps**: owner runs `VERIFY-task-0-on-mac.md` on Mac mini + iPhone. Any
+red → fix on EC2 and re-verify. All green → task-1 (vertical feed) on a new
+phase branch. Unchanged blocker: the 5 backend `ANTHROPIC_API_KEY` call sites are
+still broken on this host (owner deferred); the demo screen doesn't touch them.
+
 ## 2026-07-26 18:40 UTC — task-0.1: fix the 6 blockers an opus-5 review found in the merged foundation layer
 
 **Objective**: task-0 (spec-v3 foundation) was merged to `main` at `09ca5b7` with its own DEVLOG entry saying *"Next steps: PENDING-SIM visual checks"* — i.e. none of its 7 acceptance criteria had been verified. Run a full review of the merged code with opus-5 via Bedrock, then fix everything it found before task-1 builds on the layer.
