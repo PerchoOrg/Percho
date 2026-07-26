@@ -4,6 +4,96 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-26 21:05 UTC — root `node-linker=hoisted` broke web at both type and runtime layer; async-storage 3.x broke Expo Go
+
+**Objective**: two owner-reported failures. (1) Vercel deploy failing on
+`EditableAgentIdentity.tsx:62` — `startTransition(async () => …)` not assignable
+to `TransitionFunction`. (2) Mac mini `pnpm mobile:start` → Expo Go red screen,
+`AsyncStorageError: Native module is null, cannot access legacy storage` at
+`state/sound.ts:33`.
+
+**Actions**:
+- `apps/mobile/package.json`: `@react-native-async-storage/async-storage`
+  `^3.1.1` → `^2.2.0`.
+- Deleted root `.npmrc`, created `apps/mobile/.npmrc` with the same
+  `node-linker=hoisted` line.
+- `pnpm install`; verified web build, both test suites, both tsc, and an
+  `expo export --platform ios`.
+
+**Issues**: the Vercel error was a symptom, not the bug. Root `.npmrc` with
+`node-linker=hoisted` (added in 99a64de, the mobile monorepo migration) flattens
+every workspace into one `node_modules`. mobile pins react 19.1.0 /
+`@types/react` 19.1.17; web pins react 18.3.1 / `@types/react` 18.3.11. The
+hoist gave root the 19 copies, so:
+- web compiled against two different `ReactNode` definitions → **217** tsc
+  errors locally, of which Vercel printed only the first.
+- `@types/react-dom` never resolved into `apps/web` at all → 7 × TS2786
+  "cannot be used as a JSX component".
+- worse, and invisible to tsc: 10 web dependencies (`styled-jsx`, `next`,
+  `framer-motion`, `lucide-react`, 4 × `@dnd-kit`, `react-markdown`,
+  `react-easy-crop`) each got a **nested private react 18 copy**. `next build`
+  died in prerender with `Cannot read properties of null (reading 'useContext')`
+  inside `styled-jsx/node_modules/react` — a second React instance with no
+  dispatcher. That failure was queued behind the type errors and would have hit
+  the moment they were "fixed".
+
+For the mobile bug: Expo Go SDK 54 ships async-storage **2.2.0** as a built-in
+native module. The JS side at 3.1.1 looked for a native module that isn't in
+that binary, so `Native module is null`. `state/sound.ts:33` was just the first
+line to touch storage — `funnel.ts` would have thrown identically.
+
+**Decisions**:
+- Scoping `node-linker=hoisted` to `apps/mobile/.npmrc` instead of removing it.
+  Metro historically needed the flat layout; keeping it where Metro runs and
+  letting web use pnpm's default isolated linker fixes web without risking
+  mobile. Verified Metro is fine either way: `expo export --platform ios`
+  resolves `.pnpm` symlinks and produces a 3.9 MB bundle.
+- Rejected four alternatives, each tested and each worse: `paths` overrides in
+  `apps/web/tsconfig.json` (217 → 26, papers over the runtime double-React and
+  leaves a `react-dom` path pointing at a directory that does not exist);
+  `typeRoots` reordering (217 → 191); pointing web at root's `@types/react` 19
+  (217 → **235** — react 18 runtime with 19 types is worse, not better);
+  `pnpm --filter web add @types/react-dom` (a no-op under `hoisted`, which
+  forbids a second copy — it edited web's manifest and installed nothing).
+- Downgrading async-storage rather than moving the owner to a dev build. He
+  verifies on his phone via Expo Go; matching the shipped binary keeps that path
+  working with no Xcode build.
+- Reverted `apps/web/package.json` to HEAD. The `--filter add` attempt had
+  bumped `@types/react-dom` `^18.3.0` → `^18.3.7` and reordered a dependency
+  key; neither is part of the fix. The resulting `unmet peer @types/react@^18`
+  warning is cosmetic — hoisting is gone, so web resolves its own 18.3.7.
+
+**Resolution**: `apps/web/tsconfig.json` is untouched — the original config now
+gives **0** tsc errors, which is the proof that `.npmrc` was the whole cause.
+`pnpm run web:build` exits 0, 59/59 pages. mobile 26/26, mobile tsc 0, web tsc
+0, `expo install --check` clean, iOS bundle 3.9 MB.
+
+One pre-existing failure is NOT mine and stays red: `__tests__/create-upload.test.ts`
+expects `scope_not_supported` but the route returns `invalid_kind`. Confirmed by
+stashing all changes and re-running at HEAD — also 1 failed | 102 passed. Phase-2
+era test drift, unrelated to dependencies.
+
+**Learnings**:
+- A Vercel type error in a monorepo is worth reproducing locally before touching
+  the file it names. 19 call sites looked broken; 0 were. Every React 18
+  `@types` version rejects `startTransition(async …)` (it's a React 19 feature),
+  so "which types version regressed" was the wrong question — the right one was
+  "why is web seeing React 19 types at all".
+- `tsc --noEmit` passing means nothing about React-copy duplication. Only a real
+  `next build` catches the nested-copy `useContext` null. Run the build, not the
+  typecheck, when dependency layout changes.
+- `node-linker=hoisted` at repo root is a workspace-wide hazard when two apps
+  pin different majors of the same framework. Scope it to the app that needs it.
+- Expo Go pins native module versions. `expo install --check` is the authority
+  for anything with a native side; npm-latest is actively wrong.
+
+**Next steps**: owner runs `git pull && pnpm install && pnpm mobile:start` and
+works `docs/design/spec-v3/VERIFY-task-0-on-mac.md` (7 criteria, unchanged and
+still unverified — no simulator on this host). `apps/web/.env.local` is a local
+symlink to root `.env.local` so `next build` finds Supabase vars; it is
+gitignored and Vercel is unaffected (Root Directory = `apps/web`, own env vars).
+The 5 `ANTHROPIC_API_KEY` runtime call sites remain frozen per owner.
+
 ## 2026-07-26 19:30 UTC — make task-0's 7 acceptance criteria actually checkable on the owner's Mac
 
 **Objective**: task-0's 7 visual acceptance criteria are still PENDING-SIM (Linux
