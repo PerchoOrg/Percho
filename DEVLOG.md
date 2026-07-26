@@ -4,6 +4,76 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-26 23:52 UTC — task-1 step 5: session store + event queue + §1.10 event contract
+
+**Objective**: PLAN-task-1 §7 step 5 — the persistence layer the engine needs
+(`feed-session.ts`, `event-queue.ts`) plus the `events.ts` contract from §1.1
+that was still missing.
+
+**Actions**:
+- `lib/feed/events.ts` (new) — the §1.10 event union (`swipe`, `flip` /
+  `explore_tap` / `datapoint_tap`, `stage_advance` / `milestone_cta` /
+  `milestone_map_link`, `skip_layer`, `persona_change`) + pure constructors.
+  No `Date.now()`, no uuid: `seq` and `at` are injected, so every event is
+  reproducible in a test.
+- `state/feed-session.ts` (new) — zustand + AsyncStorage. `signals`, `seenIds`,
+  `answeredAskIds`, `sessionN`, `lastSwipeAt`, `hydrated`. All mutation
+  delegates to the pure reducers in `signals.ts`; the store holds no funnel
+  logic of its own.
+- `state/event-queue.ts` (new) — AsyncStorage FIFO, cap 500 drop-oldest,
+  injected `transport`, task-1 sink is `noopTransport`.
+- Tests: `events.test.ts` (13), `feed-session.test.ts` (14),
+  `event-queue.test.ts` (12). Suite 137 → **176 passing**, tsc 0, biome clean.
+
+**Decisions**:
+- **`WireGeoLevel = GeoLevel | "community"`.** §1.10's `geo_level` is coarser
+  than the engine's `GeoLevel` (area/city/zip). A community swipe *is* a geo
+  signal, but "community" is deliberately not a `GeoUnit` level — communities
+  are their own table with their own media and boundary. Widening only the wire
+  type keeps that separation instead of polluting the geo hierarchy.
+- **`lastSwipeAt` is not persisted.** A `dt_since_prev_swipe` spanning an app
+  restart would report hours of "hesitation" and poison the §1.10 timing
+  metric. `beginSession()` clears it too.
+- **Session store split from `funnel.ts`.** `funnel.ts` owns the monotonic stage
+  and is read by 04/05; this store owns the *evidence* that moves it. So a
+  You-tab scope reset can clear signals without becoming a second silent path
+  to a stage downshift — `clearSignals()` deliberately does not touch the stage
+  and keeps `sessionN` (it counts app opens, not scope).
+- **Cap drops the oldest.** §1.10's health metrics are funnel conversion rates,
+  so recent behaviour is what matters; dropping newest would freeze the funnel
+  view at the moment of saturation.
+- **`recordSwipe` returns the new `SignalState`** rather than relying on the
+  caller re-reading the store, because the feed must evaluate stage advance in
+  the same tick as the swipe.
+
+**Issues**:
+1. **Three newly written untracked files were deleted twice, seconds after
+   being written** — `events.ts`, `event-queue.ts`, `feed-session.ts` vanished
+   with a clean `git status`, no reflog entry, no stash, no hooks, no watcher
+   process. The second time it also cleared the git *index* after `git add`.
+   Not diagnosed.
+2. `applyInsightUnsure(signals, card)` takes the card, not a `DimKey` — first
+   draft of the store had the wrong signature.
+3. `vi.fn(async () => true)` infers `[]` for `mock.calls[0]`, so indexing the
+   batch argument fails typecheck. Needs an explicit generic:
+   `vi.fn<(batch: ScopeEvent[]) => Promise<boolean>>(...)`.
+
+**Resolution**: for (1), switched to a write → `git add` → `git commit`
+immediately rhythm (checkpoint commit `37c4104`, squashed into this step) so no
+file spends time untracked. Both losses happened only to untracked files; every
+committed file has been stable. (2) and (3) fixed against the real signatures.
+
+**Learnings**:
+- On this box, treat an uncommitted new file as volatile. Commit each file as
+  soon as it typechecks rather than batching a whole step's files.
+- `applyInsightUnsure` still marks the card seen in the store even though it
+  records no preference — otherwise §1.6's "Not sure" returns the same insight
+  on the next page.
+
+**Next steps**: §7 step 6 — the server pool endpoint
+(`/api/mobile/feed` stage-aware pool + zod + `city_geo_units` aggregation),
+verifiable here with curl against a local `next dev`.
+
 ## 2026-07-26 23:44 UTC — task-1 step 4: fix the task-0 flip bug (§1.1 red line)
 
 **Objective**: PLAN-task-1 §7 step 4 — the task-0 edits `SwipeStack` /
