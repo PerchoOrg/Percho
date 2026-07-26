@@ -4,6 +4,21 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-26 08:40 UTC — phase-ios0: spec-v3 foundation layer (task-0)
+
+**Objective**: Task-0 of the spec-v3 iOS build — the app-wide foundation every later page task (1–5) imports: design tokens, typography, the §0.5 gesture contract as a tested pure function, semantic haptics, video playback rules, funnel state machine skeleton, and 8 core presentational components. No pages, no routing.
+
+**Actions**:
+- New under `apps/mobile/`: `theme/tokens.ts` (§0.3 colors/radii/fonts — the ONLY file allowed hex) + `theme/typography.ts` (7 iOS text styles; serif renders Georgia now, New York recorded in token); `lib/haptics.ts` (4 semantic entries, `pass()` = explicit no-op per spec); `lib/gesture/decide-swipe.ts` (pure §0.5 core: 35% width / >800pt/s / ±30° sector, `'worklet'`-tagged) + `decide-swipe.test.ts` (10 boundary tests: 34/36%, ±799/801pt/s, 29/31°); `hooks/use-swipe-card.ts` (Pan gesture + ±8° follow-rotation + threshold haptic); `state/sound.ts` + `state/funnel.ts` (Zustand, AsyncStorage-persisted, monotonic-up stage guard); `components/` CardVideo (isTop play-gate, mute-retry, 82% once-latch reset on swap), SwipeStack (0.94/0.5 next, 0.88/0.25 after; only top gets gesture), KindChip, MatchBadge (null unless stage 4 && ≥60; FOMO ≥85), CardFoot, ExploreButton, TabBar (presentational), BottomSheet (custom Reanimated 2-detent, no @gorhom), SoundToggle.
+- Deps added (owner-approved): `expo-haptics`, `expo-linear-gradient`; devDep `vitest` + `vitest.config.ts` (pure-TS tests only). `pnpm test` script added.
+- Dev demo screen `app/dev-foundation.tsx` gitignored (never committed, never in nav).
+
+**Decisions**: All 9 spec ambiguities resolved with owner sign-off (card-grad gradient value, Georgia-for-New-York, vitest over jest-expo, custom sheet over @gorhom, latch-based 82% callback, MatchBadge gating props). Existing pre-v3 `app/feed.tsx` deliberately untouched — task-1 rebuilds it on this foundation.
+
+**Issues**: Claude Code run hit Anthropic credit exhaustion at turn 62 after writing all files but before final verification; Hermes finished verification: fixed 1 tsc error (Reanimated `AnimatedStyle<ViewStyle>` for `topStyle`), 2 biome hook-deps suppressions with justification comments, formatting. Final state: `pnpm test` 10/10 green, `pnpm typecheck` clean, `pnpm lint` clean, zero hex outside tokens.ts.
+
+**Next steps**: PENDING-SIM visual checks on Mac (Expo Go): SwipeStack scale/opacity stack, MatchBadge 3 states, BottomSheet detents, TabBar states, CardVideo swap behavior — via the gitignored dev-foundation screen. Then task-1 (feed) on this same phase branch.
+
 ## 2026-07-21 01:45 UTC — phase-mobile: expo-video + place stub + AsyncStorage
 
 **Objective**: Three mobile enhancements in one commit — hero video playback on listing/community cards, minimal `/place/[slug]` route stub (currently `router.push` from peek explored a non-existent route), and AsyncStorage persistence of user signal across app launches.
