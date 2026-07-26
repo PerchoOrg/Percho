@@ -4,24 +4,16 @@
  */
 import { Pressable, StyleSheet, Text } from "react-native";
 import { colors, radii } from "../theme/tokens";
-import { type } from "../theme/typography";
+import { textStyles } from "../theme/typography";
 
-interface ExploreButtonProps {
-	onPress: () => void;
-	label?: string;
-}
-
-export function ExploreButton({
-	onPress,
-	label = "Explore",
-}: ExploreButtonProps) {
+export function ExploreButton({ onPress }: { onPress: () => void }) {
 	return (
 		<Pressable
 			hitSlop={8}
 			onPress={onPress}
 			style={({ pressed }) => [styles.btn, pressed && styles.pressed]}
 		>
-			<Text style={styles.label}>{label} →</Text>
+			<Text style={styles.label}>Explore →</Text>
 		</Pressable>
 	);
 }
@@ -36,5 +28,5 @@ const styles = StyleSheet.create({
 		backgroundColor: colors.glass,
 	},
 	pressed: { opacity: 0.8 },
-	label: { ...type.headline, color: colors.ink },
+	label: { ...textStyles.headline, color: colors.ink },
 });

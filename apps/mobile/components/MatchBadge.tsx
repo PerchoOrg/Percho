@@ -8,7 +8,7 @@
  */
 import { Pressable, StyleSheet, Text } from "react-native";
 import { colors, radii } from "../theme/tokens";
-import { type } from "../theme/typography";
+import { textStyles } from "../theme/typography";
 
 const FOMO_THRESHOLD = 85;
 const MIN_VISIBLE = 60;
@@ -50,11 +50,11 @@ const styles = StyleSheet.create({
 		overflow: "hidden",
 	},
 	plainText: {
-		...type.caption,
+		...textStyles.caption,
 		color: colors.ink,
 		backgroundColor: colors.glass,
 	},
 	fomo: { backgroundColor: colors.accent },
-	fomoText: { ...type.caption, color: colors.surface },
+	fomoText: { ...textStyles.caption, color: colors.surface },
 	pressed: { backgroundColor: colors.accentDeep },
 });

@@ -9,7 +9,7 @@
 import { LinearGradient } from "expo-linear-gradient";
 import { StyleSheet, Text, View } from "react-native";
 import { colors, radii } from "../theme/tokens";
-import { priceStyle, type } from "../theme/typography";
+import { priceStyle, textStyles } from "../theme/typography";
 import { ExploreButton } from "./ExploreButton";
 
 const MAX_PILLS = 3;
@@ -62,11 +62,11 @@ const styles = StyleSheet.create({
 		paddingBottom: 16,
 	},
 	price: { ...priceStyle, color: colors.onCard },
-	address: { ...type.footnote, color: colors.onCard, marginTop: 2 },
-	specs: { ...type.footnote, color: colors.onCardDim, marginTop: 4 },
+	address: { ...textStyles.footnote, color: colors.onCard, marginTop: 2 },
+	specs: { ...textStyles.footnote, color: colors.onCardDim, marginTop: 4 },
 	pillRow: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 12 },
 	pill: {
-		...type.caption,
+		...textStyles.caption,
 		color: colors.ink,
 		backgroundColor: colors.glass,
 		paddingHorizontal: 10,

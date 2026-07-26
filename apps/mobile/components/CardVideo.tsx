@@ -1,11 +1,12 @@
 /**
  * CardVideo — expo-video wrapper enforcing the §0.7 video rules.
  *
- *   - mounts muted + looped, preload metadata-only (no autoplay off-screen),
+ *   - mounts muted + looped with a poster behind it,
  *   - only the top card plays; on becoming top it resets to currentTime=0 then
  *     plays, everything else pauses + mutes,
  *   - audio follows the global soundOn store,
- *   - play() failure → mute-and-retry,
+ *   - playback error → mute-and-retry once (§0.7's "play() reject" rule; on
+ *     native, `play()` returns void and failures surface via `statusChange`),
  *   - fires `onNearEnd` once when playback reaches 82–99%; the latch resets on
  *     every card swap so the next top card can fire again.
  *
@@ -18,7 +19,7 @@ import { Image, StyleSheet, View } from "react-native";
 import { useSoundStore } from "../state/sound";
 
 const NEAR_END_RATIO = 0.82;
-const POLL_MS = 250;
+const TIME_UPDATE_INTERVAL_S = 0.25;
 
 interface CardVideoProps {
 	url: string;
@@ -30,35 +31,29 @@ interface CardVideoProps {
 export function CardVideo({ url, poster, isTop, onNearEnd }: CardVideoProps) {
 	const soundOn = useSoundStore((s) => s.soundOn);
 	const nearEndFired = useRef(false);
+	const mutedRetried = useRef(false);
+	const onNearEndRef = useRef(onNearEnd);
+	onNearEndRef.current = onNearEnd;
 
 	const player = useVideoPlayer(url, (p) => {
 		p.loop = true;
 		p.muted = true;
+		p.timeUpdateEventInterval = TIME_UPDATE_INTERVAL_S;
 	});
 
 	// Play-gate + reset. Reset the 82% latch on every top-change (= card swap).
-	// soundOn intentionally excluded — handled by the effect below so a
-	// toggle doesn't restart playback from 0.
-	// biome-ignore lint/correctness/useExhaustiveDependencies: soundOn intentionally excluded (see above)
+	// biome-ignore lint/correctness/useExhaustiveDependencies: soundOn read once here on purpose — the effect below tracks it without restarting playback
 	useEffect(() => {
 		nearEndFired.current = false;
+		mutedRetried.current = false;
 		if (isTop) {
 			player.currentTime = 0;
 			player.muted = !soundOn;
-			try {
-				player.play();
-			} catch {
-				// Autoplay rejected — fall back to muted and retry (§0.7).
-				player.muted = true;
-				player.play();
-			}
+			player.play();
 		} else {
 			player.pause();
 			player.muted = true;
 		}
-		// soundOn intentionally excluded — handled by the effect below so a
-		// toggle doesn't restart playback from 0.
-		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [isTop, player]);
 
 	// Live audio follow without disturbing playback position.
@@ -66,20 +61,33 @@ export function CardVideo({ url, poster, isTop, onNearEnd }: CardVideoProps) {
 		if (isTop) player.muted = !soundOn;
 	}, [soundOn, isTop, player]);
 
-	// 82% breathing-CTA trigger (poll, once-latched per §0.7 / owner-approved #7).
+	// §0.7 mute-and-retry: an unmuted play can be refused (audio session, silent
+	// switch). Fall back to muted once, then give up so we don't spin.
 	useEffect(() => {
-		if (!isTop || !onNearEnd) return;
-		const id = setInterval(() => {
+		const sub = player.addListener("statusChange", ({ status, error }) => {
+			if (status !== "error" || !error) return;
+			if (!isTop || mutedRetried.current) return;
+			mutedRetried.current = true;
+			player.muted = true;
+			player.play();
+		});
+		return () => sub.remove();
+	}, [player, isTop]);
+
+	// 82% breathing-CTA trigger, once-latched per card (§0.7 / owner-approved #7).
+	useEffect(() => {
+		const sub = player.addListener("timeUpdate", ({ currentTime }) => {
+			if (!isTop || nearEndFired.current) return;
 			const dur = player.duration;
 			if (!dur || dur <= 0) return;
-			const ratio = player.currentTime / dur;
-			if (ratio >= NEAR_END_RATIO && ratio < 1 && !nearEndFired.current) {
+			const ratio = currentTime / dur;
+			if (ratio >= NEAR_END_RATIO && ratio < 1) {
 				nearEndFired.current = true;
-				onNearEnd();
+				onNearEndRef.current?.();
 			}
-		}, POLL_MS);
-		return () => clearInterval(id);
-	}, [isTop, onNearEnd, player]);
+		});
+		return () => sub.remove();
+	}, [player, isTop]);
 
 	return (
 		<View style={StyleSheet.absoluteFill} pointerEvents="none">

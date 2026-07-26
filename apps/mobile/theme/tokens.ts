@@ -38,8 +38,6 @@ export const colors = {
 	scrim: "rgba(0,0,0,0.4)",
 } as const;
 
-export type ColorToken = keyof typeof colors;
-
 // ─── Radius (§0.3) — only these five steps exist ────────────────────
 export const radii = {
 	card: 28,
@@ -49,20 +47,11 @@ export const radii = {
 	pill: 999,
 } as const;
 
-export type RadiusToken = keyof typeof radii;
-
 // ─── Font families (§0.3 / §0.4) ────────────────────────────────────
-// `display` renders Georgia on-device today (owner-approved 2026-07-26);
-// the New York name is recorded so real NY font files can drop in later
-// without touching call sites. `ui` = SF Pro Text, which is the iOS system
-// face ('System' resolves to SF Pro on iOS).
+// `display` renders Georgia on-device today (owner-approved 2026-07-26); real
+// New York font files can drop in here later without touching call sites.
+// `ui` = SF Pro Text, which is the iOS system face ('System' resolves to SF Pro).
 export const fonts = {
-	/** Recorded target serif; not yet bundled. Do not reference directly. */
-	displayTarget: "New York",
 	display: "Georgia",
 	ui: "System",
 } as const;
-
-export type FontToken = keyof typeof fonts;
-
-export const tokens = { colors, radii, fonts } as const;

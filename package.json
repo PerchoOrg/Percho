@@ -9,6 +9,7 @@
     "web:typecheck": "pnpm --filter @percho/web typecheck",
     "web:test": "pnpm --filter @percho/web test",
     "mobile:start": "pnpm --filter @percho/mobile start",
+    "mobile:test": "pnpm --filter @percho/mobile test",
     "db:push": "pnpm --filter @percho/web db:push",
     "db:reset": "pnpm --filter @percho/web db:reset",
     "db:types": "pnpm --filter @percho/web db:types"

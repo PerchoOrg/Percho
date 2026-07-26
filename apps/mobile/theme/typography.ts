@@ -10,7 +10,7 @@
 import type { TextStyle } from "react-native";
 import { fonts } from "./tokens";
 
-export const type = {
+export const textStyles = {
 	/** ask question on a card. New York 34 / bold, tracking −1. */
 	display: {
 		fontFamily: fonts.display,
@@ -57,8 +57,6 @@ export const type = {
 		textTransform: "uppercase",
 	},
 } as const satisfies Record<string, TextStyle>;
-
-export type TypeToken = keyof typeof type;
 
 /** Price token — New York serif 25 bold, per §0.6 CardFoot spec. */
 export const priceStyle: TextStyle = {
