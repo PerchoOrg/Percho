@@ -4,6 +4,86 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-27 03:00 UTC — device bug: card jump/flash on every swipe handoff (UI thread vs React racing)
+
+**Objective**: owner, testing on the phone: "每次swipe卡片 切换卡片后 都会jump一下 闪动一下". A
+different bug from the 02:30 ghosting fix — that one was a stale prop, this is a
+one-or-two-frame geometry discontinuity at the moment the deck advances.
+
+**Diagnosis**: the swipe resolves on the **UI thread** (Reanimated spring
+completion) but the deck advances through **React state** (`setActiveIndex`).
+`settle` zeroed `tx` and called `onDecision` in the same JS tick, but React's
+re-render lands a frame or two later, so in between:
+
+1. the outgoing card was still in slot 0 — at a **zeroed** offset. It snapped
+   from off-screen back to centre and flashed before being replaced;
+2. the card behind had its rise progress (`|tx|/W`) collapse from 1 back to 0 and
+   then be reassigned as the new top;
+3. the third card jumped 0.88 → 0.94 in one frame instead of easing.
+
+Three discontinuities on the same frame. Root cause is structural: card geometry
+was a function of a card's **slot in the React-rendered window**, while the thing
+that actually decides "which card is on top" resolves on the other thread.
+
+**Actions**:
+- `lib/gesture/stack-layer.ts` — rewrote as `cardStackVisual({rel, advance,
+  dragX, exitX, cardWidth})`. Geometry is now a function of a card's **absolute**
+  index (`rel = absIndex - topAbs`) offset by continuous `advance`, with the
+  resting knots (1/1 · 0.94/0.5 · 0.88/0.25) interpolated at continuous depth by
+  `restingAt`. `rel < 0` (already swiped, still flying out) reads `exitX`, not
+  `dragX`. Added `advanceFromDrag`.
+- `hooks/use-swipe-card.ts` — new `handoff` **worklet**: parks the outgoing card
+  at `exitX`, advances `topAbs`, zeroes `tx`/`advance`/`crossedRight`/
+  `flipProgress`, then hops to JS for haptics + `onDecision`. All six writes land
+  in ONE UI-thread frame. `settle` is now JS bookkeeping only (haptics +
+  callback) and touches no shared value. `advance` springs to 1 on the same
+  `FLY_OUT_SPRING` as the flyout, so the shuffle finishes exactly as the handoff
+  fires instead of jumping the last of the way. Removed `topStyle` remnants.
+- `components/SwipeStack.tsx` — extracted `StackCard`, so each card owns **one**
+  `useAnimatedStyle` created once with its `absIndex` captured as a constant and
+  **never swapped**. That makes the 02:30 ghosting class impossible by
+  construction rather than by parity discipline. The mounted range now trails one
+  card (`TRAIL = 1`) so a committed card stays in the tree to finish its flyout,
+  with `zIndex: 0` so it can't slide across the face of its replacement.
+  `useLayoutEffect` writes `activeIndex` back to `topAbs` — idempotent after a
+  swipe (the worklet already moved it), and the actual mover for tap-driven
+  advances (ask skip / "Not sure" / milestone CTA) where no worklet runs.
+- `lib/gesture/stack-layer.test.ts` — 20 tests (was 13). The invariant that would
+  have caught this is **handoff continuity**: for every surviving card,
+  `visual(rel, advance=1)` must equal `visual(rel-1, advance=0)`, asserted for
+  both directions and at five intermediate shuffle points. Kept the prop-key
+  parity guards from the ghosting fix and added "outgoing card stays parked
+  off-screen / keeps its committed rotation".
+
+**Decisions**: the cheap fix was to reset `tx` inside the same worklet and stop
+there. Rejected — it fixes symptom 1 and leaves 2 and 3, and keeps geometry
+coupled to a React slot, so the next person to touch the window size
+reintroduces it. Deriving from an absolute index makes the late re-render a
+provable visual no-op: `rel` and `advance` both shift by exactly 1, so
+`rel - advance` is invariant. That identity is the design, and it's now a test.
+
+**Verification**: `pnpm test` 260/260 (253 → 260), `pnpm typecheck` 0,
+`pnpm lint` clean over 82 files. Metro re-bundled through the live tunnel
+(HTTP 200, 15.5MB) and I checked the emitted bundle rather than trusting tsc:
+`handoff` compiled to a single worklet whose body is
+`exitX.value=dest;topAbs.value=topAbs.value+1;tx.value=0;advance.value=0;…` —
+one frame, as designed — and `cardStackVisual` / `restingAt` / `advanceFromDrag`
+all emitted with `__workletHash` (they run on the UI thread, not via a JS bridge
+hop per frame). **Visual confirmation is owed by the owner on the phone.**
+
+**Learnings**: any animation whose "current item" is decided on the UI thread
+must not derive geometry from React's rendered position — the two pipelines
+commit on different frames and every such coupling is a latent one-frame
+artefact. Make the shared value the source of truth for WHERE things are and let
+React decide only WHAT is mounted. Corollary: `useAnimatedStyle` per card, never
+per slot; if a style can be handed to a different view during its life, you have
+both this bug and the stale-prop bug waiting.
+
+**Next steps**: owner re-runs the swipe on the phone (reload Expo Go — Fast
+Refresh only reaches a still-connected app). Then V1–V6 in
+`VERIFY-task-1-on-mac.md`. Still not bugs: `Adjust my scope` only refetches,
+`Explore →` unwired (tasks 2/3/5).
+
 ## 2026-07-27 02:30 UTC — device bug: card ghosting after every swipe (Reanimated style-swap on a promoted card)
 
 **Objective**: owner tested task-1 on a real iPhone through Expo Go (EC2 dev

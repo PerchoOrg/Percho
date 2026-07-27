@@ -1,14 +1,40 @@
 /**
- * SwipeStack (§0.6 #7) — renders the top card plus the two behind it at the
- * spec resting values: next = scale 0.94 / opacity 0.5, after = 0.88 / 0.25.
- * Only the top card responds to the pan/tap gesture and, through the caller's
- * `renderCard(role)`, plays video. As the top card is dragged the next card
- * rises toward scale 1 / opacity 1.
+ * SwipeStack (§0.6 #7) — the top card plus the two behind it at the spec resting
+ * values (next = 0.94/0.5, after = 0.88/0.25), and the card that just left,
+ * still mounted while it finishes flying out.
  *
- * Each card in the window is keyed by item identity and rendered with the same
- * element shape, so promoting the next card to top preserves its subtree — the
- * CardVideo player and its buffer survive the swipe. The GestureDetector sits on
- * the card-sized frame rather than on the top card, for the same reason.
+ * Only the top card responds to the pan/tap gesture and, through the caller's
+ * `renderCard(role)`, plays video. As the top card is dragged the next card rises
+ * toward scale 1 / opacity 1.
+ *
+ * ## Why each card owns its own animated style
+ *
+ * Cards are keyed by item identity so that promoting the next card to top
+ * preserves its subtree — the CardVideo player and its buffer survive the swipe.
+ * The GestureDetector sits on the card-sized frame rather than on the top card,
+ * for the same reason.
+ *
+ * That identity-keying is in direct tension with per-POSITION animated styles,
+ * and two device bugs came out of the tension:
+ *
+ *   1. *Ghosting.* A view's animated style was swapped as it was promoted, and
+ *      Reanimated does not revert native props a detached style already wrote.
+ *      The old top style set only `transform`, so the `opacity: 0.5` written by
+ *      the style it replaced stayed on the promoted card and the cards behind
+ *      bled through it — two or three titles legible at once.
+ *
+ *   2. *Post-swipe jump.* Position was measured from React's `activeIndex` while
+ *      the swipe itself resolved on the UI thread. The index advance and the drag
+ *      reset therefore landed on different frames, and in between, the outgoing
+ *      card sat in the top slot at offset 0 — snapping back to centre and
+ *      flashing before it was replaced.
+ *
+ * The fix for both is the same: geometry is a pure function of the card's
+ * ABSOLUTE index (`StackCard`, one `useAnimatedStyle` per card, created once and
+ * never swapped) measured against a UI-thread `topAbs` cursor. React's
+ * `activeIndex` now decides only WHICH cards are mounted, never where they are
+ * drawn — so a late re-render changes the mounted window without moving a single
+ * pixel, and there is no frame in which any card's transform is inconsistent.
  *
  * `renderBack` is the §0.5 data face: stacked behind the video face and
  * crossfaded in over 350ms when the top card is tapped (never a 3D flip).
@@ -23,6 +49,7 @@
  * brighten with the finger and the direction labels fade in with it. Without it
  * exposed, those faces cannot be built at all.
  */
+import { useLayoutEffect } from "react";
 import { StyleSheet, View } from "react-native";
 import { GestureDetector } from "react-native-gesture-handler";
 import Animated, {
@@ -35,23 +62,31 @@ import {
 	type CardCapability,
 	INERT_CAPABILITY,
 } from "../lib/gesture/capability";
-import {
-	type CardLayerRole,
-	cardLayerVisual,
-} from "../lib/gesture/stack-layer";
+import { cardStackVisual } from "../lib/gesture/stack-layer";
 import { colors, radii } from "../theme/tokens";
 
+/** Cards visible at rest: top + 2 behind (§0.6 #7). */
 const WINDOW = 3;
+/**
+ * How many already-swiped cards stay mounted. Exactly one: the card that just
+ * committed has to remain in the tree to finish its flyout, and to stay parked
+ * off-screen for the frame or two before React drops it.
+ */
+const TRAIL = 1;
 
-type CardRole = CardLayerRole;
-
-const ROLES: CardRole[] = ["top", "next", "after"];
+type CardRole = "top" | "next" | "after";
 
 /** What a face needs to animate with the drag. `tx` is live on the UI thread. */
 export interface CardRenderArgs {
 	role: CardRole;
 	tx: SharedValue<number>;
 	cardWidth: number;
+}
+
+function roleFor(depth: number): CardRole {
+	if (depth <= 0) return "top";
+	if (depth === 1) return "next";
+	return "after";
 }
 
 interface SwipeStackProps<T> {
@@ -79,6 +114,60 @@ interface SwipeStackProps<T> {
 	capability: (item: T) => CardCapability;
 }
 
+interface StackCardProps {
+	/** This card's index in `items`. Fixed for the card's whole lifetime. */
+	absIndex: number;
+	/** UI-thread absolute index of the current top card. */
+	topAbs: SharedValue<number>;
+	advance: SharedValue<number>;
+	dragX: SharedValue<number>;
+	exitX: SharedValue<number>;
+	cardWidth: number;
+	zIndex: number;
+	children: React.ReactNode;
+}
+
+/**
+ * One card's frame. Its animated style is created once, with `absIndex` captured
+ * as a constant, and is never swapped for another — which is what makes both the
+ * stale-prop ghosting and the handoff jump structurally impossible rather than
+ * merely fixed.
+ */
+function StackCard({
+	absIndex,
+	topAbs,
+	advance,
+	dragX,
+	exitX,
+	cardWidth,
+	zIndex,
+	children,
+}: StackCardProps) {
+	const style = useAnimatedStyle(() => {
+		const v = cardStackVisual({
+			rel: absIndex - topAbs.value,
+			advance: advance.value,
+			dragX: dragX.value,
+			exitX: exitX.value,
+			cardWidth,
+		});
+		return {
+			transform: [
+				{ translateX: v.translateX },
+				{ rotate: `${v.rotateDeg}deg` },
+				{ scale: v.scale },
+			],
+			opacity: v.opacity,
+		};
+	});
+
+	return (
+		<Animated.View style={[styles.card, { zIndex }, style]}>
+			{children}
+		</Animated.View>
+	);
+}
+
 export function SwipeStack<T>({
 	items,
 	activeIndex,
@@ -92,8 +181,7 @@ export function SwipeStack<T>({
 	cardHeight,
 	capability,
 }: SwipeStackProps<T>) {
-	const window = items.slice(activeIndex, activeIndex + WINDOW);
-	const top = window[0];
+	const top = items[activeIndex];
 
 	// §1.1 red line: a card with no data face must not flip. `renderBack` is one
 	// callback shared by a mixed deck and returns null for the kinds that don't
@@ -114,16 +202,31 @@ export function SwipeStack<T>({
 		flippable: declared.flippable && topBackRenders,
 	};
 
-	const { gesture, tx, frontStyle, backStyle } = useSwipeCard({
-		cardWidth,
-		capability: topCapability,
-		onDecision: (decision) => {
-			if (top) onDecision(decision, top);
-		},
-		onCommit: (decision) => {
-			if (top && onCommit) onCommit(decision, top);
-		},
-	});
+	const { gesture, tx, topAbs, exitX, advance, frontStyle, backStyle } =
+		useSwipeCard({
+			cardWidth,
+			capability: topCapability,
+			onDecision: (decision) => {
+				if (top) onDecision(decision, top);
+			},
+			onCommit: (decision) => {
+				if (top && onCommit) onCommit(decision, top);
+			},
+		});
+
+	/**
+	 * Keep the UI-thread cursor in step with React.
+	 *
+	 * For a SWIPE this is idempotent: the handoff worklet already advanced
+	 * `topAbs` to exactly this value one or two frames ago, so the write changes
+	 * nothing and the late re-render cannot move a card. For a TAP-driven advance
+	 * (ask skip / "Not sure" / milestone CTA) no worklet ran, so this is what
+	 * moves the stack — a layout effect rather than a passive one so it lands in
+	 * the same commit and the promoted card is never painted at 0.94.
+	 */
+	useLayoutEffect(() => {
+		topAbs.value = activeIndex;
+	}, [activeIndex, topAbs]);
 
 	const argsFor = (role: CardRole): CardRenderArgs => ({
 		role,
@@ -131,55 +234,30 @@ export function SwipeStack<T>({
 		cardWidth,
 	});
 
-	// One style per LAYER, each writing the identical prop set (transform +
-	// opacity). Cards are keyed by item identity, so the style attached to a
-	// given view changes as it is promoted — and Reanimated leaves the native
-	// props a detached style already wrote in place. A style that omitted
-	// `opacity` would inherit 0.5 from the layer it replaced, and the cards
-	// underneath would show through the promoted card (the ghosting bug).
-	// `cardLayerVisual` is the single source of both, asserted for key parity.
-	const layer0 = useAnimatedStyle(() => {
-		const v = cardLayerVisual("top", tx.value, cardWidth);
-		return {
-			transform: [
-				{ translateX: v.translateX },
-				{ rotate: `${v.rotateDeg}deg` },
-				{ scale: v.scale },
-			],
-			opacity: v.opacity,
-		};
-	});
-	const layer1 = useAnimatedStyle(() => {
-		const v = cardLayerVisual("next", tx.value, cardWidth);
-		return {
-			transform: [
-				{ translateX: v.translateX },
-				{ rotate: `${v.rotateDeg}deg` },
-				{ scale: v.scale },
-			],
-			opacity: v.opacity,
-		};
-	});
-	const layer2 = useAnimatedStyle(() => {
-		const v = cardLayerVisual("after", tx.value, cardWidth);
-		return {
-			transform: [
-				{ translateX: v.translateX },
-				{ rotate: `${v.rotateDeg}deg` },
-				{ scale: v.scale },
-			],
-			opacity: v.opacity,
-		};
-	});
-	const layerStyles = [layer0, layer1, layer2];
+	// The mounted window trails one card behind `activeIndex` so a committed card
+	// can finish flying out. Geometry does not depend on this range — only on
+	// each card's absolute index — so widening or narrowing it cannot move
+	// anything the buyer sees.
+	// Exactly WINDOW live cards. Mounting a fourth would stack another 0.25-opacity
+	// layer directly behind the `after` card at the same clamped depth, and two
+	// translucent layers compound into a visibly darker card — the ghosting class
+	// of bug all over again.
+	const from = Math.max(0, activeIndex - TRAIL);
+	const to = Math.min(items.length, activeIndex + WINDOW);
+	const mounted: { item: T; absIndex: number }[] = [];
+	for (let i = from; i < to; i++) {
+		const item = items[i];
+		if (item !== undefined) mounted.push({ item, absIndex: i });
+	}
 
 	return (
 		<View style={styles.stack}>
 			<GestureDetector gesture={gesture}>
 				<View style={{ width: cardWidth, height: cardHeight }}>
-					{window.map((item, i) => {
-						const role = ROLES[i] ?? "after";
-						const isTop = role === "top";
+					{mounted.map(({ item, absIndex }) => {
+						const depth = absIndex - activeIndex;
+						const isTop = depth === 0;
+						const role = roleFor(depth);
 						// Reuse the already-computed top face rather than calling
 						// renderBack twice for the same item.
 						const back = isTop
@@ -188,13 +266,18 @@ export function SwipeStack<T>({
 								? renderBack(item, role)
 								: null;
 						return (
-							<Animated.View
-								key={keyExtractor(item, activeIndex + i)}
-								style={[
-									styles.card,
-									{ zIndex: WINDOW - i },
-									layerStyles[i] ?? layerStyles[2],
-								]}
+							<StackCard
+								key={keyExtractor(item, absIndex)}
+								absIndex={absIndex}
+								topAbs={topAbs}
+								advance={advance}
+								dragX={tx}
+								exitX={exitX}
+								cardWidth={cardWidth}
+								// A card that has already been swiped must stay UNDER the
+								// live stack while it flies out, or it would slide across
+								// the face of the card that replaced it.
+								zIndex={depth < 0 ? 0 : WINDOW + TRAIL - depth}
 							>
 								<Animated.View
 									style={[
@@ -219,7 +302,7 @@ export function SwipeStack<T>({
 								{isTop && renderOverlay
 									? renderOverlay(item, argsFor(role))
 									: null}
-							</Animated.View>
+							</StackCard>
 						);
 					})}
 				</View>
@@ -236,7 +319,6 @@ const styles = StyleSheet.create({
 		overflow: "hidden",
 		backgroundColor: colors.ink, // card face is always dark (§0.3)
 	},
-	after: { transform: [{ scale: 0.88 }], opacity: 0.25 },
 	faceVisible: { opacity: 1 },
 	faceHidden: { opacity: 0 },
 });

@@ -45,6 +45,7 @@ import {
 	decideSwipe,
 	stepThresholdLatch,
 } from "../lib/gesture/decide-swipe";
+import { advanceFromDrag } from "../lib/gesture/stack-layer";
 import { haptics } from "../lib/haptics";
 
 const FOLLOW_ROTATION_DEG = 8; // §0.5
@@ -101,6 +102,19 @@ interface UseSwipeCardResult {
 	gesture: ReturnType<typeof Gesture.Exclusive>;
 	/** Horizontal drag offset — cards behind read this to rise toward the top. */
 	tx: SharedValue<number>;
+	/**
+	 * Absolute index of the current top card, on the UI thread. Advanced in the
+	 * SAME worklet frame that zeroes `tx`, so the stack's geometry never passes
+	 * through a state where the outgoing card sits at the top with a zeroed
+	 * offset — that discontinuity was the post-swipe jump. React's `activeIndex`
+	 * catches up a frame or two later, and writing it back here is idempotent
+	 * because this worklet already moved it to the same value.
+	 */
+	topAbs: SharedValue<number>;
+	/** Where the committed card is flying out to; read by cards with rel < 0. */
+	exitX: SharedValue<number>;
+	/** Stack-shuffle progress in [0,1], continuous across the handoff. */
+	advance: SharedValue<number>;
 	/** 0 = video face, 1 = data face. */
 	flipProgress: SharedValue<number>;
 	/** Video face — visible at flipProgress 0. */
@@ -118,24 +132,56 @@ export function useSwipeCard({
 	const tx = useSharedValue(0);
 	const crossedRight = useSharedValue(false);
 	const flipProgress = useSharedValue(0);
+	const topAbs = useSharedValue(0);
+	const exitX = useSharedValue(0);
+	const advance = useSharedValue(0);
 
-	// Lands in the same JS tick as the caller's index advance, so the promoted
-	// card is never drawn at the outgoing card's off-screen offset.
+	// JS-side bookkeeping only. Everything that affects a pixel this frame has
+	// already happened on the UI thread in `handoff` below — by the time this
+	// runs, the new top card is already drawn centred and the outgoing one is
+	// already parked off-screen. Resetting `tx` here (the old behaviour) raced
+	// React's index advance: for a frame or two the outgoing card was still in
+	// the top slot with a zeroed offset, so it snapped back to centre and
+	// flashed. That was the post-swipe jump.
 	const settle = useCallback(
 		(decision: Exclude<SwipeDecision, "none">) => {
-			tx.value = 0;
-			crossedRight.value = false;
-			// Reset AFTER the flyout, never at commit: this runs in the flyout's
-			// completion callback, in the same tick as the caller's index advance.
-			// Zeroing it at commit time would crossfade the outgoing card back to its
-			// video face over the 350ms it is flying out — the buyer would watch the
-			// face they just acted on dissolve into a different one mid-air.
-			flipProgress.value = 0;
 			if (decision === "right") haptics.cardSettle();
 			else haptics.pass();
 			onDecision(decision);
 		},
-		[onDecision, tx, crossedRight, flipProgress],
+		[onDecision],
+	);
+
+	/**
+	 * The atomic handoff, all on the UI thread in one frame:
+	 *   - park the outgoing card at its final flyout position (`exitX`), which
+	 *     the card keeps reading while `rel < 0`, so it stays off-screen instead
+	 *     of snapping back when `tx` is zeroed;
+	 *   - advance `topAbs`, which promotes the next card;
+	 *   - zero `tx` and `advance` for the NEW top card.
+	 *
+	 * `topAbs` and `advance` move together by exactly 1 and 1, and a card's style
+	 * is a function of `rel - advance`, so every card's computed depth is
+	 * unchanged across this frame. Nothing moves that the buyer can see except
+	 * the card that left.
+	 *
+	 * `flipProgress` is reset here rather than at commit: zeroing it at commit
+	 * time would crossfade the outgoing card back to its video face over the
+	 * 350ms it is flying out — the buyer would watch the face they just acted on
+	 * dissolve into a different one mid-air.
+	 */
+	const handoff = useCallback(
+		(dest: number, decision: Exclude<SwipeDecision, "none">) => {
+			"worklet";
+			exitX.value = dest;
+			topAbs.value = topAbs.value + 1;
+			tx.value = 0;
+			advance.value = 0;
+			crossedRight.value = false;
+			flipProgress.value = 0;
+			runOnJS(settle)(decision);
+		},
+		[exitX, topAbs, tx, advance, crossedRight, flipProgress, settle],
 	);
 
 	// Destructured out of the capability object so the memo depends on the five
@@ -164,6 +210,8 @@ export function useSwipeCard({
 					maxDisplacementRatio,
 				);
 				tx.value = clamped;
+				// Drives the shuffle of the cards behind while the finger is down.
+				advance.value = advanceFromDrag(clamped, cardWidth);
 				// The latch reads the CLAMPED offset, so a card capped short of the
 				// commit threshold never fires the §0.5 "this vote counts" tick.
 				const step = stepThresholdLatch({
@@ -195,6 +243,7 @@ export function useSwipeCard({
 				);
 				if (decision === "none") {
 					tx.value = withSpring(0);
+					advance.value = withSpring(0);
 					crossedRight.value = false;
 					return;
 				}
@@ -205,8 +254,12 @@ export function useSwipeCard({
 				}
 				if (onCommit) runOnJS(onCommit)(decision);
 				const dest = decision === "right" ? cardWidth * 1.6 : -cardWidth * 1.6;
+				// The cards behind keep rising on the same spring the outgoing card
+				// flies out on, so the shuffle finishes exactly as the handoff fires
+				// rather than jumping the last of the way.
+				advance.value = withSpring(1, FLY_OUT_SPRING);
 				const flyOut = withSpring(dest, FLY_OUT_SPRING, (finished) => {
-					if (finished) runOnJS(settle)(decision);
+					if (finished) handoff(dest, decision);
 				});
 				// §1.6: hold the committed card in place for `revealMs` so it can show
 				// its answer, THEN fly out. The card freezes where the finger left it
@@ -241,8 +294,9 @@ export function useSwipeCard({
 		flippable,
 		revealMs,
 		onCommit,
-		settle,
+		handoff,
 		tx,
+		advance,
 		crossedRight,
 		flipProgress,
 	]);
@@ -255,5 +309,14 @@ export function useSwipeCard({
 		opacity: flipProgress.value,
 	}));
 
-	return { gesture, tx, flipProgress, frontStyle, backStyle };
+	return {
+		gesture,
+		tx,
+		topAbs,
+		exitX,
+		advance,
+		flipProgress,
+		frontStyle,
+		backStyle,
+	};
 }
