@@ -41,6 +41,14 @@ import { finestAvailableLevel, unitsAtLevel } from "./geo-unit";
 import { earnInsight } from "./insight";
 import type { Slot } from "./ratios";
 import { STAGE_2_GEO_FALLBACK, STAGE_MIX, WINDOW } from "./ratios";
+import {
+	RUN_WALL,
+	byStaleness,
+	kindForFill,
+	rhythmAllows,
+	runLimitsFor,
+	trailingRun,
+} from "./rhythm";
 import type { SignalState } from "./signals";
 import { dimScore, isLayerSuppressed } from "./signals";
 
@@ -392,26 +400,172 @@ function fillSlot(
  * a real card the user has already seen (§1.9 "循环 + seen 角标"), preferring the
  * stage's own material. Returns null only when the pool is genuinely empty, in
  * which case the caller shows the terminal card.
+ *
+ * **Only ever loops kinds the CURRENT STAGE is allowed to show.** It used to
+ * reach for a geo card whenever the pool had one, which broke §1.7's "Stage 0 ·
+ * 零地理" outright: once stage 0's finite ask/trade-off tables were consumed, every
+ * remaining slot looped an area card. That is where the owner's "连着10几个city"
+ * came from — not a ratio that needed tuning, but a fallback with no stage gate.
+ * The permitted kinds are derived from the stage's own mix, so this cannot drift
+ * from §1.7 again.
  */
-function loopedFallback(ctx: FillContext, rotate: number): FeedCardV3 | null {
-	if (ctx.stage >= 3) {
+function loopedFallback(
+	ctx: FillContext,
+	rotate: number,
+	mix: readonly Slot[],
+	emitted: readonly FeedCardV3[],
+	limits: ReadonlyMap<string, number>,
+): FeedCardV3 | null {
+	const permitted = new Set(mix.map((s) => s.fill));
+
+	/** Candidates in stage-preference order, each already stage-legal. */
+	const candidates: (FeedCardV3 | null)[] = [];
+
+	if (permitted.has("community")) {
 		const c = anyItem(ctx.communityRanked, rotate);
-		if (c !== null && !isLayerSuppressed(ctx.signals, "community")) return c;
+		if (c !== null && !isLayerSuppressed(ctx.signals, "community")) {
+			candidates.push(c);
+		}
 	}
 	// Suppression outranks looping: a fatigued or skipped layer must stay silent
 	// even when looping is the only way to fill the slot (§1.7). Looping a card
 	// from the layer the user just stopped responding to is the exact behaviour
 	// fatigue exists to prevent.
-	if (ctx.level !== null && !isLayerSuppressed(ctx.signals, ctx.level)) {
+	if (
+		permitted.has("geo") &&
+		ctx.level !== null &&
+		!isLayerSuppressed(ctx.signals, ctx.level)
+	) {
 		const u = anyItem(unitsAtLevel(ctx.geoRanked, ctx.level), rotate);
-		if (u !== null) return { kind: "area", id: `area-${u.id}`, unit: u };
+		if (u !== null) {
+			candidates.push({ kind: "area", id: `area-${u.id}`, unit: u });
+		}
 	}
-	const t = anyItem(TRADEOFFS, rotate);
-	if (t !== null) return t;
-	const eligible = PREFERENCE_ASKS.filter(
-		(a) => !isLayerSuppressed(ctx.signals, a.layer),
+	if (permitted.has("tradeoff")) {
+		candidates.push(anyItem(TRADEOFFS, rotate));
+	}
+	if (permitted.has("ask")) {
+		const eligible = PREFERENCE_ASKS.filter(
+			(a) => !isLayerSuppressed(ctx.signals, a.layer),
+		);
+		candidates.push(anyItem(eligible, rotate));
+	}
+
+	// Least-recently-seen kind first. A fixed preference order is wrong HERE
+	// specifically: once the finite tables are consumed, looping is the only
+	// remaining source, so a static priority hands every slot to whichever kind
+	// sits highest — the 4-card area runs survived the run guard for exactly this
+	// reason. Staleness ordering spreads the recycled cards instead.
+	const real = byStaleness(
+		emitted,
+		candidates.filter((c): c is FeedCardV3 => c !== null),
 	);
-	return anyItem(eligible, rotate);
+	// Prefer a loop that also respects the run limit; fall back to the stalest
+	// real card rather than emitting nothing (a repeat is bad, a blank is worse).
+	const legal = real.find((c) => rhythmAllows(emitted, c, limits));
+	if (legal !== undefined) return legal;
+	// Every candidate would extend a run past the limit, which means this stage
+	// has exactly one kind of recyclable content left. Returning null here (rather
+	// than the stalest anyway) is what stops a page becoming 7-12 identical cards:
+	// the caller sets `exhausted` and the screen shows §1.9's terminal card, which
+	// is the honest answer to "this scope is dry".
+	return null;
+}
+
+/**
+ * Whether a card is genuinely new to this composition.
+ *
+ * `fillSlot` dedupes against `ctx.seen`, but `pickSlot` can hand it a DIFFERENT
+ * slot than the rotation intended, and the pickers key their "first unseen" scan
+ * off `rotate` — so a substituted slot could return a card the previous page had
+ * already emitted. Checking the id against the seen set at the call site is the
+ * cheap, local guarantee that a rhythm substitution never costs a repeat.
+ */
+function isFresh(ctx: FillContext, card: FeedCardV3 | null): boolean {
+	return card !== null && !ctx.seen.has(card.id);
+}
+
+/**
+ * Search the mix for a fill OTHER than the intended slot that yields a card.
+ *
+ * `spaced` selects the two-pass behaviour the composer needs: on the first pass
+ * only rhythm-legal candidates count, on the second any real card does. Splitting
+ * it this way is what stops the search being both deterministic AND blind to what
+ * it just emitted — the combination that let one winner take every slot.
+ */
+function findAlt(
+	ctx: FillContext,
+	mix: readonly Slot[],
+	intended: Slot,
+	rotate: number,
+	emitted: readonly FeedCardV3[],
+	spaced: boolean,
+	limits: ReadonlyMap<string, number>,
+): FeedCardV3 | null {
+	for (const alt of mix) {
+		if (alt === intended) continue;
+		const card = fillSlot(ctx, alt, rotate);
+		if (card === null || ctx.seen.has(card.id)) continue;
+		if (spaced && !rhythmAllows(emitted, card, limits)) continue;
+		return card;
+	}
+	return null;
+}
+
+/**
+ * Pick the slot to fill, honouring the table's rotation but skipping ahead when
+ * the intended slot would break the rhythm.
+ *
+ * §1.7's mix is a RATIO per 10 cards, and the rotation `mix[(rotate) % len]` is
+ * just one legal ordering of it — nothing in the spec requires that exact
+ * sequence. So when the intended slot's kind is already at its run limit, the
+ * correct reading is "take the next slot in the table that isn't", not "emit a
+ * third in a row". The rotation is preserved for everything else, so the ratio
+ * still holds across a page.
+ *
+ * Returns the slot AND the rotation offset it was found at. The offset matters:
+ * the pickers use `rotate` to choose where their "first unseen" scan starts, so
+ * substituting a slot while keeping the original rotation makes a picker rescan
+ * from a stale position and hand back a card an earlier page already emitted.
+ * Returning the shifted rotation keeps substitution free of repeats.
+ */
+function pickSlot(
+	mix: readonly Slot[],
+	rotate: number,
+	emitted: readonly FeedCardV3[],
+	limits: ReadonlyMap<string, number>,
+): { slot: Slot; rotate: number } | null {
+	const intended = mix[rotate % mix.length];
+	if (intended === undefined) return null;
+	if (kindAllowedForFill(emitted, intended, limits)) {
+		return { slot: intended, rotate };
+	}
+
+	// Walk forward through the rotation so the table's own ordering still governs
+	// the substitute — never a fixed preference that would bias the ratio.
+	for (let step = 1; step < mix.length; step++) {
+		const at = rotate + step;
+		const alt = mix[at % mix.length];
+		if (alt === undefined) continue;
+		if (kindAllowedForFill(emitted, alt, limits))
+			return { slot: alt, rotate: at };
+	}
+	return { slot: intended, rotate };
+}
+
+/**
+ * Whether a slot's fill could produce a rhythm-legal card, judged on the FILL so
+ * this can run before the expensive pick. `kindForFill` is shared with the
+ * post-pick check so the two can never disagree about what a slot produces.
+ */
+function kindAllowedForFill(
+	emitted: readonly FeedCardV3[],
+	slot: Slot,
+	limits: ReadonlyMap<string, number>,
+): boolean {
+	const kind = kindForFill(slot.fill);
+	if (kind === null) return true;
+	return trailingRun(emitted, kind) < (limits.get(slot.fill) ?? 2);
 }
 
 export function generateFeed(input: GenerateFeedInput): GenerateFeedResult {
@@ -439,27 +593,75 @@ export function generateFeed(input: GenerateFeedInput): GenerateFeedResult {
 
 	const cards: FeedCardV3[] = [];
 	let exhausted = false;
+	// Derived per-kind from this stage's own ratio table, not a global constant:
+	// stage 0's `ask ×7` genuinely needs to sit 3 deep, while stage 3's
+	// `listing ×2` must not — a single flat limit made the composer fight its own
+	// mix and lose (6-runs got through). See `runLimitsFor`.
+	const runLimit = runLimitsFor(mix);
 
 	for (let i = 0; i < count; i++) {
-		const rotate = rotate0 + i;
-		const slot = mix[(rotate0 + i) % mix.length];
-		if (slot === undefined) continue;
+		const wanted = rotate0 + i;
+		// §1.7 rhythm: the mix is a RATIO, and the rotation is one legal ordering of
+		// it — so a slot whose kind is already at MAX_RUN yields to the next slot in
+		// the table. Deciding this BEFORE the pick is what fixes the run at source;
+		// a post-hoc check can only correct the cases where an alternative happens
+		// to be available, which left 4-5 card runs in stages 1 and 2.
+		const picked = pickSlot(mix, wanted, cards, runLimit);
+		if (picked === null) continue;
+		// The substituted slot carries its own rotation so the picker's unseen scan
+		// starts from the matching position — keeping the original would resurrect a
+		// card an earlier page emitted.
+		const { slot, rotate } = picked;
 
 		let card = fillSlot(ctx, slot, rotate);
+		// A substituted slot must not resurrect a card an earlier page emitted.
+		if (!isFresh(ctx, card)) card = null;
 
-		// The table's own slot came up dry — try the other fills before looping,
-		// so a thin pool degrades to a different real card rather than a repeat.
-		if (card === null) {
-			for (const alt of mix) {
-				if (alt === slot) continue;
-				card = fillSlot(ctx, alt, rotate);
-				if (card !== null) break;
+		// `pickSlot` expresses INTENT, and intent is not enough: it can hand back an
+		// `ask` slot whose table is already exhausted, in which case the search below
+		// falls through to the one fill that still has inventory — the run comes back
+		// at the transition. So the rhythm is re-checked on the MATERIALISED card,
+		// and a rhythm-legal alternative wins if one exists.
+		if (card !== null && !rhythmAllows(cards, card, runLimit)) {
+			const spaced = findAlt(ctx, mix, slot, rotate, cards, true, runLimit);
+			if (spaced !== null) {
+				card = spaced;
+			} else {
+				// Nothing in this stage's mix can break the run: the pool is missing the
+				// inventory the ratio depends on (e.g. stage 3 with no communities), so
+				// the honest answer is a short page, not 12 copies of the one kind that
+				// still has content. §1.9's terminal card handles the rest.
+				exhausted = true;
+				break;
 			}
 		}
 
+		// The table's own slot came up dry — try the other fills before looping, so
+		// a thin pool degrades to a different real card rather than a repeat.
+		//
+		// Two passes, and the ORDER matters. Pass 1 wants a fill that is both fresh
+		// and rhythm-legal. Pass 2 accepts any FRESH card even if it extends a run:
+		// recycling a card the buyer has already answered is a worse outcome than a
+		// third of a kind, and §1.9 is explicit that looping is the last resort.
+		// Both passes skip seen ids, which is what keeps the substitution from
+		// resurrecting an earlier page's card.
 		if (card === null) {
-			card = loopedFallback(ctx, rotate);
+			card =
+				findAlt(ctx, mix, slot, rotate, cards, true, runLimit) ??
+				findAlt(ctx, mix, slot, rotate, cards, false, runLimit);
+		}
+
+		if (card === null) {
+			card = loopedFallback(ctx, rotate, mix, cards, runLimit);
 			if (card === null) break;
+			// §1.9: a genuinely dry stage must terminate, not pad. If looping can no
+			// longer even alternate kinds, every further card would be the same one —
+			// a wall of 60 identical cards in a 10-page session. Stop and let the
+			// screen show the terminal card; `exhausted` is already set.
+			if (!rhythmAllows(cards, card, runLimit)) {
+				exhausted = true;
+				break;
+			}
 			exhausted = true;
 			ctx.loopedIds.push(card.id);
 		}

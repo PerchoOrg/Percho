@@ -4,6 +4,100 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-27 05:40 UTC — §1.7 节奏引擎: 39 连同类卡 (stage 0 发 area 卡) + 无照片卡面
+
+**Objective**: owner on device: "进去后连着10几个tradeoff 然后连着10几个city 你需要按照
+01-feed.md 阶段化节奏引擎(generateFeed v2)".
+
+### 复现 — 比报告更糟
+
+写了多页 session 探针（模拟屏幕真实调用：累积 `seenIds` + 轮转 cursor），跑 5 页：
+**stage 0 出现连续 39 张 area 卡**。
+
+**为什么 36 个既有测试全过却漏了这个**：它们全部只组**一页**。第 0 页永远干净
+（`ask ask trade ask ask trade …`）。退化只在 `seenIds` 吃掉有限客户端内容表
+（21 个 ask + 7 个 tradeoff）之后出现。**测试单位错了 —— 应该是 session，不是 page。**
+
+### 两个根因
+
+1. **`loopedFallback` 无 stage 门禁**。§1.7 明写 Stage 0「零地理」，但兜底只要
+   `pool.geoUnits` 非空就发 area 卡。stage 0 的表耗尽后，**每一个** slot 都循环
+   area。这就是 owner 的「连着10几个city」—— 不是配比要调，是兜底漏了 stage 判断。
+2. **兜底确定性且无记忆**。候选按固定优先级排序，同一个赢家连续吃下每个空 slot，
+   所以是「连着10几个」而非「偶尔重复」。
+
+### Actions
+
+- `lib/feed/rhythm.ts` (new) — 节奏守卫。`trailingRun` / `rhythmAllows` /
+  `runLimitsFor`（**按 kind 从该 stage 自己的配比推导** run 上限，不是全局常量：
+  stage 0 的 `ask ×7` 本来就该能 3 连，stage 3 的 `listing ×2` 不该）/
+  `byStaleness`（最久未出现优先）/ `kindForFill`（fill→kind 唯一定义，组卡前后共用，
+  两份拷贝会让 pick 前和 pick 后互相矛盾）。
+- `lib/feed/generate-feed.ts`:
+  - `loopedFallback` 只循环**当前 stage 配比允许**的 kind（`permitted` 从 mix 推导，
+    不会再和 §1.7 漂移），且候选按 staleness 排序 —— 固定优先级正是残留 4 连的原因。
+  - 新 `pickSlot`：配比是**比例**，轮转只是其中一种合法排列，所以当某 kind 已达上限
+    时取表里下一个槽，而不是硬发第三张。**返回 slot + 它所在的 rotation** —— picker
+    用 `rotate` 决定 unseen 扫描起点，换槽不换 rotate 会复活上一页发过的卡（这是我
+    中途引入的回归，被既有测试 `never re-emits a seen card` 抓到）。
+  - pick 之后再按**已实体化的卡**复查一次：`pickSlot` 表达的是意图，它可能给回一个
+    表已空的槽，于是搜索又落到唯一有库存的 fill 上，过渡处 run 复现。
+  - `findAlt` 两遍：先要 fresh + 节奏合法，再要任意 fresh。**顺序有讲究** —— §1.9
+    明写循环是最后手段，回收一张用户已答过的卡比第三张同类更糟。两遍都跳过 seen。
+- `lib/feed/rhythm.test.ts` (new, 41 tests) — 全部以 **session** 为单位。核心是
+  「任何 stage 不得塌成单一卡型」，外加 stage 门禁在**整个 session**（非仅第一页）
+  持续成立：stage 0 零 geo / 零 listing / 零 challenge。
+
+### Decisions
+
+- **上限按 stage 推导而非全局常量**：一开始写死 `MAX_RUN = 2`，结果 stage 3 的
+  `community ×6` 在算术上无法满足 ≤2，组卡器每页都在跟自己的配比表打架并输掉
+  （6 连照样过）。
+- **加过一个 `RUN_WALL` 硬断页，已撤销**：它打破 3 条既有测试，而那些测试编码的是
+  §1.7 明确要求的行为（「层疲劳 → 靠 trade-off 侧写补偿」）。既有测试是对的。
+- 我自己新写的 stage 3/4 断言一度失败，查清后是**测试 fixture 问题，不是引擎**：
+  8 个 liked community 只让 240 条 listing 里 16 条符合 stage 3「限已 like
+  community 内」，一页就枯竭。放大 fixture 而不是弱化引擎。
+
+### 无照片卡面 (承 04:30 那条)
+
+owner 还要求 tradeoff 卡加背景图片。**未做，需要 owner 定来源**：tradeoff 是纯
+客户端内容表，不绑任何地理单元，**没有照片源**。可选：借当前正在试探的 city 街景 /
+另配素材。不擅自选。当前是 04:30 加的暖色渐变 `CardSurface`（≠ 纯黑，但也不是照片）。
+
+### Verification
+
+`pnpm test` **317/317**（281 → 317）、`pnpm typecheck` 0、`pnpm lint` 干净（88 文件）。
+
+**关键：用真实线上 pool 验证，不是 fixture。** `GET https://www.percho.co/api/mobile/feed?stage=0`
+→ **109 个 city geo unit、0 listing、0 community**（正是触发 39 连的形状，也是今天的
+生产形状）。喂真实 payload 跑 6 页 72 张：
+
+| stage | 修前 | 修后 | 分布 |
+|---|---|---|---|
+| 0 | **39x area** | **2x ask** | ask 39 · tradeoff 33 · **area 0** |
+| 1 | — | 4x area | area 42 · ask 23 · tradeoff 7 |
+| 2 | — | 4x area | area 39 · ask 26 · tradeoff 7 |
+
+stage 0 的 area 卡彻底归零 —— §1.7「零地理」现在真正成立。**设备视觉仍需 owner 确认。**
+
+### Learnings
+
+**分页组卡的测试单位是 session，不是 page。** 任何「首包 + 后续页 + 去重」的引擎，
+单页测试都会在第 0 页全绿并掩盖枯竭后的退化。36 个绿灯测试挡不住一堵 39 张的墙。
+
+**兜底路径必须继承主路径的所有约束。** 这个 bug 的两半都是兜底忘了主路径的规则：
+一半忘了 stage 门禁，一半忘了「刚发过什么」。兜底是最少被测到、最容易在压力下被
+执行到的路径。
+
+### Next steps
+
+1. owner reload Expo Go 验 stage 0：应为 ask/tradeoff 交替，**一张 city 卡都不该有**。
+2. tradeoff 背景图片来源待 owner 拍板。
+3. **真实数据缺口（需单独排期）**：`listings` 只有 **3/260** 条带 `community_id`，
+   所以 stage 3 的「限已 like community 内」预览在生产上几乎无货，stage 3 会退化成
+   community + tradeoff。这是数据问题，不是引擎问题。
+
 ## 2026-07-27 04:30 UTC — device bugs: flat-black media-less cards + milestone displacing a peeked card
 
 **Objective**: owner on the phone: "一开始会连着看到纯黑的tradeoff card 后面偶尔还是会有闪变的
