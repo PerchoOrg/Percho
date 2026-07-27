@@ -16,6 +16,8 @@
  *
  * The hook owns none of the feed semantics — it reports `'left' | 'right'` to
  * `onDecision` and lets the caller (task-1) map that to like/pass/agree/etc.
+ * What a given card is ALLOWED to do arrives as a resolved `CardCapability`
+ * (§1.3), so no handler in here ever branches on a card kind.
  */
 import { useCallback, useMemo } from "react";
 import type { ViewStyle } from "react-native";
@@ -27,9 +29,16 @@ import {
 	runOnJS,
 	useAnimatedStyle,
 	useSharedValue,
+	withDelay,
 	withSpring,
 	withTiming,
 } from "react-native-reanimated";
+import {
+	type CardCapability,
+	clampDisplacement,
+	commitDecision,
+	panAllowed,
+} from "../lib/gesture/capability";
 import {
 	SWIPE_THRESHOLD_RATIO,
 	type SwipeDecision,
@@ -39,7 +48,25 @@ import {
 import { haptics } from "../lib/haptics";
 
 const FOLLOW_ROTATION_DEG = 8; // §0.5
-const FLY_OUT_MS = 220;
+/**
+ * §1.8 flyout: a spring at damping 26, NOT the `withTiming` 220ms task-0 shipped.
+ *
+ * `duration` is absent on purpose. Reanimated has two spring families — physics
+ * (`mass`/`stiffness`/`damping`) and duration (`duration`/`dampingRatio`) — and
+ * supplying both silently drops one, taking `damping: 26` with it. Damping is the
+ * number §1.8 names, so this is the physics form.
+ *
+ * `stiffness: 220` at `mass: 1` puts ζ = 26/(2·√220) ≈ 0.88 and ω ≈ 14.8 rad/s,
+ * i.e. a ~260-280ms settle — §1.8's 260ms as closely as a damping-26 spring can
+ * express it. `overshootClamping` because the target is off-screen: a bounce back
+ * into frame would show the outgoing card after its verdict was taken.
+ */
+const FLY_OUT_SPRING = {
+	damping: 26,
+	mass: 1,
+	stiffness: 220,
+	overshootClamping: true,
+} as const;
 const FLIP_MS = 350; // §0.5 — opacity crossfade, never rotateY
 const ACTIVE_OFFSET_X = 10;
 const FAIL_OFFSET_Y = 20;
@@ -51,21 +78,22 @@ const fireSettle = haptics.cardSettle;
 
 interface UseSwipeCardArgs {
 	cardWidth: number;
-	enabled: boolean;
-	/** Called on the JS thread once a swipe commits. */
+	/**
+	 * What THIS top card is allowed to do (§1.3). Resolved by the caller before
+	 * the gesture is built, which is what lets every handler below stay ignorant
+	 * of card kinds. `SwipeStack` derives it per item and ANDs `flippable` with
+	 * whether a back face actually rendered (§1.1 red line).
+	 */
+	capability: CardCapability;
+	/** Called on the JS thread after the card has flown out and settled. */
 	onDecision: (decision: Exclude<SwipeDecision, "none">) => void;
 	/**
-	 * Whether this card has a data face to flip to (§1.1 red line). Defaults to
-	 * true for backward compatibility with task-0's callers.
-	 *
-	 * A card with no back face must treat a tap as a NO-OP: ask / tradeoff /
-	 * milestone cards have nothing behind them, and flipping anyway crossfades
-	 * the visible face out to an empty one. `renderBack` being *supplied* is not
-	 * evidence a given item has a back — one `renderBack` serves a mixed deck
-	 * and returns null for the kinds that don't flip, so the decision has to be
-	 * made per item, by its result.
+	 * Called on the JS thread the instant a direction commits — BEFORE the
+	 * `revealMs` hold and the flyout. This is what makes §1.6's challenge reveal
+	 * possible at all: the card needs to change its own content while it is still
+	 * on screen, and by `onDecision` it is already gone.
 	 */
-	canFlip?: boolean;
+	onCommit?: (decision: Exclude<SwipeDecision, "none">) => void;
 }
 
 interface UseSwipeCardResult {
@@ -84,9 +112,9 @@ interface UseSwipeCardResult {
 
 export function useSwipeCard({
 	cardWidth,
-	enabled,
+	capability,
 	onDecision,
-	canFlip = true,
+	onCommit,
 }: UseSwipeCardArgs): UseSwipeCardResult {
 	const tx = useSharedValue(0);
 	const crossedRight = useSharedValue(false);
@@ -98,6 +126,11 @@ export function useSwipeCard({
 		(decision: Exclude<SwipeDecision, "none">) => {
 			tx.value = 0;
 			crossedRight.value = false;
+			// Reset AFTER the flyout, never at commit: this runs in the flyout's
+			// completion callback, in the same tick as the caller's index advance.
+			// Zeroing it at commit time would crossfade the outgoing card back to its
+			// video face over the 350ms it is flying out — the buyer would watch the
+			// face they just acted on dissolve into a different one mid-air.
 			flipProgress.value = 0;
 			if (decision === "right") haptics.cardSettle();
 			else haptics.pass();
@@ -106,18 +139,36 @@ export function useSwipeCard({
 		[onDecision, tx, crossedRight, flipProgress],
 	);
 
+	// Destructured out of the capability object so the memo depends on the five
+	// VALUES, not on object identity. The caller resolves a capability per render
+	// (`capability(item)`), so a fresh-but-equal object arrives every frame during
+	// a drag — keying the memo on it would rebuild the gesture mid-gesture.
+	const { pannable, commits, maxDisplacementRatio, flippable, revealMs } =
+		capability;
+
 	const gesture = useMemo(() => {
 		const pan = Gesture.Pan()
-			.enabled(enabled)
+			.enabled(pannable)
 			.activeOffsetX([-ACTIVE_OFFSET_X, ACTIVE_OFFSET_X])
 			.failOffsetY([-FAIL_OFFSET_Y, FAIL_OFFSET_Y])
 			.onBegin(() => {
 				crossedRight.value = false;
 			})
 			.onUpdate((e) => {
-				tx.value = e.translationX;
+				// §1.1: a flipped card does not pan. Checked here rather than through
+				// `.enabled()` because the flip state changes without rebuilding the
+				// gesture, and a static enable would go stale mid-crossfade.
+				if (!panAllowed(pannable, flipProgress.value)) return;
+				const clamped = clampDisplacement(
+					e.translationX,
+					cardWidth,
+					maxDisplacementRatio,
+				);
+				tx.value = clamped;
+				// The latch reads the CLAMPED offset, so a card capped short of the
+				// commit threshold never fires the §0.5 "this vote counts" tick.
 				const step = stepThresholdLatch({
-					translationX: e.translationX,
+					translationX: clamped,
 					cardWidth,
 					latched: crossedRight.value,
 				});
@@ -125,14 +176,27 @@ export function useSwipeCard({
 				if (step.fire) runOnJS(fireThreshold)();
 			})
 			.onEnd((e) => {
-				const decision = decideSwipe({
-					translationX: e.translationX,
-					translationY: e.translationY,
-					velocityX: e.velocityX,
+				if (!panAllowed(pannable, flipProgress.value)) return;
+				const clamped = clampDisplacement(
+					e.translationX,
 					cardWidth,
-				});
+					maxDisplacementRatio,
+				);
+				// `commits: false` (§1.5 milestone) turns every verdict into a spring
+				// back. Resolved here, before anything fires, so a ceremony card can
+				// never reach `onCommit` / `onDecision` at all.
+				const decision = commitDecision(
+					decideSwipe({
+						translationX: clamped,
+						translationY: e.translationY,
+						velocityX: e.velocityX,
+						cardWidth,
+					}),
+					commits,
+				);
 				if (decision === "none") {
 					tx.value = withSpring(0);
+					crossedRight.value = false;
 					return;
 				}
 				// A >800pt/s flick decides direction without ever crossing the
@@ -140,14 +204,23 @@ export function useSwipeCard({
 				if (decision === "right" && !crossedRight.value) {
 					runOnJS(fireThreshold)();
 				}
+				if (onCommit) runOnJS(onCommit)(decision);
 				const dest = decision === "right" ? cardWidth * 1.6 : -cardWidth * 1.6;
-				tx.value = withTiming(dest, { duration: FLY_OUT_MS }, (finished) => {
+				const flyOut = withSpring(dest, FLY_OUT_SPRING, (finished) => {
 					if (finished) runOnJS(settle)(decision);
 				});
+				// §1.6: hold the committed card in place for `revealMs` so it can show
+				// its answer, THEN fly out. The card freezes where the finger left it
+				// — spring-back-then-fly-out would read as an undo followed by a
+				// second, unexplained swipe.
+				tx.value =
+					revealMs !== undefined && revealMs > 0
+						? withDelay(revealMs, flyOut)
+						: flyOut;
 			});
 
 		const tap = Gesture.Tap()
-			.enabled(enabled && canFlip)
+			.enabled(flippable)
 			.onEnd((_e, success) => {
 				if (!success) return;
 				const target = flipProgress.value < 0.5 ? 1 : 0;
@@ -161,7 +234,19 @@ export function useSwipeCard({
 			});
 
 		return Gesture.Exclusive(pan, tap);
-	}, [cardWidth, enabled, canFlip, settle, tx, crossedRight, flipProgress]);
+	}, [
+		cardWidth,
+		pannable,
+		commits,
+		maxDisplacementRatio,
+		flippable,
+		revealMs,
+		onCommit,
+		settle,
+		tx,
+		crossedRight,
+		flipProgress,
+	]);
 
 	const topStyle = useAnimatedStyle(() => {
 		// ±8° across the drag the user can actually perform: the card commits at

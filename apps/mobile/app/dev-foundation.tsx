@@ -25,8 +25,9 @@ import { ExploreButton } from "../components/ExploreButton";
 import { KindChip } from "../components/KindChip";
 import { MatchBadge } from "../components/MatchBadge";
 import { SoundToggle } from "../components/SoundToggle";
-import { SwipeStack } from "../components/SwipeStack";
+import { type CardRenderArgs, SwipeStack } from "../components/SwipeStack";
 import { TabBar } from "../components/TabBar";
+import { DEFAULT_CAPABILITY } from "../lib/gesture/capability";
 import { colors, radii } from "../theme/tokens";
 import { textStyles } from "../theme/typography";
 
@@ -105,7 +106,7 @@ export default function DevFoundation() {
 			[`${new Date().toLocaleTimeString()} ${s}`, ...l].slice(0, 6),
 		);
 
-	const renderCard = (item: DemoCard, role: "top" | "next" | "after") => (
+	const renderCard = (item: DemoCard, { role }: CardRenderArgs) => (
 		<View style={styles.cardInner}>
 			{item.video ? (
 				<CardVideo
@@ -185,7 +186,7 @@ export default function DevFoundation() {
 						keyExtractor={(it) => it.id}
 						cardWidth={width - 32}
 						cardHeight={400}
-						enabled
+						capability={() => DEFAULT_CAPABILITY}
 					/>
 				)}
 			</View>

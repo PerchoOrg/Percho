@@ -4,6 +4,81 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-27 00:52 UTC — task-1 §1.3 capability plumbing: the gesture edits step 4 skipped
+
+**Objective**: close all seven rows of the gap I reported at the end of the last
+session. Step 4 fixed only the `SwipeStack.tsx:98` back-face bug and shipped
+`lib/gesture/capability.ts` as a **type with no runtime consumer** — the other six
+§1.3 requirements (capability prop, clamp, exposed `tx`, `onCommit` + `revealMs`,
+spring flyout, flip-blocks-swipe, deferred `flipProgress` reset) were never wired.
+Owner ruled: approved plan work misfiled under step 4, do it as its own commit
+before step 9.
+
+**Actions**:
+- `lib/gesture/capability.ts` — added `INERT_CAPABILITY` plus three worklet
+  helpers: `clampDisplacement`, `commitDecision`, `panAllowed`. They take
+  primitives, not the capability object, so nothing captures a JS object into a
+  UI-thread closure.
+- `hooks/use-swipe-card.ts` — `enabled: boolean` + `canFlip?: boolean` replaced by
+  `capability: CardCapability`; added optional `onCommit`. Flyout is now
+  `withSpring(damping 26)`, was `withTiming(220ms)`. `revealMs` inserts a
+  `withDelay` before the flyout. `flipProgress` reset moved into the flyout
+  completion callback.
+- `components/SwipeStack.tsx` — `enabled` → `capability: (item) => CardCapability`;
+  `renderCard`/`renderOverlay` now receive `{ role, tx, cardWidth }`; added
+  `onCommit` and `renderOverlay`.
+- `app/dev-foundation.tsx` — updated to the new props (`DEFAULT_CAPABILITY`).
+- `lib/gesture/capability.test.ts` (new, 17). Suite 176 → **193**.
+
+**Decisions**:
+- **Clamp where `tx` is WRITTEN, not in the `topStyle` worklet** where the brief
+  pointed. `tx` is published to three consumers (`TradeoffFace` brightness,
+  `SwipeLabels` opacity, the next card's rise), so clamping only the transform
+  would leave all three tracking a displacement the card visibly refuses. It also
+  matters mechanically: the threshold latch reads the clamped value, so a
+  milestone capped at 30% can never fire the §0.5 "your vote counts" haptic —
+  30% < the 35% commit threshold. Pinned as a test.
+- **`renderBack` deliberately does NOT receive `tx`.** There is a real circular
+  dependency: `tx` comes from the hook, the hook needs the capability, and
+  `flippable` depends on whether a back face rendered. Keeping data faces
+  drag-independent breaks it — they are static layouts read after the card stops
+  moving. Only the front trade-off face and the label overlay need `tx`, and both
+  are rendered after the hook.
+- **`flippable` is an AND of kind and result.** `capability(item)` is resolved
+  from the card kind and cannot know a pool row lacked the data a face needs;
+  `canFlipCard(rendered)` cannot know the kind shouldn't flip. Both, or the §1.1
+  red line reopens from the other side.
+- **`panAllowed` takes flip *progress*, not a `flipped` boolean.** Blocks at any
+  progress > 0: a card mid-crossfade shows two faces, and committing there records
+  a verdict against the face the buyer was leaving.
+- **No `duration` in the spring config.** Reanimated has two spring families and
+  supplying both silently drops one — taking `damping: 26` with it, which is the
+  number §1.8 actually names. `stiffness: 220` / `mass: 1` puts ζ≈0.88, ω≈14.8
+  rad/s, a ~260-280ms settle: §1.8's 260ms as closely as a damping-26 spring
+  expresses it. Documented in the constant, since it reads like an omission.
+- **Memo keyed on the five capability fields, not the object.** The caller
+  resolves `capability(item)` per render, so a fresh-but-equal object arrives
+  every frame during a drag; keying on identity would rebuild the gesture
+  mid-gesture.
+
+**Issues**: none blocking. Worth recording that the §1.5 milestone is the case
+that forced the whole redesign: task-0's only lever was `enabled: boolean`, and
+`enabled: false` gives no drag at all, while `true` lets a ceremony card fly out
+and consume the stage advance it exists to celebrate. `pannable: true, commits:
+false` is not expressible as a boolean — that is why §1.3 asked for an object.
+
+**Resolution**: 193 tests green (all 26 task-0 gesture/funnel tests unchanged),
+typecheck 0, biome clean. `capability.ts` now has real runtime consumers.
+
+**Learnings**: a shipped type with no consumer reads as done in a diff review and
+is invisible to typecheck — nothing fails when nobody imports it. The four new
+behaviors (clamp / non-commit / flip-block / reveal-then-flyout) are all pure
+worklet functions specifically so they are provable here rather than only on a
+device; the ordering itself (reveal *then* flyout) is still PENDING-SIM.
+
+**Next steps**: the `city_geo_units` migration (step 6's deviation), then step 9
+`(tabs)` routing, then step 10 the Mac verification doc.
+
 ## 2026-07-27 00:05 UTC — task-1 step 6: server pool endpoint + the Stage-3 emptiness bug
 
 **Objective**: PLAN-task-1 §7 step 6 — turn `/api/mobile/feed` from a composed
