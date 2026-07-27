@@ -19,7 +19,7 @@
  * What a given card is ALLOWED to do arrives as a resolved `CardCapability`
  * (§1.3), so no handler in here ever branches on a card kind.
  */
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useRef } from "react";
 import type { ViewStyle } from "react-native";
 import { Gesture } from "react-native-gesture-handler";
 import {
@@ -136,6 +136,27 @@ export function useSwipeCard({
 	const exitX = useSharedValue(0);
 	const advance = useSharedValue(0);
 	/**
+	 * The callbacks, read through a ref so they are NOT gesture-memo inputs.
+	 *
+	 * `SwipeStack` builds `onDecision`/`onCommit` as inline arrows that close over
+	 * the current top item, so a fresh function identity arrives on every render.
+	 * With `onCommit` in the memo's dependency list, EVERY render rebuilt the
+	 * gesture — including the renders that happen while a swipe is still resolving
+	 * (the deck appends a page, the funnel advances, a milestone splices in).
+	 *
+	 * Replacing a live `Gesture.Pan` mid-gesture drops the in-flight touch, so
+	 * `onEnd` never fires on the handler that saw `onBegin`: the flyout is never
+	 * scheduled, the handoff never runs, and the card stays on top. §1.6's
+	 * challenge holds for 900ms before its flyout, which is a wide enough window
+	 * that a re-render almost always lands inside it — hence "challenge卡还是卡"
+	 * while other kinds only occasionally stick.
+	 *
+	 * A ref keeps the latest callbacks reachable without making their identity a
+	 * reason to rebuild.
+	 */
+	const handlers = useRef({ onDecision, onCommit });
+	handlers.current = { onDecision, onCommit };
+	/**
 	 * True from the instant a direction commits until the handoff completes.
 	 *
 	 * The gap between those two moments is not a frame: the flyout spring is
@@ -153,14 +174,20 @@ export function useSwipeCard({
 	// React's index advance: for a frame or two the outgoing card was still in
 	// the top slot with a zeroed offset, so it snapped back to centre and
 	// flashed. That was the post-swipe jump.
-	const settle = useCallback(
-		(decision: Exclude<SwipeDecision, "none">) => {
-			if (decision === "right") haptics.cardSettle();
-			else haptics.pass();
-			onDecision(decision);
-		},
-		[onDecision],
-	);
+	const settle = useCallback((decision: Exclude<SwipeDecision, "none">) => {
+		if (decision === "right") haptics.cardSettle();
+		else haptics.pass();
+		handlers.current.onDecision(decision);
+	}, []);
+
+	/**
+	 * Stable JS-thread trampoline for the commit callback. `runOnJS` needs a
+	 * function whose identity does not change, or the worklet closure captures a
+	 * new one each render — which is the very thing the ref above exists to avoid.
+	 */
+	const fireCommit = useCallback((decision: Exclude<SwipeDecision, "none">) => {
+		handlers.current.onCommit?.(decision);
+	}, []);
 
 	/**
 	 * The atomic handoff, all on the UI thread in one frame:
@@ -280,7 +307,7 @@ export function useSwipeCard({
 				if (decision === "right" && !crossedRight.value) {
 					runOnJS(fireThreshold)();
 				}
-				if (onCommit) runOnJS(onCommit)(decision);
+				runOnJS(fireCommit)(decision);
 				// Before any animation is scheduled: from here until the handoff, this
 				// card takes no further input. Writing `tx` from a second gesture
 				// cancels the flyout below, and a cancelled animation never calls its
@@ -329,7 +356,7 @@ export function useSwipeCard({
 		maxDisplacementRatio,
 		flippable,
 		revealMs,
-		onCommit,
+		fireCommit,
 		handoff,
 		tx,
 		advance,

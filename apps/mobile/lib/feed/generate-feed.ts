@@ -262,7 +262,18 @@ interface FillContext {
 	geoRanked: readonly GeoUnit[];
 	communityRanked: readonly CommunityCardV3[];
 	listingRanked: readonly ListingCardV3[];
-	teaseBudget: { left: number };
+	/**
+	 * §0.2's "at most one tease per 10 cards" ration.
+	 *
+	 * `used` counts teases spent; `emitted` is how many cards the page has
+	 * actually produced so far. The cap is derived from `emitted`, NOT from the
+	 * requested count, because that is the basis `assertGate` judges on — and a
+	 * page routinely emits fewer cards than asked for (a dry pool breaks out of
+	 * the loop early). Rationing against the request let a 12-card ask spend 2
+	 * teases and then emit only 10 cards, at which point the engine THREW its own
+	 * gate: "§0.2 violation: stage 2 emitted 2 teases, cap 1".
+	 */
+	teaseRation: { used: number; emitted: number };
 	insightUsed: { done: boolean };
 	loopedIds: string[];
 }
@@ -336,10 +347,15 @@ function pickListing(
 	rotate: number,
 ): ListingCardV3 | null {
 	if (variant === "tease") {
-		if (!teaseAllowed(ctx.stage) || ctx.teaseBudget.left <= 0) return null;
+		if (!teaseAllowed(ctx.stage)) return null;
+		// Positional: a tease is only affordable once this page has emitted
+		// enough cards to carry it. Same arithmetic as `assertGate`, so the two
+		// cannot disagree and the engine cannot throw on its own output.
+		const affordable = Math.ceil((ctx.teaseRation.emitted + 1) / WINDOW);
+		if (ctx.teaseRation.used >= affordable) return null;
 		const l = firstUnseen(ctx.listingRanked, (x) => x.id, ctx.seen, rotate);
 		if (l === null) return null;
-		ctx.teaseBudget.left -= 1;
+		ctx.teaseRation.used += 1;
 		// Badge suppressed: the score isn't trustworthy this early (§1.7).
 		const { matchScore: _drop, ...rest } = l;
 		return { ...rest, tease: true };
@@ -595,8 +611,10 @@ export function generateFeed(input: GenerateFeedInput): GenerateFeedResult {
 		communityRanked: rankCommunities(pool.communities, signals),
 		listingRanked: rankListings(pool.listings, signals),
 		// One tease per 10 cards, exactly — computed from the request size so a
-		// 12-card first page gets 2, not 1.2 rounded somewhere unpredictable.
-		teaseBudget: { left: teaseAllowed(stage) ? Math.ceil(count / WINDOW) : 0 },
+		// One tease per 10 cards EMITTED — see `teaseRation`. Counting against the
+		// requested size instead is what made the engine throw its own §0.2 gate
+		// whenever a page came up short.
+		teaseRation: { used: 0, emitted: 0 },
 		insightUsed: { done: false },
 		loopedIds: [],
 	};
@@ -678,6 +696,8 @@ export function generateFeed(input: GenerateFeedInput): GenerateFeedResult {
 
 		cards.push(card);
 		seen.add(card.id);
+		// The tease ration is positional, so it has to see the page grow.
+		ctx.teaseRation.emitted = cards.length;
 	}
 
 	assertGate(stage, cards, signals.likedCommunityIds);

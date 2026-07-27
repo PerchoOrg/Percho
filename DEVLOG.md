@@ -4,6 +4,50 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-27 07:35 UTC — challenge 卡住的真因: 手势 memo 每帧重建 + 引擎自抛 §0.2
+
+**Objective**: owner: "community卡还是会很快闪现另一个卡 我看闪卡是同一个地址 并且challenge卡还是卡"。
+
+**Actions**:
+- `hooks/use-swipe-card.ts` — `onDecision`/`onCommit` 改走 `handlers` ref；新增稳定的
+  `fireCommit`（`useCallback([])` trampoline）；把 `onCommit` 从 gesture `useMemo` 的依赖
+  里**移除**，换成 `fireCommit`。
+- `lib/feed/generate-feed.ts` — `teaseBudget`（按**请求数**配额）改成 `teaseRation`
+  （按**已产出数**配额），与 `assertGate` 同一套算术。
+- 新 `lib/gesture/memo-identity.test.ts` +4，其中一条**读真实源码**断言 memo 依赖里没有
+  caller 传入的回调。
+
+**Issues**:
+
+1. **卡住 = 手势 memo 每一次 render 都重建。** `SwipeStack` 传的
+   `onCommit={(d)=>{…}}` 是闭合了当前 top item 的**内联箭头函数**，每帧都是新 identity；
+   而它在 gesture `useMemo` 的依赖列表里。**于是每次 render 都换掉一个活着的
+   `Gesture.Pan`** —— 正在进行的触摸被丢弃，看到 `onBegin` 的那个 handler 永远不会收到
+   `onEnd`：flyout 从不调度、handoff 从不执行、卡永远留在顶上。
+   而 feed 在一次 swipe 解析期间**一直在 render**（append 一页、funnel 推进、milestone
+   splice、undo toast 挂载/过期）。challenge 有 900ms reveal hold，窗口宽到几乎必然有
+   一次 render 落在里面 —— 所以**只有它稳定复现**，其他卡型偶发。
+   上一轮加的 `committed` 门禁没错（也保留），但它防的是「第二次触摸取消动画」，
+   不是「手势对象被换掉」。
+
+2. **引擎会抛自己的 §0.2 gate。** tease 配额按 `count`（请求 12）算 = 2 张，而
+   `assertGate` 的上限按**实际产出**算 = `ceil(emitted/10)`。任何短页（池子干了就提前
+   break）都会 `emitted=10` → 上限 1 → **throw**
+   `§0.2 violation: stage 2 emitted 2 teases, cap 1`。stage 2/3 有真实 listing 时必崩。
+
+**Resolution**: 389 测试（+4）、tsc 0、biome 干净。memo 守卫 revert 一行验过会红。
+已确认 shipped bundle：deps 里是 `fireCommit` 不是 `onCommit`，`teaseBudget` 归 0。
+
+**Learnings**: **把 caller 的回调放进「构建长期存活对象」的 useMemo 依赖里,等于每帧
+销毁重建它。** 手势/动画/订阅这类有生命周期的对象尤其致命 —— 语义没变但对象被换,
+表现是「事件丢失」而不是报错。规范:此类 memo 只依赖原始值 + ref-backed trampoline。
+另一条:**两处算同一个配额必须共用同一套算术**,否则一个宽一个严,严的那个就是崩溃。
+
+**Next steps**: 手机 reload 复核 —— challenge 划完是否正常飞出。**community 卡的闪现我
+还没定位**：查过 deck 无相邻重复、mounted window 内也无重复，`flipProgress` 在 handoff
+里已归零，所以「同一个地址」的来源尚未证实。若 reload 后仍闪，需要一次录屏（慢动作）
+才能判断闪的是背面还是同一张卡的另一份实例。
+
 ## 2026-07-27 07:10 UTC — 去掉 SEEN 角标（每张卡都挂 = 它已经不传递信息了）
 
 **Objective**: owner: "现在每张卡都会显示seen 这是干啥的 去掉这个"。
