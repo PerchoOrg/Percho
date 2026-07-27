@@ -8,9 +8,9 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { gateListings, type PoolListingDTO } from './listing-gate';
+import { type PoolListingDTO, gateListings } from './listing-gate';
 
-const listing = (id: string, communityId?: string): PoolListingDTO => ({
+const listing = (id: string, communityId?: string, city?: string): PoolListingDTO => ({
   id,
   slug: id,
   address: `${id} Main St`,
@@ -18,6 +18,7 @@ const listing = (id: string, communityId?: string): PoolListingDTO => ({
   bedBathSqft: '3 bd · 2 ba',
   heroUrl: `https://example.com/${id}.jpg`,
   ...(communityId ? { communityId } : {}),
+  ...(city ? { city } : {}),
 });
 
 const twelve = Array.from({ length: 12 }, (_, i) => listing(`l${i + 1}`));
@@ -28,7 +29,7 @@ describe('stage 0 — nothing, full stop', () => {
   });
 
   it('returns zero even when liked communities are supplied', () => {
-    expect(gateListings(twelve, 0, 12, ['c1'])).toEqual([]);
+    expect(gateListings(twelve, 0, 12, [{ id: 'c1' }])).toEqual([]);
   });
 });
 
@@ -57,7 +58,7 @@ describe('stages 1–2 — the 1-per-10 tease rate (§1.7)', () => {
   });
 });
 
-describe('stage 3 — previews inside liked communities only', () => {
+describe('stage 3 — previews tied to liked communities', () => {
   const pool = [
     listing('a', 'waterside'),
     listing('b', 'abernathy'),
@@ -66,7 +67,7 @@ describe('stage 3 — previews inside liked communities only', () => {
   ];
 
   it('returns only listings in a liked community', () => {
-    const out = gateListings(pool, 3, 12, ['waterside']);
+    const out = gateListings(pool, 3, 12, [{ id: 'waterside' }]);
     expect(out.map((l) => l.id)).toEqual(['a', 'd']);
   });
 
@@ -76,13 +77,13 @@ describe('stage 3 — previews inside liked communities only', () => {
     expect(gateListings(pool, 3, 12, [])).toEqual([]);
   });
 
-  it('drops listings with no community at all', () => {
-    const out = gateListings(pool, 3, 12, ['waterside', 'abernathy']);
+  it('drops listings with no community and no matching city', () => {
+    const out = gateListings(pool, 3, 12, [{ id: 'waterside' }, { id: 'abernathy' }]);
     expect(out.map((l) => l.id)).not.toContain('c');
   });
 
   it('tags as preview, not tease', () => {
-    for (const l of gateListings(pool, 3, 12, ['waterside'])) {
+    for (const l of gateListings(pool, 3, 12, [{ id: 'waterside' }])) {
       expect(l.preview).toBe(true);
       expect(l.tease).toBeUndefined();
     }
@@ -90,7 +91,36 @@ describe('stage 3 — previews inside liked communities only', () => {
 
   it('is not capped by the tease rate', () => {
     const many = Array.from({ length: 9 }, (_, i) => listing(`x${i}`, 'waterside'));
-    expect(gateListings(many, 3, 12, ['waterside'])).toHaveLength(9);
+    expect(gateListings(many, 3, 12, [{ id: 'waterside' }])).toHaveLength(9);
+  });
+});
+
+// Only 3 of 260 active listings carry a community_id, so a strict id match
+// would leave Stage 3 with ~1 preview. The city fallback keeps the stage
+// populated without unlocking anything the buyer didn't ask for.
+describe('stage 3 — city fallback when community_id is unpopulated', () => {
+  const pool = [
+    listing('has-id', 'waterside', 'Alpharetta'),
+    listing('same-city', undefined, 'Alpharetta'),
+    listing('other-city', undefined, 'Marietta'),
+    listing('no-city'),
+  ];
+
+  it('matches listings in the liked community\u2019s city', () => {
+    const out = gateListings(pool, 3, 12, [{ id: 'waterside', city: 'Alpharetta' }]);
+    expect(out.map((l) => l.id)).toEqual(['has-id', 'same-city']);
+  });
+
+  it('does not leak listings from a city the buyer never liked', () => {
+    const out = gateListings(pool, 3, 12, [{ id: 'waterside', city: 'Alpharetta' }]);
+    expect(out.map((l) => l.id)).not.toContain('other-city');
+    expect(out.map((l) => l.id)).not.toContain('no-city');
+  });
+
+  // A liked community with no city attached must not widen the gate.
+  it('falls back to id-only matching when the ref carries no city', () => {
+    const out = gateListings(pool, 3, 12, [{ id: 'waterside' }]);
+    expect(out.map((l) => l.id)).toEqual(['has-id']);
   });
 });
 

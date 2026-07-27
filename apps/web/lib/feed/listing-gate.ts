@@ -80,14 +80,11 @@ export function gateListings(
     // fall back to the unfiltered pool.
     if (liked.length === 0) return [];
     const likedIds = new Set(liked.map((c) => c.id));
-    const likedCities = new Set(
-      liked.map((c) => c.city).filter((c): c is string => !!c),
-    );
+    const likedCities = new Set(liked.map((c) => c.city).filter((c): c is string => !!c));
     return all
       .filter(
         (l) =>
-          (l.communityId && likedIds.has(l.communityId)) ||
-          (l.city && likedCities.has(l.city)),
+          (l.communityId && likedIds.has(l.communityId)) || (l.city && likedCities.has(l.city)),
       )
       .map((l) => ({ ...l, preview: true as const }));
   }

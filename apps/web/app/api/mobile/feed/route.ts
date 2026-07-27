@@ -28,16 +28,9 @@
 
 import type { BrowseCard } from '@/app/(public)/browse/_components/BrowseFeed';
 import { fetchBrowseCards, fetchBrowseCardsVideosOnly } from '@/lib/feed/browse-cards';
-import {
-  fetchCommunityPool,
-  type PoolCommunityDTO,
-} from '@/lib/feed/community-pool';
-import { fetchCityGeoUnits, type GeoUnitDTO } from '@/lib/feed/geo-units';
-import {
-  gateListings,
-  type LikedCommunityRef,
-  type PoolListingDTO,
-} from '@/lib/feed/listing-gate';
+import { type PoolCommunityDTO, fetchCommunityPool } from '@/lib/feed/community-pool';
+import { type GeoUnitDTO, fetchCityGeoUnits } from '@/lib/feed/geo-units';
+import { type LikedCommunityRef, type PoolListingDTO, gateListings } from '@/lib/feed/listing-gate';
 import { parseFeedPoolQuery } from '@/lib/zod/feed-pool';
 import { NextResponse } from 'next/server';
 
@@ -115,8 +108,7 @@ function projectListing(card: BrowseCard): PoolListingDTO {
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
-  const { stage, offset, limit, videosOnly, likedCommunityIds, cities } =
-    parseFeedPoolQuery(url);
+  const { stage, offset, limit, videosOnly, likedCommunityIds, cities } = parseFeedPoolQuery(url);
 
   // Stage 0 shows no listings at all, so don't pay for the listing query.
   const needsListingRows = stage > 0;
@@ -145,16 +137,9 @@ export async function GET(request: Request) {
   // With no id/city pairing available, fall back to the funnel's city scope so
   // Stage 3 still previews listings in the areas the buyer narrowed to.
   const likedRefs: LikedCommunityRef[] =
-    liked.length > 0
-      ? liked
-      : cities.map((city) => ({ id: `city:${city}`, city }));
+    liked.length > 0 ? liked : cities.map((city) => ({ id: `city:${city}`, city }));
 
-  const listings = gateListings(
-    rows.map(projectListing),
-    stage,
-    limit,
-    likedRefs,
-  );
+  const listings = gateListings(rows.map(projectListing), stage, limit, likedRefs);
 
   const body: FeedPoolResponse = {
     stage,

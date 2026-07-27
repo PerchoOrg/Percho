@@ -4,6 +4,76 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-27 00:05 UTC — task-1 step 6: server pool endpoint + the Stage-3 emptiness bug
+
+**Objective**: PLAN-task-1 §7 step 6 — turn `/api/mobile/feed` from a composed
+feed into a stage-aware *pool* endpoint, with the §0.2 listing gate enforced
+server-side as well as on the client.
+
+**Actions**:
+- `apps/web/lib/feed/geo-units.ts` (new) — `fetchCityGeoUnits()` +
+  `aggregateCityUnits()`. Groups the 8680 real communities by (city, state) into
+  city-level `GeoUnitDTO`s: real centroid (mean of member lat/lng), real
+  community count, ≤3 real sample names, real hero from `cover_storage_path`.
+- `apps/web/lib/feed/listing-gate.ts` (new) — `gateListings()`, the §0.2 gate.
+- `apps/web/lib/feed/community-pool.ts` (new) — `fetchCommunityPool()`, straight
+  from the `communities` table.
+- `apps/web/lib/zod/feed-pool.ts` (new) — query validation, fails closed.
+- `apps/web/app/api/mobile/feed/route.ts` — rewritten to the pool contract.
+- Tests: `listing-gate.test.ts` (17), `geo-units.test.ts` (15) = 32 passing.
+
+**Decisions**:
+- **In-process aggregation, not the `city_geo_units` view.** The view is a
+  migration against the linked remote; deferred until it can be reviewed on its
+  own. Same cache key and output contract, so swapping it in later touches one
+  file. `unstable_cache`, 1h TTL.
+- **`boundary` is never selected in the aggregate.** The Nextdoor seeds are
+  dense multipolygons and PostgREST hits `statement_timeout` (PG 57014)
+  streaming ~8k of them — the trap already documented in `lib/communities/list.ts`.
+- **Median price requires sampleSize >= 8.** With 265 listings across 109 cities
+  most cities legitimately have no median; the card omits the row rather than
+  showing a two-listing "median". Live: 5 of 109 cities qualify.
+- **Units with no coordinates are dropped**, not emitted at (0,0).
+- **The gate throws nothing and filters everything**: stage 0 → zero listings,
+  1–2 → ceil(limit/10) teases, 3 → previews tied to liked communities, 4 →
+  unlocked. `gateListings` lives in `lib/` because Next.js forbids a route module
+  from exporting non-handlers, and because it deserves direct tests.
+
+**Issues**: **Stage 3 returned zero communities and zero listings — the funnel's
+best-populated stage was empty.** Two separate causes, both found by curling the
+real endpoint rather than by reading code:
+1. I derived the community pool from listing rows. Only **3 of 260** active
+   listings carry a `community_id`, so the pool was empty and the 3→4 gate
+   (2 community likes) could never open.
+2. The stage-3 listing filter matched strictly on `community_id`, so even with a
+   community pool it would have surfaced ~1 preview across 12 cities.
+
+**Resolution**: communities now come from the `communities` table directly
+(`community-pool.ts`), scoped to the funnel's current cities so Stage 3 follows
+Stage 2's narrowing. The gate matches community id first, then falls back to the
+liked community's **city** — a data-shape concession, not a loosening: the buyer
+still only sees listings connected to something they explicitly liked, and stage
+4 remains the only unlocked stage. When `listings.community_id` gets backfilled
+the id branch simply starts winning.
+
+Live verification against `next dev` + real Supabase, 23/23 checks:
+- stage 0 → 0 listings · stage 1–2 → exactly 2 teases, badge suppressed ·
+  stage 3 (no likes) → 0 · stage 4 → 12 unlocked, untagged.
+- 109 real city units, densest first: Atlanta 731 communities, Marietta 563,
+  Alpharetta 356 (real median $594,450, n=52).
+- stage 3 with `cities=Alpharetta` → **12 real Alpharetta communities** (real
+  hero URLs, 12/12 with a real blurb) + 2 correctly-tagged previews.
+
+**Learnings**: the two Stage-3 bugs were invisible to typecheck and to unit
+tests built on synthetic fixtures — both only appeared when the endpoint was
+curled against the real database. Any "join by foreign key" assumption in this
+schema needs a `count(*) where fk is not null` check first.
+
+**Next steps**: step 8 card faces (8 of 14 committed by a parallel agent that
+timed out — `ChallengeFace`, `InsightFace`, `SwipeLabels` and the 5 chrome
+components remain), then step 7 API base config, step 9 `(tabs)` routing, step 10
+the Mac verification doc.
+
 ## 2026-07-26 23:52 UTC — task-1 step 5: session store + event queue + §1.10 event contract
 
 **Objective**: PLAN-task-1 §7 step 5 — the persistence layer the engine needs

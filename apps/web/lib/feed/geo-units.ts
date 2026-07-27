@@ -223,9 +223,7 @@ export function aggregateCityUnits(
   // Densest first: a city with 468 communities is a more useful early card
   // than one with a single seeded neighbourhood. Tie-break by name so the
   // order is deterministic across requests (the client engine assumes it).
-  units.sort(
-    (a, b) => b.communityCount - a.communityCount || a.name.localeCompare(b.name),
-  );
+  units.sort((a, b) => b.communityCount - a.communityCount || a.name.localeCompare(b.name));
   return units;
 }
 
@@ -235,10 +233,7 @@ export function aggregateCityUnits(
  */
 export const fetchCityGeoUnits = unstable_cache(
   async (): Promise<GeoUnitDTO[]> => {
-    const [communities, listings] = await Promise.all([
-      scanCommunities(),
-      scanActiveListings(),
-    ]);
+    const [communities, listings] = await Promise.all([scanCommunities(), scanActiveListings()]);
     return aggregateCityUnits(communities, listings);
   },
   ['geo-units:city:v1'],

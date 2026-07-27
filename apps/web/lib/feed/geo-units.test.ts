@@ -84,9 +84,7 @@ describe('rows that cannot form a real unit are dropped', () => {
   // A unit with no coordinates would land at (0,0) in the Gulf of Guinea and
   // break both the map thumb and any distance math.
   it('drops a city where no community has coordinates', () => {
-    expect(
-      aggregateCityUnits([community({ lat: null, lng: null })], []),
-    ).toEqual([]);
+    expect(aggregateCityUnits([community({ lat: null, lng: null })], [])).toEqual([]);
   });
 
   it('averages only the communities that do have coordinates', () => {
@@ -127,20 +125,15 @@ describe('median list price — real or absent', () => {
   });
 
   it('takes the middle value for an odd sample', () => {
-    const prices = [100, 200, 300, 400, 500, 600, 700, 800, 900].map((p) =>
-      priced(p * 1000),
-    );
-    expect(aggregateCityUnits([community()], prices)[0]?.stats.medianListPrice).toEqual(
-      { value: 500_000, sampleSize: 9 },
-    );
+    const prices = [100, 200, 300, 400, 500, 600, 700, 800, 900].map((p) => priced(p * 1000));
+    expect(aggregateCityUnits([community()], prices)[0]?.stats.medianListPrice).toEqual({
+      value: 500_000,
+      sampleSize: 9,
+    });
   });
 
   it('ignores null and non-positive prices when computing the median', () => {
-    const prices = [
-      ...Array.from({ length: 8 }, () => priced(300_000)),
-      priced(null),
-      priced(0),
-    ];
+    const prices = [...Array.from({ length: 8 }, () => priced(300_000)), priced(null), priced(0)];
     const stats = aggregateCityUnits([community()], prices)[0]?.stats;
     expect(stats?.medianListPrice).toEqual({ value: 300_000, sampleSize: 8 });
     // activeListings counts rows, including the unpriced ones — they are real

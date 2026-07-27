@@ -483,10 +483,7 @@ export async function fetchBrowseCards(offset = 0, limit = 1000): Promise<Browse
  * this exists so Expo Go hitting a cloudflared tunnel can skip the ~200
  * newest listings whose render pipeline hasn't caught up.
  */
-export async function fetchBrowseCardsVideosOnly(
-  offset = 0,
-  limit = 1000,
-): Promise<BrowseCard[]> {
+export async function fetchBrowseCardsVideosOnly(offset = 0, limit = 1000): Promise<BrowseCard[]> {
   const supabase = await createClient();
 
   // biome-ignore lint/suspicious/noExplicitAny: stub generated types
@@ -494,9 +491,9 @@ export async function fetchBrowseCardsVideosOnly(
     .from('listing_videos')
     .select('listing_id')
     .eq('status', 'ready')
-    .or(
-      'cf_video_id.not.is.null,cf_video_id_landscape.not.is.null,external_url.not.is.null',
-    )) as { data: Array<{ listing_id: string }> | null };
+    .or('cf_video_id.not.is.null,cf_video_id_landscape.not.is.null,external_url.not.is.null')) as {
+    data: Array<{ listing_id: string }> | null;
+  };
 
   const ids = Array.from(new Set((vidRows ?? []).map((r) => r.listing_id)));
   if (ids.length === 0) return [];
