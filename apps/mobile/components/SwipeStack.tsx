@@ -107,6 +107,17 @@ interface SwipeStackProps<T> {
 	renderBack?: (item: T, role: CardRole) => React.ReactNode;
 	/** Overlay above the top card only — §1.8 direction labels live here. */
 	renderOverlay?: (item: T, args: CardRenderArgs) => React.ReactNode;
+	/**
+	 * React key per mounted card. MUST be unique across the whole `items` array,
+	 * which is why the absolute index is passed in.
+	 *
+	 * A content id alone is NOT unique here: §1.9 has the composer deliberately
+	 * re-emit a card the buyer has already seen once fresh inventory runs out
+	 * ("循环 + seen 角标"), so the same card id legitimately appears at two
+	 * positions in one deck. Keying on it alone made React log "Encountered two
+	 * children with the same key" and then reuse or omit one of the two subtrees —
+	 * which is what a flashing card and a card that would not leave actually were.
+	 */
 	keyExtractor: (item: T, index: number) => string;
 	cardWidth: number;
 	cardHeight: number;

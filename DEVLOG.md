@@ -4,6 +4,48 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-27 06:55 UTC — 真根因: 重复 React key（前两轮全是误诊）
+
+**Objective**: owner 发截图 —— LogBox `Console Error`: "Encountered two children with the
+same key, `ask-purpose-primary`"，并且"两个问题都没修好 并且滑动第一个卡片就报错了"。
+
+**Actions**:
+- 新 `lib/feed/deck-key.ts` — `deckKey(card, absIndex)` = `` `${absIndex}:${card.id}` ``。
+- `app/(tabs)/feed.tsx` — `keyExtractor={deckKey}`（原来是 `(card) => card.id`）。
+- `components/SwipeStack.tsx` — 给 `keyExtractor` 写清唯一性契约。
+- 新 `lib/feed/deck-key.test.ts` +6：**多页 session** 累积 deck，断言 key 唯一。
+
+**Issues**: **我前两轮都在治 symptom，根因在上游。**
+
+§1.9 明写鲜货耗尽后要**循环重发**已看过的卡（"循环 + seen 角标"）—— 所以**同一个 card id
+合法地在一个 deck 里出现两次**。空 pool 下**第 7 次 swipe** 就发生（写探针复刻 feed.tsx
+真实逻辑跑出来的：`to-schools-vs-nightlife`、`ask-lifestyle-pace`、`to-quiet-vs-scene`）。
+`SwipeStack` 拿 `card.id` 当 key ⇒ React 收到重复 key。
+
+React 那句警告的后半句就是这两个症状:"**children to be duplicated and/or omitted**"。
+- **duplicated** → 同一 subtree 被复用到两个 stack 位置，带着另一个位置的 animated
+  style 画了一帧 = **闪现**。
+- **omitted** → outgoing 那份没挂载，于是"完成回调里做 handoff"的那个动画根本没跑 = **卡住**。
+
+所以前两轮的诊断（stack 几何 / gesture 竞态）都是对着下游现象。**几何和手势门禁再正确
+也扛不住上游把一个有歧义的 identity 交给 React。** 上一轮那两个修改本身是对的（tap 划走
+的卡确实不该可见、committed 卡确实不该再接输入），保留，但它们不是这两个症状的原因。
+
+**Resolution**: 385 测试（+6）、tsc 0、biome 干净。新测试 revert 一行验过会红（3 条失败，
+12 swipes 处报出与 owner 截图同类的重复 id）。已确认进 shipped bundle（`deckKey` ×4）。
+用 absIndex 而不是别的:它在一张卡整个挂载生命周期内不变，所以 promote 时 subtree
+（含 `CardVideo` buffer）依然存活 —— 换个会随 promote 变化的 key 会把每张卡都重挂。
+
+**Learnings**: 385 条测试里**没有一条**测过"deck 的 React key 唯一"。
+`generate-feed.test.ts` 测的是**单页内**无重复，`rhythm.test.ts` 走了整个 session 但只看
+卡型节奏。**"composer 产出什么"和"它被挂在什么 key 下"是两件独立的事，只测了前者。**
+连续三轮同一个教训：主路径分支全覆盖，跨页/兜底路径零覆盖。
+另一条:**用户给的报错截图是最短路径**。我前两轮靠读代码推理出两个真实但无关的 bug，
+截图里那行 warning 直接指向真根因。有 LogBox 报错先复现它，别先推理。
+
+**Next steps**: 手机 reload —— LogBox 应该不再报 duplicate key，闪现和 challenge 卡住
+应一并消失。若仍有残留，说明还有第三个原因，届时请连 LogBox 截图一起给我。
+
 ## 2026-07-27 06:25 UTC — tap 划走的卡闪现 + challenge 永久卡住（两个独立 bug）
 
 **Objective**: owner on device: "可以看到背景 但是卡片滑过后又有闪现的问题了 并且有些卡会卡住比如challenge"。

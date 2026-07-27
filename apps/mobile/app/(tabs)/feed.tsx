@@ -43,6 +43,7 @@ import { UndoToast } from "../../components/feed/UndoToast";
 import { useFeedPool } from "../../hooks/use-feed-pool";
 import { cardBehavior } from "../../lib/feed/behavior";
 import type { FeedCardV3, SwipeVerdict } from "../../lib/feed/card-types";
+import { deckKey } from "../../lib/feed/deck-key";
 import {
 	buildGestureEvent,
 	buildSkipLayerEvent,
@@ -515,7 +516,7 @@ export default function FeedScreen() {
 						renderCard={renderCard}
 						renderBack={renderBack}
 						renderOverlay={renderOverlay}
-						keyExtractor={(card) => card.id}
+						keyExtractor={deckKey}
 						cardWidth={cardWidth}
 						cardHeight={cardHeight}
 						capability={capability}
