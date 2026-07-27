@@ -1,177 +1,122 @@
 /**
- * City geo-unit aggregation. The pure reduce is tested directly; the Supabase
- * scan around it is not (it is a paged select with no logic of its own).
+ * City geo-unit projection — `public.city_geo_units` row → `GeoUnitDTO`.
  *
- * What matters here is the "real or absent" rule: this task ships against 8680
- * real communities and only 265 listings, so most cities legitimately have no
- * median price. Every one of these tests exists to prove the aggregate omits
- * data rather than inventing it.
+ * The aggregation itself now lives in SQL (migration 20260727010000), so what is
+ * testable here is the projection: the "real or absent" rule on the way out.
+ * That rule matters because this task ships against 8680 real communities and
+ * only 265 real listings, so most cities legitimately have no median price.
+ * Every test below exists to prove a missing number stays MISSING — no 0, no
+ * null in the DTO, no "—" placeholder for a card to render.
+ *
+ * The aggregation rules the view owns (grouping, the 8-listing median floor,
+ * dropping coordinate-less cities, densest-first ordering) were verified against
+ * the linked remote on 2026-07-27: 109 units, Atlanta 731 communities, and all 5
+ * qualifying medians match a hand `percentile_cont` over raw `listings`. They are
+ * not re-asserted here — a unit test with a fake row cannot prove what SQL does.
  */
 
 import { describe, expect, it } from 'vitest';
-import { aggregateCityUnits } from './geo-units';
+import { type CityGeoUnitRow, projectUnit } from './geo-units';
 
-type Community = Parameters<typeof aggregateCityUnits>[0][number];
-type Listing = Parameters<typeof aggregateCityUnits>[1][number];
+// `publicCoverImageUrl` throws without this, and vitest does not load
+// `.env.local`. Set here rather than in a global setup file so this suite stays
+// self-contained; the value is a shape, not a secret.
+process.env.NEXT_PUBLIC_SUPABASE_URL ??= 'https://project.supabase.co';
 
-const community = (over: Partial<Community> = {}): Community => ({
-  name: 'Abernathy',
-  city: 'Atlanta',
+const row = (over: Partial<CityGeoUnitRow> = {}): CityGeoUnitRow => ({
+  id: 'city:atlanta-ga',
+  name: 'Atlanta',
   state: 'GA',
-  lat: 33.93,
-  lng: -84.38,
-  cover_storage_path: 'nextdoor/abernathy.jpg',
+  centroid_lat: 33.93,
+  centroid_lng: -84.38,
+  hero_storage_path: 'nextdoor/abernathy.jpg',
+  community_count: 731,
+  sample_community_names: ['Abernathy', 'Ansley Park', 'Buckhead'],
+  median_list_price: null,
+  median_sample_size: null,
+  active_listings: null,
   ...over,
 });
 
-const priced = (price: number | null, city = 'Atlanta'): Listing => ({
-  city,
-  state: 'GA',
-  price,
-});
-
-describe('grouping', () => {
-  it('groups communities into one unit per city/state', () => {
-    const units = aggregateCityUnits(
-      [
-        community({ name: 'A' }),
-        community({ name: 'B' }),
-        community({ name: 'C', city: 'Marietta' }),
-      ],
-      [],
-    );
-    expect(units).toHaveLength(2);
-    expect(units[0]?.name).toBe('Atlanta');
-    expect(units[0]?.communityCount).toBe(2);
-  });
-
-  it('emits a stable level-prefixed slug id', () => {
-    const [unit] = aggregateCityUnits([community({ city: 'Sandy Springs' })], []);
-    expect(unit?.id).toBe('city:sandy-springs-ga');
+describe('the real fields pass through', () => {
+  it('projects a full row', () => {
+    const unit = projectUnit(row());
+    expect(unit).not.toBeNull();
+    expect(unit?.id).toBe('city:atlanta-ga');
     expect(unit?.level).toBe('city');
+    expect(unit?.name).toBe('Atlanta');
+    expect(unit?.state).toBe('GA');
+    expect(unit?.centroid).toEqual({ lat: 33.93, lng: -84.38 });
+    expect(unit?.communityCount).toBe(731);
+    expect(unit?.sampleCommunityNames).toEqual(['Abernathy', 'Ansley Park', 'Buckhead']);
   });
 
-  it('keeps at most 3 sample community names', () => {
-    const units = aggregateCityUnits(
-      Array.from({ length: 6 }, (_, i) => community({ name: `N${i}` })),
-      [],
-    );
-    expect(units[0]?.sampleCommunityNames).toEqual(['N0', 'N1', 'N2']);
-    // The count still reflects reality, not the sample size.
-    expect(units[0]?.communityCount).toBe(6);
-  });
-
-  it('sorts densest first, tie-broken by name for determinism', () => {
-    const units = aggregateCityUnits(
-      [
-        community({ city: 'Zebulon' }),
-        community({ city: 'Alpharetta' }),
-        community({ city: 'Atlanta' }),
-        community({ city: 'Atlanta', name: 'Second' }),
-      ],
-      [],
-    );
-    expect(units.map((u) => u.name)).toEqual(['Atlanta', 'Alpharetta', 'Zebulon']);
+  it('resolves the hero storage path to a public URL', () => {
+    expect(projectUnit(row())?.heroUrl).toContain('nextdoor/abernathy.jpg');
   });
 });
 
-describe('rows that cannot form a real unit are dropped', () => {
-  it('drops communities with no city or no state', () => {
-    expect(aggregateCityUnits([community({ city: null })], [])).toEqual([]);
-    expect(aggregateCityUnits([community({ state: null })], [])).toEqual([]);
+describe('median list price — real or absent, never partial', () => {
+  it('is emitted with its sample size when the view supplied both', () => {
+    const unit = projectUnit(row({ median_list_price: 594450, median_sample_size: 52 }));
+    expect(unit?.stats.medianListPrice).toEqual({ value: 594450, sampleSize: 52 });
   });
 
-  // A unit with no coordinates would land at (0,0) in the Gulf of Guinea and
-  // break both the map thumb and any distance math.
-  it('drops a city where no community has coordinates', () => {
-    expect(aggregateCityUnits([community({ lat: null, lng: null })], [])).toEqual([]);
+  it('is ABSENT — not zero, not null — when the view withheld it', () => {
+    const stats = projectUnit(row())?.stats;
+    expect(stats?.medianListPrice).toBeUndefined();
+    expect('medianListPrice' in (stats ?? {})).toBe(false);
   });
 
-  it('averages only the communities that do have coordinates', () => {
-    const [unit] = aggregateCityUnits(
-      [
-        community({ lat: 34, lng: -84 }),
-        community({ lat: 36, lng: -86 }),
-        community({ lat: null, lng: null }),
-      ],
-      [],
-    );
-    expect(unit?.centroid).toEqual({ lat: 35, lng: -85 });
-    // The null-coordinate row still counts as inventory.
-    expect(unit?.communityCount).toBe(3);
+  it('is absent when a price arrives without its sample size', () => {
+    // A median with no n is exactly the "statistic wearing clothes" the 8-row
+    // floor exists to prevent, so half a pair is treated as no pair.
+    const stats = projectUnit(row({ median_list_price: 500000, median_sample_size: null }))?.stats;
+    expect(stats?.medianListPrice).toBeUndefined();
+  });
+
+  it('is absent when a sample size arrives without a price', () => {
+    const stats = projectUnit(row({ median_list_price: null, median_sample_size: 52 }))?.stats;
+    expect(stats?.medianListPrice).toBeUndefined();
   });
 });
 
-describe('median list price — real or absent', () => {
-  it('is omitted below the 8-listing sample floor', () => {
-    const units = aggregateCityUnits(
-      [community()],
-      Array.from({ length: 7 }, () => priced(400_000)),
-    );
-    expect(units[0]?.stats.medianListPrice).toBeUndefined();
-    // But the honest raw count is still reported.
-    expect(units[0]?.stats.activeListings).toBe(7);
+describe('active listings — absent rather than zero', () => {
+  it('is emitted when the city really has active listings', () => {
+    expect(projectUnit(row({ active_listings: 52 }))?.stats.activeListings).toBe(52);
   });
 
-  it('is emitted at exactly the sample floor, with its sample size', () => {
-    const units = aggregateCityUnits(
-      [community()],
-      Array.from({ length: 8 }, (_, i) => priced(100_000 * (i + 1))),
-    );
-    expect(units[0]?.stats.medianListPrice).toEqual({
-      value: 450_000,
-      sampleSize: 8,
-    });
+  it('is omitted for a null count', () => {
+    expect(projectUnit(row())?.stats.activeListings).toBeUndefined();
   });
 
-  it('takes the middle value for an odd sample', () => {
-    const prices = [100, 200, 300, 400, 500, 600, 700, 800, 900].map((p) => priced(p * 1000));
-    expect(aggregateCityUnits([community()], prices)[0]?.stats.medianListPrice).toEqual({
-      value: 500_000,
-      sampleSize: 9,
-    });
+  it('is omitted for a zero count — "0 listings" is a rendered claim', () => {
+    const stats = projectUnit(row({ active_listings: 0 }))?.stats;
+    expect(stats?.activeListings).toBeUndefined();
+    expect(stats).toEqual({});
   });
+});
 
-  it('ignores null and non-positive prices when computing the median', () => {
-    const prices = [...Array.from({ length: 8 }, () => priced(300_000)), priced(null), priced(0)];
-    const stats = aggregateCityUnits([community()], prices)[0]?.stats;
-    expect(stats?.medianListPrice).toEqual({ value: 300_000, sampleSize: 8 });
-    // activeListings counts rows, including the unpriced ones — they are real
-    // active listings, they just have no price to average.
-    expect(stats?.activeListings).toBe(10);
-  });
-
-  it('does not leak another city listings into this city median', () => {
-    const units = aggregateCityUnits(
-      [community(), community({ city: 'Marietta' })],
-      Array.from({ length: 8 }, () => priced(900_000, 'Marietta')),
-    );
-    const atlanta = units.find((u) => u.name === 'Atlanta');
-    const marietta = units.find((u) => u.name === 'Marietta');
-    expect(atlanta?.stats.medianListPrice).toBeUndefined();
-    expect(atlanta?.stats.activeListings).toBeUndefined();
-    expect(marietta?.stats.medianListPrice?.value).toBe(900_000);
-  });
-
+describe('rows that cannot form a real unit', () => {
   it('emits an empty stats object when nothing real is known', () => {
-    expect(aggregateCityUnits([community()], [])[0]?.stats).toEqual({});
-  });
-});
-
-describe('hero image', () => {
-  it('uses the first community cover available in the city', () => {
-    const [unit] = aggregateCityUnits(
-      [
-        community({ cover_storage_path: null }),
-        community({ cover_storage_path: 'nextdoor/second.jpg' }),
-      ],
-      [],
-    );
-    expect(unit?.heroUrl).toContain('nextdoor/second.jpg');
+    expect(projectUnit(row())?.stats).toEqual({});
   });
 
-  it('omits heroUrl entirely when no community has a cover', () => {
-    const [unit] = aggregateCityUnits([community({ cover_storage_path: null })], []);
+  it('omits heroUrl entirely when the city has no cover', () => {
+    const unit = projectUnit(row({ hero_storage_path: null }));
     expect(unit?.heroUrl).toBeUndefined();
+    expect('heroUrl' in (unit ?? {})).toBe(false);
+  });
+
+  it('drops a unit with no centroid rather than placing it at (0,0)', () => {
+    // The view's `having` clause already excludes these; if one ever arrives,
+    // defaulting to 0/0 would put the card in the Gulf of Guinea.
+    expect(projectUnit(row({ centroid_lat: null, centroid_lng: null }))).toBeNull();
+    expect(projectUnit(row({ centroid_lat: 33.9, centroid_lng: null }))).toBeNull();
+    expect(projectUnit(row({ centroid_lat: null, centroid_lng: -84.3 }))).toBeNull();
+  });
+
+  it('tolerates a null sample-name array as an empty list', () => {
+    expect(projectUnit(row({ sample_community_names: null }))?.sampleCommunityNames).toEqual([]);
   });
 });

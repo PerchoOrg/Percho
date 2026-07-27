@@ -4,6 +4,90 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-27 01:05 UTC — task-1 step 6 correction: the `city_geo_units` view, aggregated in SQL
+
+**Objective**: fix step 6's one deviation from the approved plan. The owner ruled
+"`city_geo_units` view migration — APPROVED, write it… Do NOT reach for the
+in-process aggregation fallback"; step 6 shipped the in-process fallback anyway,
+citing CLAUDE.md §8 approval it had already been given. Ruling restated, so the
+migration is now written and applied.
+
+**Correction to the record**: the two `WIP step6 … (checkpoint)` commit messages
+(`5bc49d3`, and step 6's work folded into `51b39c8`) read as unfinished work.
+They were not. **Step 6's code was complete and live-verified — 23/23 curl checks
+against real Supabase**, including the two Stage-3 bugs found and fixed there. The
+only thing wrong with step 6 was WHERE it aggregated, which this entry fixes. A
+future reader should not go looking for missing step-6 functionality.
+
+**Actions**:
+- `supabase/migrations/20260727010000_city_geo_units_view.sql` (new) — one
+  additive read-only view, `security_invoker = true`, `grant select` to
+  anon/authenticated. Groups active communities by `(city, state)`; listing stats
+  aggregate in a **separate CTE**, not a join.
+- `apps/web/lib/feed/geo-units.ts` — `fetchCityGeoUnits` now reads the view
+  (single request, same `geo-units:city:v1` cache key, same 1h TTL, same DTO).
+  Added `projectUnit` (row → DTO). **Deleted** `aggregateCityUnits`,
+  `scanCommunities`, `scanActiveListings` and their constants: -176 lines.
+- `apps/web/lib/feed/geo-units.test.ts` — rewritten against `projectUnit`
+  (13 tests, all green here).
+
+**Decisions**:
+- **Listing stats in a separate CTE, never a join.** Joining `listings` to
+  `communities` on city fans out one listing row per community in the same city —
+  Atlanta has 731 — inflating both the median sample and the community count by
+  three orders of magnitude. This is the single most dangerous line in the
+  migration and it is commented as such.
+- **`security_invoker = true` is load-bearing, not boilerplate.** A PG view runs
+  as its OWNER by default, and RLS does not apply to a table's owner, so the
+  default would have made this a silent RLS bypass on `communities` + `listings`.
+- **The 8-listing median floor is enforced in SQL too**, and both median columns
+  go NULL together, so no caller can read a low-n median or pair a median with a
+  missing sample size even by accident.
+- **`boundary` is not in the view** and a comment says why plus why aggregating
+  it inside wouldn't help: the planner still reads every multi-KB multipolygon.
+- **Deleted the in-process reduce instead of keeping it as a fallback.** Two
+  implementations of "which numbers are real" drift, and the view is now the
+  single source of that truth. The cost is that the grouping rules are no longer
+  unit-testable on this box — accepted, because a unit test over fake rows never
+  proved what SQL does; live verification does.
+- **Applied with `psql`, not `supabase db push`.** `supabase migration list`
+  showed `20260718020000_k12_schools_pipeline` (PostGIS + 4 tables) as unapplied
+  on the remote — unrelated to this task and not mine to apply. `db push` would
+  have applied it too. Ran only my file, `--single-transaction`
+  `ON_ERROR_STOP=1`, then inserted the version into
+  `supabase_migrations.schema_migrations` so the ledger stays honest.
+
+**Verification against the linked remote** (`tavmbcghxjeyaoptndvn`, PG 17.6):
+- `create or replace view` → `CREATE VIEW` / `COMMENT` / `GRANT`.
+- `select count(*)` → **109 units**, identical to the in-process output.
+- `reloptions` → `{security_invoker=true}`.
+- Densest first: Atlanta 731, Marietta 563, Alpharetta 356 (median $594,450 n=52).
+- 5 of 109 have a median, 104 do not; **0** rows below the sample floor; 0 null
+  centroids; 0 zero-count `active_listings`.
+- All 5 medians cross-checked against a hand `percentile_cont(0.5)` over raw
+  `listings` — **exact match on value and n for all five**.
+- Anon read through PostgREST: **HTTP 200 in 0.53s** (no 57014).
+- `/api/mobile/feed` against `next dev` + the real DB, all 5 stages: geo 109 at
+  every stage; stage 0 → 0 listings; 1–2 → exactly 2 teases; 3 → 12 communities,
+  0 unscoped listings; 3 scoped to Alpharetta → 12 real communities (12/12 with a
+  real blurb) + 2 previews, all flagged `preview`; 4 → 12 plain. Matches step 6's
+  numbers exactly.
+
+**Issues**: `apps/web`'s vitest does not load `.env.local`, so
+`publicCoverImageUrl` threw `NEXT_PUBLIC_SUPABASE_URL not set` — this was already
+failing 11 of the 13 tests in this file before my change (verified by stashing).
+Set the env var at the top of the suite. Also pre-existing and untouched:
+1 failure in `__tests__/create-upload.test.ts`, and 131 biome errors across
+`apps/web` (my two files are clean).
+
+**Learnings**: `supabase db push` is not safe to reach for on a repo whose remote
+ledger has drifted — always `migration list` first and check whether anything
+unrelated is pending. And "additive view" is not automatically safe: the default
+view-owner semantics would have quietly handed anon a full RLS bypass.
+
+**Next steps**: step 9 `(tabs)` routing + the real feed screen, then step 10's
+Mac verification doc.
+
 ## 2026-07-27 00:52 UTC — task-1 §1.3 capability plumbing: the gesture edits step 4 skipped
 
 **Objective**: close all seven rows of the gap I reported at the end of the last

@@ -8,21 +8,31 @@
  * `finestAvailableLevel()` reads whatever depth arrives, so a later zip
  * backfill deepens the funnel with no engine change.
  *
- * Aggregated in-process behind `unstable_cache`, not in SQL. The plan's
- * preferred form was a `city_geo_units` view, but that is a migration against
- * the linked remote and needs explicit owner approval (CLAUDE.md §8), so this
- * is the approved fallback: paged fetch + in-process reduce, same cache key,
- * same output contract. Swapping in the view later changes only this file.
+ * Aggregated in SQL by the `public.city_geo_units` view (migration
+ * 20260727010000, owner-approved), not in this process. The view is
+ * `security_invoker = true`, so the existing public-read RLS on `communities`
+ * and `listings` still governs every row that aggregates. Reading it is one
+ * request; the in-process form this replaced took 9 paged scans of 1000 rows
+ * each per cache miss to produce the same ~109 rows.
  *
- * CRITICAL: `boundary` must NOT be selected here. The Nextdoor seeds are dense
- * multipolygons (multi-KB each) and PostgREST hits `statement_timeout` (PG
- * 57014) trying to stream ~8k of them, returning nothing at all — the same trap
- * documented in `lib/communities/list.ts`. Boundary is a per-card concern,
- * fetched lazily elsewhere.
+ * The in-process reduce this replaced (`aggregateCityUnits` + its two paged
+ * scans) is gone rather than kept as a fallback: two implementations of "which
+ * numbers are real" drift, and the migration's `having` clause and 8-listing
+ * median floor are now the single source of that truth. Verified against the
+ * remote on 2026-07-27 — the view reproduces the in-process output exactly
+ * (109 units, Atlanta 731 communities, Alpharetta median $594,450 at n=52) and
+ * all 5 medians match a hand `percentile_cont` over raw `listings`.
+ *
+ * CRITICAL: `boundary` must NOT be selected here or added to the view. The
+ * Nextdoor seeds are dense multipolygons (multi-KB each) and PostgREST hits
+ * `statement_timeout` (PG 57014) trying to stream ~8k of them, returning nothing
+ * at all — the same trap documented in `lib/communities/list.ts`. Boundary is a
+ * per-card concern, fetched lazily elsewhere.
  *
  * Every emitted number is real or absent. No estimates, no placeholders: a
- * median price is emitted only at a sample size that makes it meaningful, and
- * `stats` is `{}` when nothing real is known.
+ * median price is emitted only at a sample size that makes it meaningful (the
+ * floor is enforced in the view as well, so a low-n median cannot be read even
+ * by accident), and `stats` is `{}` when nothing real is known.
  */
 
 import { publicCoverImageUrl } from '@/lib/communities/cover';
@@ -51,190 +61,78 @@ export interface GeoUnitDTO {
   stats: GeoStatsDTO;
 }
 
-/**
- * Below this a "median" is one or two listings wearing a statistic's clothes.
- * 265 listings across ~500 cities means most cities legitimately have no
- * median — the card omits the row rather than showing a fabricated one.
- */
-const MEDIAN_MIN_SAMPLE = 8;
-
-/** Page size for the community scan. Keeps each PostgREST response small. */
-const SCAN_PAGE = 1000;
-
-type CommunityScanRow = {
+/** One row of `public.city_geo_units`. Hand-typed: `database.types.ts` is a stub. */
+export type CityGeoUnitRow = {
+  id: string;
   name: string;
-  city: string | null;
-  state: string | null;
-  lat: number | null;
-  lng: number | null;
-  cover_storage_path: string | null;
-};
-
-type ListingScanRow = {
-  city: string | null;
-  state: string | null;
-  price: number | null;
-};
-
-function citySlug(city: string, state: string): string {
-  const slug = `${city}-${state}`
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-|-$/g, '');
-  return `city:${slug}`;
-}
-
-function median(values: number[]): number {
-  const sorted = [...values].sort((a, b) => a - b);
-  const mid = Math.floor(sorted.length / 2);
-  if (sorted.length % 2 === 1) return sorted[mid] as number;
-  return Math.round(((sorted[mid - 1] as number) + (sorted[mid] as number)) / 2);
-}
-
-/**
- * Fetch every community row needed for aggregation, paged.
- * Selects the six columns the aggregate needs and nothing else.
- */
-async function scanCommunities(): Promise<CommunityScanRow[]> {
-  const supabase = await createAnonClient();
-  const rows: CommunityScanRow[] = [];
-
-  for (let offset = 0; ; offset += SCAN_PAGE) {
-    const { data, error } = await supabase
-      .from('communities')
-      .select('name, city, state, lat, lng, cover_storage_path')
-      .eq('status', 'active')
-      .range(offset, offset + SCAN_PAGE - 1);
-
-    if (error) throw new Error(`geo-units: community scan failed: ${error.message}`);
-    const page = (data ?? []) as CommunityScanRow[];
-    rows.push(...page);
-    if (page.length < SCAN_PAGE) break;
-  }
-  return rows;
-}
-
-async function scanActiveListings(): Promise<ListingScanRow[]> {
-  const supabase = await createAnonClient();
-  const { data, error } = await supabase
-    .from('listings')
-    .select('city, state, price')
-    .eq('status', 'active');
-
-  if (error) throw new Error(`geo-units: listing scan failed: ${error.message}`);
-  return (data ?? []) as ListingScanRow[];
-}
-
-interface CityAccumulator {
-  city: string;
   state: string;
-  latSum: number;
-  lngSum: number;
-  coordCount: number;
-  communityCount: number;
-  sampleNames: string[];
-  heroPath: string | null;
-}
+  centroid_lat: number | null;
+  centroid_lng: number | null;
+  hero_storage_path: string | null;
+  community_count: number;
+  sample_community_names: string[] | null;
+  median_list_price: number | null;
+  median_sample_size: number | null;
+  active_listings: number | null;
+};
 
 /**
- * Pure reduce: communities + listings → city units. Exported for direct
- * testing without touching Supabase.
+ * Row → DTO. The view already applied the median sample floor and dropped
+ * coordinate-less cities, so this only reshapes: absent stays absent, and a
+ * `stats` key is written only when its value is really there.
  */
-export function aggregateCityUnits(
-  communities: CommunityScanRow[],
-  listings: ListingScanRow[],
-): GeoUnitDTO[] {
-  const byCity = new Map<string, CityAccumulator>();
+export function projectUnit(row: CityGeoUnitRow): GeoUnitDTO | null {
+  // The view's `having` clause guarantees a centroid, but the DTO's contract is
+  // that a unit HAS one — so an unexpected null is dropped, not defaulted to 0.
+  if (row.centroid_lat == null || row.centroid_lng == null) return null;
 
-  for (const c of communities) {
-    // A unit needs a real name to key on. No "Unknown City" bucket.
-    if (!c.city || !c.state) continue;
-    const key = `${c.city}|${c.state}`;
-    let acc = byCity.get(key);
-    if (!acc) {
-      acc = {
-        city: c.city,
-        state: c.state,
-        latSum: 0,
-        lngSum: 0,
-        coordCount: 0,
-        communityCount: 0,
-        sampleNames: [],
-        heroPath: null,
-      };
-      byCity.set(key, acc);
-    }
-    acc.communityCount += 1;
-    if (c.lat != null && c.lng != null) {
-      acc.latSum += c.lat;
-      acc.lngSum += c.lng;
-      acc.coordCount += 1;
-    }
-    if (acc.sampleNames.length < 3 && c.name) acc.sampleNames.push(c.name);
-    if (!acc.heroPath && c.cover_storage_path) acc.heroPath = c.cover_storage_path;
+  const stats: GeoStatsDTO = {};
+  if (row.median_list_price != null && row.median_sample_size != null) {
+    stats.medianListPrice = {
+      value: row.median_list_price,
+      sampleSize: row.median_sample_size,
+    };
+  }
+  if (row.active_listings != null && row.active_listings > 0) {
+    stats.activeListings = row.active_listings;
   }
 
-  // Listing prices grouped the same way, so the median is over the same unit.
-  const pricesByCity = new Map<string, number[]>();
-  const countByCity = new Map<string, number>();
-  for (const l of listings) {
-    if (!l.city || !l.state) continue;
-    const key = `${l.city}|${l.state}`;
-    countByCity.set(key, (countByCity.get(key) ?? 0) + 1);
-    if (l.price != null && l.price > 0) {
-      const arr = pricesByCity.get(key);
-      if (arr) arr.push(l.price);
-      else pricesByCity.set(key, [l.price]);
-    }
-  }
-
-  const units: GeoUnitDTO[] = [];
-  for (const [key, acc] of byCity) {
-    // No coordinates → no map thumb, no distance math. Skip rather than
-    // emit a unit centred on (0,0) in the Gulf of Guinea.
-    if (acc.coordCount === 0) continue;
-
-    const prices = pricesByCity.get(key) ?? [];
-    const activeListings = countByCity.get(key);
-    const stats: GeoStatsDTO = {};
-    if (prices.length >= MEDIAN_MIN_SAMPLE) {
-      stats.medianListPrice = { value: median(prices), sampleSize: prices.length };
-    }
-    if (activeListings != null && activeListings > 0) {
-      stats.activeListings = activeListings;
-    }
-
-    units.push({
-      id: citySlug(acc.city, acc.state),
-      level: 'city',
-      name: acc.city,
-      state: acc.state,
-      centroid: {
-        lat: acc.latSum / acc.coordCount,
-        lng: acc.lngSum / acc.coordCount,
-      },
-      ...(acc.heroPath ? { heroUrl: publicCoverImageUrl(acc.heroPath) } : {}),
-      communityCount: acc.communityCount,
-      sampleCommunityNames: acc.sampleNames,
-      stats,
-    });
-  }
-
-  // Densest first: a city with 468 communities is a more useful early card
-  // than one with a single seeded neighbourhood. Tie-break by name so the
-  // order is deterministic across requests (the client engine assumes it).
-  units.sort((a, b) => b.communityCount - a.communityCount || a.name.localeCompare(b.name));
-  return units;
+  return {
+    id: row.id,
+    level: 'city',
+    name: row.name,
+    state: row.state,
+    centroid: { lat: row.centroid_lat, lng: row.centroid_lng },
+    ...(row.hero_storage_path ? { heroUrl: publicCoverImageUrl(row.hero_storage_path) } : {}),
+    communityCount: row.community_count,
+    sampleCommunityNames: row.sample_community_names ?? [],
+    stats,
+  };
 }
 
 /**
  * Cached city units. 1h TTL — community geography changes on a seeding
- * cadence, not a request cadence.
+ * cadence, not a request cadence. Cache key unchanged from the in-process form:
+ * the output contract is identical, so a deployed cache entry stays valid.
  */
 export const fetchCityGeoUnits = unstable_cache(
   async (): Promise<GeoUnitDTO[]> => {
-    const [communities, listings] = await Promise.all([scanCommunities(), scanActiveListings()]);
-    return aggregateCityUnits(communities, listings);
+    const supabase = await createAnonClient();
+    const { data, error } = await supabase
+      .from('city_geo_units')
+      .select(
+        'id, name, state, centroid_lat, centroid_lng, hero_storage_path, community_count, sample_community_names, median_list_price, median_sample_size, active_listings',
+      )
+      // Densest first: a city with 731 communities is a more useful early card
+      // than one with a single seeded neighbourhood. Name breaks ties so the
+      // order is deterministic across requests (the client engine assumes it).
+      .order('community_count', { ascending: false })
+      .order('name', { ascending: true });
+
+    if (error) throw new Error(`geo-units: city_geo_units read failed: ${error.message}`);
+    return ((data ?? []) as CityGeoUnitRow[])
+      .map(projectUnit)
+      .filter((u): u is GeoUnitDTO => u !== null);
   },
   ['geo-units:city:v1'],
   { revalidate: 3600, tags: [GEO_UNITS_TAG] },
