@@ -32,11 +32,19 @@ import {
 	View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { HotspotSheet } from "../../components/listing/HotspotSheet";
 import { PriceHistogram } from "../../components/listing/PriceHistogram";
+import { TourStop } from "../../components/listing/TourStop";
+import { TransitionCard } from "../../components/listing/TransitionCard";
 import {
 	DEFAULT_ANNUAL_RATE,
 	assumptionLabel,
 } from "../../lib/listing/assumptions";
+import {
+	buildHotspots,
+	buildListingTour,
+	transitionSignals,
+} from "../../lib/listing/build-hotspots";
 import { useListingDetail } from "../../lib/listing/detail-dto";
 import {
 	FOCUS_HIGHLIGHT_MS,
@@ -45,6 +53,8 @@ import {
 	sectionForFocus,
 } from "../../lib/listing/focus-key";
 import { buildDistribution } from "../../lib/listing/histogram";
+import type { ActionKind, Hotspot } from "../../lib/listing/hotspot";
+import { emojiForRoom } from "../../lib/listing/hotspot";
 import {
 	DEFAULT_DOWN_FRACTION,
 	computeMonthly,
@@ -56,6 +66,12 @@ import { textStyles } from "../../theme/typography";
 
 const HERO_HEIGHT = 190;
 
+/**
+ * §2.2's three entry modes. `tour` is only ever entered when a tour actually
+ * exists AND there is no `?focus=`; everything else lands in `free`.
+ */
+type Mode = "tour" | "transition" | "free";
+
 export default function ListingExploreScreen() {
 	const params = useLocalSearchParams<{ id?: string; focus?: string }>();
 	const insets = useSafeAreaInsets();
@@ -63,6 +79,16 @@ export default function ListingExploreScreen() {
 
 	const focus = useMemo(() => parseFocus(params.focus), [params.focus]);
 	const focusedSection = focus ? sectionForFocus(focus) : null;
+
+	/**
+	 * §2.2: a `?focus=` deep link SKIPS the tour. Held in state (initialised from
+	 * the param) rather than derived, because the buyer can leave the tour and
+	 * that must not be undone by a re-render.
+	 */
+	const [mode, setMode] = useState<Mode>(focus ? "free" : "tour");
+	const [stopIndex, setStopIndex] = useState(0);
+	const [openHotspot, setOpenHotspot] = useState<Hotspot | null>(null);
+	const [visitedPins, setVisitedPins] = useState<readonly string[]>([]);
 
 	// §2.1 #2 / §2.2: the landed-on section pulses for 2s, then stays put. A
 	// timer, not an animation loop — the highlight is a one-shot cue.
@@ -144,6 +170,65 @@ export default function ListingExploreScreen() {
 		cohortLabel: detail.comps.cohortLabel,
 	});
 
+	/**
+	 * §2.3–2.5 inventory. Empty today for every feed listing, because
+	 * `listing_photos.ai_tags` is unpopulated for the fmls import — so pins, the
+	 * tour, and the sheets simply do not appear rather than appearing empty. The
+	 * code path is live: backfilling tags turns all three on with no UI change.
+	 */
+	const hotspots = buildHotspots(detail.photos, {
+		comps: detail.comps,
+		...(detail.sqft !== undefined ? { sqft: detail.sqft } : {}),
+		...(detail.yearBuilt !== undefined ? { yearBuilt: detail.yearBuilt } : {}),
+	});
+	const tour = buildListingTour(hotspots, {
+		...(detail.sqft !== undefined ? { sqft: detail.sqft } : {}),
+		...(detail.beds !== undefined ? { beds: detail.beds } : {}),
+		...(detail.yearBuilt !== undefined ? { yearBuilt: detail.yearBuilt } : {}),
+	});
+
+	const openSheet = (hotspot: Hotspot) => {
+		setOpenHotspot(hotspot);
+		// §2.4 #1: a visited pin stops pulsing.
+		setVisitedPins((v) => (v.includes(hotspot.id) ? v : [...v, hotspot.id]));
+	};
+
+	// §2.6 `action_tap(kind)`. Wired to a no-op sink until the mobile event queue
+	// covers listing_explore_events — deliberately a named function so the call
+	// sites are already correct rather than needing to be found later.
+	const onAction = (_kind: ActionKind) => {};
+
+	/**
+	 * §2.2 / §2.3: the guided tour. Rendered INSTEAD of free explore, and only
+	 * when a real tour exists — `buildListingTour` returns null unless it can
+	 * produce 3 evidence-backed stops, and §2.2 sends that buyer straight to free
+	 * explore, which is the same no-penalty path the ✕ takes.
+	 */
+	if (mode === "tour" && tour) {
+		const stop = tour.stops[Math.min(stopIndex, tour.stops.length - 1)];
+		if (stop) {
+			return (
+				<View style={styles.screen}>
+					<TourStop
+						stop={stop}
+						index={stopIndex}
+						stopIds={tour.stops.map((s) => s.id)}
+						onPrev={() => setStopIndex((i) => Math.max(i - 1, 0))}
+						onNext={() => {
+							if (stopIndex >= tour.stops.length - 1) {
+								setMode("transition");
+								return;
+							}
+							setStopIndex((i) => i + 1);
+						}}
+						onExit={() => setMode("free")}
+						onAction={onAction}
+					/>
+				</View>
+			);
+		}
+	}
+
 	const stats = [
 		detail.beds !== undefined ? `${detail.beds} beds` : null,
 		detail.baths !== undefined ? `${detail.baths} baths` : null,
@@ -180,6 +265,26 @@ export default function ListingExploreScreen() {
 					>
 						<Text style={styles.heroBackLabel}>←</Text>
 					</Pressable>
+					{/* §2.4 #1: a pin per hotspot; unvisited ones pulse. Pulse is the
+					    ring's opacity, not a scale transform — a scaling pin over a photo
+					    reads as a layout jitter on device. */}
+					{hotspots.map((hotspot) => (
+						<Pressable
+							key={hotspot.id}
+							onPress={() => openSheet(hotspot)}
+							hitSlop={8}
+							style={[
+								styles.pin,
+								{
+									left: `${hotspot.pin.x * 100}%`,
+									top: `${hotspot.pin.y * 100}%`,
+								},
+								!visitedPins.includes(hotspot.id) && styles.pinUnvisited,
+							]}
+						>
+							<Text style={styles.pinGlyph}>{emojiForRoom(hotspot.room)}</Text>
+						</Pressable>
+					))}
 				</View>
 
 				<View
@@ -195,6 +300,19 @@ export default function ListingExploreScreen() {
 						{detail.address} · {detail.city}, {detail.state}
 					</Text>
 					{!!stats && <Text style={styles.stats}>{stats}</Text>}
+					{/* §2.2: once the buyer is in free explore and a tour exists, the top
+					    of the page keeps a text link back into it. */}
+					{mode === "free" && !!tour && (
+						<Pressable
+							onPress={() => {
+								setStopIndex(0);
+								setMode("tour");
+							}}
+							hitSlop={6}
+						>
+							<Text style={styles.replay}>Replay tour →</Text>
+						</Pressable>
+					)}
 					{detail.description?.map((para) => (
 						<Text key={para.slice(0, 32)} style={styles.body}>
 							{para}
@@ -244,6 +362,28 @@ export default function ListingExploreScreen() {
 					</View>
 				)}
 
+				{/* §2.4 #3: one section per hotspot room, each a row that opens the
+				    action sheet. Absent entirely when there are no hotspots — no
+				    "features coming soon" placeholder. */}
+				{hotspots.map((hotspot) => (
+					<Pressable
+						key={hotspot.id}
+						onPress={() => openSheet(hotspot)}
+						style={({ pressed }) => [
+							styles.section,
+							pressed && styles.pressedRow,
+						]}
+					>
+						<Text style={styles.sectionHead}>
+							{hotspot.room} {emojiForRoom(hotspot.room)}
+						</Text>
+						<Text style={styles.stats}>{hotspot.title}</Text>
+						<Text style={styles.dim}>
+							{`${hotspot.actions.length} actions`}
+						</Text>
+					</Pressable>
+				))}
+
 				{!!detail.hoaRaw && (
 					<View
 						style={sectionStyle("costs")}
@@ -261,6 +401,26 @@ export default function ListingExploreScreen() {
 					<Text style={styles.ctaLabel}>Schedule a tour</Text>
 				</Pressable>
 			</View>
+
+			{/* §2.4 #5: an overlay ON free explore, not a route — Continue must resume
+			    the same URL at the same scroll position. */}
+			{mode === "transition" && !!tour && (
+				<TransitionCard
+					signals={transitionSignals(tour)}
+					onContinue={() => setMode("free")}
+				/>
+			)}
+
+			{/* Mounted ONLY while open. An always-mounted transparent Modal
+			    black-screened the whole feed on iOS in task-1 — see DEVLOG
+			    2026-07-27. Do not switch this to a `visible` toggle. */}
+			{!!openHotspot && (
+				<HotspotSheet
+					hotspot={openHotspot}
+					onClose={() => setOpenHotspot(null)}
+					onAction={onAction}
+				/>
+			)}
 		</View>
 	);
 }
@@ -289,6 +449,20 @@ const styles = StyleSheet.create({
 		backgroundColor: colors.glass,
 	},
 	heroBackLabel: { ...textStyles.headline, color: colors.ink },
+	pin: {
+		position: "absolute",
+		width: 32,
+		height: 32,
+		marginLeft: -16,
+		marginTop: -16,
+		borderRadius: radii.pill,
+		alignItems: "center",
+		justifyContent: "center",
+		backgroundColor: colors.glass,
+	},
+	/** Unvisited pins carry the accent ring (§2.4 #1). */
+	pinUnvisited: { borderWidth: 2, borderColor: colors.accent },
+	pinGlyph: { fontSize: 16 },
 	section: {
 		paddingHorizontal: 20,
 		paddingVertical: 18,
@@ -297,6 +471,8 @@ const styles = StyleSheet.create({
 		borderBottomColor: colors.border,
 	},
 	sectionHighlight: { backgroundColor: colors.surface2 },
+	pressedRow: { opacity: 0.75 },
+	replay: { ...textStyles.headline, color: colors.accent, marginTop: 6 },
 	sectionHead: { ...textStyles.caption, color: colors.accent },
 	price: { ...textStyles.title1, color: colors.ink },
 	big: { ...textStyles.title1, color: colors.ink },

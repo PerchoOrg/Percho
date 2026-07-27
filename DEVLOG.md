@@ -4,6 +4,50 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-27 19:45 UTC — task-2 §2.3–2.5：guided tour + transition 卡 + hotspot sheet
+
+**Objective**: 补完 task-2 剩下的三块 UI。
+
+**Actions**:
+- `components/listing/TourStop.tsx`（STOP N OF M + 分段进度 + 220pt 媒体 + pin +
+  WHY serif 17.5 + 动作行 + Prev/Next）、`TransitionCard.tsx`（§2.4 #5 overlay，
+  非新路由）、`HotspotSheet.tsx`（复用 task-0 `BottomSheet`，5 动作原地展开）。
+- `lib/listing/build-hotspots.ts`：photos+真实字段 → hotspots/tour/transition
+  signals。**21 个新测试**（累计 476）。
+- `theme/typography.ts` 加 `serifBody`（§2.3 #3 点名要 serif 17.5，之前没有这个 token）。
+- `app/listing/[id].tsx` 接线:tour → transition → free explore 三态、hero pin
+  （未访问带 accent 环）、hotspot section 行、Replay tour 链。
+
+**Decisions**:
+- **tour 只在真能出 3 停时进**，否则直接 free explore(= ✕ 的同一条不惩罚路径)，
+  不做"只有 2 停的 tour"。
+- 今天永远走 §2.2 **generic tour**:个性化停靠点需要 per-buyer 归因，还不存在。
+  代码路径是活的,`buildTour` 一旦有人能产出个性化 stop 就直接收。
+- transition 卡 signals 为空时**说"按你自己的节奏"，不编两个偏好**。
+- Save 即时变 ♥ 且不关 sheet(§2.5 #1)，写库是 task-5 的活 —— 等 round trip 的 save
+  在真机上读起来就是坏了。
+- sheet **只在打开时挂载**(task-1 那次 iOS 黑屏的教训)。
+
+**Issues**: 两个测试红,都是我自己的 copy 触发了自己的闸门 ——
+`ask_ai` 副文案 "Scoped to this home and Duluth" **没有数字**，被
+`hasConcreteData` 静默过滤，进而让无 sqft 的房子跌破 3 动作下限、整个 hotspot 消失。
+另外 biome 抓到进度条用了 `key={index}`。
+
+**Resolution**: 副文案改成带数字(`${cohortN} nearby listings`)；`TourStop` 的
+`total: number` 改成 `stopIds: readonly string[]`，进度段用**真 stop id 做 key** ——
+task-1 就是在 index/重复 key 上连丢几轮，这条不让步。
+Gate:**476 测试**、tsc 0、biome 111 文件干净。Metro 真 bundle **HTTP 200 /
+16.2MB**，12 处新标记(WHY 块/transition/Replay/Finish/Saved/buildHotspots/serifBody)全在。
+
+**Learnings**: **"每行副文案必须带数字"这条闸门会反咬自己写的 copy** —— 它是对的,
+但失败方式是静默的:掉一行 → 跌破下限 → 整个 hotspot 不出现，表现为"功能没做"。
+凡有数量下限的过滤器，测试必须断言**下限附近**那一档，而不只是 happy path。
+
+**Next steps**: 只剩把 `photo_tagger.py` 从被禁的个人 Anthropic key 移到 Bedrock
+并回填 fmls listing —— **hotspot/tour/pin 现在对 feed 里的房子全部为空,因为
+`listing_photos.ai_tags` 一条 fmls 照片都没有**。回填完这三块自动亮，UI 不用改。
+**PENDING-SIM(需真机)**:行 tap 深链 + 2s 高亮、翻面手感、pin 位置、sheet detent。
+
 ## 2026-07-27 19:20 UTC — task-2：detail endpoint + 真 data face + Explore→ 接线
 
 **Objective**: 接上 task-2 纯层(`7eb5f66`)，做出 owner 能在真机上点的那一层。
