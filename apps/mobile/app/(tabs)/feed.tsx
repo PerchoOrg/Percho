@@ -519,11 +519,16 @@ export default function FeedScreen() {
 					/>
 				)}
 			</View>
-			<BottomSheet
-				visible={explored !== null}
-				onClose={() => setExplored(null)}
-			>
-				{explored && (
+			{/*
+			 * Mounted ONLY while open. `BottomSheet` renders a `<Modal>`, and an
+			 * always-mounted transparent Modal is a known way to get a black screen
+			 * on iOS: it participates in the window stack even at `visible={false}`,
+			 * and its `useEffect` runs a `withTiming` on a sheet height derived from
+			 * a viewport it was never laid out in. `dev-foundation.tsx` keeps one
+			 * mounted too, but that screen has nothing behind it to lose.
+			 */}
+			{explored && (
+				<BottomSheet visible onClose={() => setExplored(null)}>
 					<View style={styles.sheet}>
 						<Text style={styles.sheetEyebrow}>THE HOME BEHIND THIS</Text>
 						{!!explored.sub && (
@@ -532,8 +537,8 @@ export default function FeedScreen() {
 						<Text style={styles.sheetPrice}>{explored.revealLabel}</Text>
 						<Text style={styles.sheetBody}>{explored.teach}</Text>
 					</View>
-				)}
-			</BottomSheet>
+				</BottomSheet>
+			)}
 			{undo && (
 				<UndoToast
 					label={undo.label}

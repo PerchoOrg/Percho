@@ -4,6 +4,34 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-27 09:05 UTC — tap 后黑屏:常驻挂载的 Modal（我上一条自己引进的）
+
+**Objective**: owner: "tap之后黑屏了"（指 challenge 新版按钮）。
+
+**Actions**:
+- `app/(tabs)/feed.tsx` — `BottomSheet` 从**常驻挂载 + `visible={explored !== null}`**
+  改成**仅在打开时挂载**（`{explored && <BottomSheet visible …>}`）。
+
+**Issues**: 是我上一条（`1e4269b`）引进的。`BottomSheet` 内部渲染一个 `<Modal>`，而我把它
+**无条件挂在 feed 屏上**，只靠 `visible` 开关。iOS 上常驻的透明 Modal 即使 `visible=false`
+也参与 window 栈；同时它的 `useEffect` 会对一个「从未被真正布局过的 viewport」算出来的
+`sheetH` 跑 `withTiming`。结果是 tap 之后整屏变黑。
+
+`app/dev-foundation.tsx` 也是常驻挂一个，但那个屏幕背后没有东西可丢，所以从没暴露过 ——
+**这正是「它在别处能跑」不等于「这里也能跑」的例子。**
+
+**Resolution**: 393 测试、tsc 0、biome 干净；bundle 已确认现在是条件挂载 + `visible: true`。
+另外把 face 自己的三种状态（未答 / 答对 / 答错）单独跑了一遍纯逻辑，配色判定正确，
+所以崩的不是卡面。
+
+**Learnings**: **Modal 要条件挂载,不要常驻靠 `visible` 开关** —— 尤其它盖在真实内容之上时。
+更该记的是过程:黑屏出现在「tap 之后」，而 tap 之后唯一新增的东西就是这个 sheet ——
+**这一轮我没有再去读代码推理，而是直接锁定「本轮新增且从未在此屏运行过的那一个东西」。**
+这个定位法比前几轮的推理快得多。
+
+**Next steps**: 手机 reload —— tap 选项应原地揭晓不黑屏；tap `Explore →` 应弹出 sheet，
+点背景可关。**若仍黑屏，请把 LogBox 截图发我**（黑屏通常伴随一条被遮住的红屏错误）。
+
 ## 2026-07-27 08:50 UTC — challenge 改版:按钮选择 + 原地揭晓 + Explore（回中方案作废）
 
 **Objective**: owner: "现在challenge滑动之后又复位显示答案后又自己滑走 后面一张卡又出现
