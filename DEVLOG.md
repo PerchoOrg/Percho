@@ -4,6 +4,47 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-27 06:25 UTC — tap 划走的卡闪现 + challenge 永久卡住（两个独立 bug）
+
+**Objective**: owner on device: "可以看到背景 但是卡片滑过后又有闪现的问题了 并且有些卡会卡住比如challenge"。
+
+**Actions**:
+- `lib/gesture/stack-layer.ts` — `cardStackVisual` 对 `rel < 0 && offset === 0` 返回
+  `opacity: 0`。
+- `lib/gesture/capability.ts` — 新 `panLive({pannable, flipProgress, committed})`。
+- `hooks/use-swipe-card.ts` — 新 `committed` shared value，commit 时置位、handoff 里
+  **最后**清位；两处 `panAllowed` 换 `panLive`；`advance` 的 spring 也套上 `revealMs` 延迟。
+- 测试 +10（`stack-layer.test.ts` 的 tap-dismissed 组、`capability.test.ts` 的 panLive 组）。
+
+**Issues**（两个**独立**根因，不是一个）:
+
+1. **闪现 = tap 划走的卡**（ask "Skip this topic" / insight "Not sure" / milestone
+   "Keep going"）。这三条路径只 `setActiveIndex(i+1)`，**没有 flyout**，所以 `exitX` 是 0。
+   `restingAt` 把负 depth 夹到 0 ⇒ 那张卡停在 translateX 0 / scale 1 / **opacity 1**，
+   正好压在从 0.94 升起的新卡后面，卸载前的那一两帧从新卡边缘露出来。
+   上一轮修的 flash 是 deck rebuild 那条，这是**另一条**没覆盖到的路径。
+2. **卡住 = 取消掉的动画不会调 callback**。flyout 是 `withSpring(tx)`，handoff（推进
+   cursor、提升下一张）写在它的**完成回调**里。commit 之后第二次触摸直接写 `tx` ⇒ 取消
+   那个 spring ⇒ 回调永不执行 ⇒ cursor 永不推进，卡**永久**留在顶上（还能拖、每次弹回）。
+   challenge 是唯一有 `revealMs` 的卡型：900ms 静止 + 280ms flyout ≈ **1.2 秒**窗口，
+   而且一张明显冻住的卡正是用户会再点一下的卡 —— 所以只有它稳定复现。
+
+   顺带一处同源的视觉 bug：`advance` 的 spring **没有**套 reveal 延迟，所以 900ms 的
+   hold 期间下一张卡已经升到满 scale/opacity，跟还停在屏幕上的答案并排站着。
+
+**Resolution**: 379 测试（+10）、tsc 0、biome 干净。**两组新测试都在旧代码上验过会红**
+（各自 revert 一行 → 4 条失败），不是写完就绿的装饰。已确认进 shipped bundle
+（`panLive` ×31 / `goneWithoutFlyout` ×5 / `committed.value` ×8）。
+
+**Learnings**: 379 个测试对这两个 bug **一条都没覆盖**。`stack-layer.test.ts` 里每一条
+outgoing-card 断言都传了 `exitX: ±1.6W` —— 全都在测**被 swipe 掉**的卡，tap 划走
+（`exitX: 0`）这条路径整组缺失。教训跟 §1.7 那次一样：测试覆盖了**主路径的全部分支**，
+但兜底/次要入口一条没测。**"动画回调里做状态推进"这个模式本身是雷** —— 任何能取消该
+动画的输入都会静默吞掉推进；以后这类回调必须配一个 committed 之类的门禁。
+
+**Next steps**: 手机复核 —— (a) 三种 tap 划走不再闪；(b) challenge 划完不卡，reveal 期间
+连点多次也不卡；(c) 900ms hold 期间下一张卡应保持在 0.94/0.5 而不是提前升满。
+
 ## 2026-07-27 06:00 UTC — 无照片卡面的背景设计（9 个 variant，替掉纯黑兜底）
 
 **Objective**: owner: "对于没有照片的卡面包括tradeoff的 背景图你设计一下 不能黑屏啊"。

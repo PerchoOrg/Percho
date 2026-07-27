@@ -128,11 +128,30 @@ export function cardStackVisual({
 
 	const { scale, opacity } = restingAt(rel - advance);
 
+	/**
+	 * An outgoing card that is NOT translating was never swiped: it left by a tap
+	 * (ask "Skip this topic", insight "Not sure", milestone "Keep going"), which
+	 * advances the cursor without a flyout, so `exitX` still holds whatever the
+	 * last swipe left there — 0 if there hasn't been one.
+	 *
+	 * `restingAt` clamps a negative depth to 0, so such a card sat at translateX
+	 * 0, scale 1 and FULL opacity directly behind the card that replaced it. The
+	 * promoted card rises from 0.94, so for the frames before React unmounted the
+	 * old one its content showed around the new card's edges — a flash of the
+	 * card the buyer had just dismissed. There is no flyout to watch here, so the
+	 * card has nothing to render: hide it.
+	 *
+	 * The other tap-advance case — `exitX` still holding a PREVIOUS swipe's exit
+	 * position — needs no branch: that value is ±1.6 card widths, so the card is
+	 * already parked well off-screen.
+	 */
+	const goneWithoutFlyout = rel < 0 && offset === 0;
+
 	return {
 		translateX,
 		rotateDeg: unit * FOLLOW_ROTATION_DEG,
 		scale,
-		opacity,
+		opacity: goneWithoutFlyout ? 0 : opacity,
 	};
 }
 

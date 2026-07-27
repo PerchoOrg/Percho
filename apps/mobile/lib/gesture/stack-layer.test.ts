@@ -176,6 +176,68 @@ describe("cardStackVisual — handoff continuity (the jump invariant)", () => {
 		});
 		expect(v.rotateDeg).toBe(-FOLLOW_ROTATION_DEG);
 	});
+
+	/**
+	 * The tap-driven advances (ask "Skip this topic", insight "Not sure",
+	 * milestone "Keep going") move the cursor with no flyout at all, so the card
+	 * that just left has `exitX` 0 — nothing ever animated it away.
+	 *
+	 * Every other assertion in this file is about a card that WAS swiped, which
+	 * is why the whole suite stayed green while the device flashed a dismissed
+	 * card behind its replacement on every tap.
+	 */
+	describe("a card dismissed by tap, not by swipe", () => {
+		const tapDismissed = (over: Partial<CardStackInput> = {}) =>
+			cardStackVisual({
+				rel: -1,
+				advance: 0,
+				dragX: 0,
+				exitX: 0,
+				cardWidth: W,
+				...over,
+			});
+
+		it("is invisible — it has no flyout to show", () => {
+			// Without this it sat at scale 1 / opacity 1 (restingAt clamps a negative
+			// depth to 0) directly behind a card rising from 0.94, so its content
+			// showed around the new card's edges for a frame or two.
+			expect(tapDismissed().opacity).toBe(0);
+		});
+
+		it("is invisible however far the cursor has already moved past it", () => {
+			for (const rel of [-1, -2, -3]) {
+				expect(tapDismissed({ rel }).opacity).toBe(0);
+			}
+		});
+
+		it("still reports the full prop set, so nothing is left stale", () => {
+			// The ghosting rule (see the header): every layer writes all four keys.
+			expect(Object.keys(tapDismissed()).sort()).toEqual(
+				["opacity", "rotateDeg", "scale", "translateX"].sort(),
+			);
+		});
+
+		it("does not hide a card that IS flying out", () => {
+			// The guard keys on a zero offset, not on `rel < 0`, so a real flyout is
+			// untouched — otherwise the swipe animation would be invisible.
+			expect(tapDismissed({ exitX: W * 1.6 }).opacity).toBeGreaterThan(0);
+			expect(tapDismissed({ exitX: -W * 1.6 }).opacity).toBeGreaterThan(0);
+		});
+
+		it("does not hide any card still in the live stack", () => {
+			for (const rel of [0, 1, 2]) {
+				expect(
+					cardStackVisual({
+						rel,
+						advance: 0,
+						dragX: 0,
+						exitX: 0,
+						cardWidth: W,
+					}).opacity,
+				).toBeGreaterThan(0);
+			}
+		});
+	});
 });
 
 describe("cardStackVisual — resting geometry", () => {

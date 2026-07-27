@@ -99,3 +99,41 @@ export function panAllowed(pannable: boolean, flipProgress: number): boolean {
 	"worklet";
 	return pannable && flipProgress === 0;
 }
+
+/**
+ * Whether the pan may run at all this frame.
+ *
+ * `committed` is the second gate, and it exists because of a card that got
+ * STUCK on device — permanently, not for a frame.
+ *
+ * The flyout is driven by animating `tx` to the exit position and doing the
+ * handoff (advance the cursor, promote the next card) in that animation's
+ * completion callback. §1.6's challenge holds for `revealMs` first, so between
+ * commit and handoff there is a ~1.2s window in which the card is sitting on
+ * screen, already committed, with its gesture still live. A second touch in
+ * that window writes `tx` directly — which CANCELS the pending animation, and a
+ * cancelled Reanimated animation never calls its callback. So the handoff never
+ * ran, the cursor never advanced, and the card stayed on top forever: the buyer
+ * could drag it around and it would spring back every time.
+ *
+ * The reveal hold makes this trivially easy to hit, because a card that visibly
+ * freezes for 900ms is a card the buyer taps again. Hence "有些卡会卡住比如
+ * challenge" — challenge is the only kind with a `revealMs`, so it is the only
+ * kind with a window wide enough to lose the race reliably.
+ *
+ * A committed card is therefore inert until the handoff clears the flag. This
+ * cannot be expressed with `.enabled()`: the flag flips without rebuilding the
+ * gesture, and a rebuild mid-gesture would drop the touch binding (§1.1).
+ */
+export function panLive({
+	pannable,
+	flipProgress,
+	committed,
+}: {
+	pannable: boolean;
+	flipProgress: number;
+	committed: boolean;
+}): boolean {
+	"worklet";
+	return !committed && panAllowed(pannable, flipProgress);
+}

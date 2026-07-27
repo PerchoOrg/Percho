@@ -37,7 +37,7 @@ import {
 	type CardCapability,
 	clampDisplacement,
 	commitDecision,
-	panAllowed,
+	panLive,
 } from "../lib/gesture/capability";
 import {
 	SWIPE_THRESHOLD_RATIO,
@@ -135,6 +135,16 @@ export function useSwipeCard({
 	const topAbs = useSharedValue(0);
 	const exitX = useSharedValue(0);
 	const advance = useSharedValue(0);
+	/**
+	 * True from the instant a direction commits until the handoff completes.
+	 *
+	 * The gap between those two moments is not a frame: the flyout spring is
+	 * ~280ms and §1.6's challenge delays it by a further 900ms. Any touch in that
+	 * window used to write `tx`, which cancels the pending flyout animation — and
+	 * a cancelled animation never runs its completion callback, so the handoff
+	 * that advances the deck never fired and the card was stuck on top for good.
+	 */
+	const committed = useSharedValue(false);
 
 	// JS-side bookkeeping only. Everything that affects a pixel this frame has
 	// already happened on the UI thread in `handoff` below — by the time this
@@ -179,9 +189,13 @@ export function useSwipeCard({
 			advance.value = 0;
 			crossedRight.value = false;
 			flipProgress.value = 0;
+			// Re-arm LAST: the new top card is only touchable once the cursor has
+			// actually moved, so a touch landing on this very frame cannot be
+			// attributed to the card that just left.
+			committed.value = false;
 			runOnJS(settle)(decision);
 		},
-		[exitX, topAbs, tx, advance, crossedRight, flipProgress, settle],
+		[exitX, topAbs, tx, advance, crossedRight, flipProgress, committed, settle],
 	);
 
 	// Destructured out of the capability object so the memo depends on the five
@@ -203,7 +217,14 @@ export function useSwipeCard({
 				// §1.1: a flipped card does not pan. Checked here rather than through
 				// `.enabled()` because the flip state changes without rebuilding the
 				// gesture, and a static enable would go stale mid-crossfade.
-				if (!panAllowed(pannable, flipProgress.value)) return;
+				if (
+					!panLive({
+						pannable,
+						flipProgress: flipProgress.value,
+						committed: committed.value,
+					})
+				)
+					return;
 				const clamped = clampDisplacement(
 					e.translationX,
 					cardWidth,
@@ -223,7 +244,14 @@ export function useSwipeCard({
 				if (step.fire) runOnJS(fireThreshold)();
 			})
 			.onEnd((e) => {
-				if (!panAllowed(pannable, flipProgress.value)) return;
+				if (
+					!panLive({
+						pannable,
+						flipProgress: flipProgress.value,
+						committed: committed.value,
+					})
+				)
+					return;
 				const clamped = clampDisplacement(
 					e.translationX,
 					cardWidth,
@@ -253,22 +281,30 @@ export function useSwipeCard({
 					runOnJS(fireThreshold)();
 				}
 				if (onCommit) runOnJS(onCommit)(decision);
+				// Before any animation is scheduled: from here until the handoff, this
+				// card takes no further input. Writing `tx` from a second gesture
+				// cancels the flyout below, and a cancelled animation never calls its
+				// callback — which is the handoff, so the deck would never advance.
+				committed.value = true;
 				const dest = decision === "right" ? cardWidth * 1.6 : -cardWidth * 1.6;
-				// The cards behind keep rising on the same spring the outgoing card
-				// flies out on, so the shuffle finishes exactly as the handoff fires
-				// rather than jumping the last of the way.
-				advance.value = withSpring(1, FLY_OUT_SPRING);
-				const flyOut = withSpring(dest, FLY_OUT_SPRING, (finished) => {
-					if (finished) handoff(dest, decision);
-				});
 				// §1.6: hold the committed card in place for `revealMs` so it can show
 				// its answer, THEN fly out. The card freezes where the finger left it
 				// — spring-back-then-fly-out would read as an undo followed by a
 				// second, unexplained swipe.
-				tx.value =
-					revealMs !== undefined && revealMs > 0
-						? withDelay(revealMs, flyOut)
-						: flyOut;
+				const hold = revealMs !== undefined && revealMs > 0 ? revealMs : 0;
+				const flyOut = withSpring(dest, FLY_OUT_SPRING, (finished) => {
+					if (finished) handoff(dest, decision);
+				});
+				// The cards behind keep rising on the same spring the outgoing card
+				// flies out on, so the shuffle finishes exactly as the handoff fires
+				// rather than jumping the last of the way. It has to carry the SAME
+				// reveal delay: without it the next card rose to full scale and opacity
+				// while the challenge was still parked on screen at its drag offset, so
+				// for the whole 900ms hold the buyer saw the next card standing at full
+				// strength alongside the answer they were meant to be reading.
+				const rise = withSpring(1, FLY_OUT_SPRING);
+				advance.value = hold > 0 ? withDelay(hold, rise) : rise;
+				tx.value = hold > 0 ? withDelay(hold, flyOut) : flyOut;
 			});
 
 		const tap = Gesture.Tap()
@@ -299,6 +335,7 @@ export function useSwipeCard({
 		advance,
 		crossedRight,
 		flipProgress,
+		committed,
 	]);
 
 	const frontStyle = useAnimatedStyle(() => ({

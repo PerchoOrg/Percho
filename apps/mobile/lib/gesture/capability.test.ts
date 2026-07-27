@@ -11,6 +11,7 @@ import {
 	clampDisplacement,
 	commitDecision,
 	panAllowed,
+	panLive,
 } from "./capability";
 import { SWIPE_THRESHOLD_RATIO, decideSwipe } from "./decide-swipe";
 
@@ -123,6 +124,52 @@ describe("panAllowed — §1.1 翻面态禁 swipe", () => {
 
 	it("blocks an unpannable card regardless of flip state", () => {
 		expect(panAllowed(false, 0)).toBe(false);
+	});
+});
+
+/**
+ * The gate that stops a committed card from taking a second gesture.
+ *
+ * The flyout is a `withSpring` on `tx` whose COMPLETION CALLBACK performs the
+ * handoff (advance the cursor, promote the next card). Writing `tx` from a new
+ * gesture cancels that animation, and a cancelled Reanimated animation never
+ * calls its callback — so the handoff was skipped and the card stayed on top
+ * permanently. §1.6's challenge holds for 900ms before the flyout even starts,
+ * making it the one kind with a window wide enough to lose the race reliably:
+ * "有些卡会卡住比如challenge".
+ */
+describe("panLive — a committed card takes no further input", () => {
+	const live = (over: Partial<Parameters<typeof panLive>[0]> = {}) =>
+		panLive({ pannable: true, flipProgress: 0, committed: false, ...over });
+
+	it("allows a normal untouched top card", () => {
+		expect(live()).toBe(true);
+	});
+
+	it("blocks a card that has already committed", () => {
+		expect(live({ committed: true })).toBe(false);
+	});
+
+	it("blocks through the whole reveal hold, not just the flyout", () => {
+		// The challenge sits on screen, unmoved, for CHALLENGE_REVEAL_MS after the
+		// verdict. It looks idle and invites a second touch; it must not accept one.
+		expect(CHALLENGE_REVEAL_MS).toBeGreaterThan(0);
+		expect(live({ committed: true, flipProgress: 0 })).toBe(false);
+	});
+
+	it("still enforces both original §1.1 gates", () => {
+		expect(live({ pannable: false })).toBe(false);
+		expect(live({ flipProgress: 0.4 })).toBe(false);
+	});
+
+	it("agrees with panAllowed whenever nothing is committed", () => {
+		for (const pannable of [true, false]) {
+			for (const flipProgress of [0, 0.01, 0.5, 1]) {
+				expect(live({ pannable, flipProgress })).toBe(
+					panAllowed(pannable, flipProgress),
+				);
+			}
+		}
 	});
 });
 
