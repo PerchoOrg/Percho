@@ -4,6 +4,52 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-27 19:20 UTC — task-2：detail endpoint + 真 data face + Explore→ 接线
+
+**Objective**: 接上 task-2 纯层(`7eb5f66`)，做出 owner 能在真机上点的那一层。
+
+**Actions**:
+- 服务端 `apps/web/lib/listing/detail.ts` + `app/api/mobile/listing/[id]/route.ts`
+  （id **和** slug 都收：feed 带 id，分享链接带 slug）。16 个投影测试。
+- 客户端 `lib/listing/detail-dto.ts`（`useListingDetail`，`missing` 与 `error`
+  分开建模）、`assumptions.ts`（利率是**带标注的假设**，不是事实）。
+- `components/listing/ListingDataFace.tsx` 替掉 `DataFaceStub`（listing 分支）、
+  `PriceHistogram.tsx`（mini/full 同一份图）、`app/listing/[id].tsx`（free explore
+  骨架 + `?focus=` 深链 + 2s 高亮 + 吸底 Schedule a tour）。
+- feed 接线：listing 卡 `Explore →` 与 data face 每一行 → `router.push`；
+  **挑战卡 `THE HOME BEHIND THIS` 占位 sheet 已删，改成真跳转**（继承的 open item #1 完成）。
+
+**Decisions**:
+- **利率没有数据源**。spec §2.1 要"当周利率"，系统里没有任何利率表/feed/env。
+  所以不 inline 一个 `0.065` 假装是事实 —— 单独一个 `assumptions.ts`，带
+  `RATE_AS_OF` + `isRateStale()`，UI 打印"assumes 6.5% · 20% down"。
+- **月供明说没含什么**：taxes/insurance 不在 schema 里，卡面直接写出来，而不是悄悄不算。
+- **data face 预取而非翻面时取**：翻面是 350ms crossfade，中途冒 spinner 正是数据面
+  要消除的"这是真的吗"疑虑。`SwipeStack` 不暴露翻面状态(它的 flip 在 UI thread)，
+  所以按 top card 取。
+- **`Flip back` 只挂在按钮上，绝不挂在面的背景上** —— 这就是 spec 那条
+  stopPropagation 在 RN 里的等价物。别加外层 Pressable。
+- community 卡仍用 `DataFaceStub`(task-3 的活)，不提前造。
+
+**Issues**: 修 biome hook-deps 告警时把 `onSectionLayout` 重复声明了(编译错)。
+另外首次 bundle 校验打错入口(`/index.bundle` → 404 UnableToResolveError)，
+expo-router app 的真入口是 `/node_modules/expo-router/entry.bundle`。
+
+**Resolution**: 删重复声明；深链滚动从 `useEffect` 改到 `onLayout` 驱动
+（offset 只在 layout 后才存在，用 fetch status 当依赖等于拿它当"布局好了吗"的
+替身，时机是错的），加 `scrolledTo` ref 保证一次性。
+**真实验证**：endpoint 对线上数据 uuid 200 / slug 200 / 不存在 404，Duluth
+cohort n=50、$202/sqft@n=49；Metro 真 bundle **HTTP 200 / 16.1MB**，新文案在
+bundle 里查得到，旧占位 sheet 文案 **0 命中**。Gate：462 测试、tsc 0、biome 106 干净。
+
+**Learnings**: **校验 bundle 一定要用 app 的真入口**，expo-router 是
+`node_modules/expo-router/entry.bundle`，打 `/index.bundle` 会拿到 404 JSON 而不是
+bundle —— 而 404 body 里也有 JS 关键字，粗看像成功。
+
+**Next steps**: guided tour + transition 卡 + hotspot sheet(§2.3–2.5) → 最后把
+`photo_tagger.py` 移到 Bedrock 并回填 fmls listing。**PENDING-SIM(需真机)**：
+行 tap 深链落点 + 2s 高亮、350ms 翻面手感、吸底栏在 momentum 滚动下的表现。
+
 ## 2026-07-27 18:55 UTC — task-2 起步：先摸真实数据，再写纯逻辑层（69 个新测试）
 
 **Objective**: owner: "task-1结束 开始做task-2"。task-2 = Listing Explore

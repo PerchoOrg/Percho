@@ -14,16 +14,18 @@
  * gesture is built), and each face is a component over a NARROWED card type, so a
  * faceless kind has no back-face component that could mis-render.
  *
- * NOT WIRED, on purpose: `Explore →` on listing/community cards. Its targets are
- * tasks 2 and 3; `CardFoot` renders the button only when given a handler, so
- * omitting it leaves no dead affordance and no fake navigation — the same call
- * PLAN B11 made for `See on map →`.
+ * `Explore →` on a LISTING card is now wired (task-2): it pushes
+ * `/listing/[id]`, and a data-face row pushes the same route with `?focus=<key>`.
+ * `Explore →` on a COMMUNITY card is still unwired — that target is task-3, and
+ * `CardFoot` renders the button only when given a handler, so omitting it leaves
+ * no dead affordance rather than fake navigation (the call PLAN B11 made for
+ * `See on map →`).
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { StyleSheet, Text, View, useWindowDimensions } from "react-native";
 
+import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { BottomSheet } from "../../components/BottomSheet";
 import { type CardRenderArgs, SwipeStack } from "../../components/SwipeStack";
 import { AreaDataFace } from "../../components/cards/AreaDataFace";
 import { AreaFace } from "../../components/cards/AreaFace";
@@ -39,6 +41,9 @@ import { TradeoffFace } from "../../components/cards/TradeoffFace";
 import { CardSkeleton } from "../../components/feed/CardSkeleton";
 import { ExhaustedCard } from "../../components/feed/ExhaustedCard";
 import { OfflineBar } from "../../components/feed/OfflineBar";
+import { ListingDataFace } from "../../components/listing/ListingDataFace";
+import { useListingDetail } from "../../lib/listing/detail-dto";
+import { serialiseFocus } from "../../lib/listing/focus-key";
 
 import { UndoToast } from "../../components/feed/UndoToast";
 import { useFeedPool } from "../../hooks/use-feed-pool";
@@ -103,15 +108,19 @@ export default function FeedScreen() {
 	} | null>(null);
 	const [milestonesShown, setMilestonesShown] = useState<readonly string[]>([]);
 	/**
-	 * The challenge card whose reveal the buyer tapped `Explore →` on.
+	 * Detail for the TOP card when it is a listing, fetched as soon as that card
+	 * reaches the top rather than when the buyer flips it.
 	 *
-	 * §1.6's challenge is built from a real listing, and the answer names a real
-	 * price — so "tell me more" has to show that listing, not a placeholder. The
-	 * full listing detail is task 2, so this presents what the card already
-	 * carries (address, specs, the real price) in the task-0 sheet rather than
-	 * routing to a screen that does not exist yet.
+	 * Prefetched on purpose: §0.5's flip is a 350ms crossfade, and a spinner
+	 * appearing mid-crossfade is exactly the "is it real?" doubt the data face
+	 * exists to remove. `SwipeStack` does not expose flip state (its flip lives on
+	 * the UI thread by design), so keying on the top card is both simpler and
+	 * better — one request per card the buyer actually dwells on.
 	 */
-	const [explored, setExplored] = useState<ChallengeCardV3 | null>(null);
+	const topCard = deck[activeIndex];
+	const flippedDetail = useListingDetail(
+		topCard?.kind === "listing" ? topCard.id : undefined,
+	);
 	/**
 	 * Which challenge cards have been answered, and which side was tapped.
 	 *
@@ -407,8 +416,13 @@ export default function FeedScreen() {
 								emitGesture("datapoint_tap", card);
 							}}
 							onExplore={() => {
-								setExplored(card);
 								emitGesture("explore_tap", card);
+								// §1.6's challenge is built from a real listing, so "tell me
+								// more" navigates to that listing. Task-1 showed the card's own
+								// fields in a sheet because this screen did not exist yet.
+								if (card.listingId) {
+									router.push(`/listing/${card.listingId}`);
+								}
 							}}
 						/>
 					);
@@ -470,13 +484,29 @@ export default function FeedScreen() {
 				case "area":
 					return <AreaDataFace card={card} onFlipBack={flipBack} />;
 				case "listing":
+					return (
+						<ListingDataFace
+							card={card}
+							{...(flippedDetail.status === "ready" &&
+							flippedDetail.detail.id === card.id
+								? { detail: flippedDetail.detail }
+								: {})}
+							stage={stage}
+							onFlipBack={flipBack}
+							onExplore={(focus) => {
+								emitGesture("explore_tap", card);
+								const query = focus ? `?focus=${serialiseFocus(focus)}` : "";
+								router.push(`/listing/${card.id}${query}`);
+							}}
+						/>
+					);
 				case "community":
 					return <DataFaceStub card={card} onFlipBack={flipBack} />;
 				default:
 					return null;
 			}
 		},
-		[emitGesture],
+		[emitGesture, stage, flippedDetail],
 	);
 
 	const renderOverlay = useCallback(
@@ -519,26 +549,6 @@ export default function FeedScreen() {
 					/>
 				)}
 			</View>
-			{/*
-			 * Mounted ONLY while open. `BottomSheet` renders a `<Modal>`, and an
-			 * always-mounted transparent Modal is a known way to get a black screen
-			 * on iOS: it participates in the window stack even at `visible={false}`,
-			 * and its `useEffect` runs a `withTiming` on a sheet height derived from
-			 * a viewport it was never laid out in. `dev-foundation.tsx` keeps one
-			 * mounted too, but that screen has nothing behind it to lose.
-			 */}
-			{explored && (
-				<BottomSheet visible onClose={() => setExplored(null)}>
-					<View style={styles.sheet}>
-						<Text style={styles.sheetEyebrow}>THE HOME BEHIND THIS</Text>
-						{!!explored.sub && (
-							<Text style={styles.sheetTitle}>{explored.sub}</Text>
-						)}
-						<Text style={styles.sheetPrice}>{explored.revealLabel}</Text>
-						<Text style={styles.sheetBody}>{explored.teach}</Text>
-					</View>
-				</BottomSheet>
-			)}
 			{undo && (
 				<UndoToast
 					label={undo.label}

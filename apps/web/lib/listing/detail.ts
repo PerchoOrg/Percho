@@ -1,0 +1,238 @@
+/**
+ * Listing detail DTO for the mobile explore screen (`02-listing.md` task-2).
+ *
+ * Sibling of `lib/feed/*`: the feed endpoint serves *inventory*, this serves one
+ * listing in the depth §2.1–2.5 needs. Split out of the route file because
+ * Next.js forbids a route module from exporting non-handlers, and because the
+ * projection — which numbers are real and which are absent — is the part worth
+ * unit-testing without HTTP.
+ *
+ * WHAT IS REAL, verified against the remote 2026-07-27 (265 listings):
+ *   price 265 · sqft/year_built ~254-258 · hoa **10** · lat/lng **13**
+ *   community_id **4** · k12_schools 15 rows total · NO list_date/dom column
+ *
+ * Three consequences, all deliberate and all visible in the DTO's shape:
+ *
+ * 1. **No `daysOnMarket` field exists.** The schema has no listing date of any
+ *    kind, so the §2.1 row cannot ship. An absent key beats `daysOnMarket: 0`,
+ *    which would render as "listed today" on every home in the database.
+ * 2. **The comps cohort is the CITY, not the subdivision.** §2.1 anchors on
+ *    subdivision ("Waterside median $228"), but 4 of 265 rows carry a
+ *    `community_id`. `cohortLabel` names what was actually measured so the UI
+ *    cannot imply otherwise.
+ * 3. **`hoa` is a text column** ("$85/mo", "250"). It is passed through RAW and
+ *    parsed client-side by `lib/listing/monthly.ts`, so one parser serves the
+ *    data-face row and the calculator instead of two that can disagree.
+ *
+ * Absent means the key is OMITTED. No nulls, no zeros, no "—" strings: the
+ * client renders a missing key as absent, and that is the only honest rendering
+ * of a number we do not have (`_MASTER.md`).
+ */
+
+import { createAnonClient } from '@/lib/supabase/server';
+import { photoPublicUrl } from '@/lib/supabase/storage';
+
+/** Mirrors the tagger's output (`scripts/render-worker/photo_tagger.py`). */
+export interface PhotoTagsDTO {
+  room_type?: string | null;
+  caption?: string | null;
+  style_signals?: string[] | null;
+  subject_bbox?: number[] | null;
+  quality?: number | null;
+  hero_score?: number | null;
+  usable?: boolean | null;
+}
+
+export interface DetailPhotoDTO {
+  id: string;
+  url: string;
+  /** Present only for photos the vision tagger has actually processed. */
+  tags?: PhotoTagsDTO;
+}
+
+/** The comps cohort. `pricesUsd` drives the §2.1 #5 / §2.4 #3 histogram. */
+export interface CompsCohortDTO {
+  /** What was measured — a city name today. Never implies a subdivision. */
+  cohortLabel: string;
+  pricesUsd: number[];
+  /** Median $/sqft across the cohort, when enough rows carry both fields. */
+  medianPricePerSqft?: number;
+  medianPricePerSqftSampleSize?: number;
+}
+
+export interface ListingDetailDTO {
+  id: string;
+  slug: string;
+  address: string;
+  city: string;
+  state: string;
+  price?: number;
+  beds?: number;
+  baths?: number;
+  sqft?: number;
+  yearBuilt?: number;
+  /** RAW text from the column — parsed client-side. See file note 3. */
+  hoaRaw?: string;
+  /** Paragraphs, as stored. */
+  description?: string[];
+  photos: DetailPhotoDTO[];
+  comps: CompsCohortDTO;
+  communityId?: string;
+  /** NOTE: no `daysOnMarket` — see file note 1. */
+}
+
+type ListingRow = {
+  id: string;
+  slug: string;
+  address: string;
+  city: string;
+  state: string | null;
+  price: number | null;
+  beds: number | null;
+  baths: number | null;
+  sqft: number | null;
+  year_built: number | null;
+  hoa: string | null;
+  description: string[] | null;
+  community_id: string | null;
+};
+
+type PhotoRow = {
+  id: string;
+  storage_path: string;
+  ai_tags: PhotoTagsDTO | null;
+  sort_order: number | null;
+};
+
+type CompRow = { price: number | null; sqft: number | null };
+
+/**
+ * Rows → DTO. Pure, so the "is this number real" rules are testable without a
+ * database. Every optional field is written only when the value is really there.
+ */
+export function projectDetail(
+  listing: ListingRow,
+  photos: PhotoRow[],
+  comps: CompRow[],
+): ListingDetailDTO {
+  return {
+    id: listing.id,
+    slug: listing.slug,
+    address: listing.address,
+    city: listing.city,
+    state: listing.state ?? 'GA',
+    ...(listing.price != null && listing.price > 0 ? { price: listing.price } : {}),
+    ...(listing.beds != null ? { beds: listing.beds } : {}),
+    ...(listing.baths != null ? { baths: listing.baths } : {}),
+    ...(listing.sqft != null && listing.sqft > 0 ? { sqft: listing.sqft } : {}),
+    ...(listing.year_built != null ? { yearBuilt: listing.year_built } : {}),
+    // Kept as text on purpose: "$85/mo" vs "250" vs "1200/yr" all appear in
+    // production and one client-side parser owns that ambiguity.
+    ...(listing.hoa?.trim() ? { hoaRaw: listing.hoa.trim() } : {}),
+    ...(listing.description?.length ? { description: listing.description } : {}),
+    ...(listing.community_id ? { communityId: listing.community_id } : {}),
+    photos: projectPhotos(photos),
+    comps: projectComps(comps, listing.city),
+  };
+}
+
+/**
+ * Photos in display order. `sort_order` is nullable, and `??  0` would collapse
+ * every untagged photo onto the same key and let the DB's arbitrary order win —
+ * so nulls sort LAST, deterministically, behind everything with a real position.
+ */
+export function projectPhotos(rows: PhotoRow[]): DetailPhotoDTO[] {
+  return rows
+    .slice()
+    .sort((a, b) => {
+      const ao = a.sort_order ?? Number.MAX_SAFE_INTEGER;
+      const bo = b.sort_order ?? Number.MAX_SAFE_INTEGER;
+      if (ao !== bo) return ao - bo;
+      return a.id.localeCompare(b.id);
+    })
+    .map((r) => ({
+      id: r.id,
+      url: photoPublicUrl(r.storage_path),
+      // Omitted entirely when untagged. `tags: {}` would make a hotspot builder
+      // think it had data and produce a titleless pin.
+      ...(r.ai_tags ? { tags: r.ai_tags } : {}),
+    }));
+}
+
+/** §2.1 #5's cohort: real prices only, plus a $/sqft median when it is earned. */
+export function projectComps(rows: CompRow[], cohortLabel: string): CompsCohortDTO {
+  const pricesUsd = rows
+    .map((r) => r.price)
+    .filter((p): p is number => p != null && Number.isFinite(p) && p > 0);
+
+  const perSqft = rows
+    .filter((r) => r.price != null && r.price > 0 && r.sqft != null && r.sqft > 0)
+    .map((r) => (r.price as number) / (r.sqft as number))
+    .sort((a, b) => a - b);
+
+  const cohort: CompsCohortDTO = { cohortLabel, pricesUsd };
+
+  // Same 5-sample floor the histogram uses (`lib/listing/histogram.ts`). A
+  // "$241/sqft" derived from two homes reads as authoritative and is not.
+  if (perSqft.length >= 5) {
+    const mid = perSqft.length >> 1;
+    const median =
+      perSqft.length % 2 === 1
+        ? (perSqft[mid] as number)
+        : ((perSqft[mid - 1] as number) + (perSqft[mid] as number)) / 2;
+    cohort.medianPricePerSqft = Math.round(median);
+    cohort.medianPricePerSqftSampleSize = perSqft.length;
+  }
+
+  return cohort;
+}
+
+/** Cap on the comps cohort read. ~50 active per city today; 400 is headroom. */
+const COMPS_LIMIT = 400;
+
+/**
+ * Fetches one listing by id OR slug. Both because the feed carries ids while
+ * shared/deep-linked URLs are slugs, and a screen that only accepts one of them
+ * dead-ends the other.
+ *
+ * Returns null when the listing does not exist or is not active — the route maps
+ * that to a 404 rather than rendering a shell.
+ */
+export async function fetchListingDetail(idOrSlug: string): Promise<ListingDetailDTO | null> {
+  const supabase = createAnonClient();
+  const columns =
+    'id, slug, address, city, state, price, beds, baths, sqft, year_built, hoa, description, community_id, status';
+
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(idOrSlug);
+  const { data: rows, error } = await supabase
+    .from('listings')
+    .select(columns)
+    .eq(isUuid ? 'id' : 'slug', idOrSlug)
+    .limit(1);
+
+  if (error) throw new Error(`listing-detail: read failed: ${error.message}`);
+  const row = (rows ?? [])[0] as (ListingRow & { status: string | null }) | undefined;
+  if (!row || row.status !== 'active') return null;
+
+  // Photos and comps are independent reads — run them together rather than
+  // paying two sequential round trips on a screen the buyer is waiting on.
+  const [photoRes, compRes] = await Promise.all([
+    supabase
+      .from('listing_photos')
+      .select('id, storage_path, ai_tags, sort_order')
+      .eq('listing_id', row.id)
+      .eq('status', 'ready'),
+    supabase
+      .from('listings')
+      .select('price, sqft')
+      .eq('city', row.city)
+      .eq('status', 'active')
+      .not('price', 'is', null)
+      .limit(COMPS_LIMIT),
+  ]);
+
+  if (photoRes.error) throw new Error(`listing-detail: photos failed: ${photoRes.error.message}`);
+  if (compRes.error) throw new Error(`listing-detail: comps failed: ${compRes.error.message}`);
+
+  return projectDetail(row, (photoRes.data ?? []) as PhotoRow[], (compRes.data ?? []) as CompRow[]);
+}
