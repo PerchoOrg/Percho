@@ -26,6 +26,7 @@ import { Image, StyleSheet, View } from "react-native";
 import type { AreaCardV3 } from "../../lib/feed/card-types";
 import { colors } from "../../theme/tokens";
 import { CardFoot } from "../CardFoot";
+import { CardPhoto } from "../CardPhoto";
 import { CardVideo } from "../CardVideo";
 import { KindChip } from "../KindChip";
 import { CardSurface } from "./CardSurface";
@@ -33,6 +34,8 @@ import { CardSurface } from "./CardSurface";
 interface AreaFaceProps {
 	card: AreaCardV3;
 	isTop: boolean;
+	/** Card width / height — see `ListingFace`. */
+	cardAspect: number;
 }
 
 /** Populated stats only, in §1.3's reading order. Empty = render no row. */
@@ -52,15 +55,20 @@ function statsLine(card: AreaCardV3): string | undefined {
 	return parts.length > 0 ? parts.join(" · ") : undefined;
 }
 
-export function AreaFace({ card, isTop }: AreaFaceProps) {
+export function AreaFace({ card, isTop, cardAspect }: AreaFaceProps) {
 	const { unit } = card;
 
 	return (
 		<View style={styles.face}>
 			{unit.videoUrl ? (
-				<CardVideo url={unit.videoUrl} poster={unit.heroUrl} isTop={isTop} />
+				<CardVideo
+					url={unit.videoUrl}
+					poster={unit.heroUrl}
+					isTop={isTop}
+					cardAspect={cardAspect}
+				/>
 			) : unit.heroUrl ? (
-				<Image source={{ uri: unit.heroUrl }} style={StyleSheet.absoluteFill} />
+				<CardPhoto url={unit.heroUrl} cardAspect={cardAspect} />
 			) : (
 				<CardSurface variant="area" />
 			)}

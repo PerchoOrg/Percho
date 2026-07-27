@@ -4,6 +4,55 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-27 21:40 UTC — 视频卡没出现的真因（手机打的是 production）+ 卡面同时支持横/竖屏媒体
+
+**Objective**: owner: "没有看到视频的listing card / 我知道现在视频都是横屏的…listing card
+要能同时支持竖屏和横屏视频或者照片 对于横屏视频宽度要占满 listing card 上下可以不用占满"。
+
+**Issues（第一个是我上一轮的验证漏洞）**:
+1. **手机根本没在跟这台机器说话。** `app.json` 的 `expo.extra.apiBase` =
+   `https://www.percho.co`，所以 Expo Go 里的 app 打的是 **production**，而
+   `videoFirst` / vertical-videos / listing detail 全都只在这台机器上。上一轮我**只对
+   localhost 验证**就说"可以测了" —— 那句"verified"是站不住的。实测
+   `https://www.percho.co/api/mobile/feed?videoFirst=1` → **12 条全 `videoUrl: false`**。
+2. **横屏媒体被 `cover` 裁掉。** `CardVideo` 和三个 face 的 `<Image>` 全是
+   `cover`(填满=裁切)。16:9 的源塞进 ~9:16 的卡，**丢掉约 2/3 的宽度**，而房子视频的
+   主体通常正好在被丢掉的那部分。线上视频**全是横屏**(因为照片就是横屏)。
+
+**Actions**:
+- **打通 dev API**:`percho-prototypes/serve.py` 增加 `/api/*` → `localhost:3000` 反代
+  (只代 `/api/`，demo 静态站不受影响)。选它是因为 `demo.percho.co` 是这台机器上**唯一
+  已经走 named tunnel 的 hostname**，加第二个 hostname 需要改 root 拥有的
+  `/etc/cloudflared/config.yml`（**已请求但未获批，故未改**）。quick tunnel
+  (`trycloudflare`) 边缘一直 404，ngrok 撞 session 上限。
+- 新 `apps/mobile/lib/media/fit.ts` + **9 个测试**:竖屏→填满(`cover`)，
+  横屏→**占满宽度 + 上下暗色 letterbox**(`contain`)，尺寸未知→退回填满。
+- `CardVideo` 从**播放器真实轨道尺寸**判断(不信 DB 的 `aspect_ratio`)，新
+  `CardPhoto` 给照片同一套规则(`Image.getSize`)；三个 face 全部改用它们。
+- Expo 以 `EXPO_PUBLIC_API_BASE=https://demo.percho.co` 重启。
+
+**Decisions**: `mediaFit` 把**源的形状**(`orientation`)和**在卡里是否更宽**
+(`widerThanCard`)分成两个字段 —— 1:1 的照片"是方的"但在 9:16 卡里**确实更宽**、该
+letterbox。第一版把两者混为一谈，被自己的测试抓出来。letterbox 底色用
+`cardPlainTo` 深色(§0.3 卡面永远深色，浅色带会像渲染故障)，背后垫一层**同图模糊**，
+避免出现一条死灰条。5% 容差:1080x1900 塞进 9:16 只差 ~1%，不加容差会出现两条发丝般的
+黑边，看起来像 bug。
+
+**Resolution**: 经 `demo.percho.co` 验证 **HTTP 200、14 条 listing、前 2 条带真 9:16
+manifest**。bundle 里 `EXPO_PUBLIC_API_BASE` 已 inline 成 `https://demo.percho.co`、
+`EXPO_PUBLIC_DEV_SAMPLER` 为 `"1"`(确认不是死代码)。Gate:**494 测试**、tsc 0、
+biome 117 干净。biome 还抓到 `renderCard` 的 memo 缺 `cardAspect` 依赖 —— 旋转后会
+沿用旧的 fit，已修。
+
+**Learnings**: **"我在 localhost 上验过了"不等于"用户的设备验过了"。** 客户端有自己的
+默认 baseURL，只要没显式覆盖，真机测的就是别的服务器。**凡是"手机上看不到"的报障，
+第一步就该确认手机在跟哪个 host 说话**，而不是去读客户端代码。
+另外:**`contentFit="cover"` 是个静默的破坏性默认值** —— 它永远"看起来在工作"，只是把
+内容裁掉了，不会报错也不会留空白。
+
+**Next steps**: owner 真机测视频朝向。若要长期可用,建议把 `api-dev.percho.co` 写进
+`/etc/cloudflared/config.yml`(需要 sudo 批准)，替掉现在借道 `demo.percho.co` 的反代。
+
 ## 2026-07-27 21:05 UTC — 真机测试可用性：9:16 视频终于进 feed + dev sampler（每种 3 张，视频卡置顶）
 
 **Objective**: owner 两件事:①"翻很多卡片才能看到 listing，暂时不按 production 规则，

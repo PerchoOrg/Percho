@@ -17,6 +17,7 @@ import { Image, StyleSheet, View } from "react-native";
 import type { ListingCardV3 } from "../../lib/feed/card-types";
 import { colors } from "../../theme/tokens";
 import { CardFoot } from "../CardFoot";
+import { CardPhoto } from "../CardPhoto";
 import { CardVideo } from "../CardVideo";
 import { KindChip } from "../KindChip";
 import { MatchBadge } from "../MatchBadge";
@@ -25,6 +26,12 @@ interface ListingFaceProps {
 	card: ListingCardV3;
 	stage: number;
 	isTop: boolean;
+	/**
+	 * Card width / height. Threaded from `feed.tsx` so hero media can respect the
+	 * source's orientation (owner, 2026-07-27: a landscape video/photo fills the
+	 * WIDTH and letterboxes, rather than being cropped by `cover`).
+	 */
+	cardAspect: number;
 	onExplore?: () => void;
 	/** Flip to the data face — wired to the FOMO badge's "See why →". */
 	onSeeWhy?: () => void;
@@ -34,6 +41,7 @@ export function ListingFace({
 	card,
 	stage,
 	isTop,
+	cardAspect,
 	onExplore,
 	onSeeWhy,
 }: ListingFaceProps) {
@@ -43,9 +51,14 @@ export function ListingFace({
 	return (
 		<View style={styles.face}>
 			{card.videoUrl ? (
-				<CardVideo url={card.videoUrl} poster={card.heroUrl} isTop={isTop} />
+				<CardVideo
+					url={card.videoUrl}
+					poster={card.heroUrl}
+					isTop={isTop}
+					cardAspect={cardAspect}
+				/>
 			) : (
-				<Image source={{ uri: card.heroUrl }} style={StyleSheet.absoluteFill} />
+				<CardPhoto url={card.heroUrl} cardAspect={cardAspect} />
 			)}
 			<View style={styles.head}>
 				<KindChip label="LISTING" />

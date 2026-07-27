@@ -397,6 +397,15 @@ export default function FeedScreen() {
 		height * CARD_MAX_VIEWPORT,
 	);
 
+	/**
+	 * The card's REAL width/height — computed, not the `CARD_ASPECT` constant,
+	 * because `cardHeight` is clamped by the viewport on short screens and the two
+	 * then disagree. Hero media letterboxing is decided against this (see
+	 * `lib/media/fit.ts`), so using the unclamped constant would misjudge the fit
+	 * on exactly the devices where space is tightest.
+	 */
+	const cardAspect = cardWidth / cardHeight;
+
 	const capability = useCallback(
 		(card: FeedCardV3) => cardBehavior(card).capability,
 		[],
@@ -442,11 +451,20 @@ export default function FeedScreen() {
 						/>
 					);
 				case "area":
-					return <AreaFace card={card} isTop={isTop} />;
+					return <AreaFace card={card} isTop={isTop} cardAspect={cardAspect} />;
 				case "listing":
-					return <ListingFace card={card} stage={stage} isTop={isTop} />;
+					return (
+						<ListingFace
+							card={card}
+							stage={stage}
+							isTop={isTop}
+							cardAspect={cardAspect}
+						/>
+					);
 				case "community":
-					return <CommunityFace card={card} isTop={isTop} />;
+					return (
+						<CommunityFace card={card} isTop={isTop} cardAspect={cardAspect} />
+					);
 				case "tradeoff":
 					return <TradeoffFace card={card} tx={tx} cardWidth={w} />;
 				case "challenge":
@@ -504,6 +522,9 @@ export default function FeedScreen() {
 		},
 		[
 			stage,
+			// Rotation / a viewport change resizes the card, and hero letterboxing is
+			// decided from this ratio — a stale value would keep the old fit.
+			cardAspect,
 			sessionN,
 			signals.swipesInStage,
 			answered,

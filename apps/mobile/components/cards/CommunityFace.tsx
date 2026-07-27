@@ -16,12 +16,15 @@ import { Image, StyleSheet, View } from "react-native";
 import type { CommunityCardV3 } from "../../lib/feed/card-types";
 import { colors } from "../../theme/tokens";
 import { CardFoot } from "../CardFoot";
+import { CardPhoto } from "../CardPhoto";
 import { CardVideo } from "../CardVideo";
 import { KindChip } from "../KindChip";
 
 interface CommunityFaceProps {
 	card: CommunityCardV3;
 	isTop: boolean;
+	/** Card width / height — see `ListingFace`. */
+	cardAspect: number;
 	onExplore?: () => void;
 }
 
@@ -34,7 +37,12 @@ function specsLine(card: CommunityCardV3): string | undefined {
 	return parts.length > 0 ? parts.join(" · ") : undefined;
 }
 
-export function CommunityFace({ card, isTop, onExplore }: CommunityFaceProps) {
+export function CommunityFace({
+	card,
+	isTop,
+	cardAspect,
+	onExplore,
+}: CommunityFaceProps) {
 	const pills =
 		card.pills && card.pills.length > 0
 			? [...card.pills]
@@ -43,9 +51,14 @@ export function CommunityFace({ card, isTop, onExplore }: CommunityFaceProps) {
 	return (
 		<View style={styles.face}>
 			{card.videoUrl ? (
-				<CardVideo url={card.videoUrl} poster={card.heroUrl} isTop={isTop} />
+				<CardVideo
+					url={card.videoUrl}
+					poster={card.heroUrl}
+					isTop={isTop}
+					cardAspect={cardAspect}
+				/>
 			) : (
-				<Image source={{ uri: card.heroUrl }} style={StyleSheet.absoluteFill} />
+				<CardPhoto url={card.heroUrl} cardAspect={cardAspect} />
 			)}
 			<View style={styles.head}>
 				<KindChip label="COMMUNITY" />
