@@ -25,9 +25,9 @@ export const feedPoolQuerySchema = z.object({
     .catch('0')
     .transform((v) => v === '1'),
   /**
-   * Stage 3 returns listing previews only inside communities the buyer already
+   * Stage 3 returns listing previews tied to communities the buyer already
    * liked (§0.2). Those ids live on the device, so the client sends them.
-   * Capped at 50 to bound the `in.()` filter.
+   * Capped at 50 to bound the filter.
    */
   likedCommunityIds: z
     .string()
@@ -40,6 +40,24 @@ export const feedPoolQuerySchema = z.object({
         .filter((s) => /^[0-9a-f-]{36}$/i.test(s))
         .slice(0, 50),
     ),
+  /**
+   * Cities of those liked communities — the stage-3 fallback join key, since
+   * `listings.community_id` is almost entirely unpopulated. Also scopes the
+   * community pool so Stage 3 follows Stage 2's narrowing instead of undoing
+   * it. Letters/spaces/hyphens/apostrophes only, so this can never smuggle
+   * PostgREST filter syntax into the `in.()` list.
+   */
+  cities: z
+    .string()
+    .optional()
+    .catch(undefined)
+    .transform((raw) =>
+      (raw ?? '')
+        .split(',')
+        .map((s) => s.trim())
+        .filter((s) => s.length > 0 && s.length <= 60 && /^[A-Za-z' -]+$/.test(s))
+        .slice(0, 20),
+    ),
 });
 
 export type FeedPoolQuery = z.infer<typeof feedPoolQuerySchema>;
@@ -51,5 +69,6 @@ export function parseFeedPoolQuery(url: URL): FeedPoolQuery {
     limit: url.searchParams.get('limit') ?? 12,
     videosOnly: url.searchParams.get('videosOnly') ?? '0',
     likedCommunityIds: url.searchParams.get('likedCommunityIds') ?? undefined,
+    cities: url.searchParams.get('cities') ?? undefined,
   });
 }

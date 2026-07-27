@@ -28,26 +28,22 @@
 
 import type { BrowseCard } from '@/app/(public)/browse/_components/BrowseFeed';
 import { fetchBrowseCards, fetchBrowseCardsVideosOnly } from '@/lib/feed/browse-cards';
+import {
+  fetchCommunityPool,
+  type PoolCommunityDTO,
+} from '@/lib/feed/community-pool';
 import { fetchCityGeoUnits, type GeoUnitDTO } from '@/lib/feed/geo-units';
-import { gateListings, type PoolListingDTO } from '@/lib/feed/listing-gate';
+import {
+  gateListings,
+  type LikedCommunityRef,
+  type PoolListingDTO,
+} from '@/lib/feed/listing-gate';
 import { parseFeedPoolQuery } from '@/lib/zod/feed-pool';
 import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 
 const CF_STREAM_BASE = 'https://videodelivery.net';
-
-interface PoolCommunityDTO {
-  id: string;
-  slug: string;
-  name: string;
-  city: string;
-  state: string;
-  heroUrl: string;
-  videoUrl?: string;
-  blurb?: string;
-  listingCount?: number;
-}
 
 interface FeedPoolResponse {
   stage: number;
@@ -110,62 +106,54 @@ function projectListing(card: BrowseCard): PoolListingDTO {
     heroUrl: heroUrlFor(card),
     ...(videoUrlFor(card) ? { videoUrl: videoUrlFor(card) } : {}),
     ...(card.community?.slug ? { communityId: card.community.slug } : {}),
+    ...(card.listing.city ? { city: card.listing.city } : {}),
     ...(citySlug(card.listing.city, card.listing.state)
       ? { geoUnitId: citySlug(card.listing.city, card.listing.state) }
       : {}),
   };
 }
 
-/**
- * Communities are projected from the same BrowseCard rows, de-duped by slug.
- * Only rows that actually carry a community are eligible, and only real fields
- * are emitted — a community with no hero image is dropped rather than shown
- * with a blank card.
- */
-function projectCommunities(cards: BrowseCard[]): PoolCommunityDTO[] {
-  const bySlug = new Map<string, PoolCommunityDTO>();
-  for (const card of cards) {
-    const c = card.community;
-    if (!c?.slug || bySlug.has(c.slug)) continue;
-    const hero = heroUrlFor(card);
-    if (!hero) continue;
-    bySlug.set(c.slug, {
-      id: c.slug,
-      slug: c.slug,
-      name: c.name,
-      city: c.city ?? '',
-      state: c.state ?? '',
-      heroUrl: hero,
-      ...(videoUrlFor(card) ? { videoUrl: videoUrlFor(card) } : {}),
-      ...(c.description ? { blurb: c.description } : {}),
-      ...(c.listingCount != null ? { listingCount: c.listingCount } : {}),
-    });
-  }
-  return [...bySlug.values()];
-}
-
 export async function GET(request: Request) {
   const url = new URL(request.url);
-  const { stage, offset, limit, videosOnly, likedCommunityIds } =
+  const { stage, offset, limit, videosOnly, likedCommunityIds, cities } =
     parseFeedPoolQuery(url);
 
   // Stage 0 shows no listings at all, so don't pay for the listing query.
   const needsListingRows = stage > 0;
+  // Communities are Stage 3's main card type; earlier stages don't show them.
+  const needsCommunities = stage >= 3;
 
-  const [rows, geoUnits] = await Promise.all([
+  const [rows, geoUnits, communities] = await Promise.all([
     needsListingRows
       ? videosOnly
         ? fetchBrowseCardsVideosOnly(offset, limit)
         : fetchBrowseCards(offset, limit)
       : Promise.resolve([] as BrowseCard[]),
     fetchCityGeoUnits(),
+    needsCommunities
+      ? fetchCommunityPool({ offset, limit, cities })
+      : Promise.resolve([] as PoolCommunityDTO[]),
   ]);
+
+  // The buyer's liked-community ids arrive without their cities, so pair each
+  // id with a city when we can. `cities` is the funnel's current city scope,
+  // which is where the liked communities came from.
+  const liked: LikedCommunityRef[] = likedCommunityIds.map((id) => {
+    const match = communities.find((c) => c.id === id || c.slug === id);
+    return match?.city ? { id, city: match.city } : { id };
+  });
+  // With no id/city pairing available, fall back to the funnel's city scope so
+  // Stage 3 still previews listings in the areas the buyer narrowed to.
+  const likedRefs: LikedCommunityRef[] =
+    liked.length > 0
+      ? liked
+      : cities.map((city) => ({ id: `city:${city}`, city }));
 
   const listings = gateListings(
     rows.map(projectListing),
     stage,
     limit,
-    likedCommunityIds,
+    likedRefs,
   );
 
   const body: FeedPoolResponse = {
@@ -179,7 +167,7 @@ export async function GET(request: Request) {
     pool: {
       geoUnits,
       listings,
-      communities: projectCommunities(rows),
+      communities,
     },
   };
 
