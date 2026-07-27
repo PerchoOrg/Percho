@@ -4,6 +4,52 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-27 08:00 UTC — community 闪现 = 背面卡面（本文件头部记录的 ghosting 第三例）
+
+**Objective**: owner 看清了: "这个community卡闪现的是背面的卡片内容"。
+
+**Actions**:
+- `lib/gesture/stack-layer.ts` — 新 `faceOpacity(rel, flipProgress)`：正反两面的透明度
+  都从**卡片自己的深度**算出来。
+- `components/SwipeStack.tsx` — `StackCard` 现在自己拥有 `frontStyle`/`backStyle`
+  （`absIndex` 捕获一次，永不替换），面通过 `front`/`back`/`overlay` prop 传入而不是
+  `children`。
+- `hooks/use-swipe-card.ts` — 不再导出 `frontStyle`/`backStyle`，只导出裸的
+  `flipProgress`。删掉 `faceVisible`/`faceHidden` 两个静态 style。
+- `stack-layer.test.ts` +6。
+
+**Issues**: **根因是「按位置发 style」，跟本文件头部记录的 ghosting 完全同一类。**
+
+community/listing 是可翻面卡，所以它的数据面**从进栈那一刻就挂载着**，压在正面下面。
+原来的写法是 `isTop ? backStyle : styles.faceHidden` —— 非顶部时被一个**静态**
+`opacity: 0` 钉住，**一旦被提升为顶部，style prop 就被换成动画那个**。
+
+换 style 不是免费的:React 提交新的 style prop —— 那上面**没有** `opacity: 0`,于是 view
+回落到默认值 **1** —— 而 Reanimated 对 `flipProgress` 的第一次写入要**晚一帧**才落地。
+这一帧的空隙里,这张卡自己的数据面以**全不透明**盖在自己正面上。所以闪的是「同一个
+地址」—— 因为它就是同一张卡的背面。
+
+我前面两轮之所以查不出来:我去查了 deck 有没有重复、window 内有没有重复、
+`flipProgress` 有没有归零 —— 全都是对的。**问题不在值,在 style 被替换这个动作本身。**
+
+**Decisions**: 修法跟当初修几何完全一样 —— **永不替换 style**。每张卡拥有一份自己的
+animated style（`absIndex` 捕获为常量），正反两面都走 `faceOpacity` 同一个函数;非顶部
+的卡通过**同一条代码路径**被驱动到硬 0,于是不存在「值还没写」的帧。
+
+**Resolution**: 395 测试（+6）、tsc 0、biome 干净。revert 掉那行深度判断验过会红（2 条）。
+已确认 shipped bundle：`faceOpacity` 在，`faceVisible`/`faceHidden` 静态 style 归 0。
+
+**Learnings**: **同一个 bug 类别在这个文件里犯了三次**：①transform 按位置发 →ghosting；
+②tap 划走的卡 opacity 继承 →闪现；③本次 face style 按位置发 →背面闪现。
+统一规律:**Reanimated 的 style 一旦按「槽位」而非「身份」分配,提升/降级那一帧必然
+暴露一个未定义状态。** 规范写进文件头:栈里任何视觉属性都必须是该卡 absIndex 的纯函数,
+static style 和 animated style 之间**永不切换**。
+另一条:owner 那句「闪的是背面」比我三轮代码推理都有用 —— **让用户看清「闪的是什么」
+比问「什么时候闪」信息量大得多**。
+
+**Next steps**: 手机 reload —— community/listing 划过时不应再闪数据面；challenge 应正常
+飞出（上一轮 memo 修复）。翻面本身（tap 一下看数据面）应仍然正常工作，顺手确认。
+
 ## 2026-07-27 07:35 UTC — challenge 卡住的真因: 手势 memo 每帧重建 + 引擎自抛 §0.2
 
 **Objective**: owner: "community卡还是会很快闪现另一个卡 我看闪卡是同一个地址 并且challenge卡还是卡"。

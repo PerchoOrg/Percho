@@ -24,6 +24,7 @@ import {
 	STACK_RESTING,
 	advanceFromDrag,
 	cardStackVisual,
+	faceOpacity,
 } from "./stack-layer";
 
 const W = 300;
@@ -319,5 +320,74 @@ describe("advanceFromDrag", () => {
 
 	it("is 0 for a zero cardWidth (first frame, before layout)", () => {
 		expect(advanceFromDrag(50, 0)).toBe(0);
+	});
+});
+
+/**
+ * The back-face flash: "community卡闪现的是背面的卡片内容".
+ *
+ * A flippable card's data face is mounted beneath its front face for the card's
+ * whole life in the stack. It used to be pinned by a STATIC `opacity: 0` while the
+ * card sat behind the top card, and that static style was swapped for the animated
+ * one the moment the card was promoted. React commits the new prop — which no
+ * longer carries `opacity: 0`, so the view falls back to the default 1 — while
+ * Reanimated's first write lands a frame later. In that gap the card's own data
+ * face painted at full strength over its front.
+ *
+ * `faceOpacity` removes the swap: every card computes both opacities from its own
+ * depth through the same function, so a non-top card is driven to a hard 0 by the
+ * identical style that animates the top card.
+ */
+describe("faceOpacity — the flip crossfade", () => {
+	it("shows only the front face on the top card at rest", () => {
+		expect(faceOpacity(0, 0)).toEqual({ front: 1, back: 0 });
+	});
+
+	it("crossfades the top card as the flip progresses", () => {
+		expect(faceOpacity(0, 0.5)).toEqual({ front: 0.5, back: 0.5 });
+		expect(faceOpacity(0, 1)).toEqual({ front: 0, back: 1 });
+	});
+
+	it("hides the back face of every card that is not top", () => {
+		// The regression. Whatever flipProgress happens to hold — including a value
+		// mid-crossfade, or one not yet zeroed after a swipe — a card behind the top
+		// card must never show its data face.
+		for (const rel of [1, 2, 3]) {
+			for (const flip of [0, 0.01, 0.4, 1]) {
+				expect(faceOpacity(rel, flip), `rel ${rel}, flip ${flip}`).toEqual({
+					front: 1,
+					back: 0,
+				});
+			}
+		}
+	});
+
+	it("hides the back face of a card that is flying out", () => {
+		// flipProgress is zeroed in the handoff worklet, but the outgoing card is
+		// still mounted and must not reveal its data face on the way off-screen.
+		for (const rel of [-1, -2]) {
+			expect(faceOpacity(rel, 1)).toEqual({ front: 1, back: 0 });
+		}
+	});
+
+	it("never leaves a face unstyled — both keys are always present", () => {
+		// Same invariant as cardStackVisual: a swapped-in style that omits a prop
+		// inherits whatever the previous style wrote (or the view default). Every
+		// call returns the full set so nothing can be inherited.
+		for (const rel of [-1, 0, 1, 2]) {
+			expect(Object.keys(faceOpacity(rel, 0.5)).sort()).toEqual([
+				"back",
+				"front",
+			]);
+		}
+	});
+
+	it("the two faces always sum to full coverage on the top card", () => {
+		// Otherwise the crossfade dips through a translucent frame and the dark card
+		// background shows through mid-flip.
+		for (const flip of [0, 0.25, 0.5, 0.75, 1]) {
+			const o = faceOpacity(0, flip);
+			expect(o.front + o.back).toBeCloseTo(1, 10);
+		}
 	});
 });

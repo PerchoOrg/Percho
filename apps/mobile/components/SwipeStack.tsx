@@ -62,7 +62,11 @@ import {
 	type CardCapability,
 	INERT_CAPABILITY,
 } from "../lib/gesture/capability";
-import { VISIBLE_WINDOW, cardStackVisual } from "../lib/gesture/stack-layer";
+import {
+	VISIBLE_WINDOW,
+	cardStackVisual,
+	faceOpacity,
+} from "../lib/gesture/stack-layer";
 import { colors, radii } from "../theme/tokens";
 
 /** Cards visible at rest: top + 2 behind (§0.6 #7). Shared with the composer. */
@@ -133,16 +137,23 @@ interface StackCardProps {
 	advance: SharedValue<number>;
 	dragX: SharedValue<number>;
 	exitX: SharedValue<number>;
+	/** 0 = front face, 1 = data face. Owned by the stack, read per card. */
+	flipProgress: SharedValue<number>;
 	cardWidth: number;
 	zIndex: number;
-	children: React.ReactNode;
+	/** The front face. Always mounted. */
+	front: React.ReactNode;
+	/** The data face, or null for a kind that does not flip (§1.1). */
+	back: React.ReactNode;
+	/** §1.8 labels — above both faces, outside the crossfade. */
+	overlay: React.ReactNode;
 }
 
 /**
- * One card's frame. Its animated style is created once, with `absIndex` captured
- * as a constant, and is never swapped for another — which is what makes both the
- * stale-prop ghosting and the handoff jump structurally impossible rather than
- * merely fixed.
+ * One card's frame. Its animated styles are created once, with `absIndex`
+ * captured as a constant, and are never swapped for another — which is what makes
+ * the stale-prop ghosting, the handoff jump AND the back-face flash structurally
+ * impossible rather than merely fixed.
  */
 function StackCard({
 	absIndex,
@@ -150,9 +161,12 @@ function StackCard({
 	advance,
 	dragX,
 	exitX,
+	flipProgress,
 	cardWidth,
 	zIndex,
-	children,
+	front,
+	back,
+	overlay,
 }: StackCardProps) {
 	const style = useAnimatedStyle(() => {
 		const v = cardStackVisual({
@@ -172,9 +186,28 @@ function StackCard({
 		};
 	});
 
+	// Both faces read the SAME function, so a non-top card's back face is driven
+	// to 0 by the identical style that animates the top card's. Nothing is swapped
+	// on promotion, so there is no frame in which the back face is unstyled — that
+	// gap is what flashed the card's own data face at full opacity.
+	const frontStyle = useAnimatedStyle(() => ({
+		opacity: faceOpacity(absIndex - topAbs.value, flipProgress.value).front,
+	}));
+	const backStyle = useAnimatedStyle(() => ({
+		opacity: faceOpacity(absIndex - topAbs.value, flipProgress.value).back,
+	}));
+
 	return (
 		<Animated.View style={[styles.card, { zIndex }, style]}>
-			{children}
+			<Animated.View style={[StyleSheet.absoluteFill, frontStyle]}>
+				{front}
+			</Animated.View>
+			{canFlipCard(back) && (
+				<Animated.View style={[StyleSheet.absoluteFill, backStyle]}>
+					{back}
+				</Animated.View>
+			)}
+			{overlay}
 		</Animated.View>
 	);
 }
@@ -213,17 +246,16 @@ export function SwipeStack<T>({
 		flippable: declared.flippable && topBackRenders,
 	};
 
-	const { gesture, tx, topAbs, exitX, advance, frontStyle, backStyle } =
-		useSwipeCard({
-			cardWidth,
-			capability: topCapability,
-			onDecision: (decision) => {
-				if (top) onDecision(decision, top);
-			},
-			onCommit: (decision) => {
-				if (top && onCommit) onCommit(decision, top);
-			},
-		});
+	const { gesture, tx, topAbs, exitX, advance, flipProgress } = useSwipeCard({
+		cardWidth,
+		capability: topCapability,
+		onDecision: (decision) => {
+			if (top) onDecision(decision, top);
+		},
+		onCommit: (decision) => {
+			if (top && onCommit) onCommit(decision, top);
+		},
+	});
 
 	/**
 	 * Keep the UI-thread cursor in step with React.
@@ -284,36 +316,22 @@ export function SwipeStack<T>({
 								advance={advance}
 								dragX={tx}
 								exitX={exitX}
+								flipProgress={flipProgress}
 								cardWidth={cardWidth}
 								// A card that has already been swiped must stay UNDER the
 								// live stack while it flies out, or it would slide across
 								// the face of the card that replaced it.
 								zIndex={depth < 0 ? 0 : WINDOW + TRAIL - depth}
-							>
-								<Animated.View
-									style={[
-										StyleSheet.absoluteFill,
-										isTop ? frontStyle : styles.faceVisible,
-									]}
-								>
-									{renderCard(item, argsFor(role))}
-								</Animated.View>
-								{canFlipCard(back) && (
-									<Animated.View
-										style={[
-											StyleSheet.absoluteFill,
-											isTop ? backStyle : styles.faceHidden,
-										]}
-									>
-										{back}
-									</Animated.View>
-								)}
-								{/* Above both faces and outside the crossfade: the §1.8
-								    labels must stay legible while a flip is in progress. */}
-								{isTop && renderOverlay
-									? renderOverlay(item, argsFor(role))
-									: null}
-							</StackCard>
+								front={renderCard(item, argsFor(role))}
+								back={back}
+								// §1.8 labels sit above both faces and outside the
+								// crossfade, so they stay legible mid-flip.
+								overlay={
+									isTop && renderOverlay
+										? renderOverlay(item, argsFor(role))
+										: null
+								}
+							/>
 						);
 					})}
 				</View>
@@ -330,6 +348,4 @@ const styles = StyleSheet.create({
 		overflow: "hidden",
 		backgroundColor: colors.ink, // card face is always dark (§0.3)
 	},
-	faceVisible: { opacity: 1 },
-	faceHidden: { opacity: 0 },
 });

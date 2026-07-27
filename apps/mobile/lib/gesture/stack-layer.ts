@@ -37,6 +37,19 @@
  *
  * That identity is the whole design; `stack-layer.test.ts` asserts it directly
  * as the handoff-continuity case.
+ *
+ * ## The rule, after three instances of the same bug
+ *
+ * This class has now bitten three times: the stack transform (ghosting), a
+ * tap-dismissed card inheriting an opacity, and the flip's face styles flashing
+ * the data face on promotion. Every one had the same shape — a Reanimated style
+ * assigned by SLOT rather than by IDENTITY, so the frame on which a card is
+ * promoted or demoted exposes a value nothing has written yet.
+ *
+ * So: every visual property of a card in this stack must be a pure function of
+ * that card's own `absIndex`, and a view must NEVER be switched between a static
+ * style and an animated one. If you find yourself writing `isTop ? someStyle :
+ * staticStyle`, that is the bug.
  */
 import { SWIPE_THRESHOLD_RATIO } from "./decide-swipe";
 
@@ -164,4 +177,42 @@ export function advanceFromDrag(dragX: number, cardWidth: number): number {
 	"worklet";
 	if (cardWidth <= 0) return 0;
 	return Math.min(Math.abs(dragX) / cardWidth, 1);
+}
+
+export interface FaceOpacity {
+	front: number;
+	back: number;
+}
+
+/**
+ * The §0.5 flip crossfade, as a pure function of the card's own position.
+ *
+ * ## Why this cannot be `isTop ? backStyle : styles.faceHidden`
+ *
+ * That was the third instance of this file's headline bug, and the one the owner
+ * saw last: "community卡闪现的是背面的卡片内容".
+ *
+ * A community or listing card is flippable, so its data face is MOUNTED beneath
+ * the front face the whole time it is in the stack. While the card sat behind the
+ * top card that face was pinned by a static `opacity: 0` style; the instant the
+ * card was promoted, the style prop was swapped for the animated `backStyle`.
+ *
+ * Swapping those is not free. React commits the new style prop — which no longer
+ * carries `opacity: 0`, so the view reverts to its default opacity 1 — and
+ * Reanimated's first write of `flipProgress` lands on a later frame. In that gap
+ * the data face paints at FULL strength over the card's own front face. Hence a
+ * flash of the same address on the card that was just promoted.
+ *
+ * The fix is the same one the geometry above already uses: never swap the style.
+ * Each card owns one animated style, created once with its `absIndex` captured,
+ * that computes BOTH face opacities from its own depth. A card that is not top
+ * resolves to a hard 0 through the very same code path that animates the top
+ * card, so there is no frame in which the value is unwritten or inconsistent.
+ */
+export function faceOpacity(rel: number, flipProgress: number): FaceOpacity {
+	"worklet";
+	// Only the top card flips. Everything else — including a card mid-promotion
+	// and a card still flying out — shows its front face and nothing else.
+	if (rel !== 0) return { front: 1, back: 0 };
+	return { front: 1 - flipProgress, back: flipProgress };
 }

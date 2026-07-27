@@ -12,7 +12,11 @@
  *   - on release, delegate the decision to the pure `decideSwipe`, fly the card
  *     out and fire `cardSettle` for a like, or spring back for a non-commit,
  *   - tap flips to the data face as a 350ms opacity crossfade (§0.5 — 3D
- *     rotateY is forbidden), exposed as `flipProgress` + `frontStyle`/`backStyle`.
+ *     rotateY is forbidden), exposed as the raw `flipProgress`. The faces' own
+ *     styles are NOT built here: each card in the stack derives both opacities
+ *     from its own depth via `faceOpacity`, because a style handed out by stack
+ *     POSITION gets swapped on promotion and flashes the data face (see
+ *     `stack-layer.ts`).
  *
  * The hook owns none of the feed semantics — it reports `'left' | 'right'` to
  * `onDecision` and lets the caller (task-1) map that to like/pass/agree/etc.
@@ -117,10 +121,6 @@ interface UseSwipeCardResult {
 	advance: SharedValue<number>;
 	/** 0 = video face, 1 = data face. */
 	flipProgress: SharedValue<number>;
-	/** Video face — visible at flipProgress 0. */
-	frontStyle: AnimatedStyle<ViewStyle>;
-	/** Data face — visible at flipProgress 1. */
-	backStyle: AnimatedStyle<ViewStyle>;
 }
 
 export function useSwipeCard({
@@ -365,14 +365,6 @@ export function useSwipeCard({
 		committed,
 	]);
 
-	const frontStyle = useAnimatedStyle(() => ({
-		opacity: 1 - flipProgress.value,
-	}));
-
-	const backStyle = useAnimatedStyle(() => ({
-		opacity: flipProgress.value,
-	}));
-
 	return {
 		gesture,
 		tx,
@@ -380,7 +372,5 @@ export function useSwipeCard({
 		exitX,
 		advance,
 		flipProgress,
-		frontStyle,
-		backStyle,
 	};
 }
