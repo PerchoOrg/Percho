@@ -4,6 +4,96 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-27 03:10 UTC — device bugs: deck rebuilt mid-session (card swapped after peek) + label flash
+
+**Objective**: owner on the phone: "偶尔会出现好像有白色字体一闪而过 再消失" and "切换卡片的时候
+有时候都已经peek到下一张卡片什么样子了 结果一秒之后又自动切换成别的卡片了". Two symptoms,
+**one root cause plus one aggravating latch**.
+
+**Diagnosis — the deck was being rebuilt under the buyer.** Three couplings, each
+of which independently reset the session:
+
+1. `app/(tabs)/feed.tsx`'s compose effect depended on `pool`. `useFeedPool`
+   ACCUMULATES pages, so every successful prefetch produced a new object
+   identity → `generateFeed` re-ran and `setActiveIndex(0)`. The "一秒" the owner
+   measured is the prefetch round-trip: peek the next card, network returns, deck
+   reshuffled, different card.
+2. `useFeedPool`'s `load` depended on `citiesKey`, and `cities` is derived from
+   `signals.geo` — it changes on almost **every right-swipe on a city card**. That
+   changed `load`'s identity, which re-ran the reset effect: a full refetch from
+   offset 0 that discarded every accumulated page.
+3. `appendPage` depended on `deck`, and the prefetch effect depended on
+   `appendPage`, so each append re-created the callback and re-fired the effect —
+   a compose loop that only terminated when the engine ran dry.
+
+**Diagnosis — the flash.** `tx` is UI-thread state and it survives a React
+remount. On any of the resets above, `SwipeLabels` remounted on a new top card
+while `tx` still held the offset of the gesture that had just finished, so
+`interpolate(tx, [0, span])` returned ~1 immediately: LIKE/PASS at full opacity on
+a card the buyer never dragged, for the frame or two until something zeroed it.
+Fixing the resets removes most occurrences, but not the tap-driven advances
+(ask skip / "Not sure" / milestone CTA) or undo, which also remount the labels
+without a completed swipe. So it needed its own guard.
+
+**Actions**:
+- `app/(tabs)/feed.tsx` — `pool` and `deck` are now read through refs
+  (`poolRef` / `deckRef`), never depended on. The compose effect's deps are
+  `[hydrated, stage, revealProgress]`: the deck is built once per **semantic
+  boundary** and only ever appended to. A larger pool makes more cards
+  composable, which the next `appendPage` picks up; it must never move the buyer.
+  The prefetch effect is keyed on `remaining` (a single derived distance) instead
+  of `activeIndex` + `deck.length` separately, so an append settles the condition
+  rather than re-satisfying it.
+- `hooks/use-feed-pool.ts` — `citiesRef` / `likedRef`; `load` now depends on
+  `[stage]` alone, so **only a stage change** invalidates fetched pages (the
+  server gates listing rows by stage, which is the one case that genuinely must
+  reset). Newly liked cities widen the NEXT page, read from the refs at fetch
+  time.
+- `lib/gesture/label-reveal.ts` (new) — `labelOpacity({tx, span, side, armed})`.
+  A label is inert until rest has been observed once since mount (`REST_EPSILON`
+  0.5, not 0: a settling spring leaves sub-pixel residue and exact-zero would arm
+  only by luck). Pure and worklet-safe, so the rule is testable instead of buried
+  in a `useAnimatedStyle`.
+- `components/cards/SwipeLabels.tsx` — consumes it, holding the latch in a shared
+  value. Only the RIGHT style writes the latch; the left one reads it. Two styles
+  evaluating in the same frame would otherwise race, and whichever ran second
+  would see a latch the first had already flipped and reveal on the inherited
+  offset — the bug again, one frame narrower.
+- `lib/gesture/label-reveal.test.ts` (new, 12 tests) — inherited offsets stay
+  invisible in both directions and stay unarmed for as long as the offset
+  persists; arming at rest then revealing normally; sub-pixel residue arms; never
+  disarms; arming ≠ revealing; plus the §1.8 ramp (1 exactly at the 35%
+  threshold, clamped past it, side symmetry, `[0,1]` always, invisible at
+  unmeasured width).
+
+**Decisions**: the tempting fix for #1 was to diff the pool and skip the rebuild
+when nothing new arrived. Rejected — it makes correctness depend on a comparison
+that gets subtly wrong the first time the payload shape changes, and it still
+resets on a genuinely-new page, which is exactly when the buyer is mid-deck. Not
+depending on the pool at all is the smaller and stronger statement. Ref-reads are
+deliberate here rather than accidental: every one of the three couplings was a
+value the composer must READ at compose time and must not be WOKEN by.
+
+**Verification**: `pnpm test` 272/272 (260 → 272), `pnpm typecheck` 0,
+`pnpm lint` clean over 84 files. Metro re-bundled through the live tunnel
+(HTTP 200, 15.5MB) and I read the emitted bundle rather than trusting tsc:
+the compose effect's dep array ships as `[hydrated, stage, revealProgress]`
+(no `pool`), and `labelOpacity` emitted as a worklet with the arming branch
+intact. **Visual confirmation is owed by the owner on the phone.**
+
+**Learnings**: an accumulating cache and a composed view of it must be joined by
+a READ, never by a dependency — `[pool]` on anything that resets a cursor is a
+guaranteed mid-session jump the moment pagination lands. And any UI-thread shared
+value read by a component that can remount independently of it needs an arming
+latch; the shared value has no idea the component that used to read it is gone.
+Both are the same lesson as the 03:00 fix from the other direction: React
+identity and UI-thread state are separate clocks.
+
+**Next steps**: owner reloads Expo Go and re-swipes; the two things to watch are
+(a) a peeked card is never replaced, (b) no label appears without a drag. Then
+V1–V6 in `VERIFY-task-1-on-mac.md`. Still not bugs: `Adjust my scope` only
+refetches, `Explore →` unwired.
+
 ## 2026-07-27 03:00 UTC — device bug: card jump/flash on every swipe handoff (UI thread vs React racing)
 
 **Objective**: owner, testing on the phone: "每次swipe卡片 切换卡片后 都会jump一下 闪动一下". A

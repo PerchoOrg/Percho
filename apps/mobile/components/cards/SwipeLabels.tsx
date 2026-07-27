@@ -9,16 +9,31 @@
  *
  * §1.8: opacity tracks the displacement ratio, z-20, red left / green right, and
  * a text shadow because these sit over bright photography.
+ *
+ * ## Why the labels have to be armed
+ *
+ * `tx` is UI-thread state and it outlives any React remount of this component.
+ * When the top card changes for a reason other than a completed swipe — a deck
+ * rebuild, an undo, a tap-driven advance — this component remounts while `tx`
+ * still holds the offset from the gesture that just finished. The label then
+ * paints at full strength on a card the buyer never dragged: a white word
+ * flashing past and disappearing.
+ *
+ * `armed` closes that. A freshly mounted label stays hidden until the drag has
+ * been observed at rest at least once, so it can only ever be revealed by a
+ * gesture that began under THIS card. The decision itself lives in
+ * `labelOpacity` so it is unit-testable rather than trapped in a worklet.
  */
 import { StyleSheet, Text, View } from "react-native";
 import Animated, {
 	type SharedValue,
-	interpolate,
 	useAnimatedStyle,
+	useSharedValue,
 } from "react-native-reanimated";
 import { swipeLabelsFor } from "../../lib/feed/behavior";
 import type { FeedCardV3 } from "../../lib/feed/card-types";
 import { SWIPE_THRESHOLD_RATIO } from "../../lib/gesture/decide-swipe";
+import { labelOpacity } from "../../lib/gesture/label-reveal";
 import { colors, radii } from "../../theme/tokens";
 import { textStyles } from "../../theme/typography";
 
@@ -35,12 +50,34 @@ export function SwipeLabels({ card, tx, cardWidth }: SwipeLabelsProps) {
 	// strength by then rather than at the full card width.
 	const span = cardWidth * SWIPE_THRESHOLD_RATIO;
 
-	const rightStyle = useAnimatedStyle(() => ({
-		opacity: interpolate(tx.value, [0, span], [0, 1], "clamp"),
-	}));
-	const leftStyle = useAnimatedStyle(() => ({
-		opacity: interpolate(tx.value, [-span, 0], [1, 0], "clamp"),
-	}));
+	/**
+	 * Whether rest has been observed since mount. Starts false, latches true and
+	 * never re-arms, so it costs one comparison per frame.
+	 */
+	const armed = useSharedValue(false);
+
+	const rightStyle = useAnimatedStyle(() => {
+		const r = labelOpacity({
+			tx: tx.value,
+			span,
+			side: "right",
+			armed: armed.value,
+		});
+		armed.value = r.armed;
+		return { opacity: r.opacity };
+	});
+	const leftStyle = useAnimatedStyle(() => {
+		// Reads the same latch but must not write it: two styles evaluating in one
+		// frame would otherwise race to arm, and whichever ran second would see a
+		// latch the first had already flipped and reveal on the inherited offset.
+		const r = labelOpacity({
+			tx: tx.value,
+			span,
+			side: "left",
+			armed: armed.value,
+		});
+		return { opacity: r.opacity };
+	});
 
 	if (!labels) return null;
 

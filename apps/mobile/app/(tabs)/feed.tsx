@@ -149,18 +149,35 @@ export default function FeedScreen() {
 	}, [offline, hydrated, drain]);
 
 	/**
-	 * Compose the first page. Keyed on (hydrated, stage, pool) ONLY — signals and
-	 * seenIds are read imperatively from the store at composition time rather than
-	 * declared as deps, because re-composing after every swipe would rebuild the
-	 * deck under the buyer's thumb.
+	 * Build the deck ONCE per semantic boundary, and only ever APPEND after that.
+	 *
+	 * `poolRef` rather than a `pool` dep is the whole point. `useFeedPool`
+	 * accumulates pages, so every successful prefetch produces a new `pool`
+	 * object — and this effect used to depend on it, which rebuilt the entire deck
+	 * and reset `activeIndex` to 0 mid-session. On device that read as two
+	 * separate bugs: the buyer would half-swipe, see the next card peek out, and a
+	 * second later (the prefetch round-trip) watch it be replaced by a different
+	 * card; and the reset frame flashed the swipe labels at full opacity, because
+	 * the labels remounted on a new top card while `tx` still held the offset from
+	 * the gesture that had just finished.
+	 *
+	 * A new pool must never move the buyer. It only makes MORE cards composable,
+	 * which `appendPage` picks up on the next prefetch — so the fix is that the
+	 * pool is read, never depended on.
+	 *
+	 * Signals and seenIds are likewise read imperatively at composition time:
+	 * declaring them would rebuild the deck after every swipe.
 	 */
+	const poolRef = useRef(pool);
+	poolRef.current = pool;
+
 	useEffect(() => {
 		if (!hydrated) return;
 		const s = useFeedSession.getState();
 		const result = generateFeed({
 			stage,
 			signals: s.signals,
-			pool,
+			pool: poolRef.current,
 			seenIds: s.seenIds,
 			count: FIRST_PAGE_SIZE,
 			rotate: 0,
@@ -171,16 +188,27 @@ export default function FeedScreen() {
 		setEngineExhausted(result.exhausted);
 		setActiveIndex(0);
 		revealProgress.value = 0;
-	}, [hydrated, stage, pool, revealProgress]);
+	}, [hydrated, stage, revealProgress]);
 
-	/** §1.7 pagination: append from the pool already held, deduped by the deck. */
+	/**
+	 * §1.7 pagination: append from the pool already held, deduped by the deck.
+	 *
+	 * Reads the deck through a ref for the same reason as the pool: depending on
+	 * `deck` re-created this callback on every append, which re-fired the prefetch
+	 * effect below, which appended again — a compose loop that only stopped when
+	 * the engine ran dry.
+	 */
+	const deckRef = useRef(deck);
+	deckRef.current = deck;
+
 	const appendPage = useCallback(() => {
 		const s = useFeedSession.getState();
+		const current = deckRef.current;
 		const result = generateFeed({
 			stage,
 			signals: s.signals,
-			pool,
-			seenIds: [...s.seenIds, ...deck.map((c) => c.id)],
+			pool: poolRef.current,
+			seenIds: [...s.seenIds, ...current.map((c) => c.id)],
 			count: FIRST_PAGE_SIZE,
 			rotate: rotate.current,
 			milestonesShown,
@@ -190,15 +218,19 @@ export default function FeedScreen() {
 		setDeck((d) => [...d, ...result.cards]);
 		setLoopedIds((l) => [...l, ...result.loopedIds]);
 		setEngineExhausted(result.exhausted);
-	}, [stage, pool, deck, milestonesShown]);
+	}, [stage, milestonesShown]);
 
-	// Prefetch when the active card is 5 from the end (§1.7).
+	// Prefetch when the active card is 5 from the end (§1.7). Keyed on the
+	// DISTANCE to the end rather than on `activeIndex` and `deck.length`
+	// separately, so a successful append (which moves both) settles the condition
+	// instead of immediately re-satisfying it.
+	const remaining = deck.length - activeIndex;
 	useEffect(() => {
 		if (deck.length === 0) return;
-		if (deck.length - activeIndex > PREFETCH_DISTANCE) return;
+		if (remaining > PREFETCH_DISTANCE) return;
 		if (!exhausted) fetchMore();
 		appendPage();
-	}, [activeIndex, deck.length, exhausted, fetchMore, appendPage]);
+	}, [remaining, deck.length, exhausted, fetchMore, appendPage]);
 
 	const onDecision = useCallback(
 		(decision: "left" | "right", card: FeedCardV3) => {

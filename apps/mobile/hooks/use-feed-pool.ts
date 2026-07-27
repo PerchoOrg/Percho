@@ -88,6 +88,27 @@ export function useFeedPool({
 	const citiesKey = cities.join(",");
 	const likedKey = likedCommunityIds.join(",");
 
+	/**
+	 * The scope keys are read through refs inside `load`, not closed over as
+	 * dependencies.
+	 *
+	 * `cities` is derived from the buyer's geo signals, so it changes on almost
+	 * every right-swipe. When `load` depended on it, the identity of `load`
+	 * changed with it, which re-ran the reset effect below: a full refetch from
+	 * offset 0 that threw away every accumulated page, mid-session, while the
+	 * buyer was mid-deck. Combined with the screen's old `pool` dependency this
+	 * was what replaced a card the buyer had already peeked at, about a
+	 * round-trip after they swiped.
+	 *
+	 * Newly liked cities legitimately widen the pool, but that belongs in the
+	 * NEXT page — `fetchMore` picks the current values up from these refs — never
+	 * in a reset. Only a stage change invalidates what has already been fetched.
+	 */
+	const citiesRef = useRef(citiesKey);
+	citiesRef.current = citiesKey;
+	const likedRef = useRef(likedKey);
+	likedRef.current = likedKey;
+
 	const load = useCallback(
 		async (reset: boolean) => {
 			if (inFlight.current) return;
@@ -97,13 +118,15 @@ export function useFeedPool({
 			if (reset || offset === 0) setLoading(true);
 
 			try {
+				const scopedCities = citiesRef.current;
+				const scopedLiked = likedRef.current;
 				const res = await fetch(
 					feedPoolUrl({
 						stage,
 						offset,
 						limit: FIRST_PAGE_SIZE,
-						cities: citiesKey ? citiesKey.split(",") : [],
-						likedCommunityIds: likedKey ? likedKey.split(",") : [],
+						cities: scopedCities ? scopedCities.split(",") : [],
+						likedCommunityIds: scopedLiked ? scopedLiked.split(",") : [],
 					}),
 				);
 				if (!res.ok) throw new Error(`feed pool: HTTP ${res.status}`);
@@ -127,11 +150,12 @@ export function useFeedPool({
 				inFlight.current = false;
 			}
 		},
-		[stage, citiesKey, likedKey],
+		[stage],
 	);
 
-	// Stage changes rebuild the pool: the server gates its listing rows by stage,
-	// so a stage-4 deck must not be composed from the stage-1 payload.
+	// ONLY a stage change rebuilds the pool: the server gates its listing rows by
+	// stage, so a stage-4 deck must not be composed from the stage-1 payload.
+	// Nothing else may reset — see the note on `citiesRef` above.
 	useEffect(() => {
 		if (!enabled) return;
 		token.current += 1;
