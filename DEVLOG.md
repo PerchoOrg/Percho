@@ -4,6 +4,41 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-27 09:55 UTC — 丢弃作废的 ws3 patch（先验证再删，不是直接删）
+
+**Objective**: owner: "清理干净吧"。
+
+**Actions**:
+- 删 `~/percho-salvage/`（含那份 react18 patch）+ `git stash drop stash@{0}`。
+- `git worktree prune` / `git remote prune origin`（均无残留）。
+
+**Decisions**: **删之前先验证它是否还有用,而不是照令直删。** 三项证据都指向作废:
+1. `apps/web` 的 `pnpm typecheck` 在当前 main 上**已经 0 错误** —— 那份 patch 修的
+   react18 类型错误现在根本不存在了。
+2. `git apply --check` **失败**（`apps/mobile/package.json`、`pnpm-lock.yaml` 都对不上）——
+   main 早已走过它,它连打都打不上。
+3. 它自称修的那批错误与 `apps/web` 现存的 131 个 biome error / 1 个测试失败
+   （`create-upload.test.ts`）**不是同一批** —— 那两项与它无关,依旧存在。
+
+所以它不是「可能有用的备份」,是死资产,删掉是对的。上一条我把它两份都存下来是对的
+（当时无法判断），这一条查明后删掉也是对的。
+
+**Resolution**: 本地彻底干净 —— 只剩 `main` 一个分支、一个 worktree、`~/Percho-ws*`
+目录全无、prune 无残留。393 mobile 测试、mobile tsc 0、biome 干净。
+
+**没动的**:
+- **6 个旧 stash**（phase73/74/75/80/104 及 `feat/reelestate-ui-rewrite` 的 WIP）——
+  不是本 session 产生的,属于历史 WIP,按 CLAUDE.md §0.3「只清自己的烂摊子」保留。
+- **29 个远端分支**（全部已 merge 进 `origin/main`）—— **删远端不可逆**（本地 reflog
+  救不回),已问 owner 但 10 分钟未回,**故意停在可逆边界没删**。清单可用
+  `git branch -r --merged origin/main` 复现。
+- `apps/web` 那 131 个 biome error + 1 个既有测试失败 —— 早于本次工作。
+
+**Learnings**: 「清理干净」这类指令要先分清**可逆 / 不可逆**。本地分支和 worktree 有
+reflog 兜底,删错能救;远端分支删掉只能求 GitHub。**无人应答时,停在可逆的那一侧。**
+另外:**丢弃一份"抢救下来的东西"之前必须证明它作废**（typecheck 已绿 + patch 打不上），
+否则抢救这个动作本身就白做了。
+
 ## 2026-07-27 09:40 UTC — 清掉 10 个 worktree + 14 个已 merge 分支（ws3 有活儿，已抢救）
 
 **Objective**: owner: "如果已经merge就清理掉"。
