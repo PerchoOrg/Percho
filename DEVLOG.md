@@ -4,6 +4,56 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-27 01:20 UTC — task-1 step 10: the Mac verification doc + the B2 spec correction that was never made
+
+**Objective**: PLAN-task-1 §7 step 10 — write `VERIFY-task-1-on-mac.md` mirroring
+the task-0 doc, with all 6 visual acceptance items as `PENDING-SIM` checks.
+
+**Actions**:
+- `docs/design/spec-v3/VERIFY-task-1-on-mac.md` (new) — §0 setup, §1 launch
+  (including the three API-base cases), §2 the six checks V1–V6 as tickboxes,
+  §3 how Stage 2 degrades today, §4 what cannot be verified, §5 what I already
+  verified on EC2 so the owner doesn't repeat it.
+- `docs/design/spec-v3/01-feed.md` — **corrected the §1.7 Stage-0 row** to
+  `ask ×7 · trade-off ×3` with a footnote (see below).
+
+**The B2 spec correction had never actually been made.** `ratios.ts`'s header has
+claimed since step 1 that "`01-feed.md` §1.7 has been corrected to match", but
+line 78 still read `challenge ×1`. The owner's ruling was explicit ("Fix the
+spec, don't just work around it"). Now genuinely fixed, with a footnote recording
+that §1.6's "Stage 2+" is the intended rule and the mix row was the error. The
+rhythm-visualisation strip above the table already showed no Stage-0 challenge,
+so it needed no change.
+
+**Decisions**:
+- **Every copy string in the doc is quoted from the real component**, not
+  paraphrased — "You've seen everything in your area — widen it?", `SEEN`,
+  "Offline — showing cached homes", `Adjust my scope`. A checklist that
+  paraphrases is a checklist that can pass while the UI is wrong.
+- **Wrote in Chinese, matching the task-0 doc.** It is the owner's working
+  language for these checklists.
+- **Ordered V1 first and said the funnel is one-way.** §0.2 makes stage
+  monotonic, so the Stage-0→1 walkthrough can only be run once per install; the
+  doc says to delete the app in Expo Go to re-run it, because "Reload" does not
+  clear AsyncStorage.
+- **Listed three honest shortfalls rather than only the spec'd items**: (1)
+  acceptance item 6's `/listing/[id]` round-trip is not verifiable — that route
+  is task 2's, so `Explore →` is deliberately unwired; (2) `Adjust my scope` on
+  the exhausted card currently just refetches, so its copy promises more than it
+  does until task 5's You tab lands; (3) the telemetry sink is a no-op, so
+  nothing about §1.10 is observable on the device.
+
+**Issues**: none. Worth flagging that (2) above is a real gap I introduced in
+step 9 and chose to document rather than fix, because a real scope editor is
+task 5's screen and building a throwaway one here would be scope invention.
+
+**Learnings**: a code comment asserting that a *document* was updated is
+unverifiable by any test, and this one was wrong for four days. If a comment
+claims an edit elsewhere, the edit belongs in the same commit.
+
+**Next steps**: task-1 steps 1–10 are complete. Branch is local-only —
+**not pushed, not merged**. Awaiting the owner's V1–V6 run on the Mac mini.
+
 ## 2026-07-27 01:12 UTC — task-1 step 9: the `(tabs)` group + the real feed screen; legacy screens deleted
 
 **Objective**: PLAN-task-1 §7 step 9 — make the spec route real. Create the

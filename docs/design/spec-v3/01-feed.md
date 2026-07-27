@@ -75,11 +75,16 @@ Front face 图纸见 00 §0.6 基准屏(listing)。tap 翻 data face — **data 
 
 | Stage | 卡型配比(每 10 张) | 晋级条件(swipe 后重估) |
 |---|---|---|
-| **0 · Intent & Life** | ask ×6 · trade-off ×3 · challenge ×1(轻市场题)。零地理、零房源。 | intent 确认 + 预算带 + ≥2 生活信号(通常 8–12 张) |
+| **0 · Intent & Life** | ask ×7 · trade-off ×3。零地理、零房源、零 challenge。[^s0chall] | intent 确认 + 预算带 + ≥2 生活信号(通常 8–12 张) |
 | **1 · Area → City** | area/city 卡 ×5 · ask(geo)×2 · trade-off ×2 · **listing 预告 ×1** | ≥1 city 达到聚焦(该 city 及其下级右滑 ≥3 且右滑率 >50%) |
 | **2 · Zip / 片区** | zip 卡 ×4 · trade-off ×2 · ask ×1 · challenge ×1 · **listing 预告 ×1** · insight(条件)×1 | 2–4 个 zip 在池(右滑 ≥2 各) |
 | **3 · Community** | community ×6 · listing 预览 ×2(限已 like community 内,match badge 不显)· trade-off ×1 · insight ×1 | ≥2 community like |
 | **4 · Precision** | listing ×5 · community ×2 · insight/challenge ×2 · ask(补漏)×1 | 终态。持续学习,match badge 解锁。 |
+
+[^s0chall]: Stage 0 原本写 `ask ×6 · trade-off ×3 · challenge ×1`,与 §1.6
+"challenge 卡 Stage 2+ 才出(需要地理上下文才有梗)"直接矛盾。§1.6 是本意,
+这一行是笔误 —— challenge 槽位移除,补成第 7 张 ask。
+(task-1 修订,owner 2026-07-26 批准;引擎侧见 `apps/mobile/lib/feed/ratios.ts`。)
 
 | 规则 | 参数 |
 |---|---|
