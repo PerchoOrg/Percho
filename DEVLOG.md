@@ -4,6 +4,36 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-27 09:40 UTC — 清掉 10 个 worktree + 14 个已 merge 分支（ws3 有活儿，已抢救）
+
+**Objective**: owner: "如果已经merge就清理掉"。
+
+**Actions**:
+- **抢救 ws3**：`~/Percho-ws3` 有 **18 个未提交文件**（react18 type-error 修复 +
+  未跟踪的 `apps/web/types/react-async-components.d.ts`），**不在 main 里**。
+  存了两份:`git stash`（`stash@{0}`）**外加**一份独立 patch
+  `~/percho-salvage/ws3-react18-type-fix.patch`（1024 行 / 18 文件,含那个新 .d.ts）。
+  两份都留是因为 stash 挂在马上要删的分支上，单靠它不稳。
+- `git worktree remove` × 10（`~/Percho-ws1..ws10`）。
+- `git branch -D` × 14（全部 `--merged main` 且 `ahead_of_main=0`）。
+
+**Decisions**: 删前逐个核对四项 —— merged / dirty / 领先 main 几个 commit / 当前分支。
+其余 9 个 worktree 全部 dirty=0 且 ahead=0，是真残留。**只有 ws3 dirty=18，所以先抢救
+再删,没有直接 `-D` 了事。**
+
+**Resolution**: 现在只剩 `main` 一个分支、一个 worktree。`git branch --no-merged main`
+为空。9 个被删分支 tip 全部仍可达（reflog 未过期，`git log <sha>` 逐个验过）。
+393 测试、tsc 0、biome 干净。**Metro/Expo tunnel 存活（HTTP 200，进程在）** —— 手机不掉线。
+磁盘 35G/484G。
+
+**Learnings**: **worktree 清理前必查 `git status --porcelain`,不能只看 `--merged`。**
+「分支已 merge」和「工作区没有未提交的活」是两件独立的事 —— ws3 两者恰好相反:分支早
+merge 了，但工作区躺着一份没人提交的 react18 修复。只按 merged 判断就会静默毁掉它。
+
+**Next steps**: `~/percho-salvage/ws3-react18-type-fix.patch` 里那份 react18 type 修复
+**仍未处理** —— 它对应 HANDOFF 里记的「`apps/web` ~131 个 biome error / 1 个既有测试失败」
+那条。要用就 `git apply`，要弃就删掉，**需要 owner 决定**，我没替你选。
+
 ## 2026-07-27 09:25 UTC — 收尾清理 + 交接文档对齐（task-2 开新 thread 前）
 
 **Objective**: owner: "现在做清理和重构 接下来我会新开一个thread做task-2"。
