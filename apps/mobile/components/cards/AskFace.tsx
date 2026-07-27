@@ -19,6 +19,12 @@
  * dependency of this app and task 1 may not add one. So the thumb renders the
  * one real datum available without a renderer — the geo LEVEL — as a tile. No
  * decorative fake map, no placeholder image.
+ *
+ * Background: an ask card usually has no `heroUrl` at all (the preference layers
+ * aren't tied to a place), and it used to fall back to a flat `colors.ink` fill —
+ * a literal black screen, and these are the most frequent card in stage 0. It now
+ * falls back to `CardSurface`: `askGeo` pine for the geographic layers, `ask`
+ * violet for the preference ones, so the layer is legible before you read the chip.
  */
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 import {
@@ -29,6 +35,7 @@ import {
 import { colors, radii } from "../../theme/tokens";
 import { textStyles } from "../../theme/typography";
 import { KindChip } from "../KindChip";
+import { CardSurface } from "./CardSurface";
 
 const THUMB = 58; // §1.2 #2
 
@@ -42,8 +49,10 @@ export function AskFace({ card, onSkipTopic }: AskFaceProps) {
 
 	return (
 		<View style={styles.face}>
-			{!!card.heroUrl && (
+			{card.heroUrl ? (
 				<Image source={{ uri: card.heroUrl }} style={StyleSheet.absoluteFill} />
+			) : (
+				<CardSurface variant={geo ? "askGeo" : "ask"} />
 			)}
 			<View style={styles.head}>
 				<KindChip label={LAYER_TAG[card.layer]} />
@@ -71,7 +80,7 @@ export function AskFace({ card, onSkipTopic }: AskFaceProps) {
 }
 
 const styles = StyleSheet.create({
-	face: { flex: 1, backgroundColor: colors.ink },
+	face: { flex: 1, backgroundColor: colors.cardPlainTo, overflow: "hidden" },
 	head: { position: "absolute", top: 16, left: 16, zIndex: 2 },
 	body: {
 		flex: 1,

@@ -68,7 +68,7 @@ export function AreaDataFace({ card, onFlipBack }: AreaDataFaceProps) {
 
 	return (
 		<View style={styles.face}>
-			<CardSurface />
+			<CardSurface variant="data" />
 			<ScrollView contentContainerStyle={styles.scroll}>
 				<Text style={styles.eyebrow}>{unit.level}</Text>
 				<Text style={styles.title}>
@@ -117,7 +117,7 @@ export function AreaDataFace({ card, onFlipBack }: AreaDataFaceProps) {
 const styles = StyleSheet.create({
 	face: { flex: 1, backgroundColor: colors.cardPlainTo },
 	scroll: { padding: 20, paddingTop: 28, gap: 2 },
-	eyebrow: { ...textStyles.caption, color: colors.accent },
+	eyebrow: { ...textStyles.caption, color: colors.accentOnCard },
 	title: { ...textStyles.title1, color: colors.onCard, marginTop: 6 },
 	vibe: { ...textStyles.body, color: colors.onCardDim, marginTop: 8 },
 	row: {

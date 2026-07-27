@@ -49,7 +49,7 @@ export function ChallengeFace({
 
 	return (
 		<View style={styles.face}>
-			<CardSurface />
+			<CardSurface variant="challenge" />
 			<View style={styles.head}>
 				<KindChip label="CHALLENGE" />
 				<Text style={styles.tag}>{card.tag}</Text>

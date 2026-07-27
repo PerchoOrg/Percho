@@ -14,6 +14,13 @@
  *   pills  → real `sampleCommunityNames`
  * A unit with no median price and no listing count shows no specs row at all —
  * no "—", no "N/A", no estimated number (PLAN §3).
+ *
+ * Media follows §0.7 / PLAN B8: the real `videoUrl` when a unit has one (only 4
+ * `community_videos` rows exist today), otherwise the real `heroUrl` as a
+ * first-class static state with no missing-media affordance. With NEITHER — the
+ * common case for a derived city/zip unit, which has no photo source at all —
+ * the face wears the `area` `CardSurface` rather than the flat `colors.ink` fill
+ * it used to, which rendered as a black screen.
  */
 import { Image, StyleSheet, View } from "react-native";
 import type { AreaCardV3 } from "../../lib/feed/card-types";
@@ -21,6 +28,7 @@ import { colors } from "../../theme/tokens";
 import { CardFoot } from "../CardFoot";
 import { CardVideo } from "../CardVideo";
 import { KindChip } from "../KindChip";
+import { CardSurface } from "./CardSurface";
 
 interface AreaFaceProps {
 	card: AreaCardV3;
@@ -51,13 +59,10 @@ export function AreaFace({ card, isTop }: AreaFaceProps) {
 		<View style={styles.face}>
 			{unit.videoUrl ? (
 				<CardVideo url={unit.videoUrl} poster={unit.heroUrl} isTop={isTop} />
+			) : unit.heroUrl ? (
+				<Image source={{ uri: unit.heroUrl }} style={StyleSheet.absoluteFill} />
 			) : (
-				!!unit.heroUrl && (
-					<Image
-						source={{ uri: unit.heroUrl }}
-						style={StyleSheet.absoluteFill}
-					/>
-				)
+				<CardSurface variant="area" />
 			)}
 			<View style={styles.head}>
 				<KindChip label={`AREA · ${unit.level}`} />
@@ -75,7 +80,7 @@ export function AreaFace({ card, isTop }: AreaFaceProps) {
 }
 
 const styles = StyleSheet.create({
-	face: { flex: 1, backgroundColor: colors.ink },
+	face: { flex: 1, backgroundColor: colors.cardPlainTo, overflow: "hidden" },
 	head: { position: "absolute", top: 16, left: 16, zIndex: 2 },
 	footSlot: { flex: 1, justifyContent: "flex-end" },
 });

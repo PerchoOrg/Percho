@@ -34,7 +34,7 @@ export function InsightFace({
 }: InsightFaceProps) {
 	return (
 		<View style={styles.face}>
-			<CardSurface />
+			<CardSurface variant="insight" />
 			<View style={styles.head}>
 				<KindChip label="💡 INSIGHT" />
 				<Text style={styles.tag}>PERCHO NOTICED</Text>

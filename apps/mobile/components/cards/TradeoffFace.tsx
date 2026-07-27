@@ -14,6 +14,13 @@
  *
  * The option labels come off the card; the dim phrasing comes from the shared
  * `DIMS` vocabulary. No copy is authored here.
+ *
+ * Background: each half carries its OWN `CardSurface` hue (warm clay | cool
+ * slate) rather than one shared ramp behind both. Two reasons: the split is this
+ * card's whole point, so it should be visible before the finger moves; and the
+ * §1.6 brightness feedback then travels across two different hues instead of
+ * lightening one flat brown. Rings are suppressed (`plain`) because one shared
+ * set of arcs sweeping across the dashed rule fights it.
  */
 import { DIMS } from "@percho/shared";
 import { StyleSheet, Text, View } from "react-native";
@@ -66,22 +73,27 @@ export function TradeoffFace({ card, tx, cardWidth }: TradeoffFaceProps) {
 
 	return (
 		<View style={styles.face}>
-			<CardSurface />
 			<View style={styles.head}>
 				<KindChip label="TRADE-OFF" />
 			</View>
 			<View style={styles.split}>
-				<Animated.View style={[styles.half, leftStyle]}>
-					<Text style={styles.arrow}>←</Text>
-					<Text style={styles.label}>{card.left.label}</Text>
-					<Text style={styles.dim}>{DIMS[card.left.dim].label}</Text>
-				</Animated.View>
+				<View style={styles.half}>
+					<CardSurface variant="tradeoff" plain />
+					<Animated.View style={[styles.stack, leftStyle]}>
+						<Text style={styles.arrow}>←</Text>
+						<Text style={styles.label}>{card.left.label}</Text>
+						<Text style={styles.dim}>{DIMS[card.left.dim].label}</Text>
+					</Animated.View>
+				</View>
 				<View style={styles.rule} />
-				<Animated.View style={[styles.half, rightStyle]}>
-					<Text style={styles.arrow}>→</Text>
-					<Text style={styles.label}>{card.right.label}</Text>
-					<Text style={styles.dim}>{DIMS[card.right.dim].label}</Text>
-				</Animated.View>
+				<View style={styles.half}>
+					<CardSurface variant="tradeoffAlt" plain />
+					<Animated.View style={[styles.stack, rightStyle]}>
+						<Text style={styles.arrow}>→</Text>
+						<Text style={styles.label}>{card.right.label}</Text>
+						<Text style={styles.dim}>{DIMS[card.right.dim].label}</Text>
+					</Animated.View>
+				</View>
 			</View>
 		</View>
 	);
@@ -100,9 +112,13 @@ const styles = StyleSheet.create({
 		flex: 1,
 		alignItems: "center",
 		justifyContent: "center",
-		paddingHorizontal: 16,
-		gap: 8,
+		overflow: "hidden",
 	},
+	// The drag opacity rides on THIS, never on `half`: dimming the container
+	// would fade the half's own CardSurface toward the root fill, which is how a
+	// left-drag turned the right half back into a black rectangle. The surface
+	// stays fully painted; only the copy recedes.
+	stack: { alignItems: "center", paddingHorizontal: 16, gap: 8 },
 	rule: {
 		width: SPLIT_WIDTH,
 		borderLeftWidth: SPLIT_WIDTH,

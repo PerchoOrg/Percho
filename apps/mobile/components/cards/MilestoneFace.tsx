@@ -46,7 +46,7 @@ export function MilestoneFace({
 
 	return (
 		<View style={styles.face}>
-			<CardSurface />
+			<CardSurface variant="milestone" />
 			<View style={styles.body}>
 				<Text style={styles.eyebrow}>Stage unlocked</Text>
 				<Text style={styles.headline}>{card.headline}</Text>
@@ -91,7 +91,7 @@ export function MilestoneFace({
 const styles = StyleSheet.create({
 	face: { flex: 1, backgroundColor: colors.cardPlainTo },
 	body: { flex: 1, justifyContent: "center", paddingHorizontal: 24 },
-	eyebrow: { ...textStyles.caption, color: colors.accent },
+	eyebrow: { ...textStyles.caption, color: colors.accentOnCard },
 	headline: { ...textStyles.display, color: colors.onCard, marginTop: 12 },
 	sub: { ...textStyles.body, color: colors.onCardDim, marginTop: 14 },
 	chipRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 20 },

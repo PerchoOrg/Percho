@@ -4,6 +4,50 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-27 06:00 UTC — 无照片卡面的背景设计（9 个 variant，替掉纯黑兜底）
+
+**Objective**: owner: "对于没有照片的卡面包括tradeoff的 背景图你设计一下 不能黑屏啊"。
+上一条 entry 里给 media-less 卡面加的**单一** `cardPlainFrom→To` 棕色坡道没解决问题。
+
+**Actions**:
+- `theme/tokens.ts` — 删 `cardPlainFrom`，新增 `cardSurfaces`（9 个 variant × from/to/glow）
+  + `accentOnCard` (#F0A94B)。`cardPlainTo` 抬到 `#2E2118` 并降级为"gradient 画上来前
+  那一两帧的底色"。
+- `components/cards/CardSurface.tsx` — 重写：三层（对角双停坡道 + 3 条 hairline 圆弧
+  锚在右下角外 + 左上角 glow wash 收到 transparent）。必传 `variant`，无默认值。
+- 7 个卡面接上 variant；`AskFace` / `AreaFace` 的 `colors.ink` 兜底换成 CardSurface。
+- `theme/card-surfaces.test.ts` — 新增 52 测试。`vitest.config.ts` include 加 `theme/`。
+
+**Decisions**:
+- **一 kind 一 hue，不是一套共用**。上一版真正的问题是两个：坡道太暗 **且** 5 种卡长得
+  一样，连着刷过去像同一张坏卡在重复。tradeoff 左右两半各自持 hue（暖陶 vs 冷板岩），
+  §1.6 的亮度反馈现在跨两个色相走。
+- **不用 svg / skia / 贴图**。media-less 卡是 stage 0 牌堆的多数，每张一次全卡
+  offscreen pass 不值。圆弧就是带 borderRadius 的 `View`。
+- `AskFace` / `AreaFace` 才是真正的纯黑源头 —— 它们 fallback 到 `colors.ink`（#2B2116,
+  primary TEXT token），而 ask 卡是 stage 0 出现最多的卡型。
+
+**Issues**（都是自己审出来的，视觉复核抓的，不是靠读代码）:
+1. **我自己复现了这个 bug**：opacity 挂在 `half` 容器上 → 左划时右半的 CardSurface
+   跟着淡向根底色，又变回黑矩形。改成挂在内层 `stack`（只有文案退，surface 不退）。
+2. `askGeo` 和 `area` 第一版是**同一个**松绿 —— 两种不同卡型渲染成同色。area 改冷蓝青。
+3. milestone 的 `Stage unlocked` eyebrow 用 `colors.accent`（#B45309）—— 对浅色 `bg`
+   是 AA，压在自家铜色坡道上几乎糊掉。新 `accentOnCard`。
+4. `data` back face 最暗，复核时"下半部分接近黑" → from/to 各抬约 11。
+
+**Resolution**: 369 测试全绿（+52）、tsc 0、biome 干净。9 个 variant 逐一视觉复核过
+（`~/percho-prototypes/card-surfaces/index.html` 复刻同一套几何），确认无一读作黑屏。
+测试把"不能黑屏"写成了数字约束：`to` 通道均值 ≥ 0x20、两停都要有色度（≥8）、
+from−to 亮度差 ≥18、白字 AA ≥4.5:1、9 个 `from` 互不相同、tradeoff 两半必须
+一暖一冷。上一版的 `#221A12`（均值 27.3）和 `ink`（30.3）都过不了第一条。
+
+**Learnings**: hex 算术自我审查不够 —— 前两次修都"数字上比 ink 亮"却依然像黑屏。
+Linux 上没 iOS sim，就把同一套几何用 HTML 复刻出来真看一眼；三处真问题（含我自己
+新引入的那个 opacity 回归）全是这么抓到的，读代码一个都发现不了。
+
+**Next steps**: 手机 reload 复核 —— 尤其 tradeoff 左右划时两半的 surface 是否始终满色。
+`DataFaceStub` 下半部分是空的（task 2 的 `ListingDataFace` 会填），目前是布局空档不是背景问题。
+
 ## 2026-07-27 05:40 UTC — §1.7 节奏引擎: 39 连同类卡 (stage 0 发 area 卡) + 无照片卡面
 
 **Objective**: owner on device: "进去后连着10几个tradeoff 然后连着10几个city 你需要按照

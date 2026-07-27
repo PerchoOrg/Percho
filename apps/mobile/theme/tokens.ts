@@ -35,19 +35,79 @@ export const colors = {
 	onCard: "#FFFFFF",
 	onCardDim: "rgba(255,255,255,0.72)",
 	/**
-	 * Surface for the five faces that have NO media by design (trade-off,
-	 * challenge, insight, milestone, data). §0.3 gives every photo-backed face a
-	 * dark treatment via the foot gradient but names none for a media-less card,
-	 * and filling with `ink` — the primary TEXT token — rendered them as a full
-	 * screen of flat near-black (owner, on device: "连着看到纯黑的 tradeoff card").
-	 * A warm dark ramp instead, staying in the dark family so every on-card token
-	 * keeps the contrast it was AA-checked against.
+	 * Base fill behind a media-less face. Only ever visible for a few ms before
+	 * `CardSurface` paints over it, so it is the DARKEST stop of the ramp, never
+	 * `ink` (the primary TEXT token, which read as a black screen on device).
 	 */
-	cardPlainFrom: "#3B2E20",
-	cardPlainTo: "#221A12",
+	cardPlainTo: "#2E2118",
+	/** Hairline arcs in the `CardSurface` motif — see `cardSurfaces`. */
+	cardPlainRing: "rgba(255,255,255,0.05)",
+	/**
+	 * `accent` lightened for use ON a dark card. The amber (#B45309) is AA against
+	 * the light `bg`, but on a media-less card's own warm ramp it drops to a
+	 * barely-legible smudge (caught reviewing the milestone eyebrow). Same hue,
+	 * raised luminance.
+	 */
+	accentOnCard: "#F0A94B",
 	/** Dimming backdrop behind a bottom sheet / modal. */
 	scrim: "rgba(0,0,0,0.4)",
 } as const;
+
+/**
+ * Backgrounds for faces with NO photograph (§0.3 names a dark treatment for
+ * photo-backed faces and nothing for the rest).
+ *
+ * History: the media-less faces first filled with flat `ink` (#2B2116, the TEXT
+ * token) and then with ONE shared brown ramp. Both read on device as a black
+ * screen — "对于没有照片的卡面包括 tradeoff 的背景图你设计一下，不能黑屏"
+ * (owner, 2026-07-27). Two problems, not one: the ramp bottomed out too dark,
+ * AND all five kinds looked identical, so a run of them read as the same broken
+ * card repeating.
+ *
+ * So each kind gets its OWN hue, carrying meaning rather than decoration:
+ *   tradeoff  warm clay vs. cool slate — the split IS the card's question, and
+ *             the §1.6 brightness feedback now moves across two distinct hues.
+ *   challenge indigo — the quiz register, distinct from every other card.
+ *   insight   amber — the brand accent's own family, "Percho noticed".
+ *   milestone the brightest, warmest ramp: this is the ceremony card.
+ *   data      cool slate — a back face, deliberately the most recessive.
+ *   ask       violet, for a preference-layer question with no place attached.
+ *   askGeo    pine, for a geographic question (which side of town, how far out).
+ *   area      cool blue-teal, for an area/city/zip card with no photo. Adjacent
+ *             to `askGeo` on purpose — both are geography — but separated enough
+ *             that an area card and a geo question don't read as the same card
+ *             twice (they were literally the same pine on first review).
+ *
+ * Constraints every entry must satisfy (enforced by `card-surfaces.test.ts`):
+ *   - stays in the dark family, so `onCard` / `onCardDim` / `glass` / `pos` /
+ *     `neg` keep the contrast they were AA-checked against in §0.3;
+ *   - the dark stop is never near-black (mean channel ≥ 0x20);
+ *   - visibly chromatic (channel spread ≥ 8) — a neutral dark grey is exactly
+ *     what "black screen" means to the eye;
+ *   - `from` is materially lighter than `to`, so the ramp is legible as a ramp.
+ *
+ * `glow` is a single corner wash (transparent-ended gradient) — no blur, no
+ * noise, no mesh: these cards are the majority of the stage-0 deck and a
+ * full-card offscreen pass on each is not worth a texture.
+ */
+export const cardSurfaces = {
+	tradeoff: { from: "#5A4230", to: "#2E2118", glow: "rgba(255,196,130,0.16)" },
+	/** The right half of the trade-off split only. */
+	tradeoffAlt: {
+		from: "#2C4351",
+		to: "#17262E",
+		glow: "rgba(150,205,255,0.14)",
+	},
+	challenge: { from: "#413A63", to: "#221D34", glow: "rgba(180,170,255,0.16)" },
+	insight: { from: "#5B4014", to: "#33240E", glow: "rgba(255,205,120,0.18)" },
+	milestone: { from: "#6B3D1C", to: "#38200F", glow: "rgba(255,186,96,0.24)" },
+	data: { from: "#41504F", to: "#252F31", glow: "rgba(190,220,235,0.14)" },
+	ask: { from: "#4A3A57", to: "#241C2E", glow: "rgba(214,170,255,0.14)" },
+	askGeo: { from: "#2F4A46", to: "#17282A", glow: "rgba(140,225,205,0.14)" },
+	area: { from: "#274A5E", to: "#132833", glow: "rgba(130,205,255,0.16)" },
+} as const;
+
+export type CardSurfaceVariant = keyof typeof cardSurfaces;
 
 // ─── Radius (§0.3) — only these five steps exist ────────────────────
 export const radii = {

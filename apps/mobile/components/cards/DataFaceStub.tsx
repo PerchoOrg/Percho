@@ -62,7 +62,7 @@ export function DataFaceStub({ card, onFlipBack }: DataFaceStubProps) {
 
 	return (
 		<View style={styles.face}>
-			<CardSurface />
+			<CardSurface variant="data" />
 			<View style={styles.body}>
 				<Text style={styles.eyebrow}>{card.kind}</Text>
 				<Text style={styles.title}>{title}</Text>
@@ -89,7 +89,7 @@ export function DataFaceStub({ card, onFlipBack }: DataFaceStubProps) {
 const styles = StyleSheet.create({
 	face: { flex: 1, backgroundColor: colors.cardPlainTo },
 	body: { flex: 1, padding: 20, paddingTop: 28 },
-	eyebrow: { ...textStyles.caption, color: colors.accent },
+	eyebrow: { ...textStyles.caption, color: colors.accentOnCard },
 	title: { ...textStyles.title1, color: colors.onCard, marginTop: 6 },
 	row: {
 		flexDirection: "row",
