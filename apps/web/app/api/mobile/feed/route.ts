@@ -95,6 +95,8 @@ function projectListing(card: BrowseCard): PoolListingDTO {
     slug: card.listing.slug,
     address: card.listing.address,
     priceLabel: formatPrice(card.listing.price),
+    // The real number alongside the label — §1.6's challenge card cannot round.
+    ...(card.listing.price != null ? { price: card.listing.price } : {}),
     bedBathSqft: formatBedBathSqft(card.listing),
     heroUrl: heroUrlFor(card),
     ...(videoUrlFor(card) ? { videoUrl: videoUrlFor(card) } : {}),

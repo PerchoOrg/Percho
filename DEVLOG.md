@@ -4,6 +4,91 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-27 01:12 UTC — task-1 step 9: the `(tabs)` group + the real feed screen; legacy screens deleted
+
+**Objective**: PLAN-task-1 §7 step 9 — make the spec route real. Create the
+`(tabs)` group, wire `TabBar` (zero consumers since task-0), compose the
+committed engine + faces + chrome into `app/(tabs)/feed.tsx`, delete the pre-v3
+screens, and verify with `expo export --platform ios`.
+
+**Actions**:
+- `app/(tabs)/_layout.tsx` (new) — expo-router `Tabs` with task-0's `TabBar` as
+  its `tabBar` renderer. `Tabs` keeps navigation (so per-tab nav stacks survive),
+  `TabBar` keeps the §0.6 geometry.
+- `app/(tabs)/feed.tsx` (new, ~430 lines) — the real screen.
+- `app/(tabs)/{search,saved,you}.tsx` (new) — three honest stubs.
+- `app/_layout.tsx` — added `SafeAreaProvider`.
+- `app/index.tsx` — now a `Redirect href="/feed"`.
+- **Deleted** `app/feed.tsx` (1514 lines) and `app/place/[slug].tsx`.
+- `hooks/use-feed-pool.ts` (new) — pool fetch, page accumulation, §1.9 states.
+- `lib/feed/pool-dto.ts` (new) + tests (23) — wire → engine parsing.
+- `lib/feed/milestone.ts` (new) + tests (14) — the §1.5 card builder.
+- `state/feed-session.ts` — added `undoSwipe` + tests (10 new; file 14 → 24).
+- `apps/web`: `PoolListingDTO.price` added and populated (see below).
+- Suite 193 → **240**. typecheck 0, biome clean.
+
+**Two real gaps in the committed code, found while wiring** — both were
+invisible to typecheck because nothing consumed the code yet:
+1. **Nothing constructed a `MilestoneCardV3`.** `insertMilestone` and
+   `MilestoneFace` both existed; the card itself had no builder, so §1.5 could
+   never fire. Hence `milestone.ts`.
+2. **The §1.6 challenge card could never appear.** `pickChallenge` needs
+   `pool.listingPrices[id]` — a real price NUMBER — but the wire only carried
+   `priceLabel` ("$410K"). Every challenge slot would have silently degraded to
+   its fallback forever. Fixed by adding `price` to `PoolListingDTO` alongside
+   the label. Live-checked: a listing labelled `$410K` is really `409900`, which
+   is exactly why reconstructing from the label was not an option — the card
+   would have taught a number no listing has.
+   Also added: `undoSwipe`, because §1.8's toast had no way to revert a signal.
+
+**Decisions**:
+- **`Explore →` is deliberately NOT wired.** Its targets are tasks 2/3 and no
+  `/listing/[id]` route exists. `CardFoot` renders the button only when given a
+  handler, so omitting it yields no dead affordance and no fake navigation —
+  the same call PLAN B11 made for `See on map →`. This means acceptance item 6's
+  "push to /listing/[id] and back preserves activeIndex" is **not verifiable in
+  task 1**; the step-10 doc says so rather than quietly dropping it.
+- **First-page composition is keyed on (hydrated, stage, pool) only.** Signals
+  and seenIds are read imperatively via `useFeedSession.getState()` at
+  composition time. Declaring them as deps would rebuild the deck under the
+  buyer's thumb after every swipe. Carries a `biome-ignore` with that reason.
+- **Undo is a snapshot, not an inverse reducer.** `applySwipe` is not injective
+  (a re-liked community dedupes, dim bumps are additive), so "subtract what that
+  swipe did" is not reliably computable. Not persisted: a 3s window cannot span a
+  restart, and `beginSession`/`clearSignals` both drop it.
+- **`parsePoolResponse` never throws.** A malformed body becomes an empty pool
+  with `done: true`. A parse crash would land mid-swipe, and §1.9 has a terminal
+  card for "nothing to show" but no state for "the parser exploded".
+- **Offline = 2 consecutive failures** (`PAGE_RETRIES`), so a single slow request
+  never flashes an offline bar at an online buyer (PLAN B10, no new dependency).
+- **`index.tsx` is a redirect, not a splash.** The old landing screen put a tap
+  between the buyer and the only thing the app does (05 §5.1: no signup wall).
+
+**Issues**: writing the `parsePoolResponse` test found a bug in my own code —
+`done: raw?.done === true` returned `false` for an unreadable body, so the caller
+would have paged a garbage response forever. The doc comment already claimed the
+opposite. Fixed to report `done: true` when there is no `pool` object at all.
+
+**Verification** (this is a Linux box — **no visual verification was performed
+and none is claimed**):
+- `pnpm test` **240/240**, `pnpm typecheck` **0**, `pnpm lint` clean.
+- `npx expo export --platform ios` → **Exported: dist**, 1476 modules, one
+  3.97 MB Hermes bundle, 23 assets, no errors.
+- All four tab routes present in the exported bundle; `"Homes that fit your
+  vibe"` and `trycloudflare` both **0 occurrences** (legacy screens really gone).
+- **Zero hex literals and zero literal `borderRadius` across the entire mobile
+  tree**, not just task-0's directories — deleting the legacy screens removed the
+  last of them, so the task-0 doc's "only scan these dirs" caveat is now moot.
+  One `rgba(0,0,0,0.5)` text-shadow remains in `SwipeLabels.tsx` (step 8, not
+  mine); flagging rather than touching it.
+
+**Learnings**: both gaps above were shipped code that typechecked, tested green,
+and did nothing, because no consumer existed yet. The pattern is identical to the
+step-4 capability gap from earlier tonight: **a module with no runtime consumer
+is not verified by anything.** Wiring the screen is what surfaced all three.
+
+**Next steps**: step 10 — `VERIFY-task-1-on-mac.md`.
+
 ## 2026-07-27 01:05 UTC — task-1 step 6 correction: the `city_geo_units` view, aggregated in SQL
 
 **Objective**: fix step 6's one deviation from the approved plan. The owner ruled

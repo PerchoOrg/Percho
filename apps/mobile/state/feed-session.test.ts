@@ -38,6 +38,7 @@ beforeEach(() => {
 		sessionN: 0,
 		lastSwipeAt: undefined,
 		hydrated: false,
+		undoSnapshot: undefined,
 	});
 });
 
@@ -162,5 +163,85 @@ describe("recordInsightUnsure", () => {
 		expect(s().signals.insightAgreed).toEqual([]);
 		expect(s().signals.insightRejected).toEqual([]);
 		expect(s().signals.dims).toEqual({});
+	});
+});
+
+// §1.8 undo. The asymmetry the owner accepted (PLAN B5) is that the SIGNAL
+// reverts and the STAGE does not — `funnel.ts` is monotonic by design — so what
+// needs pinning here is that the signal really does go all the way back.
+describe("undoSwipe (§1.8)", () => {
+	it("restores the exact pre-swipe signal state", () => {
+		const before = s().signals;
+		s().recordSwipe(listing("l1"), "right", 1_000);
+		expect(s().signals.likedListingIds).toContain("l1");
+
+		const restored = s().undoSwipe("l1");
+		expect(restored).toEqual(before);
+		expect(s().signals).toEqual(before);
+		expect(s().signals.likedListingIds).not.toContain("l1");
+	});
+
+	it("reverts the per-stage swipe counter too", () => {
+		s().recordSwipe(listing("l1"), "right", 1_000);
+		expect(s().signals.swipesInStage).toBe(1);
+		s().undoSwipe("l1");
+		// Otherwise the `stage_advance` telemetry would count a swipe the buyer
+		// took back, and §1.10's swipes-per-stage metric would drift up over time.
+		expect(s().signals.swipesInStage).toBe(0);
+	});
+
+	it("un-marks the card seen so it can come back to the top of the deck", () => {
+		s().recordSwipe(listing("l1"), "left", 1_000);
+		expect(s().seenIds).toContain("l1");
+		s().undoSwipe("l1");
+		expect(s().seenIds).not.toContain("l1");
+	});
+
+	it("keeps a card seen if it was ALREADY seen before the undone swipe", () => {
+		// A looped card (§1.9) is swiped a second time. Undoing that swipe
+		// unrecords the verdict but must not claim the buyer never saw the card.
+		s().markSeen(["l1"]);
+		s().recordSwipe(listing("l1"), "right", 1_000);
+		s().undoSwipe("l1");
+		expect(s().seenIds).toContain("l1");
+	});
+
+	it("un-answers an ask so the question is not silently skipped", () => {
+		s().recordSwipe(ask, "right", 1_000);
+		expect(s().answeredAskIds).toContain(ask.id);
+		s().undoSwipe(ask.id);
+		expect(s().answeredAskIds).not.toContain(ask.id);
+	});
+
+	it("returns null for a card that is not the last swipe", () => {
+		s().recordSwipe(listing("l1"), "right", 1_000);
+		s().recordSwipe(listing("l2"), "right", 2_000);
+		// Only the most recent swipe is undoable: the 3s window has closed on l1,
+		// and restoring its snapshot would also erase l2's verdict.
+		expect(s().undoSwipe("l1")).toBeNull();
+		expect(s().signals.likedListingIds).toContain("l2");
+	});
+
+	it("returns null when there is nothing to undo", () => {
+		expect(s().undoSwipe("l1")).toBeNull();
+	});
+
+	it("cannot be used twice for the same swipe", () => {
+		s().recordSwipe(listing("l1"), "right", 1_000);
+		expect(s().undoSwipe("l1")).not.toBeNull();
+		expect(s().undoSwipe("l1")).toBeNull();
+	});
+
+	it("is dropped by a scope reset — undo must not resurrect cleared scope", () => {
+		s().recordSwipe(listing("l1"), "right", 1_000);
+		s().clearSignals();
+		expect(s().undoSwipe("l1")).toBeNull();
+		expect(s().signals).toEqual(EMPTY_SIGNALS);
+	});
+
+	it("is dropped by a new session — the 3s window cannot span a restart", () => {
+		s().recordSwipe(listing("l1"), "right", 1_000);
+		s().beginSession();
+		expect(s().undoSwipe("l1")).toBeNull();
 	});
 });

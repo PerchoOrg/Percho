@@ -18,6 +18,13 @@ export interface PoolListingDTO {
   slug: string;
   address: string;
   priceLabel: string;
+  /**
+   * The raw price, when the row has one. Carried in ADDITION to `priceLabel`
+   * because §1.6's challenge card ("guess the price") needs the real number:
+   * reconstructing it from "$685K" would round the answer to the nearest
+   * thousand and the card would teach a figure no listing actually has.
+   */
+  price?: number;
   bedBathSqft: string;
   heroUrl: string;
   videoUrl?: string;
