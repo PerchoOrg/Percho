@@ -13,23 +13,33 @@
  * A no-video card is a first-class state elsewhere (task-1 renders a static
  * hero); this component assumes a real `url`.
  *
- * ORIENTATION (owner, on device 2026-07-27): "listing card 要能同时支持竖屏和
- * 横屏视频或者照片 对于横屏视频宽度要占满 listing card 上下可以不用占满". This
- * shipped with a flat `contentFit="cover"`, which FILLS by cropping — on a 16:9
- * source in a ~9:16 card that discards about two thirds of the width, and for a
- * home video the subject is usually in the discarded part. Every video in
- * production today is landscape, because the photos they are built from are.
+ * ── FIT: always `contain`, never `cover` ────────────────────────────────────
  *
- * So the fit is now decided by `lib/media/fit.ts` from the player's REAL
- * dimensions: portrait fills, landscape gets full width with dark letterbox
- * bands. Real dimensions rather than the DB's `aspect_ratio`, because that column
- * claimed '9:16' for videos Cloudflare reports as 1080x1920 AND for ones that are
- * actually wide — the file is the only trustworthy source.
+ * Owner's rule, stated twice (2026-07-27): "横屏视频只横向占满不要纵向拉伸 不要
+ * zoom in" — a landscape video fills the card's WIDTH, is not stretched
+ * vertically, and is never zoomed.
+ *
+ * `contain` is exactly that rule, for every aspect ratio, with no measurement:
+ * the video is scaled to fit INSIDE the card, so a landscape source ends up
+ * full-width with bands above and below, and a portrait source fills. Nothing is
+ * ever cropped or magnified.
+ *
+ * Two earlier attempts got this wrong and both are worth remembering:
+ *   1. `contentFit="cover"` — fills by CROPPING. On a 16:9 source in a ~9:16
+ *      card it discards ~2/3 of the width and magnifies what is left, which is
+ *      the "占满整个card 像素很差" the owner reported: not a resolution problem,
+ *      an upscaling one.
+ *   2. Measuring the track and switching fit per orientation. The measurement
+ *      read `videoSource.videoTracks`, which does not exist — the payload field
+ *      is `availableVideoTracks` — so the size was NEVER learned and every card
+ *      silently kept the `cover` fallback. A conditional whose condition never
+ *      fires is worse than no conditional: it looks handled and is not.
+ *
+ * So there is no dimension detection here at all. `contain` needs none.
  */
 import { VideoView, useVideoPlayer } from "expo-video";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { Image, StyleSheet, View } from "react-native";
-import { type MediaSize, mediaFit } from "../lib/media/fit";
 import { useSoundStore } from "../state/sound";
 import { colors } from "../theme/tokens";
 
@@ -41,27 +51,14 @@ interface CardVideoProps {
 	poster?: string;
 	isTop: boolean;
 	onNearEnd?: () => void;
-	/**
-	 * The card's own aspect (width / height). Required so the fit adapts to the
-	 * device instead of assuming 9:16 — `feed.tsx` sizes the card from the window.
-	 */
-	cardAspect: number;
 }
 
-export function CardVideo({
-	url,
-	poster,
-	isTop,
-	onNearEnd,
-	cardAspect,
-}: CardVideoProps) {
+export function CardVideo({ url, poster, isTop, onNearEnd }: CardVideoProps) {
 	const soundOn = useSoundStore((s) => s.soundOn);
 	const nearEndFired = useRef(false);
 	const mutedRetried = useRef(false);
 	const onNearEndRef = useRef(onNearEnd);
 	onNearEndRef.current = onNearEnd;
-	/** Real pixel size, once the player knows it. Undefined → fill (safe default). */
-	const [size, setSize] = useState<MediaSize | undefined>(undefined);
 
 	const player = useVideoPlayer(url, (p) => {
 		p.loop = true;
@@ -102,46 +99,6 @@ export function CardVideo({
 		return () => sub.remove();
 	}, [player, isTop]);
 
-	/**
-	 * Real track dimensions, read once they exist.
-	 *
-	 * `sourceLoad` carries them on expo-video; `videoTrack` is also polled on
-	 * `statusChange` because a cached/looped source can reach `readyToPlay`
-	 * without re-firing `sourceLoad`, and a card that never learns its size would
-	 * silently keep the `cover` fallback — i.e. the exact cropping bug this fixes,
-	 * back again and invisible.
-	 */
-	useEffect(() => {
-		const apply = (
-			track: { size?: { width: number; height: number } } | null,
-		) => {
-			const s = track?.size;
-			if (!s || !s.width || !s.height) return;
-			setSize((prev) =>
-				prev && prev.width === s.width && prev.height === s.height
-					? prev
-					: { width: s.width, height: s.height },
-			);
-		};
-		const onLoad = player.addListener("sourceLoad", ({ videoSource }) => {
-			apply(
-				(videoSource as unknown as { videoTracks?: { size?: MediaSize }[] })
-					?.videoTracks?.[0] ?? null,
-			);
-		});
-		const onStatus = player.addListener("statusChange", ({ status }) => {
-			if (status !== "readyToPlay") return;
-			apply(
-				(player as unknown as { videoTrack?: { size?: MediaSize } })
-					.videoTrack ?? null,
-			);
-		});
-		return () => {
-			onLoad.remove();
-			onStatus.remove();
-		};
-	}, [player]);
-
 	// 82% breathing-CTA trigger, once-latched per card (§0.7 / owner-approved #7).
 	useEffect(() => {
 		const sub = player.addListener("timeUpdate", ({ currentTime }) => {
@@ -157,32 +114,27 @@ export function CardVideo({
 		return () => sub.remove();
 	}, [player, isTop]);
 
-	const fit = mediaFit(size, cardAspect);
-
 	return (
 		<View style={styles.frame} pointerEvents="none">
 			{/*
-			 * Poster. Cropped to fill even when the video is letterboxed: it sits
-			 * BEHIND the bands as a soft backdrop, and a letterboxed poster behind a
-			 * letterboxed video would show two mismatched frames.
+			 * Backdrop for whatever the video does not cover. A blurred, dimmed copy
+			 * of the poster rather than a flat band, so the letterbox area still
+			 * belongs to this card. Invisible when the video fills the frame.
 			 */}
 			{!!poster && (
 				<Image
 					source={{ uri: poster }}
 					style={StyleSheet.absoluteFill}
 					resizeMode="cover"
-					blurRadius={fit.letterboxed ? 12 : 0}
+					blurRadius={16}
 				/>
 			)}
-			{fit.letterboxed && <View style={styles.letterbox} />}
+			<View style={styles.scrim} />
 			<VideoView
 				player={player}
-				style={
-					fit.letterboxed
-						? [styles.contained, { aspectRatio: fit.boxAspectRatio }]
-						: StyleSheet.absoluteFill
-				}
-				contentFit={fit.contentFit}
+				style={StyleSheet.absoluteFill}
+				// The owner's rule, for every aspect ratio. Never `cover`.
+				contentFit="contain"
 				nativeControls={false}
 			/>
 		</View>
@@ -190,23 +142,18 @@ export function CardVideo({
 }
 
 const styles = StyleSheet.create({
-	// `center` so a letterboxed video sits mid-card with equal bands, rather than
-	// pinned to the top with all the empty space below it.
 	frame: {
 		...StyleSheet.absoluteFillObject,
 		alignItems: "center",
 		justifyContent: "center",
+		// Behind the blurred poster, so a video with no poster still sits on the
+		// dark card family (§0.3) rather than on white.
+		backgroundColor: colors.cardPlainTo,
 	},
-	/**
-	 * The band behind a letterboxed video. Dark, because §0.3 makes the card face
-	 * ALWAYS dark — a light band would read as a rendering fault, and every
-	 * on-card token was AA-checked against a dark backdrop.
-	 */
-	letterbox: {
+	/** Dims the blurred backdrop so it reads as a frame, not a second image. */
+	scrim: {
 		...StyleSheet.absoluteFillObject,
 		backgroundColor: colors.cardPlainTo,
-		opacity: 0.82,
+		opacity: 0.55,
 	},
-	/** Full card WIDTH, height from the source's aspect (the owner's rule). */
-	contained: { width: "100%" },
 });

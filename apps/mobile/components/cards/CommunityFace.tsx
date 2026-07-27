@@ -12,7 +12,7 @@
  * Pills prefer the card's authored `pills` and fall back to its real `dims`.
  */
 import { DIMS } from "@percho/shared";
-import { Image, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import type { CommunityCardV3 } from "../../lib/feed/card-types";
 import { colors } from "../../theme/tokens";
 import { CardFoot } from "../CardFoot";
@@ -23,8 +23,6 @@ import { KindChip } from "../KindChip";
 interface CommunityFaceProps {
 	card: CommunityCardV3;
 	isTop: boolean;
-	/** Card width / height — see `ListingFace`. */
-	cardAspect: number;
 	onExplore?: () => void;
 }
 
@@ -37,12 +35,7 @@ function specsLine(card: CommunityCardV3): string | undefined {
 	return parts.length > 0 ? parts.join(" · ") : undefined;
 }
 
-export function CommunityFace({
-	card,
-	isTop,
-	cardAspect,
-	onExplore,
-}: CommunityFaceProps) {
+export function CommunityFace({ card, isTop, onExplore }: CommunityFaceProps) {
 	const pills =
 		card.pills && card.pills.length > 0
 			? [...card.pills]
@@ -51,14 +44,9 @@ export function CommunityFace({
 	return (
 		<View style={styles.face}>
 			{card.videoUrl ? (
-				<CardVideo
-					url={card.videoUrl}
-					poster={card.heroUrl}
-					isTop={isTop}
-					cardAspect={cardAspect}
-				/>
+				<CardVideo url={card.videoUrl} poster={card.heroUrl} isTop={isTop} />
 			) : (
-				<CardPhoto url={card.heroUrl} cardAspect={cardAspect} />
+				<CardPhoto url={card.heroUrl} />
 			)}
 			<View style={styles.head}>
 				<KindChip label="COMMUNITY" />

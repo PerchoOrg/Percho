@@ -113,8 +113,6 @@ export default function DevFoundation() {
 					url={item.video}
 					poster={item.img}
 					isTop={role === "top"}
-					// This demo screen hardcodes cardHeight={400} below.
-					cardAspect={(width - 32) / 400}
 					onNearEnd={() => note(`A5 onNearEnd 82% fired — ${item.address}`)}
 				/>
 			) : (

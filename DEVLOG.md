@@ -4,6 +4,40 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-27 23:10 UTC — 横屏视频仍被 zoom：我上一轮的尺寸检测**从未生效**（字段名错）
+
+**Objective**: owner 第二次指出同一件事: "Listing 的视频占满了整个card 像素很差
+我说过了 横屏视频只横向占满不要纵向拉伸 不要zoom in"。
+
+**Issues（我的实现有一个静默失效的条件分支）**: 上一轮我写了"测真实轨道尺寸 → 竖屏
+`cover` / 横屏 `contain`"。但测量代码读的是 `videoSource.videoTracks` —— **expo-video
+的 payload 字段其实叫 `availableVideoTracks`**(查了 `expo-video@3.0.16` 的
+`SourceLoadEventPayload` 类型定义确认)。字段不存在 → `size` 永远学不到 →
+`mediaFit` 永远走"未知尺寸"分支 → **永远退回 `cover`**。
+`cover` = 填满靠**裁切+放大**,16:9 塞进 ~9:16 丢掉约 2/3 宽度并把剩下的放大 ——
+owner 说的"像素很差"**不是分辨率问题,是 upscale**。
+**一个条件永不成立的分支比没有分支更糟:它看起来处理了,实际没有。**
+
+**Resolution**: 删掉整个尺寸检测,`contentFit="contain"` **对所有比例一律使用**。
+`contain` 本身就是 owner 那条规则:缩放到**装进**卡内 → 横屏自然"横向占满 + 上下留边",
+竖屏自然填满,**任何比例都不裁不放大**。`CardPhoto` 同理用 `resizeMode="contain"`。
+连带删除:`lib/media/fit.ts` + 其 9 个测试(整个模块只为喂那个失效分支而存在)、
+三个 face 与 `feed.tsx`/`dev-foundation.tsx` 里的 `cardAspect` 全套传参、
+以及因此变成孤儿的 `Image` import。**净减代码。**
+
+**验证（读真 bundle，不只跑 tsc）**:Metro bundle 里 `CardVideo` 模块的
+`contentFit` **只出现 `"contain"` 一处、`cover` 零处**;`mediaFit` 已不被引用;
+`CardPhoto` 是 `cover`(背景模糊层)+`contain`(前景)。485 测试、tsc 0、biome 115 干净。
+
+**Learnings**: **对着第三方 event payload 猜字段名,失败方式是静默的。** 这次代价是
+owner 重复报同一个 bug。凡是读外部 payload 的可选字段,要么查类型定义(`.d.ts` 就在
+`node_modules` 里,一次 grep),要么加一条"没读到就告警"的兜底 —— 不能让"读不到"和
+"正常默认值"走同一条路径。
+另外:**`contain` 早就等价于用户那条规则,我却先造了一个测量+分支的方案。** 用户的措辞
+("只横向占满、不要纵向拉伸、不要 zoom")本身就是 `contain` 的定义。
+
+**Next steps**: owner 重开 app 复验。第二轮 ai_tags 回填仍在跑。
+
 ## 2026-07-27 22:45 UTC — listing 卡放的是「周边 POI 视频」不是「房子视频」（我上一轮接错了源）
 
 **Objective**: owner 真机: "我看到这两条房子的视频了 第一帧是房子 后面变成了 community 的照片了"。

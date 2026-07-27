@@ -1,81 +1,41 @@
 /**
- * CardPhoto — a still hero that respects source orientation, the same way
- * `CardVideo` does.
+ * CardPhoto — a still hero that obeys the same fit rule as `CardVideo`.
  *
- * Every card face rendered its photo as a bare `<Image style={absoluteFill} />`,
- * which defaults to `resizeMode="cover"` — it FILLS by cropping. The owner's rule
- * covers photos as well as video (2026-07-27: "listing card 要能同时支持竖屏和
- * 横屏视频或者照片"), and in production the photos are landscape, so a 16:9 house
- * exterior in a ~9:16 card was losing most of its width.
+ * Owner's rule (2026-07-27): media fills the card's WIDTH, is never stretched
+ * vertically, and is never zoomed in. `resizeMode="contain"` is that rule for
+ * every aspect ratio: a landscape photo ends up full-width with bands above and
+ * below, a portrait photo fills, and nothing is ever cropped or magnified.
  *
- * Same decision function as the video path (`lib/media/fit.ts`) so the two can
- * never diverge: portrait fills, landscape gets full width with dark bands, and a
- * blurred copy of the photo sits behind those bands so the card never shows a
- * flat empty strip.
+ * Every card face previously rendered a bare `<Image style={absoluteFill} />`,
+ * which defaults to `cover` — it FILLS by cropping, so a 16:9 house exterior in a
+ * ~9:16 card lost most of its width and upscaled the remainder.
  *
- * Dimensions come from `Image.getSize` — RN gives no dimensions on a remote URI
- * until it is measured, and guessing from the URL is not possible.
+ * No `Image.getSize` call: an earlier version measured the photo to choose
+ * between fit modes, which was both slower (an extra network round trip per
+ * card) and pointless, since `contain` already satisfies the rule at every ratio.
  */
-import { useEffect, useState } from "react";
 import { Image, StyleSheet, View } from "react-native";
-import { type MediaSize, mediaFit } from "../lib/media/fit";
 import { colors } from "../theme/tokens";
 
 interface CardPhotoProps {
 	url: string;
-	/** Card width / height, so the fit adapts to the device. */
-	cardAspect: number;
 }
 
-export function CardPhoto({ url, cardAspect }: CardPhotoProps) {
-	const [size, setSize] = useState<MediaSize | undefined>(undefined);
-
-	useEffect(() => {
-		let live = true;
-		// Reset on url change, or a new photo briefly inherits the previous one's
-		// fit — which on a portrait→landscape swap is a visible jump.
-		setSize(undefined);
-		Image.getSize(
-			url,
-			(width, height) => {
-				if (live) setSize({ width, height });
-			},
-			() => {
-				// Measurement failed (404, offline). `undefined` keeps the `cover`
-				// fallback, which still renders something rather than an empty frame.
-			},
-		);
-		return () => {
-			live = false;
-		};
-	}, [url]);
-
-	const fit = mediaFit(size, cardAspect);
-
-	if (!fit.letterboxed) {
-		return (
-			<Image
-				source={{ uri: url }}
-				style={StyleSheet.absoluteFill}
-				resizeMode="cover"
-			/>
-		);
-	}
-
+export function CardPhoto({ url }: CardPhotoProps) {
 	return (
 		<View style={styles.frame}>
-			{/* Blurred fill behind the bands — the same photo, so the band always
-			    belongs to this card rather than reading as a dead grey strip. */}
+			{/* Blurred, dimmed copy of the same photo behind the bands, so the
+			    letterbox area still belongs to this card. */}
 			<Image
 				source={{ uri: url }}
 				style={StyleSheet.absoluteFill}
 				resizeMode="cover"
-				blurRadius={14}
+				blurRadius={16}
 			/>
 			<View style={styles.scrim} />
 			<Image
 				source={{ uri: url }}
-				style={[styles.contained, { aspectRatio: fit.boxAspectRatio }]}
+				style={StyleSheet.absoluteFill}
 				resizeMode="contain"
 			/>
 		</View>
@@ -87,13 +47,11 @@ const styles = StyleSheet.create({
 		...StyleSheet.absoluteFillObject,
 		alignItems: "center",
 		justifyContent: "center",
+		backgroundColor: colors.cardPlainTo,
 	},
-	/** Darkens the blurred backdrop — the card face is always dark (§0.3). */
 	scrim: {
 		...StyleSheet.absoluteFillObject,
 		backgroundColor: colors.cardPlainTo,
-		opacity: 0.6,
+		opacity: 0.55,
 	},
-	/** Full card WIDTH; height follows the photo's own aspect. */
-	contained: { width: "100%" },
 });
