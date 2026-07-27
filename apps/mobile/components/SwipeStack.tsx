@@ -62,11 +62,11 @@ import {
 	type CardCapability,
 	INERT_CAPABILITY,
 } from "../lib/gesture/capability";
-import { cardStackVisual } from "../lib/gesture/stack-layer";
+import { VISIBLE_WINDOW, cardStackVisual } from "../lib/gesture/stack-layer";
 import { colors, radii } from "../theme/tokens";
 
-/** Cards visible at rest: top + 2 behind (§0.6 #7). */
-const WINDOW = 3;
+/** Cards visible at rest: top + 2 behind (§0.6 #7). Shared with the composer. */
+const WINDOW = VISIBLE_WINDOW;
 /**
  * How many already-swiped cards stay mounted. Exactly one: the card that just
  * committed has to remain in the tree to finish its flyout, and to stay parked

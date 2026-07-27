@@ -15,6 +15,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import type { CommunityCardV3, ListingCardV3 } from "../../lib/feed/card-types";
 import { colors, radii } from "../../theme/tokens";
 import { textStyles } from "../../theme/typography";
+import { CardSurface } from "./CardSurface";
 
 interface DataFaceStubProps {
 	card: ListingCardV3 | CommunityCardV3;
@@ -61,6 +62,7 @@ export function DataFaceStub({ card, onFlipBack }: DataFaceStubProps) {
 
 	return (
 		<View style={styles.face}>
+			<CardSurface />
 			<View style={styles.body}>
 				<Text style={styles.eyebrow}>{card.kind}</Text>
 				<Text style={styles.title}>{title}</Text>
@@ -85,7 +87,7 @@ export function DataFaceStub({ card, onFlipBack }: DataFaceStubProps) {
 }
 
 const styles = StyleSheet.create({
-	face: { flex: 1, backgroundColor: colors.ink },
+	face: { flex: 1, backgroundColor: colors.cardPlainTo },
 	body: { flex: 1, padding: 20, paddingTop: 28 },
 	eyebrow: { ...textStyles.caption, color: colors.accent },
 	title: { ...textStyles.title1, color: colors.onCard, marginTop: 6 },

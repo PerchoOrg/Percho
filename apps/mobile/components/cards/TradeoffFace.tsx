@@ -27,6 +27,7 @@ import { SWIPE_THRESHOLD_RATIO } from "../../lib/gesture/decide-swipe";
 import { colors } from "../../theme/tokens";
 import { textStyles } from "../../theme/typography";
 import { KindChip } from "../KindChip";
+import { CardSurface } from "./CardSurface";
 
 const REST_OPACITY = 0.72;
 const CHOSEN_OPACITY = 1;
@@ -65,6 +66,7 @@ export function TradeoffFace({ card, tx, cardWidth }: TradeoffFaceProps) {
 
 	return (
 		<View style={styles.face}>
+			<CardSurface />
 			<View style={styles.head}>
 				<KindChip label="TRADE-OFF" />
 			</View>
@@ -86,7 +88,7 @@ export function TradeoffFace({ card, tx, cardWidth }: TradeoffFaceProps) {
 }
 
 const styles = StyleSheet.create({
-	face: { flex: 1, backgroundColor: colors.ink },
+	face: { flex: 1, backgroundColor: colors.cardPlainTo },
 	head: {
 		position: "absolute",
 		top: 16,

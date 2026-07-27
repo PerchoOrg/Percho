@@ -23,6 +23,7 @@ import type { MilestoneCardV3 } from "../../lib/feed/card-types";
 import { haptics } from "../../lib/haptics";
 import { colors, radii } from "../../theme/tokens";
 import { textStyles } from "../../theme/typography";
+import { CardSurface } from "./CardSurface";
 
 interface MilestoneFaceProps {
 	card: MilestoneCardV3;
@@ -45,6 +46,7 @@ export function MilestoneFace({
 
 	return (
 		<View style={styles.face}>
+			<CardSurface />
 			<View style={styles.body}>
 				<Text style={styles.eyebrow}>Stage unlocked</Text>
 				<Text style={styles.headline}>{card.headline}</Text>
@@ -87,7 +89,7 @@ export function MilestoneFace({
 }
 
 const styles = StyleSheet.create({
-	face: { flex: 1, backgroundColor: colors.ink },
+	face: { flex: 1, backgroundColor: colors.cardPlainTo },
 	body: { flex: 1, justifyContent: "center", paddingHorizontal: 24 },
 	eyebrow: { ...textStyles.caption, color: colors.accent },
 	headline: { ...textStyles.display, color: colors.onCard, marginTop: 12 },

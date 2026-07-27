@@ -15,6 +15,7 @@ import type { InsightCardV3 } from "../../lib/feed/card-types";
 import { colors, radii } from "../../theme/tokens";
 import { textStyles } from "../../theme/typography";
 import { KindChip } from "../KindChip";
+import { CardSurface } from "./CardSurface";
 
 /** §0.5: every touch target is at least 44pt. */
 const MIN_TOUCH = 44;
@@ -33,6 +34,7 @@ export function InsightFace({
 }: InsightFaceProps) {
 	return (
 		<View style={styles.face}>
+			<CardSurface />
 			<View style={styles.head}>
 				<KindChip label="💡 INSIGHT" />
 				<Text style={styles.tag}>PERCHO NOTICED</Text>
@@ -59,7 +61,7 @@ export function InsightFace({
 }
 
 const styles = StyleSheet.create({
-	face: { flex: 1, backgroundColor: colors.ink },
+	face: { flex: 1, backgroundColor: colors.cardPlainTo },
 	head: {
 		position: "absolute",
 		top: 16,

@@ -4,6 +4,94 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-27 04:30 UTC — device bugs: flat-black media-less cards + milestone displacing a peeked card
+
+**Objective**: owner on the phone: "一开始会连着看到纯黑的tradeoff card 后面偶尔还是会有闪变的
+卡片". Two unrelated bugs; the second is the residue the 03:10 fix did not reach.
+
+### 1. Media-less card faces rendered as flat near-black
+
+**Diagnosis**: verified with a real `generateFeed` run against the real content
+tables before touching anything — the engine is clean: stage 0's 12-card page has
+**no two adjacent trade-offs** (longest run 1), every label has real copy, 0
+looped. So it was never composition. It was paint: all ten card faces filled with
+`colors.ink` (**#2B2116 — the PRIMARY TEXT token**), which the photo-backed faces
+immediately cover with an image. Five faces have no media source by design
+(trade-off, challenge, insight, milestone, both data faces), so for those the
+"background" WAS the final pixel: a full screen of flat near-black. Stage 0's mix
+puts a trade-off in 3 of every 10 slots, so they arrive in a visible cluster.
+
+§0.3 never specified a media-less card treatment — it names the photo + foot
+gradient and nothing else. Flat ink was the absence of a decision, not a decision.
+
+**Actions**:
+- `theme/tokens.ts` — added `cardPlainFrom` / `cardPlainTo` (warm dark ramp).
+  Stays in the dark family so every on-card token (`onCard`, `onCardDim`,
+  `glass`, `pos`/`neg`) keeps the contrast it was AA-checked against.
+- `components/cards/CardSurface.tsx` (new) — two-stop diagonal `LinearGradient`,
+  same light direction as the photo faces. No image, no blur, no noise: these
+  cards are the majority of stage 0's deck and a full-card offscreen pass on each
+  is not worth a texture.
+- The five media-less faces now render `<CardSurface />` as their base layer;
+  their `face` fallback moved from `colors.ink` to `colors.cardPlainTo` so there
+  is no black flash before the gradient paints.
+
+### 2. The milestone was displacing a card the buyer had already seen
+
+**Diagnosis**: `insertMilestone` spliced at `activeIndex + 1`. But `SwipeStack`
+renders a **3-card window**, so the card at `activeIndex + 1` has been visible
+under the buyer's thumb for the entire gesture — it is the card they were peeking
+at. Inserting there swapped it out a beat after they lifted their finger. Same
+sentence from the owner as the 03:10 report, which is why that fix looked
+incomplete: three of the four causes were dependency-driven resets, this fourth
+one is a deliberate splice landing in the wrong place.
+
+**Actions**:
+- `lib/gesture/stack-layer.ts` — exported `VISIBLE_WINDOW = 3` with the reason
+  it must be shared: anything that splices the deck has to know how far ahead the
+  buyer can already see.
+- `components/SwipeStack.tsx` — its local `WINDOW` now derives from that constant
+  rather than being a second literal `3` free to drift.
+- `lib/feed/generate-feed.ts` — `insertMilestone` splices at
+  `activeIndex + VISIBLE_WINDOW`, i.e. just past what is on screen. Still "the
+  next card" in the sense §1.5 / B15 cares about — 3 swipes away, not 12 — and
+  nothing visible moves.
+- `lib/feed/generate-feed.test.ts` — the old assertion (`out[4]` for
+  `activeIndex 3`) encoded the bug, so it was rewritten rather than kept. Added
+  the invariant that would have caught this: **"never displaces a card the buyer
+  can already see"** — every slot from `activeIndex` to `activeIndex +
+  VISIBLE_WINDOW` must be identity-unchanged after the splice. Plus "still
+  arrives soon" (bounds the delay so a future edit can't push the ceremony to the
+  end of the deck) and a clamp case for the window overrunning the deck.
+
+**Decisions**: I did NOT special-case the trade-off card with its own background.
+Five faces had the same defect from the same missing token, and fixing one would
+have left four and invited a sixth. Likewise `VISIBLE_WINDOW` is exported from the
+gesture layer rather than redeclared in the feed layer — the composer's splice and
+the renderer's window are the same fact, and two copies of `3` is how this bug
+comes back.
+
+**Verification**: `pnpm test` 275/275 (272 → 275), `pnpm typecheck` 0, `pnpm lint`
+clean over 86 files. Metro re-bundled through the live tunnel (HTTP 200, 15.5MB)
+and I read the emitted bundle rather than trusting tsc: **zero occurrences of
+`backgroundColor: colors.ink,` on a card face remain**, `CardSurface` and
+`#3B2E20` are present, and `insertMilestone` ships as
+`Math.min(Math.max(activeIndex + _gestureStackLayer.VISIBLE_WINDOW, 0), cards.length)`
+— the shared constant, not a copy. The composition claim above came from running
+the real engine, not from reading it. **Visual confirmation owed on the phone.**
+
+**Learnings**: a "background colour" behind an always-opaque layer is untested by
+construction — nobody sees it until some sibling face omits the layer. If a
+fallback is load-bearing for one variant it needs its own token and its own name,
+or it silently inherits whatever the text palette happens to be. And any splice
+into a windowed list must be expressed in terms of that window's size, never
+`+ 1`: the visible window is exactly the region where an insert is a visual bug.
+
+**Next steps**: owner reloads Expo Go. Watch for (a) trade-off / challenge /
+insight cards showing the warm gradient rather than flat black, (b) a peeked card
+never being replaced — including right after a stage advance, which is the case
+that was still broken. Then V1–V6 in `VERIFY-task-1-on-mac.md`.
+
 ## 2026-07-27 03:10 UTC — device bugs: deck rebuilt mid-session (card swapped after peek) + label flash
 
 **Objective**: owner on the phone: "偶尔会出现好像有白色字体一闪而过 再消失" and "切换卡片的时候

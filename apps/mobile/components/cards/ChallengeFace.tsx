@@ -21,6 +21,7 @@ import type { ChallengeCardV3 } from "../../lib/feed/card-types";
 import { colors } from "../../theme/tokens";
 import { textStyles } from "../../theme/typography";
 import { KindChip } from "../KindChip";
+import { CardSurface } from "./CardSurface";
 
 interface ChallengeFaceProps {
 	card: ChallengeCardV3;
@@ -48,6 +49,7 @@ export function ChallengeFace({
 
 	return (
 		<View style={styles.face}>
+			<CardSurface />
 			<View style={styles.head}>
 				<KindChip label="CHALLENGE" />
 				<Text style={styles.tag}>{card.tag}</Text>
@@ -83,7 +85,7 @@ export function ChallengeFace({
 }
 
 const styles = StyleSheet.create({
-	face: { flex: 1, backgroundColor: colors.ink },
+	face: { flex: 1, backgroundColor: colors.cardPlainTo },
 	head: {
 		position: "absolute",
 		top: 16,

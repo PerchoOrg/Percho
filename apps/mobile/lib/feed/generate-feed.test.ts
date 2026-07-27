@@ -6,6 +6,7 @@
  * provable without a simulator.
  */
 import { describe, expect, it } from "vitest";
+import { VISIBLE_WINDOW } from "../gesture/stack-layer";
 import type {
 	CommunityCardV3,
 	FeedCardV3,
@@ -448,11 +449,32 @@ describe("§1.5 milestone insertion", () => {
 		chips: ["Under $500K", "Schools matter"],
 	};
 
-	it("inserts as the very next card, not appended at the end", () => {
+	it("inserts just past the visible window, not appended at the end", () => {
 		const deck = gen(0).cards;
 		const out = insertMilestone(deck, 3, milestone, []);
-		expect(out[4]).toBe(milestone);
+		expect(out[3 + VISIBLE_WINDOW]).toBe(milestone);
 		expect(out).toHaveLength(deck.length + 1);
+	});
+
+	/**
+	 * The regression. `SwipeStack` shows a 3-card window, so a card within
+	 * `VISIBLE_WINDOW` of the cursor has ALREADY been seen — it was peeking out
+	 * from under the card being dragged. Splicing there replaces a card in front
+	 * of the buyer's eyes, which on device read as "peek 到下一张，一秒后又换成别的".
+	 */
+	it("never displaces a card the buyer can already see", () => {
+		const deck = gen(0).cards;
+		const activeIndex = 2;
+		const out = insertMilestone(deck, activeIndex, milestone, []);
+		for (let d = 0; d < VISIBLE_WINDOW; d++) {
+			expect(out[activeIndex + d]).toBe(deck[activeIndex + d]);
+		}
+	});
+
+	it("still arrives soon — within a window of the swipe that earned it", () => {
+		const deck = gen(0).cards;
+		const out = insertMilestone(deck, 1, milestone, []);
+		expect(out.indexOf(milestone) - 1).toBeLessThanOrEqual(VISIBLE_WINDOW);
 	});
 
 	it("never shows the same milestone twice", () => {
@@ -464,5 +486,12 @@ describe("§1.5 milestone insertion", () => {
 		const deck = gen(0).cards;
 		const out = insertMilestone(deck, deck.length + 5, milestone, []);
 		expect(out[out.length - 1]).toBe(milestone);
+	});
+
+	it("clamps to the deck end when the window overruns it", () => {
+		const deck = gen(0).cards;
+		const out = insertMilestone(deck, deck.length - 1, milestone, []);
+		expect(out[out.length - 1]).toBe(milestone);
+		expect(out).toHaveLength(deck.length + 1);
 	});
 });

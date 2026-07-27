@@ -1,3 +1,4 @@
+import { VISIBLE_WINDOW } from "../gesture/stack-layer";
 /**
  * `generateFeed` — the §1.7 composition engine.
  *
@@ -481,6 +482,18 @@ export function generateFeed(input: GenerateFeedInput): GenerateFeedResult {
  * §1.5 / PLAN B15: the milestone is the very next card after the swipe that
  * earned it, not an append at the end of the deck. Returns the deck unchanged
  * when this milestone was already shown (B3).
+ *
+ * "Next" means the next card the buyer has NOT ALREADY SEEN, which is not
+ * `activeIndex + 1`. `SwipeStack` renders a 3-card window, so by the time a swipe
+ * commits, the buyer has been looking at the card behind the top one for the
+ * whole gesture — it was peeking out from under the card they were dragging.
+ * Splicing at `activeIndex + 1` displaces exactly that card, so on device the
+ * card they had already seen was replaced by the milestone a moment after they
+ * lifted their finger (owner: "都已经peek到下一张卡片什么样子了 结果一秒之后又自动切换成别的卡片了").
+ *
+ * So the insert goes after the visible window: the buyer finishes the cards they
+ * can already see, then the ceremony. Still "the next card" in any sense the
+ * spec cares about — it is 2 swipes away, not 12 — and nothing on screen moves.
  */
 export function insertMilestone(
 	cards: readonly FeedCardV3[],
@@ -489,6 +502,6 @@ export function insertMilestone(
 	milestonesShown: readonly string[],
 ): readonly FeedCardV3[] {
 	if (milestonesShown.includes(milestone.id)) return cards;
-	const at = Math.min(Math.max(activeIndex + 1, 0), cards.length);
+	const at = Math.min(Math.max(activeIndex + VISIBLE_WINDOW, 0), cards.length);
 	return [...cards.slice(0, at), milestone, ...cards.slice(at)];
 }

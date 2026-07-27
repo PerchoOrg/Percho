@@ -44,6 +44,18 @@ import { SWIPE_THRESHOLD_RATIO } from "./decide-swipe";
 export const FOLLOW_ROTATION_DEG = 8;
 
 /**
+ * How many cards the buyer can see at once (§0.6 #7): the top card plus the two
+ * behind it. `SwipeStack` mounts exactly this many live cards.
+ *
+ * Exported because anything that SPLICES the deck has to know it. A card within
+ * this distance of the cursor has already been seen — it was peeking out from
+ * under the card being dragged — so inserting there swaps a card out from under
+ * the buyer's eyes. `insertMilestone` depends on this for exactly that reason;
+ * two independent copies of "3" would let the two drift apart silently.
+ */
+export const VISIBLE_WINDOW = 3;
+
+/**
  * §0.6 #7 resting values by integer depth: top, the one behind, the one behind
  * that. Depth is continuous, so these are the interpolation knots.
  */
