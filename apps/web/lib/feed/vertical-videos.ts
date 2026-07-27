@@ -1,23 +1,38 @@
 /**
- * Vertical (9:16) hero videos for the mobile feed.
+ * Hero videos for the mobile feed, and WHICH video belongs on which card.
  *
- * WHY THIS EXISTS — a real gap found on 2026-07-27 while wiring the owner's
- * device test. The mobile feed's video came from `browse-cards.ts`, which reads
- * `listing_videos` and prefers `cf_video_id ?? cf_video_id_landscape`. In
- * production every `listing_videos` row has a NULL `cf_video_id` and only a
- * `cf_video_id_landscape` — so the phone was being served LANDSCAPE video for a
- * full-bleed 9:16 card.
+ * ── The bug this file exists to prevent ─────────────────────────────────────
  *
- * Meanwhile the 15 ready rows in `generated_videos` are all `aspect_ratio =
- * '9:16'` — the vertical videos actually built for this surface — and nothing in
- * the mobile path read that table at all.
+ * Owner, on device (2026-07-27): "我看到这两条房子的视频了 第一帧是房子 后面变成了
+ * community的照片了".
  *
- * So: this module reads `generated_videos` and the mobile route prefers its
- * result over the browse-card hero. `browse-cards.ts` is deliberately untouched
- * because it also feeds the web `/browse` rails, where landscape is correct.
+ * Exactly right, and the cause is content semantics, not playback. An earlier
+ * version of this module treated every `generated_videos` row with a
+ * `listing_id` as that listing's hero. But those rows are **NEARBY / POI**
+ * videos: `scope = 'listing_intent_bucket'` means "things around this home,
+ * grouped by intent" (`outdoor`, `schools`, `dining`, `shopping`,
+ * `daily_errands`…), and their frames come from **`poi_photos`** — Google Places
+ * imagery of parks, schools and shops. Verified: all 15 ready rows have
+ * `input_photo_ids` with **zero** overlap with `listing_photos`; the first id on
+ * the 5122 Lower Creek video resolves to a `nature_preserve` POI.
  *
- * Only `status = 'ready'` rows are eligible; a still-rendering video is absent,
- * never a broken player.
+ * So the card opened on the listing's own cover photo and then cut to the
+ * neighbourhood — a listing card advertising a nature preserve.
+ *
+ * ── The rule now ────────────────────────────────────────────────────────────
+ *
+ *   LISTING hero  ← `listing_videos` (`kind = 'walkthrough'`, "Home tour").
+ *                   These are the only videos actually built from the home's own
+ *                   photos. In production they are LANDSCAPE only
+ *                   (`cf_video_id` is NULL on every row, `cf_video_id_landscape`
+ *                   is set), which is fine now that the card letterboxes
+ *                   landscape media properly (`apps/mobile/lib/media/fit.ts`).
+ *   COMMUNITY hero ← `generated_videos` with `scope = 'community_intent_bucket'`.
+ *                   Neighbourhood footage on a neighbourhood card is correct.
+ *
+ * `listing_intent_bucket` rows are deliberately NOT used as any card's hero.
+ * They are legitimate content — the "Nearby" rail on web `/browse` — but they
+ * belong to a listing's *surroundings*, not to the listing.
  */
 
 import { createAnonClient } from '@/lib/supabase/server';
@@ -34,56 +49,81 @@ export function streamPosterUrl(uid: string): string {
   return `${CF_STREAM_BASE}/${uid}/thumbnails/thumbnail.jpg?time=1s`;
 }
 
+type ListingVideoRow = {
+  listing_id: string;
+  cf_video_id: string | null;
+  cf_video_id_landscape: string | null;
+  sort_order: number | null;
+};
+
 type GeneratedVideoRow = {
-  listing_id: string | null;
   community_id: string | null;
   cf_stream_uid: string | null;
-  aspect_ratio: string | null;
   created_at: string;
 };
 
-export interface VerticalVideoIndex {
+export interface HeroVideoIndex {
+  /** listing id → stream uid of that home's OWN tour. */
   byListing: Map<string, string>;
+  /** community id → stream uid of that neighbourhood's video. */
   byCommunity: Map<string, string>;
 }
 
 /**
- * One 9:16 stream uid per listing and per community.
+ * Hero video per listing and per community, from the two correct sources.
  *
- * Unfiltered by id on purpose: there are 15 ready rows in total, so fetching all
- * of them is one small query, and it means the caller does not have to know the
- * listing ids before it can ask. When this table grows past a few hundred rows
- * this should take an id list.
+ * Unfiltered by id: 10 listing_videos rows and 15 generated_videos rows exist in
+ * total, so this is two small queries. Revisit when either table reaches a few
+ * hundred rows.
  */
-export async function fetchVerticalVideos(): Promise<VerticalVideoIndex> {
+export async function fetchVerticalVideos(): Promise<HeroVideoIndex> {
   const supabase = createAnonClient();
-  const { data, error } = await supabase
-    .from('generated_videos')
-    .select('listing_id, community_id, cf_stream_uid, aspect_ratio, created_at')
-    .eq('status', 'ready')
-    .eq('aspect_ratio', '9:16')
-    .order('created_at', { ascending: false });
 
-  // A video is an enhancement, not the card. If this read fails the feed still
-  // works with photos, so it must not take the whole endpoint down.
-  if (error) return { byListing: new Map(), byCommunity: new Map() };
+  const [listingRes, communityRes] = await Promise.all([
+    supabase
+      .from('listing_videos')
+      .select('listing_id, cf_video_id, cf_video_id_landscape, sort_order')
+      .eq('status', 'ready')
+      .eq('kind', 'walkthrough')
+      .order('sort_order', { ascending: true }),
+    supabase
+      .from('generated_videos')
+      .select('community_id, cf_stream_uid, created_at')
+      .eq('status', 'ready')
+      .eq('scope', 'community_intent_bucket')
+      .order('created_at', { ascending: false }),
+  ]);
 
   const byListing = new Map<string, string>();
   const byCommunity = new Map<string, string>();
-  for (const row of (data ?? []) as GeneratedVideoRow[]) {
-    if (!row.cf_stream_uid) continue;
-    // Newest first from the query, so the first write per key wins.
-    if (row.listing_id && !byListing.has(row.listing_id)) {
-      byListing.set(row.listing_id, row.cf_stream_uid);
-    }
-    if (row.community_id && !byCommunity.has(row.community_id)) {
-      byCommunity.set(row.community_id, row.cf_stream_uid);
+
+  // A video is an enhancement, not the card. A failed read must not take the
+  // whole feed down — the cards still render with photos.
+  if (!listingRes.error) {
+    for (const row of (listingRes.data ?? []) as ListingVideoRow[]) {
+      // Portrait preferred when it exists; landscape is the only thing present
+      // today and the card handles it. `?? undefined` rather than `?? ''` so an
+      // all-null row is skipped instead of producing a broken manifest URL.
+      const uid = row.cf_video_id ?? row.cf_video_id_landscape ?? undefined;
+      if (!uid) continue;
+      if (!byListing.has(row.listing_id)) byListing.set(row.listing_id, uid);
     }
   }
+
+  if (!communityRes.error) {
+    for (const row of (communityRes.data ?? []) as GeneratedVideoRow[]) {
+      if (!row.cf_stream_uid || !row.community_id) continue;
+      // Newest first from the query, so the first write per key wins.
+      if (!byCommunity.has(row.community_id)) {
+        byCommunity.set(row.community_id, row.cf_stream_uid);
+      }
+    }
+  }
+
   return { byListing, byCommunity };
 }
 
-/** Listing ids that have a ready 9:16 video, for the dev `videoFirst` fetch. */
+/** Listing ids that have a hero tour, for the dev `videoFirst` fetch. */
 export async function fetchVerticalVideoListingIds(): Promise<string[]> {
   const { byListing } = await fetchVerticalVideos();
   return [...byListing.keys()];

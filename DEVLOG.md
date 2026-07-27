@@ -4,6 +4,41 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-27 22:45 UTC — listing 卡放的是「周边 POI 视频」不是「房子视频」（我上一轮接错了源）
+
+**Objective**: owner 真机: "我看到这两条房子的视频了 第一帧是房子 后面变成了 community 的照片了"。
+
+**Issues（我上一轮引入的 bug，性质是内容语义错，不是播放错）**: 我把
+`generated_videos` 里**所有带 `listing_id` 的行**当成了那套房子的 hero。但那些行是
+**周边/POI 视频**:`scope='listing_intent_bucket'` 的意思是"**这套房子周围**的东西，按
+intent 分组"(`outdoor` / `schools` / `dining` / `shopping` / `daily_errands`)，帧全部来自
+**`poi_photos`**(Google Places 的公园、学校、商店图)。
+证据:15 条 ready 行的 `input_photo_ids` 与 `listing_photos` **零重叠**；5122 Lower Creek
+那条视频的第一个 photo id 指向一个 **`nature_preserve`** POI。
+所以卡片开头是 listing 自己的封面照(那是 `poster`)，一播起来就切到邻里 —— 一张
+listing 卡在给自然保护区做广告。owner 的描述精确到帧。
+
+**Resolution**: 改 hero 来源规则 —
+- **listing hero ← `listing_videos`**(`kind='walkthrough'`，"Home tour") —— 这才是真正
+  用房子自己照片做的视频。线上**只有横屏**(`cf_video_id` 全 NULL，只有
+  `cf_video_id_landscape`)，但上一轮已经让卡面正确 letterbox 横屏，所以现在能用了。
+- **community hero ← `generated_videos` 且 `scope='community_intent_bucket'`** ——
+  邻里视频放在邻里卡上是对的。
+- `listing_intent_bucket` **不再作为任何卡的 hero**。它不是垃圾数据，是 web `/browse`
+  的 "Nearby" 栏内容，只是属于房子的**周边**而非房子本身。
+
+**验证（真看了帧，不是只看 metadata）**:`?videoFirst=1` 现在返回 **22 条 listing、10 条
+带视频**(此前是 2 条错的)。抽 `c678d56a` 的第 20 秒缩略图用视觉模型确认:**室内正式餐厅，
+托盘天花+吊灯，画面自带 "DINING" 字幕条** —— 确是 home tour。经 `demo.percho.co`
+(手机实际访问的 host)复验 HTTP 200 / 10 条带视频。
+
+**Learnings**: **表名带 `listing_id` 不代表内容是关于那个 listing 的。**
+`scope` 字段才是语义所在，而我只看了外键就接线。**判据应该是"这视频的帧来自哪张表"** ——
+`input_photo_ids` 一查就穿:与 `listing_photos` 零重叠。以后接任何媒体源，先验一帧内容，
+不要只验 manifest 200。上一轮我确实验了"能播、是 9:16"，但**没验"播的是什么"**。
+
+**Next steps**: 第二轮 ai_tags 回填仍在跑。owner 重开 app 测 home tour 视频朝向与内容。
+
 ## 2026-07-27 22:15 UTC — ai_tags 回填完成 + 抓到 Next fetch-cache 把接口钉死在旧数据上
 
 **Objective**: 回填跑完(974 张, 0 失败)，验证 hotspot/tour 是否真出来了。
