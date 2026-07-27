@@ -5,11 +5,7 @@
  * listing/community/area are undoable) must stay broken in exactly that way.
  */
 import { describe, expect, it } from "vitest";
-import {
-	CHALLENGE_REVEAL_MS,
-	MILESTONE_CAP_RATIO,
-	cardBehavior,
-} from "./behavior";
+import { MILESTONE_CAP_RATIO, cardBehavior, swipeLabelsFor } from "./behavior";
 import {
 	CARD_KINDS,
 	type CardKindV3,
@@ -138,18 +134,18 @@ describe("cardBehavior", () => {
 		expect(flippable.sort()).toEqual(["area", "community", "listing"]);
 	});
 
-	it("challenge holds 900ms before flyout", () => {
-		const b = cardBehavior(cardOfKind("challenge"));
-		expect(b.mode).toBe("reveal");
-		expect(b.capability.revealMs).toBe(CHALLENGE_REVEAL_MS);
-		expect(CHALLENGE_REVEAL_MS).toBe(900);
-	});
-
-	it("no card other than challenge holds before flyout", () => {
-		const holding = CARD_KINDS.filter(
-			(k) => cardBehavior(cardOfKind(k)).capability.revealMs !== undefined,
-		);
-		expect(holding).toEqual(["challenge"]);
+	it("challenge is answered by tapping, so its swipe carries no verdict", () => {
+		// Redesigned 2026-07-27: the answer is two buttons on the face. A swipe is
+		// only "next", which is why there are no direction labels and no hold.
+		const card = cardOfKind("challenge");
+		const b = cardBehavior(card);
+		expect(b.mode).toBe("quiz");
+		expect(swipeLabelsFor(card)).toBeUndefined();
+		// It still leaves like any other card — it just records nothing.
+		expect(b.capability.commits).toBe(true);
+		expect(b.capability.pannable).toBe(true);
+		// The answer is revealed in place, not on a back face.
+		expect(b.capability.flippable).toBe(false);
 	});
 
 	it("tradeoff is a visually split either-or, never yes/no copy", () => {

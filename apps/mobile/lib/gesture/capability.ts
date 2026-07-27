@@ -22,11 +22,6 @@ export interface CardCapability {
 	maxDisplacementRatio: number;
 	/** Tap crossfades to a data face (§0.5). */
 	flippable: boolean;
-	/**
-	 * Hold after commit, before flyout, so the card face can change content
-	 * (§1.6 Challenge reveal = 900ms). Undefined = fly out immediately.
-	 */
-	revealMs?: number;
 }
 
 /** A normal decide-and-fly card with a data face. */
@@ -108,18 +103,17 @@ export function panAllowed(pannable: boolean, flipProgress: number): boolean {
  *
  * The flyout is driven by animating `tx` to the exit position and doing the
  * handoff (advance the cursor, promote the next card) in that animation's
- * completion callback. §1.6's challenge holds for `revealMs` first, so between
- * commit and handoff there is a ~1.2s window in which the card is sitting on
- * screen, already committed, with its gesture still live. A second touch in
+ * completion callback. Between commit and handoff the card is still on screen
+ * with its gesture live for the length of the flyout spring. A second touch in
  * that window writes `tx` directly — which CANCELS the pending animation, and a
  * cancelled Reanimated animation never calls its callback. So the handoff never
  * ran, the cursor never advanced, and the card stayed on top forever: the buyer
  * could drag it around and it would spring back every time.
  *
- * The reveal hold makes this trivially easy to hit, because a card that visibly
- * freezes for 900ms is a card the buyer taps again. Hence "有些卡会卡住比如
- * challenge" — challenge is the only kind with a `revealMs`, so it is the only
- * kind with a window wide enough to lose the race reliably.
+ * This was originally found via the challenge card, whose 900ms post-commit hold
+ * made the window ~1.2s wide. That hold is gone (the card is answered by buttons
+ * now), so the window is back to a single flyout — but the gate stays: the race
+ * is real at any width, and a fast double-swipe still hits it.
  *
  * A committed card is therefore inert until the handoff clears the flag. This
  * cannot be expressed with `.enabled()`: the flag flips without rebuilding the

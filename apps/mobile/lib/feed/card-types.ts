@@ -180,6 +180,13 @@ export interface ChallengeCardV3 {
 	/** The real number shown on reveal, e.g. "$712,000 — you were close!". */
 	revealLabel: string;
 	teach: string;
+	/**
+	 * The listing this question was built from — the target of the reveal's
+	 * `Explore →`. Always present in practice (`challengeFromListing` is the only
+	 * constructor), but optional so a future non-listing challenge kind isn't
+	 * forced to invent one.
+	 */
+	listingId?: string;
 }
 
 export interface InsightCardV3 {

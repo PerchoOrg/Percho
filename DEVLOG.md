@@ -4,40 +4,52 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
-## 2026-07-27 08:20 UTC — challenge 停顿改成「回中 + 停留」（不是 bug，是观感）
+## 2026-07-27 08:50 UTC — challenge 改版:按钮选择 + 原地揭晓 + Explore（回中方案作废）
 
-**Objective**: owner 验证前两项都好了（"已经没有闪卡了 翻卡也正常"），剩
-"challenge卡左右滑还是卡在一半的位置1s 然后才能被滑走"。
+**Objective**: owner: "现在challenge滑动之后又复位显示答案后又自己滑走 后面一张卡又出现
+重影 / 这个方案不好 / challenge卡做成选择按钮 选择之后显示答案 并且提供一个explore的
+按钮进一步了解 也可以直接划走"。
 
 **Actions**:
-- `hooks/use-swipe-card.ts` — 新 `SETTLE_SPRING` + `SETTLE_MS`；reveal 卡的 `tx` 改成
-  `withSequence(回中, withDelay(hold - SETTLE_MS, flyOut))`；`advance` 同步先绕回 0
-  再按同一时间表升起。
+- **revert `c202228`**（上一轮那个回中方案，整个作废）。
+- `lib/feed/behavior.ts` — `mode: "reveal"` → `mode: "quiz"`；删 `CHALLENGE_REVEAL_MS`；
+  challenge 的 capability 变成普通 `FLAT`。`swipeLabelsFor` 对 quiz 返回 undefined。
+- `lib/gesture/capability.ts` + `hooks/use-swipe-card.ts` — **`revealMs` 整条概念删除**，
+  牌堆里不再有任何 post-commit 停留。
+- `components/cards/ChallengeFace.tsx` — 重写：两个 ≥44pt 选项按钮 → tap 后原地揭晓
+  （对的描边绿 / 选错的描边红）+ 真价 + 教学文案 + `Explore →`。
+- `card-types.ts` / `content.ts` — `ChallengeCardV3.listingId`，给 Explore 一个真实目标。
+- `app/(tabs)/feed.tsx` — `answered` 改存 tap 的那一侧；删 `revealProgress` + `onCommit`；
+  Explore 打开 task-0 就写好但一直没用过的 `BottomSheet`。
+- `docs/design/spec-v3/01-feed.md` §1.6 表格 — 改写该行 + 记录旧设计为何废弃。
 
-**Issues**: **这个「卡 1 秒」是 §1.6 spec 明写的行为，不是故障** ——
-`01-feed.md` L64:「swipe 判定后卡片不立即飞出:停 900ms,卡面 crossfade 显示真答案
-+对错色彩脉冲,然后飞出」。`CHALLENGE_REVEAL_MS = 900` 有测试锁着，reveal 层也确实
-在渲染。
+**Issues**: **我上一轮的回中方案是错的，而且自己造出了新 bug。** 判定 → 弹回中间 →
+停 → 又自己飞走，是三段互相矛盾的动作:回中读作「撤销」，然后飞走读作「它自己又滑了
+一次」。owner 说的「后面一张卡又出现重影」也是这个方案带来的 —— 我给 `advance` 也套了
+`withSequence(回到 0, ...)`，等于让整个牌堆先退回去再重来一遍。
 
-**但它看起来就是坏了**，原因是停的**位置**不对：卡冻在手指离开的地方 —— 歪着、一半在
-屏幕外、答案被边缘裁掉、且完全静止。三个信号叠起来就是「卡死」而不是「请读答案」。
-另外 `advance` 也停在拖拽值上，所以下一张卡在整个 hold 期间半放大地立在后面。
+**根本问题不在时长，在手势语义**:**swipe 是「离开这张卡」的手势**。拿它当答题手段，
+就意味着答案只能在卡片正在飞出去的过程中被阅读 —— 无论怎么调时间/位置都无解。
+这是设计缺陷，不是参数问题。上一轮我判断成「spec 明写所以保留 900ms 只改呈现」，
+**方向错了:该质疑的是那条 spec 本身。**
 
-**Decisions**: 保留 900ms（spec 明文，且已被测试锁定，不单方面改产品参数），改**观感**：
-committed 之后先**弹回正中**再停留，答案居中、静止、完整可读，然后飞出。
-判定此时已不可逆，所以不构成旧注释担心的「像撤销后又莫名滑一次」。
-**关键:回中耗时从 hold 里扣除（`hold - SETTLE_MS`）而不是加在前面** —— `revealMs` 是
-「答案该在屏上多久」，不是「到位后再等多久」；加在前面会变成约 1.2s，比他抱怨的还长。
+**Decisions**: 答题与离开彻底解耦 —— **tap 答题（不动卡），swipe 只表示下一张（不记信号、
+无方向标签、无停留）**。因此 `revealMs` 这个机制在代码里彻底消失，而不是留着没人用。
+Explore 需要真实落点:listing 详情页是 task 2，所以用卡片**已经携带的真实数据**
+（地址、户型、真价）开 `BottomSheet`，不造假路由、不放死按钮。
 
-**Resolution**: 395 测试全绿、tsc 0、biome 干净；bundle 已确认带 `withSequence` +
-`SETTLE_SPRING`。时间线:回中 ~260ms → 停留 ~640ms → 飞出 ~260ms，总时长仍是 900ms 量级。
+**Resolution**: 393 测试、tsc 0、biome 干净。已确认 shipped bundle：`quiz`/`onChoose`/
+`choiceCorrect`/`listingId` 在；`revealProgress`/`CHALLENGE_REVEAL_MS`/`SETTLE_SPRING`
+全部归 **0**。
 
-**Learnings**: 用户说「卡住」不一定指逻辑坏 —— 这次前两轮（memo 重建、动画回调）是真
-bug，这一轮同样的描述指向的却是**符合 spec 但观感失败**。**分辨方法:先确认该行为是否
-spec 明写；是的话别删功能,改它的呈现。** 静止 + 位置随机 + 内容被裁 = 用户一定读成故障。
+**Learnings**: **「spec 这么写的」不是保留一个坏交互的理由。** 上一轮我用 spec 当依据只
+改呈现，结果是又一版坏交互 + 一个我自己引进的重影。**当同一个交互连续三轮被用户读成
+故障时，要质疑的是交互本身，不是它的动画曲线。**
+另一条:**别把两个语义塞进同一个手势。** swipe = 离开;答题/选择 = tap。一旦重载，
+「读答案」和「卡片还在不在」就成了同一件事的两面，无解。
 
-**Next steps**: 手机 reload 确认 challenge 现在是「回中→显示答案→飞出」的连续动作。
-若仍觉得 900ms 太久，那是**产品参数**决定（需要改 spec + 那条锁定测试），说一声我改。
+**Next steps**: 手机 reload —— tap 两个按钮之一应原地揭晓（含 Explore），直接划走也应
+正常。Explore 目前只开一个含真实数据的 sheet，**task 2 落地 listing 详情后应改为跳转**。
 
 ## 2026-07-27 08:00 UTC — community 闪现 = 背面卡面（本文件头部记录的 ghosting 第三例）
 

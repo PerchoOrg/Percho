@@ -356,6 +356,11 @@ export function challengeFromListing(
 		answer: over ? "right" : "left",
 		revealLabel: money(priceUsd),
 		teach: `Listed at ${money(priceUsd)}.`,
+		// Carried so the reveal's `Explore →` has a real target (owner asked for
+		// "一个explore的按钮进一步了解"). Not derived from the card id by string
+		// surgery at the call site: that would silently break the moment the id
+		// scheme changes.
+		listingId: listing.id,
 	};
 }
 

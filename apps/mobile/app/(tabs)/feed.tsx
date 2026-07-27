@@ -20,9 +20,10 @@
  * PLAN B11 made for `See on map →`.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { StyleSheet, View, useWindowDimensions } from "react-native";
-import { useSharedValue, withTiming } from "react-native-reanimated";
+import { StyleSheet, Text, View, useWindowDimensions } from "react-native";
+
 import { SafeAreaView } from "react-native-safe-area-context";
+import { BottomSheet } from "../../components/BottomSheet";
 import { type CardRenderArgs, SwipeStack } from "../../components/SwipeStack";
 import { AreaDataFace } from "../../components/cards/AreaDataFace";
 import { AreaFace } from "../../components/cards/AreaFace";
@@ -42,7 +43,7 @@ import { OfflineBar } from "../../components/feed/OfflineBar";
 import { UndoToast } from "../../components/feed/UndoToast";
 import { useFeedPool } from "../../hooks/use-feed-pool";
 import { cardBehavior } from "../../lib/feed/behavior";
-import type { FeedCardV3, SwipeVerdict } from "../../lib/feed/card-types";
+import type { ChallengeCardV3, FeedCardV3 } from "../../lib/feed/card-types";
 import { deckKey } from "../../lib/feed/deck-key";
 import {
 	buildGestureEvent,
@@ -58,13 +59,12 @@ import { useEventQueue } from "../../state/event-queue";
 import { useFeedSession } from "../../state/feed-session";
 import { useFunnelStore } from "../../state/funnel";
 import { colors } from "../../theme/tokens";
+import { textStyles } from "../../theme/typography";
 
 const GUTTER = 16;
 /** Card is portrait; capped against viewport height on small devices. */
 const CARD_ASPECT = 1.5;
 const CARD_MAX_VIEWPORT = 0.74;
-/** §1.6's colour pulse rides inside the 900ms hold (PLAN B4). */
-const REVEAL_FADE_MS = 180;
 
 export default function FeedScreen() {
 	const { width, height } = useWindowDimensions();
@@ -103,21 +103,27 @@ export default function FeedScreen() {
 	} | null>(null);
 	const [milestonesShown, setMilestonesShown] = useState<readonly string[]>([]);
 	/**
-	 * Which challenge cards have been answered, and how. Not in the session store:
-	 * this is presentation state for a card currently on screen (§1.6's reveal),
-	 * and a challenge swipe carries no scope signal worth persisting.
+	 * The challenge card whose reveal the buyer tapped `Explore →` on.
+	 *
+	 * §1.6's challenge is built from a real listing, and the answer names a real
+	 * price — so "tell me more" has to show that listing, not a placeholder. The
+	 * full listing detail is task 2, so this presents what the card already
+	 * carries (address, specs, the real price) in the task-0 sheet rather than
+	 * routing to a screen that does not exist yet.
 	 */
-	const [answered, setAnswered] = useState<Record<string, SwipeVerdict>>({});
-	const rotate = useRef(0);
-
+	const [explored, setExplored] = useState<ChallengeCardV3 | null>(null);
 	/**
-	 * §1.6's reveal. ONE shared value for the top card, deliberately not
-	 * `flipProgress`: the reveal is a post-commit answer state and the flip is a
-	 * user-initiated data view, and conflating them flies a card out showing the
-	 * wrong face. Reset when the top card changes so the next challenge starts
-	 * as a question.
+	 * Which challenge cards have been answered, and which side was tapped.
+	 *
+	 * Not in the session store: a challenge answer is market education, not scope
+	 * signal, so there is nothing worth persisting. Keyed by card id rather than
+	 * held per-card so the answer survives the card being re-rendered as the deck
+	 * shuffles beneath it.
 	 */
-	const revealProgress = useSharedValue(0);
+	const [answered, setAnswered] = useState<Record<string, "left" | "right">>(
+		{},
+	);
+	const rotate = useRef(0);
 
 	/**
 	 * The funnel's city scope, derived from real geo signal — the server's stage-3
@@ -188,8 +194,7 @@ export default function FeedScreen() {
 
 		setEngineExhausted(result.exhausted);
 		setActiveIndex(0);
-		revealProgress.value = 0;
-	}, [hydrated, stage, revealProgress]);
+	}, [hydrated, stage]);
 
 	/**
 	 * §1.7 pagination: append from the pool already held, deduped by the deck.
@@ -254,7 +259,6 @@ export default function FeedScreen() {
 
 			const next = recordSwipe(card, decision, at);
 			setActiveIndex(index + 1);
-			revealProgress.value = 0;
 
 			const target = evaluateStageAdvance(stage, next, {
 				units: pool.geoUnits,
@@ -310,22 +314,11 @@ export default function FeedScreen() {
 			stage,
 			sessionN,
 			recordSwipe,
-			revealProgress,
 			pool.geoUnits,
 			promoteTo,
 			resetStageCounter,
 			milestonesShown,
 		],
-	);
-
-	/** §1.6: fires at commit, BEFORE the flyout, so the answer can be revealed. */
-	const onCommit = useCallback(
-		(decision: "left" | "right", card: FeedCardV3) => {
-			if (card.kind !== "challenge") return;
-			setAnswered((a) => ({ ...a, [card.id]: decision }));
-			revealProgress.value = withTiming(1, { duration: REVEAL_FADE_MS });
-		},
-		[revealProgress],
 	);
 
 	const onUndo = useCallback(() => {
@@ -358,7 +351,7 @@ export default function FeedScreen() {
 	);
 
 	const emitGesture = useCallback(
-		(type: "flip" | "datapoint_tap", card: FeedCardV3) => {
+		(type: "flip" | "explore_tap" | "datapoint_tap", card: FeedCardV3) => {
 			enqueue(
 				buildGestureEvent({
 					seq: takeSeq(),
@@ -408,8 +401,15 @@ export default function FeedScreen() {
 					return (
 						<ChallengeFace
 							card={card}
-							revealProgress={revealProgress}
 							chosen={answered[card.id] ?? null}
+							onChoose={(side) => {
+								setAnswered((a) => ({ ...a, [card.id]: side }));
+								emitGesture("datapoint_tap", card);
+							}}
+							onExplore={() => {
+								setExplored(card);
+								emitGesture("explore_tap", card);
+							}}
 						/>
 					);
 				case "insight":
@@ -450,9 +450,9 @@ export default function FeedScreen() {
 			sessionN,
 			signals.swipesInStage,
 			answered,
-			revealProgress,
 			skipLayer,
 			recordInsightUnsure,
+			emitGesture,
 			enqueue,
 			takeSeq,
 		],
@@ -509,7 +509,6 @@ export default function FeedScreen() {
 						items={deck}
 						activeIndex={activeIndex}
 						onDecision={onDecision}
-						onCommit={onCommit}
 						renderCard={renderCard}
 						renderBack={renderBack}
 						renderOverlay={renderOverlay}
@@ -520,6 +519,21 @@ export default function FeedScreen() {
 					/>
 				)}
 			</View>
+			<BottomSheet
+				visible={explored !== null}
+				onClose={() => setExplored(null)}
+			>
+				{explored && (
+					<View style={styles.sheet}>
+						<Text style={styles.sheetEyebrow}>THE HOME BEHIND THIS</Text>
+						{!!explored.sub && (
+							<Text style={styles.sheetTitle}>{explored.sub}</Text>
+						)}
+						<Text style={styles.sheetPrice}>{explored.revealLabel}</Text>
+						<Text style={styles.sheetBody}>{explored.teach}</Text>
+					</View>
+				)}
+			</BottomSheet>
 			{undo && (
 				<UndoToast
 					label={undo.label}
@@ -534,4 +548,9 @@ export default function FeedScreen() {
 const styles = StyleSheet.create({
 	screen: { flex: 1, backgroundColor: colors.bg },
 	stackWrap: { flex: 1, alignItems: "center", justifyContent: "center" },
+	sheet: { paddingHorizontal: 20, paddingTop: 8, gap: 8 },
+	sheetEyebrow: { ...textStyles.caption, color: colors.accent },
+	sheetTitle: { ...textStyles.title2, color: colors.ink },
+	sheetPrice: { ...textStyles.display, color: colors.ink },
+	sheetBody: { ...textStyles.body, color: colors.ink2 },
 });

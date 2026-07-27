@@ -1,9 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-	CHALLENGE_REVEAL_MS,
-	MILESTONE_CAP_RATIO,
-	cardBehavior,
-} from "../feed/behavior";
+import { MILESTONE_CAP_RATIO, cardBehavior } from "../feed/behavior";
 import type { FeedCardV3 } from "../feed/card-types";
 import {
 	DEFAULT_CAPABILITY,
@@ -150,10 +146,10 @@ describe("panLive — a committed card takes no further input", () => {
 		expect(live({ committed: true })).toBe(false);
 	});
 
-	it("blocks through the whole reveal hold, not just the flyout", () => {
-		// The challenge sits on screen, unmoved, for CHALLENGE_REVEAL_MS after the
-		// verdict. It looks idle and invites a second touch; it must not accept one.
-		expect(CHALLENGE_REVEAL_MS).toBeGreaterThan(0);
+	it("blocks for the whole flyout, not just the frame of the release", () => {
+		// The committed card is still on screen and still under the gesture until the
+		// flyout spring completes and runs the handoff. A second touch in that window
+		// cancels the spring, and a cancelled animation never runs its callback.
 		expect(live({ committed: true, flipProgress: 0 })).toBe(false);
 	});
 
@@ -201,13 +197,11 @@ describe("the capabilities the gesture actually receives (§1.3 wiring)", () => 
 		expect(cap.pannable && !cap.commits).toBe(true);
 	});
 
-	it("challenge carries the 900ms reveal hold to the gesture", () => {
+	it("challenge commits and leaves like any other card", () => {
+		// Redesigned 2026-07-27: no post-commit hold anywhere in the deck. The
+		// challenge answer is tapped on the face, so its swipe is only "next".
 		const cap = cardBehavior(challenge).capability;
-		expect(cap.revealMs).toBe(CHALLENGE_REVEAL_MS);
 		expect(cap.commits).toBe(true);
-	});
-
-	it("only the challenge card asks for a reveal hold", () => {
-		expect(cardBehavior(milestone).capability.revealMs).toBeUndefined();
+		expect(cap.pannable).toBe(true);
 	});
 });

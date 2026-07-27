@@ -61,7 +61,7 @@ Front face 图纸见 00 §0.6 基准屏(listing)。tap 翻 data face — **data 
 | 细则 | 规格 |
 |---|---|
 | Trade-off 中分 | 1.5px 虚线分界;两半各自渐变压暗;swipe 时被选半边亮起(opacity 1)、弃半边压暗(0.4)跟手反馈。记 `(dim_left, dim_right, chosen)`。**永不出现 ✓/✗ 或 yes/no 文案。**Stage 0–2 的 trade-off 偏地理/生活(yard vs commute);Stage 3+ 偏房源属性(new build vs character)。 |
-| Challenge reveal | swipe 判定后卡片不立即飞出:停 900ms,卡面 crossfade 显示真答案("$712,000 — you were close!")+ 对/错色彩脉冲,然后飞出。唯一 post-swipe 变内容的卡型。Stage 2 起才出(需要地理上下文才有梗)。 |
+| Challenge 选择 | **答案用按钮选,不用 swipe**(owner 2026-07-27 改版)。卡面给两个 ≥44pt 的选项按钮;tap 之后原地揭晓:正确项描边绿、选错的那项描边红,显示真价("$712,000")+ 教学文案 + 一个 `Explore →` 进一步了解该房源。swipe 在这张卡上**只表示"下一张",不记任何信号**、无方向标签、无停留。Stage 2 起才出(需要地理上下文才有梗)。<br>**旧设计(已废弃)**:swipe 判定 + 停 900ms 再飞出。失败原因:swipe 是"离开卡片"的手势,拿它当答题手段意味着答案只能在卡片正飞出去的过程中被阅读 —— 实机上连续被读成三种故障(卡在半屏、回中像撤销、然后又莫名自己滑走)。 |
 | Insight 触发 | 仅当 evidence 过阈值(如同类 like ≥6/8)才生成,无固定节奏。文案模板必须引用具体 evidence 数字。左滑 disagree = 降权该 evidence 链。 |
 | "Not sure" 按钮 | insight 独有第三选项(描边 pill,bottom-center)。tap = 跳过不记信号。hit ≥44pt。 |
 

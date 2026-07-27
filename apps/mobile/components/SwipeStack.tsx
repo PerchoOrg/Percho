@@ -97,7 +97,7 @@ interface SwipeStackProps<T> {
 	items: readonly T[];
 	activeIndex: number;
 	onDecision: (decision: "left" | "right", item: T) => void;
-	/** Fired at commit, before any `revealMs` hold and the flyout (§1.6). */
+	/** Fired the instant a direction commits, before the flyout. */
 	onCommit?: (decision: "left" | "right", item: T) => void;
 	renderCard: (item: T, args: CardRenderArgs) => React.ReactNode;
 	/**

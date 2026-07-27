@@ -40,12 +40,20 @@ export type CardBehavior =
 	 * NEVER ✓/✗ or yes/no copy on either side.
 	 */
 	| (BehaviorBase & { mode: "either-or"; labels: SwipeLabels; split: boolean })
-	/** §1.6 challenge: commit, hold `revealMs` showing the answer, then fly out. */
-	| (BehaviorBase & {
-			mode: "reveal";
-			labels: SwipeLabels;
-			revealMs: number;
-	  })
+	/**
+	 * §1.6 challenge, redesigned 2026-07-27 (owner: "challenge卡做成选择按钮 选择之后
+	 * 显示答案 并且提供一个explore的按钮进一步了解 也可以直接划走").
+	 *
+	 * The answer is chosen by TAPPING one of two buttons, not by swiping. The card
+	 * then shows the answer and stays put until the buyer dismisses it — a swipe
+	 * carries no verdict at all, it just moves on.
+	 *
+	 * The original design committed on swipe and froze the card mid-flight for
+	 * 900ms. That coupling was the problem: a swipe is how you LEAVE a card, so
+	 * using it to answer meant the answer could not be read without also being
+	 * mid-exit. No `revealMs` here, because nothing is held.
+	 */
+	| (BehaviorBase & { mode: "quiz" })
 	/** §1.6 insight: agree / disagree plus a third neutral pill. */
 	| (BehaviorBase & {
 			mode: "confirm";
@@ -55,8 +63,6 @@ export type CardBehavior =
 	/** §1.5 milestone: never commits, explicit CTA only. */
 	| (BehaviorBase & { mode: "ceremony"; cta: string });
 
-/** §1.6 challenge reveal hold, before flyout. */
-export const CHALLENGE_REVEAL_MS = 900;
 /** §1.5 milestone drag cap — follows the finger, always springs back. */
 export const MILESTONE_CAP_RATIO = 0.3;
 
@@ -119,10 +125,11 @@ export function cardBehavior(card: FeedCardV3): CardBehavior {
 
 		case "challenge":
 			return {
-				mode: "reveal",
-				revealMs: CHALLENGE_REVEAL_MS,
-				labels: { left: card.left.label, right: card.right.label },
-				capability: { ...FLAT, revealMs: CHALLENGE_REVEAL_MS },
+				mode: "quiz",
+				// Swiping a challenge is pure navigation, so it flies out like any
+				// other card and records nothing. `flippable: false` — the answer is
+				// revealed in place by the buttons, not on a back face.
+				capability: FLAT,
 				undoable: false,
 			};
 
@@ -150,8 +157,13 @@ export function cardBehavior(card: FeedCardV3): CardBehavior {
 	}
 }
 
-/** Convenience for the label overlay; `undefined` for a ceremony card. */
+/**
+ * Convenience for the label overlay. `undefined` when a swipe carries no
+ * verdict — a ceremony (milestone) card never commits, and a quiz (challenge)
+ * card is answered by its buttons, so a direction label on either would promise
+ * a meaning the swipe does not have.
+ */
 export function swipeLabelsFor(card: FeedCardV3): SwipeLabels | undefined {
 	const b = cardBehavior(card);
-	return b.mode === "ceremony" ? undefined : b.labels;
+	return b.mode === "ceremony" || b.mode === "quiz" ? undefined : b.labels;
 }

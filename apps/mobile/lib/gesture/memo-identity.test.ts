@@ -43,7 +43,6 @@ function gestureDeps(handlerIdentity: unknown, stable: symbol): unknown[] {
 		true, // commits
 		1, // maxDisplacementRatio
 		false, // flippable
-		900, // revealMs — the challenge card
 		handlerIdentity,
 		stable, // handoff, tx, advance, crossedRight, flipProgress, committed
 	];
@@ -68,7 +67,7 @@ describe("the swipe gesture's memo identity", () => {
 		// This is what `SwipeStack` passes: `onCommit={(d) => { … }}`, a fresh arrow
 		// per render because it closes over the current top item. With that in the
 		// dep list the gesture was rebuilt on every render — including the ones
-		// that land inside a challenge card's 900ms reveal hold.
+		// that land inside a swipe that is still resolving.
 		const renderA = (_d: string) => {};
 		const renderB = (_d: string) => {};
 		expect(
