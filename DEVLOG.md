@@ -4,6 +4,46 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-27 20:20 UTC — photo_tagger 移到 Bedrock + 回填 fmls tags（hotspot 数据源终于通了）
+
+**Objective**: task-2 最后一块。§2.3–2.5 全靠 `listing_photos.ai_tags`，而它对
+feed 里 104 个 fmls listing **一条都没有** —— 因为 `photo_tagger.py` 自 2026-07-26
+个人 Anthropic key 被移除后一直是坏的（CLAUDE.md §2.1 rule 0 已把这条记为待办）。
+
+**Actions**:
+- `scripts/render-worker/photo_tagger.py`:新增 `_invoke_bedrock()`，走 boto3 默认凭据链
+  (EC2 instance role)。删掉 `api.anthropic.com` POST、`x-api-key` 头、以及
+  `tag_listing_photos` 开头那句 **`if not ANTHROPIC_API_KEY: raise`**（这句自己就会
+  让每次调用直接 abort）。`MODEL` 换成 Bedrock id
+  `global.anthropic.claude-sonnet-4-5-20250929-v1:0`。
+- 新增 `probe_tagger.py`（单张真图打通验证）、`backfill_photo_tags.py`
+  （只补 `ai_tags IS NULL` + active + ready，`--limit-listings` 限量，默认 dry-run，
+  每 listing 封顶 12 张 —— hotspot 每个房间只要一张好图）。
+- 新增 `apps/mobile/scripts/probe-hotspots.ts`:拿**真 API payload** 跑真
+  hotspot/tour 推导。
+
+**Decisions**: `_invoke_bedrock` **不留 API-key fallback** —— 上次个人 key 就是从
+fallback 路径回来的。回填做成限量+可重跑而不是一把梭:2388 张 vision 是真钱。
+
+**Issues**（probe 抓到的真 bug，单测全绿也看不见）:Suwanee 那套有
+**4 个好 hotspot(exterior/dining/living/kitchen)却出不了 tour**。因为 generic tour
+第 3 停只收 backyard/pool/balcony/exterior，而 exterior 已被第 1 停吃掉。
+
+**Resolution**: 三个停都加 `?? pickAny()` 兜底(任意未用 hotspot)，且**第 3 停文案跟着
+实际选中的房间变** —— 在书房照片上写"And what's outside."是那种让买家从此不信这页的小谎。
+**未削弱铁律**:stop 仍带真 evidence，<3 个可用 hotspot 仍然不出 tour。
+真实数据验证:Suwanee **3 停(generic)**、Alpharetta / Johns Creek 各只有 2 个 hotspot →
+**正确地不出 tour**，退 free explore。Gate:**477 测试**、tsc 0、biome 112 干净。
+
+**Learnings**: **hotspot/tour 这类"看真实数据形状"的逻辑，单测无法覆盖** —— 能不能出
+tour 取决于某套房子恰好拍了哪些房间，四张外景+三张走廊在任何单测里都是绿的。所以
+`probe-hotspots.ts` 跟 `probe-session.ts` 一样留在 repo 里:**凡是行为依赖真实数据
+分布的，必须有一个打真 API 的 probe。**
+
+**Next steps**: 101 个 listing 的回填在后台跑(974 张)。跑完 feed 里的房子就有
+pin/tour/sheet 了，UI 不用改。**PENDING-SIM(需真机)**:tour 翻停、pin 位置、sheet
+detent、行 tap 深链 + 2s 高亮。
+
 ## 2026-07-27 19:45 UTC — task-2 §2.3–2.5：guided tour + transition 卡 + hotspot sheet
 
 **Objective**: 补完 task-2 剩下的三块 UI。

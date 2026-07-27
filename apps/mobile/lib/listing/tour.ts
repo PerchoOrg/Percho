@@ -126,6 +126,23 @@ export function genericTourStops(
 		return undefined;
 	};
 
+	/**
+	 * Last resort: any unused hotspot at all, in photo order.
+	 *
+	 * Needed because the three stops below name PREFERRED rooms, and a real
+	 * listing's tagged photos frequently miss all of them. Probed against
+	 * production (`scripts/probe-hotspots.ts`, 2026-07-27): a Suwanee listing with
+	 * FOUR good hotspots — exterior, dining, living, kitchen — produced no tour,
+	 * because the third stop only accepted backyard/pool/balcony/exterior and the
+	 * exterior was already taken by stop 1. Photographers shoot what a house has;
+	 * a tour that requires a backyard photo is a tour almost nobody gets.
+	 *
+	 * This does NOT weaken the iron law: the stop still carries real evidence, and
+	 * a listing with fewer than 3 usable hotspots still yields no tour.
+	 */
+	const pickAny = (): Hotspot | undefined =>
+		hotspots.find((h) => !used.has(h.id));
+
 	const add = (
 		hotspot: Hotspot | undefined,
 		why: string,
@@ -137,19 +154,28 @@ export function genericTourStops(
 	};
 
 	if (facts.sqft !== undefined && facts.sqft > 0) {
-		add(pick(["exterior", "living"]), "Start with the whole of it.", [
-			{ label: "sqft in this home", count: facts.sqft },
-		]);
+		add(
+			pick(["exterior", "living"]) ?? pickAny(),
+			"Start with the whole of it.",
+			[{ label: "sqft in this home", count: facts.sqft }],
+		);
 	}
 	if (facts.beds !== undefined && facts.beds > 0) {
-		add(pick(["kitchen", "dining"]), "Where the day actually happens.", [
-			{ label: "bedrooms alongside it", count: facts.beds },
-		]);
+		add(
+			pick(["kitchen", "dining", "living"]) ?? pickAny(),
+			"Where the day actually happens.",
+			[{ label: "bedrooms alongside it", count: facts.beds }],
+		);
 	}
 	if (facts.yearBuilt !== undefined && facts.yearBuilt > 0) {
+		const outdoor = pick(["backyard", "pool", "balcony", "exterior"]);
+		const third = outdoor ?? pickAny();
+		// The copy has to follow the room actually chosen. "And what's outside."
+		// over a photo of a study is the kind of small lie that makes a buyer stop
+		// trusting the rest of the page.
 		add(
-			pick(["backyard", "pool", "balcony", "exterior"]),
-			"And what's outside.",
+			third,
+			outdoor ? "And what's outside." : "One more thing worth seeing.",
 			[{ label: "year it was built", count: facts.yearBuilt }],
 		);
 	}

@@ -187,6 +187,33 @@ describe("genericTourStops — the §2.2 empty-profile fallback", () => {
 		});
 		expect(buildTour(stops, { generic: true })).toBeNull();
 	});
+
+	it("builds a 3-stop tour from an ALL-INDOOR room mix (real production shape)", () => {
+		// Found by `scripts/probe-hotspots.ts` against production: a Suwanee listing
+		// with four good hotspots (exterior, dining, living, kitchen) produced NO
+		// tour, because the third stop only accepted backyard/pool/balcony/exterior
+		// and the exterior was already consumed by stop 1. Photographers shoot what
+		// a house has; requiring a backyard photo means almost nobody gets a tour.
+		const indoor = [
+			hotspot("h1", "exterior"),
+			hotspot("h2", "dining"),
+			hotspot("h3", "living"),
+			hotspot("h4", "kitchen"),
+		];
+		const tour = buildTour(
+			genericTourStops(indoor, { sqft: 2279, beds: 3, yearBuilt: 2004 }),
+			{ generic: true },
+		);
+		expect(tour?.stops).toHaveLength(3);
+		const ids = tour?.stops.map((s) => s.hotspot.id) ?? [];
+		expect(new Set(ids).size).toBe(3);
+		// The fallback stop must not claim to be outdoors over an indoor photo.
+		const third = tour?.stops[2];
+		const outdoorRooms = ["backyard", "pool", "balcony", "exterior"];
+		if (third && !outdoorRooms.includes(third.hotspot.room)) {
+			expect(third.why).not.toContain("outside");
+		}
+	});
 });
 
 describe("stop chrome", () => {
