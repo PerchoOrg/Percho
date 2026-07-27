@@ -51,7 +51,13 @@ export function UndoToast({ label, onUndo, onExpire }: UndoToastProps) {
 }
 
 const styles = StyleSheet.create({
-	wrap: { position: "absolute", left: 0, right: 0, bottom: 24, alignItems: "center" },
+	wrap: {
+		position: "absolute",
+		left: 0,
+		right: 0,
+		bottom: 24,
+		alignItems: "center",
+	},
 	toast: {
 		flexDirection: "row",
 		alignItems: "center",

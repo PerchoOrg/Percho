@@ -25,7 +25,10 @@ export function CardSkeleton() {
 
 	useEffect(() => {
 		breath.value = withRepeat(
-			withTiming(DIM, { duration: BREATH_MS, easing: Easing.inOut(Easing.quad) }),
+			withTiming(DIM, {
+				duration: BREATH_MS,
+				easing: Easing.inOut(Easing.quad),
+			}),
 			-1,
 			true,
 		);

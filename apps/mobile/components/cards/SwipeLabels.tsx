@@ -16,8 +16,8 @@ import Animated, {
 	interpolate,
 	useAnimatedStyle,
 } from "react-native-reanimated";
-import type { FeedCardV3 } from "../../lib/feed/card-types";
 import { swipeLabelsFor } from "../../lib/feed/behavior";
+import type { FeedCardV3 } from "../../lib/feed/card-types";
 import { SWIPE_THRESHOLD_RATIO } from "../../lib/gesture/decide-swipe";
 import { colors, radii } from "../../theme/tokens";
 import { textStyles } from "../../theme/typography";
