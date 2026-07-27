@@ -35,11 +35,15 @@ import {
 	type CardCapability,
 	INERT_CAPABILITY,
 } from "../lib/gesture/capability";
+import {
+	type CardLayerRole,
+	cardLayerVisual,
+} from "../lib/gesture/stack-layer";
 import { colors, radii } from "../theme/tokens";
 
 const WINDOW = 3;
 
-type CardRole = "top" | "next" | "after";
+type CardRole = CardLayerRole;
 
 const ROLES: CardRole[] = ["top", "next", "after"];
 
@@ -110,7 +114,7 @@ export function SwipeStack<T>({
 		flippable: declared.flippable && topBackRenders,
 	};
 
-	const { gesture, topStyle, tx, frontStyle, backStyle } = useSwipeCard({
+	const { gesture, tx, frontStyle, backStyle } = useSwipeCard({
 		cardWidth,
 		capability: topCapability,
 		onDecision: (decision) => {
@@ -127,13 +131,47 @@ export function SwipeStack<T>({
 		cardWidth,
 	});
 
-	const nextStyle = useAnimatedStyle(() => {
-		const p = Math.min(Math.abs(tx.value) / cardWidth, 1);
+	// One style per LAYER, each writing the identical prop set (transform +
+	// opacity). Cards are keyed by item identity, so the style attached to a
+	// given view changes as it is promoted — and Reanimated leaves the native
+	// props a detached style already wrote in place. A style that omitted
+	// `opacity` would inherit 0.5 from the layer it replaced, and the cards
+	// underneath would show through the promoted card (the ghosting bug).
+	// `cardLayerVisual` is the single source of both, asserted for key parity.
+	const layer0 = useAnimatedStyle(() => {
+		const v = cardLayerVisual("top", tx.value, cardWidth);
 		return {
-			transform: [{ scale: 0.94 + 0.06 * p }],
-			opacity: 0.5 + 0.5 * p,
+			transform: [
+				{ translateX: v.translateX },
+				{ rotate: `${v.rotateDeg}deg` },
+				{ scale: v.scale },
+			],
+			opacity: v.opacity,
 		};
 	});
+	const layer1 = useAnimatedStyle(() => {
+		const v = cardLayerVisual("next", tx.value, cardWidth);
+		return {
+			transform: [
+				{ translateX: v.translateX },
+				{ rotate: `${v.rotateDeg}deg` },
+				{ scale: v.scale },
+			],
+			opacity: v.opacity,
+		};
+	});
+	const layer2 = useAnimatedStyle(() => {
+		const v = cardLayerVisual("after", tx.value, cardWidth);
+		return {
+			transform: [
+				{ translateX: v.translateX },
+				{ rotate: `${v.rotateDeg}deg` },
+				{ scale: v.scale },
+			],
+			opacity: v.opacity,
+		};
+	});
+	const layerStyles = [layer0, layer1, layer2];
 
 	return (
 		<View style={styles.stack}>
@@ -155,7 +193,7 @@ export function SwipeStack<T>({
 								style={[
 									styles.card,
 									{ zIndex: WINDOW - i },
-									isTop ? topStyle : role === "next" ? nextStyle : styles.after,
+									layerStyles[i] ?? layerStyles[2],
 								]}
 							>
 								<Animated.View

@@ -99,7 +99,6 @@ interface UseSwipeCardArgs {
 interface UseSwipeCardResult {
 	/** Pan + tap, composed exclusively — the pan wins a contested touch. */
 	gesture: ReturnType<typeof Gesture.Exclusive>;
-	topStyle: AnimatedStyle<ViewStyle>;
 	/** Horizontal drag offset — cards behind read this to rise toward the top. */
 	tx: SharedValue<number>;
 	/** 0 = video face, 1 = data face. */
@@ -248,25 +247,6 @@ export function useSwipeCard({
 		flipProgress,
 	]);
 
-	const topStyle = useAnimatedStyle(() => {
-		// ±8° across the drag the user can actually perform: the card commits at
-		// 35% of its width, so interpolating over the full width would cap at ~2.8°.
-		const rotationSpan = cardWidth * SWIPE_THRESHOLD_RATIO;
-		return {
-			transform: [
-				{ translateX: tx.value },
-				{
-					rotate: `${interpolate(
-						tx.value,
-						[-rotationSpan, 0, rotationSpan],
-						[-FOLLOW_ROTATION_DEG, 0, FOLLOW_ROTATION_DEG],
-						"clamp",
-					)}deg`,
-				},
-			],
-		};
-	});
-
 	const frontStyle = useAnimatedStyle(() => ({
 		opacity: 1 - flipProgress.value,
 	}));
@@ -275,5 +255,5 @@ export function useSwipeCard({
 		opacity: flipProgress.value,
 	}));
 
-	return { gesture, topStyle, tx, flipProgress, frontStyle, backStyle };
+	return { gesture, tx, flipProgress, frontStyle, backStyle };
 }

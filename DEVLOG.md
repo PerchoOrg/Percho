@@ -4,6 +4,75 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-27 02:30 UTC — device bug: card ghosting after every swipe (Reanimated style-swap on a promoted card)
+
+**Objective**: owner tested task-1 on a real iPhone through Expo Go (EC2 dev
+server, `--tunnel`) and reported "滑动后卡片有重影" — after a swipe, two or three
+card titles were legible at once and the whole stack looked washed out.
+
+**Diagnosis** (from the screenshot: doubled/tripled titles at ~30×80px offsets,
+each layer progressively fainter, and the layers *behind* visible THROUGH the
+front card): not a visual tuning issue. `SwipeStack` keys cards by **item
+identity** — deliberately, so promoting the next card to top preserves its
+subtree and the `CardVideo` player survives the swipe (§0.6 #7). The consequence
+is that the animated style attached to a given view is **swapped** on promotion:
+`nextStyle` → `topStyle`. **Reanimated does not revert native props that a
+detached animated style already wrote.** The old `topStyle` set only `transform`,
+so the `opacity: 0.5` written by `nextStyle` stayed on the promoted card
+forever. Every promotion left one more translucent layer, and the `after` card
+(0.25) showed through both.
+
+This is why it only appeared *after* a swipe — on first render each view got its
+correct style and never had a stale one to inherit.
+
+**Actions**:
+- `apps/mobile/lib/gesture/stack-layer.ts` (new) — `cardLayerVisual(role, tx,
+  cardWidth)`, one pure worklet-safe function returning `{translateX, rotateDeg,
+  scale, opacity}` for all three layers. Carries the ±8°/35%-span rotation and
+  the 0.94/0.5 · 0.88/0.25 resting values, plus the "only the card directly
+  behind rises" rule.
+- `apps/mobile/components/SwipeStack.tsx` — three `useAnimatedStyle`s, one per
+  LAYER INDEX (not per role), each writing the **identical prop set**. Whichever
+  style lands on a view now fully overwrites what the previous one wrote.
+- `apps/mobile/hooks/use-swipe-card.ts` — dropped `topStyle` from the hook's
+  result; the stack owns layer visuals now, the hook owns the gesture. Removed
+  the then-unused `interpolate` / `AnimatedStyle` / `ViewStyle` imports.
+- `apps/mobile/lib/gesture/stack-layer.test.ts` (new, 13 tests) — the invariant
+  that would have caught this: **prop-key parity**, asserted at rest and
+  mid-drag, plus "no role ever returns undefined for any prop" and "the top
+  layer is fully opaque at every offset". Also covers the resting values, the
+  symmetric rise, `after` not rising, clamping past full width, ±8° exactly at
+  the 35% threshold, and `cardWidth: 0` producing no NaN.
+- `apps/mobile/biome.json` (new) — mobile had **no** biome config, so
+  `pnpm lint` was linting the gitignored generated `.expo/` directory (8 errors
+  the moment a dev server ran) and `expo-env.d.ts`. Now inherits the root config
+  with `useIgnoreFile` and those two paths ignored.
+
+**Decisions**: fixing it by adding `opacity: 1` to `topStyle` would have worked
+today and rotted the first time someone added a prop to one layer and not the
+others. Funnelling all three layers through one function makes parity structural
+and testable rather than a comment. Keying the styles by layer index rather than
+by role name also removes the `isTop ? … : role === "next" ? … : …` ternary that
+made the asymmetry easy to write in the first place.
+
+**Verification**: `pnpm test` 253/253 (240 → 253), `pnpm typecheck` 0,
+`pnpm lint` clean over 82 files; Metro re-bundled through the live tunnel
+(HTTP 200, 15.5MB, 1599 modules, 11.5s) so the change is resolvable, not just
+type-correct. Fast Refresh pushed it to the device without a restart.
+**Visual confirmation is owed by the owner on the phone** — this box has no
+simulator and I will not claim it.
+
+**Learnings**: item-keyed animated lists and per-position animated styles are in
+direct tension. If a view can be handed a different `useAnimatedStyle` during
+its lifetime, every candidate style must write the same keys — Reanimated has no
+"unset" for props a detached style left behind. Worth remembering for the
+`SwipeStack` window size if it ever grows past 3.
+
+**Next steps**: owner runs V1–V6 in `VERIFY-task-1-on-mac.md` on the phone; the
+ghosting check is now effectively V0. Known-unfinished and NOT bugs: `Adjust my
+scope` on the exhausted card only refetches, and `Explore →` is unwired (tasks
+2/3/5).
+
 ## 2026-07-27 01:20 UTC — task-1 step 10: the Mac verification doc + the B2 spec correction that was never made
 
 **Objective**: PLAN-task-1 §7 step 10 — write `VERIFY-task-1-on-mac.md` mirroring
