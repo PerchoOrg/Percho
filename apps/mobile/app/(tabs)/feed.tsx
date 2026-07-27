@@ -1,0 +1,507 @@
+/**
+ * The discovery feed (spec-v3 `01-feed.md`) — the app's only main consumption
+ * surface, and deliberately THIN.
+ *
+ * Every decision this screen appears to make is made somewhere pure and tested:
+ * what to show is `generateFeed`, what a swipe means is `applySwipe`, whether the
+ * funnel advances is `evaluateStageAdvance`, what a gesture may do is
+ * `cardBehavior(card).capability`, what a card says is `content.ts`. What is left
+ * here is wiring: fetch → compose → render → dispatch. Nothing below picks a
+ * threshold, authors a string a card shows, or computes a statistic.
+ *
+ * The §1.1 red line is satisfied structurally, not by null checks: the gesture
+ * layer never sees a card kind at all (capability is data resolved before the
+ * gesture is built), and each face is a component over a NARROWED card type, so a
+ * faceless kind has no back-face component that could mis-render.
+ *
+ * NOT WIRED, on purpose: `Explore →` on listing/community cards. Its targets are
+ * tasks 2 and 3; `CardFoot` renders the button only when given a handler, so
+ * omitting it leaves no dead affordance and no fake navigation — the same call
+ * PLAN B11 made for `See on map →`.
+ */
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { StyleSheet, View, useWindowDimensions } from "react-native";
+import { useSharedValue, withTiming } from "react-native-reanimated";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { type CardRenderArgs, SwipeStack } from "../../components/SwipeStack";
+import { AreaDataFace } from "../../components/cards/AreaDataFace";
+import { AreaFace } from "../../components/cards/AreaFace";
+import { AskFace } from "../../components/cards/AskFace";
+import { ChallengeFace } from "../../components/cards/ChallengeFace";
+import { CommunityFace } from "../../components/cards/CommunityFace";
+import { DataFaceStub } from "../../components/cards/DataFaceStub";
+import { InsightFace } from "../../components/cards/InsightFace";
+import { ListingFace } from "../../components/cards/ListingFace";
+import { MilestoneFace } from "../../components/cards/MilestoneFace";
+import { SwipeLabels } from "../../components/cards/SwipeLabels";
+import { TradeoffFace } from "../../components/cards/TradeoffFace";
+import { CardSkeleton } from "../../components/feed/CardSkeleton";
+import { ExhaustedCard } from "../../components/feed/ExhaustedCard";
+import { OfflineBar } from "../../components/feed/OfflineBar";
+import { SeenBadge } from "../../components/feed/SeenBadge";
+import { UndoToast } from "../../components/feed/UndoToast";
+import { useFeedPool } from "../../hooks/use-feed-pool";
+import { cardBehavior } from "../../lib/feed/behavior";
+import type { FeedCardV3, SwipeVerdict } from "../../lib/feed/card-types";
+import {
+	buildGestureEvent,
+	buildSkipLayerEvent,
+	buildStageEvent,
+	buildSwipeEvent,
+} from "../../lib/feed/events";
+import { generateFeed, insertMilestone } from "../../lib/feed/generate-feed";
+import { milestoneFor } from "../../lib/feed/milestone";
+import { FIRST_PAGE_SIZE, PREFETCH_DISTANCE } from "../../lib/feed/ratios";
+import { evaluateStageAdvance } from "../../lib/feed/stage-advance";
+import { useEventQueue } from "../../state/event-queue";
+import { useFeedSession } from "../../state/feed-session";
+import { useFunnelStore } from "../../state/funnel";
+import { colors } from "../../theme/tokens";
+
+const GUTTER = 16;
+/** Card is portrait; capped against viewport height on small devices. */
+const CARD_ASPECT = 1.5;
+const CARD_MAX_VIEWPORT = 0.74;
+/** §1.6's colour pulse rides inside the 900ms hold (PLAN B4). */
+const REVEAL_FADE_MS = 180;
+
+export default function FeedScreen() {
+	const { width, height } = useWindowDimensions();
+
+	const stage = useFunnelStore((s) => s.stage);
+	const stageHydrated = useFunnelStore((s) => s.hydrated);
+	const promoteTo = useFunnelStore((s) => s.promoteTo);
+
+	const signals = useFeedSession((s) => s.signals);
+	const sessionN = useFeedSession((s) => s.sessionN);
+	const sessionHydrated = useFeedSession((s) => s.hydrated);
+	const recordSwipe = useFeedSession((s) => s.recordSwipe);
+	const undoSwipe = useFeedSession((s) => s.undoSwipe);
+	const recordInsightUnsure = useFeedSession((s) => s.recordInsightUnsure);
+	const skipLayer = useFeedSession((s) => s.skipLayer);
+	const resetStageCounter = useFeedSession((s) => s.resetStageCounter);
+	const beginSession = useFeedSession((s) => s.beginSession);
+
+	const enqueue = useEventQueue((s) => s.enqueue);
+	const takeSeq = useEventQueue((s) => s.takeSeq);
+	const drain = useEventQueue((s) => s.drain);
+
+	// BOTH stores must be read back before a deck is built, or the first render
+	// composes a stage-0 deck for a returning stage-3 buyer (§1.7).
+	const hydrated = stageHydrated && sessionHydrated;
+
+	const [activeIndex, setActiveIndex] = useState(0);
+	const [deck, setDeck] = useState<readonly FeedCardV3[]>([]);
+	const [loopedIds, setLoopedIds] = useState<readonly string[]>([]);
+	const [engineExhausted, setEngineExhausted] = useState(false);
+	const [undo, setUndo] = useState<{
+		card: FeedCardV3;
+		label: string;
+		/** A milestone inserted by this swipe, if it hasn't been displayed yet. */
+		milestoneId?: string;
+	} | null>(null);
+	const [milestonesShown, setMilestonesShown] = useState<readonly string[]>([]);
+	/**
+	 * Which challenge cards have been answered, and how. Not in the session store:
+	 * this is presentation state for a card currently on screen (§1.6's reveal),
+	 * and a challenge swipe carries no scope signal worth persisting.
+	 */
+	const [answered, setAnswered] = useState<Record<string, SwipeVerdict>>({});
+	const rotate = useRef(0);
+
+	/**
+	 * §1.6's reveal. ONE shared value for the top card, deliberately not
+	 * `flipProgress`: the reveal is a post-commit answer state and the flip is a
+	 * user-initiated data view, and conflating them flies a card out showing the
+	 * wrong face. Reset when the top card changes so the next challenge starts
+	 * as a question.
+	 */
+	const revealProgress = useSharedValue(0);
+
+	/**
+	 * The funnel's city scope, derived from real geo signal — the server's stage-3
+	 * preview join key. A default city list here would show a buyer previews in a
+	 * place they never expressed interest in.
+	 */
+	const cities = useMemo(
+		() =>
+			signals.geo
+				.filter((g) => g.level === "city" && g.right > g.left)
+				.sort((a, b) => b.right - a.right)
+				.map((g) => g.unitId),
+		[signals.geo],
+	);
+
+	const { pool, loading, offline, exhausted, fetchMore, retry } = useFeedPool({
+		stage,
+		cities,
+		likedCommunityIds: signals.likedCommunityIds,
+		enabled: hydrated,
+	});
+
+	useEffect(() => {
+		if (hydrated) beginSession();
+	}, [hydrated, beginSession]);
+
+	// §1.9: drain the telemetry queue once the network is back.
+	useEffect(() => {
+		if (!offline && hydrated) void drain();
+	}, [offline, hydrated, drain]);
+
+	/**
+	 * Compose the first page. Keyed on (hydrated, stage, pool) ONLY — signals and
+	 * seenIds are read imperatively from the store at composition time rather than
+	 * declared as deps, because re-composing after every swipe would rebuild the
+	 * deck under the buyer's thumb.
+	 */
+	useEffect(() => {
+		if (!hydrated) return;
+		const s = useFeedSession.getState();
+		const result = generateFeed({
+			stage,
+			signals: s.signals,
+			pool,
+			seenIds: s.seenIds,
+			count: FIRST_PAGE_SIZE,
+			rotate: 0,
+		});
+		rotate.current = result.nextRotate;
+		setDeck(result.cards);
+		setLoopedIds(result.loopedIds);
+		setEngineExhausted(result.exhausted);
+		setActiveIndex(0);
+		revealProgress.value = 0;
+	}, [hydrated, stage, pool, revealProgress]);
+
+	/** §1.7 pagination: append from the pool already held, deduped by the deck. */
+	const appendPage = useCallback(() => {
+		const s = useFeedSession.getState();
+		const result = generateFeed({
+			stage,
+			signals: s.signals,
+			pool,
+			seenIds: [...s.seenIds, ...deck.map((c) => c.id)],
+			count: FIRST_PAGE_SIZE,
+			rotate: rotate.current,
+			milestonesShown,
+		});
+		rotate.current = result.nextRotate;
+		if (result.cards.length === 0) return;
+		setDeck((d) => [...d, ...result.cards]);
+		setLoopedIds((l) => [...l, ...result.loopedIds]);
+		setEngineExhausted(result.exhausted);
+	}, [stage, pool, deck, milestonesShown]);
+
+	// Prefetch when the active card is 5 from the end (§1.7).
+	useEffect(() => {
+		if (deck.length === 0) return;
+		if (deck.length - activeIndex > PREFETCH_DISTANCE) return;
+		if (!exhausted) fetchMore();
+		appendPage();
+	}, [activeIndex, deck.length, exhausted, fetchMore, appendPage]);
+
+	const onDecision = useCallback(
+		(decision: "left" | "right", card: FeedCardV3) => {
+			const at = Date.now();
+			const index = activeIndex;
+			const prevSwipeAt = useFeedSession.getState().lastSwipeAt;
+
+			enqueue(
+				buildSwipeEvent({
+					seq: takeSeq(),
+					at,
+					card,
+					verdict: decision,
+					funnelStage: stage,
+					sessionN,
+					activeIndex: index,
+					...(prevSwipeAt !== undefined ? { prevSwipeAt } : {}),
+				}),
+			);
+
+			const next = recordSwipe(card, decision, at);
+			setActiveIndex(index + 1);
+			revealProgress.value = 0;
+
+			const target = evaluateStageAdvance(stage, next, {
+				units: pool.geoUnits,
+			});
+			// `promoteTo` is monotonic and returns whether it actually moved — that
+			// boolean IS the §1.5 milestone trigger, so a ceremony card cannot fire
+			// for a stage the buyer was already past.
+			const advanced = target !== null && promoteTo(target);
+			let insertedMilestoneId: string | undefined;
+
+			if (advanced && target !== null) {
+				enqueue(
+					buildStageEvent({
+						seq: takeSeq(),
+						at,
+						type: "stage_advance",
+						fromStage: stage,
+						toStage: target,
+						swipesInStage: next.swipesInStage,
+						sessionN,
+					}),
+				);
+				resetStageCounter();
+
+				const milestone = milestoneFor({
+					fromStage: stage,
+					toStage: target,
+					signals: next,
+					units: pool.geoUnits,
+				});
+				if (milestone !== null && !milestonesShown.includes(milestone.id)) {
+					// B15: the very next card, not an append at the end of a deck the
+					// buyer may never reach.
+					setDeck((d) => insertMilestone(d, index, milestone, milestonesShown));
+					setMilestonesShown((m) => [...m, milestone.id]);
+					insertedMilestoneId = milestone.id;
+				}
+			}
+
+			// §1.8: undo is offered for listing / community / area only.
+			if (cardBehavior(card).undoable) {
+				setUndo({
+					card,
+					label: decision === "right" ? "Liked" : "Passed",
+					...(insertedMilestoneId ? { milestoneId: insertedMilestoneId } : {}),
+				});
+			}
+		},
+		[
+			activeIndex,
+			enqueue,
+			takeSeq,
+			stage,
+			sessionN,
+			recordSwipe,
+			revealProgress,
+			pool.geoUnits,
+			promoteTo,
+			resetStageCounter,
+			milestonesShown,
+		],
+	);
+
+	/** §1.6: fires at commit, BEFORE the flyout, so the answer can be revealed. */
+	const onCommit = useCallback(
+		(decision: "left" | "right", card: FeedCardV3) => {
+			if (card.kind !== "challenge") return;
+			setAnswered((a) => ({ ...a, [card.id]: decision }));
+			revealProgress.value = withTiming(1, { duration: REVEAL_FADE_MS });
+		},
+		[revealProgress],
+	);
+
+	const onUndo = useCallback(() => {
+		if (!undo) return;
+		const restored = undoSwipe(undo.card.id);
+		const undone = undo;
+		setUndo(null);
+		if (restored === null) return;
+		setActiveIndex((i) => Math.max(0, i - 1));
+		// The STAGE is not reverted — `funnel.ts` is monotonic by design (PLAN B5).
+		// But a milestone this swipe inserted and the buyer has not yet reached is
+		// removed: a ceremony for a stage they no longer have the evidence for is
+		// worse than the asymmetry itself (owner's addition to B5).
+		if (undone.milestoneId) {
+			const id = undone.milestoneId;
+			setDeck((d) => d.filter((c) => c.id !== id));
+			setMilestonesShown((m) => m.filter((x) => x !== id));
+		}
+	}, [undo, undoSwipe]);
+
+	const cardWidth = width - GUTTER * 2;
+	const cardHeight = Math.min(
+		cardWidth * CARD_ASPECT,
+		height * CARD_MAX_VIEWPORT,
+	);
+
+	const capability = useCallback(
+		(card: FeedCardV3) => cardBehavior(card).capability,
+		[],
+	);
+
+	const emitGesture = useCallback(
+		(type: "flip" | "datapoint_tap", card: FeedCardV3) => {
+			enqueue(
+				buildGestureEvent({
+					seq: takeSeq(),
+					at: Date.now(),
+					type,
+					card,
+					funnelStage: stage,
+					sessionN,
+				}),
+			);
+		},
+		[enqueue, takeSeq, stage, sessionN],
+	);
+
+	const renderCard = useCallback(
+		(card: FeedCardV3, { role, tx, cardWidth: w }: CardRenderArgs) => {
+			const isTop = role === "top";
+			switch (card.kind) {
+				case "ask":
+					return (
+						<AskFace
+							card={card}
+							onSkipTopic={() => {
+								skipLayer(card.layer);
+								enqueue(
+									buildSkipLayerEvent({
+										seq: takeSeq(),
+										at: Date.now(),
+										layer: card.layer,
+										funnelStage: stage,
+										sessionN,
+									}),
+								);
+								setActiveIndex((i) => i + 1);
+							}}
+						/>
+					);
+				case "area":
+					return <AreaFace card={card} isTop={isTop} />;
+				case "listing":
+					return <ListingFace card={card} stage={stage} isTop={isTop} />;
+				case "community":
+					return <CommunityFace card={card} isTop={isTop} />;
+				case "tradeoff":
+					return <TradeoffFace card={card} tx={tx} cardWidth={w} />;
+				case "challenge":
+					return (
+						<ChallengeFace
+							card={card}
+							revealProgress={revealProgress}
+							chosen={answered[card.id] ?? null}
+						/>
+					);
+				case "insight":
+					return (
+						<InsightFace
+							card={card}
+							neutralLabel="Not sure"
+							onNotSure={() => {
+								recordInsightUnsure(card);
+								setActiveIndex((i) => i + 1);
+							}}
+						/>
+					);
+				case "milestone":
+					return (
+						<MilestoneFace
+							card={card}
+							onContinue={() => {
+								enqueue(
+									buildStageEvent({
+										seq: takeSeq(),
+										at: Date.now(),
+										type: "milestone_cta",
+										fromStage: card.fromStage,
+										toStage: card.toStage,
+										swipesInStage: signals.swipesInStage,
+										sessionN,
+									}),
+								);
+								setActiveIndex((i) => i + 1);
+							}}
+						/>
+					);
+			}
+		},
+		[
+			stage,
+			sessionN,
+			signals.swipesInStage,
+			answered,
+			revealProgress,
+			skipLayer,
+			recordInsightUnsure,
+			enqueue,
+			takeSeq,
+		],
+	);
+
+	/**
+	 * The §0.5 data face. Returns null for the kinds that have none — ask,
+	 * tradeoff, challenge, insight, milestone — which is exactly what `SwipeStack`
+	 * reads to decide whether the card may flip at all (§1.1).
+	 */
+	const renderBack = useCallback(
+		(card: FeedCardV3) => {
+			const flipBack = () => emitGesture("flip", card);
+			switch (card.kind) {
+				case "area":
+					return <AreaDataFace card={card} onFlipBack={flipBack} />;
+				case "listing":
+				case "community":
+					return <DataFaceStub card={card} onFlipBack={flipBack} />;
+				default:
+					return null;
+			}
+		},
+		[emitGesture],
+	);
+
+	const renderOverlay = useCallback(
+		(card: FeedCardV3, { tx, cardWidth: w }: CardRenderArgs) => (
+			<>
+				<SwipeLabels card={card} tx={tx} cardWidth={w} />
+				{loopedIds.includes(card.id) ? <SeenBadge /> : null}
+			</>
+		),
+		[loopedIds],
+	);
+
+	const atEnd = activeIndex >= deck.length;
+	// §1.9's terminal card is for a genuinely dry pool, not for a momentary gap:
+	// the engine reports exhaustion when every slot had to reuse seen content, and
+	// the server reports it has no more inventory. Both, plus nothing left to show.
+	const showExhausted = atEnd && (engineExhausted || exhausted) && !loading;
+
+	return (
+		<SafeAreaView style={styles.screen} edges={["top"]}>
+			{offline && <OfflineBar />}
+			<View style={styles.stackWrap}>
+				{deck.length === 0 && loading ? (
+					<View style={{ width: cardWidth, height: cardHeight }}>
+						<CardSkeleton />
+					</View>
+				) : showExhausted ? (
+					<View style={{ width: cardWidth, height: cardHeight }}>
+						<ExhaustedCard onAdjustScope={retry} />
+					</View>
+				) : (
+					<SwipeStack
+						items={deck}
+						activeIndex={activeIndex}
+						onDecision={onDecision}
+						onCommit={onCommit}
+						renderCard={renderCard}
+						renderBack={renderBack}
+						renderOverlay={renderOverlay}
+						keyExtractor={(card) => card.id}
+						cardWidth={cardWidth}
+						cardHeight={cardHeight}
+						capability={capability}
+					/>
+				)}
+			</View>
+			{undo && (
+				<UndoToast
+					label={undo.label}
+					onUndo={onUndo}
+					onExpire={() => setUndo(null)}
+				/>
+			)}
+		</SafeAreaView>
+	);
+}
+
+const styles = StyleSheet.create({
+	screen: { flex: 1, backgroundColor: colors.bg },
+	stackWrap: { flex: 1, alignItems: "center", justifyContent: "center" },
+});

@@ -1,37 +1,58 @@
 /**
- * Mobile feed pagination endpoint.
+ * Mobile feed **pool** endpoint (v3, spec-v3 `01-feed.md` §0.2 / §1.7).
  *
- * Contract in `packages/shared/src/types.ts` (FeedPage). Reuses the
- * server-side `fetchBrowseCards` from the web browse feed and projects
- * BrowseCard → mobile FeedCard (a much thinner shape — no cf-stream
- * videos, no rail categories, no photo carousels; those live behind
- * "Explore →" on the detail page).
+ * This is NOT a composed feed. The v3 composition engine is client-side and
+ * pure (`apps/mobile/lib/feed/generate-feed.ts`) because §1.7 re-evaluates
+ * funnel advance after *every* swipe and §1.9 requires the feed to keep working
+ * offline — a round trip per swipe would break the §1.8 flyout→settle window
+ * and could not insert a milestone card while offline. So the server's job is
+ * to supply eligible *inventory* and to enforce the funnel's data gate.
  *
- * See paginated-feed-and-swipe-ui skill: `.range(offset, offset+limit-1)`,
- * clamp `limit` server-side, `done: fresh.length < limit`.
+ *   GET /api/mobile/feed?stage=1&offset=0&limit=12
+ *   → { stage, offset, limit, done,
+ *       pool: { geoUnits, listings, communities } }
  *
- * Ask-cards are NOT injected here. Mobile client owns ask interleaving
- * so it can skip scope layers the user has already answered.
+ * **§0.2 listing hard gate, enforced here as well as on the client.** Defence
+ * in depth: the client gate is not the only one, because "no listings before
+ * the buyer has told us anything" is the product's core promise, and a stale
+ * app build must not be able to break it.
+ *   stage 0    → zero listings, full stop.
+ *   stage 1–2  → at most ceil(limit/10) tease listings (the §1.7 1-per-10 rate).
+ *   stage 3    → previews only inside communities the buyer already liked.
+ *   stage 4    → unlocked.
+ *
+ * Ask / tradeoff / challenge pools stay client-side static — they have no data
+ * dependency, matching this route's original comment ("Ask-cards are NOT
+ * injected here. Mobile client owns ask interleaving").
  */
 
-import { NextResponse } from 'next/server';
-import { fetchBrowseCards, fetchBrowseCardsVideosOnly } from '@/lib/feed/browse-cards';
-import type {
-  FeedCard,
-  FeedPage,
-  CommunityCard,
-  ListingCard,
-} from '@percho/shared';
 import type { BrowseCard } from '@/app/(public)/browse/_components/BrowseFeed';
+import { fetchBrowseCards, fetchBrowseCardsVideosOnly } from '@/lib/feed/browse-cards';
+import { type PoolCommunityDTO, fetchCommunityPool } from '@/lib/feed/community-pool';
+import { type GeoUnitDTO, fetchCityGeoUnits } from '@/lib/feed/geo-units';
+import { type LikedCommunityRef, type PoolListingDTO, gateListings } from '@/lib/feed/listing-gate';
+import { parseFeedPoolQuery } from '@/lib/zod/feed-pool';
+import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 
 const CF_STREAM_BASE = 'https://videodelivery.net';
 
+interface FeedPoolResponse {
+  stage: number;
+  offset: number;
+  limit: number;
+  done: boolean;
+  pool: {
+    geoUnits: GeoUnitDTO[];
+    listings: PoolListingDTO[];
+    communities: PoolCommunityDTO[];
+  };
+}
+
 function heroUrlFor(card: BrowseCard): string {
   if (card.mediaKind === 'photo' && card.heroPhotoUrl) return card.heroPhotoUrl;
   if (card.gridCoverUrl) return card.gridCoverUrl;
-  // Cloudflare Stream thumbnail — first frame as still.
   const cfId = card.hero?.cfVideoId;
   if (cfId) return `${CF_STREAM_BASE}/${cfId}/thumbnails/thumbnail.jpg?time=1s`;
   return '';
@@ -59,42 +80,88 @@ function formatPrice(price: number | null): string {
   return `$${Math.round(price / 1000)}K`;
 }
 
-function projectListing(card: BrowseCard): ListingCard {
+function citySlug(city: string | null, state: string | null): string | undefined {
+  if (!city || !state) return undefined;
+  const slug = `${city}-${state}`
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
+  return `city:${slug}`;
+}
+
+function projectListing(card: BrowseCard): PoolListingDTO {
   return {
-    kind: 'listing',
     id: card.listing.id,
     slug: card.listing.slug,
     address: card.listing.address,
     priceLabel: formatPrice(card.listing.price),
+    // The real number alongside the label — §1.6's challenge card cannot round.
+    ...(card.listing.price != null ? { price: card.listing.price } : {}),
     bedBathSqft: formatBedBathSqft(card.listing),
     heroUrl: heroUrlFor(card),
-    videoUrl: videoUrlFor(card),
-    // No matchScore yet — mobile computes locally from persona.
+    ...(videoUrlFor(card) ? { videoUrl: videoUrlFor(card) } : {}),
+    ...(card.community?.slug ? { communityId: card.community.slug } : {}),
+    ...(card.listing.city ? { city: card.listing.city } : {}),
+    ...(citySlug(card.listing.city, card.listing.state)
+      ? { geoUnitId: citySlug(card.listing.city, card.listing.state) }
+      : {}),
   };
 }
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
-  const offset = Math.max(0, Number.parseInt(url.searchParams.get('offset') ?? '0', 10) || 0);
-  const limitRaw = Number.parseInt(url.searchParams.get('limit') ?? '20', 10) || 20;
-  const limit = Math.min(40, Math.max(1, limitRaw));
-  const videosOnly = url.searchParams.get('videosOnly') === '1';
+  const { stage, offset, limit, videosOnly, likedCommunityIds, cities } = parseFeedPoolQuery(url);
 
-  const rows = videosOnly
-    ? await fetchBrowseCardsVideosOnly(offset, limit)
-    : await fetchBrowseCards(offset, limit);
-  const cards: FeedCard[] = rows.map(projectListing);
+  // Stage 0 shows no listings at all, so don't pay for the listing query.
+  const needsListingRows = stage > 0;
+  // Communities are Stage 3's main card type; earlier stages don't show them.
+  const needsCommunities = stage >= 3;
 
-  const body: FeedPage = {
-    cards,
+  const [rows, geoUnits, communities] = await Promise.all([
+    needsListingRows
+      ? videosOnly
+        ? fetchBrowseCardsVideosOnly(offset, limit)
+        : fetchBrowseCards(offset, limit)
+      : Promise.resolve([] as BrowseCard[]),
+    fetchCityGeoUnits(),
+    needsCommunities
+      ? fetchCommunityPool({ offset, limit, cities })
+      : Promise.resolve([] as PoolCommunityDTO[]),
+  ]);
+
+  // The buyer's liked-community ids arrive without their cities, so pair each
+  // id with a city when we can. `cities` is the funnel's current city scope,
+  // which is where the liked communities came from.
+  const liked: LikedCommunityRef[] = likedCommunityIds.map((id) => {
+    const match = communities.find((c) => c.id === id || c.slug === id);
+    return match?.city ? { id, city: match.city } : { id };
+  });
+  // With no id/city pairing available, fall back to the funnel's city scope so
+  // Stage 3 still previews listings in the areas the buyer narrowed to.
+  const likedRefs: LikedCommunityRef[] =
+    liked.length > 0 ? liked : cities.map((city) => ({ id: `city:${city}`, city }));
+
+  const listings = gateListings(rows.map(projectListing), stage, limit, likedRefs);
+
+  const body: FeedPoolResponse = {
+    stage,
     offset,
     limit,
-    done: rows.length < limit,
+    // `done` tracks the underlying inventory scan, NOT the gated listing count:
+    // stage 1 returns 2 of 12 rows by design, and reporting done=false there
+    // would make the client loop forever trying to fill a page.
+    done: needsListingRows ? rows.length < limit : true,
+    pool: {
+      geoUnits,
+      listings,
+      communities,
+    },
   };
+
   return NextResponse.json(body, {
     headers: {
       'Cache-Control': 'no-store',
-      // CORS — mobile hits this from Expo Go / native app on a different
+      // CORS — mobile hits this from Expo Go / the native app on a different
       // origin. Read-only endpoint, no cookies needed.
       'Access-Control-Allow-Origin': '*',
     },
