@@ -4,6 +4,48 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-27 18:55 UTC — task-2 起步：先摸真实数据，再写纯逻辑层（69 个新测试）
+
+**Objective**: owner: "task-1结束 开始做task-2"。task-2 = Listing Explore
+(`02-listing.md`)。**本次起 Percho 开发由 Hermes 自己写，不再委派 Claude Code CLI**
+(owner 明确)。分支 `phase-ios2/listing`。
+
+**Actions**:
+- 写 `docs/design/spec-v3/prompts/PLAN-task-2.md`（组件树/服务端/测试/排序）。
+- 新增纯层 `apps/mobile/lib/listing/`：`focus-key.ts`（深链词表 + section 映射）、
+  `monthly.ts`（摊还 + `listings.hoa` **text** 列解析）、`histogram.ts`（7 桶 +
+  <5 样本降级）、`hotspot.ts`（ai_tags → hotspot，动作 <3 不上线）、`tour.ts`
+  （evidence 非空的类型 + 运行时双保险）。
+- 5 个测试文件，69 个新用例。
+
+**Decisions**:
+- **直方图 anchor 从 subdivision 降级为 city，并把 cohort 名带进 UI**。spec §2.1
+  写的是 Waterside 这种 subdivision，但线上 `listings.community_id` **只有 4/265**
+  有值，subdivision cohort 对 98% 的房子是空的。city 有真样本（Duluth/Suwanee/
+  Sandy Springs/Alpharetta/Johns Creek 各 ~50），所以算 city 中位数、**并在文案里
+  说明是哪个 cohort**，不假装量的是 subdivision。
+- **Days on market 行不做**。schema 里**根本没有** `list_date` / `dom` 列(逐列查过)。
+  spec §2.1 要这一行，但它只能 ABSENT —— 不填 0，不填"—"配一个假 median。
+- monthly **不估** insurance/PMI/tax，只加调用方真有的项，`includes` 字段说明加了啥。
+- `hoa` 是 text 列，"1200" **不按量级猜**年费/月费 —— 猜错直接 12× 月供。
+
+**Issues**: `genericTourStops` 第 3 停被静默吞掉 → 只出 2 停 = 无 tour。原因:
+`hotspots.find(h => rooms.includes(h.room))` 走的是**照片顺序**，室外停的候选列表末位
+是 `exterior`，撞上 hero 停已用掉的那张外景照，被去重丢弃。测试先红后修。
+
+**Resolution**: 改成按 `rooms` **偏好顺序**外层遍历且跳过已用 id，"backyard 优先，
+否则 pool，最后退外景"才真是这个语义。Gate 全绿：**462 测试**(+69)、tsc 0、
+biome 101 文件干净。
+
+**Learnings**: **`Array.find` 里用 `list.includes(item.x)` 做"优先级选择"是假的** ——
+它按被搜数组的顺序返回，不是按优先级列表的顺序。带去重的多路 fallback 必须外层遍历
+偏好列表。这类 bug 不报错，只让下游数量少一个，然后在别处以"功能没出现"的形式显现。
+
+**Next steps**: 服务端 detail endpoint → `ListingDataFace` 替掉 `DataFaceStub`
+并接 `Explore →` / 挑战卡 `THE HOME BEHIND THIS` 的真跳转 → free explore →
+guided tour → 最后把 `photo_tagger.py` 移植到 Bedrock 并回填 fmls listing
+（**hotspot 的唯一数据源，现在 199 条 tag 全在 10 个非 feed listing 上，fmls photo 一条都没有**）。
+
 ## 2026-07-27 09:55 UTC — 丢弃作废的 ws3 patch（先验证再删，不是直接删）
 
 **Objective**: owner: "清理干净吧"。
