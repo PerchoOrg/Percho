@@ -62,3 +62,9 @@ docs/ken-burns/demo/bgm.mp3
 scripts/render-worker/bgm/*.mp3
 scripts/render-worker/bgm/**/*.mp3
 __pycache__
+
+# Throwaway diagnostic probes (multi-page session replays etc). These are written
+# to reproduce a device bug and are not part of the app; a real reproduction that
+# is worth keeping belongs in a *.test.ts file instead.
+.probe/
+**/.probe/
