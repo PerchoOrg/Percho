@@ -4,6 +4,51 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-27 21:05 UTC — 真机测试可用性：9:16 视频终于进 feed + dev sampler（每种 3 张，视频卡置顶）
+
+**Objective**: owner 两件事:①"翻很多卡片才能看到 listing，暂时不按 production 规则，
+每种来 3 张"；②"最想测卡片上播之前生成的视频，把带视频的卡片放前面"。
+
+**Issues（两个真 bug，都不是"没做"而是"做了但接不上"）**:
+1. **9:16 竖版视频从来没进过 mobile feed。** `browse-cards.ts` 读 `listing_videos`
+   并取 `cf_video_id ?? cf_video_id_landscape`，而线上**每一行 `cf_video_id` 都是 NULL**、
+   只有 `cf_video_id_landscape` —— 所以手机上满屏 9:16 卡片拿到的是**横屏视频**。
+   而真正为这个界面生成的 15 条 **`generated_videos` 全是 `aspect_ratio='9:16'`**，
+   mobile 路径**根本没读过这张表**。
+2. **community 卡永远播不了视频**:`PoolCommunityDTO` **没有 `videoUrl` 字段**，
+   尽管 `CommunityFace` 早就渲染了 `CardVideo`。
+
+**Actions**:
+- 新 `apps/web/lib/feed/vertical-videos.ts`:读 `generated_videos`(ready + 9:16)，
+  route 里**优先于** browse-card hero。`browse-cards.ts` 故意不动 —— 它还喂 web
+  `/browse`，那边横屏是对的。
+- `PoolCommunityDTO` 加 `videoUrl`，community 也挂竖版视频。
+- 新 query 参数 **`videoFirst=1`**(与 `videosOnly` 分开:后者会**丢掉**纯图 listing，
+  把 §0.7"无视频是一等状态"藏起来，不能用来测真 deck)。
+- 新 `apps/mobile/lib/feed/dev-sampler.ts` + 8 个测试:`EXPO_PUBLIC_DEV_SAMPLER=1`
+  时用**每种 3 张、视频卡置顶**的平铺 deck 替掉漏斗 mix；feed 顶部琥珀色 banner
+  显示 `DEV SAMPLER · N cards · M with video`。
+
+**Decisions**: sampler **只绕过 §1.7 的 MIX，不造假数据** —— 每张卡仍由真构造器从真
+pool 生成；也**不绕服务端 §0.2 gate**,而是让客户端按 stage 4 请求(stage 4 本来就是
+解锁态)。开关是 build-time env var，默认关，不可能误上线。
+
+**Resolution**: `videoFirst` **第一版只排序当前页 → 完全没效果**，因为那 6 个有视频的
+listing 根本不在 newest-first 第一页里。**排序拿不到你没 fetch 的行** —— 改成用
+`fetchBrowseCardsByIds` 单独取。验证:`?videoFirst=1` 现在返回 14 条、**前 2 条带
+9:16 manifest**(`5122 Lower Creek Street` / `2438 Figaro Drive`)，manifest+thumbnail
+都 HTTP 200。Gate:**485 测试**、tsc 0(web+mobile)、biome 114 干净。Metro bundle
+HTTP 200/16.2MB，且 `EXPO_PUBLIC_DEV_SAMPLER` 已 inline 成 `"1"`(不是死代码)。
+
+**Learnings**: **"字段存在"≠"字段被填"≠"字段是对的形状"。** 这次三层全踩:
+community DTO 缺字段、listing 拿到的是横屏 id、竖版表没人读。**排查"功能没出现"要从
+数据那一端往 UI 走**，因为 UI 早就写好了(`CardVideo` 三个 face 都挂着)。
+另外:**改分页/排序类 dev 开关，一定要用真 endpoint 验一次输出**，"排序了"和"内容变了"
+是两件事。
+
+**Next steps**: owner 真机测(tunnel `exp://llhow00-anonymous-8081.exp.direct`)。
+`ai_tags` 回填仍在后台跑。
+
 ## 2026-07-27 20:20 UTC — photo_tagger 移到 Bedrock + 回填 fmls tags（hotspot 数据源终于通了）
 
 **Objective**: task-2 最后一块。§2.3–2.5 全靠 `listing_photos.ai_tags`，而它对

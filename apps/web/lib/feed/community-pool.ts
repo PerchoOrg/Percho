@@ -29,6 +29,14 @@ export interface PoolCommunityDTO {
   state: string;
   heroUrl: string;
   blurb?: string;
+  /**
+   * 9:16 hero video, attached by the route from `generated_videos` (see
+   * `lib/feed/vertical-videos.ts`). Absent for most communities: only 4 have a
+   * ready vertical video today. `CommunityFace` already renders `CardVideo` when
+   * this is present — the field simply did not exist before, so the mobile card
+   * could never play one.
+   */
+  videoUrl?: string;
 }
 
 type CommunityPoolRow = {

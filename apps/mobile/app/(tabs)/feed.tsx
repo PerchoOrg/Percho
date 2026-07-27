@@ -51,6 +51,11 @@ import { cardBehavior } from "../../lib/feed/behavior";
 import type { ChallengeCardV3, FeedCardV3 } from "../../lib/feed/card-types";
 import { deckKey } from "../../lib/feed/deck-key";
 import {
+	buildSamplerDeck,
+	samplerEnabled,
+	samplerLabel,
+} from "../../lib/feed/dev-sampler";
+import {
 	buildGestureEvent,
 	buildSkipLayerEvent,
 	buildStageEvent,
@@ -187,9 +192,42 @@ export default function FeedScreen() {
 	const poolRef = useRef(pool);
 	poolRef.current = pool;
 
+	/**
+	 * DEV-ONLY recompose trigger, and 0 whenever the sampler is off.
+	 *
+	 * A number rather than the pool object: the pool is a new object identity on
+	 * every merge, so depending on it directly would rebuild the deck on every
+	 * pagination — the exact bug `poolRef` exists to avoid.
+	 */
+	const samplerPoolSize = samplerEnabled()
+		? pool.listings.length + pool.communities.length + pool.geoUnits.length
+		: 0;
+
+	// biome-ignore lint/correctness/useExhaustiveDependencies: `samplerPoolSize` is a DEV-ONLY recompose trigger, not a value this effect reads directly (it reads `poolRef`). Biome sees no read and calls it unnecessary; without it the sampler deck never recomposes once the pool lands. It is 0 when the sampler is off, so production behaviour is unchanged.
 	useEffect(() => {
 		if (!hydrated) return;
 		const s = useFeedSession.getState();
+		/**
+		 * DEV SAMPLER (`EXPO_PUBLIC_DEV_SAMPLER=1`): replace the funnel mix with a
+		 * flat ~3-per-kind deck, video cards first.
+		 *
+		 * Off by default and gated on a build-time env var, so it cannot ship
+		 * enabled. It bypasses the §1.7 MIX only — every card is still built by the
+		 * real constructors from the real pool, and no listing is shown that the
+		 * server did not already gate as visible.
+		 */
+		if (samplerEnabled()) {
+			const sampled = buildSamplerDeck({ pool: poolRef.current, stage });
+			if (sampled.length > 0) {
+				rotate.current = 0;
+				setDeck(sampled);
+				setEngineExhausted(false);
+				setActiveIndex(0);
+				return;
+			}
+			// Pool not in yet — fall through and let the normal path run, and this
+			// effect re-fires when the pool arrives.
+		}
 		const result = generateFeed({
 			stage,
 			signals: s.signals,
@@ -203,7 +241,12 @@ export default function FeedScreen() {
 
 		setEngineExhausted(result.exhausted);
 		setActiveIndex(0);
-	}, [hydrated, stage]);
+		// `samplerPoolSize` is a DEV-ONLY dependency: the sampler composes straight
+		// from the pool, so it must recompose once the pool lands. It is 0 in normal
+		// operation, which keeps the production behaviour (recompose on stage change
+		// only) exactly as it was — the pool is deliberately NOT a dependency there,
+		// because pagination would otherwise rebuild the deck mid-session.
+	}, [hydrated, stage, samplerPoolSize]);
 
 	/**
 	 * §1.7 pagination: append from the pool already held, deduped by the deck.
@@ -525,6 +568,11 @@ export default function FeedScreen() {
 	return (
 		<SafeAreaView style={styles.screen} edges={["top"]}>
 			{offline && <OfflineBar />}
+			{samplerEnabled() && (
+				<View style={styles.samplerBar}>
+					<Text style={styles.samplerLabel}>{samplerLabel(deck)}</Text>
+				</View>
+			)}
 			<View style={styles.stackWrap}>
 				{deck.length === 0 && loading ? (
 					<View style={{ width: cardWidth, height: cardHeight }}>
@@ -563,6 +611,13 @@ export default function FeedScreen() {
 const styles = StyleSheet.create({
 	screen: { flex: 1, backgroundColor: colors.bg },
 	stackWrap: { flex: 1, alignItems: "center", justifyContent: "center" },
+	/** DEV sampler banner — deliberately loud so it can't be mistaken for prod. */
+	samplerBar: {
+		paddingVertical: 4,
+		paddingHorizontal: 12,
+		backgroundColor: colors.accent,
+	},
+	samplerLabel: { ...textStyles.caption, color: colors.bg },
 	sheet: { paddingHorizontal: 20, paddingTop: 8, gap: 8 },
 	sheetEyebrow: { ...textStyles.caption, color: colors.accent },
 	sheetTitle: { ...textStyles.title2, color: colors.ink },
