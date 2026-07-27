@@ -34,6 +34,7 @@ import {
 	useAnimatedStyle,
 	useSharedValue,
 	withDelay,
+	withSequence,
 	withSpring,
 	withTiming,
 } from "react-native-reanimated";
@@ -72,6 +73,29 @@ const FLY_OUT_SPRING = {
 	stiffness: 220,
 	overshootClamping: true,
 } as const;
+/**
+ * Returns a committed reveal card to centre before its hold (§1.6).
+ *
+ * Stiffer than `FLY_OUT_SPRING` on purpose: this has to finish early inside the
+ * 900ms hold so the answer is readable, centred and still, rather than arriving
+ * just as the card leaves. Critically damped (ζ = 30/(2·√320) ≈ 0.84) with
+ * clamping, because an overshoot here would look like the card bouncing back
+ * toward the side the buyer just rejected.
+ */
+const SETTLE_SPRING = {
+	damping: 30,
+	mass: 1,
+	stiffness: 320,
+	overshootClamping: true,
+} as const;
+/**
+ * Measured settle time of `SETTLE_SPRING`, in ms.
+ *
+ * ζ = 30/(2·√320) ≈ 0.84, ω = √320 ≈ 17.9 rad/s, so the envelope decays to 2% at
+ * −ln(0.02)/(ζω) ≈ 260ms. Subtracted from the reveal hold so the total on-screen
+ * time still matches §1.6's `revealMs` instead of exceeding it.
+ */
+const SETTLE_MS = 260;
 const FLIP_MS = 350; // §0.5 — opacity crossfade, never rotateY
 const ACTIVE_OFFSET_X = 10;
 const FAIL_OFFSET_Y = 20;
@@ -314,10 +338,6 @@ export function useSwipeCard({
 				// callback — which is the handoff, so the deck would never advance.
 				committed.value = true;
 				const dest = decision === "right" ? cardWidth * 1.6 : -cardWidth * 1.6;
-				// §1.6: hold the committed card in place for `revealMs` so it can show
-				// its answer, THEN fly out. The card freezes where the finger left it
-				// — spring-back-then-fly-out would read as an undo followed by a
-				// second, unexplained swipe.
 				const hold = revealMs !== undefined && revealMs > 0 ? revealMs : 0;
 				const flyOut = withSpring(dest, FLY_OUT_SPRING, (finished) => {
 					if (finished) handoff(dest, decision);
@@ -330,8 +350,45 @@ export function useSwipeCard({
 				// for the whole 900ms hold the buyer saw the next card standing at full
 				// strength alongside the answer they were meant to be reading.
 				const rise = withSpring(1, FLY_OUT_SPRING);
-				advance.value = hold > 0 ? withDelay(hold, rise) : rise;
-				tx.value = hold > 0 ? withDelay(hold, flyOut) : flyOut;
+				// Same schedule as the flyout below, so the cards behind still start
+				// rising exactly when the outgoing card leaves — not during the hold.
+				//
+				// During a reveal hold the shuffle is first wound BACK to 0 alongside the
+				// card's own recentre: `advance` was left wherever the drag pushed it, so
+				// without this the next card would sit visibly enlarged behind a card that
+				// has returned to centre, for the whole hold.
+				advance.value =
+					hold > 0
+						? withSequence(
+								withSpring(0, SETTLE_SPRING),
+								withDelay(Math.max(0, hold - SETTLE_MS), rise),
+							)
+						: rise;
+
+				if (hold > 0) {
+					// §1.6 holds the committed card on screen for `revealMs` so the buyer
+					// can read the answer. Leaving it frozen at the drag offset is what
+					// the owner read as a malfunction: "challenge卡左右滑还是卡在一半的
+					// 位置1s 然后才能被滑走" — the card sat half off-screen, tilted, with
+					// its answer clipped by the edge, and nothing moving.
+					//
+					// So the card RETURNS TO CENTRE and holds there. The verdict is already
+					// committed and irreversible by this point, so this is not the "undo
+					// then re-swipe" reading the earlier comment worried about — the
+					// recentre is what makes the reveal legible, and continuous motion
+					// (settle → hold → fly) reads as deliberate rather than stuck.
+					//
+					// The settle is SUBTRACTED from the hold rather than added in front of
+					// it: `revealMs` is how long §1.6 wants the answer on screen, not how
+					// long to wait after arriving. Adding it would have made the card sit
+					// there ~1.2s — longer than the delay he already called out.
+					tx.value = withSequence(
+						withSpring(0, SETTLE_SPRING),
+						withDelay(Math.max(0, hold - SETTLE_MS), flyOut),
+					);
+				} else {
+					tx.value = flyOut;
+				}
 			});
 
 		const tap = Gesture.Tap()

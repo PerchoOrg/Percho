@@ -4,6 +4,41 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-27 08:20 UTC — challenge 停顿改成「回中 + 停留」（不是 bug，是观感）
+
+**Objective**: owner 验证前两项都好了（"已经没有闪卡了 翻卡也正常"），剩
+"challenge卡左右滑还是卡在一半的位置1s 然后才能被滑走"。
+
+**Actions**:
+- `hooks/use-swipe-card.ts` — 新 `SETTLE_SPRING` + `SETTLE_MS`；reveal 卡的 `tx` 改成
+  `withSequence(回中, withDelay(hold - SETTLE_MS, flyOut))`；`advance` 同步先绕回 0
+  再按同一时间表升起。
+
+**Issues**: **这个「卡 1 秒」是 §1.6 spec 明写的行为，不是故障** ——
+`01-feed.md` L64:「swipe 判定后卡片不立即飞出:停 900ms,卡面 crossfade 显示真答案
++对错色彩脉冲,然后飞出」。`CHALLENGE_REVEAL_MS = 900` 有测试锁着，reveal 层也确实
+在渲染。
+
+**但它看起来就是坏了**，原因是停的**位置**不对：卡冻在手指离开的地方 —— 歪着、一半在
+屏幕外、答案被边缘裁掉、且完全静止。三个信号叠起来就是「卡死」而不是「请读答案」。
+另外 `advance` 也停在拖拽值上，所以下一张卡在整个 hold 期间半放大地立在后面。
+
+**Decisions**: 保留 900ms（spec 明文，且已被测试锁定，不单方面改产品参数），改**观感**：
+committed 之后先**弹回正中**再停留，答案居中、静止、完整可读，然后飞出。
+判定此时已不可逆，所以不构成旧注释担心的「像撤销后又莫名滑一次」。
+**关键:回中耗时从 hold 里扣除（`hold - SETTLE_MS`）而不是加在前面** —— `revealMs` 是
+「答案该在屏上多久」，不是「到位后再等多久」；加在前面会变成约 1.2s，比他抱怨的还长。
+
+**Resolution**: 395 测试全绿、tsc 0、biome 干净；bundle 已确认带 `withSequence` +
+`SETTLE_SPRING`。时间线:回中 ~260ms → 停留 ~640ms → 飞出 ~260ms，总时长仍是 900ms 量级。
+
+**Learnings**: 用户说「卡住」不一定指逻辑坏 —— 这次前两轮（memo 重建、动画回调）是真
+bug，这一轮同样的描述指向的却是**符合 spec 但观感失败**。**分辨方法:先确认该行为是否
+spec 明写；是的话别删功能,改它的呈现。** 静止 + 位置随机 + 内容被裁 = 用户一定读成故障。
+
+**Next steps**: 手机 reload 确认 challenge 现在是「回中→显示答案→飞出」的连续动作。
+若仍觉得 900ms 太久，那是**产品参数**决定（需要改 spec + 那条锁定测试），说一声我改。
+
 ## 2026-07-27 08:00 UTC — community 闪现 = 背面卡面（本文件头部记录的 ghosting 第三例）
 
 **Objective**: owner 看清了: "这个community卡闪现的是背面的卡片内容"。
