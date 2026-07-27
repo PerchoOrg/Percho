@@ -5,12 +5,12 @@
  * It returns a DISCRIMINATED UNION, not a bag of optional flags. The §1.1
  * engineering red-line is that a handler which assumes a capability exists
  * throws and loses its touch binding; a flag bag re-creates that hazard because
- * `behavior.revealMs` and `behavior.cta` would both be optional everywhere. With
- * a union, a `mode: 'ceremony'` card has no `labels` to read and a `mode:
- * 'decide'` card has no `revealMs` — the compiler refuses the mistake instead of
- * the runtime discovering it.
+ * `behavior.cta` and `behavior.labels` would both be optional everywhere. With a
+ * union, a `mode: 'ceremony'` card has no `labels` to read and a `mode: 'decide'`
+ * card has no `cta` — the compiler refuses the mistake instead of the runtime
+ * discovering it.
  *
- * Capability (pan/commit/clamp/flip/reveal) is data resolved BEFORE the gesture
+ * Capability (pan/commit/clamp/flip) is data resolved BEFORE the gesture
  * is constructed, so no gesture handler ever branches on a card kind.
  */
 import type { CardCapability } from "../gesture/capability";

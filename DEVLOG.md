@@ -4,6 +4,49 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-27 09:25 UTC — 收尾清理 + 交接文档对齐（task-2 开新 thread 前）
+
+**Objective**: owner: "现在做清理和重构 接下来我会新开一个thread做task-2"。
+
+**Actions**:
+- **删死管线 `onCommit`**：`useSwipeCard` 的 prop、`handlers` ref 里那一半、
+  `fireCommit` trampoline、`SwipeStack` 的转发 —— 全部移除。它唯一的消费者是
+  challenge 的 reveal，改版后没了。
+- 修 3 处失效注释（`behavior.ts` 头部还在讲 `revealMs`、`stack-layer.ts` 引用已删的
+  `styles.faceHidden`、`capability.ts` + `use-swipe-card.ts` 提 `onCommit`）。
+- **重写 `docs/design/spec-v3/prompts/HANDOFF-task-2.md`** —— 这份是 task-2 新 session
+  的第一份输入，之前整份是过期的。
+
+**Issues**（交接文档的过期内容，全部已修正）:
+- SHA 写 `7661dc5`、测试写 317/88 文件 → 实际 `e009d5a`、393/91。
+- 「trade-off 背景是未决产品问题，不要自己发明」→ **已定稿**，9 hue `cardSurfaces` +
+  数值化不变量测试。照旧文档做会把已验收的设计推翻重做。
+- 缺 SEEN 角标已删这件事 → 会被重新加回来。
+- 「Do not push. Do not merge」与本 session 实际直推 main 矛盾 → 改成说明那是 owner
+  为真机快速迭代的明确指示，feature phase 仍需先问。
+- 「五条 device 规则」→ 补齐成 11 条，含本 session 新增的四类（重复 React key、
+  memo 依赖里的 caller 回调、动画回调推进状态、常驻 Modal 黑屏）。
+
+**Decisions**: 只删**本 session 自己造成的**死代码。`loopedIds` 保留（它是 `exhausted`
+的证据，不是装饰）；`scripts/probe-session.ts` 保留（上次特意留的工具）；`apps/web` 那
+1 个既有失败 + ~131 biome error 不动（早于本次工作，CLAUDE.md §0.3）。
+
+**Resolution**: 393 测试、tsc 0、biome 干净 91 文件、`theme/tokens.ts` 外零 hex 字面量。
+bundle 复查：`fireCommit` 归 0（残留的 52 个 `onCommit` 是 React 自己的 Profiler API，
+不是我们的代码）；`quiz`/`faceOpacity`/`deckKey`/`panLive` 都在。
+
+**Learnings**: **交接文档跟代码一样会腐坏，而且腐坏得更贵** —— 它会让下一个 session
+把已验收的东西推翻重做（这次差点就是 trade-off 背景和 SEEN 角标）。**改了行为就要同步
+改交接文档，跟改注释一个优先级。**
+
+**Next steps（留给 task-2）**:
+1. `Explore →` 落地 listing 详情后，把 feed 里那个 `BottomSheet`（搜
+   `THE HOME BEHIND THIS`）改成真正的跳转。
+2. **13 个已 merge 的本地分支还占着 worktree**（`~/Percho-ws1..ws10`，`git worktree
+   list` 可见）—— 都是并行 agent 的残留。按规则 merged 即 `-D`，但删 worktree 是破坏性
+   操作，**没动，等 owner 点头**。
+3. stage 0 只有 ~23 张客户端卡，仍是内容/数据缺口，不是 UI 问题。
+
 ## 2026-07-27 09:05 UTC — tap 后黑屏:常驻挂载的 Modal（我上一条自己引进的）
 
 **Objective**: owner: "tap之后黑屏了"（指 challenge 新版按钮）。

@@ -97,8 +97,7 @@ interface SwipeStackProps<T> {
 	items: readonly T[];
 	activeIndex: number;
 	onDecision: (decision: "left" | "right", item: T) => void;
-	/** Fired the instant a direction commits, before the flyout. */
-	onCommit?: (decision: "left" | "right", item: T) => void;
+
 	renderCard: (item: T, args: CardRenderArgs) => React.ReactNode;
 	/**
 	 * Data face (§0.5). Return null for card kinds that don't flip.
@@ -216,7 +215,7 @@ export function SwipeStack<T>({
 	items,
 	activeIndex,
 	onDecision,
-	onCommit,
+
 	renderCard,
 	renderBack,
 	renderOverlay,
@@ -251,9 +250,6 @@ export function SwipeStack<T>({
 		capability: topCapability,
 		onDecision: (decision) => {
 			if (top) onDecision(decision, top);
-		},
-		onCommit: (decision) => {
-			if (top && onCommit) onCommit(decision, top);
 		},
 	});
 

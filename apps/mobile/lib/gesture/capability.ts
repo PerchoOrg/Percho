@@ -70,7 +70,7 @@ export function clampDisplacement(
  * A committed direction, or "none" for a card that must always spring back.
  *
  * §1.5's milestone is `pannable: true, commits: false`: it follows the finger to
- * its cap and returns, and it must NOT reach `onCommit` / `onDecision`. A
+ * its cap and returns, and it must NOT reach `onDecision` at all. A
  * milestone that flies out is the exact opposite of a ceremony card — it would
  * consume the stage advance it exists to celebrate as if it were a swipe verdict.
  */

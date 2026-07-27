@@ -9,8 +9,9 @@ You are picking up Percho iOS spec-v3 work. Read these first, in order:
 1. `~/Percho/CLAUDE.md` — all rules. Especially §2.1: never a personal Anthropic
    key (Bedrock/opus-5 only), no false completion claims (quote real SHAs from
    `git log origin/main`), DEVLOG.md is reverse-chronological (newest at TOP).
-2. `~/Percho/DEVLOG.md` — the top 6 entries. They are all from 2026-07-27 and
-   cover task-1 plus five device bugs found and fixed on a real iPhone.
+2. `~/Percho/DEVLOG.md` — the top 10 entries. All from 2026-07-27: task-1 plus a
+   long run of device bugs found on a real iPhone, and the challenge-card
+   redesign. Read them — several document mistakes that are cheap to repeat.
 3. `~/Percho/docs/design/spec-v3/00-overview.md` — global contracts.
 4. `~/Percho/docs/design/spec-v3/02-listing.md` — the screen you are building.
 5. `~/Percho/docs/design/spec-v3/prompts/_MASTER.md` — the 8 hard rules +
@@ -19,9 +20,9 @@ You are picking up Percho iOS spec-v3 work. Read these first, in order:
 
 ## Verified state (do not re-derive)
 
-- `origin/main` = `7661dc5`. Tasks 0 and 1 are merged. No open branch.
-- `apps/mobile` gate GREEN: `pnpm test` 317/317, `pnpm typecheck` 0,
-  `pnpm lint` clean over 88 files.
+- `origin/main` = `e009d5a`. Tasks 0 and 1 are merged. No open branch.
+- `apps/mobile` gate GREEN: `pnpm test` 393/393, `pnpm typecheck` 0,
+  `pnpm lint` clean over 91 files.
 - Expo dev server is running on this box in tunnel mode; the owner tests on a
   real iPhone through Expo Go. If it is dead, see the
   `expo-dev-server-headless-remote` skill — the short version is
@@ -41,8 +42,9 @@ In `apps/mobile/`:
 - `hooks/use-swipe-card.ts` — pan + tap, the atomic `handoff` worklet.
 - `components/SwipeStack.tsx` — `StackCard` owns one never-swapped
   `useAnimatedStyle` per card, keyed by ABSOLUTE index.
-- `components/cards/` — 11 faces incl. `CardSurface` (the gradient for faces
-  with no photo).
+- `components/cards/` — 12 files incl. `CardSurface`, which takes a required
+  `variant` and paints the background for a face with no photo (9 hues, one per
+  card kind — see `theme/tokens.ts` `cardSurfaces`).
 - `lib/feed/` — `generate-feed.ts`, `rhythm.ts`, `signals.ts`, `stage-advance.ts`,
   `content.ts`, `milestone.ts`, `ratios.ts`.
 - `state/` — `funnel.ts`, `feed-session.ts`, `event-queue.ts`, `sound.ts`.
@@ -53,30 +55,61 @@ In `apps/mobile/`:
 1. **`Explore →` is unwired on listing/community cards.** `CardFoot` renders the
    button only when given a handler, so today there is no dead affordance. Task-2
    is what gives it a destination — wiring it is part of this task.
-2. **Trade-off card background is an open PRODUCT question, not yours to decide.**
-   The owner asked for a photo behind it; trade-off cards are pure client-side
-   content with no geo unit and therefore no photo source. Currently a warm
-   gradient (`CardSurface`). The owner has NOT picked a source yet. Do not invent
-   one — if it comes up, ask.
-3. **Real data gap, not an engine bug:** only **3 of 260** `listings` rows carry
+   **Also**: the challenge card's reveal now has its own `Explore →`, and it is
+   wired to a `BottomSheet` showing the fields the card already carries, because
+   the listing detail screen does not exist yet. `ChallengeCardV3.listingId` is
+   the real target. **When task-2 lands the detail screen, change that sheet into
+   a navigation** (`app/(tabs)/feed.tsx`, search `THE HOME BEHIND THIS`).
+2. **Media-less card backgrounds are SETTLED — do not redesign them.** The owner
+   reviewed and accepted the 9-hue `cardSurfaces` treatment (a two-stop ramp,
+   three hairline arcs, a corner glow; trade-off carries a different hue per
+   half). `theme/card-surfaces.test.ts` encodes "not a black screen" as numeric
+   invariants — dark stop mean ≥ 0x20, both stops chromatic, AA ≥ 4.5:1, all nine
+   hues distinct. If you touch a hue, that suite is the gate.
+3. **Stage 0 has ~23 client-side cards and no other inventory.** The finite ask /
+   trade-off tables are the entire fresh supply, so §1.9 looping kicks in within a
+   session and `seenIds` is persisted. The `SEEN` badge was REMOVED for this
+   reason (it marked 100% of cards). Real inventory is a content/data problem, not
+   a UI one — do not re-add a badge.
+4. **Real data gap, not an engine bug:** only **3 of 260** `listings` rows carry
    `community_id`, so stage 3's "inside a liked community" preview has almost no
    inventory in production. Needs its own scheduled work. Do not paper over it
    with fabricated joins.
-4. `apps/web` has 1 pre-existing test failure (`create-upload.test.ts`) and ~131
+5. `apps/web` has 1 pre-existing test failure (`create-upload.test.ts`) and ~131
    biome errors. Both predate this work. Leave them unless asked.
 
 ## Hard rules that bit us repeatedly on device
 
-These are cheap to re-break and expensive to find. All five were real bugs found
+These are cheap to re-break and expensive to find. Every one was a real bug found
 only on a physical phone:
 
 - **React identity and UI-thread state are separate clocks.** Never derive
   animation geometry from a React-rendered position when the "current item" is
   decided on the UI thread — they commit on different frames. `useAnimatedStyle`
   per item, never per slot.
-- **Reanimated does not revert props a detached style wrote.** If a style can be
-  handed to a different view during its life, every candidate style must write
-  the identical prop set.
+- **Reanimated does not revert props a detached style wrote, and NEVER switch a
+  view between a static style and an animated one.** This class bit three times:
+  the stack transform (ghosting), a tap-dismissed card inheriting an opacity, and
+  the flip's face styles flashing a card's own data face on promotion. Every
+  visual property of a stacked card must be a pure function of its own
+  `absIndex`. If you write `isTop ? someStyle : staticStyle`, that IS the bug.
+- **A React key must be unique across the WHOLE list, not just the visible page.**
+  §1.9 deliberately re-emits a seen card, so a card id appears twice in one deck.
+  Keying on it alone gave "two children with the same key" and React then reused
+  or omitted a subtree — which presented as a flashing card AND a card that would
+  not leave. Use `lib/feed/deck-key.ts`.
+- **Never put a caller-supplied callback in the dependency list of a `useMemo`
+  that builds a long-lived object.** An inline arrow is a new identity every
+  render, so the gesture was rebuilt constantly; replacing a live `Gesture.Pan`
+  mid-touch drops the touch, `onEnd` never fires, and the card sticks forever.
+  Depend on primitives plus ref-backed trampolines. Guarded by
+  `lib/gesture/memo-identity.test.ts`, which reads the real source.
+- **Never advance state from an animation completion callback without a gate.**
+  Any input that cancels the animation silently swallows the advance. See
+  `panLive`'s `committed` flag.
+- **Mount a `Modal` conditionally; do not leave one mounted and toggle
+  `visible`.** An always-mounted transparent Modal over real content black-screened
+  the whole feed on iOS.
 - **An accumulating cache and a view composed from it must be joined by a READ,
   not a dependency.** `[pool]` on anything that resets a cursor is a guaranteed
   mid-session jump once pagination lands.
@@ -85,6 +118,19 @@ only on a physical phone:
 - **A paginating composer must be tested per SESSION, not per page.** 36 green
   single-page tests hid a 39-card wall; page 0 is always clean. See
   `apps/mobile/scripts/probe-session.ts` and `lib/feed/rhythm.test.ts`.
+- **Two places computing the same quota must share the same arithmetic.** The
+  tease ration was counted against the REQUESTED page size while `assertGate`
+  capped on what was EMITTED, so the engine threw its own §0.2 violation on any
+  short page.
+- **A specified behaviour can still be the wrong behaviour.** "The spec says
+  900ms" was used to justify keeping swipe-to-answer on the challenge card through
+  two failed attempts. The real fault was overloading one gesture with two
+  meanings (swipe = leave AND swipe = answer). When the same interaction reads as
+  a malfunction round after round, question the interaction, not its easing curve.
+- **When a symptom appears right after an interaction, suspect the thing you
+  added to that path this round** before re-reading the whole subsystem. Several
+  rounds here were lost to reasoning when the newest untested addition was the
+  culprit. If the user sends a LogBox screenshot, reproduce THAT first.
 - No fabricated stat anywhere, not even as a placeholder — a missing value
   renders as ABSENT. No mock/test data in commits; dev fixtures on gitignored
   paths.
@@ -118,4 +164,9 @@ Then STOP and wait for approval.
 
 One branch per phase: `git checkout -b phase-ios2/listing` off current main.
 Commit prefix `phase-ios2.N:`. DEVLOG entry at the TOP on every commit, each
-commit ending green on test/typecheck/lint. **Do not push. Do not merge to main.**
+commit ending green on test/typecheck/lint.
+
+Task-1's device fixes were committed straight to `main` because the owner was
+testing each one on his phone in a tight loop — that was his explicit call for
+that loop, not the default. For a feature phase, hold the branch and ask before
+pushing or merging.

@@ -91,12 +91,6 @@ interface UseSwipeCardArgs {
 	capability: CardCapability;
 	/** Called on the JS thread after the card has flown out and settled. */
 	onDecision: (decision: Exclude<SwipeDecision, "none">) => void;
-	/**
-	 * Called on the JS thread the instant a direction commits — BEFORE the
-	 * flyout. `onDecision` fires only after the card has left, so a caller that
-	 * needs to react while the card is still visible has to use this.
-	 */
-	onCommit?: (decision: Exclude<SwipeDecision, "none">) => void;
 }
 
 interface UseSwipeCardResult {
@@ -125,7 +119,6 @@ export function useSwipeCard({
 	cardWidth,
 	capability,
 	onDecision,
-	onCommit,
 }: UseSwipeCardArgs): UseSwipeCardResult {
 	const tx = useSharedValue(0);
 	const crossedRight = useSharedValue(false);
@@ -134,32 +127,29 @@ export function useSwipeCard({
 	const exitX = useSharedValue(0);
 	const advance = useSharedValue(0);
 	/**
-	 * The callbacks, read through a ref so they are NOT gesture-memo inputs.
+	 * `onDecision`, read through a ref so it is NOT a gesture-memo input.
 	 *
-	 * `SwipeStack` builds `onDecision`/`onCommit` as inline arrows that close over
-	 * the current top item, so a fresh function identity arrives on every render.
-	 * With `onCommit` in the memo's dependency list, EVERY render rebuilt the
-	 * gesture — including the renders that happen while a swipe is still resolving
-	 * (the deck appends a page, the funnel advances, a milestone splices in).
+	 * `SwipeStack` builds it as an inline arrow closing over the current top item,
+	 * so a fresh identity arrives on every render. While a callback like this sat
+	 * in the memo's dependency list, EVERY render rebuilt the gesture — including
+	 * the renders that happen while a swipe is still resolving (the deck appends a
+	 * page, the funnel advances, a milestone splices in).
 	 *
 	 * Replacing a live `Gesture.Pan` mid-gesture drops the in-flight touch, so
 	 * `onEnd` never fires on the handler that saw `onBegin`: the flyout is never
-	 * scheduled, the handoff never runs, and the card stays on top. §1.6's
-	 * challenge holds for 900ms before its flyout, which is a wide enough window
-	 * that a re-render almost always lands inside it — hence "challenge卡还是卡"
-	 * while other kinds only occasionally stick.
+	 * scheduled, the handoff never runs, and the card stays on top permanently.
 	 *
-	 * A ref keeps the latest callbacks reachable without making their identity a
+	 * A ref keeps the latest callback reachable without making its identity a
 	 * reason to rebuild.
 	 */
-	const handlers = useRef({ onDecision, onCommit });
-	handlers.current = { onDecision, onCommit };
+	const handlers = useRef({ onDecision });
+	handlers.current = { onDecision };
 	/**
 	 * True from the instant a direction commits until the handoff completes.
 	 *
 	 * The gap between those two moments is not a frame: the flyout spring is
-	 * ~280ms and §1.6's challenge delays it by a further 900ms. Any touch in that
-	 * window used to write `tx`, which cancels the pending flyout animation — and
+	 * ~280ms. Any touch inside it used to write `tx`, cancelling the pending
+	 * flyout animation — and
 	 * a cancelled animation never runs its completion callback, so the handoff
 	 * that advances the deck never fired and the card was stuck on top for good.
 	 */
@@ -176,15 +166,6 @@ export function useSwipeCard({
 		if (decision === "right") haptics.cardSettle();
 		else haptics.pass();
 		handlers.current.onDecision(decision);
-	}, []);
-
-	/**
-	 * Stable JS-thread trampoline for the commit callback. `runOnJS` needs a
-	 * function whose identity does not change, or the worklet closure captures a
-	 * new one each render — which is the very thing the ref above exists to avoid.
-	 */
-	const fireCommit = useCallback((decision: Exclude<SwipeDecision, "none">) => {
-		handlers.current.onCommit?.(decision);
 	}, []);
 
 	/**
@@ -283,7 +264,7 @@ export function useSwipeCard({
 				);
 				// `commits: false` (§1.5 milestone) turns every verdict into a spring
 				// back. Resolved here, before anything fires, so a ceremony card can
-				// never reach `onCommit` / `onDecision` at all.
+				// never reach `onDecision` at all.
 				const decision = commitDecision(
 					decideSwipe({
 						translationX: clamped,
@@ -304,7 +285,7 @@ export function useSwipeCard({
 				if (decision === "right" && !crossedRight.value) {
 					runOnJS(fireThreshold)();
 				}
-				runOnJS(fireCommit)(decision);
+
 				// Before any animation is scheduled: from here until the handoff, this
 				// card takes no further input. Writing `tx` from a second gesture
 				// cancels the flyout below, and a cancelled animation never calls its
@@ -341,7 +322,6 @@ export function useSwipeCard({
 		commits,
 		maxDisplacementRatio,
 		flippable,
-		fireCommit,
 		handoff,
 		tx,
 		advance,

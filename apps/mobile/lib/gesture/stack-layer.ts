@@ -187,7 +187,7 @@ export interface FaceOpacity {
 /**
  * The §0.5 flip crossfade, as a pure function of the card's own position.
  *
- * ## Why this cannot be `isTop ? backStyle : styles.faceHidden`
+ * ## Why this cannot be a style chosen by stack position
  *
  * That was the third instance of this file's headline bug, and the one the owner
  * saw last: "community卡闪现的是背面的卡片内容".
