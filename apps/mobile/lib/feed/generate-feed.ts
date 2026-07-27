@@ -88,11 +88,21 @@ export interface GenerateFeedResult {
 	nextRotate: number;
 	/**
 	 * True when every slot had to reuse already-seen content, i.e. the pool is
-	 * exhausted and the caller should show the §1.9 terminal card. Looped cards
-	 * carry `looped` ids in `loopedIds` so the UI can put a `seen` micro-badge
-	 * on them (§1.9).
+	 * exhausted and the caller should show the §1.9 terminal card.
 	 */
 	exhausted: boolean;
+	/**
+	 * Which ids were recycled rather than served fresh.
+	 *
+	 * §1.9 asked for a `seen` micro-badge on these and the feed rendered one, but
+	 * the owner had it removed (2026-07-27): with a persisted `seenIds` and only
+	 * ~23 client-side ask/trade-off cards, an exhausted stage 0 marks EVERY card,
+	 * so the badge stopped distinguishing anything and just read as chrome.
+	 *
+	 * Kept because it is not decoration — it is the evidence behind `exhausted`,
+	 * and the honest fix for the underlying problem is more real inventory, not a
+	 * label. Anything consuming it must handle "all of them" as the normal case.
+	 */
 	loopedIds: readonly string[];
 }
 

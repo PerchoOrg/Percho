@@ -38,7 +38,7 @@ import { TradeoffFace } from "../../components/cards/TradeoffFace";
 import { CardSkeleton } from "../../components/feed/CardSkeleton";
 import { ExhaustedCard } from "../../components/feed/ExhaustedCard";
 import { OfflineBar } from "../../components/feed/OfflineBar";
-import { SeenBadge } from "../../components/feed/SeenBadge";
+
 import { UndoToast } from "../../components/feed/UndoToast";
 import { useFeedPool } from "../../hooks/use-feed-pool";
 import { cardBehavior } from "../../lib/feed/behavior";
@@ -93,7 +93,7 @@ export default function FeedScreen() {
 
 	const [activeIndex, setActiveIndex] = useState(0);
 	const [deck, setDeck] = useState<readonly FeedCardV3[]>([]);
-	const [loopedIds, setLoopedIds] = useState<readonly string[]>([]);
+
 	const [engineExhausted, setEngineExhausted] = useState(false);
 	const [undo, setUndo] = useState<{
 		card: FeedCardV3;
@@ -185,7 +185,7 @@ export default function FeedScreen() {
 		});
 		rotate.current = result.nextRotate;
 		setDeck(result.cards);
-		setLoopedIds(result.loopedIds);
+
 		setEngineExhausted(result.exhausted);
 		setActiveIndex(0);
 		revealProgress.value = 0;
@@ -217,7 +217,7 @@ export default function FeedScreen() {
 		rotate.current = result.nextRotate;
 		if (result.cards.length === 0) return;
 		setDeck((d) => [...d, ...result.cards]);
-		setLoopedIds((l) => [...l, ...result.loopedIds]);
+
 		setEngineExhausted(result.exhausted);
 	}, [stage, milestonesShown]);
 
@@ -481,12 +481,9 @@ export default function FeedScreen() {
 
 	const renderOverlay = useCallback(
 		(card: FeedCardV3, { tx, cardWidth: w }: CardRenderArgs) => (
-			<>
-				<SwipeLabels card={card} tx={tx} cardWidth={w} />
-				{loopedIds.includes(card.id) ? <SeenBadge /> : null}
-			</>
+			<SwipeLabels card={card} tx={tx} cardWidth={w} />
 		),
-		[loopedIds],
+		[],
 	);
 
 	const atEnd = activeIndex >= deck.length;

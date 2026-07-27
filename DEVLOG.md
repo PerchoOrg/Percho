@@ -4,6 +4,32 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-27 07:10 UTC — 去掉 SEEN 角标（每张卡都挂 = 它已经不传递信息了）
+
+**Objective**: owner: "现在每张卡都会显示seen 这是干啥的 去掉这个"。
+
+**Actions**:
+- 删 `components/feed/SeenBadge.tsx`；`app/(tabs)/feed.tsx` 的 `renderOverlay` 只留
+  `SwipeLabels`，`loopedIds` 那个 useState + 两处 setter 一并清掉（不留死 setter）。
+- `generate-feed.ts` 的 `loopedIds` **保留**并改注释说明为何保留。
+
+**Issues**: 角标本身按 §1.9 实现是对的（"循环 + seen 角标"），但**前提塌了**。
+`seenIds` 是 persisted 的，而 stage 0 的鲜货只有客户端那 ~23 张 ask/tradeoff —— owner
+刷了一晚上，现在**每一张都是回收的**，于是角标标记了 100% 的卡。标记全部 = 不区分任何
+东西,只剩视觉噪音。这不是 bug,是 §1.9 在 0 库存现实下的设计失效。
+
+**Decisions**: 只删 UI，`loopedIds` 留在引擎里 —— 它不是装饰，是 `exhausted` 的证据，
+而 `exhausted` 驱动 §1.9 的 terminal 卡。真正的解法是补真实库存,不是换个标签。
+
+**Resolution**: 385 测试全绿、tsc 0、biome 干净，`SeenBadge` 零引用。已确认 shipped
+bundle 里 `SEEN` 字面量和 `SeenBadge` 都是 **0**（`deckKey` 仍在）。
+
+**Learnings**: "所有东西都被标记"和"没有东西被标记"传递同样多的信息(零)。任何
+conditional 角标都该问一句:最坏情况下它命中多少比例?100% 就说明它标错了维度。
+
+**Next steps**: 底层缺口仍在 —— stage 0 只有 23 张客户端卡,`geoUnits` 之外无真实库存。
+这是内容/数据排期的事,不是 UI 的事。
+
 ## 2026-07-27 06:55 UTC — 真根因: 重复 React key（前两轮全是误诊）
 
 **Objective**: owner 发截图 —— LogBox `Console Error`: "Encountered two children with the
