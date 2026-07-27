@@ -29,8 +29,9 @@
  * of a number we do not have (`_MASTER.md`).
  */
 
-import { createAnonClient } from '@/lib/supabase/server';
+import type { Database } from '@/lib/supabase/database.types';
 import { photoPublicUrl } from '@/lib/supabase/storage';
+import { createClient as createPlainClient } from '@supabase/supabase-js';
 
 /** Mirrors the tagger's output (`scripts/render-worker/photo_tagger.py`). */
 export interface PhotoTagsDTO {
@@ -191,6 +192,39 @@ export function projectComps(rows: CompRow[], cohortLabel: string): CompsCohortD
 const COMPS_LIMIT = 400;
 
 /**
+ * Anon client with Next's fetch cache explicitly DISABLED.
+ *
+ * Next 14 patches global `fetch` and, in the App Router, persists responses to
+ * `.next/cache/fetch-cache` ON DISK — surviving a dev-server restart. supabase-js
+ * uses `fetch`, so a listing read gets pinned to whatever the row looked like the
+ * first time it was requested.
+ *
+ * That cost a real debugging detour on 2026-07-27: after backfilling
+ * `listing_photos.ai_tags`, the DB and a direct PostgREST call with the SAME anon
+ * key both returned 10 tagged photos while this endpoint kept returning 0 tagged —
+ * through a restart, and for one listing but not another (whichever had been
+ * requested pre-backfill). `export const dynamic = 'force-dynamic'` on the route
+ * does NOT cover this; that governs route rendering, not the inner fetch cache.
+ *
+ * `cache: 'no-store'` on the client's own fetch is the fix. This data is
+ * per-listing and read once per screen open, so there is nothing to gain from
+ * caching it here anyway.
+ */
+function createUncachedAnonClient() {
+  return createPlainClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL as string,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string,
+    {
+      auth: { persistSession: false, autoRefreshToken: false },
+      global: {
+        fetch: (input: RequestInfo | URL, init?: RequestInit) =>
+          fetch(input, { ...init, cache: 'no-store' }),
+      },
+    },
+  );
+}
+
+/**
  * Fetches one listing by id OR slug. Both because the feed carries ids while
  * shared/deep-linked URLs are slugs, and a screen that only accepts one of them
  * dead-ends the other.
@@ -199,7 +233,7 @@ const COMPS_LIMIT = 400;
  * that to a 404 rather than rendering a shell.
  */
 export async function fetchListingDetail(idOrSlug: string): Promise<ListingDetailDTO | null> {
-  const supabase = createAnonClient();
+  const supabase = createUncachedAnonClient();
   const columns =
     'id, slug, address, city, state, price, beds, baths, sqft, year_built, hoa, description, community_id, status';
 

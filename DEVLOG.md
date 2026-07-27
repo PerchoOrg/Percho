@@ -4,6 +4,38 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-27 22:15 UTC — ai_tags 回填完成 + 抓到 Next fetch-cache 把接口钉死在旧数据上
+
+**Objective**: 回填跑完(974 张, 0 失败)，验证 hotspot/tour 是否真出来了。
+
+**Issues（一个真 bug，浪费了一段排查时间）**: 回填完成、DB 里明明有 tag，
+`/api/mobile/listing/<id>` 却**照旧返回 `tagged: 0`** —— 而且只对**部分** listing 如此
+(1831 Durwood 0，5122 Lower Creek 75)。用**同一把 anon key** 直连 PostgREST 打完全相同的
+select，返回 **10 条全带 tag**。重启 `next dev` **也不管用**。
+
+**Resolution**: 元凶是 **Next 14 的 fetch-cache 落盘**(`.next/cache/fetch-cache`，
+312K)。Next 会 patch 全局 `fetch`，supabase-js 走的就是 `fetch`，于是每个 listing 的
+读取被**钉死在第一次请求时那一刻的行数据**上 —— 跨重启存活，且只影响回填**之前**被请求过
+的那些 listing(所以表现为"只有部分坏")。**`export const dynamic = 'force-dynamic'` 挡不住
+这个** —— 它管的是 route 渲染，不是内部 fetch 缓存。
+修法:`lib/listing/detail.ts` 改用自己的 anon client，`global.fetch` 包一层
+`cache: 'no-store'`。验证:清缓存 + 新 client 后 Durwood 10/10、Lower Creek 75/75。
+
+**Actions**: 回填第一轮 **974 张 / 0 失败 / 覆盖 104 个 fmls listing**。但发现仍有
+**1385 张 ready 照片未 tag**(第一轮每 listing 封顶 12 张，且只跑 101 个 listing)，
+已启动第二轮(1000 张)。`probe-hotspots.ts` 实测:5122 Lower Creek **9 个 hotspot + 3 停
+tour**、2438 Figaro 同样 —— 而且第三停真的落在 **backyard**，文案 "And what's outside."
+这次名副其实(不再走 `pickAny` 兜底)。
+
+**Learnings**: **"DB 有数据 + 直连查得到 + 接口查不到" = 缓存，不是查询。** 而且是**落盘**
+缓存,重启不清。判据很锋利:**同一 key、同一 select、直连有 / 走接口没有**，且**只有部分
+主键受影响** —— 这个"部分"正是缓存的指纹(只有被提前请求过的键才有旧副本)。
+下次遇到 Next + supabase-js 的读取陈旧，先 `rm -rf .next/cache/fetch-cache` 验证假设，
+再上 `cache: 'no-store'`。
+
+**Next steps**: 第二轮回填在跑(1000 张)。跑完 feed 里所有 fmls listing 都会有
+hotspot/tour。
+
 ## 2026-07-27 21:40 UTC — 视频卡没出现的真因（手机打的是 production）+ 卡面同时支持横/竖屏媒体
 
 **Objective**: owner: "没有看到视频的listing card / 我知道现在视频都是横屏的…listing card
