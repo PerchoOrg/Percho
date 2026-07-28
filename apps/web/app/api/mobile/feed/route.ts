@@ -27,10 +27,19 @@
  */
 
 import type { BrowseCard } from '@/app/(public)/browse/_components/BrowseFeed';
-import { fetchBrowseCards, fetchBrowseCardsVideosOnly } from '@/lib/feed/browse-cards';
+import {
+  fetchBrowseCards,
+  fetchBrowseCardsByIds,
+  fetchBrowseCardsVideosOnly,
+} from '@/lib/feed/browse-cards';
 import { type PoolCommunityDTO, fetchCommunityPool } from '@/lib/feed/community-pool';
 import { type GeoUnitDTO, fetchCityGeoUnits } from '@/lib/feed/geo-units';
 import { type LikedCommunityRef, type PoolListingDTO, gateListings } from '@/lib/feed/listing-gate';
+import {
+  fetchVerticalVideoListingIds,
+  fetchVerticalVideos,
+  streamManifestUrl,
+} from '@/lib/feed/vertical-videos';
 import { parseFeedPoolQuery } from '@/lib/zod/feed-pool';
 import { NextResponse } from 'next/server';
 
@@ -89,7 +98,13 @@ function citySlug(city: string | null, state: string | null): string | undefined
   return `city:${slug}`;
 }
 
-function projectListing(card: BrowseCard): PoolListingDTO {
+/**
+ * @param verticalUid 9:16 stream uid for this listing, when one exists. Preferred
+ * over the browse-card hero because that hero resolves to
+ * `cf_video_id_landscape` in production — landscape video on a full-bleed 9:16
+ * card. See `lib/feed/vertical-videos.ts`.
+ */
+function projectListing(card: BrowseCard, verticalUid?: string): PoolListingDTO {
   return {
     id: card.listing.id,
     slug: card.listing.slug,
@@ -99,7 +114,11 @@ function projectListing(card: BrowseCard): PoolListingDTO {
     ...(card.listing.price != null ? { price: card.listing.price } : {}),
     bedBathSqft: formatBedBathSqft(card.listing),
     heroUrl: heroUrlFor(card),
-    ...(videoUrlFor(card) ? { videoUrl: videoUrlFor(card) } : {}),
+    ...(verticalUid
+      ? { videoUrl: streamManifestUrl(verticalUid) }
+      : videoUrlFor(card)
+        ? { videoUrl: videoUrlFor(card) }
+        : {}),
     ...(card.community?.slug ? { communityId: card.community.slug } : {}),
     ...(card.listing.city ? { city: card.listing.city } : {}),
     ...(citySlug(card.listing.city, card.listing.state)
@@ -110,14 +129,15 @@ function projectListing(card: BrowseCard): PoolListingDTO {
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
-  const { stage, offset, limit, videosOnly, likedCommunityIds, cities } = parseFeedPoolQuery(url);
+  const { stage, offset, limit, videosOnly, videoFirst, likedCommunityIds, cities } =
+    parseFeedPoolQuery(url);
 
   // Stage 0 shows no listings at all, so don't pay for the listing query.
   const needsListingRows = stage > 0;
   // Communities are Stage 3's main card type; earlier stages don't show them.
   const needsCommunities = stage >= 3;
 
-  const [rows, geoUnits, communities] = await Promise.all([
+  const [pageRows, geoUnits, communities, verticalVideos] = await Promise.all([
     needsListingRows
       ? videosOnly
         ? fetchBrowseCardsVideosOnly(offset, limit)
@@ -127,7 +147,25 @@ export async function GET(request: Request) {
     needsCommunities
       ? fetchCommunityPool({ offset, limit, cities })
       : Promise.resolve([] as PoolCommunityDTO[]),
+    // Cheap (15 ready rows) and needed for both listings and communities.
+    fetchVerticalVideos(),
   ]);
+
+  /**
+   * `videoFirst` has to FETCH the video-bearing listings, not just sort the page.
+   *
+   * First attempt only reordered `pageRows`, which changed nothing: the six
+   * listings with a 9:16 video are not in the newest-first first page at all, so
+   * there was nothing to move. Sorting a page you have cannot surface a row you
+   * did not fetch — the reason this needs its own read.
+   */
+  let rows = pageRows;
+  if (needsListingRows && videoFirst && !videosOnly) {
+    const videoIds = await fetchVerticalVideoListingIds();
+    const videoCards = videoIds.length > 0 ? await fetchBrowseCardsByIds(videoIds) : [];
+    const seen = new Set(videoCards.map((c) => c.listing.id));
+    rows = [...videoCards, ...pageRows.filter((c) => !seen.has(c.listing.id))];
+  }
 
   // The buyer's liked-community ids arrive without their cities, so pair each
   // id with a city when we can. `cities` is the funnel's current city scope,
@@ -141,7 +179,32 @@ export async function GET(request: Request) {
   const likedRefs: LikedCommunityRef[] =
     liked.length > 0 ? liked : cities.map((city) => ({ id: `city:${city}`, city }));
 
-  const listings = gateListings(rows.map(projectListing), stage, limit, likedRefs);
+  const projected = rows.map((card) =>
+    projectListing(card, verticalVideos.byListing.get(card.listing.id)),
+  );
+
+  // Dev-only reordering (§ see `videoFirst` in lib/zod/feed-pool.ts): surface the
+  // cards that actually have a 9:16 video so video playback is testable without
+  // swiping through the whole photo-only pool. Order within each group is
+  // preserved, so this only moves cards forward — it never invents or drops any.
+  const ordered = videoFirst
+    ? [...projected.filter((l) => l.videoUrl), ...projected.filter((l) => !l.videoUrl)]
+    : projected;
+
+  const listings = gateListings(ordered, stage, limit, likedRefs);
+
+  // Attach vertical video to communities too. `CommunityFace` already renders
+  // `CardVideo` when `videoUrl` is set; the DTO just never carried the field.
+  const communitiesWithVideo = communities.map((c) => {
+    const uid = verticalVideos.byCommunity.get(c.id);
+    return uid ? { ...c, videoUrl: streamManifestUrl(uid) } : c;
+  });
+  const orderedCommunities = videoFirst
+    ? [
+        ...communitiesWithVideo.filter((c) => c.videoUrl),
+        ...communitiesWithVideo.filter((c) => !c.videoUrl),
+      ]
+    : communitiesWithVideo;
 
   const body: FeedPoolResponse = {
     stage,
@@ -154,7 +217,7 @@ export async function GET(request: Request) {
     pool: {
       geoUnits,
       listings,
-      communities,
+      communities: orderedCommunities,
     },
   };
 

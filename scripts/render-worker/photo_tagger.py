@@ -8,8 +8,10 @@ photo_selector.build_plan().
 Public API:
     tag_listing_photos(photo_paths, listing) -> {"photos": [...], "style": {...}}
 
-Env required at call time:
-    ANTHROPIC_API_KEY
+Auth at call time:
+    NONE in the environment. Billing goes to AWS Bedrock via the instance role
+    (CLAUDE.md §2.1 rule 0); boto3's default credential chain supplies it.
+    Optional: AWS_REGION (default us-east-1), BEDROCK_VISION_MODEL.
 
 Failure mode:
     Any per-photo call may raise inside the thread pool; the corresponding
@@ -26,8 +28,12 @@ import urllib.request
 from pathlib import Path
 from typing import Any
 
-MODEL = os.environ.get("ANTHROPIC_VISION_MODEL", "claude-sonnet-4-5")
-API = "https://api.anthropic.com/v1/messages"
+# Bedrock model id, NOT a bare Anthropic model name. CLAUDE.md §2.1 rule 0 pins
+# spend to Bedrock; the `global.` prefix is the cross-region inference profile
+# the rest of this repo already uses (see scripts/claude-bedrock.sh).
+MODEL = os.environ.get(
+    "BEDROCK_VISION_MODEL", "global.anthropic.claude-sonnet-4-5-20250929-v1:0"
+)
 MAX_WORKERS = int(os.environ.get("PHOTO_TAGGER_WORKERS", "8"))
 
 PER_PHOTO_SYSTEM = """You are labeling ONE photo from a residential real estate listing for a video pipeline.
@@ -102,6 +108,46 @@ def _sniff_media_type(raw: bytes) -> str:
     return "image/jpeg"
 
 
+def _invoke_bedrock(system: str, content: list[dict[str, Any]],
+                    timeout: int) -> dict[str, Any]:
+    """One vision call, via AWS Bedrock on the instance role.
+
+    CLAUDE.md §2.1 rule 0: all LLM spend on this host bills to Bedrock, never to
+    a personal `sk-ant-*` key. This module used to POST api.anthropic.com with
+    `os.environ["ANTHROPIC_API_KEY"]`, which is why it has been BROKEN on this
+    host since that key was removed on 2026-07-26 — and it is the reason
+    `listing_photos.ai_tags` is empty for every fmls-import listing, which in
+    turn is why the §2.3-2.5 hotspot UI has nothing to render.
+
+    Auth comes from the instance role via boto3's default chain: no key material
+    in the environment, in `.env.local`, or in this file. Do not add an API-key
+    fallback path here — a fallback is how the personal key came back last time.
+
+    The request body is the Anthropic Messages format minus `model` (Bedrock
+    takes the model in the URL/`modelId`) plus `anthropic_version`, so the
+    caller's `content` blocks and the response shape are unchanged.
+    """
+    import boto3  # imported lazily: the caller may only need dhash helpers
+
+    from botocore.config import Config
+
+    client = boto3.client(
+        "bedrock-runtime",
+        region_name=os.environ.get("AWS_REGION", "us-east-1"),
+        config=Config(read_timeout=timeout, retries={"max_attempts": 3}),
+    )
+    resp = client.invoke_model(
+        modelId=MODEL,
+        body=json.dumps({
+            "anthropic_version": "bedrock-2023-05-31",
+            "max_tokens": 800,
+            "system": system,
+            "messages": [{"role": "user", "content": content}],
+        }),
+    )
+    return json.loads(resp["body"].read())
+
+
 def _call_vision(system: str, user_prompt: str,
                  images: list[bytes] | list[str],
                  media_type: str | None = None, timeout: int = 90) -> dict[str, Any]:
@@ -122,24 +168,7 @@ def _call_vision(system: str, user_prompt: str,
         })
     content.append({"type": "text", "text": user_prompt})
 
-    body = json.dumps({
-        "model": MODEL,
-        "max_tokens": 800,
-        "system": system,
-        "messages": [{"role": "user", "content": content}],
-    }).encode()
-
-    req = urllib.request.Request(
-        API,
-        data=body,
-        headers={
-            "x-api-key": os.environ["ANTHROPIC_API_KEY"],
-            "anthropic-version": "2023-06-01",
-            "content-type": "application/json",
-        },
-    )
-    resp = urllib.request.urlopen(req, timeout=timeout)
-    data = json.loads(resp.read())
+    data = _invoke_bedrock(system, content, timeout)
     text = next(c["text"] for c in data["content"] if c["type"] == "text")
     text = text.strip()
     if text.startswith("```"):
@@ -181,9 +210,11 @@ def tag_listing_photos(
     listing: {"price": int, "beds", "baths", "sqft", "city", "state", ...}
     Returns {"photos": [...tag dicts...], "style": {...}}
     """
-    if not os.environ.get("ANTHROPIC_API_KEY"):
-        raise RuntimeError("ANTHROPIC_API_KEY not set")
-
+    # No credential precondition to check: Bedrock auth comes from the instance
+    # role via boto3's default chain, and a missing role surfaces as a botocore
+    # NoCredentialsError on the first call (per-photo, and already captured as
+    # that photo's `error`). The old `ANTHROPIC_API_KEY` guard here was a hard
+    # abort on a key this host must never have — see `_invoke_bedrock`.
     results: list[dict[str, Any] | None] = [None] * len(photos)
     with cf.ThreadPoolExecutor(max_workers=MAX_WORKERS) as ex:
         futs = {

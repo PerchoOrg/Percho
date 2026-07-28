@@ -22,10 +22,11 @@
  * the face wears the `area` `CardSurface` rather than the flat `colors.ink` fill
  * it used to, which rendered as a black screen.
  */
-import { Image, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import type { AreaCardV3 } from "../../lib/feed/card-types";
 import { colors } from "../../theme/tokens";
 import { CardFoot } from "../CardFoot";
+import { CardPhoto } from "../CardPhoto";
 import { CardVideo } from "../CardVideo";
 import { KindChip } from "../KindChip";
 import { CardSurface } from "./CardSurface";
@@ -60,7 +61,7 @@ export function AreaFace({ card, isTop }: AreaFaceProps) {
 			{unit.videoUrl ? (
 				<CardVideo url={unit.videoUrl} poster={unit.heroUrl} isTop={isTop} />
 			) : unit.heroUrl ? (
-				<Image source={{ uri: unit.heroUrl }} style={StyleSheet.absoluteFill} />
+				<CardPhoto url={unit.heroUrl} />
 			) : (
 				<CardSurface variant="area" />
 			)}

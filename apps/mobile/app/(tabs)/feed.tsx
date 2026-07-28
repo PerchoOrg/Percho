@@ -14,16 +14,19 @@
  * gesture is built), and each face is a component over a NARROWED card type, so a
  * faceless kind has no back-face component that could mis-render.
  *
- * NOT WIRED, on purpose: `Explore →` on listing/community cards. Its targets are
- * tasks 2 and 3; `CardFoot` renders the button only when given a handler, so
- * omitting it leaves no dead affordance and no fake navigation — the same call
- * PLAN B11 made for `See on map →`.
+ * `Explore →` on a LISTING card is now wired (task-2): it pushes
+ * `/listing/[id]`, and a data-face row pushes the same route with `?focus=<key>`.
+ * `Explore →` on a COMMUNITY card is still unwired — that target is task-3, and
+ * `CardFoot` renders the button only when given a handler, so omitting it leaves
+ * no dead affordance rather than fake navigation (the call PLAN B11 made for
+ * `See on map →`).
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { StyleSheet, Text, View, useWindowDimensions } from "react-native";
 
+import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { BottomSheet } from "../../components/BottomSheet";
+import { SoundToggle } from "../../components/SoundToggle";
 import { type CardRenderArgs, SwipeStack } from "../../components/SwipeStack";
 import { AreaDataFace } from "../../components/cards/AreaDataFace";
 import { AreaFace } from "../../components/cards/AreaFace";
@@ -39,12 +42,20 @@ import { TradeoffFace } from "../../components/cards/TradeoffFace";
 import { CardSkeleton } from "../../components/feed/CardSkeleton";
 import { ExhaustedCard } from "../../components/feed/ExhaustedCard";
 import { OfflineBar } from "../../components/feed/OfflineBar";
+import { ListingDataFace } from "../../components/listing/ListingDataFace";
+import { useListingDetail } from "../../lib/listing/detail-dto";
+import { serialiseFocus } from "../../lib/listing/focus-key";
 
 import { UndoToast } from "../../components/feed/UndoToast";
 import { useFeedPool } from "../../hooks/use-feed-pool";
 import { cardBehavior } from "../../lib/feed/behavior";
 import type { ChallengeCardV3, FeedCardV3 } from "../../lib/feed/card-types";
 import { deckKey } from "../../lib/feed/deck-key";
+import {
+	buildSamplerDeck,
+	samplerEnabled,
+	samplerLabel,
+} from "../../lib/feed/dev-sampler";
 import {
 	buildGestureEvent,
 	buildSkipLayerEvent,
@@ -103,15 +114,19 @@ export default function FeedScreen() {
 	} | null>(null);
 	const [milestonesShown, setMilestonesShown] = useState<readonly string[]>([]);
 	/**
-	 * The challenge card whose reveal the buyer tapped `Explore →` on.
+	 * Detail for the TOP card when it is a listing, fetched as soon as that card
+	 * reaches the top rather than when the buyer flips it.
 	 *
-	 * §1.6's challenge is built from a real listing, and the answer names a real
-	 * price — so "tell me more" has to show that listing, not a placeholder. The
-	 * full listing detail is task 2, so this presents what the card already
-	 * carries (address, specs, the real price) in the task-0 sheet rather than
-	 * routing to a screen that does not exist yet.
+	 * Prefetched on purpose: §0.5's flip is a 350ms crossfade, and a spinner
+	 * appearing mid-crossfade is exactly the "is it real?" doubt the data face
+	 * exists to remove. `SwipeStack` does not expose flip state (its flip lives on
+	 * the UI thread by design), so keying on the top card is both simpler and
+	 * better — one request per card the buyer actually dwells on.
 	 */
-	const [explored, setExplored] = useState<ChallengeCardV3 | null>(null);
+	const topCard = deck[activeIndex];
+	const flippedDetail = useListingDetail(
+		topCard?.kind === "listing" ? topCard.id : undefined,
+	);
 	/**
 	 * Which challenge cards have been answered, and which side was tapped.
 	 *
@@ -178,9 +193,42 @@ export default function FeedScreen() {
 	const poolRef = useRef(pool);
 	poolRef.current = pool;
 
+	/**
+	 * DEV-ONLY recompose trigger, and 0 whenever the sampler is off.
+	 *
+	 * A number rather than the pool object: the pool is a new object identity on
+	 * every merge, so depending on it directly would rebuild the deck on every
+	 * pagination — the exact bug `poolRef` exists to avoid.
+	 */
+	const samplerPoolSize = samplerEnabled()
+		? pool.listings.length + pool.communities.length + pool.geoUnits.length
+		: 0;
+
+	// biome-ignore lint/correctness/useExhaustiveDependencies: `samplerPoolSize` is a DEV-ONLY recompose trigger, not a value this effect reads directly (it reads `poolRef`). Biome sees no read and calls it unnecessary; without it the sampler deck never recomposes once the pool lands. It is 0 when the sampler is off, so production behaviour is unchanged.
 	useEffect(() => {
 		if (!hydrated) return;
 		const s = useFeedSession.getState();
+		/**
+		 * DEV SAMPLER (`EXPO_PUBLIC_DEV_SAMPLER=1`): replace the funnel mix with a
+		 * flat ~3-per-kind deck, video cards first.
+		 *
+		 * Off by default and gated on a build-time env var, so it cannot ship
+		 * enabled. It bypasses the §1.7 MIX only — every card is still built by the
+		 * real constructors from the real pool, and no listing is shown that the
+		 * server did not already gate as visible.
+		 */
+		if (samplerEnabled()) {
+			const sampled = buildSamplerDeck({ pool: poolRef.current, stage });
+			if (sampled.length > 0) {
+				rotate.current = 0;
+				setDeck(sampled);
+				setEngineExhausted(false);
+				setActiveIndex(0);
+				return;
+			}
+			// Pool not in yet — fall through and let the normal path run, and this
+			// effect re-fires when the pool arrives.
+		}
 		const result = generateFeed({
 			stage,
 			signals: s.signals,
@@ -194,7 +242,12 @@ export default function FeedScreen() {
 
 		setEngineExhausted(result.exhausted);
 		setActiveIndex(0);
-	}, [hydrated, stage]);
+		// `samplerPoolSize` is a DEV-ONLY dependency: the sampler composes straight
+		// from the pool, so it must recompose once the pool lands. It is 0 in normal
+		// operation, which keeps the production behaviour (recompose on stage change
+		// only) exactly as it was — the pool is deliberately NOT a dependency there,
+		// because pagination would otherwise rebuild the deck mid-session.
+	}, [hydrated, stage, samplerPoolSize]);
 
 	/**
 	 * §1.7 pagination: append from the pool already held, deduped by the deck.
@@ -407,8 +460,13 @@ export default function FeedScreen() {
 								emitGesture("datapoint_tap", card);
 							}}
 							onExplore={() => {
-								setExplored(card);
 								emitGesture("explore_tap", card);
+								// §1.6's challenge is built from a real listing, so "tell me
+								// more" navigates to that listing. Task-1 showed the card's own
+								// fields in a sheet because this screen did not exist yet.
+								if (card.listingId) {
+									router.push(`/listing/${card.listingId}`);
+								}
 							}}
 						/>
 					);
@@ -470,13 +528,29 @@ export default function FeedScreen() {
 				case "area":
 					return <AreaDataFace card={card} onFlipBack={flipBack} />;
 				case "listing":
+					return (
+						<ListingDataFace
+							card={card}
+							{...(flippedDetail.status === "ready" &&
+							flippedDetail.detail.id === card.id
+								? { detail: flippedDetail.detail }
+								: {})}
+							stage={stage}
+							onFlipBack={flipBack}
+							onExplore={(focus) => {
+								emitGesture("explore_tap", card);
+								const query = focus ? `?focus=${serialiseFocus(focus)}` : "";
+								router.push(`/listing/${card.id}${query}`);
+							}}
+						/>
+					);
 				case "community":
 					return <DataFaceStub card={card} onFlipBack={flipBack} />;
 				default:
 					return null;
 			}
 		},
-		[emitGesture],
+		[emitGesture, stage, flippedDetail],
 	);
 
 	const renderOverlay = useCallback(
@@ -495,6 +569,21 @@ export default function FeedScreen() {
 	return (
 		<SafeAreaView style={styles.screen} edges={["top"]}>
 			{offline && <OfflineBar />}
+			{/*
+			 * §0.6 #1: the mute control is the feed's only chrome besides the tab
+			 * bar. It was previously mounted ONLY on `dev-foundation`, so on device
+			 * there was no way to unmute a tour — the reason the owner reported the
+			 * videos as having no sound (2026-07-28). Kept out of `stackWrap` so it
+			 * sits on the status-bar row rather than over a card.
+			 */}
+			<View style={styles.chromeRow}>
+				<SoundToggle />
+			</View>
+			{samplerEnabled() && (
+				<View style={styles.samplerBar}>
+					<Text style={styles.samplerLabel}>{samplerLabel(deck)}</Text>
+				</View>
+			)}
 			<View style={styles.stackWrap}>
 				{deck.length === 0 && loading ? (
 					<View style={{ width: cardWidth, height: cardHeight }}>
@@ -519,26 +608,6 @@ export default function FeedScreen() {
 					/>
 				)}
 			</View>
-			{/*
-			 * Mounted ONLY while open. `BottomSheet` renders a `<Modal>`, and an
-			 * always-mounted transparent Modal is a known way to get a black screen
-			 * on iOS: it participates in the window stack even at `visible={false}`,
-			 * and its `useEffect` runs a `withTiming` on a sheet height derived from
-			 * a viewport it was never laid out in. `dev-foundation.tsx` keeps one
-			 * mounted too, but that screen has nothing behind it to lose.
-			 */}
-			{explored && (
-				<BottomSheet visible onClose={() => setExplored(null)}>
-					<View style={styles.sheet}>
-						<Text style={styles.sheetEyebrow}>THE HOME BEHIND THIS</Text>
-						{!!explored.sub && (
-							<Text style={styles.sheetTitle}>{explored.sub}</Text>
-						)}
-						<Text style={styles.sheetPrice}>{explored.revealLabel}</Text>
-						<Text style={styles.sheetBody}>{explored.teach}</Text>
-					</View>
-				</BottomSheet>
-			)}
 			{undo && (
 				<UndoToast
 					label={undo.label}
@@ -553,6 +622,21 @@ export default function FeedScreen() {
 const styles = StyleSheet.create({
 	screen: { flex: 1, backgroundColor: colors.bg },
 	stackWrap: { flex: 1, alignItems: "center", justifyContent: "center" },
+	/** Status-bar row holding the mute toggle, right-aligned (§0.6 #1). */
+	chromeRow: {
+		flexDirection: "row",
+		justifyContent: "flex-end",
+		paddingHorizontal: 16,
+		paddingTop: 4,
+		zIndex: 100,
+	},
+	/** DEV sampler banner — deliberately loud so it can't be mistaken for prod. */
+	samplerBar: {
+		paddingVertical: 4,
+		paddingHorizontal: 12,
+		backgroundColor: colors.accent,
+	},
+	samplerLabel: { ...textStyles.caption, color: colors.bg },
 	sheet: { paddingHorizontal: 20, paddingTop: 8, gap: 8 },
 	sheetEyebrow: { ...textStyles.caption, color: colors.accent },
 	sheetTitle: { ...textStyles.title2, color: colors.ink },

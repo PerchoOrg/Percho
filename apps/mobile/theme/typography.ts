@@ -56,6 +56,20 @@ export const textStyles = {
 		letterSpacing: 1.2,
 		textTransform: "uppercase",
 	},
+	/**
+	 * The guided tour's WHY block — `02-listing.md` §2.3 #3 specifies serif 17.5
+	 * for it by name. Serif because §0.4 reserves the display face for "worth
+	 * reading slowly", and the WHY paragraph is the one piece of prose in the app
+	 * the buyer is meant to actually read rather than scan.
+	 *
+	 * Distinct from `body` (SF Pro 15) and from `title2` (serif 22 bold): this is
+	 * regular weight at a reading size, not a heading.
+	 */
+	serifBody: {
+		fontFamily: fonts.display,
+		fontSize: 17.5,
+		fontWeight: "400",
+	},
 } as const satisfies Record<string, TextStyle>;
 
 /** Price token — New York serif 25 bold, per §0.6 CardFoot spec. */

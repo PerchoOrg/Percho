@@ -21,6 +21,11 @@ from pathlib import Path
 
 
 FPS = 30
+# zoompan moves x/y/zoom in INTEGER pixels of ITS INPUT. Feed it a canvas
+# SMOOTH× larger than the output and the implicit downscale (s=w×h) turns each
+# step into a 1/SMOOTH-pixel move — the difference between smooth drift and
+# visible camera shake. Every zoompan in this file must sit behind this upscale.
+SMOOTH = 4
 IMAGE_EXTS = {".jpg", ".jpeg", ".png"}
 
 
@@ -71,9 +76,9 @@ def kenburns_filter(mode: str, duration: float, w: int, h: int) -> str:
     zoomed-in — now the full image is always in frame.
     """
     frames = int(duration * FPS)
-    # Upscale factor for smooth zoompan motion (integer-pixel steps at output size).
-    scale_w = w * 4
-    scale_h = h * 4
+    # Sub-pixel motion — see SMOOTH.
+    scale_w = w * SMOOTH
+    scale_h = h * SMOOTH
 
     # Phase 90 (2026-07-15): fit-within + blur letterbox. Landscape photos
     # (POI thumbnails, exterior shots) keep their full width — we scale to
@@ -248,9 +253,19 @@ def kenburns_filter_v2(mode: str, duration: float, w: int, h: int,
     # on the full w×h canvas. Video fills the entire frame edge-to-edge —
     # no blur pillarbox seams. Used when the caller passes cover=True.
     if cover:
+        # SMOOTHING (2026-07-28): zoompan steps x/y/zoom in INTEGER pixels of
+        # its INPUT. Running it on a 1920×1080 input and emitting 1920×1080
+        # means every motion step is a whole output pixel — which reads as
+        # camera shake ("画面是抖动的"). v1 has always avoided this by
+        # upscaling 4× before zoompan and letting the implicit downscale to
+        # s=w×h turn those integer steps into 0.25px sub-pixel motion. This
+        # branch (Phase 98 landscape cover-crop) never got that treatment, and
+        # since production listing videos are landscape-only, EVERY listing
+        # video shipped with the jitter. Cover-crop at 4× canvas, then zoompan
+        # down to w×h.
         return (
-            f"scale={w}:{h}:force_original_aspect_ratio=increase:flags=lanczos,"
-            f"crop={w}:{h},setsar=1,"
+            f"scale={w * SMOOTH}:{h * SMOOTH}:force_original_aspect_ratio=increase:flags=lanczos,"
+            f"crop={w * SMOOTH}:{h * SMOOTH},setsar=1,"
             f"zoompan=z='{z}':x='{x}':y='{y}':d={frames}:s={w}x{h}:fps={FPS},"
             f"format=yuv420p"
         )
@@ -265,8 +280,11 @@ def kenburns_filter_v2(mode: str, duration: float, w: int, h: int,
     # aspect-preserving fit-inside dimensions for a w×h box), then zoompan
     # renders motion into that same fg_w × fg_h canvas at 30fps.
     # zoompan's zoom=1.0 shows the full photo; zoom=1.10 shows the middle 90%.
+    # Same sub-pixel smoothing as the cover branch: scale the fg 4× larger
+    # than its final box so zoompan's integer steps land at 0.25px once it
+    # renders down to fg_w × fg_h.
     fg = (
-        f"scale={fg_w}:{fg_h}:flags=lanczos,setsar=1,"
+        f"scale={fg_w * SMOOTH}:{fg_h * SMOOTH}:flags=lanczos,setsar=1,"
         f"zoompan=z='{z}':x='{x}':y='{y}':d={frames}:s={fg_w}x{fg_h}:fps={FPS}"
     )
     # Compose: overlay fg centered over the blurred static bg.
@@ -770,6 +788,15 @@ def main() -> None:
     else:
         w, h = 1080, 1920
     per = float(args.duration_per_photo)
+    # A shot plan sets its own per-clip durations, and the bimodal pacing curve
+    # makes some of them SHORT (~1.0s filler beats). The xfade must be clamped
+    # against the shortest clip, not against --duration-per-photo, or a 0.5s
+    # crossfade eats an entire 1.0s clip and the xfade offset chain in
+    # concat_with_crossfade starts overlapping the wrong pair.
+    if shot_plan:
+        plan_min = min((float(s.get("duration_s") or per) for s in shot_plan),
+                       default=per)
+        per = min(per, plan_min)
     xfade = min(args.xfade_duration, per / 2 - 0.1)
     if xfade < 0.1:
         xfade = 0.3

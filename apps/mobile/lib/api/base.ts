@@ -37,6 +37,11 @@ export function apiBase(): string {
 	return PRODUCTION;
 }
 
+/** `/api/mobile/listing/<id-or-slug>` — the task-2 detail endpoint (§2.1). */
+export function listingDetailUrl(idOrSlug: string): string {
+	return `${apiBase()}/api/mobile/listing/${encodeURIComponent(idOrSlug)}`;
+}
+
 /** `/api/mobile/feed` — the stage-aware pool endpoint (spec-v3 §1.7). */
 export function feedPoolUrl(params: {
 	stage: number;
@@ -46,6 +51,12 @@ export function feedPoolUrl(params: {
 	cities?: readonly string[];
 	likedCommunityIds?: readonly string[];
 	videosOnly?: boolean;
+	/**
+	 * Dev-only: ask the server to hoist listings that have a 9:16 video into the
+	 * page. Distinct from `videosOnly`, which DROPS photo-only listings and so
+	 * hides §0.7's "no video is a first-class state".
+	 */
+	videoFirst?: boolean;
 }): string {
 	const q = new URLSearchParams({
 		stage: String(params.stage),
@@ -57,5 +68,6 @@ export function feedPoolUrl(params: {
 		q.set("likedCommunityIds", params.likedCommunityIds.join(","));
 	}
 	if (params.videosOnly) q.set("videosOnly", "1");
+	if (params.videoFirst) q.set("videoFirst", "1");
 	return `${apiBase()}/api/mobile/feed?${q.toString()}`;
 }

@@ -4,6 +4,439 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-28 01:10 UTC — Listing card 视频三症状：没声音 / 节奏太慢 / 画面抖动
+
+**Objective**: owner 真机: "listing card 视频没有声音 节奏太慢 并切细看画面是抖动的"。
+三个独立症状，逐个定位，都不是同一个根因。
+
+**症状 1 — 没声音（app 端，不是渲染端）**
+视频本身有音轨：ffprobe 直连 CF Stream manifest 确认每档 rendition 都是
+`h264 + aac`，BGM muxing 一直是好的。问题有两层：
+- `state/sound.ts` 默认 `soundOn: false`（注释写"default muted per §0.7"）。
+- `SoundToggle` **只挂在 `app/dev-foundation.tsx`**，feed 页
+  `app/(tabs)/feed.tsx` 从来没渲染它。
+
+两层叠起来 = 真机上没有任何解除静音的入口，视频永远静音，且用户无法自救。
+§0.7 的"mount muted"说的是 **player**（unmuted autoplay 会被系统拒绝，所以
+`CardVideo` 仍然 muted 创建、成为 top 后再 unmute），不是说默认该给用户静音。
+
+**Actions**: `feed.tsx` 加 `chromeRow`（status-bar 行右对齐, zIndex 100）挂
+`SoundToggle`；`sound.ts` 默认改 `soundOn: true`，注释写明为什么这跟 §0.7 不冲突。
+
+**症状 2 — 节奏太慢（`photo_selector.plan_durations`）**
+均匀曲线：`TOTAL_CAP=60s` 除以 N，钳在 [2.5, 6.0]，只给 top-3 hero +0.5s。
+22 clip 的 tour = 每张 ~2.7s 全都一样长，读起来是幻灯片不是 tour。
+**Decisions**: 加 bimodal 曲线（`PACE_BIMODAL=True`，可一行关掉回旧曲线）：
+hero 3.4s / 常规 1.7s / 最弱 1/4 用 1.0s 快速掠过。不再去凑满 TOTAL_CAP ——
+凑满固定预算本身就是"每张一样长"的成因。真机那条 22-clip tour: **54s → 30.6s**。
+
+两个连带修正，都是 bimodal 引出来的新问题：
+- `assign_modes` 的 10% 强制 static 挑的是 hero_score 最低的 clip，而那些正好
+  是 1.0s 的 filler beat —— 1.0s 的静止帧读起来是"卡住了"不是"呼吸"。现在
+  static 只落在 `>= PACE_STATIC_MIN_S`(3.0s) 的 clip 上，房型模板里抽到的
+  static 落在短 beat 上也会被换成 push_in。
+- `generate.py` 的 xfade 之前按 `--duration-per-photo` 钳，跟 shot plan 的真实
+  时长无关。0.5s crossfade 吃掉整个 1.0s clip，且 `concat_with_crossfade` 的
+  offset 累加链会开始叠错对。现在按 plan 里的**最短** clip 钳。
+
+**症状 3 — 画面抖动（根因，影响生产上每一条 listing 视频）**
+`kenburns_filter_v2` 的 `cover=True` 分支（Phase 98 加的 landscape 路径）直接在
+1920×1080 上 zoompan 输出 1920×1080。zoompan 的 x/y/zoom 步进是**输入的整像素**，
+输入=输出尺寸时每一步都是一整个输出像素 → 可见抖动。v1 一直靠"先 4× lanczos 上采样、
+zoompan 再隐式降回 w×h"把步进变成 0.25px 亚像素，这个分支从来没享受到。
+而生产上 listing 视频**全是 landscape**（`cf_video_id` 全 null，只有
+`cf_video_id_landscape`），所以每一条 listing 视频都带着这个抖动出厂。
+blur-letterbox 分支的 fg 层有同样的问题（直接 scale 到 fg_w×fg_h 再 zoompan）。
+
+**Actions**: 抽出模块级 `SMOOTH = 4` 常数（附注释说明所有 zoompan 都必须坐在这层
+上采样后面），cover 分支和 fg 层都补上，v1 的 `w*4` 改成引用同一常数。
+
+**验证（真实渲染，不是推理）**: 同一 listing (`c7435419`) 同一 shot plan 同一 BGM，
+新旧 `generate.py` 各渲一遍；单 clip push_in 逐帧算相邻帧 mean-abs-diff，再算这个
+运动信号自己的抖动量（jerk = 相邻 diff 的差）：
+
+| | jerk_mean | jerk_max |
+|---|---|---|
+| 旧 | 3.8546 | 11.5140 |
+| 新 | 1.0565 | 2.6953 |
+
+整片 30.6s、`h264 1920×1080 + aac`、vision 检查中间帧无 letterbox / 无 ghosting。
+
+**Learnings**: `SMOOTH` 现在是模块常数而不是散落的 `* 4` 字面量 —— skill 里记的
+"某次好心的重构删掉 4× 中间层就会抖"这次是反过来：**新增的分支忘了加**。任何新的
+zoompan 分支都必须走 `SMOOTH`。
+
+**Next steps**: 真机验证这三条。确认效果后再决定是否全量 regen（现有视频都是旧
+pipeline 渲的，抖动和慢节奏还在里面）—— 按 skill 的 batch regen 顺序做，先删 CF
+再删 DB 行。
+
+## 2026-07-27 23:10 UTC — 横屏视频仍被 zoom：我上一轮的尺寸检测**从未生效**（字段名错）
+
+**Objective**: owner 第二次指出同一件事: "Listing 的视频占满了整个card 像素很差
+我说过了 横屏视频只横向占满不要纵向拉伸 不要zoom in"。
+
+**Issues（我的实现有一个静默失效的条件分支）**: 上一轮我写了"测真实轨道尺寸 → 竖屏
+`cover` / 横屏 `contain`"。但测量代码读的是 `videoSource.videoTracks` —— **expo-video
+的 payload 字段其实叫 `availableVideoTracks`**(查了 `expo-video@3.0.16` 的
+`SourceLoadEventPayload` 类型定义确认)。字段不存在 → `size` 永远学不到 →
+`mediaFit` 永远走"未知尺寸"分支 → **永远退回 `cover`**。
+`cover` = 填满靠**裁切+放大**,16:9 塞进 ~9:16 丢掉约 2/3 宽度并把剩下的放大 ——
+owner 说的"像素很差"**不是分辨率问题,是 upscale**。
+**一个条件永不成立的分支比没有分支更糟:它看起来处理了,实际没有。**
+
+**Resolution**: 删掉整个尺寸检测,`contentFit="contain"` **对所有比例一律使用**。
+`contain` 本身就是 owner 那条规则:缩放到**装进**卡内 → 横屏自然"横向占满 + 上下留边",
+竖屏自然填满,**任何比例都不裁不放大**。`CardPhoto` 同理用 `resizeMode="contain"`。
+连带删除:`lib/media/fit.ts` + 其 9 个测试(整个模块只为喂那个失效分支而存在)、
+三个 face 与 `feed.tsx`/`dev-foundation.tsx` 里的 `cardAspect` 全套传参、
+以及因此变成孤儿的 `Image` import。**净减代码。**
+
+**验证（读真 bundle，不只跑 tsc）**:Metro bundle 里 `CardVideo` 模块的
+`contentFit` **只出现 `"contain"` 一处、`cover` 零处**;`mediaFit` 已不被引用;
+`CardPhoto` 是 `cover`(背景模糊层)+`contain`(前景)。485 测试、tsc 0、biome 115 干净。
+
+**Learnings**: **对着第三方 event payload 猜字段名,失败方式是静默的。** 这次代价是
+owner 重复报同一个 bug。凡是读外部 payload 的可选字段,要么查类型定义(`.d.ts` 就在
+`node_modules` 里,一次 grep),要么加一条"没读到就告警"的兜底 —— 不能让"读不到"和
+"正常默认值"走同一条路径。
+另外:**`contain` 早就等价于用户那条规则,我却先造了一个测量+分支的方案。** 用户的措辞
+("只横向占满、不要纵向拉伸、不要 zoom")本身就是 `contain` 的定义。
+
+**Next steps**: owner 重开 app 复验。第二轮 ai_tags 回填仍在跑。
+
+## 2026-07-27 22:45 UTC — listing 卡放的是「周边 POI 视频」不是「房子视频」（我上一轮接错了源）
+
+**Objective**: owner 真机: "我看到这两条房子的视频了 第一帧是房子 后面变成了 community 的照片了"。
+
+**Issues（我上一轮引入的 bug，性质是内容语义错，不是播放错）**: 我把
+`generated_videos` 里**所有带 `listing_id` 的行**当成了那套房子的 hero。但那些行是
+**周边/POI 视频**:`scope='listing_intent_bucket'` 的意思是"**这套房子周围**的东西，按
+intent 分组"(`outdoor` / `schools` / `dining` / `shopping` / `daily_errands`)，帧全部来自
+**`poi_photos`**(Google Places 的公园、学校、商店图)。
+证据:15 条 ready 行的 `input_photo_ids` 与 `listing_photos` **零重叠**；5122 Lower Creek
+那条视频的第一个 photo id 指向一个 **`nature_preserve`** POI。
+所以卡片开头是 listing 自己的封面照(那是 `poster`)，一播起来就切到邻里 —— 一张
+listing 卡在给自然保护区做广告。owner 的描述精确到帧。
+
+**Resolution**: 改 hero 来源规则 —
+- **listing hero ← `listing_videos`**(`kind='walkthrough'`，"Home tour") —— 这才是真正
+  用房子自己照片做的视频。线上**只有横屏**(`cf_video_id` 全 NULL，只有
+  `cf_video_id_landscape`)，但上一轮已经让卡面正确 letterbox 横屏，所以现在能用了。
+- **community hero ← `generated_videos` 且 `scope='community_intent_bucket'`** ——
+  邻里视频放在邻里卡上是对的。
+- `listing_intent_bucket` **不再作为任何卡的 hero**。它不是垃圾数据，是 web `/browse`
+  的 "Nearby" 栏内容，只是属于房子的**周边**而非房子本身。
+
+**验证（真看了帧，不是只看 metadata）**:`?videoFirst=1` 现在返回 **22 条 listing、10 条
+带视频**(此前是 2 条错的)。抽 `c678d56a` 的第 20 秒缩略图用视觉模型确认:**室内正式餐厅，
+托盘天花+吊灯，画面自带 "DINING" 字幕条** —— 确是 home tour。经 `demo.percho.co`
+(手机实际访问的 host)复验 HTTP 200 / 10 条带视频。
+
+**Learnings**: **表名带 `listing_id` 不代表内容是关于那个 listing 的。**
+`scope` 字段才是语义所在，而我只看了外键就接线。**判据应该是"这视频的帧来自哪张表"** ——
+`input_photo_ids` 一查就穿:与 `listing_photos` 零重叠。以后接任何媒体源，先验一帧内容，
+不要只验 manifest 200。上一轮我确实验了"能播、是 9:16"，但**没验"播的是什么"**。
+
+**Next steps**: 第二轮 ai_tags 回填仍在跑。owner 重开 app 测 home tour 视频朝向与内容。
+
+## 2026-07-27 22:15 UTC — ai_tags 回填完成 + 抓到 Next fetch-cache 把接口钉死在旧数据上
+
+**Objective**: 回填跑完(974 张, 0 失败)，验证 hotspot/tour 是否真出来了。
+
+**Issues（一个真 bug，浪费了一段排查时间）**: 回填完成、DB 里明明有 tag，
+`/api/mobile/listing/<id>` 却**照旧返回 `tagged: 0`** —— 而且只对**部分** listing 如此
+(1831 Durwood 0，5122 Lower Creek 75)。用**同一把 anon key** 直连 PostgREST 打完全相同的
+select，返回 **10 条全带 tag**。重启 `next dev` **也不管用**。
+
+**Resolution**: 元凶是 **Next 14 的 fetch-cache 落盘**(`.next/cache/fetch-cache`，
+312K)。Next 会 patch 全局 `fetch`，supabase-js 走的就是 `fetch`，于是每个 listing 的
+读取被**钉死在第一次请求时那一刻的行数据**上 —— 跨重启存活，且只影响回填**之前**被请求过
+的那些 listing(所以表现为"只有部分坏")。**`export const dynamic = 'force-dynamic'` 挡不住
+这个** —— 它管的是 route 渲染，不是内部 fetch 缓存。
+修法:`lib/listing/detail.ts` 改用自己的 anon client，`global.fetch` 包一层
+`cache: 'no-store'`。验证:清缓存 + 新 client 后 Durwood 10/10、Lower Creek 75/75。
+
+**Actions**: 回填第一轮 **974 张 / 0 失败 / 覆盖 104 个 fmls listing**。但发现仍有
+**1385 张 ready 照片未 tag**(第一轮每 listing 封顶 12 张，且只跑 101 个 listing)，
+已启动第二轮(1000 张)。`probe-hotspots.ts` 实测:5122 Lower Creek **9 个 hotspot + 3 停
+tour**、2438 Figaro 同样 —— 而且第三停真的落在 **backyard**，文案 "And what's outside."
+这次名副其实(不再走 `pickAny` 兜底)。
+
+**Learnings**: **"DB 有数据 + 直连查得到 + 接口查不到" = 缓存，不是查询。** 而且是**落盘**
+缓存,重启不清。判据很锋利:**同一 key、同一 select、直连有 / 走接口没有**，且**只有部分
+主键受影响** —— 这个"部分"正是缓存的指纹(只有被提前请求过的键才有旧副本)。
+下次遇到 Next + supabase-js 的读取陈旧，先 `rm -rf .next/cache/fetch-cache` 验证假设，
+再上 `cache: 'no-store'`。
+
+**Next steps**: 第二轮回填在跑(1000 张)。跑完 feed 里所有 fmls listing 都会有
+hotspot/tour。
+
+## 2026-07-27 21:40 UTC — 视频卡没出现的真因（手机打的是 production）+ 卡面同时支持横/竖屏媒体
+
+**Objective**: owner: "没有看到视频的listing card / 我知道现在视频都是横屏的…listing card
+要能同时支持竖屏和横屏视频或者照片 对于横屏视频宽度要占满 listing card 上下可以不用占满"。
+
+**Issues（第一个是我上一轮的验证漏洞）**:
+1. **手机根本没在跟这台机器说话。** `app.json` 的 `expo.extra.apiBase` =
+   `https://www.percho.co`，所以 Expo Go 里的 app 打的是 **production**，而
+   `videoFirst` / vertical-videos / listing detail 全都只在这台机器上。上一轮我**只对
+   localhost 验证**就说"可以测了" —— 那句"verified"是站不住的。实测
+   `https://www.percho.co/api/mobile/feed?videoFirst=1` → **12 条全 `videoUrl: false`**。
+2. **横屏媒体被 `cover` 裁掉。** `CardVideo` 和三个 face 的 `<Image>` 全是
+   `cover`(填满=裁切)。16:9 的源塞进 ~9:16 的卡，**丢掉约 2/3 的宽度**，而房子视频的
+   主体通常正好在被丢掉的那部分。线上视频**全是横屏**(因为照片就是横屏)。
+
+**Actions**:
+- **打通 dev API**:`percho-prototypes/serve.py` 增加 `/api/*` → `localhost:3000` 反代
+  (只代 `/api/`，demo 静态站不受影响)。选它是因为 `demo.percho.co` 是这台机器上**唯一
+  已经走 named tunnel 的 hostname**，加第二个 hostname 需要改 root 拥有的
+  `/etc/cloudflared/config.yml`（**已请求但未获批，故未改**）。quick tunnel
+  (`trycloudflare`) 边缘一直 404，ngrok 撞 session 上限。
+- 新 `apps/mobile/lib/media/fit.ts` + **9 个测试**:竖屏→填满(`cover`)，
+  横屏→**占满宽度 + 上下暗色 letterbox**(`contain`)，尺寸未知→退回填满。
+- `CardVideo` 从**播放器真实轨道尺寸**判断(不信 DB 的 `aspect_ratio`)，新
+  `CardPhoto` 给照片同一套规则(`Image.getSize`)；三个 face 全部改用它们。
+- Expo 以 `EXPO_PUBLIC_API_BASE=https://demo.percho.co` 重启。
+
+**Decisions**: `mediaFit` 把**源的形状**(`orientation`)和**在卡里是否更宽**
+(`widerThanCard`)分成两个字段 —— 1:1 的照片"是方的"但在 9:16 卡里**确实更宽**、该
+letterbox。第一版把两者混为一谈，被自己的测试抓出来。letterbox 底色用
+`cardPlainTo` 深色(§0.3 卡面永远深色，浅色带会像渲染故障)，背后垫一层**同图模糊**，
+避免出现一条死灰条。5% 容差:1080x1900 塞进 9:16 只差 ~1%，不加容差会出现两条发丝般的
+黑边，看起来像 bug。
+
+**Resolution**: 经 `demo.percho.co` 验证 **HTTP 200、14 条 listing、前 2 条带真 9:16
+manifest**。bundle 里 `EXPO_PUBLIC_API_BASE` 已 inline 成 `https://demo.percho.co`、
+`EXPO_PUBLIC_DEV_SAMPLER` 为 `"1"`(确认不是死代码)。Gate:**494 测试**、tsc 0、
+biome 117 干净。biome 还抓到 `renderCard` 的 memo 缺 `cardAspect` 依赖 —— 旋转后会
+沿用旧的 fit，已修。
+
+**Learnings**: **"我在 localhost 上验过了"不等于"用户的设备验过了"。** 客户端有自己的
+默认 baseURL，只要没显式覆盖，真机测的就是别的服务器。**凡是"手机上看不到"的报障，
+第一步就该确认手机在跟哪个 host 说话**，而不是去读客户端代码。
+另外:**`contentFit="cover"` 是个静默的破坏性默认值** —— 它永远"看起来在工作"，只是把
+内容裁掉了，不会报错也不会留空白。
+
+**Next steps**: owner 真机测视频朝向。若要长期可用,建议把 `api-dev.percho.co` 写进
+`/etc/cloudflared/config.yml`(需要 sudo 批准)，替掉现在借道 `demo.percho.co` 的反代。
+
+## 2026-07-27 21:05 UTC — 真机测试可用性：9:16 视频终于进 feed + dev sampler（每种 3 张，视频卡置顶）
+
+**Objective**: owner 两件事:①"翻很多卡片才能看到 listing，暂时不按 production 规则，
+每种来 3 张"；②"最想测卡片上播之前生成的视频，把带视频的卡片放前面"。
+
+**Issues（两个真 bug，都不是"没做"而是"做了但接不上"）**:
+1. **9:16 竖版视频从来没进过 mobile feed。** `browse-cards.ts` 读 `listing_videos`
+   并取 `cf_video_id ?? cf_video_id_landscape`，而线上**每一行 `cf_video_id` 都是 NULL**、
+   只有 `cf_video_id_landscape` —— 所以手机上满屏 9:16 卡片拿到的是**横屏视频**。
+   而真正为这个界面生成的 15 条 **`generated_videos` 全是 `aspect_ratio='9:16'`**，
+   mobile 路径**根本没读过这张表**。
+2. **community 卡永远播不了视频**:`PoolCommunityDTO` **没有 `videoUrl` 字段**，
+   尽管 `CommunityFace` 早就渲染了 `CardVideo`。
+
+**Actions**:
+- 新 `apps/web/lib/feed/vertical-videos.ts`:读 `generated_videos`(ready + 9:16)，
+  route 里**优先于** browse-card hero。`browse-cards.ts` 故意不动 —— 它还喂 web
+  `/browse`，那边横屏是对的。
+- `PoolCommunityDTO` 加 `videoUrl`，community 也挂竖版视频。
+- 新 query 参数 **`videoFirst=1`**(与 `videosOnly` 分开:后者会**丢掉**纯图 listing，
+  把 §0.7"无视频是一等状态"藏起来，不能用来测真 deck)。
+- 新 `apps/mobile/lib/feed/dev-sampler.ts` + 8 个测试:`EXPO_PUBLIC_DEV_SAMPLER=1`
+  时用**每种 3 张、视频卡置顶**的平铺 deck 替掉漏斗 mix；feed 顶部琥珀色 banner
+  显示 `DEV SAMPLER · N cards · M with video`。
+
+**Decisions**: sampler **只绕过 §1.7 的 MIX，不造假数据** —— 每张卡仍由真构造器从真
+pool 生成；也**不绕服务端 §0.2 gate**,而是让客户端按 stage 4 请求(stage 4 本来就是
+解锁态)。开关是 build-time env var，默认关，不可能误上线。
+
+**Resolution**: `videoFirst` **第一版只排序当前页 → 完全没效果**，因为那 6 个有视频的
+listing 根本不在 newest-first 第一页里。**排序拿不到你没 fetch 的行** —— 改成用
+`fetchBrowseCardsByIds` 单独取。验证:`?videoFirst=1` 现在返回 14 条、**前 2 条带
+9:16 manifest**(`5122 Lower Creek Street` / `2438 Figaro Drive`)，manifest+thumbnail
+都 HTTP 200。Gate:**485 测试**、tsc 0(web+mobile)、biome 114 干净。Metro bundle
+HTTP 200/16.2MB，且 `EXPO_PUBLIC_DEV_SAMPLER` 已 inline 成 `"1"`(不是死代码)。
+
+**Learnings**: **"字段存在"≠"字段被填"≠"字段是对的形状"。** 这次三层全踩:
+community DTO 缺字段、listing 拿到的是横屏 id、竖版表没人读。**排查"功能没出现"要从
+数据那一端往 UI 走**，因为 UI 早就写好了(`CardVideo` 三个 face 都挂着)。
+另外:**改分页/排序类 dev 开关，一定要用真 endpoint 验一次输出**，"排序了"和"内容变了"
+是两件事。
+
+**Next steps**: owner 真机测(tunnel `exp://llhow00-anonymous-8081.exp.direct`)。
+`ai_tags` 回填仍在后台跑。
+
+## 2026-07-27 20:20 UTC — photo_tagger 移到 Bedrock + 回填 fmls tags（hotspot 数据源终于通了）
+
+**Objective**: task-2 最后一块。§2.3–2.5 全靠 `listing_photos.ai_tags`，而它对
+feed 里 104 个 fmls listing **一条都没有** —— 因为 `photo_tagger.py` 自 2026-07-26
+个人 Anthropic key 被移除后一直是坏的（CLAUDE.md §2.1 rule 0 已把这条记为待办）。
+
+**Actions**:
+- `scripts/render-worker/photo_tagger.py`:新增 `_invoke_bedrock()`，走 boto3 默认凭据链
+  (EC2 instance role)。删掉 `api.anthropic.com` POST、`x-api-key` 头、以及
+  `tag_listing_photos` 开头那句 **`if not ANTHROPIC_API_KEY: raise`**（这句自己就会
+  让每次调用直接 abort）。`MODEL` 换成 Bedrock id
+  `global.anthropic.claude-sonnet-4-5-20250929-v1:0`。
+- 新增 `probe_tagger.py`（单张真图打通验证）、`backfill_photo_tags.py`
+  （只补 `ai_tags IS NULL` + active + ready，`--limit-listings` 限量，默认 dry-run，
+  每 listing 封顶 12 张 —— hotspot 每个房间只要一张好图）。
+- 新增 `apps/mobile/scripts/probe-hotspots.ts`:拿**真 API payload** 跑真
+  hotspot/tour 推导。
+
+**Decisions**: `_invoke_bedrock` **不留 API-key fallback** —— 上次个人 key 就是从
+fallback 路径回来的。回填做成限量+可重跑而不是一把梭:2388 张 vision 是真钱。
+
+**Issues**（probe 抓到的真 bug，单测全绿也看不见）:Suwanee 那套有
+**4 个好 hotspot(exterior/dining/living/kitchen)却出不了 tour**。因为 generic tour
+第 3 停只收 backyard/pool/balcony/exterior，而 exterior 已被第 1 停吃掉。
+
+**Resolution**: 三个停都加 `?? pickAny()` 兜底(任意未用 hotspot)，且**第 3 停文案跟着
+实际选中的房间变** —— 在书房照片上写"And what's outside."是那种让买家从此不信这页的小谎。
+**未削弱铁律**:stop 仍带真 evidence，<3 个可用 hotspot 仍然不出 tour。
+真实数据验证:Suwanee **3 停(generic)**、Alpharetta / Johns Creek 各只有 2 个 hotspot →
+**正确地不出 tour**，退 free explore。Gate:**477 测试**、tsc 0、biome 112 干净。
+
+**Learnings**: **hotspot/tour 这类"看真实数据形状"的逻辑，单测无法覆盖** —— 能不能出
+tour 取决于某套房子恰好拍了哪些房间，四张外景+三张走廊在任何单测里都是绿的。所以
+`probe-hotspots.ts` 跟 `probe-session.ts` 一样留在 repo 里:**凡是行为依赖真实数据
+分布的，必须有一个打真 API 的 probe。**
+
+**Next steps**: 101 个 listing 的回填在后台跑(974 张)。跑完 feed 里的房子就有
+pin/tour/sheet 了，UI 不用改。**PENDING-SIM(需真机)**:tour 翻停、pin 位置、sheet
+detent、行 tap 深链 + 2s 高亮。
+
+## 2026-07-27 19:45 UTC — task-2 §2.3–2.5：guided tour + transition 卡 + hotspot sheet
+
+**Objective**: 补完 task-2 剩下的三块 UI。
+
+**Actions**:
+- `components/listing/TourStop.tsx`（STOP N OF M + 分段进度 + 220pt 媒体 + pin +
+  WHY serif 17.5 + 动作行 + Prev/Next）、`TransitionCard.tsx`（§2.4 #5 overlay，
+  非新路由）、`HotspotSheet.tsx`（复用 task-0 `BottomSheet`，5 动作原地展开）。
+- `lib/listing/build-hotspots.ts`：photos+真实字段 → hotspots/tour/transition
+  signals。**21 个新测试**（累计 476）。
+- `theme/typography.ts` 加 `serifBody`（§2.3 #3 点名要 serif 17.5，之前没有这个 token）。
+- `app/listing/[id].tsx` 接线:tour → transition → free explore 三态、hero pin
+  （未访问带 accent 环）、hotspot section 行、Replay tour 链。
+
+**Decisions**:
+- **tour 只在真能出 3 停时进**，否则直接 free explore(= ✕ 的同一条不惩罚路径)，
+  不做"只有 2 停的 tour"。
+- 今天永远走 §2.2 **generic tour**:个性化停靠点需要 per-buyer 归因，还不存在。
+  代码路径是活的,`buildTour` 一旦有人能产出个性化 stop 就直接收。
+- transition 卡 signals 为空时**说"按你自己的节奏"，不编两个偏好**。
+- Save 即时变 ♥ 且不关 sheet(§2.5 #1)，写库是 task-5 的活 —— 等 round trip 的 save
+  在真机上读起来就是坏了。
+- sheet **只在打开时挂载**(task-1 那次 iOS 黑屏的教训)。
+
+**Issues**: 两个测试红,都是我自己的 copy 触发了自己的闸门 ——
+`ask_ai` 副文案 "Scoped to this home and Duluth" **没有数字**，被
+`hasConcreteData` 静默过滤，进而让无 sqft 的房子跌破 3 动作下限、整个 hotspot 消失。
+另外 biome 抓到进度条用了 `key={index}`。
+
+**Resolution**: 副文案改成带数字(`${cohortN} nearby listings`)；`TourStop` 的
+`total: number` 改成 `stopIds: readonly string[]`，进度段用**真 stop id 做 key** ——
+task-1 就是在 index/重复 key 上连丢几轮，这条不让步。
+Gate:**476 测试**、tsc 0、biome 111 文件干净。Metro 真 bundle **HTTP 200 /
+16.2MB**，12 处新标记(WHY 块/transition/Replay/Finish/Saved/buildHotspots/serifBody)全在。
+
+**Learnings**: **"每行副文案必须带数字"这条闸门会反咬自己写的 copy** —— 它是对的,
+但失败方式是静默的:掉一行 → 跌破下限 → 整个 hotspot 不出现，表现为"功能没做"。
+凡有数量下限的过滤器，测试必须断言**下限附近**那一档，而不只是 happy path。
+
+**Next steps**: 只剩把 `photo_tagger.py` 从被禁的个人 Anthropic key 移到 Bedrock
+并回填 fmls listing —— **hotspot/tour/pin 现在对 feed 里的房子全部为空,因为
+`listing_photos.ai_tags` 一条 fmls 照片都没有**。回填完这三块自动亮，UI 不用改。
+**PENDING-SIM(需真机)**:行 tap 深链 + 2s 高亮、翻面手感、pin 位置、sheet detent。
+
+## 2026-07-27 19:20 UTC — task-2：detail endpoint + 真 data face + Explore→ 接线
+
+**Objective**: 接上 task-2 纯层(`7eb5f66`)，做出 owner 能在真机上点的那一层。
+
+**Actions**:
+- 服务端 `apps/web/lib/listing/detail.ts` + `app/api/mobile/listing/[id]/route.ts`
+  （id **和** slug 都收：feed 带 id，分享链接带 slug）。16 个投影测试。
+- 客户端 `lib/listing/detail-dto.ts`（`useListingDetail`，`missing` 与 `error`
+  分开建模）、`assumptions.ts`（利率是**带标注的假设**，不是事实）。
+- `components/listing/ListingDataFace.tsx` 替掉 `DataFaceStub`（listing 分支）、
+  `PriceHistogram.tsx`（mini/full 同一份图）、`app/listing/[id].tsx`（free explore
+  骨架 + `?focus=` 深链 + 2s 高亮 + 吸底 Schedule a tour）。
+- feed 接线：listing 卡 `Explore →` 与 data face 每一行 → `router.push`；
+  **挑战卡 `THE HOME BEHIND THIS` 占位 sheet 已删，改成真跳转**（继承的 open item #1 完成）。
+
+**Decisions**:
+- **利率没有数据源**。spec §2.1 要"当周利率"，系统里没有任何利率表/feed/env。
+  所以不 inline 一个 `0.065` 假装是事实 —— 单独一个 `assumptions.ts`，带
+  `RATE_AS_OF` + `isRateStale()`，UI 打印"assumes 6.5% · 20% down"。
+- **月供明说没含什么**：taxes/insurance 不在 schema 里，卡面直接写出来，而不是悄悄不算。
+- **data face 预取而非翻面时取**：翻面是 350ms crossfade，中途冒 spinner 正是数据面
+  要消除的"这是真的吗"疑虑。`SwipeStack` 不暴露翻面状态(它的 flip 在 UI thread)，
+  所以按 top card 取。
+- **`Flip back` 只挂在按钮上，绝不挂在面的背景上** —— 这就是 spec 那条
+  stopPropagation 在 RN 里的等价物。别加外层 Pressable。
+- community 卡仍用 `DataFaceStub`(task-3 的活)，不提前造。
+
+**Issues**: 修 biome hook-deps 告警时把 `onSectionLayout` 重复声明了(编译错)。
+另外首次 bundle 校验打错入口(`/index.bundle` → 404 UnableToResolveError)，
+expo-router app 的真入口是 `/node_modules/expo-router/entry.bundle`。
+
+**Resolution**: 删重复声明；深链滚动从 `useEffect` 改到 `onLayout` 驱动
+（offset 只在 layout 后才存在，用 fetch status 当依赖等于拿它当"布局好了吗"的
+替身，时机是错的），加 `scrolledTo` ref 保证一次性。
+**真实验证**：endpoint 对线上数据 uuid 200 / slug 200 / 不存在 404，Duluth
+cohort n=50、$202/sqft@n=49；Metro 真 bundle **HTTP 200 / 16.1MB**，新文案在
+bundle 里查得到，旧占位 sheet 文案 **0 命中**。Gate：462 测试、tsc 0、biome 106 干净。
+
+**Learnings**: **校验 bundle 一定要用 app 的真入口**，expo-router 是
+`node_modules/expo-router/entry.bundle`，打 `/index.bundle` 会拿到 404 JSON 而不是
+bundle —— 而 404 body 里也有 JS 关键字，粗看像成功。
+
+**Next steps**: guided tour + transition 卡 + hotspot sheet(§2.3–2.5) → 最后把
+`photo_tagger.py` 移到 Bedrock 并回填 fmls listing。**PENDING-SIM(需真机)**：
+行 tap 深链落点 + 2s 高亮、350ms 翻面手感、吸底栏在 momentum 滚动下的表现。
+
+## 2026-07-27 18:55 UTC — task-2 起步：先摸真实数据，再写纯逻辑层（69 个新测试）
+
+**Objective**: owner: "task-1结束 开始做task-2"。task-2 = Listing Explore
+(`02-listing.md`)。**本次起 Percho 开发由 Hermes 自己写，不再委派 Claude Code CLI**
+(owner 明确)。分支 `phase-ios2/listing`。
+
+**Actions**:
+- 写 `docs/design/spec-v3/prompts/PLAN-task-2.md`（组件树/服务端/测试/排序）。
+- 新增纯层 `apps/mobile/lib/listing/`：`focus-key.ts`（深链词表 + section 映射）、
+  `monthly.ts`（摊还 + `listings.hoa` **text** 列解析）、`histogram.ts`（7 桶 +
+  <5 样本降级）、`hotspot.ts`（ai_tags → hotspot，动作 <3 不上线）、`tour.ts`
+  （evidence 非空的类型 + 运行时双保险）。
+- 5 个测试文件，69 个新用例。
+
+**Decisions**:
+- **直方图 anchor 从 subdivision 降级为 city，并把 cohort 名带进 UI**。spec §2.1
+  写的是 Waterside 这种 subdivision，但线上 `listings.community_id` **只有 4/265**
+  有值，subdivision cohort 对 98% 的房子是空的。city 有真样本（Duluth/Suwanee/
+  Sandy Springs/Alpharetta/Johns Creek 各 ~50），所以算 city 中位数、**并在文案里
+  说明是哪个 cohort**，不假装量的是 subdivision。
+- **Days on market 行不做**。schema 里**根本没有** `list_date` / `dom` 列(逐列查过)。
+  spec §2.1 要这一行，但它只能 ABSENT —— 不填 0，不填"—"配一个假 median。
+- monthly **不估** insurance/PMI/tax，只加调用方真有的项，`includes` 字段说明加了啥。
+- `hoa` 是 text 列，"1200" **不按量级猜**年费/月费 —— 猜错直接 12× 月供。
+
+**Issues**: `genericTourStops` 第 3 停被静默吞掉 → 只出 2 停 = 无 tour。原因:
+`hotspots.find(h => rooms.includes(h.room))` 走的是**照片顺序**，室外停的候选列表末位
+是 `exterior`，撞上 hero 停已用掉的那张外景照，被去重丢弃。测试先红后修。
+
+**Resolution**: 改成按 `rooms` **偏好顺序**外层遍历且跳过已用 id，"backyard 优先，
+否则 pool，最后退外景"才真是这个语义。Gate 全绿：**462 测试**(+69)、tsc 0、
+biome 101 文件干净。
+
+**Learnings**: **`Array.find` 里用 `list.includes(item.x)` 做"优先级选择"是假的** ——
+它按被搜数组的顺序返回，不是按优先级列表的顺序。带去重的多路 fallback 必须外层遍历
+偏好列表。这类 bug 不报错，只让下游数量少一个，然后在别处以"功能没出现"的形式显现。
+
+**Next steps**: 服务端 detail endpoint → `ListingDataFace` 替掉 `DataFaceStub`
+并接 `Explore →` / 挑战卡 `THE HOME BEHIND THIS` 的真跳转 → free explore →
+guided tour → 最后把 `photo_tagger.py` 移植到 Bedrock 并回填 fmls listing
+（**hotspot 的唯一数据源，现在 199 条 tag 全在 10 个非 feed listing 上，fmls photo 一条都没有**）。
+
 ## 2026-07-27 09:55 UTC — 丢弃作废的 ws3 patch（先验证再删，不是直接删）
 
 **Objective**: owner: "清理干净吧"。

@@ -16,6 +16,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { feedPoolUrl } from "../lib/api/base";
 import type { FunnelStage } from "../lib/feed/card-types";
+import { samplerEnabled } from "../lib/feed/dev-sampler";
 import { EMPTY_POOL, type FeedPool } from "../lib/feed/generate-feed";
 import { parsePoolResponse } from "../lib/feed/pool-dto";
 import { FIRST_PAGE_SIZE, PAGE_RETRIES } from "../lib/feed/ratios";
@@ -122,11 +123,20 @@ export function useFeedPool({
 				const scopedLiked = likedRef.current;
 				const res = await fetch(
 					feedPoolUrl({
-						stage,
+						// DEV SAMPLER: request the pool as stage 4 so listings and
+						// communities are in the payload at all. The §0.2 gate is not
+						// bypassed — stage 4 IS the unlocked stage, and the funnel store's
+						// real stage is untouched; only this fetch asks for a fuller pool so
+						// every card kind is testable without walking the funnel.
+						stage: samplerEnabled() ? 4 : stage,
 						offset,
 						limit: FIRST_PAGE_SIZE,
 						cities: scopedCities ? scopedCities.split(",") : [],
 						likedCommunityIds: scopedLiked ? scopedLiked.split(",") : [],
+						// Dev sampler wants the video cards in the payload at all; the
+						// server has to FETCH them, sorting a page cannot surface a row it
+						// never read. See lib/feed/dev-sampler.ts.
+						...(samplerEnabled() ? { videoFirst: true } : {}),
 					}),
 				);
 				if (!res.ok) throw new Error(`feed pool: HTTP ${res.status}`);

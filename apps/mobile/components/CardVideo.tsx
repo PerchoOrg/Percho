@@ -12,11 +12,36 @@
  *
  * A no-video card is a first-class state elsewhere (task-1 renders a static
  * hero); this component assumes a real `url`.
+ *
+ * ── FIT: always `contain`, never `cover` ────────────────────────────────────
+ *
+ * Owner's rule, stated twice (2026-07-27): "横屏视频只横向占满不要纵向拉伸 不要
+ * zoom in" — a landscape video fills the card's WIDTH, is not stretched
+ * vertically, and is never zoomed.
+ *
+ * `contain` is exactly that rule, for every aspect ratio, with no measurement:
+ * the video is scaled to fit INSIDE the card, so a landscape source ends up
+ * full-width with bands above and below, and a portrait source fills. Nothing is
+ * ever cropped or magnified.
+ *
+ * Two earlier attempts got this wrong and both are worth remembering:
+ *   1. `contentFit="cover"` — fills by CROPPING. On a 16:9 source in a ~9:16
+ *      card it discards ~2/3 of the width and magnifies what is left, which is
+ *      the "占满整个card 像素很差" the owner reported: not a resolution problem,
+ *      an upscaling one.
+ *   2. Measuring the track and switching fit per orientation. The measurement
+ *      read `videoSource.videoTracks`, which does not exist — the payload field
+ *      is `availableVideoTracks` — so the size was NEVER learned and every card
+ *      silently kept the `cover` fallback. A conditional whose condition never
+ *      fires is worse than no conditional: it looks handled and is not.
+ *
+ * So there is no dimension detection here at all. `contain` needs none.
  */
 import { VideoView, useVideoPlayer } from "expo-video";
 import { useEffect, useRef } from "react";
 import { Image, StyleSheet, View } from "react-native";
 import { useSoundStore } from "../state/sound";
+import { colors } from "../theme/tokens";
 
 const NEAR_END_RATIO = 0.82;
 const TIME_UPDATE_INTERVAL_S = 0.25;
@@ -90,16 +115,45 @@ export function CardVideo({ url, poster, isTop, onNearEnd }: CardVideoProps) {
 	}, [player, isTop]);
 
 	return (
-		<View style={StyleSheet.absoluteFill} pointerEvents="none">
+		<View style={styles.frame} pointerEvents="none">
+			{/*
+			 * Backdrop for whatever the video does not cover. A blurred, dimmed copy
+			 * of the poster rather than a flat band, so the letterbox area still
+			 * belongs to this card. Invisible when the video fills the frame.
+			 */}
 			{!!poster && (
-				<Image source={{ uri: poster }} style={StyleSheet.absoluteFill} />
+				<Image
+					source={{ uri: poster }}
+					style={StyleSheet.absoluteFill}
+					resizeMode="cover"
+					blurRadius={16}
+				/>
 			)}
+			<View style={styles.scrim} />
 			<VideoView
 				player={player}
 				style={StyleSheet.absoluteFill}
-				contentFit="cover"
+				// The owner's rule, for every aspect ratio. Never `cover`.
+				contentFit="contain"
 				nativeControls={false}
 			/>
 		</View>
 	);
 }
+
+const styles = StyleSheet.create({
+	frame: {
+		...StyleSheet.absoluteFillObject,
+		alignItems: "center",
+		justifyContent: "center",
+		// Behind the blurred poster, so a video with no poster still sits on the
+		// dark card family (§0.3) rather than on white.
+		backgroundColor: colors.cardPlainTo,
+	},
+	/** Dims the blurred backdrop so it reads as a frame, not a second image. */
+	scrim: {
+		...StyleSheet.absoluteFillObject,
+		backgroundColor: colors.cardPlainTo,
+		opacity: 0.55,
+	},
+});

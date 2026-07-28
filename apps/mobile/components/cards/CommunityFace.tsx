@@ -12,10 +12,11 @@
  * Pills prefer the card's authored `pills` and fall back to its real `dims`.
  */
 import { DIMS } from "@percho/shared";
-import { Image, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import type { CommunityCardV3 } from "../../lib/feed/card-types";
 import { colors } from "../../theme/tokens";
 import { CardFoot } from "../CardFoot";
+import { CardPhoto } from "../CardPhoto";
 import { CardVideo } from "../CardVideo";
 import { KindChip } from "../KindChip";
 
@@ -45,7 +46,7 @@ export function CommunityFace({ card, isTop, onExplore }: CommunityFaceProps) {
 			{card.videoUrl ? (
 				<CardVideo url={card.videoUrl} poster={card.heroUrl} isTop={isTop} />
 			) : (
-				<Image source={{ uri: card.heroUrl }} style={StyleSheet.absoluteFill} />
+				<CardPhoto url={card.heroUrl} />
 			)}
 			<View style={styles.head}>
 				<KindChip label="COMMUNITY" />

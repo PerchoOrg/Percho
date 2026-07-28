@@ -35,6 +35,27 @@ STATIC_RATIO = 0.10
 HERO_BOOST_COUNT = 3
 HERO_BOOST_SECONDS = 0.5
 
+# ── Pacing (2026-07-28) ──────────────────────────────────────────────────────
+# Owner on device: "节奏太慢". The uniform curve above divides a 60s cap by N,
+# so a 12-shot tour is 12 × 5s — every shot the same length, which reads as a
+# slideshow rather than a tour. A bimodal curve gives the video a beat: heroes
+# breathe, the middle keeps pace, the weakest shots pass quickly.
+#
+#   top HERO_BOOST_COUNT by hero_score      → PACE_HERO_S   (dwell)
+#   bottom PACE_FILLER_FRACTION by score    → PACE_FILLER_S (quick pass)
+#   everything else                         → PACE_NORMAL_S
+#
+# A 12-shot tour: 3×3.4 + 3×1.0 + 6×1.7 ≈ 23.4s of clips → ~18s after xfades,
+# vs ~54s before. Set PACE_BIMODAL = False to restore the uniform curve.
+PACE_BIMODAL = True
+PACE_HERO_S = 3.4
+PACE_NORMAL_S = 1.7
+PACE_FILLER_S = 1.0
+PACE_FILLER_FRACTION = 0.25
+# A 1.7s clip that doesn't move reads as a dropped frame, not as breath, so the
+# forced-static rule only applies to clips long enough to hold a still.
+PACE_STATIC_MIN_S = 3.0
+
 # Quotas: min photos we'd like to have, max we'll ever include.
 # priority: lower = filled first when trimming budget.
 QUOTAS: dict[str, dict[str, int]] = {
@@ -249,13 +270,35 @@ def narrative_sort(photos: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return ordered
 
 
-def plan_durations(n: int, hero_ranks: list[int]) -> list[float]:
+def plan_durations(n: int, hero_ranks: list[int],
+                   filler_ranks: list[int] | None = None) -> list[float]:
     """
-    Given N clips, return per-clip duration to fill ~TOTAL_CAP with crossfades,
-    clamped to [MIN,MAX]. hero_ranks are indices of clips getting +HERO_BOOST_SECONDS.
+    Per-clip durations.
+
+    Bimodal (default, PACE_BIMODAL): heroes dwell, filler passes quickly,
+    the rest keeps a walking pace. Total length is whatever the beats add up
+    to — deliberately NOT stretched to fill TOTAL_CAP, because filling a fixed
+    budget is exactly what made every clip the same length.
+
+    Uniform (PACE_BIMODAL = False): the Phase 93 curve — fill ~TOTAL_CAP,
+    clamp to [MIN,MAX], +HERO_BOOST_SECONDS on heroes taken from the others.
     """
     if n == 0:
         return []
+
+    if PACE_BIMODAL:
+        fillers = set(filler_ranks or [])
+        heroes = set(hero_ranks)
+        out: list[float] = []
+        for i in range(n):
+            if i in heroes:
+                out.append(PACE_HERO_S)
+            elif i in fillers:
+                out.append(PACE_FILLER_S)
+            else:
+                out.append(PACE_NORMAL_S)
+        return out
+
     # Total clip time needed to yield (cap) seconds after (n-1) xfades:
     # total_video = sum(clip) - (n-1)*xfade  →  sum(clip) = cap + (n-1)*xfade
     target = TOTAL_CAP + (n - 1) * XFADE
@@ -275,7 +318,8 @@ def plan_durations(n: int, hero_ranks: list[int]) -> list[float]:
     return durations
 
 
-def assign_modes(picked: list[dict[str, Any]], style: str, seed: int) -> list[str]:
+def assign_modes(picked: list[dict[str, Any]], style: str, seed: int,
+                 durations: list[float] | None = None) -> list[str]:
     rng = random.Random(seed)
     modes: list[str] = []
     templates = STYLE_ROOM_TEMPLATES.get(style, {})
@@ -288,12 +332,25 @@ def assign_modes(picked: list[dict[str, Any]], style: str, seed: int) -> list[st
             pool = [m for m in pool if m != "pan_to_subject"] or ["push_in"]
         modes.append(rng.choice(pool))
 
+    # No still frames on the short beats, whatever the room template said —
+    # a 1.0s clip that doesn't move reads as a stall, not as a pause.
+    if durations is not None:
+        for i, m in enumerate(modes):
+            if m == "static" and i < len(durations) and durations[i] < PACE_STATIC_MIN_S:
+                modes[i] = "push_in"
+
     # 10% forced static
     n_static = max(0, round(len(picked) * STATIC_RATIO))
     if n_static > 0:
         # Choose indices with LOWEST hero_score for static (they're the ones
         # least worth energetic motion — gives the audience a breath).
         idx_by_hero = sorted(range(len(picked)), key=lambda i: picked[i].get("hero_score", 0))
+        # …but only where the clip is long enough to READ as a breath. Under the
+        # bimodal curve the lowest-hero clips are also the 1.0s filler beats,
+        # and a 1.0s still frame looks like the video stalled. Skip those.
+        if durations is not None:
+            idx_by_hero = [i for i in idx_by_hero
+                           if i < len(durations) and durations[i] >= PACE_STATIC_MIN_S]
         for i in idx_by_hero[:n_static]:
             modes[i] = "static"
     return modes
@@ -336,13 +393,19 @@ def build_plan(
     ordered = narrative_sort(picked)
 
     # 6. duration plan (hero boost = top-3 hero_score positions)
-    hero_ranks = sorted(range(len(ordered)),
-                        key=lambda i: -ordered[i].get("hero_score", 0))[:HERO_BOOST_COUNT]
-    durations = plan_durations(len(ordered), hero_ranks)
+    by_hero_desc = sorted(range(len(ordered)),
+                          key=lambda i: -ordered[i].get("hero_score", 0))
+    hero_ranks = by_hero_desc[:HERO_BOOST_COUNT]
+    # Weakest quarter (excluding heroes) passes quickly — the bimodal curve's
+    # short beat. Empty when the tour is too short for a filler tier to matter.
+    n_filler = int(len(ordered) * PACE_FILLER_FRACTION)
+    filler_ranks = [i for i in reversed(by_hero_desc)
+                    if i not in hero_ranks][:n_filler]
+    durations = plan_durations(len(ordered), hero_ranks, filler_ranks)
 
     # 7. mode assignment (style-aware, seeded on listing_id)
     seed = hash(listing_id) & 0xFFFFFFFF
-    modes = assign_modes(ordered, style, seed)
+    modes = assign_modes(ordered, style, seed, durations)
 
     plan: list[dict[str, Any]] = []
     for i, p in enumerate(ordered):

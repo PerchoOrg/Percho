@@ -25,6 +25,19 @@ export const feedPoolQuerySchema = z.object({
     .catch('0')
     .transform((v) => v === '1'),
   /**
+   * Dev-only: put listings that HAVE a 9:16 video first.
+   *
+   * Separate from `videosOnly` on purpose. `videosOnly` drops every photo-only
+   * listing, which hides the §0.7 "no video is a first-class state" path and so
+   * cannot be used to test the real deck. `videoFirst` keeps the whole pool and
+   * only reorders it, which is what "put the video cards up front so I can test
+   * playback" actually needs (owner, 2026-07-27).
+   */
+  videoFirst: z
+    .enum(['0', '1'])
+    .catch('0')
+    .transform((v) => v === '1'),
+  /**
    * Stage 3 returns listing previews tied to communities the buyer already
    * liked (§0.2). Those ids live on the device, so the client sends them.
    * Capped at 50 to bound the filter.
@@ -68,6 +81,7 @@ export function parseFeedPoolQuery(url: URL): FeedPoolQuery {
     offset: url.searchParams.get('offset') ?? 0,
     limit: url.searchParams.get('limit') ?? 12,
     videosOnly: url.searchParams.get('videosOnly') ?? '0',
+    videoFirst: url.searchParams.get('videoFirst') ?? '0',
     likedCommunityIds: url.searchParams.get('likedCommunityIds') ?? undefined,
     cities: url.searchParams.get('cities') ?? undefined,
   });

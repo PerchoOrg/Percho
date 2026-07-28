@@ -13,10 +13,11 @@
  * vocabulary. A listing with no dims shows no pills.
  */
 import { DIMS } from "@percho/shared";
-import { Image, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import type { ListingCardV3 } from "../../lib/feed/card-types";
 import { colors } from "../../theme/tokens";
 import { CardFoot } from "../CardFoot";
+import { CardPhoto } from "../CardPhoto";
 import { CardVideo } from "../CardVideo";
 import { KindChip } from "../KindChip";
 import { MatchBadge } from "../MatchBadge";
@@ -45,7 +46,7 @@ export function ListingFace({
 			{card.videoUrl ? (
 				<CardVideo url={card.videoUrl} poster={card.heroUrl} isTop={isTop} />
 			) : (
-				<Image source={{ uri: card.heroUrl }} style={StyleSheet.absoluteFill} />
+				<CardPhoto url={card.heroUrl} />
 			)}
 			<View style={styles.head}>
 				<KindChip label="LISTING" />
