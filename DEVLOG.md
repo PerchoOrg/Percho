@@ -4,6 +4,23 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-28 02:00 UTC — 划走的卡还在播（含声音）：`roleFor` 把已划掉的卡也当 top
+
+**Objective**: owner 真机: "ios上面划走listing视频后音乐没有停止"。
+
+**Issues**: `SwipeStack.tsx` 的 `roleFor(depth)` 是 `depth <= 0 → "top"`。而 `TRAIL = 1`
+**故意**把刚划掉的卡继续挂载（让它飞出屏幕、并且被 React 卸载前停在屏外），那张卡的
+depth 是 **-1** —— 落进 `<= 0`，于是它一直拿着 top 角色。
+`feed.tsx:424` 是 `const isTop = role === "top"`，`CardVideo` 又完全靠 `isTop` 决定
+播/停和 muted，所以划走的 listing 在新卡底下继续播、继续出声。
+
+**Resolution**: `roleFor` 改成 `depth === 0`。几何布局根本不读 role（`cardStackVisual`
+只读绝对 index 与 UI 线程的 `topAbs`），所以收窄这个判断动不了任何一个像素，只改变
+"卡片被告知自己是什么"。485 个测试全过，tsc 干净。
+
+**Learnings**: `depth <= 0` 这种"顺手把负数一起收进来"的写法，在有 TRAIL（保留已划掉
+的卡）的 stack 里就是 bug —— 已划掉和当前置顶是两种完全相反的状态，不能共用一个分支。
+
 ## 2026-07-28 01:10 UTC — Listing card 视频三症状：没声音 / 节奏太慢 / 画面抖动
 
 **Objective**: owner 真机: "listing card 视频没有声音 节奏太慢 并切细看画面是抖动的"。

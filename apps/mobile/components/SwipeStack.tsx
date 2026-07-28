@@ -87,8 +87,24 @@ export interface CardRenderArgs {
 	cardWidth: number;
 }
 
+/**
+ * Role from stack depth.
+ *
+ * `depth < 0` is a card that has ALREADY been swiped and is only still mounted
+ * to finish its flyout (see `TRAIL`). It must NOT be "top".
+ *
+ * It used to be: `depth <= 0` returned "top", which meant the outgoing card kept
+ * the top role for as long as it stayed in the tree — and `renderCard` maps the
+ * top role to `isTop`, which is what `CardVideo` uses to decide whether to play.
+ * So a swiped-away listing kept playing, with sound, underneath the new card.
+ * Owner on device (2026-07-28): "ios上面划走listing视频后音乐没有停止".
+ *
+ * Only the card at depth 0 is top. Geometry does not read the role at all (it is
+ * a pure function of the absolute index), so narrowing this cannot move a pixel —
+ * it only changes what the card is told it is.
+ */
 function roleFor(depth: number): CardRole {
-	if (depth <= 0) return "top";
+	if (depth === 0) return "top";
 	if (depth === 1) return "next";
 	return "after";
 }
