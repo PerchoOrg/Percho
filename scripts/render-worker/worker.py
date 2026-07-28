@@ -53,6 +53,11 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 ENV_PATH = REPO_ROOT / ".env.local"
 BGM_DIR = Path(__file__).resolve().parent / "bgm"
 GENERATE_SCRIPT = REPO_ROOT / "scripts" / "ken-burns" / "generate.py"
+# System interpreter, not whatever PATH resolves "python3" to. generate.py's
+# caption renderer needs `playwright` from the system dist-packages; a venv
+# python (e.g. when the worker is started by hand from an activated shell) has
+# no playwright and every render dies at the caption step. See render().
+PYTHON_BIN = "/usr/bin/python3"
 
 POLL_IDLE_SEC = 5
 PHOTO_BUCKET = "listing-photos"
@@ -365,8 +370,18 @@ def process_job(job: dict[str, Any]) -> None:
         shot_plan_path: Path | None = None
         listing_captions_path: Path | None = None
         try:
-            if not os.environ.get("ANTHROPIC_API_KEY"):
-                raise RuntimeError("ANTHROPIC_API_KEY not set — skipping vision plan")
+            # NOTE: there is deliberately NO api-key gate here.
+            #
+            # This used to be `if not os.environ.get("ANTHROPIC_API_KEY"): raise`,
+            # which was correct when photo_tagger POSTed api.anthropic.com. The
+            # tagger was ported to Bedrock (instance role, no key material —
+            # CLAUDE.md §2.1 rule 0) but this gate was left behind, so on this
+            # host the vision block raised immediately, the fail-open except
+            # swallowed it, and EVERY render silently fell back to the legacy
+            # full-length path — no shot plan, no pacing curve, no captions.
+            # A gate on a credential the code no longer uses is worse than no
+            # gate: it looks like a safety check and is actually a kill switch.
+            # Bedrock failures still land in the fail-open except below.
 
             # Split cached vs. needs-tagging.
             need_tag = [p for p in photo_records if not p.get("tagged_at")]
@@ -501,7 +516,18 @@ def process_job(job: dict[str, Any]) -> None:
 
         def render(orientation: str, out_path: Path) -> None:
             cmd = [
-                "python3",
+                # Explicit interpreter, NOT bare "python3".
+                #
+                # generate.py shells out to scripts/caption-render/render.py with
+                # `sys.executable`, and that script needs `playwright`, which is
+                # installed in the SYSTEM dist-packages only. A bare "python3"
+                # resolves through PATH, so whoever launched the worker decides
+                # the interpreter: under systemd that's /usr/bin/python3 (fine),
+                # but launched from a shell with a venv active it's the venv
+                # python, which has no playwright — caption rendering dies and
+                # the whole render fails with a bare ffmpeg exit 1.
+                # Pin it so the worker behaves the same however it is started.
+                PYTHON_BIN,
                 str(GENERATE_SCRIPT),
                 "--photos",
                 str(workdir),
@@ -960,7 +986,7 @@ def process_bucket_job(job: dict[str, Any]) -> None:
         bgm_choice = pick_bgm()
         out_path = workdir / f"bucket_{bucket}.mp4"
         cmd = [
-            "python3", str(GENERATE_SCRIPT),
+            PYTHON_BIN, str(GENERATE_SCRIPT),
             "--photos", str(workdir),
             "--output", str(out_path),
             "--orientation", orientation,

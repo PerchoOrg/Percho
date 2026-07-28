@@ -4,6 +4,55 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-28 03:05 UTC — 重渲 10 条 listing 视频，路上挖出两个「静默失效」的老 bug
+
+**Objective**: owner 看过样片: "不错 就按照这个把已经有视频的几个listing重新生成视频
+看看ios效果 暂时不需要批量做"。10 条已有 walkthrough 的 listing 重渲。
+
+**Issues（两个都不是这轮改出来的，是本来就坏的，且都是静默失效）**:
+
+1. **`ANTHROPIC_API_KEY` gate 是个死掉的 kill switch**（worker.py:368）。
+   `photo_tagger` 在 2026-07-27 已移植到 Bedrock（走 instance role，不需要任何 key，
+   CLAUDE.md §2.1 rule 0），但 vision 块开头的
+   `if not os.environ.get("ANTHROPIC_API_KEY"): raise` 被留下了。那个 raise 直接被
+   下面 fail-open 的 `except Exception` 吞掉，于是**每一次渲染都打印
+   "shot plan disabled" 并退回 legacy 全长路径** —— shot plan、Phase 93 的 v2 filter、
+   captions、以及我这轮加的 bimodal 节奏曲线，全都从未生效。
+   这也顺带解释了 owner 报的"节奏太慢"为什么在线上比预期更严重：连旧的
+   hero-boost 曲线都没跑，是彻底的 legacy 等长路径。
+   **对一个代码已经不再使用的凭据做 gate，比不做 gate 更糟：它长得像安全检查，
+   实际上是一个常闭开关。** 已删除；Bedrock 自身的失败仍然落进 fail-open。
+
+2. **裸 `"python3"` 让解释器取决于谁启动了 worker**（worker.py 两处调用点）。
+   `generate.py` 用 `sys.executable` 去调 `caption-render/render.py`，而后者需要
+   系统 dist-packages 里的 `playwright`。systemd 启动时 PATH 解析成
+   `/usr/bin/python3`（正常），但从带 venv 的 shell 手起就变成 venv python（无
+   playwright）→ caption 渲染挂掉，最终只冒出一个看不出原因的 `ffmpeg exit 1`。
+   已改为模块级 `PYTHON_BIN = "/usr/bin/python3"`，`process_job` 和
+   `process_bucket_job` 两处都改。
+
+**另外发现**: `percho-render-worker.service` 当时是 `inactive` / `ExecMainPID=0` ——
+不是 stale 而是根本没在跑，不清楚何时死的。这轮渲染是手起 worker 进程完成的
+（`env -u VIRTUAL_ENV PATH=/usr/bin:...`）。**服务需要重新拉起并查为什么会死。**
+
+**Actions**: 按 skill 的 batch regen 顺序（先删 CF 再删 DB 行，避免 orphan CF 视频
+继续计费且 uid 不可恢复）：10 条 CF 视频 DELETE 200 → 10 条 `listing_videos` 行
+DELETE 204 → 清 in-flight `render_jobs` → 建 placeholder（sentinel
+`external_url='pending://render'`）→ 入队 10 个 job。10 个 listing 照片数都 ≥3
+（7–75 张），无需跳过。
+
+**Resolution**: `render_jobs` 全部 `done`（10/10，0 failed，0 "shot plan disabled"）。
+ffprobe 直连 CDN 逐条校验：10/10 都有 aac 音轨，时长 13.9–32.5s（旧版同款素材是
+~54s）。其中 2 条 13.9s / 14.5s 只是因为只有 7 / 8 张照片，不是缺陷。
+
+**Learnings**: 这两个 bug 都属于同一类 —— **fail-open 的 except 把配置错误伪装成
+"功能正常但降级"**。以后在 fail-open 块里 raise 之前，先确认那个前置条件今天还成立。
+排查入口是 log 里的 `shot plan disabled:` 行，它出现就意味着高级路径全没跑。
+
+**Next steps**: owner 在 iOS 上验收这 10 条（节奏 / 抖动 / 声音）。app 端的两个修复
+（feed 挂 SoundToggle + 划走停止播放）需要重起 Expo 才能看到。批量 regen 按 owner
+指示暂不做。
+
 ## 2026-07-28 02:00 UTC — 划走的卡还在播（含声音）：`roleFor` 把已划掉的卡也当 top
 
 **Objective**: owner 真机: "ios上面划走listing视频后音乐没有停止"。
