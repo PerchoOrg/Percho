@@ -116,6 +116,7 @@ export function parseListing(v: unknown): ListingCardV3 | null {
 	// Both or neither — a lone coordinate cannot place a pin.
 	const lat = num(raw.lat);
 	const lng = num(raw.lng);
+	const mapUrl = str(raw.mapUrl);
 	const d = dims(raw.dims);
 	return {
 		kind: "listing",
@@ -127,6 +128,7 @@ export function parseListing(v: unknown): ListingCardV3 | null {
 		heroUrl,
 		...(videoUrl ? { videoUrl } : {}),
 		...(lat !== undefined && lng !== undefined ? { lat, lng } : {}),
+		...(mapUrl ? { mapUrl } : {}),
 		...(communityId ? { communityId } : {}),
 		...(geoUnitId ? { geoUnitId } : {}),
 		...(matchScore !== undefined ? { matchScore } : {}),

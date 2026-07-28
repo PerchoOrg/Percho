@@ -118,6 +118,7 @@ function projectListing(card: BrowseCard, verticalUid?: string): PoolListingDTO 
     ...(card.listing.lat != null && card.listing.lng != null
       ? { lat: card.listing.lat, lng: card.listing.lng }
       : {}),
+    ...(card.listing.mapUrl ? { mapUrl: card.listing.mapUrl } : {}),
     ...(verticalUid
       ? { videoUrl: streamManifestUrl(verticalUid) }
       : videoUrlFor(card)

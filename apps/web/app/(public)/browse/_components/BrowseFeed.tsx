@@ -133,6 +133,8 @@ export type BrowseCard = {
      */
     lat?: number | null;
     lng?: number | null;
+    /** Pre-rendered locality map tile (public Storage URL); mobile card only. */
+    mapUrl?: string | null;
     /**
      * Multi-paragraph description. Each entry is one paragraph;
      * rendered as the bottom caption (Xiaohongshu-style), expandable on tap.

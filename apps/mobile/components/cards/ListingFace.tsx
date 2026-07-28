@@ -37,6 +37,7 @@
  * the stage rule.
  */
 import { DIMS } from "@percho/shared";
+import { router } from "expo-router";
 import { StyleSheet, Text, View } from "react-native";
 import type { ListingCardV3 } from "../../lib/feed/card-types";
 import { colors, radii } from "../../theme/tokens";
@@ -68,7 +69,6 @@ export function ListingFace({
 }: ListingFaceProps) {
 	const scoreShown = card.tease || card.preview ? undefined : card.matchScore;
 	const pills = (card.dims ?? []).map((d) => DIMS[d].label);
-	const hasGeo = card.lat != null && card.lng != null;
 
 	return (
 		<View style={styles.face}>
@@ -124,8 +124,11 @@ export function ListingFace({
 						</View>
 					)}
 				</View>
-				{hasGeo && (
-					<CardMap lat={card.lat as number} lng={card.lng as number} />
+				{card.mapUrl && (
+					<CardMap
+						url={card.mapUrl}
+						onPress={() => router.push(`/listing/nearby?id=${card.id}`)}
+					/>
 				)}
 			</View>
 		</View>

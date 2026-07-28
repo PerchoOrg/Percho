@@ -4,6 +4,91 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-28 09:40 UTC — 地图修复：改为服务端预渲染缓存 + 点击进 POI 深层地图（挖出两个 RLS 漏洞）
+
+**Objective**: owner: 「顺手再fix一下这个地图问题 这个地图可以存下来吗 不用每次都去调用api
+如果用户点击这个地图再调用API可以跳转到深层的地图交互页面显示周边的poi」。三件事：
+修卡片地图不显示、把静态图存下来、点击进深层 POI 地图。
+
+**Issues（全部实测确认，不是推测）**:
+
+1. **卡片地图不显示的根因：env 文件位置错了。** 上一轮把
+   `EXPO_PUBLIC_GOOGLE_MAPS_KEY` 写进**仓库根**的 `.env.local`，但 Expo 只读
+   `apps/mobile/` 下的 env。实测 Metro 进程环境里 `matches=0`，所以
+   `process.env.EXPO_PUBLIC_GOOGLE_MAPS_KEY` 在设备上是 `undefined`，
+   `CardMap` 一直走 `if (!key) return 空槽` —— 静默，无任何报错。
+2. **§12 RLS 漏洞（两处，都会让深层地图永远空白）**:
+   - `listing_pois` 只有 agent-scoped SELECT 策略。service role 看到 161 行，
+     **anon 看到 0 行**。
+   - `pois` 同样 anon=0。v1 baseline 里有 `public reads pois using (true)`，但
+     `20260714000000_poi_content_pipeline.sql` 重建了这张表、只补了 agent-scoped
+     策略，**买家可读权限被静默丢掉了**。
+   两者都是 200 + 空数组，没有任何错误信号。先用 anon vs service-role 对比读
+   证实了才动手（§12.3 的做法）。
+3. **Next dev server 缓存**：DB 策略修好后接口仍返回 0，raw REST 同一条查询却返 4 行。
+   清 `.next/cache` + 重启 dev server 才生效。
+
+**Decisions**:
+
+- **地图改为服务端预渲染 + Storage 缓存，不再客户端调 Static Maps。** 两个理由：
+  ①卡片地图是固定坐标的固定图片，每次渲染都调一次是白花钱；
+  ②`EXPO_PUBLIC_*` 会被 inline 进 JS bundle、**可被提取**，key 不该进客户端。
+  现在客户端只拿一个公开 Storage URL，key 全程留在主机上。顺带这个方案**没有
+  上面第 1 类失效模式** —— URL 要么在 DTO 里要么不在，不存在"静默读不到 env"。
+- **卡片地图保持不可交互，深层页才 mount 真 MapView。** feed 是 swipe 面，卡内
+  可拖动地图会抢手势；而且把 API 成本压在明确的用户点击上，而不是每张滑过的卡。
+- **深层页只显示 `status='approved'` 的 POI 链接。** `candidate` 是未审核的
+  Google Places 原始产出（182 行里 156 行是 candidate），不能直接给买家看。
+- 对象名带坐标（`{id}/{lat}_{lng}.png`）：重新 geocode 会产生**新路径**，而不是
+  让 immutable 缓存继续吐旧图。
+
+**Actions**:
+
+- `supabase/migrations/20260728100000_listing_map_cache.sql` — `listings.map_url`
+  + `map_cached_at`。
+- `supabase/migrations/20260728110000_buyer_reads_listing_pois.sql` — 补两条
+  buyer read 策略（`listing_pois` 限 approved、`pois` 恢复 baseline 的 `using(true)`）。
+- `scripts/backfill_listing_maps.py`（新）— 渲染→上传公开 bucket `listing-maps`
+  →写 `map_url`。幂等（已有则跳过，`--force` 重渲），并**断言返回体是 PNG 魔数**，
+  否则坏 key 会往 Storage 里灌错误图片而不报错。
+- `apps/web/app/api/mobile/listing/[id]/nearby/route.ts`（新）— 深层页数据源。
+  `pois.location` 是 Postgres point，PostgREST 输出 `"(lng,lat)"` —— **经度在前**，
+  读成 lat-first 会把每个 pin 镜像到错误半球，所以集中在一个 `parsePoint` 里解析。
+- `apps/mobile/app/listing/nearby.tsx`（新）— MapView + bucket 筛选 chip + 下方列表
+  （手机上读 pin 标签很吃力，列表是主要阅读路径）。
+- `CardMap.tsx` 改为接收缓存 URL + `onPress`；无 URL 时**返回 null**（不画灰方块，
+  信息区直接回流到全宽）。
+- `react-native-maps@1.20.1` 经 `npx expo install` 安装（不用 pnpm add —— 会拉
+  latest 导致 Expo Go 原生模块崩溃），`expo install --check` 干净。
+
+**Verification（实测）**:
+
+- 13/13 已 geocode 的 listing 全部渲染缓存成功，0 失败。
+- 缓存 URL **无任何 auth header** 直接 GET → 200 / PNG（手机就是这样读的）。
+- vision 复核瓦片：真实路网 + 街道名（S George Mason Dr / Forest Dr）+ 琥珀色
+  marker + Google attribution，不是空白瓦片。
+- `/nearby` 返回 4 个真实学校，坐标正确。
+- feed API：22 listings / 10 带 `mapUrl`；**DTO 里不含 `AIza`（key 没泄漏）**。
+- bundle 1.46MB→2.03MB、1620→2234 modules（react-native-maps 已解析），无
+  `Unable to resolve`。`tsc --noEmit` mobile + web 均 clean。
+
+**Learnings**:
+
+- **`EXPO_PUBLIC_*` 的 env 文件必须在 Expo 项目目录下**（monorepo 里不是仓库根）。
+  验证法：`tr '\0' '\n' < /proc/<metro_pid>/environ | grep KEY`，别信 `.env.local` 里有。
+- 一个"只在客户端调 API"的设计，往往同时是**成本问题 + 密钥暴露问题 + 静默失效
+  问题**。改成服务端预渲染一次解决三个。
+- 重建表的 migration 会**丢掉原表的 RLS 策略**。任何 `create table` 重建之后要重新
+  审一遍 anon 可读性 —— 症状是 200 + 空数组，最难发现的那一类。
+
+**Next steps**:
+
+1. 只有 25 条 `approved` POI 链接（集中在 2 个 listing），其余 156 条是 `candidate`。
+   深层地图对大多数 listing 会显示"No curated places yet"。要铺开得先审这些 candidate。
+2. 新 listing 入库后需要跑 `python3 scripts/backfill_listing_maps.py` 才有地图缓存
+   —— 后续应挂到 import 流程或 cron 上，现在是手动。
+3. 运镜 `pan-lr` 仍被 shot plan 覆盖（见上一条 DEVLOG），未定。
+
 ## 2026-07-28 08:35 UTC — 三段式 listing 卡：1:1 内嵌方形视频 + 地图，10 条视频重渲为 1080×1080
 
 **Objective**: owner 定的卡片结构（参照布局图）：上方视频 / 左下信息 / 右下地图，

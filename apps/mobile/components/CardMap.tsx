@@ -1,63 +1,62 @@
 /**
- * CardMap — the small locality thumbnail in the listing card's info block.
+ * CardMap — the locality thumbnail in the listing card's info block.
  *
- * A Google Static Map, not an interactive MapView: the feed is a swipe surface,
- * so a pannable map inside a card would fight the gesture. It's a picture of
- * where the home is, nothing more.
+ * ── This renders a CACHED image, not a live API call ─────────────────────────
  *
- * ── Style choices that are load-bearing ─────────────────────────────────────
+ * `url` is a public Supabase Storage URL produced once by
+ * `scripts/backfill_listing_maps.py`. Two reasons it is not a live Static Maps
+ * fetch:
  *
- * `zoom=16` with roads and place labels VISIBLE. An earlier prototype styled
- * roads and labels off at zoom 14 to look "clean"; at 104pt the result was an
- * empty tan rectangle that read as a broken image, not a map. The map has to
- * look like a map at thumbnail size, which means street geometry must show.
+ *   1. Cost. The card's map is a fixed picture of a fixed coordinate, so a live
+ *      fetch is a billable request per render for an image that never changes.
+ *   2. Key exposure. Doing it client-side needs the key in the app, and
+ *      `EXPO_PUBLIC_*` is INLINED INTO THE JS BUNDLE at build time — extractable
+ *      by anyone with the bundle. Rendering server-side keeps the key on the host.
  *
- * `scale=2` for retina. Google's attribution watermark is part of the returned
- * raster and must stay visible — do not crop it out.
+ * That first version also simply did not work: the key was written to the repo
+ * root `.env.local`, but Expo only reads env from `apps/mobile/`, so
+ * `process.env.EXPO_PUBLIC_GOOGLE_MAPS_KEY` was `undefined` on device and the
+ * component silently rendered its empty well. Verified by grepping the Metro
+ * process env (0 matches). A cached URL has no such failure mode — it is either
+ * present in the DTO or it isn't.
  *
- * A missing/failed tile renders as the card's plain surface rather than a broken
- * image icon, because `Image` with no successful load just shows the background.
+ * Not an interactive MapView: the feed is a swipe surface, so a pannable map
+ * inside a card would fight the gesture. Tapping opens the full POI map instead.
  */
-import { Image, StyleSheet, View } from "react-native";
+import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 import { colors, radii } from "../theme/tokens";
-
-const STATIC_MAPS_BASE = "https://maps.googleapis.com/maps/api/staticmap";
-
-/** Dark map styling, matched to the card family (§0.3) rather than Google default. */
-const DARK_STYLE = [
-	"feature:all|element:geometry|color:0x2f2b26",
-	"feature:all|element:labels.text.fill|color:0x9c948a",
-	"feature:all|element:labels.text.stroke|color:0x1a1816",
-	"feature:all|element:labels.icon|visibility:off",
-	"feature:road|element:geometry.fill|color:0x6b6259",
-	"feature:road.arterial|element:geometry.fill|color:0x857a6d",
-	"feature:water|element:geometry|color:0x16202a",
-	"feature:poi.park|element:geometry|color:0x24331f",
-	"feature:poi.business|visibility:off",
-];
+import { textStyles } from "../theme/typography";
 
 interface CardMapProps {
-	lat: number;
-	lng: number;
+	/** Public Storage URL of the pre-rendered tile (`listings.map_url`). */
+	url?: string;
 	/** Square edge in points. */
 	size?: number;
+	/** Opens the deep POI map. Omit to render a non-interactive thumbnail. */
+	onPress?: () => void;
 }
 
-export function CardMap({ lat, lng, size = 104 }: CardMapProps) {
-	const key = process.env.EXPO_PUBLIC_GOOGLE_MAPS_KEY;
-	// No key configured → render the empty well rather than a 403 image.
-	if (!key) return <View style={[styles.well, { width: size, height: size }]} />;
+export function CardMap({ url, size = 104, onPress }: CardMapProps) {
+	// No cached tile → render nothing at all rather than an empty grey square,
+	// so the info block simply reflows to full width.
+	if (!url) return null;
 
-	const marker = encodeURIComponent(`color:0xB45309|size:small|${lat},${lng}`);
-	const styleParams = DARK_STYLE.map((s) => `&style=${encodeURIComponent(s)}`).join("");
-	const uri =
-		`${STATIC_MAPS_BASE}?center=${lat},${lng}&zoom=16&size=200x200&scale=2` +
-		`&maptype=roadmap&markers=${marker}${styleParams}&key=${key}`;
-
-	return (
+	const body = (
 		<View style={[styles.well, { width: size, height: size }]}>
-			<Image source={{ uri }} style={styles.img} resizeMode="cover" />
+			<Image source={{ uri: url }} style={styles.img} resizeMode="cover" />
+			{!!onPress && (
+				<View style={styles.hintRow}>
+					<Text style={styles.hint}>Explore area</Text>
+				</View>
+			)}
 		</View>
+	);
+
+	if (!onPress) return body;
+	return (
+		<Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel="Explore the area around this home">
+			{body}
+		</Pressable>
 	);
 }
 
@@ -68,4 +67,14 @@ const styles = StyleSheet.create({
 		backgroundColor: colors.cardPlainTo,
 	},
 	img: { width: "100%", height: "100%" },
+	hintRow: {
+		position: "absolute",
+		left: 0,
+		right: 0,
+		bottom: 0,
+		paddingVertical: 4,
+		paddingHorizontal: 6,
+		backgroundColor: "rgba(0,0,0,0.55)",
+	},
+	hint: { ...textStyles.caption, color: colors.onCard, fontSize: 9 },
 });

@@ -57,6 +57,7 @@ type ListingRow = {
   cover_url: string | null;
   lat?: number | null;
   lng?: number | null;
+  map_url?: string | null;
   // external attribution for FMLS-imported listings.
   external_agent_name: string | null;
   external_agent_phone: string | null;
@@ -423,6 +424,7 @@ async function assembleCards(
         sqft: l.sqft,
         lat: l.lat ?? null,
         lng: l.lng ?? null,
+        mapUrl: l.map_url ?? null,
         description: (l.description ?? []).filter((s) => s && s.trim().length > 0),
         source: l.source,
         sourceId: l.source_id,
@@ -466,7 +468,7 @@ export async function fetchBrowseCards(offset = 0, limit = 1000): Promise<Browse
   const { data: rawListings } = (await (supabase as any)
     .from('listings')
     .select(
-      'id, slug, address, city, state, zip, price, beds, baths, sqft, description, community_id, agent_id, cover_url, external_agent_name, external_agent_phone, external_office, source, source_id, lat, lng',
+      'id, slug, address, city, state, zip, price, beds, baths, sqft, description, community_id, agent_id, cover_url, external_agent_name, external_agent_phone, external_office, source, source_id, lat, lng, map_url',
     )
     .eq('status', 'active')
     .order('created_at', { ascending: false })
@@ -504,7 +506,7 @@ export async function fetchBrowseCardsVideosOnly(offset = 0, limit = 1000): Prom
   const { data: rawListings } = (await (supabase as any)
     .from('listings')
     .select(
-      'id, slug, address, city, state, zip, price, beds, baths, sqft, description, community_id, agent_id, cover_url, external_agent_name, external_agent_phone, external_office, source, source_id, lat, lng',
+      'id, slug, address, city, state, zip, price, beds, baths, sqft, description, community_id, agent_id, cover_url, external_agent_name, external_agent_phone, external_office, source, source_id, lat, lng, map_url',
     )
     .in('id', ids)
     .eq('status', 'active')
@@ -540,7 +542,7 @@ export async function fetchBrowseCardsByCommunitySlug(slug: string): Promise<Bro
   const { data: rawListings } = (await (supabase as any)
     .from('listings')
     .select(
-      'id, slug, address, city, state, zip, price, beds, baths, sqft, description, community_id, agent_id, cover_url, external_agent_name, external_agent_phone, external_office, source, source_id, lat, lng',
+      'id, slug, address, city, state, zip, price, beds, baths, sqft, description, community_id, agent_id, cover_url, external_agent_name, external_agent_phone, external_office, source, source_id, lat, lng, map_url',
     )
     .eq('status', 'active')
     .eq('community_id', community.id)
@@ -563,7 +565,7 @@ export async function fetchBrowseCardsByIds(ids: string[]): Promise<BrowseCard[]
   const { data: rawListings } = (await (supabase as any)
     .from('listings')
     .select(
-      'id, slug, address, city, state, zip, price, beds, baths, sqft, description, community_id, agent_id, cover_url, external_agent_name, external_agent_phone, external_office, source, source_id, lat, lng',
+      'id, slug, address, city, state, zip, price, beds, baths, sqft, description, community_id, agent_id, cover_url, external_agent_name, external_agent_phone, external_office, source, source_id, lat, lng, map_url',
     )
     .in('id', ids)
     .eq('status', 'active')) as { data: ListingRow[] | null };
@@ -596,7 +598,7 @@ export async function fetchNearbyCards(args: {
     const r = (await (supabase as any)
       .from('listings')
       .select(
-        'id, slug, address, city, state, zip, price, beds, baths, sqft, description, community_id, agent_id, cover_url, external_agent_name, external_agent_phone, external_office, source, source_id, lat, lng',
+        'id, slug, address, city, state, zip, price, beds, baths, sqft, description, community_id, agent_id, cover_url, external_agent_name, external_agent_phone, external_office, source, source_id, lat, lng, map_url',
       )
       .eq('status', 'active')
       .not('lat', 'is', null)

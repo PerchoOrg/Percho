@@ -125,6 +125,12 @@ export interface ListingCardV3 {
 	 */
 	lat?: number;
 	lng?: number;
+	/**
+	 * Pre-rendered locality map tile (public Storage URL). Cached server-side so
+	 * the card costs no Static Maps request per render and no API key ships in
+	 * the JS bundle.
+	 */
+	mapUrl?: string;
 	communityId?: string;
 	/** The geo unit this listing sits in — a tease swipe credits it (§1.7). */
 	geoUnitId?: string;
