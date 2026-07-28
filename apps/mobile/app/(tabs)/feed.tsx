@@ -26,6 +26,7 @@ import { StyleSheet, Text, View, useWindowDimensions } from "react-native";
 
 import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { SoundToggle } from "../../components/SoundToggle";
 import { type CardRenderArgs, SwipeStack } from "../../components/SwipeStack";
 import { AreaDataFace } from "../../components/cards/AreaDataFace";
 import { AreaFace } from "../../components/cards/AreaFace";
@@ -568,6 +569,16 @@ export default function FeedScreen() {
 	return (
 		<SafeAreaView style={styles.screen} edges={["top"]}>
 			{offline && <OfflineBar />}
+			{/*
+			 * §0.6 #1: the mute control is the feed's only chrome besides the tab
+			 * bar. It was previously mounted ONLY on `dev-foundation`, so on device
+			 * there was no way to unmute a tour — the reason the owner reported the
+			 * videos as having no sound (2026-07-28). Kept out of `stackWrap` so it
+			 * sits on the status-bar row rather than over a card.
+			 */}
+			<View style={styles.chromeRow}>
+				<SoundToggle />
+			</View>
 			{samplerEnabled() && (
 				<View style={styles.samplerBar}>
 					<Text style={styles.samplerLabel}>{samplerLabel(deck)}</Text>
@@ -611,6 +622,14 @@ export default function FeedScreen() {
 const styles = StyleSheet.create({
 	screen: { flex: 1, backgroundColor: colors.bg },
 	stackWrap: { flex: 1, alignItems: "center", justifyContent: "center" },
+	/** Status-bar row holding the mute toggle, right-aligned (§0.6 #1). */
+	chromeRow: {
+		flexDirection: "row",
+		justifyContent: "flex-end",
+		paddingHorizontal: 16,
+		paddingTop: 4,
+		zIndex: 100,
+	},
 	/** DEV sampler banner — deliberately loud so it can't be mistaken for prod. */
 	samplerBar: {
 		paddingVertical: 4,

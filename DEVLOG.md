@@ -4,6 +4,72 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-28 01:10 UTC — Listing card 视频三症状：没声音 / 节奏太慢 / 画面抖动
+
+**Objective**: owner 真机: "listing card 视频没有声音 节奏太慢 并切细看画面是抖动的"。
+三个独立症状，逐个定位，都不是同一个根因。
+
+**症状 1 — 没声音（app 端，不是渲染端）**
+视频本身有音轨：ffprobe 直连 CF Stream manifest 确认每档 rendition 都是
+`h264 + aac`，BGM muxing 一直是好的。问题有两层：
+- `state/sound.ts` 默认 `soundOn: false`（注释写"default muted per §0.7"）。
+- `SoundToggle` **只挂在 `app/dev-foundation.tsx`**，feed 页
+  `app/(tabs)/feed.tsx` 从来没渲染它。
+
+两层叠起来 = 真机上没有任何解除静音的入口，视频永远静音，且用户无法自救。
+§0.7 的"mount muted"说的是 **player**（unmuted autoplay 会被系统拒绝，所以
+`CardVideo` 仍然 muted 创建、成为 top 后再 unmute），不是说默认该给用户静音。
+
+**Actions**: `feed.tsx` 加 `chromeRow`（status-bar 行右对齐, zIndex 100）挂
+`SoundToggle`；`sound.ts` 默认改 `soundOn: true`，注释写明为什么这跟 §0.7 不冲突。
+
+**症状 2 — 节奏太慢（`photo_selector.plan_durations`）**
+均匀曲线：`TOTAL_CAP=60s` 除以 N，钳在 [2.5, 6.0]，只给 top-3 hero +0.5s。
+22 clip 的 tour = 每张 ~2.7s 全都一样长，读起来是幻灯片不是 tour。
+**Decisions**: 加 bimodal 曲线（`PACE_BIMODAL=True`，可一行关掉回旧曲线）：
+hero 3.4s / 常规 1.7s / 最弱 1/4 用 1.0s 快速掠过。不再去凑满 TOTAL_CAP ——
+凑满固定预算本身就是"每张一样长"的成因。真机那条 22-clip tour: **54s → 30.6s**。
+
+两个连带修正，都是 bimodal 引出来的新问题：
+- `assign_modes` 的 10% 强制 static 挑的是 hero_score 最低的 clip，而那些正好
+  是 1.0s 的 filler beat —— 1.0s 的静止帧读起来是"卡住了"不是"呼吸"。现在
+  static 只落在 `>= PACE_STATIC_MIN_S`(3.0s) 的 clip 上，房型模板里抽到的
+  static 落在短 beat 上也会被换成 push_in。
+- `generate.py` 的 xfade 之前按 `--duration-per-photo` 钳，跟 shot plan 的真实
+  时长无关。0.5s crossfade 吃掉整个 1.0s clip，且 `concat_with_crossfade` 的
+  offset 累加链会开始叠错对。现在按 plan 里的**最短** clip 钳。
+
+**症状 3 — 画面抖动（根因，影响生产上每一条 listing 视频）**
+`kenburns_filter_v2` 的 `cover=True` 分支（Phase 98 加的 landscape 路径）直接在
+1920×1080 上 zoompan 输出 1920×1080。zoompan 的 x/y/zoom 步进是**输入的整像素**，
+输入=输出尺寸时每一步都是一整个输出像素 → 可见抖动。v1 一直靠"先 4× lanczos 上采样、
+zoompan 再隐式降回 w×h"把步进变成 0.25px 亚像素，这个分支从来没享受到。
+而生产上 listing 视频**全是 landscape**（`cf_video_id` 全 null，只有
+`cf_video_id_landscape`），所以每一条 listing 视频都带着这个抖动出厂。
+blur-letterbox 分支的 fg 层有同样的问题（直接 scale 到 fg_w×fg_h 再 zoompan）。
+
+**Actions**: 抽出模块级 `SMOOTH = 4` 常数（附注释说明所有 zoompan 都必须坐在这层
+上采样后面），cover 分支和 fg 层都补上，v1 的 `w*4` 改成引用同一常数。
+
+**验证（真实渲染，不是推理）**: 同一 listing (`c7435419`) 同一 shot plan 同一 BGM，
+新旧 `generate.py` 各渲一遍；单 clip push_in 逐帧算相邻帧 mean-abs-diff，再算这个
+运动信号自己的抖动量（jerk = 相邻 diff 的差）：
+
+| | jerk_mean | jerk_max |
+|---|---|---|
+| 旧 | 3.8546 | 11.5140 |
+| 新 | 1.0565 | 2.6953 |
+
+整片 30.6s、`h264 1920×1080 + aac`、vision 检查中间帧无 letterbox / 无 ghosting。
+
+**Learnings**: `SMOOTH` 现在是模块常数而不是散落的 `* 4` 字面量 —— skill 里记的
+"某次好心的重构删掉 4× 中间层就会抖"这次是反过来：**新增的分支忘了加**。任何新的
+zoompan 分支都必须走 `SMOOTH`。
+
+**Next steps**: 真机验证这三条。确认效果后再决定是否全量 regen（现有视频都是旧
+pipeline 渲的，抖动和慢节奏还在里面）—— 按 skill 的 batch regen 顺序做，先删 CF
+再删 DB 行。
+
 ## 2026-07-27 23:10 UTC — 横屏视频仍被 zoom：我上一轮的尺寸检测**从未生效**（字段名错）
 
 **Objective**: owner 第二次指出同一件事: "Listing 的视频占满了整个card 像素很差

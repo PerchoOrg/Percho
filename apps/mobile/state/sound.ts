@@ -21,7 +21,23 @@ interface SoundState {
 export const useSoundStore = create<SoundState>()(
 	persist(
 		(set) => ({
-			soundOn: false, // default muted per §0.7
+			/**
+			 * Sound ON by default (2026-07-28).
+			 *
+			 * §0.7's "mount muted" is about the PLAYER — a video element that
+			 * autoplays with sound can be refused outright, which is why
+			 * `CardVideo` still creates its player muted and unmutes on becoming
+			 * top. It is not a claim about the default the buyer should get.
+			 *
+			 * Defaulting this flag to false shipped every listing tour silently:
+			 * the tours are rendered with BGM (verified: aac track present on every
+			 * Cloudflare Stream manifest), and the only affordance to turn it on
+			 * was `SoundToggle`, which was mounted on the dev screen and NOT on the
+			 * feed. So the owner's "视频没有声音" was literally unfixable in-app.
+			 * The toggle is now feed chrome, and this default is on: a
+			 * property-tour feed with music is the intended first impression.
+			 */
+			soundOn: true,
 			hydrated: false,
 			toggle: () => set((s) => ({ soundOn: !s.soundOn })),
 		}),
