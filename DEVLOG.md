@@ -4,6 +4,96 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-28 08:35 UTC — 三段式 listing 卡：1:1 内嵌方形视频 + 地图，10 条视频重渲为 1080×1080
+
+**Objective**: owner 定的卡片结构（参照布局图）：上方视频 / 左下信息 / 右下地图，
+视频做成**内嵌卡并自适应视频尺寸**，且明确「不要下方补图」、「去掉房子简介文字」。
+先在 prototype 上迭代（`~/percho-prototypes/video-card/`），定稿后落到真实 app。
+
+**Decisions**:
+
+- **画布改方形，不是改 fit 模式。** FMLS 源图实测 **1024×686**（不是之前记的 800）。
+  上采样对比：portrait 1080×1920 = **2.80×**，landscape 1920×1080 = 1.88×，
+  **square 1080×1080 = 1.57×** —— 方形是上采样最小的画布，同时卡面 100% 填满。
+  「一张照片既沉浸又清晰」在数学上不成立，换画布比换 `contentFit` 有效。
+- **运镜烧进渲染，不在客户端做 transform。** owner 规则：「如果pan 视频能不能保持
+  原本照片的高度 只做左右剪裁」。渲染端横向 pan 时源高度 100% 保留；客户端做
+  transform 必然要裁才能动。
+- **客户端 `contentFit` 保持 `contain`，只有 1:1 卡走 `cover`。** 方形源进方形盒子，
+  比例已相等、无可裁；`contain` 在分数布局宽度下反而会出 hairline letterbox。
+  `CardVideo` 加 `fit` prop，默认仍是 owner 那条 `contain` 规则。
+- **腾出的高度让给信息区，不补图**（owner 明确否掉了 2×2 补图方案）。
+
+**Actions**:
+
+- `supabase/migrations/20260728090000_listing_videos_square.sql` — 新增
+  `cf_video_id_square`，并**扩展 `listing_videos_source_present_check`**（见 Issues）。
+- `scripts/ken-burns/generate.py` — cover-crop 判定 `w > h` → **`w >= h`**。
+- `scripts/render-worker/worker.py` — `SQUARE_EDGE=1080`；orientation 固定 `square`
+  （走 `--resolution`，因为 square 不是 `--orientation` 的合法值）；写 square 列。
+- `apps/mobile/components/cards/ListingFace.tsx` — 重写为三段式，去掉 `CardFoot`
+  覆盖式渐变与简介文字。
+- `apps/mobile/components/CardMap.tsx`（新）— Google Static Map 缩略图。
+- `apps/mobile/components/CardVideo.tsx` — 加 `fit` prop。
+- lat/lng 全链路：`browse-cards.ts` / `listing-gate.ts` / `BrowseFeed.tsx` /
+  `api/mobile/feed/route.ts` / `pool-dto.ts` / `card-types.ts`。
+- `apps/web/lib/feed/vertical-videos.ts` — uid 优先级 square → portrait → landscape。
+- `.env.local` — `EXPO_PUBLIC_GOOGLE_MAPS_KEY`（复用 Places key，实测 Static Maps 200）。
+
+**Issues（两个都是「静默失效」，且第 2 个烧掉了一整轮渲染）**:
+
+1. **4/5 个 listing 查询漏 select `lat, lng`。** `browse-cards.ts` 里 5 处
+   listing 查询只有 nearby 那一处带了坐标，其余 4 处没有 → 地图会在绝大多数
+   code path 上**静默永不显示**（PostgREST 返 200，字段直接缺失，没有任何报错）。
+2. **`listing_videos_source_present_check` 早于新列，square-only 的行被 23514 拒。**
+   而 worker 的 PATCH 发生在 ffmpeg 渲染 + Cloudflare 上传**之后** —— 第一轮 5 条
+   全部渲染成功、上传成功，然后写库 400 全挂，行被标 `status='error'`，渲染白烧。
+   **这跟 Phase 75 加 landscape-only 时踩的是同一个坑**（当时也得改这个约束）。
+
+**Resolution**: 约束扩成四列任一；先用一次 PostgREST PATCH 探针确认 200，才重新
+入队。第二轮 5/5 干净通过，之后补渲剩余 5 条。
+
+**Verification（全部实测，非推断）**:
+
+- Cloudflare: 10/10 `input=1080x1080` 且 `readyToStream=true`。
+- `cropdetect` 对 square 输出报 `crop=1080:1080:0:0` —— 内容铺满，零 letterbox。
+- 真 API `/api/mobile/feed?stage=4&videoFirst=1`：30 listings / **10 条 videoUrl
+  指向 square uid** / 10 条带 lat+lng / **任何卡片都不带 description|blurb 字段**。
+- `tsc --noEmit` mobile + web 均 clean；`py_compile` clean。
+
+**Learnings**:
+
+- 加媒体变体列是 5 处联动改动（列 / CHECK 约束 / reader 优先级 / 每个 select /
+  写入探针）。漏掉 CHECK 的代价不是报错，而是**渲染算力白烧**。
+- 「同一份数据穿过 N 层」时，最窄的那个 `select` 决定功能是否存在。改完要
+  `grep -c` 数一遍 select 出现次数对不对得上查询数。
+- vision/截图复核能抓 tofu 字形、截断文案、死空间；但**裁切/接缝必须用几何断言**
+  （本轮 vision 既报过不存在的白缝，也把真实 50pt 裁切说成「没问题」）。
+
+**Environment（不是本仓库代码，但会挡住真机测试）**:
+
+- `expo start --tunnel` 已不可用：**ngrok 现在强制账号**（`ERR_NGROK_4018`），
+  Expo 只表现为 `Cannot read properties of undefined (reading 'body')`。
+  cloudflared quick tunnel 本地 200 但边缘全 404。
+- 走本机已有 named tunnel：`percho-prototypes/serve.py` 按 `expo-platform` header
+  + Metro 固定路径把流量分流到 :8081，并**剥掉 Metro 自己拼进 URL 的 `:8081` 端口**
+  （隧道不服务该端口，否则 manifest 能拿到、bundle 必挂）。
+- 真机入口 `exp://demo.percho.co`；demo 模式要 `EXPO_PUBLIC_DEV_SAMPLER=1`
+  （否则 `videoFirst` 不会传给 API，刷不到视频卡）。
+
+**Next steps**:
+
+1. **地图在真机上没显示** —— owner 已报，下一个 session 专门查。
+   首查方向：`EXPO_PUBLIC_GOOGLE_MAPS_KEY` 是 build-time inline，必须在
+   **启动 Expo 的那个 shell** 里存在（本轮是在 Expo 已经起来之后才写进
+   `.env.local` 的，极可能根本没 inline 进 bundle）。验证法见
+   `expo-dev-server-headless-remote` skill：抓 bundle 后 grep 该变量。
+   另外 Static Maps 需要在 GCP 上单独启用，Places 配额不代表 Static Maps 可用。
+2. shot plan 会覆盖 `--zoom-mode`，实际运镜是 `push_in / tilt_td / pan_to_subject /
+   pull_back`，所以「只左右裁保住全高」在 shot-plan 路径下**未严格生效**
+   （`push_in` 会上下裁）。等 owner 看过真机观感再决定是否把 mode 锁成 pan-lr。
+3. community 卡仍是 9:16，本轮只改了 listing。
+
 ## 2026-07-28 03:05 UTC — 重渲 10 条 listing 视频，路上挖出两个「静默失效」的老 bug
 
 **Objective**: owner 看过样片: "不错 就按照这个把已经有视频的几个listing重新生成视频

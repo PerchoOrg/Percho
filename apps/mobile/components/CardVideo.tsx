@@ -51,9 +51,24 @@ interface CardVideoProps {
 	poster?: string;
 	isTop: boolean;
 	onNearEnd?: () => void;
+	/**
+	 * 2026-07-28 card redesign: the video lives in a 1:1 inline block and the
+	 * source is rendered 1080x1080, so the media already fills its box exactly.
+	 * `cover` is correct there — there is nothing to crop (aspect matches) and
+	 * `contain` would hairline-letterbox on fractional layout widths.
+	 *
+	 * Everywhere else keeps `contain` (the owner's standing rule below).
+	 */
+	fit?: "contain" | "cover";
 }
 
-export function CardVideo({ url, poster, isTop, onNearEnd }: CardVideoProps) {
+export function CardVideo({
+	url,
+	poster,
+	isTop,
+	onNearEnd,
+	fit = "contain",
+}: CardVideoProps) {
 	const soundOn = useSoundStore((s) => s.soundOn);
 	const nearEndFired = useRef(false);
 	const mutedRetried = useRef(false);
@@ -133,8 +148,10 @@ export function CardVideo({ url, poster, isTop, onNearEnd }: CardVideoProps) {
 			<VideoView
 				player={player}
 				style={StyleSheet.absoluteFill}
-				// The owner's rule, for every aspect ratio. Never `cover`.
-				contentFit="contain"
+				// The owner's rule, for every aspect ratio. Never `cover` —
+				// EXCEPT when the caller knows the source aspect already matches
+				// its box (the 1:1 inline block, see `fit` above).
+				contentFit={fit}
 				nativeControls={false}
 			/>
 		</View>

@@ -53,6 +53,7 @@ type ListingVideoRow = {
   listing_id: string;
   cf_video_id: string | null;
   cf_video_id_landscape: string | null;
+  cf_video_id_square: string | null;
   sort_order: number | null;
 };
 
@@ -82,7 +83,7 @@ export async function fetchVerticalVideos(): Promise<HeroVideoIndex> {
   const [listingRes, communityRes] = await Promise.all([
     supabase
       .from('listing_videos')
-      .select('listing_id, cf_video_id, cf_video_id_landscape, sort_order')
+      .select('listing_id, cf_video_id, cf_video_id_landscape, cf_video_id_square, sort_order')
       .eq('status', 'ready')
       .eq('kind', 'walkthrough')
       .order('sort_order', { ascending: true }),
@@ -101,10 +102,15 @@ export async function fetchVerticalVideos(): Promise<HeroVideoIndex> {
   // whole feed down — the cards still render with photos.
   if (!listingRes.error) {
     for (const row of (listingRes.data ?? []) as ListingVideoRow[]) {
-      // Portrait preferred when it exists; landscape is the only thing present
-      // today and the card handles it. `?? undefined` rather than `?? ''` so an
-      // all-null row is skipped instead of producing a broken manifest URL.
-      const uid = row.cf_video_id ?? row.cf_video_id_landscape ?? undefined;
+      // 2026-07-28: SQUARE first. The feed card's media block is 1:1, so a 1:1
+      // render lands in it with nothing cropped and nothing letterboxed. Falls
+      // back to portrait, then landscape, so listings without a square render
+      // keep playing (the card just letterboxes them as before).
+      const uid =
+        row.cf_video_id_square ??
+        row.cf_video_id ??
+        row.cf_video_id_landscape ??
+        undefined;
       if (!uid) continue;
       if (!byListing.has(row.listing_id)) byListing.set(row.listing_id, uid);
     }

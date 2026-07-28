@@ -113,6 +113,9 @@ export function parseListing(v: unknown): ListingCardV3 | null {
 	const communityId = str(raw.communityId);
 	const geoUnitId = str(raw.geoUnitId);
 	const matchScore = num(raw.matchScore);
+	// Both or neither — a lone coordinate cannot place a pin.
+	const lat = num(raw.lat);
+	const lng = num(raw.lng);
 	const d = dims(raw.dims);
 	return {
 		kind: "listing",
@@ -123,6 +126,7 @@ export function parseListing(v: unknown): ListingCardV3 | null {
 		bedBathSqft: str(raw.bedBathSqft) ?? "",
 		heroUrl,
 		...(videoUrl ? { videoUrl } : {}),
+		...(lat !== undefined && lng !== undefined ? { lat, lng } : {}),
 		...(communityId ? { communityId } : {}),
 		...(geoUnitId ? { geoUnitId } : {}),
 		...(matchScore !== undefined ? { matchScore } : {}),

@@ -128,6 +128,12 @@ export type BrowseCard = {
     baths: number | null;
     sqft: number | null;
     /**
+     * Coordinates, when the row is geocoded. Feeds the mobile card's locality
+     * map thumbnail (2026-07-28 card structure); web ignores them.
+     */
+    lat?: number | null;
+    lng?: number | null;
+    /**
      * Multi-paragraph description. Each entry is one paragraph;
      * rendered as the bottom caption (Xiaohongshu-style), expandable on tap.
      */

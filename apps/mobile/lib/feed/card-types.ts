@@ -118,6 +118,13 @@ export interface ListingCardV3 {
 	bedBathSqft: string;
 	heroUrl: string;
 	videoUrl?: string;
+	/**
+	 * Listing coordinates, for the card's locality map thumbnail (2026-07-28
+	 * structure change). Optional: external imports without geocoding simply
+	 * render no map.
+	 */
+	lat?: number;
+	lng?: number;
 	communityId?: string;
 	/** The geo unit this listing sits in — a tease swipe credits it (§1.7). */
 	geoUnitId?: string;

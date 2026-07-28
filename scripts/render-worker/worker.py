@@ -70,6 +70,13 @@ PHOTO_BUCKET = "listing-photos"
 # skip the extra 30-60s CPU + upload.
 LANDSCAPE_THRESHOLD = 0.8
 
+# 2026-07-28 card redesign: the feed card's media block is 1:1, so the listing
+# tour is rendered square. FMLS source photos are ~1024x686; a 1080x1080 canvas
+# upscales 1.57x vs 2.80x for the old 1080x1920 portrait canvas — the least-
+# upscaling shape available. Ken Burns is pan-lr only so each photo's full HEIGHT
+# survives (owner's rule: "如果pan 视频能不能保持原本照片的高度 只做左右剪裁").
+SQUARE_EDGE = 1080
+
 
 def probe_orientation(path: Path) -> str:
     """Return 'landscape' | 'portrait' | 'square' for an image via ffprobe."""
@@ -345,7 +352,13 @@ def process_job(job: dict[str, Any]) -> None:
         # available. Owner: "两种情况下，都只有一个视频".
         want_landscape = photos_are_mostly_landscape(photo_paths)
         landscape_ratio = sum(1 for p in photo_paths if probe_orientation(p) == "landscape") / len(photo_paths)
-        orientation = "landscape" if want_landscape else "portrait"
+        # 2026-07-28: the feed card is 1:1, so the tour is always rendered SQUARE
+        # regardless of source orientation — the square canvas is the least-
+        # upscaling shape for both landscape and portrait FMLS photos, and the
+        # card no longer letterboxes anything. `want_landscape` /
+        # `landscape_ratio` are still computed because they're logged below and
+        # used by the shot planner's framing decisions.
+        orientation = "square"
         print(
             f"[job {job['id']}] landscape_ratio={landscape_ratio:.2f} "
             f"orientation={orientation}",
@@ -533,11 +546,20 @@ def process_job(job: dict[str, Any]) -> None:
                 str(workdir),
                 "--output",
                 str(out_path),
-                "--orientation",
-                orientation,
                 "--listing-overlay",
                 str(overlay_path),
             ]
+            # 2026-07-28: "square" is a resolution, not one of generate.py's two
+            # --orientation choices, so it goes through --resolution (which
+            # overrides --orientation). The feed card's media block is 1:1.
+            if orientation == "square":
+                cmd += ["--resolution", f"{SQUARE_EDGE}x{SQUARE_EDGE}",
+                        # Pan only. Left/right travel preserves 100% of each
+                        # source photo's HEIGHT — the owner's constraint. A zoom
+                        # would crop top/bottom.
+                        "--zoom-mode", "pan-lr"]
+            else:
+                cmd += ["--orientation", orientation]
             if bgm_choice:
                 cmd += ["--bgm", str(bgm_choice)]
             if shot_plan_path is not None:
@@ -570,6 +592,7 @@ def process_job(job: dict[str, Any]) -> None:
         patch_body: dict[str, Any] = {
             "cf_video_id": cf_uid if orientation == "portrait" else None,
             "cf_video_id_landscape": cf_uid if orientation == "landscape" else None,
+            "cf_video_id_square": cf_uid if orientation == "square" else None,
             "external_url": None,
             "status": "ready",
         }

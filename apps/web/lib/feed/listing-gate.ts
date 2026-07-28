@@ -28,6 +28,9 @@ export interface PoolListingDTO {
   bedBathSqft: string;
   heroUrl: string;
   videoUrl?: string;
+  /** Coordinates for the card's locality map thumbnail (2026-07-28 card structure). */
+  lat?: number;
+  lng?: number;
   communityId?: string;
   /** City the listing is in — the stage-3 fallback join key. */
   city?: string;

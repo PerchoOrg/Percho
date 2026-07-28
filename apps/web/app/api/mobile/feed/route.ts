@@ -114,6 +114,10 @@ function projectListing(card: BrowseCard, verticalUid?: string): PoolListingDTO 
     ...(card.listing.price != null ? { price: card.listing.price } : {}),
     bedBathSqft: formatBedBathSqft(card.listing),
     heroUrl: heroUrlFor(card),
+    // Coordinates for the card's locality map thumbnail. Both or neither.
+    ...(card.listing.lat != null && card.listing.lng != null
+      ? { lat: card.listing.lat, lng: card.listing.lng }
+      : {}),
     ...(verticalUid
       ? { videoUrl: streamManifestUrl(verticalUid) }
       : videoUrlFor(card)

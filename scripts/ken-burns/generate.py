@@ -434,7 +434,12 @@ def render_clip(src: str, dst: str, duration: float, mode: str, w: int, h: int,
         # (was producing a small centered image with left/right blur pillarbox
         # when a landscape photo was fit inside a landscape canvas). Portrait
         # canvas keeps the fit-inside + blur-bg path.
-        landscape_canvas = w > h
+        #
+        # 2026-07-28: SQUARE canvas (w == h) must take the cover-crop path too.
+        # The square feed card (1080x1080) is fed landscape 800px source photos;
+        # fit-inside would pillarbox them with blur, which is exactly the "wasted
+        # card / weird band" the owner rejected. `>=` not `>`.
+        landscape_canvas = w >= h
         if landscape_canvas:
             fg_w, fg_h = w, h
             vf = kenburns_filter_v2(mode, duration, w, h, fg_w, fg_h, bbox=bbox, cover=True)
