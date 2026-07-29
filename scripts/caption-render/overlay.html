@@ -222,19 +222,22 @@
        1. the kicker (room label) is DROPPED. The caption sentence already names
           the room, and at this size two lines of chrome for one fact is the
           duplicate-overlay pattern (see feed-overlay-caption-conventions.md).
-       2. the caption is one line, ellipsised — `line-clamp` needs a height, and
-          the band is bottom-anchored with none, so `white-space:nowrap` is what
-          actually holds it to one line here.
+       2. the caption is clamped to TWO lines, not one. One line was tried first
+          and truncated mid-word ("...hardwood floors and plan…"), losing
+          "plantation shutters" — the specific detail the caption exists to
+          convey. Two lines cost ~5% of the frame and keep the sentence intact.
+          `-webkit-line-clamp` needs a block container, hence `display:-webkit-box`.
        3. the gold rule goes. It was a divider between kicker and body; with the
           kicker gone it divides nothing.
 
-     Net: the band occupies ~13% of the block height instead of ~33%. */
+     Net: the band occupies ~22% of the block height instead of ~49%. */
   body.square .LIST-band { padding: 90px 44px 40px; }
   body.square .LIST-band .kicker { display: none; }
   body.square .LIST-band .rule { display: none; }
   body.square .LIST-band .txt {
-    margin-top: 0; font-size: 40px; line-height: 1.2; max-width: 100%;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    margin-top: 0; font-size: 40px; line-height: 1.25; max-width: 100%;
+    display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2;
+    overflow: hidden; }
 </style>
 </head>
 <body>
