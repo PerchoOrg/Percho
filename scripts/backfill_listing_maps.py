@@ -32,33 +32,18 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 BUCKET = "listing-maps"
 STATIC_MAPS = "https://maps.googleapis.com/maps/api/staticmap"
 
-# Bumped whenever the STYLE below changes. It goes in the object PATH, because
-# tiles are uploaded `immutable, max-age=1y`: re-rendering to the same path
-# leaves every device and CDN serving the OLD picture forever. A new style must
-# get a new path or the re-render is invisible. (v1 = the dark tile.)
-STYLE_VERSION = "v2light"
-
-# Light map styling, matched to the light card chassis (2026-07-29 redesign).
-#
-# The previous tile was dark — styled to sit in the chocolate info panel that the
-# owner replaced ("右下角地图不好看", plus the 纯白+浅灰 brief). A dark square in a
-# white card is the single loudest element on the face, i.e. the 视觉噪音 the
-# brief rules out.
-#
-# Roads and place labels stay VISIBLE, and zoom stays at 16. That is not taste:
-# an earlier prototype styled them off at zoom 14 and the 104pt result rendered
-# as a flat empty rectangle, which reads as a broken image. Business POI pins are
-# off — they are the noise; the street grid is the signal.
-LIGHT_STYLE = [
-    "feature:all|element:geometry|color:0xEEE7DC",
-    "feature:all|element:labels.text.fill|color:0x7D7469",
-    "feature:all|element:labels.text.stroke|color:0xFFFDFA",
+# Dark map styling matched to the card family (§0.3). Roads and place labels stay
+# VISIBLE on purpose: an earlier prototype styled them off at zoom 14 and the
+# 104pt result read as an empty tan rectangle, i.e. like a broken image.
+DARK_STYLE = [
+    "feature:all|element:geometry|color:0x2f2b26",
+    "feature:all|element:labels.text.fill|color:0x9c948a",
+    "feature:all|element:labels.text.stroke|color:0x1a1816",
     "feature:all|element:labels.icon|visibility:off",
-    "feature:road|element:geometry.fill|color:0xFFFFFF",
-    "feature:road|element:geometry.stroke|color:0xDFD6C8",
-    "feature:road.arterial|element:geometry.fill|color:0xFFF8EC",
-    "feature:water|element:geometry|color:0xBFD0D6",
-    "feature:poi.park|element:geometry|color:0xD6E3C6",
+    "feature:road|element:geometry.fill|color:0x6b6259",
+    "feature:road.arterial|element:geometry.fill|color:0x857a6d",
+    "feature:water|element:geometry|color:0x16202a",
+    "feature:poi.park|element:geometry|color:0x24331f",
     "feature:poi.business|visibility:off",
 ]
 
@@ -121,20 +106,15 @@ def static_map_png(lat: float, lng: float) -> bytes:
     q = {
         "center": f"{lat},{lng}",
         "zoom": "16",
-        # 2:1 landscape, not the old 200x200 square. The card's map is now a
-        # full-width strip under the info block (the square version was a
-        # 104pt chip crammed against the text — "右下角地图不好看"), so the
-        # tile has to be rendered at the shape it is displayed at or `cover`
-        # would crop most of the street grid away.
-        "size": "600x300",
-        "scale": "2",  # retina; 1200x600 actual pixels
+        "size": "200x200",
+        "scale": "2",  # retina; 400x400 actual pixels
         "maptype": "roadmap",
         "markers": f"color:0xB45309|size:small|{lat},{lng}",
         "key": GKEY,
     }
     url = (
         f"{STATIC_MAPS}?{urllib.parse.urlencode(q)}"
-        + "".join(f"&style={urllib.parse.quote(s)}" for s in LIGHT_STYLE)
+        + "".join(f"&style={urllib.parse.quote(s)}" for s in DARK_STYLE)
     )
     with urllib.request.urlopen(url, timeout=40) as r:
         body = r.read()
@@ -193,12 +173,9 @@ def main() -> int:
         lat, lng = float(r["lat"]), float(r["lng"])
         try:
             png = static_map_png(lat, lng)
-            # Coordinate AND style version in the object name. Both matter: a
-            # re-geocode must produce a NEW path rather than serve a stale
-            # immutable-cached tile, and so must a style change (see
-            # STYLE_VERSION). Uploading a new picture to an old path is a no-op
-            # as far as every client is concerned.
-            path = f"{r['id']}/{STYLE_VERSION}_{lat:.6f}_{lng:.6f}.png"
+            # Coordinate in the object name, so a re-geocode produces a NEW path
+            # instead of serving a stale immutable-cached tile.
+            path = f"{r['id']}/{lat:.6f}_{lng:.6f}.png"
             url = upload(path, png)
             patch(
                 "listings",

@@ -445,21 +445,7 @@ export default function FeedScreen() {
 				case "area":
 					return <AreaFace card={card} isTop={isTop} />;
 				case "listing":
-					return (
-						<ListingFace
-							card={card}
-							stage={stage}
-							isTop={isTop}
-							// Wired at last: `ListingFace` renders the accent CTA only when
-							// given a handler, and this screen never passed one — so the
-							// card's single 点缀色 affordance was dead. §1.4's feed→detail
-							// entry is the listing route, same target as the data face's.
-							onExplore={() => {
-								emitGesture("explore_tap", card);
-								router.push(`/listing/${card.id}`);
-							}}
-						/>
-					);
+					return <ListingFace card={card} stage={stage} isTop={isTop} />;
 				case "community":
 					return <CommunityFace card={card} isTop={isTop} />;
 				case "tradeoff":
