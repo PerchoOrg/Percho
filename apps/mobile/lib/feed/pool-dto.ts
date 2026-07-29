@@ -117,6 +117,12 @@ export function parseListing(v: unknown): ListingCardV3 | null {
 	const lat = num(raw.lat);
 	const lng = num(raw.lng);
 	const mapUrl = str(raw.mapUrl);
+	// "Peachtree Corners, GA" — both parts or nothing. A lone state reads as a
+	// broken sub-line under the street address.
+	const city = str(raw.city);
+	const state = str(raw.state);
+	const locality = city && state ? `${city}, ${state}` : city;
+	const description = strings(raw.description);
 	const d = dims(raw.dims);
 	return {
 		kind: "listing",
@@ -129,6 +135,8 @@ export function parseListing(v: unknown): ListingCardV3 | null {
 		...(videoUrl ? { videoUrl } : {}),
 		...(lat !== undefined && lng !== undefined ? { lat, lng } : {}),
 		...(mapUrl ? { mapUrl } : {}),
+		...(locality ? { locality } : {}),
+		...(description.length > 0 ? { description } : {}),
 		...(communityId ? { communityId } : {}),
 		...(geoUnitId ? { geoUnitId } : {}),
 		...(matchScore !== undefined ? { matchScore } : {}),

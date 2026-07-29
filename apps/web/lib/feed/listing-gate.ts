@@ -36,6 +36,19 @@ export interface PoolListingDTO {
   communityId?: string;
   /** City the listing is in — the stage-3 fallback join key. */
   city?: string;
+  /** State, for the card's "City, ST" sub-line. */
+  state?: string;
+  /**
+   * The listing's own prose, already split into paragraphs by
+   * `browse-cards.ts` (`listings.description text[]`).
+   *
+   * Carried to the card because the 2026-07-29 light-card redesign gives the
+   * leftover height under the 1:1 media block to REAL body copy: the owner's
+   * two complaints were "左下角信息太单薄" and "下面有很多空的位置不够匀称", and
+   * the only thing that can absorb an arbitrary amount of card height without
+   * inventing content is the description the agent already wrote.
+   */
+  description?: string[];
   /** City unit this listing sits in — a tease swipe credits it (§1.7). */
   geoUnitId?: string;
   /** Set in stages 1–2: likeable, weighted 0.5×, match badge suppressed. */

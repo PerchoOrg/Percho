@@ -126,6 +126,12 @@ function projectListing(card: BrowseCard, verticalUid?: string): PoolListingDTO 
         : {}),
     ...(card.community?.slug ? { communityId: card.community.slug } : {}),
     ...(card.listing.city ? { city: card.listing.city } : {}),
+    ...(card.listing.state ? { state: card.listing.state } : {}),
+    // Real prose only — an empty array is omitted so the client renders no
+    // paragraph rather than an empty block (§3 "real or absent").
+    ...(card.listing.description && card.listing.description.length > 0
+      ? { description: card.listing.description }
+      : {}),
     ...(citySlug(card.listing.city, card.listing.state)
       ? { geoUnitId: citySlug(card.listing.city, card.listing.state) }
       : {}),

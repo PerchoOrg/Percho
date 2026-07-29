@@ -132,6 +132,22 @@ export interface ListingCardV3 {
 	 */
 	mapUrl?: string;
 	communityId?: string;
+	/**
+	 * "Peachtree Corners, GA" — the sub-line under the address.
+	 *
+	 * Part of the 2026-07-29 light-card redesign: the old dark foot showed
+	 * address + bed/bath only, which the owner called 太单薄. Locality is the
+	 * one fact a buyer reads immediately after the street and it costs nothing —
+	 * the row was already selected server-side.
+	 */
+	locality?: string;
+	/**
+	 * The agent's own listing prose, paragraph-split. Fills the card's leftover
+	 * height under the 1:1 media block (line-clamped to the measured space), so
+	 * the card bottoms out flush instead of leaving the dead area the owner
+	 * flagged. Absent when the row has no description — nothing is generated.
+	 */
+	description?: readonly string[];
 	/** The geo unit this listing sits in — a tease swipe credits it (§1.7). */
 	geoUnitId?: string;
 	matchScore?: number;

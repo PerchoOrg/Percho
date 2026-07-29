@@ -209,6 +209,32 @@
   body.landscape .LIST-band .kicker { font-size: 22px; letter-spacing: 0.22em; }
   body.landscape .LIST-band .txt { font-size: 42px; margin-top: 12px; }
   body.landscape .LIST-band .rule { width: 60px; height: 2px; margin-top: 20px; }
+
+  /* ---------- SQUARE (1080x1080) — the feed card's media block ----------
+     2026-07-29, owner: 「因为内嵌的视频卡不大 字幕占了很多空间影响画面」.
+
+     The band above is sized for a 1080x1920 canvas. On the SQUARE canvas the
+     same band eats the bottom ~third of a block that is only ~345pt tall on
+     device, so the room photo — the entire reason the card exists — is what
+     gets cropped by the text.
+
+     Three changes, all of them subtraction:
+       1. the kicker (room label) is DROPPED. The caption sentence already names
+          the room, and at this size two lines of chrome for one fact is the
+          duplicate-overlay pattern (see feed-overlay-caption-conventions.md).
+       2. the caption is one line, ellipsised — `line-clamp` needs a height, and
+          the band is bottom-anchored with none, so `white-space:nowrap` is what
+          actually holds it to one line here.
+       3. the gold rule goes. It was a divider between kicker and body; with the
+          kicker gone it divides nothing.
+
+     Net: the band occupies ~13% of the block height instead of ~33%. */
+  body.square .LIST-band { padding: 90px 44px 40px; }
+  body.square .LIST-band .kicker { display: none; }
+  body.square .LIST-band .rule { display: none; }
+  body.square .LIST-band .txt {
+    margin-top: 0; font-size: 40px; line-height: 1.2; max-width: 100%;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 </style>
 </head>
 <body>
@@ -226,6 +252,11 @@ document.documentElement.style.setProperty('--canvas-w', CW + 'px');
 document.documentElement.style.setProperty('--canvas-h', CH + 'px');
 const isLandscape = CW > CH;
 if (isLandscape) document.body.classList.add('landscape');
+// SQUARE is its own case, not "landscape with equal sides". `CW > CH` is false
+// when CW === CH, so a 1080x1080 canvas used to get NO override class at all and
+// silently rendered the portrait band (2026-07-29). Same class of bug as the
+// renderer's `w > h` orientation gate — see generate.py's `w >= h` fix.
+if (CW === CH) document.body.classList.add('square');
 
 function el(html) { const d = document.createElement('div'); d.innerHTML = html.trim(); return d.firstChild; }
 function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }

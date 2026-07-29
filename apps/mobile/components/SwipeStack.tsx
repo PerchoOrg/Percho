@@ -67,7 +67,7 @@ import {
 	cardStackVisual,
 	faceOpacity,
 } from "../lib/gesture/stack-layer";
-import { colors, radii } from "../theme/tokens";
+import { colors, cardShadow, radii } from "../theme/tokens";
 
 /** Cards visible at rest: top + 2 behind (§0.6 #7). Shared with the composer. */
 const WINDOW = VISIBLE_WINDOW;
@@ -359,5 +359,17 @@ const styles = StyleSheet.create({
 		borderRadius: radii.card,
 		overflow: "hidden",
 		backgroundColor: colors.ink, // card face is always dark (§0.3)
+		/**
+		 * The card's lift (owner 2026-07-29: 「微阴影，还原真实卡片触感」).
+		 *
+		 * It has to be HERE, not inside a face. `overflow: "hidden"` clips a view's
+		 * CHILDREN, so a shadow on a wrapper inside this card is thrown away — but a
+		 * view's own shadow paints outside itself and survives. `SwipeStack`'s own
+		 * container sets no overflow, so nothing clips this one.
+		 *
+		 * Applies to every face, not just the light listing card: the dark faces
+		 * were sitting flat on the paper background too.
+		 */
+		...cardShadow.ambient,
 	},
 });
