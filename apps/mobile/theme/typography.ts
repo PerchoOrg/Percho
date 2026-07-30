@@ -10,23 +10,44 @@
 import type { TextStyle } from "react-native";
 import { fonts } from "./tokens";
 
+/**
+ * The editorial serif.
+ *
+ * RN's `fontFamily` takes ONE family name, not a CSS stack, so the redline's
+ * `"New York", "Iowan Old Style", "Baskerville", "Georgia", serif` cannot be
+ * passed through verbatim. What matters about the first entry is that **New York
+ * (the iOS system serif) has LINING figures** while Georgia (the stack's 4th
+ * fallback) has OLD-STYLE ones — a 9 that drops below the baseline and 6/8 that
+ * poke above cap height. On `$968,000` that is the difference between the
+ * reference board's flat row of digits and a visibly ragged one, which is what
+ * the owner caught: 「你这个房价的字体明显不对啊」 (2026-07-30).
+ *
+ * Deliberately NOT `Platform.select`: this file is imported by
+ * `theme/*.test.ts`, and the vitest config's whole premise is that `theme/` is
+ * plain token data with no React Native runtime ("Keep RN-dependent code out of
+ * this include glob"). Importing `Platform` here breaks every theme test with a
+ * rollup parse error. iOS is the only platform this app ships on today, and
+ * `fonts.displayFallback` documents the Android/web answer for when it isn't.
+ */
+const serif = fonts.display;
+
 export const textStyles = {
 	/** ask question on a card. New York 34 / bold, tracking −1. */
 	display: {
-		fontFamily: fonts.display,
+		fontFamily: serif,
 		fontSize: 34,
 		fontWeight: "700",
 		letterSpacing: -1,
 	},
 	/** page title, detail price. New York 28 / bold. */
 	title1: {
-		fontFamily: fonts.display,
+		fontFamily: serif,
 		fontSize: 28,
 		fontWeight: "700",
 	},
 	/** sheet title, price on card. New York 22 / bold. */
 	title2: {
-		fontFamily: fonts.display,
+		fontFamily: serif,
 		fontSize: 22,
 		fontWeight: "700",
 	},
@@ -66,7 +87,7 @@ export const textStyles = {
 	 * regular weight at a reading size, not a heading.
 	 */
 	serifBody: {
-		fontFamily: fonts.display,
+		fontFamily: serif,
 		fontSize: 17.5,
 		fontWeight: "400",
 	},
@@ -74,7 +95,7 @@ export const textStyles = {
 
 /** Price token — New York serif 25 bold, per §0.6 CardFoot spec. */
 export const priceStyle: TextStyle = {
-	fontFamily: fonts.display,
+	fontFamily: serif,
 	fontSize: 25,
 	fontWeight: "700",
 };
@@ -100,7 +121,7 @@ export const priceStyle: TextStyle = {
 export const redlineText = {
 	/** Listing price — "serif, 35px". */
 	price: {
-		fontFamily: fonts.display,
+		fontFamily: serif,
 		fontSize: 35,
 		fontWeight: "500",
 		letterSpacing: -0.8,
@@ -108,7 +129,7 @@ export const redlineText = {
 	},
 	/** Community place name — "serif 38px, line-height 1". */
 	place: {
-		fontFamily: fonts.display,
+		fontFamily: serif,
 		fontSize: 38,
 		fontWeight: "500",
 		letterSpacing: -0.9,
@@ -116,7 +137,7 @@ export const redlineText = {
 	},
 	/** Trade-off question — "serif 32px, centered, line-height 1.06". */
 	question: {
-		fontFamily: fonts.display,
+		fontFamily: serif,
 		fontSize: 32,
 		fontWeight: "500",
 		letterSpacing: -0.6,
@@ -124,7 +145,7 @@ export const redlineText = {
 	},
 	/** Insight headline — "serif 30–32px, line-height 1.08". */
 	insight: {
-		fontFamily: fonts.display,
+		fontFamily: serif,
 		fontSize: 31,
 		fontWeight: "500",
 		letterSpacing: -0.7,
@@ -145,6 +166,13 @@ export const redlineText = {
 		fontSize: 13,
 		fontWeight: "400",
 		lineHeight: 19,
+	},
+	/** Trade-off subtext — the redline says 12px / 1.45, not the 13px story size. */
+	subtext: {
+		fontFamily: fonts.ui,
+		fontSize: 12,
+		fontWeight: "400",
+		lineHeight: 17,
 	},
 	/** Community subtitle — 14px at the same 1.45. */
 	subtitle: {
@@ -193,7 +221,9 @@ export const redlineText = {
 		fontWeight: "500",
 		lineHeight: 13,
 	},
-	/** "18 Photos" / swipe hint / insight micro-label — 11px. */
+	/** The insight card's "Top matches for you" — the redline says 10px. */
+	microLabel: { fontFamily: fonts.ui, fontSize: 10, fontWeight: "400" },
+	/** "18 Photos" / swipe hint — 11px. */
 	micro: { fontFamily: fonts.ui, fontSize: 11, fontWeight: "400" },
 	/** Insight recommendation caption — "9–10px". */
 	nano: { fontFamily: fonts.ui, fontSize: 9.5, fontWeight: "400" },

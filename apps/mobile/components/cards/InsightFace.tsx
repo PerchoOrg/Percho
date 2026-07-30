@@ -196,7 +196,8 @@ const styles = StyleSheet.create({
 		backgroundColor: redline.border,
 		marginTop: 26,
 	},
-	matchLabel: { ...redlineText.nano, color: redline.ink3, marginTop: 18 },
+	/** The redline says 10px for this label (`nano` is the 9.5px thumb caption). */
+	matchLabel: { ...redlineText.microLabel, color: redline.ink3, marginTop: 18 },
 	recs: { flexDirection: "row", gap: 8, marginTop: 12 },
 	rec: { width: THUMB_W },
 	recImage: {

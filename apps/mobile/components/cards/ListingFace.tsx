@@ -255,7 +255,10 @@ const styles = StyleSheet.create({
 		marginTop: "auto",
 		flexDirection: "row",
 		flexWrap: "nowrap",
-		gap: 5,
+		// The redline's "gap 6px". Was 5 while the chip font was being shrunk to
+		// force three chips onto one row; the row flexes now (see `chip`) so the
+		// spec value stands.
+		gap: 6,
 	},
 	chip: {
 		height: 27,

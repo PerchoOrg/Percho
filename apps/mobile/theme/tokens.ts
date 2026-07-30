@@ -235,10 +235,26 @@ export const radii = {
 } as const;
 
 // ─── Font families (§0.3 / §0.4) ────────────────────────────────────
-// `display` renders Georgia on-device today (owner-approved 2026-07-26); real
-// New York font files can drop in here later without touching call sites.
 // `ui` = SF Pro Text, which is the iOS system face ('System' resolves to SF Pro).
+//
+// `display` is the editorial serif. The redline names a STACK —
+//   "New York", "Iowan Old Style", "Baskerville", "Georgia", serif
+// — and the first entry matters: **New York is the iOS system serif** and it has
+// LINING (equal-height) figures. Georgia, the stack's 4th fallback, has OLD-STYLE
+// figures: its 9 descends below the baseline and its 6/8 ascend above cap height.
+//
+// That is not cosmetic on this product. `$968,000` in Georgia renders as a
+// visibly uneven up-and-down row of digits, where the redline's reference board
+// shows one flat row (measured: all six digits span y388–409 exactly). The owner
+// caught it on sight — 「你这个房价的字体明显不对啊」 (2026-07-30).
+//
+// RN resolves `fontFamily` through Core Text, so the documented iOS name for the
+// system serif works directly: `ui-serif` is the CSS spelling, `"New York"` is
+// the family name Core Text registers. `displayFallback` keeps Georgia reachable
+// so a platform without New York still gets a serif rather than defaulting to
+// sans — see `serifStack()` in `typography.ts`, which is what call sites use.
 export const fonts = {
-	display: "Georgia",
+	display: "New York",
+	displayFallback: "Georgia",
 	ui: "System",
 } as const;

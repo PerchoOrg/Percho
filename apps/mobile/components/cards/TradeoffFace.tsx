@@ -218,7 +218,8 @@ const styles = StyleSheet.create({
 		textAlign: "center",
 	},
 	sub: {
-		...redlineText.story,
+		// The redline specifies 12px here, not the 13px listing-story size.
+		...redlineText.subtext,
 		color: redline.ink2,
 		textAlign: "center",
 		marginTop: 10,
