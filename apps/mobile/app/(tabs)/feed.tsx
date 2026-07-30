@@ -432,8 +432,8 @@ export default function FeedScreen() {
 							stage={stage}
 							isTop={isTop}
 							/*
-							 * Demo variant C puts the Explore CTA on the FRONT face, under the
-							 * map circle — which since 2026-07-30 is the ONLY way into the
+							 * The redline puts a full-width "Explore Home →" at the bottom of
+							 * the content panel — since 2026-07-30 the ONLY way into the
 							 * listing detail page, because the data face that used to carry
 							 * it (and its per-row `?focus=` deep links) went with the flip.
 							 */
@@ -444,7 +444,24 @@ export default function FeedScreen() {
 						/>
 					);
 				case "community":
-					return <CommunityFace card={card} isTop={isTop} />;
+					return (
+						<CommunityFace
+							card={card}
+							isTop={isTop}
+							/*
+							 * The redline draws a "Why people love it →" CTA here. There is no
+							 * community destination in this app to send it to: `/listing/nearby`
+							 * takes a LISTING id (it fetches
+							 * `/api/mobile/listing/<id>/nearby`) and there is no community
+							 * detail route. Passing a handler would ship a button that lands on
+							 * an empty screen, so none is passed and the CTA is not rendered.
+							 *
+							 * This is the second of the two redline elements with nothing behind
+							 * it (the other is the listing's photo counter). Both are reported to
+							 * the owner rather than faked.
+							 */
+						/>
+					);
 				case "tradeoff":
 					return <TradeoffFace card={card} tx={tx} cardWidth={w} />;
 				case "challenge":

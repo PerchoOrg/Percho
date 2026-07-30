@@ -4,6 +4,110 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-30 07:50 UTC — 四张卡按 redline 全量重写（Listing/Community/Tradeoff/Insight）+ 修 serve.py gzip 代理 bug
+
+**Objective**: owner 给了 "Percho Swipe Cards" redline（文字规格）+ 一张样图，指令
+「按照redline和样图重新实现卡片（视频部分不用改）」→ 明确「我直接IOS测试」→ 方案确认
+「全按redline覆盖」。目标是 app 里四个 front face 改成 redline 的设计语言，真机测。
+
+**Actions**:
+- `theme/tokens.ts`：新增 `redline` + `redlineRadii` 两组 token（森林绿 `#0E6B57`、
+  卡面 `#FFFDF9`、`accentSoft #EAF2EE`、各种 scrim/wash/glass rgba）。**没有替换
+  `colors`** —— chrome（tab bar、detail page、ask/area/challenge/milestone face）继续
+  用暖纸+琥珀。两套 accent 不在同一个 surface 上混，这是 redline 明令的
+  "Forest green is the only accent"。
+- `theme/typography.ts`：新增 `redlineText`。和 `textStyles` 分开的原因有两条实质
+  差异：① redline 的 display 全是 **500** 字重（现有 `display/title1/title2` 都是
+  700）；② redline 给了显式 line-height 比例（1.05/1.45/1.55），RN 不会从 fontSize
+  推导，不写就在真机上挤成一团。
+- 新增 `components/cards/redline/RedlineChrome.tsx`：四张卡共用的 category pill /
+  heart / 全宽 CTA，外加 8 个线性图标。**图标用 View 画的，不是 SVG** —— 本项目
+  没装 `react-native-svg`，而它在 Expo Go 是已知雷（`RNSVGCircle must be a
+  function`，见 `expo-go-native-deps`）；`NeighborhoodScore` 的进度弧同理也是 View。
+- `ListingFace`：54% hero + 价格/地址/locality/story + 3 chips + 全宽绿色
+  `Explore Home →`。**删掉了圆形 `CardMap` 和 `NeighborhoodScore` 评分环**
+  （redline: "Do not add maps" / "Do not add score bars"），琥珀色一并去掉。
+  两个组件文件本身没删 —— detail page / nearby 还在用。
+- `CommunityFace`：全出血图 + 三段 scrim + serif 38 地名 + 三个毛玻璃 tile + 白色
+  CTA。不再用 `CardFoot`（该组件其他 face 仍在用，未删）。
+- `TradeoffFace`：换成 redline 的两张白色 choice 卡 + mint badge + "vs" 圆片。
+  **§1.6 两条红线保留**：仍然没有任何 ✓/✗；仍然由 `tx` 驱动 `interpolate` 做跟手
+  压暗（0.72 rest → 1 chosen / 0.4 discarded），只是 opacity 从「深色半边」搬到
+  「白色 choice 卡」上。1.5px 虚线分隔线删了 —— 它是分屏的分隔线，现在没有分屏。
+- `InsightFace`：mint sparkle badge + serif headline + evidence + 全宽绿色 CTA。
+  §1.6 的 "Not sure" 中性选项保留（改成 CTA 下方的低调文字按钮，旧的描边 pill 在
+  浅色卡上会和绿色 CTA 抢权重）。
+- `app/(tabs)/feed.tsx`：修掉一处已过期的 "Demo variant C" 注释；community 分支补
+  说明为什么不传 `onExplore`。
+- `~/percho-prototypes/serve.py`：修 gzip 代理 bug（详见 Issues）。
+
+**Decisions**:
+- **两套 token 并存，而不是改写 `colors`。** redline 只管这四张卡，chrome 和另外四种
+  card kind 不在它的范围内。直接把 `colors.accent` 改绿会把整个 app 连坐。
+- **redline 里没有真数据支撑的元素，一律不渲染，不造假。** 两处：
+  ① Listing 的 "⊕ 18 Photos" —— `ListingCardV3` 没有 photo count 字段（feed DTO 只
+  选一个 `heroUrl`），写死 18 就是在真房源上印一个编造的事实；
+  ② Community 的 "Why people love it →" —— app 里没有 community detail 路由，
+  `/listing/nearby` 只吃 listing id，传 handler 等于给用户一个点进空白页的按钮。
+  → 两个都缺，已在汇报里点名，等 owner 决定是补数据还是补路由。
+- **Community 的副标题用真实 "City, ST"，不用 redline 的 "Where quiet mornings meet
+  vibrant weekends."** —— `CommunityCardV3` 没有 tagline 字段，给一个真实小区编一句
+  文案属于虚构编辑内容。
+- **Tradeoff 背景用现有 `CardSurface` ramp + redline 的浅色 wash**，而不是 redline 要
+  的实景湖景照片：tradeoff card 没有图片字段，项目也没有打包图片资产的管线。目标
+  （"lighter and calmer than the image cards"）达到了，没有伪造照片也没加新依赖。
+- Video 完全没动（owner: 「视频部分不用改」）。`CardVideo` 的 `fit` 契约、`isTop`
+  逻辑原样保留；Listing 那边唯一变化是它现在待在 54% 的盒子里而不是 1:1。
+
+**Issues**:
+- **真机验证时抓到一个 serve.py 的真 bug，跟这次改动无关但会让真机测试完全失效。**
+  症候：`localhost:8081` 的 bundle 是 16MB 纯 JS，但 `demo.percho.co` 同一路径只返回
+  2.4MB 且首字节是 gzip magic `1f 8b`，`Content-Type` 却写着
+  `application/javascript`，我 grep 新代码 0 命中。
+  根因：Cloudflare 一律向 origin 请求 gzip → Metro 照做 → `_proxy` 里那段把
+  `demo.percho.co:8081` 改写成 `demo.percho.co` 的 body rewrite **在压缩字节上静默
+  失效** → 同时 `SKIP_HEADERS` 又把 `Content-Encoding` 剥掉 → 手机收到一份「标着纯
+  JS 的 gzip」，Expo Go 解析不了。表现是「app 打不开 / 还是旧版本」，且没有任何错误
+  指向代理。
+  修法：`_proxy` 向上游强制 `Accept-Encoding: identity`（因为它必须拿到明文才能做
+  body rewrite），`Content-Encoding` 继续剥。第一版我改错了半边（只是把
+  `content-encoding` 从 SKIP_HEADERS 拿掉），那样等于把明文标成 gzip，反向坏。
+
+**Resolution**:
+- `npx tsc --noEmit` 干净；`npx vitest run` **469 tests / 27 files 全绿**；
+  `npx biome check` 干净（7 处格式已 --write 修掉后复查通过）。
+- 真机链路逐跳验证，不只验 localhost：
+  · origin `:8797` → 明文；
+  · `https://demo.percho.co/...entry.bundle` → **200, 16,370,387 bytes, 首字节
+    `var __BUNDLE_STA`**，`demo.percho.co:8081` 命中数 0（端口改写恢复正常）；
+  · manifest 显示 Metro 跑的是 `--tunnel`，实际 launchAsset 指向
+    `llhow00-anonymous-8081.exp.direct`，**该 host 上的 bundle 也验过**：200 /
+    14MB / `Explore Home`×4、`Which matters more to you`×1、`#0E6B57`×2、
+    `RedlineCta`×8、`AI INSIGHT`×2。
+  · `EXPO_PUBLIC_DEV_SAMPLER` 在 bundle 里 inline 成 `value: "1"`，
+    `EXPO_PUBLIC_API_BASE=https://demo.percho.co` —— 符合「真机一律走测试模式」。
+  · `NeighborhoodScore` 在 bundle 里剩 4 处命中，全部是注释文本，组件确实已下卡。
+  · 回归检查：`/api/mobile/feed` 200、`swipe-cards-redline/index.html` 200，代理改动
+    没伤到 API 和静态 demo。
+- **仍未验证**：真机上的实际观感。我只能证明「手机会拿到这份代码」，证不了
+  「这份代码在 iPhone 上好看」。
+
+**Learnings**:
+- 「按 redline 实现」和「保住 spec 的行为红线」不冲突,但要显式区分:redline 是静态
+  视觉板,它对手势反馈保持沉默是因为它画不出来,不是因为该删。Tradeoff 的跟手压暗
+  差点就被「照着静态图做」顺手删掉了。
+- 隧道链路上「HTTP 200 + 合理的 size」远不足以证明手机拿到了正确 bundle。这次
+  2.4MB 的 gzip 也是 200。**要验首字节 + grep 自己的字符串 + 验 manifest 真正指向的
+  那个 host**（Metro 跑 --tunnel 时,它advertise 的是 exp.direct,不是我配的域名）。
+- 代理里做 body rewrite 的,必须向上游要 identity。压缩会让 rewrite 静默失效。
+
+**Next steps**:
+- 等 owner 真机反馈观感,逐项修。
+- 需要 owner 决策的两个缺口:photo count 字段(要不要 server 侧补 count),
+  community detail 路由(要不要建,好让 "Why people love it →" 有地方去)。
+- Insight 卡的 "Top matches for you" 三缩略图槽位已经接好类型(`InsightMatch[]`),
+  等 feed 能算出真 matches 就能填,现在传空即不渲染。
+
 ## 2026-07-30 07:05 UTC — 砍掉 flip：卡片改单面，整条 tap→data face 链路连根拔除
 
 **Objective**: owner「砍掉flip back的功能」。确认过是砍**整个翻面机制**（不是只砍

@@ -54,6 +54,87 @@ export const colors = {
 } as const;
 
 /**
+ * Redline card tokens (2026-07-30) — the owner-supplied "Percho Swipe Cards"
+ * redline + reference board, adopted verbatim for the four front faces
+ * (listing / community / trade-off / insight). Owner instruction:
+ * 「全按redline覆盖」.
+ *
+ * This is a SECOND, deliberately separate palette from `colors` above, not a
+ * replacement for it. `colors` is the app CHROME (warm paper bg, amber accent)
+ * and still dresses the tab bar, detail pages, ask/area/challenge/milestone
+ * faces. These four cards are what the redline specifies, and its accent is a
+ * deep forest GREEN — mixing the two accents on one surface is what the redline
+ * forbids ("Forest green is the only accent", "Do not add orange or blue
+ * accents"). So the green never leaves these tokens, and the amber never enters
+ * a redline face.
+ *
+ * Values transcribed from the redline's `--*` block, unchanged.
+ */
+export const redline = {
+	/** `--card` — the card face. Warmer and lighter than `scoreTokens.face`. */
+	card: "#FFFDF9",
+	/** `--surface` — chip / recessed fill on the card. */
+	surface: "#F1F1EC",
+	/** `--text-primary`. */
+	ink: "#171715",
+	/** `--text-secondary`. */
+	ink2: "#6F6B65",
+	/** `--text-muted`. */
+	ink3: "#96918A",
+	/** Listing story copy — the redline names #57534D for it specifically. */
+	inkStory: "#57534D",
+	/** `--accent` — deep forest green. The ONLY accent on these faces. */
+	accent: "#0E6B57",
+	/** Pressed state for the accent fill. Darkening, never fading (see below). */
+	accentDeep: "#0A5343",
+	/** `--accent-soft` — the pale mint badge behind a choice / sparkle icon. */
+	accentSoft: "#EAF2EE",
+	/** `--border` — hairline dividers on a redline face. */
+	border: "rgba(23,23,21,0.08)",
+	/** White text/fills on a photo-led face. */
+	onPhoto: "#FFFFFF",
+	/** The community card's subtitle, white at 86% per the redline. */
+	onPhotoDim: "rgba(255,255,255,0.86)",
+	/** Category pill over a photo — "white translucent pill", 10px uppercase. */
+	pill: "rgba(255,255,255,0.90)",
+	/** The heart button's disc — "white 88% opacity". */
+	heart: "rgba(255,255,255,0.88)",
+	/** The "18 Photos" pill — "dark translucent background". */
+	photoPill: "rgba(14,13,11,0.50)",
+	/** Community lifestyle blocks — rgba(255,255,255,0.13) + a 0.15 border. */
+	glassTile: "rgba(255,255,255,0.13)",
+	glassTileBorder: "rgba(255,255,255,0.15)",
+	/** Trade-off choice cards — rgba(255,255,255,0.82) + a 0.85 border. */
+	choice: "rgba(255,255,255,0.82)",
+	choiceBorder: "rgba(255,255,255,0.85)",
+	/** Community photo scrim stops (redline's 180deg overlay). */
+	communityScrimFrom: "rgba(0,0,0,0)",
+	communityScrimMid: "rgba(7,12,9,0.18)",
+	communityScrimTo: "rgba(7,12,9,0.88)",
+	/** Trade-off atmospheric wash over its landscape backdrop. */
+	tradeoffWashFrom: "rgba(249,245,238,0.10)",
+	tradeoffWashMid: "rgba(249,245,238,0.90)",
+	tradeoffWashTo: "rgba(249,245,238,1)",
+	/** Insight face gradient — `#FFFDF9` → `#F7F3EC`. */
+	insightFrom: "#FFFDF9",
+	insightTo: "#F7F3EC",
+} as const;
+
+/**
+ * Radii the redline names that the app's five-step `radii` scale has no slot
+ * for. Kept separate so `radii` stays the chrome's scale rather than growing a
+ * step per card.
+ */
+export const redlineRadii = {
+	/** Community lifestyle block. */
+	tile: 18,
+	/** Trade-off choice card. */
+	choice: 22,
+	/** Insight recommendation thumbnail. */
+	thumb: 14,
+} as const;
+
+/**
  * Score-panel tokens (2026-07-30, demo variant C).
  *
  * ── These are LIGHT-face values, transcribed from the demo ────────────────────
@@ -89,7 +170,6 @@ export const scoreTokens = {
 	 */
 	naTick: "#E6DFD2",
 } as const;
-
 
 /**
  * Backgrounds for faces with NO photograph (§0.3 names a dark treatment for
