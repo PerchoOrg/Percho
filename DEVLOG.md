@@ -4,6 +4,57 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-30 04:55 UTC — 真机 Render Error：`RNSVGCircle` 不存在。我上轮那句「Expo Go 自带 react-native-svg」是错的
+
+**Objective**: owner 真机打开测试模式，第一张卡直接红屏：
+`View config getter callback for component RNSVGCircle must be a function (received undefined)`。
+
+**Issues（我上一轮的错误假设）**: 我在上一条 DEVLOG 和 commit message 里都写了
+「`react-native-svg` 15.12.1，Expo Go 自带，不用重编原生」。**这句是错的。**
+15.12.1 确实是 `expo/bundledNativeModules.json` 里 SDK 54 对应的版本，`npx expo install
+--check` 也报 "up to date" —— 但那只保证**版本号匹配**，不保证 **Expo Go 这个二进制里
+编进了该模块的原生 view manager**。RNSVG 不在 Expo Go 里，所以 JS 能 resolve、
+`codegenNativeComponent('RNSVGCircle')` 拿到 `undefined`，一渲染就抛。
+Metro 日志末尾 `at RNSVGCircle (<anonymous>)` 是硬证据。
+**讽刺的是 `AskFace.tsx:18` 的注释早就写着 svg "is NOT a dependency of this app"** ——
+项目里本来没有 svg，是我为了画一个环加进去的。
+
+**Decisions**: 不做 custom dev client（为一个装饰件重编原生 + owner 每次要重装 app）。
+改用纯 `View` 画环，**卸掉 `react-native-svg` 依赖**。
+
+**Actions**:
+- 新增 `apps/mobile/lib/ui/arc.ts` —— `arcRotation(pct, side)`，纯函数。
+  几何：只给 `borderTopColor` + `borderRightColor` 上色的圆形 View = 一个 180° 半圆
+  （border 角在对角线交接），套进 `overflow:hidden` 的半宽窗口当光圈，旋转即扫出弧。
+  右窗光圈 = [0°,180°]，左窗 = [180°,360°]。
+- 放 `lib/` 不放组件旁边：vitest 只收集 `{lib,state,theme}`。
+- 新增 `lib/ui/arc.test.ts` —— 3 个测试，按四分位断言**可见弧 = [0, pct*360]**。
+- `NeighborhoodScore.tsx`：`Svg`/`Circle` → track View + 两个裁切窗
+- `pnpm remove react-native-svg`
+
+**过程中抓到的几何 bug（测试逼出来的，不是眼看出来的）**: 第一版两个窗口用**同一个**
+旋转角。超过 50% 时右窗的弧会跟着转离 0°，**12 点方向裂开一道缺口**，弧看起来跟起点断开。
+修法：`pct > 0.5` 时右窗钉死在 45°（该角度的 span 恰好是 [0,180]，即右半圈全满），
+左窗才继续转。测试里 `never lets the arc detach from 12 o'clock` 专门锁这条。
+
+**验证**: mobile **493 tests 全过**（28 files，含 3 个新几何测试）、tsc 0。
+真 Metro bundle：`NeighborhoodScore` 模块渲染路径**全是 `_reactNative.View`**，
+`react-native-svg` 在我的代码里**零引用**（bundle 里剩的 5 处全是 reanimated 内部
+的样式注册表和我自己写的注释）。bundle 体积 16.78MB → 16.38MB。
+
+**Learnings**: **`expo install --check` 说 "up to date" ≠ 该原生模块在 Expo Go 里可用。**
+前者只比版本号。判据应该是「Expo Go 支持的原生模块清单」，而不是 bundledNativeModules
+的版本对齐。以后往 Expo Go 阶段的 app 加任何带原生代码的依赖，先在设备上渲染一个
+最小元素验证，再往上盖 UI —— 我这次把整个面板写完才第一次上机。
+
+**另一件真机暴露的事**: 22 条 listing 里**只有 2 条有 POI 数据**
+（`5122 Lower Creek` 161 条链接、另一条 21 条），其余 20 条零。所以测试模式第 2、3 张
+listing 卡不渲染评分面板，底部照旧空着 —— 正是 owner 原始反馈里那条。
+POI discovery 一直靠 admin dashboard 手动逐条点，只跑过 2 条。回填要调 Google Places
+（花钱），**等 owner 批**。
+
+**Next steps**: owner 重新扫码测 C 版卡片。POI 回填待批（先跑 3 条看效果）。
+
 ## 2026-07-30 04:30 UTC — 卡片下半部改成 C 版邻里评分（Editorial 环形）+ 圆形浅色地图
 
 **Objective**: owner 反馈四条：字幕占画面、左下角信息太单薄、右下角地图不好看、
