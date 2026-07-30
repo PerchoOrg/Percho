@@ -14,6 +14,38 @@
 import type { DimKey } from "@percho/shared";
 import type { GeoBoundary, GeoLevel, GeoUnit } from "./geo-unit";
 
+/**
+ * Four-dimension neighborhood scores, as carried on a listing card.
+ *
+ * Declared here rather than imported from `apps/web/lib/feed/neighborhood-score`
+ * on purpose: this directory is the PURE layer (see the file header) and must not
+ * reach into the web app. The server computes; this is the wire shape.
+ *
+ * `score: null` means "no source for this dimension", NOT zero. Safety and
+ * Potential are null today — there is no crime feed and no sold-price history in
+ * the database — and the card renders those as an em dash.
+ */
+export type ScoreDimensionKey =
+	| "safety"
+	| "schools"
+	| "convenience"
+	| "potential";
+
+export interface ScoreDimension {
+	key: ScoreDimensionKey;
+	label: string;
+	score: number | null;
+	count: number;
+	nearestM?: number;
+	reason?: string;
+}
+
+export interface NeighborhoodScores {
+	/** Mean of the dimensions that have data, or null when none do. */
+	overall: number | null;
+	dims: readonly ScoreDimension[];
+}
+
 /** §0.2. Declared here (the pure layer) and re-exported by `state/funnel.ts`. */
 export type FunnelStage = 0 | 1 | 2 | 3 | 4;
 
@@ -148,6 +180,17 @@ export interface ListingCardV3 {
 	 * flagged. Absent when the row has no description — nothing is generated.
 	 */
 	description?: readonly string[];
+	/**
+	 * Four-dimension neighborhood scores for the card's score panel
+	 * (2026-07-30, owner picked demo variant "C Editorial 环形").
+	 *
+	 * A dimension whose `score` is `null` has NO SOURCE — Safety and Potential
+	 * are both null today — and renders as an em dash, never as a zero. See
+	 * `apps/web/lib/feed/neighborhood-score.ts` for the full reasoning; the
+	 * short version is that "we have no crime feed" and "this is a dangerous
+	 * street" must not look the same on a listing card.
+	 */
+	scores?: NeighborhoodScores;
 	/** The geo unit this listing sits in — a tease swipe credits it (§1.7). */
 	geoUnitId?: string;
 	matchScore?: number;

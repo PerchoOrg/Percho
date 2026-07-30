@@ -35,6 +35,8 @@ import {
 import { type PoolCommunityDTO, fetchCommunityPool } from '@/lib/feed/community-pool';
 import { type GeoUnitDTO, fetchCityGeoUnits } from '@/lib/feed/geo-units';
 import { type LikedCommunityRef, type PoolListingDTO, gateListings } from '@/lib/feed/listing-gate';
+import { fetchNeighborhoodScores } from '@/lib/feed/fetch-neighborhood-scores';
+import { createServiceClient } from '@/lib/supabase/server';
 import {
   fetchVerticalVideoListingIds,
   fetchVerticalVideos,
@@ -194,13 +196,43 @@ export async function GET(request: Request) {
     projectListing(card, verticalVideos.byListing.get(card.listing.id)),
   );
 
+  /**
+   * Neighborhood scores, attached after projection so it is ONE batched read for
+   * the whole page instead of one per card.
+   *
+   * Failure here must not take the feed down: scores are decoration on a card
+   * whose price/photo/address are the actual payload. A thrown POI query would
+   * otherwise turn a cosmetic panel into a blank feed.
+   */
+  let scored = projected;
+  if (needsListingRows && projected.length > 0) {
+    try {
+      const scores = await fetchNeighborhoodScores(
+        // Service role, deliberately: RLS caps anon at `status = 'approved'`,
+        // which on real data is 4 of 161 links. See the module header — this
+        // returns aggregates only, never POI names.
+        createServiceClient(),
+        projected.map((l) => l.id),
+      );
+      scored = projected.map((l) => {
+        const s = scores.get(l.id);
+        return s ? { ...l, scores: s } : l;
+      });
+    } catch (err) {
+      console.warn(
+        "[feed] neighborhood scores unavailable, serving cards without them:",
+        err instanceof Error ? err.message : err,
+      );
+    }
+  }
+
   // Dev-only reordering (§ see `videoFirst` in lib/zod/feed-pool.ts): surface the
   // cards that actually have a 9:16 video so video playback is testable without
   // swiping through the whole photo-only pool. Order within each group is
   // preserved, so this only moves cards forward — it never invents or drops any.
   const ordered = videoFirst
-    ? [...projected.filter((l) => l.videoUrl), ...projected.filter((l) => !l.videoUrl)]
-    : projected;
+    ? [...scored.filter((l) => l.videoUrl), ...scored.filter((l) => !l.videoUrl)]
+    : scored;
 
   const listings = gateListings(ordered, stage, limit, likedRefs);
 

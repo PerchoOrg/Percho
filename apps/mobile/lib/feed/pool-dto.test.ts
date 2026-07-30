@@ -203,3 +203,73 @@ describe("parsePoolResponse", () => {
 		expect(parsePoolResponse({ done: false, pool: {} }).done).toBe(false);
 	});
 });
+
+describe("parseListing — neighborhood scores", () => {
+	const SCORES = {
+		overall: 8.3,
+		dims: [
+			{ key: "safety", label: "Safety", score: null, count: 0, reason: "no data source" },
+			{ key: "schools", label: "Schools", score: 8.5, count: 11, nearestM: 307 },
+			{ key: "convenience", label: "Convenience", score: 8.1, count: 64 },
+			{ key: "potential", label: "Potential", score: null, count: 0 },
+		],
+	};
+
+	it("keeps a null score as null and never as zero", () => {
+		// The entire honesty argument for this panel lives on this line. If a
+		// missing source parsed to 0, the card would tell a buyer the
+		// neighbourhood scored 0.0 for Safety — a claim we have no data for.
+		const card = parseListing({ ...LISTING, scores: SCORES });
+		const safety = card?.scores?.dims.find((d) => d.key === "safety");
+		expect(safety?.score).toBeNull();
+		expect(safety?.score).not.toBe(0);
+		expect(card?.scores?.dims.find((d) => d.key === "schools")?.score).toBe(8.5);
+		expect(card?.scores?.overall).toBe(8.3);
+	});
+
+	it("coerces a garbage score to null rather than a number", () => {
+		const card = parseListing({
+			...LISTING,
+			scores: {
+				overall: "eight",
+				dims: [
+					{ key: "schools", label: "Schools", score: "8.5", count: 3 },
+					{ key: "safety", label: "Safety", score: Number.NaN, count: 0 },
+				],
+			},
+		});
+		// A string "8.5" and a NaN are both "we don't have a number", not 8.5 and
+		// not 0.
+		expect(card?.scores?.dims.find((d) => d.key === "schools")?.score).toBeNull();
+		expect(card?.scores?.dims.find((d) => d.key === "safety")?.score).toBeNull();
+		expect(card?.scores?.overall).toBeNull();
+	});
+
+	it("drops unknown dimension keys instead of rendering them", () => {
+		const card = parseListing({
+			...LISTING,
+			scores: {
+				overall: 5,
+				dims: [
+					{ key: "schools", label: "Schools", score: 5, count: 1 },
+					{ key: "vibes", label: "Vibes", score: 9.9, count: 1 },
+				],
+			},
+		});
+		expect(card?.scores?.dims.map((d) => d.key)).toEqual(["schools"]);
+	});
+
+	it("omits scores entirely when absent or malformed", () => {
+		expect(parseListing(LISTING)?.scores).toBeUndefined();
+		for (const bad of [null, "x", 7, {}, { dims: "no" }, { dims: [] }]) {
+			expect(parseListing({ ...LISTING, scores: bad })?.scores).toBeUndefined();
+		}
+	});
+
+	it("still parses the rest of the card when scores are broken", () => {
+		// Scores are decoration; price and address are the card.
+		const card = parseListing({ ...LISTING, scores: { dims: [{ nope: 1 }] } });
+		expect(card?.priceLabel).toBe("$685K");
+		expect(card?.scores).toBeUndefined();
+	});
+});

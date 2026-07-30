@@ -4,6 +4,46 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-30 04:30 UTC — 卡片下半部改成 C 版邻里评分（Editorial 环形）+ 圆形浅色地图
+
+**Objective**: owner 反馈四条：字幕占画面、左下角信息太单薄、右下角地图不好看、
+底部有空位不匀称。card-v7 demo 出了 A/B/C/D 四版，owner **选 C**（Editorial 环形）。
+本轮把 C 落到 RN，并按 owner「先不接数据源，我要真机测试」的指示，安全/潜力保持「—」。
+
+**Actions**:
+- 新增 `apps/web/lib/feed/neighborhood-score.ts` —— 四维度评分（Safety / Schools /
+  Convenience / Potential），公式 `proximity(0-6) + density(0-4)`，可对买家解释
+- 新增 `apps/web/lib/feed/fetch-neighborhood-scores.ts` —— 整页一次批量读，非每卡一次
+- `api/mobile/feed` 挂上评分，包在 try/catch：评分是装饰，POI 查询挂了不能让 feed 空白
+- 新增 `apps/mobile/components/NeighborhoodScore.tsx` —— 进度环 + 四行维度
+  （`react-native-svg` 15.12.1，Expo Go 自带，不用重编原生）
+- `ListingFace`：pills → 评分面板；城市 + bd/ba/sqft 合成一行；**$/sqft 删除**
+- `CardMap`：方块 → **132pt 圆形**，白描边，自绘中心点，地图上无文字
+- 地图列 `space-between` + 固定 150pt 槽位 —— 圆心在 120/132/150 三档下都不动
+  （实测 cx=272, cy=287.7；直接改宽高会让列变窄、圆心往右下跑）
+
+**Issues（两个我自己写出来的真 bug）**:
+1. **RLS 静默压制了开关**：`SCORE_APPROVED_ONLY=false` 完全无效 —— anon key 只看到
+   4/161 条 approved 行，live 接口一度返回 Schools 4.3、Convenience「no POIs」。
+   改用 service-role client（只输出聚合数字，不输出 POI 名字）。
+2. **地图瓦片 `immutable, max-age=1y`**：重渲到同路径 = 永远发旧图。
+   路径里加 `STYLE_VERSION=v2light`。
+
+**验证（真跑，非目测）**:
+- live API：`5122 Lower Creek Street` overall 8.3 / Schools 8.5(11 POI, 最近 307m) /
+  Convenience 8.1(64 POI)，Safety+Potential = `null` + `reason:"no data source"`
+- 瓦片路径含 `v2light`，实测平均亮度 **231.3**（深色旧版 <100）→ 浅色生效
+- mobile 490 tests 全过（27 files）、web 评分 9 tests 全过、两个 app tsc 0
+- git 无 `*.mp4/mov/webm/mkv` 泄漏
+
+**Decisions**: 安全 / 潜力**不接数据源**（owner 本轮明确：先真机测试）。
+`crime_stats`/`safety`/`price_history`/`market_stats`/`comps` 表都不存在，同城 active
+listing 只有它自己。两项显示「—」不显示 0，测试锁死 `expect(safety?.score).not.toBe(0)`。
+总分只平均有数据的维度。在房产 app 上编「安全分」是法律风险，不是体面问题。
+
+**Next steps**: owner 真机测 C 版卡片。字幕占画面那条本轮未动（字幕是烧进视频的，
+要改得走 render-worker），等真机看完再定。
+
 ## 2026-07-28 09:40 UTC — 地图修复：改为服务端预渲染缓存 + 点击进 POI 深层地图（挖出两个 RLS 漏洞）
 
 **Objective**: owner: 「顺手再fix一下这个地图问题 这个地图可以存下来吗 不用每次都去调用api
