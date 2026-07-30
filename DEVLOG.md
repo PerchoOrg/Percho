@@ -4,6 +4,65 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-30 05:15 UTC — owner：「你完全没有按照我们选定的方案C实现」。对的 —— 我照搬了 C 的几何，没照搬 C 的颜色体系
+
+**Objective**: owner 真机看完 C 版落地，判定完全不是 C。逐项 diff demo 与 RN，而不是靠记忆复述。
+
+**Issues（我做错的事，一句话概括）**: 我把 demo C 的**尺寸**抄了（环 76/stroke 6、
+地图 132 圆、MAP_SLOT 150、mini-track 54×3），但把整套东西画在了**旧的深棕卡面上**
+（`cardPlainTo #2E2118` + 白字）。而 **C 的定义性特征不是那个环，是浅色卡面** ——
+`.C .card{background:#FFFDFB}` + `--ink:#221A12`，正是 owner 最初那句
+「以纯白 + 浅灰为基底，搭配柔和渐变与微阴影，色彩克制，仅用点缀色突出核心操作」。
+把 C 的骨架套进深色面板 = 复制了布局，丢掉了设计。
+
+逐项比对 `card-v7/index.html` 的 `.C` 规则 vs RN，**15 项里 10 项不符**：
+
+| 项 | demo C | 我的实现 |
+|---|---|---|
+| 卡面 | `#FFFDFB` 近白 | `cardPlainTo` 深棕 |
+| 正文 | `#221A12` 墨 | `#FFFFFF` 白 |
+| 次级/三级文字 | `#7A6A57` / `#B3A491` | 白 72% / 白 38% |
+| 行分隔线 | `rgba(34,26,18,.10)` | `rgba(255,255,255,.10)` |
+| 环轨道 | `#E7DFD0` 浅米 | 白 14% |
+| mini-track 轨 / 填充 | `#EFE9DE` / `--ink2` 深 | 白 14% / 白 62% |
+| 无数据行的轨 | 斜纹 gradient | 纯空（＝看着像 0 分） |
+| Explore | amber 实底 + 白字大写 | glass 半透明 + ink 字 |
+| 首行上边线 | `:first-child{border-top:0}` | 每行都有 |
+| **Explore 按钮本身** | 正面就有 | **feed 从没传 `onExplore`，按钮根本没渲染过** |
+
+最后一条是独立 bug：`ListingFace` 的 `onExplore` 是可选参数，`feed.tsx` 的 listing
+分支从来没传，所以正面 CTA 一次都没出现过——只有翻到 data face 才有。
+
+**Actions**:
+- `theme/tokens.ts`：`scoreTokens` 从「深面族」整组换成**从 demo `.C` 逐值抄的浅面族**
+  （`face/ink/ink2/ink3/hairline/ringTrack/track/naTick`），注释标注对应 CSS 规则，
+  让 app 与已批 demo 不能再漂移
+- `ListingFace`：卡面 → `scoreTokens.face`；price/address → `ink`，specs → `ink2`；
+  media 块**保留深色底**（它在照片/视频下面，永不可见；换白会在每次挂载时闪白）
+- `NeighborhoodScore`：环轨道 / mini-track / 填充 / 分隔线 / 数字全换浅面；
+  首行去掉上边线；无数据行的轨改成**等距 tick 条**（RN 无 gradient 就不引原生依赖，
+  但「无数据」绝不能长得像「0 分」）
+- `ExploreButton`：加 `tone="solid"` —— amber 实底 + 白色大写字 + 按下加深
+  （不是降透明度，那读起来像 disabled）。另外 3 个调用点不传 tone，行为不变
+- `feed.tsx`：listing 分支接上 `onExplore` → `/listing/{id}` + `explore_tap` 埋点
+
+**验证（读真 bundle，不是读源码）**: `ListingFace` 编译后的 `face.backgroundColor`
+= `scoreTokens.face`，price/address = `scoreTokens.ink`，specs = `ink2`，
+media 仍是 `cardPlainTo`；`scoreTokens` 七个浅色值全部内联为
+`#FFFDFB/#221A12/#7A6A57/#B3A491/#E7DFD0/#EFE9DE/#E6DFD2`；
+`btnSolid.backgroundColor = colors.accent`；`tone:"solid"` 出现 1 次；
+`rowFirst`/`trackNa`/`hatch`/`tick` 均在；`onExplore` 3 处（challenge / **listing 新增** /
+detail face）。mobile 493 tests、tsc 0。
+
+**Learnings**: **「按照方案 X 实现」= 抄它的设计决策，不是抄它的尺寸表。** 我上一轮的
+自查全在验尺寸（圆心不动、环 76、slot 150），一条颜色都没验 —— 而 owner 选 C 恰恰是
+选它的浅色克制感。**下次落地 demo 前先把 demo 的 CSS 逐条列成 diff 表，颜色/字重/
+边框也在表里**，不然「实现了」只是「布局对了」。
+另外：**可选回调 prop 是静默失败的温床** —— `onExplore?` 没传就整个按钮消失，
+tsc 和测试都不报。
+
+**Next steps**: owner 重扫真机复验。POI 回填仍待批（20/22 条房子无 POI，评分面板不出）。
+
 ## 2026-07-30 04:55 UTC — 真机 Render Error：`RNSVGCircle` 不存在。我上轮那句「Expo Go 自带 react-native-svg」是错的
 
 **Objective**: owner 真机打开测试模式，第一张卡直接红屏：

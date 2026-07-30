@@ -53,6 +53,8 @@ interface NeighborhoodScoreProps {
 
 const RING = 76;
 const STROKE = 6;
+/** Tick count for a no-data track. Keys only; the ticks are identical. */
+const NA_TICKS = ["a", "b", "c", "d", "e", "f", "g"] as const;
 
 export function NeighborhoodScore({ scores }: NeighborhoodScoreProps) {
 	const { overall, dims } = scores;
@@ -97,15 +99,27 @@ export function NeighborhoodScore({ scores }: NeighborhoodScoreProps) {
 			</View>
 
 			<View style={styles.list}>
-				{dims.map((d) => {
+				{dims.map((d, i) => {
 					const na = d.score == null;
 					return (
-						<View key={d.key} style={styles.row}>
+						<View key={d.key} style={[styles.row, i === 0 && styles.rowFirst]}>
 							<Text style={[styles.label, na && styles.dim]} numberOfLines={1}>
 								{d.label}
 							</Text>
-							<View style={styles.track}>
-								{!na && (
+							<View style={[styles.track, na && styles.trackNa]}>
+								{na ? (
+									/*
+									 * The demo hatches an unscored track with a repeating gradient
+									 * so it cannot be misread as a zero-length bar. RN has no
+									 * gradient without a native dependency, so the hatch is drawn
+									 * as evenly spaced ticks — same message, no new dep.
+									 */
+									<View style={styles.hatch}>
+										{NA_TICKS.map((k) => (
+											<View key={k} style={styles.tick} />
+										))}
+									</View>
+								) : (
 									<View
 										style={[styles.fill, { width: `${(d.score ?? 0) * 10}%` }]}
 									/>
@@ -133,7 +147,7 @@ const styles = StyleSheet.create({
 		...StyleSheet.absoluteFillObject,
 		borderRadius: RING / 2,
 		borderWidth: STROKE,
-		borderColor: scoreTokens.track,
+		borderColor: scoreTokens.ringTrack,
 	},
 	/** Half-width clipping window; the arc inside is only visible through it. */
 	window: {
@@ -173,17 +187,17 @@ const styles = StyleSheet.create({
 		lineHeight: 24,
 		fontWeight: "600",
 		letterSpacing: -0.6,
-		color: colors.onCard,
+		color: scoreTokens.ink,
 		// Keeps the number from reflowing as it animates/changes between cards.
 		fontVariant: ["tabular-nums"],
 	},
-	outOf: { ...textStyles.caption, color: colors.onCardDim },
+	outOf: { ...textStyles.caption, color: scoreTokens.ink3 },
 	caption: {
 		...textStyles.caption,
 		marginTop: 3,
 		letterSpacing: 1.1,
 		textTransform: "uppercase",
-		color: colors.onCardDim,
+		color: scoreTokens.ink3,
 	},
 	list: { marginTop: 10 },
 	row: {
@@ -194,7 +208,14 @@ const styles = StyleSheet.create({
 		borderTopWidth: StyleSheet.hairlineWidth,
 		borderTopColor: scoreTokens.hairline,
 	},
-	label: { flex: 1, minWidth: 0, ...textStyles.footnote, color: colors.onCard },
+	/** `.C .li:first-child{border-top:0}` — the list needs no lid. */
+	rowFirst: { borderTopWidth: 0 },
+	label: {
+		flex: 1,
+		minWidth: 0,
+		...textStyles.footnote,
+		color: scoreTokens.ink,
+	},
 	track: {
 		width: 54,
 		height: 3,
@@ -202,14 +223,18 @@ const styles = StyleSheet.create({
 		backgroundColor: scoreTokens.track,
 		overflow: "hidden",
 	},
-	fill: { height: "100%", borderRadius: 2, backgroundColor: scoreTokens.fill },
+	/** An unscored row's track carries ticks, so it gets no solid fill colour. */
+	trackNa: { backgroundColor: "transparent" },
+	hatch: { flex: 1, flexDirection: "row", alignItems: "center", gap: 3 },
+	tick: { flex: 1, height: 3, backgroundColor: scoreTokens.naTick },
+	fill: { height: "100%", borderRadius: 2, backgroundColor: scoreTokens.ink2 },
 	value: {
 		minWidth: 24,
 		textAlign: "right",
 		...textStyles.footnote,
 		fontWeight: "600",
-		color: colors.onCard,
+		color: scoreTokens.ink,
 		fontVariant: ["tabular-nums"],
 	},
-	dim: { color: scoreTokens.faint },
+	dim: { color: scoreTokens.ink3 },
 });

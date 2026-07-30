@@ -56,21 +56,40 @@ export const colors = {
 /**
  * Score-panel tokens (2026-07-30, demo variant C).
  *
- * The listing card's info area sits on the dark `cardPlainTo` face, so these are
- * the dark-face family — same reason `onCard` is white. The track is a lifted
- * white wash rather than a separate hue: a coloured track competes with the
- * amber arc, and the owner's brief for this card was "色彩克制".
+ * ── These are LIGHT-face values, transcribed from the demo ────────────────────
+ *
+ * The first version of this panel used a dark-face family (white text, white
+ * washes) because it was drawn on `cardPlainTo`. That was the wrong reading of
+ * the owner's pick: demo C's card is `#FFFDFB` with `#221A12` ink, and his
+ * original brief for this card was 「纯白 + 浅灰为基底，柔和渐变与微阴影，
+ * 色彩克制」. Drawing C's geometry on a dark panel reproduced the layout and
+ * missed the design. Values below come straight from `card-v7/index.html`'s
+ * `.C` rules, so the app and the approved demo cannot drift.
  */
 export const scoreTokens = {
-	/** Unfilled portion of the ring and of each dimension's mini-track. */
-	track: "rgba(255,255,255,0.14)",
-	/** Row separators in the dimension list. */
-	hairline: "rgba(255,255,255,0.10)",
-	/** A dimension with no data source — dimmer than `onCardDim`. */
-	faint: "rgba(255,255,255,0.38)",
-	/** Filled portion of a dimension's mini-track. */
-	fill: "rgba(255,255,255,0.62)",
+	/** `.C .card` — near-white card face, very slightly warm. */
+	face: "#FFFDFB",
+	/** `--ink` — primary text on the light face. */
+	ink: "#221A12",
+	/** `--ink2` — secondary text, and the FILL of each dimension's mini-track. */
+	ink2: "#7A6A57",
+	/** `--ink3` — the "no data source" dash and the eyebrow caption. */
+	ink3: "#B3A491",
+	/** `--line` — row separators. */
+	hairline: "rgba(34,26,18,0.10)",
+	/** `.C circle` stroke — the ring's unfilled arc. */
+	ringTrack: "#E7DFD0",
+	/** `.C .li .track` — a dimension's unfilled mini-track. */
+	track: "#EFE9DE",
+	/**
+	 * `.C .li.na .track` — the demo hatches an unscored row's track with a
+	 * repeating gradient. RN has no gradient without a native dep, so it is drawn
+	 * as spaced ticks (see `NeighborhoodScore`): the point is that "no data" must
+	 * not look like "a score of zero", which a plain empty track does.
+	 */
+	naTick: "#E6DFD2",
 } as const;
+
 
 /**
  * Backgrounds for faces with NO photograph (§0.3 names a dark treatment for

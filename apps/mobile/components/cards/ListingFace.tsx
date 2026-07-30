@@ -55,11 +55,30 @@
  * column, so shrinking the circle (150 → 132) leaves the column width — and
  * therefore the circle's CENTRE — exactly where it was. That was a literal
  * requirement: 「地图稍微小一点 圆心不动」.
+ *
+ * ── The face is LIGHT, and that was the whole point of variant C ──────────────
+ *
+ * First pass got this wrong: the geometry of C was transcribed onto the old dark
+ * `cardPlainTo` face with white text, and the owner's verdict was 「你完全没有
+ * 按照我们选定的方案C实现」. Correct — C's defining property is not the ring, it
+ * is 「纯白 + 浅灰为基底，柔和渐变与微阴影，色彩克制，仅用点缀色突出核心操作」.
+ * So:
+ *
+ *   · the info area sits on `scoreTokens.face` (#FFFDFB), not a brown panel;
+ *   · text is ink on light (`scoreTokens.ink` / `ink2` / `ink3`), never white;
+ *   · the ONE accent (amber) is spent on the ring arc, the map pin and the
+ *     Explore fill — "仅用点缀色突出核心操作";
+ *   · Explore is a solid amber pill with white text, matching the demo's `.go`;
+ *     the old translucent `glass` pill was invisible on a white card.
+ *
+ * The media block keeps its dark backing (`cardPlainTo`) — that is behind a
+ * photo or video, so it is never seen; a white backing would flash white on
+ * every card mount.
  */
 import { router } from "expo-router";
 import { StyleSheet, Text, View } from "react-native";
 import type { ListingCardV3 } from "../../lib/feed/card-types";
-import { colors, radii } from "../../theme/tokens";
+import { colors, radii, scoreTokens } from "../../theme/tokens";
 import { priceStyle, textStyles } from "../../theme/typography";
 import { CardMap } from "../CardMap";
 import { CardPhoto } from "../CardPhoto";
@@ -165,7 +184,11 @@ export function ListingFace({
 							onPress={() => router.push(`/listing/nearby?id=${card.id}`)}
 						/>
 						{!!onExplore && (
-							<ExploreButton onPress={onExplore} width={MAP_SLOT} />
+							<ExploreButton
+								onPress={onExplore}
+								width={MAP_SLOT}
+								tone="solid"
+							/>
 						)}
 					</View>
 				)}
@@ -175,7 +198,8 @@ export function ListingFace({
 }
 
 const styles = StyleSheet.create({
-	face: { flex: 1, backgroundColor: colors.cardPlainTo },
+	/** Light face — demo C's `.C .card{background:#FFFDFB}`. */
+	face: { flex: 1, backgroundColor: scoreTokens.face },
 	/**
 	 * `aspectRatio: 1` makes the block's height follow the card's width, so the
 	 * 1:1 render lands 1:1 on every device size with no measurement.
@@ -212,7 +236,7 @@ const styles = StyleSheet.create({
 		justifyContent: "space-between",
 		gap: 10,
 	},
-	price: { ...priceStyle, color: colors.onCard },
-	address: { ...textStyles.footnote, color: colors.onCard, marginTop: 2 },
-	specs: { ...textStyles.footnote, color: colors.onCardDim, marginTop: 4 },
+	price: { ...priceStyle, color: scoreTokens.ink },
+	address: { ...textStyles.footnote, color: scoreTokens.ink, marginTop: 2 },
+	specs: { ...textStyles.footnote, color: scoreTokens.ink2, marginTop: 4 },
 });

@@ -91,14 +91,21 @@ export function CardMap({ url, diameter = 132, onPress }: CardMapProps) {
 const styles = StyleSheet.create({
 	/**
 	 * The white ring is what makes this read as an object sitting ON the card
-	 * rather than a hole punched INTO it — the tile's own beige is close enough
-	 * to the card's warm dark that a borderless circle looked like a smudge.
+	 * rather than a hole punched INTO it, and the soft drop shadow is demo C's
+	 * 「微阴影，还原真实卡片触感」. The well behind the tile is the recessed
+	 * `surface2` rather than a dark fill — on the light card face a brown backing
+	 * showed as a dark rim while the image loaded.
 	 */
 	well: {
 		overflow: "hidden",
-		backgroundColor: colors.cardPlainTo,
+		backgroundColor: colors.surface2,
 		borderWidth: 4,
-		borderColor: colors.onCard,
+		borderColor: colors.surface,
+		shadowColor: colors.ink,
+		shadowOpacity: 0.22,
+		shadowRadius: 8,
+		shadowOffset: { width: 0, height: 5 },
+		elevation: 4,
 	},
 	img: { width: "100%", height: "100%" },
 	/**
@@ -117,6 +124,6 @@ const styles = StyleSheet.create({
 		borderRadius: DOT / 2,
 		backgroundColor: colors.accent,
 		borderWidth: 2.5,
-		borderColor: colors.onCard,
+		borderColor: colors.surface,
 	},
 });

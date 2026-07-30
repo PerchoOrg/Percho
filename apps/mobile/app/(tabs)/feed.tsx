@@ -445,7 +445,23 @@ export default function FeedScreen() {
 				case "area":
 					return <AreaFace card={card} isTop={isTop} />;
 				case "listing":
-					return <ListingFace card={card} stage={stage} isTop={isTop} />;
+					return (
+						<ListingFace
+							card={card}
+							stage={stage}
+							isTop={isTop}
+							/*
+							 * Demo variant C puts the Explore CTA on the FRONT face, under the
+							 * map circle. It was previously only reachable from the flipped
+							 * data face, so `ListingFace`'s optional `onExplore` was never
+							 * passed and the button never rendered at all.
+							 */
+							onExplore={() => {
+								emitGesture("explore_tap", card);
+								router.push(`/listing/${card.id}`);
+							}}
+						/>
+					);
 				case "community":
 					return <CommunityFace card={card} isTop={isTop} />;
 				case "tradeoff":
