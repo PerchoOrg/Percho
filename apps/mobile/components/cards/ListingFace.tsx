@@ -35,8 +35,27 @@
  * a score at all (§1.7 "match badge 不显"), so the badge is not rendered for
  * those. That is suppression of an untrustworthy number, not a second copy of
  * the stage rule.
+ *
+ * ── 2026-07-30 info-block change (owner picked demo variant "C") ─────────────
+ *
+ * The bottom half is unchanged in LAYOUT — media on top, info left, map right,
+ * because the owner's words were 「这个格局不错」 and the previous attempt to
+ * restructure it was reverted. Only the contents of the left column and the
+ * shape of the right one changed:
+ *
+ *   · the dim pills are gone, replaced by the four-dimension neighborhood score
+ *     panel (Safety / Schools / Convenience / Potential);
+ *   · city+beds+baths+sqft collapse into ONE line, and $/sqft is removed —
+ *     both explicit owner instructions ("房子的信息可以简单点 不要每平米的价格");
+ *   · the map is a CIRCLE inside a fixed-width slot, with Explore directly
+ *     beneath it, so the right column reads as one unit and the dead space the
+ *     owner flagged under the CTA is gone.
+ *
+ * MAP_SLOT vs the circle's own diameter matters: the slot is what reserves the
+ * column, so shrinking the circle (150 → 132) leaves the column width — and
+ * therefore the circle's CENTRE — exactly where it was. That was a literal
+ * requirement: 「地图稍微小一点 圆心不动」.
  */
-import { DIMS } from "@percho/shared";
 import { router } from "expo-router";
 import { StyleSheet, Text, View } from "react-native";
 import type { ListingCardV3 } from "../../lib/feed/card-types";
@@ -48,8 +67,14 @@ import { CardVideo } from "../CardVideo";
 import { ExploreButton } from "../ExploreButton";
 import { KindChip } from "../KindChip";
 import { MatchBadge } from "../MatchBadge";
+import { NeighborhoodScore } from "../NeighborhoodScore";
 
-const MAX_PILLS = 3;
+/**
+ * Width of the right-hand column. The map circle is smaller than this (see
+ * `CardMap`'s default) and centres inside it, which is what keeps the circle's
+ * centre fixed when its diameter changes.
+ */
+const MAP_SLOT = 150;
 
 interface ListingFaceProps {
 	card: ListingCardV3;
@@ -68,7 +93,14 @@ export function ListingFace({
 	onSeeWhy,
 }: ListingFaceProps) {
 	const scoreShown = card.tease || card.preview ? undefined : card.matchScore;
-	const pills = (card.dims ?? []).map((d) => DIMS[d].label);
+	/**
+	 * "Peachtree Corners, GA · 4 bd · 4 ba · 3,302 sqft" — locality and specs on
+	 * one line. Both halves are optional, and the separator only appears when
+	 * both exist, so a listing missing either never renders a dangling "·".
+	 */
+	const specLine = [card.locality, card.bedBathSqft]
+		.filter((s): s is string => !!s && s.trim().length > 0)
+		.join(" · ");
 
 	return (
 		<View style={styles.face}>
@@ -104,31 +136,38 @@ export function ListingFace({
 							{card.address}
 						</Text>
 					)}
-					{!!card.bedBathSqft && (
+					{/*
+					 * One spec line, not two (2026-07-30). "City, ST · 4 bd · 4 ba ·
+					 * 3,302 sqft" reads as a single fact about the house; splitting it
+					 * cost ~22pt of card height that the photo needs, and the owner's
+					 * instruction was to SIMPLIFY the property info. No $/sqft — he
+					 * explicitly cut it.
+					 */}
+					{!!specLine && (
 						<Text style={styles.specs} numberOfLines={1}>
-							{card.bedBathSqft}
+							{specLine}
 						</Text>
 					)}
-					{pills.length > 0 && (
-						<View style={styles.pillRow}>
-							{pills.slice(0, MAX_PILLS).map((p) => (
-								<Text key={p} style={styles.pill}>
-									{p}
-								</Text>
-							))}
-						</View>
-					)}
-					{!!onExplore && (
-						<View style={styles.exploreRow}>
-							<ExploreButton onPress={onExplore} />
-						</View>
+					{/*
+					 * The score panel replaces the dim pills. Pills restated match dims
+					 * the badge already covers; the four scores are new information.
+					 * Suppressed for tease/preview listings for the same reason the match
+					 * badge is (§1.7): pre-stage-4 we don't stand behind the numbers.
+					 */}
+					{!!card.scores && !card.tease && !card.preview && (
+						<NeighborhoodScore scores={card.scores} />
 					)}
 				</View>
 				{card.mapUrl && (
-					<CardMap
-						url={card.mapUrl}
-						onPress={() => router.push(`/listing/nearby?id=${card.id}`)}
-					/>
+					<View style={styles.mapCol}>
+						<CardMap
+							url={card.mapUrl}
+							onPress={() => router.push(`/listing/nearby?id=${card.id}`)}
+						/>
+						{!!onExplore && (
+							<ExploreButton onPress={onExplore} width={MAP_SLOT} />
+						)}
+					</View>
 				)}
 			</View>
 		</View>
@@ -160,18 +199,20 @@ const styles = StyleSheet.create({
 		paddingBottom: 16,
 	},
 	infoText: { flex: 1, minWidth: 0 },
+	/**
+	 * Fixed width so the map circle's centre never moves, and `space-between` so
+	 * any slack in the row is absorbed BETWEEN the circle and the button instead
+	 * of piling up under the button — that pile-up was the 「底下空的太多」 the
+	 * owner reported on the previous round.
+	 */
+	mapCol: {
+		width: MAP_SLOT,
+		alignSelf: "stretch",
+		alignItems: "center",
+		justifyContent: "space-between",
+		gap: 10,
+	},
 	price: { ...priceStyle, color: colors.onCard },
 	address: { ...textStyles.footnote, color: colors.onCard, marginTop: 2 },
 	specs: { ...textStyles.footnote, color: colors.onCardDim, marginTop: 4 },
-	pillRow: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 12 },
-	pill: {
-		...textStyles.caption,
-		color: colors.ink,
-		backgroundColor: colors.glass,
-		paddingHorizontal: 10,
-		paddingVertical: 4,
-		borderRadius: radii.pill,
-		overflow: "hidden",
-	},
-	exploreRow: { marginTop: 14 },
 });

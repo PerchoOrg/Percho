@@ -54,6 +54,25 @@ export const colors = {
 } as const;
 
 /**
+ * Score-panel tokens (2026-07-30, demo variant C).
+ *
+ * The listing card's info area sits on the dark `cardPlainTo` face, so these are
+ * the dark-face family — same reason `onCard` is white. The track is a lifted
+ * white wash rather than a separate hue: a coloured track competes with the
+ * amber arc, and the owner's brief for this card was "色彩克制".
+ */
+export const scoreTokens = {
+	/** Unfilled portion of the ring and of each dimension's mini-track. */
+	track: "rgba(255,255,255,0.14)",
+	/** Row separators in the dimension list. */
+	hairline: "rgba(255,255,255,0.10)",
+	/** A dimension with no data source — dimmer than `onCardDim`. */
+	faint: "rgba(255,255,255,0.38)",
+	/** Filled portion of a dimension's mini-track. */
+	fill: "rgba(255,255,255,0.62)",
+} as const;
+
+/**
  * Backgrounds for faces with NO photograph (§0.3 names a dark treatment for
  * photo-backed faces and nothing for the rest).
  *

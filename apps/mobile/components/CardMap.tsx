@@ -22,59 +22,101 @@
  *
  * Not an interactive MapView: the feed is a swipe surface, so a pannable map
  * inside a card would fight the gesture. Tapping opens the full POI map instead.
+ *
+ * ── 2026-07-30: circular, and with no text on it ─────────────────────────────
+ *
+ * Two owner instructions, both literal. 「去掉地图上的字」 removed the "Explore
+ * area" caption that used to sit on the tile — the Explore button below it says
+ * the same thing without covering the map. The pre-rendered tile itself also has
+ * Google's label layer switched off (see `scripts/backfill_listing_maps.py`), so
+ * street names are gone as well; the Google watermark and attribution are
+ * mandated by the Static Maps terms and cannot be styled away.
+ *
+ * `diameter` defaults BELOW the card's 150pt column slot: the circle centres in
+ * that slot, so resizing it leaves its centre where it was — 「地图稍微小一点
+ * 圆心不动」. Sizing the column to the circle instead would have moved the
+ * centre right and down as it shrank.
  */
-import { Image, Pressable, StyleSheet, Text, View } from "react-native";
-import { colors, radii } from "../theme/tokens";
-import { textStyles } from "../theme/typography";
+import { Image, Pressable, StyleSheet, View } from "react-native";
+import { colors } from "../theme/tokens";
 
 interface CardMapProps {
 	/** Public Storage URL of the pre-rendered tile (`listings.map_url`). */
 	url?: string;
-	/** Square edge in points. */
-	size?: number;
+	/** Circle diameter in points. */
+	diameter?: number;
 	/** Opens the deep POI map. Omit to render a non-interactive thumbnail. */
 	onPress?: () => void;
 }
 
-export function CardMap({ url, size = 104, onPress }: CardMapProps) {
+/** Diameter of the centre dot marking the house. */
+const DOT = 12;
+
+export function CardMap({ url, diameter = 132, onPress }: CardMapProps) {
 	// No cached tile → render nothing at all rather than an empty grey square,
 	// so the info block simply reflows to full width.
 	if (!url) return null;
 
 	const body = (
-		<View style={[styles.well, { width: size, height: size }]}>
+		<View
+			style={[
+				styles.well,
+				{ width: diameter, height: diameter, borderRadius: diameter / 2 },
+			]}
+		>
 			<Image source={{ uri: url }} style={styles.img} resizeMode="cover" />
-			{!!onPress && (
-				<View style={styles.hintRow}>
-					<Text style={styles.hint}>Explore area</Text>
-				</View>
-			)}
+			{/*
+			 * Our own centre dot. The pre-rendered tile deliberately carries NO
+			 * Google marker (see `scripts/backfill_listing_maps.py`) — its teardrop
+			 * pin doesn't match anything else in the app, and keeping both drew two
+			 * overlapping indicators. The tile is centred on the listing, so the
+			 * geometric centre of the circle IS the house.
+			 */}
+			<View style={styles.dot} />
 		</View>
 	);
 
 	if (!onPress) return body;
 	return (
-		<Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel="Explore the area around this home">
+		<Pressable
+			onPress={onPress}
+			accessibilityRole="button"
+			accessibilityLabel="Explore the area around this home"
+		>
 			{body}
 		</Pressable>
 	);
 }
 
 const styles = StyleSheet.create({
+	/**
+	 * The white ring is what makes this read as an object sitting ON the card
+	 * rather than a hole punched INTO it — the tile's own beige is close enough
+	 * to the card's warm dark that a borderless circle looked like a smudge.
+	 */
 	well: {
-		borderRadius: radii.tile,
 		overflow: "hidden",
 		backgroundColor: colors.cardPlainTo,
+		borderWidth: 4,
+		borderColor: colors.onCard,
 	},
 	img: { width: "100%", height: "100%" },
-	hintRow: {
+	/**
+	 * Centred by `position:absolute` + 50% insets and a half-size negative
+	 * margin, which is exact at any diameter — `alignItems:center` on the parent
+	 * would fight the absolutely-positioned image.
+	 */
+	dot: {
 		position: "absolute",
-		left: 0,
-		right: 0,
-		bottom: 0,
-		paddingVertical: 4,
-		paddingHorizontal: 6,
-		backgroundColor: "rgba(0,0,0,0.55)",
+		top: "50%",
+		left: "50%",
+		width: DOT,
+		height: DOT,
+		marginTop: -DOT / 2,
+		marginLeft: -DOT / 2,
+		borderRadius: DOT / 2,
+		backgroundColor: colors.accent,
+		borderWidth: 2.5,
+		borderColor: colors.onCard,
 	},
-	hint: { ...textStyles.caption, color: colors.onCard, fontSize: 9 },
 });

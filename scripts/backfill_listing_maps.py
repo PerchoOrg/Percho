@@ -32,20 +32,41 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 BUCKET = "listing-maps"
 STATIC_MAPS = "https://maps.googleapis.com/maps/api/staticmap"
 
-# Dark map styling matched to the card family (§0.3). Roads and place labels stay
-# VISIBLE on purpose: an earlier prototype styled them off at zoom 14 and the
-# 104pt result read as an empty tan rectangle, i.e. like a broken image.
-DARK_STYLE = [
-    "feature:all|element:geometry|color:0x2f2b26",
-    "feature:all|element:labels.text.fill|color:0x9c948a",
-    "feature:all|element:labels.text.stroke|color:0x1a1816",
-    "feature:all|element:labels.icon|visibility:off",
-    "feature:road|element:geometry.fill|color:0x6b6259",
-    "feature:road.arterial|element:geometry.fill|color:0x857a6d",
-    "feature:water|element:geometry|color:0x16202a",
-    "feature:poi.park|element:geometry|color:0x24331f",
-    "feature:poi.business|visibility:off",
+# Card map styling. Two deliberate departures from the first version:
+#
+#   1. NO LABELS AT ALL. The owner's instruction was 「去掉地图上的字」 — street
+#      names are text too, so the whole label layer goes, not just the caption
+#      the card used to overlay. (Google's own watermark + "Map data ©" stay:
+#      the Static Maps terms mandate them and no styling removes them. Getting
+#      rid of those means changing basemap providers — Mapbox / MapTiler.)
+#   2. LIGHT, warm palette. The tile now renders inside a 132pt CIRCLE with a
+#      white ring, and the old near-black fill read as a hole punched in the
+#      card rather than an object on it.
+#
+# The earlier note here warned that labels-off at zoom 14 looked like a broken
+# empty rectangle. That was a ZOOM problem, not a label problem: at 16 the local
+# street geometry fills the frame on its own, verified on the sample listing.
+CARD_STYLE = [
+    "feature:all|element:geometry|color:0xf3ede2",
+    "feature:all|element:labels|visibility:off",
+    "feature:road|element:geometry.fill|color:0xffffff",
+    "feature:road|element:geometry.stroke|color:0xe6dbc8",
+    "feature:road.arterial|element:geometry.fill|color:0xfff6e6",
+    "feature:water|element:geometry|color:0xbfd9de",
+    "feature:poi.park|element:geometry|color:0xcfe3be",
+    "feature:landscape.natural|element:geometry|color:0xede6d6",
+    "feature:poi|visibility:off",
+    "feature:transit|visibility:off",
 ]
+
+# Bump this whenever CARD_STYLE / zoom / size / markers change.
+#
+# It goes in the STORAGE PATH, and that is load-bearing: tiles are uploaded with
+# `Cache-Control: public, max-age=31536000, immutable`. Re-rendering to the same
+# path leaves every CDN edge and every installed app serving the OLD picture
+# forever — a redesign that appears to do nothing. Versioning the path makes the
+# new tile a new object, so it simply can't be shadowed by the old one.
+STYLE_VERSION = "v2light"
 
 
 def load_env() -> dict[str, str]:
@@ -106,15 +127,21 @@ def static_map_png(lat: float, lng: float) -> bytes:
     q = {
         "center": f"{lat},{lng}",
         "zoom": "16",
-        "size": "200x200",
-        "scale": "2",  # retina; 400x400 actual pixels
+        # 240 not 200: the tile now fills a 132pt circle at up to 3x device
+        # density, and the extra margin means the circular crop never eats the
+        # part of the street grid nearest the house.
+        "size": "240x240",
+        "scale": "2",  # retina; 480x480 actual pixels
         "maptype": "roadmap",
-        "markers": f"color:0xB45309|size:small|{lat},{lng}",
+        # NO `markers`. Google's marker is a teardrop pin with a drop shadow; the
+        # card draws its own centred dot (a plain circle, plus a slow pulse) so
+        # the pin style is ours and stays consistent with the rest of the UI.
+        # Leaving both in produced two overlapping location indicators.
         "key": GKEY,
     }
     url = (
         f"{STATIC_MAPS}?{urllib.parse.urlencode(q)}"
-        + "".join(f"&style={urllib.parse.quote(s)}" for s in DARK_STYLE)
+        + "".join(f"&style={urllib.parse.quote(s)}" for s in CARD_STYLE)
     )
     with urllib.request.urlopen(url, timeout=40) as r:
         body = r.read()
@@ -175,7 +202,7 @@ def main() -> int:
             png = static_map_png(lat, lng)
             # Coordinate in the object name, so a re-geocode produces a NEW path
             # instead of serving a stale immutable-cached tile.
-            path = f"{r['id']}/{lat:.6f}_{lng:.6f}.png"
+            path = f"{r['id']}/{STYLE_VERSION}_{lat:.6f}_{lng:.6f}.png"
             url = upload(path, png)
             patch(
                 "listings",

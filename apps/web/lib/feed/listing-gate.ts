@@ -10,6 +10,8 @@
  * app build cannot break the promise.
  */
 
+import type { NeighborhoodScores } from "./neighborhood-score";
+
 /** §1.7: one tease listing per ten cards in stages 1–2. */
 export const TEASE_PER = 10;
 
@@ -49,6 +51,16 @@ export interface PoolListingDTO {
    * inventing content is the description the agent already wrote.
    */
   description?: string[];
+  /**
+   * Four-dimension neighborhood scores (Safety / Schools / Convenience /
+   * Potential) for the card's score panel.
+   *
+   * Absent when the listing has no POI rows at all. Within it, a dimension's
+   * `score` is `null` when we hold no source for it — Safety and Potential are
+   * both null today, and the card renders them as an em dash. See
+   * `lib/feed/neighborhood-score.ts` for why that is not a zero.
+   */
+  scores?: NeighborhoodScores;
   /** City unit this listing sits in — a tease swipe credits it (§1.7). */
   geoUnitId?: string;
   /** Set in stages 1–2: likeable, weighted 0.5×, match badge suppressed. */

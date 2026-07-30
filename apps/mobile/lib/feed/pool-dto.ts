@@ -13,7 +13,13 @@
  */
 import type { DimKey } from "@percho/shared";
 import { DIMS } from "@percho/shared";
-import type { CommunityCardV3, ListingCardV3 } from "./card-types";
+import type {
+	CommunityCardV3,
+	ListingCardV3,
+	NeighborhoodScores,
+	ScoreDimension,
+	ScoreDimensionKey,
+} from "./card-types";
 import type { FeedPool } from "./generate-feed";
 import type { GeoLevel, GeoStats, GeoUnit } from "./geo-unit";
 import { GEO_LEVELS } from "./geo-unit";
@@ -97,6 +103,58 @@ export function parseGeoUnit(v: unknown): GeoUnit | null {
 	};
 }
 
+/**
+ * Neighborhood scores off the wire.
+ *
+ * Validated field by field rather than cast, like everything else in this file:
+ * a malformed `dims` entry must not reach the renderer as a partially-shaped
+ * object. In particular `score` distinguishes three states —
+ *
+ *   a finite number → show it
+ *   explicit null    → "no source", the card shows an em dash
+ *   anything else    → treat as null; never coerce to 0
+ *
+ * That last line is the whole point. `Number(undefined)` is NaN and
+ * `Number(null)` is 0, so a sloppy parse here would silently claim a
+ * neighbourhood scored zero on Safety.
+ */
+function scores(v: unknown): NeighborhoodScores | undefined {
+	const raw = rec(v);
+	if (!raw) return undefined;
+	if (!Array.isArray(raw.dims)) return undefined;
+
+	const valid: ScoreDimensionKey[] = [
+		"safety",
+		"schools",
+		"convenience",
+		"potential",
+	];
+	const dims: ScoreDimension[] = [];
+	for (const entry of raw.dims) {
+		const d = rec(entry);
+		if (!d) continue;
+		const key = str(d.key);
+		const label = str(d.label);
+		if (!key || !label) continue;
+		if (!valid.includes(key as ScoreDimensionKey)) continue;
+		const score = num(d.score);
+		dims.push({
+			key: key as ScoreDimensionKey,
+			label,
+			// `num` returns undefined for null/NaN/non-numbers alike, which is
+			// exactly the "unknown" case — normalise it to null.
+			score: score === undefined ? null : score,
+			count: num(d.count) ?? 0,
+			...(num(d.nearestM) !== undefined ? { nearestM: num(d.nearestM) } : {}),
+			...(str(d.reason) ? { reason: str(d.reason) } : {}),
+		});
+	}
+	if (dims.length === 0) return undefined;
+
+	const overall = num(raw.overall);
+	return { overall: overall === undefined ? null : overall, dims };
+}
+
 export function parseListing(v: unknown): ListingCardV3 | null {
 	const raw = rec(v);
 	if (!raw) return null;
@@ -123,6 +181,7 @@ export function parseListing(v: unknown): ListingCardV3 | null {
 	const state = str(raw.state);
 	const locality = city && state ? `${city}, ${state}` : city;
 	const description = strings(raw.description);
+	const sc = scores(raw.scores);
 	const d = dims(raw.dims);
 	return {
 		kind: "listing",
@@ -137,6 +196,7 @@ export function parseListing(v: unknown): ListingCardV3 | null {
 		...(mapUrl ? { mapUrl } : {}),
 		...(locality ? { locality } : {}),
 		...(description.length > 0 ? { description } : {}),
+		...(sc ? { scores: sc } : {}),
 		...(communityId ? { communityId } : {}),
 		...(geoUnitId ? { geoUnitId } : {}),
 		...(matchScore !== undefined ? { matchScore } : {}),
