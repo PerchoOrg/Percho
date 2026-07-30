@@ -6,7 +6,6 @@ import {
 	INERT_CAPABILITY,
 	clampDisplacement,
 	commitDecision,
-	panAllowed,
 	panLive,
 } from "./capability";
 import { SWIPE_THRESHOLD_RATIO, decideSwipe } from "./decide-swipe";
@@ -102,27 +101,6 @@ describe("commitDecision — `commits: false` never reaches the caller", () => {
 	});
 });
 
-describe("panAllowed — §1.1 翻面态禁 swipe", () => {
-	it("allows the pan on an unflipped pannable card", () => {
-		expect(panAllowed(true, 0)).toBe(true);
-	});
-
-	it("blocks the pan on a fully flipped card", () => {
-		expect(panAllowed(true, 1)).toBe(false);
-	});
-
-	it("blocks the pan MID-crossfade, not just at rest on the data face", () => {
-		// A card at 0.4 is showing two faces at once. Committing a verdict there
-		// records it against a face the buyer was in the middle of leaving.
-		expect(panAllowed(true, 0.4)).toBe(false);
-		expect(panAllowed(true, 0.01)).toBe(false);
-	});
-
-	it("blocks an unpannable card regardless of flip state", () => {
-		expect(panAllowed(false, 0)).toBe(false);
-	});
-});
-
 /**
  * The gate that stops a committed card from taking a second gesture.
  *
@@ -136,7 +114,7 @@ describe("panAllowed — §1.1 翻面态禁 swipe", () => {
  */
 describe("panLive — a committed card takes no further input", () => {
 	const live = (over: Partial<Parameters<typeof panLive>[0]> = {}) =>
-		panLive({ pannable: true, flipProgress: 0, committed: false, ...over });
+		panLive({ pannable: true, committed: false, ...over });
 
 	it("allows a normal untouched top card", () => {
 		expect(live()).toBe(true);
@@ -150,39 +128,37 @@ describe("panLive — a committed card takes no further input", () => {
 		// The committed card is still on screen and still under the gesture until the
 		// flyout spring completes and runs the handoff. A second touch in that window
 		// cancels the spring, and a cancelled animation never runs its callback.
-		expect(live({ committed: true, flipProgress: 0 })).toBe(false);
+		expect(live({ committed: true })).toBe(false);
 	});
 
-	it("still enforces both original §1.1 gates", () => {
+	it("still enforces the §1.1 pannable gate", () => {
 		expect(live({ pannable: false })).toBe(false);
-		expect(live({ flipProgress: 0.4 })).toBe(false);
 	});
 
-	it("agrees with panAllowed whenever nothing is committed", () => {
+	it("is exactly `pannable && !committed` — nothing else gates the pan", () => {
+		// The flip is gone (2026-07-30), and with it the `flipProgress` gate that
+		// used to be the other half of this predicate. Pinned so a future reader
+		// does not re-add a third input without deciding it belongs here.
 		for (const pannable of [true, false]) {
-			for (const flipProgress of [0, 0.01, 0.5, 1]) {
-				expect(live({ pannable, flipProgress })).toBe(
-					panAllowed(pannable, flipProgress),
-				);
+			for (const committed of [true, false]) {
+				expect(live({ pannable, committed })).toBe(pannable && !committed);
 			}
 		}
 	});
 });
 
 describe("the capability constants", () => {
-	it("DEFAULT is a normal decide-and-fly card with a data face", () => {
+	it("DEFAULT is a normal decide-and-fly card", () => {
 		expect(DEFAULT_CAPABILITY).toEqual({
 			pannable: true,
 			commits: true,
 			maxDisplacementRatio: 1,
-			flippable: true,
 		});
 	});
 
 	it("INERT is dead to the touch — the no-top-card case", () => {
 		expect(INERT_CAPABILITY.pannable).toBe(false);
 		expect(INERT_CAPABILITY.commits).toBe(false);
-		expect(INERT_CAPABILITY.flippable).toBe(false);
 	});
 });
 

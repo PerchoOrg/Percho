@@ -179,40 +179,13 @@ export function advanceFromDrag(dragX: number, cardWidth: number): number {
 	return Math.min(Math.abs(dragX) / cardWidth, 1);
 }
 
-export interface FaceOpacity {
-	front: number;
-	back: number;
-}
-
-/**
- * The §0.5 flip crossfade, as a pure function of the card's own position.
- *
- * ## Why this cannot be a style chosen by stack position
- *
- * That was the third instance of this file's headline bug, and the one the owner
- * saw last: "community卡闪现的是背面的卡片内容".
- *
- * A community or listing card is flippable, so its data face is MOUNTED beneath
- * the front face the whole time it is in the stack. While the card sat behind the
- * top card that face was pinned by a static `opacity: 0` style; the instant the
- * card was promoted, the style prop was swapped for the animated `backStyle`.
- *
- * Swapping those is not free. React commits the new style prop — which no longer
- * carries `opacity: 0`, so the view reverts to its default opacity 1 — and
- * Reanimated's first write of `flipProgress` lands on a later frame. In that gap
- * the data face paints at FULL strength over the card's own front face. Hence a
- * flash of the same address on the card that was just promoted.
- *
- * The fix is the same one the geometry above already uses: never swap the style.
- * Each card owns one animated style, created once with its `absIndex` captured,
- * that computes BOTH face opacities from its own depth. A card that is not top
- * resolves to a hard 0 through the very same code path that animates the top
- * card, so there is no frame in which the value is unwritten or inconsistent.
+/*
+ * `faceOpacity` used to live here: the §0.5 flip crossfade, computed per card
+ * from its own depth so a non-top card's data face was driven to a hard 0 by the
+ * same style that animated the top card's. It existed because the naive version
+ * — a static `opacity: 0` swapped for an animated style on promotion — flashed
+ * the card's own data face over its front for one frame ("community卡闪现的是背面
+ * 的卡片内容"). The flip mechanic itself was cut on 2026-07-30, so the card is
+ * single-faced and there is no second opacity to reconcile. The lesson survives
+ * in the module comment above (#1): never swap a card's animated style.
  */
-export function faceOpacity(rel: number, flipProgress: number): FaceOpacity {
-	"worklet";
-	// Only the top card flips. Everything else — including a card mid-promotion
-	// and a card still flying out — shows its front face and nothing else.
-	if (rel !== 0) return { front: 1, back: 0 };
-	return { front: 1 - flipProgress, back: flipProgress };
-}

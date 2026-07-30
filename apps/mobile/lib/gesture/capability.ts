@@ -7,6 +7,18 @@
  * it (`lib/feed/behavior.ts`). A gesture handler therefore never branches on a
  * card kind — the §1.1 engineering red-line ("every handler must handle all 8
  * kinds") is satisfied structurally rather than by 8 null checks.
+ *
+ * ## No `flippable`
+ *
+ * The card used to have a second face: a tap crossfaded to a data face over
+ * 350ms (§0.5), and that flip carried a whole sub-system — a `flipProgress`
+ * shared value, a per-card face-opacity function, a `canFlipCard` predicate over
+ * the rendered back node, and a rule that a flipped card must not pan. The owner
+ * cut the mechanic entirely (2026-07-30: "砍掉flip back的功能"), so the card is
+ * now single-faced and the only gesture on it is the pan. Every part of the flip
+ * is gone rather than merely disabled — a dormant `flippable: false` flag would
+ * keep the dead code compiling and re-attract the three device bugs it caused
+ * (back-face flash on promotion, mid-crossfade swipe, stale static style).
  */
 
 export interface CardCapability {
@@ -20,16 +32,13 @@ export interface CardCapability {
 	commits: boolean;
 	/** Fraction of card width the drag is clamped to. 1 = unclamped. */
 	maxDisplacementRatio: number;
-	/** Tap crossfades to a data face (§0.5). */
-	flippable: boolean;
 }
 
-/** A normal decide-and-fly card with a data face. */
+/** A normal decide-and-fly card. */
 export const DEFAULT_CAPABILITY: CardCapability = {
 	pannable: true,
 	commits: true,
 	maxDisplacementRatio: 1,
-	flippable: true,
 };
 
 /**
@@ -40,7 +49,6 @@ export const INERT_CAPABILITY: CardCapability = {
 	pannable: false,
 	commits: false,
 	maxDisplacementRatio: 1,
-	flippable: false,
 };
 
 /**
@@ -83,23 +91,10 @@ export function commitDecision<T extends string>(
 }
 
 /**
- * §1.1 red line ("翻面态禁 swipe"): a flipped card does not pan.
- *
- * Takes the flip PROGRESS rather than a JS `flipped` boolean so the answer is
- * available on the UI thread mid-crossfade. Any progress at all blocks: a card
- * half-way through the 350ms fade is showing two faces, and swiping it out then
- * commits a verdict against a face the buyer was in the middle of leaving.
- */
-export function panAllowed(pannable: boolean, flipProgress: number): boolean {
-	"worklet";
-	return pannable && flipProgress === 0;
-}
-
-/**
  * Whether the pan may run at all this frame.
  *
- * `committed` is the second gate, and it exists because of a card that got
- * STUCK on device — permanently, not for a frame.
+ * `committed` exists because of a card that got STUCK on device — permanently,
+ * not for a frame.
  *
  * The flyout is driven by animating `tx` to the exit position and doing the
  * handoff (advance the cursor, promote the next card) in that animation's
@@ -110,24 +105,20 @@ export function panAllowed(pannable: boolean, flipProgress: number): boolean {
  * ran, the cursor never advanced, and the card stayed on top forever: the buyer
  * could drag it around and it would spring back every time.
  *
- * This was originally found via the challenge card, whose 900ms post-commit hold
- * made the window ~1.2s wide. That hold is gone (the card is answered by buttons
- * now), so the window is back to a single flyout — but the gate stays: the race
- * is real at any width, and a fast double-swipe still hits it.
- *
  * A committed card is therefore inert until the handoff clears the flag. This
  * cannot be expressed with `.enabled()`: the flag flips without rebuilding the
  * gesture, and a rebuild mid-gesture would drop the touch binding (§1.1).
+ *
+ * This used to take `flipProgress` too, blocking the pan on a flipped card. The
+ * flip is gone (see the module comment), so `committed` is the only gate left.
  */
 export function panLive({
 	pannable,
-	flipProgress,
 	committed,
 }: {
 	pannable: boolean;
-	flipProgress: number;
 	committed: boolean;
 }): boolean {
 	"worklet";
-	return !committed && panAllowed(pannable, flipProgress);
+	return pannable && !committed;
 }

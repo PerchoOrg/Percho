@@ -6,9 +6,11 @@
  * on-card chrome: the "Skip this topic" underline link at a 44pt target
  * (§1.2 #4).
  *
- * NO BACK FACE (§1.2 #5) — an ask card is the reason `canFlipCard` exists. The
- * deck's `renderBack` returns null for this kind and `SwipeStack` gates the flip
- * on that result, so a tap is a genuine no-op.
+ * NO BACK FACE (§1.2 #5). This kind is why `canFlipCard` used to exist — a mixed
+ * deck's shared `renderBack` returned null here, and gating the flip on the
+ * CALLBACK rather than its rendered result once let a tap crossfade an ask card
+ * out to a blank face. Moot since 2026-07-30: the flip mechanic is gone, no card
+ * has a second face, and a tap is inert on every kind.
  *
  * Content rule: every string here comes off the card. There is no fallback
  * question, no placeholder sub-line, no invented place name.

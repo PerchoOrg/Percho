@@ -165,10 +165,7 @@ describe("buildGestureEvent", () => {
 		sessionN: 1,
 	};
 
-	it("builds flip and explore_tap without a focus key", () => {
-		expect(
-			buildGestureEvent({ ...base, type: "flip" }).focusKey,
-		).toBeUndefined();
+	it("builds explore_tap without a focus key", () => {
 		expect(
 			buildGestureEvent({ ...base, type: "explore_tap" }).focusKey,
 		).toBeUndefined();
@@ -182,12 +179,12 @@ describe("buildGestureEvent", () => {
 		});
 		expect(tap.focusKey).toBe("schools");
 		// The same key passed with the wrong type must not leak through.
-		const flip = buildGestureEvent({
+		const explore = buildGestureEvent({
 			...base,
-			type: "flip",
+			type: "explore_tap",
 			focusKey: "schools",
 		});
-		expect("focusKey" in flip).toBe(false);
+		expect("focusKey" in explore).toBe(false);
 	});
 });
 

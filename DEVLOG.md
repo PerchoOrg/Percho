@@ -4,6 +4,54 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-07-30 07:05 UTC — 砍掉 flip：卡片改单面，整条 tap→data face 链路连根拔除
+
+**Objective**: owner「砍掉flip back的功能」。确认过是砍**整个翻面机制**（不是只砍
+data face 底部那颗 Flip back 按钮），所以做法是删到没有休眠开关剩下。
+
+**Actions（自下往上，8 层）**:
+- `lib/gesture/capability.ts`：`CardCapability` 去掉 `flippable`；删 `panAllowed`；
+  `panLive` 从 3 参降到 2 参（`pannable && !committed`）
+- 删 `lib/gesture/can-flip.ts` + 测试（`canFlipCard` 整个存在意义就是 flip 红线）
+- `lib/gesture/stack-layer.ts`：删 `faceOpacity` / `FaceOpacity`，原地留注释保住
+  「永不换 card 的 animated style」这条教训（那才是三个真机 bug 的根因）
+- `hooks/use-swipe-card.ts`：删 `flipProgress` shared value、`Gesture.Tap`、
+  `Gesture.Exclusive` 组合、`FLIP_MS`、`withTiming` import。返回值现在是纯
+  `Gesture.Pan`
+- `components/SwipeStack.tsx`：删 `renderBack` prop、`StackCard` 的 back/前后两层
+  crossfade、`flippable` AND 逻辑。一张卡一个 face
+- `lib/feed/behavior.ts`：`UNDOABLE`/`FLAT` 两个 capability 常量塌成一个 `DECIDES`
+  —— 去掉 flip 后 8 种卡里只有 milestone 的手势行为不同
+- 删 `AreaDataFace.tsx` / `DataFaceStub.tsx` / `ListingDataFace.tsx`（三个 data face）
+- `lib/feed/events.ts`：`GestureEvent.type` 去掉 `"flip"`（已无发射点）
+
+**Decisions**:
+- **删而不是留 `flippable: false`。** 留下等于让整套死代码继续编译，并且把它引发过的
+  三个真机 bug（promotion 时闪背面、crossfade 中途可 swipe、静态 style 被 detach）重新
+  拉回可达状态。
+- `cardSurfaces.data` 这个色阶随 data face 一起删了 —— `card-surfaces.test.ts` 本来就
+  有一条「每个 variant 必须有真实调用点」的断言（注释里写着上次 DataFaceStub 就是这样
+  进来的死代码），所以不删测试会红。
+- `MatchBadge` 的 `onSeeWhy` / `ListingFace` 的同名 prop **保留但 feed 不再传** ——
+  FOMO 角标现在是 label 不是按钮。这是**功能回退，不是遗漏**：它原来的目的地就是 data
+  face。已在两处 prop 注释里写明「等新目的地」。
+- **listing detail 页现在只有一个入口**：正面的 `Explore →`。data face 上那些
+  `?focus=<row>` 逐行深链**没了**（`/listing/[id]` 仍支持 `?focus=`，只是 feed 不再
+  产生）。`serialiseFocus` / `useListingDetail` 在 feed 里的 prefetch 也一并移除。
+
+**Issues**: `memo-identity.test.ts` 有一条测试用正则去真源码里抓 gesture memo 的依赖
+数组，锚点写的是 `return Gesture.Exclusive(pan, tap);`。tap 删掉后正则**静默匹配不到**，
+靠它自己那句 `expect(deps).not.toBeNull()` 才报出来 —— 换成锚 `const gesture = useMemo`
+的声明侧。**教训**：读源码的测试要锚在声明上，别锚在会变的返回表达式上。
+
+**验证**: mobile **469 tests 全过**（原 474，减掉的 5 条全是 faceOpacity/panAllowed/
+flippable 专项）、`tsc --noEmit` 0 错、biome 对本次改动的 6 个文件 0 error（仓库里
+另外 5 个 format 告警在 main 上就存在，`git stash` 对照确认过）。
+
+**Next steps**: owner 真机确认「tap 卡片不再有任何反应、只能 swipe」。走**测试模式**
+（`EXPO_PUBLIC_DEV_SAMPLER=1`）而不是完整 feed。
+
+
 ## 2026-07-30 05:15 UTC — owner：「你完全没有按照我们选定的方案C实现」。对的 —— 我照搬了 C 的几何，没照搬 C 的颜色体系
 
 **Objective**: owner 真机看完 C 版落地，判定完全不是 C。逐项 diff demo 与 RN，而不是靠记忆复述。

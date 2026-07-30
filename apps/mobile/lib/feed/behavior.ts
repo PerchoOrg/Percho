@@ -10,8 +10,12 @@
  * card has no `cta` — the compiler refuses the mistake instead of the runtime
  * discovering it.
  *
- * Capability (pan/commit/clamp/flip) is data resolved BEFORE the gesture
- * is constructed, so no gesture handler ever branches on a card kind.
+ * Capability (pan / commit / clamp) is data resolved BEFORE the gesture is
+ * constructed, so no gesture handler ever branches on a card kind.
+ *
+ * There is no `flippable` any more: the tap-to-data-face mechanic was cut on
+ * 2026-07-30 ("砍掉flip back的功能"), so every kind is single-faced and the only
+ * thing that varies between kinds is how the PAN behaves.
  */
 import type { CardCapability } from "../gesture/capability";
 import type { FeedCardV3 } from "./card-types";
@@ -66,15 +70,12 @@ export type CardBehavior =
 /** §1.5 milestone drag cap — follows the finger, always springs back. */
 export const MILESTONE_CAP_RATIO = 0.3;
 
-const UNDOABLE: CardCapability = {
+/** Commits and flies out — every kind except the §1.5 milestone. */
+const DECIDES: CardCapability = {
 	pannable: true,
 	commits: true,
 	maxDisplacementRatio: 1,
-	flippable: true,
 };
-
-/** Commits and flies out, but has no data face to flip to. */
-const FLAT: CardCapability = { ...UNDOABLE, flippable: false };
 
 export function cardBehavior(card: FeedCardV3): CardBehavior {
 	switch (card.kind) {
@@ -87,13 +88,13 @@ export function cardBehavior(card: FeedCardV3): CardBehavior {
 							left: card.choice.left.label,
 							right: card.choice.right.label,
 						},
-						capability: FLAT,
+						capability: DECIDES,
 						undoable: false,
 					}
 				: {
 						mode: "decide",
 						labels: { left: "NO", right: "YES" },
-						capability: FLAT,
+						capability: DECIDES,
 						undoable: false,
 					};
 
@@ -101,7 +102,7 @@ export function cardBehavior(card: FeedCardV3): CardBehavior {
 			return {
 				mode: "decide",
 				labels: { left: "NOT FOR ME", right: "TELL ME MORE" },
-				capability: UNDOABLE,
+				capability: DECIDES,
 				undoable: true,
 			};
 
@@ -110,7 +111,7 @@ export function cardBehavior(card: FeedCardV3): CardBehavior {
 			return {
 				mode: "decide",
 				labels: { left: "PASS", right: "LIKE" },
-				capability: UNDOABLE,
+				capability: DECIDES,
 				undoable: true,
 			};
 
@@ -119,7 +120,7 @@ export function cardBehavior(card: FeedCardV3): CardBehavior {
 				mode: "either-or",
 				split: true,
 				labels: { left: card.left.label, right: card.right.label },
-				capability: FLAT,
+				capability: DECIDES,
 				undoable: false,
 			};
 
@@ -127,9 +128,9 @@ export function cardBehavior(card: FeedCardV3): CardBehavior {
 			return {
 				mode: "quiz",
 				// Swiping a challenge is pure navigation, so it flies out like any
-				// other card and records nothing. `flippable: false` — the answer is
-				// revealed in place by the buttons, not on a back face.
-				capability: FLAT,
+				// other card and records nothing — the answer is revealed in place by
+				// the buttons.
+				capability: DECIDES,
 				undoable: false,
 			};
 
@@ -138,7 +139,7 @@ export function cardBehavior(card: FeedCardV3): CardBehavior {
 				mode: "confirm",
 				labels: { left: "NOT REALLY", right: "THAT'S ME" },
 				neutralLabel: "Not sure",
-				capability: FLAT,
+				capability: DECIDES,
 				undoable: false,
 			};
 
@@ -150,7 +151,6 @@ export function cardBehavior(card: FeedCardV3): CardBehavior {
 					pannable: true,
 					commits: false,
 					maxDisplacementRatio: MILESTONE_CAP_RATIO,
-					flippable: false,
 				},
 				undoable: false,
 			};

@@ -100,7 +100,11 @@ interface ListingFaceProps {
 	stage: number;
 	isTop: boolean;
 	onExplore?: () => void;
-	/** Flip to the data face — wired to the FOMO badge's "See why →". */
+	/**
+	 * Handler for the FOMO badge's "See why →". Used to flip to the data face;
+	 * the flip is gone (2026-07-30) and the feed passes nothing, so the badge
+	 * renders as a plain label until a new destination exists.
+	 */
 	onSeeWhy?: () => void;
 }
 

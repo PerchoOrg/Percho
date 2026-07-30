@@ -42,9 +42,8 @@ function gestureDeps(handlerIdentity: unknown, stable: symbol): unknown[] {
 		true, // pannable
 		true, // commits
 		1, // maxDisplacementRatio
-		false, // flippable
 		handlerIdentity,
-		stable, // handoff, tx, advance, crossedRight, flipProgress, committed
+		stable, // handoff, tx, advance, crossedRight, committed
 	];
 }
 
@@ -103,9 +102,15 @@ describe("the swipe gesture's memo identity", () => {
 			join(__dirname, "../../hooks/use-swipe-card.ts"),
 			"utf8",
 		);
-		// The memo's dependency array is the last `}, [ … ]);` of the useMemo.
+		// The memo's dependency array is the `}, [ … ]);` that closes the useMemo.
+		// Anchored on the declaration rather than on the RETURNED expression: that
+		// used to be `Gesture.Exclusive(pan, tap)`, and when the tap (the flip) was
+		// removed on 2026-07-30 the old regex silently matched nothing — the
+		// `not.toBeNull()` below is what caught it.
 		const deps =
-			/return Gesture\.Exclusive\(pan, tap\);\s*},\s*\[([^\]]*)\]/.exec(src);
+			/const gesture = useMemo\(\(\) => \{[\s\S]*?\n\s*\}, \[([^\]]*)\]\);/.exec(
+				src,
+			);
 		expect(deps, "could not locate the gesture memo dep list").not.toBeNull();
 		const listed = (deps?.[1] ?? "")
 			.split(",")

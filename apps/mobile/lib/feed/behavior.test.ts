@@ -127,11 +127,15 @@ describe("cardBehavior", () => {
 		expect(undoable.sort()).toEqual(["area", "community", "listing"]);
 	});
 
-	it("ask and milestone have no data face", () => {
-		const flippable = CARD_KINDS.filter(
-			(k) => cardBehavior(cardOfKind(k)).capability.flippable,
+	it("every kind but the milestone commits and flies out", () => {
+		// The flip is gone (2026-07-30), so `capability` no longer varies by data
+		// face — the only kind that behaves differently is the §1.5 ceremony card,
+		// which follows the finger to a cap and always springs back.
+		const commits = CARD_KINDS.filter(
+			(k) => cardBehavior(cardOfKind(k)).capability.commits,
 		);
-		expect(flippable.sort()).toEqual(["area", "community", "listing"]);
+		expect(commits).not.toContain("milestone");
+		expect(commits.length).toBe(CARD_KINDS.length - 1);
 	});
 
 	it("challenge is answered by tapping, so its swipe carries no verdict", () => {
@@ -144,8 +148,6 @@ describe("cardBehavior", () => {
 		// It still leaves like any other card — it just records nothing.
 		expect(b.capability.commits).toBe(true);
 		expect(b.capability.pannable).toBe(true);
-		// The answer is revealed in place, not on a back face.
-		expect(b.capability.flippable).toBe(false);
 	});
 
 	it("tradeoff is a visually split either-or, never yes/no copy", () => {

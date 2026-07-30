@@ -3,8 +3,11 @@
  *
  * Visibility (owner-approved #9): renders null unless `stage === 4 && score >= 60`
  * (scores aren't trustworthy before the funnel completes). At `score >= 85` it
- * swaps to the FOMO state — a tappable "🎯 92% MATCH · See why →" that flips to
- * the data face via `onSeeWhy`.
+ * swaps to the FOMO state — "🎯 92% MATCH · See why →", tappable only when the
+ * caller supplies `onSeeWhy`. That used to flip the card to its data face; the
+ * flip was cut on 2026-07-30 and the feed does not pass a handler, so on a feed
+ * card the FOMO state is currently a label, not a button. Whatever replaces the
+ * destination wires in here.
  */
 import { Pressable, StyleSheet, Text } from "react-native";
 import { colors, radii } from "../theme/tokens";

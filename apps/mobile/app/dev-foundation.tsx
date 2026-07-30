@@ -138,18 +138,6 @@ export default function DevFoundation() {
 		</View>
 	);
 
-	const renderBack = (item: DemoCard, _role: "top" | "next" | "after") => (
-		<View style={styles.dataFace}>
-			<Text style={styles.dataTitle}>{item.address}</Text>
-			<Text style={styles.dataRow}>{item.specs}</Text>
-			<Text style={styles.dataRow}>Match {item.score}%</Text>
-			<Text style={styles.dataRow}>
-				A2: tap flips via 350ms crossfade — no 3D spin, no mirrored text.
-			</Text>
-			<Text style={styles.dataRow}>Tap again to flip back.</Text>
-		</View>
-	);
-
 	const atEnd = index >= DEMO.length;
 
 	return (
@@ -182,7 +170,6 @@ export default function DevFoundation() {
 							setIndex((i) => Math.min(i + 1, DEMO.length));
 						}}
 						renderCard={renderCard}
-						renderBack={renderBack}
 						keyExtractor={(it) => it.id}
 						cardWidth={width - 32}
 						cardHeight={400}
@@ -260,9 +247,7 @@ const styles = StyleSheet.create({
 	},
 	stackWrap: { height: 400, marginBottom: 8 },
 	cardInner: { flex: 1 },
-	dataFace: { flex: 1, padding: 20, gap: 8, backgroundColor: colors.ink },
-	dataTitle: { ...textStyles.title2, color: colors.onCard },
-	dataRow: { ...textStyles.body, color: colors.onCardDim },
+
 	chipRow: {
 		position: "absolute",
 		top: 12,

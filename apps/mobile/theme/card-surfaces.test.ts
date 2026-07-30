@@ -50,7 +50,6 @@ describe("cardSurfaces", () => {
 				"challenge",
 				"insight",
 				"milestone",
-				"data",
 				"ask",
 				"askGeo",
 				"area",

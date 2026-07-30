@@ -55,9 +55,15 @@ export interface SwipeEvent extends EventBase {
 	activeIndex: number;
 }
 
-/** §1.10 groups flip / explore_tap / datapoint_tap: card_id + originating gesture. */
+/**
+ * §1.10 groups explore_tap / datapoint_tap: card_id + originating gesture.
+ *
+ * `flip` was the third type here and is gone with the flip mechanic itself
+ * (2026-07-30). Removed rather than kept as a never-emitted value, so a future
+ * reader of the event stream cannot mistake its absence for a tracking gap.
+ */
 export interface GestureEvent extends EventBase {
-	type: "flip" | "explore_tap" | "datapoint_tap";
+	type: "explore_tap" | "datapoint_tap";
 	cardId: string;
 	cardType: CardKindV3;
 	/** Only datapoint_tap carries a focus key (§1.10). */

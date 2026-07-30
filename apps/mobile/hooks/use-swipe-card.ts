@@ -10,13 +10,13 @@
  *     is decided — by distance mid-drag or by velocity on release. LEFT stays
  *     silent (pass = no haptic, §0.5),
  *   - on release, delegate the decision to the pure `decideSwipe`, fly the card
- *     out and fire `cardSettle` for a like, or spring back for a non-commit,
- *   - tap flips to the data face as a 350ms opacity crossfade (§0.5 — 3D
- *     rotateY is forbidden), exposed as the raw `flipProgress`. The faces' own
- *     styles are NOT built here: each card in the stack derives both opacities
- *     from its own depth via `faceOpacity`, because a style handed out by stack
- *     POSITION gets swapped on promotion and flashes the data face (see
- *     `stack-layer.ts`).
+ *     out and fire `cardSettle` for a like, or spring back for a non-commit.
+ *
+ * There is NO tap gesture. A tap used to crossfade the card to a data face over
+ * 350ms (§0.5); the owner cut that mechanic on 2026-07-30 ("砍掉flip back的功能"),
+ * so the card is single-faced and the pan is the only gesture on it. The
+ * `flipProgress` shared value, the `Gesture.Exclusive(pan, tap)` composition and
+ * the "a flipped card must not pan" gate all went with it.
  *
  * The hook owns none of the feed semantics — it reports `'left' | 'right'` to
  * `onDecision` and lets the caller (task-1) map that to like/pass/agree/etc.
@@ -34,7 +34,6 @@ import {
 	useAnimatedStyle,
 	useSharedValue,
 	withSpring,
-	withTiming,
 } from "react-native-reanimated";
 import {
 	type CardCapability,
@@ -71,14 +70,12 @@ const FLY_OUT_SPRING = {
 	stiffness: 220,
 	overshootClamping: true,
 } as const;
-const FLIP_MS = 350; // §0.5 — opacity crossfade, never rotateY
 const ACTIVE_OFFSET_X = 10;
 const FAIL_OFFSET_Y = 20;
 
 // Referenced from worklets: naming the functions keeps the whole `haptics`
 // object out of the UI-thread closure.
 const fireThreshold = haptics.swipeThreshold;
-const fireSettle = haptics.cardSettle;
 
 interface UseSwipeCardArgs {
 	cardWidth: number;
@@ -94,8 +91,8 @@ interface UseSwipeCardArgs {
 }
 
 interface UseSwipeCardResult {
-	/** Pan + tap, composed exclusively — the pan wins a contested touch. */
-	gesture: ReturnType<typeof Gesture.Exclusive>;
+	/** The pan. The card has no second face, so there is no tap to compose with. */
+	gesture: ReturnType<typeof Gesture.Pan>;
 	/** Horizontal drag offset — cards behind read this to rise toward the top. */
 	tx: SharedValue<number>;
 	/**
@@ -111,8 +108,6 @@ interface UseSwipeCardResult {
 	exitX: SharedValue<number>;
 	/** Stack-shuffle progress in [0,1], continuous across the handoff. */
 	advance: SharedValue<number>;
-	/** 0 = video face, 1 = data face. */
-	flipProgress: SharedValue<number>;
 }
 
 export function useSwipeCard({
@@ -122,7 +117,6 @@ export function useSwipeCard({
 }: UseSwipeCardArgs): UseSwipeCardResult {
 	const tx = useSharedValue(0);
 	const crossedRight = useSharedValue(false);
-	const flipProgress = useSharedValue(0);
 	const topAbs = useSharedValue(0);
 	const exitX = useSharedValue(0);
 	const advance = useSharedValue(0);
@@ -180,11 +174,6 @@ export function useSwipeCard({
 	 * is a function of `rel - advance`, so every card's computed depth is
 	 * unchanged across this frame. Nothing moves that the buyer can see except
 	 * the card that left.
-	 *
-	 * `flipProgress` is reset here rather than at commit: zeroing it at commit
-	 * time would crossfade the outgoing card back to its video face over the
-	 * 350ms it is flying out — the buyer would watch the face they just acted on
-	 * dissolve into a different one mid-air.
 	 */
 	const handoff = useCallback(
 		(dest: number, decision: Exclude<SwipeDecision, "none">) => {
@@ -194,24 +183,23 @@ export function useSwipeCard({
 			tx.value = 0;
 			advance.value = 0;
 			crossedRight.value = false;
-			flipProgress.value = 0;
 			// Re-arm LAST: the new top card is only touchable once the cursor has
 			// actually moved, so a touch landing on this very frame cannot be
 			// attributed to the card that just left.
 			committed.value = false;
 			runOnJS(settle)(decision);
 		},
-		[exitX, topAbs, tx, advance, crossedRight, flipProgress, committed, settle],
+		[exitX, topAbs, tx, advance, crossedRight, committed, settle],
 	);
 
-	// Destructured out of the capability object so the memo depends on the five
+	// Destructured out of the capability object so the memo depends on the three
 	// VALUES, not on object identity. The caller resolves a capability per render
 	// (`capability(item)`), so a fresh-but-equal object arrives every frame during
 	// a drag — keying the memo on it would rebuild the gesture mid-gesture.
-	const { pannable, commits, maxDisplacementRatio, flippable } = capability;
+	const { pannable, commits, maxDisplacementRatio } = capability;
 
 	const gesture = useMemo(() => {
-		const pan = Gesture.Pan()
+		return Gesture.Pan()
 			.enabled(pannable)
 			.activeOffsetX([-ACTIVE_OFFSET_X, ACTIVE_OFFSET_X])
 			.failOffsetY([-FAIL_OFFSET_Y, FAIL_OFFSET_Y])
@@ -219,17 +207,10 @@ export function useSwipeCard({
 				crossedRight.value = false;
 			})
 			.onUpdate((e) => {
-				// §1.1: a flipped card does not pan. Checked here rather than through
-				// `.enabled()` because the flip state changes without rebuilding the
-				// gesture, and a static enable would go stale mid-crossfade.
-				if (
-					!panLive({
-						pannable,
-						flipProgress: flipProgress.value,
-						committed: committed.value,
-					})
-				)
-					return;
+				// Checked here rather than through `.enabled()` because `committed`
+				// flips without rebuilding the gesture, and a rebuild mid-gesture
+				// would drop the in-flight touch (§1.1).
+				if (!panLive({ pannable, committed: committed.value })) return;
 				const clamped = clampDisplacement(
 					e.translationX,
 					cardWidth,
@@ -249,14 +230,7 @@ export function useSwipeCard({
 				if (step.fire) runOnJS(fireThreshold)();
 			})
 			.onEnd((e) => {
-				if (
-					!panLive({
-						pannable,
-						flipProgress: flipProgress.value,
-						committed: committed.value,
-					})
-				)
-					return;
+				if (!panLive({ pannable, committed: committed.value })) return;
 				const clamped = clampDisplacement(
 					e.translationX,
 					cardWidth,
@@ -300,33 +274,15 @@ export function useSwipeCard({
 					if (finished) handoff(dest, decision);
 				});
 			});
-
-		const tap = Gesture.Tap()
-			.enabled(flippable)
-			.onEnd((_e, success) => {
-				if (!success) return;
-				const target = flipProgress.value < 0.5 ? 1 : 0;
-				flipProgress.value = withTiming(
-					target,
-					{ duration: FLIP_MS },
-					(finished) => {
-						if (finished) runOnJS(fireSettle)();
-					},
-				);
-			});
-
-		return Gesture.Exclusive(pan, tap);
 	}, [
 		cardWidth,
 		pannable,
 		commits,
 		maxDisplacementRatio,
-		flippable,
 		handoff,
 		tx,
 		advance,
 		crossedRight,
-		flipProgress,
 		committed,
 	]);
 
@@ -336,6 +292,5 @@ export function useSwipeCard({
 		topAbs,
 		exitX,
 		advance,
-		flipProgress,
 	};
 }

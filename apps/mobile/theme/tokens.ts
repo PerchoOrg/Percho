@@ -108,7 +108,6 @@ export const scoreTokens = {
  *   challenge indigo — the quiz register, distinct from every other card.
  *   insight   amber — the brand accent's own family, "Percho noticed".
  *   milestone the brightest, warmest ramp: this is the ceremony card.
- *   data      cool slate — a back face, deliberately the most recessive.
  *   ask       violet, for a preference-layer question with no place attached.
  *   askGeo    pine, for a geographic question (which side of town, how far out).
  *   area      cool blue-teal, for an area/city/zip card with no photo. Adjacent
@@ -139,7 +138,6 @@ export const cardSurfaces = {
 	challenge: { from: "#413A63", to: "#221D34", glow: "rgba(180,170,255,0.16)" },
 	insight: { from: "#5B4014", to: "#33240E", glow: "rgba(255,205,120,0.18)" },
 	milestone: { from: "#6B3D1C", to: "#38200F", glow: "rgba(255,186,96,0.24)" },
-	data: { from: "#41504F", to: "#252F31", glow: "rgba(190,220,235,0.14)" },
 	ask: { from: "#4A3A57", to: "#241C2E", glow: "rgba(214,170,255,0.14)" },
 	askGeo: { from: "#2F4A46", to: "#17282A", glow: "rgba(140,225,205,0.14)" },
 	area: { from: "#274A5E", to: "#132833", glow: "rgba(130,205,255,0.16)" },

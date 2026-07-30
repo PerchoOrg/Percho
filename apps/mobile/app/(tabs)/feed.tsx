@@ -28,12 +28,10 @@ import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { SoundToggle } from "../../components/SoundToggle";
 import { type CardRenderArgs, SwipeStack } from "../../components/SwipeStack";
-import { AreaDataFace } from "../../components/cards/AreaDataFace";
 import { AreaFace } from "../../components/cards/AreaFace";
 import { AskFace } from "../../components/cards/AskFace";
 import { ChallengeFace } from "../../components/cards/ChallengeFace";
 import { CommunityFace } from "../../components/cards/CommunityFace";
-import { DataFaceStub } from "../../components/cards/DataFaceStub";
 import { InsightFace } from "../../components/cards/InsightFace";
 import { ListingFace } from "../../components/cards/ListingFace";
 import { MilestoneFace } from "../../components/cards/MilestoneFace";
@@ -42,9 +40,6 @@ import { TradeoffFace } from "../../components/cards/TradeoffFace";
 import { CardSkeleton } from "../../components/feed/CardSkeleton";
 import { ExhaustedCard } from "../../components/feed/ExhaustedCard";
 import { OfflineBar } from "../../components/feed/OfflineBar";
-import { ListingDataFace } from "../../components/listing/ListingDataFace";
-import { useListingDetail } from "../../lib/listing/detail-dto";
-import { serialiseFocus } from "../../lib/listing/focus-key";
 
 import { UndoToast } from "../../components/feed/UndoToast";
 import { useFeedPool } from "../../hooks/use-feed-pool";
@@ -113,20 +108,6 @@ export default function FeedScreen() {
 		milestoneId?: string;
 	} | null>(null);
 	const [milestonesShown, setMilestonesShown] = useState<readonly string[]>([]);
-	/**
-	 * Detail for the TOP card when it is a listing, fetched as soon as that card
-	 * reaches the top rather than when the buyer flips it.
-	 *
-	 * Prefetched on purpose: §0.5's flip is a 350ms crossfade, and a spinner
-	 * appearing mid-crossfade is exactly the "is it real?" doubt the data face
-	 * exists to remove. `SwipeStack` does not expose flip state (its flip lives on
-	 * the UI thread by design), so keying on the top card is both simpler and
-	 * better — one request per card the buyer actually dwells on.
-	 */
-	const topCard = deck[activeIndex];
-	const flippedDetail = useListingDetail(
-		topCard?.kind === "listing" ? topCard.id : undefined,
-	);
 	/**
 	 * Which challenge cards have been answered, and which side was tapped.
 	 *
@@ -404,7 +385,7 @@ export default function FeedScreen() {
 	);
 
 	const emitGesture = useCallback(
-		(type: "flip" | "explore_tap" | "datapoint_tap", card: FeedCardV3) => {
+		(type: "explore_tap" | "datapoint_tap", card: FeedCardV3) => {
 			enqueue(
 				buildGestureEvent({
 					seq: takeSeq(),
@@ -452,9 +433,9 @@ export default function FeedScreen() {
 							isTop={isTop}
 							/*
 							 * Demo variant C puts the Explore CTA on the FRONT face, under the
-							 * map circle. It was previously only reachable from the flipped
-							 * data face, so `ListingFace`'s optional `onExplore` was never
-							 * passed and the button never rendered at all.
+							 * map circle — which since 2026-07-30 is the ONLY way into the
+							 * listing detail page, because the data face that used to carry
+							 * it (and its per-row `?focus=` deep links) went with the flip.
 							 */
 							onExplore={() => {
 								emitGesture("explore_tap", card);
@@ -532,43 +513,6 @@ export default function FeedScreen() {
 		],
 	);
 
-	/**
-	 * The §0.5 data face. Returns null for the kinds that have none — ask,
-	 * tradeoff, challenge, insight, milestone — which is exactly what `SwipeStack`
-	 * reads to decide whether the card may flip at all (§1.1).
-	 */
-	const renderBack = useCallback(
-		(card: FeedCardV3) => {
-			const flipBack = () => emitGesture("flip", card);
-			switch (card.kind) {
-				case "area":
-					return <AreaDataFace card={card} onFlipBack={flipBack} />;
-				case "listing":
-					return (
-						<ListingDataFace
-							card={card}
-							{...(flippedDetail.status === "ready" &&
-							flippedDetail.detail.id === card.id
-								? { detail: flippedDetail.detail }
-								: {})}
-							stage={stage}
-							onFlipBack={flipBack}
-							onExplore={(focus) => {
-								emitGesture("explore_tap", card);
-								const query = focus ? `?focus=${serialiseFocus(focus)}` : "";
-								router.push(`/listing/${card.id}${query}`);
-							}}
-						/>
-					);
-				case "community":
-					return <DataFaceStub card={card} onFlipBack={flipBack} />;
-				default:
-					return null;
-			}
-		},
-		[emitGesture, stage, flippedDetail],
-	);
-
 	const renderOverlay = useCallback(
 		(card: FeedCardV3, { tx, cardWidth: w }: CardRenderArgs) => (
 			<SwipeLabels card={card} tx={tx} cardWidth={w} />
@@ -615,7 +559,6 @@ export default function FeedScreen() {
 						activeIndex={activeIndex}
 						onDecision={onDecision}
 						renderCard={renderCard}
-						renderBack={renderBack}
 						renderOverlay={renderOverlay}
 						keyExtractor={deckKey}
 						cardWidth={cardWidth}

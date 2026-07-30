@@ -36,8 +36,10 @@
  * drawn — so a late re-render changes the mounted window without moving a single
  * pixel, and there is no frame in which any card's transform is inconsistent.
  *
- * `renderBack` is the §0.5 data face: stacked behind the video face and
- * crossfaded in over 350ms when the top card is tapped (never a 3D flip).
+ * There is exactly ONE face per card. A tap used to crossfade to a §0.5 data
+ * face (`renderBack`, `flipProgress`, `faceOpacity`, `canFlipCard`); the owner
+ * cut that mechanic on 2026-07-30 ("砍掉flip back的功能"), so a card renders its
+ * front and nothing else, and the only gesture on the stack is the pan.
  *
  * Generic over the card data type — task-0 knows nothing about feed semantics;
  * it reports the raw `'left' | 'right'` decision and the item to the caller.
@@ -57,16 +59,11 @@ import Animated, {
 	useAnimatedStyle,
 } from "react-native-reanimated";
 import { useSwipeCard } from "../hooks/use-swipe-card";
-import { canFlipCard } from "../lib/gesture/can-flip";
 import {
 	type CardCapability,
 	INERT_CAPABILITY,
 } from "../lib/gesture/capability";
-import {
-	VISIBLE_WINDOW,
-	cardStackVisual,
-	faceOpacity,
-} from "../lib/gesture/stack-layer";
+import { VISIBLE_WINDOW, cardStackVisual } from "../lib/gesture/stack-layer";
 import { colors, radii } from "../theme/tokens";
 
 /** Cards visible at rest: top + 2 behind (§0.6 #7). Shared with the composer. */
@@ -115,15 +112,6 @@ interface SwipeStackProps<T> {
 	onDecision: (decision: "left" | "right", item: T) => void;
 
 	renderCard: (item: T, args: CardRenderArgs) => React.ReactNode;
-	/**
-	 * Data face (§0.5). Return null for card kinds that don't flip.
-	 *
-	 * Deliberately NOT given `tx`: a data face is a static layout the buyer reads
-	 * after the card has stopped moving, and keeping it drag-independent is what
-	 * lets this be called before the gesture exists — which is what closes the
-	 * §1.1 red line (see below).
-	 */
-	renderBack?: (item: T, role: CardRole) => React.ReactNode;
 	/** Overlay above the top card only — §1.8 direction labels live here. */
 	renderOverlay?: (item: T, args: CardRenderArgs) => React.ReactNode;
 	/**
@@ -152,14 +140,10 @@ interface StackCardProps {
 	advance: SharedValue<number>;
 	dragX: SharedValue<number>;
 	exitX: SharedValue<number>;
-	/** 0 = front face, 1 = data face. Owned by the stack, read per card. */
-	flipProgress: SharedValue<number>;
 	cardWidth: number;
 	zIndex: number;
-	/** The front face. Always mounted. */
+	/** The card's only face. */
 	front: React.ReactNode;
-	/** The data face, or null for a kind that does not flip (§1.1). */
-	back: React.ReactNode;
 	/** §1.8 labels — above both faces, outside the crossfade. */
 	overlay: React.ReactNode;
 }
@@ -167,8 +151,8 @@ interface StackCardProps {
 /**
  * One card's frame. Its animated styles are created once, with `absIndex`
  * captured as a constant, and are never swapped for another — which is what makes
- * the stale-prop ghosting, the handoff jump AND the back-face flash structurally
- * impossible rather than merely fixed.
+ * the stale-prop ghosting and the handoff jump structurally impossible rather
+ * than merely fixed.
  */
 function StackCard({
 	absIndex,
@@ -176,11 +160,9 @@ function StackCard({
 	advance,
 	dragX,
 	exitX,
-	flipProgress,
 	cardWidth,
 	zIndex,
 	front,
-	back,
 	overlay,
 }: StackCardProps) {
 	const style = useAnimatedStyle(() => {
@@ -201,27 +183,9 @@ function StackCard({
 		};
 	});
 
-	// Both faces read the SAME function, so a non-top card's back face is driven
-	// to 0 by the identical style that animates the top card's. Nothing is swapped
-	// on promotion, so there is no frame in which the back face is unstyled — that
-	// gap is what flashed the card's own data face at full opacity.
-	const frontStyle = useAnimatedStyle(() => ({
-		opacity: faceOpacity(absIndex - topAbs.value, flipProgress.value).front,
-	}));
-	const backStyle = useAnimatedStyle(() => ({
-		opacity: faceOpacity(absIndex - topAbs.value, flipProgress.value).back,
-	}));
-
 	return (
 		<Animated.View style={[styles.card, { zIndex }, style]}>
-			<Animated.View style={[StyleSheet.absoluteFill, frontStyle]}>
-				{front}
-			</Animated.View>
-			{canFlipCard(back) && (
-				<Animated.View style={[StyleSheet.absoluteFill, backStyle]}>
-					{back}
-				</Animated.View>
-			)}
+			<View style={StyleSheet.absoluteFill}>{front}</View>
 			{overlay}
 		</Animated.View>
 	);
@@ -233,7 +197,6 @@ export function SwipeStack<T>({
 	onDecision,
 
 	renderCard,
-	renderBack,
 	renderOverlay,
 	keyExtractor,
 	cardWidth,
@@ -242,26 +205,10 @@ export function SwipeStack<T>({
 }: SwipeStackProps<T>) {
 	const top = items[activeIndex];
 
-	// §1.1 red line: a card with no data face must not flip. `renderBack` is one
-	// callback shared by a mixed deck and returns null for the kinds that don't
-	// flip (ask / tradeoff / milestone), so the existence of the *callback* says
-	// nothing about the *item*. Gating on the callback — the original bug — let a
-	// tap crossfade an ask card out to a blank face. Gate on the rendered result.
-	const topBack =
-		top !== undefined && renderBack ? renderBack(top, "top") : null;
-	const topBackRenders = canFlipCard(topBack);
+	const topCapability: CardCapability =
+		top === undefined ? INERT_CAPABILITY : capability(top);
 
-	// `flippable` is an AND of two independent facts, and neither alone suffices:
-	// what the card KIND allows (`capability`, which cannot know a pool row was
-	// missing the data a face needs) and whether a face actually rendered for
-	// THIS item (which cannot know the kind shouldn't flip in the first place).
-	const declared = top === undefined ? INERT_CAPABILITY : capability(top);
-	const topCapability: CardCapability = {
-		...declared,
-		flippable: declared.flippable && topBackRenders,
-	};
-
-	const { gesture, tx, topAbs, exitX, advance, flipProgress } = useSwipeCard({
+	const { gesture, tx, topAbs, exitX, advance } = useSwipeCard({
 		cardWidth,
 		capability: topCapability,
 		onDecision: (decision) => {
@@ -313,13 +260,6 @@ export function SwipeStack<T>({
 						const depth = absIndex - activeIndex;
 						const isTop = depth === 0;
 						const role = roleFor(depth);
-						// Reuse the already-computed top face rather than calling
-						// renderBack twice for the same item.
-						const back = isTop
-							? topBack
-							: renderBack
-								? renderBack(item, role)
-								: null;
 						return (
 							<StackCard
 								key={keyExtractor(item, absIndex)}
@@ -328,16 +268,13 @@ export function SwipeStack<T>({
 								advance={advance}
 								dragX={tx}
 								exitX={exitX}
-								flipProgress={flipProgress}
 								cardWidth={cardWidth}
 								// A card that has already been swiped must stay UNDER the
 								// live stack while it flies out, or it would slide across
 								// the face of the card that replaced it.
 								zIndex={depth < 0 ? 0 : WINDOW + TRAIL - depth}
 								front={renderCard(item, argsFor(role))}
-								back={back}
-								// §1.8 labels sit above both faces and outside the
-								// crossfade, so they stay legible mid-flip.
+								// §1.8 labels sit above the face.
 								overlay={
 									isTop && renderOverlay
 										? renderOverlay(item, argsFor(role))
