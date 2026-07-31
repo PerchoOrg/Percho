@@ -61,14 +61,30 @@ const TILE_ICON = 17;
 /** The scrim's stops, from the redline's `linear-gradient(180deg, …)`. */
 const SCRIM_STOPS = [0.32, 0.48, 1] as const;
 
-/** Same vocabulary as the listing chips — see `ListingFace`'s `DIM_ICON`. */
-const DIM_ICON: Partial<Record<DimKey, RedlineIconName>> = {
+/**
+ * One glyph per dim — TOTAL, not partial.
+ *
+ * The community pool now sends real `dims` derived from the Nextdoor seed (see
+ * `apps/web/lib/feed/community-highlights.ts`), and all 11 dims can arrive. When
+ * this map was partial every unmapped dim fell through to a default `walk`
+ * glyph, so a tile reading "Cultural Scene" showed a walking figure. Typing it
+ * as a full `Record` makes an unmapped dim a compile error instead.
+ *
+ * `quiet` deliberately does NOT reuse the two-heads `family` art it used to
+ * borrow: on a tile labelled "Quiet Streets" that glyph reads as "family".
+ */
+const DIM_ICON: Record<DimKey, RedlineIconName> = {
 	family: "family",
 	walkable: "walk",
 	schools: "school",
 	outdoors: "tree",
-	trails: "tree",
-	quiet: "family",
+	trails: "path",
+	quiet: "moon",
+	hip: "shop",
+	entertaining: "cup",
+	move_in: "check",
+	space: "expand",
+	nightlife: "cup",
 };
 
 /** Short, tile-sized labels. `DIMS[].label` is prose and wraps to 3 lines at 10px. */
@@ -141,7 +157,7 @@ export function CommunityFace({
 						{dims.map((dim) => (
 							<View key={dim} style={styles.tile}>
 								<RedlineIcon
-									name={DIM_ICON[dim] ?? "walk"}
+									name={DIM_ICON[dim]}
 									size={TILE_ICON}
 									color={redline.onPhoto}
 								/>

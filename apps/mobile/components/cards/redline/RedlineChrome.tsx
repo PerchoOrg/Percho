@@ -148,7 +148,18 @@ export type RedlineIconName =
 	| "family"
 	| "car"
 	| "yard"
-	| "sparkle";
+	| "sparkle"
+	// Community-highlight dims. Added when the community card started
+	// receiving real `dims` from the Nextdoor seed: the ten dims that actually
+	// occur need ten distinct glyphs, and before this `quiet` was borrowing the
+	// two-heads `family` art, which reads as "family" on a tile labelled
+	// "Quiet Streets".
+	| "moon"
+	| "path"
+	| "shop"
+	| "cup"
+	| "check"
+	| "expand";
 
 interface RedlineIconProps {
 	name: RedlineIconName;
@@ -505,6 +516,267 @@ export function RedlineIcon({ name, size, color }: RedlineIconProps) {
 								height: size * 0.22,
 								left: size * 0.75 - STROKE / 2,
 								top: size * 0.52,
+							},
+						]}
+					/>
+				</View>
+			);
+		// A crescent moon — "Quiet Streets".
+		//
+		// Drawn as an ARC, not as two overlapping discs. The two-disc trick needs
+		// an opaque disc in the backdrop's colour to bite the crescent out, and
+		// this icon's main call site is a glass tile floating over a photo — there
+		// is no solid colour there to paint with, so the bite would show as a grey
+		// blob. A circle with two adjacent borders set transparent gives a real
+		// open arc that composites correctly over anything.
+		case "moon":
+			return (
+				<View style={[styles.icon, box]}>
+					<View
+						style={[
+							styles.iconAbs,
+							{
+								borderWidth: STROKE,
+								borderColor: color,
+								// The open side of the crescent.
+								borderRightColor: "transparent",
+								borderTopColor: "transparent",
+								width: size * 0.86,
+								height: size * 0.86,
+								borderRadius: size * 0.43,
+								left: size * 0.07,
+								top: size * 0.07,
+								transform: [{ rotate: "-20deg" }],
+							},
+						]}
+					/>
+				</View>
+			);
+		// A winding path — "Trails Nearby". Three offset dashes read as a trail
+		// receding, which is legible at 17pt where an S-curve is not.
+		case "path":
+			return (
+				<View style={[styles.icon, box]}>
+					{[
+						{ w: 0.5, l: 0.06, t: 0.7 },
+						{ w: 0.38, l: 0.3, t: 0.44 },
+						{ w: 0.26, l: 0.5, t: 0.18 },
+					].map((seg) => (
+						<View
+							key={seg.t}
+							style={[
+								styles.iconAbs,
+								{
+									backgroundColor: color,
+									width: size * seg.w,
+									height: STROKE,
+									left: size * seg.l,
+									top: size * seg.t,
+									borderRadius: STROKE,
+								},
+							]}
+						/>
+					))}
+				</View>
+			);
+		// A shopfront with an awning — "Cultural Scene" (shops, food, downtown).
+		case "shop":
+			return (
+				<View style={[styles.icon, box]}>
+					<View
+						style={[
+							styles.iconAbs,
+							{
+								backgroundColor: color,
+								width: size * 0.9,
+								height: STROKE,
+								left: size * 0.05,
+								top: size * 0.32,
+								borderRadius: STROKE,
+							},
+						]}
+					/>
+					<View
+						style={[
+							styles.iconAbs,
+							{
+								borderColor: color,
+								borderLeftWidth: STROKE,
+								borderRightWidth: STROKE,
+								borderBottomWidth: STROKE,
+								width: size * 0.74,
+								height: size * 0.48,
+								left: size * 0.13,
+								top: size * 0.34,
+							},
+						]}
+					/>
+					<View
+						style={[
+							styles.iconAbs,
+							{
+								borderColor: color,
+								borderTopWidth: STROKE,
+								borderLeftWidth: STROKE,
+								borderRightWidth: STROKE,
+								width: size * 0.3,
+								height: size * 0.24,
+								left: size * 0.35,
+								top: size * 0.58,
+								borderTopLeftRadius: size * 0.15,
+								borderTopRightRadius: size * 0.15,
+							},
+						]}
+					/>
+				</View>
+			);
+		// A cup — "Great for Hosting" (entertaining: dinners, wine, gatherings).
+		case "cup":
+			return (
+				<View style={[styles.icon, box]}>
+					<View
+						style={[
+							styles.iconAbs,
+							{
+								borderColor: color,
+								borderLeftWidth: STROKE,
+								borderRightWidth: STROKE,
+								borderBottomWidth: STROKE,
+								width: size * 0.52,
+								height: size * 0.36,
+								left: size * 0.14,
+								top: size * 0.22,
+								borderBottomLeftRadius: size * 0.24,
+								borderBottomRightRadius: size * 0.24,
+							},
+						]}
+					/>
+					<View
+						style={[
+							styles.iconAbs,
+							{
+								backgroundColor: color,
+								width: STROKE,
+								height: size * 0.24,
+								left: size * 0.4 - STROKE / 2,
+								top: size * 0.56,
+							},
+						]}
+					/>
+					<View
+						style={[
+							styles.iconAbs,
+							{
+								backgroundColor: color,
+								width: size * 0.36,
+								height: STROKE,
+								left: size * 0.22,
+								top: size * 0.8,
+								borderRadius: STROKE,
+							},
+						]}
+					/>
+					<View
+						style={[
+							styles.iconAbs,
+							line,
+							{
+								width: size * 0.22,
+								height: size * 0.22,
+								borderRadius: size * 0.11,
+								left: size * 0.64,
+								top: size * 0.28,
+							},
+						]}
+					/>
+				</View>
+			);
+		// A ticked box — "Move-in Ready".
+		case "check":
+			return (
+				<View style={[styles.icon, box]}>
+					<View
+						style={[
+							styles.iconAbs,
+							line,
+							{
+								width: size * 0.84,
+								height: size * 0.84,
+								borderRadius: size * 0.24,
+								left: size * 0.08,
+								top: size * 0.08,
+							},
+						]}
+					/>
+					<View
+						style={[
+							styles.iconAbs,
+							{
+								backgroundColor: color,
+								width: size * 0.22,
+								height: STROKE,
+								left: size * 0.24,
+								top: size * 0.52,
+								borderRadius: STROKE,
+								transform: [{ rotate: "45deg" }],
+							},
+						]}
+					/>
+					<View
+						style={[
+							styles.iconAbs,
+							{
+								backgroundColor: color,
+								width: size * 0.38,
+								height: STROKE,
+								left: size * 0.38,
+								top: size * 0.46,
+								borderRadius: STROKE,
+								transform: [{ rotate: "-45deg" }],
+							},
+						]}
+					/>
+				</View>
+			);
+		// Four corner brackets pushing outward — "Spacious".
+		case "expand":
+			return (
+				<View style={[styles.icon, box]}>
+					{[
+						{ k: "tl", top: STROKE, left: STROKE, tw: STROKE, lw: STROKE },
+						{ k: "tr", top: STROKE, right: STROKE, tw: STROKE, rw: STROKE },
+						{ k: "bl", bottom: STROKE, left: STROKE, bw: STROKE, lw: STROKE },
+						{ k: "br", bottom: STROKE, right: STROKE, bw: STROKE, rw: STROKE },
+					].map((c) => (
+						<View
+							key={c.k}
+							style={[
+								styles.iconAbs,
+								{
+									borderColor: color,
+									borderTopWidth: c.tw ?? 0,
+									borderBottomWidth: c.bw ?? 0,
+									borderLeftWidth: c.lw ?? 0,
+									borderRightWidth: c.rw ?? 0,
+									width: size * 0.3,
+									height: size * 0.3,
+									...(c.top !== undefined ? { top: 0 } : { bottom: 0 }),
+									...(c.left !== undefined ? { left: 0 } : { right: 0 }),
+								},
+							]}
+						/>
+					))}
+					<View
+						style={[
+							styles.iconAbs,
+							{
+								backgroundColor: color,
+								width: size * 0.34,
+								height: STROKE,
+								left: size * 0.33,
+								top: size * 0.5 - STROKE / 2,
+								borderRadius: STROKE,
+								transform: [{ rotate: "-45deg" }],
 							},
 						]}
 					/>
