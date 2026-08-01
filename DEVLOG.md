@@ -4,6 +4,63 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-08-01 08:45 UTC — Listing 视频去字幕 + 卡片去照片数量,文字移到 Explore 相册
+
+**Objective**: Owner:「重新渲染dev sampler里listing视频 去掉所有的字幕 还有左下角照片数量
+-不够沉浸,点击explore可以浏览所有照片 包括视频里没有的 这时候再配上字幕详细解读」。
+一个想法三处落地:swipe card 上的视频变成纯视觉对象,所有文字挪到买家主动点进去的 Explore。
+
+**Actions**:
+- `scripts/render-worker/worker.py` — 停止产出两条 caption 路径的输入:不再设
+  `shot["caption"]`(generate.py 的 drawtext 输入),删掉写 `captions.json` 的整段
+  (HTML→PNG LISTING band 输入),`--captions` 不再传。`caption_for_shot` import 去掉
+  (worker 里这是唯一调用点)。shot plan / bimodal 节奏 / v2 filter / BGM 全部不动。
+- `apps/mobile/components/cards/ListingFace.tsx` — hero 去掉「⊕ N Photos」pill,只剩
+  LISTING pill + heart 两个 overlay。`theme/listing-geometry.ts` 删 `photoCountSlot`,
+  `redline-listing-geometry.test.ts` 改成断言 slot 集合恰好 = {cta, heart, pill}。
+- **新增** `apps/mobile/lib/listing/gallery.ts`(+12 个测试)与
+  `components/listing/PhotoGallery.tsx`,从 explore hero 的「All N photos」按钮进入。
+- `app/listing/[id].tsx` — 接上 gallery overlay(不是 route,Continue 语义同 TransitionCard)。
+- `docs/pipelines/README.md` / `video-listing.md` / `video-generation-master.md` 同步。
+
+**Decisions**:
+- **caption 关闭方式选「不给输入」而不是加 flag**。`generate.py` / `overlay.html` /
+  `caption-render/render.py` 一行没改,`.LIST-band` 版式和 `v2_caption_filter()` 原样留着
+  ——回滚 = 恢复 worker 里那两个赋值。LISTING archetype 变成本管线不可达,但 overlay.html
+  还在服务 6 个 bucket archetype,所以不删。
+- **gallery 展示全部 `listing_photos`**,不是 shot plan 的 8–14 张。这就是 owner 说的
+  「包括视频里没有的」:视频本来就是精选(dHash 去重 + 配额裁剪),相册是档案。
+  也不按 `usable` 过滤——那是「能不能进视频」的判断,不是「买家能不能看」。
+- **未打标的照片不显示字幕条,不做兜底文案**。feed 在服的 104 条 fmls-import listing 的
+  `ai_tags` 全是 null,兜底等于对绝大多数房源说假话。
+- **手势用原生 `pagingEnabled`**,不自己写 PanResponder——JS drag 在 iOS 上读起来是
+  「swipe 的动画」而不是 swipe,这个替换以前在 web carousel 上被否过(「太突兀」)。
+- gallery 背景用近黑 `colors.photoVoid` 而非暖纸 `bg`:纸色围着照片会给照片染色。
+
+**Issues**:
+- `percho-render-worker` 又是 `inactive` / `ExecMainPID=0`(和 07-28 同样的无解释死亡)。
+  本次用前台进程跑完样本,**systemd 单元仍未恢复**,需要 owner 决定要不要查根因。
+- DB 里还留着一条 07-28 worker 死时孤立的 `render_jobs.status='running'`
+  (job `11d0caa8`, listing `735fa6d4`)。`claim_job` 只认 `queued` 所以不影响,但该清。
+
+**Resolution**: 只重渲染了 **一条** 作为样本(5122 Lower Creek Street,75 张照片,
+CF uid `8d9bb8be83f2441691ba708d87a400e4`,32.5s / 24 clips),旧视频没删、可对照。
+另外 9 条 walkthrough **未动**,等 owner 看过样本再决定是否全量。
+
+**Learnings**:
+- 验证 caption 是否真的关掉,**不能只看日志没报错**——两条路径都是静默不渲染。
+  可靠信号是 `[ken-burns] (n/N) rendering ... → mode` 那行有没有 `+cap[LISTING]` 后缀;
+  本次 24 个 clip 全都没有。再叠加抽帧视觉确认(3s/18s/31s 三帧均无任何文字)。
+- CF Stream 刚上传完那几十秒内 HLS manifest 还在转码,`ffmpeg -i .../video.m3u8` 会喷
+  一屏 `Invalid NAL unit size` / `partial file`。抽帧改用
+  `/thumbnails/thumbnail.jpg?time=Ns&width=1080` 更稳。
+
+**Next steps**:
+1. Owner 看样本:https://customer-4vgbwrmdsd3h7zzb.cloudflarestream.com/8d9bb8be83f2441691ba708d87a400e4/watch
+2. 批了就跑 `scripts/requeue-existing-walkthroughs.py --apply` 重渲染余下 9 条。
+3. 真机验 Explore 相册(按 owner 规矩走测试模式 / dev sampler)。
+4. `percho-render-worker` systemd 单元要修回去;顺手清掉那条孤立 running job。
+
 ## 2026-07-30 07:50 UTC — 四张卡按 redline 全量重写（Listing/Community/Tradeoff/Insight）+ 修 serve.py gzip 代理 bug
 
 **Objective**: owner 给了 "Percho Swipe Cards" redline（文字规格）+ 一张样图，指令

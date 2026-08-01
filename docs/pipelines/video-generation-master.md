@@ -5,7 +5,7 @@
 **入口**: [`README.md`](./README.md) —— 公共基础设施、14→6 archetype 映射表、铁律、7 doc 索引
 
 **子文档**:
-- [`video-listing.md`](./video-listing.md) — Listing walkthrough(15 步 + LISTING archetype)
+- [`video-listing.md`](./video-listing.md) — Listing walkthrough(15 步;**2026-08-01 起零字幕**,caption 移到 app Explore 相册)
 - [`video-nearby-trust.md`](./video-nearby-trust.md) — schools, healthcare
 - [`video-nearby-lifestyle.md`](./video-nearby-lifestyle.md) — dining, fitness
 - [`video-nearby-utility.md`](./video-nearby-utility.md) — shopping, daily_errands, pets

@@ -33,13 +33,13 @@
      --orientation vertical|landscape
      --shot-plan shot_plan.json
      --listing-overlay overlay.json
-     --captions captions.json           # v97.0
      --bgm <随机 mp3>
    ```
+   **`--captions` 自 2026-08-01 起不再传**(worker 不写 captions.json)。
 10. **渲染 (`kenburns_filter_v2`)**: 单层 fill-crop(`force_original_aspect_ratio=increase, crop`)
     + zoompan;支持 `push_in / pull_back / pan_lr / pan_rl / tilt_td / pan_to_subject / static`;
     zoom 1.00 → 1.15;`pan_to_subject` 用 subject_bbox 中心
-11. **字幕(v97.0)**: 见下方「二、LISTING archetype 字幕系统」
+11. **字幕: 无**(2026-08-01)。见下方「二、字幕已下线」
 12. **拼接**: `concat_with_crossfade` xfade 0.5s,ffprobe 每段实际时长
 13. **BGM 混音**: 拼接后 mux
 14. **上传**: `cf_upload()` → Cloudflare Stream 拿 uid
@@ -50,17 +50,47 @@
 
 ---
 
-## 二、LISTING archetype 字幕系统(v97.0)
+## 二、字幕已下线(2026-08-01)
 
-**Per-photo AI caption**,底部锚定 · **V3-5 Local blur band**。
+**Listing walkthrough 现在零字幕。** Owner:「去掉所有的字幕 ... 不够沉浸」。
+视频是纯视觉对象;文字全部移到 app 的 Explore 相册,由买家主动点进去看。
 
-### 数据管线
+### 关闭方式:靠「不给输入」,不是加 flag
+
+两条 caption 路径各有一个输入,worker 两个都不再产出:
+
+| 路径 | 输入 | 现状 |
+|---|---|---|
+| HTML→PNG `LISTING` band | `captions.json`(`--captions`) | worker 不写、不传 → `caption_png=None` |
+| ffmpeg drawtext fallback | `shot["caption"]` → `v2_cap` | worker 不设 → `generate.py:426` 的 `if v2_caption and not caption_png` 不成立 |
+
+好处是回滚 = 恢复那两个赋值,`generate.py` / `overlay.html` / `render.py`
+一行都没改,`.LIST-band` 版式和 `v2_caption_filter()` 都原样留着。
+
+⚠ **验证时不要只看 worker 日志有没有报错** — 两条路径都是「静默不渲染」。
+看 `[ken-burns] (n/N) rendering ... → mode` 那行有没有 `+cap[LISTING]` 后缀;
+有就说明 captions.json 又被写出来了。再抽帧做视觉确认。
+
+### 文字去了哪(app 侧,勿在渲染器重建)
+
+`apps/mobile/lib/listing/gallery.ts` + `components/listing/PhotoGallery.tsx`,
+从 explore hero 的「All N photos」进入:
+
+- 展示 **全部** `listing_photos`,不是 shot plan 挑的 8–14 张(owner:「包括视频里没有的」)
+- 每张配 `ai_tags.caption` 作正文 + room kicker;**未打标的照片不显示字幕条**,
+  不用兜底文案(feed 在服的 104 条 fmls-import listing 的 `ai_tags` 全是 null,
+  兜底等于对绝大多数房源说假话)
+- caption 在这里可以比视频上长(`numberOfLines={4}`)——这正是「详细解读」的意思
+
+### 历史版式(保留未删,供回滚参考)
+
+以下是 v97.0 曾经在用的数据管线与 CSS,**当前不生效**:
 
 ```
 listing_photos.ai_tags.caption          (vision tagger, ≤15 词事实句)
   ↓ photo_selector.py:356
 shot_plan.json  → clip.ai_caption
-  ↓ worker.py:461–491
+  ↓ worker.py(已删除这段)
 captions.json  { archetype:"LISTING", clips:[{clip, kicker, txt}] }
   ↓ generate.py --captions
 caption-render/render.py (Playwright)

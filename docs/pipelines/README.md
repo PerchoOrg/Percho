@@ -15,7 +15,7 @@
 
 | 文档 | 覆盖内容 |
 |---|---|
-| [`video-listing.md`](./video-listing.md) | **Listing walkthrough**(房源本身)15 步 + `LISTING` archetype per-photo AI caption |
+| [`video-listing.md`](./video-listing.md) | **Listing walkthrough**(房源本身)15 步。**2026-08-01 起零字幕** — caption 移到 app Explore 相册 |
 | [`video-nearby-trust.md`](./video-nearby-trust.md) | `TRUST` archetype — schools, healthcare |
 | [`video-nearby-lifestyle.md`](./video-nearby-lifestyle.md) | `LIFESTYLE` archetype — dining, fitness |
 | [`video-nearby-utility.md`](./video-nearby-utility.md) | `UTILITY` archetype — shopping, daily_errands, pets |
@@ -46,7 +46,7 @@
 
 | Archetype | 用途 | 分支起始 |
 |---|---|---|
-| `LISTING` | Listing walkthrough per-photo caption(v97.0) | overlay.html:315 |
+| `LISTING` | ~~Listing walkthrough per-photo caption~~ **2026-08-01 起不再被调用**(worker 不写 captions.json);版式保留未删,便于一行回滚 | overlay.html:315 |
 | `TRUST` | 权威型 POI(学校/医疗) | overlay.html:246 |
 | `LIFESTYLE` | 生活方式 POI(餐饮/健身) | overlay.html:255 |
 | `UTILITY` | 便利型 POI(购物/日常/宠物) | overlay.html:276 |
@@ -102,7 +102,7 @@
 | 打标签 | listing 照片(room_type/hero) | POI 照片(scene/mood/usable) |
 | Filter | `kenburns_filter_v2` fill-crop | `kenburns_filter` blur-letterbox |
 | 运镜词表 | 全套 8 种(含 pan/tilt/pan_to_subject) | 只 `zoom_in` / `zoom_out` |
-| 字幕系统 | HTML→PNG `LISTING` archetype(v97.0)· drawtext 为 gated fallback | HTML→PNG(6 种 archetype 版式) |
+| 字幕系统 | **无**(2026-08-01)。两条 caption 路径都靠「不给输入」关闭:不设 `shot["caption"]`(drawtext 的输入)、不写 `captions.json`(HTML→PNG 的输入) | HTML→PNG(6 种 archetype 版式) |
 | Overlay 数据 | 房源 price/specs/address | Archetype 特定 + POI distance / drive_time |
 | 方向策略 | 单方向(依据照片主体方向) | 同左 |
 | BGM | 5 桶随机 | 5 桶随机(archetype 可 hint bucket) |
