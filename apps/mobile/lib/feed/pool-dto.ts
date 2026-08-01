@@ -230,6 +230,7 @@ export function parseCommunity(v: unknown): CommunityCardV3 | null {
 	const homes = num(raw.homes);
 	const pills = strings(raw.pills);
 	const d = dims(raw.dims);
+	const blurb = str(raw.blurb);
 	return {
 		kind: "community",
 		id,
@@ -244,6 +245,7 @@ export function parseCommunity(v: unknown): CommunityCardV3 | null {
 		...(homes !== undefined ? { homes } : {}),
 		...(pills.length > 0 ? { pills } : {}),
 		...(d.length > 0 ? { dims: d } : {}),
+		...(blurb ? { blurb } : {}),
 	};
 }
 

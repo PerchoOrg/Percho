@@ -225,6 +225,17 @@ export interface CommunityCardV3 {
 	homes?: number;
 	pills?: readonly string[];
 	dims?: readonly DimKey[];
+	/**
+	 * The community's authored prose (`communities.description`), which the feed
+	 * DTO has always sent as `blurb`.
+	 *
+	 * Fills the redline's subtitle slot under the place name ("Where quiet
+	 * mornings meet vibrant weekends."). `CommunityFace` printed "City, ST" there
+	 * instead, on a comment claiming no tagline field existed — the field was in
+	 * the API response the whole time, just never parsed. 12/12 communities on the
+	 * live feed carry one.
+	 */
+	blurb?: string;
 }
 
 // ─── Trade-off / Challenge / Insight (§1.6) ─────────────────────────

@@ -172,6 +172,22 @@ describe("parseCommunity", () => {
 	it("omits an empty pill list rather than carrying []", () => {
 		expect(parseCommunity(COMMUNITY)?.pills).toBeUndefined();
 	});
+
+	it("keeps the authored blurb — the redline's subtitle slot", () => {
+		// The API has always sent this (communities.description); the card type
+		// never declared it, so the subtitle fell back to "City, ST".
+		const c = parseCommunity({
+			...COMMUNITY,
+			blurb: "A peaceful, tree-lined neighborhood.",
+		});
+		expect(c?.blurb).toBe("A peaceful, tree-lined neighborhood.");
+	});
+
+	it("omits a blank or non-string blurb so the card falls back to City, ST", () => {
+		expect(parseCommunity({ ...COMMUNITY, blurb: "" })?.blurb).toBeUndefined();
+		expect(parseCommunity({ ...COMMUNITY, blurb: 7 })?.blurb).toBeUndefined();
+		expect(parseCommunity(COMMUNITY)?.blurb).toBeUndefined();
+	});
 });
 
 describe("parsePoolResponse", () => {

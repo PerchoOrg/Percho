@@ -31,7 +31,7 @@ import type { DimKey } from "@percho/shared";
  *     price           serif 35
  *     address         14 semibold, margin-top 8
  *     locality        12 muted, margin-top 4
- *     story           13 / 1.45, margin-top 14, #57534D
+ *     story           13 / 1.45, margin-top 15, #57534D
  *     chips           27pt tall, #F1F1EC, green line icons
  *     CTA             full-width 48pt pill, #0E6B57, "Explore Home →"
  *
@@ -72,12 +72,18 @@ import {
 	RedlinePill,
 } from "./redline/RedlineChrome";
 
-/** The redline's "Hero image: 54% of card height". */
-const HERO_RATIO = 0.54;
-/** "Chips ... Height 27px", icon 10pt to sit inside it. */
-const CHIP_ICON = 10;
-/** The redline shows three chips; a fourth would wrap and break the row. */
-const MAX_CHIPS = 3;
+/**
+ * Geometry lives in `theme/listing-geometry.ts` as plain data so
+ * `theme/redline-listing-geometry.test.ts` can assert it without importing
+ * react-native. Read that file for the redline quotes behind each number, and for
+ * why they must not be re-derived from the prototype HTML.
+ */
+import {
+	CHIP_ICON,
+	HERO_RATIO,
+	MAX_CHIPS,
+	listingGeometry as geo,
+} from "../../theme/listing-geometry";
 
 /**
  * Which line icon stands for which preference dimension.
@@ -248,20 +254,15 @@ const styles = StyleSheet.create({
 		borderTopLeftRadius: radii.card - 1,
 		borderTopRightRadius: radii.card - 1,
 	},
-	pillSlot: { position: "absolute", top: 15, left: 15, zIndex: 2 },
-	heartSlot: { position: "absolute", top: 15, right: 15, zIndex: 2 },
-	/** The redline's "left:15px; bottom:14px" on the hero. */
-	photoCountSlot: { position: "absolute", bottom: 14, left: 15, zIndex: 2 },
-	panel: {
-		flex: 1 - HERO_RATIO,
-		paddingHorizontal: 18,
-		paddingTop: 18,
-		paddingBottom: 20,
-	},
+	pillSlot: { position: "absolute", ...geo.pillSlot, zIndex: 2 },
+	heartSlot: { position: "absolute", ...geo.heartSlot, zIndex: 2 },
+	/** The redline's "Bottom-left image pill" on the hero. */
+	photoCountSlot: { position: "absolute", ...geo.photoCountSlot, zIndex: 2 },
+	panel: geo.panel,
 	price: { ...redlineText.price, color: redline.ink },
-	address: { ...redlineText.address, color: redline.ink, marginTop: 8 },
-	locality: { ...redlineText.locality, color: redline.ink3, marginTop: 4 },
-	story: { ...redlineText.story, color: redline.inkStory, marginTop: 14 },
+	address: { ...redlineText.address, color: redline.ink, ...geo.address },
+	locality: { ...redlineText.locality, color: redline.ink3, ...geo.locality },
+	story: { ...redlineText.story, ...geo.story },
 	/**
 	 * `marginTop: auto` pins the chip row + CTA to the bottom of the panel, so a
 	 * listing with a short description does not leave the CTA floating in the
@@ -271,12 +272,10 @@ const styles = StyleSheet.create({
 		marginTop: "auto",
 		flexDirection: "row",
 		flexWrap: "nowrap",
-		// The redline's "gap 6px", verified against the spec text in the
-		// 2026-07-31 type audit (theme/redline-type.test.ts pins it).
-		gap: 6,
+		...geo.chips,
 	},
 	chip: {
-		height: 27,
+		...geo.chip,
 		// Shrinkable, deliberately: at 9.5px with 3 chips on a 270pt card the row
 		// is near capacity, and "Private Backyard" is the widest redline label.
 		// Letting the chip shrink keeps all three on ONE row (the redline's
@@ -290,5 +289,5 @@ const styles = StyleSheet.create({
 		backgroundColor: redline.surface,
 	},
 	chipLabel: { ...redlineText.chip, color: redline.inkStory, flexShrink: 1 },
-	ctaSlot: { marginTop: 14 },
+	ctaSlot: geo.ctaSlot,
 });

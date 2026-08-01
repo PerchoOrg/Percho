@@ -25,13 +25,17 @@
  *
  * The redline's mock card is Roswell / "Where quiet mornings meet vibrant
  * weekends." / Family Friendly · Walkable · Great Schools. This face renders the
- * real card instead: `card.name`, `card.city`/`state`, and the community's own
- * `dims` (falling back to its authored `pills`) mapped to the three tiles.
+ * real card instead: `card.name` for the place, `card.blurb` for the subtitle,
+ * and the community's own `dims` (falling back to its authored `pills`) mapped to
+ * the three tiles.
  *
- * There is no authored tagline field on `CommunityCardV3`, so the subtitle slot
- * shows the real "City, ST" line rather than an invented lifestyle sentence.
- * Writing "Where quiet mornings meet vibrant weekends" under an arbitrary
- * subdivision would be fabricated editorial copy about a real place.
+ * The subtitle used to print "City, ST" on a note here claiming
+ * `CommunityCardV3` had no tagline field. It did not — but the API response
+ * always carried one: `PoolCommunityDTO.blurb` (from `communities.description`,
+ * authored prose, present on 12/12 live communities). The mobile card type simply
+ * never declared it, so nothing parsed it. Clamped to the redline's two lines;
+ * "City, ST" remains the fallback for a community with no prose, which is a real
+ * fact rather than an invented lifestyle sentence.
  *
  * ── Video untouched (owner: 「视频部分不用改」) ──────────────────────────────
  *
@@ -149,8 +153,8 @@ export function CommunityFace({
 
 			<View style={styles.body}>
 				<Text style={styles.name}>{card.name}</Text>
-				<Text style={styles.tagline}>
-					{card.city}, {card.state}
+				<Text style={styles.tagline} numberOfLines={2}>
+					{card.blurb ?? `${card.city}, ${card.state}`}
 				</Text>
 				{(dims.length > 0 || fallbackPills.length > 0) && (
 					<View style={styles.tiles}>
