@@ -133,6 +133,30 @@ describe("parseListing", () => {
 			parseListing({ ...LISTING, matchScore: "92" })?.matchScore,
 		).toBeUndefined();
 	});
+
+	it("keeps a real photo count for the redline's hero pill", () => {
+		expect(parseListing({ ...LISTING, photoCount: 18 })?.photoCount).toBe(18);
+	});
+
+	it("drops a photo count of 1 — the pill must never read '1 Photos'", () => {
+		expect(
+			parseListing({ ...LISTING, photoCount: 1 })?.photoCount,
+		).toBeUndefined();
+		expect(
+			parseListing({ ...LISTING, photoCount: 0 })?.photoCount,
+		).toBeUndefined();
+	});
+
+	it("omits a non-numeric or absent photo count", () => {
+		expect(
+			parseListing({ ...LISTING, photoCount: "18" })?.photoCount,
+		).toBeUndefined();
+		expect(parseListing(LISTING)?.photoCount).toBeUndefined();
+	});
+
+	it("floors a fractional photo count rather than rendering '10.5 Photos'", () => {
+		expect(parseListing({ ...LISTING, photoCount: 10.5 })?.photoCount).toBe(10);
+	});
 });
 
 describe("parseCommunity", () => {
@@ -208,8 +232,20 @@ describe("parseListing — neighborhood scores", () => {
 	const SCORES = {
 		overall: 8.3,
 		dims: [
-			{ key: "safety", label: "Safety", score: null, count: 0, reason: "no data source" },
-			{ key: "schools", label: "Schools", score: 8.5, count: 11, nearestM: 307 },
+			{
+				key: "safety",
+				label: "Safety",
+				score: null,
+				count: 0,
+				reason: "no data source",
+			},
+			{
+				key: "schools",
+				label: "Schools",
+				score: 8.5,
+				count: 11,
+				nearestM: 307,
+			},
 			{ key: "convenience", label: "Convenience", score: 8.1, count: 64 },
 			{ key: "potential", label: "Potential", score: null, count: 0 },
 		],
@@ -223,7 +259,9 @@ describe("parseListing — neighborhood scores", () => {
 		const safety = card?.scores?.dims.find((d) => d.key === "safety");
 		expect(safety?.score).toBeNull();
 		expect(safety?.score).not.toBe(0);
-		expect(card?.scores?.dims.find((d) => d.key === "schools")?.score).toBe(8.5);
+		expect(card?.scores?.dims.find((d) => d.key === "schools")?.score).toBe(
+			8.5,
+		);
 		expect(card?.scores?.overall).toBe(8.3);
 	});
 
@@ -240,8 +278,12 @@ describe("parseListing — neighborhood scores", () => {
 		});
 		// A string "8.5" and a NaN are both "we don't have a number", not 8.5 and
 		// not 0.
-		expect(card?.scores?.dims.find((d) => d.key === "schools")?.score).toBeNull();
-		expect(card?.scores?.dims.find((d) => d.key === "safety")?.score).toBeNull();
+		expect(
+			card?.scores?.dims.find((d) => d.key === "schools")?.score,
+		).toBeNull();
+		expect(
+			card?.scores?.dims.find((d) => d.key === "safety")?.score,
+		).toBeNull();
 		expect(card?.scores?.overall).toBeNull();
 	});
 

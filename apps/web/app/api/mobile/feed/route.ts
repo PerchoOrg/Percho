@@ -139,6 +139,10 @@ function projectListing(card: BrowseCard, verticalUid?: string): PoolListingDTO 
     // The redline's chip row above the CTA. Omitted (not `[]`) when the listing's
     // own copy asserts none of the dims — see lib/feed/listing-highlights.ts.
     ...(dims.length > 0 ? { dims } : {}),
+    // >1 only — see the field docs. A "1 Photos" pill is worse than none.
+    ...(card.photoCount !== undefined && card.photoCount > 1
+      ? { photoCount: card.photoCount }
+      : {}),
     ...(citySlug(card.listing.city, card.listing.state)
       ? { geoUnitId: citySlug(card.listing.city, card.listing.state) }
       : {}),

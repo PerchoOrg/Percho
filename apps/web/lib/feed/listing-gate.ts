@@ -71,6 +71,14 @@ export interface PoolListingDTO {
    * copy claims nothing gets the field omitted rather than an empty array.
    */
   dims?: DimKey[];
+  /**
+   * Photo count for the redline's "⊕ N Photos" hero pill.
+   *
+   * Only sent when the listing has MORE THAN ONE photo: a pill reading
+   * "1 Photos" on a single-photo listing is worse than no pill, and the pill's
+   * whole promise is that there is a gallery behind the hero.
+   */
+  photoCount?: number;
   /** City unit this listing sits in — a tease swipe credits it (§1.7). */
   geoUnitId?: string;
   /** Set in stages 1–2: likeable, weighted 0.5×, match badge suppressed. */

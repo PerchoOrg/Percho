@@ -83,6 +83,16 @@ export type BrowseCard = {
    */
   photos?: string[];
   /**
+   * How many photos the listing actually has, regardless of media kind.
+   *
+   * Distinct from `photos` above, which is only populated for the photo-only
+   * carousel branch. The redline's listing card puts a "⊕ N Photos" pill on the
+   * hero, and that needs a count even for a video-led listing. Read from the
+   * same `listing_photos` rows the hero already comes from, so it costs no
+   * extra query. Absent when the listing has no photo rows at all (1 of 260).
+   */
+  photoCount?: number;
+  /**
    * Optional richer hero pool — when set, the 'hero' source cycles through
    * these videos (horizontal swipe / repeat-tap Hero source on the rail).
    * Used by `/v/[agent]/[listing]` to expose multi-walkthrough listings;

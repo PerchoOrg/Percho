@@ -429,7 +429,6 @@ export default function FeedScreen() {
 					return (
 						<ListingFace
 							card={card}
-							stage={stage}
 							isTop={isTop}
 							/*
 							 * The redline puts a full-width "Explore Home →" at the bottom of

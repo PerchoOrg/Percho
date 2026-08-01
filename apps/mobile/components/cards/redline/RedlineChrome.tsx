@@ -49,6 +49,30 @@ export function RedlinePill({ label }: { label: string }) {
 	return <Text style={styles.pill}>{label}</Text>;
 }
 
+// ─── Photo-count pill ───────────────────────────────────────────────
+
+/**
+ * The redline's "⊕ 18 Photos" counter, bottom-left of the listing hero.
+ *
+ * Spec: dark translucent pill (`--photoPill`, rgba(14,13,11,.5)), a 13pt camera
+ * glyph, white 11px text, 6px icon/text gap, 11×6 padding, inset 15 left /
+ * 14 bottom.
+ *
+ * Renders the REAL photo count. The pill was absent from the card for a while
+ * because the DTO carried no count — a note in `ListingFace` even claimed the
+ * gallery size was unavailable. It was: `browse-cards.ts` already fetches every
+ * `listing_photos` row to pick the hero, so the count was one `.length` away.
+ * 254 of 260 active listings have 2+ photos (median 10).
+ */
+export function RedlinePhotoCount({ count }: { count: number }) {
+	return (
+		<View style={styles.photoPill}>
+			<RedlineIcon name="camera" size={13} color={redline.onPhoto} />
+			<Text style={styles.photoPillLabel}>{count} Photos</Text>
+		</View>
+	);
+}
+
 // ─── Heart ──────────────────────────────────────────────────────────
 
 /**
@@ -855,6 +879,22 @@ const styles = StyleSheet.create({
 		paddingVertical: 7,
 		borderRadius: radii.pill,
 		overflow: "hidden",
+	},
+	/** The redline's "⊕ N Photos" counter: dark translucent, 11×6, 6px gap. */
+	photoPill: {
+		flexDirection: "row",
+		alignItems: "center",
+		gap: 6,
+		alignSelf: "flex-start",
+		backgroundColor: redline.photoPill,
+		paddingHorizontal: 11,
+		paddingVertical: 6,
+		borderRadius: radii.pill,
+		overflow: "hidden",
+	},
+	photoPillLabel: {
+		...redlineText.micro,
+		color: redline.onPhoto,
 	},
 	heart: {
 		width: 38,

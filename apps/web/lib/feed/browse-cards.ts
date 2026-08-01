@@ -404,6 +404,11 @@ async function assembleCards(
       photos: hero
         ? undefined
         : (photosByListing.get(l.id) ?? []).map((p) => photoPublicUrl(p.storage_path)),
+      // Count is set even for video-led listings (unlike `photos` above), because
+      // the redline's hero pill shows "N Photos" on every listing card.
+      ...(photosByListing.has(l.id)
+        ? { photoCount: (photosByListing.get(l.id) as ListingPhotoRow[]).length }
+        : {}),
       // grid thumbnail honours the agent's
       // explicit `cover_url`. Grid consumers prefer this over the
       // mediaKind-derived hero. We fall through to undefined when

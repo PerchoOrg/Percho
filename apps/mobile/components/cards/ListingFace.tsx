@@ -24,13 +24,20 @@ import type { DimKey } from "@percho/shared";
  * ── The redline's structure, verbatim ────────────────────────────────────────
  *
  *   hero image        54% of card height, full bleed, top corners = card radius
+ *     LISTING pill    top-left 15/15
+ *     heart           top-right 15/15
+ *     photo counter   bottom-left 15/14, "⊕ N Photos", dark translucent pill
  *   content panel     46%, padding 18 / 18 / 20
  *     price           serif 35
  *     address         14 semibold, margin-top 8
  *     locality        12 muted, margin-top 4
- *     story           13 / 1.45, margin-top 15, #57534D
+ *     story           13 / 1.45, margin-top 14, #57534D
  *     chips           27pt tall, #F1F1EC, green line icons
  *     CTA             full-width 48pt pill, #0E6B57, "Explore Home →"
+ *
+ * Those three overlays are the ONLY things on the hero. The match-score badge
+ * that used to sit at top-right/60 was ours, never the redline's, and it is gone
+ * — the score still reaches the buyer on the detail screen.
  *
  * ── Video is untouched (owner: 「视频部分不用改」) ───────────────────────────
  *
@@ -56,12 +63,12 @@ import { radii, redline } from "../../theme/tokens";
 import { redlineText } from "../../theme/typography";
 import { CardPhoto } from "../CardPhoto";
 import { CardVideo } from "../CardVideo";
-import { MatchBadge } from "../MatchBadge";
 import {
 	RedlineCta,
 	RedlineHeart,
 	RedlineIcon,
 	type RedlineIconName,
+	RedlinePhotoCount,
 	RedlinePill,
 } from "./redline/RedlineChrome";
 
@@ -101,23 +108,18 @@ const DIM_ICON: Record<DimKey, RedlineIconName> = {
 
 interface ListingFaceProps {
 	card: ListingCardV3;
-	stage: number;
 	isTop: boolean;
 	onExplore?: () => void;
-	onSeeWhy?: () => void;
 	/** Favourite. Optional — the heart renders inert when absent. */
 	onSave?: () => void;
 }
 
 export function ListingFace({
 	card,
-	stage,
 	isTop,
 	onExplore,
-	onSeeWhy,
 	onSave,
 }: ListingFaceProps) {
-	const scoreShown = card.tease || card.preview ? undefined : card.matchScore;
 	/** First paragraph only — the redline's story slot is two lines. */
 	const story = card.description?.[0];
 	const chips = (card.dims ?? []).slice(0, MAX_CHIPS);
@@ -143,24 +145,18 @@ export function ListingFace({
 					<RedlineHeart onPress={onSave} />
 				</View>
 				{/*
-				 * The match badge keeps its §1.7 suppression for tease/preview cards.
-				 * It sits BELOW the heart rather than replacing it, because the
-				 * redline's top-right slot is the heart's.
+				 * The redline's listing card has NO match badge — its photo carries
+				 * exactly three overlays: the LISTING pill, the heart, and the photo
+				 * counter. The badge used to sit here at top:60 and was an addition of
+				 * ours, not a redline element, so it is gone. The score still reaches
+				 * the buyer through the detail screen; it is not lost, just not printed
+				 * over the hero the redline keeps clean.
 				 */}
-				{scoreShown !== undefined && (
-					<View style={styles.badgeSlot}>
-						<MatchBadge score={scoreShown} stage={stage} onSeeWhy={onSeeWhy} />
+				{card.photoCount !== undefined && (
+					<View style={styles.photoCountSlot}>
+						<RedlinePhotoCount count={card.photoCount} />
 					</View>
 				)}
-				{/*
-				 * The redline draws a "⊕ 18 Photos" counter here. `ListingCardV3`
-				 * carries NO photo count — the feed DTO selects one `heroUrl`, not the
-				 * gallery — so there is no number to print. Rendering "18" (the
-				 * redline's sample value) would be a fabricated fact on a real
-				 * listing, and deriving it would need a new server-side count.
-				 * The pill is therefore absent, not faked. See the note in the reply
-				 * to the owner: this is the one redline element with no data behind it.
-				 */}
 			</View>
 
 			{/* Content panel — 46% */}
@@ -254,7 +250,8 @@ const styles = StyleSheet.create({
 	},
 	pillSlot: { position: "absolute", top: 15, left: 15, zIndex: 2 },
 	heartSlot: { position: "absolute", top: 15, right: 15, zIndex: 2 },
-	badgeSlot: { position: "absolute", top: 60, right: 15, zIndex: 2 },
+	/** The redline's "left:15px; bottom:14px" on the hero. */
+	photoCountSlot: { position: "absolute", bottom: 14, left: 15, zIndex: 2 },
 	panel: {
 		flex: 1 - HERO_RATIO,
 		paddingHorizontal: 18,
@@ -264,7 +261,7 @@ const styles = StyleSheet.create({
 	price: { ...redlineText.price, color: redline.ink },
 	address: { ...redlineText.address, color: redline.ink, marginTop: 8 },
 	locality: { ...redlineText.locality, color: redline.ink3, marginTop: 4 },
-	story: { ...redlineText.story, color: redline.inkStory, marginTop: 15 },
+	story: { ...redlineText.story, color: redline.inkStory, marginTop: 14 },
 	/**
 	 * `marginTop: auto` pins the chip row + CTA to the bottom of the panel, so a
 	 * listing with a short description does not leave the CTA floating in the
@@ -274,13 +271,16 @@ const styles = StyleSheet.create({
 		marginTop: "auto",
 		flexDirection: "row",
 		flexWrap: "nowrap",
-		// The redline's "gap 6px". Was 5 while the chip font was being shrunk to
-		// force three chips onto one row; the row flexes now (see `chip`) so the
-		// spec value stands.
+		// The redline's "gap 6px", verified against the spec text in the
+		// 2026-07-31 type audit (theme/redline-type.test.ts pins it).
 		gap: 6,
 	},
 	chip: {
 		height: 27,
+		// Shrinkable, deliberately: at 9.5px with 3 chips on a 270pt card the row
+		// is near capacity, and "Private Backyard" is the widest redline label.
+		// Letting the chip shrink keeps all three on ONE row (the redline's
+		// nowrap) instead of pushing the third out.
 		flexShrink: 1,
 		flexDirection: "row",
 		alignItems: "center",

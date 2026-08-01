@@ -196,6 +196,12 @@ export interface ListingCardV3 {
 	matchScore?: number;
 	dims?: readonly DimKey[];
 	/**
+	 * Photo count for the redline's "⊕ N Photos" hero pill. Server sends it only
+	 * when the listing has more than one photo, so the pill never reads
+	 * "1 Photos".
+	 */
+	photoCount?: number;
+	/**
 	 * §1.7 tease listing: the 1-per-10 preview shown in Stage 1–2. Likeable, but
 	 * weighted 0.5× and the match badge is suppressed because the score is not
 	 * yet trustworthy.

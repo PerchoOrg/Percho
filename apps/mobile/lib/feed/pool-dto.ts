@@ -183,6 +183,10 @@ export function parseListing(v: unknown): ListingCardV3 | null {
 	const description = strings(raw.description);
 	const sc = scores(raw.scores);
 	const d = dims(raw.dims);
+	// >1 guard repeated client-side: a stale/hand-rolled server must not be able
+	// to make the pill read "1 Photos".
+	const pc = num(raw.photoCount);
+	const photoCount = pc !== undefined && pc > 1 ? Math.floor(pc) : undefined;
 	return {
 		kind: "listing",
 		id,
@@ -201,6 +205,7 @@ export function parseListing(v: unknown): ListingCardV3 | null {
 		...(geoUnitId ? { geoUnitId } : {}),
 		...(matchScore !== undefined ? { matchScore } : {}),
 		...(d.length > 0 ? { dims: d } : {}),
+		...(photoCount !== undefined ? { photoCount } : {}),
 		// The server flags the gate variant; the client engine re-applies its own
 		// gate on top, so these are carried through verbatim rather than inferred.
 		...(raw.tease === true ? { tease: true as const } : {}),
