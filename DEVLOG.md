@@ -4,6 +4,68 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-08-01 23:40 UTC — 图标集存档备用 + chip 覆盖率 47.3% → 63.5%
+
+**Objective**: Owner 两条:①「设计好的 icon 都存下来备用」;②「每个 listing card
+最好至少放三个」。
+
+### ① 图标集存档 `assets/icons/`
+
+| 文件 | 内容 |
+|---|---|
+| `phosphor-fill/*.svg` | 14 个 glyph 独立 SVG,`fill="currentColor"` —— **给 web/email/marketing 复用** |
+| `Phosphor-Fill.ttf` | 上游全量字体(1512 glyph / 440 KB),**只作重新 subset 的源,禁止上车** |
+| `phosphor-selection.json` | name→codepoint 表。上游 2 MB,**裁到 86 KB**(只留 name+code) |
+| `README.md` | 14 个 glyph 对照表 + 加图标步骤 + 尺寸表 + 「禁混库/只用 fill/绿色」规则 |
+| `scripts/build-icon-font.py` | **可复现**重建 app subset 字体 |
+
+subset 字体原来是我手搓的一次性产物 —— 加 glyph 忘了重跑就会真机出空白。现在有脚本:
+跑完 `cmp` 与已上车的 `PerchoIcons.ttf` **逐字节相同**,且打印的码点与 `icon-font.ts`
+完全一致。14 个 SVG 也逐个与上游 iconify 的 path **字符串比对全等**、无 stray `stroke`。
+
+vision 曾怀疑 `path.svg` 是「描边没填充」的 bug —— 核对后是**上游本来就是线性字形**,
+不是错误。
+
+### ② chip 覆盖率:不靠编造,靠 recall
+
+先量真实数据(260 条 active listing,`listing-highlights.ts` 的原始 pattern):
+
+    3+ dims: 47.3%    1+ dims: 96.5%    0 dims: 9 条
+
+**「至少三个」用放宽判定是达不到的** —— 剩下 52.7% 的房子,它自己的文案确实没主张三件事。
+§3 是「real or absent」,编一个 chip 出来是伪造 editorial。真正缺的是**数据源**
+(POI / school attendance zone 至今是空表),不是正则。
+
+能拿的是 **recall**:同一个 claim 的其他说法没被列进去。screened porch 就是私密户外
+空间;有 tennis court + playground 的社区就是 `family` 已经在讲的那件事;
+"new roof / new HVAC" 与 "move-in ready" 是同一个「没活儿要干」的主张。加完:
+
+    3+ dims: 47.3% → **63.5%**    1+ dims: 96.5% → **96.9%**
+
+**没有任何 dim 获得新含义**,`hip`/`nightlife` 依然刻意不可提取。
+
+**Issues**: 上线前把每条新 pattern 的**真实命中句子**打出来人工过了一遍,抓到一个
+假阳性:某条房源写 "back deck overlooking a **freshly painted backyard fence**" ——
+刷个栅栏不是 move-in ready。给 paint pattern 加了负向 lookahead
+`(?!\s+(?:backyard|fence|deck|exterior|shed))`,并补了针对它的测试。
+
+**Resolution**: `listing-highlights.test.ts` 12 → **19 条全过**(6 条新 recall +
+1 条假阳性回归)。覆盖率数字是**跑上车的那个 TS 函数**over 真实 260 条测的,不是我用
+Python 重写一遍测的(临时 probe 测完即删)。
+`apps/web` 有 **2 个先前就存在的失败**(`create-upload.test.ts` 的 community scope、
+以及 profile/dashboard 的 `useTransition` tsc 报错)—— **把我的改动 stash 掉后照样失败**,
+不是我引入的,按 §0.3 没动。`listing-highlights.ts` 的 biome format 报错同理是既有的
+(该文件用双引号,web 的 biome 要单引号),`--formatter-enabled=false` 下干净。
+
+**Learnings**: 「每个卡片至少 N 个」这类要求要先**量真实分布**再答 —— 47.3% 说明它
+不是调参能满足的,而是数据缺口。区分「放宽 claim(不可以)」和「补同义表达(可以)」
+是这次唯一能诚实交付的路径;差别就在于**上线前把命中句子打出来读**,不然 fence 那条
+就混进去了。
+
+**Next steps**: 3+ 想再往上只能补数据源:POI 回填(20/22 条无 POI,待批)或
+school attendance zone。另 `walkable` 仅 8.8% / `entertaining` 9.6%,若 owner 想让
+这两个更常出现,需要它们各自的数据而不是更松的词。
+
 ## 2026-08-01 23:20 UTC — chip icon 10 → 12(owner:「icon再大一点点」)
 
 **Objective**: Phosphor Fill 上车后 owner 觉得 chip 图标偏小。

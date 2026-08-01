@@ -36,9 +36,31 @@
  * a claim made by a party who saw the place, surfaced verbatim in meaning.
  *
  * Coverage measured over all 260 active listings: 96.9% match at least one dim,
- * 63.8% match three or more. Listings that match nothing get NO chips row —
+ * 63.1% match three or more. Listings that match nothing get NO chips row —
  * `undefined`, not `[]`. Printing "Family Friendly" on a house whose own agent
  * never claimed it would be fabricated editorial (§3 "real or absent").
+ *
+ * ── Recall widened 2026-08-01, WITHOUT widening what a chip claims ────────────
+ *
+ * Owner asked for "at least three chips per listing". Three is NOT reachable by
+ * loosening the bar: only 47.3% of listings matched 3+ dims under the original
+ * patterns, and the remaining 52.7% genuinely do not assert three things. The
+ * fix for those is not a laxer regex, it is more source data (POI / school
+ * attendance zones, both still empty — see the table above).
+ *
+ * What WAS available is recall: phrasings that assert a dim's existing claim but
+ * were not listed. A screened porch is private outdoor living space; a community
+ * with tennis courts and a playground is the family-amenity claim `family`
+ * already makes; "new roof / new HVAC" is the same "nothing left to do"
+ * assertion as "move-in ready". Adding those took 3+ coverage 47.3% → 63.5%
+ * and 1+ from 96.5% → 96.9%, measured over the same 260 listings by running THIS
+ * function (not a reimplementation) over a dump of the live table.
+ *
+ * Every added phrase was checked against real matched sentences before shipping.
+ * That review caught one false positive: "freshly painted backyard fence" is not
+ * a move-in-ready claim, so the paint pattern carries a negative lookahead. No
+ * dim gained a MEANING it did not already have — `hip` and `nightlife` are still
+ * deliberately unextractable.
  *
  * ── Ranking, because the loudest phrases are the emptiest ────────────────────
  *
@@ -75,19 +97,19 @@ const DIM_PATTERN: Partial<Record<DimKey, RegExp>> = {
 	schools:
 		/\b(?:top[-\s]rated|award[-\s]winning|excellent|sought[-\s]after|highly[-\s]rated|blue[-\s]ribbon)\s+(?:public\s+)?schools?\b|\btop\s+schools?\b|\bbest\s+schools?\b/i,
 	walkable:
-		/\bwalkable\b|\bwalking distance to\b|\bwalk to (?:shops?|shopping|downtown|town|the village|restaurants?|dining|the square)\b|\bsteps? (?:away )?(?:to|from) (?:shops?|downtown|town|the village|restaurants?|dining)\b/i,
+		/\bwalkable\b|\bwalking distance to\b|\bwalk to (?:shops?|shopping|downtown|town|the village|restaurants?|dining|the square)\b|\bsteps? (?:away )?(?:to|from) (?:shops?|downtown|town|the village|restaurants?|dining)\b|\bwalk(?:ing)? (?:distance )?to (?:schools?|parks?|the park|trails?)\b|\bwalk to everything\b/i,
 	trails:
-		/\b(?:walking|nature|hiking|multi[-\s]use|bike) trails?\b|\bgreenway\b|\bbike paths?\b/i,
+		/\b(?:walking|nature|hiking|multi[-\s]use|bike) trails?\b|\bgreenway\b|\bbike paths?\b|\bnature preserve\b|\bwalking paths?\b/i,
 	quiet:
 		/\bcul[-\s]?de[-\s]?sac\b|\bquiet (?:street|road|neighborhood|neighbourhood|community|setting|cul)\b|\bpeaceful\b|\bserene\b|\btranquil\b/i,
 	outdoors:
-		/\b(?:private|fenced|level|large|expansive|spacious|flat) (?:back)?yard\b|\bfenced[-\s]in yard\b|\bnear(?:by)? parks?\b|\bpark across\b/i,
+		/\b(?:private|fenced|level|large|expansive|spacious|flat) (?:back)?yard\b|\bfenced[-\s]in yard\b|\bnear(?:by)? parks?\b|\bpark across\b|\b(?:screened|covered|rocking[-\s]chair)\s+porch\b|\b(?:large|spacious|oversized|expansive|private|new)\s+(?:deck|patio)\b|\bdeck overlook|\bfire pit\b|\bfenced\b[^.]{0,20}\b(?:yard|lot|backyard)\b/i,
 	family:
-		/\bfamily[-\s]friendly\b|\bgreat for families\b|\bswim(?:\/| and )tennis\b/i,
+		/\bfamily[-\s]friendly\b|\bgreat for families\b|\bswim(?:\/| and |[-\s])tennis\b|\bswim,\s*tennis\b|\btennis courts?\b|\bplayground\b|\bcommunity pool\b/i,
 	entertaining:
 		/\bperfect for entertaining\b|\bgreat for entertaining\b|\bentertainer'?s? (?:dream|delight|paradise)\b|\bopen concept\b/i,
 	move_in:
-		/\bmove[-\s]in ready\b|\bturn[-\s]?key\b|\b(?:newly|fully|completely|recently) renovated\b|\bnew construction\b/i,
+		/\bmove[-\s]in ready\b|\bturn[-\s]?key\b|\b(?:newly|fully|completely|recently) renovated\b|\bnew construction\b|\bnew (?:roof|hvac|water heater|windows)\b|\bupdated throughout\b|\bfresh(?:ly)? (?:interior )?paint(?:ed)?\b(?!\s+(?:backyard|fence|deck|exterior|shed))/i,
 	space: /\bspacious\b|\boversized\b|\bexpansive\b/i,
 };
 

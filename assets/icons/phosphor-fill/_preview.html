@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Saved icon set — assets/icons/phosphor-fill</title>
+<style>
+  :root{--f:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,system-ui,sans-serif;
+    --paper:#F3F1EC;--card:#FFFDF9;--ink:#221A12;--ink2:#6F6B65;--ink3:#96918A;--accent:#0E6B57}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--f);padding:22px 16px 60px}
+  .wrap{max-width:900px;margin:0 auto}
+  h1{font-size:17px;margin:0 0 4px}
+  p.sub{font:400 12.5px/1.6 var(--f);color:var(--ink2);margin:0 0 18px}
+  code{font:500 11.5px ui-monospace,monospace;color:var(--accent)}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:9px}
+  .cell{background:var(--card);border:1px solid rgba(0,0,0,.06);border-radius:14px;
+    padding:14px 9px;display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center}
+  .cell img{width:30px;height:30px}
+  .cell b{font:600 11px/1.2 var(--f)}
+  .cell span{font:500 9.5px/1.2 ui-monospace,monospace;color:var(--ink3)}
+  .v{font:600 12px/1.5 var(--f);border-radius:13px;padding:11px 13px;margin:16px 0 0}
+</style>
+</head>
+<body><div class="wrap">
+  <h1>Saved icon set — <code>assets/icons/phosphor-fill/*.svg</code></h1>
+  <p class="sub">Loads the 14 committed SVG files directly (green tint applied via CSS filter,
+    since <code>currentColor</code> does not inherit through <code>&lt;img&gt;</code>).
+    A broken or empty file shows as a missing image.</p>
+  <div class="grid" id="g"></div>
+  <div class="v" id="v"></div>
+</div>
+<script>
+const NAMES=["school","tree","path","walk","moon","family","shop","cup","check","expand","yard","car","camera","sparkle"];
+const PH={school:"graduation-cap-fill",tree:"tree-fill",path:"path-fill",walk:"footprints-fill",
+ moon:"moon-stars-fill",family:"users-three-fill",shop:"storefront-fill",cup:"cheers-fill",
+ check:"check-circle-fill",expand:"arrows-out-fill",yard:"picnic-table-fill",car:"car-fill",
+ camera:"camera-fill",sparkle:"sparkle-fill"};
+document.getElementById('g').innerHTML=NAMES.map(n=>
+  `<div class="cell"><img src="${n}.svg" alt="${n}" data-n="${n}"
+     style="filter:invert(28%) sepia(83%) saturate(560%) hue-rotate(125deg) brightness(88%)">
+   <b>${n}</b><span>${PH[n]}</span></div>`).join('');
+let done=0,bad=[];
+document.querySelectorAll('#g img').forEach(im=>{
+  const fin=ok=>{done++;if(!ok)bad.push(im.dataset.n);
+    if(done===NAMES.length){const el=document.getElementById('v');
+      el.textContent=bad.length?`✗ failed to load: ${bad.join(', ')}`
+        :`✓ all ${NAMES.length} saved SVGs load and render`;
+      el.style.background=bad.length?'#FDECEA':'#EAF2EE';
+      el.style.color=bad.length?'#B3261E':'#0E6B57';}};
+  if(im.complete)fin(im.naturalWidth>0); else {im.onload=()=>fin(true);im.onerror=()=>fin(false);}
+});
+</script>
+</body></html>

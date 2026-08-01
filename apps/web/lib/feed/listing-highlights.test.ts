@@ -97,4 +97,57 @@ describe("listingHighlightDims", () => {
 			listingHighlightDims(["A lovely home.", "Quiet cul-de-sac location."]),
 		).toEqual(["quiet"]);
 	});
+
+	// ── Recall widened 2026-08-01 (owner: at least three chips) ───────────────
+	// Each of these asserts a claim the dim ALREADY makes, in wording the
+	// original patterns did not list. They exist because 3+ coverage was 47.3%.
+
+	it("counts a screened porch as outdoor living space", () => {
+		expect(
+			listingHighlightDims(["Enjoy the large screened porch out back."]),
+		).toContain("outdoors");
+	});
+
+	it("counts community tennis courts and a playground as family amenities", () => {
+		expect(
+			listingHighlightDims([
+				"The neighborhood offers a clubhouse, tennis courts and a playground.",
+			]),
+		).toContain("family");
+	});
+
+	it("counts new roof / new HVAC as move-in ready", () => {
+		expect(
+			listingHighlightDims(["Major updates done: new roof and new HVAC."]),
+		).toContain("move_in");
+	});
+
+	it("counts walk-to-school as a walkability claim", () => {
+		expect(
+			listingHighlightDims(["Walk to schools and the park from your door."]),
+		).toContain("walkable");
+	});
+
+	it("counts a nature preserve as trails", () => {
+		expect(
+			listingHighlightDims(["Minutes from the Blue Heron Nature Preserve."]),
+		).toContain("trails");
+	});
+
+	it("does NOT claim move-in ready from a freshly painted FENCE", () => {
+		// Caught while reviewing real matched sentences: one live listing says
+		// "back deck overlooking a freshly painted backyard fence". Painting a
+		// fence is not the "nothing left to do" claim `move_in` makes.
+		expect(
+			listingHighlightDims([
+				"A back deck overlooking a freshly painted backyard fence.",
+			]),
+		).not.toContain("move_in");
+	});
+
+	it("still claims move-in ready from freshly painted interiors", () => {
+		expect(
+			listingHighlightDims(["Freshly painted inside with new flooring."]),
+		).toContain("move_in");
+	});
 });
