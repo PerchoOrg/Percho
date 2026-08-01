@@ -60,7 +60,21 @@ lockfile 现在显式把 `expo-font` 钉在 `(react@19.1.0)` 上 —— 这就�
   原生模块/hook 的改动，验证必须落到真机或至少 Metro 冷启后的运行时。
 
 **Next steps**: owner 重开 app(测试模式 / dev sampler)确认红屏没了、chips 是
-Phosphor Fill。Metro 已冷启在 8081,`EXPO_PUBLIC_API_BASE=https://demo.percho.co`。
+Phosphor Fill。
+
+**真机启动命令(少一个环境变量就连不上,记住)**:
+
+    cd apps/mobile && EXPO_PUBLIC_DEV_SAMPLER=1 \
+      EXPO_PUBLIC_API_BASE=https://demo.percho.co \
+      REACT_NATIVE_PACKAGER_HOSTNAME=demo.percho.co \
+      npx expo start --clear
+
+`REACT_NATIVE_PACKAGER_HOSTNAME` 是这次顺带发现的**第二个 blocker**:不加它、又不用
+`--tunnel` 时,manifest 里 `launchAsset.url` 和 `hostUri` 都是 **`127.0.0.1:8081`** ——
+手机拿到这个地址是去连**自己**,必然失败,而且**不报任何错**,只表现为扫码后连不上/
+卡住,极易误判成"代码又炸了"。ngrok 从 2026-07-28 起要账号(`--tunnel` 不可用),所以
+走已有的 named cloudflared 隧道 + 这个变量。判据:manifest 里应是
+`"hostUri":"demo.percho.co"`。
 
 ## 2026-08-01 22:15 UTC — 卡片图标换成真 Phosphor Fill(用**字体**,不是 SVG)
 
