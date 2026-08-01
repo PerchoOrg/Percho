@@ -26,7 +26,6 @@ import type { DimKey } from "@percho/shared";
  *   hero image        54% of card height, full bleed, top corners = card radius
  *     LISTING pill    top-left 15/15
  *     heart           top-right 15/15
- *     photo counter   bottom-left 15/14, "⊕ N Photos", dark translucent pill
  *   content panel     46%, padding 18 / 18 / 20
  *     price           serif 35
  *     address         14 semibold, margin-top 8
@@ -35,9 +34,12 @@ import type { DimKey } from "@percho/shared";
  *     chips           27pt tall, #F1F1EC, green line icons
  *     CTA             full-width 48pt pill, #0E6B57, "Explore Home →"
  *
- * Those three overlays are the ONLY things on the hero. The match-score badge
- * that used to sit at top-right/60 was ours, never the redline's, and it is gone
- * — the score still reaches the buyer on the detail screen.
+ * Those two overlays are the ONLY things on the hero. The redline also drew a
+ * bottom-left "⊕ 18 Photos" counter; it was removed 2026-08-01 on the owner's
+ * immersion call ("不够沉浸") along with all burned-in video captions. Photos and
+ * their captions now live behind the CTA, in Explore. The match-score badge that
+ * used to sit at top-right/60 was ours, never the redline's, and is also gone —
+ * the score still reaches the buyer on the detail screen.
  *
  * ── Video is untouched (owner: 「视频部分不用改」) ───────────────────────────
  *
@@ -68,7 +70,6 @@ import {
 	RedlineHeart,
 	RedlineIcon,
 	type RedlineIconName,
-	RedlinePhotoCount,
 	RedlinePill,
 } from "./redline/RedlineChrome";
 
@@ -151,18 +152,25 @@ export function ListingFace({
 					<RedlineHeart onPress={onSave} />
 				</View>
 				{/*
-				 * The redline's listing card has NO match badge — its photo carries
-				 * exactly three overlays: the LISTING pill, the heart, and the photo
-				 * counter. The badge used to sit here at top:60 and was an addition of
-				 * ours, not a redline element, so it is gone. The score still reaches
-				 * the buyer through the detail screen; it is not lost, just not printed
-				 * over the hero the redline keeps clean.
+				 * The hero carries exactly TWO overlays now: the LISTING pill and
+				 * the heart.
+				 *
+				 * The redline's third — a bottom-left "⊕ 18 Photos" counter — was
+				 * removed 2026-08-01. The owner's reason is immersion: the video
+				 * fills this box, and a chrome pill sitting on top of moving
+				 * footage announces "this is a UI element with N assets behind it"
+				 * at exactly the moment the card is trying to be a window into a
+				 * house. The count was also the weakest thing the pixel could say
+				 * — it is a number about the LISTING PAGE, not about the home.
+				 *
+				 * The information is not lost: Explore now opens on the full photo
+				 * gallery (including every photo the video's 8-14 clips skipped),
+				 * where the count is implicit in the strip and each photo carries
+				 * its caption. `photoCount` stays on the DTO for that screen.
+				 *
+				 * The match badge that once sat at top-right/60 was never a
+				 * redline element and is likewise gone.
 				 */}
-				{card.photoCount !== undefined && (
-					<View style={styles.photoCountSlot}>
-						<RedlinePhotoCount count={card.photoCount} />
-					</View>
-				)}
 			</View>
 
 			{/* Content panel — 46% */}
@@ -256,8 +264,6 @@ const styles = StyleSheet.create({
 	},
 	pillSlot: { position: "absolute", ...geo.pillSlot, zIndex: 2 },
 	heartSlot: { position: "absolute", ...geo.heartSlot, zIndex: 2 },
-	/** The redline's "Bottom-left image pill" on the hero. */
-	photoCountSlot: { position: "absolute", ...geo.photoCountSlot, zIndex: 2 },
 	panel: geo.panel,
 	price: { ...redlineText.price, color: redline.ink },
 	address: { ...redlineText.address, color: redline.ink, ...geo.address },

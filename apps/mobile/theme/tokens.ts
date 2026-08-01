@@ -51,6 +51,16 @@ export const colors = {
 	accentOnCard: "#F0A94B",
 	/** Dimming backdrop behind a bottom sheet / modal. */
 	scrim: "rgba(0,0,0,0.4)",
+	/**
+	 * The photo-gallery backdrop (`components/listing/PhotoGallery.tsx`).
+	 *
+	 * Near-black rather than `bg` (#FAF6F0) on purpose, and it is the one surface
+	 * in the app that opts out of warm paper: paper AROUND a photograph tints the
+	 * photograph, and a buyer in the archive view is judging the house's colour,
+	 * not ours. Not pure #000 either — a hair of warmth keeps it in the family
+	 * and stops the letterbox bands reading as a dead region.
+	 */
+	photoVoid: "#0B0A09",
 } as const;
 
 /**

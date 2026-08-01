@@ -78,19 +78,24 @@ describe("listing card redline geometry", () => {
 		expect(listingGeometry.heartSlot).toEqual({ top: 15, right: 15 });
 	});
 
-	it("puts the photo-count pill bottom-left of the hero", () => {
-		expect(listingGeometry.photoCountSlot).toEqual({ bottom: 14, left: 15 });
+	it("puts NO photo-count pill on the hero (removed 2026-08-01)", () => {
+		// The redline drew one bottom-left, and it shipped. The owner then pulled
+		// it, with all burned-in video captions, for immersion ("不够沉浸"). The
+		// count now reaches the buyer in Explore's photo gallery instead. This
+		// asserts the slot is GONE, so re-adding the pill trips a test rather than
+		// quietly landing back on the video.
+		expect(listingGeometry).not.toHaveProperty("photoCountSlot");
 	});
 
-	it("has NO fourth hero overlay — the match badge is not a redline element", () => {
+	it("has NO third hero overlay — two only, pill and heart", () => {
 		// The redline's DO-NOT list: "Add more metadata", "Add score bars",
 		// "Add any UI not shown in the reference". A `badgeSlot` reappearing here
-		// means the badge came back.
+		// means the match badge came back; a `photoCountSlot` means the counter did.
 		expect(listingGeometry).not.toHaveProperty("badgeSlot");
 		expect(
 			Object.keys(listingGeometry)
 				.filter((k) => k.endsWith("Slot"))
 				.sort(),
-		).toEqual(["ctaSlot", "heartSlot", "photoCountSlot", "pillSlot"]);
+		).toEqual(["ctaSlot", "heartSlot", "pillSlot"]);
 	});
 });

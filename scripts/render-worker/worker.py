@@ -39,7 +39,7 @@ from typing import Any
 import requests
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from photo_selector import build_plan, caption_for_shot  # type: ignore  # noqa: E402
+from photo_selector import build_plan  # type: ignore  # noqa: E402
 from photo_tagger import MODEL as TAGGER_MODEL, tag_listing_photos  # type: ignore  # noqa: E402
 
 
@@ -479,8 +479,24 @@ def process_job(job: dict[str, Any]) -> None:
             tagged = cached_tagged + newly_tagged
             style = style_info.get("style", "modern")
             plan = build_plan(tagged, style, listing_id)
-            for shot in plan:
-                shot["caption"] = caption_for_shot(shot)
+            # 2026-08-01 — NO on-screen text on the listing tour at all.
+            #
+            # The owner's read: a caption band on the swipe card's video is a
+            # wall between the buyer and the house ("不够沉浸"). The video is now
+            # a purely visual object; the WORDS moved to Explore, where the
+            # buyer opts into reading and gets a caption per photo over the FULL
+            # photo set (not just the 8-14 clips the planner picked).
+            #
+            # `shot["caption"]` is deliberately NOT set: generate.py reads it as
+            # `v2_cap` for its ffmpeg drawtext fallback, so leaving it unset is
+            # what turns that path off. `captions.json` is not written either,
+            # so the HTML→PNG band never renders. Both caption systems are off
+            # by absence of input, not by a flag — see `--captions` below.
+            #
+            # `caption_for_shot` (photo_selector) is no longer imported here —
+            # this was its only caller. It still lives in photo_selector.py,
+            # where `build_plan` and the Explore gallery's room labels can use
+            # it; nothing in the renderer calls it now.
             shot_plan_path = workdir / "shot_plan.json"
             shot_plan_path.write_text(json.dumps({
                 "plan": plan,
@@ -488,32 +504,14 @@ def process_job(job: dict[str, Any]) -> None:
                 "style": style_info,
             }, indent=2))
 
-            # Phase 100 (2026-07-16): per-photo AI caption band. Reuses the
-            # HTML→PNG caption renderer (bucket videos use it too, archetype
-            # dispatch happens in overlay.html). LISTING archetype writes a
-            # bottom scrim band; `txt` is the ai_tags.caption vision output,
-            # `kicker` is a room label derived from photo_selector.
-            # Empty txt (missing/short caption) → overlay renderer emits an
-            # empty transparent PNG, ffmpeg overlay is a no-op for that clip.
-            listing_captions = []
-            for i, shot in enumerate(plan, start=1):
-                raw = (shot.get("ai_caption") or "").strip()
-                # room label kicker: use caption_for_shot output (already
-                # room/subject-aware). Fall back to room_type in Title Case.
-                kicker = (shot.get("caption") or "").strip()
-                if not kicker:
-                    rt = (shot.get("room_type") or "").replace("_", " ").strip()
-                    kicker = rt.title() if rt else ""
-                listing_captions.append({
-                    "clip": i,
-                    "kicker": kicker.upper(),
-                    "txt": raw,
-                })
-            listing_captions_path = workdir / "captions.json"
-            listing_captions_path.write_text(json.dumps({
-                "archetype": "LISTING",
-                "clips": listing_captions,
-            }, indent=2))
+            # The Phase 100 LISTING caption band used to be built here, writing
+            # `captions.json` with one {kicker, txt} per clip. It is GONE
+            # (2026-08-01) — see the note above. `listing_captions_path` stays
+            # None for the whole listing path, so `--captions` is never passed
+            # and generate.py renders no PNG band. The LISTING archetype in
+            # `overlay.html` is now unreached from this pipeline; it is left in
+            # place rather than deleted so the decision is reversible in one
+            # line, and because `overlay.html` still serves 6 bucket archetypes.
             print(
                 f"[job {job['id']}] shot plan: style={style} "
                 f"clips={len(plan)} (of {len(tagged)} tagged)",

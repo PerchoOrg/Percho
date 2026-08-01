@@ -22,7 +22,7 @@
  * No placeholder pins, no "coming soon" sections, no invented captions.
  */
 import { router, useLocalSearchParams } from "expo-router";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
 	Image,
 	Pressable,
@@ -33,12 +33,15 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { HotspotSheet } from "../../components/listing/HotspotSheet";
+import { PhotoGallery } from "../../components/listing/PhotoGallery";
 import { PriceHistogram } from "../../components/listing/PriceHistogram";
 import { TourStop } from "../../components/listing/TourStop";
 import { TransitionCard } from "../../components/listing/TransitionCard";
+import { ValueSlider } from "../../components/listing/ValueSlider";
 import {
 	DEFAULT_ANNUAL_RATE,
 	assumptionLabel,
+	formatRate,
 } from "../../lib/listing/assumptions";
 import {
 	buildHotspots,
@@ -46,11 +49,21 @@ import {
 	transitionSignals,
 } from "../../lib/listing/build-hotspots";
 import { useListingDetail } from "../../lib/listing/detail-dto";
+import { buildGallerySlides } from "../../lib/listing/gallery";
+import {
+	buildActionTapEvent,
+	buildDatapointFocusEvent,
+	buildEvidenceCitedEvent,
+	buildHotspotEvent,
+	buildSaveFeatureEvent,
+	buildTourEvent,
+} from "../../lib/listing/explore-events";
 import {
 	FOCUS_HIGHLIGHT_MS,
 	type SectionId,
 	parseFocus,
 	sectionForFocus,
+	serialiseFocus,
 } from "../../lib/listing/focus-key";
 import { buildDistribution } from "../../lib/listing/histogram";
 import type { ActionKind, Hotspot } from "../../lib/listing/hotspot";
@@ -61,10 +74,29 @@ import {
 	formatUsd,
 	parseHoaMonthlyUsd,
 } from "../../lib/listing/monthly";
+import {
+	DOWN_SCALE,
+	RATE_SCALE,
+} from "../../lib/listing/slider-scale";
+import {
+	type NavChip,
+	buildNavChips,
+	currentNavKey,
+	navKey,
+} from "../../lib/listing/section-nav";
+import { useEventQueue } from "../../state/event-queue";
+import { useFunnelStore } from "../../state/funnel";
 import { colors, radii } from "../../theme/tokens";
 import { textStyles } from "../../theme/typography";
 
 const HERO_HEIGHT = 190;
+
+/**
+ * Height of the sticky chip strip. The activation line for "which section am I
+ * in" sits just below it, so a heading counts as reached when it clears the
+ * chips rather than when it slides under them.
+ */
+const NAV_H = 46;
 
 /**
  * §2.2's three entry modes. `tour` is only ever entered when a tour actually
@@ -88,7 +120,51 @@ export default function ListingExploreScreen() {
 	const [mode, setMode] = useState<Mode>(focus ? "free" : "tour");
 	const [stopIndex, setStopIndex] = useState(0);
 	const [openHotspot, setOpenHotspot] = useState<Hotspot | null>(null);
+	/**
+	 * The full-photo gallery (2026-08-01). An OVERLAY, not a route, for the same
+	 * reason `TransitionCard` is one: dismissing it must return the buyer to this
+	 * page at the scroll position they left, and a route push/pop resets that.
+	 */
+	const [galleryOpen, setGalleryOpen] = useState(false);
 	const [visitedPins, setVisitedPins] = useState<readonly string[]>([]);
+
+	/**
+	 * §2.4 #3: the calculator's two adjustable inputs. Seeded from the same
+	 * defaults the data-face row uses, so the page opens showing the number the
+	 * buyer already saw and the sliders explain it rather than contradicting it.
+	 */
+	const [downFraction, setDownFraction] = useState(DEFAULT_DOWN_FRACTION);
+	const [annualRate, setAnnualRate] = useState(DEFAULT_ANNUAL_RATE);
+
+	/** §2.4 #2: which chip is highlighted, driven by scroll position. */
+	const [currentKey, setCurrentKey] = useState<string | null>(null);
+
+	// ——— §2.6 telemetry ———
+	// The queue and the stage are read once here; every emitter closes over them.
+	const enqueue = useEventQueue((s) => s.enqueue);
+	const takeSeq = useEventQueue((s) => s.takeSeq);
+	const funnelStage = useFunnelStore((s) => s.stage);
+	const listingId = params.id ?? "";
+
+	/**
+	 * Builds the shared context for an explore event. A function rather than a
+	 * memo because `seq` must be reserved AT EMIT TIME — a memoised context would
+	 * hand the same seq to every event in a session and destroy server-side dedupe.
+	 */
+	const ctx = useCallback(
+		() => ({
+			seq: takeSeq(),
+			at: Date.now(),
+			funnelStage,
+			listingId,
+		}),
+		[takeSeq, funnelStage, listingId],
+	);
+
+	/** Open timestamp of the sheet, so `hotspot_open` can carry real dwell. */
+	const sheetOpenedAt = useRef(0);
+	/** Stop indices already reported, so a Prev/Next bounce is not a re-view. */
+	const viewedStops = useRef<Set<string>>(new Set());
 
 	// §2.1 #2 / §2.2: the landed-on section pulses for 2s, then stays put. A
 	// timer, not an animation loop — the highlight is a one-shot cue.
@@ -100,8 +176,34 @@ export default function ListingExploreScreen() {
 		return () => clearTimeout(t);
 	}, [focusedSection]);
 
+	/**
+	 * §2.6 row 5, `datapoint_focus(key)` — which data-face row the buyer tapped
+	 * to get here, which decides row ordering in v1.1.
+	 *
+	 * Emitted HERE rather than at the tap site on the feed card, because the
+	 * focus key is a property of the arriving URL: a deep link from anywhere
+	 * (share sheet, notification, a future Search result) is the same signal, and
+	 * one emitter at the destination cannot be forgotten by a new caller.
+	 * Keyed on `params.focus` so re-rendering does not re-report.
+	 */
+	useEffect(() => {
+		if (!focus) return;
+		enqueue(
+			buildDatapointFocusEvent(
+				{ seq: takeSeq(), at: Date.now(), funnelStage, listingId },
+				{ focusKey: serialiseFocus(focus) },
+			),
+		);
+	}, [focus, enqueue, takeSeq, funnelStage, listingId]);
+
 	const scrollRef = useRef<ScrollView>(null);
-	const offsets = useRef<Partial<Record<SectionId, number>>>({});
+	/**
+	 * Scroll offset per nav key. Keyed by `navKey(...)`, so a fixed section
+	 * ("monthly") and a generated room section ("hotspot:<id>") share one map —
+	 * the chip strip and the `?focus=` deep link then read the same offsets
+	 * instead of two maps that can disagree.
+	 */
+	const offsets = useRef<Record<string, number | undefined>>({});
 	/** Guards the one-shot deep-link scroll so later layout passes don't re-jump. */
 	const scrolledTo = useRef<SectionId | null>(null);
 
@@ -114,11 +216,18 @@ export default function ListingExploreScreen() {
 	 * time. `scrolledTo` keeps it one-shot, so a re-layout (rotation, image load)
 	 * cannot yank a buyer who has since scrolled away.
 	 */
-	const onSectionLayout = (id: SectionId) => (y: number) => {
-		offsets.current[id] = y;
-		if (id !== focusedSection || scrolledTo.current === id) return;
-		scrolledTo.current = id;
+	const onSectionLayout = (key: string) => (y: number) => {
+		offsets.current[key] = y;
+		if (key !== focusedSection || scrolledTo.current === focusedSection) return;
+		scrolledTo.current = focusedSection;
 		scrollRef.current?.scrollTo({ y: Math.max(y - 8, 0), animated: true });
+	};
+
+	/** §2.4 #2: a chip scrolls the page; it does not switch a tab. */
+	const scrollToKey = (key: string) => {
+		const y = offsets.current[key];
+		if (y === undefined) return;
+		scrollRef.current?.scrollTo({ y: Math.max(y - NAV_H, 0), animated: true });
 	};
 
 	if (state.status === "loading") {
@@ -154,12 +263,23 @@ export default function ListingExploreScreen() {
 
 	const { detail } = state;
 	const hero = detail.photos[0];
+	/**
+	 * Every photo, in `sort_order`. This is the set the owner asked Explore to
+	 * show — "浏览所有照片 包括视频里没有的" — so it is deliberately the raw DTO
+	 * list, not the video's shot plan (8–14 clips after dedup + quota trim) and
+	 * not the hotspot list (tagged, navigable rooms only).
+	 */
+	const gallerySlides = buildGallerySlides(detail.photos);
 	const hoaMonthlyUsd = parseHoaMonthlyUsd(detail.hoaRaw);
 	const monthly =
 		detail.price !== undefined
 			? computeMonthly({
 					priceUsd: detail.price,
-					annualRate: DEFAULT_ANNUAL_RATE,
+					// §2.4 #3: the sliders' current values, not the defaults. The data
+					// face's row is this same function at the defaults — one formula,
+					// two callers, which is why `monthly.ts` is shared and pure.
+					annualRate,
+					downFraction,
 					...(hoaMonthlyUsd !== undefined ? { hoaMonthlyUsd } : {}),
 				})
 			: undefined;
@@ -189,14 +309,55 @@ export default function ListingExploreScreen() {
 
 	const openSheet = (hotspot: Hotspot) => {
 		setOpenHotspot(hotspot);
+		// Start the dwell clock here, not in the sheet: §2.6 measures how long the
+		// buyer looked, which begins when it opens, not when it finishes animating.
+		sheetOpenedAt.current = Date.now();
 		// §2.4 #1: a visited pin stops pulsing.
 		setVisitedPins((v) => (v.includes(hotspot.id) ? v : [...v, hotspot.id]));
 	};
 
-	// §2.6 `action_tap(kind)`. Wired to a no-op sink until the mobile event queue
-	// covers listing_explore_events — deliberately a named function so the call
-	// sites are already correct rather than needing to be found later.
-	const onAction = (_kind: ActionKind) => {};
+	/**
+	 * §2.6 `hotspot_open(hotspot_id, dwell_ms)`, emitted on CLOSE so the duration
+	 * is real. See `explore-events.ts` for why dwell rides the open event rather
+	 * than needing a second close row.
+	 */
+	const closeSheet = () => {
+		const hotspot = openHotspot;
+		if (hotspot && sheetOpenedAt.current > 0) {
+			enqueue(
+				buildHotspotEvent(ctx(), {
+					hotspotId: hotspot.id,
+					dwellMs: Date.now() - sheetOpenedAt.current,
+				}),
+			);
+		}
+		sheetOpenedAt.current = 0;
+		setOpenHotspot(null);
+	};
+
+	/**
+	 * §2.6 `action_tap(kind)` plus `save_feature(feature)`.
+	 *
+	 * Save emits BOTH: the tap belongs in the action distribution (§2.6 row 3
+	 * watches for one action taking >70% share), and the saved feature is a
+	 * separate profile write (row 4). Collapsing them would lose one or the other.
+	 */
+	const emitAction = (
+		hotspot: Hotspot,
+		kind: ActionKind,
+		surface: "tour" | "sheet",
+	) => {
+		enqueue(buildActionTapEvent(ctx(), { hotspotId: hotspot.id, kind, surface }));
+		if (kind === "save") {
+			enqueue(
+				buildSaveFeatureEvent(ctx(), {
+					hotspotId: hotspot.id,
+					// The label the buyer saw, per §2.6 row 4 — not an internal id.
+					feature: hotspot.title,
+				}),
+			);
+		}
+	};
 
 	/**
 	 * §2.2 / §2.3: the guided tour. Rendered INSTEAD of free explore, and only
@@ -207,6 +368,34 @@ export default function ListingExploreScreen() {
 	if (mode === "tour" && tour) {
 		const stop = tour.stops[Math.min(stopIndex, tour.stops.length - 1)];
 		if (stop) {
+			const total = tour.stops.length;
+			const tourCtx = {
+				stopIndex,
+				stopCount: total,
+				stopId: stop.id,
+			};
+			/**
+			 * §2.6 `tour_stop_view` + `evidence_cited`, emitted during RENDER of a
+			 * stop the buyer has not seen before.
+			 *
+			 * In render rather than an effect, deliberately: the guarded set makes
+			 * this idempotent, and an effect would need `stop.id` in its dependency
+			 * list inside a branch that returns early — a conditional hook, which is
+			 * illegal. The set also means Prev/Next bouncing over stop 2 reports one
+			 * view, which is what a completion rate needs.
+			 */
+			if (!viewedStops.current.has(stop.id)) {
+				viewedStops.current.add(stop.id);
+				enqueue(buildTourEvent(ctx(), { ...tourCtx, type: "tour_stop_view" }));
+				// §2.6 row 6: which profile signals actually got put in front of the
+				// buyer. Null when the stop cited nothing — impossible today, since
+				// `tour.ts` refuses an evidence-free stop, but the guard is the point.
+				const cited = buildEvidenceCitedEvent(ctx(), {
+					stopId: stop.id,
+					evidenceIds: stop.evidence.flatMap((e) => e.sourceIds ?? [e.label]),
+				});
+				if (cited) enqueue(cited);
+			}
 			return (
 				<View style={styles.screen}>
 					<TourStop
@@ -215,14 +404,24 @@ export default function ListingExploreScreen() {
 						stopIds={tour.stops.map((s) => s.id)}
 						onPrev={() => setStopIndex((i) => Math.max(i - 1, 0))}
 						onNext={() => {
-							if (stopIndex >= tour.stops.length - 1) {
+							if (stopIndex >= total - 1) {
+								enqueue(
+									buildTourEvent(ctx(), { ...tourCtx, type: "tour_complete" }),
+								);
 								setMode("transition");
 								return;
 							}
 							setStopIndex((i) => i + 1);
 						}}
-						onExit={() => setMode("free")}
-						onAction={onAction}
+						onExit={() => {
+							// §2.6 row 1: abandon carries the stop it happened AT, which is
+							// the drop-off point the completion funnel is measuring.
+							enqueue(
+								buildTourEvent(ctx(), { ...tourCtx, type: "tour_abandoned" }),
+							);
+							setMode("free");
+						}}
+						onAction={(kind) => emitAction(stop.hotspot, kind, "tour")}
 					/>
 				</View>
 			);
@@ -245,12 +444,49 @@ export default function ListingExploreScreen() {
 		highlight === id && styles.sectionHighlight,
 	];
 
+	/**
+	 * §2.4 #2's chip row. Built from what this page actually renders, using the
+	 * SAME conditions as the JSX below — the flags are read from the same
+	 * expressions, not re-derived, so a chip cannot outlive its section.
+	 */
+	const navChips: NavChip[] = buildNavChips({
+		hotspots,
+		hasMonthly: !!monthly,
+		hasComps: distribution.kind !== "empty",
+		hasCosts: !!detail.hoaRaw,
+		// Community is 03's screen; the section is not on this page yet, so no chip.
+		hasCommunity: false,
+	});
+	const activeKey = currentKey ?? navChips[0]?.key ?? null;
+
 	return (
 		<View style={styles.screen}>
 			<ScrollView
 				ref={scrollRef}
 				contentContainerStyle={{ paddingBottom: insets.bottom + 96 }}
 				showsVerticalScrollIndicator={false}
+				/**
+				 * The chip strip is child index 1 (the hero is 0), so it scrolls up
+				 * with the hero and then PINS — §2.4 #2 wants it reachable from any
+				 * scroll position without stealing height at the top of the page.
+				 * `stickyHeaderIndices` rather than an absolutely positioned bar
+				 * because an overlay would sit on top of the hero and its ← button.
+				 */
+				stickyHeaderIndices={navChips.length > 0 ? [1] : undefined}
+				// 16/s is enough for a highlight that tracks headings and cheap
+				// enough not to fight the scroll: this handler only recomputes which
+				// chip is current from offsets already measured.
+				scrollEventThrottle={64}
+				onScroll={(e) =>
+					setCurrentKey(
+						currentNavKey(
+							navChips,
+							offsets.current,
+							e.nativeEvent.contentOffset.y,
+							NAV_H + 8,
+						),
+					)
+				}
 			>
 				<View style={styles.hero}>
 					{hero ? (
@@ -285,7 +521,75 @@ export default function ListingExploreScreen() {
 							<Text style={styles.pinGlyph}>{emojiForRoom(hotspot.room)}</Text>
 						</Pressable>
 					))}
+					{/*
+					 * The gallery entry point, bottom-right of the hero.
+					 *
+					 * This is where the photo count went when the swipe card's hero pill
+					 * was removed (2026-08-01). On the card that pill sat over playing
+					 * video and cost immersion for no gain; here it is the affordance
+					 * that answers "can I see the rest?", on a still image, on a screen
+					 * the buyer navigated to on purpose. Same information, the surface
+					 * where it is an action rather than a decoration.
+					 *
+					 * `> 1` because "1 Photo" is not worth a button — the hero already
+					 * IS that photo.
+					 */}
+					{gallerySlides.length > 1 && (
+						<Pressable
+							onPress={() => setGalleryOpen(true)}
+							hitSlop={8}
+							accessibilityRole="button"
+							accessibilityLabel={`View all ${gallerySlides.length} photos`}
+							style={({ pressed }) => [
+								styles.galleryBtn,
+								pressed && styles.pressedRow,
+							]}
+						>
+							<Text style={styles.galleryLabel}>
+								{`⊞  All ${gallerySlides.length} photos`}
+							</Text>
+						</Pressable>
+					)}
 				</View>
+
+				{/*
+				 * §2.4 #2: a horizontally scrolling chip row. Scrolls the page, does
+				 * NOT switch a tab — this is one long page and the chips are jumps
+				 * within it. Rendered as an empty View (not null) when there are no
+				 * chips, so `stickyHeaderIndices`'s child index stays valid.
+				 */}
+				{navChips.length > 0 ? (
+					<View style={styles.navBar}>
+						<ScrollView
+							horizontal
+							showsHorizontalScrollIndicator={false}
+							contentContainerStyle={styles.navRow}
+						>
+							{navChips.map((chip) => {
+								const active = chip.key === activeKey;
+								return (
+									<Pressable
+										key={chip.key}
+										onPress={() => scrollToKey(chip.key)}
+										style={({ pressed }) => [
+											styles.chip,
+											active && styles.chipActive,
+											pressed && styles.pressedRow,
+										]}
+									>
+										<Text
+											style={[styles.chipLabel, active && styles.chipLabelActive]}
+										>
+											{chip.label}
+										</Text>
+									</Pressable>
+								);
+							})}
+						</ScrollView>
+					</View>
+				) : (
+					<View />
+				)}
 
 				<View
 					style={sectionStyle("overview")}
@@ -330,7 +634,10 @@ export default function ListingExploreScreen() {
 							style={styles.big}
 						>{`${formatUsd(monthly.totalUsd)}/mo`}</Text>
 						<Text style={styles.dim}>
-							{assumptionLabel(DEFAULT_ANNUAL_RATE, DEFAULT_DOWN_FRACTION)}
+							{/* The label must follow the SLIDERS, not the defaults — a
+							    disclosure that says "assumes 6.5%" under a payment
+							    computed at 8% is worse than no disclosure. */}
+							{assumptionLabel(annualRate, downFraction)}
 						</Text>
 						<Text style={styles.dim}>
 							{`principal & interest ${formatUsd(monthly.principalAndInterestUsd)}`}
@@ -338,6 +645,28 @@ export default function ListingExploreScreen() {
 								? ` · HOA ${formatUsd(monthly.hoaMonthlyUsd)}`
 								: ""}
 						</Text>
+						{/* §2.4 #3: "Monthly section = 可调计算器(down %、rate,滑杆)". */}
+						<ValueSlider
+							label="Down payment"
+							valueLabel={`${Math.round(downFraction * 100)}% · ${formatUsd(monthly.downPaymentUsd)}`}
+							value={downFraction}
+							scale={DOWN_SCALE}
+							onChange={setDownFraction}
+							a11yLabel="Down payment percentage"
+						/>
+						<ValueSlider
+							label="Interest rate"
+							valueLabel={formatRate(annualRate)}
+							value={annualRate}
+							scale={RATE_SCALE}
+							onChange={setAnnualRate}
+							a11yLabel="Annual interest rate"
+						/>
+						{annualRate !== DEFAULT_ANNUAL_RATE && (
+							<Pressable onPress={() => setAnnualRate(DEFAULT_ANNUAL_RATE)}>
+								<Text style={styles.replay}>Reset to published rate</Text>
+							</Pressable>
+						)}
 						{/* Says what is NOT in the number, rather than quietly excluding
 						    it: taxes and insurance are not in the schema. */}
 						<Text style={styles.dim}>
@@ -369,6 +698,13 @@ export default function ListingExploreScreen() {
 					<Pressable
 						key={hotspot.id}
 						onPress={() => openSheet(hotspot)}
+						// Registers this section's offset under the same key its chip
+						// carries, which is what makes the chip able to scroll here.
+						onLayout={(e) =>
+							onSectionLayout(
+								navKey({ kind: "hotspot", id: hotspot.id, room: hotspot.room }),
+							)(e.nativeEvent.layout.y)
+						}
 						style={({ pressed }) => [
 							styles.section,
 							pressed && styles.pressedRow,
@@ -411,14 +747,29 @@ export default function ListingExploreScreen() {
 				/>
 			)}
 
+			{/*
+			 * The full-photo gallery. Mounted ONLY while open, following the same
+			 * rule the HotspotSheet note below records: a permanently-mounted
+			 * full-screen overlay black-screened the feed on iOS. This one is a plain
+			 * absolutely-positioned View rather than a Modal, so it cannot repeat
+			 * that failure, but conditional mounting also means a 40-photo listing
+			 * pays nothing until the buyer asks for the photos.
+			 */}
+			{galleryOpen && (
+				<PhotoGallery
+					slides={gallerySlides}
+					onClose={() => setGalleryOpen(false)}
+				/>
+			)}
+
 			{/* Mounted ONLY while open. An always-mounted transparent Modal
 			    black-screened the whole feed on iOS in task-1 — see DEVLOG
 			    2026-07-27. Do not switch this to a `visible` toggle. */}
 			{!!openHotspot && (
 				<HotspotSheet
 					hotspot={openHotspot}
-					onClose={() => setOpenHotspot(null)}
-					onAction={onAction}
+					onClose={closeSheet}
+					onAction={(kind) => emitAction(openHotspot, kind, "sheet")}
 				/>
 			)}
 		</View>
@@ -463,6 +814,22 @@ const styles = StyleSheet.create({
 	/** Unvisited pins carry the accent ring (§2.4 #1). */
 	pinUnvisited: { borderWidth: 2, borderColor: colors.accent },
 	pinGlyph: { fontSize: 16 },
+	/**
+	 * The "All N photos" button, bottom-right of the hero. `glass` is the §0.3
+	 * token for a light control laid over a photo — the same one the hero's ←
+	 * uses, so the two read as one control layer rather than two designs.
+	 */
+	galleryBtn: {
+		position: "absolute",
+		right: 12,
+		bottom: 12,
+		minHeight: 34,
+		justifyContent: "center",
+		paddingHorizontal: 12,
+		borderRadius: radii.pill,
+		backgroundColor: colors.glass,
+	},
+	galleryLabel: { ...textStyles.footnote, color: colors.ink },
 	section: {
 		paddingHorizontal: 20,
 		paddingVertical: 18,
@@ -472,6 +839,28 @@ const styles = StyleSheet.create({
 	},
 	sectionHighlight: { backgroundColor: colors.surface2 },
 	pressedRow: { opacity: 0.75 },
+	/**
+	 * The sticky chip strip. Opaque `bg` is required, not cosmetic: a sticky
+	 * header with a transparent background lets the content scroll through it.
+	 */
+	navBar: {
+		height: NAV_H,
+		justifyContent: "center",
+		backgroundColor: colors.bg,
+		borderBottomWidth: StyleSheet.hairlineWidth,
+		borderBottomColor: colors.border,
+	},
+	navRow: { paddingHorizontal: 20, gap: 8, alignItems: "center" },
+	chip: {
+		minHeight: 30,
+		justifyContent: "center",
+		paddingHorizontal: 12,
+		borderRadius: radii.pill,
+		backgroundColor: colors.surface2,
+	},
+	chipActive: { backgroundColor: colors.accent },
+	chipLabel: { ...textStyles.footnote, color: colors.ink2 },
+	chipLabelActive: { color: colors.bg },
 	replay: { ...textStyles.headline, color: colors.accent, marginTop: 6 },
 	sectionHead: { ...textStyles.caption, color: colors.accent },
 	price: { ...textStyles.title1, color: colors.ink },

@@ -46,11 +46,15 @@ export const listingGeometry = {
 	/** "CTA: ... margin-top 14px" */
 	ctaSlot: { marginTop: 14 },
 
-	// ── Hero overlays. The redline gives the listing hero EXACTLY three ──
+	// ── Hero overlays. The listing hero carries EXACTLY two ──────────────
+	// The redline drew a third, a bottom-left "⊕ 18 Photos" counter. It was
+	// removed 2026-08-01: the hero plays the tour video, and chrome printed over
+	// moving footage costs immersion for a number that describes the listing PAGE
+	// rather than the home. `photoCountSlot` is deliberately absent, not zeroed —
+	// `redline-listing-geometry.test.ts` asserts the exact slot key set, so a slot
+	// reappearing here is a test failure rather than a silent regression.
 	/** LISTING pill — "15px from top and left". */
 	pillSlot: { top: 15, left: 15 },
 	/** Heart — "38px circle", mirroring the pill's inset. */
 	heartSlot: { top: 15, right: 15 },
-	/** "Bottom-left image pill: [small camera icon] 18 Photos" */
-	photoCountSlot: { bottom: 14, left: 15 },
 } as const;
