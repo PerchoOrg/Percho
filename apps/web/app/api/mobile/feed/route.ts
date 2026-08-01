@@ -35,6 +35,7 @@ import {
 import { type PoolCommunityDTO, fetchCommunityPool } from '@/lib/feed/community-pool';
 import { type GeoUnitDTO, fetchCityGeoUnits } from '@/lib/feed/geo-units';
 import { type LikedCommunityRef, type PoolListingDTO, gateListings } from '@/lib/feed/listing-gate';
+import { listingHighlightDims } from '@/lib/feed/listing-highlights';
 import { fetchNeighborhoodScores } from '@/lib/feed/fetch-neighborhood-scores';
 import { createServiceClient } from '@/lib/supabase/server';
 import {
@@ -107,6 +108,7 @@ function citySlug(city: string | null, state: string | null): string | undefined
  * card. See `lib/feed/vertical-videos.ts`.
  */
 function projectListing(card: BrowseCard, verticalUid?: string): PoolListingDTO {
+  const dims = listingHighlightDims(card.listing.description);
   return {
     id: card.listing.id,
     slug: card.listing.slug,
@@ -134,6 +136,9 @@ function projectListing(card: BrowseCard, verticalUid?: string): PoolListingDTO 
     ...(card.listing.description && card.listing.description.length > 0
       ? { description: card.listing.description }
       : {}),
+    // The redline's chip row above the CTA. Omitted (not `[]`) when the listing's
+    // own copy asserts none of the dims — see lib/feed/listing-highlights.ts.
+    ...(dims.length > 0 ? { dims } : {}),
     ...(citySlug(card.listing.city, card.listing.state)
       ? { geoUnitId: citySlug(card.listing.city, card.listing.state) }
       : {}),

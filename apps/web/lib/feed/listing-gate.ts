@@ -10,7 +10,8 @@
  * app build cannot break the promise.
  */
 
-import type { NeighborhoodScores } from "./neighborhood-score";
+import type { DimKey } from '@percho/shared';
+import type { NeighborhoodScores } from './neighborhood-score';
 
 /** §1.7: one tease listing per ten cards in stages 1–2. */
 export const TEASE_PER = 10;
@@ -61,6 +62,15 @@ export interface PoolListingDTO {
    * `lib/feed/neighborhood-score.ts` for why that is not a zero.
    */
   scores?: NeighborhoodScores;
+  /**
+   * Up to three highlight dims for the redline's chip row above the CTA
+   * ("Top Schools · Private Backyard · Walkable Park").
+   *
+   * Extracted from the listing's own prose — see `lib/feed/listing-highlights.ts`
+   * for why that is the only source with real coverage, and why a listing whose
+   * copy claims nothing gets the field omitted rather than an empty array.
+   */
+  dims?: DimKey[];
   /** City unit this listing sits in — a tease swipe credits it (§1.7). */
   geoUnitId?: string;
   /** Set in stages 1–2: likeable, weighted 0.5×, match badge suppressed. */

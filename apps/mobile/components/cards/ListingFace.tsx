@@ -75,17 +75,28 @@ const MAX_CHIPS = 3;
 /**
  * Which line icon stands for which preference dimension.
  *
- * The redline's sample chips are Top Schools / Private Backyard / Walkable Park,
- * which map onto three real `DimKey`s. Dims with no obvious glyph fall back to
- * the walk mark rather than rendering an empty chip — the LABEL is the content,
- * the icon is decoration.
+ * A full `Record`, not `Partial` — the community card had exactly this bug: with
+ * a partial map plus a `?? "walk"` fallback, every unmapped dim silently drew a
+ * walking figure, so a chip reading "Move-in Ready" showed a pedestrian. Typing
+ * it as a complete `Record` makes an unmapped dim a compile error instead.
+ *
+ * Kept identical to `CommunityFace`'s map on purpose: the same dim must not have
+ * one glyph on a listing card and a different one on a community card two swipes
+ * later. `quiet` therefore uses `moon`, not the two-heads `family` art it used to
+ * borrow (which read as "family" under the label "Quiet Streets").
  */
-const DIM_ICON: Partial<Record<DimKey, RedlineIconName>> = {
+const DIM_ICON: Record<DimKey, RedlineIconName> = {
+	family: "family",
+	walkable: "walk",
 	schools: "school",
 	outdoors: "tree",
-	trails: "tree",
-	walkable: "walk",
-	quiet: "family",
+	trails: "path",
+	quiet: "moon",
+	hip: "shop",
+	entertaining: "cup",
+	move_in: "check",
+	space: "expand",
+	nightlife: "cup",
 };
 
 interface ListingFaceProps {
@@ -175,7 +186,7 @@ export function ListingFace({
 						{chips.map((dim) => (
 							<View key={dim} style={styles.chip}>
 								<RedlineIcon
-									name={DIM_ICON[dim] ?? "walk"}
+									name={DIM_ICON[dim]}
 									size={CHIP_ICON}
 									color={redline.accent}
 								/>
@@ -201,15 +212,23 @@ export function ListingFace({
  * schools") and reads wrong in Title Case inside a 27pt chip, which the redline
  * sets in Title Case ("Top Schools"). These are the same dims, capitalised for
  * the chip — not new claims about the listing.
+ *
+ * The redline's three sample chips are Top Schools / Private Backyard / Walkable
+ * Park. The first two are printed as-is because a dim backs each exactly
+ * (`outdoors` requires the copy to describe a private/fenced/level yard). The
+ * third is NOT: no dim establishes that a park is the thing within walking
+ * distance, so `walkable` stays "Walkable" and `trails` says "Trails Nearby",
+ * which is what the greenway/walking-trail phrasing actually supports. Sample
+ * copy is a layout reference, not a claim we may print verbatim.
  */
 const CHIP_LABEL: Record<DimKey, string> = {
-	outdoors: "Outdoor Space",
+	outdoors: "Private Backyard",
 	walkable: "Walkable",
 	schools: "Top Schools",
 	quiet: "Quiet Streets",
 	hip: "Cultural Scene",
-	entertaining: "Entertaining",
-	trails: "Trails",
+	entertaining: "Great for Hosting",
+	trails: "Trails Nearby",
 	nightlife: "Nightlife",
 	family: "Family Friendly",
 	move_in: "Move-in Ready",
