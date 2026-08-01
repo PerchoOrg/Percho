@@ -8,28 +8,35 @@
  * transcription of the redline's own numbers — 15px insets, a 38pt heart, a 48pt
  * full-width CTA, 999 radius.
  *
- * ── Why the icons are Views and not SVG ─────────────────────────────────────
+ * ── Where the icons come from ───────────────────────────────────────────────
  *
- * The redline asks for "thin rounded line icons similar to SF Symbols" and says
- * Lucide is acceptable. Both want `react-native-svg`, which is NOT a dependency
- * of this app, and adding it is a known Expo Go landmine in this codebase
- * (`RNSVGCircle must be a function (received undefined)` — see the
- * `expo-go-native-deps` reference). `NeighborhoodScore` already draws its
- * progress arc out of plain `View`s for exactly this reason.
+ * The icons were originally composed from bordered `View`s, because the redline
+ * asked for Lucide-style line art and Lucide wants `react-native-svg` — which
+ * red screens in Expo Go on this project (`RNSVGCircle must be a function`, see
+ * DEVLOG 2026-07-30 04:55). That constraint has NOT gone away.
  *
- * So each icon here is composed from bordered `View`s: a stroke is a 1.7pt
- * border (the redline's stroke width), a round cap is a border radius. They are
- * intentionally simple — at 10–24pt on a phone a heavier illustration would
- * just be noise, and the redline's own rule is that luxury comes from
- * proportion and restraint rather than decoration.
+ * On 2026-08-01 the owner reviewed six real icon libraries at true chip size and
+ * picked **Phosphor Fill** ("这些图标不可爱" about the old line art). Phosphor
+ * ships an icon FONT as well as SVGs, and a font needs no native module at all,
+ * so the real artwork now ships via `expo-font` with none of the RNSVG risk.
+ * See `./icon-font.ts` for the glyph table and the subsetting command.
  *
- * If `react-native-svg` is ever added for another reason, these can be swapped
- * for real Lucide paths without touching any face: every face imports the icon
- * by NAME, never by geometry.
+ * `HeartIcon` below is the one exception and is still `View` art — the redline's
+ * unsaved heart is an OUTLINE and this subset only carries Phosphor's fill.
  */
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { radii, redline } from "../../../theme/tokens";
 import { redlineText } from "../../../theme/typography";
+import {
+	ICON_FONT,
+	ICON_GLYPH,
+	ICON_OPTICAL_SCALE,
+	type RedlineIconName,
+} from "./icon-font";
+
+// Re-exported because every face already imports the icon type from this module;
+// the artwork moved to `icon-font.ts`, the public surface did not.
+export type { RedlineIconName };
 
 /** §0.5 — every touch target is at least 44pt, even when the art is smaller. */
 const MIN_TOUCH = 44;
@@ -113,6 +120,15 @@ interface RedlineCtaProps {
 	 * `light` = white fill with accent text, for use over a photo (community).
 	 */
 	tone?: "solid" | "light";
+	/**
+	 * 44pt instead of the redline's 48pt. Opt-in, and used ONLY by the listing
+	 * card, whose panel shrank to 35.2% when the hero went to 64.8%
+	 * (2026-08-01). The other three faces keep 48 — their panels did not change,
+	 * and shrinking this globally would silently restyle three cards to fix one.
+	 *
+	 * 44 is the floor, not a free parameter: §0.5 requires a 44pt touch target.
+	 */
+	compact?: boolean;
 }
 
 /**
@@ -127,6 +143,7 @@ export function RedlineCta({
 	label,
 	onPress,
 	tone = "solid",
+	compact = false,
 }: RedlineCtaProps) {
 	const light = tone === "light";
 	return (
@@ -137,6 +154,7 @@ export function RedlineCta({
 			accessibilityLabel={label}
 			style={({ pressed }) => [
 				styles.cta,
+				compact && styles.ctaCompact,
 				light ? styles.ctaLight : styles.ctaSolid,
 				// A saturated fill must DARKEN under the finger; fading reads as
 				// disabled. The light pill has no darker token, so it fades.
@@ -152,7 +170,13 @@ export function RedlineCta({
 
 // ─── Icons ──────────────────────────────────────────────────────────
 
-/** An outline heart, built from two round lobes and a rotated square tail. */
+/**
+ * The heart on every card's top-right. Phosphor's `heart-fill` is a filled
+ * shape, but the redline's unsaved state is an OUTLINE heart, and this subset
+ * carries no outline variant — so the hand-built art stays for this one glyph.
+ * It is chrome with a single fixed size (17pt), not part of the scalable icon
+ * vocabulary, so it never needed the font.
+ */
 function HeartIcon() {
 	return (
 		<View style={styles.heartIcon}>
@@ -163,28 +187,6 @@ function HeartIcon() {
 	);
 }
 
-/** Icon names every redline face may ask for. */
-export type RedlineIconName =
-	| "camera"
-	| "school"
-	| "tree"
-	| "walk"
-	| "family"
-	| "car"
-	| "yard"
-	| "sparkle"
-	// Community-highlight dims. Added when the community card started
-	// receiving real `dims` from the Nextdoor seed: the ten dims that actually
-	// occur need ten distinct glyphs, and before this `quiet` was borrowing the
-	// two-heads `family` art, which reads as "family" on a tile labelled
-	// "Quiet Streets".
-	| "moon"
-	| "path"
-	| "shop"
-	| "cup"
-	| "check"
-	| "expand";
-
 interface RedlineIconProps {
 	name: RedlineIconName;
 	/** Art size in points. The redline uses 10 (chip) / 17 (tile) / 24 (choice). */
@@ -193,680 +195,36 @@ interface RedlineIconProps {
 }
 
 /**
- * A line icon drawn from `View`s. Scale-driven: each shape is a fraction of
- * `size`, so one definition serves the chip (10pt), tile (17pt) and choice
- * badge (24pt) call sites.
+ * A Phosphor Fill glyph, drawn as text.
+ *
+ * `width`/`height` are pinned to `size` and the glyph is centred inside them, so
+ * this drops into the same layout slot the old `View`-composed icons occupied —
+ * a call site that reserved 10pt still gets exactly 10pt. `includeFontPadding`
+ * (Android) and `textAlignVertical` are what stop the font's line box from
+ * adding invisible space above the art and pushing chip labels off centre.
+ *
+ * Note there is no `name`-not-found branch: `RedlineIconName` is a closed union
+ * and `ICON_GLYPH` is a complete `Record` of it, so an unmapped name is a
+ * compile error rather than a run-time tofu box.
  */
 export function RedlineIcon({ name, size, color }: RedlineIconProps) {
-	const box = { width: size, height: size };
-	const line = { borderColor: color, borderWidth: STROKE };
-
-	switch (name) {
-		// A lens in a body — the "18 Photos" pill.
-		case "camera":
-			return (
-				<View style={[styles.icon, box]}>
-					<View
-						style={[
-							styles.iconFill,
-							line,
-							{
-								top: size * 0.22,
-								height: size * 0.56,
-								borderRadius: size * 0.16,
-							},
-						]}
-					/>
-					<View
-						style={[
-							styles.iconAbs,
-							line,
-							{
-								width: size * 0.3,
-								height: size * 0.3,
-								borderRadius: size * 0.15,
-								left: size * 0.35,
-								top: size * 0.35,
-							},
-						]}
-					/>
-				</View>
-			);
-		// A mortarboard — "Top Schools" / "Great Schools".
-		case "school":
-			return (
-				<View style={[styles.icon, box]}>
-					<View
-						style={[
-							styles.iconAbs,
-							line,
-							{
-								width: size * 0.72,
-								height: size * 0.36,
-								left: size * 0.14,
-								top: size * 0.2,
-								borderRadius: size * 0.06,
-								transform: [{ rotate: "-8deg" }],
-							},
-						]}
-					/>
-					<View
-						style={[
-							styles.iconAbs,
-							{
-								borderColor: color,
-								borderBottomWidth: STROKE,
-								borderLeftWidth: STROKE,
-								borderRightWidth: STROKE,
-								width: size * 0.44,
-								height: size * 0.28,
-								left: size * 0.28,
-								top: size * 0.5,
-								borderBottomLeftRadius: size * 0.1,
-								borderBottomRightRadius: size * 0.1,
-							},
-						]}
-					/>
-				</View>
-			);
-		// A conifer — "Private Backyard".
-		case "tree":
-			return (
-				<View style={[styles.icon, box]}>
-					<View
-						style={[
-							styles.iconAbs,
-							{
-								borderLeftWidth: size * 0.22,
-								borderRightWidth: size * 0.22,
-								borderBottomWidth: size * 0.5,
-								borderLeftColor: "transparent",
-								borderRightColor: "transparent",
-								borderBottomColor: color,
-								left: size * 0.06,
-								top: size * 0.1,
-							},
-						]}
-					/>
-					<View
-						style={[
-							styles.iconAbs,
-							{
-								backgroundColor: color,
-								width: STROKE,
-								height: size * 0.26,
-								left: size * 0.5 - STROKE / 2,
-								top: size * 0.6,
-							},
-						]}
-					/>
-				</View>
-			);
-		// A walking figure — "Walkable Park" / "Walkable".
-		case "walk":
-			return (
-				<View style={[styles.icon, box]}>
-					<View
-						style={[
-							styles.iconAbs,
-							line,
-							{
-								width: size * 0.24,
-								height: size * 0.24,
-								borderRadius: size * 0.12,
-								left: size * 0.38,
-								top: 0,
-							},
-						]}
-					/>
-					<View
-						style={[
-							styles.iconAbs,
-							{
-								backgroundColor: color,
-								width: STROKE,
-								height: size * 0.34,
-								left: size * 0.5 - STROKE / 2,
-								top: size * 0.3,
-							},
-						]}
-					/>
-					<View
-						style={[
-							styles.iconAbs,
-							{
-								backgroundColor: color,
-								width: STROKE,
-								height: size * 0.34,
-								left: size * 0.34,
-								top: size * 0.62,
-								transform: [{ rotate: "18deg" }],
-							},
-						]}
-					/>
-					<View
-						style={[
-							styles.iconAbs,
-							{
-								backgroundColor: color,
-								width: STROKE,
-								height: size * 0.34,
-								left: size * 0.64,
-								top: size * 0.62,
-								transform: [{ rotate: "-18deg" }],
-							},
-						]}
-					/>
-				</View>
-			);
-		// Two heads — "Family Friendly".
-		case "family":
-			return (
-				<View style={[styles.icon, box]}>
-					<View
-						style={[
-							styles.iconAbs,
-							line,
-							{
-								width: size * 0.3,
-								height: size * 0.3,
-								borderRadius: size * 0.15,
-								left: size * 0.04,
-								top: size * 0.06,
-							},
-						]}
-					/>
-					<View
-						style={[
-							styles.iconAbs,
-							line,
-							{
-								width: size * 0.26,
-								height: size * 0.26,
-								borderRadius: size * 0.13,
-								left: size * 0.62,
-								top: size * 0.12,
-							},
-						]}
-					/>
-					<View
-						style={[
-							styles.iconAbs,
-							{
-								borderColor: color,
-								borderTopWidth: STROKE,
-								borderLeftWidth: STROKE,
-								borderRightWidth: STROKE,
-								width: size * 0.42,
-								height: size * 0.3,
-								left: size * -0.02,
-								top: size * 0.5,
-								borderTopLeftRadius: size * 0.2,
-								borderTopRightRadius: size * 0.2,
-							},
-						]}
-					/>
-					<View
-						style={[
-							styles.iconAbs,
-							{
-								borderColor: color,
-								borderTopWidth: STROKE,
-								borderLeftWidth: STROKE,
-								borderRightWidth: STROKE,
-								width: size * 0.36,
-								height: size * 0.26,
-								left: size * 0.6,
-								top: size * 0.54,
-								borderTopLeftRadius: size * 0.18,
-								borderTopRightRadius: size * 0.18,
-							},
-						]}
-					/>
-				</View>
-			);
-		// A car — the trade-off's commute option.
-		case "car":
-			return (
-				<View style={[styles.icon, box]}>
-					<View
-						style={[
-							styles.iconAbs,
-							{
-								borderColor: color,
-								borderTopWidth: STROKE,
-								borderLeftWidth: STROKE,
-								borderRightWidth: STROKE,
-								width: size * 0.56,
-								height: size * 0.24,
-								left: size * 0.22,
-								top: size * 0.24,
-								borderTopLeftRadius: size * 0.14,
-								borderTopRightRadius: size * 0.14,
-							},
-						]}
-					/>
-					<View
-						style={[
-							styles.iconAbs,
-							line,
-							{
-								width: size * 0.86,
-								height: size * 0.26,
-								left: size * 0.07,
-								top: size * 0.46,
-								borderRadius: size * 0.08,
-							},
-						]}
-					/>
-					<View
-						style={[
-							styles.iconAbs,
-							{
-								backgroundColor: color,
-								width: size * 0.14,
-								height: size * 0.14,
-								borderRadius: size * 0.07,
-								left: size * 0.2,
-								top: size * 0.68,
-							},
-						]}
-					/>
-					<View
-						style={[
-							styles.iconAbs,
-							{
-								backgroundColor: color,
-								width: size * 0.14,
-								height: size * 0.14,
-								borderRadius: size * 0.07,
-								left: size * 0.66,
-								top: size * 0.68,
-							},
-						]}
-					/>
-				</View>
-			);
-		// A house with a tree — the trade-off's backyard option.
-		case "yard":
-			return (
-				<View style={[styles.icon, box]}>
-					<View
-						style={[
-							styles.iconAbs,
-							{
-								borderLeftWidth: size * 0.24,
-								borderRightWidth: size * 0.24,
-								borderBottomWidth: size * 0.26,
-								borderLeftColor: "transparent",
-								borderRightColor: "transparent",
-								borderBottomColor: color,
-								left: size * 0.02,
-								top: size * 0.14,
-							},
-						]}
-					/>
-					<View
-						style={[
-							styles.iconAbs,
-							line,
-							{
-								width: size * 0.44,
-								height: size * 0.34,
-								left: size * 0.02,
-								top: size * 0.4,
-							},
-						]}
-					/>
-					<View
-						style={[
-							styles.iconAbs,
-							line,
-							{
-								width: size * 0.3,
-								height: size * 0.3,
-								borderRadius: size * 0.15,
-								left: size * 0.6,
-								top: size * 0.24,
-							},
-						]}
-					/>
-					<View
-						style={[
-							styles.iconAbs,
-							{
-								backgroundColor: color,
-								width: STROKE,
-								height: size * 0.22,
-								left: size * 0.75 - STROKE / 2,
-								top: size * 0.52,
-							},
-						]}
-					/>
-				</View>
-			);
-		// A crescent moon — "Quiet Streets".
-		//
-		// Drawn as an ARC, not as two overlapping discs. The two-disc trick needs
-		// an opaque disc in the backdrop's colour to bite the crescent out, and
-		// this icon's main call site is a glass tile floating over a photo — there
-		// is no solid colour there to paint with, so the bite would show as a grey
-		// blob. A circle with two adjacent borders set transparent gives a real
-		// open arc that composites correctly over anything.
-		case "moon":
-			return (
-				<View style={[styles.icon, box]}>
-					<View
-						style={[
-							styles.iconAbs,
-							{
-								borderWidth: STROKE,
-								borderColor: color,
-								// The open side of the crescent.
-								borderRightColor: "transparent",
-								borderTopColor: "transparent",
-								width: size * 0.86,
-								height: size * 0.86,
-								borderRadius: size * 0.43,
-								left: size * 0.07,
-								top: size * 0.07,
-								transform: [{ rotate: "-20deg" }],
-							},
-						]}
-					/>
-				</View>
-			);
-		// A winding path — "Trails Nearby". Three offset dashes read as a trail
-		// receding, which is legible at 17pt where an S-curve is not.
-		case "path":
-			return (
-				<View style={[styles.icon, box]}>
-					{[
-						{ w: 0.5, l: 0.06, t: 0.7 },
-						{ w: 0.38, l: 0.3, t: 0.44 },
-						{ w: 0.26, l: 0.5, t: 0.18 },
-					].map((seg) => (
-						<View
-							key={seg.t}
-							style={[
-								styles.iconAbs,
-								{
-									backgroundColor: color,
-									width: size * seg.w,
-									height: STROKE,
-									left: size * seg.l,
-									top: size * seg.t,
-									borderRadius: STROKE,
-								},
-							]}
-						/>
-					))}
-				</View>
-			);
-		// A shopfront with an awning — "Cultural Scene" (shops, food, downtown).
-		case "shop":
-			return (
-				<View style={[styles.icon, box]}>
-					<View
-						style={[
-							styles.iconAbs,
-							{
-								backgroundColor: color,
-								width: size * 0.9,
-								height: STROKE,
-								left: size * 0.05,
-								top: size * 0.32,
-								borderRadius: STROKE,
-							},
-						]}
-					/>
-					<View
-						style={[
-							styles.iconAbs,
-							{
-								borderColor: color,
-								borderLeftWidth: STROKE,
-								borderRightWidth: STROKE,
-								borderBottomWidth: STROKE,
-								width: size * 0.74,
-								height: size * 0.48,
-								left: size * 0.13,
-								top: size * 0.34,
-							},
-						]}
-					/>
-					<View
-						style={[
-							styles.iconAbs,
-							{
-								borderColor: color,
-								borderTopWidth: STROKE,
-								borderLeftWidth: STROKE,
-								borderRightWidth: STROKE,
-								width: size * 0.3,
-								height: size * 0.24,
-								left: size * 0.35,
-								top: size * 0.58,
-								borderTopLeftRadius: size * 0.15,
-								borderTopRightRadius: size * 0.15,
-							},
-						]}
-					/>
-				</View>
-			);
-		// A cup — "Great for Hosting" (entertaining: dinners, wine, gatherings).
-		case "cup":
-			return (
-				<View style={[styles.icon, box]}>
-					<View
-						style={[
-							styles.iconAbs,
-							{
-								borderColor: color,
-								borderLeftWidth: STROKE,
-								borderRightWidth: STROKE,
-								borderBottomWidth: STROKE,
-								width: size * 0.52,
-								height: size * 0.36,
-								left: size * 0.14,
-								top: size * 0.22,
-								borderBottomLeftRadius: size * 0.24,
-								borderBottomRightRadius: size * 0.24,
-							},
-						]}
-					/>
-					<View
-						style={[
-							styles.iconAbs,
-							{
-								backgroundColor: color,
-								width: STROKE,
-								height: size * 0.24,
-								left: size * 0.4 - STROKE / 2,
-								top: size * 0.56,
-							},
-						]}
-					/>
-					<View
-						style={[
-							styles.iconAbs,
-							{
-								backgroundColor: color,
-								width: size * 0.36,
-								height: STROKE,
-								left: size * 0.22,
-								top: size * 0.8,
-								borderRadius: STROKE,
-							},
-						]}
-					/>
-					<View
-						style={[
-							styles.iconAbs,
-							line,
-							{
-								width: size * 0.22,
-								height: size * 0.22,
-								borderRadius: size * 0.11,
-								left: size * 0.64,
-								top: size * 0.28,
-							},
-						]}
-					/>
-				</View>
-			);
-		// A ticked box — "Move-in Ready".
-		case "check":
-			return (
-				<View style={[styles.icon, box]}>
-					<View
-						style={[
-							styles.iconAbs,
-							line,
-							{
-								width: size * 0.84,
-								height: size * 0.84,
-								borderRadius: size * 0.24,
-								left: size * 0.08,
-								top: size * 0.08,
-							},
-						]}
-					/>
-					<View
-						style={[
-							styles.iconAbs,
-							{
-								backgroundColor: color,
-								width: size * 0.22,
-								height: STROKE,
-								left: size * 0.24,
-								top: size * 0.52,
-								borderRadius: STROKE,
-								transform: [{ rotate: "45deg" }],
-							},
-						]}
-					/>
-					<View
-						style={[
-							styles.iconAbs,
-							{
-								backgroundColor: color,
-								width: size * 0.38,
-								height: STROKE,
-								left: size * 0.38,
-								top: size * 0.46,
-								borderRadius: STROKE,
-								transform: [{ rotate: "-45deg" }],
-							},
-						]}
-					/>
-				</View>
-			);
-		// Four corner brackets pushing outward — "Spacious".
-		case "expand":
-			return (
-				<View style={[styles.icon, box]}>
-					{[
-						{ k: "tl", top: STROKE, left: STROKE, tw: STROKE, lw: STROKE },
-						{ k: "tr", top: STROKE, right: STROKE, tw: STROKE, rw: STROKE },
-						{ k: "bl", bottom: STROKE, left: STROKE, bw: STROKE, lw: STROKE },
-						{ k: "br", bottom: STROKE, right: STROKE, bw: STROKE, rw: STROKE },
-					].map((c) => (
-						<View
-							key={c.k}
-							style={[
-								styles.iconAbs,
-								{
-									borderColor: color,
-									borderTopWidth: c.tw ?? 0,
-									borderBottomWidth: c.bw ?? 0,
-									borderLeftWidth: c.lw ?? 0,
-									borderRightWidth: c.rw ?? 0,
-									width: size * 0.3,
-									height: size * 0.3,
-									...(c.top !== undefined ? { top: 0 } : { bottom: 0 }),
-									...(c.left !== undefined ? { left: 0 } : { right: 0 }),
-								},
-							]}
-						/>
-					))}
-					<View
-						style={[
-							styles.iconAbs,
-							{
-								backgroundColor: color,
-								width: size * 0.34,
-								height: STROKE,
-								left: size * 0.33,
-								top: size * 0.5 - STROKE / 2,
-								borderRadius: STROKE,
-								transform: [{ rotate: "-45deg" }],
-							},
-						]}
-					/>
-				</View>
-			);
-		// A four-point sparkle — the insight card's badge.
-		case "sparkle":
-			return (
-				<View style={[styles.icon, box]}>
-					<View
-						style={[
-							styles.iconAbs,
-							{
-								backgroundColor: color,
-								width: STROKE + 0.4,
-								height: size,
-								left: size * 0.5 - (STROKE + 0.4) / 2,
-								top: 0,
-								borderRadius: STROKE,
-							},
-						]}
-					/>
-					<View
-						style={[
-							styles.iconAbs,
-							{
-								backgroundColor: color,
-								width: size,
-								height: STROKE + 0.4,
-								left: 0,
-								top: size * 0.5 - (STROKE + 0.4) / 2,
-								borderRadius: STROKE,
-							},
-						]}
-					/>
-					<View
-						style={[
-							styles.iconAbs,
-							{
-								backgroundColor: color,
-								width: STROKE,
-								height: size * 0.68,
-								left: size * 0.5 - STROKE / 2,
-								top: size * 0.16,
-								borderRadius: STROKE,
-								transform: [{ rotate: "45deg" }],
-							},
-						]}
-					/>
-					<View
-						style={[
-							styles.iconAbs,
-							{
-								backgroundColor: color,
-								width: size * 0.68,
-								height: STROKE,
-								left: size * 0.16,
-								top: size * 0.5 - STROKE / 2,
-								borderRadius: STROKE,
-								transform: [{ rotate: "45deg" }],
-							},
-						]}
-					/>
-				</View>
-			);
-	}
+	return (
+		<View style={[styles.iconBox, { width: size, height: size }]}>
+			<Text
+				allowFontScaling={false}
+				style={{
+					fontFamily: ICON_FONT,
+					fontSize: size * ICON_OPTICAL_SCALE,
+					lineHeight: size * ICON_OPTICAL_SCALE,
+					color,
+					includeFontPadding: false,
+					textAlignVertical: "center",
+				}}
+			>
+				{ICON_GLYPH[name]}
+			</Text>
+		</View>
+	);
 }
 
 const styles = StyleSheet.create({
@@ -914,6 +272,8 @@ const styles = StyleSheet.create({
 		justifyContent: "center",
 	},
 	ctaSolid: { backgroundColor: redline.accent },
+	/** See `compact` in RedlineCtaProps. 44 = the §0.5 touch-target floor. */
+	ctaCompact: { height: 44 },
 	ctaPressed: { backgroundColor: redline.accentDeep },
 	ctaLight: { backgroundColor: redline.onPhoto, height: 47 },
 	ctaLabel: { ...redlineText.cta, color: redline.onPhoto },
@@ -946,7 +306,6 @@ const styles = StyleSheet.create({
 		transform: [{ rotate: "45deg" }],
 	},
 
-	icon: { position: "relative" },
-	iconAbs: { position: "absolute" },
-	iconFill: { position: "absolute", left: 0, right: 0 },
+	/** Reserves the nominal icon box and centres the glyph inside it. */
+	iconBox: { alignItems: "center", justifyContent: "center" },
 });

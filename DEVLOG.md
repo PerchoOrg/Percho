@@ -4,6 +4,72 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-08-01 22:15 UTC — 卡片图标换成真 Phosphor Fill(用**字体**,不是 SVG)
+
+**Objective**: Owner 说 listing card 下方 chips 的图标「不可爱」,要求参照 redline
+参考图做一整套 demo 选型。做了 6 套候选 demo 后 owner 定 **Phosphor Fill**。
+
+**Actions**:
+- demo: `~/percho-prototypes/icon-sets/`(→ https://demo.percho.co/icon-sets/)。
+  6 套真实图标库(Lucide Line / Material Rounded / Phosphor Fill / Solar Bold /
+  Solar Duotone / Fluent Emoji high-contrast),从 `@iconify-json/*` 取真路径,
+  一键换全页。四段:真卡片 → 15 glyph 全套 → **六套并排 13px 真尺寸** → 逐 glyph 矩阵。
+- 新增 `components/cards/redline/icon-font.ts` —— `RedlineIconName` 联合类型 +
+  `ICON_GLYPH` 码点表 + `ICON_OPTICAL_SCALE` 从这里导出。
+- `RedlineChrome.tsx` —— `RedlineIcon` 从 640 行 `View` 拼图换成一个 `<Text>`
+  查表。**净 -713/+86 行**。图标名一个没改,所以四个 face 文件零改动。
+- 新增 `assets/fonts/PerchoIcons.ttf`(5.2 KB)、`app/_layout.tsx` 里 `useFonts` 加载。
+- 新增 `theme/icon-font.test.ts` —— 手写 TrueType `cmap` 解析器(format 4/12),
+  直接读 .ttf 字节验证每个码点真在字体里。
+
+**Decisions**:
+- **为什么是字体不是 SVG**:`react-native-svg` 在本项目 Expo Go 里红屏
+  (`RNSVGCircle must be a function`,见 2026-07-30 04:55),这条约束没变。
+  Phosphor 除 SVG 外**也发字体**,而字体不需要任何原生模块 —— `expo-font` 是
+  Expo Go 核心模块,一个 glyph 就是一个 `<Text>`。真图形上车,零 RNSVG 风险。
+- 字体用 `pyftsubset` 只保留 14 个码点:**5.2 KB vs 完整 Phosphor-Fill 440 KB**。
+  子集命令写在 `icon-font.ts` 注释里,加 glyph 必须重跑,光加表项会出豆腐块。
+- `ICON_OPTICAL_SCALE = 1.18` 是**量出来的不是猜的**:该子集里 art 只占
+  0.69em(expand/yard/family)到 0.91em(sparkle),均值 0.79em,所以
+  `fontSize === size` 会比原来的 `View` 图标**小**一圈。
+- `HeartIcon` 保留 `View` 画法 —— redline 未收藏态是**描边**心,这个子集只有 fill。
+- `useFonts` **故意不 gate splash**:首帧返回 false,拿它挡整棵树会闪白屏。
+  字体没加载好最多几毫秒缺字形,卡片照渲染。
+
+**Issues**:
+1. demo 页 `font: 600 11.5px/1.1 inherit` —— **`font` 简写里写 `inherit` 是无效 CSS**,
+   13 条声明全被浏览器静默丢弃,chip 字号实际是 16px 而不是 10.5px。
+   `getComputedStyle` 才看出来,肉眼和 vision 都以为「排版没问题」。改成显式 `var(--f)`。
+2. 改对字号后发现 **3 个 chip 在 390pt 手机上一行放不下**(需 369px / 只有 350px)。
+   最终 10px 字 / gap 5 / padding 7 才刚好 350=350。**desktop mock 上看着能放 13px 是假的。**
+3. 验证脚本第一版用 **advance width** 判豆腐块 → 14 个 glyph 全部误报 failed:
+   图标字体每个 glyph advance 都是 1em,宽度法无效。改成 **canvas 光栅化数点亮像素**
+   (真 glyph 431–1193px,缺失码点 0px)才是真检测。
+4. vision 一度报告 "18 Photos" pill 不存在 —— 实际是 panel 上移 14px 压住了它,
+   `bottom:13px` → `26px`。**同一个 vision 调用在放大后又说它在** —— 小元素上
+   vision 的「没有」不可信,得用 `getBoundingClientRect` 对坐标。
+
+**Resolution**: `tsc --noEmit` 干净;`vitest` 34 files / 561 tests 全过(含新增 4 条);
+`biome` 我这 3 个文件干净(`app/listing/[id].tsx` 的 organizeImports 报错是别人在飞的活,
+没碰)。Metro 侧实证:bundle 里 `iconAbs/iconFill` 已 0 命中、`PerchoIcons` 7 命中;
+`/assets/?unstable_path=...PerchoIcons.ttf` 返回 200 + 5292 bytes,`cmp` 与仓库文件
+**逐字节相同**。字体渲染实证页 `~/percho-prototypes/icon-font-proof/`
+(→ https://demo.percho.co/icon-font-proof/),直接 `@font-face` 加载**上车的那个
+.ttf**,14 个 glyph 全部光栅化通过。故意把 `camera` 码点改错后新测试确实 FAIL,
+说明这个 guard 不是摆设。
+
+**Learnings**:
+- **`font:` 简写里不能用 `inherit`** —— 整条声明被丢,而且丢得完全静默。要继承字族
+  就用自定义属性(`var(--f)`)。demo 上一切「看起来对」的排版结论都要用
+  `getComputedStyle` 复核一次。
+- **图标字体不能用宽度判缺字形**,必须光栅化。
+- 一个图标库能不能上车,**先看它有没有发 .ttf** —— 这是绕开 RNSVG 那类原生依赖的
+  通用出口,不止 Phosphor。
+
+**Next steps**: owner 真机走**测试模式 / dev sampler**扫一眼 chip / tile(17pt) /
+choice(24pt) 三种尺寸。若要 `check` 换 `seal-check`(Phosphor 无 `seal-check-fill`,
+现用 `check-circle-fill`)或换掉 10pt 下偏方块的 `shop`/`yard`,重跑 pyftsubset 即可。
+
 ## 2026-08-01 20:30 UTC — Listing card:去掉 hero 爱心,content panel 空白重新分配
 
 **Objective**: Owner 看真机 dev sampler 截图后两条:①「去掉右上角的爱心标志」;
