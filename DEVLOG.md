@@ -4,6 +4,39 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-08-01 23:20 UTC — chip icon 10 → 12(owner:「icon再大一点点」)
+
+**Objective**: Phosphor Fill 上车后 owner 觉得 chip 图标偏小。
+
+**Actions**: `theme/listing-geometry.ts` → `CHIP_ICON` 10 → 12。**一行改动**,
+`ListingFace` 是唯一消费方,不用动。
+
+**Decisions**: 12 是按**宽度预算**选的不是拍的。三 chip nowrap,最宽实际组合
+(Top Schools · Private Backyard · Trails Nearby)标签 9.5pt 实测约 197pt,加每 chip
+`icon + 4 gap + 2×7 padding` 和 2×5 行间距:
+
+    icon 10 → 291pt    12 → 297pt    13 → 300pt    14 → 303pt
+
+最窄设备 iPhone SE:375 − 2×16 gutter − 2×18 panel padding = **307pt**。
+所以 12 剩 10pt,13 只剩 7pt,14 只剩 4pt。chip 是 `flexShrink: 1`,**超了不会报错
+只会静默压缩某个 chip**,所以留余量比顶格重要 —— 12 是最后一个有真余量的尺寸。
+高度不是约束(12 的字形盒在 21pt chip 里)。
+
+比例上 12/9.5 ≈ 1.26,图标光学重量落在标签 cap-height 与 ascender 之间;10 时在
+cap-height 以下,所以显小。
+
+**Resolution**: `tsc` 干净,`vitest` 34 files / 562 tests 全过,`biome` 干净。
+Metro 实证:重取 bundle 里 `CHIP_ICON = 12`(不是 10),即已生效。
+对比页 `~/percho-prototypes/chip-icon-size/`(→ https://demo.percho.co/chip-icon-size/):
+10 vs 12 并排 + 四种设备宽度实测 —— **SE/390/393/430 全部单行不换行**
+(`scrollWidth > clientWidth` 均为 false)。
+
+**Learnings**: `flexShrink: 1` 的 nowrap 行,**放大子元素不会暴露为报错或换行,
+只会静默压缩**,所以调尺寸必须先算宽度预算、并以最窄设备为准,不能只看模拟器一台。
+
+**Next steps**: owner 真机(测试模式)确认大小合适。还想更大就得同时降 chip 标签字号
+或砍到 2 个 chip —— 13/14 在 SE 上余量只剩 7/4pt,不安全。
+
 ## 2026-08-01 22:25 UTC — 真机红屏 `Cannot read property 'useState' of null`:`expo-font` 是 phantom dependency
 
 **Objective**: Owner 真机打开就红屏两条:①`Invalid hook call`;

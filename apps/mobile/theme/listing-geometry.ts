@@ -63,8 +63,28 @@ export const HERO_RATIO = 0.618;
  */
 export const PANEL_SCALE = 0.765;
 
-/** "Chips ... Height 27px", icon sized to sit inside it. */
-export const CHIP_ICON = 10;
+/**
+ * "Chips ... Height 27px", icon sized to sit inside it.
+ *
+ * Raised 10 → 12 on 2026-08-01 (owner: 「icon再大一点点」) once the art became
+ * Phosphor Fill glyphs: solid shapes read smaller than the old stroke drawings
+ * at the same point size, so 10 looked undersized next to the label.
+ *
+ * 12 is chosen against the WIDTH budget, not by eye. The row is three chips,
+ * nowrap, and its widest realistic trio ("Top Schools" · "Private Backyard" ·
+ * "Trails Nearby") measures ~197pt of label at 9.5pt. Adding per-chip
+ * icon + 4 gap + 2×7 padding and 2×5 row gaps:
+ *
+ *   icon 10 → 291pt      icon 12 → 297pt      icon 13 → 300pt
+ *
+ * The tightest device is the iPhone SE: 375 − 2×16 gutter − 2×18 panel padding
+ * = 307pt of content width. So 12 keeps ~10pt of slack and 13 keeps only ~7 —
+ * and the chip is `flexShrink: 1`, so overflow would silently shrink a chip
+ * rather than error. 12 is the last size with real margin.
+ *
+ * Height is not a constraint: the glyph box is 12 inside a 21pt chip.
+ */
+export const CHIP_ICON = 12;
 
 /** The redline shows three chips; a fourth would wrap and break the row. */
 export const MAX_CHIPS = 3;
