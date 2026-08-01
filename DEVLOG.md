@@ -4,6 +4,45 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-08-01 20:30 UTC — Listing card:去掉 hero 爱心,content panel 空白重新分配
+
+**Objective**: Owner 看真机 dev sampler 截图后两条:①「去掉右上角的爱心标志」;
+②「视频下方的部分不协调 描述和几个特点之间的空白明显比其他空白大 你参照第二个照片里的
+样式和排版」(第二张图 = 原 redline 参考板)。
+
+**Actions**:
+- `components/cards/ListingFace.tsx` — hero 去掉 `RedlineHeart`;`onSave` prop 一并
+  删除(feed 从来没传过,留着就是个休眠钩子)。hero 现在只有 LISTING pill 一个 overlay。
+- `theme/listing-geometry.ts` — 删 `heartSlot`;新增 `SLACK_SLOTS = 3` 与
+  `SECTION_GAP_FLOOR = 4`;`story.marginBottom` / `chips.marginBottom` 各 4,
+  `ctaSlot.marginTop` 改 `'auto'`,`price.marginTop` 加 `'auto'`。
+- `theme/redline-listing-geometry.test.ts` — slot 集合断言改 `[ctaSlot, pillSlot]`;
+  新增 4 条:三个 slack slot、两个 section 地板相等、地板总和保持 8(高度中性)、
+  Pro Max 上最大单个 gap 不超过 slack/3 + 地板。
+
+**Decisions**:
+- 爱心只从 **listing** face 摘掉。redline 四张卡都画了爱心,owner 只点了 listing,
+  community / trade-off / insight 保持不变 —— 不擅自扩大 scope。
+- 空白问题的根因不是某个 margin 写大了,而是 **panel 是卡片的固定 38.2%**(不是
+  fit-to-content),多出来的余量必须落在某个 `marginTop:'auto'` 上。之前列里只有
+  `chips` 一个 auto,于是它吃掉 100% 余量 → story→chips 实测 ~37pt,其它 gap 8pt。
+  改成三个等分 slot(price 上 / chips 上 / CTA 上),就是参考板的节奏:照片下面一个大
+  呼吸、身份行紧凑、下面两个 section break 相等。
+- **高度中性是算出来的不是看出来的**:原来 CTA 上方固定 8pt,现在拆成 4+4,panel 固定
+  成本不变。
+
+**Issues**: 第一版两个地板都写 8 —— fit test 立刻挂:SE 需要 194pt 只有 188.5(CTA 被
+挤出卡片),iPhone 14 的第二行描述也丢了。这正是这个测试当初存在的理由。
+
+**Resolution**: 地板降到 4+4。各机型实测渲染值(fixed 成本 + slack/3):
+SE 4.8pt / 13 mini 7.5 / 14·13 5.7 / 16 Pro 8.0 / Pro Max 13.4;两行描述的机型分布
+不变(390pt 宽及以上两行)。hero 0.618、accent `#0E6B57`、字号全部未动。
+
+**Learnings**: panel 是比例切片时,「某个 gap 太大」几乎总是 auto margin 的**数量**
+问题,不是某个数值问题。改 gap 前先数列里有几个 auto。
+
+**Next steps**: 真机 dev sampler 复看这两条;community face 的爱心留着,等 owner 说。
+
 ## 2026-08-01 08:45 UTC — Listing 视频去字幕 + 卡片去照片数量,文字移到 Explore 相册
 
 **Objective**: Owner:「重新渲染dev sampler里listing视频 去掉所有的字幕 还有左下角照片数量
