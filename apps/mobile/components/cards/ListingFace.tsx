@@ -23,16 +23,22 @@ import type { DimKey } from "@percho/shared";
  *
  * ── The redline's structure, verbatim ────────────────────────────────────────
  *
- *   hero image        54% of card height, full bleed, top corners = card radius
+ *   hero image        61.8% of card height, full bleed, top corners = card radius
  *     LISTING pill    top-left 15/15
  *     heart           top-right 15/15
- *   content panel     46%, padding 18 / 18 / 20
- *     price           serif 35
- *     address         14 semibold, margin-top 8
- *     locality        12 muted, margin-top 4
- *     story           13 / 1.45, margin-top 15, #57534D
- *     chips           27pt tall, #F1F1EC, green line icons
- *     CTA             full-width 48pt pill, #0E6B57, "Explore Home →"
+ *   content panel     38.2%, padding 18 / 14 / 15
+ *     price           serif 27
+ *     address         14 semibold, margin-top 6
+ *     locality        12 muted, margin-top 3
+ *     story           13 / 1.45, margin-top 11, #57534D, up to 2 lines
+ *     chips           21pt tall, #F1F1EC, green line icons
+ *     CTA             full-width 44pt pill, #0E6B57, "Explore Home →"
+ *
+ * The hero was 54% and the panel's type was larger in the redline; the owner
+ * raised the hero to the golden ratio on 2026-08-01 (「视频占卡片比例改成0.618」)
+ * and the panel's metrics are that same redline scaled by `PANEL_SCALE`. Read
+ * `theme/listing-geometry.ts` before changing any of these — the numbers are
+ * derived from a measured device-fit table, not picked to look right.
  *
  * Those two overlays are the ONLY things on the hero. The redline also drew a
  * bottom-left "⊕ 18 Photos" counter; it was removed 2026-08-01 on the owner's
@@ -67,7 +73,6 @@ import { CardPhoto } from "../CardPhoto";
 import { CardVideo } from "../CardVideo";
 import {
 	RedlineCta,
-	RedlineHeart,
 	RedlineIcon,
 	type RedlineIconName,
 	RedlinePill,
@@ -117,17 +122,16 @@ interface ListingFaceProps {
 	card: ListingCardV3;
 	isTop: boolean;
 	onExplore?: () => void;
-	/** Favourite. Optional — the heart renders inert when absent. */
-	onSave?: () => void;
+	/*
+	 * No `onSave`. The heart that consumed it was removed 2026-08-01 (owner:
+	 * 「去掉右上角的爱心标志」) and the feed never passed a handler, so keeping the
+	 * prop would leave an argument no element can reach — the kind of dormant
+	 * hook that gets "restored" by accident later.
+	 */
 }
 
-export function ListingFace({
-	card,
-	isTop,
-	onExplore,
-	onSave,
-}: ListingFaceProps) {
-	/** First paragraph only — the redline's story slot is two lines. */
+export function ListingFace({ card, isTop, onExplore }: ListingFaceProps) {
+	/** First paragraph only — the panel's story slot is at most two lines. */
 	const story = card.description?.[0];
 	const chips = (card.dims ?? []).slice(0, MAX_CHIPS);
 
@@ -148,12 +152,13 @@ export function ListingFace({
 				<View style={styles.pillSlot}>
 					<RedlinePill label="LISTING" />
 				</View>
-				<View style={styles.heartSlot}>
-					<RedlineHeart onPress={onSave} />
-				</View>
 				{/*
-				 * The hero carries exactly TWO overlays now: the LISTING pill and
-				 * the heart.
+				 * The hero carries exactly ONE overlay now: the LISTING pill.
+				 *
+				 * The heart went 2026-08-01 (owner: 「去掉右上角的爱心标志」). It had
+				 * always been inert on this face — the feed never passed `onSave` —
+				 * so removing it costs no working behaviour, and the top-right
+				 * corner of the video is now clean.
 				 *
 				 * The redline's third — a bottom-left "⊕ 18 Photos" counter — was
 				 * removed 2026-08-01. The owner's reason is immersion: the video
@@ -186,6 +191,19 @@ export function ListingFace({
 						{card.locality}
 					</Text>
 				)}
+				{/*
+				 * Two lines where they fit, one where they don't.
+				 *
+				 * Restored 2026-08-01 (owner: 「可以把底下的两行描述加回来吗」) once the
+				 * hero settled at 0.618. `flexShrink: 1` on the style is the load-
+				 * bearing part, not decoration: the panel is 188pt on a 375×667 SE and
+				 * two lines need 202, so without the shrink the overflow would push
+				 * the CTA off the bottom edge (`chips` is `marginTop: auto`). With it,
+				 * the story is the thing that yields a line and the CTA never moves.
+				 *
+				 * See `PANEL_SCALE` for which devices get two lines (390pt-wide and up)
+				 * and which get one (SE / 13 mini).
+				 */}
 				{!!story && (
 					<Text style={styles.story} numberOfLines={2}>
 						{story}
@@ -209,7 +227,7 @@ export function ListingFace({
 				)}
 				{!!onExplore && (
 					<View style={styles.ctaSlot}>
-						<RedlineCta label="Explore Home →" onPress={onExplore} />
+						<RedlineCta label="Explore Home →" onPress={onExplore} compact />
 					</View>
 				)}
 			</View>
@@ -263,12 +281,37 @@ const styles = StyleSheet.create({
 		borderTopRightRadius: radii.card - 1,
 	},
 	pillSlot: { position: "absolute", ...geo.pillSlot, zIndex: 2 },
-	heartSlot: { position: "absolute", ...geo.heartSlot, zIndex: 2 },
 	panel: geo.panel,
-	price: { ...redlineText.price, color: redline.ink },
+	/**
+	 * `marginTop: 'auto'` here is a SPACING fix, not decoration (owner
+	 * 2026-08-01: 「描述和几个特点之间的空白明显比其他空白大」).
+	 *
+	 * The panel is a proportional slice of the card (38.2%), so on most devices
+	 * it is a few points TALLER than its content needs. All of that slack used to
+	 * land in one place — `chips`'s `marginTop: 'auto'` was the only auto margin
+	 * in the column, so it collected 100% of it and the story→chips gap measured
+	 * ~37pt against 8pt everywhere else. The reference board's rhythm is the
+	 * opposite: the largest gap sits at the TOP of the panel and the steps get
+	 * smaller downward, with the two section breaks (story→chips, chips→CTA)
+	 * equal.
+	 *
+	 * Two auto margins split the free space equally (Yoga, like CSS flexbox), so
+	 * half the slack now goes above the price — where it reads as panel padding
+	 * under the photo — and half above the chips. Under pressure both resolve to
+	 * 0 and the story's `flexShrink` still yields the line, so the CTA cannot be
+	 * pushed off the card and the fit floor is unchanged.
+	 */
+	price: { ...redlineText.priceCompact, color: redline.ink, marginTop: "auto" },
 	address: { ...redlineText.address, color: redline.ink, ...geo.address },
 	locality: { ...redlineText.locality, color: redline.ink3, ...geo.locality },
-	story: { ...redlineText.story, ...geo.story },
+	/**
+	 * `flexShrink: 1` is what protects the CTA. Two lines need 202pt of a panel
+	 * that is only 188pt on a 375×667 iPhone SE; letting THIS element yield a
+	 * line is what keeps the overflow from travelling down to the CTA through
+	 * `chips`'s `marginTop: auto`. Do not remove it to "fix" the story being
+	 * short on small phones — that trades a shorter blurb for a clipped button.
+	 */
+	story: { ...redlineText.storyCompact, ...geo.story, flexShrink: 1 },
 	/**
 	 * `marginTop: auto` pins the chip row + CTA to the bottom of the panel, so a
 	 * listing with a short description does not leave the CTA floating in the
