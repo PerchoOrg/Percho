@@ -70,7 +70,9 @@ describe("redline icon font", () => {
 	it("draws every glyph the icon table names", () => {
 		const missing = Object.entries(ICON_GLYPH)
 			.filter(([, glyph]) => !present.has(glyph.codePointAt(0) as number))
-			.map(([name, glyph]) => `${name} (U+${glyph.codePointAt(0)?.toString(16)})`);
+			.map(
+				([name, glyph]) => `${name} (U+${glyph.codePointAt(0)?.toString(16)})`,
+			);
 
 		// A name added to ICON_GLYPH without re-running pyftsubset lands here.
 		expect(missing).toEqual([]);
@@ -78,7 +80,9 @@ describe("redline icon font", () => {
 
 	it("maps each icon name to exactly one codepoint", () => {
 		for (const [name, glyph] of Object.entries(ICON_GLYPH)) {
-			expect(Array.from(glyph), `${name} must be a single glyph`).toHaveLength(1);
+			expect(Array.from(glyph), `${name} must be a single glyph`).toHaveLength(
+				1,
+			);
 		}
 	});
 
@@ -87,7 +91,10 @@ describe("redline icon font", () => {
 		// another's art — the "Move-in Ready shows a pedestrian" bug class.
 		const seen = new Map<string, string>();
 		for (const [name, glyph] of Object.entries(ICON_GLYPH)) {
-			expect(seen.get(glyph), `${name} duplicates ${seen.get(glyph)}`).toBeUndefined();
+			expect(
+				seen.get(glyph),
+				`${name} duplicates ${seen.get(glyph)}`,
+			).toBeUndefined();
 			seen.set(glyph, name);
 		}
 	});
@@ -95,5 +102,23 @@ describe("redline icon font", () => {
 	it("stays subset — the full Phosphor font must never be committed", () => {
 		// Phosphor-Fill.ttf is ~440 KB for 1512 glyphs. Ours is ~5 KB for 14.
 		expect(readFileSync(FONT).byteLength).toBeLessThan(40_000);
+	});
+
+	it("declares expo-font as a real dependency", () => {
+		// Regression guard for the 2026-08-01 red screen. `expo-font` was used
+		// without being declared, so pnpm's hoisted copy at the repo root got
+		// picked up instead of a properly peer-linked one. The hoisted copy has
+		// no react of its own, so it resolved the ROOT node_modules/react while
+		// the app resolved .pnpm/react@19.1.0 — same version, different path,
+		// and Metro keys modules by path. Two React instances means a null
+		// dispatcher: "Invalid hook call" / "Cannot read property 'useState' of
+		// null" the moment useFonts ran on device.
+		//
+		// tsc cannot catch this (the phantom import type-checks fine) and it
+		// only fails on a real device, so it is asserted here.
+		const pkg = JSON.parse(
+			readFileSync(join(__dirname, "../package.json"), "utf8"),
+		);
+		expect(pkg.dependencies["expo-font"]).toBeTruthy();
 	});
 });

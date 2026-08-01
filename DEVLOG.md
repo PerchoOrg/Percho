@@ -4,6 +4,64 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-08-01 22:25 UTC — 真机红屏 `Cannot read property 'useState' of null`:`expo-font` 是 phantom dependency
+
+**Objective**: Owner 真机打开就红屏两条:①`Invalid hook call`;
+②`Cannot read property 'useState' of null`,都指着 `_layout.tsx:27` 的 `useFonts({`。
+上一条(40c7561)加图标字体时我引入的。
+
+**Issues / 根因**: **`expo-font` 从来没被 `apps/mobile/package.json` 声明过。**
+我看到 `require.resolve('expo-font')` 能解析就直接用了 —— 但那是 pnpm **hoist 到仓库
+根** `node_modules/expo-font` 的一份(phantom dependency),不是给 mobile 正常 peer-link
+的那份。后果是解析出两个 React:
+
+    expo-font 解析到 → <root>/node_modules/react          ← 根目录那份
+    app 解析到       → <root>/node_modules/.pnpm/react@19.1.0/node_modules/react
+
+**两者 version 完全一样(都是 19.1.0),内容甚至是同一个 inode(pnpm 硬链接)**,
+所以任何 "查版本对不对" 的排查都会说没问题。但 **Metro 按路径注册模块**,两个路径
+= 两个 React 实例 = hook dispatcher 是 null → `useState of null`。
+
+这也解释了为什么我上一轮的验证全过还是炸:`tsc` 看不见 phantom import(类型能解析),
+`vitest` 在 node 下跑根本不进 Metro 的 registry,bundle 也能正常 build —— **只有真机
+运行时才炸**。我把 "bundle 里有 PerchoIcons 字样" 当成了 "功能能跑",这是这次的教训。
+
+**Actions**:
+- `npx expo install expo-font` → `apps/mobile/package.json` 声明 `~14.0.12`。
+  注意 `expo install` 写了 package.json 但**没建 symlink**,还要
+  `pnpm install --filter @percho/mobile` 才真正 link 上。
+- 新增测试 `theme/icon-font.test.ts` → "declares expo-font as a real dependency"。
+- 扫了一遍 mobile 全部 `.ts/.tsx` 的 import 对 package.json,**除 expo-font 外无其他
+  phantom dep**。
+- Metro 用 `--clear` 冷启(旧进程已死,只剩一个孤儿 ngrok,一并 kill)。
+
+**Resolution**: 判定标准是 `require.resolve` 的**物理路径**,不是 version：
+
+    修复前: expo-font 的 react = <root>/node_modules/react            SAME? NO
+    修复后: expo-font 的 react = .pnpm/react@19.1.0/.../react         SAME? YES
+
+lockfile 现在显式把 `expo-font` 钉在 `(react@19.1.0)` 上 —— 这就是原先缺的 peer link。
+真机路径实证(不是 localhost):`https://demo.percho.co/.expo/.virtual-metro-entry.bundle`
+返回 200 / 10,084,596 bytes,里面**非 `.pnpm` 前缀的 react 路径 = 0 条**,react copies
+只有 `react@19.1.0` 一份;字体经隧道取回与仓库文件 `cmp` 逐字节相同。
+`tsc` 干净,`vitest` 34 files / 562 tests 全过。
+
+**Learnings**:
+- **`require.resolve` 能解析 ≠ 该包是依赖。** pnpm 根目录 hoist 出来的东西随时会
+  在别的机器/CI 上消失,而且会拖进第二份 React。加任何新 import 前先确认
+  package.json 里有。
+- **重复 React 不看版本号看物理路径。** 同版本、同 inode 也照样是两个实例,
+  因为 Metro 按路径 key。排查命令:
+  `require.resolve('react',{paths:[path.dirname(require.resolve(PKG))]})` 与
+  app 自己的 react 比**字符串**。
+- **`expo install` 之后要补 `pnpm install --filter`**,否则 package.json 有声明但
+  node_modules 里没 symlink,状态更迷惑。
+- `tsc` 干净 + 单测全过 + bundle 能 build，**没有一条能证明真机不红屏**。涉及
+  原生模块/hook 的改动，验证必须落到真机或至少 Metro 冷启后的运行时。
+
+**Next steps**: owner 重开 app(测试模式 / dev sampler)确认红屏没了、chips 是
+Phosphor Fill。Metro 已冷启在 8081,`EXPO_PUBLIC_API_BASE=https://demo.percho.co`。
+
 ## 2026-08-01 22:15 UTC — 卡片图标换成真 Phosphor Fill(用**字体**,不是 SVG)
 
 **Objective**: Owner 说 listing card 下方 chips 的图标「不可爱」,要求参照 redline
