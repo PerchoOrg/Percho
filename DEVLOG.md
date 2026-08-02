@@ -4,6 +4,75 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-08-02 00:00 UTC — 余下 9 条 walkthrough 重渲染,与 5122 对齐
+
+**Objective**: Owner:「对于已经有视频的 listing 重新渲染 跟 5122 保持一致」。08-01 的
+去字幕改动只出了 5122 一条样本(sort_order 0, `8d9bb8be`),其余 9 条还是 07-28 带字幕
+的老视频。
+
+**Actions**:
+- `scripts/render-worker` systemd 单元又是 `inactive` / `ExecMainPID=0`(07-28、08-01
+  已两次记录),`sudo systemctl start` 拉活 → `ExecMainPID=750933`,`Result=success`。
+- 清掉 07-28 遗留的孤立 `render_jobs.status='running'`(`claim_job` 只认 queued,不影响
+  调度,但一直脏)。
+- 删掉 5122 那条 `sort_order=99` 的 `PRE-0801 captioned (superseded, kept for compare)`
+  行 + 它的 CF 视频(`b6f5fb473e`)。对照价值已经用完,留着只会再制造「app 到底在放哪一行」
+  的歧义。
+- **新增** `scripts/requeue-existing-walkthroughs.py`(把 08-01 的 `/tmp` 一次性脚本
+  固化):默认 dry-run,`--apply` 才动手,`--skip <listing_id>` 排除。内建 `<3 张照片`
+  跳过、CF-先删-后删-DB 顺序、清 in-flight job、顺序入队。
+- 跑 `--apply --skip c7435419-…`(5122 已是新版):9 条 CF 删除全 200,9 条 DB 行 204,
+  9 个新 job 入队,worker 6 分钟顺序跑完。
+
+**Decisions**:
+- **新行落 `sort_order=0`,不是 99**。`apps/web/lib/feed/vertical-videos.ts` 按
+  `sort_order asc` 取每个 listing 的**第一行**;停在 99 的行 app 永远看不到 —— 这正是
+  08-01 owner 反馈「5122 视频里还是有字幕」的原因。脚本里写死 0 并在 docstring 里说明。
+- **旧 CF 视频直接删,不保留**。owner 已批过样本,这轮是对齐落地不是比较;留着 orphan
+  只是白烧 CF Stream 配额。
+- 脚本按**每个 listing 的所有 walkthrough 行**分组删除(`UID_COLUMNS` 三列都扫),不是
+  只删最新那条 —— 否则 99 这种历史行会永远留下。
+
+**Issues**:
+- `818de7b4` (2438 Figaro, 45 张) 的 shot plan 只取了 `clips=24 of 45`;`a474df35`
+  取 `11 of 12`、`4c9750d5` 取 `9 of 10`。这是 `photo_selector` 的 dHash 去重 + 配额裁剪
+  正常行为,不是失败。
+- systemd 单元第三次无解释死亡,**根因仍未查**。
+
+**Resolution**: 10 条 walkthrough 现在全部 `status='ready'`、square 1080×1080、
+`sort_order=0`、每个 listing **恰好一行**(10 行 / 10 listing,无残留第二行)。
+
+新 CF uid:
+
+| listing | 地址 | clips | 时长 | cf uid |
+|---|---|---|---|---|
+| 03fc78cd | 2895 Shurburne Dr | 9 | 15.8s | `9a1c1a021e6903f74d4dc81741e62066` |
+| 0e523407 | 1103 Durham Rd | 12 | 19.0s | `7e5c74e8a51cf6af55382ab85eec718d` |
+| 14ba5612 | 2125 Melrose Trace | 10 | 17.1s | `25f79daabed2fb8dff92ef0cd34d1b32` |
+| 178c994d | 950 Renaissance Way | 7 | 13.9s | `dc30eaf54f969455f139d49c742c5543` |
+| 735fa6d4 | 355 Morgans Creek Ct NW | 11 | 18.4s | `329849e1bda782799099d056c7c6d70b` |
+| 818de7b4 | 2438 Figaro Dr | 24 | 32.5s | `6292ec5033144f7b8e3aab17eb2a7ada` |
+| a188cc1f | 1006 Quaker Ridge Way | 9 | 15.8s | `c13d85ebb5014278dccd9890f3073d4d` |
+| c7435419 | 5122 Lower Creek St | 24 | 32.5s | `8d9bb8be83f2441691ba708d87a400e4`(08-01 样本,未重跑) |
+| f0857cec | 1619 Tide Mill Rd | 8 | 14.5s | `75f96a59cf300e11bd809653afbccfae` |
+| fdecf6fe | 2229 Saint Kennedy Ln | 11 | 18.4s | `0c299d80ce6a45d401f28a20be09b46f` |
+
+**验证**(两半都做,缺一半就是 08-01 那个坑):
+1. **渲染**:本批 101 行 `[ken-burns] (n/N) rendering …` **零个 `+cap[LISTING]` 后缀**、
+   零 `captions` 字样;9 条全部 `landscape_ratio=1.00 orientation=square` +
+   `shot plan: style=… clips=N`(说明 Phase 93+ 路径真的跑了,没有 `shot plan disabled`)。
+   抽 3 条 × 2 个时间点 CF thumbnail 做视觉核验:无任何字幕/角标,1:1 满幅。
+2. **投放**:按客户端自己的排序查(`status=ready&order=sort_order.asc`,每 listing 取首行),
+   10 条首行 uid 与本次渲染的 uid **逐条一致**。
+
+**Learnings**: 「插一行新的」和「换掉用户看到的那条」是两件事,由 consumer 的取行规则
+(`sort_order asc` / `created_at desc` / `is_primary`)决定你到底做了哪件 —— 插入前先读
+那条规则。已同步进 skill `percho-video-pipeline`。
+
+**Next steps**:
+1. 真机走 dev sampler 复看这 10 条(owner 规矩:测试模式,不是完整 feed)。
+2. `percho-render-worker` 反复自杀的根因该查了 —— 已经第三次。
+
 ## 2026-08-01 23:40 UTC — 图标集存档备用 + chip 覆盖率 47.3% → 63.5%
 
 **Objective**: Owner 两条:①「设计好的 icon 都存下来备用」;②「每个 listing card
