@@ -75,6 +75,19 @@ interface CardVideoProps {
 	 * `AreaFace` behave exactly as before.
 	 */
 	frameAspect?: number;
+	/**
+	 * The fit to use until (or unless) the video's track size is measured.
+	 * Only consulted when `frameAspect` is supplied.
+	 *
+	 * Pass `"cover"` when the caller KNOWS its source is portrait. The owner
+	 * reported the community card's black side-gaps twice — the second time
+	 * AFTER the measured fix shipped (「视频黑色空隙 还在!」) — and the reason a
+	 * measured fix can fail silently is that `availableVideoTracks` on an iOS HLS
+	 * source only populates when the manifest exposes them. No error, no log, the
+	 * card just sits on the `contain` fallback forever. A known-portrait surface
+	 * must not be waiting on a measurement to look right.
+	 */
+	unknownFit?: "contain" | "cover";
 }
 
 export function CardVideo({
@@ -84,6 +97,7 @@ export function CardVideo({
 	onNearEnd,
 	fit = "contain",
 	frameAspect,
+	unknownFit = "contain",
 }: CardVideoProps) {
 	const soundOn = useSoundStore((s) => s.soundOn);
 	const nearEndFired = useRef(false);
@@ -163,15 +177,17 @@ export function CardVideo({
 	 * exist, so no card ever learned its size). `statusChange → readyToPlay` reads
 	 * `player.videoTrack` as the backstop.
 	 *
-	 * Reset on url change, or a new portrait cover briefly inherits the previous
-	 * landscape one's fit — visible as a jump on swipe.
+	 * Reset on source change, or a new portrait cover briefly inherits the
+	 * previous landscape one's fit — visible as a jump on swipe. Done as the
+	 * FIRST statement of this effect, keyed on `player`: `useVideoPlayer(url)`
+	 * returns a new player when the url changes, so `player` already IS the
+	 * source identity and listing `url` as well is a redundant dep (Biome says so
+	 * and it is right — suppressing a correct rule is how the next person
+	 * inherits a lie).
 	 */
 	useEffect(() => {
-		setSize(null);
-	}, [url]);
-
-	useEffect(() => {
 		if (frameAspect == null) return; // caller opted out; `fit` is used verbatim
+		setSize(null);
 		const commit = (s?: { width: number; height: number } | null) => {
 			if (!s || s.width <= 0 || s.height <= 0) return;
 			setSize((prev) =>
@@ -209,7 +225,7 @@ export function CardVideo({
 			onTrack.remove();
 			onStatus.remove();
 		};
-	}, [player, frameAspect, url]);
+	}, [player, frameAspect]);
 
 	/**
 	 * The fit actually applied.
@@ -219,7 +235,7 @@ export function CardVideo({
 	 * the caller's own `fit`, unchanged.
 	 */
 	const appliedFit =
-		frameAspect == null ? fit : mediaFit(size, frameAspect);
+		frameAspect == null ? fit : mediaFit(size, frameAspect, unknownFit);
 
 	return (
 		<View style={styles.frame} pointerEvents="none">

@@ -37,6 +37,41 @@ describe("mediaFit", () => {
 		expect(mediaFit({ width: 0, height: 0 }, CARD)).toBe("contain");
 	});
 
+	/**
+	 * The owner reported the community card's black side-gaps a SECOND time after
+	 * the measured fix shipped (「视频黑色空隙 还在!」). A measured fix fails silently
+	 * on iOS HLS when `availableVideoTracks` never populates: the card sits on
+	 * the unknown-size fallback forever with nothing in any log. So a surface
+	 * whose renders are known-portrait must be able to say "fill until told
+	 * otherwise".
+	 */
+	describe("whenUnknown — a known-portrait surface must not wait to look right", () => {
+		it("fills on frame one when the caller says its source is portrait", () => {
+			expect(mediaFit(null, CARD, "cover")).toBe("cover");
+			expect(mediaFit(undefined, CARD, "cover")).toBe("cover");
+			expect(mediaFit({ width: 0, height: 0 }, CARD, "cover")).toBe("cover");
+		});
+
+		it("still letterboxes a landscape source once its real size lands", () => {
+			// The self-correction that makes `whenUnknown: cover` safe: 2 of the 5
+			// ready community videos are really 1920x1080 while the DB claims 9:16,
+			// and a measured size ALWAYS overrides the default.
+			expect(mediaFit({ width: 1920, height: 1080 }, CARD, "cover")).toBe(
+				"contain",
+			);
+		});
+
+		it("keeps contain as the default so other callers are unchanged", () => {
+			// `AreaFace` / `ListingFace` pass no `whenUnknown`; their behaviour must
+			// not move because the community card needed a different default.
+			expect(mediaFit(null, CARD)).toBe("contain");
+		});
+
+		it("honours the fallback for a nonsense frame aspect too", () => {
+			expect(mediaFit({ width: 1080, height: 1920 }, 0, "cover")).toBe("cover");
+		});
+	});
+
 	it("falls back to contain for a nonsense frame aspect", () => {
 		expect(mediaFit({ width: 1080, height: 1920 }, 0)).toBe("contain");
 		expect(mediaFit({ width: 1080, height: 1920 }, Number.NaN)).toBe("contain");

@@ -219,6 +219,29 @@ export function CommunityFace({
 					poster={card.heroUrl}
 					isTop={isTop}
 					frameAspect={cardAspect}
+					/*
+					 * Fill from frame ONE, do not wait for a measurement.
+					 *
+					 * The owner reported the black side-gaps twice, the second time
+					 * after the measured fix shipped (「视频黑色空隙 还在!」). A measured
+					 * fix fails silently here: `availableVideoTracks` on an iOS HLS
+					 * source only populates when the manifest exposes them, so the card
+					 * can sit on the `contain` fallback indefinitely with nothing in any
+					 * log. Community covers are rendered 9:16 by `scripts/ken-burns`
+					 * (verified 1080×1920 in the served manifest), so the honest default
+					 * for THIS surface is fill.
+					 *
+					 * Tradeoff, stated because it is real: 2 of the 5 ready
+					 * `generated_videos` rows are actually 1920×1080 while the DB's
+					 * `aspect_ratio` column claims `9:16` for all five — that column is
+					 * a lie, see `percho-video-pipeline`. If one of those ever becomes
+					 * the served row it will show cropped until the real size lands,
+					 * then self-correct to letterboxed, because a measured size always
+					 * overrides this default. A few hundred ms of crop beats permanent
+					 * bars on every card. The served row today (`2ec79ed2bc…`) is真
+					 * 1080×1920.
+					 */
+					unknownFit="cover"
 				/>
 			) : (
 				<CardPhoto url={card.heroUrl} />
