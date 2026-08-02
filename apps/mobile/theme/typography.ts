@@ -119,13 +119,34 @@ export const priceStyle: TextStyle = {
  * `letterSpacing` values are the redline's `-0.8px` / `-0.2px` tracking.
  */
 export const redlineText = {
-	/** Listing price — "serif, 35px". */
+	/**
+	 * Listing price — "serif, 35px".
+	 *
+	 * `priceCompact` (27px) is what the listing CARD renders as of 2026-08-01;
+	 * this 35px entry stays because it is the redline's number and the value any
+	 * future full-height listing surface should use.
+	 */
 	price: {
 		fontFamily: serif,
 		fontSize: 35,
 		fontWeight: "500",
 		letterSpacing: -0.8,
 		lineHeight: 35,
+	},
+	/**
+	 * The price on the swipe card after the hero grew to 64.8% (owner:
+	 * 「下面的部分按比例小一点」). 35 × PANEL_SCALE ≈ 31.
+	 *
+	 * A separate token rather than a runtime `fontSize * PANEL_SCALE`: the theme
+	 * is asserted by `theme/*.test.ts` as plain data, and a computed size would
+	 * make the test restate the arithmetic instead of the intended value.
+	 */
+	priceCompact: {
+		fontFamily: serif,
+		fontSize: 27,
+		fontWeight: "500",
+		letterSpacing: -0.6,
+		lineHeight: 27,
 	},
 	/** Community place name — "serif 38px, line-height 1". */
 	place: {
@@ -166,6 +187,21 @@ export const redlineText = {
 		fontSize: 13,
 		fontWeight: "400",
 		lineHeight: 19,
+	},
+	/**
+	 * The listing CARD's story line after the 0.618 hero (2026-08-01).
+	 *
+	 * 13px kept — the redline's floor for body copy, and shrinking it further
+	 * would read as fine print. The LEADING drops 19 → 14 (1.45 → 1.08), which is
+	 * what makes two lines fit a 38.2% panel: at 19 the second line overflowed
+	 * every device below a Pro Max. Tight for a paragraph, correct for a 2-line
+	 * blurb that is scanned rather than read.
+	 */
+	storyCompact: {
+		fontFamily: fonts.ui,
+		fontSize: 13,
+		fontWeight: "400",
+		lineHeight: 14,
 	},
 	/** Trade-off subtext — the redline says 12px / 1.45, not the 13px story size. */
 	subtext: {

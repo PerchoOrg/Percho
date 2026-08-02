@@ -117,6 +117,23 @@ export const redline = {
 	/** Trade-off choice cards — rgba(255,255,255,0.82) + a 0.85 border. */
 	choice: "rgba(255,255,255,0.82)",
 	choiceBorder: "rgba(255,255,255,0.85)",
+	/**
+	 * Community photo scrim, TOP end (2026-08-02).
+	 *
+	 * The redline's overlay only darkened the foot, because the card's copy all
+	 * sat at the foot. The name + blurb moved to the top (owner:
+	 * 「把底部的文字移到顶部避免重复」) so the top needs its own dark end. Measured on
+	 * the real Ashley Crossing cover, white-on-photo at the name was **2.00:1**
+	 * before this — already failing WCAG at the redline's own composition, and a
+	 * bright sky frame made it unreadable outright.
+	 *
+	 * Same hue as `communityScrimTo` (7,12,9) so the two ends read as one wash
+	 * rather than two different greys; lighter (0.72 vs 0.88) because the top
+	 * carries two short lines, not a tile row and a button.
+	 */
+	communityScrimTop: "rgba(7,12,9,0.72)",
+	/** Where the top wash has fully released the photo. */
+	communityScrimTopFade: "rgba(7,12,9,0.20)",
 	/** Community photo scrim stops (redline's 180deg overlay). */
 	communityScrimFrom: "rgba(0,0,0,0)",
 	communityScrimMid: "rgba(7,12,9,0.18)",
