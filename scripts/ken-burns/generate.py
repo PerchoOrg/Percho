@@ -754,7 +754,9 @@ def main() -> None:
     if args.shot_plan:
         with open(args.shot_plan) as f:
             plan_data = json.load(f)
-        shot_plan = plan_data.get("plan", plan_data if isinstance(plan_data, list) else []) or []
+        shot_plan = (
+            plan_data.get("plan", plan_data) if isinstance(plan_data, dict) else plan_data
+        ) or []
         # Map available photos by their sort_order prefix (worker writes
         # {sort:03d}_{id}.jpg) OR by filename stem, then reorder per plan.
         by_sort: dict[int, Path] = {}

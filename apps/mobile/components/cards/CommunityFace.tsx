@@ -72,6 +72,7 @@ import type { DimKey } from "@percho/shared";
 import { LinearGradient } from "expo-linear-gradient";
 import { StyleSheet, Text, View } from "react-native";
 import type { CommunityCardV3 } from "../../lib/feed/card-types";
+import { HERO_RATIO } from "../../theme/listing-geometry";
 import { colors, redline, redlineRadii } from "../../theme/tokens";
 import { redlineText } from "../../theme/typography";
 import { CardPhoto } from "../CardPhoto";
@@ -213,92 +214,88 @@ export function CommunityFace({
 
 	return (
 		<View style={styles.face}>
-			{card.videoUrl ? (
-				<CardVideo
-					url={card.videoUrl}
-					poster={card.heroUrl}
-					isTop={isTop}
-					frameAspect={cardAspect}
-					/*
-					 * Fill from frame ONE, do not wait for a measurement.
-					 *
-					 * The owner reported the black side-gaps twice, the second time
-					 * after the measured fix shipped (「视频黑色空隙 还在!」). A measured
-					 * fix fails silently here: `availableVideoTracks` on an iOS HLS
-					 * source only populates when the manifest exposes them, so the card
-					 * can sit on the `contain` fallback indefinitely with nothing in any
-					 * log. Community covers are rendered 9:16 by `scripts/ken-burns`
-					 * (verified 1080×1920 in the served manifest), so the honest default
-					 * for THIS surface is fill.
-					 *
-					 * Tradeoff, stated because it is real: 2 of the 5 ready
-					 * `generated_videos` rows are actually 1920×1080 while the DB's
-					 * `aspect_ratio` column claims `9:16` for all five — that column is
-					 * a lie, see `percho-video-pipeline`. If one of those ever becomes
-					 * the served row it will show cropped until the real size lands,
-					 * then self-correct to letterboxed, because a measured size always
-					 * overrides this default. A few hundred ms of crop beats permanent
-					 * bars on every card. The served row today (`2ec79ed2bc…`) is真
-					 * 1080×1920.
-					 */
-					unknownFit="cover"
+			<View style={styles.hero}>
+				{card.videoUrl ? (
+					<CardVideo
+						url={card.videoUrl}
+						poster={card.heroUrl}
+						isTop={isTop}
+						/*
+						 * The HERO BOX's aspect, not the card's.
+						 *
+						 * The cover is rendered `1080x1000` = exactly `1 / (1.5 × 0.618)`
+						 * (1.0800 vs 1.0787, 0.1% off), so it fills this box edge to edge
+						 * with nothing cropped and nothing letterboxed. Owner, 2026-08-02:
+						 * 「不要留模糊带 横图要截取完全占据视频区域 也就是卡片的0.618高度」.
+						 */
+						frameAspect={
+							cardAspect == null ? undefined : cardAspect / HERO_RATIO
+						}
+						/*
+						 * Fill from frame ONE, do not wait for a measurement.
+						 *
+						 * The owner reported black gaps twice, the second time after the
+						 * measured fix shipped (「视频黑色空隙 还在!」). A measured fix fails
+						 * silently: `availableVideoTracks` on an iOS HLS source only
+						 * populates when the manifest exposes them, so the card can sit on
+						 * the `contain` fallback indefinitely with nothing in any log.
+						 *
+						 * A measured size still overrides this, so a legacy row that is
+						 * really 1920×1080 (2 of the 5 ready rows are, while the DB's
+						 * `aspect_ratio` claims 9:16 for all five — that column is a lie,
+						 * see `percho-video-pipeline`) self-corrects to letterboxed after
+						 * a few hundred ms rather than staying cropped.
+						 */
+						unknownFit="cover"
+					/>
+				) : (
+					<CardPhoto url={card.heroUrl} />
+				)}
+				{/*
+				 * Scrim + chrome live INSIDE the hero box now.
+				 *
+				 * They used to be `absoluteFill` over the whole card because the media
+				 * was full-bleed. The media is now the top 61.8% (owner: 「横图要截取完全
+				 * 占据视频区域 也就是卡片的0.618高度」), so a card-sized scrim would darken
+				 * the panel below it and the name would sit on solid colour rather than
+				 * on footage. The stop LIST is unchanged — same tokens, same ramp, just
+				 * measured against the box the copy actually sits in.
+				 */}
+				<LinearGradient
+					colors={[
+						redline.communityScrimTop,
+						redline.communityScrimTopFade,
+						redline.communityScrimFrom,
+						redline.communityScrimMid,
+						redline.communityScrimTo,
+					]}
+					locations={[...SCRIM_STOPS]}
+					style={StyleSheet.absoluteFill}
+					pointerEvents="none"
 				/>
-			) : (
-				<CardPhoto url={card.heroUrl} />
-			)}
-			{/*
-			 * Scrim darkened at BOTH ends (2026-08-02).
-			 *
-			 * The redline's three stops ramp one way — clear at 32%, dark at the
-			 * foot — because all the copy used to sit at the foot. The name and
-			 * blurb now sit at the TOP (owner: 「把底部的文字移到顶部避免重复」), so
-			 * the top needs its own dark end or the serif name lands on open sky:
-			 * measured 2.00:1 white-on-photo at the top of the real cover, i.e.
-			 * already failing before the move.
-			 *
-			 * `communityScrim*` tokens are untouched — this is a stop LIST change,
-			 * so the card's colours are still the redline's.
-			 */}
-			<LinearGradient
-				colors={[
-					redline.communityScrimTop,
-					redline.communityScrimTopFade,
-					redline.communityScrimFrom,
-					redline.communityScrimMid,
-					redline.communityScrimTo,
-				]}
-				locations={[...SCRIM_STOPS]}
-				style={StyleSheet.absoluteFill}
-				pointerEvents="none"
-			/>
-			<View style={styles.pillSlot}>
-				<RedlinePill label="COMMUNITY" />
-			</View>
-			{/*
-			 * No heart. Owner, 2026-08-02: 「去掉右上角的心」 — scoped to THIS face,
-			 * exactly as the listing card's heart was removed on 2026-08-01. The
-			 * trade-off and insight faces keep theirs; the redline drew it on all
-			 * four and dropping it there is a design decision nobody has made.
-			 *
-			 * `onSave` went with it: the feed never passed one, so the button had
-			 * always been inert. A dormant `onSave?: () => void` is a hook that
-			 * gets "restored" by accident.
-			 */}
+				<View style={styles.pillSlot}>
+					<RedlinePill label="COMMUNITY" />
+				</View>
+				{/*
+				 * No heart. Owner, 2026-08-02: 「去掉右上角的心」 — scoped to THIS face.
+				 * The trade-off and insight faces keep theirs; the redline drew it on
+				 * all four and dropping it there is a decision nobody has made.
+				 *
+				 * `onSave` went with it: the feed never passed one, so the button had
+				 * always been inert.
+				 */}
 
-			{/*
-			 * TOP: who this is. The video below it is the neighbourhood itself, so
-			 * the name and the prose no longer compete with the footage for the
-			 * same corner of the card.
-			 */}
-			<View style={styles.head}>
-				<Text style={styles.name}>{card.name}</Text>
-				<Text style={styles.tagline} numberOfLines={2}>
-					{card.blurb ?? `${card.city}, ${card.state}`}
-				</Text>
+				{/* Who this is, over the footage of the place itself. */}
+				<View style={styles.head}>
+					<Text style={styles.name}>{card.name}</Text>
+					<Text style={styles.tagline} numberOfLines={2}>
+						{card.blurb ?? `${card.city}, ${card.state}`}
+					</Text>
+				</View>
 			</View>
 
-			{/* BOTTOM: why residents love it, then the way in. */}
-			<View style={styles.body}>
+			{/* Why residents love it, then the way in. */}
+			<View style={styles.panel}>
 				{hasTiles && (
 					<View style={styles.tiles}>
 						{reasons.map((r) => (
@@ -309,7 +306,7 @@ export function CommunityFace({
 								<RedlineIcon
 									name={r.icon}
 									size={TILE_ICON}
-									color={redline.onPhoto}
+									color={redline.accent}
 								/>
 								{/*
 								 * `numberOfLines={2}` not 1: "Well Maintained" and
@@ -333,7 +330,7 @@ export function CommunityFace({
 								<RedlineIcon
 									name={DIM_ICON[dim]}
 									size={TILE_ICON}
-									color={redline.onPhoto}
+									color={redline.accent}
 								/>
 								<Text style={styles.tileLabel}>{TILE_LABEL[dim]}</Text>
 							</View>
@@ -352,7 +349,12 @@ export function CommunityFace({
 						<RedlineCta
 							label="Why people love it →"
 							onPress={onExplore}
-							tone="light"
+							/*
+							 * `solid` now, not `light`: the CTA moved off the photo and onto
+							 * the light panel, where a white pill on near-white is invisible.
+							 * Same accent fill the listing card's CTA uses on the same panel.
+							 */
+							tone="solid"
 						/>
 					</View>
 				)}
@@ -363,24 +365,33 @@ export function CommunityFace({
 
 const styles = StyleSheet.create({
 	/**
-	 * Base fill stays the dark `cardPlainTo` rather than the redline's light
-	 * `--card`: this face is a full-bleed photo, and a near-white backing flashes
-	 * white for a frame on every card mount (the reason `ListingFace`'s media box
-	 * keeps a dark backing too).
+	 * The card is now hero + panel, like `ListingFace`, instead of one full-bleed
+	 * photo (owner 2026-08-02: 「横图要截取完全占据视频区域 也就是卡片的0.618高度」).
+	 * So the base fill is the redline's light `--card`: the panel is the majority
+	 * of what a viewer sees at rest and it is a light surface.
 	 */
-	face: { flex: 1, backgroundColor: colors.cardPlainTo },
+	face: { flex: 1, backgroundColor: redline.card },
+	/**
+	 * The media box — HERO_RATIO of the card, the same constant `ListingFace`
+	 * uses. The cover is rendered `1080x1000` to match it exactly, so nothing is
+	 * cropped and there is no blur letterbox.
+	 *
+	 * Dark backing, not `redline.card`: a near-white box flashes white for a
+	 * frame on every card mount (same reason `ListingFace`'s media box is dark).
+	 */
+	hero: {
+		flex: HERO_RATIO,
+		backgroundColor: colors.cardPlainTo,
+		overflow: "hidden",
+	},
 	pillSlot: { position: "absolute", top: 15, left: 15, zIndex: 3 },
 	/**
-	 * The name + blurb, at the TOP.
+	 * The name + blurb, inside the hero box, over the footage.
 	 *
 	 * `top: 56` clears the 15pt-inset COMMUNITY pill rather than guessing: pill
-	 * top 15 + its ~23pt box + 18 of air = 56. Absolutely positioned like the
-	 * other chrome slots, so the `body` block below keeps its own `flex: 1`
-	 * bottom alignment and neither has to know about the other.
-	 *
-	 * `right: 18` — the card's own padding. It was 64 to clear the heart's 44pt
-	 * touch target; with the heart gone (2026-08-02) a long community name gets
-	 * the full width back instead of wrapping early against nothing.
+	 * top 15 + its ~23pt box + 18 of air = 56. `right: 18` is the card's own
+	 * padding — it was 64 to clear the heart's touch target, and the heart is
+	 * gone.
 	 */
 	head: {
 		position: "absolute",
@@ -389,23 +400,36 @@ const styles = StyleSheet.create({
 		right: 18,
 		zIndex: 2,
 	},
-	/** Content sits at the bottom of the card, over the scrim's dark end. */
-	body: {
-		flex: 1,
-		justifyContent: "flex-end",
-		padding: 18,
-		zIndex: 2,
+	/**
+	 * The content panel — the card's remaining 38.2%.
+	 *
+	 * Padding copied from `listingGeometry.panel` so the two faces agree; the
+	 * panel only has to seat the tile row and the CTA (the name and blurb moved
+	 * into the hero on 2026-08-02), so there is no `marginTop: auto` slack
+	 * problem to split here.
+	 */
+	panel: {
+		flex: 1 - HERO_RATIO,
+		paddingHorizontal: 18,
+		paddingTop: 14,
+		paddingBottom: 15,
+		justifyContent: "space-between",
 	},
 	name: { ...redlineText.place, color: redline.onPhoto },
 	tagline: { ...redlineText.subtitle, color: redline.onPhotoDim, marginTop: 8 },
-	tiles: { flexDirection: "row", gap: 8, marginTop: 16 },
+	tiles: { flexDirection: "row", gap: 8 },
+	/**
+	 * The tiles sit on the LIGHT panel now, not on the photo, so the glass fill
+	 * and white type would be invisible. `surface` + `border` + `ink` is the same
+	 * recipe the listing card's chips use on the same panel.
+	 */
 	tile: {
 		flex: 1,
 		height: 84,
 		borderRadius: redlineRadii.tile,
-		backgroundColor: redline.glassTile,
+		backgroundColor: redline.surface,
 		borderWidth: 1,
-		borderColor: redline.glassTileBorder,
+		borderColor: redline.border,
 		alignItems: "center",
 		justifyContent: "center",
 		gap: 9,
@@ -414,29 +438,25 @@ const styles = StyleSheet.create({
 	/**
 	 * The reason row's height when any tile carries a sub-fact.
 	 *
-	 * `gap` drops 9 → 6 because there are now up to three children instead of two,
-	 * and two 9pt gaps plus three text runs overflowed 96. The icon-to-label
-	 * relationship still reads at 6 — it is the same optical spacing the listing
-	 * chip uses.
+	 * `gap` drops 9 → 6 because there are three children instead of two, and two
+	 * 9pt gaps plus three text runs overflowed 96.
 	 */
 	tileTall: { height: TILE_H_WITH_FACT, gap: 6 },
 	tileLabel: {
 		...redlineText.tile,
-		color: redline.onPhoto,
+		color: redline.ink,
 		textAlign: "center",
 	},
 	/**
 	 * The factual sub-line under a reason.
 	 *
-	 * `nano` (9.5px) rather than a new token: it is the redline's existing
-	 * smallest size and it is already what the insight card's caption uses, so no
-	 * new type size enters the scale. White at 62% puts it a clear step below the
-	 * label — the reason is the claim, the number is its footnote, and equal weight
+	 * `nano` (9.5px) rather than a new type size, and `ink3` rather than `ink`:
+	 * the reason is the claim and the number is its footnote, so equal weight
 	 * would make the tile read as two competing lines.
 	 */
 	tileFact: {
 		...redlineText.nano,
-		color: "rgba(255,255,255,0.62)",
+		color: redline.ink3,
 		textAlign: "center",
 	},
 	ctaSlot: { marginTop: 12 },
