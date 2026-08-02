@@ -4,6 +4,48 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-08-02 07:35 UTC — community card 四条:去心 / 视频占满 / 特色带证据 / CTA 落地
+
+**Objective**: Owner 真机反馈四条:①去掉右上角的心 ②视频宽度不够有黑色空隙 ③底下三个特色
+要有数据支持(和 demo 一样) ④why people love it 的跳转 button。
+
+**Actions**:
+- `CommunityFace`:删 `heartSlot` + `RedlineHeart` + 死掉的 `onSave`;`head.right` 64→18。
+- 新增 `apps/mobile/lib/media/fit.ts` + 7 条测试;`CardVideo` 加 `frameAspect`,
+  feed 传 `cardAspect={w / cardHeight}`(并进 `useCallback` dep)。
+- `community-reasons.ts`:`numeric()` 解析文本列;新增 `INTEREST_EVIDENCE`;
+  拆出 `communityReasonsAll`。`community-pool.ts` 传 `interests`。
+- 新增 `apps/web/lib/community/detail.ts`、`/api/mobile/community/[id]`、
+  `apps/mobile/app/community/[slug].tsx`。
+- HTML redline board(twin surface):`CommunityCard` 改走 `cardChrome(label, {heart:false})`。
+
+**Decisions**:
+- **视频不是 CSS 问题**:封面 1080×1920(0.5625)在 2:3 卡片(0.667)里**比画框更窄**,
+  `contain` 必然留左右黑边。规则改成「比画框窄→cover 填满;比画框宽→仍 contain 不裁宽度」,
+  07-27 那条横屏规矩没破。尺寸从真实 track 读,未知时兜底 `contain`(不能让横屏闪一帧放大)。
+- **demo 的 sub-fact 不可复制**:`community_pois` 175 行**全属 Ashley Crossing**(8,679 里 1 个)。
+  改用 `communities.interests`(97.5% 覆盖),严格配对,`Safe`/`Convenient`/`Beautiful` 明确不配。
+- **不做 §3.3 四柱 explore**:四柱在库里全空(crime/学校/通勤无源、`median_home_value`
+  8,679 行全 NULL、260 条 listing 只有 3 条挂 `community_id`)。四张「数据不足」不值得推一屏。
+- `avg_income` 永久不上页(fair-housing)。
+
+**Issues**:
+- **`homeowners_pct` 是 TEXT(`"35%"`)**,旧代码 `pct > 0` 是 NaN 比较→恒 false,
+  **那条 sub-fact 一次都没渲染过**。原测试全用数字 fixture,所以这个 bug 一路活到真机。
+- 本轮 owner 发的截图与上轮 **md5 完全相同**(`d42f1855…`,两张都是 11:53),不可能反映修复。
+
+**Resolution**: 真实覆盖率 **≥1 条 sub-fact 36.2% → 82.3%**
+(0:17.7% / 1:30.2% / 2:40.3% / 3:11.8%)。**「三条全有」上限 11.8%,做不到**,不编数字。
+
+**验证**:mobile 573/573 + 新增 7;community-reasons 28/28(先把文本列测试在旧代码上
+跑红再信);两个 app 的 tsc 干净(只剩既有 `TransitionFunction` 噪声);两个 endpoint 经
+`demo.percho.co` 均 200;Metro 实际下发的 bundle 里 `mediaFit`/`frameAspect`/`cardAspect`/
+`/community/` 都在,残留 5 处 `heartSlot` 逐个归因为两张未动的卡 + 一条注释;board 上
+per-card 实测 `[listing 0, community 0, trade 1, insight 1]`。
+
+**Next steps**: 真机走 dev sampler 复看(Ashley Crossing 是唯一带视频的 community,
+`videoFirst=1` 已能把它捞进第一页)。
+
 ## 2026-08-02 00:00 UTC — 余下 9 条 walkthrough 重渲染,与 5122 对齐
 
 **Objective**: Owner:「对于已经有视频的 listing 重新渲染 跟 5122 保持一致」。08-01 的
