@@ -240,19 +240,30 @@ export function CardVideo({
 	return (
 		<View style={styles.frame} pointerEvents="none">
 			{/*
-			 * Backdrop for whatever the video does not cover. A blurred, dimmed copy
-			 * of the poster rather than a flat band, so the letterbox area still
-			 * belongs to this card. Invisible when the video fills the frame.
+			 * Backdrop for whatever the video does not cover: a blurred, dimmed copy
+			 * of the poster, so a letterbox area still belongs to this card.
+			 *
+			 * SKIPPED entirely under `cover`, where the video fills the frame and
+			 * this layer can only ever be overdraw. Two reasons that matters rather
+			 * than being a micro-optimisation: it is the layer the owner has been
+			 * seeing as the "black band" whenever the fit resolved to `contain`
+			 * (reported four times), so not painting it means a future fit
+			 * regression shows as a visible gap instead of quietly looking like a
+			 * design choice; and it saves a full-card blurred image decode per card.
 			 */}
-			{!!poster && (
-				<Image
-					source={{ uri: poster }}
-					style={StyleSheet.absoluteFill}
-					resizeMode="cover"
-					blurRadius={16}
-				/>
+			{appliedFit !== "cover" && (
+				<>
+					{!!poster && (
+						<Image
+							source={{ uri: poster }}
+							style={StyleSheet.absoluteFill}
+							resizeMode="cover"
+							blurRadius={16}
+						/>
+					)}
+					<View style={styles.scrim} />
+				</>
 			)}
-			<View style={styles.scrim} />
 			<VideoView
 				player={player}
 				style={StyleSheet.absoluteFill}

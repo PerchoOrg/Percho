@@ -128,16 +128,38 @@ export const redline = {
 	 * bright sky frame made it unreadable outright.
 	 *
 	 * Same hue as `communityScrimTo` (7,12,9) so the two ends read as one wash
-	 * rather than two different greys; lighter (0.72 vs 0.88) because the top
-	 * carries two short lines, not a tile row and a button.
+	 * rather than two different greys.
+	 *
+	 * **0.50, was 0.72** (2026-08-02). Owner reported the video as not filling
+	 * the card FOUR times, and the last screenshot showed hard-edged dark bands
+	 * at top and bottom with the photo only in the middle — that was never a fit
+	 * problem, it was THIS. At 0.72 only 28% of the footage survives at the top,
+	 * which reads as a black band, not as a wash.
+	 *
+	 * 0.50 is the measured floor, not a guess: white over the brightest 8×8
+	 * block in the real cover's top text zone is **4.05:1** at 0.50 (WCAG AA for
+	 * large text is 3:1, normal text 4.5:1 — the name is 38px serif, the blurb
+	 * 14px at 86% white), against 8.70:1 at 0.72. Half the video now shows
+	 * through where a quarter did.
+	 * `scripts/measure_text_contrast_over_media.py` in the
+	 * `paginated-feed-and-swipe-ui` skill is the tool.
 	 */
-	communityScrimTop: "rgba(7,12,9,0.72)",
+	communityScrimTop: "rgba(7,12,9,0.50)",
 	/** Where the top wash has fully released the photo. */
-	communityScrimTopFade: "rgba(7,12,9,0.20)",
+	communityScrimTopFade: "rgba(7,12,9,0.12)",
 	/** Community photo scrim stops (redline's 180deg overlay). */
 	communityScrimFrom: "rgba(0,0,0,0)",
-	communityScrimMid: "rgba(7,12,9,0.18)",
-	communityScrimTo: "rgba(7,12,9,0.88)",
+	communityScrimMid: "rgba(7,12,9,0.10)",
+	/**
+	 * The foot wash, under the tile row and the CTA.
+	 *
+	 * **0.55, was 0.88** — same report, same reason: 0.88 left only 12% of the
+	 * footage visible, i.e. a black band. Measured 5.10:1 for white over the
+	 * brightest foot block at 0.55 (vs 15.32:1 at 0.88), and the glass tiles
+	 * carry their own fill on top of this, so the tile labels are not relying on
+	 * the scrim alone.
+	 */
+	communityScrimTo: "rgba(7,12,9,0.55)",
 	/** Trade-off atmospheric wash over its landscape backdrop. */
 	tradeoffWashFrom: "rgba(249,245,238,0.10)",
 	tradeoffWashMid: "rgba(249,245,238,0.90)",

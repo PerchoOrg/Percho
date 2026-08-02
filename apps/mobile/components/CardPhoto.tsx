@@ -35,15 +35,25 @@ interface CardPhotoProps {
 export function CardPhoto({ url, fit = "contain" }: CardPhotoProps) {
 	return (
 		<View style={styles.frame}>
-			{/* Blurred, dimmed copy of the same photo behind the bands, so the
-			    letterbox area still belongs to this card. Invisible under `cover`. */}
-			<Image
-				source={{ uri: url }}
-				style={StyleSheet.absoluteFill}
-				resizeMode="cover"
-				blurRadius={16}
-			/>
-			<View style={styles.scrim} />
+			{/*
+			 * Blurred, dimmed copy of the same photo behind the letterbox bands.
+			 *
+			 * SKIPPED under `cover` — there are no bands, so it is pure overdraw,
+			 * and it is the layer the owner kept reporting as the "black band". Not
+			 * painting it makes a future fit regression show up as a real gap rather
+			 * than as something that looks intentional.
+			 */}
+			{fit !== "cover" && (
+				<>
+					<Image
+						source={{ uri: url }}
+						style={StyleSheet.absoluteFill}
+						resizeMode="cover"
+						blurRadius={16}
+					/>
+					<View style={styles.scrim} />
+				</>
+			)}
 			<Image
 				source={{ uri: url }}
 				style={StyleSheet.absoluteFill}

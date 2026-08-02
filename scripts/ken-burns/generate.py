@@ -415,6 +415,7 @@ def render_clip(src: str, dst: str, duration: float, mode: str, w: int, h: int,
                 caption_png: str | None = None,
                 bbox: list[float] | None = None,
                 use_v2: bool = False,
+                cover_crop: bool = False,
                 v2_caption: str | None = None) -> None:
     """Render one Ken Burns clip.
 
@@ -439,7 +440,17 @@ def render_clip(src: str, dst: str, duration: float, mode: str, w: int, h: int,
         # The square feed card (1080x1080) is fed landscape 800px source photos;
         # fit-inside would pillarbox them with blur, which is exactly the "wasted
         # card / weird band" the owner rejected. `>=` not `>`.
-        landscape_canvas = w >= h
+        #
+        # 2026-08-02: --cover-crop OVERRIDES the canvas-shape guess entirely.
+        # Inferring "should I crop?" from the canvas aspect is wrong, and it cost
+        # four rounds of the owner reporting bars on the community card: the
+        # 1080x1000 community cover satisfied `w >= h` and cropped correctly,
+        # then re-rendering the SAME photos at 1080x1620 (full bleed, 2:3)
+        # flipped the flag false and silently restored the blur letterbox —
+        # baking bands into the video that no card-side fit can remove. Whether
+        # to crop is the CALLER's product decision, not a property of the output
+        # dimensions, so it is now a flag.
+        landscape_canvas = cover_crop or w >= h
         if landscape_canvas:
             fg_w, fg_h = w, h
             vf = kenburns_filter_v2(mode, duration, w, h, fg_w, fg_h, bbox=bbox, cover=True)
@@ -723,6 +734,12 @@ def main() -> None:
                         "photos are matched by sort_order or filename and per-clip "
                         "duration/mode/bbox come from the plan (overrides "
                         "--duration-per-photo and --zoom-mode).")
+    p.add_argument("--cover-crop", action="store_true",
+                   help="Force cover-crop composition (fill the canvas, crop the "
+                        "overflow) instead of inferring it from the canvas shape. "
+                        "Required for a PORTRAIT full-bleed render: without it a "
+                        "1080x1620 canvas takes the fit-inside path and bakes blur "
+                        "letterbox bands into the video.")
     p.add_argument("--xfade-duration", type=float, default=0.5)
     p.add_argument("--archetype", default="TRUST",
                    choices=["TRUST", "LIFESTYLE", "UTILITY", "NARRATIVE", "MAGAZINE", "MAP"],
@@ -867,6 +884,7 @@ def main() -> None:
                         caption_png=clip_cap_png,
                         bbox=bbox,
                         use_v2=use_v2,
+                        cover_crop=args.cover_crop,
                         v2_caption=v2_cap)
             clips.append(out)
 
