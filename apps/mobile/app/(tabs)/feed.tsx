@@ -448,14 +448,6 @@ export default function FeedScreen() {
 							card={card}
 							isTop={isTop}
 							/*
-							 * The card's REAL aspect, so `CardVideo` can derive its fit from
-							 * the video's measured track size (`lib/media/fit.ts`). Not
-							 * `CARD_ASPECT`: that constant is height/width AND is clamped by
-							 * the viewport on short phones, so the two disagree exactly where
-							 * space is tightest.
-							 */
-							cardAspect={w / cardHeight}
-							/*
 							 * "Why people love it →" now has a destination (owner,
 							 * 2026-08-02: 「最后还有why people love it的跳转button」).
 							 *
@@ -543,10 +535,6 @@ export default function FeedScreen() {
 			emitGesture,
 			enqueue,
 			takeSeq,
-			// `cardAspect` is `w / cardHeight`; without this dep a rotation or a
-			// viewport change keeps the previous fit. Biome's exhaustive-deps rule
-			// catches this — do not suppress it.
-			cardHeight,
 		],
 	);
 

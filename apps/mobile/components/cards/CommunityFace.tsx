@@ -160,16 +160,13 @@ interface CommunityFaceProps {
 	card: CommunityCardV3;
 	isTop: boolean;
 	onExplore?: () => void;
-	/**
-	 * The card's REAL `width / height`, threaded to `CardVideo` so the video's
-	 * fit is derived from its measured track size instead of pinned to
-	 * `contain`.
-	 *
-	 * Owner, 2026-08-02: 「视频宽度不够 没有占满card 有黑色空隙」 — the 1080×1920
-	 * cover is NARROWER than this 2:3 card, so `contain` pillarboxed it. See
-	 * `lib/media/fit.ts`.
+	/*
+	 * No `cardAspect`. It existed to derive the media fit from the measured
+	 * track size, and that derivation is exactly what kept putting bars back on
+	 * this face (see the `fit="cover"` comment below). This face is
+	 * unconditionally full bleed, so there is nothing to derive and the prop is
+	 * deleted rather than left dangling for someone to re-wire.
 	 */
-	cardAspect?: number;
 	/*
 	 * No `onSave`. The heart went with the owner's 2026-08-02 redline
 	 * (「去掉右上角的心」) and the feed never passed a handler for it, so the button
@@ -177,12 +174,7 @@ interface CommunityFaceProps {
 	 */
 }
 
-export function CommunityFace({
-	card,
-	isTop,
-	onExplore,
-	cardAspect,
-}: CommunityFaceProps) {
+export function CommunityFace({ card, isTop, onExplore }: CommunityFaceProps) {
 	/**
 	 * Three sources for the one tile row, in descending confidence:
 	 *
@@ -218,32 +210,44 @@ export function CommunityFace({
 					url={card.videoUrl}
 					poster={card.heroUrl}
 					isTop={isTop}
-					frameAspect={cardAspect}
 					/*
-					 * Fill from frame ONE, do not wait for a measurement.
+					 * `cover`, unconditionally. NOT the measured `frameAspect` path.
 					 *
-					 * The owner reported the black side-gaps twice, the second time
-					 * after the measured fix shipped (「视频黑色空隙 还在!」). A measured
-					 * fix fails silently here: `availableVideoTracks` on an iOS HLS
-					 * source only populates when the manifest exposes them, so the card
-					 * can sit on the `contain` fallback indefinitely with nothing in any
-					 * log. Community covers are rendered FULL BLEED at `1080x1620` =
-					 * the card's own 2:3 (owner, 2026-08-02: 「community视频要full
-					 * bleed!占据整个卡面」), so the honest default for this surface is fill.
+					 * Owner has now reported this three times, the last one after the
+					 * cover was re-rendered at the card's exact 2:3
+					 * (「视频还是没有占据整个卡片」). The video artifact was never the
+					 * problem — 1080x1620 with clean edges on every sampled frame. The
+					 * CARD was, because `frameAspect` makes the fit a RUNTIME DECISION:
+					 * `mediaFit` returns `contain` for any source wider than the frame,
+					 * and `contain` on this face exposes `CardVideo`'s blurred-poster +
+					 * 0.55 scrim backdrop — which IS the "black gap" being reported.
 					 *
-					 * Tradeoff, stated because it is real: 2 of the older
-					 * `generated_videos` rows are actually 1920×1080 while the DB's
-					 * `aspect_ratio` column claims `9:16` for all of them — that column
-					 * is a lie, see `percho-video-pipeline`. If one of those ever becomes
-					 * the served row it will show cropped until the real size lands,
-					 * then self-correct to letterboxed, because a measured size always
-					 * overrides this default. A few hundred ms of crop beats permanent
-					 * bars on every card.
+					 * Measured: with `frameAspect` supplied, the old 1080x1000 row
+					 * (1.0800) and any legacy 1920x1080 row (1.7778) letterbox on EVERY
+					 * device, because both are wider than the card's 0.6667. So as long
+					 * as the fit is derived, one stale row anywhere in
+					 * `generated_videos` puts the bars back — and `created_at desc`
+					 * decides which row that is, not this component.
+					 *
+					 * 「full bleed 占据整个卡面」 is unconditional, so the fit is too. This
+					 * is a deliberate override of the standing "landscape letterboxes"
+					 * rule FOR THIS FACE ONLY: `ListingFace` and `AreaFace` are
+					 * untouched and still letterbox landscape sources.
+					 *
+					 * ponytail: a landscape row served here will be cropped, not
+					 * letterboxed. That is the owner's stated preference for this
+					 * surface; the fix if it ever matters is re-rendering that row at
+					 * 2:3, not re-deriving the fit.
 					 */
-					unknownFit="cover"
+					fit="cover"
 				/>
 			) : (
-				<CardPhoto url={card.heroUrl} />
+				/*
+				 * Same full-bleed rule as the video. This is the path ~every community
+				 * card actually takes — only 1 of 8,679 communities has a video — so a
+				 * video-only fix would have left the bars on all the others.
+				 */
+				<CardPhoto url={card.heroUrl} fit="cover" />
 			)}
 			{/*
 			 * Scrim darkened at BOTH ends (2026-08-02).

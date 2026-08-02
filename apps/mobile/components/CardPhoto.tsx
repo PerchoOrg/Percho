@@ -19,13 +19,24 @@ import { colors } from "../theme/tokens";
 
 interface CardPhotoProps {
 	url: string;
+	/**
+	 * `"contain"` (default) keeps the owner's 2026-07-27 rule: fill the width,
+	 * letterbox vertically, never crop.
+	 *
+	 * `"cover"` is for a face that must be FULL BLEED regardless of source shape
+	 * (`CommunityFace`, owner 2026-08-02: 「community视频要full bleed!占据整个卡面」).
+	 * It matters here because only ONE community has a video — every other
+	 * community card renders through THIS component, so fixing the video path
+	 * alone would have left the bars on ~all of them.
+	 */
+	fit?: "contain" | "cover";
 }
 
-export function CardPhoto({ url }: CardPhotoProps) {
+export function CardPhoto({ url, fit = "contain" }: CardPhotoProps) {
 	return (
 		<View style={styles.frame}>
 			{/* Blurred, dimmed copy of the same photo behind the bands, so the
-			    letterbox area still belongs to this card. */}
+			    letterbox area still belongs to this card. Invisible under `cover`. */}
 			<Image
 				source={{ uri: url }}
 				style={StyleSheet.absoluteFill}
@@ -36,7 +47,7 @@ export function CardPhoto({ url }: CardPhotoProps) {
 			<Image
 				source={{ uri: url }}
 				style={StyleSheet.absoluteFill}
-				resizeMode="contain"
+				resizeMode={fit}
 			/>
 		</View>
 	);
