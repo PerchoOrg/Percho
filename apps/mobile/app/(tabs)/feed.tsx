@@ -448,17 +448,34 @@ export default function FeedScreen() {
 							card={card}
 							isTop={isTop}
 							/*
-							 * The redline draws a "Why people love it →" CTA here. There is no
-							 * community destination in this app to send it to: `/listing/nearby`
-							 * takes a LISTING id (it fetches
-							 * `/api/mobile/listing/<id>/nearby`) and there is no community
-							 * detail route. Passing a handler would ship a button that lands on
-							 * an empty screen, so none is passed and the CTA is not rendered.
-							 *
-							 * This is the second of the two redline elements with nothing behind
-							 * it (the other is the listing's photo counter). Both are reported to
-							 * the owner rather than faked.
+							 * The card's REAL aspect, so `CardVideo` can derive its fit from
+							 * the video's measured track size (`lib/media/fit.ts`). Not
+							 * `CARD_ASPECT`: that constant is height/width AND is clamped by
+							 * the viewport on short phones, so the two disagree exactly where
+							 * space is tightest.
 							 */
+							cardAspect={w / cardHeight}
+							/*
+							 * "Why people love it →" now has a destination (owner,
+							 * 2026-08-02: 「最后还有why people love it的跳转button」).
+							 *
+							 * This comment used to say there was nowhere to send it, and that
+							 * was true: `/listing/nearby` takes a LISTING id and no community
+							 * route existed. `app/community/[slug].tsx` +
+							 * `/api/mobile/community/<id-or-slug>` are that route now — the
+							 * card's three reason tiles expanded, every other reason the
+							 * residents stated, and the interest ranking that is the evidence
+							 * under them. Deliberately NOT spec-v3 §3.3's four-pillar explore
+							 * page: 安/学/便/潜 have no data on this DB (see the screen's
+							 * header for the counts).
+							 *
+							 * Keyed by SLUG, not id, so a shared link and a feed tap land on
+							 * the same URL; the endpoint accepts either.
+							 */
+							onExplore={() => {
+								emitGesture("explore_tap", card);
+								router.push(`/community/${card.slug}`);
+							}}
 						/>
 					);
 				case "tradeoff":
@@ -526,6 +543,10 @@ export default function FeedScreen() {
 			emitGesture,
 			enqueue,
 			takeSeq,
+			// `cardAspect` is `w / cardHeight`; without this dep a rotation or a
+			// viewport change keeps the previous fit. Biome's exhaustive-deps rule
+			// catches this — do not suppress it.
+			cardHeight,
 		],
 	);
 

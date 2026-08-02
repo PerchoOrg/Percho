@@ -38,8 +38,9 @@
  * So there is no dimension detection here at all. `contain` needs none.
  */
 import { VideoView, useVideoPlayer } from "expo-video";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Image, StyleSheet, View } from "react-native";
+import { type MediaSize, mediaFit } from "../lib/media/fit";
 import { useSoundStore } from "../state/sound";
 import { colors } from "../theme/tokens";
 
@@ -60,6 +61,20 @@ interface CardVideoProps {
 	 * Everywhere else keeps `contain` (the owner's standing rule below).
 	 */
 	fit?: "contain" | "cover";
+	/**
+	 * The card's REAL `width / height`. When supplied, the fit is DERIVED from
+	 * the video's measured track size instead of taken from `fit` — see
+	 * `lib/media/fit.ts` for the two rules it satisfies at once.
+	 *
+	 * Owner, 2026-08-02: 「视频宽度不够 没有占满card 有黑色空隙」. The community
+	 * cover is 1080×1920 (0.5625) in a 2:3 card (0.667), i.e. NARROWER than the
+	 * frame, so the standing `contain` rule pillarboxed it. A source narrower
+	 * than the frame must fill; only a source WIDER than the frame may band.
+	 *
+	 * Absent → the `fit` prop is used verbatim, so `ListingFace`'s 1:1 block and
+	 * `AreaFace` behave exactly as before.
+	 */
+	frameAspect?: number;
 }
 
 export function CardVideo({
@@ -68,12 +83,20 @@ export function CardVideo({
 	isTop,
 	onNearEnd,
 	fit = "contain",
+	frameAspect,
 }: CardVideoProps) {
 	const soundOn = useSoundStore((s) => s.soundOn);
 	const nearEndFired = useRef(false);
 	const mutedRetried = useRef(false);
 	const onNearEndRef = useRef(onNearEnd);
 	onNearEndRef.current = onNearEnd;
+	/**
+	 * The video's real track size, once the player reports one.
+	 *
+	 * `null` until then, and `mediaFit` treats null as `contain` — never `cover`,
+	 * or a landscape video would flash a zoomed crop for a frame.
+	 */
+	const [size, setSize] = useState<MediaSize | null>(null);
 
 	const player = useVideoPlayer(url, (p) => {
 		p.loop = true;
@@ -129,6 +152,75 @@ export function CardVideo({
 		return () => sub.remove();
 	}, [player, isTop]);
 
+	/**
+	 * Learn the real track size, so `mediaFit` can decide fill-vs-letterbox.
+	 *
+	 * Two listeners, not one, and that is deliberate. `sourceLoad` carries the
+	 * size directly but does NOT re-fire for a cached or looping source, so a card
+	 * remounted onto a URL the player already holds would never learn its size and
+	 * would silently keep the `contain` fallback forever — the exact failure mode
+	 * this component's header records (an earlier attempt read a field that did not
+	 * exist, so no card ever learned its size). `statusChange → readyToPlay` reads
+	 * `player.videoTrack` as the backstop.
+	 *
+	 * Reset on url change, or a new portrait cover briefly inherits the previous
+	 * landscape one's fit — visible as a jump on swipe.
+	 */
+	useEffect(() => {
+		setSize(null);
+	}, [url]);
+
+	useEffect(() => {
+		if (frameAspect == null) return; // caller opted out; `fit` is used verbatim
+		const commit = (s?: { width: number; height: number } | null) => {
+			if (!s || s.width <= 0 || s.height <= 0) return;
+			setSize((prev) =>
+				prev && prev.width === s.width && prev.height === s.height
+					? prev
+					: { width: s.width, height: s.height },
+			);
+		};
+		/**
+		 * HLS delivers one `VideoTrack` per rendition (240p…1080p for our CF
+		 * Stream sources) and they all share the source's aspect. The largest is
+		 * taken so the numbers in a log read as the real render size rather than
+		 * as a 240p thumbnail.
+		 */
+		const onLoad = player.addListener("sourceLoad", (payload) => {
+			const tracks = payload?.availableVideoTracks ?? [];
+			const best = tracks.reduce<{ width: number; height: number } | null>(
+				(acc, t) =>
+					t?.size && (!acc || t.size.width > acc.width) ? t.size : acc,
+				null,
+			);
+			commit(best);
+		});
+		const onTrack = player.addListener("videoTrackChange", ({ videoTrack }) => {
+			commit(videoTrack?.size ?? null);
+		});
+		const onStatus = player.addListener("statusChange", ({ status }) => {
+			if (status !== "readyToPlay") return;
+			commit(player.videoTrack?.size ?? null);
+		});
+		// A source already loaded before this effect ran emits nothing new.
+		commit(player.videoTrack?.size ?? null);
+		return () => {
+			onLoad.remove();
+			onTrack.remove();
+			onStatus.remove();
+		};
+	}, [player, frameAspect, url]);
+
+	/**
+	 * The fit actually applied.
+	 *
+	 * `frameAspect` supplied → derived from the measured size (fill a source that
+	 * is narrower than the card, letterbox one that is wider). Not supplied →
+	 * the caller's own `fit`, unchanged.
+	 */
+	const appliedFit =
+		frameAspect == null ? fit : mediaFit(size, frameAspect);
+
 	return (
 		<View style={styles.frame} pointerEvents="none">
 			{/*
@@ -151,7 +243,7 @@ export function CardVideo({
 				// The owner's rule, for every aspect ratio. Never `cover` —
 				// EXCEPT when the caller knows the source aspect already matches
 				// its box (the 1:1 inline block, see `fit` above).
-				contentFit={fit}
+				contentFit={appliedFit}
 				nativeControls={false}
 			/>
 		</View>

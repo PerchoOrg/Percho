@@ -22,6 +22,7 @@ import { publicCoverImageUrl } from "@/lib/communities/cover";
 import { createAnonClient } from "@/lib/supabase/server";
 import type { DimKey } from "@percho/shared";
 import { communityHighlightDims } from "./community-highlights";
+import { type CommunityReason, communityReasons } from "./community-reasons";
 
 export interface PoolCommunityDTO {
 	id: string;
@@ -38,6 +39,16 @@ export interface PoolCommunityDTO {
 	 * usable signal, so `CommunityFace` renders no tiles rather than empty ones.
 	 */
 	dims?: DimKey[];
+	/**
+	 * The three "why people love it" tiles — resident-stated `attributes`,
+	 * verbatim, each with a glyph and sometimes a factual sub-line. This is what
+	 * the card renders as of layout E (owner, 2026-08-02); `dims` above stays as
+	 * the fallback for the 9.4% of communities whose attributes yield no reason.
+	 *
+	 * Omitted (not `[]`) when empty, same convention as `dims`, so the card can
+	 * tell "no reasons" from "reasons not sent".
+	 */
+	reasons?: CommunityReason[];
 	/**
 	 * 9:16 hero video, attached by the route from `generated_videos` (see
 	 * `lib/feed/vertical-videos.ts`). Absent for most communities: only 4 have a
@@ -58,6 +69,10 @@ type CommunityPoolRow = {
 	cover_storage_path: string | null;
 	attributes: string[] | null;
 	interests: string[] | null;
+	/** Sub-fact sources for the reason tiles. Only ever used as evidence FOR the
+	 * reason they sit under — see `community-reasons.ts` `factFor`. */
+	residents_count: number | null;
+	homeowners_pct: number | null;
 };
 
 /**
@@ -81,8 +96,11 @@ export async function fetchCommunityPool(args: {
 		// `attributes` / `interests` are small text[] columns (10 short values
 		// each) — unlike `boundary` they are safe to stream for a whole page. They
 		// feed the redline's three highlight tiles; see `community-highlights.ts`.
+		// `residents_count` / `homeowners_pct` are two smallints; they are the only
+		// two figures that qualify as evidence for a resident-stated reason (see
+		// `community-reasons.ts`). Still no `boundary` — that is the timeout trap.
 		.select(
-			"id, slug, name, city, state, description, cover_storage_path, attributes, interests",
+			"id, slug, name, city, state, description, cover_storage_path, attributes, interests, residents_count, homeowners_pct",
 		)
 		.eq("status", "active")
 		// A card with no photo is not a card (§1.4 is photo-first).
@@ -101,6 +119,46 @@ export async function fetchCommunityPool(args: {
 	return projectCommunityPool((data ?? []) as CommunityPoolRow[]);
 }
 
+/**
+ * Communities named by id, ignoring the name-ordered page window.
+ *
+ * `videoFirst` cannot be satisfied by SORTING the page — the same trap the route
+ * already documents for listings, and the reason the owner saw no community
+ * video in the iOS dev sampler (2026-08-02). The pool is ordered by `name` and
+ * read as `offset=0, limit=12`; the only community with a ready video today is
+ * **Ashley Crossing**, which is ~280th alphabetically. It was never in the page
+ * to be hoisted. Sorting a page you have cannot surface a row you did not fetch.
+ *
+ * So the caller fetches these explicitly and prepends them. Same projection, so
+ * a card built this way is indistinguishable from a paged one.
+ */
+export async function fetchCommunityPoolByIds(
+	ids: string[],
+): Promise<PoolCommunityDTO[]> {
+	if (ids.length === 0) return [];
+	const supabase = await createAnonClient();
+	const { data, error } = await supabase
+		.from("communities")
+		// Same column list as the paged read, minus `boundary` — see the header.
+		.select(
+			"id, slug, name, city, state, description, cover_storage_path, attributes, interests, residents_count, homeowners_pct",
+		)
+		.eq("status", "active")
+		.not("cover_storage_path", "is", null)
+		.in("id", ids);
+
+	// A failed read here must not take the feed down: this is a dev-only ordering
+	// aid, and the funnel's real community page is fetched separately.
+	if (error) {
+		console.warn(
+			"[feed] community-by-id fetch failed, serving the paged window only:",
+			error.message,
+		);
+		return [];
+	}
+	return projectCommunityPool((data ?? []) as CommunityPoolRow[]);
+}
+
 /** Pure projection, exported for direct testing. */
 export function projectCommunityPool(
 	rows: CommunityPoolRow[],
@@ -114,6 +172,20 @@ export function projectCommunityPool(
 			attributes: r.attributes,
 			interests: r.interests,
 		});
+		// Layout E's tiles. Sent ALONGSIDE `dims` rather than instead of them: the
+		// card prefers reasons and falls back to dims, and 9.4% of communities yield
+		// no reason while still yielding a dim.
+		const reasons = communityReasons({
+			attributes: r.attributes,
+			facts: {
+				residentsCount: r.residents_count,
+				homeownersPct: r.homeowners_pct,
+				// Evidence for a resident-stated reason, and the column that took
+				// sub-fact coverage from 36.2% to 82.3% of cards — see
+				// `community-reasons.ts` `INTEREST_EVIDENCE`.
+				interests: r.interests,
+			},
+		});
 		out.push({
 			id: r.id,
 			slug: r.slug,
@@ -125,6 +197,7 @@ export function projectCommunityPool(
 			// Omitted rather than `[]` when there is no usable signal: the card must
 			// render no tiles at all instead of three empty glass boxes.
 			...(dims.length > 0 ? { dims } : {}),
+			...(reasons.length > 0 ? { reasons } : {}),
 		});
 	}
 	return out;

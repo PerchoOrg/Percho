@@ -37,10 +37,36 @@
  * "City, ST" remains the fallback for a community with no prose, which is a real
  * fact rather than an invented lifestyle sentence.
  *
- * ── Video untouched (owner: 「视频部分不用改」) ──────────────────────────────
+ * ── Video fills the card face (owner: 「视频宽度不够 没有占满card 有黑色空隙」) ──
  *
- * `CardVideo` keeps its default `fit` (contain) exactly as before — this card
- * was always full-bleed, so the orientation logic that prop drives is unchanged.
+ * `CardVideo` now receives `frameAspect` (the card's real width/height) and
+ * derives its fit from the video's MEASURED track size: a source narrower than
+ * the card fills it, a source wider than the card still letterboxes rather than
+ * cropping its width (the owner's older standing rule). The community cover is
+ * 1080×1920 in a 2:3 card — narrower — so it fills. See `lib/media/fit.ts`.
+ *
+ * ── 2026-08-02: the tiles now carry resident REASONS (layout E) ──────────────
+ *
+ * Owner reviewed four full-bleed variants at `demo.percho.co/community-card` and
+ * picked 「A的布局 + B的信息量」 — A's composition, B's information. The
+ * composition below is therefore unchanged: name → blurb → ONE row of glass
+ * tiles → white CTA. What changed is what a tile SAYS.
+ *
+ *   before   `dims` → TILE_LABEL → "Cultural Scene" · "Outdoor Space" · "Walkable"
+ *   after    `reasons` → "Convenient" · "Dog Friendly" · "Safe", each with an
+ *            optional factual sub-line ("35% owner-occupied")
+ *
+ * A dim label is Percho's name for a category, one abstraction away from anybody.
+ * A reason is the word residents themselves left on Nextdoor, rendered verbatim —
+ * which is what makes the card's own CTA ("Why people love it →") a promise the
+ * tiles above it actually keep. Server side: `lib/feed/community-reasons.ts`.
+ *
+ * `dims` is NOT deleted. It is the fallback for the 9.4% of communities whose
+ * attributes yield no reason, and `pills` remains the fallback after that. Three
+ * sources, one row, in confidence order.
+ *
+ * The tile grew 84 → 96pt to seat a third text line. Nothing else moved; the
+ * scrim, the name, the CTA and the 18pt padding are the redline's.
  */
 import type { DimKey } from "@percho/shared";
 import { LinearGradient } from "expo-linear-gradient";
@@ -52,7 +78,6 @@ import { CardPhoto } from "../CardPhoto";
 import { CardVideo } from "../CardVideo";
 import {
 	RedlineCta,
-	RedlineHeart,
 	RedlineIcon,
 	type RedlineIconName,
 	RedlinePill,
@@ -62,8 +87,33 @@ import {
 const MAX_TILES = 3;
 /** "Icon 17px" inside an 84pt tile. */
 const TILE_ICON = 17;
-/** The scrim's stops, from the redline's `linear-gradient(180deg, …)`. */
-const SCRIM_STOPS = [0.32, 0.48, 1] as const;
+/**
+ * Tile height with a sub-fact line present.
+ *
+ * The redline's tile is 84 for icon + one label. A reason tile can carry a third
+ * line ("35% owner-occupied"), which needs 12 more points — measured, not
+ * guessed: 17 icon + 6 + 13 label + 2 + 12 fact + 2×12 padding = 96.
+ *
+ * Applied per ROW, not per tile: `factRow` below is true when ANY of the three
+ * has a fact, so all three grow together. Tiles of two different heights in one
+ * row read as a layout bug, and only 42.8% of communities have a fact on even
+ * one tile — so a mixed row is the COMMON case, not an edge case.
+ */
+const TILE_H_WITH_FACT = 96;
+/**
+ * The scrim's stops.
+ *
+ * The redline's own three (`0.32 / 0.48 / 1`) are the last three, unchanged —
+ * that ramp still owns the foot where the tiles and CTA live. Two were prepended
+ * for the top block (owner moved the name + blurb up, 2026-08-02):
+ *
+ *   0     dark   — behind the name
+ *   0.18  fading — released by the time the blurb's second line ends
+ *   0.32  clear  ← the redline's first stop, unmoved
+ *
+ * So the photo still breathes across its middle; both ends are just anchored.
+ */
+const SCRIM_STOPS = [0, 0.18, 0.32, 0.48, 1] as const;
 
 /**
  * One glyph per dim — TOTAL, not partial.
@@ -110,32 +160,86 @@ interface CommunityFaceProps {
 	card: CommunityCardV3;
 	isTop: boolean;
 	onExplore?: () => void;
-	onSave?: () => void;
+	/**
+	 * The card's REAL `width / height`, threaded to `CardVideo` so the video's
+	 * fit is derived from its measured track size instead of pinned to
+	 * `contain`.
+	 *
+	 * Owner, 2026-08-02: 「视频宽度不够 没有占满card 有黑色空隙」 — the 1080×1920
+	 * cover is NARROWER than this 2:3 card, so `contain` pillarboxed it. See
+	 * `lib/media/fit.ts`.
+	 */
+	cardAspect?: number;
+	/*
+	 * No `onSave`. The heart went with the owner's 2026-08-02 redline
+	 * (「去掉右上角的心」) and the feed never passed a handler for it, so the button
+	 * had always been inert. Left absent rather than optional-and-dead.
+	 */
 }
 
 export function CommunityFace({
 	card,
 	isTop,
 	onExplore,
-	onSave,
+	cardAspect,
 }: CommunityFaceProps) {
 	/**
-	 * Prefer the community's real dims (which carry an icon); fall back to its
-	 * authored pill strings, which have no dim key and so render label-only.
+	 * Three sources for the one tile row, in descending confidence:
+	 *
+	 *   1. `reasons` — what residents said, verbatim (88.6% of communities).
+	 *   2. `dims`    — Percho's category labels, for the 9.4% whose attributes map
+	 *                  to a dim but not to a whitelisted reason.
+	 *   3. `pills`   — authored strings, label-only, no glyph.
+	 *
+	 * Exactly one path renders. Mixing a reason tile with a dim tile would put two
+	 * different registers of claim in one row, and the reader has no way to tell
+	 * which words are the neighbours' and which are ours.
 	 */
-	const dims = (card.dims ?? []).slice(0, MAX_TILES);
+	const reasons = (card.reasons ?? []).slice(0, MAX_TILES);
+	const dims =
+		reasons.length === 0 ? (card.dims ?? []).slice(0, MAX_TILES) : [];
 	const fallbackPills =
-		dims.length === 0 ? (card.pills ?? []).slice(0, MAX_TILES) : [];
+		reasons.length === 0 && dims.length === 0
+			? (card.pills ?? []).slice(0, MAX_TILES)
+			: [];
+	const hasTiles =
+		reasons.length > 0 || dims.length > 0 || fallbackPills.length > 0;
+	/**
+	 * One height for the whole row — see `TILE_H_WITH_FACT`. A row where one tile
+	 * has a sub-fact and two do not is the majority case (42.8% of communities
+	 * resolve exactly one fact), so this is the normal path, not a guard.
+	 */
+	const factRow = reasons.some((r) => !!r.fact);
 
 	return (
 		<View style={styles.face}>
 			{card.videoUrl ? (
-				<CardVideo url={card.videoUrl} poster={card.heroUrl} isTop={isTop} />
+				<CardVideo
+					url={card.videoUrl}
+					poster={card.heroUrl}
+					isTop={isTop}
+					frameAspect={cardAspect}
+				/>
 			) : (
 				<CardPhoto url={card.heroUrl} />
 			)}
+			{/*
+			 * Scrim darkened at BOTH ends (2026-08-02).
+			 *
+			 * The redline's three stops ramp one way — clear at 32%, dark at the
+			 * foot — because all the copy used to sit at the foot. The name and
+			 * blurb now sit at the TOP (owner: 「把底部的文字移到顶部避免重复」), so
+			 * the top needs its own dark end or the serif name lands on open sky:
+			 * measured 2.00:1 white-on-photo at the top of the real cover, i.e.
+			 * already failing before the move.
+			 *
+			 * `communityScrim*` tokens are untouched — this is a stop LIST change,
+			 * so the card's colours are still the redline's.
+			 */}
 			<LinearGradient
 				colors={[
+					redline.communityScrimTop,
+					redline.communityScrimTopFade,
 					redline.communityScrimFrom,
 					redline.communityScrimMid,
 					redline.communityScrimTo,
@@ -147,17 +251,60 @@ export function CommunityFace({
 			<View style={styles.pillSlot}>
 				<RedlinePill label="COMMUNITY" />
 			</View>
-			<View style={styles.heartSlot}>
-				<RedlineHeart onPress={onSave} />
-			</View>
+			{/*
+			 * No heart. Owner, 2026-08-02: 「去掉右上角的心」 — scoped to THIS face,
+			 * exactly as the listing card's heart was removed on 2026-08-01. The
+			 * trade-off and insight faces keep theirs; the redline drew it on all
+			 * four and dropping it there is a design decision nobody has made.
+			 *
+			 * `onSave` went with it: the feed never passed one, so the button had
+			 * always been inert. A dormant `onSave?: () => void` is a hook that
+			 * gets "restored" by accident.
+			 */}
 
-			<View style={styles.body}>
+			{/*
+			 * TOP: who this is. The video below it is the neighbourhood itself, so
+			 * the name and the prose no longer compete with the footage for the
+			 * same corner of the card.
+			 */}
+			<View style={styles.head}>
 				<Text style={styles.name}>{card.name}</Text>
 				<Text style={styles.tagline} numberOfLines={2}>
 					{card.blurb ?? `${card.city}, ${card.state}`}
 				</Text>
-				{(dims.length > 0 || fallbackPills.length > 0) && (
+			</View>
+
+			{/* BOTTOM: why residents love it, then the way in. */}
+			<View style={styles.body}>
+				{hasTiles && (
 					<View style={styles.tiles}>
+						{reasons.map((r) => (
+							<View
+								key={r.label}
+								style={[styles.tile, factRow && styles.tileTall]}
+							>
+								<RedlineIcon
+									name={r.icon}
+									size={TILE_ICON}
+									color={redline.onPhoto}
+								/>
+								{/*
+								 * `numberOfLines={2}` not 1: "Well Maintained" and
+								 * "Family Friendly" are two words at 10px in a third-of-a-card
+								 * tile and WILL wrap. Truncating a resident's word to
+								 * "Well Maintai…" is worse than a second line, and the tile
+								 * has the height for it.
+								 */}
+								<Text style={styles.tileLabel} numberOfLines={2}>
+									{r.label}
+								</Text>
+								{!!r.fact && (
+									<Text style={styles.tileFact} numberOfLines={1}>
+										{r.fact}
+									</Text>
+								)}
+							</View>
+						))}
 						{dims.map((dim) => (
 							<View key={dim} style={styles.tile}>
 								<RedlineIcon
@@ -200,7 +347,25 @@ const styles = StyleSheet.create({
 	 */
 	face: { flex: 1, backgroundColor: colors.cardPlainTo },
 	pillSlot: { position: "absolute", top: 15, left: 15, zIndex: 3 },
-	heartSlot: { position: "absolute", top: 15, right: 15, zIndex: 3 },
+	/**
+	 * The name + blurb, at the TOP.
+	 *
+	 * `top: 56` clears the 15pt-inset COMMUNITY pill rather than guessing: pill
+	 * top 15 + its ~23pt box + 18 of air = 56. Absolutely positioned like the
+	 * other chrome slots, so the `body` block below keeps its own `flex: 1`
+	 * bottom alignment and neither has to know about the other.
+	 *
+	 * `right: 18` — the card's own padding. It was 64 to clear the heart's 44pt
+	 * touch target; with the heart gone (2026-08-02) a long community name gets
+	 * the full width back instead of wrapping early against nothing.
+	 */
+	head: {
+		position: "absolute",
+		top: 56,
+		left: 18,
+		right: 18,
+		zIndex: 2,
+	},
 	/** Content sits at the bottom of the card, over the scrim's dark end. */
 	body: {
 		flex: 1,
@@ -223,9 +388,32 @@ const styles = StyleSheet.create({
 		gap: 9,
 		paddingHorizontal: 4,
 	},
+	/**
+	 * The reason row's height when any tile carries a sub-fact.
+	 *
+	 * `gap` drops 9 → 6 because there are now up to three children instead of two,
+	 * and two 9pt gaps plus three text runs overflowed 96. The icon-to-label
+	 * relationship still reads at 6 — it is the same optical spacing the listing
+	 * chip uses.
+	 */
+	tileTall: { height: TILE_H_WITH_FACT, gap: 6 },
 	tileLabel: {
 		...redlineText.tile,
 		color: redline.onPhoto,
+		textAlign: "center",
+	},
+	/**
+	 * The factual sub-line under a reason.
+	 *
+	 * `nano` (9.5px) rather than a new token: it is the redline's existing
+	 * smallest size and it is already what the insight card's caption uses, so no
+	 * new type size enters the scale. White at 62% puts it a clear step below the
+	 * label — the reason is the claim, the number is its footnote, and equal weight
+	 * would make the tile read as two competing lines.
+	 */
+	tileFact: {
+		...redlineText.nano,
+		color: "rgba(255,255,255,0.62)",
 		textAlign: "center",
 	},
 	ctaSlot: { marginTop: 12 },
