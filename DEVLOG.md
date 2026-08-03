@@ -38,6 +38,10 @@ BEFORE/AFTER 样本已生成待 owner 评审 —— 未经批准不跑全量回�
 **Next steps**: owner 看样本定 preset(ESRGAN 之后 grade 砍半是否还偏重);
 渲染搬回 Mac mini 时只需 `pip install onnxruntime` + `models/fetch.sh`。
 
+**07:55 补记**: owner 决定「渲染等 Mac mini 做」。EC2 上的 66MB 权重已删除,
+本机 `--self-check` 现在报 `SR backend: fsrcnn` —— 回退路径实测有效,EC2 继续用
+FSRCNN 跑不阻塞。Mac mini 上跑 `models/fetch.sh` 即自动切到 Real-ESRGAN。
+
 ## 2026-08-03 07:40 UTC — 删掉视频审批闸:渲完即上线
 
 **Objective**: owner:「删掉 Home tour (auto-generated) / walkthrough · ready /
