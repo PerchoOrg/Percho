@@ -1,0 +1,497 @@
+'use client';
+
+/**
+ * PhotoTable — one row per photo, every decision-relevant field in a column.
+ *
+ * Replaces the thumbnail grid on both admin photo surfaces. Owner 2026-08-03:
+ * "把 photos 做成一个表格的形式 每一行一个 photo，显示重要的信息以及管理按键".
+ *
+ * ONE component for `listing_photos` and `poi_photos`: the columns that differ
+ * are the ones the other table has no data for, so they render "—" rather than
+ * justifying a second component. `lib/poi/photo-tag-view.ts` absorbs the fact
+ * that the two taggers write different keys into `ai_tags`.
+ *
+ * Client-side sort + filter. The page loads at most a few hundred rows per
+ * listing/POI, so paginating or pushing sort to PostgREST would be more moving
+ * parts for no gain.
+ * ponytail: in-memory sort/filter, revisit if a single owner ever exceeds ~1k photos.
+ */
+
+import {
+  type EnhanceDecision,
+  type PhotoTable as PhotoTableName,
+  queuePhotoEnhancement,
+  setEnhancedDecision,
+} from '@/lib/poi/admin-enhance-actions';
+import { setGlobalPhotoStatus } from '@/lib/poi/admin-photo-actions';
+import { projectTags, resolutionWarning } from '@/lib/poi/photo-tag-view';
+import { Check, Film, Sparkles, X } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useMemo, useState } from 'react';
+
+export interface PhotoRow {
+  id: string;
+  storage_path: string;
+  // listing_photos only
+  sort_order?: number | null;
+  width?: number | null;
+  height?: number | null;
+  used_in_video_at?: string | null;
+  used_clip_index?: number | null;
+  // poi_photos only
+  width_px?: number | null;
+  height_px?: number | null;
+  status?: string | null;
+  applicable_buckets?: string[] | null;
+  poi_name?: string | null;
+  // both
+  ai_tags?: Record<string, unknown> | null;
+  ai_score?: number | null;
+  tagged_at?: string | null;
+  enhanced_path?: string | null;
+  enhanced_status?: string | null;
+  enhanced_preset?: string | null;
+  enhanced_error?: string | null;
+  /** Videos that used this photo (POI: resolved from generated_videos). */
+  used_in?: string[];
+}
+
+type SortKey = 'order' | 'score' | 'hero' | 'category' | 'enhanced';
+type Filter = 'all' | 'untagged' | 'unreviewed' | 'enhance_ready' | 'in_video' | 'not_in_video';
+
+export function PhotoTable({
+  table,
+  storageBase,
+  bucket,
+  photos,
+}: {
+  table: PhotoTableName;
+  storageBase: string;
+  bucket: string;
+  photos: PhotoRow[];
+}) {
+  const router = useRouter();
+  const [pending, setPending] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [sort, setSort] = useState<SortKey>('score');
+  const [filter, setFilter] = useState<Filter>('all');
+  const [lightbox, setLightbox] = useState<{ url: string; alt: string } | null>(null);
+
+  const isListing = table === 'listing_photos';
+  const url = (p: string) => `${storageBase}/storage/v1/object/public/${bucket}/${p}`;
+
+  const rows = useMemo(() => {
+    const withTags = photos.map((p) => ({
+      p,
+      t: projectTags(p.ai_tags),
+      w: p.width ?? p.width_px ?? null,
+      h: p.height ?? p.height_px ?? null,
+      inVideo: !!p.used_in_video_at || (p.used_in?.length ?? 0) > 0,
+    }));
+
+    const filtered = withTags.filter(({ p, t, inVideo }) => {
+      switch (filter) {
+        case 'untagged':
+          return !p.tagged_at;
+        case 'unreviewed':
+          return (p.status ?? 'pending') === 'pending';
+        case 'enhance_ready':
+          return p.enhanced_status === 'ready';
+        case 'in_video':
+          return inVideo;
+        case 'not_in_video':
+          return !inVideo && (t.usable ?? true);
+        default:
+          return true;
+      }
+    });
+
+    const by = {
+      // nullsLast for every numeric sort: an untagged photo has no score and
+      // must not outrank a scored one just because null sorts high.
+      score: (a: (typeof withTags)[number], b: (typeof withTags)[number]) =>
+        (b.p.ai_score ?? -1) - (a.p.ai_score ?? -1),
+      hero: (a: (typeof withTags)[number], b: (typeof withTags)[number]) =>
+        (b.t.heroScore ?? -1) - (a.t.heroScore ?? -1),
+      order: (a: (typeof withTags)[number], b: (typeof withTags)[number]) =>
+        (a.p.sort_order ?? 0) - (b.p.sort_order ?? 0),
+      category: (a: (typeof withTags)[number], b: (typeof withTags)[number]) =>
+        (a.t.category ?? 'zzz').localeCompare(b.t.category ?? 'zzz'),
+      enhanced: (a: (typeof withTags)[number], b: (typeof withTags)[number]) =>
+        (a.p.enhanced_status ?? '').localeCompare(b.p.enhanced_status ?? ''),
+    }[sort];
+
+    return [...filtered].sort(by);
+  }, [photos, sort, filter]);
+
+  function run(id: string, fn: () => Promise<{ ok: boolean; message?: string }>) {
+    setPending(id);
+    setError(null);
+    void (async () => {
+      const res = await fn();
+      if (!res.ok) setError(res.message ?? 'Failed');
+      setPending(null);
+      router.refresh();
+    })();
+  }
+
+  const needsEnhance = photos.filter(
+    (p) => p.enhanced_status === 'none' || p.enhanced_status === 'failed',
+  );
+
+  if (photos.length === 0) {
+    return (
+      <div className="rounded-2xl border border-line bg-surface p-8 text-center text-sm text-ink2">
+        No photos yet.
+      </div>
+    );
+  }
+
+  return (
+    <section className="space-y-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 className="text-lg font-semibold">
+          Photos <span className="text-ink2 text-sm font-normal">({rows.length}/{photos.length})</span>
+        </h2>
+        <div className="flex flex-wrap items-center gap-2 text-xs">
+          <select
+            value={filter}
+            onChange={(e) => setFilter(e.target.value as Filter)}
+            aria-label="Filter photos"
+            className="rounded-lg border border-line bg-bg px-2 py-1.5"
+          >
+            <option value="all">All</option>
+            <option value="untagged">Not AI-tagged</option>
+            <option value="unreviewed">Awaiting review</option>
+            <option value="enhance_ready">Enhanced, awaiting approval</option>
+            <option value="in_video">In a video</option>
+            <option value="not_in_video">Usable but unused</option>
+          </select>
+          <select
+            value={sort}
+            onChange={(e) => setSort(e.target.value as SortKey)}
+            aria-label="Sort photos"
+            className="rounded-lg border border-line bg-bg px-2 py-1.5"
+          >
+            <option value="score">Sort: AI score</option>
+            {isListing && <option value="hero">Sort: hero score</option>}
+            {isListing && <option value="order">Sort: photo order</option>}
+            <option value="category">Sort: category</option>
+            <option value="enhanced">Sort: enhance status</option>
+          </select>
+          <button
+            type="button"
+            disabled={!!pending || needsEnhance.length === 0}
+            onClick={() =>
+              run('bulk', () =>
+                queuePhotoEnhancement(
+                  table,
+                  needsEnhance.map((p) => p.id),
+                ),
+              )
+            }
+            className="flex items-center gap-1.5 rounded-lg border border-line bg-bg px-2.5 py-1.5 font-medium hover:border-ink2 disabled:opacity-40"
+          >
+            <Sparkles size={13} />
+            Enhance {needsEnhance.length || ''}
+          </button>
+        </div>
+      </div>
+
+      {error && (
+        <div className="rounded-lg bg-red-500/10 px-3 py-2 text-xs text-red-700">{error}</div>
+      )}
+
+      <div className="overflow-x-auto rounded-2xl border border-line">
+        <table className="w-full min-w-[1100px] border-collapse text-left text-xs">
+          <thead className="bg-surface text-ink2">
+            <tr>
+              <Th>Photo</Th>
+              <Th>{isListing ? '#' : 'POI'}</Th>
+              <Th>Size</Th>
+              <Th>Category</Th>
+              <Th className="min-w-[220px]">AI description</Th>
+              <Th className="min-w-[160px]">AI tags</Th>
+              <Th>Score</Th>
+              {isListing && <Th>Hero</Th>}
+              {!isListing && <Th>Buckets</Th>}
+              {!isListing && <Th>Review</Th>}
+              <Th>In video</Th>
+              <Th>Enhanced</Th>
+              <Th>Actions</Th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map(({ p, t, w, h, inVideo }) => {
+              const res = resolutionWarning(w, h);
+              const busy = pending === p.id || pending === 'bulk';
+              const showEnhanced = p.enhanced_status === 'approved' && p.enhanced_path;
+              const thumbPath = showEnhanced ? (p.enhanced_path as string) : p.storage_path;
+              return (
+                <tr key={p.id} className="border-line border-t align-top hover:bg-surface/60">
+                  <Td>
+                    <button
+                      type="button"
+                      onClick={() => setLightbox({ url: url(thumbPath), alt: t.description ?? 'photo' })}
+                      className="block h-14 w-20 overflow-hidden rounded-md ring-1 ring-line"
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={url(thumbPath)} alt="" className="h-full w-full object-cover" />
+                    </button>
+                  </Td>
+                  <Td className="tabular-nums text-ink2">
+                    {isListing ? (p.sort_order ?? '—') : (p.poi_name ?? '—')}
+                  </Td>
+                  <Td className={res === 'low' ? 'text-amber-600' : 'text-ink2'}>
+                    {w && h ? `${w}×${h}` : '—'}
+                    {res === 'low' && <div className="text-[10px]">low res</div>}
+                  </Td>
+                  <Td>
+                    {t.category ?? <span className="text-ink2">—</span>}
+                    {t.isMaster && <div className="text-[10px] text-bronze">master</div>}
+                    {t.usable === false && <div className="text-[10px] text-red-600">unusable</div>}
+                  </Td>
+                  <Td className="max-w-[280px] text-ink2">
+                    {t.description ? (
+                      <span title={t.description}>{truncate(t.description, 110)}</span>
+                    ) : (
+                      '—'
+                    )}
+                  </Td>
+                  <Td>
+                    {t.tags.length === 0 ? (
+                      <span className="text-ink2">—</span>
+                    ) : (
+                      <div className="flex flex-wrap gap-1">
+                        {t.tags.slice(0, 4).map((tag) => (
+                          <span
+                            key={tag}
+                            className="rounded bg-line/60 px-1.5 py-0.5 text-[10px] text-ink2"
+                          >
+                            {tag}
+                          </span>
+                        ))}
+                        {t.tags.length > 4 && (
+                          <span className="text-[10px] text-ink2">+{t.tags.length - 4}</span>
+                        )}
+                      </div>
+                    )}
+                  </Td>
+                  <Td className="tabular-nums">
+                    {p.ai_score != null ? p.ai_score.toFixed(2) : <span className="text-ink2">—</span>}
+                    {!p.tagged_at && <div className="text-[10px] text-amber-600">untagged</div>}
+                  </Td>
+                  {isListing && (
+                    <Td className="tabular-nums text-ink2">
+                      {t.heroScore != null ? t.heroScore.toFixed(2) : '—'}
+                    </Td>
+                  )}
+                  {!isListing && (
+                    <Td>
+                      {(p.applicable_buckets?.length ?? 0) === 0 ? (
+                        <span className="text-ink2">—</span>
+                      ) : (
+                        <div className="flex flex-wrap gap-1">
+                          {(p.applicable_buckets ?? []).map((b) => (
+                            <span
+                              key={b}
+                              className="rounded bg-line/60 px-1.5 py-0.5 text-[10px] uppercase text-ink2"
+                            >
+                              {b}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </Td>
+                  )}
+                  {!isListing && (
+                    <Td>
+                      <StatusText value={p.status ?? 'pending'} />
+                    </Td>
+                  )}
+                  <Td>
+                    {inVideo ? (
+                      <span className="flex items-center gap-1 text-emerald-600">
+                        <Film size={12} />
+                        {p.used_clip_index != null
+                          ? `clip ${p.used_clip_index + 1}`
+                          : (p.used_in?.join(', ') ?? 'yes')}
+                      </span>
+                    ) : (
+                      <span className="text-ink2">no</span>
+                    )}
+                  </Td>
+                  <Td>
+                    <StatusText value={p.enhanced_status ?? 'none'} />
+                    {p.enhanced_error && (
+                      <div className="text-[10px] text-red-600" title={p.enhanced_error}>
+                        {truncate(p.enhanced_error, 40)}
+                      </div>
+                    )}
+                    {p.enhanced_path && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setLightbox({
+                            url: url(p.enhanced_path as string),
+                            alt: 'enhanced',
+                          })
+                        }
+                        className="text-[10px] text-bronze underline"
+                      >
+                        view enhanced
+                      </button>
+                    )}
+                  </Td>
+                  <Td>
+                    <div className="flex flex-col gap-1">
+                      {p.enhanced_path && p.enhanced_status !== 'queued' && (
+                        <div className="flex gap-1">
+                          <MiniBtn
+                            label="✓ enh"
+                            title="Approve the enhanced file — renders will use it from now on"
+                            active={p.enhanced_status === 'approved'}
+                            disabled={busy}
+                            onClick={() =>
+                              run(p.id, () => setEnhancedDecision(table, p.id, 'approved'))
+                            }
+                          />
+                          <MiniBtn
+                            label="✗ enh"
+                            title="Reject the enhanced file — renders keep the original"
+                            danger
+                            active={p.enhanced_status === 'rejected'}
+                            disabled={busy}
+                            onClick={() =>
+                              run(p.id, () => setEnhancedDecision(table, p.id, 'rejected'))
+                            }
+                          />
+                        </div>
+                      )}
+                      {!p.enhanced_path && (
+                        <MiniBtn
+                          label="Enhance"
+                          title="Queue this photo for enhancement"
+                          disabled={busy}
+                          onClick={() => run(p.id, () => queuePhotoEnhancement(table, [p.id]))}
+                        />
+                      )}
+                      {!isListing && (
+                        <div className="flex gap-1">
+                          <MiniBtn
+                            label={<Check size={11} />}
+                            title="Approve photo (platform-wide)"
+                            active={p.status === 'approved'}
+                            disabled={busy}
+                            onClick={() => run(p.id, () => setGlobalPhotoStatus(p.id, 'approved'))}
+                          />
+                          <MiniBtn
+                            label={<X size={11} />}
+                            title="Reject photo — removes it from every video pool"
+                            danger
+                            active={p.status === 'rejected'}
+                            disabled={busy}
+                            onClick={() => run(p.id, () => setGlobalPhotoStatus(p.id, 'rejected'))}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </Td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      <p className="text-ink2 text-[11px]">
+        Approving an enhanced photo is what makes the next render use it —{' '}
+        <em>ready</em> alone changes nothing. &ldquo;In video&rdquo; is stamped by the render
+        worker, so it only reflects the most recent render.
+      </p>
+
+      {lightbox && (
+        // biome-ignore lint/a11y/useSemanticElements: full-viewport lightbox, same pattern as PhotoReviewClient.
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Photo"
+          onClick={() => setLightbox(null)}
+          className="fixed inset-0 z-[90] flex items-center justify-center bg-black/90 p-4"
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={lightbox.url}
+            alt={lightbox.alt}
+            className="max-h-full max-w-full object-contain"
+          />
+        </div>
+      )}
+    </section>
+  );
+}
+
+function truncate(s: string, n: number) {
+  return s.length > n ? `${s.slice(0, n)}…` : s;
+}
+
+function Th({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+  return (
+    <th className={`px-2.5 py-2 font-medium uppercase tracking-wide text-[10px] ${className}`}>
+      {children}
+    </th>
+  );
+}
+
+function Td({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+  return <td className={`px-2.5 py-2 ${className}`}>{children}</td>;
+}
+
+function StatusText({ value }: { value: string }) {
+  const cls =
+    value === 'approved'
+      ? 'text-emerald-600'
+      : value === 'ready'
+        ? 'text-amber-600'
+        : value === 'rejected' || value === 'failed'
+          ? 'text-red-600'
+          : value === 'queued' || value === 'processing'
+            ? 'text-blue-600'
+            : 'text-ink2';
+  return <span className={cls}>{value}</span>;
+}
+
+function MiniBtn({
+  label,
+  title,
+  active,
+  danger,
+  disabled,
+  onClick,
+}: {
+  label: React.ReactNode;
+  title: string;
+  active?: boolean;
+  danger?: boolean;
+  disabled?: boolean;
+  onClick: () => void;
+}) {
+  const cls = active
+    ? danger
+      ? 'bg-red-500 text-white'
+      : 'bg-emerald-500 text-white'
+    : 'border border-line bg-bg text-ink2 hover:border-ink2';
+  return (
+    <button
+      type="button"
+      title={title}
+      disabled={disabled}
+      onClick={onClick}
+      className={`flex items-center justify-center gap-1 rounded px-1.5 py-1 text-[10px] font-medium disabled:opacity-40 ${cls}`}
+    >
+      {label}
+    </button>
+  );
+}
+
+export type { EnhanceDecision };

@@ -1,16 +1,19 @@
 /**
- * /admin/pipeline/poi-library/[id] — POI detail + photo review.
+ * /admin/pipeline/poi-library/[id] — POI detail + photo table.
  *
  * Photos are the global `poi_photos` rows for this POI. Admin can flag
  * any photo `rejected` (or `approved` — informational, doesn't force
  * anything) which propagates to every listing + community video pool
  * via the filter in lib/poi/*-video-actions.ts.
+ *
+ * 2026-08-03: the thumbnail grid + separate enhance panel became one table
+ * (`PhotoTable`) — one row per photo with tags, description, buckets, review
+ * state, enhancement state, and which videos used it.
  */
 
 import { createServiceClient } from '@/lib/supabase/server';
 import { notFound } from 'next/navigation';
-import { EnhancePanel } from '../../../_components/EnhancePanel';
-import { PhotoReviewClient } from './PhotoReviewClient';
+import { PhotoTable } from '../../../_components/PhotoTable';
 
 export const dynamic = 'force-dynamic';
 
@@ -77,6 +80,35 @@ export default async function PoiDetailPage({
 
   if (!poi) notFound();
 
+  const rows = photos ?? [];
+
+  // Which videos used each photo. `generated_videos.input_photo_ids` is a uuid[]
+  // of poi_photos ids — the only place this provenance exists for POI photos.
+  // Only 18 rows carry it, so scan them all rather than building an @> filter
+  // per photo.
+  const usedIn = new Map<string, string[]>();
+  if (rows.length > 0) {
+    const { data: vids } = (await supabase
+      .from('generated_videos')
+      .select('intent_bucket, scope, status, input_photo_ids')
+      .not('input_photo_ids', 'is', null)) as {
+      data: Array<{
+        intent_bucket: string | null;
+        scope: string | null;
+        status: string;
+        input_photo_ids: string[] | null;
+      }> | null;
+    };
+    for (const v of vids ?? []) {
+      const label = v.intent_bucket ?? v.scope ?? 'video';
+      for (const pid of v.input_photo_ids ?? []) {
+        const list = usedIn.get(pid) ?? [];
+        if (!list.includes(label)) list.push(label);
+        usedIn.set(pid, list);
+      }
+    }
+  }
+
   const storageBase = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
 
   return (
@@ -95,18 +127,15 @@ export default async function PoiDetailPage({
         </div>
       </header>
 
-      <section>
-        <h2 className="mb-3 text-sm font-medium uppercase tracking-wide text-ink2">
-          Photos <span className="text-ink">({photos?.length ?? 0})</span>
-        </h2>
-        <PhotoReviewClient storageBase={storageBase} bucket={PHOTO_BUCKET} photos={photos ?? []} />
-      </section>
-
-      <EnhancePanel
+      <PhotoTable
         table="poi_photos"
         storageBase={storageBase}
         bucket={PHOTO_BUCKET}
-        photos={photos ?? []}
+        photos={rows.map((p) => ({
+          ...p,
+          poi_name: poi.display_name,
+          used_in: usedIn.get(p.id) ?? [],
+        }))}
       />
     </div>
   );

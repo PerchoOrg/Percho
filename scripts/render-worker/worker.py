@@ -558,6 +558,31 @@ def process_job(job: dict[str, Any]) -> None:
                 f"clips={len(plan)} (of {len(tagged)} tagged)",
                 flush=True,
             )
+
+            # Persist WHICH photos got used, so the admin photo table can answer
+            # "is this photo in the video?". The plan is otherwise thrown away
+            # with the temp workdir. Clear the whole listing first, then stamp
+            # the chosen ones, so a photo dropped by a re-render stops claiming
+            # it is in the tour.
+            try:
+                sb_patch(
+                    "listing_photos",
+                    {"listing_id": f"eq.{listing_id}"},
+                    {"used_in_video_at": None, "used_clip_index": None},
+                )
+                stamped_at = _now_iso()
+                for clip_i, shot in enumerate(plan):
+                    pid = shot.get("id")
+                    if not pid:
+                        continue
+                    sb_patch(
+                        "listing_photos",
+                        {"id": f"eq.{pid}"},
+                        {"used_in_video_at": stamped_at, "used_clip_index": clip_i},
+                    )
+            except Exception:
+                # Provenance only — never fail a good render over bookkeeping.
+                traceback.print_exc()
         except Exception as e:  # noqa: BLE001
             print(f"[job {job['id']}] shot plan disabled: {e} — falling back to legacy path", flush=True)
             shot_plan_path = None

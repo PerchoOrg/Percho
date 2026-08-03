@@ -4,6 +4,53 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-08-03 07:25 UTC — admin 照片改表格(14 列)+ listing 选片落库
+
+**Objective**: owner:「把 photos 做成一个表格的形式 每一行一个 photo,显示重要的信息
+以及管理按键 包括 ai tag, description,是否被选用做视频」。
+
+**Actions**:
+- `lib/poi/photo-tag-view.ts` + 5 条测试:把两张表**不同 key 的 `ai_tags`** 投影成同一组
+  字段(listing 的 `caption/room_type/hero_score/style_signals` vs POI 的
+  `description/primary_category/tags/mood`)。
+- `admin/_components/PhotoTable.tsx`:listing/POI 共用。14 列 = 缩略图 / 序号或 POI /
+  尺寸 / 类别 / AI description / AI tags / score / hero(listing)/ buckets(POI)/
+  review(POI)/ in video / enhanced / 行内操作。客户端排序 + 6 种筛选。
+- migration `20260803074500`:`listing_photos.used_in_video_at` + `used_clip_index`。
+  worker 渲染后先把整个 listing 清零、再逐条盖章(包在 try 里 —— provenance 不能让
+  一次好渲染失败)。
+- POI 的「用于视频」从 `generated_videos.input_photo_ids` 反查(仅 18 行,全表扫)。
+- 删掉 `EnhancePanel.tsx`(我自己 bc02e3d 加的,已被表格取代)。`PhotoReviewClient`
+  留着 —— 那是既有代码不是我的。
+
+**Decisions**:
+- **一个组件不是两个**。差异列只是「另一张表没有这个数据」,渲染 `—` 就够,不值得
+  第二个组件。key 差异全部吸收进 `photo-tag-view.ts`。
+- **`used_in_video_at` + `clip_index` 两列而不是一个 bool**。问「为什么开场是浴室」时
+  顺序才是有用的那部分。
+- **排序全部 nullsLast**。未打 tag 的照片没有 score,不能因为 null 排前面就压过打了分的。
+- 客户端排序/筛选(`ponytail:` 注释标了上限):单个 listing/POI 最多几百行。
+
+**Issues**:
+- 提案时发现 **listing 的选片根本没落库** —— `shot_plan.json` 写在 render job 的
+  temp workdir,渲完随目录删掉。所以「是否被选用做视频」这列在 listing 侧本来永远是空的。
+  POI 侧有 `input_photo_ids` 所以没事。加了两列 + worker 落库才补上。
+- 覆盖率实测(决定了哪些列值得做):listing 1331/2588 打过 tag,POI 202/586 打过 tag、
+  61 approved / 525 pending、`applicable_buckets` 100%。`alt_text` / `reviewed_by`
+  全空 → **不做列**。
+
+**Resolution**: 10 条测试全过(photo-tag-view 5 + video-uid 5)。`tsc` 19 = 基线,
+我的文件 0 错。
+
+**Learnings**:
+- **提列之前先查覆盖率**。不然会提出一堆永远显示 `—` 的列 —— 和 2026-08-02 那次
+  `attributes` 顺序零信息量是同一个教训。
+- **「显示 X」的需求可能根本没有 X 的数据**。先追数据源到底在哪(这次追到 temp workdir),
+  再决定是加列还是砍需求。
+
+**Next steps**: preset 全量回填仍等 owner 批。`generated_videos` 的批准按钮还没挂到
+Community Tour 详情页。
+
 ## 2026-08-03 06:40 UTC — 真机三条报障:approve 报 FK / 5122 web 放不了 / ios+web 要各一条
 
 **Objective**: owner 在 admin 上实测,报三条:①点 Approve 报

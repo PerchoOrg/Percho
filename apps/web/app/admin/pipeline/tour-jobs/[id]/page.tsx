@@ -12,7 +12,7 @@ import { streamIframeUrl, thumbnailUrl } from '@/lib/cloudflare/stream';
 import { webVideoUid } from '@/lib/feed/video-uid';
 import { createServiceClient } from '@/lib/supabase/server';
 import { notFound } from 'next/navigation';
-import { EnhancePanel } from '../../../_components/EnhancePanel';
+import { PhotoTable } from '../../../_components/PhotoTable';
 import { SurfacePreview } from '../../../_components/SurfacePreview';
 import { VideoApproveButton } from '../../../_components/VideoApproveButton';
 import { AdminGenerateTourButton } from './AdminGenerateTourButton';
@@ -59,7 +59,7 @@ export default async function AdminTourJobsDetailPage({
     supabase
       .from('listing_photos')
       .select(
-        'id, storage_path, sort_order, width, height, enhanced_path, enhanced_status, enhanced_preset, enhanced_error',
+        'id, storage_path, sort_order, width, height, ai_tags, ai_score, tagged_at, used_in_video_at, used_clip_index, enhanced_path, enhanced_status, enhanced_preset, enhanced_error',
       )
       .eq('listing_id', id)
       .order('sort_order', { ascending: true }) as unknown as Promise<{
@@ -69,6 +69,11 @@ export default async function AdminTourJobsDetailPage({
         sort_order: number;
         width: number | null;
         height: number | null;
+        ai_tags: Record<string, unknown> | null;
+        ai_score: number | null;
+        tagged_at: string | null;
+        used_in_video_at: string | null;
+        used_clip_index: number | null;
         enhanced_path: string | null;
         enhanced_status: string;
         enhanced_preset: string | null;
@@ -177,40 +182,7 @@ export default async function AdminTourJobsDetailPage({
         )}
       </section>
 
-      <section>
-        <h2 className="mb-3 text-lg font-semibold">
-          Photos <span className="text-ink2 text-sm font-normal">({photos.length})</span>
-        </h2>
-        {photos.length === 0 ? (
-          <p className="text-ink2 rounded-2xl border border-line bg-surface p-6 text-sm">
-            No photos uploaded yet.
-          </p>
-        ) : (
-          <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-            {photos.map((p) => (
-              <li key={p.id} className="overflow-hidden rounded-xl border border-line bg-surface">
-                <a
-                  href={photoPublicUrl(p.storage_path)}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="block"
-                >
-                  <div className="aspect-square w-full bg-black/20">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={photoPublicUrl(p.storage_path)}
-                      alt={`photo ${p.sort_order}`}
-                      className="h-full w-full object-cover"
-                    />
-                  </div>
-                </a>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-
-      <EnhancePanel
+      <PhotoTable
         table="listing_photos"
         storageBase={SUPABASE_URL}
         bucket="listing-photos"
