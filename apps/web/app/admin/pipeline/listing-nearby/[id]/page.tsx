@@ -5,9 +5,11 @@
  */
 
 import { ListingNearbyPanel } from '@/app/dashboard/listings/[id]/edit/ListingNearbyPanel';
+import { loadNearbyPhotos } from '@/lib/poi/admin-nearby-photos';
 import { loadNearbyPoisForListing } from '@/lib/poi/listing-actions';
 import { createServiceClient } from '@/lib/supabase/server';
 import { notFound } from 'next/navigation';
+import { PhotoTable } from '../../../_components/PhotoTable';
 
 export const dynamic = 'force-dynamic';
 
@@ -41,13 +43,25 @@ export default async function AdminListingNearbyPage({
 
   if (!listing) notFound();
 
-  const initialPois = await loadNearbyPoisForListing(listing.id).catch(() => []);
+  const [initialPois, photos] = await Promise.all([
+    loadNearbyPoisForListing(listing.id).catch(() => []),
+    loadNearbyPhotos({ kind: 'listing', id: listing.id }).catch(() => []),
+  ]);
 
   return (
     <div className="space-y-4">
       <header className="rounded-2xl border border-line bg-surface p-4 sm:p-5">
         <h1 className="text-xl font-semibold">{listing.address}</h1>
       </header>
+
+      {/* Photo table first — same reason as the community page: answers "what do
+          I have / what's in a video" without opening every POI accordion. */}
+      <PhotoTable
+        table="poi_photos"
+        storageBase={process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''}
+        bucket="listing-photos"
+        photos={photos}
+      />
 
       <section className="rounded-2xl border border-line bg-surface p-4 sm:p-5">
         <ListingNearbyPanel

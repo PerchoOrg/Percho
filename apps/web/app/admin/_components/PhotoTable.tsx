@@ -44,6 +44,8 @@ export interface PhotoRow {
   status?: string | null;
   applicable_buckets?: string[] | null;
   poi_name?: string | null;
+  /** poi_photos: the owning POI, so the row can link to its detail page. */
+  poi_id?: string | null;
   // both
   ai_tags?: Record<string, unknown> | null;
   ai_score?: number | null;
@@ -240,7 +242,19 @@ export function PhotoTable({
                     </button>
                   </Td>
                   <Td className="tabular-nums text-ink2">
-                    {isListing ? (p.sort_order ?? '—') : (p.poi_name ?? '—')}
+                    {isListing ? (
+                      (p.sort_order ?? '—')
+                    ) : p.poi_id ? (
+                      // The POI tab was dropped 2026-08-03; this is the way in.
+                      <a
+                        href={`/admin/pipeline/poi-library/${p.poi_id}`}
+                        className="text-bronze underline"
+                      >
+                        {p.poi_name ?? 'POI'}
+                      </a>
+                    ) : (
+                      (p.poi_name ?? '—')
+                    )}
                   </Td>
                   <Td className={res === 'low' ? 'text-amber-600' : 'text-ink2'}>
                     {w && h ? `${w}×${h}` : '—'}

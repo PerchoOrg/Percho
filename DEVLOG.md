@@ -4,6 +4,43 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-08-03 07:50 UTC — 两个 nearby 页也上照片表格;tab 重排/改名/删 POI
+
+**Objective**: owner:「这个表格不错,对 community tour / Listing nearby 也按照这个模式
+重构一下;把 community tour 放到第二个;rename Listing nearby to Home nearby;删掉 poi tab」。
+
+**Actions**:
+- 新增 `lib/poi/admin-nearby-photos.ts`(`loadNearbyPhotos({kind,id})`)+ 4 条测试:
+  把 per-POI 折叠面板里的照片**铺平**成 `PhotoTable` 的行。两次查询:
+  `{community,listing}_pois → poi_photos`,再从 `generated_videos` 反查用于视频。
+- 两个详情页在原有面板**上方**加表格(面板保留 —— 抓取/审核 POI 的入口还在那里)。
+- tab:`Home Tour / Community Tour / Home Nearby / Video Jobs / Music / Worker`,
+  六个。POI tab 删掉。
+- `PhotoTable` 的 POI 列变成**链接**到 `/admin/pipeline/poi-library/[id]`。
+
+**Decisions**:
+- **POI 路由保留,只删 tab**。POI 详情页是照片表格的既有宿主,删路由等于砍掉一个能用的
+  页面;而删 tab 只是不再当顶级入口。**但光删 tab 会让那个页面无法到达**,所以同一轮
+  把表格的 POI 列做成链接 —— 否则我在 layout 注释里写的「still reachable」就是假话。
+- **`used_in` 必须按 owner 过滤**。别的 community 的视频用了这张照片,不等于「在本
+  community 的视频里」。测试专门盯这条。
+- 表格放在 POI 面板**之前**:表格回答「我手上有什么、哪些进了视频」,面板是逐个 POI 的
+  抓取/审核操作 —— 前者是概览,后者是动作。
+
+**Issues**:
+- 差点犯的错:先写了 layout 注释声称 POI 页「仍可通过表格到达」,而当时表格**根本没有
+  链接**。自查时发现,同轮补上 `poi_id` 贯通两个 loader + 链接列。
+
+**Resolution**: 14 条测试全过。`tsc` 19 = 基线。真实数据验证:
+community `e07c9a85` = 175 POI / 72 张照片 / 24 张在视频里;
+listing `c7435419` = 161 POI / 201 张照片 / 58 张在视频里 —— **两页都不是空表**。
+
+**Learnings**:
+- **删一个入口前先确认还有另一条路进去**,并且在同一轮把那条路做出来。注释里写
+  「still reachable」而代码里没有链接 = 给未来的自己埋一个假事实。
+
+**Next steps**: preset 全量回填仍等 owner 批。
+
 ## 2026-08-03 07:45 UTC — SR 步骤换成 Real-ESRGAN x2 (ONNX)
 
 **Objective**: owner:「用 Real-ESRGAN 实现功能 - 我在 mac mini 上可以跑」。原

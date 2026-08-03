@@ -2,33 +2,34 @@
  * /admin layout — HubTabs chip bar identical to the agent hub, mobile
  * ↔ desktop. Every child route is admin-gated at this layer.
  *
- * sidebar retired in favor of a chip-mode tab
- * bar.
- * split Nearby into Home + Neighborhood.
- * Seven tabs now — the chip strip scrolls horizontally on narrow
- * viewports.
+ * sidebar retired in favor of a chip-mode tab bar.
+ *
+ * 2026-08-03: six tabs. The POI tab was dropped (owner) — every POI photo is
+ * now reachable through the Community Tour / Home Nearby photo tables, which
+ * show the same `poi_photos` rows in context. `/admin/pipeline/poi-library`
+ * still WORKS and is still linked from those tables' rows; it just isn't a
+ * top-level destination.
  */
 
 import { requireAdmin } from '@/lib/auth/require-admin';
-import { Activity, Building2, Film, Home, ImageIcon, ListVideo, Music } from 'lucide-react';
+import { Activity, Building2, Film, Home, ListVideo, Music } from 'lucide-react';
 import { redirect } from 'next/navigation';
 import { type AdminHubTab, AdminHubTabs } from './_components/AdminHubTabs';
 
 const TABS: AdminHubTab[] = [
   { id: 'tour', label: 'Home Tour', href: '/admin/pipeline/tour-jobs', icon: <Film size={22} /> },
   {
-    id: 'listing-nearby',
-    label: 'Listing Nearby',
-    href: '/admin/pipeline/listing-nearby',
-    icon: <Home size={22} />,
-  },
-  {
     id: 'community-nearby',
     label: 'Community Tour',
     href: '/admin/pipeline/community-nearby',
     icon: <Building2 size={22} />,
   },
-  { id: 'poi', label: 'POI', href: '/admin/pipeline/poi-library', icon: <ImageIcon size={22} /> },
+  {
+    id: 'listing-nearby',
+    label: 'Home Nearby',
+    href: '/admin/pipeline/listing-nearby',
+    icon: <Home size={22} />,
+  },
   {
     id: 'jobs',
     label: 'Video Jobs',

@@ -133,6 +133,7 @@ export default async function PoiDetailPage({
         bucket={PHOTO_BUCKET}
         photos={rows.map((p) => ({
           ...p,
+          poi_id: poi.id,
           poi_name: poi.display_name,
           used_in: usedIn.get(p.id) ?? [],
         }))}
