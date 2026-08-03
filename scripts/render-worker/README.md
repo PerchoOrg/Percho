@@ -13,11 +13,22 @@ page → `POST /api/listings/[id]/generate-tour` inserts a placeholder
 - `ffmpeg` in `PATH` (used by `scripts/ken-burns/generate.py`).
 - **`opencv-contrib-python-headless`** for the photo-enhancement pass
   (`enhance.py`). Must be the `contrib` build — plain `opencv-python` has no
-  `cv2.dnn_superres`, and the enhance job then fails at the SR step:
+  `cv2.dnn_superres`, and the FSRCNN fallback then fails:
   ```bash
   /usr/bin/python3 -m pip install --break-system-packages opencv-contrib-python-headless
   ```
   Verify: `python3 -c "import cv2; print(hasattr(cv2,'dnn_superres'))"` → `True`.
+- **`onnxruntime` + the Real-ESRGAN x2 weights** for the SR step. Weights are
+  66 MB and gitignored:
+  ```bash
+  /usr/bin/python3 -m pip install --break-system-packages onnxruntime
+  scripts/render-worker/models/fetch.sh
+  ```
+  On the Mac mini install `onnxruntime` (the wheel carries the CoreML EP) —
+  `enhance.py` picks CoreML → CUDA → CPU automatically, no per-host config.
+  Without either piece it silently falls back to FSRCNN_x2 and keeps working;
+  `enhance.py --self-check` prints which backend is live.
+  `ENHANCE_THREADS` overrides the intra-op thread count (defaults to all cores).
 - Repo checked out at `/home/ubuntu/Percho` with `.env.local` containing
   `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`,
   `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_STREAM_API_TOKEN`.

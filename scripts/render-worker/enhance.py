@@ -5,14 +5,13 @@ Photo enhancement — the chain the owner asked for (2026-08-03):
     original -> Super Resolution -> Denoise -> Sharpen
              -> Local Contrast -> Color Correction -> output
 
-Runs on CPU, no GPU, no torch. OpenCV's `dnn_superres` with **FSRCNN_x2**
-(39 KB, ships in `models/`) instead of Real-ESRGAN: this host has 4 vCPU and no
-CUDA, and Real-ESRGAN x4 on a 3200x2400 source is ~90 s/photo plus a 65 MB
-torch/basicsr stack. FSRCNN_x2 is ~1 s/photo and the render only ever needs
-1080-2400 px of real detail.
+SR step is **Real-ESRGAN x2** (`models/real_esrgan_x2.onnx`, 66 MB) run through
+onnxruntime — no torch, no basicsr. Same file works on the Mac mini (CoreML EP,
+GPU/ANE) and on the EC2 box (CPU EP, ~28 s/MPix on 4 vCPU), so the worker code is
+identical on both hosts. FSRCNN_x2 (39 KB, `models/FSRCNN_x2.pb`) stays as the
+fallback for when the ONNX file or onnxruntime is absent.
 
-# ponytail: FSRCNN_x2 for SR. Swap in Real-ESRGAN (ONNX via cv2.dnn, or torch)
-# only if a GPU box shows up AND the owner rejects FSRCNN output side by side.
+Fetch the model: `scripts/render-worker/models/fetch.sh` (gitignored, 66 MB).
 
 Skips SR entirely when the source is already >= SR_SKIP_EDGE on its long edge —
 upscaling a 3200x2400 Places photo to 6400x4800 buys nothing at a 1080 card and
@@ -26,12 +25,21 @@ CLI (also how the worker calls it):
 from __future__ import annotations
 
 import argparse
+import functools
+import os
 from pathlib import Path
 
 import cv2
 import numpy as np
 
 MODELS_DIR = Path(__file__).resolve().parent / "models"
+ESRGAN_ONNX = MODELS_DIR / "real_esrgan_x2.onnx"
+
+# Tile size for Real-ESRGAN. 4 vCPU / 15 GB EC2 peaks ~1.5 GB at 384 with the 2x
+# output held alongside. PAD is the overlap trimmed off each tile — RRDB has a
+# wide receptive field, and 8 px is not enough (visible seams on brick/siding).
+ESRGAN_TILE = 384
+ESRGAN_PAD = 24
 
 # Above this long edge, SR is a waste (see module docstring).
 SR_SKIP_EDGE = 2400
@@ -59,8 +67,64 @@ PRESETS = {
 }
 
 
+@functools.lru_cache(maxsize=1)
+def _esrgan_session():
+    """Real-ESRGAN x2 onnxruntime session, or None if unavailable.
+
+    Cached: loading the 66 MB graph takes ~1.5 s, and the worker enhances photos
+    in a loop. Providers are tried in order, so the same code gets CoreML
+    (GPU/ANE) on the Mac mini and CPU on EC2 — nothing host-specific here.
+    """
+    if not ESRGAN_ONNX.exists():
+        return None
+    try:
+        import onnxruntime as ort
+    except ImportError:
+        return None
+    opts = ort.SessionOptions()
+    opts.intra_op_num_threads = int(os.environ.get("ENHANCE_THREADS") or os.cpu_count() or 4)
+    available = ort.get_available_providers()
+    providers = [p for p in ("CoreMLExecutionProvider", "CUDAExecutionProvider",
+                             "CPUExecutionProvider") if p in available]
+    return ort.InferenceSession(str(ESRGAN_ONNX), opts, providers=providers)
+
+
+def _esrgan_tile(sess, tile: np.ndarray) -> np.ndarray:
+    """One tile through the net. BGR uint8 in, BGR uint8 2x out."""
+    x = cv2.cvtColor(tile, cv2.COLOR_BGR2RGB).astype(np.float32) / 255.0
+    x = np.ascontiguousarray(x.transpose(2, 0, 1)[None])
+    y = sess.run(None, {sess.get_inputs()[0].name: x})[0][0]
+    y = np.clip(y.transpose(1, 2, 0), 0.0, 1.0) * 255.0
+    return cv2.cvtColor(y.astype(np.uint8), cv2.COLOR_RGB2BGR)
+
+
+def _esrgan_x2(sess, img: np.ndarray) -> np.ndarray:
+    """Tiled Real-ESRGAN x2. Whole-image inference on a 2400px photo would want
+    ~10 GB, so tile with ESRGAN_PAD overlap and trim the pad back off (at 2x)
+    from every interior edge — the pad is what keeps tile boundaries invisible.
+    """
+    h, w = img.shape[:2]
+    out = np.empty((h * 2, w * 2, 3), np.uint8)
+    for y0 in range(0, h, ESRGAN_TILE):
+        for x0 in range(0, w, ESRGAN_TILE):
+            y1, x1 = min(y0 + ESRGAN_TILE, h), min(x0 + ESRGAN_TILE, w)
+            # Padded read window, clamped to the image.
+            py0, px0 = max(y0 - ESRGAN_PAD, 0), max(x0 - ESRGAN_PAD, 0)
+            py1, px1 = min(y1 + ESRGAN_PAD, h), min(x1 + ESRGAN_PAD, w)
+            up = _esrgan_tile(sess, img[py0:py1, px0:px1])
+            # Cut the pad back out of the 2x result.
+            ty0, tx0 = (y0 - py0) * 2, (x0 - px0) * 2
+            out[y0 * 2:y1 * 2, x0 * 2:x1 * 2] = up[
+                ty0:ty0 + (y1 - y0) * 2, tx0:tx0 + (x1 - x0) * 2
+            ]
+    return out
+
+
 def _superres(img: np.ndarray) -> np.ndarray:
-    """FSRCNN x2. Returns the input untouched if the model is missing."""
+    """Real-ESRGAN x2 when available, else FSRCNN x2, else the input untouched."""
+    sess = _esrgan_session()
+    if sess is not None:
+        return _esrgan_x2(sess, img)
     model = MODELS_DIR / "FSRCNN_x2.pb"
     if not model.exists():
         return img
@@ -130,7 +194,14 @@ def enhance(img: np.ndarray, preset: str = "default", use_sr: bool = True) -> np
 
     long_edge = max(img.shape[:2])
     if use_sr and long_edge < SR_SKIP_EDGE:
+        before = img.shape
         img = _superres(img)
+        # Real-ESRGAN already denoises and reconstructs edges as part of the
+        # upscale. Running the full NLM + unsharp grade on top of it double-cooks
+        # (plastic skies, halos on rooflines). Back both off when it ran.
+        if img.shape != before and _esrgan_session() is not None:
+            denoise_h *= 0.5
+            sharpen_amt *= 0.5
 
     if max(img.shape[:2]) > MAX_EDGE:
         scale = MAX_EDGE / max(img.shape[:2])
@@ -176,8 +247,32 @@ def _self_check() -> None:
     assert out.min() >= 0 and out.max() <= 255
 
     up = enhance(noisy[:60, :80], use_sr=True)
-    assert up.shape[0] in (120, 60), up.shape  # 2x when the model is present
-    print("enhance self-check OK")
+    assert up.shape[0] in (120, 60), up.shape  # 2x when a model is present
+
+    # Tiling must be seam-free and geometrically exact. Substitute a trivial
+    # "net" (nearest 2x) for the real one: any indexing bug in _esrgan_x2 then
+    # shows up as a pixel mismatch against a plain resize.
+    class _FakeSess:
+        def get_inputs(self):
+            return [type("I", (), {"name": "input"})()]
+
+        def run(self, _, feed):
+            x = next(iter(feed.values()))
+            up = np.repeat(np.repeat(x, 2, axis=2), 2, axis=3)
+            return [up]
+
+    global ESRGAN_TILE
+    tile_was, ESRGAN_TILE = ESRGAN_TILE, 32       # force a 4x3 tile grid on 100x130
+    try:
+        src = rng.integers(0, 255, (100, 130, 3), dtype=np.uint8)
+        got = _esrgan_x2(_FakeSess(), src)
+        want = np.repeat(np.repeat(src, 2, axis=0), 2, axis=1)
+        assert got.shape == want.shape, (got.shape, want.shape)
+        assert np.array_equal(got, want), "tiling lost or misplaced pixels"
+    finally:
+        ESRGAN_TILE = tile_was
+
+    print(f"enhance self-check OK (SR backend: {'real-esrgan' if _esrgan_session() else 'fsrcnn'})")
 
 
 if __name__ == "__main__":

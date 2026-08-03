@@ -68,3 +68,6 @@ __pycache__
 # is worth keeping belongs in a *.test.ts file instead.
 .probe/
 **/.probe/
+
+# Real-ESRGAN ONNX weights (66MB) — scripts/render-worker/models/fetch.sh
+scripts/render-worker/models/*.onnx

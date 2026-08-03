@@ -4,6 +4,40 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-08-03 07:45 UTC — SR 步骤换成 Real-ESRGAN x2 (ONNX)
+
+**Objective**: owner:「用 Real-ESRGAN 实现功能 - 我在 mac mini 上可以跑」。原
+`enhance.py` 的 SR 是 FSRCNN_x2,当初因为 EC2 无 GPU 才选它。
+
+**Actions**:
+- `enhance.py`: `_superres()` 改成先试 Real-ESRGAN x2 ONNX,失败再退 FSRCNN。
+  新增 `_esrgan_session()`(lru_cache,provider 顺序 CoreML → CUDA → CPU)、
+  `_esrgan_tile()`、`_esrgan_x2()`(384 tile + 24px pad,pad 在 2x 后裁掉)。
+- `enhance()`: ESRGAN 跑过时 denoise/unsharp 各砍半 —— RRDB 本身就去噪+重建边缘,
+  再叠满 grade 会 double-cook(塑料天空、屋脊白边)。
+- `models/fetch.sh` + `.gitignore` 加 `models/*.onnx`(66MB,不进 git)。
+- README: onnxruntime 安装 + `ENHANCE_THREADS`。
+- `--self-check` 新增 tiling 正确性断言(拿 nearest-2x 假 session 换掉真网,
+  和 `np.repeat` 逐像素比对,任何 index bug 立刻炸)。
+
+**Decisions**:
+- **ONNX + onnxruntime,不用 torch/basicsr**:65MB torch 栈换不来质量,而且同一个
+  `.onnx` 在 Mac mini 走 CoreML EP、在 EC2 走 CPU EP,worker 代码零分支。
+- 权重取 `wide-video/real-esrgan-v1.0.0`(BSD-3,x2plus 导出)。**没有**用
+  `cv2.dnn.readNetFromONNX` —— OpenCV 5.0 在 resize2 层直接 assert 失败
+  (`ninputs == 1 || 2 || >= 4`),这条路走不通,必须 onnxruntime。
+- x2 而非 x4:卡片只吃 1080,`MAX_EDGE=3200` 会把 x4 结果再缩回去,纯浪费。
+
+**Issues**: EC2 CPU 上 ~28 s/MPix,1600x1200 整链 **87.7 s/张**(FSRCNN 约 1s)。
+enhance 队列本来就排在 render job 之后,属于后台批处理,可接受;Mac mini CoreML
+会快一个量级。
+
+**Resolution**: `--self-check` 通过并报告 `SR backend: real-esrgan`。真实照片
+BEFORE/AFTER 样本已生成待 owner 评审 —— 未经批准不跑全量回填。
+
+**Next steps**: owner 看样本定 preset(ESRGAN 之后 grade 砍半是否还偏重);
+渲染搬回 Mac mini 时只需 `pip install onnxruntime` + `models/fetch.sh`。
+
 ## 2026-08-03 07:40 UTC — 删掉视频审批闸:渲完即上线
 
 **Objective**: owner:「删掉 Home tour (auto-generated) / walkthrough · ready /
