@@ -73,8 +73,14 @@ type CommunityPoolRow = {
    * reason they sit under — see `community-reasons.ts` `factFor`. */
   residents_count: number | null;
   homeowners_pct: number | null;
-  /** 91.1% populated. Cited only for age-shaped claims — see `factFor`. */
-  avg_age: number | null;
+  /**
+   * 91.1% populated. Cited only for age-shaped claims — see `factFor`.
+   *
+   * OPTIONAL, not `number | null`: making it required broke every existing test
+   * fixture that predates this column, and `factFor` already treats a missing
+   * value the same as a null one.
+   */
+  avg_age?: number | null;
 };
 
 /**
@@ -118,7 +124,13 @@ export async function fetchCommunityPool(args: {
 
   if (error) throw new Error(`community pool fetch failed: ${error.message}`);
 
-  return projectCommunityPool((data ?? []) as CommunityPoolRow[]);
+  const rows = (data ?? []) as CommunityPoolRow[];
+  // One grouped read for the page, after the rows are known.
+  const poiCounts = await fetchPoiCounts(
+    supabase,
+    rows.map((r) => r.id),
+  );
+  return projectCommunityPool(rows, poiCounts);
 }
 
 /**
@@ -156,11 +168,51 @@ export async function fetchCommunityPoolByIds(ids: string[]): Promise<PoolCommun
     );
     return [];
   }
-  return projectCommunityPool((data ?? []) as CommunityPoolRow[]);
+  const rows = (data ?? []) as CommunityPoolRow[];
+  // Same counts as the paged read. Omitting them here would make a by-id card
+  // (the dev sampler's path, and the owner's device) show WEAKER facts than the
+  // identical card served from the page window.
+  const poiCounts = await fetchPoiCounts(
+    supabase,
+    rows.map((r) => r.id),
+  );
+  return projectCommunityPool(rows, poiCounts);
+}
+
+/**
+ * POI counts per community, keyed `communityId -> intent_bucket -> count`.
+ *
+ * One grouped read for the whole page rather than a query per card. Only
+ * `approved`/`candidate` rows exist today and both are real places, so no status
+ * filter — revisit if a `rejected` state appears.
+ *
+ * Returns an empty map on error: a missing count must degrade to the interest
+ * and demographic facts, never fail the feed.
+ */
+export async function fetchPoiCounts(
+  supabase: Awaited<ReturnType<typeof createAnonClient>>,
+  communityIds: string[],
+): Promise<Record<string, Record<string, number>>> {
+  if (communityIds.length === 0) return {};
+  const { data, error } = await supabase
+    .from('community_pois')
+    .select('community_id, intent_bucket')
+    .in('community_id', communityIds);
+  if (error || !data) return {};
+  const out: Record<string, Record<string, number>> = {};
+  for (const row of data as { community_id: string; intent_bucket: string }[]) {
+    if (!row.community_id || !row.intent_bucket) continue;
+    const perCommunity = (out[row.community_id] ??= {});
+    perCommunity[row.intent_bucket] = (perCommunity[row.intent_bucket] ?? 0) + 1;
+  }
+  return out;
 }
 
 /** Pure projection, exported for direct testing. */
-export function projectCommunityPool(rows: CommunityPoolRow[]): PoolCommunityDTO[] {
+export function projectCommunityPool(
+  rows: CommunityPoolRow[],
+  poiCounts: Record<string, Record<string, number>> = {},
+): PoolCommunityDTO[] {
   const out: PoolCommunityDTO[] = [];
   for (const r of rows) {
     // Guarded again rather than trusting the query filter: this projection is
@@ -179,6 +231,10 @@ export function projectCommunityPool(rows: CommunityPoolRow[]): PoolCommunityDTO
         residentsCount: r.residents_count,
         homeownersPct: r.homeowners_pct,
         avgAge: r.avg_age,
+        // Counts of real places — the strongest fact the card can show
+        // (owner: 「图标里要有干货数据 比如33个餐厅」). Only 11.7% of communities
+        // have any; see `poiCounts` in `community-reasons.ts` for the ceiling.
+        poiCounts: poiCounts[r.id],
         // Evidence for a resident-stated reason, and the column that took
         // sub-fact coverage from 36.2% to 82.3% of cards — see
         // `community-reasons.ts` `INTEREST_EVIDENCE`.

@@ -38,6 +38,7 @@
  */
 
 import { publicCoverImageUrl } from '@/lib/communities/cover';
+import { fetchPoiCounts } from '@/lib/feed/community-pool';
 import { createAnonClient } from '@/lib/supabase/server';
 import {
   type CommunityReason,
@@ -120,11 +121,18 @@ export async function fetchCommunityDetail(idOrSlug: string): Promise<CommunityD
 
   if (error) throw new Error(`community detail fetch failed: ${error.message}`);
   if (!data) return null;
-  return projectCommunityDetail(data as DetailRow);
+  const row = data as DetailRow;
+  // Counts of real places, fetched here too so this page cannot show WEAKER
+  // facts than the tile the user tapped to reach it.
+  const poiCounts = await fetchPoiCounts(supabase, [row.id]);
+  return projectCommunityDetail(row, poiCounts[row.id]);
 }
 
 /** Pure projection, exported for direct testing. */
-export function projectCommunityDetail(r: DetailRow): CommunityDetailDTO | null {
+export function projectCommunityDetail(
+  r: DetailRow,
+  poiCounts?: Record<string, number>,
+): CommunityDetailDTO | null {
   if (!r.cover_storage_path || !r.slug || !r.name) return null;
 
   const facts = {
@@ -133,6 +141,7 @@ export function projectCommunityDetail(r: DetailRow): CommunityDetailDTO | null 
     // Must match the card's fact sources exactly, or tapping the CTA shows
     // FEWER facts than the tile the user just tapped.
     avgAge: r.avg_age,
+    poiCounts,
     interests: r.interests,
   };
   // The SAME picker the card uses, so the first three here are byte-identical to

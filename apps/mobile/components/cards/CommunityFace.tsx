@@ -87,7 +87,11 @@ import {
 /** The redline's three lifestyle blocks. More would not fit the row. */
 const MAX_TILES = 3;
 /**
- * Tile glyph. 13, not the redline's 17.
+ * Tile glyph. 11, not the redline's 17.
+ *
+ * 13 -> 11 on 2026-08-02 (owner: 「图标需要缩小点」). The glyph is the least
+ * informative thing in the tile and it was competing with the number, which is
+ * the thing the owner actually wants read (「图标里要有干货数据 比如33个餐厅」).
  *
  * The tile is still the redline's STACK (glyph / label / statistic) — the owner
  * kept every row (「所有信息都需要保留 title description highlights with
@@ -95,7 +99,7 @@ const MAX_TILES = 3;
  * 188pt panel affords alongside a 2-line description and a 44pt CTA. Everything
  * scaled together; nothing was dropped.
  */
-const TILE_ICON = 13;
+const TILE_ICON = 11;
 /**
  * The scrim's stops.
  *
@@ -437,21 +441,27 @@ const styles = StyleSheet.create({
 	 */
 	tileLabel: {
 		...redlineText.tile,
-		fontSize: 9.5,
-		lineHeight: 12,
-		color: redline.ink,
+		fontSize: 9,
+		lineHeight: 11,
+		color: redline.ink2,
 		textAlign: "center",
 	},
 	/**
-	 * The statistic. 8.5/11, and `ink2` NOT `ink3`: measured 2.76:1 for ink3 on
-	 * this tile fill in the demo, a WCAG AA fail at this size. ink2 is 4.67:1 and
-	 * still reads a step below the label.
+	 * The statistic — the line the tile exists to deliver.
+	 *
+	 * 9.5/12, up from 8.5/11: the 2pt freed by shrinking the glyph 13 -> 11 went
+	 * here, because the owner shrank the icon in order to make the NUMBER read
+	 * (「图标需要缩小点 / 图标里要有干货数据」). `ink2` not `ink3` — measured 2.76:1
+	 * for ink3 on this tile fill, a WCAG AA fail at this size; ink2 is 4.67:1.
 	 */
 	tileFact: {
 		...redlineText.nano,
-		fontSize: 8.5,
-		lineHeight: 11,
-		color: redline.ink2,
+		fontSize: 9.5,
+		lineHeight: 12,
+		fontWeight: "600",
+		// `ink`, and the LABEL is now ink2 — the number leads, the label names it.
+		// Inverted on 2026-08-02 with the icon shrink, for the same reason.
+		color: redline.ink,
 		textAlign: "center",
 	},
 	/**

@@ -38,7 +38,7 @@ const PAD_BOTTOM = 11;
 const NAME_H = 22; // place @ 20/22
 const BLURB_H = 2 * 13; // subtitle @ 11.5/13, numberOfLines={2}
 const TILES_MARGIN_TOP = 4;
-const TILE_H = 52; // padV 5x2 + glyph 13 + gap 2 + label 12 + gap 2 + fact 11
+const TILE_H = 48; // padV 5x2 + glyph 11 + gap 2 + label 11 + gap 2 + fact 12
 const CTA_H = 44; // §0.5 floor — RedlineCta's own height, the one size that never scales
 
 /** Every device the app supports, shortest first. */

@@ -323,6 +323,21 @@ export interface CommunityReasonFacts {
    */
   avgAge?: number | string | null;
   /**
+   * POI COUNTS keyed by `community_pois.intent_bucket` — `{ dining: 33, ... }`.
+   *
+   * The owner's 「图标里要有干货数据 比如33个餐厅」. Ashley Crossing genuinely has 33
+   * `dining` rows within 3km, which is where that number came from, and a count
+   * of real places outranks every other source here.
+   *
+   * CEILING, stated because it is severe: `community_pois` holds 175 rows and
+   * ALL of them belong to one community. Deriving counts from the global `pois`
+   * table by distance reaches only 11.7% of communities (1,016/8,679) — there
+   * are just 1,521 POIs and they were fetched around Atlanta. Precise where it
+   * exists, absent for ~88% of cards, which is why the interest and demographic
+   * rules below stay. Upgrade path is a Places backfill, not a code change.
+   */
+  poiCounts?: Partial<Record<string, number>> | null;
+  /**
    * `communities.interests` — Nextdoor's own top-10 list of what residents of
    * THIS neighbourhood are into, in the order Nextdoor ranks them. 97.5% of
    * feed-eligible communities carry one, 8,323 of them with all ten values.
@@ -431,7 +446,7 @@ const INTEREST_EVIDENCE: Record<string, string> = {
  */
 interface FactWithSource {
   text: string;
-  source: 'homeowners_pct' | 'residents_count' | 'avg_age' | `interest:${string}`;
+  source: 'homeowners_pct' | 'residents_count' | 'avg_age' | `interest:${string}` | `poi:${string}`;
 }
 
 /**
@@ -456,7 +471,43 @@ interface FactWithSource {
  * Never widen this to "any number we happen to have": a figure under a claim
  * reads as proof of that claim, and the wrong figure is worse than none.
  */
+/**
+ * `intent_bucket` -> the reason label its count proves, and the noun to print.
+ *
+ * Only buckets whose count actually PROVES the claim on the tile. A `faith` or
+ * `healthcare` count backs no label the card shows, so those are absent rather
+ * than mapped to something merely adjacent.
+ */
+const POI_EVIDENCE: Record<string, { label: string; noun: string }> = {
+  // No "nearby" suffix. Estimated at 8.5px, "33 restaurants nearby" is ~89pt in
+  // the 93pt tile box on an SE — too tight to trust, and the tile already sits
+  // under a community, so "nearby" is implied. The COUNT is the fact.
+  dining: { label: 'Restaurants', noun: 'restaurants' },
+  outdoor: { label: 'Parks', noun: 'parks' },
+  schools: { label: 'Schools', noun: 'schools' },
+  shopping: { label: 'Shopping', noun: 'shops' },
+  pets: { label: 'Dog Friendly', noun: 'pet places' },
+};
+
+/** Reverse index of `POI_EVIDENCE`, built once at module load. */
+const POI_BUCKET_FOR_LABEL: Record<string, { bucket: string; noun: string }> = Object.fromEntries(
+  Object.entries(POI_EVIDENCE).map(([bucket, v]) => [v.label, { bucket, noun: v.noun }]),
+);
+
 function factFor(label: string, facts: CommunityReasonFacts): FactWithSource | undefined {
+  /*
+   * A COUNT OF REAL PLACES outranks everything else here, so it is checked
+   * first — owner, 2026-08-02: 「图标里要有干货数据 比如33个餐厅等等」.
+   * "33 restaurants nearby" measures the neighbourhood; "#7 resident interest"
+   * only orders a preference. Where the count exists, print the count.
+   */
+  const poi = POI_BUCKET_FOR_LABEL[label];
+  if (poi) {
+    const n = facts.poiCounts?.[poi.bucket];
+    if (typeof n === 'number' && n > 0) {
+      return { text: `${n} ${poi.noun}`, source: `poi:${poi.bucket}` };
+    }
+  }
   if (label === 'Well Maintained' || label === 'Safe') {
     const pct = numeric(facts.homeownersPct);
     if (pct != null && pct > 0) {

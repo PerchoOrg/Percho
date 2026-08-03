@@ -78,6 +78,28 @@ describe('communityReasons', () => {
     expect(new Set(figures).size).toBe(figures.length);
   });
 
+  it('prints a COUNT of real places above every other fact', () => {
+    // Owner, 2026-08-02: 「图标里要有干货数据 比如33个餐厅等等」. Ashley Crossing has
+    // 33 `dining` rows in `community_pois`; a count measures the place, an
+    // interest rank only orders a preference, so the count wins.
+    const out = communityReasons({
+      attributes: ['Restaurants'],
+      // Both sources available: the count must beat the rank.
+      facts: { poiCounts: { dining: 33 }, interests: ['Cooking'] },
+    });
+    expect(out[0]?.fact).toBe('33 restaurants');
+  });
+
+  it('ignores a POI bucket that proves nothing on the tile', () => {
+    // A `faith` or `healthcare` count backs no label the card shows. Mapping it
+    // to an adjacent label would put the wrong figure under a claim.
+    const out = communityReasons({
+      attributes: ['Restaurants'],
+      facts: { poiCounts: { faith: 13, healthcare: 21 } },
+    });
+    expect(out[0]?.fact).toBeUndefined();
+  });
+
   it('cites avg_age only for age-shaped claims', () => {
     // A median age is not evidence that a place is safe or walkable.
     const ageOk = communityReasons({
