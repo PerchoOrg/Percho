@@ -3,6 +3,7 @@ export * from './traits';
 export * from './persona';
 export * from './scope';
 export * from './dims';
+export * from './icons';
 export * from './profile';
 export * from './rhythm';
 export * from './pools';
