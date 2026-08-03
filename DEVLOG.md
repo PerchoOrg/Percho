@@ -4,6 +4,47 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-08-03 08:10 UTC — enhance 链补全:straighten + 曝光统一 + 室内白平衡
+
+**Objective**: owner:「在保证图片依然真实的情况下 实现所有的优化 包括需要gpu的」。
+先在 demo 里验证了三个免费 op(`~/percho-prototypes/photo-enhance-demo/`,
+挂 demo.percho.co),owner 看过后要求全部落地。
+
+**Actions**:
+- `enhance.py`: 新增 `_vertical_tilt_deg` / `_straighten`(roll-only)、
+  `exposure_gains` / `_apply_exposure`、`_looks_indoor` / `_indoor_wb`。
+  `enhance()` 签名改成返回 `(img, meta)`,新增 `exposure_gain` 参数;
+  新增 `enhance_group()` 和 `--group-json` CLI。
+- `worker.py`: `claim_enhance_job` 改成**按 listing 成组claim**
+  (`ENHANCE_GROUP_MAX=24`),`process_enhance_job(table, rows)` 收 list;
+  每张照片独立写 DB 状态,一张挂不拖累同 listing 其他张;新增 `_fail_enhance`。
+  删掉 ffprobe 量尺寸那段 —— enhance.py 现在直接回 width/height。
+- `PhotoTable.tsx`: status 下面显示实际生效的 op(`ESRGAN · straighten 1.2° ·
+  exp 1.14× · indoor WB`),读 `enhanced_meta`。
+- README: 整条链的表格 + 每步的 ceiling/拒绝条件。
+
+**Decisions**:
+- **成组不是优化而是必需**:曝光统一的目标是「这个 listing 的中位亮度」,
+  单张算不出来。目标取中位数而非固定值 = 不会凭空造出房子没有的亮度。
+- **明确不做 keystone/透视矫正**。18 张实测里真正歪的多是仰拍导致的垂直线收敛,
+  修它必须拉伸画面 —— 天花板变形、门框弯,这正是"假"的观感。只做 roll。
+- 曝光在**线性光**里乘增益再编码回 sRGB;直接乘 sRGB 数值就是"HDR 滤镜"发白的来源。
+- 室内白平衡只取画面**亮部**估计照明色,避免大面积木地板/红地毯拖偏。
+
+**Issues**: 写 demo 时 self-check 抓到一个真 bug —— 纯噪声图能产生 293 条
+"直线",加权中位数给出一个**看起来很自信的 -2.78°**。只靠 line count 当可靠性门槛
+是错的,改成要求加权 55% 的线落在中位数 ±1.5° 内(consensus gate),否则拒绝旋转。
+这个断言留在 `--self-check` 里。
+
+**Resolution**: `--self-check`(每个 op + 它的拒绝路径)、`--group-json` 三张真实
+照片、`enhance_smoke.py` 全过。web 端 tsc 对 PhotoTable 干净(biome 报的 2 个错
+在改动前就存在)。EC2 无 ONNX 权重 → SR 走 fsrcnn 回退,链其余部分照常。
+
+**Next steps**: Mac mini 上 `pip install onnxruntime` + `models/fetch.sh` 即启用
+Real-ESRGAN。全量回填要 owner 批(EC2 CPU ~90s/张)。`_looks_indoor` 是启发式,
+`photo_tagger.py` 的 room_type 是更好的源,等它从坏掉的 ANTHROPIC_API_KEY 路径
+迁到 Bedrock 后接上。
+
 ## 2026-08-03 07:50 UTC — 两个 nearby 页也上照片表格;tab 重排/改名/删 POI
 
 **Objective**: owner:「这个表格不错,对 community tour / Listing nearby 也按照这个模式

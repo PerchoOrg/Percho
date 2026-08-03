@@ -51,7 +51,7 @@ def dl(path, dest):
 
 def pair(src: Path, tag: str) -> Path:
     img = cv2.imread(str(src), cv2.IMREAD_COLOR)
-    after = enhance(img)
+    after, _ = enhance(img)
     a = OUT / f"{tag}_after.jpg"
     cv2.imwrite(str(a), after, [cv2.IMWRITE_JPEG_QUALITY, 92])
     cmp = OUT / f"cmp_{tag}.jpg"

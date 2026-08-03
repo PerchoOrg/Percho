@@ -40,6 +40,34 @@ Admin queues from `/admin/pipeline/tour-jobs/[id]` or
 `/admin/pipeline/poi-library/[id]`; the worker polls it *after* render jobs so
 batch enhancement never delays a render someone is watching.
 
+Photos are claimed **per listing, not per photo** (`ENHANCE_GROUP_MAX = 24`).
+That is not an optimisation: exposure matching targets the median brightness of
+the listing, which cannot be computed one photo at a time.
+
+The chain, in order:
+
+| Step | What | Ceiling / refusal |
+|---|---|---|
+| straighten | roll-only rotation, walls plumb | ≤4°, ≥0.3°, refused unless detected verticals agree; corners cropped to real pixels, never filled |
+| superres | Real-ESRGAN x2 (ONNX) → FSRCNN x2 → none | skipped when long edge ≥ 2400 |
+| denoise | NLM colored | halved when ESRGAN ran |
+| sharpen | unsharp mask | halved when ESRGAN ran |
+| local contrast | CLAHE on L + shadow lift | clip 1.1 default |
+| color correct | gray-world | ±2% |
+| indoor WB | illuminant from the bright half | ±10%, **interiors only** |
+| exposure match | pull toward the listing's median luma | ±0.35 stop, 70% strength, linear light |
+
+Every op is clamped and has a no-op path, because an MLS photo must not
+misrepresent the property. `enhanced_meta.chain` records which ops actually
+fired per photo, and the admin photo table shows it under the status.
+
+Straighten fires on roughly **1 in 18** real listing photos (measured
+2026-08-03) — MLS shooters use tripods. It is kept because the cost of a miss is
+one Canny+Hough pass and the win when it fires is a visibly crooked photo fixed.
+Perspective/keystone correction is deliberately NOT implemented: pulling
+converging verticals parallel stretches ceilings and bows door frames, which is
+exactly the manipulated look the product can't ship.
+
 `ready` means the enhanced JPEG exists at
 `listing-photos/enhanced/<original path>` and is awaiting review. Renders read it
 only once an admin sets `approved` — see `approved_enhanced_path()`.
@@ -47,9 +75,16 @@ only once an admin sets `approved` — see `approved_enhanced_path()`.
 Self-checks:
 
 ```bash
-/usr/bin/python3 scripts/render-worker/enhance.py --self-check   # filter chain
+/usr/bin/python3 scripts/render-worker/enhance.py --self-check   # every op + its refusal path
 /usr/bin/python3 scripts/render-worker/enhance_smoke.py          # queue → storage, end to end
 /usr/bin/python3 scripts/render-worker/enhance_sample.py 3       # BEFORE/AFTER JPEGs for review
+```
+
+One listing by hand (exposure matched across the group):
+
+```bash
+/usr/bin/python3 scripts/render-worker/enhance.py --group-json \
+  '{"preset":"default","pairs":[["a.jpg","a-out.jpg"],["b.jpg","b-out.jpg"]]}'
 ```
 
 ## Manual run (for testing)

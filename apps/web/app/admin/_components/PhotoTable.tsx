@@ -54,6 +54,15 @@ export interface PhotoRow {
   enhanced_status?: string | null;
   enhanced_preset?: string | null;
   enhanced_error?: string | null;
+  /** Per-photo record of which ops actually fired (worker writes it). Lets you
+   *  see WHY a photo changed without diffing pixels. */
+  enhanced_meta?: {
+    chain?: string;
+    straighten_deg?: number | null;
+    exposure_gain?: number;
+    indoor?: boolean;
+    sr?: string | null;
+  } | null;
   /** Videos that used this photo (POI: resolved from generated_videos). */
   used_in?: string[];
 }
@@ -337,6 +346,23 @@ export function PhotoTable({
                   </Td>
                   <Td>
                     <StatusText value={p.enhanced_status ?? 'none'} />
+                    {p.enhanced_meta?.chain && (
+                      <div className="text-[10px] text-ink2" title={p.enhanced_meta.chain}>
+                        {[
+                          p.enhanced_meta.sr === 'real-esrgan-x2' ? 'ESRGAN' : null,
+                          p.enhanced_meta.straighten_deg != null
+                            ? `straighten ${p.enhanced_meta.straighten_deg}\u00b0`
+                            : null,
+                          p.enhanced_meta.exposure_gain != null &&
+                          Math.abs(p.enhanced_meta.exposure_gain - 1) >= 0.01
+                            ? `exp ${p.enhanced_meta.exposure_gain}\u00d7`
+                            : null,
+                          p.enhanced_meta.chain.includes('indoor_wb') ? 'indoor WB' : null,
+                        ]
+                          .filter(Boolean)
+                          .join(' · ') || 'base grade only'}
+                      </div>
+                    )}
                     {p.enhanced_error && (
                       <div className="text-[10px] text-red-600" title={p.enhanced_error}>
                         {truncate(p.enhanced_error, 40)}

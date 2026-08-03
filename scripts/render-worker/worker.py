@@ -1216,15 +1216,28 @@ def process_bucket_job(job: dict[str, Any]) -> None:
 
 ENHANCE_SCRIPT = Path(__file__).resolve().parent / "enhance.py"
 ENHANCE_TABLES = ("listing_photos", "poi_photos")
+# Cap on one claimed group. Exposure matching wants the whole listing, but a
+# 60-photo listing at ~90 s/photo on CPU would hold the queue for 90 minutes and
+# starve any render job queued behind it.
+# ponytail: fixed cap. Make it adaptive only if a real listing exceeds it often.
+ENHANCE_GROUP_MAX = 24
+ENHANCE_TIMEOUT_SEC = 300     # per photo in the group
 
 
-def claim_enhance_job() -> tuple[str, dict[str, Any]] | None:
-    """Oldest queued photo across both photo tables. Returns (table, row)."""
+def claim_enhance_job() -> tuple[str, list[dict[str, Any]]] | None:
+    """Claim a GROUP of queued photos. Returns (table, rows).
+
+    A group is one listing's queued photos (poi_photos have no listing, so they
+    come one at a time). Grouping is not an optimisation — exposure matching
+    targets the MEDIAN brightness of the listing, which is unknowable one photo at
+    a time. It also amortises the 66 MB Real-ESRGAN model load across the group.
+    """
     for table in ENHANCE_TABLES:
         rows = sb_get(
             table,
             {
-                "select": "id,storage_path,enhanced_preset",
+                "select": "id,storage_path,enhanced_preset"
+                          + (",listing_id" if table == "listing_photos" else ""),
                 "enhanced_status": "eq.queued",
                 "order": "id.asc",
                 "limit": "1",
@@ -1232,78 +1245,103 @@ def claim_enhance_job() -> tuple[str, dict[str, Any]] | None:
         )
         if not rows:
             continue
-        row = rows[0]
-        updated = sb_patch(
-            table,
-            {"id": f"eq.{row['id']}", "enhanced_status": "eq.queued"},
-            {"enhanced_status": "processing"},
-        )
-        if updated:
-            return table, row
+        first = rows[0]
+        group = [first]
+        if table == "listing_photos" and first.get("listing_id"):
+            group = sb_get(table, {
+                "select": "id,storage_path,enhanced_preset,listing_id",
+                "enhanced_status": "eq.queued",
+                "listing_id": f"eq.{first['listing_id']}",
+                "order": "id.asc",
+                "limit": str(ENHANCE_GROUP_MAX),
+            }) or group
+        claimed = []
+        for row in group:
+            if sb_patch(
+                table,
+                {"id": f"eq.{row['id']}", "enhanced_status": "eq.queued"},
+                {"enhanced_status": "processing"},
+            ):
+                claimed.append(row)
+        if claimed:
+            return table, claimed
     return None
 
 
-def process_enhance_job(table: str, row: dict[str, Any]) -> None:
-    photo_id = row["id"]
-    src_path = row["storage_path"]
-    preset = row.get("enhanced_preset") or "default"
-    workdir = Path(tempfile.mkdtemp(prefix=f"enhance-{photo_id[:8]}-"))
-    print(f"[enhance {table}/{photo_id}] preset={preset} src={src_path}", flush=True)
+def process_enhance_job(table: str, rows: list[dict[str, Any]]) -> None:
+    """Enhance one claimed group. Each row's DB state is updated independently so
+    one bad photo fails alone instead of failing its listing-mates."""
+    if isinstance(rows, dict):          # tolerate the old single-row call shape
+        rows = [rows]
+    preset = rows[0].get("enhanced_preset") or "default"
+    workdir = Path(tempfile.mkdtemp(prefix=f"enhance-{rows[0]['id'][:8]}-"))
+    print(f"[enhance {table}] group of {len(rows)} preset={preset}", flush=True)
 
     try:
-        ext = Path(src_path).suffix or ".jpg"
-        src = workdir / f"orig{ext}"
-        out = workdir / "enhanced.jpg"
-        storage_download(PHOTO_BUCKET, src_path, src)
+        srcs, dests, ok_rows = [], [], []
+        for row in rows:
+            try:
+                ext = Path(row["storage_path"]).suffix or ".jpg"
+                src = workdir / f"{row['id']}{ext}"
+                storage_download(PHOTO_BUCKET, row["storage_path"], src)
+                srcs.append(src)
+                dests.append(workdir / f"{row['id']}-out.jpg")
+                ok_rows.append(row)
+            except Exception as exc:  # noqa: BLE001
+                _fail_enhance(table, row["id"], exc)
+
+        if not ok_rows:
+            return
 
         proc = subprocess.run(
-            [PYTHON_BIN, str(ENHANCE_SCRIPT), str(src), str(out), "--preset", preset],
-            capture_output=True, text=True, timeout=600,
+            [PYTHON_BIN, str(ENHANCE_SCRIPT), "--group-json",
+             json.dumps({"preset": preset,
+                         "pairs": [[str(s), str(d)] for s, d in zip(srcs, dests)]})],
+            capture_output=True, text=True, timeout=ENHANCE_TIMEOUT_SEC * len(ok_rows),
         )
-        if proc.returncode != 0 or not out.exists():
+        if proc.returncode != 0:
             raise RuntimeError(f"enhance.py failed: {proc.stderr[-500:] or proc.stdout[-500:]}")
+        metas = json.loads(proc.stdout.strip().splitlines()[-1])
 
-        dest_path = f"enhanced/{Path(src_path).with_suffix('.jpg')}"
-        storage_upload(PHOTO_BUCKET, dest_path, out)
-
-        w, h = 0, 0
-        try:
-            dims = subprocess.run(
-                ["ffprobe", "-v", "error", "-select_streams", "v:0",
-                 "-show_entries", "stream=width,height", "-of", "csv=p=0", str(out)],
-                capture_output=True, text=True, check=True, timeout=15,
-            ).stdout.strip().split(",")
-            w, h = int(dims[0]), int(dims[1])
-        except Exception:
-            pass
-
-        sb_patch(table, {"id": f"eq.{photo_id}"}, {
-            "enhanced_path": dest_path,
-            # 'ready' NOT 'approved' — the render only reads approved files, so
-            # nothing changes in the product until the owner clicks Approve.
-            "enhanced_status": "ready",
-            "enhanced_preset": preset,
-            "enhanced_meta": {
-                "width": w, "height": h,
-                "bytes": out.stat().st_size,
-                "chain": "superres,denoise,sharpen,local_contrast,color_correct",
-            },
-            "enhanced_at": _now_iso(),
-            "enhanced_error": None,
-        })
-        print(f"[enhance {table}/{photo_id}] ready {w}x{h} -> {dest_path}", flush=True)
+        for row, dest, meta in zip(ok_rows, dests, metas):
+            try:
+                if not dest.exists():
+                    raise RuntimeError("enhance.py produced no output")
+                dest_path = f"enhanced/{Path(row['storage_path']).with_suffix('.jpg')}"
+                storage_upload(PHOTO_BUCKET, dest_path, dest)
+                sb_patch(table, {"id": f"eq.{row['id']}"}, {
+                    "enhanced_path": dest_path,
+                    # 'ready' NOT 'approved' — the render only reads approved
+                    # files, so nothing changes in the product until the owner
+                    # clicks Approve.
+                    "enhanced_status": "ready",
+                    "enhanced_preset": preset,
+                    "enhanced_meta": {**meta, "bytes": dest.stat().st_size},
+                    "enhanced_at": _now_iso(),
+                    "enhanced_error": None,
+                })
+                print(f"[enhance {table}/{row['id']}] ready "
+                      f"{meta.get('width')}x{meta.get('height')} {meta.get('chain')}", flush=True)
+            except Exception as exc:  # noqa: BLE001
+                traceback.print_exc()
+                _fail_enhance(table, row["id"], exc)
     except Exception as exc:  # noqa: BLE001
         traceback.print_exc()
-        try:
-            sb_patch(table, {"id": f"eq.{photo_id}"}, {
-                "enhanced_status": "failed",
-                "enhanced_error": str(exc)[:500],
-                "enhanced_at": _now_iso(),
-            })
-        except Exception:
-            traceback.print_exc()
+        for row in rows:
+            _fail_enhance(table, row["id"], exc)
     finally:
         shutil.rmtree(workdir, ignore_errors=True)
+
+
+def _fail_enhance(table: str, photo_id: str, exc: Exception) -> None:
+    try:
+        sb_patch(table, {"id": f"eq.{photo_id}"}, {
+            "enhanced_status": "failed",
+            "enhanced_error": str(exc)[:500],
+            "enhanced_at": _now_iso(),
+        })
+    except Exception:
+        traceback.print_exc()
 
 
 def approved_enhanced_path(row: dict[str, Any]) -> str | None:
