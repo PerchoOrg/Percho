@@ -4,6 +4,41 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-08-03 07:35 UTC — 表格里「in video」全是 no:新列上线前渲的,回填 133 张
+
+**Objective**: owner:「为啥表里都显示不在 video 里?」
+
+**Actions**:
+- 查 DB:`used_in_video_at not null` = **0 行**。不是查询错,是**根本没数据**。
+- 重启 render worker(上一次重启在 07:01,落库代码是 07:24 写的,进程还是旧的)。
+- 新增 `scripts/render-worker/backfill_used_in_video.py`:**重算** shot plan 而不是重渲染。
+  `build_plan` 是纯函数且 seeded on `listing_id`,每张照片的 tags 都缓存在
+  `listing_photos.ai_tags`,所以能精确复现上次渲染选了哪些。
+- 11 个已渲染 listing,回填 **133 张**。
+
+**Decisions**:
+- **重算,不重渲染**。重渲染要烧 CF encode 分钟数,而 plan 是可确定复现的。
+- 先清零整个 listing 再逐条盖章 —— 和 worker 里同样的顺序,否则被新 plan 淘汰的照片会
+  一直声称自己在视频里。
+
+**Issues**:
+- 根因是**时序**:5122 那次渲染在 07:02,`used_in_video_at` 的 migration + worker
+  落库代码在 07:24。列是对的、查询是对的,数据来不及产生。
+- 我上一轮已经在回复里写了「这列对新渲染才有值,老视频要重渲一次」—— 但**只提了没做**,
+  等于把一个看起来像 bug 的空列丢给 owner。
+
+**Resolution**: 133 张已盖章。5122 重算出 **24 clips**,与渲染日志 `clips=24` 完全一致
+→ 重算准确。`clip 1..24` 顺序正确(sort_order 0 → clip 0)。POI 侧 134 张从
+`generated_videos.input_photo_ids` 反查,一直有数据、无需回填。
+
+**Learnings**:
+- **加了一列就要回填,不能只在代码里支持**。「以后新的会有值」对 owner 来说和 bug 无法
+  区分 —— 这是今天第二次同类问题(上次是 approval gate 的 grandfather)。
+- **可确定复现的派生数据不需要重跑昂贵的生产流程**。先问「这个值能算出来吗」再问
+  「要不要重跑」。
+
+**Next steps**: preset 全量回填仍等 owner 批。
+
 ## 2026-08-03 07:25 UTC — admin 照片改表格(14 列)+ listing 选片落库
 
 **Objective**: owner:「把 photos 做成一个表格的形式 每一行一个 photo,显示重要的信息
