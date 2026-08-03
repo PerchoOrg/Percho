@@ -78,40 +78,7 @@ export async function setEnhancedDecision(
   return { ok: true };
 }
 
-/** Approve a rendered video for the buyer-facing feed (incl. Expo Go).
- *  `status` stays owned by the Cloudflare webhook; approval is its own column. */
-export async function setVideoApproval(
-  table: 'listing_videos' | 'community_videos' | 'generated_videos',
-  videoId: string,
-  approved: boolean,
-): Promise<Result> {
-  const admin = await requireAdmin();
-  if (!admin) return { ok: false, message: 'Not authorized.' };
-
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const supabase: any = createServiceClient();
-
-  // approved_by FK targets auth.users(id), so it needs the AUTH user id — NOT
-  // `admin.id`, which is the `agents` row id. Passing the agents id fails with
-  // 23503 listing_videos_approved_by_fkey (reported from admin 2026-08-03).
-  const approver = admin.user_id;
-
-  const patch =
-    table === 'generated_videos'
-      ? {
-          // NOT status='approved' — 20260714120000 dropped that value from this
-          // table's status CHECK. Approval is `approved_at` on all three tables.
-          approved_at: approved ? new Date().toISOString() : null,
-          approved_by: approved ? approver : null,
-          reviewed_at: new Date().toISOString(),
-        }
-      : {
-          approved_at: approved ? new Date().toISOString() : null,
-          approved_by: approved ? approver : null,
-        };
-
-  const { error } = await supabase.from(table).update(patch).eq('id', videoId);
-  if (error) return { ok: false, message: error.message };
-  revalidatePath('/admin/pipeline');
-  return { ok: true };
-}
+// `setVideoApproval` lived here until 2026-08-03. Videos no longer need manual
+// approval — a finished render is live on iOS and web immediately, so the only
+// gate is `status='ready'` (see lib/feed/vertical-videos.ts). The `approved_at`
+// columns are left in the schema; nothing reads them.

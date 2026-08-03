@@ -87,20 +87,14 @@ export async function fetchVerticalVideos(): Promise<HeroVideoIndex> {
       .select('listing_id, cf_video_id, cf_video_id_landscape, cf_video_id_square, sort_order')
       .eq('status', 'ready')
       .eq('kind', 'walkthrough')
-      // 2026-08-03: approval gate. `status='ready'` only means Cloudflare
-      // finished encoding; `approved_at` is the admin's decision that this
-      // render may reach buyers. Un-approved renders stay invisible in the app
-      // (including Expo Go) until someone approves them in /admin.
-      .not('approved_at', 'is', null)
+      // NO approval gate: a finished render goes live on iOS and web
+      // immediately (owner 2026-08-03 — the manual approve step was removed).
+      // `status='ready'` (set by the worker / CF webhook) is the only gate.
       .order('sort_order', { ascending: true }),
     supabase
       .from('generated_videos')
       .select('community_id, cf_stream_uid, created_at')
-      // Same gate as listing_videos. NOT `status='approved'` — 20260714120000
-      // dropped 'approved' from this table's status CHECK, so approval lives in
-      // its own column here too.
       .eq('status', 'ready')
-      .not('approved_at', 'is', null)
       .eq('scope', 'community_intent_bucket')
       .order('created_at', { ascending: false }),
   ]);

@@ -4,6 +4,43 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-08-03 07:40 UTC — 删掉视频审批闸:渲完即上线
+
+**Objective**: owner:「删掉 Home tour (auto-generated) / walkthrough · ready /
+approval 啥的,视频渲染完了就自动更新 ios 和 web」。
+
+**Actions**:
+- `vertical-videos.ts`:去掉两处 `.not('approved_at','is',null)`。唯一的闸变成
+  `status='ready'`(worker 写的)。
+- admin tour-jobs 页:删掉 title 行、`walkthrough · ready` 元信息行、
+  `VideoApproveButton`。改成只在**有问题时**说一句话:render failed / 还在渲 /
+  某个 surface 没渲 / 否则「Live on iOS and web.」
+- 删 `VideoApproveButton.tsx`、删 `setVideoApproval` server action(留一行注释说明去向)。
+- `approved_at`/`approved_by` 列**留在 schema 里不删**,只是没人读。
+
+**Decisions**:
+- **不写 migration 去掉列**。删列是不可逆的,而留着零成本 —— 万一以后要恢复审批,
+  加回读侧一行就行。今天已经证明这个闸的每一处都会咬人(FK 类型、grandfather),
+  不留一个「下次再来一遍」的坑。
+- 状态行改成 **exception-only**:渲完即上线之后,「walkthrough · ready」是零信息
+  (它永远是这个值),而「no iOS render」才是需要你动手的信号。
+
+**Issues**:
+- 去闸后 anon 视角的 listing 视频从 10 → **11** 条,多出来的正是那条 `approved_at is null`
+  的行 —— 说明闸确实在拦东西,现在放行了。community 6 条本来就全批过,不变。
+- 查了 CF webhook 会不会把 `ready` 改回去:它只按 `cf_video_id` 匹配,而我们的渲染写的是
+  `cf_video_id_square`/`_landscape`,**碰不到这些行**。所以 worker 的 `ready` 是唯一真相,
+  两者不会打架。
+
+**Resolution**: 10 条测试过,`tsc` 19 = 基线。`setVideoApproval`/`VideoApproveButton`
+零残留引用。
+
+**Learnings**:
+- **删功能要同时删三处**:UI、读侧过滤、以及被闸拦住的现存数据。只删 UI 会留下一批
+  永远上不了线的行 —— 和今天早上加闸时忘了 grandfather 是同一个错的镜像。
+
+**Next steps**: preset 全量回填仍等 owner 批。
+
 ## 2026-08-03 07:35 UTC — 表格里「in video」全是 no:新列上线前渲的,回填 133 张
 
 **Objective**: owner:「为啥表里都显示不在 video 里?」

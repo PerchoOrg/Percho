@@ -14,7 +14,6 @@ import { createServiceClient } from '@/lib/supabase/server';
 import { notFound } from 'next/navigation';
 import { PhotoTable } from '../../../_components/PhotoTable';
 import { SurfacePreview } from '../../../_components/SurfacePreview';
-import { VideoApproveButton } from '../../../_components/VideoApproveButton';
 import { AdminGenerateTourButton } from './AdminGenerateTourButton';
 
 export const dynamic = 'force-dynamic';
@@ -83,7 +82,7 @@ export default async function AdminTourJobsDetailPage({
     supabase
       .from('listing_videos')
       .select(
-        'id, cf_video_id, cf_video_id_landscape, cf_video_id_square, external_url, kind, status, title, sort_order, created_at, approved_at',
+        'id, cf_video_id, cf_video_id_landscape, cf_video_id_square, external_url, kind, status, title, sort_order, created_at',
       )
       .eq('listing_id', id)
       .order('sort_order', { ascending: true }) as unknown as Promise<{
@@ -98,7 +97,6 @@ export default async function AdminTourJobsDetailPage({
         title: string | null;
         sort_order: number;
         created_at: string;
-        approved_at: string | null;
       }> | null;
     }>,
   ]);
@@ -121,7 +119,7 @@ export default async function AdminTourJobsDetailPage({
         </h2>
         {videos.length === 0 ? (
           <p className="text-ink2 rounded-2xl border border-line bg-surface p-6 text-sm">
-            No videos yet. Click <em>Generate new tour video</em> to render one from the photos.
+            No videos yet. Use the Generate buttons above to render from the photos.
           </p>
         ) : (
           <ul className="space-y-4">
@@ -139,40 +137,24 @@ export default async function AdminTourJobsDetailPage({
                     <SurfacePreview surface="ios" uid={iosUid} status={v.status} />
                     <SurfacePreview surface="web" uid={webUid} status={v.status} />
                   </div>
-                  <div className="mt-3 space-y-2 text-xs">
-                    <div className="font-medium">{v.title ?? v.kind}</div>
-                    <div className="text-ink2">
-                      {v.kind}
-                      {' · '}
-                      <span
-                        className={
-                          v.status === 'ready' || v.status === 'approved'
-                            ? 'text-emerald-500'
-                            : v.status === 'failed'
-                              ? 'text-red-500'
-                              : 'text-amber-500'
-                        }
-                      >
-                        {v.status}
+                  <div className="mt-3 text-xs">
+                    {/* Title, kind and status line removed 2026-08-03: a render
+                        goes live the moment it finishes, so the only thing worth
+                        surfacing is a MISSING surface or an outright failure. */}
+                    {v.status === 'failed' ? (
+                      <span className="text-red-500">Render failed.</span>
+                    ) : v.status !== 'ready' ? (
+                      <span className="text-amber-500">{v.status}…</span>
+                    ) : !iosUid || !webUid ? (
+                      <span className="text-amber-600">
+                        {!iosUid && !webUid
+                          ? 'Neither surface rendered yet.'
+                          : !iosUid
+                            ? 'No iOS render — click Generate iOS video.'
+                            : 'No web render — click Generate web video.'}
                       </span>
-                      {v.status === 'ready' && !v.approved_at && (
-                        <span className="text-amber-600"> · not in app yet</span>
-                      )}
-                      {v.status === 'ready' && !iosUid && (
-                        <span className="text-amber-600"> · no iOS render</span>
-                      )}
-                      {v.status === 'ready' && !webUid && (
-                        <span className="text-amber-600"> · no web render</span>
-                      )}
-                    </div>
-                    {v.status === 'ready' && (
-                      <div className="max-w-xs">
-                        <VideoApproveButton
-                          table="listing_videos"
-                          videoId={v.id}
-                          approved={!!v.approved_at}
-                        />
-                      </div>
+                    ) : (
+                      <span className="text-emerald-600">Live on iOS and web.</span>
                     )}
                   </div>
                 </li>
