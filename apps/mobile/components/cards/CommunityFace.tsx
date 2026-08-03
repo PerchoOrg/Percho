@@ -406,7 +406,12 @@ const styles = StyleSheet.create({
 		lineHeight: 13,
 		color: redline.ink2,
 	},
-	tiles: { flexDirection: "row", gap: 6, marginTop: 4 },
+	/**
+	 * `flexGrow: 1` — the tile row absorbs the panel's spare height so it is not
+	 * pooled into one gap above the CTA (see `ctaSlot`). On a taller phone the
+	 * tiles get taller; on an SE there is 3.5pt to share and nothing moves.
+	 */
+	tiles: { flexDirection: "row", gap: 6, marginTop: 4, flexGrow: 1 },
 	/**
 	 * STACKED tile — glyph, label, statistic. 52pt, not the redline's 84: the
 	 * scale-down is what let the statistic line survive inside a 188pt panel.
@@ -450,10 +455,17 @@ const styles = StyleSheet.create({
 		textAlign: "center",
 	},
 	/**
-	 * `marginTop: 'auto'` pins the CTA to the panel FLOOR — owner: 「最底下还是要有
-	 * 一个Why people love it按钮」. Without it the panel's spare space pooled below
-	 * the button and it floated 46pt above the card's bottom edge (measured in the
-	 * demo).
+	 * The CTA sits on the panel floor, but WITHOUT `marginTop: 'auto'`.
+	 *
+	 * Owner, 2026-08-02: 「三个tile下方的空白太大了 卡片下方整体要协调」. `auto`
+	 * pins the button down by dumping ALL of the panel's slack into this one gap —
+	 * measured 3.5pt on an SE but **43.1pt on a 16 Pro Max**, because the panel
+	 * grows with the card while the rows do not. That single pooled gap is the
+	 * hole under the tiles.
+	 *
+	 * Instead the TILE ROW takes the slack (`flexGrow: 1` on `tiles`), so extra
+	 * height goes into the thing that can use it and every gap stays at 6. The
+	 * button still ends up flush against the bottom padding.
 	 */
-	ctaSlot: { marginTop: "auto" },
+	ctaSlot: { flexShrink: 0 },
 });
