@@ -4,6 +4,58 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-08-03 02:45 UTC — community card 收尾:全出血视频 → hero+panel、POI 真实计数、RLS 洞
+
+**Objective**: 接上一条,owner 又提了六轮真机反馈:视频黑边(报了 4 次)、文字压视频看不清、
+C 版视频要和 listing card 一致、字缩小但信息全留、tile 下方空白太大、图标缩小且要有干货数据。
+
+**Actions**:
+- **视频**:`CommunityFace` 从「全出血 + 卡片级 scrim」改成 **hero(`HERO_RATIO`)+ 浅色 panel**,
+  与 `ListingFace` 共用同一个常量(不是抄 0.618)。scrim/pill 移进 hero 盒内。
+- **ken-burns**:新增 `--cover-crop` flag。封面重渲染 1080×1620 + `--cover-crop`,
+  CF uid `a80692ebecf49b690fa87a75bb8ae130`;旧行 PATCH 成 `superseded`。
+- **文字**:type 全面缩放(place 38→20/22、subtitle 14→11.5/13、tile 84→48pt、
+  图标 17→11、statistic 9.5/12 weight 600),四行全保留。CTA 恒定 44pt。
+- **数据**:`factFor` 新增 POI 计数(最高优先)、`avg_age`、8 条 `INTEREST_EVIDENCE` 配对;
+  fact 带 source 列做去重;`communityReasons` 优先选有证据的 reason(仅筛选,不改排序)。
+- **migration** `20260802120000_buyer_reads_community_pois.sql`,已 push 到 linked remote。
+- 新增 `apps/mobile/theme/community-panel-fit.test.ts`(10 条,五机型行高预算)。
+- Demo:`~/percho-prototypes/community-text-layout/`(4 版 × alpha 滑杆 × 面积四档 + 审计表)。
+
+**Decisions**:
+- 黑边根因**不是** CSS 也不是视频文件,是 `frameAspect` 让 fit 变成**运行时决策** ——
+  `mediaFit` 对任何比画框宽的源返回 `contain`,而 `contain` 会露出 `CardVideo` 的
+  模糊封面底层。只要 fit 是推导的,`generated_videos` 里任何一条旧行都能把黑边带回来。
+  改成 `fit="cover"` 钉死,并删掉整条 `cardAspect` 链路(不留悬空 prop)。
+- `community_pois` 的 RLS **不限制 `status='approved'`**(与 `listing_pois` 先例相反):
+  那条策略保护的是**渲染每个地点**的界面,这里只输出计数、不指名任何地点。175 行里仅 3 行
+  approved,加过滤会给 3km 内有 33 家餐厅的社区印「1 restaurant」= 把审核积压当成现实。
+- tile 下方空白根因是 `marginTop:'auto'` **把面板全部余量堆到一个 gap**(SE 3.5pt,
+  Pro Max 43.1pt)。改成 tile 行 `flexGrow:1` 吸收余量。
+
+**Issues**:
+- `attributes` 顺序看似可当第二排序信号 → 实测 **7,796 行 100% 字母序**、0 个集合有多种
+  顺序,零信息量,**假设作废**。只有 `interests` 顺序带信息(246/8,441 字母序)。
+- `community_pois` anon 读 **0 行** / service role 读 175 —— 静默失效,无任何报错。
+- migration 生效后 dev server 又服务了 3 次旧数据才需重启;**localhost 探测不可信**。
+- 我自己的验证代码错了两次:`getClientRects().length` 对 block 元素恒为 1(误报标题单行);
+  行数计数器除以硬编码 18px(把 13px 行高的 2 行报成 1 行)。两处都已修。
+
+**Resolution**: 覆盖率 tile 64.1%→**95.6%**、三格全有 25.6%→**88.9%**;POI 计数
+上限 **11.7% 社区**(1,016/8,679,全库仅 1,521 个 POI 且集中在 Atlanta)——已写进类型注释。
+mobile 587/587、web lib/ 179/179、tsc 干净。`__tests__/create-upload.test.ts` 与
+`CardIconName`/`TransitionFunction` 在 stash 干净树上同样失败 = **既有问题**。
+
+**Learnings**:
+- 「视频没占满」这类报障:**先验产物(ffprobe + 抽帧测边缘锐度),再改代码**。前三轮
+  都在改卡片,而其中一轮黑边是**烧进视频文件**的(`landscape_canvas = w >= h` 在
+  1080×1000 为真、1080×1620 为假,静默切回模糊填充)。
+- 「不能没有数据支持」→ 先扫全部列的覆盖率(`avg_age` 91.1% 一直没用),再动配对表。
+- owner 逐字重发同一条 = 上轮**只出了 demo 没落地到 app**。
+
+**Next steps**: 六个 POI bucket(fitness/healthcare/faith/errands/nightlife/kids)零照片,
+175 个 POI 只覆盖 1 个社区 —— 要跑 Google Places 抓取(花钱,待 owner 批)。
+
 ## 2026-08-02 07:35 UTC — community card 四条:去心 / 视频占满 / 特色带证据 / CTA 落地
 
 **Objective**: Owner 真机反馈四条:①去掉右上角的心 ②视频宽度不够有黑色空隙 ③底下三个特色
