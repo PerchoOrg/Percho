@@ -87,14 +87,15 @@ import {
 /** The redline's three lifestyle blocks. More would not fit the row. */
 const MAX_TILES = 3;
 /**
- * Tile glyph. 15, not the redline's 17: the tile is a single-line row now, not
- * an 84pt stack, and 17 crowded the label.
+ * Tile glyph. 13, not the redline's 17.
  *
- * `TILE_H_WITH_FACT` (96) is gone with the stacked tile — the sub-fact line does
- * not fit a 188pt panel next to a 44pt CTA (see the row budget in the component)
- * and now lives on the CTA's destination screen instead.
+ * The tile is still the redline's STACK (glyph / label / statistic) — the owner
+ * kept every row (「所有信息都需要保留 title description highlights with
+ * statistics and button」) — but at 52pt rather than 84, because that is what a
+ * 188pt panel affords alongside a 2-line description and a 44pt CTA. Everything
+ * scaled together; nothing was dropped.
  */
-const TILE_ICON = 15;
+const TILE_ICON = 13;
 /**
  * The scrim's stops.
  *
@@ -276,6 +277,14 @@ export function CommunityFace({ card, isTop, onExplore }: CommunityFaceProps) {
 				<Text style={styles.name} numberOfLines={1}>
 					{card.name}
 				</Text>
+				{/*
+				 * Description is BACK (owner, 2026-08-02: 「可以按比例缩小文字 但是所有
+				 * 信息都需要保留 title description highlights with statistics and
+				 * button」). It fits because the type scaled, not because a row went.
+				 */}
+				<Text style={styles.blurb} numberOfLines={2}>
+					{card.blurb ?? `${card.city}, ${card.state}`}
+				</Text>
 				{hasTiles && (
 					<View style={styles.tiles}>
 						{reasons.map((r) => (
@@ -285,15 +294,20 @@ export function CommunityFace({ card, isTop, onExplore }: CommunityFaceProps) {
 									size={TILE_ICON}
 									color={redline.accent}
 								/>
-								{/*
-								 * `numberOfLines={1}` and no sub-fact: the tiles are a
-								 * single-line row now (see the budget above). The facts are
-								 * not lost — they are the first thing the CTA's destination
-								 * shows (`app/community/[slug].tsx`).
-								 */}
 								<Text style={styles.tileLabel} numberOfLines={1}>
 									{r.label}
 								</Text>
+								{/*
+								 * The STATISTIC, on its own line — owner: 「highlights with
+								 * statistics」. Not every reason resolves one (only 42.8% of
+								 * communities get a fact on even one tile), and an absent
+								 * fact renders nothing rather than a placeholder.
+								 */}
+								{!!r.fact && (
+									<Text style={styles.tileFact} numberOfLines={1}>
+										{r.fact}
+									</Text>
+								)}
 							</View>
 						))}
 						{dims.map((dim) => (
@@ -365,43 +379,75 @@ const styles = StyleSheet.create({
 	 */
 	panel: {
 		flex: 1 - HERO_RATIO,
-		paddingHorizontal: 18,
-		paddingTop: 14,
-		paddingBottom: 15,
+		paddingHorizontal: 14,
+		paddingTop: 10,
+		paddingBottom: 11,
+		gap: 6,
 	},
-	/** Serif place name. `place` (38) is the full-bleed size; 26 fits the panel. */
+	/**
+	 * Serif place name. `place` is 38 for the full-bleed face; 20/22 is what a
+	 * 188pt panel affords once the description, the statistic line and a 44pt CTA
+	 * all have to fit (owner: 「可以按比例缩小文字 但是所有信息都需要保留」).
+	 */
 	name: {
 		...redlineText.place,
-		fontSize: 26,
-		lineHeight: 28,
+		fontSize: 20,
+		lineHeight: 22,
 		color: redline.ink,
 	},
-	tiles: { flexDirection: "row", gap: 8, marginTop: 11 },
 	/**
-	 * SINGLE-LINE tiles: icon and label side by side, no sub-fact.
-	 *
-	 * The 84pt stacked tile does not fit a 188pt panel alongside a 44pt CTA — see
-	 * the budget. `flexShrink: 1` lets a long label compress rather than push the
-	 * row wider, which is what keeps the three-up row from wrapping.
+	 * Description at 11.5/13, down from `subtitle`'s 14/20. Two lines cost 26pt
+	 * here against 40 at the token size — that 14pt is most of what paid for the
+	 * statistic line below.
+	 */
+	blurb: {
+		...redlineText.subtitle,
+		fontSize: 11.5,
+		lineHeight: 13,
+		color: redline.ink2,
+	},
+	tiles: { flexDirection: "row", gap: 6, marginTop: 4 },
+	/**
+	 * STACKED tile — glyph, label, statistic. 52pt, not the redline's 84: the
+	 * scale-down is what let the statistic line survive inside a 188pt panel.
+	 * `paddingVertical: 5` and `gap: 2` are the measured values, not taste.
 	 */
 	tile: {
 		flex: 1,
 		minWidth: 0,
-		flexDirection: "row",
 		alignItems: "center",
 		justifyContent: "center",
-		gap: 5,
-		paddingVertical: 9,
-		paddingHorizontal: 6,
+		gap: 2,
+		paddingVertical: 5,
+		paddingHorizontal: 4,
 		borderRadius: redlineRadii.tile,
 		backgroundColor: redline.surface,
 		borderWidth: 1,
 		borderColor: redline.border,
 	},
+	/**
+	 * `numberOfLines={1}` at 9.5/12. "Well Maintained" is the longest real label
+	 * and measured 78pt in a 93pt box in the demo, so it fits without wrapping —
+	 * and a second label line would cost 12pt the panel does not have.
+	 */
 	tileLabel: {
 		...redlineText.tile,
+		fontSize: 9.5,
+		lineHeight: 12,
 		color: redline.ink,
-		flexShrink: 1,
+		textAlign: "center",
+	},
+	/**
+	 * The statistic. 8.5/11, and `ink2` NOT `ink3`: measured 2.76:1 for ink3 on
+	 * this tile fill in the demo, a WCAG AA fail at this size. ink2 is 4.67:1 and
+	 * still reads a step below the label.
+	 */
+	tileFact: {
+		...redlineText.nano,
+		fontSize: 8.5,
+		lineHeight: 11,
+		color: redline.ink2,
+		textAlign: "center",
 	},
 	/**
 	 * `marginTop: 'auto'` pins the CTA to the panel FLOOR — owner: 「最底下还是要有

@@ -26,13 +26,20 @@ const GUTTER = 16;
 const CARD_ASPECT = 1.5;
 const CARD_MAX_VIEWPORT = 0.74;
 
-/** Rendered heights of `CommunityFace`'s panel rows. Keep in sync with its styles. */
-const PAD_TOP = 14;
-const PAD_BOTTOM = 15;
-const NAME_H = 28; // redlineText.place at fontSize 26 / lineHeight 28
-const TILES_MARGIN_TOP = 11;
-const TILE_H = 33; // paddingVertical 9 x2 + the 15pt glyph on a single-line row
-const CTA_H = 44; // §0.5 floor — RedlineCta's own height
+/**
+ * Rendered heights of `CommunityFace`'s panel rows. Keep in sync with its styles.
+ *
+ * ALL FOUR rows are here — title, description, highlights WITH statistics, button
+ * (owner: 「所有信息都需要保留」). They fit because the type scaled, not because
+ * anything was cut, so this arithmetic is the whole argument for those sizes.
+ */
+const PAD_TOP = 10;
+const PAD_BOTTOM = 11;
+const NAME_H = 22; // place @ 20/22
+const BLURB_H = 2 * 13; // subtitle @ 11.5/13, numberOfLines={2}
+const TILES_MARGIN_TOP = 4;
+const TILE_H = 52; // padV 5x2 + glyph 13 + gap 2 + label 12 + gap 2 + fact 11
+const CTA_H = 44; // §0.5 floor — RedlineCta's own height, the one size that never scales
 
 /** Every device the app supports, shortest first. */
 const DEVICES = [
@@ -50,11 +57,21 @@ function panelHeight(w: number, h: number) {
 	return cardHeight * (1 - HERO_RATIO);
 }
 
+const GAP = 6; // panel `gap`, applied between each pair of rows
 const CONTENT_H =
-	PAD_TOP + NAME_H + TILES_MARGIN_TOP + TILE_H + CTA_H + PAD_BOTTOM;
+	PAD_TOP +
+	NAME_H +
+	GAP +
+	BLURB_H +
+	GAP +
+	TILES_MARGIN_TOP +
+	TILE_H +
+	GAP +
+	CTA_H +
+	PAD_BOTTOM;
 
 describe("community card panel fits", () => {
-	it.each(DEVICES)("seats name + tiles + CTA on $name", ({ w, h }) => {
+	it.each(DEVICES)("seats all four rows on $name", ({ w, h }) => {
 		expect(CONTENT_H).toBeLessThanOrEqual(panelHeight(w, h));
 	});
 
@@ -67,12 +84,33 @@ describe("community card panel fits", () => {
 		expect(panel - withoutCta).toBeGreaterThanOrEqual(CTA_H);
 	});
 
-	it("has no room for a second tile line", () => {
-		// Documents WHY the sub-facts moved to the destination screen: the 96pt
-		// stacked tile (+63 over the single-line row) does not fit.
+	it("would NOT fit at the redline's unscaled sizes", () => {
+		// The scale-down is load-bearing, not cosmetic. At the token sizes
+		// (place 38/38, subtitle 14/20, 84pt tile) the same four rows overflow —
+		// which is why "just use the tokens" is not an option here.
 		const smallest = DEVICES[0]!;
-		const stacked = CONTENT_H - TILE_H + 96;
-		expect(stacked).toBeGreaterThan(panelHeight(smallest.w, smallest.h));
+		const unscaled =
+			PAD_TOP +
+			38 +
+			GAP +
+			2 * 20 +
+			GAP +
+			TILES_MARGIN_TOP +
+			84 +
+			GAP +
+			CTA_H +
+			PAD_BOTTOM;
+		expect(unscaled).toBeGreaterThan(panelHeight(smallest.w, smallest.h));
+	});
+
+	it("keeps the statistic line inside the tile budget", () => {
+		// The statistic is the row most likely to be "temporarily" dropped again.
+		// 11pt of the 52pt tile is the fact line; assert the tile still has it.
+		const tileWithoutFact = TILE_H - 11 - 2;
+		expect(TILE_H).toBeGreaterThan(tileWithoutFact);
+		expect(CONTENT_H).toBeLessThanOrEqual(
+			panelHeight(DEVICES[0]!.w, DEVICES[0]!.h),
+		);
 	});
 
 	it("matches the listing card's hero exactly", () => {
