@@ -13,6 +13,7 @@ import { webVideoUid } from '@/lib/feed/video-uid';
 import { createServiceClient } from '@/lib/supabase/server';
 import { notFound } from 'next/navigation';
 import { EnhancePanel } from '../../../_components/EnhancePanel';
+import { SurfacePreview } from '../../../_components/SurfacePreview';
 import { VideoApproveButton } from '../../../_components/VideoApproveButton';
 import { AdminGenerateTourButton } from './AdminGenerateTourButton';
 
@@ -118,67 +119,26 @@ export default async function AdminTourJobsDetailPage({
             No videos yet. Click <em>Generate new tour video</em> to render one from the photos.
           </p>
         ) : (
-          <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+          <ul className="space-y-4">
             {videos.map((v) => {
-              // Which uid the admin tile plays. Square is the mobile render and
-              // was previously ignored here too, so a square-only row showed the
-              // bare status text instead of a player.
-              const effectiveCfId = webVideoUid(v);
-              const isLandscape = !v.cf_video_id && !!v.cf_video_id_landscape;
-              const shapes = [
-                v.cf_video_id_square ? 'square (iOS)' : null,
-                v.cf_video_id_landscape ? 'landscape (web)' : null,
-                v.cf_video_id ? 'portrait' : null,
-              ].filter(Boolean);
-              const cfThumb = effectiveCfId
-                ? (() => {
-                    try {
-                      return thumbnailUrl(effectiveCfId);
-                    } catch {
-                      return null;
-                    }
-                  })()
-                : null;
-              const iframe = effectiveCfId
-                ? (() => {
-                    try {
-                      return streamIframeUrl(effectiveCfId);
-                    } catch {
-                      return null;
-                    }
-                  })()
-                : null;
+              // Each surface previewed SEPARATELY at its own aspect — a 1:1 asset
+              // squeezed into one shared 9:16 tile told you nothing about what the
+              // buyer actually sees (owner, 2026-08-03).
+              const iosUid = v.cf_video_id_square;
+              // Web plays landscape; portrait is the legacy column, and square is
+              // the last-resort fallback webVideoUid() applies for old rows.
+              const webUid = v.cf_video_id_landscape ?? v.cf_video_id;
               return (
-                <li key={v.id} className="overflow-hidden rounded-xl border border-line bg-surface">
-                  <div
-                    className={`${isLandscape ? 'aspect-video' : 'aspect-[9/16]'} w-full bg-black/40`}
-                  >
-                    {iframe ? (
-                      <iframe
-                        src={iframe}
-                        title={v.title ?? 'tour video'}
-                        allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;"
-                        allowFullScreen
-                        className="h-full w-full border-0"
-                      />
-                    ) : cfThumb ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={cfThumb}
-                        alt={v.title ?? 'tour video'}
-                        className="h-full w-full object-cover"
-                      />
-                    ) : (
-                      <div className="flex h-full w-full items-center justify-center text-xs text-ink2">
-                        {v.status}
-                      </div>
-                    )}
+                <li key={v.id} className="rounded-2xl border border-line bg-surface p-4">
+                  <div className="grid gap-5 sm:grid-cols-2">
+                    <SurfacePreview surface="ios" uid={iosUid} status={v.status} />
+                    <SurfacePreview surface="web" uid={webUid} status={v.status} />
                   </div>
-                  <div className="space-y-2 p-2 text-xs">
+                  <div className="mt-3 space-y-2 text-xs">
                     <div className="font-medium">{v.title ?? v.kind}</div>
                     <div className="text-ink2">
                       {v.kind}
-                      {shapes.length > 0 ? ` · ${shapes.join(' + ')}` : ''} ·{' '}
+                      {' · '}
                       <span
                         className={
                           v.status === 'ready' || v.status === 'approved'
@@ -193,13 +153,21 @@ export default async function AdminTourJobsDetailPage({
                       {v.status === 'ready' && !v.approved_at && (
                         <span className="text-amber-600"> · not in app yet</span>
                       )}
+                      {v.status === 'ready' && !iosUid && (
+                        <span className="text-amber-600"> · no iOS render</span>
+                      )}
+                      {v.status === 'ready' && !webUid && (
+                        <span className="text-amber-600"> · no web render</span>
+                      )}
                     </div>
                     {v.status === 'ready' && (
-                      <VideoApproveButton
-                        table="listing_videos"
-                        videoId={v.id}
-                        approved={!!v.approved_at}
-                      />
+                      <div className="max-w-xs">
+                        <VideoApproveButton
+                          table="listing_videos"
+                          videoId={v.id}
+                          approved={!!v.approved_at}
+                        />
+                      </div>
                     )}
                   </div>
                 </li>

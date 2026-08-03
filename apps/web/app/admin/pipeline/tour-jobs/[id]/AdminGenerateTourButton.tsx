@@ -54,12 +54,18 @@ export function AdminGenerateTourButton({
     }
   }
 
-  async function onClick() {
+  async function onClick(surface?: 'ios' | 'web') {
     if (!enough || busy) return;
     setError(null);
     setStatus('queued');
     try {
-      const res = await fetch(`/api/admin/listings/${listingId}/generate-tour`, { method: 'POST' });
+      const res = await fetch(`/api/admin/listings/${listingId}/generate-tour`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        // No surface = rebuild BOTH (drops the row and re-renders from scratch).
+        // A surface re-renders ONLY that shape and leaves the other one intact.
+        body: JSON.stringify(surface ? { surface } : {}),
+      });
       if (!res.ok) {
         const body = (await res.json().catch(() => ({}))) as { message?: string; error?: string };
         setStatus('failed');
@@ -84,16 +90,37 @@ export function AdminGenerateTourButton({
 
   return (
     <div className="flex flex-col items-start gap-1">
-      <button
-        type="button"
-        onClick={onClick}
-        disabled={!enough || busy}
-        title={title}
-        className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-bg px-3 py-2 text-sm text-ink hover:border-bronze disabled:cursor-not-allowed disabled:text-muted"
-      >
-        <Sparkles size={14} aria-hidden />
-        {busy ? 'Rendering…' : 'Generate new tour video'}
-      </button>
+      <div className="flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          onClick={() => onClick('ios')}
+          disabled={!enough || busy}
+          title={enough ? 'Render the 1:1 asset the iOS feed card plays (~2 min). Leaves the web video alone.' : title}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-bg px-3 py-2 text-sm text-ink hover:border-bronze disabled:cursor-not-allowed disabled:text-muted"
+        >
+          <Sparkles size={14} aria-hidden />
+          {busy ? 'Rendering…' : 'Generate iOS video (1:1)'}
+        </button>
+        <button
+          type="button"
+          onClick={() => onClick('web')}
+          disabled={!enough || busy}
+          title={enough ? 'Render the 16:9 asset web plays (~2 min). Leaves the iOS video alone.' : title}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-bg px-3 py-2 text-sm text-ink hover:border-bronze disabled:cursor-not-allowed disabled:text-muted"
+        >
+          <Sparkles size={14} aria-hidden />
+          {busy ? 'Rendering…' : 'Generate web video (16:9)'}
+        </button>
+        <button
+          type="button"
+          onClick={() => onClick()}
+          disabled={!enough || busy}
+          title={enough ? 'Drop both assets and re-render iOS + web from scratch (~4 min).' : title}
+          className="inline-flex items-center gap-1.5 rounded-lg px-2 py-2 text-xs text-ink2 underline hover:text-ink disabled:cursor-not-allowed disabled:text-muted"
+        >
+          Rebuild both
+        </button>
+      </div>
       {status !== 'idle' && (
         <div className="text-xs">
           {status === 'queued' && <span className="text-ink2">Queued…</span>}

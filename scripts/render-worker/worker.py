@@ -224,7 +224,7 @@ def claim_job() -> dict[str, Any] | None:
     rows = sb_get(
         "render_jobs",
         {
-            "select": "id,listing_id,video_row_id,attempts",
+            "select": "id,listing_id,video_row_id,attempts,orientations",
             "status": "eq.queued",
             "order": "created_at.asc",
             "limit": "1",
@@ -396,7 +396,10 @@ def process_job(job: dict[str, Any]) -> None:
         #   landscape -> cf_video_id_landscape -> web
         # Web gets landscape rather than portrait because every production FMLS
         # photo set is horizontal; portrait would blur-letterbox ~30% of frame.
-        orientations = ["square", "landscape"]
+        # The job may target ONE surface (the admin's two buttons), so an iOS
+        # re-render leaves the web asset alone. NULL/absent = render both.
+        requested = job.get("orientations") or None
+        orientations = list(requested) if requested else ["square", "landscape"]
         print(
             f"[job {job['id']}] landscape_ratio={landscape_ratio:.2f} "
             f"orientations={orientations}",
@@ -624,16 +627,27 @@ def process_job(job: dict[str, Any]) -> None:
             )
             print(f"[job {job['id']}] uploaded {orientation} to CF: {uids[orientation]}", flush=True)
 
-        # 7. Update listing_videos: one column per rendered orientation, and NULL
-        #    for any we did not render this round (so a re-render that drops an
-        #    orientation doesn't leave a stale uid pointing at a deleted asset).
+        # 7. Update listing_videos: write ONLY the columns we actually rendered.
+        #
+        # Do NOT null the others. A single-surface job (the admin's per-surface
+        # buttons) renders e.g. square only, and blanking cf_video_id_landscape
+        # would destroy the web asset the other button just produced — the exact
+        # opposite of splitting the two surfaces.
+        #
+        # For a full rebuild (`orientations` unset -> both), the API route has
+        # already deleted the old row + its CF assets, so there is no stale uid to
+        # clear here either.
+        col_for = {
+            "portrait": "cf_video_id",
+            "landscape": "cf_video_id_landscape",
+            "square": "cf_video_id_square",
+        }
         patch_body: dict[str, Any] = {
-            "cf_video_id": uids.get("portrait"),
-            "cf_video_id_landscape": uids.get("landscape"),
-            "cf_video_id_square": uids.get("square"),
             "external_url": None,
             "status": "ready",
         }
+        for orient, uid in uids.items():
+            patch_body[col_for[orient]] = uid
         sb_patch(
             "listing_videos",
             {"id": f"eq.{video_row_id}"},

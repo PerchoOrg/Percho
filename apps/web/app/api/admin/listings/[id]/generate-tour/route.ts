@@ -33,6 +33,23 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
   if (!admin) return NextResponse.json({ error: 'forbidden' }, { status: 403 });
 
   const { id } = await params;
+
+  // Which surface's render to (re)build. Owner 2026-08-03: "There should be two
+  // buttons for generate video, one for web one for iOS". The worker reads
+  // `render_jobs.orientations`; omitting it renders BOTH (the default, and what
+  // the pre-2026-08-03 single button did).
+  //
+  //   ios  -> square    (1:1, fills the card's HERO_RATIO=0.618 media block)
+  //   web  -> landscape (16:9)
+  let orientations: string[] | null = null;
+  try {
+    const body = (await _req.json()) as { surface?: string } | null;
+    if (body?.surface === 'ios') orientations = ['square'];
+    else if (body?.surface === 'web') orientations = ['landscape'];
+  } catch {
+    /* no body = render both, same as before */
+  }
+
   // biome-ignore lint/suspicious/noExplicitAny: stub generated types
   const sb = createServiceClient() as any;
 
@@ -53,60 +70,92 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
     );
   }
 
-  // Remove any prior walkthrough(s) before re-rendering.
   const { data: existing } = await sb
     .from('listing_videos')
-    .select('id, cf_video_id')
+    .select('id, cf_video_id, cf_video_id_landscape, cf_video_id_square, sort_order')
     .eq('listing_id', id)
-    .eq('kind', 'walkthrough');
+    .eq('kind', 'walkthrough')
+    .order('sort_order', { ascending: true });
 
-  if (existing && existing.length > 0) {
-    for (const row of existing as Array<{ id: string; cf_video_id: string | null }>) {
-      if (row.cf_video_id) await deleteCfVideo(row.cf_video_id);
+  const rows = (existing ?? []) as Array<{
+    id: string;
+    cf_video_id: string | null;
+    cf_video_id_landscape: string | null;
+    cf_video_id_square: string | null;
+    sort_order: number;
+  }>;
+
+  let videoRowId: string;
+
+  if (orientations && rows[0]) {
+    // Per-surface re-render: REUSE the row and delete only the CF asset for the
+    // orientation being replaced. Dropping the row (what this route used to do
+    // unconditionally) would throw away the OTHER surface's render, which is
+    // exactly the split the two buttons exist to preserve.
+    videoRowId = rows[0].id;
+    const stale = orientations.includes('square')
+      ? rows[0].cf_video_id_square
+      : rows[0].cf_video_id_landscape;
+    if (stale) await deleteCfVideo(stale);
+    await sb.from('listing_videos').update({ status: 'processing' }).eq('id', videoRowId);
+  } else {
+    // Full rebuild (both surfaces): prior behaviour — drop every walkthrough
+    // asset and row, insert a fresh one.
+    for (const row of rows) {
+      for (const uid of [row.cf_video_id, row.cf_video_id_landscape, row.cf_video_id_square]) {
+        if (uid) await deleteCfVideo(uid);
+      }
     }
-    await sb.from('listing_videos').delete().eq('listing_id', id).eq('kind', 'walkthrough');
+    if (rows.length > 0) {
+      await sb.from('listing_videos').delete().eq('listing_id', id).eq('kind', 'walkthrough');
+    }
+
+    const { data: maxRow } = await sb
+      .from('listing_videos')
+      .select('sort_order')
+      .eq('listing_id', id)
+      .order('sort_order', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    const nextSort = ((maxRow as { sort_order: number } | null)?.sort_order ?? -1) + 1;
+
+    const { data: videoRow, error: videoErr } = await sb
+      .from('listing_videos')
+      .insert({
+        listing_id: id,
+        cf_video_id: null,
+        external_url: 'pending://render',
+        kind: 'walkthrough',
+        status: 'processing',
+        sort_order: nextSort,
+        title: 'Home tour (admin-generated)',
+      })
+      .select('id')
+      .single();
+
+    if (videoErr || !videoRow) {
+      return NextResponse.json(
+        { error: 'video_insert_failed', message: videoErr?.message ?? 'insert failed' },
+        { status: 500 },
+      );
+    }
+    videoRowId = (videoRow as { id: string }).id;
   }
 
-  const { data: maxRow } = await sb
-    .from('listing_videos')
-    .select('sort_order')
-    .eq('listing_id', id)
-    .order('sort_order', { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  const nextSort = ((maxRow as { sort_order: number } | null)?.sort_order ?? -1) + 1;
-
-  const { data: videoRow, error: videoErr } = await sb
-    .from('listing_videos')
+  const { data: job, error: jobErr } = await sb
+    .from('render_jobs')
     .insert({
       listing_id: id,
-      cf_video_id: null,
-      external_url: 'pending://render',
-      kind: 'walkthrough',
-      status: 'processing',
-      sort_order: nextSort,
-      title: 'Home tour (admin-generated)',
+      video_row_id: videoRowId,
+      status: 'queued',
+      ...(orientations ? { orientations } : {}),
     })
     .select('id')
     .single();
 
-  if (videoErr || !videoRow) {
-    return NextResponse.json(
-      { error: 'video_insert_failed', message: videoErr?.message ?? 'insert failed' },
-      { status: 500 },
-    );
-  }
-
-  const videoRowId = (videoRow as { id: string }).id;
-
-  const { data: job, error: jobErr } = await sb
-    .from('render_jobs')
-    .insert({ listing_id: id, video_row_id: videoRowId, status: 'queued' })
-    .select('id')
-    .single();
-
   if (jobErr || !job) {
-    await sb.from('listing_videos').delete().eq('id', videoRowId);
+    // Only clean up a row WE created. A reused row must survive a failed enqueue.
+    if (!orientations) await sb.from('listing_videos').delete().eq('id', videoRowId);
     return NextResponse.json(
       { error: 'job_insert_failed', message: jobErr?.message ?? 'insert failed' },
       { status: 500 },
