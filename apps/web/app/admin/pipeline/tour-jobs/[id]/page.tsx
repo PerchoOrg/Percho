@@ -11,6 +11,8 @@
 import { streamIframeUrl, thumbnailUrl } from '@/lib/cloudflare/stream';
 import { createServiceClient } from '@/lib/supabase/server';
 import { notFound } from 'next/navigation';
+import { EnhancePanel } from '../../../_components/EnhancePanel';
+import { VideoApproveButton } from '../../../_components/VideoApproveButton';
 import { AdminGenerateTourButton } from './AdminGenerateTourButton';
 
 export const dynamic = 'force-dynamic';
@@ -54,7 +56,9 @@ export default async function AdminTourJobsDetailPage({
   const [photoRes, videoRes] = await Promise.all([
     supabase
       .from('listing_photos')
-      .select('id, storage_path, sort_order, width, height')
+      .select(
+        'id, storage_path, sort_order, width, height, enhanced_path, enhanced_status, enhanced_preset, enhanced_error',
+      )
       .eq('listing_id', id)
       .order('sort_order', { ascending: true }) as unknown as Promise<{
       data: Array<{
@@ -63,12 +67,16 @@ export default async function AdminTourJobsDetailPage({
         sort_order: number;
         width: number | null;
         height: number | null;
+        enhanced_path: string | null;
+        enhanced_status: string;
+        enhanced_preset: string | null;
+        enhanced_error: string | null;
       }> | null;
     }>,
     supabase
       .from('listing_videos')
       .select(
-        'id, cf_video_id, cf_video_id_landscape, external_url, kind, status, title, sort_order, created_at',
+        'id, cf_video_id, cf_video_id_landscape, external_url, kind, status, title, sort_order, created_at, approved_at',
       )
       .eq('listing_id', id)
       .order('sort_order', { ascending: true }) as unknown as Promise<{
@@ -82,6 +90,7 @@ export default async function AdminTourJobsDetailPage({
         title: string | null;
         sort_order: number;
         created_at: string;
+        approved_at: string | null;
       }> | null;
     }>,
   ]);
@@ -157,7 +166,7 @@ export default async function AdminTourJobsDetailPage({
                       </div>
                     )}
                   </div>
-                  <div className="p-2 text-xs">
+                  <div className="space-y-2 p-2 text-xs">
                     <div className="font-medium">{v.title ?? v.kind}</div>
                     <div className="text-ink2">
                       {v.kind}
@@ -173,7 +182,17 @@ export default async function AdminTourJobsDetailPage({
                       >
                         {v.status}
                       </span>
+                      {v.status === 'ready' && !v.approved_at && (
+                        <span className="text-amber-600"> · not in app yet</span>
+                      )}
                     </div>
+                    {v.status === 'ready' && (
+                      <VideoApproveButton
+                        table="listing_videos"
+                        videoId={v.id}
+                        approved={!!v.approved_at}
+                      />
+                    )}
                   </div>
                 </li>
               );
@@ -214,6 +233,13 @@ export default async function AdminTourJobsDetailPage({
           </ul>
         )}
       </section>
+
+      <EnhancePanel
+        table="listing_photos"
+        storageBase={SUPABASE_URL}
+        bucket="listing-photos"
+        photos={photos}
+      />
     </div>
   );
 }

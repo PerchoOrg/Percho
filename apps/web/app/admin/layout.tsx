@@ -24,7 +24,7 @@ const TABS: AdminHubTab[] = [
   },
   {
     id: 'community-nearby',
-    label: 'Neighborhood Nearby',
+    label: 'Community Tour',
     href: '/admin/pipeline/community-nearby',
     icon: <Building2 size={22} />,
   },

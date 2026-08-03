@@ -9,6 +9,7 @@
 
 import { createServiceClient } from '@/lib/supabase/server';
 import { notFound } from 'next/navigation';
+import { EnhancePanel } from '../../../_components/EnhancePanel';
 import { PhotoReviewClient } from './PhotoReviewClient';
 
 export const dynamic = 'force-dynamic';
@@ -39,6 +40,10 @@ type Photo = {
   attribution: Record<string, unknown> | null;
   reviewed_at: string | null;
   tagged_at: string | null;
+  enhanced_path: string | null;
+  enhanced_status: string;
+  enhanced_preset: string | null;
+  enhanced_error: string | null;
 };
 
 const PHOTO_BUCKET = 'listing-photos';
@@ -63,7 +68,7 @@ export default async function PoiDetailPage({
     supabase
       .from('poi_photos')
       .select(
-        'id, storage_path, status, width_px, height_px, ai_score, ai_tags, applicable_buckets, attribution, reviewed_at, tagged_at',
+        'id, storage_path, status, width_px, height_px, ai_score, ai_tags, applicable_buckets, attribution, reviewed_at, tagged_at, enhanced_path, enhanced_status, enhanced_preset, enhanced_error',
       )
       .eq('poi_id', id)
       .order('ai_score', { ascending: false, nullsFirst: false })
@@ -96,6 +101,13 @@ export default async function PoiDetailPage({
         </h2>
         <PhotoReviewClient storageBase={storageBase} bucket={PHOTO_BUCKET} photos={photos ?? []} />
       </section>
+
+      <EnhancePanel
+        table="poi_photos"
+        storageBase={storageBase}
+        bucket={PHOTO_BUCKET}
+        photos={photos ?? []}
+      />
     </div>
   );
 }

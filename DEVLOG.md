@@ -4,6 +4,68 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-08-03 06:30 UTC — admin: 照片增强链路 + 视频审批闸 + Community Tour 改名
+
+**Objective**: owner 三条:①admin tab `Neighborhood Nearby` → `Community Tour`;
+②listing + community 照片在生成视频前可以增强(他点名 ESRGAN + OpenCV 链路);
+③exit criteria = admin 里能看原图/增强图、能管、能验;iOS 视频批准后要在 Expo Go 生效。
+
+**Actions**:
+- `scripts/render-worker/enhance.py` — `SR → denoise → sharpen → local contrast →
+  color correct`,OpenCV `dnn_superres` + **FSRCNN_x2**(39KB,入 repo `models/`)。
+  `--self-check` 逐步断言。`enhance_sample.py` 出 BEFORE/AFTER 对比图,
+  `enhance_smoke.py` 端到端(queue → storage)。
+- `worker.py`:`claim_enhance_job` / `process_enhance_job` / `storage_upload`(upsert)/
+  `approved_enhanced_path()`;两条渲染路径(listing + bucket)的下载都改成
+  `approved_enhanced_path(row) or storage_path`。
+- migration `20260803060000`(`{listing,poi}_photos.enhanced_*` + listing/community_videos
+  `approved_at/approved_by` + grandfather)、`20260803070000`(generated_videos 同款闸 +
+  grandfather)。两条都已 push 到 linked remote。
+- `admin/_components/EnhancePanel.tsx`(listing/POI 共用)、`VideoApproveButton.tsx`、
+  `lib/poi/admin-enhance-actions.ts`。`vertical-videos.ts` 加 `approved_at` 闸。
+
+**Decisions**:
+- **不用 Real-ESRGAN**。这台机器 4 vCPU 无 CUDA:x4 单张 ~90s + 65MB torch/basicsr;
+  FSRCNN_x2 ~1s/张,而卡片只要 1080px 真实细节。升级路径写在 `# ponytail:` 注释里。
+- **不建 enhance_jobs 表**。`enhanced_status` 本身就是队列(admin UI 反正要读这个字段),
+  独立表等于把同一份状态写两遍。增强任务排在渲染任务**之后** —— 渲染是 owner 点了在等的。
+- **不复用 `status` 做审批**。`listing_videos.status` 的 CHECK 只有
+  processing/ready/error,而且 Cloudflare webhook 会写它,合并字段会在任何 re-encode 时
+  被冲掉。→ 独立 `approved_at`。
+- `generated_videos` 本来打算走 `status='approved'`(baseline CHECK 里有),但
+  **20260714120000 把 'approved' 从 CHECK 里删掉了** —— update 直接 23514。三张表统一用
+  `approved_at`。
+- **每张已 ready 的行全部 grandfather 成 approved**。不做这步,开闸当场清空 owner 手机上
+  所有现有视频。验证:anon 视角 10/10 listing、6/6 community 过闸,零回退。
+
+**Issues**:
+- 第一版 preset 被 vision review 否掉:gray-world clamp ±12% 把米白外墙染粉、把云染紫
+  (中性色是白平衡的判据,云变紫就是 WB 坏了);CLAHE 2.0 把树冠/廊下压成死黑;
+  unsharp 0.55 在屋脊对天空处起白边。MLS 照片染色 = misrepresent 房产,不能留。
+- 第二版仍被指「绿和天空蓝被推过」= 唯一还剩的「像修过」的破绽。
+- `enhance.py` 自检写错两次:先测「CLAHE 应该拉大明暗差」——合成双色图上 CLAHE 其实压缩
+  全局 spread;又测「增强后平坦区方差应下降」——sharpen 故意把 denoise 去掉的噪声加回来了。
+  改成**逐步单独测**。
+
+**Resolution**: 终版 preset = WB clamp ±2%、**饱和度不动**、CLAHE 1.1 +
+只作用于 L<96 的阴影抬升(同时治好死黑和白边)。第三轮 vision:「看起来仍是未修的照片,
+只是更清楚」。smoke test 真图 800×533 → 1600×1066,public URL 200。
+`tsc` 我的文件 0 错(19 vs 基线 22,差额全是既有的 `useTransition` 类型问题)。
+
+**Learnings**:
+- **owner 递上来一份 AI 方案(ESRGAN/Topaz)时,先量成本再照抄**。这次和 2026-08-03 早上
+  那次(maxHeightPx clamp)是同一个教训的两面:那次根因是我们自己的下载 clamp,这次是
+  重型模型在这台机器上不划算。链路照他的做,实现挑能跑的。
+- **调色预设必须过 vision review,而且第一版一定过不了**。三轮:①WB/CLAHE/unsharp 全部
+  过火 → ②只剩饱和度 → ③过。静态图会**低报**损伤(上次 ffmpeg ENHANCE 也是这个结论)。
+- **两张表的 CHECK 可能被后来的 migration 改掉**。`generated_videos` 的 'approved' 在
+  baseline 里合法、在 20260714120000 之后非法 —— 写 update 前 grep 最后一次改 CHECK 的地方。
+- 任何「上线要过审」的闸,**同一条 migration 里必须 grandfather 现存数据**,否则闸=删库。
+
+**Next steps**: preset 等 owner 批,批了全量回填(586 poi_photos + listing_photos,
+~1s/张,不花钱)。`generated_videos` 的批准按钮还没挂到 Community Tour 详情页
+(server action 已支持,只差一处 UI)。per-photo 强度没做 —— 全局单 preset。
+
 ## 2026-08-03 02:45 UTC — community card 收尾:全出血视频 → hero+panel、POI 真实计数、RLS 洞
 
 **Objective**: 接上一条,owner 又提了六轮真机反馈:视频黑边(报了 4 次)、文字压视频看不清、

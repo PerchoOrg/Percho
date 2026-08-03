@@ -174,6 +174,26 @@ def storage_download(bucket: str, path: str, dest: Path) -> None:
                 f.write(chunk)
 
 
+def storage_upload(bucket: str, path: str, src: Path, content_type: str = "image/jpeg") -> None:
+    """Upsert a file into Storage. Used by the enhance pass, which must be
+    re-runnable: a second enhance of the same photo overwrites in place rather
+    than orphaning the first JPEG."""
+    url = f"{STORAGE}/object/{bucket}/{path}"
+    headers = {
+        "apikey": SERVICE_KEY,
+        "Authorization": f"Bearer {SERVICE_KEY}",
+        "Content-Type": content_type,
+        "x-upsert": "true",
+    }
+    with src.open("rb") as f:
+        r = requests.post(url, headers=headers, data=f, timeout=120)
+    if r.status_code == 409:  # some Storage versions reject POST-over-existing
+        with src.open("rb") as f:
+            r = requests.put(url, headers=headers, data=f, timeout=120)
+    if not r.ok:
+        raise RuntimeError(f"storage upload failed {r.status_code}: {r.text[:300]}")
+
+
 # ── Cloudflare Stream ───────────────────────────────────────────────────
 
 def cf_upload(mp4: Path, meta: dict[str, str]) -> str:
@@ -307,7 +327,8 @@ def process_job(job: dict[str, Any]) -> None:
         photos = sb_get(
             "listing_photos",
             {
-                "select": "id,storage_path,sort_order,width,height,ai_tags,tagged_at",
+                "select": "id,storage_path,sort_order,width,height,ai_tags,tagged_at,"
+                          "enhanced_path,enhanced_status",
                 "listing_id": f"eq.{listing_id}",
                 "order": "sort_order.asc",
             },
@@ -322,11 +343,15 @@ def process_job(job: dict[str, Any]) -> None:
         photo_records: list[dict[str, Any]] = []
         for p in photos:
             path = p["storage_path"]
+            # 2026-08-03: read the ENHANCED file when an admin approved it.
+            # `storage_path` stays the provenance record either way, so the
+            # photo_records entry below still points at the original row.
+            read_path = approved_enhanced_path(p) or path
             sort_i = int(p.get("sort_order") or 0)
             pid = p["id"]
-            ext = Path(path).suffix or ".jpg"
+            ext = Path(read_path).suffix or ".jpg"
             dest = workdir / f"{sort_i:03d}_{pid}{ext}"
-            storage_download(PHOTO_BUCKET, path, dest)
+            storage_download(PHOTO_BUCKET, read_path, dest)
             photo_paths.append(dest)
             photo_records.append({
                 "id": pid,
@@ -803,7 +828,8 @@ def process_bucket_job(job: dict[str, Any]) -> None:
         photo_rows = sb_get(
             "poi_photos",
             {
-                "select": "id,storage_path,poi_id,pois!inner(display_name,primary_type,types)",
+                "select": "id,storage_path,poi_id,enhanced_path,enhanced_status,"
+                          "pois!inner(display_name,primary_type,types)",
                 "id": f"in.({id_list})",
             },
         )
@@ -841,7 +867,8 @@ def process_bucket_job(job: dict[str, Any]) -> None:
         # 2. Download in the exact order the server action selected them.
         photo_paths: list[Path] = []
         for i, pid in enumerate(input_photo_ids, start=1):
-            path = by_id[pid]["storage_path"]
+            # Same approved-enhanced rule as the listing path.
+            path = approved_enhanced_path(by_id[pid]) or by_id[pid]["storage_path"]
             ext = Path(path).suffix or ".jpg"
             dest = workdir / f"{i:02d}-photo{ext}"
             storage_download(PHOTO_BUCKET, path, dest)
@@ -1123,6 +1150,119 @@ def process_bucket_job(job: dict[str, Any]) -> None:
         shutil.rmtree(workdir, ignore_errors=True)
 
 
+# ── photo enhancement (2026-08-03) ──────────────────────────────────────
+#
+# No new queue table: `{listing,poi}_photos.enhanced_status` IS the queue
+# ('queued' → 'processing' → 'ready'), claimed with the same optimistic-lock
+# PATCH the render queues use. A separate enhance_jobs table would duplicate the
+# state that has to live on the photo row anyway (the admin UI reads it there).
+#
+# Enhanced files land next to the original in the same bucket under
+# `enhanced/<original path>`, so bucket policy and cleanup are unchanged.
+
+ENHANCE_SCRIPT = Path(__file__).resolve().parent / "enhance.py"
+ENHANCE_TABLES = ("listing_photos", "poi_photos")
+
+
+def claim_enhance_job() -> tuple[str, dict[str, Any]] | None:
+    """Oldest queued photo across both photo tables. Returns (table, row)."""
+    for table in ENHANCE_TABLES:
+        rows = sb_get(
+            table,
+            {
+                "select": "id,storage_path,enhanced_preset",
+                "enhanced_status": "eq.queued",
+                "order": "id.asc",
+                "limit": "1",
+            },
+        )
+        if not rows:
+            continue
+        row = rows[0]
+        updated = sb_patch(
+            table,
+            {"id": f"eq.{row['id']}", "enhanced_status": "eq.queued"},
+            {"enhanced_status": "processing"},
+        )
+        if updated:
+            return table, row
+    return None
+
+
+def process_enhance_job(table: str, row: dict[str, Any]) -> None:
+    photo_id = row["id"]
+    src_path = row["storage_path"]
+    preset = row.get("enhanced_preset") or "default"
+    workdir = Path(tempfile.mkdtemp(prefix=f"enhance-{photo_id[:8]}-"))
+    print(f"[enhance {table}/{photo_id}] preset={preset} src={src_path}", flush=True)
+
+    try:
+        ext = Path(src_path).suffix or ".jpg"
+        src = workdir / f"orig{ext}"
+        out = workdir / "enhanced.jpg"
+        storage_download(PHOTO_BUCKET, src_path, src)
+
+        proc = subprocess.run(
+            [PYTHON_BIN, str(ENHANCE_SCRIPT), str(src), str(out), "--preset", preset],
+            capture_output=True, text=True, timeout=600,
+        )
+        if proc.returncode != 0 or not out.exists():
+            raise RuntimeError(f"enhance.py failed: {proc.stderr[-500:] or proc.stdout[-500:]}")
+
+        dest_path = f"enhanced/{Path(src_path).with_suffix('.jpg')}"
+        storage_upload(PHOTO_BUCKET, dest_path, out)
+
+        w, h = 0, 0
+        try:
+            dims = subprocess.run(
+                ["ffprobe", "-v", "error", "-select_streams", "v:0",
+                 "-show_entries", "stream=width,height", "-of", "csv=p=0", str(out)],
+                capture_output=True, text=True, check=True, timeout=15,
+            ).stdout.strip().split(",")
+            w, h = int(dims[0]), int(dims[1])
+        except Exception:
+            pass
+
+        sb_patch(table, {"id": f"eq.{photo_id}"}, {
+            "enhanced_path": dest_path,
+            # 'ready' NOT 'approved' — the render only reads approved files, so
+            # nothing changes in the product until the owner clicks Approve.
+            "enhanced_status": "ready",
+            "enhanced_preset": preset,
+            "enhanced_meta": {
+                "width": w, "height": h,
+                "bytes": out.stat().st_size,
+                "chain": "superres,denoise,sharpen,local_contrast,color_correct",
+            },
+            "enhanced_at": _now_iso(),
+            "enhanced_error": None,
+        })
+        print(f"[enhance {table}/{photo_id}] ready {w}x{h} -> {dest_path}", flush=True)
+    except Exception as exc:  # noqa: BLE001
+        traceback.print_exc()
+        try:
+            sb_patch(table, {"id": f"eq.{photo_id}"}, {
+                "enhanced_status": "failed",
+                "enhanced_error": str(exc)[:500],
+                "enhanced_at": _now_iso(),
+            })
+        except Exception:
+            traceback.print_exc()
+    finally:
+        shutil.rmtree(workdir, ignore_errors=True)
+
+
+def approved_enhanced_path(row: dict[str, Any]) -> str | None:
+    """The path a render should actually read for this photo row.
+
+    Returns the enhanced file ONLY when an admin approved it — that is the whole
+    gate. Callers fall back to `storage_path`.
+    """
+    if row.get("enhanced_status") == "approved" and row.get("enhanced_path"):
+        return str(row["enhanced_path"])
+    return None
+
+
 def main() -> None:
     print(f"[worker] starting, polling every {POLL_IDLE_SEC}s", flush=True)
     while True:
@@ -1151,6 +1291,20 @@ def main() -> None:
 
         if bucket_job is not None:
             process_bucket_job(bucket_job)
+            continue
+
+        # Photo enhancement is LAST in the priority order: a render job is
+        # interactive (owner clicked Generate and is watching), an enhance job is
+        # batch. Enhancing never delays a render.
+        try:
+            enhance_job = claim_enhance_job()
+        except Exception:
+            traceback.print_exc()
+            time.sleep(POLL_IDLE_SEC)
+            continue
+
+        if enhance_job is not None:
+            process_enhance_job(*enhance_job)
             continue
 
         time.sleep(POLL_IDLE_SEC)

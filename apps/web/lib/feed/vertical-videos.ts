@@ -86,11 +86,20 @@ export async function fetchVerticalVideos(): Promise<HeroVideoIndex> {
       .select('listing_id, cf_video_id, cf_video_id_landscape, cf_video_id_square, sort_order')
       .eq('status', 'ready')
       .eq('kind', 'walkthrough')
+      // 2026-08-03: approval gate. `status='ready'` only means Cloudflare
+      // finished encoding; `approved_at` is the admin's decision that this
+      // render may reach buyers. Un-approved renders stay invisible in the app
+      // (including Expo Go) until someone approves them in /admin.
+      .not('approved_at', 'is', null)
       .order('sort_order', { ascending: true }),
     supabase
       .from('generated_videos')
       .select('community_id, cf_stream_uid, created_at')
+      // Same gate as listing_videos. NOT `status='approved'` — 20260714120000
+      // dropped 'approved' from this table's status CHECK, so approval lives in
+      // its own column here too.
       .eq('status', 'ready')
+      .not('approved_at', 'is', null)
       .eq('scope', 'community_intent_bucket')
       .order('created_at', { ascending: false }),
   ]);
@@ -133,4 +142,18 @@ export async function fetchVerticalVideos(): Promise<HeroVideoIndex> {
 export async function fetchVerticalVideoListingIds(): Promise<string[]> {
   const { byListing } = await fetchVerticalVideos();
   return [...byListing.keys()];
+}
+
+/**
+ * Community ids that have a hero video, for the dev `videoFirst` fetch.
+ *
+ * The community half of the same problem the listing function above solves: the
+ * community pool is a `name`-ordered page, and the only community with a ready
+ * video (Ashley Crossing) is ~280th alphabetically, so it is never inside
+ * `offset=0, limit=12`. Reordering that page hoists nothing. The route uses
+ * these ids to fetch the rows directly — see `fetchCommunityPoolByIds`.
+ */
+export async function fetchVerticalVideoCommunityIds(): Promise<string[]> {
+  const { byCommunity } = await fetchVerticalVideos();
+  return [...byCommunity.keys()];
 }

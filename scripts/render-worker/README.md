@@ -11,9 +11,35 @@ page → `POST /api/listings/[id]/generate-tour` inserts a placeholder
 
 - Python 3 with `requests` (stdlib for the rest — no supabase-py, no dotenv).
 - `ffmpeg` in `PATH` (used by `scripts/ken-burns/generate.py`).
+- **`opencv-contrib-python-headless`** for the photo-enhancement pass
+  (`enhance.py`). Must be the `contrib` build — plain `opencv-python` has no
+  `cv2.dnn_superres`, and the enhance job then fails at the SR step:
+  ```bash
+  /usr/bin/python3 -m pip install --break-system-packages opencv-contrib-python-headless
+  ```
+  Verify: `python3 -c "import cv2; print(hasattr(cv2,'dnn_superres'))"` → `True`.
 - Repo checked out at `/home/ubuntu/Percho` with `.env.local` containing
   `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`,
   `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_STREAM_API_TOKEN`.
+
+## Photo enhancement queue
+
+There is no jobs table — `{listing,poi}_photos.enhanced_status` IS the queue.
+Admin queues from `/admin/pipeline/tour-jobs/[id]` or
+`/admin/pipeline/poi-library/[id]`; the worker polls it *after* render jobs so
+batch enhancement never delays a render someone is watching.
+
+`ready` means the enhanced JPEG exists at
+`listing-photos/enhanced/<original path>` and is awaiting review. Renders read it
+only once an admin sets `approved` — see `approved_enhanced_path()`.
+
+Self-checks:
+
+```bash
+/usr/bin/python3 scripts/render-worker/enhance.py --self-check   # filter chain
+/usr/bin/python3 scripts/render-worker/enhance_smoke.py          # queue → storage, end to end
+/usr/bin/python3 scripts/render-worker/enhance_sample.py 3       # BEFORE/AFTER JPEGs for review
+```
 
 ## Manual run (for testing)
 
