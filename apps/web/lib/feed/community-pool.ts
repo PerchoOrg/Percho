@@ -202,7 +202,11 @@ export async function fetchPoiCounts(
   const out: Record<string, Record<string, number>> = {};
   for (const row of data as { community_id: string; intent_bucket: string }[]) {
     if (!row.community_id || !row.intent_bucket) continue;
-    const perCommunity = (out[row.community_id] ??= {});
+    let perCommunity = out[row.community_id];
+    if (!perCommunity) {
+      perCommunity = {};
+      out[row.community_id] = perCommunity;
+    }
     perCommunity[row.intent_bucket] = (perCommunity[row.intent_bucket] ?? 0) + 1;
   }
   return out;

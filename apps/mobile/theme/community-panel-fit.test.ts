@@ -41,9 +41,16 @@ const TILES_MARGIN_TOP = 4;
 const TILE_H = 48; // padV 5x2 + glyph 11 + gap 2 + label 11 + gap 2 + fact 12
 const CTA_H = 44; // §0.5 floor — RedlineCta's own height, the one size that never scales
 
+/**
+ * The shortest device, declared separately so the fit assertions do not need a
+ * non-null assertion on `DEVICES[0]` (which the repo's lint forbids, rightly —
+ * an index access that "cannot" be undefined is exactly how off-by-ones hide).
+ */
+const SMALLEST = { name: "iPhone SE / 8", w: 375, h: 667 };
+
 /** Every device the app supports, shortest first. */
 const DEVICES = [
-	{ name: "iPhone SE / 8", w: 375, h: 667 },
+	SMALLEST,
 	{ name: "iPhone 13 mini", w: 375, h: 812 },
 	{ name: "iPhone 14", w: 390, h: 844 },
 	{ name: "iPhone 16 Pro", w: 402, h: 874 },
@@ -78,8 +85,7 @@ describe("community card panel fits", () => {
 	it("keeps the CTA at its full 44pt on the smallest device", () => {
 		// The regression was a CRUSHED CTA, not a clipped panel. If the rows ever
 		// grow past the panel again, this is the assertion that should fail.
-		const smallest = DEVICES[0]!;
-		const panel = panelHeight(smallest.w, smallest.h);
+		const panel = panelHeight(SMALLEST.w, SMALLEST.h);
 		const withoutCta = CONTENT_H - CTA_H;
 		expect(panel - withoutCta).toBeGreaterThanOrEqual(CTA_H);
 	});
@@ -88,7 +94,6 @@ describe("community card panel fits", () => {
 		// The scale-down is load-bearing, not cosmetic. At the token sizes
 		// (place 38/38, subtitle 14/20, 84pt tile) the same four rows overflow —
 		// which is why "just use the tokens" is not an option here.
-		const smallest = DEVICES[0]!;
 		const unscaled =
 			PAD_TOP +
 			38 +
@@ -100,7 +105,7 @@ describe("community card panel fits", () => {
 			GAP +
 			CTA_H +
 			PAD_BOTTOM;
-		expect(unscaled).toBeGreaterThan(panelHeight(smallest.w, smallest.h));
+		expect(unscaled).toBeGreaterThan(panelHeight(SMALLEST.w, SMALLEST.h));
 	});
 
 	it("keeps the statistic line inside the tile budget", () => {
@@ -108,9 +113,7 @@ describe("community card panel fits", () => {
 		// 11pt of the 52pt tile is the fact line; assert the tile still has it.
 		const tileWithoutFact = TILE_H - 11 - 2;
 		expect(TILE_H).toBeGreaterThan(tileWithoutFact);
-		expect(CONTENT_H).toBeLessThanOrEqual(
-			panelHeight(DEVICES[0]!.w, DEVICES[0]!.h),
-		);
+		expect(CONTENT_H).toBeLessThanOrEqual(panelHeight(SMALLEST.w, SMALLEST.h));
 	});
 
 	it("matches the listing card's hero exactly", () => {
