@@ -19,6 +19,7 @@
  */
 
 import type { BrowseCard } from '@/app/(public)/browse/_components/BrowseFeed';
+import { webVideoUid } from '@/lib/feed/video-uid';
 import { createClient } from '@/lib/supabase/server';
 import {
   COMMUNITY_VIDEO_CATEGORIES,
@@ -65,6 +66,7 @@ type ListingVideo = {
   id: string;
   cf_video_id: string | null;
   cf_video_id_landscape: string | null;
+  cf_video_id_square: string | null;
   external_url: string | null;
   kind: string;
   title: string | null;
@@ -110,7 +112,9 @@ async function fetchAroundListing(
 
   const { data: listingVideos } = (await supabase
     .from('listing_videos')
-    .select('id, cf_video_id, cf_video_id_landscape, external_url, kind, title, sort_order')
+    .select(
+      'id, cf_video_id, cf_video_id_landscape, cf_video_id_square, external_url, kind, title, sort_order',
+    )
     .eq('listing_id', listing.id)
     .eq('status', 'ready')
     .order('sort_order', { ascending: true })) as { data: ListingVideo[] | null };
@@ -422,7 +426,7 @@ export async function buildListingCards(
   if (!hero) return [];
 
   const heroVideos = listingVideos.map((v) => ({
-    cfVideoId: v.cf_video_id ?? '',
+    cfVideoId: webVideoUid(v) ?? '',
     cfVideoIdLandscape: v.cf_video_id_landscape ?? null,
     externalUrl: v.external_url ?? null,
     line1: v.title ?? listing.address,
@@ -430,10 +434,10 @@ export async function buildListingCards(
   }));
 
   const card: BrowseCard = {
-    id: hero.cf_video_id ?? hero.cf_video_id_landscape ?? `ext:${hero.id}`,
+    id: webVideoUid(hero) ?? `ext:${hero.id}`,
     mediaKind: 'video',
     hero: {
-      cfVideoId: hero.cf_video_id ?? hero.cf_video_id_landscape ?? '',
+      cfVideoId: webVideoUid(hero) ?? '',
       cfVideoIdLandscape: hero.cf_video_id_landscape ?? null,
       externalUrl: hero.external_url ?? null,
     },

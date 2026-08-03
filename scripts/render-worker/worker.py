@@ -383,10 +383,23 @@ def process_job(job: dict[str, Any]) -> None:
         # card no longer letterboxes anything. `want_landscape` /
         # `landscape_ratio` are still computed because they're logged below and
         # used by the shot planner's framing decisions.
-        orientation = "square"
+        # 2026-08-03: TWO renders, one per surface. Owner: "需要分一个 ios 一个 web".
+        #
+        # Since 2026-07-28 we rendered SQUARE only, because the mobile feed card's
+        # media block is 1:1. But web (`/browse`, `/v/...`) plays a 9:16 or 16:9
+        # card and its loaders never even SELECT cf_video_id_square — so a
+        # square-only listing (5122 Lower Creek Street) has literally no uid web
+        # can read and the video just doesn't play there.
+        #
+        # One asset cannot serve both without letterboxing one of them, so:
+        #   square    -> cf_video_id_square    -> iOS feed card
+        #   landscape -> cf_video_id_landscape -> web
+        # Web gets landscape rather than portrait because every production FMLS
+        # photo set is horizontal; portrait would blur-letterbox ~30% of frame.
+        orientations = ["square", "landscape"]
         print(
             f"[job {job['id']}] landscape_ratio={landscape_ratio:.2f} "
-            f"orientation={orientation}",
+            f"orientations={orientations}",
             flush=True,
         )
 
@@ -594,28 +607,30 @@ def process_job(job: dict[str, Any]) -> None:
             if not out_path.exists():
                 raise RuntimeError(f"generate.py did not produce {out_path.name}")
 
-        out_path = workdir / f"out_{orientation}.mp4"
-        render(orientation, out_path)
+        # Render + upload each orientation. A failure in either aborts the job
+        # (the except below marks render_jobs failed), so we never leave a row
+        # claiming ready with only half its uids.
+        uids: dict[str, str] = {}
+        for orientation in orientations:
+            out_path = workdir / f"out_{orientation}.mp4"
+            render(orientation, out_path)
+            uids[orientation] = cf_upload(
+                out_path,
+                meta={
+                    "name": f"{listing.get('address', 'Listing')} — home tour ({orientation})",
+                    "listing_id": listing_id,
+                    "orientation": orientation,
+                },
+            )
+            print(f"[job {job['id']}] uploaded {orientation} to CF: {uids[orientation]}", flush=True)
 
-        # 6. Upload to Cloudflare Stream (one asset only).
-        cf_uid = cf_upload(
-            out_path,
-            meta={
-                "name": f"{listing.get('address', 'Listing')} — home tour"
-                + (" (landscape)" if orientation == "landscape" else ""),
-                "listing_id": listing_id,
-                "orientation": orientation,
-            },
-        )
-        print(f"[job {job['id']}] uploaded {orientation} to CF: {cf_uid}", flush=True)
-
-        # 7. Update listing_videos: set the appropriate uid column, clear
-        #    the other one (in case of a re-render swapping orientations),
-        #    clear the sentinel external_url, mark ready.
+        # 7. Update listing_videos: one column per rendered orientation, and NULL
+        #    for any we did not render this round (so a re-render that drops an
+        #    orientation doesn't leave a stale uid pointing at a deleted asset).
         patch_body: dict[str, Any] = {
-            "cf_video_id": cf_uid if orientation == "portrait" else None,
-            "cf_video_id_landscape": cf_uid if orientation == "landscape" else None,
-            "cf_video_id_square": cf_uid if orientation == "square" else None,
+            "cf_video_id": uids.get("portrait"),
+            "cf_video_id_landscape": uids.get("landscape"),
+            "cf_video_id_square": uids.get("square"),
             "external_url": None,
             "status": "ready",
         }

@@ -9,6 +9,7 @@
  */
 
 import { streamIframeUrl, thumbnailUrl } from '@/lib/cloudflare/stream';
+import { webVideoUid } from '@/lib/feed/video-uid';
 import { createServiceClient } from '@/lib/supabase/server';
 import { notFound } from 'next/navigation';
 import { EnhancePanel } from '../../../_components/EnhancePanel';
@@ -76,7 +77,7 @@ export default async function AdminTourJobsDetailPage({
     supabase
       .from('listing_videos')
       .select(
-        'id, cf_video_id, cf_video_id_landscape, external_url, kind, status, title, sort_order, created_at, approved_at',
+        'id, cf_video_id, cf_video_id_landscape, cf_video_id_square, external_url, kind, status, title, sort_order, created_at, approved_at',
       )
       .eq('listing_id', id)
       .order('sort_order', { ascending: true }) as unknown as Promise<{
@@ -84,6 +85,7 @@ export default async function AdminTourJobsDetailPage({
         id: string;
         cf_video_id: string | null;
         cf_video_id_landscape: string | null;
+        cf_video_id_square: string | null;
         external_url: string | null;
         kind: string;
         status: string;
@@ -118,10 +120,16 @@ export default async function AdminTourJobsDetailPage({
         ) : (
           <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
             {videos.map((v) => {
-              // Feed uses landscape uid when present (BrowseFeed:670). Mirror that
-              // fallback so admin tiles play whichever variant actually rendered.
-              const effectiveCfId = v.cf_video_id ?? v.cf_video_id_landscape;
+              // Which uid the admin tile plays. Square is the mobile render and
+              // was previously ignored here too, so a square-only row showed the
+              // bare status text instead of a player.
+              const effectiveCfId = webVideoUid(v);
               const isLandscape = !v.cf_video_id && !!v.cf_video_id_landscape;
+              const shapes = [
+                v.cf_video_id_square ? 'square (iOS)' : null,
+                v.cf_video_id_landscape ? 'landscape (web)' : null,
+                v.cf_video_id ? 'portrait' : null,
+              ].filter(Boolean);
               const cfThumb = effectiveCfId
                 ? (() => {
                     try {
@@ -170,7 +178,7 @@ export default async function AdminTourJobsDetailPage({
                     <div className="font-medium">{v.title ?? v.kind}</div>
                     <div className="text-ink2">
                       {v.kind}
-                      {isLandscape ? ' · landscape' : ''} ·{' '}
+                      {shapes.length > 0 ? ` · ${shapes.join(' + ')}` : ''} ·{' '}
                       <span
                         className={
                           v.status === 'ready' || v.status === 'approved'

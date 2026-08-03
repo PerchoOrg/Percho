@@ -91,20 +91,23 @@ export async function setVideoApproval(
   // biome-ignore lint/suspicious/noExplicitAny: stub generated types
   const supabase: any = createServiceClient();
 
-  // generated_videos carries approval in its own status CHECK ('approved'),
-  // the other two use approved_at/approved_by columns.
+  // approved_by FK targets auth.users(id), so it needs the AUTH user id — NOT
+  // `admin.id`, which is the `agents` row id. Passing the agents id fails with
+  // 23503 listing_videos_approved_by_fkey (reported from admin 2026-08-03).
+  const approver = admin.user_id;
+
   const patch =
     table === 'generated_videos'
       ? {
           // NOT status='approved' — 20260714120000 dropped that value from this
           // table's status CHECK. Approval is `approved_at` on all three tables.
           approved_at: approved ? new Date().toISOString() : null,
-          approved_by: approved ? admin.id : null,
+          approved_by: approved ? approver : null,
           reviewed_at: new Date().toISOString(),
         }
       : {
           approved_at: approved ? new Date().toISOString() : null,
-          approved_by: approved ? admin.id : null,
+          approved_by: approved ? approver : null,
         };
 
   const { error } = await supabase.from(table).update(patch).eq('id', videoId);

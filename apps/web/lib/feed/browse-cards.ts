@@ -17,6 +17,7 @@
  */
 
 import type { BrowseCard } from '@/app/(public)/browse/_components/BrowseFeed';
+import { webVideoUid } from '@/lib/feed/video-uid';
 import { haversineMiles, latLngBoundingBox } from '@/lib/geo/distance';
 import { createClient } from '@/lib/supabase/server';
 import {
@@ -78,6 +79,7 @@ type ListingVideoRow = {
   listing_id: string;
   cf_video_id: string | null;
   cf_video_id_landscape: string | null;
+  cf_video_id_square: string | null;
   external_url: string | null;
   title: string | null;
   kind: string;
@@ -163,7 +165,7 @@ async function assembleCards(
     supabase
       .from('listing_videos')
       .select(
-        'listing_id, cf_video_id, cf_video_id_landscape, external_url, title, kind, sort_order',
+        'listing_id, cf_video_id, cf_video_id_landscape, cf_video_id_square, external_url, title, kind, sort_order',
       )
       .in('listing_id', listingIds)
       .eq('status', 'ready')
@@ -385,11 +387,11 @@ async function assembleCards(
 
     const card: BrowseCard = {
       id: hero
-        ? (hero.cf_video_id ?? hero.cf_video_id_landscape ?? `ext:${l.id}`)
+        ? (webVideoUid(hero) ?? `ext:${l.id}`)
         : `photo:${l.id}`,
       mediaKind: hero ? 'video' : 'photo',
       hero: {
-        cfVideoId: hero?.cf_video_id ?? hero?.cf_video_id_landscape ?? '',
+        cfVideoId: webVideoUid(hero) ?? '',
         cfVideoIdLandscape: hero?.cf_video_id_landscape ?? null,
         externalUrl: hero?.external_url ?? null,
       },
@@ -500,7 +502,11 @@ export async function fetchBrowseCardsVideosOnly(offset = 0, limit = 1000): Prom
     .from('listing_videos')
     .select('listing_id')
     .eq('status', 'ready')
-    .or('cf_video_id.not.is.null,cf_video_id_landscape.not.is.null,external_url.not.is.null')) as {
+    .or(
+      // Square counts too. Omitting it here hid every square-only listing from
+      // /browse entirely (the videosOnly page), not just its player.
+      'cf_video_id.not.is.null,cf_video_id_landscape.not.is.null,cf_video_id_square.not.is.null,external_url.not.is.null',
+    )) as {
     data: Array<{ listing_id: string }> | null;
   };
 

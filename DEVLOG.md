@@ -4,6 +4,53 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-08-03 06:40 UTC — 真机三条报障:approve 报 FK / 5122 web 放不了 / ios+web 要各一条
+
+**Objective**: owner 在 admin 上实测,报三条:①点 Approve 报
+`listing_videos_approved_by_fkey` 违约;②5122 Lower Creek Street 视频放不了;
+③「需要分一个 ios 一个 web」。
+
+**Actions**:
+- `admin-enhance-actions.ts`:`approved_by` 传 `admin.user_id`(auth.users id),
+  不是 `admin.id`(agents 行 id)。
+- `worker.py`:`orientations = ["square", "landscape"]`,循环渲染 + 上传,
+  `uids.get(...)` 逐列写入。未渲染的 orientation 写 NULL(避免留下指向已删 CF 资产的旧 uid)。
+- 新增 `apps/web/lib/feed/video-uid.ts`:`webVideoUid`(landscape 优先)/
+  `mobileVideoUid`(square 优先)/`hasAnyVideoUid`。5 条 vitest 全过。
+- 五个 call site 全部改走 helper:`browse-cards.ts`(含 `fetchBrowseCardsVideosOnly`
+  的 `.or()` 过滤)、`listing-feed/load.ts`、`vertical-videos.ts`、admin tour-jobs 页。
+  三处 select 补上 `cf_video_id_square`。
+- admin 视频 tile 现在显示 `square (iOS) + landscape (web)`,一眼看得出两条都在。
+
+**Decisions**:
+- **fallback 收进一个文件,不在五处各写一遍**。这次的 bug 就是「加了一列,五个地方要记得改,
+  漏了三个」。helper 之后加列只动一处。
+- **web 拿 landscape 而不是 portrait**:生产 FMLS 照片集全是横向,portrait 会
+  blur-letterbox 掉约 30% 画面。
+- **web 的 fallback 链末尾保留 square**。1:1 素材在 web 卡片里会 letterbox,但
+  **letterbox 也比死卡片好** —— 这样 5122 这类只有 square 的老行今天就能放,不等重渲染。
+
+**Issues**:
+- ③ 其实是 ② 的另一半:worker 自 2026-07-28 起只渲 square,而 web 两个 loader
+  连 `cf_video_id_square` 都没 SELECT。**同一个 listing iOS 正常、web 空白**,
+  正是我上一轮回答里推断的那个原因 —— 但当时只解释了,没修。
+- `fetchBrowseCardsVideosOnly` 的 `.or()` 也漏了 square,所以 square-only 的 listing
+  在 /browse 上是**整张卡都不出现**,不只是播不了。这个 owner 还没报,但同根。
+
+**Resolution**: 5122 现在 web/mobile 都解析出 uid(暂时同一条 square asset);
+重渲染后才会真正 square+landscape 各一条。`tsc` 19 错 = 基线,我的文件 0 错。
+
+**Learnings**:
+- **「加一列」= 一次读侧审计**。和 §14(reader-missing-primary-flag)同一类:写侧加了
+  `cf_video_id_square`,五个读侧没跟上,潜伏了 6 天才被 owner 撞见。
+  加列的那个 PR 里就该 grep 全部 `.from('listing_videos')`。
+- **FK 指向 `auth.users` 时不能传 agents 行 id**。`requireAdmin()` 返回的是 agents 行,
+  `.id` 和 `.user_id` 是两个不同的 uuid,都合法、都不报类型错,只在运行时炸 23503。
+- **我上一轮已经诊断出 web/iOS 分叉的根因却只写了报告没修**。诊断完直接修,别等下一轮报障。
+
+**Next steps**: 5122 要重渲染才能拿到独立的 landscape asset(owner 点
+Generate new tour video)。render worker 需重启才能拿到双渲染 + enhance 队列。
+
 ## 2026-08-03 06:30 UTC — admin: 照片增强链路 + 视频审批闸 + Community Tour 改名
 
 **Objective**: owner 三条:①admin tab `Neighborhood Nearby` → `Community Tour`;

@@ -35,6 +35,7 @@
  * belong to a listing's *surroundings*, not to the listing.
  */
 
+import { mobileVideoUid } from '@/lib/feed/video-uid';
 import { createAnonClient } from '@/lib/supabase/server';
 
 const CF_STREAM_BASE = 'https://videodelivery.net';
@@ -115,11 +116,9 @@ export async function fetchVerticalVideos(): Promise<HeroVideoIndex> {
       // render lands in it with nothing cropped and nothing letterboxed. Falls
       // back to portrait, then landscape, so listings without a square render
       // keep playing (the card just letterboxes them as before).
-      const uid =
-        row.cf_video_id_square ??
-        row.cf_video_id ??
-        row.cf_video_id_landscape ??
-        undefined;
+      // 2026-08-03: same chain, now in `lib/feed/video-uid.ts` so web and mobile
+      // preferences live next to each other and adding a column touches one file.
+      const uid = mobileVideoUid(row) ?? undefined;
       if (!uid) continue;
       if (!byListing.has(row.listing_id)) byListing.set(row.listing_id, uid);
     }
