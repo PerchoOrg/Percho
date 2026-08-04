@@ -18,6 +18,10 @@
  * `pyftsubset` down to the 14 codepoints below — 5.2 KB instead of 440 KB. To
  * add a glyph you must re-subset; adding a name here alone will render tofu.
  *
+ * The reproducible path is `python3 scripts/build-icon-font.py` (it reads
+ * `GLYPHS` there and prints the codepoints to paste back here); the raw command
+ * it runs is:
+ *
  *   pyftsubset Phosphor-Fill.ttf --unicodes=U+E10E,U+E112,... \
  *     --output-file=assets/fonts/PerchoIcons.ttf --no-hinting --name-IDs='*'
  *
@@ -25,7 +29,13 @@
  *
  * `RedlineIconName` keeps the same 14 members it had when the icons were hand
  * built out of `View`s, so no card face changed in this swap. The names are
- * ours; only the artwork underneath moved to Phosphor.
+ * ours; only the artwork underneath moved to Phosphor. (Three more were added
+ * 2026-08-02 for the community card's resident reasons — see the union below.)
+ *
+ * The same union now also exists as `CardIconName` in `@percho/shared`, because
+ * the server picks the glyph for a resident-stated attribute and has to name it
+ * over the wire. Keep the two in step; `theme/icon-font.test.ts` guards this
+ * table against the .ttf, and the shared copy carries the rationale.
  */
 
 /** Icon names every redline face may ask for. */
@@ -46,7 +56,14 @@ export type RedlineIconName =
 	| "shop"
 	| "cup"
 	| "check"
-	| "expand";
+	| "expand"
+	// Community-card resident reasons (layout E, 2026-08-02). The community tile
+	// now prints the attribute residents actually left ("Dog Friendly") instead of
+	// a Percho dim label ("Trails Nearby"), and ~60 attributes need more than the
+	// original 14 glyphs could cover without two claims wearing the same art.
+	| "dog"
+	| "handshake"
+	| "shieldCheck";
 
 /** The family name registered with `expo-font`. */
 export const ICON_FONT = "PerchoIcons";
@@ -73,6 +90,9 @@ export const ICON_GLYPH: Record<RedlineIconName, string> = {
 	tree: "\ue6da", // tree-fill            — "Private Backyard"
 	walk: "\uea88", // footprints-fill      — "Walkable"
 	yard: "\uee26", // picnic-table-fill    — outdoor space (tradeoff face)
+	dog: "\ue74a", // dog-fill              — "Dog Friendly"
+	handshake: "\ue582", // handshake-fill  — "Friendly" / "Welcoming" / "Neighbors"
+	shieldCheck: "\ue40c", // shield-check-fill — "Safe"
 };
 
 /**

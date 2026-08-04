@@ -10,6 +10,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ScopeEvent } from "../lib/feed/events";
 import {
 	QUEUE_CAP,
+	type QueuedEvent,
 	capQueue,
 	noopTransport,
 	useEventQueue,
@@ -51,7 +52,7 @@ describe("capQueue — drop-oldest at the cap", () => {
 	});
 
 	it("holds the real 500 cap", () => {
-		let queue: ScopeEvent[] = [];
+		let queue: QueuedEvent[] = [];
 		for (let i = 1; i <= QUEUE_CAP + 10; i++) queue = capQueue(queue, ev(i));
 		expect(queue.length).toBe(QUEUE_CAP);
 		expect(queue[0]?.seq).toBe(11);
@@ -68,7 +69,7 @@ describe("takeSeq", () => {
 
 describe("drain", () => {
 	it("ships the batch and empties the queue", async () => {
-		const transport = vi.fn<(batch: ScopeEvent[]) => Promise<boolean>>(
+		const transport = vi.fn<(batch: QueuedEvent[]) => Promise<boolean>>(
 			async () => true,
 		);
 		q().setTransport(transport);

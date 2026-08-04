@@ -32,13 +32,18 @@ import {
   fetchBrowseCardsByIds,
   fetchBrowseCardsVideosOnly,
 } from '@/lib/feed/browse-cards';
-import { type PoolCommunityDTO, fetchCommunityPool } from '@/lib/feed/community-pool';
+import {
+  type PoolCommunityDTO,
+  fetchCommunityPool,
+  fetchCommunityPoolByIds,
+} from '@/lib/feed/community-pool';
 import { type GeoUnitDTO, fetchCityGeoUnits } from '@/lib/feed/geo-units';
 import { type LikedCommunityRef, type PoolListingDTO, gateListings } from '@/lib/feed/listing-gate';
 import { listingHighlightDims } from '@/lib/feed/listing-highlights';
 import { fetchNeighborhoodScores } from '@/lib/feed/fetch-neighborhood-scores';
 import { createServiceClient } from '@/lib/supabase/server';
 import {
+  fetchVerticalVideoCommunityIds,
   fetchVerticalVideoListingIds,
   fetchVerticalVideos,
   streamManifestUrl,
@@ -245,9 +250,32 @@ export async function GET(request: Request) {
 
   const listings = gateListings(ordered, stage, limit, likedRefs);
 
+  /**
+   * `videoFirst` has to FETCH the video-bearing communities, exactly as it does
+   * for listings above — reordering the page is not enough.
+   *
+   * Owner on device (2026-08-02): 「ios上测试dev sampler里一条带视频的community都
+   * 没有看到」. The community pool is ordered by `name` and read as
+   * `offset=0, limit=12`, and the only community with a ready video today is
+   * Ashley Crossing — **~280th alphabetically**. The sort below had nothing to
+   * hoist because the row was never in the page. Same bug, same fix as the
+   * `videoFirst` block for listings; the listing half was fixed and the
+   * community half was left sorting an empty set.
+   */
+  let communityRows = communities;
+  if (needsCommunities && videoFirst) {
+    const videoCommunityIds = await fetchVerticalVideoCommunityIds();
+    const extra =
+      videoCommunityIds.length > 0
+        ? await fetchCommunityPoolByIds(videoCommunityIds)
+        : [];
+    const seen = new Set(extra.map((c) => c.id));
+    communityRows = [...extra, ...communities.filter((c) => !seen.has(c.id))];
+  }
+
   // Attach vertical video to communities too. `CommunityFace` already renders
   // `CardVideo` when `videoUrl` is set; the DTO just never carried the field.
-  const communitiesWithVideo = communities.map((c) => {
+  const communitiesWithVideo = communityRows.map((c) => {
     const uid = verticalVideos.byCommunity.get(c.id);
     return uid ? { ...c, videoUrl: streamManifestUrl(uid) } : c;
   });

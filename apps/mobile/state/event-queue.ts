@@ -15,11 +15,23 @@
  * `buyer_scope_events` / `/api/mobile/events` do not exist yet (see the
  * `events.ts` header). Swapping in a real POST is a one-line change and needs
  * no test rewrite.
+ *
+ * ONE QUEUE, TWO STREAMS (task-2). §2.6's `listing_explore_events` shares this
+ * queue with §1.10's `buyer_scope_events`, because offline durability, ordering
+ * and the drop-oldest cap are properties of the DEVICE, not of a table. The
+ * transport is what routes: every event carries a discriminating `type`, and
+ * `listingId` is present on exactly the explore ones. Two parallel queues would
+ * mean two caps, two drains, and an interleaving that no longer reflects what
+ * the buyer actually did.
  */
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import type { ScopeEvent } from "../lib/feed/events";
+import type { ExploreEvent } from "../lib/listing/explore-events";
+
+/** Anything the device queues. Discriminated by `type` at the transport. */
+export type QueuedEvent = ScopeEvent | ExploreEvent;
 
 export const QUEUE_CAP = 500;
 
@@ -27,23 +39,23 @@ export const QUEUE_CAP = 500;
  * Ships a batch. Must resolve true only when the batch is durably accepted —
  * false or a throw leaves the batch queued for the next drain.
  */
-export type EventTransport = (batch: ScopeEvent[]) => Promise<boolean>;
+export type EventTransport = (batch: QueuedEvent[]) => Promise<boolean>;
 
 /** Task-1 sink: accepts and discards. Keeps the drain path exercised. */
 export const noopTransport: EventTransport = async () => true;
 
 /** Pure cap policy, exported so the drop-oldest rule is directly testable. */
 export function capQueue(
-	queue: readonly ScopeEvent[],
-	incoming: ScopeEvent,
+	queue: readonly QueuedEvent[],
+	incoming: QueuedEvent,
 	cap: number = QUEUE_CAP,
-): ScopeEvent[] {
+): QueuedEvent[] {
 	const next = [...queue, incoming];
 	return next.length <= cap ? next : next.slice(next.length - cap);
 }
 
 interface EventQueueState {
-	queue: readonly ScopeEvent[];
+	queue: readonly QueuedEvent[];
 	hydrated: boolean;
 	/** Monotonic per-install counter backing `ScopeEvent.seq`. */
 	nextSeq: number;
@@ -54,7 +66,7 @@ interface EventQueueState {
 	setTransport: (t: EventTransport) => void;
 	/** Reserve the next seq. Callers pass it into the `build*Event` helpers. */
 	takeSeq: () => number;
-	enqueue: (event: ScopeEvent) => void;
+	enqueue: (event: QueuedEvent) => void;
 	/** Ship everything queued. Returns the number of events accepted. */
 	drain: () => Promise<number>;
 	clear: () => void;

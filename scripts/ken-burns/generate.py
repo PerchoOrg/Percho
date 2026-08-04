@@ -28,6 +28,26 @@ FPS = 30
 SMOOTH = 4
 IMAGE_EXTS = {".jpg", ".jpeg", ".png"}
 
+# 2026-08-03: content-preserving enhancement, applied AFTER zoompan so it runs
+# on the final w×h frame (cheap) instead of the SMOOTH× intermediate.
+# denoise → sharpen → S-curve → contrast/saturation. Pure arithmetic: no
+# generative editing, nothing is added or removed from the photo, so it's safe
+# for MLS. Tuned against raw/light/medium/strong side-by-sides on real POI
+# photos — "strong" haloed on high-contrast edges, clipped greens and crushed
+# blacks; this is the "medium" rung.
+# ponytail: one global preset. Per-photo strength needs a quality score
+# (Laplacian variance / clipping stats) — add that when a photo actually
+# looks wrong, not before.
+ENHANCE = (
+    "hqdn3d=1.5:1.5:4:4,"
+    "unsharp=5:5:0.7:5:5:0.0,"
+    # S-curve that leaves the TOE and SHOULDER alone: 0.08 and 0.92 are pinned
+    # to themselves so blacks don't crush (navy blazers going flat black) and
+    # whites don't clip (shirts / paper losing texture). Only midtones move.
+    "curves=all='0/0 0.08/0.08 0.3/0.335 0.7/0.735 0.92/0.92 1/1',"
+    "eq=contrast=1.06:saturation=1.10:gamma=1.02"
+)
+
 
 def die(msg: str, code: int = 1) -> None:
     print(f"error: {msg}", file=sys.stderr)
@@ -457,6 +477,7 @@ def render_clip(src: str, dst: str, duration: float, mode: str, w: int, h: int,
         else:
             fg_w, fg_h = fit_inside(src_w, src_h, w, h, no_upscale=True)
             vf = kenburns_filter_v2(mode, duration, w, h, fg_w, fg_h, bbox=bbox)
+        vf += "," + ENHANCE
         if v2_caption and not caption_png:
             # Phase 100 (2026-07-16): when a caption_png overlay is present
             # (listing videos now use HTML→PNG LISTING archetype for
@@ -466,7 +487,7 @@ def render_clip(src: str, dst: str, duration: float, mode: str, w: int, h: int,
             if cap_vf:
                 vf = vf + "," + cap_vf
     else:
-        vf = kenburns_filter(mode, duration, w, h)
+        vf = kenburns_filter(mode, duration, w, h) + "," + ENHANCE
     if overlay:
         vf = vf + "," + listing_overlay_filter(overlay, w, h)
 

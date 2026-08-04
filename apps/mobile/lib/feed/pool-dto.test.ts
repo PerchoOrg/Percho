@@ -188,6 +188,60 @@ describe("parseCommunity", () => {
 		expect(parseCommunity({ ...COMMUNITY, blurb: 7 })?.blurb).toBeUndefined();
 		expect(parseCommunity(COMMUNITY)?.blurb).toBeUndefined();
 	});
+
+	describe("reason tiles (layout E)", () => {
+		it("parses reasons, keeping a sub-fact only when the server sent one", () => {
+			const c = parseCommunity({
+				...COMMUNITY,
+				reasons: [
+					{ label: "Dog Friendly", icon: "dog" },
+					{ label: "Well Maintained", icon: "check", fact: "35% owner-occupied" },
+				],
+			});
+			expect(c?.reasons).toEqual([
+				{ label: "Dog Friendly", icon: "dog" },
+				{ label: "Well Maintained", icon: "check", fact: "35% owner-occupied" },
+			]);
+		});
+
+		it("DROPS a tile whose icon is not in the shipped font", () => {
+			// The single failure this validation exists for: an icon name the subset
+			// .ttf cannot draw renders a TOFU BOX on device and nowhere else. Off the
+			// wire no app-side test can see it, so it is rejected here. The tile is
+			// dropped rather than given a default glyph — a wrong picture under a
+			// resident's own words is a fabricated claim.
+			const c = parseCommunity({
+				...COMMUNITY,
+				reasons: [
+					{ label: "Dog Friendly", icon: "dog" },
+					{ label: "Haunted", icon: "ghost" },
+					{ label: "Safe", icon: "shieldCheck" },
+				],
+			});
+			expect(c?.reasons?.map((r) => r.label)).toEqual([
+				"Dog Friendly",
+				"Safe",
+			]);
+		});
+
+		it("drops a tile with no label, and rejects a non-array", () => {
+			expect(
+				parseCommunity({ ...COMMUNITY, reasons: [{ icon: "dog" }] })?.reasons,
+			).toBeUndefined();
+			expect(
+				parseCommunity({ ...COMMUNITY, reasons: "Dog Friendly" })?.reasons,
+			).toBeUndefined();
+		});
+
+		it("omits reasons entirely when the server sent none", () => {
+			// The card then falls back to `dims`, then to no tiles. `[]` would be
+			// indistinguishable from "three tiles, all empty".
+			expect(parseCommunity(COMMUNITY)?.reasons).toBeUndefined();
+			expect(
+				parseCommunity({ ...COMMUNITY, reasons: [] })?.reasons,
+			).toBeUndefined();
+		});
+	});
 });
 
 describe("parsePoolResponse", () => {

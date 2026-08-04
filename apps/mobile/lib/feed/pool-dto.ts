@@ -11,10 +11,11 @@
  *
  * Pure: no react/react-native/expo/zustand, so it is testable on its own.
  */
-import type { DimKey } from "@percho/shared";
-import { DIMS } from "@percho/shared";
+import type { CardIconName, DimKey } from "@percho/shared";
+import { CARD_ICON_NAMES, DIMS } from "@percho/shared";
 import type {
 	CommunityCardV3,
+	CommunityReasonV3,
 	ListingCardV3,
 	NeighborhoodScores,
 	ScoreDimension,
@@ -46,6 +47,37 @@ function level(v: unknown): GeoLevel | undefined {
 function dims(v: unknown): DimKey[] {
 	if (!Array.isArray(v)) return [];
 	return v.filter((d): d is DimKey => typeof d === "string" && d in DIMS);
+}
+
+/**
+ * The three "why people love it" tiles.
+ *
+ * Strict for the same reason the rest of this module is: a reason whose `icon` is
+ * not in the shipped font renders a TOFU BOX on device and nowhere else — the
+ * exact failure class `theme/icon-font.test.ts` exists to catch on the app side,
+ * except here the bad name comes off the wire where no test can see it. An
+ * unknown icon drops the whole tile rather than substituting a default glyph:
+ * a wrong picture under a resident's words is a fabricated claim, and three
+ * tiles is a target, not a quota.
+ *
+ * `fact` is optional and absent on most real tiles (57.1% of communities have
+ * none at all) — see `CommunityCardV3.reasons`.
+ */
+function reasons(v: unknown): CommunityReasonV3[] {
+	if (!Array.isArray(v)) return [];
+	const out: CommunityReasonV3[] = [];
+	for (const item of v) {
+		const raw = rec(item);
+		if (!raw) continue;
+		const label = str(raw.label);
+		const icon = CARD_ICON_NAMES.find((n) => n === raw.icon) as
+			| CardIconName
+			| undefined;
+		if (!label || !icon) continue;
+		const fact = str(raw.fact);
+		out.push({ label, icon, ...(fact ? { fact } : {}) });
+	}
+	return out;
 }
 
 function strings(v: unknown): string[] {
@@ -230,6 +262,7 @@ export function parseCommunity(v: unknown): CommunityCardV3 | null {
 	const homes = num(raw.homes);
 	const pills = strings(raw.pills);
 	const d = dims(raw.dims);
+	const r = reasons(raw.reasons);
 	const blurb = str(raw.blurb);
 	return {
 		kind: "community",
@@ -245,6 +278,7 @@ export function parseCommunity(v: unknown): CommunityCardV3 | null {
 		...(homes !== undefined ? { homes } : {}),
 		...(pills.length > 0 ? { pills } : {}),
 		...(d.length > 0 ? { dims: d } : {}),
+		...(r.length > 0 ? { reasons: r } : {}),
 		...(blurb ? { blurb } : {}),
 	};
 }

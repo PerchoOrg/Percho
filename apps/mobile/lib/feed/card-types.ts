@@ -11,7 +11,7 @@
  * `generateDiscoveryFeed` lands (05 §5.6 item 4). Type-only imports of the
  * shared dim vocabulary are erased at compile time and cost nothing at runtime.
  */
-import type { DimKey } from "@percho/shared";
+import type { CardIconName, DimKey } from "@percho/shared";
 import type { GeoBoundary, GeoLevel, GeoUnit } from "./geo-unit";
 
 /**
@@ -211,6 +211,15 @@ export interface ListingCardV3 {
 	preview?: true;
 }
 
+/** One "why people love it" tile. Mirrors `CommunityReason` on the server. */
+export interface CommunityReasonV3 {
+	/** The attribute as residents left it on Nextdoor. Never paraphrased. */
+	label: string;
+	icon: CardIconName;
+	/** Present only when a DB row is evidence for this specific reason. */
+	fact?: string;
+}
+
 export interface CommunityCardV3 {
 	kind: "community";
 	id: string;
@@ -225,6 +234,22 @@ export interface CommunityCardV3 {
 	homes?: number;
 	pills?: readonly string[];
 	dims?: readonly DimKey[];
+	/**
+	 * The three "why people love it" tiles — what the card renders as of layout E
+	 * (owner, 2026-08-02): the resident-stated `communities.attributes` VERBATIM,
+	 * each with a glyph and sometimes one factual sub-line.
+	 *
+	 * Preferred over `dims`, which stays as the fallback. The difference is one of
+	 * voice: `dims` are Percho's category labels ("Cultural Scene", "Outdoor
+	 * Space") and a reason is the neighbour's own word ("Dog Friendly",
+	 * "Peaceful"). 88.6% of feed-eligible communities yield three reasons.
+	 *
+	 * `fact` is absent on most tiles by design — a figure is attached only when a
+	 * DB row is evidence for THAT reason, which is true for 42.8% of communities on
+	 * exactly one of their three tiles. A fact-less tile is the canon 84pt tile, so
+	 * the common case is not a degraded one. See `lib/feed/community-reasons.ts`.
+	 */
+	reasons?: readonly CommunityReasonV3[];
 	/**
 	 * The community's authored prose (`communities.description`), which the feed
 	 * DTO has always sent as `blurb`.

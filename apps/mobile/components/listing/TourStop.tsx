@@ -14,7 +14,15 @@
  * Prev/Next are always mounted. (Task-1 learned this the hard way on the
  * challenge card: overloading one gesture with two meanings read as a
  * malfunction round after round.)
+ *
+ * The accelerator reuses the §0.5 gesture contract — `decideSwipe`, the same
+ * 35%-of-width / 800pt/s / ±30°-sector judgement the feed uses — so a swipe that
+ * advances a card and a swipe that advances a stop feel identical in the hand.
+ * It is scoped with `activeOffsetX` and `failOffsetY` so a vertical drag stays
+ * the ScrollView's: this page scrolls, and stealing that would break the WHY
+ * block on a small screen.
  */
+import { useCallback, useMemo, useRef } from "react";
 import {
 	Image,
 	Pressable,
@@ -22,7 +30,11 @@ import {
 	StyleSheet,
 	Text,
 	View,
+	useWindowDimensions,
 } from "react-native";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
+import { runOnJS } from "react-native-reanimated";
+import { decideSwipe } from "../../lib/gesture/decide-swipe";
 import type { ActionKind } from "../../lib/listing/hotspot";
 import { emojiForRoom } from "../../lib/listing/hotspot";
 import type { Stop } from "../../lib/listing/tour";
@@ -31,6 +43,14 @@ import { colors, radii } from "../../theme/tokens";
 import { textStyles } from "../../theme/typography";
 
 const MEDIA_HEIGHT = 220;
+
+/**
+ * Horizontal travel before the pan takes over from the scroll view, and the
+ * vertical travel that hands it back. Deliberately asymmetric: a buyer reading
+ * the WHY block scrolls far more often than they swipe, so vertical wins ties.
+ */
+const PAN_ACTIVATE_X = 14;
+const PAN_FAIL_Y = 12;
 
 interface TourStopProps {
 	stop: Stop;
@@ -69,102 +89,153 @@ export function TourStop({
 	const total = stopIds.length;
 	const last = isLastStop(index, total);
 	const { hotspot } = stop;
+	const { width } = useWindowDimensions();
+
+	/**
+	 * Ref trampolines for the two callbacks the gesture calls.
+	 *
+	 * A caller passes inline arrows here (`onNext={() => …}`), so their identity
+	 * changes every render. Putting them in the gesture's dependency list would
+	 * rebuild a live `Gesture.Pan` mid-touch — which DROPS the in-flight touch, so
+	 * `onEnd` never fires and the interaction sticks. Task-1 lost rounds to
+	 * exactly this on the feed; the rule is in `lib/gesture/memo-identity.test.ts`.
+	 * The refs are written on every render and the gesture depends only on `width`.
+	 */
+	const nextRef = useRef(onNext);
+	const prevRef = useRef(onPrev);
+	nextRef.current = onNext;
+	prevRef.current = onPrev;
+
+	// `useCallback` with an empty dep list, matching `use-swipe-card.ts`'s
+	// `settle`: these two are STABLE for the component's whole life, so naming
+	// them in the memo below satisfies the exhaustive-deps rule without ever
+	// actually invalidating the gesture.
+	const goNext = useCallback(() => nextRef.current(), []);
+	const goPrev = useCallback(() => prevRef.current(), []);
+
+	const pan = useMemo(
+		() =>
+			Gesture.Pan()
+				// Horizontal intent only; a vertical drag stays the ScrollView's.
+				.activeOffsetX([-PAN_ACTIVATE_X, PAN_ACTIVATE_X])
+				.failOffsetY([-PAN_FAIL_Y, PAN_FAIL_Y])
+				.onEnd((e) => {
+					"worklet";
+					// The §0.5 contract, unchanged: same threshold, velocity and
+					// sector as a feed card, measured against the screen width
+					// because this stop fills it.
+					const decision = decideSwipe({
+						translationX: e.translationX,
+						translationY: e.translationY,
+						velocityX: e.velocityX,
+						cardWidth: width,
+					});
+					// Left = forward, matching the reading direction of "Next stop →".
+					if (decision === "left") runOnJS(goNext)();
+					else if (decision === "right") runOnJS(goPrev)();
+				}),
+		[width, goNext, goPrev],
+	);
 
 	return (
-		<View style={styles.screen}>
-			<View style={styles.head}>
-				<Text style={styles.stopLabel}>{stopLabel(index, total)}</Text>
-				<Pressable onPress={onExit} hitSlop={12}>
-					<Text style={styles.close}>✕</Text>
-				</Pressable>
-			</View>
-
-			{/* Segmented progress: completed segments in amber, the rest hairline.
-			    Keyed off the STOP ID, not the index — task-1 lost rounds to
-			    index/duplicate keys and the rule here is absolute. */}
-			<View style={styles.progress}>
-				{stopIds.map((id, i) => (
-					<View
-						key={id}
-						style={[styles.segment, i <= index && styles.segmentDone]}
-					/>
-				))}
-			</View>
-
-			<ScrollView contentContainerStyle={styles.body}>
-				<View style={styles.media}>
-					<Image source={{ uri: hotspot.mediaUrl }} style={styles.mediaImg} />
-					{/* The pin sits at the tagger's subject centre (§2.3 #2). */}
-					<View
-						style={[
-							styles.pin,
-							{
-								left: `${hotspot.pin.x * 100}%`,
-								top: `${hotspot.pin.y * 100}%`,
-							},
-						]}
-					>
-						<Text style={styles.pinGlyph}>{emojiForRoom(hotspot.room)}</Text>
-					</View>
+		<GestureDetector gesture={pan}>
+			<View style={styles.screen}>
+				<View style={styles.head}>
+					<Text style={styles.stopLabel}>{stopLabel(index, total)}</Text>
+					<Pressable onPress={onExit} hitSlop={12}>
+						<Text style={styles.close}>✕</Text>
+					</Pressable>
 				</View>
 
-				<Text style={styles.whyEyebrow}>WHY WE'RE SHOWING YOU THIS</Text>
-				<Text style={styles.why}>{stop.why}</Text>
-				<Text style={styles.evidence}>
-					{`Based on ${stop.evidence
-						.map((e) => `${e.count} ${e.label}`)
-						.join(" · ")}`}
-				</Text>
+				{/* Segmented progress: completed segments in amber, the rest hairline.
+			    Keyed off the STOP ID, not the index — task-1 lost rounds to
+			    index/duplicate keys and the rule here is absolute. */}
+				<View style={styles.progress}>
+					{stopIds.map((id, i) => (
+						<View
+							key={id}
+							style={[styles.segment, i <= index && styles.segmentDone]}
+						/>
+					))}
+				</View>
 
-				{hotspot.actions.map((action) => (
+				<ScrollView contentContainerStyle={styles.body}>
+					<View style={styles.media}>
+						<Image source={{ uri: hotspot.mediaUrl }} style={styles.mediaImg} />
+						{/* The pin sits at the tagger's subject centre (§2.3 #2). */}
+						<View
+							style={[
+								styles.pin,
+								{
+									left: `${hotspot.pin.x * 100}%`,
+									top: `${hotspot.pin.y * 100}%`,
+								},
+							]}
+						>
+							<Text style={styles.pinGlyph}>{emojiForRoom(hotspot.room)}</Text>
+						</View>
+					</View>
+
+					<Text style={styles.whyEyebrow}>WHY WE'RE SHOWING YOU THIS</Text>
+					<Text style={styles.why}>{stop.why}</Text>
+					<Text style={styles.evidence}>
+						{`Based on ${stop.evidence
+							.map((e) => `${e.count} ${e.label}`)
+							.join(" · ")}`}
+					</Text>
+
+					{hotspot.actions.map((action) => (
+						<Pressable
+							key={action.kind}
+							onPress={() => !action.disabled && onAction(action.kind)}
+							style={({ pressed }) => [
+								styles.action,
+								pressed && !action.disabled && styles.pressed,
+								action.disabled && styles.disabled,
+							]}
+						>
+							<Text style={styles.actionEmoji}>
+								{ACTION_EMOJI[action.kind]}
+							</Text>
+							<View style={styles.actionText}>
+								<Text style={styles.actionLabel}>
+									{action.label}
+									{action.disabled ? " · coming soon" : ""}
+								</Text>
+								<Text style={styles.actionSub}>{action.sub}</Text>
+							</View>
+							{!action.disabled && <Text style={styles.chevron}>›</Text>}
+						</Pressable>
+					))}
+				</ScrollView>
+
+				<View style={styles.foot}>
 					<Pressable
-						key={action.kind}
-						onPress={() => !action.disabled && onAction(action.kind)}
+						onPress={onPrev}
+						disabled={index === 0}
 						style={({ pressed }) => [
-							styles.action,
-							pressed && !action.disabled && styles.pressed,
-							action.disabled && styles.disabled,
+							styles.btn,
+							pressed && styles.pressed,
+							index === 0 && styles.disabled,
 						]}
 					>
-						<Text style={styles.actionEmoji}>{ACTION_EMOJI[action.kind]}</Text>
-						<View style={styles.actionText}>
-							<Text style={styles.actionLabel}>
-								{action.label}
-								{action.disabled ? " · coming soon" : ""}
-							</Text>
-							<Text style={styles.actionSub}>{action.sub}</Text>
-						</View>
-						{!action.disabled && <Text style={styles.chevron}>›</Text>}
+						<Text style={styles.btnLabel}>← Prev</Text>
 					</Pressable>
-				))}
-			</ScrollView>
-
-			<View style={styles.foot}>
-				<Pressable
-					onPress={onPrev}
-					disabled={index === 0}
-					style={({ pressed }) => [
-						styles.btn,
-						pressed && styles.pressed,
-						index === 0 && styles.disabled,
-					]}
-				>
-					<Text style={styles.btnLabel}>← Prev</Text>
-				</Pressable>
-				<Pressable
-					onPress={onNext}
-					style={({ pressed }) => [
-						styles.btn,
-						styles.btnPrimary,
-						pressed && styles.pressed,
-					]}
-				>
-					<Text style={styles.btnPrimaryLabel}>
-						{last ? "Finish tour →" : "Next stop →"}
-					</Text>
-				</Pressable>
+					<Pressable
+						onPress={onNext}
+						style={({ pressed }) => [
+							styles.btn,
+							styles.btnPrimary,
+							pressed && styles.pressed,
+						]}
+					>
+						<Text style={styles.btnPrimaryLabel}>
+							{last ? "Finish tour →" : "Next stop →"}
+						</Text>
+					</Pressable>
+				</View>
 			</View>
-		</View>
+		</GestureDetector>
 	);
 }
 

@@ -53,6 +53,12 @@ GLYPHS = {
     "tree": "tree-fill",                  # "Private Backyard"
     "walk": "footprints-fill",            # "Walkable"
     "yard": "picnic-table-fill",          # outdoor space (tradeoff face)
+    # Added 2026-08-02 for the community card's resident reasons (layout E).
+    # Each exists because the alternative was two different claims sharing art —
+    # see the CardIconName docs in packages/shared/src/icons.ts.
+    "dog": "dog-fill",                    # "Dog Friendly" (35.8% of communities)
+    "handshake": "handshake-fill",        # "Friendly" / "Welcoming" / "Neighbors"
+    "shieldCheck": "shield-check-fill",   # "Safe" (41.4%)
 }
 
 

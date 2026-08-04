@@ -57,6 +57,15 @@ function take<T>(items: readonly T[], n: number): T[] {
  * The server already hoists video listings into the pool (`?videoFirst=1`), but
  * the DECK order is decided here, so without this the video cards would land
  * wherever the kind interleave put them.
+ *
+ * NOTE this can only reorder what the pool CONTAINS. Owner on device
+ * (2026-08-02): 「ios上测试dev sampler里一条带视频的community都没有看到」 — the
+ * sampler was fine, the community pool simply never contained the one community
+ * with a video (Ashley Crossing, ~280th alphabetically, outside the
+ * name-ordered `limit=12` window). Fixed server-side in
+ * `app/api/mobile/feed/route.ts` via `fetchCommunityPoolByIds`. If a face's
+ * video goes missing here again, check what the POOL holds before touching this
+ * function.
  */
 function videoFirst<T extends { videoUrl?: string }>(items: readonly T[]): T[] {
 	return [

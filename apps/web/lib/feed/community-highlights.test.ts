@@ -151,6 +151,11 @@ describe("projectCommunityPool highlight tiles", () => {
 		cover_storage_path: "nextdoor/abernathy.jpg",
 		attributes: ["Peaceful", "Family Friendly", "Walkability"],
 		interests: null,
+		// Sub-fact sources for the reason tiles (2026-08-02). Null here because
+		// these tests are about `dims`; `community-reasons.test.ts` covers the
+		// facts, and null is the honest majority case anyway.
+		residents_count: null,
+		homeowners_pct: null,
 	};
 
 	it("carries dims into the DTO so the card has tiles to draw", () => {
@@ -167,5 +172,39 @@ describe("projectCommunityPool highlight tiles", () => {
 		]);
 		expect(dtos).toHaveLength(1);
 		expect(dtos[0] && "dims" in dtos[0]).toBe(false);
+	});
+
+	it("carries reason tiles, with a sub-fact only where one is earned", () => {
+		// Layout E's payload (2026-08-02). "Well Maintained" gets the percentage;
+		// "Peaceful" and "Dog Friendly" are label-only, which is the majority shape.
+		const dtos = projectCommunityPool([
+			{
+				...row,
+				attributes: ["Peaceful", "Dog Friendly", "Well Maintained"],
+				homeowners_pct: 35,
+			},
+		]);
+		// Rarest first (2026-08-02): Well Maintained 31.9% → Dog Friendly 35.8% →
+		// Peaceful 61.2%. The seed hands them over alphabetically; the card does not.
+		expect(dtos[0]?.reasons).toEqual([
+			{ label: "Well Maintained", icon: "check", fact: "35% owner-occupied" },
+			{ label: "Dog Friendly", icon: "dog" },
+			{ label: "Peaceful", icon: "moon" },
+		]);
+	});
+
+	it("sends reasons AND dims, so the card can fall back", () => {
+		// Both are populated on the same row on purpose: the card prefers reasons,
+		// and 9.4% of real communities yield a dim but no whitelisted reason.
+		const dtos = projectCommunityPool([row]);
+		expect(dtos[0]?.reasons?.length).toBeGreaterThan(0);
+		expect(dtos[0]?.dims?.length).toBeGreaterThan(0);
+	});
+
+	it("OMITS reasons rather than sending [] when nothing maps", () => {
+		const dtos = projectCommunityPool([
+			{ ...row, attributes: ["Lash Strips"], interests: null },
+		]);
+		expect(dtos[0] && "reasons" in dtos[0]).toBe(false);
 	});
 });

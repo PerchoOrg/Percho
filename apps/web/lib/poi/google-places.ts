@@ -189,7 +189,13 @@ export async function fetchPhotoBinary(
   const params = new URLSearchParams();
   if (opts.maxHeightPx) params.set('maxHeightPx', String(opts.maxHeightPx));
   if (opts.maxWidthPx) params.set('maxWidthPx', String(opts.maxWidthPx));
-  if (!opts.maxHeightPx && !opts.maxWidthPx) params.set('maxHeightPx', '1200');
+  // 2026-08-03: was 1200. Google returns ~1600x1200 at that clamp, but the
+  // 1080 square feed card + ken-burns 4x SMOOTH upscale needs far more: the
+  // pipeline was upscaling 1200px sources and producing visibly mushy bark /
+  // foliage / signage. Source photos are typically 3000-4800px tall, so 2400
+  // gets us a real 3200x2400 (~1.7MB) — sharp at 1080 with pan headroom, at
+  // half the bytes of the 4800 clamp.
+  if (!opts.maxHeightPx && !opts.maxWidthPx) params.set('maxHeightPx', '2400');
 
   const url = `${PLACES_BASE}/${photoName}/media?${params.toString()}`;
   const res = await fetch(url, { headers: { 'X-Goog-Api-Key': apiKey() } });

@@ -229,7 +229,8 @@ export async function fetchPhotosForListingPoi(
     } else {
       let blob;
       try {
-        blob = await fetchPhotoBinary(photo.name, { maxHeightPx: opts.maxHeightPx ?? 1200 });
+        blob = await fetchPhotoBinary(photo.name,
+          opts.maxHeightPx ? { maxHeightPx: opts.maxHeightPx } : {});
       } catch (err) {
         console.error(`[listing-poi] fetch photo ${photo.name} failed:`, err);
         noteSkip(`Google Places fetch: ${(err as Error).message ?? 'unknown'}`);
