@@ -95,9 +95,9 @@ describe("buildNavChips", () => {
 describe("navKey", () => {
 	it("namespaces a hotspot so it cannot collide with a fixed section", () => {
 		expect(navKey({ kind: "section", id: "monthly" })).toBe("monthly");
-		expect(
-			navKey({ kind: "hotspot", id: "monthly", room: "kitchen" }),
-		).toBe("hotspot:monthly");
+		expect(navKey({ kind: "hotspot", id: "monthly", room: "kitchen" })).toBe(
+			"hotspot:monthly",
+		);
 	});
 });
 

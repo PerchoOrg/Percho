@@ -68,6 +68,10 @@ const styles = StyleSheet.create({
 	/** A fill this saturated should darken, not fade — fading reads as disabled. */
 	pressedSolid: { backgroundColor: colors.accentDeep },
 	label: { ...textStyles.headline, color: colors.ink },
-	labelSolid: { ...textStyles.caption, color: colors.surface, letterSpacing: 1.2 },
+	labelSolid: {
+		...textStyles.caption,
+		color: colors.surface,
+		letterSpacing: 1.2,
+	},
 	labelCentered: { textAlign: "center" },
 });

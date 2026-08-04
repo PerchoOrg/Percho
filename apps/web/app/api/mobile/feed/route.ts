@@ -37,17 +37,17 @@ import {
   fetchCommunityPool,
   fetchCommunityPoolByIds,
 } from '@/lib/feed/community-pool';
+import { fetchNeighborhoodScores } from '@/lib/feed/fetch-neighborhood-scores';
 import { type GeoUnitDTO, fetchCityGeoUnits } from '@/lib/feed/geo-units';
 import { type LikedCommunityRef, type PoolListingDTO, gateListings } from '@/lib/feed/listing-gate';
 import { listingHighlightDims } from '@/lib/feed/listing-highlights';
-import { fetchNeighborhoodScores } from '@/lib/feed/fetch-neighborhood-scores';
-import { createServiceClient } from '@/lib/supabase/server';
 import {
   fetchVerticalVideoCommunityIds,
   fetchVerticalVideoListingIds,
   fetchVerticalVideos,
   streamManifestUrl,
 } from '@/lib/feed/vertical-videos';
+import { createServiceClient } from '@/lib/supabase/server';
 import { parseFeedPoolQuery } from '@/lib/zod/feed-pool';
 import { NextResponse } from 'next/server';
 
@@ -234,7 +234,7 @@ export async function GET(request: Request) {
       });
     } catch (err) {
       console.warn(
-        "[feed] neighborhood scores unavailable, serving cards without them:",
+        '[feed] neighborhood scores unavailable, serving cards without them:',
         err instanceof Error ? err.message : err,
       );
     }
@@ -266,9 +266,7 @@ export async function GET(request: Request) {
   if (needsCommunities && videoFirst) {
     const videoCommunityIds = await fetchVerticalVideoCommunityIds();
     const extra =
-      videoCommunityIds.length > 0
-        ? await fetchCommunityPoolByIds(videoCommunityIds)
-        : [];
+      videoCommunityIds.length > 0 ? await fetchCommunityPoolByIds(videoCommunityIds) : [];
     const seen = new Set(extra.map((c) => c.id));
     communityRows = [...extra, ...communities.filter((c) => !seen.has(c.id))];
   }

@@ -38,10 +38,7 @@ export function snapToScale(value: number, scale: SliderScale): number {
  * decimals and a 0.05 step yields 2 — no more, so the drift above cannot survive.
  */
 function roundToStep(value: number, step: number): number {
-	const decimals = Math.min(
-		10,
-		Math.max(0, Math.ceil(-Math.log10(step)) + 2),
-	);
+	const decimals = Math.min(10, Math.max(0, Math.ceil(-Math.log10(step)) + 2));
 	const factor = 10 ** decimals;
 	return Math.round(value * factor) / factor;
 }

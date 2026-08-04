@@ -17,10 +17,8 @@ supabase-storage-paths §9): storage_path stays as `fmls-import/{remineId}/{nn}.
 from __future__ import annotations
 
 import json
-import os
 import re
 import sys
-import time
 import urllib.error
 import urllib.parse
 import urllib.request

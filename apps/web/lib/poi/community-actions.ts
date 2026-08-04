@@ -19,6 +19,7 @@ import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
 import {
   DEFAULT_INCLUDED_TYPES,
+  type PhotoBlob,
   type PlaceResult,
   bucketByPlaceType,
   fetchPhotoBinary,
@@ -158,7 +159,7 @@ export async function discoverPoisForCommunity(
         status: 'candidate',
       });
       if (cpErr) {
-        console.error(`[community-poi] insert community_pois failed:`, cpErr);
+        console.error('[community-poi] insert community_pois failed:', cpErr);
         continue;
       }
       discovered += 1;
@@ -225,10 +226,12 @@ export async function fetchPhotosForCommunityPoi(
       poiPhotoId = existingPhoto.id;
       reused += 1;
     } else {
-      let blob;
+      let blob: PhotoBlob;
       try {
-        blob = await fetchPhotoBinary(photo.name,
-          opts.maxHeightPx ? { maxHeightPx: opts.maxHeightPx } : {});
+        blob = await fetchPhotoBinary(
+          photo.name,
+          opts.maxHeightPx ? { maxHeightPx: opts.maxHeightPx } : {},
+        );
       } catch (err) {
         console.error(`[community-poi] fetch photo ${photo.name} failed:`, err);
         noteSkip(`Google Places fetch: ${(err as Error).message ?? 'unknown'}`);
@@ -240,7 +243,7 @@ export async function fetchPhotosForCommunityPoi(
         .from(POI_PHOTO_BUCKET)
         .upload(storagePath, blob.bytes, { contentType: blob.contentType, upsert: true });
       if (upErr) {
-        console.error(`[community-poi] storage upload failed:`, upErr);
+        console.error('[community-poi] storage upload failed:', upErr);
         noteSkip(`Storage upload: ${(upErr as { message?: string }).message ?? 'unknown'}`);
         continue;
       }
@@ -267,7 +270,7 @@ export async function fetchPhotosForCommunityPoi(
       };
 
       if (upsertErr || !upserted) {
-        console.error(`[community-poi] upsert poi_photos failed:`, upsertErr);
+        console.error('[community-poi] upsert poi_photos failed:', upsertErr);
         noteSkip(`DB upsert: ${(upsertErr as { message?: string })?.message ?? 'unknown'}`);
         continue;
       }

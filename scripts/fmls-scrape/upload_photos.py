@@ -7,7 +7,7 @@ Path:     fmls-import/{remineId}/{nn}.jpg   (stage; move to {listing_uuid}/ at i
 Writes ~/fmls-scrape/photos_manifest.json:
   { remineId: [{ n, storage_path, public_url, bytes }, ...] }
 """
-import json, os, sys, mimetypes, urllib.request, urllib.error
+import json, mimetypes, urllib.request, urllib.error
 from pathlib import Path
 
 BASE = Path.home() / "fmls-scrape"
@@ -53,7 +53,7 @@ def main():
     manifest = {}
     if MANIFEST.exists():
         try: manifest = json.loads(MANIFEST.read_text())
-        except: manifest = {}
+        except (OSError, json.JSONDecodeError): manifest = {}
     dirs = sorted([d for d in PHOTOS.iterdir() if d.is_dir()])
     total, uploaded, skipped, failed = 0, 0, 0, 0
     for i, d in enumerate(dirs):

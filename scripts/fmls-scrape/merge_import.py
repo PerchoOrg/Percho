@@ -23,7 +23,7 @@ def num(x, default=None):
     s = re.sub(r"[^\d.]", "", str(x))
     if not s: return default
     try: return int(float(s)) if "." not in s else float(s)
-    except: return default
+    except (TypeError, ValueError): return default
 
 def parse_addr(a):
     if not a: return {}

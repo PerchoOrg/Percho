@@ -104,12 +104,15 @@ describe('POST /api/video/create-upload', () => {
     expect(mockedCreateDirectUpload).not.toHaveBeenCalled();
   });
 
-  it("rejects scope='community' (Phase 2 limits to listings)", async () => {
+  // `scope: 'community'` is supported now (V1 shared-community model), so the
+  // old "community is rejected outright" assertion was stale. What still has to
+  // hold: a community upload may not borrow a listing-only `kind`.
+  it("rejects scope='community' with a listing kind", async () => {
     // biome-ignore lint/suspicious/noExplicitAny: test-only fake supabase client
     mockedCreateClient.mockResolvedValue(buildSupabase({ id: 'u1' }) as any);
     const res = await POST(makeReq({ ...validBody, scope: 'community' }));
     expect(res.status).toBe(400);
-    expect(await res.json()).toMatchObject({ error: 'scope_not_supported' });
+    expect(await res.json()).toMatchObject({ error: 'invalid_kind' });
     expect(mockedCreateDirectUpload).not.toHaveBeenCalled();
   });
 

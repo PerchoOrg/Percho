@@ -9,12 +9,21 @@ Everything NOT in git is in a transfer bundle — see §3.
 
 ## 1. What state the repo is in
 
-- `main` @ `2d9994c` — carries the in-flight **listing-explore** work
-  (`docs/design/listing-explore.md` §2.4/§2.6): section-nav strip, explore
-  telemetry stream, value slider, TourStop rework. All 182 unit tests pass
-  (`npx vitest run apps/mobile/lib/listing ...`). This was committed straight
-  to `main` as a pre-migration snapshot — it is **not** a finished feature, the
-  screens that consume `section-nav.ts` / `explore-events.ts` aren't wired yet.
+- `main` carries the **listing-explore** work (`02-listing.md` §2.4/§2.6):
+  section-nav strip, explore telemetry stream, value slider, TourStop rework.
+  `app/listing/[id].tsx` DOES consume `section-nav.ts`, `slider-scale.ts` and
+  `explore-events.ts` — the screen is wired; what is missing is the
+  `listing_photos.ai_tags` backfill, without which every listing produces zero
+  hotspots, so the tour / pins / room sections render as absent rather than
+  empty. Suites green on the last EC2 commit: mobile **587/587**, web
+  **239/239**, mobile `tsc` + `biome check .` clean. `apps/web` `biome check .`
+  reports ~138 pre-existing errors repo-wide (mostly a11y `useSemanticElements`
+  on dashboard components); every file this work touched is clean.
+  `apps/web` `tsc` still reports **19 pre-existing** `startTransition(async
+  …)` / `TransitionFunction` errors — a React 18 `@types` mismatch that
+  predates this work and does not block `next build`. Don't treat it as a
+  regression; fix it by moving those 19 call sites to `startTransition(() => {
+  void fn(); })` if it ever matters.
 - `scripts/fmls-scrape/` — newly checked in. It had **only ever existed in
   `~/fmls-scrape/` on the EC2 box** and would have died with the instance.
 - Six EC2-local stashes are preserved as tags `pre-migration/stash-0` …
@@ -104,3 +113,26 @@ from starting.
 Snapshot an AMI first, then terminate. Sweep for tail billing: **Elastic IP**
 (billed when detached), EBS snapshots, CloudWatch log groups, S3 buckets in
 other regions.
+
+## 7. Where to pick up on the Mac
+
+In order. Everything above this line is migration mechanics; this is the actual
+work queue.
+
+1. **`listing_photos.ai_tags` backfill.** Blocks the whole of §2.3–2.5: tour,
+   hotspot pins, per-room sections. `apps/web/lib/poi/vision-tagger.ts` is the
+   tagger and it reads `ANTHROPIC_API_KEY` — port it to Bedrock first (§5).
+   104 `fmls-import` listings have zero tags; 10 older ones have them, so the
+   render path is already proven end to end.
+2. **Port the remaining `ANTHROPIC_API_KEY` call sites to Bedrock** —
+   `apps/web/lib/poi/*`, `scripts/render-worker/*`. On the Mac that means
+   explicit AWS credentials, not an instance role.
+3. **Verify Real-ESRGAN on M4.** `scripts/render-worker/enhance.py` prefers
+   ESRGAN and silently falls back to FSRCNN; EC2 always fell back. Run
+   `enhance_sample.py` and compare before trusting a full re-render.
+4. **Resume the 5 paused cron jobs** once the Mac gateway is the only one
+   running. Delivery targets were remapped away from the dead workspace, but
+   they have never fired since.
+
+Nothing in the current tree is half-finished mid-edit — the working tree was
+clean, suites green, at the last EC2 commit.

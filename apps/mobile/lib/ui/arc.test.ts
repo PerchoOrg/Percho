@@ -14,10 +14,7 @@ import { describe, expect, it } from "vitest";
 import { arcRotation } from "./arc";
 
 /** What actually shows through a window: the span ∩ the aperture. */
-function visible(
-	pct: number,
-	side: "left" | "right",
-): [number, number] | null {
+function visible(pct: number, side: "left" | "right"): [number, number] | null {
 	const t = arcRotation(pct, side);
 	const span: [number, number] = [t - 45, t + 135];
 	const ap: [number, number] = side === "right" ? [0, 180] : [180, 360];

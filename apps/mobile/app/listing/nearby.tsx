@@ -50,7 +50,12 @@ interface Poi {
 
 interface NearbyResponse {
 	center: { lat: number; lng: number } | null;
-	listing: { id: string; address: string; city?: string | null; state?: string | null };
+	listing: {
+		id: string;
+		address: string;
+		city?: string | null;
+		state?: string | null;
+	};
 	pois: Poi[];
 }
 
@@ -90,7 +95,8 @@ export default function NearbyMapScreen() {
 	const buckets = useMemo(() => {
 		if (!data) return [];
 		const seen = new Map<string, string>();
-		for (const p of data.pois) if (!seen.has(p.bucket)) seen.set(p.bucket, p.bucketLabel);
+		for (const p of data.pois)
+			if (!seen.has(p.bucket)) seen.set(p.bucket, p.bucketLabel);
 		return [...seen.entries()].map(([key, label]) => ({ key, label }));
 	}, [data]);
 
@@ -158,7 +164,11 @@ export default function NearbyMapScreen() {
 			</MapView>
 
 			<View style={[styles.header, { paddingTop: insets.top + 8 }]}>
-				<Pressable onPress={() => router.back()} style={styles.close} accessibilityLabel="Close map">
+				<Pressable
+					onPress={() => router.back()}
+					style={styles.close}
+					accessibilityLabel="Close map"
+				>
 					<Text style={styles.closeTxt}>✕</Text>
 				</Pressable>
 				<View style={styles.titleWrap}>
@@ -178,8 +188,13 @@ export default function NearbyMapScreen() {
 					style={[styles.filters, { top: insets.top + 62 }]}
 					contentContainerStyle={styles.filtersInner}
 				>
-					<Pressable onPress={() => setBucket(null)} style={[styles.chip, !bucket && styles.chipOn]}>
-						<Text style={[styles.chipTxt, !bucket && styles.chipTxtOn]}>All</Text>
+					<Pressable
+						onPress={() => setBucket(null)}
+						style={[styles.chip, !bucket && styles.chipOn]}
+					>
+						<Text style={[styles.chipTxt, !bucket && styles.chipTxtOn]}>
+							All
+						</Text>
 					</Pressable>
 					{buckets.map((b) => (
 						<Pressable
@@ -187,7 +202,11 @@ export default function NearbyMapScreen() {
 							onPress={() => setBucket(b.key === bucket ? null : b.key)}
 							style={[styles.chip, bucket === b.key && styles.chipOn]}
 						>
-							<Text style={[styles.chipTxt, bucket === b.key && styles.chipTxtOn]}>{b.label}</Text>
+							<Text
+								style={[styles.chipTxt, bucket === b.key && styles.chipTxtOn]}
+							>
+								{b.label}
+							</Text>
 						</Pressable>
 					))}
 				</ScrollView>
@@ -197,7 +216,9 @@ export default function NearbyMapScreen() {
 			<View style={[styles.sheet, { paddingBottom: insets.bottom + 12 }]}>
 				<ScrollView showsVerticalScrollIndicator={false}>
 					{shown.length === 0 ? (
-						<Text style={styles.empty}>No curated places for this home yet.</Text>
+						<Text style={styles.empty}>
+							No curated places for this home yet.
+						</Text>
 					) : (
 						shown.map((p) => (
 							<View key={p.id} style={styles.row}>
@@ -230,7 +251,12 @@ const styles = StyleSheet.create({
 		gap: 14,
 		backgroundColor: colors.bg,
 	},
-	err: { ...textStyles.footnote, color: colors.ink2, textAlign: "center", paddingHorizontal: 32 },
+	err: {
+		...textStyles.footnote,
+		color: colors.ink2,
+		textAlign: "center",
+		paddingHorizontal: 32,
+	},
 	backBtn: {
 		paddingHorizontal: 18,
 		paddingVertical: 10,
@@ -286,7 +312,12 @@ const styles = StyleSheet.create({
 		paddingTop: 12,
 		paddingHorizontal: 16,
 	},
-	empty: { ...textStyles.footnote, color: colors.ink3, paddingVertical: 18, textAlign: "center" },
+	empty: {
+		...textStyles.footnote,
+		color: colors.ink3,
+		paddingVertical: 18,
+		textAlign: "center",
+	},
 	row: {
 		flexDirection: "row",
 		alignItems: "center",

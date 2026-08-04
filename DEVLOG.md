@@ -4,6 +4,58 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-08-04 04:30 UTC — 迁移前最后一轮清理:让 main 在 Mac 上开箱即绿
+
+**Objective**: EC2 即将下线。`2d9994c`/`909ccaa` 是"抢救式提交",没过 lint /
+全量测试。Mac 上 clone 完第一件事就会跑 `pnpm test` / `lint`,红的东西必须现在
+清掉,否则接手的人分不清哪些是自己弄坏的。
+
+**Actions**:
+- `biome check --write` 打过 recent-work 全部文件 + 3 个 `format` 漏网的旧文件
+  (`app/listing/nearby.tsx`、`components/ExploreButton.tsx`、`lib/ui/arc.test.ts`)。
+  两个 app 现在 `biome check .` 各自:mobile **0**,web 只剩既有 a11y 噪声。
+- 手修 biome 不能自动修的 3 处:
+  - `PhotoTable.tsx` 的 lightbox 从 `role="dialog"` div 换成 `<button>` —— 这里
+    唯一交互就是"点一下关掉",button 白送 Enter/Space/focus。`PhotoReviewClient`
+    保持 div,它有自己的键盘处理。
+  - `poi/{community,listing}-actions.ts` 的 `let blob` 隐式 any → 显式
+    `PhotoBlob`(google-places 已 export)。
+- **修 `__tests__/create-upload.test.ts` 唯一一个红**:断言写的是
+  `scope='community'` 被整体拒绝(`scope_not_supported`),但 community scope
+  早就实现了,route 实际返回 `invalid_kind`(listing 的 `kind` 借去 community)。
+  测试过期,不是代码坏 —— 改断言,保留"不许借 kind"这个真实约束。
+- `ruff --select F401,E722` 清 `scripts/fmls-scrape/`:删 6 个未用 import,
+  2 个 bare `except` 收窄成 `(TypeError, ValueError)` / `(OSError,
+  JSONDecodeError)`。剩下的 E701/E702(单行 `if x: return`)是这批脚本的既有
+  风格,repo 没有 ruff 配置,不动。
+- 去掉两处重复:`explore-events.ts` 的 `Ctx` 是 `ExploreEventBase` 的逐字副本 →
+  `type Ctx = ExploreEventBase`;`[id].tsx` 里 `datapoint_focus` 手搓 ctx 字面量
+  → 用同文件已有的 `ctx()`,顺带把 effect 依赖从 4 个收到 1 个。
+- `docs/MIGRATION-HANDOFF.md` 加 §7「Mac 上从哪接着干」+ 修正 §1:原文说
+  "screens 还没接 section-nav / explore-events",**错** —— `[id].tsx` 三个模块
+  都在用,真正缺的是 `ai_tags` backfill(没 tag → 0 hotspot → tour/pin/room
+  整段不渲染)。
+
+**Decisions**:
+- **web 的 19 个 `TransitionFunction` tsc 错不修**。全是
+  `startTransition(async () => …)`,React 18 `@types` 的已知不匹配,横跨 13 个
+  dashboard 文件、`next build` 不受影响、和这轮工作零关系。改它是 19 处 churn
+  换一个 Mac 上可能直接消失(升 @types/react)的问题。写进 handoff §1 标明是
+  既有噪声,别当回归。
+- web 那 138 个 biome 错同理:绝大多数是 dashboard 的 a11y
+  `useSemanticElements`。只保证"这轮碰过的文件干净",不做全库 a11y 战役。
+- `ids_h1.js` / `ids_h2.js` 看着像重复(都是 1639B、125 个 id),实测**内容不同**
+  (h1/h2 是两次搜索的两批 id),md5 不同 → 保留两个。
+
+**Verification**: mobile **587/587**、web **239/239**(修前 238/239)、
+mobile `tsc` 0、mobile+web 改动文件 `biome` 0、`fmls-scrape` `py_compile` +
+`ruff F401,E722,F82` 全过。
+
+**Learnings**: "抢救式提交"和"可接手的提交"是两件事。前者只要不丢,后者要
+`clone && install && test` 全绿 —— 否则下一任第一小时全花在分辨遗留红字。
+过期测试(create-upload)比失败测试更贵:它断言的是一个早就改掉的产品决策,
+留着会误导人以为 community scope 不支持。
+
 ## 2026-08-04 02:45 UTC — EC2 收尾:把这台机器上的东西全部推到 GitHub
 
 **Objective**: owner 要删掉 EC2 host,Mac mini 接手。GitHub 上必须是 Mac 能直接

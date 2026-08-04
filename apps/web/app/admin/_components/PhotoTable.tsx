@@ -162,7 +162,10 @@ export function PhotoTable({
     <section className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-lg font-semibold">
-          Photos <span className="text-ink2 text-sm font-normal">({rows.length}/{photos.length})</span>
+          Photos{' '}
+          <span className="text-ink2 text-sm font-normal">
+            ({rows.length}/{photos.length})
+          </span>
         </h2>
         <div className="flex flex-wrap items-center gap-2 text-xs">
           <select
@@ -243,7 +246,9 @@ export function PhotoTable({
                   <Td>
                     <button
                       type="button"
-                      onClick={() => setLightbox({ url: url(thumbPath), alt: t.description ?? 'photo' })}
+                      onClick={() =>
+                        setLightbox({ url: url(thumbPath), alt: t.description ?? 'photo' })
+                      }
                       className="block h-14 w-20 overflow-hidden rounded-md ring-1 ring-line"
                     >
                       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -301,7 +306,11 @@ export function PhotoTable({
                     )}
                   </Td>
                   <Td className="tabular-nums">
-                    {p.ai_score != null ? p.ai_score.toFixed(2) : <span className="text-ink2">—</span>}
+                    {p.ai_score != null ? (
+                      p.ai_score.toFixed(2)
+                    ) : (
+                      <span className="text-ink2">—</span>
+                    )}
                     {!p.tagged_at && <div className="text-[10px] text-amber-600">untagged</div>}
                   </Td>
                   {isListing && (
@@ -445,17 +454,18 @@ export function PhotoTable({
       </div>
 
       <p className="text-ink2 text-[11px]">
-        Approving an enhanced photo is what makes the next render use it —{' '}
-        <em>ready</em> alone changes nothing. &ldquo;In video&rdquo; is stamped by the render
-        worker, so it only reflects the most recent render.
+        Approving an enhanced photo is what makes the next render use it — <em>ready</em> alone
+        changes nothing. &ldquo;In video&rdquo; is stamped by the render worker, so it only reflects
+        the most recent render.
       </p>
 
       {lightbox && (
-        // biome-ignore lint/a11y/useSemanticElements: full-viewport lightbox, same pattern as PhotoReviewClient.
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label="Photo"
+        // A <button> backdrop, not a role="dialog" div: dismiss is the only
+        // interaction here, and a button gets Enter/Space/focus for free —
+        // PhotoReviewClient needs the div because it has its own key handling.
+        <button
+          type="button"
+          aria-label="Close photo"
           onClick={() => setLightbox(null)}
           className="fixed inset-0 z-[90] flex items-center justify-center bg-black/90 p-4"
         >
@@ -465,7 +475,7 @@ export function PhotoTable({
             alt={lightbox.alt}
             className="max-h-full max-w-full object-contain"
           />
-        </div>
+        </button>
       )}
     </section>
   );

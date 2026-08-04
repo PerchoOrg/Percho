@@ -111,12 +111,8 @@ export type ExploreEvent =
 
 export type ExploreEventType = ExploreEvent["type"];
 
-interface Ctx {
-	seq: number;
-	at: number;
-	funnelStage: FunnelStage;
-	listingId: string;
-}
+/** What every constructor needs, injected. Identical to the event base. */
+type Ctx = ExploreEventBase;
 
 export function buildTourEvent(
 	ctx: Ctx,

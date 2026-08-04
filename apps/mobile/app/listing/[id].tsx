@@ -49,7 +49,6 @@ import {
 	transitionSignals,
 } from "../../lib/listing/build-hotspots";
 import { useListingDetail } from "../../lib/listing/detail-dto";
-import { buildGallerySlides } from "../../lib/listing/gallery";
 import {
 	buildActionTapEvent,
 	buildDatapointFocusEvent,
@@ -65,6 +64,7 @@ import {
 	sectionForFocus,
 	serialiseFocus,
 } from "../../lib/listing/focus-key";
+import { buildGallerySlides } from "../../lib/listing/gallery";
 import { buildDistribution } from "../../lib/listing/histogram";
 import type { ActionKind, Hotspot } from "../../lib/listing/hotspot";
 import { emojiForRoom } from "../../lib/listing/hotspot";
@@ -75,15 +75,12 @@ import {
 	parseHoaMonthlyUsd,
 } from "../../lib/listing/monthly";
 import {
-	DOWN_SCALE,
-	RATE_SCALE,
-} from "../../lib/listing/slider-scale";
-import {
 	type NavChip,
 	buildNavChips,
 	currentNavKey,
 	navKey,
 } from "../../lib/listing/section-nav";
+import { DOWN_SCALE, RATE_SCALE } from "../../lib/listing/slider-scale";
 import { useEventQueue } from "../../state/event-queue";
 import { useFunnelStore } from "../../state/funnel";
 import { colors, radii } from "../../theme/tokens";
@@ -189,12 +186,9 @@ export default function ListingExploreScreen() {
 	useEffect(() => {
 		if (!focus) return;
 		enqueue(
-			buildDatapointFocusEvent(
-				{ seq: takeSeq(), at: Date.now(), funnelStage, listingId },
-				{ focusKey: serialiseFocus(focus) },
-			),
+			buildDatapointFocusEvent(ctx(), { focusKey: serialiseFocus(focus) }),
 		);
-	}, [focus, enqueue, takeSeq, funnelStage, listingId]);
+	}, [focus, enqueue, ctx]);
 
 	const scrollRef = useRef<ScrollView>(null);
 	/**
@@ -347,7 +341,9 @@ export default function ListingExploreScreen() {
 		kind: ActionKind,
 		surface: "tour" | "sheet",
 	) => {
-		enqueue(buildActionTapEvent(ctx(), { hotspotId: hotspot.id, kind, surface }));
+		enqueue(
+			buildActionTapEvent(ctx(), { hotspotId: hotspot.id, kind, surface }),
+		);
 		if (kind === "save") {
 			enqueue(
 				buildSaveFeatureEvent(ctx(), {
@@ -578,7 +574,10 @@ export default function ListingExploreScreen() {
 										]}
 									>
 										<Text
-											style={[styles.chipLabel, active && styles.chipLabelActive]}
+											style={[
+												styles.chipLabel,
+												active && styles.chipLabelActive,
+											]}
 										>
 											{chip.label}
 										</Text>

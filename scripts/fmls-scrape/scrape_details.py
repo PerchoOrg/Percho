@@ -11,7 +11,7 @@ Writes:
   ~/fmls-scrape/photos/{id}/{n:02d}.jpg
 Resumable.
 """
-import json, os, sys, time
+import json, time
 from pathlib import Path
 from playwright.sync_api import sync_playwright
 

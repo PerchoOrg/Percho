@@ -195,7 +195,11 @@ describe("parseCommunity", () => {
 				...COMMUNITY,
 				reasons: [
 					{ label: "Dog Friendly", icon: "dog" },
-					{ label: "Well Maintained", icon: "check", fact: "35% owner-occupied" },
+					{
+						label: "Well Maintained",
+						icon: "check",
+						fact: "35% owner-occupied",
+					},
 				],
 			});
 			expect(c?.reasons).toEqual([
@@ -218,10 +222,7 @@ describe("parseCommunity", () => {
 					{ label: "Safe", icon: "shieldCheck" },
 				],
 			});
-			expect(c?.reasons?.map((r) => r.label)).toEqual([
-				"Dog Friendly",
-				"Safe",
-			]);
+			expect(c?.reasons?.map((r) => r.label)).toEqual(["Dog Friendly", "Safe"]);
 		});
 
 		it("drops a tile with no label, and rejects a non-array", () => {
