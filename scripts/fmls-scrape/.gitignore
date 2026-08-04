@@ -1,0 +1,8 @@
+# Scraped output — regenerable, and photo URLs are session-bound anyway.
+photos/
+details/
+*.json
+*.csv
+*.log
+*.html
+__pycache__/

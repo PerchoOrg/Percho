@@ -4,6 +4,52 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-08-04 02:45 UTC — EC2 收尾:把这台机器上的东西全部推到 GitHub
+
+**Objective**: owner 要删掉 EC2 host,Mac mini 接手。GitHub 上必须是 Mac 能直接
+接着干的最新状态 —— 任何只存在于这台机器上的东西都算即将丢失。
+
+**Actions**:
+- `main` 上 16 改 + 8 新未提交文件,全是 listing-explore 在飞的活。跑
+  `npx vitest run apps/mobile/lib/listing apps/mobile/lib/feed/pool-dto.test.ts
+  apps/mobile/state/event-queue.test.ts apps/web/lib/feed/community-highlights.test.ts`
+  → 182 passed,提交为 `2d9994c`。
+- **`~/fmls-scrape/` 的 4 个 scraper 从来没进过 git**,只活在这台 EC2 上。
+  搬进 `scripts/fmls-scrape/`(+ README + .gitignore),对齐
+  `scripts/nextdoor-seed/` 的既有模式。数据(167MB 照片、details/)不进 git。
+- 6 个本地 stash 打成 tag `pre-migration/stash-0..5` 推上去。
+- 新增 `docs/MIGRATION-HANDOFF.md`:服务对照表(systemd → launchd)、bundle
+  清单、Mac bring-up 命令、继承的坏账。
+
+**Decisions**:
+- **提交到 main 而不是开分支**。owner 的要求是"GitHub 有最新状态给 Mac 接手",
+  开个分支再让 Mac 去猜该 checkout 哪个是给自己找麻烦。commit message 里写清
+  这是 pre-migration snapshot、feature 未完成。
+- **git-tracked 的东西一律不进 bundle**(clone 就有)。bundle 只装
+  gitignored + `.env*` + secrets + `~/.hermes`。
+- **BGM 587MB 和 ESRGAN 66MB 不搬**,两边都有 `fetch.sh`,Mac 上重新拉。
+- `~/percho-nextdoor-seed/*.py` 与 repo 里的版本有 10-17 行差异,但 repo 版本
+  更新(2026-07-16 的 Phase-N 前缀清理之后),EC2 那份是清理前的旧副本。不回填。
+
+**Issues**:
+- `npx jest` 跑不了这些测试(源文件 import vitest,jest 用 require 载入报错)。
+  这个 repo 的单测跑法是 vitest,不是 jest。
+- `event-queue.test.ts` 在 vitest 里 54 个 error 但 182 tests 全 pass ——
+  错误来自 zustand persist middleware 往 AsyncStorage 写、drain 之后 store 已
+  卸载。测试断言本身没问题,是 teardown 噪音。没修,不在本次范围内。
+- render-worker 的 Python 依赖装在 `/usr/bin/python3`(3.12),**不是**
+  `python3`(3.11.15,uv 装的那个)。Mac 上别照抄 `python3 -m pip`。
+
+**Learnings**: `git ls-files | grep -i <topic>` 是判断"这东西到底进过 git 没"
+最快的一步;`~/` 下每个非 git 目录都要单独问一次"里面有没有不可再生的东西"。
+fmls scraper 差一点就跟着实例一起消失了 —— 它是反爬源逆出来的,重写不便宜。
+
+**Next steps**: Mac 上按 `docs/MIGRATION-HANDOFF.md` §4 装起来,§5 是三个已知
+坏账(ANTHROPIC_API_KEY 调用点、5 个 paused cron、ESRGAN 从未真跑过)。
+EC2 别当天删,先让 Mac 跑几天。
+
+---
+
 ## 2026-08-03 08:10 UTC — enhance 链补全:straighten + 曝光统一 + 室内白平衡
 
 **Objective**: owner:「在保证图片依然真实的情况下 实现所有的优化 包括需要gpu的」。
