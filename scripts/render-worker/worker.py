@@ -428,14 +428,14 @@ def process_job(job: dict[str, Any]) -> None:
             #
             # This used to be `if not os.environ.get("ANTHROPIC_API_KEY"): raise`,
             # which was correct when photo_tagger POSTed api.anthropic.com. The
-            # tagger was ported to Bedrock (instance role, no key material —
-            # CLAUDE.md §2.1 rule 0) but this gate was left behind, so on this
-            # host the vision block raised immediately, the fail-open except
-            # swallowed it, and EVERY render silently fell back to the legacy
-            # full-length path — no shot plan, no pacing curve, no captions.
+            # tagger was ported to Bedrock (instance role, no key material) but
+            # this gate was left behind, so on the EC2 host the vision block
+            # raised immediately, the fail-open except swallowed it, and EVERY
+            # render silently fell back to the legacy full-length path — no shot
+            # plan, no pacing curve, no captions.
             # A gate on a credential the code no longer uses is worse than no
             # gate: it looks like a safety check and is actually a kill switch.
-            # Today the tagger reads GEMINI_API_KEY (migrated off Bedrock
+            # The tagger now reads GEMINI_API_KEY (migrated off Bedrock
             # 2026-08-08); a missing key raises RuntimeError inside
             # tag_listing_photos and lands in the fail-open except below.
 

@@ -4,6 +4,22 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-08-08 — Bedrock 清理
+
+**Objective**: owner 指出 Bedrock 已全部停用，清理仓库里所有 Bedrock 相关残留。
+
+**Actions**:
+- 删除 `scripts/claude-bedrock.sh`（owner: 永远不会再用，及时清理）。
+- CLAUDE.md 不改（owner: 仍用 Claude Code 开发，Gemini 只是 runtime 功能之一；rule 0 的"不碰个人 key"铁律继续有效）。
+- `docs/MIGRATION-HANDOFF.md`：§5 旧"ANTHROPIC_API_KEY 调用点需移植 Bedrock"更新为已随 Gemini 迁移解决；§7 1–2 项标记 DONE。
+- 注释清理：`worker.py` gate 注释、`probe_tagger.py` docstring、`backfill_photo_tags.py`、`apps/mobile/app/listing/[id].tsx`、`apps/web/.../PhotoPanel.tsx`（Claude vision → Gemini vision）。
+
+**Decisions**: 历史 DEVLOG / spec prompt 文件**不改写**——它们记录当时的事实；只在关键条目补"后迁 Gemini"指注。
+
+**Verification**: `grep -ri bedrock` 残余只剩历史 DEVLOG、spec-v3 prompts（记录当时流程）。运行时代码与现行文档无 Bedrock 引用。
+
+**Next steps**: 无。
+
 ## 2026-08-04 04:30 UTC — 迁移前最后一轮清理:让 main 在 Mac 上开箱即绿
 
 **Objective**: EC2 即将下线。`2d9994c`/`909ccaa` 是"抢救式提交",没过 lint /
@@ -140,8 +156,8 @@ EC2 别当天删,先让 Mac 跑几天。
 
 **Next steps**: Mac mini 上 `pip install onnxruntime` + `models/fetch.sh` 即启用
 Real-ESRGAN。全量回填要 owner 批(EC2 CPU ~90s/张)。`_looks_indoor` 是启发式,
-`photo_tagger.py` 的 room_type 是更好的源,等它从坏掉的 ANTHROPIC_API_KEY 路径
-迁到 Bedrock 后接上。
+`photo_tagger.py` 的 room_type 是更好的源,等它迁到 Gemini 后接上(2026-08-08
+已迁,见上)。
 
 ## 2026-08-03 07:50 UTC — 两个 nearby 页也上照片表格;tab 重排/改名/删 POI
 
@@ -1424,7 +1440,7 @@ listing 只有它自己。两项显示「—」不显示 0，测试锁死 `expec
 
 1. **`ANTHROPIC_API_KEY` gate 是个死掉的 kill switch**（worker.py:368）。
    `photo_tagger` 在 2026-07-27 已移植到 Bedrock（走 instance role，不需要任何 key，
-   CLAUDE.md §2.1 rule 0），但 vision 块开头的
+   CLAUDE.md §2.1 rule 0；2026-08-08 又随全仓库迁到 Gemini），但 vision 块开头的
    `if not os.environ.get("ANTHROPIC_API_KEY"): raise` 被留下了。那个 raise 直接被
    下面 fail-open 的 `except Exception` 吞掉，于是**每一次渲染都打印
    "shot plan disabled" 并退回 legacy 全长路径** —— shot plan、Phase 93 的 v2 filter、
@@ -1432,7 +1448,7 @@ listing 只有它自己。两项显示「—」不显示 0，测试锁死 `expec
    这也顺带解释了 owner 报的"节奏太慢"为什么在线上比预期更严重：连旧的
    hero-boost 曲线都没跑，是彻底的 legacy 等长路径。
    **对一个代码已经不再使用的凭据做 gate，比不做 gate 更糟：它长得像安全检查，
-   实际上是一个常闭开关。** 已删除；Bedrock 自身的失败仍然落进 fail-open。
+   实际上是一个常闭开关。** 已删除；Gemini 自身的失败仍然落进 fail-open。
 
 2. **裸 `"python3"` 让解释器取决于谁启动了 worker**（worker.py 两处调用点）。
    `generate.py` 用 `sys.executable` 去调 `caption-render/render.py`，而后者需要
@@ -1753,7 +1769,8 @@ feed 里 104 个 fmls listing **一条都没有** —— 因为 `photo_tagger.py
   (EC2 instance role)。删掉 `api.anthropic.com` POST、`x-api-key` 头、以及
   `tag_listing_photos` 开头那句 **`if not ANTHROPIC_API_KEY: raise`**（这句自己就会
   让每次调用直接 abort）。`MODEL` 换成 Bedrock id
-  `global.anthropic.claude-sonnet-4-5-20250929-v1:0`。
+  `global.anthropic.claude-sonnet-4-5-20250929-v1:0`。（2026-08-08 全仓库又迁到
+  Gemini，`_invoke_bedrock` 被 `_invoke_gemini` 取代。）
 - 新增 `probe_tagger.py`（单张真图打通验证）、`backfill_photo_tags.py`
   （只补 `ai_tags IS NULL` + active + ready，`--limit-listings` 限量，默认 dry-run，
   每 listing 封顶 12 张 —— hotspot 每个房间只要一张好图）。
@@ -1762,6 +1779,7 @@ feed 里 104 个 fmls listing **一条都没有** —— 因为 `photo_tagger.py
 
 **Decisions**: `_invoke_bedrock` **不留 API-key fallback** —— 上次个人 key 就是从
 fallback 路径回来的。回填做成限量+可重跑而不是一把梭:2388 张 vision 是真钱。
+（该决策随 2026-08-08 Gemini 迁移保留：`_invoke_gemini` 同样无 fallback。）
 
 **Issues**（probe 抓到的真 bug，单测全绿也看不见）:Suwanee 那套有
 **4 个好 hotspot(exterior/dining/living/kitchen)却出不了 tour**。因为 generic tour
@@ -1822,7 +1840,8 @@ Gate:**476 测试**、tsc 0、biome 111 文件干净。Metro 真 bundle **HTTP 2
 凡有数量下限的过滤器，测试必须断言**下限附近**那一档，而不只是 happy path。
 
 **Next steps**: 只剩把 `photo_tagger.py` 从被禁的个人 Anthropic key 移到 Bedrock
-并回填 fmls listing —— **hotspot/tour/pin 现在对 feed 里的房子全部为空,因为
+（后于 2026-08-08 迁到 Gemini）并回填 fmls listing —— **hotspot/tour/pin 现在对
+feed 里的房子全部为空,因为
 `listing_photos.ai_tags` 一条 fmls 照片都没有**。回填完这三块自动亮，UI 不用改。
 **PENDING-SIM(需真机)**:行 tap 深链 + 2s 高亮、翻面手感、pin 位置、sheet detent。
 
@@ -1869,7 +1888,7 @@ bundle 里查得到，旧占位 sheet 文案 **0 命中**。Gate：462 测试、
 bundle —— 而 404 body 里也有 JS 关键字，粗看像成功。
 
 **Next steps**: guided tour + transition 卡 + hotspot sheet(§2.3–2.5) → 最后把
-`photo_tagger.py` 移到 Bedrock 并回填 fmls listing。**PENDING-SIM(需真机)**：
+`photo_tagger.py` 移到 Bedrock（后于 2026-08-08 迁到 Gemini）并回填 fmls listing。**PENDING-SIM(需真机)**：
 行 tap 深链落点 + 2s 高亮、350ms 翻面手感、吸底栏在 momentum 滚动下的表现。
 
 ## 2026-07-27 18:55 UTC — task-2 起步：先摸真实数据，再写纯逻辑层（69 个新测试）
@@ -3587,7 +3606,7 @@ still broken on this host (owner deferred); the demo screen doesn't touch them.
 
 **PENDING-SIM** (cannot be closed on this host — Linux EC2, no iOS simulator; needs the owner's Mac): all 7 task-0 visual acceptance criteria remain unverified on a device. Specifically the 350ms crossfade feel, the ±8° follow-rotation, that the pan no longer steals vertical drags, tab-bar layout on a notched device, and that a swipe no longer re-fetches the next card's video. The logic is unit-tested; the rendering is not.
 
-**Next steps**: Owner runs the layer on a simulator/device against `task-0-foundation.md`'s 7 criteria. Then task-1 (feed) via `scripts/claude-bedrock.sh` — grant it bash permissions this time so it can self-verify. Still open from the previous entry: port the 5 `ANTHROPIC_API_KEY` runtime call sites to Bedrock (deferred by owner), and rotate the personal key.
+**Next steps**: Owner runs the layer on a simulator/device against `task-0-foundation.md`'s 7 criteria. Then task-1 (feed) via `scripts/claude-bedrock.sh` — grant it bash permissions this time so it can self-verify. Still open from the previous entry: port the 5 `ANTHROPIC_API_KEY` runtime call sites to Bedrock (deferred by owner), and rotate the personal key. (Both later resolved 2026-08-08: runtime migrated to Gemini instead of Bedrock; the script is now deleted.)
 
 ## 2026-07-26 15:10 UTC — cut personal Anthropic key off this host; Claude Code → Bedrock (opus-5)
 

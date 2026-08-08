@@ -335,7 +335,7 @@ export const PhotoPanel = forwardRef<PhotoPanelHandle, Props>(function PhotoPane
               </div>
 
               {/* AI caption + tag chips. Empty until the render
-                  worker's Claude vision pass writes ai_tags back. */}
+                  worker's Gemini vision pass writes ai_tags back. */}
               {caption ? (
                 <p className="line-clamp-2 text-[11px] text-ink2 leading-snug" title={caption}>
                   {caption}

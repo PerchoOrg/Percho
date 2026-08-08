@@ -5,7 +5,8 @@ Why this exists: the §2.3-2.5 hotspot UI (tour stops, hero pins, action sheets)
 is driven entirely by `ai_tags`. On 2026-07-27 that column was populated for 10
 listings and ZERO of the 104 fmls-import listings the feed actually serves,
 because `photo_tagger` had been broken since the personal Anthropic key was
-removed. The tagger now runs on Bedrock; this fills the gap.
+removed. The tagger now runs on Gemini (migrated off Bedrock 2026-08-08);
+this fills the gap.
 
 Scope control, on purpose:
   - Only ACTIVE listings, only `status='ready'` photos, only rows where

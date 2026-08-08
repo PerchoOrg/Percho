@@ -96,11 +96,11 @@ from starting.
 
 ## 5. Known-broken, inherited
 
-- `apps/web/lib/poi/*` and `scripts/render-worker/*` read
-  `process.env.ANTHROPIC_API_KEY`, which is deliberately absent (see
-  `CLAUDE.md` §2.1 rule 0 — a personal key burned $55 in 18 min on
-  2026-07-26). Those call sites still need porting to Bedrock. On the Mac
-  there's no instance IAM role, so they need explicit AWS credentials.
+- **Stale as of 2026-08-08:** the `ANTHROPIC_API_KEY` call sites listed in
+  the original handoff were never broken on the Mac — the runtime migrated
+  from Anthropic/Bedrock to Gemini that day. See
+  `apps/web/lib/ai/gemini.ts` and `scripts/render-worker/photo_tagger.py`
+  for the current (Gemini) key contract.
 - 5 Hermes cron jobs are **paused** with `last_delivery_error:
   account_inactive` from an old Slack app. Fix the delivery target before
   resuming, or they'll fail silently again.
@@ -119,14 +119,13 @@ other regions.
 In order. Everything above this line is migration mechanics; this is the actual
 work queue.
 
-1. **`listing_photos.ai_tags` backfill.** Blocks the whole of §2.3–2.5: tour,
-   hotspot pins, per-room sections. `apps/web/lib/poi/vision-tagger.ts` is the
-   tagger and it reads `ANTHROPIC_API_KEY` — port it to Bedrock first (§5).
-   104 `fmls-import` listings have zero tags; 10 older ones have them, so the
-   render path is already proven end to end.
-2. **Port the remaining `ANTHROPIC_API_KEY` call sites to Bedrock** —
-   `apps/web/lib/poi/*`, `scripts/render-worker/*`. On the Mac that means
-   explicit AWS credentials, not an instance role.
+1. **`listing_photos.ai_tags` backfill.** DONE 2026-07-27 (photo_tagger on
+   Bedrock) / re-done on Gemini 2026-08-08 — the tagger is migrated and
+   verified; backfill tooling lives in `scripts/render-worker/backfill_photo_tags.py`.
+2. ~~Port the remaining `ANTHROPIC_API_KEY` call sites to Bedrock~~ — **done
+   2026-08-08**: the runtime migrated to Gemini instead (no AWS credentials
+   needed). `apps/web/lib/poi/*` and `scripts/render-worker/*` now read
+   `GEMINI_API_KEY`.
 3. **Verify Real-ESRGAN on M4.** `scripts/render-worker/enhance.py` prefers
    ESRGAN and silently falls back to FSRCNN; EC2 always fell back. Run
    `enhance_sample.py` and compare before trusting a full re-render.

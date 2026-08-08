@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""One-shot probe: tag ONE real listing photo through Bedrock and print the tags.
+"""One-shot probe: tag ONE real listing photo via the Gemini vision tagger
+and print the tags.
 
-Exists to prove `photo_tagger._call_vision` actually reaches Bedrock on the
-instance role after the port off the personal Anthropic key (CLAUDE.md §2.1
-rule 0). Writes nothing to the database.
+Exists to prove `photo_tagger._call_vision` reaches Gemini end to end
+(migrated off Bedrock 2026-08-08, off the personal Anthropic key before
+that — CLAUDE.md §2.1 rule 0). Writes nothing to the database.
 
     python3 scripts/render-worker/probe_tagger.py <public-photo-url>
 """

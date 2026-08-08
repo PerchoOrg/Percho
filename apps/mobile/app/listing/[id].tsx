@@ -11,13 +11,10 @@
  *   - tour ✕ / finished, or a repeat visit → free explore, no penalty.
  *
  * §2.3–2.5 (tour stops, hotspot pins, action sheets) all hang off HOTSPOTS,
- * which come from `listing_photos.ai_tags`. On the remote today that column is
- * populated for 10 listings and **zero of the 104 `fmls-import` listings the feed
- * actually serves** (checked 2026-07-27). So this screen renders what is real:
- * hero, stats, description, monthly, comps. The tour and pins appear
+ * which come from `listing_photos.ai_tags`. The tour and pins appear
  * automatically for any listing that HAS tags — the code path is live, not
- * stubbed — and the backfill (porting `photo_tagger.py` off the banned personal
- * Anthropic key onto Bedrock) is the last step of this phase.
+ * stubbed. Backfill tooling: `scripts/render-worker/backfill_photo_tags.py`
+ * (Gemini tagger, migrated off Bedrock 2026-08-08).
  *
  * No placeholder pins, no "coming soon" sections, no invented captions.
  */
