@@ -19,7 +19,7 @@
  * Server-action contract:
  *   - Approve/reject POIs + photos → `lib/poi/actions.ts`.
  *   - Bucket-video generation + status → `lib/poi/video-actions.ts`.
- *   - Video narrative synthesis (Anthropic, manual click, English) →
+ *   - Video narrative synthesis (Gemini, manual click, English) →
  *     `regenerateBucketVideoNarrative` in `lib/poi/video-actions.ts`.
  *
  * Photos already carry `ai_tags.description` (500-char cap) written by the
@@ -792,7 +792,7 @@ function PhotoLightbox({
 //   - Status pill (idle / rendering / ready / failed)
 //   - Structured description (intro + scene beats + closing) synthesized
 //     from the photos' vision-tagged captions. Manual "Regenerate description"
-//     button — never auto-fires to keep Anthropic spend predictable.
+//     button — never auto-fires to keep Gemini spend predictable.
 //   - Generate / Regenerate video button (unchanged wiring — enqueues a
 //     `generated_videos` row, the EC2 worker picks it up).
 //

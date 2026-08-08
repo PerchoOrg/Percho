@@ -6,7 +6,7 @@
  * Scans for the first '{' and walks to the matching '}', respecting strings
  * and escapes. Returns null if no balanced object is found.
  *
- * Used by backend Anthropic callers (POI narrative, vision tagger) to salvage
+ * Used by backend Gemini callers (POI narrative, vision tagger) to salvage
  * a JSON body from a chat-shaped response. Kept dependency-free so it works
  * anywhere.
  */

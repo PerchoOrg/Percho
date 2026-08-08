@@ -92,7 +92,7 @@ def _dhash(image_path: Path) -> int:
 
 def _sniff_media_type(raw: bytes) -> str:
     """Phase 99: detect image media type from magic bytes so PNG/WebP/GIF
-    listings aren't sent to Anthropic as image/jpeg (400s otherwise).
+    listings aren't sent to the vision API as image/jpeg (400s otherwise).
     Falls back to jpeg for anything unrecognized."""
     if raw.startswith(b"\x89PNG\r\n\x1a\n"):
         return "image/png"

@@ -18,7 +18,7 @@ import {
   SOCIAL_PLATFORMS,
   type SocialLanguage,
   type SocialPlatform,
-} from '@/lib/ai/anthropic';
+} from '@/lib/ai/gemini';
 import { checkAndRecord } from '@/lib/ai/rate-limit';
 import { socialDraftHash } from '@/lib/ai/social-cache';
 import { createClient, createServiceClient } from '@/lib/supabase/server';
@@ -211,7 +211,7 @@ export async function POST(req: Request) {
     });
     return NextResponse.json(out, { status: 200 });
   } catch (err) {
-    console.error('[generate-social] anthropic call failed', err);
+    console.error('[generate-social] gemini call failed', err);
     return NextResponse.json({ error: 'generation_failed' }, { status: 502 });
   }
 }

@@ -23,7 +23,7 @@ import {
   SOCIAL_PLATFORMS,
   type SocialLanguage,
   type SocialPlatform,
-} from '@/lib/ai/anthropic';
+} from '@/lib/ai/gemini';
 import { checkAndRecord } from '@/lib/ai/rate-limit';
 import { socialDraftHash } from '@/lib/ai/social-cache';
 import { createClient, createServiceClient } from '@/lib/supabase/server';

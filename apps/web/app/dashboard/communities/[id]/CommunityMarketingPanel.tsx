@@ -8,7 +8,7 @@
  * arrive at a single `/c/<slug>` URL regardless of channel, so the only
  * axis that matters is *language*. The agent picks a language, generates
  * a 150-250 word marketing body grounded in the community's videos +
- * schools + POIs (see `lib/ai/anthropic.ts::generateCommunityMarketing`),
+ * schools + POIs (see `lib/ai/gemini.ts::generateCommunityMarketing`),
  * edits inline, then saves to a per-language drafts list.
  *
  * Drafts persist to `saved_social_drafts` with `community_id` set,

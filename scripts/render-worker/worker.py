@@ -323,7 +323,7 @@ def process_job(job: dict[str, Any]) -> None:
 
         # 2. Fetch photos in sort order (with id + dimensions for tagger).
         #    Phase 95: also pull `ai_tags`/`tagged_at` so we can reuse prior
-        #    vision labels and avoid re-billing Claude on repeat renders.
+        #    vision labels and avoid re-billing the vision model on repeat renders.
         photos = sb_get(
             "listing_photos",
             {

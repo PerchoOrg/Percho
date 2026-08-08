@@ -15,7 +15,7 @@
  * than two surgical handlers.
  */
 
-import { COMMUNITY_MARKETING_LANGUAGES, type CommunityMarketingLanguage } from '@/lib/ai/anthropic';
+import { COMMUNITY_MARKETING_LANGUAGES, type CommunityMarketingLanguage } from '@/lib/ai/gemini';
 import { checkAndRecord } from '@/lib/ai/rate-limit';
 import { socialDraftHash } from '@/lib/ai/social-cache';
 import { createClient, createServiceClient } from '@/lib/supabase/server';

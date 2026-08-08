@@ -1,6 +1,6 @@
 /**
  * POST /api/generate-copy — generate a 3-paragraph English listing description
- * via Anthropic. Phase 6.1b.
+ * via Gemini. Phase 6.1b.
  *
  * Auth: requires a logged-in agent (uses anon-cookie client to read auth, then
  * resolves agent_id by user_id). RLS is irrelevant here — we don't query
@@ -8,7 +8,7 @@
  *
  * Rate limit: `RATE_LIMIT_PER_MIN` per agent per kind via `ai_usage_log`.
  *
- * The Anthropic call goes through `lib/ai/anthropic.ts` (Phase 0 seam — model
+ * The Gemini call goes through `lib/ai/gemini.ts` (Phase 0 seam — model
  * pin + max_tokens cap live there). We deliberately accept listing fields in
  * the request body rather than reading from the listings table: the edit form
  * has unsaved local state, and the agent should be able to preview copy
@@ -16,7 +16,7 @@
  * auth, not field validation against persisted state.
  */
 
-import { generateListingCopy } from '@/lib/ai/anthropic';
+import { generateListingCopy } from '@/lib/ai/gemini';
 import { checkAndRecord } from '@/lib/ai/rate-limit';
 import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
@@ -81,7 +81,7 @@ export async function POST(req: Request) {
     const paragraphs = await generateListingCopy(parsed.data);
     return NextResponse.json({ paragraphs }, { status: 200 });
   } catch (err) {
-    console.error('[generate-copy] anthropic call failed', err);
+    console.error('[generate-copy] gemini call failed', err);
     return NextResponse.json({ error: 'generation_failed' }, { status: 502 });
   }
 }

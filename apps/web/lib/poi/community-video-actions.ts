@@ -517,7 +517,7 @@ export async function getCommunityBucketEligiblePhotoCount(
 
 /**
  * manual "Regenerate description" trigger for community videos.
- * Same Anthropic-narrative pipeline as the listing version - narrative.ts
+ * Same Gemini-narrative pipeline as the listing version - narrative.ts
  * accepts both scopes now. Revalidates the community page instead of the
  * listing edit page.
  */

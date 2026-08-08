@@ -97,7 +97,7 @@ function safeJsonParse(raw: string, label: string): unknown {
   } catch (err) {
     // Surface the first ~500 chars of the raw response so we can see why
     // the model went off-format. Not PII — just listing copy.
-    console.error(`[anthropic:${label}] JSON.parse failed; raw=`, raw.slice(0, 500));
+    console.error(`[gemini:${label}] JSON.parse failed; raw=`, raw.slice(0, 500));
     throw err;
   }
 }
@@ -138,7 +138,7 @@ export async function generateListingCopy(input: {
     parsed.length !== 3 ||
     !parsed.every((p) => typeof p === 'string')
   ) {
-    throw new Error('Anthropic response was not a 3-string array');
+    throw new Error('Gemini response was not a 3-string array');
   }
   return parsed as string[];
 }
@@ -354,7 +354,7 @@ export async function generateSocialCopy(
     }
   }
   if (Object.keys(out).length === 0) {
-    throw new Error('Anthropic response missing all requested platform/language strings');
+    throw new Error('Gemini response missing all requested platform/language strings');
   }
   return out;
 }
@@ -609,7 +609,7 @@ export async function generateCommunityMarketing(
     }
   }
   if (Object.keys(out).length === 0) {
-    throw new Error('Anthropic response missing all requested languages');
+    throw new Error('Gemini response missing all requested languages');
   }
   return out;
 }

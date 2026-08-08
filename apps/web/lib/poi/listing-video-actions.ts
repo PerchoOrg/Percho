@@ -499,7 +499,7 @@ export async function getListingBucketEligiblePhotoCount(
 
 /**
  * manual "Regenerate description" trigger for listing-scoped
- * bucket videos. Same Anthropic-narrative pipeline as community —
+ * bucket videos. Same Gemini-narrative pipeline as community —
  * narrative.ts accepts either owner. Revalidates the listing edit page.
  */
 export async function regenerateListingBucketVideoNarrative(

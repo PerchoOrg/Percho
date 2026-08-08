@@ -1,4 +1,4 @@
-import { extractJsonObject } from '@/lib/ai/anthropic';
+import { extractJsonObject } from '@/lib/ai/gemini';
 import { describe, expect, it } from 'vitest';
 
 function parse(raw: string): unknown {
