@@ -412,15 +412,15 @@ def process_job(job: dict[str, Any]) -> None:
         overlay_path.write_text(json.dumps(overlay, indent=2))
 
         # 4b. Phase 93: vision-driven shot plan for listing home tours.
-        #    Runs Claude Sonnet 4.5 on every photo, then photo_selector picks
+        #    Runs Gemini 2.5 Flash on every photo, then photo_selector picks
         #    the 8-14 best in narrative order. Any failure (missing API key,
-        #    network, bad JSON) falls back to the legacy “all photos in
-        #    sort_order” path — the video still ships.
+        #    network, bad JSON) falls back to the legacy "all photos in
+        #    sort_order" path — the video still ships.
         #
         #    Phase 95: results are now persisted to `listing_photos.ai_tags`
         #    and `listings.ai_style`. Photos with `tagged_at IS NOT NULL`
         #    reuse the cached tags — repeat renders of the same listing do
-        #    zero Claude calls unless new photos are uploaded.
+        #    zero vision calls unless new photos are uploaded.
         shot_plan_path: Path | None = None
         listing_captions_path: Path | None = None
         try:
@@ -435,7 +435,9 @@ def process_job(job: dict[str, Any]) -> None:
             # full-length path — no shot plan, no pacing curve, no captions.
             # A gate on a credential the code no longer uses is worse than no
             # gate: it looks like a safety check and is actually a kill switch.
-            # Bedrock failures still land in the fail-open except below.
+            # Today the tagger reads GEMINI_API_KEY (migrated off Bedrock
+            # 2026-08-08); a missing key raises RuntimeError inside
+            # tag_listing_photos and lands in the fail-open except below.
 
             # Split cached vs. needs-tagging.
             need_tag = [p for p in photo_records if not p.get("tagged_at")]
@@ -453,7 +455,7 @@ def process_job(job: dict[str, Any]) -> None:
             style_info: dict[str, Any] | None = None
             if need_tag:
                 print(
-                    f"[job {job['id']}] tagging {len(need_tag)} new photos w/ Claude vision "
+                    f"[job {job['id']}] tagging {len(need_tag)} new photos w/ Gemini vision "
                     f"(reusing {len(cached_tagged)} cached)",
                     flush=True,
                 )

@@ -1,28 +1,26 @@
 /**
- * Anthropic API wrapper for V1 listing copy generation.
+ * Gemini API wrapper for V1 listing copy generation.
  *
- * V2 seam: when the LLM workload grows (agent workflows, video understanding,
- * eval harness), extract this module into a separate Python service. The
- * callers in this app only depend on the function signatures here, so the
- * swap is local.
+ * Migrated from Anthropic Messages API to Gemini 2.5 Flash (2026-08-08):
+ * same callers, same function signatures — the swap is local to this module.
  *
  * Cost guards:
- *   - Pinned to the model in ANTHROPIC_MODEL env (default: claude-sonnet-4-5).
- *     Never call opus from V1 code paths.
- *   - max_tokens cap on every call.
+ *   - Pinned to the model in GEMINI_MODEL env (default: gemini-2.5-flash).
+ *   - generationConfig caps output tokens on every call.
  *   - All calls run async (never on the user's request path) — fire from a
  *     button click or a background job, return job ids if needed.
  */
 
-const API_BASE = 'https://api.anthropic.com/v1/messages';
+const API_BASE = (m: string) =>
+  `https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent`;
 
 function model(): string {
-  return process.env.ANTHROPIC_MODEL ?? 'claude-sonnet-4-5';
+  return process.env.GEMINI_MODEL ?? 'gemini-2.5-flash';
 }
 
 function apiKey(): string {
-  const k = process.env.ANTHROPIC_API_KEY;
-  if (!k) throw new Error('ANTHROPIC_API_KEY not set');
+  const k = process.env.GEMINI_API_KEY;
+  if (!k) throw new Error('GEMINI_API_KEY not set');
   return k;
 }
 
@@ -33,26 +31,26 @@ async function callMessages(opts: {
   messages: Message[];
   maxTokens: number;
 }): Promise<string> {
-  const res = await fetch(API_BASE, {
+  const res = await fetch(API_BASE(model()), {
     method: 'POST',
     headers: {
-      'x-api-key': apiKey(),
-      'anthropic-version': '2023-06-01',
+      'x-goog-api-key': apiKey(),
       'content-type': 'application/json',
     },
     body: JSON.stringify({
-      model: model(),
-      max_tokens: opts.maxTokens,
-      system: opts.system,
-      messages: opts.messages,
+      systemInstruction: opts.system ? { parts: [{ text: opts.system }] } : undefined,
+      contents: opts.messages.map((m) => ({ role: m.role, parts: [{ text: m.content }] })),
+      generationConfig: { maxOutputTokens: opts.maxTokens },
     }),
   });
   if (!res.ok) {
-    throw new Error(`Anthropic API error: ${res.status} ${await res.text()}`);
+    throw new Error(`Gemini API error: ${res.status} ${await res.text()}`);
   }
-  const data = (await res.json()) as { content: { type: string; text: string }[] };
-  const text = data.content?.find((c) => c.type === 'text')?.text;
-  if (!text) throw new Error('Anthropic API returned no text content');
+  const data = (await res.json()) as {
+    candidates?: { content?: { parts?: { text?: string }[] } }[];
+  };
+  const text = data.candidates?.[0]?.content?.parts?.find((p) => p.text)?.text;
+  if (!text) throw new Error('Gemini API returned no text content');
   return text;
 }
 

@@ -1,7 +1,7 @@
 /**
  * Vision tagger for POI photos —  *
  * Given a poi_photos.id, downloads the JPEG from Supabase Storage, sends it to
- * Claude Sonnet 4.5 vision, and fills:
+ * Gemini 2.5 Flash vision (migrated from Claude Sonnet 4.5, 2026-08-08), and fills:
  *   ai_tags       jsonb   {description, primary_category, tags[], mood, usable, reason}
  *   ai_score      numeric 0-1 (quality × relevance)
  *   ai_model      text
@@ -12,16 +12,17 @@
  * Idempotent: if tagged_at is set we skip. Errors are logged but never thrown —
  * tagging failures should NEVER block user actions.
  *
- * Cost: ~$0.005 per photo (Claude Sonnet 4.5, ~1200px input). A full listing
- * refresh (~100 photos) is ~$0.50.
+ * Cost: ~$0.0001-0.0005 per photo (Gemini 2.5 Flash, ~1200px input). A full
+ * listing refresh (~100 photos) is ~$0.02-0.05.
  */
 
 import { extractJsonObject } from '@/lib/utils/extract-json';
 import { INTENT_BUCKETS, type IntentBucket } from '@/lib/poi/types';
 import { createServiceClient } from '@/lib/supabase/server';
 
-const VISION_MODEL = process.env.ANTHROPIC_VISION_MODEL ?? 'claude-sonnet-4-5';
-const API_BASE = 'https://api.anthropic.com/v1/messages';
+const VISION_MODEL = process.env.GEMINI_VISION_MODEL ?? 'gemini-2.5-flash';
+const API_BASE = (m: string) =>
+  `https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent`;
 const POI_PHOTO_BUCKET = 'listing-photos';
 
 export const PHOTO_CATEGORIES = [
@@ -118,44 +119,42 @@ async function callVision(opts: {
   mediaType: string;
   userPrompt: string;
 }): Promise<string> {
-  const key = process.env.ANTHROPIC_API_KEY;
-  if (!key) throw new Error('ANTHROPIC_API_KEY not set');
+  const key = process.env.GEMINI_API_KEY;
+  if (!key) throw new Error('GEMINI_API_KEY not set');
 
-  const res = await fetch(API_BASE, {
+  const res = await fetch(API_BASE(VISION_MODEL), {
     method: 'POST',
     headers: {
-      'x-api-key': key,
-      'anthropic-version': '2023-06-01',
+      'x-goog-api-key': key,
       'content-type': 'application/json',
     },
     body: JSON.stringify({
-      model: VISION_MODEL,
-      max_tokens: 512,
-      system: SYSTEM,
-      messages: [
+      systemInstruction: { parts: [{ text: SYSTEM }] },
+      contents: [
         {
           role: 'user',
-          content: [
+          parts: [
             {
-              type: 'image',
-              source: {
-                type: 'base64',
-                media_type: opts.mediaType,
+              inlineData: {
+                mimeType: opts.mediaType,
                 data: opts.imageBase64,
               },
             },
-            { type: 'text', text: opts.userPrompt },
+            { text: opts.userPrompt },
           ],
         },
       ],
+      generationConfig: { maxOutputTokens: 512 },
     }),
   });
   if (!res.ok) {
-    throw new Error(`Anthropic vision ${res.status}: ${(await res.text()).slice(0, 300)}`);
+    throw new Error(`Gemini vision ${res.status}: ${(await res.text()).slice(0, 300)}`);
   }
-  const data = (await res.json()) as { content: { type: string; text: string }[] };
-  const text = data.content?.find((c) => c.type === 'text')?.text;
-  if (!text) throw new Error('Anthropic vision returned no text');
+  const data = (await res.json()) as {
+    candidates?: { content?: { parts?: { text?: string }[] } }[];
+  };
+  const text = data.candidates?.[0]?.content?.parts?.find((p) => p.text)?.text;
+  if (!text) throw new Error('Gemini vision returned no text');
   return text;
 }
 
@@ -170,7 +169,7 @@ export async function tagPoiPhoto(poiPhotoId: string): Promise<{
   skipped?: 'already_tagged' | 'no_key';
   error?: string;
 }> {
-  if (!process.env.ANTHROPIC_API_KEY) {
+  if (!process.env.GEMINI_API_KEY) {
     return { ok: false, skipped: 'no_key' };
   }
 
@@ -234,8 +233,8 @@ export async function tagPoiPhoto(poiPhotoId: string): Promise<{
       }),
     });
   } catch (err) {
-    console.error(`[vision-tagger] anthropic call failed for ${poiPhotoId}:`, err);
-    return { ok: false, error: 'anthropic_error' };
+    console.error(`[vision-tagger] gemini call failed for ${poiPhotoId}:`, err);
+    return { ok: false, error: 'gemini_error' };
   }
 
   // Parse JSON — tolerant of fences / trailing chatter (same helper the

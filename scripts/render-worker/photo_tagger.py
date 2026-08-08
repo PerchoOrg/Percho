@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-photo_tagger — Claude Sonnet 4.5 vision labeling of listing photos for the
+photo_tagger — Gemini 2.5 Flash vision labeling of listing photos for the
 Phase 93 shot planner. Extracted from scripts/spikes/vision_tag_listing.py
 (2026-07-15) and turned into an importable module the worker calls before
 photo_selector.build_plan().
@@ -9,9 +9,9 @@ Public API:
     tag_listing_photos(photo_paths, listing) -> {"photos": [...], "style": {...}}
 
 Auth at call time:
-    NONE in the environment. Billing goes to AWS Bedrock via the instance role
-    (CLAUDE.md §2.1 rule 0); boto3's default credential chain supplies it.
-    Optional: AWS_REGION (default us-east-1), BEDROCK_VISION_MODEL.
+    GEMINI_API_KEY from the environment (was AWS Bedrock instance-role billing
+    until 2026-08-08 — the Bedrock path was retired with the rest of the
+    repo's Anthropic spend). Optional: GEMINI_MODEL (default gemini-2.5-flash).
 
 Failure mode:
     Any per-photo call may raise inside the thread pool; the corresponding
@@ -28,12 +28,7 @@ import urllib.request
 from pathlib import Path
 from typing import Any
 
-# Bedrock model id, NOT a bare Anthropic model name. CLAUDE.md §2.1 rule 0 pins
-# spend to Bedrock; the `global.` prefix is the cross-region inference profile
-# the rest of this repo already uses (see scripts/claude-bedrock.sh).
-MODEL = os.environ.get(
-    "BEDROCK_VISION_MODEL", "global.anthropic.claude-sonnet-4-5-20250929-v1:0"
-)
+MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
 MAX_WORKERS = int(os.environ.get("PHOTO_TAGGER_WORKERS", "8"))
 
 PER_PHOTO_SYSTEM = """You are labeling ONE photo from a residential real estate listing for a video pipeline.
@@ -108,44 +103,47 @@ def _sniff_media_type(raw: bytes) -> str:
     return "image/jpeg"
 
 
-def _invoke_bedrock(system: str, content: list[dict[str, Any]],
-                    timeout: int) -> dict[str, Any]:
-    """One vision call, via AWS Bedrock on the instance role.
+def _invoke_gemini(system: str, content: list[dict[str, Any]],
+                   timeout: int) -> dict[str, Any]:
+    """One vision call, via the Gemini REST API (migrated from Bedrock 2026-08-08).
 
-    CLAUDE.md §2.1 rule 0: all LLM spend on this host bills to Bedrock, never to
-    a personal `sk-ant-*` key. This module used to POST api.anthropic.com with
-    `os.environ["ANTHROPIC_API_KEY"]`, which is why it has been BROKEN on this
-    host since that key was removed on 2026-07-26 — and it is the reason
-    `listing_photos.ai_tags` is empty for every fmls-import listing, which in
-    turn is why the §2.3-2.5 hotspot UI has nothing to render.
-
-    Auth comes from the instance role via boto3's default chain: no key material
-    in the environment, in `.env.local`, or in this file. Do not add an API-key
-    fallback path here — a fallback is how the personal key came back last time.
-
-    The request body is the Anthropic Messages format minus `model` (Bedrock
-    takes the model in the URL/`modelId`) plus `anthropic_version`, so the
-    caller's `content` blocks and the response shape are unchanged.
+    Key comes from GEMINI_API_KEY. Images are sent as inline_data (raw base64)
+    so `_call_vision` keeps receiving raw bytes and the media-type sniff stays
+    useful. Response is {candidates: [{content: {parts: [{text}]}}]}; the
+    caller's `content` blocks are rebuilt here, so nothing upstream changes.
     """
-    import boto3  # imported lazily: the caller may only need dhash helpers
+    key = os.environ.get("GEMINI_API_KEY")
+    if not key:
+        raise RuntimeError("GEMINI_API_KEY not set")
 
-    from botocore.config import Config
+    parts: list[dict[str, Any]] = []
+    for item in content:
+        if item.get("type") == "image":
+            src = item["source"]
+            parts.append({
+                "inline_data": {
+                    "mime_type": src["media_type"],
+                    "data": src["data"],
+                }
+            })
+        else:
+            parts.append({"text": item["text"]})
 
-    client = boto3.client(
-        "bedrock-runtime",
-        region_name=os.environ.get("AWS_REGION", "us-east-1"),
-        config=Config(read_timeout=timeout, retries={"max_attempts": 3}),
+    body = json.dumps({
+        "system_instruction": {"parts": [{"text": system}]},
+        "contents": [{"role": "user", "parts": parts}],
+        "generationConfig": {"maxOutputTokens": 800},
+    }).encode()
+
+    url = (
+        f"https://generativelanguage.googleapis.com/v1beta/models/{MODEL}"
+        ":generateContent?key=" + key
     )
-    resp = client.invoke_model(
-        modelId=MODEL,
-        body=json.dumps({
-            "anthropic_version": "bedrock-2023-05-31",
-            "max_tokens": 800,
-            "system": system,
-            "messages": [{"role": "user", "content": content}],
-        }),
+    req = urllib.request.Request(
+        url, data=body, headers={"content-type": "application/json"}, method="POST"
     )
-    return json.loads(resp["body"].read())
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        return json.loads(resp.read())
 
 
 def _call_vision(system: str, user_prompt: str,
@@ -168,12 +166,30 @@ def _call_vision(system: str, user_prompt: str,
         })
     content.append({"type": "text", "text": user_prompt})
 
-    data = _invoke_bedrock(system, content, timeout)
-    text = next(c["text"] for c in data["content"] if c["type"] == "text")
+    data = _invoke_gemini(system, content, timeout)
+    text = ""
+    candidates = data.get("candidates") or []
+    if candidates:
+        parts = (candidates[0].get("content") or {}).get("parts") or []
+        for p in parts:
+            if p.get("text"):
+                text = p["text"]
+                break
     text = text.strip()
     if text.startswith("```"):
         text = text.split("\n", 1)[1].rsplit("```", 1)[0]
-    return json.loads(text)
+    out = json.loads(text)
+    # Gemini sometimes emits unnormalized bboxes ([0.46, 345, 0.08, 0.04]).
+    # Clamp to unit square; anything out of range becomes null so the
+    # downstream pan_to_subject guard (photo_selector.py:331) drops it.
+    bb = out.get("subject_bbox")
+    if isinstance(bb, list) and len(bb) == 4:
+        clamped = [max(0.0, min(1.0, float(v))) for v in bb]
+        if all(v == float(v) and 0 <= v <= 1 for v in bb):
+            out["subject_bbox"] = clamped
+        else:
+            out["subject_bbox"] = None
+    return out
 
 
 def _tag_one(photo_path: Path, sort_order: int, photo_id: str) -> dict[str, Any]:
@@ -210,11 +226,9 @@ def tag_listing_photos(
     listing: {"price": int, "beds", "baths", "sqft", "city", "state", ...}
     Returns {"photos": [...tag dicts...], "style": {...}}
     """
-    # No credential precondition to check: Bedrock auth comes from the instance
-    # role via boto3's default chain, and a missing role surfaces as a botocore
-    # NoCredentialsError on the first call (per-photo, and already captured as
-    # that photo's `error`). The old `ANTHROPIC_API_KEY` guard here was a hard
-    # abort on a key this host must never have — see `_invoke_bedrock`.
+    # No credential precondition to check: Gemini auth comes from
+    # GEMINI_API_KEY and a missing key surfaces as RuntimeError on the first
+    # call (per-photo, already captured as that photo's `error`).
     results: list[dict[str, Any] | None] = [None] * len(photos)
     with cf.ThreadPoolExecutor(max_workers=MAX_WORKERS) as ex:
         futs = {

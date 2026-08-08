@@ -4,22 +4,23 @@
  * Turns a ready bucket video's already-tagged photos into a structured
  * narrative script that we can later feed to TTS. Photos already carry
  * `poi_photos.ai_tags.description` (from `lib/poi/vision-tagger.ts`), so
- * this is a cheap text-only Claude call — no re-vision needed.
+ * this is a cheap text-only Gemini call — no re-vision needed.
  *
  * Writes back to `generated_videos.narrative` (existing jsonb column, no
  * schema change).
  *
- * Cost: ~$0.005-0.01 per video (Sonnet 4.5, ≤~2k input tokens for 15 photos).
- * Manual trigger only — the "Regenerate description" button in the Nearby
- * tab. Never fired automatically to keep spend predictable.
+ * Cost: ~$0.0002-0.001 per video (Gemini 2.5 Flash, ≤~2k input tokens for
+ * 15 photos). Manual trigger only — the "Regenerate description" button in
+ * the Nearby tab. Never fired automatically to keep spend predictable.
  */
 
 import { extractJsonObject } from '@/lib/utils/extract-json';
 import { createServiceClient } from '@/lib/supabase/server';
 import type { IntentBucket } from './types';
 
-const NARRATIVE_MODEL = process.env.ANTHROPIC_MODEL ?? 'claude-sonnet-4-5';
-const API_BASE = 'https://api.anthropic.com/v1/messages';
+const NARRATIVE_MODEL = process.env.GEMINI_MODEL ?? 'gemini-2.5-flash';
+const API_BASE = (m: string) =>
+  `https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent`;
 
 /**
  * Per-clip caption fields. Populated by the LLM alongside the
@@ -177,9 +178,9 @@ export async function generateBucketVideoNarrative(
 ): Promise<
   { ok: true; narrative: VideoNarrative } | { ok: false; error: string; message: string }
 > {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
+  const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
-    return { ok: false, error: 'missing_key', message: 'ANTHROPIC_API_KEY not set' };
+    return { ok: false, error: 'missing_key', message: 'GEMINI_API_KEY not set' };
   }
 
   const admin = createServiceClient();
@@ -261,31 +262,31 @@ export async function generateBucketVideoNarrative(
 
   let raw: string;
   try {
-    const res = await fetch(API_BASE, {
+    const res = await fetch(API_BASE(NARRATIVE_MODEL), {
       method: 'POST',
       headers: {
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
+        'x-goog-api-key': apiKey,
         'content-type': 'application/json',
       },
       body: JSON.stringify({
-        model: NARRATIVE_MODEL,
-        max_tokens: 1024,
-        messages: [{ role: 'user', content: prompt }],
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        generationConfig: { maxOutputTokens: 1024 },
       }),
     });
     if (!res.ok) {
       const body = await res.text();
-      console.error('[narrative] anthropic error:', res.status, body.slice(0, 200));
-      return { ok: false, error: 'anthropic_error', message: `HTTP ${res.status}` };
+      console.error('[narrative] gemini error:', res.status, body.slice(0, 200));
+      return { ok: false, error: 'gemini_error', message: `HTTP ${res.status}` };
     }
-    const data = (await res.json()) as { content?: Array<{ type: string; text: string }> };
-    raw = data.content?.find((c) => c.type === 'text')?.text ?? '';
+    const data = (await res.json()) as {
+      candidates?: { content?: { parts?: { text?: string }[] } }[];
+    };
+    raw = data.candidates?.[0]?.content?.parts?.find((p) => p.text)?.text ?? '';
     if (!raw) {
-      return { ok: false, error: 'empty_response', message: 'Anthropic returned no text.' };
+      return { ok: false, error: 'empty_response', message: 'Gemini returned no text.' };
     }
   } catch (err) {
-    console.error('[narrative] anthropic call failed:', err);
+    console.error('[narrative] gemini call failed:', err);
     return { ok: false, error: 'network', message: (err as Error).message };
   }
 
