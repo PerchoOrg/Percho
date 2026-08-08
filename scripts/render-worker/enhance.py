@@ -86,14 +86,6 @@ PRESETS = {
     "strong":  (4.0, 0.45, 1.6, 1.04, 0.04),
 }
 
-# How much of the Real-ESRGAN result to keep, blended back over a plain cubic
-# upscale of the source. At 1.0 the net redraws interior texture it has no
-# information for — fabric, wood grain and painted drywall come back looking
-# like plastic. Exteriors survive far more of it (brick, foliage and shingle
-# are exactly what RRDB was trained on), hence the split.
-SR_STRENGTH_INDOOR = 0.3
-SR_STRENGTH_OUTDOOR = 0.75
-
 
 @functools.lru_cache(maxsize=1)
 def _esrgan_session():
@@ -162,14 +154,7 @@ def _superres(img: np.ndarray) -> np.ndarray:
     """Real-ESRGAN x2 when available, else FSRCNN x2, else the input untouched."""
     sess = _esrgan_session()
     if sess is not None:
-        out = _esrgan_x2(sess, img)
-        # Blend the net's result back over a plain cubic 2x. Full-strength
-        # ESRGAN hallucinates texture; the cubic half re-anchors it to pixels
-        # that were actually in the photo.
-        alpha = SR_STRENGTH_INDOOR if _looks_indoor(img) else SR_STRENGTH_OUTDOOR
-        base = cv2.resize(img, (out.shape[1], out.shape[0]),
-                          interpolation=cv2.INTER_CUBIC)
-        return cv2.addWeighted(out, alpha, base, 1.0 - alpha, 0)
+        return _esrgan_x2(sess, img)
     model = MODELS_DIR / "FSRCNN_x2.pb"
     if not model.exists():
         return img
@@ -392,19 +377,13 @@ def enhance(img: np.ndarray, preset: str = "default", use_sr: bool = True,
         img = _superres(img)
         # Real-ESRGAN already denoises and reconstructs edges as part of the
         # upscale. Running the full NLM + unsharp grade on top of it double-cooks
-        # (plastic skies, halos on rooflines). Back denoise off and drop unsharp
-        # entirely — even at half amount it re-crisped what the net had already
-        # crisped, which is the "AI-looking" tell on interiors.
+        # (plastic skies, halos on rooflines). Back both off when it ran.
         if img.shape != before:
             esrgan = _esrgan_session() is not None
             meta["sr"] = "real-esrgan-x2" if esrgan else "fsrcnn-x2"
             if esrgan:
                 denoise_h *= 0.5
-                sharpen_amt = 0.0
-                # Interiors are mostly large flat painted surfaces; CLAHE on top
-                # of an SR pass turns their gradients into visible blotches.
-                if _looks_indoor(img):
-                    clahe_clip *= 0.6
+                sharpen_amt *= 0.5
 
     if max(img.shape[:2]) > MAX_EDGE:
         scale = MAX_EDGE / max(img.shape[:2])
