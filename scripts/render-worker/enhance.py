@@ -131,7 +131,17 @@ def _esrgan_x2(sess, img: np.ndarray) -> np.ndarray:
             # Padded read window, clamped to the image.
             py0, px0 = max(y0 - ESRGAN_PAD, 0), max(x0 - ESRGAN_PAD, 0)
             py1, px1 = min(y1 + ESRGAN_PAD, h), min(x1 + ESRGAN_PAD, w)
-            up = _esrgan_tile(sess, img[py0:py1, px0:px1])
+            # ESRGAN input must be even per dim. FMLS/Places photos are odd
+            # (e.g. 1023x687): the Reshape_29 op would fail on the last tile.
+            # Pad (not trim) so the 2x output is exactly (h2, w2) and the
+            # crop math below stays exact.
+            h2, w2 = py1 - py0, px1 - px0
+            if h2 % 2 or w2 % 2:
+                tile = np.zeros((h2 + h2 % 2, w2 + w2 % 2, 3), np.uint8)
+                tile[:h2, :w2] = img[py0:py1, px0:px1]
+            else:
+                tile = img[py0:py1, px0:px1]
+            up = _esrgan_tile(sess, tile)
             # Cut the pad back out of the 2x result.
             ty0, tx0 = (y0 - py0) * 2, (x0 - px0) * 2
             out[y0 * 2:y1 * 2, x0 * 2:x1 * 2] = up[

@@ -57,7 +57,11 @@ GENERATE_SCRIPT = REPO_ROOT / "scripts" / "ken-burns" / "generate.py"
 # caption renderer needs `playwright` from the system dist-packages; a venv
 # python (e.g. when the worker is started by hand from an activated shell) has
 # no playwright and every render dies at the caption step. See render().
-PYTHON_BIN = "/usr/bin/python3"
+# On EC2 this was /usr/bin/python3 (system 3.12 with all deps installed via
+# --break-system-packages). On the Mac mini the render deps live in the
+# .venv-render venv instead — pin the interpreter so the worker behaves the
+# same however it is started.
+PYTHON_BIN = str(REPO_ROOT / ".venv-render/bin/python3")
 
 POLL_IDLE_SEC = 5
 PHOTO_BUCKET = "listing-photos"
