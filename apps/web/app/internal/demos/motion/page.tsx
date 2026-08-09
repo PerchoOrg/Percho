@@ -7,43 +7,51 @@ export const metadata: Metadata = {
 
 // Videos live in the public `demo-assets` Storage bucket (never in git —
 // see .gitignore). Uploaded via scripts/admin/upload-demo-assets.mjs.
-const BASE = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/demo-assets/motion`;
+const BASE = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/demo-assets`;
+const MOTION = `${BASE}/motion`;
 
 type Clip = { src: string; title: string; note: string };
 
-const FULL_VIDEOS: Clip[] = [
+const CHOSEN: Clip[] = [
   {
-    src: `${BASE}/berkeley-park-da2-small.mp4`,
-    title: 'Depth Anything V2 — Small (current default)',
-    note: '25M params. Soft object edges; watch trees and cabinet lines during orbits.',
+    src: `${BASE}/kenburns/vicinity-slideshow-demo.mp4`,
+    title: 'Ken Burns slideshow — the shipping path',
+    note: 'Vertical 1080x1920, pan/zoom alternating, crossfades, BGM, ending card. Pure ffmpeg, no model inference. This is what the render worker produces today.',
   },
   {
-    src: `${BASE}/berkeley-park-da2-large.mp4`,
-    title: 'Depth Anything V2 — Large',
-    note: '335M params. Slightly cleaner edges, same overall look.',
+    src: `${MOTION}/percho-depthflow-demo.mp4`,
+    title: 'DepthFlow 2.5D parallax — Depth Anything V2 Small',
+    note: 'Four clips: exterior orbit, living room zoom-in, kitchen orbit, backyard zoom-out. The parallax option we are keeping, if we add one.',
   },
   {
-    src: `${BASE}/berkeley-park-pro.mp4`,
-    title: 'Apple Depth Pro',
-    note: 'Full-resolution metric depth. Sharpest edges — porch columns, railings, fixtures hold shape in motion.',
+    src: `${MOTION}/berkeley-park-da2-small.mp4`,
+    title: 'DepthFlow, DA2-Small — full 10-photo listing',
+    note: '3525 Berkeley Park Court, Duluth GA. 3s per photo, orbit and zoom alternating.',
   },
 ];
 
-const COMPARISONS: Clip[] = [
+// Kept for the record. Depth Pro and the layered/inpainting route were tested
+// and dropped on 2026-08-09 — sharper on paper, too soft in motion.
+const REJECTED: Clip[] = [
   {
-    src: `${BASE}/compare-depth__small_large_pro.mp4`,
-    title: 'Depth model triptych — exterior orbit',
+    src: `${MOTION}/berkeley-park-pro.mp4`,
+    title: 'Apple Depth Pro — full listing',
+    note: 'Sharpest depth maps of the three models, 2GB weights, ~3.6s per photo. Not pursued.',
+  },
+  {
+    src: `${MOTION}/berkeley-park-da2-large.mp4`,
+    title: 'Depth Anything V2 Large — full listing',
+    note: '335M params. Marginally cleaner edges than Small for 13x the model size. Not pursued.',
+  },
+  {
+    src: `${MOTION}/compare-depth__small_large_pro.mp4`,
+    title: 'Depth model triptych',
     note: 'Left to right: DA2-Small, DA2-Large, Depth Pro. Same photo, same camera move.',
   },
   {
-    src: `${BASE}/compare-fill__stretch_layered_layered2x.mp4`,
-    title: 'Disocclusion fill — stretch vs. generated pixels',
-    note: 'Left: edge stretch (current). Middle: layered + LaMa inpainting, same amplitude. Right: 2x amplitude — the mailbox leaves the frame and reveals generated lawn behind it.',
-  },
-  {
-    src: `${BASE}/compare-fill-kitchen__stretch_layered_layered2x.mp4`,
-    title: 'Disocclusion fill — interior (kitchen)',
-    note: 'Same three-way comparison along the countertop edge.',
+    src: `${MOTION}/listing-sliced.mp4`,
+    title: 'Layered depth slices + LaMa inpainting',
+    note: 'Scene cut into 4 depth slices, each inpainted to extend behind the ones in front, so disocclusions reveal generated pixels instead of stretched edges. Dropped: too soft in motion.',
   },
 ];
 
@@ -74,47 +82,40 @@ export default function MotionDemosPage() {
       <header>
         <h1 className="text-xl font-semibold">Photo motion prototypes</h1>
         <p className="mt-2 text-sm text-ink2">
-          AutoReel-style per-photo camera moves (3s each, alternating orbit/zoom) rendered with
-          DepthFlow 2.5D parallax on local hardware. Test listing: 3525 Berkeley Park Court, Duluth
-          GA (10 photos). Render cost: ~0.3s per clip, no API spend.
+          Where listing video stands. Ken Burns is in production. DepthFlow with Depth Anything V2
+          Small is the parallax option we kept; everything under &ldquo;explored, not pursued&rdquo;
+          was tested and dropped. Test listing throughout: 3525 Berkeley Park Court, Duluth GA.
         </p>
       </header>
 
       <section className="flex flex-col gap-6">
-        <h2 className="text-base font-semibold">Full listing video — one per depth model</h2>
-        {FULL_VIDEOS.map((clip) => (
+        <h2 className="text-base font-semibold">What we are building on</h2>
+        {CHOSEN.map((clip) => (
           <VideoBlock key={clip.src} clip={clip} />
         ))}
       </section>
 
       <section className="flex flex-col gap-6">
-        <h2 className="text-base font-semibold">Research comparisons</h2>
-        {COMPARISONS.map((clip) => (
+        <h2 className="text-base font-semibold">Explored, not pursued</h2>
+        <p className="text-sm text-ink2">
+          Kept so we do not re-run these experiments. All of it renders locally at no API cost; the
+          reason to drop it is output quality in motion, not price.
+        </p>
+        {REJECTED.map((clip) => (
           <VideoBlock key={clip.src} clip={clip} />
         ))}
         <figure className="m-0">
           <h3 className="mb-2 text-sm font-medium">Depth maps side by side</h3>
           <img
             src="/demos/motion/compare-depthmaps.png"
-            alt="Depth map comparison: original photo, DA2-Small, DA2-Large and Depth Pro. Depth Pro resolves the mailbox scrollwork that the others blur."
+            alt="Depth map comparison: original photo, DA2-Small, DA2-Large and Depth Pro."
             className="w-full rounded border border-line"
           />
           <figcaption className="mt-2 text-xs text-ink2">
-            Note the mailbox scrollwork (bottom right): Depth Pro resolves it fully — this is what
-            keeps edges clean during motion.
+            Original, DA2-Small, DA2-Large, Depth Pro. Depth Pro resolves the mailbox scrollwork the
+            others blur — which did not translate into a better video.
           </figcaption>
         </figure>
-      </section>
-
-      <section className="flex flex-col gap-6">
-        <h2 className="text-base font-semibold">Baseline demo (first prototype)</h2>
-        <VideoBlock
-          clip={{
-            src: `${BASE}/percho-depthflow-demo.mp4`,
-            title: 'First 4-clip demo — DA2-Small',
-            note: 'Exterior orbit, living room zoom-in, kitchen orbit, backyard zoom-out.',
-          }}
-        />
       </section>
     </div>
   );
