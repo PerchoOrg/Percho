@@ -4,6 +4,97 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-08-09 14:00 — 运镜 demo 上线 percho.co/internal/demos/motion
+
+**Objective**: owner 在本地看不了 QuickTime(远程),要求所有 demo 挂到
+percho.co。深度模型三联对比他看不出差别,要求用 3525 Berkeley Park Court
+(FMLS 584501905,Duluth GA,10 张照片)给三个深度模型各渲一条完整视频对比。
+
+**Actions**:
+- `render_full.py`(scratchpad):10 张照片 × 3s,orbit/zoom 交替,三个变体
+  各出一条 30s 视频。Depth Pro 全listing深度 3.6s/图;渲染 da2-small 6.8s /
+  da2-large 10.2s / pro 3.0s(深度已缓存)整条。
+- 新页面 `apps/web/app/internal/demos/motion/page.tsx`(挂在既有 unlisted
+  `/internal` 区,noindex):三条完整视频 + 三个研究对比三联 + 深度图对比 +
+  基线 demo。资产 10MB 进 `apps/web/public/demos/motion/`。
+- biome 0 错,tsc 无本文件错误。
+- 曾先发过 Claude Artifact 版评审页,owner 明确"demo 都走 percho.co"后改走
+  站内。
+
+**Decisions**: 视频直接进 git/public 而非 Cloudflare Stream——10MB 静态资产,
+demo 用途,不值得为此接 Stream 上传流程。FMLS 缩略图上生产域名的合规风险
+已向 owner 提示过,owner 拍板放行(unlisted + noindex)。
+
+**Next steps**: push 后等 Vercel 部署,验证
+https://percho.co/internal/demos/motion 可播。
+
+## 2026-08-09 13:00 — 深度模型三方对比 + 分层深度(生成像素)原型
+
+**Objective**: 上一条 demo 的三个升级方向做实测对比:DA2-Large、Apple Depth
+Pro、分层深度 + LaMa inpainting(让 orbit 露出的遮挡区显示真实生成像素,而非
+shader 拉伸)。owner 已授权 trust 模式,全部本机执行。
+
+**Actions**:
+- `render_variants.py`:同一 4 张照片 × 4 运镜,按深度源渲三版
+  (da2-small/da2-large/pro)。DepthFlow 支持外部深度图(`input(depth=...)`,
+  约定 float32 0-1、越大越近)——Depth Pro 米制深度取倒数归一化后直接喂入。
+- `depth_pro_infer.py`:HF 下载 `apple/DepthPro` 权重(~2GB),M4 Pro MPS 推理,
+  4 张图深度落盘 npy + 三模型深度可视化 PNG。
+- `layered_demo.py`:**双层渲染原型**(moderngl 无窗上下文,400×300 网格 ×2)。
+  前景蒙版 = 深度局部对比(median 121px,thr 0.045,滤 <400px 碎片);背景板
+  = LaMa 补全(`simple-lama-inpainting`,锁死 pillow 9.5 需 `--no-deps` 装);
+  背景深度 = Telea 补全。外立面(邮箱)+ 厨房(台面/水龙头)各渲 1x/2x 幅度。
+- 产物归档 `~/Workspace/percho-prototypes/depthflow-demo/`:三个 hstack 对比
+  视频 + 深度图 2×2 对比图 + 全部 clip 和脚本。
+
+**Decisions / findings**:
+- **深度质量:Depth Pro 明显最好**——邮箱雕花杆完整分辨、全分辨率输出;
+  DA2-Small 糊成一坨,Large 略好但仍软。推理 M4 Pro 上秒级,权重 2GB。
+- **分层法成立但蒙版是命门**:蒙版盖全的物体(邮箱)在 2x 幅度下移出画面,
+  露出 LaMa 补的草地完全自然——"生成像素"目标达成;蒙版漏掉的物体退化成
+  单层拉伸,比不分层更难看。局部对比启发式对大物体敏感(中值核必须大于
+  物体尺寸),生产化需要更稳的分割(候选:SAM 按深度种子点提示)。
+- 室内(厨房)分层沿台面前缘工作良好,2x 幅度基本稳。
+- **成本结构**:LaMa 每图 1.2s(一次性可缓存),双层渲染 0.3-0.4s/条,
+  全程零 API 成本。
+- 环境坑:Depth Pro 安装把 numpy 降到 1.x → 新版 transformers(按 numpy 2 写)
+  与 DepthFlow 的 diskcache 深度缓存(numpy 2 pickle)双双炸掉。修复:深度
+  落盘后 numpy 升回 2.x + 清 `~/Library/Caches/depthflow/depthmaps`。
+- 本机 ffmpeg 无 drawtext filter,对比视频用文件名标注顺序。
+
+**Next steps**: owner 看三个对比视频定夺技术路线(见上一条 entry 的 a/b/c);
+若走分层路线,蒙版分割升级(SAM / 深度种子点)是第一个正经任务;DepthFlow
+AGPL 商用授权问题在立项前必须解决。
+
+## 2026-08-09 — DepthFlow 2.5D 运镜可行性 demo(AutoReel 调研落地)
+
+**Objective**: 调研 AutoReel 的逐照片运镜(zoom/orbit,每张 ~3s)。结论:其基础
+运镜是生成式 image-to-video(官方 "AI Engine v25",orbit 结果不保证、有幻觉
+伪影、按 credit 计费)。验证廉价替代路线:DepthFlow(深度估计 + 2.5D 视差,
+开源)在 Mac mini 本地能否达到可用观感。
+
+**Actions**:
+- 装了 uv(`~/.local/bin/uv`);scratchpad 里建 Python 3.12 venv 装 `depthflow` 1.0.0
+  (torch 2.13 MPS 可用,depth 模型首跑自动下载)。不在仓库内,零依赖污染。
+- 用 `~/Workspace/fmls-scrape/photos/582110389`(EC2 迁移过来的真实房源图,
+  800×600 缩略图)渲了 4 条 3s@30fps clip:orbit_right(外立面)、zoom_in
+  (客厅)、orbit_left(厨房)、zoom_out(后院),ffmpeg 拼成 12s demo。
+- 产物 + 渲染脚本存 `~/Workspace/percho-prototypes/depthflow-demo/`
+  (`render_demo.py` 是 DepthScene 子类,每帧按 eased tau 驱动
+  state.zoom/offset/isometric)。
+
+**Learnings**:
+- **速度**:单条 3s clip 渲染 0.3s(~10x 实时,M4 Pro,headless GL)。整库
+  照片全动画化的成本可忽略。深度估计每图数秒,可缓存。
+- **质量**:视差成立(前景邮箱 vs 房体位移明显);深度边缘有轻微拉伸痕迹,
+  静帧可见、动起来不显眼。zoom 类几乎无痕,orbit 幅度越大痕迹越重。
+- fmls 照片库全是 800×600 缩略图 —— 正式做需要全尺寸图源。
+- **License 注意**:DepthFlow 是 AGPL(有商业授权选项),进产品前要过一遍。
+
+**Next steps**: owner 看 demo 定夺:a) 仅 DepthFlow 路线接入 render-worker;
+b) 混合路线(多数照片 DepthFlow,关键照片走商业 I2V API 做真 orbit,需按
+CLAUDE.md §8 批准新付费服务);c) 不做。
+
 ## 2026-08-08 — Bedrock 清理
 
 **Objective**: owner 指出 Bedrock 已全部停用，清理仓库里所有 Bedrock 相关残留。
