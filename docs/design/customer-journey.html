@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Percho · End-to-End Customer Journey</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@500;600&family=Noto+Sans+SC:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1E2B28; --ink-soft:#4B5A55; --ink-mute:#7E8A85;
+    --paper:#FAF8F3; --card:#FFFFFF;
+    --pine:#2E5E52; --pine-deep:#1C4038; --moss:#E8F0EA; --moss-line:#BCD2C4;
+    --amber:#C1771F; --amber-soft:#F6EAD6; --amber-line:#E0BE8A;
+    --line:#DDD8CC;
+    --mono:'IBM Plex Mono',monospace;
+    --serif:'Noto Serif SC',serif;
+    --sans:'Noto Sans SC',sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.85}
+  .wrap{max-width:840px;margin:0 auto;padding:56px 28px 96px}
+
+  .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.18em;color:var(--pine);text-transform:uppercase}
+  header.doc h1{font-family:var(--serif);font-weight:600;font-size:34px;line-height:1.3;margin:10px 0 6px}
+  header.doc .tagline{font-family:var(--serif);font-size:16px;color:var(--ink-soft)}
+  .meta{display:flex;flex-wrap:wrap;gap:8px 22px;margin-top:20px;padding-top:16px;border-top:1px solid var(--line);font-family:var(--mono);font-size:11.5px;color:var(--ink-mute)}
+  .meta b{color:var(--ink);font-weight:500}
+
+  section{margin-top:64px}
+  h2{font-family:var(--serif);font-weight:600;font-size:22px;margin-bottom:6px}
+  h2 .no{font-family:var(--mono);font-size:12px;color:var(--amber);letter-spacing:.14em;display:block;margin-bottom:6px;font-weight:500}
+  .lede{color:var(--ink-soft);max-width:620px;margin-bottom:26px}
+
+  /* ---------- 旅程飞行轨迹 ---------- */
+  .journey{position:relative;margin:34px 0 0;padding-left:34px}
+  .journey::before{content:"";position:absolute;left:9px;top:6px;bottom:44px;width:2px;background:linear-gradient(var(--ink-mute),var(--pine) 30%,var(--pine) 68%,var(--amber));border-radius:2px}
+  .stop{position:relative;padding:0 0 26px}
+  .stop::before{content:"";position:absolute;left:-32px;top:7px;width:14px;height:14px;border-radius:50%;background:var(--paper);border:3px solid var(--pine)}
+  .stop.neutral::before{border-color:var(--ink-mute)}
+  .stop.act::before{border-color:var(--amber)}
+  .stop .s-head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+  .stop .s-no{font-family:var(--mono);font-size:11px;color:var(--ink-mute);letter-spacing:.1em}
+  .stop h3{font-size:16.5px;font-weight:700}
+  .stop p{color:var(--ink-soft);font-size:14px;max-width:560px}
+  .stop .chip{font-family:var(--mono);font-size:10.5px;padding:2px 8px;border-radius:20px;letter-spacing:.06em}
+  .chip.learn{background:var(--moss);color:var(--pine-deep);border:1px solid var(--moss-line)}
+  .chip.act{background:var(--amber-soft);color:#8A5310;border:1px solid var(--amber-line)}
+  .chip.flow{background:#EFEDE6;color:var(--ink-soft);border:1px solid var(--line)}
+  .perch-mark{margin-left:-24px;margin-top:2px}
+
+  /* ---------- 速览表 ---------- */
+  .tbl-scroll{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:var(--card)}
+  table{border-collapse:collapse;width:100%;min-width:640px;font-size:13.5px}
+  th{font-family:var(--mono);font-size:11px;letter-spacing:.1em;color:var(--ink-mute);text-align:left;font-weight:500;padding:12px 14px;border-bottom:1px solid var(--line);white-space:nowrap}
+  td{padding:11px 14px;border-bottom:1px solid #EFECE3;vertical-align:top;color:var(--ink-soft)}
+  tr:last-child td{border-bottom:none}
+  td:first-child{font-weight:700;color:var(--ink);white-space:nowrap}
+  td em{font-style:normal;color:var(--pine);font-weight:500}
+
+  /* ---------- 相位机 ---------- */
+  .phase-flow{display:flex;flex-direction:column;gap:0;max-width:520px;margin:30px auto 0}
+  .phase{background:var(--card);border:1px solid var(--moss-line);border-radius:12px;padding:16px 20px}
+  .phase.c-teal{border-color:var(--amber-line);background:#FFFDF8}
+  .phase .p-name{font-weight:700;font-size:15px}
+  .phase .p-name span{font-family:var(--mono);font-size:11px;color:var(--pine);margin-right:8px;letter-spacing:.08em}
+  .phase.c-teal .p-name span{color:var(--amber)}
+  .phase .p-sub{font-size:13px;color:var(--ink-soft);margin-top:2px}
+  .ph-arrow{display:flex;align-items:center;gap:12px;padding:6px 0 6px 24px;color:var(--ink-mute)}
+  .ph-arrow .a-line{font-size:16px;color:var(--pine)}
+  .ph-arrow .a-label{font-family:var(--mono);font-size:11px;letter-spacing:.05em}
+  .ph-loop{margin-top:14px;text-align:center;font-family:var(--mono);font-size:11.5px;color:var(--ink-mute)}
+
+  /* ---------- 决策卡 ---------- */
+  .decisions{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:26px}
+  .dcard{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px}
+  .dcard .d-q{font-weight:700;font-size:14.5px;margin-bottom:4px}
+  .dcard .d-a{font-size:13px;color:var(--ink-soft)}
+  .dcard .d-a b{color:var(--pine);font-weight:500}
+
+  /* ---------- Appendix ---------- */
+  .appendix-divider{margin-top:80px;padding-top:22px;border-top:2px solid var(--ink);display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px}
+  .appendix-divider h2{font-size:24px;margin:0}
+  .appendix-divider span{font-family:var(--mono);font-size:11px;color:var(--ink-mute);letter-spacing:.14em}
+  .app{margin-top:44px}
+  .app h3{font-family:var(--serif);font-weight:600;font-size:17.5px;margin-bottom:12px}
+  .app h3 .a-no{font-family:var(--mono);font-size:11px;color:var(--amber);letter-spacing:.14em;margin-right:10px}
+  .app h4{font-size:14px;font-weight:700;margin:20px 0 6px;color:var(--pine-deep)}
+  .app p{font-size:14px;color:var(--ink-soft);margin-bottom:10px;max-width:700px}
+  .app ul{margin:6px 0 14px 20px}
+  .app li{font-size:14px;color:var(--ink-soft);margin-bottom:6px;max-width:680px}
+  .app li b,.app p b{color:var(--ink);font-weight:700}
+  .kv{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:4px 16px;margin:12px 0 16px;max-width:700px}
+  .kv .row{display:flex;gap:16px;padding:9px 0;border-bottom:1px solid #EFECE3;font-size:13.5px}
+  .kv .row:last-child{border-bottom:none}
+  .kv .k{flex:0 0 170px;font-family:var(--mono);font-size:12px;color:var(--pine);padding-top:2px}
+  .kv .v{color:var(--ink-soft)}
+  .note{border-left:3px solid var(--amber);background:var(--amber-soft);padding:10px 16px;border-radius:0 8px 8px 0;font-size:13.5px;color:#6B4A17;margin:14px 0;max-width:680px}
+
+  footer{margin-top:90px;padding-top:18px;border-top:1px solid var(--line);display:flex;justify-content:space-between;font-family:var(--mono);font-size:11px;color:var(--ink-mute);flex-wrap:wrap;gap:8px}
+
+  @media (max-width:640px){
+    .wrap{padding:40px 18px 72px}
+    header.doc h1{font-size:27px}
+    .decisions{grid-template-columns:1fr}
+    .kv .row{flex-direction:column;gap:2px}
+    .kv .k{flex:none}
+  }
+  @media print{
+    body{background:#fff}
+    .wrap{max-width:100%;padding:0}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="doc">
+  <div class="eyebrow">Percho · Product Design</div>
+  <h1>End-to-End Customer Journey</h1>
+  <div class="tagline">从第一次刷到一个社区,到在那里安家 —— 以及回来讲述它。</div>
+  <div class="meta">
+    <div>版本 <b>v0.1 草案</b></div>
+    <div>锚定 Persona <b>跨城搬迁买家(Atlanta)</b></div>
+    <div>范围 <b>Phase 1 核心闭环</b></div>
+    <div>更新 <b>2026-08</b></div>
+  </div>
+</header>
+
+<!-- ============ 1 · 旅程总览 ============ -->
+<section>
+  <h2><span class="no">01 · OVERVIEW</span>旅程总览:七个阶段,一条飞行轨迹</h2>
+  <p class="lede">主干锚定决策链最长、商业闭环最完整的核心 persona:跨城搬迁买家。数字游民与本地换房用户是这条主干上的分支,不另设旅程。绿色为<b>学习段</b>,琥珀色为<b>决策段</b>,灰色为进出口。</p>
+
+  <div class="journey">
+    <div class="stop neutral">
+      <div class="s-head"><span class="s-no">STAGE 1</span><h3>触达</h3><span class="chip flow">内容即广告</span></div>
+      <p>Pipeline 生成的社区/房源视频直接作为获客素材分发到 TikTok / Reels / Shorts;用户经深链进入,首个 deck 围绕他刚看的那个地方展开。</p>
+    </div>
+    <div class="stop">
+      <div class="s-head"><span class="s-no">STAGE 2</span><h3>冷启动</h3><span class="chip learn">前 60 秒</span></div>
+      <p>免注册,落地即滑。目标:前 5 张卡内出现第一个「它懂我」时刻;注册延迟到价值时刻(第 N 次收藏)才触发。</p>
+    </div>
+    <div class="stop">
+      <div class="s-head"><span class="s-no">STAGE 3</span><h3>沉浸探索</h3><span class="chip learn">滑动即学习</span></div>
+      <p>六种卡片按相位动态混排:内容卡承载体验,学习卡用同一个手势轻量地问。被动 + 主动双通道信号沉淀为 preference profile。</p>
+    </div>
+    <div class="stop">
+      <div class="s-head"><span class="s-no">STAGE 4</span><h3>收敛 · Your Perches</h3><span class="chip learn">逛 → 项目</span></div>
+      <p>置信度与证据量双双过阈后,物化出 3 个候选社区的 shortlist——每个都带证据、带短板。这是用户从「随便逛」切换到「我的项目」的心理转折点。3↔4 循环,shortlist 是活的工作台。</p>
+    </div>
+    <div class="stop act">
+      <div class="s-head"><span class="s-no">STAGE 5</span><h3>深研 · Explore</h3><span class="chip act">偏好透镜</span></div>
+      <p>数据不做通用 dump,全部经 preference profile 翻译成「对你意味着什么」。对比视图的行序由用户已揭示的优先级驱动。</p>
+    </div>
+    <div class="stop act">
+      <div class="s-head"><span class="s-no">STAGE 6</span><h3>行动</h3><span class="chip act">双分支</span></div>
+      <p>买:预约看房 → agent 转介绍(变现点);试:预订目标社区 2–4 周短租,附 in-stay checklist,把试住变成结构化决策工具。</p>
+    </div>
+    <div class="stop neutral" style="padding-bottom:8px">
+      <div class="s-head"><span class="s-no">STAGE 7</span><h3>落地与回流</h3><span class="chip flow">飞轮闭合</span></div>
+      <p>新居民订阅社区频道、贡献「show your street」UGC——反哺 Stage 1 的获客素材;完整旅程数据成为匹配模型的训练样本。</p>
+    </div>
+    <svg class="perch-mark" width="120" height="46" viewBox="0 0 120 46" aria-hidden="true">
+      <line x1="4" y1="38" x2="116" y2="38" stroke="#C1771F" stroke-width="2.5" stroke-linecap="round"/>
+      <polygon points="52,38 66,22 74,30 66,38" fill="#2E5E52"/>
+      <polygon points="66,22 78,16 74,30" fill="#1C4038"/>
+      <circle cx="79" cy="15" r="1.6" fill="#C1771F"/>
+    </svg>
+  </div>
+</section>
+
+<!-- ============ 2 · 阶段速览 ============ -->
+<section>
+  <h2><span class="no">02 · AT A GLANCE</span>每阶段速览</h2>
+  <p class="lede">一行看清每个阶段:用户在什么状态、产品做什么、看什么指标。指标即验证——每一段都对应一个可证伪的假设。</p>
+  <div class="tbl-scroll">
+    <table>
+      <thead><tr><th>阶段</th><th>用户状态</th><th>产品动作</th><th>关键指标</th></tr></thead>
+      <tbody>
+        <tr><td>1 触达</td><td>被一条视频击中</td><td>分发 + 深链承接,带地理上下文</td><td>深链 → 首滑率</td></tr>
+        <tr><td>2 冷启动</td><td>好奇但零承诺</td><td>免注册开滑;高信息量冷启动 deck</td><td>前 5 卡留存 · 首 session 深度</td></tr>
+        <tr><td>3 沉浸探索</td><td>逛,被逐渐理解</td><td>相位化混排 deck;双通道学偏好</td><td>学习卡完成率 · <em>Insight agree rate</em></td></tr>
+        <tr><td>4 收敛</td><td>意识到这是个项目</td><td>生成 Your Perches;feed 换配方</td><td>触发后 <em>7 日留存 delta</em> · pin/remove 比</td></tr>
+        <tr><td>5 深研</td><td>认真研究候选</td><td>偏好透镜渲染数据;并排对比</td><td>Perch → Explore 率 · <em>中档 CTA 率</em></td></tr>
+        <tr><td>6 行动</td><td>准备下场验证</td><td>约看房 / 订试住;agent 转介绍</td><td>看房预约数 · 试住预订数</td></tr>
+        <tr><td>7 落地回流</td><td>成为新居民</td><td>社区频道 + UGC 邀请</td><td>UGC 贡献率 · 内容回流量</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ============ 3 · 核心机制 ============ -->
+<section>
+  <h2><span class="no">03 · CORE MECHANISM</span>心脏机制:偏好学习三相位</h2>
+  <p class="lede">Stage 3–4 由一个三相位状态机驱动。feed 不是静态配方,而是随用户相位切换的动态编排——每个相位有自己的卡片配比与学习目标。</p>
+
+  <div class="phase-flow">
+    <div class="phase">
+      <div class="p-name"><span>PHASE A</span>广撒</div>
+      <div class="p-sub">高多样性内容卡 + 密集偏好卡(1:4)。目标:最少的卡定位大方向。</div>
+    </div>
+    <div class="ph-arrow"><span class="a-line">&#8595;</span><span class="a-label">过 θ1 · 大方向已明</span></div>
+    <div class="phase">
+      <div class="p-name"><span>PHASE B</span>定向</div>
+      <div class="p-sub">围绕 top clusters;Trade-off 卡上场问优先级;首张 Insight 开口说话。</div>
+    </div>
+    <div class="ph-arrow"><span class="a-line">&#8595;</span><span class="a-label">过 θ2 + 证据量下限</span></div>
+    <div class="phase c-teal">
+      <div class="p-name"><span>PHASE C</span>Your Perches</div>
+      <div class="p-sub">纵深 60% + 挑战者位 20% + 持续探索与消歧 20%。</div>
+    </div>
+    <div class="ph-loop">&#8635; 「还没准备好」或证据反转 → 退回定向</div>
+  </div>
+</section>
+
+<footer>
+  <span>PERCHO · CUSTOMER JOURNEY v0.1</span>
+  <span>find your perch &#8599;</span>
+</footer>
+
+</div>
+</body>
+</html>
