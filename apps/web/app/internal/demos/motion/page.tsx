@@ -12,6 +12,29 @@ const MOTION = `${BASE}/motion`;
 
 type Clip = { src: string; title: string; note: string; sound?: boolean };
 
+const CATALOG: Clip[] = [
+  {
+    src: `${BASE}/catalog/catalog-kenburns-exterior.mp4`,
+    title: 'Ken Burns — all 10 modes (exterior)',
+    note: 'push_in, push_in_slow, pull_back, pan_lr, pan_rl, push_pan_lr, push_pan_rl, tilt_td, pan_to_subject, static. Every mode kenburns_filter_v2 implements, rendered through the production path. 3s each, labelled.',
+  },
+  {
+    src: `${BASE}/catalog/catalog-depthflow-exterior.mp4`,
+    title: 'DepthFlow — all 9 moves (exterior)',
+    note: 'The four from the original prototype, plus five built from DepthState knobs it never used: tilt_parallax, orbit_to_subject, dolly_in, parallax_bloom, rack_focus. Same photo, same canvas.',
+  },
+  {
+    src: `${BASE}/catalog/catalog-kenburns-kitchen.mp4`,
+    title: 'Ken Burns — all 10 modes (kitchen)',
+    note: 'The same catalogue on an interior photo, where depth is shallower and parallax has less to work with.',
+  },
+  {
+    src: `${BASE}/catalog/catalog-depthflow-kitchen.mp4`,
+    title: 'DepthFlow — all 9 moves (kitchen)',
+    note: 'Interior counterpart. Watch the faucet and the countertop edge against the Ken Burns version.',
+  },
+];
+
 const CHOSEN: Clip[] = [
   {
     src: `${BASE}/kenburns/berkeley-park-depthflow.mp4`,
@@ -95,6 +118,19 @@ export default function MotionDemosPage() {
           was tested and dropped. Test listing throughout: 3525 Berkeley Park Court, Duluth GA.
         </p>
       </header>
+
+      <section className="flex flex-col gap-6">
+        <h2 className="text-base font-semibold">Every effect both engines can do</h2>
+        <p className="text-sm text-ink2">
+          Same photo, same canvas, every mode labelled and held for 3s. Ken Burns has 10 modes and
+          DepthFlow has 9 — but the overlap is not the whole story: two DepthFlow moves
+          (parallax_bloom, rack_focus) have no Ken Burns equivalent, and Ken Burns has no move that
+          DepthFlow cannot reproduce.
+        </p>
+        {CATALOG.map((clip) => (
+          <VideoBlock key={clip.src} clip={clip} />
+        ))}
+      </section>
 
       <section className="flex flex-col gap-6">
         <h2 className="text-base font-semibold">Parallax vs. Ken Burns</h2>
