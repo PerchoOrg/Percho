@@ -29,6 +29,29 @@ const FULL_VIDEOS: Clip[] = [
   },
 ];
 
+const SLICES: Clip[] = [
+  {
+    src: `${BASE}/slice-exterior-1x.mp4`,
+    title: 'Exterior — production amplitude',
+    note: 'Left: one stretched sheet (current). Right: 4 depth slices, each inpainted so it extends behind the slice in front of it.',
+  },
+  {
+    src: `${BASE}/slice-exterior-2x.mp4`,
+    title: 'Exterior — 2x amplitude',
+    note: 'Twice the camera travel, where the difference is obvious: roofline, window frames and bushes stay sharp on the right; the left smears.',
+  },
+  {
+    src: `${BASE}/slice-kitchen-1x.mp4`,
+    title: 'Interior — production amplitude',
+    note: 'Watch the faucet and the countertop edge.',
+  },
+  {
+    src: `${BASE}/slice-kitchen-2x.mp4`,
+    title: 'Interior — 2x amplitude',
+    note: 'The faucet survives on the right and is smeared away on the left.',
+  },
+];
+
 const COMPARISONS: Clip[] = [
   {
     src: `${BASE}/compare-depth__small_large_pro.mp4`,
@@ -83,6 +106,18 @@ export default function MotionDemosPage() {
       <section className="flex flex-col gap-6">
         <h2 className="text-base font-semibold">Full listing video — one per depth model</h2>
         {FULL_VIDEOS.map((clip) => (
+          <VideoBlock key={clip.src} clip={clip} />
+        ))}
+      </section>
+
+      <section className="flex flex-col gap-6">
+        <h2 className="text-base font-semibold">Depth-slice layering — stretch vs. sliced</h2>
+        <p className="text-sm text-ink2">
+          Every clip below is left = current single-layer stretch, right = the scene cut into 4
+          depth slices at histogram valleys, each slice inpainted so it extends behind the ones in
+          front of it. Same photo, same camera move, same depth map (Depth Pro).
+        </p>
+        {SLICES.map((clip) => (
           <VideoBlock key={clip.src} clip={clip} />
         ))}
       </section>
