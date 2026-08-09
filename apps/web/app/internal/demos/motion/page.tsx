@@ -51,9 +51,12 @@ function VideoBlock({ clip }: { clip: Clip }) {
   return (
     <figure className="m-0">
       <h3 className="mb-2 text-sm font-medium">{clip.title}</h3>
+      {/* autoPlay + muted so the clips are visibly moving on load — without it
+          they sit on frame 1 and read as stills. */}
       <video
         src={clip.src}
         controls
+        autoPlay
         loop
         muted
         playsInline

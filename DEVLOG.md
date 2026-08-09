@@ -4,6 +4,40 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-08-09 21:00 — motion demo 页"看着像照片":faststart + autoplay 修复
+
+**Objective**: owner 反馈 https://www.percho.co/internal/demos/motion "看到
+照片了但是不是视频"。
+
+**Actions**:
+- ffprobe 全 7 条:h264 High / yuv420p / 800x532 (对比条 2400x600),编码本身
+  浏览器全支持,排除解码问题。
+- 用 python 逐 atom 扫描:**7 条全部 `ftyp/free/mdat/moov`——moov 在文件末尾**,
+  DepthFlow/ffmpeg 输出没做 faststart。`preload="metadata"` 下浏览器必须先发
+  一次 range 请求去尾部取索引才能出画面。
+- `ffmpeg -c copy -movflags +faststart` 重封装(无重编码,时长/画质不变),
+  经 `scripts/admin/upload-demo-assets.mjs` upsert 覆盖同名对象。verify:
+  `curl -r 0-63 | xxd` 7/7 命中 `moov` 在头部。
+- `page.tsx` 的 `VideoBlock` 加 `autoPlay`(已有 muted + playsInline,满足
+  浏览器自动播放策略)。
+- biome 单文件 0 错;`pnpm typecheck` 0 错。
+
+**Decisions**:
+- 主因判断是**没 autoplay**:`<video controls preload="metadata">` 停在第一帧,
+  第一帧就是静止的房子照片 —— 和 owner 描述完全吻合。faststart 是同时发现的
+  真实缺陷(拖慢起播),一并修,两个修复互不冲突。
+- 没上 IntersectionObserver 按可视区播放:内部页 7 条约 10MB,加 `'use client'`
+  + 观察器属于过度设计(§0.2)。
+- 没动 RELEASE.md:`/internal` 是未公开内部页,对用户无可见影响。
+
+**Issues**: claude-in-chrome 浏览器工具本轮不可用(tab group 反复 `No group
+with id` 报错,试 4 次后按规程放弃),所以**页面渲染层面没做浏览器实测**——
+faststart 是 curl 字节级验证过的,autoplay 生效与否需要 owner 在自己机器上确认。
+
+**Next steps**: owner 复查页面;若仍不动,下一步查的是 CSP/media 自动播放策略
+和 Chrome 省电模式,而不是文件本身(文件已排除)。技术路线三选一(Depth Pro /
+分层+LaMa / 现状)+ DepthFlow AGPL 商用授权仍未决,见 14:00 与 13:00 两条。
+
 ## 2026-08-09 14:00 — 运镜 demo 上线 percho.co/internal/demos/motion
 
 **Objective**: owner 在本地看不了 QuickTime(远程),要求所有 demo 挂到
