@@ -4,6 +4,39 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-08-09 21:40 — 分层版边缘模糊定位:蒙版几乎是空的(非渲染 bug)
+
+**Objective**: owner 反馈"分层的有很多边缘模糊"。定位成因。
+
+**Actions / findings**(证据:`compare/clips-layered/00-fg-mask.png`):
+- **前景蒙版几乎全黑,只有邮箱被分出来**。房子/树/灌木全部落进背景层,跟
+  不分层版一样是单张橡皮布拉伸 —— 所以画面大部分区域的模糊程度**与基线相同**,
+  分层根本没生效。
+- **屋脊线上有白色三角误报**(深度断崖处)。这些碎片被当独立前景抠出、贴在
+  LaMa 背景上单独平移 → 屋檐拖影。这是分层版**比基线更糊**的地方。
+  `layered_demo.py:84-87` 的 <400px 连通域过滤没滤掉它们(面积够大)。
+- `layered_demo.py:100` alpha = `dilate(3x3)` + `GaussianBlur(5x5)`,蒙版
+  **向外**扩 → 每块前景带一圈背景像素一起移动 → 软边光晕。应改 erode。
+- LaMa 背景板质量本身没问题(`00-bg-plate.png`:邮箱抠除后补的草地很自然)。
+- 根因:局部对比启发式(`medianBlur(121)` + thr 0.045)要求中值核大于目标物体,
+  **天生只对孤立小物件有效**,对占画面一半的房子必然失效,同时在深度断崖误报。
+  调阈值救不了这一类失败模式。
+
+**Issues**: 上次的 python 环境已丢失 —— `~/Workspace/percho-prototypes` 下无
+venv,`depth-pro/*.npy` 深度缓存随上次 scratchpad 清理一起没了。重渲要重建
+torch + moderngl + simple-lama-inpainting 环境(约 2-3GB 下载;Depth Pro 权重
+在 `~/.cache/huggingface` 里还在)。
+
+**Decisions**: 未动代码 —— 重建环境 + 换分割方案是方向性投入,等 owner 拍板。
+候选见下。注意:**分层渲染器是自研 moderngl,不走 DepthFlow**,所以走分层路线
+可以顺带绕开 DepthFlow AGPL 问题(但 LaMa 权重的商用许可需另行核实)。
+
+**Next steps**(三选一,等 owner):
+(a) 深度分层切片(按深度带切 N 层,不需要语义分割,无新模型)—— 推荐,
+    房产照片本质是平面分层;
+(b) SAM 2 + 深度种子点做真分割(蒙版质量最好,新增重依赖);
+(c) 放弃分层,直接出 Depth Pro 单层(最省,中等幅度下无明显模糊)。
+
 ## 2026-08-09 21:00 — motion demo 页"看着像照片":faststart + autoplay 修复
 
 **Objective**: owner 反馈 https://www.percho.co/internal/demos/motion "看到
