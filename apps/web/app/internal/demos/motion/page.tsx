@@ -5,7 +5,9 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-const BASE = '/demos/motion';
+// Videos live in the public `demo-assets` Storage bucket (never in git —
+// see .gitignore). Uploaded via scripts/admin/upload-demo-assets.mjs.
+const BASE = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/demo-assets/motion`;
 
 type Clip = { src: string; title: string; note: string };
 
@@ -90,7 +92,7 @@ export default function MotionDemosPage() {
         <figure className="m-0">
           <h3 className="mb-2 text-sm font-medium">Depth maps side by side</h3>
           <img
-            src={`${BASE}/compare-depthmaps.png`}
+            src="/demos/motion/compare-depthmaps.png"
             alt="Depth map comparison: original photo, DA2-Small, DA2-Large and Depth Pro. Depth Pro resolves the mailbox scrollwork that the others blur."
             className="w-full rounded border border-line"
           />
