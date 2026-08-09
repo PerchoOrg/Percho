@@ -130,6 +130,15 @@ def load_env(path: Path) -> None:
 
 load_env(ENV_PATH)
 
+# photo_tagger.MODEL binds at import (line 43), before load_env ran above —
+# re-point it so GEMINI_MODEL from .env.local actually applies. Without this
+# the worker calls the default gemini-2.5-flash, which 404s for the current
+# API key: every photo errors → ai_tags null → build_plan collapses to a
+# 1-clip video (all error dicts land in the "other" quota, max 1).
+import photo_tagger
+photo_tagger.MODEL = os.environ.get("GEMINI_MODEL", photo_tagger.MODEL)
+MODEL_NAME = photo_tagger.MODEL
+
 SUPABASE_URL = os.environ["NEXT_PUBLIC_SUPABASE_URL"].rstrip("/")
 SERVICE_KEY = os.environ["SUPABASE_SERVICE_ROLE_KEY"]
 CF_ACCOUNT = os.environ["CLOUDFLARE_ACCOUNT_ID"]
@@ -524,6 +533,12 @@ def process_job(job: dict[str, Any]) -> None:
                 )
 
             tagged = cached_tagged + newly_tagged
+            valid_tags = [r for r in tagged if r.get("room_type") and not r.get("error")]
+            if not valid_tags:
+                raise RuntimeError(
+                    f"zero valid vision tags ({len(tagged)} attempted) — "
+                    "legacy render instead of a degenerate 1-clip video"
+                )
             style = style_info.get("style", "modern")
             plan = build_plan(tagged, style, listing_id)
             # 2026-08-01 — NO on-screen text on the listing tour at all.
