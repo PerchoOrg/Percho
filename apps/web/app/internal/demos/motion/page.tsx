@@ -10,23 +10,25 @@ export const metadata: Metadata = {
 const BASE = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/demo-assets`;
 const MOTION = `${BASE}/motion`;
 
-type Clip = { src: string; title: string; note: string };
+type Clip = { src: string; title: string; note: string; sound?: boolean };
 
 const CHOSEN: Clip[] = [
   {
-    src: `${BASE}/kenburns/vicinity-slideshow-demo.mp4`,
-    title: 'Ken Burns slideshow — the shipping path',
-    note: 'Vertical 1080x1920, pan/zoom alternating, crossfades, BGM, ending card. Pure ffmpeg, no model inference. This is what the render worker produces today.',
+    src: `${BASE}/kenburns/berkeley-park-depthflow.mp4`,
+    title: 'DepthFlow parallax in the production format — with music',
+    note: '3525 Berkeley Park Court, all 10 photos. Vertical 1080x1920, blur-letterbox composition, crossfades and BGM all identical to the Ken Burns pipeline — the only thing swapped is the per-photo motion. Depth Anything V2 Small, 1.4s render per clip.',
+    sound: true,
   },
   {
-    src: `${MOTION}/percho-depthflow-demo.mp4`,
-    title: 'DepthFlow 2.5D parallax — Depth Anything V2 Small',
-    note: 'Four clips: exterior orbit, living room zoom-in, kitchen orbit, backyard zoom-out. The parallax option we are keeping, if we add one.',
+    src: `${BASE}/kenburns/vicinity-slideshow-demo.mp4`,
+    title: 'Ken Burns slideshow — what ships today',
+    note: 'Same pipeline, ffmpeg pan/zoom instead of parallax, plus an ending card. Different listing, so compare the motion rather than the property.',
+    sound: true,
   },
   {
     src: `${MOTION}/berkeley-park-da2-small.mp4`,
-    title: 'DepthFlow, DA2-Small — full 10-photo listing',
-    note: '3525 Berkeley Park Court, Duluth GA. 3s per photo, orbit and zoom alternating.',
+    title: 'The same parallax, landscape and unscored',
+    note: 'Earlier render of the same 10 photos at 800x600 with no canvas, music or transitions. Easier to see the raw camera moves.',
   },
 ];
 
@@ -58,18 +60,24 @@ const REJECTED: Clip[] = [
 function VideoBlock({ clip }: { clip: Clip }) {
   return (
     <figure className="m-0">
-      <h3 className="mb-2 text-sm font-medium">{clip.title}</h3>
-      {/* autoPlay + muted so the clips are visibly moving on load — without it
-          they sit on frame 1 and read as stills. */}
+      <h3 className="mb-2 text-sm font-medium">
+        {clip.title}
+        {clip.sound ? (
+          <span className="ml-2 text-xs text-ink2">🔊 press play for sound</span>
+        ) : null}
+      </h3>
+      {/* Silent clips autoplay muted, otherwise they sit on frame 1 and read as
+          stills. Scored clips must not: browsers only allow autoplay when
+          muted, which would defeat the point of showing them with music. */}
       <video
         src={clip.src}
         controls
-        autoPlay
+        autoPlay={!clip.sound}
         loop
-        muted
+        muted={!clip.sound}
         playsInline
         preload="metadata"
-        className="w-full rounded border border-line bg-black"
+        className={`w-full rounded border border-line bg-black${clip.sound ? ' max-w-sm' : ''}`}
       />
       <figcaption className="mt-2 text-xs text-ink2">{clip.note}</figcaption>
     </figure>
@@ -89,7 +97,11 @@ export default function MotionDemosPage() {
       </header>
 
       <section className="flex flex-col gap-6">
-        <h2 className="text-base font-semibold">What we are building on</h2>
+        <h2 className="text-base font-semibold">Parallax vs. Ken Burns</h2>
+        <p className="text-sm text-ink2">
+          These two have sound. The first is the candidate: DepthFlow parallax dropped into the
+          existing render pipeline unchanged.
+        </p>
         {CHOSEN.map((clip) => (
           <VideoBlock key={clip.src} clip={clip} />
         ))}
