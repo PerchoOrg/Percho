@@ -12,7 +12,7 @@
 
 import { readFileSync } from 'node:fs';
 import { basename, extname, resolve } from 'node:path';
-import { createClient } from '../../apps/web/node_modules/@supabase/supabase-js/dist/module/index.js';
+import { createClient } from '../../apps/web/node_modules/@supabase/supabase-js/dist/index.mjs';
 
 const BUCKET = 'demo-assets';
 const MIME = { '.mp4': 'video/mp4', '.png': 'image/png', '.jpg': 'image/jpeg', '.gif': 'image/gif' };
