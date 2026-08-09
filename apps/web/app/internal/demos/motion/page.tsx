@@ -29,6 +29,24 @@ const FULL_VIDEOS: Clip[] = [
   },
 ];
 
+const SLICE_LISTING: Clip[] = [
+  {
+    src: `${BASE}/listing-flat.mp4`,
+    title: 'A — single-layer stretch (what ships today)',
+    note: 'Baseline. One mesh, one depth map, disocclusions filled by stretching the edge pixels.',
+  },
+  {
+    src: `${BASE}/listing-sliced.mp4`,
+    title: 'B — depth slices, same amplitude',
+    note: 'Identical choreography and depth map. Only difference: 4 depth slices per photo, each inpainted to extend behind the ones in front.',
+  },
+  {
+    src: `${BASE}/listing-sliced-2x.mp4`,
+    title: 'C — depth slices, 2x amplitude',
+    note: 'What the extra headroom buys: twice the camera travel, which the baseline cannot do without smearing.',
+  },
+];
+
 const SLICES: Clip[] = [
   {
     src: `${BASE}/slice-exterior-1x.mp4`,
@@ -111,7 +129,19 @@ export default function MotionDemosPage() {
       </section>
 
       <section className="flex flex-col gap-6">
-        <h2 className="text-base font-semibold">Depth-slice layering — stretch vs. sliced</h2>
+        <h2 className="text-base font-semibold">Full listing — three ways</h2>
+        <p className="text-sm text-ink2">
+          All ten photos, 3s each, orbit and zoom alternating — the same choreography the baseline
+          demo uses, so the only variable is how disocclusions get filled. Depth is Depth Pro in all
+          three.
+        </p>
+        {SLICE_LISTING.map((clip) => (
+          <VideoBlock key={clip.src} clip={clip} />
+        ))}
+      </section>
+
+      <section className="flex flex-col gap-6">
+        <h2 className="text-base font-semibold">Per-photo detail — stretch vs. sliced</h2>
         <p className="text-sm text-ink2">
           Every clip below is left = current single-layer stretch, right = the scene cut into 4
           depth slices at histogram valleys, each slice inpainted so it extends behind the ones in

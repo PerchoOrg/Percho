@@ -53,12 +53,17 @@ uniform vec2 offset;
 uniform float zoom;
 uniform float steady;
 uniform float strength;
+uniform float dolly;
 out vec2 uv;
 void main() {
     uv = in_pos;
     float d = texture(depth_tex, uv).r;
     vec2 ndc = vec2(in_pos.x, 1.0 - in_pos.y) * 2.0 - 1.0;
-    vec2 pos = ndc * (1.0 / zoom) + offset * (d - steady) * strength;
+    // dolly scales magnification by depth, so a push-in opens real
+    // disocclusions at silhouettes. Without it a zoom is a flat Ken Burns
+    // crop and the layers have nothing to reveal.
+    vec2 pos = ndc * (1.0 / zoom) * (1.0 + dolly * (d - steady))
+             + offset * (d - steady) * strength;
     gl_Position = vec4(pos, 0.0, 1.0);
 }
 """
@@ -146,6 +151,16 @@ def _peel_plates(photo: Path, image: np.ndarray, bands: list[np.ndarray], n: int
     return plates
 
 
+def flat_layer(photo: Path, depth: np.ndarray) -> list[dict]:
+    """The current production behaviour: the whole scene as one stretched sheet."""
+    image = imageio.imread(photo)[..., :3]
+    return [{
+        "rgb": image,
+        "depth": cv2.resize(depth, (image.shape[1], image.shape[0])),
+        "alpha": np.ones(image.shape[:2], np.float32),
+    }]
+
+
 def build_layers(photo: Path, depth: np.ndarray, n: int) -> list[dict]:
     """Back-to-front list of {rgb, depth, alpha}. Layer 0 is the far plate."""
     image = imageio.imread(photo)[..., :3]
@@ -214,7 +229,24 @@ def make_grid(ctx, prog, gw: int, gh: int):
     return ctx.vertex_array(prog, [(vbo, "2f", "in_pos")], ibo)
 
 
-def render(layers: list[dict], out: Path, direction: str, amplitude: float) -> None:
+MOVES = ("orbit_right", "orbit_left", "zoom_in", "zoom_out")
+
+
+def move_params(move: str, s: float, amplitude: float) -> tuple[tuple[float, float], float, float]:
+    """(offset, zoom, dolly) at eased time s. Ports the DepthFlow choreography
+    the live demo uses, so the comparison isolates layering."""
+    base = crop_zoom(amplitude)
+    if move in ("orbit_left", "orbit_right"):
+        sign = -1.0 if move == "orbit_left" else 1.0
+        return (sign * (2.0 * amplitude * s - amplitude), 0.0), base, 0.0
+    if move == "zoom_in":
+        return (0.0, 0.0), base * (1.0 - 0.10 * s), 0.10 * s
+    if move == "zoom_out":
+        return (0.0, 0.0), base * (0.90 + 0.10 * s), 0.10 * (1.0 - s)
+    raise ValueError(f"unknown move: {move}")
+
+
+def render(layers: list[dict], out: Path, move: str, amplitude: float) -> None:
     h, w = layers[0]["rgb"].shape[:2]
     ctx = moderngl.create_context(standalone=True)
     prog = ctx.program(vertex_shader=VERT, fragment_shader=FRAG)
@@ -239,8 +271,6 @@ def render(layers: list[dict], out: Path, direction: str, amplitude: float) -> N
         stdin=subprocess.PIPE,
     )
 
-    sign = -1.0 if direction == "left" else 1.0
-    prog["zoom"].value = crop_zoom(amplitude)
     prog["steady"].value = STEADY
     prog["strength"].value = STRENGTH
     ctx.enable(moderngl.BLEND)
@@ -249,7 +279,10 @@ def render(layers: list[dict], out: Path, direction: str, amplitude: float) -> N
     frames = FPS * SECONDS
     for i in range(frames):
         s = ease(i / (frames - 1))
-        prog["offset"].value = (sign * (2.0 * amplitude * s - amplitude), 0.0)
+        offset, zoom, dolly = move_params(move, s, amplitude)
+        prog["offset"].value = offset
+        prog["zoom"].value = zoom
+        prog["dolly"].value = dolly
         fbo.use()
         ctx.clear(0.0, 0.0, 0.0)
         for img, dep, alp in gl_layers:  # back to front
@@ -271,20 +304,15 @@ def main() -> None:
     ap.add_argument("photo", type=Path)
     ap.add_argument("--layers", type=int, default=4)
     ap.add_argument("--amplitude", type=float, default=0.35)
-    ap.add_argument("--direction", default="right")
+    ap.add_argument("--move", default="orbit_right", choices=MOVES)
     args = ap.parse_args()
 
     depth = load_depth(args.photo)
-    image = imageio.imread(args.photo)[..., :3]
-    depth_full = cv2.resize(depth, (image.shape[1], image.shape[0]))
-    stem = f"{args.photo.stem}-{args.direction}-a{args.amplitude:g}"
+    stem = f"{args.photo.stem}-{args.move}-a{args.amplitude:g}"
 
-    # Baseline: the whole scene as one stretched sheet, for side-by-side.
-    flat = [{"rgb": image, "depth": depth_full, "alpha": np.ones(image.shape[:2], np.float32)}]
-    render(flat, OUT / f"{stem}-flat.mp4", args.direction, args.amplitude)
-
+    render(flat_layer(args.photo, depth), OUT / f"{stem}-flat.mp4", args.move, args.amplitude)
     layers = build_layers(args.photo, depth, args.layers)
-    render(layers, OUT / f"{stem}-sliced.mp4", args.direction, args.amplitude)
+    render(layers, OUT / f"{stem}-sliced.mp4", args.move, args.amplitude)
 
 
 if __name__ == "__main__":
