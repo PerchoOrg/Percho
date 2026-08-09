@@ -1,7 +1,21 @@
 # Percho render worker
 
-Long-running poller on the EC2 render box. Turns queued `render_jobs` rows
-into Cloudflare Stream videos.
+Long-running poller on the render box (a Mac mini as of 2026-08; this said
+"EC2" until then). Turns queued `render_jobs` rows into Cloudflare Stream
+videos.
+
+## Motion engine
+
+`render_jobs.engine` selects how each photo moves. NULL/`kenburns` is ffmpeg
+pan/zoom and needs nothing beyond ffmpeg. `depthflow` renders 2.5D parallax
+from a Depth Anything V2 Small depth map and needs an interpreter with
+`depthflow` installed — `$DEPTHFLOW_PYTHON`, defaulting to
+`.venv-depthflow/bin/python` at the repo root. Everything downstream of the
+per-clip render (canvas, transitions, captions, overlays, BGM) is shared.
+
+Admins pick the engine from the dropdown on the tour-jobs page; the
+agent-facing route does not set it, so agent-triggered renders stay on
+Ken Burns.
 
 Trigger path: agent clicks **Generate home tour video** on the listing edit
 page → `POST /api/listings/[id]/generate-tour` inserts a placeholder
