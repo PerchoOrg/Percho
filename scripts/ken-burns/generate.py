@@ -197,14 +197,22 @@ def subject_center(bbox: list[float] | None) -> tuple[float, float]:
 
 
 # Ceiling on how fast the frame may travel across a photo, as a fraction of
-# the frame's own width (or height) per second. Owner 2026-08-09 set 15%/s.
+# the frame's own width (or height) per second.
+#
+# Owner set 15%/s on 2026-08-09, then 10%/s, then 6%/s on 2026-08-10 after
+# watching the result — "一直在抖动". This is the exchange rate for the whole
+# feature and it is not a free parameter: measured on the square canvas, the
+# movement is what buys the coverage. At 5%/s both the motion AND the coverage
+# land exactly where the accepted build was, i.e. no gain at all; every point
+# of coverage above ~70% costs proportional movement. 6%/s is the owner's
+# chosen point on that curve, deliberately close to the calm end.
 #
 # This is the exchange rate between the two things that fight here: a clip can
 # show more of the photo, or it can move more calmly, and the only currency
 # between them is time. A full sweep of a 3:2 photo on the square canvas is 50%
 # of the frame, so it needs 3.3s to stay under this — which is why the short
 # beats end up showing less of the photo, not moving faster.
-MAX_TRAVEL_PER_S = 0.10
+MAX_TRAVEL_PER_S = 0.06
 
 # Smoothstep spends the clip accelerating and decelerating, so its PEAK speed is
 # 1.5x its average. Owner 2026-08-10 reported the video shakes: measured against
