@@ -4,6 +4,59 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-08-09 23:10 — phase-motion 收敛完成;迁移未应用,worker 暂不能重启
+
+**Objective**: 补记 `phase-motion/consolidate` 分支上 4 个提交(14:42–15:50)的
+DEVLOG —— 这批提交当时没写条目。同时记录会话中断后的状态核查结论。
+
+**Actions**(分支已 push,`origin/main` 仍停在 `a0ecfce9`,未合):
+- `bfffb2b0` **技术路线定案(owner 拍板)**:分层深度切片和 Depth Pro 两条路都
+  **放弃** —— 更锐的深度图没换来更好的视频,动起来都发糊。Ken Burns 保持生产路径,
+  DepthFlow + DA2-Small 作为保留的视差选项。21:40 那条里的三选一到此关闭
+  (选的既不是 a 也不是 b,是"两条都留、按引擎切换")。散在未跟踪 scratch 目录里的
+  DA2-Small 脚本收进 `scripts/prototypes/photo-motion/`,避免再丢一次。
+- `8aead45b` DepthFlow 版按**生产格式**出片(1080x1920、同一套模糊信箱构图),
+  `concat_with_crossfade` / `mux_bgm` 直接从 `generate.py` import 而非重写 ——
+  保证与 Ken Burns 版**只有运镜一个变量**。
+- `545ee44f` 全效果并排目录:10 个 kenburns_filter_v2 模式 + 9 个 DepthFlow 动作,
+  同一张图同一画布各 3s。新做的 5 个 DepthFlow 动作来自原型没碰过的 DepthState
+  旋钮。坑:`blur.intensity` 是 0–100 标度(shader 内除以 100),第一版填 1.0
+  完全看不出模糊。标签用 PIL 画 PNG 叠加 —— 本机 ffmpeg 没有 drawtext。
+- `a0b58bc9` **可选引擎落到生产管线**:`generate.py --engine`,worker 透传,
+  admin tour-jobs 页下拉选择,迁移 `20260809220000_render_jobs_engine.sql` 加
+  nullable `render_jobs.engine`(NULL = kenburns,存量行行为不变)。
+  `depthflow_clip.py` 跑在独立解释器 `$DEPTHFLOW_PYTHON`(默认
+  `.venv-depthflow/bin/python`),因为 `generate.py` 必须保持 stdlib-only。
+  评审剔除 `orbit_to_subject` 与 `rack_focus`;`pan_to_subject` 因此降级为普通
+  orbit,有测试断言 shot planner 能产出的每个 mode 都有视差对应物。
+
+**Issues**(会话中断后核查发现,均未修复):
+1. **迁移没应用到远端库**。`GET /rest/v1/render_jobs?select=engine` →
+   `42703 column render_jobs.engine does not exist`。
+2. **因此 worker 现在不能重启**。`worker.py:246` 的 `claim_job()` select 里已
+   包含 `engine`,库里没这列 → 每次轮询 42703 → **整个渲染队列挂掉**,不只是
+   depthflow 路径。当前跑的 PID 39383 启动于 09:38,是引擎提交之前的旧代码,
+   继续服务 kenburns 正常(最后一个 job `f924b032` 10:11 完成)。**顺序必须是
+   先迁移后重启,不能颠倒。**
+3. **这台 Mac 没有可用的迁移凭证**:未 `supabase link`(无 `supabase/.temp/
+   project-ref`),`.env.local` 里 `SUPABASE_DB_PASSWORD=` 为空,`~/.supabase`
+   无 access token,系统无 `psql`。CLI 本身有(node_modules v1.226.4)。
+   8-04 从 EC2 迁过来后**这是第一条待应用的迁移**,通路没验证过。
+4. `lib/supabase/database.types.ts` 自 2026-07-19 (`1e518c72`) 未再生成,连
+   `render_jobs` 整张表都不在里面 —— **先于本分支存在**,不是这批改动引入的。
+
+**Decisions**: 没有绕过既定规程去应用迁移。DEVLOG 3135 行确立的做法是
+`supabase migration list` 先查远端 ledger 漂移、再用 psql 单条应用并回填
+`schema_migrations` —— 缺密码,两步都做不了。不用 dashboard SQL editor 直改
+(§5),也不自行安装/link 改动 owner 的凭证配置。
+
+**Next steps**:
+1. owner 提供 `SUPABASE_DB_PASSWORD`(或授权 `supabase link`),然后 `migration
+   list` 查漂移 → 只应用 `20260809220000` → 验证 `select=engine` 返回 200。
+2. 迁移生效后再 `launchctl kickstart -k gui/501/com.percho.render-worker`
+   拉起新代码,用 admin 下拉发一个 depthflow job 端到端验证。
+3. 分支合 main。RELEASE.md 判断跳过 —— 引擎下拉是 admin-only,用户不可见。
+
 ## 2026-08-09 21:40 — 分层版边缘模糊定位:蒙版几乎是空的(非渲染 bug)
 
 **Objective**: owner 反馈"分层的有很多边缘模糊"。定位成因。
