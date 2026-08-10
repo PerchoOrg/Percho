@@ -4,7 +4,7 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
-## 2026-08-09 23:10 — phase-motion 收敛完成;迁移未应用,worker 暂不能重启
+## 2026-08-09 23:10 — phase-motion 收敛完成;引擎迁移已应用,worker 已换新代码
 
 **Objective**: 补记 `phase-motion/consolidate` 分支上 4 个提交(14:42–15:50)的
 DEVLOG —— 这批提交当时没写条目。同时记录会话中断后的状态核查结论。
@@ -30,32 +30,56 @@ DEVLOG —— 这批提交当时没写条目。同时记录会话中断后的状
   评审剔除 `orbit_to_subject` 与 `rack_focus`;`pan_to_subject` 因此降级为普通
   orbit,有测试断言 shot planner 能产出的每个 mode 都有视差对应物。
 
-**Issues**(会话中断后核查发现,均未修复):
-1. **迁移没应用到远端库**。`GET /rest/v1/render_jobs?select=engine` →
+**Issues**(会话中断后核查发现):
+1. **迁移当时没应用到远端库**。`GET /rest/v1/render_jobs?select=engine` →
    `42703 column render_jobs.engine does not exist`。
-2. **因此 worker 现在不能重启**。`worker.py:246` 的 `claim_job()` select 里已
-   包含 `engine`,库里没这列 → 每次轮询 42703 → **整个渲染队列挂掉**,不只是
-   depthflow 路径。当前跑的 PID 39383 启动于 09:38,是引擎提交之前的旧代码,
-   继续服务 kenburns 正常(最后一个 job `f924b032` 10:11 完成)。**顺序必须是
-   先迁移后重启,不能颠倒。**
-3. **这台 Mac 没有可用的迁移凭证**:未 `supabase link`(无 `supabase/.temp/
-   project-ref`),`.env.local` 里 `SUPABASE_DB_PASSWORD=` 为空,`~/.supabase`
-   无 access token,系统无 `psql`。CLI 本身有(node_modules v1.226.4)。
-   8-04 从 EC2 迁过来后**这是第一条待应用的迁移**,通路没验证过。
-4. `lib/supabase/database.types.ts` 自 2026-07-19 (`1e518c72`) 未再生成,连
+2. **因此 worker 当时不能重启 —— 这是本条最重要的一点**。`worker.py:246` 的
+   `claim_job()` select 里已经包含 `engine`,库里没这列 → 每次轮询 42703 →
+   **整个渲染队列挂掉,不只是 depthflow 路径**。当时跑的 PID 39383 启动于 09:38
+   (引擎提交之前的旧代码),继续服务 kenburns 正常。**顺序必须是先迁移后重启。**
+   下次再遇到"代码先合、迁移后跑"的组合,先查 select 列表里有没有新列。
+3. `lib/supabase/database.types.ts` 自 2026-07-19 (`1e518c72`) 未再生成,连
    `render_jobs` 整张表都不在里面 —— **先于本分支存在**,不是这批改动引入的。
+   现在也没补:补它要连带处理整表缺失,超出本次范围。
 
-**Decisions**: 没有绕过既定规程去应用迁移。DEVLOG 3135 行确立的做法是
-`supabase migration list` 先查远端 ledger 漂移、再用 psql 单条应用并回填
-`schema_migrations` —— 缺密码,两步都做不了。不用 dashboard SQL editor 直改
-(§5),也不自行安装/link 改动 owner 的凭证配置。
+**Resolution**(全部完成,顺序 迁移 → 重启 → 验证):
+- **迁移通路是这台 Mac 迁过来后第一次走通,记下来省得下次再摸**:
+  - `SUPABASE_DB_PASSWORD` **一直在 `.env.local` 里**(15 字符)。我一度判断它为空
+    —— 那是 `grep -oE '^SUPABASE_DB[A-Z_]*='` 的锅,`-o` 只打印匹配到的部分,模式
+    在 `=` 处就结束了,值被截掉了。**别用 `grep -o` 判断 env 值是否为空。**
+  - 项目**没 link**,`~/.supabase` 也没 access token。绕过办法是 `--db-url`,
+    不需要 link,也不需要动 owner 的凭证配置。
+  - **直连 `db.<ref>.supabase.co` 走不通**:只有 IPv6 (`2600:1f14:…`),本机无
+    IPv6 路由 → `no route to host`。必须走 pooler。
+  - **pooler 主机名是 `aws-1-us-west-2.pooler.supabase.com`**,不是文档里常见的
+    `aws-0-`。`aws-0-*` 全部返回 `ENOTFOUND tenant/user … not found`,那个报错
+    看着像密码/用户名错,实际是**区域或前缀猜错**。区域是从 REST 响应头
+    (`cf-ray: …-SEA`)+ 直连 IPv6 段推出来的。
+  - 用法:`postgresql://postgres.<ref>:<pw>@aws-1-us-west-2.pooler.supabase.com:5432/postgres`
+    传给 `supabase … --db-url`。
+- `migration list` 查漂移:**远端 ledger 干净**,本地 35 条全部已应用,只差
+  `20260809220000` 一条。所以直接 `db push` 是安全的 —— 不同于 3135 行那次
+  (那次远端有别人未应用的迁移,必须绕开 `db push` 用 psql 单条应用)。
+  **规程是"先 list 再决定",不是"永远不用 db push"。**
+- `db push --dry-run` 确认只推这一条 → `db push` 应用成功 → 验证:
+  `select=id,status,engine` **HTTP 200**,存量行 `engine: null`;`migration list`
+  两侧都显示 `20260809220000`,ledger 诚实。
+- 队列确认为空(`status=in.(queued,running)` → `[]`)后
+  `launchctl kickstart -k gui/501/com.percho.render-worker` → 新 PID 48832,
+  日志 `[worker] starting, polling every 5s`,重启后 20s 内 **0 个 42703 / Traceback**。
+- `test_depthflow_modes.py` 4/4 passed。注意要用 **`.venv-motion/bin/pytest`** ——
+  `.venv-render` 里没装 pytest,而同目录的 `test_pick_bgm.py` 又 import `worker`
+  需要 `.venv-render` 的 `requests`,**两个测试文件当前没有同一个能跑全的解释器**
+  (先于本分支存在的问题,没动)。
 
 **Next steps**:
-1. owner 提供 `SUPABASE_DB_PASSWORD`(或授权 `supabase link`),然后 `migration
-   list` 查漂移 → 只应用 `20260809220000` → 验证 `select=engine` 返回 200。
-2. 迁移生效后再 `launchctl kickstart -k gui/501/com.percho.render-worker`
-   拉起新代码,用 admin 下拉发一个 depthflow job 端到端验证。
-3. 分支合 main。RELEASE.md 判断跳过 —— 引擎下拉是 admin-only,用户不可见。
+1. 用 admin tour-jobs 页下拉发一个 depthflow job 做端到端验证 —— 会真实渲染并
+   上传 CF Stream,等 owner 点头再跑。
+2. 分支合 main。RELEASE.md 判断跳过 —— 引擎下拉是 admin-only,用户不可见。
+3. **`ANTHROPIC_API_KEY` 又出现在 `.env.local` 里了**(见 CLAUDE.md §2.1 规则 0:
+   7-26 那次烧掉 ~$55 的正是这条路径)。我没动它 —— 删除是 owner 的决定,而且
+   `apps/web/lib/poi/*` 和 `scripts/render-worker/*` 现在还在读它。要么把这些调用点
+   移到 Bedrock,要么 owner 明确接受留着。**请拍板。**
 
 ## 2026-08-09 21:40 — 分层版边缘模糊定位:蒙版几乎是空的(非渲染 bug)
 
