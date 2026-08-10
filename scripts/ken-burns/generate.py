@@ -197,14 +197,30 @@ def subject_center(bbox: list[float] | None) -> tuple[float, float]:
 
 
 # Ceiling on how fast the frame may travel across a photo, as a fraction of
-# the frame's own width (or height) per second. Owner 2026-08-09 set 15%/s.
+# the frame's own width (or height) per second.
+#
+# Owner set 15%/s on 2026-08-09, then 10%/s, then 6%/s on 2026-08-10 after
+# watching the result — "一直在抖动". This is the exchange rate for the whole
+# feature and it is not a free parameter: measured on the square canvas, the
+# movement is what buys the coverage. At 5%/s both the motion AND the coverage
+# land exactly where the accepted build was, i.e. no gain at all; every point
+# of coverage above ~70% costs proportional movement. 6%/s is the owner's
+# chosen point on that curve, deliberately close to the calm end.
 #
 # This is the exchange rate between the two things that fight here: a clip can
 # show more of the photo, or it can move more calmly, and the only currency
 # between them is time. A full sweep of a 3:2 photo on the square canvas is 50%
 # of the frame, so it needs 3.3s to stay under this — which is why the short
 # beats end up showing less of the photo, not moving faster.
-MAX_TRAVEL_PER_S = 0.10
+MAX_TRAVEL_PER_S = 0.06
+
+# Smoothstep spends the clip accelerating and decelerating, so its PEAK speed is
+# 1.5x its average. Owner 2026-08-10 reported the video shakes: measured against
+# the build they accepted, the square canvas had 3-8x the per-frame movement,
+# ramping from a standstill to peak inside a single clip. Budgeting the ceiling
+# against the peak rather than the average is what makes MAX_TRAVEL_PER_S mean
+# what it says — the fastest moment stays under it, not just the average.
+EASE_PEAK_FACTOR = 1.5
 
 # How much of a photo a clip aims to have shown by the end. Owner 2026-08-10,
 # after watching the first coverage-first cut: "大部分都是追求100%的信息量 滑动
@@ -294,7 +310,8 @@ def cover_travel(src: str, duration: float, frames: int,
     # in the crop's own pixels, that is (target*in_w - out_w).
     slack = "(in_w-out_w)"
     need = f"max(0,{COVERAGE_TARGET}*in_w-out_w)"
-    cap = f"{MAX_TRAVEL_PER_S / ZOOM_CEILING:.6f}*out_w*{duration:.3f}"
+    cap = (f"{MAX_TRAVEL_PER_S / ZOOM_CEILING / EASE_PEAK_FACTOR:.6f}"
+           f"*out_w*{duration:.3f}")
     travel = f"min({slack},min({need},{cap}))"
     # Start so the swept band is centred on the subject, then clamp so the
     # window never leaves the photo.
@@ -1253,9 +1270,12 @@ def main() -> None:
                         v2_caption=v2_cap,
                         engine=clip_engine,
                         depthflow_python=args.depthflow_python,
-                        # Alternate the sweep so a tour doesn't drift the same
-                        # way every clip, which reads as one long slow pan.
-                        forward=(i % 2 == 0))
+                        # One direction for the whole tour. Alternating it per
+                        # clip was meant to avoid monotony, but with every clip
+                        # now travelling it turned the video into a ping-pong —
+                        # part of what the owner saw as shaking on 2026-08-10.
+                        # Variety comes from the modes and the engine mix.
+                        forward=True)
             clips.append(out)
 
         if ending is not None:

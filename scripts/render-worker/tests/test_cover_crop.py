@@ -147,7 +147,12 @@ def test_travel_stops_at_the_coverage_target():
 
 
 def test_travel_is_also_capped_by_speed():
-    assert f"{MAX_TRAVEL_PER_S / 1.10:.6f}*out_w" in horizontal()
+    # Budgeted against the PEAK, not the average: smoothstep spends the clip
+    # accelerating, so its fastest moment is 1.5x its mean and that is the
+    # moment the viewer reads as shake.
+    from generate import EASE_PEAK_FACTOR, ZOOM_CEILING
+    expected = MAX_TRAVEL_PER_S / ZOOM_CEILING / EASE_PEAK_FACTOR
+    assert f"{expected:.6f}*out_w" in horizontal()
 
 
 def test_longer_clips_move_more_slowly_not_further():
