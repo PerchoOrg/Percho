@@ -17,6 +17,7 @@ from depthflow_modes import (  # noqa: E402
     FROM_KENBURNS,
     MOVES,
     PARALLAX_MAX_OVERFLOW,
+    PARALLAX_MAX_SHARE,
     PARALLAX_MIN_CLIPS,
     pick_engines,
     plan_moves,
@@ -140,8 +141,11 @@ def test_every_video_keeps_some_parallax():
 
 
 def test_parallax_share_is_capped():
-    engines = pick_engines([0.0] * 20)
-    assert engines.count("depthflow") <= 8      # 40% of 20
+    # Depth inference is the render-time cost, so the share is bounded even
+    # when every clip qualifies.
+    n = 20
+    engines = pick_engines([0.0] * n)
+    assert engines.count("depthflow") <= int(n * PARALLAX_MAX_SHARE)
 
 
 def test_parallax_goes_to_the_clips_with_least_to_reveal():

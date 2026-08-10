@@ -204,7 +204,18 @@ def subject_center(bbox: list[float] | None) -> tuple[float, float]:
 # between them is time. A full sweep of a 3:2 photo on the square canvas is 50%
 # of the frame, so it needs 3.3s to stay under this — which is why the short
 # beats end up showing less of the photo, not moving faster.
-MAX_TRAVEL_PER_S = 0.15
+MAX_TRAVEL_PER_S = 0.10
+
+# How much of a photo a clip aims to have shown by the end. Owner 2026-08-10,
+# after watching the first coverage-first cut: "大部分都是追求100%的信息量 滑动
+# 疲劳 80%信息量就可以了 要多做一些效果".
+#
+# Chasing the last 20% is what costs the most movement — the frame has to run
+# all the way to the edge to get it — so it is the first thing to give up when
+# the movement itself becomes the problem. A 3:2 photo on the square canvas
+# already shows 66.7% standing still, so 80% is a fifth of the frame's width of
+# travel instead of a third.
+COVERAGE_TARGET = 0.80
 
 # Every v2 mode tops out at this zoom. zoompan runs AFTER the travelling crop,
 # so it shrinks the visible frame to 1/ZOOM_CEILING of the window — the same
@@ -212,6 +223,69 @@ MAX_TRAVEL_PER_S = 0.15
 # actually sees. Measured without this correction, the 2.0s tier ran at
 # 18.5%/s against a 15%/s ceiling.
 ZOOM_CEILING = 1.10
+
+
+def detail_rows(src: str, n: int = 48) -> list[float] | None:
+    """Per-row detail of a photo (mean absolute gradient), top to bottom.
+
+    One ffmpeg call for an n×n greyscale dump, parsed with the stdlib — this
+    module has to stay importable under the worker's bare interpreter.
+    Returns None if the photo can't be read, and every caller treats that as
+    "no opinion" rather than failing the render.
+    """
+    try:
+        out = subprocess.run(
+            ["ffmpeg", "-v", "error", "-i", src,
+             "-vf", f"scale={n}:{n},format=gray", "-frames:v", "1",
+             "-f", "rawvideo", "-"],
+            capture_output=True, check=True, timeout=20).stdout
+    except Exception:
+        return None
+    if len(out) < n * n:
+        return None
+    rows = [out[r * n:(r + 1) * n] for r in range(n)]
+    profile = []
+    for r in range(n):
+        horiz = sum(abs(rows[r][c] - rows[r][c - 1]) for c in range(1, n))
+        vert = sum(abs(rows[r][c] - rows[r - 1][c]) for c in range(n)) if r else 0
+        profile.append((horiz + vert) / (2 * n))
+    return profile
+
+
+def best_band(src: str, frac: float, subj_cy: float) -> float:
+    """Top edge (0..1-frac) of the horizontal band worth keeping.
+
+    Owner 2026-08-10: "如果是上下被截取 我觉得不用追求100%的信息量上下滑动 而是
+    找到信息量最大的那部分作为基础 然后做一些别的效果". So the vertical axis
+    stops sweeping and instead picks where to stand.
+
+    Detail alone would do it — measured over 400 real listing photos, 274 of
+    them want the window lower, because sky is the emptiest part of a house
+    photo. But it SATURATES: for more than half, "most detail" is simply the
+    bottom edge, which would crop the sky off entirely and reframe the shot
+    harder than anyone asked. So the detail optimum is constrained to keep the
+    tagged subject inside the window; the two signals together land somewhere
+    sane where either alone does not.
+    """
+    lo, hi = 0.0, max(0.0, 1.0 - frac)
+    profile = detail_rows(src)
+    if not profile:
+        return min(max(subj_cy - frac / 2, lo), hi)
+    n = len(profile)
+    win = max(1, int(round(frac * n)))
+    best_i, best_score = 0, -1.0
+    for i in range(0, n - win + 1):
+        top = i / n
+        # Constraint, not a tiebreak: a window that loses the subject is not a
+        # candidate however much texture it has.
+        if not (top <= subj_cy <= top + frac):
+            continue
+        score = sum(profile[i:i + win])
+        if score > best_score:
+            best_score, best_i = score, i
+    if best_score < 0:                      # subject outside every window
+        return min(max(subj_cy - frac / 2, lo), hi)
+    return min(max(best_i / n, lo), hi)
 
 
 def travel_axis(src_w: int, src_h: int, w: int, h: int) -> str | None:
@@ -232,7 +306,7 @@ def travel_axis(src_w: int, src_h: int, w: int, h: int) -> str | None:
     return "x" if src_ar > out_ar else "y"
 
 
-def cover_travel(mode: str, duration: float, frames: int,
+def cover_travel(src: str, duration: float, frames: int,
                  subj_cx: float, subj_cy: float,
                  src_w: int, src_h: int, w: int, h: int,
                  forward: bool) -> str:
@@ -261,27 +335,37 @@ def cover_travel(mode: str, duration: float, frames: int,
     if axis is None:
         return cover_crop_xy(subj_cx, subj_cy)
 
-    # Slack and the cap are both expressed in ffmpeg's own crop variables, so
-    # they stay correct for any source the tagger hands us.
-    if axis == "x":
-        in_dim, out_dim, subj = "in_w", "out_w", subj_cx
-        still = f":y='clip({subj_cy:.4f}*in_h-out_h/2,0,in_h-out_h)'"
-    else:
-        in_dim, out_dim, subj = "in_h", "out_h", subj_cy
-        still = f":x='clip({subj_cx:.4f}*in_w-out_w/2,0,in_w-out_w)'"
+    # Vertical overflow does not sweep. Sliding a frame up and down a room
+    # reads as restless rather than revealing, and there is far less to gain:
+    # a 3:2 photo hides 18.5% of the frame on the landscape canvas against 50%
+    # on the square one. Stand on the band worth looking at instead, and let
+    # the clip spend itself on zoom or parallax (see pick_engines, which sends
+    # these clips to DepthFlow for exactly that reason).
+    if axis == "y":
+        band = best_band(src, (h / w) / (src_h / src_w), subj_cy)
+        return (f":x='clip({subj_cx:.4f}*in_w-out_w/2,0,in_w-out_w)'"
+                f":y='clip({band:.4f}*in_h,0,in_h-out_h)'")
 
-    slack = f"({in_dim}-{out_dim})"
-    cap = f"{MAX_TRAVEL_PER_S / ZOOM_CEILING:.6f}*{out_dim}*{duration:.3f}"
-    travel = f"min({slack},{cap})"
+    # Horizontal: travel far enough to have shown COVERAGE_TARGET of the photo,
+    # not all of it, and never faster than MAX_TRAVEL_PER_S.
+    #
+    # `out_w/in_w` is the share of the photo the window shows standing still,
+    # so the extra share still needed is (target - out_w/in_w) and, expressed
+    # in the crop's own pixels, that is (target*in_w - out_w).
+    slack = "(in_w-out_w)"
+    need = f"max(0,{COVERAGE_TARGET}*in_w-out_w)"
+    cap = f"{MAX_TRAVEL_PER_S / ZOOM_CEILING:.6f}*out_w*{duration:.3f}"
+    travel = f"min({slack},min({need},{cap}))"
     # Start so the swept band is centred on the subject, then clamp so the
     # window never leaves the photo.
-    start = f"clip({subj:.4f}*{in_dim}-{out_dim}/2-{travel}/2,0,{slack}-{travel})"
+    start = f"clip({subj_cx:.4f}*in_w-out_w/2-{travel}/2,0,{slack}-{travel})"
 
     t = f"(n/{max(frames - 1, 1)})"
     eased = f"({t}*{t}*(3-2*{t}))"
     progress = eased if forward else f"(1-{eased})"
     moving = f"{start}+{travel}*{progress}"
-    return f":{axis}='{moving}'{still}"
+    return (f":x='{moving}'"
+            f":y='clip({subj_cy:.4f}*in_h-out_h/2,0,in_h-out_h)'")
 
 
 def cover_crop_xy(subj_cx: float, subj_cy: float) -> str:
@@ -318,7 +402,7 @@ def kenburns_filter_v2(mode: str, duration: float, w: int, h: int,
                        fg_w: int, fg_h: int,
                        bbox: list[float] | None = None,
                        cover: bool = False,
-                       src_w: int = 0, src_h: int = 0,
+                       src: str = "", src_w: int = 0, src_h: int = 0,
                        forward: bool = True) -> str:
     """
     Phase 93.1 filter for LISTING videos. Blur-letterbox composition so
@@ -422,7 +506,7 @@ def kenburns_filter_v2(mode: str, duration: float, w: int, h: int,
         # each looped input frame with one output frame so both animate. The
         # caller feeds the still at FPS for the same reason.
         if src_w and src_h:
-            crop_xy = cover_travel(mode, duration, frames, subj_cx, subj_cy,
+            crop_xy = cover_travel(src, duration, frames, subj_cx, subj_cy,
                                    src_w, src_h, w, h, forward)
             # The window is already moving; a second lateral move on top reads
             # as two cameras fighting, so the zoom-only expressions are used.
@@ -582,7 +666,7 @@ def v2_caption_filter(text: str, w: int, h: int) -> str:
 def compose_filter(w: int, h: int, cover: bool,
                    bbox: list[float] | None = None,
                    duration: float = 0.0, frames: int = 0,
-                   src_w: int = 0, src_h: int = 0,
+                   src: str = "", src_w: int = 0, src_h: int = 0,
                    forward: bool = True) -> str:
     """Canvas composition WITHOUT motion, for clips whose movement was already
     baked in by another engine.
@@ -599,7 +683,7 @@ def compose_filter(w: int, h: int, cover: bool,
         # this collapses to the static aim — which is what keeps the parallax
         # from having a second camera move stacked on top of it.
         if src_w and src_h and frames:
-            crop_xy = cover_travel("", duration, frames, subj_cx, subj_cy,
+            crop_xy = cover_travel(src, duration, frames, subj_cx, subj_cy,
                                    src_w, src_h, w, h, forward)
         else:
             crop_xy = cover_crop_xy(subj_cx, subj_cy)
@@ -669,9 +753,11 @@ def render_clip(src: str, dst: str, duration: float, mode: str, w: int, h: int,
         parallax = dst + ".parallax.mp4"
         render_parallax(src, parallax, duration, mode, w, h, depthflow_python)
         src_w, src_h = ffprobe_wh(src)
+        # The detail profile reads the SOURCE PHOTO, not the parallax render:
+        # same framing, one still to decode instead of a video.
         vf = compose_filter(w, h, cover=cover_crop or w >= h, bbox=bbox,
                             duration=duration, frames=int(duration * FPS),
-                            src_w=src_w, src_h=src_h,
+                            src=src, src_w=src_w, src_h=src_h,
                             forward=forward) + "," + ENHANCE
         if v2_caption and not caption_png:
             cap_vf = v2_caption_filter(v2_caption, w, h)
@@ -702,8 +788,8 @@ def render_clip(src: str, dst: str, duration: float, mode: str, w: int, h: int,
         if landscape_canvas:
             fg_w, fg_h = w, h
             vf = kenburns_filter_v2(mode, duration, w, h, fg_w, fg_h, bbox=bbox,
-                                    cover=True, src_w=src_w, src_h=src_h,
-                                    forward=forward)
+                                    cover=True, src=src, src_w=src_w,
+                                    src_h=src_h, forward=forward)
         else:
             fg_w, fg_h = fit_inside(src_w, src_h, w, h, no_upscale=True)
             vf = kenburns_filter_v2(mode, duration, w, h, fg_w, fg_h, bbox=bbox)
@@ -1000,10 +1086,14 @@ def main() -> None:
                         "1080x1620 canvas takes the fit-inside path and bakes blur "
                         "letterbox bands into the video.")
     p.add_argument("--xfade-duration", type=float, default=0.5)
-    p.add_argument("--engine", default="mixed",
+    # The CLI default stays kenburns — it is the only engine with no extra
+    # dependency, so an ad-hoc invocation still works with ffmpeg alone. The
+    # PRODUCT default is mixed and lives in the API route, which is what
+    # decides what a new job gets.
+    p.add_argument("--engine", default="kenburns",
                    choices=["mixed", "kenburns", "depthflow"],
                    help="Motion engine for the per-photo camera move. mixed "
-                        "(default) picks per clip: Ken Burns where the canvas "
+                        "picks per clip: Ken Burns where the canvas "
                         "has to crop the photo, so the frame can travel and "
                         "reveal it, DepthFlow where it doesn't and the clip can "
                         "spend itself on parallax instead. kenburns = ffmpeg "
@@ -1146,10 +1236,12 @@ def main() -> None:
             for ph in photos:
                 sw, sh = ffprobe_wh(str(ph))
                 axis = travel_axis(sw, sh, w, h)
-                src_ar, out_ar = sw / sh, w / h
-                overflows.append(0.0 if axis is None else
-                                 abs(src_ar / out_ar - 1.0) if axis == "x"
-                                 else abs(out_ar / src_ar - 1.0))
+                # What pick_engines wants is "how much travel does this clip
+                # need", not "how much is cropped". A vertically-cropped clip
+                # deliberately does not travel (see cover_travel), so it needs
+                # none — which is exactly what makes it a good parallax clip.
+                overflows.append(abs(sw / sh / (w / h) - 1.0)
+                                 if axis == "x" else 0.0)
             clip_engines = pick_engines(overflows)
             n_df = sum(1 for e in clip_engines if e == "depthflow")
             print(f"[ken-burns] mixed engines: {n_df} depthflow / "

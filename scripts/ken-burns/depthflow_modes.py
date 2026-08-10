@@ -88,7 +88,9 @@ def resolve(mode: str, room_type: str | None = None, index: int = 0) -> str | No
 # never stack — a DepthFlow clip is chosen precisely because its window has
 # nowhere to travel.
 PARALLAX_MAX_OVERFLOW = 0.20   # frame-fractions; above this, travel wins
-PARALLAX_MAX_SHARE = 0.40      # cap render time — depth inference is the cost
+# Owner 2026-08-10: "80%信息量就可以了 要多做一些效果". Less of every clip is
+# spent travelling now, so more of them are free to be the effect instead.
+PARALLAX_MAX_SHARE = 0.50      # cap render time — depth inference is the cost
 PARALLAX_MIN_CLIPS = 2         # every video keeps some parallax, even on square
 
 

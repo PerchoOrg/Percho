@@ -690,9 +690,12 @@ def process_job(job: dict[str, Any]) -> None:
                         "--zoom-mode", "pan-lr"]
             else:
                 cmd += ["--orientation", orientation]
+            # Always explicit: generate.py's own default is kenburns (the only
+            # engine that needs nothing but ffmpeg), while the product default
+            # is whatever the API route wrote on the row.
+            cmd += ["--engine", engine]
             if engine in ("depthflow", "mixed"):
-                cmd += ["--engine", engine,
-                        "--depthflow-python", DEPTHFLOW_PYTHON]
+                cmd += ["--depthflow-python", DEPTHFLOW_PYTHON]
             if bgm_choice:
                 cmd += ["--bgm", str(bgm_choice)]
             if shot_plan_path is not None:
