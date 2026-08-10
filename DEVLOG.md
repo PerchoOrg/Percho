@@ -4,6 +4,48 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-08-10 11:20 — 效果分布打开:模板加宽 + 家族均衡 + 恢复小幅垂直移动
+
+**Objective**: owner "除了 3 个我说的不做的,其他的效果多多少少都分配一点,不要
+太单一…之前上下大幅度滑动不好,但是小幅度的向上移动俯视角度是可以的…目的是提供
+信息量以及沉浸感,并且不无聊"。(3 个不做的 = `orbit_to_subject`、`rack_focus`、
+`static`。)
+
+**先量再改 —— 单一在 Ken Burns 一侧,不在 DepthFlow**(20 条模拟 tour):
+
+| | 改前 | 改后 |
+|---|---|---|
+| push 家族 | **64%**(push_in 31 + push_in_slow 33) | 33% |
+| 用到的 KB 模式数 | 6 | **8** |
+| 单一模式最高占比 | 33% | **18%** |
+| `pan_rl` / `push_pan_rl` | **0** | 12% / 3.8% |
+| DepthFlow `zoom_out` | 1.2% | 19% |
+
+DepthFlow 侧本来就 7 个动作全用到,改后分布更平。
+
+**Actions**:
+- **加宽房型模板**(`STYLE_ROOM_TEMPLATES` + `default_modes_for_room`)。根因是
+  大量单项模板(`bedroom: ["push_in"]`)—— 池子里只有一个,选不出花样。现在每个
+  房型提供跨家族(push / pull / pan / tilt)的 3-4 个选项。
+- **新增家族均衡** `balance_families()`:按**家族**而非模式限制占比上限 40%。
+  按模式限制没意义 —— `push_in` 和 `push_in_slow` 在观众眼里是同一个动作,轮换
+  它们仍然是"一直在推近"。只会换成**同一房型池子里**的其他模式,所以镜头始终
+  贴合房间;池子里没得换的就保持不动。每次交换严格减少领先家族计数,天然收敛。
+- **恢复小幅垂直移动**:`VERTICAL_DRIFT_SCALE = 0.35`,即横向允许量的 35%。
+  09:40 那轮为消除"上下大幅滑动"把垂直行程整个关掉了,owner 现在明确要回一点。
+  垂直是**质感而非信息预算**(3:2 照片在横版只藏了 18.5% 画幅,方形是 50%),
+  所以给得克制。横版 `push_in` 平均运动 0.95 → 1.48,峰值 1.36 → 3.18。
+
+**Issues**: `test_vertical_does_not_travel` 断言的是上一轮的要求(垂直永不移动),
+需求变了所以测试也变 —— 改为断言**幅度受限**(必须小于横向允许量、且 scale<0.5),
+而不是断言不存在。这是需求变更导致的测试更新,不是测试之前写错了。
+
+**Resolution**: 测试 40/40。真实照片两画布端到端通过,方形 2/6 视差、横版 3/6。
+`pan_to_subject` 在模拟里仍近乎为 0 —— 查过**不是被均衡挤掉**,而是它只在
+kitchen/balcony 池里,夹具每条片子只有 1 个 kitchen、0 个 balcony,本就稀有。
+
+**Next steps**: 未合 main、worker 未重启。
+
 ## 2026-08-10 10:30 — 全片向左移是 bug 不是巧合:方向意图被硬编码抹掉了
 
 **Objective**: owner "我怎么发现 ios 的照片都是向左移动?是偶然的吗"。
