@@ -206,6 +206,14 @@ def subject_center(bbox: list[float] | None) -> tuple[float, float]:
 # beats end up showing less of the photo, not moving faster.
 MAX_TRAVEL_PER_S = 0.10
 
+# Smoothstep spends the clip accelerating and decelerating, so its PEAK speed is
+# 1.5x its average. Owner 2026-08-10 reported the video shakes: measured against
+# the build they accepted, the square canvas had 3-8x the per-frame movement,
+# ramping from a standstill to peak inside a single clip. Budgeting the ceiling
+# against the peak rather than the average is what makes MAX_TRAVEL_PER_S mean
+# what it says — the fastest moment stays under it, not just the average.
+EASE_PEAK_FACTOR = 1.5
+
 # How much of a photo a clip aims to have shown by the end. Owner 2026-08-10,
 # after watching the first coverage-first cut: "大部分都是追求100%的信息量 滑动
 # 疲劳 80%信息量就可以了 要多做一些效果".
@@ -294,7 +302,8 @@ def cover_travel(src: str, duration: float, frames: int,
     # in the crop's own pixels, that is (target*in_w - out_w).
     slack = "(in_w-out_w)"
     need = f"max(0,{COVERAGE_TARGET}*in_w-out_w)"
-    cap = f"{MAX_TRAVEL_PER_S / ZOOM_CEILING:.6f}*out_w*{duration:.3f}"
+    cap = (f"{MAX_TRAVEL_PER_S / ZOOM_CEILING / EASE_PEAK_FACTOR:.6f}"
+           f"*out_w*{duration:.3f}")
     travel = f"min({slack},min({need},{cap}))"
     # Start so the swept band is centred on the subject, then clamp so the
     # window never leaves the photo.
@@ -1253,9 +1262,12 @@ def main() -> None:
                         v2_caption=v2_cap,
                         engine=clip_engine,
                         depthflow_python=args.depthflow_python,
-                        # Alternate the sweep so a tour doesn't drift the same
-                        # way every clip, which reads as one long slow pan.
-                        forward=(i % 2 == 0))
+                        # One direction for the whole tour. Alternating it per
+                        # clip was meant to avoid monotony, but with every clip
+                        # now travelling it turned the video into a ping-pong —
+                        # part of what the owner saw as shaking on 2026-08-10.
+                        # Variety comes from the modes and the engine mix.
+                        forward=True)
             clips.append(out)
 
         if ending is not None:
