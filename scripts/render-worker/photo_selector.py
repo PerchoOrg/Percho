@@ -271,6 +271,20 @@ def narrative_sort(photos: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return ordered
 
 
+def square_overflow(photo: dict[str, Any]) -> float:
+    """How much of this photo the square canvas cannot show at once.
+
+    Expressed as a fraction of the frame: a 3:2 photo is 0.50, meaning the
+    frame has to travel half its own width to reveal the whole thing. 0.0 for
+    a photo already square, or one whose dimensions we never learned.
+    """
+    w, h = photo.get("width"), photo.get("height")
+    if not w or not h:
+        return 0.0
+    ar = w / h
+    return abs(ar - 1.0) if ar >= 1.0 else abs(1.0 / ar - 1.0)
+
+
 def plan_durations(n: int, hero_ranks: list[int],
                    filler_ranks: list[int] | None = None) -> list[float]:
     """
@@ -383,9 +397,21 @@ def build_plan(
     hero_ranks = by_hero_desc[:HERO_BOOST_COUNT]
     # Weakest quarter (excluding heroes) passes quickly — the bimodal curve's
     # short beat. Empty when the tour is too short for a filler tier to matter.
+    #
+    # Owner 2026-08-09, "我们首先要保证的是信息量": a clip reveals its photo by
+    # travelling across it, so a short beat is also the beat that shows the
+    # least of the photo it was given. Among the weak candidates, spend the
+    # short beats on the photos that have the LEAST to reveal, so the widest
+    # ones keep the time they need. Ties (and photos of unknown shape) fall
+    # back to hero_score order, which is what this did before.
+    #
+    # Overflow is measured against the SQUARE canvas on purpose. iOS is the
+    # primary surface and square is the harder canvas — a 3:2 photo overflows
+    # 50% of the frame there versus 18.5% on the web landscape one. Balancing
+    # the two would mean letting web's easier geometry shorten iOS's clips.
     n_filler = int(len(ordered) * PACE_FILLER_FRACTION)
-    filler_ranks = [i for i in reversed(by_hero_desc)
-                    if i not in hero_ranks][:n_filler]
+    weak = [i for i in reversed(by_hero_desc) if i not in hero_ranks]
+    filler_ranks = sorted(weak, key=lambda i: square_overflow(ordered[i]))[:n_filler]
     durations = plan_durations(len(ordered), hero_ranks, filler_ranks)
 
     # 7. mode assignment (style-aware, seeded on listing_id)

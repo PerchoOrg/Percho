@@ -43,17 +43,25 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
   //   web  -> landscape (16:9)
   //
   // `engine` picks the motion engine for the camera moves (owner 2026-08-09).
-  // Omitted / anything unrecognised leaves the column NULL, which the worker
-  // reads as kenburns — the pre-existing behaviour.
+  // 'mixed' is the default for new jobs: it chooses per clip, Ken Burns where
+  // the canvas has to crop the photo so the frame can travel and reveal it,
+  // DepthFlow where it doesn't. The other two render one engine throughout and
+  // exist for comparison. NULL is still read as kenburns by the worker, which
+  // is what rows queued before the column existed get.
   let orientations: string[] | null = null;
-  let engine: 'kenburns' | 'depthflow' | null = null;
+  const ENGINES = ['mixed', 'kenburns', 'depthflow'] as const;
+  type Engine = (typeof ENGINES)[number];
+  let engine: Engine = 'mixed';
   try {
     const body = (await _req.json()) as { surface?: string; engine?: string } | null;
     if (body?.surface === 'ios') orientations = ['square'];
     else if (body?.surface === 'web') orientations = ['landscape'];
-    if (body?.engine === 'depthflow' || body?.engine === 'kenburns') engine = body.engine;
+    const requested = body?.engine;
+    if (requested && (ENGINES as readonly string[]).includes(requested)) {
+      engine = requested as Engine;
+    }
   } catch {
-    /* no body = render both with the default engine, same as before */
+    /* no body = render both surfaces with the default engine */
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: stub generated types

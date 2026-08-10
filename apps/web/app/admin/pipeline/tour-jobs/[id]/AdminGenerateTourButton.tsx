@@ -11,7 +11,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 
 type JobStatus = 'idle' | 'queued' | 'running' | 'done' | 'failed';
-type Engine = 'kenburns' | 'depthflow';
+type Engine = 'mixed' | 'kenburns' | 'depthflow';
 
 export function AdminGenerateTourButton({
   listingId,
@@ -24,7 +24,7 @@ export function AdminGenerateTourButton({
   const [status, setStatus] = useState<JobStatus>('idle');
   const [error, setError] = useState<string | null>(null);
   const [jobId, setJobId] = useState<string | null>(null);
-  const [engine, setEngine] = useState<Engine>('kenburns');
+  const [engine, setEngine] = useState<Engine>('mixed');
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const enough = photoCount >= 3;
@@ -103,8 +103,9 @@ export function AdminGenerateTourButton({
           disabled={busy}
           className="rounded-md border border-line bg-bg px-2 py-1 text-xs text-ink disabled:text-muted"
         >
-          <option value="kenburns">Ken Burns (pan/zoom)</option>
-          <option value="depthflow">DepthFlow (2.5D parallax)</option>
+          <option value="mixed">Mixed (per clip, recommended)</option>
+          <option value="kenburns">Ken Burns only (pan/zoom)</option>
+          <option value="depthflow">DepthFlow only (2.5D parallax)</option>
         </select>
       </label>
       <div className="flex flex-wrap items-center gap-2">
