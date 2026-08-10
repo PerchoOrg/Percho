@@ -88,6 +88,28 @@ LANDSCAPE_THRESHOLD = 0.8
 SQUARE_EDGE = 1080
 
 
+def probe_dims(path: Path) -> tuple[int, int] | None:
+    """(width, height) of an image via ffprobe, or None if it can't be read.
+
+    listing_photos.width/height is NULL for 2388 of 2588 rows, so the shot
+    planner cannot get a photo's shape from the database. The files are already
+    on disk here and already ffprobed for orientation, so read it locally.
+    """
+    try:
+        out = subprocess.run(
+            [
+                "ffprobe", "-v", "error", "-select_streams", "v:0",
+                "-show_entries", "stream=width,height",
+                "-of", "csv=p=0", str(path),
+            ],
+            capture_output=True, text=True, check=True, timeout=15,
+        )
+        w_str, h_str = out.stdout.strip().split(",")[:2]
+        return int(w_str), int(h_str)
+    except Exception:
+        return None
+
+
 def probe_orientation(path: Path) -> str:
     """Return 'landscape' | 'portrait' | 'square' for an image via ffprobe."""
     try:
@@ -372,7 +394,10 @@ def process_job(job: dict[str, Any]) -> None:
             dest = workdir / f"{sort_i:03d}_{pid}{ext}"
             storage_download(PHOTO_BUCKET, read_path, dest)
             photo_paths.append(dest)
+            probed = probe_dims(dest)
             photo_records.append({
+                "probe_w": probed[0] if probed else None,
+                "probe_h": probed[1] if probed else None,
                 "id": pid,
                 "sort_order": sort_i,
                 "local_path": str(dest),
@@ -549,6 +574,17 @@ def process_job(job: dict[str, Any]) -> None:
                     "legacy render instead of a degenerate 1-clip video"
                 )
             style = style_info.get("style", "modern")
+            # The planner sizes the short beats around how much of a photo a
+            # clip can reveal, which needs the photo's shape. The DB column is
+            # NULL for most rows, so use what we probed off the local file.
+            dims_by_id = {
+                r["id"]: (r.get("probe_w"), r.get("probe_h"))
+                for r in photo_records
+            }
+            for t in tagged:
+                pw, ph = dims_by_id.get(t.get("id"), (None, None))
+                if pw and ph:
+                    t["width"], t["height"] = pw, ph
             plan = build_plan(tagged, style, listing_id)
             # 2026-08-01 — NO on-screen text on the listing tour at all.
             #
@@ -654,8 +690,8 @@ def process_job(job: dict[str, Any]) -> None:
                         "--zoom-mode", "pan-lr"]
             else:
                 cmd += ["--orientation", orientation]
-            if engine == "depthflow":
-                cmd += ["--engine", "depthflow",
+            if engine in ("depthflow", "mixed"):
+                cmd += ["--engine", engine,
                         "--depthflow-python", DEPTHFLOW_PYTHON]
             if bgm_choice:
                 cmd += ["--bgm", str(bgm_choice)]

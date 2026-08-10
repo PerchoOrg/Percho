@@ -73,6 +73,72 @@ def resolve(mode: str, room_type: str | None = None, index: int = 0) -> str | No
     return candidates[_rotation(room_type, index) % len(candidates)]
 
 
+# Mixed rendering. Owner 2026-08-09: "ken burns 和 depthflow 两种可以混合渲染
+# 各取所长". The two engines are good at opposite things and the SAME number
+# decides which is which — how much of the photo the canvas cannot show at once:
+#
+#   Ken Burns   moves the frame across the photo with no artefacts and no depth
+#               model. It is what reveals a photo the canvas has to crop.
+#   DepthFlow   gives real parallax, but its motion has to stay small — push the
+#               offset and occlusion edges stretch (DEVLOG 2026-08-09 21:40) —
+#               and it costs a depth inference per photo.
+#
+# So: a photo with a lot to reveal goes to Ken Burns, and a photo with little to
+# reveal spends its clip on depth instead of travel. That is also why the two
+# never stack — a DepthFlow clip is chosen precisely because its window has
+# nowhere to travel.
+PARALLAX_MAX_OVERFLOW = 0.20   # frame-fractions; above this, travel wins
+PARALLAX_MAX_SHARE = 0.40      # cap render time — depth inference is the cost
+PARALLAX_MIN_CLIPS = 2         # every video keeps some parallax, even on square
+
+
+def pick_engines(overflows: list[float]) -> list[str]:
+    """Per-clip engine given each clip's overflow, in play order.
+
+    `overflows` is the fraction of the frame each clip would have to travel to
+    reveal its whole photo, on the canvas being rendered — so the same listing
+    can mix differently for the iOS square card and the web landscape one.
+    That is deliberate: deciding once for both would let the easier canvas
+    dictate the harder one.
+    """
+    n = len(overflows)
+    if n == 0:
+        return []
+    engines = ["kenburns"] * n
+    by_overflow = sorted(range(n), key=lambda i: overflows[i])
+
+    def take(candidates: list[int], limit: int) -> int:
+        taken = 0
+        for i in candidates:
+            if taken >= limit:
+                break
+            # Never adjacent: back to back, the parallax stops reading as an
+            # accent. This has to be checked while assigning rather than after
+            # — when every photo overflows the same amount the two least-
+            # overflowing clips are simply the first two, which are neighbours.
+            if engines[i] == "depthflow":
+                continue
+            if (i > 0 and engines[i - 1] == "depthflow") or \
+               (i + 1 < n and engines[i + 1] == "depthflow"):
+                continue
+            engines[i] = "depthflow"
+            taken += 1
+        return taken
+
+    budget = max(PARALLAX_MIN_CLIPS, int(n * PARALLAX_MAX_SHARE))
+    eligible = [i for i in by_overflow if overflows[i] <= PARALLAX_MAX_OVERFLOW]
+    used = take(eligible, budget)
+
+    # Every video keeps some parallax even when nothing qualifies — the square
+    # card fed 3:2 photos is exactly that case, and an all-Ken-Burns tour would
+    # make "mixed" mixed in name only. The floor deliberately overrides the
+    # share cap, which only matters for tours of 3-4 clips.
+    if used < PARALLAX_MIN_CLIPS:
+        take([i for i in by_overflow if engines[i] != "depthflow"],
+             PARALLAX_MIN_CLIPS - used)
+    return engines
+
+
 def plan_moves(shots: list[tuple[str, str | None]]) -> list[str | None]:
     """
     Resolve a whole tour at once, given [(mode, room_type), …] in play order.

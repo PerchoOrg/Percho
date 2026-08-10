@@ -13,7 +13,15 @@ REPO = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO / "scripts" / "ken-burns"))
 sys.path.insert(0, str(REPO / "scripts" / "render-worker"))
 
-from depthflow_modes import FROM_KENBURNS, MOVES, plan_moves, resolve  # noqa: E402
+from depthflow_modes import (  # noqa: E402
+    FROM_KENBURNS,
+    MOVES,
+    PARALLAX_MAX_OVERFLOW,
+    PARALLAX_MIN_CLIPS,
+    pick_engines,
+    plan_moves,
+    resolve,
+)
 import photo_selector  # noqa: E402
 
 
@@ -96,3 +104,57 @@ def test_every_non_static_move_is_reachable_from_the_planner():
     reachable = {m for cands in FROM_KENBURNS.values() for m in cands}
     unreachable = sorted(set(MOVES) - reachable - {"static"})
     assert unreachable == [], f"parallax moves nothing can select: {unreachable}"
+
+
+# ── mixed rendering ──────────────────────────────────────────────────────────
+# Owner 2026-08-09: "两种可以混合渲染 各取所长". The split is decided by how much
+# of a photo the canvas cannot show at once, because that is exactly what
+# separates the engines: travel reveals, parallax cannot.
+
+def test_photos_with_a_lot_to_reveal_go_to_ken_burns():
+    # 3:2 on the square card overflows 50% of the frame — far too much to give
+    # up to an engine that cannot travel.
+    engines = pick_engines([0.5] * 8)
+    assert engines.count("kenburns") >= 6
+
+
+def test_photos_with_nothing_to_reveal_go_to_depthflow():
+    engines = pick_engines([0.0] * 8)
+    assert "depthflow" in engines
+
+
+def test_parallax_never_lands_on_two_adjacent_clips():
+    for overflows in ([0.0] * 10, [0.05] * 6, [0.0, 0.5] * 5):
+        engines = pick_engines(overflows)
+        pairs = [i for i in range(1, len(engines))
+                 if engines[i] == engines[i - 1] == "depthflow"]
+        assert pairs == [], f"{engines} adjacent at {pairs}"
+
+
+def test_every_video_keeps_some_parallax():
+    # Even when every photo overflows badly — the square card with 3:2 photos,
+    # which is the common case — the tour should not silently become all
+    # Ken Burns, or the mixed engine is mixed in name only.
+    engines = pick_engines([0.6] * 9)
+    assert engines.count("depthflow") >= PARALLAX_MIN_CLIPS
+
+
+def test_parallax_share_is_capped():
+    engines = pick_engines([0.0] * 20)
+    assert engines.count("depthflow") <= 8      # 40% of 20
+
+
+def test_parallax_goes_to_the_clips_with_least_to_reveal():
+    overflows = [0.9, 0.02, 0.9, 0.9, 0.01, 0.9]
+    engines = pick_engines(overflows)
+    chosen = [i for i, e in enumerate(engines) if e == "depthflow"]
+    assert set(chosen) == {1, 4}, f"{engines}"
+
+
+def test_threshold_is_the_documented_one():
+    # A photo right at the threshold is still parallax-eligible; past it, not.
+    assert pick_engines([PARALLAX_MAX_OVERFLOW, 0.9, 0.9, 0.9])[0] == "depthflow"
+
+
+def test_empty_plan_is_not_a_crash():
+    assert pick_engines([]) == []

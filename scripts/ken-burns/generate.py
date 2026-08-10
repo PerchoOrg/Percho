@@ -22,7 +22,7 @@ from pathlib import Path
 # Sibling module, stdlib-only on purpose — this script runs under the worker's
 # system interpreter, so it must not pull in torch the way depthflow_clip does.
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from depthflow_modes import plan_moves  # noqa: E402
+from depthflow_modes import pick_engines, plan_moves  # noqa: E402
 
 
 FPS = 30
@@ -196,6 +196,94 @@ def subject_center(bbox: list[float] | None) -> tuple[float, float]:
     return 0.5, 0.5
 
 
+# Ceiling on how fast the frame may travel across a photo, as a fraction of
+# the frame's own width (or height) per second. Owner 2026-08-09 set 15%/s.
+#
+# This is the exchange rate between the two things that fight here: a clip can
+# show more of the photo, or it can move more calmly, and the only currency
+# between them is time. A full sweep of a 3:2 photo on the square canvas is 50%
+# of the frame, so it needs 3.3s to stay under this — which is why the short
+# beats end up showing less of the photo, not moving faster.
+MAX_TRAVEL_PER_S = 0.15
+
+# Every v2 mode tops out at this zoom. zoompan runs AFTER the travelling crop,
+# so it shrinks the visible frame to 1/ZOOM_CEILING of the window — the same
+# pixel travel then covers a proportionally larger share of what the viewer
+# actually sees. Measured without this correction, the 2.0s tier ran at
+# 18.5%/s against a 15%/s ceiling.
+ZOOM_CEILING = 1.10
+
+
+def travel_axis(src_w: int, src_h: int, w: int, h: int) -> str | None:
+    """Which axis a cover crop has room to travel along: 'x', 'y' or neither.
+
+    A cover scale matches one axis exactly and overflows the other; the
+    overflow is the only place a moving window has anywhere to go. Which axis
+    that is depends on the CANVAS, not the photo, and the worker renders two
+    canvases from one shot plan — so this cannot be decided in the planner.
+
+      3:2 photo -> square 1080x1080     overflows width  -> 'x'
+      3:2 photo -> landscape 1920x1080  overflows height -> 'y'
+    """
+    src_ar = src_w / src_h
+    out_ar = w / h
+    if abs(src_ar - out_ar) < 1e-3:
+        return None
+    return "x" if src_ar > out_ar else "y"
+
+
+def cover_travel(mode: str, duration: float, frames: int,
+                 subj_cx: float, subj_cy: float,
+                 src_w: int, src_h: int, w: int, h: int,
+                 forward: bool) -> str:
+    """`x`/`y` args for a cover crop whose WINDOW MOVES across the photo.
+
+    Owner 2026-08-09: "我们首先要保证的是信息量… 渲染效果的主要目的就应该是在
+    2.5-3.5 秒内能有机会尽可能多的展示原来的画面".
+
+    A static window throws the overflow away before any motion happens, so the
+    camera move could only ever wander inside what survived: measured, a 3:2
+    photo on the square canvas showed 66.7% of its width, and pan_lr revealed
+    no more of it than push_in did. Animating the crop instead makes the travel
+    itself the thing that reveals the photo, and it composes with the subject
+    aim rather than replacing it:
+
+      - travel = the whole overflow, unless MAX_TRAVEL_PER_S caps it
+      - when capped, the swept band is CENTRED ON THE SUBJECT, so a clip too
+        short to show everything still shows the part that matters
+      - eased (smoothstep), so the move starts and settles gently
+
+    zoompan cannot do this. Its window is always the aspect of its INPUT, so
+    dropping the pre-crop to give it room would stretch the picture — which is
+    what the pre-crop was there for in the first place.
+    """
+    axis = travel_axis(src_w, src_h, w, h)
+    if axis is None:
+        return cover_crop_xy(subj_cx, subj_cy)
+
+    # Slack and the cap are both expressed in ffmpeg's own crop variables, so
+    # they stay correct for any source the tagger hands us.
+    if axis == "x":
+        in_dim, out_dim, subj = "in_w", "out_w", subj_cx
+        still = f":y='clip({subj_cy:.4f}*in_h-out_h/2,0,in_h-out_h)'"
+    else:
+        in_dim, out_dim, subj = "in_h", "out_h", subj_cy
+        still = f":x='clip({subj_cx:.4f}*in_w-out_w/2,0,in_w-out_w)'"
+
+    slack = f"({in_dim}-{out_dim})"
+    cap = f"{MAX_TRAVEL_PER_S / ZOOM_CEILING:.6f}*{out_dim}*{duration:.3f}"
+    travel = f"min({slack},{cap})"
+    # Start so the swept band is centred on the subject, then clamp so the
+    # window never leaves the photo.
+    start = f"clip({subj:.4f}*{in_dim}-{out_dim}/2-{travel}/2,0,{slack}-{travel})"
+
+    t = f"(n/{max(frames - 1, 1)})"
+    eased = f"({t}*{t}*(3-2*{t}))"
+    progress = eased if forward else f"(1-{eased})"
+    moving = f"{start}+{travel}*{progress}"
+    return f":{axis}='{moving}'{still}"
+
+
 def cover_crop_xy(subj_cx: float, subj_cy: float) -> str:
     """`x`/`y` args for a cover crop, aimed at the subject.
 
@@ -229,7 +317,9 @@ def cover_crop_xy(subj_cx: float, subj_cy: float) -> str:
 def kenburns_filter_v2(mode: str, duration: float, w: int, h: int,
                        fg_w: int, fg_h: int,
                        bbox: list[float] | None = None,
-                       cover: bool = False) -> str:
+                       cover: bool = False,
+                       src_w: int = 0, src_h: int = 0,
+                       forward: bool = True) -> str:
     """
     Phase 93.1 filter for LISTING videos. Blur-letterbox composition so
     landscape photos keep their FULL width (no crop) at their native
@@ -322,10 +412,30 @@ def kenburns_filter_v2(mode: str, duration: float, w: int, h: int,
         # since production listing videos are landscape-only, EVERY listing
         # video shipped with the jitter. Cover-crop at 4× canvas, then zoompan
         # down to w×h.
+        # The travelling window supplies the TRAVEL (how much of the photo the
+        # clip reveals); zoompan is left with the ZOOM (the push/pull that gives
+        # the mode its character). Splitting them this way is what lets every
+        # cover clip reveal its photo without every clip looking like a pan.
+        # d=frames makes zoompan expand ONE input frame into the whole clip,
+        # which leaves every filter before it evaluated once, at n=0 — a moving
+        # crop in front of it would silently render as a static one. d=1 pairs
+        # each looped input frame with one output frame so both animate. The
+        # caller feeds the still at FPS for the same reason.
+        if src_w and src_h:
+            crop_xy = cover_travel(mode, duration, frames, subj_cx, subj_cy,
+                                   src_w, src_h, w, h, forward)
+            # The window is already moving; a second lateral move on top reads
+            # as two cameras fighting, so the zoom-only expressions are used.
+            x = "iw/2-(iw/zoom/2)"
+            y = "ih/2-(ih/zoom/2)"
+            d = 1
+        else:
+            crop_xy = cover_crop_xy(subj_cx, subj_cy)
+            d = frames
         return (
             f"scale={w * SMOOTH}:{h * SMOOTH}:force_original_aspect_ratio=increase:flags=lanczos,"
-            f"crop={w * SMOOTH}:{h * SMOOTH}{cover_crop_xy(subj_cx, subj_cy)},setsar=1,"
-            f"zoompan=z='{z}':x='{x}':y='{y}':d={frames}:s={w}x{h}:fps={FPS},"
+            f"crop={w * SMOOTH}:{h * SMOOTH}{crop_xy},setsar=1,"
+            f"zoompan=z='{z}':x='{x}':y='{y}':d={d}:s={w}x{h}:fps={FPS},"
             f"format=yuv420p"
         )
 
@@ -470,7 +580,10 @@ def v2_caption_filter(text: str, w: int, h: int) -> str:
 
 
 def compose_filter(w: int, h: int, cover: bool,
-                   bbox: list[float] | None = None) -> str:
+                   bbox: list[float] | None = None,
+                   duration: float = 0.0, frames: int = 0,
+                   src_w: int = 0, src_h: int = 0,
+                   forward: bool = True) -> str:
     """Canvas composition WITHOUT motion, for clips whose movement was already
     baked in by another engine.
 
@@ -481,9 +594,18 @@ def compose_filter(w: int, h: int, cover: bool,
     """
     if cover:
         subj_cx, subj_cy = subject_center(bbox)
+        # A DepthFlow clip is picked precisely because it has little overflow to
+        # reveal (see pick_engines), so the window usually has nowhere to go and
+        # this collapses to the static aim — which is what keeps the parallax
+        # from having a second camera move stacked on top of it.
+        if src_w and src_h and frames:
+            crop_xy = cover_travel("", duration, frames, subj_cx, subj_cy,
+                                   src_w, src_h, w, h, forward)
+        else:
+            crop_xy = cover_crop_xy(subj_cx, subj_cy)
         return (
             f"scale={w}:{h}:force_original_aspect_ratio=increase,"
-            f"crop={w}:{h}{cover_crop_xy(subj_cx, subj_cy)},setsar=1"
+            f"crop={w}:{h}{crop_xy},setsar=1"
         )
     bg = (
         f"scale={w}:{h}:force_original_aspect_ratio=increase,crop={w}:{h},"
@@ -526,7 +648,8 @@ def render_clip(src: str, dst: str, duration: float, mode: str, w: int, h: int,
                 cover_crop: bool = False,
                 v2_caption: str | None = None,
                 engine: str = "kenburns",
-                depthflow_python: str | None = None) -> None:
+                depthflow_python: str | None = None,
+                forward: bool = True) -> None:
     """Render one Ken Burns clip.
 
     Phase 88: caption is now a pre-rendered transparent PNG overlay produced
@@ -545,7 +668,11 @@ def render_clip(src: str, dst: str, duration: float, mode: str, w: int, h: int,
             die("--engine depthflow requires --depthflow-python")
         parallax = dst + ".parallax.mp4"
         render_parallax(src, parallax, duration, mode, w, h, depthflow_python)
-        vf = compose_filter(w, h, cover=cover_crop or w >= h, bbox=bbox) + "," + ENHANCE
+        src_w, src_h = ffprobe_wh(src)
+        vf = compose_filter(w, h, cover=cover_crop or w >= h, bbox=bbox,
+                            duration=duration, frames=int(duration * FPS),
+                            src_w=src_w, src_h=src_h,
+                            forward=forward) + "," + ENHANCE
         if v2_caption and not caption_png:
             cap_vf = v2_caption_filter(v2_caption, w, h)
             if cap_vf:
@@ -574,7 +701,9 @@ def render_clip(src: str, dst: str, duration: float, mode: str, w: int, h: int,
         landscape_canvas = cover_crop or w >= h
         if landscape_canvas:
             fg_w, fg_h = w, h
-            vf = kenburns_filter_v2(mode, duration, w, h, fg_w, fg_h, bbox=bbox, cover=True)
+            vf = kenburns_filter_v2(mode, duration, w, h, fg_w, fg_h, bbox=bbox,
+                                    cover=True, src_w=src_w, src_h=src_h,
+                                    forward=forward)
         else:
             fg_w, fg_h = fit_inside(src_w, src_h, w, h, no_upscale=True)
             vf = kenburns_filter_v2(mode, duration, w, h, fg_w, fg_h, bbox=bbox)
@@ -594,9 +723,12 @@ def render_clip(src: str, dst: str, duration: float, mode: str, w: int, h: int,
 
     # A parallax clip is already a moving video; a still photo has to be looped
     # into one.
+    # -framerate pins the looped still to FPS. Without it the loop runs at
+    # ffmpeg's 25fps default, and any filter animating on frame number would
+    # finish its move early relative to the FPS-based frame count we computed.
     cmd: list[str] = (
         ["ffmpeg", "-y", "-i", parallax] if parallax
-        else ["ffmpeg", "-y", "-loop", "1", "-i", src]
+        else ["ffmpeg", "-y", "-loop", "1", "-framerate", str(FPS), "-i", src]
     )
     if caption_png:
         cmd += ["-loop", "1", "-i", caption_png]
@@ -868,12 +1000,18 @@ def main() -> None:
                         "1080x1620 canvas takes the fit-inside path and bakes blur "
                         "letterbox bands into the video.")
     p.add_argument("--xfade-duration", type=float, default=0.5)
-    p.add_argument("--engine", default="kenburns", choices=["kenburns", "depthflow"],
-                   help="Motion engine for the per-photo camera move. kenburns = "
-                        "ffmpeg zoompan (default, no extra deps). depthflow = 2.5D "
-                        "parallax over a Depth Anything V2 Small depth map, which "
-                        "needs --depthflow-python. Composition, transitions, BGM, "
-                        "captions and overlays are identical either way.")
+    p.add_argument("--engine", default="mixed",
+                   choices=["mixed", "kenburns", "depthflow"],
+                   help="Motion engine for the per-photo camera move. mixed "
+                        "(default) picks per clip: Ken Burns where the canvas "
+                        "has to crop the photo, so the frame can travel and "
+                        "reveal it, DepthFlow where it doesn't and the clip can "
+                        "spend itself on parallax instead. kenburns = ffmpeg "
+                        "zoompan everywhere, no extra deps. depthflow = parallax "
+                        "everywhere. The last two are mainly for comparing. "
+                        "Anything but kenburns needs --depthflow-python. "
+                        "Composition, transitions, BGM, captions and overlays "
+                        "are identical either way.")
     p.add_argument("--depthflow-python", default=os.environ.get("DEPTHFLOW_PYTHON"),
                    help="Interpreter that has depthflow installed (defaults to "
                         "$DEPTHFLOW_PYTHON). Required for --engine depthflow; this "
@@ -891,11 +1029,11 @@ def main() -> None:
         die("ffmpeg not found on PATH")
     if not shutil.which("ffprobe"):
         die("ffprobe not found on PATH")
-    if args.engine == "depthflow":
+    if args.engine in ("depthflow", "mixed"):
         # Fail here rather than after the photos are already staged and the
         # first clip has burned a minute of render time.
         if not args.depthflow_python:
-            die("--engine depthflow needs --depthflow-python (or $DEPTHFLOW_PYTHON)")
+            die(f"--engine {args.engine} needs --depthflow-python (or $DEPTHFLOW_PYTHON)")
         if not os.path.exists(args.depthflow_python):
             die(f"--depthflow-python not found: {args.depthflow_python}")
 
@@ -1000,11 +1138,30 @@ def main() -> None:
             caption_pngs = render_caption_pngs(args.captions, tmp_caption_dir,
                                                 width=w, height=h)
 
+        # Engines are chosen for the whole tour at once, from how much each
+        # photo overflows THIS canvas — so the iOS square card and the web
+        # landscape one can mix differently, and neither constrains the other.
+        if args.engine == "mixed":
+            overflows = []
+            for ph in photos:
+                sw, sh = ffprobe_wh(str(ph))
+                axis = travel_axis(sw, sh, w, h)
+                src_ar, out_ar = sw / sh, w / h
+                overflows.append(0.0 if axis is None else
+                                 abs(src_ar / out_ar - 1.0) if axis == "x"
+                                 else abs(out_ar / src_ar - 1.0))
+            clip_engines = pick_engines(overflows)
+            n_df = sum(1 for e in clip_engines if e == "depthflow")
+            print(f"[ken-burns] mixed engines: {n_df} depthflow / "
+                  f"{len(clip_engines) - n_df} kenburns")
+        else:
+            clip_engines = [args.engine] * len(photos)
+
         # Parallax moves are chosen for the whole tour at once: a mode maps to
         # several moves and the choice depends on the neighbouring clip, which
         # a single render_clip call can't see. Ken Burns keeps its own modes.
         parallax_moves: list[str | None] = []
-        if args.engine == "depthflow":
+        if any(e == "depthflow" for e in clip_engines):
             if shot_plan:
                 shots = [(s["mode"], s.get("room_type")) for s in shot_plan]
             else:
@@ -1027,7 +1184,8 @@ def main() -> None:
                 bbox = None
                 use_v2 = False
                 v2_cap = ""
-            if parallax_moves:
+            clip_engine = clip_engines[i]
+            if clip_engine == "depthflow" and parallax_moves:
                 move = parallax_moves[i]
                 if move is None:
                     die(f"no parallax counterpart for shot mode {mode!r}")
@@ -1039,7 +1197,8 @@ def main() -> None:
             tag = f" +overlay" if clip_overlay else ""
             if clip_cap_png:
                 tag += f" +cap[{caption_archetype}]"
-            print(f"[ken-burns] ({i+1}/{len(photos)}) rendering {ph.name} → {mode} {clip_dur:.2f}s{tag}")
+            print(f"[ken-burns] ({i+1}/{len(photos)}) rendering {ph.name} → "
+                  f"{mode} {clip_dur:.2f}s [{clip_engine}]{tag}")
             render_clip(str(ph), out, clip_dur, mode, w, h,
                         overlay=clip_overlay,
                         caption_png=clip_cap_png,
@@ -1047,8 +1206,11 @@ def main() -> None:
                         use_v2=use_v2,
                         cover_crop=args.cover_crop,
                         v2_caption=v2_cap,
-                        engine=args.engine,
-                        depthflow_python=args.depthflow_python)
+                        engine=clip_engine,
+                        depthflow_python=args.depthflow_python,
+                        # Alternate the sweep so a tour doesn't drift the same
+                        # way every clip, which reads as one long slow pan.
+                        forward=(i % 2 == 0))
             clips.append(out)
 
         if ending is not None:
