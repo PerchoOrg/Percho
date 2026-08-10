@@ -4,6 +4,61 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-08-10 00:40 — 节奏放慢到 2.0s 起、去掉静止帧、DepthFlow 效果用全
+
+**Objective**: owner 端到端验证了 depthflow 产出后提三条:①每张照片至少 2-3 秒,
+现在太快 ②不要静止的图片 ③"效果很多你只用了很少"。①②对两个引擎都生效。
+
+**Decisions**(两处开工前问过 owner):
+- **时长档位选 2.0 / 2.5 / 3.5**(filler / 普通 / hero),不是我推荐的 2.5/3.0/4.0。
+  owner 要更紧凑的片子。三档节奏保留 —— 抬地板不等于抹平,不然就退回当初
+  bimodal 要解决的"幻灯片"问题。12 张 ≈ 26s(原来 ≈18s)。
+- **DepthFlow 选招走"候选表 + 确定性轮换"**,而不是给 depthflow 单独一套房型
+  模板。后者表达力更强但要让 `photo_selector` 开始区分引擎;前者把改动关在
+  DepthFlow 自己的模块里,保住"规划器与引擎无关"这条既有分界。
+
+**Actions**:
+- `photo_selector.py`:`PACE_*` 改 3.5/2.5/2.0;删掉 `STATIC_RATIO` +
+  强制静止整段 + `PACE_STATIC_MIN_S`;`garage`/`other` 模板里的 `static` 换掉。
+  渲染器**仍保留** static 实现(`--zoom-mode static` 手动可达),只是规划器不再产出。
+  `assign_modes` 的 `durations` 参数随之失去用途,一并删掉。
+- **片长预算跟着改**:原来除以 `MIN_PER_PHOTO`,但 bimodal 下 `MIN_PER_PHOTO`
+  根本不是下界(实际下界是 `PACE_FILLER_S`),两者相等纯属巧合。改成按曲线取
+  `PACE_NORMAL_S`,行为不变但下次有人调 `PACE_*` 时 `TOTAL_CAP` 不会被悄悄突破。
+  顺手删掉同一段里**先于本次存在的死变量** `hard_cap_n`(算了从不用)。
+- `depthflow_modes.py`:`FROM_KENBURNS` 从一对一改成一对多候选表;新增
+  `plan_moves(shots)` 整条片子一次性定招。
+- `generate.py`:改在**这里**解析整条 tour 的视差动作,再把已解析的动作名传给
+  `depthflow_clip.py`。原因见下。
+- README 记录新机制。
+
+**Issues**:
+- 第一版把选招放在 `depthflow_clip.py`(按 `--room-type` + `--index` 逐条选),
+  跑出来 14/15 两条相邻都是 `dolly_in` —— **逐条渲染的子进程看不到前一条**,
+  而"连着两条一样"恰恰是观众唯一真会注意到的撞车。改成 `generate.py` 整条定招,
+  `--room-type`/`--index` 两个参数随之删除。`generate.py` 可以 import
+  `depthflow_modes` 是因为它是纯 stdlib —— 这正是当初把它从 `depthflow_clip.py`
+  拆出来的理由。
+- 写测试时 fake 照片的 `_dhash` 用了连续整数,被 `dedupe` 当近重复**全部合并成
+  1 张**,12 张照片的计划只出 1 条 clip。改用 md5 取 64 位。dHash 阈值是
+  Hamming < 10,构造测试数据时别用小整数。
+
+**Resolution**:
+- 12 张 → 12 clips,时长 {2.0, 2.5, 3.5},26.0s;40 张 → 24 clips,48.5s,
+  都在 `TOTAL_CAP` 内。0 条静止。
+- DepthFlow 实际用到的动作:改前 5 个(`dolly_in` 一家独大),改后 **7 个非静止
+  动作全部可达**,`zoom_in` / `parallax_bloom` 从"实现了但永远走不到"变成常规出场。
+  20 clips 的片子相邻重复只剩 1 处,是 `tilt_td`(唯一候选,刻意不换 —— 真重复
+  也好过换一个与镜头意图矛盾的动作)。
+- 测试 15/15 通过(`test_depthflow_modes.py` 扩到 9 条,新增 `test_pacing.py` 6 条)。
+  `test_pacing.py` 断言的是**计划**的性质(下限、无静止、不超 `TOTAL_CAP`),
+  所以两个引擎共用一份保证。
+- 跑测试用 `.venv-motion/bin/pytest`(`.venv-render` 没装 pytest,先于本次存在)。
+
+**Next steps**: 需要 owner 再看一次实际产出确认节奏对了。`.env.local` 的
+`ANTHROPIC_API_KEY` 已按 owner 指示注释掉(两处代码提及都只是注释,无实际读取者,
+不影响运行)—— 此事结案,不再跟进。
+
 ## 2026-08-09 23:10 — phase-motion 收敛完成;引擎迁移已应用,worker 已换新代码
 
 **Objective**: 补记 `phase-motion/consolidate` 分支上 4 个提交(14:42–15:50)的
