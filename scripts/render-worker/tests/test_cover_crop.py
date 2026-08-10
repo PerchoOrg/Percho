@@ -26,6 +26,7 @@ from generate import (  # noqa: E402
 
 LEFT_SUBJECT = [0.08, 0.33, 0.08, 0.34]   # centroid x = 0.12
 RIGHT_SUBJECT = [0.80, 0.33, 0.10, 0.34]  # centroid x = 0.85
+HIGH_SUBJECT = [0.375, 0.037, 0.25, 0.113]  # centroid y = 0.09
 
 
 def test_subject_center_uses_the_bbox_centroid():
@@ -73,6 +74,29 @@ def test_both_engines_aim_the_same_way():
     offsets = cover_crop_xy(*subject_center(LEFT_SUBJECT))
     assert offsets in kb
     assert offsets in df
+
+
+def test_crop_aims_vertically_too():
+    """Owner 2026-08-09: "有时候不是左右而是上下".
+
+    Which axis actually gets cut is a property of the CANVAS, not the photo.
+    Production photos are overwhelmingly 3:2 (145 of 200 sampled):
+
+      square 1080x1080   3:2 is wider than 1:1   → width overflows, cuts L/R
+      landscape 1920x1080  3:2 is TALLER than 16:9 → height overflows, cuts T/B
+
+    So the landscape output — which the worker renders by default alongside
+    square — crops vertically for 92% of real photos, and dropping the `y`
+    expression as redundant would silently reintroduce the bug there.
+    """
+    high = compose_filter(1920, 1080, cover=True, bbox=HIGH_SUBJECT)
+    centred = compose_filter(1920, 1080, cover=True)
+    assert "0.0935*in_h" in high
+    assert "0.5000*in_h" in centred
+
+    kb_high = kenburns_filter_v2("push_in", 3.0, 1920, 1080, 1620, 1080,
+                                 bbox=HIGH_SUBJECT, cover=True)
+    assert "0.0935*in_h" in kb_high
 
 
 def test_blur_letterbox_path_never_crops():
