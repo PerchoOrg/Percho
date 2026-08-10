@@ -104,3 +104,75 @@ def test_blur_letterbox_path_never_crops():
     # crop offset leaking in there would cut a photo that used to be intact.
     vf = compose_filter(1080, 1920, cover=False, bbox=LEFT_SUBJECT)
     assert "in_w-out_w" not in vf
+
+
+# ── coverage target and the vertical anchor ──────────────────────────────────
+# Owner 2026-08-10, on the coverage-first cut: "速度有点快", "上下滑动很奇怪…
+# 不用追求100%的信息量上下滑动 而是找到信息量最大的那部分作为基础", "80%信息量
+# 就可以了 要多做一些效果".
+
+from generate import (  # noqa: E402
+    COVERAGE_TARGET,
+    MAX_TRAVEL_PER_S,
+    best_band,
+    cover_travel,
+)
+
+WIDE = (1500, 1000)     # 3:2, the dominant production aspect
+SQUARE_CANVAS = (1080, 1080)
+LANDSCAPE_CANVAS = (1920, 1080)
+
+
+def horizontal(duration=2.5, frames=75, forward=True):
+    return cover_travel("", duration, frames, 0.5, 0.5,
+                        *WIDE, *SQUARE_CANVAS, forward)
+
+
+def test_horizontal_still_travels():
+    # The frame has to move for the clip to reveal anything, so a moving crop
+    # is the whole point on the axis that overflows.
+    assert "n/" in horizontal()
+
+
+def test_vertical_does_not_travel():
+    # A frame sliding up and down a room reads as restless; there is also far
+    # less to gain (18.5% of the frame against 50% on square).
+    vf = cover_travel("", 2.5, 75, 0.5, 0.5, *WIDE, *LANDSCAPE_CANVAS, True)
+    assert "n/" not in vf, f"vertical axis is still sweeping: {vf}"
+
+
+def test_travel_stops_at_the_coverage_target():
+    # Chasing the last 20% costs the most movement, so the target caps travel
+    # before the photo's full width does.
+    assert f"{COVERAGE_TARGET}*in_w-out_w" in horizontal()
+
+
+def test_travel_is_also_capped_by_speed():
+    assert f"{MAX_TRAVEL_PER_S / 1.10:.6f}*out_w" in horizontal()
+
+
+def test_longer_clips_move_more_slowly_not_further():
+    # Both tiers chase the same 80%, so the extra second buys calm, not
+    # coverage — which is what the owner asked for.
+    short, long = horizontal(2.0, 60), horizontal(3.5, 105)
+    assert "*2.000" in short and "*3.500" in long
+    assert f"{COVERAGE_TARGET}*in_w-out_w" in short
+    assert f"{COVERAGE_TARGET}*in_w-out_w" in long
+
+
+def test_direction_alternates():
+    assert horizontal(forward=True) != horizontal(forward=False)
+
+
+def test_best_band_falls_back_to_the_subject_when_the_photo_is_unreadable():
+    # Never fail a render over a probe: no pixels means no opinion, and the
+    # window falls back to sitting on the subject.
+    frac, cy = 0.844, 0.55
+    expected = min(max(cy - frac / 2, 0.0), 1 - frac)
+    assert best_band("/nonexistent.jpg", frac, cy) == expected
+
+
+def test_best_band_stays_inside_the_photo():
+    for cy in (0.0, 0.5, 1.0):
+        top = best_band("/nonexistent.jpg", 0.844, cy)
+        assert 0.0 <= top <= 1 - 0.844 + 1e-9, top
