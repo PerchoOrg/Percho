@@ -222,6 +222,12 @@ MAX_TRAVEL_PER_S = 0.06
 # what it says — the fastest moment stays under it, not just the average.
 EASE_PEAK_FACTOR = 1.5
 
+# Vertical drift runs at this fraction of the horizontal allowance. Owner
+# 2026-08-10 rejected big vertical sweeps but asked for small ones back, and the
+# vertical axis is a texture rather than an information budget — a 3:2 photo
+# hides 18.5% of the landscape frame against 50% of the square one.
+VERTICAL_DRIFT_SCALE = 0.35
+
 # How much of a photo a clip aims to have shown by the end. Owner 2026-08-10,
 # after watching the first coverage-first cut: "大部分都是追求100%的信息量 滑动
 # 疲劳 80%信息量就可以了 要多做一些效果".
@@ -288,19 +294,29 @@ def cover_travel(src: str, duration: float, frames: int,
     if axis is None:
         return cover_crop_xy(subj_cx, subj_cy)
 
-    # Vertical overflow does not sweep — sliding a frame up and down a room
-    # reads as restless rather than revealing, and there is far less to gain
-    # (a 3:2 photo hides 18.5% of the frame on the landscape canvas against 50%
-    # on the square one). The clip spends itself on zoom or parallax instead.
+    # Vertical overflow gets a SMALL drift, not a sweep. Owner 2026-08-10:
+    # "之前上下大幅度滑动不好 但是小幅度的向上移动俯视角度是可以的". A full
+    # vertical sweep was restless and was removed; a short move still reads as
+    # a camera settling and gives the frame somewhere to go. There is also less
+    # to win here — a 3:2 photo hides 18.5% of the frame on the landscape canvas
+    # against 50% on the square one — so it is a texture, not an information
+    # budget, and it stays well under the horizontal allowance.
     #
-    # WHERE it stands is just the subject aim. A row-detail profile was tried
-    # and reverted: owner 2026-08-10, "web上的主体不对我建议你还是用之前的版本".
-    # It saturated exactly as the 400-photo check predicted — for more than half
-    # of them "most detail" is the bottom edge, because sky is the emptiest part
-    # of a house photo, so it cropped the sky away and reframed the shot harder
-    # than anyone asked. Keeping the subject aim is the version that was right.
+    # Where it starts is the subject aim. A row-detail profile was tried and
+    # reverted (owner: "web上的主体不对我建议你还是用之前的版本") — it saturated
+    # to the bottom edge on more than half of 400 real photos, because sky is
+    # the emptiest part of a house photo, and cropped the sky away entirely.
     if axis == "y":
-        return cover_crop_xy(subj_cx, subj_cy)
+        slack = "(in_h-out_h)"
+        cap = (f"{MAX_TRAVEL_PER_S * VERTICAL_DRIFT_SCALE / ZOOM_CEILING / EASE_PEAK_FACTOR:.6f}"
+               f"*out_h*{duration:.3f}")
+        travel = f"min({slack},{cap})"
+        start = f"clip({subj_cy:.4f}*in_h-out_h/2-{travel}/2,0,{slack}-{travel})"
+        t = f"(n/{max(frames - 1, 1)})"
+        eased = f"({t}*{t}*(3-2*{t}))"
+        progress = eased if forward else f"(1-{eased})"
+        return (f":x='clip({subj_cx:.4f}*in_w-out_w/2,0,in_w-out_w)'"
+                f":y='{start}+{travel}*{progress}'")
 
     # Horizontal: travel far enough to have shown COVERAGE_TARGET of the photo,
     # not all of it, and never faster than MAX_TRAVEL_PER_S.

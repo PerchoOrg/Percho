@@ -110,65 +110,70 @@ NARRATIVE_ORDER = {
 # Style × room → motion template pool. Renderer picks one at random per clip.
 # Empty list = fall back to default_modes_for_room().
 STYLE_ROOM_TEMPLATES: dict[str, dict[str, list[str]]] = {
+    # Owner 2026-08-10: "其他的效果多多少少都分配一点 不要太单一". Measured over
+    # 20 simulated tours, two thirds of every video was a push-in, because most
+    # of these lists had one entry. Each room now offers moves from several
+    # families (push / pull / pan / tilt) so the picker has something to pick
+    # BETWEEN — assign_modes then balances what actually gets used.
     "luxury": {
-        "exterior": ["push_in_slow"],
-        "living":   ["pull_back", "push_pan_lr"],
-        "kitchen":  ["pan_to_subject"],
-        "bedroom":  ["push_in_slow"],
-        "bathroom": ["tilt_td"],
-        "pool":     ["pull_back", "pan_to_subject"],
-        "backyard": ["pull_back"],
-        "balcony":  ["pan_to_subject"],
+        "exterior": ["push_in_slow", "pull_back", "tilt_td"],
+        "living":   ["pull_back", "push_pan_lr", "push_pan_rl"],
+        "kitchen":  ["pan_to_subject", "pan_rl", "push_in_slow"],
+        "bedroom":  ["push_in_slow", "pan_lr", "pull_back"],
+        "bathroom": ["tilt_td", "pan_rl", "push_in_slow"],
+        "pool":     ["pull_back", "pan_to_subject", "pan_lr"],
+        "backyard": ["pull_back", "pan_rl", "push_in_slow"],
+        "balcony":  ["pan_to_subject", "tilt_td", "pull_back"],
     },
     "modern": {
-        "exterior": ["push_in", "pull_back"],
-        "living":   ["push_pan_lr", "push_pan_rl", "pull_back"],
-        "kitchen":  ["pan_to_subject", "pan_lr"],
-        "bedroom":  ["push_in"],
-        "bathroom": ["tilt_td"],
-        "backyard": ["pull_back"],
-        "balcony":  ["pan_to_subject"],
+        "exterior": ["push_in", "pull_back", "pan_lr", "tilt_td"],
+        "living":   ["push_pan_lr", "push_pan_rl", "pull_back", "push_in"],
+        "kitchen":  ["pan_to_subject", "pan_lr", "push_in", "tilt_td"],
+        "bedroom":  ["push_in", "pan_rl", "pull_back"],
+        "bathroom": ["tilt_td", "pan_rl", "push_in_slow"],
+        "backyard": ["pull_back", "pan_lr", "push_in"],
+        "balcony":  ["pan_to_subject", "tilt_td", "push_in"],
     },
     "traditional": {
-        "exterior": ["push_in"],
-        "living":   ["push_in", "pan_lr"],
-        "kitchen":  ["pan_to_subject"],
-        "bedroom":  ["push_in"],
-        "bathroom": ["tilt_td"],
-        "backyard": ["pull_back"],
+        "exterior": ["push_in", "pull_back", "tilt_td"],
+        "living":   ["push_in", "pan_lr", "push_pan_rl", "pull_back"],
+        "kitchen":  ["pan_to_subject", "pan_rl", "push_in"],
+        "bedroom":  ["push_in", "pan_lr", "pull_back"],
+        "bathroom": ["tilt_td", "pan_rl", "push_in_slow"],
+        "backyard": ["pull_back", "pan_lr", "push_in_slow"],
     },
     "cozy": {
-        "exterior": ["push_in"],
-        "living":   ["push_pan_lr", "push_in"],
-        "kitchen":  ["pan_lr"],
-        "bedroom":  ["push_in"],
-        "bathroom": ["tilt_td"],
+        "exterior": ["push_in", "pull_back", "pan_rl"],
+        "living":   ["push_pan_lr", "push_in", "pull_back", "pan_rl"],
+        "kitchen":  ["pan_lr", "pan_to_subject", "push_in"],
+        "bedroom":  ["push_in", "pan_rl", "tilt_td"],
+        "bathroom": ["tilt_td", "pan_lr", "push_in_slow"],
     },
     "rural": {
-        "exterior": ["pull_back", "push_in_slow"],
-        "backyard": ["pull_back"],
-        "living":   ["push_in"],
+        "exterior": ["pull_back", "push_in_slow", "pan_lr", "tilt_td"],
+        "backyard": ["pull_back", "pan_rl", "push_in_slow"],
+        "living":   ["push_in", "push_pan_lr", "pull_back"],
     },
 }
 
 
 def default_modes_for_room(room_type: str) -> list[str]:
     return {
-        "exterior":          ["push_in", "pull_back"],
-        "living":            ["push_pan_lr", "push_pan_rl", "pull_back"],
-        "kitchen":           ["pan_to_subject", "pan_lr"],
-        "dining":            ["push_in"],
-        "bedroom":           ["push_in"],
-        "bathroom":          ["tilt_td"],
-        "office":            ["push_in"],
-        "backyard":          ["pull_back", "pan_lr"],
-        "pool":              ["pull_back", "pan_to_subject"],
-        "balcony":           ["pan_to_subject"],
-        "community_amenity": ["pull_back"],
-        "hallway":           ["push_in_slow"],
-        "garage":            ["push_in_slow"],
-        "basement":          ["push_in_slow"],
-        "other":             ["push_in_slow", "push_in"],
+        "exterior":          ["push_in", "pull_back", "pan_lr", "tilt_td"],
+        "living":            ["push_pan_lr", "push_pan_rl", "pull_back", "push_in"],
+        "kitchen":           ["pan_to_subject", "pan_lr", "push_in", "tilt_td"],
+        "dining":            ["push_in", "pan_rl", "pull_back"],
+        "bedroom":           ["push_in", "pan_lr", "pull_back"],
+        "bathroom":          ["tilt_td", "pan_rl", "push_in_slow"],
+        "office":            ["push_in", "pan_lr", "tilt_td"],
+        "backyard":          ["pull_back", "pan_lr", "push_in"],
+        "pool":              ["pull_back", "pan_to_subject", "pan_rl"],
+        "balcony":           ["pan_to_subject", "tilt_td", "pull_back"],
+        "community_amenity": ["pull_back", "pan_lr", "push_in_slow"],
+        "hallway":           ["push_in_slow", "pan_rl", "tilt_td"],
+        "garage":            ["push_in_slow", "pan_lr"],
+        "basement":          ["push_in_slow", "push_in", "pan_rl"],
+        "other":             ["push_in_slow", "push_in", "pan_lr"],
     }.get(room_type, ["push_in"])
 
 
@@ -337,9 +342,66 @@ def plan_durations(n: int, hero_ranks: list[int],
     return durations
 
 
+# Modes that read as the same gesture to a viewer. Balancing by family rather
+# than by mode is what "不要太单一" actually means: push_in and push_in_slow are
+# two names for pushing in, and a tour that alternates between them still looks
+# like one long push.
+MODE_FAMILY = {
+    "push_in": "push", "push_in_slow": "push",
+    "pull_back": "pull",
+    "pan_lr": "pan", "pan_rl": "pan", "pan_to_subject": "pan",
+    "push_pan_lr": "push_pan", "push_pan_rl": "push_pan",
+    "tilt_td": "tilt",
+}
+# No family may exceed this share of a tour while another family is available
+# from the same room's pool.
+FAMILY_MAX_SHARE = 0.40
+
+
+def family_of(mode: str) -> str:
+    return MODE_FAMILY.get(mode, mode)
+
+
+def balance_families(modes: list[str], pools: list[list[str]],
+                     rng: random.Random) -> list[str]:
+    """Trade clips out of over-used families into under-used ones.
+
+    Only ever swaps a clip for another mode its own room offered, so the shot
+    stays appropriate to the room; a clip whose pool has nothing else to give
+    is left alone. Bounded by construction — every swap strictly reduces the
+    leading family's count.
+    """
+    n = len(modes)
+    if n < 3:
+        return modes
+    limit = max(1, int(n * FAMILY_MAX_SHARE))
+    for _ in range(n):
+        counts: dict[str, int] = {}
+        for m in modes:
+            counts[family_of(m)] = counts.get(family_of(m), 0) + 1
+        worst = max(counts, key=lambda f: counts[f])
+        if counts[worst] <= limit:
+            break
+        # Prefer moving a clip into the family used least so far.
+        candidates = [
+            (i, alt)
+            for i, m in enumerate(modes) if family_of(m) == worst
+            for alt in pools[i] if family_of(alt) != worst
+        ]
+        if not candidates:
+            break
+        i, alt = min(
+            candidates,
+            key=lambda ia: (counts.get(family_of(ia[1]), 0), rng.random()),
+        )
+        modes[i] = alt
+    return modes
+
+
 def assign_modes(picked: list[dict[str, Any]], style: str, seed: int) -> list[str]:
     rng = random.Random(seed)
     modes: list[str] = []
+    pools: list[list[str]] = []
     templates = STYLE_ROOM_TEMPLATES.get(style, {})
     for p in picked:
         rt = p.get("room_type", "other")
@@ -348,7 +410,12 @@ def assign_modes(picked: list[dict[str, Any]], style: str, seed: int) -> list[st
         bbox = p.get("subject_bbox")
         if not bbox or len(bbox) != 4 or bbox[2] < 0.05 or bbox[3] < 0.05:
             pool = [m for m in pool if m != "pan_to_subject"] or ["push_in"]
+        pools.append(pool)
         modes.append(rng.choice(pool))
+
+    # Random picks from per-room pools still clump — every room's pool leans on
+    # push variants, so the tour does too. Spread them across families.
+    modes = balance_families(modes, pools, rng)
 
     # Owner 2026-08-09: "不要静止的图片". Every clip moves. The forced-static
     # rule (10% of clips, lowest hero_score, as a breath between energetic

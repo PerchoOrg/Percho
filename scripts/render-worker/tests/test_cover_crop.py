@@ -133,11 +133,17 @@ def test_horizontal_still_travels():
     assert "n/" in horizontal()
 
 
-def test_vertical_does_not_travel():
-    # A frame sliding up and down a room reads as restless; there is also far
-    # less to gain (18.5% of the frame against 50% on square).
+def test_vertical_drifts_but_only_a_little():
+    """Owner 2026-08-10: "之前上下大幅度滑动不好 但是小幅度的向上移动俯视角度是
+    可以的". A full vertical sweep was restless and removed; a short drift is
+    wanted back. The guard is on the AMOUNT, not the presence."""
+    from generate import VERTICAL_DRIFT_SCALE
     vf = cover_travel("", 2.5, 75, 0.5, 0.5, *WIDE, *LANDSCAPE_CANVAS, True)
-    assert "n/" not in vf, f"vertical axis is still sweeping: {vf}"
+    assert "n/" in vf, f"vertical axis is frozen again: {vf}"
+    assert VERTICAL_DRIFT_SCALE < 0.5, "vertical is a texture, not a sweep"
+    # …and it must be a fraction of what the horizontal axis is allowed.
+    h_rate = MAX_TRAVEL_PER_S / 1.10 / 1.5
+    assert f"{h_rate * VERTICAL_DRIFT_SCALE:.6f}*out_h" in vf
 
 
 def test_travel_stops_at_the_coverage_target():
