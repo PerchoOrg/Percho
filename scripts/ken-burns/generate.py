@@ -187,6 +187,36 @@ def fit_inside(src_w: int, src_h: int, box_w: int, box_h: int,
     return max(fw, 2), max(fh, 2)
 
 
+def subject_center(bbox: list[float] | None) -> tuple[float, float]:
+    """Normalized centre of the tagged subject, or the frame centre."""
+    if bbox and len(bbox) == 4 and bbox[2] > 0.01 and bbox[3] > 0.01:
+        bx, by, bw, bh = bbox
+        return (max(0.0, min(1.0, bx + bw / 2)),
+                max(0.0, min(1.0, by + bh / 2)))
+    return 0.5, 0.5
+
+
+def cover_crop_xy(subj_cx: float, subj_cy: float) -> str:
+    """`x`/`y` args for a cover crop, aimed at the subject.
+
+    Owner 2026-08-09: "16:9 的照片截取的部分把房子切成了两半". The crop was
+    hard-centred — ffmpeg's default when x/y are omitted — so a house sitting
+    off-centre in a wide photo lost whatever fell outside the middle of the
+    frame, even though the shot plan has always carried a subject bbox.
+
+    The crop window keeps its size; only its position moves, clamped to the
+    image so the frame never runs off the edge. That means it fixes off-centre
+    subjects and cannot help a subject wider than the window — a 1:1 crop of a
+    16:9 photo keeps 56% of the width no matter where it sits.
+
+    Coordinates are normalized, so they survive the scale that precedes the
+    crop. On the axis that the scale matched exactly there is no slack and the
+    clip collapses to 0, which is the centred behaviour anyway.
+    """
+    return (f":x='clip({subj_cx:.4f}*in_w-out_w/2,0,in_w-out_w)'"
+            f":y='clip({subj_cy:.4f}*in_h-out_h/2,0,in_h-out_h)'")
+
+
 def kenburns_filter_v2(mode: str, duration: float, w: int, h: int,
                        fg_w: int, fg_h: int,
                        bbox: list[float] | None = None,
@@ -221,12 +251,7 @@ def kenburns_filter_v2(mode: str, duration: float, w: int, h: int,
     frames = int(duration * FPS)
     fl = max(frames - 1, 1)
 
-    if bbox and len(bbox) == 4 and bbox[2] > 0.01 and bbox[3] > 0.01:
-        bx, by, bw, bh = bbox
-        subj_cx = max(0.0, min(1.0, bx + bw / 2))
-        subj_cy = max(0.0, min(1.0, by + bh / 2))
-    else:
-        subj_cx, subj_cy = 0.5, 0.5
+    subj_cx, subj_cy = subject_center(bbox)
 
     x_center = "iw/2-(iw/zoom/2)"
     y_center = "ih/2-(ih/zoom/2)"
@@ -290,7 +315,7 @@ def kenburns_filter_v2(mode: str, duration: float, w: int, h: int,
         # down to w×h.
         return (
             f"scale={w * SMOOTH}:{h * SMOOTH}:force_original_aspect_ratio=increase:flags=lanczos,"
-            f"crop={w * SMOOTH}:{h * SMOOTH},setsar=1,"
+            f"crop={w * SMOOTH}:{h * SMOOTH}{cover_crop_xy(subj_cx, subj_cy)},setsar=1,"
             f"zoompan=z='{z}':x='{x}':y='{y}':d={frames}:s={w}x{h}:fps={FPS},"
             f"format=yuv420p"
         )
@@ -435,18 +460,21 @@ def v2_caption_filter(text: str, w: int, h: int) -> str:
     return f"{bar},{txt}"
 
 
-def compose_filter(w: int, h: int, cover: bool) -> str:
+def compose_filter(w: int, h: int, cover: bool,
+                   bbox: list[float] | None = None) -> str:
     """Canvas composition WITHOUT motion, for clips whose movement was already
     baked in by another engine.
 
     Mirrors what kenburns_filter/_v2 do around their zoompan so the two engines
     put the photo on the canvas identically — the only thing that should differ
-    between them is how the camera moves.
+    between them is how the camera moves. That includes where the cover crop
+    aims: see cover_crop_xy.
     """
     if cover:
+        subj_cx, subj_cy = subject_center(bbox)
         return (
             f"scale={w}:{h}:force_original_aspect_ratio=increase,"
-            f"crop={w}:{h},setsar=1"
+            f"crop={w}:{h}{cover_crop_xy(subj_cx, subj_cy)},setsar=1"
         )
     bg = (
         f"scale={w}:{h}:force_original_aspect_ratio=increase,crop={w}:{h},"
@@ -508,7 +536,7 @@ def render_clip(src: str, dst: str, duration: float, mode: str, w: int, h: int,
             die("--engine depthflow requires --depthflow-python")
         parallax = dst + ".parallax.mp4"
         render_parallax(src, parallax, duration, mode, w, h, depthflow_python)
-        vf = compose_filter(w, h, cover=cover_crop or w >= h) + "," + ENHANCE
+        vf = compose_filter(w, h, cover=cover_crop or w >= h, bbox=bbox) + "," + ENHANCE
         if v2_caption and not caption_png:
             cap_vf = v2_caption_filter(v2_caption, w, h)
             if cap_vf:

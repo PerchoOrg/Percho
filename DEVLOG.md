@@ -4,6 +4,59 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-08-10 01:40 — cover crop 对准主体(方形卡片不再把房子切成两半)
+
+**Objective**: owner:"16:9 的照片截取的部分把房子切成了两半,有没有可能自动识别
+主体然后尽量保留?"
+
+**Findings**:
+- **裁切是写死居中的**。`generate.py` 两处 cover 分支都是 `crop=w:h` 不带 x/y,
+  ffmpeg 默认取正中。而 `subject_bbox` 一直在 shot plan 里(`pan_to_subject`
+  在用),**裁切从来没读过它**。
+- **只有方形卡片会裁**。`landscape_canvas = cover_crop or w >= h`:1080x1080
+  (w==h)走 cover crop,从 16:9 只保留 **56.25% 宽度**;竖版 1080x1920 走模糊
+  信箱,整张照片都在,不裁切。所以 owner 看到的是 feed 方卡。
+- **我先入为主判断错了一次**:读 tagger 提示词后我以为外景照没有可用 bbox
+  (`subject_label` 词表里没有"房子")。查真实数据:265 张外景照 **254 张有非默认
+  bbox**,但标签压倒性是 `door`(234/265)—— 指的是前门,不是房子。**读提示词
+  推不出数据长什么样,要查库。**
+- 实测这个锚点的价值:主体中心 x 高度集中(p10=0.46 / p50=0.50 / p90=0.56),
+  偏移 >3% 画宽的只有 **84/264(32%)**。所以对准主体是**真改进但幅度有限** ——
+  修那 1/3 偏心的照片,另外 2/3 前门本来就在正中,挪不动。
+
+**Decisions**:
+- owner 在 A/B/C 三个选项里**只选 A**(对准主体)。B(外景方卡改成保全宽度 +
+  上下模糊带)和 C(让 tagger 额外返回建筑主体包围盒,需重新打标 + 回填,
+  §8 花费)都没做。
+- **窗口只挪位置,不改大小**,并 clamp 在图内。所以它修不了"主体比窗口还宽"
+  这一类 —— 这点在选项里跟 owner 说清楚了,是已知上限,不是遗漏。
+- 完全对准(不是挪一部分):跟 owner 确认时画的图就是挪到贴边为止。
+
+**Actions**:
+- 新增 `subject_center(bbox)` 和 `cover_crop_xy(cx, cy)`,输出
+  `crop=…:x='clip(cx*in_w-out_w/2,0,in_w-out_w)':y='…'`。归一化坐标在
+  scale 之后依然成立;scale 恰好贴合的那条轴没有余量,clip 自动塌成 0 = 原居中行为。
+- 两个引擎都接上:`kenburns_filter_v2` 的 cover 分支、`compose_filter`
+  (新增 `bbox` 参数)。`kenburns_filter_v2` 里原有的 bbox 取中心代码抽成
+  `subject_center` 复用。
+- 新增 `tests/test_cover_crop.py`(7 条)。
+
+**Resolution**(端到端实拍验证,不是只看滤镜串):
+造了两张 1600x900、主体分别在 x=0.12 / x=0.74 的图,同一份 shot plan
+分别跑 `origin/main` 和本分支:
+
+| 主体位置 | main(居中) | 本分支(对准) |
+|---|---|---|
+| x=0.12 | **0 px —— 整个切没了** | 56,775 px |
+| x=0.74 | 46,728 px(切掉一部分) | 66,522 px |
+
+DepthFlow 路径的滤镜串单独用 ffmpeg 验过(同一表达式,有测试钉住两个引擎
+输出一致),没跑完整 depthflow 渲染 —— 要 torch,且变量只在运镜不在构图。
+测试 22/22 通过。
+
+**Next steps**: owner 看实际产出。若"房子比窗口宽"仍然明显,下一步是 B
+(外景方卡保全宽度 + 上下模糊带),不需要重新打标;C 才需要动 tagger 和花钱。
+
 ## 2026-08-10 00:40 — 节奏放慢到 2.0s 起、去掉静止帧、DepthFlow 效果用全
 
 **Objective**: owner 端到端验证了 depthflow 产出后提三条:①每张照片至少 2-3 秒,
