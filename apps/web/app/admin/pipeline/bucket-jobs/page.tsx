@@ -8,9 +8,12 @@
  */
 
 import { createServiceClient } from '@/lib/supabase/server';
+import Link from 'next/link';
 import BucketJobsTable, { type BucketJobRow } from './BucketJobsTable';
 
 export const dynamic = 'force-dynamic';
+
+type StatusFilter = 'all' | 'pending' | 'processing' | 'ready' | 'approved' | 'failed' | 'superseded';
 
 type DbRow = {
   id: string;
@@ -26,16 +29,33 @@ type DbRow = {
   input_photo_ids: string[] | null;
 };
 
-export default async function BucketJobsPage() {
+export default async function BucketJobsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ status?: string }>;
+}) {
+  const { status } = await searchParams;
+  const statusFilter: StatusFilter =
+    status === 'pending' ||
+    status === 'processing' ||
+    status === 'ready' ||
+    status === 'approved' ||
+    status === 'failed' ||
+    status === 'superseded'
+      ? status
+      : 'all';
+
   const supabase = createServiceClient();
-  const { data } = (await supabase
+  let q = supabase
     .from('generated_videos')
     .select(
       'id, scope, intent_bucket, status, cf_stream_uid, duration_s, error, created_at, community_id, listing_id, input_photo_ids',
     )
     .in('scope', ['listing_intent_bucket', 'community_intent_bucket'])
     .order('created_at', { ascending: false })
-    .limit(500)) as { data: DbRow[] | null };
+    .limit(500);
+  if (statusFilter !== 'all') q = q.eq('status', statusFilter);
+  const { data } = (await q) as { data: DbRow[] | null };
 
   const rows: BucketJobRow[] = (data ?? []).map((r) => ({
     id: r.id,
@@ -52,7 +72,41 @@ export default async function BucketJobsPage() {
 
   return (
     <div className="space-y-4">
+      <StatusFilterBar current={statusFilter} />
       <BucketJobsTable rows={rows} />
+    </div>
+  );
+}
+
+function StatusFilterBar({ current }: { current: StatusFilter }) {
+  const options: { value: StatusFilter; label: string }[] = [
+    { value: 'all', label: 'All' },
+    { value: 'pending', label: 'Pending' },
+    { value: 'processing', label: 'Processing' },
+    { value: 'ready', label: 'Ready' },
+    { value: 'approved', label: 'Approved' },
+    { value: 'failed', label: 'Failed' },
+    { value: 'superseded', label: 'Superseded' },
+  ];
+  return (
+    <div className="flex flex-wrap gap-2">
+      {options.map((o) => {
+        const active = current === o.value;
+        const href = o.value === 'all' ? '/admin/pipeline/bucket-jobs' : `?status=${o.value}`;
+        return (
+          <Link
+            key={o.value}
+            href={href}
+            className={`rounded-full border px-3 py-1 text-xs transition ${
+              active
+                ? 'border-ink bg-ink text-bg'
+                : 'border-line bg-surface text-ink2 hover:border-ink2 hover:text-ink'
+            }`}
+          >
+            {o.label}
+          </Link>
+        );
+      })}
     </div>
   );
 }

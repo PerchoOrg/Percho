@@ -4,6 +4,12 @@
  * We don't have a heartbeat table yet (TODO once render-worker starts
  * writing to `worker_heartbeats`), so this page infers health from the
  * timing of the most recent job transitions.
+ *
+ * NOTE: generated_videos has NO `updated_at` column — only created_at /
+ * reviewed_at / approved_at. Completion time for a bucket render is not
+ * timestamped separately, so created_at is the closest available signal
+ * for "last successful render" (rows are enqueued and drained within
+ * seconds, so the approximation is tight).
  */
 
 import { createServiceClient } from '@/lib/supabase/server';
@@ -13,11 +19,19 @@ export const dynamic = 'force-dynamic';
 async function loadHealth() {
   const supabase = createServiceClient();
 
-  type LastReady = { id: string; updated_at: string; scope: string; intent_bucket: string | null };
+  type LastReady = { id: string; created_at: string; scope: string; intent_bucket: string | null };
   type LastFailed = LastReady & { error: string | null };
+  type RecentJob = {
+    id: string;
+    listing_id: string | null;
+    status: string;
+    created_at: string;
+    updated_at: string | null;
+    error: string | null;
+  };
 
-  const [pending, processing, failed24h, ready24h, lastReadyRes, lastFailedRes] = await Promise.all(
-    [
+  const [pending, processing, failed24h, ready24h, lastReadyRes, lastFailedRes, recentJobsRes] =
+    await Promise.all([
       supabase
         .from('generated_videos')
         .select('id', { count: 'exact', head: true })
@@ -37,23 +51,27 @@ async function loadHealth() {
         .from('generated_videos')
         .select('id', { count: 'exact', head: true })
         .in('status', ['ready', 'approved'])
-        .gte('updated_at', new Date(Date.now() - 24 * 3600 * 1000).toISOString()),
+        .gte('created_at', new Date(Date.now() - 24 * 3600 * 1000).toISOString()),
       supabase
         .from('generated_videos')
-        .select('id, updated_at, scope, intent_bucket')
+        .select('id, created_at, scope, intent_bucket')
         .in('status', ['ready', 'approved'])
-        .order('updated_at', { ascending: false })
+        .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle() as unknown as Promise<{ data: LastReady | null }>,
       supabase
         .from('generated_videos')
-        .select('id, updated_at, error, scope, intent_bucket')
+        .select('id, created_at, error, scope, intent_bucket')
         .eq('status', 'failed')
-        .order('updated_at', { ascending: false })
+        .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle() as unknown as Promise<{ data: LastFailed | null }>,
-    ],
-  );
+      supabase
+        .from('render_jobs')
+        .select('id, listing_id, status, created_at, updated_at, error')
+        .order('created_at', { ascending: false })
+        .limit(5) as unknown as Promise<{ data: RecentJob[] | null }>,
+    ]);
 
   return {
     pending: pending.count ?? 0,
@@ -62,6 +80,7 @@ async function loadHealth() {
     ready24h: ready24h.count ?? 0,
     lastReady: lastReadyRes.data,
     lastFailed: lastFailedRes.data,
+    recentJobs: recentJobsRes.data ?? [],
   };
 }
 
@@ -78,8 +97,8 @@ export default async function WorkerHealthPage() {
 
   const stalled =
     h.pending > 0 &&
-    (!h.lastReady?.updated_at ||
-      Date.now() - new Date(h.lastReady.updated_at).getTime() > 30 * 60 * 1000);
+    (!h.lastReady?.created_at ||
+      Date.now() - new Date(h.lastReady.created_at).getTime() > 30 * 60 * 1000);
 
   return (
     <div className="space-y-4">
@@ -105,7 +124,7 @@ export default async function WorkerHealthPage() {
               <>
                 <span className="text-emerald-500">{h.lastReady.intent_bucket ?? '—'}</span>
                 <span className="text-ink2"> · {h.lastReady.scope}</span>
-                <span className="text-ink2"> · {ageStr(h.lastReady.updated_at)}</span>
+                <span className="text-ink2"> · {ageStr(h.lastReady.created_at)}</span>
               </>
             ) : (
               <span className="text-ink2">no data</span>
@@ -119,7 +138,7 @@ export default async function WorkerHealthPage() {
               <>
                 <span className="text-red-500">{h.lastFailed.intent_bucket ?? '—'}</span>
                 <span className="text-ink2"> · {h.lastFailed.scope}</span>
-                <span className="text-ink2"> · {ageStr(h.lastFailed.updated_at)}</span>
+                <span className="text-ink2"> · {ageStr(h.lastFailed.created_at)}</span>
                 {h.lastFailed.error && (
                   <div className="text-ink2 mt-1 line-clamp-3 text-xs">{h.lastFailed.error}</div>
                 )}
@@ -128,6 +147,40 @@ export default async function WorkerHealthPage() {
               <span className="text-ink2">none in recent history</span>
             )}
           </div>
+        </div>
+      </div>
+
+      <div className="rounded-2xl border border-line bg-surface p-4">
+        <div className="text-ink2 text-xs uppercase tracking-wide">
+          Recent render jobs <span className="normal-case">(render_jobs — includes Mac mini tour renders)</span>
+        </div>
+        <div className="mt-2 space-y-1.5 text-sm">
+          {h.recentJobs.length === 0 ? (
+            <span className="text-ink2">no jobs</span>
+          ) : (
+            h.recentJobs.map((j) => (
+              <div key={j.id} className="flex items-center gap-3">
+                <span className="font-mono text-xs text-ink2">{j.id.slice(0, 8)}</span>
+                <span
+                  className={`text-xs font-medium ${
+                    j.status === 'done'
+                      ? 'text-emerald-500'
+                      : j.status === 'failed'
+                        ? 'text-red-500'
+                        : j.status === 'running'
+                          ? 'text-blue-500'
+                          : 'text-ink2'
+                  }`}
+                >
+                  {j.status}
+                </span>
+                <span className="text-xs text-ink2">
+                  {new Date(j.created_at).toLocaleString()}
+                </span>
+                {j.error && <span className="text-ink2 line-clamp-1 text-xs">{j.error}</span>}
+              </div>
+            ))
+          )}
         </div>
       </div>
     </div>
