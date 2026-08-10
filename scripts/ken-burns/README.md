@@ -39,7 +39,13 @@ python scripts/ken-burns/generate.py \
 stdlib-only). Canvas composition, transitions, captions, overlays and BGM are
 identical either way, so the two outputs differ in motion and nothing else.
 
-Shot-plan modes are translated to parallax moves by `depthflow_modes.py`.
+Shot-plan modes are translated to parallax moves by `depthflow_modes.py`. Each
+mode offers several moves that read as the same camera intent (`push_in` →
+`dolly_in` / `zoom_in` / `parallax_bloom`), and `plan_moves` picks one per clip
+from the room type and the clip's position, then swaps when a move would repeat
+the one before it. That is why the whole tour is resolved up front here rather
+than inside `depthflow_clip.py` — a single clip can't see its neighbour.
+
 `pan_to_subject` loses its subject aim there — the parallax move that tracked a
 bbox was rejected in review, so it degrades to a plain orbit.
 

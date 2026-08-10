@@ -96,6 +96,9 @@ def main() -> None:
     p.add_argument("--fps", type=int, default=30)
     args = p.parse_args()
 
+    # generate.py resolves the whole tour up front (it is the only caller that
+    # can see a clip's neighbours) and passes a parallax move straight through.
+    # resolve() still runs so this stays usable by hand with a Ken Burns mode.
     move = resolve(args.mode)
     if move is None:
         print(f"depthflow_clip: unknown mode {args.mode!r}", file=sys.stderr)

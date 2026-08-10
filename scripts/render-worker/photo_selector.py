@@ -10,12 +10,12 @@ Input: list of per-photo dicts with at minimum these vision fields:
 
 Output: ordered list of PhotoPlan dicts with:
   id, path, room_type, subject_label, subject_bbox, is_master,
-  hero_score, quality, duration_s, mode, is_static
+  hero_score, quality, duration_s, mode, is_hero
 
 Config (Phase 93):
-  TOTAL_CAP = 60s, MIN = 2.5s, MAX = 6.0s, XFADE = 0.5s.
+  TOTAL_CAP = 60s, XFADE = 0.5s. Clip length comes from the pacing tiers
+  below (MIN/MAX_PER_PHOTO only bound the uniform curve, PACE_BIMODAL=False).
   dhash Hamming distance < 10 → treat as near-dup.
-  10% of clips randomly forced to `static` mode (seeded by listing_id).
   Hero-boost: top-3 hero_score photos each +0.5s (redistributed).
   floorplan never included in the video.
 """
@@ -31,7 +31,6 @@ MIN_PER_PHOTO = 2.5
 MAX_PER_PHOTO = 6.0
 XFADE = 0.5
 DHASH_THRESHOLD = 10
-STATIC_RATIO = 0.10
 HERO_BOOST_COUNT = 3
 HERO_BOOST_SECONDS = 0.5
 
@@ -45,16 +44,18 @@ HERO_BOOST_SECONDS = 0.5
 #   bottom PACE_FILLER_FRACTION by score    → PACE_FILLER_S (quick pass)
 #   everything else                         → PACE_NORMAL_S
 #
-# A 12-shot tour: 3×3.4 + 3×1.0 + 6×1.7 ≈ 23.4s of clips → ~18s after xfades,
-# vs ~54s before. Set PACE_BIMODAL = False to restore the uniform curve.
+# Owner 2026-08-09, watching the first depthflow tour: the short beats read as
+# too fast to take a room in — "每张照片至少 2-3 秒". The beat stays, the floor
+# comes up: nothing is shorter than PACE_FILLER_S now, so the curve compresses
+# from 1.0–3.4 to 2.0–3.5.
+#
+# A 12-shot tour: 3×3.5 + 3×2.0 + 6×2.5 = 31.5s of clips → ~27s after xfades.
+# Set PACE_BIMODAL = False to restore the uniform curve.
 PACE_BIMODAL = True
-PACE_HERO_S = 3.4
-PACE_NORMAL_S = 1.7
-PACE_FILLER_S = 1.0
+PACE_HERO_S = 3.5
+PACE_NORMAL_S = 2.5
+PACE_FILLER_S = 2.0
 PACE_FILLER_FRACTION = 0.25
-# A 1.7s clip that doesn't move reads as a dropped frame, not as breath, so the
-# forced-static rule only applies to clips long enough to hold a still.
-PACE_STATIC_MIN_S = 3.0
 
 # Quotas: min photos we'd like to have, max we'll ever include.
 # priority: lower = filled first when trimming budget.
@@ -161,9 +162,9 @@ def default_modes_for_room(room_type: str) -> list[str]:
         "balcony":           ["pan_to_subject"],
         "community_amenity": ["pull_back"],
         "hallway":           ["push_in_slow"],
-        "garage":            ["static"],
+        "garage":            ["push_in_slow"],
         "basement":          ["push_in_slow"],
-        "other":             ["static", "push_in"],
+        "other":             ["push_in_slow", "push_in"],
     }.get(room_type, ["push_in"])
 
 
@@ -318,8 +319,7 @@ def plan_durations(n: int, hero_ranks: list[int],
     return durations
 
 
-def assign_modes(picked: list[dict[str, Any]], style: str, seed: int,
-                 durations: list[float] | None = None) -> list[str]:
+def assign_modes(picked: list[dict[str, Any]], style: str, seed: int) -> list[str]:
     rng = random.Random(seed)
     modes: list[str] = []
     templates = STYLE_ROOM_TEMPLATES.get(style, {})
@@ -332,27 +332,11 @@ def assign_modes(picked: list[dict[str, Any]], style: str, seed: int,
             pool = [m for m in pool if m != "pan_to_subject"] or ["push_in"]
         modes.append(rng.choice(pool))
 
-    # No still frames on the short beats, whatever the room template said —
-    # a 1.0s clip that doesn't move reads as a stall, not as a pause.
-    if durations is not None:
-        for i, m in enumerate(modes):
-            if m == "static" and i < len(durations) and durations[i] < PACE_STATIC_MIN_S:
-                modes[i] = "push_in"
-
-    # 10% forced static
-    n_static = max(0, round(len(picked) * STATIC_RATIO))
-    if n_static > 0:
-        # Choose indices with LOWEST hero_score for static (they're the ones
-        # least worth energetic motion — gives the audience a breath).
-        idx_by_hero = sorted(range(len(picked)), key=lambda i: picked[i].get("hero_score", 0))
-        # …but only where the clip is long enough to READ as a breath. Under the
-        # bimodal curve the lowest-hero clips are also the 1.0s filler beats,
-        # and a 1.0s still frame looks like the video stalled. Skip those.
-        if durations is not None:
-            idx_by_hero = [i for i in idx_by_hero
-                           if i < len(durations) and durations[i] >= PACE_STATIC_MIN_S]
-        for i in idx_by_hero[:n_static]:
-            modes[i] = "static"
+    # Owner 2026-08-09: "不要静止的图片". Every clip moves. The forced-static
+    # rule (10% of clips, lowest hero_score, as a breath between energetic
+    # shots) is gone, and no room template offers `static` any more. The
+    # renderers still implement the mode — it is reachable by hand through
+    # --zoom-mode — the shot planner just never asks for it.
     return modes
 
 
@@ -376,14 +360,15 @@ def build_plan(
     usable = dedupe(usable)
 
     # 3. determine budget
-    #    max feasible clips at MIN duration:  cap = n*MIN - (n-1)*XFADE
-    #    n = (cap + XFADE) / (MIN + XFADE) ... no wait, per clip is >= MIN,
-    #    total video = sum - (n-1)*xfade. If per=MIN: cap = n*MIN - (n-1)*xfade
-    #    → n = (cap - xfade) / (MIN - xfade) → but MIN>xfade so:
-    hard_cap_n = int((TOTAL_CAP + XFADE) // (MIN_PER_PHOTO - XFADE + XFADE))
-    # Simpler: total_clip_time = cap + (n-1)*xfade, and per >= MIN
-    # So n <= (cap + xfade) / MIN  (approximately). Use that.
-    max_n_by_budget = int((TOTAL_CAP + XFADE) / (MIN_PER_PHOTO - 0.0))
+    #    total_clip_time = cap + (n-1)*xfade, so n <= (cap + xfade) / per_clip.
+    #    Which "per clip" is the honest divisor depends on the curve: under the
+    #    uniform curve every clip sits at >= MIN_PER_PHOTO, but under the
+    #    bimodal curve MIN_PER_PHOTO is not a bound at all — the tiers are the
+    #    bound, and PACE_NORMAL_S is the one most clips land on (heroes run
+    #    longer, fillers shorter, and those roughly cancel). Deriving it from
+    #    the tier keeps TOTAL_CAP honest when the pacing constants get retuned.
+    per_clip = PACE_NORMAL_S if PACE_BIMODAL else MIN_PER_PHOTO
+    max_n_by_budget = int((TOTAL_CAP + XFADE) / per_clip)
     budget = min(max_n_by_budget, max_photos or 9999, len(usable))
 
     # 4. quota-based selection
@@ -405,7 +390,7 @@ def build_plan(
 
     # 7. mode assignment (style-aware, seeded on listing_id)
     seed = hash(listing_id) & 0xFFFFFFFF
-    modes = assign_modes(ordered, style, seed, durations)
+    modes = assign_modes(ordered, style, seed)
 
     plan: list[dict[str, Any]] = []
     for i, p in enumerate(ordered):

@@ -19,6 +19,11 @@ import sys
 import tempfile
 from pathlib import Path
 
+# Sibling module, stdlib-only on purpose — this script runs under the worker's
+# system interpreter, so it must not pull in torch the way depthflow_clip does.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from depthflow_modes import plan_moves  # noqa: E402
+
 
 FPS = 30
 # zoompan moves x/y/zoom in INTEGER pixels of ITS INPUT. Feed it a canvas
@@ -958,6 +963,18 @@ def main() -> None:
             caption_pngs = render_caption_pngs(args.captions, tmp_caption_dir,
                                                 width=w, height=h)
 
+        # Parallax moves are chosen for the whole tour at once: a mode maps to
+        # several moves and the choice depends on the neighbouring clip, which
+        # a single render_clip call can't see. Ken Burns keeps its own modes.
+        parallax_moves: list[str | None] = []
+        if args.engine == "depthflow":
+            if shot_plan:
+                shots = [(s["mode"], s.get("room_type")) for s in shot_plan]
+            else:
+                shots = [(pick_mode(i, args.zoom_mode), None)
+                         for i in range(len(photos))]
+            parallax_moves = plan_moves(shots)
+
         clips = []
         for i, ph in enumerate(photos):
             if shot_plan:
@@ -973,6 +990,11 @@ def main() -> None:
                 bbox = None
                 use_v2 = False
                 v2_cap = ""
+            if parallax_moves:
+                move = parallax_moves[i]
+                if move is None:
+                    die(f"no parallax counterpart for shot mode {mode!r}")
+                mode = move
             out = os.path.join(tmp, f"clip_{i:03d}.mp4")
             # show_on_clips is 1-indexed by convention
             clip_overlay = listing_overlay if (i + 1) in overlay_clips else None
