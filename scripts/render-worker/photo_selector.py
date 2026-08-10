@@ -49,12 +49,16 @@ HERO_BOOST_SECONDS = 0.5
 # comes up: nothing is shorter than PACE_FILLER_S now, so the curve compresses
 # from 1.0–3.4 to 2.0–3.5.
 #
-# A 12-shot tour: 3×3.5 + 3×2.0 + 6×2.5 = 31.5s of clips → ~27s after xfades.
+# Owner 2026-08-10: "注意我们的2.5到3.5的约束" — the floor comes up again, so
+# every clip now sits inside the 2.5-3.5s band the owner set for taking a room
+# in. The 2.0s beat read as a still rather than a quick pass.
+#
+# A 12-shot tour: 3×3.5 + 3×2.5 + 6×3.0 = 36s of clips → ~30s after xfades.
 # Set PACE_BIMODAL = False to restore the uniform curve.
 PACE_BIMODAL = True
 PACE_HERO_S = 3.5
-PACE_NORMAL_S = 2.5
-PACE_FILLER_S = 2.0
+PACE_NORMAL_S = 3.0
+PACE_FILLER_S = 2.5
 PACE_FILLER_FRACTION = 0.25
 
 # Quotas: min photos we'd like to have, max we'll ever include.

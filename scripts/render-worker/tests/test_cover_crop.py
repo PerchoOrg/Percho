@@ -114,7 +114,6 @@ def test_blur_letterbox_path_never_crops():
 from generate import (  # noqa: E402
     COVERAGE_TARGET,
     MAX_TRAVEL_PER_S,
-    best_band,
     cover_travel,
 )
 
@@ -164,15 +163,16 @@ def test_direction_alternates():
     assert horizontal(forward=True) != horizontal(forward=False)
 
 
-def test_best_band_falls_back_to_the_subject_when_the_photo_is_unreadable():
-    # Never fail a render over a probe: no pixels means no opinion, and the
-    # window falls back to sitting on the subject.
-    frac, cy = 0.844, 0.55
-    expected = min(max(cy - frac / 2, 0.0), 1 - frac)
-    assert best_band("/nonexistent.jpg", frac, cy) == expected
-
-
-def test_best_band_stays_inside_the_photo():
-    for cy in (0.0, 0.5, 1.0):
-        top = best_band("/nonexistent.jpg", 0.844, cy)
-        assert 0.0 <= top <= 1 - 0.844 + 1e-9, top
+def test_vertical_clips_still_move():
+    # Owner 2026-08-10: "出现了很多静止的图". The vertical axis stopped
+    # travelling, and the cover branch was also zeroing zoompan's pan for every
+    # cover clip — so a pan_lr on the landscape canvas, whose zoom is a constant
+    # 1.10 rather than a ramp, had no motion left at all. The pan is only
+    # silenced when the CROP is the thing moving.
+    from generate import kenburns_filter_v2
+    vf = kenburns_filter_v2("pan_lr", 3.0, 1920, 1080, 1620, 1080,
+                            bbox=[0.35, 0.35, 0.3, 0.3], cover=True,
+                            src="", src_w=1500, src_h=1000)
+    zp = vf.split("zoompan=")[1]
+    assert "iw/2-(iw/zoom/2)" not in zp, f"pan was silenced with nothing else moving: {zp}"
+    assert "on/" in zp, f"no zoompan motion left: {zp}"
