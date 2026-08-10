@@ -4,6 +4,33 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-08-10 07:20 — Admin 修复:Worker tab 崩溃 + Video Jobs 加状态过滤
+
+**Objective**: owner 报 "Admin - Video Jobs 不显示最新的 mac mini 上的任务,Worker tab 也没有信息"。
+
+**根因(两个独立 bug)**:
+1. **Worker tab 整页 500**:`admin/pipeline/worker-health/page.tsx` 6 个查询里有 3 个
+   `.from('generated_videos').select('..., updated_at')` — 该表**没有 `updated_at`
+   列**(只有 `created_at` / `reviewed_at` / `approved_at`),PostgREST 返回 400,
+   `Promise.all` 全拒 → 页面无信息。
+2. **Video Jobs 看起来没新任务**:该 tab 只读 `generated_videos`(nearby/bucket 视频),
+   而 Mac mini 最近的渲染全是 listing tour(`render_jobs` / `listing_videos`),
+   在 Home Tour 之外没有单独展示。`generated_videos` 本身最近一行是 08-02。
+
+**Actions**:
+- worker-health: `updated_at` → `created_at`(bucket 渲染无独立完成时间戳,
+  created_at 是最近似信号;注释说明)。新增 "Recent render jobs" 面板,
+  直接读 `render_jobs` 最近 5 条(done/failed/running + 时间 + error),
+  Mac mini 的 tour 渲染立刻可见。
+- bucket-jobs(Video Jobs): 加 Status filter chips(All/Pending/Processing/Ready/
+  Approved/Failed/Superseded),`?status=` searchParam 驱动,server-side 过滤。
+
+**Decisions**: 不动 worker 代码——worker 本身健康(launchd `com.percho.render-worker`
+在跑,log 显示今日多条 `[job …] done`)。问题是 admin 展示层读错列 + 读错表。
+
+**Next steps**: 如需让 Video Jobs 也显示 tour 渲染,可以把它改成
+`generated_videos` + `render_jobs` 的合并视图;当前 Worker tab 已覆盖。
+
 ## 2026-08-10 04:30 — 信息量优先:移动取景窗 + 画布感知轴向 + 双引擎混合
 
 **Objective**: owner 立的基本原则:"我们首先要保证的是信息量。如果一个照片不得不
