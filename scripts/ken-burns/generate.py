@@ -1246,6 +1246,27 @@ def main() -> None:
                 bbox = None
                 use_v2 = False
                 v2_cap = ""
+            # Sweep direction comes from the shot's own intent, read BEFORE the
+            # parallax substitution below replaces `mode` with a move name.
+            # Owner 2026-08-10: "ios的照片都是向左移动？" — not a coincidence.
+            # Holding one direction for the whole tour (which fixed the
+            # ping-pong) also flattened pan_rl and push_pan_rl into their _lr
+            # counterparts, throwing away a distinction the planner makes on
+            # purpose. Taking it from the mode restores the variety without
+            # going back to alternating mechanically on every clip.
+            #
+            # Most modes (push_in, pull_back, tilt_td) carry no direction at
+            # all, and they are the overwhelming majority — over 12 simulated
+            # listings only 1% of clips used an _rl mode. Those take their
+            # direction from the photo instead: sweep AWAY from the subject,
+            # toward the side that has more of the picture still unseen.
+            if mode.endswith("_rl"):
+                sweep_forward = False
+            elif mode.endswith("_lr"):
+                sweep_forward = True
+            else:
+                cx, _ = subject_center(bbox)
+                sweep_forward = cx < 0.5
             clip_engine = clip_engines[i]
             if clip_engine == "depthflow" and parallax_moves:
                 move = parallax_moves[i]
@@ -1270,12 +1291,7 @@ def main() -> None:
                         v2_caption=v2_cap,
                         engine=clip_engine,
                         depthflow_python=args.depthflow_python,
-                        # One direction for the whole tour. Alternating it per
-                        # clip was meant to avoid monotony, but with every clip
-                        # now travelling it turned the video into a ping-pong —
-                        # part of what the owner saw as shaking on 2026-08-10.
-                        # Variety comes from the modes and the engine mix.
-                        forward=True)
+                        forward=sweep_forward)
             clips.append(out)
 
         if ending is not None:

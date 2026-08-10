@@ -181,3 +181,23 @@ def test_vertical_clips_still_move():
     zp = vf.split("zoompan=")[1]
     assert "iw/2-(iw/zoom/2)" not in zp, f"pan was silenced with nothing else moving: {zp}"
     assert "on/" in zp, f"no zoompan motion left: {zp}"
+
+
+# ── sweep direction ──────────────────────────────────────────────────────────
+# Owner 2026-08-10: "我怎么发现ios的照片都是向左移动？是偶然的吗". It was not.
+# Holding one direction for the whole tour fixed the ping-pong but flattened
+# pan_rl and push_pan_rl into their _lr counterparts — a distinction the planner
+# makes deliberately — and left every undirected mode going the same way.
+
+def swept(forward: bool) -> str:
+    return cover_travel("", 2.5, 75, 0.5, 0.5, *WIDE, *SQUARE_CANVAS, forward)
+
+
+def test_the_two_directions_are_actually_different():
+    assert swept(True) != swept(False)
+
+
+def test_forward_and_backward_are_mirror_progressions():
+    # backward is the same travel run in reverse, not a different distance.
+    assert "(1-(" in swept(False)
+    assert "(1-(" not in swept(True)
