@@ -27,6 +27,22 @@ python scripts/ken-burns/generate.py \
   --zoom-mode auto
 ```
 
+## Motion engine
+
+```
+--engine kenburns          # default: ffmpeg zoompan, no extra deps
+--engine depthflow --depthflow-python /path/to/.venv-depthflow/bin/python
+```
+
+`depthflow` replaces only the per-photo camera move with 2.5D parallax
+(`depthflow_clip.py`, run in its own interpreter because this script stays
+stdlib-only). Canvas composition, transitions, captions, overlays and BGM are
+identical either way, so the two outputs differ in motion and nothing else.
+
+Shot-plan modes are translated to parallax moves by `depthflow_modes.py`.
+`pan_to_subject` loses its subject aim there — the parallax move that tracked a
+bbox was rejected in review, so it degrades to a plain orbit.
+
 Only `--photos` and `--output` are required. `--zoom-mode auto` alternates
 `pan-lr → zoom-in → pan-tb → zoom-out` deterministically by photo index.
 

@@ -62,6 +62,12 @@ GENERATE_SCRIPT = REPO_ROOT / "scripts" / "ken-burns" / "generate.py"
 # .venv-render venv instead — pin the interpreter so the worker behaves the
 # same however it is started.
 PYTHON_BIN = str(REPO_ROOT / ".venv-render/bin/python3")
+# Interpreter for the DepthFlow engine (torch + a depth model). Separate
+# from PYTHON_BIN because generate.py and the caption renderer must keep
+# running on the stdlib/playwright interpreter.
+DEPTHFLOW_PYTHON = os.environ.get(
+    "DEPTHFLOW_PYTHON", str(REPO_ROOT / ".venv-depthflow/bin/python")
+)
 
 POLL_IDLE_SEC = 5
 PHOTO_BUCKET = "listing-photos"
@@ -237,7 +243,7 @@ def claim_job() -> dict[str, Any] | None:
     rows = sb_get(
         "render_jobs",
         {
-            "select": "id,listing_id,video_row_id,attempts,orientations",
+            "select": "id,listing_id,video_row_id,attempts,orientations,engine",
             "status": "eq.queued",
             "order": "created_at.asc",
             "limit": "1",
@@ -413,9 +419,12 @@ def process_job(job: dict[str, Any]) -> None:
         # re-render leaves the web asset alone. NULL/absent = render both.
         requested = job.get("orientations") or None
         orientations = list(requested) if requested else ["square", "landscape"]
+        # NULL = kenburns, so every job queued before the engine column existed
+        # renders exactly as it did before.
+        engine = job.get("engine") or "kenburns"
         print(
             f"[job {job['id']}] landscape_ratio={landscape_ratio:.2f} "
-            f"orientations={orientations}",
+            f"orientations={orientations} engine={engine}",
             flush=True,
         )
 
@@ -645,6 +654,9 @@ def process_job(job: dict[str, Any]) -> None:
                         "--zoom-mode", "pan-lr"]
             else:
                 cmd += ["--orientation", orientation]
+            if engine == "depthflow":
+                cmd += ["--engine", "depthflow",
+                        "--depthflow-python", DEPTHFLOW_PYTHON]
             if bgm_choice:
                 cmd += ["--bgm", str(bgm_choice)]
             if shot_plan_path is not None:

@@ -430,13 +430,61 @@ def v2_caption_filter(text: str, w: int, h: int) -> str:
     return f"{bar},{txt}"
 
 
+def compose_filter(w: int, h: int, cover: bool) -> str:
+    """Canvas composition WITHOUT motion, for clips whose movement was already
+    baked in by another engine.
+
+    Mirrors what kenburns_filter/_v2 do around their zoompan so the two engines
+    put the photo on the canvas identically — the only thing that should differ
+    between them is how the camera moves.
+    """
+    if cover:
+        return (
+            f"scale={w}:{h}:force_original_aspect_ratio=increase,"
+            f"crop={w}:{h},setsar=1"
+        )
+    bg = (
+        f"scale={w}:{h}:force_original_aspect_ratio=increase,crop={w}:{h},"
+        f"boxblur=40:2,eq=brightness=-0.15:saturation=0.85,setsar=1"
+    )
+    fg = f"scale={w}:{h}:force_original_aspect_ratio=decrease,setsar=1"
+    # Label names deliberately differ from kenburns_filter_v2's: with a caption
+    # PNG the caller wraps this graph as `[0:v]{vf}[bg]`, and reusing [bg]
+    # internally would collide with that outer label.
+    return (
+        f"split=2[cbgsrc][cfgsrc];[cbgsrc]{bg}[cbg];[cfgsrc]{fg}[cfg];"
+        f"[cbg][cfg]overlay=(W-w)/2:(H-h)/2,setsar=1"
+    )
+
+
+def render_parallax(src: str, dst: str, duration: float, mode: str,
+                    w: int, h: int, depthflow_python: str) -> None:
+    """Run depthflow_clip.py in its own interpreter (it needs torch; this
+    script must stay stdlib-only)."""
+    src_w, src_h = ffprobe_wh(src)
+    # Render at the photo's own aspect, wide enough to cover the canvas after
+    # composition. Composition only ever scales down from here.
+    scale = max(w / src_w, h / src_h)
+    out_w = int(round(src_w * scale / 2)) * 2
+    out_h = int(round(src_h * scale / 2)) * 2
+    run([
+        depthflow_python,
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), "depthflow_clip.py"),
+        "--photo", src, "--out", dst, "--mode", mode,
+        "--duration", f"{duration:.3f}",
+        "--width", str(out_w), "--height", str(out_h), "--fps", str(FPS),
+    ])
+
+
 def render_clip(src: str, dst: str, duration: float, mode: str, w: int, h: int,
                 overlay: dict | None = None,
                 caption_png: str | None = None,
                 bbox: list[float] | None = None,
                 use_v2: bool = False,
                 cover_crop: bool = False,
-                v2_caption: str | None = None) -> None:
+                v2_caption: str | None = None,
+                engine: str = "kenburns",
+                depthflow_python: str | None = None) -> None:
     """Render one Ken Burns clip.
 
     Phase 88: caption is now a pre-rendered transparent PNG overlay produced
@@ -449,7 +497,18 @@ def render_clip(src: str, dst: str, duration: float, mode: str, w: int, h: int,
     unchanged). `v2_caption` overlays a lightweight drawtext label
     (Kitchen Island, Master Suite …) on v2 clips only.
     """
-    if use_v2:
+    parallax: str | None = None
+    if engine == "depthflow":
+        if not depthflow_python:
+            die("--engine depthflow requires --depthflow-python")
+        parallax = dst + ".parallax.mp4"
+        render_parallax(src, parallax, duration, mode, w, h, depthflow_python)
+        vf = compose_filter(w, h, cover=cover_crop or w >= h) + "," + ENHANCE
+        if v2_caption and not caption_png:
+            cap_vf = v2_caption_filter(v2_caption, w, h)
+            if cap_vf:
+                vf = vf + "," + cap_vf
+    elif use_v2:
         src_w, src_h = ffprobe_wh(src)
         # Phase 98: landscape canvas (w > h) uses cover-crop — no blur letterbox
         # (was producing a small centered image with left/right blur pillarbox
@@ -491,7 +550,12 @@ def render_clip(src: str, dst: str, duration: float, mode: str, w: int, h: int,
     if overlay:
         vf = vf + "," + listing_overlay_filter(overlay, w, h)
 
-    cmd: list[str] = ["ffmpeg", "-y", "-loop", "1", "-i", src]
+    # A parallax clip is already a moving video; a still photo has to be looped
+    # into one.
+    cmd: list[str] = (
+        ["ffmpeg", "-y", "-i", parallax] if parallax
+        else ["ffmpeg", "-y", "-loop", "1", "-i", src]
+    )
     if caption_png:
         cmd += ["-loop", "1", "-i", caption_png]
         # Build filter_complex: [0] kenburns → [bg]; [bg][1] overlay → [v]
@@ -762,6 +826,16 @@ def main() -> None:
                         "1080x1620 canvas takes the fit-inside path and bakes blur "
                         "letterbox bands into the video.")
     p.add_argument("--xfade-duration", type=float, default=0.5)
+    p.add_argument("--engine", default="kenburns", choices=["kenburns", "depthflow"],
+                   help="Motion engine for the per-photo camera move. kenburns = "
+                        "ffmpeg zoompan (default, no extra deps). depthflow = 2.5D "
+                        "parallax over a Depth Anything V2 Small depth map, which "
+                        "needs --depthflow-python. Composition, transitions, BGM, "
+                        "captions and overlays are identical either way.")
+    p.add_argument("--depthflow-python", default=os.environ.get("DEPTHFLOW_PYTHON"),
+                   help="Interpreter that has depthflow installed (defaults to "
+                        "$DEPTHFLOW_PYTHON). Required for --engine depthflow; this "
+                        "script itself stays stdlib-only.")
     p.add_argument("--archetype", default="TRUST",
                    choices=["TRUST", "LIFESTYLE", "UTILITY", "NARRATIVE", "MAGAZINE", "MAP"],
                    help="Caption template family (Phase 85). NARRATIVE deferred; "
@@ -775,6 +849,13 @@ def main() -> None:
         die("ffmpeg not found on PATH")
     if not shutil.which("ffprobe"):
         die("ffprobe not found on PATH")
+    if args.engine == "depthflow":
+        # Fail here rather than after the photos are already staged and the
+        # first clip has burned a minute of render time.
+        if not args.depthflow_python:
+            die("--engine depthflow needs --depthflow-python (or $DEPTHFLOW_PYTHON)")
+        if not os.path.exists(args.depthflow_python):
+            die(f"--depthflow-python not found: {args.depthflow_python}")
 
     photos_dir = Path(args.photos)
     if not photos_dir.is_dir():
@@ -906,7 +987,9 @@ def main() -> None:
                         bbox=bbox,
                         use_v2=use_v2,
                         cover_crop=args.cover_crop,
-                        v2_caption=v2_cap)
+                        v2_caption=v2_cap,
+                        engine=args.engine,
+                        depthflow_python=args.depthflow_python)
             clips.append(out)
 
         if ending is not None:

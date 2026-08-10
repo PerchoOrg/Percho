@@ -1,0 +1,20 @@
+# Photo-motion prototype deps. Python 3.12 (torch has no 3.14 wheels).
+#
+#   /opt/homebrew/bin/python3.12 -m venv .venv-motion
+#   .venv-motion/bin/pip install -r scripts/prototypes/photo-motion/requirements.txt
+#   .venv-motion/bin/pip install --no-deps \
+#       git+https://github.com/apple/ml-depth-pro.git timm pillow_heif simple-lama-inpainting
+#
+# The second line MUST use --no-deps: both ml-depth-pro and
+# simple-lama-inpainting pin old numpy/pillow and will drag numpy back to 1.x,
+# which breaks everything else here.
+
+torch
+torchvision
+numpy
+opencv-python
+imageio
+imageio-ffmpeg
+moderngl
+pillow
+huggingface_hub

@@ -41,13 +41,19 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
   //
   //   ios  -> square    (1:1, fills the card's HERO_RATIO=0.618 media block)
   //   web  -> landscape (16:9)
+  //
+  // `engine` picks the motion engine for the camera moves (owner 2026-08-09).
+  // Omitted / anything unrecognised leaves the column NULL, which the worker
+  // reads as kenburns — the pre-existing behaviour.
   let orientations: string[] | null = null;
+  let engine: 'kenburns' | 'depthflow' | null = null;
   try {
-    const body = (await _req.json()) as { surface?: string } | null;
+    const body = (await _req.json()) as { surface?: string; engine?: string } | null;
     if (body?.surface === 'ios') orientations = ['square'];
     else if (body?.surface === 'web') orientations = ['landscape'];
+    if (body?.engine === 'depthflow' || body?.engine === 'kenburns') engine = body.engine;
   } catch {
-    /* no body = render both, same as before */
+    /* no body = render both with the default engine, same as before */
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: stub generated types
@@ -149,6 +155,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
       video_row_id: videoRowId,
       status: 'queued',
       ...(orientations ? { orientations } : {}),
+      ...(engine ? { engine } : {}),
     })
     .select('id')
     .single();

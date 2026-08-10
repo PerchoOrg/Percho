@@ -50,6 +50,15 @@ package-lock.json
 *.webm
 *.mkv
 
+# Python venvs — glob, not a list. A named entry only covers the venvs that
+# existed when it was written, and the next one gets committed by accident.
+.venv*/
+
+# Photo-motion prototype: derived artifacts (depth maps, inpainted plates,
+# renders). All regenerable from the scripts — never commit.
+scripts/prototypes/photo-motion/.cache/
+scripts/prototypes/photo-motion/out/
+
 # Meetup / demo assets
 docs/ken-burns/demo/*.mp4
 docs/ken-burns/demo-condo/*.mp4

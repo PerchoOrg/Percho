@@ -11,6 +11,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 
 type JobStatus = 'idle' | 'queued' | 'running' | 'done' | 'failed';
+type Engine = 'kenburns' | 'depthflow';
 
 export function AdminGenerateTourButton({
   listingId,
@@ -23,6 +24,7 @@ export function AdminGenerateTourButton({
   const [status, setStatus] = useState<JobStatus>('idle');
   const [error, setError] = useState<string | null>(null);
   const [jobId, setJobId] = useState<string | null>(null);
+  const [engine, setEngine] = useState<Engine>('kenburns');
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const enough = photoCount >= 3;
@@ -64,7 +66,7 @@ export function AdminGenerateTourButton({
         headers: { 'Content-Type': 'application/json' },
         // No surface = rebuild BOTH (drops the row and re-renders from scratch).
         // A surface re-renders ONLY that shape and leaves the other one intact.
-        body: JSON.stringify(surface ? { surface } : {}),
+        body: JSON.stringify({ ...(surface ? { surface } : {}), engine }),
       });
       if (!res.ok) {
         const body = (await res.json().catch(() => ({}))) as { message?: string; error?: string };
@@ -86,16 +88,35 @@ export function AdminGenerateTourButton({
     ? `Need ≥3 photos (have ${photoCount}).`
     : busy
       ? 'Rendering…'
-      : 'Re-render the Ken Burns walkthrough for this listing (~2 min).';
+      : `Re-render the walkthrough for this listing (~2 min, ${engine}).`;
 
   return (
-    <div className="flex flex-col items-start gap-1">
+    <div className="flex flex-col items-start gap-2">
+      {/* Motion engine. Ken Burns is ffmpeg pan/zoom and needs nothing extra;
+          DepthFlow renders 2.5D parallax from a depth map and is slower. Both
+          share the same canvas, transitions, captions and BGM. */}
+      <label className="flex items-center gap-2 text-xs text-ink2">
+        <span>Motion</span>
+        <select
+          value={engine}
+          onChange={(e) => setEngine(e.target.value as Engine)}
+          disabled={busy}
+          className="rounded-md border border-line bg-bg px-2 py-1 text-xs text-ink disabled:text-muted"
+        >
+          <option value="kenburns">Ken Burns (pan/zoom)</option>
+          <option value="depthflow">DepthFlow (2.5D parallax)</option>
+        </select>
+      </label>
       <div className="flex flex-wrap items-center gap-2">
         <button
           type="button"
           onClick={() => onClick('ios')}
           disabled={!enough || busy}
-          title={enough ? 'Render the 1:1 asset the iOS feed card plays (~2 min). Leaves the web video alone.' : title}
+          title={
+            enough
+              ? 'Render the 1:1 asset the iOS feed card plays (~2 min). Leaves the web video alone.'
+              : title
+          }
           className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-bg px-3 py-2 text-sm text-ink hover:border-bronze disabled:cursor-not-allowed disabled:text-muted"
         >
           <Sparkles size={14} aria-hidden />
@@ -105,7 +126,9 @@ export function AdminGenerateTourButton({
           type="button"
           onClick={() => onClick('web')}
           disabled={!enough || busy}
-          title={enough ? 'Render the 16:9 asset web plays (~2 min). Leaves the iOS video alone.' : title}
+          title={
+            enough ? 'Render the 16:9 asset web plays (~2 min). Leaves the iOS video alone.' : title
+          }
           className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-bg px-3 py-2 text-sm text-ink hover:border-bronze disabled:cursor-not-allowed disabled:text-muted"
         >
           <Sparkles size={14} aria-hidden />
