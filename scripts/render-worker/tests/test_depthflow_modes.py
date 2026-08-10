@@ -19,6 +19,7 @@ from depthflow_modes import (  # noqa: E402
     PARALLAX_MAX_OVERFLOW,
     PARALLAX_MAX_SHARE,
     PARALLAX_MIN_CLIPS,
+    PARALLAX_MIN_SHARE,
     pick_engines,
     plan_moves,
     resolve,
@@ -114,9 +115,12 @@ def test_every_non_static_move_is_reachable_from_the_planner():
 
 def test_photos_with_a_lot_to_reveal_go_to_ken_burns():
     # 3:2 on the square card overflows 50% of the frame — far too much to give
-    # up to an engine that cannot travel.
-    engines = pick_engines([0.5] * 8)
-    assert engines.count("kenburns") >= 6
+    # up to an engine that cannot travel. Parallax still gets its floor (owner
+    # 2026-08-10, "旋转的图少了"), but travel keeps the majority.
+    n = 8
+    engines = pick_engines([0.5] * n)
+    assert engines.count("kenburns") > engines.count("depthflow")
+    assert engines.count("depthflow") == round(n * PARALLAX_MIN_SHARE)
 
 
 def test_photos_with_nothing_to_reveal_go_to_depthflow():

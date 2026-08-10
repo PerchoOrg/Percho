@@ -91,7 +91,12 @@ PARALLAX_MAX_OVERFLOW = 0.20   # frame-fractions; above this, travel wins
 # Owner 2026-08-10: "80%信息量就可以了 要多做一些效果". Less of every clip is
 # spent travelling now, so more of them are free to be the effect instead.
 PARALLAX_MAX_SHARE = 0.50      # cap render time — depth inference is the cost
-PARALLAX_MIN_CLIPS = 2         # every video keeps some parallax, even on square
+# Owner 2026-08-10: "旋转的图少了". The orbit moves only exist on the parallax
+# side, so a floor of 2 clips made them rare on the square card, where 3:2
+# photos all overflow and nothing qualifies on merit. A third of the tour keeps
+# them present without letting parallax take over the clips that need to travel.
+PARALLAX_MIN_SHARE = 1 / 3
+PARALLAX_MIN_CLIPS = 2         # …and never fewer than this on a short tour
 
 
 def pick_engines(overflows: list[float]) -> list[str]:
@@ -134,10 +139,11 @@ def pick_engines(overflows: list[float]) -> list[str]:
     # Every video keeps some parallax even when nothing qualifies — the square
     # card fed 3:2 photos is exactly that case, and an all-Ken-Burns tour would
     # make "mixed" mixed in name only. The floor deliberately overrides the
-    # share cap, which only matters for tours of 3-4 clips.
-    if used < PARALLAX_MIN_CLIPS:
-        take([i for i in by_overflow if engines[i] != "depthflow"],
-             PARALLAX_MIN_CLIPS - used)
+    # eligibility test, and takes the clips with the least to lose by not
+    # travelling. It cannot exceed the share cap except on a very short tour.
+    floor = min(max(PARALLAX_MIN_CLIPS, round(n * PARALLAX_MIN_SHARE)), budget)
+    if used < floor:
+        take([i for i in by_overflow if engines[i] != "depthflow"], floor - used)
     return engines
 
 

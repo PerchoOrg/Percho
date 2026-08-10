@@ -225,69 +225,6 @@ COVERAGE_TARGET = 0.80
 ZOOM_CEILING = 1.10
 
 
-def detail_rows(src: str, n: int = 48) -> list[float] | None:
-    """Per-row detail of a photo (mean absolute gradient), top to bottom.
-
-    One ffmpeg call for an n×n greyscale dump, parsed with the stdlib — this
-    module has to stay importable under the worker's bare interpreter.
-    Returns None if the photo can't be read, and every caller treats that as
-    "no opinion" rather than failing the render.
-    """
-    try:
-        out = subprocess.run(
-            ["ffmpeg", "-v", "error", "-i", src,
-             "-vf", f"scale={n}:{n},format=gray", "-frames:v", "1",
-             "-f", "rawvideo", "-"],
-            capture_output=True, check=True, timeout=20).stdout
-    except Exception:
-        return None
-    if len(out) < n * n:
-        return None
-    rows = [out[r * n:(r + 1) * n] for r in range(n)]
-    profile = []
-    for r in range(n):
-        horiz = sum(abs(rows[r][c] - rows[r][c - 1]) for c in range(1, n))
-        vert = sum(abs(rows[r][c] - rows[r - 1][c]) for c in range(n)) if r else 0
-        profile.append((horiz + vert) / (2 * n))
-    return profile
-
-
-def best_band(src: str, frac: float, subj_cy: float) -> float:
-    """Top edge (0..1-frac) of the horizontal band worth keeping.
-
-    Owner 2026-08-10: "如果是上下被截取 我觉得不用追求100%的信息量上下滑动 而是
-    找到信息量最大的那部分作为基础 然后做一些别的效果". So the vertical axis
-    stops sweeping and instead picks where to stand.
-
-    Detail alone would do it — measured over 400 real listing photos, 274 of
-    them want the window lower, because sky is the emptiest part of a house
-    photo. But it SATURATES: for more than half, "most detail" is simply the
-    bottom edge, which would crop the sky off entirely and reframe the shot
-    harder than anyone asked. So the detail optimum is constrained to keep the
-    tagged subject inside the window; the two signals together land somewhere
-    sane where either alone does not.
-    """
-    lo, hi = 0.0, max(0.0, 1.0 - frac)
-    profile = detail_rows(src)
-    if not profile:
-        return min(max(subj_cy - frac / 2, lo), hi)
-    n = len(profile)
-    win = max(1, int(round(frac * n)))
-    best_i, best_score = 0, -1.0
-    for i in range(0, n - win + 1):
-        top = i / n
-        # Constraint, not a tiebreak: a window that loses the subject is not a
-        # candidate however much texture it has.
-        if not (top <= subj_cy <= top + frac):
-            continue
-        score = sum(profile[i:i + win])
-        if score > best_score:
-            best_score, best_i = score, i
-    if best_score < 0:                      # subject outside every window
-        return min(max(subj_cy - frac / 2, lo), hi)
-    return min(max(best_i / n, lo), hi)
-
-
 def travel_axis(src_w: int, src_h: int, w: int, h: int) -> str | None:
     """Which axis a cover crop has room to travel along: 'x', 'y' or neither.
 
@@ -335,16 +272,19 @@ def cover_travel(src: str, duration: float, frames: int,
     if axis is None:
         return cover_crop_xy(subj_cx, subj_cy)
 
-    # Vertical overflow does not sweep. Sliding a frame up and down a room
-    # reads as restless rather than revealing, and there is far less to gain:
-    # a 3:2 photo hides 18.5% of the frame on the landscape canvas against 50%
-    # on the square one. Stand on the band worth looking at instead, and let
-    # the clip spend itself on zoom or parallax (see pick_engines, which sends
-    # these clips to DepthFlow for exactly that reason).
+    # Vertical overflow does not sweep — sliding a frame up and down a room
+    # reads as restless rather than revealing, and there is far less to gain
+    # (a 3:2 photo hides 18.5% of the frame on the landscape canvas against 50%
+    # on the square one). The clip spends itself on zoom or parallax instead.
+    #
+    # WHERE it stands is just the subject aim. A row-detail profile was tried
+    # and reverted: owner 2026-08-10, "web上的主体不对我建议你还是用之前的版本".
+    # It saturated exactly as the 400-photo check predicted — for more than half
+    # of them "most detail" is the bottom edge, because sky is the emptiest part
+    # of a house photo, so it cropped the sky away and reframed the shot harder
+    # than anyone asked. Keeping the subject aim is the version that was right.
     if axis == "y":
-        band = best_band(src, (h / w) / (src_h / src_w), subj_cy)
-        return (f":x='clip({subj_cx:.4f}*in_w-out_w/2,0,in_w-out_w)'"
-                f":y='clip({band:.4f}*in_h,0,in_h-out_h)'")
+        return cover_crop_xy(subj_cx, subj_cy)
 
     # Horizontal: travel far enough to have shown COVERAGE_TARGET of the photo,
     # not all of it, and never faster than MAX_TRAVEL_PER_S.
@@ -442,12 +382,20 @@ def kenburns_filter_v2(mode: str, duration: float, w: int, h: int,
     # Gentler motion than the fill-crop v2 draft: we're zoompan'ing the fg
     # (which is a fit-inside scale, so the fg's zoom=1.0 already leaves
     # letterbox around it). Push to 1.10 max keeps most of the photo in view.
+    #
+    # The zooms are written against `on` (the output frame counter) rather than
+    # the usual accumulating `zoom+0.0007` idiom. Owner 2026-08-10 reported
+    # "很多静止的图": the accumulation reads the PREVIOUS frame's zoom, which
+    # only carries over while zoompan is expanding one input frame (d=frames).
+    # The travelling crop needs d=1, and under it `zoom` resets every frame, so
+    # push_in and pull_back froze. Per-frame rates are unchanged — these are
+    # the same ramps, expressed so they do not depend on d.
     if mode == "push_in":
-        z = "min(zoom+0.0007,1.10)"; x = x_center; y = y_center
+        z = "min(1.0+0.0007*on,1.10)"; x = x_center; y = y_center
     elif mode == "push_in_slow":
-        z = "min(zoom+0.0005,1.08)"; x = x_center; y = y_center
+        z = "min(1.0+0.0005*on,1.08)"; x = x_center; y = y_center
     elif mode == "pull_back":
-        z = "if(lte(zoom,1.0),1.10,max(1.001,zoom-0.0007))"
+        z = "max(1.10-0.0007*on,1.001)"
         x = x_center; y = y_center
     elif mode == "pan_lr":
         z = "1.10"
@@ -479,7 +427,7 @@ def kenburns_filter_v2(mode: str, duration: float, w: int, h: int,
     elif mode == "static":
         z = "1.001"; x = x_center; y = y_center
     else:
-        z = "min(zoom+0.0005,1.08)"; x = x_center; y = y_center
+        z = "min(1.0+0.0005*on,1.08)"; x = x_center; y = y_center
 
     # Phase 98: cover-crop composition for landscape canvas (1920×1080).
     # Scale source to COVER w×h (no letterbox), center-crop, then zoompan
@@ -508,11 +456,16 @@ def kenburns_filter_v2(mode: str, duration: float, w: int, h: int,
         if src_w and src_h:
             crop_xy = cover_travel(src, duration, frames, subj_cx, subj_cy,
                                    src_w, src_h, w, h, forward)
-            # The window is already moving; a second lateral move on top reads
-            # as two cameras fighting, so the zoom-only expressions are used.
-            x = "iw/2-(iw/zoom/2)"
-            y = "ih/2-(ih/zoom/2)"
             d = 1
+            # Only silence zoompan's pan when the CROP is the thing moving.
+            # Owner 2026-08-10 reported "很多静止的图": this used to zero the pan
+            # for every cover clip, but the vertical axis stopped travelling, so
+            # on the landscape canvas a pan_lr — whose zoom is a constant 1.10,
+            # not a ramp — ended up with no crop travel AND no pan. Measured,
+            # those clips were completely frozen.
+            if travel_axis(src_w, src_h, w, h) == "x":
+                x = "iw/2-(iw/zoom/2)"
+                y = "ih/2-(ih/zoom/2)"
         else:
             crop_xy = cover_crop_xy(subj_cx, subj_cy)
             d = frames
