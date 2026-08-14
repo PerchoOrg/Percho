@@ -93,8 +93,7 @@ function formatBedBathSqft(l: BrowseCard['listing']): string {
 
 function formatPrice(price: number | null): string {
   if (price == null) return '';
-  if (price >= 1_000_000) return `$${(price / 1_000_000).toFixed(2)}M`;
-  return `$${Math.round(price / 1000)}K`;
+  return `$${price.toLocaleString('en-US')}`;
 }
 
 function citySlug(city: string | null, state: string | null): string | undefined {
