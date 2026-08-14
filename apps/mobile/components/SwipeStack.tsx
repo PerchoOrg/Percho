@@ -96,6 +96,17 @@ const DEFAULT_FRAME_RATIO = 0.95;
  * the new top card easing to its own height inside it.
  */
 const FRAME_HEIGHT_MS = 240;
+/**
+ * How much of the NEXT card's lower edge peeks below the top card (owner:
+ * 「应该只能peek下一张」 — a sliver, not a card). Points.
+ */
+const PEEK_PT = 20;
+/**
+ * How far the paper clip extends ABOVE the stage. A taller behind card is
+ * bottom-anchored at `peekAnchor`, so its top can stick out past the stage's
+ * top edge; the clip hides that overflow.
+ */
+const CLIP_OVERFLOW_PT = 120;
 
 type CardRole = "top" | "next" | "after";
 
@@ -221,6 +232,11 @@ interface StackCardProps {
 	stageHeight: number;
 	/** This card's frame height in points (see `frameHeightRatio`). */
 	frameHeight: number;
+	/**
+	 * The y position of a peeked (behind) card's BOTTOM — just below the top
+	 * card's bottom edge, so only a fixed PEEK sliver of the next card shows.
+	 */
+	peekAnchor: number;
 	zIndex: number;
 	/** The card's only face. */
 	front: React.ReactNode;
@@ -243,6 +259,7 @@ function StackCard({
 	cardWidth,
 	stageHeight,
 	frameHeight,
+	peekAnchor,
 	zIndex,
 	front,
 	overlay,
@@ -262,15 +279,26 @@ function StackCard({
 						easing: Easing.out(Easing.cubic),
 					});
 	}, [frameHeight, heightAnim]);
-	// Cards must OVERLAP (the stack effect), so each card is absolutely
-	// positioned inside the fixed stage and centred in it — a short card sits
-	// with paper above and below, never top-aligned.
+	// Vertical position by stack depth:
+	//   depth ≤ 0 (top, or flying out) — centred in the stage.
+	//   depth = 1 (the peeked next card) — its BOTTOM sits at `peekAnchor`
+	//     (just below the top card's bottom), so only a fixed PEEK sliver of
+	//     its lower edge shows — never a whole tall card under a short one
+	//     (Tia 2026-08-15: 「显示trade off小卡的时候露出了下面的大卡」).
+	// Between depths the position interpolates with `advance`, in lockstep
+	// with the card's scale — so a card rising to top eases from peeked to
+	// centred, no jump.
 	const cardStyle = useAnimatedStyle(() => {
 		const height = heightAnim.value;
+		const rel = absIndex - topAbs.value;
+		const depth = rel - advance.value;
+		const centred = (stageHeight - height) / 2;
+		const peeked = peekAnchor - height;
+		const t = Math.max(0, Math.min(1, 1 - depth));
 		return {
 			width: cardWidth,
 			height,
-			top: (stageHeight - height) / 2,
+			top: peeked + (centred - peeked) * t,
 		};
 	});
 	const style = useAnimatedStyle(() => {
@@ -297,10 +325,15 @@ function StackCard({
 	// card, no touch handling.
 	const glowStyle = useAnimatedStyle(() => {
 		const height = heightAnim.value;
+		const rel = absIndex - topAbs.value;
+		const depth = rel - advance.value;
+		const centred = (stageHeight - height) / 2;
+		const peeked = peekAnchor - height;
+		const t = Math.max(0, Math.min(1, 1 - depth));
 		return {
 			width: cardWidth,
 			height,
-			top: (stageHeight - height) / 2,
+			top: peeked + (centred - peeked) * t,
 		};
 	});
 
@@ -407,20 +440,25 @@ export function SwipeStack<T>({
 	}, []);
 
 	// The paper band that hides the upper part of a TALLER behind card (the
-	// next card's badge must not show over a short top card). Its height is
-	// the top card's top offset — everything above the top card is paper. The
-	// cards now render at their OWN real heights permanently, so this is
-	// static per top-card kind: no animation, and no height change on commit
-	// (the Tia 2026-08-15 "fake height then snap" jump).
-	const topOffset =
+	// next card's badge must not show over a short top card). It covers from
+	// ABOVE the stage (behind cards can stick out past the top edge when
+	// bottom-anchored at `peekAnchor`) down to the top card's top edge.
+	// Cards render at their OWN real heights permanently, so this is static
+	// per top-card kind: no animation, and no height change on commit (the
+	// Tia 2026-08-15 "fake height then snap" jump).
+	const topHeight =
 		top === undefined || stageHeight === 0
 			? 0
 			: cardHeight !== undefined
-				? (stageHeight - cardHeight) / 2
-				: (stageHeight -
-						stageHeight *
-							(frameHeightRatio?.(top) ?? DEFAULT_FRAME_RATIO)) /
-					2;
+				? cardHeight
+				: stageHeight *
+					(frameHeightRatio?.(top) ?? DEFAULT_FRAME_RATIO);
+	const topOffset =
+		top === undefined || stageHeight === 0 ? 0 : (stageHeight - topHeight) / 2;
+	// The peeked card's bottom sits just below the top card's bottom (clamped
+	// to the stage so a behind card never spills past the stage's bottom edge).
+	const peekAnchor =
+		stageHeight === 0 ? 0 : Math.min(stageHeight, topOffset + topHeight + PEEK_PT);
 
 	const argsFor = (role: CardRole): CardRenderArgs => ({
 		role,
@@ -452,9 +490,13 @@ export function SwipeStack<T>({
 				<View style={[styles.frame, { width: cardWidth }]}>
 					{/* Paper band over the region above the top card (zIndex 3,
 					 * same as top, earlier in the tree so the top card wins) —
-					 * hides the upper part of a taller behind card. */}
+					 * hides the upper part of a taller behind card, including
+					 * the part that sticks out past the stage's top edge. */}
 					<View
-						style={[styles.stageClip, { height: topOffset }]}
+						style={[
+							styles.stageClip,
+							{ height: topOffset + CLIP_OVERFLOW_PT },
+						]}
 						pointerEvents="none"
 					/>
 					{mounted.map(({ item, absIndex }) => {
@@ -492,6 +534,7 @@ export function SwipeStack<T>({
 								cardWidth={cardWidth}
 								stageHeight={stageHeight}
 								frameHeight={frameHeight}
+								peekAnchor={peekAnchor}
 								// A card that has already been swiped must stay UNDER the
 								// live stack while it flies out, or it would slide across
 								// the face of the card that replaced it.
@@ -536,14 +579,14 @@ const styles = StyleSheet.create({
 	},
 	/**
 	 * The paper band over the region above the top card (the stage's own
-	 * background colour, painted as a view). Hides the upper part of a taller
-	 * behind card so only the next card's lower edge peeks; sits behind the
-	 * top card (same zIndex 3, earlier in the tree) and above the behind card
-	 * (zIndex 2).
+	 * background colour, painted as a view). Starts ABOVE the stage so it also
+	 * hides the part of a taller behind card that sticks out past the stage's
+	 * top edge when bottom-anchored at `peekAnchor`. Sits behind the top card
+	 * (same zIndex 3, earlier in the tree) and above the behind card (2).
 	 */
 	stageClip: {
 		position: "absolute",
-		top: 0,
+		top: -CLIP_OVERFLOW_PT,
 		left: 0,
 		right: 0,
 		backgroundColor: colors.bg,
