@@ -10,10 +10,11 @@
 
 // ─── Color (§0.3) ───────────────────────────────────────────────────
 export const colors = {
-	// App background (warm paper) — chrome base. Deepened from #FAF6F0 (owner,
-	// 2026-08-14) so the near-white card face (`redline.card` #FFFDF9) reads as
-	// paper laid ON the background rather than as the background itself.
-	bg: "#F4EEE4",
+	// App background (warm paper) — chrome base. 2026-08-14 follow-up pass:
+	// neutralised from #F4EEE4 → #F8F7F3 (owner: 「不要明显偏黄的 beige」).
+	// The paper is now cool-grey-warm, so the card face reads as paper laid ON
+	// the background rather than as the background itself.
+	bg: "#F8F7F3",
 	surface: "#FFFFFF", // Cards, sheets, stat tiles
 	surface2: "#F3EDE4", // Recessed wells, inputs
 	border: "#EADFD0", // Hairline dividers
@@ -84,8 +85,10 @@ export const colors = {
  * Values transcribed from the redline's `--*` block, unchanged.
  */
 export const redline = {
-	/** `--card` — the card face. Warmer and lighter than `scoreTokens.face`. */
-	card: "#FFFDF9",
+	/** `--card` — the card face. 2026-08-14 follow-up: #FFFDF9 → #FFFDFC
+	 * (owner: 「Card 使用 #FFFDFC,不要明显偏黄的 beige」) — neutral paper,
+	 * no longer warm-tinted. */
+	card: "#FFFDFC",
 	/** `--surface` — chip / recessed fill on the card. */
 	surface: "#F1F1EC",
 	/** `--text-primary`. */
@@ -98,6 +101,12 @@ export const redline = {
 	inkStory: "#57534D",
 	/** `--accent` — deep forest green. The ONLY accent on these faces. */
 	accent: "#0E6B57",
+	/**
+	 * CTA fill for the 2026-08-13 listing-card redesign — slightly deeper than
+	 * `accent` (#0E6B57) so the CTA reads as the primary action against the
+	 * green-tinted tag pills. Same family, AA on `--card` either way.
+	 */
+	ctaDeep: "#0E5C48",
 	/** Pressed state for the accent fill. Darkening, never fading (see below). */
 	accentDeep: "#0A5343",
 	/** `--accent-soft` — the pale mint badge behind a choice / sparkle icon. */
@@ -173,9 +182,9 @@ export const redline = {
 } as const;
 
 /**
- * Radii the redline names that the app's five-step `radii` scale has no slot
- * for. Kept separate so `radii` stays the chrome's scale rather than growing a
- * step per card.
+ * Redline radii the redline names that the app's five-step `radii` scale has no
+ * slot for. Kept separate so `radii` stays the chrome's scale rather than growing
+ * a step per card.
  */
 export const redlineRadii = {
 	/** Community lifestyle block. */
@@ -184,6 +193,12 @@ export const redlineRadii = {
 	choice: 22,
 	/** Insight recommendation thumbnail. */
 	thumb: 14,
+	/** The listing card's CTA pill — 46pt tall, radius 23 (§0.5 44pt floor). */
+	listingCta: 23,
+	/** Listing tag pill — radius 14 per the 2026-08-13 card redesign. */
+	tag: 14,
+	/** The LISTING badge pill on the media — radius 20. */
+	badge: 20,
 } as const;
 
 /**

@@ -85,7 +85,7 @@ export function TabBar({ tabs, activeKey, onSelect }: TabBarProps) {
  * states; everything else about each icon is fixed, so the rest of the
  * geometry lives in the StyleSheet below.
  */
-const ICON_SIZE = 20;
+const ICON_SIZE = 22;
 const K = ICON_SIZE / 24;
 const STROKE = 1.75;
 
@@ -201,8 +201,19 @@ function BookmarkIcon({ color }: IconProps) {
 	);
 }
 
+/**
+ * UserRound (Lucide) — 22px, stroke 1.75 (owner, 2026-08-14: the old
+ * semicircle-shoulders person read as a lump; UserRound is a full circle head
+ * over a half-round shoulders blob). Geometry from Lucide's 24-grid scaled by
+ * K, same stroke + box rhythm as Home / Search / Bookmark so the row is
+ * visually uniform:
+ *
+ *   circle  c(12,8) r 4            → head
+ *   path    M20 21a8 8 0 0 0-16 0 → shoulders (half-round blob, not a box)
+ */
 const HEAD_D = 8 * K;
 const SHOULDER_W = 16 * K;
+const SHOULDER_R = SHOULDER_W / 2;
 
 function UserIcon({ color }: IconProps) {
 	return (
@@ -235,7 +246,7 @@ const styles = StyleSheet.create({
 	},
 	tab: { flex: 1, alignItems: "center", justifyContent: "center", gap: 4 },
 	label: { ...textStyles.caption },
-	active: { color: redline.accent, opacity: 1 },
+	active: { color: "#0E5C48", opacity: 1 },
 	inactive: { color: colors.ink2, opacity: 0.5 },
 	/**
 	 * The icon's half of the same two states. The FEED (home) icon must match
@@ -346,18 +357,19 @@ const styles = StyleSheet.create({
 		borderWidth: STROKE,
 	},
 	/**
-	 * Lucide's `M20 21a8 8 0 0 0-16 0` — a semicircle. A box half as tall as it is
-	 * wide, with both top corners rounded to half its width and only its top
-	 * border drawn, IS that arc.
+	 * UserRound's shoulders: a half-round blob whose flat side is its top —
+	 * a box SHORTER than it is wide, both top corners rounded to the full
+	 * radius, top border drawn. Sits on the baseline so the blob reads as
+	 * shoulders, not as a box (the old full-height box read as a lump).
 	 */
 	shoulders: {
 		position: "absolute",
 		left: (ICON_SIZE - SHOULDER_W) / 2,
 		top: 13 * K,
 		width: SHOULDER_W,
-		height: SHOULDER_W / 2,
+		height: SHOULDER_R,
 		borderTopWidth: STROKE,
-		borderTopLeftRadius: SHOULDER_W / 2,
-		borderTopRightRadius: SHOULDER_W / 2,
+		borderTopLeftRadius: SHOULDER_R,
+		borderTopRightRadius: SHOULDER_R,
 	},
 });

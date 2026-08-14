@@ -14,6 +14,7 @@ import { StatusBar } from "expo-status-bar";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { ICON_FONT } from "../components/cards/redline/icon-font";
+import { DM_SERIF_FONT } from "../theme/fonts";
 
 export default function RootLayout() {
 	/**
@@ -26,6 +27,7 @@ export default function RootLayout() {
 	 */
 	useFonts({
 		[ICON_FONT]: require("../assets/fonts/PerchoIcons.ttf"),
+		[DM_SERIF_FONT]: require("../assets/fonts/DMSerifDisplay-Regular.ttf"),
 	});
 
 	return (

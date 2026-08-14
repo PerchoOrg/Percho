@@ -75,6 +75,7 @@ import { useFunnelStore } from "../../state/funnel";
 import { useSavedStore } from "../../state/saved";
 import { useSwipeHintStore } from "../../state/swipe-hint";
 import { colors, redline } from "../../theme/tokens";
+import { DM_SERIF_FONT } from "../../theme/fonts";
 import { textStyles } from "../../theme/typography";
 
 const GUTTER = 26;
@@ -645,6 +646,10 @@ export default function FeedScreen() {
 			 * is a tour-playing surface and not a top corner of the feed. Deleting
 			 * it outright would re-create the 2026-07-28 bug where a buyer had no
 			 * way to unmute a tour at all.
+			 *
+			 * 2026-08-14 follow-up: the wordmark is DM Serif Display 34/400/−0.5
+			 * in #086B5B — the ONLY serif face on this screen (owner: 「只有
+			 * Percho logo 使用 serif」). See `theme/fonts.ts`.
 			 */}
 			<View style={styles.chromeRow}>
 				<Text style={styles.wordmark}>Percho</Text>
@@ -719,8 +724,20 @@ const styles = StyleSheet.create({
 	 * never share a surface. The wordmark is the app's name, not chrome that
 	 * competes with a card, and the feed is a green-card surface; the amber
 	 * accent stays out of this row.
+	 *
+	 * 2026-08-14 follow-up: DM Serif Display 34/400/−0.5 in #086B5B (owner
+	 * spec). The family is bundled + registered (`theme/fonts.ts`), so this
+	 * is the only font change on the screen — the card faces keep their own
+	 * `serif` (New York) and the UI keeps SF Pro.
 	 */
-	wordmark: { ...textStyles.title1, color: redline.accent },
+	wordmark: {
+		...textStyles.title1,
+		fontFamily: DM_SERIF_FONT,
+		fontSize: 34,
+		fontWeight: "400",
+		letterSpacing: -0.5,
+		color: "#086B5B",
+	},
 	sheet: { paddingHorizontal: 20, paddingTop: 8, gap: 8 },
 	sheetEyebrow: { ...textStyles.caption, color: colors.accent },
 	sheetTitle: { ...textStyles.title2, color: colors.ink },
