@@ -157,16 +157,16 @@ describe("applySwipe — tradeoff / ask records (§1.6)", () => {
 	it("a yes-no ask records only on the affirmative side", () => {
 		const ask = {
 			kind: "ask" as const,
-			id: "ask-intent",
-			layer: "purpose" as const,
-			q: "First home?",
+			id: "ask-life-family",
+			layer: "life" as const,
+			q: "Kids at home?",
 			choice: {
 				form: "yes-no" as const,
-				affirm: { type: "intent" as const, value: "primary" },
+				affirm: { type: "dim" as const, dim: "family" as const },
 			},
 		};
-		expect(applySwipe(EMPTY_SIGNALS, ask, "right").intent).toBe("primary");
-		expect(applySwipe(EMPTY_SIGNALS, ask, "left").intent).toBeUndefined();
+		expect(applySwipe(EMPTY_SIGNALS, ask, "right").dims.family).toBe(1);
+		expect(applySwipe(EMPTY_SIGNALS, ask, "left").dims.family).toBeUndefined();
 	});
 
 	it("an either-or ask records on both sides", () => {

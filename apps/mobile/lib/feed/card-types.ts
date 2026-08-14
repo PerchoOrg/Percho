@@ -50,12 +50,14 @@ export interface NeighborhoodScores {
 export type FunnelStage = 0 | 1 | 2 | 3 | 4;
 
 /**
- * The §1.2 layer-tag vocabulary. `purpose` / `life` / `lifestyle` are
- * preference layers; `area` / `city` / `zip` / `community` are geographic and
- * are the only ones that show the 58×58 map thumb.
+ * The §1.2 layer-tag vocabulary. `life` / `lifestyle` are preference layers;
+ * `area` / `city` / `zip` / `community` are geographic and are the only ones
+ * that show the 58×58 map thumb.
+ *
+ * `purpose` was removed 2026-08-15 along with the Stage-0 purpose asks
+ * (owner: 「把 your purpose card 先全部删掉」).
  */
 export type FunnelLayer =
-	| "purpose"
 	| "life"
 	| "area"
 	| "city"
@@ -76,7 +78,6 @@ export function isGeoLayer(layer: FunnelLayer): boolean {
 
 /** §1.2 layer tags, verbatim. */
 export const LAYER_TAG: Record<FunnelLayer, string> = {
-	purpose: "🎯 YOUR PURPOSE",
 	life: "🌱 YOUR LIFE",
 	area: "🧭 AREA",
 	city: "🌆 CITY",
@@ -99,7 +100,6 @@ export interface BudgetBand {
 
 /** What a swipe on an ask card records. One per side of the card. */
 export type AskRecord =
-	| { type: "intent"; value: string }
 	| { type: "budget"; band: BudgetBand }
 	| { type: "dim"; dim: DimKey }
 	| { type: "geo"; unitId: string; level: GeoLevel };
@@ -273,6 +273,14 @@ export interface CommunityCardV3 {
 export interface TradeoffSideV3 {
 	label: string;
 	dim: DimKey;
+	/**
+	 * Icon override. `dim` usually picks the glyph, but two real trade-offs
+	 * would collide without it: "Shorter commute" and "Walkable shops" both
+	 * carry `dim: "walkable"` — one should draw a car, the other footprints.
+	 * Optional so the card types stay pure data and existing literal
+	 * constructions (tests, older decks) keep working.
+	 */
+	icon?: CardIconName;
 }
 
 export interface TradeoffCardV3 {

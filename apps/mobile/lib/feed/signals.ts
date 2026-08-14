@@ -37,8 +37,6 @@ export interface TradeoffRecord {
 }
 
 export interface SignalState {
-	/** Confirmed buying intent, from a stage-0 ask. */
-	intent?: string;
 	/** Narrowed by successive binary splits — never a slider (§1.7 / iron law). */
 	budget?: BudgetBand;
 	/** Dim → net weight. Life/lifestyle signals accumulate here. */
@@ -164,8 +162,7 @@ export function applySwipe(
 						? card.choice.right.record
 						: card.choice.left.record;
 			if (record) {
-				if (record.type === "intent") next = { ...next, intent: record.value };
-				else if (record.type === "budget")
+				if (record.type === "budget")
 					next = { ...next, budget: record.band };
 				else if (record.type === "dim")
 					next = { ...next, dims: bump(next.dims, record.dim, 1) };

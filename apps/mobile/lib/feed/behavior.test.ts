@@ -20,11 +20,11 @@ function cardOfKind(kind: CardKindV3): FeedCardV3 {
 			return {
 				kind: "ask",
 				id: "ask-1",
-				layer: "purpose",
+				layer: "life",
 				q: "q",
 				choice: {
 					form: "yes-no",
-					affirm: { type: "intent", value: "primary" },
+					affirm: { type: "dim", dim: "family" },
 				},
 			};
 		case "area":

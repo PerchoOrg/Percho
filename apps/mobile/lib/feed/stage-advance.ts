@@ -130,8 +130,10 @@ export function evaluateStageAdvance(
 ): FunnelStage | null {
 	switch (stage) {
 		case 0: {
+			// 2026-08-15: the purpose asks are gone (owner: 「把 your purpose
+			// card 先全部删掉」), so the intent clause left the gate. Budget +
+			// life signals are what remains.
 			const ready =
-				!!signals.intent &&
 				!!signals.budget &&
 				countLifeSignals(signals) >= LIFE_SIGNALS_REQUIRED;
 			return ready ? 1 : null;

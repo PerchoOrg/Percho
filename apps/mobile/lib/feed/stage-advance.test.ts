@@ -64,11 +64,10 @@ function withGeo(
 describe("0 → 1 · Intent & Life", () => {
 	const base: SignalState = {
 		...EMPTY_SIGNALS,
-		intent: "primary",
 		budget: { minUsd: 450_000, maxUsd: 650_000 },
 	};
 
-	it("intent + budget + 1 life signal is not enough", () => {
+	it("budget + 1 life signal is not enough", () => {
 		const s = { ...base, dims: { family: 1 } };
 		expect(countLifeSignals(s)).toBe(1);
 		expect(evaluateStageAdvance(0, s, { units: [] })).toBeNull();
@@ -92,19 +91,9 @@ describe("0 → 1 · Intent & Life", () => {
 		expect(evaluateStageAdvance(0, s, { units: [] })).toBeNull();
 	});
 
-	it("missing intent blocks even with plenty of life signal", () => {
-		const s = {
-			...EMPTY_SIGNALS,
-			budget: { maxUsd: 500_000 },
-			dims: { family: 1, trails: 1, walkable: 1 },
-		};
-		expect(evaluateStageAdvance(0, s, { units: [] })).toBeNull();
-	});
-
 	it("missing budget band blocks", () => {
 		const s = {
 			...EMPTY_SIGNALS,
-			intent: "primary",
 			dims: { family: 1, trails: 1 },
 		};
 		expect(evaluateStageAdvance(0, s, { units: [] })).toBeNull();
@@ -253,7 +242,6 @@ describe("stage 4 is terminal, and the gate is monotonic", () => {
 	it("stage 4 never advances, however much signal exists", () => {
 		const s: SignalState = {
 			...EMPTY_SIGNALS,
-			intent: "primary",
 			budget: { maxUsd: 900_000 },
 			dims: { family: 9, trails: 9 },
 			likedCommunityIds: ["c-1", "c-2", "c-3"],
@@ -265,7 +253,6 @@ describe("stage 4 is terminal, and the gate is monotonic", () => {
 	it("never returns a stage at or below the current one", () => {
 		const rich: SignalState = {
 			...EMPTY_SIGNALS,
-			intent: "primary",
 			budget: { maxUsd: 900_000 },
 			dims: { family: 3, trails: 3 },
 			likedCommunityIds: ["c-1", "c-2", "c-3"],
@@ -283,7 +270,6 @@ describe("stage 4 is terminal, and the gate is monotonic", () => {
 	it("advances exactly one stage at a time even with signal for several", () => {
 		const rich: SignalState = {
 			...EMPTY_SIGNALS,
-			intent: "primary",
 			budget: { maxUsd: 900_000 },
 			dims: { family: 3, trails: 3 },
 			likedCommunityIds: ["c-1", "c-2"],

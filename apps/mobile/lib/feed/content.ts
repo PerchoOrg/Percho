@@ -15,7 +15,14 @@
  *
  * Challenge cards are likewise derived — see `challengeFromListing`, which
  * builds the "guess the price" card from a real listing's real price.
+ *
+ * NOTE (2026-08-15): the Stage-0 purpose asks (`PURPOSE_ASKS`) were deleted
+ * wholesale — the owner's 「把 your purpose card 先全部删掉」. The intent
+ * vocabulary they fed (`AskRecord.type: "intent"`, `SignalState.intent`, the
+ * 0→1 gate's `!!signals.intent` clause) went with them; the 0→1 gate is now
+ * budget + ≥2 life signals.
  */
+
 import type {
 	AskCardV3,
 	BudgetBand,
@@ -25,43 +32,6 @@ import type {
 	TradeoffCardV3,
 } from "./card-types";
 import type { GeoUnit } from "./geo-unit";
-
-// ─── Stage-0 purpose + life asks (§1.7 "intent 确认 + ≥2 生活信号") ────
-
-export const PURPOSE_ASKS: readonly AskCardV3[] = [
-	{
-		kind: "ask",
-		id: "ask-purpose-primary",
-		layer: "purpose",
-		q: "Looking for a place to actually live in?",
-		sub: "As opposed to an investment or a second home.",
-		choice: { form: "yes-no", affirm: { type: "intent", value: "primary" } },
-	},
-	{
-		kind: "ask",
-		id: "ask-purpose-first-home",
-		layer: "purpose",
-		q: "Is this your first home?",
-		choice: { form: "yes-no", affirm: { type: "intent", value: "first-home" } },
-	},
-	{
-		kind: "ask",
-		id: "ask-purpose-timeline",
-		layer: "purpose",
-		q: "Buying soon, or still getting a feel for it?",
-		choice: {
-			form: "either-or",
-			left: {
-				label: "Just looking",
-				record: { type: "intent", value: "browsing" },
-			},
-			right: {
-				label: "Buying soon",
-				record: { type: "intent", value: "active" },
-			},
-		},
-	},
-];
 
 export const LIFE_ASKS: readonly AskCardV3[] = [
 	{
@@ -237,7 +207,7 @@ export const TRADEOFFS: readonly TradeoffCardV3[] = [
 		kind: "tradeoff",
 		id: "to-yard-vs-commute",
 		left: { label: "Bigger yard", dim: "outdoors" },
-		right: { label: "Shorter commute", dim: "walkable" },
+		right: { label: "Shorter commute", dim: "walkable", icon: "car" },
 		scope: "life",
 	},
 	{
@@ -365,7 +335,6 @@ export function challengeFromListing(
 }
 
 export const PREFERENCE_ASKS: readonly AskCardV3[] = [
-	...PURPOSE_ASKS,
 	...LIFE_ASKS,
 	...LIFESTYLE_ASKS,
 ];
