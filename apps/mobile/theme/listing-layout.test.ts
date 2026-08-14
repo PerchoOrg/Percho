@@ -71,16 +71,15 @@ describe("listing card 2026-08-13 layout", () => {
 		expect(mediaShare).toBeGreaterThanOrEqual(MEDIA_MIN_SHARE);
 	});
 
-	it("insets the media by a uniform 12pt", () => {
-		// The video is an INSET card inside the white card, and the 2026-08-14
-		// polish pass makes the paper frame around it EVEN: 12pt top and 12pt
-		// on both sides (the text block's own paddingTop is the gap underneath).
-		// It used to track `textBlock.block.paddingHorizontal` so the video's
-		// edges lined up with the price and the tags; the owner overrode that in
-		// favour of the uniform inset. Full-bleed media (margin 0) is the bug
-		// this replaced, so a zero here is still a failure.
-		expect(media.marginHorizontal).toBe(12);
-		expect(media.marginTop).toBe(media.marginHorizontal);
+	it("insets the media 12 top / 16 sides", () => {
+		// The video is an INSET card inside the white card: 12pt of paper
+		// above, 16pt on both sides (owner 2026-08-14: 「Video 左右 inset 比
+		// 现在增加 3–4px」 — the wider paper band makes the white card surface
+		// read clearly). Full-bleed media (margin 0) is the bug this replaced,
+		// so a zero here is still a failure.
+		expect(media.marginHorizontal).toBe(16);
+		expect(media.marginTop).toBe(12);
+		expect(media.marginTop).toBeLessThan(media.marginHorizontal);
 		// A rounded box to clip the player, concentric with the card's radius.
 		expect(media.borderRadius).toBeGreaterThan(0);
 	});

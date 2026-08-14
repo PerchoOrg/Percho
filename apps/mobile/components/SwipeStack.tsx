@@ -385,8 +385,25 @@ const styles = StyleSheet.create({
 	 * The card frame. With `cardHeight` absent (feed) it stretches to the
 	 * container's full height — `flex: 1` inside the padded CardContainer —
 	 * so the card fills the screen instead of the old centered 0.74 box.
+	 *
+	 * Carries the AMBIENT half of the card's two-shadow lift (owner,
+	 * 2026-08-14 follow-up: `0 18px 50px rgba(38,32,24,.09)`). RN views
+	 * support exactly ONE shadow, so the wide diffuse ambient one lives on
+	 * the frame (same size as the card, no clipping anywhere above it) and
+	 * the tight contact one lives on `card` below. No border anywhere.
 	 */
-	frame: { flex: 1, alignSelf: "stretch" },
+	frame: {
+		flex: 1,
+		alignSelf: "stretch",
+		shadowColor: "rgba(38,32,24,0.09)",
+		shadowOffset: { width: 0, height: 18 },
+		shadowRadius: 50,
+		/**
+		 * iOS multiplies `shadowColor`'s alpha by `shadowOpacity`, which
+		 * defaults to 0 — without this the colour above renders nothing.
+		 */
+		shadowOpacity: 1,
+	},
 	/**
 	 * The feed's height cap (owner, 2026-08-14: the card still reads too tall).
 	 * `flex: 1` would take the container's whole height; `maxHeight: 95%` gives
@@ -405,27 +422,23 @@ const styles = StyleSheet.create({
 		overflow: "hidden",
 		backgroundColor: colors.ink, // card face is always dark (§0.3)
 		/**
-		 * Soft lift off the paper background (owner, 2026-08-14). The ask was two
-		 * shadows — `0 12px 32px rgba(35,30,22,.07)` plus a tight
-		 * `0 2px 6px rgba(35,30,22,.03)` — but a RN view carries exactly ONE
-		 * shadow, so the large ambient one is what ships; the contact shadow is
-		 * dropped rather than faked with a wrapper view.
-		 *
-		 * 2026-08-14 follow-up pass: the owner re-specified the single shadow —
-		 * `0 14px 36px rgba(40,32,22,.07)`, no border, no heavy shadow. Same
-		 * 0.07 alpha, slightly deeper offset/radius and a warmer tint.
+		 * Soft lift off the paper background — the CONTACT half of the owner's
+		 * two-shadow spec (2026-08-14: `0 3px 10px rgba(38,32,24,.04)`). RN
+		 * supports exactly ONE shadow per view, so the wide ambient half
+		 * (`0 18px 50px rgba(38,32,24,.09)`) lives on the frame, and this tight
+		 * one on the card. No border, no heavy shadow.
 		 *
 		 * `overflow: hidden` above clips this view's CHILDREN, not its shadow,
 		 * and no ancestor (`stack`, `stackWrap`) clips either — so the shadow is
 		 * free to spill past the card's own inset.
 		 */
-		shadowColor: "rgba(40,32,22,0.07)",
-		shadowOffset: { width: 0, height: 14 },
-		shadowRadius: 36,
+		shadowColor: "rgba(38,32,24,0.04)",
+		shadowOffset: { width: 0, height: 3 },
+		shadowRadius: 10,
 		/**
 		 * iOS multiplies `shadowColor`'s alpha by `shadowOpacity`, which defaults
 		 * to 0 — without this line the colour above renders nothing at all. 1
-		 * keeps the 0.07 the owner specified as the effective opacity.
+		 * keeps the 0.04 the owner specified as the effective opacity.
 		 */
 		shadowOpacity: 1,
 		elevation: 6,

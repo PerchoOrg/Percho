@@ -102,10 +102,17 @@ export const DIVIDER_HEIGHT = 1;
  *
  * There is no `marginBottom`: the text block's own 16pt `paddingTop` is the
  * gap under the video, and adding a margin here would double it.
+ *
+ * 2026-08-14 follow-up pass: horizontal inset 12 → 16 (owner: 「Video 左右
+ * inset 增加 3–4px,让白色 card surface 更明显」). The paper band down the
+ * sides widens to 16 while the top stays 12 — height and proportion of the
+ * video are untouched (the media box is still `flex:1`; only its horizontal
+ * margin moved). `listing-layout.test.ts` now asserts the horizontal inset
+ * explicitly instead of the old top==sides uniformity.
  */
 export const media = {
 	marginTop: 12,
-	marginHorizontal: 12,
+	marginHorizontal: 16,
 	/**
 	 * Nested inside the card's 28pt radius. 14 (was 20, owner 2026-08-14): with
 	 * only a 12pt inset, a 20pt radius read nearly as round as the card's own
