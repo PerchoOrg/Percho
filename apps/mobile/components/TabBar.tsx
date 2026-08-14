@@ -61,7 +61,12 @@ const styles = StyleSheet.create({
 		flexDirection: "row",
 		backgroundColor: colors.bg,
 		borderTopWidth: StyleSheet.hairlineWidth,
-		borderTopColor: colors.border,
+		/**
+		 * 5% ink rather than `colors.border` (#EADFD0). The bar itself stays flat
+		 * and container-less (owner, 2026-08-14); the rule above it only has to
+		 * say "the surface ends here", and the warm token read as a drawn line.
+		 */
+		borderTopColor: "rgba(23,23,21,0.05)",
 	},
 	tab: { flex: 1, alignItems: "center", justifyContent: "center", gap: 2 },
 	label: { ...textStyles.caption },

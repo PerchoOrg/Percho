@@ -16,13 +16,13 @@
  *
  * `TEXT_BLOCK_TARGET` is the redesign's budget for the block:
  * padding 16 top / 18 horizontal / 18 bottom, a price+specs baseline row
- * (31pt), the address (8pt + 12pt), the tags (13pt + 21pt pill), the hairline
- * divider (12pt + 1pt), and a 46pt CTA (8pt + 46), then 18pt of bottom
+ * (31pt), the address (8pt + 12pt), the tags (11pt + 21pt pill), the hairline
+ * divider (16pt + 1pt), and a 46pt CTA (8pt + 46), then 18pt of bottom
  * padding:
  *
- *   16 + 31 + 8 + 12 + 13 + 21 + 12 + 1 + 8 + 46 + 18 = 186 ≤ 190  ✓
+ *   16 + 31 + 8 + 12 + 11 + 21 + 16 + 1 + 8 + 46 + 18 = 188 ≤ 190  ✓
  *
- * That floor leaves 4pt of headroom before the ≤190 acceptance starts
+ * That floor leaves 2pt of headroom before the ≤190 acceptance starts
  * failing — the exact number a future "just add one more row" edit spends
  * without tripping anything until it is too late. It was 17pt before the
  * 2026-08-14 pass; the divider is what spent most of it.
@@ -54,7 +54,12 @@ export const MAX_TAGS = 3;
  * chip row wanted a hairline rule between it and the explore link. The rule
  * carries the separation the CTA gap used to carry alone, so `ctaSlot` drops
  * 14 → 8 — without that the block lands at 192pt and blows the ≤190 budget.
- * `tags.marginTop` stays at 13, inside the owner's 12-14 target.
+ *
+ * 2026-08-14 polish pass: price / address / tags must read as ONE group that
+ * the divider separates from the explore row. So the gap INSIDE the group
+ * tightens (`tags.marginTop` 13 → 11) and the gap to the rule widens
+ * (`divider.marginTop` 12 → 16). Net +2pt on the block, which the 4pt of
+ * headroom absorbs.
  */
 export const textBlock = {
 	block: {
@@ -63,8 +68,8 @@ export const textBlock = {
 		paddingBottom: 18,
 	},
 	address: { marginTop: 8 },
-	tags: { marginTop: 13 },
-	divider: { marginTop: 12 },
+	tags: { marginTop: 11 },
+	divider: { marginTop: 16 },
 	ctaSlot: { marginTop: 8 },
 } as const;
 
@@ -84,17 +89,20 @@ export const DIVIDER_HEIGHT = 1;
  * both sides, so the video reads as an image card EMBEDDED in the listing
  * card rather than a photo with a caption bolted underneath.
  *
- * `marginHorizontal` MUST equal `textBlock.block.paddingHorizontal` — the
- * whole point is that the video's left and right edges line up with the price,
- * the address and the tags. `listing-layout.test.ts` asserts the equality so
- * the two cannot drift.
+ * 2026-08-14 polish pass: the inset is a UNIFORM 12pt on all four sides
+ * (owner: 「视频四边 padding 统一 12」). It previously tracked
+ * `textBlock.block.paddingHorizontal` (18) so the video's edges sat on the
+ * same vertical lines as the price and the tags; the owner overrode that —
+ * the video now sits 6pt wider than the text on each side, and the frame of
+ * paper around it is even. `listing-layout.test.ts` no longer asserts the
+ * equality (it asserts the uniformity instead).
  *
  * There is no `marginBottom`: the text block's own 16pt `paddingTop` is the
  * gap under the video, and adding a margin here would double it.
  */
 export const media = {
-	marginTop: 14,
-	marginHorizontal: textBlock.block.paddingHorizontal,
+	marginTop: 12,
+	marginHorizontal: 12,
 	/** Nested inside the card's 28pt radius; 20 keeps the corners concentric. */
 	borderRadius: 20,
 } as const;

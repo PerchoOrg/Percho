@@ -74,7 +74,7 @@ import { useFeedSession } from "../../state/feed-session";
 import { useFunnelStore } from "../../state/funnel";
 import { useSavedStore } from "../../state/saved";
 import { useSwipeHintStore } from "../../state/swipe-hint";
-import { colors } from "../../theme/tokens";
+import { colors, redline } from "../../theme/tokens";
 import { textStyles } from "../../theme/typography";
 
 const GUTTER = 16;
@@ -705,8 +705,17 @@ const styles = StyleSheet.create({
 		paddingHorizontal: 16,
 		zIndex: 100,
 	},
-	/** `textStyles.title1` is the 28pt serif — the spec's "~28-32, display". */
-	wordmark: { ...textStyles.title1, color: colors.ink },
+	/**
+	 * `textStyles.title1` is the 28pt serif — the spec's "~28-32, display".
+	 *
+	 * Painted `redline.accent` (owner, 2026-08-14: 「深墨绿 + 优雅衬线」). This
+	 * is the one place the redline's forest green crosses into app CHROME — the
+	 * tokens file reserves it for the four card faces so the amber and the green
+	 * never share a surface. The wordmark is the app's name, not chrome that
+	 * competes with a card, and the feed is a green-card surface; the amber
+	 * accent stays out of this row.
+	 */
+	wordmark: { ...textStyles.title1, color: redline.accent },
 	sheet: { paddingHorizontal: 20, paddingTop: 8, gap: 8 },
 	sheetEyebrow: { ...textStyles.caption, color: colors.accent },
 	sheetTitle: { ...textStyles.title2, color: colors.ink },

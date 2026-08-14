@@ -48,9 +48,9 @@ function textBlockFloor() {
 		redlineText.listingCard.price.lineHeight + // 31
 		textBlock.address.marginTop + // 8
 		redlineText.listingCard.address.fontSize + // 12
-		textBlock.tags.marginTop + // 13
+		textBlock.tags.marginTop + // 11
 		TAG_PILL_HEIGHT + // 21
-		textBlock.divider.marginTop + // 12
+		textBlock.divider.marginTop + // 16
 		DIVIDER_HEIGHT + // 1
 		textBlock.ctaSlot.marginTop + // 8
 		46 + // CTA
@@ -71,15 +71,17 @@ describe("listing card 2026-08-13 layout", () => {
 		expect(mediaShare).toBeGreaterThanOrEqual(MEDIA_MIN_SHARE);
 	});
 
-	it("lines the media up with the text block's left and right edges", () => {
-		// The 2026-08-14 fix: the video is an INSET card inside the white card,
-		// and it only reads that way if its edges sit on the same vertical
-		// lines as the price / address / tags. Full-bleed media (margin 0) is
-		// the bug this replaced, so a zero here is also a failure.
-		expect(media.marginHorizontal).toBe(textBlock.block.paddingHorizontal);
-		expect(media.marginHorizontal).toBeGreaterThan(0);
-		// Paper above the video too, and a rounded box to clip the player.
-		expect(media.marginTop).toBeGreaterThan(0);
+	it("insets the media by a uniform 12pt", () => {
+		// The video is an INSET card inside the white card, and the 2026-08-14
+		// polish pass makes the paper frame around it EVEN: 12pt top and 12pt
+		// on both sides (the text block's own paddingTop is the gap underneath).
+		// It used to track `textBlock.block.paddingHorizontal` so the video's
+		// edges lined up with the price and the tags; the owner overrode that in
+		// favour of the uniform inset. Full-bleed media (margin 0) is the bug
+		// this replaced, so a zero here is still a failure.
+		expect(media.marginHorizontal).toBe(12);
+		expect(media.marginTop).toBe(media.marginHorizontal);
+		// A rounded box to clip the player, concentric with the card's radius.
 		expect(media.borderRadius).toBeGreaterThan(0);
 	});
 

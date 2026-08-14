@@ -341,7 +341,9 @@ export function SwipeStack<T>({
 					style={[
 						styles.frame,
 						{ width: cardWidth },
-						cardHeight !== undefined && { height: cardHeight },
+						cardHeight !== undefined
+							? { height: cardHeight }
+							: styles.frameCapped,
 					]}
 				>
 					{mounted.map(({ item, absIndex }) => {
@@ -385,6 +387,18 @@ const styles = StyleSheet.create({
 	 * so the card fills the screen instead of the old centered 0.74 box.
 	 */
 	frame: { flex: 1, alignSelf: "stretch" },
+	/**
+	 * The feed's height cap (owner, 2026-08-14: the card still reads too tall).
+	 * `flex: 1` would take the container's whole height; `maxHeight: 95%` gives
+	 * back 5% of it, and `stack`'s `justifyContent: "center"` splits the freed
+	 * space evenly above and below — so the card shrinks about its own centre
+	 * and paper shows top AND bottom.
+	 *
+	 * Applied only on the flex path: `dev-foundation` passes an explicit
+	 * `cardHeight`, and clamping a fixed height against its container would
+	 * silently resize a screen this change has nothing to do with.
+	 */
+	frameCapped: { maxHeight: "95%" },
 	card: {
 		...StyleSheet.absoluteFillObject,
 		borderRadius: radii.card,

@@ -61,7 +61,7 @@ import { fonts, redline, redlineRadii } from "../../theme/tokens";
 import { redlineText } from "../../theme/typography";
 import { CardPhoto } from "../CardPhoto";
 import { CardVideo } from "../CardVideo";
-import { RedlineIcon, type RedlineIconName } from "./redline/RedlineChrome";
+import type { RedlineIconName } from "./redline/RedlineChrome";
 
 /**
  * Geometry lives in `theme/listing-layout.ts` as plain data so
@@ -116,18 +116,14 @@ const INK = {
 	primary: "#181B18",
 	/** Secondary — specs ("4 bd · 3 ba · 2,853 sqft"). */
 	secondary: "#535952",
-	/** Tertiary — address and other secondary metadata. */
-	tertiary: "#92968F",
+	/**
+	 * Tertiary — the address. Sits between `secondary` and the old #92968F
+	 * (owner, 2026-08-14: the address was too light to read comfortably). It
+	 * still steps down from the specs, so the row reads as metadata rather than
+	 * as a second headline.
+	 */
+	tertiary: "#6E746F",
 } as const;
-
-/**
- * Saved-state green on the dark disc. `redline.accent` (#0E6B57) is tuned for
- * ink-on-paper and goes muddy on a translucent dark disc over a photo, so the
- * saved bookmark uses a light mint at the same hue. Green stays reserved for
- * interactive / selected state (owner, 2026-08-14), which is exactly what a
- * saved bookmark is.
- */
-const SAVED_GREEN = "#7FD4B8";
 
 /** The bookmark disc's target id, written into `tapSlot` on touch start. */
 export const SAVE_TAP_TARGET = "save";
@@ -209,11 +205,7 @@ export function ListingFace({
 							pressed && styles.savePressed,
 						]}
 					>
-						<RedlineIcon
-							name="bookmark"
-							size={17}
-							color={saved ? SAVED_GREEN : redline.onPhoto}
-						/>
+						<BookmarkIcon saved={saved} />
 					</Pressable>
 				</View>
 			</View>
@@ -268,16 +260,83 @@ export function ListingFace({
 								]}
 							>
 								<Text style={styles.exploreLabel}>Explore home</Text>
-								<RedlineIcon
-									name="arrowRight"
-									size={13}
-									color={redline.accent}
-								/>
+								<ArrowRightIcon />
 							</Pressable>
 						</View>
 					</>
 				)}
 			</View>
+		</View>
+	);
+}
+
+/**
+ * ── Outline icon art (owner, 2026-08-14) ────────────────────────────────────
+ *
+ * The two icons on this card are Lucide-style OUTLINES: a thin arrow after
+ * "Explore home" and a white bookmark on the save disc. Neither can come from
+ * the icon font — the Phosphor subset this project ships carries FILL weights
+ * only (see `redline/icon-font.ts`), which is what made the old arrow read as a
+ * thick wedge and the saved bookmark a solid green blob. `react-native-svg` is
+ * not an option either: it red-screens in Expo Go on this project (DEVLOG
+ * 2026-07-30 04:55).
+ *
+ * So they are composed from bordered `View`s, the way `RedlineChrome`'s
+ * `HeartIcon` has always been. The numbers below are Lucide's own 24-grid
+ * geometry scaled to the target size rather than eyeballed:
+ *
+ *   arrow-right  shaft (5,12)→(19,12), head corners (12,5)-(19,12)-(12,19)
+ *   bookmark     body x 5..19, y 3..21, notch tip (12,16)
+ *
+ * A 45°-rotated square with only its top and right borders IS the arrowhead —
+ * the same trick the heart's tail uses. Both icons are single-size and
+ * single-colour, so the geometry lives in the StyleSheet below as constants
+ * rather than as props.
+ */
+const OUTLINE_STROKE = 1.75;
+
+const ARROW_SIZE = 16;
+const ARROW_K = ARROW_SIZE / 24;
+/** Side of the rotated square whose top+right borders draw the arrowhead. */
+const ARROW_HEAD = 7 * ARROW_K * Math.SQRT2;
+
+const BOOKMARK_SIZE = 18;
+const BOOKMARK_K = BOOKMARK_SIZE / 24;
+const BM_LEFT = 5 * BOOKMARK_K;
+const BM_WIDTH = 14 * BOOKMARK_K;
+const BM_TOP = 3 * BOOKMARK_K;
+const BM_BOTTOM = 21 * BOOKMARK_K;
+/** Where the V bites into the bottom edge. */
+const BM_NOTCH = 16 * BOOKMARK_K;
+const BM_RUN = BM_WIDTH / 2;
+const BM_RISE = BM_BOTTOM - BM_NOTCH;
+const BM_DIAG = Math.hypot(BM_RUN, BM_RISE);
+const BM_ANGLE = (Math.atan2(BM_RISE, BM_RUN) * 180) / Math.PI;
+
+/** The arrow after "Explore home". 16pt, 1.75 stroke, accent green. */
+function ArrowRightIcon() {
+	return (
+		<View style={styles.arrowBox}>
+			<View style={styles.arrowShaft} />
+			<View style={styles.arrowHead} />
+		</View>
+	);
+}
+
+/**
+ * The save bookmark. White outline in both states (owner: 「去掉绿色 icon」);
+ * saved additionally fills the body, which is the classic outline-vs-filled
+ * bookmark distinction and the only signal left once the green is gone.
+ */
+function BookmarkIcon({ saved }: { saved: boolean }) {
+	return (
+		<View style={styles.bookmarkBox}>
+			{saved && <View style={styles.bookmarkFill} />}
+			<View style={styles.bookmarkTop} />
+			<View style={[styles.bookmarkSide, styles.bookmarkSideLeft]} />
+			<View style={[styles.bookmarkSide, styles.bookmarkSideRight]} />
+			<View style={[styles.bookmarkDiag, styles.bookmarkDiagLeft]} />
+			<View style={[styles.bookmarkDiag, styles.bookmarkDiagRight]} />
 		</View>
 	);
 }
@@ -380,8 +439,20 @@ const styles = StyleSheet.create({
 		fontWeight: "600",
 		color: INK.primary,
 	},
-	/** "4 bd · 3 ba · 2,853 sqft" — 12.5/600, one line. */
-	specs: { ...redlineText.listingCard.specs, color: INK.secondary },
+	/**
+	 * "4 bd · 3 ba · 2,853 sqft" — 12.5/600, one line.
+	 *
+	 * Lifted 2pt (owner, 2026-08-14). Row 1 aligns the two texts on their
+	 * BASELINES, which is typographically right and optically wrong here: the
+	 * price is 31pt and the specs 12.5pt, so a shared baseline hangs the small
+	 * text off the bottom of the big one. The nudge splits the difference
+	 * without giving up the baseline row.
+	 */
+	specs: {
+		...redlineText.listingCard.specs,
+		color: INK.secondary,
+		transform: [{ translateY: -2 }],
+	},
 	/** Row 2 — "355 Morgans Creek Ct · Kennesaw, GA 30144", one muted line. */
 	address: {
 		...redlineText.listingCard.address,
@@ -439,7 +510,7 @@ const styles = StyleSheet.create({
 	exploreLink: {
 		flexDirection: "row",
 		alignItems: "center",
-		gap: 5,
+		gap: 6,
 		minHeight: 44, // §0.5 touch floor
 		paddingHorizontal: 4,
 	},
@@ -447,5 +518,80 @@ const styles = StyleSheet.create({
 	exploreLabel: {
 		...redlineText.listingCard.cta,
 		color: redline.accent,
+	},
+
+	// ─── Outline icon art (see the block above CHIP_LABEL) ────────────────
+	arrowBox: { width: ARROW_SIZE, height: ARROW_SIZE },
+	arrowShaft: {
+		position: "absolute",
+		left: 5 * ARROW_K,
+		width: 14 * ARROW_K,
+		top: (ARROW_SIZE - OUTLINE_STROKE) / 2,
+		height: OUTLINE_STROKE,
+		borderRadius: OUTLINE_STROKE / 2,
+		backgroundColor: redline.accent,
+	},
+	/**
+	 * Lucide's head is the (12,5)-(19,12)-(12,19) corner, i.e. a square centred
+	 * in the box, rotated 45°, wearing only its top and right borders.
+	 */
+	arrowHead: {
+		position: "absolute",
+		left: (ARROW_SIZE - ARROW_HEAD) / 2,
+		top: (ARROW_SIZE - ARROW_HEAD) / 2,
+		width: ARROW_HEAD,
+		height: ARROW_HEAD,
+		borderTopWidth: OUTLINE_STROKE,
+		borderRightWidth: OUTLINE_STROKE,
+		borderColor: redline.accent,
+		borderTopRightRadius: OUTLINE_STROKE,
+		transform: [{ rotate: "45deg" }],
+	},
+
+	bookmarkBox: { width: BOOKMARK_SIZE, height: BOOKMARK_SIZE },
+	/** Saved: the body filled down to the notch tip. */
+	bookmarkFill: {
+		position: "absolute",
+		left: BM_LEFT + OUTLINE_STROKE,
+		top: BM_TOP + OUTLINE_STROKE,
+		width: BM_WIDTH - OUTLINE_STROKE * 2,
+		height: BM_NOTCH - BM_TOP - OUTLINE_STROKE,
+		backgroundColor: redline.onPhoto,
+	},
+	bookmarkTop: {
+		position: "absolute",
+		left: BM_LEFT,
+		top: BM_TOP,
+		width: BM_WIDTH,
+		height: OUTLINE_STROKE,
+		borderRadius: OUTLINE_STROKE / 2,
+		backgroundColor: redline.onPhoto,
+	},
+	bookmarkSide: {
+		position: "absolute",
+		top: BM_TOP,
+		width: OUTLINE_STROKE,
+		height: BM_BOTTOM - BM_TOP,
+		borderRadius: OUTLINE_STROKE / 2,
+		backgroundColor: redline.onPhoto,
+	},
+	bookmarkSideLeft: { left: BM_LEFT },
+	bookmarkSideRight: { left: BM_LEFT + BM_WIDTH - OUTLINE_STROKE },
+	/** The V: two bars rotated about their own centres onto the notch's legs. */
+	bookmarkDiag: {
+		position: "absolute",
+		top: (BM_BOTTOM + BM_NOTCH) / 2 - OUTLINE_STROKE / 2,
+		width: BM_DIAG,
+		height: OUTLINE_STROKE,
+		borderRadius: OUTLINE_STROKE / 2,
+		backgroundColor: redline.onPhoto,
+	},
+	bookmarkDiagLeft: {
+		left: BM_LEFT + BM_RUN / 2 - BM_DIAG / 2,
+		transform: [{ rotate: `${-BM_ANGLE}deg` }],
+	},
+	bookmarkDiagRight: {
+		left: BM_LEFT + BM_WIDTH - BM_RUN / 2 - BM_DIAG / 2,
+		transform: [{ rotate: `${BM_ANGLE}deg` }],
 	},
 });

@@ -45,9 +45,16 @@ Percho is a mobile-first home discovery app for the whole US buyer pool. Buyers 
 - Home cards sit further in from the edges, so the paper background frames each one.
 - Calmer card typography — a lighter price, softer address and spec greys, and a hairline rule above the "Explore home" link.
 - Feature tags are now light tinted rectangles instead of candy-coloured capsules.
-- Green is reserved for things you can tap or have selected: the LISTING label is plain ink again, and a saved home's bookmark turns green.
+- Green is reserved for things you can tap or have selected: the LISTING label is plain ink again.
 - The save button on a photo is a smaller frosted disc that reads clearly over any image.
 - The sound on/off control moved off the feed's top bar and onto the home detail screen, where the guided tour plays.
+- Home cards are a touch shorter, so the paper background shows above and below each one.
+- The video inside a home card now has an even margin on all sides.
+- The address under the price is darker and easier to read.
+- Price, address, and tags read as one group, set apart from the "Explore home" link.
+- Lighter, thinner icons: the explore arrow and the save bookmark are outlines now. A saved home fills its bookmark in white instead of turning it green.
+- The line above the bottom tab bar is fainter.
+- The Percho name at the top of the feed is now deep forest green.
 
 <!--
 Add new dated bullets below as bug fixes / small polish land under v1.0.

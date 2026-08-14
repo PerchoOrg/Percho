@@ -4,6 +4,71 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-08-14 02:10 — Listing-card polish pass: 5% shorter card, uniform video
+inset, outline icons, green wordmark
+
+**Objective**: Tia's 9-item polish pass on the card shipped in 62f07528.
+Explicitly "small polish only, no redesign, no new elements".
+
+**Actions**:
+- `components/SwipeStack.tsx` — the card frame gets `maxHeight: "95%"` on the
+  FLEX path only (`frameCapped`); `dev-foundation`'s explicit `cardHeight`
+  keeps the old behaviour. `stack`'s `justifyContent: "center"` splits the
+  freed 5% above and below, so the card shrinks about its own centre.
+- `theme/listing-layout.ts` — `media` inset is now a uniform 12 (`marginTop`
+  14 → 12, `marginHorizontal` 18 → 12, no longer derived from the block's
+  padding); `tags.marginTop` 13 → 11, `divider.marginTop` 12 → 16. Block floor
+  186 → 188 (still ≤ 190).
+- `theme/listing-layout.test.ts` — floor comments updated; the media/text
+  edge-alignment assertion is replaced by a uniform-inset assertion.
+- `components/cards/ListingFace.tsx` — `INK.tertiary` #92968F → #6E746F
+  (address readability); specs get `translateY: -2`; explore-link gap 5 → 6;
+  the filled `RedlineIcon` arrow and bookmark are replaced by hand-drawn
+  outline `ArrowRightIcon` / `BookmarkIcon`; `SAVED_GREEN` deleted.
+- `components/TabBar.tsx` — top hairline `colors.border` → rgba(23,23,21,0.05).
+- `app/(tabs)/feed.tsx` — wordmark colour `colors.ink` → `redline.accent`.
+
+**Decisions**:
+- **Outline icons as `View` art.** The owner asked for Lucide-style 1.75-stroke
+  outlines. `react-native-svg` still red-screens in Expo Go (2026-07-30) and
+  the Phosphor subset is FILL-only, so both icons are composed from bordered
+  `View`s like `RedlineChrome`'s `HeartIcon`. The geometry is Lucide's own
+  24-grid scaled (`arrow-right`: shaft 5,12→19,12 + a 45°-rotated square
+  wearing top+right borders; `bookmark`: body 5..19 × 3..21 with the notch tip
+  at 12,16, drawn as top bar + two sides + two rotated bars for the V).
+- **Saved state without green.** Owner: 「去掉绿色 icon」. The bookmark is white
+  in both states; SAVED adds a white fill of the body down to the notch tip —
+  the classic outline-vs-filled distinction. The disc is unchanged.
+- **Video inset overrides edge alignment.** Last round's rule was that the
+  video's edges line up with the text block's 18pt padding; the owner replaced
+  it with a uniform 12pt frame. The video now sits 6pt wider per side than the
+  text. The test that guarded the old rule now guards the new one.
+- **Wordmark green crosses a token boundary.** `redline.accent` is documented
+  as never leaving the four card faces (so amber and green never share a
+  surface). The wordmark is the exception, taken deliberately: it is the app's
+  name over a green-card feed, and the amber stays out of that row.
+
+**Issues**: the `gives the media at least 65% of the card` assertion in
+`listing-layout.test.ts` models the card as `screenH − 62 − 8 − 10`. That model
+is now optimistic in two ways: it never accounted for the 44pt wordmark row
+added in 62f07528, and it does not know about the new 5% cap. Measured with
+both, an iPhone SE (667pt) gives the media ≈59% of the card, not 65%. Bigger
+phones (852pt) are ≈67% and fine. The test still passes because its model is
+unchanged — deliberately NOT rewritten here, because making it honest would
+mean either failing the build or relaxing an acceptance criterion on my own.
+
+**Resolution**: shipped as asked. `pnpm typecheck` clean, 611 vitest tests
+pass, biome clean on the six changed files.
+
+**Learnings**: `maxHeight: "%"` on a `flex: 1` child of a centred column is the
+cheap way to shrink a fill-height card without touching any of its internals —
+the parent's `justifyContent` does the recentring for free.
+
+**Next steps**: the owner needs to rule on the SE media share — either relax
+the 65% criterion for small devices or trim ~5pt out of the text block (the
+block padding-bottom 18 is the softest target). Pre-existing, unrelated: the
+`fonts` import in `ListingFace.tsx` is now dead (left in place per §0.3).
+
 ## 2026-08-14 01:35 — Owner design pass on the listing card: wordmark, inset
 frame, ink scale, tinted tags, frosted save disc
 
