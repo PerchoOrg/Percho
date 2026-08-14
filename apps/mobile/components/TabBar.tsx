@@ -202,15 +202,18 @@ function BookmarkIcon({ color }: IconProps) {
 /**
  * UserRound (Lucide) — 22px, stroke 1.75 (owner, 2026-08-14). Geometry from
  * Lucide's 24-grid scaled by K, same stroke + box rhythm as Home / Search /
- * Bookmark. Real UserRound has a r5 head (NOT the r4 of plain `user` — that
- * was the bug that made the glyph read as a tiny dot):
+ * Bookmark. Head is r5 (NOT the r4 of plain `user`). The shoulders are a
+ * WIDER barrel than Lucide's exact half-disc (owner: 「身子拉出来一点,看不
+ * 出来是身子」) — 18 units wide with mostly-straight sides so the body reads
+ * as a body at 22px instead of a shallow "U":
  *
  *   circle  c(12,8) r 5          → head
- *   path    M20 21a8 8 0 0 0-16 0 → shoulders (half-round blob, not a box)
+ *   barrel  w 18, r 7, y 12.5→22.5 → shoulders
  */
 const HEAD_D = 10 * K;
-const SHOULDER_W = 16 * K;
-const SHOULDER_R = SHOULDER_W / 2;
+const SHOULDER_W = 18 * K;
+const SHOULDER_H = 10 * K;
+const SHOULDER_R = 7 * K;
 
 function UserIcon({ color }: IconProps) {
 	return (
@@ -347,17 +350,17 @@ const styles = StyleSheet.create({
 		borderWidth: STROKE,
 	},
 	/**
-	 * UserRound's shoulders: a half-round blob whose flat side is its top —
-	 * a box SHORTER than it is wide, both top corners rounded to the full
-	 * radius, top border drawn. Sits on the baseline so the blob reads as
-	 * shoulders, not as a box (the old full-height box read as a lump).
+	 * UserRound's shoulders: a rounded barrel whose flat side is its top —
+	 * wider than the head (18 units), with the top corners rounded to 7 and
+	 * the sides running straight down to the baseline. Reads as a body at
+	 * 22px; the earlier exact half-disc (r8, height 8) read as a thin "U".
 	 */
 	shoulders: {
 		position: "absolute",
 		left: (ICON_SIZE - SHOULDER_W) / 2,
-		top: 13 * K,
+		top: 12.5 * K,
 		width: SHOULDER_W,
-		height: SHOULDER_R,
+		height: SHOULDER_H,
 		borderTopWidth: STROKE,
 		borderTopLeftRadius: SHOULDER_R,
 		borderTopRightRadius: SHOULDER_R,
