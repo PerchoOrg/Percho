@@ -15,7 +15,7 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { colors, redline } from "../theme/tokens";
-import { TAB_BAR_ART_WIDTH, TAB_BAR_FONT, TAB_BAR_GLYPH, TAB_BAR_OPTICAL_SCALE, type TabBarIconName } from "./TabBarIconFont";
+import { TAB_BAR_ART_WIDTH, TAB_BAR_FONT, TAB_BAR_GLYPH, TAB_BAR_GLYPH_SCALE, TAB_BAR_OPTICAL_SCALE, type TabBarIconName } from "./TabBarIconFont";
 
 export interface TabItem {
 	key: string;
@@ -52,7 +52,8 @@ export function TabBar({ tabs, activeKey, onSelect }: TabBarProps) {
 				const active = t.key === activeKey;
 				const glyph = TAB_BAR_GLYPH[t.key as TabBarIconName];
 				const artWidth = TAB_BAR_ART_WIDTH[t.key as TabBarIconName];
-				const fontSize = ICON_SIZE * TAB_BAR_OPTICAL_SCALE;
+				const glyphScale = TAB_BAR_GLYPH_SCALE[t.key as TabBarIconName];
+				const fontSize = ICON_SIZE * TAB_BAR_OPTICAL_SCALE * glyphScale;
 				return (
 					<Pressable
 						key={t.key}

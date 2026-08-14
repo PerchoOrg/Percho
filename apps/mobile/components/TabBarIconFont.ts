@@ -50,6 +50,21 @@ export const TAB_BAR_ART_WIDTH: Record<TabBarIconName, number> = {
 };
 
 /**
+ * Per-glyph visual scale, applied on top of `TAB_BAR_OPTICAL_SCALE`.
+ *
+ * The magnifying glass reads ~1–2px larger than the other three at the same
+ * em size (its art is the widest at 0.906em, and the handle adds optical
+ * mass), so it gets a small shrink (owner 2026-08-15: "Search icon 视觉上
+ * 缩小 1–2px"). 0.93 at 22px ≈ 1.5px. Everything else stays 1.
+ */
+export const TAB_BAR_GLYPH_SCALE: Record<TabBarIconName, number> = {
+	feed: 1,
+	search: 0.93,
+	saved: 1,
+	you: 1,
+};
+
+/**
  * Font size to request per point of nominal icon size.
  *
  * The regular-weight art fills ~0.78–0.91em of the em box, mean ≈0.87em. A
