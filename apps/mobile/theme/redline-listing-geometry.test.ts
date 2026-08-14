@@ -71,19 +71,14 @@ describe("listing card redline geometry", () => {
 	 * than overflowing. If this fails, the CTA is being clipped on a real device.
 	 */
 	const panelFloor = () => {
-		const localityMarginTop = listingGeometry.locality.marginTop;
-		const localityFontSize = redlineText.locality.fontSize;
-		const specsMarginTop = listingGeometry.specs.marginTop;
-		const specsLineHeight = 13; // data row — no prose leading
+		const specsLineHeight = 18; // specs row — 15pt/600 data
 		const specsFloor = 0; // specs.marginTop is 'auto' — the 4th slack slot, collapses to 0
 		return (
 			listingGeometry.panel.paddingTop +
 			listingGeometry.panel.paddingBottom +
-			redlineText.priceCompact.lineHeight +
-			listingGeometry.address.marginTop +
-			redlineText.address.fontSize +
-			localityMarginTop +
-			localityFontSize +
+			redlineText.price.lineHeight +
+			listingGeometry.place.marginTop +
+			redlineText.locality.fontSize +
 			specsFloor +
 			specsLineHeight +
 			// NOTE: the story row (storyMT + storyLH) is NOT in this floor.

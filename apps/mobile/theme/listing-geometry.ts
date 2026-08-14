@@ -152,10 +152,15 @@ export const listingGeometry = {
 		paddingTop: 14,
 		paddingBottom: 15,
 	},
-	/** "Address: 14px semibold, margin-top 8px" → 6 at PANEL_SCALE. */
+	/** "Address: 14px semibold, margin-top 8px" → 6 at PANEL_SCALE. Kept as redline reference; the card renders the merged `place` row. */
 	address: { marginTop: 6 },
-	/** "Location: 12px muted, margin-top 4px" → 3. */
+	/** "Location: 12px muted, margin-top 4px" → 3. Kept as redline reference; the card renders the merged `place` row. */
 	locality: { marginTop: 3 },
+	/**
+	 * Row 3 margin — the merged address · city, state zip row (2026-08-13
+	 * redesign). Tight, same voice as the identity rows it replaces.
+	 */
+	place: { marginTop: 3 },
 	/**
 	 * Spec line margin — the fourth slack slot (see SLACK_SLOTS). It is auto so
 	 * the space the story left behind is distributed, not dumped between locality

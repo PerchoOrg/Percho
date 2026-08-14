@@ -174,6 +174,11 @@ export interface ListingCardV3 {
 	 */
 	locality?: string;
 	/**
+	 * Zip code, carried from the server's `listing.zip`. Merged with the
+	 * address row on the card face ("355 Morgans Creek Ct · Kennesaw, GA 30144").
+	 */
+	zip?: string;
+	/**
 	 * The agent's own listing prose, paragraph-split. Fills the card's leftover
 	 * height under the 1:1 media block (line-clamped to the measured space), so
 	 * the card bottoms out flush instead of leaving the dead area the owner

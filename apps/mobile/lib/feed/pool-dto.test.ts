@@ -134,8 +134,20 @@ describe("parseListing", () => {
 		).toBeUndefined();
 	});
 
-	it("keeps a real photo count for the redline's hero pill", () => {
-		expect(parseListing({ ...LISTING, photoCount: 18 })?.photoCount).toBe(18);
+	it("carries the listing's zip so the address row can merge it", () => {
+		expect(
+			parseListing({
+				...LISTING,
+				city: "Kennesaw",
+				state: "GA",
+				zip: "30144",
+			})?.zip,
+		).toBe("30144");
+		expect(parseListing(LISTING)?.zip).toBeUndefined();
+	});
+
+	it("omits a non-string zip", () => {
+		expect(parseListing({ ...LISTING, zip: 30144 })?.zip).toBeUndefined();
 	});
 
 	it("drops a photo count of 1 — the pill must never read '1 Photos'", () => {

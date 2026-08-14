@@ -68,6 +68,15 @@ import type { DimKey } from "@percho/shared";
  * 介绍那一段 只保留基本信息和几个绿色的tag和explore button」). The field stays on
  * the DTO and `theme/listing-geometry.ts` still carries `geo.story` — data is
  * cheap, re-enabling is a one-line render.
+ *
+ * The panel was redesigned 2026-08-13 to the owner's approved order (demo
+ * `~/percho-prototypes/listing-panel-redesign/`):
+ *   1. price — 36pt serif (bigger, immersive)
+ *   2. bed/bath/sqft — 15pt/600
+ *   3. address · city, state zip — one 13pt muted row
+ *   4. chips — 14pt (up from 9.5)
+ *   5. CTA — 44pt pill
+ * The old separate `locality` row is merged into row 3.
  */
 import { StyleSheet, Text, View } from "react-native";
 import type { ListingCardV3 } from "../../lib/feed/card-types";
@@ -137,6 +146,10 @@ interface ListingFaceProps {
 export function ListingFace({ card, isTop, onExplore }: ListingFaceProps) {
 	/** Chip labels — the story line was removed 2026-08-13 (see header). */
 	const chips = (card.dims ?? []).slice(0, MAX_CHIPS);
+	/** Row 3: "355 Morgans Creek Ct · Kennesaw, GA 30144". */
+	const place = [card.address, card.locality, card.zip]
+		.filter(Boolean)
+		.join(" · ");
 	return (
 		<View style={styles.face}>
 			{/* Hero — 54%, full bleed */}
@@ -183,25 +196,16 @@ export function ListingFace({ card, isTop, onExplore }: ListingFaceProps) {
 			{/* Content panel — 46% */}
 			<View style={styles.panel}>
 				<Text style={styles.price}>{card.priceLabel}</Text>
-				{!!card.address && (
-					<Text style={styles.address} numberOfLines={1}>
-						{card.address}
-					</Text>
-				)}
-				{!!card.locality && (
-					<Text style={styles.locality} numberOfLines={1}>
-						{card.locality}
-					</Text>
-				)}
-				{/*
-				 * The spec line (bed / bath / sqft) — the single "basic info" row that
-				 * anchors the panel after the story was removed 2026-08-13. Reads in
-				 * the same muted voice as the locality row, so the panel's hierarchy
-				 * is: price → address → locality → specs → chips → CTA.
-				 */}
+				{/* Row 2 — bed/bath/sqft, 15pt/600 */}
 				{!!card.bedBathSqft && (
 					<Text style={styles.specs} numberOfLines={1}>
 						{card.bedBathSqft}
+					</Text>
+				)}
+				{/* Row 3 — address · city, state zip, 13pt muted, one line */}
+				{!!place && (
+					<Text style={styles.place} numberOfLines={1}>
+						{place}
 					</Text>
 				)}
 				{chips.length > 0 && (
@@ -296,22 +300,24 @@ const styles = StyleSheet.create({
 	 * 0 and the story's `flexShrink` still yields the line, so the CTA cannot be
 	 * pushed off the card and the fit floor is unchanged.
 	 */
-	price: { ...redlineText.priceCompact, color: redline.ink, marginTop: "auto" },
-	address: { ...redlineText.address, color: redline.ink, ...geo.address },
-	locality: { ...redlineText.locality, color: redline.ink3, ...geo.locality },
+	price: { ...redlineText.price, color: redline.ink, marginTop: "auto" },
 	/**
-	 * Spec line ("3 bd · 2 ba · 1,800 sqft") — 13px in the same muted ink as
-	 * the story used, grouped with the identity rows rather than as a section.
-	 * It is data, not prose, so it does NOT grow a line-height: lineHeight 13
-	 * keeps the fixed cost inside the panel budget (the geometry test asserts
-	 * the CTA can never be pushed off the card).
+	 * Row 3 — address · city, state zip. 13pt muted, one line. The old
+	 * `address` (14/600 ink) and `locality` (12/ink3) styles are folded into
+	 * this single muted row per the approved redesign; `geo.place` owns the
+	 * margins.
+	 */
+	place: { ...redlineText.locality, color: redline.ink2, ...geo.place },
+	/**
+	 * Row 2 — "3 bd · 2 ba · 1,800 sqft". 15pt/600 per the approved redesign
+	 * (up from 13/400). Short data, no prose leading.
 	 */
 	specs: {
 		fontFamily: fonts.ui,
-		fontSize: 13,
-		fontWeight: "400",
-		lineHeight: 13,
-		color: redline.inkStory,
+		fontSize: 15,
+		fontWeight: "600",
+		lineHeight: 18,
+		color: redline.ink,
 		...geo.specs,
 	},
 	/**
@@ -350,6 +356,12 @@ const styles = StyleSheet.create({
 		borderRadius: radii.pill,
 		backgroundColor: redline.surface,
 	},
-	chipLabel: { ...redlineText.chip, color: redline.inkStory, flexShrink: 1 },
+	chipLabel: {
+		...redlineText.chip,
+		fontSize: 14,
+		fontWeight: "600",
+		color: redline.inkStory,
+		flexShrink: 1,
+	},
 	ctaSlot: geo.ctaSlot,
 });

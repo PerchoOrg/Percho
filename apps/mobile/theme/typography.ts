@@ -122,9 +122,11 @@ export const redlineText = {
 	/**
 	 * Listing price — "serif, 35px".
 	 *
-	 * `priceCompact` (27px) is what the listing CARD renders as of 2026-08-01;
-	 * this 35px entry stays because it is the redline's number and the value any
-	 * future full-height listing surface should use.
+	 * This is the price the listing CARD renders as of 2026-08-13 (owner:
+	 * 「整体不够沉浸 小字太多 底下的字再大一些 尤其是价格」 — demo
+	 * `~/percho-prototypes/listing-panel-redesign/` approved). 27px
+	 * (`priceCompact`) was the card's price after the hero grew to 0.618 and
+	 * is retained below as the redline's scaled value.
 	 */
 	price: {
 		fontFamily: serif,
@@ -140,6 +142,10 @@ export const redlineText = {
 	 * A separate token rather than a runtime `fontSize * PANEL_SCALE`: the theme
 	 * is asserted by `theme/*.test.ts` as plain data, and a computed size would
 	 * make the test restate the arithmetic instead of the intended value.
+	 *
+	 * No longer rendered on the listing card (2026-08-13 redesign made the
+	 * full 35pt `price` the card price again). Kept for the redline reference
+	 * and any future compact surface.
 	 */
 	priceCompact: {
 		fontFamily: serif,

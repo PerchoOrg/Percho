@@ -212,6 +212,7 @@ export function parseListing(v: unknown): ListingCardV3 | null {
 	const city = str(raw.city);
 	const state = str(raw.state);
 	const locality = city && state ? `${city}, ${state}` : city;
+	const zip = str(raw.zip);
 	const description = strings(raw.description);
 	const sc = scores(raw.scores);
 	const d = dims(raw.dims);
@@ -231,6 +232,7 @@ export function parseListing(v: unknown): ListingCardV3 | null {
 		...(lat !== undefined && lng !== undefined ? { lat, lng } : {}),
 		...(mapUrl ? { mapUrl } : {}),
 		...(locality ? { locality } : {}),
+		...(zip ? { zip } : {}),
 		...(description.length > 0 ? { description } : {}),
 		...(sc ? { scores: sc } : {}),
 		...(communityId ? { communityId } : {}),

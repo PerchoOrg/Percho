@@ -4,29 +4,38 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
-## 2026-08-13 17:40 — Listing card 面板重排:去 story + 加 specs 行
+## 2026-08-13 19:30 — Listing card 面板最终重排(approved demo 落地)
 
-**Objective**: owner 先「删掉文字介绍那一段 只保留基本信息和几个绿色的tag和explore
-button」,随后看图反馈「视频下方重新设计一下 有点零散 没有终点」。
+**Objective**: owner 审核 demo 后批准(「整体不够沉浸 小字太多 底下的字再大一些 尤其是
+价格和3个绿色的tag 字体也乱 你出个方案我先审核 批准后你再实现」),demo
+`~/percho-prototypes/listing-panel-redesign/` 最终单版结构落地。
 
 **Actions**:
-- `components/cards/ListingFace.tsx`:删 story 渲染(`description[0]` 两行 Text);
-  新增 specs 行(`card.bedBathSqft` — "3 bd · 2 ba · 1,800 sqft",13px/#57534D)。
-- `theme/listing-geometry.ts`:`SLACK_SLOTS` 3→4(删 story 后 slack 涨,最坏单 gap
-  Pro Max 20.018>20 被测试抓到);`geo.specs = { marginTop: 'auto' }` 作为第四个
-  slack 槽,把 story 腾出的空间均分,不堆在 locality→chips 之间。
-- `theme/redline-listing-geometry.test.ts`:panelFloor 不再含 storyMT+storyLH(渲染已删,
-  floor 只算当前渲染),加 specs 13 行高;SLACK_SLOTS 断言 3→4;gap 上限改 1/4。
+- `components/cards/ListingFace.tsx`:面板重排为 5 行
+  1. price — `redlineText.price`(35pt serif,原 card 用 27 的 priceCompact)
+  2. bed/bath/sqft — 15pt/600(原 13/400)
+  3. address · city, state zip — 合并行,13pt muted(原 address 14/600 ink + locality 12/ink3 两行)
+  4. chips — 14pt/600(原 9.5/500)
+  5. CTA — 44pt pill 不变
+  删除旧 address / locality 独立样式,`place` = [address, locality, zip].filter.join(" · ")。
+- `lib/feed/pool-dto.ts` + `card-types.ts` + 测试:解析 `zip` 字段(server `listing.zip`
+  已返回,之前没透传),`ListingCardV3.zip?` 新增。
+- `theme/typography.ts`:`redlineText.price`(35pt)重新成为 card 价格;`priceCompact`
+  (27pt)保留为参考。注释更新。
+- `theme/listing-geometry.ts`:`geo.place = { marginTop: 3 }` 新增;address/locality
+  标记为 redline 参考不再渲染。SLACK_SLOTS 仍为 4(specs 是第四个 auto 槽)。
+- `theme/redline-listing-geometry.test.ts`:panelFloor 用 price(35) + place(13) +
+  specs(18),不再用 priceCompact + address + locality。
 
-**Decisions**: 面板层级固定为 price → address → locality → specs → chips → CTA,
-"终点"= CTA。story 的 geometry 字段保留(恢复是一行渲染)。hero 不动——story 删掉后
-面板 188-228pt 装得下六行,不需要再调 0.618。
+**Decisions**: 价格用 redline 官方 35 而非 demo 的 36(tokens 语义,测试断言 35)。
+zip 从 server 透传,拼进地址行("355 Morgans Creek Ct · Kennesaw, GA 30144")。
+locality 字段保留在 DTO(card 上不再单独渲染,合并进 place 行)。
 
-**Verify**: `npx tsc --noEmit` 干净;`npx biome check` 3 文件过;`npx vitest run`
-586 passed(theme 96 含在内)。
+**Verify**: `npx tsc --noEmit` 干净;`npx biome check` 7 文件过;`npx vitest run`
+587 passed(新增 zip 解析测试)。
 
-**Next steps**: 真机确认面板间距——specs 行是 auto margin,小屏上紧贴 locality,大屏
-上会有空隙;不合适就把它改成固定 6pt 而非 auto。
+**Next steps**: 真机确认面板——价格 35 + specs 15 + place 13 在 SE 上是否仍放得下
+(geometry 测试断言 floor 188.5 ≤ panel,理论 OK)。
 
 ## 2026-08-10 11:20 — 效果分布打开:模板加宽 + 家族均衡 + 恢复小幅垂直移动
 
