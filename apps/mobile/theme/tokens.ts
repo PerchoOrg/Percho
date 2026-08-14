@@ -85,10 +85,10 @@ export const colors = {
  * Values transcribed from the redline's `--*` block, unchanged.
  */
 export const redline = {
-	/** `--card` — the card face. 2026-08-14 follow-up: #FFFDF9 → #FFFDFC
-	 * (owner: 「Card 使用 #FFFDFC,不要明显偏黄的 beige」) — neutral paper,
-	 * no longer warm-tinted. */
-	card: "#FFFDFC",
+	/** `--card` — the card face. 2026-08-14 follow-up: #FFFDFC → #FFFFFF
+	 * (owner: 「Card background 改为 #FFFFFF」) — pure white, page stays
+	 * warm off-white so the card reads as lifted paper. */
+	card: "#FFFFFF",
 	/** `--surface` — chip / recessed fill on the card. */
 	surface: "#F1F1EC",
 	/** `--text-primary`. */

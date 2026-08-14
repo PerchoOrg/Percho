@@ -346,6 +346,8 @@ export function SwipeStack<T>({
 							: styles.frameCapped,
 					]}
 				>
+					{/* mid shadow layer — see `styles.midShadow` */}
+					<View pointerEvents="none" style={styles.midShadow} />
 					{mounted.map(({ item, absIndex }) => {
 						const depth = absIndex - activeIndex;
 						const isTop = depth === 0;
@@ -386,22 +388,34 @@ const styles = StyleSheet.create({
 	 * container's full height — `flex: 1` inside the padded CardContainer —
 	 * so the card fills the screen instead of the old centered 0.74 box.
 	 *
-	 * Carries the AMBIENT half of the card's two-shadow lift (owner,
-	 * 2026-08-14 follow-up: `0 18px 50px rgba(38,32,24,.09)`). RN views
-	 * support exactly ONE shadow, so the wide diffuse ambient one lives on
-	 * the frame (same size as the card, no clipping anywhere above it) and
-	 * the tight contact one lives on `card` below. No border anywhere.
+	 * Carries the WIDEST of the card's three-shadow lift (owner, 2026-08-14
+	 * follow-up: `0 24px 60px rgba(35,30,24,.05)`). RN views support exactly
+	 * ONE shadow each, so the three layers are split across the frame, a
+	 * neutral `midShadow` sibling, and the card itself. No border anywhere.
 	 */
 	frame: {
 		flex: 1,
 		alignSelf: "stretch",
-		shadowColor: "rgba(38,32,24,0.09)",
-		shadowOffset: { width: 0, height: 18 },
-		shadowRadius: 50,
+		shadowColor: "rgba(35,30,24,0.05)",
+		shadowOffset: { width: 0, height: 24 },
+		shadowRadius: 60,
 		/**
 		 * iOS multiplies `shadowColor`'s alpha by `shadowOpacity`, which
 		 * defaults to 0 — without this the colour above renders nothing.
 		 */
+		shadowOpacity: 1,
+	},
+	/**
+	 * The MIDDLE shadow layer (`0 10px 24px rgba(35,30,24,.06)`) — an
+	 * invisible sibling of the card so it does not participate in layout or
+	 * hit-testing, sized to the frame, shadow spilling outside like the
+	 * frame's own. Sits under the cards (first child) so nothing covers it.
+	 */
+	midShadow: {
+		...StyleSheet.absoluteFillObject,
+		shadowColor: "rgba(35,30,24,0.06)",
+		shadowOffset: { width: 0, height: 10 },
+		shadowRadius: 24,
 		shadowOpacity: 1,
 	},
 	/**
@@ -422,23 +436,22 @@ const styles = StyleSheet.create({
 		overflow: "hidden",
 		backgroundColor: colors.ink, // card face is always dark (§0.3)
 		/**
-		 * Soft lift off the paper background — the CONTACT half of the owner's
-		 * two-shadow spec (2026-08-14: `0 3px 10px rgba(38,32,24,.04)`). RN
-		 * supports exactly ONE shadow per view, so the wide ambient half
-		 * (`0 18px 50px rgba(38,32,24,.09)`) lives on the frame, and this tight
-		 * one on the card. No border, no heavy shadow.
+		 * Soft lift off the paper background — the TIGHT half of the owner's
+		 * three-shadow spec (2026-08-14: `0 2px 5px rgba(35,30,24,.05)`). The
+		 * mid (`0 10px 24px .06`) and wide (`0 24px 60px .05`) layers live on
+		 * `midShadow` and `frame`. No border, no heavy shadow.
 		 *
 		 * `overflow: hidden` above clips this view's CHILDREN, not its shadow,
 		 * and no ancestor (`stack`, `stackWrap`) clips either — so the shadow is
 		 * free to spill past the card's own inset.
 		 */
-		shadowColor: "rgba(38,32,24,0.04)",
-		shadowOffset: { width: 0, height: 3 },
-		shadowRadius: 10,
+		shadowColor: "rgba(35,30,24,0.05)",
+		shadowOffset: { width: 0, height: 2 },
+		shadowRadius: 5,
 		/**
 		 * iOS multiplies `shadowColor`'s alpha by `shadowOpacity`, which defaults
 		 * to 0 — without this line the colour above renders nothing at all. 1
-		 * keeps the 0.04 the owner specified as the effective opacity.
+		 * keeps the 0.05 the owner specified as the effective opacity.
 		 */
 		shadowOpacity: 1,
 		elevation: 6,
