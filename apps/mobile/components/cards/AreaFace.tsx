@@ -38,7 +38,6 @@
  * deeper foot to the gradient, which is exactly where the white text sits.
  */
 import { LinearGradient } from "expo-linear-gradient";
-import { BlurView } from "expo-blur";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import type { SharedValue } from "react-native-reanimated";
 import type { AreaCardV3 } from "../../lib/feed/card-types";
@@ -158,9 +157,7 @@ export function AreaFace({
 						pressed && styles.savePressed,
 					]}
 				>
-					<BlurView intensity={40} tint="light" style={styles.saveBlur}>
-						<BookmarkIcon saved={saved} />
-					</BlurView>
+					<BookmarkIcon saved={saved} />
 				</Pressable>
 			</View>
 
@@ -298,9 +295,10 @@ const styles = StyleSheet.create({
 	saveSlot: { position: "absolute", top: 12, right: 12, zIndex: 2 },
 	/**
 	 * Translucent white disc + dark bookmark — 40px (owner 2026-08-15: shrink
-	 * the ~48px disc to 40–42). 75% white + backdrop blur so it reads as a
-	 * floating chip, not a solid button. The listing card's dark disc stays
-	 * untouched.
+	 * the ~48px disc to 40–42). 75% white keeps it floating over the media.
+	 * NOTE: backdrop blur (expo-blur) was tried here and red-screened Expo Go
+	 * with a React 19 `use` dispatcher error, so it is plain translucency.
+	 * The listing card's dark disc stays untouched.
 	 */
 	saveDisc: {
 		width: 40,
@@ -308,11 +306,6 @@ const styles = StyleSheet.create({
 		borderRadius: 20,
 		backgroundColor: "rgba(255,255,255,0.75)",
 		overflow: "hidden",
-		alignItems: "center",
-		justifyContent: "center",
-	},
-	saveBlur: {
-		...StyleSheet.absoluteFillObject,
 		alignItems: "center",
 		justifyContent: "center",
 	},
