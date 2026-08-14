@@ -125,6 +125,15 @@ const INK = {
 	tertiary: "#6E746F",
 } as const;
 
+/**
+ * Above this many characters the price drops a step (28 → 26pt). Row 1 seats
+ * the price and the specs on one line with a 16pt minimum gap; a full
+ * eight-figure label ("$120,000,000" = 13) at 28pt leaves the specs nothing to
+ * sit in, while "$550,000" (8) has room to spare. Counted in characters rather
+ * than measured because this module cannot measure text.
+ */
+const PRICE_LONG_CHARS = 12;
+
 /** The bookmark disc's target id, written into `tapSlot` on touch start. */
 export const SAVE_TAP_TARGET = "save";
 /** The explore link's target id, written into `tapSlot` on touch start. */
@@ -213,7 +222,14 @@ export function ListingFace({
 			{/* Text block — natural height, target ≤ 190pt */}
 			<View style={styles.block}>
 				<View style={styles.row1}>
-					<Text style={styles.price} numberOfLines={1}>
+					<Text
+						style={
+							card.priceLabel.length > PRICE_LONG_CHARS
+								? styles.priceLong
+								: styles.price
+						}
+						numberOfLines={1}
+					>
 						{card.priceLabel}
 					</Text>
 					{!!card.bedBathSqft && (
@@ -424,16 +440,21 @@ const styles = StyleSheet.create({
 	 * `geo` owns padding and row margins (see `theme/listing-layout.ts`).
 	 */
 	block: geo.block,
-	/** Row 1 — price + specs on ONE baseline row (the space-saving key). */
+	/**
+	 * Row 1 — price + specs on ONE baseline row (the space-saving key).
+	 * `space-between` alone collapses to zero gap once the price is long, so the
+	 * row also carries a 16pt minimum between the two texts.
+	 */
 	row1: {
 		flexDirection: "row",
 		justifyContent: "space-between",
 		alignItems: "baseline",
+		gap: 16,
 	},
 	/**
-	 * The price is the card's anchor — the CTA must not out-weight it. Weight
-	 * steps down 700 → 600 (owner 2026-08-14: the 700 read as shouting at 31pt);
-	 * the size is unchanged. Overridden here rather than in
+	 * The price is the card's anchor — the CTA must not out-weight it. 28/600:
+	 * the weight steps down 700 → 600 (owner 2026-08-14: the 700 read as
+	 * shouting) and the size 31 → 28. Overridden here rather than in
 	 * `redlineText.listingCard.price` so the token stays the redline's number.
 	 */
 	price: {
@@ -442,11 +463,23 @@ const styles = StyleSheet.create({
 		color: INK.primary,
 	},
 	/**
+	 * The long form — same serif 600, one step down to 26pt. Applied when the
+	 * label passes `PRICE_LONG_CHARS`, so an eight-figure price keeps its 16pt
+	 * gap to the specs on one line instead of squeezing them out.
+	 */
+	priceLong: {
+		...redlineText.listingCard.price,
+		fontSize: 26,
+		lineHeight: 26,
+		fontWeight: "600",
+		color: INK.primary,
+	},
+	/**
 	 * "4 bd · 3 ba · 2,853 sqft" — 12.5/600, one line.
 	 *
 	 * Lifted 2pt (owner, 2026-08-14). Row 1 aligns the two texts on their
 	 * BASELINES, which is typographically right and optically wrong here: the
-	 * price is 31pt and the specs 12.5pt, so a shared baseline hangs the small
+	 * price is 28pt and the specs 12.5pt, so a shared baseline hangs the small
 	 * text off the bottom of the big one. The nudge splits the difference
 	 * without giving up the baseline row.
 	 */

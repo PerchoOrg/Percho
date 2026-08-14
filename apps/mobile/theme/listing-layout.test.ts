@@ -45,7 +45,7 @@ function cardHeight(w: number, h: number) {
 function textBlockFloor() {
 	return (
 		textBlock.block.paddingTop + // 16
-		redlineText.listingCard.price.lineHeight + // 31
+		redlineText.listingCard.price.lineHeight + // 28
 		textBlock.address.marginTop + // 8
 		redlineText.listingCard.address.fontSize + // 12
 		textBlock.tags.marginTop + // 11

@@ -16,16 +16,19 @@
  *
  * `TEXT_BLOCK_TARGET` is the redesign's budget for the block:
  * padding 16 top / 18 horizontal / 18 bottom, a price+specs baseline row
- * (31pt), the address (8pt + 12pt), the tags (11pt + 21pt pill), the hairline
+ * (28pt), the address (8pt + 12pt), the tags (11pt + 21pt pill), the hairline
  * divider (16pt + 1pt), and a 46pt CTA (4pt + 46), then 18pt of bottom
  * padding:
  *
- *   16 + 31 + 8 + 12 + 11 + 21 + 12 + 1 + 2 + 46 + 18 = 178 ≤ 190  ✓
+ *   16 + 28 + 8 + 12 + 11 + 21 + 12 + 1 + 2 + 46 + 18 = 175 ≤ 190  ✓
  *
  * 2026-08-14 follow-up pass (「收紧 divider → Explore 的垂直间距」): the CTA
  * region is more compact — `divider.marginTop` 16 → 12, `ctaSlot.marginTop`
- * 4 → 2. Net −6pt on the block; the floor drops to 178 and the headroom
- * before the ≤190 acceptance grows to 12pt.
+ * 4 → 2. Net −6pt on the block.
+ *
+ * 2026-08-14 price pass: the price token drops 31 → 28pt, so the row above
+ * shrinks with it — the floor lands at 175 and the headroom before the ≤190
+ * acceptance grows to 15pt.
  */
 export const TEXT_BLOCK_TARGET = 190;
 

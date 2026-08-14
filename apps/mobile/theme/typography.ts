@@ -269,4 +269,41 @@ export const redlineText = {
 	micro: { fontFamily: fonts.ui, fontSize: 11, fontWeight: "400" },
 	/** Insight recommendation caption — "9–10px". */
 	nano: { fontFamily: fonts.ui, fontSize: 9.5, fontWeight: "400" },
-} as const satisfies Record<string, TextStyle>;
+	/**
+	 * The 2026-08-13 listing-card redesign's text scale. The listing card now
+	 * renders a natural-height text block under a flex media area, so its rows
+	 * are sized independently of `PANEL_SCALE` — these are the redesign's
+	 * numbers, kept as data so `listing-layout.test.ts` can assert the
+	 * ≤190pt block and 3-tag SE fit.
+	 */
+	listingCard: {
+		/** Price — 28/700, −1.1 tracking, line 28. */
+		price: {
+			fontFamily: serif,
+			fontSize: 28,
+			fontWeight: "700",
+			letterSpacing: -1.1,
+			lineHeight: 28,
+		},
+		/** Specs — "4 bd · 3 ba · 2,853 sqft". */
+		specs: {
+			fontFamily: fonts.ui,
+			fontSize: 12.5,
+			fontWeight: "600",
+			lineHeight: 15,
+		},
+		/** Address — 12pt muted, one line. */
+		address: { fontFamily: fonts.ui, fontSize: 12, fontWeight: "400" },
+		/** Tag pill label — 10.5/600. */
+		tag: { fontFamily: fonts.ui, fontSize: 10.5, fontWeight: "600" },
+		/** CTA — "Explore home →". */
+		cta: { fontFamily: fonts.ui, fontSize: 14, fontWeight: "600" },
+		/** LISTING badge — 9.5/700 with 1pt tracking. */
+		badge: {
+			fontFamily: fonts.ui,
+			fontSize: 9.5,
+			fontWeight: "700",
+			letterSpacing: 1,
+		},
+	},
+} as const satisfies Record<string, TextStyle | Record<string, TextStyle>>;
