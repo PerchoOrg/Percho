@@ -411,13 +411,17 @@ const styles = StyleSheet.create({
 		 * shadow, so the large ambient one is what ships; the contact shadow is
 		 * dropped rather than faked with a wrapper view.
 		 *
+		 * 2026-08-14 follow-up pass: the owner re-specified the single shadow —
+		 * `0 14px 36px rgba(40,32,22,.07)`, no border, no heavy shadow. Same
+		 * 0.07 alpha, slightly deeper offset/radius and a warmer tint.
+		 *
 		 * `overflow: hidden` above clips this view's CHILDREN, not its shadow,
 		 * and no ancestor (`stack`, `stackWrap`) clips either — so the shadow is
 		 * free to spill past the card's own inset.
 		 */
-		shadowColor: "rgba(35,30,22,0.07)",
-		shadowOffset: { width: 0, height: 12 },
-		shadowRadius: 32,
+		shadowColor: "rgba(40,32,22,0.07)",
+		shadowOffset: { width: 0, height: 14 },
+		shadowRadius: 36,
 		/**
 		 * iOS multiplies `shadowColor`'s alpha by `shadowOpacity`, which defaults
 		 * to 0 — without this line the colour above renders nothing at all. 1

@@ -77,7 +77,7 @@ import { useSwipeHintStore } from "../../state/swipe-hint";
 import { colors, redline } from "../../theme/tokens";
 import { textStyles } from "../../theme/typography";
 
-const GUTTER = 16;
+const GUTTER = 26;
 /** Card is portrait; capped against viewport height on small devices. */
 const CARD_ASPECT = 1.5;
 const CARD_MAX_VIEWPORT = 0.74;

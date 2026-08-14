@@ -8,7 +8,7 @@
  */
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { colors } from "../theme/tokens";
+import { colors, redline } from "../theme/tokens";
 import { textStyles } from "../theme/typography";
 
 export interface TabItem {
@@ -47,7 +47,11 @@ export function TabBar({ tabs, activeKey, onSelect }: TabBarProps) {
 					>
 						{Icon && (
 							<View style={active ? styles.iconOn : styles.iconOff}>
-								<Icon color={active ? colors.ink : colors.ink2} />
+								{active && t.key === "feed" ? (
+									<Icon color={styles.iconActive.color} />
+								) : (
+									<Icon color={active ? colors.ink : colors.ink2} />
+								)}
 							</View>
 						)}
 						<Text
@@ -231,12 +235,18 @@ const styles = StyleSheet.create({
 	},
 	tab: { flex: 1, alignItems: "center", justifyContent: "center", gap: 4 },
 	label: { ...textStyles.caption },
-	active: { color: colors.ink, opacity: 1 },
+	active: { color: redline.accent, opacity: 1 },
 	inactive: { color: colors.ink2, opacity: 0.5 },
-	/** The icon's half of the same two states — colour is a prop, so only the
-	 * dimming lives here. */
+	/**
+	 * The icon's half of the same two states. The FEED (home) icon must match
+	 * its label — Percho green when active, light grey when inactive (owner
+	 * 2026-08-14) — so the active colour is passed through on the icon prop
+	 * rather than left to the dimming wrappers alone.
+	 */
 	iconOn: { opacity: 1 },
 	iconOff: { opacity: 0.5 },
+	/** The four inactive icons stay light grey; `FeedIcon` overrides active. */
+	iconActive: { color: redline.accent },
 
 	iconBox: { width: ICON_SIZE, height: ICON_SIZE },
 

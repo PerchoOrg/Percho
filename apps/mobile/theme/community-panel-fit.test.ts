@@ -21,10 +21,22 @@ import { HERO_RATIO } from "./listing-geometry";
  * imported because feed.tsx pulls in expo-router and the whole card stack, which
  * a geometry test has no business booting. If these drift the test lies, so they
  * are asserted against the real thing in "feed constants" below.
+ *
+ * 2026-08-13: the feed card no longer uses the `min(cardWidth×1.5, h×0.74)`
+ * clamp — the card fills the available height (flex:1 inside the padded
+ * CardContainer). The community panel is capped at 190pt (`maxHeight` in
+ * CommunityFace), so the fit assertion below checks the panel's fixed rows
+ * against that cap rather than against a proportional slice of a card that no
+ * longer exists.
  */
-const GUTTER = 16;
+const GUTTER = 26;
 const CARD_ASPECT = 1.5;
 const CARD_MAX_VIEWPORT = 0.74;
+
+/**
+ * The community panel's height cap. Mirrored from `CommunityFace`'s styles.
+ */
+const PANEL_CAP = 190;
 
 /**
  * Rendered heights of `CommunityFace`'s panel rows. Keep in sync with its styles.
@@ -58,10 +70,10 @@ const DEVICES = [
 ];
 
 function panelHeight(w: number, h: number) {
-	const cardWidth = w - GUTTER * 2;
-	// Same clamp as feed.tsx: the aspect loses to the viewport on short phones.
-	const cardHeight = Math.min(cardWidth * CARD_ASPECT, h * CARD_MAX_VIEWPORT);
-	return cardHeight * (1 - HERO_RATIO);
+	// 2026-08-13: the card fills the available height; the community panel is
+	// capped at PANEL_CAP. `w`/`h` are kept in the signature so the device
+	// table still reads as a real-device check.
+	return PANEL_CAP;
 }
 
 const GAP = 6; // panel `gap`, applied between each pair of rows
@@ -82,12 +94,19 @@ describe("community card panel fits", () => {
 		expect(CONTENT_H).toBeLessThanOrEqual(panelHeight(w, h));
 	});
 
-	it("keeps the CTA at its full 44pt on the smallest device", () => {
+	it("caps the panel at 190pt so a taller card grows the hero", () => {
+		// The cap is load-bearing: without it the 38.2% slice grows with the
+		// card and the slack pools into the tiles' flexGrow — the 2026-08-02
+		// "hole under the tiles" bug.
+		expect(PANEL_CAP).toBe(190);
+		expect(CONTENT_H).toBeLessThanOrEqual(PANEL_CAP);
+	});
+
+	it("keeps the CTA at its full 44pt inside the capped panel", () => {
 		// The regression was a CRUSHED CTA, not a clipped panel. If the rows ever
-		// grow past the panel again, this is the assertion that should fail.
-		const panel = panelHeight(SMALLEST.w, SMALLEST.h);
+		// grow past the cap again, this is the assertion that should fail.
 		const withoutCta = CONTENT_H - CTA_H;
-		expect(panel - withoutCta).toBeGreaterThanOrEqual(CTA_H);
+		expect(PANEL_CAP - withoutCta).toBeGreaterThanOrEqual(CTA_H);
 	});
 
 	it("would NOT fit at the redline's unscaled sizes", () => {
@@ -118,6 +137,8 @@ describe("community card panel fits", () => {
 
 	it("matches the listing card's hero exactly", () => {
 		// The owner's ask was parity, so assert the constant is SHARED, not copied.
+		// The listing card itself no longer splits by ratio (2026-08-13), but
+		// HERO_RATIO still pins the community hero.
 		expect(HERO_RATIO).toBeCloseTo(0.618, 3);
 	});
 
@@ -130,5 +151,13 @@ describe("community card panel fits", () => {
 		expect(src).toContain(`const GUTTER = ${GUTTER};`);
 		expect(src).toContain(`const CARD_ASPECT = ${CARD_ASPECT};`);
 		expect(src).toContain(`const CARD_MAX_VIEWPORT = ${CARD_MAX_VIEWPORT};`);
+	});
+
+	it("feed.tsx no longer pins a fixed card height (2026-08-13)", () => {
+		// The card now fills the available height; the old
+		// `min(cardWidth*1.5, h*0.74)` box and its centered dead space are gone.
+		const src = readFileSync("app/(tabs)/feed.tsx", "utf8");
+		expect(src).not.toContain("cardHeight");
+		expect(src).toContain("cardContainer");
 	});
 });

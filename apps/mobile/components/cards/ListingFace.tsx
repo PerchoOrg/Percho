@@ -411,9 +411,9 @@ const styles = StyleSheet.create({
 		width: 32,
 		height: 32,
 		borderRadius: 16,
-		backgroundColor: "rgba(20,24,22,0.42)",
-		borderWidth: 1,
-		borderColor: "rgba(255,255,255,0.18)",
+		backgroundColor: "rgba(20,24,22,0.50)",
+		// borderless (owner 2026-08-14: 「不要边框」); the deeper fill carries
+		// the frosted read without the rim
 		overflow: "hidden",
 		alignItems: "center",
 		justifyContent: "center",
@@ -453,7 +453,7 @@ const styles = StyleSheet.create({
 	specs: {
 		...redlineText.listingCard.specs,
 		color: INK.secondary,
-		transform: [{ translateY: -2 }],
+		transform: [{ translateY: -2.5 }],
 	},
 	/** Row 2 — "355 Morgans Creek Ct · Kennesaw, GA 30144", one muted line. */
 	address: {

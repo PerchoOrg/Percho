@@ -51,6 +51,13 @@ describe("listing card redline geometry", () => {
 	// the redline value named in each message. That is different from the drift
 	// this file was created to catch: drift was me silently re-deriving numbers
 	// from a lookalike prototype; this is the owner changing the spec on purpose.
+	//
+	// NOTE (2026-08-13): the listing CARD no longer uses the proportional
+	// split — the card fills the available height, the media area takes the
+	// remainder, and the text block is natural-height (see
+	// `listing-layout.test.ts`). `HERO_RATIO` / `PANEL_SCALE` are retained as
+	// the constants CommunityFace still shares, and the panel-fit assertions
+	// below are kept for the COMMUNITY panel's 38.2% slice.
 	it("gives the hero the golden ratio 0.618 (redline said 54%)", () => {
 		expect(HERO_RATIO).toBeCloseTo(0.618, 5);
 		expect(listingGeometry.panel.flex).toBeCloseTo(0.382, 5);
@@ -95,10 +102,18 @@ describe("listing card redline geometry", () => {
 
 	/** The card box the feed actually renders (`app/(tabs)/feed.tsx`). */
 	const panelHeight = (w: number, h: number) => {
-		const cardWidth = w - 16 * 2; // GUTTER
+		const cardWidth = w - 26 * 2; // GUTTER
 		const cardHeight = Math.min(cardWidth * 1.5, h * 0.74);
 		return cardHeight * listingGeometry.panel.flex;
 	};
+
+	it("caps the COMMUNITY panel at 190pt so a taller card grows the hero", () => {
+		// 2026-08-13: the feed card now fills the available height. Without
+		// this cap, CommunityFace's 38.2% panel grows with the card and the
+		// slack pools into the tiles — the 2026-08-02 "hole under the tiles"
+		// bug. The listing card itself is asserted in `listing-layout.test.ts`.
+		expect(listingGeometry.panel.flex).toBeLessThan(0.5);
+	});
 
 	it("fits its floor on the smallest supported device (375x667 SE)", () => {
 		expect(panelFloor()).toBeLessThanOrEqual(panelHeight(375, 667));

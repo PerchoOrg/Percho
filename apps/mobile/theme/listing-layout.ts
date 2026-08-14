@@ -20,13 +20,12 @@
  * divider (16pt + 1pt), and a 46pt CTA (4pt + 46), then 18pt of bottom
  * padding:
  *
- *   16 + 31 + 8 + 12 + 11 + 21 + 16 + 1 + 4 + 46 + 18 = 184 ≤ 190  ✓
+ *   16 + 31 + 8 + 12 + 11 + 21 + 12 + 1 + 2 + 46 + 18 = 178 ≤ 190  ✓
  *
- * That floor leaves 6pt of headroom before the ≤190 acceptance starts
- * failing — the number a future "just add one more row" edit spends without
- * tripping anything until it is too late. It was 17pt before the 2026-08-14
- * design pass; the divider spent most of it, and the polish pass's tighter
- * `ctaSlot` (8 → 4) handed 4pt back.
+ * 2026-08-14 follow-up pass (「收紧 divider → Explore 的垂直间距」): the CTA
+ * region is more compact — `divider.marginTop` 16 → 12, `ctaSlot.marginTop`
+ * 4 → 2. Net −6pt on the block; the floor drops to 178 and the headroom
+ * before the ≤190 acceptance grows to 12pt.
  */
 export const TEXT_BLOCK_TARGET = 190;
 
@@ -73,8 +72,8 @@ export const textBlock = {
 	},
 	address: { marginTop: 8 },
 	tags: { marginTop: 11 },
-	divider: { marginTop: 16 },
-	ctaSlot: { marginTop: 4 },
+	divider: { marginTop: 12 },
+	ctaSlot: { marginTop: 2 },
 } as const;
 
 /**
