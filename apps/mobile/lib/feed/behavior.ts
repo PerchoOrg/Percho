@@ -27,12 +27,6 @@ export interface SwipeLabels {
 
 interface BehaviorBase {
 	capability: CardCapability;
-	/**
-	 * §1.8: undo is offered for listing / community / area only. An ask or
-	 * trade-off swipe is already scope signal, and un-asking a question the user
-	 * has seen is worse than living with the answer.
-	 */
-	undoable: boolean;
 }
 
 export type CardBehavior =
@@ -89,21 +83,18 @@ export function cardBehavior(card: FeedCardV3): CardBehavior {
 							right: card.choice.right.label,
 						},
 						capability: DECIDES,
-						undoable: false,
 					}
 				: {
-						mode: "decide",
-						labels: { left: "NO", right: "YES" },
-						capability: DECIDES,
-						undoable: false,
-					};
+					mode: "decide",
+					labels: { left: "NO", right: "YES" },
+					capability: DECIDES,
+				};
 
 		case "area":
 			return {
 				mode: "decide",
 				labels: { left: "NOT FOR ME", right: "TELL ME MORE" },
 				capability: DECIDES,
-				undoable: true,
 			};
 
 		case "listing":
@@ -112,7 +103,6 @@ export function cardBehavior(card: FeedCardV3): CardBehavior {
 				mode: "decide",
 				labels: { left: "PASS", right: "LIKE" },
 				capability: DECIDES,
-				undoable: true,
 			};
 
 		case "tradeoff":
@@ -121,7 +111,6 @@ export function cardBehavior(card: FeedCardV3): CardBehavior {
 				split: true,
 				labels: { left: card.left.label, right: card.right.label },
 				capability: DECIDES,
-				undoable: false,
 			};
 
 		case "challenge":
@@ -131,7 +120,6 @@ export function cardBehavior(card: FeedCardV3): CardBehavior {
 				// other card and records nothing — the answer is revealed in place by
 				// the buttons.
 				capability: DECIDES,
-				undoable: false,
 			};
 
 		case "insight":
@@ -140,7 +128,6 @@ export function cardBehavior(card: FeedCardV3): CardBehavior {
 				labels: { left: "NOT REALLY", right: "THAT'S ME" },
 				neutralLabel: "Not sure",
 				capability: DECIDES,
-				undoable: false,
 			};
 
 		case "milestone":
@@ -152,7 +139,6 @@ export function cardBehavior(card: FeedCardV3): CardBehavior {
 					commits: false,
 					maxDisplacementRatio: MILESTONE_CAP_RATIO,
 				},
-				undoable: false,
 			};
 	}
 }

@@ -120,13 +120,6 @@ describe("cardBehavior", () => {
 		expect(MILESTONE_CAP_RATIO).toBe(0.3);
 	});
 
-	it("only listing / community / area are undoable (§1.8)", () => {
-		const undoable = CARD_KINDS.filter(
-			(k) => cardBehavior(cardOfKind(k)).undoable,
-		);
-		expect(undoable.sort()).toEqual(["area", "community", "listing"]);
-	});
-
 	it("every kind but the milestone commits and flies out", () => {
 		// The flip is gone (2026-07-30), so `capability` no longer varies by data
 		// face — the only kind that behaves differently is the §1.5 ceremony card,

@@ -44,30 +44,12 @@ interface FeedSessionState {
 	lastSwipeAt?: number;
 	hydrated: boolean;
 
-	/**
-	 * Signals as they were BEFORE the last swipe, so §1.8's undo can restore them.
-	 *
-	 * A snapshot rather than an inverse reducer: `applySwipe` is not injective
-	 * (a re-liked community is deduped, a dim bump is additive), so "subtract what
-	 * that swipe did" is not reliably computable. Deliberately NOT persisted — the
-	 * undo window is 3s, and an undo offered for a swipe from a previous session
-	 * would restore a signal state the buyer no longer remembers producing.
-	 */
-	undoSnapshot?: { cardId: string; signals: SignalState; wasSeen: boolean };
-
 	/** Record a swipe. Returns the resulting signals for advance evaluation. */
 	recordSwipe: (
 		card: FeedCardV3,
 		verdict: SwipeVerdict,
 		at: number,
 	) => SignalState;
-	/**
-	 * §1.8 undo: restore the pre-swipe signals. Returns the restored state, or
-	 * null when the snapshot does not match this card (the window closed, or
-	 * another swipe landed first). The STAGE is deliberately NOT reverted —
-	 * `funnel.ts` is monotonic by design (PLAN B5, owner-accepted).
-	 */
-	undoSwipe: (cardId: string) => SignalState | null;
 	/** "Not sure" on an insight card — records no preference, by design (§1.6). */
 	recordInsightUnsure: (card: FeedCardV3) => void;
 	skipLayer: (layer: FunnelLayer) => void;
@@ -90,16 +72,10 @@ export const useFeedSession = create<FeedSessionState>()(
 			hydrated: false,
 
 			recordSwipe: (card, verdict, at) => {
-				const before = get().signals;
-				const signals = applySwipe(before, card, verdict);
+				const signals = applySwipe(get().signals, card, verdict);
 				set((s) => ({
 					signals,
 					lastSwipeAt: at,
-					undoSnapshot: {
-						cardId: card.id,
-						signals: before,
-						wasSeen: s.seenIds.includes(card.id),
-					},
 					seenIds: s.seenIds.includes(card.id)
 						? s.seenIds
 						: [...s.seenIds, card.id],
@@ -109,23 +85,6 @@ export const useFeedSession = create<FeedSessionState>()(
 							: s.answeredAskIds,
 				}));
 				return signals;
-			},
-
-			undoSwipe: (cardId) => {
-				const snap = get().undoSnapshot;
-				if (!snap || snap.cardId !== cardId) return null;
-				set((s) => ({
-					signals: snap.signals,
-					undoSnapshot: undefined,
-					// A card already seen BEFORE this swipe stays seen: undo unrecords
-					// the verdict, it does not unsee the card. Re-emitting it as fresh
-					// content would be a second bug wearing the first one's clothes.
-					seenIds: snap.wasSeen
-						? s.seenIds
-						: s.seenIds.filter((id) => id !== cardId),
-					answeredAskIds: s.answeredAskIds.filter((id) => id !== cardId),
-				}));
-				return snap.signals;
 			},
 
 			recordInsightUnsure: (card) =>
@@ -152,8 +111,6 @@ export const useFeedSession = create<FeedSessionState>()(
 				set((s) => ({
 					sessionN: s.sessionN + 1,
 					lastSwipeAt: undefined,
-					// The 3s undo window cannot survive an app restart.
-					undoSnapshot: undefined,
 				})),
 
 			resetStageCounter: () =>
@@ -165,9 +122,6 @@ export const useFeedSession = create<FeedSessionState>()(
 					seenIds: [],
 					answeredAskIds: [],
 					lastSwipeAt: undefined,
-					// Undoing back INTO signals the user just asked to clear would
-					// resurrect the scope they explicitly reset.
-					undoSnapshot: undefined,
 				}),
 		}),
 		{

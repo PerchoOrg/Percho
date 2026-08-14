@@ -41,7 +41,6 @@ import { CardSkeleton } from "../../components/feed/CardSkeleton";
 import { ExhaustedCard } from "../../components/feed/ExhaustedCard";
 import { OfflineBar } from "../../components/feed/OfflineBar";
 
-import { UndoToast } from "../../components/feed/UndoToast";
 import { useFeedPool } from "../../hooks/use-feed-pool";
 import { cardBehavior } from "../../lib/feed/behavior";
 import type { ChallengeCardV3, FeedCardV3 } from "../../lib/feed/card-types";
@@ -83,7 +82,6 @@ export default function FeedScreen() {
 	const sessionN = useFeedSession((s) => s.sessionN);
 	const sessionHydrated = useFeedSession((s) => s.hydrated);
 	const recordSwipe = useFeedSession((s) => s.recordSwipe);
-	const undoSwipe = useFeedSession((s) => s.undoSwipe);
 	const recordInsightUnsure = useFeedSession((s) => s.recordInsightUnsure);
 	const skipLayer = useFeedSession((s) => s.skipLayer);
 	const resetStageCounter = useFeedSession((s) => s.resetStageCounter);
@@ -101,12 +99,6 @@ export default function FeedScreen() {
 	const [deck, setDeck] = useState<readonly FeedCardV3[]>([]);
 
 	const [engineExhausted, setEngineExhausted] = useState(false);
-	const [undo, setUndo] = useState<{
-		card: FeedCardV3;
-		label: string;
-		/** A milestone inserted by this swipe, if it hasn't been displayed yet. */
-		milestoneId?: string;
-	} | null>(null);
 	const [milestonesShown, setMilestonesShown] = useState<readonly string[]>([]);
 	/**
 	 * Which challenge cards have been answered, and which side was tapped.
@@ -301,7 +293,6 @@ export default function FeedScreen() {
 			// boolean IS the §1.5 milestone trigger, so a ceremony card cannot fire
 			// for a stage the buyer was already past.
 			const advanced = target !== null && promoteTo(target);
-			let insertedMilestoneId: string | undefined;
 
 			if (advanced && target !== null) {
 				enqueue(
@@ -328,17 +319,7 @@ export default function FeedScreen() {
 					// buyer may never reach.
 					setDeck((d) => insertMilestone(d, index, milestone, milestonesShown));
 					setMilestonesShown((m) => [...m, milestone.id]);
-					insertedMilestoneId = milestone.id;
 				}
-			}
-
-			// §1.8: undo is offered for listing / community / area only.
-			if (cardBehavior(card).undoable) {
-				setUndo({
-					card,
-					label: decision === "right" ? "Liked" : "Passed",
-					...(insertedMilestoneId ? { milestoneId: insertedMilestoneId } : {}),
-				});
 			}
 		},
 		[
@@ -354,24 +335,6 @@ export default function FeedScreen() {
 			milestonesShown,
 		],
 	);
-
-	const onUndo = useCallback(() => {
-		if (!undo) return;
-		const restored = undoSwipe(undo.card.id);
-		const undone = undo;
-		setUndo(null);
-		if (restored === null) return;
-		setActiveIndex((i) => Math.max(0, i - 1));
-		// The STAGE is not reverted — `funnel.ts` is monotonic by design (PLAN B5).
-		// But a milestone this swipe inserted and the buyer has not yet reached is
-		// removed: a ceremony for a stage they no longer have the evidence for is
-		// worse than the asymmetry itself (owner's addition to B5).
-		if (undone.milestoneId) {
-			const id = undone.milestoneId;
-			setDeck((d) => d.filter((c) => c.id !== id));
-			setMilestonesShown((m) => m.filter((x) => x !== id));
-		}
-	}, [undo, undoSwipe]);
 
 	const cardWidth = width - GUTTER * 2;
 	const cardHeight = Math.min(
@@ -592,13 +555,6 @@ export default function FeedScreen() {
 					/>
 				)}
 			</View>
-			{undo && (
-				<UndoToast
-					label={undo.label}
-					onUndo={onUndo}
-					onExpire={() => setUndo(null)}
-				/>
-			)}
 		</SafeAreaView>
 	);
 }
