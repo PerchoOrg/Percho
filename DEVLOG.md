@@ -4,6 +4,23 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-08-13 17:30 — Listing card:去掉文字介绍段(story)
+
+**Objective**: owner 「Listing Card 视频下方的文字太多了 删掉文字介绍那一段 只保留
+基本信息和几个绿色的tag和explore button」。
+
+**Actions**:
+- `apps/mobile/components/cards/ListingFace.tsx`:删除 story 渲染(`description[0]`
+  的 `Text` + 相关注释)。保留 chips + CTA 不动。
+- `styles.story` / `theme/listing-geometry.ts` 的 `geo.story` 字段**保留**(数据便宜,
+  恢复是一行渲染)。`redline-listing-geometry.test.ts` 未改,24 个测试全过。
+
+**Verify**: `npx tsc --noEmit` 干净;`vitest run theme/redline-listing-geometry.test.ts`
+24 passed。
+
+**Next steps**: 手机真机确认面板间距(删掉 story 后 `marginTop: auto` 的 slack 分配
+变化:price 和 chips 各吸收一半,CTA 仍钉底)。
+
 ## 2026-08-10 11:20 — 效果分布打开:模板加宽 + 家族均衡 + 恢复小幅垂直移动
 
 **Objective**: owner "除了 3 个我说的不做的,其他的效果多多少少都分配一点,不要

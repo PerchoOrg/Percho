@@ -60,10 +60,14 @@ import type { DimKey } from "@percho/shared";
  *
  * The redline's mock text ("Modern family home with…", "18 Photos", the three
  * chips) is SAMPLE copy. This face renders the card's real fields:
- * `description[0]` for the story, `photoCount` for the counter, `dims` mapped
- * through the shared `DIMS` vocabulary for the chips. A listing with no
- * description renders no story line; a listing with no dims renders no chips.
- * Nothing on this card is generated to fill the redline's shape.
+ * `dims` mapped through the shared `DIMS` vocabulary for the chips. A listing
+ * with no dims renders no chips. Nothing on this card is generated to fill the
+ * redline's shape.
+ *
+ * The story line (`description[0]`) was removed 2026-08-13 (owner: 「删掉文字
+ * 介绍那一段 只保留基本信息和几个绿色的tag和explore button」). The field stays on
+ * the DTO and `theme/listing-geometry.ts` still carries `geo.story` — data is
+ * cheap, re-enabling is a one-line render.
  */
 import { StyleSheet, Text, View } from "react-native";
 import type { ListingCardV3 } from "../../lib/feed/card-types";
@@ -131,8 +135,7 @@ interface ListingFaceProps {
 }
 
 export function ListingFace({ card, isTop, onExplore }: ListingFaceProps) {
-	/** First paragraph only — the panel's story slot is at most two lines. */
-	const story = card.description?.[0];
+	/** Chip labels — the story line was removed 2026-08-13 (see header). */
 	const chips = (card.dims ?? []).slice(0, MAX_CHIPS);
 
 	return (
@@ -189,24 +192,6 @@ export function ListingFace({ card, isTop, onExplore }: ListingFaceProps) {
 				{!!card.locality && (
 					<Text style={styles.locality} numberOfLines={1}>
 						{card.locality}
-					</Text>
-				)}
-				{/*
-				 * Two lines where they fit, one where they don't.
-				 *
-				 * Restored 2026-08-01 (owner: 「可以把底下的两行描述加回来吗」) once the
-				 * hero settled at 0.618. `flexShrink: 1` on the style is the load-
-				 * bearing part, not decoration: the panel is 188pt on a 375×667 SE and
-				 * two lines need 202, so without the shrink the overflow would push
-				 * the CTA off the bottom edge (`chips` is `marginTop: auto`). With it,
-				 * the story is the thing that yields a line and the CTA never moves.
-				 *
-				 * See `PANEL_SCALE` for which devices get two lines (390pt-wide and up)
-				 * and which get one (SE / 13 mini).
-				 */}
-				{!!story && (
-					<Text style={styles.story} numberOfLines={2}>
-						{story}
 					</Text>
 				)}
 				{chips.length > 0 && (
@@ -310,6 +295,9 @@ const styles = StyleSheet.create({
 	 * line is what keeps the overflow from travelling down to the CTA through
 	 * `chips`'s `marginTop: auto`. Do not remove it to "fix" the story being
 	 * short on small phones — that trades a shorter blurb for a clipped button.
+	 *
+	 * Unused since 2026-08-13 (story render removed) but kept so re-enabling
+	 * the line stays a one-line change.
 	 */
 	story: { ...redlineText.storyCompact, ...geo.story, flexShrink: 1 },
 	/**
