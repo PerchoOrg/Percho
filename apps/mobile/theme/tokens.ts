@@ -11,10 +11,11 @@
 // ─── Color (§0.3) ───────────────────────────────────────────────────
 export const colors = {
 	// App background (warm paper) — chrome base. 2026-08-14 follow-up pass:
-	// neutralised from #F4EEE4 → #F8F7F3 (owner: 「不要明显偏黄的 beige」).
-	// The paper is now cool-grey-warm, so the card face reads as paper laid ON
-	// the background rather than as the background itself.
-	bg: "#F8F7F3",
+	// neutralised twice for a visible elevation: #F4EEE4 → #F8F7F3 →
+	// #F7F5F0 (owner: 「做一个明显可比较的 elevation」). The page is a warm
+	// off-white slightly darker than the pure-white card, so the card reads
+	// as lifted paper.
+	bg: "#F7F5F0",
 	surface: "#FFFFFF", // Cards, sheets, stat tiles
 	surface2: "#F3EDE4", // Recessed wells, inputs
 	border: "#EADFD0", // Hairline dividers
