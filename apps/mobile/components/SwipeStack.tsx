@@ -406,6 +406,22 @@ export function SwipeStack<T>({
 		setStageHeight(e.nativeEvent.layout.height);
 	}, []);
 
+	// The paper band that hides the upper part of a TALLER behind card (the
+	// next card's badge must not show over a short top card). Its height is
+	// the top card's top offset — everything above the top card is paper. The
+	// cards now render at their OWN real heights permanently, so this is
+	// static per top-card kind: no animation, and no height change on commit
+	// (the Tia 2026-08-15 "fake height then snap" jump).
+	const topOffset =
+		top === undefined || stageHeight === 0
+			? 0
+			: cardHeight !== undefined
+				? (stageHeight - cardHeight) / 2
+				: (stageHeight -
+						stageHeight *
+							(frameHeightRatio?.(top) ?? DEFAULT_FRAME_RATIO)) /
+					2;
+
 	const argsFor = (role: CardRole): CardRenderArgs => ({
 		role,
 		tx,
@@ -434,25 +450,28 @@ export function SwipeStack<T>({
 		<View style={styles.stack} onLayout={onStageLayout}>
 			<GestureDetector gesture={gesture}>
 				<View style={[styles.frame, { width: cardWidth }]}>
+					{/* Paper band over the region above the top card (zIndex 3,
+					 * same as top, earlier in the tree so the top card wins) —
+					 * hides the upper part of a taller behind card. */}
+					<View
+						style={[styles.stageClip, { height: topOffset }]}
+						pointerEvents="none"
+					/>
 					{mounted.map(({ item, absIndex }) => {
 						const depth = absIndex - activeIndex;
 						const isTop = depth === 0;
 						const role = roleFor(depth);
-						// Behind cards share the TOP card's box: a taller card
-						// behind a short top card must not stick out ABOVE it
-						// (the trade-off card at 62% exposing the community
-						// card's badge — Tia report 2026-08-15). Only the top
-						// card gets its own kind's ratio; behind cards are
-						// sized to the top card's height so the stack reads as
-						// ONE card with a sliver of the next peeking past its
-						// edge — never a taller card showing over the top.
-						// When a behind card becomes top, StackCard eases its
-						// height to its own ratio (240ms), so nothing pops.
-						const topRatio =
-							top === undefined
-								? DEFAULT_FRAME_RATIO
-								: frameHeightRatio?.(top) ??
-									(cardHeight !== undefined ? 1 : DEFAULT_FRAME_RATIO);
+						// EVERY card renders at its OWN real height (own kind's
+						// ratio). The Tia 2026-08-15 report: a behind card
+						// clipped to the top card's height peeks at a FAKE
+						// height, then snaps to its real height when it
+						// becomes top — a jump at the end of every swipe.
+						// Real height always = zero height change on commit.
+						// The part of a taller behind card that sticks out
+						// ABOVE the top card is hidden by the paper-coloured
+						// stageClip layer (rendered behind the top card),
+						// so the peek is only ever the next card's lower
+						// edge — never its badge over the top.
 						const ownRatio =
 							frameHeightRatio?.(item) ??
 							(cardHeight !== undefined ? 1 : DEFAULT_FRAME_RATIO);
@@ -461,7 +480,7 @@ export function SwipeStack<T>({
 								? cardHeight
 								: stageHeight === 0
 									? 0 // pre-layout: no height yet, StackCard snaps when it lands
-									: stageHeight * (isTop ? ownRatio : topRatio);
+									: stageHeight * ownRatio;
 						return (
 							<StackCard
 								key={keyExtractor(item, absIndex)}
@@ -514,6 +533,21 @@ const styles = StyleSheet.create({
 	frame: {
 		flex: 1,
 		alignSelf: "stretch",
+	},
+	/**
+	 * The paper band over the region above the top card (the stage's own
+	 * background colour, painted as a view). Hides the upper part of a taller
+	 * behind card so only the next card's lower edge peeks; sits behind the
+	 * top card (same zIndex 3, earlier in the tree) and above the behind card
+	 * (zIndex 2).
+	 */
+	stageClip: {
+		position: "absolute",
+		top: 0,
+		left: 0,
+		right: 0,
+		backgroundColor: colors.bg,
+		zIndex: 3,
 	},
 	/**
 	 * The WIDE elevation layer behind each card (owner 2026-08-14:
