@@ -82,7 +82,8 @@ const WINDOW = VISIBLE_WINDOW;
 const TRAIL = 1;
 
 /**
- * Share of the STAGE a card frame takes when the caller names no ratio.
+ * Share of the STAGE a card frame takes when the caller names no ratio for
+ * its kind.
  *
  * 0.95 is not a new number: it is the old `frameCapped` `maxHeight: "95%"`,
  * carried over so listing / community cards render at exactly the height they
@@ -90,9 +91,10 @@ const TRAIL = 1;
  */
 const DEFAULT_FRAME_RATIO = 0.95;
 /**
- * Height cross-fade duration (owner spec 2026-08-15: 200-300ms, ease-out). The
- * frame is the ONLY thing that animates — the stage box around it is fixed, so
- * the header, the card stage and the tab bar cannot move while this plays.
+ * Height cross-fade duration (owner spec 2026-08-15: 200-300ms, ease-out).
+ * Applied per-CARD: the frame is fixed, so the page skeleton (header, stage,
+ * tab bar) never moves — the only thing that changes while a swipe settles is
+ * the new top card easing to its own height inside it.
  */
 const FRAME_HEIGHT_MS = 240;
 
@@ -193,16 +195,16 @@ export interface SwipeStackProps<T> {
 	 */
 	cardHeight?: number;
 	/**
-	 * How much of the STAGE the card frame occupies, 0-1 (owner spec
-	 * 2026-08-15: 「页面骨架固定, card 可以不同高度」). The stage — this
-	 * component's outer box — is fixed by its container, so a card kind that
-	 * wants to be shorter changes only its own frame; the page skeleton around
-	 * it never moves.
+	 * How much of the STAGE this card's frame occupies, 0-1 (owner spec
+	 * 2026-08-15: 「页面骨架固定, card 可以不同高度」). Per-card — each card is
+	 * centred inside the FIXED stage, so a short card (trade-off, 0.62) sits
+	 * vertically centred with paper above and below it instead of forcing the
+	 * whole page to jump.
 	 *
-	 * Undefined keeps `DEFAULT_FRAME_RATIO`, i.e. the pre-stage sizing.
-	 * Ignored when `cardHeight` is given (`dev-foundation`'s fixed box).
+	 * Undefined keeps the pre-stage sizing (`frameCapped`). Ignored when
+	 * `cardHeight` is given (`dev-foundation`'s fixed box).
 	 */
-	frameHeightRatio?: number;
+	frameHeightRatio?: (item: T) => number | undefined;
 	/** §1.3 per-item gesture capability. Resolved before the gesture is built. */
 	capability: (item: T) => CardCapability;
 }
@@ -216,6 +218,10 @@ interface StackCardProps {
 	dragX: SharedValue<number>;
 	exitX: SharedValue<number>;
 	cardWidth: number;
+	/** The FIXED stage height (points) this card centres within. */
+	stageHeight: number;
+	/** This card's frame height in points (see `frameHeightRatio`). */
+	frameHeight: number;
 	zIndex: number;
 	/** The card's only face. */
 	front: React.ReactNode;
@@ -236,10 +242,38 @@ function StackCard({
 	dragX,
 	exitX,
 	cardWidth,
+	stageHeight,
+	frameHeight,
 	zIndex,
 	front,
 	overlay,
 }: StackCardProps) {
+	// The card's height eases to its target (owner spec: 200-300ms ease-out)
+	// so a kind change reads as a settle, not a snap. The FIRST real value
+	// (mount, or stageHeight landing from 0) snaps — a grow-from-zero on
+	// entry would look like a bug.
+	const heightAnim = useSharedValue(0);
+	useEffect(() => {
+		if (frameHeight <= 0) return;
+		heightAnim.value =
+			heightAnim.value === 0
+				? frameHeight
+				: withTiming(frameHeight, {
+						duration: FRAME_HEIGHT_MS,
+						easing: Easing.out(Easing.cubic),
+					});
+	}, [frameHeight, heightAnim]);
+	// Cards must OVERLAP (the stack effect), so each card is absolutely
+	// positioned inside the fixed stage and centred in it — a short card sits
+	// with paper above and below, never top-aligned.
+	const cardStyle = useAnimatedStyle(() => {
+		const height = heightAnim.value;
+		return {
+			width: cardWidth,
+			height,
+			top: (stageHeight - height) / 2,
+		};
+	});
 	const style = useAnimatedStyle(() => {
 		const v = cardStackVisual({
 			rel: absIndex - topAbs.value,
@@ -257,12 +291,33 @@ function StackCard({
 			opacity: v.opacity,
 		};
 	});
+	// The WIDE half of the two-shadow elevation (owner 2026-08-14:
+	// `0 16px 38px rgba(32,28,22,.085)`), on a shadow-only view BEHIND the
+	// card so it follows the card's real bounds (a short card gets a short
+	// glow, not a band from the full-stage frame). Same animated box as the
+	// card, no touch handling.
+	const glowStyle = useAnimatedStyle(() => {
+		const height = heightAnim.value;
+		return {
+			width: cardWidth,
+			height,
+			top: (stageHeight - height) / 2,
+		};
+	});
 
 	return (
-		<Animated.View style={[styles.card, { zIndex }, style]}>
-			<View style={StyleSheet.absoluteFill}>{front}</View>
-			{overlay}
-		</Animated.View>
+		<>
+			<Animated.View
+				pointerEvents="none"
+				style={[styles.cardGlow, glowStyle, { zIndex }]}
+			/>
+			<Animated.View
+				style={[styles.card, cardStyle, { zIndex }, style]}
+			>
+				<View style={StyleSheet.absoluteFill}>{front}</View>
+				{overlay}
+			</Animated.View>
+		</>
 	);
 }
 
@@ -340,36 +395,17 @@ export function SwipeStack<T>({
 	}, [onHintReady]);
 
 	/**
-	 * The STAGE height, measured once off the stack's own (fixed) box.
-	 *
-	 * Sizing the frame in POINTS rather than in percent is what makes the
-	 * height animatable at all: a shared value can drive `height: 380`, it
-	 * cannot drive `height: "62%"`. And because the number is derived from the
-	 * stage — which is `flex: 1` inside the padded container and therefore the
-	 * same on every card — no card kind can change the page layout.
+	 * The FIXED stage (owner spec 2026-08-15: 「页面骨架固定, card 可以不同
+	 * 高度」). `flex: 1` inside the padded container makes it deterministic —
+	 * page height minus the wordmark row, the tab bar and the container's own
+	 * padding — and it is the SAME box for every card kind, so nothing a card
+	 * does can move the page skeleton. Each card sizes itself against it via
+	 * `frameHeightRatio` and centres inside it.
 	 */
 	const [stageHeight, setStageHeight] = useState(0);
 	const onStageLayout = useCallback((e: LayoutChangeEvent) => {
 		setStageHeight(e.nativeEvent.layout.height);
 	}, []);
-
-	const targetHeight = stageHeight * (frameHeightRatio ?? DEFAULT_FRAME_RATIO);
-	const frameHeight = useSharedValue(0);
-	useEffect(() => {
-		if (targetHeight <= 0) return;
-		// The FIRST measurement lands instantly — easing up from 0 would play a
-		// grow-in on mount that nobody asked for. Every later change (a new top
-		// card whose kind wants another height) eases, which is the whole point:
-		// a straight style swap is the abrupt resize the owner is complaining of.
-		frameHeight.value =
-			frameHeight.value === 0
-				? targetHeight
-				: withTiming(targetHeight, {
-						duration: FRAME_HEIGHT_MS,
-						easing: Easing.out(Easing.cubic),
-					});
-	}, [targetHeight, frameHeight]);
-	const frameStyle = useAnimatedStyle(() => ({ height: frameHeight.value }));
 
 	const argsFor = (role: CardRole): CardRenderArgs => ({
 		role,
@@ -398,24 +434,27 @@ export function SwipeStack<T>({
 	return (
 		<View style={styles.stack} onLayout={onStageLayout}>
 			<GestureDetector gesture={gesture}>
-				<Animated.View
-					style={[
-						styles.frame,
-						{ width: cardWidth },
-						cardHeight !== undefined
-							? { height: cardHeight }
-							: // Before the first layout there is no stage height to take a
-								// share of, so the frame falls back to the flex sizing it had
-								// before — same 95%, no empty first frame.
-								stageHeight === 0
-								? styles.frameCapped
-								: [styles.frameSized, frameStyle],
-					]}
-				>
+				<View style={[styles.frame, { width: cardWidth }]}>
 					{mounted.map(({ item, absIndex }) => {
 						const depth = absIndex - activeIndex;
 						const isTop = depth === 0;
 						const role = roleFor(depth);
+						// Each card sizes itself: cards behind the top are sized to
+						// the stage share their OWN kind wants — so the community
+						// card behind a trade-off card is ALREADY tall while the
+						// trade-off card flies away, instead of being clipped to
+						// the trade-off's height and snapping tall on commit.
+						// StackCard animates the height in 240ms (ease-out), and
+						// the fixed stage keeps the page skeleton motionless.
+						const ratio =
+							frameHeightRatio?.(item) ??
+							(cardHeight !== undefined ? 1 : DEFAULT_FRAME_RATIO);
+						const frameHeight =
+							cardHeight !== undefined
+								? cardHeight
+								: stageHeight === 0
+									? 0 // pre-layout: no height yet, StackCard snaps when it lands
+									: stageHeight * ratio;
 						return (
 							<StackCard
 								key={keyExtractor(item, absIndex)}
@@ -425,6 +464,8 @@ export function SwipeStack<T>({
 								dragX={tx}
 								exitX={exitX}
 								cardWidth={cardWidth}
+								stageHeight={stageHeight}
+								frameHeight={frameHeight}
 								// A card that has already been swiped must stay UNDER the
 								// live stack while it flies out, or it would slide across
 								// the face of the card that replaced it.
@@ -439,7 +480,7 @@ export function SwipeStack<T>({
 							/>
 						);
 					})}
-				</Animated.View>
+				</View>
 			</GestureDetector>
 		</View>
 	);
@@ -457,47 +498,31 @@ const styles = StyleSheet.create({
 	 */
 	stack: { flex: 1, alignItems: "center", justifyContent: "center" },
 	/**
-	 * The card frame. With `cardHeight` absent (feed) it stretches to the
-	 * container's full height — `flex: 1` inside the padded CardContainer —
-	 * so the card fills the screen instead of the old centered 0.74 box.
-	 *
-	 * Carries the WIDE half of the card's two-shadow elevation (owner,
-	 * 2026-08-14: `0 16px 38px rgba(32,28,22,.085)`). RN views support
-	 * exactly ONE shadow each, so the wide layer lives on the frame (same
-	 * size as the card, no clipping above it) and the tight contact layer
-	 * on `card` below. No border anywhere.
+	 * The card frame — the fixed stage box (width from `cardWidth`, height
+	 * from `flex: 1` inside the padded container) and positioning context for
+	 * the absolutely-placed cards. No shadow here: cards are individually
+	 * sized, so a wide glow on the full-height frame would read as a dark
+	 * band behind a short card. Both elevation layers live on the card view.
 	 */
 	frame: {
 		flex: 1,
 		alignSelf: "stretch",
+	},
+	/**
+	 * The WIDE elevation layer behind each card (owner 2026-08-14:
+	 * `0 16px 38px rgba(32,28,22,.085)`). A shadow-only view — same animated
+	 * bounds as the card it backs, `pointerEvents: none`, no background —
+	 * because RN supports exactly ONE shadow per view and the frame is no
+	 * longer card-sized. Sits behind the card via zIndex.
+	 */
+	cardGlow: {
+		position: "absolute",
+		borderRadius: radii.card,
 		shadowColor: "rgba(32,28,22,0.085)",
 		shadowOffset: { width: 0, height: 16 },
 		shadowRadius: 38,
-		/**
-		 * iOS multiplies `shadowColor`'s alpha by `shadowOpacity`, which
-		 * defaults to 0 — without this the colour above renders nothing.
-		 */
 		shadowOpacity: 1,
 	},
-	/**
-	 * The feed's height cap (owner, 2026-08-14: the card still reads too tall).
-	 * `flex: 1` would take the container's whole height; `maxHeight: 95%` gives
-	 * back 5% of it, and `stack`'s `justifyContent: "center"` splits the freed
-	 * space evenly above and below — so the card shrinks about its own centre
-	 * and paper shows top AND bottom.
-	 *
-	 * Applied only on the flex path: `dev-foundation` passes an explicit
-	 * `cardHeight`, and clamping a fixed height against its container would
-	 * silently resize a screen this change has nothing to do with.
-	 */
-	frameCapped: { maxHeight: "95%" },
-	/**
-	 * The measured path: the frame is sized by the animated height above, so it
-	 * must stop being a flex child — `flex: 1` would grow it back to the full
-	 * stage and the ratio would never be visible. `flex: 0` in RN is
-	 * grow 0 / shrink 0 / basis auto, i.e. "use my own height".
-	 */
-	frameSized: { flex: 0 },
 	card: {
 		...StyleSheet.absoluteFillObject,
 		borderRadius: radii.card,
@@ -506,8 +531,9 @@ const styles = StyleSheet.create({
 		/**
 		 * Soft lift off the paper background — the TIGHT half of the owner's
 		 * two-shadow elevation spec (2026-08-14: `0 3px 10px rgba(32,28,22,.05)`).
-		 * The wide layer (`0 16px 38px .085`) lives on `frame`. No border, no
-		 * heavy shadow.
+		 * The WIDE layer (`0 16px 38px .085`) is a separate shadow-only view
+		 * behind the card (same bounds, `pointerEvents: none`) — RN supports
+		 * exactly ONE shadow per view.
 		 *
 		 * `overflow: hidden` above clips this view's CHILDREN, not its shadow,
 		 * and no ancestor (`stack`, `stackWrap`) clips either — so the shadow is

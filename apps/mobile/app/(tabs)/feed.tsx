@@ -344,11 +344,16 @@ export default function FeedScreen() {
 
 	const cardWidth = width - GUTTER * 2;
 
-	// The top card's share of the stage. Read from the CARD rather than from a
-	// role, so the height eases at the same moment the new top card takes over.
-	const topKind = deck[activeIndex]?.kind;
-	const frameHeightRatio =
-		topKind === undefined ? undefined : FRAME_HEIGHT_RATIO[topKind];
+	// Per-CARD share of the stage. A function, not a single top-card value:
+	// each mounted card (including the one peeking behind the top) sizes
+	// itself to its OWN kind's ratio, so the tall community card behind a
+	// trade-off card is already tall while the trade-off flies away — the
+	// page never has to "grow" a card on commit.
+	const frameHeightRatio = useCallback(
+		(card: FeedCardV3) =>
+			FRAME_HEIGHT_RATIO[card.kind],
+		[],
+	);
 
 	const capability = useCallback(
 		(card: FeedCardV3) => cardBehavior(card).capability,
