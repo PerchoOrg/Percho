@@ -4,6 +4,76 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-08-14 01:35 — Owner design pass on the listing card: wordmark, inset
+frame, ink scale, tinted tags, frosted save disc
+
+**Objective**: Tia's 7-item design pass on the feed's listing card, sent with a
+screenshot of the current build as the reference.
+
+**Actions**:
+- `app/(tabs)/feed.tsx` — chrome row is now a 44pt centred "Percho" wordmark
+  (`textStyles.title1`, 28pt serif); `SoundToggle` removed from it;
+  `CARD_INSET.horizontal` 16 → 24 and `top` 8 → 12.
+- `app/listing/[id].tsx` — `SoundToggle` re-mounted at the hero's top-right,
+  mirroring the back button.
+- `theme/listing-layout.ts` — `address.marginTop` 6 → 8, new
+  `divider.marginTop` 12 + `DIVIDER_HEIGHT` 1, `ctaSlot.marginTop` 14 → 8.
+- `components/cards/ListingFace.tsx` — local `INK` scale (#181B18 / #535952 /
+  #92968F); price weight 700 → 600; hairline divider above the CTA; tag radius
+  14 → 9 with a lighter tint (#EFE9DE → #F4F2ED); `badgeLabel` accent → ink;
+  `saveDisc` 38pt solid white → 34pt rgba(20,24,22,0.42) with a
+  rgba(255,255,255,0.18) rim, icon white (saved: #7FD4B8).
+- `theme/listing-layout.test.ts` — `textBlockFloor()` now counts the divider.
+
+**Decisions**:
+- **Sound toggle relocated, not deleted.** The owner's rule is that both top
+  corners of the feed stay empty, and the mute control was the only thing in
+  them. Deleting it would re-create the 2026-07-28 bug (no way to unmute a
+  tour on device). It moved to the listing explore hero — a tour-playing
+  surface — and `state/sound.ts` plus the mute lifecycle are untouched.
+- **Ink scale is local to `ListingFace`, not a `redline.ink*` edit.** The
+  spec's #181B18/#535952/#92968F are near but not equal to the redline's
+  #171715/#6F6B65/#96918A, and every other face reads those tokens; moving
+  them globally would repaint the community and insight cards to match a
+  listing-card note.
+- **Price weight overridden in the component**, not in
+  `redlineText.listingCard.price`, for the same containment reason.
+- **Divider is gated on the CTA**, not on the tags. Its job is to separate the
+  facts from the action; without an explore row it would be a rule hanging off
+  the bottom of the block.
+- **No `expo-blur`.** The spec asks for `backdrop-filter: blur(8px)`, which RN
+  has no style for and which would need a new dependency (§8). The 42%-dark
+  fill + 18%-white rim already reads as frosted over a photo; noted in the
+  style comment.
+
+**Issues**:
+- Item 6 ("remove the floating white capsule, restore a flat nav") — there is
+  no floating capsule. `components/TabBar.tsx` is already flat: paper bg,
+  hairline top border, text labels, no margin/radius/shadow, and
+  `app/(tabs)/_layout.tsx` drives it directly with no overrides. Nothing
+  changed; the owner is likely looking at an older build.
+- The divider spends most of the text block's headroom: the floor goes 173 →
+  186 against the ≤190 target, so `ctaSlot` had to drop 14 → 8 to fit. 4pt of
+  slack left — the next row added to this block will break the budget.
+- **Pre-existing, NOT introduced here**: `HEAD` (c63468df) does not typecheck
+  on its own. `ListingFace` at HEAD already imports
+  `redlineText.listingCard`, `redlineRadii.tag/badge/listingCta` and
+  `lib/feed/abbreviate-address`, none of which are committed — they live in
+  the worktree, and the owner's instruction for this pass was explicitly to
+  leave `theme/typography.ts` / `theme/tokens.ts` / `abbreviate-address*`
+  uncommitted. So this commit is also not standalone-green. Verification below
+  ran against the full worktree, which IS green.
+
+**Resolution**: `npx tsc --noEmit` clean, `npx vitest run` 611/611 across 41
+files, `npx biome check` clean on the five changed source files.
+
+**Learnings**: the ≤190pt text-block budget is now the binding constraint on
+this card — any further row needs a trade, not an addition.
+
+**Next steps**: the owner should decide whether to commit the worktree's
+`typography.ts` / `tokens.ts` / `abbreviate-address*` so `main` typechecks
+from a clean checkout.
+
 ## 2026-08-14 00:40 — Listing card polish: icon centring, green badge, inset
 media, and the swipe hint that never played
 

@@ -40,6 +40,15 @@ Percho is a mobile-first home discovery app for the whole US buyer pool. Buyers 
 - Multi-agent-safe editing on shared communities — no one can accidentally overwrite another agent's uploads.
 - Full mobile viewport on every feed, comfortable 44×44 tap targets, and consistent right-rail placement across every video and photo surface.
 
+### 2026-08-14
+- The Percho name now sits at the top of the feed, with both top corners left clear.
+- Home cards sit further in from the edges, so the paper background frames each one.
+- Calmer card typography — a lighter price, softer address and spec greys, and a hairline rule above the "Explore home" link.
+- Feature tags are now light tinted rectangles instead of candy-coloured capsules.
+- Green is reserved for things you can tap or have selected: the LISTING label is plain ink again, and a saved home's bookmark turns green.
+- The save button on a photo is a smaller frosted disc that reads clearly over any image.
+- The sound on/off control moved off the feed's top bar and onto the home detail screen, where the guided tour plays.
+
 <!--
 Add new dated bullets below as bug fixes / small polish land under v1.0.
 Only bump the version (v1.1, v2.0, …) for a new pitchable capability

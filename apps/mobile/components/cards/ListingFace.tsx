@@ -71,6 +71,7 @@ import { RedlineIcon, type RedlineIconName } from "./redline/RedlineChrome";
  * to assert the new flex layout.
  */
 import {
+	DIVIDER_HEIGHT,
 	MAX_TAGS,
 	TAG_PILL_HEIGHT,
 	textBlock as geo,
@@ -101,6 +102,32 @@ const DIM_ICON: Record<DimKey, RedlineIconName> = {
 	space: "expand",
 	nightlife: "cup",
 };
+
+/**
+ * The card's ink scale (owner, 2026-08-14). Three steps, near-black to muted:
+ * price / specs / address. These are DELIBERATELY local to this file rather
+ * than an edit to `redline.ink` / `ink2` / `ink3` (#171715 / #6F6B65 /
+ * #96918A) — the spec's values are close to but not the same as the redline's,
+ * and the redline inks are read by every other face, so moving them globally
+ * would repaint the community and insight cards to match a listing-card note.
+ */
+const INK = {
+	/** Primary — price. Near-black, not pure black. */
+	primary: "#181B18",
+	/** Secondary — specs ("4 bd · 3 ba · 2,853 sqft"). */
+	secondary: "#535952",
+	/** Tertiary — address and other secondary metadata. */
+	tertiary: "#92968F",
+} as const;
+
+/**
+ * Saved-state green on the dark disc. `redline.accent` (#0E6B57) is tuned for
+ * ink-on-paper and goes muddy on a translucent dark disc over a photo, so the
+ * saved bookmark uses a light mint at the same hue. Green stays reserved for
+ * interactive / selected state (owner, 2026-08-14), which is exactly what a
+ * saved bookmark is.
+ */
+const SAVED_GREEN = "#7FD4B8";
 
 /** The bookmark disc's target id, written into `tapSlot` on touch start. */
 export const SAVE_TAP_TARGET = "save";
@@ -185,7 +212,7 @@ export function ListingFace({
 						<RedlineIcon
 							name="bookmark"
 							size={17}
-							color={saved ? redline.accent : redline.ink2}
+							color={saved ? SAVED_GREEN : redline.onPhoto}
 						/>
 					</Pressable>
 				</View>
@@ -219,22 +246,36 @@ export function ListingFace({
 						))}
 					</View>
 				)}
+				{/*
+				 * Hairline under the chips (owner 2026-08-14). Gated on the CTA, not
+				 * on the tags: its job is to separate the facts from the action, so
+				 * without an explore row it would be a rule hanging off the bottom of
+				 * the block. A listing with no dims still gets it — it then divides
+				 * the address from the link.
+				 */}
 				{!!onExplore && (
-					<View style={styles.ctaRow}>
-						<Pressable
-							onTouchStart={arm(EXPLORE_TAP_TARGET)}
-							accessibilityRole="link"
-							accessibilityLabel="Explore home"
-							hitSlop={12}
-							style={({ pressed }) => [
-								styles.exploreLink,
-								pressed && styles.explorePressed,
-							]}
-						>
-							<Text style={styles.exploreLabel}>Explore home</Text>
-							<RedlineIcon name="arrowRight" size={13} color={redline.accent} />
-						</Pressable>
-					</View>
+					<>
+						<View style={styles.divider} />
+						<View style={styles.ctaRow}>
+							<Pressable
+								onTouchStart={arm(EXPLORE_TAP_TARGET)}
+								accessibilityRole="link"
+								accessibilityLabel="Explore home"
+								hitSlop={12}
+								style={({ pressed }) => [
+									styles.exploreLink,
+									pressed && styles.explorePressed,
+								]}
+							>
+								<Text style={styles.exploreLabel}>Explore home</Text>
+								<RedlineIcon
+									name="arrowRight"
+									size={13}
+									color={redline.accent}
+								/>
+							</Pressable>
+						</View>
+					</>
 				)}
 			</View>
 		</View>
@@ -288,18 +329,31 @@ const styles = StyleSheet.create({
 		overflow: "hidden",
 	},
 	/**
-	 * Green, not ink (owner 2026-08-14). `redline.accent` (#0E6B57) is the only
-	 * accent these faces may use, and the frosted white pill keeps the
-	 * contrast — the badge is the one place the theme colour reads at a glance.
+	 * Neutral ink, NOT green (owner 2026-08-14, reversing the 08-13 pass).
+	 * Green is now reserved for interactive / selected state; the badge is a
+	 * static label, so colouring it accent made the card's one action colour
+	 * mean nothing.
 	 */
-	badgeLabel: { ...redlineText.listingCard.badge, color: redline.accent },
+	badgeLabel: { ...redlineText.listingCard.badge, color: INK.primary },
 	/** Save bookmark disc — top-right over the media (owner 2026-08-13). */
 	saveSlot: { position: "absolute", top: 12, right: 12, zIndex: 2 },
+	/**
+	 * 34pt frosted disc (owner 2026-08-14) — a translucent dark fill with a
+	 * light hairline, replacing the solid white one that read as a sticker.
+	 *
+	 * The spec asks for `backdrop-filter: blur(8px)`, which React Native has no
+	 * style for; it needs `expo-blur`, a new dependency, so it is deliberately
+	 * NOT here. Over a photo the 42%-dark fill plus the 18%-white rim already
+	 * reads as frosted, and the icon inside is white either way.
+	 */
 	saveDisc: {
-		width: 38,
-		height: 38,
-		borderRadius: redlineRadii.badge,
-		backgroundColor: "rgba(255,255,255,0.92)",
+		width: 34,
+		height: 34,
+		borderRadius: 17,
+		backgroundColor: "rgba(20,24,22,0.42)",
+		borderWidth: 1,
+		borderColor: "rgba(255,255,255,0.18)",
+		overflow: "hidden",
 		alignItems: "center",
 		justifyContent: "center",
 	},
@@ -315,14 +369,23 @@ const styles = StyleSheet.create({
 		justifyContent: "space-between",
 		alignItems: "baseline",
 	},
-	/** The price is the card's anchor — the CTA must not out-weight it. */
-	price: { ...redlineText.listingCard.price, color: redline.ink },
+	/**
+	 * The price is the card's anchor — the CTA must not out-weight it. Weight
+	 * steps down 700 → 600 (owner 2026-08-14: the 700 read as shouting at 31pt);
+	 * the size is unchanged. Overridden here rather than in
+	 * `redlineText.listingCard.price` so the token stays the redline's number.
+	 */
+	price: {
+		...redlineText.listingCard.price,
+		fontWeight: "600",
+		color: INK.primary,
+	},
 	/** "4 bd · 3 ba · 2,853 sqft" — 12.5/600, one line. */
-	specs: { ...redlineText.listingCard.specs, color: "#4A524E" },
+	specs: { ...redlineText.listingCard.specs, color: INK.secondary },
 	/** Row 2 — "355 Morgans Creek Ct · Kennesaw, GA 30144", one muted line. */
 	address: {
 		...redlineText.listingCard.address,
-		color: "#8A918C",
+		color: INK.tertiary,
 		...geo.address,
 	},
 	/**
@@ -336,16 +399,32 @@ const styles = StyleSheet.create({
 		gap: 6,
 		...geo.tags,
 	},
+	/**
+	 * Radius 9, not `redlineRadii.tag` (14) — at 21pt tall a 14 is a full
+	 * capsule, and the owner's 2026-08-14 note is explicit that these are
+	 * "light tinted rectangles, not capsule candy". The tint lightens with it
+	 * (#EFE9DE → #F4F2ED) so the row recedes behind the price.
+	 */
 	tag: {
 		height: TAG_PILL_HEIGHT,
 		paddingHorizontal: 9,
-		borderRadius: redlineRadii.tag,
-		backgroundColor: "#EFE9DE",
+		borderRadius: 9,
+		backgroundColor: "#F4F2ED",
 		alignItems: "center",
 		justifyContent: "center",
 		flexShrink: 0,
 	},
 	tagLabel: { ...redlineText.listingCard.tag, color: "#3E4744" },
+	/**
+	 * Hairline between the chips and the explore link. 8% ink — visible as a
+	 * change of tone, not as a rule. Height comes from `listing-layout` because
+	 * it is part of the block's ≤190pt arithmetic.
+	 */
+	divider: {
+		height: DIVIDER_HEIGHT,
+		backgroundColor: "rgba(24,27,24,0.08)",
+		...geo.divider,
+	},
 	/**
 	 * Explore link row — right-aligned, bottom of the text block. The owner's
 	 * 2026-08-13 revision dropped the giant 46pt green pill for a quiet link

@@ -26,7 +26,6 @@ import { StyleSheet, Text, View, useWindowDimensions } from "react-native";
 
 import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { SoundToggle } from "../../components/SoundToggle";
 import {
 	type CardRenderArgs,
 	type SwipeHintHandle,
@@ -93,8 +92,15 @@ const CARD_MAX_VIEWPORT = 0.74;
  * so the container's horizontal padding grows to 16 (was 12) — the paper
  * background shows around the card and the media box (which has its own
  * margin from the white text block) reads inset.
+ *
+ * 2026-08-14 owner revision: the card should not read as full-bleed at all —
+ * horizontal 24 (was 16) so a clear band of paper shows down BOTH sides, and
+ * top 12 (was 8) to seat it under the new wordmark row. This is the card
+ * FRAME's inset; the media's own inset inside the white card is
+ * `theme/listing-layout.ts` `media.marginHorizontal`, a different number for a
+ * different reason.
  */
-const CARD_INSET = { horizontal: 16, top: 8, bottom: 10 };
+const CARD_INSET = { horizontal: 24, top: 12, bottom: 10 };
 
 export default function FeedScreen() {
 	const { width, height } = useWindowDimensions();
@@ -624,14 +630,19 @@ export default function FeedScreen() {
 		<SafeAreaView style={styles.screen} edges={["top"]}>
 			{offline && <OfflineBar />}
 			{/*
-			 * §0.6 #1: the mute control is the feed's only chrome besides the tab
-			 * bar. It was previously mounted ONLY on `dev-foundation`, so on device
-			 * there was no way to unmute a tour — the reason the owner reported the
-			 * videos as having no sound (2026-07-28). Kept out of `stackWrap` so it
-			 * sits on the status-bar row rather than over a card.
+			 * The wordmark row (owner, 2026-08-14): "Percho" centred at the very
+			 * top, and the two top CORNERS stay empty — no features up here.
+			 *
+			 * That rule is what evicted the mute control, which used to be the
+			 * feed's only chrome besides the tab bar. It is NOT deleted: audio is
+			 * still global state (`state/sound.ts`) and the toggle now lives at the
+			 * top-right of the listing explore hero (`app/listing/[id].tsx`), which
+			 * is a tour-playing surface and not a top corner of the feed. Deleting
+			 * it outright would re-create the 2026-07-28 bug where a buyer had no
+			 * way to unmute a tour at all.
 			 */}
 			<View style={styles.chromeRow}>
-				<SoundToggle />
+				<Text style={styles.wordmark}>Percho</Text>
 			</View>
 			<View style={styles.stackWrap}>
 				{deck.length === 0 && loading ? (
@@ -681,14 +692,21 @@ const styles = StyleSheet.create({
 	 * the real card would (flex:1 within the padded container).
 	 */
 	cardContainer: { flex: 1, alignSelf: "stretch" },
-	/** Status-bar row holding the mute toggle, right-aligned (§0.6 #1). */
+	/**
+	 * Status-bar row — the "Percho" wordmark, centred, nothing in either corner
+	 * (owner 2026-08-14). 44pt tall so the row reads as chrome rather than as a
+	 * masthead band.
+	 */
 	chromeRow: {
+		height: 44,
 		flexDirection: "row",
-		justifyContent: "flex-end",
+		alignItems: "center",
+		justifyContent: "center",
 		paddingHorizontal: 16,
-		paddingTop: 4,
 		zIndex: 100,
 	},
+	/** `textStyles.title1` is the 28pt serif — the spec's "~28-32, display". */
+	wordmark: { ...textStyles.title1, color: colors.ink },
 	sheet: { paddingHorizontal: 20, paddingTop: 8, gap: 8 },
 	sheetEyebrow: { ...textStyles.caption, color: colors.accent },
 	sheetTitle: { ...textStyles.title2, color: colors.ink },

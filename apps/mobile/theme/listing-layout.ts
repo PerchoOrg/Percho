@@ -16,14 +16,16 @@
  *
  * `TEXT_BLOCK_TARGET` is the redesign's budget for the block:
  * padding 16 top / 18 horizontal / 18 bottom, a price+specs baseline row
- * (31pt), the address (6pt + 12pt), the tags (13pt + 21pt pill), and a
- * 46pt CTA (14pt + 46 + 14pt bottom gap):
+ * (31pt), the address (8pt + 12pt), the tags (13pt + 21pt pill), the hairline
+ * divider (12pt + 1pt), and a 46pt CTA (8pt + 46), then 18pt of bottom
+ * padding:
  *
- *   16 + 31 + 6 + 12 + 13 + 21 + 14 + 46 + 14 = 173 ≤ 190  ✓
+ *   16 + 31 + 8 + 12 + 13 + 21 + 12 + 1 + 8 + 46 + 18 = 186 ≤ 190  ✓
  *
- * That floor leaves 17pt of headroom before the ≤190 acceptance starts
+ * That floor leaves 4pt of headroom before the ≤190 acceptance starts
  * failing — the exact number a future "just add one more row" edit spends
- * without tripping anything until it is too late.
+ * without tripping anything until it is too late. It was 17pt before the
+ * 2026-08-14 pass; the divider is what spent most of it.
  */
 export const TEXT_BLOCK_TARGET = 190;
 
@@ -44,9 +46,15 @@ export const MAX_TAGS = 3;
 
 /**
  * The text block's own geometry — padding and row margins. `ListingFace`
- * spreads `geo.block` / `geo.address` / `geo.tags` / `geo.ctaSlot` into its
- * StyleSheet so the component and this arithmetic stay in lockstep. Row
- * margins are the redesign's numbers (6 / 13 / 14), the CTA is a fixed 46pt.
+ * spreads `geo.block` / `geo.address` / `geo.tags` / `geo.divider` /
+ * `geo.ctaSlot` into its StyleSheet so the component and this arithmetic stay
+ * in lockstep. The CTA is a fixed 46pt.
+ *
+ * 2026-08-14 owner pass: the price wanted more air under it (6 → 8), and the
+ * chip row wanted a hairline rule between it and the explore link. The rule
+ * carries the separation the CTA gap used to carry alone, so `ctaSlot` drops
+ * 14 → 8 — without that the block lands at 192pt and blows the ≤190 budget.
+ * `tags.marginTop` stays at 13, inside the owner's 12-14 target.
  */
 export const textBlock = {
 	block: {
@@ -54,10 +62,19 @@ export const textBlock = {
 		paddingHorizontal: 18,
 		paddingBottom: 18,
 	},
-	address: { marginTop: 6 },
+	address: { marginTop: 8 },
 	tags: { marginTop: 13 },
-	ctaSlot: { marginTop: 14 },
+	divider: { marginTop: 12 },
+	ctaSlot: { marginTop: 8 },
 } as const;
+
+/**
+ * The hairline under the chip row. 1pt rather than
+ * `StyleSheet.hairlineWidth` because this module is deliberately
+ * react-native-free (see the header) and the height is part of the block's
+ * arithmetic above.
+ */
+export const DIVIDER_HEIGHT = 1;
 
 /**
  * The media box's inset inside the white card (owner, 2026-08-14: the video

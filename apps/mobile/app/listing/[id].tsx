@@ -29,6 +29,7 @@ import {
 	View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { SoundToggle } from "../../components/SoundToggle";
 import { HotspotSheet } from "../../components/listing/HotspotSheet";
 import { PhotoGallery } from "../../components/listing/PhotoGallery";
 import { PriceHistogram } from "../../components/listing/PriceHistogram";
@@ -494,6 +495,17 @@ export default function ListingExploreScreen() {
 					>
 						<Text style={styles.heroBackLabel}>←</Text>
 					</Pressable>
+					{/*
+					 * The global mute toggle (owner, 2026-08-14). It used to sit in the
+					 * feed's chrome row, but that row is now the wordmark and its two
+					 * corners must stay empty, so the control moved here rather than
+					 * being deleted — this screen plays the guided tour ("Replay tour
+					 * →"), so it is the surface where a buyer actually wants sound, and
+					 * §0.7's global `soundOn` store is unchanged.
+					 */}
+					<View style={[styles.heroSound, { top: insets.top + 8 }]}>
+						<SoundToggle />
+					</View>
 					{/* §2.4 #1: a pin per hotspot; unvisited ones pulse. Pulse is the
 					    ring's opacity, not a scale transform — a scaling pin over a photo
 					    reads as a layout jitter on device. */}
@@ -796,6 +808,8 @@ const styles = StyleSheet.create({
 		backgroundColor: colors.glass,
 	},
 	heroBackLabel: { ...textStyles.headline, color: colors.ink },
+	/** Mirrors `heroBack` at the other end of the hero. */
+	heroSound: { position: "absolute", right: 16 },
 	pin: {
 		position: "absolute",
 		width: 32,

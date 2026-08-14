@@ -19,6 +19,7 @@
 import { describe, expect, it } from "vitest";
 import { HERO_RATIO } from "./listing-geometry";
 import {
+	DIVIDER_HEIGHT,
 	MAX_TAGS,
 	SE_TAG_ROW_WIDTH,
 	TAG_PILL_HEIGHT,
@@ -45,11 +46,13 @@ function textBlockFloor() {
 	return (
 		textBlock.block.paddingTop + // 16
 		redlineText.listingCard.price.lineHeight + // 31
-		textBlock.address.marginTop + // 6
+		textBlock.address.marginTop + // 8
 		redlineText.listingCard.address.fontSize + // 12
 		textBlock.tags.marginTop + // 13
 		TAG_PILL_HEIGHT + // 21
-		textBlock.ctaSlot.marginTop + // 14
+		textBlock.divider.marginTop + // 12
+		DIVIDER_HEIGHT + // 1
+		textBlock.ctaSlot.marginTop + // 8
 		46 + // CTA
 		textBlock.block.paddingBottom // 18
 	);
