@@ -208,11 +208,14 @@ function BookmarkIcon({ color }: IconProps) {
  * as a body at 22px instead of a shallow "U":
  *
  *   circle  c(12,8) r 5          → head
- *   barrel  w 18, r 7, y 12.5→22.5 → shoulders
+ *   barrel  w 18, y 12.5→24      → shoulders (ALL four borders drawn —
+ *                                  top border alone was just an arc with
+ *                                  blank space below, the 2026-08-14 bug)
  */
 const HEAD_D = 10 * K;
 const SHOULDER_W = 18 * K;
-const SHOULDER_H = 10 * K;
+/** Top at 12.5, down to the box bottom (24 on the grid). */
+const SHOULDER_H = 11.5 * K;
 const SHOULDER_R = 7 * K;
 
 function UserIcon({ color }: IconProps) {
@@ -350,10 +353,10 @@ const styles = StyleSheet.create({
 		borderWidth: STROKE,
 	},
 	/**
-	 * UserRound's shoulders: a rounded barrel whose flat side is its top —
-	 * wider than the head (18 units), with the top corners rounded to 7 and
-	 * the sides running straight down to the baseline. Reads as a body at
-	 * 22px; the earlier exact half-disc (r8, height 8) read as a thin "U".
+	 * UserRound's shoulders: a rounded-top barrel running from under the
+	 * head down to the box baseline. ALL FOUR borders are drawn — the
+	 * earlier version drew only `borderTopWidth`, so the body rendered as a
+	 * top arc with blank space below (owner: 「身子不够长,下面是空白」).
 	 */
 	shoulders: {
 		position: "absolute",
@@ -362,6 +365,9 @@ const styles = StyleSheet.create({
 		width: SHOULDER_W,
 		height: SHOULDER_H,
 		borderTopWidth: STROKE,
+		borderLeftWidth: STROKE,
+		borderRightWidth: STROKE,
+		borderBottomWidth: STROKE,
 		borderTopLeftRadius: SHOULDER_R,
 		borderTopRightRadius: SHOULDER_R,
 	},
