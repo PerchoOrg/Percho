@@ -47,11 +47,7 @@ export function TabBar({ tabs, activeKey, onSelect }: TabBarProps) {
 					>
 						{Icon && (
 							<View style={active ? styles.iconOn : styles.iconOff}>
-								{active && t.key === "feed" ? (
-									<Icon color={styles.iconActive.color} />
-								) : (
-									<Icon color={active ? colors.ink : colors.ink2} />
-								)}
+								<Icon color={active ? ACTIVE_GREEN : colors.ink2} />
 							</View>
 						)}
 						<Text
@@ -88,6 +84,8 @@ export function TabBar({ tabs, activeKey, onSelect }: TabBarProps) {
 const ICON_SIZE = 22;
 const K = ICON_SIZE / 24;
 const STROKE = 1.75;
+/** Active tab colour — icon AND text (owner, 2026-08-14: 「icon 和 text 都变深绿色」). */
+const ACTIVE_GREEN = "#0E5C48";
 
 interface IconProps {
 	color: string;
@@ -202,16 +200,15 @@ function BookmarkIcon({ color }: IconProps) {
 }
 
 /**
- * UserRound (Lucide) — 22px, stroke 1.75 (owner, 2026-08-14: the old
- * semicircle-shoulders person read as a lump; UserRound is a full circle head
- * over a half-round shoulders blob). Geometry from Lucide's 24-grid scaled by
- * K, same stroke + box rhythm as Home / Search / Bookmark so the row is
- * visually uniform:
+ * UserRound (Lucide) — 22px, stroke 1.75 (owner, 2026-08-14). Geometry from
+ * Lucide's 24-grid scaled by K, same stroke + box rhythm as Home / Search /
+ * Bookmark. Real UserRound has a r5 head (NOT the r4 of plain `user` — that
+ * was the bug that made the glyph read as a tiny dot):
  *
- *   circle  c(12,8) r 4            → head
+ *   circle  c(12,8) r 5          → head
  *   path    M20 21a8 8 0 0 0-16 0 → shoulders (half-round blob, not a box)
  */
-const HEAD_D = 8 * K;
+const HEAD_D = 10 * K;
 const SHOULDER_W = 16 * K;
 const SHOULDER_R = SHOULDER_W / 2;
 
@@ -246,18 +243,11 @@ const styles = StyleSheet.create({
 	},
 	tab: { flex: 1, alignItems: "center", justifyContent: "center", gap: 4 },
 	label: { ...textStyles.caption },
-	active: { color: "#0E5C48", opacity: 1 },
+	active: { color: ACTIVE_GREEN, opacity: 1 },
 	inactive: { color: colors.ink2, opacity: 0.5 },
-	/**
-	 * The icon's half of the same two states. The FEED (home) icon must match
-	 * its label — Percho green when active, light grey when inactive (owner
-	 * 2026-08-14) — so the active colour is passed through on the icon prop
-	 * rather than left to the dimming wrappers alone.
-	 */
+	/** The icon's half of the same two states — dimming only; colour is a prop. */
 	iconOn: { opacity: 1 },
 	iconOff: { opacity: 0.5 },
-	/** The four inactive icons stay light grey; `FeedIcon` overrides active. */
-	iconActive: { color: redline.accent },
 
 	iconBox: { width: ICON_SIZE, height: ICON_SIZE },
 
