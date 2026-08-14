@@ -51,7 +51,7 @@
  * brighten with the finger and the direction labels fade in with it. Without it
  * exposed, those faces cannot be built at all.
  */
-import { useLayoutEffect } from "react";
+import { useEffect, useLayoutEffect } from "react";
 import { StyleSheet, View } from "react-native";
 import { GestureDetector } from "react-native-gesture-handler";
 import Animated, {
@@ -64,6 +64,7 @@ import {
 	INERT_CAPABILITY,
 } from "../lib/gesture/capability";
 import { VISIBLE_WINDOW, cardStackVisual } from "../lib/gesture/stack-layer";
+import type { TapSlot, TapStatus } from "../lib/gesture/tap-slot";
 import { colors, radii } from "../theme/tokens";
 
 /** Cards visible at rest: top + 2 behind (§0.6 #7). Shared with the composer. */
@@ -82,6 +83,15 @@ export interface CardRenderArgs {
 	role: CardRole;
 	tx: SharedValue<number>;
 	cardWidth: number;
+	/**
+	 * The tap gesture's target slot — an interactive card target (save heart,
+	 * explore link) writes its tap id into it on touch start; the pan's `onEnd`
+	 * reads it to decide whether the release was a tap. See
+	 * `lib/gesture/tap-slot.ts` for why this exists at all.
+	 */
+	tapSlot?: SharedValue<TapSlot>;
+	/** The tap gesture's live state. Only used to disarm a stale slot. */
+	tapStatus?: SharedValue<TapStatus>;
 }
 
 /**
@@ -106,10 +116,30 @@ function roleFor(depth: number): CardRole {
 	return "after";
 }
 
-interface SwipeStackProps<T> {
+export interface SwipeStackProps<T> {
 	items: readonly T[];
 	activeIndex: number;
 	onDecision: (decision: "left" | "right", item: T) => void;
+
+	/**
+	 * Called when a release was a TAP on an interactive card target (the save
+	 * heart / the explore link). The target's tap id (`"save:<id>"` /
+	 * `"explore:<id>"`) is what the feed maps to the right action; the
+	 * exclusive-tap gesture (see `useSwipeCard`) detects the tap, so a
+	 * Pressable-vs-Pan conflict is impossible by construction.
+	 */
+	onTapTarget?: (target: string) => void;
+
+	/**
+	 * Optional imperative nudge — the swipe-hint (owner 2026-08-13). Called
+	 * with the stack's live `tx`/`advance` shared values so the caller can
+	 * run the nudge animation on the UI thread. The feed plays it once when
+	 * the first card settles; other callers (dev-foundation) simply omit it.
+	 */
+	onHintReady?: (hint: {
+		tx: SharedValue<number>;
+		advance: SharedValue<number>;
+	}) => void;
 
 	renderCard: (item: T, args: CardRenderArgs) => React.ReactNode;
 	/** Overlay above the top card only — §1.8 direction labels live here. */
@@ -127,7 +157,12 @@ interface SwipeStackProps<T> {
 	 */
 	keyExtractor: (item: T, index: number) => string;
 	cardWidth: number;
-	cardHeight: number;
+	/**
+	 * Explicit card height. 2026-08-13: the feed no longer passes one — the
+	 * card fills the container (`flex: 1`), so height is derived from the
+	 * available space. `dev-foundation` still passes a fixed height.
+	 */
+	cardHeight?: number;
 	/** §1.3 per-item gesture capability. Resolved before the gesture is built. */
 	capability: (item: T) => CardCapability;
 }
@@ -195,6 +230,8 @@ export function SwipeStack<T>({
 	items,
 	activeIndex,
 	onDecision,
+	onTapTarget,
+	onHintReady,
 
 	renderCard,
 	renderOverlay,
@@ -208,13 +245,18 @@ export function SwipeStack<T>({
 	const topCapability: CardCapability =
 		top === undefined ? INERT_CAPABILITY : capability(top);
 
-	const { gesture, tx, topAbs, exitX, advance } = useSwipeCard({
-		cardWidth,
-		capability: topCapability,
-		onDecision: (decision) => {
-			if (top) onDecision(decision, top);
-		},
-	});
+	const { gesture, tx, topAbs, exitX, advance, tapSlot, tapStatus } =
+		useSwipeCard({
+			cardWidth,
+			capability: topCapability,
+			onDecision: (decision) => {
+				if (top) onDecision(decision, top);
+			},
+			onTapTarget: (target) => {
+				if (target === "__touchdown__") return;
+				if (top) onTapTarget?.(target);
+			},
+		});
 
 	/**
 	 * Keep the UI-thread cursor in step with React.
@@ -230,10 +272,20 @@ export function SwipeStack<T>({
 		topAbs.value = activeIndex;
 	}, [activeIndex, topAbs]);
 
+	// Hand the live shared values to the caller ONCE (the swipe-hint needs
+	// them to run its nudge on the UI thread; it must not re-fire on every
+	// render, which would reset the hint's run-once latch).
+	useEffect(() => {
+		if (onHintReady) onHintReady({ tx, advance });
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [onHintReady, tx, advance]);
+
 	const argsFor = (role: CardRole): CardRenderArgs => ({
 		role,
 		tx,
 		cardWidth,
+		tapSlot,
+		tapStatus,
 	});
 
 	// The mounted window trails one card behind `activeIndex` so a committed card
@@ -255,7 +307,13 @@ export function SwipeStack<T>({
 	return (
 		<View style={styles.stack}>
 			<GestureDetector gesture={gesture}>
-				<View style={{ width: cardWidth, height: cardHeight }}>
+				<View
+					style={[
+						styles.frame,
+						{ width: cardWidth },
+						cardHeight !== undefined && { height: cardHeight },
+					]}
+				>
 					{mounted.map(({ item, absIndex }) => {
 						const depth = absIndex - activeIndex;
 						const isTop = depth === 0;
@@ -291,6 +349,12 @@ export function SwipeStack<T>({
 
 const styles = StyleSheet.create({
 	stack: { flex: 1, alignItems: "center", justifyContent: "center" },
+	/**
+	 * The card frame. With `cardHeight` absent (feed) it stretches to the
+	 * container's full height — `flex: 1` inside the padded CardContainer —
+	 * so the card fills the screen instead of the old centered 0.74 box.
+	 */
+	frame: { flex: 1, alignSelf: "stretch" },
 	card: {
 		...StyleSheet.absoluteFillObject,
 		borderRadius: radii.card,

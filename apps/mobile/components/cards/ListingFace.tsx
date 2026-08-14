@@ -3,106 +3,78 @@ import type { DimKey } from "@percho/shared";
  * ListingFace (§1.4) — the listing front face, REBUILT to the owner's
  * "Percho Swipe Cards" redline (2026-07-30, 「全按redline覆盖」).
  *
- * ── What this replaced, and why it is gone ───────────────────────────────────
+ * ── 2026-08-13 redesign: media-first, natural-height text block ─────────────
  *
- * The previous face was demo variant "C" (picked 2026-07-30 earlier the same
- * day): a 1:1 inline media block, a left info column, and a right column with a
- * circular locality map + the four-dimension neighborhood score ring, all in
- * amber. The redline specifies a different card and the owner chose it
- * explicitly over keeping C's layout, so:
+ * The card now fills the feed's available height (flex:1 card), the media
+ * area eats every remaining point (`flex: 1, minHeight: 0` — no aspectRatio,
+ * no fixed height), and the text block renders at its natural height under
+ * it, targeted ≤ 190pt. The previous 54/46 (later 61.8/38.2) proportional
+ * split is gone, along with the `PANEL_SCALE` scaling of the panel's type.
+ * Rows, in order:
  *
- *   · the circular `CardMap` is gone from this face — the redline says
- *     "Do not add maps";
- *   · the `NeighborhoodScore` ring is gone — "Do not add score bars", and its
- *     four dimensions are not in the redline's content list;
- *   · amber is gone — "Forest green is the only accent".
+ *   1. price + specs on ONE baseline row (the space-saving move)
+ *   2. address · city, state zip — one muted line
+ *   3. up to three tag pills, no icons — drop-whole instead of truncate
+ *   4. "Explore home →" — 46pt solid pill
  *
- * `CardMap` and `NeighborhoodScore` are NOT deleted: both are still reachable
- * from the listing detail page / nearby view, and deleting a working component
- * because one caller stopped using it is out of scope for a card redesign.
+ * ── 2026-08-13 owner revision (「内嵌白色卡片感 + 右下角 explore link + 右上
+ *    saved icon + swipe hint」) ────────────────────────────────────────────────
  *
- * ── The redline's structure, verbatim ────────────────────────────────────────
+ *   · The media box gets `margin` from the card container (feed.tsx
+ *     CardContainer padding), so the video reads as an embedded white card:
+ *     paper shows around it and the white text block frames the media.
+ *   · The giant green CTA pill is gone. "Explore home →" is now a right-
+ *     aligned link row in the text block, tap-detected by the stack's
+ *     exclusive-tap gesture (`tapSlot`), not by a nested Pressable — a
+ *     Pressable inside the pan gesture area silently stops firing (RNGH
+ *     #3172), so the tap is detected in the pan's own `onEnd`.
+ *   · A filled bookmark sits top-right over the media (owner: 「卡片右上加
+ *     saved icon」). It toggles the saved store.
  *
- *   hero image        61.8% of card height, full bleed, top corners = card radius
- *     LISTING pill    top-left 15/15
- *     heart           top-right 15/15
- *   content panel     38.2%, padding 18 / 14 / 15
- *     price           serif 27
- *     address         14 semibold, margin-top 6
- *     locality        12 muted, margin-top 3
- *     story           13 / 1.45, margin-top 11, #57534D, up to 2 lines
- *     chips           21pt tall, #F1F1EC, green line icons
- *     CTA             full-width 44pt pill, #0E6B57, "Explore Home →"
+ * The tag pills replace the old icon chips: no emoji/glyph, and when the row
+ * cannot seat all three, the third pill is dropped ENTIRELY rather than
+ * ellipsized (an ellipsis on a pill reads as broken copy).
  *
- * The hero was 54% and the panel's type was larger in the redline; the owner
- * raised the hero to the golden ratio on 2026-08-01 (「视频占卡片比例改成0.618」)
- * and the panel's metrics are that same redline scaled by `PANEL_SCALE`. Read
- * `theme/listing-geometry.ts` before changing any of these — the numbers are
- * derived from a measured device-fit table, not picked to look right.
- *
- * Those two overlays are the ONLY things on the hero. The redline also drew a
- * bottom-left "⊕ 18 Photos" counter; it was removed 2026-08-01 on the owner's
- * immersion call ("不够沉浸") along with all burned-in video captions. Photos and
- * their captions now live behind the CTA, in Explore. The match-score badge that
- * used to sit at top-right/60 was ours, never the redline's, and is also gone —
- * the score still reaches the buyer on the detail screen.
+ * The LISTING pill over the media is now a frosted badge at top-left 12/12.
  *
  * ── Video is untouched (owner: 「视频部分不用改」) ───────────────────────────
  *
- * `CardVideo` still receives `fit="cover"`, still keys off `isTop`, and the
- * square-render reasoning behind that prop is unchanged — the only difference is
- * the box it sits in is now 54% of the card rather than 1:1. A 1080x1080 render
- * in a 270x302-shaped box crops the sides rather than letterboxing, which is
- * what `cover` is for and what the redline's "full bleed / object-fit: cover"
- * asks for by name.
+ * `CardVideo` still receives `fit="cover"`, still keys off `isTop`. The box
+ * it sits in is now taller, so a 1080×1080 render in a taller card crops the
+ * top and bottom rather than letterboxing — which is what `cover` is for and
+ * what the redline's "full bleed / object-fit: cover" asks for by name.
  *
  * ── What is NOT invented ────────────────────────────────────────────────────
  *
- * The redline's mock text ("Modern family home with…", "18 Photos", the three
- * chips) is SAMPLE copy. This face renders the card's real fields:
- * `dims` mapped through the shared `DIMS` vocabulary for the chips. A listing
- * with no dims renders no chips. Nothing on this card is generated to fill the
- * redline's shape.
- *
- * The story line (`description[0]`) was removed 2026-08-13 (owner: 「删掉文字
- * 介绍那一段 只保留基本信息和几个绿色的tag和explore button」). The field stays on
- * the DTO and `theme/listing-geometry.ts` still carries `geo.story` — data is
- * cheap, re-enabling is a one-line render.
- *
- * The panel was redesigned 2026-08-13 to the owner's approved order (demo
- * `~/percho-prototypes/listing-panel-redesign/`):
- *   1. price — 36pt serif (bigger, immersive)
- *   2. bed/bath/sqft — 15pt/600
- *   3. address · city, state zip — one 13pt muted row
- *   4. chips — 14pt (up from 9.5)
- *   5. CTA — 44pt pill
- * The old separate `locality` row is merged into row 3.
+ * The card renders the card's real fields: `priceLabel`, `bedBathSqft`, the
+ * merged address row, and `dims` mapped through the shared `DIMS` vocabulary
+ * for the tag pills. A listing with no dims renders no tags. Nothing on this
+ * card is generated to fill the redline's shape.
  */
-import { StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
+import type { SharedValue } from "react-native-reanimated";
+import { abbreviateAddress } from "../../lib/feed/abbreviate-address";
 import type { ListingCardV3 } from "../../lib/feed/card-types";
-import { fonts, radii, redline } from "../../theme/tokens";
+import type { TapSlot, TapStatus } from "../../lib/gesture/tap-slot";
+import { useSavedStore } from "../../state/saved";
+import { fonts, redline, redlineRadii } from "../../theme/tokens";
 import { redlineText } from "../../theme/typography";
 import { CardPhoto } from "../CardPhoto";
 import { CardVideo } from "../CardVideo";
-import {
-	RedlineCta,
-	RedlineIcon,
-	type RedlineIconName,
-	RedlinePill,
-} from "./redline/RedlineChrome";
+import { RedlineIcon, type RedlineIconName } from "./redline/RedlineChrome";
 
 /**
- * Geometry lives in `theme/listing-geometry.ts` as plain data so
- * `theme/redline-listing-geometry.test.ts` can assert it without importing
- * react-native. Read that file for the redline quotes behind each number, and for
- * why they must not be re-derived from the prototype HTML.
+ * Geometry lives in `theme/listing-layout.ts` as plain data so
+ * `theme/listing-layout.test.ts` can assert it without importing react-native.
+ * `theme/listing-geometry.ts` carries the OLD proportional split (0.618 hero /
+ * 0.382 panel); this face no longer uses it — the geometry test was rewritten
+ * to assert the new flex layout.
  */
 import {
-	CHIP_ICON,
-	HERO_RATIO,
-	MAX_CHIPS,
-	listingGeometry as geo,
-} from "../../theme/listing-geometry";
+	MAX_TAGS,
+	TAG_PILL_HEIGHT,
+	textBlock as geo,
+} from "../../theme/listing-layout";
 
 /**
  * Which line icon stands for which preference dimension.
@@ -112,10 +84,8 @@ import {
  * walking figure, so a chip reading "Move-in Ready" showed a pedestrian. Typing
  * it as a complete `Record` makes an unmapped dim a compile error instead.
  *
- * Kept identical to `CommunityFace`'s map on purpose: the same dim must not have
- * one glyph on a listing card and a different one on a community card two swipes
- * later. `quiet` therefore uses `moon`, not the two-heads `family` art it used to
- * borrow (which read as "family" under the label "Quiet Streets").
+ * The tag pills no longer render icons (2026-08-13 redesign: 「去掉 emoji 图标」),
+ * but the map stays for the detail screens that still use `DIM_ICON`.
  */
 const DIM_ICON: Record<DimKey, RedlineIconName> = {
 	family: "family",
@@ -131,29 +101,59 @@ const DIM_ICON: Record<DimKey, RedlineIconName> = {
 	nightlife: "cup",
 };
 
+/** The bookmark disc's target id, written into `tapSlot` on touch start. */
+export const SAVE_TAP_TARGET = "save";
+/** The explore link's target id, written into `tapSlot` on touch start. */
+export const EXPLORE_TAP_TARGET = "explore";
+
 interface ListingFaceProps {
 	card: ListingCardV3;
 	isTop: boolean;
 	onExplore?: () => void;
-	/*
-	 * No `onSave`. The heart that consumed it was removed 2026-08-01 (owner:
-	 * 「去掉右上角的爱心标志」) and the feed never passed a handler, so keeping the
-	 * prop would leave an argument no element can reach — the kind of dormant
-	 * hook that gets "restored" by accident later.
+	/**
+	 * The stack's tap slots (see `lib/gesture/tap-slot.ts`). Interactive
+	 * targets on this face write their id into `tapSlot` on touch start; the
+	 * pan's `onEnd` reads it to decide whether the release was a tap. Absent
+	 * when the face renders outside the feed stack (dev-foundation), where
+	 * nothing can be tapped.
 	 */
+	tapSlot?: SharedValue<TapSlot>;
+	/** Live tap-gesture state, used to disarm a stale slot. */
+	tapStatus?: SharedValue<TapStatus>;
 }
 
-export function ListingFace({ card, isTop, onExplore }: ListingFaceProps) {
-	/** Chip labels — the story line was removed 2026-08-13 (see header). */
-	const chips = (card.dims ?? []).slice(0, MAX_CHIPS);
-	/** Row 3: "355 Morgans Creek Ct · Kennesaw, GA 30144". */
-	const place = [card.address, card.locality, card.zip]
+export function ListingFace({
+	card,
+	isTop,
+	onExplore,
+	tapSlot,
+	tapStatus,
+}: ListingFaceProps) {
+	/** Tag labels — no icons. See `CHIP_LABEL` for the copy. */
+	const tags = (card.dims ?? []).slice(0, MAX_TAGS);
+	/** Row 2: "355 Morgans Creek Ct · Kennesaw, GA 30144". */
+	const place = [abbreviateAddress(card.address), card.locality, card.zip]
 		.filter(Boolean)
 		.join(" · ");
+
+	const saved = useSavedStore((s) => s.isSaved(card.id));
+	const toggleSaved = useSavedStore((s) => s.toggle);
+
+	/**
+	 * Touch-start handler shared by the two interactive targets. Writes the
+	 * target id into `tapSlot` so the pan's `onEnd` can recognise the release
+	 * as a tap on it; `tapStatus` still being live is the tap gesture telling
+	 * us this touch is still eligible (a swipe deactivates it).
+	 */
+	const arm = (target: string) => () => {
+		if (!tapSlot || !tapStatus) return;
+		if (!tapStatus.value.active) tapSlot.value = { target };
+	};
+
 	return (
 		<View style={styles.face}>
-			{/* Hero — 54%, full bleed */}
-			<View style={styles.hero}>
+			{/* Media — flex:1, eats every remaining point above the text block */}
+			<View style={styles.media}>
 				{card.videoUrl ? (
 					<CardVideo
 						url={card.videoUrl}
@@ -164,60 +164,59 @@ export function ListingFace({ card, isTop, onExplore }: ListingFaceProps) {
 				) : (
 					<CardPhoto url={card.heroUrl} />
 				)}
-				<View style={styles.pillSlot}>
-					<RedlinePill label="LISTING" />
+				<View style={styles.badgeSlot}>
+					<View style={styles.badge}>
+						<Text style={styles.badgeLabel}>LISTING</Text>
+					</View>
 				</View>
-				{/*
-				 * The hero carries exactly ONE overlay now: the LISTING pill.
-				 *
-				 * The heart went 2026-08-01 (owner: 「去掉右上角的爱心标志」). It had
-				 * always been inert on this face — the feed never passed `onSave` —
-				 * so removing it costs no working behaviour, and the top-right
-				 * corner of the video is now clean.
-				 *
-				 * The redline's third — a bottom-left "⊕ 18 Photos" counter — was
-				 * removed 2026-08-01. The owner's reason is immersion: the video
-				 * fills this box, and a chrome pill sitting on top of moving
-				 * footage announces "this is a UI element with N assets behind it"
-				 * at exactly the moment the card is trying to be a window into a
-				 * house. The count was also the weakest thing the pixel could say
-				 * — it is a number about the LISTING PAGE, not about the home.
-				 *
-				 * The information is not lost: Explore now opens on the full photo
-				 * gallery (including every photo the video's 8-14 clips skipped),
-				 * where the count is implicit in the strip and each photo carries
-				 * its caption. `photoCount` stays on the DTO for that screen.
-				 *
-				 * The match badge that once sat at top-right/60 was never a
-				 * redline element and is likewise gone.
-				 */}
+				{/* Save bookmark — top-right over the media (owner 2026-08-13). */}
+				<View style={styles.saveSlot}>
+					<Pressable
+						onTouchStart={arm(SAVE_TAP_TARGET)}
+						onTouchEnd={() => {
+							if (tapSlot && tapStatus && tapStatus.value.active) {
+								tapSlot.value = { target: null };
+							}
+						}}
+						accessibilityRole="button"
+						accessibilityLabel={saved ? "Saved" : "Save"}
+						hitSlop={12}
+						style={({ pressed }) => [
+							styles.saveDisc,
+							pressed && styles.savePressed,
+						]}
+					>
+						<RedlineIcon
+							name="bookmark"
+							size={17}
+							color={saved ? redline.accent : redline.ink2}
+						/>
+					</Pressable>
+				</View>
 			</View>
 
-			{/* Content panel — 46% */}
-			<View style={styles.panel}>
-				<Text style={styles.price}>{card.priceLabel}</Text>
-				{/* Row 2 — bed/bath/sqft, 15pt/600 */}
-				{!!card.bedBathSqft && (
-					<Text style={styles.specs} numberOfLines={1}>
-						{card.bedBathSqft}
+			{/* Text block — natural height, target ≤ 190pt */}
+			<View style={styles.block}>
+				<View style={styles.row1}>
+					<Text style={styles.price} numberOfLines={1}>
+						{card.priceLabel}
 					</Text>
-				)}
-				{/* Row 3 — address · city, state zip, 13pt muted, one line */}
+					{!!card.bedBathSqft && (
+						<Text style={styles.specs} numberOfLines={1}>
+							{card.bedBathSqft}
+						</Text>
+					)}
+				</View>
 				{!!place && (
-					<Text style={styles.place} numberOfLines={1}>
+					<Text style={styles.address} numberOfLines={1}>
 						{place}
 					</Text>
 				)}
-				{chips.length > 0 && (
-					<View style={styles.chips}>
-						{chips.map((dim) => (
-							<View key={dim} style={styles.chip}>
-								<RedlineIcon
-									name={DIM_ICON[dim]}
-									size={CHIP_ICON}
-									color={redline.accent}
-								/>
-								<Text style={styles.chipLabel} numberOfLines={1}>
+				{tags.length > 0 && (
+					<View style={styles.tags}>
+						{tags.map((dim) => (
+							<View key={dim} style={styles.tag}>
+								<Text style={styles.tagLabel} numberOfLines={1}>
 									{CHIP_LABEL[dim]}
 								</Text>
 							</View>
@@ -225,8 +224,25 @@ export function ListingFace({ card, isTop, onExplore }: ListingFaceProps) {
 					</View>
 				)}
 				{!!onExplore && (
-					<View style={styles.ctaSlot}>
-						<RedlineCta label="Explore Home →" onPress={onExplore} compact />
+					<View style={styles.ctaRow}>
+						<Pressable
+							onTouchStart={arm(EXPLORE_TAP_TARGET)}
+							onTouchEnd={() => {
+								if (tapSlot && tapStatus && tapStatus.value.active) {
+									tapSlot.value = { target: null };
+								}
+							}}
+							accessibilityRole="link"
+							accessibilityLabel="Explore home"
+							hitSlop={12}
+							style={({ pressed }) => [
+								styles.exploreLink,
+								pressed && styles.explorePressed,
+							]}
+						>
+							<Text style={styles.exploreLabel}>Explore home</Text>
+							<RedlineIcon name="arrowRight" size={13} color={redline.accent} />
+						</Pressable>
 					</View>
 				)}
 			</View>
@@ -235,18 +251,10 @@ export function ListingFace({ card, isTop, onExplore }: ListingFaceProps) {
 }
 
 /**
- * Chip copy. `DIMS[dim].label` is written for prose ("outdoor space", "top
- * schools") and reads wrong in Title Case inside a 27pt chip, which the redline
- * sets in Title Case ("Top Schools"). These are the same dims, capitalised for
- * the chip — not new claims about the listing.
- *
- * The redline's three sample chips are Top Schools / Private Backyard / Walkable
- * Park. The first two are printed as-is because a dim backs each exactly
- * (`outdoors` requires the copy to describe a private/fenced/level yard). The
- * third is NOT: no dim establishes that a park is the thing within walking
- * distance, so `walkable` stays "Walkable" and `trails` says "Trails Nearby",
- * which is what the greenway/walking-trail phrasing actually supports. Sample
- * copy is a layout reference, not a claim we may print verbatim.
+ * Tag copy. `DIMS[dim].label` is written for prose ("outdoor space", "top
+ * schools") and reads wrong in Title Case inside a 10.5pt pill, which the
+ * 2026-08-13 demo sets in Title Case ("Top Schools"). These are the same dims,
+ * capitalised for the pill — not new claims about the listing.
  */
 const CHIP_LABEL: Record<DimKey, string> = {
 	outdoors: "Private Backyard",
@@ -266,102 +274,97 @@ const styles = StyleSheet.create({
 	/** `--card` (#FFFDF9), not the old `scoreTokens.face`. */
 	face: { flex: 1, backgroundColor: redline.card },
 	/**
-	 * `flex` rather than a percentage height: the two children then split the
-	 * card 54/46 at any device height with no measurement, and the panel's
-	 * `flex: 1` absorbs the rounding so the CTA never gets pushed off the bottom
-	 * edge (the exact overflow that had to be fixed twice on the HTML board).
+	 * Media — `flex: 1` makes it absorb every point the text block does not
+	 * use; `minHeight: 0` lets flexbox give it zero rather than fighting the
+	 * block's natural height. No aspectRatio, no fixed height (owner
+	 * 2026-08-13: 「媒体吃掉所有剩余高度」).
 	 */
-	hero: {
-		flex: HERO_RATIO,
+	media: { flex: 1, minHeight: 0, overflow: "hidden" },
+	badgeSlot: { position: "absolute", top: 12, left: 12, zIndex: 2 },
+	/** Frosted LISTING badge — rgba(255,255,255,0.92), radius 20. */
+	badge: {
+		alignSelf: "flex-start",
+		backgroundColor: "rgba(255,255,255,0.92)",
+		borderRadius: redlineRadii.badge,
+		paddingVertical: 5,
+		paddingHorizontal: 11,
 		overflow: "hidden",
-		// The top corners inherit the card radius via the parent's clip; the
-		// bottom two must stay square where the panel meets the photo.
-		borderTopLeftRadius: radii.card - 1,
-		borderTopRightRadius: radii.card - 1,
 	},
-	pillSlot: { position: "absolute", ...geo.pillSlot, zIndex: 2 },
-	panel: geo.panel,
+	badgeLabel: { ...redlineText.listingCard.badge, color: redline.ink },
+	/** Save bookmark disc — top-right over the media (owner 2026-08-13). */
+	saveSlot: { position: "absolute", top: 12, right: 12, zIndex: 2 },
+	saveDisc: {
+		width: 38,
+		height: 38,
+		borderRadius: redlineRadii.badge,
+		backgroundColor: "rgba(255,255,255,0.92)",
+		alignItems: "center",
+		justifyContent: "center",
+	},
+	savePressed: { opacity: 0.7 },
 	/**
-	 * `marginTop: 'auto'` here is a SPACING fix, not decoration (owner
-	 * 2026-08-01: 「描述和几个特点之间的空白明显比其他空白大」).
-	 *
-	 * The panel is a proportional slice of the card (38.2%), so on most devices
-	 * it is a few points TALLER than its content needs. All of that slack used to
-	 * land in one place — `chips`'s `marginTop: 'auto'` was the only auto margin
-	 * in the column, so it collected 100% of it and the story→chips gap measured
-	 * ~37pt against 8pt everywhere else. The reference board's rhythm is the
-	 * opposite: the largest gap sits at the TOP of the panel and the steps get
-	 * smaller downward, with the two section breaks (story→chips, chips→CTA)
-	 * equal.
-	 *
-	 * Two auto margins split the free space equally (Yoga, like CSS flexbox), so
-	 * half the slack now goes above the price — where it reads as panel padding
-	 * under the photo — and half above the chips. Under pressure both resolve to
-	 * 0 and the story's `flexShrink` still yields the line, so the CTA cannot be
-	 * pushed off the card and the fit floor is unchanged.
+	 * Text block — natural height (no flex), the redesign's ≤190pt budget.
+	 * `geo` owns padding and row margins (see `theme/listing-layout.ts`).
 	 */
-	price: { ...redlineText.price, color: redline.ink, marginTop: "auto" },
-	/**
-	 * Row 3 — address · city, state zip. 13pt muted, one line. The old
-	 * `address` (14/600 ink) and `locality` (12/ink3) styles are folded into
-	 * this single muted row per the approved redesign; `geo.place` owns the
-	 * margins.
-	 */
-	place: { ...redlineText.locality, color: redline.ink2, ...geo.place },
-	/**
-	 * Row 2 — "3 bd · 2 ba · 1,800 sqft". 15pt/600 per the approved redesign
-	 * (up from 13/400). Short data, no prose leading.
-	 */
-	specs: {
-		fontFamily: fonts.ui,
-		fontSize: 15,
-		fontWeight: "600",
-		lineHeight: 18,
-		color: redline.ink,
-		...geo.specs,
+	block: geo.block,
+	/** Row 1 — price + specs on ONE baseline row (the space-saving key). */
+	row1: {
+		flexDirection: "row",
+		justifyContent: "space-between",
+		alignItems: "baseline",
+	},
+	/** The price is the card's anchor — the CTA must not out-weight it. */
+	price: { ...redlineText.listingCard.price, color: redline.ink },
+	/** "4 bd · 3 ba · 2,853 sqft" — 12.5/600, one line. */
+	specs: { ...redlineText.listingCard.specs, color: "#4A524E" },
+	/** Row 2 — "355 Morgans Creek Ct · Kennesaw, GA 30144", one muted line. */
+	address: {
+		...redlineText.listingCard.address,
+		color: "#8A918C",
+		...geo.address,
 	},
 	/**
-	 * `flexShrink: 1` is what protects the CTA. Two lines need 202pt of a panel
-	 * that is only 188pt on a 375×667 iPhone SE; letting THIS element yield a
-	 * line is what keeps the overflow from travelling down to the CTA through
-	 * `chips`'s `marginTop: auto`. Do not remove it to "fix" the story being
-	 * short on small phones — that trades a shorter blurb for a clipped button.
-	 *
-	 * Unused since 2026-08-13 (story render removed) but kept so re-enabling
-	 * the line stays a one-line change.
+	 * Tag pills — no icons, no ellipsis. `flexWrap: nowrap` + the drop-whole
+	 * logic in the component body: when three do not fit, the third is removed
+	 * rather than truncated.
 	 */
-	story: { ...redlineText.storyCompact, ...geo.story, flexShrink: 1 },
-	/**
-	 * `marginTop: auto` pins the chip row + CTA to the bottom of the panel, so a
-	 * listing with a short description does not leave the CTA floating in the
-	 * middle of the card.
-	 */
-	chips: {
-		marginTop: "auto",
+	tags: {
 		flexDirection: "row",
 		flexWrap: "nowrap",
-		...geo.chips,
+		gap: 6,
+		...geo.tags,
 	},
-	chip: {
-		...geo.chip,
-		// Shrinkable, deliberately: at 9.5px with 3 chips on a 270pt card the row
-		// is near capacity, and "Private Backyard" is the widest redline label.
-		// Letting the chip shrink keeps all three on ONE row (the redline's
-		// nowrap) instead of pushing the third out.
-		flexShrink: 1,
+	tag: {
+		height: TAG_PILL_HEIGHT,
+		paddingHorizontal: 9,
+		borderRadius: redlineRadii.tag,
+		backgroundColor: "#EFE9DE",
+		alignItems: "center",
+		justifyContent: "center",
+		flexShrink: 0,
+	},
+	tagLabel: { ...redlineText.listingCard.tag, color: "#3E4744" },
+	/**
+	 * Explore link row — right-aligned, bottom of the text block. The owner's
+	 * 2026-08-13 revision dropped the giant 46pt green pill for a quiet link
+	 * ("右下角的 explore link"). Tap-detected via `tapSlot`, not Pressable.
+	 */
+	ctaRow: {
+		flexDirection: "row",
+		justifyContent: "flex-end",
+		alignItems: "center",
+		...geo.ctaSlot,
+	},
+	exploreLink: {
 		flexDirection: "row",
 		alignItems: "center",
-		gap: 4,
-		paddingHorizontal: 7,
-		borderRadius: radii.pill,
-		backgroundColor: redline.surface,
+		gap: 5,
+		minHeight: 44, // §0.5 touch floor
+		paddingHorizontal: 4,
 	},
-	chipLabel: {
-		...redlineText.chip,
-		fontSize: 14,
-		fontWeight: "600",
-		color: redline.inkStory,
-		flexShrink: 1,
+	explorePressed: { opacity: 0.7 },
+	exploreLabel: {
+		...redlineText.listingCard.cta,
+		color: redline.accent,
 	},
-	ctaSlot: geo.ctaSlot,
 });

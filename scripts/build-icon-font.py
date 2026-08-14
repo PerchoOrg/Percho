@@ -59,6 +59,10 @@ GLYPHS = {
     "dog": "dog-fill",                    # "Dog Friendly" (35.8% of communities)
     "handshake": "handshake-fill",        # "Friendly" / "Welcoming" / "Neighbors"
     "shieldCheck": "shield-check-fill",   # "Safe" (41.4%)
+    # Added 2026-08-13 for the listing card's save heart (top-right, FILLED
+    # when saved) and the right-bottom "Explore home →" link row.
+    "bookmark": "bookmark-fill",          # saved state (filled bookmark)
+    "arrowRight": "arrow-right-fill",     # explore link affordance
 }
 
 

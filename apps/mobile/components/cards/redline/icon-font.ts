@@ -63,7 +63,11 @@ export type RedlineIconName =
 	// original 14 glyphs could cover without two claims wearing the same art.
 	| "dog"
 	| "handshake"
-	| "shieldCheck";
+	| "shieldCheck"
+	// 2026-08-13 listing-card chrome: saved bookmark (filled when saved) and
+	// the explore link's arrow.
+	| "bookmark"
+	| "arrowRight";
 
 /** The family name registered with `expo-font`. */
 export const ICON_FONT = "PerchoIcons";
@@ -93,6 +97,8 @@ export const ICON_GLYPH: Record<RedlineIconName, string> = {
 	dog: "\ue74a", // dog-fill              — "Dog Friendly"
 	handshake: "\ue582", // handshake-fill  — "Friendly" / "Welcoming" / "Neighbors"
 	shieldCheck: "\ue40c", // shield-check-fill — "Safe"
+	bookmark: "\ue0e8", // bookmark-fill      — saved listing (filled bookmark)
+	arrowRight: "\ue06c", // arrow-right-fill — explore link affordance
 };
 
 /**

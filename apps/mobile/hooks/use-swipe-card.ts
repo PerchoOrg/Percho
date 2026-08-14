@@ -48,6 +48,12 @@ import {
 	stepThresholdLatch,
 } from "../lib/gesture/decide-swipe";
 import { advanceFromDrag } from "../lib/gesture/stack-layer";
+import {
+	TAP_MAX_DX,
+	type TapSlot,
+	type TapStatus,
+	isTapEnd,
+} from "../lib/gesture/tap-slot";
 import { haptics } from "../lib/haptics";
 
 const FOLLOW_ROTATION_DEG = 8; // §0.5
@@ -88,11 +94,26 @@ interface UseSwipeCardArgs {
 	capability: CardCapability;
 	/** Called on the JS thread after the card has flown out and settled. */
 	onDecision: (decision: Exclude<SwipeDecision, "none">) => void;
+	/**
+	 * Called when a release is a TAP on an interactive card target (the save
+	 * heart / the explore link). `target` is the tap target's id; the card
+	 * faces write it into `tapSlot` on their own touches. The feed wires this
+	 * to the routing/emitting callbacks — see `lib/gesture/tap-slot.ts` for
+	 * why a tap inside the pan gesture has to be detected here rather than by
+	 * a nested `Pressable`.
+	 */
+	onTapTarget?: (target: string) => void;
 }
 
 interface UseSwipeCardResult {
-	/** The pan. The card has no second face, so there is no tap to compose with. */
-	gesture: ReturnType<typeof Gesture.Pan>;
+	/**
+	 * The composed gesture — `Gesture.Exclusive(pan, tap)`. The tap half gives
+	 * interactive children (the save heart, the explore link) their own
+	 * activation inside the pan area; it only ever activates on a stationary
+	 * touch, so a swipe always wins the exclusive and nothing that drags the
+	 * card can fire a tap.
+	 */
+	gesture: ReturnType<typeof Gesture.Exclusive>;
 	/** Horizontal drag offset — cards behind read this to rise toward the top. */
 	tx: SharedValue<number>;
 	/**
@@ -108,18 +129,37 @@ interface UseSwipeCardResult {
 	exitX: SharedValue<number>;
 	/** Stack-shuffle progress in [0,1], continuous across the handoff. */
 	advance: SharedValue<number>;
+	/**
+	 * The tap gesture's target slot. The card faces write `{ target }` into it
+	 * on their own touch start (the heart / explore link) and clear it on
+	 * release; the pan's `onEnd` reads it to decide whether the release was a
+	 * tap on that target. Faces are the only writers; the worklets are the only
+	 * readers.
+	 */
+	tapSlot: SharedValue<TapSlot>;
+	/** The tap gesture's live state, set on `onTouchesDown` / cleared on activate. */
+	tapStatus: SharedValue<TapStatus>;
 }
 
 export function useSwipeCard({
 	cardWidth,
 	capability,
 	onDecision,
+	onTapTarget,
 }: UseSwipeCardArgs): UseSwipeCardResult {
 	const tx = useSharedValue(0);
 	const crossedRight = useSharedValue(false);
 	const topAbs = useSharedValue(0);
 	const exitX = useSharedValue(0);
 	const advance = useSharedValue(0);
+	/**
+	 * The tap gesture's two slots. `tapSlot.target` is written by the card
+	 * faces (on their own touch start) and read by the pan's `onEnd`; the
+	 * exclusive tap gesture itself only ever ACTIVATES on a stationary touch,
+	 * so the pan and the tap can never both be active for one release.
+	 */
+	const tapSlot = useSharedValue<TapSlot>({ target: null });
+	const tapStatus = useSharedValue<TapStatus>({ active: false });
 	/**
 	 * `onDecision`, read through a ref so it is NOT a gesture-memo input.
 	 *
@@ -136,8 +176,8 @@ export function useSwipeCard({
 	 * A ref keeps the latest callback reachable without making its identity a
 	 * reason to rebuild.
 	 */
-	const handlers = useRef({ onDecision });
-	handlers.current = { onDecision };
+	const handlers = useRef({ onDecision, onTapTarget });
+	handlers.current = { onDecision, onTapTarget };
 	/**
 	 * True from the instant a direction commits until the handoff completes.
 	 *
@@ -236,6 +276,29 @@ export function useSwipeCard({
 					cardWidth,
 					maxDisplacementRatio,
 				);
+
+				/**
+				 * Tap-target dispatch. A stationary release (≤6pt, no flick) whose
+				 * touch began on an interactive card target is a TAP — the explore
+				 * link or the save heart — and it goes to `onTapTarget`, NOT through
+				 * the swipe machinery. The pan only runs `onEnd` when the pan
+				 * actually activated; the exclusive tap only writes `tapSlot` when
+				 * IT activated, and the two cannot both activate for one touch, so
+				 * a swipe release can never be mistaken for a tap.
+				 */
+				const tap = isTapEnd(
+					tapSlot.value,
+					tapStatus.value,
+					e.translationX,
+					e.velocityX,
+				);
+				if (tap.tapped && tap.target) {
+					const cb = handlers.current.onTapTarget;
+					if (cb) runOnJS(cb)(tap.target);
+					// Clear the slot so a stale target cannot fire twice.
+					tapSlot.value = { target: null };
+					return;
+				}
 				// `commits: false` (§1.5 milestone) turns every verdict into a spring
 				// back. Resolved here, before anything fires, so a ceremony card can
 				// never reach `onDecision` at all.
@@ -284,13 +347,41 @@ export function useSwipeCard({
 		advance,
 		crossedRight,
 		committed,
+		tapSlot,
+		tapStatus,
 	]);
 
+	const tapGesture = useMemo(() => {
+		return (
+			Gesture.Tap()
+				.enabled(pannable)
+				// RNGH's tap needs a small radius to call itself a tap; anything
+				// beyond it fails and hands the touch back to the pan (exclusive).
+				.maxDistance(TAP_MAX_DX)
+				.onTouchesDown((_e, _mgr) => {
+					tapStatus.value = { active: true };
+					// Only run the face's touch-start handlers (which write the
+					// target into `tapSlot`) on a fresh touch, not on later moves.
+					const cb = handlers.current.onTapTarget;
+					if (cb) runOnJS(cb)("__touchdown__");
+				})
+				.onStart(() => {
+					tapStatus.value = { active: false };
+					tapSlot.value = { target: null };
+				})
+				.onEnd(() => {
+					tapStatus.value = { active: false };
+				})
+		);
+	}, [pannable, tapStatus, tapSlot]);
+
 	return {
-		gesture,
+		gesture: Gesture.Exclusive(gesture, tapGesture),
 		tx,
 		topAbs,
 		exitX,
 		advance,
+		tapSlot,
+		tapStatus,
 	};
 }

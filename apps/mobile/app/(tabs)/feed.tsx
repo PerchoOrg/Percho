@@ -33,7 +33,11 @@ import { AskFace } from "../../components/cards/AskFace";
 import { ChallengeFace } from "../../components/cards/ChallengeFace";
 import { CommunityFace } from "../../components/cards/CommunityFace";
 import { InsightFace } from "../../components/cards/InsightFace";
-import { ListingFace } from "../../components/cards/ListingFace";
+import {
+	EXPLORE_TAP_TARGET,
+	ListingFace,
+	SAVE_TAP_TARGET,
+} from "../../components/cards/ListingFace";
 import { MilestoneFace } from "../../components/cards/MilestoneFace";
 import { SwipeLabels } from "../../components/cards/SwipeLabels";
 import { TradeoffFace } from "../../components/cards/TradeoffFace";
@@ -41,15 +45,17 @@ import { CardSkeleton } from "../../components/feed/CardSkeleton";
 import { ExhaustedCard } from "../../components/feed/ExhaustedCard";
 import { OfflineBar } from "../../components/feed/OfflineBar";
 
+import {
+	type SharedValue,
+	runOnUI,
+	withSequence,
+	withTiming,
+} from "react-native-reanimated";
 import { useFeedPool } from "../../hooks/use-feed-pool";
 import { cardBehavior } from "../../lib/feed/behavior";
 import type { ChallengeCardV3, FeedCardV3 } from "../../lib/feed/card-types";
 import { deckKey } from "../../lib/feed/deck-key";
-import {
-	buildSamplerDeck,
-	samplerEnabled,
-	samplerLabel,
-} from "../../lib/feed/dev-sampler";
+import { buildSamplerDeck, samplerEnabled } from "../../lib/feed/dev-sampler";
 import {
 	buildGestureEvent,
 	buildSkipLayerEvent,
@@ -63,6 +69,8 @@ import { evaluateStageAdvance } from "../../lib/feed/stage-advance";
 import { useEventQueue } from "../../state/event-queue";
 import { useFeedSession } from "../../state/feed-session";
 import { useFunnelStore } from "../../state/funnel";
+import { useSavedStore } from "../../state/saved";
+import { MAX_HINT_SESSIONS, useSwipeHintStore } from "../../state/swipe-hint";
 import { colors } from "../../theme/tokens";
 import { textStyles } from "../../theme/typography";
 
@@ -70,6 +78,19 @@ const GUTTER = 16;
 /** Card is portrait; capped against viewport height on small devices. */
 const CARD_ASPECT = 1.5;
 const CARD_MAX_VIEWPORT = 0.74;
+
+/**
+ * CardContainer insets (2026-08-13 redesign). The card now fills ALL of the
+ * feed's available height (`flex: 1` inside the stack), so this padding is the
+ * card's only margin — the old centered box with ~50pt of dead space top and
+ * bottom is gone.
+ *
+ * 2026-08-13 owner revision: the media should read as an embedded WHITE card,
+ * so the container's horizontal padding grows to 16 (was 12) — the paper
+ * background shows around the card and the media box (which has its own
+ * margin from the white text block) reads inset.
+ */
+const CARD_INSET = { horizontal: 16, top: 8, bottom: 10 };
 
 export default function FeedScreen() {
 	const { width, height } = useWindowDimensions();
@@ -90,6 +111,16 @@ export default function FeedScreen() {
 	const enqueue = useEventQueue((s) => s.enqueue);
 	const takeSeq = useEventQueue((s) => s.takeSeq);
 	const drain = useEventQueue((s) => s.drain);
+
+	// Saved state — the card heart toggles it; nothing else reads it yet
+	// (the Saved tab is still the task-5 placeholder).
+	const toggleSaved = useSavedStore((s) => s.toggle);
+	// Swipe-hint state — the motion hint's never-nag contract.
+	const hintDiscovered = useSwipeHintStore((s) => s.hasDiscoveredSwipe);
+	const hintSessions = useSwipeHintStore((s) => s.hintSessionsShown);
+	const hintHydrated = useSwipeHintStore((s) => s.hydrated);
+	const recordSwipeHint = useSwipeHintStore((s) => s.recordSwipe);
+	const recordHintShown = useSwipeHintStore((s) => s.recordHintShown);
 
 	// BOTH stores must be read back before a deck is built, or the first render
 	// composes a stage-0 deck for a returning stage-3 buyer (§1.7).
@@ -284,8 +315,9 @@ export default function FeedScreen() {
 			);
 
 			const next = recordSwipe(card, decision, at);
+			// A real swipe IS the discovery — the hint never plays again.
+			recordSwipeHint();
 			setActiveIndex(index + 1);
-
 			const target = evaluateStageAdvance(stage, next, {
 				units: pool.geoUnits,
 			});
@@ -329,6 +361,7 @@ export default function FeedScreen() {
 			stage,
 			sessionN,
 			recordSwipe,
+			recordSwipeHint,
 			pool.geoUnits,
 			promoteTo,
 			resetStageCounter,
@@ -337,10 +370,6 @@ export default function FeedScreen() {
 	);
 
 	const cardWidth = width - GUTTER * 2;
-	const cardHeight = Math.min(
-		cardWidth * CARD_ASPECT,
-		height * CARD_MAX_VIEWPORT,
-	);
 
 	const capability = useCallback(
 		(card: FeedCardV3) => cardBehavior(card).capability,
@@ -364,8 +393,8 @@ export default function FeedScreen() {
 	);
 
 	const renderCard = useCallback(
-		(card: FeedCardV3, { role, tx, cardWidth: w }: CardRenderArgs) => {
-			const isTop = role === "top";
+		(card: FeedCardV3, args: CardRenderArgs) => {
+			const isTop = args.role === "top";
 			switch (card.kind) {
 				case "ask":
 					return (
@@ -393,11 +422,14 @@ export default function FeedScreen() {
 						<ListingFace
 							card={card}
 							isTop={isTop}
+							tapSlot={args.tapSlot}
+							tapStatus={args.tapStatus}
 							/*
-							 * The redline puts a full-width "Explore Home →" at the bottom of
-							 * the content panel — since 2026-07-30 the ONLY way into the
-							 * listing detail page, because the data face that used to carry
-							 * it (and its per-row `?focus=` deep links) went with the flip.
+							 * The owner's 2026-08-13 revision dropped the giant green
+							 * CTA pill for a quiet right-bottom link. The link fires
+							 * through the stack's exclusive-tap gesture
+							 * (`onTapTarget` → EXPLORE_TAP_TARGET); the `onExplore`
+							 * prop stays for callers outside the stack.
 							 */
 							onExplore={() => {
 								emitGesture("explore_tap", card);
@@ -434,7 +466,9 @@ export default function FeedScreen() {
 						/>
 					);
 				case "tradeoff":
-					return <TradeoffFace card={card} tx={tx} cardWidth={w} />;
+					return (
+						<TradeoffFace card={card} tx={args.tx} cardWidth={args.cardWidth} />
+					);
 				case "challenge":
 					return (
 						<ChallengeFace
@@ -508,6 +542,76 @@ export default function FeedScreen() {
 		[],
 	);
 
+	/**
+	 * The swipe-hint (owner spec, 2026-08-13): once the first card has
+	 * settled (~500-800ms), nudge the stack left 16pt and back so the buyer
+	 * sees the next card peek — the proof the cards swipe. Never nags:
+	 * a real swipe (recordSwipe in `onDecision`) disables it forever; without
+	 * a swipe it plays at most MAX_HINT_SESSIONS app opens.
+	 */
+	const hintRef = useRef<{
+		tx: SharedValue<number>;
+		advance: SharedValue<number>;
+	} | null>(null);
+	const hintRunOnce = useRef(false);
+	const onHintReady = useCallback(
+		(hint: { tx: SharedValue<number>; advance: SharedValue<number> }) => {
+			hintRef.current = hint;
+		},
+		[],
+	);
+	useEffect(() => {
+		if (!hintHydrated || hintDiscovered || hintRunOnce.current) return;
+		if (deck.length === 0 || activeIndex !== 0) return;
+		if (hintSessions >= MAX_HINT_SESSIONS) return;
+		hintRunOnce.current = true;
+		const ok = recordHintShown();
+		if (!ok) return;
+		const t = setTimeout(() => {
+			const hint = hintRef.current;
+			if (!hint) return;
+			runOnUI(() => {
+				"worklet";
+				hint.tx.value = withSequence(
+					withTiming(-16, { duration: 240 }),
+					withTiming(0, { duration: 240 }),
+				);
+				hint.advance.value = withSequence(
+					withTiming(0.035, { duration: 240 }),
+					withTiming(0, { duration: 240 }),
+				);
+			})();
+		}, 600);
+		return () => clearTimeout(t);
+	}, [
+		hintHydrated,
+		hintDiscovered,
+		hintSessions,
+		recordHintShown,
+		deck.length,
+		activeIndex,
+	]);
+
+	const onTapTarget = useCallback(
+		(target: string) => {
+			if (target === SAVE_TAP_TARGET) {
+				const top = deckRef.current[activeIndex];
+				if (top && top.kind === "listing") {
+					toggleSaved(top.id);
+				}
+				return;
+			}
+			if (target === EXPLORE_TAP_TARGET) {
+				const top = deckRef.current[activeIndex];
+				if (top && top.kind === "listing") {
+					emitGesture("explore_tap", top);
+					router.push(`/listing/${top.id}`);
+				}
+			}
+		},
+		[activeIndex, toggleSaved, emitGesture],
+	);
+
 	const atEnd = activeIndex >= deck.length;
 	// §1.9's terminal card is for a genuinely dry pool, not for a momentary gap:
 	// the engine reports exhaustion when every slot had to reuse seen content, and
@@ -527,18 +631,13 @@ export default function FeedScreen() {
 			<View style={styles.chromeRow}>
 				<SoundToggle />
 			</View>
-			{samplerEnabled() && (
-				<View style={styles.samplerBar}>
-					<Text style={styles.samplerLabel}>{samplerLabel(deck)}</Text>
-				</View>
-			)}
 			<View style={styles.stackWrap}>
 				{deck.length === 0 && loading ? (
-					<View style={{ width: cardWidth, height: cardHeight }}>
+					<View style={styles.cardContainer}>
 						<CardSkeleton />
 					</View>
 				) : showExhausted ? (
-					<View style={{ width: cardWidth, height: cardHeight }}>
+					<View style={styles.cardContainer}>
 						<ExhaustedCard onAdjustScope={retry} />
 					</View>
 				) : (
@@ -546,11 +645,12 @@ export default function FeedScreen() {
 						items={deck}
 						activeIndex={activeIndex}
 						onDecision={onDecision}
+						onTapTarget={onTapTarget}
+						onHintReady={onHintReady}
 						renderCard={renderCard}
 						renderOverlay={renderOverlay}
 						keyExtractor={deckKey}
 						cardWidth={cardWidth}
-						cardHeight={cardHeight}
 						capability={capability}
 					/>
 				)}
@@ -561,7 +661,24 @@ export default function FeedScreen() {
 
 const styles = StyleSheet.create({
 	screen: { flex: 1, backgroundColor: colors.bg },
-	stackWrap: { flex: 1, alignItems: "center", justifyContent: "center" },
+	/**
+	 * CardContainer (2026-08-13 redesign) — the card's only margin, now that
+	 * the card fills the available height. `flex: 1` + centering keeps the
+	 * stack vertically centred and the card stretching edge to edge.
+	 */
+	stackWrap: {
+		flex: 1,
+		alignItems: "center",
+		justifyContent: "center",
+		paddingHorizontal: CARD_INSET.horizontal,
+		paddingTop: CARD_INSET.top,
+		paddingBottom: CARD_INSET.bottom,
+	},
+	/**
+	 * Placeholder frame for skeleton / exhausted states — fills the same box
+	 * the real card would (flex:1 within the padded container).
+	 */
+	cardContainer: { flex: 1, alignSelf: "stretch" },
 	/** Status-bar row holding the mute toggle, right-aligned (§0.6 #1). */
 	chromeRow: {
 		flexDirection: "row",
@@ -570,13 +687,6 @@ const styles = StyleSheet.create({
 		paddingTop: 4,
 		zIndex: 100,
 	},
-	/** DEV sampler banner — deliberately loud so it can't be mistaken for prod. */
-	samplerBar: {
-		paddingVertical: 4,
-		paddingHorizontal: 12,
-		backgroundColor: colors.accent,
-	},
-	samplerLabel: { ...textStyles.caption, color: colors.bg },
 	sheet: { paddingHorizontal: 20, paddingTop: 8, gap: 8 },
 	sheetEyebrow: { ...textStyles.caption, color: colors.accent },
 	sheetTitle: { ...textStyles.title2, color: colors.ink },
