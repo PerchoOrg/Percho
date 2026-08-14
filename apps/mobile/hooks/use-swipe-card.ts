@@ -23,7 +23,7 @@
  * What a given card is ALLOWED to do arrives as a resolved `CardCapability`
  * (§1.3), so no handler in here ever branches on a card kind.
  */
-import { useCallback, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import type { ViewStyle } from "react-native";
 import { Gesture } from "react-native-gesture-handler";
 import {
@@ -194,6 +194,15 @@ export function useSwipeCard({
 	// Mirror into the module-level slot so `dispatchTapTarget` (which runs on
 	// the JS thread via runOnJS) can reach it without a ref deref in a worklet.
 	lastTapTarget = onTapTarget ?? null;
+	// Clear on unmount so a late runOnJS hop can never call a dead callback.
+	// The cleanup closure compares identity to avoid clobbering a newer mount.
+	useEffect(() => {
+		const installed = onTapTarget ?? null;
+		return () => {
+			if (lastTapTarget === installed) lastTapTarget = null;
+		};
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, []);
 	/**
 	 * True from the instant a direction commits until the handoff completes.
 	 *
@@ -389,12 +398,16 @@ export function useSwipeCard({
 					// onEnd will never run. Keep `tapSlot` armed: the tap's
 					// own `onEnd` (below) dispatches it.
 				})
-				.onEnd(() => {
+				.onEnd((_e, success) => {
 					tapStatus.value = { active: false };
-					// A tap that ACTIVATED is a stationary release — dispatch
-					// the armed target. `dispatchTapTarget` runs on the JS
-					// thread and reads the module-level `lastTapTarget`, so no
-					// ref deref happens in this worklet.
+					// ONLY dispatch when the tap actually ENDED successfully
+					// (the finger stayed still). In `Gesture.Exclusive(pan,
+					// tap)`, when the pan wins a swipe, the tap FAILS — and
+					// RNGH still fires `onEnd` with `success: false`. Without
+					// this guard, a swipe that started on the heart would
+					// dispatch the stale armed target and fire the save/explore
+					// action on a card the user was swiping away.
+					if (!success) return;
 					if (tapSlot.value.target) {
 						runOnJS(dispatchTapTarget)(tapSlot.value.target);
 						tapSlot.value = { target: null };
