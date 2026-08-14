@@ -23,6 +23,7 @@ import { createAnonClient } from '@/lib/supabase/server';
 import type { DimKey } from '@percho/shared';
 import { communityHighlightDims } from './community-highlights';
 import { type CommunityReason, communityReasons } from './community-reasons';
+import { communityLifestyleSignals } from './community-signals';
 
 export interface PoolCommunityDTO {
   id: string;
@@ -49,6 +50,13 @@ export interface PoolCommunityDTO {
    * tell "no reasons" from "reasons not sent".
    */
   reasons?: CommunityReason[];
+  /**
+   * The chip row's 2-3 distinctive lifestyle signals, computed per community
+   * by `community-signals.ts` (owner, 2026-08-15: no generic category words —
+   * "Mature trees" / "3 parks nearby" / "Quiet streets", not Restaurants /
+   * Walkability / Trees). Omitted when the community yields no usable signal.
+   */
+  signals?: string[];
   /**
    * 9:16 hero video, attached by the route from `generated_videos` (see
    * `lib/feed/vertical-videos.ts`). Absent for most communities: only 4 have a
@@ -245,6 +253,9 @@ export function projectCommunityPool(
         interests: r.interests,
       },
     });
+    // The chip row's 2-3 lifestyle signals — distinct per community, and a
+    // count ("33 restaurants") only when this community actually has one.
+    const signals = communityLifestyleSignals(reasons);
     out.push({
       id: r.id,
       slug: r.slug,
@@ -252,11 +263,11 @@ export function projectCommunityPool(
       city: r.city ?? '',
       state: r.state ?? '',
       heroUrl: publicCoverImageUrl(r.cover_storage_path),
-      ...(r.description ? { blurb: r.description } : {}),
       // Omitted rather than `[]` when there is no usable signal: the card must
       // render no tiles at all instead of three empty glass boxes.
       ...(dims.length > 0 ? { dims } : {}),
       ...(reasons.length > 0 ? { reasons } : {}),
+      ...(signals.length > 0 ? { signals } : {}),
     });
   }
   return out;

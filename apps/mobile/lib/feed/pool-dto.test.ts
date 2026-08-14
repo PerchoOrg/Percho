@@ -183,20 +183,21 @@ describe("parseCommunity", () => {
 		expect(parseCommunity(COMMUNITY)?.pills).toBeUndefined();
 	});
 
-	it("keeps the authored blurb — the redline's subtitle slot", () => {
-		// The API has always sent this (communities.description); the card type
-		// never declared it, so the subtitle fell back to "City, ST".
+	it("keeps the lifestyle signal pills — the chip row's content", () => {
+		// Owner, 2026-08-15: the card's pills are the server's per-community
+		// signals ("Mature trees", "3 parks nearby"), never generic category
+		// words. The old `blurb` field is gone with the description row.
 		const c = parseCommunity({
 			...COMMUNITY,
-			blurb: "A peaceful, tree-lined neighborhood.",
+			signals: ["Mature trees", "3 parks nearby"],
 		});
-		expect(c?.blurb).toBe("A peaceful, tree-lined neighborhood.");
+		expect(c?.signals).toEqual(["Mature trees", "3 parks nearby"]);
 	});
 
-	it("omits a blank or non-string blurb so the card falls back to City, ST", () => {
-		expect(parseCommunity({ ...COMMUNITY, blurb: "" })?.blurb).toBeUndefined();
-		expect(parseCommunity({ ...COMMUNITY, blurb: 7 })?.blurb).toBeUndefined();
-		expect(parseCommunity(COMMUNITY)?.blurb).toBeUndefined();
+	it("omits an empty signal list so the card falls back to reasons/dims", () => {
+		expect(parseCommunity({ ...COMMUNITY, signals: [] })?.signals).toBeUndefined();
+		expect(parseCommunity({ ...COMMUNITY, signals: 7 })?.signals).toBeUndefined();
+		expect(parseCommunity(COMMUNITY)?.signals).toBeUndefined();
 	});
 
 	describe("reason tiles (layout E)", () => {

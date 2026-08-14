@@ -182,10 +182,12 @@ export interface CommunityCardV3 {
 	 */
 	reasons?: readonly CommunityReasonV3[];
 	/**
-	 * The community's authored prose (`communities.description`), which the feed
-	 * DTO has always sent as `blurb`.
+	 * The chip row's 2-3 distinctive lifestyle signals, computed per community
+	 * by the server (`apps/web/lib/feed/community-signals.ts`): "Mature
+	 * trees", "3 parks nearby", "Quiet streets". Never generic category words
+	 * (Restaurants / Walkability / Trees).
 	 */
-	blurb?: string;
+	signals?: readonly string[];
 }
 
 // ─── Trade-off (§1.6) ───────────────────────────────────────────────

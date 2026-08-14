@@ -265,7 +265,10 @@ export function parseCommunity(v: unknown): CommunityCardV3 | null {
 	const pills = strings(raw.pills);
 	const d = dims(raw.dims);
 	const r = reasons(raw.reasons);
-	const blurb = str(raw.blurb);
+	// Distinctive lifestyle signals — the chip row's primary content
+	// (2026-08-15). No validation beyond non-empty strings: the server owns the
+	// vocabulary, and a stale build must not drop pills for the whole pool.
+	const signals = strings(raw.signals);
 	return {
 		kind: "community",
 		id,
@@ -281,7 +284,7 @@ export function parseCommunity(v: unknown): CommunityCardV3 | null {
 		...(pills.length > 0 ? { pills } : {}),
 		...(d.length > 0 ? { dims: d } : {}),
 		...(r.length > 0 ? { reasons: r } : {}),
-		...(blurb ? { blurb } : {}),
+		...(signals.length > 0 ? { signals } : {}),
 	};
 }
 

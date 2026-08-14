@@ -1,481 +1,412 @@
+import type { DimKey } from "@percho/shared";
 /**
- * CommunityFace (§1.4) — the community (subdivision) front face, REBUILT to the
- * owner's "Percho Swipe Cards" redline (2026-07-30, 「全按redline覆盖」).
+ * CommunityFace (§1.4) — the community (subdivision) front face.
  *
- * ── What changed ─────────────────────────────────────────────────────────────
+ * ── 2026-08-14 rebuild: same design system as the listing card ───────────────
  *
- * Previously this face reused `CardFoot` (the shared dark gradient foot with
- * price / address / specs / pills). The redline gives the community card its own
- * composition, so `CardFoot` is no longer used HERE — it is still the foot for
- * other faces and is not deleted.
+ * The owner's ask is parity: the community card and the listing card must be
+ * the same width, the same total height, and — the part that kept slipping —
+ * carry the SAME VIDEO HEIGHT. The old face split the card 61.8/38.2 with
+ * `HERO_RATIO` and then capped the panel at 190pt, which meant the media got
+ * "whatever 61.8% happens to be" while the listing card's media got "every
+ * point the text block does not use". Those are not the same number on any
+ * device.
  *
- * The redline's structure, verbatim:
+ * So this face now has `ListingFace`'s layout, not an approximation of it:
  *
- *   image        occupies the FULL card (not a 54% hero — this is the one
- *                image-led card of the four)
- *   scrim        180deg, transparent 32% → rgba(7,12,9,.18) 48% → .88 100%
- *   name         serif 38, white, line-height 1
- *   tagline      14 / 1.45, white 86%, margin-top 8
- *   three tiles  84pt tall, radius 18, rgba(255,255,255,.13), 1px .15 border,
- *                a centred 17pt line icon over a 10px label
- *   CTA          full-width 47pt WHITE pill with green text,
- *                "Why people love it →"
+ *   media   `flex: 1, minHeight: 0` + `mediaGeo` (12 top / 16 sides / r14)
+ *   block   natural height, `geo.block` padding, target ≤ 190pt
+ *
+ * Both faces import the same `theme/listing-layout` data, so the media boxes
+ * cannot drift. `HERO_RATIO` is no longer used here (it stays in
+ * `theme/listing-geometry.ts` — other tests still assert it).
+ *
+ * ── The block's rows, mirroring the listing card ─────────────────────────────
+ *
+ *   1. name + "City, ST" on ONE baseline row      (listing: price + specs)
+ *   2. up to 2-3 distinctive lifestyle signal pills (listing: the dim pills)
+ *      hairline divider
+ *   3. "Why people love it →", right-aligned link  (listing: "Explore home →")
+ *
+ * 2026-08-15 (owner): the authored blurb/description row is GONE — the card
+ * shows no paragraph, and the text block is that much tighter. What replaced
+ * it is the pill row's new content: not generic category words
+ * (Restaurants / Walkability / Trees) but 2-3 distinctive lifestyle signals
+ * ("Mature trees", "3 parks nearby", "Quiet streets") computed per community
+ * by `apps/web/lib/feed/community-signals.ts` and sent over the wire as
+ * `signals`. A community with no usable signal renders NO pill row — fewer
+ * chips is the correct answer, never a placeholder.
+ *
+ * The old composition — 38pt white name over the video, a scrim carrying it,
+ * and three 52pt glass tiles with a glyph and a statistic — is gone. The owner
+ * asked for the listing card's compact chips in its place (「不要大的 glass
+ * tile」), so the statistic sub-line has no home on this card any more: a chip
+ * is one line of 10.5pt type. The facts are not lost — `app/community/[slug]`
+ * renders every reason with its evidence, and that screen is where the CTA
+ * goes.
  *
  * ── Data, not sample copy ────────────────────────────────────────────────────
  *
- * The redline's mock card is Roswell / "Where quiet mornings meet vibrant
- * weekends." / Family Friendly · Walkable · Great Schools. This face renders the
- * real card instead: `card.name` for the place, `card.blurb` for the subtitle,
- * and the community's own `dims` (falling back to its authored `pills`) mapped to
- * the three tiles.
+ * Three sources for the chip row, in descending confidence, exactly one of
+ * which renders:
  *
- * The subtitle used to print "City, ST" on a note here claiming
- * `CommunityCardV3` had no tagline field. It did not — but the API response
- * always carried one: `PoolCommunityDTO.blurb` (from `communities.description`,
- * authored prose, present on 12/12 live communities). The mobile card type simply
- * never declared it, so nothing parsed it. Clamped to the redline's two lines;
- * "City, ST" remains the fallback for a community with no prose, which is a real
- * fact rather than an invented lifestyle sentence.
+ *   1. `reasons` — what residents said, verbatim (88.6% of communities)
+ *   2. `dims`    — Percho's category labels, for the 9.4% with no reason
+ *   3. `pills`   — authored strings
  *
- * ── Video fills the card face (owner: 「视频宽度不够 没有占满card 有黑色空隙」) ──
- *
- * `CardVideo` now receives `frameAspect` (the card's real width/height) and
- * derives its fit from the video's MEASURED track size: a source narrower than
- * the card fills it, a source wider than the card still letterboxes rather than
- * cropping its width (the owner's older standing rule). The community cover is
- * 1080×1920 in a 2:3 card — narrower — so it fills. See `lib/media/fit.ts`.
- *
- * ── 2026-08-02: the tiles now carry resident REASONS (layout E) ──────────────
- *
- * Owner reviewed four full-bleed variants at `demo.percho.co/community-card` and
- * picked 「A的布局 + B的信息量」 — A's composition, B's information. The
- * composition below is therefore unchanged: name → blurb → ONE row of glass
- * tiles → white CTA. What changed is what a tile SAYS.
- *
- *   before   `dims` → TILE_LABEL → "Cultural Scene" · "Outdoor Space" · "Walkable"
- *   after    `reasons` → "Convenient" · "Dog Friendly" · "Safe", each with an
- *            optional factual sub-line ("35% owner-occupied")
- *
- * A dim label is Percho's name for a category, one abstraction away from anybody.
- * A reason is the word residents themselves left on Nextdoor, rendered verbatim —
- * which is what makes the card's own CTA ("Why people love it →") a promise the
- * tiles above it actually keep. Server side: `lib/feed/community-reasons.ts`.
- *
- * `dims` is NOT deleted. It is the fallback for the 9.4% of communities whose
- * attributes yield no reason, and `pills` remains the fallback after that. Three
- * sources, one row, in confidence order.
- *
- * The tile grew 84 → 96pt to seat a third text line. Nothing else moved; the
- * scrim, the name, the CTA and the 18pt padding are the redline's.
+ * Mixing them would put two registers of claim in one row with no way to tell
+ * which words are the neighbours' and which are ours. A community with none of
+ * the three renders NO chip row — fewer chips is the correct answer, never a
+ * placeholder.
  */
-import type { DimKey } from "@percho/shared";
-import { LinearGradient } from "expo-linear-gradient";
-import { StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
+import type { SharedValue } from "react-native-reanimated";
 import type { CommunityCardV3 } from "../../lib/feed/card-types";
-import { HERO_RATIO } from "../../theme/listing-geometry";
-import { colors, redline, redlineRadii } from "../../theme/tokens";
+import type { TapSlot } from "../../lib/gesture/tap-slot";
+import {
+	DIVIDER_HEIGHT,
+	MAX_TAGS,
+	TAG_PILL_HEIGHT,
+	textBlock as geo,
+	media as mediaGeo,
+} from "../../theme/listing-layout";
+import { redline, redlineRadii } from "../../theme/tokens";
 import { redlineText } from "../../theme/typography";
 import { CardPhoto } from "../CardPhoto";
 import { CardVideo } from "../CardVideo";
-import {
-	RedlineCta,
-	RedlineIcon,
-	type RedlineIconName,
-	RedlinePill,
-} from "./redline/RedlineChrome";
-
-/** The redline's three lifestyle blocks. More would not fit the row. */
-const MAX_TILES = 3;
-/**
- * Tile glyph. 11, not the redline's 17.
- *
- * 13 -> 11 on 2026-08-02 (owner: 「图标需要缩小点」). The glyph is the least
- * informative thing in the tile and it was competing with the number, which is
- * the thing the owner actually wants read (「图标里要有干货数据 比如33个餐厅」).
- *
- * The tile is still the redline's STACK (glyph / label / statistic) — the owner
- * kept every row (「所有信息都需要保留 title description highlights with
- * statistics and button」) — but at 52pt rather than 84, because that is what a
- * 188pt panel affords alongside a 2-line description and a 44pt CTA. Everything
- * scaled together; nothing was dropped.
- */
-const TILE_ICON = 11;
-/**
- * The scrim's stops.
- *
- * The redline's own three (`0.32 / 0.48 / 1`) are the last three, unchanged —
- * that ramp still owns the foot where the tiles and CTA live. Two were prepended
- * for the top block (owner moved the name + blurb up, 2026-08-02):
- *
- *   0     dark   — behind the name
- *   0.18  fading — released by the time the blurb's second line ends
- *   0.32  clear  ← the redline's first stop, unmoved
- *
- * So the photo still breathes across its middle; both ends are just anchored.
- */
-const SCRIM_STOPS = [0, 0.18, 0.32, 0.48, 1] as const;
+import { EXPLORE_TAP_TARGET } from "./ListingFace";
 
 /**
- * One glyph per dim — TOTAL, not partial.
- *
- * The community pool now sends real `dims` derived from the Nextdoor seed (see
- * `apps/web/lib/feed/community-highlights.ts`), and all 11 dims can arrive. When
- * this map was partial every unmapped dim fell through to a default `walk`
- * glyph, so a tile reading "Cultural Scene" showed a walking figure. Typing it
- * as a full `Record` makes an unmapped dim a compile error instead.
- *
- * `quiet` deliberately does NOT reuse the two-heads `family` art it used to
- * borrow: on a tile labelled "Quiet Streets" that glyph reads as "family".
+ * The card's ink scale — the same three steps as `ListingFace`'s local `INK`
+ * (#181B18 / #535952 / #6E746F). Duplicated rather than imported because
+ * `ListingFace` does not export it and this pass may not edit that file; the
+ * values are the owner's 2026-08-14 scale, not new choices. If they ever move,
+ * they move in both places.
  */
-const DIM_ICON: Record<DimKey, RedlineIconName> = {
-	family: "family",
-	walkable: "walk",
-	schools: "school",
-	outdoors: "tree",
-	trails: "path",
-	quiet: "moon",
-	hip: "shop",
-	entertaining: "cup",
-	move_in: "check",
-	space: "expand",
-	nightlife: "cup",
-};
+const INK = {
+	/** Primary — the community name. */
+	primary: "#181B18",
+	/** Secondary — "City, ST" and the blurb. */
+	secondary: "#535952",
+} as const;
 
-/** Short, tile-sized labels. `DIMS[].label` is prose and wraps to 3 lines at 10px. */
-const TILE_LABEL: Record<DimKey, string> = {
-	outdoors: "Outdoor\nSpace",
+/**
+ * Chip copy for the `dims` fallback. One line each — the old `TILE_LABEL`
+ * carried "\n" because a 52pt glass tile wrapped its label over two lines; a
+ * 21pt pill does not wrap.
+ *
+ * A full `Record`, not `Partial`: with a partial map an unmapped dim used to
+ * fall through to a default and mislabel the chip. Deliberately NOT
+ * `ListingFace`'s `CHIP_LABEL` — that one is written about a house
+ * ("Private Backyard"), and a subdivision does not have one.
+ */
+const CHIP_LABEL: Record<DimKey, string> = {
+	outdoors: "Outdoor Space",
 	walkable: "Walkable",
-	schools: "Great\nSchools",
-	quiet: "Quiet\nStreets",
-	hip: "Cultural\nScene",
-	entertaining: "Great for\nHosting",
-	trails: "Trails\nNearby",
+	schools: "Great Schools",
+	quiet: "Quiet Streets",
+	hip: "Cultural Scene",
+	entertaining: "Great for Hosting",
+	trails: "Trails Nearby",
 	nightlife: "Nightlife",
-	family: "Family\nFriendly",
-	move_in: "Move-in\nReady",
+	family: "Family Friendly",
+	move_in: "Move-in Ready",
 	space: "Spacious",
 };
+
+/**
+ * The chip row's labels — `signals` first (the server's per-community
+ * lifestyle signals), else reasons, else dims, else pills, at most `MAX_TAGS`.
+ *
+ * Label ONLY. The `signals` strings are already the specific phrasings the
+ * owner asked for; a reason's `fact` ("33 restaurants") is real and is not
+ * dropped from the product, but it does not fit a one-line 10.5pt pill and
+ * there is no placeholder for the 57.2% of communities that resolve no fact.
+ * The facts render on the community explore screen, which is where this card's
+ * CTA goes.
+ */
+function chipLabels(card: CommunityCardV3): string[] {
+	const signals = card.signals ?? [];
+	if (signals.length > 0) return signals.slice(0, MAX_TAGS);
+	const reasons = card.reasons ?? [];
+	if (reasons.length > 0) return reasons.slice(0, MAX_TAGS).map((r) => r.label);
+	const dims = card.dims ?? [];
+	if (dims.length > 0) return dims.slice(0, MAX_TAGS).map((d) => CHIP_LABEL[d]);
+	return (card.pills ?? []).slice(0, MAX_TAGS);
+}
 
 interface CommunityFaceProps {
 	card: CommunityCardV3;
 	isTop: boolean;
 	onExplore?: () => void;
-	/*
-	 * No `cardAspect`. It existed to derive the media fit from the measured
-	 * track size, and that derivation is exactly what kept putting bars back on
-	 * this face (see the `fit="cover"` comment below). This face is
-	 * unconditionally full bleed, so there is nothing to derive and the prop is
-	 * deleted rather than left dangling for someone to re-wire.
+	/**
+	 * The stack's tap slots (see `lib/gesture/tap-slot.ts`), same contract as
+	 * `ListingFace`: the CTA writes its id into `tapSlot` on touch start and the
+	 * pan's `onEnd` decides whether the release was a tap. A `Pressable` inside
+	 * the pan gesture area silently stops firing (RNGH #3172), which is why the
+	 * link cannot just use `onPress` in the feed. Absent outside the stack
+	 * (dev-foundation), where `onExplore` runs through `onPress` instead.
 	 */
-	/*
-	 * No `onSave`. The heart went with the owner's 2026-08-02 redline
-	 * (「去掉右上角的心」) and the feed never passed a handler for it, so the button
-	 * had always been inert. Left absent rather than optional-and-dead.
-	 */
+	tapSlot?: SharedValue<TapSlot>;
 }
 
-export function CommunityFace({ card, isTop, onExplore }: CommunityFaceProps) {
-	/**
-	 * Three sources for the one tile row, in descending confidence:
-	 *
-	 *   1. `reasons` — what residents said, verbatim (88.6% of communities).
-	 *   2. `dims`    — Percho's category labels, for the 9.4% whose attributes map
-	 *                  to a dim but not to a whitelisted reason.
-	 *   3. `pills`   — authored strings, label-only, no glyph.
-	 *
-	 * Exactly one path renders. Mixing a reason tile with a dim tile would put two
-	 * different registers of claim in one row, and the reader has no way to tell
-	 * which words are the neighbours' and which are ours.
-	 */
-	const reasons = (card.reasons ?? []).slice(0, MAX_TILES);
-	const dims =
-		reasons.length === 0 ? (card.dims ?? []).slice(0, MAX_TILES) : [];
-	const fallbackPills =
-		reasons.length === 0 && dims.length === 0
-			? (card.pills ?? []).slice(0, MAX_TILES)
-			: [];
-	const hasTiles =
-		reasons.length > 0 || dims.length > 0 || fallbackPills.length > 0;
+export function CommunityFace({
+	card,
+	isTop,
+	onExplore,
+	tapSlot,
+}: CommunityFaceProps) {
+	const chips = chipLabels(card);
+
+	/** See `ListingFace.arm` — no gate here; the tap decision happens at release. */
+	const arm = (target: string) => () => {
+		if (!tapSlot) return;
+		tapSlot.value = { target };
+	};
 
 	return (
 		<View style={styles.face}>
-			{/*
-			 * HERO — `HERO_RATIO`, the SAME constant `ListingFace` uses (owner,
-			 * 2026-08-02: 「C 跟listing card 的视频大小保持一致」). Measured 61.80%
-			 * against the listing card's 61.80% in the demo.
-			 */}
-			<View style={styles.hero}>
+			{/* Media — flex:1, the same box the listing card's media sits in */}
+			<View style={styles.media}>
 				{card.videoUrl ? (
 					<CardVideo
 						url={card.videoUrl}
 						poster={card.heroUrl}
 						isTop={isTop}
 						/*
-						 * `cover`, unconditionally. NOT the measured `frameAspect` path.
-						 *
-						 * The owner reported black bars four times; the video artifact was
-						 * never the problem. `frameAspect` makes the fit a RUNTIME
-						 * DECISION, and `mediaFit` returns `contain` for any source wider
-						 * than the frame — which uncovers `CardVideo`'s blurred-poster
-						 * backdrop, i.e. the "black gap". One stale `generated_videos` row
-						 * was enough to bring it back, and `created_at desc` picks that
-						 * row, not this component.
-						 *
-						 * ponytail: a landscape row served here is cropped, not
-						 * letterboxed. Deliberate, FOR THIS FACE ONLY — `ListingFace` and
-						 * `AreaFace` still letterbox landscape sources. The fix if it ever
-						 * matters is re-rendering that row, not re-deriving the fit.
+						 * `cover`, unconditionally. NOT the measured `frameAspect` path:
+						 * that makes the fit a RUNTIME decision, and `mediaFit` returns
+						 * `contain` for any source wider than the frame — which uncovers
+						 * `CardVideo`'s blurred-poster backdrop, i.e. the "black gap" the
+						 * owner reported four times. A landscape source is cropped here,
+						 * deliberately; the fix if it ever matters is re-rendering that
+						 * row, not re-deriving the fit.
 						 */
 						fit="cover"
 					/>
 				) : (
 					/*
 					 * Same rule for the photo path. Only 1 of 8,679 communities has a
-					 * video, so ~every community card renders through HERE — a
-					 * video-only fix would have left the bars on all the others.
+					 * video, so ~every community card renders through HERE.
 					 */
 					<CardPhoto url={card.heroUrl} fit="cover" />
 				)}
-				{/*
-				 * Scrim and pill live INSIDE the hero box. They used to be
-				 * `absoluteFill` over the whole card, which would now darken the light
-				 * panel too. Same tokens, same stop list — only the box changed.
-				 */}
-				<LinearGradient
-					colors={[
-						redline.communityScrimTop,
-						redline.communityScrimTopFade,
-						redline.communityScrimFrom,
-						redline.communityScrimMid,
-						redline.communityScrimTo,
-					]}
-					locations={[...SCRIM_STOPS]}
-					style={StyleSheet.absoluteFill}
-					pointerEvents="none"
-				/>
-				<View style={styles.pillSlot}>
-					<RedlinePill label="COMMUNITY" />
+				<View style={styles.badgeSlot}>
+					<View style={styles.badge}>
+						<Text style={styles.badgeLabel}>COMMUNITY</Text>
+					</View>
 				</View>
-				{/*
-				 * No heart (owner, 2026-08-02: 「去掉右上角的心」) — scoped to THIS face.
-				 * Trade-off and insight keep theirs. `onSave` went with it: the feed
-				 * never passed one, so the button had always been inert.
-				 */}
 			</View>
 
-			{/*
-			 * PANEL — the card's own light surface, so text legibility no longer
-			 * depends on which video frame is playing (owner: 「现在文字和视频内容重叠
-			 * 很乱 看不清楚」).
-			 *
-			 * MEASURED row budget, because the first attempt overflowed silently.
-			 * The panel is 38.2% = 188pt on the smallest card, and
-			 * name + 2-line blurb + 84pt tiles + 44pt CTA + gaps needs 254pt. Nothing
-			 * errored: the CTA yielded and rendered at 16pt, 29pt BELOW the card.
-			 *   name 26 + one-line tiles 38 + CTA 44 + 2 gaps + padding = 161pt
-			 * So the tiles are single-line and the blurb does not ship here. The CTA
-			 * is fixed-height with `marginTop: 'auto'` so it can never be the thing
-			 * that shrinks, and it sits on the panel floor.
-			 */}
-			<View style={styles.panel}>
-				<Text style={styles.name} numberOfLines={1}>
-					{card.name}
-				</Text>
-				{/*
-				 * Description is BACK (owner, 2026-08-02: 「可以按比例缩小文字 但是所有
-				 * 信息都需要保留 title description highlights with statistics and
-				 * button」). It fits because the type scaled, not because a row went.
-				 */}
-				<Text style={styles.blurb} numberOfLines={2}>
-					{card.blurb ?? `${card.city}, ${card.state}`}
-				</Text>
-				{hasTiles && (
-					<View style={styles.tiles}>
-						{reasons.map((r) => (
-							<View key={r.label} style={styles.tile}>
-								<RedlineIcon
-									name={r.icon}
-									size={TILE_ICON}
-									color={redline.accent}
-								/>
-								<Text style={styles.tileLabel} numberOfLines={1}>
-									{r.label}
-								</Text>
-								{/*
-								 * The STATISTIC, on its own line — owner: 「highlights with
-								 * statistics」. Not every reason resolves one (only 42.8% of
-								 * communities get a fact on even one tile), and an absent
-								 * fact renders nothing rather than a placeholder.
-								 */}
-								{!!r.fact && (
-									<Text style={styles.tileFact} numberOfLines={1}>
-										{r.fact}
-									</Text>
-								)}
-							</View>
-						))}
-						{dims.map((dim) => (
-							<View key={dim} style={styles.tile}>
-								<RedlineIcon
-									name={DIM_ICON[dim]}
-									size={TILE_ICON}
-									color={redline.accent}
-								/>
-								<Text style={styles.tileLabel} numberOfLines={1}>
-									{TILE_LABEL[dim].replace("\n", " ")}
-								</Text>
-							</View>
-						))}
-						{fallbackPills.map((p) => (
-							<View key={p} style={styles.tile}>
-								<Text style={styles.tileLabel} numberOfLines={1}>
-									{p}
+			{/* Text block — natural height, target ≤ 190pt (see the styles below) */}
+			<View style={styles.block}>
+				<View style={styles.row1}>
+					<Text style={styles.name} numberOfLines={1}>
+						{card.name}
+					</Text>
+					<Text style={styles.place} numberOfLines={1}>
+						{`${card.city}, ${card.state}`}
+					</Text>
+				</View>
+				{/* The blurb row is gone (owner, 2026-08-15) — the chips sit
+				 * directly under row 1. `card.signals` is the server's
+				 * per-community lifestyle signal row; absent → no row. */}
+				{chips.length > 0 && (
+					<View style={styles.chips}>
+						{chips.map((label) => (
+							<View key={label} style={styles.chip}>
+								<Text style={styles.chipLabel} numberOfLines={1}>
+									{label}
 								</Text>
 							</View>
 						))}
 					</View>
 				)}
+				{/* Hairline: separates the facts from the action, so it is gated on
+				 * the CTA rather than on the chips. */}
 				{!!onExplore && (
-					<View style={styles.ctaSlot}>
-						<RedlineCta
-							label="Why people love it →"
-							onPress={onExplore}
-							/*
-							 * `solid`, not `light`: the CTA is on the light panel now, and a
-							 * white pill on near-white is invisible.
-							 */
-							tone="solid"
-						/>
-					</View>
+					<>
+						<View style={styles.divider} />
+						<View style={styles.ctaRow}>
+							<Pressable
+								onTouchStart={arm(EXPLORE_TAP_TARGET)}
+								// In the feed the tap arrives via `tapSlot`; `onPress` is the
+								// dev-foundation path, where there is no pan gesture to lose to.
+								onPress={tapSlot ? undefined : onExplore}
+								accessibilityRole="link"
+								accessibilityLabel="Why people love it"
+								hitSlop={12}
+								style={({ pressed }) => [
+									styles.exploreLink,
+									pressed && styles.explorePressed,
+								]}
+							>
+								<Text style={styles.exploreLabel}>Why people love it</Text>
+								<ArrowRightIcon />
+							</Pressable>
+						</View>
+					</>
 				)}
 			</View>
 		</View>
 	);
 }
 
+/**
+ * The arrow after the CTA label — `ListingFace`'s art, at the same size and
+ * colour, so the two cards' links are the same link.
+ *
+ * Copied rather than imported: `ListingFace` does not export it and this pass
+ * may not edit that file. It cannot come from the icon font (the Phosphor
+ * subset ships FILL weights only, which is what made the old arrow a thick
+ * wedge) and `react-native-svg` red-screens in Expo Go on this project (DEVLOG
+ * 2026-07-30 04:55), so it is composed from bordered `View`s on Lucide's own
+ * 24-grid geometry: shaft (5,12)→(19,12), head corners (12,5)-(19,12)-(12,19),
+ * i.e. a 45°-rotated square wearing only its top and right borders.
+ */
+const OUTLINE_STROKE = 1.75;
+const ARROW_SIZE = 16;
+const ARROW_K = ARROW_SIZE / 24;
+/** Side of the rotated square whose top+right borders draw the arrowhead. */
+const ARROW_HEAD = 7 * ARROW_K * Math.SQRT2;
+
+function ArrowRightIcon() {
+	return (
+		<View style={styles.arrowBox}>
+			<View style={styles.arrowShaft} />
+			<View style={styles.arrowHead} />
+		</View>
+	);
+}
+
 const styles = StyleSheet.create({
-	/**
-	 * Hero + panel, matching `ListingFace` (owner 2026-08-02: 「C 跟listing card 的
-	 * 视频大小保持一致」). Base fill is the redline's light `--card` because the panel
-	 * is now the majority of what a viewer sees at rest.
-	 */
 	face: { flex: 1, backgroundColor: redline.card },
 	/**
-	 * `HERO_RATIO` — the same constant, not a copied number. Dark backing rather
-	 * than `redline.card`: a near-white box flashes white for a frame on every
-	 * card mount (same reason `ListingFace`'s media box is dark).
-	 *
-	 * Square bottom corners where the panel meets the media; the top two inherit
-	 * the card radius via the parent's clip, exactly as `ListingFace.hero` does.
+	 * `flex: 1, minHeight: 0` — the media absorbs every point the text block
+	 * does not use, which is the whole point of the rebuild: identical to
+	 * `ListingFace.media`, spreading the same `mediaGeo`, so the two cards'
+	 * videos are the same height on every device. `overflow: hidden` is what
+	 * makes the 14pt radius clip the player and the scrim.
 	 */
-	hero: {
-		flex: HERO_RATIO,
-		backgroundColor: colors.cardPlainTo,
+	media: { flex: 1, minHeight: 0, overflow: "hidden", ...mediaGeo },
+	badgeSlot: { position: "absolute", top: 12, left: 12, zIndex: 2 },
+	/** Frosted COMMUNITY badge — the listing card's badge, relabelled. */
+	badge: {
+		alignSelf: "flex-start",
+		backgroundColor: "rgba(255,255,255,0.92)",
+		borderRadius: redlineRadii.badge,
+		paddingVertical: 5,
+		paddingHorizontal: 11,
 		overflow: "hidden",
 	},
-	pillSlot: { position: "absolute", top: 15, left: 15, zIndex: 3 },
+	/** Neutral ink, not green — green is reserved for interactive state. */
+	badgeLabel: { ...redlineText.listingCard.badge, color: INK.primary },
 	/**
-	 * The content panel — the card's remaining 38.2%.
+	 * Text block — natural height. The ≤190pt budget, row by row (blurb row
+	 * removed 2026-08-15, so the chips sit directly under row 1):
 	 *
-	 * Padding copied from `listingGeometry.panel` so the two faces agree. See the
-	 * row-budget comment in the component: this panel is 188pt on the smallest
-	 * card and every row here is sized against that, not chosen by eye.
+	 *   16 padTop + 22 name + 11 + 21 chip
+	 *   + 12 + 1 divider + 2 + 44 CTA + 18 padBottom = 147 ≤ 190  ✓
+	 *
+	 * 28pt lighter than the listing card's 175 — all of it the two blurb lines
+	 * that used to sit between the name and the chips. The media box grows by
+	 * exactly that much, which is the point of the change.
 	 */
-	panel: {
-		flex: 1 - HERO_RATIO,
-		paddingHorizontal: 14,
-		paddingTop: 10,
-		paddingBottom: 11,
-		gap: 6,
+	block: geo.block,
+	/** Row 1 — name + "City, ST" on ONE baseline row (listing: price + specs). */
+	row1: {
+		flexDirection: "row",
+		justifyContent: "space-between",
+		alignItems: "baseline",
+		gap: 16,
 	},
 	/**
-	 * Serif place name. `place` is 38 for the full-bleed face; 20/22 is what a
-	 * 188pt panel affords once the description, the statistic line and a 44pt CTA
-	 * all have to fit (owner: 「可以按比例缩小文字 但是所有信息都需要保留」).
+	 * Serif place name at 20/22. `redlineText.place` is 38 — that was the size
+	 * for a name printed in white across the video; in the text block it is the
+	 * card's anchor the way the listing's price is, at the size a 190pt block
+	 * affords. `flexShrink` lets a long name yield to the locality rather than
+	 * pushing it off the row.
 	 */
 	name: {
 		...redlineText.place,
 		fontSize: 20,
 		lineHeight: 22,
-		color: redline.ink,
+		color: INK.primary,
+		flexShrink: 1,
+	},
+	/** "Decatur, GA" — the listing card's specs slot, same 12.5/600. */
+	place: {
+		...redlineText.listingCard.specs,
+		color: INK.secondary,
+		flexShrink: 0,
 	},
 	/**
-	 * Description at 11.5/13, down from `subtitle`'s 14/20. Two lines cost 26pt
-	 * here against 40 at the token size — that 14pt is most of what paid for the
-	 * statistic line below.
+	 * The blurb style is gone with its row (2026-08-15). The chips now sit
+	 * directly under row 1 via `geo.tags`' own margin — see the block comment.
 	 */
-	blurb: {
-		...redlineText.subtitle,
-		fontSize: 11.5,
-		lineHeight: 13,
-		color: redline.ink2,
+	/** Chip row — `ListingFace`'s tag row: no icons, no wrap, no ellipsis. */
+	chips: {
+		flexDirection: "row",
+		flexWrap: "nowrap",
+		gap: 6,
+		...geo.tags,
 	},
-	/**
-	 * `flexGrow: 1` — the tile row absorbs the panel's spare height so it is not
-	 * pooled into one gap above the CTA (see `ctaSlot`). On a taller phone the
-	 * tiles get taller; on an SE there is 3.5pt to share and nothing moves.
-	 */
-	tiles: { flexDirection: "row", gap: 6, marginTop: 4, flexGrow: 1 },
-	/**
-	 * STACKED tile — glyph, label, statistic. 52pt, not the redline's 84: the
-	 * scale-down is what let the statistic line survive inside a 188pt panel.
-	 * `paddingVertical: 5` and `gap: 2` are the measured values, not taste.
-	 */
-	tile: {
-		flex: 1,
-		minWidth: 0,
+	/** Radius 9 on #F4F2ED: light tinted rectangles, not capsule candy. */
+	chip: {
+		height: TAG_PILL_HEIGHT,
+		paddingHorizontal: 9,
+		borderRadius: 9,
+		backgroundColor: "#F4F2ED",
 		alignItems: "center",
 		justifyContent: "center",
-		gap: 2,
-		paddingVertical: 5,
+		flexShrink: 1,
+	},
+	chipLabel: { ...redlineText.listingCard.tag, color: "#3E4744" },
+	divider: {
+		height: DIVIDER_HEIGHT,
+		backgroundColor: "rgba(24,27,24,0.08)",
+		...geo.divider,
+	},
+	ctaRow: {
+		flexDirection: "row",
+		justifyContent: "flex-end",
+		alignItems: "center",
+		...geo.ctaSlot,
+	},
+	exploreLink: {
+		flexDirection: "row",
+		alignItems: "center",
+		gap: 6,
+		minHeight: 44, // §0.5 touch floor
 		paddingHorizontal: 4,
-		borderRadius: redlineRadii.tile,
-		backgroundColor: redline.surface,
-		borderWidth: 1,
-		borderColor: redline.border,
 	},
-	/**
-	 * `numberOfLines={1}` at 9.5/12. "Well Maintained" is the longest real label
-	 * and measured 78pt in a 93pt box in the demo, so it fits without wrapping —
-	 * and a second label line would cost 12pt the panel does not have.
-	 */
-	tileLabel: {
-		...redlineText.tile,
-		fontSize: 9,
-		lineHeight: 11,
-		color: redline.ink2,
-		textAlign: "center",
+	explorePressed: { opacity: 0.7 },
+	exploreLabel: {
+		...redlineText.listingCard.cta,
+		color: redline.accent,
 	},
-	/**
-	 * The statistic — the line the tile exists to deliver.
-	 *
-	 * 9.5/12, up from 8.5/11: the 2pt freed by shrinking the glyph 13 -> 11 went
-	 * here, because the owner shrank the icon in order to make the NUMBER read
-	 * (「图标需要缩小点 / 图标里要有干货数据」). `ink2` not `ink3` — measured 2.76:1
-	 * for ink3 on this tile fill, a WCAG AA fail at this size; ink2 is 4.67:1.
-	 */
-	tileFact: {
-		...redlineText.nano,
-		fontSize: 9.5,
-		lineHeight: 12,
-		fontWeight: "600",
-		// `ink`, and the LABEL is now ink2 — the number leads, the label names it.
-		// Inverted on 2026-08-02 with the icon shrink, for the same reason.
-		color: redline.ink,
-		textAlign: "center",
+
+	// ─── Arrow art (see the block above) ──────────────────────────────────
+	arrowBox: { width: ARROW_SIZE, height: ARROW_SIZE },
+	arrowShaft: {
+		position: "absolute",
+		left: 5 * ARROW_K,
+		width: 14 * ARROW_K,
+		top: (ARROW_SIZE - OUTLINE_STROKE) / 2,
+		height: OUTLINE_STROKE,
+		borderRadius: OUTLINE_STROKE / 2,
+		backgroundColor: redline.accent,
 	},
-	/**
-	 * The CTA sits on the panel floor, but WITHOUT `marginTop: 'auto'`.
-	 *
-	 * Owner, 2026-08-02: 「三个tile下方的空白太大了 卡片下方整体要协调」. `auto`
-	 * pins the button down by dumping ALL of the panel's slack into this one gap —
-	 * measured 3.5pt on an SE but **43.1pt on a 16 Pro Max**, because the panel
-	 * grows with the card while the rows do not. That single pooled gap is the
-	 * hole under the tiles.
-	 *
-	 * Instead the TILE ROW takes the slack (`flexGrow: 1` on `tiles`), so extra
-	 * height goes into the thing that can use it and every gap stays at 6. The
-	 * button still ends up flush against the bottom padding.
-	 */
-	ctaSlot: { flexShrink: 0 },
+	arrowHead: {
+		position: "absolute",
+		left: (ARROW_SIZE - ARROW_HEAD) / 2,
+		top: (ARROW_SIZE - ARROW_HEAD) / 2,
+		width: ARROW_HEAD,
+		height: ARROW_HEAD,
+		borderTopWidth: OUTLINE_STROKE,
+		borderRightWidth: OUTLINE_STROKE,
+		borderColor: redline.accent,
+		borderTopRightRadius: OUTLINE_STROKE,
+		transform: [{ rotate: "45deg" }],
+	},
 });

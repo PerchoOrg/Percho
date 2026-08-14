@@ -4,6 +4,63 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-08-15 13:10 UTC — Community card: no description, distinctive lifestyle signal pills
+
+**Objective**: owner spec (Tia, 2026-08-15) — the community card's info area:
+delete the description/blurb paragraph entirely, keep the pills UI/styles but
+change their content logic: no more generic category words (Restaurants /
+Walkability / Trees); every community shows its 2-3 most DISTINCTIVE lifestyle
+signals ("Mature trees", "3 parks nearby", "Cafés nearby", "Quiet streets",
+"Highly walkable"); numbers when we have them, short qualitative phrases
+otherwise; NOT the same pills on every card; video height unchanged; tighten
+vertical spacing after removing the description; keep "Why people love it →";
+touch no font/color/radius/shadow.
+
+**Actions**:
+- NEW `apps/web/lib/feed/community-signals.ts` — label-keyed translation from
+  `community-reasons.ts` labels to distinctive phrasings. A `SIGNAL_FAMILIES`
+  table maps each generic label to its specific phrases ("Trees" → "Mature
+  trees" / "Lots of trees", "Walkability" → "Highly walkable"). Picker returns
+  2-3 per community, rarest-first via `reasonPrevalence`, at most ONE per
+  family, and a NUMBER ("33 restaurants nearby") beats a phrase. Numbers are
+  extracted from a reason's `fact` ONLY when it is shaped like a POI count
+  (`/^\d+ [a-zA-Z ]+$/`) — "35% owner-occupied" / "1,050 residents" /
+  "median age 42" deliberately never become "N X nearby".
+- `community-pool.ts` — projection now sends `signals` (omitted when empty).
+  The `description` → `blurb` field is DROPPED from the pool DTO.
+- `apps/mobile/components/cards/CommunityFace.tsx` — blurb row and `styles.blurb`
+  deleted; chip row reads `card.signals` first (reasons → dims → pills remain
+  fallbacks). Block arithmetic 187 → 147pt: the media box gains exactly the two
+  blurb lines (video height grows, not shrinks — card total is unchanged).
+- `card-types.ts` / `pool-dto.ts` — `CommunityCardV3.blurb` → `signals`; wire
+  parser carries `signals` (no vocabulary validation — server owns it).
+- Tests: NEW `community-signals.test.ts`; `community-panel-fit.test.ts` updated
+  (block floor 147, headroom 43, blurb-absence assertions, "one blurb row LESS
+  than the listing block"); `pool-dto.test.ts` blurb → signals.
+
+**Decisions**:
+- Signals computed SERVER-side from the already-shipped `reasons` — no new
+  columns, no new queries, per-community distinctness is a byproduct of the
+  input, and the map is keyed on the labels `community-reasons.ts` already
+  prints (no second token-override map to drift).
+- Fallbacks kept: a community with no mapped claim renders NO chip row (real or
+  absent, never invented). `reasons`/`dims`/`pills` still fill the row for the
+  9.4% with no signal.
+- `community-reasons.ts` untouched — the detail screen (`/community/[slug]`)
+  still shows the verbatim resident reasons and their facts, which is where the
+  CTA goes.
+
+**Issues**: none. `search.tsx` tsc failure and `community-panel-fit` failures
+noted in the 2026-08-15 12:30 entry remain pre-existing; this pass fixed the
+fit test's assertions to the new geometry.
+
+**Verification**: web `vitest run` 245/245, mobile 501/501, `tsc --noEmit` clean
+(modulo the two pre-existing files).
+
+**Next steps**: verify on device — the tighter block makes the community video
+taller than the listing's on every screen; confirm that reads right with the
+card-stage frame ratios from the 12:30 entry.
+
 ## 2026-08-15 12:30 — Fixed card stage, variable card height
 
 **Objective**: owner spec 「页面骨架固定, card 可以不同高度」 — the header row,
