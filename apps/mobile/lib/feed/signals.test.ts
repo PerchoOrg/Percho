@@ -116,9 +116,15 @@ describe("applySwipe — community likes", () => {
 	});
 });
 
-describe("applySwipe — tradeoff carries no preference signal", () => {
-	it("records nothing but the swipe", () => {
+describe("applySwipe — tradeoff records preference dims (§1.6)", () => {
+	it("boosts the chosen dim and softly downweights the discarded one", () => {
 		const s = applySwipe(EMPTY_SIGNALS, tradeoff, "right");
+		expect(s.dims.walkable).toBe(1);
+		expect(s.dims.outdoors).toBe(-0.5);
+	});
+
+	it("does not touch geo or community lists", () => {
+		const s = applySwipe(EMPTY_SIGNALS, tradeoff, "left");
 		expect(s.likedListingIds).toEqual([]);
 		expect(s.likedCommunityIds).toEqual([]);
 		expect(s.geo).toEqual([]);

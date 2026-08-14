@@ -32,6 +32,8 @@ export interface GeoSignal {
 
 export interface SignalState {
 	geo: readonly GeoSignal[];
+	/** Preference dimension scores, fed by trade-off swipes (§1.6). */
+	dims: Readonly<Record<string, number>>;
 	likedCommunityIds: readonly string[];
 	passedCommunityIds: readonly string[];
 	likedListingIds: readonly string[];
@@ -45,6 +47,7 @@ export interface SignalState {
 
 export const EMPTY_SIGNALS: SignalState = {
 	geo: [],
+	dims: {},
 	likedCommunityIds: [],
 	passedCommunityIds: [],
 	likedListingIds: [],
@@ -184,9 +187,23 @@ export function applySwipe(
 			break;
 		}
 
-		case "tradeoff":
-			// Market education carries no preference signal.
+		case "tradeoff": {
+			// A trade-off is a preference statement: the chosen side boosts its
+			// dim, the discarded side is softly downweighted (§1.6).
+			const chosen = verdict === "right" ? card.right : card.left;
+			const discarded = verdict === "right" ? card.left : card.right;
+			next = {
+				...next,
+				dims: bump(next.dims, chosen.dim, 1),
+			};
+			if (discarded.dim !== chosen.dim) {
+				next = {
+					...next,
+					dims: bump(next.dims, discarded.dim, -0.5),
+				};
+			}
 			break;
+		}
 	}
 
 	const layer = layerOf(card);

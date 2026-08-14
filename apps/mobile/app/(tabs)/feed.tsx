@@ -100,6 +100,26 @@ const CARD_MAX_VIEWPORT = 0.74;
  */
 const CARD_INSET = { horizontal: 30, top: 12, bottom: 10 };
 
+/**
+ * How much of the fixed card STAGE each kind occupies (owner spec, 2026-08-15:
+ * 「页面骨架固定, card 可以不同高度」).
+ *
+ * The stage is `styles.stackWrap` minus its padding, and it is `flex: 1` — so
+ * it is the same box on every card and the wordmark row / stage / tab bar can
+ * never move. What varies is only the card frame INSIDE it, which
+ * `SwipeStack` eases between heights over 240ms.
+ *
+ * A kind absent from this map takes `SwipeStack`'s own default (0.95, the
+ * height listing / community cards already had), which is why they are not
+ * listed: the point of the change is that they look exactly as they did.
+ */
+const FRAME_HEIGHT_RATIO: Partial<Record<FeedCardV3["kind"], number>> = {
+	/** Stays light — the redline's short question card (spec: 60-65%). */
+	tradeoff: 0.62,
+	/** Keeps its immersive full-bleed feel (spec: 92-96%). */
+	area: 0.94,
+};
+
 export default function FeedScreen() {
 	const { width, height } = useWindowDimensions();
 
@@ -325,6 +345,12 @@ export default function FeedScreen() {
 
 	const cardWidth = width - GUTTER * 2;
 
+	// The top card's share of the stage. Read from the CARD rather than from a
+	// role, so the height eases at the same moment the new top card takes over.
+	const topKind = deck[activeIndex]?.kind;
+	const frameHeightRatio =
+		topKind === undefined ? undefined : FRAME_HEIGHT_RATIO[topKind];
+
 	const capability = useCallback(
 		(card: FeedCardV3) => cardBehavior(card).capability,
 		[],
@@ -351,7 +377,7 @@ export default function FeedScreen() {
 			const isTop = args.role === "top";
 			switch (card.kind) {
 				case "area":
-					return <AreaFace card={card} isTop={isTop} />;
+					return <AreaFace card={card} isTop={isTop} tapSlot={args.tapSlot} />;
 				case "listing":
 					return (
 						<ListingFace
@@ -376,6 +402,7 @@ export default function FeedScreen() {
 						<CommunityFace
 							card={card}
 							isTop={isTop}
+							tapSlot={args.tapSlot}
 							/*
 							 * "Why people love it →" now has a destination (owner,
 							 * 2026-08-02: 「最后还有why people love it的跳转button」).
@@ -482,6 +509,14 @@ export default function FeedScreen() {
 					emitGesture("explore_tap", top);
 					router.push(`/listing/${top.id}`);
 				}
+				// The community card's "Why people love it →" link, rebuilt on
+				// 2026-08-14 to the listing card's design system, fires through the
+				// SAME tap target. Its destination is the community route, keyed by
+				// SLUG (see the `onExplore` comment on `CommunityFace` above).
+				if (top && top.kind === "community") {
+					emitGesture("explore_tap", top);
+					router.push(`/community/${top.slug}`);
+				}
 			}
 		},
 		[activeIndex, toggleSaved, emitGesture],
@@ -535,6 +570,7 @@ export default function FeedScreen() {
 						renderOverlay={renderOverlay}
 						keyExtractor={deckKey}
 						cardWidth={cardWidth}
+						frameHeightRatio={frameHeightRatio}
 						capability={capability}
 					/>
 				)}
