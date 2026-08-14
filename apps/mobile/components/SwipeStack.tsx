@@ -68,12 +68,11 @@ import {
 	type CardCapability,
 	INERT_CAPABILITY,
 } from "../lib/gesture/capability";
-import { VISIBLE_WINDOW, cardStackVisual } from "../lib/gesture/stack-layer";
+import { cardStackVisual } from "../lib/gesture/stack-layer";
 import type { TapSlot, TapStatus } from "../lib/gesture/tap-slot";
 import { colors, radii } from "../theme/tokens";
 
-/** Cards visible at rest: top + 2 behind (§0.6 #7). Shared with the composer. */
-const WINDOW = VISIBLE_WINDOW;
+/** Cards visible at rest: top + 1 behind (owner cut the third, 2026-08-15). */
 /**
  * How many already-swiped cards stay mounted. Exactly one: the card that just
  * committed has to remain in the tree to finish its flyout, and to stay parked
@@ -419,12 +418,12 @@ export function SwipeStack<T>({
 	// can finish flying out. Geometry does not depend on this range — only on
 	// each card's absolute index — so widening or narrowing it cannot move
 	// anything the buyer sees.
-	// Exactly WINDOW live cards. Mounting a fourth would stack another 0.25-opacity
-	// layer directly behind the `after` card at the same clamped depth, and two
-	// translucent layers compound into a visibly darker card — the ghosting class
-	// of bug all over again.
+	// Two live cards: the top and the one behind it. The third (after) used to
+	// stack behind the next at 0.88/0.25 — through the 0.5-opacity next card it
+	// reads as "two cards peeking", which the owner cut (Tia 2026-08-15: 「应该
+	// 只能peek下一张」). The next card rising to top is the only peek.
 	const from = Math.max(0, activeIndex - TRAIL);
-	const to = Math.min(items.length, activeIndex + WINDOW);
+	const to = Math.min(items.length, activeIndex + 2);
 	const mounted: { item: T; absIndex: number }[] = [];
 	for (let i = from; i < to; i++) {
 		const item = items[i];
@@ -439,14 +438,22 @@ export function SwipeStack<T>({
 						const depth = absIndex - activeIndex;
 						const isTop = depth === 0;
 						const role = roleFor(depth);
-						// Each card sizes itself: cards behind the top are sized to
-						// the stage share their OWN kind wants — so the community
-						// card behind a trade-off card is ALREADY tall while the
-						// trade-off card flies away, instead of being clipped to
-						// the trade-off's height and snapping tall on commit.
-						// StackCard animates the height in 240ms (ease-out), and
-						// the fixed stage keeps the page skeleton motionless.
-						const ratio =
+						// Behind cards share the TOP card's box: a taller card
+						// behind a short top card must not stick out ABOVE it
+						// (the trade-off card at 62% exposing the community
+						// card's badge — Tia report 2026-08-15). Only the top
+						// card gets its own kind's ratio; behind cards are
+						// sized to the top card's height so the stack reads as
+						// ONE card with a sliver of the next peeking past its
+						// edge — never a taller card showing over the top.
+						// When a behind card becomes top, StackCard eases its
+						// height to its own ratio (240ms), so nothing pops.
+						const topRatio =
+							top === undefined
+								? DEFAULT_FRAME_RATIO
+								: frameHeightRatio?.(top) ??
+									(cardHeight !== undefined ? 1 : DEFAULT_FRAME_RATIO);
+						const ownRatio =
 							frameHeightRatio?.(item) ??
 							(cardHeight !== undefined ? 1 : DEFAULT_FRAME_RATIO);
 						const frameHeight =
@@ -454,7 +461,7 @@ export function SwipeStack<T>({
 								? cardHeight
 								: stageHeight === 0
 									? 0 // pre-layout: no height yet, StackCard snaps when it lands
-									: stageHeight * ratio;
+									: stageHeight * (isTop ? ownRatio : topRatio);
 						return (
 							<StackCard
 								key={keyExtractor(item, absIndex)}
@@ -469,7 +476,7 @@ export function SwipeStack<T>({
 								// A card that has already been swiped must stay UNDER the
 								// live stack while it flies out, or it would slide across
 								// the face of the card that replaced it.
-								zIndex={depth < 0 ? 0 : WINDOW + TRAIL - depth}
+								zIndex={depth < 0 ? 0 : 2 + TRAIL - depth}
 								front={renderCard(item, argsFor(role))}
 								// §1.8 labels sit above the face.
 								overlay={
