@@ -41,6 +41,12 @@ Percho is a mobile-first home discovery app for the whole US buyer pool. Buyers 
 - Full mobile viewport on every feed, comfortable 44×44 tap targets, and consistent right-rail placement across every video and photo surface.
 
 ### 2026-08-14
+- The bottom tab bar has icons again — a house, a magnifying glass, a bookmark, and a person, drawn as light outlines above each label.
+- Home cards are a little narrower, with more of the paper background on each side, and now cast a soft shadow so they lift off the page.
+- The feed's background is a slightly deeper warm off-white, so the near-white card reads as paper laid on top of it.
+- The video inside a home card has gently rounded corners rather than fully rounded ones.
+- Less empty space between the rule and the "Explore home" link.
+- The save button on a photo is slightly smaller again.
 - The Percho name now sits at the top of the feed, with both top corners left clear.
 - Home cards sit further in from the edges, so the paper background frames each one.
 - Calmer card typography — a lighter price, softer address and spec greys, and a hairline rule above the "Explore home" link.

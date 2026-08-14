@@ -300,7 +300,8 @@ const ARROW_K = ARROW_SIZE / 24;
 /** Side of the rotated square whose top+right borders draw the arrowhead. */
 const ARROW_HEAD = 7 * ARROW_K * Math.SQRT2;
 
-const BOOKMARK_SIZE = 18;
+/** 16 (was 18) — the disc shrank to 32 with it (owner, 2026-08-14). */
+const BOOKMARK_SIZE = 16;
 const BOOKMARK_K = BOOKMARK_SIZE / 24;
 const BM_LEFT = 5 * BOOKMARK_K;
 const BM_WIDTH = 14 * BOOKMARK_K;
@@ -397,8 +398,9 @@ const styles = StyleSheet.create({
 	/** Save bookmark disc — top-right over the media (owner 2026-08-13). */
 	saveSlot: { position: "absolute", top: 12, right: 12, zIndex: 2 },
 	/**
-	 * 34pt frosted disc (owner 2026-08-14) — a translucent dark fill with a
-	 * light hairline, replacing the solid white one that read as a sticker.
+	 * 32pt frosted disc (owner 2026-08-14, 34 in the pass before) — a translucent
+	 * dark fill with a light hairline, replacing the solid white one that read as
+	 * a sticker.
 	 *
 	 * The spec asks for `backdrop-filter: blur(8px)`, which React Native has no
 	 * style for; it needs `expo-blur`, a new dependency, so it is deliberately
@@ -406,9 +408,9 @@ const styles = StyleSheet.create({
 	 * reads as frosted, and the icon inside is white either way.
 	 */
 	saveDisc: {
-		width: 34,
-		height: 34,
-		borderRadius: 17,
+		width: 32,
+		height: 32,
+		borderRadius: 16,
 		backgroundColor: "rgba(20,24,22,0.42)",
 		borderWidth: 1,
 		borderColor: "rgba(255,255,255,0.18)",

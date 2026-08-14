@@ -36,6 +36,7 @@ export function TabBar({ tabs, activeKey, onSelect }: TabBarProps) {
 		>
 			{tabs.map((t) => {
 				const active = t.key === activeKey;
+				const Icon = ICONS[t.key];
 				return (
 					<Pressable
 						key={t.key}
@@ -44,6 +45,11 @@ export function TabBar({ tabs, activeKey, onSelect }: TabBarProps) {
 						accessibilityRole="tab"
 						accessibilityState={{ selected: active }}
 					>
+						{Icon && (
+							<View style={active ? styles.iconOn : styles.iconOff}>
+								<Icon color={active ? colors.ink : colors.ink2} />
+							</View>
+						)}
 						<Text
 							style={[styles.label, active ? styles.active : styles.inactive]}
 						>
@@ -55,6 +61,161 @@ export function TabBar({ tabs, activeKey, onSelect }: TabBarProps) {
 		</View>
 	);
 }
+
+/**
+ * ── Outline tab icons (owner, 2026-08-14) ───────────────────────────────────
+ *
+ * Lucide-style 1.75-stroke outlines at 20pt, composed from bordered `View`s —
+ * the same technique (and for the same two reasons) as `ListingFace`'s arrow
+ * and bookmark: the Phosphor subset this project ships is FILL-only, and
+ * `react-native-svg` red-screens in Expo Go (DEVLOG 2026-07-30 04:55).
+ *
+ * Geometry is Lucide's own 24-grid scaled by `K`, not eyeballed:
+ *
+ *   home      roof (3.5,11)→(12,3.5)→(20.5,11), walls down to y 20.5
+ *   search    circle c(10.5,10.5) r 6.5, handle (15.1,15.1)→(20,20)
+ *   bookmark  body x 5..19, y 3..21, notch tip (12,16)   [same as ListingFace]
+ *   user      head c(12,8) r 4, shoulders as a semicircle x 4..20 from y 13
+ *
+ * Colour is a prop rather than a style constant because the bar has two
+ * states; everything else about each icon is fixed, so the rest of the
+ * geometry lives in the StyleSheet below.
+ */
+const ICON_SIZE = 20;
+const K = ICON_SIZE / 24;
+const STROKE = 1.75;
+
+interface IconProps {
+	color: string;
+}
+
+/** Rotated-bar geometry for one leg of a two-legged shape (roof, notch). */
+function bar(run: number, rise: number) {
+	return {
+		length: Math.hypot(run, rise),
+		angle: (Math.atan2(rise, run) * 180) / Math.PI,
+	};
+}
+
+const HOME_APEX_Y = 3.5 * K;
+const HOME_EAVE_Y = 11 * K;
+const HOME_BASE_Y = 20.5 * K;
+const HOME_LEFT = 3.5 * K;
+const HOME_WIDTH = 17 * K;
+const HOME_ROOF = bar(HOME_WIDTH / 2, HOME_EAVE_Y - HOME_APEX_Y);
+
+function HomeIcon({ color }: IconProps) {
+	return (
+		<View style={styles.iconBox}>
+			<View
+				style={[
+					styles.homeRoof,
+					styles.homeRoofLeft,
+					{ backgroundColor: color },
+				]}
+			/>
+			<View
+				style={[
+					styles.homeRoof,
+					styles.homeRoofRight,
+					{ backgroundColor: color },
+				]}
+			/>
+			<View
+				style={[
+					styles.homeWall,
+					styles.homeWallLeft,
+					{ backgroundColor: color },
+				]}
+			/>
+			<View
+				style={[
+					styles.homeWall,
+					styles.homeWallRight,
+					{ backgroundColor: color },
+				]}
+			/>
+			<View style={[styles.homeBase, { backgroundColor: color }]} />
+		</View>
+	);
+}
+
+const GLASS_D = 13 * K;
+const GLASS_LEFT = 4 * K;
+const HANDLE = bar(4.9 * K, 4.9 * K);
+
+function SearchIcon({ color }: IconProps) {
+	return (
+		<View style={styles.iconBox}>
+			<View style={[styles.glass, { borderColor: color }]} />
+			<View style={[styles.handle, { backgroundColor: color }]} />
+		</View>
+	);
+}
+
+const BM_LEFT = 5 * K;
+const BM_WIDTH = 14 * K;
+const BM_TOP = 3 * K;
+const BM_BOTTOM = 21 * K;
+/** Where the V bites into the bottom edge. */
+const BM_NOTCH = 16 * K;
+const BM_DIAG = bar(BM_WIDTH / 2, BM_BOTTOM - BM_NOTCH);
+
+function BookmarkIcon({ color }: IconProps) {
+	return (
+		<View style={styles.iconBox}>
+			<View style={[styles.bookmarkTop, { backgroundColor: color }]} />
+			<View
+				style={[
+					styles.bookmarkSide,
+					styles.bookmarkSideLeft,
+					{ backgroundColor: color },
+				]}
+			/>
+			<View
+				style={[
+					styles.bookmarkSide,
+					styles.bookmarkSideRight,
+					{ backgroundColor: color },
+				]}
+			/>
+			<View
+				style={[
+					styles.bookmarkDiag,
+					styles.bookmarkDiagLeft,
+					{ backgroundColor: color },
+				]}
+			/>
+			<View
+				style={[
+					styles.bookmarkDiag,
+					styles.bookmarkDiagRight,
+					{ backgroundColor: color },
+				]}
+			/>
+		</View>
+	);
+}
+
+const HEAD_D = 8 * K;
+const SHOULDER_W = 16 * K;
+
+function UserIcon({ color }: IconProps) {
+	return (
+		<View style={styles.iconBox}>
+			<View style={[styles.head, { borderColor: color }]} />
+			<View style={[styles.shoulders, { borderColor: color }]} />
+		</View>
+	);
+}
+
+/** Keyed by the tab keys `app/(tabs)/_layout.tsx` defines. */
+const ICONS: Record<string, (props: IconProps) => React.JSX.Element> = {
+	feed: HomeIcon,
+	search: SearchIcon,
+	saved: BookmarkIcon,
+	you: UserIcon,
+};
 
 const styles = StyleSheet.create({
 	bar: {
@@ -68,8 +229,125 @@ const styles = StyleSheet.create({
 		 */
 		borderTopColor: "rgba(23,23,21,0.05)",
 	},
-	tab: { flex: 1, alignItems: "center", justifyContent: "center", gap: 2 },
+	tab: { flex: 1, alignItems: "center", justifyContent: "center", gap: 4 },
 	label: { ...textStyles.caption },
 	active: { color: colors.ink, opacity: 1 },
 	inactive: { color: colors.ink2, opacity: 0.5 },
+	/** The icon's half of the same two states — colour is a prop, so only the
+	 * dimming lives here. */
+	iconOn: { opacity: 1 },
+	iconOff: { opacity: 0.5 },
+
+	iconBox: { width: ICON_SIZE, height: ICON_SIZE },
+
+	homeRoof: {
+		position: "absolute",
+		top: (HOME_APEX_Y + HOME_EAVE_Y) / 2 - STROKE / 2,
+		width: HOME_ROOF.length,
+		height: STROKE,
+		borderRadius: STROKE / 2,
+	},
+	homeRoofLeft: {
+		left: HOME_LEFT + HOME_WIDTH / 4 - HOME_ROOF.length / 2,
+		transform: [{ rotate: `${-HOME_ROOF.angle}deg` }],
+	},
+	homeRoofRight: {
+		left: HOME_LEFT + (HOME_WIDTH * 3) / 4 - HOME_ROOF.length / 2,
+		transform: [{ rotate: `${HOME_ROOF.angle}deg` }],
+	},
+	homeWall: {
+		position: "absolute",
+		top: HOME_EAVE_Y,
+		width: STROKE,
+		height: HOME_BASE_Y - HOME_EAVE_Y,
+	},
+	homeWallLeft: { left: HOME_LEFT },
+	homeWallRight: { left: HOME_LEFT + HOME_WIDTH - STROKE },
+	homeBase: {
+		position: "absolute",
+		left: HOME_LEFT,
+		top: HOME_BASE_Y - STROKE,
+		width: HOME_WIDTH,
+		height: STROKE,
+		borderRadius: STROKE / 2,
+	},
+
+	glass: {
+		position: "absolute",
+		left: GLASS_LEFT,
+		top: GLASS_LEFT,
+		width: GLASS_D,
+		height: GLASS_D,
+		borderRadius: GLASS_D / 2,
+		borderWidth: STROKE,
+	},
+	/** The handle runs out of the circle at 45°, Lucide's (15.1,15.1)→(20,20). */
+	handle: {
+		position: "absolute",
+		left: 17.55 * K - HANDLE.length / 2,
+		top: 17.55 * K - STROKE / 2,
+		width: HANDLE.length,
+		height: STROKE,
+		borderRadius: STROKE / 2,
+		transform: [{ rotate: `${HANDLE.angle}deg` }],
+	},
+
+	bookmarkTop: {
+		position: "absolute",
+		left: BM_LEFT,
+		top: BM_TOP,
+		width: BM_WIDTH,
+		height: STROKE,
+		borderRadius: STROKE / 2,
+	},
+	bookmarkSide: {
+		position: "absolute",
+		top: BM_TOP,
+		width: STROKE,
+		height: BM_BOTTOM - BM_TOP,
+		borderRadius: STROKE / 2,
+	},
+	bookmarkSideLeft: { left: BM_LEFT },
+	bookmarkSideRight: { left: BM_LEFT + BM_WIDTH - STROKE },
+	/** The V: two bars rotated about their own centres onto the notch's legs. */
+	bookmarkDiag: {
+		position: "absolute",
+		top: (BM_BOTTOM + BM_NOTCH) / 2 - STROKE / 2,
+		width: BM_DIAG.length,
+		height: STROKE,
+		borderRadius: STROKE / 2,
+	},
+	bookmarkDiagLeft: {
+		left: BM_LEFT + BM_WIDTH / 4 - BM_DIAG.length / 2,
+		transform: [{ rotate: `${-BM_DIAG.angle}deg` }],
+	},
+	bookmarkDiagRight: {
+		left: BM_LEFT + (BM_WIDTH * 3) / 4 - BM_DIAG.length / 2,
+		transform: [{ rotate: `${BM_DIAG.angle}deg` }],
+	},
+
+	head: {
+		position: "absolute",
+		left: (ICON_SIZE - HEAD_D) / 2,
+		top: 4 * K,
+		width: HEAD_D,
+		height: HEAD_D,
+		borderRadius: HEAD_D / 2,
+		borderWidth: STROKE,
+	},
+	/**
+	 * Lucide's `M20 21a8 8 0 0 0-16 0` — a semicircle. A box half as tall as it is
+	 * wide, with both top corners rounded to half its width and only its top
+	 * border drawn, IS that arc.
+	 */
+	shoulders: {
+		position: "absolute",
+		left: (ICON_SIZE - SHOULDER_W) / 2,
+		top: 13 * K,
+		width: SHOULDER_W,
+		height: SHOULDER_W / 2,
+		borderTopWidth: STROKE,
+		borderTopLeftRadius: SHOULDER_W / 2,
+		borderTopRightRadius: SHOULDER_W / 2,
+	},
 });

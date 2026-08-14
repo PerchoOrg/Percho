@@ -52,7 +52,7 @@ function textBlockFloor() {
 		TAG_PILL_HEIGHT + // 21
 		textBlock.divider.marginTop + // 16
 		DIVIDER_HEIGHT + // 1
-		textBlock.ctaSlot.marginTop + // 8
+		textBlock.ctaSlot.marginTop + // 4
 		46 + // CTA
 		textBlock.block.paddingBottom // 18
 	);

@@ -4,6 +4,77 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-08-14 05:30 — Feed polish round 3: narrower card, video radius 14, warm
+background, card shadow, tab-bar icons
+
+**Objective**: the owner's third polish round on the feed card + tab bar — 7
+items plus 2 follow-ups, explicitly "no redesign, no new elements, no layout
+change".
+
+**Actions**:
+- `app/(tabs)/feed.tsx` — `CARD_INSET.horizontal` 24 → 30 (card ~6% narrower;
+  `stackWrap` is `alignItems: center` so it narrows symmetrically). `top: 12` /
+  `bottom: 10` untouched.
+- `theme/listing-layout.ts` — `media.borderRadius` 20 → 14; `textBlock
+  .ctaSlot.marginTop` 8 → 4 (the divider→explore-link gap). Block floor
+  188 → 184, back to 6pt of headroom under the ≤190 budget.
+- `theme/listing-layout.test.ts` — the floor mirror's inline `// 8` comment
+  follows `ctaSlot` to 4. No assertion changed: the radius test only asserts
+  `> 0`, and 184 still passes ≤ 190.
+- `theme/tokens.ts` — `colors.bg` #FAF6F0 → #F4EEE4. The card face
+  (`redline.card` #FFFDF9) is untouched, which is the whole point: the deeper
+  page makes the near-white card read as paper laid ON it.
+- `components/SwipeStack.tsx` — `styles.card` gets the soft shadow.
+- `components/cards/ListingFace.tsx` — `saveDisc` 34 → 32 (radius 17 → 16),
+  `BOOKMARK_SIZE` 18 → 16. Fill / border / saved-state colours unchanged.
+- `components/TabBar.tsx` — four outline icons (home, magnifier, bookmark,
+  person) above the labels, 20pt at 1.75 stroke, `tab` gap 2 → 4.
+
+**Decisions**:
+- **`shadowOpacity: 1` is not scope creep.** The owner's shadow is
+  `rgba(35,30,22,0.07)`, but iOS multiplies `shadowColor`'s alpha by
+  `shadowOpacity`, which defaults to 0 — the four properties as briefed would
+  have rendered nothing. `shadowOpacity: 1` makes 0.07 the effective opacity,
+  i.e. exactly what was asked for.
+- **One shadow, not two.** The brief's `0 12px 32px rgba(35,30,22,.07)` +
+  `0 2px 6px rgba(35,30,22,.03)` cannot both exist on one RN view. The large
+  ambient one ships; the contact shadow is dropped rather than faked with a
+  wrapper view, which would have meant a new element.
+- **No extra padding for the shadow.** RN draws shadows outside a view's
+  bounds, and `overflow: hidden` on the card clips its CHILDREN only. Checked
+  every ancestor — `frame`, `stack`, `stackWrap`, the SafeAreaView — and none
+  sets `overflow`, so nothing clips it and `CARD_INSET` stays as specified.
+- **Tab icons are bordered `View`s, again.** Same two constraints as the
+  2026-08-14 02:10 pass: `react-native-svg` red-screens in Expo Go and the
+  Phosphor subset is fill-only. Geometry is Lucide's 24-grid scaled by
+  `K = 20/24`. The `user` icon's shoulders are the one genuinely new trick — a
+  16×8 box with both top corners rounded to 8 and only `borderTopWidth` drawn
+  IS Lucide's `a8 8 0 0 0-16 0` arc, no rotation maths needed. The bookmark
+  reuses `ListingFace`'s notch geometry (duplicated, not extracted: two
+  different sizes and colour models, and §0.2 says no abstraction for a
+  second use).
+- **Icon colour is a prop, dimming is a style.** `styles.active` carries
+  `color`, which `ViewStyle` has no slot for, so the icon wrapper gets its own
+  `iconOn` / `iconOff` opacity pair and the colour arrives as
+  `colors.ink` / `colors.ink2`. No hex literal leaves `tokens.ts`.
+
+**Issues**: none. `theme/tokens.ts` was already dirty with unrelated in-flight
+work (`redline.ctaDeep`, three `redlineRadii` entries) — only the `colors.bg`
+hunk is staged here, via `git apply --cached` on a filtered patch.
+
+**Resolution**: `npx tsc --noEmit` clean, 611/611 vitest pass, biome clean on
+the seven changed files. Not yet verified on a device — the shadow and the four
+icons are the two items that want a screenshot.
+
+**Learnings**: `shadowColor` with an rgba alpha is a silent no-op on iOS
+without `shadowOpacity`. Worth remembering the next time a shadow "doesn't
+show up" in this app.
+
+**Next steps**: owner to eyeball the tab icons and the card shadow on device.
+The SE media-share question from the 02:10 entry is still open — the 4pt the
+`ctaSlot` change gave back moves it slightly in the right direction but does
+not settle it.
+
 ## 2026-08-14 02:10 — Listing-card polish pass: 5% shorter card, uniform video
 inset, outline icons, green wordmark
 

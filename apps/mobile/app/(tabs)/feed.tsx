@@ -99,8 +99,13 @@ const CARD_MAX_VIEWPORT = 0.74;
  * FRAME's inset; the media's own inset inside the white card is
  * `theme/listing-layout.ts` `media.marginHorizontal`, a different number for a
  * different reason.
+ *
+ * 2026-08-14 polish pass: horizontal 24 → 30 — the owner wanted the card ~6%
+ * narrower with more paper on each side. `stackWrap` is `alignItems: center`,
+ * so widening its padding narrows the card symmetrically; top/bottom are
+ * unchanged.
  */
-const CARD_INSET = { horizontal: 24, top: 12, bottom: 10 };
+const CARD_INSET = { horizontal: 30, top: 12, bottom: 10 };
 
 export default function FeedScreen() {
 	const { width, height } = useWindowDimensions();

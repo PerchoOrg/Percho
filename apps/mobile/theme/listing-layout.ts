@@ -17,15 +17,16 @@
  * `TEXT_BLOCK_TARGET` is the redesign's budget for the block:
  * padding 16 top / 18 horizontal / 18 bottom, a price+specs baseline row
  * (31pt), the address (8pt + 12pt), the tags (11pt + 21pt pill), the hairline
- * divider (16pt + 1pt), and a 46pt CTA (8pt + 46), then 18pt of bottom
+ * divider (16pt + 1pt), and a 46pt CTA (4pt + 46), then 18pt of bottom
  * padding:
  *
- *   16 + 31 + 8 + 12 + 11 + 21 + 16 + 1 + 8 + 46 + 18 = 188 ≤ 190  ✓
+ *   16 + 31 + 8 + 12 + 11 + 21 + 16 + 1 + 4 + 46 + 18 = 184 ≤ 190  ✓
  *
- * That floor leaves 2pt of headroom before the ≤190 acceptance starts
- * failing — the exact number a future "just add one more row" edit spends
- * without tripping anything until it is too late. It was 17pt before the
- * 2026-08-14 pass; the divider is what spent most of it.
+ * That floor leaves 6pt of headroom before the ≤190 acceptance starts
+ * failing — the number a future "just add one more row" edit spends without
+ * tripping anything until it is too late. It was 17pt before the 2026-08-14
+ * design pass; the divider spent most of it, and the polish pass's tighter
+ * `ctaSlot` (8 → 4) handed 4pt back.
  */
 export const TEXT_BLOCK_TARGET = 190;
 
@@ -60,6 +61,9 @@ export const MAX_TAGS = 3;
  * tightens (`tags.marginTop` 13 → 11) and the gap to the rule widens
  * (`divider.marginTop` 12 → 16). Net +2pt on the block, which the 4pt of
  * headroom absorbs.
+ *
+ * 2026-08-14 polish pass: the explore row sat too far off the rule
+ * (`ctaSlot.marginTop` 8 → 4), which also buys back 4pt of block budget.
  */
 export const textBlock = {
 	block: {
@@ -70,7 +74,7 @@ export const textBlock = {
 	address: { marginTop: 8 },
 	tags: { marginTop: 11 },
 	divider: { marginTop: 16 },
-	ctaSlot: { marginTop: 8 },
+	ctaSlot: { marginTop: 4 },
 } as const;
 
 /**
@@ -103,6 +107,10 @@ export const DIVIDER_HEIGHT = 1;
 export const media = {
 	marginTop: 12,
 	marginHorizontal: 12,
-	/** Nested inside the card's 28pt radius; 20 keeps the corners concentric. */
-	borderRadius: 20,
+	/**
+	 * Nested inside the card's 28pt radius. 14 (was 20, owner 2026-08-14): with
+	 * only a 12pt inset, a 20pt radius read nearly as round as the card's own
+	 * corner; the tighter radius makes the video read as a distinct inner panel.
+	 */
+	borderRadius: 14,
 } as const;

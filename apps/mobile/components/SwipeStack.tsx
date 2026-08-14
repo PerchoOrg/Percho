@@ -404,5 +404,26 @@ const styles = StyleSheet.create({
 		borderRadius: radii.card,
 		overflow: "hidden",
 		backgroundColor: colors.ink, // card face is always dark (§0.3)
+		/**
+		 * Soft lift off the paper background (owner, 2026-08-14). The ask was two
+		 * shadows — `0 12px 32px rgba(35,30,22,.07)` plus a tight
+		 * `0 2px 6px rgba(35,30,22,.03)` — but a RN view carries exactly ONE
+		 * shadow, so the large ambient one is what ships; the contact shadow is
+		 * dropped rather than faked with a wrapper view.
+		 *
+		 * `overflow: hidden` above clips this view's CHILDREN, not its shadow,
+		 * and no ancestor (`stack`, `stackWrap`) clips either — so the shadow is
+		 * free to spill past the card's own inset.
+		 */
+		shadowColor: "rgba(35,30,22,0.07)",
+		shadowOffset: { width: 0, height: 12 },
+		shadowRadius: 32,
+		/**
+		 * iOS multiplies `shadowColor`'s alpha by `shadowOpacity`, which defaults
+		 * to 0 — without this line the colour above renders nothing at all. 1
+		 * keeps the 0.07 the owner specified as the effective opacity.
+		 */
+		shadowOpacity: 1,
+		elevation: 6,
 	},
 });

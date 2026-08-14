@@ -10,7 +10,10 @@
 
 // ─── Color (§0.3) ───────────────────────────────────────────────────
 export const colors = {
-	bg: "#FAF6F0", // App background (warm paper) — chrome base
+	// App background (warm paper) — chrome base. Deepened from #FAF6F0 (owner,
+	// 2026-08-14) so the near-white card face (`redline.card` #FFFDF9) reads as
+	// paper laid ON the background rather than as the background itself.
+	bg: "#F4EEE4",
 	surface: "#FFFFFF", // Cards, sheets, stat tiles
 	surface2: "#F3EDE4", // Recessed wells, inputs
 	border: "#EADFD0", // Hairline dividers
@@ -54,7 +57,7 @@ export const colors = {
 	/**
 	 * The photo-gallery backdrop (`components/listing/PhotoGallery.tsx`).
 	 *
-	 * Near-black rather than `bg` (#FAF6F0) on purpose, and it is the one surface
+	 * Near-black rather than `bg` (#F4EEE4) on purpose, and it is the one surface
 	 * in the app that opts out of warm paper: paper AROUND a photograph tints the
 	 * photograph, and a buyer in the archive view is judging the house's colour,
 	 * not ours. Not pure #000 either — a hair of warmth keeps it in the family
