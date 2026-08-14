@@ -4,22 +4,29 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
-## 2026-08-13 17:30 — Listing card:去掉文字介绍段(story)
+## 2026-08-13 17:40 — Listing card 面板重排:去 story + 加 specs 行
 
-**Objective**: owner 「Listing Card 视频下方的文字太多了 删掉文字介绍那一段 只保留
-基本信息和几个绿色的tag和explore button」。
+**Objective**: owner 先「删掉文字介绍那一段 只保留基本信息和几个绿色的tag和explore
+button」,随后看图反馈「视频下方重新设计一下 有点零散 没有终点」。
 
 **Actions**:
-- `apps/mobile/components/cards/ListingFace.tsx`:删除 story 渲染(`description[0]`
-  的 `Text` + 相关注释)。保留 chips + CTA 不动。
-- `styles.story` / `theme/listing-geometry.ts` 的 `geo.story` 字段**保留**(数据便宜,
-  恢复是一行渲染)。`redline-listing-geometry.test.ts` 未改,24 个测试全过。
+- `components/cards/ListingFace.tsx`:删 story 渲染(`description[0]` 两行 Text);
+  新增 specs 行(`card.bedBathSqft` — "3 bd · 2 ba · 1,800 sqft",13px/#57534D)。
+- `theme/listing-geometry.ts`:`SLACK_SLOTS` 3→4(删 story 后 slack 涨,最坏单 gap
+  Pro Max 20.018>20 被测试抓到);`geo.specs = { marginTop: 'auto' }` 作为第四个
+  slack 槽,把 story 腾出的空间均分,不堆在 locality→chips 之间。
+- `theme/redline-listing-geometry.test.ts`:panelFloor 不再含 storyMT+storyLH(渲染已删,
+  floor 只算当前渲染),加 specs 13 行高;SLACK_SLOTS 断言 3→4;gap 上限改 1/4。
 
-**Verify**: `npx tsc --noEmit` 干净;`vitest run theme/redline-listing-geometry.test.ts`
-24 passed。
+**Decisions**: 面板层级固定为 price → address → locality → specs → chips → CTA,
+"终点"= CTA。story 的 geometry 字段保留(恢复是一行渲染)。hero 不动——story 删掉后
+面板 188-228pt 装得下六行,不需要再调 0.618。
 
-**Next steps**: 手机真机确认面板间距(删掉 story 后 `marginTop: auto` 的 slack 分配
-变化:price 和 chips 各吸收一半,CTA 仍钉底)。
+**Verify**: `npx tsc --noEmit` 干净;`npx biome check` 3 文件过;`npx vitest run`
+586 passed(theme 96 含在内)。
+
+**Next steps**: 真机确认面板间距——specs 行是 auto margin,小屏上紧贴 locality,大屏
+上会有空隙;不合适就把它改成固定 6pt 而非 auto。
 
 ## 2026-08-10 11:20 — 效果分布打开:模板加宽 + 家族均衡 + 恢复小幅垂直移动
 

@@ -71,7 +71,7 @@ import type { DimKey } from "@percho/shared";
  */
 import { StyleSheet, Text, View } from "react-native";
 import type { ListingCardV3 } from "../../lib/feed/card-types";
-import { radii, redline } from "../../theme/tokens";
+import { fonts, radii, redline } from "../../theme/tokens";
 import { redlineText } from "../../theme/typography";
 import { CardPhoto } from "../CardPhoto";
 import { CardVideo } from "../CardVideo";
@@ -137,7 +137,6 @@ interface ListingFaceProps {
 export function ListingFace({ card, isTop, onExplore }: ListingFaceProps) {
 	/** Chip labels — the story line was removed 2026-08-13 (see header). */
 	const chips = (card.dims ?? []).slice(0, MAX_CHIPS);
-
 	return (
 		<View style={styles.face}>
 			{/* Hero — 54%, full bleed */}
@@ -192,6 +191,17 @@ export function ListingFace({ card, isTop, onExplore }: ListingFaceProps) {
 				{!!card.locality && (
 					<Text style={styles.locality} numberOfLines={1}>
 						{card.locality}
+					</Text>
+				)}
+				{/*
+				 * The spec line (bed / bath / sqft) — the single "basic info" row that
+				 * anchors the panel after the story was removed 2026-08-13. Reads in
+				 * the same muted voice as the locality row, so the panel's hierarchy
+				 * is: price → address → locality → specs → chips → CTA.
+				 */}
+				{!!card.bedBathSqft && (
+					<Text style={styles.specs} numberOfLines={1}>
+						{card.bedBathSqft}
 					</Text>
 				)}
 				{chips.length > 0 && (
@@ -289,6 +299,21 @@ const styles = StyleSheet.create({
 	price: { ...redlineText.priceCompact, color: redline.ink, marginTop: "auto" },
 	address: { ...redlineText.address, color: redline.ink, ...geo.address },
 	locality: { ...redlineText.locality, color: redline.ink3, ...geo.locality },
+	/**
+	 * Spec line ("3 bd · 2 ba · 1,800 sqft") — 13px in the same muted ink as
+	 * the story used, grouped with the identity rows rather than as a section.
+	 * It is data, not prose, so it does NOT grow a line-height: lineHeight 13
+	 * keeps the fixed cost inside the panel budget (the geometry test asserts
+	 * the CTA can never be pushed off the card).
+	 */
+	specs: {
+		fontFamily: fonts.ui,
+		fontSize: 13,
+		fontWeight: "400",
+		lineHeight: 13,
+		color: redline.inkStory,
+		...geo.specs,
+	},
 	/**
 	 * `flexShrink: 1` is what protects the CTA. Two lines need 202pt of a panel
 	 * that is only 188pt on a 375×667 iPhone SE; letting THIS element yield a

@@ -108,11 +108,19 @@ export const MAX_CHIPS = 3;
  *   2. `chips.marginTop`   — the story→chips section break (on top of an 8pt floor)
  *   3. `ctaSlot.marginTop` — the chips→CTA section break (on top of an 8pt floor)
  *
- * Under pressure every auto resolves to 0, the two floors hold, and the story's
- * `flexShrink` yields the second line — so the CTA still cannot be pushed off the
- * card and the fit floor asserted in the test is unchanged.
+ * **2026-08-13**: the story row was removed (owner: 「删掉文字介绍那一段」), freeing
+ * ~22pt of panel height. That slack flowed entirely into the auto slots and
+ * pushed the worst single gap past 20pt on a Pro Max (the geometry test caught
+ * it: 20.018 > 20). The panel now renders six rows (price / address / locality /
+ * specs / chips / CTA) where the removed story used to sit between locality and
+ * chips, so the slack is split FOUR ways — the specs margin is the fourth slot
+ * that fills the space the story occupied.
+ *
+ * Under pressure every auto resolves to 0, the floors hold, and the specs row
+ * (like the story before it) is the first thing to yield — so the CTA still
+ * cannot be pushed off the card.
  */
-export const SLACK_SLOTS = 3;
+export const SLACK_SLOTS = 4;
 
 /**
  * The MINIMUM story→chips and chips→CTA gap, in pt.
@@ -148,6 +156,13 @@ export const listingGeometry = {
 	address: { marginTop: 6 },
 	/** "Location: 12px muted, margin-top 4px" → 3. */
 	locality: { marginTop: 3 },
+	/**
+	 * Spec line margin — the fourth slack slot (see SLACK_SLOTS). It is auto so
+	 * the space the story left behind is distributed, not dumped between locality
+	 * and chips. On tight devices it collapses to 0 — the specs row sits flush
+	 * under locality and the CTA stays pinned.
+	 */
+	specs: { marginTop: "auto" },
 	/**
 	 * "Story: 13px, line-height 1.45, margin-top 15px, #57534D" → margin 8.
 	 *

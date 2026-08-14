@@ -71,17 +71,27 @@ describe("listing card redline geometry", () => {
 	 * than overflowing. If this fails, the CTA is being clipped on a real device.
 	 */
 	const panelFloor = () => {
+		const localityMarginTop = listingGeometry.locality.marginTop;
+		const localityFontSize = redlineText.locality.fontSize;
+		const specsMarginTop = listingGeometry.specs.marginTop;
+		const specsLineHeight = 13; // data row — no prose leading
+		const specsFloor = 0; // specs.marginTop is 'auto' — the 4th slack slot, collapses to 0
 		return (
 			listingGeometry.panel.paddingTop +
 			listingGeometry.panel.paddingBottom +
 			redlineText.priceCompact.lineHeight +
 			listingGeometry.address.marginTop +
 			redlineText.address.fontSize +
-			listingGeometry.locality.marginTop +
-			redlineText.locality.fontSize +
-			listingGeometry.story.marginTop +
-			(redlineText.storyCompact.lineHeight ?? 0) + // one line minimum
-			listingGeometry.story.marginBottom + // story→chips FLOOR
+			localityMarginTop +
+			localityFontSize +
+			specsFloor +
+			specsLineHeight +
+			// NOTE: the story row (storyMT + storyLH) is NOT in this floor.
+			// The story render was removed 2026-08-13; geometry keeps the
+			// fields only so re-enabling stays a one-line render. The floor
+			// asserts the panel that actually renders today. storyMB stays —
+			// it is the chips' upper gap.
+			listingGeometry.story.marginBottom + // chips upper gap
 			listingGeometry.chip.height +
 			listingGeometry.chips.marginBottom + // chips→CTA FLOOR
 			44 // compact CTA (§0.5 touch-target floor)
@@ -182,9 +192,11 @@ describe("listing card redline geometry", () => {
 	// 样式和排版」. The panel is 38.2% of the card regardless of content, so it
 	// carries free space; whichever `marginTop:'auto'` slots exist split it
 	// equally. With ONE slot (`chips`) the story→chips gap took all of it —
-	// measured ~37pt against 8pt elsewhere.
-	it("splits the panel's free space across THREE auto slots", () => {
-		expect(SLACK_SLOTS).toBe(3);
+	// measured ~37pt against 8pt elsewhere. After the story was removed
+	// (2026-08-13) the freed space would have re-piled into the remaining slots,
+	// so a fourth slot (`specs`) was added to absorb it.
+	it("splits the panel's free space across FOUR auto slots", () => {
+		expect(SLACK_SLOTS).toBe(4);
 		// The three that are `auto` are asserted structurally in ListingFace's
 		// StyleSheet via `geo`; the two below are the two that must keep a FLOOR
 		// so a tight device still gets a visible section break.
@@ -233,7 +245,7 @@ describe("listing card redline geometry", () => {
 	 * the THINNEST content (no story, no chips) — every point of slack is real.
 	 * With 3 slots no single gap may exceed a third of it plus its own floor.
 	 */
-	it("caps any single gap at a third of the slack on a Pro Max", () => {
+	it("caps any single gap at a quarter of the slack on a Pro Max", () => {
 		const slack = panelHeight(430, 932) - panelFloor();
 		expect(slack).toBeGreaterThan(0); // otherwise this test proves nothing
 		const worstGap = slack / SLACK_SLOTS + listingGeometry.story.marginBottom;
