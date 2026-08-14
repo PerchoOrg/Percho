@@ -79,6 +79,16 @@ interface SharedValueLike<T> {
  * two can never both have activated, so the slot can never be stale).
  * `tapStatus` is the `onTouchesDown`-set "tap gesture is live" flag, which
  * clears the moment the tap activates.
+ *
+ * `"worklet"` is LOAD-BEARING: the only caller is the pan's `onEnd`, which runs
+ * on the UI thread. Without the directive Reanimated captures this as a plain JS
+ * function in the worklet's closure — callable only through `runOnJS` — and the
+ * synchronous call throws "Tried to synchronously call a non-worklet function on
+ * the UI thread" out of the gesture callback, i.e. the app dies at the end of
+ * every swipe. Every other helper the gesture worklets call (`decideSwipe`,
+ * `clampDisplacement`, `panLive`, `advanceFromDrag`, …) carries it for the same
+ * reason. The directive is an inert string statement under vitest, so this stays
+ * a plain pure function to its tests.
  */
 export function isTapEnd(
 	slot: TapSlot | undefined | null,
@@ -86,6 +96,7 @@ export function isTapEnd(
 	dx: number,
 	vx: number,
 ): { target: string | null; tapped: boolean } {
+	"worklet";
 	if (!slot || !slot.target) return { target: null, tapped: false };
 	if (!status || !status.active) return { target: null, tapped: false };
 	if (Math.abs(dx) > TAP_MAX_DX || Math.abs(vx) > TAP_MAX_VX) {

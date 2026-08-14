@@ -4,6 +4,57 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-08-14 00:05 — 划走卡片必崩:`isTapEnd` 没有 `"worklet"` 指令
+
+**Objective**: owner 真机(Expo Go / iPhone)报「划一下卡片就崩」。加载时崩溃已在
+`332eb524` / `e014d1d5` 修掉,这一条是**滑动结束**才触发的,前两次修的是 tap
+派发路径,没修中根因。
+
+**Root cause**: `lib/gesture/tap-slot.ts` 的 `isTapEnd()` **缺少 `"worklet"`
+指令**,而它唯一的调用点是 `hooks/use-swipe-card.ts:314` —— pan 的 `onEnd`,
+跑在 UI 线程。Reanimated 序列化 worklet 闭包时,把没有指令的普通 JS 函数装成
+「只能经 `runOnJS` 调用」的桩;worklet 里同步调用它会抛
+`Tried to synchronously call a non-worklet function on the UI thread`,而这个异常
+是从 gesture 回调里抛出来的 → 崩。
+
+时序完全对得上:pan 的 `onEnd` **只在 pan 真的激活过**(手指移动超过
+`activeOffsetX` ±10pt)时才跑,所以点一下不崩、**划一下必崩**,而且崩在松手那一刻
+而不是拖动过程中(`onUpdate` 里调的 `panLive` / `clampDisplacement` /
+`advanceFromDrag` / `stepThresholdLatch` 全都带指令,所以拖动是好的)。
+
+`lib/gesture/` 里其它被 worklet 调用的纯函数(`decideSwipe`、`commitDecision`、
+`cardStackVisual`、`labelOpacity` …)**无一例外都带 `"worklet"`**;`isTapEnd` 是
+2026-08-13 tap-target 那批新增的,漏了。这也解释了为什么前两轮修 tap 派发没用:
+崩溃发生在 `isTapEnd` 返回之前,`runOnJS(dispatchTapTarget)` 那几行根本没跑到。
+
+**Actions**:
+- `lib/gesture/tap-slot.ts`:`isTapEnd` 加 `"worklet";`,并写明这条指令是
+  load-bearing(vitest 下它只是一条惰性字符串语句,纯函数测试不受影响)。
+- `lib/gesture/tap-slot.test.ts`:加一条源码断言(沿用 `memo-identity.test.ts`
+  的 readFileSync 套路)—— 行为测试跑在 Node 里,永远看不见线程问题,只能读源码
+  兜住这条不再被删掉。
+
+**Decisions**: 只改这一处。排查过但**未动**的几个嫌疑:swipe-hint 的 zustand
+persist 写入、`recordSwipe` → `setActiveIndex` 竞态、`runOnUI` 的 nudge、
+`ListingFace` 的 heart/explore 渲染路径 —— 都不是同步跨线程调用,不会崩。
+
+**Issues / 遗留风险**(本次没改,记录在案):
+1. `use-swipe-card.ts:420` 的 `Gesture.Exclusive(gesture, tapGesture)` **没有
+   memo**,每次 render 新建 ExclusiveGesture。RNGH 的 `updateHandlers` 每次
+   render 都会调 `gestureConfig.prepare()`,而 `ExclusiveGesture.prepare()` 是
+   **追加** `requireToFail`(`gestureComposition.ts:38`)——由于 `tapGesture` 被
+   memo 住是同一个实例,它的 `config.requireToFail` 会**每 render 增长一项**,
+   一路传给原生 `waitFor`。不是崩溃源,但是货真价实的泄漏,值得下一轮收掉。
+2. `ListingFace` 的 `arm()` 只在 heart / explore 的 `onTouchStart` 上写
+   `tapSlot`,**没有任何地方在触摸落在别处时清空它**;目前靠 `tapStatus.active`
+   + tap `onEnd` 的 `success` 两道闸挡住,逻辑上够,但状态是脏的。
+
+**Verify**: `npx tsc --noEmit` 干净;`npx vitest run` **609 passed / 41 files**
+(新增 1 条);`npx biome check` 两个改动文件过。**真机未验证** —— 需要 owner 在
+iPhone 上划一张卡确认。
+
+**Next steps**: owner 真机确认「划走不崩」后再提交;然后处理上面两条遗留风险。
+
 ## 2026-08-13 19:30 — Listing card 面板最终重排(approved demo 落地)
 
 **Objective**: owner 审核 demo 后批准(「整体不够沉浸 小字太多 底下的字再大一些 尤其是

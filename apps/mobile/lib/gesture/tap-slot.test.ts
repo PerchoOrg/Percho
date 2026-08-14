@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { TAP_MAX_DX, TAP_MAX_VX, isTapEnd } from "./tap-slot";
 
@@ -40,5 +42,18 @@ describe("isTapEnd", () => {
 			target: null,
 			tapped: false,
 		});
+	});
+
+	/**
+	 * The behaviour above is thread-agnostic; WHERE it runs is not. The pan's
+	 * `onEnd` calls this synchronously on the UI thread, so without the
+	 * `"worklet"` directive Reanimated hands the worklet a JS-only stub and the
+	 * call throws out of the gesture callback — every swipe killed the app
+	 * (2026-08-13). Nothing observable from a vitest process can catch that, so
+	 * the source is read directly.
+	 */
+	it("is a worklet — the pan's onEnd calls it on the UI thread", () => {
+		const src = readFileSync(join(__dirname, "tap-slot.ts"), "utf8");
+		expect(src).toMatch(/export function isTapEnd\([\s\S]*?\{\n\t"worklet";/);
 	});
 });
