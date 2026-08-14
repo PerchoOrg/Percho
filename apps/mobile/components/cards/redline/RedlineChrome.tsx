@@ -28,6 +28,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { radii, redline } from "../../../theme/tokens";
 import { redlineText } from "../../../theme/typography";
 import {
+	ICON_ART_WIDTH,
 	ICON_FONT,
 	ICON_GLYPH,
 	ICON_OPTICAL_SCALE,
@@ -129,6 +130,17 @@ interface RedlineCtaProps {
 	 * 44 is the floor, not a free parameter: §0.5 requires a 44pt touch target.
 	 */
 	compact?: boolean;
+	/**
+	 * Exact CTA height override. 2026-08-13 listing-card redesign: the listing
+	 * CTA is 46pt. `compact` still sets the floor when `height` is absent.
+	 */
+	height?: number;
+	/**
+	 * Solid-fill override. 2026-08-13: the listing CTA is `redline.ctaDeep`
+	 * (#0E5C48), slightly deeper than the default accent so it does not fight
+	 * the tag pills. Pressed state still uses `accentDeep`.
+	 */
+	fill?: string;
 }
 
 /**
@@ -144,6 +156,8 @@ export function RedlineCta({
 	onPress,
 	tone = "solid",
 	compact = false,
+	height,
+	fill,
 }: RedlineCtaProps) {
 	const light = tone === "light";
 	return (
@@ -155,7 +169,12 @@ export function RedlineCta({
 			style={({ pressed }) => [
 				styles.cta,
 				compact && styles.ctaCompact,
-				light ? styles.ctaLight : styles.ctaSolid,
+				height !== undefined && { height },
+				light
+					? styles.ctaLight
+					: fill !== undefined
+						? { backgroundColor: fill }
+						: styles.ctaSolid,
 				// A saturated fill must DARKEN under the finger; fading reads as
 				// disabled. The light pill has no darker token, so it fades.
 				pressed && (light ? styles.pressedSoft : styles.ctaPressed),
@@ -203,22 +222,39 @@ interface RedlineIconProps {
  * (Android) and `textAlignVertical` are what stop the font's line box from
  * adding invisible space above the art and pushing chip labels off centre.
  *
+ * ── Horizontal centring is NOT free (2026-08-14) ────────────────────────────
+ *
+ * Flex-centring the `<Text>` centres the glyph's EM BOX. In this font every
+ * glyph has a 1em advance and a zero left side bearing, so the drawing is
+ * flush left and all of the slack sits on the right — the art lands
+ * `(1 - artWidth) / 2` em left of centre. `bookmark` is the extreme case at
+ * 0.5625em wide: 4.4pt off centre inside the 38pt save disc, which is what
+ * the owner saw. So the glyph is shifted right by half its slack.
+ * `textAlign: "center"` covers the other half of the problem — a box narrower
+ * than the 1.18em advance would otherwise leave the glyph left-aligned in it.
+ * See `ICON_ART_WIDTH` for the measurements.
+ *
  * Note there is no `name`-not-found branch: `RedlineIconName` is a closed union
  * and `ICON_GLYPH` is a complete `Record` of it, so an unmapped name is a
  * compile error rather than a run-time tofu box.
  */
 export function RedlineIcon({ name, size, color }: RedlineIconProps) {
+	const fontSize = size * ICON_OPTICAL_SCALE;
 	return (
 		<View style={[styles.iconBox, { width: size, height: size }]}>
 			<Text
 				allowFontScaling={false}
 				style={{
 					fontFamily: ICON_FONT,
-					fontSize: size * ICON_OPTICAL_SCALE,
-					lineHeight: size * ICON_OPTICAL_SCALE,
+					fontSize,
+					lineHeight: fontSize,
 					color,
 					includeFontPadding: false,
 					textAlignVertical: "center",
+					textAlign: "center",
+					transform: [
+						{ translateX: (fontSize * (1 - ICON_ART_WIDTH[name])) / 2 },
+					],
 				}}
 			>
 				{ICON_GLYPH[name]}

@@ -102,6 +102,55 @@ export const ICON_GLYPH: Record<RedlineIconName, string> = {
 };
 
 /**
+ * Width of each glyph's DRAWING, as a fraction of the em box.
+ *
+ * Measured off `assets/fonts/PerchoIcons.ttf` with fontTools (`hmtx` +
+ * outline bounds). Every glyph in this subset has advance width 1024 (1em)
+ * and left side bearing 0 — the art is flush LEFT in the em box and the
+ * leftover width sits entirely on the right. Centring the text box therefore
+ * centres the em box, not the drawing, and every icon renders left of centre
+ * by `(1 - artWidth) / 2` em.
+ *
+ * That is small for the wide glyphs (camera, 0.047em) and large for the
+ * narrow ones: `bookmark` is 0.5625em wide, so it sat 0.219em ≈ 4.4pt left of
+ * centre inside the 38pt save disc — the off-centre bookmark the owner
+ * reported on 2026-08-14. `RedlineIcon` shifts the glyph right by half the
+ * slack, which centres the ART for every name.
+ *
+ * To re-measure after a re-subset:
+ *
+ *   python3 - <<'PY'
+ *   from fontTools.ttLib import TTFont
+ *   from fontTools.pens.boundsPen import BoundsPen
+ *   f = TTFont('assets/fonts/PerchoIcons.ttf'); gs = f.getGlyphSet()
+ *   for cp, g in sorted(f.getBestCmap().items()):
+ *       bp = BoundsPen(gs); gs[g].draw(bp)
+ *       print(hex(cp), round(bp.bounds[2] / f['head'].unitsPerEm, 4))
+ *   PY
+ */
+export const ICON_ART_WIDTH: Record<RedlineIconName, number> = {
+	camera: 0.8125,
+	car: 0.9375,
+	check: 0.8125,
+	cup: 0.8438,
+	expand: 0.6875,
+	family: 0.9375,
+	moon: 0.8125,
+	path: 0.7969,
+	school: 1,
+	shop: 0.8125,
+	sparkle: 0.9063,
+	tree: 0.875,
+	walk: 0.7513,
+	yard: 0.8125,
+	dog: 0.875,
+	handshake: 1,
+	shieldCheck: 0.75,
+	bookmark: 0.5625,
+	arrowRight: 0.75,
+};
+
+/**
  * Font size to request per point of nominal icon size.
  *
  * Measured, not guessed: in this subset the drawn art occupies 0.69em (expand,

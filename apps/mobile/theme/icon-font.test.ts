@@ -10,7 +10,10 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { ICON_GLYPH } from "../components/cards/redline/icon-font";
+import {
+	ICON_ART_WIDTH,
+	ICON_GLYPH,
+} from "../components/cards/redline/icon-font";
 
 const FONT = join(__dirname, "../assets/fonts/PerchoIcons.ttf");
 
@@ -97,6 +100,22 @@ describe("redline icon font", () => {
 			).toBeUndefined();
 			seen.set(glyph, name);
 		}
+	});
+
+	it("knows every glyph's art width, for the centring shift", () => {
+		// `RedlineIcon` centres the DRAWING, not the em box, because this font
+		// draws every glyph flush left in a 1em advance (see ICON_ART_WIDTH).
+		// A name added to ICON_GLYPH without a width here would type-error, but
+		// a placeholder 1 would silently un-centre it, so the range is checked
+		// too: 1 means "art fills the em box", 0 is impossible.
+		for (const name of Object.keys(ICON_GLYPH)) {
+			const w = ICON_ART_WIDTH[name as keyof typeof ICON_ART_WIDTH];
+			expect(w, `${name} art width`).toBeGreaterThan(0);
+			expect(w, `${name} art width`).toBeLessThanOrEqual(1);
+		}
+		expect(Object.keys(ICON_ART_WIDTH).sort()).toEqual(
+			Object.keys(ICON_GLYPH).sort(),
+		);
 	});
 
 	it("stays subset — the full Phosphor font must never be committed", () => {

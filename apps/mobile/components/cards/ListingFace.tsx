@@ -74,6 +74,7 @@ import {
 	MAX_TAGS,
 	TAG_PILL_HEIGHT,
 	textBlock as geo,
+	media as mediaGeo,
 } from "../../theme/listing-layout";
 
 /**
@@ -268,8 +269,14 @@ const styles = StyleSheet.create({
 	 * use; `minHeight: 0` lets flexbox give it zero rather than fighting the
 	 * block's natural height. No aspectRatio, no fixed height (owner
 	 * 2026-08-13: 「媒体吃掉所有剩余高度」).
+	 *
+	 * Inset by `mediaGeo` (owner 2026-08-14): white card paper shows above and
+	 * beside the video, and its left/right edges line up with the text block's
+	 * 18pt padding, so the two read as ONE card instead of a video with a
+	 * separate white panel stuck under it. `overflow: hidden` is what makes the
+	 * rounded corners actually clip the player.
 	 */
-	media: { flex: 1, minHeight: 0, overflow: "hidden" },
+	media: { flex: 1, minHeight: 0, overflow: "hidden", ...mediaGeo },
 	badgeSlot: { position: "absolute", top: 12, left: 12, zIndex: 2 },
 	/** Frosted LISTING badge — rgba(255,255,255,0.92), radius 20. */
 	badge: {
@@ -280,7 +287,12 @@ const styles = StyleSheet.create({
 		paddingHorizontal: 11,
 		overflow: "hidden",
 	},
-	badgeLabel: { ...redlineText.listingCard.badge, color: redline.ink },
+	/**
+	 * Green, not ink (owner 2026-08-14). `redline.accent` (#0E6B57) is the only
+	 * accent these faces may use, and the frosted white pill keeps the
+	 * contrast — the badge is the one place the theme colour reads at a glance.
+	 */
+	badgeLabel: { ...redlineText.listingCard.badge, color: redline.accent },
 	/** Save bookmark disc — top-right over the media (owner 2026-08-13). */
 	saveSlot: { position: "absolute", top: 12, right: 12, zIndex: 2 },
 	saveDisc: {

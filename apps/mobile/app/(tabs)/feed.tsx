@@ -74,7 +74,7 @@ import { useEventQueue } from "../../state/event-queue";
 import { useFeedSession } from "../../state/feed-session";
 import { useFunnelStore } from "../../state/funnel";
 import { useSavedStore } from "../../state/saved";
-import { MAX_HINT_SESSIONS, useSwipeHintStore } from "../../state/swipe-hint";
+import { useSwipeHintStore } from "../../state/swipe-hint";
 import { colors } from "../../theme/tokens";
 import { textStyles } from "../../theme/typography";
 
@@ -119,9 +119,9 @@ export default function FeedScreen() {
 	// Saved state — the card heart toggles it; nothing else reads it yet
 	// (the Saved tab is still the task-5 placeholder).
 	const toggleSaved = useSavedStore((s) => s.toggle);
-	// Swipe-hint state — the motion hint's never-nag contract.
-	const hintDiscovered = useSwipeHintStore((s) => s.hasDiscoveredSwipe);
-	const hintSessions = useSwipeHintStore((s) => s.hintSessionsShown);
+	// Swipe-hint state — the motion hint's never-nag contract. Deliberately NOT
+	// subscribed to `hasDiscoveredSwipe` / `hintSessionsShown`: the hint effect
+	// below WRITES both, and a subscription would re-run it. See there.
 	const hintHydrated = useSwipeHintStore((s) => s.hydrated);
 	const recordSwipeHint = useSwipeHintStore((s) => s.recordSwipe);
 	const recordHintShown = useSwipeHintStore((s) => s.recordHintShown);
@@ -319,7 +319,11 @@ export default function FeedScreen() {
 			);
 
 			const next = recordSwipe(card, decision, at);
-			// A real swipe IS the discovery — the hint never plays again.
+			// A real swipe IS the discovery — the hint never plays again. Only
+			// reached by a committed PAN: the tap-driven advances (ask "Skip this
+			// topic", insight "Not sure", milestone CTA) call `setActiveIndex`
+			// directly and never enter this handler, so no tap can count as a
+			// swipe here.
 			recordSwipeHint();
 			setActiveIndex(index + 1);
 			const target = evaluateStageAdvance(stage, next, {
@@ -551,31 +555,44 @@ export default function FeedScreen() {
 	 * sees the next card peek — the proof the cards swipe. Never nags:
 	 * a real swipe (recordSwipe in `onDecision`) disables it forever; without
 	 * a swipe it plays at most MAX_HINT_SESSIONS app opens.
+	 *
+	 * ── Why the deps are this narrow (2026-08-14) ───────────────────────────
+	 *
+	 * The hint never played on device, and the reason was in this effect rather
+	 * than in the animation. `recordHintShown()` WRITES the hint store, and the
+	 * effect used to subscribe to the value it writes (`hintSessionsShown`) and
+	 * to `deck.length`. So the set() it makes re-rendered the screen with a
+	 * changed dep, React ran the CLEANUP first — `clearTimeout(t)` — and the
+	 * 600ms timer died a few milliseconds after being scheduled. The re-run
+	 * then hit the `hintRunOnce` latch and returned. Worse, the session had
+	 * already been counted, so three feed opens silently burned the entire
+	 * never-nag budget without the buyer ever seeing a nudge. A `deck.length`
+	 * append inside the 600ms window killed it the same way.
+	 *
+	 * The fix is to depend only on values this effect does not write:
+	 * `hintEligible` is a BOOLEAN, so a deck that keeps growing does not
+	 * re-trigger it, and the never-nag rules (discovered? budget left?) are
+	 * already enforced inside `recordHintShown` against fresh store state —
+	 * they never needed a subscription here.
 	 */
 	const hintRef = useRef<SwipeHintHandle | null>(null);
 	const hintRunOnce = useRef(false);
 	const onHintReady = useCallback((hint: SwipeHintHandle) => {
 		hintRef.current = hint;
 	}, []);
+	/** A deck is up and the buyer is on its first card. Flips once. */
+	const hintEligible = deck.length > 0 && activeIndex === 0;
 	useEffect(() => {
-		if (!hintHydrated || hintDiscovered || hintRunOnce.current) return;
-		if (deck.length === 0 || activeIndex !== 0) return;
-		if (hintSessions >= MAX_HINT_SESSIONS) return;
+		if (!hintHydrated || !hintEligible || hintRunOnce.current) return;
 		hintRunOnce.current = true;
-		const ok = recordHintShown();
-		if (!ok) return;
+		// Returns false when the buyer has already discovered the swipe or the
+		// MAX_HINT_SESSIONS budget is spent.
+		if (!recordHintShown()) return;
 		const t = setTimeout(() => {
 			hintRef.current?.nudge();
 		}, 600);
 		return () => clearTimeout(t);
-	}, [
-		hintHydrated,
-		hintDiscovered,
-		hintSessions,
-		recordHintShown,
-		deck.length,
-		activeIndex,
-	]);
+	}, [hintHydrated, hintEligible, recordHintShown]);
 
 	const onTapTarget = useCallback(
 		(target: string) => {

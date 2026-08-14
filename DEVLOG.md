@@ -4,6 +4,88 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-08-14 00:40 — Listing card polish: icon centring, green badge, inset
+media, and the swipe hint that never played
+
+**Objective**: four UI fixes from Tia on the feed's listing card — (1) the save
+bookmark is not centred in its white disc, (2) the LISTING badge should be the
+green accent, (3) the video and the white text block read as two separate
+cards, (4) the swipe/motion hint is still not visible on device.
+
+**Actions**:
+- `components/cards/redline/icon-font.ts` — new `ICON_ART_WIDTH` table (art
+  width per glyph, in em), plus the fontTools snippet to re-measure it after a
+  re-subset.
+- `components/cards/redline/RedlineChrome.tsx` — `RedlineIcon` now adds
+  `textAlign: "center"` AND shifts the glyph right by half its em-box slack.
+- `theme/listing-layout.ts` — new `media` geometry (marginTop 14,
+  marginHorizontal = `textBlock.block.paddingHorizontal` = 18, borderRadius 20).
+- `components/cards/ListingFace.tsx` — media box spreads `media`; badge label
+  goes `redline.ink` → `redline.accent`.
+- `app/(tabs)/feed.tsx` — swipe-hint effect deps narrowed; hint store
+  subscriptions for `hasDiscoveredSwipe` / `hintSessionsShown` dropped.
+- Tests: `theme/icon-font.test.ts` (art-width table covers ICON_GLYPH, values
+  in (0,1]), `theme/listing-layout.test.ts` (media edges align with the text
+  block; the 65% media share now accounts for the 14pt top inset).
+
+**Issues / root causes**:
+
+1. **The bookmark was off-centre because the FONT is, not because of CSS.**
+   Measured `assets/fonts/PerchoIcons.ttf` with fontTools: every glyph in the
+   subset has advance 1024 (1em) and **lsb 0** — the art is flush LEFT and all
+   of the leftover width sits on the right. Flex-centring the `<Text>` centres
+   the em box, so the drawing lands `(1 − artWidth)/2` em left of centre. Per
+   glyph that is 0.047em (sparkle) to **0.219em for `bookmark`** (art is only
+   0.5625em wide) — 4.4pt inside a 38pt disc, exactly what Tia saw. The fix
+   corrects every glyph, so all icons move a little; the bookmark moves a lot.
+   `textAlign: "center"` alone would NOT have fixed this.
+
+2. **The swipe hint never played, and it was the effect, not the animation.**
+   `recordHintShown()` writes `hintSessionsShown`, and the effect subscribed to
+   that same value (and to `deck.length`). The store write re-rendered the feed
+   with a changed dep → React ran the effect CLEANUP first → `clearTimeout(t)`
+   killed the 600ms timer a few ms after it was scheduled → the re-run hit the
+   `hintRunOnce` latch and returned. The session had already been counted, so
+   **three feed opens silently burned the whole never-nag budget with the buyer
+   never seeing a nudge** — and after that `recordHintShown()` returns false
+   forever. A `deck.length` append inside the 600ms window did the same. Deps
+   are now `[hintHydrated, hintEligible, recordHintShown]`, where `hintEligible`
+   is a boolean that flips once; the never-nag rules were always enforced inside
+   `recordHintShown` against fresh store state and never needed a subscription.
+
+   Buyers who already hit `hintSessionsShown: 3` will not see the hint — the
+   persisted counter is spent. If Tia wants it back on her device, delete the
+   app's `percho-v3:swipe-hint:v1` AsyncStorage key (reinstall does it).
+
+**Decisions**:
+- The media inset lives in `listing-layout.ts`, not `tokens.ts`, so the test can
+  assert `media.marginHorizontal === textBlock.block.paddingHorizontal` — the
+  alignment IS the fix, and two hand-typed 18s would drift.
+- Badge/save slots stay at `top: 12 / left: 12 / right: 12` **inside** the media
+  box, so they now sit 30pt from the card's left edge rather than 12. Pulling
+  them in would push them into the media's 20pt corner radius. Worth a look on
+  device.
+- `recordSwipeHint()` in `onDecision` was checked and left alone: `onDecision`
+  is only reachable from a committed PAN (`useSwipeCard` → `settle` → handoff).
+  Every tap-driven advance (ask "Skip this topic", insight "Not sure",
+  milestone CTA) calls `setActiveIndex` directly and never enters that handler,
+  so no tap can already count as a swipe. Added a comment saying so.
+- The nudge (`tx → −16`) arms `SwipeLabels` and shows the "pass" label at ~0.13
+  opacity for a beat. Left as is — it is the direction the hint is teaching, and
+  suppressing it would mean threading a flag through the label worklet.
+
+**Verification**: `npx tsc --noEmit` clean; `npx vitest run` 41 files / 611
+tests pass; `npx biome check` clean on the seven changed files. Not verified on
+device — the icon shift and the media inset need Tia's eyes on Expo Go.
+
+**Next steps**: device pass on the four fixes. Also: `lib/feed/
+abbreviate-address.ts` is still UNTRACKED while `ListingFace` (committed in
+`ddaa885d`) imports it — a fresh clone does not build. `theme/listing-layout.ts`
+had the same problem and is committed here because this change edits it;
+`abbreviate-address.ts` (+ its test) was left alone as outside this change and
+needs committing. `lib/area-familiarity.ts` is untracked too but only the
+uncommitted `search.tsx` imports it, so it belongs with that work.
+
 ## 2026-08-14 00:05 — 划走卡片必崩:`isTapEnd` 没有 `"worklet"` 指令
 
 **Objective**: owner 真机(Expo Go / iPhone)报「划一下卡片就崩」。加载时崩溃已在
