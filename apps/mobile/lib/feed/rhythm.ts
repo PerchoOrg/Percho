@@ -42,8 +42,6 @@ export function kindForFill(fill: string): FeedCardV3["kind"] | null {
 	switch (fill) {
 		case "geo":
 			return "area";
-		case "ask":
-			return "ask";
 		case "tradeoff":
 			return "tradeoff";
 		case "community":
@@ -51,7 +49,7 @@ export function kindForFill(fill: string): FeedCardV3["kind"] | null {
 		case "listing":
 			return "listing";
 		default:
-			// challenge / insight — rare by budget, placement decided elsewhere.
+			// No budget-limited fills remain post-collapse.
 			return null;
 	}
 }
@@ -120,11 +118,11 @@ export function runLimitsFor(
 
 /**
  * Kinds exempt from the run limit because they are structurally rare and their
- * placement is decided elsewhere: a milestone is a ceremony spliced in by
- * `insertMilestone`, and an insight is emitted at most once per page by budget.
- * Counting them would let a run "reset" across a milestone and hide a long run.
+ * placement is decided elsewhere. Post-collapse every kind commits and flows
+ * through the composer, so nothing is exempt; kept as an empty set so the
+ * rhythm rule reads as "no exemptions" rather than as an accident.
  */
-const EXEMPT: ReadonlySet<FeedCardV3["kind"]> = new Set(["milestone"]);
+const EXEMPT: ReadonlySet<FeedCardV3["kind"]> = new Set([]);
 
 /**
  * How many cards at the tail of `cards` share the given kind.

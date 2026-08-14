@@ -27,7 +27,6 @@ import type {
 import {
 	EMPTY_SIGNALS,
 	type SignalState,
-	applyInsightUnsure,
 	applySkipLayer,
 	applySwipe,
 } from "../lib/feed/signals";
@@ -36,28 +35,22 @@ interface FeedSessionState {
 	signals: SignalState;
 	/** Card ids already shown — dedupes across pages (§1.7 pagination). */
 	seenIds: readonly string[];
-	/** Ask ids already answered, so a question never repeats. */
-	answeredAskIds: readonly string[];
 	/** Nth session for this install (§1.10 `session_n`). */
 	sessionN: number;
 	/** Epoch ms of the previous swipe, for §1.10 `dt_since_prev_swipe`. */
 	lastSwipeAt?: number;
 	hydrated: boolean;
 
-	/** Record a swipe. Returns the resulting signals for advance evaluation. */
+	/** Record a swipe. Returns the resulting signals. */
 	recordSwipe: (
 		card: FeedCardV3,
 		verdict: SwipeVerdict,
 		at: number,
 	) => SignalState;
-	/** "Not sure" on an insight card — records no preference, by design (§1.6). */
-	recordInsightUnsure: (card: FeedCardV3) => void;
 	skipLayer: (layer: FunnelLayer) => void;
 	markSeen: (ids: readonly string[]) => void;
 	/** Called once per app open, after hydration. */
 	beginSession: () => void;
-	/** Stage advanced: reset the per-stage swipe counter (§1.10). */
-	resetStageCounter: () => void;
 	/** Explicit user scope reset (You-tab). Clears evidence, not the stage. */
 	clearSignals: () => void;
 }
@@ -67,7 +60,6 @@ export const useFeedSession = create<FeedSessionState>()(
 		(set, get) => ({
 			signals: EMPTY_SIGNALS,
 			seenIds: [],
-			answeredAskIds: [],
 			sessionN: 0,
 			hydrated: false,
 
@@ -79,21 +71,9 @@ export const useFeedSession = create<FeedSessionState>()(
 					seenIds: s.seenIds.includes(card.id)
 						? s.seenIds
 						: [...s.seenIds, card.id],
-					answeredAskIds:
-						card.kind === "ask" && !s.answeredAskIds.includes(card.id)
-							? [...s.answeredAskIds, card.id]
-							: s.answeredAskIds,
 				}));
 				return signals;
 			},
-
-			recordInsightUnsure: (card) =>
-				set((s) => ({
-					signals: applyInsightUnsure(s.signals, card),
-					seenIds: s.seenIds.includes(card.id)
-						? s.seenIds
-						: [...s.seenIds, card.id],
-				})),
 
 			skipLayer: (layer) =>
 				set((s) => ({ signals: applySkipLayer(s.signals, layer) })),
@@ -113,14 +93,10 @@ export const useFeedSession = create<FeedSessionState>()(
 					lastSwipeAt: undefined,
 				})),
 
-			resetStageCounter: () =>
-				set((s) => ({ signals: { ...s.signals, swipesInStage: 0 } })),
-
 			clearSignals: () =>
 				set({
 					signals: EMPTY_SIGNALS,
 					seenIds: [],
-					answeredAskIds: [],
 					lastSwipeAt: undefined,
 				}),
 		}),
@@ -132,7 +108,6 @@ export const useFeedSession = create<FeedSessionState>()(
 			partialize: (s) => ({
 				signals: s.signals,
 				seenIds: s.seenIds,
-				answeredAskIds: s.answeredAskIds,
 				sessionN: s.sessionN,
 			}),
 			onRehydrateStorage: () => () => {

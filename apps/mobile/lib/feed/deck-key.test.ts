@@ -28,7 +28,7 @@ function session(pool: FeedPool, swipes: number): readonly FeedCardV3[] {
 	let rotate = 0;
 
 	const first = generateFeed({
-		stage: 0,
+		stage: 4,
 		signals: EMPTY_SIGNALS,
 		pool,
 		seenIds: [],
@@ -41,13 +41,12 @@ function session(pool: FeedPool, swipes: number): readonly FeedCardV3[] {
 	for (let i = 0; i < swipes; i++) {
 		if (deck.length - i <= PREFETCH_DISTANCE) {
 			const page = generateFeed({
-				stage: 0,
+				stage: 4,
 				signals: EMPTY_SIGNALS,
 				pool,
 				seenIds: deck.map((c) => c.id),
 				count: FIRST_PAGE_SIZE,
 				rotate,
-				milestonesShown: [],
 			});
 			rotate = page.nextRotate;
 			deck = [...deck, ...page.cards];

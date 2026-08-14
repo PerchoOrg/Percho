@@ -1,20 +1,20 @@
 /**
- * `applySwipe` — the pure reducer. Every §1.7 weighting rule is asserted here,
- * because these are the numbers the funnel gates read.
+ * `applySwipe` — the pure reducer. Every weighting rule is asserted here.
+ *
+ * 2026-08-15: ask / challenge / insight are gone, so the reducer now only
+ * handles the 4 surviving kinds: geo (area), likes (listing/community) and
+ * trade-off (no preference signal).
  */
 import { describe, expect, it } from "vitest";
 import type {
 	AreaCardV3,
 	CommunityCardV3,
-	InsightCardV3,
 	ListingCardV3,
 	TradeoffCardV3,
 } from "./card-types";
 import {
 	EMPTY_SIGNALS,
 	FATIGUE_WINDOW,
-	TEASE_WEIGHT,
-	applyInsightUnsure,
 	applySkipLayer,
 	applySwipe,
 	geoSignalFor,
@@ -37,24 +37,15 @@ const city: AreaCardV3 = {
 	},
 };
 
-const teaseListing: ListingCardV3 = {
+const listing: ListingCardV3 = {
 	kind: "listing",
-	id: "l-tease",
-	slug: "l-tease",
+	id: "l-1",
+	slug: "l-1",
 	address: "1 Main St",
 	priceLabel: "$520K",
 	bedBathSqft: "3 bd · 2 ba",
 	heroUrl: "hero",
 	geoUnitId: "city:decatur-ga",
-	dims: ["trails"],
-	tease: true,
-};
-
-const fullListing: ListingCardV3 = {
-	...teaseListing,
-	id: "l-full",
-	slug: "l-full",
-	tease: undefined,
 };
 
 const community: CommunityCardV3 = {
@@ -66,7 +57,6 @@ const community: CommunityCardV3 = {
 	state: "GA",
 	heroUrl: "hero",
 	geoUnitId: "city:decatur-ga",
-	dims: ["walkable"],
 };
 
 const tradeoff: TradeoffCardV3 = {
@@ -76,44 +66,6 @@ const tradeoff: TradeoffCardV3 = {
 	right: { label: "Shorter commute", dim: "walkable" },
 	scope: "life",
 };
-
-const insight: InsightCardV3 = {
-	kind: "insight",
-	id: "in-trails",
-	dim: "trails",
-	text: "You gravitate toward trail-access homes.",
-	evidence: "6 of your last 8 likes back onto a greenway.",
-};
-
-describe("applySwipe — tease listing weighting (§1.7)", () => {
-	it("credits the geo unit at 0.5x on a right swipe", () => {
-		const s = applySwipe(EMPTY_SIGNALS, teaseListing, "right");
-		expect(geoSignalFor(s, "city:decatur-ga")?.right).toBe(TEASE_WEIGHT);
-		expect(TEASE_WEIGHT).toBe(0.5);
-	});
-
-	it("credits the dim at 0.5x too", () => {
-		const s = applySwipe(EMPTY_SIGNALS, teaseListing, "right");
-		expect(s.dims.trails).toBe(0.5);
-	});
-
-	it("a full listing credits at 1x — the halving is tease-only", () => {
-		const s = applySwipe(EMPTY_SIGNALS, fullListing, "right");
-		expect(geoSignalFor(s, "city:decatur-ga")?.right).toBe(1);
-		expect(s.dims.trails).toBe(1);
-	});
-
-	it("a left tease swipe is an equally weak negative (§1.7)", () => {
-		const s = applySwipe(EMPTY_SIGNALS, teaseListing, "left");
-		expect(geoSignalFor(s, "city:decatur-ga")?.left).toBe(TEASE_WEIGHT);
-		expect(s.likedListingIds).toEqual([]);
-	});
-
-	it("a liked tease is still recorded as a liked listing", () => {
-		const s = applySwipe(EMPTY_SIGNALS, teaseListing, "right");
-		expect(s.likedListingIds).toEqual(["l-tease"]);
-	});
-});
 
 describe("applySwipe — area is a soft signal, never a filter (§1.7)", () => {
 	it("a left swipe records a downweight but keeps the unit present", () => {
@@ -135,84 +87,17 @@ describe("applySwipe — area is a soft signal, never a filter (§1.7)", () => {
 	});
 });
 
-describe("applySwipe — tradeoff / ask records (§1.6)", () => {
-	it("records (dim_left, dim_right, chosen)", () => {
-		const s = applySwipe(EMPTY_SIGNALS, tradeoff, "right");
-		expect(s.tradeoffs).toEqual([
-			{
-				cardId: "to-yard-vs-commute",
-				dimLeft: "outdoors",
-				dimRight: "walkable",
-				chosen: "walkable",
-			},
-		]);
+describe("applySwipe — listing likes", () => {
+	it("a like records the listing and credits its city", () => {
+		const s = applySwipe(EMPTY_SIGNALS, listing, "right");
+		expect(s.likedListingIds).toEqual(["l-1"]);
+		expect(geoSignalFor(s, "city:decatur-ga")?.right).toBe(1);
 	});
 
-	it("boosts the chosen dim and softly downweights the discarded one", () => {
-		const s = applySwipe(EMPTY_SIGNALS, tradeoff, "left");
-		expect(s.dims.outdoors).toBe(1);
-		expect(s.dims.walkable).toBe(-0.5);
-	});
-
-	it("a yes-no ask records only on the affirmative side", () => {
-		const ask = {
-			kind: "ask" as const,
-			id: "ask-life-family",
-			layer: "life" as const,
-			q: "Kids at home?",
-			choice: {
-				form: "yes-no" as const,
-				affirm: { type: "dim" as const, dim: "family" as const },
-			},
-		};
-		expect(applySwipe(EMPTY_SIGNALS, ask, "right").dims.family).toBe(1);
-		expect(applySwipe(EMPTY_SIGNALS, ask, "left").dims.family).toBeUndefined();
-	});
-
-	it("an either-or ask records on both sides", () => {
-		const ask = {
-			kind: "ask" as const,
-			id: "ask-budget",
-			layer: "life" as const,
-			q: "Where does your budget land?",
-			choice: {
-				form: "either-or" as const,
-				left: {
-					label: "Under $500K",
-					record: { type: "budget" as const, band: { maxUsd: 500_000 } },
-				},
-				right: {
-					label: "Over $500K",
-					record: { type: "budget" as const, band: { minUsd: 500_000 } },
-				},
-			},
-		};
-		expect(applySwipe(EMPTY_SIGNALS, ask, "left").budget).toEqual({
-			maxUsd: 500_000,
-		});
-		expect(applySwipe(EMPTY_SIGNALS, ask, "right").budget).toEqual({
-			minUsd: 500_000,
-		});
-	});
-});
-
-describe("applySwipe — insight (§1.6)", () => {
-	it("agree boosts the dim and marks it agreed", () => {
-		const s = applySwipe(EMPTY_SIGNALS, insight, "right");
-		expect(s.insightAgreed).toEqual(["trails"]);
-		expect(s.dims.trails).toBe(1);
-	});
-
-	it("disagree downweights the evidence chain", () => {
-		const s = applySwipe(EMPTY_SIGNALS, insight, "left");
-		expect(s.insightRejected).toEqual(["trails"]);
-		expect(s.dims.trails).toBe(-1);
-	});
-
-	it('"Not sure" records nothing at all', () => {
-		const before = applySwipe(EMPTY_SIGNALS, insight, "right");
-		expect(applyInsightUnsure(before, insight)).toBe(before);
-		expect(applyInsightUnsure(EMPTY_SIGNALS, insight)).toEqual(EMPTY_SIGNALS);
+	it("a pass removes a prior like", () => {
+		let s = applySwipe(EMPTY_SIGNALS, listing, "right");
+		s = applySwipe(s, listing, "left");
+		expect(s.likedListingIds).toEqual([]);
 	});
 });
 
@@ -228,6 +113,15 @@ describe("applySwipe — community likes", () => {
 		s = applySwipe(s, community, "left");
 		expect(s.likedCommunityIds).toEqual([]);
 		expect(s.passedCommunityIds).toEqual(["c-oakhurst"]);
+	});
+});
+
+describe("applySwipe — tradeoff carries no preference signal", () => {
+	it("records nothing but the swipe", () => {
+		const s = applySwipe(EMPTY_SIGNALS, tradeoff, "right");
+		expect(s.likedListingIds).toEqual([]);
+		expect(s.likedCommunityIds).toEqual([]);
+		expect(s.geo).toEqual([]);
 	});
 });
 
@@ -265,7 +159,6 @@ describe("layer fatigue (§1.7 — 15 swipes, zero positive)", () => {
 		let s = EMPTY_SIGNALS;
 		for (let i = 0; i < 30; i++) s = applySwipe(s, tradeoff, "left");
 		expect(isLayerFatigued(s, "city")).toBe(false);
-		expect(isLayerFatigued(s, "life")).toBe(false);
 	});
 });
 
@@ -290,7 +183,7 @@ describe("purity", () => {
 		expect(EMPTY_SIGNALS).toEqual(before);
 	});
 
-	it("counts swipes in the current stage", () => {
+	it("counts swipes in the session", () => {
 		let s = applySwipe(EMPTY_SIGNALS, city, "right");
 		s = applySwipe(s, tradeoff, "left");
 		expect(s.swipesInStage).toBe(2);

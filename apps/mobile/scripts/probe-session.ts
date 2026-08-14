@@ -53,7 +53,7 @@ const all: string[] = [];
 
 for (let p = 0; p < pages; p++) {
 	const r = generateFeed({
-		stage: stage as 0 | 1 | 2 | 3 | 4,
+		stage: 4,
 		signals: EMPTY_SIGNALS,
 		pool,
 		seenIds: [...seen, ...all],
@@ -75,7 +75,7 @@ let rotate2 = 0;
 const seen2: string[] = [];
 for (let p = 0; p < pages; p++) {
 	const r = generateFeed({
-		stage: stage as 0 | 1 | 2 | 3 | 4,
+		stage: 4,
 		signals: EMPTY_SIGNALS,
 		pool,
 		seenIds: seen2.slice(),

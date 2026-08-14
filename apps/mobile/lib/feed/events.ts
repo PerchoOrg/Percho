@@ -70,18 +70,6 @@ export interface GestureEvent extends EventBase {
 	focusKey?: string;
 }
 
-export interface StageEvent extends EventBase {
-	type: "stage_advance" | "milestone_cta" | "milestone_map_link";
-	fromStage: FunnelStage;
-	toStage: FunnelStage;
-	swipesInStage: number;
-}
-
-export interface SkipLayerEvent extends EventBase {
-	type: "skip_layer";
-	layer: FunnelLayer;
-}
-
 export interface PersonaChangeEvent extends EventBase {
 	type: "persona_change";
 	oldPersona: string;
@@ -91,8 +79,6 @@ export interface PersonaChangeEvent extends EventBase {
 export type ScopeEvent =
 	| SwipeEvent
 	| GestureEvent
-	| StageEvent
-	| SkipLayerEvent
 	| PersonaChangeEvent;
 
 export type ScopeEventType = ScopeEvent["type"];
@@ -114,15 +100,6 @@ export function geoLevelOf(card: FeedCardV3): WireGeoLevel | undefined {
 			return card.unit.level;
 		case "community":
 			return "community";
-		case "ask": {
-			const layer = layerOf(card);
-			return layer === "area" ||
-				layer === "city" ||
-				layer === "zip" ||
-				layer === "community"
-				? layer
-				: undefined;
-		}
 		default:
 			return undefined;
 	}
@@ -179,45 +156,6 @@ export function buildGestureEvent(input: {
 		...(input.type === "datapoint_tap" && input.focusKey
 			? { focusKey: input.focusKey }
 			: {}),
-	};
-}
-
-export function buildStageEvent(input: {
-	seq: number;
-	at: number;
-	type: StageEvent["type"];
-	fromStage: FunnelStage;
-	toStage: FunnelStage;
-	swipesInStage: number;
-	sessionN: number;
-}): StageEvent {
-	return {
-		type: input.type,
-		seq: input.seq,
-		at: input.at,
-		// The event's funnel_stage is where the user was when it fired.
-		funnelStage: input.fromStage,
-		sessionN: input.sessionN,
-		fromStage: input.fromStage,
-		toStage: input.toStage,
-		swipesInStage: input.swipesInStage,
-	};
-}
-
-export function buildSkipLayerEvent(input: {
-	seq: number;
-	at: number;
-	layer: FunnelLayer;
-	funnelStage: FunnelStage;
-	sessionN: number;
-}): SkipLayerEvent {
-	return {
-		type: "skip_layer",
-		seq: input.seq,
-		at: input.at,
-		funnelStage: input.funnelStage,
-		sessionN: input.sessionN,
-		layer: input.layer,
 	};
 }
 

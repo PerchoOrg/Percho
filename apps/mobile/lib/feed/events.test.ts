@@ -2,19 +2,19 @@
  * §1.10 event contract tests. These lock the *wire shape*: there is no
  * server-side schema in this task, so a renamed field would otherwise break
  * aggregation silently once a consumer lands.
+ *
+ * 2026-08-15: ask cards, stage events and skip-layer events are gone with the
+ * cards that produced them; funnelStage is pinned at 4.
  */
 import { describe, expect, it } from "vitest";
 import type {
 	AreaCardV3,
-	AskCardV3,
 	CommunityCardV3,
 	FeedCardV3,
 	ListingCardV3,
 } from "./card-types";
 import {
 	buildGestureEvent,
-	buildSkipLayerEvent,
-	buildStageEvent,
 	buildSwipeEvent,
 	geoLevelOf,
 	wireVerdict,
@@ -56,25 +56,6 @@ const community: CommunityCardV3 = {
 	heroUrl: "https://example.com/c.jpg",
 };
 
-const geoAsk: AskCardV3 = {
-	kind: "ask",
-	id: "ask-city-1",
-	layer: "city",
-	q: "Marietta?",
-	choice: {
-		form: "yes-no",
-		affirm: { type: "geo", unitId: "city:marietta-ga", level: "city" },
-	},
-};
-
-const lifeAsk: AskCardV3 = {
-	kind: "ask",
-	id: "ask-life-1",
-	layer: "life",
-	q: "Is walkability important?",
-	choice: { form: "yes-no", affirm: { type: "dim", dim: "walkable" } },
-};
-
 describe("wireVerdict — §1.10 verdict(L/R)", () => {
 	it("maps right→R and left→L", () => {
 		expect(wireVerdict("right")).toBe("R");
@@ -93,14 +74,7 @@ describe("geoLevelOf", () => {
 		expect(geoLevelOf(community)).toBe("community");
 	});
 
-	it("reports the asked-about layer for a geo ask", () => {
-		expect(geoLevelOf(geoAsk)).toBe("city");
-	});
-
-	// A life-layer ask has no geography. Reporting one would corrupt the
-	// per-level swipe distribution in §1.10's health metrics.
-	it("omits the level for a non-geo ask and for listings", () => {
-		expect(geoLevelOf(lifeAsk)).toBeUndefined();
+	it("omits the level for listings", () => {
 		expect(geoLevelOf(listing)).toBeUndefined();
 	});
 });
@@ -110,7 +84,7 @@ describe("buildSwipeEvent", () => {
 		seq: 7,
 		at: 1_000,
 		verdict: "right" as const,
-		funnelStage: 2 as const,
+		funnelStage: 4 as const,
 		sessionN: 3,
 		activeIndex: 4,
 	};
@@ -125,7 +99,7 @@ describe("buildSwipeEvent", () => {
 			type: "swipe",
 			seq: 7,
 			at: 1_000,
-			funnelStage: 2,
+			funnelStage: 4,
 			sessionN: 3,
 			cardId: "a-city",
 			cardType: "area",
@@ -169,51 +143,5 @@ describe("buildGestureEvent", () => {
 		expect(
 			buildGestureEvent({ ...base, type: "explore_tap" }).focusKey,
 		).toBeUndefined();
-	});
-
-	it("carries focusKey only for datapoint_tap (§1.10)", () => {
-		const tap = buildGestureEvent({
-			...base,
-			type: "datapoint_tap",
-			focusKey: "schools",
-		});
-		expect(tap.focusKey).toBe("schools");
-		// The same key passed with the wrong type must not leak through.
-		const explore = buildGestureEvent({
-			...base,
-			type: "explore_tap",
-			focusKey: "schools",
-		});
-		expect("focusKey" in explore).toBe(false);
-	});
-});
-
-describe("buildStageEvent", () => {
-	it("reports funnelStage as the stage the user was in when it fired", () => {
-		const e = buildStageEvent({
-			seq: 2,
-			at: 50,
-			type: "stage_advance",
-			fromStage: 1,
-			toStage: 2,
-			swipesInStage: 23,
-			sessionN: 2,
-		});
-		expect(e.funnelStage).toBe(1);
-		expect(e.toStage).toBe(2);
-		expect(e.swipesInStage).toBe(23);
-	});
-});
-
-describe("buildSkipLayerEvent", () => {
-	it("carries the skipped layer", () => {
-		const e = buildSkipLayerEvent({
-			seq: 3,
-			at: 60,
-			layer: "lifestyle",
-			funnelStage: 1,
-			sessionN: 1,
-		});
-		expect(e).toMatchObject({ type: "skip_layer", layer: "lifestyle" });
 	});
 });

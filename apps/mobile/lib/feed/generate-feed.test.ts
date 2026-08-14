@@ -1,22 +1,20 @@
 /**
- * §1.7 composition + §0.2 listing hard gate.
+ * §1.7 composition — the single unlocked stage 4 mix.
  *
- * The gate assertions are the reason this file exists: "no listings before the
- * buyer has told us anything" is the product's core promise, and it has to be
- * provable without a simulator.
+ * 2026-08-15: the funnel collapsed. There is no listing hard gate (stage 4 is
+ * listing-dominant by design), no stage 0-3 mixes, no tease/preview gating, no
+ * insight, no milestone. What survives is the composition contract: window
+ * length, seenIds dedupe, determinism, exhaustion/looping, and fatigue.
  */
 import { describe, expect, it } from "vitest";
-import { VISIBLE_WINDOW } from "../gesture/stack-layer";
 import type {
 	CommunityCardV3,
 	FeedCardV3,
 	ListingCardV3,
-	MilestoneCardV3,
 } from "./card-types";
 import type { FeedPool } from "./generate-feed";
-import { generateFeed, insertMilestone, mixFor } from "./generate-feed";
+import { generateFeed, mixFor } from "./generate-feed";
 import type { GeoUnit } from "./geo-unit";
-import { INSIGHT_EVIDENCE } from "./insight";
 import { STAGE_MIX, WINDOW } from "./ratios";
 import type { SignalState } from "./signals";
 import { EMPTY_SIGNALS } from "./signals";
@@ -94,11 +92,10 @@ const POOL: FeedPool = {
 		community("c7"),
 		community("c8"),
 	],
-	listingPrices: { l1: 625_000, l2: 412_000, l3: 880_000, l4: 355_000 },
 };
 
 function gen(
-	stage: 0 | 1 | 2 | 3 | 4,
+	stage: 4,
 	over: Partial<Parameters<typeof generateFeed>[0]> = {},
 ) {
 	return generateFeed({
@@ -115,184 +112,44 @@ const kinds = (cards: readonly FeedCardV3[]) => cards.map((c) => c.kind);
 const countKind = (cards: readonly FeedCardV3[], kind: string) =>
 	cards.filter((c) => c.kind === kind).length;
 
-// ─── §0.2 listing hard gate ───────────────────────────────────────────────────
+// ─── §1.7 the stage-4 mix ─────────────────────────────────────────────────────
 
-describe("§0.2 listing hard gate", () => {
-	it("stage 0 emits zero listing cards, teases included", () => {
-		const { cards } = gen(0);
-		expect(countKind(cards, "listing")).toBe(0);
-	});
-
-	it("stage 0 emits no geo card either — no location has been established", () => {
-		const { cards } = gen(0);
-		expect(countKind(cards, "area")).toBe(0);
-	});
-
-	it("stage 1 emits exactly one tease per 10 cards", () => {
-		const { cards } = gen(1);
-		const listings = cards.filter(
-			(c): c is ListingCardV3 => c.kind === "listing",
-		);
-		expect(listings).toHaveLength(1);
-		expect(listings[0]?.tease).toBe(true);
-	});
-
-	it("stage 2 emits exactly one tease per 10 cards", () => {
-		const listings = gen(2).cards.filter(
-			(c): c is ListingCardV3 => c.kind === "listing",
-		);
-		expect(listings).toHaveLength(1);
-		expect(listings[0]?.tease).toBe(true);
-	});
-
-	it("holds the tease rate at 1 per 10 across a 12-card first page", () => {
-		// `ceil(count/WINDOW)` is a CAP, not a quota: the 12-card page walks 10
-		// mix slots plus 2, and those 2 land on geo slots, so one tease is the
-		// correct answer. The cap only matters once the table is walked twice.
-		const { cards } = gen(1, { count: 12 });
-		expect(countKind(cards, "listing")).toBe(1);
-	});
-
-	it("emits 2 teases across a full 20-card double window, never more", () => {
-		const { cards } = gen(1, { count: 20 });
-		expect(cards).toHaveLength(20);
-		expect(countKind(cards, "listing")).toBe(2);
-	});
-
-	it("suppresses the match badge on a tease — the score is not yet trustworthy", () => {
-		const tease = gen(1).cards.find(
-			(c): c is ListingCardV3 => c.kind === "listing",
-		);
-		expect(tease?.matchScore).toBeUndefined();
-	});
-
-	it("stage 3 previews only listings inside already-liked communities", () => {
-		const signals: SignalState = {
-			...EMPTY_SIGNALS,
-			likedCommunityIds: ["c1"],
-		};
-		const listings = gen(3, { signals }).cards.filter(
-			(c): c is ListingCardV3 => c.kind === "listing",
-		);
-		expect(listings.length).toBeGreaterThan(0);
-		for (const l of listings) {
-			expect(l.communityId).toBe("c1");
-			expect(l.preview).toBe(true);
-			expect(l.matchScore).toBeUndefined();
-		}
-	});
-
-	it("stage 3 with no liked community yet emits no listing at all", () => {
-		const listings = gen(3).cards.filter((c) => c.kind === "listing");
-		expect(listings).toHaveLength(0);
-	});
-
-	it("stage 4 unlocks full listings with the badge intact", () => {
-		const listings = gen(4).cards.filter(
-			(c): c is ListingCardV3 => c.kind === "listing",
-		);
-		expect(listings.length).toBeGreaterThan(0);
-		expect(listings.every((l) => l.tease === undefined)).toBe(true);
-		expect(listings.some((l) => l.matchScore !== undefined)).toBe(true);
-	});
-
-	it("throws rather than silently dropping if a mix table leaks a listing", () => {
-		// Guards the guard: a hand-built stage-0 deck with a listing must not pass.
-		expect(() =>
-			generateFeed({
-				stage: 0,
-				signals: EMPTY_SIGNALS,
-				// A pool of only listings would starve every stage-0 slot; the
-				// engine must still refuse to fill with a listing.
-				pool: { ...POOL, geoUnits: [], communities: [] },
-				seenIds: [],
-				count: WINDOW,
-			}).cards.some((c) => c.kind === "listing"),
-		).not.toThrow();
-	});
-});
-
-// ─── §1.7 stage mixes ─────────────────────────────────────────────────────────
-
-describe("§1.7 stage mixes", () => {
-	it("every mix table is exactly one window long", () => {
-		for (const stage of [0, 1, 2, 3, 4] as const) {
-			expect(STAGE_MIX[stage]).toHaveLength(WINDOW);
-		}
-	});
-
-	it("stage 0 is ask ×7 + trade-off ×3, with no challenge (§1.6 wins)", () => {
-		const { cards } = gen(0);
-		expect(countKind(cards, "ask")).toBe(7);
-		expect(countKind(cards, "tradeoff")).toBe(3);
-		expect(countKind(cards, "challenge")).toBe(0);
-	});
-
-	it("stage 1 leads with geo cards once units exist", () => {
-		const { cards } = gen(1);
-		expect(countKind(cards, "area")).toBeGreaterThanOrEqual(4);
-		expect(kinds(cards)[0]).toBe("area");
-	});
-
-	it("stage 3 is community-dominant", () => {
-		const signals: SignalState = {
-			...EMPTY_SIGNALS,
-			likedCommunityIds: ["c1"],
-		};
-		expect(
-			countKind(gen(3, { signals }).cards, "community"),
-		).toBeGreaterThanOrEqual(5);
+describe("§1.7 stage 4 mix", () => {
+	it("the mix table is exactly one window long", () => {
+		expect(STAGE_MIX[4]).toHaveLength(WINDOW);
 	});
 
 	it("stage 4 is listing-dominant", () => {
-		expect(countKind(gen(4).cards, "listing")).toBeGreaterThanOrEqual(4);
+		const { cards } = gen(4);
+		expect(countKind(cards, "listing")).toBeGreaterThanOrEqual(4);
+	});
+
+	it("emits a healthy mix of all 4 kinds", () => {
+		const { cards } = gen(4);
+		expect(countKind(cards, "area")).toBeGreaterThan(0);
+		expect(countKind(cards, "community")).toBeGreaterThan(0);
+		expect(countKind(cards, "tradeoff")).toBeGreaterThan(0);
+	});
+
+	it("mixFor returns the stage-4 window", () => {
+		expect(mixFor(4, "city")).toHaveLength(WINDOW);
+		expect(mixFor(4, "zip")).toHaveLength(WINDOW);
 	});
 
 	it("always returns exactly the requested count when the pool can fill it", () => {
-		for (const stage of [0, 1, 2, 3, 4] as const) {
-			expect(gen(stage, { count: 12 }).cards).toHaveLength(12);
-		}
+		expect(gen(4, { count: 12 }).cards).toHaveLength(12);
 	});
-});
 
-// ─── §3 stage-2 zip degradation (the owner-approved geo fallback) ─────────────
-
-describe("§3 stage-2 degradation with no zip inventory", () => {
-	it("substitutes city units and keeps the window 10 long", () => {
-		const { cards } = gen(2);
-		expect(cards).toHaveLength(WINDOW);
-		const areas = cards.filter((c) => c.kind === "area");
+	it("uses city units when the pool has no zips", () => {
+		const areas = gen(4).cards.filter((c) => c.kind === "area");
 		expect(areas.length).toBeGreaterThan(0);
 		for (const a of areas) {
 			if (a.kind === "area") expect(a.unit.level).toBe("city");
 		}
 	});
 
-	it("uses real zip units the moment the pool has them", () => {
-		const zips = [
-			unit("30030", "zip", "30030"),
-			unit("30306", "zip", "30306"),
-			unit("30327", "zip", "30327"),
-			unit("30075", "zip", "30075"),
-		];
-		const { cards } = gen(2, {
-			pool: { ...POOL, geoUnits: [...CITIES, ...zips] },
-		});
-		const areas = cards.filter((c) => c.kind === "area");
-		expect(areas.length).toBeGreaterThan(0);
-		for (const a of areas) {
-			if (a.kind === "area") expect(a.unit.level).toBe("zip");
-		}
-	});
-
-	it("mixFor preserves slot count in both readings", () => {
-		expect(mixFor(2, "city")).toHaveLength(WINDOW);
-		expect(mixFor(2, "zip")).toHaveLength(WINDOW);
-		expect(mixFor(2, "zip")).toEqual([...STAGE_MIX[2]]);
-	});
-
 	it("emits no geo card when the pool has no units at all", () => {
-		const { cards } = gen(1, { pool: { ...POOL, geoUnits: [] } });
+		const { cards } = gen(4, { pool: { ...POOL, geoUnits: [] } });
 		expect(countKind(cards, "area")).toBe(0);
 		expect(cards).toHaveLength(WINDOW);
 	});
@@ -302,9 +159,9 @@ describe("§3 stage-2 degradation with no zip inventory", () => {
 
 describe("seenIds and exhaustion", () => {
 	it("never re-emits a seen card while fresh content exists", () => {
-		const first = gen(1, { count: 10 });
+		const first = gen(4, { count: 10 });
 		const firstIds = first.cards.map((c) => c.id);
-		const second = gen(1, {
+		const second = gen(4, {
 			count: 10,
 			seenIds: firstIds,
 			rotate: first.nextRotate,
@@ -316,13 +173,13 @@ describe("seenIds and exhaustion", () => {
 	});
 
 	it("emits no duplicates within a single page", () => {
-		const ids = gen(1, { count: 12 }).cards.map((c) => c.id);
+		const ids = gen(4, { count: 12 }).cards.map((c) => c.id);
 		expect(new Set(ids).size).toBe(ids.length);
 	});
 
 	it("is deterministic — same input twice, same output", () => {
-		const a = gen(2, { count: 12 });
-		const b = gen(2, { count: 12 });
+		const a = gen(4, { count: 12 });
+		const b = gen(4, { count: 12 });
 		expect(a.cards.map((c) => c.id)).toEqual(b.cards.map((c) => c.id));
 	});
 
@@ -333,7 +190,7 @@ describe("seenIds and exhaustion", () => {
 			communities: [community("c1")],
 		};
 		const all = generateFeed({
-			stage: 1,
+			stage: 4,
 			signals: EMPTY_SIGNALS,
 			pool: thin,
 			seenIds: [],
@@ -345,153 +202,30 @@ describe("seenIds and exhaustion", () => {
 
 	it("returns an empty deck, not a crash, on a completely empty pool", () => {
 		const res = generateFeed({
-			stage: 3,
+			stage: 4,
 			signals: EMPTY_SIGNALS,
 			pool: { geoUnits: [], listings: [], communities: [] },
 			seenIds: [],
 			count: 10,
 		});
-		// Stage 3 has no static content of its own, so it degrades to asks and
-		// trade-offs rather than returning nothing.
+		// The trade-off table is static content, so there is always something.
 		expect(res.cards.length).toBeGreaterThan(0);
-		expect(countKind(res.cards, "community")).toBe(0);
 	});
 });
 
-// ─── Fatigue and skip (§1.7 / §1.2 #4) ───────────────────────────────────────
+// ─── Fatigue (§1.7) ───────────────────────────────────────────────────────────
 
-describe("layer fatigue and skip", () => {
+describe("layer fatigue", () => {
 	it("emits no area card for a fatigued geo layer", () => {
 		const signals: SignalState = {
 			...EMPTY_SIGNALS,
 			dryStreak: { city: 15 },
 		};
-		expect(countKind(gen(1, { signals }).cards, "area")).toBe(0);
+		expect(countKind(gen(4, { signals }).cards, "area")).toBe(0);
 	});
 
-	it("emits no ask for a skipped layer", () => {
-		const signals: SignalState = {
-			...EMPTY_SIGNALS,
-			skippedLayers: ["life"],
-		};
-		const asks = gen(0, { signals }).cards.filter((c) => c.kind === "ask");
-		expect(asks.length).toBeGreaterThan(0);
-		for (const a of asks) {
-			if (a.kind === "ask") expect(a.layer).not.toBe("life");
-		}
-	});
-
-	it("compensates a fatigued layer with trade-offs, not blank slots", () => {
+	it("compensates a fatigued layer with other fills, not blank slots", () => {
 		const signals: SignalState = { ...EMPTY_SIGNALS, dryStreak: { city: 15 } };
-		expect(gen(1, { signals }).cards).toHaveLength(WINDOW);
-	});
-});
-
-// ─── Insight (§1.6 / PLAN B13) ───────────────────────────────────────────────
-
-describe("§1.6 insight", () => {
-	it("does not fire below the evidence threshold", () => {
-		const signals: SignalState = {
-			...EMPTY_SIGNALS,
-			dims: { schools: INSIGHT_EVIDENCE - 1 },
-			likedCommunityIds: ["c1"],
-		};
-		expect(countKind(gen(3, { signals }).cards, "insight")).toBe(0);
-	});
-
-	it("fires once at the threshold, quoting the real count", () => {
-		const signals: SignalState = {
-			...EMPTY_SIGNALS,
-			dims: { schools: INSIGHT_EVIDENCE },
-			likedCommunityIds: ["c1"],
-		};
-		const insights = gen(3, { signals }).cards.filter(
-			(c) => c.kind === "insight",
-		);
-		expect(insights).toHaveLength(1);
-		const card = insights[0];
-		if (card?.kind === "insight") {
-			expect(card.dim).toBe("schools");
-			expect(card.evidence).toContain(String(INSIGHT_EVIDENCE));
-		}
-	});
-
-	it("never repeats a dim already agreed or rejected", () => {
-		const signals: SignalState = {
-			...EMPTY_SIGNALS,
-			dims: { schools: 12 },
-			insightRejected: ["schools"],
-			likedCommunityIds: ["c1"],
-		};
-		expect(countKind(gen(3, { signals }).cards, "insight")).toBe(0);
-	});
-
-	it("falls back to the slot's declared fill when no insight is earned", () => {
-		const signals: SignalState = {
-			...EMPTY_SIGNALS,
-			likedCommunityIds: ["c1"],
-		};
-		// Stage 3's insight slot falls back to a community card.
-		expect(gen(3, { signals }).cards).toHaveLength(WINDOW);
-	});
-});
-
-// ─── Milestone insertion (§1.5 / PLAN B15) ───────────────────────────────────
-
-describe("§1.5 milestone insertion", () => {
-	const milestone: MilestoneCardV3 = {
-		kind: "milestone",
-		id: "ms-0-1",
-		fromStage: 0,
-		toStage: 1,
-		headline: "Now we know what you're after",
-		sub: "Let's find where.",
-		chips: ["Under $500K", "Schools matter"],
-	};
-
-	it("inserts just past the visible window, not appended at the end", () => {
-		const deck = gen(0).cards;
-		const out = insertMilestone(deck, 3, milestone, []);
-		expect(out[3 + VISIBLE_WINDOW]).toBe(milestone);
-		expect(out).toHaveLength(deck.length + 1);
-	});
-
-	/**
-	 * The regression. `SwipeStack` shows a 3-card window, so a card within
-	 * `VISIBLE_WINDOW` of the cursor has ALREADY been seen — it was peeking out
-	 * from under the card being dragged. Splicing there replaces a card in front
-	 * of the buyer's eyes, which on device read as "peek 到下一张，一秒后又换成别的".
-	 */
-	it("never displaces a card the buyer can already see", () => {
-		const deck = gen(0).cards;
-		const activeIndex = 2;
-		const out = insertMilestone(deck, activeIndex, milestone, []);
-		for (let d = 0; d < VISIBLE_WINDOW; d++) {
-			expect(out[activeIndex + d]).toBe(deck[activeIndex + d]);
-		}
-	});
-
-	it("still arrives soon — within a window of the swipe that earned it", () => {
-		const deck = gen(0).cards;
-		const out = insertMilestone(deck, 1, milestone, []);
-		expect(out.indexOf(milestone) - 1).toBeLessThanOrEqual(VISIBLE_WINDOW);
-	});
-
-	it("never shows the same milestone twice", () => {
-		const deck = gen(0).cards;
-		expect(insertMilestone(deck, 3, milestone, ["ms-0-1"])).toEqual(deck);
-	});
-
-	it("clamps to the deck end when the active card is the last one", () => {
-		const deck = gen(0).cards;
-		const out = insertMilestone(deck, deck.length + 5, milestone, []);
-		expect(out[out.length - 1]).toBe(milestone);
-	});
-
-	it("clamps to the deck end when the window overruns it", () => {
-		const deck = gen(0).cards;
-		const out = insertMilestone(deck, deck.length - 1, milestone, []);
-		expect(out[out.length - 1]).toBe(milestone);
-		expect(out).toHaveLength(deck.length + 1);
+		expect(gen(4, { signals }).cards).toHaveLength(WINDOW);
 	});
 });

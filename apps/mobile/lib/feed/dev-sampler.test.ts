@@ -61,7 +61,6 @@ const pool: FeedPool = {
 		community("c2"),
 		community("c3", "https://videodelivery.net/y/manifest/video.m3u8"),
 	],
-	listingPrices: { l1: 419000, l2: 505000, l3: 380000 },
 };
 
 describe("buildSamplerDeck", () => {
@@ -99,20 +98,7 @@ describe("buildSamplerDeck", () => {
 		expect(kinds).toContain("listing");
 		expect(kinds).toContain("community");
 		expect(kinds).toContain("area");
-		expect(kinds).toContain("ask");
 		expect(kinds).toContain("tradeoff");
-		expect(kinds).toContain("challenge");
-	});
-
-	it("strips tease/preview so a sampled listing renders as a full card", () => {
-		const teased: FeedPool = {
-			...pool,
-			listings: [{ ...listing("t1"), tease: true as const }],
-		};
-		const card = buildSamplerDeck({ pool: teased, stage: 4 }).find(
-			(c) => c.kind === "listing",
-		);
-		expect(card && "tease" in card ? card.tease : undefined).toBeUndefined();
 	});
 
 	it("emits no listing/community cards from an empty pool rather than blanks", () => {
@@ -121,12 +107,6 @@ describe("buildSamplerDeck", () => {
 		expect(deck.some((c) => c.kind === "listing")).toBe(false);
 		expect(deck.some((c) => c.kind === "community")).toBe(false);
 		expect(deck.some((c) => c.kind === "area")).toBe(false);
-	});
-
-	it("omits challenge cards for listings with no known price", () => {
-		const noPrices: FeedPool = { ...pool, listingPrices: {} };
-		const deck = buildSamplerDeck({ pool: noPrices, stage: 4 });
-		expect(deck.some((c) => c.kind === "challenge")).toBe(false);
 	});
 });
 

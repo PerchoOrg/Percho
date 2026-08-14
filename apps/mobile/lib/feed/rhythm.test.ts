@@ -1,19 +1,19 @@
 /**
- * §1.7 rhythm — the multi-page invariants.
+ * §1.7 rhythm — the multi-page invariants for the single unlocked stage 4.
  *
  * ## Why these tests exist
  *
  * `generate-feed.test.ts` had 36 passing tests and the engine still shipped a
  * session that degenerated to **39 consecutive area cards** on device. Every one
  * of those tests composed ONE page from a full pool, and page 0 is always clean.
- * The collapse only appears once `seenIds` has consumed the finite client-side
- * tables (stage 0 has 21 asks and 7 trade-offs) and every subsequent slot falls
- * through to the single fill that still has inventory.
  *
  * So the unit of testing here is a SESSION, not a page: compose repeatedly with an
  * accumulating `seenIds` and a rotating cursor, exactly as the feed screen does,
  * then assert on the whole emitted sequence. That is the only shape in which these
  * bugs are visible.
+ *
+ * 2026-08-15: the funnel collapsed to a single stage 4 mix (listing-dominant).
+ * All stage-gate assertions are gone; the rhythm rules themselves survive.
  */
 import { describe, expect, it } from "vitest";
 import type { FeedCardV3, FunnelStage } from "./card-types";
@@ -29,7 +29,7 @@ import {
 	runLimitsFor,
 	trailingRun,
 } from "./rhythm";
-import { EMPTY_SIGNALS, type SignalState } from "./signals";
+import { EMPTY_SIGNALS } from "./signals";
 
 // ─── fixtures ────────────────────────────────────────────────────────
 
@@ -51,28 +51,17 @@ const communities = Array.from({ length: 200 }, (_, i) => ({
 	city: `City ${i % 12}`,
 	state: "GA",
 	heroUrl: "https://example.test/h.jpg",
-	highlights: [],
-	attributes: {},
 }));
 
-/** Listings carry `communityId` so stage 3's "inside a liked community" preview
- * slot can actually fill — without it stage 3 has no listing source and the
- * composer is forced into a community run, which is a DATA gap, not a rhythm bug.
- *
- * Sized for a 10-page (120-card) session: a fixture that runs dry mid-test makes
- * the assertion measure the fixture rather than the engine. Real Atlanta metro has
- * 8680 communities, so 200 here is still conservative. */
 const listings = Array.from({ length: 240 }, (_, i) => ({
 	kind: "listing" as const,
 	id: `l${i}`,
-	addr: `${i} Main St`,
-	city: `City ${i % 12}`,
-	state: "GA",
-	price: 400000 + i * 1000,
+	slug: `l${i}`,
+	address: `${i} Main St`,
+	priceLabel: `$${400000 + i * 1000}`,
+	bedBathSqft: "3 bd · 2 ba",
 	heroUrl: "https://example.test/l.jpg",
-	beds: 3,
-	baths: 2,
-	communityId: `cm${i % 200}`,
+	geoUnitId: `city:c${i % 12}`,
 }));
 
 const FULL_POOL: FeedPool = {
@@ -82,25 +71,11 @@ const FULL_POOL: FeedPool = {
 	listings: listings as never,
 };
 
-/**
- * A buyer deep in stage 3-4 has liked a lot of communities — that is what got them
- * there. 8 liked communities means only ~16 of 240 listings are eligible for
- * stage 3's "inside a liked community" preview slot, so the slot starves after one
- * page and the composer has nothing but communities left. That is a DATA
- * constraint (§1.7 scopes the preview to liked communities on purpose), not a
- * rhythm defect, and a fixture that hits it measures the fixture.
- */
-const LIKED: SignalState = {
-	...EMPTY_SIGNALS,
-	likedCommunityIds: communities.slice(0, 60).map((c) => c.id),
-};
-
 /** Compose `pages` pages the way the screen does: accumulating seenIds, rotating. */
 function session(
 	stage: FunnelStage,
 	pages: number,
 	pool: FeedPool = FULL_POOL,
-	signals: SignalState = LIKED,
 ): FeedCardV3[] {
 	let rotate = 0;
 	const seen: string[] = [];
@@ -108,7 +83,7 @@ function session(
 	for (let p = 0; p < pages; p++) {
 		const r = generateFeed({
 			stage,
-			signals,
+			signals: EMPTY_SIGNALS,
 			pool,
 			seenIds: seen.slice(),
 			count: 12,
@@ -140,11 +115,7 @@ function longestRun(cards: readonly FeedCardV3[]): {
 	return best;
 }
 
-const STAGES: FunnelStage[] = [0, 1, 2, 3, 4];
-
-// ─── the regression ──────────────────────────────────────────────────
-
-describe("§1.7 rhythm — no stage collapses into one card kind", () => {
+describe("§1.7 rhythm — the single stage 4 mix never collapses into one kind", () => {
 	/**
 	 * THE regression: pre-fix, stage 0 produced a run of **39** over 5 pages and
 	 * the deck was effectively one card kind.
@@ -157,156 +128,62 @@ describe("§1.7 rhythm — no stage collapses into one card kind", () => {
 	 */
 	const WALL = 4;
 
-	it.each(STAGES)(
-		"stage %i never runs longer than the wall over 5 pages",
-		(s) => {
-			expect(longestRun(session(s, 5)).length).toBeLessThanOrEqual(WALL);
-		},
-	);
+	it("never runs longer than the wall over 5 pages", () => {
+		expect(longestRun(session(4, 5)).length).toBeLessThanOrEqual(WALL);
+	});
 
-	it.each(STAGES)("stage %i holds over a long 10-page session", (s) => {
-		expect(longestRun(session(s, 10)).length).toBeLessThanOrEqual(WALL);
+	it("holds over a long 10-page session", () => {
+		expect(longestRun(session(4, 10)).length).toBeLessThanOrEqual(WALL);
 	});
 
 	/**
 	 * The exact pool shape that produced the 39-run: real geo units, no listings,
-	 * no communities. This is also today's PRODUCTION shape — 8680 communities
-	 * aggregate to city units, and only 3 of 260 listings carry a `community_id`.
-	 *
-	 * Scoped to stages 0-2 on purpose. Stages 3-4 are *defined* over community and
-	 * listing inventory (§1.7: `community ×6`, `listing ×5`), so a pool with
-	 * neither leaves them nothing but the client-side trade-off table — and §1.7's
-	 * own layer-fatigue rule says "靠 trade-off 侧写补偿" is the correct response to
-	 * having nothing else. Asserting a rhythm there would be asserting that the
-	 * engine invent inventory it does not have.
+	 * no communities. Post-collapse the stage-4 mix is listing-dominant, so with
+	 * no listings the engine must fall back to the other fills without walling.
 	 */
-	it("holds with a geo-only pool for the stages that can run on one", () => {
+	it("holds with a geo-only pool — no listings, no communities", () => {
 		const geoOnly: FeedPool = { ...EMPTY_POOL, geoUnits: cities };
-		for (const s of [0, 1, 2] as FunnelStage[]) {
-			const run = longestRun(session(s, 5, geoOnly, EMPTY_SIGNALS));
-			expect(
-				run.length,
-				`stage ${s} ran ${run.length}x ${run.kind}`,
-			).toBeLessThanOrEqual(WALL);
-		}
-	});
-
-	it("stage 0 on a geo-only pool is the 39-run case specifically", () => {
-		const geoOnly: FeedPool = { ...EMPTY_POOL, geoUnits: cities };
-		const cards = session(0, 5, geoOnly, EMPTY_SIGNALS);
-		const run = longestRun(cards);
-		// Pre-fix: 39x area. Post-fix: no geo card at all, and no wall.
-		expect(cards.map((c) => c.kind)).not.toContain("area");
+		const run = longestRun(session(4, 5, geoOnly));
 		expect(run.length).toBeLessThanOrEqual(WALL);
 	});
 
 	it("keeps a healthy pool comfortably inside the per-stage limit", () => {
-		// With inventory for every fill there is no excuse for exceeding the guard.
-		for (const s of [0, 1, 2] as FunnelStage[]) {
-			expect(longestRun(session(s, 5)).length).toBeLessThanOrEqual(
-				MAX_RUN_LIMIT,
-			);
-		}
+		expect(longestRun(session(4, 5)).length).toBeLessThanOrEqual(MAX_RUN_LIMIT);
 	});
 
-	it("emits more than one kind per stage — never a single-kind deck", () => {
-		for (const s of STAGES) {
-			const kinds = new Set(session(s, 5).map((c) => c.kind));
-			expect(kinds.size, `stage ${s}`).toBeGreaterThan(1);
-		}
+	it("emits more than one kind — never a single-kind deck", () => {
+		const kinds = new Set(session(4, 5).map((c) => c.kind));
+		expect(kinds.size).toBeGreaterThan(1);
 	});
 
 	it("no single kind exceeds two thirds of a long session", () => {
-		for (const s of STAGES) {
-			const cards = session(s, 8);
-			const counts = new Map<string, number>();
-			for (const c of cards) {
-				counts.set(c.kind, (counts.get(c.kind) ?? 0) + 1);
-			}
-			const dominant = Math.max(...counts.values());
-			expect(
-				dominant / cards.length,
-				`stage ${s} was ${dominant}/${cards.length} one kind`,
-			).toBeLessThanOrEqual(0.67);
+		const cards = session(4, 8);
+		const counts = new Map<string, number>();
+		for (const c of cards) {
+			counts.set(c.kind, (counts.get(c.kind) ?? 0) + 1);
 		}
+		const dominant = Math.max(...counts.values());
+		expect(dominant / cards.length).toBeLessThanOrEqual(0.67);
 	});
 });
 
-describe("§1.7 stage gate survives the whole session, not just page 1", () => {
-	/**
-	 * The other half of the 39-run bug: `loopedFallback` reached for a geo card
-	 * whenever the pool had one, ignoring the stage. §1.7 stage 0 is "零地理".
-	 */
-	it("stage 0 emits ZERO geo cards across a long session", () => {
-		const kinds = session(0, 10).map((c) => c.kind);
-		expect(kinds).not.toContain("area");
-	});
-
-	it("stage 0 emits zero listings across a long session (§1.7 零房源)", () => {
-		const kinds = session(0, 10).map((c) => c.kind);
-		expect(kinds).not.toContain("listing");
-	});
-
-	it("stage 0 emits zero challenge cards (§1.6 — needs geo context)", () => {
-		const kinds = session(0, 10).map((c) => c.kind);
-		expect(kinds).not.toContain("challenge");
-	});
-
-	it("stage 0 and 1 emit zero community cards (community starts at stage 3)", () => {
-		for (const s of [0, 1] as FunnelStage[]) {
-			expect(session(s, 10).map((c) => c.kind)).not.toContain("community");
-		}
-	});
-
-	it("every emitted kind is one the stage's own mix permits, or a milestone", () => {
-		for (const s of STAGES) {
-			const declaredFills = new Set<string>(STAGE_MIX[s].map((x) => x.fill));
-			const permitted = new Set(
-				STAGE_MIX[s]
-					.map((slot) => kindForFill(slot.fill))
-					.filter((k): k is FeedCardV3["kind"] => k !== null),
-			);
-			for (const c of session(s, 6)) {
-				if (c.kind === "milestone") continue;
-				// insight / challenge come from fills that map to null, so they are
-				// legal only where the mix declares that fill by name.
-				const ok = permitted.has(c.kind) || declaredFills.has(c.kind);
-				expect(ok, `stage ${s} emitted unexpected ${c.kind}`).toBe(true);
-			}
-		}
-	});
-});
-
-describe("§1.7 the declared ratio still holds after the guard", () => {
-	it("stage 0 stays ask-dominant (ask ×7 · trade-off ×3)", () => {
-		const kinds = session(0, 5).map((c) => c.kind);
-		const asks = kinds.filter((k) => k === "ask").length;
-		const trades = kinds.filter((k) => k === "tradeoff").length;
-		expect(asks).toBeGreaterThan(trades);
-	});
-
-	it("stage 1 stays geo-dominant (area/city ×5 is the largest share)", () => {
-		const kinds = session(1, 5).map((c) => c.kind);
-		const areas = kinds.filter((k) => k === "area").length;
-		for (const other of ["ask", "tradeoff", "listing"]) {
-			expect(areas).toBeGreaterThanOrEqual(
-				kinds.filter((k) => k === other).length,
-			);
-		}
-	});
-
+describe("§1.7 the declared ratio holds after the guard", () => {
 	it("stage 4 stays listing-dominant (listing ×5)", () => {
 		const kinds = session(4, 5).map((c) => c.kind);
 		const l = kinds.filter((k) => k === "listing").length;
 		expect(l).toBeGreaterThan(kinds.filter((k) => k === "community").length);
+		expect(l).toBeGreaterThan(kinds.filter((k) => k === "area").length);
+		expect(l).toBeGreaterThan(kinds.filter((k) => k === "tradeoff").length);
 	});
 
-	it("stage 1-2 keep the tease at roughly 1 per 10 (§1.7), never more", () => {
-		for (const s of [1, 2] as FunnelStage[]) {
-			const cards = session(s, 5);
-			const teases = cards.filter((c) => c.kind === "listing").length;
-			// 60 cards -> at most 1 per 10, with a little slack for page boundaries.
-			expect(teases).toBeLessThanOrEqual(Math.ceil(cards.length / 10) + 2);
+	it("every emitted kind is one the mix permits", () => {
+		const permitted = new Set(
+			STAGE_MIX[4]
+				.map((slot) => kindForFill(slot.fill))
+				.filter((k): k is FeedCardV3["kind"] => k !== null),
+		);
+		for (const c of session(4, 6)) {
+			expect(permitted.has(c.kind), `emitted unexpected ${c.kind}`).toBe(true);
 		}
 	});
 });
@@ -318,16 +195,16 @@ const card = (kind: FeedCardV3["kind"], id = kind): FeedCardV3 =>
 
 describe("trailingRun", () => {
 	it("counts only the tail, not total occurrences", () => {
-		const cards = [card("ask"), card("area"), card("ask"), card("ask")];
-		expect(trailingRun(cards, "ask")).toBe(2);
+		const cards = [card("area"), card("area"), card("tradeoff"), card("area"), card("area")];
+		expect(trailingRun(cards, "area")).toBe(2);
 	});
 
 	it("is 0 when the tail is a different kind", () => {
-		expect(trailingRun([card("ask"), card("area")], "ask")).toBe(0);
+		expect(trailingRun([card("area"), card("tradeoff")], "area")).toBe(0);
 	});
 
 	it("is 0 on an empty deck", () => {
-		expect(trailingRun([], "ask")).toBe(0);
+		expect(trailingRun([], "area")).toBe(0);
 	});
 });
 
@@ -335,16 +212,11 @@ describe("rhythmAllows", () => {
 	it("blocks a third consecutive card of a kind at limit 2", () => {
 		const two = [card("area"), card("area")];
 		expect(rhythmAllows(two, card("area"), 2)).toBe(false);
-		expect(rhythmAllows(two, card("ask"), 2)).toBe(true);
+		expect(rhythmAllows(two, card("listing"), 2)).toBe(true);
 	});
 
 	it("permits a pair at limit 2", () => {
 		expect(rhythmAllows([card("area")], card("area"), 2)).toBe(true);
-	});
-
-	it("exempts milestones — their placement is decided by insertMilestone", () => {
-		const wall = [card("milestone"), card("milestone"), card("milestone")];
-		expect(rhythmAllows(wall, card("milestone"), 2)).toBe(true);
 	});
 
 	it("accepts a per-fill limit map as well as a flat number", () => {
@@ -359,20 +231,16 @@ describe("rhythmAllows", () => {
 
 describe("runLimitsFor", () => {
 	it("returns a limit for every fill the mix declares", () => {
-		for (const s of STAGES) {
-			const limits = runLimitsFor(STAGE_MIX[s]);
-			for (const slot of STAGE_MIX[s]) {
-				expect(limits.has(slot.fill)).toBe(true);
-			}
+		const limits = runLimitsFor(STAGE_MIX[4]);
+		for (const slot of STAGE_MIX[4]) {
+			expect(limits.has(slot.fill)).toBe(true);
 		}
 	});
 
 	it("never exceeds the ceiling or drops below the floor", () => {
-		for (const s of STAGES) {
-			for (const limit of runLimitsFor(STAGE_MIX[s]).values()) {
-				expect(limit).toBeGreaterThanOrEqual(2);
-				expect(limit).toBeLessThanOrEqual(MAX_RUN_LIMIT);
-			}
+		for (const limit of runLimitsFor(STAGE_MIX[4]).values()) {
+			expect(limit).toBeGreaterThanOrEqual(2);
+			expect(limit).toBeLessThanOrEqual(MAX_RUN_LIMIT);
 		}
 	});
 
@@ -386,11 +254,6 @@ describe("kindForFill", () => {
 		expect(kindForFill("geo")).toBe("area");
 	});
 
-	it("returns null for the budget-limited kinds", () => {
-		expect(kindForFill("insight")).toBeNull();
-		expect(kindForFill("challenge")).toBeNull();
-	});
-
 	it("returns null for an unknown fill rather than guessing", () => {
 		expect(kindForFill("nonsense")).toBeNull();
 	});
@@ -398,11 +261,11 @@ describe("kindForFill", () => {
 
 describe("distanceSinceKind / byStaleness", () => {
 	it("reports 1 for the immediately preceding card", () => {
-		expect(distanceSinceKind([card("ask"), card("area")], "area")).toBe(1);
+		expect(distanceSinceKind([card("listing"), card("area")], "area")).toBe(1);
 	});
 
 	it("reports Infinity for a kind never emitted", () => {
-		expect(distanceSinceKind([card("ask")], "listing")).toBe(
+		expect(distanceSinceKind([card("area")], "listing")).toBe(
 			Number.POSITIVE_INFINITY,
 		);
 	});
@@ -427,7 +290,7 @@ describe("distanceSinceKind / byStaleness", () => {
 	});
 
 	it("is stable for equal staleness, so caller preference breaks ties", () => {
-		const ordered = byStaleness([], [card("area"), card("ask")]);
-		expect(ordered.map((c) => c.kind)).toEqual(["area", "ask"]);
+		const ordered = byStaleness([], [card("area"), card("listing")]);
+		expect(ordered.map((c) => c.kind)).toEqual(["area", "listing"]);
 	});
 });

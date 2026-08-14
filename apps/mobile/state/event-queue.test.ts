@@ -22,7 +22,7 @@ const ev = (seq: number): ScopeEvent => ({
 	type: "swipe",
 	seq,
 	at: seq * 100,
-	funnelStage: 1,
+	funnelStage: 4,
 	sessionN: 1,
 	cardId: `c${seq}`,
 	cardType: "listing",

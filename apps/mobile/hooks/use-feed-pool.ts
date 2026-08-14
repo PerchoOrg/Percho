@@ -59,7 +59,6 @@ function mergePool(prev: FeedPool, next: FeedPool): FeedPool {
 		geoUnits: next.geoUnits.length > 0 ? next.geoUnits : prev.geoUnits,
 		listings: byId(prev.listings, next.listings),
 		communities: byId(prev.communities, next.communities),
-		listingPrices: { ...prev.listingPrices, ...next.listingPrices },
 	};
 }
 

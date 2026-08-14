@@ -316,18 +316,6 @@ export function parsePoolResponse(body: unknown): ParsedPoolPage {
 		.map(parseListing)
 		.filter((l): l is ListingCardV3 => l !== null);
 
-	// §1.6's challenge card needs the real price NUMBER, which the wire carries
-	// alongside the formatted label. A listing with no price simply isn't a
-	// candidate — `pickChallenge` skips ids that are missing here, so an absent
-	// price costs one challenge card rather than producing a wrong answer.
-	const listingPrices: Record<string, number> = {};
-	for (const l of listings) {
-		const row = rec(l);
-		const id = str(row?.id);
-		const price = num(row?.price);
-		if (id && price !== undefined && price > 0) listingPrices[id] = price;
-	}
-
 	return {
 		pool: {
 			geoUnits: geoUnits
@@ -337,7 +325,6 @@ export function parsePoolResponse(body: unknown): ParsedPoolPage {
 			communities: communities
 				.map(parseCommunity)
 				.filter((c): c is CommunityCardV3 => c !== null),
-			listingPrices,
 		},
 		done: raw?.done === true,
 	};

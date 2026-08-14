@@ -117,10 +117,8 @@ describe("parseListing", () => {
 		expect(parseListing({ ...LISTING, heroUrl: undefined })).toBeNull();
 	});
 
-	it("carries the server's gate flags verbatim", () => {
-		expect(parseListing({ ...LISTING, tease: true })?.tease).toBe(true);
-		expect(parseListing({ ...LISTING, preview: true })?.preview).toBe(true);
-		expect(parseListing(LISTING)?.tease).toBeUndefined();
+	it("carries the server's geoUnitId so signals attach to the right city", () => {
+		expect(parseListing(LISTING)?.geoUnitId).toBe("city:decatur-ga");
 	});
 
 	it("ignores dims the shared vocabulary does not define", () => {
@@ -267,21 +265,6 @@ describe("parsePoolResponse", () => {
 		expect(page.pool.listings).toHaveLength(1);
 		expect(page.pool.communities).toHaveLength(1);
 		expect(page.done).toBe(true);
-	});
-
-	it("indexes the REAL price for the §1.6 challenge card", () => {
-		const page = parsePoolResponse({ pool: { listings: [LISTING] } });
-		// The label rounds ($685K); the challenge card must teach the real number.
-		expect(page.pool.listingPrices?.l1).toBe(685_000);
-	});
-
-	it("leaves a priceless listing out of the challenge index", () => {
-		const page = parsePoolResponse({
-			pool: { listings: [{ ...LISTING, price: undefined }] },
-		});
-		expect(page.pool.listingPrices?.l1).toBeUndefined();
-		// The listing itself still shows — it just cannot be a challenge subject.
-		expect(page.pool.listings).toHaveLength(1);
 	});
 
 	it("keeps the good rows and drops only the bad ones", () => {

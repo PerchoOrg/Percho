@@ -1,11 +1,14 @@
 /**
  * Feed session store tests. The funnel *logic* is already pinned by
  * `signals.test.ts`; what needs proving here is the store's own contract —
- * seen-id dedupe across pages, ask idempotence, the hydration gate, and the
- * fact that a scope reset clears evidence WITHOUT touching the stage machine.
+ * seen-id dedupe across pages, the hydration gate, and the fact that a scope
+ * reset clears evidence.
+ *
+ * 2026-08-15: ask ids and insight-unsure are gone with the cards that produced
+ * them; `resetStageCounter` is gone with the stage machine.
  */
 import { beforeEach, describe, expect, it } from "vitest";
-import type { AskCardV3, ListingCardV3 } from "../lib/feed/card-types";
+import type { ListingCardV3 } from "../lib/feed/card-types";
 import { EMPTY_SIGNALS } from "../lib/feed/signals";
 import { useFeedSession } from "./feed-session";
 
@@ -22,19 +25,10 @@ const listing = (id: string): ListingCardV3 => ({
 	geoUnitId: "city:marietta-ga",
 });
 
-const ask: AskCardV3 = {
-	kind: "ask",
-	id: "ask-life-walkable",
-	layer: "life",
-	q: "Is walkability important?",
-	choice: { form: "yes-no", affirm: { type: "dim", dim: "walkable" } },
-};
-
 beforeEach(() => {
 	useFeedSession.setState({
 		signals: EMPTY_SIGNALS,
 		seenIds: [],
-		answeredAskIds: [],
 		sessionN: 0,
 		lastSwipeAt: undefined,
 		hydrated: false,
@@ -42,10 +36,8 @@ beforeEach(() => {
 });
 
 describe("recordSwipe", () => {
-	it("returns the new signals so the caller can evaluate advance in the same tick", () => {
+	it("returns the new signals", () => {
 		const next = s().recordSwipe(listing("l1"), "right", 1_000);
-		// Returned value must be the post-swipe state, not the pre-swipe one —
-		// the feed feeds it straight into evaluateStageAdvance.
 		expect(next).toBe(s().signals);
 		expect(next.likedListingIds).toContain("l1");
 	});
@@ -62,16 +54,6 @@ describe("recordSwipe", () => {
 		s().recordSwipe(listing("l1"), "right", 1);
 		s().recordSwipe(listing("l1"), "left", 2);
 		expect(s().seenIds).toEqual(["l1"]);
-	});
-
-	it("records an ask id so the question never repeats", () => {
-		s().recordSwipe(ask, "right", 10);
-		expect(s().answeredAskIds).toEqual(["ask-life-walkable"]);
-	});
-
-	it("does not treat a listing as an answered ask", () => {
-		s().recordSwipe(listing("l1"), "right", 10);
-		expect(s().answeredAskIds).toEqual([]);
 	});
 });
 
@@ -102,28 +84,14 @@ describe("beginSession", () => {
 	});
 });
 
-describe("resetStageCounter", () => {
-	it("zeroes swipesInStage without discarding accumulated signals", () => {
-		s().recordSwipe(listing("l1"), "right", 1);
-		expect(s().signals.swipesInStage).toBe(1);
-		s().resetStageCounter();
-		expect(s().signals.swipesInStage).toBe(0);
-		expect(s().signals.likedListingIds).toContain("l1");
-	});
-});
-
 describe("clearSignals — You-tab scope reset", () => {
 	it("wipes evidence and seen ids", () => {
 		s().recordSwipe(listing("l1"), "right", 1);
-		s().recordSwipe(ask, "right", 2);
 		s().clearSignals();
 		expect(s().signals).toEqual(EMPTY_SIGNALS);
 		expect(s().seenIds).toEqual([]);
-		expect(s().answeredAskIds).toEqual([]);
 	});
 
-	// The stage lives in funnel.ts and only resetTo() may move it backward.
-	// This store must not be a second, silent path to a downshift.
 	it("keeps sessionN — it counts app opens, not scope", () => {
 		s().beginSession();
 		s().beginSession();
@@ -133,36 +101,15 @@ describe("clearSignals — You-tab scope reset", () => {
 });
 
 describe("hydration gate", () => {
-	it("starts false so the feed cannot compose a stage-0 deck for a returning user", () => {
+	it("starts false so the feed cannot compose a deck before rehydration", () => {
 		expect(s().hydrated).toBe(false);
 	});
 });
 
 describe("skipLayer", () => {
 	it("delegates to the pure reducer and is idempotent", () => {
-		s().skipLayer("lifestyle");
-		s().skipLayer("lifestyle");
-		expect(s().signals.skippedLayers).toEqual(["lifestyle"]);
+		s().skipLayer("city");
+		s().skipLayer("city");
+		expect(s().signals.skippedLayers).toEqual(["city"]);
 	});
 });
-
-describe("recordInsightUnsure", () => {
-	// §1.6: "Not sure" records nothing. It must still consume the card, or the
-	// same insight comes back on the next page.
-	it("marks the card seen but records no preference", () => {
-		const insightCard = {
-			kind: "insight" as const,
-			id: "ins-1",
-			dim: "walkable" as const,
-			text: "Walkable areas here cost more",
-			evidence: "Median $612k vs $448k across 44 Marietta communities",
-		};
-		s().recordInsightUnsure(insightCard);
-		expect(s().seenIds).toContain("ins-1");
-		expect(s().signals.insightAgreed).toEqual([]);
-		expect(s().signals.insightRejected).toEqual([]);
-		expect(s().signals.dims).toEqual({});
-	});
-});
-
-

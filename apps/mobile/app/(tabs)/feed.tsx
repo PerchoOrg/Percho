@@ -32,16 +32,12 @@ import {
 	SwipeStack,
 } from "../../components/SwipeStack";
 import { AreaFace } from "../../components/cards/AreaFace";
-import { AskFace } from "../../components/cards/AskFace";
-import { ChallengeFace } from "../../components/cards/ChallengeFace";
 import { CommunityFace } from "../../components/cards/CommunityFace";
-import { InsightFace } from "../../components/cards/InsightFace";
 import {
 	EXPLORE_TAP_TARGET,
 	ListingFace,
 	SAVE_TAP_TARGET,
 } from "../../components/cards/ListingFace";
-import { MilestoneFace } from "../../components/cards/MilestoneFace";
 import { SwipeLabels } from "../../components/cards/SwipeLabels";
 import { TradeoffFace } from "../../components/cards/TradeoffFace";
 import { CardSkeleton } from "../../components/feed/CardSkeleton";
@@ -56,19 +52,15 @@ import {
 } from "react-native-reanimated";
 import { useFeedPool } from "../../hooks/use-feed-pool";
 import { cardBehavior } from "../../lib/feed/behavior";
-import type { ChallengeCardV3, FeedCardV3 } from "../../lib/feed/card-types";
+import type { FeedCardV3 } from "../../lib/feed/card-types";
 import { deckKey } from "../../lib/feed/deck-key";
 import { buildSamplerDeck, samplerEnabled } from "../../lib/feed/dev-sampler";
 import {
 	buildGestureEvent,
-	buildSkipLayerEvent,
-	buildStageEvent,
 	buildSwipeEvent,
 } from "../../lib/feed/events";
-import { generateFeed, insertMilestone } from "../../lib/feed/generate-feed";
-import { milestoneFor } from "../../lib/feed/milestone";
+import { generateFeed } from "../../lib/feed/generate-feed";
 import { FIRST_PAGE_SIZE, PREFETCH_DISTANCE } from "../../lib/feed/ratios";
-import { evaluateStageAdvance } from "../../lib/feed/stage-advance";
 import { useEventQueue } from "../../state/event-queue";
 import { useFeedSession } from "../../state/feed-session";
 import { useFunnelStore } from "../../state/funnel";
@@ -113,15 +105,11 @@ export default function FeedScreen() {
 
 	const stage = useFunnelStore((s) => s.stage);
 	const stageHydrated = useFunnelStore((s) => s.hydrated);
-	const promoteTo = useFunnelStore((s) => s.promoteTo);
 
 	const signals = useFeedSession((s) => s.signals);
 	const sessionN = useFeedSession((s) => s.sessionN);
 	const sessionHydrated = useFeedSession((s) => s.hydrated);
 	const recordSwipe = useFeedSession((s) => s.recordSwipe);
-	const recordInsightUnsure = useFeedSession((s) => s.recordInsightUnsure);
-	const skipLayer = useFeedSession((s) => s.skipLayer);
-	const resetStageCounter = useFeedSession((s) => s.resetStageCounter);
 	const beginSession = useFeedSession((s) => s.beginSession);
 
 	const enqueue = useEventQueue((s) => s.enqueue);
@@ -146,18 +134,6 @@ export default function FeedScreen() {
 	const [deck, setDeck] = useState<readonly FeedCardV3[]>([]);
 
 	const [engineExhausted, setEngineExhausted] = useState(false);
-	const [milestonesShown, setMilestonesShown] = useState<readonly string[]>([]);
-	/**
-	 * Which challenge cards have been answered, and which side was tapped.
-	 *
-	 * Not in the session store: a challenge answer is market education, not scope
-	 * signal, so there is nothing worth persisting. Keyed by card id rather than
-	 * held per-card so the answer survives the card being re-rendered as the deck
-	 * shuffles beneath it.
-	 */
-	const [answered, setAnswered] = useState<Record<string, "left" | "right">>(
-		{},
-	);
 	const rotate = useRef(0);
 
 	/**
@@ -290,14 +266,13 @@ export default function FeedScreen() {
 			seenIds: [...s.seenIds, ...current.map((c) => c.id)],
 			count: FIRST_PAGE_SIZE,
 			rotate: rotate.current,
-			milestonesShown,
 		});
 		rotate.current = result.nextRotate;
 		if (result.cards.length === 0) return;
 		setDeck((d) => [...d, ...result.cards]);
 
 		setEngineExhausted(result.exhausted);
-	}, [stage, milestonesShown]);
+	}, [stage]);
 
 	// Prefetch when the active card is 5 from the end (§1.7). Keyed on the
 	// DISTANCE to the end rather than on `activeIndex` and `deck.length`
@@ -332,47 +307,9 @@ export default function FeedScreen() {
 
 			const next = recordSwipe(card, decision, at);
 			// A real swipe IS the discovery — the hint never plays again. Only
-			// reached by a committed PAN: the tap-driven advances (ask "Skip this
-			// topic", insight "Not sure", milestone CTA) call `setActiveIndex`
-			// directly and never enter this handler, so no tap can count as a
-			// swipe here.
+			// reached by a committed PAN; every surviving kind commits.
 			recordSwipeHint();
 			setActiveIndex(index + 1);
-			const target = evaluateStageAdvance(stage, next, {
-				units: pool.geoUnits,
-			});
-			// `promoteTo` is monotonic and returns whether it actually moved — that
-			// boolean IS the §1.5 milestone trigger, so a ceremony card cannot fire
-			// for a stage the buyer was already past.
-			const advanced = target !== null && promoteTo(target);
-
-			if (advanced && target !== null) {
-				enqueue(
-					buildStageEvent({
-						seq: takeSeq(),
-						at,
-						type: "stage_advance",
-						fromStage: stage,
-						toStage: target,
-						swipesInStage: next.swipesInStage,
-						sessionN,
-					}),
-				);
-				resetStageCounter();
-
-				const milestone = milestoneFor({
-					fromStage: stage,
-					toStage: target,
-					signals: next,
-					units: pool.geoUnits,
-				});
-				if (milestone !== null && !milestonesShown.includes(milestone.id)) {
-					// B15: the very next card, not an append at the end of a deck the
-					// buyer may never reach.
-					setDeck((d) => insertMilestone(d, index, milestone, milestonesShown));
-					setMilestonesShown((m) => [...m, milestone.id]);
-				}
-			}
 		},
 		[
 			activeIndex,
@@ -383,9 +320,6 @@ export default function FeedScreen() {
 			recordSwipe,
 			recordSwipeHint,
 			pool.geoUnits,
-			promoteTo,
-			resetStageCounter,
-			milestonesShown,
 		],
 	);
 
@@ -416,25 +350,6 @@ export default function FeedScreen() {
 		(card: FeedCardV3, args: CardRenderArgs) => {
 			const isTop = args.role === "top";
 			switch (card.kind) {
-				case "ask":
-					return (
-						<AskFace
-							card={card}
-							onSkipTopic={() => {
-								skipLayer(card.layer);
-								enqueue(
-									buildSkipLayerEvent({
-										seq: takeSeq(),
-										at: Date.now(),
-										layer: card.layer,
-										funnelStage: stage,
-										sessionN,
-									}),
-								);
-								setActiveIndex((i) => i + 1);
-							}}
-						/>
-					);
 				case "area":
 					return <AreaFace card={card} isTop={isTop} />;
 				case "listing":
@@ -488,66 +403,12 @@ export default function FeedScreen() {
 					return (
 						<TradeoffFace card={card} tx={args.tx} cardWidth={args.cardWidth} />
 					);
-				case "challenge":
-					return (
-						<ChallengeFace
-							card={card}
-							chosen={answered[card.id] ?? null}
-							onChoose={(side) => {
-								setAnswered((a) => ({ ...a, [card.id]: side }));
-								emitGesture("datapoint_tap", card);
-							}}
-							onExplore={() => {
-								emitGesture("explore_tap", card);
-								// §1.6's challenge is built from a real listing, so "tell me
-								// more" navigates to that listing. Task-1 showed the card's own
-								// fields in a sheet because this screen did not exist yet.
-								if (card.listingId) {
-									router.push(`/listing/${card.listingId}`);
-								}
-							}}
-						/>
-					);
-				case "insight":
-					return (
-						<InsightFace
-							card={card}
-							neutralLabel="Not sure"
-							onNotSure={() => {
-								recordInsightUnsure(card);
-								setActiveIndex((i) => i + 1);
-							}}
-						/>
-					);
-				case "milestone":
-					return (
-						<MilestoneFace
-							card={card}
-							onContinue={() => {
-								enqueue(
-									buildStageEvent({
-										seq: takeSeq(),
-										at: Date.now(),
-										type: "milestone_cta",
-										fromStage: card.fromStage,
-										toStage: card.toStage,
-										swipesInStage: signals.swipesInStage,
-										sessionN,
-									}),
-								);
-								setActiveIndex((i) => i + 1);
-							}}
-						/>
-					);
 			}
 		},
 		[
 			stage,
 			sessionN,
 			signals.swipesInStage,
-			answered,
-			skipLayer,
-			recordInsightUnsure,
 			emitGesture,
 			enqueue,
 			takeSeq,

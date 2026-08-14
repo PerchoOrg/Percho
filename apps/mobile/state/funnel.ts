@@ -1,60 +1,40 @@
 /**
- * Discovery-funnel state machine skeleton (§0.2). One global `funnelStage`
- * (0–4) drives the feed rhythm engine (01), Search journey layer (04), and
- * You-tab familiarity (05).
+ * Discovery-funnel state machine skeleton (§0.2).
  *
- * This task (task-0) defines only the machine + its promotion interface and
- * the hard invariant. The concrete promotion thresholds (§1.6 — how much
- * signal moves you from one stage to the next) belong to task-1.
- *
- * INVARIANT (§0.2): stage NEVER auto-regresses. `promoteTo` only ever moves
- * forward. A downshift happens exclusively through an explicit user action
- * (You-tab scope removal, Search deep-link) via `resetTo`.
+ * 2026-08-15: the ask / challenge / insight / milestone cards were deleted, so
+ * the stage machine has no preference input left — the feed is a single
+ * unlocked mix and `stage` is pinned at 4. The store still exists because
+ * search's "Your journey" strip reads `stage`; promotion and reset are gone.
  *
  * AsyncStorage rehydrates asynchronously, so the first render always reads
- * `stage: 0` no matter what is on disk. Consumers must gate on `hydrated`
- * before building a deck or firing a milestone off the stage.
+ * `stage: 4` no matter what is on disk. Consumers must gate on `hydrated`
+ * before building a deck.
  */
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
-
-export type FunnelStage = 0 | 1 | 2 | 3 | 4;
+import type { FunnelStage } from "../lib/feed/card-types";
 
 interface FunnelState {
 	stage: FunnelStage;
 	/** False until the persisted stage has been read back from AsyncStorage. */
 	hydrated: boolean;
-	/**
-	 * Advance toward a later stage. Monotonic: a target at or below the current
-	 * stage is ignored, so the funnel can never slide backward on its own.
-	 * Returns true iff the stage actually advanced (feed uses this to fire the
-	 * milestone card + success haptic — task-1).
-	 */
-	promoteTo: (target: FunnelStage) => boolean;
-	/**
-	 * Explicit user-driven jump (forward OR backward). The ONLY sanctioned way
-	 * to move to an earlier stage. Not called by the automatic rhythm engine.
-	 */
-	resetTo: (stage: FunnelStage) => void;
 }
 
 export const useFunnelStore = create<FunnelState>()(
-	persist(
-		(set, get) => ({
-			stage: 0,
+	persist<FunnelState>(
+		() => ({
+			stage: 4,
 			hydrated: false,
-			promoteTo: (target) => {
-				if (target <= get().stage) return false;
-				set({ stage: target });
-				return true;
-			},
-			resetTo: (stage) => set({ stage }),
 		}),
 		{
 			name: "percho-v3:funnel:v1",
 			storage: createJSONStorage(() => AsyncStorage),
-			partialize: (s) => ({ stage: s.stage }),
+			// The funnel collapsed (2026-08-15): whatever stage was persisted is
+			// obsolete. Rehydrating a pre-collapse stage would unlock the wrong
+			// mix, so the persisted stage is dropped on load.
+			merge: () => ({ stage: 4, hydrated: true }),
+			partialize: (s) => ({ stage: s.stage }) as FunnelState,
 			onRehydrateStorage: () => () => {
 				useFunnelStore.setState({ hydrated: true });
 			},

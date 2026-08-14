@@ -19,7 +19,7 @@ import {
 const ctx = {
 	seq: 7,
 	at: 1_785_000_000_000,
-	funnelStage: 3 as const,
+	funnelStage: 4 as const,
 	listingId: "listing-1",
 };
 
@@ -56,7 +56,7 @@ describe("buildTourEvent", () => {
 		});
 		expect(e.seq).toBe(7);
 		expect(e.at).toBe(ctx.at);
-		expect(e.funnelStage).toBe(3);
+		expect(e.funnelStage).toBe(4);
 		expect(e.listingId).toBe("listing-1");
 	});
 });
