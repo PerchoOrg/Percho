@@ -51,13 +51,15 @@
  * brighten with the finger and the direction labels fade in with it. Without it
  * exposed, those faces cannot be built at all.
  */
-import { useEffect, useLayoutEffect } from "react";
-import { StyleSheet, View } from "react-native";
+import { useCallback, useEffect, useLayoutEffect, useState } from "react";
+import { type LayoutChangeEvent, StyleSheet, View } from "react-native";
 import { GestureDetector } from "react-native-gesture-handler";
 import Animated, {
+	Easing,
 	runOnUI,
 	type SharedValue,
 	useAnimatedStyle,
+	useSharedValue,
 	withSequence,
 	withTiming,
 } from "react-native-reanimated";
@@ -78,6 +80,21 @@ const WINDOW = VISIBLE_WINDOW;
  * off-screen for the frame or two before React drops it.
  */
 const TRAIL = 1;
+
+/**
+ * Share of the STAGE a card frame takes when the caller names no ratio.
+ *
+ * 0.95 is not a new number: it is the old `frameCapped` `maxHeight: "95%"`,
+ * carried over so listing / community cards render at exactly the height they
+ * did before the stage existed.
+ */
+const DEFAULT_FRAME_RATIO = 0.95;
+/**
+ * Height cross-fade duration (owner spec 2026-08-15: 200-300ms, ease-out). The
+ * frame is the ONLY thing that animates — the stage box around it is fixed, so
+ * the header, the card stage and the tab bar cannot move while this plays.
+ */
+const FRAME_HEIGHT_MS = 240;
 
 type CardRole = "top" | "next" | "after";
 
@@ -175,6 +192,17 @@ export interface SwipeStackProps<T> {
 	 * available space. `dev-foundation` still passes a fixed height.
 	 */
 	cardHeight?: number;
+	/**
+	 * How much of the STAGE the card frame occupies, 0-1 (owner spec
+	 * 2026-08-15: 「页面骨架固定, card 可以不同高度」). The stage — this
+	 * component's outer box — is fixed by its container, so a card kind that
+	 * wants to be shorter changes only its own frame; the page skeleton around
+	 * it never moves.
+	 *
+	 * Undefined keeps `DEFAULT_FRAME_RATIO`, i.e. the pre-stage sizing.
+	 * Ignored when `cardHeight` is given (`dev-foundation`'s fixed box).
+	 */
+	frameHeightRatio?: number;
 	/** §1.3 per-item gesture capability. Resolved before the gesture is built. */
 	capability: (item: T) => CardCapability;
 }
@@ -250,6 +278,7 @@ export function SwipeStack<T>({
 	keyExtractor,
 	cardWidth,
 	cardHeight,
+	frameHeightRatio,
 	capability,
 }: SwipeStackProps<T>) {
 	const top = items[activeIndex];
@@ -310,6 +339,38 @@ export function SwipeStack<T>({
 		if (onHintReady) onHintReady(handle);
 	}, [onHintReady]);
 
+	/**
+	 * The STAGE height, measured once off the stack's own (fixed) box.
+	 *
+	 * Sizing the frame in POINTS rather than in percent is what makes the
+	 * height animatable at all: a shared value can drive `height: 380`, it
+	 * cannot drive `height: "62%"`. And because the number is derived from the
+	 * stage — which is `flex: 1` inside the padded container and therefore the
+	 * same on every card — no card kind can change the page layout.
+	 */
+	const [stageHeight, setStageHeight] = useState(0);
+	const onStageLayout = useCallback((e: LayoutChangeEvent) => {
+		setStageHeight(e.nativeEvent.layout.height);
+	}, []);
+
+	const targetHeight = stageHeight * (frameHeightRatio ?? DEFAULT_FRAME_RATIO);
+	const frameHeight = useSharedValue(0);
+	useEffect(() => {
+		if (targetHeight <= 0) return;
+		// The FIRST measurement lands instantly — easing up from 0 would play a
+		// grow-in on mount that nobody asked for. Every later change (a new top
+		// card whose kind wants another height) eases, which is the whole point:
+		// a straight style swap is the abrupt resize the owner is complaining of.
+		frameHeight.value =
+			frameHeight.value === 0
+				? targetHeight
+				: withTiming(targetHeight, {
+						duration: FRAME_HEIGHT_MS,
+						easing: Easing.out(Easing.cubic),
+					});
+	}, [targetHeight, frameHeight]);
+	const frameStyle = useAnimatedStyle(() => ({ height: frameHeight.value }));
+
 	const argsFor = (role: CardRole): CardRenderArgs => ({
 		role,
 		tx,
@@ -335,15 +396,20 @@ export function SwipeStack<T>({
 	}
 
 	return (
-		<View style={styles.stack}>
+		<View style={styles.stack} onLayout={onStageLayout}>
 			<GestureDetector gesture={gesture}>
-				<View
+				<Animated.View
 					style={[
 						styles.frame,
 						{ width: cardWidth },
 						cardHeight !== undefined
 							? { height: cardHeight }
-							: styles.frameCapped,
+							: // Before the first layout there is no stage height to take a
+								// share of, so the frame falls back to the flex sizing it had
+								// before — same 95%, no empty first frame.
+								stageHeight === 0
+								? styles.frameCapped
+								: [styles.frameSized, frameStyle],
 					]}
 				>
 					{mounted.map(({ item, absIndex }) => {
@@ -373,13 +439,22 @@ export function SwipeStack<T>({
 							/>
 						);
 					})}
-				</View>
+				</Animated.View>
 			</GestureDetector>
 		</View>
 	);
 }
 
 const styles = StyleSheet.create({
+	/**
+	 * The STAGE (owner spec 2026-08-15). `flex: 1` inside the padded container
+	 * makes it deterministic — page height minus the wordmark row, the tab bar
+	 * and the container's own padding — and it is the SAME box for every card
+	 * kind, so nothing a card does can move the page skeleton.
+	 *
+	 * `justifyContent: "center"` is what keeps a short card (trade-off, 62%)
+	 * vertically centred in it rather than top-aligned.
+	 */
 	stack: { flex: 1, alignItems: "center", justifyContent: "center" },
 	/**
 	 * The card frame. With `cardHeight` absent (feed) it stretches to the
@@ -416,6 +491,13 @@ const styles = StyleSheet.create({
 	 * silently resize a screen this change has nothing to do with.
 	 */
 	frameCapped: { maxHeight: "95%" },
+	/**
+	 * The measured path: the frame is sized by the animated height above, so it
+	 * must stop being a flex child — `flex: 1` would grow it back to the full
+	 * stage and the ratio would never be visible. `flex: 0` in RN is
+	 * grow 0 / shrink 0 / basis auto, i.e. "use my own height".
+	 */
+	frameSized: { flex: 0 },
 	card: {
 		...StyleSheet.absoluteFillObject,
 		borderRadius: radii.card,

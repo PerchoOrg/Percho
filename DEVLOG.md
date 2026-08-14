@@ -4,6 +4,140 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-08-15 12:30 — Fixed card stage, variable card height
+
+**Objective**: owner spec 「页面骨架固定, card 可以不同高度」 — the header row,
+the card stage and the tab bar must sit at fixed positions on every card kind,
+while each kind may occupy a different share of the stage (listing/community
+~88-92%, area 92-96%, trade-off 60-65%), centred, easing between heights in
+200-300ms.
+
+**Actions**:
+- `components/SwipeStack.tsx` — new optional `frameHeightRatio` prop. The stack
+  box (`styles.stack`, `flex: 1`) is now explicitly the STAGE and measures
+  itself with `onLayout`; the card frame is sized from `stageHeight * ratio` in
+  POINTS, driven by a `useSharedValue` + `withTiming(240, Easing.out(cubic))`.
+  New `frameSized: { flex: 0 }` so the frame stops growing back to the full
+  stage. `frame` is now an `Animated.View`; both shadow layers (wide on
+  `frame`, tight on `card`) are untouched.
+- `app/(tabs)/feed.tsx` — `FRAME_HEIGHT_RATIO` map (`tradeoff: 0.62`,
+  `area: 0.94`), read off `deck[activeIndex].kind` and passed to the stack.
+  `CARD_INSET` / `GUTTER` / `stackWrap` untouched.
+
+**Decisions**:
+- **Points, not percent.** A shared value can drive `height: 380`; it cannot
+  drive `height: "62%"`. Measuring the stage once and animating a pixel height
+  is the only way to get the eased transition the owner asked for — a static
+  style switch between two percentages IS the abrupt resize being complained
+  about.
+- **Default ratio 0.95, not 0.90.** That is the old `maxHeight: "95%"` cap
+  carried over verbatim, so listing / community render at exactly the height
+  they did yesterday. The spec's 88-92% band and "keep listing/community
+  looking as today" conflict; the brief resolves it in favour of "as today".
+- **First measurement lands without animation** (guard on `frameHeight === 0`),
+  otherwise every mount plays a grow-from-zero. Pre-layout the frame falls back
+  to the old `frameCapped` flex sizing, so there is no empty first frame.
+- **`cardHeight` path untouched** — `dev-foundation` passes an explicit height
+  and keeps its old `flex: 1` frame; the ratio is ignored there.
+
+**Issues**:
+- The 2026-08-15 TradeoffFace rewrite (owner, in flight) landed mid-task and
+  overwrote a shrink-to-fit tweak I had made to the old 220pt choice boxes. The
+  new face is centred (`body: justifyContent: "center"`) with 48pt discs and no
+  footer, so it needs nothing — but its header comment says "~57% frame" while
+  this brief says 60-65%. Shipped 0.62; the number is one constant to change.
+- Pre-existing and NOT touched: `search.tsx` fails `tsc` (`SignalState` lost
+  `dims` in the in-flight `lib/feed/signals.ts` edit), and
+  `theme/community-panel-fit.test.ts` fails on a `top.kind === "community"`
+  assertion that HEAD's `feed.tsx` already does not satisfy. Both reproduce on
+  the index version of the files.
+
+**Learnings**: Reanimated's `flattenArray` recurses, so a nested
+`[styles.frameSized, animatedStyle]` inside the style array is attached
+correctly — no need to flatten by hand.
+
+**Next steps**: verify on device (the ratios are the kind of number that only
+reads right on a real screen), and confirm 0.62 vs the face's own ~57% note.
+
+## 2026-08-14 16:43 — Community card rebuilt on the listing card's design system
+
+**Objective**: the owner wants the community card and the listing card to be
+the same card — same width, same total height, **same video height**, same
+padding / radius / shadow / divider / CTA region — with the community's own
+content in the text block. `ListingFace.tsx` and its layout data were off
+limits for this pass.
+
+**Actions**:
+- `components/cards/CommunityFace.tsx` — rewritten. Media is now
+  `flex: 1, minHeight: 0` spreading the SHARED `theme/listing-layout` `media`
+  inset (12 top / 16 sides / r14), i.e. the identical box `ListingFace` uses.
+  The text block is natural-height with `geo.block` padding and four rows:
+  name (serif 20/22) + "City, ST" on one baseline row → blurb 12/17 ×2 lines →
+  up to three 21pt tag pills → hairline + right-aligned "Why people love it →".
+  Gains a `tapSlot` prop; the CTA arms `EXPLORE_TAP_TARGET` (imported from
+  `ListingFace`, not re-declared) on touch start, with `onPress` as the
+  dev-foundation fallback.
+- `app/(tabs)/feed.tsx` — passes `tapSlot={args.tapSlot}` to `CommunityFace`
+  and adds the `kind === "community"` branch to `onTapTarget`, routing
+  `EXPLORE_TAP_TARGET` to `/community/${slug}` (the same destination
+  `onExplore` already had).
+- `theme/community-panel-fit.test.ts` — rewritten. The old file mirrored a
+  panel that no longer exists (61.8/38.2 split, 190pt cap, 52pt glass tiles);
+  it would have kept passing while describing nothing. It now asserts the new
+  block against `TEXT_BLOCK_TARGET` and reads both faces' source to assert the
+  media parity, the label-only chips, and the CTA's tap wiring.
+
+**Decisions**:
+- **`HERO_RATIO` is not deleted, just unused here.** `listing-geometry.ts`
+  keeps it and `redline-listing-geometry.test.ts` /`listing-layout.test.ts`
+  still assert it; both were off limits this pass. Their comments about
+  "the constant CommunityFace shares" are now stale — worth a cleanup later.
+- **Chips are label-only.** A reason's `fact` ("33 restaurants") cannot fit a
+  one-line 10.5pt pill, and 57.2% of communities resolve no fact at all, so
+  half the row would have carried a bare label anyway. The facts are not lost:
+  `app/community/[slug]` renders every reason with its evidence, which is where
+  this card's CTA goes. The old glass tile is exactly what the owner asked to
+  remove.
+- **No blurb fallback.** The old face printed "City, ST" when
+  `communities.description` was absent. Row 1 now carries "City, ST", so the
+  fallback would have repeated it verbatim — the row is simply omitted.
+- **Chip labels are the community's own**, not `ListingFace`'s `CHIP_LABEL`:
+  that map says "Private Backyard" for `outdoors`, which is a claim about a
+  house. The community map's old `TILE_LABEL` values were reused with their
+  `"\n"` removed (a 21pt pill does not wrap).
+- **The arrow icon is copied, not extracted.** `ListingFace` does not export it
+  and could not be edited this pass. Same size, same colour, same Lucide
+  24-grid geometry.
+
+**Issues**:
+- The block lands at **189pt against the ≤190 target — 1pt of headroom** (the
+  listing block is 175; the delta is the blurb's second line). A test now
+  asserts the headroom is ≤1 so the next row added here has to displace one.
+  If the owner wants slack back, dropping the blurb's leading 17 → 16 buys 2pt.
+- **The scrim was kept** over the media (per brief), but nothing renders on the
+  video any more except the frosted COMMUNITY badge, so its bottom stop (.88
+  dark) now darkens the foot of the video for no reason and is the one visible
+  difference from the listing card's media. Recommend dropping it, or keeping
+  only the top two stops — owner's call.
+- `feed.tsx` has a **pre-existing** biome `organizeImports` error at lines
+  77–78 (`tokens` before `fonts`), present at HEAD and unrelated to this
+  change. Left alone per §0.3.
+
+**Resolution**: `tsc --noEmit` clean; mobile vitest 607/607 across 41 files;
+`apps/web` `lib/feed` 102/102 (the community-reasons contract is untouched).
+Biome clean on all three changed files. **Nothing committed or staged** — the
+working tree keeps its pre-existing modifications (`search.tsx`,
+`lib/area-familiarity*`, `lib/feed/abbreviate-address*`, `docs/design/v1-e2e/`).
+
+**Learnings**: the 2026-08-02 "video sizes match" claim was never true after
+the 08-13 listing redesign — `HERO_RATIO × cardHeight` and "every point the
+text block does not use" are only equal by coincidence. Parity between two
+faces has to be a SHARED import, not two constants that agree today.
+
+**Next steps**: owner review on device (the 1pt headroom and the scrim are the
+two things to look at); then decide whether `HERO_RATIO` and its two remaining
+test files can be retired entirely.
+
 ## 2026-08-14 05:30 — Feed polish round 3: narrower card, video radius 14, warm
 background, card shadow, tab-bar icons
 
