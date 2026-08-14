@@ -34,20 +34,27 @@ export const TAB_BAR_GLYPH: Record<TabBarIconName, string> = {
 	you: "\ue4c2", // user — plain Phosphor outline person, NOT user-circle
 };
 
-/** Width of each glyph's drawing, as a fraction of the em box (measured). */
+/**
+ * Width of each glyph's drawing, as a fraction of the em box (measured).
+ *
+ * The TabBar font is a subset of the OFFICIAL Phosphor regular TTF (see
+ * `scripts/build-tabbar-icon-font.py`) — not the earlier hand-built SVG→TTF
+ * conversion, whose winding broke on CoreText and rendered every icon as a
+ * solid blob (owner: "三个一模一样").
+ */
 export const TAB_BAR_ART_WIDTH: Record<TabBarIconName, number> = {
-	feed: 0.75,
-	search: 0.847,
-	saved: 0.562,
-	you: 0.8146,
+	feed: 0.875,
+	search: 0.9062,
+	saved: 0.7812,
+	you: 0.9062,
 };
 
 /**
  * Font size to request per point of nominal icon size.
  *
- * The regular-weight art fills ~0.56–0.85em of the em box, mean ≈0.74em. A
- * glyph set at `fontSize === size` renders visibly SMALLER than the box.
- * 1.18 brings the average to ~0.87em — matching the old `View` icons' optical
- * weight without the widest glyph (search, 0.847em) overflowing its row.
+ * The regular-weight art fills ~0.78–0.91em of the em box, mean ≈0.87em. A
+ * glyph set at `fontSize === size` renders ~13% smaller than the box. 1.13
+ * brings the average to ~0.98em — matching the old `View` icons' optical
+ * weight without the widest glyph (search/you, 0.906em) overflowing its row.
  */
-export const TAB_BAR_OPTICAL_SCALE = 1.18;
+export const TAB_BAR_OPTICAL_SCALE = 1.13;
