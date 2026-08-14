@@ -1,15 +1,21 @@
 /**
  * TabBar (§0.6 #6) — 4-tab bar, 62pt + home indicator inset. Warm-paper base
- * with a hairline top border; active = full ink, inactive = 50% ink-2.
+ * with a hairline top border; active = green, inactive = neutral gray.
  *
  * Presentational only (owner-approved #8): it takes tabs + active key +
  * onSelect. Wiring to expo-router `Tabs` and preserving per-tab nav stacks is a
  * later task's concern.
+ *
+ * 2026-08-15 (owner): the bar went quiet. Icons are now Phosphor outline glyphs
+ * (one library, 22px, ~1.75 stroke — see `TabBarIconFont.ts`), the label is
+ * sentence case at 12.5/500 with no tracking, icon↔label gap is 5, and
+ * inactive is neutral `#9B9B94` instead of the warm beige ink. No pills, no
+ * indicator bar — the cards stay the visual centre.
  */
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { colors, redline } from "../theme/tokens";
-import { textStyles } from "../theme/typography";
+import { TAB_BAR_ART_WIDTH, TAB_BAR_FONT, TAB_BAR_GLYPH, TAB_BAR_OPTICAL_SCALE, type TabBarIconName } from "./TabBarIconFont";
 
 export interface TabItem {
 	key: string;
@@ -24,6 +30,14 @@ interface TabBarProps {
 }
 
 const BAR_HEIGHT = 62;
+/** Icon size — the owner's 22–24px outline spec, at the low end for a quiet bar. */
+const ICON_SIZE = 22;
+/** Icon ↔ label gap (owner: 5–6px). */
+const ICON_LABEL_GAP = 5;
+/** Active tab colour — Percho green (redline accent, the only accent). */
+const ACTIVE_GREEN = redline.accent;
+/** Inactive — neutral gray (owner: NOT the warm beige ink). */
+const INACTIVE_GRAY = "#9B9B94";
 
 export function TabBar({ tabs, activeKey, onSelect }: TabBarProps) {
 	const insets = useSafeAreaInsets();
@@ -36,7 +50,9 @@ export function TabBar({ tabs, activeKey, onSelect }: TabBarProps) {
 		>
 			{tabs.map((t) => {
 				const active = t.key === activeKey;
-				const Icon = ICONS[t.key];
+				const glyph = TAB_BAR_GLYPH[t.key as TabBarIconName];
+				const artWidth = TAB_BAR_ART_WIDTH[t.key as TabBarIconName];
+				const fontSize = ICON_SIZE * TAB_BAR_OPTICAL_SCALE;
 				return (
 					<Pressable
 						key={t.key}
@@ -45,14 +61,29 @@ export function TabBar({ tabs, activeKey, onSelect }: TabBarProps) {
 						accessibilityRole="tab"
 						accessibilityState={{ selected: active }}
 					>
-						{Icon && (
-							<View style={active ? styles.iconOn : styles.iconOff}>
-								<Icon color={active ? ACTIVE_GREEN : colors.ink2} />
-							</View>
-						)}
-						<Text
-							style={[styles.label, active ? styles.active : styles.inactive]}
-						>
+						<View style={[styles.iconBox, { width: ICON_SIZE, height: ICON_SIZE }]}>
+							<Text
+								allowFontScaling={false}
+								style={[
+									styles.icon,
+									{
+										fontFamily: TAB_BAR_FONT,
+										fontSize,
+										lineHeight: fontSize,
+										color: active ? ACTIVE_GREEN : INACTIVE_GRAY,
+										transform: [
+											{
+												translateX:
+													(fontSize * (1 - artWidth)) / 2,
+											},
+										],
+									},
+								]}
+							>
+								{glyph}
+							</Text>
+						</View>
+						<Text style={[styles.label, active ? styles.active : styles.inactive]}>
 							{t.label}
 						</Text>
 					</Pressable>
@@ -61,179 +92,6 @@ export function TabBar({ tabs, activeKey, onSelect }: TabBarProps) {
 		</View>
 	);
 }
-
-/**
- * ── Outline tab icons (owner, 2026-08-14) ───────────────────────────────────
- *
- * Lucide-style 1.75-stroke outlines at 20pt, composed from bordered `View`s —
- * the same technique (and for the same two reasons) as `ListingFace`'s arrow
- * and bookmark: the Phosphor subset this project ships is FILL-only, and
- * `react-native-svg` red-screens in Expo Go (DEVLOG 2026-07-30 04:55).
- *
- * Geometry is Lucide's own 24-grid scaled by `K`, not eyeballed:
- *
- *   home      roof (3.5,11)→(12,3.5)→(20.5,11), walls down to y 20.5
- *   search    circle c(10.5,10.5) r 6.5, handle (15.1,15.1)→(20,20)
- *   bookmark  body x 5..19, y 3..21, notch tip (12,16)   [same as ListingFace]
- *   user      head c(12,8) r 4, shoulders as a semicircle x 4..20 from y 13
- *
- * Colour is a prop rather than a style constant because the bar has two
- * states; everything else about each icon is fixed, so the rest of the
- * geometry lives in the StyleSheet below.
- */
-const ICON_SIZE = 22;
-const K = ICON_SIZE / 24;
-const STROKE = 1.75;
-/** Active tab colour — icon AND text (owner, 2026-08-14: 「icon 和 text 都变深绿色」). */
-const ACTIVE_GREEN = "#0E5C48";
-
-interface IconProps {
-	color: string;
-}
-
-/** Rotated-bar geometry for one leg of a two-legged shape (roof, notch). */
-function bar(run: number, rise: number) {
-	return {
-		length: Math.hypot(run, rise),
-		angle: (Math.atan2(rise, run) * 180) / Math.PI,
-	};
-}
-
-const HOME_APEX_Y = 3.5 * K;
-const HOME_EAVE_Y = 11 * K;
-const HOME_BASE_Y = 20.5 * K;
-const HOME_LEFT = 3.5 * K;
-const HOME_WIDTH = 17 * K;
-const HOME_ROOF = bar(HOME_WIDTH / 2, HOME_EAVE_Y - HOME_APEX_Y);
-
-function HomeIcon({ color }: IconProps) {
-	return (
-		<View style={styles.iconBox}>
-			<View
-				style={[
-					styles.homeRoof,
-					styles.homeRoofLeft,
-					{ backgroundColor: color },
-				]}
-			/>
-			<View
-				style={[
-					styles.homeRoof,
-					styles.homeRoofRight,
-					{ backgroundColor: color },
-				]}
-			/>
-			<View
-				style={[
-					styles.homeWall,
-					styles.homeWallLeft,
-					{ backgroundColor: color },
-				]}
-			/>
-			<View
-				style={[
-					styles.homeWall,
-					styles.homeWallRight,
-					{ backgroundColor: color },
-				]}
-			/>
-			<View style={[styles.homeBase, { backgroundColor: color }]} />
-		</View>
-	);
-}
-
-const GLASS_D = 13 * K;
-const GLASS_LEFT = 4 * K;
-const HANDLE = bar(4.9 * K, 4.9 * K);
-
-function SearchIcon({ color }: IconProps) {
-	return (
-		<View style={styles.iconBox}>
-			<View style={[styles.glass, { borderColor: color }]} />
-			<View style={[styles.handle, { backgroundColor: color }]} />
-		</View>
-	);
-}
-
-const BM_LEFT = 5 * K;
-const BM_WIDTH = 14 * K;
-const BM_TOP = 3 * K;
-const BM_BOTTOM = 21 * K;
-/** Where the V bites into the bottom edge. */
-const BM_NOTCH = 16 * K;
-const BM_DIAG = bar(BM_WIDTH / 2, BM_BOTTOM - BM_NOTCH);
-
-function BookmarkIcon({ color }: IconProps) {
-	return (
-		<View style={styles.iconBox}>
-			<View style={[styles.bookmarkTop, { backgroundColor: color }]} />
-			<View
-				style={[
-					styles.bookmarkSide,
-					styles.bookmarkSideLeft,
-					{ backgroundColor: color },
-				]}
-			/>
-			<View
-				style={[
-					styles.bookmarkSide,
-					styles.bookmarkSideRight,
-					{ backgroundColor: color },
-				]}
-			/>
-			<View
-				style={[
-					styles.bookmarkDiag,
-					styles.bookmarkDiagLeft,
-					{ backgroundColor: color },
-				]}
-			/>
-			<View
-				style={[
-					styles.bookmarkDiag,
-					styles.bookmarkDiagRight,
-					{ backgroundColor: color },
-				]}
-			/>
-		</View>
-	);
-}
-
-/**
- * UserRound (Lucide) — 22px, stroke 1.75 (owner, 2026-08-14). Geometry from
- * Lucide's 24-grid scaled by K, same stroke + box rhythm as Home / Search /
- * Bookmark. Head is r5 (NOT the r4 of plain `user`). The shoulders are a
- * WIDER barrel than Lucide's exact half-disc (owner: 「身子拉出来一点,看不
- * 出来是身子」) — 18 units wide with mostly-straight sides so the body reads
- * as a body at 22px instead of a shallow "U":
- *
- *   circle  c(12,8) r 5          → head
- *   barrel  w 18, y 12.5→24      → shoulders (ALL four borders drawn —
- *                                  top border alone was just an arc with
- *                                  blank space below, the 2026-08-14 bug)
- */
-const HEAD_D = 10 * K;
-const SHOULDER_W = 18 * K;
-/** Top at 12.5, down to the box bottom (24 on the grid). */
-const SHOULDER_H = 11.5 * K;
-const SHOULDER_R = 7 * K;
-
-function UserIcon({ color }: IconProps) {
-	return (
-		<View style={styles.iconBox}>
-			<View style={[styles.head, { borderColor: color }]} />
-			<View style={[styles.shoulders, { borderColor: color }]} />
-		</View>
-	);
-}
-
-/** Keyed by the tab keys `app/(tabs)/_layout.tsx` defines. */
-const ICONS: Record<string, (props: IconProps) => React.JSX.Element> = {
-	feed: HomeIcon,
-	search: SearchIcon,
-	saved: BookmarkIcon,
-	you: UserIcon,
-};
 
 const styles = StyleSheet.create({
 	bar: {
@@ -247,128 +105,29 @@ const styles = StyleSheet.create({
 		 */
 		borderTopColor: "rgba(23,23,21,0.05)",
 	},
-	tab: { flex: 1, alignItems: "center", justifyContent: "center", gap: 4 },
-	label: { ...textStyles.caption },
-	active: { color: ACTIVE_GREEN, opacity: 1 },
-	inactive: { color: colors.ink2, opacity: 0.5 },
-	/** The icon's half of the same two states — dimming only; colour is a prop. */
-	iconOn: { opacity: 1 },
-	iconOff: { opacity: 0.5 },
-
-	iconBox: { width: ICON_SIZE, height: ICON_SIZE },
-
-	homeRoof: {
-		position: "absolute",
-		top: (HOME_APEX_Y + HOME_EAVE_Y) / 2 - STROKE / 2,
-		width: HOME_ROOF.length,
-		height: STROKE,
-		borderRadius: STROKE / 2,
+	tab: {
+		flex: 1,
+		alignItems: "center",
+		justifyContent: "center",
+		gap: ICON_LABEL_GAP,
 	},
-	homeRoofLeft: {
-		left: HOME_LEFT + HOME_WIDTH / 4 - HOME_ROOF.length / 2,
-		transform: [{ rotate: `${-HOME_ROOF.angle}deg` }],
-	},
-	homeRoofRight: {
-		left: HOME_LEFT + (HOME_WIDTH * 3) / 4 - HOME_ROOF.length / 2,
-		transform: [{ rotate: `${HOME_ROOF.angle}deg` }],
-	},
-	homeWall: {
-		position: "absolute",
-		top: HOME_EAVE_Y,
-		width: STROKE,
-		height: HOME_BASE_Y - HOME_EAVE_Y,
-	},
-	homeWallLeft: { left: HOME_LEFT },
-	homeWallRight: { left: HOME_LEFT + HOME_WIDTH - STROKE },
-	homeBase: {
-		position: "absolute",
-		left: HOME_LEFT,
-		top: HOME_BASE_Y - STROKE,
-		width: HOME_WIDTH,
-		height: STROKE,
-		borderRadius: STROKE / 2,
-	},
-
-	glass: {
-		position: "absolute",
-		left: GLASS_LEFT,
-		top: GLASS_LEFT,
-		width: GLASS_D,
-		height: GLASS_D,
-		borderRadius: GLASS_D / 2,
-		borderWidth: STROKE,
-	},
-	/** The handle runs out of the circle at 45°, Lucide's (15.1,15.1)→(20,20). */
-	handle: {
-		position: "absolute",
-		left: 17.55 * K - HANDLE.length / 2,
-		top: 17.55 * K - STROKE / 2,
-		width: HANDLE.length,
-		height: STROKE,
-		borderRadius: STROKE / 2,
-		transform: [{ rotate: `${HANDLE.angle}deg` }],
-	},
-
-	bookmarkTop: {
-		position: "absolute",
-		left: BM_LEFT,
-		top: BM_TOP,
-		width: BM_WIDTH,
-		height: STROKE,
-		borderRadius: STROKE / 2,
-	},
-	bookmarkSide: {
-		position: "absolute",
-		top: BM_TOP,
-		width: STROKE,
-		height: BM_BOTTOM - BM_TOP,
-		borderRadius: STROKE / 2,
-	},
-	bookmarkSideLeft: { left: BM_LEFT },
-	bookmarkSideRight: { left: BM_LEFT + BM_WIDTH - STROKE },
-	/** The V: two bars rotated about their own centres onto the notch's legs. */
-	bookmarkDiag: {
-		position: "absolute",
-		top: (BM_BOTTOM + BM_NOTCH) / 2 - STROKE / 2,
-		width: BM_DIAG.length,
-		height: STROKE,
-		borderRadius: STROKE / 2,
-	},
-	bookmarkDiagLeft: {
-		left: BM_LEFT + BM_WIDTH / 4 - BM_DIAG.length / 2,
-		transform: [{ rotate: `${-BM_DIAG.angle}deg` }],
-	},
-	bookmarkDiagRight: {
-		left: BM_LEFT + (BM_WIDTH * 3) / 4 - BM_DIAG.length / 2,
-		transform: [{ rotate: `${BM_DIAG.angle}deg` }],
-	},
-
-	head: {
-		position: "absolute",
-		left: (ICON_SIZE - HEAD_D) / 2,
-		top: 4 * K,
-		width: HEAD_D,
-		height: HEAD_D,
-		borderRadius: HEAD_D / 2,
-		borderWidth: STROKE,
-	},
+	iconBox: { alignItems: "center", justifyContent: "center" },
 	/**
-	 * UserRound's shoulders: a rounded-top barrel running from under the
-	 * head down to the box baseline. ALL FOUR borders are drawn — the
-	 * earlier version drew only `borderTopWidth`, so the body rendered as a
-	 * top arc with blank space below (owner: 「身子不够长,下面是空白」).
+	 * Glyph text — pinned to the icon box, centred, with the art-shift so the
+	 * drawing (not the em box) is centred. `includeFontPadding` off stops
+	 * Android's line box from adding invisible space above the art.
 	 */
-	shoulders: {
-		position: "absolute",
-		left: (ICON_SIZE - SHOULDER_W) / 2,
-		top: 12.5 * K,
-		width: SHOULDER_W,
-		height: SHOULDER_H,
-		borderTopWidth: STROKE,
-		borderLeftWidth: STROKE,
-		borderRightWidth: STROKE,
-		borderBottomWidth: STROKE,
-		borderTopLeftRadius: SHOULDER_R,
-		borderTopRightRadius: SHOULDER_R,
+	icon: {
+		includeFontPadding: false,
+		textAlignVertical: "center",
+		textAlign: "center",
 	},
+	/** Label — 12.5/500, no uppercase, no tracking (owner, 2026-08-15). */
+	label: {
+		fontFamily: "System",
+		fontSize: 12.5,
+		fontWeight: "500",
+	},
+	active: { color: ACTIVE_GREEN },
+	inactive: { color: INACTIVE_GRAY },
 });
