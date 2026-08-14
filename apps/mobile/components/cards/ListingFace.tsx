@@ -55,7 +55,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import type { SharedValue } from "react-native-reanimated";
 import { abbreviateAddress } from "../../lib/feed/abbreviate-address";
 import type { ListingCardV3 } from "../../lib/feed/card-types";
-import type { TapSlot, TapStatus } from "../../lib/gesture/tap-slot";
+import type { TapSlot } from "../../lib/gesture/tap-slot";
 import { useSavedStore } from "../../state/saved";
 import { fonts, redline, redlineRadii } from "../../theme/tokens";
 import { redlineText } from "../../theme/typography";
@@ -118,8 +118,6 @@ interface ListingFaceProps {
 	 * nothing can be tapped.
 	 */
 	tapSlot?: SharedValue<TapSlot>;
-	/** Live tap-gesture state, used to disarm a stale slot. */
-	tapStatus?: SharedValue<TapStatus>;
 }
 
 export function ListingFace({
@@ -127,7 +125,6 @@ export function ListingFace({
 	isTop,
 	onExplore,
 	tapSlot,
-	tapStatus,
 }: ListingFaceProps) {
 	/** Tag labels — no icons. See `CHIP_LABEL` for the copy. */
 	const tags = (card.dims ?? []).slice(0, MAX_TAGS);
@@ -142,12 +139,15 @@ export function ListingFace({
 	/**
 	 * Touch-start handler shared by the two interactive targets. Writes the
 	 * target id into `tapSlot` so the pan's `onEnd` can recognise the release
-	 * as a tap on it; `tapStatus` still being live is the tap gesture telling
-	 * us this touch is still eligible (a swipe deactivates it).
+	 * as a tap on it. No gate here: at touch-down `tapStatus.active` is still
+	 * false (the tap gesture's `onTouchesDown` fires after React's
+	 * `onTouchStart`), so checking it would never arm. The swipe-vs-tap
+	 * decision is made at RELEASE in the pan's `onEnd` (`isTapEnd`), which is
+	 * where `tapStatus` actually matters.
 	 */
 	const arm = (target: string) => () => {
-		if (!tapSlot || !tapStatus) return;
-		if (!tapStatus.value.active) tapSlot.value = { target };
+		if (!tapSlot) return;
+		tapSlot.value = { target };
 	};
 
 	return (
@@ -173,11 +173,6 @@ export function ListingFace({
 				<View style={styles.saveSlot}>
 					<Pressable
 						onTouchStart={arm(SAVE_TAP_TARGET)}
-						onTouchEnd={() => {
-							if (tapSlot && tapStatus && tapStatus.value.active) {
-								tapSlot.value = { target: null };
-							}
-						}}
 						accessibilityRole="button"
 						accessibilityLabel={saved ? "Saved" : "Save"}
 						hitSlop={12}
@@ -227,11 +222,6 @@ export function ListingFace({
 					<View style={styles.ctaRow}>
 						<Pressable
 							onTouchStart={arm(EXPLORE_TAP_TARGET)}
-							onTouchEnd={() => {
-								if (tapSlot && tapStatus && tapStatus.value.active) {
-									tapSlot.value = { target: null };
-								}
-							}}
 							accessibilityRole="link"
 							accessibilityLabel="Explore home"
 							hitSlop={12}

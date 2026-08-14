@@ -141,6 +141,19 @@ interface UseSwipeCardResult {
 	tapStatus: SharedValue<TapStatus>;
 }
 
+/**
+ * Module-level dispatcher for tap targets. The pan's `onEnd` runs on the UI
+ * thread and cannot read `handlers` (a ref); this runs on the JS thread via
+ * `runOnJS` and derefs the ref there, where it is valid.
+ */
+function dispatchTapTarget(target: string) {
+	if (target === "__touchdown__") return;
+	lastTapTarget?.(target);
+}
+
+/** The latest tap-target handler, set by `useSwipeCard` (JS thread only). */
+let lastTapTarget: ((target: string) => void) | null = null;
+
 export function useSwipeCard({
 	cardWidth,
 	capability,
@@ -178,6 +191,9 @@ export function useSwipeCard({
 	 */
 	const handlers = useRef({ onDecision, onTapTarget });
 	handlers.current = { onDecision, onTapTarget };
+	// Mirror into the module-level slot so `dispatchTapTarget` (which runs on
+	// the JS thread via runOnJS) can reach it without a ref deref in a worklet.
+	lastTapTarget = onTapTarget ?? null;
 	/**
 	 * True from the instant a direction commits until the handoff completes.
 	 *
@@ -293,8 +309,10 @@ export function useSwipeCard({
 					e.velocityX,
 				);
 				if (tap.tapped && tap.target) {
-					const cb = handlers.current.onTapTarget;
-					if (cb) runOnJS(cb)(tap.target);
+					// `handlers.current` is a REF — not readable from a worklet.
+					// Route through the module-level dispatcher, which reads the
+					// ref on the JS thread (inside `runOnJS`'s target).
+					runOnJS(dispatchTapTarget)(tap.target);
 					// Clear the slot so a stale target cannot fire twice.
 					tapSlot.value = { target: null };
 					return;
@@ -360,17 +378,27 @@ export function useSwipeCard({
 				.maxDistance(TAP_MAX_DX)
 				.onTouchesDown((_e, _mgr) => {
 					tapStatus.value = { active: true };
-					// Only run the face's touch-start handlers (which write the
-					// target into `tapSlot`) on a fresh touch, not on later moves.
-					const cb = handlers.current.onTapTarget;
-					if (cb) runOnJS(cb)("__touchdown__");
+					// The face's own `onTouchStart` (a real React handler on the
+					// JS thread) already armed `tapSlot.target` before the
+					// gesture's touchesDown fired. Nothing to do here.
 				})
 				.onStart(() => {
 					tapStatus.value = { active: false };
-					tapSlot.value = { target: null };
+					// The tap ACTIVATED — the finger stayed still. This is a
+					// real tap; the pan FAILED (it needs ±10pt), so the pan's
+					// onEnd will never run. Keep `tapSlot` armed: the tap's
+					// own `onEnd` (below) dispatches it.
 				})
 				.onEnd(() => {
 					tapStatus.value = { active: false };
+					// A tap that ACTIVATED is a stationary release — dispatch
+					// the armed target. `dispatchTapTarget` runs on the JS
+					// thread and reads the module-level `lastTapTarget`, so no
+					// ref deref happens in this worklet.
+					if (tapSlot.value.target) {
+						runOnJS(dispatchTapTarget)(tapSlot.value.target);
+						tapSlot.value = { target: null };
+					}
 				})
 		);
 	}, [pannable, tapStatus, tapSlot]);

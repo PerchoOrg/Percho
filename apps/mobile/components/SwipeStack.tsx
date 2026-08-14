@@ -55,8 +55,11 @@ import { useEffect, useLayoutEffect } from "react";
 import { StyleSheet, View } from "react-native";
 import { GestureDetector } from "react-native-gesture-handler";
 import Animated, {
+	runOnUI,
 	type SharedValue,
 	useAnimatedStyle,
+	withSequence,
+	withTiming,
 } from "react-native-reanimated";
 import { useSwipeCard } from "../hooks/use-swipe-card";
 import {
@@ -77,6 +80,15 @@ const WINDOW = VISIBLE_WINDOW;
 const TRAIL = 1;
 
 type CardRole = "top" | "next" | "after";
+
+/** The imperative swipe-hint handle passed to `onHintReady`. */
+export interface SwipeHintHandle {
+	/**
+	 * Nudge the stack left 16pt and back — the swipe-hint. Runs on the UI
+	 * thread; safe to call after mount (no-op if the stack is gone).
+	 */
+	nudge: () => void;
+}
 
 /** What a face needs to animate with the drag. `tx` is live on the UI thread. */
 export interface CardRenderArgs {
@@ -132,14 +144,14 @@ export interface SwipeStackProps<T> {
 
 	/**
 	 * Optional imperative nudge — the swipe-hint (owner 2026-08-13). Called
-	 * with the stack's live `tx`/`advance` shared values so the caller can
-	 * run the nudge animation on the UI thread. The feed plays it once when
-	 * the first card settles; other callers (dev-foundation) simply omit it.
+	 * ONCE on mount with a stable handle whose methods run the nudge on the
+	 * UI thread via `runOnUI` on the stack's own shared values (never capture
+	 * a plain object with `runOnUI` — Reanimated serializes closure
+	 * captures, and a shared-value-backed object is not serializable).
+	 * The feed plays it once when the first card settles; other callers
+	 * (dev-foundation) simply omit it.
 	 */
-	onHintReady?: (hint: {
-		tx: SharedValue<number>;
-		advance: SharedValue<number>;
-	}) => void;
+	onHintReady?: (hint: SwipeHintHandle) => void;
 
 	renderCard: (item: T, args: CardRenderArgs) => React.ReactNode;
 	/** Overlay above the top card only — §1.8 direction labels live here. */
@@ -275,10 +287,28 @@ export function SwipeStack<T>({
 	// Hand the live shared values to the caller ONCE (the swipe-hint needs
 	// them to run its nudge on the UI thread; it must not re-fire on every
 	// render, which would reset the hint's run-once latch).
+	// biome-ignore lint/correctness/useExhaustiveDependencies: deliver once on mount; `tx`/`advance` are stable shared values.
 	useEffect(() => {
-		if (onHintReady) onHintReady({ tx, advance });
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [onHintReady, tx, advance]);
+		const handle: SwipeHintHandle = {
+			nudge: () => {
+				// Run the animation on the UI thread. `runOnUI` serializes the
+				// closure — capturing `tx`/`advance` (SharedValues) directly is
+				// safe; capturing the handle itself is not.
+				runOnUI(() => {
+					"worklet";
+					tx.value = withSequence(
+						withTiming(-16, { duration: 240 }),
+						withTiming(0, { duration: 240 }),
+					);
+					advance.value = withSequence(
+						withTiming(0.035, { duration: 240 }),
+						withTiming(0, { duration: 240 }),
+					);
+				})();
+			},
+		};
+		if (onHintReady) onHintReady(handle);
+	}, [onHintReady]);
 
 	const argsFor = (role: CardRole): CardRenderArgs => ({
 		role,

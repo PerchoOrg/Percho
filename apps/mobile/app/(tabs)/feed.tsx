@@ -27,7 +27,11 @@ import { StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { SoundToggle } from "../../components/SoundToggle";
-import { type CardRenderArgs, SwipeStack } from "../../components/SwipeStack";
+import {
+	type CardRenderArgs,
+	type SwipeHintHandle,
+	SwipeStack,
+} from "../../components/SwipeStack";
 import { AreaFace } from "../../components/cards/AreaFace";
 import { AskFace } from "../../components/cards/AskFace";
 import { ChallengeFace } from "../../components/cards/ChallengeFace";
@@ -423,7 +427,6 @@ export default function FeedScreen() {
 							card={card}
 							isTop={isTop}
 							tapSlot={args.tapSlot}
-							tapStatus={args.tapStatus}
 							/*
 							 * The owner's 2026-08-13 revision dropped the giant green
 							 * CTA pill for a quiet right-bottom link. The link fires
@@ -549,17 +552,11 @@ export default function FeedScreen() {
 	 * a real swipe (recordSwipe in `onDecision`) disables it forever; without
 	 * a swipe it plays at most MAX_HINT_SESSIONS app opens.
 	 */
-	const hintRef = useRef<{
-		tx: SharedValue<number>;
-		advance: SharedValue<number>;
-	} | null>(null);
+	const hintRef = useRef<SwipeHintHandle | null>(null);
 	const hintRunOnce = useRef(false);
-	const onHintReady = useCallback(
-		(hint: { tx: SharedValue<number>; advance: SharedValue<number> }) => {
-			hintRef.current = hint;
-		},
-		[],
-	);
+	const onHintReady = useCallback((hint: SwipeHintHandle) => {
+		hintRef.current = hint;
+	}, []);
 	useEffect(() => {
 		if (!hintHydrated || hintDiscovered || hintRunOnce.current) return;
 		if (deck.length === 0 || activeIndex !== 0) return;
@@ -568,19 +565,7 @@ export default function FeedScreen() {
 		const ok = recordHintShown();
 		if (!ok) return;
 		const t = setTimeout(() => {
-			const hint = hintRef.current;
-			if (!hint) return;
-			runOnUI(() => {
-				"worklet";
-				hint.tx.value = withSequence(
-					withTiming(-16, { duration: 240 }),
-					withTiming(0, { duration: 240 }),
-				);
-				hint.advance.value = withSequence(
-					withTiming(0.035, { duration: 240 }),
-					withTiming(0, { duration: 240 }),
-				);
-			})();
+			hintRef.current?.nudge();
 		}, 600);
 		return () => clearTimeout(t);
 	}, [
