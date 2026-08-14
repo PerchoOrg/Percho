@@ -30,7 +30,6 @@ import gzip
 import io
 import tarfile
 from pathlib import Path
-
 REPO = Path(__file__).resolve().parent.parent
 OUT = REPO / "apps/mobile/assets/fonts/TabBarIcons.ttf"
 TMP = Path("/tmp/phosphor-web")
@@ -82,10 +81,32 @@ def main() -> int:
         ],
         check=True,
     )
+    # The source family name is "Phosphor" — identical to
+    # `PerchoIconsOutline.ttf` (the redline outline set). expo-font/CoreText
+    # key fonts by their INTERNAL name table, so a second font registering the
+    # same family silently loses, the glyph falls back to an emoji/PUA glyph,
+    # and every tab icon renders as a colored blob (owner: "我的 expo 视频都没有声音"
+    # — same class of breakage). Rename this subset so it registers uniquely.
+    rename_family(OUT, "TabBarIcons")
     print(f"wrote {OUT} ({unicodes})")
     for g in GLYPHS:
         print(f"{g} = U+{FILL_CODEPOINTS[g]:04X}")
     return 0
+
+
+def rename_family(ttf_path: Path, family: str) -> None:
+    """Rewrite name IDs 1/3/4/6/16/17 to `family` (fontTools API)."""
+    from fontTools.ttLib import TTFont
+
+    font = TTFont(ttf_path)
+    name = font["name"]
+    # Family (1), unique (3), full (4), postscript (6), typographic family (16),
+    # typographic subfamily (17). Keep subfamily names (2/5) as-is.
+    for name_id in (1, 3, 4, 6, 16, 17):
+        for record in name.names:
+            if record.nameID == name_id:
+                record.string = family.encode(record.getEncoding() or "utf-8")
+    font.save(ttf_path)
 
 
 if __name__ == "__main__":
