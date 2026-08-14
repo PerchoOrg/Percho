@@ -38,7 +38,6 @@ import {
 	ListingFace,
 	SAVE_TAP_TARGET,
 } from "../../components/cards/ListingFace";
-import { SwipeLabels } from "../../components/cards/SwipeLabels";
 import { TradeoffFace } from "../../components/cards/TradeoffFace";
 import { CardSkeleton } from "../../components/feed/CardSkeleton";
 import { ExhaustedCard } from "../../components/feed/ExhaustedCard";
@@ -442,13 +441,6 @@ export default function FeedScreen() {
 		],
 	);
 
-	const renderOverlay = useCallback(
-		(card: FeedCardV3, { tx, cardWidth: w }: CardRenderArgs) => (
-			<SwipeLabels card={card} tx={tx} cardWidth={w} />
-		),
-		[],
-	);
-
 	/**
 	 * The swipe-hint (owner spec, 2026-08-13): once the first card has
 	 * settled (~500-800ms), nudge the stack left 16pt and back so the buyer
@@ -567,7 +559,6 @@ export default function FeedScreen() {
 						onTapTarget={onTapTarget}
 						onHintReady={onHintReady}
 						renderCard={renderCard}
-						renderOverlay={renderOverlay}
 						keyExtractor={deckKey}
 						cardWidth={cardWidth}
 						frameHeightRatio={frameHeightRatio}
