@@ -387,7 +387,7 @@ const styles = StyleSheet.create({
 	 * so the card fills the screen instead of the old centered 0.74 box.
 	 *
 	 * Carries the WIDE half of the card's two-shadow elevation (owner,
-	 * 2026-08-14: `0 20px 45px rgba(32,28,22,.11)`). RN views support
+	 * 2026-08-14: `0 16px 38px rgba(32,28,22,.085)`). RN views support
 	 * exactly ONE shadow each, so the wide layer lives on the frame (same
 	 * size as the card, no clipping above it) and the tight contact layer
 	 * on `card` below. No border anywhere.
@@ -395,9 +395,9 @@ const styles = StyleSheet.create({
 	frame: {
 		flex: 1,
 		alignSelf: "stretch",
-		shadowColor: "rgba(32,28,22,0.11)",
-		shadowOffset: { width: 0, height: 20 },
-		shadowRadius: 45,
+		shadowColor: "rgba(32,28,22,0.085)",
+		shadowOffset: { width: 0, height: 16 },
+		shadowRadius: 38,
 		/**
 		 * iOS multiplies `shadowColor`'s alpha by `shadowOpacity`, which
 		 * defaults to 0 — without this the colour above renders nothing.
@@ -423,17 +423,17 @@ const styles = StyleSheet.create({
 		backgroundColor: colors.ink, // card face is always dark (§0.3)
 		/**
 		 * Soft lift off the paper background — the TIGHT half of the owner's
-		 * two-shadow elevation spec (2026-08-14: `0 4px 12px rgba(32,28,22,.06)`).
-		 * The wide layer (`0 20px 45px .11`) lives on `frame`. No border, no
+		 * two-shadow elevation spec (2026-08-14: `0 3px 10px rgba(32,28,22,.05)`).
+		 * The wide layer (`0 16px 38px .085`) lives on `frame`. No border, no
 		 * heavy shadow.
 		 *
 		 * `overflow: hidden` above clips this view's CHILDREN, not its shadow,
 		 * and no ancestor (`stack`, `stackWrap`) clips either — so the shadow is
 		 * free to spill past the card's own inset.
 		 */
-		shadowColor: "rgba(32,28,22,0.06)",
-		shadowOffset: { width: 0, height: 4 },
-		shadowRadius: 12,
+		shadowColor: "rgba(32,28,22,0.05)",
+		shadowOffset: { width: 0, height: 3 },
+		shadowRadius: 10,
 		/**
 		 * iOS multiplies `shadowColor`'s alpha by `shadowOpacity`, which defaults
 		 * to 0 — without this line the colour above renders nothing at all. 1
