@@ -116,7 +116,7 @@ export async function submitVideo(opts: {
 
 export type VideoJobState =
   | { status: 'processing' }
-  | { status: 'completed'; videoUrl: string }
+  | { status: 'completed'; videoUrl: string; costUsd: number | null }
   | { status: 'failed'; error: string };
 
 /**
@@ -128,6 +128,7 @@ export function parseVideoStatus(payload: unknown): VideoJobState {
     status?: unknown;
     error?: unknown;
     unsigned_urls?: unknown;
+    usage?: { cost?: unknown };
   };
   const status = typeof data.status === 'string' ? data.status : '';
 
@@ -138,7 +139,12 @@ export function parseVideoStatus(payload: unknown): VideoJobState {
     const urls = Array.isArray(data.unsigned_urls) ? data.unsigned_urls : [];
     const first = urls.find((u): u is string => typeof u === 'string' && u.length > 0);
     if (!first) return { status: 'failed', error: 'completed but no video URL returned' };
-    return { status: 'completed', videoUrl: first };
+    const cost = data.usage?.cost;
+    return {
+      status: 'completed',
+      videoUrl: first,
+      costUsd: typeof cost === 'number' && Number.isFinite(cost) ? cost : null,
+    };
   }
   return { status: 'processing' };
 }

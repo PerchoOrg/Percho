@@ -8,10 +8,20 @@ import { isOpenRouterHost, parseVideoStatus, submitVideo } from '../openrouter-v
  */
 
 describe('parseVideoStatus', () => {
-  it('reports completed with the first content URL', () => {
+  it('reports completed with the first content URL and usage cost', () => {
     expect(
-      parseVideoStatus({ status: 'completed', unsigned_urls: ['https://cdn/a.mp4', 'b.mp4'] }),
-    ).toEqual({ status: 'completed', videoUrl: 'https://cdn/a.mp4' });
+      parseVideoStatus({
+        status: 'completed',
+        unsigned_urls: ['https://cdn/a.mp4', 'b.mp4'],
+        usage: { cost: 0.24318 },
+      }),
+    ).toEqual({ status: 'completed', videoUrl: 'https://cdn/a.mp4', costUsd: 0.24318 });
+  });
+
+  it('treats missing usage cost as null (not an error)', () => {
+    expect(
+      parseVideoStatus({ status: 'completed', unsigned_urls: ['https://cdn/a.mp4'] }),
+    ).toEqual({ status: 'completed', videoUrl: 'https://cdn/a.mp4', costUsd: null });
   });
 
   it('treats completed-with-no-URL as a failure, not a success', () => {

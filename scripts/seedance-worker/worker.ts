@@ -154,6 +154,7 @@ async function finalizeClip(row: Row): Promise<boolean> {
     .update({
       status: 'ready',
       storage_path: storagePath,
+      cost_usd: state.costUsd,
       error: null,
       updated_at: new Date().toISOString(),
     })

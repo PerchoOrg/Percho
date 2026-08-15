@@ -37,6 +37,7 @@ interface JobRow {
   status: string;
   polling_url: string | null;
   storage_path: string | null;
+  cost_usd: number | null;
   error: string | null;
   created_at: string;
 }
@@ -123,7 +124,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   const { data } = (await sb
     .from('ai_tour_videos')
     .select(
-      'id, community_id, input_photo_ids, prompt, duration_s, aspect_ratio, status, polling_url, storage_path, error, created_at',
+      'id, community_id, input_photo_ids, prompt, duration_s, aspect_ratio, status, polling_url, storage_path, cost_usd, error, created_at',
     )
     .eq('community_id', communityId)
     .order('created_at', { ascending: false })
@@ -136,6 +137,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     video_url: r.storage_path ? publicUrl(sb, r.storage_path) : null,
     duration_s: r.duration_s,
     prompt: r.prompt,
+    cost_usd: r.cost_usd,
     error: r.error,
     created_at: r.created_at,
   }));

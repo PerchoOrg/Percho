@@ -252,6 +252,9 @@ function ClipCard({ video, thumbs }: { video: AiTourVideoRow; thumbs: string[] }
         <div className="text-[10px] text-ink2">
           {video.duration_s}s · {thumbs.length} photo{thumbs.length === 1 ? '' : 's'} ·{' '}
           {new Date(video.created_at).toLocaleString()}
+          {video.status === 'ready' && video.cost_usd != null && (
+            <span className="text-ink3"> · ${video.cost_usd.toFixed(2)}</span>
+          )}
         </div>
         {video.error && (
           <div className="text-[10px] text-red-600" title={video.error}>

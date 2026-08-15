@@ -32,6 +32,8 @@ export interface AiTourVideoRow {
   video_url: string | null;
   duration_s: number;
   prompt: string;
+  /** OpenRouter generation cost in USD, from usage.cost at completion. */
+  cost_usd: number | null;
   error: string | null;
   created_at: string;
 }
