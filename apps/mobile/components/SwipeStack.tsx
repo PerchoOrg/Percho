@@ -55,11 +55,9 @@ import { useCallback, useEffect, useLayoutEffect, useState } from "react";
 import { type LayoutChangeEvent, StyleSheet, View } from "react-native";
 import { GestureDetector } from "react-native-gesture-handler";
 import Animated, {
-	Easing,
 	runOnUI,
 	type SharedValue,
 	useAnimatedStyle,
-	useSharedValue,
 	withSequence,
 	withTiming,
 } from "react-native-reanimated";
@@ -70,6 +68,7 @@ import {
 } from "../lib/gesture/capability";
 import { cardStackVisual } from "../lib/gesture/stack-layer";
 import type { TapSlot, TapStatus } from "../lib/gesture/tap-slot";
+import { CARD_FRAME_RATIO } from "../theme/card-frame";
 import { colors, radii } from "../theme/tokens";
 
 /** Cards visible at rest: top + 1 behind (owner cut the third, 2026-08-15). */
@@ -81,30 +80,13 @@ import { colors, radii } from "../theme/tokens";
 const TRAIL = 1;
 
 /**
- * Share of the STAGE a card frame takes when the caller names no ratio for
- * its kind.
- *
- * 0.95 is not a new number: it is the old `frameCapped` `maxHeight: "95%"`,
- * carried over so listing / community cards render at exactly the height they
- * did before the stage existed.
- */
-const DEFAULT_FRAME_RATIO = 0.95;
-/**
- * Height cross-fade duration (owner spec 2026-08-15: 200-300ms, ease-out).
- * Applied per-CARD: the frame is fixed, so the page skeleton (header, stage,
- * tab bar) never moves — the only thing that changes while a swipe settles is
- * the new top card easing to its own height inside it.
- */
-const FRAME_HEIGHT_MS = 240;
-/**
  * How much of the NEXT card's lower edge peeks below the top card (owner:
  * 「应该只能peek下一张」 — a sliver, not a card). Points.
  */
 const PEEK_PT = 0;
 /**
  * How far the paper clip extends ABOVE the stage. Generous on purpose — the
- * band's job is to leave nothing of the behind card (or of its elevation glow,
- * which reaches ~22pt past its own top edge) visible above the top card.
+ * 纸带负责把后方卡片(以及它超过自身顶边的 ~22pt 提升光晕)在顶卡上方完全遮住。
  */
 const CLIP_OVERFLOW_PT = 120;
 
@@ -204,17 +186,6 @@ export interface SwipeStackProps<T> {
 	 * available space. `dev-foundation` still passes a fixed height.
 	 */
 	cardHeight?: number;
-	/**
-	 * How much of the STAGE this card's frame occupies, 0-1 (owner spec
-	 * 2026-08-15: 「页面骨架固定, card 可以不同高度」). Per-card — each card is
-	 * centred inside the FIXED stage, so a short card (trade-off, 0.62) sits
-	 * vertically centred with paper above and below it instead of forcing the
-	 * whole page to jump.
-	 *
-	 * Undefined keeps the pre-stage sizing (`frameCapped`). Ignored when
-	 * `cardHeight` is given (`dev-foundation`'s fixed box).
-	 */
-	frameHeightRatio?: (item: T) => number | undefined;
 	/** §1.3 per-item gesture capability. Resolved before the gesture is built. */
 	capability: (item: T) => CardCapability;
 }
@@ -230,7 +201,7 @@ interface StackCardProps {
 	cardWidth: number;
 	/** The FIXED stage height (points) this card centres within. */
 	stageHeight: number;
-	/** This card's frame height in points (see `frameHeightRatio`). */
+	/** The card frame's height in points (see `CARD_FRAME_RATIO`). */
 	frameHeight: number;
 	/**
 	 * The y position of a behind card's BOTTOM — aligned with the top card's
@@ -264,21 +235,12 @@ function StackCard({
 	front,
 	overlay,
 }: StackCardProps) {
-	// The card's height eases to its target (owner spec: 200-300ms ease-out)
-	// so a kind change reads as a settle, not a snap. The FIRST real value
-	// (mount, or stageHeight landing from 0) snaps — a grow-from-zero on
-	// entry would look like a bug.
-	const heightAnim = useSharedValue(0);
-	useEffect(() => {
-		if (frameHeight <= 0) return;
-		heightAnim.value =
-			heightAnim.value === 0
-				? frameHeight
-				: withTiming(frameHeight, {
-						duration: FRAME_HEIGHT_MS,
-						easing: Easing.out(Easing.cubic),
-					});
-	}, [frameHeight, heightAnim]);
+	// `frameHeight` is read straight, with no tween: every card kind is the
+	// same box now (`CARD_FRAME_RATIO`), so the only thing that can change it
+	// is the stage itself resizing. The 240ms height cross-fade that used to
+	// live here existed to soften a KIND change, and softening it is exactly
+	// what the owner saw as the page jumping (2026-08-17).
+	//
 	// Vertical position by stack depth:
 	//   depth ≤ 0 (top, or flying out) — centred in the stage.
 	//   depth = 1 (the behind card) — its BOTTOM sits AT the top card's bottom
@@ -288,7 +250,7 @@ function StackCard({
 	// with the card's scale — so a card rising to top eases from peeked to
 	// centred, no jump.
 	const cardStyle = useAnimatedStyle(() => {
-		const height = heightAnim.value;
+		const height = frameHeight;
 		const rel = absIndex - topAbs.value;
 		const depth = rel - advance.value;
 		const centred = (stageHeight - height) / 2;
@@ -323,7 +285,7 @@ function StackCard({
 	// glow, not a band from the full-stage frame). Same animated box as the
 	// card, no touch handling.
 	const glowStyle = useAnimatedStyle(() => {
-		const height = heightAnim.value;
+		const height = frameHeight;
 		const rel = absIndex - topAbs.value;
 		const depth = rel - advance.value;
 		const centred = (stageHeight - height) / 2;
@@ -364,7 +326,6 @@ export function SwipeStack<T>({
 	keyExtractor,
 	cardWidth,
 	cardHeight,
-	frameHeightRatio,
 	capability,
 }: SwipeStackProps<T>) {
 	const top = items[activeIndex];
@@ -430,28 +391,26 @@ export function SwipeStack<T>({
 	 * 高度」). `flex: 1` inside the padded container makes it deterministic —
 	 * page height minus the wordmark row, the tab bar and the container's own
 	 * padding — and it is the SAME box for every card kind, so nothing a card
-	 * does can move the page skeleton. Each card sizes itself against it via
-	 * `frameHeightRatio` and centres inside it.
+	 * does can move the page skeleton. Every card takes `CARD_FRAME_RATIO` of
+	 * it and centres inside it.
 	 */
 	const [stageHeight, setStageHeight] = useState(0);
 	const onStageLayout = useCallback((e: LayoutChangeEvent) => {
 		setStageHeight(e.nativeEvent.layout.height);
 	}, []);
 
-	// The paper band that hides the upper part of a TALLER behind card (the
-	// next card's badge must not show over a short top card). It covers from
-	// ABOVE the stage (behind cards can stick out past the top edge when
-	// bottom-anchored at `peekAnchor`) down to the top card's top edge.
-	// Cards render at their OWN real heights permanently, so this is static
-	// per top-card kind: no animation, and no height change on commit (the
-	// Tia 2026-08-15 "fake height then snap" jump).
-	const topHeight =
-		top === undefined || stageHeight === 0
-			? 0
-			: cardHeight !== undefined
-				? cardHeight
-				: stageHeight *
-					(frameHeightRatio?.(top) ?? DEFAULT_FRAME_RATIO);
+	// EVERY card is the same box: `CARD_FRAME_RATIO` of the stage (owner
+	// 2026-08-17 — one frame height for all four kinds), or the caller's fixed
+	// `cardHeight` (dev-foundation). So this is one number for the whole deck,
+	// not a per-kind lookup, and a swipe can no longer change the frame height
+	// at all — which is the jump the owner reported.
+	const frameHeight =
+		cardHeight !== undefined
+			? cardHeight
+			: // Pre-layout there is no stage yet, so no height either; the cards
+				// land the frame they will keep as soon as it arrives.
+				stageHeight * CARD_FRAME_RATIO;
+	const topHeight = top === undefined || stageHeight === 0 ? 0 : frameHeight;
 	const topOffset =
 		top === undefined || stageHeight === 0 ? 0 : (stageHeight - topHeight) / 2;
 	// The peeked card's bottom sits just below the top card's bottom (clamped
@@ -489,8 +448,9 @@ export function SwipeStack<T>({
 				<View style={[styles.frame, { width: cardWidth }]}>
 					{/* Paper band over the region above the top card (zIndex 3,
 					 * same as top, earlier in the tree so the top card wins) —
-					 * hides the upper part of a taller behind card, including
-					 * the part that sticks out past the stage's top edge. */}
+					 * the behind card is bottom-anchored at `peekAnchor`, so
+					 * this is what keeps its top edge and its elevation glow
+					 * off the paper above the top card. */}
 					<View
 						style={[
 							styles.stageClip,
@@ -502,26 +462,6 @@ export function SwipeStack<T>({
 						const depth = absIndex - activeIndex;
 						const isTop = depth === 0;
 						const role = roleFor(depth);
-						// EVERY card renders at its OWN real height (own kind's
-						// ratio). The Tia 2026-08-15 report: a behind card
-						// clipped to the top card's height peeks at a FAKE
-						// height, then snaps to its real height when it
-						// becomes top — a jump at the end of every swipe.
-						// Real height always = zero height change on commit.
-						// The part of a taller behind card that sticks out
-						// ABOVE the top card is hidden by the paper-coloured
-						// stageClip layer (rendered behind the top card),
-						// so the peek is only ever the next card's lower
-						// edge — never its badge over the top.
-						const ownRatio =
-							frameHeightRatio?.(item) ??
-							(cardHeight !== undefined ? 1 : DEFAULT_FRAME_RATIO);
-						const frameHeight =
-							cardHeight !== undefined
-								? cardHeight
-								: stageHeight === 0
-									? 0 // pre-layout: no height yet, StackCard snaps when it lands
-									: stageHeight * ownRatio;
 						return (
 							<StackCard
 								key={keyExtractor(item, absIndex)}
