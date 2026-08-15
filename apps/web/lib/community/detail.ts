@@ -59,6 +59,12 @@ export interface CommunityDetailDTO {
   city: string;
   state: string;
   heroUrl: string;
+  /**
+   * The latest READY AI-generated community tour video (Seedance, via the
+   * admin Community Tour page). Omitted when none exists yet. Playable mp4
+   * in the `ai-videos` Supabase Storage bucket.
+   */
+  videoUrl?: string;
   /** `communities.description` — authored prose. Omitted when absent. */
   blurb?: string;
   /**
@@ -125,13 +131,34 @@ export async function fetchCommunityDetail(idOrSlug: string): Promise<CommunityD
   // Counts of real places, fetched here too so this page cannot show WEAKER
   // facts than the tile the user tapped to reach it.
   const poiCounts = await fetchPoiCounts(supabase, [row.id]);
-  return projectCommunityDetail(row, poiCounts[row.id]);
+  const videoUrl = await fetchLatestAiTourVideo(supabase, row.id);
+  return projectCommunityDetail(row, poiCounts[row.id], videoUrl);
+}
+
+/** Latest READY AI community-tour video for a community, or null. */
+async function fetchLatestAiTourVideo(
+  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
+  supabase: any,
+  communityId: string,
+): Promise<string | null> {
+  const { data } = (await supabase
+    .from('ai_tour_videos')
+    .select('storage_path')
+    .eq('community_id', communityId)
+    .eq('status', 'ready')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()) as { data: { storage_path: string } | null };
+  if (!data?.storage_path) return null;
+  const { data: urlData } = supabase.storage.from('ai-videos').getPublicUrl(data.storage_path);
+  return (urlData as { publicUrl: string }).publicUrl;
 }
 
 /** Pure projection, exported for direct testing. */
 export function projectCommunityDetail(
   r: DetailRow,
   poiCounts?: Record<string, number>,
+  videoUrl?: string | null,
 ): CommunityDetailDTO | null {
   if (!r.cover_storage_path || !r.slug || !r.name) return null;
 
@@ -186,6 +213,7 @@ export function projectCommunityDetail(
     city: r.city ?? '',
     state: r.state ?? '',
     heroUrl: publicCoverImageUrl(r.cover_storage_path),
+    ...(videoUrl ? { videoUrl } : {}),
     ...(r.description ? { blurb: r.description } : {}),
     topReasons,
     moreReasons,

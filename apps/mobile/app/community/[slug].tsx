@@ -26,6 +26,7 @@
  * row.
  */
 import { router, useLocalSearchParams } from "expo-router";
+import { VideoView, useVideoPlayer } from "expo-video";
 import { useEffect, useState } from "react";
 import {
 	ActivityIndicator,
@@ -59,6 +60,8 @@ interface CommunityDetailDTO {
 	city: string;
 	state: string;
 	heroUrl: string;
+	/** AI-generated community tour video (mp4), when the admin has one. */
+	videoUrl?: string;
 	blurb?: string;
 	topReasons: ReasonDTO[];
 	moreReasons: ReasonDTO[];
@@ -84,6 +87,27 @@ function ReasonRow({ reason }: { reason: ReasonDTO }) {
 				{!!reason.fact && <Text style={styles.rowFact}>{reason.fact}</Text>}
 			</View>
 		</View>
+	);
+}
+
+/**
+ * AI-generated community tour (Seedance mp4) replacing the static hero when
+ * the admin has generated one. Autoplays muted+looped like feed cards; the
+ * poster is the community cover while the mp4 loads.
+ */
+function CommunityTourVideo({ url, heroUrl }: { url: string; heroUrl: string }) {
+	const player = useVideoPlayer(url, (p) => {
+		p.loop = true;
+		p.muted = true;
+		p.play();
+	});
+	return (
+		<VideoView
+			player={player}
+			style={styles.heroImg}
+			contentFit="cover"
+			nativeControls
+		/>
 	);
 }
 
@@ -141,7 +165,11 @@ export default function CommunityWhyScreen() {
 				showsVerticalScrollIndicator={false}
 			>
 				<View style={styles.hero}>
-					<Image source={{ uri: data.heroUrl }} style={styles.heroImg} />
+					{data.videoUrl ? (
+						<CommunityTourVideo url={data.videoUrl} heroUrl={data.heroUrl} />
+					) : (
+						<Image source={{ uri: data.heroUrl }} style={styles.heroImg} />
+					)}
 					<View style={styles.heroScrim} />
 					<View style={[styles.heroText, { paddingTop: insets.top + 40 }]}>
 						<Text style={styles.eyebrow}>WHY PEOPLE LOVE IT</Text>
