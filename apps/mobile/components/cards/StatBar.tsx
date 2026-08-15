@@ -23,12 +23,7 @@ export function StatBar({ cells }: StatBarProps) {
 				<Fragment key={cell.label}>
 					{i > 0 && <View style={styles.divider} />}
 					<View style={styles.cell}>
-						<Text
-							style={styles.value}
-							numberOfLines={1}
-							adjustsFontSizeToFit
-							minimumFontScale={0.7}
-						>
+						<Text style={styles.value} numberOfLines={1}>
 							{cell.value}
 						</Text>
 						<Text
@@ -50,13 +45,13 @@ const styles = StyleSheet.create({
 	bar: {
 		flexDirection: "row",
 		alignItems: "center",
-		gap: 8,
 		minWidth: 0,
 		/**
 		 * `flex: 2` — the bar takes the bottom row's left two-thirds against
 		 * the Explore CTA's `flex: 1` (owner 2026-08-19: 展开分隔信息,别和
-		 * Explore 重合). With 1:1 the 4 cells got squeezed and labels
-		 * ellipsized.
+		 * Explore 重合). NO `gap` on the row: with 7 children (4 cells +
+		 * 3 dividers) a gap would shave ~56pt of cell width and force the
+		 * values to shrink — the divider itself is the separator.
 		 */
 		flex: 2,
 	},
@@ -68,6 +63,11 @@ const styles = StyleSheet.create({
 	cell: {
 		flex: 1,
 		minWidth: 0,
+		/**
+		 * Inner padding instead of row `gap` — cells flex-split the whole bar
+		 * width, and the text breathing room comes out of the cell's own box.
+		 */
+		paddingHorizontal: 4,
 	},
 	/** The number — the listing card's specs token verbatim (12.5/600), so the
 	 *  bottom info bar reads at the same size across all three card kinds
