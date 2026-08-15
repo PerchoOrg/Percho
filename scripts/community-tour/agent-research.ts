@@ -19,15 +19,12 @@
  */
 
 import { execFile } from 'node:child_process';
-import { promisify } from 'node:util';
 import { loadEnv } from '../seedance-worker/loadEnv.js';
 import { buildResearchPrompt } from '../../apps/web/lib/ai/community-tour-prompt.js';
 import { extractJsonObject } from '../../apps/web/lib/utils/extract-json.js';
 import { createServiceClient } from '../../apps/web/lib/supabase/server.js';
 
 loadEnv();
-
-const execFileP = promisify(execFile);
 
 const REPO_ROOT = new URL('../../', import.meta.url).pathname;
 
@@ -39,30 +36,45 @@ async function runAgent(
   agent: 'claude' | 'codex',
   prompt: string,
 ): Promise<{ ok: boolean; raw: string; error?: string }> {
-  const maxTurns = Number(process.env[`${agent.toUpperCase()}_MAX_TURNS`] ?? 8);
+  const maxTurns = Number(process.env[`${agent.toUpperCase()}_MAX_TURNS`] ?? 20);
   try {
     if (agent === 'claude') {
       // Pro OAuth; print mode skips dialogs. Restrict tools to web + read —
-      // Claude must research, not write files.
-      const { stdout } = await execFileP(
-        'claude',
-        ['-p', prompt, '--allowedTools', 'WebSearch,WebFetch', '--max-turns', String(maxTurns)],
-        { timeout: 5 * 60_000, maxBuffer: 8 * 1024 * 1024, cwd: REPO_ROOT },
-      );
+      // Claude must research, not write files. Spawn with stdio 'ignore' so
+      // stdin is closed (print mode waits 3s for piped data otherwise).
+      const { stdout } = await new Promise<{ stdout: string }>((resolve, reject) => {
+        const child = execFile(
+          'claude',
+          ['-p', prompt, '--allowedTools', 'WebSearch,WebFetch', '--max-turns', String(maxTurns)],
+          { timeout: 8 * 60_000, maxBuffer: 8 * 1024 * 1024, cwd: REPO_ROOT },
+          (err, stdout) => {
+            if (err) reject(err);
+            else resolve({ stdout });
+          },
+        );
+        child.stdin?.end();
+      });
       return { ok: true, raw: stdout };
     }
     // codex: needs a git repo; scratch dir is fine. danger-full-access because
     // the Hermes gateway context breaks bubblewrap (see codex skill).
-    const { stdout } = await execFileP(
-      'codex',
-      [
-        'exec',
-        '--sandbox',
-        'danger-full-access',
-        `Search the web and return JSON only. ${prompt}`,
-      ],
-      { timeout: 5 * 60_000, maxBuffer: 8 * 1024 * 1024, cwd: REPO_ROOT },
-    );
+    const { stdout } = await new Promise<{ stdout: string }>((resolve, reject) => {
+      const child = execFile(
+        'codex',
+        [
+          'exec',
+          '--sandbox',
+          'danger-full-access',
+          `Search the web and return JSON only. ${prompt}`,
+        ],
+        { timeout: 5 * 60_000, maxBuffer: 8 * 1024 * 1024, cwd: REPO_ROOT },
+        (err, stdout) => {
+          if (err) reject(err);
+          else resolve({ stdout });
+        },
+      );
+      child.stdin?.end();
+    });
     return { ok: true, raw: stdout };
   } catch (err) {
     const e = err as { message?: string; stderr?: string };
