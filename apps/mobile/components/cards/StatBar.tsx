@@ -69,11 +69,18 @@ const styles = StyleSheet.create({
 		 */
 		paddingHorizontal: 4,
 	},
-	/** The number — the listing card's specs token verbatim (12.5/600), so the
-	 *  bottom info bar reads at the same size across all three card kinds
-	 *  (owner 2026-08-19: 同一类型的文字大小要统一). */
+	/**
+	 * The number — 16/600, white, never auto-shrunk. Started at the listing
+	 * card's specs token (12.5) so all three card kinds matched, but the
+	 * owner called that too small (2026-08-19: "还是小") — bumped to 16 while
+	 * keeping `fontFamily` from the shared token. All 4 cells stay locked to
+	 * this exact size (owner: 同一类型的文字大小要统一); it's the LABEL below
+	 * that shrinks to fit a long string like "Cost of Living", never this.
+	 */
 	value: {
 		...redlineText.listingCard.specs,
+		fontSize: 16,
+		lineHeight: 19,
 		fontWeight: "600",
 		color: "#FFFFFF",
 	},
