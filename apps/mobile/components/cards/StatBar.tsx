@@ -69,19 +69,19 @@ const styles = StyleSheet.create({
 		flex: 1,
 		minWidth: 0,
 	},
-	/** The number — 13/600 white, the row's anchor. */
+	/** The number — the listing card's specs token verbatim (12.5/600), so the
+	 *  bottom info bar reads at the same size across all three card kinds
+	 *  (owner 2026-08-19: 同一类型的文字大小要统一). */
 	value: {
 		...redlineText.listingCard.specs,
-		fontSize: 13,
-		lineHeight: 16,
 		fontWeight: "600",
 		color: "#FFFFFF",
 	},
-	/** The label — 9/500 muted white, under the value. */
+	/** The label — 10/500 muted white, under the value. */
 	label: {
 		...redlineText.listingCard.specs,
-		fontSize: 9,
-		lineHeight: 11,
+		fontSize: 10,
+		lineHeight: 12,
 		fontWeight: "500",
 		color: "rgba(255,255,255,0.65)",
 		marginTop: 1,
