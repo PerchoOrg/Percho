@@ -27,6 +27,7 @@
  */
 
 import type { BrowseCard } from '@/app/(public)/browse/_components/BrowseFeed';
+import { fetchAiTourVideoByCommunity } from '@/lib/feed/ai-tour-videos';
 import {
   fetchBrowseCards,
   fetchBrowseCardsByIds,
@@ -163,7 +164,7 @@ export async function GET(request: Request) {
   // Communities are Stage 3's main card type; earlier stages don't show them.
   const needsCommunities = stage >= 3;
 
-  const [pageRows, geoUnits, communities, verticalVideos] = await Promise.all([
+  const [pageRows, geoUnits, communities, verticalVideos, aiTourVideos] = await Promise.all([
     needsListingRows
       ? videosOnly
         ? fetchBrowseCardsVideosOnly(offset, limit)
@@ -175,6 +176,8 @@ export async function GET(request: Request) {
       : Promise.resolve([] as PoolCommunityDTO[]),
     // Cheap (15 ready rows) and needed for both listings and communities.
     fetchVerticalVideos(),
+    // AI-generated community tours (Seedance); only communities have these.
+    needsCommunities ? fetchAiTourVideoByCommunity() : Promise.resolve(new Map<string, string>()),
   ]);
 
   /**
@@ -264,17 +267,21 @@ export async function GET(request: Request) {
   let communityRows = communities;
   if (needsCommunities && videoFirst) {
     const videoCommunityIds = await fetchVerticalVideoCommunityIds();
-    const extra =
-      videoCommunityIds.length > 0 ? await fetchCommunityPoolByIds(videoCommunityIds) : [];
+    const aiVideoIds = [...aiTourVideos.keys()];
+    const allVideoIds = [...new Set([...videoCommunityIds, ...aiVideoIds])];
+    const extra = allVideoIds.length > 0 ? await fetchCommunityPoolByIds(allVideoIds) : [];
     const seen = new Set(extra.map((c) => c.id));
     communityRows = [...extra, ...communities.filter((c) => !seen.has(c.id))];
   }
 
   // Attach vertical video to communities too. `CommunityFace` already renders
   // `CardVideo` when `videoUrl` is set; the DTO just never carried the field.
+  // AI tour videos (Seedance) attach the same way; vertical wins if both exist.
   const communitiesWithVideo = communityRows.map((c) => {
     const uid = verticalVideos.byCommunity.get(c.id);
-    return uid ? { ...c, videoUrl: streamManifestUrl(uid) } : c;
+    if (uid) return { ...c, videoUrl: streamManifestUrl(uid) };
+    const aiUrl = aiTourVideos.get(c.id);
+    return aiUrl ? { ...c, videoUrl: aiUrl } : c;
   });
   const orderedCommunities = videoFirst
     ? [
