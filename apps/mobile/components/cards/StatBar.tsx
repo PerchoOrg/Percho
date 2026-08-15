@@ -26,12 +26,7 @@ export function StatBar({ cells }: StatBarProps) {
 						<Text style={styles.value} numberOfLines={1}>
 							{cell.value}
 						</Text>
-						<Text
-							style={styles.label}
-							numberOfLines={1}
-							adjustsFontSizeToFit
-							minimumFontScale={0.7}
-						>
+						<Text style={styles.label} numberOfLines={1}>
 							{cell.label}
 						</Text>
 					</View>
@@ -84,10 +79,14 @@ const styles = StyleSheet.create({
 		fontWeight: "600",
 		color: "#FFFFFF",
 	},
-	/** The label — 10/500 muted white, under the value. */
+	/** The label — 9.5/500 muted white, under the value. FIXED size: no
+	 *  auto-shrink, so a long label ("Cost of Living") never renders visibly
+	 *  smaller than a short one ("Jobs") — owner 2026-08-19: 同一类型文字
+	 *  大小要统一. Labels that don't fit are shortened in `place-stats`,
+	 *  not scaled here. */
 	label: {
 		...redlineText.listingCard.specs,
-		fontSize: 10,
+		fontSize: 9.5,
 		lineHeight: 12,
 		fontWeight: "500",
 		color: "rgba(255,255,255,0.65)",

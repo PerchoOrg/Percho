@@ -65,16 +65,16 @@ function communityCells(rand: () => number): StatCell[] {
 		{ label: "Schools", value: outOfTen(6 + Math.floor(rand() * 5)) }, // 6–10
 		{ label: "Safety", value: outOfTen(6 + Math.floor(rand() * 5)) },
 		{ label: "Convenience", value: index(40 + rand() * 120) }, // 40–160
-		{ label: "Growth (3yr)", value: pct(1 + rand() * 7) }, // +1%–+8%
+		{ label: "Growth", value: pct(1 + rand() * 7) }, // +1%–+8%
 	];
 }
 
 function cityCells(rand: () => number): StatCell[] {
 	return [
-		{ label: "Jobs (YoY)", value: pct(0.5 + rand() * 5.5) }, // +0.5%–+6%
+		{ label: "Jobs", value: pct(0.5 + rand() * 5.5) }, // +0.5%–+6%
 		{ label: "Cost of Living", value: index(75 + rand() * 75) }, // 75–150
 		{ label: "Commute", value: `${Math.round(15 + rand() * 45)} min` }, // 15–60 min
-		{ label: "Growth (3yr)", value: pct(1 + rand() * 7) },
+		{ label: "Growth", value: pct(1 + rand() * 7) },
 	];
 }
 

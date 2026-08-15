@@ -19,7 +19,7 @@ describe("placeStats — deterministic placeholder stat bars", () => {
 			"Schools",
 			"Safety",
 			"Convenience",
-			"Growth (3yr)",
+			"Growth",
 		]);
 		// Schools/Safety are N/10, Convenience an index, Growth a percentage.
 		expect(cells[0]!.value).toMatch(/^(10|\d)\/10$/);
@@ -31,10 +31,10 @@ describe("placeStats — deterministic placeholder stat bars", () => {
 	it("city = Jobs / Cost of Living / Commute / Growth", () => {
 		const cells = placeStats("abc-1", "city");
 		expect(cells.map((c) => c.label)).toEqual([
-			"Jobs (YoY)",
+			"Jobs",
 			"Cost of Living",
 			"Commute",
-			"Growth (3yr)",
+			"Growth",
 		]);
 		expect(cells[0]!.value).toMatch(/^\+\d\.\d%$/);
 		expect(cells[1]!.value).toMatch(/^\d+$/);
