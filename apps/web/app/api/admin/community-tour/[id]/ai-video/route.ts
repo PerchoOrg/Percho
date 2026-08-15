@@ -22,13 +22,7 @@
  * the same row twice.
  */
 
-import {
-  SEEDANCE_MODEL,
-  downloadVideo,
-  pollVideo,
-  submitVideo,
-  uploadFrameImage,
-} from '@/lib/ai/openrouter-video';
+import { SEEDANCE_MODEL, downloadVideo, pollVideo, submitVideo } from '@/lib/ai/openrouter-video';
 import { requireAdmin } from '@/lib/auth/require-admin';
 import {
   AI_VIDEO_ASPECT,
@@ -239,28 +233,23 @@ async function submitClip(sb: any, row: JobRow): Promise<void> {
 
   // Same rule as the render worker: the enhanced file is only used once an
   // admin has approved it.
+  //
+  // Photos are already publicly readable in Supabase Storage, and OpenRouter
+  // accepts public HTTPS URLs directly as frame images (verified live
+  // 2026-08-15) — so no download + re-upload to /files is needed. The URL is
+  // the storage bucket's public base + the path.
   const frameUrls: string[] = [];
+  const publicBase = sb.storage
+    .from(PHOTO_BUCKET)
+    .getPublicUrl('__probe__')
+    .data.publicUrl.replace('/__probe__', '');
   for (const id of row.input_photo_ids ?? []) {
     const photo = photoMap.get(id)!;
     const path =
       photo.enhanced_status === 'approved' && photo.enhanced_path
         ? photo.enhanced_path
         : photo.storage_path;
-
-    const { data: blob, error: dlErr } = await sb.storage.from(PHOTO_BUCKET).download(path);
-    if (dlErr || !blob) {
-      throw new Error(
-        `storage download failed: ${(dlErr as { message?: string })?.message ?? path}`,
-      );
-    }
-    const file = blob as Blob;
-    frameUrls.push(
-      await uploadFrameImage(
-        await file.arrayBuffer(),
-        path.split('/').pop() || 'frame.jpg',
-        file.type || 'image/jpeg',
-      ),
-    );
+    frameUrls.push(`${publicBase}/${path}`);
   }
 
   const job = await submitVideo({
