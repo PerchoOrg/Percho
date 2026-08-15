@@ -44,12 +44,13 @@ describe("listing card immersive full-bleed layout (2026-08-18)", () => {
 	it("carries a bottom scrim like the CITY card", () => {
 		expect(LISTING).toContain("LinearGradient");
 		expect(LISTING).toContain("rgba(0,0,0,0.5)");
-		// Listing's scrim runs deeper than the CITY/COMMUNITY one (owner
-		// 2026-08-19: 底部渐变 + 信息文字条) — same start, deeper end.
+		// All three faces now share the DEEP gradient (owner 2026-08-19: 底部渐变
+		// + 信息文字条) — same 0.55 start, deep 0.92 end. The listing card led,
+		// then AreaFace and CommunityFace followed in the same pass.
 		expect(LISTING).toContain("locations={[0.55, 0.78, 1]}");
 		expect(LISTING).toContain("rgba(0,0,0,0.92)");
-		expect(AREA).toContain("locations={[0.55, 1]}");
-		expect(COMMUNITY).toContain("locations={[0.55, 1]}");
+		expect(AREA).toContain("locations={[0.55, 0.78, 1]}");
+		expect(COMMUNITY).toContain("locations={[0.55, 0.78, 1]}");
 	});
 
 	it("keeps the LISTING badge and the bookmark", () => {

@@ -4,6 +4,47 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-08-19 — Community/City cards: deep gradient + divided stat bars (owner Tia)
+
+**Objective**: owner spec (Tia, 2026-08-19) — apply the listing card's bottom
+gradient + divided info bar to the Community and City cards. Community shows
+Schools / Safety / Convenience / Growth; City shows Jobs / Cost of Living /
+Commute / Growth (her reference photo). "没有数据就用随机数据先,等我之后接
+api 纠正".
+
+**Actions**:
+- NEW `apps/mobile/lib/feed/place-stats.ts` (+ test) — deterministic stat
+  cells keyed on `card.id` (FNV-1a hash → mulberry32 PRNG), so the same card
+  always shows the same numbers and nothing re-rolls on re-render. Community:
+  Schools N/10, Safety N/10, Convenience index 40–160, Growth +1–8%. City:
+  Jobs +0.5–6%, Cost of Living 75–150, Commute 15–60 min, Growth +1–8%.
+  `StatCell[]` is the single seam for the future API swap.
+- NEW `apps/mobile/components/cards/StatBar.tsx` — the divided 4-cell row
+  (value over label, 1px hairlines) shared by both faces.
+- `CommunityFace.tsx` — scrim deepened to the listing card's 3-stop gradient;
+  bottom row = StatBar (left ~2/3) + Explore (right); chips row kept above.
+- `AreaFace.tsx` — scrim deepened; `communityLine` kept as a muted line under
+  the name; bottom row = StatBar (left ~2/3) + Explore (right). The old
+  stats-left/CTA-right `bottomRow` branch and the CTA-alone `ctaBottomRow`
+  branch collapsed into one row.
+- `theme/listing-layout.test.ts` / `theme/community-panel-fit.test.ts` —
+  scrim parity assertions updated: ALL three faces now assert the deep
+  `locations={[0.55, 0.78, 1]}` / `rgba(0,0,0,0.92)` gradient.
+
+**Decisions**: random data is deterministic per card id (not `Math.random`)
+so a card never changes numbers mid-session — looks intentional, not broken.
+The 4 cells are a shared `StatBar` (not duplicated per face). Kept the
+community chips and the city community-count line — the reference photo
+doesn't show them but removing info the owner asked for previously needs a
+separate nod.
+
+**Verification**: tsc clean; `vitest run` 508/508 pass (incl. new
+place-stats suite + both parity suites).
+
+**Next steps**: Tia to check in Expo Go; when the real API fields land, swap
+`placeStats` body for wire data (keep `StatCell[]` shape). City Explore CTA
+is still the known dead tap (no city route exists — pre-existing, untouched).
+
 ## 2026-08-19 — Listing card: bottom gradient + divided specs bar (owner Tia)
 
 **Objective**: owner spec (Tia, 2026-08-19) — the listing card's bottom text was

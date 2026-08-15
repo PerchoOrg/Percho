@@ -1,53 +1,16 @@
-/**
- * AreaFace (§1.3) — the Stage 1–2 geographic probe. ONE component for all three
- * granularities (area / city / zip); the `KindChip` marks which level, per
- * §1.3 #1.
- *
- * ── 2026-08-15 rebuild: immersive full-bleed city card ───────────────────────
- *
- * The owner's ask: the city card is an EXPERIENCE CARD, not a listing card.
- * Media fills the ENTIRE card (no white text block underneath), UI recedes,
- * and the text sits on a subtle bottom scrim so it stays readable over any
- * video. Deliberately NOT `ListingFace`'s layout (media + white block below).
- *
- *   · CITY pill top-left — the LISTING / COMMUNITY frosted badge, relabelled.
- *   · bookmark disc top-right — translucent white disc + dark bookmark icon,
- *     the CITY pill's visual family (owner 2026-08-15).
- *   · bottom scrim — `LinearGradient` over the lower ~34% of the card:
- *     transparent → rgba(0,0,0,0.58), so white text reads on any frame
- *     without painting a black footer.
- *   · bottom info, 3 layers (30pt gutters):
- *       a. name (serif, largest)
- *       b. vibe (secondary, one line; deterministic fallback hook until the
- *          real vibe field ships)
- *       c. stats left · `Explore {city} →` right (text + arrow, no pill)
- *     Hierarchy: City → vibe → metadata / Explore CTA.
- *   · stats are low-contrast white and hide when meaningless (homes only when
- *     >1 — never `1 home`).
- *   · deleted: address/street pills, `AREA · CITY`, the old `CardFoot` panel.
- *   · height: the feed pins the area card to ~87% of the container (8–12%
- *     shorter than listing/community), width/radius/shadow/margins unchanged.
- *
- * Media follows §0.7 / PLAN B8: the real `videoUrl` when a unit has one (only 4
- * `community_videos` rows exist today), otherwise the real `heroUrl` as a
- * first-class static state with no missing-media affordance.
- *
- * With NEITHER — the common case for a derived city/zip unit, which has no
- * photo source at all — the face wears the `area` `CardSurface` rather than a
- * black screen. The scrim stays: over a media-less surface it reads as a
- * deeper foot to the gradient, which is exactly where the white text sits.
- */
 import { LinearGradient } from "expo-linear-gradient";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import type { SharedValue } from "react-native-reanimated";
 import type { AreaCardV3 } from "../../lib/feed/card-types";
 import type { TapSlot } from "../../lib/gesture/tap-slot";
+import { placeStats } from "../../lib/feed/place-stats";
 import { useSavedStore } from "../../state/saved";
 import { redline, redlineRadii } from "../../theme/tokens";
 import { redlineText } from "../../theme/typography";
 import { CardPhoto } from "../CardPhoto";
 import { CardVideo } from "../CardVideo";
 import { CardSurface } from "./CardSurface";
+import { StatBar } from "./StatBar";
 import { SAVE_TAP_TARGET } from "./ListingFace";
 
 /** The circular arrow CTA's tap target id (feed.tsx `onTapTarget`). */
@@ -60,51 +23,18 @@ interface AreaFaceProps {
 	onExplore?: () => void;
 }
 
-/** `8 communities · 124 homes` — dynamic, no placeholders. Homes only when
- * meaningful (>1): a single active listing is noise on a city card. */
-function statsLine(card: AreaCardV3): string | undefined {
-	const { unit } = card;
-	const parts: string[] = [];
-	if (unit.communityCount > 0) {
-		parts.push(
-			unit.communityCount === 1
-				? "1 community"
-				: `${unit.communityCount} communities`,
-		);
-	}
-	const active = unit.stats.activeListings;
-	if (active !== undefined && active > 1) {
-		parts.push(`${active} homes`);
-	}
-	return parts.length > 0 ? parts.join(" · ") : undefined;
-}
-
 /**
- * Fallback hooks until the real vibe field ships (server `GeoUnitDTO` has no
- * vibe column today — owner approved dummy copy, 2026-08-15). Deterministic
- * per unit so a city reads the same hook every swipe.
- * ponytail: placeholder hooks, swap for authored copy when the field lands.
+ * `8 communities` — the card's ONE fact line (owner 2026-08-17: name, community
+ * count, Explore, nothing else).
+ *
+ * The `N homes` half is gone with the vibe line: it counted active listings,
+ * which is a number that moves week to week and says nothing about the city.
+ * A city with no communities renders no line at all — never a placeholder.
  */
-const VIBE_FALLBACKS = [
-	"Sunbelt pace, Southern charm, red-dirt sunsets.",
-	"College-town energy without the Friday traffic.",
-	"Ranch houses, lake breeze, and a farmers market every Saturday.",
-	"Deep-dish loyalties and a quick train to the Loop.",
-	"Trailheads out the back door, quiet streets up front.",
-	"Coastal light, palm-lined blocks, salt in the air.",
-	"Porch-sitting weather from March to November.",
-	"Riverwalk mornings, game-day crowds, river views.",
-	"Small-town downtown with big-city jobs an hour away.",
-	"Wind, wheat fields, and a town square that still runs on handshakes.",
-] as const;
-
-function vibeText(card: AreaCardV3): string {
-	if (card.vibe) return card.vibe;
-	let h = 0;
-	for (let i = 0; i < card.unit.id.length; i++) {
-		h = (h * 31 + card.unit.id.charCodeAt(i)) | 0;
-	}
-	return VIBE_FALLBACKS[Math.abs(h) % VIBE_FALLBACKS.length]!;
+function communityLine(card: AreaCardV3): string | undefined {
+	const { communityCount } = card.unit;
+	if (communityCount <= 0) return undefined;
+	return communityCount === 1 ? "1 community" : `${communityCount} communities`;
 }
 
 export function AreaFace({
@@ -161,11 +91,12 @@ export function AreaFace({
 				</Pressable>
 			</View>
 
-			{/* Bottom scrim — transparent until ~55% down, then darkening to 0.5
-			    at the bottom (owner 2026-08-15: adaptive, starts 55–60% up). */}
+			{/* Bottom scrim — transparent until ~55% down, then darkening to a
+			    deep 0.92 at the bottom (owner 2026-08-19: 底部渐变 + 信息文字条,
+			    same as the listing card). */}
 			<LinearGradient
-				colors={["transparent", "rgba(0,0,0,0.5)"]}
-				locations={[0.55, 1]}
+				colors={["transparent", "rgba(0,0,0,0.5)", "rgba(0,0,0,0.92)"]}
+				locations={[0.55, 0.78, 1]}
 				start={{ x: 0, y: 0 }}
 				end={{ x: 0, y: 1 }}
 				style={styles.scrim}
@@ -175,41 +106,27 @@ export function AreaFace({
 			{/* Bottom-left info block — white, stepped hierarchy. */}
 
 			<View style={styles.info}>
-				<Text style={styles.name} numberOfLines={1}>
+				{/* No `numberOfLines` — the owner's rule for this card is NO
+				    truncated text anywhere, so a long name wraps to a second line
+				    rather than ellipsizing. The block is bottom-anchored, so the
+				    extra line grows UP into the scrim. */}
+				<Text style={styles.name}>
 					{unit.name}, {unit.state}
 				</Text>
-				<Text style={styles.vibe} numberOfLines={1}>
-					{vibeText(card)}
-				</Text>
 				{(() => {
-					const stats = statsLine(card);
-					if (!stats) {
-						return (
-							<View style={styles.ctaBottomRow}>
-								<Pressable
-									onTouchStart={arm(CITY_EXPLORE_TAP_TARGET)}
-									onPress={tapSlot ? undefined : onExplore}
-									accessibilityRole="link"
-									accessibilityLabel={`Explore ${unit.name}`}
-									hitSlop={12}
-									style={({ pressed }) => [
-										styles.ctaLink,
-										pressed && styles.ctaPressed,
-									]}
-								>
-									<Text style={styles.ctaLabel} numberOfLines={1}>
-										Explore
-									</Text>
-									<ArrowRightIcon />
-								</Pressable>
-							</View>
-						);
-					}
-					return (
-						<View style={styles.bottomRow}>
-							<Text style={styles.stats} numberOfLines={1}>
-								{stats}
-							</Text>
+					const stats = communityLine(card);
+					return stats ? (
+						<Text style={styles.stats} numberOfLines={1}>
+							{stats}
+						</Text>
+					) : null;
+				})()}
+				{/* Bottom row — city stat bar (left ~2/3) + Explore (right), the
+				    listing card's divided-info layout (owner 2026-08-19). */}
+				<View style={styles.bottomRow}>
+					<StatBar cells={placeStats(card.id, "city")} />
+					{!!onExplore && (
+						<View style={styles.ctaBottomRow}>
 							<Pressable
 								onTouchStart={arm(CITY_EXPLORE_TAP_TARGET)}
 								onPress={tapSlot ? undefined : onExplore}
@@ -227,8 +144,8 @@ export function AreaFace({
 								<ArrowRightIcon />
 							</Pressable>
 						</View>
-					);
-				})()}
+					)}
+				</View>
 			</View>
 		</View>
 	);
@@ -334,14 +251,7 @@ const styles = StyleSheet.create({
 		fontWeight: "600",
 		color: "#FFFFFF",
 	},
-	/** Vibe — one line, secondary. */
-	vibe: {
-		...redlineText.listingCard.address,
-		fontSize: 13,
-		color: "rgba(255,255,255,0.92)",
-		marginTop: 2,
-	},
-	/** Stats — smallest. */
+	/** Community count — the card's only fact line. */
 	stats: {
 		...redlineText.listingCard.specs,
 		fontSize: 11,
@@ -350,8 +260,8 @@ const styles = StyleSheet.create({
 		marginTop: 3,
 	},
 	/**
-	 * Row 3 — stats left, `Explore {city} →` right. The CTA is text + arrow
-	 * only (no pill, no background); `Explore` sits clearly below the title.
+	 * Bottom row — city stat bar (left ~2/3) + Explore (right), the listing
+	 * card's divided-info layout (owner 2026-08-19).
 	 */
 	bottomRow: {
 		flexDirection: "row",
@@ -360,23 +270,25 @@ const styles = StyleSheet.create({
 		gap: 12,
 		marginTop: 10,
 	},
-	/** Same row, CTA alone — when stats are empty the link is right-aligned. */
+	/** Explore column — right-aligned, takes the row's right third. */
 	ctaBottomRow: {
+		flex: 1,
 		flexDirection: "row",
 		justifyContent: "flex-end",
-		marginTop: 10,
+		alignItems: "center",
 	},
 	/** CTA link — text + arrow, no pill, no background. */
 	ctaLink: {
 		flexDirection: "row",
 		alignItems: "center",
+		justifyContent: "flex-end",
 		gap: 6,
 		minHeight: 32, // §0.5 touch floor
 		paddingHorizontal: 2,
 	},
 	ctaLabel: {
 		...redlineText.listingCard.cta,
-		fontSize: 13,
+		fontSize: 15,
 		fontWeight: "500",
 		color: "rgba(255,255,255,0.92)",
 	},
