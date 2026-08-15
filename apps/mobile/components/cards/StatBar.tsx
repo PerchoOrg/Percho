@@ -23,10 +23,20 @@ export function StatBar({ cells }: StatBarProps) {
 				<Fragment key={cell.label}>
 					{i > 0 && <View style={styles.divider} />}
 					<View style={styles.cell}>
-						<Text style={styles.value} numberOfLines={1}>
+						<Text
+							style={styles.value}
+							numberOfLines={1}
+							adjustsFontSizeToFit
+							minimumFontScale={0.7}
+						>
 							{cell.value}
 						</Text>
-						<Text style={styles.label} numberOfLines={1}>
+						<Text
+							style={styles.label}
+							numberOfLines={1}
+							adjustsFontSizeToFit
+							minimumFontScale={0.7}
+						>
 							{cell.label}
 						</Text>
 					</View>
@@ -40,32 +50,38 @@ const styles = StyleSheet.create({
 	bar: {
 		flexDirection: "row",
 		alignItems: "center",
-		gap: 10,
+		gap: 8,
 		minWidth: 0,
-		flex: 1,
+		/**
+		 * `flex: 2` — the bar takes the bottom row's left two-thirds against
+		 * the Explore CTA's `flex: 1` (owner 2026-08-19: 展开分隔信息,别和
+		 * Explore 重合). With 1:1 the 4 cells got squeezed and labels
+		 * ellipsized.
+		 */
+		flex: 2,
 	},
 	divider: {
 		width: 1,
-		height: 22,
+		height: 20,
 		backgroundColor: "rgba(255,255,255,0.35)",
 	},
 	cell: {
 		flex: 1,
 		minWidth: 0,
 	},
-	/** The number — 14/600 white, the row's anchor. */
+	/** The number — 13/600 white, the row's anchor. */
 	value: {
 		...redlineText.listingCard.specs,
-		fontSize: 14,
-		lineHeight: 17,
+		fontSize: 13,
+		lineHeight: 16,
 		fontWeight: "600",
 		color: "#FFFFFF",
 	},
-	/** The label — 9.5/500 muted white, under the value. */
+	/** The label — 9/500 muted white, under the value. */
 	label: {
 		...redlineText.listingCard.specs,
-		fontSize: 9.5,
-		lineHeight: 12,
+		fontSize: 9,
+		lineHeight: 11,
 		fontWeight: "500",
 		color: "rgba(255,255,255,0.65)",
 		marginTop: 1,
