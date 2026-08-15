@@ -100,11 +100,11 @@ const FRAME_HEIGHT_MS = 240;
  * How much of the NEXT card's lower edge peeks below the top card (owner:
  * 「应该只能peek下一张」 — a sliver, not a card). Points.
  */
-const PEEK_PT = 20;
+const PEEK_PT = 0;
 /**
- * How far the paper clip extends ABOVE the stage. A taller behind card is
- * bottom-anchored at `peekAnchor`, so its top can stick out past the stage's
- * top edge; the clip hides that overflow.
+ * How far the paper clip extends ABOVE the stage. Generous on purpose — the
+ * band's job is to leave nothing of the behind card (or of its elevation glow,
+ * which reaches ~22pt past its own top edge) visible above the top card.
  */
 const CLIP_OVERFLOW_PT = 120;
 
@@ -233,8 +233,8 @@ interface StackCardProps {
 	/** This card's frame height in points (see `frameHeightRatio`). */
 	frameHeight: number;
 	/**
-	 * The y position of a peeked (behind) card's BOTTOM — just below the top
-	 * card's bottom edge, so only a fixed PEEK sliver of the next card shows.
+	 * The y position of a behind card's BOTTOM — aligned with the top card's
+	 * bottom edge (PEEK_PT = 0), so no next-card sliver shows under the top card.
 	 */
 	peekAnchor: number;
 	zIndex: number;
@@ -281,10 +281,9 @@ function StackCard({
 	}, [frameHeight, heightAnim]);
 	// Vertical position by stack depth:
 	//   depth ≤ 0 (top, or flying out) — centred in the stage.
-	//   depth = 1 (the peeked next card) — its BOTTOM sits at `peekAnchor`
-	//     (just below the top card's bottom), so only a fixed PEEK sliver of
-	//     its lower edge shows — never a whole tall card under a short one
-	//     (Tia 2026-08-15: 「显示trade off小卡的时候露出了下面的大卡」).
+	//   depth = 1 (the behind card) — its BOTTOM sits AT the top card's bottom
+	//     (PEEK_PT = 0, Tia 2026-08-19), so its edge hides exactly behind the
+	//     top card's lower edge.
 	// Between depths the position interpolates with `advance`, in lockstep
 	// with the card's scale — so a card rising to top eases from peeked to
 	// centred, no jump.
