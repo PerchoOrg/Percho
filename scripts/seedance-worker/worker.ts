@@ -16,11 +16,47 @@
  * Install as launchd agent for always-on (see scripts/seedance-worker/README).
  */
 import { config as loadEnv } from 'dotenv';
-import { fileURLToPath } from 'node:url';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
+const execFileP = promisify(execFile);
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 loadEnv({ path: path.join(repoRoot, '.env.local') });
+
+/**
+ * Re-encode a Seedance mp4 into a stream-friendly one: moov at the front
+ * (faststart) and a sane bitrate. Seedance ships 720p at ~15Mbps with moov
+ * at the tail — fine on desktop, stutters on iOS (player waits for moov,
+ * then decodes a huge stream). CRF 26 on 720p lands ~2-4Mbps.
+ */
+async function transcodeForStreaming(src: ArrayBuffer): Promise<ArrayBuffer> {
+  const dir = await mkdtemp(path.join(tmpdir(), 'seedance-'));
+  const inPath = path.join(dir, 'in.mp4');
+  const outPath = path.join(dir, 'out.mp4');
+  try {
+    await writeFile(inPath, Buffer.from(src));
+    await execFileP('ffmpeg', [
+      '-y',
+      '-i', inPath,
+      '-c:v', 'libx264',
+      '-crf', '26',
+      '-preset', 'veryfast',
+      '-pix_fmt', 'yuv420p',
+      '-c:a', 'aac',
+      '-b:a', '128k',
+      '-movflags', '+faststart',
+      outPath,
+    ], { timeout: 120_000, maxBuffer: 64 * 1024 * 1024 });
+    const out = await readFile(outPath);
+    return out.buffer.slice(out.byteOffset, out.byteOffset + out.byteLength) as ArrayBuffer;
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+}
 
 import {
   SEEDANCE_MODEL,
@@ -144,9 +180,14 @@ async function finalizeClip(row: Row): Promise<boolean> {
 
   const mp4 = await downloadVideo(state.videoUrl);
   const storagePath = `${row.community_id}/${row.id}.mp4`;
+  // Transcode to a stream-friendly mp4: Seedance output is 15Mbps with moov
+  // at the tail — iOS stalls (no faststart + huge bitrate). CRF 26 keeps a
+  // 720p clip crisp at ~2-4Mbps; faststart moves moov to the front so the
+  // player can start immediately.
+  const transcode = await transcodeForStreaming(mp4);
   const { error: upErr } = await sb.storage
     .from(AI_VIDEO_BUCKET)
-    .upload(storagePath, mp4, { contentType: 'video/mp4', upsert: true });
+    .upload(storagePath, transcode, { contentType: 'video/mp4', upsert: true });
   if (upErr) throw new Error(`storage upload failed: ${(upErr as { message: string }).message}`);
 
   await sb
