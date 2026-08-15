@@ -1,117 +1,102 @@
 /**
- * The listing card's 2026-08-13 layout, asserted against the acceptance
- * criteria. Sibling of `redline-listing-geometry.test.ts` (the OLD proportional
- * split, which `ListingFace` no longer uses).
+ * The listing card's 2026-08-18 immersive full-bleed layout, asserted as text.
  *
- * This file exists because the redesign's whole point is the height model:
- * the card fills the available height, the media area eats the remainder
- * (`flex: 1`), and the text block renders at its natural height — targeted
- * ≤ 190pt. Two of the three acceptance criteria are arithmetic, so they get
- * asserted here:
+ * Sibling of `community-panel-fit.test.ts` (the community card's full-bleed
+ * composition). On 2026-08-18 the listing card joined the ONE card system:
+ * media fills the ENTIRE card, price/specs/address sit on a bottom scrim, and
+ * the white text block under the media is GONE.
  *
- *   1. text block ≤ 190pt
- *   2. media ≥ 65% of the card
- *   3. three tags fit on an iPhone SE without ellipsis
+ * This file reads `ListingFace.tsx` as text rather than importing it — the
+ * mobile vitest suite is deliberately react-native-free (see
+ * `redline-type.test.ts`), and the component pulls in `StyleSheet` / `View`.
  *
- * The tag fit is measured against the widest realistic trio ("Top Schools" ·
- * "Private Backyard" · "Trails Nearby") at the token sizes.
+ * ── The three fixed elements (owner, 2026-08-18) ────────────────────────────
+ *
+ * City / Community / Listing must carry IDENTICAL type label, save disc, and
+ * Explore CTA — same position, size, colour, style. The parity assertions
+ * read all three faces and compare the shared numbers:
+ *
+ *   · badge        top 12 / left 12, padding 7/10, rgba(255,255,255,0.92)
+ *   · save disc    top 12 / right 12, 40px, rgba(255,255,255,0.75)
+ *   · explore      white 15/500 "Explore →", right-aligned
  */
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { HERO_RATIO } from "./listing-geometry";
-import {
-	DIVIDER_HEIGHT,
-	MAX_TAGS,
-	SE_TAG_ROW_WIDTH,
-	TAG_PILL_HEIGHT,
-	TEXT_BLOCK_TARGET,
-	media,
-	textBlock,
-} from "./listing-layout";
-import { redlineText } from "./typography";
 
-const MEDIA_MIN_SHARE = 0.65;
+const LISTING = readFileSync("components/cards/ListingFace.tsx", "utf8");
+const AREA = readFileSync("components/cards/AreaFace.tsx", "utf8");
+const COMMUNITY = readFileSync("components/cards/CommunityFace.tsx", "utf8");
 
-/** The feed's card box on the smallest supported device. */
-function cardHeight(w: number, h: number) {
-	// The card fills the available height: screen height minus the feed's
-	// chrome + the CardContainer insets. The card container sits between the
-	// chrome row (status bar) and the tab bar (62pt + home-indicator inset);
-	// use the SE's 667pt and the container's 8/10 insets as the floor.
-	const available = h - 62;
-	return available - 8 - 10;
-}
-
-/** The text block's fixed cost, from the token data. */
-function textBlockFloor() {
-	return (
-		textBlock.block.paddingTop + // 16
-		redlineText.listingCard.price.lineHeight + // 28
-		textBlock.address.marginTop + // 8
-		redlineText.listingCard.address.fontSize + // 12
-		textBlock.tags.marginTop + // 11
-		TAG_PILL_HEIGHT + // 21
-		textBlock.divider.marginTop + // 16
-		DIVIDER_HEIGHT + // 1
-		textBlock.ctaSlot.marginTop + // 4
-		46 + // CTA
-		textBlock.block.paddingBottom // 18
-	);
-}
-
-describe("listing card 2026-08-13 layout", () => {
-	it("keeps the text block under the 190pt target", () => {
-		expect(textBlockFloor()).toBeLessThanOrEqual(TEXT_BLOCK_TARGET);
+describe("listing card immersive full-bleed layout (2026-08-18)", () => {
+	it("fills the card with media — no white text block below", () => {
+		// The old face split card into media + white block; the new face has
+		// ONE media layer with the info overlaid. The white container
+		// (geo.block / textBlock) must be gone — from the STYLES, not from
+		// the history notes in the header.
+		expect(LISTING).not.toMatch(/styles\.(block|divider)/);
+		expect(LISTING).not.toContain("textBlock as geo");
+		expect(LISTING).not.toContain("media as mediaGeo");
+		expect(LISTING).not.toContain("flex: 1, minHeight: 0");
+		expect(LISTING).toContain("overflow: \"hidden\"");
+		expect(LISTING).toContain("fit=\"cover\"");
 	});
 
-	it("gives the media at least 65% of the card", () => {
-		// Media = card − text block − the media's own top inset. Assert the
-		// ratio at the SE floor.
-		const card = cardHeight(375, 667);
-		const mediaShare = (card - textBlockFloor() - media.marginTop) / card;
-		expect(mediaShare).toBeGreaterThanOrEqual(MEDIA_MIN_SHARE);
+	it("carries a bottom scrim like the CITY card", () => {
+		expect(LISTING).toContain("LinearGradient");
+		expect(LISTING).toContain("rgba(0,0,0,0.5)");
+		// Listing's scrim runs deeper than the CITY/COMMUNITY one (owner
+		// 2026-08-19: 底部渐变 + 信息文字条) — same start, deeper end.
+		expect(LISTING).toContain("locations={[0.55, 0.78, 1]}");
+		expect(LISTING).toContain("rgba(0,0,0,0.92)");
+		expect(AREA).toContain("locations={[0.55, 1]}");
+		expect(COMMUNITY).toContain("locations={[0.55, 1]}");
 	});
 
-	it("insets the media 12 top / 16 sides", () => {
-		// The video is an INSET card inside the white card: 12pt of paper
-		// above, 16pt on both sides (owner 2026-08-14: 「Video 左右 inset 比
-		// 现在增加 3–4px」 — the wider paper band makes the white card surface
-		// read clearly). Full-bleed media (margin 0) is the bug this replaced,
-		// so a zero here is still a failure.
-		expect(media.marginHorizontal).toBe(16);
-		expect(media.marginTop).toBe(12);
-		expect(media.marginTop).toBeLessThan(media.marginHorizontal);
-		// A rounded box to clip the player, concentric with the card's radius.
-		expect(media.borderRadius).toBeGreaterThan(0);
+	it("keeps the LISTING badge and the bookmark", () => {
+		expect(LISTING).toContain("LISTING");
+		expect(LISTING).toContain("SAVE_TAP_TARGET");
+		expect(LISTING).toContain("BookmarkIcon");
 	});
 
-	it("seats three tags on an iPhone SE without ellipsis", () => {
-		// 315pt of content width on the SE. A conservative upper bound for SF
-		// Pro at 10.5/600: proportional glyphs average ~0.5em; 0.58em covers
-		// the wider caps and lowercase without pretending to measure fonts.
-		const widest = ["Top Schools", "Private Backyard", "Trails Nearby"];
-		const width = widest.reduce(
-			(sum, label) =>
-				sum +
-				label.length * 0.58 * redlineText.listingCard.tag.fontSize +
-				9 * 2,
-			0,
-		);
-		const withGaps = width + 6 * (MAX_TAGS - 1);
-		expect(withGaps).toBeLessThanOrEqual(SE_TAG_ROW_WIDTH);
+	it("renders price, specs and address on the photo — no white container", () => {
+		expect(LISTING).toContain("card.priceLabel");
+		expect(LISTING).toContain("card.bedBathSqft");
+		expect(LISTING).toContain("styles.address");
+		expect(LISTING).toContain("styles.info");
+		// The overlay block lives on the photo (absolute info), never in a
+		// natural-height white panel below the media.
+		expect(LISTING).toContain("position: \"absolute\"");
 	});
 
-	it("never truncates a tag — pills are fixed-width, the row does not wrap", () => {
-		// The redesign's rule: no ellipsis on a pill. A too-wide row drops the
-		// third pill whole (ListingFace caps at MAX_TAGS) rather than shrinking
-		// or ellipsizing. These are the layout properties that make the rule
-		// hold; `flexShrink: 0` + `nowrap` mean a pill can never be squeezed.
-		expect(TAG_PILL_HEIGHT).toBeGreaterThan(0);
-		expect(MAX_TAGS).toBe(3);
+	it("unifies the three fixed elements across City / Community / Listing", () => {
+		const badge = "paddingVertical: 7,\n\t\tpaddingHorizontal: 10";
+		expect(LISTING).toContain(badge);
+		expect(AREA).toContain(badge);
+		expect(COMMUNITY).toContain(badge);
+
+		const disc = "width: 40,\n\t\theight: 40,\n\t\tborderRadius: 20,\n\t\tbackgroundColor: \"rgba(255,255,255,0.75)\"";
+		expect(LISTING).toContain(disc);
+		expect(AREA).toContain(disc);
+		expect(COMMUNITY).toContain(disc);
+
+		// Same explore CTA — label copy, size, weight, colour.
+		expect(LISTING).toContain("fontSize: 15,\n\t\tfontWeight: \"500\",\n\t\tcolor: \"rgba(255,255,255,0.92)\"");
+		expect(AREA).toContain("fontSize: 15,\n\t\tfontWeight: \"500\",\n\t\tcolor: \"rgba(255,255,255,0.92)\"");
+		expect(COMMUNITY).toContain("fontSize: 15,\n\t\tfontWeight: \"500\",\n\t\tcolor: \"rgba(255,255,255,0.92)\"");
+		expect(LISTING).toContain("Explore\n");
 	});
 
-	it("uses natural heights — no aspectRatio on the media", () => {
-		// The media box is `flex: 1, minHeight: 0`; the old proportional split
-		// is gone from the face. HERO_RATIO still exists for CommunityFace.
-		expect(HERO_RATIO).toBeCloseTo(0.618, 3);
+	it("keeps the CTA label and routes it through the shared tap target", () => {
+		// Owner, 2026-08-16: CTA → "Explore →" (the old "Why people love it"
+		// text link is gone with the white block). The listing card now says
+		// "Explore", not "Explore home", matching CITY / COMMUNITY.
+		expect(LISTING).toContain("arm(EXPLORE_TAP_TARGET)");
+		// The feed must actually send that target somewhere, or the link is
+		// dead in the stack (a Pressable inside the pan gesture never fires —
+		// RNGH #3172).
+		const feed = readFileSync("app/(tabs)/feed.tsx", "utf8");
+		expect(feed).toContain("top.kind === \"listing\"");
+		expect(feed).toContain("router.push(`/listing/${top.id}`)");
+		expect(feed).toContain("tapSlot={args.tapSlot}");
 	});
 });

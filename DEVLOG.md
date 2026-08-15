@@ -4,6 +4,41 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-08-19 — Listing card: bottom gradient + divided specs bar (owner Tia)
+
+**Objective**: owner spec (Tia, 2026-08-19) — the listing card's bottom text was
+unreadable ("下面的文字不清楚"). Make it a bottom gradient + info text bar:
+1. deeper bottom scrim (near-black at the bottom, like her reference photo),
+2. move room/specs info to the bottom row's LEFT ~2/3 as `4 bd | 3 ba | 2,853
+   sqft` with vertical divider hairlines, Explore stays right.
+
+**Actions**:
+- `apps/mobile/components/cards/ListingFace.tsx` — info block rework:
+  - price on its OWN line (was price+specs on one baseline row),
+  - specs moved to a bottom `bottomRow` (flex 2:1 with the CTA): `specsBar`
+    renders `card.bedBathSqft` split on ` · ` into 3 parts with 1px divider
+    hairlines (`rgba(255,255,255,0.35)`, height 14) between them,
+  - scrim deepened: `["transparent", "rgba(0,0,0,0.5)", "rgba(0,0,0,0.92)"]`
+    with `locations={[0.55, 0.78, 1]}` — same 0.55 start as CITY/COMMUNITY,
+    deeper 0.92 end for the info bar,
+  - deleted `styles.row1` / `styles.specs` (baseline row) → `bottomRow` /
+    `specsBar` / `spec` / `specDivider`; address marginTop 8→6.
+- `apps/mobile/theme/listing-layout.test.ts` — scrim assertion updated to the
+  deeper 3-stop gradient (0.92 end); CITY/COMMUNITY parity assertions unchanged.
+
+**Decisions**: split server's `bedBathSqft` string in the client (pure UI
+change, hot-reloads in Expo Go; no server/deploy round-trip). Specs bar is
+`flex: 2` vs CTA `flex: 1` ≈ left two-thirds. Demo (HTML with real listing
+photos) in `~/percho-prototypes/listing-card-scrim/` confirmed by Tia before
+implementation.
+
+**Verification**: tsc clean; `vitest run` 502/502 pass (incl. listing-layout
+parity suite); demo screenshot OCR-verified all three info lines readable on
+dark/bright/mid photos.
+
+**Next steps**: Tia to verify in Expo Go on device; adjust scrim stops/divider
+opacity if she asks.
+
 ## 2026-08-15 13:10 UTC — Community card: no description, distinctive lifestyle signal pills
 
 **Objective**: owner spec (Tia, 2026-08-15) — the community card's info area:
