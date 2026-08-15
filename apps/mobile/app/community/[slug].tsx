@@ -27,6 +27,7 @@
  */
 import { router, useLocalSearchParams } from "expo-router";
 import { VideoView, useVideoPlayer } from "expo-video";
+import { useSoundStore } from "../../state/sound";
 import { useEffect, useState } from "react";
 import {
 	ActivityIndicator,
@@ -92,13 +93,15 @@ function ReasonRow({ reason }: { reason: ReasonDTO }) {
 
 /**
  * AI-generated community tour (Seedance mp4) replacing the static hero when
- * the admin has generated one. Autoplays muted+looped like feed cards; the
- * poster is the community cover while the mp4 loads.
+ * the admin has generated one. Autoplays looped like feed cards; audio follows
+ * the global soundOn store, so a buyer on the feed hears the tour here too.
+ * `nativeControls` gives a way back if the phone's silent switch is on.
  */
 function CommunityTourVideo({ url, heroUrl }: { url: string; heroUrl: string }) {
+	const soundOn = useSoundStore((s) => s.soundOn);
 	const player = useVideoPlayer(url, (p) => {
 		p.loop = true;
-		p.muted = true;
+		p.muted = !soundOn;
 		p.play();
 	});
 	return (
