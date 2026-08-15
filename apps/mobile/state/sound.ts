@@ -42,7 +42,16 @@ export const useSoundStore = create<SoundState>()(
 			toggle: () => set((s) => ({ soundOn: !s.soundOn })),
 		}),
 		{
-			name: "percho-v3:sound:v1",
+			/*
+			 * v2 (2026-08-15): key bump, NOT a no-op. Devices that persisted
+			 * `soundOn:false` before the 2026-07-28 default flip (or by an
+			 * early mute tap) rehydrate that stale false forever — with the
+			 * toggle off the feed, a buyer on the feed can't unmute, and
+			 * "all videos have no sound" on Tia's phone was exactly that.
+			 * New key → empty storage → fresh `soundOn: true` default.
+			 * One-time reset; sound-on is the product default.
+			 */
+			name: "percho-v3:sound:v2",
 			storage: createJSONStorage(() => AsyncStorage),
 			partialize: (s) => ({ soundOn: s.soundOn }),
 			onRehydrateStorage: () => () => {
