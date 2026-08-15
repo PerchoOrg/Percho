@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.percho.seedance-worker</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/Users/apocalypsee/Workspace/Percho/node_modules/.bin/tsx</string>
+    <string>/Users/apocalypsee/Workspace/Percho/scripts/seedance-worker/worker.ts</string>
+  </array>
+  <key>WorkingDirectory</key>
+  <string>/Users/apocalypsee/Workspace/Percho</string>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <true/>
+  <key>StandardOutPath</key>
+  <string>/tmp/seedance-worker.log</string>
+  <key>StandardErrorPath</key>
+  <string>/tmp/seedance-worker.log</string>
+</dict>
+</plist>

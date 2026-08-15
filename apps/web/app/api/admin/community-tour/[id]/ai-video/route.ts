@@ -5,24 +5,15 @@
  *   them). Body: { photoIds: uuid[], prompt: string, durationS: 4..15 }
  *
  * GET /api/admin/community-tour/[id]/ai-video
- *   Advance the queue by one bounded step, then return every row for this
- *   community (newest first).
+ *   Return every row for this community (newest first).
  *
- * WHY THE GET DOES WORK: generation takes minutes, which is longer than a
- * route handler may run, and this repo's only background worker is the EC2
- * render worker (ffmpeg/Cloudflare — a different pipeline we are told not to
- * touch). So the queue is pumped by the admin's own status polling: each GET
- * claims a little work (submit a pending row, finalize a completed one),
- * bounded by MAX_WORK_PER_PUMP so the request stays fast. Nothing is lost if
- * the admin closes the tab — the rows keep their state and the next GET (from
- * any admin) picks up where this one stopped.
- *
- * Concurrency: the pending → submitting claim is an UPDATE ... WHERE
- * status = 'pending' RETURNING id, so two tabs polling at once cannot submit
- * the same row twice.
+ * Generation runs in the LOCAL seedance worker
+ * (scripts/seedance-worker/worker.ts — render-worker pattern, owns
+ * OPENROUTER_API_KEY). This route only writes the queue row and reads
+ * status; it never calls OpenRouter. The web app works from Vercel without
+ * the key; the worker on the Mac has it.
  */
 
-import { SEEDANCE_MODEL, downloadVideo, pollVideo, submitVideo } from '@/lib/ai/openrouter-video';
 import { requireAdmin } from '@/lib/auth/require-admin';
 import {
   AI_VIDEO_ASPECT,
@@ -35,13 +26,6 @@ import { GenerateAiTourVideos } from '@/lib/zod/ai-tour-video';
 import { NextResponse } from 'next/server';
 
 export const runtime = 'nodejs';
-export const maxDuration = 300;
-
-/** Source bucket for POI photos (same one PhotoTable renders thumbnails from). */
-const PHOTO_BUCKET = 'listing-photos';
-
-/** Expensive steps (a submit or a download+upload) per GET. */
-const MAX_WORK_PER_PUMP = 3;
 
 interface JobRow {
   id: string;
@@ -60,13 +44,6 @@ interface JobRow {
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const admin = await requireAdmin();
   if (!admin) return NextResponse.json({ error: 'forbidden' }, { status: 403 });
-
-  if (!process.env.OPENROUTER_API_KEY) {
-    return NextResponse.json(
-      { error: 'not_configured', message: 'OPENROUTER_API_KEY is not set on this deployment.' },
-      { status: 501 },
-    );
-  }
 
   const { id: communityId } = await params;
 
@@ -119,7 +96,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     community_id: communityId,
     input_photo_ids: rows.map((p) => p.id),
     prompt: clipPrompt(prompt, rows[0]?.pois?.display_name),
-    model: SEEDANCE_MODEL,
+    model: 'bytedance/seedance-2.0-mini',
     duration_s: durationS,
     aspect_ratio: AI_VIDEO_ASPECT,
     status: 'pending',
@@ -143,8 +120,6 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   // biome-ignore lint/suspicious/noExplicitAny: stub generated types
   const sb = createServiceClient() as any;
 
-  if (process.env.OPENROUTER_API_KEY) await pump(sb, communityId);
-
   const { data } = (await sb
     .from('ai_tour_videos')
     .select(
@@ -165,153 +140,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     created_at: r.created_at,
   }));
 
-  return NextResponse.json({ videos, configured: !!process.env.OPENROUTER_API_KEY });
-}
-
-// ─── queue pump ────────────────────────────────────────────────────────────
-
-// biome-ignore lint/suspicious/noExplicitAny: stub generated types
-async function pump(sb: any, communityId: string): Promise<void> {
-  const { data } = (await sb
-    .from('ai_tour_videos')
-    .select(
-      'id, community_id, input_photo_ids, prompt, duration_s, aspect_ratio, status, polling_url, storage_path, error, created_at',
-    )
-    .eq('community_id', communityId)
-    .in('status', ['pending', 'processing'])
-    .order('created_at', { ascending: true })
-    .limit(50)) as { data: JobRow[] | null };
-
-  let budget = MAX_WORK_PER_PUMP;
-  for (const row of data ?? []) {
-    if (budget <= 0) return;
-    try {
-      if (row.status === 'pending') {
-        if (await claim(sb, row.id)) {
-          await submitClip(sb, row);
-          budget -= 1;
-        }
-      } else if (await finalizeClip(sb, row)) {
-        // Only a finished clip costs a download + upload; a poll that says
-        // "still rendering" is cheap and doesn't eat the budget.
-        budget -= 1;
-      }
-    } catch (err) {
-      await fail(sb, row.id, err);
-    }
-  }
-}
-
-/** Atomic pending → submitting. False means another pump got there first. */
-// biome-ignore lint/suspicious/noExplicitAny: stub generated types
-async function claim(sb: any, id: string): Promise<boolean> {
-  const { data } = (await sb
-    .from('ai_tour_videos')
-    .update({ status: 'submitting', updated_at: new Date().toISOString() })
-    .eq('id', id)
-    .eq('status', 'pending')
-    .select('id')) as { data: Array<{ id: string }> | null };
-  return (data ?? []).length > 0;
-}
-
-// biome-ignore lint/suspicious/noExplicitAny: stub generated types
-async function submitClip(sb: any, row: JobRow): Promise<void> {
-  const { data: photos } = (await sb
-    .from('poi_photos')
-    .select('id, storage_path, enhanced_path, enhanced_status')
-    .in('id', row.input_photo_ids ?? [])) as {
-    data: Array<{
-      id: string;
-      storage_path: string;
-      enhanced_path: string | null;
-      enhanced_status: string;
-    }> | null;
-  };
-  const photoMap = new Map((photos ?? []).map((p) => [p.id, p]));
-  const missing = (row.input_photo_ids ?? []).filter((id) => !photoMap.has(id));
-  if (missing.length > 0) throw new Error(`source photo(s) no longer exist: ${missing.join(', ')}`);
-
-  // Same rule as the render worker: the enhanced file is only used once an
-  // admin has approved it.
-  //
-  // Photos are already publicly readable in Supabase Storage, and OpenRouter
-  // accepts public HTTPS URLs directly as frame images (verified live
-  // 2026-08-15) — so no download + re-upload to /files is needed. The URL is
-  // the storage bucket's public base + the path.
-  const frameUrls: string[] = [];
-  const publicBase = sb.storage
-    .from(PHOTO_BUCKET)
-    .getPublicUrl('__probe__')
-    .data.publicUrl.replace('/__probe__', '');
-  for (const id of row.input_photo_ids ?? []) {
-    const photo = photoMap.get(id)!;
-    const path =
-      photo.enhanced_status === 'approved' && photo.enhanced_path
-        ? photo.enhanced_path
-        : photo.storage_path;
-    frameUrls.push(`${publicBase}/${path}`);
-  }
-
-  const job = await submitVideo({
-    prompt: row.prompt,
-    frameImageUrls: frameUrls,
-    durationS: row.duration_s,
-    aspectRatio: row.aspect_ratio,
-  });
-
-  await sb
-    .from('ai_tour_videos')
-    .update({
-      status: 'processing',
-      provider_job_id: job.id,
-      polling_url: job.pollingUrl,
-      updated_at: new Date().toISOString(),
-    })
-    .eq('id', row.id);
-}
-
-/** @returns true if the clip finished (and we spent a download + upload). */
-// biome-ignore lint/suspicious/noExplicitAny: stub generated types
-async function finalizeClip(sb: any, row: JobRow): Promise<boolean> {
-  if (!row.polling_url) throw new Error('processing row has no polling_url');
-
-  const state = await pollVideo(row.polling_url);
-  if (state.status === 'processing') return false;
-  if (state.status === 'failed') {
-    await fail(sb, row.id, state.error);
-    return false;
-  }
-
-  const mp4 = await downloadVideo(state.videoUrl);
-  const storagePath = `${row.community_id}/${row.id}.mp4`;
-  const { error: upErr } = await sb.storage
-    .from(AI_VIDEO_BUCKET)
-    .upload(storagePath, mp4, { contentType: 'video/mp4', upsert: true });
-  if (upErr) throw new Error(`storage upload failed: ${(upErr as { message: string }).message}`);
-
-  await sb
-    .from('ai_tour_videos')
-    .update({
-      status: 'ready',
-      storage_path: storagePath,
-      error: null,
-      updated_at: new Date().toISOString(),
-    })
-    .eq('id', row.id);
-  return true;
-}
-
-// biome-ignore lint/suspicious/noExplicitAny: stub generated types
-async function fail(sb: any, id: string, err: unknown): Promise<void> {
-  const message = err instanceof Error ? err.message : String(err);
-  await sb
-    .from('ai_tour_videos')
-    .update({
-      status: 'failed',
-      error: message.slice(0, 500),
-      updated_at: new Date().toISOString(),
-    })
-    .eq('id', id);
+  return NextResponse.json({ videos });
 }
 
 // biome-ignore lint/suspicious/noExplicitAny: stub generated types

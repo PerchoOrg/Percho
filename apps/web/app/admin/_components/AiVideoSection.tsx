@@ -53,7 +53,6 @@ export function AiVideoSection({
   );
   const [durationS, setDurationS] = useState<AiVideoDuration>(8);
   const [videos, setVideos] = useState<AiTourVideoRow[]>([]);
-  const [configured, setConfigured] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const inFlight = useRef(false);
@@ -68,9 +67,8 @@ export function AiVideoSection({
     try {
       const res = await fetch(endpoint);
       if (!res.ok) return;
-      const body = (await res.json()) as { videos: AiTourVideoRow[]; configured: boolean };
+      const body = (await res.json()) as { videos: AiTourVideoRow[] };
       setVideos(body.videos);
-      setConfigured(body.configured);
     } catch {
       /* transient — the next tick retries */
     } finally {
@@ -177,12 +175,8 @@ export function AiVideoSection({
             <button
               type="button"
               onClick={() => void generate()}
-              disabled={count === 0 || tooMany || submitting || !configured}
-              title={
-                configured
-                  ? `Generate one ${durationS}s AI video from ${count} selected photo${count === 1 ? '' : 's'} (~2-5 min).`
-                  : 'OPENROUTER_API_KEY is not set on this deployment.'
-              }
+              disabled={count === 0 || tooMany || submitting}
+              title={`Generate one ${durationS}s AI video from ${count} selected photo${count === 1 ? '' : 's'} (~2-5 min).`}
               className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-bg px-3 py-2 text-sm text-ink hover:border-bronze disabled:cursor-not-allowed disabled:text-muted"
             >
               <Sparkles size={14} aria-hidden />
@@ -199,11 +193,6 @@ export function AiVideoSection({
           className="w-full rounded-lg border border-line bg-bg px-3 py-2 text-xs text-ink"
         />
 
-        {!configured && (
-          <p className="rounded-lg bg-amber-500/10 px-3 py-2 text-xs text-amber-700">
-            OPENROUTER_API_KEY is not set — generation is disabled on this deployment.
-          </p>
-        )}
         {tooMany && (
           <p className="text-xs text-red-600">
             {count} photos selected — the cap is {MAX_PHOTOS_PER_BATCH} per run.
