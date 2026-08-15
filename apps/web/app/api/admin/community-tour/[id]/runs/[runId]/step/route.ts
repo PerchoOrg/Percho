@@ -1,0 +1,394 @@
+/**
+ * POST /api/admin/community-tour/[id]/runs/[runId]/step
+ *   Execute one pipeline step, persist its output into step_results.
+ *
+ * Steps (owner-fixed 2026-08-15):
+ *   research   — dual-agent claude/codex CLI research. LOCAL DEV ONLY (the
+ *                CLIs live on the Mac, not Vercel). On Vercel this returns a
+ *                clear 409; locally it spawns `pnpm --filter @percho/web
+ *                community-tour-agent <communityId> <runId>` (async — the
+ *                script writes the result itself).
+ *   resolve    — Google Places Text Search firewall on agent candidates.
+ *   photos     — fetch 3 photos per surviving POI (existing poi_photos path).
+ *   tag        — Gemini tag every fetched photo + build shot list.
+ *   generate   — enqueue photo→clip jobs in photo_clips (seedance worker
+ *                picks them up).
+ *   assemble   — ffmpeg concat per shot list (wired later; photo_clips must
+ *                all be ready first).
+ */
+
+import { spawn } from 'node:child_process';
+import path from 'node:path';
+import { requireAdmin } from '@/lib/auth/require-admin';
+import { createServiceClient } from '@/lib/supabase/server';
+import { NextResponse } from 'next/server';
+
+export const runtime = 'nodejs';
+
+interface RunRow {
+  id: string;
+  community_id: string;
+  status: string;
+  step_results: Record<string, unknown>;
+}
+
+async function getRun(sb: any, runId: string): Promise<RunRow | null> {
+  const { data } = await sb
+    .from('community_tour_runs')
+    .select('id, community_id, status, step_results')
+    .eq('id', runId)
+    .maybeSingle();
+  return (data as RunRow | null) ?? null;
+}
+
+async function setRunStatus(
+  sb: any,
+  runId: string,
+  status: string,
+  extra: Record<string, unknown> = {},
+) {
+  await sb
+    .from('community_tour_runs')
+    .update({ status, updated_at: new Date().toISOString(), ...extra })
+    .eq('id', runId);
+}
+
+/** Persist a step's output under step_results.<step> (merge, not replace). */
+async function saveStep(sb: any, run: RunRow, step: string, result: unknown) {
+  await sb
+    .from('community_tour_runs')
+    .update({
+      step_results: { ...run.step_results, [step]: result },
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', run.id);
+}
+
+// ─── step: research (local dev) ─────────────────────────────────────────────
+
+async function runResearch(sb: any, run: RunRow): Promise<{ started: boolean; error?: string }> {
+  // If a previous run already produced research, reuse it — agents cost money
+  // and the admin can re-run explicitly by clearing the step.
+  if (run.step_results.agent_research) {
+    return { started: false };
+  }
+
+  const repoRoot = path.resolve(process.cwd(), '..', '..');
+  // node_modules/.bin/tsx must exist (apps/web/node_modules/.bin/tsx).
+  const tsxBin = path.join(repoRoot, 'apps/web/node_modules/.bin/tsx');
+
+  try {
+    // Async: spawn detached so the agent script can take minutes while this
+    // request returns immediately. The script writes step_results itself.
+    const child = spawn(
+      tsxBin,
+      ['../../scripts/community-tour/agent-research.ts', run.community_id, run.id],
+      {
+        cwd: path.join(repoRoot, 'apps/web'),
+        detached: true,
+        stdio: 'ignore',
+      },
+    );
+    child.unref();
+    return { started: true };
+  } catch (err) {
+    return { started: false, error: (err as Error).message };
+  }
+}
+
+async function runResolve(sb: any, run: RunRow) {
+  const research = run.step_results.agent_research as
+    | {
+        agents: {
+          claude?: { ok?: boolean; parsed?: { pois?: unknown[] } | null };
+          codex?: { ok?: boolean; parsed?: { pois?: unknown[] } | null };
+        };
+        community?: { lat?: number | null; lng?: number | null };
+      }
+    | undefined;
+
+  if (!research?.agents) {
+    return { error: 'no_research', message: 'Run the research step first.' };
+  }
+
+  const candidates: Array<{
+    name: string;
+    address_hint: string;
+    bucket: string;
+    why: string;
+    shot_note: string;
+    source: string;
+    confidence: 'high' | 'medium';
+    agent: 'claude' | 'codex';
+  }> = [];
+
+  for (const agent of ['claude', 'codex'] as const) {
+    const a = research.agents[agent];
+    if (!a?.ok || !a.parsed?.pois) continue;
+    for (const raw of a.parsed.pois) {
+      const p = raw as {
+        name?: string;
+        address_hint?: string;
+        bucket?: string;
+        why?: string;
+        shot_note?: string;
+        source?: string;
+        confidence?: string;
+      };
+      if (!p.name) continue;
+      candidates.push({
+        name: p.name,
+        address_hint: p.address_hint ?? '',
+        bucket: p.bucket ?? 'other',
+        why: p.why ?? '',
+        shot_note: p.shot_note ?? '',
+        source: p.source ?? '',
+        confidence: p.confidence === 'high' ? 'high' : 'medium',
+        agent,
+      });
+    }
+  }
+
+  const center = {
+    lat: research.community?.lat ?? 0,
+    lng: research.community?.lng ?? 0,
+  };
+  if (!center.lat || !center.lng) {
+    return { error: 'no_community_center', message: 'Community has no lat/lng.' };
+  }
+
+  const { resolveCandidates } = await import('@/lib/poi/community-tour');
+  const radiusMeters = 6000; // suburban default — the <4 POI widen hook lives at step 4
+  const result = await resolveCandidates(candidates, center, radiusMeters);
+  await saveStep(sb, run, 'resolve', result);
+  await setRunStatus(sb, run.id, result.resolved.length >= 4 ? 'fetching_photos' : 'resolving');
+  return { resolved: result.resolved.length, dropped: result.dropped.length };
+}
+
+// ─── step: photos ───────────────────────────────────────────────────────────
+
+async function runPhotos(sb: any, run: RunRow) {
+  const resolve = run.step_results.resolve as
+    | { resolved?: Array<{ place_id: string }> }
+    | undefined;
+  if (!resolve?.resolved?.length) {
+    return { error: 'no_resolved', message: 'Run the resolve step first.' };
+  }
+
+  const { fetchPhotosForCommunityPoi } = await import('@/lib/poi/community-actions');
+  const results: Record<string, unknown> = {};
+  for (const poi of resolve.resolved) {
+    // Agent-discovered POIs may not be in nearby scope yet — upsert `pois` by
+    // google_place_id and link to this community before fetching photos.
+    const { data: existing } = await sb
+      .from('pois')
+      .select('id')
+      .eq('google_place_id', poi.place_id)
+      .maybeSingle();
+    let poiId: string | null = existing?.id ?? null;
+    if (!poiId) {
+      const { data: inserted, error: insErr } = await sb
+        .from('pois')
+        .insert({ google_place_id: poi.place_id })
+        .select('id')
+        .single();
+      if (insErr || !inserted) {
+        results[poi.place_id] = {
+          skipped: `poi upsert failed: ${(insErr as { message?: string })?.message ?? 'unknown'}`,
+        };
+        continue;
+      }
+      poiId = inserted.id;
+    }
+    // Ensure community link (candidate status — admin reviews later).
+    const { data: link } = await sb
+      .from('community_pois')
+      .select('community_id')
+      .eq('community_id', run.community_id)
+      .eq('poi_id', poiId)
+      .maybeSingle();
+    if (!link) {
+      await sb.from('community_pois').insert({
+        community_id: run.community_id,
+        poi_id: poiId,
+        intent_bucket: 'other',
+        status: 'candidate',
+      });
+    }
+    const r = await fetchPhotosForCommunityPoi(run.community_id, poiId!, { max: 3 });
+    results[poi.place_id] = r;
+  }
+  await saveStep(sb, run, 'photos', { results });
+  await setRunStatus(sb, run.id, 'tagging');
+  return { ok: true, poiCount: Object.keys(results).length };
+}
+
+// ─── step: tag ──────────────────────────────────────────────────────────────
+
+async function runTag(sb: any, run: RunRow) {
+  const resolve = run.step_results.resolve as
+    | { resolved?: Array<{ place_id: string }> }
+    | undefined;
+  const photosStep = run.step_results.photos as
+    | { results?: Record<string, { fetched?: number }> }
+    | undefined;
+  if (!resolve?.resolved?.length)
+    return { error: 'no_resolved', message: 'Run the resolve step first.' };
+
+  const { tagPoiPhoto } = await import('@/lib/poi/vision-tagger');
+  const { data: photos } = await sb
+    .from('poi_photos')
+    .select('id, poi_id, ai_tags, ai_score, tagged_at')
+    .eq('tagged_at', null)
+    .limit(50);
+  const tagged: string[] = [];
+  for (const photo of photos ?? []) {
+    if (!photosStep?.results) {
+      // tag everything untagged up to 50
+      const r = await tagPoiPhoto(photo.id);
+      if (r.ok) tagged.push(photo.id);
+    } else {
+      const r = await tagPoiPhoto(photo.id);
+      if (r.ok) tagged.push(photo.id);
+    }
+  }
+
+  await saveStep(sb, run, 'tag', { tagged: tagged.length });
+  await setRunStatus(sb, run.id, 'generating');
+  return { tagged: tagged.length };
+}
+
+// ─── step: generate ─────────────────────────────────────────────────────────
+
+async function runGenerate(sb: any, run: RunRow) {
+  const resolve = run.step_results.resolve as
+    | { resolved?: Array<{ place_id: string; bucket: string; name: string }> }
+    | undefined;
+  if (!resolve?.resolved?.length)
+    return { error: 'no_resolved', message: 'Run the resolve step first.' };
+
+  // Pull photos for the resolved POIs, build photo_clips rows where missing.
+  const placeIds = resolve.resolved.map((r) => r.place_id);
+  const { data: pois } = await sb
+    .from('pois')
+    .select('id, google_place_id')
+    .in('google_place_id', placeIds);
+  const poiByPlace = new Map(
+    (pois ?? []).map((p: { id: string; google_place_id: string }) => [p.google_place_id, p.id]),
+  );
+  const poiIds = [...poiByPlace.values()];
+
+  const { data: photos } = await sb
+    .from('poi_photos')
+    .select('id, poi_id, ai_tags, ai_score')
+    .in('poi_id', poiIds);
+
+  // Shot list from tags
+  const { buildShotList } = await import('@/lib/poi/community-tour');
+  const byPoi = new Map(resolve.resolved.map((r) => [r.place_id, r]));
+
+  const inputs: Array<{
+    photo_id: string;
+    poi_id: string;
+    poi_name: string;
+    category: string;
+    usable: boolean;
+    has_prominent_text: boolean;
+    ai_score: number;
+    bucket: string;
+  }> = [];
+  for (const photo of photos ?? []) {
+    const poi = resolve.resolved.find((r) => poiByPlace.get(r.place_id) === photo.poi_id);
+    const tags = (photo.ai_tags ?? {}) as {
+      primary_category?: string;
+      usable?: boolean;
+      has_prominent_text?: boolean;
+    };
+    inputs.push({
+      photo_id: photo.id,
+      poi_id: photo.poi_id,
+      poi_name: poi?.name ?? '',
+      category: tags.primary_category ?? 'other',
+      usable: tags.usable !== false,
+      has_prominent_text: !!tags.has_prominent_text,
+      ai_score: Number(photo.ai_score ?? 0.5),
+      bucket: poi?.bucket ?? 'other',
+    });
+  }
+  const shots = buildShotList(inputs);
+
+  // Enqueue missing photo_clips
+  const existing = await sb
+    .from('photo_clips')
+    .select('photo_id')
+    .in(
+      'photo_id',
+      shots.map((s) => s.photo_id),
+    );
+  const have = new Set((existing.data ?? []).map((r: { photo_id: string }) => r.photo_id));
+  const toCreate = shots.filter((s) => !have.has(s.photo_id));
+  if (toCreate.length > 0) {
+    await sb.from('photo_clips').insert(
+      toCreate.map((s) => ({
+        photo_id: s.photo_id,
+        engine: s.engine,
+        duration_s: s.duration_s,
+        status: 'pending',
+      })),
+    );
+  }
+
+  await saveStep(sb, run, 'generate', {
+    shots,
+    created: toCreate.length,
+    reused: shots.length - toCreate.length,
+  });
+  await setRunStatus(sb, run.id, 'generating');
+  return { shots: shots.length, created: toCreate.length };
+}
+
+// ─── dispatcher ─────────────────────────────────────────────────────────────
+
+const STEP_HANDLERS: Record<string, (sb: any, run: RunRow) => Promise<unknown>> = {
+  research: runResearch,
+  resolve: runResolve,
+  photos: runPhotos,
+  tag: runTag,
+  generate: runGenerate,
+};
+
+export async function POST(
+  req: Request,
+  { params }: { params: Promise<{ id: string; runId: string }> },
+) {
+  const admin = await requireAdmin();
+  if (!admin) return NextResponse.json({ error: 'forbidden' }, { status: 403 });
+
+  const { id: communityId, runId } = await params;
+  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
+  const sb: any = createServiceClient();
+
+  const body = (await req.json().catch(() => ({}))) as { step?: string };
+  const step = body.step;
+  if (!step || !STEP_HANDLERS[step]) {
+    return NextResponse.json(
+      { error: 'invalid_step', message: `Unknown step: ${step}` },
+      { status: 400 },
+    );
+  }
+
+  const run = await getRun(sb, runId);
+  if (!run) return NextResponse.json({ error: 'run_not_found' }, { status: 404 });
+  if (run.community_id !== communityId) {
+    return NextResponse.json({ error: 'run_mismatch' }, { status: 400 });
+  }
+
+  try {
+    const result = await STEP_HANDLERS[step]!(sb, run);
+    return NextResponse.json({ ok: true, step, result });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    await setRunStatus(sb, run.id, 'failed');
+    return NextResponse.json({ ok: false, step, error: message }, { status: 500 });
+  }
+}

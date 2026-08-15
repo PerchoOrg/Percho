@@ -1,0 +1,418 @@
+'use client';
+
+/**
+ * TourPipeline — 8-panel Community Tour pipeline admin (owner 2026-08-15).
+ *
+ * Each step runs via POST /api/admin/community-tour/[id]/runs/[runId]/step,
+ * output persists in community_tour_runs.step_results. Every panel shows its
+ * step result; "Run all" chains steps in order. Steps that need no prior
+ * data (research) start immediately; dependent steps return a clear message
+ * until their prerequisite ran.
+ *
+ * Steps:
+ *   1 community info    (DB read — always available)
+ *   2 agent research    (claude/codex CLI, local dev — async, polls)
+ *   3 resolve+merge     (Google firewall)
+ *   4 <4 survivors      (widen hook — shown when resolve < 4)
+ *   5 photos            (3 per POI)
+ *   6 tag + shot list   (Gemini)
+ *   7 generate clips    (photo_clips)
+ *   8 assemble          (ffmpeg concat — wire after clips ready)
+ */
+
+import { CheckCircle2, Loader2, Play, RefreshCw, Sparkles } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+
+type StepName = 'research' | 'resolve' | 'photos' | 'tag' | 'generate' | 'assemble';
+
+const STEPS: Array<{ name: StepName; label: string; desc: string }> = [
+  { name: 'research', label: '2 · Agent Research', desc: 'claude + codex (local dev)' },
+  { name: 'resolve', label: '3 · Resolve & Merge', desc: 'Google Places firewall' },
+  { name: 'photos', label: '5 · Fetch Photos', desc: '3 per POI' },
+  { name: 'tag', label: '6 · Tag + Shot List', desc: 'Gemini + duration' },
+  { name: 'generate', label: '7 · Generate Clips', desc: 'photo = unit, cached' },
+  { name: 'assemble', label: '8 · Assemble', desc: 'ffmpeg concat' },
+];
+
+interface Run {
+  id: string;
+  community_id: string;
+  status: string;
+  step_results: Record<string, unknown>;
+  created_at: string;
+}
+
+interface ClipRow {
+  photo_id: string;
+  poi_id: string;
+  photo_url: string;
+  ai_tags: unknown;
+  clip: {
+    engine: string;
+    duration_s: number | null;
+    status: string;
+    video_url: string | null;
+    cost_usd: number | null;
+    error: string | null;
+  } | null;
+}
+
+export function TourPipeline({
+  communityId,
+  communityName,
+  city,
+  state,
+  storageBase,
+}: {
+  communityId: string;
+  communityName: string;
+  city: string | null;
+  state: string | null;
+  storageBase: string;
+}) {
+  const [runs, setRuns] = useState<Run[]>([]);
+  const [selectedRun, setSelectedRun] = useState<string | null>(null);
+  const [running, setRunning] = useState<StepName | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [clips, setClips] = useState<ClipRow[]>([]);
+  const inFlight = useRef(false);
+
+  const loadRuns = useCallback(async () => {
+    const res = await fetch(`/api/admin/community-tour/${communityId}/runs`);
+    if (!res.ok) return;
+    const body = (await res.json()) as { runs: Run[] };
+    setRuns(body.runs);
+    if (!selectedRun && body.runs.length > 0) setSelectedRun(body.runs[0]!.id);
+  }, [communityId, selectedRun]);
+
+  const loadClips = useCallback(async () => {
+    const res = await fetch(`/api/admin/community-tour/${communityId}/clips`);
+    if (!res.ok) return;
+    const body = (await res.json()) as { clips: ClipRow[] };
+    setClips(body.clips);
+  }, [communityId]);
+
+  useEffect(() => {
+    void loadRuns();
+    void loadClips();
+  }, [loadRuns, loadClips]);
+
+  // Poll while a step is running (research is async: the agent script writes
+  // step_results itself, this refetches until it lands).
+  useEffect(() => {
+    if (!running) return;
+    const t = setInterval(() => {
+      void loadRuns();
+      void loadClips();
+    }, 4000);
+    return () => clearInterval(t);
+  }, [running, loadRuns, loadClips]);
+
+  async function createRun(): Promise<string | null> {
+    const res = await fetch(`/api/admin/community-tour/${communityId}/runs`, { method: 'POST' });
+    if (!res.ok) return null;
+    const body = (await res.json()) as { run: Run };
+    setRuns((prev) => [body.run, ...prev]);
+    setSelectedRun(body.run.id);
+    return body.run.id;
+  }
+
+  async function runStep(step: StepName, runId: string | null): Promise<void> {
+    const rid = runId ?? (await createRun());
+    if (!rid) {
+      setError('Could not create run');
+      return;
+    }
+    setRunning(step);
+    setError(null);
+    try {
+      const res = await fetch(`/api/admin/community-tour/${communityId}/runs/${rid}/step`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ step }),
+      });
+      const body = (await res.json()) as { ok?: boolean; error?: string; message?: string };
+      if (!res.ok || !body.ok) {
+        setError(body.message ?? body.error ?? `HTTP ${res.status}`);
+        return;
+      }
+    } finally {
+      setRunning(null);
+      await loadRuns();
+      await loadClips();
+    }
+  }
+
+  async function runAll(): Promise<void> {
+    const rid = await createRun();
+    if (!rid) {
+      setError('Could not create run');
+      return;
+    }
+    for (const s of STEPS) {
+      setRunning(s.name);
+      setError(null);
+      try {
+        const res = await fetch(`/api/admin/community-tour/${communityId}/runs/${rid}/step`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ step: s.name }),
+        });
+        const body = (await res.json()) as { ok?: boolean; error?: string; message?: string };
+        if (!res.ok || !body.ok) {
+          setError(`${s.label}: ${body.message ?? body.error ?? 'failed'}`);
+          break;
+        }
+      } finally {
+        setRunning(null);
+        await loadRuns();
+        await loadClips();
+      }
+    }
+  }
+
+  const run = runs.find((r) => r.id === selectedRun);
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="flex items-center gap-1.5 text-lg font-semibold">
+            <Sparkles size={16} aria-hidden />
+            Community Tour Pipeline
+          </h2>
+          <p className="text-ink2 text-xs">
+            {communityName} · {[city, state].filter(Boolean).join(', ')}
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2 text-xs">
+          {runs.length > 0 && (
+            <select
+              value={selectedRun ?? ''}
+              onChange={(e) => setSelectedRun(e.target.value)}
+              className="rounded-md border border-line bg-bg px-2 py-1 text-ink"
+            >
+              {runs.map((r) => (
+                <option key={r.id} value={r.id}>
+                  {new Date(r.created_at).toLocaleString()} · {r.status}
+                </option>
+              ))}
+            </select>
+          )}
+          <button
+            type="button"
+            onClick={() => void runAll()}
+            disabled={!!running}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-bg px-3 py-2 text-sm text-ink hover:border-bronze disabled:cursor-not-allowed disabled:text-muted"
+          >
+            <Play size={14} aria-hidden />
+            Run all
+          </button>
+        </div>
+      </div>
+
+      {error && (
+        <div className="rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-xs text-red-700">
+          {error}
+        </div>
+      )}
+
+      {/* Step 1 — community info (always visible) */}
+      <section className="rounded-2xl border border-line bg-surface p-4">
+        <h3 className="text-sm font-semibold">1 · Community Info</h3>
+        <p className="text-ink2 mt-1 text-xs">
+          {communityName} · {[city, state].filter(Boolean).join(', ')}
+        </p>
+      </section>
+
+      {/* Steps 2-8 */}
+      {STEPS.map((s) => {
+        const done = !!run?.step_results[s.name];
+        const result = run?.step_results[s.name] as
+          | {
+              resolved?: unknown[];
+              dropped?: unknown[];
+              tagged?: number;
+              shots?: unknown[];
+              created?: number;
+              started?: boolean;
+              error?: string;
+            }
+          | undefined;
+        return (
+          <section key={s.name} className="rounded-2xl border border-line bg-surface p-4">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <h3 className="flex items-center gap-1.5 text-sm font-semibold">
+                  {s.label}
+                  {done && <CheckCircle2 size={13} className="text-emerald-600" />}
+                </h3>
+                <p className="text-ink2 text-xs">{s.desc}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => void runStep(s.name, selectedRun)}
+                disabled={!!running}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-bg px-3 py-1.5 text-xs text-ink hover:border-bronze disabled:cursor-not-allowed disabled:text-muted"
+              >
+                {running === s.name ? (
+                  <Loader2 size={13} className="animate-spin" />
+                ) : (
+                  <RefreshCw size={13} />
+                )}
+                {running === s.name ? 'Running…' : done ? 'Re-run' : 'Run'}
+              </button>
+            </div>
+
+            {done && result && (
+              <div className="mt-2 text-xs text-ink2">
+                <StepResult s={s.name} result={result} />
+              </div>
+            )}
+            {!done && !result && <div className="mt-2 text-xs text-ink3">Not run yet.</div>}
+          </section>
+        );
+      })}
+
+      {/* Step 7 clip status table */}
+      <section className="rounded-2xl border border-line bg-surface p-4">
+        <h3 className="text-sm font-semibold">Clip Status (per photo)</h3>
+        {clips.length === 0 ? (
+          <p className="text-ink3 mt-2 text-xs">No photos fetched yet.</p>
+        ) : (
+          <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+            {clips.slice(0, 30).map((c) => (
+              <div key={c.photo_id} className="rounded-lg border border-line p-2">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={c.photo_url} alt="" className="h-20 w-full rounded object-cover" />
+                <div className="mt-1 flex items-center justify-between text-[10px]">
+                  <span className="text-ink2">{c.clip ? c.clip.status : 'no clip'}</span>
+                  {c.clip?.status === 'ready' && c.clip.video_url ? (
+                    <a
+                      href={c.clip.video_url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-bronze underline"
+                    >
+                      watch
+                    </a>
+                  ) : null}
+                </div>
+                {c.clip?.error && (
+                  <div className="text-[10px] text-red-600" title={c.clip.error}>
+                    {c.clip.error.slice(0, 60)}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+    </div>
+  );
+}
+
+function StepResult({ s, result }: { s: StepName; result: Record<string, unknown> }) {
+  if (s === 'research') {
+    const r = result as {
+      agents?: {
+        claude?: { ok?: boolean; parsed?: { pois?: unknown[] } | null; error?: string | null };
+        codex?: { ok?: boolean; parsed?: { pois?: unknown[] } | null; error?: string | null };
+      };
+      community?: { name?: string };
+    };
+    const claudePois = r.agents?.claude?.parsed?.pois?.length ?? 0;
+    const codexPois = r.agents?.codex?.parsed?.pois?.length ?? 0;
+    return (
+      <div>
+        <div className="flex gap-3">
+          <span className={r.agents?.claude?.ok ? 'text-emerald-600' : 'text-red-600'}>
+            claude {r.agents?.claude?.ok ? `${claudePois} POIs` : 'failed'}
+          </span>
+          <span className={r.agents?.codex?.ok ? 'text-emerald-600' : 'text-red-600'}>
+            codex {r.agents?.codex?.ok ? `${codexPois} POIs` : 'failed'}
+          </span>
+        </div>
+        {r.agents?.claude?.error && (
+          <div className="text-red-600">claude: {r.agents.claude.error}</div>
+        )}
+        {r.agents?.codex?.error && (
+          <div className="text-red-600">codex: {r.agents.codex.error}</div>
+        )}
+      </div>
+    );
+  }
+  if (s === 'resolve') {
+    const r = result as {
+      resolved?: Array<{ name: string; bucket: string; score: number; agreement: number }>;
+      dropped?: Array<{ name: string; reason: string }>;
+    };
+    return (
+      <div>
+        <div className="mb-1">
+          {r.resolved?.length ?? 0} resolved · {r.dropped?.length ?? 0} dropped
+        </div>
+        <ul className="space-y-0.5">
+          {(r.resolved ?? []).slice(0, 12).map((p) => (
+            <li key={p.name}>
+              {p.name}{' '}
+              <span className="text-ink3">
+                ({p.bucket}, score {p.score.toFixed(2)}, agreement {p.agreement}/2)
+              </span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    );
+  }
+  if (s === 'photos') {
+    const r = result as {
+      results?: Record<string, { fetched?: number; reused?: number; skipped?: number }>;
+    };
+    const vals = Object.values(r.results ?? {});
+    const fetched = vals.reduce((a, v) => a + (v.fetched ?? 0), 0);
+    const reused = vals.reduce((a, v) => a + (v.reused ?? 0), 0);
+    return (
+      <div>
+        {fetched} fetched · {reused} reused
+      </div>
+    );
+  }
+  if (s === 'tag') {
+    const r = result as { tagged?: number };
+    return <div>{r.tagged ?? 0} photos tagged</div>;
+  }
+  if (s === 'generate') {
+    const r = result as {
+      shots?: Array<{ photo_id: string; poi_name: string; duration_s: number; engine: string }>;
+      created?: number;
+      reused?: number;
+    };
+    return (
+      <div>
+        <div className="mb-1">
+          {r.shots?.length ?? 0} shots · {r.created ?? 0} created · {r.reused ?? 0} reused from
+          cache
+        </div>
+        <ul className="space-y-0.5">
+          {(r.shots ?? []).slice(0, 12).map((s) => (
+            <li key={s.photo_id}>
+              {s.poi_name} · {s.duration_s}s · {s.engine}
+            </li>
+          ))}
+        </ul>
+      </div>
+    );
+  }
+  if (s === 'assemble') {
+    const r = result as { video_url?: string };
+    return r.video_url ? (
+      <a href={r.video_url} target="_blank" rel="noreferrer" className="text-bronze underline">
+        Watch final video
+      </a>
+    ) : (
+      <div>Not assembled yet — run after clips are ready.</div>
+    );
+  }
+  return null;
+}
