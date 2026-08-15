@@ -4,16 +4,17 @@
  * Ported from the verified spike at
  * `scripts/spikes/seedance-community-video/spike.py`. The flow is:
  *
- *   1. POST /files          multipart 'file' → { data: { url } }
- *   2. POST /videos         model + prompt + frame_images (one or more first_frame)
- *                           → { id, polling_url }
- *   3. GET  <polling_url>   until status = completed | failed
- *   4. GET  unsigned_urls[0]  → the mp4 bytes
+ *   1. POST /videos         model + prompt + input_references (reference
+ *                           images) → { id, polling_url }
+ *   2. GET  <polling_url>   until status = completed | failed
+ *   3. GET  unsigned_urls[0]  → the mp4 bytes
  *
- * Seedance 2.0 Mini accepts up to 9 `first_frame` reference images in one
- * job — the community tour sends every selected photo as a frame, and the
- * provider weaves them into a single video. Callers that want N photos in a
- * video submit ONE job with N frames.
+ * TWO image modes (verified live 2026-08-15):
+ *   - frame_images:   first/last frame control. MAX 2 images (first + last).
+ *   - input_references: style/content references. Seedance 2.0 supports up
+ *                     to 9. This is the mode for a community tour — every
+ *                     selected photo is a reference, the model weaves them
+ *                     into one video. NEVER send both fields together.
  *
  * Cost guard: every call here spends money. Nothing in this module retries on
  * its own — the caller owns the state machine and decides when to submit.
@@ -56,31 +57,50 @@ export async function uploadFrameImage(
   return url;
 }
 
-/** Submit an image-to-video job with one or more first-frame reference images. */
+/**
+ * Submit a video job. By default uses `input_references` (reference-to-video,
+ * up to 9 images — the community tour mode). Pass `mode: 'frames'` with ≤2
+ * urls for first/last-frame control.
+ */
 export async function submitVideo(opts: {
   prompt: string;
   frameImageUrls: string[];
   durationS: number;
   aspectRatio: string;
+  mode?: 'references' | 'frames';
 }): Promise<{ id: string; pollingUrl: string }> {
+  const mode = opts.mode ?? 'references';
+  const images = opts.frameImageUrls.map((url) => ({
+    type: 'image_url',
+    image_url: { url },
+  }));
+
+  if (mode === 'frames' && images.length > 2) {
+    throw new Error('frame_images mode supports at most 2 images (first + last frame)');
+  }
+
+  const body: Record<string, unknown> = {
+    model: SEEDANCE_MODEL,
+    prompt: opts.prompt,
+    duration: opts.durationS,
+    aspect_ratio: opts.aspectRatio,
+  };
+  if (mode === 'frames') {
+    body.frame_images = images.map((img, i) => ({
+      ...img,
+      frame_type: i === 0 ? 'first_frame' : 'last_frame',
+    }));
+  } else {
+    body.input_references = images;
+  }
+
   const res = await fetch(`${API}/videos`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${apiKey()}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({
-      model: SEEDANCE_MODEL,
-      prompt: opts.prompt,
-      duration: opts.durationS,
-      aspect_ratio: opts.aspectRatio,
-      frame_images: opts.frameImageUrls.map((url) => ({
-        type: 'image_url',
-        image_url: { url },
-        frame_type: 'first_frame',
-      })),
-      generate_audio: false,
-    }),
+    body: JSON.stringify(body),
   });
   if (!res.ok) throw await failure(res, '/videos');
 

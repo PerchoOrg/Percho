@@ -63,7 +63,7 @@ describe('isOpenRouterHost', () => {
 });
 
 describe('submitVideo request body', () => {
-  it('sends every selected photo as a first_frame reference image in ONE job', async () => {
+  it('defaults to input_references mode and sends every selected photo as a reference', async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
       json: async () => ({ id: 'job-1', polling_url: 'https://openrouter.ai/api/v1/videos/job-1' }),
@@ -82,15 +82,14 @@ describe('submitVideo request body', () => {
       const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
       const body = JSON.parse(String(init.body));
       expect(body.model).toBe('bytedance/seedance-2.0-mini');
-      expect(body.frame_images).toHaveLength(3);
-      expect(body.frame_images[0]).toEqual({
+      expect(body.input_references).toHaveLength(3);
+      expect(body.input_references[0]).toEqual({
         type: 'image_url',
         image_url: { url: 'https://a/frame1.jpg' },
-        frame_type: 'first_frame',
       });
+      expect(body.frame_images).toBeUndefined();
       expect(body.duration).toBe(8);
       expect(body.aspect_ratio).toBe('9:16');
-      expect(body.generate_audio).toBe(false);
     } finally {
       vi.unstubAllGlobals();
       process.env.OPENROUTER_API_KEY = undefined;
