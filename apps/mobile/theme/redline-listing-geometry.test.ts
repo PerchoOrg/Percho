@@ -56,8 +56,8 @@ describe("listing card redline geometry", () => {
 	// split — the card fills the available height, the media area takes the
 	// remainder, and the text block is natural-height (see
 	// `listing-layout.test.ts`). `HERO_RATIO` / `PANEL_SCALE` are retained as
-	// the constants CommunityFace still shares, and the panel-fit assertions
-	// below are kept for the COMMUNITY panel's 38.2% slice.
+	// geometry tokens; the COMMUNITY card's 38.2% slice died with the
+	// 2026-08-16 full-bleed rebuild (no component spreads `panel` anymore).
 	it("gives the hero the golden ratio 0.618 (redline said 54%)", () => {
 		expect(HERO_RATIO).toBeCloseTo(0.618, 5);
 		expect(listingGeometry.panel.flex).toBeCloseTo(0.382, 5);
@@ -109,9 +109,12 @@ describe("listing card redline geometry", () => {
 
 	it("caps the COMMUNITY panel at 190pt so a taller card grows the hero", () => {
 		// 2026-08-13: the feed card now fills the available height. Without
-		// this cap, CommunityFace's 38.2% panel grows with the card and the
-		// slack pools into the tiles — the 2026-08-02 "hole under the tiles"
-		// bug. The listing card itself is asserted in `listing-layout.test.ts`.
+		// this cap, the old CommunityFace's 38.2% panel grew with the card and
+		// the slack pooled into the tiles — the 2026-08-02 "hole under the
+		// tiles" bug. The panel died in the 2026-08-16 full-bleed rebuild;
+		// the token is retained so the geometry suite still documents why it
+		// was capped. The listing card itself is asserted in
+		// `listing-layout.test.ts`.
 		expect(listingGeometry.panel.flex).toBeLessThan(0.5);
 	});
 

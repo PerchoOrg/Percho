@@ -32,6 +32,9 @@ import {
 	ICON_FONT,
 	ICON_GLYPH,
 	ICON_OPTICAL_SCALE,
+	OUTLINE_ART_WIDTH,
+	OUTLINE_FONT,
+	OUTLINE_OPTICAL_SCALE,
 	type RedlineIconName,
 } from "./icon-font";
 
@@ -211,10 +214,17 @@ interface RedlineIconProps {
 	/** Art size in points. The redline uses 10 (chip) / 17 (tile) / 24 (choice). */
 	size: number;
 	color: string;
+	/**
+	 * `fill` (default) = Phosphor Fill — the main set every face uses.
+	 * `outline` = Phosphor Regular, the fine line weight the trade-off card's
+	 * 2026-08-14 redesign calls for. Same codepoints, different font file and
+	 * centring numbers (see `icon-font.ts`).
+	 */
+	weight?: "fill" | "outline";
 }
 
 /**
- * A Phosphor Fill glyph, drawn as text.
+ * A Phosphor glyph, drawn as text.
  *
  * `width`/`height` are pinned to `size` and the glyph is centred inside them, so
  * this drops into the same layout slot the old `View`-composed icons occupied —
@@ -238,14 +248,15 @@ interface RedlineIconProps {
  * and `ICON_GLYPH` is a complete `Record` of it, so an unmapped name is a
  * compile error rather than a run-time tofu box.
  */
-export function RedlineIcon({ name, size, color }: RedlineIconProps) {
-	const fontSize = size * ICON_OPTICAL_SCALE;
+export function RedlineIcon({ name, size, color, weight = "fill" }: RedlineIconProps) {
+	const outline = weight === "outline";
+	const fontSize = size * (outline ? OUTLINE_OPTICAL_SCALE : ICON_OPTICAL_SCALE);
 	return (
 		<View style={[styles.iconBox, { width: size, height: size }]}>
 			<Text
 				allowFontScaling={false}
 				style={{
-					fontFamily: ICON_FONT,
+					fontFamily: outline ? OUTLINE_FONT : ICON_FONT,
 					fontSize,
 					lineHeight: fontSize,
 					color,
@@ -253,7 +264,10 @@ export function RedlineIcon({ name, size, color }: RedlineIconProps) {
 					textAlignVertical: "center",
 					textAlign: "center",
 					transform: [
-						{ translateX: (fontSize * (1 - ICON_ART_WIDTH[name])) / 2 },
+						{
+							translateX:
+								(fontSize * (1 - (outline ? OUTLINE_ART_WIDTH : ICON_ART_WIDTH)[name])) / 2,
+						},
 					],
 				}}
 			>

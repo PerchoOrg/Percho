@@ -69,11 +69,6 @@ import { colors, redline } from "../../theme/tokens";
 import { DM_SERIF_FONT } from "../../theme/fonts";
 import { textStyles } from "../../theme/typography";
 
-const GUTTER = 26;
-/** Card is portrait; capped against viewport height on small devices. */
-const CARD_ASPECT = 1.5;
-const CARD_MAX_VIEWPORT = 0.74;
-
 /**
  * CardContainer insets (2026-08-13 redesign). The card now fills ALL of the
  * feed's available height (`flex: 1` inside the stack), so this padding is the
@@ -88,36 +83,31 @@ const CARD_MAX_VIEWPORT = 0.74;
  * 2026-08-14 owner revision: the card should not read as full-bleed at all —
  * horizontal 24 (was 16) so a clear band of paper shows down BOTH sides, and
  * top 12 (was 8) to seat it under the new wordmark row. This is the card
- * FRAME's inset; the media's own inset inside the white card is
- * `theme/listing-layout.ts` `media.marginHorizontal`, a different number for a
- * different reason.
+ * FRAME's inset — the frame, not the media; since 2026-08-18 every face is
+ * full-bleed inside it.
  *
  * 2026-08-14 polish pass: horizontal 24 → 30 — the owner wanted the card ~6%
  * narrower with more paper on each side. `stackWrap` is `alignItems: center`,
  * so widening its padding narrows the card symmetrically; top/bottom are
  * unchanged.
+ *
+ * 2026-08-16 (Tia): 30 → 46 — the cards were too wide to read as swipeable,
+ * so the next card's edge never showed. The wider band makes the card
+ * visibly narrower than the screen and the next card peeks beside it (the
+ * constant itself is defined above the doc block; `GUTTER` above matches).
  */
-const CARD_INSET = { horizontal: 30, top: 12, bottom: 10 };
+const CARD_INSET = { horizontal: 37, top: 12, bottom: 10 };
+const GUTTER = 37;
 
 /**
- * How much of the fixed card STAGE each kind occupies (owner spec, 2026-08-15:
- * 「页面骨架固定, card 可以不同高度」).
+ * The card frame height is NOT decided here any more (owner, 2026-08-17: one
+ * frame height for every kind). It is `theme/card-frame.ts`'s
+ * `CARD_FRAME_RATIO`, applied by `SwipeStack` to every card it mounts.
  *
- * The stage is `styles.stackWrap` minus its padding, and it is `flex: 1` — so
- * it is the same box on every card and the wordmark row / stage / tab bar can
- * never move. What varies is only the card frame INSIDE it, which
- * `SwipeStack` eases between heights over 240ms.
- *
- * A kind absent from this map takes `SwipeStack`'s own default (0.95, the
- * height listing / community cards already had), which is why they are not
- * listed: the point of the change is that they look exactly as they did.
+ * What this replaced: three competing heights — listing 0.95, trade-off 0.62,
+ * and area/community at `width × 1.2` — which meant an alternating deck
+ * cross-faded the frame height on every commit and the page visibly jumped.
  */
-const FRAME_HEIGHT_RATIO: Partial<Record<FeedCardV3["kind"], number>> = {
-	/** Stays light — the redline's short question card (spec: 60-65%). */
-	tradeoff: 0.62,
-	/** Keeps its immersive full-bleed feel (spec: 92-96%). */
-	area: 0.94,
-};
 
 export default function FeedScreen() {
 	const { width, height } = useWindowDimensions();
@@ -344,17 +334,6 @@ export default function FeedScreen() {
 
 	const cardWidth = width - GUTTER * 2;
 
-	// Per-CARD share of the stage. A function, not a single top-card value:
-	// each mounted card (including the one peeking behind the top) sizes
-	// itself to its OWN kind's ratio, so the tall community card behind a
-	// trade-off card is already tall while the trade-off flies away — the
-	// page never has to "grow" a card on commit.
-	const frameHeightRatio = useCallback(
-		(card: FeedCardV3) =>
-			FRAME_HEIGHT_RATIO[card.kind],
-		[],
-	);
-
 	const capability = useCallback(
 		(card: FeedCardV3) => cardBehavior(card).capability,
 		[],
@@ -566,7 +545,6 @@ export default function FeedScreen() {
 						renderCard={renderCard}
 						keyExtractor={deckKey}
 						cardWidth={cardWidth}
-						frameHeightRatio={frameHeightRatio}
 						capability={capability}
 					/>
 				)}

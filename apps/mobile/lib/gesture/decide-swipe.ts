@@ -31,6 +31,18 @@ export type SwipeDecision = "none" | "left" | "right";
 export const SWIPE_THRESHOLD_RATIO = 0.35;
 export const SWIPE_VELOCITY_PTS = 800;
 export const SWIPE_SECTOR_DEG = 30;
+/**
+ * Minimum horizontal travel for the velocity path to commit.
+ *
+ * Without this, a fast release over a tiny distance reads as a swipe: the
+ * velocity rule commits at `> 800 pt/s` with NO distance floor, so a quick
+ * 10-15pt horizontal nudge (a thumb repositioning, a tiny flick while reading)
+ * flies the card out — the owner's "我还没有 swipe 他就跳到下一张" on trade-off
+ * cards. A deliberate flick covers real distance; a micro-motion does not.
+ * 12% of card width (~45pt on a 375pt screen) is far below the 35% distance
+ * threshold but above any thumb-jitter.
+ */
+export const SWIPE_MIN_FLICK_DIST_RATIO = 0.12;
 
 export function decideSwipe(input: SwipeInput): SwipeDecision {
 	"worklet";
@@ -49,7 +61,9 @@ export function decideSwipe(input: SwipeInput): SwipeDecision {
 	if (angleDeg > SWIPE_SECTOR_DEG) return "none";
 
 	const passedThreshold = absX >= cardWidth * SWIPE_THRESHOLD_RATIO;
-	const passedVelocity = Math.abs(velocityX) > SWIPE_VELOCITY_PTS;
+	const passedVelocity =
+		Math.abs(velocityX) > SWIPE_VELOCITY_PTS &&
+		absX >= cardWidth * SWIPE_MIN_FLICK_DIST_RATIO;
 	if (!passedThreshold && !passedVelocity) return "none";
 
 	// A decisive velocity pointing against the drag means the finger reversed:

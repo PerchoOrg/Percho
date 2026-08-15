@@ -73,6 +73,22 @@ export type RedlineIconName =
 export const ICON_FONT = "PerchoIcons";
 
 /**
+ * The OUTLINE weight of the same set, for the 2026-08-14 trade-off redesign.
+ *
+ * The main subset is Phosphor FILL (owner's 2026-08-01 pick, "Fill weight
+ * only" — see `assets/icons/README.md`). The trade-off card's new spec asks
+ * for fine line icons ("精细 outline icon"), which is a different weight of
+ * the SAME drawings: Phosphor's regular.ttf uses the identical codepoints,
+ * so `ICON_GLYPH` serves both fonts unchanged — only the font file and the
+ * centring numbers differ.
+ *
+ * Subset with `scripts/build-icon-font.py`-style pyftsubset against
+ * Phosphor-Regular.ttf using the same unicodes; `PerchoIconsOutline.ttf` is
+ * ~7.7 KB for the same 19 glyphs.
+ */
+export const OUTLINE_FONT = "PerchoIconsOutline";
+
+/**
  * Name → codepoint in `PerchoIcons.ttf`.
  *
  * The comment on each line is the upstream Phosphor glyph, which is the only
@@ -151,6 +167,38 @@ export const ICON_ART_WIDTH: Record<RedlineIconName, number> = {
 };
 
 /**
+ * Art widths of the OUTLINE (regular-weight) font, same glyphs.
+ *
+ * Same measurement as `ICON_ART_WIDTH`, taken off `PerchoIconsOutline.ttf`
+ * with fontTools. The outline drawings are wider than the fill ones (mean
+ * ≈0.93em vs ≈0.79em) because the fill weight collapses the art to a solid
+ * core; the outline keeps the full outer stroke. `RedlineIcon` needs the
+ * per-font width to centre the drawing, so the trade-off face cannot reuse
+ * the fill numbers.
+ */
+export const OUTLINE_ART_WIDTH: Record<RedlineIconName, number> = {
+	camera: 0.9062,
+	car: 0.9688,
+	check: 0.9062,
+	cup: 0.9062,
+	expand: 0.8438,
+	family: 0.9688,
+	moon: 0.9375,
+	path: 0.9062,
+	school: 1,
+	shop: 0.9062,
+	sparkle: 0.9688,
+	tree: 0.9375,
+	walk: 0.8747,
+	yard: 1,
+	dog: 0.9375,
+	handshake: 1,
+	shieldCheck: 0.875,
+	bookmark: 0.7812,
+	arrowRight: 0.875,
+};
+
+/**
  * Font size to request per point of nominal icon size.
  *
  * Measured, not guessed: in this subset the drawn art occupies 0.69em (expand,
@@ -165,3 +213,14 @@ export const ICON_ART_WIDTH: Record<RedlineIconName, number> = {
  * ~0.44em, so flex-centring the `<Text>` centres the drawing too.
  */
 export const ICON_OPTICAL_SCALE = 1.18;
+
+/**
+ * Optical scale for the OUTLINE font.
+ *
+ * The outline drawings are wider (mean ≈0.93em vs ≈0.79em), so the fill
+ * scale of 1.18 would blow an outline glyph ~25% past its box. 1.0 keeps the
+ * average art at ~0.93 × size — the same "close to the box edge" look the
+ * fill scale produces — and the widest glyphs (school/handshake/yard at
+ * 1.0em) land exactly at the box.
+ */
+export const OUTLINE_OPTICAL_SCALE = 1.0;

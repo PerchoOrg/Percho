@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+	SWIPE_MIN_FLICK_DIST_RATIO,
 	SWIPE_SECTOR_DEG,
 	SWIPE_THRESHOLD_RATIO,
 	SWIPE_VELOCITY_PTS,
@@ -57,13 +58,14 @@ describe("decideSwipe — 35% width threshold (§0.5)", () => {
 });
 
 describe("decideSwipe — 800 pt/s velocity (§0.5)", () => {
-	// Below the distance threshold, so velocity is the only possible decider.
-	const shortX = 10;
+	// The velocity path now also requires minimum travel (SWIPE_MIN_FLICK_DIST_RATIO)
+	// so a micro-nudge with a fast release does not read as a swipe.
+	const MIN_FLICK = CARD_W * SWIPE_MIN_FLICK_DIST_RATIO; // ~48pt
 
 	it("exactly the velocity threshold does not commit (contract is strict >)", () => {
 		expect(
 			decideSwipe({
-				translationX: shortX,
+				translationX: MIN_FLICK,
 				translationY: 0,
 				velocityX: SWIPE_VELOCITY_PTS,
 				cardWidth: CARD_W,
@@ -74,7 +76,7 @@ describe("decideSwipe — 800 pt/s velocity (§0.5)", () => {
 	it("one thousandth over the velocity threshold commits", () => {
 		expect(
 			decideSwipe({
-				translationX: shortX,
+				translationX: MIN_FLICK,
 				translationY: 0,
 				velocityX: SWIPE_VELOCITY_PTS + 0.001,
 				cardWidth: CARD_W,
@@ -85,12 +87,36 @@ describe("decideSwipe — 800 pt/s velocity (§0.5)", () => {
 	it("a fast left flick commits left", () => {
 		expect(
 			decideSwipe({
-				translationX: -shortX,
+				translationX: -MIN_FLICK,
 				translationY: 0,
 				velocityX: -(SWIPE_VELOCITY_PTS + 0.001),
 				cardWidth: CARD_W,
 			}),
 		).toBe("left");
+	});
+
+	it("a fast release over a tiny distance does NOT commit (no-swipe bug)", () => {
+		// The owner's "我还没有 swipe 他就跳到下一张": high release velocity but the
+		// finger only moved ~10pt. Distance floor rejects it.
+		expect(
+			decideSwipe({
+				translationX: 10,
+				translationY: 0,
+				velocityX: SWIPE_VELOCITY_PTS + 0.001,
+				cardWidth: CARD_W,
+			}),
+		).toBe("none");
+	});
+
+	it("a fast release just under the distance floor does NOT commit", () => {
+		expect(
+			decideSwipe({
+				translationX: MIN_FLICK - 0.001,
+				translationY: 0,
+				velocityX: SWIPE_VELOCITY_PTS + 100,
+				cardWidth: CARD_W,
+			}),
+		).toBe("none");
 	});
 });
 

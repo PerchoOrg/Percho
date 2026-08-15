@@ -1,114 +1,72 @@
-/**
- * TradeoffFace (§1.6) — the "force a priority" card, REBUILT to the owner's
- * "Percho Swipe Cards" redline (2026-07-30, 「全按redline覆盖」).
- *
- * ── What changed ─────────────────────────────────────────────────────────────
- *
- * The old face was a full-bleed vertical SPLIT: two dark halves (warm clay |
- * cool slate) divided by a 1.5px dashed rule, each half carrying an arrow and
- * its label. The redline replaces that with a light, calm card:
- *
- *   backdrop     a soft mountain-lake landscape, blurred and desaturated
- *   wash         180deg rgba(249,245,238,.10) → .90 at 48% → 1 at 100%
- *   headline     serif 32, centred, ~70pt below the top label
- *   subtext      12, centred, secondary
- *   choices      two 220pt cards, radius 22, rgba(255,255,255,.82),
- *                each with a 58pt mint badge + a 24pt line icon
- *   vs           a small white circular chip between them
- *   footer       ←  Swipe left or right  →
- *
- * ── §1.6's two red lines are PRESERVED, deliberately ────────────────────────
- *
- * The redline is a visual spec; §1.6 is a behavioural one, and where the redline
- * is silent the spec still governs. Both of its named red lines survive:
- *
- *   1. NO ✓ / ✗ anywhere. Nothing in this file renders a mark, same as before.
- *   2. The only feedback is BRIGHTNESS, tracking the finger. `tx` still drives
- *      `interpolate`, so the side being chosen goes to opacity 1 and the
- *      discarded side to 0.4 as the card is dragged.
- *
- * What moved is only WHERE that opacity lands: it used to ride each dark half,
- * and now rides each white choice card. Dropping the feedback would have been
- * the easy reading of "implement the redline" and it would have silently deleted
- * a spec red line — the redline says nothing about drag feedback because it is a
- * static board, not because the behaviour should go.
- *
- * The dashed 1.5px rule IS gone: it was the divider of a split face, and there is
- * no split any more. The "vs" chip is the redline's replacement separator.
- *
- * ── The backdrop ─────────────────────────────────────────────────────────────
- *
- * The redline asks for a photographic landscape here. A trade-off card has no
- * image field (`TradeoffCardV3` is text + two dims), and there is no bundled
- * asset pipeline in this app, so the atmosphere is drawn instead: the existing
- * `CardSurface` ramp under the redline's own light wash. That keeps the card
- * "lighter and calmer than the image cards" (the redline's stated goal for it)
- * with no fabricated photo and no new dependency. If a real landscape asset is
- * added later it drops in behind the same wash.
- */
+import { StyleSheet, Text, View } from "react-native";
 import { DIMS } from "@percho/shared";
 import type { DimKey } from "@percho/shared";
-import { LinearGradient } from "expo-linear-gradient";
-import { StyleSheet, Text, View } from "react-native";
+import type { TradeoffCardV3 } from "../../lib/feed/card-types";
+import { SWIPE_THRESHOLD_RATIO } from "../../lib/gesture/decide-swipe";
+import { radii, redline } from "../../theme/tokens";
+import { redlineText } from "../../theme/typography";
+import {
+	RedlineIcon,
+	type RedlineIconName,
+} from "./redline/RedlineChrome";
 import Animated, {
 	type SharedValue,
 	interpolate,
 	useAnimatedStyle,
 } from "react-native-reanimated";
-import type { TradeoffCardV3 } from "../../lib/feed/card-types";
-import { SWIPE_THRESHOLD_RATIO } from "../../lib/gesture/decide-swipe";
-import { radii, redline, redlineRadii } from "../../theme/tokens";
-import { redlineText } from "../../theme/typography";
-import { CardSurface } from "./CardSurface";
-import {
-	RedlineHeart,
-	RedlineIcon,
-	type RedlineIconName,
-	RedlinePill,
-} from "./redline/RedlineChrome";
 
-// §1.6, verbatim — unchanged from the previous implementation.
 const REST_OPACITY = 0.72;
 const CHOSEN_OPACITY = 1;
 const DISCARDED_OPACITY = 0.4;
 
-/** "Icon 24px" inside the redline's 58pt badge. */
-const CHOICE_ICON = 24;
-/** The wash's stops, from the redline's `linear-gradient(180deg, …)`. */
-const WASH_STOPS = [0, 0.48, 1] as const;
-
 /**
- * Which glyph stands for a dimension on a 24pt badge. The redline's sample card
- * is commute-vs-backyard (a car and a house-with-tree), which are the `move_in`
- * and `outdoors` ends of the real vocabulary.
+ * The two choices are the card's content — the owner's 2026-08-17 note is to
+ * make them BIGGER and give them air, not to add anything to fill the frame.
+ * Disc 48 → 58, icon 22 → 27 (the icon keeps its ~0.47 share of the disc, so
+ * the art is not just floating in a wider circle).
  */
+const CHOICE_ICON = 27;
+const DISC_SIZE = 58;
+
 const DIM_ICON: Partial<Record<DimKey, RedlineIconName>> = {
 	outdoors: "yard",
-	space: "yard",
-	trails: "tree",
+	space: "expand",
+	trails: "path",
 	walkable: "walk",
 	schools: "school",
 	family: "family",
-	move_in: "car",
-	quiet: "family",
+	move_in: "check",
+	quiet: "moon",
+	hip: "shop",
+	nightlife: "cup",
+	entertaining: "cup",
+};
+
+const SUPPORT: Record<DimKey, string> = {
+	outdoors: "More room outside",
+	walkable: "Less time driving",
+	schools: "Better for families",
+	quiet: "Peace and quiet",
+	hip: "A neighborhood scene",
+	entertaining: "Great for hosting",
+	trails: "Nature on your doorstep",
+	nightlife: "Walk to dinner",
+	family: "Made for family life",
+	move_in: "Nothing to fix",
+	space: "Room to grow",
 };
 
 interface TradeoffFaceProps {
 	card: TradeoffCardV3;
-	/** Live horizontal drag offset from `useSwipeCard`. */
 	tx: SharedValue<number>;
 	cardWidth: number;
-	onSave?: () => void;
 }
 
 export function TradeoffFace({
 	card,
 	tx,
 	cardWidth,
-	onSave,
 }: TradeoffFaceProps) {
-	// The card commits at 35% of its width, so brightness must reach full
-	// strength by then — interpolating over the whole width would barely move.
 	const span = cardWidth * SWIPE_THRESHOLD_RATIO;
 
 	const leftStyle = useAnimatedStyle(() => ({
@@ -131,67 +89,41 @@ export function TradeoffFace({
 
 	return (
 		<View style={styles.face}>
-			{/* Atmosphere: the existing ramp, then the redline's light wash over it. */}
-			<CardSurface variant="tradeoff" plain />
-			<LinearGradient
-				colors={[
-					redline.tradeoffWashFrom,
-					redline.tradeoffWashMid,
-					redline.tradeoffWashTo,
-				]}
-				locations={[...WASH_STOPS]}
-				style={StyleSheet.absoluteFill}
-				pointerEvents="none"
-			/>
-
-			<View style={styles.pillSlot}>
-				<RedlinePill label="TRADE-OFF" />
-			</View>
-			<View style={styles.heartSlot}>
-				<RedlineHeart onPress={onSave} />
-			</View>
-
 			<View style={styles.body}>
-				<Text style={styles.question}>Which matters more to you?</Text>
-				<Text style={styles.sub}>
-					Your choice helps us find the right places for you.
-				</Text>
+				<Text style={styles.question}>What matters more to you?</Text>
 
 				<View style={styles.choices}>
-					<Animated.View style={[styles.choice, leftStyle]}>
-						<View style={styles.badge}>
+					<Animated.View style={[styles.option, leftStyle]}>
+						<View style={styles.disc}>
 							<RedlineIcon
-								name={DIM_ICON[card.left.dim] ?? "walk"}
+								name={card.left.icon ?? DIM_ICON[card.left.dim] ?? "walk"}
 								size={CHOICE_ICON}
 								color={redline.accent}
+								weight="outline"
 							/>
 						</View>
-						<Text style={styles.choiceLabel}>{card.left.label}</Text>
-						<Text style={styles.choiceDim}>{DIMS[card.left.dim].label}</Text>
+						<Text style={styles.optionLabel}>{card.left.label}</Text>
+						<Text style={styles.optionSupport}>{SUPPORT[card.left.dim]}</Text>
 					</Animated.View>
 
-					<Animated.View style={[styles.choice, rightStyle]}>
-						<View style={styles.badge}>
-							<RedlineIcon
-								name={DIM_ICON[card.right.dim] ?? "walk"}
-								size={CHOICE_ICON}
-								color={redline.accent}
-							/>
+					<View style={styles.separator} pointerEvents="none">
+						<View style={styles.orDisc}>
+							<Text style={styles.orLabel}>or</Text>
 						</View>
-						<Text style={styles.choiceLabel}>{card.right.label}</Text>
-						<Text style={styles.choiceDim}>{DIMS[card.right.dim].label}</Text>
-					</Animated.View>
-
-					{/* The redline's separator, replacing the old dashed split rule. */}
-					<View style={styles.vs} pointerEvents="none">
-						<Text style={styles.vsLabel}>vs</Text>
 					</View>
-				</View>
 
-				<View style={styles.footer}>
-					<Text style={styles.footerArrow}>←</Text>
-					<Text style={styles.footerLabel}>Swipe left or right</Text>
-					<Text style={styles.footerArrow}>→</Text>
+					<Animated.View style={[styles.option, rightStyle]}>
+						<View style={styles.disc}>
+							<RedlineIcon
+								name={card.right.icon ?? DIM_ICON[card.right.dim] ?? "walk"}
+								size={CHOICE_ICON}
+								color={redline.accent}
+								weight="outline"
+							/>
+						</View>
+						<Text style={styles.optionLabel}>{card.right.label}</Text>
+						<Text style={styles.optionSupport}>{SUPPORT[card.right.dim]}</Text>
+					</Animated.View>
 				</View>
 			</View>
 		</View>
@@ -199,92 +131,104 @@ export function TradeoffFace({
 }
 
 const styles = StyleSheet.create({
-	/** Light face — the wash bottoms out at the redline's opaque cream. */
 	face: { flex: 1, backgroundColor: redline.card },
-	pillSlot: { position: "absolute", top: 15, left: 15, zIndex: 3 },
-	heartSlot: { position: "absolute", top: 15, right: 15, zIndex: 3 },
-	/** "about 70px below the top label" — 15 inset + 38 pill + the redline's gap. */
+	/**
+	 * Still `justifyContent: center`, but the padding is ASYMMETRIC (18/18 →
+	 * 16 top / 38 bottom) — owner 2026-08-17: less dead space above the
+	 * question.
+	 *
+	 * Centring inside a box that is padded more at the bottom sits the group
+	 * ~11pt higher than true centre, on every device, which top-anchoring with
+	 * a fixed offset does not: this card carries a fixed ~230pt of content, so
+	 * a fixed top offset that looks right on an SE leaves a 130pt hole under
+	 * the choices on a Pro Max. The bias is a constant; the slack it leaves
+	 * still splits with the frame.
+	 */
 	body: {
 		flex: 1,
 		alignItems: "center",
-		paddingTop: 70,
-		paddingHorizontal: 18,
-		paddingBottom: 22,
+		justifyContent: "center",
+		paddingHorizontal: 22,
+		paddingTop: 16,
+		paddingBottom: 38,
 		zIndex: 2,
 	},
+	/**
+	 * "What matters more to you?" — serif 25/500 centred. One natural break:
+	 * line 1 "What matters more to", line 2 "you?" — no orphan. The old 32pt
+	 * question wrapped after "you" and stranded "you?" alone on line 2
+	 * (Tia 2026-08-16).
+	 */
 	question: {
 		...redlineText.question,
+		fontSize: 25,
+		lineHeight: 29,
 		color: redline.ink,
 		textAlign: "center",
 	},
-	sub: {
-		// The redline specifies 12px here, not the 13px listing-story size.
-		...redlineText.subtext,
-		color: redline.ink2,
-		textAlign: "center",
-		marginTop: 10,
-	},
+	/**
+	 * 44 (28 → 34 → 44, 2026-08-17): the gap between the two-line question and
+	 * the choices. Widened again with the discs — the question and the choice
+	 * pair are the card's two ideas, and at 34 against a 58pt disc they read as
+	 * one block. The body centres the group, so this only changes where the
+	 * question sits relative to the choices, never where the pair sits in the
+	 * frame.
+	 */
 	choices: {
 		flexDirection: "row",
-		gap: 10,
-		marginTop: 28,
+		justifyContent: "space-between",
+		marginTop: 44,
 		width: "100%",
 		position: "relative",
 	},
-	choice: {
+	/** 12 (was 10) — a wider quiet band between each option and the `or`. */
+	option: {
 		flex: 1,
-		height: 220,
-		borderRadius: redlineRadii.choice,
-		backgroundColor: redline.choice,
-		borderWidth: 1,
-		borderColor: redline.choiceBorder,
 		alignItems: "center",
-		justifyContent: "center",
-		gap: 14,
 		paddingHorizontal: 12,
 	},
-	badge: {
-		width: 58,
-		height: 58,
+	disc: {
+		width: DISC_SIZE,
+		height: DISC_SIZE,
 		borderRadius: radii.pill,
 		backgroundColor: redline.accentSoft,
 		alignItems: "center",
 		justifyContent: "center",
+		marginBottom: 18,
 	},
-	choiceLabel: {
+	optionLabel: {
 		...redlineText.choice,
 		color: redline.ink,
 		textAlign: "center",
 	},
-	choiceDim: {
-		...redlineText.nano,
+	/** 6 (was 3) — the support line is a second thought, not a subtitle. */
+	optionSupport: {
+		...redlineText.subtext,
 		color: redline.ink3,
 		textAlign: "center",
+		marginTop: 6,
 	},
-	/**
-	 * Centred in the gutter. `pointerEvents: none` so the chip never eats a drag
-	 * that started on it — the whole card is the gesture target.
-	 */
-	vs: {
+	separator: {
 		position: "absolute",
+		top: 0,
+		bottom: 0,
 		alignSelf: "center",
-		top: "50%",
-		width: 26,
-		height: 26,
-		marginTop: -13,
-		borderRadius: radii.pill,
-		backgroundColor: redline.onPhoto,
+		left: "50%",
+		marginLeft: -14,
+		width: 28,
 		alignItems: "center",
 		justifyContent: "center",
 	},
-	vsLabel: { ...redlineText.nano, color: redline.ink3 },
-	footer: {
-		marginTop: "auto",
-		width: "100%",
-		flexDirection: "row",
+	orDisc: {
+		width: 26,
+		height: 26,
+		borderRadius: radii.pill,
+		backgroundColor: redline.card,
 		alignItems: "center",
-		justifyContent: "space-between",
+		justifyContent: "center",
 	},
-	footerArrow: { ...redlineText.micro, color: redline.ink3 },
-	footerLabel: { ...redlineText.micro, color: redline.ink3 },
+	orLabel: {
+		...redlineText.nano,
+		color: redline.ink3,
+	},
 });
