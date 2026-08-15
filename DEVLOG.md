@@ -4,6 +4,54 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-08-15 — Admin Community Tour: AI video generation (Seedance via OpenRouter)
+
+**Objective**: owner ask (2026-08-15) — on Admin → Community Tour
+(`/admin/pipeline/community-nearby/<id>`), add a "Generate AI Video" control at
+the top. Each photo gets a checkbox; all selected photos are turned into AI
+videos.
+
+**Actions** (Claude Code CLI, print mode, 40-turn budget):
+- `scripts/spikes/seedance-community-video/spike.py` — zero-dep spike that
+  proved the OpenRouter flow: `POST /api/v1/files` (multipart upload) →
+  `POST /api/v1/videos` (model `bytedance/seedance-2.0-mini`, `frame_images`
+  first_frame, duration, aspect_ratio) → poll `polling_url` → download
+  `unsigned_urls[0]`. Source of truth for the API contract.
+- `apps/web/lib/ai/openrouter-video.ts` — production port: `uploadFrameImage`
+  (multipart via FormData), `submitVideo`, `pollVideo`/`parseVideoStatus`
+  (testable state machine), `downloadVideo` (API key never sent to third-party
+  hosts — `isOpenRouterHost` guard), `errorText`.
+- `apps/web/app/api/admin/community-tour/[id]/ai-video/route.ts` — POST
+  enqueues one row per selected photo (`ai_tour_videos`, status `pending`);
+  GET advances the queue (bounded `MAX_WORK_PER_PUMP=3`), atomic
+  `pending→submitting` claim so concurrent admins can't double-submit,
+  enhanced-photo priority, download → Supabase Storage (`ai-videos` bucket).
+  No EC2 worker involvement — the admin's own status polling pumps the queue.
+- `apps/web/app/admin/_components/AiVideoSection.tsx` + `PhotoTable` optional
+  `selection` prop — checkbox per row, header select-all, prompt textarea,
+  duration 4/8/12s, live clip cards with polling.
+- Migration `20260815120000_ai_tour_videos.sql` — table (RLS: admin select
+  only, writes via service role), `ai-videos` public bucket (200 MB cap,
+  video/mp4 only). Applied to remote.
+
+**Decisions**: ALL selected photos → ONE video. Seedance 2.0 Mini accepts up
+to 9 `first_frame` reference images in a single job and weaves them into one
+clip, so a batch = one row (`input_photo_ids uuid[]`). v1 shipped one row per
+photo (`poi_photo_id`) — corrected the same day (owner: "不要各自生成一个 AI
+视频 要选中的全部一起生成"). Cap `MAX_PHOTOS_PER_BATCH = 9`, durations 4–15s
+(rev 2). Stitching is native to the model — no ffmpeg involved. Key from
+`OPENROUTER_API_KEY` (not set on this host yet — panel renders disabled until
+it is).
+
+**Verification**: `tsc --noEmit` clean; vitest 16/16 (incl. request-body test
+asserting all selected photos land in ONE job's frame_images); biome clean;
+`next build` succeeded; follow-up migration
+`20260815130000_ai_tour_videos_multi_photo.sql` pushed + `input_photo_ids`
+returns HTTP 200.
+
+**Next steps**: set `OPENROUTER_API_KEY` in deployment env, then generate a
+real clip to confirm end-to-end (upload → job → poll → download).
+
 ## 2026-08-19 — Community/City cards: deep gradient + divided stat bars (owner Tia)
 
 **Objective**: owner spec (Tia, 2026-08-19) — apply the listing card's bottom

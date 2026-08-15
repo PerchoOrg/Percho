@@ -70,16 +70,30 @@ export interface PhotoRow {
 type SortKey = 'order' | 'score' | 'hero' | 'category' | 'enhanced';
 type Filter = 'all' | 'untagged' | 'unreviewed' | 'enhance_ready' | 'in_video' | 'not_in_video';
 
+/**
+ * Optional per-row picker. State lives in the parent because the thing that
+ * consumes the selection (the AI video panel) sits above the table — see
+ * AiVideoSection.
+ */
+export interface PhotoSelection {
+  selected: ReadonlySet<string>;
+  onToggle: (id: string) => void;
+  /** Header checkbox: select/clear every row currently visible after filtering. */
+  onToggleMany: (ids: string[], select: boolean) => void;
+}
+
 export function PhotoTable({
   table,
   storageBase,
   bucket,
   photos,
+  selection,
 }: {
   table: PhotoTableName;
   storageBase: string;
   bucket: string;
   photos: PhotoRow[];
+  selection?: PhotoSelection;
 }) {
   const router = useRouter();
   const [pending, setPending] = useState<string | null>(null);
@@ -134,6 +148,9 @@ export function PhotoTable({
 
     return [...filtered].sort(by);
   }, [photos, sort, filter]);
+
+  const visibleIds = rows.map(({ p }) => p.id);
+  const allVisibleSelected = !!selection && visibleIds.every((id) => selection.selected.has(id));
 
   function run(id: string, fn: () => Promise<{ ok: boolean; message?: string }>) {
     setPending(id);
@@ -220,6 +237,17 @@ export function PhotoTable({
         <table className="w-full min-w-[1100px] border-collapse text-left text-xs">
           <thead className="bg-surface text-ink2">
             <tr>
+              {selection && (
+                <Th>
+                  <input
+                    type="checkbox"
+                    aria-label="Select all visible photos"
+                    checked={visibleIds.length > 0 && allVisibleSelected}
+                    onChange={(e) => selection.onToggleMany(visibleIds, e.target.checked)}
+                    className="h-3.5 w-3.5 accent-bronze"
+                  />
+                </Th>
+              )}
               <Th>Photo</Th>
               <Th>{isListing ? '#' : 'POI'}</Th>
               <Th>Size</Th>
@@ -243,6 +271,17 @@ export function PhotoTable({
               const thumbPath = showEnhanced ? (p.enhanced_path as string) : p.storage_path;
               return (
                 <tr key={p.id} className="border-line border-t align-top hover:bg-surface/60">
+                  {selection && (
+                    <Td>
+                      <input
+                        type="checkbox"
+                        aria-label="Select photo for AI video"
+                        checked={selection.selected.has(p.id)}
+                        onChange={() => selection.onToggle(p.id)}
+                        className="h-3.5 w-3.5 accent-bronze"
+                      />
+                    </Td>
+                  )}
                   <Td>
                     <button
                       type="button"

@@ -5,11 +5,11 @@
  */
 
 import { CommunityNearbyPanel } from '@/app/dashboard/communities/[id]/CommunityNearbyPanel';
-import { loadNearbyPoisForCommunity } from '@/lib/poi/community-actions';
 import { loadNearbyPhotos } from '@/lib/poi/admin-nearby-photos';
+import { loadNearbyPoisForCommunity } from '@/lib/poi/community-actions';
 import { createServiceClient } from '@/lib/supabase/server';
 import { notFound } from 'next/navigation';
-import { PhotoTable } from '../../../_components/PhotoTable';
+import { AiVideoSection } from '../../../_components/AiVideoSection';
 
 export const dynamic = 'force-dynamic';
 
@@ -54,9 +54,13 @@ export default async function AdminCommunityNearbyPage({
       </header>
 
       {/* Photo table first: it answers "what do I have and what's in a video"
-          without clicking through every POI accordion below. */}
-      <PhotoTable
-        table="poi_photos"
+          without clicking through every POI accordion below. The AI video
+          panel sits on top of it and drives the table's row checkboxes. */}
+      <AiVideoSection
+        communityId={community.id}
+        communityName={community.name}
+        city={community.city}
+        state={community.state}
         storageBase={process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''}
         bucket="listing-photos"
         photos={photos}
