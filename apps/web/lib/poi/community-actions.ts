@@ -214,6 +214,44 @@ export async function fetchPhotosForCommunityPoi(
     if (skippedReasons.length < 3) skippedReasons.push(reason);
   };
 
+  // POI-level dedup (owner 2026-08-16): if this POI already has photos,
+  // just link them — no re-download, no Google calls. Re-fetch is only
+  // meant to backfill POIs that have none.
+  const { data: existingAny } = (await admin
+    .from('poi_photos')
+    .select('id')
+    .eq('poi_id', poi.id)
+    .limit(1)) as { data: { id: string }[] | null };
+  if ((existingAny ?? []).length > 0) {
+    const refs = targets.map((p) => p.name).filter(Boolean);
+    const { data: storedRows } = (await admin
+      .from('poi_photos')
+      .select('id, google_photo_name')
+      .eq('poi_id', poi.id)
+      .in('google_photo_name', refs)) as {
+      data: Array<{ id: string; google_photo_name: string | null }> | null;
+    };
+    for (const row of storedRows ?? []) {
+      // ensure the review link exists for each stored photo
+      const { data: link } = (await admin
+        .from('community_poi_photos')
+        .select('community_id')
+        .eq('community_id', communityId)
+        .eq('poi_photo_id', row.id)
+        .maybeSingle()) as { data: { community_id: string } | null };
+      if (!link) {
+        await admin.from('community_poi_photos').insert({
+          community_id: communityId,
+          poi_photo_id: row.id,
+          status: 'pending',
+        });
+      }
+    }
+    reused += (storedRows ?? []).length;
+    revalidatePath(`/dashboard/communities/${communityId}`);
+    return { fetched, reused, skipped, ...(skippedReasons.length ? { skippedReasons } : {}) };
+  }
+
   for (const photo of targets) {
     // Google photo refs rotate on every Places response — the same image can
     // arrive under a different google_photo_name. Dedup by CONTENT HASH
