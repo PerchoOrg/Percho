@@ -116,8 +116,12 @@ export function PhotoTable({
   bucket: string;
   photos: PhotoRow[];
   selection?: PhotoSelection;
-  /** Community tour: per-row "Generate seedance clip" button (photo_clips). */
-  onGenerateClip?: (photoId: string) => Promise<{ ok: boolean; message?: string }>;
+  /** Community tour: per-row "Generate seedance clip" button (photo_clips).
+      `engine` forces the clip engine (DA+KB column passes 'kenburns'). */
+  onGenerateClip?: (
+    photoId: string,
+    engine?: string,
+  ) => Promise<{ ok: boolean; message?: string }>;
 }) {
   const router = useRouter();
   const [pending, setPending] = useState<string | null>(null);
@@ -559,12 +563,7 @@ export function PhotoTable({
                               disabled={busy}
                               onClick={() =>
                                 run(p.id, () =>
-                                  (
-                                    onGenerateClip as (
-                                      id: string,
-                                      engine?: string,
-                                    ) => Promise<{ ok: boolean; message?: string }>
-                                  )(p.id, p.dakb_clip?.engine ?? 'kenburns'),
+                                  onGenerateClip(p.id, p.dakb_clip?.engine ?? 'kenburns'),
                                 )
                               }
                             />
@@ -578,16 +577,7 @@ export function PhotoTable({
                               label="Generate"
                               title="Generate a DA+KB clip from this photo"
                               disabled={busy}
-                              onClick={() =>
-                                run(p.id, () =>
-                                  (
-                                    onGenerateClip as (
-                                      id: string,
-                                      engine?: string,
-                                    ) => Promise<{ ok: boolean; message?: string }>
-                                  )(p.id, 'kenburns'),
-                                )
-                              }
+                              onClick={() => run(p.id, () => onGenerateClip(p.id, 'kenburns'))}
                             />
                           )}
                         </div>

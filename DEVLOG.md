@@ -4,6 +4,50 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-08-16 23:40 UTC — Fix: DA+KB Generate sent engine=null (fetch-photo panel)
+
+**Objective**: DA+KB column "Generate" in the fetch-photo panel created no
+`photo_clips` row. Route debug (`step_results.last_generate_request`) showed
+`{"engine": null, "photoIds": [...]}` — the engine never reached the API.
+
+**Issue**: two different `generateClip` implementations feed `PhotoTable`:
+- `CommunityTourSection.generateClip(photoId, engine)` — big collapsible table
+  below the pipeline. Correct: forwards `engine`.
+- `TourPipeline.generateClip(photoId)` — **fetch-photo panel** (step 5
+  `StepResult` → `PhotoTable`). Took one param and posted a body with no
+  `engine` key at all.
+
+`PhotoTable`'s `onGenerateClip` prop was typed 1-param, and the DA+KB buttons
+worked around that with an inline `as (id, engine?) => …` cast. The cast made
+TS accept the 2-arg call, but JS silently drops the extra arg when the
+receiving function only declares one — so on the TourPipeline path `engine`
+was never in the POST body. Route then computed
+`forceEngine = null → engine: 'seedance'`, and the money guard (commit
+6ebff4eb) refused the row with `seedance_disabled`. Nothing was created.
+
+**Actions**:
+- `PhotoTable.tsx` — prop widened to `(photoId: string, engine?: string)`;
+  removed both `as` casts at the DA+KB call sites.
+- `TourPipeline.tsx` — `generateClip` now takes `engine?: string` and sends it
+  in the body; `StepResult`'s `onGenerateClip` prop type widened to match.
+
+**Decisions**: fixed the caller rather than defaulting `engine` server-side —
+the route's `forceEngine` allowlist (`depthflow | kenburns`) is the intended
+guard and should keep failing closed. Seedance money guard untouched.
+
+**Learnings**: an `as` cast that *widens a function's arity* is unsound in a
+way TS won't flag — the extra argument silently evaporates at runtime. The
+cast existed precisely because the prop type was wrong; it hid the real bug
+for both consumers instead of surfacing it at one.
+
+**Verification**: `tsc --noEmit -p apps/web/tsconfig.json` clean. `pnpm
+web:lint` unchanged from baseline (179 errors / 60 warnings before and after —
+all pre-existing).
+
+**Next steps**: click DA+KB Generate in the fetch-photo panel and confirm a
+`photo_clips` row lands with `engine='kenburns'`. Then drop the
+`last_generate_request` debug write in the step route POST (added 2a9c757f).
+
 ## 2026-08-16 — Community Tour pipeline: 8-step admin orchestration
 
 **Objective**: owner-fixed flow (2026-08-15) — for any community, run 8 steps

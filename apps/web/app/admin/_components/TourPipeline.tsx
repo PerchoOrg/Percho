@@ -229,12 +229,15 @@ export function TourPipeline({
     }
   }
 
-  async function generateClip(photoId: string): Promise<{ ok: boolean; message?: string }> {
+  async function generateClip(
+    photoId: string,
+    engine?: string,
+  ): Promise<{ ok: boolean; message?: string }> {
     if (!run?.id) return { ok: false, message: 'No run yet — create one first.' };
     const res = await fetch(`/api/admin/community-tour/${communityId}/runs/${run.id}/step`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ step: 'generate', photoIds: [photoId] }),
+      body: JSON.stringify({ step: 'generate', photoIds: [photoId], engine }),
     });
     const body = (await res.json()) as { ok?: boolean; message?: string; error?: string };
     if (!res.ok || !body.ok) return { ok: false, message: body.message ?? body.error ?? `HTTP ${res.status}` };
@@ -460,7 +463,10 @@ function StepResult({
   storageBase: string;
   bucket: string;
   photos: PhotoRow[];
-  onGenerateClip?: (photoId: string) => Promise<{ ok: boolean; message?: string }>;
+  onGenerateClip?: (
+    photoId: string,
+    engine?: string,
+  ) => Promise<{ ok: boolean; message?: string }>;
 }) {
   if (s === 'research') {
     const r = result as {
