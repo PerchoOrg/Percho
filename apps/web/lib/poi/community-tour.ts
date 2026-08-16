@@ -234,7 +234,8 @@ export async function resolveCandidates(
   resolved.sort((a, b) => b.score - a.score);
 
   // ── Third dimension: top-rated Google places nearby (owner 2026-08-16).
-  // Places API v1 has no rating sort — pull 20 and pick the best-rated 10.
+  // Places API v1 has no rating sort — pull 20 and pick the best-rated 3.
+  // Top-10 was mostly merchants; keep it to a handful of true standouts.
   const seenIds = new Set(resolved.map((r) => r.place_id));
   let topRated: ResolvedPoi[] = [];
   try {
@@ -246,7 +247,7 @@ export async function resolveCandidates(
           (b.rating ?? 0) - (a.rating ?? 0) ||
           (b.userRatingCount ?? 0) - (a.userRatingCount ?? 0),
       )
-      .slice(0, 10)
+      .slice(0, 3)
       .map((p) => ({
         place_id: p.id,
         name: p.displayName?.text ?? '',
