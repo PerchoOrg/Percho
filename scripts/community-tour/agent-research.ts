@@ -202,10 +202,73 @@ async function main() {
   const prompt = buildResearchPrompt(community);
   log('prompt built', community.name);
 
-  const [claudeRes, codexRes] = await Promise.all([
-    runAgent('claude', prompt),
-    runAgent('codex', prompt),
-  ]);
+  // Live progress: write step_results.research_progress as agents run so the
+  // admin page can render a "researching" state (the UI polls runs; the
+  // final agent_research landing is the done signal). Writes are serialized
+  // through a promise chain so the read-modify-write on step_results can't
+  // clobber itself.
+  const startedAt = new Date().toISOString();
+  const agentsDone: string[] = [];
+  let progressChain: Promise<unknown> = Promise.resolve();
+  const queueProgress = (patch: Record<string, unknown>) => {
+    progressChain = progressChain
+      .then(async () => {
+        const { data: run } = await sb
+          .from('community_tour_runs')
+          .select('step_results')
+          .eq('id', runId)
+          .maybeSingle();
+        if (!run) return;
+        await sb
+          .from('community_tour_runs')
+          .update({
+            step_results: { ...run.step_results, ...patch },
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', runId);
+      })
+      .catch((err: Error) => log('progress write failed (non-fatal):', err.message));
+    return progressChain;
+  };
+  const reportAgent = (agent: 'claude' | 'codex', ok: boolean) => {
+    agentsDone.push(agent);
+    queueProgress({
+      research_progress: {
+        status: 'running',
+        started_at: startedAt,
+        agents_done: [...agentsDone],
+        [`${agent}_ok`]: ok,
+      },
+    });
+  };
+
+  queueProgress({
+    research_progress: { status: 'running', started_at: startedAt, agents_done: [] },
+  });
+
+  let claudeRes: Awaited<ReturnType<typeof runAgent>>;
+  let codexRes: Awaited<ReturnType<typeof runAgent>>;
+  try {
+    [claudeRes, codexRes] = await Promise.all([
+      runAgent('claude', prompt).then((r) => {
+        reportAgent('claude', r.ok);
+        return r;
+      }),
+      runAgent('codex', prompt).then((r) => {
+        reportAgent('codex', r.ok);
+        return r;
+      }),
+    ]);
+  } catch (err) {
+    queueProgress({
+      research_progress: {
+        status: 'failed',
+        started_at: startedAt,
+        error: (err as Error).message,
+      },
+    });
+    throw err;
+  }
 
   const result = {
     community: {

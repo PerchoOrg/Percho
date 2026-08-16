@@ -76,15 +76,19 @@ export function TourPipeline({
     void loadRuns();
   }, [loadRuns]);
 
-  // Poll while a step is running (research is async: the agent script writes
-  // step_results itself, this refetches until it lands).
+  // Poll while a step is running, OR while research is in flight (the agent
+  // script writes step_results itself over minutes — the POST already
+  // returned). Stop once the run is no longer researching.
+  const researchInFlight = runs.some(
+    (r) => r.status === 'researching' && !r.step_results.agent_research,
+  );
   useEffect(() => {
-    if (!running) return;
+    if (!running && !researchInFlight) return;
     const t = setInterval(() => {
       void loadRuns();
     }, 4000);
     return () => clearInterval(t);
-  }, [running, loadRuns]);
+  }, [running, researchInFlight, loadRuns]);
 
   async function createRun(): Promise<string | null> {
     const res = await fetch(`/api/admin/community-tour/${communityId}/runs`, { method: 'POST' });
@@ -233,6 +237,23 @@ export function TourPipeline({
               error?: string;
             }
           | undefined;
+        // Live research progress (script writes research_progress while the
+        // two agents run; agent_research landing is the done signal).
+        const researchProgress = run?.step_results.research_progress as
+          | {
+              status?: string;
+              started_at?: string;
+              agents_done?: string[];
+              error?: string;
+            }
+          | undefined;
+        const researching = !done && researchProgress?.status === 'running';
+        const runSeconds = researchProgress?.started_at
+          ? Math.max(
+              0,
+              Math.round((Date.now() - new Date(researchProgress.started_at).getTime()) / 1000),
+            )
+          : 0;
         return (
           <section key={s.name} className="rounded-2xl border border-line bg-surface p-4">
             <div className="flex items-center justify-between gap-3">
@@ -240,6 +261,9 @@ export function TourPipeline({
                 <h3 className="flex items-center gap-1.5 text-sm font-semibold">
                   {s.label}
                   {done && <CheckCircle2 size={13} className="text-emerald-600" />}
+                  {researching && (
+                    <Loader2 size={13} className="animate-spin text-bronze" aria-hidden />
+                  )}
                 </h3>
                 <p className="text-ink2 text-xs">{s.desc}</p>
               </div>
@@ -249,14 +273,26 @@ export function TourPipeline({
                 disabled={!!running}
                 className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-bg px-3 py-1.5 text-xs text-ink hover:border-bronze disabled:cursor-not-allowed disabled:text-muted"
               >
-                {running === s.name ? (
+                {running === s.name || researching ? (
                   <Loader2 size={13} className="animate-spin" />
                 ) : (
                   <RefreshCw size={13} />
                 )}
-                {running === s.name ? 'Running…' : done ? 'Re-run' : 'Run'}
+                {running === s.name || researching ? 'Running…' : done ? 'Re-run' : 'Run'}
               </button>
             </div>
+
+            {researching && (
+              <div className="mt-2 flex items-center gap-2 text-xs text-ink2">
+                <Loader2 size={13} className="animate-spin text-bronze" aria-hidden />
+                {researchProgress?.agents_done?.length ?? 0}/2 agents done · {runSeconds}s elapsed
+              </div>
+            )}
+            {researchProgress?.status === 'failed' && !done && (
+              <div className="mt-2 text-xs text-red-600">
+                Research failed: {researchProgress.error ?? 'unknown'}
+              </div>
+            )}
 
             {done && result && (
               <div className="mt-2 text-xs text-ink2">
