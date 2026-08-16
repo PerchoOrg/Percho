@@ -181,6 +181,14 @@ export function TourPipeline({
         cost_usd: number | null;
         error: string | null;
       } | null;
+      dakb_clip: {
+        engine: string;
+        duration_s: number | null;
+        status: string;
+        video_url: string | null;
+        cost_usd: number | null;
+        error: string | null;
+      } | null;
     }>
   >([]);
   const [tagPending, setTagPending] = useState(false);
@@ -202,9 +210,15 @@ export function TourPipeline({
   }, [loadClips]);
 
   const clipById = new Map(clipRows.map((c) => [c.photo_id, c.clip]));
+  const dakbClipById = new Map(clipRows.map((c) => [c.photo_id, c.dakb_clip]));
   const stepPhotos = photos.map((p) => {
     const clip = clipById.get(p.id);
-    return clip !== undefined ? { ...p, clip } : p;
+    const dakbClip = dakbClipById.get(p.id);
+    return {
+      ...p,
+      ...(clip !== undefined ? { clip } : {}),
+      ...(dakbClip !== undefined ? { dakb_clip: dakbClip } : {}),
+    };
   });
 
   async function tagPhotos(runId: string): Promise<void> {
