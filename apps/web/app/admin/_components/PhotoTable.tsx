@@ -503,17 +503,9 @@ export function PhotoTable({
                           {onGenerateClip && p.clip.status !== 'ready' && (
                             <MiniBtn
                               label="Generate"
-                              title="Generate a seedance clip from this photo"
-                              disabled={busy}
-                              onClick={() =>
-                                run(p.id, () =>
-                                  (
-                                    onGenerateClip as (
-                                      id: string,
-                                    ) => Promise<{ ok: boolean; message?: string }>
-                                  )(p.id),
-                                )
-                              }
+                              title="Seedance generate disabled — local video testing first (owner 2026-08-17)"
+                              disabled={true}
+                              onClick={() => {}}
                             />
                           )}
                         </div>
@@ -523,17 +515,9 @@ export function PhotoTable({
                           {onGenerateClip && (
                             <MiniBtn
                               label="Generate"
-                              title="Generate a seedance clip from this photo"
-                              disabled={busy}
-                              onClick={() =>
-                                run(p.id, () =>
-                                  (
-                                    onGenerateClip as (
-                                      id: string,
-                                    ) => Promise<{ ok: boolean; message?: string }>
-                                  )(p.id),
-                                )
-                              }
+                              title="Seedance generate disabled — local video testing first (owner 2026-08-17)"
+                              disabled={true}
+                              onClick={() => {}}
                             />
                           )}
                         </div>
