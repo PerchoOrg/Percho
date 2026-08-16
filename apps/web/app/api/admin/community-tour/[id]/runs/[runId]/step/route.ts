@@ -594,6 +594,22 @@ export async function POST(
     return NextResponse.json({ error: 'run_mismatch' }, { status: 400 });
   }
 
+  // Debug: record the raw engine the client sent (owner 2026-08-17: DA+KB
+  // clicks were landing as seedance; need to see if engine reaches the route).
+  await sb
+    .from('community_tour_runs')
+    .update({
+      step_results: {
+        ...run.step_results,
+        last_generate_request: {
+          photoIds: body.photoIds ?? null,
+          engine: body.engine ?? null,
+          at: new Date().toISOString(),
+        },
+      },
+    })
+    .eq('id', run.id);
+
   try {
     const result =
       step === 'generate'
