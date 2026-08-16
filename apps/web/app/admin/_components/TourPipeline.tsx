@@ -96,7 +96,9 @@ export function TourPipeline({
   }
 
   async function runStep(step: StepName, runId: string | null): Promise<void> {
-    const rid = runId ?? (await createRun());
+    // Research is expensive + cached per-run: "Run" always starts a fresh run
+    // so the button visibly does something (owner 2026-08-16).
+    const rid = step === 'research' ? (await createRun()) : (runId ?? (await createRun()));
     if (!rid) {
       setError('Could not create run');
       return;
