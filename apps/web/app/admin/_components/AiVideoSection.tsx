@@ -26,7 +26,7 @@ import {
 } from '@/lib/poi/ai-tour-video';
 import { Sparkles } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { type PhotoRow, PhotoTable } from './PhotoTable';
+import type { PhotoRow } from './PhotoTable';
 
 const POLL_MS = 10_000;
 
@@ -38,6 +38,8 @@ export function AiVideoSection({
   storageBase,
   bucket,
   photos,
+  selected,
+  onClearSelection,
 }: {
   communityId: string;
   communityName: string;
@@ -46,8 +48,12 @@ export function AiVideoSection({
   storageBase: string;
   bucket: string;
   photos: PhotoRow[];
+  /** Selection count only — the checkboxes live in the big table below the
+   *  8-step pipeline. Owner 2026-08-16: page order is video → 8 steps →
+   *  big table → collapsible extras. */
+  selected: ReadonlySet<string>;
+  onClearSelection: () => void;
 }) {
-  const [selected, setSelected] = useState<Set<string>>(() => new Set());
   const [prompt, setPrompt] = useState(() =>
     defaultTourPrompt({ name: communityName, city, state }),
   );
@@ -83,26 +89,6 @@ export function AiVideoSection({
     return () => clearInterval(t);
   }, [load, live]);
 
-  const toggle = useCallback((id: string) => {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }, []);
-
-  const toggleMany = useCallback((ids: string[], select: boolean) => {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      for (const id of ids) {
-        if (select) next.add(id);
-        else next.delete(id);
-      }
-      return next;
-    });
-  }, []);
-
   const count = selected.size;
   const tooMany = count > MAX_PHOTOS_PER_BATCH;
 
@@ -121,7 +107,7 @@ export function AiVideoSection({
         setError(body.message ?? body.error ?? `HTTP ${res.status}`);
         return;
       }
-      setSelected(new Set());
+      onClearSelection();
       await load();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'network error');
@@ -210,14 +196,6 @@ export function AiVideoSection({
           </div>
         )}
       </section>
-
-      <PhotoTable
-        table="poi_photos"
-        storageBase={storageBase}
-        bucket={bucket}
-        photos={photos}
-        selection={{ selected, onToggle: toggle, onToggleMany: toggleMany }}
-      />
     </div>
   );
 }

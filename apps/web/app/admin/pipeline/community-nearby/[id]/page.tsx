@@ -9,8 +9,7 @@ import { loadNearbyPhotos } from '@/lib/poi/admin-nearby-photos';
 import { loadNearbyPoisForCommunity } from '@/lib/poi/community-actions';
 import { createServiceClient } from '@/lib/supabase/server';
 import { notFound } from 'next/navigation';
-import { AiVideoSection } from '../../../_components/AiVideoSection';
-import { TourPipeline } from '../../../_components/TourPipeline';
+import { CommunityTourSection } from '../../../_components/CommunityTourSection';
 
 export const dynamic = 'force-dynamic';
 
@@ -54,10 +53,8 @@ export default async function AdminCommunityNearbyPage({
         <h1 className="text-xl font-semibold">{community.name}</h1>
       </header>
 
-      {/* Photo table first: it answers "what do I have and what's in a video"
-          without clicking through every POI accordion below. The AI video
-          panel sits on top of it and drives the table's row checkboxes. */}
-      <AiVideoSection
+      {/* Community Tour: video → 8 steps → big photo table (owner 2026-08-16) */}
+      <CommunityTourSection
         communityId={community.id}
         communityName={community.name}
         city={community.city}
@@ -67,22 +64,19 @@ export default async function AdminCommunityNearbyPage({
         photos={photos}
       />
 
-      {/* Community Tour pipeline — 8-step orchestration with per-step results */}
-      <TourPipeline
-        communityId={community.id}
-        communityName={community.name}
-        city={community.city}
-        state={community.state}
-        storageBase={process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''}
-      />
-
-      <section className="rounded-2xl border border-line bg-surface p-4 sm:p-5">
-        <CommunityNearbyPanel
-          communityId={community.id}
-          initialPois={initialPois}
-          supabaseStorageBase={process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''}
-        />
-      </section>
+      {/* Everything else, collapsible at the bottom */}
+      <details className="rounded-2xl border border-line bg-surface p-4 sm:p-5">
+        <summary className="cursor-pointer text-sm font-semibold text-ink">
+          POI Review & Nearby Management
+        </summary>
+        <div className="mt-4">
+          <CommunityNearbyPanel
+            communityId={community.id}
+            initialPois={initialPois}
+            supabaseStorageBase={process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''}
+          />
+        </div>
+      </details>
     </div>
   );
 }
