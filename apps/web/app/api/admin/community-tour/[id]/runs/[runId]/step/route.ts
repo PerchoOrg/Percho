@@ -22,6 +22,8 @@ import { buildResearchPrompt } from '@/lib/ai/community-tour-prompt';
 import { extractJsonObject } from '@/lib/utils/extract-json';
 
 export const runtime = 'nodejs';
+// Tag loops Gemini per photo (~3s each); 50 photos = 150s+ > default 60s.
+export const maxDuration = 300;
 
 interface RunRow {
   id: string;
@@ -361,32 +363,34 @@ async function runTag(sb: any, run: RunRow) {
     | { resolved?: Array<{ place_id: string }> }
     | undefined;
   const photosStep = run.step_results.photos as
-    | { results?: Record<string, { fetched?: number }> }
+    | { results?: Record<string, { fetched?: number }>; resolved_poi_ids?: string[] }
     | undefined;
   if (!resolve?.resolved?.length)
     return { error: 'no_resolved', message: 'Run the resolve step first.' };
 
-  const { tagPoiPhoto } = await import('@/lib/poi/vision-tagger');
-  const { data: photos } = await sb
+  // Scope to THIS run's photos — not any global untagged photo (cross-community
+  // bug fixed 2026-08-17). Fall back to all untagged for legacy runs.
+  const poiIds = photosStep?.resolved_poi_ids;
+  let query = sb
     .from('poi_photos')
     .select('id, poi_id, ai_tags, ai_score, tagged_at')
     .eq('tagged_at', null)
-    .limit(50);
+    .limit(15); // ponytail: batch cap so the loop fits under the 300s function timeout; re-click for more.
+  if (poiIds?.length) query = query.in('poi_id', poiIds);
+  const { data: photos } = await query;
+
+  const { tagPoiPhoto } = await import('@/lib/poi/vision-tagger');
   const tagged: string[] = [];
+  const errors: Record<string, string> = {};
   for (const photo of photos ?? []) {
-    if (!photosStep?.results) {
-      // tag everything untagged up to 50
-      const r = await tagPoiPhoto(photo.id);
-      if (r.ok) tagged.push(photo.id);
-    } else {
-      const r = await tagPoiPhoto(photo.id);
-      if (r.ok) tagged.push(photo.id);
-    }
+    const r = await tagPoiPhoto(photo.id);
+    if (r.ok) tagged.push(photo.id);
+    else if (r.error) errors[photo.id] = r.error;
   }
 
-  await saveStep(sb, run, 'tag', { tagged: tagged.length });
+  await saveStep(sb, run, 'tag', { tagged: tagged.length, total: (photos ?? []).length, errors });
   await setRunStatus(sb, run.id, 'generating');
-  return { tagged: tagged.length };
+  return { tagged: tagged.length, total: (photos ?? []).length, errors };
 }
 
 // ─── step: generate ─────────────────────────────────────────────────────────
