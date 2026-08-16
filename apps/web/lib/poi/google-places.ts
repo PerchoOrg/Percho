@@ -52,7 +52,7 @@ export const BUCKET_PLACES_TYPES: Record<string, readonly string[]> = {
  * Reverse index: Google `type` -> bucket. First bucket wins if a type maps
  * to more than one (Places returns types[] with the most specific first).
  */
-const PLACES_TYPE_TO_BUCKET: Record<string, string> = (() => {
+export const PLACES_TYPE_TO_BUCKET: Record<string, string> = (() => {
   const map: Record<string, string> = {};
   for (const [bucket, types] of Object.entries(BUCKET_PLACES_TYPES)) {
     for (const t of types) if (!map[t]) map[t] = bucket;

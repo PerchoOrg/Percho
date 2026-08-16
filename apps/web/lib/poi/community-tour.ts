@@ -16,7 +16,8 @@
  * admin page renders history instead of re-running.
  */
 
-import { haversineMeters, searchText } from './google-places';
+import { haversineMeters, searchNearby, searchText } from './google-places';
+import { PLACES_TYPE_TO_BUCKET } from './google-places';
 
 // ─── step 3: resolve + merge ────────────────────────────────────────────────
 
@@ -50,6 +51,15 @@ export interface ResolveResult {
     agent: 'claude' | 'codex' | 'both';
   }>;
   buckets: Record<string, number>;
+  /** Third dimension: top-rated Google places near the community. */
+  top_rated: ResolvedPoi[];
+}
+
+/** Map a raw Places result to a tour bucket via its primary type. */
+function bucketFromPlace(p: { primaryType?: string; types?: string[] }): string {
+  const t = p.primaryType ?? p.types?.[0];
+  if (!t) return 'other';
+  return PLACES_TYPE_TO_BUCKET[t] ?? 'other';
 }
 
 /** Per-bucket weight — schools first (GA buyer #1), S+A tiers, then C-tier. */
@@ -223,10 +233,57 @@ export async function resolveCandidates(
 
   resolved.sort((a, b) => b.score - a.score);
 
+  // ── Third dimension: top-rated Google places nearby (owner 2026-08-16).
+  // Places API v1 has no rating sort — pull 20 and pick the best-rated 10.
+  const seenIds = new Set(resolved.map((r) => r.place_id));
+  let topRated: ResolvedPoi[] = [];
+  try {
+    const nearby = await searchNearby({ center, radius: radiusMeters, maxResultCount: 20 });
+    topRated = nearby
+      .filter((p) => p.rating != null && p.userRatingCount != null && !seenIds.has(p.id))
+      .sort(
+        (a, b) =>
+          (b.rating ?? 0) - (a.rating ?? 0) ||
+          (b.userRatingCount ?? 0) - (a.userRatingCount ?? 0),
+      )
+      .slice(0, 10)
+      .map((p) => ({
+        place_id: p.id,
+        name: p.displayName?.text ?? '',
+        formatted_address: p.formattedAddress ?? null,
+        bucket: bucketFromPlace(p),
+        lat: p.location?.latitude ?? center.lat,
+        lng: p.location?.longitude ?? center.lng,
+        distance_m: p.location
+          ? Math.round(
+              haversineMeters(center, {
+                lat: p.location.latitude,
+                lng: p.location.longitude,
+              }),
+            )
+          : null,
+        agreement: 1 as const,
+        confidence: (p.rating ?? 0) >= 4.3 ? ('high' as const) : ('medium' as const),
+        source: 'google_top_rated',
+        why: `Top-rated nearby: ${p.rating?.toFixed(1)}★ (${p.userRatingCount} reviews)`,
+        shot_note: '',
+        photo_count: p.photos?.length ?? 0,
+        rating: p.rating ?? null,
+        user_ratings_total: p.userRatingCount ?? null,
+        score: scorePoi({ bucket: bucketFromPlace(p), agreement: 1, confidence: 'high', photo_count: p.photos?.length ?? 0 }),
+      }));
+    resolved.push(...topRated);
+  } catch {
+    // Nearby ranking is a bonus dimension — a failure here must not sink the
+    // agent-resolved results.
+  }
+
+  resolved.sort((a, b) => b.score - a.score);
+
   const buckets: Record<string, number> = {};
   for (const r of resolved) buckets[r.bucket] = (buckets[r.bucket] ?? 0) + 1;
 
-  return { resolved, dropped, buckets };
+  return { resolved, dropped, buckets, top_rated: topRated };
 }
 
 // ─── step 6: duration by photo category ─────────────────────────────────────
