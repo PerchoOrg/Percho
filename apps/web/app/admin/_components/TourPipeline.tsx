@@ -281,12 +281,14 @@ function StepResult({ s, result }: { s: StepName; result: Record<string, unknown
           parsed?: { pois?: unknown[] } | null;
           raw?: string | null;
           error?: string | null;
+          usage?: { input_tokens?: number; output_tokens?: number; total_cost_usd?: number } | null;
         };
         codex?: {
           ok?: boolean;
           parsed?: { pois?: unknown[] } | null;
           raw?: string | null;
           error?: string | null;
+          usage?: { input_tokens?: number; output_tokens?: number; total_cost_usd?: number } | null;
         };
       };
       community?: { name?: string };
@@ -295,12 +297,29 @@ function StepResult({ s, result }: { s: StepName; result: Record<string, unknown
     const codexPois = r.agents?.codex?.parsed?.pois?.length ?? 0;
     return (
       <div className="space-y-2">
-        <div className="flex gap-3">
+        <div className="flex flex-wrap gap-3">
           <span className={r.agents?.claude?.ok ? 'text-emerald-600' : 'text-red-600'}>
             claude {r.agents?.claude?.ok ? `${claudePois} POIs` : 'failed'}
+            {r.agents?.claude?.usage && (
+              <span className="text-ink3">
+                {' '}
+                · {r.agents.claude.usage.input_tokens?.toLocaleString()} in /{' '}
+                {r.agents.claude.usage.output_tokens?.toLocaleString()} out
+                {r.agents.claude.usage.total_cost_usd
+                  ? ` · $${r.agents.claude.usage.total_cost_usd.toFixed(4)}`
+                  : ''}
+              </span>
+            )}
           </span>
           <span className={r.agents?.codex?.ok ? 'text-emerald-600' : 'text-red-600'}>
             codex {r.agents?.codex?.ok ? `${codexPois} POIs` : 'failed'}
+            {r.agents?.codex?.usage && (
+              <span className="text-ink3">
+                {' '}
+                · {r.agents.codex.usage.input_tokens?.toLocaleString()} in /{' '}
+                {r.agents.codex.usage.output_tokens?.toLocaleString()} out
+              </span>
+            )}
           </span>
         </div>
         {r.prompt && (

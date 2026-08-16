@@ -35,18 +35,23 @@ function log(...args: unknown[]) {
 async function runAgent(
   agent: 'claude' | 'codex',
   prompt: string,
-): Promise<{ ok: boolean; raw: string; error?: string }> {
+): Promise<{
+  ok: boolean;
+  raw: string;
+  error?: string;
+  usage?: { input_tokens?: number; output_tokens?: number; total_cost_usd?: number };
+}> {
   const maxTurns = Number(process.env[`${agent.toUpperCase()}_MAX_TURNS`] ?? 4);
   try {
     if (agent === 'claude') {
       // Pro OAuth; print mode skips dialogs. NO web tools — claude answers
       // from its own knowledge in ~30-60s. codex does the deep web research;
       // claude provides a fast second perspective. max-turns 1 so it can't
-      // loop.
+      // loop. stream-json --verbose emits a `result` event with usage+cost.
       const { stdout } = await new Promise<{ stdout: string }>((resolve, reject) => {
         const child = execFile(
           'claude',
-          ['-p', prompt, '--max-turns', '1'],
+          ['-p', prompt, '--max-turns', '1', '--output-format', 'stream-json', '--verbose'],
           { timeout: 60_000, maxBuffer: 8 * 1024 * 1024, cwd: REPO_ROOT },
           (err, stdout) => {
             if (err) reject(err);
@@ -55,7 +60,8 @@ async function runAgent(
         );
         child.stdin?.end();
       });
-      return { ok: true, raw: stdout };
+      const usage = extractUsage(stdout, 'claude');
+      return { ok: true, raw: stdout, usage };
     }
     // codex: needs a git repo; scratch dir is fine. danger-full-access because
     // the Hermes gateway context breaks bubblewrap (see codex skill).
@@ -64,6 +70,7 @@ async function runAgent(
         'codex',
         [
           'exec',
+          '--json',
           '--sandbox',
           'danger-full-access',
           `Search the web and return JSON only. ${prompt}`,
@@ -76,11 +83,67 @@ async function runAgent(
       );
       child.stdin?.end();
     });
-    return { ok: true, raw: stdout };
+    const usage = extractUsage(stdout, 'codex');
+    return { ok: true, raw: stdout, usage };
   } catch (err) {
     const e = err as { message?: string; stderr?: string };
     return { ok: false, raw: '', error: (e.stderr ?? e.message ?? String(err)).slice(0, 500) };
   }
+}
+
+/** Pull token/cost numbers out of the CLI's JSONL event stream. */
+function extractUsage(
+  stdout: string,
+  agent: 'claude' | 'codex',
+): { input_tokens?: number; output_tokens?: number; total_cost_usd?: number } | undefined {
+  let lastUsage: Record<string, unknown> | undefined;
+  let lastCost: number | undefined;
+  for (const line of stdout.split('\n')) {
+    if (!line.trim() || !line.trim().startsWith('{')) continue;
+    try {
+      const ev = JSON.parse(line);
+      if (agent === 'claude' && ev.type === 'result' && ev.usage) {
+        lastUsage = ev.usage as Record<string, unknown>;
+        lastCost = ev.total_cost_usd;
+      }
+      if (agent === 'codex' && ev.type === 'turn.completed' && ev.usage) {
+        lastUsage = ev.usage as Record<string, unknown>;
+      }
+    } catch {
+      // not JSON — skip
+    }
+  }
+  if (!lastUsage) return undefined;
+  return {
+    input_tokens: (lastUsage.input_tokens as number | undefined) ?? 0,
+    output_tokens: (lastUsage.output_tokens as number | undefined) ?? 0,
+    total_cost_usd: lastCost,
+  };
+}
+
+/**
+ * Extract the agent's final answer text from the JSONL event stream, so the
+ * stored raw is the actual JSON the prompt asked for, not CLI plumbing.
+ */
+function extractAnswerText(stdout: string, agent: 'claude' | 'codex'): string {
+  const parts: string[] = [];
+  for (const line of stdout.split('\n')) {
+    if (!line.trim() || !line.trim().startsWith('{')) continue;
+    try {
+      const ev = JSON.parse(line);
+      if (agent === 'claude' && ev.type === 'assistant') {
+        for (const c of ev.message?.content ?? []) {
+          if (c.type === 'text') parts.push(c.text ?? '');
+        }
+      }
+      if (agent === 'codex' && ev.type === 'item.completed' && ev.item?.type === 'agent_message') {
+        parts.push(ev.item.text ?? '');
+      }
+    } catch {
+      // not JSON — skip
+    }
+  }
+  return parts.join('\n');
 }
 
 function parseResearch(raw: string): { narrative_angle?: string; pois?: unknown[] } | null {
@@ -139,15 +202,19 @@ async function main() {
     agents: {
       claude: {
         ok: claudeRes.ok,
-        raw: claudeRes.ok ? claudeRes.raw.slice(0, 20_000) : null,
-        parsed: parseResearch(claudeRes.raw),
+        raw: claudeRes.ok
+          ? extractAnswerText(claudeRes.raw, 'claude').slice(0, 20_000)
+          : null,
+        parsed: parseResearch(extractAnswerText(claudeRes.raw, 'claude')),
         error: claudeRes.error ?? null,
+        usage: claudeRes.usage ?? null,
       },
       codex: {
         ok: codexRes.ok,
-        raw: codexRes.ok ? codexRes.raw.slice(0, 20_000) : null,
-        parsed: parseResearch(codexRes.raw),
+        raw: codexRes.ok ? extractAnswerText(codexRes.raw, 'codex').slice(0, 20_000) : null,
+        parsed: parseResearch(extractAnswerText(codexRes.raw, 'codex')),
         error: codexRes.error ?? null,
+        usage: codexRes.usage ?? null,
       },
     },
   };
