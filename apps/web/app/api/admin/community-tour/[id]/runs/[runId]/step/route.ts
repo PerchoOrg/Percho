@@ -306,6 +306,7 @@ async function runPhotos(sb: any, run: RunRow) {
 
   const { fetchPhotosForCommunityPoi } = await import('@/lib/poi/community-actions');
   const results: Record<string, unknown> = {};
+  const resolvedPoiIds: string[] = [];
   for (const poi of resolve.resolved) {
     // Agent-discovered POIs may not be in nearby scope yet — upsert `pois` by
     // google_place_id and link to this community before fetching photos.
@@ -329,6 +330,7 @@ async function runPhotos(sb: any, run: RunRow) {
       }
       poiId = inserted.id;
     }
+    resolvedPoiIds.push(poiId!);
     // Ensure community link (candidate status — admin reviews later).
     const { data: link } = await sb
       .from('community_pois')
@@ -347,7 +349,7 @@ async function runPhotos(sb: any, run: RunRow) {
     const r = await fetchPhotosForCommunityPoi(run.community_id, poiId!, { max: 3 });
     results[poi.place_id] = r;
   }
-  await saveStep(sb, run, 'photos', { results });
+  await saveStep(sb, run, 'photos', { results, resolved_poi_ids: resolvedPoiIds });
   await setRunStatus(sb, run.id, 'tagging');
   return { ok: true, poiCount: Object.keys(results).length };
 }

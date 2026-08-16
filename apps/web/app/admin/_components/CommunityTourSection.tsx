@@ -163,6 +163,9 @@ export function CommunityTourSection({
         zip={zip}
         lat={lat}
         lng={lng}
+        storageBase={storageBase}
+        bucket={bucket}
+        photos={photos}
       />
 
       {/* 3 · Big table: every photo with all info + clip status + generate */}

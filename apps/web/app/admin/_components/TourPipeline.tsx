@@ -22,6 +22,7 @@
 
 import { CheckCircle2, Loader2, Play, RefreshCw, Sparkles } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
+import { PhotoTable, type PhotoRow } from './PhotoTable';
 
 type StepName = 'research' | 'resolve' | 'photos' | 'tag' | 'generate' | 'assemble';
 
@@ -50,6 +51,9 @@ export function TourPipeline({
   zip,
   lat,
   lng,
+  storageBase,
+  bucket,
+  photos,
 }: {
   communityId: string;
   communityName: string;
@@ -58,6 +62,9 @@ export function TourPipeline({
   zip: string | null;
   lat: number | null;
   lng: number | null;
+  storageBase: string;
+  bucket: string;
+  photos: PhotoRow[];
 }) {
   const [runs, setRuns] = useState<Run[]>([]);
   const [selectedRun, setSelectedRun] = useState<string | null>(null);
@@ -296,7 +303,13 @@ export function TourPipeline({
 
             {done && result && (
               <div className="mt-2 text-xs text-ink2">
-                <StepResult s={s.name} result={result} />
+                <StepResult
+                  s={s.name}
+                  result={result}
+                  storageBase={storageBase}
+                  bucket={bucket}
+                  photos={photos}
+                />
               </div>
             )}
             {!done && !result && <div className="mt-2 text-xs text-ink3">Not run yet.</div>}
@@ -307,7 +320,19 @@ export function TourPipeline({
   );
 }
 
-function StepResult({ s, result }: { s: StepName; result: Record<string, unknown> }) {
+function StepResult({
+  s,
+  result,
+  storageBase,
+  bucket,
+  photos,
+}: {
+  s: StepName;
+  result: Record<string, unknown>;
+  storageBase: string;
+  bucket: string;
+  photos: PhotoRow[];
+}) {
   if (s === 'research') {
     const r = result as {
       prompt?: string;
@@ -496,13 +521,31 @@ function StepResult({ s, result }: { s: StepName; result: Record<string, unknown
   if (s === 'photos') {
     const r = result as {
       results?: Record<string, { fetched?: number; reused?: number; skipped?: number }>;
+      resolved_poi_ids?: string[];
     };
     const vals = Object.values(r.results ?? {});
     const fetched = vals.reduce((a, v) => a + (v.fetched ?? 0), 0);
     const reused = vals.reduce((a, v) => a + (v.reused ?? 0), 0);
+    const poiIds = new Set(r.resolved_poi_ids ?? []);
+    // Same shape as the big table below: every photo of the resolve-surviving
+    // POIs, filtered to this run's POI set.
+    const stepPhotos = (photos ?? []).filter((p) => p.poi_id && poiIds.has(p.poi_id));
     return (
-      <div>
-        {fetched} fetched · {reused} reused
+      <div className="space-y-2">
+        <div className="text-xs">
+          {fetched} fetched · {reused} reused · {stepPhotos.length} photos across{' '}
+          {poiIds.size} resolved POIs
+        </div>
+        {stepPhotos.length > 0 ? (
+          <PhotoTable
+            table="poi_photos"
+            storageBase={storageBase}
+            bucket={bucket}
+            photos={stepPhotos}
+          />
+        ) : (
+          <div className="text-xs text-ink3">No photos fetched for this run yet.</div>
+        )}
       </div>
     );
   }
