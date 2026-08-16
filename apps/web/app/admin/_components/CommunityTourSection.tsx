@@ -168,15 +168,23 @@ export function CommunityTourSection({
         photos={photos}
       />
 
-      {/* 3 · Big table: every photo with all info + clip status + generate */}
-      <PhotoTable
-        table="poi_photos"
-        storageBase={storageBase}
-        bucket={bucket}
-        photos={enriched}
-        selection={{ selected, onToggle: toggle, onToggleMany: toggleMany }}
-        onGenerateClip={generateClip}
-      />
+      {/* 3 · Big table: every photo with all info + clip status + generate.
+           Collapsible — too long to keep open (owner 2026-08-17). */}
+      <details className="rounded-2xl border border-line bg-surface">
+        <summary className="cursor-pointer p-4 text-sm font-semibold text-ink">
+          Photos ({enriched.length})
+        </summary>
+        <div className="px-4 pb-4">
+          <PhotoTable
+            table="poi_photos"
+            storageBase={storageBase}
+            bucket={bucket}
+            photos={enriched}
+            selection={{ selected, onToggle: toggle, onToggleMany: toggleMany }}
+            onGenerateClip={generateClip}
+          />
+        </div>
+      </details>
     </div>
   );
 }
