@@ -46,7 +46,7 @@ async function runAgent(
         const child = execFile(
           'claude',
           ['-p', prompt, '--allowedTools', 'WebSearch,WebFetch', '--max-turns', String(maxTurns)],
-          { timeout: 8 * 60_000, maxBuffer: 8 * 1024 * 1024, cwd: REPO_ROOT },
+          { timeout: 15 * 60_000, maxBuffer: 8 * 1024 * 1024, cwd: REPO_ROOT },
           (err, stdout) => {
             if (err) reject(err);
             else resolve({ stdout });
