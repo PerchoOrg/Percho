@@ -12,6 +12,7 @@
     "typecheck": "tsc --noEmit",
     "db:types": "supabase gen types typescript --local > lib/supabase/database.types.ts",
     "seedance-worker": "tsx ../../scripts/seedance-worker/worker.ts",
+    "community-tour-agent": "tsx ../../scripts/community-tour/agent-research.ts",
     "db:push": "supabase db push",
     "db:reset": "supabase db reset",
     "test": "vitest run",

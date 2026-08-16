@@ -210,6 +210,7 @@ async function tick(): Promise<void> {
     return;
   }
 
+  // ── ai_tour_videos (existing multi-photo path) ──
   const { data } = (await sb
     .from('ai_tour_videos')
     .select('*')
@@ -245,6 +246,138 @@ async function tick(): Promise<void> {
       }
     } catch (err) {
       await fail(row.id, err);
+    }
+  }
+
+  // ── photo_clips (per-photo cache, single-photo jobs) ──
+  if (done >= MAX_JOBS_PER_TICK) return;
+  await processPhotoClips();
+}
+
+type PhotoClipRow = {
+  id: string;
+  photo_id: string;
+  engine: string;
+  duration_s: number;
+  status: string;
+  polling_url: string | null;
+  storage_path: string | null;
+  updated_at: string;
+};
+
+async function processPhotoClips(): Promise<void> {
+  const { data } = (await sb
+    .from('photo_clips')
+    .select('*')
+    .in('status', ['pending', 'processing'])
+    .order('created_at', { ascending: true })
+    .limit(20)) as { data: PhotoClipRow[] | null };
+
+  let done = 0;
+  for (const row of data ?? []) {
+    if (done >= MAX_JOBS_PER_TICK) break;
+    try {
+      if (row.status === 'pending') {
+        // Atomic claim
+        const { data: claimed } = (await sb
+          .from('photo_clips')
+          .update({ status: 'submitting', updated_at: new Date().toISOString() })
+          .eq('id', row.id)
+          .eq('status', 'pending')
+          .select('id')) as { data: Array<{ id: string }> | null };
+        if ((claimed ?? []).length === 0) continue;
+
+        const { data: photo } = (await sb
+          .from('poi_photos')
+          .select('id, storage_path, enhanced_path, enhanced_status')
+          .eq('id', row.photo_id)
+          .maybeSingle()) as {
+          data: {
+            id: string;
+            storage_path: string;
+            enhanced_path: string | null;
+            enhanced_status: string;
+          } | null;
+        };
+        if (!photo) throw new Error(`photo ${row.photo_id} not found`);
+
+        const path =
+          photo.enhanced_status === 'approved' && photo.enhanced_path
+            ? photo.enhanced_path
+            : photo.storage_path;
+        const publicBase = sb.storage.from(PHOTO_BUCKET).getPublicUrl('__probe__').data.publicUrl.replace(
+          '/__probe__',
+          '',
+        );
+
+        // Single photo → first-frame control (no inter-frame geometry risk).
+        const job = await submitVideo({
+          prompt: 'A slow, cinematic push-in on this scene. Warm natural light. No text, no people in close-up.',
+          frameImageUrls: [`${publicBase}/${path}`],
+          durationS: Math.min(Math.max(Math.round(row.duration_s ?? 4), 4), 15),
+          aspectRatio: AI_VIDEO_ASPECT,
+          mode: 'frames',
+        });
+
+        await sb
+          .from('photo_clips')
+          .update({
+            status: 'processing',
+            provider_job_id: job.id,
+            polling_url: job.pollingUrl,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', row.id);
+        log('photo-clip submitted', row.id, 'job', job.id);
+      } else {
+        if (!row.polling_url) {
+          const ageMs = Date.now() - new Date(row.updated_at).getTime();
+          if (ageMs > STALE_PROCESSING_MS) {
+            await sb
+              .from('photo_clips')
+              .update({ status: 'pending', updated_at: new Date().toISOString() })
+              .eq('id', row.id);
+            log('reset stale photo-clip -> pending', row.id);
+          }
+          continue;
+        }
+        const state = await pollVideo(row.polling_url);
+        if (state.status === 'processing') continue;
+        if (state.status === 'failed') {
+          await sb
+            .from('photo_clips')
+            .update({ status: 'failed', error: state.error.slice(0, 500), updated_at: new Date().toISOString() })
+            .eq('id', row.id);
+          log('photo-clip failed', row.id, state.error.slice(0, 200));
+          continue;
+        }
+        const mp4 = await downloadVideo(state.videoUrl);
+        const storagePath = `clips/${row.photo_id}.mp4`;
+        const transcode = await transcodeForStreaming(mp4);
+        const { error: upErr } = await sb.storage
+          .from(AI_VIDEO_BUCKET)
+          .upload(storagePath, transcode, { contentType: 'video/mp4', upsert: true });
+        if (upErr) throw new Error(`storage upload failed: ${(upErr as { message: string }).message}`);
+        await sb
+          .from('photo_clips')
+          .update({
+            status: 'ready',
+            storage_path: storagePath,
+            cost_usd: state.costUsd,
+            error: null,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', row.id);
+        log('photo-clip ready', row.id, storagePath);
+      }
+      done += 1;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      log('photo-clip error', row.id, message.slice(0, 300));
+      await sb
+        .from('photo_clips')
+        .update({ status: 'failed', error: message.slice(0, 500), updated_at: new Date().toISOString() })
+        .eq('id', row.id);
     }
   }
 }

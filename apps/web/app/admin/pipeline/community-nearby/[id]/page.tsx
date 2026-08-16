@@ -10,6 +10,7 @@ import { loadNearbyPoisForCommunity } from '@/lib/poi/community-actions';
 import { createServiceClient } from '@/lib/supabase/server';
 import { notFound } from 'next/navigation';
 import { AiVideoSection } from '../../../_components/AiVideoSection';
+import { TourPipeline } from '../../../_components/TourPipeline';
 
 export const dynamic = 'force-dynamic';
 
@@ -64,6 +65,15 @@ export default async function AdminCommunityNearbyPage({
         storageBase={process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''}
         bucket="listing-photos"
         photos={photos}
+      />
+
+      {/* Community Tour pipeline — 8-step orchestration with per-step results */}
+      <TourPipeline
+        communityId={community.id}
+        communityName={community.name}
+        city={community.city}
+        state={community.state}
+        storageBase={process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''}
       />
 
       <section className="rounded-2xl border border-line bg-surface p-4 sm:p-5">
