@@ -48,7 +48,7 @@ export interface ResolveResult {
     name: string;
     bucket: string;
     reason: string;
-    agent: 'claude' | 'codex' | 'both';
+    agent: 'gemini_a' | 'gemini_b' | 'both';
   }>;
   buckets: Record<string, number>;
   /** Third dimension: top-rated Google places near the community. */
@@ -109,7 +109,7 @@ export type CandidateInput = {
   shot_note: string;
   source: string;
   confidence: 'high' | 'medium';
-  agent: 'claude' | 'codex';
+  agent: 'gemini_a' | 'gemini_b';
 };
 
 /**
@@ -143,11 +143,11 @@ export async function resolveCandidates(
         name: first.name,
         bucket: first.bucket,
         reason: `places error: ${(err as Error).message}`,
-        agent: group.some((c) => c.agent === 'claude')
-          ? group.some((c) => c.agent === 'codex')
+        agent: group.some((c) => c.agent === 'gemini_a')
+          ? group.some((c) => c.agent === 'gemini_b')
             ? 'both'
-            : 'claude'
-          : 'codex',
+            : 'gemini_a'
+          : 'gemini_b',
       });
       continue;
     }
@@ -157,11 +157,11 @@ export async function resolveCandidates(
         name: first.name,
         bucket: first.bucket,
         reason: 'no google result',
-        agent: group.some((c) => c.agent === 'claude')
-          ? group.some((c) => c.agent === 'codex')
+        agent: group.some((c) => c.agent === 'gemini_a')
+          ? group.some((c) => c.agent === 'gemini_b')
             ? 'both'
-            : 'claude'
-          : 'codex',
+            : 'gemini_a'
+          : 'gemini_b',
       });
       continue;
     }
@@ -170,11 +170,11 @@ export async function resolveCandidates(
         name: first.name,
         bucket: first.bucket,
         reason: `not operational (${place.businessStatus})`,
-        agent: group.some((c) => c.agent === 'claude')
-          ? group.some((c) => c.agent === 'codex')
+        agent: group.some((c) => c.agent === 'gemini_a')
+          ? group.some((c) => c.agent === 'gemini_b')
             ? 'both'
-            : 'claude'
-          : 'codex',
+            : 'gemini_a'
+          : 'gemini_b',
       });
       continue;
     }
@@ -188,11 +188,11 @@ export async function resolveCandidates(
           name: first.name,
           bucket: first.bucket,
           reason: `too far (${Math.round(d / 1000)}km)`,
-          agent: group.some((c) => c.agent === 'claude')
-            ? group.some((c) => c.agent === 'codex')
+          agent: group.some((c) => c.agent === 'gemini_a')
+            ? group.some((c) => c.agent === 'gemini_b')
               ? 'both'
-              : 'claude'
-            : 'codex',
+              : 'gemini_a'
+            : 'gemini_b',
         });
         continue;
       }

@@ -100,8 +100,8 @@ async function runResolve(sb: any, run: RunRow) {
   const research = run.step_results.agent_research as
     | {
         agents: {
-          claude?: { ok?: boolean; parsed?: { pois?: unknown[] } | null };
-          codex?: { ok?: boolean; parsed?: { pois?: unknown[] } | null };
+          gemini_a?: { ok?: boolean; parsed?: { pois?: unknown[] } | null };
+          gemini_b?: { ok?: boolean; parsed?: { pois?: unknown[] } | null };
         };
         community?: { lat?: number | null; lng?: number | null };
       }
@@ -119,10 +119,10 @@ async function runResolve(sb: any, run: RunRow) {
     shot_note: string;
     source: string;
     confidence: 'high' | 'medium';
-    agent: 'claude' | 'codex';
+    agent: 'gemini_a' | 'gemini_b';
   }> = [];
 
-  for (const agent of ['claude', 'codex'] as const) {
+  for (const agent of ['gemini_a', 'gemini_b'] as const) {
     const a = research.agents[agent];
     if (!a?.ok || !a.parsed?.pois) continue;
     for (const raw of a.parsed.pois) {

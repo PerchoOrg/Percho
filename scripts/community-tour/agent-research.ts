@@ -1,25 +1,24 @@
 /**
- * Dual-agent community research — LOCAL DEV ONLY.
+ * Dual-agent community research via Gemini Grounding with Google Search.
  *
- * Runs the same generic prompt through claude code and codex CLIs
- * independently (they must not see each other's output), then writes both
- * JSON results to a single `step_results.agent_research` blob for the admin
- * UI to render and the resolve step to consume.
+ * Runs the same research prompt through two Gemini calls (gemini_a / gemini_b,
+ * slightly different tempering so they diverge), each with Google Search
+ * grounding so every POI is backed by a real source. Writes both JSON results
+ * to a single `step_results.agent_research` blob for the admin UI to render
+ * and the resolve step to consume.
  *
- * Why local: both CLIs run on this host (claude Pro OAuth + codex OAuth),
- * not on Vercel. The API route that triggers this step is expected to run
- * under `pnpm web:dev` on the Mac; on Vercel it returns a clear error.
+ * Replaces the claude/codex CLI path (owner 2026-08-16): the CLIs' OAuth
+ * sessions/tool permissions were flaky and they cost real money; Gemini
+ * grounding is a plain HTTP call with per-call usage metadata.
  *
  * Usage:
  *   pnpm --filter @percho/web community-tour-agent <communityId> <runId>
  *
  * Env (repo-root .env.local, loaded like the seedance worker):
  *   SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY  (worker uses NEXT_PUBLIC_…)
- *   CLAUDE_CLI_MAX_TURNS (default 20), CODEX_MAX_TURNS (unused — codex CLI
- *   has no max-turns flag; total time is capped by the 15min execFile timeout)
+ *   GEMINI_API_KEY / GEMINI_MODEL             (default gemini-3.1-flash-lite)
  */
 
-import { execFile } from 'node:child_process';
 import { loadEnv } from '../seedance-worker/loadEnv.js';
 import { buildResearchPrompt } from '../../apps/web/lib/ai/community-tour-prompt.js';
 import { extractJsonObject } from '../../apps/web/lib/utils/extract-json.js';
@@ -27,162 +26,89 @@ import { createServiceClient } from '../../apps/web/lib/supabase/server.js';
 
 loadEnv();
 
-const REPO_ROOT = new URL('../../', import.meta.url).pathname;
-/** Neutral cwd for claude chat-mode — no repo CLAUDE.md/skills/MCP pickup. */
-const CHAT_DIR = process.env.HOME ? `${process.env.HOME}/chat` : '/tmp';
-
 function log(...args: unknown[]) {
   console.log(new Date().toISOString(), ...args);
 }
 
-/** Map execFile error codes to a human-readable failure label. */
-function errLabel(e: { code?: string | number }): string {
-  switch (e.code) {
-    case 'ETIMEDOUT':
-      return 'timeout';
-    case 'ENOENT':
-      return 'cli_not_found';
-    default:
-      return `error_${String(e.code ?? 'unknown')}`;
-  }
+const GEMINI_API_BASE =
+  'https://generativelanguage.googleapis.com/v1beta/models';
+
+function geminiModel(): string {
+  return process.env.GEMINI_MODEL ?? 'gemini-3.1-flash-lite';
 }
 
-async function runAgent(
-  agent: 'claude' | 'codex',
-  prompt: string,
-): Promise<{
+function geminiApiKey(): string {
+  const k = process.env.GEMINI_API_KEY;
+  if (!k) throw new Error('GEMINI_API_KEY not set');
+  return k;
+}
+
+async function callGemini(opts: {
+  prompt: string;
+  temperature: number;
+  maxOutputTokens: number;
+}): Promise<{
   ok: boolean;
-  raw: string;
+  text: string;
   error?: string;
-  usage?: { input_tokens?: number; output_tokens?: number; total_cost_usd?: number };
+  usage?: { input_tokens?: number; output_tokens?: number };
+  sources?: string[];
 }> {
-  const maxTurns = Number(process.env.CLAUDE_CLI_MAX_TURNS ?? 20);
   try {
-    if (agent === 'claude') {
-      // Pro OAuth. Chat-mode research (owner 2026-08-16): cwd=~/chat avoids
-      // repo CLAUDE.md/skills/MCP discovery; --disallowedTools physically
-      // removes Edit/Write/Bash/NotebookEdit so it can only answer (WebSearch/
-      // WebFetch stay — that's the research task). --bare would skip auth
-      // (apiKeySource:none), so we don't use it. stream-json --verbose emits
-      // a `result` event with usage+cost.
-      const { stdout } = await new Promise<{ stdout: string }>((resolve, reject) => {
-        const child = execFile(
-          'claude',
-          [
-            '-p',
-            prompt,
-            '--allowedTools',
-            'WebSearch,WebFetch',
-            '--disallowedTools',
-            'Edit,Write,Bash,NotebookEdit',
-            '--max-turns',
-            maxTurns.toString(),
-            '--output-format',
-            'stream-json',
-            '--verbose',
-          ],
-          { timeout: 15 * 60_000, maxBuffer: 8 * 1024 * 1024, cwd: CHAT_DIR },
-          (err, stdout) => {
-            if (err) reject(err);
-            else resolve({ stdout });
-          },
-        );
-        child.stdin?.end();
-      });
-      const usage = extractUsage(stdout, 'claude');
-      return { ok: true, raw: stdout, usage };
-    }
-    // codex: needs a git repo; scratch dir is fine. danger-full-access because
-    // the Hermes gateway context breaks bubblewrap (see codex skill).
-    // Chat-mode preamble: answer directly, no repo/file/command side effects;
-    // web search IS allowed (that's the research task).
-    const CHAT_MODE = [
-      '进入对话模式。默认直接回答我的问题，不读取项目文件、不运行命令、不修改文件、不创建计划；可以用 web 搜索获取信息。回答自然、简洁，保留上下文；信息不足时先问我一个关键问题。',
-    ].join('\n');
-    const { stdout } = await new Promise<{ stdout: string }>((resolve, reject) => {
-      const child = execFile(
-        'codex',
-        [
-          'exec',
-          '--json',
-          '--skip-git-repo-check',
-          '--sandbox',
-          'danger-full-access',
-          `${CHAT_MODE}\n\nSearch the web and return JSON only. ${prompt}`,
-        ],
-        { timeout: 15 * 60_000, maxBuffer: 8 * 1024 * 1024, cwd: CHAT_DIR },
-        (err, stdout) => {
-          if (err) reject(err);
-          else resolve({ stdout });
+    const url = `${GEMINI_API_BASE}/${geminiModel()}:generateContent`;
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'x-goog-api-key': geminiApiKey(),
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        contents: [{ role: 'user', parts: [{ text: opts.prompt }] }],
+        tools: [{ google_search: {} }],
+        generationConfig: {
+          temperature: opts.temperature,
+          maxOutputTokens: opts.maxOutputTokens,
         },
-      );
-      child.stdin?.end();
+      }),
     });
-    const usage = extractUsage(stdout, 'codex');
-    return { ok: true, raw: stdout, usage };
+    if (!res.ok) {
+      const body = await res.text();
+      return { ok: false, text: '', error: `Gemini HTTP ${res.status}: ${body.slice(0, 400)}` };
+    }
+    const data = (await res.json()) as {
+      candidates?: Array<{
+        content?: { parts?: { text?: string }[] };
+        groundingMetadata?: {
+          groundingChunks?: Array<{ web?: { uri?: string; title?: string } }>;
+        };
+      }>;
+      usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number };
+    };
+    const cand = data.candidates?.[0];
+    const text = cand?.content?.parts?.find((p) => p.text)?.text ?? '';
+    if (!text) {
+      return { ok: false, text: '', error: 'Gemini returned no text content' };
+    }
+    const sources = (cand?.groundingMetadata?.groundingChunks ?? [])
+      .map((c) => c.web?.uri)
+      .filter((u): u is string => !!u)
+      .slice(0, 20);
+    return {
+      ok: true,
+      text,
+      usage: {
+        input_tokens: data.usageMetadata?.promptTokenCount ?? 0,
+        output_tokens: data.usageMetadata?.candidatesTokenCount ?? 0,
+      },
+      sources,
+    };
   } catch (err) {
-    const e = err as { message?: string; stderr?: string; code?: string | number };
     return {
       ok: false,
-      raw: '',
-      error: `${errLabel(e)}: ${(e.stderr ?? e.message ?? String(err)).slice(0, 500)}`,
+      text: '',
+      error: (err as Error).message.slice(0, 500),
     };
   }
-}
-
-/** Pull token/cost numbers out of the CLI's JSONL event stream. */
-function extractUsage(
-  stdout: string,
-  agent: 'claude' | 'codex',
-): { input_tokens?: number; output_tokens?: number; total_cost_usd?: number } | undefined {
-  let lastUsage: Record<string, unknown> | undefined;
-  let lastCost: number | undefined;
-  for (const line of stdout.split('\n')) {
-    if (!line.trim() || !line.trim().startsWith('{')) continue;
-    try {
-      const ev = JSON.parse(line);
-      if (agent === 'claude' && ev.type === 'result' && ev.usage) {
-        lastUsage = ev.usage as Record<string, unknown>;
-        lastCost = ev.total_cost_usd;
-      }
-      if (agent === 'codex' && ev.type === 'turn.completed' && ev.usage) {
-        lastUsage = ev.usage as Record<string, unknown>;
-      }
-    } catch {
-      // not JSON — skip
-    }
-  }
-  if (!lastUsage) return undefined;
-  return {
-    input_tokens: (lastUsage.input_tokens as number | undefined) ?? 0,
-    output_tokens: (lastUsage.output_tokens as number | undefined) ?? 0,
-    total_cost_usd: lastCost,
-  };
-}
-
-/**
- * Extract the agent's final answer text from the JSONL event stream, so the
- * stored raw is the actual JSON the prompt asked for, not CLI plumbing.
- */
-function extractAnswerText(stdout: string, agent: 'claude' | 'codex'): string {
-  const parts: string[] = [];
-  for (const line of stdout.split('\n')) {
-    if (!line.trim() || !line.trim().startsWith('{')) continue;
-    try {
-      const ev = JSON.parse(line);
-      if (agent === 'claude' && ev.type === 'assistant') {
-        for (const c of ev.message?.content ?? []) {
-          if (c.type === 'text') parts.push(c.text ?? '');
-        }
-      }
-      if (agent === 'codex' && ev.type === 'item.completed' && ev.item?.type === 'agent_message') {
-        parts.push(ev.item.text ?? '');
-      }
-    } catch {
-      // not JSON — skip
-    }
-  }
-  return parts.join('\n');
 }
 
 function parseResearch(raw: string): { narrative_angle?: string; pois?: unknown[] } | null {
@@ -251,7 +177,7 @@ async function main() {
       .catch((err: Error) => log('progress write failed (non-fatal):', err.message));
     return progressChain;
   };
-  const reportAgent = (agent: 'claude' | 'codex', ok: boolean, error?: string) => {
+  const reportAgent = (agent: 'gemini_a' | 'gemini_b', ok: boolean, error?: string) => {
     agentsDone.push(agent);
     queueProgress({
       research_progress: {
@@ -268,19 +194,29 @@ async function main() {
     research_progress: { status: 'running', started_at: startedAt, agents_done: [] },
   });
 
-  let claudeRes: Awaited<ReturnType<typeof runAgent>>;
-  let codexRes: Awaited<ReturnType<typeof runAgent>>;
+  const AGENTS: Array<{
+    name: 'gemini_a' | 'gemini_b';
+    temperature: number;
+  }> = [
+    { name: 'gemini_a', temperature: 0.4 },
+    { name: 'gemini_b', temperature: 0.9 },
+  ];
+
+  let aRes: Awaited<ReturnType<typeof callGemini>>;
+  let bRes: Awaited<ReturnType<typeof callGemini>>;
   try {
-    [claudeRes, codexRes] = await Promise.all([
-      runAgent('claude', prompt).then((r) => {
-        reportAgent('claude', r.ok, r.error);
-        return r;
-      }),
-      runAgent('codex', prompt).then((r) => {
-        reportAgent('codex', r.ok, r.error);
-        return r;
-      }),
-    ]);
+    [aRes, bRes] = await Promise.all(
+      AGENTS.map(({ name, temperature }) =>
+        callGemini({
+          prompt,
+          temperature,
+          maxOutputTokens: 8000,
+        }).then((r) => {
+          reportAgent(name, r.ok, r.error);
+          return r;
+        }),
+      ),
+    );
   } catch (err) {
     queueProgress({
       research_progress: {
@@ -292,20 +228,39 @@ async function main() {
     throw err;
   }
 
-  // Both agents failed (e.g. both timed out): persist a failed state so the
-  // admin UI stops polling instead of spinning forever on "researching".
-  if (!claudeRes.ok && !codexRes.ok) {
+  // Both agents failed: persist a failed state so the admin UI stops polling
+  // instead of spinning forever on "researching".
+  if (!aRes.ok && !bRes.ok) {
     queueProgress({
       research_progress: {
         status: 'failed',
         started_at: startedAt,
         agents_done: [...agentsDone],
-        error: `both agents failed — claude: ${claudeRes.error} · codex: ${codexRes.error}`,
+        error: `both agents failed — gemini_a: ${aRes.error} · gemini_b: ${bRes.error}`,
       },
     });
     console.error('agent-research: both agents failed — no result persisted');
     process.exit(1);
   }
+
+  const agents = {
+    gemini_a: {
+      ok: aRes.ok,
+      raw: aRes.ok ? aRes.text.slice(0, 20_000) : null,
+      parsed: aRes.ok ? parseResearch(aRes.text) : null,
+      error: aRes.error ?? null,
+      usage: aRes.usage ?? null,
+      sources: aRes.sources ?? [],
+    },
+    gemini_b: {
+      ok: bRes.ok,
+      raw: bRes.ok ? bRes.text.slice(0, 20_000) : null,
+      parsed: bRes.ok ? parseResearch(bRes.text) : null,
+      error: bRes.error ?? null,
+      usage: bRes.usage ?? null,
+      sources: bRes.sources ?? [],
+    },
+  };
 
   const result = {
     community: {
@@ -317,24 +272,7 @@ async function main() {
       lng: community.lng,
     },
     prompt,
-    agents: {
-      claude: {
-        ok: claudeRes.ok,
-        raw: claudeRes.ok
-          ? extractAnswerText(claudeRes.raw, 'claude').slice(0, 20_000)
-          : null,
-        parsed: parseResearch(extractAnswerText(claudeRes.raw, 'claude')),
-        error: claudeRes.error ?? null,
-        usage: claudeRes.usage ?? null,
-      },
-      codex: {
-        ok: codexRes.ok,
-        raw: codexRes.ok ? extractAnswerText(codexRes.raw, 'codex').slice(0, 20_000) : null,
-        parsed: parseResearch(extractAnswerText(codexRes.raw, 'codex')),
-        error: codexRes.error ?? null,
-        usage: codexRes.usage ?? null,
-      },
-    },
+    agents,
   };
 
   // Persist into the run's step_results so the admin page renders it and the
@@ -358,8 +296,8 @@ async function main() {
     .eq('id', runId);
 
   log('agent research persisted', runId, {
-    claude: claudeRes.ok ? 'ok' : 'fail',
-    codex: codexRes.ok ? 'ok' : 'fail',
+    gemini_a: aRes.ok ? 'ok' : 'fail',
+    gemini_b: bRes.ok ? 'ok' : 'fail',
   });
 }
 

@@ -312,14 +312,14 @@ function StepResult({ s, result }: { s: StepName; result: Record<string, unknown
     const r = result as {
       prompt?: string;
       agents?: {
-        claude?: {
+        gemini_a?: {
           ok?: boolean;
           parsed?: { pois?: unknown[] } | null;
           raw?: string | null;
           error?: string | null;
           usage?: { input_tokens?: number; output_tokens?: number; total_cost_usd?: number } | null;
         };
-        codex?: {
+        gemini_b?: {
           ok?: boolean;
           parsed?: { pois?: unknown[] } | null;
           raw?: string | null;
@@ -329,31 +329,31 @@ function StepResult({ s, result }: { s: StepName; result: Record<string, unknown
       };
       community?: { name?: string };
     };
-    const claudePois = r.agents?.claude?.parsed?.pois?.length ?? 0;
-    const codexPois = r.agents?.codex?.parsed?.pois?.length ?? 0;
+    const claudePois = r.agents?.gemini_a?.parsed?.pois?.length ?? 0;
+    const codexPois = r.agents?.gemini_b?.parsed?.pois?.length ?? 0;
     return (
       <div className="space-y-2">
         <div className="flex flex-wrap gap-3">
-          <span className={r.agents?.claude?.ok ? 'text-emerald-600' : 'text-red-600'}>
-            claude {r.agents?.claude?.ok ? `${claudePois} POIs` : 'failed'}
-            {r.agents?.claude?.usage && (
+          <span className={r.agents?.gemini_a?.ok ? 'text-emerald-600' : 'text-red-600'}>
+            gemini_a {r.agents?.gemini_a?.ok ? `${claudePois} POIs` : 'failed'}
+            {r.agents?.gemini_a?.usage && (
               <span className="text-ink3">
                 {' '}
-                · {r.agents.claude.usage.input_tokens?.toLocaleString()} in /{' '}
-                {r.agents.claude.usage.output_tokens?.toLocaleString()} out
-                {r.agents.claude.usage.total_cost_usd
-                  ? ` · $${r.agents.claude.usage.total_cost_usd.toFixed(4)}`
+                · {r.agents.gemini_a.usage.input_tokens?.toLocaleString()} in /{' '}
+                {r.agents.gemini_a.usage.output_tokens?.toLocaleString()} out
+                {r.agents.gemini_a.usage.total_cost_usd
+                  ? ` · $${r.agents.gemini_a.usage.total_cost_usd.toFixed(4)}`
                   : ''}
               </span>
             )}
           </span>
-          <span className={r.agents?.codex?.ok ? 'text-emerald-600' : 'text-red-600'}>
-            codex {r.agents?.codex?.ok ? `${codexPois} POIs` : 'failed'}
-            {r.agents?.codex?.usage && (
+          <span className={r.agents?.gemini_b?.ok ? 'text-emerald-600' : 'text-red-600'}>
+            gemini_b {r.agents?.gemini_b?.ok ? `${codexPois} POIs` : 'failed'}
+            {r.agents?.gemini_b?.usage && (
               <span className="text-ink3">
                 {' '}
-                · {r.agents.codex.usage.input_tokens?.toLocaleString()} in /{' '}
-                {r.agents.codex.usage.output_tokens?.toLocaleString()} out
+                · {r.agents.gemini_b.usage.input_tokens?.toLocaleString()} in /{' '}
+                {r.agents.gemini_b.usage.output_tokens?.toLocaleString()} out
               </span>
             )}
           </span>
@@ -366,17 +366,17 @@ function StepResult({ s, result }: { s: StepName; result: Record<string, unknown
             </pre>
           </details>
         )}
-        {r.agents?.claude?.raw && (
+        {r.agents?.gemini_a?.raw && (
           <details>
-            <summary className="cursor-pointer text-ink2">claude raw ({claudePois} POIs)</summary>
+            <summary className="cursor-pointer text-ink2">gemini_a raw ({claudePois} POIs)</summary>
             <pre className="bg-bg mt-1 max-h-48 overflow-auto whitespace-pre-wrap rounded border border-line p-2 text-[10px] text-ink2">
-              {r.agents.claude.raw}
+              {r.agents.gemini_a.raw}
             </pre>
           </details>
         )}
-        {r.agents?.codex?.raw && (
+        {r.agents?.gemini_b?.raw && (
           <div>
-            <h4 className="text-ink2 text-xs font-medium">codex results ({codexPois} POIs)</h4>
+            <h4 className="text-ink2 text-xs font-medium">gemini_b results ({codexPois} POIs)</h4>
             <div className="overflow-x-auto rounded border border-line">
               <table className="w-full border-collapse text-left text-[10px]">
                 <thead className="bg-surface text-ink2">
@@ -389,7 +389,7 @@ function StepResult({ s, result }: { s: StepName; result: Record<string, unknown
                   </tr>
                 </thead>
                 <tbody>
-                  {(r.agents?.codex?.parsed?.pois ?? []).map((p, i) => {
+                  {(r.agents?.gemini_b?.parsed?.pois ?? []).map((p, i) => {
                     const poi = p as {
                       name?: string;
                       address_hint?: string;
@@ -420,16 +420,16 @@ function StepResult({ s, result }: { s: StepName; result: Record<string, unknown
             <details className="mt-1">
               <summary className="cursor-pointer text-ink2">raw JSON</summary>
               <pre className="bg-bg mt-1 max-h-48 overflow-auto whitespace-pre-wrap rounded border border-line p-2 text-[10px] text-ink2">
-                {r.agents.codex.raw}
+                {r.agents.gemini_b.raw}
               </pre>
             </details>
           </div>
         )}
-        {r.agents?.claude?.error && (
-          <div className="text-red-600">claude: {r.agents.claude.error}</div>
+        {r.agents?.gemini_a?.error && (
+          <div className="text-red-600">gemini_a: {r.agents.gemini_a.error}</div>
         )}
-        {r.agents?.codex?.error && (
-          <div className="text-red-600">codex: {r.agents.codex.error}</div>
+        {r.agents?.gemini_b?.error && (
+          <div className="text-red-600">gemini_b: {r.agents.gemini_b.error}</div>
         )}
       </div>
     );
