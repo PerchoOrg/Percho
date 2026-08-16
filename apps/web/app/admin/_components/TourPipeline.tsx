@@ -19,7 +19,7 @@
  *   8 assemble          (ffmpeg concat — wire after clips ready)
  */
 
-import { CheckCircle2, Loader2, Play, RefreshCw, Sparkles } from 'lucide-react';
+import { CheckCircle2, ChevronDown, ChevronRight, Loader2, Play, RefreshCw, Sparkles } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 import { PhotoTable, type PhotoRow } from './PhotoTable';
@@ -72,6 +72,7 @@ export function TourPipeline({
   const [selectedRun, setSelectedRun] = useState<string | null>(null);
   const [running, setRunning] = useState<StepName | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
 
   const loadRuns = useCallback(async () => {
     const res = await fetch(`/api/admin/community-tour/${communityId}/runs`);
@@ -281,23 +282,36 @@ export function TourPipeline({
 
       {/* Step 1 — community info (always visible) */}
       <section className="rounded-2xl border border-line bg-surface p-4">
-        <h3 className="text-sm font-semibold">1 · Community Info</h3>
-        <dl className="mt-2 grid grid-cols-2 gap-x-6 gap-y-1 text-xs sm:grid-cols-3">
-          <div>
-            <dt className="text-ink3">Name</dt>
-            <dd className="text-ink">{communityName}</dd>
-          </div>
-          <div>
-            <dt className="text-ink3">Location</dt>
-            <dd className="text-ink">{[city, state, zip].filter(Boolean).join(', ') || '—'}</dd>
-          </div>
-          <div>
-            <dt className="text-ink3">Coordinates</dt>
-            <dd className="tabular-nums text-ink">
-              {lat != null && lng != null ? `${lat.toFixed(4)}, ${lng.toFixed(4)}` : '—'}
-            </dd>
-          </div>
-        </dl>
+        <button
+          type="button"
+          onClick={() => setCollapsed((c) => ({ ...c, info: !c.info }))}
+          className="flex w-full items-center justify-between gap-3 text-left"
+        >
+          <h3 className="text-sm font-semibold">1 · Community Info</h3>
+          {collapsed.info ? (
+            <ChevronRight size={15} className="text-ink3" />
+          ) : (
+            <ChevronDown size={15} className="text-ink3" />
+          )}
+        </button>
+        {!collapsed.info && (
+          <dl className="mt-2 grid grid-cols-2 gap-x-6 gap-y-1 text-xs sm:grid-cols-3">
+            <div>
+              <dt className="text-ink3">Name</dt>
+              <dd className="text-ink">{communityName}</dd>
+            </div>
+            <div>
+              <dt className="text-ink3">Location</dt>
+              <dd className="text-ink">{[city, state, zip].filter(Boolean).join(', ') || '—'}</dd>
+            </div>
+            <div>
+              <dt className="text-ink3">Coordinates</dt>
+              <dd className="tabular-nums text-ink">
+                {lat != null && lng != null ? `${lat.toFixed(4)}, ${lng.toFixed(4)}` : '—'}
+              </dd>
+            </div>
+          </dl>
+        )}
       </section>
 
       {/* Steps 2-5, 8 */}
@@ -339,7 +353,16 @@ export function TourPipeline({
         return (
           <section key={s.name} className="rounded-2xl border border-line bg-surface p-4">
             <div className="flex items-center justify-between gap-3">
-              <div>
+              <button
+                type="button"
+                onClick={() => setCollapsed((c) => ({ ...c, [s.name]: !c[s.name] }))}
+                className="flex items-center gap-1.5 text-left"
+              >
+                {collapsed[s.name] ? (
+                  <ChevronRight size={15} className="text-ink3" />
+                ) : (
+                  <ChevronDown size={15} className="text-ink3" />
+                )}
                 <h3 className="flex items-center gap-1.5 text-sm font-semibold">
                   {s.label}
                   {done && <CheckCircle2 size={13} className="text-emerald-600" />}
@@ -347,8 +370,7 @@ export function TourPipeline({
                     <Loader2 size={13} className="animate-spin text-bronze" aria-hidden />
                   )}
                 </h3>
-                <p className="text-ink2 text-xs">{s.desc}</p>
-              </div>
+              </button>
               <button
                 type="button"
                 onClick={() => void runStep(s.name, selectedRun)}
@@ -363,49 +385,54 @@ export function TourPipeline({
                 {running === s.name || researching ? 'Running…' : done ? 'Re-run' : 'Run'}
               </button>
             </div>
+            <p className="text-ink2 text-xs">{s.desc}</p>
 
-            {researching && (
-              <div className="mt-2 flex items-center gap-2 text-xs text-ink2">
-                <Loader2 size={13} className="animate-spin text-bronze" aria-hidden />
-                {researchProgress?.agents_done?.length ?? 0}/2 agents done · {runSeconds}s elapsed
-              </div>
-            )}
-            {running === 'research' && researchProgress?.status === 'failed' && (
-              <div className="mt-2 text-xs text-red-600">
-                Research failed: {researchProgress.error ?? 'unknown'}
-              </div>
-            )}
-
-            {done && result && (
-              <div className="mt-2 text-xs text-ink2">
-                <StepResult
-                  s={s.name}
-                  result={result}
-                  storageBase={storageBase}
-                  bucket={bucket}
-                  photos={stepPhotos}
-                  onGenerateClip={generateClip}
-                />
-                {s.name === 'photos' && run && (
-                  <div className="mt-3 flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => void tagPhotos(run.id)}
-                      className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-bg px-3 py-1.5 text-xs text-ink hover:border-bronze"
-                    >
-                      {tagPending ? (
-                        <Loader2 size={13} className="animate-spin" />
-                      ) : (
-                        <Sparkles size={13} />
-                      )}
-                      {tagPending ? 'Tagging…' : 'Tag all untagged'}
-                    </button>
-                    {tagError && <span className="text-red-600">{tagError}</span>}
+            {!collapsed[s.name] && (
+              <>
+                {researching && (
+                  <div className="mt-2 flex items-center gap-2 text-xs text-ink2">
+                    <Loader2 size={13} className="animate-spin text-bronze" aria-hidden />
+                    {researchProgress?.agents_done?.length ?? 0}/2 agents done · {runSeconds}s elapsed
                   </div>
                 )}
-              </div>
+                {running === 'research' && researchProgress?.status === 'failed' && (
+                  <div className="mt-2 text-xs text-red-600">
+                    Research failed: {researchProgress.error ?? 'unknown'}
+                  </div>
+                )}
+
+                {done && result && (
+                  <div className="mt-2 text-xs text-ink2">
+                    <StepResult
+                      s={s.name}
+                      result={result}
+                      storageBase={storageBase}
+                      bucket={bucket}
+                      photos={stepPhotos}
+                      onGenerateClip={generateClip}
+                    />
+                    {s.name === 'photos' && run && (
+                      <div className="mt-3 flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => void tagPhotos(run.id)}
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-bg px-3 py-1.5 text-xs text-ink hover:border-bronze"
+                        >
+                          {tagPending ? (
+                            <Loader2 size={13} className="animate-spin" />
+                          ) : (
+                            <Sparkles size={13} />
+                          )}
+                          {tagPending ? 'Tagging…' : 'Tag all untagged'}
+                        </button>
+                        {tagError && <span className="text-red-600">{tagError}</span>}
+                      </div>
+                    )}
+                  </div>
+                )}
+                {!done && !result && <div className="mt-2 text-xs text-ink3">Not run yet.</div>}
+              </>
             )}
-            {!done && !result && <div className="mt-2 text-xs text-ink3">Not run yet.</div>}
           </section>
         );
       })}
