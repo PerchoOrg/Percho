@@ -11,12 +11,11 @@
  *
  * Steps:
  *   1 community info    (DB read — always available)
- *   2 agent research    (dual Gemini grounding — inline, Vercel)
+ *   2 agent research    (Gemini grounding — inline, Vercel)
  *   3 resolve+merge     (Google firewall)
  *   4 <4 survivors      (widen hook — shown when resolve < 4)
- *   5 photos            (3 per POI)
- *   6 tag + shot list   (Gemini)
- *   7 generate clips    (photo_clips)
+ *   5 photos            (3 per POI — tag, shot list & clip generation live
+ *                        in the table below this panel; steps 6/7 merged there)
  *   8 assemble          (ffmpeg concat — wire after clips ready)
  */
 
@@ -27,11 +26,13 @@ import { PhotoTable, type PhotoRow } from './PhotoTable';
 type StepName = 'research' | 'resolve' | 'photos' | 'tag' | 'generate' | 'assemble';
 
 const STEPS: Array<{ name: StepName; label: string; desc: string }> = [
-  { name: 'research', label: '2 · Agent Research', desc: 'gemini_a + gemini_b (grounding)' },
+  { name: 'research', label: '2 · Agent Research', desc: 'Gemini grounding' },
   { name: 'resolve', label: '3 · Resolve & Merge', desc: 'Google Places firewall' },
-  { name: 'photos', label: '5 · Fetch Photos', desc: '3 per POI' },
-  { name: 'tag', label: '6 · Tag + Shot List', desc: 'Gemini + duration' },
-  { name: 'generate', label: '7 · Generate Clips', desc: 'photo = unit, cached' },
+  {
+    name: 'photos',
+    label: '5 · Fetch Photos',
+    desc: '3 per POI — tag, shot list & clips managed in table below',
+  },
   { name: 'assemble', label: '8 · Assemble', desc: 'ffmpeg concat' },
 ];
 
@@ -159,6 +160,73 @@ export function TourPipeline({
 
   const run = runs.find((r) => r.id === selectedRun);
 
+  // Steps 6/7 (tag + generate clips) merged into the photos panel — the table
+  // below drives per-photo actions (owner 2026-08-17). Clip status fetched
+  // separately so tag/generate reflect immediately without a full reload.
+  const [clipRows, setClipRows] = useState<
+    Array<{
+      photo_id: string;
+      clip: {
+        engine: string;
+        duration_s: number | null;
+        status: string;
+        video_url: string | null;
+        cost_usd: number | null;
+        error: string | null;
+      } | null;
+    }>
+  >([]);
+  const [tagPending, setTagPending] = useState(false);
+  const [tagError, setTagError] = useState<string | null>(null);
+
+  const loadClips = useCallback(async () => {
+    if (!run?.id) return;
+    const res = await fetch(`/api/admin/community-tour/${communityId}/clips`);
+    if (!res.ok) return;
+    const body = (await res.json()) as { clips: typeof clipRows };
+    setClipRows(body.clips);
+  }, [communityId, run?.id]);
+
+  const clipById = new Map(clipRows.map((c) => [c.photo_id, c.clip]));
+  const stepPhotos = photos.map((p) => {
+    const clip = clipById.get(p.id);
+    return clip !== undefined ? { ...p, clip } : p;
+  });
+
+  async function tagPhotos(runId: string): Promise<void> {
+    setTagPending(true);
+    setTagError(null);
+    try {
+      const res = await fetch(`/api/admin/community-tour/${communityId}/runs/${runId}/step`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ step: 'tag' }),
+      });
+      const body = (await res.json()) as { ok?: boolean; message?: string; error?: string };
+      if (!res.ok || !body.ok) {
+        setTagError(body.message ?? body.error ?? `HTTP ${res.status}`);
+        return;
+      }
+      await loadRuns();
+      await loadClips();
+    } finally {
+      setTagPending(false);
+    }
+  }
+
+  async function generateClip(photoId: string): Promise<{ ok: boolean; message?: string }> {
+    if (!run?.id) return { ok: false, message: 'No run yet — create one first.' };
+    const res = await fetch(`/api/admin/community-tour/${communityId}/runs/${run.id}/step`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ step: 'generate', photoIds: [photoId] }),
+    });
+    const body = (await res.json()) as { ok?: boolean; message?: string; error?: string };
+    if (!res.ok || !body.ok) return { ok: false, message: body.message ?? body.error ?? `HTTP ${res.status}` };
+    await loadClips();
+    return { ok: true };
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -224,7 +292,7 @@ export function TourPipeline({
         </dl>
       </section>
 
-      {/* Steps 2-8 */}
+      {/* Steps 2-5, 8 */}
       {STEPS.map((s) => {
         // research results live under agent_research (written by the detached
         // agent script); every other step uses its own key.
@@ -307,8 +375,26 @@ export function TourPipeline({
                   result={result}
                   storageBase={storageBase}
                   bucket={bucket}
-                  photos={photos}
+                  photos={stepPhotos}
+                  onGenerateClip={generateClip}
                 />
+                {s.name === 'photos' && run && (
+                  <div className="mt-3 flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => void tagPhotos(run.id)}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-bg px-3 py-1.5 text-xs text-ink hover:border-bronze"
+                    >
+                      {tagPending ? (
+                        <Loader2 size={13} className="animate-spin" />
+                      ) : (
+                        <Sparkles size={13} />
+                      )}
+                      {tagPending ? 'Tagging…' : 'Tag all untagged'}
+                    </button>
+                    {tagError && <span className="text-red-600">{tagError}</span>}
+                  </div>
+                )}
               </div>
             )}
             {!done && !result && <div className="mt-2 text-xs text-ink3">Not run yet.</div>}
@@ -325,12 +411,14 @@ function StepResult({
   storageBase,
   bucket,
   photos,
+  onGenerateClip,
 }: {
   s: StepName;
   result: Record<string, unknown>;
   storageBase: string;
   bucket: string;
   photos: PhotoRow[];
+  onGenerateClip?: (photoId: string) => Promise<{ ok: boolean; message?: string }>;
 }) {
   if (s === 'research') {
     const r = result as {
@@ -552,36 +640,11 @@ function StepResult({
             storageBase={storageBase}
             bucket={bucket}
             photos={stepPhotos}
+            onGenerateClip={onGenerateClip}
           />
         ) : (
           <div className="text-xs text-ink3">No photos fetched for this run yet.</div>
         )}
-      </div>
-    );
-  }
-  if (s === 'tag') {
-    const r = result as { tagged?: number };
-    return <div>{r.tagged ?? 0} photos tagged</div>;
-  }
-  if (s === 'generate') {
-    const r = result as {
-      shots?: Array<{ photo_id: string; poi_name: string; duration_s: number; engine: string }>;
-      created?: number;
-      reused?: number;
-    };
-    return (
-      <div>
-        <div className="mb-1">
-          {r.shots?.length ?? 0} shots · {r.created ?? 0} created · {r.reused ?? 0} reused from
-          cache
-        </div>
-        <ul className="space-y-0.5">
-          {(r.shots ?? []).slice(0, 12).map((s) => (
-            <li key={s.photo_id}>
-              {s.poi_name} · {s.duration_s}s · {s.engine}
-            </li>
-          ))}
-        </ul>
       </div>
     );
   }
