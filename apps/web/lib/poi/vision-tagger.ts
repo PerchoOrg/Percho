@@ -20,7 +20,7 @@ import { extractJsonObject } from '@/lib/utils/extract-json';
 import { INTENT_BUCKETS, type IntentBucket } from '@/lib/poi/types';
 import { createServiceClient } from '@/lib/supabase/server';
 
-const VISION_MODEL = process.env.GEMINI_VISION_MODEL ?? 'gemini-2.5-flash';
+const VISION_MODEL = process.env.GEMINI_VISION_MODEL ?? 'gemini-3.1-flash-lite';
 const API_BASE = (m: string) =>
   `https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent`;
 const POI_PHOTO_BUCKET = 'listing-photos';
