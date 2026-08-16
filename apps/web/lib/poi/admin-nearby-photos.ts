@@ -99,6 +99,15 @@ export async function loadNearbyPhotos(scope: Scope): Promise<NearbyPhotoRow[]> 
     }
   }
 
+  // Which photos have an AI clip (photo_clips ready). These must survive the
+  // per-POI display cap even if they fell outside the newest-3 window.
+  const clipPhotoIds = new Set<string>();
+  const { data: clips } = (await sb
+    .from('photo_clips')
+    .select('photo_id')
+    .eq('status', 'ready')) as { data: Array<{ photo_id: string }> | null };
+  for (const c of clips ?? []) clipPhotoIds.add(c.photo_id);
+
   const full = rows.map((p) => ({
     ...p,
     poi_name: nameByPoi.get(p.poi_id) ?? null,
@@ -106,7 +115,7 @@ export async function loadNearbyPhotos(scope: Scope): Promise<NearbyPhotoRow[]> 
   }));
 
   // Owner 2026-08-17: each POI shows the LATEST fetch's photos (3), plus any
-  // photo that has an AI video (used_in non-empty). Historical fetches
+  // photo that has an AI clip (photo_clips ready). Historical fetches
   // accumulated 10-14 photos per POI (content-hash dedup reuses, never
   // deletes — by design). Display-only trim; DB untouched.
   const POI_PHOTO_CAP = 3;
@@ -119,13 +128,13 @@ export async function loadNearbyPhotos(scope: Scope): Promise<NearbyPhotoRow[]> 
   const trimmed: NearbyPhotoRow[] = [];
   for (const [pid, arr] of byPoi) {
     // rows are already sorted created_at desc; keep the newest cap, then
-    // append any used-in-video photos that fell outside the cap.
+    // append any photo with an AI clip that fell outside the cap.
     const kept = arr.slice(0, POI_PHOTO_CAP);
-    const usedIds = new Set(kept.map((r) => r.id));
+    const keptIds = new Set(kept.map((r) => r.id));
     for (const row of arr.slice(POI_PHOTO_CAP)) {
-      if (row.used_in.length > 0 && !usedIds.has(row.id)) {
+      if (clipPhotoIds.has(row.id) && !keptIds.has(row.id)) {
         kept.push(row);
-        usedIds.add(row.id);
+        keptIds.add(row.id);
       }
     }
     trimmed.push(...kept);
