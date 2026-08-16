@@ -15,7 +15,8 @@
  *
  * Env (repo-root .env.local, loaded like the seedance worker):
  *   SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY  (worker uses NEXT_PUBLIC_…)
- *   CLAUDE_CLI_MAX_TURNS (default 8), CODEX_MAX_TURNS (default 8)
+ *   CLAUDE_CLI_MAX_TURNS (default 20), CODEX_MAX_TURNS (unused — codex CLI
+ *   has no max-turns flag; total time is capped by the 15min execFile timeout)
  */
 
 import { execFile } from 'node:child_process';
@@ -34,6 +35,18 @@ function log(...args: unknown[]) {
   console.log(new Date().toISOString(), ...args);
 }
 
+/** Map execFile error codes to a human-readable failure label. */
+function errLabel(e: { code?: string | number }): string {
+  switch (e.code) {
+    case 'ETIMEDOUT':
+      return 'timeout';
+    case 'ENOENT':
+      return 'cli_not_found';
+    default:
+      return `error_${String(e.code ?? 'unknown')}`;
+  }
+}
+
 async function runAgent(
   agent: 'claude' | 'codex',
   prompt: string,
@@ -43,7 +56,7 @@ async function runAgent(
   error?: string;
   usage?: { input_tokens?: number; output_tokens?: number; total_cost_usd?: number };
 }> {
-  const maxTurns = Number(process.env[`${agent.toUpperCase()}_MAX_TURNS`] ?? 4);
+  const maxTurns = Number(process.env.CLAUDE_CLI_MAX_TURNS ?? 20);
   try {
     if (agent === 'claude') {
       // Pro OAuth. Chat-mode research (owner 2026-08-16): cwd=~/chat avoids
@@ -58,13 +71,17 @@ async function runAgent(
           [
             '-p',
             prompt,
+            '--allowedTools',
+            'WebSearch,WebFetch',
             '--disallowedTools',
             'Edit,Write,Bash,NotebookEdit',
+            '--max-turns',
+            maxTurns.toString(),
             '--output-format',
             'stream-json',
             '--verbose',
           ],
-          { timeout: 5 * 60_000, maxBuffer: 8 * 1024 * 1024, cwd: CHAT_DIR },
+          { timeout: 15 * 60_000, maxBuffer: 8 * 1024 * 1024, cwd: CHAT_DIR },
           (err, stdout) => {
             if (err) reject(err);
             else resolve({ stdout });
@@ -93,7 +110,7 @@ async function runAgent(
           'danger-full-access',
           `${CHAT_MODE}\n\nSearch the web and return JSON only. ${prompt}`,
         ],
-        { timeout: 5 * 60_000, maxBuffer: 8 * 1024 * 1024, cwd: CHAT_DIR },
+        { timeout: 15 * 60_000, maxBuffer: 8 * 1024 * 1024, cwd: CHAT_DIR },
         (err, stdout) => {
           if (err) reject(err);
           else resolve({ stdout });
@@ -104,8 +121,12 @@ async function runAgent(
     const usage = extractUsage(stdout, 'codex');
     return { ok: true, raw: stdout, usage };
   } catch (err) {
-    const e = err as { message?: string; stderr?: string };
-    return { ok: false, raw: '', error: (e.stderr ?? e.message ?? String(err)).slice(0, 500) };
+    const e = err as { message?: string; stderr?: string; code?: string | number };
+    return {
+      ok: false,
+      raw: '',
+      error: `${errLabel(e)}: ${(e.stderr ?? e.message ?? String(err)).slice(0, 500)}`,
+    };
   }
 }
 
@@ -230,14 +251,15 @@ async function main() {
       .catch((err: Error) => log('progress write failed (non-fatal):', err.message));
     return progressChain;
   };
-  const reportAgent = (agent: 'claude' | 'codex', ok: boolean) => {
+  const reportAgent = (agent: 'claude' | 'codex', ok: boolean, error?: string) => {
     agentsDone.push(agent);
     queueProgress({
       research_progress: {
-        status: 'running',
+        status: ok ? 'running' : 'failed',
         started_at: startedAt,
         agents_done: [...agentsDone],
         [`${agent}_ok`]: ok,
+        error,
       },
     });
   };
@@ -251,11 +273,11 @@ async function main() {
   try {
     [claudeRes, codexRes] = await Promise.all([
       runAgent('claude', prompt).then((r) => {
-        reportAgent('claude', r.ok);
+        reportAgent('claude', r.ok, r.error);
         return r;
       }),
       runAgent('codex', prompt).then((r) => {
-        reportAgent('codex', r.ok);
+        reportAgent('codex', r.ok, r.error);
         return r;
       }),
     ]);
@@ -268,6 +290,21 @@ async function main() {
       },
     });
     throw err;
+  }
+
+  // Both agents failed (e.g. both timed out): persist a failed state so the
+  // admin UI stops polling instead of spinning forever on "researching".
+  if (!claudeRes.ok && !codexRes.ok) {
+    queueProgress({
+      research_progress: {
+        status: 'failed',
+        started_at: startedAt,
+        agents_done: [...agentsDone],
+        error: `both agents failed — claude: ${claudeRes.error} · codex: ${codexRes.error}`,
+      },
+    });
+    console.error('agent-research: both agents failed — no result persisted');
+    process.exit(1);
   }
 
   const result = {
