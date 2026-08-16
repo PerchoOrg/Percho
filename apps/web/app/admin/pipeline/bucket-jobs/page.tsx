@@ -13,7 +13,7 @@ import BucketJobsTable, { type BucketJobRow } from './BucketJobsTable';
 
 export const dynamic = 'force-dynamic';
 
-type StatusFilter = 'all' | 'pending' | 'processing' | 'ready' | 'approved' | 'failed' | 'superseded';
+type StatusFilter = 'all' | 'pending' | 'processing' | 'ready' | 'approved' | 'failed' | 'superseded' | 'submitting';
 
 type DbRow = {
   id: string;
@@ -68,31 +68,29 @@ export default async function BucketJobsPage({
   if (statusFilter !== 'all') q = q.eq('status', statusFilter);
   const { data } = (await q) as { data: DbRow[] | null };
 
-  // Seedance worker visibility: same page, so admins can see what the
-  // seedance worker is draining without jumping to the community page.
+  // Seedance worker rows (photo_clips + ai_tour_videos) — merged into the same
+  // table with a type column so the worker's queue is visible on this page.
   const [seedClips, seedTours] = await Promise.all([
     supabase
       .from('photo_clips')
       .select('id, status, error, provider_job_id, created_at')
       .order('created_at', { ascending: false })
-      .limit(8) as unknown as Promise<{ data: SeedanceRow[] | null }>,
+      .limit(100) as unknown as Promise<{ data: SeedanceRow[] | null }>,
     supabase
       .from('ai_tour_videos')
       .select('id, status, error, provider_job_id, created_at')
       .order('created_at', { ascending: false })
-      .limit(8) as unknown as Promise<{ data: SeedanceRow[] | null }>,
+      .limit(100) as unknown as Promise<{ data: SeedanceRow[] | null }>,
   ]);
-  const seedanceRows: SeedanceRow[] = [
-    ...(seedClips.data ?? []).map((r) => ({ ...r, kind: 'clip' as const })),
-    ...(seedTours.data ?? []).map((r) => ({ ...r, kind: 'tour' as const })),
-  ].sort((a, b) => b.created_at.localeCompare(a.created_at));
 
-  const rows: BucketJobRow[] = (data ?? []).map((r) => ({
+  const renderRows: BucketJobRow[] = (data ?? []).map((r) => ({
     id: r.id,
+    type: 'render',
     scope: r.scope,
     intent_bucket: r.intent_bucket,
     status: r.status,
     cf_stream_uid: r.cf_stream_uid,
+    provider_job_id: null,
     error: r.error,
     created_at: r.created_at,
     community_id: r.community_id,
@@ -100,48 +98,45 @@ export default async function BucketJobsPage({
     photoCount: r.input_photo_ids?.length ?? 0,
   }));
 
+  const seedRows: BucketJobRow[] = [
+    ...(seedClips.data ?? []).map((r) => ({
+      id: r.id,
+      type: 'clip' as const,
+      scope: 'photo_clips',
+      intent_bucket: null,
+      status: r.status,
+      cf_stream_uid: null,
+      provider_job_id: r.provider_job_id,
+      error: r.error,
+      created_at: r.created_at,
+      community_id: null,
+      listing_id: null,
+      photoCount: 1,
+    })),
+    ...(seedTours.data ?? []).map((r) => ({
+      id: r.id,
+      type: 'tour' as const,
+      scope: 'ai_tour_videos',
+      intent_bucket: null,
+      status: r.status,
+      cf_stream_uid: null,
+      provider_job_id: r.provider_job_id,
+      error: r.error,
+      created_at: r.created_at,
+      community_id: null,
+      listing_id: null,
+      photoCount: 0,
+    })),
+  ].filter((r) => statusFilter === 'all' || r.status === statusFilter);
+
+  const rows = [...renderRows, ...seedRows].sort((a, b) =>
+    b.created_at.localeCompare(a.created_at),
+  );
+
   return (
     <div className="space-y-4">
       <StatusFilterBar current={statusFilter} />
       <BucketJobsTable rows={rows} />
-      <SeedanceSection rows={seedanceRows} />
-    </div>
-  );
-}
-
-function SeedanceSection({ rows }: { rows: SeedanceRow[] }) {
-  if (rows.length === 0) return null;
-  return (
-    <div className="rounded-2xl border border-line bg-surface p-4">
-      <div className="text-ink2 text-xs uppercase tracking-wide">
-        Seedance worker <span className="normal-case">(ai_tour_videos + photo_clips — latest 8 each)</span>
-      </div>
-      <div className="mt-2 space-y-1.5 text-sm">
-        {rows.map((r) => (
-          <div key={`${r.kind}-${r.id}`} className="flex items-center gap-3">
-            <span
-              className={`inline-block w-14 rounded-full px-2 py-0.5 text-center text-[10px] font-medium ${
-                r.kind === 'clip' ? 'bg-ink2/15 text-ink2' : 'bg-bronze/15 text-bronze'
-              }`}
-            >
-              {r.kind === 'clip' ? 'clip' : 'tour'}
-            </span>
-            <span className="font-mono text-xs text-ink2">{r.id.slice(0, 8)}</span>
-            <StatusPill status={r.status} />
-            {r.provider_job_id && (
-              <span className="font-mono text-xs text-ink2">job {r.provider_job_id}</span>
-            )}
-            {r.error && (
-              <span className="text-ink2 line-clamp-1 text-xs" title={r.error}>
-                {r.error}
-              </span>
-            )}
-            <span className="ml-auto text-xs text-ink2">
-              {new Date(r.created_at).toLocaleString()}
-            </span>
-          </div>
-        ))}
-      </div>
     </div>
   );
 }
@@ -173,6 +168,7 @@ function StatusFilterBar({ current }: { current: StatusFilter }) {
     { value: 'approved', label: 'Approved' },
     { value: 'failed', label: 'Failed' },
     { value: 'superseded', label: 'Superseded' },
+    { value: 'submitting', label: 'Submitting' },
   ];
   return (
     <div className="flex flex-wrap gap-2">

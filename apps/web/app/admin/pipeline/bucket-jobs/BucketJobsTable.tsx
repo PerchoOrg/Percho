@@ -5,16 +5,33 @@ import Link from 'next/link';
 
 export type BucketJobRow = {
   id: string;
+  type: 'render' | 'clip' | 'tour';
   scope: string;
   intent_bucket: string | null;
   status: string;
   cf_stream_uid: string | null;
+  provider_job_id: string | null;
   error: string | null;
   created_at: string;
   community_id: string | null;
   listing_id: string | null;
   photoCount: number;
 };
+
+function TypeBadge({ type }: { type: BucketJobRow['type'] }) {
+  const label = type === 'render' ? 'render' : type === 'clip' ? 'clip' : 'tour';
+  const cls =
+    type === 'render'
+      ? 'bg-ink2/15 text-ink2'
+      : type === 'clip'
+        ? 'bg-blue-500/15 text-blue-500'
+        : 'bg-bronze/15 text-bronze';
+  return (
+    <span className={`inline-block w-14 rounded-full px-2 py-0.5 text-center text-[10px] font-medium ${cls}`}>
+      {label}
+    </span>
+  );
+}
 
 function StatusPill({ status }: { status: string }) {
   const cls =
@@ -34,10 +51,23 @@ function StatusPill({ status }: { status: string }) {
 
 const columns: AdminColumn<BucketJobRow>[] = [
   {
+    key: 'type',
+    header: 'Type',
+    sortValue: (r) => r.type,
+    render: (r) => <TypeBadge type={r.type} />,
+  },
+  {
     key: 'job',
     header: 'Job',
     sortValue: (r) => r.id,
-    render: (r) => <span className="font-mono text-xs">{r.id.slice(0, 8)}</span>,
+    render: (r) => (
+      <div className="flex flex-col gap-0.5">
+        <span className="font-mono text-xs">{r.id.slice(0, 8)}</span>
+        {r.provider_job_id && (
+          <span className="font-mono text-[10px] text-ink2">job {r.provider_job_id}</span>
+        )}
+      </div>
+    ),
   },
   {
     key: 'anchor',
@@ -129,9 +159,11 @@ export default function BucketJobsTable({ rows }: { rows: BucketJobRow[] }) {
       columns={columns}
       rowKey={(r) => r.id}
       searchable={(r) =>
-        `${r.id} ${r.scope} ${r.intent_bucket ?? ''} ${r.status} ${r.listing_id ?? ''} ${
-          r.community_id ?? ''
-        } ${r.cf_stream_uid ?? ''} ${r.error ?? ''}`
+        `${r.id} ${r.type} ${r.scope} ${r.intent_bucket ?? ''} ${r.status} ${
+          r.listing_id ?? ''
+        } ${r.community_id ?? ''} ${r.cf_stream_uid ?? ''} ${r.provider_job_id ?? ''} ${
+          r.error ?? ''
+        }`
       }
       emptyMessage="No jobs."
       searchPlaceholder="Search jobs…"
