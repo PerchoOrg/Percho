@@ -4,6 +4,49 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-08-16 — Community Tour pipeline: 8-step admin orchestration
+
+**Objective**: owner-fixed flow (2026-08-15) — for any community, run 8 steps
+with each step's result visible + persisted on the Admin Community Tour page:
+1 read community info, 2 dual-agent research (claude + codex), 3 resolve+merge
+against Google Places (firewall), 4 <4 survivors widen hook (TBD), 5 fetch 3
+photos per POI, 6 AI tag + per-photo duration + shot list, 7 generate one clip
+per photo (photo = smallest unit, cached across communities), 8 ffmpeg concat.
+
+**Actions**:
+- `supabase/migrations/20260815233000_community_tour_runs_photo_clips.sql` —
+  `community_tour_runs` (step_results jsonb) + `photo_clips` (photo_id unique
+  cache, engine/duration/status/cost). Pushed to remote.
+- `apps/web/lib/ai/community-tour-prompt.ts` — generic dual-agent prompt
+  (no density class; source-grounded; 12-20 POIs; bucket classification).
+- `apps/web/lib/poi/community-tour.ts` — resolveCandidates (Places firewall,
+  agreement scoring), DURATION_BY_CATEGORY (4s aerial → 2s interior),
+  buildShotList (widen→hero→bucket interleave, no consecutive same-POI,
+  text→depthflow / clean→seedance). 4 vitest tests pass.
+- `scripts/community-tour/agent-research.ts` — parallel claude + codex CLI
+  (LOCAL DEV ONLY), stdin closed via child.stdin.end(), claude max-turns 20 +
+  15min timeout (12-20 POI research needs ~15 web searches).
+- `apps/web/app/api/admin/community-tour/[id]/runs/route.ts` + `[runId]/step/route.ts`
+  + `clips/route.ts` — run CRUD, step execution (research/resolve/photos/
+  tag/generate), clip status incl. cache hits.
+- `apps/web/app/admin/_components/TourPipeline.tsx` — 8-panel UI + Run all,
+  mounted on `/admin/pipeline/community-nearby/<id>`.
+- `scripts/seedance-worker/worker.ts` — photo_clips single-photo jobs
+  (first-frame control, transcode, ai-videos bucket `clips/<photo_id>.mp4`).
+
+**Decisions**: agent research runs local dev only (CLIs live on Mac, not
+Vercel — route spawns the script detached, script writes step_results itself).
+Photos step upserts agent-discovered POIs into `pois` + links `community_pois`
+before fetching. Seedance = single photo first-frame, duration by category.
+
+**Issues**: claude/codex execFile both wait on inherited stdin → close via
+child.stdin?.end(). claude 8min timeout killed mid-research (13 web searches
+done, no final JSON) → 15min. codex ok (13 POIs), claude pending verify.
+
+**Next steps**: verify claude produces 12-20 POIs (15min run in progress);
+then admin Run all end-to-end smoke; assemble step (ffmpeg concat) still to
+wire after clips ready; <4 POI widen hook thresholds TBD.
+
 ## 2026-08-15 — Admin Community Tour: AI video generation (Seedance via OpenRouter)
 
 **Objective**: owner ask (2026-08-15) — on Admin → Community Tour
