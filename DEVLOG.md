@@ -4,6 +4,67 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-08-17 00:20 UTC — Fix: POI detail page 404'd since 2026-07-17 (bad column name)
+
+**Objective**: `/admin/pipeline/poi-library/<poi-id>` returned 404 for the
+logged-in owner. Reported as "一直显示404" — it had never worked.
+
+**Investigation** (ruling things out before touching code):
+- Route resolution is fine in production. Unauthenticated `curl` of
+  `/admin/pipeline/poi-library/<uuid>` returns **307 → /dashboard**, while
+  `/admin/pipeline/does-not-exist-xyz` returns **404**. A 404 renders the root
+  layout only; the 307 comes from `redirect('/dashboard')` inside
+  `app/admin/layout.tsx`, which only runs once the route has matched. So the
+  page's function exists in the deployment and the segment resolves — no
+  `page.tsx` + `[id]/page.tsx` conflict, no missing build output.
+- Not an env mismatch: prod's `NEXT_PUBLIC_SUPABASE_URL` (extracted from the
+  deployed client chunks) is the same project as local — `tavmbcghxjeyaoptndvn`.
+- Not a thrown server-component error: with no `error.tsx` anywhere in `app/`,
+  a throw renders Next's 500 boundary, not a 404.
+- The `getSession()` warning in the Vercel log is a red herring — it comes from
+  the auth path that already succeeded (otherwise: 307, not 404).
+
+**Root cause**: `notFound()`. The `pois` select named a column that does not
+exist:
+
+```
+select=… , rating, user_rating_count, formatted_address, …
+→ 400 {"code":"42703","message":"column pois.user_rating_count does not exist"}
+```
+
+The real column is `user_ratings_total` (`supabase/migrations/20260714000000_poi_content_pipeline.sql:48`);
+every other call site in the repo already uses that name. PostgREST returned
+400, supabase-js returned `{ data: null, error: {...} }`, the page destructured
+only `data`, and `if (!poi) notFound()` turned a broken query into a 404. The
+POI row was always there.
+
+Introduced 2026-07-17 when the page was written, which is why it never worked.
+Commit dd8b92f1 (clip columns) is unrelated — it just happened to be the deploy
+under test.
+
+**Actions** (`apps/web/app/admin/pipeline/poi-library/[id]/page.tsx`):
+- `user_rating_count` → `user_ratings_total` in the select, the `Poi` type, and
+  the header render.
+- Destructure `error` from the `pois` query and `throw` on it, so a broken
+  select surfaces as a 500 with the PostgREST message instead of being
+  disguised as a missing POI.
+
+**Verification**:
+- Ran every select on the page against the live DB with the service key:
+  `pois` (fixed list) 200, `poi_photos` 200, `generated_videos` +
+  `input_photo_ids=not.is.null` 200, `photo_clips` 200. `user_rating_count` was
+  the only bad column. Also confirmed `photo_clips?photo_id=in.()` (the
+  zero-photo case) returns 200, not 400.
+- `tsc --noEmit -p apps/web/tsconfig.json` — clean.
+
+**Learnings**: `.maybeSingle()` + `if (!x) notFound()` without reading `error`
+makes any schema drift look like a missing row. Other admin pages follow the
+same shape (`community-nearby/[id]` discards `error` identically) — worth a
+sweep, but not changed here.
+
+**Next steps**: owner to confirm the page renders in prod after this ships.
+Left uncommitted per request.
+
 ## 2026-08-16 23:40 UTC — Fix: DA+KB Generate sent engine=null (fetch-photo panel)
 
 **Objective**: DA+KB column "Generate" in the fetch-photo panel created no

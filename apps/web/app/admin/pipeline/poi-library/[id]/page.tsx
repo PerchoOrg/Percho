@@ -23,7 +23,7 @@ type Poi = {
   display_name: string;
   primary_type: string | null;
   rating: number | null;
-  user_rating_count: number | null;
+  user_ratings_total: number | null;
   formatted_address: string | null;
   ai_summary: string | null;
   ai_tags: Record<string, unknown> | null;
@@ -60,14 +60,17 @@ export default async function PoiDetailPage({
   // biome-ignore lint/suspicious/noExplicitAny: stub generated types
   const supabase: any = createServiceClient();
 
-  const [{ data: poi }, { data: photos }] = await Promise.all([
+  const [{ data: poi, error: poiError }, { data: photos }] = await Promise.all([
     supabase
       .from('pois')
       .select(
-        'id, google_place_id, display_name, primary_type, rating, user_rating_count, formatted_address, ai_summary, ai_tags, tagged_at, discovered_at',
+        'id, google_place_id, display_name, primary_type, rating, user_ratings_total, formatted_address, ai_summary, ai_tags, tagged_at, discovered_at',
       )
       .eq('id', id)
-      .maybeSingle() as unknown as Promise<{ data: Poi | null }>,
+      .maybeSingle() as unknown as Promise<{
+      data: Poi | null;
+      error: { message: string } | null;
+    }>,
     supabase
       .from('poi_photos')
       .select(
@@ -78,6 +81,10 @@ export default async function PoiDetailPage({
       .limit(200) as unknown as Promise<{ data: Photo[] | null }>,
   ]);
 
+  // A failed query also yields `data: null` — surface it instead of letting
+  // notFound() disguise a broken select as a missing POI (that masked a bad
+  // column name in this select from 2026-07-17 to 2026-08-16).
+  if (poiError) throw new Error(`pois query failed: ${poiError.message}`);
   if (!poi) notFound();
 
   const rows = photos ?? [];
@@ -149,7 +156,7 @@ export default async function PoiDetailPage({
           {typeof poi.rating === 'number' && (
             <>
               {' · '}★ {poi.rating.toFixed(1)}
-              {poi.user_rating_count ? ` (${poi.user_rating_count})` : ''}
+              {poi.user_ratings_total ? ` (${poi.user_ratings_total})` : ''}
             </>
           )}
           {poi.formatted_address ? ` · ${poi.formatted_address}` : ''}
