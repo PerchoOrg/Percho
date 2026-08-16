@@ -77,6 +77,15 @@ export interface PhotoRow {
     cost_usd: number | null;
     error: string | null;
   } | null;
+  /** Community tour: depthflow/kenburns clip (separate row per photo+engine). */
+  dakb_clip?: {
+    engine: string;
+    duration_s: number | null;
+    status: string;
+    video_url: string | null;
+    cost_usd: number | null;
+    error: string | null;
+  } | null;
 }
 
 type SortKey = 'order' | 'score' | 'hero' | 'category' | 'enhanced';
@@ -276,6 +285,7 @@ export function PhotoTable({
               {!isListing && <Th>Review</Th>}
               {!isListing && <Th>Agent</Th>}
               {!isListing && <Th>Clip</Th>}
+              {!isListing && <Th>DA+KB</Th>}
               <Th>In video</Th>
               <Th>Enhanced</Th>
               <Th className="min-w-[220px]">AI description</Th>
@@ -522,6 +532,76 @@ export function PhotoTable({
                                       id: string,
                                     ) => Promise<{ ok: boolean; message?: string }>
                                   )(p.id),
+                                )
+                              }
+                            />
+                          )}
+                        </div>
+                      )}
+                    </Td>
+                  )}
+                  {!isListing && (
+                    <Td>
+                      {p.dakb_clip ? (
+                        <div className="flex flex-col gap-1">
+                          <StatusText value={p.dakb_clip.status} />
+                          {p.dakb_clip.status === 'ready' && p.dakb_clip.video_url && (
+                            <button
+                              type="button"
+                              onClick={() => setClipLightbox(p.dakb_clip!.video_url)}
+                              className="group relative block h-24 w-16 overflow-hidden rounded-md bg-black"
+                              title="Click to play the DA+KB clip"
+                            >
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src={url(thumbPath)}
+                                alt=""
+                                className="h-full w-full object-cover opacity-80 transition group-hover:opacity-50"
+                              />
+                              <span className="absolute inset-0 flex items-center justify-center text-xl text-white">
+                                ▶
+                              </span>
+                            </button>
+                          )}
+                          {p.dakb_clip.error && (
+                            <span className="text-[10px] text-red-600" title={p.dakb_clip.error}>
+                              {truncate(p.dakb_clip.error, 40)}
+                            </span>
+                          )}
+                          {onGenerateClip && p.dakb_clip.status !== 'ready' && (
+                            <MiniBtn
+                              label="Generate"
+                              title="Generate a DA+KB clip from this photo"
+                              disabled={busy}
+                              onClick={() =>
+                                run(p.id, () =>
+                                  (
+                                    onGenerateClip as (
+                                      id: string,
+                                      engine?: string,
+                                    ) => Promise<{ ok: boolean; message?: string }>
+                                  )(p.id, p.dakb_clip?.engine ?? 'kenburns'),
+                                )
+                              }
+                            />
+                          )}
+                        </div>
+                      ) : (
+                        <div className="flex flex-col gap-1">
+                          <span className="text-ink2">no clip</span>
+                          {onGenerateClip && (
+                            <MiniBtn
+                              label="Generate"
+                              title="Generate a DA+KB clip from this photo"
+                              disabled={busy}
+                              onClick={() =>
+                                run(p.id, () =>
+                                  (
+                                    onGenerateClip as (
+                                      id: string,
+                                      engine?: string,
+                                    ) => Promise<{ ok: boolean; message?: string }>
+                                  )(p.id, 'kenburns'),
                                 )
                               }
                             />

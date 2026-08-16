@@ -268,10 +268,15 @@ type PhotoClipRow = {
 };
 
 async function processPhotoClips(): Promise<void> {
+  // MONEY GUARD (owner 2026-08-17): photo_clips now carries depthflow/kenburns
+  // rows too, consumed locally by render-worker. This worker must ONLY claim
+  // seedance rows — submitting a depthflow/kenburns row here would bill a paid
+  // OpenRouter job for something the local render service does free.
   const { data } = (await sb
     .from('photo_clips')
     .select('*')
     .in('status', ['pending', 'processing'])
+    .eq('engine', 'seedance')
     .order('created_at', { ascending: true })
     .limit(20)) as { data: PhotoClipRow[] | null };
 

@@ -395,7 +395,7 @@ async function runTag(sb: any, run: RunRow) {
 
 // ─── step: generate ─────────────────────────────────────────────────────────
 
-async function runGenerate(sb: any, run: RunRow, photoIds?: string[]) {
+async function runGenerate(sb: any, run: RunRow, photoIds?: string[], engine?: string) {
   const resolve = run.step_results.resolve as
     | { resolved?: Array<{ place_id: string; bucket: string; name: string }> }
     | undefined;
@@ -454,20 +454,31 @@ async function runGenerate(sb: any, run: RunRow, photoIds?: string[]) {
   // Single-photo generate (row button): keep only that photo's shot.
   const selected =
     photoIds && photoIds.length > 0 ? shots.filter((s) => photoIds.includes(s.photo_id)) : shots;
+  // Engine override: the row button on the DA+KB column requests depthflow/kenburns;
+  // the seedance column requests seedance (the shot list default).
+  const forceEngine = engine === 'depthflow' || engine === 'kenburns' ? engine : null;
+  const shotsWithEngine = forceEngine ? selected.map((s) => ({ ...s, engine: forceEngine })) : selected;
 
   // Enqueue missing photo_clips — but a FAILED row is dead (expired TTL,
   // provider rejection); reset it to pending so the worker picks it up again
   // instead of silently skipping (owner 2026-08-17: generate after expired
   // showed no status change because the failed row blocked a re-create).
+  // Keyed by (photo_id, engine): a photo can have both a seedance and a
+  // depthflow/kenburns clip.
   const existing = await sb
     .from('photo_clips')
-    .select('photo_id, status')
+    .select('photo_id, engine, status')
     .in(
       'photo_id',
-      selected.map((s) => s.photo_id),
+      shotsWithEngine.map((s) => s.photo_id),
     );
-  const have = new Map((existing.data ?? []).map((r: { photo_id: string; status: string }) => [r.photo_id, r.status]));
-  const toCreate = selected.filter((s) => !have.has(s.photo_id));
+  const have = new Map(
+    (existing.data ?? []).map((r: { photo_id: string; engine: string; status: string }) => [
+      `${r.photo_id}:${r.engine}`,
+      r.status,
+    ]),
+  );
+  const toCreate = shotsWithEngine.filter((s) => !have.has(`${s.photo_id}:${s.engine}`));
   if (toCreate.length > 0) {
     await sb.from('photo_clips').insert(
       toCreate.map((s) => ({
@@ -479,30 +490,31 @@ async function runGenerate(sb: any, run: RunRow, photoIds?: string[]) {
     );
   }
   // Failed rows: reset to pending (re-generate). Leave ready/processing alone.
-  const failedIds = selected
+  const failedIds = shotsWithEngine
     .map((s) => s.photo_id)
-    .filter((id) => have.get(id) === 'failed');
+    .filter((id) => have.get(`${id}:${forceEngine ?? 'seedance'}`) === 'failed');
   if (failedIds.length > 0) {
     await sb
       .from('photo_clips')
       .update({ status: 'pending', error: null, updated_at: new Date().toISOString() })
-      .in('photo_id', failedIds);
+      .in('photo_id', failedIds)
+      .eq('engine', forceEngine ?? 'seedance');
   }
 
   await saveStep(sb, run, 'generate', {
-    shots,
+    shots: shotsWithEngine,
     created: toCreate.length,
-    reused: shots.length - toCreate.length,
+    reused: shotsWithEngine.length - toCreate.length,
   });
   await setRunStatus(sb, run.id, 'generating');
-  return { shots: shots.length, created: toCreate.length };
+  return { shots: shotsWithEngine.length, created: toCreate.length };
 }
 
 // ─── dispatcher ─────────────────────────────────────────────────────────────
 
 const STEP_HANDLERS: Record<
   string,
-  (sb: any, run: RunRow, photoIds?: string[]) => Promise<unknown>
+  (sb: any, run: RunRow, photoIds?: string[], engine?: string) => Promise<unknown>
 > = {
   research: runResearch,
   resolve: runResolve,
@@ -525,6 +537,7 @@ export async function POST(
   const body = (await req.json().catch(() => ({}))) as {
     step?: string;
     photoIds?: string[];
+    engine?: string;
   };
   const step = body.step;
   if (!step || !STEP_HANDLERS[step]) {
@@ -543,7 +556,7 @@ export async function POST(
   try {
     const result =
       step === 'generate'
-        ? await STEP_HANDLERS[step]!(sb, run, body.photoIds)
+        ? await STEP_HANDLERS[step]!(sb, run, body.photoIds, body.engine)
         : await STEP_HANDLERS[step]!(sb, run);
     return NextResponse.json({ ok: true, step, result });
   } catch (err) {

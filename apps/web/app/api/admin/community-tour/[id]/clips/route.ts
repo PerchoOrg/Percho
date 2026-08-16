@@ -83,6 +83,12 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       }) => [c.photo_id, c],
     ),
   );
+  // Seedance vs depthflow/kenburns clips are separate rows (same photo can
+  // have both). The UI shows two columns; key by photo_id + engine.
+  const clipsByPhotoEngine = new Map<string, typeof clipByPhoto extends Map<string, infer V> ? V : never>();
+  for (const c of clips ?? []) {
+    clipsByPhotoEngine.set(`${c.photo_id}:${c.engine}`, c);
+  }
   const publicBase = sb.storage
     .from('ai-videos')
     .getPublicUrl('__probe__')
@@ -105,8 +111,20 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       ai_tags: unknown;
     }) => {
       const clip = clipByPhoto.get(p.id);
+      const dakbClip = clipsByPhotoEngine.get(`${p.id}:depthflow`) ?? clipsByPhotoEngine.get(`${p.id}:kenburns`);
       const path =
         p.enhanced_status === 'approved' && p.enhanced_path ? p.enhanced_path : p.storage_path;
+      const clipOut = (c: (typeof clipByPhoto extends Map<string, infer V> ? V : never) | undefined) =>
+        c
+          ? {
+              engine: c.engine,
+              duration_s: c.duration_s,
+              status: c.status,
+              video_url: c.storage_path ? `${publicBase}/${c.storage_path}` : null,
+              cost_usd: c.cost_usd,
+              error: c.error,
+            }
+          : null;
       return {
         photo_id: p.id,
         poi_id: p.poi_id,
@@ -115,16 +133,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
         recommended:
           recommendedIds.has(poiPlaceId.get(p.poi_id) ?? '') ||
           (clip?.status === 'ready' ? true : false),
-        clip: clip
-          ? {
-              engine: clip.engine,
-              duration_s: clip.duration_s,
-              status: clip.status,
-              video_url: clip.storage_path ? `${publicBase}/${clip.storage_path}` : null,
-              cost_usd: clip.cost_usd,
-              error: clip.error,
-            }
-          : null,
+        clip: clipOut(clip),
+        dakb_clip: clipOut(dakbClip),
       };
     },
   );

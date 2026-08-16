@@ -1427,6 +1427,123 @@ def approved_enhanced_path(row: dict[str, Any]) -> str | None:
     return None
 
 
+# ── photo clip (photo_clips depthflow/kenburns, 2026-08-17) ─────────────
+#
+# The community-tour pipeline enqueues per-photo clips in `photo_clips`
+# with engine seedance|depthflow|kenburns. seedance rows are consumed by
+# scripts/seedance-worker (OpenRouter, paid). depthflow/kenburns rows are
+# consumed HERE — a single photo rendered locally by generate.py, uploaded
+# to the ai-videos bucket as clips/<photo_id>.mp4 (same path shape the
+# seedance worker uses), then the row flips to ready.
+#
+# Priority: above photo enhancement (owner clicked Generate and is
+# watching), below the bigger interactive render jobs.
+
+def claim_photo_clip() -> dict[str, Any] | None:
+    """Claim the oldest pending depthflow/kenburns photo_clips row."""
+    rows = sb_get(
+        "photo_clips",
+        {
+            "select": "id,photo_id,engine,duration_s,status",
+            "status": "eq.pending",
+            "or": "(engine.eq.depthflow,engine.eq.kenburns)",
+            "order": "created_at.asc",
+            "limit": "1",
+        },
+    )
+    if not rows:
+        return None
+    row = rows[0]
+    updated = sb_patch(
+        "photo_clips",
+        {"id": f"eq.{row['id']}", "status": "eq.pending"},
+        {"status": "processing", "updated_at": _now_iso()},
+    )
+    if not updated:
+        return None
+    return row
+
+
+def process_photo_clip(row: dict[str, Any]) -> None:
+    clip_id = row["id"]
+    photo_id = row["photo_id"]
+    engine = row.get("engine") or "kenburns"
+    workdir = Path(tempfile.mkdtemp(prefix=f"clip-{clip_id[:8]}-"))
+    print(f"[clip {clip_id}] photo={photo_id} engine={engine}", flush=True)
+
+    try:
+        # 1. Fetch the photo (respect approved enhancement like other renders).
+        photos = sb_get(
+            "poi_photos",
+            {
+                "select": "id,storage_path,enhanced_path,enhanced_status",
+                "id": f"eq.{photo_id}",
+                "limit": "1",
+            },
+        )
+        if not photos:
+            raise RuntimeError(f"poi_photo {photo_id} not found")
+        p = photos[0]
+        read_path = approved_enhanced_path(p) or p["storage_path"]
+        ext = Path(read_path).suffix or ".jpg"
+        src = workdir / f"photo{ext}"
+        storage_download(PHOTO_BUCKET, read_path, src)
+        print(f"[clip {clip_id}] downloaded {read_path}", flush=True)
+
+        # 2. Render one clip with generate.py.
+        duration = float(row.get("duration_s") or 3.0)
+        out_path = workdir / "clip.mp4"
+        cmd = [
+            PYTHON_BIN,
+            str(GENERATE_SCRIPT),
+            "--photos", str(workdir),
+            "--output", str(out_path),
+            "--duration-per-photo", str(duration),
+            "--engine", engine,
+            "--orientation", "portrait",
+            "--cover-crop",
+        ]
+        if engine == "depthflow":
+            cmd += ["--depthflow-python", DEPTHFLOW_PYTHON]
+        print(f"[clip {clip_id}] running: {' '.join(cmd)}", flush=True)
+        subprocess.run(cmd, check=True, cwd=str(REPO_ROOT), timeout=600)
+        if not out_path.exists():
+            raise RuntimeError("generate.py produced no output")
+
+        # 3. Upload to ai-videos bucket. Path includes the engine so a
+        #    seedance and a depthflow/kenburns clip of the same photo do not
+        #    overwrite each other (both historically used clips/<photo_id>.mp4).
+        storage_path = f"clips/{photo_id}-{engine}.mp4"
+        storage_upload("ai-videos", storage_path, out_path, content_type="video/mp4")
+        print(f"[clip {clip_id}] uploaded {storage_path}", flush=True)
+
+        sb_patch(
+            "photo_clips",
+            {"id": f"eq.{clip_id}"},
+            {
+                "status": "ready",
+                "storage_path": storage_path,
+                "error": None,
+                "updated_at": _now_iso(),
+            },
+        )
+        print(f"[clip {clip_id}] ready", flush=True)
+    except Exception as e:  # noqa: BLE001
+        err = f"{type(e).__name__}: {e}"
+        print(f"[clip {clip_id}] FAILED: {err}", flush=True)
+        traceback.print_exc()
+        try:
+            sb_patch(
+                "photo_clips",
+                {"id": f"eq.{clip_id}"},
+                {"status": "failed", "error": err[:500], "updated_at": _now_iso()},
+            )
+        except Exception:
+            traceback.print_exc()
+    finally:
+        shutil.rmtree(workdir, ignore_errors=True)
+
+
 def main() -> None:
     print(f"[worker] starting, polling every {POLL_IDLE_SEC}s", flush=True)
     while True:
@@ -1455,6 +1572,18 @@ def main() -> None:
 
         if bucket_job is not None:
             process_bucket_job(bucket_job)
+            continue
+
+        # Photo clips (depthflow/kenburns) — interactive, above enhancement.
+        try:
+            clip_row = claim_photo_clip()
+        except Exception:
+            traceback.print_exc()
+            time.sleep(POLL_IDLE_SEC)
+            continue
+
+        if clip_row is not None:
+            process_photo_clip(clip_row)
             continue
 
         # Photo enhancement is LAST in the priority order: a render job is

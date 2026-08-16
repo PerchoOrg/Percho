@@ -32,6 +32,14 @@ interface ClipRow {
     cost_usd: number | null;
     error: string | null;
   } | null;
+  dakb_clip: {
+    engine: string;
+    duration_s: number | null;
+    status: string;
+    video_url: string | null;
+    cost_usd: number | null;
+    error: string | null;
+  } | null;
 }
 
 export function CommunityTourSection({
@@ -85,7 +93,7 @@ export function CommunityTourSection({
   const enriched = photos.map((p) => {
     const c = clipById.get(p.id);
     if (!c) return p;
-    return { ...p, recommended: c.recommended, clip: c.clip };
+    return { ...p, recommended: c.recommended, clip: c.clip, dakb_clip: c.dakb_clip };
   });
 
   const toggle = useCallback((id: string) => {
@@ -108,7 +116,10 @@ export function CommunityTourSection({
     });
   }, []);
 
-  async function generateClip(photoId: string): Promise<{ ok: boolean; message?: string }> {
+  async function generateClip(
+    photoId: string,
+    engine?: string,
+  ): Promise<{ ok: boolean; message?: string }> {
     // Reuse the latest run (or create one) and run the generate step for one
     // photo. The step route creates a photo_clips row (engine/duration from
     // the shot list); the seedance worker picks it up.
@@ -129,7 +140,7 @@ export function CommunityTourSection({
     const res = await fetch(`/api/admin/community-tour/${communityId}/runs/${runId}/step`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ step: 'generate', photoIds: [photoId] }),
+      body: JSON.stringify({ step: 'generate', photoIds: [photoId], engine }),
     });
     if (!res.ok) {
       const body = (await res.json().catch(() => ({}))) as { message?: string; error?: string };
