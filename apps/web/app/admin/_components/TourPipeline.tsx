@@ -83,19 +83,16 @@ export function TourPipeline({
     void loadRuns();
   }, [loadRuns]);
 
-  // Poll while a step is running, OR while research is in flight (the agent
-  // script writes step_results itself over minutes — the POST already
-  // returned). Stop once the run is no longer researching.
-  const researchInFlight = runs.some(
-    (r) => r.status === 'researching' && !r.step_results.agent_research,
-  );
+  // Poll only while a step button is actually in flight (POST pending).
+  // Research is now inline (Vercel) — it completes inside the POST, so no
+  // separate "wait for the detached script" polling is needed.
   useEffect(() => {
-    if (!running && !researchInFlight) return;
+    if (!running) return;
     const t = setInterval(() => {
       void loadRuns();
     }, 4000);
     return () => clearInterval(t);
-  }, [running, researchInFlight, loadRuns]);
+  }, [running, loadRuns]);
 
   async function createRun(): Promise<string | null> {
     const res = await fetch(`/api/admin/community-tour/${communityId}/runs`, { method: 'POST' });
@@ -246,6 +243,8 @@ export function TourPipeline({
           | undefined;
         // Live research progress (script writes research_progress while the
         // two agents run; agent_research landing is the done signal).
+        // Only trust it while THIS button actually triggered a run — a stale
+        // research_progress blob (dead process) must not show a spinner.
         const researchProgress = run?.step_results.research_progress as
           | {
               status?: string;
@@ -254,7 +253,7 @@ export function TourPipeline({
               error?: string;
             }
           | undefined;
-        const researching = !done && researchProgress?.status === 'running';
+        const researching = running === 'research' && researchProgress?.status === 'running';
         const runSeconds = researchProgress?.started_at
           ? Math.max(
               0,
@@ -295,7 +294,7 @@ export function TourPipeline({
                 {researchProgress?.agents_done?.length ?? 0}/2 agents done · {runSeconds}s elapsed
               </div>
             )}
-            {researchProgress?.status === 'failed' && !done && (
+            {running === 'research' && researchProgress?.status === 'failed' && (
               <div className="mt-2 text-xs text-red-600">
                 Research failed: {researchProgress.error ?? 'unknown'}
               </div>
