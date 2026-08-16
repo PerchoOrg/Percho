@@ -1,15 +1,14 @@
 /**
  * Dual-agent community research via Gemini Grounding with Google Search.
  *
- * Runs the same research prompt through two Gemini calls (gemini_a / gemini_b,
- * slightly different tempering so they diverge), each with Google Search
- * grounding so every POI is backed by a real source. Writes both JSON results
- * to a single `step_results.agent_research` blob for the admin UI to render
- * and the resolve step to consume.
+ * Runs the generic research prompt through two Gemini grounding calls
+ * independently (they must not see each other's output), then writes both
+ * JSON results to a single `step_results.agent_research` blob for the admin
+ * UI to render and the resolve step to consume.
  *
- * Replaces the claude/codex CLI path (owner 2026-08-16): the CLIs' OAuth
- * sessions/tool permissions were flaky and they cost real money; Gemini
- * grounding is a plain HTTP call with per-call usage metadata.
+ * Runs inline on Vercel (plain HTTP to Gemini — no local CLI). The CLI
+ * script `scripts/community-tour/agent-research.ts` still exists for local
+ * debugging only.
  *
  * Usage:
  *   pnpm --filter @percho/web community-tour-agent <communityId> <runId>

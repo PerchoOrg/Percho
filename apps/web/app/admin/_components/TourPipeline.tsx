@@ -11,7 +11,7 @@
  *
  * Steps:
  *   1 community info    (DB read — always available)
- *   2 agent research    (claude/codex CLI, local dev — async, polls)
+ *   2 agent research    (dual Gemini grounding — inline, Vercel)
  *   3 resolve+merge     (Google firewall)
  *   4 <4 survivors      (widen hook — shown when resolve < 4)
  *   5 photos            (3 per POI)
@@ -26,7 +26,7 @@ import { useCallback, useEffect, useState } from 'react';
 type StepName = 'research' | 'resolve' | 'photos' | 'tag' | 'generate' | 'assemble';
 
 const STEPS: Array<{ name: StepName; label: string; desc: string }> = [
-  { name: 'research', label: '2 · Agent Research', desc: 'claude + codex (local dev)' },
+  { name: 'research', label: '2 · Agent Research', desc: 'gemini_a + gemini_b (grounding)' },
   { name: 'resolve', label: '3 · Resolve & Merge', desc: 'Google Places firewall' },
   { name: 'photos', label: '5 · Fetch Photos', desc: '3 per POI' },
   { name: 'tag', label: '6 · Tag + Shot List', desc: 'Gemini + duration' },
@@ -329,13 +329,13 @@ function StepResult({ s, result }: { s: StepName; result: Record<string, unknown
       };
       community?: { name?: string };
     };
-    const claudePois = r.agents?.gemini_a?.parsed?.pois?.length ?? 0;
-    const codexPois = r.agents?.gemini_b?.parsed?.pois?.length ?? 0;
+    const geminiAPois = r.agents?.gemini_a?.parsed?.pois?.length ?? 0;
+    const geminiBPois = r.agents?.gemini_b?.parsed?.pois?.length ?? 0;
     return (
       <div className="space-y-2">
         <div className="flex flex-wrap gap-3">
           <span className={r.agents?.gemini_a?.ok ? 'text-emerald-600' : 'text-red-600'}>
-            gemini_a {r.agents?.gemini_a?.ok ? `${claudePois} POIs` : 'failed'}
+            gemini_a {r.agents?.gemini_a?.ok ? `${geminiAPois} POIs` : 'failed'}
             {r.agents?.gemini_a?.usage && (
               <span className="text-ink3">
                 {' '}
@@ -348,7 +348,7 @@ function StepResult({ s, result }: { s: StepName; result: Record<string, unknown
             )}
           </span>
           <span className={r.agents?.gemini_b?.ok ? 'text-emerald-600' : 'text-red-600'}>
-            gemini_b {r.agents?.gemini_b?.ok ? `${codexPois} POIs` : 'failed'}
+            gemini_b {r.agents?.gemini_b?.ok ? `${geminiBPois} POIs` : 'failed'}
             {r.agents?.gemini_b?.usage && (
               <span className="text-ink3">
                 {' '}
@@ -368,7 +368,7 @@ function StepResult({ s, result }: { s: StepName; result: Record<string, unknown
         )}
         {r.agents?.gemini_a?.raw && (
           <details>
-            <summary className="cursor-pointer text-ink2">gemini_a raw ({claudePois} POIs)</summary>
+            <summary className="cursor-pointer text-ink2">gemini_a raw ({geminiAPois} POIs)</summary>
             <pre className="bg-bg mt-1 max-h-48 overflow-auto whitespace-pre-wrap rounded border border-line p-2 text-[10px] text-ink2">
               {r.agents.gemini_a.raw}
             </pre>
@@ -376,7 +376,7 @@ function StepResult({ s, result }: { s: StepName; result: Record<string, unknown
         )}
         {r.agents?.gemini_b?.raw && (
           <div>
-            <h4 className="text-ink2 text-xs font-medium">gemini_b results ({codexPois} POIs)</h4>
+            <h4 className="text-ink2 text-xs font-medium">gemini_b results ({geminiBPois} POIs)</h4>
             <div className="overflow-x-auto rounded border border-line">
               <table className="w-full border-collapse text-left text-[10px]">
                 <thead className="bg-surface text-ink2">

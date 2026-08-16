@@ -3,8 +3,7 @@
  *
  * Steps (owner-fixed 2026-08-15):
  *   1. community info     (DB read, no work)
- *   2. agent research     (claude/codex CLI — LOCAL DEV ONLY, see
- *                          scripts/community-tour/agent-research.ts)
+ *   2. agent research     (dual Gemini grounding — inline, Vercel)
  *   3. resolve+merge      (Google Places Text Search firewall)
  *   4. <4 survivors       → widen radius hook (thresholds TBD)
  *   5. fetch photos       (3 per POI, 1600px, existing poi_photos pipeline)

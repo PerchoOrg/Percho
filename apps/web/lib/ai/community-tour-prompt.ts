@@ -1,9 +1,9 @@
 /**
  * Generic dual-agent research prompt for the Community Tour pipeline.
  *
- * Runs identically in claude code and codex (local dev only — see
- * scripts/community-tour/agent-research.ts). NO density class / probe:
- * the agent researches like a person searching an unfamiliar city.
+ * Runs identically in both Gemini grounding calls (gemini_a / gemini_b).
+ * NO density class / probe: the agent researches like a person searching an
+ * unfamiliar city.
  *
  * Output contract is strict JSON so the orchestrator can merge both agents'
  * results without a human.
