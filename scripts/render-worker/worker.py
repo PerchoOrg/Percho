@@ -1510,11 +1510,11 @@ def process_photo_clip(row: dict[str, Any]) -> None:
         if not out_path.exists():
             raise RuntimeError("generate.py produced no output")
 
-        # 3. Upload to ai-videos bucket. Path includes the engine so a
-        #    seedance and a depthflow/kenburns clip of the same photo do not
-        #    overwrite each other (both historically used clips/<photo_id>.mp4).
+        # 3. Upload to the clip-renders bucket (LOCAL render output, NOT the
+        #    paid ai-videos bucket). Path includes the engine so a seedance
+        #    and a depthflow/kenburns clip of the same photo never collide.
         storage_path = f"clips/{photo_id}-{engine}.mp4"
-        storage_upload("ai-videos", storage_path, out_path, content_type="video/mp4")
+        storage_upload("clip-renders", storage_path, out_path, content_type="video/mp4")
         print(f"[clip {clip_id}] uploaded {storage_path}", flush=True)
 
         sb_patch(

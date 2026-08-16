@@ -93,6 +93,12 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     .from('ai-videos')
     .getPublicUrl('__probe__')
     .data.publicUrl.replace('/__probe__', '');
+  // Local render clips (depthflow/kenburns) live in clip-renders, not the
+  // paid ai-videos bucket — keep the two money classes separate.
+  const renderBase = sb.storage
+    .from('clip-renders')
+    .getPublicUrl('__probe__')
+    .data.publicUrl.replace('/__probe__', '');
 
   const poiPlaceId = new Map<string, string>(
     (pois ?? []).map((poi: { id: string; google_place_id: string }) => [
@@ -114,13 +120,15 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       const dakbClip = clipsByPhotoEngine.get(`${p.id}:depthflow`) ?? clipsByPhotoEngine.get(`${p.id}:kenburns`);
       const path =
         p.enhanced_status === 'approved' && p.enhanced_path ? p.enhanced_path : p.storage_path;
-      const clipOut = (c: (typeof clipByPhoto extends Map<string, infer V> ? V : never) | undefined) =>
+      const clipOut = (c: (typeof clipByPhoto extends Map<string, infer V> ? V : never) | undefined, isDakb: boolean) =>
         c
           ? {
               engine: c.engine,
               duration_s: c.duration_s,
               status: c.status,
-              video_url: c.storage_path ? `${publicBase}/${c.storage_path}` : null,
+              video_url: c.storage_path
+                ? `${isDakb ? renderBase : publicBase}/${c.storage_path}`
+                : null,
               cost_usd: c.cost_usd,
               error: c.error,
             }
@@ -133,8 +141,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
         recommended:
           recommendedIds.has(poiPlaceId.get(p.poi_id) ?? '') ||
           (clip?.status === 'ready' ? true : false),
-        clip: clipOut(clip),
-        dakb_clip: clipOut(dakbClip),
+        clip: clipOut(clip, false),
+        dakb_clip: clipOut(dakbClip, true),
       };
     },
   );
