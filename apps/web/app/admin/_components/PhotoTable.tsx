@@ -264,12 +264,12 @@ export function PhotoTable({
                   />
                 </Th>
               )}
+              <Th>Actions</Th>
               <Th>Photo</Th>
               <Th>{isListing ? '#' : 'POI'}</Th>
               <Th>Size</Th>
               <Th>Category</Th>
-              <Th className="min-w-[220px]">AI description</Th>
-              <Th className="min-w-[160px]">AI tags</Th>
+              {!isListing && <Th>Seedance?</Th>}
               <Th>Score</Th>
               {isListing && <Th>Hero</Th>}
               {!isListing && <Th>Buckets</Th>}
@@ -278,7 +278,8 @@ export function PhotoTable({
               {!isListing && <Th>Clip</Th>}
               <Th>In video</Th>
               <Th>Enhanced</Th>
-              <Th>Actions</Th>
+              <Th className="min-w-[220px]">AI description</Th>
+              <Th className="min-w-[160px]">AI tags</Th>
             </tr>
           </thead>
           <tbody>
@@ -300,6 +301,68 @@ export function PhotoTable({
                       />
                     </Td>
                   )}
+                  <Td>
+                    <div className="flex flex-col gap-1">
+                      {p.enhanced_path && p.enhanced_status !== 'queued' && (
+                        <div className="flex gap-1">
+                          <MiniBtn
+                            label="✓ enh"
+                            title="Approve the enhanced file — renders will use it from now on"
+                            active={p.enhanced_status === 'approved'}
+                            disabled={busy}
+                            onClick={() =>
+                              run(p.id, () => setEnhancedDecision(table, p.id, 'approved'))
+                            }
+                          />
+                          <MiniBtn
+                            label="✗ enh"
+                            title="Reject the enhanced file — renders keep the original"
+                            danger
+                            active={p.enhanced_status === 'rejected'}
+                            disabled={busy}
+                            onClick={() =>
+                              run(p.id, () => setEnhancedDecision(table, p.id, 'rejected'))
+                            }
+                          />
+                        </div>
+                      )}
+                      {!p.enhanced_path && (
+                        <MiniBtn
+                          label="Enhance"
+                          title="Queue this photo for enhancement"
+                          disabled={busy}
+                          onClick={() => run(p.id, () => queuePhotoEnhancement(table, [p.id]))}
+                        />
+                      )}
+                      {!isListing && (
+                        <div className="flex gap-1">
+                          {!p.tagged_at && (
+                            <MiniBtn
+                              label="Tag"
+                              title="Tag this photo with Gemini (AI description + category + score)"
+                              disabled={busy}
+                              onClick={() => run(p.id, () => tagPoiPhotoAction(p.id))}
+                            />
+                          )}
+                          <MiniBtn
+                            label={<Check size={11} />}
+                            title="Approve photo (platform-wide)"
+                            active={p.status === 'approved'}
+                            disabled={busy}
+                            onClick={() => run(p.id, () => setGlobalPhotoStatus(p.id, 'approved'))}
+                          />
+                          <MiniBtn
+                            label={<X size={11} />}
+                            title="Reject photo — removes it from every video pool"
+                            danger
+                            active={p.status === 'rejected'}
+                            disabled={busy}
+                            onClick={() => run(p.id, () => setGlobalPhotoStatus(p.id, 'rejected'))}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </Td>
                   <Td>
                     <button
                       type="button"
@@ -336,32 +399,17 @@ export function PhotoTable({
                     {t.isMaster && <div className="text-[10px] text-bronze">master</div>}
                     {t.usable === false && <div className="text-[10px] text-red-600">unusable</div>}
                   </Td>
-                  <Td className="max-w-[280px] text-ink2">
-                    {t.description ? (
-                      <span title={t.description}>{truncate(t.description, 110)}</span>
-                    ) : (
-                      '—'
-                    )}
-                  </Td>
-                  <Td>
-                    {t.tags.length === 0 ? (
-                      <span className="text-ink2">—</span>
-                    ) : (
-                      <div className="flex flex-wrap gap-1">
-                        {t.tags.slice(0, 4).map((tag) => (
-                          <span
-                            key={tag}
-                            className="rounded bg-line/60 px-1.5 py-0.5 text-[10px] text-ink2"
-                          >
-                            {tag}
-                          </span>
-                        ))}
-                        {t.tags.length > 4 && (
-                          <span className="text-[10px] text-ink2">+{t.tags.length - 4}</span>
-                        )}
-                      </div>
-                    )}
-                  </Td>
+                  {!isListing && (
+                    <Td>
+                      {p.clip?.engine === 'seedance' || (!p.clip && seedanceByCategory(t.category)) ? (
+                        <span className="flex items-center gap-1 text-emerald-600">
+                          <Check size={12} /> yes
+                        </span>
+                      ) : (
+                        <span className="text-ink2">—</span>
+                      )}
+                    </Td>
+                  )}
                   <Td className="tabular-nums">
                     {p.ai_score != null ? (
                       p.ai_score.toFixed(2)
@@ -533,67 +581,31 @@ export function PhotoTable({
                       </button>
                     )}
                   </Td>
+                  <Td className="max-w-[280px] text-ink2">
+                    {t.description ? (
+                      <span title={t.description}>{truncate(t.description, 110)}</span>
+                    ) : (
+                      '—'
+                    )}
+                  </Td>
                   <Td>
-                    <div className="flex flex-col gap-1">
-                      {p.enhanced_path && p.enhanced_status !== 'queued' && (
-                        <div className="flex gap-1">
-                          <MiniBtn
-                            label="✓ enh"
-                            title="Approve the enhanced file — renders will use it from now on"
-                            active={p.enhanced_status === 'approved'}
-                            disabled={busy}
-                            onClick={() =>
-                              run(p.id, () => setEnhancedDecision(table, p.id, 'approved'))
-                            }
-                          />
-                          <MiniBtn
-                            label="✗ enh"
-                            title="Reject the enhanced file — renders keep the original"
-                            danger
-                            active={p.enhanced_status === 'rejected'}
-                            disabled={busy}
-                            onClick={() =>
-                              run(p.id, () => setEnhancedDecision(table, p.id, 'rejected'))
-                            }
-                          />
-                        </div>
-                      )}
-                      {!p.enhanced_path && (
-                        <MiniBtn
-                          label="Enhance"
-                          title="Queue this photo for enhancement"
-                          disabled={busy}
-                          onClick={() => run(p.id, () => queuePhotoEnhancement(table, [p.id]))}
-                        />
-                      )}
-                      {!isListing && (
-                        <div className="flex gap-1">
-                          {!p.tagged_at && (
-                            <MiniBtn
-                              label="Tag"
-                              title="Tag this photo with Gemini (AI description + category + score)"
-                              disabled={busy}
-                              onClick={() => run(p.id, () => tagPoiPhotoAction(p.id))}
-                            />
-                          )}
-                          <MiniBtn
-                            label={<Check size={11} />}
-                            title="Approve photo (platform-wide)"
-                            active={p.status === 'approved'}
-                            disabled={busy}
-                            onClick={() => run(p.id, () => setGlobalPhotoStatus(p.id, 'approved'))}
-                          />
-                          <MiniBtn
-                            label={<X size={11} />}
-                            title="Reject photo — removes it from every video pool"
-                            danger
-                            active={p.status === 'rejected'}
-                            disabled={busy}
-                            onClick={() => run(p.id, () => setGlobalPhotoStatus(p.id, 'rejected'))}
-                          />
-                        </div>
-                      )}
-                    </div>
+                    {t.tags.length === 0 ? (
+                      <span className="text-ink2">—</span>
+                    ) : (
+                      <div className="flex flex-wrap gap-1">
+                        {t.tags.slice(0, 4).map((tag) => (
+                          <span
+                            key={tag}
+                            className="rounded bg-line/60 px-1.5 py-0.5 text-[10px] text-ink2"
+                          >
+                            {tag}
+                          </span>
+                        ))}
+                        {t.tags.length > 4 && (
+                          <span className="text-[10px] text-ink2">+{t.tags.length - 4}</span>
+                        )}
+                      </div>
+                    )}
                   </Td>
                 </tr>
               );
@@ -649,6 +661,13 @@ export function PhotoTable({
 
 function truncate(s: string, n: number) {
   return s.length > n ? `${s.slice(0, n)}…` : s;
+}
+
+/** Seedance recommendation without an existing clip: open scenes (aerial /
+ *  landscape / storefront) benefit from generation; interiors and text-heavy
+ *  frames are served fine by depthflow/ken-burns (owner 2026-08-17). */
+function seedanceByCategory(category: string | null): boolean {
+  return category === 'aerial' || category === 'landscape' || category === 'storefront';
 }
 
 function Th({ children, className = '' }: { children: React.ReactNode; className?: string }) {
