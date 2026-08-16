@@ -65,12 +65,12 @@ export async function loadNearbyPhotos(scope: Scope): Promise<NearbyPhotoRow[]> 
   const { data: photos } = (await sb
     .from('poi_photos')
     .select(
-      'id, poi_id, storage_path, status, width_px, height_px, ai_score, ai_tags, applicable_buckets, tagged_at, enhanced_path, enhanced_status, enhanced_preset, enhanced_error',
+      'id, poi_id, storage_path, status, width_px, height_px, ai_score, ai_tags, applicable_buckets, tagged_at, enhanced_path, enhanced_status, enhanced_preset, enhanced_error, created_at',
     )
     .in('poi_id', poiIds)
-    .order('ai_score', { ascending: false, nullsFirst: false })
+    .order('created_at', { ascending: false, nullsFirst: false })
     .limit(1000)) as {
-    data: Array<Omit<NearbyPhotoRow, 'poi_name' | 'used_in'>> | null;
+    data: Array<Omit<NearbyPhotoRow, 'poi_name' | 'used_in'> & { created_at: string }> | null;
   };
 
   const rows = photos ?? [];
@@ -99,9 +99,36 @@ export async function loadNearbyPhotos(scope: Scope): Promise<NearbyPhotoRow[]> 
     }
   }
 
-  return rows.map((p) => ({
+  const full = rows.map((p) => ({
     ...p,
     poi_name: nameByPoi.get(p.poi_id) ?? null,
     used_in: usedIn.get(p.id) ?? [],
   }));
+
+  // Owner 2026-08-17: each POI shows the LATEST fetch's photos (3), plus any
+  // photo that has an AI video (used_in non-empty). Historical fetches
+  // accumulated 10-14 photos per POI (content-hash dedup reuses, never
+  // deletes — by design). Display-only trim; DB untouched.
+  const POI_PHOTO_CAP = 3;
+  const byPoi = new Map<string, NearbyPhotoRow[]>();
+  for (const row of full) {
+    const arr = byPoi.get(row.poi_id) ?? [];
+    arr.push(row);
+    byPoi.set(row.poi_id, arr);
+  }
+  const trimmed: NearbyPhotoRow[] = [];
+  for (const [pid, arr] of byPoi) {
+    // rows are already sorted created_at desc; keep the newest cap, then
+    // append any used-in-video photos that fell outside the cap.
+    const kept = arr.slice(0, POI_PHOTO_CAP);
+    const usedIds = new Set(kept.map((r) => r.id));
+    for (const row of arr.slice(POI_PHOTO_CAP)) {
+      if (row.used_in.length > 0 && !usedIds.has(row.id)) {
+        kept.push(row);
+        usedIds.add(row.id);
+      }
+    }
+    trimmed.push(...kept);
+  }
+  return trimmed;
 }
