@@ -296,6 +296,9 @@ function StepResult({ s, result }: { s: StepName; result: Record<string, unknown
     return (
       <div className="space-y-2">
         <div className="flex gap-3">
+          <span className={r.agents?.claude?.ok ? 'text-emerald-600' : 'text-red-600'}>
+            claude {r.agents?.claude?.ok ? `${claudePois} POIs` : 'failed'}
+          </span>
           <span className={r.agents?.codex?.ok ? 'text-emerald-600' : 'text-red-600'}>
             codex {r.agents?.codex?.ok ? `${codexPois} POIs` : 'failed'}
           </span>
