@@ -20,6 +20,7 @@
  */
 
 import { CheckCircle2, Loader2, Play, RefreshCw, Sparkles } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 import { PhotoTable, type PhotoRow } from './PhotoTable';
 
@@ -160,6 +161,11 @@ export function TourPipeline({
 
   const run = runs.find((r) => r.id === selectedRun);
 
+  // Photo rows (ai_tags/tagged_at/status) come from the server page props —
+  // a step POST only mutates the DB, so refresh() re-runs the server
+  // component to pull updated photo data into the tables (owner 2026-08-17).
+  const router = useRouter();
+
   // Steps 6/7 (tag + generate clips) merged into the photos panel — the table
   // below drives per-photo actions (owner 2026-08-17). Clip status fetched
   // separately so tag/generate reflect immediately without a full reload.
@@ -209,6 +215,7 @@ export function TourPipeline({
       }
       await loadRuns();
       await loadClips();
+      router.refresh();
     } finally {
       setTagPending(false);
     }
@@ -224,6 +231,7 @@ export function TourPipeline({
     const body = (await res.json()) as { ok?: boolean; message?: string; error?: string };
     if (!res.ok || !body.ok) return { ok: false, message: body.message ?? body.error ?? `HTTP ${res.status}` };
     await loadClips();
+    router.refresh();
     return { ok: true };
   }
 
