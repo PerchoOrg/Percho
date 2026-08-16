@@ -116,6 +116,7 @@ export function PhotoTable({
   const [sort, setSort] = useState<SortKey>('score');
   const [filter, setFilter] = useState<Filter>('all');
   const [lightbox, setLightbox] = useState<{ url: string; alt: string } | null>(null);
+  const [clipLightbox, setClipLightbox] = useState<string | null>(null);
 
   const isListing = table === 'listing_photos';
   const url = (p: string) => `${storageBase}/storage/v1/object/public/${bucket}/${p}`;
@@ -414,14 +415,22 @@ export function PhotoTable({
                         <div className="flex flex-col gap-1">
                           <StatusText value={p.clip.status} />
                           {p.clip.status === 'ready' && p.clip.video_url && (
-                            <video
-                              src={p.clip.video_url}
-                              controls
-                              preload="none"
-                              playsInline
-                              className="h-24 w-16 rounded-md bg-black object-contain"
+                            <button
+                              type="button"
+                              onClick={() => setClipLightbox(p.clip!.video_url)}
+                              className="group relative block h-24 w-16 overflow-hidden rounded-md bg-black"
                               title="Click to play the generated clip"
-                            />
+                            >
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src={url(thumbPath)}
+                                alt=""
+                                className="h-full w-full object-cover opacity-80 transition group-hover:opacity-50"
+                              />
+                              <span className="absolute inset-0 flex items-center justify-center text-xl text-white">
+                                ▶
+                              </span>
+                            </button>
                           )}
                           {p.clip.cost_usd != null && (
                             <span className="text-[10px] text-ink2">
@@ -614,6 +623,23 @@ export function PhotoTable({
             src={lightbox.url}
             alt={lightbox.alt}
             className="max-h-full max-w-full object-contain"
+          />
+        </button>
+      )}
+
+      {clipLightbox && (
+        <button
+          type="button"
+          aria-label="Close clip"
+          onClick={() => setClipLightbox(null)}
+          className="fixed inset-0 z-[90] flex items-center justify-center bg-black/90 p-4"
+        >
+          <video
+            src={clipLightbox}
+            controls
+            autoPlay
+            playsInline
+            className="max-h-full max-w-full"
           />
         </button>
       )}

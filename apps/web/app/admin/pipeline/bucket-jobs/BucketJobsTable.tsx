@@ -1,6 +1,7 @@
 'use client';
 
 import { type AdminColumn, AdminTable } from '@/app/admin/_components/AdminTable';
+import { streamIframeUrl } from '@/lib/cloudflare/stream';
 import Link from 'next/link';
 
 export type BucketJobRow = {
@@ -108,9 +109,9 @@ const columns: AdminColumn<BucketJobRow>[] = [
             className="font-mono text-xs text-blue-500 hover:underline"
             target="_blank"
             rel="noreferrer"
-            href={`https://dash.cloudflare.com/?to=/:account/stream/videos/${r.cf_stream_uid}`}
+            href={streamIframeUrl(r.cf_stream_uid)}
           >
-            {r.cf_stream_uid.slice(0, 10)}
+            {r.cf_stream_uid.slice(0, 10)}▶
           </a>
         );
       }
