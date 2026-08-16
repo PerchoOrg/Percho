@@ -121,6 +121,22 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   // biome-ignore lint/suspicious/noExplicitAny: stub generated types
   const sb = createServiceClient() as any;
 
+  // Owner 2026-08-16: failed jobs are garbage — delete them, don't keep.
+  const { data: failedRows } = (await sb
+    .from('ai_tour_videos')
+    .select('id')
+    .eq('community_id', communityId)
+    .eq('status', 'failed')) as { data: Array<{ id: string }> | null };
+  if ((failedRows ?? []).length > 0) {
+    await sb
+      .from('ai_tour_videos')
+      .delete()
+      .in(
+        'id',
+        (failedRows ?? []).map((r) => r.id),
+      );
+  }
+
   const { data } = (await sb
     .from('ai_tour_videos')
     .select(

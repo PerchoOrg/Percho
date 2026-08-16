@@ -269,16 +269,27 @@ export function TourPipeline({
 function StepResult({ s, result }: { s: StepName; result: Record<string, unknown> }) {
   if (s === 'research') {
     const r = result as {
+      prompt?: string;
       agents?: {
-        claude?: { ok?: boolean; parsed?: { pois?: unknown[] } | null; error?: string | null };
-        codex?: { ok?: boolean; parsed?: { pois?: unknown[] } | null; error?: string | null };
+        claude?: {
+          ok?: boolean;
+          parsed?: { pois?: unknown[] } | null;
+          raw?: string | null;
+          error?: string | null;
+        };
+        codex?: {
+          ok?: boolean;
+          parsed?: { pois?: unknown[] } | null;
+          raw?: string | null;
+          error?: string | null;
+        };
       };
       community?: { name?: string };
     };
     const claudePois = r.agents?.claude?.parsed?.pois?.length ?? 0;
     const codexPois = r.agents?.codex?.parsed?.pois?.length ?? 0;
     return (
-      <div>
+      <div className="space-y-2">
         <div className="flex gap-3">
           <span className={r.agents?.claude?.ok ? 'text-emerald-600' : 'text-red-600'}>
             claude {r.agents?.claude?.ok ? `${claudePois} POIs` : 'failed'}
@@ -287,6 +298,30 @@ function StepResult({ s, result }: { s: StepName; result: Record<string, unknown
             codex {r.agents?.codex?.ok ? `${codexPois} POIs` : 'failed'}
           </span>
         </div>
+        {r.prompt && (
+          <details>
+            <summary className="cursor-pointer text-ink2">Prompt</summary>
+            <pre className="bg-bg mt-1 max-h-48 overflow-auto whitespace-pre-wrap rounded border border-line p-2 text-[10px] text-ink2">
+              {r.prompt}
+            </pre>
+          </details>
+        )}
+        {r.agents?.claude?.raw && (
+          <details>
+            <summary className="cursor-pointer text-ink2">claude raw ({claudePois} POIs)</summary>
+            <pre className="bg-bg mt-1 max-h-48 overflow-auto whitespace-pre-wrap rounded border border-line p-2 text-[10px] text-ink2">
+              {r.agents.claude.raw}
+            </pre>
+          </details>
+        )}
+        {r.agents?.codex?.raw && (
+          <details>
+            <summary className="cursor-pointer text-ink2">codex raw ({codexPois} POIs)</summary>
+            <pre className="bg-bg mt-1 max-h-48 overflow-auto whitespace-pre-wrap rounded border border-line p-2 text-[10px] text-ink2">
+              {r.agents.codex.raw}
+            </pre>
+          </details>
+        )}
         {r.agents?.claude?.error && (
           <div className="text-red-600">claude: {r.agents.claude.error}</div>
         )}
