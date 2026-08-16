@@ -93,6 +93,9 @@ export async function submitVideo(opts: {
     prompt: opts.prompt,
     duration: opts.durationS,
     aspect_ratio: opts.aspectRatio,
+    // Owner 2026-08-17: 480p — faster + cheaper than the 720p default; the
+    // final video gets re-encoded by the worker for streaming anyway.
+    resolution: '480p',
     // Music belongs at assemble time, not per-clip — every clip would get a
     // different random track. Also cheaper (audio gen is billed separately).
     generate_audio: false,
