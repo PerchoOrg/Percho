@@ -21,12 +21,10 @@
  */
 
 /**
- * Seedance 2.0 Fast — not mini. Mini is a 60%-off promo tier that queues
- * behind standard/fast; jobs sat `pending` >1h on OpenRouter (2026-08-16,
- * job MGc3qJ2WmsprKPxNRxF3). For 4-8s clips the cost delta is ~$0.10, and
- * the admin pipeline wants minutes, not an hour.
+ * Seedance 2.0 Mini — owner's default (cheap). Do NOT change the model
+ * without explicit owner approval (owner 2026-08-17).
  */
-export const SEEDANCE_MODEL = 'bytedance/seedance-2.0-fast';
+export const SEEDANCE_MODEL = 'bytedance/seedance-2.0-mini';
 
 const API = 'https://openrouter.ai/api/v1';
 
