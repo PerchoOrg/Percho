@@ -71,17 +71,19 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       error: string | null;
     }
   >(
-    (clips ?? []).map(
-      (c: {
-        photo_id: string;
-        engine: string;
-        duration_s: number | null;
-        status: string;
-        storage_path: string | null;
-        cost_usd: number | null;
-        error: string | null;
-      }) => [c.photo_id, c],
-    ),
+    (clips ?? [])
+      .filter((c: { engine: string }) => c.engine === 'seedance')
+      .map(
+        (c: {
+          photo_id: string;
+          engine: string;
+          duration_s: number | null;
+          status: string;
+          storage_path: string | null;
+          cost_usd: number | null;
+          error: string | null;
+        }) => [c.photo_id, c],
+      ),
   );
   // Seedance vs depthflow/kenburns clips are separate rows (same photo can
   // have both). The UI shows two columns; key by photo_id + engine.
