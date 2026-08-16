@@ -16,6 +16,7 @@
  */
 
 import { createClient, createServiceClient } from '@/lib/supabase/server';
+import { createHash } from 'crypto';
 import { revalidatePath } from 'next/cache';
 import {
   DEFAULT_INCLUDED_TYPES,
@@ -214,12 +215,15 @@ export async function fetchPhotosForCommunityPoi(
   };
 
   for (const photo of targets) {
+    // Google photo refs rotate on every Places response — the same image can
+    // arrive under a different google_photo_name. Dedup by CONTENT HASH
+    // (poi_id, content_hash), not by ref. Check ref first (cheap, common case),
+    // then hash (catches rotated refs).
     const { data: existingPhoto } = (await admin
       .from('poi_photos')
       .select('id')
       .eq('google_photo_name', photo.name)
       .maybeSingle()) as { data: { id: string } | null };
-
     let poiPhotoId: string;
 
     if (existingPhoto) {
@@ -235,6 +239,25 @@ export async function fetchPhotosForCommunityPoi(
       } catch (err) {
         console.error(`[community-poi] fetch photo ${photo.name} failed:`, err);
         noteSkip(`Google Places fetch: ${(err as Error).message ?? 'unknown'}`);
+        continue;
+      }
+
+      const contentHash = createHash('sha256').update(blob.bytes).digest('hex');
+      // Rotated ref for an image we already stored → reuse that row.
+      const { data: existingByHash } = (await admin
+        .from('poi_photos')
+        .select('id')
+        .eq('poi_id', poi.id)
+        .eq('content_hash', contentHash)
+        .maybeSingle()) as { data: { id: string } | null };
+      if (existingByHash) {
+        poiPhotoId = existingByHash.id;
+        reused += 1;
+        // keep the row's google_photo_name fresh (new ref), cheap update
+        await admin
+          .from('poi_photos')
+          .update({ google_photo_name: photo.name, updated_at: new Date().toISOString() })
+          .eq('id', poiPhotoId);
         continue;
       }
 
@@ -256,6 +279,7 @@ export async function fetchPhotosForCommunityPoi(
             source: 'google_places',
             google_photo_name: photo.name,
             storage_path: storagePath,
+            content_hash: contentHash,
             width_px: photo.widthPx ?? null,
             height_px: photo.heightPx ?? null,
             bytes: blob.bytes.length,
