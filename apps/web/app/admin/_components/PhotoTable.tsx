@@ -414,14 +414,14 @@ export function PhotoTable({
                         <div className="flex flex-col gap-1">
                           <StatusText value={p.clip.status} />
                           {p.clip.status === 'ready' && p.clip.video_url && (
-                            <a
-                              href={p.clip.video_url}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="text-[10px] text-bronze underline"
-                            >
-                              watch clip
-                            </a>
+                            <video
+                              src={p.clip.video_url}
+                              controls
+                              preload="none"
+                              playsInline
+                              className="h-24 w-16 rounded-md bg-black object-contain"
+                              title="Click to play the generated clip"
+                            />
                           )}
                           {p.clip.cost_usd != null && (
                             <span className="text-[10px] text-ink2">

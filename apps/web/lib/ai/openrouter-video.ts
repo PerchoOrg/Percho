@@ -30,6 +30,10 @@ function apiKey(): string {
   return k;
 }
 
+/** 45s ceiling per HTTP call — a hung connection must not block the worker's
+ *  single-threaded tick forever (owner 2026-08-16). */
+const FETCH_TIMEOUT_MS = 45_000;
+
 async function failure(res: Response, label: string): Promise<Error> {
   const body = await res.text().catch(() => '');
   return new Error(`OpenRouter ${label} ${res.status}: ${body.slice(0, 300)}`);
@@ -48,6 +52,7 @@ export async function uploadFrameImage(
     method: 'POST',
     headers: { Authorization: `Bearer ${apiKey()}` },
     body: form,
+    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
   });
   if (!res.ok) throw await failure(res, '/files');
 
@@ -101,6 +106,7 @@ export async function submitVideo(opts: {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(body),
+    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
   });
   if (!res.ok) throw await failure(res, '/videos');
 
@@ -152,6 +158,7 @@ export function parseVideoStatus(payload: unknown): VideoJobState {
 export async function pollVideo(pollingUrl: string): Promise<VideoJobState> {
   const res = await fetch(pollingUrl, {
     headers: { Authorization: `Bearer ${apiKey()}` },
+    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
   });
   if (!res.ok) {
     // 4xx (bad key / bad job id) will not fix itself; 5xx and 429 might, so the
@@ -180,6 +187,7 @@ export function isOpenRouterHost(url: string): boolean {
 export async function downloadVideo(url: string): Promise<ArrayBuffer> {
   const res = await fetch(url, {
     headers: isOpenRouterHost(url) ? { Authorization: `Bearer ${apiKey()}` } : {},
+    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
   });
   if (!res.ok) throw await failure(res, 'video download');
   return res.arrayBuffer();

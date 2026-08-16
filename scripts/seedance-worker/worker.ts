@@ -209,6 +209,7 @@ async function tick(): Promise<void> {
     log('OPENROUTER_API_KEY not set — idle');
     return;
   }
+  const tickStart = Date.now();
 
   // ── ai_tour_videos (existing multi-photo path) ──
   const { data } = (await sb
@@ -252,6 +253,7 @@ async function tick(): Promise<void> {
   // ── photo_clips (per-photo cache, single-photo jobs) ──
   if (done >= MAX_JOBS_PER_TICK) return;
   await processPhotoClips();
+  log('tick done', Date.now() - tickStart, 'ms', done, 'jobs');
 }
 
 type PhotoClipRow = {
@@ -383,5 +385,16 @@ async function processPhotoClips(): Promise<void> {
 }
 
 log('worker starting');
-setInterval(tick, POLL_DB_MS);
-tick().catch((err) => log('tick error', err));
+let ticking = false;
+setInterval(async () => {
+  if (ticking) return;
+  ticking = true;
+  try {
+    await tick();
+  } catch (err) {
+    log('tick error', err instanceof Error ? err.message : String(err));
+  } finally {
+    ticking = false;
+  }
+}, POLL_DB_MS);
+void tick().catch((err) => log('tick error', err));
