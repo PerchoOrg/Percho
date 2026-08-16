@@ -468,6 +468,7 @@ function StepResult({
         place_id?: string;
         source?: string;
         confidence?: string;
+        formatted_address?: string;
       }>;
       dropped?: Array<{ name: string; reason: string }>;
     };
@@ -482,6 +483,7 @@ function StepResult({
             <thead className="bg-surface text-ink2">
               <tr>
                 <th className="border-line border-b px-2 py-1">Name</th>
+                <th className="border-line border-b px-2 py-1">Address</th>
                 <th className="border-line border-b px-2 py-1">Bucket</th>
                 <th className="border-line border-b px-2 py-1">Score</th>
                 <th className="border-line border-b px-2 py-1">Agreement</th>
@@ -494,6 +496,9 @@ function StepResult({
                   className="border-line border-b align-top last:border-b-0"
                 >
                   <td className="px-2 py-1 font-medium">{p.name}</td>
+                  <td className="max-w-[260px] px-2 py-1 text-ink2">
+                    {p.formatted_address ?? '—'}
+                  </td>
                   <td className="px-2 py-1 text-ink2">{p.bucket}</td>
                   <td className="tabular-nums px-2 py-1">{p.score.toFixed(2)}</td>
                   <td className="px-2 py-1">{p.agreement}/2</td>
@@ -527,13 +532,19 @@ function StepResult({
     const reused = vals.reduce((a, v) => a + (v.reused ?? 0), 0);
     const poiIds = new Set(r.resolved_poi_ids ?? []);
     // Same shape as the big table below: every photo of the resolve-surviving
-    // POIs, filtered to this run's POI set.
-    const stepPhotos = (photos ?? []).filter((p) => p.poi_id && poiIds.has(p.poi_id));
+    // POIs, filtered to this run's POI set. Legacy runs (before resolved_poi_ids
+    // existed) fall back to all photos — the per-POI mapping is not recoverable.
+    const isLegacy = (r.resolved_poi_ids ?? []).length === 0;
+    const stepPhotos = isLegacy
+      ? (photos ?? [])
+      : (photos ?? []).filter((p) => p.poi_id && poiIds.has(p.poi_id));
     return (
       <div className="space-y-2">
         <div className="text-xs">
-          {fetched} fetched · {reused} reused · {stepPhotos.length} photos across{' '}
-          {poiIds.size} resolved POIs
+          {fetched} fetched · {reused} reused · {stepPhotos.length} photos
+          {isLegacy
+            ? ' (legacy run — no per-POI mapping)'
+            : ` across ${poiIds.size} resolved POIs`}
         </div>
         {stepPhotos.length > 0 ? (
           <PhotoTable
