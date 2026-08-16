@@ -27,6 +27,8 @@ import { createServiceClient } from '../../apps/web/lib/supabase/server.js';
 loadEnv();
 
 const REPO_ROOT = new URL('../../', import.meta.url).pathname;
+/** Neutral cwd for claude chat-mode — no repo CLAUDE.md/skills/MCP pickup. */
+const CHAT_DIR = process.env.HOME ? `${process.env.HOME}/chat` : '/tmp';
 
 function log(...args: unknown[]) {
   console.log(new Date().toISOString(), ...args);
@@ -44,15 +46,25 @@ async function runAgent(
   const maxTurns = Number(process.env[`${agent.toUpperCase()}_MAX_TURNS`] ?? 4);
   try {
     if (agent === 'claude') {
-      // Pro OAuth; print mode skips dialogs. Single-turn chat answer —
-      // max-turns 1 keeps it one round (owner: "只是一个chat 一轮就可以收尾").
-      // Web tools still available in that one turn. stream-json --verbose
-      // emits a `result` event with usage+cost.
+      // Pro OAuth. Chat-mode research (owner 2026-08-16): cwd=~/chat avoids
+      // repo CLAUDE.md/skills/MCP discovery; --disallowedTools physically
+      // removes Edit/Write/Bash/NotebookEdit so it can only answer (WebSearch/
+      // WebFetch stay — that's the research task). --bare would skip auth
+      // (apiKeySource:none), so we don't use it. stream-json --verbose emits
+      // a `result` event with usage+cost.
       const { stdout } = await new Promise<{ stdout: string }>((resolve, reject) => {
         const child = execFile(
           'claude',
-          ['-p', prompt, '--max-turns', '1', '--output-format', 'stream-json', '--verbose'],
-          { timeout: 60_000, maxBuffer: 8 * 1024 * 1024, cwd: REPO_ROOT },
+          [
+            '-p',
+            prompt,
+            '--disallowedTools',
+            'Edit,Write,Bash,NotebookEdit',
+            '--output-format',
+            'stream-json',
+            '--verbose',
+          ],
+          { timeout: 5 * 60_000, maxBuffer: 8 * 1024 * 1024, cwd: CHAT_DIR },
           (err, stdout) => {
             if (err) reject(err);
             else resolve({ stdout });
@@ -65,17 +77,23 @@ async function runAgent(
     }
     // codex: needs a git repo; scratch dir is fine. danger-full-access because
     // the Hermes gateway context breaks bubblewrap (see codex skill).
+    // Chat-mode preamble: answer directly, no repo/file/command side effects;
+    // web search IS allowed (that's the research task).
+    const CHAT_MODE = [
+      '进入对话模式。默认直接回答我的问题，不读取项目文件、不运行命令、不修改文件、不创建计划；可以用 web 搜索获取信息。回答自然、简洁，保留上下文；信息不足时先问我一个关键问题。',
+    ].join('\n');
     const { stdout } = await new Promise<{ stdout: string }>((resolve, reject) => {
       const child = execFile(
         'codex',
         [
           'exec',
           '--json',
+          '--skip-git-repo-check',
           '--sandbox',
           'danger-full-access',
-          `Search the web and return JSON only. ${prompt}`,
+          `${CHAT_MODE}\n\nSearch the web and return JSON only. ${prompt}`,
         ],
-        { timeout: 5 * 60_000, maxBuffer: 8 * 1024 * 1024, cwd: REPO_ROOT },
+        { timeout: 5 * 60_000, maxBuffer: 8 * 1024 * 1024, cwd: CHAT_DIR },
         (err, stdout) => {
           if (err) reject(err);
           else resolve({ stdout });
