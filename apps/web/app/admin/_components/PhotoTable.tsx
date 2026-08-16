@@ -24,6 +24,7 @@ import {
   setEnhancedDecision,
 } from '@/lib/poi/admin-enhance-actions';
 import { setGlobalPhotoStatus } from '@/lib/poi/admin-photo-actions';
+import { tagPoiPhotoAction } from '@/lib/poi/admin-tag-action';
 import { projectTags, resolutionWarning } from '@/lib/poi/photo-tag-view';
 import { Check, Film, Sparkles, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -558,6 +559,14 @@ export function PhotoTable({
                       )}
                       {!isListing && (
                         <div className="flex gap-1">
+                          {!p.tagged_at && (
+                            <MiniBtn
+                              label="Tag"
+                              title="Tag this photo with Gemini (AI description + category + score)"
+                              disabled={busy}
+                              onClick={() => run(p.id, () => tagPoiPhotoAction(p.id))}
+                            />
+                          )}
                           <MiniBtn
                             label={<Check size={11} />}
                             title="Approve photo (platform-wide)"
