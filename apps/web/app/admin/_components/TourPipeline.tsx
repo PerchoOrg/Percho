@@ -291,16 +291,15 @@ function StepResult({ s, result }: { s: StepName; result: Record<string, unknown
     return (
       <div className="space-y-2">
         <div className="flex gap-3">
-          <span className={r.agents?.claude?.ok ? 'text-emerald-600' : 'text-red-600'}>
-            claude {r.agents?.claude?.ok ? `${claudePois} POIs` : 'failed'}
-          </span>
           <span className={r.agents?.codex?.ok ? 'text-emerald-600' : 'text-red-600'}>
             codex {r.agents?.codex?.ok ? `${codexPois} POIs` : 'failed'}
           </span>
         </div>
         {r.prompt && (
-          <details>
-            <summary className="cursor-pointer text-ink2">Prompt</summary>
+          <details open>
+            <summary className="cursor-pointer text-ink2">
+              Prompt (fed to agent)
+            </summary>
             <pre className="bg-bg mt-1 max-h-48 overflow-auto whitespace-pre-wrap rounded border border-line p-2 text-[10px] text-ink2">
               {r.prompt}
             </pre>

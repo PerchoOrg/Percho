@@ -33,30 +33,11 @@ function log(...args: unknown[]) {
 }
 
 async function runAgent(
-  agent: 'claude' | 'codex',
+  agent: 'codex',
   prompt: string,
 ): Promise<{ ok: boolean; raw: string; error?: string }> {
   const maxTurns = Number(process.env[`${agent.toUpperCase()}_MAX_TURNS`] ?? 4);
   try {
-    if (agent === 'claude') {
-      // Pro OAuth; print mode skips dialogs. NO web tools — claude must
-      // answer from its own knowledge in ~30-60s. codex does the deep web
-      // research; claude provides a fast second perspective. max-turns 1 so
-      // it can't loop.
-      const { stdout } = await new Promise<{ stdout: string }>((resolve, reject) => {
-        const child = execFile(
-          'claude',
-          ['-p', prompt, '--max-turns', '1'],
-          { timeout: 60_000, maxBuffer: 8 * 1024 * 1024, cwd: REPO_ROOT },
-          (err, stdout) => {
-            if (err) reject(err);
-            else resolve({ stdout });
-          },
-        );
-        child.stdin?.end();
-      });
-      return { ok: true, raw: stdout };
-    }
     // codex: needs a git repo; scratch dir is fine. danger-full-access because
     // the Hermes gateway context breaks bubblewrap (see codex skill).
     const { stdout } = await new Promise<{ stdout: string }>((resolve, reject) => {
@@ -121,10 +102,7 @@ async function main() {
   const prompt = buildResearchPrompt(community);
   log('prompt built', community.name);
 
-  const [claudeRes, codexRes] = await Promise.all([
-    runAgent('claude', prompt),
-    runAgent('codex', prompt),
-  ]);
+  const codexRes = await runAgent('codex', prompt);
 
   const result = {
     community: {
@@ -137,12 +115,6 @@ async function main() {
     },
     prompt,
     agents: {
-      claude: {
-        ok: claudeRes.ok,
-        raw: claudeRes.ok ? claudeRes.raw.slice(0, 20_000) : null,
-        parsed: parseResearch(claudeRes.raw),
-        error: claudeRes.error ?? null,
-      },
       codex: {
         ok: codexRes.ok,
         raw: codexRes.ok ? codexRes.raw.slice(0, 20_000) : null,
@@ -173,7 +145,6 @@ async function main() {
     .eq('id', runId);
 
   log('agent research persisted', runId, {
-    claude: claudeRes.ok ? 'ok' : 'fail',
     codex: codexRes.ok ? 'ok' : 'fail',
   });
 }
