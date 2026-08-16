@@ -399,6 +399,38 @@ async function runGenerate(sb: any, run: RunRow, photoIds?: string[], engine?: s
   const resolve = run.step_results.resolve as
     | { resolved?: Array<{ place_id: string; bucket: string; name: string }> }
     | undefined;
+
+  // Single-photo generate (row button): build the shot directly from the
+  // requested photo_id — it may belong to a POI that was never resolved in
+  // this run (the fetch-photo panel shows ALL community POIs, resolve only
+  // covers the ~13 recommended). Falling through to the resolve-only path
+  // silently did nothing for those photos (owner 2026-08-17: click no-op).
+  if (photoIds && photoIds.length > 0) {
+    const { data: photos } = await sb
+      .from('poi_photos')
+      .select('id, poi_id, ai_tags, ai_score, poi:pois!inner(display_name)')
+      .in('id', photoIds);
+    const { durationForCategory } = await import('@/lib/poi/community-tour');
+    const forceEngine = engine === 'depthflow' || engine === 'kenburns' ? engine : null;
+    const selected = (photos ?? []).map((p: any) => {
+      const tags = (p.ai_tags ?? {}) as {
+        primary_category?: string;
+        usable?: boolean;
+        has_prominent_text?: boolean;
+      };
+      return {
+        photo_id: p.id,
+        poi_id: p.poi_id,
+        poi_name: p.poi?.display_name ?? '',
+        category: tags.primary_category ?? 'other',
+        duration_s: durationForCategory(tags.primary_category ?? 'other'),
+        engine: forceEngine ?? (tags.has_prominent_text ? 'depthflow' : 'seedance'),
+        bucket: 'other',
+      };
+    });
+    return enqueueClips(sb, run, selected, forceEngine);
+  }
+
   if (!resolve?.resolved?.length)
     return { error: 'no_resolved', message: 'Run the resolve step first.' };
 
@@ -465,6 +497,15 @@ async function runGenerate(sb: any, run: RunRow, photoIds?: string[], engine?: s
   // showed no status change because the failed row blocked a re-create).
   // Keyed by (photo_id, engine): a photo can have both a seedance and a
   // depthflow/kenburns clip.
+  return enqueueClips(sb, run, shotsWithEngine, forceEngine);
+}
+
+async function enqueueClips(
+  sb: any,
+  run: RunRow,
+  shotsWithEngine: Array<{ photo_id: string; engine: string; duration_s: number }>,
+  forceEngine?: string | null,
+) {
   const existing = await sb
     .from('photo_clips')
     .select('photo_id, engine, status')
