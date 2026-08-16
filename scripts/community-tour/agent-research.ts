@@ -16,7 +16,7 @@
  *
  * Env (repo-root .env.local, loaded like the seedance worker):
  *   SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY  (worker uses NEXT_PUBLIC_…)
- *   GEMINI_API_KEY / GEMINI_MODEL             (default gemini-3.1-flash-lite)
+ *   GEMINI_API_KEY / GEMINI_MODEL             (default gemini-3.5-flash-lite)
  */
 
 import { loadEnv } from '../seedance-worker/loadEnv.js';
@@ -34,7 +34,7 @@ const GEMINI_API_BASE =
   'https://generativelanguage.googleapis.com/v1beta/models';
 
 function geminiModel(): string {
-  return process.env.GEMINI_MODEL ?? 'gemini-3.1-flash-lite';
+  return process.env.GEMINI_MODEL ?? 'gemini-3.5-flash-lite';
 }
 
 function geminiApiKey(): string {
