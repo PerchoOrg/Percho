@@ -218,8 +218,11 @@ export function TourPipeline({
 
       {/* Steps 2-8 */}
       {STEPS.map((s) => {
-        const done = !!run?.step_results[s.name];
-        const result = run?.step_results[s.name] as
+        // research results live under agent_research (written by the detached
+        // agent script); every other step uses its own key.
+        const resultKey = s.name === 'research' ? 'agent_research' : s.name;
+        const done = !!run?.step_results[resultKey];
+        const result = run?.step_results[resultKey] as
           | {
               resolved?: unknown[];
               dropped?: unknown[];
