@@ -378,24 +378,60 @@ function StepResult({ s, result }: { s: StepName; result: Record<string, unknown
   }
   if (s === 'resolve') {
     const r = result as {
-      resolved?: Array<{ name: string; bucket: string; score: number; agreement: number }>;
+      resolved?: Array<{
+        name: string;
+        bucket: string;
+        score: number;
+        agreement: number;
+        place_id?: string;
+        source?: string;
+        confidence?: string;
+      }>;
       dropped?: Array<{ name: string; reason: string }>;
     };
+    const resolved = r.resolved ?? [];
     return (
       <div>
         <div className="mb-1">
-          {r.resolved?.length ?? 0} resolved · {r.dropped?.length ?? 0} dropped
+          {resolved.length} resolved · {r.dropped?.length ?? 0} dropped
         </div>
-        <ul className="space-y-0.5">
-          {(r.resolved ?? []).slice(0, 12).map((p) => (
-            <li key={p.name}>
-              {p.name}{' '}
-              <span className="text-ink3">
-                ({p.bucket}, score {p.score.toFixed(2)}, agreement {p.agreement}/2)
-              </span>
-            </li>
-          ))}
-        </ul>
+        <div className="overflow-x-auto rounded border border-line">
+          <table className="w-full border-collapse text-left text-[10px]">
+            <thead className="bg-surface text-ink2">
+              <tr>
+                <th className="border-line border-b px-2 py-1">Name</th>
+                <th className="border-line border-b px-2 py-1">Bucket</th>
+                <th className="border-line border-b px-2 py-1">Score</th>
+                <th className="border-line border-b px-2 py-1">Agreement</th>
+              </tr>
+            </thead>
+            <tbody>
+              {resolved.map((p, i) => (
+                <tr
+                  key={`${p.name}-${i}`}
+                  className="border-line border-b align-top last:border-b-0"
+                >
+                  <td className="px-2 py-1 font-medium">{p.name}</td>
+                  <td className="px-2 py-1 text-ink2">{p.bucket}</td>
+                  <td className="tabular-nums px-2 py-1">{p.score.toFixed(2)}</td>
+                  <td className="px-2 py-1">{p.agreement}/2</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        {r.dropped && r.dropped.length > 0 && (
+          <details className="mt-1">
+            <summary className="cursor-pointer text-ink2">dropped ({r.dropped.length})</summary>
+            <ul className="mt-1 space-y-0.5">
+              {r.dropped.map((p, i) => (
+                <li key={`${p.name}-${i}`} className="text-ink2">
+                  {p.name} — {p.reason}
+                </li>
+              ))}
+            </ul>
+          </details>
+        )}
       </div>
     );
   }
