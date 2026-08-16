@@ -455,15 +455,18 @@ async function runGenerate(sb: any, run: RunRow, photoIds?: string[]) {
   const selected =
     photoIds && photoIds.length > 0 ? shots.filter((s) => photoIds.includes(s.photo_id)) : shots;
 
-  // Enqueue missing photo_clips
+  // Enqueue missing photo_clips — but a FAILED row is dead (expired TTL,
+  // provider rejection); reset it to pending so the worker picks it up again
+  // instead of silently skipping (owner 2026-08-17: generate after expired
+  // showed no status change because the failed row blocked a re-create).
   const existing = await sb
     .from('photo_clips')
-    .select('photo_id')
+    .select('photo_id, status')
     .in(
       'photo_id',
       selected.map((s) => s.photo_id),
     );
-  const have = new Set((existing.data ?? []).map((r: { photo_id: string }) => r.photo_id));
+  const have = new Map((existing.data ?? []).map((r: { photo_id: string; status: string }) => [r.photo_id, r.status]));
   const toCreate = selected.filter((s) => !have.has(s.photo_id));
   if (toCreate.length > 0) {
     await sb.from('photo_clips').insert(
@@ -474,6 +477,16 @@ async function runGenerate(sb: any, run: RunRow, photoIds?: string[]) {
         status: 'pending',
       })),
     );
+  }
+  // Failed rows: reset to pending (re-generate). Leave ready/processing alone.
+  const failedIds = selected
+    .map((s) => s.photo_id)
+    .filter((id) => have.get(id) === 'failed');
+  if (failedIds.length > 0) {
+    await sb
+      .from('photo_clips')
+      .update({ status: 'pending', error: null, updated_at: new Date().toISOString() })
+      .in('photo_id', failedIds);
   }
 
   await saveStep(sb, run, 'generate', {

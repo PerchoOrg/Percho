@@ -38,6 +38,13 @@ describe('parseVideoStatus', () => {
     });
   });
 
+  it('treats expired as terminal failure so the row can be regenerated', () => {
+    expect(parseVideoStatus({ status: 'expired', error: 'Job exceeded maximum time to live' })).toEqual({
+      status: 'failed',
+      error: 'Job exceeded maximum time to live',
+    });
+  });
+
   it('surfaces an object error via .message', () => {
     expect(parseVideoStatus({ status: 'failed', error: { message: 'quota exceeded' } })).toEqual({
       status: 'failed',
@@ -91,7 +98,7 @@ describe('submitVideo request body', () => {
 
       const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
       const body = JSON.parse(String(init.body));
-      expect(body.model).toBe('bytedance/seedance-2.0-mini');
+      expect(body.model).toBe('bytedance/seedance-1-5-pro');
       expect(body.input_references).toHaveLength(3);
       expect(body.input_references[0]).toEqual({
         type: 'image_url',

@@ -21,10 +21,10 @@
  */
 
 /**
- * Seedance 2.0 Mini — owner's default (cheap). Do NOT change the model
- * without explicit owner approval (owner 2026-08-17).
+ * Seedance 1.5 Pro — owner's explicit choice 2026-08-17 (was 2.0 Mini).
+ * Do NOT change the model without explicit owner approval.
  */
-export const SEEDANCE_MODEL = 'bytedance/seedance-2.0-mini';
+export const SEEDANCE_MODEL = 'bytedance/seedance-1-5-pro';
 
 const API = 'https://openrouter.ai/api/v1';
 
@@ -148,8 +148,15 @@ export function parseVideoStatus(payload: unknown): VideoJobState {
   };
   const status = typeof data.status === 'string' ? data.status : '';
 
-  if (status === 'failed') {
-    return { status: 'failed', error: errorText(data.error) || 'generation failed' };
+  if (status === 'failed' || status === 'expired') {
+    return {
+      status: 'failed',
+      error:
+        errorText(data.error) ||
+        (status === 'expired'
+          ? 'generation expired (provider queue TTL) — regenerate'
+          : 'generation failed'),
+    };
   }
   if (status === 'completed') {
     const urls = Array.isArray(data.unsigned_urls) ? data.unsigned_urls : [];
