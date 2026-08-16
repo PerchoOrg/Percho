@@ -98,7 +98,7 @@ export function TourPipeline({
   async function runStep(step: StepName, runId: string | null): Promise<void> {
     // Research is expensive + cached per-run: "Run" always starts a fresh run
     // so the button visibly does something (owner 2026-08-16).
-    const rid = step === 'research' ? (await createRun()) : (runId ?? (await createRun()));
+    const rid = step === 'research' ? await createRun() : (runId ?? (await createRun()));
     if (!rid) {
       setError('Could not create run');
       return;
@@ -302,9 +302,7 @@ function StepResult({ s, result }: { s: StepName; result: Record<string, unknown
         </div>
         {r.prompt && (
           <details open>
-            <summary className="cursor-pointer text-ink2">
-              Prompt (fed to agent)
-            </summary>
+            <summary className="cursor-pointer text-ink2">Prompt (fed to agent)</summary>
             <pre className="bg-bg mt-1 max-h-48 overflow-auto whitespace-pre-wrap rounded border border-line p-2 text-[10px] text-ink2">
               {r.prompt}
             </pre>
@@ -319,12 +317,55 @@ function StepResult({ s, result }: { s: StepName; result: Record<string, unknown
           </details>
         )}
         {r.agents?.codex?.raw && (
-          <details>
-            <summary className="cursor-pointer text-ink2">codex raw ({codexPois} POIs)</summary>
-            <pre className="bg-bg mt-1 max-h-48 overflow-auto whitespace-pre-wrap rounded border border-line p-2 text-[10px] text-ink2">
-              {r.agents.codex.raw}
-            </pre>
-          </details>
+          <div>
+            <h4 className="text-ink2 text-xs font-medium">codex results ({codexPois} POIs)</h4>
+            <div className="overflow-x-auto rounded border border-line">
+              <table className="w-full border-collapse text-left text-[10px]">
+                <thead className="bg-surface text-ink2">
+                  <tr>
+                    <th className="border-line border-b px-2 py-1">Name</th>
+                    <th className="border-line border-b px-2 py-1">Address</th>
+                    <th className="border-line border-b px-2 py-1">Bucket</th>
+                    <th className="border-line border-b px-2 py-1">Conf</th>
+                    <th className="border-line border-b px-2 py-1">Why</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(r.agents?.codex?.parsed?.pois ?? []).map((p, i) => {
+                    const poi = p as {
+                      name?: string;
+                      address_hint?: string;
+                      bucket?: string;
+                      confidence?: string;
+                      why?: string;
+                    };
+                    return (
+                      <tr
+                        key={`${poi.name ?? 'poi'}-${i}`}
+                        className="border-line border-b align-top last:border-b-0"
+                      >
+                        <td className="px-2 py-1 font-medium">{poi.name ?? '—'}</td>
+                        <td className="px-2 py-1 text-ink2">{poi.address_hint ?? '—'}</td>
+                        <td className="px-2 py-1 text-ink2">{poi.bucket ?? '—'}</td>
+                        <td className="px-2 py-1">{poi.confidence ?? '—'}</td>
+                        <td className="max-w-[280px] px-2 py-1 text-ink2">
+                          {poi.why && poi.why.length > 120
+                            ? `${poi.why.slice(0, 120)}…`
+                            : (poi.why ?? '—')}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            <details className="mt-1">
+              <summary className="cursor-pointer text-ink2">raw JSON</summary>
+              <pre className="bg-bg mt-1 max-h-48 overflow-auto whitespace-pre-wrap rounded border border-line p-2 text-[10px] text-ink2">
+                {r.agents.codex.raw}
+              </pre>
+            </details>
+          </div>
         )}
         {r.agents?.claude?.error && (
           <div className="text-red-600">claude: {r.agents.claude.error}</div>
