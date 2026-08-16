@@ -374,7 +374,7 @@ async function runTag(sb: any, run: RunRow) {
   let query = sb
     .from('poi_photos')
     .select('id, poi_id, ai_tags, ai_score, tagged_at')
-    .eq('tagged_at', null)
+    .is('tagged_at', null) // NOT .eq(null) — PostgREST treats =null as invalid for timestamptz
     .limit(15); // ponytail: batch cap so the loop fits under the 300s function timeout; re-click for more.
   if (poiIds?.length) query = query.in('poi_id', poiIds);
   const { data: photos } = await query;
