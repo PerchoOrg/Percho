@@ -112,7 +112,9 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
         poi_id: p.poi_id,
         photo_url: `${sb.storage.from('listing-photos').getPublicUrl(path).data.publicUrl}`,
         ai_tags: p.ai_tags ?? null,
-        recommended: recommendedIds.has(poiPlaceId.get(p.poi_id) ?? ''),
+        recommended:
+          recommendedIds.has(poiPlaceId.get(p.poi_id) ?? '') ||
+          (clip?.status === 'ready' ? true : false),
         clip: clip
           ? {
               engine: clip.engine,
