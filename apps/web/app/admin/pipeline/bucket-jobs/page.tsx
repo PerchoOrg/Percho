@@ -34,6 +34,7 @@ type DbRow = {
 type SeedanceRow = {
   id: string;
   kind: 'clip' | 'tour';
+  engine: string | null;
   status: string;
   error: string | null;
   provider_job_id: string | null;
@@ -74,7 +75,7 @@ export default async function BucketJobsPage({
   const [seedClips, seedTours] = await Promise.all([
     supabase
       .from('photo_clips')
-      .select('id, status, error, provider_job_id, storage_path, created_at')
+      .select('id, engine, status, error, provider_job_id, storage_path, created_at')
       .order('created_at', { ascending: false })
       .limit(100) as unknown as Promise<{ data: SeedanceRow[] | null }>,
     supabase
@@ -105,7 +106,7 @@ export default async function BucketJobsPage({
       id: r.id,
       type: 'clip' as const,
       scope: 'photo_clips',
-      intent_bucket: null,
+      intent_bucket: r.engine ?? null,
       status: r.status,
       cf_stream_uid: null,
       provider_job_id: r.provider_job_id,

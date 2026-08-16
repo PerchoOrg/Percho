@@ -116,7 +116,25 @@ const columns: AdminColumn<BucketJobRow>[] = [
         );
       }
       if (r.storage_path) {
-        return <span className="font-mono text-xs text-ink2">{r.storage_path}</span>;
+        // Local render clips (depthflow/kenburns) live in clip-renders; paid
+        // seedance clips/tours live in ai-videos. Pick the right base so the
+        // link actually plays instead of 404ing.
+        const base =
+          r.type === 'clip' && r.intent_bucket === 'kenburns'
+            ? 'https://tavmbcghxjeyaoptndvn.supabase.co/storage/v1/object/public/clip-renders/'
+            : r.type === 'clip' && r.intent_bucket === 'depthflow'
+              ? 'https://tavmbcghxjeyaoptndvn.supabase.co/storage/v1/object/public/clip-renders/'
+              : 'https://tavmbcghxjeyaoptndvn.supabase.co/storage/v1/object/public/ai-videos/';
+        return (
+          <a
+            className="font-mono text-xs text-blue-500 hover:underline"
+            target="_blank"
+            rel="noreferrer"
+            href={`${base}${r.storage_path}`}
+          >
+            {r.storage_path.split('/').pop()}▶
+          </a>
+        );
       }
       return <span className="font-mono text-xs">{r.intent_bucket ?? '—'}</span>;
     },
