@@ -44,15 +44,15 @@ async function runAgent(
   const maxTurns = Number(process.env[`${agent.toUpperCase()}_MAX_TURNS`] ?? 4);
   try {
     if (agent === 'claude') {
-      // Pro OAuth; print mode skips dialogs. Full research — claude has its
-      // own WebSearch/WebFetch tools by default, no artificial turn/time cap
-      // (owner 2026-08-16: "去掉这些限制"). stream-json --verbose emits a
-      // `result` event with usage+cost.
+      // Pro OAuth; print mode skips dialogs. Single-turn chat answer —
+      // max-turns 1 keeps it one round (owner: "只是一个chat 一轮就可以收尾").
+      // Web tools still available in that one turn. stream-json --verbose
+      // emits a `result` event with usage+cost.
       const { stdout } = await new Promise<{ stdout: string }>((resolve, reject) => {
         const child = execFile(
           'claude',
-          ['-p', prompt, '--output-format', 'stream-json', '--verbose'],
-          { timeout: 5 * 60_000, maxBuffer: 8 * 1024 * 1024, cwd: REPO_ROOT },
+          ['-p', prompt, '--max-turns', '1', '--output-format', 'stream-json', '--verbose'],
+          { timeout: 60_000, maxBuffer: 8 * 1024 * 1024, cwd: REPO_ROOT },
           (err, stdout) => {
             if (err) reject(err);
             else resolve({ stdout });
