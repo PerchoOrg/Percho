@@ -280,10 +280,13 @@ async function processPhotoClips(): Promise<void> {
     if (done >= MAX_JOBS_PER_TICK) break;
     try {
       if (row.status === 'pending') {
-        // Atomic claim
+        // Atomic claim. Status MUST be in photo_clips' CHECK set —
+        // ('pending','processing','ready','failed') — 'submitting' is NOT
+        // allowed and the constraint violation silently returns 0 rows,
+        // leaving the row pending forever (owner 2026-08-16).
         const { data: claimed } = (await sb
           .from('photo_clips')
-          .update({ status: 'submitting', updated_at: new Date().toISOString() })
+          .update({ status: 'processing', updated_at: new Date().toISOString() })
           .eq('id', row.id)
           .eq('status', 'pending')
           .select('id')) as { data: Array<{ id: string }> | null };
