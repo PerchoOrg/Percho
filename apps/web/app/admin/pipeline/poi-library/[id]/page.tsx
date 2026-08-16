@@ -111,6 +111,35 @@ export default async function PoiDetailPage({
 
   const storageBase = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
 
+  // Clip state for the DA+KB / seedance columns. The POI detail page shows
+  // every photo's clip rows (photo_clips is keyed by photo_id+engine; a photo
+  // can have a paid seedance clip and a local depthflow/kenburns clip).
+  const { data: clips } = (await supabase
+    .from('photo_clips')
+    .select('photo_id, engine, duration_s, status, storage_path, cost_usd, error')
+    .in(
+      'photo_id',
+      rows.map((p) => p.id),
+    )) as { data: Array<{ photo_id: string; engine: string; duration_s: number | null; status: string; storage_path: string | null; cost_usd: number | null; error: string | null }> | null };
+  type ClipRow = { photo_id: string; engine: string; duration_s: number | null; status: string; storage_path: string | null; cost_usd: number | null; error: string | null };
+  const clipByPhoto = new Map<string, ClipRow>();
+  for (const c of clips ?? []) if (c.engine === 'seedance') clipByPhoto.set(c.photo_id, c);
+  const clipByPhotoEngine = new Map<string, ClipRow>();
+  for (const c of clips ?? []) clipByPhotoEngine.set(`${c.photo_id}:${c.engine}`, c);
+  const renderBase = `${storageBase}/storage/v1/object/public/clip-renders`;
+  const publicBase = `${storageBase}/storage/v1/object/public/ai-videos`;
+  const clipOut = (c: ClipRow | undefined, isDakb: boolean) =>
+    c
+      ? {
+          engine: c.engine,
+          duration_s: c.duration_s,
+          status: c.status,
+          video_url: c.storage_path ? `${isDakb ? renderBase : publicBase}/${c.storage_path}` : null,
+          cost_usd: c.cost_usd,
+          error: c.error,
+        }
+      : null;
+
   return (
     <div className="space-y-6">
       <header className="space-y-2">
@@ -136,6 +165,8 @@ export default async function PoiDetailPage({
           poi_id: poi.id,
           poi_name: poi.display_name,
           used_in: usedIn.get(p.id) ?? [],
+          clip: clipOut(clipByPhoto.get(p.id), false),
+          dakb_clip: clipOut(clipByPhotoEngine.get(`${p.id}:depthflow`) ?? clipByPhotoEngine.get(`${p.id}:kenburns`), true),
         }))}
       />
     </div>
