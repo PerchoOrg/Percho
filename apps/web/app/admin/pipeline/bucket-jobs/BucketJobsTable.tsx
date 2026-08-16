@@ -11,6 +11,7 @@ export type BucketJobRow = {
   status: string;
   cf_stream_uid: string | null;
   provider_job_id: string | null;
+  storage_path: string | null;
   error: string | null;
   created_at: string;
   community_id: string | null;
@@ -98,9 +99,26 @@ const columns: AdminColumn<BucketJobRow>[] = [
   },
   {
     key: 'bucket',
-    header: 'Bucket',
-    sortValue: (r) => r.intent_bucket ?? '',
-    render: (r) => r.intent_bucket ?? '—',
+    header: 'Bucket / Stream',
+    sortValue: (r) => r.intent_bucket ?? r.cf_stream_uid ?? r.storage_path ?? '',
+    render: (r) => {
+      if (r.cf_stream_uid) {
+        return (
+          <a
+            className="font-mono text-xs text-blue-500 hover:underline"
+            target="_blank"
+            rel="noreferrer"
+            href={`https://dash.cloudflare.com/?to=/:account/stream/videos/${r.cf_stream_uid}`}
+          >
+            {r.cf_stream_uid.slice(0, 10)}
+          </a>
+        );
+      }
+      if (r.storage_path) {
+        return <span className="font-mono text-xs text-ink2">{r.storage_path}</span>;
+      }
+      return <span className="font-mono text-xs">{r.intent_bucket ?? '—'}</span>;
+    },
   },
   {
     key: 'status',
@@ -131,24 +149,6 @@ const columns: AdminColumn<BucketJobRow>[] = [
     render: (r) => (
       <span className="text-ink2 text-xs">{new Date(r.created_at).toLocaleString()}</span>
     ),
-  },
-  {
-    key: 'stream',
-    header: 'Stream',
-    sortValue: (r) => r.cf_stream_uid ?? '',
-    render: (r) =>
-      r.cf_stream_uid ? (
-        <a
-          className="font-mono text-xs text-blue-500 hover:underline"
-          target="_blank"
-          rel="noreferrer"
-          href={`https://dash.cloudflare.com/?to=/:account/stream/videos/${r.cf_stream_uid}`}
-        >
-          {r.cf_stream_uid.slice(0, 10)}
-        </a>
-      ) : (
-        <span className="font-mono text-xs">—</span>
-      ),
   },
 ];
 

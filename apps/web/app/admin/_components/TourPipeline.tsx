@@ -194,6 +194,13 @@ export function TourPipeline({
     setClipRows(body.clips);
   }, [communityId, run?.id]);
 
+  // Clips can already exist in the DB (previous generate) — fetch them on
+  // mount so ready clips show a player without waiting for a new action
+  // (owner 2026-08-17).
+  useEffect(() => {
+    void loadClips();
+  }, [loadClips]);
+
   const clipById = new Map(clipRows.map((c) => [c.photo_id, c.clip]));
   const stepPhotos = photos.map((p) => {
     const clip = clipById.get(p.id);
