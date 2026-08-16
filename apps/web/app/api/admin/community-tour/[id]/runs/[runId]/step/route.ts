@@ -260,7 +260,7 @@ async function runTag(sb: any, run: RunRow) {
 
 // ─── step: generate ─────────────────────────────────────────────────────────
 
-async function runGenerate(sb: any, run: RunRow) {
+async function runGenerate(sb: any, run: RunRow, photoIds?: string[]) {
   const resolve = run.step_results.resolve as
     | { resolved?: Array<{ place_id: string; bucket: string; name: string }> }
     | undefined;
@@ -316,6 +316,9 @@ async function runGenerate(sb: any, run: RunRow) {
     });
   }
   const shots = buildShotList(inputs);
+  // Single-photo generate (row button): keep only that photo's shot.
+  const selected =
+    photoIds && photoIds.length > 0 ? shots.filter((s) => photoIds.includes(s.photo_id)) : shots;
 
   // Enqueue missing photo_clips
   const existing = await sb
@@ -323,10 +326,10 @@ async function runGenerate(sb: any, run: RunRow) {
     .select('photo_id')
     .in(
       'photo_id',
-      shots.map((s) => s.photo_id),
+      selected.map((s) => s.photo_id),
     );
   const have = new Set((existing.data ?? []).map((r: { photo_id: string }) => r.photo_id));
-  const toCreate = shots.filter((s) => !have.has(s.photo_id));
+  const toCreate = selected.filter((s) => !have.has(s.photo_id));
   if (toCreate.length > 0) {
     await sb.from('photo_clips').insert(
       toCreate.map((s) => ({
@@ -349,7 +352,10 @@ async function runGenerate(sb: any, run: RunRow) {
 
 // ─── dispatcher ─────────────────────────────────────────────────────────────
 
-const STEP_HANDLERS: Record<string, (sb: any, run: RunRow) => Promise<unknown>> = {
+const STEP_HANDLERS: Record<
+  string,
+  (sb: any, run: RunRow, photoIds?: string[]) => Promise<unknown>
+> = {
   research: runResearch,
   resolve: runResolve,
   photos: runPhotos,
@@ -368,7 +374,10 @@ export async function POST(
   // biome-ignore lint/suspicious/noExplicitAny: stub generated types
   const sb: any = createServiceClient();
 
-  const body = (await req.json().catch(() => ({}))) as { step?: string };
+  const body = (await req.json().catch(() => ({}))) as {
+    step?: string;
+    photoIds?: string[];
+  };
   const step = body.step;
   if (!step || !STEP_HANDLERS[step]) {
     return NextResponse.json(
@@ -384,7 +393,10 @@ export async function POST(
   }
 
   try {
-    const result = await STEP_HANDLERS[step]!(sb, run);
+    const result =
+      step === 'generate'
+        ? await STEP_HANDLERS[step]!(sb, run, body.photoIds)
+        : await STEP_HANDLERS[step]!(sb, run);
     return NextResponse.json({ ok: true, step, result });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);

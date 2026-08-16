@@ -190,9 +190,11 @@ export function AiVideoSection({
 
         {videos.length > 0 && (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-            {videos.map((v) => (
-              <ClipCard key={v.id} video={v} thumbs={clipThumbs(v.photo_ids)} />
-            ))}
+            {videos
+              .filter((v) => v.status !== 'failed')
+              .map((v) => (
+                <ClipCard key={v.id} video={v} thumbs={clipThumbs(v.photo_ids)} />
+              ))}
           </div>
         )}
       </section>

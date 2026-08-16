@@ -21,7 +21,7 @@
  */
 
 import { CheckCircle2, Loader2, Play, RefreshCw, Sparkles } from 'lucide-react';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 type StepName = 'research' | 'resolve' | 'photos' | 'tag' | 'generate' | 'assemble';
 
@@ -42,40 +42,27 @@ interface Run {
   created_at: string;
 }
 
-interface ClipRow {
-  photo_id: string;
-  poi_id: string;
-  photo_url: string;
-  ai_tags: unknown;
-  clip: {
-    engine: string;
-    duration_s: number | null;
-    status: string;
-    video_url: string | null;
-    cost_usd: number | null;
-    error: string | null;
-  } | null;
-}
-
 export function TourPipeline({
   communityId,
   communityName,
   city,
   state,
-  storageBase,
+  zip,
+  lat,
+  lng,
 }: {
   communityId: string;
   communityName: string;
   city: string | null;
   state: string | null;
-  storageBase: string;
+  zip: string | null;
+  lat: number | null;
+  lng: number | null;
 }) {
   const [runs, setRuns] = useState<Run[]>([]);
   const [selectedRun, setSelectedRun] = useState<string | null>(null);
   const [running, setRunning] = useState<StepName | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [clips, setClips] = useState<ClipRow[]>([]);
-  const inFlight = useRef(false);
 
   const loadRuns = useCallback(async () => {
     const res = await fetch(`/api/admin/community-tour/${communityId}/runs`);
@@ -85,17 +72,9 @@ export function TourPipeline({
     if (!selectedRun && body.runs.length > 0) setSelectedRun(body.runs[0]!.id);
   }, [communityId, selectedRun]);
 
-  const loadClips = useCallback(async () => {
-    const res = await fetch(`/api/admin/community-tour/${communityId}/clips`);
-    if (!res.ok) return;
-    const body = (await res.json()) as { clips: ClipRow[] };
-    setClips(body.clips);
-  }, [communityId]);
-
   useEffect(() => {
     void loadRuns();
-    void loadClips();
-  }, [loadRuns, loadClips]);
+  }, [loadRuns]);
 
   // Poll while a step is running (research is async: the agent script writes
   // step_results itself, this refetches until it lands).
@@ -103,10 +82,9 @@ export function TourPipeline({
     if (!running) return;
     const t = setInterval(() => {
       void loadRuns();
-      void loadClips();
     }, 4000);
     return () => clearInterval(t);
-  }, [running, loadRuns, loadClips]);
+  }, [running, loadRuns]);
 
   async function createRun(): Promise<string | null> {
     const res = await fetch(`/api/admin/community-tour/${communityId}/runs`, { method: 'POST' });
@@ -139,7 +117,6 @@ export function TourPipeline({
     } finally {
       setRunning(null);
       await loadRuns();
-      await loadClips();
     }
   }
 
@@ -166,7 +143,6 @@ export function TourPipeline({
       } finally {
         setRunning(null);
         await loadRuns();
-        await loadClips();
       }
     }
   }
@@ -220,9 +196,22 @@ export function TourPipeline({
       {/* Step 1 — community info (always visible) */}
       <section className="rounded-2xl border border-line bg-surface p-4">
         <h3 className="text-sm font-semibold">1 · Community Info</h3>
-        <p className="text-ink2 mt-1 text-xs">
-          {communityName} · {[city, state].filter(Boolean).join(', ')}
-        </p>
+        <dl className="mt-2 grid grid-cols-2 gap-x-6 gap-y-1 text-xs sm:grid-cols-3">
+          <div>
+            <dt className="text-ink3">Name</dt>
+            <dd className="text-ink">{communityName}</dd>
+          </div>
+          <div>
+            <dt className="text-ink3">Location</dt>
+            <dd className="text-ink">{[city, state, zip].filter(Boolean).join(', ') || '—'}</dd>
+          </div>
+          <div>
+            <dt className="text-ink3">Coordinates</dt>
+            <dd className="tabular-nums text-ink">
+              {lat != null && lng != null ? `${lat.toFixed(4)}, ${lng.toFixed(4)}` : '—'}
+            </dd>
+          </div>
+        </dl>
       </section>
 
       {/* Steps 2-8 */}
@@ -273,41 +262,6 @@ export function TourPipeline({
           </section>
         );
       })}
-
-      {/* Step 7 clip status table */}
-      <section className="rounded-2xl border border-line bg-surface p-4">
-        <h3 className="text-sm font-semibold">Clip Status (per photo)</h3>
-        {clips.length === 0 ? (
-          <p className="text-ink3 mt-2 text-xs">No photos fetched yet.</p>
-        ) : (
-          <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
-            {clips.slice(0, 30).map((c) => (
-              <div key={c.photo_id} className="rounded-lg border border-line p-2">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={c.photo_url} alt="" className="h-20 w-full rounded object-cover" />
-                <div className="mt-1 flex items-center justify-between text-[10px]">
-                  <span className="text-ink2">{c.clip ? c.clip.status : 'no clip'}</span>
-                  {c.clip?.status === 'ready' && c.clip.video_url ? (
-                    <a
-                      href={c.clip.video_url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-bronze underline"
-                    >
-                      watch
-                    </a>
-                  ) : null}
-                </div>
-                {c.clip?.error && (
-                  <div className="text-[10px] text-red-600" title={c.clip.error}>
-                    {c.clip.error.slice(0, 60)}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-      </section>
     </div>
   );
 }

@@ -65,6 +65,17 @@ export interface PhotoRow {
   } | null;
   /** Videos that used this photo (POI: resolved from generated_videos). */
   used_in?: string[];
+  /** Community tour: agent-recommended (survived resolve firewall). */
+  recommended?: boolean;
+  /** Community tour: per-photo clip status (photo_clips cache). */
+  clip?: {
+    engine: string;
+    duration_s: number | null;
+    status: string;
+    video_url: string | null;
+    cost_usd: number | null;
+    error: string | null;
+  } | null;
 }
 
 type SortKey = 'order' | 'score' | 'hero' | 'category' | 'enhanced';
@@ -88,12 +99,15 @@ export function PhotoTable({
   bucket,
   photos,
   selection,
+  onGenerateClip,
 }: {
   table: PhotoTableName;
   storageBase: string;
   bucket: string;
   photos: PhotoRow[];
   selection?: PhotoSelection;
+  /** Community tour: per-row "Generate seedance clip" button (photo_clips). */
+  onGenerateClip?: (photoId: string) => Promise<{ ok: boolean; message?: string }>;
 }) {
   const router = useRouter();
   const [pending, setPending] = useState<string | null>(null);
@@ -258,6 +272,8 @@ export function PhotoTable({
               {isListing && <Th>Hero</Th>}
               {!isListing && <Th>Buckets</Th>}
               {!isListing && <Th>Review</Th>}
+              {!isListing && <Th>Agent</Th>}
+              {!isListing && <Th>Clip</Th>}
               <Th>In video</Th>
               <Th>Enhanced</Th>
               <Th>Actions</Th>
@@ -378,6 +394,82 @@ export function PhotoTable({
                   {!isListing && (
                     <Td>
                       <StatusText value={p.status ?? 'pending'} />
+                    </Td>
+                  )}
+                  {!isListing && (
+                    <Td>
+                      {p.recommended ? (
+                        <span className="flex items-center gap-1 text-emerald-600">
+                          <Check size={12} /> yes
+                        </span>
+                      ) : (
+                        <span className="text-ink2">—</span>
+                      )}
+                    </Td>
+                  )}
+                  {!isListing && (
+                    <Td>
+                      {p.clip ? (
+                        <div className="flex flex-col gap-1">
+                          <StatusText value={p.clip.status} />
+                          {p.clip.status === 'ready' && p.clip.video_url && (
+                            <a
+                              href={p.clip.video_url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-[10px] text-bronze underline"
+                            >
+                              watch clip
+                            </a>
+                          )}
+                          {p.clip.cost_usd != null && (
+                            <span className="text-[10px] text-ink2">
+                              ${p.clip.cost_usd.toFixed(2)}
+                            </span>
+                          )}
+                          {p.clip.error && (
+                            <span className="text-[10px] text-red-600" title={p.clip.error}>
+                              {truncate(p.clip.error, 40)}
+                            </span>
+                          )}
+                          {onGenerateClip && p.clip.status !== 'ready' && (
+                            <MiniBtn
+                              label="Generate"
+                              title="Generate a seedance clip from this photo"
+                              disabled={busy}
+                              onClick={() =>
+                                run(p.id, () =>
+                                  (
+                                    onGenerateClip as (
+                                      id: string,
+                                    ) => Promise<{ ok: boolean; message?: string }>
+                                  )(p.id),
+                                )
+                              }
+                            />
+                          )}
+                        </div>
+                      ) : (
+                        <div className="flex flex-col gap-1">
+                          <span className="text-ink2">no clip</span>
+                          {onGenerateClip && (
+                            <MiniBtn
+                              label="Generate"
+                              title="Generate a seedance clip from this photo"
+                              disabled={busy}
+                              onClick={() =>
+                                run(p.id, () =>
+                                  (
+                                    onGenerateClip as (
+                                      id: string,
+                                    ) => Promise<{ ok: boolean; message?: string }>
+                                  )(p.id),
+                                )
+                              }
+                            />
+                          )}
+                        </div>
+                      )}
                     </Td>
                   )}
                   <Td>

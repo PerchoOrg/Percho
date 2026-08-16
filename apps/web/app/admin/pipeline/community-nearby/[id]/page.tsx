@@ -27,7 +27,7 @@ export default async function AdminCommunityNearbyPage({
 
   const { data: community } = (await supabase
     .from('communities')
-    .select('id, name, slug, city, state, status')
+    .select('id, name, slug, city, state, zip, lat, lng, status')
     .eq('id', id)
     .maybeSingle()) as {
     data: {
@@ -36,6 +36,9 @@ export default async function AdminCommunityNearbyPage({
       slug: string | null;
       city: string | null;
       state: string | null;
+      zip: string | null;
+      lat: number | null;
+      lng: number | null;
       status: string;
     } | null;
   };
@@ -59,6 +62,9 @@ export default async function AdminCommunityNearbyPage({
         communityName={community.name}
         city={community.city}
         state={community.state}
+        zip={community.zip}
+        lat={community.lat}
+        lng={community.lng}
         storageBase={process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''}
         bucket="listing-photos"
         photos={photos}

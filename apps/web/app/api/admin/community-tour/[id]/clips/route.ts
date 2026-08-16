@@ -29,6 +29,23 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   const poiIds = [...new Set((links ?? []).map((l: { poi_id: string }) => l.poi_id))];
   if (poiIds.length === 0) return NextResponse.json({ clips: [] });
 
+  // google_place_id per POI — used to mark agent-recommended photos
+  const { data: pois } = await sb.from('pois').select('id, google_place_id').in('id', poiIds);
+
+  // The latest run's resolve step: which place_ids survived the firewall.
+  const { data: runs } = await sb
+    .from('community_tour_runs')
+    .select('step_results')
+    .eq('community_id', communityId)
+    .order('created_at', { ascending: false })
+    .limit(1);
+  const resolve = (
+    runs?.[0]?.step_results as { resolve?: { resolved?: Array<{ place_id: string }> } } | undefined
+  )?.resolve;
+  const recommendedIds = new Set(
+    (resolve?.resolved ?? []).map((r: { place_id: string }) => r.place_id),
+  );
+
   const { data: photos } = await sb
     .from('poi_photos')
     .select('id, poi_id, storage_path, enhanced_path, enhanced_status, ai_tags')
@@ -71,6 +88,13 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     .getPublicUrl('__probe__')
     .data.publicUrl.replace('/__probe__', '');
 
+  const poiPlaceId = new Map<string, string>(
+    (pois ?? []).map((poi: { id: string; google_place_id: string }) => [
+      poi.id,
+      poi.google_place_id,
+    ]),
+  );
+
   const rows = (photos ?? []).map(
     (p: {
       id: string;
@@ -88,6 +112,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
         poi_id: p.poi_id,
         photo_url: `${sb.storage.from('listing-photos').getPublicUrl(path).data.publicUrl}`,
         ai_tags: p.ai_tags ?? null,
+        recommended: recommendedIds.has(poiPlaceId.get(p.poi_id) ?? ''),
         clip: clip
           ? {
               engine: clip.engine,
