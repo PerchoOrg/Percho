@@ -89,6 +89,9 @@ export async function submitVideo(opts: {
     prompt: opts.prompt,
     duration: opts.durationS,
     aspect_ratio: opts.aspectRatio,
+    // Music belongs at assemble time, not per-clip — every clip would get a
+    // different random track. Also cheaper (audio gen is billed separately).
+    generate_audio: false,
   };
   if (mode === 'frames') {
     body.frame_images = images.map((img, i) => ({
