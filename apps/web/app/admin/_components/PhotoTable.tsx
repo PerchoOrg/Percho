@@ -332,32 +332,13 @@ export function PhotoTable({
                   )}
                   <Td>
                     <div className="flex flex-col gap-1">
-                      {!isListing && (
-                        <div className="flex gap-1">
-                          {!p.tagged_at && (
-                            <MiniBtn
-                              label="Tag"
-                              title="Tag this photo with Gemini (AI description + category + score)"
-                              disabled={busy}
-                              onClick={() => run(p.id, () => tagPoiPhotoAction(p.id))}
-                            />
-                          )}
-                          <MiniBtn
-                            label={<Check size={11} />}
-                            title="Approve photo (platform-wide)"
-                            active={p.status === 'approved'}
-                            disabled={busy}
-                            onClick={() => run(p.id, () => setGlobalPhotoStatus(p.id, 'approved'))}
-                          />
-                          <MiniBtn
-                            label={<X size={11} />}
-                            title="Reject photo — removes it from every video pool"
-                            danger
-                            active={p.status === 'rejected'}
-                            disabled={busy}
-                            onClick={() => run(p.id, () => setGlobalPhotoStatus(p.id, 'rejected'))}
-                          />
-                        </div>
+                      {!isListing && !p.tagged_at && (
+                        <MiniBtn
+                          label="Tag"
+                          title="Tag this photo with Gemini (AI description + category + score)"
+                          disabled={busy}
+                          onClick={() => run(p.id, () => tagPoiPhotoAction(p.id))}
+                        />
                       )}
                     </div>
                   </Td>
@@ -443,11 +424,30 @@ export function PhotoTable({
                   )}
                   {!isListing && (
                     <Td>
-                      {t.usable === false ? (
-                        <span className="text-red-600">rejected</span>
-                      ) : (
-                        <StatusText value={p.status ?? 'pending'} />
-                      )}
+                      <div className="flex flex-col gap-1">
+                        {t.usable === false ? (
+                          <span className="text-red-600">rejected</span>
+                        ) : (
+                          <StatusText value={p.status ?? 'pending'} />
+                        )}
+                        <div className="flex gap-1">
+                          <MiniBtn
+                            label={<Check size={11} />}
+                            title="Approve photo (platform-wide) — the only gate for final video material"
+                            active={p.status === 'approved'}
+                            disabled={busy}
+                            onClick={() => run(p.id, () => setGlobalPhotoStatus(p.id, 'approved'))}
+                          />
+                          <MiniBtn
+                            label={<X size={11} />}
+                            title="Reject photo — removes it from every video pool"
+                            danger
+                            active={p.status === 'rejected'}
+                            disabled={busy}
+                            onClick={() => run(p.id, () => setGlobalPhotoStatus(p.id, 'rejected'))}
+                          />
+                        </div>
+                      </div>
                     </Td>
                   )}
                   {!isListing && (
