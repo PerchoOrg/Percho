@@ -4,6 +4,52 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-08-18 06:30 UTC — The plan was invisible in the admin table
+
+**Symptom** (owner, testing Apremont - Highcroft): clicked Re-run on the photos
+step, "table didn't change".
+
+**Diagnosis — not a pipeline bug.** The re-run worked: `step_results.photos` at
+06:16 had 16 shots in the new format, Curator annotated 16/16 with 0 missing
+and 0 invented ids, VO Pass ok, plan persisted. The Selected Photos table
+simply has **no column fed by the plan** — its columns are Review / Photo /
+POI / Size / Category / Seedance? / Score / Buckets / Clip / DA+KB / … and none
+of them carry engine, move, duration or the AI flag. A re-plan is invisible by
+construction.
+
+Worse, the "Seedance?" column was still computing `seedanceByCategory(category)`
+— aerial/landscape/storefront → yes — which is **the rule deleted in phase49.3**.
+It was showing a judgement no part of the system makes any more.
+
+**Actions**:
+- `PhotoTable` takes an optional `plan` (photo_id → sort_order/engine/move/
+  duration/ai_generated). The Seedance? column becomes **Plan**: `#03 depthflow`
+  + `dolly_in · 3.5s` + an AI badge, and "not rendered yet" in amber when no
+  ready clip matches the planned engine — which is the thing that tells the
+  owner whether to click Generate.
+- `seedanceByCategory` deleted. Without a plan the column reads "—": engine is
+  decided at plan time and this table may not guess.
+- Photos panel gained a plan summary strip: total duration, engine mix,
+  narration words + pace (red when outside 2.1-2.6), Curator model/attempts, VO
+  failure, and an expandable warnings/violations list. That data was already in
+  `step_results.photos.plan` and had no reader.
+
+**Also confirmed while investigating** (not a bug, worth recording): the
+`photo_clips` rows for that run carry no `move`/`prompt` and there are no
+depthflow rows at all, because the plan only reaches the clip rows when
+Generate / Re-render all DA+KB runs — and neither had been clicked since the
+re-plan. Run status was still `tagging` (the photos step's terminal status),
+which is how you can tell from the DB alone that no generate step ran.
+
+**Verification**: `pnpm web:typecheck` clean, `pnpm web:test` 345 passed. The
+three remaining biome hits on both files pre-date this change (verified by
+stashing); the diff removes two formatting ones.
+
+**Learnings**: a pipeline change is not finished when the pipeline is correct —
+if the surface the owner reviews on has no column for the new decision, the
+work is untestable by the person who has to accept it. Worth checking the
+consumer UI in the same pass next time.
+
 ## 2026-08-18 01:10 UTC — Community tour orchestration, Phase 3: VO Pass + pipeline rebuilt on the plan
 
 **Objective**: finish the layer — narration continuity — and make the running

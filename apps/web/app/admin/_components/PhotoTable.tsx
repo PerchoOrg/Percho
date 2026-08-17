@@ -97,12 +97,22 @@ type Filter = 'all' | 'untagged' | 'unreviewed' | 'enhance_ready' | 'in_video' |
  * (2026-08-17) — no caller passes selection anymore.
  */
 
+/** One clip as the orchestrator planned it, keyed by photo_id. */
+export interface PlanCell {
+  sort_order: number;
+  engine: string;
+  move: string;
+  duration_s: number;
+  ai_generated: boolean;
+}
+
 export function PhotoTable({
   table,
   storageBase,
   bucket,
   photos,
   onGenerateClip,
+  plan,
 }: {
   table: PhotoTableName;
   storageBase: string;
@@ -110,10 +120,11 @@ export function PhotoTable({
   photos: PhotoRow[];
   /** Community tour: per-row "Generate seedance clip" button (photo_clips).
       `engine` forces the clip engine (DA+KB column passes 'kenburns'). */
-  onGenerateClip?: (
-    photoId: string,
-    engine?: string,
-  ) => Promise<{ ok: boolean; message?: string }>;
+  onGenerateClip?: (photoId: string, engine?: string) => Promise<{ ok: boolean; message?: string }>;
+  /** Community tour: the planned shot per photo (step_results.photos.shots).
+      Without it the Plan column reads "—". Engine is decided by the
+      orchestrator at plan time and nothing in this table may guess at it. */
+  plan?: Record<string, PlanCell>;
 }) {
   const router = useRouter();
   const [pending, setPending] = useState<string | null>(null);
@@ -190,9 +201,7 @@ export function PhotoTable({
     const needsEnhance = photos.filter(
       (p) => p.enhanced_status === 'none' || p.enhanced_status === 'failed',
     );
-    const autoApprove = photos.filter(
-      (p) => p.enhanced_status === 'ready' && p.enhanced_path,
-    );
+    const autoApprove = photos.filter((p) => p.enhanced_status === 'ready' && p.enhanced_path);
     if (needsEnhance.length === 0 && autoApprove.length === 0) return;
     setEnhancedRefreshing(true);
     void (async () => {
@@ -275,7 +284,7 @@ export function PhotoTable({
               <Th>{isListing ? '#' : 'POI'}</Th>
               <Th>Size</Th>
               <Th>Category</Th>
-              {!isListing && <Th>Seedance?</Th>}
+              {!isListing && <Th className="min-w-[150px]">Plan</Th>}
               <Th>Score</Th>
               {isListing && <Th>Hero</Th>}
               {!isListing && <Th>Buckets</Th>}
@@ -311,7 +320,9 @@ export function PhotoTable({
                               title="Approve photo (platform-wide) — the only gate for final video material"
                               active={p.status === 'approved'}
                               disabled={busy}
-                              onClick={() => run(p.id, () => setGlobalPhotoStatus(p.id, 'approved'))}
+                              onClick={() =>
+                                run(p.id, () => setGlobalPhotoStatus(p.id, 'approved'))
+                              }
                             />
                             <MiniBtn
                               label={<X size={11} />}
@@ -319,7 +330,9 @@ export function PhotoTable({
                               danger
                               active={p.status === 'rejected'}
                               disabled={busy}
-                              onClick={() => run(p.id, () => setGlobalPhotoStatus(p.id, 'rejected'))}
+                              onClick={() =>
+                                run(p.id, () => setGlobalPhotoStatus(p.id, 'rejected'))
+                              }
                             />
                           </div>
                         </>
@@ -366,12 +379,49 @@ export function PhotoTable({
                     <Td>
                       {t.usable === false ? (
                         <span className="text-red-600">no</span>
-                      ) : p.clip?.engine === 'seedance' || (!p.clip && seedanceByCategory(t.category)) ? (
-                        <span className="flex items-center gap-1 text-emerald-600">
-                          <Check size={12} /> yes
-                        </span>
+                      ) : plan?.[p.id] ? (
+                        <div className="space-y-0.5">
+                          <div className="flex items-center gap-1">
+                            <span className="tabular-nums text-ink2">
+                              #{String(plan[p.id]!.sort_order + 1).padStart(2, '0')}
+                            </span>
+                            <span
+                              className={
+                                plan[p.id]!.engine === 'seedance'
+                                  ? 'font-medium text-emerald-600'
+                                  : 'font-medium text-ink'
+                              }
+                            >
+                              {plan[p.id]!.engine}
+                            </span>
+                            {plan[p.id]!.ai_generated && (
+                              <span
+                                className="rounded bg-emerald-50 px-1 text-[9px] font-medium text-emerald-700"
+                                title="AI-generated clip — disclosed on the row in photo_clips"
+                              >
+                                AI
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-[10px] text-ink2">
+                            {plan[p.id]!.move} · {plan[p.id]!.duration_s.toFixed(1)}s
+                          </div>
+                          {!hasPlannedClip(p, plan[p.id]!.engine) && (
+                            <div
+                              className="text-[10px] text-amber-600"
+                              title="No ready clip for the planned engine — click Generate on this row (or Re-render all DA+KB) to render the plan"
+                            >
+                              not rendered yet
+                            </div>
+                          )}
+                        </div>
                       ) : (
-                        <span className="text-ink2">—</span>
+                        <span
+                          className="text-ink2"
+                          title="Not in the current plan — re-run the photos step"
+                        >
+                          —
+                        </span>
                       )}
                     </Td>
                   )}
@@ -409,9 +459,7 @@ export function PhotoTable({
                   {!isListing && (
                     <Td>
                       {p.agreement != null ? (
-                        <span className="tabular-nums text-ink">
-                          {p.agreement}/2 agents
-                        </span>
+                        <span className="tabular-nums text-ink">{p.agreement}/2 agents</span>
                       ) : (
                         <span className="text-ink2">—</span>
                       )}
@@ -671,11 +719,15 @@ function truncate(s: string, n: number) {
   return s.length > n ? `${s.slice(0, n)}…` : s;
 }
 
-/** Seedance recommendation without an existing clip: open scenes (aerial /
- *  landscape / storefront) benefit from generation; interiors and text-heavy
- *  frames are served fine by depthflow/ken-burns (owner 2026-08-17). */
-function seedanceByCategory(category: string | null): boolean {
-  return category === 'aerial' || category === 'landscape' || category === 'storefront';
+/**
+ * Does a ready clip exist for the engine the plan asked for? A photo can carry
+ * an old clip from a previous plan (kenburns where the plan now says
+ * depthflow), and that clip is what assemble would pick up — so "has a clip"
+ * is not the same question as "matches the plan".
+ */
+function hasPlannedClip(p: PhotoRow, engine: string): boolean {
+  const clip = engine === 'seedance' ? p.clip : p.dakb_clip;
+  return clip?.engine === engine && clip.status === 'ready';
 }
 
 function Th({ children, className = '' }: { children: React.ReactNode; className?: string }) {

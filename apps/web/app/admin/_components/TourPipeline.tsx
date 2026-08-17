@@ -19,17 +19,29 @@
  * Community info was merged into the header title (owner 2026-08-17).
  */
 
-import { CheckCircle2, ChevronDown, ChevronRight, Loader2, Play, RefreshCw, Sparkles } from 'lucide-react';
+import {
+  CheckCircle2,
+  ChevronDown,
+  ChevronRight,
+  Loader2,
+  Play,
+  RefreshCw,
+  Sparkles,
+} from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
-import { PhotoTable, type PhotoRow } from './PhotoTable';
+import { type PhotoRow, PhotoTable, type PlanCell } from './PhotoTable';
 
 type StepName = 'research' | 'resolve' | 'photos' | 'tag' | 'generate' | 'assemble';
 
 const STEPS: Array<{ name: StepName; label: string; desc: string }> = [
   { name: 'research', label: '1 · Agent Research', desc: 'Gemini grounding' },
   { name: 'resolve', label: '2 · Resolve & Merge', desc: 'Google Places firewall' },
-  { name: 'photos', label: '3 · Selected Photos', desc: '3 per POI — auto-enhance, tag, shot list & clips managed in table below' },
+  {
+    name: 'photos',
+    label: '3 · Selected Photos',
+    desc: '3 per POI — auto-enhance, tag, shot list & clips managed in table below',
+  },
   { name: 'assemble', label: '4 · Assemble', desc: 'ffmpeg concat' },
 ];
 
@@ -233,7 +245,8 @@ export function TourPipeline({
       body: JSON.stringify({ step: 'generate', photoIds: [photoId], engine }),
     });
     const body = (await res.json()) as { ok?: boolean; message?: string; error?: string };
-    if (!res.ok || !body.ok) return { ok: false, message: body.message ?? body.error ?? `HTTP ${res.status}` };
+    if (!res.ok || !body.ok)
+      return { ok: false, message: body.message ?? body.error ?? `HTTP ${res.status}` };
     await loadClips();
     router.refresh();
     return { ok: true };
@@ -251,7 +264,8 @@ export function TourPipeline({
       body: JSON.stringify({ step: 'regenerate-all' }),
     });
     const body = (await res.json()) as { ok?: boolean; message?: string; error?: string };
-    if (!res.ok || !body.ok) return { ok: false, message: body.message ?? body.error ?? `HTTP ${res.status}` };
+    if (!res.ok || !body.ok)
+      return { ok: false, message: body.message ?? body.error ?? `HTTP ${res.status}` };
     await loadClips();
     router.refresh();
     return { ok: true };
@@ -354,7 +368,7 @@ export function TourPipeline({
                 onClick={() => setCollapsed((c) => ({ ...c, [s.name]: !c[s.name] }))}
                 className="flex items-center gap-1.5 text-left"
               >
-                {collapsed[s.name] ?? true ? (
+                {(collapsed[s.name] ?? true) ? (
                   <ChevronRight size={15} className="text-ink3" />
                 ) : (
                   <ChevronDown size={15} className="text-ink3" />
@@ -388,7 +402,8 @@ export function TourPipeline({
                 {researching && (
                   <div className="mt-2 flex items-center gap-2 text-xs text-ink2">
                     <Loader2 size={13} className="animate-spin text-bronze" aria-hidden />
-                    {researchProgress?.agents_done?.length ?? 0}/2 agents done · {runSeconds}s elapsed
+                    {researchProgress?.agents_done?.length ?? 0}/2 agents done · {runSeconds}s
+                    elapsed
                   </div>
                 )}
                 {running === 'research' && researchProgress?.status === 'failed' && (
@@ -434,10 +449,7 @@ function StepResult({
   storageBase: string;
   bucket: string;
   photos: PhotoRow[];
-  onGenerateClip?: (
-    photoId: string,
-    engine?: string,
-  ) => Promise<{ ok: boolean; message?: string }>;
+  onGenerateClip?: (photoId: string, engine?: string) => Promise<{ ok: boolean; message?: string }>;
   onRegenerateAllDAKB?: () => Promise<{ ok: boolean; message?: string }>;
 }) {
   const router = useRouter();
@@ -501,7 +513,9 @@ function StepResult({
         )}
         {r.agents?.gemini_a?.raw && (
           <details>
-            <summary className="cursor-pointer text-ink2">gemini_a raw ({geminiAPois} POIs)</summary>
+            <summary className="cursor-pointer text-ink2">
+              gemini_a raw ({geminiAPois} POIs)
+            </summary>
             <pre className="bg-bg mt-1 max-h-48 overflow-auto whitespace-pre-wrap rounded border border-line p-2 text-[10px] text-ink2">
               {r.agents.gemini_a.raw}
             </pre>
@@ -635,10 +649,27 @@ function StepResult({
     const r = result as {
       results?: Record<string, { fetched?: number; reused?: number; skipped?: number }>;
       resolved_poi_ids?: string[];
-      // Owner 2026-08-17: the FINAL shot list is computed server-side (2 best
-      // per POI by quality + engine/category mapping) and persisted here.
-      shots?: Array<{ photo_id: string; poi_id: string; poi_name: string }>;
+      // The FINAL shot list, planned server-side by the orchestration layer
+      // (Curator → Scheduler → Guard → VO Pass) and persisted here.
+      shots?: Array<{
+        photo_id: string;
+        poi_id: string;
+        poi_name: string;
+        sort_order?: number;
+        engine?: string;
+        move?: string;
+        duration_s?: number;
+        ai_generated?: boolean;
+        vo_line?: string;
+      }>;
       dropped?: Array<{ photo_id: string; poi_id: string; reason: string }>;
+      plan?: {
+        warnings?: Array<{ code: string; detail: string }>;
+        violations?: Array<{ code: string; detail: string }>;
+        narration?: { words: number; spokenSeconds: number; rate: number; withinRange: boolean };
+        curator?: { model: string; attempts: number; annotated: number; missing: string[] };
+        vo?: { ok: boolean; error?: string };
+      };
     };
     const vals = Object.values(r.results ?? {});
     const fetched = vals.reduce((a, v) => a + (v.fetched ?? 0), 0);
@@ -655,15 +686,84 @@ function StepResult({
     const stepPhotos = runPhotos.filter((p) => shotById.has(p.id));
     const droppedPhotos = runPhotos.filter((p) => droppedById.has(p.id));
     const dropReasons = (p: { id: string }) => droppedById.get(p.id)?.reason;
+    // Per-photo plan for the table. A pre-orchestrator run has no engine on its
+    // shots, so the column stays empty rather than inventing one.
+    const planByPhoto: Record<string, PlanCell> = {};
+    for (const shot of r.shots ?? []) {
+      if (shot.engine == null || shot.move == null) continue;
+      planByPhoto[shot.photo_id] = {
+        sort_order: shot.sort_order ?? 0,
+        engine: shot.engine,
+        move: shot.move,
+        duration_s: shot.duration_s ?? 0,
+        ai_generated: shot.ai_generated === true,
+      };
+    }
+    const planned = Object.values(planByPhoto);
+    const totalDuration = planned.reduce((n, c) => n + c.duration_s, 0);
+    const byEngine = planned.reduce<Record<string, number>>((acc, c) => {
+      acc[c.engine] = (acc[c.engine] ?? 0) + 1;
+      return acc;
+    }, {});
+    const narration = r.plan?.narration;
+    const warnings = r.plan?.warnings ?? [];
+    const violations = r.plan?.violations ?? [];
     return (
       <div className="space-y-4">
         <div className="text-xs">
           {fetched} fetched · {reused} reused · {stepPhotos.length} selected ·{' '}
           {droppedPhotos.length} dropped
-          {isLegacy
-            ? ' (legacy run — no per-POI mapping)'
-            : ` across ${poiIds.size} resolved POIs`}
+          {isLegacy ? ' (legacy run — no per-POI mapping)' : ` across ${poiIds.size} resolved POIs`}
         </div>
+        {planned.length > 0 && (
+          <div className="space-y-1 rounded-xl border border-line bg-surface px-3 py-2 text-xs">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+              <span className="font-medium text-ink">Plan</span>
+              <span className="tabular-nums">{totalDuration.toFixed(1)}s</span>
+              <span className="text-ink2">
+                {Object.entries(byEngine)
+                  .map(([engine, n]) => `${n} ${engine}`)
+                  .join(' · ')}
+              </span>
+              {narration && (
+                <span className={narration.withinRange ? 'text-ink2' : 'text-red-600'}>
+                  narration {narration.words} words · {narration.rate.toFixed(2)} w/s
+                </span>
+              )}
+              {r.plan?.vo && !r.plan.vo.ok && (
+                <span className="text-red-600" title={r.plan.vo.error}>
+                  VO pass failed — draft lines kept
+                </span>
+              )}
+              {r.plan?.curator && (
+                <span className="text-ink3">
+                  {r.plan.curator.model} · {r.plan.curator.annotated} annotated
+                  {r.plan.curator.attempts > 1 ? ` · ${r.plan.curator.attempts} attempts` : ''}
+                </span>
+              )}
+            </div>
+            {(warnings.length > 0 || violations.length > 0) && (
+              <details>
+                <summary className="cursor-pointer text-ink2">
+                  {warnings.length} warning{warnings.length === 1 ? '' : 's'} · {violations.length}{' '}
+                  violation{violations.length === 1 ? '' : 's'}
+                </summary>
+                <ul className="mt-1 space-y-0.5">
+                  {violations.map((v, i) => (
+                    <li key={`v-${v.code}-${i}`} className="text-red-600">
+                      {v.code} — {v.detail}
+                    </li>
+                  ))}
+                  {warnings.map((w, i) => (
+                    <li key={`w-${w.code}-${i}`} className="text-ink2">
+                      {w.code} — {w.detail}
+                    </li>
+                  ))}
+                </ul>
+              </details>
+            )}
+          </div>
+        )}
         <div className="space-y-1">
           <div className="flex items-center justify-between gap-3">
             <h4 className="text-xs font-medium text-ink">Selected photos ({stepPhotos.length})</h4>
@@ -693,6 +793,7 @@ function StepResult({
               bucket={bucket}
               photos={stepPhotos}
               onGenerateClip={onGenerateClip}
+              plan={planByPhoto}
             />
           ) : (
             <div className="text-xs text-ink3">No selected photos yet.</div>
