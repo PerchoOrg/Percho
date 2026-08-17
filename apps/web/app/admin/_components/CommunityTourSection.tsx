@@ -13,6 +13,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { AssemblyVideoPanel } from './AssemblyVideoPanel';
 import type { PhotoRow } from './PhotoTable';
 import { PhotoTable } from './PhotoTable';
@@ -67,6 +68,7 @@ export function CommunityTourSection({
 }) {
   const [clipRows, setClipRows] = useState<ClipRow[]>([]);
   const inFlight = useRef(false);
+  const router = useRouter();
 
   const loadClips = useCallback(async () => {
     if (inFlight.current) return;
@@ -129,6 +131,31 @@ export function CommunityTourSection({
     return { ok: true };
   }
 
+  async function regenerateAllDAKB(): Promise<{ ok: boolean; message?: string }> {
+    // Bulk re-render for photos that already have a ready DA+KB clip — the
+    // per-row Generate button only shows when there's NO clip (owner
+    // 2026-08-17: old clips have no button, we need one click to re-render
+    // everything with the 9:16 fix). Reuse the latest run like generateClip.
+    const runsRes = await fetch(`/api/admin/community-tour/${communityId}/runs`);
+    if (!runsRes.ok) return { ok: false, message: 'Could not load runs' };
+    const runsBody = (await runsRes.json()) as {
+      runs: Array<{ id: string }>;
+    };
+    let runId = runsBody.runs[0]?.id;
+    if (!runId) return { ok: false, message: 'No run yet — run the photos step first.' };
+    const res = await fetch(`/api/admin/community-tour/${communityId}/runs/${runId}/step`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ step: 'regenerate-all' }),
+    });
+    if (!res.ok) {
+      const body = (await res.json().catch(() => ({}))) as { message?: string; error?: string };
+      return { ok: false, message: body.message ?? body.error ?? `HTTP ${res.status}` };
+    }
+    await loadClips();
+    return { ok: true };
+  }
+
   return (
     <div className="space-y-4">
       {/* 1 · The community's final assembled video (owner 2026-08-17:
@@ -156,6 +183,25 @@ export function CommunityTourSection({
           All Fetched Photos ({enriched.length})
         </summary>
         <div className="px-4 pb-4">
+          <div className="mb-3 flex items-center justify-end">
+            <button
+              type="button"
+              onClick={() => {
+                void (async () => {
+                  const res = await regenerateAllDAKB();
+                  if (res.ok) {
+                    router.refresh();
+                  } else {
+                    alert(res.message ?? 'Failed');
+                  }
+                })();
+              }}
+              className="rounded-lg border border-line bg-bg px-3 py-1.5 text-xs font-medium text-ink2 hover:border-ink2"
+              title="Reset every DA+KB clip for this community's Selected Photos to pending and re-render with current code (9:16 no-black-bars). Seedance clips untouched."
+            >
+              ↻ Re-render all DA+KB
+            </button>
+          </div>
           <PhotoTable
             table="poi_photos"
             storageBase={storageBase}

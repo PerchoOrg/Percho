@@ -617,6 +617,112 @@ async function enqueueClips(
   return { shots: shotsWithEngine.length, created: toCreate.length };
 }
 
+// ─── step: regenerate-all (DA+KB bulk re-render, owner 2026-08-17) ────────
+// The row Generate button only shows for photos WITHOUT a DA+KB clip (or one
+// that failed). Photos that already have a READY da+kb clip — e.g. the ones
+// rendered before the 9:16 fix — have no per-row button to re-run them with.
+// This bulk step resets every existing depthflow/kenburns clip for the run's
+// POIs back to pending and enqueues new ones for photos that never got one,
+// so the whole table can be re-rendered with current code in one click.
+
+async function runRegenerateAll(sb: any, run: RunRow) {
+  const photos = run.step_results.photos as
+    | { resolved_poi_ids?: string[] }
+    | undefined;
+  const poiIds = photos?.resolved_poi_ids ?? [];
+  if (poiIds.length === 0) {
+    return { error: 'no_photos', message: 'Run the photos step first.' };
+  }
+
+  const { data: photoRows } = await sb
+    .from('poi_photos')
+    .select('id, ai_tags, ai_score, poi_id, created_at, poi:pois!inner(display_name)')
+    .in('poi_id', poiIds);
+  const { durationForCategory } = await import('@/lib/poi/community-tour');
+
+  // Selected Photos panel trim (gotcha 46): newest 3 per POI + any photo with
+  // a READY clip. Matches loadNearbyPhotos / computeFinalShots so the bulk
+  // re-render covers exactly what the panel shows.
+  const { data: clipRows } = await sb
+    .from('photo_clips')
+    .select('photo_id, status')
+    .in('photo_id', (photoRows ?? []).map((p: any) => p.id));
+  const readyIds = new Set(
+    (clipRows ?? [])
+      .filter((r: any) => r.status === 'ready')
+      .map((r: any) => r.photo_id),
+  );
+  const byPoi = new Map<string, typeof photoRows>();
+  for (const p of photoRows ?? []) {
+    if (!byPoi.has(p.poi_id)) byPoi.set(p.poi_id, []);
+    byPoi.get(p.poi_id)!.push(p);
+  }
+  const kept: any[] = [];
+  for (const list of byPoi.values()) {
+    list.sort(
+      (a: any, b: any) =>
+        String(b.created_at ?? '').localeCompare(String(a.created_at ?? '')),
+    );
+    const top = list.slice(0, 3);
+    kept.push(...top.filter((p: any) => readyIds.has(p.id) || top.includes(p)));
+  }
+
+  // Unusable photos never enter the video pool (gotcha 37).
+  const selected = kept
+    .filter((p: any) => ((p.ai_tags ?? {}) as { usable?: boolean }).usable !== false)
+    .map((p: any) => {
+      const tags = (p.ai_tags ?? {}) as { primary_category?: string };
+      return {
+        photo_id: p.id,
+        poi_id: p.poi_id,
+        poi_name: p.poi?.display_name ?? '',
+        category: tags.primary_category ?? 'other',
+        duration_s: durationForCategory(tags.primary_category ?? 'other'),
+        engine: 'kenburns',
+        bucket: 'other',
+      };
+    });
+
+  // Reset EVERY existing depthflow/kenburns row for these photos (ready
+  // included — the whole point is re-rendering old 16:9 clips with the new
+  // 9:16 code). Seedance rows are untouched.
+  const photoIds = selected.map((s) => s.photo_id);
+  if (photoIds.length > 0) {
+    await sb
+      .from('photo_clips')
+      .update({ status: 'pending', error: null, updated_at: new Date().toISOString() })
+      .in('photo_id', photoIds)
+      .in('engine', ['depthflow', 'kenburns']);
+  }
+
+  // Enqueue clips for photos that never had one.
+  const { data: existing } = await sb
+    .from('photo_clips')
+    .select('photo_id, engine')
+    .in('photo_id', photoIds)
+    .in('engine', ['depthflow', 'kenburns']);
+  const have = new Set((existing ?? []).map((r: any) => `${r.photo_id}:${r.engine}`));
+  const toCreate = selected.filter((s) => !have.has(`${s.photo_id}:${s.engine}`));
+  if (toCreate.length > 0) {
+    await sb.from('photo_clips').insert(
+      toCreate.map((s) => ({
+        photo_id: s.photo_id,
+        engine: s.engine,
+        duration_s: s.duration_s,
+        status: 'pending',
+      })),
+    );
+  }
+
+  await saveStep(sb, run, 'regenerate_all', {
+    reset: photoIds.length,
+    created: toCreate.length,
+    engine: 'kenburns',
+  });
+  await setRunStatus(sb, run.id, 'generating');
+  return { reset: photoIds.length, created: toCreate.length };
+}
+
 // ─── step: assemble ─────────────────────────────────────────────────────────
 // Owner 2026-08-17: "筛选去重确实上一步做了,但 2 张上限 + engine/category 映射
 // 还是要在这里 - no 这一步也应该在上一步做" — the photos step computes the
@@ -838,6 +944,7 @@ const STEP_HANDLERS: Record<
   photos: runPhotos,
   tag: runTag,
   generate: runGenerate,
+  'regenerate-all': runRegenerateAll,
   assemble: runAssemble,
 };
 
@@ -894,7 +1001,9 @@ export async function POST(
         ? await STEP_HANDLERS[step]!(sb, run, body.photoIds, body.engine)
         : step === 'assemble'
           ? await STEP_HANDLERS[step]!(sb, run, undefined, undefined, body.approve)
-          : await STEP_HANDLERS[step]!(sb, run);
+          : step === 'regenerate-all'
+            ? await STEP_HANDLERS[step]!(sb, run)
+            : await STEP_HANDLERS[step]!(sb, run);
     return NextResponse.json({ ok: true, step, result });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
