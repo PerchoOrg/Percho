@@ -4,6 +4,45 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-08-18 14:50 UTC — Aberdeen, third round: my own getPlaceDetails URL was wrong
+
+**Symptom**: still `0 fetched` across 12 resolved POIs. The DB showed the
+upsert running (`refreshed_at` seconds after the run, `display_name` correct)
+with **`raw_place` null** on all 12 — so the backfill added an hour earlier had
+silently done nothing. Deploy timing ruled out: `c2d90895` was READY at 10:53,
+the run is 10:55.
+
+**Cause, mine, from the previous commit**: `PLACES_BASE` stops at `/v1` — which
+is why every other call spells out `/places:searchText`. `getPlaceDetails` was
+written as `${PLACES_BASE}/${placeId}`, so it requested `/v1/ChIJ…`, got a 404,
+and `if (!res.ok) return null` turned that into "this POI has no photos".
+
+**Why my verification missed it**: I checked the endpoint by hand-typing
+`/v1/places/{id}` into a probe script — the correct URL, which is not the one
+the code builds. Verifying a URL I retyped instead of the code path proved
+nothing about the code. The probe this time imports and calls the real exported
+function: `getPlaceDetails('ChIJ13w2MweX9YgRWnTiFhsY374')` → "Town Center Park",
+**10 photos**.
+
+**Actions**:
+- URL fixed to `${PLACES_BASE}/places/${placeId}`.
+- The failure is now logged with status and body. A bare `return null` on any
+  non-OK response is indistinguishable from a genuine photo-less POI, and the
+  caller stores either outcome — that is what let a 404 masquerade as data for
+  two rounds.
+- Read the whole of `fetchPhotosForCommunityPoi` this time, to the end: with
+  `raw_place.photos` present the rest of the chain is sound (download → storage
+  → `poi_photos` with width/height → `community_poi_photos` link). No fourth
+  layer.
+
+**Verification**: live call through the real function (above); `pnpm
+web:typecheck` clean; `pnpm web:test` **366 passed** — each its own command.
+
+**Learnings**: three rounds on one symptom, and the last two were self-inflicted.
+Both had the same shape — I wrote a plausible thing, verified something
+adjacent to it, and reported it as verified. A probe must run the code, not a
+retyped version of what the code is meant to do.
+
 ## 2026-08-18 14:20 UTC — Aberdeen, second layer: the photo fetch reads raw_place, which nothing wrote
 
 **Symptom**: after the display_name fix, `resolved_poi_ids` went 0 → 12, but

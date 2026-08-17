@@ -216,14 +216,25 @@ export type PhotoBlob = {
  * that column, so a row without it silently yields zero photos.
  */
 export async function getPlaceDetails(placeId: string): Promise<PlaceResult | null> {
-  const res = await fetch(`${PLACES_BASE}/${placeId}`, {
+  // `/places/{id}` — PLACES_BASE stops at /v1, which is why the search calls
+  // spell out `/places:searchText`. Without the `places/` segment this 404s,
+  // and the old bare `return null` turned that into "this POI has no photos"
+  // (2026-08-17: every backfilled POI came back empty and nothing said why).
+  const res = await fetch(`${PLACES_BASE}/places/${placeId}`, {
     headers: {
       'X-Goog-Api-Key': apiKey(),
       // Single-place mask: the same fields, without the `places.` prefix.
       'X-Goog-FieldMask': NEARBY_FIELD_MASK.replaceAll('places.', ''),
     },
   });
-  if (!res.ok) return null;
+  if (!res.ok) {
+    // Loud: a silent null is indistinguishable from a real POI with no photos,
+    // and the caller stores the result either way.
+    console.error(
+      `[places] details ${placeId} failed: ${res.status} ${(await res.text()).slice(0, 200)}`,
+    );
+    return null;
+  }
   return (await res.json()) as PlaceResult;
 }
 
