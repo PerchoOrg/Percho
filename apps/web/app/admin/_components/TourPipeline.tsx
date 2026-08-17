@@ -23,7 +23,6 @@ import { CheckCircle2, ChevronDown, ChevronRight, Loader2, Play, RefreshCw, Spar
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 import { PhotoTable, type PhotoRow } from './PhotoTable';
-import { projectTags } from '@/lib/poi/photo-tag-view';
 
 type StepName = 'research' | 'resolve' | 'photos' | 'tag' | 'generate' | 'assemble';
 
@@ -614,27 +613,26 @@ function StepResult({
     const r = result as {
       results?: Record<string, { fetched?: number; reused?: number; skipped?: number }>;
       resolved_poi_ids?: string[];
+      // Owner 2026-08-17: the FINAL shot list is computed server-side (2 best
+      // per POI by quality + engine/category mapping) and persisted here.
+      shots?: Array<{ photo_id: string; poi_id: string; poi_name: string }>;
+      dropped?: Array<{ photo_id: string; poi_id: string; reason: string }>;
     };
     const vals = Object.values(r.results ?? {});
     const fetched = vals.reduce((a, v) => a + (v.fetched ?? 0), 0);
     const reused = vals.reduce((a, v) => a + (v.reused ?? 0), 0);
     const poiIds = new Set(r.resolved_poi_ids ?? []);
-    // Same shape as the big table below: every photo of the resolve-surviving
-    // POIs, filtered to this run's POI set. Legacy runs (before resolved_poi_ids
-    // existed) fall back to all photos — the per-POI mapping is not recoverable.
     const isLegacy = (r.resolved_poi_ids ?? []).length === 0;
     const runPhotos = isLegacy
       ? (photos ?? [])
       : (photos ?? []).filter((p) => p.poi_id && poiIds.has(p.poi_id));
-    // Two tables (owner 2026-08-17): Selected = everything not dropped;
-    // Drop = user-rejected (Review ✗ → poi_photos.status='rejected') or
-    // tagger-unusable (ai_tags.usable=false). Same split runAssemble uses.
-    const stepPhotos = runPhotos.filter(
-      (p) => p.status !== 'rejected' && projectTags(p.ai_tags).usable !== false,
-    );
-    const droppedPhotos = runPhotos.filter(
-      (p) => p.status === 'rejected' || projectTags(p.ai_tags).usable === false,
-    );
+    // The server's selection is authoritative: shots = final list, dropped =
+    // everything else (rejected / unusable / not in top 2 by quality).
+    const shotById = new Map((r.shots ?? []).map((s) => [s.photo_id, s]));
+    const droppedById = new Map((r.dropped ?? []).map((d) => [d.photo_id, d]));
+    const stepPhotos = runPhotos.filter((p) => shotById.has(p.id));
+    const droppedPhotos = runPhotos.filter((p) => droppedById.has(p.id));
+    const dropReasons = (p: { id: string }) => droppedById.get(p.id)?.reason;
     return (
       <div className="space-y-4">
         <div className="text-xs">
@@ -661,15 +659,24 @@ function StepResult({
         <div className="space-y-1">
           <h4 className="text-xs font-medium text-ink">Dropped photos ({droppedPhotos.length})</h4>
           {droppedPhotos.length > 0 ? (
-            <PhotoTable
-              table="poi_photos"
-              storageBase={storageBase}
-              bucket={bucket}
-              photos={droppedPhotos}
-              onGenerateClip={onGenerateClip}
-            />
+            <>
+              <PhotoTable
+                table="poi_photos"
+                storageBase={storageBase}
+                bucket={bucket}
+                photos={droppedPhotos}
+                onGenerateClip={onGenerateClip}
+              />
+              <ul className="space-y-0.5 text-xs">
+                {droppedPhotos.map((p) => (
+                  <li key={p.id} className="text-ink2">
+                    {dropReasons(p) ?? 'dropped'}
+                  </li>
+                ))}
+              </ul>
+            </>
           ) : (
-            <div className="text-xs text-ink3">Nothing dropped — no rejected or unusable photos.</div>
+            <div className="text-xs text-ink3">Nothing dropped.</div>
           )}
         </div>
       </div>
