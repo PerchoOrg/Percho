@@ -611,8 +611,17 @@ async function enqueueClips(
 // 尽量cover不同的category" + "show the final selected photos on tour pipeline
 // and I will need to approve it before generating video".
 //
-// Phase 1 (this handler): compute the FINAL shot list from the generate step's
-// shots + ready photo_clips, persist it to step_results.assemble so the UI can
+// Flow (owner 2026-08-17, after bug report "上一步那么多照片为啥只有一个"):
+//   assemble input = the Selected Photos panel's photos (photos step's
+//   resolved_poi_ids) DIRECTLY — no re-filtering, no buildShotList collapse.
+//   Photos rejected by the user (Review column ✗ → poi_photos.status='rejected')
+//   or by the tagger (ai_tags.usable=false) go into a DROP list, persisted in
+//   the same step result (photos_dropped) and, on approve, in tour_assemblies.
+//   The remaining photos ARE the final shot list — the user reviews it in the
+//   panel and clicks Approve & build.
+//
+// Phase 1 (this handler): compute the final shot list from the photos step +
+// drop rejected/unusable, persist it to step_results.assemble so the UI can
 // show it. Phase 2 (Approve button in the panel) POSTs the same step with
 // {approve: true}, which inserts a tour_assemblies pending row the render
 // worker consumes.
@@ -623,99 +632,96 @@ async function runAssemble(
   _engine?: string,
   approve?: boolean,
 ) {
-  const generate = run.step_results.generate as
-    | { shots?: Array<{ photo_id: string; poi_id: string; poi_name: string; category: string; engine: string; duration_s: number; bucket: string }> }
+  // Input = photos step's resolved POIs (the Selected Photos panel set) — NOT
+  // the generate step's shots, which buildShotList can collapse to 1 photo.
+  const photosStep = run.step_results.photos as
+    | { resolved_poi_ids?: string[] }
     | undefined;
-  if (!generate?.shots?.length) {
-    return { error: 'no_shots', message: 'Run the generate step first — it produces the candidate shot list.' };
+  const poiIds = photosStep?.resolved_poi_ids;
+  if (!poiIds?.length) {
+    return { error: 'no_photos', message: 'Run the photos step first — it produces the Selected Photos list.' };
   }
 
-  const shots = generate.shots;
-  const photoIdsAll = shots.map((s) => s.photo_id);
-
-  // Ready clips only — assemble consumes actual video files.
-  const { data: clips } = (await sb
-    .from('photo_clips')
-    .select('id, photo_id, engine, duration_s, status, storage_path')
-    .in('photo_id', photoIdsAll)
-    .in('status', ['ready'])) as {
+  // All photos under the Selected POIs. No buildShotList, no POI cap here:
+  // every selected photo is a shot (owner: "Selected Photos直接作为输入").
+  const { data: photos } = (await sb
+    .from('poi_photos')
+    .select(
+      'id, poi_id, status, ai_tags, ai_score, storage_path, enhanced_path, enhanced_status',
+    )
+    .in('poi_id', poiIds)) as {
     data: Array<{
       id: string;
-      photo_id: string;
-      engine: string;
-      duration_s: number | null;
-      status: string;
+      poi_id: string;
+      status: string | null;
+      ai_tags: Record<string, unknown> | null;
+      ai_score: number | null;
       storage_path: string | null;
+      enhanced_path: string | null;
+      enhanced_status: string | null;
     }> | null;
   };
 
-  const clipByPhoto = new Map<string, NonNullable<typeof clips>[number]>();
-  for (const c of clips ?? []) {
-    // One clip per photo for assemble: prefer the shot list's engine.
-    const prev = clipByPhoto.get(c.photo_id);
-    if (!prev) {
-      clipByPhoto.set(c.photo_id, c);
-      continue;
-    }
-    const shotEngine = shots.find((s) => s.photo_id === c.photo_id)?.engine;
-    if (c.engine === shotEngine) clipByPhoto.set(c.photo_id, c);
-    else if (prev.engine !== shotEngine) {
-      // Both non-preferred — keep the higher-quality (seedance > kenburns > depthflow).
-      const rank = (e: string) => (e === 'seedance' ? 2 : e === 'kenburns' ? 1 : 0);
-      if (rank(c.engine) > rank(prev.engine)) clipByPhoto.set(c.photo_id, c);
-    }
-  }
-
-  // Selection: keep the shot list's order (opener → hero → round-robin → closer),
-  // drop photos with no ready clip or unusable tags.
-  const { data: photos } = (await sb
-    .from('poi_photos')
-    .select('id, ai_tags')
-    .in('id', photoIdsAll)) as {
-    data: Array<{ id: string; ai_tags: Record<string, unknown> | null }> | null;
+  // POI display names for the shot rows.
+  const { data: poiRows } = (await sb
+    .from('pois')
+    .select('id, display_name')
+    .in('id', poiIds)) as {
+    data: Array<{ id: string; display_name: string | null }> | null;
   };
-  const usableByPhoto = new Map(
-    (photos ?? []).map((p) => [p.id, ((p.ai_tags ?? {}) as { usable?: boolean }).usable !== false]),
-  );
+  const poiName = new Map((poiRows ?? []).map((p) => [p.id, p.display_name ?? '']));
 
-  const ordered: Array<{
+  // Category per photo (from ai_tags) — the shot list needs it for duration.
+  const shots: Array<{
     photo_id: string;
     poi_id: string;
     poi_name: string;
     category: string;
     engine: string;
     duration_s: number;
-    clip_id: string;
+    clip_id: string | null;
     clip_storage_path: string | null;
   }> = [];
-  const dropped: Array<{ photo_id: string; reason: string }> = [];
+  const dropped: Array<{ photo_id: string; poi_id: string; reason: string }> = [];
 
-  const perPoi = new Map<string, number>();
-  for (const s of shots) {
-    const clip = clipByPhoto.get(s.photo_id);
-    if (!clip) {
-      dropped.push({ photo_id: s.photo_id, reason: 'no ready clip yet' });
+  const { durationForCategory } = await import('@/lib/poi/community-tour');
+
+  for (const p of photos ?? []) {
+    const tags = (p.ai_tags ?? {}) as {
+      primary_category?: string;
+      usable?: boolean;
+      has_prominent_text?: boolean;
+    };
+    const category = tags.primary_category ?? 'other';
+    const rejectedByUser = p.status === 'rejected';
+    const rejectedByTagger = tags.usable === false;
+    if (rejectedByUser || rejectedByTagger) {
+      dropped.push({
+        photo_id: p.id,
+        poi_id: p.poi_id,
+        reason: rejectedByUser
+          ? 'rejected in Review'
+          : 'tagger-unusable',
+      });
       continue;
     }
-    if (usableByPhoto.get(s.photo_id) === false) {
-      dropped.push({ photo_id: s.photo_id, reason: 'tagger-unusable' });
-      continue;
-    }
-    const n = perPoi.get(s.poi_id) ?? 0;
-    if (n >= 2) {
-      dropped.push({ photo_id: s.photo_id, reason: 'POI cap (2 max)' });
-      continue;
-    }
-    perPoi.set(s.poi_id, n + 1);
-    ordered.push({
-      photo_id: s.photo_id,
-      poi_id: s.poi_id,
-      poi_name: s.poi_name,
-      category: s.category,
-      engine: s.engine,
-      duration_s: s.duration_s,
-      clip_id: clip.id,
-      clip_storage_path: clip.storage_path,
+    // Engine: text-heavy → depthflow/kenburns; open clean scenes → seedance;
+    // everything else → kenburns (same routing as buildShotList).
+    const engine =
+      tags.has_prominent_text === true
+        ? 'depthflow'
+        : category === 'aerial' || category === 'landscape' || category === 'storefront'
+          ? 'seedance'
+          : 'kenburns';
+    shots.push({
+      photo_id: p.id,
+      poi_id: p.poi_id,
+      poi_name: poiName.get(p.poi_id) ?? '',
+      category,
+      engine,
+      duration_s: durationForCategory(category),
+      clip_id: null,
+      clip_storage_path: null,
     });
   }
 
@@ -724,18 +730,18 @@ async function runAssemble(
       community_id: run.community_id,
       run_id: run.id,
       status: 'pending',
-      ordered_clips: ordered,
+      ordered_clips: shots,
       photos_dropped: dropped,
     });
     if (insErr) return { error: 'insert_failed', message: (insErr as { message: string }).message };
     await setRunStatus(sb, run.id, 'assembled');
-    await saveStep(sb, run, 'assemble', { approved: true, ordered, dropped });
-    return { approved: true, ordered, dropped };
+    await saveStep(sb, run, 'assemble', { approved: true, ordered: shots, dropped });
+    return { approved: true, ordered: shots, dropped };
   }
 
   // Preview (no DB write beyond step_results — the UI shows this before approve).
-  await saveStep(sb, run, 'assemble', { approved: false, ordered, dropped });
-  return { approved: false, ordered, dropped };
+  await saveStep(sb, run, 'assemble', { approved: false, ordered: shots, dropped });
+  return { approved: false, ordered: shots, dropped };
 }
 
 // ─── dispatcher ─────────────────────────────────────────────────────────────
