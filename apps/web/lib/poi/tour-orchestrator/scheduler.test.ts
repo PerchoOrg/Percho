@@ -14,8 +14,10 @@ import {
   depthflowQuota,
   durationFor,
   isPanorama,
+  isTooLowRes,
   overflow,
   scheduleClips,
+  upscaleFactor,
 } from './scheduler';
 import type { PhotoAnnotation, PhotoMeta } from './types';
 
@@ -36,6 +38,42 @@ describe('overflow', () => {
   it('puts 3:4 portrait and 4:3 landscape on opposite sides of the threshold', () => {
     expect(overflow(3024, 4032)).toBeLessThan(DEPTHFLOW_MAX_OVERFLOW);
     expect(overflow(4032, 3024)).toBeGreaterThan(DEPTHFLOW_MAX_OVERFLOW);
+  });
+});
+
+describe('upscaleFactor / isTooLowRes', () => {
+  it('measures enlargement against the 9:16 canvas, not pixel count', () => {
+    // The frame the owner flagged (2026-08-17).
+    expect(upscaleFactor(680, 497)).toBeCloseTo(4.25, 2);
+    expect(isTooLowRes(680, 497)).toBe(true);
+    // Same pixels, different shape, different verdict: a portrait frame reaches
+    // the canvas height with far less enlargement than a landscape one.
+    expect(upscaleFactor(497, 680)).toBeLessThan(upscaleFactor(680, 497));
+  });
+
+  it('keeps everything a normal Places fetch returns', () => {
+    for (const [w, h] of [
+      [3200, 2400],
+      [3456, 2304],
+      [3024, 4032],
+      [4800, 3200],
+    ] as const) {
+      expect(upscaleFactor(w, h)).toBeLessThan(1);
+      expect(isTooLowRes(w, h)).toBe(false);
+    }
+  });
+
+  it('measures a panorama by its letterbox fit, not by a cover crop', () => {
+    // 2000x947 is padded top/bottom, never enlarged to fill the height —
+    // judging it as a cover crop would drop a frame that renders downscaled.
+    expect(isPanorama(2000, 947)).toBe(true);
+    expect(upscaleFactor(2000, 947)).toBeLessThan(1);
+    expect(isTooLowRes(2000, 947)).toBe(false);
+  });
+
+  it('treats a missing size as unusable rather than as fine', () => {
+    expect(upscaleFactor(0, 0)).toBe(Number.POSITIVE_INFINITY);
+    expect(isTooLowRes(0, 0)).toBe(true);
   });
 });
 

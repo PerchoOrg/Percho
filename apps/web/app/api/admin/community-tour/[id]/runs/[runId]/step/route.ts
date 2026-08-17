@@ -848,14 +848,28 @@ async function computeFinalShots(
   // 更适合的" — per POI pick the 2 BEST by quality, not newest-first. Quality =
   // usable (tagger verdict) first, then ai_score desc, then newest as tiebreak.
   const POI_PHOTO_CAP = 2;
+  const photos: NonNullable<typeof photosRaw> = [];
+  const dropped: Array<{ photo_id: string; poi_id: string; reason: string }> = [];
+
+  // Resolution gate, BEFORE the per-POI cap so a POI with a sharper alternate
+  // uses it instead of spending its slot on a soft frame. Owner 2026-08-17, on
+  // a 680x497 storefront that needed 4.25x to fill a 1080x1920 frame: the
+  // duration rule shortens a soft clip, it cannot rescue one.
+  const { upscaleFactor, isTooLowRes } = await import('@/lib/poi/tour-orchestrator/scheduler');
   const byPoi = new Map<string, NonNullable<typeof photosRaw>>();
   for (const p of photosRaw ?? []) {
+    if (p.width_px && p.height_px && isTooLowRes(p.width_px, p.height_px)) {
+      dropped.push({
+        photo_id: p.id,
+        poi_id: p.poi_id,
+        reason: `too low resolution — ${p.width_px}x${p.height_px} needs ${upscaleFactor(p.width_px, p.height_px).toFixed(1)}x upscale for 1080x1920`,
+      });
+      continue;
+    }
     const arr = byPoi.get(p.poi_id) ?? [];
     arr.push(p);
     byPoi.set(p.poi_id, arr);
   }
-  const photos: NonNullable<typeof photosRaw> = [];
-  const dropped: Array<{ photo_id: string; poi_id: string; reason: string }> = [];
   for (const arr of byPoi.values()) {
     const ranked = [...arr].sort((a, b) => {
       const aTags = (a.ai_tags ?? {}) as { usable?: boolean };

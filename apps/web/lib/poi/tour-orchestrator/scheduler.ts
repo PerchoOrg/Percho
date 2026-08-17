@@ -140,6 +140,52 @@ const SEEDANCE_BLOCKED_SUBJECTS: readonly DominantSubject[] = [
 
 // ─── geometry ───────────────────────────────────────────────────────────────
 
+/** The canvas every community-tour clip renders at. */
+export const CANVAS_W = 1080;
+export const CANVAS_H = 1920;
+/** Ken Burns pushes to 1.10, so the source has to carry that much extra. */
+const ZOOM_HEADROOM = 1.1;
+
+/**
+ * How far a photo must be enlarged to fill the 9:16 canvas, zoom included.
+ * Below 1.0 the photo is downscaled and loses nothing.
+ *
+ * Pixel count is the wrong measure here: at 2000px wide, a landscape frame and
+ * a portrait one need completely different amounts of enlargement, because the
+ * canvas is portrait. This is the number that predicts softness.
+ */
+export function upscaleFactor(widthPx: number, heightPx: number): number {
+  if (!(widthPx > 0) || !(heightPx > 0)) return Number.POSITIVE_INFINITY;
+  // A panorama is letterboxed, not cropped, so it only has to reach the
+  // canvas WIDTH — measuring it like a cover crop would condemn a 2000x947
+  // frame that actually renders downscaled.
+  const scale = isPanorama(widthPx, heightPx)
+    ? Math.min(CANVAS_W / widthPx, CANVAS_H / heightPx)
+    : Math.max(CANVAS_W / widthPx, CANVAS_H / heightPx);
+  return scale * ZOOM_HEADROOM;
+}
+
+/**
+ * Above this, a photo is dropped from the tour rather than rendered soft.
+ *
+ * 2.0 comes from two ends. Below it: the pipeline already shortens a low-res
+ * clip to hide it, and a mild enlargement survives that. Above it: nothing
+ * hides it — the owner flagged a 680x497 storefront that needed **4.25x**
+ * (2026-08-17), and this repo has been here before, moving the Places fetch
+ * from 1200px to 2400px because 1200px sources rendered "visibly mushy bark /
+ * foliage / signage" (~1.76x on this canvas).
+ *
+ * Measured over 581 POI photos: 11% exceed 2.0x, and only 4 POIs of 82 have
+ * nothing better. At 1.5x it would be 20% and 9 POIs — more coverage lost than
+ * sharpness gained.
+ */
+export const MAX_UPSCALE = 2.0;
+
+/** Too soft for a full-frame 9:16 clip, whatever the camera move. */
+export function isTooLowRes(widthPx: number, heightPx: number): boolean {
+  return upscaleFactor(widthPx, heightPx) > MAX_UPSCALE;
+}
+
 /**
  * Fraction of the photo the 9:16 canvas crops away.
  *

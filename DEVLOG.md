@@ -4,6 +4,50 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-08-18 11:30 UTC — Drop photos too small for the canvas, measured as upscale not pixels
+
+**Owner**, on a 680x497 storefront the plan had scheduled: "low res … should we
+drop them?" The existing rule only *shortens* a low-res clip (spec §4.5, "用短
+时长遮画质"). A 2-second clip does not hide what this one needs.
+
+**The measure**: pixel count is the wrong test on a portrait canvas — at 2000px
+wide a landscape frame and a portrait frame need completely different
+enlargement. What predicts softness is how far the photo must be enlarged to
+fill 1080x1920 with the Ken Burns 1.10 zoom on top:
+
+    max(1080/w, 1920/h) * 1.10        — cover crop
+    min(1080/w, 1920/h) * 1.10        — panorama (letterboxed, never enlarged
+                                        to fill the height)
+
+The panorama branch matters: without it a 2000x947 frame scores 2.23x and gets
+dropped, when it actually renders **downscaled**. It rescued 4 photos in the
+current library.
+
+**Threshold 2.0x**, from both ends: below it the duration rule already hides a
+mild enlargement; above it nothing does — the flagged frame needed **4.25x**,
+and this repo already moved the Places fetch from 1200px to 2400px because
+1200px sources rendered "visibly mushy bark / foliage / signage" (~1.76x here).
+
+Measured over the 581 POI photos that have dimensions:
+
+| threshold | photos cut | POIs left with nothing |
+|---|---|---|
+| 1.5x | 20.0% | 9 / 82 |
+| **2.0x** | **10.3%** | **4 / 82** |
+| 2.5x | 9.3% | 3 / 82 |
+
+1.5x costs twice the coverage for sharpness the duration rule was already
+covering. The current Apremont run has exactly one photo over 2.0x — the one
+the owner flagged; everything else sits at 0.88-0.92x.
+
+**Actions**: `upscaleFactor` / `isTooLowRes` / `MAX_UPSCALE` in `scheduler.ts`,
+applied in `computeFinalShots` **before** the per-POI cap, so a POI with a
+sharper alternate spends its slot on that instead of losing the slot. The
+Dropped table shows the frame size and the factor, e.g. "too low resolution —
+680x497 needs 4.2x upscale for 1080x1920".
+
+**Verification**: `pnpm web:typecheck` clean, `pnpm web:test` **356 passed**.
+
 ## 2026-08-18 10:50 UTC — Dropped table: reason inline, not a list underneath
 
 **Owner**: "dropped table - inline drop reason, dont do this after table".
