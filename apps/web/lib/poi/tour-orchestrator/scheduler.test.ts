@@ -15,6 +15,7 @@ import {
   overflow,
   scheduleClips,
 } from './scheduler';
+import type { PhotoAnnotation, PhotoMeta } from './types';
 
 const plan = () => scheduleClips(GOLDEN_ANNOTATIONS, GOLDEN_PHOTOS);
 
@@ -212,5 +213,43 @@ describe('scheduleClips — degenerate inputs', () => {
     const photos = [...GOLDEN_PHOTOS.slice(0, 3), { ...GOLDEN_PHOTOS[3]!, width_px: 0 }];
     const { clips } = scheduleClips(GOLDEN_ANNOTATIONS, photos);
     expect(clips).toHaveLength(3);
+  });
+
+  it('does not repeat a Seedance camera move on adjacent clips', () => {
+    // Regression (curator-eval run 1, 2026-08-17): four open_space frames all
+    // qualify for Seedance and all want a pull-back, so clips 5 and 6 came out
+    // with the same move. The golden fixture never had two adjacent Seedance
+    // clips of the same subject, so nothing caught it.
+    const photos: PhotoMeta[] = [0, 1, 2, 3].map((i) => ({
+      photo_id: `1000000${i}-0000-4000-8000-00000000000${i}`,
+      poi_id: `poi-${i}`,
+      poi_name: `Park ${i}`,
+      bucket: 'outdoor',
+      width_px: 4032,
+      height_px: 3024,
+      description: 'An open lawn with trees at the edge.',
+    }));
+    const annotations: PhotoAnnotation[] = photos.map((p, i) => ({
+      photo_id: p.photo_id,
+      has_natural_motion: true,
+      motion_hint: 'trees moving in the wind',
+      dominant_subject: 'open_space',
+      has_visible_people: false,
+      people_prominence: 'none',
+      has_readable_brand_signage: false,
+      has_rigid_geometry: false,
+      narrative_role: 'establishing',
+      time_of_day: 40 + i,
+      emotional_weight: 0.8,
+      poi_pair_with: null,
+      pair_role: null,
+      vo_line: '',
+      chip_label: `Park ${i}`,
+    }));
+    const { clips } = scheduleClips(annotations, photos);
+    expect(clips.every((c) => c.engine === 'seedance')).toBe(true);
+    for (let i = 1; i < clips.length; i++) {
+      expect(clips[i]!.move).not.toBe(clips[i - 1]!.move);
+    }
   });
 });

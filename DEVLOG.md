@@ -4,6 +4,95 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-08-17 23:40 UTC — Community tour orchestration, Phase 2 (Curator) + measured eval
+
+**Objective**: the LLM half of the annotation layer — one batch call that says
+what each photo IS, scored against the hand baseline from Phase 1.
+
+**Actions**:
+- `lib/poi/tour-orchestrator/curator.ts` — Prompt A verbatim (owner's spec text;
+  it is the contract the agreement numbers are measured against, so it is not
+  paraphrased), batch rendering, JSON-array extraction, one retry with the
+  parse failure appended, then the Phase 1 coercions.
+- `scripts/admin/curator-eval.ts` (+ `pnpm --filter @percho/web curator-eval`)
+  — downloads the 14 fixture photos, runs the batch, scores the three
+  Guard-critical fields against the baseline, and prints the resulting plan.
+- 10 new tests for the pure parts (prompt rendering, array extraction, unknown
+  id rejection, coercion pass-through, retry-worthy parse errors).
+- **Bug fixed, found by the eval**: two adjacent Seedance clips both came out
+  `pull_back`. The Seedance camera token was derived from the subject alone and
+  never went through the no-repeat rule the other engines use. Now it falls
+  back `camera_fixed` → `drift_in` → `pull_back`, ordered by how little each
+  assumes. The golden fixture never had two adjacent same-subject Seedance
+  clips, so nothing caught it — regression test added with four open_space
+  frames.
+
+**Transport decision — Files API, not inline base64**: the 14-photo batch is
+**25.5 MB** of JPEG, 34 MB base64, well past the ~20 MB inline ceiling. Photos
+are uploaded once and referenced by URI, so "one `generateContent` call for the
+batch" holds at any batch size. Splitting into several calls was rejected: the
+batch-level fields (one opener, one closer, wide→close pairing) are only
+meaningful with every photo in the same call.
+
+**Measured (2 runs, temperature 0, `gemini-3.1-flash-lite`, ~37s per batch)**:
+
+| acceptance | target | measured |
+|---|---|---|
+| whole batch, one call | — | 14/14 annotated, 0 missing, 0 invented ids |
+| first-parse success | ≥ 90% | **100%** (2/2) |
+| exactly one opener / closer | 1 / 1 | **1 / 1** |
+| `people_prominence` agreement | ≥ 85% | **93%** |
+| `dominant_subject` agreement | ≥ 85% | **79%** ✗ |
+| `has_readable_brand_signage` agreement | ≥ 85% | **79%** ✗ |
+
+Both runs produced **byte-identical** annotations, so the 7 disagreements are
+systematic — a definitional gap, not sampling noise. Retrying or re-prompting
+for variance would be wasted money.
+
+The 7, and which way they cut:
+1. trail-with-autumn — model `street_perspective`, baseline `nature` (receding
+   paved path; both readings defensible)
+2. The Forum exterior ×2 — model `street_perspective`, baseline
+   `building_facade` (open-air retail street; model arguably right)
+3. Norcross facade — model brand signage `true`, baseline `false` (school name
+   board: is an institution name "a brand"? — **over**-calling, which is the
+   safe direction: it forces a Ken Burns downgrade)
+4. Town Center panorama — model brand signage `true`, baseline `false` (retail
+   names legible in the plaza; also over-calling)
+5. Trader Joe's produce — model brand signage `false`, baseline `true`. The
+   **only under-call**, i.e. the only unsafe direction. Harmless in practice
+   here: `interior_close` is excluded from Seedance anyway.
+6. Town Green night — `midground` vs `background` people (judgment call)
+
+**Decision deferred to owner**: Prompt A is spec text. Both failing fields hinge
+on definitions the prompt leaves open — "is an institution name brand signage?"
+and "street_perspective vs building_facade when a retail street is the frame".
+Tuning the prompt to match a 14-photo baseline I wrote myself would be
+overfitting, and re-annotating the baseline to match the model would be
+circular. Owner arbitrates the 7 frames, then the prompt and the baseline get
+one edit each.
+
+**Merge with the existing bulk vision tagging — feasible, but only partly**:
+`vision-tagger.ts` runs per photo at approve time. Eight of the Curator's
+fields are per-photo and could move there at zero extra orchestration cost:
+`has_natural_motion`, `motion_hint`, `dominant_subject`, `has_visible_people`,
+`people_prominence`, `has_readable_brand_signage`, `has_rigid_geometry`,
+`time_of_day`. Five cannot: `narrative_role` (opener/closer are batch-unique),
+`poi_pair_with` / `pair_role` (a pair only exists relative to other photos in
+the batch), `emotional_weight` (a ranking, only comparable within a batch), and
+`vo_line` (needs the tour's context). Recommended shape: extend the ingest
+tagger with the eight, leaving the tour-time call **text-only** over the
+already-tagged photos — no image upload, no Files API, a fraction of the cost
+and latency. Not done in this branch: it changes the ingest schema and needs a
+re-tag of the existing photos.
+
+**Verification**: `pnpm web:typecheck` clean. `pnpm web:test` **331 passed / 31
+files**. Two real Curator runs against production photos (Gemini spend: cents).
+
+**Next steps**: (1) owner arbitrates the 7 disagreements; (2) Phase 3 — VO Pass
+(text + word-rate check only; film stays BGM-scored) and wiring the plan into
+`computeFinalShots` / `photo_clips`.
+
 ## 2026-08-17 22:30 UTC — Community tour orchestration layer, Phase 1 (Scheduler + Guard)
 
 **Objective**: land the deterministic half of the owner's four-layer

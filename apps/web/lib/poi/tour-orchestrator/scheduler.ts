@@ -402,7 +402,7 @@ function repairAdjacency(
 // ─── moves ──────────────────────────────────────────────────────────────────
 
 /** Seedance camera clause for a subject — see SEEDANCE_CAMERA in seedance-prompt. */
-function seedanceMove(e: Entry): string {
+function seedanceSubjectMove(e: Entry): string {
   if (e.annotation.dominant_subject === 'nature' && e.overflow <= DEPTHFLOW_MAX_OVERFLOW) {
     // Nothing to reveal and the water/foliage is the point: lock the frame and
     // let the only motion in the clip be the motion that is really there.
@@ -420,6 +420,25 @@ function seedanceMove(e: Entry): string {
     default:
       return 'drift_in';
   }
+}
+
+/**
+ * Seedance move, with the same no-repeat rule the other engines get. Two
+ * open_space frames in a row both want a pull-back, and back to back that
+ * reads as one shot cut in half.
+ *
+ * The fallback order is by how little it assumes: a locked frame is safe on
+ * any Seedance clip (the natural motion carries it), and a slow drift is the
+ * next most neutral. Subject intent yields to the repeat rule, never the
+ * reverse.
+ */
+function seedanceMove(e: Entry, previousMove: string | null): string {
+  const preferred = seedanceSubjectMove(e);
+  if (preferred !== previousMove) return preferred;
+  for (const fallback of ['camera_fixed', 'drift_in', 'pull_back'] as const) {
+    if (fallback !== previousMove) return fallback;
+  }
+  return preferred;
 }
 
 /**
@@ -491,7 +510,7 @@ export function scheduleClips(annotations: PhotoAnnotation[], photos: PhotoMeta[
     const engine = engines[i]!;
     const move: string =
       engine === 'seedance'
-        ? seedanceMove(e)
+        ? seedanceMove(e, previousMove)
         : moveFor(
             engine,
             e.annotation.dominant_subject,
