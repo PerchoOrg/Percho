@@ -108,6 +108,13 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       poi.google_place_id,
     ]),
   );
+  // Agent agreement per place_id (resolve step: 1 = single agent, 2 = both).
+  const agreementByPlace = new Map(
+    (resolve?.resolved ?? []).map((r: { place_id: string; agreement?: number }) => [
+      r.place_id,
+      r.agreement ?? 1,
+    ]),
+  );
 
   const rows = (photos ?? []).map(
     (p: {
@@ -143,6 +150,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
         recommended:
           recommendedIds.has(poiPlaceId.get(p.poi_id) ?? '') ||
           (clip?.status === 'ready' ? true : false),
+        agreement: agreementByPlace.get(poiPlaceId.get(p.poi_id) ?? '') ?? null,
         clip: clipOut(clip, false),
         dakb_clip: clipOut(dakbClip, true),
       };

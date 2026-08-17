@@ -383,7 +383,27 @@ async function runPhotos(sb: any, run: RunRow) {
     }
   }
 
-  await saveStep(sb, run, 'photos', { results, resolved_poi_ids: resolvedPoiIds });
+  // Auto-tag (owner 2026-08-17): each community has only dozens of photos, so
+  // tagging needs no manual trigger — tag what we just fetched (only photos
+  // not yet tagged; tagPoiPhoto is idempotent but skip the API call anyway).
+  const taggedCount: Record<string, unknown> = {};
+  if (fetchedPhotoIds.length > 0) {
+    const { data: untaggedRows } = await sb
+      .from('poi_photos')
+      .select('id')
+      .in('id', fetchedPhotoIds)
+      .is('tagged_at', null);
+    const { tagPoiPhoto } = await import('@/lib/poi/vision-tagger');
+    let tagged = 0;
+    for (const row of untaggedRows ?? []) {
+      const r = await tagPoiPhoto(row.id);
+      if (r.ok) tagged += 1;
+    }
+    taggedCount.tagged = tagged;
+    taggedCount.total = (untaggedRows ?? []).length;
+  }
+
+  await saveStep(sb, run, 'photos', { results, resolved_poi_ids: resolvedPoiIds, auto_tag: taggedCount });
   await setRunStatus(sb, run.id, 'tagging');
   return { ok: true, poiCount: Object.keys(results).length };
 }

@@ -188,11 +188,10 @@ export function TourPipeline({
         cost_usd: number | null;
         error: string | null;
       } | null;
+      /** Resolve-step agent agreement (1/2) for the row's POI. */
+      agreement?: number | null;
     }>
   >([]);
-  const [tagPending, setTagPending] = useState(false);
-  const [tagError, setTagError] = useState<string | null>(null);
-
   const loadClips = useCallback(async () => {
     if (!run?.id) return;
     const res = await fetch(`/api/admin/community-tour/${communityId}/clips`);
@@ -210,37 +209,18 @@ export function TourPipeline({
 
   const clipById = new Map(clipRows.map((c) => [c.photo_id, c.clip]));
   const dakbClipById = new Map(clipRows.map((c) => [c.photo_id, c.dakb_clip]));
+  const agreementById = new Map(clipRows.map((c) => [c.photo_id, c.agreement]));
   const stepPhotos = photos.map((p) => {
     const clip = clipById.get(p.id);
     const dakbClip = dakbClipById.get(p.id);
+    const agreement = agreementById.get(p.id);
     return {
       ...p,
       ...(clip !== undefined ? { clip } : {}),
       ...(dakbClip !== undefined ? { dakb_clip: dakbClip } : {}),
+      ...(agreement !== undefined ? { agreement } : {}),
     };
   });
-
-  async function tagPhotos(runId: string): Promise<void> {
-    setTagPending(true);
-    setTagError(null);
-    try {
-      const res = await fetch(`/api/admin/community-tour/${communityId}/runs/${runId}/step`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ step: 'tag' }),
-      });
-      const body = (await res.json()) as { ok?: boolean; message?: string; error?: string };
-      if (!res.ok || !body.ok) {
-        setTagError(body.message ?? body.error ?? `HTTP ${res.status}`);
-        return;
-      }
-      await loadRuns();
-      await loadClips();
-      router.refresh();
-    } finally {
-      setTagPending(false);
-    }
-  }
 
   async function generateClip(
     photoId: string,
@@ -409,23 +389,6 @@ export function TourPipeline({
                       photos={stepPhotos}
                       onGenerateClip={generateClip}
                     />
-                    {s.name === 'photos' && run && (
-                      <div className="mt-3 flex items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() => void tagPhotos(run.id)}
-                          className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-bg px-3 py-1.5 text-xs text-ink hover:border-bronze"
-                        >
-                          {tagPending ? (
-                            <Loader2 size={13} className="animate-spin" />
-                          ) : (
-                            <Sparkles size={13} />
-                          )}
-                          {tagPending ? 'Tagging…' : 'Tag all untagged'}
-                        </button>
-                        {tagError && <span className="text-red-600">{tagError}</span>}
-                      </div>
-                    )}
                   </div>
                 )}
                 {!done && !result && <div className="mt-2 text-xs text-ink3">Not run yet.</div>}

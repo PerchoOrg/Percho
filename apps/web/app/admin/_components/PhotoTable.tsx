@@ -24,7 +24,6 @@ import {
   setEnhancedDecision,
 } from '@/lib/poi/admin-enhance-actions';
 import { setGlobalPhotoStatus } from '@/lib/poi/admin-photo-actions';
-import { tagPoiPhotoAction } from '@/lib/poi/admin-tag-action';
 import { projectTags, resolutionWarning } from '@/lib/poi/photo-tag-view';
 import { Check, Film, Sparkles, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -68,6 +67,8 @@ export interface PhotoRow {
   used_in?: string[];
   /** Community tour: agent-recommended (survived resolve firewall). */
   recommended?: boolean;
+  /** Community tour: resolve-step agent agreement (1 or 2 agents). */
+  agreement?: number | null;
   /** Community tour: per-photo clip status (photo_clips cache). */
   clip?: {
     engine: string;
@@ -292,7 +293,7 @@ export function PhotoTable({
                   />
                 </Th>
               )}
-              <Th>Actions</Th>
+              {!isListing && <Th>Review</Th>}
               <Th>Photo</Th>
               <Th>{isListing ? '#' : 'POI'}</Th>
               <Th>Size</Th>
@@ -301,7 +302,6 @@ export function PhotoTable({
               <Th>Score</Th>
               {isListing && <Th>Hero</Th>}
               {!isListing && <Th>Buckets</Th>}
-              {!isListing && <Th>Review</Th>}
               {!isListing && <Th>Agent</Th>}
               {!isListing && <Th>Clip</Th>}
               {!isListing && <Th>DA+KB</Th>}
@@ -332,13 +332,31 @@ export function PhotoTable({
                   )}
                   <Td>
                     <div className="flex flex-col gap-1">
-                      {!isListing && !p.tagged_at && (
-                        <MiniBtn
-                          label="Tag"
-                          title="Tag this photo with Gemini (AI description + category + score)"
-                          disabled={busy}
-                          onClick={() => run(p.id, () => tagPoiPhotoAction(p.id))}
-                        />
+                      {!isListing && (
+                        <>
+                          {t.usable === false ? (
+                            <span className="text-red-600">rejected</span>
+                          ) : (
+                            <StatusText value={p.status ?? 'pending'} />
+                          )}
+                          <div className="flex gap-1">
+                            <MiniBtn
+                              label={<Check size={11} />}
+                              title="Approve photo (platform-wide) — the only gate for final video material"
+                              active={p.status === 'approved'}
+                              disabled={busy}
+                              onClick={() => run(p.id, () => setGlobalPhotoStatus(p.id, 'approved'))}
+                            />
+                            <MiniBtn
+                              label={<X size={11} />}
+                              title="Reject photo — removes it from every video pool"
+                              danger
+                              active={p.status === 'rejected'}
+                              disabled={busy}
+                              onClick={() => run(p.id, () => setGlobalPhotoStatus(p.id, 'rejected'))}
+                            />
+                          </div>
+                        </>
                       )}
                     </div>
                   </Td>
@@ -424,37 +442,9 @@ export function PhotoTable({
                   )}
                   {!isListing && (
                     <Td>
-                      <div className="flex flex-col gap-1">
-                        {t.usable === false ? (
-                          <span className="text-red-600">rejected</span>
-                        ) : (
-                          <StatusText value={p.status ?? 'pending'} />
-                        )}
-                        <div className="flex gap-1">
-                          <MiniBtn
-                            label={<Check size={11} />}
-                            title="Approve photo (platform-wide) — the only gate for final video material"
-                            active={p.status === 'approved'}
-                            disabled={busy}
-                            onClick={() => run(p.id, () => setGlobalPhotoStatus(p.id, 'approved'))}
-                          />
-                          <MiniBtn
-                            label={<X size={11} />}
-                            title="Reject photo — removes it from every video pool"
-                            danger
-                            active={p.status === 'rejected'}
-                            disabled={busy}
-                            onClick={() => run(p.id, () => setGlobalPhotoStatus(p.id, 'rejected'))}
-                          />
-                        </div>
-                      </div>
-                    </Td>
-                  )}
-                  {!isListing && (
-                    <Td>
-                      {p.recommended ? (
-                        <span className="flex items-center gap-1 text-emerald-600">
-                          <Check size={12} /> yes
+                      {p.agreement != null ? (
+                        <span className="tabular-nums text-ink">
+                          {p.agreement}/2 agents
                         </span>
                       ) : (
                         <span className="text-ink2">—</span>
