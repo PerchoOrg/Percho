@@ -231,7 +231,7 @@ export function PhotoTable({
     <section className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-lg font-semibold">
-          Photos{' '}
+          All Photos{' '}
           <span className="text-ink2 text-sm font-normal">
             ({rows.length}/{photos.length})
           </span>

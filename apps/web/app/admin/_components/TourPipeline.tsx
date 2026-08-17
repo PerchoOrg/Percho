@@ -10,12 +10,13 @@
  * message until their prerequisite ran.
  *
  * Panels (display order, owner 2026-08-17; all start collapsed):
- *   1 community info    (DB read — always available)
- *   2 agent research    (Gemini grounding — inline, Vercel)
- *   3 resolve+merge     (Google firewall)
- *   4 Photo Management  (photos — auto-enhance, tag, shot list & clip
+ *   1 agent research    (Gemini grounding — inline, Vercel)
+ *   2 resolve+merge     (Google firewall)
+ *   3 Selected Photos   (photos — auto-enhance, tag, shot list & clip
  *                        generation live in the table below; steps 6/7 merged)
- *   5 assemble          (ffmpeg concat — wire after clips ready)
+ *   4 assemble          (ffmpeg concat — wire after clips ready)
+ *
+ * Community info was merged into the header title (owner 2026-08-17).
  */
 
 import { CheckCircle2, ChevronDown, ChevronRight, Loader2, Play, RefreshCw, Sparkles } from 'lucide-react';
@@ -26,10 +27,10 @@ import { PhotoTable, type PhotoRow } from './PhotoTable';
 type StepName = 'research' | 'resolve' | 'photos' | 'tag' | 'generate' | 'assemble';
 
 const STEPS: Array<{ name: StepName; label: string; desc: string }> = [
-  { name: 'research', label: '2 · Agent Research', desc: 'Gemini grounding' },
-  { name: 'resolve', label: '3 · Resolve & Merge', desc: 'Google Places firewall' },
-  { name: 'photos', label: '4 · Photo Management', desc: '3 per POI — auto-enhance, tag, shot list & clips managed in table below' },
-  { name: 'assemble', label: '5 · Assemble', desc: 'ffmpeg concat' },
+  { name: 'research', label: '1 · Agent Research', desc: 'Gemini grounding' },
+  { name: 'resolve', label: '2 · Resolve & Merge', desc: 'Google Places firewall' },
+  { name: 'photos', label: '3 · Selected Photos', desc: '3 per POI — auto-enhance, tag, shot list & clips managed in table below' },
+  { name: 'assemble', label: '4 · Assemble', desc: 'ffmpeg concat' },
 ];
 
 interface Run {
@@ -264,11 +265,20 @@ export function TourPipeline({
         <div>
           <h2 className="flex items-center gap-1.5 text-lg font-semibold">
             <Sparkles size={16} aria-hidden />
-            Community Tour Pipeline
+            {communityName}
+            {[city, state].filter(Boolean).length > 0 && (
+              <span className="text-ink2 text-sm font-normal">
+                {' '}
+                · {[city, state].filter(Boolean).join(', ')}
+              </span>
+            )}
+            {lat != null && lng != null && (
+              <span className="text-ink3 text-xs font-normal">
+                {' '}
+                {lat.toFixed(4)}, {lng.toFixed(4)}
+              </span>
+            )}
           </h2>
-          <p className="text-ink2 text-xs">
-            {communityName} · {[city, state].filter(Boolean).join(', ')}
-          </p>
         </div>
         <div className="flex flex-wrap items-center gap-2 text-xs">
           {runs.length > 0 && (
@@ -302,41 +312,7 @@ export function TourPipeline({
         </div>
       )}
 
-      {/* Step 1 — community info (always visible) */}
-      <section className="rounded-2xl border border-line bg-surface p-4">
-        <button
-          type="button"
-          onClick={() => setCollapsed((c) => ({ ...c, info: !c.info }))}
-          className="flex w-full items-center justify-between gap-3 text-left"
-        >
-          <h3 className="text-sm font-semibold">1 · Community Info</h3>
-          {collapsed.info ?? true ? (
-            <ChevronRight size={15} className="text-ink3" />
-          ) : (
-            <ChevronDown size={15} className="text-ink3" />
-          )}
-          </button>
-          {!(collapsed.info ?? true) && (
-          <dl className="mt-2 grid grid-cols-2 gap-x-6 gap-y-1 text-xs sm:grid-cols-3">
-            <div>
-              <dt className="text-ink3">Name</dt>
-              <dd className="text-ink">{communityName}</dd>
-            </div>
-            <div>
-              <dt className="text-ink3">Location</dt>
-              <dd className="text-ink">{[city, state, zip].filter(Boolean).join(', ') || '—'}</dd>
-            </div>
-            <div>
-              <dt className="text-ink3">Coordinates</dt>
-              <dd className="tabular-nums text-ink">
-                {lat != null && lng != null ? `${lat.toFixed(4)}, ${lng.toFixed(4)}` : '—'}
-              </dd>
-            </div>
-          </dl>
-        )}
-      </section>
-
-      {/* Steps 2-5, 8 */}
+      {/* Steps 2-5 */}
       {STEPS.map((s) => {
         // research results live under agent_research (written by the detached
         // agent script); every other step uses its own key.
