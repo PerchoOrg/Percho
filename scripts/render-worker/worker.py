@@ -1625,16 +1625,39 @@ def process_assembly(row: dict[str, Any]) -> None:
         if len(ordered) < 2:
             raise RuntimeError(f"need >=2 clips, got {len(ordered)}")
         # Download every ready clip (seedance → ai-videos bucket, DA+KB → clip-renders).
+        # The web route does NOT join photo_clips into ordered_clips (the shots carry
+        # only photo_id/engine), so resolve storage paths here: photo_clips ready rows
+        # keyed by photo_id — seedance → ai-videos, depthflow/kenburns → clip-renders.
         clip_paths: list[Path] = []
+        by_photo = {}
+        clip_rows = sb_get(
+            "photo_clips",
+            {
+                "select": "id,photo_id,engine,storage_path,status",
+                "status": "eq.ready",
+                "limit": "200",
+            },
+        )
+        for r in clip_rows:
+            by_photo.setdefault(r["photo_id"], []).append(r)
         for i, c in enumerate(ordered, start=1):
-            path = c.get("clip_storage_path") or ""
+            engine = c.get("engine") or "kenburns"
+            candidates = by_photo.get(c.get("photo_id"), [])
+            # Prefer the ready row whose engine matches the shot; fall back to any
+            # ready row for that photo.
+            ready = next((r for r in candidates if r["engine"] == engine), None) or (
+                candidates[0] if candidates else None
+            )
+            if not ready or not ready.get("storage_path"):
+                raise RuntimeError(
+                    f"clip for photo {c.get('photo_id')} (engine={engine}) not ready — generate it in the photos panel first"
+                )
+            path = ready["storage_path"]
             bucket = (
                 "ai-videos"
-                if (c.get("engine") or "kenburns") == "seedance"
+                if (ready.get("engine") or "kenburns") == "seedance"
                 else "clip-renders"
             )
-            if not path:
-                raise RuntimeError(f"clip {c.get('photo_id')} has no storage_path")
             dest = workdir / f"{i:02d}.mp4"
             storage_download(bucket, path, dest)
             clip_paths.append(dest)
