@@ -120,6 +120,7 @@ export function PhotoTable({
   photos,
   onGenerateClip,
   plan,
+  dropReasons,
 }: {
   table: PhotoTableName;
   storageBase: string;
@@ -132,6 +133,9 @@ export function PhotoTable({
       Without it the Plan column reads "—". Engine is decided by the
       orchestrator at plan time and nothing in this table may guess at it. */
   plan?: Record<string, PlanCell>;
+  /** Community tour, Dropped table: why each photo is out, by photo_id. The
+      column replaces Plan — a dropped photo has no plan to show. */
+  dropReasons?: Record<string, string>;
 }) {
   const router = useRouter();
   const [pending, setPending] = useState<string | null>(null);
@@ -291,7 +295,12 @@ export function PhotoTable({
               <Th>{isListing ? '#' : 'POI'}</Th>
               <Th>Size</Th>
               <Th>Category</Th>
-              {!isListing && <Th className="min-w-[150px]">Plan</Th>}
+              {!isListing &&
+                (dropReasons ? (
+                  <Th className="min-w-[180px]">Dropped because</Th>
+                ) : (
+                  <Th className="min-w-[150px]">Plan</Th>
+                ))}
               <Th>Score</Th>
               {isListing && <Th>Hero</Th>}
               {!isListing && <Th>Buckets</Th>}
@@ -382,7 +391,12 @@ export function PhotoTable({
                     {t.isMaster && <div className="text-[10px] text-bronze">master</div>}
                     {t.usable === false && <div className="text-[10px] text-red-600">unusable</div>}
                   </Td>
-                  {!isListing && (
+                  {!isListing && dropReasons && (
+                    <Td>
+                      <span className="text-ink2">{dropReasons[p.id] ?? 'dropped'}</span>
+                    </Td>
+                  )}
+                  {!isListing && !dropReasons && (
                     <Td>
                       {t.usable === false ? (
                         <span className="text-red-600">no</span>

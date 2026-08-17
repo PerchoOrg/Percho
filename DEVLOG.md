@@ -4,6 +4,20 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-08-18 10:50 UTC — Dropped table: reason inline, not a list underneath
+
+**Owner**: "dropped table - inline drop reason, dont do this after table".
+
+The Dropped panel rendered the table and then an unlabelled `<ul>` of reasons
+below it — the reader had to match list position to row position by counting.
+
+`PhotoTable` takes an optional `dropReasons` (photo_id → reason) and renders a
+**Dropped because** column in the slot the Plan column occupies, since the two
+never apply to the same table: a dropped photo has no plan, and a planned photo
+has no reason. The list under the table is gone.
+
+**Verification**: `pnpm web:typecheck` clean, `pnpm web:test` 352 passed.
+
 ## 2026-08-18 10:20 UTC — Selected Photos: show the prompt, always offer re-render, drop "In video"
 
 **Owner asks** (three, on the Selected Photos table):

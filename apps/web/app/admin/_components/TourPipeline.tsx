@@ -804,22 +804,16 @@ function StepResult({
         <div className="space-y-1">
           <h4 className="text-xs font-medium text-ink">Dropped photos ({droppedPhotos.length})</h4>
           {droppedPhotos.length > 0 ? (
-            <>
-              <PhotoTable
-                table="poi_photos"
-                storageBase={storageBase}
-                bucket={bucket}
-                photos={droppedPhotos}
-                onGenerateClip={onGenerateClip}
-              />
-              <ul className="space-y-0.5 text-xs">
-                {droppedPhotos.map((p) => (
-                  <li key={p.id} className="text-ink2">
-                    {dropReasons(p) ?? 'dropped'}
-                  </li>
-                ))}
-              </ul>
-            </>
+            <PhotoTable
+              table="poi_photos"
+              storageBase={storageBase}
+              bucket={bucket}
+              photos={droppedPhotos}
+              onGenerateClip={onGenerateClip}
+              dropReasons={Object.fromEntries(
+                droppedPhotos.map((p) => [p.id, dropReasons(p) ?? 'dropped']),
+              )}
+            />
           ) : (
             <div className="text-xs text-ink3">Nothing dropped.</div>
           )}
