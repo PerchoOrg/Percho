@@ -4,6 +4,49 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-08-18 15:50 UTC — The photos existed and the page still showed none: community_pois was empty
+
+**Owner**: "still not able to view the photos" — with 33 photos in `poi_photos`
+and 19 shots planned.
+
+**Cause**: `loadNearbyPhotos` (what the admin page renders from) starts at
+`community_pois` and returns `[]` when a community has no links. Aberdeen had
+**zero** rows there. `runPhotos` does create them:
+
+```ts
+await sb.from('community_pois').insert({ …, intent_bucket: 'other', … });
+```
+
+but `community_pois.intent_bucket` has a CHECK that never included `'other'`
+(nor `'civic'` / `'waterfront'`, both of which the resolve step produces). So
+every link insert violated the constraint — **and the insert's error was never
+read**, so the step reported success while the table stayed empty.
+
+Third instance today of the same shape: an unchecked write failing silently on
+the new-community path, invisible because the community we had been testing on
+already had its rows from the nearby pipeline.
+
+**Actions**:
+- Migration `20260817230000` widens the CHECK to the tour taxonomy (`civic`,
+  `waterfront`, `other`). **Applied to the remote.**
+- The link now carries the POI's real bucket instead of a hardcoded `'other'`,
+  and the insert error is surfaced into the step result rather than dropped.
+- **Backfilled Aberdeen's 12 links directly** so nothing has to be re-run —
+  buckets landed as 3 schools / 3 outdoor / 1 fitness / 1 civic / 1 kids /
+  1 faith / 2 other, which also proves the widened constraint (civic and other
+  would have been rejected before).
+
+**Verified by replaying the page's own query**: `community_pois` → `poi_photos`
+now returns **33 photos across 12 POIs**, and **all 19 planned shots** are among
+them. The table will render on the next page load, no re-run needed.
+
+**Verification**: `pnpm web:typecheck` clean, `pnpm web:test` 366 passed, each
+its own command.
+
+**Learnings**: every `insert` in this route that ignored its error has now
+turned out to be hiding a real failure. Worth a sweep for the rest of them
+rather than waiting for the next symptom.
+
 ## 2026-08-18 15:20 UTC — Aberdeen works; the last "still empty" was a 4-minute step with a silent panel
 
 **It was already working.** While the owner reported an empty table, the DB

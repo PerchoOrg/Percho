@@ -404,12 +404,23 @@ async function runPhotos(sb: any, run: RunRow) {
       .eq('poi_id', poiId)
       .maybeSingle();
     if (!link) {
-      await sb.from('community_pois').insert({
+      // The POI's real bucket, not a hardcoded 'other'. And the error is read:
+      // this insert silently violated the intent_bucket CHECK for every new
+      // POI, which left `community_pois` empty — and that table is where the
+      // admin page starts when it looks for a community's photos, so the
+      // photos existed and the page showed none (owner 2026-08-17, Aberdeen).
+      const { error: linkErr } = await sb.from('community_pois').insert({
         community_id: run.community_id,
         poi_id: poiId,
-        intent_bucket: 'other',
+        intent_bucket: poi.bucket ?? 'other',
         status: 'candidate',
       });
+      if (linkErr) {
+        results[poi.place_id] = {
+          skipped: `community link failed: ${(linkErr as { message?: string })?.message ?? 'unknown'}`,
+        };
+        continue;
+      }
     }
     const r = await fetchPhotosForCommunityPoi(run.community_id, poiId!, { max: 3 });
     results[poi.place_id] = r;
