@@ -4,6 +4,65 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-08-18 09:30 UTC — Camera watermarks: a photo class the Curator could not describe
+
+**Symptom** (owner, on shot #04): "the bottom left of this pic has text, it
+should not be used in the video". The frame is a Town Green fitness area with
+**"Shot on OnePlus | HASSELBLAD"** and "TW" burned into the bottom-left corner
+— a phone's camera watermark on a Google Places user upload.
+
+**Why nothing caught it**: the Curator has `has_readable_brand_signage`, which
+is about text *photographed in the scene* — its purpose is stopping Seedance
+from redrawing a shop sign. A watermark is text *stamped onto the image*, and
+the correct response is not a gentler engine, it is not using the photo. There
+was no field for it.
+
+The old pipeline looked no better on inspection: `computeFinalShots` used to
+branch on `tags.has_prominent_text`, but the POI vision-tagger never writes
+that key (its `ai_tags` are description / primary_category / tags / mood /
+usable / reason). That branch was dead for every POI photo — which is why a
+watermarked frame sailed through both the old mapping and the new one.
+
+**Actions**:
+- Curator gains `has_overlay_text`, defined against the confusable case: text
+  stamped on the image (camera watermark, date stamp, photographer credit,
+  stock mark — check all four corners), explicitly NOT a shop sign or a menu
+  board. The prompt says the photo will be dropped, so err toward false.
+- `buildTourPlan` filters those photos out **before** scheduling, so they do
+  not take a slot, skew the DepthFlow quota, or spend seconds of running time,
+  and returns them as `excluded`. The route merges that into the panel's
+  `dropped` list with the reason, so review sees why.
+- Fixture pins the frame (`f1b25f82…` → `has_overlay_text: true`, verified
+  against the image) and `plan.test.ts` covers: only that photo is dropped, no
+  clip survives for it, the remaining plan is still compliant, and a watermark
+  on the *opener* doesn't strand the tour.
+
+**Measured** (`curator-eval`, same 14 photos, `gemini-3.1-flash-lite`):
+
+| field | target | measured |
+|---|---|---|
+| `has_overlay_text` | ≥85% | **100%** |
+| `dominant_subject` | ≥85% | 86% |
+| `people_prominence` | ≥85% | 93% |
+| `has_readable_brand_signage` | ≥85% | 86% |
+
+The plan is now **13 clips**, 45.0s, 2.18 w/s, 0 overlong lines, 0 school-regex
+hits. Brand signage came down from last run's 100% to 86%: adding a field
+changed the prompt, and the model now calls the Norcross entrance and the
+Trader Joe's interior `true` where I verified from the images that no name is
+legible. Both are over-calls, which is the safe direction (an unnecessary
+Ken Burns downgrade), so no action — but it is a reminder that every prompt
+edit re-rolls every field.
+
+**Verification**: `pnpm web:typecheck` clean, `pnpm web:test` **352 passed /
+33 files**. No worker restart needed this time — the planning code is all
+web-side.
+
+**Learnings**: the pipeline can only reject what the Curator has a word for.
+Worth asking, for each new photo defect the owner reports, whether it is a
+rendering problem or a "this photo is not usable" problem — they have
+different homes (Guard vs plan filter) and only the second one removes it.
+
 ## 2026-08-18 08:15 UTC — A 14-clip tour played as six: crossfade offsets started at zero
 
 **Symptom** (owner): the Apremont - Highcroft assembly "only has 6 clips even

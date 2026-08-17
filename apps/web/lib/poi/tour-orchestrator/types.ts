@@ -46,6 +46,13 @@ export const annotationSchema = z.object({
   people_prominence: z.enum(PEOPLE_PROMINENCE),
   /** Any legible storefront name, logo, or trademark. */
   has_readable_brand_signage: z.boolean(),
+  /**
+   * Text stamped ONTO the image rather than present in the scene: a camera
+   * watermark ("Shot on OnePlus | HASSELBLAD"), a date stamp, a stock-photo
+   * mark. Such a photo is dropped from the tour outright — no camera move
+   * hides it, and it is someone else's branding on our film.
+   */
+  has_overlay_text: z.boolean(),
   /** Track lanes, parking stripes, window grids, fence rails, brick coursing. */
   has_rigid_geometry: z.boolean(),
   narrative_role: z.enum(NARRATIVE_ROLES),

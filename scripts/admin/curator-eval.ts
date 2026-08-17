@@ -43,6 +43,9 @@ const SCORED_FIELDS = [
   'dominant_subject',
   'people_prominence',
   'has_readable_brand_signage',
+  // Not a Guard downgrade but a hard exclusion — a miss here puts someone
+  // else's camera watermark in the film (owner 2026-08-17).
+  'has_overlay_text',
 ] as const satisfies readonly (keyof PhotoAnnotation)[];
 
 async function loadPhotos(): Promise<TourPlanPhoto[]> {

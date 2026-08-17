@@ -113,6 +113,16 @@ For each photo, emit an object with exactly these keys:
     //   too: the downstream risk is a generative model redrawing that text,
     //   and a name board carries that risk exactly like a shop sign does.
 
+  "has_overlay_text": boolean,
+    // True if text was STAMPED ONTO the photo rather than photographed in the
+    // scene: a camera watermark ("Shot on OnePlus | HASSELBLAD", "Shot on
+    // Galaxy"), a date stamp, a photographer credit, a stock-photo mark, an
+    // app logo in a corner. Look at all four corners.
+    // This is NOT scene text — a shop sign, a street sign or a menu board on
+    // a wall is has_readable_brand_signage, not this.
+    // A photo with overlay text is dropped from the tour entirely, so err
+    // toward true only when you can actually read stamped-on characters.
+
   "has_rigid_geometry": boolean,
     // True if the frame contains regular repeating structures that would look
     // broken if distorted: running track lanes, parking stripes, window grids,

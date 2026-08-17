@@ -44,9 +44,17 @@ export interface TourShot {
   camera_fixed: boolean;
 }
 
+/** A photo the Curator saw and the plan refuses to use at all. */
+export interface ExcludedPhoto {
+  photo_id: string;
+  reason: string;
+}
+
 export interface TourPlan {
   shots: TourShot[];
   annotations: PhotoAnnotation[];
+  /** Photos kept out of the tour entirely, with the reason. */
+  excluded: ExcludedPhoto[];
   warnings: PlanWarning[];
   violations: Array<GuardViolation | VoViolation>;
   narration: NarrationStats;
@@ -101,8 +109,22 @@ export async function buildTourPlan(photos: TourPlanPhoto[]): Promise<TourPlan> 
   const meta: PhotoMeta[] = photos.map(({ bytes: _bytes, mime_type: _mime, ...rest }) => rest);
 
   const curated = await curateBatch(curatorPhotos);
-  const scheduled = scheduleClips(curated.annotations, meta);
-  const guarded = guardClips(scheduled.clips, curated.annotations, meta);
+
+  // Text stamped onto the image — a camera watermark, a date stamp — is not a
+  // rendering problem to be worked around, it is a photo we cannot use. No
+  // camera move hides it, and it puts another company's branding on the film.
+  // Dropped before scheduling so it does not consume a slot, skew the DepthFlow
+  // quota, or take up seconds of the running time (owner 2026-08-17, on a
+  // "Shot on OnePlus | HASSELBLAD" frame that reached the tour).
+  const excluded: ExcludedPhoto[] = [];
+  const usable = curated.annotations.filter((a) => {
+    if (!a.has_overlay_text) return true;
+    excluded.push({ photo_id: a.photo_id, reason: 'overlay text (watermark / date stamp)' });
+    return false;
+  });
+
+  const scheduled = scheduleClips(usable, meta);
+  const guarded = guardClips(scheduled.clips, usable, meta);
   const vo = await runVoPass(guarded.clips);
 
   assertNoSchoolAssignment(vo.clips);
@@ -110,6 +132,7 @@ export async function buildTourPlan(photos: TourPlanPhoto[]): Promise<TourPlan> 
   return {
     shots: vo.clips.map(toShot),
     annotations: curated.annotations,
+    excluded,
     warnings: [...curated.warnings, ...scheduled.warnings],
     violations: [...guarded.violations, ...vo.violations],
     narration: narrationStats(vo.clips),

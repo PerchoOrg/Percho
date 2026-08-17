@@ -945,6 +945,10 @@ async function computeFinalShots(
       reason: 'curator returned no annotation',
     });
   }
+  for (const ex of plan.excluded) {
+    const photo = planPhotos.find((p) => p.photo_id === ex.photo_id);
+    dropped.push({ photo_id: ex.photo_id, poi_id: photo?.poi_id ?? '', reason: ex.reason });
+  }
 
   return {
     shots: plan.shots,

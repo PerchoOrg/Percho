@@ -24,6 +24,7 @@ What that changes on screen:
 - Neighborhood tour videos are planned end to end (photo description → shot list → compliance check → narration)
 - Every AI-generated clip in a tour now carries an AI-generated label
 - The photo review table shows each photo's plan — its place in the film, how it will be animated, how long it holds, and whether it still needs rendering
+- Photos carrying a camera watermark or date stamp are kept out of neighborhood tours
 
 ---
 

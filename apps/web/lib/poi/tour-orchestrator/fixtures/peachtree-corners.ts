@@ -162,6 +162,7 @@ export const GOLDEN_ANNOTATIONS: PhotoAnnotation[] = [
     has_visible_people: false,
     people_prominence: 'none',
     has_readable_brand_signage: false,
+    has_overlay_text: false,
     has_rigid_geometry: false,
     narrative_role: 'opener',
     time_of_day: 45,
@@ -179,6 +180,7 @@ export const GOLDEN_ANNOTATIONS: PhotoAnnotation[] = [
     has_visible_people: false,
     people_prominence: 'none',
     has_readable_brand_signage: false,
+    has_overlay_text: false,
     has_rigid_geometry: false,
     narrative_role: 'establishing',
     time_of_day: 40,
@@ -198,6 +200,7 @@ export const GOLDEN_ANNOTATIONS: PhotoAnnotation[] = [
     // Checked against the image (2026-08-17): the entrance frame carries no
     // legible name at all — brick, columns and parking stripes only.
     has_readable_brand_signage: false,
+    has_overlay_text: false,
     has_rigid_geometry: true,
     narrative_role: 'establishing',
     time_of_day: 50,
@@ -218,6 +221,7 @@ export const GOLDEN_ANNOTATIONS: PhotoAnnotation[] = [
     // across the press box and "NORCROSS BLUE DEVILS" on the end wall are both
     // legible, so this frame must never go to Seedance.
     has_readable_brand_signage: true,
+    has_overlay_text: false,
     has_rigid_geometry: true,
     narrative_role: 'establishing',
     time_of_day: 55,
@@ -237,6 +241,7 @@ export const GOLDEN_ANNOTATIONS: PhotoAnnotation[] = [
     // Checked against the image (2026-08-17): price cards and a "Restroom" sign,
     // but the store's own name is not legible anywhere in the frame.
     has_readable_brand_signage: false,
+    has_overlay_text: false,
     has_rigid_geometry: false,
     narrative_role: 'detail',
     time_of_day: 50,
@@ -254,6 +259,7 @@ export const GOLDEN_ANNOTATIONS: PhotoAnnotation[] = [
     has_visible_people: false,
     people_prominence: 'none',
     has_readable_brand_signage: true,
+    has_overlay_text: false,
     has_rigid_geometry: false,
     narrative_role: 'establishing',
     time_of_day: 50,
@@ -271,6 +277,7 @@ export const GOLDEN_ANNOTATIONS: PhotoAnnotation[] = [
     has_visible_people: false,
     people_prominence: 'none',
     has_readable_brand_signage: false,
+    has_overlay_text: false,
     has_rigid_geometry: false,
     narrative_role: 'establishing',
     time_of_day: 35,
@@ -288,6 +295,7 @@ export const GOLDEN_ANNOTATIONS: PhotoAnnotation[] = [
     has_visible_people: false,
     people_prominence: 'none',
     has_readable_brand_signage: false,
+    has_overlay_text: false,
     has_rigid_geometry: true,
     narrative_role: 'filler',
     time_of_day: 45,
@@ -305,6 +313,10 @@ export const GOLDEN_ANNOTATIONS: PhotoAnnotation[] = [
     has_visible_people: false,
     people_prominence: 'none',
     has_readable_brand_signage: false,
+    // Checked against the image (2026-08-17): "Shot on OnePlus | HASSELBLAD"
+    // and "TW" are burned into the bottom-left corner. This photo must not
+    // reach a tour at all.
+    has_overlay_text: true,
     has_rigid_geometry: true,
     narrative_role: 'filler',
     time_of_day: 30,
@@ -324,6 +336,7 @@ export const GOLDEN_ANNOTATIONS: PhotoAnnotation[] = [
     has_visible_people: true,
     people_prominence: 'background',
     has_readable_brand_signage: true,
+    has_overlay_text: false,
     has_rigid_geometry: false,
     narrative_role: 'establishing',
     time_of_day: 60,
@@ -342,6 +355,7 @@ export const GOLDEN_ANNOTATIONS: PhotoAnnotation[] = [
     people_prominence: 'background',
     // Retail names around the plaza are legible (owner 2026-08-17).
     has_readable_brand_signage: true,
+    has_overlay_text: false,
     has_rigid_geometry: false,
     narrative_role: 'establishing',
     time_of_day: 55,
@@ -359,6 +373,7 @@ export const GOLDEN_ANNOTATIONS: PhotoAnnotation[] = [
     has_visible_people: false,
     people_prominence: 'none',
     has_readable_brand_signage: true,
+    has_overlay_text: false,
     has_rigid_geometry: false,
     narrative_role: 'detail',
     time_of_day: 55,
@@ -378,6 +393,7 @@ export const GOLDEN_ANNOTATIONS: PhotoAnnotation[] = [
     has_visible_people: false,
     people_prominence: 'none',
     has_readable_brand_signage: true,
+    has_overlay_text: false,
     has_rigid_geometry: false,
     narrative_role: 'establishing',
     time_of_day: 85,
@@ -395,6 +411,7 @@ export const GOLDEN_ANNOTATIONS: PhotoAnnotation[] = [
     has_visible_people: true,
     people_prominence: 'background',
     has_readable_brand_signage: false,
+    has_overlay_text: false,
     has_rigid_geometry: false,
     narrative_role: 'closer',
     time_of_day: 95,

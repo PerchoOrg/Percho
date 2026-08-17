@@ -97,6 +97,7 @@ export function normalizeAnnotations(raw: unknown[]): {
         warnings,
       ),
       has_readable_brand_signage: asBool(o.has_readable_brand_signage),
+      has_overlay_text: asBool(o.has_overlay_text),
       has_rigid_geometry: asBool(o.has_rigid_geometry),
       narrative_role: coerceEnum(
         o.narrative_role,
