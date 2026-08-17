@@ -29,7 +29,7 @@ type StepName = 'research' | 'resolve' | 'photos' | 'tag' | 'generate' | 'assemb
 const STEPS: Array<{ name: StepName; label: string; desc: string }> = [
   { name: 'research', label: '1 · Agent Research', desc: 'Gemini grounding' },
   { name: 'resolve', label: '2 · Resolve & Merge', desc: 'Google Places firewall' },
-  { name: 'photos', label: '3 · All Fetched Photos', desc: '3 per POI — auto-enhance, tag, shot list & clips managed in table below' },
+  { name: 'photos', label: '3 · Selected Photos', desc: '3 per POI — auto-enhance, tag, shot list & clips managed in table below' },
   { name: 'assemble', label: '4 · Assemble', desc: 'ffmpeg concat' },
 ];
 
@@ -628,7 +628,7 @@ function StepResult({
     return (
       <div className="space-y-2">
         <div className="text-xs">
-          All Fetched Photos · {fetched} fetched · {reused} reused · {stepPhotos.length} photos
+          {fetched} fetched · {reused} reused · {stepPhotos.length} photos
           {isLegacy
             ? ' (legacy run — no per-POI mapping)'
             : ` across ${poiIds.size} resolved POIs`}
