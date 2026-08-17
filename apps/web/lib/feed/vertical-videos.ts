@@ -137,11 +137,18 @@ export async function fetchVerticalVideos(): Promise<HeroVideoIndex> {
   }
 
   // Assembled tour wins over bucket videos (owner 2026-08-17): the assembly IS
-  // the community's final video. Overwrite whatever the bucket query set.
+  // the community's final video. Query is newest-first, so the LAST write per
+  // key is the OLDEST — keep the FIRST (latest), then overwrite bucket values.
   if (!assemblyRes.error) {
+    const byCommunityLatest = new Map<string, string>();
     for (const row of (assemblyRes.data ?? []) as GeneratedVideoRow[]) {
       if (!row.cf_stream_uid || !row.community_id) continue;
-      byCommunity.set(row.community_id, row.cf_stream_uid);
+      if (!byCommunityLatest.has(row.community_id)) {
+        byCommunityLatest.set(row.community_id, row.cf_stream_uid);
+      }
+    }
+    for (const [id, uid] of byCommunityLatest) {
+      byCommunity.set(id, uid);
     }
   }
 
