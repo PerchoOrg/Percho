@@ -183,7 +183,7 @@ export function CommunityTourSection({
            Collapsible — too long to keep open (owner 2026-08-17). */}
       <details className="rounded-2xl border border-line bg-surface">
         <summary className="cursor-pointer p-4 text-sm font-semibold text-ink">
-          Photos ({enriched.length})
+          All Fetched Photos ({enriched.length})
         </summary>
         <div className="px-4 pb-4">
           <PhotoTable
