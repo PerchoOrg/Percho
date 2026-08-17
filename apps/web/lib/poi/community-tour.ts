@@ -25,6 +25,10 @@ export interface ResolvedPoi {
   place_id: string;
   name: string;
   formatted_address: string | null;
+  /** Google's own classification — persisted onto `pois`, and the fallback
+   *  the photos step uses to derive a bucket. */
+  primary_type: string | null;
+  types: string[] | null;
   bucket: string;
   lat: number;
   lng: number;
@@ -250,6 +254,8 @@ export async function resolveCandidates(
       place_id: place.id,
       name: place.displayName?.text ?? first.name,
       formatted_address: place.formattedAddress ?? null,
+      primary_type: place.primaryType ?? null,
+      types: place.types ?? null,
       bucket: first.bucket,
       lat: place.location?.latitude ?? center.lat,
       lng: place.location?.longitude ?? center.lng,
@@ -293,6 +299,8 @@ export async function resolveCandidates(
         place_id: p.id,
         name: p.displayName?.text ?? '',
         formatted_address: p.formattedAddress ?? null,
+        primary_type: p.primaryType ?? null,
+        types: p.types ?? null,
         bucket: bucketFromPlace(p),
         lat: p.location?.latitude ?? center.lat,
         lng: p.location?.longitude ?? center.lng,

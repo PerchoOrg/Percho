@@ -4,6 +4,50 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-08-18 13:40 UTC — Aberdeen got zero photos: the POI upsert never had a display_name
+
+**Symptom** (owner): photos step on Aberdeen reports "0 fetched · 0 reused · 0
+selected · 0 dropped (legacy run — no per-POI mapping)" while resolve found 12
+POIs.
+
+**Cause**, straight out of the step's own result blob — every entry read:
+
+```
+poi upsert failed: null value in column "display_name" of relation "pois"
+violates not-null constraint
+```
+
+`runPhotos` inserted `{ google_place_id }` and nothing else. `pois.display_name`
+is NOT NULL, so **every POI that did not already exist failed**, `resolvedPoiIds`
+came back empty, and the step had nothing to fetch photos for.
+
+This is not new — it has been there since the tour pipeline was written. It was
+invisible because the community we have been testing on (Apremont) had its POIs
+created earlier by the nearby pipeline, so the `existing?.id` branch always won
+and the insert never ran. Aberdeen is a fresh community: nothing existed, every
+insert failed.
+
+**Fix**: upsert the same columns the nearby pipeline writes
+(`lib/poi/community-actions.ts`) — display_name, formatted_address,
+primary_type, types, rating, user_ratings_total, location, refreshed_at — keyed
+on `google_place_id`, so a re-run refreshes instead of failing. `ResolvedPoi`
+now carries `primary_type` / `types` (available since the field-mask fix) so
+there is something real to write, and the photos step's bucket fallback has a
+type to read.
+
+**Verified against the live table**: upserted a throwaway row with the exact
+shape, confirmed `types` (text[]) and `location` (point) round-trip, deleted it.
+
+**Correction to the previous entry**: it claims `pnpm web:typecheck` was clean
+for `a1242cfd`. It was not — that command was chained after `biome check --fix`,
+biome exited 2 on pre-existing lint, and `&&` meant typecheck never ran. The
+commit shipped with a type error in the new test file's mock (`(...args:
+unknown[])` spread into a typed mock). Fixed here, and from now on typecheck
+gets its own invocation rather than riding on the end of a chain.
+
+**Verification**: `pnpm web:typecheck` clean (run on its own), `pnpm web:test`
+**365 passed / 34 files**.
+
 ## 2026-08-18 13:00 UTC — Resolve by name + locality, not by the agent's address
 
 **Owner**, on Aberdeen: "remove the address from Agent Research and Resolve &

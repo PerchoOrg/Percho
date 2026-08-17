@@ -1,14 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const searchText = vi.fn();
-const searchNearby = vi.fn(async () => []);
+const searchNearby = vi.fn(async (_input?: unknown): Promise<unknown[]> => []);
 
 vi.mock('./google-places', async () => {
   const actual = await vi.importActual<typeof import('./google-places')>('./google-places');
   return {
     ...actual,
-    searchText: (...args: unknown[]) => searchText(...args),
-    searchNearby: (...args: unknown[]) => searchNearby(...args),
+    searchText: (query: string, bias?: unknown) => searchText(query, bias),
+    searchNearby: (input: unknown) => searchNearby(input),
   };
 });
 

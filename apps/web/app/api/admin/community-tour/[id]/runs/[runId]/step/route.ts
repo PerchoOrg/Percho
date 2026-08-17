@@ -320,7 +320,20 @@ async function runResolve(sb: any, run: RunRow) {
 
 async function runPhotos(sb: any, run: RunRow) {
   const resolve = run.step_results.resolve as
-    | { resolved?: Array<{ place_id: string; bucket?: string }> }
+    | {
+        resolved?: Array<{
+          place_id: string;
+          name?: string;
+          formatted_address?: string | null;
+          primary_type?: string | null;
+          types?: string[] | null;
+          rating?: number | null;
+          user_ratings_total?: number | null;
+          lat?: number | null;
+          lng?: number | null;
+          bucket?: string;
+        }>;
+      }
     | undefined;
   if (!resolve?.resolved?.length) {
     return { error: 'no_resolved', message: 'Run the resolve step first.' };
@@ -336,26 +349,39 @@ async function runPhotos(sb: any, run: RunRow) {
   for (const poi of resolve.resolved) {
     // Agent-discovered POIs may not be in nearby scope yet — upsert `pois` by
     // google_place_id and link to this community before fetching photos.
-    const { data: existing } = await sb
+    //
+    // This used to insert `{ google_place_id }` alone, which violates the
+    // NOT NULL on display_name — so EVERY new POI failed and only communities
+    // whose POIs the nearby pipeline had already created could ever get
+    // photos. It went unseen because the test community's POIs already
+    // existed (owner 2026-08-17, on Aberdeen: "0 fetched · 0 selected").
+    // Same columns the nearby pipeline writes (lib/poi/community-actions.ts),
+    // and an upsert so a re-run refreshes rather than fails.
+    const { data: upserted, error: insErr } = await sb
       .from('pois')
+      .upsert(
+        {
+          google_place_id: poi.place_id,
+          display_name: poi.name || '(unnamed)',
+          formatted_address: poi.formatted_address ?? null,
+          primary_type: poi.primary_type ?? null,
+          types: poi.types ?? null,
+          rating: poi.rating ?? null,
+          user_ratings_total: poi.user_ratings_total ?? null,
+          location: poi.lng != null && poi.lat != null ? `(${poi.lng},${poi.lat})` : null,
+          refreshed_at: new Date().toISOString(),
+        },
+        { onConflict: 'google_place_id' },
+      )
       .select('id')
-      .eq('google_place_id', poi.place_id)
-      .maybeSingle();
-    let poiId: string | null = existing?.id ?? null;
-    if (!poiId) {
-      const { data: inserted, error: insErr } = await sb
-        .from('pois')
-        .insert({ google_place_id: poi.place_id })
-        .select('id')
-        .single();
-      if (insErr || !inserted) {
-        results[poi.place_id] = {
-          skipped: `poi upsert failed: ${(insErr as { message?: string })?.message ?? 'unknown'}`,
-        };
-        continue;
-      }
-      poiId = inserted.id;
+      .single();
+    if (insErr || !upserted) {
+      results[poi.place_id] = {
+        skipped: `poi upsert failed: ${(insErr as { message?: string })?.message ?? 'unknown'}`,
+      };
+      continue;
     }
+    const poiId: string = upserted.id;
     resolvedPoiIds.push(poiId!);
     if (poi.bucket) bucketByPoiId.set(poiId!, poi.bucket);
     // Ensure community link (candidate status — admin reviews later).
