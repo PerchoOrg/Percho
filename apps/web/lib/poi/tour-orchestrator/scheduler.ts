@@ -64,7 +64,18 @@ const DURATION_STEP = 0.5;
 /** Short side at/above which resolution stops shortening a clip. */
 export const FULL_RES_SHORT_SIDE = 1080;
 
-/** Ken Burns catalogue — the 9 modes generate.py's v2 filter accepts. */
+/**
+ * Ken Burns catalogue — every name here has a branch in `kenburns_filter_v2`
+ * (scripts/ken-burns/generate.py). That is the whole requirement, and it was
+ * not met: this list was copied from the render worker, which carried the v1
+ * names `zoom-in` / `zoom-out`. The v2 filter has no branch for either, so a
+ * clip planned `zoom-out` rendered as a slow push-in — the opposite move,
+ * reported by the owner on 2026-08-17.
+ *
+ * `pan_to_subject` and `static` exist in the filter but are left out on
+ * purpose: pan_to_subject needs a subject bbox POI photos do not carry, and a
+ * static clip is the "很多静止的图" the owner rejected on 2026-08-10.
+ */
 export const KEN_BURNS_MOVES = [
   'push_in',
   'push_in_slow',
@@ -72,9 +83,8 @@ export const KEN_BURNS_MOVES = [
   'pan_lr',
   'pan_rl',
   'push_pan_lr',
+  'push_pan_rl',
   'tilt_td',
-  'zoom-in',
-  'zoom-out',
 ] as const;
 
 /**
@@ -107,9 +117,9 @@ export const SEEDANCE_MOVES = [
  * collision a viewer actually notices.
  */
 const KEN_BURNS_PREFERENCE: Partial<Record<DominantSubject, readonly string[]>> = {
-  nature: ['push_in', 'push_in_slow', 'zoom-in'],
+  nature: ['push_in', 'push_in_slow'],
   building_facade: ['pan_lr', 'pan_rl', 'tilt_td'],
-  open_space: ['pull_back', 'zoom-out'],
+  open_space: ['pull_back', 'push_pan_rl'],
   interior_close: ['push_in_slow', 'push_pan_lr'],
 };
 

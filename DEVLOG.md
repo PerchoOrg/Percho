@@ -4,6 +4,69 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-08-18 07:00 UTC — Planned zoom-out rendered as a push-in (two causes)
+
+**Symptom** (owner): shot #10 planned `kenburns · zoom-out · 3.0s`, the DA+KB
+clip is not a zoom-out.
+
+**Cause 1 — the running worker never read the plan.** The render worker is a
+launchd agent pinned to `/Users/apocalypsee/Workspace/Percho`, the shared
+reference worktree, which is still on `4cb0ebd1` — three commits behind and
+without the code that reads `photo_clips.move` (`grep -c 'row.get("move")'` →
+0). It therefore picked the mode the old way, `POI_CLIP_MODES[int(photo_id[:8],
+16) % 9]`, which for `6c8947f5…` is **pan_lr**. The clip is a horizontal pan.
+The plan reached the database and stopped there. Same applies to the seedance
+worker (`prompt`): both plists point at that worktree.
+
+**Cause 2 — `zoom-out` has no branch in the v2 filter.** Even once the worker
+reads the plan, `kenburns_filter_v2` implements push_in, push_in_slow,
+pull_back, pan_lr, pan_rl, push_pan_lr, push_pan_rl, tilt_td, pan_to_subject,
+static — and nothing else. `zoom-in` / `zoom-out` / `pan-lr` / `pan-tb` are the
+**v1** vocabulary, only implemented by `kenburns_filter`, which the shot-plan
+path never uses. They fell through to `else: z = min(1.0+0.0005*on,1.08)` — a
+slow push-in. A planned pull-back rendered as its opposite, silently.
+
+This predates the orchestrator: `worker.py`'s `POI_CLIP_MODES` has carried both
+v1 names since it was written, so 2 of every 9 hash-picked DA+KB clips have
+been rendering the wrong move all along. The Scheduler copied that list — its
+comment even claimed it was "the full mode catalogue the v2 filter supports" —
+and made the wrong move deterministic and visible, which is how it finally got
+caught.
+
+**Actions**:
+- `generate.py`: `kenburns_filter_v2` translates the four v1 aliases to their
+  v2 equivalents (zoom-out → pull_back), so plans **already persisted** render
+  correctly without a re-plan; and its `else` now `die()`s instead of
+  defaulting. A silent default is what made this invisible.
+- `worker.py`: `POI_CLIP_MODES` drops the two v1 names → 8 modes, all
+  implemented.
+- `scheduler.ts`: `KEN_BURNS_MOVES` likewise — 8 v2-native moves.
+  `pan_to_subject` stays out (needs a subject bbox POI photos lack) and
+  `static` stays out (the "很多静止的图" the owner rejected 2026-08-10).
+  Subject preferences updated to match.
+- Tests, in both languages: `tests/test_kenburns_modes.py` asserts every
+  planner mode produces a *distinct* filter (a collapsed one means it hit the
+  default), that the v1 aliases equal their v2 targets, that `zoom-out` ≠
+  `push_in*`, and that an unknown mode raises. Verified they have teeth by
+  running them against `origin/main`'s generate.py: **3 of 4 fail**. The TS
+  test pins the catalogue and rejects hyphenated (v1) names.
+
+**Blast radius in the live run**: 2 of 16 shots planned a v1 move — #10
+(zoom-out) and #15 (zoom-in). Only #10 was visibly wrong, since zoom-in and the
+default push-in look alike.
+
+**Verification**: `pytest tests/` in `.venv-motion` 22 passed; `pnpm
+web:typecheck` clean; `pnpm web:test` 346 passed.
+
+**Learnings**:
+- Deploying the web app does not deploy the renderers. Both workers run from a
+  worktree nothing in the pipeline updates, so a merged fix is inert until
+  someone pulls there and restarts the agent. Worth stating in the hand-off
+  every time render behaviour changes.
+- A fallback branch that produces plausible output is worse than a crash. This
+  one converted a wrong move into a believable one for as long as the code has
+  existed.
+
 ## 2026-08-18 06:30 UTC — The plan was invisible in the admin table
 
 **Symptom** (owner, testing Apremont - Highcroft): clicked Re-run on the photos

@@ -1536,9 +1536,15 @@ def process_photo_clip(row: dict[str, Any]) -> None:
         # clip — something a single-clip render cannot see. Rows planned before
         # the orchestrator (2026-08-17) have no move and keep the old per-photo
         # rotation: deterministic, varied, but blind to its neighbours.
+        # Every name here must be one kenburns_filter_v2 actually implements.
+        # This list used to end "zoom-in", "zoom-out" — v1 names with no branch
+        # in the v2 filter, so 2 of these 9 rendered as a slow push-in whatever
+        # they claimed (owner 2026-08-17: a planned zoom-out came out pushing
+        # in). Keep it in sync with KEN_BURNS_MOVES in
+        # apps/web/lib/poi/tour-orchestrator/scheduler.ts.
         POI_CLIP_MODES = [
             "push_in", "push_in_slow", "pull_back", "pan_lr", "pan_rl",
-            "push_pan_lr", "tilt_td", "zoom-in", "zoom-out",
+            "push_pan_lr", "push_pan_rl", "tilt_td",
         ]
         mode = (row.get("move") or "").strip() or \
             POI_CLIP_MODES[int(photo_id[:8], 16) % len(POI_CLIP_MODES)]

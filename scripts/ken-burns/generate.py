@@ -407,6 +407,20 @@ def kenburns_filter_v2(mode: str, duration: float, w: int, h: int,
     frames = int(duration * FPS)
     fl = max(frames - 1, 1)
 
+    # v1 mode names reaching the v2 filter. Owner 2026-08-17: a clip planned
+    # `zoom-out` rendered as a slow PUSH-IN — the opposite move. zoom-in /
+    # zoom-out / pan-lr / pan-tb are the pre-shot-plan vocabulary that only
+    # kenburns_filter (v1) implements; here they matched no branch and fell
+    # through to the default push, silently. Translating them is what makes an
+    # already-persisted plan render correctly; the unknown-mode die() below is
+    # what stops the next name from failing quietly instead.
+    mode = {
+        "zoom-in": "push_in",
+        "zoom-out": "pull_back",
+        "pan-lr": "pan_lr",
+        "pan-tb": "tilt_td",
+    }.get(mode, mode)
+
     subj_cx, subj_cy = subject_center(bbox)
 
     x_center = "iw/2-(iw/zoom/2)"
@@ -460,7 +474,10 @@ def kenburns_filter_v2(mode: str, duration: float, w: int, h: int,
     elif mode == "static":
         z = "1.001"; x = x_center; y = y_center
     else:
-        z = "min(1.0+0.0005*on,1.08)"; x = x_center; y = y_center
+        # No silent default. A mode this filter does not implement used to
+        # render as a slow push-in, so a wrong move looked like a plausible
+        # one and nothing anywhere said otherwise.
+        die(f"kenburns_filter_v2: unknown mode {mode!r}")
 
     # Phase 98: cover-crop composition for landscape canvas (1920×1080).
     # Scale source to COVER w×h (no letterbox), center-crop, then zoompan

@@ -162,6 +162,27 @@ describe('scheduleClips — golden fixture', () => {
     expect(DEPTHFLOW_MOVES as readonly string[]).not.toContain('rack_focus');
   });
 
+  it('plans only Ken Burns modes the renderer implements', () => {
+    // Every name must have a branch in kenburns_filter_v2 (generate.py).
+    // `zoom-in` / `zoom-out` are the v1 vocabulary: the v2 filter has no branch
+    // for them, so a clip planned zoom-out rendered as a slow push-in — the
+    // opposite move (owner 2026-08-17). The Python side of this pin lives in
+    // scripts/render-worker/tests/test_kenburns_modes.py.
+    expect([...KEN_BURNS_MOVES]).toEqual([
+      'push_in',
+      'push_in_slow',
+      'pull_back',
+      'pan_lr',
+      'pan_rl',
+      'push_pan_lr',
+      'push_pan_rl',
+      'tilt_td',
+    ]);
+    for (const move of KEN_BURNS_MOVES) {
+      expect(move).not.toMatch(/-/); // v1 names are hyphenated, v2 use _
+    }
+  });
+
   it('never runs one bucket for more than 2 consecutive clips', () => {
     const { clips } = plan();
     let run = 1;
