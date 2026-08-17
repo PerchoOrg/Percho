@@ -644,12 +644,15 @@ async function runAssemble(
 
   // All photos under the Selected POIs. No buildShotList, no POI cap here:
   // every selected photo is a shot (owner: "Selected Photos直接作为输入").
-  const { data: photos } = (await sb
+  // Same display trim as the Selected Photos panel (loadNearbyPhotos):
+  // newest 3 per POI + any photo with a ready photo_clips row.
+  const { data: photosRaw } = (await sb
     .from('poi_photos')
     .select(
-      'id, poi_id, status, ai_tags, ai_score, storage_path, enhanced_path, enhanced_status',
+      'id, poi_id, status, ai_tags, ai_score, storage_path, enhanced_path, enhanced_status, created_at',
     )
-    .in('poi_id', poiIds)) as {
+    .in('poi_id', poiIds)
+    .order('created_at', { ascending: false, nullsFirst: false })) as {
     data: Array<{
       id: string;
       poi_id: string;
@@ -659,8 +662,35 @@ async function runAssemble(
       storage_path: string | null;
       enhanced_path: string | null;
       enhanced_status: string | null;
+      created_at: string | null;
     }> | null;
   };
+
+  const { data: readyClips } = (await sb
+    .from('photo_clips')
+    .select('photo_id')
+    .eq('status', 'ready')) as { data: Array<{ photo_id: string }> | null };
+  const clipPhotoIds = new Set((readyClips ?? []).map((c) => c.photo_id));
+
+  const POI_PHOTO_CAP = 3;
+  const byPoi = new Map<string, NonNullable<typeof photosRaw>>();
+  for (const p of photosRaw ?? []) {
+    const arr = byPoi.get(p.poi_id) ?? [];
+    arr.push(p);
+    byPoi.set(p.poi_id, arr);
+  }
+  const photos: NonNullable<typeof photosRaw> = [];
+  for (const arr of byPoi.values()) {
+    const kept = arr.slice(0, POI_PHOTO_CAP);
+    const keptIds = new Set(kept.map((r) => r.id));
+    for (const row of arr.slice(POI_PHOTO_CAP)) {
+      if (clipPhotoIds.has(row.id) && !keptIds.has(row.id)) {
+        kept.push(row);
+        keptIds.add(row.id);
+      }
+    }
+    photos.push(...kept);
+  }
 
   // POI display names for the shot rows.
   const { data: poiRows } = (await sb
