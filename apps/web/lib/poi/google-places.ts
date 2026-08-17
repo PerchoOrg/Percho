@@ -150,16 +150,44 @@ export async function searchNearby(input: NearbySearchInput): Promise<PlaceResul
  * Text-based place lookup. Used when we only have an address string and need
  * a Place ID for the listing itself (to seed the search center + build the
  * commute-anchor list).
+ *
+ * `bias` restricts the search to a circle around the community. It is a
+ * stronger disambiguator than anything that can be put in the query string —
+ * "Aberdeen" the subdivision and "Aberdeen" the Scottish city are the same
+ * text, not the same place — and it lets a caller search a bare name instead
+ * of guessing at a street address (owner 2026-08-17).
  */
-export async function searchText(query: string): Promise<PlaceResult[]> {
+export async function searchText(
+  query: string,
+  bias?: { center: { lat: number; lng: number }; radiusMeters: number },
+): Promise<PlaceResult[]> {
   const res = await fetch(`${PLACES_BASE}/places:searchText`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'X-Goog-Api-Key': apiKey(),
-      'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,places.location',
+      // Same mask as nearby search. It used to request id / name / address /
+      // location only, which quietly disabled two things that read the result:
+      // `photo_count` fed scorePoi, so every agent-resolved POI scored 0 and
+      // the ranking was meaningless; and the "not operational" firewall tested
+      // a businessStatus that was never returned (owner 2026-08-17).
+      'X-Goog-FieldMask': NEARBY_FIELD_MASK,
     },
-    body: JSON.stringify({ textQuery: query, maxResultCount: 5 }),
+    body: JSON.stringify({
+      textQuery: query,
+      maxResultCount: 5,
+      ...(bias
+        ? {
+            locationBias: {
+              circle: {
+                center: { latitude: bias.center.lat, longitude: bias.center.lng },
+                // Places caps the bias radius at 50 km.
+                radius: Math.min(bias.radiusMeters, 50_000),
+              },
+            },
+          }
+        : {}),
+    }),
   });
 
   if (!res.ok) {

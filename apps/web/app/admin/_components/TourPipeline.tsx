@@ -529,7 +529,6 @@ function StepResult({
                 <thead className="bg-surface text-ink2">
                   <tr>
                     <th className="border-line border-b px-2 py-1">Name</th>
-                    <th className="border-line border-b px-2 py-1">Address</th>
                     <th className="border-line border-b px-2 py-1">Bucket</th>
                     <th className="border-line border-b px-2 py-1">Conf</th>
                     <th className="border-line border-b px-2 py-1">Why</th>
@@ -539,7 +538,6 @@ function StepResult({
                   {(r.agents?.gemini_b?.parsed?.pois ?? []).map((p, i) => {
                     const poi = p as {
                       name?: string;
-                      address_hint?: string;
                       bucket?: string;
                       confidence?: string;
                       why?: string;
@@ -550,7 +548,6 @@ function StepResult({
                         className="border-line border-b align-top last:border-b-0"
                       >
                         <td className="px-2 py-1 font-medium">{poi.name ?? '—'}</td>
-                        <td className="px-2 py-1 text-ink2">{poi.address_hint ?? '—'}</td>
                         <td className="px-2 py-1 text-ink2">{poi.bucket ?? '—'}</td>
                         <td className="px-2 py-1">{poi.confidence ?? '—'}</td>
                         <td className="max-w-[280px] px-2 py-1 text-ink2">

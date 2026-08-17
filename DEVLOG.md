@@ -4,6 +4,54 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-08-18 13:00 UTC — Resolve by name + locality, not by the agent's address
+
+**Owner**, on Aberdeen: "remove the address from Agent Research and Resolve &
+Merge, only keep the name, use name for google place search, with city / state,
+the address is very inaccurate, nothing returns."
+
+The research prompt demanded an `address_hint` "enough to find the place on
+Google Maps by itself", and resolve concatenated it into the Text Search query.
+When the agent guesses the street wrong, the address dominates the query — I
+reproduced it against the live API: `"Suwanee Town Center 1490 Peachtree
+Industrial Blvd"` returns **the street address itself** as the match, not the
+POI.
+
+**Actions**:
+- Prompt A drops `address_hint` entirely and spends the instruction on the NAME
+  instead ("exactly as Google Maps spells it, including the branch suffix").
+- `resolveCandidates(…, locality?)` queries `name, City, ST` and passes a
+  **locationBias circle** around the community. The bias is the real
+  disambiguator — "Aberdeen" the subdivision and "Aberdeen" the Scottish city
+  are the same text, not the same place.
+- The Agent Research table loses its Address column. **The Resolve table keeps
+  its address**: that one is Google's answer for the matched place, which is
+  how a human tells a right match from a wrong one. Say the word if it should
+  go too.
+
+**Two latent defects found while verifying, fixed here**:
+1. `searchText`'s field mask asked only for id/name/address/location, so
+   `place.photos` was always undefined → `photo_count` 0 → `scorePoi` returned
+   **0 for every agent-resolved POI**. Confirmed in the live run: the only
+   non-zero scores belonged to `google_top_rated` entries, which come from
+   `searchNearby` and its wider mask. The resolve ranking has been meaningless
+   for the POIs the agents actually researched. Same mask also omitted
+   `businessStatus`, so the "not operational" firewall tested a field that was
+   never populated. Both now use `NEARBY_FIELD_MASK`.
+2. A name Google cannot place resolves **up** to the surrounding town —
+   "Suwanee Town Center" → the city of Suwanee, verified live, complete with 10
+   photos of the city. Nothing rejected it. Added an administrative-type
+   firewall (locality / political / postal_code / neighborhood / …).
+
+**Cost note**: the wider field mask moves Text Search to a higher-priced Places
+SKU. Resolve makes ~15-20 of those per community run, so the delta is a
+fraction of a cent per run — but it is a tier change, not a free one.
+
+**Verification**: 6 new tests mocking `searchText` pin the query shape (name +
+locality, never an address), the bias, and both firewalls. `pnpm web:test`
+**365 passed**, typecheck clean. Live API checks recorded above. The two biome
+hits in `community-tour.ts` pre-date this change (confirmed by stashing).
+
 ## 2026-08-18 12:10 UTC — Cache the Curator per photo; a re-run over deterministic changes is now free
 
 **Owner**: "every time rerun would make llm call that is expensive, anyway to

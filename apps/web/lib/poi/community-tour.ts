@@ -54,6 +54,22 @@ export interface ResolveResult {
   top_rated: ResolvedPoi[];
 }
 
+/**
+ * Google types that mean "an area", not "a place you can film". A search that
+ * cannot find the POI happily returns the surrounding city or ZIP instead.
+ */
+const ADMINISTRATIVE_TYPES = new Set([
+  'locality',
+  'sublocality',
+  'political',
+  'postal_code',
+  'administrative_area_level_1',
+  'administrative_area_level_2',
+  'administrative_area_level_3',
+  'country',
+  'neighborhood',
+]);
+
 /** Map a raw Places result to a tour bucket via its primary type. */
 function bucketFromPlace(p: { primaryType?: string; types?: string[] }): string {
   const t = p.primaryType ?? p.types?.[0];
@@ -102,7 +118,6 @@ export function scorePoi(p: {
 
 export type CandidateInput = {
   name: string;
-  address_hint: string;
   bucket: string;
   why: string;
   shot_note: string;
@@ -119,6 +134,15 @@ export async function resolveCandidates(
   candidates: CandidateInput[],
   center: { lat: number; lng: number },
   radiusMeters: number,
+  /**
+   * "Alpharetta, GA" — the community's own city and state. Appended to the
+   * NAME to disambiguate; the agent's guess at a street address is not used at
+   * all any more. Owner 2026-08-17, on Aberdeen: the addresses came back "very
+   * inaccurate" and a name+address query returned nothing, while the name plus
+   * the real city resolves. The agent knows what a place is called; it does not
+   * know where it is.
+   */
+  locality?: string,
 ): Promise<ResolveResult> {
   const byName = new Map<string, CandidateInput[]>();
   for (const c of candidates) {
@@ -133,10 +157,12 @@ export async function resolveCandidates(
 
   for (const [name, group] of byName) {
     const first = group[0]!;
-    const query = [first.name, first.address_hint, ''].filter(Boolean).join(' ');
+    const query = [first.name, locality].filter(Boolean).join(', ');
     let places;
     try {
-      places = await searchText(query);
+      // Biased to the community's circle, so a name that exists in fifty
+      // states resolves to the one next door.
+      places = await searchText(query, { center, radiusMeters });
     } catch (err) {
       dropped.push({
         name: first.name,
@@ -156,6 +182,23 @@ export async function resolveCandidates(
         name: first.name,
         bucket: first.bucket,
         reason: 'no google result',
+        agent: group.some((c) => c.agent === 'gemini_a')
+          ? group.some((c) => c.agent === 'gemini_b')
+            ? 'both'
+            : 'gemini_a'
+          : 'gemini_b',
+      });
+      continue;
+    }
+    // A name Google cannot place often resolves UP to the town it is in:
+    // "Suwanee Town Center" comes back as the city of Suwanee (verified against
+    // the live API, 2026-08-17). That is not a POI, has no useful photos, and
+    // would put a map pin of a whole city in the tour.
+    if (place.types?.some((t) => ADMINISTRATIVE_TYPES.has(t))) {
+      dropped.push({
+        name: first.name,
+        bucket: first.bucket,
+        reason: `resolved to a place type, not a POI (${place.types.find((t) => ADMINISTRATIVE_TYPES.has(t))})`,
         agent: group.some((c) => c.agent === 'gemini_a')
           ? group.some((c) => c.agent === 'gemini_b')
             ? 'both'

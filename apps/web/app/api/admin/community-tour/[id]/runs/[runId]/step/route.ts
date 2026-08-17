@@ -250,7 +250,12 @@ async function runResolve(sb: any, run: RunRow) {
           gemini_a?: { ok?: boolean; parsed?: { pois?: unknown[] } | null };
           gemini_b?: { ok?: boolean; parsed?: { pois?: unknown[] } | null };
         };
-        community?: { lat?: number | null; lng?: number | null };
+        community?: {
+          lat?: number | null;
+          lng?: number | null;
+          city?: string | null;
+          state?: string | null;
+        };
       }
     | undefined;
 
@@ -260,7 +265,6 @@ async function runResolve(sb: any, run: RunRow) {
 
   const candidates: Array<{
     name: string;
-    address_hint: string;
     bucket: string;
     why: string;
     shot_note: string;
@@ -275,7 +279,6 @@ async function runResolve(sb: any, run: RunRow) {
     for (const raw of a.parsed.pois) {
       const p = raw as {
         name?: string;
-        address_hint?: string;
         bucket?: string;
         why?: string;
         shot_note?: string;
@@ -285,7 +288,6 @@ async function runResolve(sb: any, run: RunRow) {
       if (!p.name) continue;
       candidates.push({
         name: p.name,
-        address_hint: p.address_hint ?? '',
         bucket: p.bucket ?? 'other',
         why: p.why ?? '',
         shot_note: p.shot_note ?? '',
@@ -306,7 +308,9 @@ async function runResolve(sb: any, run: RunRow) {
 
   const { resolveCandidates } = await import('@/lib/poi/community-tour');
   const radiusMeters = 6000; // suburban default — the <4 POI widen hook lives at step 4
-  const result = await resolveCandidates(candidates, center, radiusMeters);
+  // The community's real city/state, not the agent's guess at a street address.
+  const locality = [research.community?.city, research.community?.state].filter(Boolean).join(', ');
+  const result = await resolveCandidates(candidates, center, radiusMeters, locality);
   await saveStep(sb, run, 'resolve', result);
   await setRunStatus(sb, run.id, result.resolved.length >= 4 ? 'fetching_photos' : 'resolving');
   return { resolved: result.resolved.length, dropped: result.dropped.length };

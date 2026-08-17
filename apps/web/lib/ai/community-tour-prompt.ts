@@ -30,7 +30,6 @@ export type TourBucket =
 
 export interface TourPoiCandidate {
   name: string;
-  address_hint: string;
   bucket: TourBucket;
   why: string;
   shot_note: string;
@@ -94,7 +93,6 @@ OUTPUT — JSON only, no fences, no preamble
   "narrative_angle": "one specific, honest sentence on what defines this place",
   "pois": [{
     "name": "exact name as it appears on Google Maps",
-    "address_hint": "street or shopping center, enough to disambiguate",
     "bucket": "schools|dining|nightlife|shopping|outdoor|fitness|kids|asian_community|daily_errands|faith|work_hubs|healthcare|pets|transit|civic|waterfront|other",
     "why": "what a buyer learns from seeing this",
     "shot_note": "what specifically to film here",
@@ -110,11 +108,13 @@ CONSTRAINTS
 - Every name will be checked against Google Places. Names that do not resolve
   are discarded. An unverifiable name is worse than a missing one — this feeds
   a published real-estate video.
-- \"address_hint\" must be enough to find the place on Google Maps by itself:
-  a full street address or a well-known shopping center / building name plus
-  city. A bare community name, intersection, or \"near {community}\" is NOT
-  enough — the Places API needs a searchable string, and places without
-  indexed photos will be dropped downstream.
+- Do NOT give an address. The name is looked up against Google Places inside a
+  circle around this community, so the city is already known and a guessed
+  street address only makes the query wrong. Owner 2026-08-17: addresses came
+  back \"very inaccurate\" and the search returned nothing.
+- Spend that effort on the NAME instead: exactly as Google Maps spells it,
+  including the suffix that distinguishes branches (\"Publix Super Market at
+  Windward Commons\", not \"Publix\").
 - Prefer places that are known to have Google listing photos (restaurants,
   parks, malls, landmarks) over private spots, HOA clubhouses, and model
   homes — we need downloadable imagery for every POI.`;
