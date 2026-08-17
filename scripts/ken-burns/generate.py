@@ -23,6 +23,7 @@ from pathlib import Path
 # system interpreter, so it must not pull in torch the way depthflow_clip does.
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from depthflow_modes import pick_engines, plan_moves  # noqa: E402
+from xfade import crossfade_offsets, crossfade_total  # noqa: E402
 
 
 FPS = 30
@@ -1040,18 +1041,18 @@ def concat_with_crossfade(clips: list[str], dst: str, xfade: float, w: int, h: i
 
     filter_parts = []
     prev = "0:v"
-    offset = 0.0
+    offsets = crossfade_offsets(durations, xfade)
     for i in range(1, len(clips)):
-        offset += durations[i - 1] - xfade
         out_label = f"v{i}"
         filter_parts.append(
-            f"[{prev}][{i}:v]xfade=transition=fade:duration={xfade}:offset={offset:.3f}[{out_label}]"
+            f"[{prev}][{i}:v]xfade=transition=fade:duration={xfade}:"
+            f"offset={offsets[i - 1]:.3f}[{out_label}]"
         )
         prev = out_label
 
     filter_complex = ";".join(filter_parts) if filter_parts else ""
 
-    total = sum(durations) - xfade * (len(clips) - 1)
+    total = crossfade_total(durations, xfade)
     cmd = ["ffmpeg", "-y"] + inputs + [
         "-filter_complex", filter_complex,
         "-map", f"[{prev}]",

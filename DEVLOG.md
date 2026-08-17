@@ -4,6 +4,69 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-08-18 08:15 UTC — A 14-clip tour played as six: crossfade offsets started at zero
+
+**Symptom** (owner): the Apremont - Highcroft assembly "only has 6 clips even
+with 16 annotated".
+
+**What the data said**: `tour_assemblies` had **16** ordered_clips, status
+ready. The worker log shows 14 downloaded and 2 skipped (both Jones Bridge Park
+photos have no ready clip), and an ffmpeg command with 14 inputs. So nothing
+dropped clips. But ffmpeg's own summary line reads `frame=500 … time=16.60` and
+`drop=877`, and Cloudflare reports **duration=16.6s** for ~45s of footage. The
+clips were all there; most of the film was being thrown away.
+
+**Cause**: the assembly step built its xfade chain with its own copy of the
+offset loop:
+
+```python
+for d in durs[:-1]:
+    offsets.append(acc)      # append BEFORE accumulating
+    acc += d - xfade
+```
+
+so `offsets[0] == 0` — the opening clip is replaced by its own transition and
+every later transition fires one clip early. Because each xfade truncates the
+accumulated chain at its offset, the error compounds rather than costing one
+clip. `generate.py`'s `concat_with_crossfade` had the correct version
+(accumulate, then append) three functions away; the comment above the copy even
+states the right formula.
+
+**Reproduced before fixing**, with real ffmpeg on synthetic clips cut to the
+production durations from the log:
+
+| offsets | 4 × 4.0s | the real 14 clips |
+|---|---|---|
+| old (append first) | 11.0s | **16.7s** (production: 16.6s) |
+| fixed (accumulate first) | 14.5s | **45.5s** (expected 45.45s) |
+
+**Actions**:
+- New `scripts/ken-burns/xfade.py` — `crossfade_offsets` / `crossfade_total`,
+  one implementation. `generate.py` and the worker's assembly step both import
+  it; the hand copy is gone. The worker still builds its own filter graph
+  (its clips arrive at two resolutions and need normalising first) — only the
+  arithmetic is shared, which is the part that was wrong.
+- `scripts/render-worker/tests/test_xfade.py`: first offset is a clip in, not
+  zero; offsets follow `sum(d[0..i]) - (i+1)*xfade`; the last offset leaves
+  room for the final clip; and a test pinning the *shape* of the old bug
+  (transition i got transition i-1's offset). Deliberately no assertion on
+  "what the old code produced" — its arithmetic predicts 41.9s while ffmpeg
+  gave 16.7s, so a number there would encode a fiction.
+
+**Verification**: 50 passed in `.venv-motion` (`test_pick_bgm.py` still
+uncollectable — pre-existing, needs `requests`). `worker.py` imports cleanly
+under its real runtime `.venv-render`, with the new `scripts/ken-burns` path
+entry resolving.
+
+**Learnings**:
+- Two copies of one formula, and only one of them tested. The copy was made
+  because the original "is not exposed standalone" — a note in the comment,
+  which was true and was the moment to extract it instead.
+- The give-away was in the log the whole time: ffmpeg prints the output
+  duration of every render. Nothing reads it. A concat that produces materially
+  less than `crossfade_total` should fail the job rather than upload — worth
+  adding next time this code is open.
+
 ## 2026-08-18 07:00 UTC — Planned zoom-out rendered as a push-in (two causes)
 
 **Symptom** (owner): shot #10 planned `kenburns · zoom-out · 3.0s`, the DA+KB

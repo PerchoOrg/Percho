@@ -39,6 +39,8 @@ from typing import Any
 import requests
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "ken-burns"))
+from xfade import crossfade_offsets, crossfade_total  # type: ignore  # noqa: E402
 from photo_selector import build_plan  # type: ignore  # noqa: E402
 from photo_tagger import MODEL as TAGGER_MODEL, tag_listing_photos  # type: ignore  # noqa: E402
 
@@ -1698,18 +1700,16 @@ def process_assembly(row: dict[str, Any]) -> None:
                 f"need >=2 ready clips, got {len(clip_paths)} (missing: {', '.join(skipped[:5]) or 'none'})"
             )
 
-        # Concat with crossfade — reuse generate.py's concat helper via its CLI.
+        # Concat with crossfade. The filter graph is built here rather than by
+        # generate.py because these clips arrive at two different resolutions
+        # (seedance 496x864, local DA+KB 1080x1920) and have to be normalised
+        # first; the OFFSETS come from the shared helper, which is the part
+        # that was wrong when this was a hand copy (see xfade.py).
         out_path = workdir / "tour.mp4"
-        # generate.py's concat_with_crossfade is not exposed standalone; do the
-        # concat inline with ffmpeg xfade chain (same 0.5s crossfade as the
-        # bucket path).
         inputs = []
         for p in clip_paths:
             inputs += ["-i", str(p)]
-        # Build xfade chain: offset_i = offset_{i-1} + dur_{i-1} - xfade
         xfade = 0.5
-        offsets: list[float] = []
-        acc = 0.0
         durs = []
         for p in clip_paths:
             out = subprocess.run(
@@ -1718,10 +1718,7 @@ def process_assembly(row: dict[str, Any]) -> None:
                 capture_output=True, text=True, check=True, timeout=15,
             )
             durs.append(float(out.stdout.strip()))
-        acc = 0.0
-        for d in durs[:-1]:
-            offsets.append(acc)
-            acc += d - xfade
+        offsets = crossfade_offsets(durs, xfade)
         filters: list[str] = []
         prev = "[0:v]"
         # Seedance clips render 496x864 (480p); local DA+KB clips render
@@ -1754,7 +1751,7 @@ def process_assembly(row: dict[str, Any]) -> None:
                 f"offset={offsets[i-1]:.3f}[{name}]"
             )
             prev = f"[{name}]"
-        total = sum(durs) - xfade * (len(durs) - 1)
+        total = crossfade_total(durs, xfade)
         vf = ";".join(filters) + f";{prev}format=yuv420p"
         cmd = [
             "ffmpeg", "-y",
