@@ -36,7 +36,7 @@
  */
 
 import { mobileVideoUid } from '@/lib/feed/video-uid';
-import { createAnonClient } from '@/lib/supabase/server';
+import { createServiceClient } from '@/lib/supabase/server';
 
 const CF_STREAM_BASE = 'https://videodelivery.net';
 
@@ -79,7 +79,7 @@ export interface HeroVideoIndex {
  * hundred rows.
  */
 export async function fetchVerticalVideos(): Promise<HeroVideoIndex> {
-  const supabase = createAnonClient();
+  const supabase = createServiceClient();
 
   const [listingRes, communityRes, assemblyRes] = await Promise.all([
     supabase
