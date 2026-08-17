@@ -628,7 +628,7 @@ function StepResult({
     return (
       <div className="space-y-2">
         <div className="text-xs">
-          {fetched} fetched · {reused} reused · {stepPhotos.length} photos
+          All Fetched Photos · {fetched} fetched · {reused} reused · {stepPhotos.length} photos
           {isLegacy
             ? ' (legacy run — no per-POI mapping)'
             : ` across ${poiIds.size} resolved POIs`}
