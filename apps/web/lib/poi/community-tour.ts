@@ -243,8 +243,7 @@ export async function resolveCandidates(
       .filter((p) => p.rating != null && p.userRatingCount != null && !seenIds.has(p.id))
       .sort(
         (a, b) =>
-          (b.rating ?? 0) - (a.rating ?? 0) ||
-          (b.userRatingCount ?? 0) - (a.userRatingCount ?? 0),
+          (b.rating ?? 0) - (a.rating ?? 0) || (b.userRatingCount ?? 0) - (a.userRatingCount ?? 0),
       )
       .slice(0, 3)
       .map((p) => ({
@@ -270,7 +269,12 @@ export async function resolveCandidates(
         photo_count: p.photos?.length ?? 0,
         rating: p.rating ?? null,
         user_ratings_total: p.userRatingCount ?? null,
-        score: scorePoi({ bucket: bucketFromPlace(p), agreement: 1, confidence: 'high', photo_count: p.photos?.length ?? 0 }),
+        score: scorePoi({
+          bucket: bucketFromPlace(p),
+          agreement: 1,
+          confidence: 'high',
+          photo_count: p.photos?.length ?? 0,
+        }),
       }));
     resolved.push(...topRated);
   } catch {
@@ -286,158 +290,9 @@ export async function resolveCandidates(
   return { resolved, dropped, buckets, top_rated: topRated };
 }
 
-// ─── step 6: duration by photo category ─────────────────────────────────────
-
-/**
- * Duration per photo category — decided at tag time, cached with the clip.
- * Owner: "每个照片不是固定生成4s的clip - 需要根据照片内容决定时间长度 最长4s".
- * Aerial/landscape get the full walk; interiors/details breathe shorter.
- */
-export const DURATION_BY_CATEGORY: Record<string, number> = {
-  aerial: 4.0,
-  landscape: 4.0,
-  storefront: 3.0,
-  food: 2.5,
-  interior: 2.0,
-  detail: 2.5,
-  people: 2.5,
-  signage: 2.0, // text-heavy → depthflow/kenburns, not Seedance
-  other: 2.5,
-};
-
-export function durationForCategory(category: string | null | undefined): number {
-  return DURATION_BY_CATEGORY[category ?? 'other'] ?? 2.5;
-}
-
-// ─── shot list (step 6b) ────────────────────────────────────────────────────
-
-export interface Shot {
-  photo_id: string;
-  poi_id: string;
-  poi_name: string;
-  category: string;
-  duration_s: number;
-  engine: 'seedance' | 'depthflow' | 'kenburns';
-  bucket: string;
-}
-
-export interface ShotListInput {
-  photo_id: string;
-  poi_id: string;
-  poi_name: string;
-  category: string;
-  usable: boolean;
-  has_prominent_text: boolean;
-  ai_score: number;
-  bucket: string;
-}
-
-/**
- * Build the shot list: open widest (aerial/landscape), hero second, interleave
- * buckets, never two consecutive same-POI, max 2 per POI, close with activity.
- * Text-heavy photos → depthflow/kenburns; clean open scenes → seedance.
- */
-export function buildShotList(inputs: ShotListInput[]): Shot[] {
-  const usable = inputs
-    .filter((p) => p.usable)
-    .map((p) => ({
-      ...p,
-      engine: p.has_prominent_text
-        ? ('depthflow' as const)
-        : p.category === 'aerial' || p.category === 'landscape'
-          ? ('seedance' as const)
-          : p.category === 'storefront'
-            ? ('seedance' as const)
-            : ('kenburns' as const),
-    }));
-
-  const byCategory: Record<string, ShotListInput[]> = {};
-  for (const p of usable) {
-    (byCategory[p.category] ??= []).push(p);
-  }
-
-  const pool: Array<{ input: ShotListInput; engine: Shot['engine'] }> = [];
-  for (const p of usable) {
-    pool.push({ input: p, engine: p.engine });
-  }
-  // widen first
-  const widen = ['aerial', 'landscape'];
-  const openers = pool.filter((x) => widen.includes(x.input.category));
-  const rest = pool.filter((x) => !widen.includes(x.input.category));
-
-  const shots: Shot[] = [];
-  const perPoi = new Map<string, number>();
-  let lastPoiId: string | null = null;
-
-  const push = (x: { input: ShotListInput; engine: Shot['engine'] }) => {
-    const n = perPoi.get(x.input.poi_id) ?? 0;
-    if (n >= 2) return;
-    shots.push({
-      photo_id: x.input.photo_id,
-      poi_id: x.input.poi_id,
-      poi_name: x.input.poi_name,
-      category: x.input.category,
-      duration_s: durationForCategory(x.input.category),
-      engine: x.engine,
-      bucket: x.input.bucket,
-    });
-    perPoi.set(x.input.poi_id, n + 1);
-    lastPoiId = x.input.poi_id;
-  };
-
-  // opener: widest available
-  const open = openers.sort((a, b) => (b.input.ai_score ?? 0) - (a.input.ai_score ?? 0))[0];
-  if (open) push(open);
-
-  // hero: strongest single frame (town center / park usually)
-  const heroPool = rest
-    .concat(openers.filter((x) => x !== open))
-    .sort((a, b) => (b.input.ai_score ?? 0) - (a.input.ai_score ?? 0));
-  const hero = heroPool[0]!;
-  if (hero) push(hero);
-
-  // interleave buckets, never two consecutive same-POI
-  const byBucket = new Map<string, Array<{ input: ShotListInput; engine: Shot['engine'] }>>();
-  for (const x of rest.concat(openers.filter((x) => x !== open && x !== hero))) {
-    const arr = byBucket.get(x.input.bucket) ?? [];
-    arr.push(x);
-    byBucket.set(x.input.bucket, arr);
-  }
-
-  let remaining = true;
-  while (remaining) {
-    remaining = false;
-    for (const [, arr] of byBucket) {
-      if (arr.length === 0) continue;
-      // round-robin: pop highest ai_score first
-      arr.sort((a, b) => (b.input.ai_score ?? 0) - (a.input.ai_score ?? 0));
-      const x = arr.shift();
-      if (!x) continue;
-      if (lastPoiId === x.input.poi_id) {
-        // try next in bucket
-        const alt = arr.shift();
-        if (alt) {
-          push(alt);
-        } else {
-          // nothing else in bucket — still push (accept consecutive same-POI
-          // when it's the only option; rare)
-          push(x);
-        }
-      } else {
-        push(x);
-      }
-      remaining = true;
-    }
-  }
-
-  // close: activity/light frame if any left
-  const closePool = pool.filter((x) => !shots.some((s) => s.photo_id === x.input.photo_id));
-  if (closePool.length > 0) {
-    const closer =
-      closePool.find((x) => x.input.category === 'storefront' || x.input.category === 'people') ??
-      closePool[0]!;
-    push(closer);
-  }
-
-  return shots;
-}
+// Duration, engine and shot ordering used to live here as a photo-category
+// lookup (DURATION_BY_CATEGORY / buildShotList). They were replaced on
+// 2026-08-17 by the orchestration layer in lib/poi/tour-orchestrator/, which
+// derives all three from the Curator's annotations plus the pixel size. The
+// lookup is deleted rather than deprecated: two engine mappings in one
+// pipeline is how a clip ends up rendered by the rule nobody was reading.

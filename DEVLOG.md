@@ -4,6 +4,319 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-08-18 01:10 UTC — Community tour orchestration, Phase 3: VO Pass + pipeline rebuilt on the plan
+
+**Objective**: finish the layer — narration continuity — and make the running
+pipeline use it instead of the category lookup. Owner: "continue with phase 3
+to rebuild the pipeline", plus rulings on the two Curator definitions.
+
+**Owner rulings applied (2026-08-17)**:
+1. An institution name (school, park) on a building or sign IS brand signage —
+   the risk is a generative model redrawing the text, and a name board carries
+   it exactly like a shop sign.
+2. When an open-air retail street or plaza fills the frame and no single
+   building dominates, that is `street_perspective`, not `building_facade`.
+Both went into Prompt A **and** into the hand baseline.
+
+**Actions**:
+- `vo-pass.ts` — Prompt B verbatim, `applyVoRewrites` (pure) enforcing the two
+  rules the prompt can only ask for: a line may be blanked but never added to a
+  clip the Curator left silent, and the school regex runs again on the rewrite.
+  `narrationStats` gives whole-film pace and per-clip fit. `runVoPass` degrades
+  to the Curator's drafts on any failure — they are already compliant.
+- `plan.ts` — `buildTourPlan(photos)`: Curator → Scheduler → Guard → VO Pass,
+  returning the shot list plus warnings, violations, narration stats and
+  Curator diagnostics. Throws only if school phrasing survives to the end.
+- `scheduler.ts` — film-length fit. Per-clip duration is a judgement about the
+  photo; 45-50s is a judgement about the viewer. The pass spends the remaining
+  half-seconds on the highest-weight clips and trims the lowest, never past a
+  clip's own bounds, and warns (`tour_duration_off_target`) when the target is
+  unreachable.
+- **Route rebuilt**: `computeFinalShots` keeps the 2/POI selection and the
+  dropped-reason bookkeeping, then calls `buildTourPlan` — the category→engine
+  map, `durationForCategory`, and the NARRATIVE_ORDER sort are gone.
+  `runGenerate` and `runRegenerateAll` now **enqueue the plan** instead of
+  re-deriving one, and `enqueueClips` writes `move`/`prompt`/`ai_generated`
+  onto both new and existing rows, so a re-plan reaches the workers.
+- **Deleted** `buildShotList` / `durationForCategory` / `DURATION_BY_CATEGORY`
+  and their tests. They were orphaned by this change, and leaving a second
+  engine mapping in the repo is how a clip gets rendered by the rule nobody was
+  reading. Repo lint errors went 193 → **189** as a result.
+
+**Two real bugs the eval caught (neither had a failing unit test before)**:
+1. VO Pass returned "no usable rewrites" every time. `gemini-3.5-flash` is a
+   thinking model and its reasoning tokens come out of `maxOutputTokens`; at
+   2048 the whole budget went to thinking and the reply had **no text part at
+   all**. Raised to 8192, and a missing text part now reports `finishReason`
+   instead of a generic failure.
+2. My own Prompt A clarification ("a park trail is nature") leaked: the model
+   started calling entire playgrounds `nature`, and `dominant_subject`
+   agreement **fell 79% → 71%**. Narrowed to "nature means water, trees or sky
+   dominate; a park with play structures or equipment is open_space" → 86%.
+   Lesson: a clarification aimed at one photo is a rule applied to all of them.
+
+**Ground truth correction — I looked at the disputed photos**: three of the
+remaining Curator disagreements were **my baseline being wrong**, not the
+model. The baseline was written from tagger descriptions; the images say:
+- Norcross facade: no legible name anywhere → brand signage **false** (I had true)
+- Norcross stadium: "NORCROSS BLUE DEVIL STADIUM" reads clearly → **true**
+  (I had false). This one matters: corrected, the stadium is now **excluded
+  from Seedance**, which is the right outcome — that sign would have been
+  redrawn.
+- Trader Joe's produce: price cards and a "Restroom" sign, no store name →
+  **false** (I had true)
+Signage agreement went 79% → **100%**. Verifying against the image is the only
+honest way to settle a labelling dispute; matching the model to keep a number
+happy would have been circular.
+
+**Measured, end to end, on the 14 real photos** (`pnpm --filter @percho/web
+curator-eval`, which now runs the whole plan):
+
+| acceptance | target | measured |
+|---|---|---|
+| first-parse success | ≥90% | **100%** |
+| `dominant_subject` agreement | ≥85% | **86%** |
+| `people_prominence` agreement | ≥85% | **93%** |
+| brand signage agreement | ≥85% | **100%** |
+| opener / closer | 1 / 1 | **1 / 1** |
+| film length | 45-50s | **45.0s** |
+| narration pace | 2.1-2.6 w/s | **2.23** |
+| lines longer than their clip | 0 | **0** |
+| AI disclosure on every Seedance clip | yes | **yes** |
+| school regex hits after VO Pass | 0 | **0** |
+
+The VO Pass now carries a sentence across a cut ("The Forum provides a walkable
+outdoor shopping experience," / "particularly in the evenings.") — the thing
+per-photo captions structurally cannot do.
+
+**Issues / risks**:
+- The photos step now costs a Curator call (~50s, 25 MB upload, cents) on every
+  run. `maxDuration` is already 300 on that route, so it fits, but it is no
+  longer a cheap step.
+- A photo outside the plan (the panel lists every community POI, the plan
+  covers the resolved ones) can still be generated by the row button; with no
+  annotation there is no prompt, so the seedance worker falls back to its
+  conservative default. Honest, but it is the one path that does not carry a
+  Guard-built prompt.
+- Migration `20260817210000` is still **not pushed**; the route now writes
+  `move`/`prompt`/`ai_generated`, so it must be applied before the photos step
+  runs against production.
+- `database.types.ts` still the stub (unchanged, still owed).
+
+**Learnings**:
+- The eval harness paid for itself three times: it found the adjacent-Seedance
+  move bug, the thinking-token failure, and my own bad prompt edit. None of
+  those were visible from unit tests over a fixture I wrote.
+- Gemini exposes TTS models on the same key (`gemini-3.1-flash-tts-preview`,
+  `gemini-2.5-flash-native-audio-*`). When the owner wants voice, it is not a
+  new vendor — worth knowing before Phase 4.
+
+**Next steps**: apply the migration, then exercise the pipeline end to end from
+the admin UI (photos → generate → assemble) and watch one finished tour.
+
+## 2026-08-17 23:40 UTC — Community tour orchestration, Phase 2 (Curator) + measured eval
+
+**Objective**: the LLM half of the annotation layer — one batch call that says
+what each photo IS, scored against the hand baseline from Phase 1.
+
+**Actions**:
+- `lib/poi/tour-orchestrator/curator.ts` — Prompt A verbatim (owner's spec text;
+  it is the contract the agreement numbers are measured against, so it is not
+  paraphrased), batch rendering, JSON-array extraction, one retry with the
+  parse failure appended, then the Phase 1 coercions.
+- `scripts/admin/curator-eval.ts` (+ `pnpm --filter @percho/web curator-eval`)
+  — downloads the 14 fixture photos, runs the batch, scores the three
+  Guard-critical fields against the baseline, and prints the resulting plan.
+- 10 new tests for the pure parts (prompt rendering, array extraction, unknown
+  id rejection, coercion pass-through, retry-worthy parse errors).
+- **Bug fixed, found by the eval**: two adjacent Seedance clips both came out
+  `pull_back`. The Seedance camera token was derived from the subject alone and
+  never went through the no-repeat rule the other engines use. Now it falls
+  back `camera_fixed` → `drift_in` → `pull_back`, ordered by how little each
+  assumes. The golden fixture never had two adjacent same-subject Seedance
+  clips, so nothing caught it — regression test added with four open_space
+  frames.
+
+**Transport decision — Files API, not inline base64**: the 14-photo batch is
+**25.5 MB** of JPEG, 34 MB base64, well past the ~20 MB inline ceiling. Photos
+are uploaded once and referenced by URI, so "one `generateContent` call for the
+batch" holds at any batch size. Splitting into several calls was rejected: the
+batch-level fields (one opener, one closer, wide→close pairing) are only
+meaningful with every photo in the same call.
+
+**Measured (2 runs, temperature 0, `gemini-3.1-flash-lite`, ~37s per batch)**:
+
+| acceptance | target | measured |
+|---|---|---|
+| whole batch, one call | — | 14/14 annotated, 0 missing, 0 invented ids |
+| first-parse success | ≥ 90% | **100%** (2/2) |
+| exactly one opener / closer | 1 / 1 | **1 / 1** |
+| `people_prominence` agreement | ≥ 85% | **93%** |
+| `dominant_subject` agreement | ≥ 85% | **79%** ✗ |
+| `has_readable_brand_signage` agreement | ≥ 85% | **79%** ✗ |
+
+Both runs produced **byte-identical** annotations, so the 7 disagreements are
+systematic — a definitional gap, not sampling noise. Retrying or re-prompting
+for variance would be wasted money.
+
+The 7, and which way they cut:
+1. trail-with-autumn — model `street_perspective`, baseline `nature` (receding
+   paved path; both readings defensible)
+2. The Forum exterior ×2 — model `street_perspective`, baseline
+   `building_facade` (open-air retail street; model arguably right)
+3. Norcross facade — model brand signage `true`, baseline `false` (school name
+   board: is an institution name "a brand"? — **over**-calling, which is the
+   safe direction: it forces a Ken Burns downgrade)
+4. Town Center panorama — model brand signage `true`, baseline `false` (retail
+   names legible in the plaza; also over-calling)
+5. Trader Joe's produce — model brand signage `false`, baseline `true`. The
+   **only under-call**, i.e. the only unsafe direction. Harmless in practice
+   here: `interior_close` is excluded from Seedance anyway.
+6. Town Green night — `midground` vs `background` people (judgment call)
+
+**Decision deferred to owner**: Prompt A is spec text. Both failing fields hinge
+on definitions the prompt leaves open — "is an institution name brand signage?"
+and "street_perspective vs building_facade when a retail street is the frame".
+Tuning the prompt to match a 14-photo baseline I wrote myself would be
+overfitting, and re-annotating the baseline to match the model would be
+circular. Owner arbitrates the 7 frames, then the prompt and the baseline get
+one edit each.
+
+**Merge with the existing bulk vision tagging — feasible, but only partly**:
+`vision-tagger.ts` runs per photo at approve time. Eight of the Curator's
+fields are per-photo and could move there at zero extra orchestration cost:
+`has_natural_motion`, `motion_hint`, `dominant_subject`, `has_visible_people`,
+`people_prominence`, `has_readable_brand_signage`, `has_rigid_geometry`,
+`time_of_day`. Five cannot: `narrative_role` (opener/closer are batch-unique),
+`poi_pair_with` / `pair_role` (a pair only exists relative to other photos in
+the batch), `emotional_weight` (a ranking, only comparable within a batch), and
+`vo_line` (needs the tour's context). Recommended shape: extend the ingest
+tagger with the eight, leaving the tour-time call **text-only** over the
+already-tagged photos — no image upload, no Files API, a fraction of the cost
+and latency. Not done in this branch: it changes the ingest schema and needs a
+re-tag of the existing photos.
+
+**Verification**: `pnpm web:typecheck` clean. `pnpm web:test` **331 passed / 31
+files**. Two real Curator runs against production photos (Gemini spend: cents).
+
+**Next steps**: (1) owner arbitrates the 7 disagreements; (2) Phase 3 — VO Pass
+(text + word-rate check only; film stays BGM-scored) and wiring the plan into
+`computeFinalShots` / `photo_clips`.
+
+## 2026-08-17 22:30 UTC — Community tour orchestration layer, Phase 1 (Scheduler + Guard)
+
+**Objective**: land the deterministic half of the owner's four-layer
+orchestration spec (Curator / Scheduler / Guard / VO Pass) — turning "a set of
+approved photos → a community tour shot list" from per-category hardcoding into
+a reproducible pipeline. Phase 1 is the pure code only; the Curator LLM (Phase
+2) and the VO Pass (Phase 3) are not in this branch.
+
+**What the spec assumed vs what the code actually was** (checked before writing
+anything — three of the five assumptions were wrong):
+- "current rule: overflow > 20% → Ken Burns" — that constant
+  (`PARALLAX_MAX_OVERFLOW = 0.20`, `scripts/ken-burns/depthflow_modes.py:90`)
+  only fires under `--engine mixed`, which is the **listing** path. Community
+  tour engines were assigned in TS by photo category
+  (`step/route.ts` `computeFinalShots`), never through `pick_engines`. So the
+  0.20-vs-0.55 conflict needed **no global change**: 0.55 lives in the new
+  9:16 Scheduler, 0.20 stays on the listing canvas. The threshold is a function
+  of the canvas, which is why "just fix the threshold" would have been wrong
+  here — there are two canvases.
+- moves were picked by the render worker from `hash(photo_id)` over 9 Ken Burns
+  modes (`worker.py:1543`); the 8 DepthFlow moves were unreachable and nothing
+  was persisted.
+- the Seedance prompt was **one hardcoded string** for every clip
+  (`seedance-worker/worker.ts:322`), containing the word `cinematic` — which
+  the spec bans precisely because it binds to a dolly-in. That is the direct
+  cause of "every clip zooms in".
+
+**Actions**:
+- New pure module `apps/web/lib/poi/tour-orchestrator/`:
+  - `types.ts` — Curator output contract (zod) + `ScheduledClip`.
+  - `annotations.ts` — coercion of untrusted LLM output. Out-of-range enums
+    land on the value that makes a photo **ineligible** for Seedance, never the
+    permissive one; >1 opener/closer demoted to establishing; one-sided pair
+    references nulled. Warnings, not retries.
+  - `scheduler.ts` — overflow, ordering (time → pinned opener/closer → pairs
+    kept adjacent wide-then-close → bucket run ≤ 2 clips), engine assignment
+    (Seedance ≤ 4 by emotional weight on eligible frames; DepthFlow quota 0.40
+    clamped to [1/3, 1/2] of the non-Seedance pool, ≥ 2), move rotation, and
+    duration.
+  - `guard.ts` — hard checks: brand-signage / foreground-people Seedance
+    downgrades, verbatim clause injection, school-language stripping, per-clip
+    AI-generation flag.
+  - `seedance-prompt.ts` — four-part template (scene / motion / camera /
+    constraints), banned-word assert, missing-clause throw.
+  - `school-language.ts` — the six frozen patterns, sentence-level stripping.
+  - `fixtures/peachtree-corners.ts` — the 14 real `poi_photos` rows (real ids,
+    real `width_px/height_px`, real tagger descriptions) with **hand-written**
+    annotations as the Curator baseline. Not model output; see §6.
+- Migration `20260817210000_photo_clips_move_prompt.sql`: `move`, `prompt`,
+  `ai_generated` on `photo_clips`. Both workers now consume them with a
+  fallback (`worker.py` `row["move"] or hash`, `seedance-worker`
+  `row.prompt ?? FALLBACK_CLIP_PROMPT`), so old rows keep rendering. The
+  fallback prompt was rewritten to drop `cinematic` and to assume **no people
+  may be generated** when there is no annotation.
+- 54 new tests (4 files). Full suite **321 passed / 30 files** (was 267/26).
+
+**Decisions** (owner, this session):
+- *Seedance duration floor 4.0s.* The provider clamps anything shorter
+  (`Math.min(Math.max(round(d),4),15)`), so a planned 3.5s Seedance clip was a
+  lie in the shot list. The Scheduler now floors Seedance at 4.0 instead of
+  trimming in assemble. Durations stay in [2.0, 4.5] overall.
+- *Migration now, not at wiring time.* Columns exist and are consumed, so the
+  Phase 3 wiring is a write, not a schema change.
+- *Curator goes through the existing direct Google Gemini API*, not the
+  LiteLLM :4000 proxy the spec names — there is no LiteLLM in this repo, and
+  adding one is a new service dependency (CLAUDE.md §8). `vision-tagger.ts`
+  already talks to `generativelanguage.googleapis.com` with
+  `gemini-3.1-flash-lite`.
+- *Music now, TTS later.* Nothing in the repo does TTS. The assemble step
+  already muxes a warm-acoustic BGM track (`worker.py:1768`), so the VO Pass
+  will produce **text plus a word-rate check** and the film stays BGM-scored
+  until a TTS provider is chosen.
+- *`vo_line` deliberately NOT a `photo_clips` column.* That table is a global
+  per-photo cache reused across communities; narration belongs to one tour's
+  shot list (`tour_assemblies.ordered_clips`).
+
+**Issues**:
+- The golden fixture emits exactly one warning, and it is correct, not a bug:
+  Seedance takes one of the four low-overflow portraits, leaving 3 photos under
+  0.55 in a pool of 10 whose 1/3 floor is 4. The quota is the hard constraint
+  and the threshold the preference, so a 4th DepthFlow is taken over threshold
+  **with a warning**. This contradicts the spec's §4.2 prediction that the
+  fallback "won't be triggered" — it triggers by one clip.
+- Guard's downgrade rules are unreachable through the Scheduler (which already
+  excludes those photos from the Seedance candidate set). They are tested by
+  handing the Guard a clip with `engine: 'seedance'` directly — the admin
+  override / hand-edited plan path, which is the only way they fire in
+  production.
+- `pnpm web:lint` remains red repo-wide (pre-existing, 185 errors). The new
+  module is clean apart from 50 `noNonNullAssertion` **warnings**, which is the
+  house style under `noUncheckedIndexedAccess`.
+- `database.types.ts` is still the 16-line stub, so §5's "regenerate types
+  after a migration" was again not done — a real regen cascades typecheck
+  failures across code relying on the permissive stub. Still owed.
+
+**Verification**: `pnpm web:typecheck` clean. `pnpm web:test` **321 passed**.
+`python3 -m py_compile scripts/render-worker/worker.py` clean.
+Migration **not** pushed to the remote yet — the plan is not wired into the
+pipeline, so nothing depends on it in prod, and the push is the owner's call.
+
+**Learnings**:
+- Read the constant before trusting a spec's description of it. "Change 0.20 to
+  0.55" would have silently retuned every listing video on a canvas where 0.20
+  is the right number.
+- The four-layer split earns its keep at test time: because the Scheduler is
+  pure, "same input, 100 runs, identical output" is a one-line test, and every
+  compliance rule is assertable without a model in the loop.
+
+**Next steps**: (1) owner reviews the golden plan output (45.5s total, 4
+Seedance / 4 DepthFlow / 6 Ken Burns) against the human baseline in §10 of the
+spec; (2) Phase 2 — Curator, ideally merged into the existing bulk vision
+tagging so annotation costs nothing extra at orchestration time; (3) Phase 3 —
+VO Pass + wiring the plan into `computeFinalShots` and `photo_clips`.
+
 ## 2026-08-17 20:00 UTC — Community tour final assemble + migration push channel fix
 
 **Objective**: land the community-tour final assemble work (photos + clips

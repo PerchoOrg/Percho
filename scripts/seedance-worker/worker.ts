@@ -264,7 +264,21 @@ type PhotoClipRow = {
   polling_url: string | null;
   storage_path: string | null;
   updated_at: string;
+  /** Built by the tour Guard, mandatory clauses included. Null on old rows. */
+  prompt: string | null;
 };
+
+/**
+ * Used only when a row predates the orchestrator (2026-08-17) and carries no
+ * prompt of its own. It says nothing about who is in the frame because nothing
+ * here knows: with no annotation, the safe assumption is that no person may be
+ * generated. It also avoids fast / cinematic / epic / dramatic / dynamic —
+ * those bind tightly to a dolly-in and are why every clip used to zoom in.
+ */
+const FALLBACK_CLIP_PROMPT =
+  'The scene animates only where it naturally moves; everything else stays completely still. ' +
+  'Camera drifts forward very slowly and smoothly. ' +
+  'No people appear in the frame. Storefront signage stays unchanged.';
 
 async function processPhotoClips(): Promise<void> {
   // MONEY GUARD (owner 2026-08-17): photo_clips now carries depthflow/kenburns
@@ -319,7 +333,9 @@ async function processPhotoClips(): Promise<void> {
 
         // Single photo → first-frame control (no inter-frame geometry risk).
         const job = await submitVideo({
-          prompt: 'A slow, cinematic push-in on this scene. Warm natural light. No text, no people in close-up.',
+          // The prompt is built by the tour Guard (four fixed parts, verbatim
+          // mandatory clauses) — this worker never composes or edits one.
+          prompt: row.prompt?.trim() || FALLBACK_CLIP_PROMPT,
           frameImageUrls: [`${publicBase}/${photo.storage_path}`],
           durationS: Math.min(Math.max(Math.round(row.duration_s ?? 4), 4), 15),
           aspectRatio: AI_VIDEO_ASPECT,

@@ -15,11 +15,12 @@
  *                all be ready first).
  */
 
-import { requireAdmin } from '@/lib/auth/require-admin';
-import { createServiceClient } from '@/lib/supabase/server';
-import { NextResponse } from 'next/server';
 import { buildResearchPrompt } from '@/lib/ai/community-tour-prompt';
+import { requireAdmin } from '@/lib/auth/require-admin';
+import type { TourPlanPhoto } from '@/lib/poi/tour-orchestrator/plan';
+import { createServiceClient } from '@/lib/supabase/server';
 import { extractJsonObject } from '@/lib/utils/extract-json';
+import { NextResponse } from 'next/server';
 
 export const runtime = 'nodejs';
 // Tag loops Gemini per photo (~3s each); 50 photos = 150s+ > default 60s.
@@ -66,14 +67,25 @@ async function saveStep(sb: any, run: RunRow, step: string, result: unknown) {
 
 // ─── step: research (Gemini grounding, runs on Vercel) ─────────────────────
 
-const GEMINI_API_BASE =
-  'https://generativelanguage.googleapis.com/v1beta/models';
+const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
 
 async function geminiResearch(opts: {
-  community: { name: string; city: string | null; state: string | null; zip: string | null; lat: number | null; lng: number | null };
+  community: {
+    name: string;
+    city: string | null;
+    state: string | null;
+    zip: string | null;
+    lat: number | null;
+    lng: number | null;
+  };
   runId: string;
   sb: any;
-}): Promise<{ ok: boolean; text: string; error?: string; usage?: { input_tokens?: number; output_tokens?: number } }> {
+}): Promise<{
+  ok: boolean;
+  text: string;
+  error?: string;
+  usage?: { input_tokens?: number; output_tokens?: number };
+}> {
   const model = process.env.GEMINI_MODEL ?? 'gemini-3.5-flash-lite';
   const key = process.env.GEMINI_API_KEY;
   if (!key) return { ok: false, text: '', error: 'GEMINI_API_KEY not set' };
@@ -179,7 +191,10 @@ function parseResearchJson(raw: string): { narrative_angle?: string; pois?: unkn
   }
 }
 
-async function runResearch(sb: any, run: RunRow): Promise<{ ok: boolean; started: boolean; error?: string }> {
+async function runResearch(
+  sb: any,
+  run: RunRow,
+): Promise<{ ok: boolean; started: boolean; error?: string }> {
   // If a previous run already produced research, reuse it — agents cost money
   // and the admin can re-run explicitly by clearing the step.
   if (run.step_results.agent_research) {
@@ -300,7 +315,7 @@ async function runResolve(sb: any, run: RunRow) {
 
 async function runPhotos(sb: any, run: RunRow) {
   const resolve = run.step_results.resolve as
-    | { resolved?: Array<{ place_id: string }> }
+    | { resolved?: Array<{ place_id: string; bucket?: string }> }
     | undefined;
   if (!resolve?.resolved?.length) {
     return { error: 'no_resolved', message: 'Run the resolve step first.' };
@@ -310,6 +325,9 @@ async function runPhotos(sb: any, run: RunRow) {
   const results: Record<string, unknown> = {};
   const resolvedPoiIds: string[] = [];
   const fetchedPhotoIds: string[] = [];
+  // The resolve step already decided each POI's tour bucket; the Scheduler
+  // needs it to keep one bucket from running more than two clips in a row.
+  const bucketByPoiId = new Map<string, string>();
   for (const poi of resolve.resolved) {
     // Agent-discovered POIs may not be in nearby scope yet — upsert `pois` by
     // google_place_id and link to this community before fetching photos.
@@ -334,6 +352,7 @@ async function runPhotos(sb: any, run: RunRow) {
       poiId = inserted.id;
     }
     resolvedPoiIds.push(poiId!);
+    if (poi.bucket) bucketByPoiId.set(poiId!, poi.bucket);
     // Ensure community link (candidate status — admin reviews later).
     const { data: link } = await sb
       .from('community_pois')
@@ -406,7 +425,7 @@ async function runPhotos(sb: any, run: RunRow) {
   // Final shot list — owner 2026-08-17: selection (2/POI cap + engine/category
   // mapping + rejected/unusable drop) lives in the PHOTOS step, not assemble.
   // Assemble just enqueues this list. Computed AFTER tag so ai_tags exist.
-  const { shots, dropped } = await computeFinalShots(sb, resolvedPoiIds);
+  const { shots, dropped, plan } = await computeFinalShots(sb, resolvedPoiIds, bucketByPoiId);
 
   await saveStep(sb, run, 'photos', {
     results,
@@ -414,9 +433,10 @@ async function runPhotos(sb: any, run: RunRow) {
     auto_tag: taggedCount,
     shots,
     dropped,
+    plan,
   });
   await setRunStatus(sb, run.id, 'tagging');
-  return { ok: true, poiCount: Object.keys(results).length, shots: shots.length };
+  return { ok: true, poiCount: Object.keys(results).length, shots: shots.length, plan };
 }
 
 // ─── step: tag ──────────────────────────────────────────────────────────────
@@ -458,6 +478,24 @@ async function runTag(sb: any, run: RunRow) {
 
 // ─── step: generate ─────────────────────────────────────────────────────────
 
+/** One planned clip as the photos step persisted it. */
+interface PlannedShot {
+  photo_id: string;
+  poi_id: string;
+  poi_name: string;
+  engine: string;
+  move: string | null;
+  duration_s: number;
+  prompt: string | null;
+  ai_generated: boolean;
+}
+
+/** The shot list the photos step planned, or [] if it has not run. */
+function plannedShots(run: RunRow): PlannedShot[] {
+  const photos = run.step_results.photos as { shots?: PlannedShot[] } | undefined;
+  return Array.isArray(photos?.shots) ? photos.shots : [];
+}
+
 async function runGenerate(sb: any, run: RunRow, photoIds?: string[], engine?: string) {
   const resolve = run.step_results.resolve as
     | { resolved?: Array<{ place_id: string; bucket: string; name: string }> }
@@ -469,93 +507,65 @@ async function runGenerate(sb: any, run: RunRow, photoIds?: string[], engine?: s
   // covers the ~13 recommended). Falling through to the resolve-only path
   // silently did nothing for those photos (owner 2026-08-17: click no-op).
   if (photoIds && photoIds.length > 0) {
+    const forceEngine = engine === 'depthflow' || engine === 'kenburns' ? engine : null;
+    const planned = plannedShots(run);
+    const plannedById = new Map(planned.map((s) => [s.photo_id, s]));
+
+    // A photo the plan covers renders exactly as planned. A photo outside the
+    // plan can still be generated (the fetch-photo panel lists every community
+    // POI, the plan only covers the resolved ones) — but with no annotation
+    // there is no Seedance prompt, so it falls back to the worker's own
+    // conservative default.
     const { data: photos } = await sb
       .from('poi_photos')
-      .select('id, poi_id, ai_tags, ai_score, poi:pois!inner(display_name)')
+      .select('id, poi_id, ai_tags, poi:pois!inner(display_name)')
       .in('id', photoIds);
-    const { durationForCategory } = await import('@/lib/poi/community-tour');
-    const forceEngine = engine === 'depthflow' || engine === 'kenburns' ? engine : null;
-    // Owner 2026-08-17: tagger-unusable photos never enter the video pool.
     const selected = (photos ?? [])
       .filter((p: any) => ((p.ai_tags ?? {}) as { usable?: boolean }).usable !== false)
-      .map((p: any) => {
-      const tags = (p.ai_tags ?? {}) as {
-        primary_category?: string;
-        usable?: boolean;
-        has_prominent_text?: boolean;
-      };
-      return {
-        photo_id: p.id,
-        poi_id: p.poi_id,
-        poi_name: p.poi?.display_name ?? '',
-        category: tags.primary_category ?? 'other',
-        duration_s: durationForCategory(tags.primary_category ?? 'other'),
-        engine: forceEngine ?? (tags.has_prominent_text ? 'depthflow' : 'seedance'),
-        bucket: 'other',
-      };
-    });
+      .map((p: any): PlannedShot => {
+        const shot = plannedById.get(p.id);
+        if (shot) {
+          return forceEngine && forceEngine !== shot.engine
+            ? { ...shot, engine: forceEngine, move: null, prompt: null, ai_generated: false }
+            : shot;
+        }
+        return {
+          photo_id: p.id,
+          poi_id: p.poi_id,
+          poi_name: p.poi?.display_name ?? '',
+          engine: forceEngine ?? 'seedance',
+          move: null,
+          duration_s: forceEngine ? 3.0 : 4.0,
+          prompt: null,
+          ai_generated: !forceEngine,
+        };
+      });
     return enqueueClips(sb, run, selected, forceEngine);
   }
 
   if (!resolve?.resolved?.length)
     return { error: 'no_resolved', message: 'Run the resolve step first.' };
 
-  // Pull photos for the resolved POIs, build photo_clips rows where missing.
-  const placeIds = resolve.resolved.map((r) => r.place_id);
-  const { data: pois } = await sb
-    .from('pois')
-    .select('id, google_place_id')
-    .in('google_place_id', placeIds);
-  const poiByPlace = new Map(
-    (pois ?? []).map((p: { id: string; google_place_id: string }) => [p.google_place_id, p.id]),
-  );
-  const poiIds = [...poiByPlace.values()];
-
-  const { data: photos } = await sb
-    .from('poi_photos')
-    .select('id, poi_id, ai_tags, ai_score')
-    .in('poi_id', poiIds);
-
-  // Shot list from tags
-  const { buildShotList } = await import('@/lib/poi/community-tour');
-  const byPoi = new Map(resolve.resolved.map((r) => [r.place_id, r]));
-
-  const inputs: Array<{
-    photo_id: string;
-    poi_id: string;
-    poi_name: string;
-    category: string;
-    usable: boolean;
-    has_prominent_text: boolean;
-    ai_score: number;
-    bucket: string;
-  }> = [];
-  for (const photo of photos ?? []) {
-    const poi = resolve.resolved.find((r) => poiByPlace.get(r.place_id) === photo.poi_id);
-    const tags = (photo.ai_tags ?? {}) as {
-      primary_category?: string;
-      usable?: boolean;
-      has_prominent_text?: boolean;
+  // The plan is the shot list (orchestration layer, 2026-08-17). Generate no
+  // longer re-derives engines from categories — it enqueues what the photos
+  // step planned, so what renders is what review approved.
+  const planned = plannedShots(run);
+  if (planned.length === 0) {
+    return {
+      error: 'no_plan',
+      message: 'No planned shots — run the photos step first (it builds the shot list).',
     };
-    inputs.push({
-      photo_id: photo.id,
-      poi_id: photo.poi_id,
-      poi_name: poi?.name ?? '',
-      category: tags.primary_category ?? 'other',
-      usable: tags.usable !== false,
-      has_prominent_text: !!tags.has_prominent_text,
-      ai_score: Number(photo.ai_score ?? 0.5),
-      bucket: poi?.bucket ?? 'other',
-    });
   }
-  const shots = buildShotList(inputs);
-  // Single-photo generate (row button): keep only that photo's shot.
-  const selected =
-    photoIds && photoIds.length > 0 ? shots.filter((s) => photoIds.includes(s.photo_id)) : shots;
-  // Engine override: the row button on the DA+KB column requests depthflow/kenburns;
-  // the seedance column requests seedance (the shot list default).
   const forceEngine = engine === 'depthflow' || engine === 'kenburns' ? engine : null;
-  const shotsWithEngine = forceEngine ? selected.map((s) => ({ ...s, engine: forceEngine })) : selected;
+  const shotsWithEngine = forceEngine
+    ? planned.map((s) => ({
+        ...s,
+        engine: forceEngine,
+        prompt: null,
+        ai_generated: false,
+        move: null,
+      }))
+    : planned;
 
   // Enqueue missing photo_clips — but a FAILED row is dead (expired TTL,
   // provider rejection); reset it to pending so the worker picks it up again
@@ -569,7 +579,14 @@ async function runGenerate(sb: any, run: RunRow, photoIds?: string[], engine?: s
 async function enqueueClips(
   sb: any,
   run: RunRow,
-  shotsWithEngine: Array<{ photo_id: string; engine: string; duration_s: number }>,
+  shotsWithEngine: Array<{
+    photo_id: string;
+    engine: string;
+    duration_s: number;
+    move?: string | null;
+    prompt?: string | null;
+    ai_generated?: boolean;
+  }>,
   forceEngine?: string | null,
 ) {
   const existing = await sb
@@ -592,9 +609,32 @@ async function enqueueClips(
         photo_id: s.photo_id,
         engine: s.engine,
         duration_s: s.duration_s,
+        // The plan's decisions travel with the row: the render worker takes the
+        // move and the seedance worker takes the prompt instead of each
+        // improvising one (migration 20260817210000).
+        move: s.move ?? null,
+        prompt: s.prompt ?? null,
+        ai_generated: s.ai_generated ?? false,
         status: 'pending',
       })),
     );
+  }
+  // Rows that already exist keep their id but must follow the current plan —
+  // a re-plan that changed the move or the prompt has to reach the worker.
+  for (const s of shotsWithEngine) {
+    if (!have.has(`${s.photo_id}:${s.engine}`)) continue;
+    if (have.get(`${s.photo_id}:${s.engine}`) === 'processing') continue;
+    await sb
+      .from('photo_clips')
+      .update({
+        duration_s: s.duration_s,
+        move: s.move ?? null,
+        prompt: s.prompt ?? null,
+        ai_generated: s.ai_generated ?? false,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('photo_id', s.photo_id)
+      .eq('engine', s.engine);
   }
   // Failed rows: reset to pending (re-generate). Leave ready/processing alone.
   const failedIds = shotsWithEngine
@@ -626,9 +666,7 @@ async function enqueueClips(
 // so the whole table can be re-rendered with current code in one click.
 
 async function runRegenerateAll(sb: any, run: RunRow) {
-  const photos = run.step_results.photos as
-    | { resolved_poi_ids?: string[] }
-    | undefined;
+  const photos = run.step_results.photos as { resolved_poi_ids?: string[] } | undefined;
   const poiIds = photos?.resolved_poi_ids ?? [];
   if (poiIds.length === 0) {
     return { error: 'no_photos', message: 'Run the photos step first.' };
@@ -638,7 +676,10 @@ async function runRegenerateAll(sb: any, run: RunRow) {
     .from('poi_photos')
     .select('id, ai_tags, ai_score, poi_id, created_at, poi:pois!inner(display_name)')
     .in('poi_id', poiIds);
-  const { durationForCategory } = await import('@/lib/poi/community-tour');
+  // The plan already assigned depthflow vs kenburns per photo; this button
+  // re-renders the LOCAL half of it, so it follows the plan rather than
+  // flattening everything to kenburns the way it used to.
+  const plannedById = new Map(plannedShots(run).map((s) => [s.photo_id, s]));
 
   // Selected Photos panel trim (gotcha 46): newest 3 per POI + any photo with
   // a READY clip. Matches loadNearbyPhotos / computeFinalShots so the bulk
@@ -646,11 +687,12 @@ async function runRegenerateAll(sb: any, run: RunRow) {
   const { data: clipRows } = await sb
     .from('photo_clips')
     .select('photo_id, status')
-    .in('photo_id', (photoRows ?? []).map((p: any) => p.id));
+    .in(
+      'photo_id',
+      (photoRows ?? []).map((p: any) => p.id),
+    );
   const readyIds = new Set(
-    (clipRows ?? [])
-      .filter((r: any) => r.status === 'ready')
-      .map((r: any) => r.photo_id),
+    (clipRows ?? []).filter((r: any) => r.status === 'ready').map((r: any) => r.photo_id),
   );
   const byPoi = new Map<string, typeof photoRows>();
   for (const p of photoRows ?? []) {
@@ -659,9 +701,8 @@ async function runRegenerateAll(sb: any, run: RunRow) {
   }
   const kept: any[] = [];
   for (const list of byPoi.values()) {
-    list.sort(
-      (a: any, b: any) =>
-        String(b.created_at ?? '').localeCompare(String(a.created_at ?? '')),
+    list.sort((a: any, b: any) =>
+      String(b.created_at ?? '').localeCompare(String(a.created_at ?? '')),
     );
     const top = list.slice(0, 3);
     kept.push(...top.filter((p: any) => readyIds.has(p.id) || top.includes(p)));
@@ -671,15 +712,18 @@ async function runRegenerateAll(sb: any, run: RunRow) {
   const selected = kept
     .filter((p: any) => ((p.ai_tags ?? {}) as { usable?: boolean }).usable !== false)
     .map((p: any) => {
-      const tags = (p.ai_tags ?? {}) as { primary_category?: string };
+      const shot = plannedById.get(p.id);
+      // Off-plan photos, and the Seedance half of the plan, still render
+      // locally here — that is what this button is for — but as Ken Burns,
+      // whose move the worker can derive on its own.
+      const local = shot && shot.engine === 'depthflow' ? 'depthflow' : 'kenburns';
       return {
         photo_id: p.id,
         poi_id: p.poi_id,
         poi_name: p.poi?.display_name ?? '',
-        category: tags.primary_category ?? 'other',
-        duration_s: durationForCategory(tags.primary_category ?? 'other'),
-        engine: 'kenburns',
-        bucket: 'other',
+        duration_s: shot?.duration_s ?? 3.0,
+        engine: local,
+        move: shot && shot.engine === local ? shot.move : null,
       };
     });
 
@@ -709,15 +753,25 @@ async function runRegenerateAll(sb: any, run: RunRow) {
         photo_id: s.photo_id,
         engine: s.engine,
         duration_s: s.duration_s,
+        move: s.move ?? null,
         status: 'pending',
       })),
     );
+  }
+  // Existing rows get the planned move too — otherwise a re-render repeats the
+  // old hash-picked one.
+  for (const s of selected) {
+    if (!s.move) continue;
+    await sb
+      .from('photo_clips')
+      .update({ move: s.move, duration_s: s.duration_s, updated_at: new Date().toISOString() })
+      .eq('photo_id', s.photo_id)
+      .eq('engine', s.engine);
   }
 
   await saveStep(sb, run, 'regenerate_all', {
     reset: photoIds.length,
     created: toCreate.length,
-    engine: 'kenburns',
   });
   await setRunStatus(sb, run.id, 'generating');
   return { reset: photoIds.length, created: toCreate.length };
@@ -735,11 +789,12 @@ async function runRegenerateAll(sb: any, run: RunRow) {
 async function computeFinalShots(
   sb: any,
   poiIds: string[],
-): Promise<{ shots: unknown[]; dropped: unknown[] }> {
+  buckets?: Map<string, string>,
+): Promise<{ shots: unknown[]; dropped: unknown[]; plan: unknown }> {
   const { data: photosRaw } = (await sb
     .from('poi_photos')
     .select(
-      'id, poi_id, status, ai_tags, ai_score, storage_path, enhanced_path, enhanced_status, created_at',
+      'id, poi_id, status, ai_tags, ai_score, storage_path, enhanced_path, enhanced_status, created_at, width_px, height_px',
     )
     .in('poi_id', poiIds)
     .order('created_at', { ascending: false, nullsFirst: false })) as {
@@ -753,6 +808,8 @@ async function computeFinalShots(
       enhanced_path: string | null;
       enhanced_status: string | null;
       created_at: string | null;
+      width_px: number | null;
+      height_px: number | null;
     }> | null;
   };
 
@@ -803,30 +860,27 @@ async function computeFinalShots(
 
   const { data: poiRows } = (await sb
     .from('pois')
-    .select('id, display_name')
+    .select('id, display_name, primary_type')
     .in('id', poiIds)) as {
-    data: Array<{ id: string; display_name: string | null }> | null;
+    data: Array<{ id: string; display_name: string | null; primary_type: string | null }> | null;
   };
   const poiName = new Map((poiRows ?? []).map((p) => [p.id, p.display_name ?? '']));
+  const { PLACES_TYPE_TO_BUCKET } = await import('@/lib/poi/google-places');
+  const poiBucket = new Map(
+    (poiRows ?? []).map((p) => [
+      p.id,
+      // The resolve step's bucket is the accurate one; primary_type is the
+      // fallback for POIs the agent upserted with nothing but a place_id.
+      buckets?.get(p.id) ??
+        (p.primary_type ? (PLACES_TYPE_TO_BUCKET[p.primary_type] ?? 'other') : 'other'),
+    ]),
+  );
 
-  const shots: Array<{
-    photo_id: string;
-    poi_id: string;
-    poi_name: string;
-    category: string;
-    engine: string;
-    duration_s: number;
-  }> = [];
-
-  const { durationForCategory } = await import('@/lib/poi/community-tour');
-
+  // Photos the tagger or the reviewer already rejected never reach the Curator
+  // — no point paying to annotate a frame that cannot be used.
+  const usable: typeof photos = [];
   for (const p of photos ?? []) {
-    const tags = (p.ai_tags ?? {}) as {
-      primary_category?: string;
-      usable?: boolean;
-      has_prominent_text?: boolean;
-    };
-    const category = tags.primary_category ?? 'other';
+    const tags = (p.ai_tags ?? {}) as { usable?: boolean };
     const rejectedByUser = p.status === 'rejected';
     const rejectedByTagger = tags.usable === false;
     if (rejectedByUser || rejectedByTagger) {
@@ -837,62 +891,73 @@ async function computeFinalShots(
       });
       continue;
     }
-    // Engine: text-heavy → depthflow/kenburns; open clean scenes → seedance;
-    // everything else → kenburns (same routing as buildShotList).
-    const engine =
-      tags.has_prominent_text === true
-        ? 'depthflow'
-        : category === 'aerial' || category === 'landscape' || category === 'storefront'
-          ? 'seedance'
-          : 'kenburns';
-    shots.push({
+    usable.push(p);
+  }
+
+  // Orchestration layer (2026-08-17): the engine/move/order/duration used to be
+  // a category lookup here. It is now Curator → Scheduler → Guard → VO Pass,
+  // which is the only place those decisions live. See
+  // lib/poi/tour-orchestrator/. The ORIGINAL file is sent for annotation, not
+  // the enhanced one: enhancement changes the light, and time_of_day is judged
+  // from the light.
+  const { buildTourPlan } = await import('@/lib/poi/tour-orchestrator/plan');
+  const planPhotos: TourPlanPhoto[] = [];
+  for (const p of usable) {
+    const widthPx = p.width_px ?? 0;
+    const heightPx = p.height_px ?? 0;
+    if (!p.storage_path || widthPx <= 0 || heightPx <= 0) {
+      dropped.push({
+        photo_id: p.id,
+        poi_id: p.poi_id,
+        reason: 'no stored file or no pixel dimensions',
+      });
+      continue;
+    }
+    const { data: blob, error: dlErr } = await sb.storage
+      .from('listing-photos')
+      .download(p.storage_path);
+    if (dlErr || !blob) {
+      dropped.push({ photo_id: p.id, poi_id: p.poi_id, reason: 'storage download failed' });
+      continue;
+    }
+    const tags = (p.ai_tags ?? {}) as { description?: string };
+    planPhotos.push({
       photo_id: p.id,
       poi_id: p.poi_id,
       poi_name: poiName.get(p.poi_id) ?? '',
-      category,
-      engine,
-      duration_s: durationForCategory(category),
+      bucket: poiBucket.get(p.poi_id) ?? 'other',
+      width_px: widthPx,
+      height_px: heightPx,
+      description: tags.description ?? '',
+      bytes: new Uint8Array(await blob.arrayBuffer()),
+      mime_type: 'image/jpeg',
     });
   }
 
-  // Natural narrative order (mirrors render-worker photo_selector narrative_sort):
-  // wide establishing shots open (aerial/landscape), then move indoors/activity,
-  // signage/other closes. Never two consecutive shots of the same POI when avoidable.
-  // Owner 2026-08-17: "clip的顺序要自然".
-  const NARRATIVE_ORDER: Record<string, number> = {
-    aerial: 10,
-    landscape: 20,
-    storefront: 30,
-    food: 40,
-    people: 50,
-    interior: 60,
-    detail: 70,
-    signage: 80,
-    other: 90,
-  };
-  shots.sort((a, b) => {
-    const ca = NARRATIVE_ORDER[a.category] ?? 90;
-    const cb = NARRATIVE_ORDER[b.category] ?? 90;
-    if (ca !== cb) return ca - cb;
-    // Same category: alternate POIs (spread same-POI pairs apart).
-    return a.poi_id < b.poi_id ? -1 : a.poi_id > b.poi_id ? 1 : 0;
-  });
-  // De-dup consecutive same-POI (only two per POI, so a simple adjacent swap
-  // covers the common case; category grouping already breaks most runs).
-  for (let i = 1; i < shots.length; i++) {
-    if (shots[i]!.poi_id === shots[i - 1]!.poi_id && i + 1 < shots.length) {
-      let j = i + 1;
-      while (j < shots.length && shots[j]!.poi_id === shots[i]!.poi_id) j++;
-      if (j < shots.length) {
-        [shots[i], shots[j]] = [shots[j]!, shots[i]!];
-      }
-    }
-  }
-  shots.forEach((s, i) => {
-    (s as { sort_order?: number }).sort_order = i;
-  });
+  if (planPhotos.length === 0) return { shots: [], dropped, plan: null };
 
-  return { shots, dropped };
+  const plan = await buildTourPlan(planPhotos);
+  for (const id of plan.curator.missing) {
+    const photo = planPhotos.find((p) => p.photo_id === id);
+    dropped.push({
+      photo_id: id,
+      poi_id: photo?.poi_id ?? '',
+      reason: 'curator returned no annotation',
+    });
+  }
+
+  return {
+    shots: plan.shots,
+    dropped,
+    // Everything review needs to judge the plan, persisted next to it.
+    plan: {
+      warnings: plan.warnings,
+      violations: plan.violations,
+      narration: plan.narration,
+      curator: plan.curator,
+      vo: plan.vo,
+    },
+  };
 }
 
 async function runAssemble(
@@ -937,7 +1002,13 @@ async function runAssemble(
 
 const STEP_HANDLERS: Record<
   string,
-  (sb: any, run: RunRow, photoIds?: string[], engine?: string, approve?: boolean) => Promise<unknown>
+  (
+    sb: any,
+    run: RunRow,
+    photoIds?: string[],
+    engine?: string,
+    approve?: boolean,
+  ) => Promise<unknown>
 > = {
   research: runResearch,
   resolve: runResolve,
