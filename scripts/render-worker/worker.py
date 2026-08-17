@@ -954,7 +954,7 @@ def process_bucket_job(job: dict[str, Any]) -> None:
         photo_rows = sb_get(
             "poi_photos",
             {
-                "select": "id,storage_path,poi_id,enhanced_path,enhanced_status,"
+                "select": "id,storage_path,poi_id,enhanced_path,enhanced_status,ai_tags,"
                           "pois!inner(display_name,primary_type,types)",
                 "id": f"in.({id_list})",
             },
@@ -988,6 +988,21 @@ def process_bucket_job(job: dict[str, Any]) -> None:
         if missing:
             raise RuntimeError(
                 f"{len(missing)} input photo ids not found in poi_photos: {missing[:3]}"
+            )
+        # Owner 2026-08-17: tagger-unusable photos never enter the video pool.
+        # Belt-and-braces: generated_videos.input_photo_ids was curated before
+        # insert, but a stale job (enqueued pre-filter) must not render unusable
+        # frames either.
+        unusable = [
+            pid
+            for pid in input_photo_ids
+            if (
+                (by_id[pid].get("ai_tags") or {}).get("usable") is False
+            )
+        ]
+        if unusable:
+            raise RuntimeError(
+                f"{len(unusable)} unusable photos in job: {unusable[:3]}"
             )
 
         # 2. Download in the exact order the server action selected them.

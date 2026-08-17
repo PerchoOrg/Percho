@@ -309,6 +309,7 @@ async function runPhotos(sb: any, run: RunRow) {
   const { fetchPhotosForCommunityPoi } = await import('@/lib/poi/community-actions');
   const results: Record<string, unknown> = {};
   const resolvedPoiIds: string[] = [];
+  const fetchedPhotoIds: string[] = [];
   for (const poi of resolve.resolved) {
     // Agent-discovered POIs may not be in nearby scope yet — upsert `pois` by
     // google_place_id and link to this community before fetching photos.
@@ -350,7 +351,38 @@ async function runPhotos(sb: any, run: RunRow) {
     }
     const r = await fetchPhotosForCommunityPoi(run.community_id, poiId!, { max: 3 });
     results[poi.place_id] = r;
+    if ((r as { fetched?: number }).fetched) {
+      const { data: rows } = await sb
+        .from('poi_photos')
+        .select('id')
+        .eq('poi_id', poiId!)
+        .order('created_at', { ascending: false })
+        .limit(3);
+      fetchedPhotoIds.push(...(rows ?? []).map((row: { id: string }) => row.id));
+    }
   }
+
+  // Auto-enhance the panel's photos (owner 2026-08-17): the enhance QUEUE is
+  // poi_photos.enhanced_status itself — render-worker claims `queued` rows.
+  // Set to queued unless already enhanced (ready/approved/rejected = keep
+  // whatever exists; failed = retry once). Thumbnails + clips then pick up
+  // the enhanced file automatically (approved → enhanced_path).
+  if (fetchedPhotoIds.length > 0) {
+    const { data: existing } = await sb
+      .from('poi_photos')
+      .select('id, enhanced_status')
+      .in('id', fetchedPhotoIds)
+      .in('enhanced_status', ['ready', 'approved', 'rejected']);
+    const keep = new Set((existing ?? []).map((r: { id: string }) => r.id));
+    const toEnhance = fetchedPhotoIds.filter((id) => !keep.has(id));
+    if (toEnhance.length > 0) {
+      await sb
+        .from('poi_photos')
+        .update({ enhanced_status: 'queued', enhanced_error: null })
+        .in('id', toEnhance);
+    }
+  }
+
   await saveStep(sb, run, 'photos', { results, resolved_poi_ids: resolvedPoiIds });
   await setRunStatus(sb, run.id, 'tagging');
   return { ok: true, poiCount: Object.keys(results).length };
@@ -412,7 +444,10 @@ async function runGenerate(sb: any, run: RunRow, photoIds?: string[], engine?: s
       .in('id', photoIds);
     const { durationForCategory } = await import('@/lib/poi/community-tour');
     const forceEngine = engine === 'depthflow' || engine === 'kenburns' ? engine : null;
-    const selected = (photos ?? []).map((p: any) => {
+    // Owner 2026-08-17: tagger-unusable photos never enter the video pool.
+    const selected = (photos ?? [])
+      .filter((p: any) => ((p.ai_tags ?? {}) as { usable?: boolean }).usable !== false)
+      .map((p: any) => {
       const tags = (p.ai_tags ?? {}) as {
         primary_category?: string;
         usable?: boolean;

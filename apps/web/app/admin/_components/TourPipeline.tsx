@@ -1,22 +1,24 @@
 'use client';
 
 /**
- * TourPipeline — 8-panel Community Tour pipeline admin (owner 2026-08-15).
+ * TourPipeline — Community Tour pipeline admin (owner 2026-08-15).
  *
  * Each step runs via POST /api/admin/community-tour/[id]/runs/[runId]/step,
  * output persists in community_tour_runs.step_results. Every panel shows its
- * step result; "Run all" chains steps in order. Steps that need no prior
- * data (research) start immediately; dependent steps return a clear message
- * until their prerequisite ran.
+ * step result; "Run all" chains steps in execution order. Steps that need no
+ * prior data (research) start immediately; dependent steps return a clear
+ * message until their prerequisite ran.
  *
- * Steps:
+ * Panels (display order, owner 2026-08-17; all start collapsed):
  *   1 community info    (DB read — always available)
- *   2 agent research    (Gemini grounding — inline, Vercel)
- *   3 resolve+merge     (Google firewall)
- *   4 <4 survivors      (widen hook — shown when resolve < 4)
- *   5 photos            (3 per POI — tag, shot list & clip generation live
- *                        in the table below this panel; steps 6/7 merged there)
+ *   2 Photo Management  (photos — auto-enhance, tag, shot list & clip
+ *                        generation live in the table below; steps 6/7 merged)
+ *   3 agent research    (Gemini grounding — inline, Vercel)
+ *   4 resolve+merge     (Google firewall)
  *   8 assemble          (ffmpeg concat — wire after clips ready)
+ *
+ * Run-all execution order is independent of display order (RUN_ORDER):
+ * research → resolve → photos → assemble.
  */
 
 import { CheckCircle2, ChevronDown, ChevronRight, Loader2, Play, RefreshCw, Sparkles } from 'lucide-react';
@@ -27,15 +29,16 @@ import { PhotoTable, type PhotoRow } from './PhotoTable';
 type StepName = 'research' | 'resolve' | 'photos' | 'tag' | 'generate' | 'assemble';
 
 const STEPS: Array<{ name: StepName; label: string; desc: string }> = [
-  { name: 'research', label: '2 · Agent Research', desc: 'Gemini grounding' },
-  { name: 'resolve', label: '3 · Resolve & Merge', desc: 'Google Places firewall' },
-  {
-    name: 'photos',
-    label: '5 · Fetch Photos',
-    desc: '3 per POI — tag, shot list & clips managed in table below',
-  },
+  { name: 'photos', label: '2 · Photo Management', desc: '3 per POI — auto-enhance, tag, shot list & clips managed in table below' },
+  { name: 'research', label: '3 · Agent Research', desc: 'Gemini grounding' },
+  { name: 'resolve', label: '4 · Resolve & Merge', desc: 'Google Places firewall' },
   { name: 'assemble', label: '8 · Assemble', desc: 'ffmpeg concat' },
 ];
+
+// Execution order for "Run all" — display order (STEPS) is owner-chosen for
+// the panel layout, but the pipeline dependencies stay research → resolve →
+// photos → assemble (photos needs resolve's place_ids).
+const RUN_ORDER: StepName[] = ['research', 'resolve', 'photos', 'assemble'];
 
 interface Run {
   id: string;
@@ -72,6 +75,9 @@ export function TourPipeline({
   const [selectedRun, setSelectedRun] = useState<string | null>(null);
   const [running, setRunning] = useState<StepName | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // All panels start collapsed (owner 2026-08-17). Keys mirror the section
+  // names: 'info' + each STEPS entry; unknown keys (e.g. a legacy step not in
+  // STEPS) default to collapsed via the `?? true` fallback in the render.
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
 
   const loadRuns = useCallback(async () => {
@@ -139,7 +145,8 @@ export function TourPipeline({
       setError('Could not create run');
       return;
     }
-    for (const s of STEPS) {
+    for (const name of RUN_ORDER) {
+      const s = STEPS.find((x) => x.name === name)!;
       setRunning(s.name);
       setError(null);
       try {
@@ -312,13 +319,13 @@ export function TourPipeline({
           className="flex w-full items-center justify-between gap-3 text-left"
         >
           <h3 className="text-sm font-semibold">1 · Community Info</h3>
-          {collapsed.info ? (
+          {collapsed.info ?? true ? (
             <ChevronRight size={15} className="text-ink3" />
           ) : (
             <ChevronDown size={15} className="text-ink3" />
           )}
-        </button>
-        {!collapsed.info && (
+          </button>
+          {!(collapsed.info ?? true) && (
           <dl className="mt-2 grid grid-cols-2 gap-x-6 gap-y-1 text-xs sm:grid-cols-3">
             <div>
               <dt className="text-ink3">Name</dt>
@@ -382,7 +389,7 @@ export function TourPipeline({
                 onClick={() => setCollapsed((c) => ({ ...c, [s.name]: !c[s.name] }))}
                 className="flex items-center gap-1.5 text-left"
               >
-                {collapsed[s.name] ? (
+                {collapsed[s.name] ?? true ? (
                   <ChevronRight size={15} className="text-ink3" />
                 ) : (
                   <ChevronDown size={15} className="text-ink3" />
@@ -411,7 +418,7 @@ export function TourPipeline({
             </div>
             <p className="text-ink2 text-xs">{s.desc}</p>
 
-            {!collapsed[s.name] && (
+            {!(collapsed[s.name] ?? true) && (
               <>
                 {researching && (
                   <div className="mt-2 flex items-center gap-2 text-xs text-ink2">

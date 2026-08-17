@@ -28,7 +28,7 @@ import { tagPoiPhotoAction } from '@/lib/poi/admin-tag-action';
 import { projectTags, resolutionWarning } from '@/lib/poi/photo-tag-view';
 import { Check, Film, Sparkles, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 export interface PhotoRow {
   id: string;
@@ -192,9 +192,32 @@ export function PhotoTable({
     })();
   }
 
-  const needsEnhance = photos.filter(
-    (p) => p.enhanced_status === 'none' || p.enhanced_status === 'failed',
-  );
+  // Auto-enhance (owner 2026-08-17): no per-photo manual action. Photos that
+  // still need enhancement (none/failed) get queued; photos the worker already
+  // finished (ready) get auto-approved so thumbnails + clips use the enhanced
+  // file. Fires on mount + whenever the photo set changes (re-fetch, tag).
+  const [enhancedRefreshing, setEnhancedRefreshing] = useState(false);
+  useEffect(() => {
+    const needsEnhance = photos.filter(
+      (p) => p.enhanced_status === 'none' || p.enhanced_status === 'failed',
+    );
+    const autoApprove = photos.filter(
+      (p) => p.enhanced_status === 'ready' && p.enhanced_path,
+    );
+    if (needsEnhance.length === 0 && autoApprove.length === 0) return;
+    setEnhancedRefreshing(true);
+    void (async () => {
+      for (const p of needsEnhance) {
+        await queuePhotoEnhancement(table, [p.id]);
+      }
+      for (const p of autoApprove) {
+        await setEnhancedDecision(table, p.id, 'approved');
+      }
+      setEnhancedRefreshing(false);
+      router.refresh();
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [photos, table]);
 
   if (photos.length === 0) {
     return (
@@ -239,22 +262,14 @@ export function PhotoTable({
             <option value="category">Sort: category</option>
             <option value="enhanced">Sort: enhance status</option>
           </select>
-          <button
-            type="button"
-            disabled={!!pending || needsEnhance.length === 0}
-            onClick={() =>
-              run('bulk', () =>
-                queuePhotoEnhancement(
-                  table,
-                  needsEnhance.map((p) => p.id),
-                ),
-              )
-            }
-            className="flex items-center gap-1.5 rounded-lg border border-line bg-bg px-2.5 py-1.5 font-medium hover:border-ink2 disabled:opacity-40"
-          >
-            <Sparkles size={13} />
-            Enhance {needsEnhance.length || ''}
-          </button>
+          {enhancedRefreshing ? (
+            <span className="flex items-center gap-1.5 text-ink2">
+              <Sparkles size={13} className="animate-pulse" />
+              Enhancing…
+            </span>
+          ) : (
+            <span className="text-ink2">Auto-enhanced</span>
+          )}
         </div>
       </div>
 
@@ -317,37 +332,6 @@ export function PhotoTable({
                   )}
                   <Td>
                     <div className="flex flex-col gap-1">
-                      {p.enhanced_path && p.enhanced_status !== 'queued' && (
-                        <div className="flex gap-1">
-                          <MiniBtn
-                            label="✓ enh"
-                            title="Approve the enhanced file — renders will use it from now on"
-                            active={p.enhanced_status === 'approved'}
-                            disabled={busy}
-                            onClick={() =>
-                              run(p.id, () => setEnhancedDecision(table, p.id, 'approved'))
-                            }
-                          />
-                          <MiniBtn
-                            label="✗ enh"
-                            title="Reject the enhanced file — renders keep the original"
-                            danger
-                            active={p.enhanced_status === 'rejected'}
-                            disabled={busy}
-                            onClick={() =>
-                              run(p.id, () => setEnhancedDecision(table, p.id, 'rejected'))
-                            }
-                          />
-                        </div>
-                      )}
-                      {!p.enhanced_path && (
-                        <MiniBtn
-                          label="Enhance"
-                          title="Queue this photo for enhancement"
-                          disabled={busy}
-                          onClick={() => run(p.id, () => queuePhotoEnhancement(table, [p.id]))}
-                        />
-                      )}
                       {!isListing && (
                         <div className="flex gap-1">
                           {!p.tagged_at && (
@@ -415,7 +399,9 @@ export function PhotoTable({
                   </Td>
                   {!isListing && (
                     <Td>
-                      {p.clip?.engine === 'seedance' || (!p.clip && seedanceByCategory(t.category)) ? (
+                      {t.usable === false ? (
+                        <span className="text-red-600">no</span>
+                      ) : p.clip?.engine === 'seedance' || (!p.clip && seedanceByCategory(t.category)) ? (
                         <span className="flex items-center gap-1 text-emerald-600">
                           <Check size={12} /> yes
                         </span>
@@ -457,7 +443,11 @@ export function PhotoTable({
                   )}
                   {!isListing && (
                     <Td>
-                      <StatusText value={p.status ?? 'pending'} />
+                      {t.usable === false ? (
+                        <span className="text-red-600">rejected</span>
+                      ) : (
+                        <StatusText value={p.status ?? 'pending'} />
+                      )}
                     </Td>
                   )}
                   {!isListing && (
@@ -620,7 +610,7 @@ export function PhotoTable({
                         {truncate(p.enhanced_error, 40)}
                       </div>
                     )}
-                    {p.enhanced_path && (
+                    {p.enhanced_path ? (
                       <button
                         type="button"
                         onClick={() =>
@@ -639,6 +629,8 @@ export function PhotoTable({
                           className="h-full w-full object-cover"
                         />
                       </button>
+                    ) : (
+                      <div className="mt-1 text-[10px] text-ink3">pending enhance</div>
                     )}
                   </Td>
                   <Td className="max-w-[280px] text-ink2">

@@ -138,14 +138,13 @@ async function submitClip(row: Row): Promise<void> {
     '/__probe__',
     '',
   );
+  // Owner 2026-08-17: seedance AI clips always use the ORIGINAL photo —
+  // the enhanced file is for local renders (DA+KB) and the final tour,
+  // not for the AI model input.
   const frameUrls: string[] = [];
   for (const id of row.input_photo_ids ?? []) {
     const photo = photoMap.get(id)!;
-    const path =
-      photo.enhanced_status === 'approved' && photo.enhanced_path
-        ? photo.enhanced_path
-        : photo.storage_path;
-    frameUrls.push(`${publicBase}/${path}`);
+    frameUrls.push(`${publicBase}/${photo.storage_path}`);
   }
 
   const job = await submitVideo({
@@ -311,10 +310,8 @@ async function processPhotoClips(): Promise<void> {
         };
         if (!photo) throw new Error(`photo ${row.photo_id} not found`);
 
-        const path =
-          photo.enhanced_status === 'approved' && photo.enhanced_path
-            ? photo.enhanced_path
-            : photo.storage_path;
+        // Original photo for seedance input (owner 2026-08-17) — enhanced
+        // files feed DA+KB local renders, not the AI model.
         const publicBase = sb.storage.from(PHOTO_BUCKET).getPublicUrl('__probe__').data.publicUrl.replace(
           '/__probe__',
           '',
@@ -323,7 +320,7 @@ async function processPhotoClips(): Promise<void> {
         // Single photo → first-frame control (no inter-frame geometry risk).
         const job = await submitVideo({
           prompt: 'A slow, cinematic push-in on this scene. Warm natural light. No text, no people in close-up.',
-          frameImageUrls: [`${publicBase}/${path}`],
+          frameImageUrls: [`${publicBase}/${photo.storage_path}`],
           durationS: Math.min(Math.max(Math.round(row.duration_s ?? 4), 4), 15),
           aspectRatio: AI_VIDEO_ASPECT,
           mode: 'frames',

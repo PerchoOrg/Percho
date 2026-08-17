@@ -82,7 +82,7 @@ export async function generateCommunityBucketVideo(
   const { data: approvedPhotos, error: photosErr } = (await admin
     .from('community_poi_photos')
     .select(
-      'poi_photo_id, poi_photos!inner(id, poi_id, storage_path, attribution, width_px, height_px, applicable_buckets, ai_score, tagged_at, status)',
+      'poi_photo_id, poi_photos!inner(id, poi_id, storage_path, attribution, width_px, height_px, applicable_buckets, ai_score, tagged_at, status, ai_tags)',
     )
     .eq('community_id', communityId)
     .eq('status', 'approved')
@@ -100,6 +100,7 @@ export async function generateCommunityBucketVideo(
         applicable_buckets: string[] | null;
         ai_score: number | null;
         tagged_at: string | null;
+        ai_tags: unknown;
       };
     }> | null;
     error: { message: string } | null;
@@ -183,6 +184,8 @@ export async function generateCommunityBucketVideo(
   const eligible = photoRows.filter((r) => {
     if (claimedPhotoIds.has(r.poi_photo_id)) return false;
     const p = r.poi_photos;
+    // Owner 2026-08-17: tagger-unusable photos never enter the video pool.
+    if (((p.ai_tags as Record<string, unknown> | null)?.usable) === false) return false;
     const applicable = Array.isArray(p.applicable_buckets) ? p.applicable_buckets : [];
     if (p.tagged_at && applicable.length > 0) {
       return applicable.includes(bucket);
