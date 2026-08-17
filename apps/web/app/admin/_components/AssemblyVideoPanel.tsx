@@ -83,10 +83,10 @@ export function AssemblyVideoPanel({ communityId }: { communityId: string }) {
         )}
       </div>
       {ready && iframeUrl ? (
-        <div className="mt-3 aspect-video w-full overflow-hidden rounded-xl">
+        <div className="mt-3 flex justify-center overflow-hidden rounded-xl bg-black">
           <iframe
             src={iframeUrl}
-            className="h-full w-full"
+            className="aspect-[9/16] h-[420px]"
             allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture"
             allowFullScreen
           />
