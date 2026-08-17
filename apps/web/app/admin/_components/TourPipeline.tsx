@@ -644,6 +644,9 @@ function StepResult({
   }
   if (s === 'photos') {
     const r = result as {
+      /** How far the step got: tagging → planning → done. Absent on runs that
+          predate progress saves. */
+      phase?: 'tagging' | 'planning' | 'done';
       results?: Record<string, { fetched?: number; reused?: number; skipped?: number }>;
       resolved_poi_ids?: string[];
       // The FINAL shot list, planned server-side by the orchestration layer
@@ -714,6 +717,16 @@ function StepResult({
           {droppedPhotos.length} dropped
           {isLegacy ? ' (legacy run — no per-POI mapping)' : ` across ${poiIds.size} resolved POIs`}
         </div>
+        {r.phase && r.phase !== 'done' && (
+          // The step takes minutes; without this the panel shows the previous
+          // run's numbers the whole time and looks like it did nothing.
+          <div className="flex items-center gap-2 rounded-xl border border-bronze/30 bg-bronze/5 px-3 py-2 text-xs text-ink2">
+            <Loader2 size={12} className="animate-spin" />
+            {r.phase === 'tagging'
+              ? 'Photos fetched — enhancing and tagging them now. The shot list appears once the plan is built.'
+              : 'Tagging done — building the shot list (curator, scheduler, guard, narration).'}
+          </div>
+        )}
         {planned.length > 0 && (
           <div className="space-y-1 rounded-xl border border-line bg-surface px-3 py-2 text-xs">
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1">

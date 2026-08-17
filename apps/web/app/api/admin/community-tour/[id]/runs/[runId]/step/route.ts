@@ -424,6 +424,21 @@ async function runPhotos(sb: any, run: RunRow) {
     }
   }
 
+  // Save progress before the slow half. This step now runs for minutes —
+  // fetch, then enhance, then a Gemini tag per photo, then the whole
+  // orchestration plan — and it used to write nothing until the very end, so
+  // the panel showed the PREVIOUS run's numbers throughout. That is
+  // indistinguishable from "it did nothing", and cost three rounds of the
+  // owner reporting an empty table while the step was in fact working
+  // (2026-08-17).
+  await saveStep(sb, run, 'photos', {
+    phase: 'tagging',
+    results,
+    resolved_poi_ids: resolvedPoiIds,
+    shots: [],
+    dropped: [],
+  });
+
   // Auto-enhance the panel's photos (owner 2026-08-17): the enhance QUEUE is
   // poi_photos.enhanced_status itself — render-worker claims `queued` rows.
   // Set to queued unless already enhanced (ready/approved/rejected = keep
@@ -468,9 +483,19 @@ async function runPhotos(sb: any, run: RunRow) {
   // Final shot list — owner 2026-08-17: selection (2/POI cap + engine/category
   // mapping + rejected/unusable drop) lives in the PHOTOS step, not assemble.
   // Assemble just enqueues this list. Computed AFTER tag so ai_tags exist.
+  await saveStep(sb, run, 'photos', {
+    phase: 'planning',
+    results,
+    resolved_poi_ids: resolvedPoiIds,
+    auto_tag: taggedCount,
+    shots: [],
+    dropped: [],
+  });
+
   const { shots, dropped, plan } = await computeFinalShots(sb, resolvedPoiIds, bucketByPoiId);
 
   await saveStep(sb, run, 'photos', {
+    phase: 'done',
     results,
     resolved_poi_ids: resolvedPoiIds,
     auto_tag: taggedCount,

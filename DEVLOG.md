@@ -4,6 +4,35 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-08-18 15:20 UTC — Aberdeen works; the last "still empty" was a 4-minute step with a silent panel
+
+**It was already working.** While the owner reported an empty table, the DB
+showed: `raw_place` set on 12/12 POIs, **33 poi_photos rows** landed, 27 of 33
+already tagged, newest row seconds old. Waited for it to finish — the photos
+step saved at 11:05:34 with **19 shots / 50.0s**, 10 kenburns / 6 depthflow /
+3 seedance, and the new resolution filter dropping three frames (650x440 needing
+4.8x, 512x384 needing 5.5x, 512x393 needing 5.4x).
+
+**Why it looked empty**: the step now takes ~4 minutes — fetch 12 POIs, queue
+enhancement, a Gemini tag per photo (33 × ~3s), then the whole plan (Curator
+upload + call, scheduler, guard, VO). It wrote `step_results` **only at the
+very end**, so for those four minutes the panel rendered the *previous* run's
+numbers — all zeros. That is indistinguishable from "the step did nothing", and
+it is what turned one plumbing bug into three rounds of "still empty".
+
+**Actions**: `runPhotos` now saves progress at each phase (`tagging` →
+`planning` → `done`), and the panel shows an in-flight banner naming the phase
+while `phase !== 'done'`. A run in progress can no longer be mistaken for a run
+that failed.
+
+**Also noted, not fixed**: the Aberdeen plan carries a `vo_rate_out_of_range`
+violation — 65 words over 32.5 narrated seconds is 2.00 w/s, just under the 2.1
+floor. The VO Pass wrote a slightly sparse script; the violation is recorded and
+visible, which is the designed behaviour, and the film is otherwise in spec.
+
+**Verification**: `pnpm web:typecheck` clean, `pnpm web:test` 366 passed, each
+its own command. End-to-end confirmed on Aberdeen's real run, above.
+
 ## 2026-08-18 14:50 UTC — Aberdeen, third round: my own getPlaceDetails URL was wrong
 
 **Symptom**: still `0 fetched` across 12 resolved POIs. The DB showed the
