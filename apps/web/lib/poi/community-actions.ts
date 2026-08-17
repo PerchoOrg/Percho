@@ -15,8 +15,8 @@
  * still require `auth.getUser()` so anonymous callers are rejected up-front.
  */
 
-import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { createHash } from 'crypto';
+import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
 import {
   DEFAULT_INCLUDED_TYPES,
@@ -240,11 +240,14 @@ export async function fetchPhotosForCommunityPoi(
         .eq('poi_photo_id', row.id)
         .maybeSingle()) as { data: { community_id: string } | null };
       if (!link) {
-        await admin.from('community_poi_photos').insert({
+        const { error: linkErr } = await admin.from('community_poi_photos').insert({
           community_id: communityId,
           poi_photo_id: row.id,
           status: 'pending',
         });
+        // The review link is what puts a photo in front of a human; losing it
+        // silently means the photo exists and nobody ever sees it.
+        if (linkErr) console.error('[community-poi] review link failed:', linkErr);
       }
     }
     reused += (storedRows ?? []).length;
@@ -351,11 +354,15 @@ export async function fetchPhotosForCommunityPoi(
       .maybeSingle()) as { data: { community_id: string } | null };
 
     if (!existingLink) {
-      await admin.from('community_poi_photos').insert({
+      const { error: linkErr } = await admin.from('community_poi_photos').insert({
         community_id: communityId,
         poi_photo_id: poiPhotoId,
         status: 'pending',
       });
+      if (linkErr) {
+        console.error('[community-poi] review link failed:', linkErr);
+        noteSkip(`review link: ${(linkErr as { message?: string }).message ?? 'unknown'}`);
+      }
     }
   }
 

@@ -129,7 +129,7 @@ export function CommunityNearbyPanel({
   const [pending, startTransition] = useTransition();
   const [busyPois, setBusyPois] = useState<Set<string>>(() => new Set());
   const [notice, setNotice] = useState<string | null>(null);
-  const [expandedBuckets, setExpandedBuckets] = useState<Set<IntentBucket>>(new Set());
+  const [expandedBuckets, setExpandedBuckets] = useState<Set<string>>(new Set());
 
   const BUCKET_DEFAULT_LIMIT = 10;
 
@@ -137,12 +137,27 @@ export function CommunityNearbyPanel({
   // Sort each bucket by rating quality (rating desc, review-count desc as
   // tiebreaker, null ratings pushed to the end). Panel then shows only the
   // top BUCKET_DEFAULT_LIMIT per bucket, with a "Show all (N)" toggle.
-  const grouped: Record<IntentBucket, NearbyPoiForCommunity[]> = Object.fromEntries(
+  const grouped: Record<string, NearbyPoiForCommunity[]> = Object.fromEntries(
     BUCKET_ORDER.map((b) => [b, [] as NearbyPoiForCommunity[]]),
-  ) as Record<IntentBucket, NearbyPoiForCommunity[]>;
-  for (const p of pois) grouped[p.intent_bucket].push(p);
-  for (const b of BUCKET_ORDER) {
-    grouped[b].sort((a, b) => {
+  );
+  // A bucket this panel has never heard of must not take the page down with
+  // it. The community tour classifies POIs with a wider taxonomy (civic,
+  // waterfront, other) than INTENT_BUCKETS, and writes it to the same column;
+  // an unknown key used to hit `undefined.push` and crash the whole route
+  // (owner 2026-08-17). Unknown buckets are collected and rendered after the
+  // known ones rather than silently dropped.
+  const unknownBuckets: string[] = [];
+  for (const p of pois) {
+    const bucket = p.intent_bucket as string;
+    if (!grouped[bucket]) {
+      grouped[bucket] = [];
+      unknownBuckets.push(bucket);
+    }
+    grouped[bucket]!.push(p);
+  }
+  const renderBuckets: string[] = [...BUCKET_ORDER, ...unknownBuckets];
+  for (const b of renderBuckets) {
+    grouped[b]?.sort((a, b) => {
       const ra = a.pois.rating ?? -1;
       const rb = b.pois.rating ?? -1;
       if (rb !== ra) return rb - ra;
@@ -150,7 +165,7 @@ export function CommunityNearbyPanel({
     });
   }
 
-  const toggleBucket = (b: IntentBucket) => {
+  const toggleBucket = (b: string) => {
     setExpandedBuckets((prev) => {
       const next = new Set(prev);
       if (next.has(b)) next.delete(b);
@@ -292,8 +307,8 @@ export function CommunityNearbyPanel({
           </p>
         ) : (
           <div className="space-y-4">
-            {BUCKET_ORDER.map((bucket) => {
-              const rows = grouped[bucket];
+            {renderBuckets.map((bucket) => {
+              const rows = grouped[bucket] ?? [];
               if (rows.length === 0) return null;
               const isExpanded = expandedBuckets.has(bucket);
               const visibleRows = isExpanded ? rows : rows.slice(0, BUCKET_DEFAULT_LIMIT);
@@ -302,7 +317,7 @@ export function CommunityNearbyPanel({
                 <section key={bucket}>
                   <div className="mb-2 flex items-center justify-between gap-2">
                     <h4 className="text-xs font-medium uppercase tracking-wide text-muted">
-                      {BUCKET_LABELS[bucket]} · {rows.length}
+                      {BUCKET_LABELS[bucket as IntentBucket] ?? bucket} · {rows.length}
                       {rows.length > BUCKET_DEFAULT_LIMIT && !isExpanded ? (
                         <span className="ml-1 text-muted/70 normal-case">
                           (top {BUCKET_DEFAULT_LIMIT} by rating)

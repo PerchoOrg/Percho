@@ -34,6 +34,32 @@ interface RunRow {
   step_results: Record<string, unknown>;
 }
 
+/**
+ * Run a write and fail loudly. Every silent write in this route has turned out
+ * to be hiding a real failure: the POI insert with no display_name, the
+ * community_pois link violating its bucket CHECK, both invisible for weeks
+ * because nobody read the error (2026-08-17). The POST handler catches, marks
+ * the run failed and returns the message, so a broken write now reaches the
+ * screen instead of looking like an empty result.
+ */
+async function mustWrite(label: string, q: PromiseLike<{ error: unknown }>): Promise<void> {
+  const { error } = await q;
+  if (error) {
+    throw new Error(`${label}: ${(error as { message?: string })?.message ?? 'unknown error'}`);
+  }
+}
+
+/**
+ * For writes whose failure costs nothing but a progress indicator. Logged, not
+ * thrown — losing the spinner is not worth losing the run.
+ */
+async function bestEffortWrite(label: string, q: PromiseLike<{ error: unknown }>): Promise<void> {
+  const { error } = await q;
+  if (error) {
+    console.error(`[community-tour] ${label} failed:`, error);
+  }
+}
+
 async function getRun(sb: any, runId: string): Promise<RunRow | null> {
   const { data } = await sb
     .from('community_tour_runs')
@@ -49,21 +75,29 @@ async function setRunStatus(
   status: string,
   extra: Record<string, unknown> = {},
 ) {
-  await sb
-    .from('community_tour_runs')
-    .update({ status, updated_at: new Date().toISOString(), ...extra })
-    .eq('id', runId);
+  await mustWrite(
+    `setRunStatus(${status})`,
+    sb
+      .from('community_tour_runs')
+      .update({ status, updated_at: new Date().toISOString(), ...extra })
+      .eq('id', runId),
+  );
 }
 
 /** Persist a step's output under step_results.<step> (merge, not replace). */
 async function saveStep(sb: any, run: RunRow, step: string, result: unknown) {
-  await sb
-    .from('community_tour_runs')
-    .update({
-      step_results: { ...run.step_results, [step]: result },
-      updated_at: new Date().toISOString(),
-    })
-    .eq('id', run.id);
+  // The write whose silent failure is indistinguishable from "the step did
+  // nothing": the panel simply keeps rendering the previous run's numbers.
+  await mustWrite(
+    `saveStep(${step})`,
+    sb
+      .from('community_tour_runs')
+      .update({
+        step_results: { ...run.step_results, [step]: result },
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', run.id),
+  );
 }
 
 // ─── step: research (Gemini grounding, runs on Vercel) ─────────────────────
@@ -100,13 +134,16 @@ async function geminiResearch(opts: {
       .eq('id', opts.runId)
       .maybeSingle();
     if (!run) return;
-    await opts.sb
-      .from('community_tour_runs')
-      .update({
-        step_results: { ...run.step_results, ...patch },
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', opts.runId);
+    await bestEffortWrite(
+      'research progress',
+      opts.sb
+        .from('community_tour_runs')
+        .update({
+          step_results: { ...run.step_results, ...patch },
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', opts.runId),
+    );
   };
   await patchProgress({
     research_progress: { status: 'running', started_at: startedAt, agents_done: [] },
@@ -233,13 +270,16 @@ async function runResearch(
     prompt: buildResearchPrompt(community),
     agents: parsed,
   };
-  await sb
-    .from('community_tour_runs')
-    .update({
-      step_results: { ...run.step_results, agent_research: research },
-      updated_at: new Date().toISOString(),
-    })
-    .eq('id', run.id);
+  await mustWrite(
+    'save agent_research',
+    sb
+      .from('community_tour_runs')
+      .update({
+        step_results: { ...run.step_results, agent_research: research },
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', run.id),
+  );
   return { ok: true, started: true };
 }
 
@@ -464,10 +504,13 @@ async function runPhotos(sb: any, run: RunRow) {
     const keep = new Set((existing ?? []).map((r: { id: string }) => r.id));
     const toEnhance = fetchedPhotoIds.filter((id) => !keep.has(id));
     if (toEnhance.length > 0) {
-      await sb
-        .from('poi_photos')
-        .update({ enhanced_status: 'queued', enhanced_error: null })
-        .in('id', toEnhance);
+      await mustWrite(
+        `queue ${toEnhance.length} photo(s) for enhancement`,
+        sb
+          .from('poi_photos')
+          .update({ enhanced_status: 'queued', enhanced_error: null })
+          .in('id', toEnhance),
+      );
     }
   }
 
@@ -708,19 +751,22 @@ async function enqueueClips(
   );
   const toCreate = shotsWithEngine.filter((s) => !have.has(`${s.photo_id}:${s.engine}`));
   if (toCreate.length > 0) {
-    await sb.from('photo_clips').insert(
-      toCreate.map((s) => ({
-        photo_id: s.photo_id,
-        engine: s.engine,
-        duration_s: s.duration_s,
-        // The plan's decisions travel with the row: the render worker takes the
-        // move and the seedance worker takes the prompt instead of each
-        // improvising one (migration 20260817210000).
-        move: s.move ?? null,
-        prompt: s.prompt ?? null,
-        ai_generated: s.ai_generated ?? false,
-        status: 'pending',
-      })),
+    await mustWrite(
+      `enqueue ${toCreate.length} clip(s)`,
+      sb.from('photo_clips').insert(
+        toCreate.map((s) => ({
+          photo_id: s.photo_id,
+          engine: s.engine,
+          duration_s: s.duration_s,
+          // The plan's decisions travel with the row: the render worker takes
+          // the move and the seedance worker takes the prompt instead of each
+          // improvising one (migration 20260817210000).
+          move: s.move ?? null,
+          prompt: s.prompt ?? null,
+          ai_generated: s.ai_generated ?? false,
+          status: 'pending',
+        })),
+      ),
     );
   }
   // Rows that already exist keep their id but must follow the current plan —
@@ -732,29 +778,35 @@ async function enqueueClips(
     if (status === 'processing') continue;
     const rerender = requeueReady && status === 'ready';
     if (rerender) requeued += 1;
-    await sb
-      .from('photo_clips')
-      .update({
-        duration_s: s.duration_s,
-        move: s.move ?? null,
-        prompt: s.prompt ?? null,
-        ai_generated: s.ai_generated ?? false,
-        ...(rerender ? { status: 'pending', error: null } : {}),
-        updated_at: new Date().toISOString(),
-      })
-      .eq('photo_id', s.photo_id)
-      .eq('engine', s.engine);
+    await mustWrite(
+      `apply plan to clip(${s.photo_id}:${s.engine})`,
+      sb
+        .from('photo_clips')
+        .update({
+          duration_s: s.duration_s,
+          move: s.move ?? null,
+          prompt: s.prompt ?? null,
+          ai_generated: s.ai_generated ?? false,
+          ...(rerender ? { status: 'pending', error: null } : {}),
+          updated_at: new Date().toISOString(),
+        })
+        .eq('photo_id', s.photo_id)
+        .eq('engine', s.engine),
+    );
   }
   // Failed rows: reset to pending (re-generate). Leave ready/processing alone.
   const failedIds = shotsWithEngine
     .map((s) => s.photo_id)
     .filter((id) => have.get(`${id}:${forceEngine ?? 'seedance'}`) === 'failed');
   if (failedIds.length > 0) {
-    await sb
-      .from('photo_clips')
-      .update({ status: 'pending', error: null, updated_at: new Date().toISOString() })
-      .in('photo_id', failedIds)
-      .eq('engine', forceEngine ?? 'seedance');
+    await mustWrite(
+      `requeue ${failedIds.length} failed clip(s)`,
+      sb
+        .from('photo_clips')
+        .update({ status: 'pending', error: null, updated_at: new Date().toISOString() })
+        .in('photo_id', failedIds)
+        .eq('engine', forceEngine ?? 'seedance'),
+    );
   }
 
   await saveStep(sb, run, 'generate', {
@@ -842,11 +894,14 @@ async function runRegenerateAll(sb: any, run: RunRow) {
   // 9:16 code). Seedance rows are untouched.
   const photoIds = selected.map((s) => s.photo_id);
   if (photoIds.length > 0) {
-    await sb
-      .from('photo_clips')
-      .update({ status: 'pending', error: null, updated_at: new Date().toISOString() })
-      .in('photo_id', photoIds)
-      .in('engine', ['depthflow', 'kenburns']);
+    await mustWrite(
+      `reset ${photoIds.length} DA+KB clip(s)`,
+      sb
+        .from('photo_clips')
+        .update({ status: 'pending', error: null, updated_at: new Date().toISOString() })
+        .in('photo_id', photoIds)
+        .in('engine', ['depthflow', 'kenburns']),
+    );
   }
 
   // Enqueue clips for photos that never had one.
@@ -858,25 +913,31 @@ async function runRegenerateAll(sb: any, run: RunRow) {
   const have = new Set((existing ?? []).map((r: any) => `${r.photo_id}:${r.engine}`));
   const toCreate = selected.filter((s) => !have.has(`${s.photo_id}:${s.engine}`));
   if (toCreate.length > 0) {
-    await sb.from('photo_clips').insert(
-      toCreate.map((s) => ({
-        photo_id: s.photo_id,
-        engine: s.engine,
-        duration_s: s.duration_s,
-        move: s.move ?? null,
-        status: 'pending',
-      })),
+    await mustWrite(
+      `enqueue ${toCreate.length} DA+KB clip(s)`,
+      sb.from('photo_clips').insert(
+        toCreate.map((s) => ({
+          photo_id: s.photo_id,
+          engine: s.engine,
+          duration_s: s.duration_s,
+          move: s.move ?? null,
+          status: 'pending',
+        })),
+      ),
     );
   }
   // Existing rows get the planned move too — otherwise a re-render repeats the
   // old hash-picked one.
   for (const s of selected) {
     if (!s.move) continue;
-    await sb
-      .from('photo_clips')
-      .update({ move: s.move, duration_s: s.duration_s, updated_at: new Date().toISOString() })
-      .eq('photo_id', s.photo_id)
-      .eq('engine', s.engine);
+    await mustWrite(
+      `apply planned move(${s.photo_id})`,
+      sb
+        .from('photo_clips')
+        .update({ move: s.move, duration_s: s.duration_s, updated_at: new Date().toISOString() })
+        .eq('photo_id', s.photo_id)
+        .eq('engine', s.engine),
+    );
   }
 
   await saveStep(sb, run, 'regenerate_all', {
@@ -1084,14 +1145,18 @@ async function computeFinalShots(
   // instead of paying again (owner 2026-08-17: "every time rerun would make llm
   // call that is expensive").
   for (const a of plan.curator.fresh) {
-    await sb
-      .from('poi_photos')
-      .update({
-        curator_tags: a,
-        curator_version: CURATOR_VERSION,
-        curated_at: new Date().toISOString(),
-      })
-      .eq('id', a.photo_id);
+    // Losing this silently means paying the Curator again on every future run.
+    await mustWrite(
+      `cache curator_tags(${a.photo_id})`,
+      sb
+        .from('poi_photos')
+        .update({
+          curator_tags: a,
+          curator_version: CURATOR_VERSION,
+          curated_at: new Date().toISOString(),
+        })
+        .eq('id', a.photo_id),
+    );
   }
   for (const id of plan.curator.missing) {
     const photo = planPhotos.find((p) => p.photo_id === id);
@@ -1212,19 +1277,22 @@ export async function POST(
 
   // Debug: record the raw engine the client sent (owner 2026-08-17: DA+KB
   // clicks were landing as seedance; need to see if engine reaches the route).
-  await sb
-    .from('community_tour_runs')
-    .update({
-      step_results: {
-        ...run.step_results,
-        last_generate_request: {
-          photoIds: body.photoIds ?? null,
-          engine: body.engine ?? null,
-          at: new Date().toISOString(),
+  await bestEffortWrite(
+    'last_generate_request',
+    sb
+      .from('community_tour_runs')
+      .update({
+        step_results: {
+          ...run.step_results,
+          last_generate_request: {
+            photoIds: body.photoIds ?? null,
+            engine: body.engine ?? null,
+            at: new Date().toISOString(),
+          },
         },
-      },
-    })
-    .eq('id', run.id);
+      })
+      .eq('id', run.id),
+  );
 
   try {
     const result =

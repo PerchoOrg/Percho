@@ -4,6 +4,60 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-08-18 16:30 UTC — I crashed the community page; then swept every unchecked write
+
+**Symptom** (owner): `TypeError: Cannot read properties of undefined (reading
+'push')` on `/admin/pipeline/community-nearby/{aberdeen}`.
+
+**Cause — mine, from the previous entry.** `CommunityNearbyPanel` groups POIs
+into a map built from `BUCKET_ORDER`:
+
+```ts
+const grouped = Object.fromEntries(BUCKET_ORDER.map((b) => [b, []]));
+for (const p of pois) grouped[p.intent_bucket].push(p);
+```
+
+`INTENT_BUCKETS` has 14 values. The tour taxonomy has 17 — `civic`,
+`waterfront`, `other`. I widened the DB CHECK to accept them and backfilled
+Aberdeen with `civic` ×1 and `other` ×2, and the panel hit `undefined.push` on
+the first one. Widening a constraint let new values reach a UI that had a
+closed list.
+
+**Fixed**: the grouping creates a bucket on demand, and buckets the panel does
+not know are rendered after the known ones under their raw name rather than
+dropped. A UI must not fall over on data it does not recognise, and it must not
+silently hide it either.
+
+**Then the sweep the owner asked for.** Every write in the step route now goes
+through one of two helpers:
+
+- `mustWrite(label, query)` — throws with the DB message. The POST handler
+  catches it, marks the run failed and returns it, so the failure reaches the
+  screen. Applied to 12 sites: run status, `saveStep`, agent_research,
+  enhancement queueing, the curator cache write, both `photo_clips` inserts,
+  the plan-application update, both requeues, the planned-move update, the
+  community link.
+- `bestEffortWrite(label, query)` — logs only. Two sites: the research progress
+  patch and the `last_generate_request` debug blob, where losing the write costs
+  a spinner, not a result.
+
+Also `community-actions.ts`: both `community_poi_photos` review-link inserts now
+report failure. That link is what puts a photo in front of a human — losing it
+silently means the photo exists and nobody ever sees it.
+
+**Every unchecked write found so far had been hiding a real failure** — the POI
+insert with no display_name, the community link violating its CHECK. This
+closes the class in the tour pipeline rather than waiting for the next symptom.
+
+**Note on my own process**: the first conversion script asserted its way out on
+substitution 4 of 4 and never reached `write_text`, so three conversions I had
+reported as done were silently lost. Caught it by re-grepping for bare writes
+rather than trusting the "ok:" lines. Scripts that batch edits need to write
+incrementally or verify afterwards.
+
+**Verification**: `pnpm web:typecheck` clean, `pnpm web:test` **366 passed**,
+each its own command; grouping logic exercised with unknown buckets.
+
 ## 2026-08-18 15:50 UTC — The photos existed and the page still showed none: community_pois was empty
 
 **Owner**: "still not able to view the photos" — with 33 photos in `poi_photos`
