@@ -650,7 +650,9 @@ async function computeFinalShots(
     }> | null;
   };
 
-  // Owner 2026-08-17: "同一个poi最多2张照片" — hard cap 2 per POI, newest first.
+  // Owner 2026-08-17: "同一个poi最多2张照片" + "从取到的3张里选取两张质量好的
+  // 更适合的" — per POI pick the 2 BEST by quality, not newest-first. Quality =
+  // usable (tagger verdict) first, then ai_score desc, then newest as tiebreak.
   const POI_PHOTO_CAP = 2;
   const byPoi = new Map<string, NonNullable<typeof photosRaw>>();
   for (const p of photosRaw ?? []) {
@@ -660,7 +662,21 @@ async function computeFinalShots(
   }
   const photos: NonNullable<typeof photosRaw> = [];
   for (const arr of byPoi.values()) {
-    photos.push(...arr.slice(0, POI_PHOTO_CAP));
+    const ranked = [...arr].sort((a, b) => {
+      const aTags = (a.ai_tags ?? {}) as { usable?: boolean };
+      const bTags = (b.ai_tags ?? {}) as { usable?: boolean };
+      // User-rejected photos rank last (they still appear in dropped).
+      const aRej = a.status === 'rejected' ? 0 : 1;
+      const bRej = b.status === 'rejected' ? 0 : 1;
+      if (aRej !== bRej) return bRej - aRej;
+      const aUsable = aTags.usable === false ? 0 : 1;
+      const bUsable = bTags.usable === false ? 0 : 1;
+      if (aUsable !== bUsable) return bUsable - aUsable;
+      const score = (b.ai_score ?? 0) - (a.ai_score ?? 0);
+      if (score !== 0) return score;
+      return (b.created_at ?? '').localeCompare(a.created_at ?? '');
+    });
+    photos.push(...ranked.slice(0, POI_PHOTO_CAP));
   }
 
   const { data: poiRows } = (await sb
