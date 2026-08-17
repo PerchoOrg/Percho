@@ -507,9 +507,9 @@ export function PhotoTable({
                           {onGenerateClip && p.clip.status !== 'ready' && (
                             <MiniBtn
                               label="Generate"
-                              title="Seedance generate disabled — local video testing first (owner 2026-08-17)"
-                              disabled={true}
-                              onClick={() => {}}
+                              title="Generate a seedance clip from this photo"
+                              disabled={!!pending}
+                              onClick={() => onGenerateClip(p.id)}
                             />
                           )}
                         </div>
@@ -519,9 +519,9 @@ export function PhotoTable({
                           {onGenerateClip && (
                             <MiniBtn
                               label="Generate"
-                              title="Seedance generate disabled — local video testing first (owner 2026-08-17)"
-                              disabled={true}
-                              onClick={() => {}}
+                              title="Generate a seedance clip from this photo"
+                              disabled={!!pending}
+                              onClick={() => onGenerateClip(p.id)}
                             />
                           )}
                         </div>
@@ -629,9 +629,15 @@ export function PhotoTable({
                             alt: 'enhanced',
                           })
                         }
-                        className="text-[10px] text-bronze underline"
+                        className="mt-1 block h-16 w-12 overflow-hidden rounded border border-line bg-black"
+                        title="Click to view enhanced photo full-size"
                       >
-                        view enhanced
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={url(p.enhanced_path as string)}
+                          alt=""
+                          className="h-full w-full object-cover"
+                        />
                       </button>
                     )}
                   </Td>

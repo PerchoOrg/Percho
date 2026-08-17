@@ -506,16 +506,6 @@ async function enqueueClips(
   shotsWithEngine: Array<{ photo_id: string; engine: string; duration_s: number }>,
   forceEngine?: string | null,
 ) {
-  // MONEY GUARD (owner 2026-08-17): seedance costs real money and is
-  // DISABLED while local (depthflow/kenburns) video generation is being
-  // tested. Any seedance enqueue is refused until the owner re-enables it.
-  const paying = shotsWithEngine.filter((s) => s.engine === 'seedance');
-  if (paying.length > 0) {
-    return {
-      error: 'seedance_disabled',
-      message: 'Seedance generation is temporarily disabled (local video testing).',
-    };
-  }
   const existing = await sb
     .from('photo_clips')
     .select('photo_id, engine, status')
