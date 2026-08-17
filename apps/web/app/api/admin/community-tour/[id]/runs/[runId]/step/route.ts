@@ -507,7 +507,12 @@ async function runGenerate(sb: any, run: RunRow, photoIds?: string[], engine?: s
   // covers the ~13 recommended). Falling through to the resolve-only path
   // silently did nothing for those photos (owner 2026-08-17: click no-op).
   if (photoIds && photoIds.length > 0) {
-    const forceEngine = engine === 'depthflow' || engine === 'kenburns' ? engine : null;
+    // Each column's button names its own engine: the Clip column means "make a
+    // Seedance clip", the DA+KB column means the local one. Without that the
+    // Seedance column would silently enqueue Ken Burns for any photo the plan
+    // assigned locally, which is not what the column says.
+    const forceEngine =
+      engine === 'depthflow' || engine === 'kenburns' || engine === 'seedance' ? engine : null;
     const planned = plannedShots(run);
     const plannedById = new Map(planned.map((s) => [s.photo_id, s]));
 
@@ -525,9 +530,18 @@ async function runGenerate(sb: any, run: RunRow, photoIds?: string[], engine?: s
       .map((p: any): PlannedShot => {
         const shot = plannedById.get(p.id);
         if (shot) {
-          return forceEngine && forceEngine !== shot.engine
-            ? { ...shot, engine: forceEngine, move: null, prompt: null, ai_generated: false }
-            : shot;
+          if (!forceEngine || forceEngine === shot.engine) return shot;
+          // Off-plan override: the plan's move and prompt belong to the engine
+          // it chose, so neither survives the switch. A forced Seedance clip
+          // therefore has no Guard-built prompt and gets the worker's
+          // conservative default.
+          return {
+            ...shot,
+            engine: forceEngine,
+            move: null,
+            prompt: null,
+            ai_generated: forceEngine === 'seedance',
+          };
         }
         return {
           photo_id: p.id,
@@ -535,12 +549,13 @@ async function runGenerate(sb: any, run: RunRow, photoIds?: string[], engine?: s
           poi_name: p.poi?.display_name ?? '',
           engine: forceEngine ?? 'seedance',
           move: null,
-          duration_s: forceEngine ? 3.0 : 4.0,
+          duration_s: forceEngine && forceEngine !== 'seedance' ? 3.0 : 4.0,
           prompt: null,
-          ai_generated: !forceEngine,
+          ai_generated: (forceEngine ?? 'seedance') === 'seedance',
         };
       });
-    return enqueueClips(sb, run, selected, forceEngine);
+    // Per-row click: re-render even a clip that is already ready.
+    return enqueueClips(sb, run, selected, forceEngine, true);
   }
 
   if (!resolve?.resolved?.length)
@@ -556,6 +571,8 @@ async function runGenerate(sb: any, run: RunRow, photoIds?: string[], engine?: s
       message: 'No planned shots — run the photos step first (it builds the shot list).',
     };
   }
+  // Deliberately narrower than the per-row path: a bulk override to seedance
+  // would bill a generation for every photo in the run.
   const forceEngine = engine === 'depthflow' || engine === 'kenburns' ? engine : null;
   const shotsWithEngine = forceEngine
     ? planned.map((s) => ({
@@ -588,6 +605,14 @@ async function enqueueClips(
     ai_generated?: boolean;
   }>,
   forceEngine?: string | null,
+  /**
+   * A per-row click means "render this again", so a clip that is already
+   * ready has to go back to pending — otherwise the button updates the row's
+   * prompt and nothing ever re-renders (owner 2026-08-17, on the Regenerate
+   * button). Bulk enqueues leave ready clips alone: re-rendering a whole tour
+   * on every Generate would burn Seedance spend nobody asked for.
+   */
+  requeueReady = false,
 ) {
   const existing = await sb
     .from('photo_clips')
@@ -621,9 +646,13 @@ async function enqueueClips(
   }
   // Rows that already exist keep their id but must follow the current plan —
   // a re-plan that changed the move or the prompt has to reach the worker.
+  let requeued = 0;
   for (const s of shotsWithEngine) {
-    if (!have.has(`${s.photo_id}:${s.engine}`)) continue;
-    if (have.get(`${s.photo_id}:${s.engine}`) === 'processing') continue;
+    const status = have.get(`${s.photo_id}:${s.engine}`);
+    if (status === undefined) continue;
+    if (status === 'processing') continue;
+    const rerender = requeueReady && status === 'ready';
+    if (rerender) requeued += 1;
     await sb
       .from('photo_clips')
       .update({
@@ -631,6 +660,7 @@ async function enqueueClips(
         move: s.move ?? null,
         prompt: s.prompt ?? null,
         ai_generated: s.ai_generated ?? false,
+        ...(rerender ? { status: 'pending', error: null } : {}),
         updated_at: new Date().toISOString(),
       })
       .eq('photo_id', s.photo_id)
@@ -651,19 +681,20 @@ async function enqueueClips(
   await saveStep(sb, run, 'generate', {
     shots: shotsWithEngine,
     created: toCreate.length,
-    reused: shotsWithEngine.length - toCreate.length,
+    requeued,
+    reused: shotsWithEngine.length - toCreate.length - requeued,
   });
   await setRunStatus(sb, run.id, 'generating');
-  return { shots: shotsWithEngine.length, created: toCreate.length };
+  return { shots: shotsWithEngine.length, created: toCreate.length, requeued };
 }
 
 // ─── step: regenerate-all (DA+KB bulk re-render, owner 2026-08-17) ────────
-// The row Generate button only shows for photos WITHOUT a DA+KB clip (or one
-// that failed). Photos that already have a READY da+kb clip — e.g. the ones
-// rendered before the 9:16 fix — have no per-row button to re-run them with.
-// This bulk step resets every existing depthflow/kenburns clip for the run's
-// POIs back to pending and enqueues new ones for photos that never got one,
-// so the whole table can be re-rendered with current code in one click.
+// Resets every existing depthflow/kenburns clip for the run's POIs back to
+// pending and enqueues new ones for photos that never got one, so the whole
+// table can be re-rendered with current code in one click. Seedance rows are
+// untouched — this button must never spend generation money.
+// (The per-row button re-renders one photo, ready or not, since 2026-08-17;
+// this one is still the way to redo the whole local half at once.)
 
 async function runRegenerateAll(sb: any, run: RunRow) {
   const photos = run.step_results.photos as { resolved_poi_ids?: string[] } | undefined;

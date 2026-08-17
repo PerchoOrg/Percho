@@ -104,6 +104,13 @@ export interface PlanCell {
   move: string;
   duration_s: number;
   ai_generated: boolean;
+  /** Seedance only: the exact prompt the clip will be generated from. */
+  prompt: string | null;
+}
+
+/** The engine a DA+KB re-render should use, or null if the plan says Seedance. */
+function plannedLocalEngine(engine: string | undefined): string | null {
+  return engine === 'depthflow' || engine === 'kenburns' ? engine : null;
 }
 
 export function PhotoTable({
@@ -291,7 +298,7 @@ export function PhotoTable({
               {!isListing && <Th>Agent</Th>}
               {!isListing && <Th>Clip</Th>}
               {!isListing && <Th>DA+KB</Th>}
-              <Th>In video</Th>
+              {!plan && <Th>In video</Th>}
               <Th>Enhanced</Th>
               <Th className="min-w-[220px]">AI description</Th>
               <Th className="min-w-[160px]">AI tags</Th>
@@ -414,6 +421,20 @@ export function PhotoTable({
                               not rendered yet
                             </div>
                           )}
+                          {plan[p.id]!.prompt && (
+                            // The exact string the clip is generated from,
+                            // mandatory clauses included. Collapsed so the row
+                            // stays readable; this is the text to check before
+                            // paying for a generation.
+                            <details className="mt-0.5">
+                              <summary className="cursor-pointer text-[10px] text-ink2 hover:text-ink">
+                                prompt
+                              </summary>
+                              <p className="mt-1 max-w-[280px] whitespace-pre-wrap break-words rounded bg-surface p-1 text-[10px] leading-snug text-ink2">
+                                {plan[p.id]!.prompt}
+                              </p>
+                            </details>
+                          )}
                         </div>
                       ) : (
                         <span
@@ -498,12 +519,16 @@ export function PhotoTable({
                               {truncate(p.clip.error, 40)}
                             </span>
                           )}
-                          {onGenerateClip && p.clip.status !== 'ready' && (
+                          {onGenerateClip && (
                             <MiniBtn
-                              label="Generate"
-                              title="Generate a seedance clip from this photo"
+                              label={p.clip.status === 'ready' ? 'Regenerate' : 'Generate'}
+                              title={
+                                p.clip.status === 'ready'
+                                  ? 'Re-render this seedance clip with the current plan'
+                                  : 'Generate a seedance clip from this photo'
+                              }
                               disabled={!!pending}
-                              onClick={() => onGenerateClip(p.id)}
+                              onClick={() => onGenerateClip(p.id, 'seedance')}
                             />
                           )}
                         </div>
@@ -515,7 +540,7 @@ export function PhotoTable({
                               label="Generate"
                               title="Generate a seedance clip from this photo"
                               disabled={!!pending}
-                              onClick={() => onGenerateClip(p.id)}
+                              onClick={() => onGenerateClip(p.id, 'seedance')}
                             />
                           )}
                         </div>
@@ -550,14 +575,26 @@ export function PhotoTable({
                               {truncate(p.dakb_clip.error, 40)}
                             </span>
                           )}
-                          {onGenerateClip && p.dakb_clip.status !== 'ready' && (
+                          {onGenerateClip && (
                             <MiniBtn
-                              label="Generate"
-                              title="Generate a DA+KB clip from this photo"
+                              label={p.dakb_clip.status === 'ready' ? 'Regenerate' : 'Generate'}
+                              title={
+                                p.dakb_clip.status === 'ready'
+                                  ? 'Re-render this clip with the current plan (move + duration)'
+                                  : 'Generate a DA+KB clip from this photo'
+                              }
                               disabled={busy}
                               onClick={() =>
                                 run(p.id, () =>
-                                  onGenerateClip(p.id, p.dakb_clip?.engine ?? 'kenburns'),
+                                  // Follow the PLAN's engine, not the existing
+                                  // clip's: a re-plan may have moved this photo
+                                  // from kenburns to depthflow.
+                                  onGenerateClip(
+                                    p.id,
+                                    plannedLocalEngine(plan?.[p.id]?.engine) ??
+                                      p.dakb_clip?.engine ??
+                                      'kenburns',
+                                  ),
                                 )
                               }
                             />
@@ -571,25 +608,37 @@ export function PhotoTable({
                               label="Generate"
                               title="Generate a DA+KB clip from this photo"
                               disabled={busy}
-                              onClick={() => run(p.id, () => onGenerateClip(p.id, 'kenburns'))}
+                              onClick={() =>
+                                run(p.id, () =>
+                                  onGenerateClip(
+                                    p.id,
+                                    plannedLocalEngine(plan?.[p.id]?.engine) ?? 'kenburns',
+                                  ),
+                                )
+                              }
                             />
                           )}
                         </div>
                       )}
                     </Td>
                   )}
-                  <Td>
-                    {inVideo ? (
-                      <span className="flex items-center gap-1 text-emerald-600">
-                        <Film size={12} />
-                        {p.used_clip_index != null
-                          ? `clip ${p.used_clip_index + 1}`
-                          : (p.used_in?.join(', ') ?? 'yes')}
-                      </span>
-                    ) : (
-                      <span className="text-ink2">no</span>
-                    )}
-                  </Td>
+                  {/* Every planned photo is in the film by definition, so the
+                      column only says something where there is no plan — the
+                      listing surface and the Dropped table. */}
+                  {!plan && (
+                    <Td>
+                      {inVideo ? (
+                        <span className="flex items-center gap-1 text-emerald-600">
+                          <Film size={12} />
+                          {p.used_clip_index != null
+                            ? `clip ${p.used_clip_index + 1}`
+                            : (p.used_in?.join(', ') ?? 'yes')}
+                        </span>
+                      ) : (
+                        <span className="text-ink2">no</span>
+                      )}
+                    </Td>
+                  )}
                   <Td>
                     <StatusText value={p.enhanced_status ?? 'none'} />
                     {p.enhanced_meta?.chain && (

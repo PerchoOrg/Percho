@@ -660,6 +660,7 @@ function StepResult({
         move?: string;
         duration_s?: number;
         ai_generated?: boolean;
+        prompt?: string | null;
         vo_line?: string;
       }>;
       dropped?: Array<{ photo_id: string; poi_id: string; reason: string }>;
@@ -697,6 +698,7 @@ function StepResult({
         move: shot.move,
         duration_s: shot.duration_s ?? 0,
         ai_generated: shot.ai_generated === true,
+        prompt: shot.prompt ?? null,
       };
     }
     const planned = Object.values(planByPhoto);

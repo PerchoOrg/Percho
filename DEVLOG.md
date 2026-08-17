@@ -4,6 +4,45 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-08-18 10:20 UTC — Selected Photos: show the prompt, always offer re-render, drop "In video"
+
+**Owner asks** (three, on the Selected Photos table):
+1. show the prompt a Seedance clip will be generated from,
+2. keep a regenerate button on rows that already have a clip,
+3. drop the "In video" column — every planned photo is in the film.
+
+**Actions**:
+- `PlanCell` carries `prompt`; the Plan column renders it in a collapsed
+  `<details>` so a row stays one line until you want the text. This is the
+  string to read before paying for a generation, mandatory clauses included.
+- The per-row buttons no longer hide when a clip is ready; they read
+  **Regenerate** instead of Generate.
+- "In video" renders only when the table has no plan — the listing surface and
+  the Dropped table, where it still says something.
+
+**Two things the request exposed, fixed with it**:
+1. **The button would have done nothing.** `enqueueClips` only reset *failed*
+   rows to pending; a ready row had its prompt/move updated and never
+   re-rendered. A per-row click now requeues a ready clip
+   (`requeueReady`), while bulk enqueues still leave ready clips alone — a
+   whole-tour re-render on every Generate would spend Seedance money nobody
+   asked for. The step result reports `requeued` alongside `created`.
+2. **The Seedance column had stopped meaning Seedance.** Since the plan wiring,
+   a per-row click followed the plan's engine, so clicking Generate in the Clip
+   (Seedance) column on a photo the plan assigned to Ken Burns silently
+   enqueued a Ken Burns clip. Each column now names its own engine: the Clip
+   column forces `seedance`, the DA+KB column forces the plan's *local* engine
+   (so a re-plan that moved a photo kenburns → depthflow re-renders as
+   depthflow, not as whatever the old clip was). An off-plan override drops the
+   plan's move and prompt, because both belong to the engine that was replaced;
+   a forced Seedance clip therefore falls back to the worker's conservative
+   default prompt.
+   The bulk path deliberately still refuses a `seedance` override — one click
+   there would bill a generation per photo.
+
+**Verification**: `pnpm web:typecheck` clean, `pnpm web:test` 352 passed. UI
+not exercised in a browser — admin-auth surface, owner is testing directly.
+
 ## 2026-08-18 09:30 UTC — Camera watermarks: a photo class the Curator could not describe
 
 **Symptom** (owner, on shot #04): "the bottom left of this pic has text, it
