@@ -1518,6 +1518,34 @@ def process_photo_clip(row: dict[str, Any]) -> None:
             "--orientation", "portrait",
             "--cover-crop",
         ]
+        # Owner 2026-08-17: "DA+KB 每张图片的效果都是zoom in - fix it 应该有很多种效果".
+        # Without a shot plan, generate.py falls back to pick_mode(i, 'auto') =
+        # [zoom-in, zoom-out] for every clip. Feed it a plan whose mode is
+        # seeded by the photo id — deterministic (re-render = same move) but
+        # varied across photos. POI photos have no room_type, so use the full
+        # mode catalogue the v2 filter supports instead of photo_selector's
+        # room pools (which are listing-oriented).
+        POI_CLIP_MODES = [
+            "push_in", "push_in_slow", "pull_back", "pan_lr", "pan_rl",
+            "push_pan_lr", "tilt_td", "zoom-in", "zoom-out",
+        ]
+        mode = POI_CLIP_MODES[int(photo_id[:8], 16) % len(POI_CLIP_MODES)]
+        shot_plan_path = workdir / "clip_shot_plan.json"
+        shot_plan_path.write_text(json.dumps({"plan": [{
+            "id": photo_id,
+            "sort_order": 0,
+            "room_type": None,
+            "is_master": False,
+            "subject_label": None,
+            "subject_bbox": None,
+            "ai_caption": "",
+            "hero_score": 0.5,
+            "quality": 0.5,
+            "duration_s": duration,
+            "mode": mode,
+            "is_hero": True,
+        }]}))
+        cmd += ["--shot-plan", str(shot_plan_path)]
         if engine == "depthflow":
             cmd += ["--depthflow-python", DEPTHFLOW_PYTHON]
         print(f"[clip {clip_id}] running: {' '.join(cmd)}", flush=True)
@@ -1559,6 +1587,149 @@ def process_photo_clip(row: dict[str, Any]) -> None:
         shutil.rmtree(workdir, ignore_errors=True)
 
 
+# ── tour_assemblies: final concat of approved photo clips (2026-08-17) ─────
+# The TourPipeline Assemble step computes the final shot list (every POI 1-2
+# photos, ready clips only) and the owner approves it; this worker downloads
+# the ready clips, concatenates with crossfade, uploads to Cloudflare Stream,
+# and marks the assembly ready. Same claim/process pattern as bucket jobs.
+
+def claim_assembly() -> dict[str, Any] | None:
+    rows = sb_get(
+        "tour_assemblies",
+        {
+            "select": "id,community_id,run_id,ordered_clips,status",
+            "status": "eq.pending",
+            "order": "created_at.asc",
+            "limit": "1",
+        },
+    )
+    if not rows:
+        return None
+    row = rows[0]
+    updated = sb_patch(
+        "tour_assemblies",
+        {"id": f"eq.{row['id']}", "status": "eq.pending"},
+        {"status": "processing", "updated_at": _now_iso()},
+    )
+    if not updated:
+        return None
+    return row
+
+
+def process_assembly(row: dict[str, Any]) -> None:
+    assembly_id = row["id"]
+    ordered = row.get("ordered_clips") or []
+    print(f"[assembly {assembly_id}] {len(ordered)} clips", flush=True)
+    workdir = Path(tempfile.mkdtemp(prefix=f"assembly-{assembly_id[:8]}-"))
+    try:
+        if len(ordered) < 2:
+            raise RuntimeError(f"need >=2 clips, got {len(ordered)}")
+        # Download every ready clip (seedance → ai-videos bucket, DA+KB → clip-renders).
+        clip_paths: list[Path] = []
+        for i, c in enumerate(ordered, start=1):
+            path = c.get("clip_storage_path") or ""
+            bucket = (
+                "ai-videos"
+                if (c.get("engine") or "kenburns") == "seedance"
+                else "clip-renders"
+            )
+            if not path:
+                raise RuntimeError(f"clip {c.get('photo_id')} has no storage_path")
+            dest = workdir / f"{i:02d}.mp4"
+            storage_download(bucket, path, dest)
+            clip_paths.append(dest)
+            print(f"[assembly {assembly_id}] downloaded {bucket}/{path}", flush=True)
+
+        # Concat with crossfade — reuse generate.py's concat helper via its CLI.
+        out_path = workdir / "tour.mp4"
+        # generate.py's concat_with_crossfade is not exposed standalone; do the
+        # concat inline with ffmpeg xfade chain (same 0.5s crossfade as the
+        # bucket path).
+        inputs = []
+        for p in clip_paths:
+            inputs += ["-i", str(p)]
+        # Build xfade chain: offset_i = offset_{i-1} + dur_{i-1} - xfade
+        xfade = 0.5
+        offsets: list[float] = []
+        acc = 0.0
+        durs = []
+        for p in clip_paths:
+            out = subprocess.run(
+                ["ffprobe", "-v", "error", "-show_entries", "format=duration",
+                 "-of", "csv=p=0", str(p)],
+                capture_output=True, text=True, check=True, timeout=15,
+            )
+            durs.append(float(out.stdout.strip()))
+        acc = 0.0
+        for d in durs[:-1]:
+            offsets.append(acc)
+            acc += d - xfade
+        filters: list[str] = []
+        prev = "[0:v]"
+        for i in range(1, len(clip_paths)):
+            name = f"x{i}"
+            filters.append(
+                f"{prev}[{i}:v]xfade=transition=fade:duration={xfade}:"
+                f"offset={offsets[i-1]:.3f}[{name}]"
+            )
+            prev = f"[{name}]"
+        total = sum(durs) - xfade * (len(durs) - 1)
+        vf = ";".join(filters) + f";{prev}format=yuv420p"
+        cmd = [
+            "ffmpeg", "-y",
+            *inputs,
+            "-filter_complex", vf,
+            "-c:v", "libx264", "-preset", "medium", "-crf", "20",
+            "-movflags", "+faststart",
+            str(out_path),
+        ]
+        print(f"[assembly {assembly_id}] running: {' '.join(cmd)}", flush=True)
+        subprocess.run(cmd, check=True, cwd=str(REPO_ROOT), timeout=600)
+        if not out_path.exists():
+            raise RuntimeError("concat produced no output")
+
+        # Upload to CF Stream.
+        cf_meta = {
+            "name": f"community-tour-{row.get('community_id')}",
+            "scope": "community_tour_assemble",
+            "tour_assembly_id": assembly_id,
+        }
+        cf_uid = cf_upload(out_path, meta=cf_meta)
+        print(f"[assembly {assembly_id}] uploaded to CF: {cf_uid}", flush=True)
+
+        sb_patch(
+            "tour_assemblies",
+            {"id": f"eq.{assembly_id}"},
+            {
+                "status": "ready",
+                "cf_stream_uid": cf_uid,
+                "video_url": streamIframeUrl(cf_uid),
+                "error": None,
+                "updated_at": _now_iso(),
+            },
+        )
+        print(f"[assembly {assembly_id}] ready", flush=True)
+    except Exception as e:
+        err = f"{type(e).__name__}: {e}"
+        print(f"[assembly {assembly_id}] FAILED: {err}", flush=True)
+        traceback.print_exc()
+        try:
+            sb_patch(
+                "tour_assemblies",
+                {"id": f"eq.{assembly_id}"},
+                {"status": "failed", "error": err[:500], "updated_at": _now_iso()},
+            )
+        except Exception:
+            traceback.print_exc()
+    finally:
+        shutil.rmtree(workdir, ignore_errors=True)
+
+
+def streamIframeUrl(uid: str) -> str:
+    sub = os.environ.get("NEXT_PUBLIC_CLOUDFLARE_STREAM_CUSTOMER_SUBDOMAIN", "")
+    return f"https://customer-{sub}/media/{uid}/iframe" if sub else f"https://watch.cloudflarestream.com/{uid}"
+
+
 def main() -> None:
     print(f"[worker] starting, polling every {POLL_IDLE_SEC}s", flush=True)
     while True:
@@ -1587,6 +1758,18 @@ def main() -> None:
 
         if bucket_job is not None:
             process_bucket_job(bucket_job)
+            continue
+
+        # Tour assemblies (approved final concat) — above per-photo clips.
+        try:
+            assembly = claim_assembly()
+        except Exception:
+            traceback.print_exc()
+            time.sleep(POLL_IDLE_SEC)
+            continue
+
+        if assembly is not None:
+            process_assembly(assembly)
             continue
 
         # Photo clips (depthflow/kenburns) — interactive, above enhancement.

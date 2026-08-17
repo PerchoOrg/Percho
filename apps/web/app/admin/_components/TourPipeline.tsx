@@ -105,7 +105,7 @@ export function TourPipeline({
     return body.run.id;
   }
 
-  async function runStep(step: StepName, runId: string | null): Promise<void> {
+  async function runStep(step: StepName, runId: string | null, approve = false): Promise<void> {
     // Research is expensive + cached per-run: "Run" always starts a fresh run
     // so the button visibly does something (owner 2026-08-16).
     const rid = step === 'research' ? await createRun() : (runId ?? (await createRun()));
@@ -119,7 +119,7 @@ export function TourPipeline({
       const res = await fetch(`/api/admin/community-tour/${communityId}/runs/${rid}/step`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ step }),
+        body: JSON.stringify({ step, ...(approve ? { approve: true } : {}) }),
       });
       const body = (await res.json()) as { ok?: boolean; error?: string; message?: string };
       if (!res.ok || !body.ok) {
@@ -362,6 +362,17 @@ export function TourPipeline({
                 )}
                 {running === s.name || researching ? 'Running…' : done ? 'Re-run' : 'Run'}
               </button>
+              {s.name === 'assemble' && done && (
+                <button
+                  type="button"
+                  onClick={() => void runStep(s.name, selectedRun, true)}
+                  disabled={!!running}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-700/40 bg-emerald-600/10 px-3 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-600/20 disabled:cursor-not-allowed disabled:text-muted"
+                >
+                  <CheckCircle2 size={13} />
+                  Approve & build
+                </button>
+              )}
             </div>
             <p className="text-ink2 text-xs">{s.desc}</p>
 
@@ -648,14 +659,85 @@ function StepResult({
     );
   }
   if (s === 'assemble') {
-    const r = result as { video_url?: string };
-    return r.video_url ? (
-      <a href={r.video_url} target="_blank" rel="noreferrer" className="text-bronze underline">
-        Watch final video
-      </a>
-    ) : (
-      <div>Not assembled yet — run after clips are ready.</div>
+    const r = result as {
+      approved?: boolean;
+      ordered?: Array<{
+        photo_id: string;
+        poi_id: string;
+        poi_name: string;
+        category: string;
+        engine: string;
+        duration_s: number;
+        clip_id: string;
+        clip_storage_path: string | null;
+      }>;
+      dropped?: Array<{ photo_id: string; reason: string }>;
+      error?: string;
+    };
+    if (r.error) return <div className="text-red-600">{r.error}</div>;
+    const ordered = r.ordered ?? [];
+    const dropped = r.dropped ?? [];
+    return (
+      <div className="space-y-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="font-medium text-ink">
+            {r.approved ? 'Approved — building…' : 'Final shot list'} ({ordered.length} clips)
+          </span>
+          <span className="text-ink3">
+            {ordered.reduce((a, c) => a + (c.duration_s ?? 0), 0).toFixed(1)}s total
+          </span>
+          {r.approved && <span className="text-emerald-600">✓ enqueued</span>}
+        </div>
+        {ordered.length === 0 && <div className="text-ink3">No clips ready — generate them first.</div>}
+        <ol className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+          {ordered.map((c, i) => (
+            <li key={c.photo_id} className="overflow-hidden rounded-lg border border-line bg-bg">
+              <div className="relative h-20 w-full bg-black">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={photoThumb(photos, c.photo_id, storageBase, bucket)}
+                  alt={c.poi_name}
+                  className="h-full w-full object-cover"
+                />
+                <span className="absolute left-1 top-1 rounded bg-black/70 px-1.5 text-[10px] text-white">
+                  {i + 1}
+                </span>
+              </div>
+              <div className="px-2 py-1.5 text-[10px]">
+                <div className="truncate font-medium text-ink">{c.poi_name}</div>
+                <div className="text-ink2">
+                  {c.category} · {c.engine} · {c.duration_s}s
+                </div>
+              </div>
+            </li>
+          ))}
+        </ol>
+        {dropped.length > 0 && (
+          <details className="text-xs text-ink2">
+            <summary className="cursor-pointer">{dropped.length} dropped</summary>
+            <ul className="mt-1 space-y-0.5">
+              {dropped.map((d) => (
+                <li key={d.photo_id}>
+                  {d.photo_id.slice(0, 8)} — {d.reason}
+                </li>
+              ))}
+            </ul>
+          </details>
+        )}
+      </div>
     );
   }
   return null;
+}
+
+function photoThumb(
+  photos: PhotoRow[],
+  photoId: string,
+  storageBase: string,
+  bucket: string,
+): string {
+  const p = photos.find((x) => x.id === photoId);
+  if (!p) return '';
+  const path = p.enhanced_status === 'approved' && p.enhanced_path ? p.enhanced_path : p.storage_path;
+  return `${storageBase}/storage/v1/object/public/${bucket}/${path}`;
 }
