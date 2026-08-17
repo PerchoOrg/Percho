@@ -749,6 +749,43 @@ async function computeFinalShots(
     });
   }
 
+  // Natural narrative order (mirrors render-worker photo_selector narrative_sort):
+  // wide establishing shots open (aerial/landscape), then move indoors/activity,
+  // signage/other closes. Never two consecutive shots of the same POI when avoidable.
+  // Owner 2026-08-17: "clip的顺序要自然".
+  const NARRATIVE_ORDER: Record<string, number> = {
+    aerial: 10,
+    landscape: 20,
+    storefront: 30,
+    food: 40,
+    people: 50,
+    interior: 60,
+    detail: 70,
+    signage: 80,
+    other: 90,
+  };
+  shots.sort((a, b) => {
+    const ca = NARRATIVE_ORDER[a.category] ?? 90;
+    const cb = NARRATIVE_ORDER[b.category] ?? 90;
+    if (ca !== cb) return ca - cb;
+    // Same category: alternate POIs (spread same-POI pairs apart).
+    return a.poi_id < b.poi_id ? -1 : a.poi_id > b.poi_id ? 1 : 0;
+  });
+  // De-dup consecutive same-POI (only two per POI, so a simple adjacent swap
+  // covers the common case; category grouping already breaks most runs).
+  for (let i = 1; i < shots.length; i++) {
+    if (shots[i]!.poi_id === shots[i - 1]!.poi_id && i + 1 < shots.length) {
+      let j = i + 1;
+      while (j < shots.length && shots[j]!.poi_id === shots[i]!.poi_id) j++;
+      if (j < shots.length) {
+        [shots[i], shots[j]] = [shots[j]!, shots[i]!];
+      }
+    }
+  }
+  shots.forEach((s, i) => {
+    (s as { sort_order?: number }).sort_order = i;
+  });
+
   return { shots, dropped };
 }
 

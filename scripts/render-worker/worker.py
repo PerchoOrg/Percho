@@ -1644,10 +1644,15 @@ def process_assembly(row: dict[str, Any]) -> None:
         for i, c in enumerate(ordered, start=1):
             engine = c.get("engine") or "kenburns"
             candidates = by_photo.get(c.get("photo_id"), [])
-            # Prefer the ready row whose engine matches the shot; fall back to any
-            # ready row for that photo.
-            ready = next((r for r in candidates if r["engine"] == engine), None) or (
-                candidates[0] if candidates else None
+            # AI-first: when BOTH a seedance (AI) clip and a local DA+KB clip are
+            # ready for the same photo, prefer seedance regardless of what the shot
+            # declared (owner 2026-08-17: "有ai 选ai"). Fall back to the shot's
+            # engine, then any ready row.
+            seedance = next((r for r in candidates if r["engine"] == "seedance"), None)
+            ready = (
+                seedance
+                or next((r for r in candidates if r["engine"] == engine), None)
+                or (candidates[0] if candidates else None)
             )
             if not ready or not ready.get("storage_path"):
                 # Shot has no ready clip yet (never generated or still pending) —
@@ -1745,6 +1750,26 @@ def process_assembly(row: dict[str, Any]) -> None:
         subprocess.run(cmd, check=True, cwd=str(REPO_ROOT), timeout=600)
         if not out_path.exists():
             raise RuntimeError("concat produced no output")
+
+        # Owner 2026-08-17: "assemble要加音乐" — mux a warm-acoustic BGM track
+        # (same library + fade + volume as listing/bucket renders, generate.py
+        # mux_bgm). Silent if the bucket is empty.
+        bgm = pick_bgm()
+        if bgm:
+            bgm_out = workdir / "tour_bgm.mp4"
+            fade_start = max(0.0, total - 2.0)
+            mux_cmd = [
+                "ffmpeg", "-y", "-i", str(out_path),
+                "-stream_loop", "-1", "-i", str(bgm),
+                "-shortest", "-t", f"{total:.3f}",
+                "-af", f"afade=t=out:st={fade_start:.3f}:d=2,volume=0.55",
+                "-c:v", "copy", "-c:a", "aac", "-b:a", "160k",
+                "-map", "0:v:0", "-map", "1:a:0",
+                str(bgm_out),
+            ]
+            print(f"[assembly {assembly_id}] muxing BGM {bgm.name}", flush=True)
+            subprocess.run(mux_cmd, check=True, cwd=str(REPO_ROOT), timeout=600)
+            out_path = bgm_out
 
         # Upload to CF Stream.
         cf_meta = {
