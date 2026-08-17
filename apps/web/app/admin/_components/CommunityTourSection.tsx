@@ -5,15 +5,15 @@
  * (owner 2026-08-16: page order = video → 8 steps → big photo table →
  * collapsible extras).
  *
- * Holds the photo selection here so the Generate AI Video panel (top) and the
- * big PhotoTable (below the 8-step pipeline) share one selection set.
- * Also fetches per-photo clip status (+ agent-recommended flag) from the
- * clips route and merges it into the table rows, so the table shows clip
- * state and a per-row Generate button.
+ * The top panel is the community's final assembled video (AssemblyVideoPanel —
+ * replaced the old Generate AI Video panel; per-photo Seedance generation now
+ * lives in the PhotoTable row Generate buttons). Also fetches per-photo clip
+ * status (+ agent-recommended flag) from the clips route and merges it into
+ * the table rows, so the table shows clip state and a per-row Generate button.
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { AiVideoSection } from './AiVideoSection';
+import { AssemblyVideoPanel } from './AssemblyVideoPanel';
 import type { PhotoRow } from './PhotoTable';
 import { PhotoTable } from './PhotoTable';
 import { TourPipeline } from './TourPipeline';
@@ -65,7 +65,6 @@ export function CommunityTourSection({
   bucket: string;
   photos: PhotoRow[];
 }) {
-  const [selected, setSelected] = useState<ReadonlySet<string>>(() => new Set());
   const [clipRows, setClipRows] = useState<ClipRow[]>([]);
   const inFlight = useRef(false);
 
@@ -95,26 +94,6 @@ export function CommunityTourSection({
     if (!c) return p;
     return { ...p, recommended: c.recommended, clip: c.clip, dakb_clip: c.dakb_clip };
   });
-
-  const toggle = useCallback((id: string) => {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }, []);
-
-  const toggleMany = useCallback((ids: string[], select: boolean) => {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      for (const id of ids) {
-        if (select) next.add(id);
-        else next.delete(id);
-      }
-      return next;
-    });
-  }, []);
 
   async function generateClip(
     photoId: string,
@@ -152,18 +131,9 @@ export function CommunityTourSection({
 
   return (
     <div className="space-y-4">
-      {/* 1 · Generated community tour AI video from the selected clips */}
-      <AiVideoSection
-        communityId={communityId}
-        communityName={communityName}
-        city={city}
-        state={state}
-        storageBase={storageBase}
-        bucket={bucket}
-        photos={photos}
-        selected={selected}
-        onClearSelection={() => setSelected(new Set())}
-      />
+      {/* 1 · The community's final assembled video (owner 2026-08-17:
+          assembly results at the top — the community's video). */}
+      <AssemblyVideoPanel communityId={communityId} />
 
       {/* 2 · The 8 pipeline steps, each with its own run button */}
       <TourPipeline
@@ -191,7 +161,6 @@ export function CommunityTourSection({
             storageBase={storageBase}
             bucket={bucket}
             photos={enriched}
-            selection={{ selected, onToggle: toggle, onToggleMany: toggleMany }}
             onGenerateClip={generateClip}
           />
         </div>

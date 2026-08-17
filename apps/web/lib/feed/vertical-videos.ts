@@ -81,7 +81,7 @@ export interface HeroVideoIndex {
 export async function fetchVerticalVideos(): Promise<HeroVideoIndex> {
   const supabase = createAnonClient();
 
-  const [listingRes, communityRes] = await Promise.all([
+  const [listingRes, communityRes, assemblyRes] = await Promise.all([
     supabase
       .from('listing_videos')
       .select('listing_id, cf_video_id, cf_video_id_landscape, cf_video_id_square, sort_order')
@@ -96,6 +96,14 @@ export async function fetchVerticalVideos(): Promise<HeroVideoIndex> {
       .select('community_id, cf_stream_uid, created_at')
       .eq('status', 'ready')
       .eq('scope', 'community_intent_bucket')
+      .order('created_at', { ascending: false }),
+    // Owner 2026-08-17: the assembled community tour (ffmpeg concat of the
+    // Selected Photos clips) IS the community's video — it takes priority over
+    // the older bucket videos when it's ready.
+    supabase
+      .from('tour_assemblies')
+      .select('community_id, cf_stream_uid, created_at')
+      .eq('status', 'ready')
       .order('created_at', { ascending: false }),
   ]);
 
@@ -125,6 +133,15 @@ export async function fetchVerticalVideos(): Promise<HeroVideoIndex> {
       if (!byCommunity.has(row.community_id)) {
         byCommunity.set(row.community_id, row.cf_stream_uid);
       }
+    }
+  }
+
+  // Assembled tour wins over bucket videos (owner 2026-08-17): the assembly IS
+  // the community's final video. Overwrite whatever the bucket query set.
+  if (!assemblyRes.error) {
+    for (const row of (assemblyRes.data ?? []) as GeneratedVideoRow[]) {
+      if (!row.cf_stream_uid || !row.community_id) continue;
+      byCommunity.set(row.community_id, row.cf_stream_uid);
     }
   }
 
