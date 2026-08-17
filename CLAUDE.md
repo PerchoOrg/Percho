@@ -221,14 +221,15 @@ These are mandated by the owner. Breaking any of them ends the session badly:
 
 ## 2.5 Multi-agent workspace protocol (READ BEFORE EDITING FILES)
 
-**Do NOT edit files under `~/Percho` directly.** It's the shared reference
-worktree pinned on `main`. Multiple agents (Claude Code, Codex, Hermes
-subagents, humans) run in parallel — writing to `~/Percho` causes merge
-conflicts and lost work.
+**Do NOT edit files under `~/Workspace/Percho` directly.** It's the shared
+reference worktree pinned on `main`. Multiple agents (Claude Code, Codex,
+Hermes subagents, humans) run in parallel — writing to `~/Workspace/Percho`
+causes merge conflicts and lost work.
 
-Instead, claim one of ten dedicated worktrees (`~/Percho-ws1` … `~/Percho-ws10`),
-each with its own long-lived branch `agent/wsN` and its own `node_modules`.
-All share `~/Percho/.git`, so `git fetch` in one updates all.
+Instead, claim one of the eight dedicated worktrees
+(`~/Workspace/Percho-ws1` … `~/Workspace/Percho-ws8`), each with its own
+long-lived branch `agent/wsN` and its own `node_modules`.
+All share `~/Workspace/Percho/.git`, so `git fetch` in one updates all.
 
 **Registry:** `~/Percho-workspaces.json` (flock-guarded — never hand-edit while
 agents are running).
@@ -279,9 +280,12 @@ ws release "$path"    # verifies clean + synced with origin/main → idle
 3. **Never operate on someone else's `claimed` worktree.** If you need it,
    ask the human. `ws show <id>` tells you who has it and what they're doing.
 4. **If `ws claim` fails (all busy)** — stop and ask the human. Do NOT fall
-   back to `~/Percho`.
+   back to `~/Workspace/Percho`.
 5. **Don't `git branch -D agent/wsN`** — it's the parking slot. Only the
    phase branches you create are yours to delete.
+6. **`ws` must be on PATH for agent shells.** Non-interactive shells don't
+   read `~/.zshrc`; if `ws` isn't found, use `/Users/apocalypsee/bin/ws` or
+   add `export PATH="$HOME/bin:$PATH"` to `~/.zshenv`.
 
 ### Debug commands
 
