@@ -1501,7 +1501,12 @@ def process_photo_clip(row: dict[str, Any]) -> None:
         p = photos[0]
         read_path = approved_enhanced_path(p) or p["storage_path"]
         ext = Path(read_path).suffix or ".jpg"
-        src = workdir / f"photo{ext}"
+        # Filename MUST be the photo UUID: generate.py --shot-plan matches
+        # plan entries by sort_order prefix OR filename stem against the
+        # plan's `id` field. A plain `photo.jpg` matches neither, so the
+        # plan "matched zero photos" and every DA+KB clip failed with
+        # CalledProcessError (owner 2026-08-17, failed from Re-render all).
+        src = workdir / f"{photo_id}{ext}"
         storage_download(PHOTO_BUCKET, read_path, src)
         print(f"[clip {clip_id}] downloaded {read_path}", flush=True)
 
