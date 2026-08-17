@@ -1459,7 +1459,7 @@ def claim_photo_clip() -> dict[str, Any] | None:
     rows = sb_get(
         "photo_clips",
         {
-            "select": "id,photo_id,engine,duration_s,status",
+            "select": "id,photo_id,engine,duration_s,status,move",
             "status": "eq.pending",
             "or": "(engine.eq.depthflow,engine.eq.kenburns)",
             "order": "created_at.asc",
@@ -1531,16 +1531,17 @@ def process_photo_clip(row: dict[str, Any]) -> None:
         ]
         # Owner 2026-08-17: "DA+KB 每张图片的效果都是zoom in - fix it 应该有很多种效果".
         # Without a shot plan, generate.py falls back to pick_mode(i, 'auto') =
-        # [zoom-in, zoom-out] for every clip. Feed it a plan whose mode is
-        # seeded by the photo id — deterministic (re-render = same move) but
-        # varied across photos. POI photos have no room_type, so use the full
-        # mode catalogue the v2 filter supports instead of photo_selector's
-        # room pools (which are listing-oriented).
+        # [zoom-in, zoom-out] for every clip. The move now comes from the tour
+        # Scheduler, which picks it from the photo's subject AND the neighbouring
+        # clip — something a single-clip render cannot see. Rows planned before
+        # the orchestrator (2026-08-17) have no move and keep the old per-photo
+        # rotation: deterministic, varied, but blind to its neighbours.
         POI_CLIP_MODES = [
             "push_in", "push_in_slow", "pull_back", "pan_lr", "pan_rl",
             "push_pan_lr", "tilt_td", "zoom-in", "zoom-out",
         ]
-        mode = POI_CLIP_MODES[int(photo_id[:8], 16) % len(POI_CLIP_MODES)]
+        mode = (row.get("move") or "").strip() or \
+            POI_CLIP_MODES[int(photo_id[:8], 16) % len(POI_CLIP_MODES)]
         shot_plan_path = workdir / "clip_shot_plan.json"
         shot_plan_path.write_text(json.dumps({"plan": [{
             "id": photo_id,

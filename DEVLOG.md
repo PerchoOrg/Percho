@@ -4,6 +4,120 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-08-17 22:30 UTC — Community tour orchestration layer, Phase 1 (Scheduler + Guard)
+
+**Objective**: land the deterministic half of the owner's four-layer
+orchestration spec (Curator / Scheduler / Guard / VO Pass) — turning "a set of
+approved photos → a community tour shot list" from per-category hardcoding into
+a reproducible pipeline. Phase 1 is the pure code only; the Curator LLM (Phase
+2) and the VO Pass (Phase 3) are not in this branch.
+
+**What the spec assumed vs what the code actually was** (checked before writing
+anything — three of the five assumptions were wrong):
+- "current rule: overflow > 20% → Ken Burns" — that constant
+  (`PARALLAX_MAX_OVERFLOW = 0.20`, `scripts/ken-burns/depthflow_modes.py:90`)
+  only fires under `--engine mixed`, which is the **listing** path. Community
+  tour engines were assigned in TS by photo category
+  (`step/route.ts` `computeFinalShots`), never through `pick_engines`. So the
+  0.20-vs-0.55 conflict needed **no global change**: 0.55 lives in the new
+  9:16 Scheduler, 0.20 stays on the listing canvas. The threshold is a function
+  of the canvas, which is why "just fix the threshold" would have been wrong
+  here — there are two canvases.
+- moves were picked by the render worker from `hash(photo_id)` over 9 Ken Burns
+  modes (`worker.py:1543`); the 8 DepthFlow moves were unreachable and nothing
+  was persisted.
+- the Seedance prompt was **one hardcoded string** for every clip
+  (`seedance-worker/worker.ts:322`), containing the word `cinematic` — which
+  the spec bans precisely because it binds to a dolly-in. That is the direct
+  cause of "every clip zooms in".
+
+**Actions**:
+- New pure module `apps/web/lib/poi/tour-orchestrator/`:
+  - `types.ts` — Curator output contract (zod) + `ScheduledClip`.
+  - `annotations.ts` — coercion of untrusted LLM output. Out-of-range enums
+    land on the value that makes a photo **ineligible** for Seedance, never the
+    permissive one; >1 opener/closer demoted to establishing; one-sided pair
+    references nulled. Warnings, not retries.
+  - `scheduler.ts` — overflow, ordering (time → pinned opener/closer → pairs
+    kept adjacent wide-then-close → bucket run ≤ 2 clips), engine assignment
+    (Seedance ≤ 4 by emotional weight on eligible frames; DepthFlow quota 0.40
+    clamped to [1/3, 1/2] of the non-Seedance pool, ≥ 2), move rotation, and
+    duration.
+  - `guard.ts` — hard checks: brand-signage / foreground-people Seedance
+    downgrades, verbatim clause injection, school-language stripping, per-clip
+    AI-generation flag.
+  - `seedance-prompt.ts` — four-part template (scene / motion / camera /
+    constraints), banned-word assert, missing-clause throw.
+  - `school-language.ts` — the six frozen patterns, sentence-level stripping.
+  - `fixtures/peachtree-corners.ts` — the 14 real `poi_photos` rows (real ids,
+    real `width_px/height_px`, real tagger descriptions) with **hand-written**
+    annotations as the Curator baseline. Not model output; see §6.
+- Migration `20260817210000_photo_clips_move_prompt.sql`: `move`, `prompt`,
+  `ai_generated` on `photo_clips`. Both workers now consume them with a
+  fallback (`worker.py` `row["move"] or hash`, `seedance-worker`
+  `row.prompt ?? FALLBACK_CLIP_PROMPT`), so old rows keep rendering. The
+  fallback prompt was rewritten to drop `cinematic` and to assume **no people
+  may be generated** when there is no annotation.
+- 54 new tests (4 files). Full suite **321 passed / 30 files** (was 267/26).
+
+**Decisions** (owner, this session):
+- *Seedance duration floor 4.0s.* The provider clamps anything shorter
+  (`Math.min(Math.max(round(d),4),15)`), so a planned 3.5s Seedance clip was a
+  lie in the shot list. The Scheduler now floors Seedance at 4.0 instead of
+  trimming in assemble. Durations stay in [2.0, 4.5] overall.
+- *Migration now, not at wiring time.* Columns exist and are consumed, so the
+  Phase 3 wiring is a write, not a schema change.
+- *Curator goes through the existing direct Google Gemini API*, not the
+  LiteLLM :4000 proxy the spec names — there is no LiteLLM in this repo, and
+  adding one is a new service dependency (CLAUDE.md §8). `vision-tagger.ts`
+  already talks to `generativelanguage.googleapis.com` with
+  `gemini-3.1-flash-lite`.
+- *Music now, TTS later.* Nothing in the repo does TTS. The assemble step
+  already muxes a warm-acoustic BGM track (`worker.py:1768`), so the VO Pass
+  will produce **text plus a word-rate check** and the film stays BGM-scored
+  until a TTS provider is chosen.
+- *`vo_line` deliberately NOT a `photo_clips` column.* That table is a global
+  per-photo cache reused across communities; narration belongs to one tour's
+  shot list (`tour_assemblies.ordered_clips`).
+
+**Issues**:
+- The golden fixture emits exactly one warning, and it is correct, not a bug:
+  Seedance takes one of the four low-overflow portraits, leaving 3 photos under
+  0.55 in a pool of 10 whose 1/3 floor is 4. The quota is the hard constraint
+  and the threshold the preference, so a 4th DepthFlow is taken over threshold
+  **with a warning**. This contradicts the spec's §4.2 prediction that the
+  fallback "won't be triggered" — it triggers by one clip.
+- Guard's downgrade rules are unreachable through the Scheduler (which already
+  excludes those photos from the Seedance candidate set). They are tested by
+  handing the Guard a clip with `engine: 'seedance'` directly — the admin
+  override / hand-edited plan path, which is the only way they fire in
+  production.
+- `pnpm web:lint` remains red repo-wide (pre-existing, 185 errors). The new
+  module is clean apart from 50 `noNonNullAssertion` **warnings**, which is the
+  house style under `noUncheckedIndexedAccess`.
+- `database.types.ts` is still the 16-line stub, so §5's "regenerate types
+  after a migration" was again not done — a real regen cascades typecheck
+  failures across code relying on the permissive stub. Still owed.
+
+**Verification**: `pnpm web:typecheck` clean. `pnpm web:test` **321 passed**.
+`python3 -m py_compile scripts/render-worker/worker.py` clean.
+Migration **not** pushed to the remote yet — the plan is not wired into the
+pipeline, so nothing depends on it in prod, and the push is the owner's call.
+
+**Learnings**:
+- Read the constant before trusting a spec's description of it. "Change 0.20 to
+  0.55" would have silently retuned every listing video on a canvas where 0.20
+  is the right number.
+- The four-layer split earns its keep at test time: because the Scheduler is
+  pure, "same input, 100 runs, identical output" is a one-line test, and every
+  compliance rule is assertable without a model in the loop.
+
+**Next steps**: (1) owner reviews the golden plan output (45.5s total, 4
+Seedance / 4 DepthFlow / 6 Ken Burns) against the human baseline in §10 of the
+spec; (2) Phase 2 — Curator, ideally merged into the existing bulk vision
+tagging so annotation costs nothing extra at orchestration time; (3) Phase 3 —
+VO Pass + wiring the plan into `computeFinalShots` and `photo_clips`.
+
 ## 2026-08-17 20:00 UTC — Community tour final assemble + migration push channel fix
 
 **Objective**: land the community-tour final assemble work (photos + clips
