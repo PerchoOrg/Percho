@@ -696,6 +696,16 @@ def render_parallax(src: str, dst: str, duration: float, mode: str,
     """Run depthflow_clip.py in its own interpreter (it needs torch; this
     script must stay stdlib-only)."""
     src_w, src_h = ffprobe_wh(src)
+    # DepthFlow output aspect follows the SOURCE photo. On a 9:16 canvas a
+    # non-9:16 photo (e.g. 3:2 landscape) would emit a WIDE video that the
+    # downstream cover-crop can only top/bottom-crop to 9:16 — destroying
+    # the parallax vertical travel. Crop the source to the canvas aspect
+    # FIRST so the parallax itself renders at the target aspect (same
+    # framing decision as the kenburns cover path); the only remaining
+    # overflow is the cover margin, which travel_axis reads off the resized
+    # src.
+    src = _fit_crop_to_aspect(src, src_w, src_h, w, h)
+    src_w, src_h = ffprobe_wh(src)
     # Render at the photo's own aspect, wide enough to cover the canvas after
     # composition. Composition only ever scales down from here.
     scale = max(w / src_w, h / src_h)
@@ -708,6 +718,25 @@ def render_parallax(src: str, dst: str, duration: float, mode: str,
         "--duration", f"{duration:.3f}",
         "--width", str(out_w), "--height", str(out_h), "--fps", str(FPS),
     ])
+
+
+def _fit_crop_to_aspect(src: str, src_w: int, src_h: int, w: int, h: int) -> str:
+    """Center-crop a copy of `src` to the canvas aspect, scaled to cover it.
+
+    Returns the path of the processed file (a tempfile next to `src`).
+    """
+    if abs((src_w / src_h) - (w / h)) < 1e-3:
+        return src
+    from tempfile import NamedTemporaryFile
+    out = os.path.join(os.path.dirname(os.path.abspath(src)),
+                       os.path.basename(src) + ".aspect.jpg")
+    run([
+        "ffmpeg", "-y", "-i", src,
+        "-vf", f"scale={w}:{h}:force_original_aspect_ratio=increase:flags=lanczos,"
+               f"crop={w}:{h},setsar=1",
+        "-frames:v", "1", out,
+    ])
+    return out
 
 
 def render_clip(src: str, dst: str, duration: float, mode: str, w: int, h: int,
@@ -770,6 +799,16 @@ def render_clip(src: str, dst: str, duration: float, mode: str, w: int, h: int,
         # baking bands into the video that no card-side fit can remove. Whether
         # to crop is the CALLER's product decision, not a property of the output
         # dimensions, so it is now a flag.
+        #
+        # 2026-08-17: PER-PHOTO CLIPS (--cover-crop) on a 9:16 canvas always
+        # cover-crop. The blur-letterbox composition fits the photo INSIDE the
+        # canvas and pads with a blurred copy of itself — on a full-bleed 9:16
+        # clip of a 3:2 photo that shows up as hard black top/bottom bands, and
+        # the owner rejected them ("不要上下留黑"). A clip is one photo filling
+        # the whole frame; there is no multi-photo slideshow to justify the
+        # letterbox. `cover_crop` is forced by every per-photo caller, so the
+        # shape guess below is effectively dead for that path — kept for the
+        # legacy 1080x1620 cover path only.
         landscape_canvas = cover_crop or w >= h
         if landscape_canvas:
             fg_w, fg_h = w, h

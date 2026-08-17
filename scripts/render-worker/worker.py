@@ -1515,7 +1515,13 @@ def process_photo_clip(row: dict[str, Any]) -> None:
             "--output", str(out_path),
             "--duration-per-photo", str(duration),
             "--engine", engine,
-            "--orientation", "portrait",
+            # Owner 2026-08-17: every clip must be 9:16, no black bars. The
+            # explicit 1080x1920 canvas + --cover-crop below is what makes a
+            # non-9:16 photo fill the frame edge-to-edge (the fit-inside
+            # blur-letterbox path would pad with black bands). DepthFlow gets
+            # the same aspect up front in render_parallax so its parallax
+            # travel isn't cropped away by the cover crop.
+            "--resolution", "1080x1920",
             "--cover-crop",
         ]
         # Owner 2026-08-17: "DA+KB 每张图片的效果都是zoom in - fix it 应该有很多种效果".
