@@ -23,6 +23,7 @@ import { CheckCircle2, ChevronDown, ChevronRight, Loader2, Play, RefreshCw, Spar
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 import { PhotoTable, type PhotoRow } from './PhotoTable';
+import { projectTags } from '@/lib/poi/photo-tag-view';
 
 type StepName = 'research' | 'resolve' | 'photos' | 'tag' | 'generate' | 'assemble';
 
@@ -633,28 +634,55 @@ function StepResult({
     // POIs, filtered to this run's POI set. Legacy runs (before resolved_poi_ids
     // existed) fall back to all photos — the per-POI mapping is not recoverable.
     const isLegacy = (r.resolved_poi_ids ?? []).length === 0;
-    const stepPhotos = isLegacy
+    const runPhotos = isLegacy
       ? (photos ?? [])
       : (photos ?? []).filter((p) => p.poi_id && poiIds.has(p.poi_id));
+    // Two tables (owner 2026-08-17): Selected = everything not dropped;
+    // Drop = user-rejected (Review ✗ → poi_photos.status='rejected') or
+    // tagger-unusable (ai_tags.usable=false). Same split runAssemble uses.
+    const stepPhotos = runPhotos.filter(
+      (p) => p.status !== 'rejected' && projectTags(p.ai_tags).usable !== false,
+    );
+    const droppedPhotos = runPhotos.filter(
+      (p) => p.status === 'rejected' || projectTags(p.ai_tags).usable === false,
+    );
     return (
-      <div className="space-y-2">
+      <div className="space-y-4">
         <div className="text-xs">
-          {fetched} fetched · {reused} reused · {stepPhotos.length} photos
+          {fetched} fetched · {reused} reused · {stepPhotos.length} selected ·{' '}
+          {droppedPhotos.length} dropped
           {isLegacy
             ? ' (legacy run — no per-POI mapping)'
             : ` across ${poiIds.size} resolved POIs`}
         </div>
-        {stepPhotos.length > 0 ? (
-          <PhotoTable
-            table="poi_photos"
-            storageBase={storageBase}
-            bucket={bucket}
-            photos={stepPhotos}
-            onGenerateClip={onGenerateClip}
-          />
-        ) : (
-          <div className="text-xs text-ink3">No photos fetched for this run yet.</div>
-        )}
+        <div className="space-y-1">
+          <h4 className="text-xs font-medium text-ink">Selected photos ({stepPhotos.length})</h4>
+          {stepPhotos.length > 0 ? (
+            <PhotoTable
+              table="poi_photos"
+              storageBase={storageBase}
+              bucket={bucket}
+              photos={stepPhotos}
+              onGenerateClip={onGenerateClip}
+            />
+          ) : (
+            <div className="text-xs text-ink3">No selected photos yet.</div>
+          )}
+        </div>
+        <div className="space-y-1">
+          <h4 className="text-xs font-medium text-ink">Dropped photos ({droppedPhotos.length})</h4>
+          {droppedPhotos.length > 0 ? (
+            <PhotoTable
+              table="poi_photos"
+              storageBase={storageBase}
+              bucket={bucket}
+              photos={droppedPhotos}
+              onGenerateClip={onGenerateClip}
+            />
+          ) : (
+            <div className="text-xs text-ink3">Nothing dropped — no rejected or unusable photos.</div>
+          )}
+        </div>
       </div>
     );
   }
