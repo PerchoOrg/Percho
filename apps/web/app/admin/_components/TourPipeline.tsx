@@ -363,9 +363,6 @@ export function TourPipeline({
                 )}
                 {running === s.name || researching ? 'Running…' : done ? 'Re-run' : 'Run'}
               </button>
-              {s.name === 'assemble' && done && (
-                <span className="text-ink2 text-xs">Re-run rebuilds the job</span>
-              )}
             </div>
             <p className="text-ink2 text-xs">{s.desc}</p>
 
@@ -679,85 +676,18 @@ function StepResult({
     );
   }
   if (s === 'assemble') {
-    const r = result as {
-      approved?: boolean;
-      ordered?: Array<{
-        photo_id: string;
-        poi_id: string;
-        poi_name: string;
-        category: string;
-        engine: string;
-        duration_s: number;
-        clip_id: string;
-        clip_storage_path: string | null;
-      }>;
-      dropped?: Array<{ photo_id: string; reason: string }>;
-      error?: string;
-    };
+    // Owner 2026-08-17: "删除这一步预览 上一步的selected photos是一样的内容
+    // 筛选逻辑应该已经在上一步完成了 selected / drop" — the Selected Photos
+    // panel IS the final list; assemble just builds the job. No duplicate list.
+    const r = result as { approved?: boolean; ordered?: unknown[]; error?: string };
     if (r.error) return <div className="text-red-600">{r.error}</div>;
-    const ordered = r.ordered ?? [];
-    const dropped = r.dropped ?? [];
     return (
-      <div className="space-y-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="font-medium text-ink">
-            {r.approved ? 'Approved — building…' : 'Final shot list'} ({ordered.length} clips)
-          </span>
-          <span className="text-ink3">
-            {ordered.reduce((a, c) => a + (c.duration_s ?? 0), 0).toFixed(1)}s total
-          </span>
-          {r.approved && <span className="text-emerald-600">✓ enqueued</span>}
-        </div>
-        {ordered.length === 0 && <div className="text-ink3">No clips ready — generate them first.</div>}
-        <ol className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
-          {ordered.map((c, i) => (
-            <li key={c.photo_id} className="overflow-hidden rounded-lg border border-line bg-bg">
-              <div className="relative h-20 w-full bg-black">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={photoThumb(photos, c.photo_id, storageBase, bucket)}
-                  alt={c.poi_name}
-                  className="h-full w-full object-cover"
-                />
-                <span className="absolute left-1 top-1 rounded bg-black/70 px-1.5 text-[10px] text-white">
-                  {i + 1}
-                </span>
-              </div>
-              <div className="px-2 py-1.5 text-[10px]">
-                <div className="truncate font-medium text-ink">{c.poi_name}</div>
-                <div className="text-ink2">
-                  {c.category} · {c.engine} · {c.duration_s}s
-                </div>
-              </div>
-            </li>
-          ))}
-        </ol>
-        {dropped.length > 0 && (
-          <details className="text-xs text-ink2">
-            <summary className="cursor-pointer">{dropped.length} dropped</summary>
-            <ul className="mt-1 space-y-0.5">
-              {dropped.map((d) => (
-                <li key={d.photo_id}>
-                  {d.photo_id.slice(0, 8)} — {d.reason}
-                </li>
-              ))}
-            </ul>
-          </details>
-        )}
+      <div className="text-ink2">
+        {r.approved
+          ? `✓ Assemble job enqueued (${(r.ordered ?? []).length} clips). See Video Jobs.`
+          : 'Run assemble to build the final video job.'}
       </div>
     );
   }
   return null;
-}
-
-function photoThumb(
-  photos: PhotoRow[],
-  photoId: string,
-  storageBase: string,
-  bucket: string,
-): string {
-  const p = photos.find((x) => x.id === photoId);
-  if (!p) return '';
-  const path = p.enhanced_status === 'approved' && p.enhanced_path ? p.enhanced_path : p.storage_path;
-  return `${storageBase}/storage/v1/object/public/${bucket}/${path}`;
 }
