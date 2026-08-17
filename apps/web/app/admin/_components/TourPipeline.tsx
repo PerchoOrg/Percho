@@ -239,6 +239,24 @@ export function TourPipeline({
     return { ok: true };
   }
 
+  async function regenerateAllDAKB(): Promise<{ ok: boolean; message?: string }> {
+    // Bulk re-render for photos that already have a ready DA+KB clip — the
+    // per-row Generate button only shows when there's NO clip (owner
+    // 2026-08-17: old clips have no button, one click to re-render with the
+    // 9:16 fix). Same run as the panel's generateClip.
+    if (!run?.id) return { ok: false, message: 'No run yet — create one first.' };
+    const res = await fetch(`/api/admin/community-tour/${communityId}/runs/${run.id}/step`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ step: 'regenerate-all' }),
+    });
+    const body = (await res.json()) as { ok?: boolean; message?: string; error?: string };
+    if (!res.ok || !body.ok) return { ok: false, message: body.message ?? body.error ?? `HTTP ${res.status}` };
+    await loadClips();
+    router.refresh();
+    return { ok: true };
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -388,6 +406,7 @@ export function TourPipeline({
                       bucket={bucket}
                       photos={stepPhotos}
                       onGenerateClip={generateClip}
+                      onRegenerateAllDAKB={regenerateAllDAKB}
                     />
                   </div>
                 )}
@@ -408,6 +427,7 @@ function StepResult({
   bucket,
   photos,
   onGenerateClip,
+  onRegenerateAllDAKB,
 }: {
   s: StepName;
   result: Record<string, unknown>;
@@ -418,7 +438,9 @@ function StepResult({
     photoId: string,
     engine?: string,
   ) => Promise<{ ok: boolean; message?: string }>;
+  onRegenerateAllDAKB?: () => Promise<{ ok: boolean; message?: string }>;
 }) {
+  const router = useRouter();
   if (s === 'research') {
     const r = result as {
       prompt?: string;
@@ -643,7 +665,27 @@ function StepResult({
             : ` across ${poiIds.size} resolved POIs`}
         </div>
         <div className="space-y-1">
-          <h4 className="text-xs font-medium text-ink">Selected photos ({stepPhotos.length})</h4>
+          <div className="flex items-center justify-between gap-3">
+            <h4 className="text-xs font-medium text-ink">Selected photos ({stepPhotos.length})</h4>
+            <button
+              type="button"
+              onClick={() => {
+                void (async () => {
+                  const res = await onRegenerateAllDAKB?.();
+                  if (!res) return;
+                  if (res.ok) {
+                    router.refresh();
+                  } else {
+                    alert(res.message ?? 'Failed');
+                  }
+                })();
+              }}
+              className="rounded border border-line bg-bg px-2 py-1 text-[10px] font-medium text-ink2 hover:border-ink2"
+              title="Reset every DA+KB clip for these Selected Photos to pending and re-render with current code (9:16 no-black-bars). Seedance clips untouched."
+            >
+              ↻ Re-render all DA+KB
+            </button>
+          </div>
           {stepPhotos.length > 0 ? (
             <PhotoTable
               table="poi_photos"
