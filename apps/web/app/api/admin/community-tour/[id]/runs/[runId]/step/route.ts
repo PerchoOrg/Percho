@@ -403,9 +403,20 @@ async function runPhotos(sb: any, run: RunRow) {
     taggedCount.total = (untaggedRows ?? []).length;
   }
 
-  await saveStep(sb, run, 'photos', { results, resolved_poi_ids: resolvedPoiIds, auto_tag: taggedCount });
+  // Final shot list — owner 2026-08-17: selection (2/POI cap + engine/category
+  // mapping + rejected/unusable drop) lives in the PHOTOS step, not assemble.
+  // Assemble just enqueues this list. Computed AFTER tag so ai_tags exist.
+  const { shots, dropped } = await computeFinalShots(sb, resolvedPoiIds);
+
+  await saveStep(sb, run, 'photos', {
+    results,
+    resolved_poi_ids: resolvedPoiIds,
+    auto_tag: taggedCount,
+    shots,
+    dropped,
+  });
   await setRunStatus(sb, run.id, 'tagging');
-  return { ok: true, poiCount: Object.keys(results).length };
+  return { ok: true, poiCount: Object.keys(results).length, shots: shots.length };
 }
 
 // ─── step: tag ──────────────────────────────────────────────────────────────
@@ -607,45 +618,18 @@ async function enqueueClips(
 }
 
 // ─── step: assemble ─────────────────────────────────────────────────────────
-// Owner 2026-08-17: "敲定最后 assemble 要用的照片和clips 每个poi选择1-2个照片
-// 尽量cover不同的category" + "show the final selected photos on tour pipeline
-// and I will need to approve it before generating video".
-//
-// Flow (owner 2026-08-17, after bug report "上一步那么多照片为啥只有一个"):
-//   assemble input = the Selected Photos panel's photos (photos step's
-//   resolved_poi_ids) DIRECTLY — no re-filtering, no buildShotList collapse.
-//   Photos rejected by the user (Review column ✗ → poi_photos.status='rejected')
-//   or by the tagger (ai_tags.usable=false) go into a DROP list, persisted in
-//   the same step result (photos_dropped) and, on approve, in tour_assemblies.
-//   The remaining photos ARE the final shot list — the user reviews it in the
-//   panel and clicks Approve & build.
-//
-// Phase 1 (this handler): compute the final shot list from the photos step +
-// drop rejected/unusable, persist it to step_results.assemble so the UI can
-// show it. Phase 2 (Approve button in the panel) POSTs the same step with
-// {approve: true}, which inserts a tour_assemblies pending row the render
-// worker consumes.
-async function runAssemble(
-  sb: any,
-  run: RunRow,
-  _photoIds?: string[],
-  _engine?: string,
-  approve?: boolean,
-) {
-  // Input = photos step's resolved POIs (the Selected Photos panel set) — NOT
-  // the generate step's shots, which buildShotList can collapse to 1 photo.
-  const photosStep = run.step_results.photos as
-    | { resolved_poi_ids?: string[] }
-    | undefined;
-  const poiIds = photosStep?.resolved_poi_ids;
-  if (!poiIds?.length) {
-    return { error: 'no_photos', message: 'Run the photos step first — it produces the Selected Photos list.' };
-  }
+// Owner 2026-08-17: "筛选去重确实上一步做了,但 2 张上限 + engine/category 映射
+// 还是要在这里 - no 这一步也应该在上一步做" — the photos step computes the
+// FINAL shot list (2 per POI + engine/category/duration) and persists it as
+// step_results.photos.shots. Assemble is now a pure job enqueue: it reads the
+// saved shots and inserts a pending tour_assemblies row. No re-selection.
 
-  // All photos under the Selected POIs. No buildShotList, no POI cap here:
-  // every selected photo is a shot (owner: "Selected Photos直接作为输入").
-  // Same display trim as the Selected Photos panel (loadNearbyPhotos):
-  // newest 3 per POI + any photo with a ready photo_clips row.
+/** Shared: build the final shot list for a set of POIs. Photos step computes
+ *  and persists this; assemble consumes it. Per-POI cap 2 (owner 2026-08-17). */
+async function computeFinalShots(
+  sb: any,
+  poiIds: string[],
+): Promise<{ shots: unknown[]; dropped: unknown[] }> {
   const { data: photosRaw } = (await sb
     .from('poi_photos')
     .select(
@@ -666,7 +650,6 @@ async function runAssemble(
     }> | null;
   };
 
-  // POI display names for the shot rows.
   // Owner 2026-08-17: "同一个poi最多2张照片" — hard cap 2 per POI, newest first.
   const POI_PHOTO_CAP = 2;
   const byPoi = new Map<string, NonNullable<typeof photosRaw>>();
@@ -680,7 +663,6 @@ async function runAssemble(
     photos.push(...arr.slice(0, POI_PHOTO_CAP));
   }
 
-  // POI display names for the shot rows.
   const { data: poiRows } = (await sb
     .from('pois')
     .select('id, display_name')
@@ -689,7 +671,6 @@ async function runAssemble(
   };
   const poiName = new Map((poiRows ?? []).map((p) => [p.id, p.display_name ?? '']));
 
-  // Category per photo (from ai_tags) — the shot list needs it for duration.
   const shots: Array<{
     photo_id: string;
     poi_id: string;
@@ -697,8 +678,6 @@ async function runAssemble(
     category: string;
     engine: string;
     duration_s: number;
-    clip_id: string | null;
-    clip_storage_path: string | null;
   }> = [];
   const dropped: Array<{ photo_id: string; poi_id: string; reason: string }> = [];
 
@@ -717,9 +696,7 @@ async function runAssemble(
       dropped.push({
         photo_id: p.id,
         poi_id: p.poi_id,
-        reason: rejectedByUser
-          ? 'rejected in Review'
-          : 'tagger-unusable',
+        reason: rejectedByUser ? 'rejected in Review' : 'tagger-unusable',
       });
       continue;
     }
@@ -738,10 +715,31 @@ async function runAssemble(
       category,
       engine,
       duration_s: durationForCategory(category),
-      clip_id: null,
-      clip_storage_path: null,
     });
   }
+
+  return { shots, dropped };
+}
+
+async function runAssemble(
+  sb: any,
+  run: RunRow,
+  _photoIds?: string[],
+  _engine?: string,
+  approve?: boolean,
+) {
+  // Final shot list is computed + persisted by the photos step (owner 2026-08-17).
+  const photosStep = run.step_results.photos as
+    | { resolved_poi_ids?: string[]; shots?: unknown[]; dropped?: unknown[] }
+    | undefined;
+  const shots = photosStep?.shots;
+  if (!Array.isArray(shots) || shots.length === 0) {
+    return {
+      error: 'no_shots',
+      message: 'No final shot list yet — run the photos step first (it selects 2 per POI).',
+    };
+  }
+  const dropped = photosStep?.dropped ?? [];
 
   if (approve) {
     const { error: insErr } = await sb.from('tour_assemblies').insert({
@@ -757,7 +755,6 @@ async function runAssemble(
     return { approved: true, ordered: shots, dropped };
   }
 
-  // Preview (no DB write beyond step_results — the UI shows this before approve).
   await saveStep(sb, run, 'assemble', { approved: false, ordered: shots, dropped });
   return { approved: false, ordered: shots, dropped };
 }
