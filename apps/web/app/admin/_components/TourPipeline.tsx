@@ -352,7 +352,7 @@ export function TourPipeline({
               </button>
               <button
                 type="button"
-                onClick={() => void runStep(s.name, selectedRun)}
+                onClick={() => void runStep(s.name, selectedRun, s.name === 'assemble')}
                 disabled={!!running}
                 className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-bg px-3 py-1.5 text-xs text-ink hover:border-bronze disabled:cursor-not-allowed disabled:text-muted"
               >
@@ -364,15 +364,7 @@ export function TourPipeline({
                 {running === s.name || researching ? 'Running…' : done ? 'Re-run' : 'Run'}
               </button>
               {s.name === 'assemble' && done && (
-                <button
-                  type="button"
-                  onClick={() => void runStep(s.name, selectedRun, true)}
-                  disabled={!!running}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-700/40 bg-emerald-600/10 px-3 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-600/20 disabled:cursor-not-allowed disabled:text-muted"
-                >
-                  <CheckCircle2 size={13} />
-                  Approve & build
-                </button>
+                <span className="text-ink2 text-xs">Re-run rebuilds the job</span>
               )}
             </div>
             <p className="text-ink2 text-xs">{s.desc}</p>
