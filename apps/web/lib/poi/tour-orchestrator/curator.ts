@@ -24,6 +24,19 @@ import type { PhotoAnnotation, PlanWarning } from './types';
 export const CURATOR_MODEL =
   process.env.GEMINI_CURATOR_MODEL ?? process.env.GEMINI_VISION_MODEL ?? 'gemini-3.1-flash-lite';
 
+/**
+ * Generation of the prompt + field set below. Annotations are cached per photo
+ * (poi_photos.curator_tags) and reused until this number moves, so **bump it
+ * in the same commit as any change to CURATOR_PROMPT or the annotation
+ * schema** — otherwise cached rows keep answering a question that is no longer
+ * being asked.
+ *
+ * 1 — initial four-layer Curator
+ * 2 — institution names count as brand signage; nature vs open_space narrowed
+ * 3 — has_overlay_text added (camera watermarks)
+ */
+export const CURATOR_VERSION = 3;
+
 const FILES_UPLOAD_URL = 'https://generativelanguage.googleapis.com/upload/v1beta/files';
 const GENERATE_URL = (model: string) =>
   `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
@@ -333,8 +346,8 @@ async function callCurator(
  * and a retry loop just spends money on it.
  */
 export async function curateBatch(photos: CuratorPhoto[]): Promise<CuratorResult> {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) throw new Error('GEMINI_API_KEY not set');
+  // Nothing to annotate is the common case once the cache is warm, and it must
+  // not need a key, a network round trip, or a thought.
   if (photos.length === 0) {
     return {
       annotations: [],
@@ -346,6 +359,8 @@ export async function curateBatch(photos: CuratorPhoto[]): Promise<CuratorResult
       raw: '',
     };
   }
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) throw new Error('GEMINI_API_KEY not set');
 
   const files: UploadedFile[] = [];
   for (const photo of photos) files.push(await uploadFile(photo, apiKey));

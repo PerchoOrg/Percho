@@ -6,6 +6,7 @@
  * warnings, compliance violations, and the narration pace. Nothing is silent.
  */
 
+import { normalizeAnnotations } from './annotations';
 import { type CuratorPhoto, curateBatch } from './curator';
 import { type GuardViolation, type GuardedClip, guardClips } from './guard';
 import { scheduleClips } from './scheduler';
@@ -64,6 +65,10 @@ export interface TourPlan {
     annotated: number;
     missing: string[];
     unknown: string[];
+    /** Reused from poi_photos.curator_tags — no upload, no call, no cost. */
+    from_cache: number;
+    /** Freshly annotated this run; the caller persists these. */
+    fresh: PhotoAnnotation[];
   };
   vo: { ok: boolean; error?: string };
 }
@@ -96,8 +101,20 @@ function toShot(clip: GuardedClip): TourShot {
  * step. Everything else degrades: a VO Pass that fails leaves the Curator's
  * draft lines, which are already compliant.
  */
-export async function buildTourPlan(photos: TourPlanPhoto[]): Promise<TourPlan> {
-  const curatorPhotos: CuratorPhoto[] = photos.map((p) => ({
+export async function buildTourPlan(
+  photos: TourPlanPhoto[],
+  /**
+   * Annotations already stored for these photos (poi_photos.curator_tags, at
+   * the current CURATOR_VERSION). Anything present here is not sent to the
+   * model: an annotation describes the photo, and the photo has not changed.
+   * When every photo is cached the batch call is skipped entirely — no upload,
+   * no spend — which is what makes re-running the step over a deterministic
+   * change cheap (owner 2026-08-17).
+   */
+  cached?: Map<string, PhotoAnnotation>,
+): Promise<TourPlan> {
+  const needsCurating = photos.filter((p) => !cached?.has(p.photo_id));
+  const curatorPhotos: CuratorPhoto[] = needsCurating.map((p) => ({
     photo_id: p.photo_id,
     poi_name: p.poi_name,
     bucket: p.bucket,
@@ -110,6 +127,21 @@ export async function buildTourPlan(photos: TourPlanPhoto[]): Promise<TourPlan> 
 
   const curated = await curateBatch(curatorPhotos);
 
+  // Merge cache and fresh, then re-normalise the whole batch: "at most one
+  // opener", "at most one closer" and "a pair must be mutual" are properties of
+  // THIS set, and a cached role or pair partner may no longer fit it. The
+  // coercions are deterministic, so re-deriving them costs nothing — that is
+  // precisely why batch-level fields are safe to cache at all.
+  const fresh = curated.annotations;
+  const freshIds = new Set(fresh.map((a) => a.photo_id));
+  const merged = normalizeAnnotations([
+    ...photos
+      .filter((p) => !freshIds.has(p.photo_id))
+      .map((p) => cached?.get(p.photo_id))
+      .filter((a): a is PhotoAnnotation => a !== undefined),
+    ...fresh,
+  ]);
+
   // Text stamped onto the image — a camera watermark, a date stamp — is not a
   // rendering problem to be worked around, it is a photo we cannot use. No
   // camera move hides it, and it puts another company's branding on the film.
@@ -117,7 +149,7 @@ export async function buildTourPlan(photos: TourPlanPhoto[]): Promise<TourPlan> 
   // quota, or take up seconds of the running time (owner 2026-08-17, on a
   // "Shot on OnePlus | HASSELBLAD" frame that reached the tour).
   const excluded: ExcludedPhoto[] = [];
-  const usable = curated.annotations.filter((a) => {
+  const usable = merged.annotations.filter((a) => {
     if (!a.has_overlay_text) return true;
     excluded.push({ photo_id: a.photo_id, reason: 'overlay text (watermark / date stamp)' });
     return false;
@@ -131,17 +163,19 @@ export async function buildTourPlan(photos: TourPlanPhoto[]): Promise<TourPlan> 
 
   return {
     shots: vo.clips.map(toShot),
-    annotations: curated.annotations,
+    annotations: merged.annotations,
     excluded,
-    warnings: [...curated.warnings, ...scheduled.warnings],
+    warnings: [...curated.warnings, ...merged.warnings, ...scheduled.warnings],
     violations: [...guarded.violations, ...vo.violations],
     narration: narrationStats(vo.clips),
     curator: {
       model: curated.model,
       attempts: curated.attempts,
-      annotated: curated.annotations.length,
+      annotated: merged.annotations.length,
       missing: curated.missing,
       unknown: curated.unknown,
+      from_cache: merged.annotations.length - fresh.length,
+      fresh,
     },
     vo: { ok: vo.ok, error: vo.error },
   };

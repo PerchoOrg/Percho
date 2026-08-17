@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { normalizeAnnotations } from './annotations';
 import { GOLDEN_ANNOTATIONS, GOLDEN_PHOTOS } from './fixtures/peachtree-corners';
 import { guardClips } from './guard';
 import { scheduleClips } from './scheduler';
@@ -78,5 +79,44 @@ describe('overlay-text photos never reach the tour', () => {
     const { usable } = excludeUnusable(GOLDEN_ANNOTATIONS);
     const { clips } = scheduleClips(usable, photos);
     expect(clips.length).toBeLessThanOrEqual(4);
+  });
+});
+
+describe('cached annotations stay correct for a different batch', () => {
+  /**
+   * Caching per photo is only safe because the batch-level fields are
+   * re-derived on read. These cover the cases where a cached value stops
+   * fitting the set it is loaded into.
+   */
+  it('re-enforces one opener and one closer across a merged batch', () => {
+    // Two photos cached as openers — e.g. each was the opener of an earlier,
+    // smaller batch — now loaded together.
+    const annotations = GOLDEN_ANNOTATIONS.map((a, i) =>
+      i < 2 ? { ...a, narrative_role: 'opener' as const } : a,
+    );
+    const { annotations: fixed, warnings } = normalizeAnnotations(annotations);
+    expect(fixed.filter((a) => a.narrative_role === 'opener')).toHaveLength(1);
+    expect(warnings.some((w) => w.code === 'annotation_role_coerced')).toBe(true);
+  });
+
+  it('drops a cached pair whose partner is not in this batch', () => {
+    const paired = GOLDEN_ANNOTATIONS.find((a) => a.poi_pair_with !== null)!;
+    const withoutPartner = GOLDEN_ANNOTATIONS.filter((a) => a.photo_id !== paired.poi_pair_with);
+    const { annotations: fixed, warnings } = normalizeAnnotations(withoutPartner);
+    const survivor = fixed.find((a) => a.photo_id === paired.photo_id)!;
+    expect(survivor.poi_pair_with).toBeNull();
+    expect(survivor.pair_role).toBeNull();
+    expect(warnings.some((w) => w.code === 'annotation_pair_unpaired')).toBe(true);
+  });
+
+  it('a fully cached batch still schedules identically', () => {
+    // The value of the cache: same annotations in, same plan out, no call.
+    const { usable } = excludeUnusable(GOLDEN_ANNOTATIONS);
+    const direct = scheduleClips(usable, GOLDEN_PHOTOS);
+    const roundTripped = normalizeAnnotations(
+      JSON.parse(JSON.stringify(usable)) as unknown[],
+    ).annotations;
+    const viaCache = scheduleClips(roundTripped, GOLDEN_PHOTOS);
+    expect(JSON.stringify(viaCache.clips)).toBe(JSON.stringify(direct.clips));
   });
 });

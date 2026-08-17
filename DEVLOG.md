@@ -4,6 +4,50 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-08-18 12:10 UTC — Cache the Curator per photo; a re-run over deterministic changes is now free
+
+**Owner**: "every time rerun would make llm call that is expensive, anyway to
+avoid tagging existing photos? this is only about filtering resolution, not ai
+based."
+
+Right, and it was worse than expensive — re-running the photos step re-uploaded
+~25 MB and re-annotated everything just to exercise a pure-geometry filter.
+
+**Why caching is safe**: an annotation describes the PHOTO — what is in it,
+whether anything moves, whether text is stamped on it. That does not change
+while the photo and the prompt do not. The awkward part is the batch-level
+fields (`narrative_role` opener/closer, `poi_pair_with`, `emotional_weight`),
+which are relative to the set — but `normalizeAnnotations` already re-enforces
+"at most one opener", "at most one closer" and "a pair must be mutual",
+deterministically, on every read. The cache is safe *because* that pass exists;
+merged annotations are re-normalised before scheduling.
+
+**Actions**:
+- Migration `20260817220000`: `poi_photos.curator_tags` / `curator_version` /
+  `curated_at`, plus a partial index. **Applied to the remote** (ledger clean
+  before push, `curator_tags` resolves over REST → HTTP 200).
+- `CURATOR_VERSION = 3` in `curator.ts`, with the history of what each bump was
+  for. Bumping it invalidates every cached row, so a prompt or schema change
+  cannot be silently answered by stale annotations. This is the mechanism that
+  makes the cache safe to keep across the prompt edits we have been making.
+- `buildTourPlan(photos, cached?)` only sends the photos with no cached
+  annotation, merges the two, re-normalises, and reports `from_cache` plus the
+  `fresh` list. `curateBatch([])` now short-circuits before the API-key check,
+  so a fully cached run makes **no call at all**.
+- The route reads the cache in its existing photo query, **skips even the
+  storage download** for cached photos, and writes back only what was fresh.
+
+**Cost**: a re-run with no new photos goes from ~25 MB uploaded + ~50s + a
+Gemini batch to zero of each. New photos still cost exactly one batch call.
+
+**Tests**: three that pin why the cache is allowed — two cached openers collapse
+to one, a cached pair whose partner is absent unpairs, and a fully round-tripped
+batch schedules byte-identically. 359 passed.
+
+**Not done**: the VO Pass still runs every time. It is text-only, no upload, and
+it depends on the final ordering, so caching it would mean keying on the whole
+shot list — more machinery than the call costs.
+
 ## 2026-08-18 11:30 UTC — Drop photos too small for the canvas, measured as upscale not pixels
 
 **Owner**, on a 680x497 storefront the plan had scheduled: "low res … should we

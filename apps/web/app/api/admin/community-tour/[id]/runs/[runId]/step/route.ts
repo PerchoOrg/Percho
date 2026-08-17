@@ -18,6 +18,7 @@
 import { buildResearchPrompt } from '@/lib/ai/community-tour-prompt';
 import { requireAdmin } from '@/lib/auth/require-admin';
 import type { TourPlanPhoto } from '@/lib/poi/tour-orchestrator/plan';
+import type { PhotoAnnotation } from '@/lib/poi/tour-orchestrator/types';
 import { createServiceClient } from '@/lib/supabase/server';
 import { extractJsonObject } from '@/lib/utils/extract-json';
 import { NextResponse } from 'next/server';
@@ -825,7 +826,7 @@ async function computeFinalShots(
   const { data: photosRaw } = (await sb
     .from('poi_photos')
     .select(
-      'id, poi_id, status, ai_tags, ai_score, storage_path, enhanced_path, enhanced_status, created_at, width_px, height_px',
+      'id, poi_id, status, ai_tags, ai_score, storage_path, enhanced_path, enhanced_status, created_at, width_px, height_px, curator_tags, curator_version',
     )
     .in('poi_id', poiIds)
     .order('created_at', { ascending: false, nullsFirst: false })) as {
@@ -841,6 +842,8 @@ async function computeFinalShots(
       created_at: string | null;
       width_px: number | null;
       height_px: number | null;
+      curator_tags: Record<string, unknown> | null;
+      curator_version: number | null;
     }> | null;
   };
 
@@ -946,7 +949,11 @@ async function computeFinalShots(
   // the enhanced one: enhancement changes the light, and time_of_day is judged
   // from the light.
   const { buildTourPlan } = await import('@/lib/poi/tour-orchestrator/plan');
+  const { CURATOR_VERSION } = await import('@/lib/poi/tour-orchestrator/curator');
+  const { annotationSchema } = await import('@/lib/poi/tour-orchestrator/types');
   const planPhotos: TourPlanPhoto[] = [];
+  // photo_id → annotation already stored at the current CURATOR_VERSION.
+  const cached = new Map<string, PhotoAnnotation>();
   for (const p of usable) {
     const widthPx = p.width_px ?? 0;
     const heightPx = p.height_px ?? 0;
@@ -958,12 +965,24 @@ async function computeFinalShots(
       });
       continue;
     }
-    const { data: blob, error: dlErr } = await sb.storage
-      .from('listing-photos')
-      .download(p.storage_path);
-    if (dlErr || !blob) {
-      dropped.push({ photo_id: p.id, poi_id: p.poi_id, reason: 'storage download failed' });
-      continue;
+    // A photo whose annotation is already cached at the current version never
+    // has to be downloaded, let alone uploaded to the model.
+    const cachedAnnotation =
+      p.curator_version === CURATOR_VERSION && p.curator_tags
+        ? annotationSchema.safeParse(p.curator_tags)
+        : null;
+    let bytes = new Uint8Array();
+    if (!cachedAnnotation?.success) {
+      const { data: blob, error: dlErr } = await sb.storage
+        .from('listing-photos')
+        .download(p.storage_path);
+      if (dlErr || !blob) {
+        dropped.push({ photo_id: p.id, poi_id: p.poi_id, reason: 'storage download failed' });
+        continue;
+      }
+      bytes = new Uint8Array(await blob.arrayBuffer());
+    } else {
+      cached.set(p.id, cachedAnnotation.data);
     }
     const tags = (p.ai_tags ?? {}) as { description?: string };
     planPhotos.push({
@@ -974,14 +993,28 @@ async function computeFinalShots(
       width_px: widthPx,
       height_px: heightPx,
       description: tags.description ?? '',
-      bytes: new Uint8Array(await blob.arrayBuffer()),
+      bytes,
       mime_type: 'image/jpeg',
     });
   }
 
   if (planPhotos.length === 0) return { shots: [], dropped, plan: null };
 
-  const plan = await buildTourPlan(planPhotos);
+  const plan = await buildTourPlan(planPhotos, cached);
+
+  // Persist what was freshly annotated, so the next run of this step reuses it
+  // instead of paying again (owner 2026-08-17: "every time rerun would make llm
+  // call that is expensive").
+  for (const a of plan.curator.fresh) {
+    await sb
+      .from('poi_photos')
+      .update({
+        curator_tags: a,
+        curator_version: CURATOR_VERSION,
+        curated_at: new Date().toISOString(),
+      })
+      .eq('id', a.photo_id);
+  }
   for (const id of plan.curator.missing) {
     const photo = planPhotos.find((p) => p.photo_id === id);
     dropped.push({
