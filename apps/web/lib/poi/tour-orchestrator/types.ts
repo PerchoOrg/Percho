@@ -101,6 +101,7 @@ export interface PlanWarning {
   code:
     | 'depthflow_quota_over_threshold'
     | 'depthflow_adjacent_demoted'
+    | 'tour_duration_off_target'
     | 'annotation_enum_coerced'
     | 'annotation_role_coerced'
     | 'annotation_pair_unpaired';

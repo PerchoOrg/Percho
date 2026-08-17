@@ -56,6 +56,11 @@ export const PANORAMA_MIN_ASPECT = 2.0;
 export const DURATION_BASE = 3.0;
 export const DURATION_MIN = 2.0;
 export const DURATION_MAX = 4.5;
+/** Finished-film length the tour aims for (spec §9 Phase 3). */
+export const TOUR_TARGET_MIN_S = 45;
+export const TOUR_TARGET_MAX_S = 50;
+/** Durations move in half seconds; anything finer is invisible on screen. */
+const DURATION_STEP = 0.5;
 /** Short side at/above which resolution stops shortening a clip. */
 export const FULL_RES_SHORT_SIDE = 1080;
 
@@ -160,6 +165,42 @@ export function durationFor(
   const rounded = Math.round(emo * resScale * 2) / 2;
   const clamped = Math.min(DURATION_MAX, Math.max(DURATION_MIN, rounded));
   return engine === 'seedance' ? Math.max(clamped, SEEDANCE_MIN_DURATION) : clamped;
+}
+
+/**
+ * Nudge clip lengths until the film lands in [45, 50]s.
+ *
+ * Per-clip duration is a judgement about that photo; film length is a
+ * judgement about the viewer. Both matter, so the per-clip value sets the
+ * starting point and this pass spends the remaining seconds where they do the
+ * most good: lengthening the frames a viewer wants to linger on, shortening
+ * the ones they do not. Every clip stays inside its own bounds, so a photo can
+ * never be stretched past what it can carry.
+ *
+ * Mutates `durations` in place; returns whether the target was reached.
+ */
+function fitTotalDuration(durations: number[], weights: number[], engines: Engine[]): boolean {
+  const floorFor = (i: number) =>
+    engines[i] === 'seedance' ? Math.max(DURATION_MIN, SEEDANCE_MIN_DURATION) : DURATION_MIN;
+  const total = () => durations.reduce((n, d) => n + d, 0);
+  // Longest-first when growing, shortest-first when trimming; index breaks
+  // ties so the pass is deterministic.
+  const order = durations.map((_, i) => i);
+  const byWeightDesc = [...order].sort((a, b) => weights[b]! - weights[a]! || a - b);
+  const byWeightAsc = [...order].sort((a, b) => weights[a]! - weights[b]! || a - b);
+
+  let guard = durations.length * 20;
+  while (total() < TOUR_TARGET_MIN_S && guard-- > 0) {
+    const i = byWeightDesc.find((k) => durations[k]! + DURATION_STEP <= DURATION_MAX);
+    if (i === undefined) return false;
+    durations[i] = durations[i]! + DURATION_STEP;
+  }
+  while (total() > TOUR_TARGET_MAX_S && guard-- > 0) {
+    const i = byWeightAsc.find((k) => durations[k]! - DURATION_STEP >= floorFor(k));
+    if (i === undefined) return false;
+    durations[i] = durations[i]! - DURATION_STEP;
+  }
+  return total() >= TOUR_TARGET_MIN_S && total() <= TOUR_TARGET_MAX_S;
 }
 
 /** DepthFlow amplitude: the heavier the crop, the less it may move. */
@@ -538,6 +579,24 @@ export function scheduleClips(annotations: PhotoAnnotation[], photos: PhotoMeta[
       camera_fixed: engine === 'seedance' && move === 'camera_fixed',
       vo_line: e.annotation.vo_line,
       chip_label: e.annotation.chip_label,
+    });
+  }
+
+  const durations = clips.map((c) => c.duration_s);
+  const fitted = fitTotalDuration(
+    durations,
+    ordered.map((e) => e.annotation.emotional_weight),
+    engines,
+  );
+  clips.forEach((c, i) => {
+    c.duration_s = durations[i]!;
+  });
+  if (!fitted) {
+    const total = durations.reduce((n, d) => n + d, 0);
+    warnings.push({
+      code: 'tour_duration_off_target',
+      photo_id: '',
+      detail: `${total.toFixed(1)}s outside [${TOUR_TARGET_MIN_S}, ${TOUR_TARGET_MAX_S}] — ${clips.length} clips cannot reach it within per-clip bounds`,
     });
   }
 

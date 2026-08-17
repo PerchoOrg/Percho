@@ -33,11 +33,21 @@ describe('guardClips — clause injection', () => {
     }
   });
 
-  it('injects the geometry clause when the frame has rigid geometry', () => {
+  it('carries the geometry clause exactly when the frame has rigid geometry', () => {
+    const { clips } = guarded();
+    for (const c of clips.filter((x) => x.engine === 'seedance')) {
+      const a = GOLDEN_ANNOTATIONS.find((x) => x.photo_id === c.photo_id)!;
+      expect(c.constraints.includes(CLAUSE_RIGID_GEOMETRY)).toBe(a.has_rigid_geometry);
+    }
+  });
+
+  it('keeps the stadium off Seedance — its name board is legible', () => {
+    // Verified against the image (2026-08-17): "NORCROSS BLUE DEVIL STADIUM"
+    // reads clearly across the press box, and a generative model would redraw it.
     const { clips } = guarded();
     const stadium = clips.find((c) => c.photo_id === 'd9973e1e-eb3b-4976-8cd7-db320aee652c')!;
-    expect(stadium.engine).toBe('seedance');
-    expect(stadium.constraints).toContain(CLAUSE_RIGID_GEOMETRY);
+    expect(stadium.engine).not.toBe('seedance');
+    expect(stadium.ai_generated).toBe(false);
   });
 
   it('leaves locally rendered clips without constraints or a prompt', () => {

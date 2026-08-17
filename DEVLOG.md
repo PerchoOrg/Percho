@@ -4,6 +4,116 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-08-18 01:10 UTC — Community tour orchestration, Phase 3: VO Pass + pipeline rebuilt on the plan
+
+**Objective**: finish the layer — narration continuity — and make the running
+pipeline use it instead of the category lookup. Owner: "continue with phase 3
+to rebuild the pipeline", plus rulings on the two Curator definitions.
+
+**Owner rulings applied (2026-08-17)**:
+1. An institution name (school, park) on a building or sign IS brand signage —
+   the risk is a generative model redrawing the text, and a name board carries
+   it exactly like a shop sign.
+2. When an open-air retail street or plaza fills the frame and no single
+   building dominates, that is `street_perspective`, not `building_facade`.
+Both went into Prompt A **and** into the hand baseline.
+
+**Actions**:
+- `vo-pass.ts` — Prompt B verbatim, `applyVoRewrites` (pure) enforcing the two
+  rules the prompt can only ask for: a line may be blanked but never added to a
+  clip the Curator left silent, and the school regex runs again on the rewrite.
+  `narrationStats` gives whole-film pace and per-clip fit. `runVoPass` degrades
+  to the Curator's drafts on any failure — they are already compliant.
+- `plan.ts` — `buildTourPlan(photos)`: Curator → Scheduler → Guard → VO Pass,
+  returning the shot list plus warnings, violations, narration stats and
+  Curator diagnostics. Throws only if school phrasing survives to the end.
+- `scheduler.ts` — film-length fit. Per-clip duration is a judgement about the
+  photo; 45-50s is a judgement about the viewer. The pass spends the remaining
+  half-seconds on the highest-weight clips and trims the lowest, never past a
+  clip's own bounds, and warns (`tour_duration_off_target`) when the target is
+  unreachable.
+- **Route rebuilt**: `computeFinalShots` keeps the 2/POI selection and the
+  dropped-reason bookkeeping, then calls `buildTourPlan` — the category→engine
+  map, `durationForCategory`, and the NARRATIVE_ORDER sort are gone.
+  `runGenerate` and `runRegenerateAll` now **enqueue the plan** instead of
+  re-deriving one, and `enqueueClips` writes `move`/`prompt`/`ai_generated`
+  onto both new and existing rows, so a re-plan reaches the workers.
+- **Deleted** `buildShotList` / `durationForCategory` / `DURATION_BY_CATEGORY`
+  and their tests. They were orphaned by this change, and leaving a second
+  engine mapping in the repo is how a clip gets rendered by the rule nobody was
+  reading. Repo lint errors went 193 → **189** as a result.
+
+**Two real bugs the eval caught (neither had a failing unit test before)**:
+1. VO Pass returned "no usable rewrites" every time. `gemini-3.5-flash` is a
+   thinking model and its reasoning tokens come out of `maxOutputTokens`; at
+   2048 the whole budget went to thinking and the reply had **no text part at
+   all**. Raised to 8192, and a missing text part now reports `finishReason`
+   instead of a generic failure.
+2. My own Prompt A clarification ("a park trail is nature") leaked: the model
+   started calling entire playgrounds `nature`, and `dominant_subject`
+   agreement **fell 79% → 71%**. Narrowed to "nature means water, trees or sky
+   dominate; a park with play structures or equipment is open_space" → 86%.
+   Lesson: a clarification aimed at one photo is a rule applied to all of them.
+
+**Ground truth correction — I looked at the disputed photos**: three of the
+remaining Curator disagreements were **my baseline being wrong**, not the
+model. The baseline was written from tagger descriptions; the images say:
+- Norcross facade: no legible name anywhere → brand signage **false** (I had true)
+- Norcross stadium: "NORCROSS BLUE DEVIL STADIUM" reads clearly → **true**
+  (I had false). This one matters: corrected, the stadium is now **excluded
+  from Seedance**, which is the right outcome — that sign would have been
+  redrawn.
+- Trader Joe's produce: price cards and a "Restroom" sign, no store name →
+  **false** (I had true)
+Signage agreement went 79% → **100%**. Verifying against the image is the only
+honest way to settle a labelling dispute; matching the model to keep a number
+happy would have been circular.
+
+**Measured, end to end, on the 14 real photos** (`pnpm --filter @percho/web
+curator-eval`, which now runs the whole plan):
+
+| acceptance | target | measured |
+|---|---|---|
+| first-parse success | ≥90% | **100%** |
+| `dominant_subject` agreement | ≥85% | **86%** |
+| `people_prominence` agreement | ≥85% | **93%** |
+| brand signage agreement | ≥85% | **100%** |
+| opener / closer | 1 / 1 | **1 / 1** |
+| film length | 45-50s | **45.0s** |
+| narration pace | 2.1-2.6 w/s | **2.23** |
+| lines longer than their clip | 0 | **0** |
+| AI disclosure on every Seedance clip | yes | **yes** |
+| school regex hits after VO Pass | 0 | **0** |
+
+The VO Pass now carries a sentence across a cut ("The Forum provides a walkable
+outdoor shopping experience," / "particularly in the evenings.") — the thing
+per-photo captions structurally cannot do.
+
+**Issues / risks**:
+- The photos step now costs a Curator call (~50s, 25 MB upload, cents) on every
+  run. `maxDuration` is already 300 on that route, so it fits, but it is no
+  longer a cheap step.
+- A photo outside the plan (the panel lists every community POI, the plan
+  covers the resolved ones) can still be generated by the row button; with no
+  annotation there is no prompt, so the seedance worker falls back to its
+  conservative default. Honest, but it is the one path that does not carry a
+  Guard-built prompt.
+- Migration `20260817210000` is still **not pushed**; the route now writes
+  `move`/`prompt`/`ai_generated`, so it must be applied before the photos step
+  runs against production.
+- `database.types.ts` still the stub (unchanged, still owed).
+
+**Learnings**:
+- The eval harness paid for itself three times: it found the adjacent-Seedance
+  move bug, the thinking-token failure, and my own bad prompt edit. None of
+  those were visible from unit tests over a fixture I wrote.
+- Gemini exposes TTS models on the same key (`gemini-3.1-flash-tts-preview`,
+  `gemini-2.5-flash-native-audio-*`). When the owner wants voice, it is not a
+  new vendor — worth knowing before Phase 4.
+
+**Next steps**: apply the migration, then exercise the pipeline end to end from
+the admin UI (photos → generate → assemble) and watch one finished tour.
+
 ## 2026-08-17 23:40 UTC — Community tour orchestration, Phase 2 (Curator) + measured eval
 
 **Objective**: the LLM half of the annotation layer — one batch call that says

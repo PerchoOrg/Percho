@@ -8,6 +8,8 @@ import {
   KEN_BURNS_MOVES,
   SEEDANCE_MAX_CLIPS,
   SEEDANCE_MIN_DURATION,
+  TOUR_TARGET_MAX_S,
+  TOUR_TARGET_MIN_S,
   depthflowAmplitude,
   depthflowQuota,
   durationFor,
@@ -179,6 +181,13 @@ describe('scheduleClips — golden fixture', () => {
     }
   });
 
+  it('lands the film inside the 45-50s target', () => {
+    const { clips } = plan();
+    const total = clips.reduce((n, c) => n + c.duration_s, 0);
+    expect(total).toBeGreaterThanOrEqual(TOUR_TARGET_MIN_S);
+    expect(total).toBeLessThanOrEqual(TOUR_TARGET_MAX_S);
+  });
+
   it('letterboxes the panorama instead of cropping 73% away', () => {
     const { clips } = plan();
     const pano = clips.find((c) => c.photo_id === 'caac3754-a837-4395-8506-55c7bb50b7b6')!;
@@ -188,13 +197,13 @@ describe('scheduleClips — golden fixture', () => {
     expect(['pan_lr', 'pan_rl']).toContain(pano.move);
   });
 
-  it('warns once: the quota needs a 4th DepthFlow and only 3 qualify', () => {
-    // Seedance takes one of the four low-overflow portraits, leaving 3 under
-    // the threshold in a pool of 10 whose 1/3 floor is 4. The quota wins and
-    // says so — the threshold is the preference, not the constraint.
+  it('warns only about a quota that had to reach past the threshold', () => {
+    // The fixture has fewer low-overflow photos than the 1/3 floor needs, so
+    // the quota takes one or two over threshold and says so. The quota is the
+    // constraint; the threshold is the preference. Nothing else may warn.
     const { warnings } = plan();
-    expect(warnings).toHaveLength(1);
-    expect(warnings[0]!.code).toBe('depthflow_quota_over_threshold');
+    expect(warnings.length).toBeGreaterThan(0);
+    expect(warnings.every((w) => w.code === 'depthflow_quota_over_threshold')).toBe(true);
   });
 });
 
@@ -213,6 +222,60 @@ describe('scheduleClips — degenerate inputs', () => {
     const photos = [...GOLDEN_PHOTOS.slice(0, 3), { ...GOLDEN_PHOTOS[3]!, width_px: 0 }];
     const { clips } = scheduleClips(GOLDEN_ANNOTATIONS, photos);
     expect(clips).toHaveLength(3);
+  });
+
+  it('says so when too few clips cannot reach 45s', () => {
+    // 4 clips at the 4.5s ceiling is 18s — the target is unreachable, and the
+    // pass must say that rather than stretch a clip past what it can carry.
+    const photos = GOLDEN_PHOTOS.slice(0, 4);
+    const ids = new Set(photos.map((p) => p.photo_id));
+    const annotations = GOLDEN_ANNOTATIONS.filter((a) => ids.has(a.photo_id)).map((a) => ({
+      ...a,
+      poi_pair_with: null,
+      pair_role: null,
+    }));
+    const { clips, warnings } = scheduleClips(annotations, photos);
+    expect(clips.every((c) => c.duration_s <= DURATION_MAX)).toBe(true);
+    expect(warnings.some((w) => w.code === 'tour_duration_off_target')).toBe(true);
+  });
+
+  it('trims a long tour back under 50s without going below any floor', () => {
+    const photos: PhotoMeta[] = Array.from({ length: 20 }, (_, i) => ({
+      photo_id: `2000000${i % 10}-0000-4000-8000-0000000000${String(i).padStart(2, '0')}`,
+      poi_id: `poi-${i}`,
+      poi_name: `Place ${i}`,
+      bucket: i % 2 === 0 ? 'outdoor' : 'shopping',
+      width_px: 4032,
+      height_px: 3024,
+      description: 'A place.',
+    }));
+    const annotations: PhotoAnnotation[] = photos.map((p, i) => ({
+      photo_id: p.photo_id,
+      has_natural_motion: false,
+      motion_hint: '',
+      dominant_subject: 'open_space',
+      has_visible_people: false,
+      people_prominence: 'none',
+      has_readable_brand_signage: false,
+      has_rigid_geometry: false,
+      narrative_role: 'establishing',
+      time_of_day: 30 + i,
+      emotional_weight: 0.9,
+      poi_pair_with: null,
+      pair_role: null,
+      vo_line: '',
+      chip_label: `Place ${i}`,
+    }));
+    const { clips, warnings } = scheduleClips(annotations, photos);
+    const total = clips.reduce((n, c) => n + c.duration_s, 0);
+    expect(total).toBeLessThanOrEqual(TOUR_TARGET_MAX_S);
+    expect(total).toBeGreaterThanOrEqual(TOUR_TARGET_MIN_S);
+    for (const c of clips) {
+      expect(c.duration_s).toBeGreaterThanOrEqual(
+        c.engine === 'seedance' ? SEEDANCE_MIN_DURATION : DURATION_MIN,
+      );
+    }
+    expect(warnings.some((w) => w.code === 'tour_duration_off_target')).toBe(false);
   });
 
   it('does not repeat a Seedance camera move on adjacent clips', () => {

@@ -195,6 +195,8 @@ export const GOLDEN_ANNOTATIONS: PhotoAnnotation[] = [
     dominant_subject: 'building_facade',
     has_visible_people: false,
     people_prominence: 'none',
+    // Checked against the image (2026-08-17): the entrance frame carries no
+    // legible name at all — brick, columns and parking stripes only.
     has_readable_brand_signage: false,
     has_rigid_geometry: true,
     narrative_role: 'establishing',
@@ -212,7 +214,10 @@ export const GOLDEN_ANNOTATIONS: PhotoAnnotation[] = [
     dominant_subject: 'open_space',
     has_visible_people: false,
     people_prominence: 'none',
-    has_readable_brand_signage: false,
+    // Checked against the image (2026-08-17): "NORCROSS BLUE DEVIL STADIUM"
+    // across the press box and "NORCROSS BLUE DEVILS" on the end wall are both
+    // legible, so this frame must never go to Seedance.
+    has_readable_brand_signage: true,
     has_rigid_geometry: true,
     narrative_role: 'establishing',
     time_of_day: 55,
@@ -229,7 +234,9 @@ export const GOLDEN_ANNOTATIONS: PhotoAnnotation[] = [
     dominant_subject: 'interior_close',
     has_visible_people: false,
     people_prominence: 'none',
-    has_readable_brand_signage: true,
+    // Checked against the image (2026-08-17): price cards and a "Restroom" sign,
+    // but the store's own name is not legible anywhere in the frame.
+    has_readable_brand_signage: false,
     has_rigid_geometry: false,
     narrative_role: 'detail',
     time_of_day: 50,
@@ -311,7 +318,9 @@ export const GOLDEN_ANNOTATIONS: PhotoAnnotation[] = [
     photo_id: '6ceb7f5d-0777-49b4-9e72-b03d14f09e5f',
     has_natural_motion: false,
     motion_hint: '',
-    dominant_subject: 'building_facade',
+    // Retail street with storefronts, seating and signage across the frame —
+    // street_perspective, not one dominating facade (owner 2026-08-17).
+    dominant_subject: 'street_perspective',
     has_visible_people: true,
     people_prominence: 'background',
     has_readable_brand_signage: true,
@@ -331,7 +340,8 @@ export const GOLDEN_ANNOTATIONS: PhotoAnnotation[] = [
     dominant_subject: 'open_space',
     has_visible_people: true,
     people_prominence: 'background',
-    has_readable_brand_signage: false,
+    // Retail names around the plaza are legible (owner 2026-08-17).
+    has_readable_brand_signage: true,
     has_rigid_geometry: false,
     narrative_role: 'establishing',
     time_of_day: 55,
@@ -362,7 +372,9 @@ export const GOLDEN_ANNOTATIONS: PhotoAnnotation[] = [
     photo_id: '72be043b-921f-416e-afe9-51b9f6835aa5',
     has_natural_motion: true,
     motion_hint: 'string lights glowing, sky colour shifting',
-    dominant_subject: 'building_facade',
+    // Open-air retail plaza with a clock tower — no single building owns the
+    // frame, so street_perspective under the owner's 2026-08-17 ruling.
+    dominant_subject: 'street_perspective',
     has_visible_people: false,
     people_prominence: 'none',
     has_readable_brand_signage: true,

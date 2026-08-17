@@ -6,6 +6,26 @@
 
 ---
 
+## v1.1 — Neighborhood tours are now planned shot by shot, not assembled by rule of thumb
+
+A neighborhood tour used to be built from a simple lookup: a photo tagged "landscape" always got the same treatment, for the same number of seconds, in the same place in the film. Every tour therefore looked a little like every other one, and a photo that happened to be tagged wrong got a clip that fought it.
+
+Tours are now planned. Each approved photo is looked at once and described — what it shows, whether anything in it really moves, whether people or shop signs are visible, what time of day it is, how long a viewer would want to linger. The plan is then worked out from those descriptions: which photos get real motion, which get depth, which get a slow camera move; what order they play in; how long each one holds; and what the narration says.
+
+What that changes on screen:
+
+- **Fewer identical-looking clips.** Camera moves are picked per photo and checked against the clip before them, so the same move never lands twice in a row.
+- **Films land at a consistent length.** Every tour is planned to run 45–50 seconds, with the seconds spent on the shots worth lingering on.
+- **Panoramas are no longer cropped to ribbons.** A wide plaza shot keeps its whole frame instead of losing three quarters of it to the portrait format.
+- **AI motion is used sparingly and only where it is safe.** At most four clips per tour use generative motion, never on a frame with a readable shop or school sign, never on one with people in the foreground, and never to invent anything that was not already in the photo. Each of those clips is labelled as AI-generated.
+- **Narration reads as one script.** Lines are written per photo, then rewritten as a continuous voiceover script paced to the film. Nothing about school assignment is ever stated or implied.
+
+### 2026-08-17
+- Neighborhood tour videos are planned end to end (photo description → shot list → compliance check → narration)
+- Every AI-generated clip in a tour now carries an AI-generated label
+
+---
+
 ## v1.0 — Percho is a swipe-feed home discovery product for US buyers, with an AI-native hub for listing agents
 
 Percho is a mobile-first home discovery app for the whole US buyer pool. Buyers scroll a TikTok-style vertical feed of homes and the neighborhoods around them — real listings, real photos and video, plus short clips of the parks, restaurants, schools, and shops actually nearby. Listing agents get a single hub that turns their photos into a home-tour video, drafts social copy in five languages across nine platforms, routes leads, and reports on what's working. Operators get an admin console that watches every pipeline behind it.

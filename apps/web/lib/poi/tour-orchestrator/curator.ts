@@ -93,6 +93,14 @@ For each photo, emit an object with exactly these keys:
     //   define the frame. street_perspective = receding road or sidewalk lines.
     // Both force conservative rendering downstream, so classify honestly
     // rather than generously.
+    // When an open-air retail street or plaza fills the frame and no single
+    //   building dominates it, that is street_perspective, not building_facade.
+    // A footpath or trail through greenery is nature, not street_perspective —
+    //   street_perspective exists for BUILT streets, whose receding lines are
+    //   what a generative model bends.
+    // nature means water, trees or sky dominate the frame. A park with play
+    //   structures, courts, benches or fitness equipment is open_space: what
+    //   was installed in it is what the frame is about.
 
   "has_visible_people": boolean,
   "people_prominence": one of ["none","background","midground","foreground"],
@@ -101,6 +109,9 @@ For each photo, emit an object with exactly these keys:
 
   "has_readable_brand_signage": boolean,
     // True if any storefront name, logo, or trademark is legible.
+    // A school, park, or other institution name on a building or sign counts
+    //   too: the downstream risk is a generative model redrawing that text,
+    //   and a name board carries that risk exactly like a shop sign does.
 
   "has_rigid_geometry": boolean,
     // True if the frame contains regular repeating structures that would look
