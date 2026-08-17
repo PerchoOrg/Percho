@@ -42,6 +42,17 @@ type SeedanceRow = {
   created_at: string;
 };
 
+/** Tour assemblies (final concat of approved photo clips) — render worker owns
+ *  these; the TourPipeline Approve button inserts the pending row. */
+type AssemblyRow = {
+  id: string;
+  community_id: string | null;
+  status: string;
+  error: string | null;
+  cf_stream_uid: string | null;
+  created_at: string;
+};
+
 export default async function BucketJobsPage({
   searchParams,
 }: {
@@ -72,7 +83,7 @@ export default async function BucketJobsPage({
 
   // Seedance worker rows (photo_clips + ai_tour_videos) — merged into the same
   // table with a type column so the worker's queue is visible on this page.
-  const [seedClips, seedTours] = await Promise.all([
+  const [seedClips, seedTours, assemblies] = await Promise.all([
     supabase
       .from('photo_clips')
       .select('id, engine, status, error, provider_job_id, storage_path, created_at')
@@ -83,6 +94,11 @@ export default async function BucketJobsPage({
       .select('id, status, error, provider_job_id, storage_path, created_at')
       .order('created_at', { ascending: false })
       .limit(100) as unknown as Promise<{ data: SeedanceRow[] | null }>,
+    supabase
+      .from('tour_assemblies')
+      .select('id, community_id, status, error, cf_stream_uid, created_at')
+      .order('created_at', { ascending: false })
+      .limit(100) as unknown as Promise<{ data: AssemblyRow[] | null }>,
   ]);
 
   const renderRows: BucketJobRow[] = (data ?? []).map((r) => ({
@@ -134,7 +150,25 @@ export default async function BucketJobsPage({
     })),
   ].filter((r) => statusFilter === 'all' || r.status === statusFilter);
 
-  const rows = [...renderRows, ...seedRows].sort((a, b) =>
+  const assemblyRows: BucketJobRow[] = (assemblies.data ?? [])
+    .filter((r) => statusFilter === 'all' || r.status === statusFilter)
+    .map((r) => ({
+      id: r.id,
+      type: 'assembly',
+      scope: 'tour_assemblies',
+      intent_bucket: null,
+      status: r.status,
+      cf_stream_uid: r.cf_stream_uid,
+      provider_job_id: null,
+      storage_path: null,
+      error: r.error,
+      created_at: r.created_at,
+      community_id: r.community_id,
+      listing_id: null,
+      photoCount: 0,
+    }));
+
+  const rows = [...renderRows, ...seedRows, ...assemblyRows].sort((a, b) =>
     b.created_at.localeCompare(a.created_at),
   );
 

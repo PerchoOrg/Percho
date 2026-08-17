@@ -6,7 +6,7 @@ import Link from 'next/link';
 
 export type BucketJobRow = {
   id: string;
-  type: 'render' | 'clip' | 'tour';
+  type: 'render' | 'clip' | 'tour' | 'assembly';
   scope: string;
   intent_bucket: string | null;
   status: string;
@@ -21,13 +21,15 @@ export type BucketJobRow = {
 };
 
 function TypeBadge({ type }: { type: BucketJobRow['type'] }) {
-  const label = type === 'render' ? 'render' : type === 'clip' ? 'clip' : 'tour';
+  const label = type === 'render' ? 'render' : type === 'clip' ? 'clip' : type === 'tour' ? 'tour' : 'assembly';
   const cls =
     type === 'render'
       ? 'bg-ink2/15 text-ink2'
       : type === 'clip'
         ? 'bg-blue-500/15 text-blue-500'
-        : 'bg-bronze/15 text-bronze';
+        : type === 'tour'
+          ? 'bg-bronze/15 text-bronze'
+          : 'bg-purple-500/15 text-purple-500';
   return (
     <span className={`inline-block w-14 rounded-full px-2 py-0.5 text-center text-[10px] font-medium ${cls}`}>
       {label}
