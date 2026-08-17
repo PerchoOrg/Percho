@@ -329,6 +329,7 @@ async function runPhotos(sb: any, run: RunRow) {
           types?: string[] | null;
           rating?: number | null;
           user_ratings_total?: number | null;
+          raw_place?: unknown;
           lat?: number | null;
           lng?: number | null;
           bucket?: string;
@@ -357,6 +358,14 @@ async function runPhotos(sb: any, run: RunRow) {
     // existed (owner 2026-08-17, on Aberdeen: "0 fetched · 0 selected").
     // Same columns the nearby pipeline writes (lib/poi/community-actions.ts),
     // and an upsert so a re-run refreshes rather than fails.
+    // Runs resolved before raw_place was carried through have none, and the
+    // photo fetch needs it. One details call per such POI, once — the value is
+    // stored, so this does not repeat.
+    let rawPlace = poi.raw_place ?? null;
+    if (!rawPlace) {
+      const { getPlaceDetails } = await import('@/lib/poi/google-places');
+      rawPlace = await getPlaceDetails(poi.place_id);
+    }
     const { data: upserted, error: insErr } = await sb
       .from('pois')
       .upsert(
@@ -368,6 +377,9 @@ async function runPhotos(sb: any, run: RunRow) {
           types: poi.types ?? null,
           rating: poi.rating ?? null,
           user_ratings_total: poi.user_ratings_total ?? null,
+          // The photo fetch reads its references out of raw_place; a POI
+          // without it resolves and then yields zero photos.
+          raw_place: rawPlace,
           location: poi.lng != null && poi.lat != null ? `(${poi.lng},${poi.lat})` : null,
           refreshed_at: new Date().toISOString(),
         },

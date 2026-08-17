@@ -15,7 +15,7 @@
  * admin page renders history instead of re-running.
  */
 
-import { haversineMeters, searchNearby, searchText } from './google-places';
+import { type PlaceResult, haversineMeters, searchNearby, searchText } from './google-places';
 import { PLACES_TYPE_TO_BUCKET } from './google-places';
 
 // ─── step 3: resolve + merge ────────────────────────────────────────────────
@@ -29,6 +29,12 @@ export interface ResolvedPoi {
    *  the photos step uses to derive a bucket. */
   primary_type: string | null;
   types: string[] | null;
+  /**
+   * The whole Places result. `fetchPhotosForCommunityPoi` reads its photo
+   * references out of `pois.raw_place`, so a POI stored without it resolves
+   * fine and then yields zero photos (owner 2026-08-17, Aberdeen).
+   */
+  raw_place: PlaceResult | null;
   bucket: string;
   lat: number;
   lng: number;
@@ -256,6 +262,7 @@ export async function resolveCandidates(
       formatted_address: place.formattedAddress ?? null,
       primary_type: place.primaryType ?? null,
       types: place.types ?? null,
+      raw_place: place,
       bucket: first.bucket,
       lat: place.location?.latitude ?? center.lat,
       lng: place.location?.longitude ?? center.lng,
@@ -301,6 +308,7 @@ export async function resolveCandidates(
         formatted_address: p.formattedAddress ?? null,
         primary_type: p.primaryType ?? null,
         types: p.types ?? null,
+        raw_place: p,
         bucket: bucketFromPlace(p),
         lat: p.location?.latitude ?? center.lat,
         lng: p.location?.longitude ?? center.lng,

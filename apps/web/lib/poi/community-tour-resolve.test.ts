@@ -106,4 +106,19 @@ describe('resolveCandidates — firewall', () => {
     expect(out.resolved[0]!.photo_count).toBe(3);
     expect(out.resolved[0]!.score).toBeGreaterThan(0);
   });
+
+  it('carries the whole Places result through, photos included', async () => {
+    // The photo fetch reads its references out of pois.raw_place. A resolved
+    // POI stored without it resolves fine and then yields zero photos —
+    // exactly what Aberdeen did (owner 2026-08-17).
+    searchText.mockResolvedValue([place()]);
+    const out = await resolveCandidates(
+      [candidate('Sims Lake Park')],
+      CENTER,
+      RADIUS,
+      'Suwanee, GA',
+    );
+    expect(out.resolved[0]!.raw_place).not.toBeNull();
+    expect(out.resolved[0]!.raw_place?.photos).toHaveLength(3);
+  });
 });

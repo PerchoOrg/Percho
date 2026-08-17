@@ -210,6 +210,23 @@ export type PhotoBlob = {
  * @param photoName e.g. "places/xxx/photos/yyy"
  * @param maxHeightPx clamp for cost (10..4800)
  */
+/**
+ * One place by id. Used to backfill `pois.raw_place` for rows created before
+ * the resolve step carried it — the photo fetch reads its references out of
+ * that column, so a row without it silently yields zero photos.
+ */
+export async function getPlaceDetails(placeId: string): Promise<PlaceResult | null> {
+  const res = await fetch(`${PLACES_BASE}/${placeId}`, {
+    headers: {
+      'X-Goog-Api-Key': apiKey(),
+      // Single-place mask: the same fields, without the `places.` prefix.
+      'X-Goog-FieldMask': NEARBY_FIELD_MASK.replaceAll('places.', ''),
+    },
+  });
+  if (!res.ok) return null;
+  return (await res.json()) as PlaceResult;
+}
+
 export async function fetchPhotoBinary(
   photoName: string,
   opts: { maxHeightPx?: number; maxWidthPx?: number } = {},

@@ -4,6 +4,43 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-08-18 14:20 UTC — Aberdeen, second layer: the photo fetch reads raw_place, which nothing wrote
+
+**Symptom**: after the display_name fix, `resolved_poi_ids` went 0 → 12, but
+every POI still reported `{fetched: 0, reused: 0, skipped: 0}`.
+
+**Cause**: `fetchPhotosForCommunityPoi` takes its photo references from
+`pois.raw_place.photos` (`community-actions.ts:204`). The nearby pipeline stores
+the whole Places result in that column; the tour's upsert — including the one I
+had just written — did not. So the POIs existed, correctly named, with nothing
+to fetch.
+
+Two bugs stacked in the same code path, which is why the first fix looked like
+no fix: the insert failed for lack of a name, and would have produced photo-less
+POIs even if it had succeeded.
+
+**Actions**:
+- `ResolvedPoi` carries `raw_place`, and the upsert stores it. The Places result
+  is already in hand at resolve time, so this costs nothing.
+- `getPlaceDetails(placeId)` added to `google-places.ts`, and the photos step
+  backfills `raw_place` for any POI whose resolve result predates the change —
+  one details call per such POI, once, because the value is then stored. Without
+  it, Aberdeen would have needed a full re-run of resolve.
+
+**Verified against the live API** with Aberdeen's own place ids:
+`ChIJ13w2MweX9YgRWnTiFhsY374` → "Town Center Park", **10 photos**;
+`ChIJ22YQzJSX9YgRlTVRnAMOQjQ` → "Suwanee Creek Park", **10 photos**. The POIs
+were always real and photo-rich; the whole failure was plumbing.
+
+**Verification**: `pnpm web:typecheck` clean and `pnpm web:test` **366 passed /
+34 files**, each run as its own command (see the correction in the entry below).
+
+**Learnings**: when a fix moves a counter but not the outcome, the next layer is
+usually in the same function. Reading `fetchPhotosForCommunityPoi` before
+writing the upsert would have caught both at once — the nearby pipeline was
+right there as the reference implementation, and I copied only the columns I
+noticed rather than the ones its consumer reads.
+
 ## 2026-08-18 13:40 UTC — Aberdeen got zero photos: the POI upsert never had a display_name
 
 **Symptom** (owner): photos step on Aberdeen reports "0 fetched · 0 reused · 0
