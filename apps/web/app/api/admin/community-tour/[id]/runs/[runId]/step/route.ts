@@ -666,13 +666,9 @@ async function runAssemble(
     }> | null;
   };
 
-  const { data: readyClips } = (await sb
-    .from('photo_clips')
-    .select('photo_id')
-    .eq('status', 'ready')) as { data: Array<{ photo_id: string }> | null };
-  const clipPhotoIds = new Set((readyClips ?? []).map((c) => c.photo_id));
-
-  const POI_PHOTO_CAP = 3;
+  // POI display names for the shot rows.
+  // Owner 2026-08-17: "同一个poi最多2张照片" — hard cap 2 per POI, newest first.
+  const POI_PHOTO_CAP = 2;
   const byPoi = new Map<string, NonNullable<typeof photosRaw>>();
   for (const p of photosRaw ?? []) {
     const arr = byPoi.get(p.poi_id) ?? [];
@@ -681,15 +677,7 @@ async function runAssemble(
   }
   const photos: NonNullable<typeof photosRaw> = [];
   for (const arr of byPoi.values()) {
-    const kept = arr.slice(0, POI_PHOTO_CAP);
-    const keptIds = new Set(kept.map((r) => r.id));
-    for (const row of arr.slice(POI_PHOTO_CAP)) {
-      if (clipPhotoIds.has(row.id) && !keptIds.has(row.id)) {
-        kept.push(row);
-        keptIds.add(row.id);
-      }
-    }
-    photos.push(...kept);
+    photos.push(...arr.slice(0, POI_PHOTO_CAP));
   }
 
   // POI display names for the shot rows.
