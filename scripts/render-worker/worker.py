@@ -1629,6 +1629,7 @@ def process_assembly(row: dict[str, Any]) -> None:
         # only photo_id/engine), so resolve storage paths here: photo_clips ready rows
         # keyed by photo_id — seedance → ai-videos, depthflow/kenburns → clip-renders.
         clip_paths: list[Path] = []
+        skipped: list[str] = []
         by_photo = {}
         clip_rows = sb_get(
             "photo_clips",
@@ -1649,9 +1650,15 @@ def process_assembly(row: dict[str, Any]) -> None:
                 candidates[0] if candidates else None
             )
             if not ready or not ready.get("storage_path"):
-                raise RuntimeError(
-                    f"clip for photo {c.get('photo_id')} (engine={engine}) not ready — generate it in the photos panel first"
+                # Shot has no ready clip yet (never generated or still pending) —
+                # skip it instead of failing the whole assembly. The user generates
+                # missing clips in the photos panel; a re-run picks them up.
+                print(
+                    f"[assembly {assembly_id}] SKIP photo {c.get('photo_id')} (engine={engine}) — no ready clip",
+                    flush=True,
                 )
+                skipped.append(c.get("photo_id", ""))
+                continue
             path = ready["storage_path"]
             bucket = (
                 "ai-videos"
@@ -1662,6 +1669,11 @@ def process_assembly(row: dict[str, Any]) -> None:
             storage_download(bucket, path, dest)
             clip_paths.append(dest)
             print(f"[assembly {assembly_id}] downloaded {bucket}/{path}", flush=True)
+
+        if len(clip_paths) < 2:
+            raise RuntimeError(
+                f"need >=2 ready clips, got {len(clip_paths)} (missing: {', '.join(skipped[:5]) or 'none'})"
+            )
 
         # Concat with crossfade — reuse generate.py's concat helper via its CLI.
         out_path = workdir / "tour.mp4"
