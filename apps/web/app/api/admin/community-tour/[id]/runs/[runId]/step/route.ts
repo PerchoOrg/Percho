@@ -661,6 +661,7 @@ async function computeFinalShots(
     byPoi.set(p.poi_id, arr);
   }
   const photos: NonNullable<typeof photosRaw> = [];
+  const dropped: Array<{ photo_id: string; poi_id: string; reason: string }> = [];
   for (const arr of byPoi.values()) {
     const ranked = [...arr].sort((a, b) => {
       const aTags = (a.ai_tags ?? {}) as { usable?: boolean };
@@ -676,7 +677,22 @@ async function computeFinalShots(
       if (score !== 0) return score;
       return (b.created_at ?? '').localeCompare(a.created_at ?? '');
     });
-    photos.push(...ranked.slice(0, POI_PHOTO_CAP));
+    const kept = ranked.slice(0, POI_PHOTO_CAP);
+    const keptIds = new Set(kept.map((r) => r.id));
+    photos.push(...kept);
+    // Owner 2026-08-17: "另外一张放到drop table里并说明原因" — every photo
+    // beyond the 2/POI cap lands in dropped with the reason it lost.
+    for (const row of ranked.slice(POI_PHOTO_CAP)) {
+      if (keptIds.has(row.id)) continue;
+      const tags = (row.ai_tags ?? {}) as { usable?: boolean };
+      const reason =
+        row.status === 'rejected'
+          ? 'rejected in Review'
+          : tags.usable === false
+            ? 'tagger-unusable'
+            : 'not in top 2 by quality score';
+      dropped.push({ photo_id: row.id, poi_id: row.poi_id, reason });
+    }
   }
 
   const { data: poiRows } = (await sb
@@ -695,7 +711,6 @@ async function computeFinalShots(
     engine: string;
     duration_s: number;
   }> = [];
-  const dropped: Array<{ photo_id: string; poi_id: string; reason: string }> = [];
 
   const { durationForCategory } = await import('@/lib/poi/community-tour');
 
