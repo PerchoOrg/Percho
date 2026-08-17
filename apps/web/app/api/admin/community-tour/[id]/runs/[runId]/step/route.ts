@@ -729,10 +729,12 @@ async function runAssemble(
     });
     if (insErr) return { error: 'insert_failed', message: (insErr as { message: string }).message };
     await setRunStatus(sb, run.id, 'assembled');
+    await saveStep(sb, run, 'assemble', { approved: true, ordered, dropped });
     return { approved: true, ordered, dropped };
   }
 
   // Preview (no DB write beyond step_results — the UI shows this before approve).
+  await saveStep(sb, run, 'assemble', { approved: false, ordered, dropped });
   return { approved: false, ordered, dropped };
 }
 
