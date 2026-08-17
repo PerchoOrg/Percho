@@ -1701,10 +1701,33 @@ def process_assembly(row: dict[str, Any]) -> None:
             acc += d - xfade
         filters: list[str] = []
         prev = "[0:v]"
+        # Seedance clips render 496x864 (480p); local DA+KB clips render
+        # 1080x1920. xfade requires all inputs the same resolution — scale every
+        # clip to the largest, center-cropped. Keep 16:9.01 portrait aspect by
+        # scaling to W=max width, H=max height (both chains are same aspect).
+        scale_to = None
+        for p in clip_paths:
+            out = subprocess.run(
+                ["ffprobe", "-v", "error", "-select_streams", "v:0",
+                 "-show_entries", "stream=width,height",
+                 "-of", "csv=p=0", str(p)],
+                capture_output=True, text=True, check=True, timeout=15,
+            )
+            w, h = (int(x) for x in out.stdout.strip().split(",")[:2])
+            if scale_to is None:
+                scale_to = [w, h]
+            else:
+                scale_to[0] = max(scale_to[0], w)
+                scale_to[1] = max(scale_to[1], h)
+        assert scale_to is not None, "clip_paths cannot be empty here"
+        for i in range(len(clip_paths)):
+            name = f"s{i}"
+            filters.append(f"[{i}:v]fps=30,scale={scale_to[0]}:{scale_to[1]}:force_original_aspect_ratio=decrease,pad={scale_to[0]}:{scale_to[1]}:(ow-iw)/2:(oh-ih)/2:color=black,setsar=1[{name}]")
+        prev = "[s0]"
         for i in range(1, len(clip_paths)):
             name = f"x{i}"
             filters.append(
-                f"{prev}[{i}:v]xfade=transition=fade:duration={xfade}:"
+                f"{prev}[s{i}]xfade=transition=fade:duration={xfade}:"
                 f"offset={offsets[i-1]:.3f}[{name}]"
             )
             prev = f"[{name}]"
