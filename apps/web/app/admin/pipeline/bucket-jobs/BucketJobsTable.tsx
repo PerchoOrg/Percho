@@ -62,14 +62,18 @@ const columns: AdminColumn<BucketJobRow>[] = [
     key: 'job',
     header: 'Job',
     sortValue: (r) => r.id,
-    render: (r) => (
-      <div className="flex flex-col gap-0.5">
-        <span className="font-mono text-xs">{r.id.slice(0, 8)}</span>
-        {r.provider_job_id && (
-          <span className="font-mono text-[10px] text-ink2">job {r.provider_job_id}</span>
-        )}
-      </div>
-    ),
+    render: (r) => <span className="font-mono text-xs">{r.id.slice(0, 8)}</span>,
+  },
+  {
+    key: 'provider_job',
+    header: 'OpenRouter Job',
+    sortValue: (r) => r.provider_job_id ?? '',
+    render: (r) =>
+      r.provider_job_id ? (
+        <span className="font-mono text-[10px] text-ink2">{r.provider_job_id}</span>
+      ) : (
+        <span className="text-ink2 text-xs">—</span>
+      ),
   },
   {
     key: 'anchor',
