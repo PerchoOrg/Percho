@@ -83,7 +83,7 @@ async function hydrateCommunityCards(communities: CommunityRow[]): Promise<Commu
   // request and merge in-memory.
   const CHUNK = 500;
   async function chunkedIn<T>(
-    fn: (batch: string[]) => Promise<{ data: T[] | null }>,
+    fn: (batch: string[]) => PromiseLike<{ data: T[] | null }>,
   ): Promise<T[]> {
     const out: T[] = [];
     for (let i = 0; i < communityIds.length; i += CHUNK) {
@@ -95,19 +95,21 @@ async function hydrateCommunityCards(communities: CommunityRow[]): Promise<Commu
   }
 
   // Wave 1: memberships (needed to compute videoCount + fallback cover cf id).
-  const memberRows = await chunkedIn<{ community_id: string; video_id: string }>((batch) =>
-    (supabase as any)
+  const memberRows = await chunkedIn((batch) =>
+    supabase
       .from('community_video_membership')
       .select('community_id, video_id')
       .in('community_id', batch),
   );
-  const allVideoIds = Array.from(new Set(memberRows.map((m) => m.video_id)));
+  const allVideoIds = Array.from(
+    new Set(memberRows.map((m) => m.video_id).filter((id): id is string => id !== null)),
+  );
 
   // Wave 2: videos (ready+public only) + listings (active).
   // Videos batched by video_id, listings batched by community_id.
   async function chunkedInField<T>(
     ids: string[],
-    fn: (batch: string[]) => Promise<{ data: T[] | null }>,
+    fn: (batch: string[]) => PromiseLike<{ data: T[] | null }>,
   ): Promise<T[]> {
     const out: T[] = [];
     for (let i = 0; i < ids.length; i += CHUNK) {
@@ -121,9 +123,8 @@ async function hydrateCommunityCards(communities: CommunityRow[]): Promise<Commu
   const [videoRows, listingRows] = await Promise.all([
     allVideoIds.length === 0
       ? Promise.resolve([] as Array<{ id: string; cf_video_id: string }>)
-      : chunkedInField<{ id: string; cf_video_id: string }>(allVideoIds, (batch) =>
-          // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-          (supabase as any)
+      : chunkedInField(allVideoIds, (batch) =>
+          supabase
             .from('community_videos')
             .select('id, cf_video_id, status')
             .in('id', batch)
@@ -132,8 +133,8 @@ async function hydrateCommunityCards(communities: CommunityRow[]): Promise<Commu
             // skip history renders.
             .eq('is_primary', true),
         ),
-    chunkedIn<{ community_id: string | null }>((batch) =>
-      (supabase as any)
+    chunkedIn((batch) =>
+      supabase
         .from('listings')
         .select('community_id')
         .eq('status', 'active')
@@ -147,6 +148,9 @@ async function hydrateCommunityCards(communities: CommunityRow[]): Promise<Commu
   const countByCommunity = new Map<string, number>();
   const firstVideoCfByCommunity = new Map<string, string>();
   for (const m of memberRows) {
+    // Both columns are nullable in the schema — skip orphaned membership rows
+    // rather than keying maps on null. (Matches the listingRows loop below.)
+    if (!m.community_id || !m.video_id) continue;
     const cf = cfById.get(m.video_id);
     if (!cf) continue;
     countByCommunity.set(m.community_id, (countByCommunity.get(m.community_id) ?? 0) + 1);
@@ -174,10 +178,8 @@ async function hydrateCommunityCards(communities: CommunityRow[]): Promise<Commu
     .map((c) => c.id);
   const boundaryByCommunity = new Map<string, unknown>();
   if (needsBoundaryIds.length > 0) {
-    const boundaryRows = await chunkedInField<{ id: string; boundary: unknown }>(
-      needsBoundaryIds,
-      // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-      (batch) => (supabase as any).from('communities').select('id, boundary').in('id', batch),
+    const boundaryRows = await chunkedInField(needsBoundaryIds, (batch) =>
+      supabase.from('communities').select('id, boundary').in('id', batch),
     );
     for (const r of boundaryRows) boundaryByCommunity.set(r.id, r.boundary);
   }
@@ -230,8 +232,7 @@ async function fetchActiveCommunitiesImpl(): Promise<CommunityListCard[]> {
   const supabase = createAnonClient();
   t.mark('createClient');
 
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { data } = (await (supabase as any)
+  const { data } = (await supabase
     .from('communities')
     .select('id, name, slug, city, state, description, cover_video_id, cover_storage_path')
     // never surface the upload-flow `Untitled community`
@@ -265,8 +266,7 @@ async function fetchOwnInactiveCommunities(agentId: string): Promise<CommunityLi
   const t = startTimer('fetchOwnInactiveCommunities');
   const supabase = createAnonClient();
 
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { data } = (await (supabase as any)
+  const { data } = (await supabase
     .from('communities')
     .select('id, name, slug, city, state, description, cover_video_id, cover_storage_path')
     .neq('status', 'active')
@@ -304,21 +304,17 @@ async function fetchAgentScopedCommunities(agentId: string): Promise<CommunityLi
   // Query 1: communities the agent created.
   // Query 2: distinct community_ids from the agent's active listings.
   const [createdRes, listingRes] = await Promise.all([
-    // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-    (supabase as any)
+    supabase
       .from('communities')
       .select('id, name, slug, city, state, description, cover_video_id, cover_storage_path')
       .eq('created_by', agentId)
-      .neq('name', 'Untitled community') as Promise<{ data: CommunityRow[] | null }>,
-    // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-    (supabase as any)
+      .neq('name', 'Untitled community'),
+    supabase
       .from('listings')
       .select('community_id')
       .eq('agent_id', agentId)
       .eq('status', 'active')
-      .not('community_id', 'is', null) as Promise<{
-      data: Array<{ community_id: string | null }> | null;
-    }>,
+      .not('community_id', 'is', null),
   ]);
 
   const createdRows = createdRes.data ?? [];
@@ -331,8 +327,7 @@ async function fetchAgentScopedCommunities(agentId: string): Promise<CommunityLi
   const needIds = listingCommunityIds.filter((id) => !createdRows.some((r) => r.id === id));
   let linkedRows: CommunityRow[] = [];
   if (needIds.length > 0) {
-    // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-    const { data } = (await (supabase as any)
+    const { data } = (await supabase
       .from('communities')
       .select('id, name, slug, city, state, description, cover_video_id, cover_storage_path')
       .in('id', needIds)) as { data: CommunityRow[] | null };

@@ -80,8 +80,7 @@ export default async function EditListingPage({
   const user = session?.user ?? null;
   if (!user) redirect(`/login?redirect=%2Fdashboard%2Flistings%2F${id}%2Fedit`);
 
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { data: listing } = (await (supabase as any)
+  const { data: listing } = (await supabase
     .from('listings')
     .select(
       'id, address, city, state, zip, neighborhood, status, slug, agent_id, price, beds, baths, sqft, year_built, lot_size, hoa, style, description, cover_url, community_id',
@@ -97,8 +96,7 @@ export default async function EditListingPage({
     );
   }
 
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { data: videosRaw } = (await (supabase as any)
+  const { data: videosRaw } = (await supabase
     .from('listing_videos')
     .select('id, cf_video_id, cf_video_id_landscape, kind, title, status, sort_order')
     .eq('listing_id', listing.id)
@@ -107,8 +105,7 @@ export default async function EditListingPage({
 
   const videos = videosRaw ?? [];
 
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const photosResp = (await (supabase as any)
+  const photosResp = (await supabase
     .from('listing_photos')
     .select('id, storage_path, alt_text, width, height, sort_order, ai_tags')
     .eq('listing_id', listing.id)
@@ -122,7 +119,7 @@ export default async function EditListingPage({
   // only surface active communities in the listing → community
   // dropdown. Draft stubs ('Untitled community') and any inactive/incomplete
   // community (no cover, no name) must not leak into the picker.
-  const { data: communitiesRaw } = (await (supabase as any)
+  const { data: communitiesRaw } = (await supabase
     .from('communities')
     .select('id, name, city, state')
     .eq('status', 'active')
