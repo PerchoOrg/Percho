@@ -61,6 +61,7 @@ import Image from 'next/image';
 import { useCallback, useEffect, useState, useTransition } from 'react';
 
 const BUCKET_LABELS: Record<IntentBucket, string> = {
+  amenities: 'Community Amenities',
   schools: 'Schools',
   dining: 'Dining',
   nightlife: 'Nightlife & Entertainment',
@@ -78,6 +79,7 @@ const BUCKET_LABELS: Record<IntentBucket, string> = {
 };
 
 const BUCKET_SHORT: Record<IntentBucket, string> = {
+  amenities: 'Amenities',
   schools: 'Schools',
   dining: 'Dining',
   nightlife: 'Nightlife',
@@ -95,6 +97,7 @@ const BUCKET_SHORT: Record<IntentBucket, string> = {
 };
 
 const BUCKET_ORDER: IntentBucket[] = [
+  'amenities',
   'schools',
   'dining',
   'nightlife',

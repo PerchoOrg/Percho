@@ -59,7 +59,11 @@ import {
 import Image from 'next/image';
 import { useCallback, useEffect, useState, useTransition } from 'react';
 
+// 'amenities' is a community-level bucket; it is absent from BUCKET_ORDER
+// below, so a listing never renders it. Present in these maps only because
+// they must cover IntentBucket.
 const BUCKET_LABELS: Record<IntentBucket, string> = {
+  amenities: 'Community Amenities',
   schools: 'Schools',
   dining: 'Dining',
   nightlife: 'Nightlife & Entertainment',
@@ -77,6 +81,7 @@ const BUCKET_LABELS: Record<IntentBucket, string> = {
 };
 
 const BUCKET_SHORT: Record<IntentBucket, string> = {
+  amenities: 'Amenities',
   schools: 'Schools',
   dining: 'Dining',
   nightlife: 'Nightlife',

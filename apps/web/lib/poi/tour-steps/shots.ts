@@ -36,7 +36,7 @@ export async function computeFinalShots(
   const { data: photosRaw } = (await sb
     .from('poi_photos')
     .select(
-      'id, poi_id, status, ai_tags, ai_score, storage_path, enhanced_path, enhanced_status, created_at, width_px, height_px, curator_tags, curator_version',
+      'id, poi_id, status, ai_tags, ai_score, storage_path, enhanced_path, enhanced_status, enhanced_meta, created_at, width_px, height_px, curator_tags, curator_version',
     )
     .in('poi_id', poiIds)
     .order('created_at', { ascending: false, nullsFirst: false })) as {
@@ -49,6 +49,7 @@ export async function computeFinalShots(
       storage_path: string | null;
       enhanced_path: string | null;
       enhanced_status: string | null;
+      enhanced_meta: { width?: number; height?: number } | null;
       created_at: string | null;
       width_px: number | null;
       height_px: number | null;
@@ -71,11 +72,20 @@ export async function computeFinalShots(
   const { upscaleFactor, isTooLowRes } = await import('@/lib/poi/tour-orchestrator/scheduler');
   const byPoi = new Map<string, NonNullable<typeof photosRaw>>();
   for (const p of photosRaw ?? []) {
-    if (p.width_px && p.height_px && isTooLowRes(p.width_px, p.height_px)) {
+    // Measure the file the render will actually read. The worker reads the
+    // enhanced file once an admin approves it (approved_enhanced_path in
+    // scripts/render-worker/worker.py), and Real-ESRGAN x2 doubles both
+    // edges — so judging an approved photo on its pre-enhance width is what
+    // the enhance pass exists to prevent. width_px/height_px are never
+    // rewritten on enhance; enhanced_meta carries the new size.
+    const enhanced = p.enhanced_status === 'approved' ? p.enhanced_meta : null;
+    const w = enhanced?.width ?? p.width_px;
+    const h = enhanced?.height ?? p.height_px;
+    if (w && h && isTooLowRes(w, h)) {
       dropped.push({
         photo_id: p.id,
         poi_id: p.poi_id,
-        reason: `too low resolution — ${p.width_px}x${p.height_px} needs ${upscaleFactor(p.width_px, p.height_px).toFixed(1)}x upscale for 1080x1920`,
+        reason: `too low resolution — ${w}x${h} needs ${upscaleFactor(w, h).toFixed(1)}x upscale for 1080x1920`,
       });
       continue;
     }

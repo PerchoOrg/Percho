@@ -346,10 +346,38 @@ function orderUnits(units: Unit[]): Unit[] {
     (a, b) => a.time - b.time || b.emotion - a.emotion || unitId(a).localeCompare(unitId(b)),
   );
 
+  // A community tour opens on the community itself — its gate, sign or
+  // clubhouse — before showing what is around it. The Curator assigns at most
+  // one 'opener' across a whole batch and picks it on photographic merit
+  // alone, so on a 25-photo tour it usually lands on a neighbourhood POI and
+  // an amenity photo never competes. A wide amenity 'establishing' shot is
+  // therefore also eligible for the slot — that is the Curator's own
+  // definition of establishing ("introduces a POI at wide framing"), which is
+  // what an opener has to do. Only the opener is biased: front-loading the
+  // whole bucket would fight spreadBuckets below, which keeps the tour varied.
+  const openerRank = (u: Unit): number => {
+    if (u.bucket === 'amenities' && u.role === 'opener') return 0;
+    if (u.bucket === 'amenities' && u.role === 'establishing') return 1;
+    if (u.role === 'opener') return 2;
+    return 3;
+  };
+
   const pickRole = (role: 'opener' | 'closer'): Unit | undefined => {
-    const held = byTime.filter((u) => u.role === role);
+    if (role === 'closer') {
+      const held = byTime.filter((u) => u.role === 'closer');
+      if (held.length === 0) return undefined;
+      return [...held].sort(
+        (a, b) => b.emotion - a.emotion || unitId(a).localeCompare(unitId(b)),
+      )[0];
+    }
+    const held = byTime.filter((u) => openerRank(u) < 3);
     if (held.length === 0) return undefined;
-    return [...held].sort((a, b) => b.emotion - a.emotion || unitId(a).localeCompare(unitId(b)))[0];
+    return [...held].sort(
+      (a, b) =>
+        openerRank(a) - openerRank(b) ||
+        b.emotion - a.emotion ||
+        unitId(a).localeCompare(unitId(b)),
+    )[0];
   };
 
   const opener = pickRole('opener');

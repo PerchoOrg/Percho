@@ -19,8 +19,16 @@
  * S+A photo-tier buckets follow (positions 2-8), then B-tier, then
  * C-tier (healthcare/pets/transit) — the last three use alternate data
  * sources (info cards / Mapbox animations) rather than Places photos.
+ *
+ * 'amenities' (added 2026-08-18, phase56) is the odd one out: every other
+ * bucket describes what is NEAR the entity, this one describes the community
+ * itself — its gate, pool, clubhouse, courts, playground. Its photos rarely
+ * come from Google Places (an HOA pool is not a listed business), so they are
+ * ingested from the community's own site by
+ * `scripts/admin/ingest-community-photos.ts`.
  */
 export const INTENT_BUCKETS = [
+  'amenities',
   'schools',
   'dining',
   'nightlife',
