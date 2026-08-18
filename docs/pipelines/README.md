@@ -9,6 +9,9 @@
 
 **改任何视频/照片生成前,先读这份 README 及对应子文档;改完同步更新。**
 
+社区/生活区域的覆盖层级、抓取门槛和 tour fallback 规则见
+[`living-area-coverage.md`](./living-area-coverage.md)。
+
 ---
 
 ## 一、7 份子文档索引

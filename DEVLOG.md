@@ -1145,6 +1145,35 @@ if the surface the owner reviews on has no column for the new decision, the
 work is untestable by the person who has to accept it. Worth checking the
 consumer UI in the same pass next time.
 
+## 2026-08-18 05:45 UTC — Defined the living-area coverage model
+
+**Objective**: turn the community-tour discussion into an operational product
+definition for discovering areas, fetching content, assigning homes, and
+selecting tours.
+
+**Actions**: added `docs/pipelines/living-area-coverage.md`, covering the
+builder-community → city-sector → city fallback, qualification and content
+thresholds, POI/photo policy, Atlanta pilot, current database audit, and future
+logical-neighborhood extension.
+
+**Decisions**: builder communities are the first and most specific coverage
+when their membership and internal imagery are verified. Large cities use a
+small number of broad sectors rather than requiring a complete neighborhood
+taxonomy. Compact cities retain one city tour. Logical neighborhoods are
+explicitly deferred.
+
+**Issues**: the current Atlanta inventory contains 731 mixed-granularity
+Nextdoor polygons but no associated POIs or tours, so it is candidate evidence
+rather than a production taxonomy.
+
+**Resolution**: preserve the source rows and provenance; build verified
+builder communities and city sectors as explicit publishing layers instead of
+relabeling every existing community.
+
+**Next steps**: use Aberdeen as the Tier A builder-community prototype, then
+prototype four Atlanta directional sectors and test whether a fifth Central
+sector is necessary.
+
 ## 2026-08-18 01:10 UTC — Community tour orchestration, Phase 3: VO Pass + pipeline rebuilt on the plan
 
 **Objective**: finish the layer — narration continuity — and make the running
@@ -4091,4 +4120,3 @@ CF uid `8d9bb8be83f2441691ba708d87a400e4`,32.5s / 24 clips),旧视频没删、�
 2. 批了就跑 `scripts/requeue-existing-walkthroughs.py --apply` 重渲染余下 9 条。
 3. 真机验 Explore 相册(按 owner 规矩走测试模式 / dev sampler)。
 4. `percho-render-worker` systemd 单元要修回去;顺手清掉那条孤立 running job。
-
