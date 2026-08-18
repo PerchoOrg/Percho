@@ -3,6 +3,8 @@
  * list from them. Writes progress as it goes so a long run is not mistaken
  * for a dead one.
  */
+import { COMMUNITY_SCOPE } from '@/lib/poi/entity-scope';
+import { fetchPhotosForPoiAsService } from '@/lib/poi/poi-actions-core';
 import { type RunRow, type TourDb, asJson, mustWrite, saveStep, setRunStatus } from './shared';
 import { computeFinalShots } from './shots';
 
@@ -28,7 +30,6 @@ export async function runPhotos(sb: TourDb, run: RunRow) {
     return { error: 'no_resolved', message: 'Run the resolve step first.' };
   }
 
-  const { fetchPhotosForCommunityPoi } = await import('@/lib/poi/community-actions');
   const results: Record<string, unknown> = {};
   const resolvedPoiIds: string[] = [];
   const fetchedPhotoIds: string[] = [];
@@ -110,7 +111,9 @@ export async function runPhotos(sb: TourDb, run: RunRow) {
         continue;
       }
     }
-    const r = await fetchPhotosForCommunityPoi(run.community_id, poiId!, { max: 3 });
+    const r = await fetchPhotosForPoiAsService(COMMUNITY_SCOPE, run.community_id, poiId!, sb, {
+      max: 3,
+    });
     results[poi.place_id] = r;
     if ((r as { fetched?: number }).fetched) {
       const { data: rows } = await sb

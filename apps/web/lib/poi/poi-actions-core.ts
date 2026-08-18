@@ -223,7 +223,34 @@ export async function fetchPhotosForPoi(
 ): Promise<PhotoFetchResult> {
   await requireEntity(s, entityId);
   const admin = createServiceClient() as unknown as DynamicClient;
+  const result = await fetchPhotosForPoiWithClient(s, entityId, poiId, admin, opts);
+  revalidatePath(s.revalidatePathFor(entityId));
+  return result;
+}
 
+/**
+ * Background-pipeline entry point. The caller must supply its already-created
+ * service client; unlike the server action above this neither reads cookies
+ * nor revalidates a request path, so workers and audited CLI runs can execute
+ * the same photo implementation without weakening browser authentication.
+ */
+export async function fetchPhotosForPoiAsService(
+  s: PoiEntityScope,
+  entityId: string,
+  poiId: string,
+  adminClient: unknown,
+  opts: { max?: number; maxHeightPx?: number } = {},
+): Promise<PhotoFetchResult> {
+  return fetchPhotosForPoiWithClient(s, entityId, poiId, adminClient as DynamicClient, opts);
+}
+
+async function fetchPhotosForPoiWithClient(
+  s: PoiEntityScope,
+  entityId: string,
+  poiId: string,
+  admin: DynamicClient,
+  opts: { max?: number; maxHeightPx?: number },
+): Promise<PhotoFetchResult> {
   const { data: poi, error: poiErr } = (await admin
     .from('pois')
     .select('id, google_place_id, raw_place')
@@ -287,7 +314,6 @@ export async function fetchPhotosForPoi(
     };
     for (const row of storedRows ?? []) await linkPhoto(row.id);
     reused += (storedRows ?? []).length;
-    revalidatePath(s.revalidatePathFor(entityId));
     return { fetched, reused, skipped, ...(skippedReasons.length ? { skippedReasons } : {}) };
   }
 
@@ -382,7 +408,6 @@ export async function fetchPhotosForPoi(
     await linkPhoto(poiPhotoId, noteSkip);
   }
 
-  revalidatePath(s.revalidatePathFor(entityId));
   return { fetched, reused, skipped, ...(skippedReasons.length ? { skippedReasons } : {}) };
 }
 
