@@ -252,7 +252,7 @@ export async function tagPoiPhoto(poiPhotoId: string): Promise<{
   };
   try {
     parsed = JSON.parse(jsonStr);
-  } catch (err) {
+  } catch (_err) {
     console.error(`[vision-tagger] JSON parse failed for ${poiPhotoId}; raw=`, raw.slice(0, 300));
     return { ok: false, error: 'parse_failed' };
   }

@@ -138,7 +138,7 @@ function buildPrompt(
     : `{ "poi_name": "<exact name from list>", "beat": "1 sentence, 6-14 words describing what the viewer sees + why it matters" }`;
 
   const fieldsRule = fieldsSpec
-    ? `\n- caption_fields is REQUIRED for every scene. Follow the word caps strictly. If the description gives nothing to work with, write a generic-but-honest line — never invent ratings, awards, or reviews.`
+    ? '\n- caption_fields is REQUIRED for every scene. Follow the word caps strictly. If the description gives nothing to work with, write a generic-but-honest line — never invent ratings, awards, or reviews.'
     : '';
 
   return `You are writing a short voiceover script for a real-estate video slideshow.

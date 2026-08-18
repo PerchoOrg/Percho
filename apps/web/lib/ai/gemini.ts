@@ -231,26 +231,11 @@ export async function generateSocialCopy(
   const platformBrief = platforms.map((p) => `- ${p}: ${PLATFORM_BRIEF[p]}`).join('\n');
   const languageBrief = languages.map((l) => `- ${l}: ${LANGUAGE_LABEL[l]}`).join('\n');
 
-  const shapeExample =
-    '{ ' +
-    platforms
-      .map((p) => `"${p}": { ${languages.map((l) => `"${l}": string`).join(', ')} }`)
-      .join(', ') +
-    ' }';
+  const shapeExample = `{ ${platforms
+    .map((p) => `"${p}": { ${languages.map((l) => `"${l}": string`).join(', ')} }`)
+    .join(', ')} }`;
 
-  const system =
-    'You write marketing copy for US real estate listings. The agent serves a ' +
-    'multilingual US homebuyer audience (English plus the buyer-side languages ' +
-    'requested below). Treat each language as fully native — translate the ' +
-    'meaning, do not transliterate, and use idiomatic phrasing for that locale. ' +
-    'Match the platform conventions exactly:\n' +
-    platformBrief +
-    '\n\nLanguages requested:\n' +
-    languageBrief +
-    '\n\nOutput strict JSON and nothing else (no markdown, no code fences, no commentary). ' +
-    `Shape: ${shapeExample}. ` +
-    'Each string is the post body for that (platform, language). Keep posts concise — total response under ' +
-    `${Math.min(2400, 220 * platforms.length * languages.length)} words.`;
+  const system = `You write marketing copy for US real estate listings. The agent serves a multilingual US homebuyer audience (English plus the buyer-side languages requested below). Treat each language as fully native — translate the meaning, do not transliterate, and use idiomatic phrasing for that locale. Match the platform conventions exactly:\n${platformBrief}\n\nLanguages requested:\n${languageBrief}\n\nOutput strict JSON and nothing else (no markdown, no code fences, no commentary). Shape: ${shapeExample}. Each string is the post body for that (platform, language). Keep posts concise — total response under ${Math.min(2400, 220 * platforms.length * languages.length)} words.`;
 
   // Compact context for the model — only fields with content.
   const userPayload: Record<string, unknown> = {

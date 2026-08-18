@@ -532,7 +532,6 @@ function DraftRow({ draft, onDelete, onPatch, onRefine }: DraftRowProps) {
             onChange={(e) => setTitleBuffer(e.target.value)}
             placeholder="Title (optional, e.g. Open house — front yard)"
             maxLength={120}
-            autoFocus
             className="flex-1 min-w-[200px] rounded border border-line bg-surface px-2 py-1 text-ink text-xs placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-line-strong"
           />
           <button

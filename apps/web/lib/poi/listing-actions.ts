@@ -17,7 +17,7 @@
  * discovery uses the service role and bypasses RLS.
  */
 
-import { createHash } from 'crypto';
+import { createHash } from 'node:crypto';
 import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
 import {

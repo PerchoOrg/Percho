@@ -176,8 +176,7 @@ export function ListingNearbyPanel({
           .map((x) => `${BUCKET_SHORT[x.b]} ${x.n}`)
           .join(' · ');
         setNotice(
-          `Discovered ${r.discovered} new POIs (${r.reused} already known)` +
-            (topBuckets ? `. Top: ${topBuckets}.` : '.'),
+          `Discovered ${r.discovered} new POIs (${r.reused} already known)${topBuckets ? `. Top: ${topBuckets}.` : '.'}`,
         );
         await refresh();
       } catch (err) {

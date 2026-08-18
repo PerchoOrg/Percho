@@ -88,7 +88,6 @@ export function EditableAgentIdentity({
       <div className="mt-2">
         {editing === 'name' ? (
           <input
-            autoFocus
             type="text"
             defaultValue={name}
             disabled={isPending}
@@ -120,7 +119,6 @@ export function EditableAgentIdentity({
       <div className="mt-1">
         {editing === 'brokerage' ? (
           <input
-            autoFocus
             type="text"
             defaultValue={brokerage}
             disabled={isPending}

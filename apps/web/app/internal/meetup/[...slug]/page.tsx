@@ -23,7 +23,7 @@ function resolveMd(slugParts: string[]): string | null {
   if (!slugParts.length) return null;
   const root = slugParts[0];
   if (!root || !ALLOWED_ROOTS.includes(root)) return null;
-  const rel = slugParts.join('/') + '.md';
+  const rel = `${slugParts.join('/')}.md`;
   const full = path.resolve(DOCS_ROOT, rel);
   const rootReal = path.resolve(DOCS_ROOT);
   if (!full.startsWith(rootReal + path.sep)) return null;

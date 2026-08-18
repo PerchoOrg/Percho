@@ -24,7 +24,7 @@ function extractMeta(md: string, fallback: string): { title: string; preview: st
   let title = fallback;
   for (const line of lines) {
     const m = line.match(/^#\s+(.+?)\s*$/);
-    if (m && m[1]) {
+    if (m?.[1]) {
       title = m[1].trim();
       break;
     }
@@ -49,7 +49,7 @@ function extractMeta(md: string, fallback: string): { title: string; preview: st
       .trim();
     if (preview) break;
   }
-  if (preview.length > 140) preview = preview.slice(0, 137).trimEnd() + '…';
+  if (preview.length > 140) preview = `${preview.slice(0, 137).trimEnd()}…`;
   return { title, preview };
 }
 

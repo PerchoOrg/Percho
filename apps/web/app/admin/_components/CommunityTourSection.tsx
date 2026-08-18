@@ -68,7 +68,7 @@ export function CommunityTourSection({
 }) {
   const [clipRows, setClipRows] = useState<ClipRow[]>([]);
   const inFlight = useRef(false);
-  const router = useRouter();
+  const _router = useRouter();
 
   const loadClips = useCallback(async () => {
     if (inFlight.current) return;

@@ -44,7 +44,7 @@ export type CommunityListCard = {
 
 export const COMMUNITY_CARDS_TAG = 'community-cards';
 
-const NIL_UUID = '00000000-0000-0000-0000-000000000000';
+const _NIL_UUID = '00000000-0000-0000-0000-000000000000';
 
 type CommunityRow = {
   id: string;

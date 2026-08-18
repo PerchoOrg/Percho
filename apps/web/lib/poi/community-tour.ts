@@ -165,7 +165,7 @@ export async function resolveCandidates(
   const resolved: ResolvedPoi[] = [];
   const dropped: ResolveResult['dropped'] = [];
 
-  for (const [name, group] of byName) {
+  for (const [_name, group] of byName) {
     const first = group[0]!;
     const query = [first.name, locality].filter(Boolean).join(', ');
     let places;

@@ -15,7 +15,7 @@
  * still require `auth.getUser()` so anonymous callers are rejected up-front.
  */
 
-import { createHash } from 'crypto';
+import { createHash } from 'node:crypto';
 import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
 import {

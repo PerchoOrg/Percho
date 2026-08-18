@@ -126,7 +126,7 @@ export async function loadNearbyPhotos(scope: Scope): Promise<NearbyPhotoRow[]> 
     byPoi.set(row.poi_id, arr);
   }
   const trimmed: NearbyPhotoRow[] = [];
-  for (const [pid, arr] of byPoi) {
+  for (const [_pid, arr] of byPoi) {
     // rows are already sorted created_at desc; keep the newest cap, then
     // append any photo with an AI clip that fell outside the cap.
     const kept = arr.slice(0, POI_PHOTO_CAP);

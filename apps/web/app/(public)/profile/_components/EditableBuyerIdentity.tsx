@@ -65,7 +65,6 @@ export function EditableBuyerIdentity({
       <div className="mt-2">
         {editing ? (
           <input
-            autoFocus
             type="text"
             defaultValue={displayName}
             disabled={isPending}
