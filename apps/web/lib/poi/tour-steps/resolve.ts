@@ -3,6 +3,7 @@
  * candidate POIs. A name the agents invented resolves to nothing and is
  * dropped here rather than reaching the photo fetch.
  */
+import type { GeoJsonPolygonLike } from '@/lib/geo/point-in-polygon';
 import { type RunRow, type TourDb, saveStep, setRunStatus } from './shared';
 
 export async function runResolve(sb: TourDb, run: RunRow) {
@@ -69,10 +70,23 @@ export async function runResolve(sb: TourDb, run: RunRow) {
   }
 
   const { resolveCandidates } = await import('@/lib/poi/community-tour');
+  const { data: community, error: communityError } = await sb
+    .from('communities')
+    .select('boundary')
+    .eq('id', run.community_id)
+    .single();
+  if (communityError) {
+    throw new Error(`load community boundary: ${communityError.message}`);
+  }
+  const rawBoundary = community?.boundary as { type?: string } | null;
+  const boundary =
+    rawBoundary?.type === 'Polygon' || rawBoundary?.type === 'MultiPolygon'
+      ? (rawBoundary as GeoJsonPolygonLike)
+      : null;
   const radiusMeters = 6000; // suburban default — the <4 POI widen hook lives at step 4
   // The community's real city/state, not the agent's guess at a street address.
   const locality = [research.community?.city, research.community?.state].filter(Boolean).join(', ');
-  const result = await resolveCandidates(candidates, center, radiusMeters, locality);
+  const result = await resolveCandidates(candidates, center, radiusMeters, locality, boundary);
   await saveStep(sb, run, 'resolve', result);
   await setRunStatus(sb, run.id, result.resolved.length >= 4 ? 'fetching_photos' : 'resolving');
   return { resolved: result.resolved.length, dropped: result.dropped.length };

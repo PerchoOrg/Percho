@@ -16,6 +16,18 @@ const { resolveCandidates } = await import('./community-tour');
 
 const CENTER = { lat: 34.09057, lng: -84.141518 }; // Aberdeen, Suwanee GA
 const RADIUS = 6000;
+const SECTOR = {
+  type: 'Polygon' as const,
+  coordinates: [
+    [
+      [-84.2, 34.0],
+      [-84.1, 34.0],
+      [-84.1, 34.2],
+      [-84.2, 34.2],
+      [-84.2, 34.0],
+    ],
+  ],
+};
 
 const candidate = (name: string) => ({
   name,
@@ -69,6 +81,46 @@ describe('resolveCandidates — query shape', () => {
 });
 
 describe('resolveCandidates — firewall', () => {
+  it('drops a Google result outside the sector polygon before photos', async () => {
+    searchText.mockResolvedValue([place({ location: { latitude: 34.1, longitude: -84.05 } })]);
+    const out = await resolveCandidates(
+      [candidate('Wrong-sector Park')],
+      CENTER,
+      RADIUS,
+      'Suwanee, GA',
+      SECTOR,
+    );
+    expect(out.resolved).toHaveLength(0);
+    expect(out.dropped[0]!.reason).toBe('outside sector polygon');
+  });
+
+  it('keeps a Google result inside the sector polygon', async () => {
+    searchText.mockResolvedValue([place()]);
+    const out = await resolveCandidates(
+      [candidate('In-sector Park')],
+      CENTER,
+      RADIUS,
+      'Suwanee, GA',
+      SECTOR,
+    );
+    expect(out.resolved).toHaveLength(1);
+  });
+
+  it('filters top-rated nearby additions through the same sector polygon', async () => {
+    searchText.mockResolvedValue([]);
+    searchNearby.mockResolvedValue([
+      place({
+        id: 'outside-top',
+        rating: 4.9,
+        userRatingCount: 500,
+        location: { latitude: 34.1, longitude: -84.05 },
+      }),
+      place({ id: 'inside-top', rating: 4.8, userRatingCount: 400 }),
+    ]);
+    const out = await resolveCandidates([], CENTER, RADIUS, 'Suwanee, GA', SECTOR);
+    expect(out.top_rated.map((p) => p.place_id)).toEqual(['inside-top']);
+  });
+
   it('drops a match that resolved up to the town', async () => {
     // Verified live: "Suwanee Town Center" comes back as the city of Suwanee.
     searchText.mockResolvedValue([
@@ -105,6 +157,18 @@ describe('resolveCandidates — firewall', () => {
     // meant nothing.
     expect(out.resolved[0]!.photo_count).toBe(3);
     expect(out.resolved[0]!.score).toBeGreaterThan(0);
+  });
+
+  it('deduplicates aliases that resolve to the same Google place_id', async () => {
+    searchText.mockResolvedValue([place()]);
+    const out = await resolveCandidates(
+      [candidate('George Pierce Park'), candidate('George Pierce Park & Community Center')],
+      CENTER,
+      RADIUS,
+      'Suwanee, GA',
+    );
+    expect(out.resolved).toHaveLength(1);
+    expect(out.resolved[0]!.place_id).toBe('place-1');
   });
 
   it('carries the whole Places result through, photos included', async () => {

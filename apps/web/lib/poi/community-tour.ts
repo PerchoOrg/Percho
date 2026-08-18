@@ -15,6 +15,7 @@
  * admin page renders history instead of re-running.
  */
 
+import { type GeoJsonPolygonLike, pointInPolygon } from '@/lib/geo/point-in-polygon';
 import { type PlaceResult, haversineMeters, searchNearby, searchText } from './google-places';
 import { PLACES_TYPE_TO_BUCKET } from './google-places';
 
@@ -153,6 +154,11 @@ export async function resolveCandidates(
    * know where it is.
    */
   locality?: string,
+  /**
+   * When the community has an explicit boundary, a resolved Google Place must
+   * fall inside it before it can reach photo download or shot selection.
+   */
+  boundary?: GeoJsonPolygonLike | null,
 ): Promise<ResolveResult> {
   const byName = new Map<string, CandidateInput[]>();
   for (const c of candidates) {
@@ -230,6 +236,34 @@ export async function resolveCandidates(
       });
       continue;
     }
+    if (boundary) {
+      if (!place.location) {
+        dropped.push({
+          name: first.name,
+          bucket: first.bucket,
+          reason: 'outside sector polygon (Google result has no point)',
+          agent: group.some((c) => c.agent === 'gemini_a')
+            ? group.some((c) => c.agent === 'gemini_b')
+              ? 'both'
+              : 'gemini_a'
+            : 'gemini_b',
+        });
+        continue;
+      }
+      if (!pointInPolygon(place.location.longitude, place.location.latitude, boundary)) {
+        dropped.push({
+          name: first.name,
+          bucket: first.bucket,
+          reason: 'outside sector polygon',
+          agent: group.some((c) => c.agent === 'gemini_a')
+            ? group.some((c) => c.agent === 'gemini_b')
+              ? 'both'
+              : 'gemini_a'
+            : 'gemini_b',
+        });
+        continue;
+      }
+    }
     if (place.location) {
       const d = haversineMeters(center, {
         lat: place.location.latitude,
@@ -286,6 +320,15 @@ export async function resolveCandidates(
     });
   }
 
+  // Different agent names/aliases can resolve to the same Google place_id
+  // (for example "Town Center on Main" and a longer branded variant). Keep
+  // one canonical row so the same POI cannot occupy multiple tour shots.
+  const uniqueResolved = new Map<string, ResolvedPoi>();
+  for (const poi of resolved) {
+    const existing = uniqueResolved.get(poi.place_id);
+    if (!existing || poi.score > existing.score) uniqueResolved.set(poi.place_id, poi);
+  }
+  resolved.splice(0, resolved.length, ...uniqueResolved.values());
   resolved.sort((a, b) => b.score - a.score);
 
   // ── Third dimension: top-rated Google places nearby (owner 2026-08-16).
@@ -297,6 +340,11 @@ export async function resolveCandidates(
     const nearby = await searchNearby({ center, radius: radiusMeters, maxResultCount: 20 });
     topRated = nearby
       .filter((p) => p.rating != null && p.userRatingCount != null && !seenIds.has(p.id))
+      .filter(
+        (p) =>
+          !boundary ||
+          (!!p.location && pointInPolygon(p.location.longitude, p.location.latitude, boundary)),
+      )
       .sort(
         (a, b) =>
           (b.rating ?? 0) - (a.rating ?? 0) || (b.userRatingCount ?? 0) - (a.userRatingCount ?? 0),

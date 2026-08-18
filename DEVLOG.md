@@ -1036,6 +1036,49 @@ entry resolving.
   less than `crossfade_total` should fail the job rather than upload — worth
   adding next time this code is open.
 
+## 2026-08-18 08:07 UTC — Sector tours now reject every Google POI outside their polygon
+
+**Objective**: owner stopped the four-sector assembly review after seeing too
+much overlap: "Google Places resolve 之后，必须先做 POI point-in-sector-polygon
+过滤，再进入照片下载和选片".
+
+The overlap was real. `resolveCandidates` only used a 6 km center bias and a
+12 km hard distance ceiling; neither expresses a sector boundary. The resolve
+step now loads `communities.boundary` and passes a validated GeoJSON Polygon or
+MultiPolygon into the resolver. Both sources — agent candidates resolved by
+Google Text Search and Google's top-rated Nearby additions — must have a point
+inside that polygon. Missing-point results are also rejected, because they
+cannot prove sector membership. The rejection happens before `runPhotos`, so
+an out-of-sector POI cannot be linked, downloaded, tagged, selected, rendered,
+or assembled.
+
+The same audit exposed aliases resolving to the same Google `place_id`; those
+are now collapsed before the top-rated merge so one real place cannot occupy
+multiple slots merely because the agents named it differently.
+
+Production dry audit, reusing the four baseline research outputs but creating
+new resolve runs:
+
+- North `b49af8f1-ad2f-4bbc-9c6e-0030034c764e`: 11 unique survivors, 2 polygon drops.
+- West `1fe55d0e-e913-49ba-8fa8-bab71ed1caf0`: 8 survivors, 9 polygon drops.
+- South `77e6d9ef-746c-4302-8408-a3cf083e5a86`: 7 survivors, 11 polygon drops.
+- East `cc13cb99-7103-49f2-911f-3e2deac23dcf`: 2 survivors, 12 polygon drops.
+- Re-tested every survivor against its stored boundary: zero outside points.
+
+East retaining only Collins Hill High School and H Mart is not a filtering
+failure; it shows the old research was mostly Town Center/core material. East
+needs a new polygon-aware research pass to find enough true East POIs rather
+than borrowing footage from the other sectors. The old four assemblies remain
+baseline artifacts and should not be published.
+
+**Validation**: 25 focused Vitest tests pass (resolver + geometry), web
+TypeScript passes, and Biome reports only the file's pre-existing non-null
+assertion warnings after import order was corrected. The application browser
+had no available tab, so the authenticated photo/generate steps were not
+bypassed from CLI; the new resolve runs stop before photo download.
+
+---
+
 ## 2026-08-18 07:53 UTC — Four Suwanee sector tours dry-run to ready clips
 
 **Objective**: test the proposed North/West/South/East Suwanee living areas
