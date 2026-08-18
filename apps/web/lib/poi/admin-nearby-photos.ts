@@ -31,6 +31,7 @@ export interface NearbyPhotoRow {
   enhanced_error: string | null;
   poi_name: string | null;
   poi_id: string;
+  source: string | null;
   used_in: string[];
 }
 
@@ -65,7 +66,7 @@ export async function loadNearbyPhotos(scope: Scope): Promise<NearbyPhotoRow[]> 
   const { data: photos } = (await sb
     .from('poi_photos')
     .select(
-      'id, poi_id, storage_path, status, width_px, height_px, ai_score, ai_tags, applicable_buckets, tagged_at, enhanced_path, enhanced_status, enhanced_preset, enhanced_error, created_at',
+      'id, poi_id, storage_path, status, width_px, height_px, ai_score, ai_tags, applicable_buckets, tagged_at, enhanced_path, enhanced_status, enhanced_preset, enhanced_error, source, created_at',
     )
     .in('poi_id', poiIds)
     .order('created_at', { ascending: false, nullsFirst: false })
@@ -118,14 +119,23 @@ export async function loadNearbyPhotos(scope: Scope): Promise<NearbyPhotoRow[]> 
   // photo that has an AI clip (photo_clips ready). Historical fetches
   // accumulated 10-14 photos per POI (content-hash dedup reuses, never
   // deletes — by design). Display-only trim; DB untouched.
+  //
+  // The cap is about stale Google fetches piling up, so it does not apply to
+  // 'community_site' photos: an admin pasted that page precisely to review
+  // everything on it, and hiding all but three would defeat the feature.
   const POI_PHOTO_CAP = 3;
   const byPoi = new Map<string, NearbyPhotoRow[]>();
+  const handPicked: NearbyPhotoRow[] = [];
   for (const row of full) {
+    if (row.source === 'community_site') {
+      handPicked.push(row);
+      continue;
+    }
     const arr = byPoi.get(row.poi_id) ?? [];
     arr.push(row);
     byPoi.set(row.poi_id, arr);
   }
-  const trimmed: NearbyPhotoRow[] = [];
+  const trimmed: NearbyPhotoRow[] = [...handPicked];
   for (const [_pid, arr] of byPoi) {
     // rows are already sorted created_at desc; keep the newest cap, then
     // append any photo with an AI clip that fell outside the cap.

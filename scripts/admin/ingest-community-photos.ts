@@ -26,6 +26,7 @@ import { createHash } from 'node:crypto';
 import { readFile, readdir } from 'node:fs/promises';
 import { basename, extname, join } from 'node:path';
 import { createClient } from '@supabase/supabase-js';
+import { imageSizeOf } from '../../apps/web/lib/poi/image-size.js';
 
 const PHOTO_BUCKET = 'listing-photos';
 const IMAGE_EXTS = new Set(['.jpg', '.jpeg', '.png']);
@@ -35,35 +36,6 @@ const CONTENT_TYPES: Record<string, string> = {
   '.jpeg': 'image/jpeg',
   '.png': 'image/png',
 };
-
-/**
- * Pixel dimensions from the file header. The scheduler drops a photo that
- * would need too much upscaling (see isTooLowRes), so these must be real
- * values, not guesses — but the pipeline only ever ingests JPEG and PNG, and
- * both encode their size in a fixed place. Not worth a dependency.
- */
-function imageSize(bytes: Buffer): { width: number; height: number } | null {
-  // PNG: IHDR width/height are big-endian u32 at offsets 16 and 20.
-  if (bytes.length > 24 && bytes.readUInt32BE(0) === 0x89504e47) {
-    return { width: bytes.readUInt32BE(16), height: bytes.readUInt32BE(20) };
-  }
-  // JPEG: walk the segment chain to the SOFn frame header, which carries the
-  // dimensions. Segments before it (EXIF, quantisation tables) vary in size.
-  if (bytes.length > 4 && bytes.readUInt16BE(0) === 0xffd8) {
-    let off = 2;
-    while (off + 9 < bytes.length) {
-      if (bytes[off] !== 0xff) return null;
-      const marker = bytes[off + 1]!;
-      const len = bytes.readUInt16BE(off + 2);
-      // SOF0..SOF15, excluding the non-frame markers DHT (c4), JPGA (c8), DAC (cc).
-      if (marker >= 0xc0 && marker <= 0xcf && marker !== 0xc4 && marker !== 0xc8 && marker !== 0xcc) {
-        return { height: bytes.readUInt16BE(off + 5), width: bytes.readUInt16BE(off + 7) };
-      }
-      off += 2 + len;
-    }
-  }
-  return null;
-}
 
 function titleCase(slug: string): string {
   return slug
@@ -165,7 +137,7 @@ async function main() {
         continue;
       }
 
-      const size = imageSize(bytes);
+      const size = imageSizeOf(bytes);
       if (!size) {
         console.warn(`  ! ${file}: unreadable header, skipped`);
         continue;
