@@ -1036,6 +1036,44 @@ entry resolving.
   less than `crossfade_total` should fail the job rather than upload — worth
   adding next time this code is open.
 
+## 2026-08-18 07:53 UTC — Four Suwanee sector tours dry-run to ready clips
+
+**Objective**: test the proposed North/West/South/East Suwanee living areas
+through the real community-tour pipeline, stopping before assembly so the
+owner can curate and assemble manually.
+
+**Actions**: created four `inactive` community records with the candidate
+ZCTA-30024 polygons; ran research, resolve, photo fetch, enhancement, tagging,
+Curator/Scheduler/Guard/VO, and clip generation. Runs: North
+`21c3969f-6d7d-438d-98b2-24fcdab804c6`, West
+`056bedf5-80b2-4e55-afb8-9dfa2e4bf7cf`, South
+`1268fafe-fbf7-4141-82d5-aece5d8e1269`, East
+`90153670-bf1f-442c-81dc-c8b3d8132e8f`. No assembly was created.
+
+**Results**: 96 selected photos/clips total, all with both base vision tags and
+Curator tags, and all 96 planned clips ready. North 23 shots/54s, West 25/58s,
+South 25/58s, East 23/54s. Each plan used four Seedance clips; recorded paid
+cost totals `$0.9088` across the four runs.
+
+**Issues**: the existing resolver is center + 6km, accepts results as far as
+12km, and never tests the candidate polygon. The output therefore crosses
+sector boundaries: West repeats Town Center, South includes Medieval Times,
+and East includes Sims Lake, City Hall/Town Center-area content. South/East
+parallel photo fetch also exposed a content-hash insert race for a shared POI;
+a serialized East photo rerun linked the already-stored photos and rebuilt the
+plan without another Curator call. The CLI also cannot call the authenticated
+photo server action outside a Next request; a temporary service-role operator
+guard was used locally and reverted immediately afterward.
+
+**Decisions**: keep all four records inactive and treat their output as a
+selection/tagging corpus, not publishable tours. The next iteration must reject
+resolved POIs outside each sector polygon before selection; distance alone is
+not enough for a city-sector pipeline.
+
+**Next steps**: owner manually removes cross-sector/generic POIs and assembles
+the strongest clips. Then add polygon-aware resolution and re-run selection
+from the existing photo cache before paying for any additional generation.
+
 ## 2026-08-18 07:00 UTC — Planned zoom-out rendered as a push-in (two causes)
 
 **Symptom** (owner): shot #10 planned `kenburns · zoom-out · 3.0s`, the DA+KB
