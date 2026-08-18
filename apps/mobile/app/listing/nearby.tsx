@@ -7,7 +7,7 @@
  * ── Why this screen exists, and why the card's map is NOT this ───────────────
  *
  * The feed card shows a pre-rendered, non-interactive map image (cached in
- * Storage, see `scripts/backfill_listing_maps.py`). Two reasons it isn't a live
+ * Storage, see `scripts/maintenance/backfill_listing_maps.py`). Two reasons it isn't a live
  * MapView: an interactive map inside a swipe card fights the swipe gesture, and
  * a live Static Maps fetch per render is a billable request for a picture that
  * never changes.

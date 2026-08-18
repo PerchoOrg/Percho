@@ -20,7 +20,7 @@
 
 import { publicCoverImageUrl } from '@/lib/communities/cover';
 import { createAnonClient } from '@/lib/supabase/server';
-import type { DimKey } from '@percho/shared';
+import type { DimKey } from '@percho/shared/types';
 import { communityHighlightDims } from './community-highlights';
 import { type CommunityReason, communityReasons } from './community-reasons';
 import { communityLifestyleSignals } from './community-signals';

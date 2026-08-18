@@ -1,4 +1,4 @@
-import type { DimKey } from "@percho/shared";
+import type { DimKey } from "@percho/shared/types";
 /**
  * CommunityFace (§1.4) — the community (subdivision) front face.
  *

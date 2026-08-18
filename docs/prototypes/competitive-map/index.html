@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Percho — Competitive Map</title>
+<style>
+:root{
+  --bg:#fafaf7; --card:#fff; --ink:#1a1a1a; --muted:#666; --line:#e6e4de;
+  --accent:#c8552d; --tag:#f0ede4; --tag-ink:#5c5548;
+  --a:#0a5c8a;
+  --pre:#e8f2ee; --pre-ink:#1e5a4a;
+  --post:#f4ecdb; --post-ink:#7a5a1e;
+  --perc:#fbe4d8; --perc-ink:#a83a10;
+}
+[data-theme="dark"]{
+  --bg:#141410; --card:#1e1e1a; --ink:#f0ede4; --muted:#9a958a; --line:#2e2d28;
+  --accent:#e87550; --tag:#26241f; --tag-ink:#bdb6a5;
+  --a:#6cb8e3;
+  --pre:#1a2e28; --pre-ink:#7fd4b8;
+  --post:#2a2416; --post-ink:#d9b775;
+  --perc:#3a1c10; --perc-ink:#f19570;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+header{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:8px}
+h1{font-size:28px;margin:0 0 6px;letter-spacing:-.01em}
+.sub{color:var(--muted);font-size:14px;margin-bottom:28px;max-width:640px;line-height:1.5}
+.toggle{border:1px solid var(--line);background:var(--card);color:var(--ink);padding:6px 12px;border-radius:20px;font-size:12px;cursor:pointer}
+.toggle:hover{border-color:var(--accent)}
+h2{font-size:18px;margin:36px 0 4px;letter-spacing:-.005em;display:flex;align-items:center;gap:10px}
+h2 .count{font-size:12px;font-weight:500;color:var(--muted)}
+.section-desc{color:var(--muted);font-size:13px;margin-bottom:16px;line-height:1.5;max-width:720px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;transition:border-color .15s}
+.card:hover{border-color:var(--accent)}
+.card.percho{background:var(--perc);border-color:transparent}
+.card.percho .name{color:var(--perc-ink)}
+.card .row1{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:2px}
+.name{font-weight:600;font-size:15px}
+.name a{color:inherit;text-decoration:none;border-bottom:1px solid transparent}
+.name a:hover{border-bottom-color:currentColor}
+.url{font-size:11px;color:var(--muted);font-family:"SF Mono",ui-monospace,monospace}
+.url a{color:var(--muted);text-decoration:none}
+.url a:hover{color:var(--a)}
+.tags{display:flex;flex-wrap:wrap;gap:4px;margin:8px 0}
+.tag{font-size:10px;padding:2px 7px;border-radius:10px;background:var(--tag);color:var(--tag-ink);letter-spacing:.02em;text-transform:uppercase;font-weight:500}
+.tag.pre{background:var(--pre);color:var(--pre-ink)}
+.tag.post{background:var(--post);color:var(--post-ink)}
+.desc{font-size:13px;line-height:1.5;color:var(--ink);margin:2px 0 0}
+.desc .note{color:var(--muted);display:block;margin-top:4px;font-size:12px;font-style:italic}
+footer{margin-top:48px;padding-top:20px;border-top:1px solid var(--line);color:var(--muted);font-size:12px;line-height:1.5}
+.legend{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 4px}
+.legend .tag{font-size:11px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div>
+    <h1>Percho — Competitive Map</h1>
+    <div class="sub">谁在做"move 之前的决策"和"move 之后的基础设施"。按赛道分类,标记定位、模式、对 Percho 的相关性。</div>
+  </div>
+  <button class="toggle" onclick="const h=document.documentElement;h.dataset.theme=h.dataset.theme==='light'?'dark':'light'">◐ theme</button>
+</header>
+
+<div class="legend">
+  <span class="tag pre">pre-move</span>
+  <span class="tag post">post-move</span>
+  <span class="tag">SEO/content</span>
+  <span class="tag">marketplace</span>
+  <span class="tag">B2B</span>
+  <span class="tag">subscription</span>
+</div>
+
+<h2>Pre-move decision — 主流玩家 <span class="count">SEO/内容站已占位</span></h2>
+<div class="section-desc">"选城市 / 选社区"的决策工具。Niche 是 800lb gorilla,SEO 头部基本被吃干。数据驱动为主,无 agent 服务闭环。</div>
+<div class="grid">
+
+  <div class="card">
+    <div class="row1"><div class="name"><a href="https://www.niche.com" target="_blank">Niche</a></div></div>
+    <div class="url"><a href="https://www.niche.com" target="_blank">niche.com</a></div>
+    <div class="tags"><span class="tag pre">pre-move</span><span class="tag">SEO/content</span><span class="tag">rating</span></div>
+    <div class="desc">最大的"选社区/学校"站,年 UV 1亿+。学校+邻里评级+"Best Places to Live"榜单。变现=学校/大学广告 + agent lead。<span class="note">硬伤:数据死板、无真实照片、无 agent 服务。DR 85+,SEO 无法正面刚。</span></div>
+  </div>
+
+  <div class="card">
+    <div class="row1"><div class="name"><a href="https://www.areavibes.com" target="_blank">AreaVibes</a></div></div>
+    <div class="url"><a href="https://www.areavibes.com" target="_blank">areavibes.com</a></div>
+    <div class="tags"><span class="tag pre">pre-move</span><span class="tag">SEO/content</span></div>
+    <div class="desc">Livability score 起家,量比 Niche 小一个量级。纯 SEO/广告模式。</div>
+  </div>
+
+  <div class="card">
+    <div class="row1"><div class="name"><a href="https://livability.com" target="_blank">Livability</a></div></div>
+    <div class="url"><a href="https://livability.com" target="_blank">livability.com</a></div>
+    <div class="tags"><span class="tag pre">pre-move</span><span class="tag">SEO/content</span><span class="tag">media</span></div>
+    <div class="desc">内容站 + "Top 100 Best Places" 榜单。母公司 Journal Communications——是媒体,不是产品公司。</div>
+  </div>
+
+  <div class="card">
+    <div class="row1"><div class="name"><a href="https://www.bestplaces.net" target="_blank">BestPlaces (Sperling's)</a></div></div>
+    <div class="url"><a href="https://www.bestplaces.net" target="_blank">bestplaces.net</a></div>
+    <div class="tags"><span class="tag pre">pre-move</span><span class="tag">legacy</span></div>
+    <div class="desc">老牌数据源, Money 杂志 "Best Places to Live" 榜单背后的数据。90 年代产物,UI 停留在 2005。</div>
+  </div>
+
+  <div class="card">
+    <div class="row1"><div class="name"><a href="https://topia.com" target="_blank">Teleport → Topia</a></div></div>
+    <div class="url"><a href="https://topia.com" target="_blank">topia.com</a></div>
+    <div class="tags"><span class="tag pre">pre-move</span><span class="tag">B2B</span><span class="tag">exit</span></div>
+    <div class="desc">早期"帮 remote worker 选城市",2017 被 Topia 收购,转 B2B relocation SaaS。<span class="note">对 Percho 的信号:C 端 relocation 决策工具最好的 exit 是被 B2B relocation SaaS 收编。</span></div>
+  </div>
+
+</div>
+
+<h2>Pre-move decision — 新一代 / 更贴 Percho <span class="count">窄客群 + 订阅制</span></h2>
+<div class="section-desc">远程工作者、数字游民、投资角度切入的选城市工具。客群窄但客户愿付费。</div>
+<div class="grid">
+
+  <div class="card">
+    <div class="row1"><div class="name"><a href="https://nomadlist.com" target="_blank">Nomad List</a></div></div>
+    <div class="url"><a href="https://nomadlist.com" target="_blank">nomadlist.com</a></div>
+    <div class="tags"><span class="tag pre">pre-move</span><span class="tag">subscription</span><span class="tag">community</span></div>
+    <div class="desc">数字游民选城市,全球 vibe/成本/wifi/安全评分 + 社区。$99/年会员 $2-3M ARR。<span class="note">证明:"选城市"愿付费的用户存在,但客群非常窄。</span></div>
+  </div>
+
+  <div class="card">
+    <div class="row1"><div class="name"><a href="https://home.llc" target="_blank">Home.LLC</a></div></div>
+    <div class="url"><a href="https://home.llc" target="_blank">home.llc</a></div>
+    <div class="tags"><span class="tag pre">pre-move</span><span class="tag">data</span><span class="tag">investment</span></div>
+    <div class="desc">数据驱动"哪个 zip code 该买",偏投资视角。</div>
+  </div>
+
+  <div class="card">
+    <div class="row1"><div class="name"><a href="https://www.ownwell.com" target="_blank">Ownwell</a></div></div>
+    <div class="url"><a href="https://www.ownwell.com" target="_blank">ownwell.com</a></div>
+    <div class="tags"><span class="tag pre">pre-move</span><span class="tag">data</span></div>
+    <div class="desc">同类数据驱动房产决策工具,偏 property tax / 投资侧。</div>
+  </div>
+
+  <div class="card">
+    <div class="row1"><div class="name"><a href="https://www.movley.com" target="_blank">Movley</a></div></div>
+    <div class="url"><a href="https://www.movley.com" target="_blank">movley.com</a></div>
+    <div class="tags"><span class="tag pre">pre-move</span><span class="tag">concierge</span></div>
+    <div class="desc">帮人 relocate 的 concierge 服务,人工重,不是 tech-driven。</div>
+  </div>
+
+  <div class="card">
+    <div class="row1"><div class="name"><a href="https://www.reddit.com/r/SameGrassButGreener/" target="_blank">r/SameGrassButGreener</a></div></div>
+    <div class="url"><a href="https://www.reddit.com/r/SameGrassButGreener/" target="_blank">reddit.com/r/SameGrassButGreener</a></div>
+    <div class="tags"><span class="tag pre">pre-move</span><span class="tag">UGC</span></div>
+    <div class="desc">450k+ 用户,"我该搬到哪个城市" 的默认问答池。<span class="note">决策最前期流量在这里,Niche/Percho 都接不到。</span></div>
+  </div>
+
+</div>
+
+<h2>Post-move infrastructure <span class="count">分散,C 端品牌位空着</span></h2>
+<div class="section-desc">搬家后 3-6 个月的生活基础设施重建。Updater 融资 $200M+ 但走 B2B 分销,C 端品牌位子空着。</div>
+<div class="grid">
+
+  <div class="card">
+    <div class="row1"><div class="name"><a href="https://www.updater.com" target="_blank">Updater</a></div></div>
+    <div class="url"><a href="https://www.updater.com" target="_blank">updater.com</a></div>
+    <div class="tags"><span class="tag post">post-move</span><span class="tag">B2B</span><span class="tag">unicorn</span></div>
+    <div class="desc">跟 property manager / agent 合作,搬家时一键办水电煤 + 改地址 + 搬家公司。融资 $200M+,估值 ~$700M。<span class="note">最像"post-move 变现平台",但藏在 B2B 分销后,用户不认识它。</span></div>
+  </div>
+
+  <div class="card">
+    <div class="row1"><div class="name"><a href="https://moveeasy.com" target="_blank">MoveEasy</a></div></div>
+    <div class="url"><a href="https://moveeasy.com" target="_blank">moveeasy.com</a></div>
+    <div class="tags"><span class="tag post">post-move</span><span class="tag">B2B</span></div>
+    <div class="desc">Updater 的直接对手,也是 B2B 分销模式。</div>
+  </div>
+
+  <div class="card">
+    <div class="row1"><div class="name"><a href="https://porch.com" target="_blank">Porch</a></div></div>
+    <div class="url"><a href="https://porch.com" target="_blank">porch.com</a></div>
+    <div class="tags"><span class="tag post">post-move</span><span class="tag">marketplace</span><span class="tag">public</span></div>
+    <div class="desc">Home services marketplace(搬家/装修/清洁/家电安装)。上市 $PRCH,市值缩水 90%,业务艰难但活着。</div>
+  </div>
+
+  <div class="card">
+    <div class="row1"><div class="name"><a href="https://thumbtack.com" target="_blank">Thumbtack</a></div></div>
+    <div class="url"><a href="https://thumbtack.com" target="_blank">thumbtack.com</a></div>
+    <div class="tags"><span class="tag post">post-move</span><span class="tag">marketplace</span></div>
+    <div class="desc">通用 home services marketplace,不专做 relocation。</div>
+  </div>
+
+  <div class="card">
+    <div class="row1"><div class="name"><a href="https://angi.com" target="_blank">Angi</a></div></div>
+    <div class="url"><a href="https://angi.com" target="_blank">angi.com</a></div>
+    <div class="tags"><span class="tag post">post-move</span><span class="tag">marketplace</span></div>
+    <div class="desc">通用 home services,前身 Angie's List + HomeAdvisor 合并。</div>
+  </div>
+
+  <div class="card">
+    <div class="row1"><div class="name"><a href="https://taskrabbit.com" target="_blank">TaskRabbit</a></div></div>
+    <div class="url"><a href="https://taskrabbit.com" target="_blank">taskrabbit.com</a></div>
+    <div class="tags"><span class="tag post">post-move</span><span class="tag">marketplace</span></div>
+    <div class="desc">按需劳动力,IKEA 组装 / 搬家杂活。IKEA 收购。</div>
+  </div>
+
+  <div class="card">
+    <div class="row1"><div class="name"><a href="https://homeadvisor.com" target="_blank">HomeAdvisor</a></div></div>
+    <div class="url"><a href="https://homeadvisor.com" target="_blank">homeadvisor.com</a></div>
+    <div class="tags"><span class="tag post">post-move</span><span class="tag">lead-gen</span></div>
+    <div class="desc">装修 lead gen,Angi 母公司旗下。</div>
+  </div>
+
+</div>
+
+<h2>房源 / 大盘玩家 <span class="count">决策后期流量已被吃</span></h2>
+<div class="section-desc">列房源 + agent 分佣的巨头。Percho 不打这个战场,但它们是变现路径的最终节点。</div>
+<div class="grid">
+
+  <div class="card">
+    <div class="row1"><div class="name"><a href="https://zillow.com" target="_blank">Zillow</a></div></div>
+    <div class="url"><a href="https://zillow.com" target="_blank">zillow.com</a></div>
+    <div class="tags"><span class="tag pre">pre-move</span><span class="tag post">post-move</span><span class="tag">marketplace</span></div>
+    <div class="desc">房源 + Premier Agent 分佣。5000+ 人。<span class="note">agent 端满意度暴跌(Premier Agent 涨价 + Flex 抽 40%),agent 有替代平台意愿。</span></div>
+  </div>
+
+  <div class="card">
+    <div class="row1"><div class="name"><a href="https://redfin.com" target="_blank">Redfin</a></div></div>
+    <div class="url"><a href="https://redfin.com" target="_blank">redfin.com</a></div>
+    <div class="tags"><span class="tag">marketplace</span><span class="tag">brokerage</span></div>
+    <div class="desc">房源 + 自营经纪。SEO "Best places to live" 前 10 占位者之一。</div>
+  </div>
+
+  <div class="card">
+    <div class="row1"><div class="name"><a href="https://airbnb.com" target="_blank">Airbnb</a></div></div>
+    <div class="url"><a href="https://airbnb.com" target="_blank">airbnb.com</a></div>
+    <div class="tags"><span class="tag pre">pre-move</span><span class="tag">threat</span></div>
+    <div class="desc">长租/试住基础设施。<span class="note">威胁:如果认真做 "long-stay relocation",他们有流量+住宿+社区,Percho 的 pre-move 决策位直接被吃。</span></div>
+  </div>
+
+  <div class="card">
+    <div class="row1"><div class="name"><a href="https://furnishedfinder.com" target="_blank">Furnished Finder</a></div></div>
+    <div class="url"><a href="https://furnishedfinder.com" target="_blank">furnishedfinder.com</a></div>
+    <div class="tags"><span class="tag">rental</span><span class="tag">try-before-buy</span></div>
+    <div class="desc">中长期带家具租赁,travel nurse 起家。"试住后买" 的天然入口。</div>
+  </div>
+
+  <div class="card">
+    <div class="row1"><div class="name"><a href="https://blueground.com" target="_blank">Blueground</a></div></div>
+    <div class="url"><a href="https://blueground.com" target="_blank">blueground.com</a></div>
+    <div class="tags"><span class="tag">rental</span><span class="tag">try-before-buy</span></div>
+    <div class="desc">高端 furnished long-stay,relocation 用户的天然试住供给。</div>
+  </div>
+
+</div>
+
+<h2>Percho <span class="count">这里</span></h2>
+<div class="grid">
+  <div class="card percho">
+    <div class="row1"><div class="name">Percho</div></div>
+    <div class="url">percho.co</div>
+    <div class="tags"><span class="tag pre">pre-move</span><span class="tag">marketplace</span><span class="tag">agent-in-loop</span></div>
+    <div class="desc"><b>定位空位</b>:Niche 无 agent、Zillow 不选社区、Nomad List 全球太宽、Updater 藏在 B2B——中间的 "agent-in-the-loop 的真实社区决策" 位置空着。<span class="note">Unfair advantage 目前只有一条:笑云 + Atlanta 深度。其他一切(swipe UX、真实照片、subdivision 数据)都是可复制功能。</span></div>
+  </div>
+</div>
+
+<footer>
+  <b>3 个空白区可能是机会:</b><br>
+  ① Pre-move 决策链里 "agent-in-the-loop" 的位置 (Niche 无 agent, Zillow 不选社区) —— Percho 现在的战场<br>
+  ② Post-move 的 C 端品牌位 (Updater 走 B2B, C 端认知空白) —— 有流量后的自然延伸<br>
+  ③ 决策最前期 "要不要搬 / 搬哪个州" 的 UGC 流量目前在 Reddit r/SameGrassButGreener,没人做产品化<br><br>
+  <b>2 个真威胁:</b> Airbnb 认真做 long-stay relocation,或 ChatGPT/Perplexity 直接回答 "我该搬到哪"。
+</footer>
+
+</div>
+</body>
+</html>

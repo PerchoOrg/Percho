@@ -16,6 +16,80 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-19 09:05 UTC — assets/icons, packages/shared, and 549 MB of Workspace scratch
+
+**Objective**: owner: "clean up and refactor 1) assets/icons, 2) packages/shared,
+3) folders in /Users/apocalypsee/Workspace: fmls-scrape percho-nextdoor-seed
+percho-prototypes". Branch `phase53/cleanup`, off `1ca75131`.
+
+**A live Supabase service-role key was found, in plaintext.**
+`percho-prototypes/flipbook-demo/prepare.py:11` hardcoded a `sb_secret_…` key
+against the production project URL. It had been sitting in an untracked folder
+since July 2026. GitHub push protection rejected the commit that would have
+brought it into the repo — that is how it surfaced, which is luck rather than
+process. The line now reads `os.environ["SUPABASE_SERVICE_ROLE_KEY"]`, the
+commit was amended so the key never entered history, and a sweep of every
+tracked file found no other secret-shaped string. **The key should be treated
+as compromised and rotated** — six weeks in the clear, and nothing on this
+machine can say what read it.
+
+**assets/icons was already in good shape** — the README is accurate and every
+path it cites resolves. The real problem was next door: `scripts/` had four
+loose files at its root fitting none of its folders, two of them the icon-font
+builders that `assets/icons/README.md` points at. Grouped into
+`scripts/icon-fonts/` and `scripts/maintenance/`, with twelve live references
+updated (DEVLOG and docs/devlog left as written — they record the paths as
+they were). Also documented `phosphor-fill/_preview.html`, the one file the
+README omitted.
+
+**packages/shared: 848 -> 177 lines.**
+- `src/index.ts` was a barrel file, which CLAUDE.md §6 forbids by name. The
+  `exports` map then listed subpaths for only four of the nine modules, so an
+  importer's path depended on which module it wanted. Barrel deleted, every
+  module exposed by subpath, ten importers repointed.
+- Six modules had **zero consumers**: persona, pools, profile, rhythm, scope,
+  traits. All were ported from `percho-prototypes` in July for the
+  discovery-feed design; apps/mobile then built its own feed
+  (`generate-feed`, `ratios`, `signals`, a differently-shaped rhythm guard)
+  and the ports were never wired up. Owner chose deletion.
+- Removing them exposed that 14 of `types.ts`'s 18 exports existed only to
+  type the deleted modules. `types.ts` is now `DimKey` alone.
+- What is left is exactly the four symbols both apps import: `DimKey`,
+  `CardIconName`, `CARD_ICON_NAMES`, `DIMS`.
+
+**The three Workspace folders: 549 MB, deleted.** All three were untracked
+scratch, none a git repo.
+- `fmls-scrape` and `percho-nextdoor-seed` held only superseded copies of
+  scripts already in the repo — the repo versions are the portable rewrites
+  (the Workspace ones still hardcode `/home/ubuntu/…` from the EC2 era) and
+  are strictly cleaner. `02_scrape_neighborhoods.py` and
+  `04_import_to_percho.py` exist only in the Workspace copy; the repo README
+  already records that `02b` and `05` retired them. `seed_slugs.json` differed
+  only in formatting — same 8,679 entries.
+- `percho-prototypes` held **35 unique source files that existed nowhere
+  else**, never backed up. Rescued into `docs/prototypes/` (468 KB) with a
+  README; their ~139 MB of rendered output was left behind since each
+  prototype regenerates its own. Verified by tree diff that every non-binary
+  source file made it across, and pushed to the remote *before* deleting the
+  originals.
+
+**Learnings**:
+- Pushing the rescue before deleting the source is the whole discipline here.
+  Had I deleted first, the secret-scanning rejection would have destroyed 35
+  irreplaceable files.
+- A barrel file is not just a style rule: this one hid that two thirds of the
+  package was dead, because everything resolved through one import path.
+- Untracked scratch directories are where credentials go to sit. The two
+  scrapers also carried a Nextdoor session cookie file (`.cookies.json`),
+  which went with the deletion.
+
+**Next steps**:
+- Rotate the Supabase service-role key.
+- ~300 `as any` and ~40 hand-written `XRow` types remain.
+- `use-hls-playback` extraction from VideoCard, gated on device testing.
+
+---
+
 ## 2026-08-19 07:20 UTC — BrowseFeed broken up; the BrowseCard dependency inverted
 
 **Objective**: owner: "merge to main first, then lets do BrowseFeed". phase51

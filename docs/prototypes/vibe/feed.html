@@ -1,0 +1,1562 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Vibe · Feed</title>
+<link rel="stylesheet" href="_app.css" />
+<style>
+  .screen { background: #0A0C10; color: #fff; }
+
+  /* ---- Top bar with live persona ---- */
+  .topbar {
+    position: absolute; top: 0; left: 0; right: 0;
+    z-index: 20; padding: 54px 16px 12px;
+    background: linear-gradient(180deg, rgba(10,12,16,0.85) 0%, rgba(10,12,16,0.4) 70%, transparent 100%);
+    display: flex; align-items: center; gap: 10px;
+    pointer-events: none;
+  }
+  .topbar > * { pointer-events: auto; }
+  .persona-live {
+    background: rgba(232,90,42,0.9); backdrop-filter: blur(10px);
+    color: #fff; padding: 6px 12px 6px 8px; border-radius: 999px;
+    font-size: 11px; font-weight: 700; letter-spacing: 0.02em;
+    display: flex; align-items: center; gap: 6px;
+    cursor: pointer;
+  }
+  .persona-live .dot {
+    width: 6px; height: 6px; background: #fff; border-radius: 50%;
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+  .persona-live .count { opacity: 0.85; font-weight: 500; margin-left: 3px; }
+
+  .top-actions { margin-left: auto; display: flex; gap: 8px; }
+
+  /* Scope strip — shows narrowed context */
+  .scope-strip {
+    position: absolute; top: 60px; left: 0; right: 0;
+    z-index: 50;
+    padding: 4px 16px;
+    display: flex; gap: 6px; align-items: center;
+    overflow-x: auto; scrollbar-width: none;
+    pointer-events: none;
+    min-height: 24px;
+  }
+  .scope-strip::-webkit-scrollbar { display: none; }
+  .scope-strip:empty { display: none; }
+  .scope-strip .chip {
+    flex-shrink: 0;
+    background: rgba(28,18,12,0.85);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(232,90,42,0.55);
+    color: #fff;
+    padding: 4px 9px; border-radius: 999px;
+    font-size: 10px; font-weight: 700;
+    letter-spacing: 0.03em;
+    display: inline-flex; gap: 3px; align-items: center;
+    white-space: nowrap;
+    pointer-events: auto;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.35);
+  }
+  .scope-strip .chip.multi { background: rgba(232,90,42,0.08); }
+  .scope-strip .chip .rm {
+    margin-left: 4px; opacity: 0.5; cursor: pointer;
+    font-size: 12px; line-height: 1;
+  }
+  .scope-strip .arr {
+    color: var(--muted); font-size: 9px; opacity: 0.5;
+    flex-shrink: 0;
+  }
+  .icon-btn {
+    width: 34px; height: 34px; border-radius: 50%;
+    background: rgba(255,255,255,0.12); backdrop-filter: blur(10px);
+    color: #fff; border: none; font-size: 15px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+  }
+
+  /* ---- Feed card container ---- */
+  .feed-stack {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .feed-card {
+    position: absolute; inset: 0;
+    perspective: 1200px;
+    transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.3, 1.05), opacity 0.35s ease;
+    will-change: transform, opacity;
+  }
+  .feed-card.top { z-index: 5; }
+  .feed-card.next { z-index: 4; transform: scale(0.94); opacity: 0.5; }
+  .feed-card.after { z-index: 3; transform: scale(0.88); opacity: 0.25; }
+  .feed-card.gone-right { transform: translate(120%, 0) rotate(15deg); opacity: 0; }
+  .feed-card.gone-left  { transform: translate(-120%, 0) rotate(-15deg); opacity: 0; }
+  .feed-card.gone-up    { transform: translate(0, -100%); opacity: 0; }
+
+  /* Flip container (2D swap — 3D breaks inside .phone transform) */
+  .flip {
+    position: absolute; inset: 0;
+  }
+  .face {
+    position: absolute; inset: 0;
+    overflow: hidden;
+    transition: opacity 0.35s ease;
+  }
+  .face.back { opacity: 0; pointer-events: none; }
+  .flip.flipped .face.front { opacity: 0; pointer-events: none; }
+  .flip.flipped .face.front video { visibility: hidden; }
+  .flip.flipped .face.back { opacity: 1; pointer-events: auto; }
+
+  /* ---- Front: media hero ---- */
+  .face.front {
+    background-size: cover; background-position: center; background-color: #0a0c10;
+    display: flex; flex-direction: column;
+    color: #fff;
+  }
+  .face.front::before {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(180deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0) 25%, rgba(0,0,0,0) 45%, rgba(0,0,0,0.9) 100%);
+    z-index: 1; pointer-events: none;
+  }
+  .face.front video {
+    position: absolute; inset: 0; width: 100%; height: 100%;
+    object-fit: cover; z-index: 0;
+  }
+
+  /* ---- End-of-video CTA (feature #3) ---- */
+  .end-cta {
+    position: absolute; inset: 0; z-index: 3;
+    display: flex; align-items: center; justify-content: center;
+    background: radial-gradient(ellipse at center, rgba(0,0,0,0.55), rgba(0,0,0,0.85));
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.6s ease;
+  }
+  .end-cta.show { opacity: 1; pointer-events: auto; }
+  .end-cta .cta-inner {
+    text-align: center; padding: 20px 26px;
+    border: 1px solid rgba(255,255,255,0.35);
+    border-radius: 18px;
+    background: rgba(232,90,42,0.92);
+    backdrop-filter: blur(12px);
+    animation: cta-breathe 2s ease-in-out infinite;
+  }
+  .end-cta .cta-title { font-size: 15px; font-weight: 800; color: #fff; letter-spacing: 0.02em; }
+  .end-cta .cta-sub   { font-size: 11px; color: rgba(255,255,255,0.85); margin-top: 4px; }
+  @keyframes cta-breathe {
+    0%,100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(232,90,42,0.5); }
+    50%     { transform: scale(1.04); box-shadow: 0 0 0 14px rgba(232,90,42,0); }
+  }
+
+  /* ---- Tappable data cells on Back face (feature #2) ---- */
+  .face.back .tappable { position: relative; cursor: pointer; transition: background 0.2s, transform 0.15s; }
+  .face.back .tappable::after {
+    content: '↗'; position: absolute; top: 6px; right: 8px;
+    font-size: 10px; opacity: 0; color: #E85A2A;
+    transition: opacity 0.2s;
+  }
+  .face.back .tappable:hover, .face.back .tappable:active { background: rgba(232,90,42,0.10); }
+  .face.back .tappable:hover::after, .face.back .tappable:active::after { opacity: 0.9; }
+  .face.back .spec.tappable, .face.back .tc.tappable {
+    border-radius: 8px;
+  }
+  .face.back .poi-mini .row.tappable {
+    border-radius: 6px; padding-left: 4px;
+  }
+  .face.back .price-chart.tappable, .face.back .price-dist.tappable {
+    border-radius: 8px; padding: 4px;
+  }
+  .tappable-hint {
+    text-align: center; font-size: 10px; opacity: 0.55;
+    margin-top: 6px; margin-bottom: 2px; letter-spacing: 0.03em;
+  }
+
+  /* ---- Overflow reminder banner (feature #4) ---- */
+  .overflow-banner {
+    position: absolute; top: 96px; left: 12px; right: 12px;
+    z-index: 30;
+    padding: 12px 14px; border-radius: 14px;
+    background: linear-gradient(135deg, #E85A2A, #F97316);
+    color: #fff; font-size: 13px; font-weight: 600;
+    box-shadow: 0 10px 30px rgba(232,90,42,0.45);
+    display: flex; align-items: center; gap: 10px;
+    transform: translateY(-30px); opacity: 0;
+    pointer-events: none;
+    transition: transform 0.35s cubic-bezier(0.2,0.9,0.3,1.2), opacity 0.35s;
+  }
+  .overflow-banner.show { transform: translateY(0); opacity: 1; pointer-events: auto; }
+  .overflow-banner .ob-txt { flex: 1; line-height: 1.3; }
+  .overflow-banner .ob-txt small { display: block; font-size: 10px; opacity: 0.85; font-weight: 400; margin-top: 2px; }
+  .overflow-banner .ob-cta {
+    background: rgba(255,255,255,0.95); color: #E85A2A;
+    border: none; padding: 8px 12px; border-radius: 8px;
+    font-size: 11px; font-weight: 800; cursor: pointer;
+    white-space: nowrap;
+  }
+  .overflow-banner .ob-dismiss {
+    background: none; border: none; color: rgba(255,255,255,0.7);
+    font-size: 18px; cursor: pointer; padding: 0 2px;
+  }
+
+  /* ---- Deep Peek modal (feature #1: longpress) ---- */
+  .deep-peek {
+    position: fixed; inset: 0; z-index: 100;
+    background: rgba(0,0,0,0.94); backdrop-filter: blur(20px);
+    display: none; align-items: center; justify-content: center;
+    flex-direction: column;
+  }
+  .deep-peek.show { display: flex; animation: dp-in 0.28s cubic-bezier(0.2,0.9,0.3,1.05); }
+  @keyframes dp-in { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+  .deep-peek-media {
+    position: relative;
+    width: 92%; max-width: 340px; aspect-ratio: 9/16;
+    border-radius: 20px; overflow: hidden;
+    box-shadow: 0 30px 80px rgba(232,90,42,0.4);
+  }
+  .deep-peek-media video, .deep-peek-media img {
+    width: 100%; height: 100%; object-fit: cover;
+  }
+  .deep-peek-media::after {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(180deg, rgba(0,0,0,0.1) 0%, transparent 30%, transparent 55%, rgba(0,0,0,0.95) 100%);
+  }
+  .deep-peek-info {
+    position: absolute; bottom: 20px; left: 20px; right: 20px;
+    z-index: 2; color: #fff;
+  }
+  .deep-peek-info .dpi-name { font-size: 20px; font-weight: 800; margin-bottom: 4px; }
+  .deep-peek-info .dpi-sub { font-size: 12px; opacity: 0.85; margin-bottom: 10px; }
+  .deep-peek-info .dpi-poi {
+    display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 12px;
+  }
+  .deep-peek-info .dpi-poi span {
+    background: rgba(255,255,255,0.15); padding: 3px 8px;
+    border-radius: 999px; font-size: 10px;
+    backdrop-filter: blur(8px);
+  }
+  .deep-peek-hint {
+    color: rgba(255,255,255,0.55); font-size: 11px;
+    margin-top: 14px; letter-spacing: 0.04em;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .deep-peek-hint b { color: #E85A2A; }
+  .deep-peek-actions {
+    display: flex; gap: 10px; margin-top: 14px;
+  }
+  .deep-peek-actions button {
+    padding: 12px 18px; border-radius: 12px;
+    font-size: 13px; font-weight: 700;
+    border: 1px solid rgba(255,255,255,0.2);
+    background: rgba(255,255,255,0.08); color: #fff;
+    cursor: pointer;
+  }
+  .deep-peek-actions button.primary {
+    background: #E85A2A; border-color: #E85A2A;
+  }
+
+  /* ---- Ask card: single yes/no question with big centered text ---- */
+  .face.ask {
+    position: absolute; inset: 0; overflow: hidden;
+    display: flex; flex-direction: column; justify-content: space-between;
+    background-size: cover; background-position: center;
+    color: #fff;
+    padding: 100px 26px 60px;
+  }
+  .face.ask::before {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(180deg,
+      rgba(10,12,16,0.55) 0%,
+      rgba(10,12,16,0.4) 40%,
+      rgba(10,12,16,0.88) 100%);
+    z-index: 0;
+  }
+  .face.ask .ask-tag {
+    position: relative; z-index: 1;
+    align-self: flex-start;
+    background: rgba(232,90,42,0.95);
+    padding: 6px 12px; border-radius: 6px;
+    font-size: 10px; font-weight: 800; letter-spacing: 0.09em;
+    box-shadow: 0 4px 14px rgba(232,90,42,0.4);
+  }
+  .face.ask .ask-body {
+    position: relative; z-index: 1;
+    flex: 1; display: flex; flex-direction: column; justify-content: center;
+    padding: 24px 0;
+  }
+  .face.ask .ask-q {
+    font-size: 40px; font-weight: 800; line-height: 1.05;
+    letter-spacing: -0.01em;
+    margin-bottom: 14px;
+    text-shadow: 0 3px 20px rgba(0,0,0,0.6);
+  }
+  .face.ask .ask-sub {
+    font-size: 15px; opacity: 0.85; line-height: 1.4;
+    text-shadow: 0 2px 12px rgba(0,0,0,0.6);
+  }
+  .face.ask .ask-hint {
+    position: relative; z-index: 1;
+    display: flex; justify-content: space-between;
+    font-size: 11px; opacity: 0.7;
+    padding-top: 12px;
+    border-top: 1px solid rgba(255,255,255,0.15);
+  }
+  .face.ask .ask-yes { color: rgba(120,255,180,0.85); }
+  .face.ask .ask-no { color: rgba(255,120,120,0.85); }
+
+  /* Longpress visual feedback on card */
+  .feed-card.longpressing .flip {
+    transform: scale(1.03) !important;
+    transition: transform 0.4s cubic-bezier(0.2,0.9,0.3,1.05);
+  }
+  .feed-card.longpressing::after {
+    content: 'Hold to peek…'; position: absolute;
+    top: 50%; left: 50%; transform: translate(-50%, -50%);
+    background: rgba(232,90,42,0.95); color: #fff;
+    padding: 8px 14px; border-radius: 999px;
+    font-size: 12px; font-weight: 700;
+    z-index: 15; pointer-events: none;
+    animation: lp-pulse 0.5s ease-in-out;
+  }
+  @keyframes lp-pulse { from { opacity: 0; transform: translate(-50%,-40%); } to { opacity: 1; transform: translate(-50%,-50%); } }
+
+  /* ---- Scope picker cards (intent, region, metro, culture) ---- */
+  .face.scope {
+    position: absolute; inset: 0; overflow: hidden;
+    display: flex; flex-direction: column;
+    background-size: cover; background-position: center;
+    color: #fff;
+  }
+  .face.scope::before {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(180deg, rgba(10,12,16,0.65) 0%, rgba(10,12,16,0.85) 100%);
+    z-index: 0;
+  }
+  .scope-head {
+    position: relative; z-index: 1;
+    padding: 110px 22px 8px;
+  }
+  .scope-tag {
+    display: inline-block;
+    background: rgba(232,90,42,0.95);
+    padding: 5px 11px; border-radius: 6px;
+    font-size: 10px; font-weight: 800; letter-spacing: 0.08em;
+    margin-bottom: 12px;
+  }
+  .scope-title { font-size: 26px; font-weight: 800; line-height: 1.15; margin-bottom: 6px; }
+  .scope-sub { font-size: 13px; opacity: 0.75; line-height: 1.4; margin-bottom: 8px; }
+  .scope-note {
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 8px;
+    padding: 6px 10px; font-size: 10px;
+    letter-spacing: 0.04em; opacity: 0.85;
+  }
+  .scope-options {
+    position: relative; z-index: 1;
+    flex: 1; overflow-y: auto;
+    padding: 12px 16px 100px;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .scope-opt {
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.14);
+    border-radius: 12px;
+    padding: 12px 14px;
+    display: flex; gap: 12px; align-items: flex-start;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .scope-opt:hover, .scope-opt:active {
+    background: rgba(232,90,42,0.22);
+    border-color: rgba(232,90,42,0.6);
+    transform: translateX(2px);
+  }
+  .scope-opt.selected {
+    background: rgba(232,90,42,0.5);
+    border-color: #E85A2A;
+    box-shadow: 0 0 0 2px rgba(232,90,42,0.4);
+  }
+  .scope-opt .emo { font-size: 24px; line-height: 1; padding-top: 2px; }
+  .scope-opt .body { flex: 1; }
+  .scope-opt .lbl { font-size: 14px; font-weight: 700; margin-bottom: 3px; }
+  .scope-opt .body .d { font-size: 11px; opacity: 0.7; line-height: 1.35; }
+  .scope-opt .body .ex { font-size: 10px; opacity: 0.55; margin-top: 4px; font-style: italic; }
+  .scope-opt .body .hi {
+    display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px;
+  }
+  .scope-opt .body .hi span {
+    background: rgba(255,255,255,0.12);
+    padding: 2px 6px; border-radius: 999px; font-size: 9px;
+  }
+  .scope-opt .body .stats {
+    display: flex; gap: 10px; margin-top: 6px; font-size: 10px; opacity: 0.75;
+  }
+  .scope-opt .body .stats b { color: #FFD9CB; font-weight: 700; }
+  .scope-skip {
+    position: absolute; bottom: 76px; left: 16px; right: 16px;
+    z-index: 2; text-align: center;
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+  }
+  .scope-skip button {
+    background: rgba(255,255,255,0.1);
+    color: rgba(255,255,255,0.75);
+    border: 1px solid rgba(255,255,255,0.18);
+    padding: 10px 16px; border-radius: 10px;
+    font-size: 12px; cursor: pointer;
+    letter-spacing: 0.03em;
+  }
+  .scope-skip .hint { font-size: 10px; opacity: 0.5; }
+
+  .kind-chip {
+    position: absolute; top: 100px; left: 18px;
+    padding: 5px 10px; border-radius: 6px;
+    font-size: 10px; font-weight: 800; letter-spacing: 0.08em;
+    background: rgba(0,0,0,0.55); backdrop-filter: blur(8px);
+    z-index: 2;
+  }
+  .kind-chip.listing { color: #fff; }
+  .kind-chip.listing::before { content: '🏠 '; }
+  .kind-chip.community { color: #FCE7DE; }
+  .kind-chip.community::before { content: '🏘️ '; }
+
+  .media-indicator {
+    position: absolute; top: 100px; right: 18px;
+    display: flex; gap: 4px; z-index: 2;
+  }
+  .media-indicator .m {
+    padding: 4px 8px; border-radius: 999px;
+    font-size: 10px; font-weight: 700;
+    background: rgba(0,0,0,0.55); backdrop-filter: blur(6px);
+    color: #fff; letter-spacing: 0.03em;
+  }
+  .media-indicator .m.playing {
+    background: rgba(232,90,42,0.95);
+    animation: pulse-live 1.8s ease-in-out infinite;
+  }
+  @keyframes pulse-live { 0%,100%{opacity:1} 50%{opacity:0.65} }
+
+  .front-content {
+    margin-top: auto; padding: 20px 22px 130px; position: relative; z-index: 2;
+  }
+  .front-title {
+    font-size: 32px; font-weight: 800; line-height: 1.05; letter-spacing: -0.02em;
+  }
+  .front-sub {
+    font-size: 13px; opacity: 0.88; margin-top: 6px;
+  }
+  .front-hook {
+    font-size: 13px; margin-top: 12px; opacity: 0.95;
+    line-height: 1.5;
+  }
+  .front-pills {
+    display: flex; gap: 6px; flex-wrap: wrap; margin-top: 12px;
+  }
+  .front-pills .p {
+    padding: 4px 10px; border-radius: 999px;
+    background: rgba(255,255,255,0.18); backdrop-filter: blur(10px);
+    font-size: 11px;
+  }
+  .front-price {
+    display: inline-block; padding: 6px 12px; border-radius: 10px;
+    background: rgba(232,90,42,0.95);
+    font-size: 20px; font-weight: 800; margin-bottom: 10px;
+    letter-spacing: -0.01em;
+  }
+  .front-match {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 12px; border-radius: 999px;
+    background: rgba(34, 197, 94, 0.9); backdrop-filter: blur(8px);
+    color: #fff; font-size: 12px; font-weight: 700;
+    margin-bottom: 10px;
+  }
+
+  /* Flip / Explore hint */
+  .card-actions-row {
+    position: absolute; bottom: 70px; left: 0; right: 0; padding: 0 22px;
+    display: flex; justify-content: space-between; gap: 10px;
+    z-index: 3;
+  }
+  .flip-btn, .explore-btn {
+    padding: 11px 16px; border-radius: 999px;
+    background: rgba(255,255,255,0.15); backdrop-filter: blur(14px);
+    color: #fff; border: 1px solid rgba(255,255,255,0.2);
+    font-size: 12px; font-weight: 700; letter-spacing: 0.02em;
+    display: inline-flex; align-items: center; gap: 6px;
+    cursor: pointer;
+  }
+  .explore-btn { background: rgba(232,90,42,0.9); border-color: transparent; }
+  .flip-btn { background: rgba(0,0,0,0.5); }
+
+  /* ---- Back: data panel ---- */
+  .face.back {
+    background: linear-gradient(160deg, #14171E 0%, #0A0C10 100%);
+    color: #fff; padding: 90px 20px 90px;
+    display: flex; flex-direction: column;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .face.back::-webkit-scrollbar { display: none; }
+  .back-title { font-size: 20px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.2; }
+  .back-sub { font-size: 12px; color: #9AA0AB; margin-top: 3px; }
+
+  .section-h {
+    font-size: 10px; letter-spacing: 0.1em; opacity: 0.5;
+    margin: 18px 0 8px; font-weight: 700;
+  }
+
+  /* Price history chart */
+  .price-chart {
+    height: 60px; display: flex; align-items: flex-end; gap: 6px;
+    padding: 4px 0;
+  }
+  .price-chart .bar {
+    flex: 1; background: linear-gradient(180deg, var(--accent), rgba(232,90,42,0.4));
+    border-radius: 4px 4px 2px 2px;
+    position: relative;
+    min-height: 4px;
+  }
+  .price-chart .bar span {
+    position: absolute; top: -18px; left: 50%; transform: translateX(-50%);
+    font-size: 9px; opacity: 0.7; white-space: nowrap;
+  }
+  .price-chart .bar .lbl {
+    top: auto; bottom: -14px; opacity: 0.5;
+  }
+
+  /* Spec grid */
+  .spec-grid {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .spec {
+    background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08);
+    padding: 10px 12px; border-radius: 10px;
+  }
+  .spec b { display: block; font-size: 15px; font-weight: 700; }
+  .spec .lbl { font-size: 9px; letter-spacing: 0.06em; color: #9AA0AB; margin-top: 2px; }
+
+  /* Radar / trait compare */
+  .trait-cmp { display: flex; flex-direction: column; gap: 6px; }
+  .trait-cmp .tc {
+    display: flex; align-items: center; gap: 10px; font-size: 11px;
+  }
+  .trait-cmp .tc-lbl { flex: 0 0 72px; opacity: 0.75; }
+  .trait-cmp .tc-track {
+    flex: 1; height: 6px; background: rgba(255,255,255,0.08);
+    border-radius: 3px; position: relative;
+  }
+  .trait-cmp .tc-bar {
+    height: 100%; background: var(--accent); border-radius: 3px;
+  }
+  .trait-cmp .tc-you {
+    position: absolute; top: -2px; width: 2px; height: 10px; background: #fff;
+  }
+  .trait-cmp .tc-val { flex: 0 0 28px; text-align: right; font-size: 10px; opacity: 0.6; font-variant-numeric: tabular-nums; }
+
+  /* POI mini-list */
+  .poi-mini { display: flex; flex-direction: column; gap: 6px; }
+  .poi-mini .row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 10px;
+    background: rgba(255,255,255,0.05); border-radius: 10px;
+    font-size: 12px;
+  }
+  .poi-mini .row .ic { width: 24px; text-align: center; }
+  .poi-mini .row .n { flex: 1; }
+  .poi-mini .row .m { font-size: 10px; color: #E85A2A; font-weight: 700; }
+
+  /* Price distribution mini */
+  .price-dist {
+    height: 44px; display: flex; align-items: flex-end; gap: 2px;
+    padding: 4px 0; position: relative;
+  }
+  .price-dist .b {
+    flex: 1; background: rgba(255,255,255,0.2); border-radius: 2px 2px 0 0;
+    min-height: 3px;
+  }
+  .price-dist .b.here { background: var(--accent); }
+  .price-dist-lbl {
+    display: flex; justify-content: space-between; font-size: 9px; opacity: 0.5;
+    margin-top: 2px; letter-spacing: 0.03em;
+  }
+
+  /* Swipe hint overlays */
+  .swipe-choice {
+    position: absolute; top: 130px;
+    padding: 8px 18px; border: 4px solid; border-radius: 10px;
+    font-weight: 900; font-size: 24px; letter-spacing: 0.06em;
+    opacity: 0; z-index: 4;
+    transform: rotate(-6deg);
+    pointer-events: none;
+  }
+  .swipe-choice.like { right: 24px; border-color: #22C55E; color: #22C55E; }
+  .swipe-choice.pass { left: 24px; border-color: #EF4444; color: #EF4444; transform: rotate(6deg); }
+  .feed-card.dragging-right .swipe-choice.like { opacity: 1; }
+  .feed-card.dragging-left  .swipe-choice.pass { opacity: 1; }
+
+  /* Bottom nav */
+  .tabbar {
+    position: absolute; bottom: 0; left: 0; right: 0; height: 60px;
+    background: rgba(10,12,16,0.85); backdrop-filter: blur(14px);
+    border-top: 1px solid rgba(255,255,255,0.1);
+    display: flex; justify-content: space-around; align-items: center;
+    z-index: 15;
+  }
+  .tabbar button {
+    background: none; border: none; color: #fff;
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+    padding: 6px 12px; opacity: 0.55; font-size: 9px; letter-spacing: 0.05em;
+    font-weight: 600;
+  }
+  .tabbar button.active { opacity: 1; color: var(--accent); }
+  .tabbar button .ic { font-size: 20px; }
+
+  /* Persona-updated toast */
+  .toast {
+    position: absolute; top: 100px; left: 50%; transform: translate(-50%, -20px);
+    background: rgba(34, 197, 94, 0.95); color: #fff;
+    padding: 8px 14px; border-radius: 999px;
+    font-size: 11px; font-weight: 700; letter-spacing: 0.02em;
+    opacity: 0; z-index: 30;
+    transition: opacity 0.3s, transform 0.3s;
+    pointer-events: none;
+  }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+  /* Onboarding hint (first card only) */
+  .hint {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    background: rgba(0,0,0,0.85); backdrop-filter: blur(12px);
+    padding: 20px 24px; border-radius: 20px;
+    color: #fff; z-index: 40; text-align: center;
+    max-width: 280px;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.3s;
+  }
+  .hint.show { opacity: 1; pointer-events: auto; }
+  .hint b { display: block; font-size: 15px; margin-bottom: 8px; }
+  .hint p { font-size: 12px; line-height: 1.5; opacity: 0.85; margin-bottom: 4px; }
+  .hint .hint-actions {
+    margin-top: 14px; display: flex; gap: 8px; justify-content: center;
+  }
+  .hint button {
+    padding: 8px 16px; border-radius: 999px;
+    background: var(--accent); color: #fff; border: none;
+    font-size: 12px; font-weight: 700;
+  }
+
+</style>
+</head>
+<body>
+  <div class="page-title">Vibe · Infinite feed</div>
+  <a href="index.html" class="nav-back">← Home</a>
+  <div class="phone">
+    <div class="notch"></div>
+    <div class="screen">
+
+      <!-- top persona bar -->
+      <div class="topbar">
+        <div class="persona-live" id="personaLive" onclick="location.href='app.html'">
+          <div class="dot"></div>
+          <span id="personaName">Explorer</span>
+          <span class="count" id="likedCount">· 0</span>
+        </div>
+        <div class="top-actions">
+          <button class="icon-btn" id="sound-toggle" onclick="toggleSound()" title="Sound">🔇</button>
+          <button class="icon-btn" onclick="location.href='app.html'" title="My Places">♥</button>
+          <button class="icon-btn" onclick="location.href='app.html'" title="Menu">☰</button>
+        </div>
+      </div>
+
+      <!-- Scope strip: shows narrowed-down context (intent > region > metro > culture) -->
+      <div class="scope-strip" id="scopeStrip"></div>
+
+      <div class="feed-stack" id="stack"></div>
+
+      <!-- Onboarding hint -->
+      <div class="hint" id="hint">
+        <b>Swipe to shape your Vibe</b>
+        <p>← Pass · Right → Like</p>
+        <p>Tap card → data face. <b>Every stat is tappable</b>.</p>
+        <p><b>Hold ~0.5s</b> → Deep Peek (immersive preview).</p>
+        <p>Explore → detail. 🔇 top-right → sound.</p>
+        <div class="hint-actions">
+          <button onclick="document.getElementById('hint').classList.remove('show')">Got it</button>
+        </div>
+      </div>
+
+      <div class="toast" id="toast">Vibe updated</div>
+
+      <!-- Overflow reminder banner (feature #4) -->
+      <div class="overflow-banner" id="overflowBanner">
+        <div class="ob-txt" id="overflowText">
+          You've liked 5 places
+          <small>Compare them side-by-side?</small>
+        </div>
+        <button class="ob-cta" onclick="location.href='app.html'">See all →</button>
+        <button class="ob-dismiss" onclick="dismissOverflow()">×</button>
+      </div>
+
+      <!-- Deep Peek modal (feature #1) -->
+      <div class="deep-peek" id="deepPeek">
+        <div class="deep-peek-media" id="deepPeekMedia"></div>
+        <div class="deep-peek-hint">
+          <span>💡</span>
+          <span>Release to close · Tap <b>Explore</b> to go deep</span>
+        </div>
+        <div class="deep-peek-actions">
+          <button onclick="closeDeepPeek()">← Back to feed</button>
+          <button class="primary" id="deepPeekExplore">Explore →</button>
+        </div>
+      </div>
+
+      <!-- Bottom nav (thin, doesn't fight the feed) -->
+      <div class="tabbar">
+        <button class="active"><span class="ic">🎴</span><span>FEED</span></button>
+        <button onclick="location.href='app.html'"><span class="ic">🧭</span><span>DISCOVER</span></button>
+        <button onclick="location.href='app.html'"><span class="ic">♥</span><span>SAVED</span></button>
+        <button onclick="location.href='app.html'"><span class="ic">📍</span><span>MAP</span></button>
+      </div>
+    </div>
+  </div>
+
+  <script src="_data.js"></script>
+  <script src="_theme.js"></script>
+  <script>
+  //////// ------- state ------- ////////
+  const KEY = window.VIBE_STATE_KEY;
+  function load() { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch { return {}; } }
+  function save(s) { localStorage.setItem(KEY, JSON.stringify(s)); }
+
+  let state = load();
+  if (!state.likedIds) state.likedIds = [];
+  if (!state.likedListings) state.likedListings = [];
+  if (!state.passedIds) state.passedIds = [];
+  // rolling trait accumulator so every swipe updates persona
+  if (!state.traitTally) state.traitTally = { family:0,walkable:0,quiet:0,hip:0,outdoors:0,nightlife:0, count:0 };
+  if (!state.persona) state.persona = derivePersona(state.likedIds);
+  save(state);
+
+  function updatePersonaLive() {
+    const name = state.persona?.name || 'Explorer';
+    const short = name.replace(/^The /, '');
+    document.getElementById('personaName').textContent = short;
+    document.getElementById('likedCount').textContent = '· ' + (state.likedIds.length + state.likedListings.length);
+  }
+  updatePersonaLive();
+
+  function updateScopeStrip() {
+    const el = document.getElementById('scopeStrip');
+    if (!el) return;
+    const scope = state.scope || {};
+    const parts = [];
+    const chip = (type, id) => {
+      const lbl = getScopeLabel(type, id);
+      return `<span class="chip" data-scope-type="${type}" data-scope-id="${id}">
+        ${lbl}<span class="rm" onclick="removeScope('${type}','${id}')">×</span>
+      </span>`;
+    };
+    // Hierarchy order for display
+    ['intent','region','state','metro','city','culture','style'].forEach(type => {
+      const v = scope[type];
+      if (!v) return;
+      const list = Array.isArray(v) ? v : [v];
+      list.forEach(id => parts.push(chip(type, id)));
+    });
+    // Separator between hierarchy levels (arrows only when moving to next type)
+    el.innerHTML = parts.join('');
+  }
+  window.removeScope = function(type, id) {
+    if (!state.scope) return;
+    const v = state.scope[type];
+    if (Array.isArray(v)) {
+      state.scope[type] = v.filter(x => x !== id);
+      if (state.scope[type].length === 0) delete state.scope[type];
+    } else {
+      delete state.scope[type];
+    }
+    save(state);
+    updateScopeStrip();
+  };
+  updateScopeStrip();
+
+  function showToast(text) {
+    const t = document.getElementById('toast');
+    t.textContent = text;
+    t.classList.add('show');
+    clearTimeout(t._h);
+    t._h = setTimeout(() => t.classList.remove('show'), 1600);
+  }
+
+  //////// ------- feed ------- ////////
+  const FEED = generateFeed(60);
+  let idx = 0;
+  const stack = document.getElementById('stack');
+
+  function currency(n) {
+    if (n >= 1000000) return '$' + (n/1000000).toFixed(2) + 'M';
+    return '$' + Math.round(n/1000) + 'K';
+  }
+
+  // Which subdivisions and listings have a rendered video available
+  const HAS_VIDEO = new Set(['waterside','southern-village','downtown-durham','l1','l2','l3']);
+  function videoUrlFor(item) {
+    const key = item.type === 'listing' ? item.ref.id : item.ref.id;
+    return HAS_VIDEO.has(key) ? `videos/out_v2/${key}.mp4` : null;
+  }
+
+  function renderFrontListing(item) {
+    const l = item.ref, s = item.sub;
+    const p = state.persona || derivePersona([]);
+    const match = s ? scoreMatch(p.traits, s) : null;
+    const vurl = videoUrlFor(item);
+    const media = vurl
+      ? `<video src="${vurl}" muted loop playsinline preload="metadata" poster="${l.img}"></video>`
+      : '';
+    const exploreId = s ? s.id : '';
+    return `
+      <div class="face front" style="background-image:url('${l.img}')">
+        ${media}
+        <div class="kind-chip listing">LISTING</div>
+        <div class="media-indicator">
+          ${vurl ? '<span class="m playing">▶︎ LIVE</span>' : ''}
+          <span class="m">📷 12</span>
+          <span class="m">▶︎ 0:32</span>
+        </div>
+        <div class="front-content">
+          ${match ? `<div class="front-match">✨ ${match} MATCH · via ${s.name}</div>` : ''}
+          <div class="front-price">${currency(l.price)}</div>
+          <div class="front-title">${l.addr}</div>
+          <div class="front-sub">${s ? s.name + ' · ' : ''}${s ? s.city : ''}</div>
+          <div class="front-hook">${l.hook}</div>
+          <div class="front-pills">
+            <span class="p">${l.bd} bd</span>
+            <span class="p">${l.ba} ba</span>
+            <span class="p">${l.sqft.toLocaleString()} sqft</span>
+            <span class="p">${l.dom}d on market</span>
+          </div>
+        </div>
+        <div class="end-cta" data-explore="${exploreId}" data-name="${l.addr}">
+          <div class="cta-inner">
+            <div class="cta-title">See this home in depth →</div>
+            <div class="cta-sub">Photos · Neighborhood · Schools · Walk score</div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderFrontCommunity(item) {
+    const s = item.ref;
+    const p = state.persona || derivePersona([]);
+    const match = scoreMatch(p.traits, s);
+    const vurl = videoUrlFor(item);
+    const media = vurl
+      ? `<video src="${vurl}" muted loop playsinline preload="metadata" poster="${s.img}"></video>`
+      : '';
+    return `
+      <div class="face front" style="background-image:url('${s.img}')">
+        ${media}
+        <div class="kind-chip community">COMMUNITY</div>
+        <div class="media-indicator">
+          ${vurl ? '<span class="m playing">▶︎ LIVE</span>' : ''}
+          <span class="m">📷 24</span>
+          <span class="m">▶︎ 1:45</span>
+        </div>
+        <div class="front-content">
+          <div class="front-match" style="background:${match>=80?'rgba(34,197,94,0.9)':match>=60?'rgba(232,90,42,0.9)':'rgba(245,158,11,0.9)'}">
+            ✨ ${match} MATCH
+          </div>
+          <div class="front-title">${s.name}</div>
+          <div class="front-sub">${s.city} · ${s.stats.homes} homes · ${s.stats.median} median</div>
+          <div class="front-hook">${s.blurb}</div>
+          <div class="front-pills">
+            ${s.tags.map(t => `<span class="p">${t}</span>`).join('')}
+          </div>
+        </div>
+        <div class="end-cta" data-explore="${s.id}" data-name="${s.name}">
+          <div class="cta-inner">
+            <div class="cta-title">Explore ${s.name} →</div>
+            <div class="cta-sub">Video tour · POI map · Traits deep-dive · Listings</div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderBackListing(item) {
+    const l = item.ref, s = item.sub;
+    const exploreId = s ? s.id : '';
+    const minP = Math.min(...l.priceHistory), maxP = Math.max(...l.priceHistory);
+    const rangeK = maxP - minP + 5;
+    const times = ['−90d','−60d','−30d','Now'];
+    const priceBars = l.priceHistory.map((v, i) => {
+      const h = 20 + ((v - minP) / rangeK) * 60;
+      return `<div class="bar" style="height:${h}px">
+        <span>$${v}K</span>
+        <span class="lbl">${times[i]}</span>
+      </div>`;
+    }).join('');
+    const p = state.persona || derivePersona([]);
+    const traitLabels = { family:'Family', walkable:'Walkable', quiet:'Quiet', hip:'Hip', outdoors:'Outdoors', nightlife:'Nightlife' };
+    const compare = s ? Object.entries(traitLabels).map(([k, lbl]) => `
+      <div class="tc tappable" onclick="event.stopPropagation(); tapDeep('trait','${exploreId}','${k}')">
+        <div class="tc-lbl">${lbl}</div>
+        <div class="tc-track">
+          <div class="tc-bar" style="width:${s.traits[k]}%"></div>
+          <div class="tc-you" style="left:${p.traits[k]}%"></div>
+        </div>
+        <div class="tc-val">${s.traits[k]}</div>
+      </div>
+    `).join('') : '';
+    return `
+      <div class="face back">
+        <div class="back-title">${l.addr}</div>
+        <div class="back-sub">${s ? s.name + ' · ' : ''}${currency(l.price)} · ${l.bd}/${l.ba} · ${l.sqft.toLocaleString()} sqft</div>
+
+        <div class="tappable-hint">✨ tap any data point to explore</div>
+
+        <div class="section-h">PRICE HISTORY</div>
+        <div class="price-chart tappable" onclick="event.stopPropagation(); tapDeep('price','${exploreId}','')">${priceBars}</div>
+        <div style="height:16px"></div>
+
+        <div class="section-h">THE HOUSE</div>
+        <div class="spec-grid">
+          <div class="spec tappable" onclick="event.stopPropagation(); tapDeep('year','${exploreId}','')"><b>${l.year}</b><div class="lbl">YEAR BUILT</div></div>
+          <div class="spec tappable" onclick="event.stopPropagation(); tapDeep('ppsf','${exploreId}','')"><b>$${Math.round(l.price/l.sqft)}</b><div class="lbl">PRICE / SQFT</div></div>
+          <div class="spec tappable" onclick="event.stopPropagation(); tapDeep('dom','${exploreId}','')"><b>${l.dom}</b><div class="lbl">DAYS ON MARKET</div></div>
+          <div class="spec tappable" onclick="event.stopPropagation(); tapDeep('layout','${exploreId}','')"><b>${l.bd}/${l.ba}</b><div class="lbl">BED / BATH</div></div>
+        </div>
+
+        ${s ? `<div class="section-h">COMMUNITY VIBE MATCH</div>
+        <div class="trait-cmp">${compare}</div>
+        <div style="font-size:9px;opacity:0.5;margin-top:6px">Bar = ${s.name} · Line = your persona</div>` : ''}
+
+        <div class="card-actions-row" style="position:sticky;bottom:0;padding-top:14px;background:linear-gradient(180deg,transparent,#0A0C10 40%)">
+          <button class="flip-btn" onclick="flipBack(this)">↺ Flip back</button>
+          <button class="explore-btn" onclick="location.href='place.html?id=${s ? s.id : ''}'">Explore →</button>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderBackCommunity(item) {
+    const s = item.ref;
+    const p = state.persona || derivePersona([]);
+    const traitLabels = { family:'Family', walkable:'Walkable', quiet:'Quiet', hip:'Hip', outdoors:'Outdoors', nightlife:'Nightlife' };
+    const compare = Object.entries(traitLabels).map(([k, lbl]) => `
+      <div class="tc tappable" onclick="event.stopPropagation(); tapDeep('trait','${s.id}','${k}')">
+        <div class="tc-lbl">${lbl}</div>
+        <div class="tc-track">
+          <div class="tc-bar" style="width:${s.traits[k]}%"></div>
+          <div class="tc-you" style="left:${p.traits[k]}%"></div>
+        </div>
+        <div class="tc-val">${s.traits[k]}</div>
+      </div>
+    `).join('');
+
+    // Price distribution (fake demo, cluster around median)
+    const medK = parseFloat(s.stats.median.replace(/[^0-9.]/g,'')) * (s.stats.median.includes('M') ? 1000 : 1);
+    const dist = [0.05,0.15,0.30,0.45,0.80,1.0,0.75,0.45,0.25,0.10];
+    const distEls = dist.map((h, i) => {
+      const isHere = i === 5;
+      return `<div class="b ${isHere ? 'here' : ''}" style="height:${h*100}%"></div>`;
+    }).join('');
+
+    const poiRows = s.pois.slice(0, 4).map(poi => {
+      const meta = CAT_META[poi.cat] || { icon: '📍' };
+      return `<div class="row tappable" onclick="event.stopPropagation(); tapDeep('poi','${s.id}','${poi.cat}')"><div class="ic">${meta.icon}</div><div class="n">${poi.name}<div style="font-size:10px;opacity:0.55;margin-top:1px">${poi.note}</div></div><div class="m">${poi.mins}m</div></div>`;
+    }).join('');
+
+    return `
+      <div class="face back">
+        <div class="back-title">${s.name}</div>
+        <div class="back-sub">${s.city} · ${s.stats.homes} homes · ${s.stats.vibe}</div>
+
+        <div class="tappable-hint">✨ tap any data point to explore</div>
+
+        <div class="section-h">HOW YOU MATCH THIS COMMUNITY</div>
+        <div class="trait-cmp">${compare}</div>
+        <div style="font-size:9px;opacity:0.5;margin-top:6px">Bar = ${s.name} · Line = your persona</div>
+
+        <div class="section-h">PRICE DISTRIBUTION</div>
+        <div class="price-dist tappable" onclick="event.stopPropagation(); tapDeep('priceDist','${s.id}','')">${distEls}</div>
+        <div class="price-dist-lbl">
+          <span>$${Math.round(medK*0.6)}K</span>
+          <span>${s.stats.median} median</span>
+          <span>$${Math.round(medK*1.4)}K</span>
+        </div>
+
+        <div class="section-h">WHAT'S CLOSE</div>
+        <div class="poi-mini">${poiRows}</div>
+
+        <div class="card-actions-row" style="position:sticky;bottom:0;padding-top:14px;background:linear-gradient(180deg,transparent,#0A0C10 40%)">
+          <button class="flip-btn" onclick="flipBack(this)">↺ Flip back</button>
+          <button class="explore-btn" onclick="location.href='place.html?id=${s.id}'">Explore →</button>
+        </div>
+      </div>
+    `;
+  }
+
+  // ---- Scope picker cards (intent, region, metro, culture) ----
+  function renderScopeCard(item) {
+    const t = item.type;
+    let title, sub, bgImg, opts, tagLbl, note;
+    const scope = state.scope || {};
+    if (t === 'intent') {
+      tagLbl = '🎯 STEP 1 · YOUR PURPOSE';
+      title = 'Why are you looking?';
+      sub = 'This shapes everything downstream — schools matter for primary, cap-rate matters for investment.';
+      bgImg = 'https://images.unsplash.com/photo-1519999482648-25049ddd37b1?w=900&q=70';
+      opts = INTENT_CARDS.map(o => ({
+        id: o.id, emoji: o.emoji, label: o.label, desc: o.desc,
+        selected: scope.intent === o.id
+      }));
+    } else if (t === 'region') {
+      tagLbl = '🌎 STEP 2 · WHERE IN THE COUNTRY';
+      title = 'Which region calls you?';
+      sub = 'Sun Belt, mountain, coasts — the region sets your COL, weather, and job market ceiling.';
+      bgImg = 'https://images.unsplash.com/photo-1519999482648-25049ddd37b1?w=900&q=70';
+      opts = REGION_CARDS.map(o => ({
+        id: o.id, emoji: o.emoji, label: o.label, desc: o.desc,
+        highlights: o.highlights, selected: scope.region === o.id
+      }));
+    } else if (t === 'metro') {
+      tagLbl = '🏙️ STEP 3 · METRO AREA';
+      title = 'Zoom into a metro';
+      sub = 'Metros differ more than regions — Austin ≠ Houston. Pick one to see its cities.';
+      bgImg = 'https://images.unsplash.com/photo-1596496050755-c923e73e42e1?w=900&q=70';
+      opts = METRO_CARDS.map(o => ({
+        id: o.id, emoji: o.emoji, label: o.label, desc: o.desc,
+        stats: o.stats, tags: o.tags, selected: scope.metro === o.id
+      }));
+    } else if (t === 'culture') {
+      tagLbl = '✨ STEP 4 · COMMUNITY FIT';
+      title = 'Any culture that matters to you?';
+      sub = 'Optional — but if it matters, we\'ll rank cities and neighborhoods on this signal.';
+      bgImg = 'https://images.unsplash.com/photo-1555921015-5532091f6026?w=900&q=70';
+      opts = CULTURE_CARDS.map(o => ({
+        id: o.id, emoji: o.emoji, label: o.label, desc: o.desc,
+        examples: o.examples, selected: (scope.cultures || []).includes(o.id)
+      }));
+      note = 'Multi-select ✓ — tap as many as apply';
+    }
+
+    const optHtml = opts.map(o => `
+      <div class="scope-opt ${o.selected?'selected':''}"
+           onclick="event.stopPropagation(); pickScope('${t}','${o.id}')">
+        <div class="emo">${o.emoji}</div>
+        <div class="body">
+          <div class="lbl">${o.label}</div>
+          <div class="d">${o.desc}</div>
+          ${o.highlights ? `<div class="hi">${o.highlights.map(h=>`<span>${h}</span>`).join('')}</div>` : ''}
+          ${o.stats ? `<div class="stats">
+            <span>Pop <b>${o.stats.pop}</b></span>
+            <span>Median <b>${o.stats.median}</b></span>
+            <span>Jobs <b>${o.stats.jobs}</b></span>
+          </div>` : ''}
+          ${o.tags ? `<div class="hi">${o.tags.map(x=>`<span>${x}</span>`).join('')}</div>` : ''}
+          ${o.examples ? `<div class="ex">e.g. ${o.examples}</div>` : ''}
+        </div>
+      </div>
+    `).join('');
+
+    return `
+      <div class="face scope" style="background-image:url('${bgImg}')">
+        <div class="scope-head">
+          <div class="scope-tag">${tagLbl}</div>
+          <div class="scope-title">${title}</div>
+          <div class="scope-sub">${sub}</div>
+          ${note ? `<div class="scope-note">${note}</div>` : ''}
+        </div>
+        <div class="scope-options">${optHtml}</div>
+        <div class="scope-skip">
+          <button onclick="event.stopPropagation(); skipScope()">Skip · not sure yet →</button>
+          <div class="hint">Or swipe ↓ to keep browsing</div>
+        </div>
+      </div>
+    `;
+  }
+
+  window.pickScope = function(type, id) {
+    state.scope = state.scope || {};
+    if (type === 'culture') {
+      state.scope.cultures = state.scope.cultures || [];
+      const i = state.scope.cultures.indexOf(id);
+      if (i >= 0) state.scope.cultures.splice(i, 1);
+      else state.scope.cultures.push(id);
+    } else {
+      state.scope[type] = id;
+    }
+    save(state);
+    updateScopeStrip();
+    // Re-render top card to show selected state
+    const top = document.querySelector('.feed-card.top .face.scope');
+    if (top) {
+      const item = FEED[idx];
+      if (item && item.type === type) {
+        top.outerHTML = renderScopeCard(item);
+      }
+    }
+    // For single-select types, advance after 500ms
+    if (type !== 'culture') {
+      showToast(getScopeLabel(type, id) + ' — locked in');
+      setTimeout(() => { commit('like', FEED[idx]); }, 550);
+    }
+  };
+
+  window.skipScope = function() {
+    // treat as pass (don't record trait)
+    const item = FEED[idx];
+    commit('skip', item);
+  };
+
+  function getScopeLabel(type, id) {
+    // Prefer ASK_POOL chip label (new source of truth)
+    if (window.ASK_POOL) {
+      const hit = ASK_POOL.find(a => a.scopeType === type && a.id === id);
+      if (hit) return hit.chip;
+    }
+    const pool = type === 'intent' ? (window.INTENT_CARDS || [])
+                : type === 'region' ? (window.REGION_CARDS || [])
+                : type === 'metro' ? (window.METRO_CARDS || [])
+                : type === 'culture' ? (window.CULTURE_CARDS || [])
+                : [];
+    const found = pool.find(o => o.id === id);
+    return found ? (found.emoji + ' ' + found.label) : id;
+  }
+
+  // ---- Ask card: one yes/no question per card, swipe to answer ----
+  function renderAskCard(item) {
+    const a = item.ref;  // { scopeType, id, q, sub, img, chip }
+    const stepLbl = {
+      intent:'🎯 YOUR PURPOSE', region:'🌎 REGION', state:'📍 STATE',
+      metro:'🏙️ METRO', city:'🏘️ CITY', culture:'✨ COMMUNITY FIT', style:'🏠 HOME STYLE'
+    }[a.scopeType] || 'ABOUT YOU';
+    return `
+      <div class="face ask" style="background-image:url('${a.img}')">
+        <div class="ask-tag">${stepLbl}</div>
+        <div class="ask-body">
+          <div class="ask-q">${a.q}</div>
+          <div class="ask-sub">${a.sub}</div>
+        </div>
+        <div class="ask-hint">
+          <div class="ask-no">← Swipe left · No</div>
+          <div class="ask-yes">Swipe right · Yes →</div>
+        </div>
+      </div>
+    `;
+  }
+
+  function getAskChip(a) {
+    return a && a.chip ? a.chip : a?.id || '?';
+  }
+
+  function buildCard(item, position) {
+    const wrapper = document.createElement('div');
+    wrapper.className = `feed-card ${position}`;
+    wrapper.dataset.key = item.key;
+    wrapper.dataset.type = item.type;
+    wrapper.dataset.refId = item.ref.id;
+
+    // Ask card: one yes/no question, swipe left/right answers
+    if (item.type === 'ask') {
+      wrapper.dataset.ask = '1';
+      wrapper.innerHTML = `
+        <div class="swipe-choice like">YES ✓</div>
+        <div class="swipe-choice pass">NO</div>
+        <div class="flip">${renderAskCard(item)}</div>
+      `;
+      return wrapper;
+    }
+
+    // Legacy scope picker cards (intent / region / metro / culture) — kept for compat
+    if (item.type === 'intent' || item.type === 'region' || item.type === 'metro' || item.type === 'culture') {
+      wrapper.dataset.scope = '1';
+      wrapper.innerHTML = `
+        <div class="swipe-choice like">LATER</div>
+        <div class="swipe-choice pass">SKIP</div>
+        <div class="flip">${renderScopeCard(item)}</div>
+      `;
+      return wrapper;
+    }
+
+    const front = item.type === 'listing' ? renderFrontListing(item) : renderFrontCommunity(item);
+    const back  = item.type === 'listing' ? renderBackListing(item)  : renderBackCommunity(item);
+    if (item.sub) wrapper.dataset.subId = item.sub.id;
+
+    wrapper.innerHTML = `
+      <div class="swipe-choice like">LIKE</div>
+      <div class="swipe-choice pass">PASS</div>
+      <div class="flip">
+        ${front}
+        ${back}
+      </div>
+      <div class="card-actions-row front-actions">
+        <button class="flip-btn">↷ Data</button>
+        <button class="explore-btn">Explore →</button>
+      </div>
+    `;
+    return wrapper;
+  }
+
+  // ==== Feature #3: end-cta click routing (delegated) ====
+  document.addEventListener('click', (e) => {
+    const cta = e.target.closest('.end-cta.show');
+    if (!cta) return;
+    e.stopPropagation();
+    const id = cta.dataset.explore;
+    if (id) location.href = 'place.html?id=' + id;
+  }, true);
+
+  // ==== Feature #2: tap any data cell to deep-explore ====
+  window.tapDeep = function(kind, exploreId, key) {
+    if (!exploreId) return;
+    const q = encodeURIComponent(kind + (key ? ':' + key : ''));
+    location.href = `place.html?id=${exploreId}&focus=${q}`;
+  };
+
+  // ==== Feature #4: overflow reminder banner ====
+  let overflowDismissedAt = -999;
+  let overflowShownFor = new Set();
+  function checkOverflow() {
+    const liked = state.likedIds.length + state.likedListings.length;
+    // Trigger at every 5 likes; snooze 20 swipes after dismiss
+    if (liked < 5) return;
+    if (liked % 5 !== 0) return;
+    if (overflowShownFor.has(liked)) return;
+    if (idx - overflowDismissedAt < 20 && overflowDismissedAt >= 0) return;
+    overflowShownFor.add(liked);
+    const banner = document.getElementById('overflowBanner');
+    document.getElementById('overflowText').innerHTML =
+      `You've liked <b>${liked}</b> place${liked>1?'s':''}` +
+      `<small>Stop scrolling — see them side-by-side on the map</small>`;
+    banner.classList.add('show');
+    // Auto-hide after 6s if untouched
+    clearTimeout(banner._h);
+    banner._h = setTimeout(() => banner.classList.remove('show'), 6000);
+  }
+  window.dismissOverflow = function() {
+    document.getElementById('overflowBanner').classList.remove('show');
+    overflowDismissedAt = idx;
+  };
+
+  // ==== Feature #1: longpress → Deep Peek ====
+  const peekEl = document.getElementById('deepPeek');
+  const peekMedia = document.getElementById('deepPeekMedia');
+  const peekExplore = document.getElementById('deepPeekExplore');
+  let peekOpen = false;
+
+  function openDeepPeek(item) {
+    if (peekOpen) return;
+    peekOpen = true;
+    const isListing = item.type === 'listing';
+    const ref = item.ref;
+    const sub = item.sub || (isListing ? null : ref);
+    const vurl = videoUrlFor(item);
+    const img = ref.img;
+    const exploreId = sub ? sub.id : ref.id;
+
+    const poiChips = (sub && sub.pois) ? sub.pois.slice(0, 5).map(p => {
+      const meta = CAT_META[p.cat] || { icon: '📍' };
+      return `<span>${meta.icon} ${p.name.split(' ').slice(0,2).join(' ')} · ${p.mins}m</span>`;
+    }).join('') : '';
+
+    const name = isListing ? ref.addr : ref.name;
+    const subline = isListing
+      ? `${sub ? sub.name + ' · ' : ''}${currency(ref.price)} · ${ref.bd}bd ${ref.ba}ba`
+      : `${ref.city} · ${ref.stats.homes} homes · ${ref.stats.median} median`;
+
+    peekMedia.innerHTML = `
+      ${vurl
+        ? `<video src="${vurl}" autoplay loop playsinline ${window.__soundOn?'':'muted'}></video>`
+        : `<img src="${img}" alt="">`}
+      <div class="deep-peek-info">
+        <div class="dpi-name">${name}</div>
+        <div class="dpi-sub">${subline}</div>
+        <div class="dpi-poi">${poiChips}</div>
+      </div>
+    `;
+    peekExplore.onclick = () => { location.href = 'place.html?id=' + exploreId; };
+    peekEl.classList.add('show');
+    // Pause underlying feed video
+    document.querySelectorAll('.feed-card.top video').forEach(v => v.pause());
+  }
+  window.closeDeepPeek = function() {
+    peekEl.classList.remove('show');
+    peekMedia.innerHTML = '';
+    peekOpen = false;
+    // resume feed video
+    playTopVideo();
+  };
+
+  function render() {
+    stack.innerHTML = '';
+    const slice = FEED.slice(idx, idx + 3);
+    slice.forEach((it, i) => {
+      const pos = i === 0 ? 'top' : i === 1 ? 'next' : 'after';
+      const el = buildCard(it, pos);
+      stack.appendChild(el);
+      if (i === 0) attachSwipe(el, it);
+    });
+    // Play only top card's video
+    playTopVideo();
+  }
+
+  function playTopVideo() {
+    document.querySelectorAll('.feed-card video').forEach(v => {
+      v.pause();
+      v.muted = true; // reset others
+    });
+    // Also reset any showing end-cta
+    document.querySelectorAll('.end-cta').forEach(c => c.classList.remove('show'));
+    const topV = document.querySelector('.feed-card.top video');
+    if (topV) {
+      topV.currentTime = 0;
+      // Honor global sound preference
+      topV.muted = !window.__soundOn;
+      const p = topV.play();
+      if (p && p.catch) p.catch(() => { topV.muted = true; topV.play().catch(()=>{}); });
+
+      // Feature #3: show end-of-video CTA at ~85% of duration
+      topV.ontimeupdate = () => {
+        if (!topV.duration) return;
+        const ratio = topV.currentTime / topV.duration;
+        const cta = topV.closest('.face.front').querySelector('.end-cta');
+        if (!cta) return;
+        if (ratio > 0.82 && ratio < 0.99) {
+          cta.classList.add('show');
+        }
+      };
+      topV.onended = () => {
+        const cta = topV.closest('.face.front').querySelector('.end-cta');
+        if (cta) cta.classList.add('show');
+      };
+    }
+    // Update sound button label
+    const sb = document.getElementById('sound-toggle');
+    if (sb) sb.textContent = window.__soundOn ? '🔊' : '🔇';
+  }
+  window.__soundOn = false;
+  window.toggleSound = function() {
+    window.__soundOn = !window.__soundOn;
+    const topV = document.querySelector('.feed-card.top video');
+    if (topV) topV.muted = !window.__soundOn;
+    const sb = document.getElementById('sound-toggle');
+    if (sb) sb.textContent = window.__soundOn ? '🔊' : '🔇';
+  };
+
+  window.flipBack = function(btn) {
+    const card = btn.closest('.feed-card');
+    card.querySelector('.flip').classList.remove('flipped');
+    card.querySelector('.front-actions').style.display = 'flex';
+  };
+
+  function attachSwipe(el, item) {
+    const flip = el.querySelector('.flip');
+    const frontActions = el.querySelector('.front-actions');
+    const isAsk = item.type === 'ask';
+
+    // Bind action buttons on the front (listings/community only)
+    if (frontActions) {
+      frontActions.querySelector('.flip-btn').onclick = (e) => {
+        e.stopPropagation();
+        flip.classList.add('flipped');
+        frontActions.style.display = 'none';
+      };
+      frontActions.querySelector('.explore-btn').onclick = (e) => {
+        e.stopPropagation();
+        const subId = item.sub ? item.sub.id : (item.type === 'community' ? item.ref.id : null);
+        if (subId) location.href = 'place.html?id=' + subId;
+      };
+    }
+    // Tap on card body flips (but not on buttons, not on ask cards, not if dragging)
+    el.addEventListener('click', (e) => {
+      if (isAsk) return;  // ask cards: no tap-to-flip
+      if (dragging || Math.abs(dx) > 5) return;
+      if (e.target.closest('button')) return;
+      if (flip.classList.contains('flipped')) {
+        flip.classList.remove('flipped');
+        if (frontActions) frontActions.style.display = 'flex';
+      } else {
+        flip.classList.add('flipped');
+        if (frontActions) frontActions.style.display = 'none';
+      }
+    });
+
+    // Drag / swipe
+    let startX = 0, startY = 0;
+    let dragging = false, dx = 0, dy = 0;
+    let lpTimer = null;
+
+    const clearLongpress = () => {
+      if (lpTimer) { clearTimeout(lpTimer); lpTimer = null; }
+      el.classList.remove('longpressing');
+    };
+
+    const onDown = (x, y) => {
+      // Disable drag when flipped (allow scrolling back panel)
+      if (flip.classList.contains('flipped')) return;
+      dragging = true; startX = x; startY = y; dx = 0; dy = 0;
+      // Skip longpress on ask cards (nothing to peek)
+      if (isAsk) return;
+      // Start longpress timer (feature #1)
+      lpTimer = setTimeout(() => {
+        el.classList.add('longpressing');
+        // Kick off deep peek after visual hint (350ms more)
+        lpTimer = setTimeout(() => {
+          dragging = false; // suppress swipe commit
+          openDeepPeek(item);
+          el.classList.remove('longpressing');
+          lpTimer = null;
+        }, 350);
+      }, 450);
+    };
+    const onMove = (x, y) => {
+      if (!dragging) return;
+      dx = x - startX; dy = y - startY;
+      if (Math.abs(dx) < 4 && Math.abs(dy) < 4) return;
+      clearLongpress(); // any drag cancels longpress
+      flip.style.transform = `translate(${dx}px, ${dy * 0.4}px) rotate(${dx * 0.06}deg)`;
+      el.classList.toggle('dragging-right', dx > 40);
+      el.classList.toggle('dragging-left', dx < -40);
+    };
+    const onUp = () => {
+      clearLongpress();
+      if (!dragging) return;
+      dragging = false;
+      if (dx > 100) commit('like', item);
+      else if (dx < -100) commit('pass', item);
+      else { flip.style.transform = ''; el.classList.remove('dragging-right','dragging-left'); }
+    };
+
+    el.addEventListener('mousedown', e => onDown(e.clientX, e.clientY));
+    window.addEventListener('mousemove', e => onMove(e.clientX, e.clientY));
+    window.addEventListener('mouseup', onUp);
+    el.addEventListener('touchstart', e => onDown(e.touches[0].clientX, e.touches[0].clientY), { passive: true });
+    el.addEventListener('touchmove', e => onMove(e.touches[0].clientX, e.touches[0].clientY), { passive: true });
+    el.addEventListener('touchend', onUp);
+  }
+
+  function commit(action, item) {
+    const top = stack.querySelector('.feed-card.top');
+    if (top) {
+      top.classList.remove('dragging-right','dragging-left');
+      top.classList.add(action === 'like' ? 'gone-right' : 'gone-left');
+    }
+    // Ask card: swipe right = yes (add to scope), swipe left = no (record rejection)
+    if (item.type === 'ask') {
+      const a = item.ref;
+      state.scope = state.scope || {};
+      state.scope[a.scopeType] = state.scope[a.scopeType] || [];
+      // Ensure array (in case old single-value data present)
+      if (!Array.isArray(state.scope[a.scopeType])) state.scope[a.scopeType] = [state.scope[a.scopeType]];
+      state.scopeRejected = state.scopeRejected || {};
+      state.scopeRejected[a.scopeType] = state.scopeRejected[a.scopeType] || [];
+      if (action === 'like') {
+        if (!state.scope[a.scopeType].includes(a.id)) state.scope[a.scopeType].push(a.id);
+        // clean rejected in case they change mind on re-swipe
+        state.scopeRejected[a.scopeType] = state.scopeRejected[a.scopeType].filter(x => x !== a.id);
+        showToast('✓ ' + a.chip + ' added');
+      } else {
+        if (!state.scopeRejected[a.scopeType].includes(a.id)) state.scopeRejected[a.scopeType].push(a.id);
+        state.scope[a.scopeType] = state.scope[a.scopeType].filter(x => x !== a.id);
+      }
+      save(state);
+      updateScopeStrip();
+      setTimeout(() => {
+        idx++;
+        if (idx >= FEED.length) idx = 0;
+        render();
+      }, 320);
+      return;
+    }
+    if (action === 'like') {
+      if (item.type === 'community') {
+        if (!state.likedIds.includes(item.ref.id)) state.likedIds.push(item.ref.id);
+        // Also tally the community's traits (weight 2 for direct community swipe)
+        const t = item.ref.traits;
+        Object.keys(t).forEach(k => state.traitTally[k] += t[k] * 2);
+        state.traitTally.count += 2;
+      } else {
+        if (!state.likedListings.includes(item.ref.id)) state.likedListings.push(item.ref.id);
+        // Listing likes weight-1 inherit their subdivision's traits
+        if (item.sub) {
+          const t = item.sub.traits;
+          Object.keys(t).forEach(k => state.traitTally[k] += t[k]);
+          state.traitTally.count += 1;
+        }
+      }
+    } else if (action === 'pass') {
+      state.passedIds.push(item.ref.id);
+      // negative-ish signal: subtract half weight for community traits
+      if (item.type === 'community') {
+        const t = item.ref.traits;
+        Object.keys(t).forEach(k => state.traitTally[k] -= t[k] * 0.5);
+        state.traitTally.count += 0.5;
+      }
+    }
+    // Recompute persona from tally (if enough signal)
+    if (state.traitTally.count >= 3) {
+      const traits = {};
+      Object.keys(state.traitTally).forEach(k => {
+        if (k === 'count') return;
+        let v = state.traitTally[k] / state.traitTally.count;
+        v = Math.max(0, Math.min(100, Math.round(v)));
+        traits[k] = v;
+      });
+      // Derive name from likedIds if we have them, else from traits
+      const prev = state.persona ? state.persona.name : null;
+      const p = derivePersonaFromTraits(traits, state.likedIds);
+      state.persona = p;
+      if (prev && prev !== p.name) {
+        showToast('→ You\'re now ' + p.name.replace(/^The /, ''));
+      }
+    }
+    save(state);
+    updatePersonaLive();
+    checkOverflow();
+
+    setTimeout(() => {
+      idx++;
+      if (idx >= FEED.length) idx = 0; // loop for demo
+      render();
+    }, 320);
+  }
+
+  // Persona derivation from raw traits (not just likedIds)
+  function derivePersonaFromTraits(traits, likedIds) {
+    let name = 'The Balanced Explorer';
+    let desc = 'Mixed signal so far — we\'ll keep learning.';
+    if (traits.family > 75 && traits.outdoors > 65 && traits.quiet > 65) {
+      name = 'The Trail-Runner Suburbanite';
+      desc = 'Quiet streets, easy nature access, top schools.';
+    } else if (traits.walkable > 80 && traits.hip > 70) {
+      name = 'The Third-Place Urbanist';
+      desc = 'Coffee AM, restaurants PM, no car if possible.';
+    } else if (traits.quiet > 85 && traits.outdoors > 75) {
+      name = 'The Slow-Living Retreater';
+      desc = 'Would trade nightlife for stars.';
+    } else if (traits.family > 85) {
+      name = 'The Family-First Planner';
+      desc = 'Schools first, everything else negotiable.';
+    } else if (traits.hip > 75 && traits.nightlife > 60) {
+      name = 'The Downtown Devotee';
+      desc = 'Culture, music, food scene.';
+    } else if (traits.family > 60 && traits.walkable > 70) {
+      name = 'The Village Family';
+      desc = 'Small-town feel with real amenities.';
+    }
+    return { name, desc, traits, likedIds };
+  }
+
+  render();
+
+  // Show onboarding hint if first time on feed
+  if (!state.feedIntroSeen) {
+    state.feedIntroSeen = true; save(state);
+    setTimeout(() => document.getElementById('hint').classList.add('show'), 400);
+  }
+  </script>
+</body>
+</html>

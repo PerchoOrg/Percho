@@ -6,8 +6,8 @@ whole listings table. Use after a renderer / pacing / caption change so every
 existing card is consistent with the sample the owner already approved.
 
     cd ~/Percho
-    /usr/bin/python3 scripts/requeue-existing-walkthroughs.py                 # dry run
-    /usr/bin/python3 scripts/requeue-existing-walkthroughs.py --apply
+    /usr/bin/python3 scripts/maintenance/requeue-existing-walkthroughs.py                 # dry run
+    /usr/bin/python3 scripts/maintenance/requeue-existing-walkthroughs.py --apply
     #   --skip <listing_id>   exclude a listing (e.g. the approved sample)
 
 ORDER MATTERS (see skill percho-video-pipeline § batch regen):

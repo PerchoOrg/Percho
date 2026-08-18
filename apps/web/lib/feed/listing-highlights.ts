@@ -79,7 +79,7 @@
  *   sourced from the word "vibrant" is a claim we cannot stand behind.
  */
 
-import type { DimKey } from '@percho/shared';
+import type { DimKey } from '@percho/shared/types';
 
 /**
  * One pattern per dim. Deliberately narrow — the phrase has to carry the

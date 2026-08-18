@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+<title>Percho · Listing Explore</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  :root {
+    --bg: #0b0b10; --panel: #16161d; --ink: #f4f4f4; --muted: #a4a4b0;
+    --accent: #ffb74d; --save:#60a5fa; --explore:#c084fc;
+  }
+  html, body { margin: 0; background: var(--bg); color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif; }
+  .topbar { position: sticky; top: 0; z-index: 10; background: rgba(11,11,16,0.9); backdrop-filter: blur(8px);
+    display: flex; align-items: center; gap: 8px; padding: 12px 14px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+  .topbar a { color: var(--muted); text-decoration: none; font-size: 14px; }
+  .topbar .addr { font-weight: 600; font-size: 15px; }
+  .topbar .price { margin-left: auto; color: var(--accent); font-weight: 700; }
+
+  .wrap { max-width: 460px; margin: 0 auto; padding: 0 0 40px; }
+
+  /* Guided tour */
+  .stop {
+    background: var(--panel); margin: 16px; border-radius: 20px; overflow: hidden;
+    box-shadow: 0 12px 30px rgba(0,0,0,0.3);
+  }
+  .stop .hero { height: 220px; background-size: cover; background-position: center; position: relative; }
+  .stop .stop-tag { position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.6);
+    padding: 5px 10px; border-radius: 999px; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); }
+  .stop .body { padding: 16px 18px 18px; }
+  .why { font-size: 14px; line-height: 1.5;
+    background: rgba(255,183,77,0.1); border-left: 3px solid var(--accent);
+    padding: 10px 12px; border-radius: 10px; margin-bottom: 14px; }
+  .why b { color: var(--accent); }
+  .stop h2 { margin: 0 0 8px; font-size: 20px; }
+  .hotspot-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+  .hotspot-actions button {
+    background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15);
+    color: var(--ink); padding: 12px 10px; border-radius: 12px; font-size: 13px; font-weight: 600;
+    text-align: left; cursor: pointer;
+  }
+  .hotspot-actions button:hover { background: rgba(255,255,255,0.14); }
+
+  .tour-nav { display: flex; gap: 8px; padding: 0 16px; }
+  .tour-nav button { flex: 1; padding: 12px; background: var(--panel); border: 1px solid rgba(255,255,255,0.15);
+    color: var(--ink); border-radius: 12px; font-size: 14px; font-weight: 600; cursor: pointer; }
+  .tour-nav button.primary { background: var(--accent); color: #000; border-color: var(--accent); }
+
+  .progress { padding: 8px 16px; font-size: 12px; color: var(--muted); }
+
+  /* Transition */
+  .transition {
+    margin: 24px 16px; background: linear-gradient(160deg, #3b2a5f, #1a1230);
+    padding: 32px 24px; border-radius: 20px; text-align: center;
+  }
+  .transition h2 { margin: 0 0 14px; font-size: 22px; }
+  .transition p { color: rgba(255,255,255,0.8); font-size: 14px; line-height: 1.5; margin: 8px 0; }
+  .transition button { margin-top: 20px; background: var(--accent); color: #000; border: none;
+    padding: 12px 28px; border-radius: 999px; font-weight: 700; font-size: 14px; cursor: pointer; }
+
+  /* Free explore */
+  .free { display: none; }
+  .free.on { display: block; }
+  .free-hero { position: relative; height: 320px; background-size: cover; background-position: center; }
+  .free-hero .hotspot-pin {
+    position: absolute; width: 32px; height: 32px; border-radius: 50%;
+    background: rgba(255,183,77,0.9); border: 3px solid #fff;
+    display: flex; align-items: center; justify-content: center; font-size: 12px;
+    color: #000; cursor: pointer; transform: translate(-50%, -50%);
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%,100% { box-shadow: 0 0 0 0 rgba(255,183,77,0.6); }
+    50%     { box-shadow: 0 0 0 12px rgba(255,183,77,0); }
+  }
+  .free-heading { padding: 20px 18px 8px; }
+  .free-heading h2 { margin: 0; font-size: 20px; }
+  .free-heading p { color: var(--muted); font-size: 13px; margin: 6px 0 0; }
+
+  /* bottom sheet */
+  .sheet-bg { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 20; display: none; }
+  .sheet-bg.on { display: block; }
+  .sheet {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 21;
+    background: var(--panel); border-radius: 20px 20px 0 0; padding: 20px;
+    max-width: 460px; margin: 0 auto;
+    transform: translateY(100%); transition: transform 0.25s ease;
+  }
+  .sheet.on { transform: translateY(0); }
+  .sheet .grabber { width: 40px; height: 4px; background: rgba(255,255,255,0.2); border-radius: 2px; margin: 0 auto 14px; }
+  .sheet h3 { margin: 0 0 4px; }
+  .sheet .feat-why { font-size: 13px; color: var(--muted); line-height: 1.4; margin-bottom: 14px; }
+  .sheet .feat-actions { display: flex; flex-direction: column; gap: 8px; }
+  .sheet .feat-actions button {
+    background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: var(--ink);
+    padding: 12px 14px; border-radius: 12px; font-size: 14px; font-weight: 600; text-align: left; cursor: pointer;
+  }
+  .sheet .close { position: absolute; top: 14px; right: 16px; color: var(--muted); background: none; border: none; font-size: 20px; cursor: pointer; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a href="feed.html">← Feed</a>
+  <span class="addr" id="addr">Listing</span>
+  <span class="price" id="price"></span>
+</div>
+
+<div class="wrap">
+  <div id="guided"></div>
+  <div id="transition" class="transition" style="display:none;">
+    <h2>You've seen the highlights.</h2>
+    <p id="trans-body">Explore the rest freely.</p>
+    <p style="border-top:1px solid rgba(255,255,255,0.15);margin-top:14px;padding-top:14px;font-size:13px;">
+      <b style="color:var(--accent);">We've learned</b> <span id="learned"></span>
+    </p>
+    <button id="continue-btn">Continue</button>
+  </div>
+  <div class="free" id="free">
+    <div class="free-hero" id="freeHero"></div>
+    <div class="free-heading">
+      <h2>Explore freely</h2>
+      <p>Tap any pin below for actions on that feature.</p>
+    </div>
+    <div id="freeSections"></div>
+  </div>
+</div>
+
+<div class="sheet-bg" id="sheetBg" onclick="closeSheet()"></div>
+<div class="sheet" id="sheet">
+  <button class="close" onclick="closeSheet()">×</button>
+  <div class="grabber"></div>
+  <h3 id="sheetTitle">Feature</h3>
+  <div class="feat-why" id="sheetWhy"></div>
+  <div class="feat-actions" id="sheetActions"></div>
+</div>
+
+<script src="_data.js" defer></script>
+<script src="_listing.js" defer></script>
+</body>
+</html>

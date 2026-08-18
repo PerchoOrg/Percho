@@ -18,7 +18,7 @@
  * `pyftsubset` down to the 14 codepoints below — 5.2 KB instead of 440 KB. To
  * add a glyph you must re-subset; adding a name here alone will render tofu.
  *
- * The reproducible path is `python3 scripts/build-icon-font.py` (it reads
+ * The reproducible path is `python3 scripts/icon-fonts/build-icon-font.py` (it reads
  * `GLYPHS` there and prints the codepoints to paste back here); the raw command
  * it runs is:
  *
@@ -82,7 +82,7 @@ export const ICON_FONT = "PerchoIcons";
  * so `ICON_GLYPH` serves both fonts unchanged — only the font file and the
  * centring numbers differ.
  *
- * Subset with `scripts/build-icon-font.py`-style pyftsubset against
+ * Subset with `scripts/icon-fonts/build-icon-font.py`-style pyftsubset against
  * Phosphor-Regular.ttf using the same unicodes; `PerchoIconsOutline.ttf` is
  * ~7.7 KB for the same 19 glyphs.
  */

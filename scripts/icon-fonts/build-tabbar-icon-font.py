@@ -9,7 +9,7 @@ accent), not the redline green — so it gets its own font.
 
 Source: Phosphor's regular (outline) weight TTF from the @phosphor-icons/web
 npm package (`package/src/regular/Phosphor.ttf`), subset with fontTools
-subset — the same reproducible path `scripts/build-icon-font.py` uses for the
+subset — the same reproducible path `scripts/icon-fonts/build-icon-font.py` uses for the
 fill weight. The fill-weight codepoints are the same across weights, so they
 line up with `assets/icons/phosphor-selection.json`.
 
@@ -19,7 +19,7 @@ the icons rendered as solid blobs on device (owner: "三个一模一样"). The
 official TTF carries correct winding; subsetting it preserves the outlines.
 
 Usage:
-    python3 scripts/build-tabbar-icon-font.py
+    python3 scripts/icon-fonts/build-tabbar-icon-font.py
 
 Prints the codepoints for TAB_BAR_GLYPH in TabBarIconFont.ts.
 """

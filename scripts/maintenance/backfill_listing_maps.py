@@ -11,9 +11,9 @@ stores the resulting public URL on `listings.map_url`.
 Idempotent: a listing that already has `map_url` is skipped unless --force.
 
 Usage:
-    python3 scripts/backfill_listing_maps.py            # only missing ones
-    python3 scripts/backfill_listing_maps.py --force    # re-render everything
-    python3 scripts/backfill_listing_maps.py --limit 5  # sample first
+    python3 scripts/maintenance/backfill_listing_maps.py            # only missing ones
+    python3 scripts/maintenance/backfill_listing_maps.py --force    # re-render everything
+    python3 scripts/maintenance/backfill_listing_maps.py --limit 5  # sample first
 """
 from __future__ import annotations
 

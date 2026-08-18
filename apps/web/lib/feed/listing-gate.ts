@@ -10,7 +10,7 @@
  * app build cannot break the promise.
  */
 
-import type { DimKey } from '@percho/shared';
+import type { DimKey } from '@percho/shared/types';
 import type { NeighborhoodScores } from './neighborhood-score';
 
 /** §1.7: one tease listing per ten cards in stages 1–2. */
@@ -34,7 +34,7 @@ export interface PoolListingDTO {
   /** Coordinates for the card's locality map thumbnail (2026-07-28 card structure). */
   lat?: number;
   lng?: number;
-  /** Pre-rendered map tile (public Storage URL). See scripts/backfill_listing_maps.py. */
+  /** Pre-rendered map tile (public Storage URL). See scripts/maintenance/backfill_listing_maps.py. */
   mapUrl?: string;
   communityId?: string;
   /** City the listing is in — the stage-3 fallback join key. */

@@ -1,0 +1,408 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Vibe · App</title>
+<link rel="stylesheet" href="_app.css" />
+<style>
+  .screen { background: var(--surface); color: var(--ink); }
+
+  /* Top header shared across tabs */
+  .app-header {
+    padding: 54px 20px 14px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; z-index: 10;
+  }
+  .app-header .row { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+  .app-header .row > div:first-child { min-width: 0; flex: 1; }
+  .h-title { font-size: 24px; font-weight: 800; letter-spacing: -0.02em; }
+  .h-sub { font-size: 11px; color: var(--mute); margin-top: 3px; line-height: 1.4; }
+  .persona-chip {
+    background: var(--accent-soft); color: var(--accent);
+    padding: 5px 10px; border-radius: 999px;
+    font-size: 9px; font-weight: 700; letter-spacing: 0.05em;
+    text-align: center; line-height: 1.2;
+    max-width: 100px; flex-shrink: 0;
+    margin-top: 4px;
+  }
+  html.dark .persona-chip { background: rgba(232,90,42,0.18); }
+
+  /* ==== Discover ==== */
+  .discover .kicker {
+    font-size: 11px; letter-spacing: 0.1em; color: var(--mute);
+    font-weight: 600; margin: 20px 20px 8px;
+  }
+  .today-card {
+    margin: 0 20px 12px; padding: 14px;
+    background: var(--card); border-radius: 16px;
+    border: 1px solid var(--border);
+    display: flex; gap: 12px;
+    cursor: pointer;
+    transition: transform 0.15s;
+  }
+  .today-card:active { transform: scale(0.995); }
+  .today-card img { width: 90px; height: 90px; object-fit: cover; border-radius: 12px; flex-shrink: 0; }
+  .today-card .info { flex: 1; min-width: 0; }
+  .today-card .badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 10px; font-weight: 700; letter-spacing: 0.05em;
+    background: var(--accent); color: #fff; padding: 3px 8px; border-radius: 6px;
+    margin-bottom: 6px;
+  }
+  .today-card b { font-size: 15px; display: block; }
+  .today-card .city { font-size: 11px; color: var(--mute); margin-top: 1px; }
+  .today-card .reason { font-size: 12px; margin-top: 6px; line-height: 1.5; color: var(--ink); opacity: 0.85; }
+
+  .insight-tile {
+    margin: 4px 20px 12px; padding: 14px 16px;
+    background: linear-gradient(135deg, var(--accent-soft), transparent);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    display: flex; align-items: center; gap: 14px;
+  }
+  .insight-tile .emoji { font-size: 28px; flex-shrink: 0; }
+  .insight-tile .title { font-size: 12px; font-weight: 700; color: var(--accent); letter-spacing: 0.05em; }
+  .insight-tile .text { font-size: 13px; line-height: 1.45; margin-top: 3px; }
+
+  .swipe-more-cta {
+    margin: 16px 20px; padding: 16px;
+    background: var(--ink); color: var(--surface);
+    border-radius: 16px; text-align: center;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    font-size: 14px; font-weight: 600;
+    cursor: pointer;
+  }
+
+  /* ==== My Places ==== */
+  .places-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+    padding: 16px 20px 20px;
+  }
+  .place-card {
+    background: var(--card); border-radius: 14px; overflow: hidden;
+    border: 1px solid var(--border);
+    display: flex; flex-direction: column;
+    cursor: pointer;
+  }
+  .place-card img { width: 100%; height: 100px; object-fit: cover; display: block; }
+  .place-card .info { padding: 10px; }
+  .place-card b { font-size: 13px; display: block; }
+  .place-card .city { font-size: 10px; color: var(--mute); margin-top: 1px; }
+  .place-card .match-score {
+    display: inline-block; font-size: 10px; font-weight: 700; color: var(--accent);
+    background: var(--accent-soft); padding: 2px 6px; border-radius: 4px;
+    margin-top: 6px;
+  }
+  html.dark .place-card .match-score { background: rgba(232,90,42,0.18); }
+
+  .empty-state {
+    padding: 60px 30px; text-align: center; color: var(--mute);
+  }
+  .empty-state .big { font-size: 40px; margin-bottom: 12px; }
+  .empty-state b { color: var(--ink); font-size: 15px; }
+  .empty-state p { font-size: 12px; margin-top: 6px; line-height: 1.5; }
+
+  /* ==== Map ==== */
+  .map-canvas {
+    position: relative; height: 480px; margin: 16px 20px 8px;
+    background:
+      radial-gradient(ellipse at 30% 40%, rgba(16,185,129,0.10), transparent 40%),
+      radial-gradient(ellipse at 70% 30%, rgba(59,130,246,0.10), transparent 40%),
+      var(--card);
+    border-radius: 20px; overflow: hidden;
+    border: 1px solid var(--border);
+  }
+  .map-canvas::before {
+    content: ''; position: absolute; inset: 0;
+    background-image:
+      linear-gradient(rgba(0,0,0,0.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,0,0,0.05) 1px, transparent 1px);
+    background-size: 40px 40px;
+    opacity: 0.6;
+  }
+  html.dark .map-canvas::before {
+    background-image:
+      linear-gradient(rgba(255,255,255,0.06) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.06) 1px, transparent 1px);
+  }
+  .region-label {
+    position: absolute; font-size: 10px; letter-spacing: 0.1em;
+    font-weight: 700; color: var(--mute); opacity: 0.7;
+  }
+
+  .map-pin {
+    position: absolute; transform: translate(-50%, -100%);
+    display: flex; flex-direction: column; align-items: center;
+    cursor: pointer;
+  }
+  .map-pin .dot {
+    width: 32px; height: 32px; border-radius: 50%;
+    background: var(--accent);
+    border: 3px solid var(--surface);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+  }
+  .map-pin.match-90 .dot { background: #22C55E; }
+  .map-pin.match-70 .dot { background: var(--accent); }
+  .map-pin.match-50 .dot { background: #F59E0B; }
+  .map-pin .lbl {
+    margin-top: 4px; padding: 2px 6px;
+    background: var(--surface); color: var(--ink);
+    border: 1px solid var(--border);
+    font-size: 9px; font-weight: 600;
+    border-radius: 4px;
+    white-space: nowrap;
+  }
+
+  .map-legend {
+    padding: 8px 20px 12px; display: flex; gap: 14px; font-size: 10px; color: var(--mute);
+  }
+  .map-legend .d {
+    display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+    vertical-align: middle; margin-right: 4px;
+  }
+</style>
+</head>
+<body>
+  <div class="page-title">Vibe · Main app</div>
+  <a href="index.html" class="nav-back">← Home</a>
+  <div class="phone">
+    <div class="notch"></div>
+    <div class="screen">
+      <!-- ==== DISCOVER TAB ==== -->
+      <div class="screen-body tab-panel" id="tab-discover">
+        <div class="app-header">
+          <div class="row">
+            <div>
+              <div class="h-title">Discover</div>
+              <div class="h-sub" id="discover-sub">—</div>
+            </div>
+            <div class="persona-chip" id="persona-chip">—</div>
+          </div>
+        </div>
+
+        <div class="kicker">TODAY'S PICKS FOR YOU</div>
+        <div id="today-list"></div>
+
+        <div class="kicker">ONE MORE THING</div>
+        <div class="insight-tile" id="insight">
+          <div class="emoji">💡</div>
+          <div>
+            <div class="title">VIBE INSIGHT</div>
+            <div class="text" id="insight-text">—</div>
+          </div>
+        </div>
+
+        <div class="swipe-more-cta" onclick="location.href='swipe.html'">
+          <span>♥</span> Swipe more · sharpen your persona
+        </div>
+      </div>
+
+      <!-- ==== MY PLACES TAB ==== -->
+      <div class="screen-body tab-panel hidden" id="tab-places">
+        <div class="app-header">
+          <div>
+            <div class="h-title">My Places</div>
+            <div class="h-sub" id="places-sub">—</div>
+          </div>
+        </div>
+        <div id="places-grid" class="places-grid"></div>
+      </div>
+
+      <!-- ==== MAP TAB ==== -->
+      <div class="screen-body tab-panel hidden" id="tab-map">
+        <div class="app-header">
+          <div>
+            <div class="h-title">Your Map</div>
+            <div class="h-sub">Every place you've liked, plotted.</div>
+          </div>
+        </div>
+        <div class="map-canvas" id="map">
+          <div class="region-label" style="top: 12px; left: 20px;">DURHAM</div>
+          <div class="region-label" style="top: 12px; right: 20px;">CHAPEL HILL</div>
+          <div class="region-label" style="bottom: 12px; left: 20px;">CARRBORO</div>
+          <div class="region-label" style="bottom: 12px; right: 20px;">PITTSBORO</div>
+        </div>
+        <div class="map-legend">
+          <span><span class="d" style="background:#22C55E"></span>90+ match</span>
+          <span><span class="d" style="background:#E85A2A"></span>70–89 match</span>
+          <span><span class="d" style="background:#F59E0B"></span>50–69</span>
+        </div>
+      </div>
+
+      <!-- ==== TAB BAR ==== -->
+      <div class="tabbar">
+        <button class="tab active" data-tab="discover">
+          <span class="tab-icon">🧭</span>
+          <span class="tab-label">DISCOVER</span>
+        </button>
+        <button class="tab" data-tab="places">
+          <span class="tab-icon">♥</span>
+          <span class="tab-label">MY PLACES</span>
+          <span class="tab-badge hidden" id="places-badge">0</span>
+        </button>
+        <button class="tab" data-tab="map">
+          <span class="tab-icon">📍</span>
+          <span class="tab-label">MAP</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script src="_data.js"></script>
+  <script src="_theme.js"></script>
+  <script>
+    const state = loadState();
+    if (!state || !state.persona) location.href = 'index.html';
+
+    const p = state.persona;
+    const likedIds = state.likedIds || [];
+    // Short chip label — full name shown elsewhere
+    const shortName = p.name.replace(/^The /, '');
+    document.getElementById('persona-chip').textContent = shortName.toUpperCase();
+    document.getElementById('discover-sub').textContent = `${likedIds.length} liked · Refined ${likedIds.length}× so far`;
+    document.getElementById('places-sub').textContent = `${likedIds.length} places you've said yes to`;
+
+    // ===== Discover: today's picks =====
+    // Pick top 3 not-yet-liked matches
+    const todayPicks = rankedMatches(p.traits, likedIds).slice(0, 3);
+    const badges = ['✨ TOP MATCH', '🔥 RISING', '👀 SURPRISE'];
+    const reasonFlavor = [
+      (s, r) => `Fits your ${r}. Similar profile to the ones you liked.`,
+      (s, r) => `Same ${r} you kept swiping right on, ${Math.round((s.stats.median||'').replace(/[^0-9.]/g,'')/1000) < parseInt(String(likedIds[0]||'').length)*100 ? 'cheaper' : 'a bit different'} feel.`,
+      (s, r) => `You'd probably pass at first glance — but the ${r} is exactly your profile.`,
+    ];
+    document.getElementById('today-list').innerHTML = todayPicks.map((m, i) => {
+      const reason = matchReasonFor(p, m.s);
+      const line = (
+        i === 0 ? `Fits your <b>${reason}</b> — same profile as your top likes.` :
+        i === 1 ? `Different price point, same <b>${reason}</b>.` :
+                  `Not obvious, but the <b>${reason}</b> is exactly you.`
+      );
+      return `
+        <div class="today-card" onclick="location.href='place.html?id=${m.s.id}'">
+          <img src="${m.s.img}" />
+          <div class="info">
+            <div class="badge">${badges[i]} · ${m.score}</div>
+            <b>${m.s.name}</b>
+            <div class="city">${m.s.city} · ${m.s.stats.median}</div>
+            <div class="reason">${line}</div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    // ===== Discover: insight =====
+    const insights = [
+      { emoji: '💡', text: `You liked ${likedIds.length} places. Your strongest signal: <b>${topTrait(p.traits)}</b>.` },
+      { emoji: '🎯', text: `You're a ${p.name}. Only <b>${percentOfPop(p.name)}%</b> of Triangle buyers land here.` },
+      { emoji: '🌱', text: `New listings in your matches this week: <b>7</b>. We'll notify you when your top match gets one.` },
+    ];
+    const ins = insights[Math.floor(Math.random() * insights.length)];
+    document.getElementById('insight').querySelector('.emoji').textContent = ins.emoji;
+    document.getElementById('insight-text').innerHTML = ins.text;
+
+    function topTrait(traits) {
+      const labels = { family: 'family orientation', walkable: 'walkability', quiet: 'quiet',
+                       hip: 'urban culture', outdoors: 'outdoors', nightlife: 'nightlife' };
+      const entries = Object.entries(traits).sort((a,b) => b[1] - a[1]);
+      return labels[entries[0][0]];
+    }
+    function percentOfPop(name) {
+      // Purely for demo flavor
+      const map = { 'The Trail-Runner Suburbanite': 8, 'The Third-Place Urbanist': 12, 'The Slow-Living Retreater': 4,
+                    'The Family-First Planner': 22, 'The Downtown Devotee': 9, 'The Village Family': 6,
+                    'The Balanced Explorer': 18 };
+      return map[name] || 10;
+    }
+
+    // ===== My Places =====
+    const badge = document.getElementById('places-badge');
+    if (likedIds.length > 0) {
+      badge.textContent = likedIds.length;
+      badge.classList.remove('hidden');
+    }
+
+    const placesGrid = document.getElementById('places-grid');
+    if (likedIds.length === 0) {
+      placesGrid.innerHTML = `<div class="empty-state" style="grid-column: 1/-1;">
+        <div class="big">🗺️</div>
+        <b>No places yet</b>
+        <p>Head back to Discover and swipe on subdivisions you'd consider. They'll live here.</p>
+      </div>`;
+    } else {
+      const liked = SUBDIVISIONS.filter(s => likedIds.includes(s.id));
+      placesGrid.innerHTML = liked.map(s => {
+        const score = scoreMatch(p.traits, s);
+        return `
+          <div class="place-card" onclick="location.href='place.html?id=${s.id}'">
+            <img src="${s.img}" />
+            <div class="info">
+              <b>${s.name}</b>
+              <div class="city">${s.city}</div>
+              <div class="match-score">${score} MATCH</div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // ===== Map =====
+    // Layout: rough regional grid
+    const positions = {
+      'downtown-durham':  { x: 22, y: 25 },
+      'ninth-street':     { x: 32, y: 38 },
+      'meadowmont':       { x: 55, y: 45 },
+      'waterside':        { x: 68, y: 32 },
+      'chapel-woods':     { x: 75, y: 22 },
+      'southern-village': { x: 72, y: 55 },
+      'governors-club':   { x: 78, y: 68 },
+      'carrboro-mill':    { x: 45, y: 62 },
+      'briar-chapel':     { x: 55, y: 78 },
+      'fearrington':      { x: 42, y: 88 },
+    };
+    const mapEl = document.getElementById('map');
+    // Render pins ONLY for liked
+    likedIds.forEach(id => {
+      const sub = SUBDIVISIONS.find(s => s.id === id);
+      if (!sub) return;
+      const pos = positions[id] || { x: 50, y: 50 };
+      const score = scoreMatch(p.traits, sub);
+      const cls = score >= 90 ? 'match-90' : score >= 70 ? 'match-70' : 'match-50';
+      const pin = document.createElement('div');
+      pin.className = `map-pin ${cls}`;
+      pin.style.left = pos.x + '%';
+      pin.style.top = pos.y + '%';
+      pin.innerHTML = `<div class="dot">♥</div><div class="lbl">${sub.name}</div>`;
+      pin.onclick = () => location.href = `place.html?id=${id}`;
+      mapEl.appendChild(pin);
+    });
+    // Also show a few ghost pins for unliked matches to hint "there's more to find"
+    const ghostIds = todayPicks.map(m => m.s.id).filter(id => !likedIds.includes(id));
+    ghostIds.forEach(id => {
+      const sub = SUBDIVISIONS.find(s => s.id === id);
+      const pos = positions[id] || { x: 50, y: 50 };
+      const pin = document.createElement('div');
+      pin.className = 'map-pin';
+      pin.style.left = pos.x + '%';
+      pin.style.top = pos.y + '%';
+      pin.innerHTML = `<div class="dot" style="background:transparent;border:2px dashed var(--mute);color:var(--mute);">?</div><div class="lbl" style="opacity:0.6">${sub.name}</div>`;
+      pin.onclick = () => location.href = `place.html?id=${id}`;
+      mapEl.appendChild(pin);
+    });
+
+    // ===== Tab switching =====
+    document.querySelectorAll('.tab').forEach(t => {
+      t.onclick = () => {
+        document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+        t.classList.add('active');
+        document.querySelectorAll('.tab-panel').forEach(x => x.classList.add('hidden'));
+        document.getElementById('tab-' + t.dataset.tab).classList.remove('hidden');
+      };
+    });
+  </script>
+</body>
+</html>

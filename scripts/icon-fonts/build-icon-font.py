@@ -15,7 +15,7 @@ owner finds on his phone.
 
 USAGE
 -----
-    python3 scripts/build-icon-font.py
+    python3 scripts/icon-fonts/build-icon-font.py
 
 Adding an icon:
   1. Find the Phosphor name at https://phosphoricons.com (use the FILL weight).

@@ -12,7 +12,8 @@ instead of picking a new library.
 | `phosphor-fill/*.svg` | The 14 chosen glyphs, standalone SVGs, `fill="currentColor"` | Web / email / marketing / anywhere that is not React Native |
 | `Phosphor-Fill.ttf` | Full upstream font, 1512 glyphs, 440 KB | Source for re-subsetting only — **never ship this** |
 | `phosphor-selection.json` | Glyph name → codepoint (slimmed from Phosphor's 2 MB original) | Input to the subset script |
-| `../../scripts/build-icon-font.py` | Rebuilds the app's subset font | Adding/changing an app glyph |
+| `phosphor-fill/_preview.html` | Contact sheet of the 14 SVGs at chip size | Eyeballing the set before adding a glyph |
+| `../../scripts/icon-fonts/build-icon-font.py` | Rebuilds the app's subset font | Adding/changing an app glyph |
 | `../../apps/mobile/assets/fonts/PerchoIcons.ttf` | Shipped subset, 14 glyphs, 5.2 KB | What the mobile app actually loads |
 
 ## The 14 glyphs
@@ -70,11 +71,11 @@ font has to be rebuilt too. `apps/mobile/theme/icon-font.test.ts` fails loudly i
 the table and the font disagree, so this cannot ship broken silently.
 
 1. Find the name at <https://phosphoricons.com> — pick the **Fill** weight.
-2. Add it to `GLYPHS` in `scripts/build-icon-font.py`.
+2. Add it to `GLYPHS` in `scripts/icon-fonts/build-icon-font.py`.
 3. Add the same key to `ICON_GLYPH` in
    `apps/mobile/components/cards/redline/icon-font.ts` (the script prints the
    codepoint to paste).
-4. `python3 scripts/build-icon-font.py` (needs `fonttools`).
+4. `python3 scripts/icon-fonts/build-icon-font.py` (needs `fonttools`).
 5. `cd apps/mobile && npx vitest run theme/icon-font.test.ts`.
 
 To also use it on the web, export the SVG from `@iconify-json/ph` or download it
