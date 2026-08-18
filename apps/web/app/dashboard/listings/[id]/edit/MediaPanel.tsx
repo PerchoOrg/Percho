@@ -21,7 +21,7 @@
  *             optimistically once the upload finishes.
  */
 
-import { type UploadedVideo, VideoUploader } from '@/components/dashboard/VideoUploader';
+import { type UploadedVideo, VideoUploader } from '@/app/_components/VideoUploader';
 import { Upload } from 'lucide-react';
 import { useCallback, useRef, useState } from 'react';
 import { type ListingPhotoRow, PhotoPanel, type PhotoPanelHandle } from './PhotoPanel';

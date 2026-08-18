@@ -23,7 +23,7 @@ import {
   type CommunityKind,
   type UploadedVideo,
   VideoUploader,
-} from '@/components/dashboard/VideoUploader';
+} from '@/app/_components/VideoUploader';
 import {
   type CommunityVideoCategoryId,
   legacyKindForCategory,

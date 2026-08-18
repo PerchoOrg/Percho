@@ -17,12 +17,12 @@
  * alongside this one on the same page).
  */
 
+import { type UploadedVideo, VideoUploader } from '@/app/_components/VideoUploader';
 import {
   deleteListingVideo,
   reorderListingVideos,
   setListingCover,
 } from '@/app/dashboard/listings/[id]/edit/actions';
-import { type UploadedVideo, VideoUploader } from '@/components/dashboard/VideoUploader';
 import { thumbnailUrl } from '@/lib/cloudflare/stream';
 import { startAsyncTransition } from '@/lib/utils/start-async-transition';
 import {
