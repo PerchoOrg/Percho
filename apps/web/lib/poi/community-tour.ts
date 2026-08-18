@@ -168,7 +168,7 @@ export async function resolveCandidates(
   for (const [_name, group] of byName) {
     const first = group[0]!;
     const query = [first.name, locality].filter(Boolean).join(', ');
-    let places;
+    let places: PlaceResult[];
     try {
       // Biased to the community's circle, so a name that exists in fifty
       // states resolves to the one next door.

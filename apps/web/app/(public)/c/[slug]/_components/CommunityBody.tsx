@@ -35,6 +35,7 @@ import {
   COMMUNITY_VIDEO_CATEGORIES,
   type CommunityVideoCategoryId,
 } from '@/lib/zod/community-video-categories';
+import { Fragment } from 'react';
 import { useEffect, useState } from 'react';
 import { CommunityBoundaryMap } from './CommunityBoundaryMap';
 
@@ -369,12 +370,12 @@ function CommunityStats({
           <div className="grid grid-cols-2 gap-2">
             {nrb.map((n) => {
               const inner = (
-                <>
+                <Fragment key={n.name}>
                   <div className="truncate font-medium text-ink text-sm">{n.name}</div>
                   <div className="truncate text-muted text-xs">
                     {n.city ? `${n.city}, ${n.state}` : n.state}
                   </div>
-                </>
+                </Fragment>
               );
               return n.href ? (
                 <a

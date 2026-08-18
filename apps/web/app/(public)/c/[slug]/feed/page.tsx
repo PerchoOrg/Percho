@@ -152,17 +152,6 @@ export default async function CommunityFeedPage({
     category: v.category,
   }));
 
-  // right-rail "View N listings" button on the
-  // feed needs an accurate count — same query shape as `/c/[slug]` so the
-  // two surfaces never disagree. `published` (not `'active'`) per the
-  // listings.status check constraint in 0001_init.sql.
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const { count: activeListings } = await (supabase as any)
-    .from('listings')
-    .select('id', { count: 'exact', head: true })
-    .eq('community_id', community.id)
-    .eq('status', 'active');
-
   // Scenario B — bottom-left "homes here"
   // chip opens a listings sheet (L2) for the active community. Fetch the
   // full listing rows + hero video/photo here so the sheet has everything
@@ -288,7 +277,6 @@ export default async function CommunityFeedPage({
       owner={ownerId && ownerName ? { id: ownerId, name: ownerName } : null}
       videos={feedVideos}
       initialIndex={initialIndex}
-      activeListingsCount={activeListings ?? 0}
       listings={listings}
     />
   );

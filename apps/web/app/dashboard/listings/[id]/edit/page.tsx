@@ -119,7 +119,6 @@ export default async function EditListingPage({
     )) as { data: ListingPhotoRow[] | null };
   const photos = photosResp.data ?? [];
 
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
   // only surface active communities in the listing → community
   // dropdown. Draft stubs ('Untitled community') and any inactive/incomplete
   // community (no cover, no name) must not leak into the picker.

@@ -112,6 +112,7 @@ export function useUploadSheet() {
           className="absolute top-3 right-3 flex h-8 w-8 items-center justify-center rounded-full text-ink2 transition active:scale-95 hover:bg-bg hover:text-ink"
         >
           <svg
+            aria-hidden="true"
             width="18"
             height="18"
             viewBox="0 0 24 24"
@@ -138,6 +139,7 @@ export function useUploadSheet() {
               }}
               icon={
                 <svg
+                  aria-hidden="true"
                   width="28"
                   height="28"
                   viewBox="0 0 24 24"
@@ -161,6 +163,7 @@ export function useUploadSheet() {
               }}
               icon={
                 <svg
+                  aria-hidden="true"
                   width="28"
                   height="28"
                   viewBox="0 0 24 24"

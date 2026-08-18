@@ -48,14 +48,7 @@ export function HeroControl({
     );
   }
   return (
-    <button
-      // biome-ignore lint/a11y/useButtonType: dynamic via prop
-      type={type}
-      onClick={onClick}
-      className={cls}
-      style={textShadow}
-      aria-label={ariaLabel}
-    >
+    <button type={type} onClick={onClick} className={cls} style={textShadow} aria-label={ariaLabel}>
       {children}
     </button>
   );

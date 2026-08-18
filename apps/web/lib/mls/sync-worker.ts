@@ -136,7 +136,6 @@ async function runSync(args: CliArgs): Promise<void> {
   const client = new BridgeClient();
   await client.authenticate();
 
-  // biome-ignore lint/suspicious/noExplicitAny: see SB type note
   const sb: SB = args.dryRun ? null : createServiceClient();
 
   let filterRaw = `(${ACTIVE_STATUSES})`;

@@ -26,5 +26,5 @@ export async function DesktopSidebarWrapper() {
     role = agent ? 'agent' : 'buyer';
   }
 
-  return <DesktopSidebar role={role} />;
+  return <DesktopSidebar viewer={role} />;
 }

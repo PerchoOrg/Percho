@@ -58,7 +58,6 @@ export function TourPipeline({
   communityName,
   city,
   state,
-  zip,
   lat,
   lng,
   storageBase,
@@ -69,7 +68,6 @@ export function TourPipeline({
   communityName: string;
   city: string | null;
   state: string | null;
-  zip: string | null;
   lat: number | null;
   lng: number | null;
   storageBase: string;

@@ -80,7 +80,6 @@ export function AvatarCircle({
 }) {
   if (url) {
     return (
-      // biome-ignore lint/a11y/useAltText: alt is set
       <img
         src={url}
         alt="Avatar"

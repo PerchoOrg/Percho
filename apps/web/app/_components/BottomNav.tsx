@@ -63,12 +63,13 @@ function TabButton({ tab, active }: { tab: Tab; active: boolean }) {
   );
 }
 
-export function BottomNav({ role }: { role: ViewerRole }) {
+// Named `viewer`, not `role`: `role` is a reserved ARIA attribute.
+export function BottomNav({ viewer }: { viewer: ViewerRole }) {
   const pathname = usePathname() ?? '/';
 
   if (isChromeHidden(pathname)) return null;
 
-  const tabs = getPrimaryTabs(role);
+  const tabs = getPrimaryTabs(viewer);
 
   return (
     <nav

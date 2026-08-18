@@ -342,7 +342,7 @@ function LeadItem({
       <Link
         href={`/dashboard/leads/${lead.id}?back=inbox`}
         prefetch={false}
-        aria-hidden
+        aria-hidden="true"
         tabIndex={-1}
         className="absolute inset-0 z-0"
       >
@@ -353,7 +353,7 @@ function LeadItem({
       <div className="sm:hidden relative z-10 pointer-events-none">
         <div className="flex items-start gap-2">
           <span
-            aria-hidden
+            aria-hidden="true"
             className="mt-1.5 h-2 w-2 shrink-0 rounded-full"
             style={
               open
@@ -438,7 +438,7 @@ function LeadItem({
       <div className="contents max-sm:hidden">
         {/* Status dot */}
         <span
-          aria-hidden
+          aria-hidden="true"
           className="hidden sm:block relative z-10 pointer-events-none h-2 w-2 rounded-full"
           style={
             open ? { backgroundColor: OPEN_DOT_COLOR } : { border: '1px solid rgba(49,49,49,0.2)' }
@@ -482,7 +482,7 @@ function LeadItem({
             </a>
           ) : (
             <span
-              aria-hidden
+              aria-hidden="true"
               className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-line/50 text-muted/50"
               title="No email"
             >
@@ -504,7 +504,7 @@ function LeadItem({
             </a>
           ) : (
             <span
-              aria-hidden
+              aria-hidden="true"
               className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-line/50 text-muted/50"
               title="No phone"
             >
@@ -555,7 +555,7 @@ function EmailIcon() {
       strokeWidth="1.8"
       strokeLinecap="round"
       strokeLinejoin="round"
-      aria-hidden
+      aria-hidden="true"
     >
       <rect x="3" y="5" width="18" height="14" rx="2" />
       <path d="m3 7 9 6 9-6" />
@@ -574,7 +574,7 @@ function SmsIcon() {
       strokeWidth="1.8"
       strokeLinecap="round"
       strokeLinejoin="round"
-      aria-hidden
+      aria-hidden="true"
     >
       <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
     </svg>
@@ -592,7 +592,7 @@ function CheckIcon() {
       strokeWidth="2.2"
       strokeLinecap="round"
       strokeLinejoin="round"
-      aria-hidden
+      aria-hidden="true"
     >
       <path d="M20 6 9 17l-5-5" />
     </svg>
@@ -610,7 +610,7 @@ function UndoIcon() {
       strokeWidth="1.8"
       strokeLinecap="round"
       strokeLinejoin="round"
-      aria-hidden
+      aria-hidden="true"
     >
       <path d="M3 7v6h6" />
       <path d="M3 13a9 9 0 1 0 3-7.7L3 8" />

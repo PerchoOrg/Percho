@@ -48,7 +48,6 @@ export function CommunityTourSection({
   communityName,
   city,
   state,
-  zip,
   lat,
   lng,
   storageBase,
@@ -59,7 +58,6 @@ export function CommunityTourSection({
   communityName: string;
   city: string | null;
   state: string | null;
-  zip: string | null;
   lat: number | null;
   lng: number | null;
   storageBase: string;
@@ -143,7 +141,6 @@ export function CommunityTourSection({
         communityName={communityName}
         city={city}
         state={state}
-        zip={zip}
         lat={lat}
         lng={lng}
         storageBase={storageBase}

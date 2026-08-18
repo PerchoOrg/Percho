@@ -95,13 +95,11 @@ async function hydrateCommunityCards(communities: CommunityRow[]): Promise<Commu
   }
 
   // Wave 1: memberships (needed to compute videoCount + fallback cover cf id).
-  const memberRows = await chunkedIn<{ community_id: string; video_id: string }>(
-    // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-    (batch) =>
-      (supabase as any)
-        .from('community_video_membership')
-        .select('community_id, video_id')
-        .in('community_id', batch),
+  const memberRows = await chunkedIn<{ community_id: string; video_id: string }>((batch) =>
+    (supabase as any)
+      .from('community_video_membership')
+      .select('community_id, video_id')
+      .in('community_id', batch),
   );
   const allVideoIds = Array.from(new Set(memberRows.map((m) => m.video_id)));
 
@@ -134,14 +132,12 @@ async function hydrateCommunityCards(communities: CommunityRow[]): Promise<Commu
             // skip history renders.
             .eq('is_primary', true),
         ),
-    chunkedIn<{ community_id: string | null }>(
-      // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-      (batch) =>
-        (supabase as any)
-          .from('listings')
-          .select('community_id')
-          .eq('status', 'active')
-          .in('community_id', batch),
+    chunkedIn<{ community_id: string | null }>((batch) =>
+      (supabase as any)
+        .from('listings')
+        .select('community_id')
+        .eq('status', 'active')
+        .in('community_id', batch),
     ),
   ]);
 

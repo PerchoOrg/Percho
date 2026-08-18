@@ -28,14 +28,16 @@ import { useEffect, useId, useRef, useState } from 'react';
 import { type ViewerRole, getSubTabs, isChromeHidden, isSubTabActive } from './nav-config';
 
 export type TopBarProps = {
-  role: ViewerRole;
+  /** Renamed from `role`: that name collides with the reserved ARIA
+   * attribute, which made a11y lints treat it as `role="agent"` markup. */
+  viewer: ViewerRole;
   /** First letter shown in the avatar circle. */
   initial: string;
   /** Optional avatar URL — preset path or Supabase Storage public URL. */
   avatarUrl?: string | null;
 };
 
-export function TopBar({ role, initial, avatarUrl }: TopBarProps) {
+export function TopBar({ viewer, initial, avatarUrl }: TopBarProps) {
   const pathname = usePathname() ?? '/';
   if (isChromeHidden(pathname)) return null;
 
@@ -45,15 +47,15 @@ export function TopBar({ role, initial, avatarUrl }: TopBarProps) {
       style={{ paddingTop: 'env(safe-area-inset-top)' }}
     >
       <div className="mx-auto flex h-14 max-w-6xl items-center gap-3 px-3 sm:px-6">
-        <TopBarInner role={role} initial={initial} avatarUrl={avatarUrl} pathname={pathname} />
+        <TopBarInner viewer={viewer} initial={initial} avatarUrl={avatarUrl} pathname={pathname} />
       </div>
     </header>
   );
 }
 
-function TopBarInner({ role, initial, avatarUrl, pathname }: TopBarProps & { pathname: string }) {
+function TopBarInner({ viewer, initial, avatarUrl, pathname }: TopBarProps & { pathname: string }) {
   const [searching, setSearching] = useState(false);
-  const subTabs = getSubTabs(pathname, role);
+  const subTabs = getSubTabs(pathname, viewer);
 
   if (searching) {
     return <SearchExpanded onClose={() => setSearching(false)} />;
@@ -83,7 +85,7 @@ function TopBarInner({ role, initial, avatarUrl, pathname }: TopBarProps & { pat
 
       {/* Right — avatar / sign-in */}
       <div className="shrink-0">
-        {role === 'anon' ? (
+        {viewer === 'anon' ? (
           <Link
             href="/login"
             className="inline-flex h-11 items-center px-3 font-medium text-ink2 text-sm transition hover:text-ink"
@@ -91,7 +93,7 @@ function TopBarInner({ role, initial, avatarUrl, pathname }: TopBarProps & { pat
             Log in
           </Link>
         ) : (
-          <AvatarMenu initial={initial} avatarUrl={avatarUrl} role={role} />
+          <AvatarMenu initial={initial} avatarUrl={avatarUrl} />
         )}
       </div>
     </>
@@ -232,11 +234,9 @@ function SearchExpanded({ onClose }: { onClose: () => void }) {
 function AvatarMenu({
   initial,
   avatarUrl,
-  role,
 }: {
   initial: string;
   avatarUrl?: string | null;
-  role: ViewerRole;
 }) {
   const pathname = usePathname() ?? '/';
   const [open, setOpen] = useState(false);
@@ -275,7 +275,6 @@ function AvatarMenu({
         className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-full border border-line-strong bg-bg font-medium text-ink text-sm transition active:scale-95"
       >
         {avatarUrl ? (
-          // biome-ignore lint/a11y/useAltText: aria-label on the button covers it
           <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
         ) : (
           initial.toUpperCase()

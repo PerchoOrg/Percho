@@ -62,7 +62,6 @@ export default async function AdminCommunityNearbyPage({
         communityName={community.name}
         city={community.city}
         state={community.state}
-        zip={community.zip}
         lat={community.lat}
         lng={community.lng}
         storageBase={process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''}

@@ -153,7 +153,7 @@ export function CommunityListingCarousel({
       },
       { root, threshold: [0.6, 0.9] },
     );
-    cardRefs.current.forEach((el) => obs.observe(el));
+    for (const el of cardRefs.current.values()) obs.observe(el);
     return () => obs.disconnect();
   }, [open, listings.length]);
 
@@ -474,7 +474,6 @@ function ListingSlide({
         >
           <video
             ref={ref}
-            // biome-ignore lint/a11y/useMediaCaption: HLS source has no caption track.
             className="relative h-full w-full bg-black object-contain"
             style={{
               // fade-in only — see BrowseFeed 74.11.

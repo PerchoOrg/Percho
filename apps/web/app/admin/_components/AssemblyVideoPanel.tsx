@@ -85,6 +85,7 @@ export function AssemblyVideoPanel({ communityId }: { communityId: string }) {
       {ready && iframeUrl ? (
         <div className="mt-3 flex justify-center overflow-hidden rounded-xl bg-black">
           <iframe
+            title="Assembled tour video"
             src={iframeUrl}
             className="aspect-[9/16] h-[420px]"
             allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture"

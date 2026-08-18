@@ -41,5 +41,5 @@ export async function BottomNavWrapper() {
     role = agent ? 'agent' : 'buyer';
   }
 
-  return <BottomNav role={role} />;
+  return <BottomNav viewer={role} />;
 }

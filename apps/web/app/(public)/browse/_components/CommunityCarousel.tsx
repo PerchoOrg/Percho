@@ -512,7 +512,7 @@ function CarouselSlide({
         v.volume = 0;
       } catch {}
       try {
-        document.querySelectorAll('video').forEach((av) => {
+        for (const av of document.querySelectorAll('video')) {
           try {
             av.pause();
           } catch {}
@@ -520,7 +520,7 @@ function CarouselSlide({
             (av as HTMLVideoElement).muted = true;
             (av as HTMLVideoElement).volume = 0;
           } catch {}
-        });
+        }
       } catch {}
       return;
     }
@@ -564,7 +564,6 @@ function CarouselSlide({
         <>
           <video
             ref={ref}
-            // biome-ignore lint/a11y/useMediaCaption: HLS source has no caption track.
             className={`h-full w-full bg-black object-cover transition-opacity duration-150 ${
               hasFirstFrame ? 'opacity-100' : 'opacity-0'
             }`}
@@ -580,7 +579,7 @@ function CarouselSlide({
             <img
               src={poster}
               alt=""
-              aria-hidden
+              aria-hidden="true"
               className="pointer-events-none absolute inset-0 h-full w-full bg-black object-cover"
               decoding="async"
             />
@@ -617,7 +616,7 @@ function CarouselSlide({
               viewBox="0 0 24 24"
               fill="currentColor"
               className="ml-1 text-cream"
-              aria-hidden
+              aria-hidden="true"
             >
               <path d="M8 5v14l11-7z" />
             </svg>

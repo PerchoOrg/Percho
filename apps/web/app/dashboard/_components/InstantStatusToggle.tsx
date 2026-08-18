@@ -26,7 +26,7 @@ import {
   unpublishListing,
 } from '@/app/dashboard/listings/[id]/edit/publish-actions';
 import { useRouter } from 'next/navigation';
-import { useEffect, useRef, useState, useTransition } from 'react';
+import { useCallback, useEffect, useRef, useState, useTransition } from 'react';
 import { createPortal } from 'react-dom';
 
 const MISSING_LABELS: Record<string, string> = {
@@ -62,11 +62,13 @@ export function InstantStatusToggle({ id, status, kind = 'listing', variant = 'h
 
   const isActive = status === 'active';
 
-  function clearErrors() {
+  // useCallback so the outside-click effect can list it as a dependency
+  // without re-subscribing on every render. Only calls stable setters.
+  const clearErrors = useCallback(() => {
     setMissing(null);
     setErr(null);
     setPos(null);
-  }
+  }, []);
 
   function showAt() {
     const el = ref.current;
@@ -129,7 +131,7 @@ export function InstantStatusToggle({ id, status, kind = 'listing', variant = 'h
       window.clearTimeout(t);
       window.removeEventListener('click', onClick);
     };
-  }, [pos]);
+  }, [pos, clearErrors]);
 
   // Hero variant: chromeless, white text + scrim shadow, hover frosted glass.
   // Outline variant: explicit pill (used outside hero, e.g. dashboard cards).

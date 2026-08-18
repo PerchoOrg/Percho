@@ -110,6 +110,7 @@ export function slugifyBgmFilename(original: string): string {
   const slug = stem
     .toLowerCase()
     .normalize('NFKD')
+    // biome-ignore lint/suspicious/noMisleadingCharacterClass: stripping the combining-diacritic block after NFKD is exactly the intent
     .replace(/[\u0300-\u036f]/g, '')
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')

@@ -998,6 +998,7 @@ function BucketVideoCard({
       {isReady && status?.cf_stream_uid && showPlayer ? (
         <div className="mb-3 aspect-[9/16] w-full max-w-[280px] overflow-hidden rounded-lg border border-line bg-black">
           <iframe
+            title="Nearby community video"
             src={streamIframeUrl(status.cf_stream_uid)}
             allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;"
             allowFullScreen
