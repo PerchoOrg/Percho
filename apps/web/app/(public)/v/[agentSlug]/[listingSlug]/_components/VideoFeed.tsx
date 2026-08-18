@@ -12,7 +12,7 @@
  */
 
 import { type BrowseCard, BrowseFeed } from '@/app/(public)/browse/_components/BrowseFeed';
-import { track } from '@/lib/events/track';
+import { track } from '@/lib/analytics/track';
 import { useEffect } from 'react';
 
 type Props = {

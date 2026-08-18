@@ -1,4 +1,4 @@
-import { placeDetails } from '@/lib/google/places';
+import { placeDetails } from '@/lib/listings/address-autocomplete';
 /**
  * GET /api/places/details?place_id=...&session=***
  *
