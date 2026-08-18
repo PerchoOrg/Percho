@@ -16,6 +16,81 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-18 20:30 UTC — Admin can nominate a source page; its photos land in the review table
+
+**Objective**: owner on the Aberdeen tour — "the generated video needs a lot of
+tuning, can you update admin-community tour with new features so i can manully
+and input websites that have good content, then everything will go to photo
+table for review". Branch `phase57/admin-url-photo-ingest` (ws1).
+
+The phase56 ingest was a CLI script pointed at a local directory, which means
+the owner cannot use it. This puts the same capability on the admin page: paste
+a URL, get its photos into the table that already has approve/reject buttons.
+
+**Actions**:
+- `lib/poi/ingest-page-photos.ts` — fetch page, extract image URLs, download,
+  filter, insert as `pending`. `extractImageUrls` is exported and unit-tested.
+- `POST /api/admin/community-tour/[id]/ingest-url`, `requireAdmin` + zod
+  (`CommunityPhotoIngest`: http(s) URL, optional label defaulting to
+  "Amenities").
+- `app/admin/_components/PhotoSourcePanel.tsx`, mounted in
+  `CommunityTourSection` directly above the photo table it feeds. It calls
+  `router.refresh()` on success — which finally uses the `_router` that had
+  been sitting unused in that component.
+- `lib/poi/image-size.ts` — the JPEG/PNG header parser from phase56's script,
+  lifted out so the route and the script share one copy.
+
+**Decisions**:
+- **Three shapes of image URL, because real sites use all three.** `<img src>`,
+  `srcset` candidate lists, and `<a href="...jpg">` — that last one is how the
+  Aberdeen album works, where the `<img>` is a 150px thumbnail and the actual
+  photo is only reachable through the link. Extracting only `<img src>` would
+  have ingested thumbnails and silently produced a table of unusable photos.
+- **Filters are deliberately crude**: ≥400px on both edges and ≥20 KB. On the
+  Aberdeen clubhouse album that rejected exactly one file — the site logo — and
+  kept all 17 photos. A tighter filter risks dropping real content; the human
+  is reviewing everything anyway, which is the point.
+- **Photos arrive `pending`, never approved.** The POI *link* is created
+  `approved` (an admin nominating a page has asserted the place belongs to the
+  community), but every photo waits for a click.
+- **Label is optional** and names the POI (`Aberdeen Pool`), so a pool page and
+  a clubhouse page stay separable in the tour rather than merging into one
+  undifferentiated "amenities" blob.
+- `MAX_IMAGES = 40` per page: each image is a download plus an upload, and the
+  route's `maxDuration` is 300s.
+
+**Issues**: `loadNearbyPhotos` trims each POI to its newest 3 photos — a
+display-only cap from 2026-08-17 for stale Google fetches piling up. Ingesting
+17 clubhouse photos would have shown 3 of them, quietly defeating the whole
+feature. `source='community_site'` rows are now exempt: an admin pasted that
+page precisely to review everything on it. Found by calling `loadNearbyPhotos`
+directly after the ingest rather than by reading the code.
+
+**Verification**: route returns 403 unauthenticated (gate wired). Real run
+against the Aberdeen clubhouse album: 18 images found, 17 added, 1 skipped
+(`logo.png`, 7 KB). All 17 land `pending` / `enhanced_status=queued` with
+`attribution` carrying both the source page and the source image URL, and all
+17 survive the display cap. 895 tests pass, lint clean, typecheck clean.
+**Not verified: the panel's appearance.** The admin page 307s to login and I
+have no session — the owner needs to eyeball it.
+
+**Learnings**:
+- A display-only cap elsewhere in the codebase can silently negate a new
+  ingest path. Worth asking "what filters sit between the write and the
+  screen?" whenever adding a way to create rows.
+- Testing the URL extractor against the *actual* HTML shape of the target site
+  was what surfaced the thumbnail-vs-fullsize problem. A synthetic `<img src>`
+  fixture would have passed and shipped a broken feature.
+
+**Next steps**:
+- Owner to review the panel on `/admin/pipeline/community-nearby/<id>`.
+- The 17 clubhouse-interior photos ingested during testing are sitting pending
+  in Aberdeen. They are real (kitchen, meeting rooms) but utilitarian; reject
+  them if they should not be tour material.
+- Photo licensing with the HOA is still unresolved (see phase56 entry).
+
+---
+
 ## 2026-08-18 20:15 UTC — The 'amenities' bucket: a community tour can finally show the community
 
 **Objective**: owner, after the roster work — "the point is it doesn't have

@@ -115,6 +115,27 @@ export const PoiCreate = z.object({
 });
 export type PoiCreate = z.infer<typeof PoiCreate>;
 
+// ─── Admin: photo ingest from a community's own site ─────────────
+export const CommunityPhotoIngest = z.object({
+  // An admin picked this page by hand, so it is trusted to be worth fetching —
+  // but the server is the one making the request, so pin the protocol.
+  url: z
+    .string()
+    .url()
+    .refine((u) => u.startsWith('https://') || u.startsWith('http://'), {
+      message: 'Must be an http(s) URL',
+    }),
+  // Names the POI the photos hang off ("Aberdeen Pool"), so one community can
+  // keep its pool page and its clubhouse page apart in the tour.
+  label: z
+    .string()
+    .min(1)
+    .max(40)
+    .regex(/^[a-zA-Z0-9 \-_]+$/, 'Letters, numbers, spaces and hyphens only')
+    .default('Amenities'),
+});
+export type CommunityPhotoIngest = z.infer<typeof CommunityPhotoIngest>;
+
 // ─── Events ──────────────────────────────────────────────────────
 export const EventInsert = z.object({
   listing_id: z.string().uuid().optional(),

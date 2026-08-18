@@ -15,6 +15,7 @@
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AssemblyVideoPanel } from './AssemblyVideoPanel';
+import { PhotoSourcePanel } from './PhotoSourcePanel';
 import type { PhotoRow } from './PhotoTable';
 import { PhotoTable } from './PhotoTable';
 import { TourPipeline } from './TourPipeline';
@@ -66,7 +67,7 @@ export function CommunityTourSection({
 }) {
   const [clipRows, setClipRows] = useState<ClipRow[]>([]);
   const inFlight = useRef(false);
-  const _router = useRouter();
+  const router = useRouter();
 
   const loadClips = useCallback(async () => {
     if (inFlight.current) return;
@@ -148,7 +149,11 @@ export function CommunityTourSection({
         photos={photos}
       />
 
-      {/* 3 · Big table: every photo with all info + clip status + generate.
+      {/* 3 · Hand-picked sources: a page URL in, pending photos out. Sits
+           directly above the table those photos land in. */}
+      <PhotoSourcePanel communityId={communityId} onIngested={() => router.refresh()} />
+
+      {/* 4 · Big table: every photo with all info + clip status + generate.
            Collapsible — too long to keep open (owner 2026-08-17). */}
       <details className="rounded-2xl border border-line bg-surface">
         <summary className="cursor-pointer p-4 text-sm font-semibold text-ink">
