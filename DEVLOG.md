@@ -533,6 +533,33 @@ incrementally or verify afterwards.
 **Verification**: `pnpm web:typecheck` clean, `pnpm web:test` **366 passed**,
 each its own command; grouping logic exercised with unknown buckets.
 
+## 2026-08-18 16:14 UTC — Coverage scope reduced to city + verified clear-boundary community
+
+**Objective**: owner after reviewing the Suwanee sector experiment with
+Vivian: launch with two levels only — city, then communities whose boundary is
+clear. No logical areas for now.
+
+Rewrote `docs/pipelines/living-area-coverage.md` around the two-level contract.
+A verified and publishable builder/master-planned/subdivision/HOA community
+overrides the city tour; every other listing falls back directly to city.
+Directional sectors, logical neighborhoods and school-area products are
+explicitly deferred rather than silently remaining in the launch flow.
+
+The city section now defines one city-wide research pass, Google resolve and
+dedupe, adopted-boundary filtering, non-LLM Nearby supplementation, a 10-16 POI
+target, a five-chapter editorial arc, and city-scale narration safety. The
+community section preserves the internal-first 70-85% rule and readiness tiers.
+
+Production interpretation is also explicit: a city is keyed by canonical
+`(city, state)` / listing address, not by reusing an arbitrary Nextdoor
+`communities` row named after the city. Current tour tables are community-keyed,
+so city rollout needs a real city scope (or generic typed coverage scope).
+
+The four Suwanee sector rows were already inactive. Their polygons and videos
+remain unpublished experiment artifacts; no destructive cleanup was needed.
+
+---
+
 ## 2026-08-18 15:50 UTC — The photos existed and the page still showed none: community_pois was empty
 
 **Owner**: "still not able to view the photos" — with 33 photos in `poi_photos`
