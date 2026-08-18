@@ -32,6 +32,7 @@ export async function computeFinalShots(
   sb: TourDb,
   poiIds: string[],
   buckets?: Map<string, string>,
+  narrativeRanks?: Map<string, number>,
 ): Promise<{ shots: unknown[]; dropped: unknown[]; plan: unknown }> {
   const { data: photosRaw } = (await sb
     .from('poi_photos')
@@ -203,6 +204,7 @@ export async function computeFinalShots(
       width_px: widthPx,
       height_px: heightPx,
       description: tags.description ?? '',
+      narrative_rank: narrativeRanks?.get(p.poi_id),
       bytes,
       mime_type: 'image/jpeg',
     });

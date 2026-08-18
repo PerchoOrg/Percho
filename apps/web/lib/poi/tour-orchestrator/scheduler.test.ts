@@ -152,6 +152,54 @@ describe('scheduleClips — golden fixture', () => {
     }
   });
 
+  it('follows editorial POI ranks instead of incidental time-of-day order', () => {
+    const photos = GOLDEN_PHOTOS.slice(0, 4).map((photo, index) => ({
+      ...photo,
+      poi_id: `ranked-poi-${index}`,
+      bucket: ['civic', 'schools', 'outdoor', 'dining'][index]!,
+      narrative_rank: 3 - index,
+    }));
+    const ids = new Set(photos.map((photo) => photo.photo_id));
+    const annotations = GOLDEN_ANNOTATIONS.filter((annotation) => ids.has(annotation.photo_id)).map(
+      (annotation) => ({
+        ...annotation,
+        narrative_role: 'establishing' as const,
+        poi_pair_with: null,
+        pair_role: null,
+      }),
+    );
+    const { clips } = scheduleClips(annotations, photos);
+    expect(clips.map((clip) => clip.photo_id)).toEqual(
+      [...photos]
+        .sort((a, b) => a.narrative_rank - b.narrative_rank)
+        .map((photo) => photo.photo_id),
+    );
+  });
+
+  it('keeps unpaired photos from the same POI adjacent', () => {
+    const photos = GOLDEN_PHOTOS.slice(0, 4).map((photo, index) => ({
+      ...photo,
+      poi_id: index < 2 ? 'shared-poi' : `poi-${index}`,
+      bucket: index < 2 ? 'shopping' : index === 2 ? 'outdoor' : 'schools',
+      narrative_rank: index < 2 ? 1 : index,
+    }));
+    const ids = new Set(photos.map((photo) => photo.photo_id));
+    const annotations = GOLDEN_ANNOTATIONS.filter((annotation) => ids.has(annotation.photo_id)).map(
+      (annotation) => ({
+        ...annotation,
+        narrative_role: 'establishing' as const,
+        poi_pair_with: null,
+        pair_role: null,
+      }),
+    );
+    const { clips } = scheduleClips(annotations, photos);
+    const positions = clips
+      .map((clip, index) => (clip.poi_id === 'shared-poi' ? index : -1))
+      .filter((index) => index >= 0);
+    expect(positions).toHaveLength(2);
+    expect(positions[1]).toBe(positions[0]! + 1);
+  });
+
   it('caps Seedance at the cost gate and only on eligible photos', () => {
     const { clips } = plan();
     const seedance = clips.filter((c) => c.engine === 'seedance');
@@ -221,12 +269,14 @@ describe('scheduleClips — golden fixture', () => {
     }
   });
 
-  it('never runs one bucket for more than 2 consecutive clips', () => {
+  it('limits bucket runs without splitting a two-photo POI unit', () => {
     const { clips } = plan();
     let run = 1;
     for (let i = 1; i < clips.length; i++) {
       run = clips[i]!.bucket === clips[i - 1]!.bucket ? run + 1 : 1;
-      expect(run).toBeLessThanOrEqual(2);
+      // Two adjacent two-photo POIs are atomic. Coherence wins over the old
+      // clip-level hard cap of two; a fifth clip still requires another unit.
+      expect(run).toBeLessThanOrEqual(4);
     }
   });
 

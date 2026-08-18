@@ -80,6 +80,8 @@ export interface PhotoMeta {
   height_px: number;
   /** Vision-tagger description — feeds the Seedance scene clause. */
   description: string;
+  /** Editorial POI order from the city-sector research plan. */
+  narrative_rank?: number;
 }
 
 export type Engine = 'seedance' | 'depthflow' | 'kenburns';

@@ -297,41 +297,55 @@ interface Unit {
   emotion: number;
   bucket: string;
   role: PhotoAnnotation['narrative_role'];
+  narrativeRank: number;
 }
 
 function buildUnits(entries: Entry[]): Unit[] {
-  const byId = new Map(entries.map((e) => [e.annotation.photo_id, e]));
   const consumed = new Set<string>();
   const units: Unit[] = [];
 
   for (const e of entries) {
     const id = e.annotation.photo_id;
     if (consumed.has(id)) continue;
-    const partnerId = e.annotation.poi_pair_with;
-    const partner = partnerId ? byId.get(partnerId) : undefined;
-    if (partner && !consumed.has(partnerId!) && partner.annotation.poi_pair_with === id) {
-      const wide = e.annotation.pair_role === 'wide' ? e : partner;
-      const close = wide === e ? partner : e;
-      consumed.add(id);
-      consumed.add(partnerId!);
-      units.push({
-        entries: [wide, close],
-        time: Math.min(wide.annotation.time_of_day, close.annotation.time_of_day),
-        emotion: Math.max(wide.annotation.emotional_weight, close.annotation.emotional_weight),
-        bucket: wide.meta.bucket,
-        // The wide half carries the unit's narrative role; a "detail" close-up
-        // must not drag an establishing pair to the back of the tour.
-        role: wide.annotation.narrative_role,
+    // A POI is the atomic story unit even when the Curator did not explicitly
+    // pair its wide/detail frames. Bucket spreading may move this whole group,
+    // but can never interleave another location between its photos.
+    const samePoi = entries
+      .filter(
+        (candidate) =>
+          candidate.meta.poi_id === e.meta.poi_id && !consumed.has(candidate.annotation.photo_id),
+      )
+      .sort((a, b) => {
+        const pairRank = (entry: Entry) =>
+          entry.annotation.narrative_role === 'opener'
+            ? -1
+            : entry.annotation.narrative_role === 'closer'
+              ? 3
+              : entry.annotation.pair_role === 'wide'
+                ? 0
+                : entry.annotation.pair_role === 'close' ||
+                    entry.annotation.narrative_role === 'detail'
+                  ? 2
+                  : 1;
+        return (
+          pairRank(a) - pairRank(b) ||
+          b.annotation.emotional_weight - a.annotation.emotional_weight ||
+          a.annotation.photo_id.localeCompare(b.annotation.photo_id)
+        );
       });
-      continue;
-    }
-    consumed.add(id);
+    for (const member of samePoi) consumed.add(member.annotation.photo_id);
+    const lead = samePoi[0]!;
+    const roleEntry =
+      samePoi.find((member) => member.annotation.narrative_role === 'opener') ??
+      samePoi.find((member) => member.annotation.narrative_role === 'closer') ??
+      lead;
     units.push({
-      entries: [e],
-      time: e.annotation.time_of_day,
-      emotion: e.annotation.emotional_weight,
-      bucket: e.meta.bucket,
-      role: e.annotation.narrative_role,
+      entries: samePoi,
+      time: Math.min(...samePoi.map((member) => member.annotation.time_of_day)),
+      emotion: Math.max(...samePoi.map((member) => member.annotation.emotional_weight)),
+      bucket: lead.meta.bucket,
+      role: roleEntry.annotation.narrative_role,
+      narrativeRank: lead.meta.narrative_rank ?? Number.MAX_SAFE_INTEGER,
     });
   }
   return units;
@@ -342,20 +356,27 @@ function unitId(u: Unit): string {
 }
 
 function orderUnits(units: Unit[]): Unit[] {
-  const byTime = [...units].sort(
-    (a, b) => a.time - b.time || b.emotion - a.emotion || unitId(a).localeCompare(unitId(b)),
+  const byNarrative = [...units].sort(
+    (a, b) =>
+      a.narrativeRank - b.narrativeRank ||
+      a.time - b.time ||
+      b.emotion - a.emotion ||
+      unitId(a).localeCompare(unitId(b)),
   );
 
   const pickRole = (role: 'opener' | 'closer'): Unit | undefined => {
-    const held = byTime.filter((u) => u.role === role);
+    const held = byNarrative.filter((u) => u.role === role);
     if (held.length === 0) return undefined;
     return [...held].sort((a, b) => b.emotion - a.emotion || unitId(a).localeCompare(unitId(b)))[0];
   };
 
   const opener = pickRole('opener');
   const closer = pickRole('closer') === opener ? undefined : pickRole('closer');
-  const middle = byTime.filter((u) => u !== opener && u !== closer);
+  const middle = byNarrative.filter((u) => u !== opener && u !== closer);
   const ordered = [...(opener ? [opener] : []), ...middle, ...(closer ? [closer] : [])];
+  // Preserve the editorial route, with one narrow correction: a third clip
+  // from the same bucket reads as repetition, so pull the nearest different
+  // chapter forward. This moves whole POI units and never splits wide/detail.
   return spreadBuckets(ordered);
 }
 

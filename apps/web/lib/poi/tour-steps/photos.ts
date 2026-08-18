@@ -23,6 +23,7 @@ export async function runPhotos(sb: TourDb, run: RunRow) {
           lat?: number | null;
           lng?: number | null;
           bucket?: string;
+          narrative_order?: number;
         }>;
       }
     | undefined;
@@ -36,6 +37,7 @@ export async function runPhotos(sb: TourDb, run: RunRow) {
   // The resolve step already decided each POI's tour bucket; the Scheduler
   // needs it to keep one bucket from running more than two clips in a row.
   const bucketByPoiId = new Map<string, string>();
+  const narrativeRankByPoiId = new Map<string, number>();
   for (const poi of resolve.resolved) {
     // Agent-discovered POIs may not be in nearby scope yet — upsert `pois` by
     // google_place_id and link to this community before fetching photos.
@@ -85,6 +87,7 @@ export async function runPhotos(sb: TourDb, run: RunRow) {
     const poiId: string = upserted.id;
     resolvedPoiIds.push(poiId!);
     if (poi.bucket) bucketByPoiId.set(poiId!, poi.bucket);
+    if (poi.narrative_order != null) narrativeRankByPoiId.set(poiId, poi.narrative_order);
     // Ensure community link (candidate status — admin reviews later).
     const { data: link } = await sb
       .from('community_pois')
@@ -197,7 +200,12 @@ export async function runPhotos(sb: TourDb, run: RunRow) {
     dropped: [],
   });
 
-  const { shots, dropped, plan } = await computeFinalShots(sb, resolvedPoiIds, bucketByPoiId);
+  const { shots, dropped, plan } = await computeFinalShots(
+    sb,
+    resolvedPoiIds,
+    bucketByPoiId,
+    narrativeRankByPoiId,
+  );
 
   await saveStep(sb, run, 'photos', {
     phase: 'done',

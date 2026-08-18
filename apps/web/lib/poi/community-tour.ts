@@ -49,6 +49,9 @@ export interface ResolvedPoi {
   rating: number | null;
   user_ratings_total: number | null;
   score: number;
+  /** City-batch editorial order; geometry still decides the actual sector. */
+  narrative_order?: number;
+  suggested_sector_slug?: string;
   dropped?: false;
 }
 
@@ -135,6 +138,8 @@ export type CandidateInput = {
   source: string;
   confidence: 'high' | 'medium';
   agent: 'gemini_a' | 'gemini_b';
+  narrative_order?: number;
+  suggested_sector_slug?: string;
 };
 
 /**
@@ -317,6 +322,8 @@ export async function resolveCandidates(
       rating: place.rating ?? null,
       user_ratings_total: place.userRatingCount ?? null,
       score: scorePoi({ bucket: first.bucket, agreement, confidence, photo_count }),
+      narrative_order: best.narrative_order,
+      suggested_sector_slug: best.suggested_sector_slug,
     });
   }
 

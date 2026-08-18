@@ -973,6 +973,58 @@ Worth asking, for each new photo defect the owner reports, whether it is a
 rendering problem or a "this photo is not usable" problem — they have
 different homes (Guard vs plan filter) and only the second one removes it.
 
+## 2026-08-18 08:57 UTC — One city research call now plans every sector and every tour has a narrative route
+
+**Objective**: owner: four sector tours should not make four independent LLM
+research calls, and photos inside a sector should not feel randomly ordered.
+
+Added a city-sector research path. One grounded Gemini request receives the
+city plus every sector's name, centroid and lifestyle/school identity, and
+returns one coordinated JSON plan with distinct POIs and production-order
+arrays. Google Places resolution then happens once across the city, dedupes by
+`place_id`, and actual coordinates — never the model's suggestion — assign the
+POI to a stored polygon. Thin sectors are supplemented by typed Google Nearby
+queries inside their own polygon; that fallback invokes no LLM, requires a
+photo, caps bucket repetition, and maintains city-wide ID uniqueness.
+
+The first two production probes were intentionally stopped before resolve: one
+model reply used an abbreviated JSON object, and combining Search grounding
+with JSON MIME yielded an empty text candidate. The final contract forbids
+ellipsis, targets 6-10 POIs/sector, scans all complete objects in grounded
+output instead of blindly parsing the first brace, and succeeded in one call:
+971 input tokens / 4,850 output tokens. No per-sector research calls followed.
+
+Ordering is now a data contract. Each resolved POI carries
+`narrative_order`; its selected photos inherit `narrative_rank`; Scheduler
+orders POI units by that rank with opener/closer pinning. A POI is atomic even
+when Curator did not explicitly return a mutual wide/detail pair, so bucket
+balancing can move the whole location but cannot interleave another place
+between its two frames. This fixed the real West plan where Village Shoppes
+had appeared at clips 7 and 10.
+
+Suwanee production result (all point-in-polygon, 45 seconds each):
+
+- North run `a45dc348-b20b-4ae3-9bc5-26c667a3bc57`, 8 POIs / 13 clips,
+  assembly `33ab3cd9-b671-4610-9c45-d633efc02069`.
+- West run `64bd5606-b73d-48e3-a4ba-9357e309750e`, 8 POIs / 12 clips,
+  assembly `ab509fea-55aa-47a2-83fc-c288b347feb4`.
+- South run `d6713862-e5e6-47c5-a99f-6eb64c5b1222`, 8 POIs / 12 clips,
+  assembly `bbc762bf-8afd-4940-9bf2-31acd0eda7f3`.
+- East run `f1979d2f-8698-4827-9726-b06156361603`, 8 POIs / 13 clips,
+  assembly `ada30b16-9aa8-47ec-9266-0890dcc036bf`.
+
+Before enqueue, exact `(photo_id, engine)` reuse was audited. The only two
+missing planned Seedance clips were remapped to local Ken Burns; final batch
+added **zero Seedance generations**. Missing local variants rendered normally,
+then all four assemblies reached ready.
+
+**Validation**: 69 focused tests pass across prompt, geometry, resolver,
+Scheduler and full tour-plan behavior; web TypeScript passes; Biome has no
+errors (pre-existing non-null assertion warnings remain in touched legacy
+files); `git diff --check` passes.
+
+---
+
 ## 2026-08-18 08:15 UTC — A 14-clip tour played as six: crossfade offsets started at zero
 
 **Symptom** (owner): the Apremont - Highcroft assembly "only has 6 clips even
