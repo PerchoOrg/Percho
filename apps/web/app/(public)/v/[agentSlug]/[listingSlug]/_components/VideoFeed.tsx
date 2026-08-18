@@ -11,8 +11,9 @@
  * BrowseFeed grows that hook.
  */
 
-import { type BrowseCard, BrowseFeed } from '@/app/(public)/browse/_components/BrowseFeed';
+import { BrowseFeed } from '@/app/(public)/browse/_components/BrowseFeed';
 import { track } from '@/lib/analytics/track';
+import type { BrowseCard } from '@/lib/feed/browse-card';
 import { useEffect } from 'react';
 
 type Props = {

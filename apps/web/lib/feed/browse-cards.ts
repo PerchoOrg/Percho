@@ -16,7 +16,7 @@
  * the only additive, optional field on the returned card.
  */
 
-import type { BrowseCard } from '@/app/(public)/browse/_components/BrowseFeed';
+import type { BrowseCard } from '@/lib/feed/browse-card';
 import { webVideoUid } from '@/lib/feed/video-uid';
 import { haversineMiles, latLngBoundingBox } from '@/lib/geo/distance';
 import { createClient } from '@/lib/supabase/server';

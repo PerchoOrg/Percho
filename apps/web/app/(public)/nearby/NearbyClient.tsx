@@ -1,9 +1,9 @@
 'use client';
 
-import type { BrowseCard } from '@/app/(public)/browse/_components/BrowseFeed';
 import { GridPageShell } from '@/app/_components/GridPageShell';
 import { ListingGrid, type ListingGridItem } from '@/app/_components/ListingGrid';
 import { thumbnailUrl } from '@/lib/cloudflare/stream';
+import type { BrowseCard } from '@/lib/feed/browse-card';
 import { linkForCard } from '@/lib/feed/link-for-card';
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';

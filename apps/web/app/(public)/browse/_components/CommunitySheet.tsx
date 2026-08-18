@@ -24,8 +24,8 @@
 'use client';
 
 import { thumbnailUrl } from '@/lib/cloudflare/stream';
+import type { BrowseSourceVideo } from '@/lib/feed/browse-card';
 import { useEffect } from 'react';
-import type { BrowseSourceVideo } from './BrowseFeed';
 
 export type CommunitySheetData = {
   slug: string;

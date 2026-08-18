@@ -45,12 +45,12 @@
 'use client';
 
 import { hlsUrl, thumbnailUrl } from '@/lib/cloudflare/stream';
+import type { BrowseSourceVideo } from '@/lib/feed/browse-card';
 import Hls from 'hls.js';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActionButton } from '../../_components/feed/ActionButton';
 import { FEED_FRAME_CLASS, FEED_RAIL_BOTTOM, FEED_Z } from '../../_components/feed/constants';
 import { BookmarkIcon, CommentIcon, HeartIcon, ShareIcon } from '../../_components/feed/icons';
-import type { BrowseSourceVideo } from './BrowseFeed';
 
 interface Props {
   open: boolean;

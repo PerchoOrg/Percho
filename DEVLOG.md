@@ -16,6 +16,66 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-19 07:20 UTC — BrowseFeed broken up; the BrowseCard dependency inverted
+
+**Objective**: owner: "merge to main first, then lets do BrowseFeed". phase51
+merged as `0a8a1d05`. Branch `phase52/browsefeed`.
+
+**What was wrong.** BrowseFeed.tsx was 2,100 lines — the largest file in the
+repo — holding two card components, the feed orchestration, the card type
+every other feed surface depends on, and the video-selection policy.
+
+The dependency also pointed the wrong way. `BrowseCard` is imported by nine
+modules and only two of them are components: `lib/feed/browse-cards.ts`, the
+module that *builds* these cards, had to import its own return type back out
+of a route component, as did `lib/listings/feed-load.ts` and the mobile feed
+API route. lib/ depending on app/ is backwards, and it is the kind of thing
+that quietly makes a file un-splittable.
+
+**The split**:
+
+| file | lines | holds |
+|---|---|---|
+| `lib/feed/browse-card.ts` | 226 | `BrowseSourceVideo`, `BrowseCard`, `Source`, `poolFor`, `pickVideo` |
+| `VideoCard.tsx` | 854 | HLS / autoplay playback |
+| `PhotoCard.tsx` | 302 | photo-carousel card |
+| `BrowseFeed.tsx` | 678 | feed orchestration only |
+| `use-fullscreen-viewport.ts` | 88 | the in-page fullscreen box and its measurement |
+
+`Card` was renamed `VideoCard` — it is what it is, and it pairs with
+PhotoCard. All nine importers now take `BrowseCard` from `lib/feed/`.
+
+**Tests where there were none.** `poolFor` and `pickVideo` decide which video
+plays on every horizontal swipe and had zero coverage inside the component.
+10 tests now pin the wrap-around, the hero fallback captioned from the listing
+address, the empty-nearby fallback, and the null-not-undefined normalisation
+of the landscape/external fields.
+
+**Where I stopped, deliberately.** VideoCard still carries ~330 lines of HLS
+attach / detach / autoplay-retry effects. They are separable in principle —
+`use-hls-playback` is the obvious next module — but they are interwoven with
+`sel`, `isActive`, `muted`, `shouldMount`, `setPaused`, `onAutoplayBlocked`,
+`domPaused` and `hasFirstFrame`, and their *ordering* is load-bearing: the
+comments record specific iOS failures (74.22's `p=T` sample window, the
+"按两次" double-tap, rAF closing over a stale `paused` prop). There is no test
+coverage and no way for me to verify on a real handset. Extracting them is a
+change I can make look correct and cannot prove is correct, so it should be
+done by someone with a phone in hand.
+
+The fullscreen/viewport concern *was* safe to lift: it depends only on
+`isFullscreen`, and most of its length is the record of which measurement
+approach was wrong on which iPhone.
+
+**Verified**: typecheck clean across all 3 projects, 378 web tests (was 368)
++ 508 mobile, `next build` compiles 60 pages.
+
+**Next steps**:
+- `use-hls-playback` extraction, gated on device testing.
+- ~300 `as any` and ~40 hand-written `XRow` types remain.
+- `lib/feed/` is now 23 files and still the least clearly bounded folder.
+
+---
+
 ## 2026-08-19 05:10 UTC — Structure pass: palette, components, the tour route, docs, and a repo map
 
 **Objective**: owner: "keep refactoring the other parts, the code, the ui,
