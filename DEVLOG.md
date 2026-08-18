@@ -16,6 +16,78 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-19 05:10 UTC — Structure pass: palette, components, the tour route, docs, and a repo map
+
+**Objective**: owner: "keep refactoring the other parts, the code, the ui,
+the doc — after this you need to tell me each folder clear responsibility in
+this repo". Branch `phase51/structure-and-docs`, off `fe0a1224`.
+
+**UI — the palette lied.** `tailwind.config.ts` carried five dark-theme
+aliases (cream, gold, bronze, ink3, accent), each resolving to one of the six
+real tokens after the light-theme switch, with a comment saying they were kept
+"without a 73-file sweep". So `text-gold` rendered ink and `text-cream`
+rendered the paper surface — every colour in the codebase read as the wrong
+colour. Did the sweep: 184 utilities across 49 files renamed to the token they
+actually resolve to, then deleted the aliases. `.btn-gold` (which is
+`background: var(--ink)`) became `.btn-primary`, pairing with `.btn-ghost`.
+Pixel-identical by construction — every alias mapped to a byte-identical hex —
+and confirmed against the compiled stylesheet.
+
+**UI — two homes for shared components.** `app/_components/` (15 files) and a
+top-level `components/` (4). Nothing distinguished them. Merged into
+`app/_components/`, 11 importers updated, dead tailwind content glob dropped.
+The rule is now one line: shared → `app/_components/`, single-subtree → that
+route's `_components/`, non-React → `lib/`.
+
+**Code — the tour step route.** 1,304 lines holding all seven pipeline steps.
+The seam was already there (the route only dispatched through `STEP_HANDLERS`
+and no step called another), so each step became its own module under
+`lib/poi/tour-steps/`. Route is now 120 lines of dispatch; every step module
+exports exactly its handler. Handler bodies moved verbatim. The dispatch also
+lost a four-branch ternary that called the same handler with different
+arities.
+
+**Code — two lib folders named after the wrong thing.** `lib/google/` said
+which API it wrapped, not what for, and there were *two* Google Places clients
+with nothing in the names to tell them apart. Its one file serves the listing
+address input, so it became `lib/listings/address-autocomplete.ts`;
+`lib/poi/google-places.ts` is now unambiguously the POI pipeline's.
+`lib/events/` and `lib/analytics/` were the same subject split by direction
+(track.ts writes to `events`, entity-stats reads it back) — merged.
+
+**Docs.** `docs/` mixed living reference with finished process artifacts.
+Moved to `docs/archive/` with a README saying plainly that nothing there is
+maintained and the code wins on conflict: the 15 spec-v3 sprint prompts (tasks
+0–5, all shipped, branches long merged), the VERIFY-on-mac checklists, and
+MIGRATION-HANDOFF.md (written on the EC2 host the day it was terminated).
+`docs/design/spec-v3/` now holds only the six spec documents.
+
+**The deliverable: ARCHITECTURE.md.** The repo had no map — README.md is a
+product vision doc, CLAUDE.md is rules, DEVLOG.md is history, so nobody
+arriving could tell where a new file belongs. One responsibility per folder
+across apps/web (routes + lib), apps/mobile, packages/shared, scripts,
+supabase and docs, plus the job-table boundary that keeps rendering off
+Vercel. Every path it names was checked against the tree: 103 claims, 0 wrong.
+Linked from README.md and from CLAUDE.md's session-start instruction.
+
+**Learnings**:
+- The palette aliases are the clearest case yet of a comment documenting debt
+  instead of paying it. The "73-file sweep" it avoided took one scripted pass
+  and was provably a no-op at the pixel level.
+- Splitting the route was cheap *because* the registry already existed. The
+  cost of a 1,300-line file is not the length, it is that the seam goes
+  unnoticed.
+- Naming a folder after the vendor (`lib/google/`) rather than the job hides
+  duplication: two Places clients coexisted for months.
+
+**Next steps**:
+- ~300 `as any` remain, plus ~40 hand-written `XRow` types.
+- 7 `useExhaustiveDependencies` and 15 `useSemanticElements` still warnings.
+- `BrowseFeed.tsx` is 2,096 lines and is now the largest file in the repo.
+- `lib/feed/` is 21 files and the least-clearly-bounded folder left.
+
+---
+
 ## 2026-08-19 02:40 UTC — Repo-wide cleanup: the CI gate was never running
 
 **Objective**: owner asked for a holistic review and a repo-wide refactor —
