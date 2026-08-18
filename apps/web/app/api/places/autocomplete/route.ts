@@ -1,4 +1,4 @@
-import { autocomplete } from '@/lib/google/places';
+import { autocomplete } from '@/lib/listings/address-autocomplete';
 /**
  * GET /api/places/autocomplete?q=...&session=<uuid>
  *

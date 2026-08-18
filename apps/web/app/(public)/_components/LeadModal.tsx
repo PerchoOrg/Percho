@@ -263,7 +263,7 @@ export function LeadModal({
             <button
               type="submit"
               disabled={submitting}
-              className="mt-2 w-full rounded-md bg-ink px-4 py-2.5 font-semibold text-cream text-sm transition-colors hover:bg-ink/90 disabled:cursor-not-allowed disabled:opacity-60"
+              className="mt-2 w-full rounded-md bg-ink px-4 py-2.5 font-semibold text-surface text-sm transition-colors hover:bg-ink/90 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {submitting ? 'Sending…' : `Send to ${firstName}`}
             </button>

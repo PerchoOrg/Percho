@@ -58,7 +58,7 @@ export default async function ProfilePage() {
             <div className="mt-4 flex flex-col gap-2">
               <Link
                 href="/login"
-                className="btn-gold inline-flex items-center justify-center rounded-full px-6 py-3 text-sm"
+                className="btn-primary inline-flex items-center justify-center rounded-full px-6 py-3 text-sm"
               >
                 Log in
               </Link>
@@ -111,21 +111,21 @@ export default async function ProfilePage() {
             {agent.slug ? (
               <Link
                 href={`/a/${agent.slug}`}
-                className="btn-gold inline-flex items-center justify-center rounded-full px-6 py-3 text-sm"
+                className="btn-primary inline-flex items-center justify-center rounded-full px-6 py-3 text-sm"
               >
                 Public profile
               </Link>
             ) : null}
             <Link
               href="/dashboard/analytics"
-              className="btn-gold inline-flex items-center justify-center rounded-full px-6 py-3 text-sm"
+              className="btn-primary inline-flex items-center justify-center rounded-full px-6 py-3 text-sm"
             >
               View analytics
             </Link>
             {agent.is_admin ? (
               <Link
                 href="/admin/pipeline"
-                className="btn-gold inline-flex items-center justify-center rounded-full px-6 py-3 text-sm"
+                className="btn-primary inline-flex items-center justify-center rounded-full px-6 py-3 text-sm"
               >
                 Admin console
               </Link>

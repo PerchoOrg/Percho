@@ -62,7 +62,7 @@ export default async function BgmLibraryPage() {
         </div>
         <div className="mt-1">
           When adding tracks, ensure the source license permits commercial use. See{' '}
-          <code className="rounded bg-cream px-1 py-0.5">docs/bgm/vibe-map.md</code> for the
+          <code className="rounded bg-surface px-1 py-0.5">docs/bgm/vibe-map.md</code> for the
           curation SOP (instrumental, 80–100 BPM, no vocals, no EDM drops).
         </div>
       </footer>

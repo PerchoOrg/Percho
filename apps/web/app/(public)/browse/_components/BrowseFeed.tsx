@@ -450,7 +450,7 @@ function PhotoCard({
         style={{ willChange: 'transform', WebkitOverflowScrolling: 'touch' }}
       >
         {total === 0 && (
-          <div className="flex h-full w-full flex-shrink-0 snap-center items-center justify-center text-cream/40 text-sm">
+          <div className="flex h-full w-full flex-shrink-0 snap-center items-center justify-center text-surface/40 text-sm">
             No photo
           </div>
         )}
@@ -495,7 +495,7 @@ function PhotoCard({
        * so the buyer can see how deep they are into the reel. */}
       {poolSize > 1 && total > 1 && (
         <>
-          <div className="pointer-events-none absolute top-3 right-3 z-10 flex h-9 items-center rounded-full border border-cream/20 bg-ink/55 px-3 font-medium text-[12px] text-cream backdrop-blur-md tabular-nums">
+          <div className="pointer-events-none absolute top-3 right-3 z-10 flex h-9 items-center rounded-full border border-surface/20 bg-ink/55 px-3 font-medium text-[12px] text-surface backdrop-blur-md tabular-nums">
             {displayIdx + 1} / {total}
           </div>
           <div className="pointer-events-none absolute inset-x-3 top-16 z-10 flex gap-1">
@@ -503,7 +503,7 @@ function PhotoCard({
               <div
                 key={`${p}-prog`}
                 className={`h-0.5 flex-1 rounded-full transition-colors ${
-                  i <= displayIdx ? 'bg-cream' : 'bg-cream/20'
+                  i <= displayIdx ? 'bg-surface' : 'bg-surface/20'
                 }`}
               />
             ))}
@@ -518,7 +518,7 @@ function PhotoCard({
             type="button"
             onClick={goPrev}
             aria-label="Previous photo"
-            className="-translate-y-1/2 absolute top-1/2 left-3 z-10 hidden h-10 w-10 items-center justify-center rounded-full border border-cream/20 bg-ink/55 text-cream backdrop-blur transition-colors hover:border-cream hover:text-cream md:flex"
+            className="-translate-y-1/2 absolute top-1/2 left-3 z-10 hidden h-10 w-10 items-center justify-center rounded-full border border-surface/20 bg-ink/55 text-surface backdrop-blur transition-colors hover:border-surface hover:text-surface md:flex"
             style={{ touchAction: 'manipulation' }}
           >
             ‹
@@ -527,7 +527,7 @@ function PhotoCard({
             type="button"
             onClick={goNext}
             aria-label="Next photo"
-            className="-translate-y-1/2 absolute top-1/2 right-3 z-10 hidden h-10 w-10 items-center justify-center rounded-full border border-cream/20 bg-ink/55 text-cream backdrop-blur transition-colors hover:border-cream hover:text-cream md:flex"
+            className="-translate-y-1/2 absolute top-1/2 right-3 z-10 hidden h-10 w-10 items-center justify-center rounded-full border border-surface/20 bg-ink/55 text-surface backdrop-blur transition-colors hover:border-surface hover:text-surface md:flex"
             style={{ touchAction: 'manipulation' }}
           >
             ›
@@ -1216,7 +1216,7 @@ function Card({
       <div className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-black/70 via-black/30 to-transparent" />
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-72 bg-gradient-to-t from-black/85 via-black/50 to-transparent" />
 
-      {/* single category pill — gold-on-gold,
+      {/* single category pill — ink-on-ink,
        * top-left. Replaces the older dark-card source overlay AND the
        * bottom-caption gold pill that duplicated this same data. Only
        * shown in Nearby mode; hero is unlabelled. Pool counter sits in
@@ -1252,7 +1252,7 @@ function Card({
               onSwipe(-1);
             }}
             aria-label="Previous nearby video"
-            className="-translate-x-1/2 absolute top-20 left-1/2 z-10 hidden h-10 w-10 items-center justify-center rounded-full border border-cream/20 bg-ink/55 text-cream backdrop-blur transition-colors hover:border-cream hover:text-cream md:flex"
+            className="-translate-x-1/2 absolute top-20 left-1/2 z-10 hidden h-10 w-10 items-center justify-center rounded-full border border-surface/20 bg-ink/55 text-surface backdrop-blur transition-colors hover:border-surface hover:text-surface md:flex"
             style={{ touchAction: 'manipulation' }}
           >
             ‹
@@ -1264,7 +1264,7 @@ function Card({
               onSwipe(1);
             }}
             aria-label="Next nearby video"
-            className="-translate-x-1/2 absolute bottom-32 left-1/2 z-10 hidden h-10 w-10 items-center justify-center rounded-full border border-cream/20 bg-ink/55 text-cream backdrop-blur transition-colors hover:border-cream hover:text-cream md:flex"
+            className="-translate-x-1/2 absolute bottom-32 left-1/2 z-10 hidden h-10 w-10 items-center justify-center rounded-full border border-surface/20 bg-ink/55 text-surface backdrop-blur transition-colors hover:border-surface hover:text-surface md:flex"
             style={{ touchAction: 'manipulation', transform: 'translateX(-50%) rotate(180deg)' }}
           >
             ‹
@@ -1300,7 +1300,7 @@ function Card({
               : { position: 'absolute', inset: 0 }
           }
         >
-          <div className="flex h-20 w-20 items-center justify-center rounded-full bg-black/40 text-cream backdrop-blur">
+          <div className="flex h-20 w-20 items-center justify-center rounded-full bg-black/40 text-surface backdrop-blur">
             <PlayIcon />
           </div>
         </div>
@@ -1366,7 +1366,7 @@ function Card({
             setIsFullscreen(true);
           }}
           aria-label="View landscape fullscreen"
-          className="-translate-x-1/2 absolute bottom-[26%] left-1/2 z-20 flex items-center gap-2 rounded-full border border-cream/30 bg-ink/70 px-4 py-2 text-cream text-sm backdrop-blur transition-colors hover:border-cream hover:bg-ink/85"
+          className="-translate-x-1/2 absolute bottom-[26%] left-1/2 z-20 flex items-center gap-2 rounded-full border border-surface/30 bg-ink/70 px-4 py-2 text-surface text-sm backdrop-blur transition-colors hover:border-surface hover:bg-ink/85"
           style={{ touchAction: 'manipulation' }}
         >
           {/* corner-arrows expand icon */}
@@ -1397,7 +1397,7 @@ function Card({
             setIsFullscreen(false);
           }}
           aria-label="Exit fullscreen"
-          className="flex h-11 w-11 items-center justify-center rounded-full border border-cream/40 bg-ink/80 text-cream backdrop-blur transition-colors hover:border-cream hover:bg-ink/90"
+          className="flex h-11 w-11 items-center justify-center rounded-full border border-surface/40 bg-ink/80 text-surface backdrop-blur transition-colors hover:border-surface hover:bg-ink/90"
           style={{
             // X button was hidden BEHIND the fullscreen video
             // because the video sits at zIndex 10000 (needed to escape the
@@ -1989,7 +1989,7 @@ export function BrowseFeed({
             }
           }}
           aria-label={activeSource !== 'hero' ? 'Back to listing video' : 'Back'}
-          className="flex h-11 w-11 items-center justify-center rounded-full border border-cream/20 bg-ink/55 text-cream backdrop-blur-md transition-colors hover:border-cream hover:text-cream"
+          className="flex h-11 w-11 items-center justify-center rounded-full border border-surface/20 bg-ink/55 text-surface backdrop-blur-md transition-colors hover:border-surface hover:text-surface"
           style={{ touchAction: 'manipulation' }}
         >
           <BackArrowIcon />

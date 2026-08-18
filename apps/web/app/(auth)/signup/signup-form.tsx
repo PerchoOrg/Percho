@@ -148,7 +148,7 @@ export function SignupForm({ redirect }: { redirect: string }) {
           password.length === 0 ||
           confirm.length === 0
         }
-        className="btn-gold mt-6 w-full rounded-lg py-3 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50"
+        className="btn-primary mt-6 w-full rounded-lg py-3 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50"
       >
         {status === 'sending' ? 'Creating account…' : 'Create account'}
       </button>

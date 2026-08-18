@@ -53,8 +53,8 @@ export function CommunityGrid({
               ) : null
             }
             fallback={
-              <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-bronze/20 to-ink">
-                <span className="font-semibold text-3xl text-cream/70">{c.name.charAt(0)}</span>
+              <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-ink2/20 to-ink">
+                <span className="font-semibold text-3xl text-surface/70">{c.name.charAt(0)}</span>
               </div>
             }
             caption={

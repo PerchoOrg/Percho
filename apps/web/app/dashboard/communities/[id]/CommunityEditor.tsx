@@ -439,7 +439,7 @@ export function CommunityEditor({
                 aria-pressed={active}
                 className={`rounded-full border px-3 py-1 text-xs transition disabled:cursor-not-allowed disabled:opacity-60 ${
                   active
-                    ? 'border-ink bg-ink text-cream'
+                    ? 'border-ink bg-ink text-surface'
                     : 'border-line bg-surface text-ink2 hover:border-line-strong hover:text-ink'
                 }`}
               >
@@ -579,7 +579,7 @@ export function CommunityEditor({
           <button
             type="submit"
             disabled={isPending || saveState === 'saving'}
-            className="rounded bg-ink px-4 py-2 text-sm font-medium text-cream transition hover:opacity-90 disabled:opacity-50"
+            className="rounded bg-ink px-4 py-2 text-sm font-medium text-surface transition hover:opacity-90 disabled:opacity-50"
           >
             {saveState === 'saving' ? 'Saving…' : 'Save'}
           </button>

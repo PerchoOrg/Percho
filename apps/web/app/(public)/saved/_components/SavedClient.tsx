@@ -94,7 +94,7 @@ function FavoritesEmpty() {
         <div className="mt-6 flex flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:justify-center">
           <Link
             href="/browse"
-            className="rounded-full bg-ink px-5 py-2 font-medium text-cream text-sm transition hover:opacity-90"
+            className="rounded-full bg-ink px-5 py-2 font-medium text-surface text-sm transition hover:opacity-90"
           >
             Explore listing
           </Link>
@@ -152,8 +152,8 @@ function CommunitiesView({ communities }: { communities: SavedCommunityCard[] })
             coverUrl={c.coverUrl}
             alt={c.name}
             fallback={
-              <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-bronze/20 to-ink">
-                <span className="font-semibold text-3xl text-cream/70">{c.name.charAt(0)}</span>
+              <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-ink2/20 to-ink">
+                <span className="font-semibold text-3xl text-surface/70">{c.name.charAt(0)}</span>
               </div>
             }
             caption={

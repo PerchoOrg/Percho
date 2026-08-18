@@ -212,7 +212,7 @@ export default async function LeadDetailPage({ params, searchParams }: PageProps
           {mailto ? (
             <a
               href={mailto}
-              className="rounded bg-ink px-4 py-2 text-sm font-semibold text-cream hover:bg-ink/90"
+              className="rounded bg-ink px-4 py-2 text-sm font-semibold text-surface hover:bg-ink/90"
             >
               Reply by email
             </a>

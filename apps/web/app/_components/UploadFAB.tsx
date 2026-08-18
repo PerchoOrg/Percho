@@ -22,7 +22,7 @@ export function UploadFAB() {
         type="button"
         onClick={open}
         aria-label="Upload"
-        className="mx-auto -translate-y-3 flex h-14 w-14 items-center justify-center rounded-full bg-ink text-cream shadow-lg shadow-black/20 transition active:scale-95"
+        className="mx-auto -translate-y-3 flex h-14 w-14 items-center justify-center rounded-full bg-ink text-surface shadow-lg shadow-black/20 transition active:scale-95"
       >
         <Plus size={24} aria-hidden="true" strokeWidth={2} />
       </button>

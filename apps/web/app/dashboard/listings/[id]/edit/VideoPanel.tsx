@@ -17,12 +17,12 @@
  * alongside this one on the same page).
  */
 
+import { type UploadedVideo, VideoUploader } from '@/app/_components/VideoUploader';
 import {
   deleteListingVideo,
   reorderListingVideos,
   setListingCover,
 } from '@/app/dashboard/listings/[id]/edit/actions';
-import { type UploadedVideo, VideoUploader } from '@/components/dashboard/VideoUploader';
 import { thumbnailUrl } from '@/lib/cloudflare/stream';
 import { startAsyncTransition } from '@/lib/utils/start-async-transition';
 import {
@@ -412,7 +412,7 @@ function SortableVideoItem({
         </div>
         <div className="mt-1 flex flex-wrap items-center gap-1">
           {isCover ? (
-            <span className="flex-shrink-0 rounded bg-ink px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-cream">
+            <span className="flex-shrink-0 rounded bg-ink px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-surface">
               Cover
             </span>
           ) : null}

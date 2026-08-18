@@ -1,4 +1,4 @@
-import { SiteFooter } from '@/components/site/SiteFooter';
+import { SiteFooter } from '@/app/_components/SiteFooter';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 

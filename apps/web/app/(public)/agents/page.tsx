@@ -32,7 +32,7 @@ export default function AgentsLandingPage() {
 
         <a
           href="#waitlist"
-          className="btn-gold mt-8 inline-flex w-full items-center justify-center rounded-lg px-6 py-3 text-base font-medium sm:w-auto"
+          className="btn-primary mt-8 inline-flex w-full items-center justify-center rounded-lg px-6 py-3 text-base font-medium sm:w-auto"
         >
           Join the Atlanta beta →
         </a>
@@ -161,7 +161,7 @@ function BenefitCard({
 function Step({ n, title }: { n: number; title: string }) {
   return (
     <li className="flex gap-4 rounded-xl border border-line bg-surface p-4">
-      <span className="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-ink text-sm font-medium text-cream">
+      <span className="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-ink text-sm font-medium text-surface">
         {n}
       </span>
       <span className="text-sm text-ink sm:text-base">{title}</span>

@@ -58,7 +58,7 @@ export function AssemblyVideoPanel({ communityId }: { communityId: string }) {
     return (
       <div className="rounded-2xl border border-line bg-surface p-4">
         <div className="text-sm font-semibold text-ink">Community Video</div>
-        <div className="mt-1 text-xs text-ink3">
+        <div className="mt-1 text-xs text-ink2">
           No assembled video yet — run the pipeline steps and Assemble.
         </div>
       </div>

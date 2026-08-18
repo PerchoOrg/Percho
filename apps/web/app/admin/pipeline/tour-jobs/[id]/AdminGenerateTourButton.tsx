@@ -118,7 +118,7 @@ export function AdminGenerateTourButton({
               ? 'Render the 1:1 asset the iOS feed card plays (~2 min). Leaves the web video alone.'
               : title
           }
-          className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-bg px-3 py-2 text-sm text-ink hover:border-bronze disabled:cursor-not-allowed disabled:text-muted"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-bg px-3 py-2 text-sm text-ink hover:border-ink2 disabled:cursor-not-allowed disabled:text-muted"
         >
           <Sparkles size={14} aria-hidden />
           {busy ? 'Rendering…' : 'Generate iOS video (1:1)'}
@@ -130,7 +130,7 @@ export function AdminGenerateTourButton({
           title={
             enough ? 'Render the 16:9 asset web plays (~2 min). Leaves the iOS video alone.' : title
           }
-          className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-bg px-3 py-2 text-sm text-ink hover:border-bronze disabled:cursor-not-allowed disabled:text-muted"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-bg px-3 py-2 text-sm text-ink hover:border-ink2 disabled:cursor-not-allowed disabled:text-muted"
         >
           <Sparkles size={14} aria-hidden />
           {busy ? 'Rendering…' : 'Generate web video (16:9)'}

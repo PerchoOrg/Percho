@@ -239,7 +239,7 @@ export function LeadsLive({ initial }: { initial: LeadRow[] }) {
             placeholder="Search name, email, listing, neighborhood…"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            className="w-full rounded-full border border-line bg-surface px-3 py-1.5 text-xs text-ink placeholder-cream/40 focus:border-line-strong focus:outline-none sm:w-72"
+            className="w-full rounded-full border border-line bg-surface px-3 py-1.5 text-xs text-ink placeholder-surface/40 focus:border-line-strong focus:outline-none sm:w-72"
           />
           <a
             href="/api/leads/export"

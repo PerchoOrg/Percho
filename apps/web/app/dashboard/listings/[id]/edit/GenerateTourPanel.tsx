@@ -100,7 +100,7 @@ export function GenerateTourPanel({
         disabled={!enoughPhotos || busy}
         title={disabledReason}
         aria-disabled={!enoughPhotos || busy}
-        className="inline-flex items-center gap-1.5 rounded-md border border-line bg-bg px-3 py-1.5 text-ink2 text-xs hover:border-bronze hover:text-ink disabled:cursor-not-allowed disabled:text-muted"
+        className="inline-flex items-center gap-1.5 rounded-md border border-line bg-bg px-3 py-1.5 text-ink2 text-xs hover:border-ink2 hover:text-ink disabled:cursor-not-allowed disabled:text-muted"
       >
         <Sparkles size={14} aria-hidden="true" />
         {busy ? 'Rendering…' : 'Generate tour video'}

@@ -9,7 +9,7 @@
  * Behavior preserved:
  *   - 12x12 circle, cream/ink palette, backdrop-blur
  *   - 'rose' accent for Like (Xiaohongshu / TikTok convention)
- *   - 'gold' accent (cream-on-cream) for everything else
+ *   - ink accent (surface-on-surface) for everything else
  *   - optional badge pill (top-right)
  *   - renders <Link> if href is set + not disabled, else <button>
  */
@@ -51,25 +51,25 @@ export function ActionButton({
   const activeCls =
     activeColor === 'rose'
       ? 'border-rose-400/70 bg-rose-400/20 text-rose-400'
-      : 'border-cream/40 bg-cream/15 text-cream';
+      : 'border-surface/40 bg-surface/15 text-surface';
   const cls = `flex h-12 w-12 items-center justify-center rounded-full border backdrop-blur transition ${
     active
       ? activeCls
       : disabled
-        ? 'border-cream/10 bg-ink/30 text-cream/30'
-        : 'border-cream/20 bg-ink/40 text-cream hover:border-cream/50'
+        ? 'border-surface/10 bg-ink/30 text-surface/30'
+        : 'border-surface/20 bg-ink/40 text-surface hover:border-surface/50'
   }`;
   const badgeCls =
     badgeColor === 'red'
       ? '-right-1 -top-1 absolute rounded-full bg-red-500 px-1.5 py-0.5 font-semibold text-[9px] text-white leading-none tabular-nums'
-      : '-right-1 -top-1 absolute rounded-full bg-cream px-1.5 py-0.5 font-semibold text-[9px] text-ink leading-none tabular-nums';
+      : '-right-1 -top-1 absolute rounded-full bg-surface px-1.5 py-0.5 font-semibold text-[9px] text-ink leading-none tabular-nums';
   const inner = (
     <div className="flex flex-col items-center gap-1">
       <span className="relative">
         <span className={cls}>{children}</span>
         {badge ? <span className={badgeCls}>{badge}</span> : null}
       </span>
-      <span className="font-medium text-[10px] text-cream/80">{label}</span>
+      <span className="font-medium text-[10px] text-surface/80">{label}</span>
     </div>
   );
   if (href && !disabled) {

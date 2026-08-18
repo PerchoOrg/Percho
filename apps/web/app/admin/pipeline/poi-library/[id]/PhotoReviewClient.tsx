@@ -163,7 +163,7 @@ function PhotoTile({
       type="button"
       onClick={onOpen}
       aria-label={`Review photo ${photo.id.slice(0, 6)}`}
-      className={`group relative block overflow-hidden rounded-lg ${ring} focus:outline-none focus:ring-2 focus:ring-bronze`}
+      className={`group relative block overflow-hidden rounded-lg ${ring} focus:outline-none focus:ring-2 focus:ring-ink2`}
     >
       <div className="relative aspect-square">
         <Image src={url} alt="POI photo" fill sizes="200px" className="object-cover" unoptimized />

@@ -1,4 +1,4 @@
-import { LegalLayout } from '@/components/site/LegalLayout';
+import { LegalLayout } from '@/app/_components/LegalLayout';
 
 export const metadata = {
   title: 'Terms of Service — Percho',

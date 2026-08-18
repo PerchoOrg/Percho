@@ -21,7 +21,7 @@
  *             optimistically once the upload finishes.
  */
 
-import { type UploadedVideo, VideoUploader } from '@/components/dashboard/VideoUploader';
+import { type UploadedVideo, VideoUploader } from '@/app/_components/VideoUploader';
 import { Upload } from 'lucide-react';
 import { useCallback, useRef, useState } from 'react';
 import { type ListingPhotoRow, PhotoPanel, type PhotoPanelHandle } from './PhotoPanel';
@@ -169,7 +169,7 @@ export function MediaPanel({
             <button
               type="button"
               onClick={() => videoInputRef.current?.click()}
-              className="inline-flex items-center gap-2 rounded-md border border-line bg-bg px-3 py-1.5 text-ink2 text-xs hover:border-bronze hover:text-ink"
+              className="inline-flex items-center gap-2 rounded-md border border-line bg-bg px-3 py-1.5 text-ink2 text-xs hover:border-ink2 hover:text-ink"
             >
               <Upload size={14} aria-hidden="true" />
               Upload
@@ -189,7 +189,7 @@ export function MediaPanel({
             <button
               type="button"
               onClick={() => photoInputRef.current?.click()}
-              className="inline-flex items-center gap-2 rounded-md border border-line bg-bg px-3 py-1.5 text-ink2 text-xs hover:border-bronze hover:text-ink"
+              className="inline-flex items-center gap-2 rounded-md border border-line bg-bg px-3 py-1.5 text-ink2 text-xs hover:border-ink2 hover:text-ink"
             >
               <Upload size={14} aria-hidden="true" />
               Upload

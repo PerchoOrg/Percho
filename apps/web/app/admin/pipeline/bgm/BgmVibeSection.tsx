@@ -157,7 +157,7 @@ export function BgmVibeSection({ vibe, tracks }: { vibe: BgmVibe; tracks: BgmTra
 
   return (
     <section className="overflow-hidden rounded-2xl border border-line bg-surface">
-      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2 border-line border-b bg-cream/60 px-4 py-3 sm:px-5">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2 border-line border-b bg-surface/60 px-4 py-3 sm:px-5">
         <div>
           <h2 className="font-semibold text-base text-ink">{meta.label}</h2>
           <p className="text-ink2 text-xs">{meta.blurb}</p>
@@ -235,7 +235,7 @@ export function BgmVibeSection({ vibe, tracks }: { vibe: BgmVibe; tracks: BgmTra
             />
           ))}
           {rejected.length > 0 ? (
-            <li className="bg-cream/30 px-4 py-2 text-ink2 text-xs sm:px-5">
+            <li className="bg-surface/30 px-4 py-2 text-ink2 text-xs sm:px-5">
               Rejected — worker skips these
             </li>
           ) : null}
@@ -280,7 +280,7 @@ function TrackRow({
   return (
     <li
       className={`flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:gap-4 sm:px-5 ${
-        isRejected ? 'bg-cream/20' : ''
+        isRejected ? 'bg-surface/20' : ''
       }`}
     >
       <div className="min-w-0 flex-1">
@@ -435,7 +435,7 @@ function ImportPicker({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-full p-1 text-ink2 hover:bg-cream hover:text-ink"
+            className="rounded-full p-1 text-ink2 hover:bg-surface hover:text-ink"
             aria-label="Close"
           >
             <X size={16} />
@@ -487,7 +487,7 @@ function ImportPicker({
                 return (
                   <li
                     key={c.filename}
-                    className={`rounded px-2 py-2 ${checked ? 'bg-cream' : 'hover:bg-cream/50'}`}
+                    className={`rounded px-2 py-2 ${checked ? 'bg-surface' : 'hover:bg-surface/50'}`}
                   >
                     <div className="flex items-start gap-2">
                       <input

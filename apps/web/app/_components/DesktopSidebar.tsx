@@ -98,7 +98,7 @@ function NewButton() {
       <button
         type="button"
         onClick={open}
-        className="flex w-full items-center gap-3 rounded-lg border border-line bg-surface px-3 py-2.5 font-medium text-ink text-sm transition-colors hover:border-line-strong hover:bg-cream"
+        className="flex w-full items-center gap-3 rounded-lg border border-line bg-surface px-3 py-2.5 font-medium text-ink text-sm transition-colors hover:border-line-strong hover:bg-surface"
       >
         <Plus size={18} aria-hidden="true" strokeWidth={1.75} />
         <span>New</span>

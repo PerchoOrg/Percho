@@ -27,8 +27,8 @@ import { GridCard, GridCardCaption } from '@/app/_components/GridCard';
 import { GridFrame } from '@/app/_components/GridFrame';
 import { ListingGrid, type ListingGridItem } from '@/app/_components/ListingGrid';
 import { HeroControl } from '@/app/dashboard/_components/HeroControl';
+import { track } from '@/lib/analytics/track';
 import { thumbnailUrl } from '@/lib/cloudflare/stream';
-import { track } from '@/lib/events/track';
 import { linkForCard } from '@/lib/feed/link-for-card';
 import type { GeoJsonPolygonLike } from '@/lib/geo/point-in-polygon';
 import {
@@ -100,7 +100,7 @@ export function CommunityBody({
             className="absolute inset-0 h-full w-full object-cover"
           />
         ) : (
-          <div className="absolute inset-0 bg-gradient-to-br from-bronze/30 to-ink" />
+          <div className="absolute inset-0 bg-gradient-to-br from-ink2/30 to-ink" />
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-ink via-ink/60 to-ink/10" />
         {/* top-left ← Back chip — same HeroControl style as the
@@ -110,7 +110,7 @@ export function CommunityBody({
           <HeroControl href="/communities">← Back</HeroControl>
         </div>
         <div className="absolute inset-x-0 bottom-0 px-4 py-3 sm:px-6 sm:py-4">
-          <h1 className="font-semibold text-2xl text-cream tracking-tight sm:text-3xl">
+          <h1 className="font-semibold text-2xl text-surface tracking-tight sm:text-3xl">
             {community.name}
           </h1>
           {/* CTA folds back inline (variant I1).
@@ -119,16 +119,16 @@ export function CommunityBody({
            *   still reads as a sentence, not chrome. State-flips to
            *   "← Walk through" on the listings tab. */}
           <div className="mt-0.5 flex flex-wrap items-baseline gap-x-2 text-sm">
-            <span className="text-cream/90">
+            <span className="text-surface/90">
               {community.city ? `${community.city}, ${community.state}` : community.state}
             </span>
-            <span className="text-cream/60" aria-hidden="true">
+            <span className="text-surface/60" aria-hidden="true">
               ·
             </span>
             <button
               type="button"
               onClick={() => setTab(tab === 'videos' ? 'listings' : 'videos')}
-              className="font-semibold text-cream underline decoration-cream decoration-[1.5px] underline-offset-[3px] transition hover:decoration-cream/70"
+              className="font-semibold text-surface underline decoration-surface decoration-[1.5px] underline-offset-[3px] transition hover:decoration-surface/70"
             >
               {tab === 'videos' ? (
                 <>
@@ -142,7 +142,7 @@ export function CommunityBody({
             </button>
           </div>
           {community.description ? (
-            <p className="mt-1 max-w-2xl text-cream/80 text-xs sm:text-sm">
+            <p className="mt-1 max-w-2xl text-surface/80 text-xs sm:text-sm">
               {community.description}
             </p>
           ) : null}
@@ -381,7 +381,7 @@ function CommunityStats({
                 <a
                   key={n.name}
                   href={n.href}
-                  className="rounded-lg border border-line bg-bg p-2 transition hover:border-bronze"
+                  className="rounded-lg border border-line bg-bg p-2 transition hover:border-ink2"
                 >
                   {inner}
                 </a>

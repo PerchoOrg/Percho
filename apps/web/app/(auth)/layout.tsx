@@ -1,4 +1,4 @@
-import { BrandMark } from '@/components/site/BrandMark';
+import { BrandMark } from '@/app/_components/BrandMark';
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (

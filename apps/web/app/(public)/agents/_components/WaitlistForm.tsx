@@ -189,7 +189,7 @@ export function WaitlistForm({ presetEmail }: { presetEmail?: string }) {
       <button
         type="submit"
         disabled={disabled}
-        className="btn-gold mt-6 w-full rounded-lg py-3 text-base font-medium disabled:cursor-not-allowed disabled:opacity-50"
+        className="btn-primary mt-6 w-full rounded-lg py-3 text-base font-medium disabled:cursor-not-allowed disabled:opacity-50"
       >
         {disabled ? 'Sending…' : 'Sign me up →'}
       </button>

@@ -100,7 +100,7 @@ body {
   animation: heart-pop 0.45s ease;
 }
 
-.btn-gold {
+.btn-primary {
   background: var(--ink);
   color: #fbf8f3;
   font-weight: 500;
@@ -108,7 +108,7 @@ body {
   letter-spacing: 0.04em;
   transition: background 0.18s ease;
 }
-.btn-gold:hover {
+.btn-primary:hover {
   background: var(--brand-dark);
 }
 .btn-ghost {
