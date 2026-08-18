@@ -32,7 +32,7 @@ function TypeBadge({ type }: { type: BucketJobRow['type'] }) {
       : type === 'clip'
         ? 'bg-blue-500/15 text-blue-500'
         : type === 'tour'
-          ? 'bg-bronze/15 text-bronze'
+          ? 'bg-ink2/15 text-ink2'
           : 'bg-purple-500/15 text-purple-500';
   return (
     <span
@@ -191,7 +191,7 @@ const columns: AdminColumn<BucketJobRow>[] = [
       <span className="text-ink2 text-xs">
         {new Date(r.last_activity_at).toLocaleString()}
         {r.last_activity_at !== r.created_at && (
-          <span className="ml-1 rounded bg-bronze/10 px-1 text-[10px] text-bronze">re-run</span>
+          <span className="ml-1 rounded bg-ink2/10 px-1 text-[10px] text-ink2">re-run</span>
         )}
       </span>
     ),

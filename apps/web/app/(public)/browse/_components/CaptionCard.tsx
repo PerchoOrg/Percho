@@ -101,7 +101,7 @@ export function CaptionCard({
        * drop-shadow. `right-20` reserves the right rail for the action
        * icons. */}
       <div
-        className="absolute right-20 left-4 z-30 text-cream"
+        className="absolute right-20 left-4 z-30 text-surface"
         style={{
           bottom: 'max(1rem, env(safe-area-inset-bottom))',
           textShadow: '0 2px 8px rgba(0,0,0,0.7), 0 1px 2px rgba(0,0,0,0.5)',
@@ -113,12 +113,12 @@ export function CaptionCard({
         <div className="mt-1.5 text-[13px] leading-snug">{specs}</div>
         <div className="mt-1 text-[13px] leading-snug">{addressLine}</div>
         {hasDescription && preview.length > 0 && (
-          <div className="mt-1.5 text-[13px] text-cream/95 leading-snug">
+          <div className="mt-1.5 text-[13px] text-surface/95 leading-snug">
             <span>{preview}</span>
             <button
               type="button"
               onClick={openSheet}
-              className="ml-1 font-semibold text-cream/95 hover:text-cream"
+              className="ml-1 font-semibold text-surface/95 hover:text-surface"
               aria-haspopup="dialog"
               aria-expanded={open}
             >
@@ -130,7 +130,7 @@ export function CaptionCard({
           <button
             type="button"
             onClick={openSheet}
-            className="mt-2 inline-flex items-center gap-1 font-semibold text-[13px] text-cream/95 hover:text-cream"
+            className="mt-2 inline-flex items-center gap-1 font-semibold text-[13px] text-surface/95 hover:text-surface"
             aria-haspopup="dialog"
             aria-expanded={open}
           >

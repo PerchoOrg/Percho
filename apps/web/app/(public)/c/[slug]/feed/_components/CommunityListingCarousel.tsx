@@ -278,17 +278,17 @@ export function CommunityListingCarousel({
             type="button"
             onClick={onClose}
             aria-label="Back to neighborhood"
-            className="flex h-10 items-center gap-2 rounded-full border border-cream/20 bg-ink/55 pr-3 pl-2 text-cream backdrop-blur-md transition-colors hover:border-cream hover:text-cream"
+            className="flex h-10 items-center gap-2 rounded-full border border-surface/20 bg-ink/55 pr-3 pl-2 text-surface backdrop-blur-md transition-colors hover:border-surface hover:text-surface"
             style={{ touchAction: 'manipulation' }}
           >
             <BackArrowIcon />
             <span className="flex items-center gap-1.5 text-left leading-none">
               <span className="font-semibold text-[12px]">Back</span>
-              <span className="text-cream/50">·</span>
-              <span className="max-w-[38vw] truncate text-[11px] text-cream/70">{backLabel}</span>
+              <span className="text-surface/50">·</span>
+              <span className="max-w-[38vw] truncate text-[11px] text-surface/70">{backLabel}</span>
             </span>
           </button>
-          <div className="flex h-10 items-center rounded-full border border-cream/20 bg-ink/55 px-3 font-medium text-[12px] text-cream backdrop-blur-md tabular-nums">
+          <div className="flex h-10 items-center rounded-full border border-surface/20 bg-ink/55 px-3 font-medium text-[12px] text-surface backdrop-blur-md tabular-nums">
             {safeActive + 1} / {total}
           </div>
         </div>
@@ -496,7 +496,7 @@ function ListingSlide({
           )}
           {manuallyPaused && (
             <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-ink/55 text-cream backdrop-blur-md">
+              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-ink/55 text-surface backdrop-blur-md">
                 <svg
                   aria-hidden="true"
                   viewBox="0 0 24 24"
@@ -520,7 +520,7 @@ function ListingSlide({
        * contrast). `right-20` reserves space for the right rail (even
        * though community feed has no rail today, keep the gutter consistent). */}
       <div
-        className="absolute right-20 left-4 z-30 text-cream"
+        className="absolute right-20 left-4 z-30 text-surface"
         style={{
           bottom: 'max(1rem, env(safe-area-inset-bottom))',
           textShadow: '0 2px 8px rgba(0,0,0,0.7), 0 1px 2px rgba(0,0,0,0.5)',

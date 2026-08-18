@@ -243,18 +243,18 @@ export function CommunityCarousel({
             type="button"
             onClick={onClose}
             aria-label="Back to listing"
-            className="flex h-10 items-center gap-2 rounded-full border border-cream/20 bg-ink/55 pr-3 pl-2 text-cream backdrop-blur-md transition-colors hover:border-cream hover:text-cream"
+            className="flex h-10 items-center gap-2 rounded-full border border-surface/20 bg-ink/55 pr-3 pl-2 text-surface backdrop-blur-md transition-colors hover:border-surface hover:text-surface"
             style={{ touchAction: 'manipulation' }}
           >
             <span className="text-xl leading-none">‹</span>
             <span className="flex items-center gap-1.5 text-left leading-none">
               <span className="text-[12px] font-semibold">Back</span>
-              <span className="text-cream/50">·</span>
-              <span className="max-w-[38vw] truncate text-[11px] text-cream/70">{backLabel}</span>
+              <span className="text-surface/50">·</span>
+              <span className="max-w-[38vw] truncate text-[11px] text-surface/70">{backLabel}</span>
             </span>
           </button>
           <div className="flex items-center gap-2">
-            <div className="flex h-10 items-center rounded-full border border-cream/20 bg-ink/55 px-3 font-medium text-[12px] text-cream backdrop-blur-md tabular-nums">
+            <div className="flex h-10 items-center rounded-full border border-surface/20 bg-ink/55 px-3 font-medium text-[12px] text-surface backdrop-blur-md tabular-nums">
               {safeDisplayActive + 1} / {total}
             </div>
             {/* Share moved from top-right into
@@ -615,7 +615,7 @@ function CarouselSlide({
               height="34"
               viewBox="0 0 24 24"
               fill="currentColor"
-              className="ml-1 text-cream"
+              className="ml-1 text-surface"
               aria-hidden="true"
             >
               <path d="M8 5v14l11-7z" />

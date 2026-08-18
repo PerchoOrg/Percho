@@ -373,7 +373,7 @@ export function PhotoTable({
                       // The POI tab was dropped 2026-08-03; this is the way in.
                       <a
                         href={`/admin/pipeline/poi-library/${p.poi_id}`}
-                        className="text-bronze underline"
+                        className="text-ink2 underline"
                       >
                         {p.poi_name ?? 'POI'}
                       </a>
@@ -387,7 +387,7 @@ export function PhotoTable({
                   </Td>
                   <Td>
                     {t.category ?? <span className="text-ink2">—</span>}
-                    {t.isMaster && <div className="text-[10px] text-bronze">master</div>}
+                    {t.isMaster && <div className="text-[10px] text-ink2">master</div>}
                     {t.usable === false && <div className="text-[10px] text-red-600">unusable</div>}
                   </Td>
                   {!isListing && dropReasons && (
@@ -696,7 +696,7 @@ export function PhotoTable({
                         />
                       </button>
                     ) : (
-                      <div className="mt-1 text-[10px] text-ink3">pending enhance</div>
+                      <div className="mt-1 text-[10px] text-ink2">pending enhance</div>
                     )}
                   </Td>
                   <Td className="max-w-[280px] text-ink2">

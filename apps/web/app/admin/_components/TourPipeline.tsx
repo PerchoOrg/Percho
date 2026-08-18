@@ -303,7 +303,7 @@ export function TourPipeline({
               </span>
             )}
             {lat != null && lng != null && (
-              <span className="text-ink3 text-xs font-normal">
+              <span className="text-ink2 text-xs font-normal">
                 {' '}
                 {lat.toFixed(4)}, {lng.toFixed(4)}
               </span>
@@ -328,7 +328,7 @@ export function TourPipeline({
             type="button"
             onClick={() => void runAll()}
             disabled={!!running}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-bg px-3 py-2 text-sm text-ink hover:border-bronze disabled:cursor-not-allowed disabled:text-muted"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-bg px-3 py-2 text-sm text-ink hover:border-ink2 disabled:cursor-not-allowed disabled:text-muted"
           >
             <Play size={14} aria-hidden />
             Run all
@@ -387,15 +387,15 @@ export function TourPipeline({
                 className="flex items-center gap-1.5 text-left"
               >
                 {(collapsed[s.name] ?? true) ? (
-                  <ChevronRight size={15} className="text-ink3" />
+                  <ChevronRight size={15} className="text-ink2" />
                 ) : (
-                  <ChevronDown size={15} className="text-ink3" />
+                  <ChevronDown size={15} className="text-ink2" />
                 )}
                 <h3 className="flex items-center gap-1.5 text-sm font-semibold">
                   {s.label}
                   {done && <CheckCircle2 size={13} className="text-emerald-600" />}
                   {researching && (
-                    <Loader2 size={13} className="animate-spin text-bronze" aria-hidden />
+                    <Loader2 size={13} className="animate-spin text-ink2" aria-hidden />
                   )}
                 </h3>
               </button>
@@ -403,7 +403,7 @@ export function TourPipeline({
                 type="button"
                 onClick={() => void runStep(s.name, selectedRun, s.name === 'assemble')}
                 disabled={!!running}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-bg px-3 py-1.5 text-xs text-ink hover:border-bronze disabled:cursor-not-allowed disabled:text-muted"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-bg px-3 py-1.5 text-xs text-ink hover:border-ink2 disabled:cursor-not-allowed disabled:text-muted"
               >
                 {running === s.name || researching ? (
                   <Loader2 size={13} className="animate-spin" />
@@ -419,7 +419,7 @@ export function TourPipeline({
               <>
                 {researching && (
                   <div className="mt-2 flex items-center gap-2 text-xs text-ink2">
-                    <Loader2 size={13} className="animate-spin text-bronze" aria-hidden />
+                    <Loader2 size={13} className="animate-spin text-ink2" aria-hidden />
                     {researchProgress?.agents_done?.length ?? 0}/2 agents done · {runSeconds}s
                     elapsed
                   </div>
@@ -443,7 +443,7 @@ export function TourPipeline({
                     />
                   </div>
                 )}
-                {!done && !result && <div className="mt-2 text-xs text-ink3">Not run yet.</div>}
+                {!done && !result && <div className="mt-2 text-xs text-ink2">Not run yet.</div>}
               </>
             )}
           </section>
@@ -503,7 +503,7 @@ function StepResult({
           <span className={r.agents?.gemini_a?.ok ? 'text-emerald-600' : 'text-red-600'}>
             gemini_a {r.agents?.gemini_a?.ok ? `${geminiAPois} POIs` : 'failed'}
             {r.agents?.gemini_a?.usage && (
-              <span className="text-ink3">
+              <span className="text-ink2">
                 {' '}
                 · {r.agents.gemini_a.usage.input_tokens?.toLocaleString()} in /{' '}
                 {r.agents.gemini_a.usage.output_tokens?.toLocaleString()} out
@@ -516,7 +516,7 @@ function StepResult({
           <span className={r.agents?.gemini_b?.ok ? 'text-emerald-600' : 'text-red-600'}>
             gemini_b {r.agents?.gemini_b?.ok ? `${geminiBPois} POIs` : 'failed'}
             {r.agents?.gemini_b?.usage && (
-              <span className="text-ink3">
+              <span className="text-ink2">
                 {' '}
                 · {r.agents.gemini_b.usage.input_tokens?.toLocaleString()} in /{' '}
                 {r.agents.gemini_b.usage.output_tokens?.toLocaleString()} out
@@ -741,7 +741,7 @@ function StepResult({
         {r.phase && r.phase !== 'done' && (
           // The step takes minutes; without this the panel shows the previous
           // run's numbers the whole time and looks like it did nothing.
-          <div className="flex items-center gap-2 rounded-xl border border-bronze/30 bg-bronze/5 px-3 py-2 text-xs text-ink2">
+          <div className="flex items-center gap-2 rounded-xl border border-ink2/30 bg-ink2/5 px-3 py-2 text-xs text-ink2">
             <Loader2 size={12} className="animate-spin" />
             {r.phase === 'tagging'
               ? 'Photos fetched — enhancing and tagging them now. The shot list appears once the plan is built.'
@@ -769,7 +769,7 @@ function StepResult({
                 </span>
               )}
               {r.plan?.curator && (
-                <span className="text-ink3">
+                <span className="text-ink2">
                   {r.plan.curator.model} · {r.plan.curator.annotated} annotated
                   {r.plan.curator.attempts > 1 ? ` · ${r.plan.curator.attempts} attempts` : ''}
                 </span>
@@ -832,7 +832,7 @@ function StepResult({
               plan={planByPhoto}
             />
           ) : (
-            <div className="text-xs text-ink3">No selected photos yet.</div>
+            <div className="text-xs text-ink2">No selected photos yet.</div>
           )}
         </div>
         <div className="space-y-1">
@@ -849,7 +849,7 @@ function StepResult({
               )}
             />
           ) : (
-            <div className="text-xs text-ink3">Nothing dropped.</div>
+            <div className="text-xs text-ink2">Nothing dropped.</div>
           )}
         </div>
       </div>

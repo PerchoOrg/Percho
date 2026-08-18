@@ -242,7 +242,7 @@ export function DraftAddressPanel({ listingId }: { listingId: string }) {
         <button
           type="submit"
           disabled={!resolved || isPending}
-          className="rounded bg-ink px-4 py-2 font-medium text-cream disabled:opacity-50"
+          className="rounded bg-ink px-4 py-2 font-medium text-surface disabled:opacity-50"
         >
           {isPending ? 'Saving…' : 'Save address'}
         </button>

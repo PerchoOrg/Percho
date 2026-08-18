@@ -59,7 +59,7 @@ export function NearbyRadiusPref() {
         step={1}
         value={radius}
         onChange={(e) => update(Number(e.target.value))}
-        className="mt-3 w-full accent-gold"
+        className="mt-3 w-full accent-ink"
       />
       <div className="mt-1 flex justify-between text-muted text-[10px]">
         <span>{MIN_RADIUS} mi</span>

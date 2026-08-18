@@ -49,7 +49,7 @@ function TabButton({ tab, active }: { tab: Tab; active: boolean }) {
         active ? 'font-medium text-ink' : 'text-muted hover:text-ink'
       }`}
     >
-      {/* Aman idiom: 1px ink hairline above the active tab. Cream-on-cream
+      {/* Aman idiom: 1px ink hairline above the active tab. Surface-on-surface
           color contrast alone wasn't readable (Tianrou, 2026-06-18). */}
       {active && (
         <span

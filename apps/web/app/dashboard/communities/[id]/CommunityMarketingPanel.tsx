@@ -217,7 +217,7 @@ export function CommunityMarketingPanel({ communityId }: Props) {
             type="button"
             onClick={onGenerate}
             disabled={state === 'loading'}
-            className="inline-flex items-center gap-2 rounded-md bg-ink px-4 py-2 font-medium text-cream text-sm transition hover:opacity-90 disabled:opacity-60"
+            className="inline-flex items-center gap-2 rounded-md bg-ink px-4 py-2 font-medium text-surface text-sm transition hover:opacity-90 disabled:opacity-60"
           >
             {state === 'loading' ? (
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -255,7 +255,7 @@ export function CommunityMarketingPanel({ communityId }: Props) {
                   type="button"
                   onClick={onSave}
                   disabled={saving}
-                  className="inline-flex items-center gap-1 rounded border border-line bg-bg px-2 py-1 text-ink text-xs hover:border-bronze disabled:opacity-60"
+                  className="inline-flex items-center gap-1 rounded border border-line bg-bg px-2 py-1 text-ink text-xs hover:border-ink2 disabled:opacity-60"
                 >
                   {saving ? (
                     <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -311,7 +311,7 @@ export function CommunityMarketingPanel({ communityId }: Props) {
                       <button
                         type="button"
                         onClick={() => void commitEdit()}
-                        className="inline-flex items-center gap-1 text-ink text-xs hover:text-bronze"
+                        className="inline-flex items-center gap-1 text-ink text-xs hover:text-ink2"
                       >
                         <Save className="h-3.5 w-3.5" /> Save edit
                       </button>

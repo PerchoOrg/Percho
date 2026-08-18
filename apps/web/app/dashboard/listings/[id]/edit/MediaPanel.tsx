@@ -169,7 +169,7 @@ export function MediaPanel({
             <button
               type="button"
               onClick={() => videoInputRef.current?.click()}
-              className="inline-flex items-center gap-2 rounded-md border border-line bg-bg px-3 py-1.5 text-ink2 text-xs hover:border-bronze hover:text-ink"
+              className="inline-flex items-center gap-2 rounded-md border border-line bg-bg px-3 py-1.5 text-ink2 text-xs hover:border-ink2 hover:text-ink"
             >
               <Upload size={14} aria-hidden="true" />
               Upload
@@ -189,7 +189,7 @@ export function MediaPanel({
             <button
               type="button"
               onClick={() => photoInputRef.current?.click()}
-              className="inline-flex items-center gap-2 rounded-md border border-line bg-bg px-3 py-1.5 text-ink2 text-xs hover:border-bronze hover:text-ink"
+              className="inline-flex items-center gap-2 rounded-md border border-line bg-bg px-3 py-1.5 text-ink2 text-xs hover:border-ink2 hover:text-ink"
             >
               <Upload size={14} aria-hidden="true" />
               Upload

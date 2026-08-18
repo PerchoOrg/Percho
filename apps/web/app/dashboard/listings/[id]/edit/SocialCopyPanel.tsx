@@ -339,7 +339,7 @@ export function SocialCopyPanel({ listingId }: Props) {
               type="button"
               onClick={onGenerate}
               disabled={state === 'loading' || highlightsOver}
-              className="inline-flex items-center gap-2 rounded-lg bg-ink px-4 py-2 font-medium text-cream text-sm transition hover:opacity-90 disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-lg bg-ink px-4 py-2 font-medium text-surface text-sm transition hover:opacity-90 disabled:opacity-50"
             >
               {state === 'loading' ? (
                 <>

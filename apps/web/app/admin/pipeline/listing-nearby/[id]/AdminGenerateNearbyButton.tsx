@@ -70,7 +70,7 @@ export function AdminGenerateNearbyButton({ listingId }: { listingId: string }) 
             setDialogOpen(true);
           }}
           disabled={busy}
-          className="inline-flex items-center gap-1.5 rounded-md border border-line bg-surface px-3 py-1.5 text-ink text-xs hover:border-bronze hover:text-bronze disabled:opacity-50"
+          className="inline-flex items-center gap-1.5 rounded-md border border-line bg-surface px-3 py-1.5 text-ink text-xs hover:border-ink2 hover:text-ink2 disabled:opacity-50"
         >
           {busy ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
           Generate nearby videos
@@ -102,7 +102,7 @@ export function AdminGenerateNearbyButton({ listingId }: { listingId: string }) 
                 type="checkbox"
                 checked={force}
                 onChange={(e) => setForce(e.target.checked)}
-                className="h-4 w-4 accent-bronze"
+                className="h-4 w-4 accent-ink2"
               />
               Force re-generate (replace buckets that already have a live video)
             </label>
@@ -120,7 +120,7 @@ export function AdminGenerateNearbyButton({ listingId }: { listingId: string }) 
                 type="button"
                 onClick={fire}
                 disabled={busy}
-                className="inline-flex items-center gap-1.5 rounded-md border border-bronze bg-bronze px-3 py-1.5 text-white text-xs hover:opacity-90 disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 rounded-md border border-ink2 bg-ink2 px-3 py-1.5 text-white text-xs hover:opacity-90 disabled:opacity-50"
               >
                 {busy ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
                 {busy ? 'Queueing…' : 'Continue'}

@@ -68,7 +68,7 @@ export function ForgotPasswordForm() {
       <button
         type="submit"
         disabled={status === 'sending' || email.length === 0}
-        className="btn-gold mt-6 w-full rounded-lg py-3 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50"
+        className="btn-primary mt-6 w-full rounded-lg py-3 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50"
       >
         {status === 'sending' ? 'Sending…' : 'Send code'}
       </button>

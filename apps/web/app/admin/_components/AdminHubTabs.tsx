@@ -51,7 +51,7 @@ export function AdminHubTabs({ tabs }: { tabs: AdminHubTab[] }) {
               <span
                 className={`relative flex items-center justify-center rounded-full border bg-surface transition ${
                   isActive
-                    ? 'h-14 w-14 border-2 border-ink bg-cream shadow-[0_2px_10px_rgba(49,49,49,0.12)] sm:h-16 sm:w-16'
+                    ? 'h-14 w-14 border-2 border-ink bg-surface shadow-[0_2px_10px_rgba(49,49,49,0.12)] sm:h-16 sm:w-16'
                     : 'h-14 w-14 border-line group-hover:-translate-y-0.5 group-hover:border-ink2 sm:h-16 sm:w-16'
                 }`}
                 aria-hidden

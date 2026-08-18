@@ -80,7 +80,7 @@ export function SurfacePreview({
                 {media}
               </div>
               <div
-                className="flex w-full flex-col justify-center gap-1.5 bg-cream px-3"
+                className="flex w-full flex-col justify-center gap-1.5 bg-surface px-3"
                 style={{ flex: 1 - HERO_RATIO }}
                 aria-hidden
               >

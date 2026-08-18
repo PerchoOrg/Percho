@@ -303,7 +303,7 @@ function VideoCard({
       {/* Pause indicator. */}
       {paused && shouldMount && (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-          <div className="flex h-20 w-20 items-center justify-center rounded-full bg-black/40 text-cream backdrop-blur">
+          <div className="flex h-20 w-20 items-center justify-center rounded-full bg-black/40 text-surface backdrop-blur">
             <svg viewBox="0 0 24 24" width={36} height={36} fill="currentColor" aria-hidden="true">
               <path d="M8 5v14l11-7z" />
             </svg>
@@ -318,14 +318,14 @@ function VideoCard({
        * tells the buyer what they're watching ("A walk through the
        * neighborhood, block by block."). When we add curated descriptions
        * (post-V1), they replace the blurb here. */}
-      <div className="absolute right-20 bottom-20 left-4 text-cream">
+      <div className="absolute right-20 bottom-20 left-4 text-surface">
         {cat && (
-          <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-cream/40 bg-cream/15 px-3 py-1 backdrop-blur">
-            <span className="font-medium text-cream text-xs">{cat.label}</span>
+          <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-surface/40 bg-surface/15 px-3 py-1 backdrop-blur">
+            <span className="font-medium text-surface text-xs">{cat.label}</span>
           </div>
         )}
         {cat?.blurb && (
-          <p className="text-cream/85 text-sm leading-snug drop-shadow">{cat.blurb}</p>
+          <p className="text-surface/85 text-sm leading-snug drop-shadow">{cat.blurb}</p>
         )}
       </div>
     </section>
@@ -567,15 +567,15 @@ export function CommunityVideoFeed({
           type="button"
           onClick={onBack}
           aria-label={`Back to ${community.name}`}
-          className="flex h-11 w-11 items-center justify-center rounded-full border border-cream/20 bg-ink/55 text-cream backdrop-blur-md transition-colors hover:border-cream hover:text-cream"
+          className="flex h-11 w-11 items-center justify-center rounded-full border border-surface/20 bg-ink/55 text-surface backdrop-blur-md transition-colors hover:border-surface hover:text-surface"
           style={{ touchAction: 'manipulation' }}
         >
           <BackArrowIcon />
         </button>
-        <div className="rounded-full border border-cream/20 bg-ink/55 px-3 py-1.5 backdrop-blur-md">
-          <span className="font-medium text-cream text-xs">{community.name}</span>
+        <div className="rounded-full border border-surface/20 bg-ink/55 px-3 py-1.5 backdrop-blur-md">
+          <span className="font-medium text-surface text-xs">{community.name}</span>
           {community.city && (
-            <span className="ml-1.5 text-cream/60 text-xs">
+            <span className="ml-1.5 text-surface/60 text-xs">
               · {community.city}, {community.state}
             </span>
           )}

@@ -283,7 +283,7 @@ export function CommunityNearbyPanel({
             type="button"
             onClick={handleDiscover}
             disabled={pending}
-            className="inline-flex items-center gap-2 rounded-md border border-line bg-bg px-3 py-1.5 text-ink2 text-xs hover:border-bronze hover:text-ink disabled:opacity-50"
+            className="inline-flex items-center gap-2 rounded-md border border-line bg-bg px-3 py-1.5 text-ink2 text-xs hover:border-ink2 hover:text-ink disabled:opacity-50"
           >
             {pending ? (
               <Loader2 size={14} className="animate-spin" aria-hidden />
@@ -342,7 +342,7 @@ export function CommunityNearbyPanel({
                     <button
                       type="button"
                       onClick={() => toggleBucket(bucket)}
-                      className="mt-2 text-xs text-accent hover:underline"
+                      className="mt-2 text-xs text-ink hover:underline"
                     >
                       {isExpanded
                         ? `Show top ${BUCKET_DEFAULT_LIMIT} only`
@@ -402,7 +402,7 @@ function PoiRow({
             {photoCount > 0 ? (
               <button
                 type="button"
-                className="text-bronze hover:underline"
+                className="text-ink2 hover:underline"
                 onClick={() => setExpanded((e) => !e)}
               >
                 {expanded ? 'Hide' : 'Show'} {photoCount} photo
@@ -422,7 +422,7 @@ function PoiRow({
             }
             onClick={onFetchPhotos}
             disabled={busy}
-            className="rounded p-1 text-muted hover:bg-surface hover:text-bronze disabled:opacity-40"
+            className="rounded p-1 text-muted hover:bg-surface hover:text-ink2 disabled:opacity-40"
           >
             {busy ? (
               <Loader2 size={16} className="animate-spin" />
@@ -597,7 +597,7 @@ function PhotoTile({
         type="button"
         onClick={onOpen}
         aria-label={author ? `Review photo by ${author}` : 'Review photo'}
-        className={`group relative block overflow-hidden rounded ${ring} focus:outline-none focus:ring-2 focus:ring-bronze`}
+        className={`group relative block overflow-hidden rounded ${ring} focus:outline-none focus:ring-2 focus:ring-ink2`}
       >
         <div className="relative aspect-square">
           <Image

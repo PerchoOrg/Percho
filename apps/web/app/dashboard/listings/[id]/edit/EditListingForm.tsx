@@ -636,7 +636,7 @@ export function EditListingForm({ listingId, initial, communities }: Props) {
             void saveNow();
           }}
           disabled={saveState === 'saving'}
-          className="rounded bg-ink px-4 py-2 text-sm font-medium text-cream transition hover:opacity-90 disabled:opacity-50"
+          className="rounded bg-ink px-4 py-2 text-sm font-medium text-surface transition hover:opacity-90 disabled:opacity-50"
         >
           {saveState === 'saving' ? 'Saving…' : 'Save'}
         </button>

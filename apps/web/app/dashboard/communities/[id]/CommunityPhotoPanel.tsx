@@ -301,7 +301,7 @@ export const CommunityPhotoPanel = forwardRef<CommunityPhotoPanelHandle, Props>(
           <button
             type="button"
             onClick={() => inputRef.current?.click()}
-            className="inline-flex items-center gap-2 rounded-md border border-line bg-bg px-4 py-2 text-ink2 text-sm hover:border-bronze hover:text-ink"
+            className="inline-flex items-center gap-2 rounded-md border border-line bg-bg px-4 py-2 text-ink2 text-sm hover:border-ink2 hover:text-ink"
           >
             <Upload size={16} aria-hidden="true" />
             Add photos as “{meta.label}”
@@ -411,7 +411,7 @@ function PhotoCard({
         </div>
       )}
       {isCover ? (
-        <span className="absolute top-1.5 left-1.5 rounded bg-ink px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-cream">
+        <span className="absolute top-1.5 left-1.5 rounded bg-ink px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-surface">
           Cover
         </span>
       ) : null}

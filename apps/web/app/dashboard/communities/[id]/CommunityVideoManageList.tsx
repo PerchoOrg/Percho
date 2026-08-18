@@ -198,7 +198,7 @@ function ManageRow({
         <div className="flex flex-wrap items-center gap-2">
           <span className="truncate text-sm text-ink">{video.title ?? '(untitled)'}</span>
           {isCover ? (
-            <span className="flex-shrink-0 rounded bg-ink px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-cream">
+            <span className="flex-shrink-0 rounded bg-ink px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-surface">
               Cover
             </span>
           ) : null}

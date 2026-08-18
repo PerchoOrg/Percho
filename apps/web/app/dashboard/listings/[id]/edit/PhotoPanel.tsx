@@ -307,7 +307,7 @@ export const PhotoPanel = forwardRef<PhotoPanelHandle, Props>(function PhotoPane
                 />
 
                 {isCover ? (
-                  <span className="absolute top-1.5 left-1.5 rounded bg-ink px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-cream">
+                  <span className="absolute top-1.5 left-1.5 rounded bg-ink px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-surface">
                     Cover
                   </span>
                 ) : null}
@@ -351,7 +351,7 @@ export const PhotoPanel = forwardRef<PhotoPanelHandle, Props>(function PhotoPane
                   {tagChips.map((t) => (
                     <span
                       key={t}
-                      className="rounded border border-line bg-cream px-1.5 py-0.5 text-[10px] text-ink2"
+                      className="rounded border border-line bg-surface px-1.5 py-0.5 text-[10px] text-ink2"
                     >
                       {t.replace(/_/g, ' ')}
                     </span>
@@ -393,7 +393,7 @@ export const PhotoPanel = forwardRef<PhotoPanelHandle, Props>(function PhotoPane
         <button
           type="button"
           onClick={() => inputRef.current?.click()}
-          className="inline-flex items-center gap-2 rounded-md border border-line bg-bg px-4 py-2 text-ink2 text-sm hover:border-bronze hover:text-ink"
+          className="inline-flex items-center gap-2 rounded-md border border-line bg-bg px-4 py-2 text-ink2 text-sm hover:border-ink2 hover:text-ink"
         >
           <Upload size={16} aria-hidden="true" />
           Add photos

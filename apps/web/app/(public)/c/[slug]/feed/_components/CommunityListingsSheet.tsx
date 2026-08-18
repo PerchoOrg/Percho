@@ -120,7 +120,7 @@ export function CommunityListingsSheet({
               No homes for sale in this neighborhood yet.
             </div>
           ) : (
-            <ul className="divide-y divide-cream/10">
+            <ul className="divide-y divide-surface/10">
               {listings.map((l, idx) => {
                 let poster: string | null = null;
                 if (l.heroCfVideoId) {
