@@ -13,7 +13,7 @@
  * rather than borrowing redline glyphs.
  *
  * `assets/fonts/TabBarIcons.ttf` is a 4-glyph subset of Phosphor regular,
- * built by `scripts/build-tabbar-icon-font.py` (SVG -> minimal TTF via
+ * built by `scripts/icon-fonts/build-tabbar-icon-font.py` (SVG -> minimal TTF via
  * fontTools, ~1.1 KB). Codepoints match the FILL weight's, so they line up
  * with `assets/icons/phosphor-selection.json`.
  *
@@ -38,7 +38,7 @@ export const TAB_BAR_GLYPH: Record<TabBarIconName, string> = {
  * Width of each glyph's drawing, as a fraction of the em box (measured).
  *
  * The TabBar font is a subset of the OFFICIAL Phosphor regular TTF (see
- * `scripts/build-tabbar-icon-font.py`) — not the earlier hand-built SVG→TTF
+ * `scripts/icon-fonts/build-tabbar-icon-font.py`) — not the earlier hand-built SVG→TTF
  * conversion, whose winding broke on CoreText and rendered every icon as a
  * solid blob (owner: "三个一模一样").
  */

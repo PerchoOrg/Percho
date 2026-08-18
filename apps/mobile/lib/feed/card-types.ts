@@ -14,7 +14,8 @@
  * `generateDiscoveryFeed` lands. Type-only imports of the shared dim vocabulary
  * are erased at compile time and cost nothing at runtime.
  */
-import type { CardIconName, DimKey } from "@percho/shared";
+import type { CardIconName } from "@percho/shared/icons";
+import type { DimKey } from "@percho/shared/types";
 import type { GeoUnit } from "./geo-unit";
 
 /**

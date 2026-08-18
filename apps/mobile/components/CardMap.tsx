@@ -4,7 +4,7 @@
  * ── This renders a CACHED image, not a live API call ─────────────────────────
  *
  * `url` is a public Supabase Storage URL produced once by
- * `scripts/backfill_listing_maps.py`. Two reasons it is not a live Static Maps
+ * `scripts/maintenance/backfill_listing_maps.py`. Two reasons it is not a live Static Maps
  * fetch:
  *
  *   1. Cost. The card's map is a fixed picture of a fixed coordinate, so a live
@@ -28,7 +28,7 @@
  * Two owner instructions, both literal. 「去掉地图上的字」 removed the "Explore
  * area" caption that used to sit on the tile — the Explore button below it says
  * the same thing without covering the map. The pre-rendered tile itself also has
- * Google's label layer switched off (see `scripts/backfill_listing_maps.py`), so
+ * Google's label layer switched off (see `scripts/maintenance/backfill_listing_maps.py`), so
  * street names are gone as well; the Google watermark and attribution are
  * mandated by the Static Maps terms and cannot be styled away.
  *
@@ -67,7 +67,7 @@ export function CardMap({ url, diameter = 132, onPress }: CardMapProps) {
 			<Image source={{ uri: url }} style={styles.img} resizeMode="cover" />
 			{/*
 			 * Our own centre dot. The pre-rendered tile deliberately carries NO
-			 * Google marker (see `scripts/backfill_listing_maps.py`) — its teardrop
+			 * Google marker (see `scripts/maintenance/backfill_listing_maps.py`) — its teardrop
 			 * pin doesn't match anything else in the app, and keeping both drew two
 			 * overlapping indicators. The tile is centred on the listing, so the
 			 * geometric centre of the circle IS the house.

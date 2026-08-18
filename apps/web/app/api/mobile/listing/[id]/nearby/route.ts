@@ -5,7 +5,7 @@
  *   → 200 { center, pois[] } | 404 | 500
  *
  * The card's map thumbnail is a cached, non-interactive picture (see
- * `scripts/backfill_listing_maps.py`). Tapping it opens the real map, and THAT
+ * `scripts/maintenance/backfill_listing_maps.py`). Tapping it opens the real map, and THAT
  * is the only place we spend a request to build POI geometry — the feed itself
  * never does.
  *

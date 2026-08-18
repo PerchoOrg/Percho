@@ -44,7 +44,7 @@ worker outside Vercel picks it up. Anything slow lives behind that boundary.
 |---|---|
 | `apps/web/` | The product. Next.js 14 App Router — buyer-facing pages, the agent dashboard, the admin pipeline console, and the HTTP API. Everything a browser touches. |
 | `apps/mobile/` | Buyer-facing iOS app. Expo + expo-router. Reads the web app's `/api/mobile/*` routes; owns no schema. |
-| `packages/shared/` | Types and constants both apps must agree on — persona, traits, scope, dims, pools. The only cross-app import. Keep it dependency-free. |
+| `packages/shared/` | Types and constants both apps must agree on. The only cross-app import. Keep it dependency-free, and import a module by subpath (`@percho/shared/types`) — there is no barrel. |
 | `scripts/` | Everything that runs outside Vercel: long-running workers, one-shot pipelines, admin utilities, prototypes. |
 | `supabase/` | Schema source of truth. Migrations, RLS policies, edge functions, local config. |
 | `docs/` | Reference material a human reads. Not process logs — those go to `docs/archive/`. |
@@ -156,6 +156,8 @@ worker or a one-shot job.
 | `k12/` | School data and photo upload. |
 | `upload-bgm/` | Mirrors the local BGM library into storage. |
 | `admin/` | Operator utilities — curator eval, production smoke test, demo assets. Allowed to use the service-role key (CLAUDE.md §3). |
+| `icon-fonts/` | Rebuilds the mobile app's subset icon fonts from `assets/icons/`. |
+| `maintenance/` | One-off backfills and requeues run by hand against production. |
 | `prototypes/`, `spikes/` | Experiments. Nothing in the product depends on them; treat as disposable. |
 
 ---

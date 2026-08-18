@@ -56,7 +56,7 @@
  *     no reason at all.
  */
 
-import type { CardIconName } from '@percho/shared';
+import type { CardIconName } from '@percho/shared/icons';
 
 /** One tile: the resident's own word, a glyph, and optionally one factual line. */
 export interface CommunityReason {

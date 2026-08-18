@@ -17,7 +17,7 @@
  *
  * PURE: no react / zustand / expo imports.
  */
-import type { DimKey } from "@percho/shared";
+import type { DimKey } from "@percho/shared/types";
 import type { GeoSignal } from "./feed/signals";
 
 /** The four pillar dims, mirrored from the community four-pillar naming. */

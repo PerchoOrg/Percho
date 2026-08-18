@@ -58,7 +58,7 @@
  *   'nightlife' — no attribute in the vocabulary honestly means nightlife.
  */
 
-import type { DimKey } from '@percho/shared';
+import type { DimKey } from '@percho/shared/types';
 
 /**
  * Resident-stated attributes. Highest-confidence source: a direct claim about

@@ -25,10 +25,10 @@
  * added here and to `ICON_GLYPH` but not re-subset renders BLANK on device and
  * nowhere else. Full procedure in `assets/icons/README.md`; short version:
  *
- *   1. add to `GLYPHS` in `scripts/build-icon-font.py`
+ *   1. add to `GLYPHS` in `scripts/icon-fonts/build-icon-font.py`
  *   2. add the same key to `ICON_GLYPH` in `icon-font.ts`
  *   3. add it to the union below
- *   4. `python3 scripts/build-icon-font.py`
+ *   4. `python3 scripts/icon-fonts/build-icon-font.py`
  *   5. `cd apps/mobile && npx vitest run theme/icon-font.test.ts`
  *
  * Step 5 fails loudly if the table and the .ttf disagree, so this cannot ship

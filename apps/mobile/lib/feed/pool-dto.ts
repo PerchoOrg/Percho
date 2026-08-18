@@ -1,3 +1,4 @@
+import { DIMS } from "@percho/shared/dims";
 /**
  * Wire → engine narrowing for `/api/mobile/feed`'s pool payload.
  *
@@ -11,8 +12,9 @@
  *
  * Pure: no react/react-native/expo/zustand, so it is testable on its own.
  */
-import type { CardIconName, DimKey } from "@percho/shared";
-import { CARD_ICON_NAMES, DIMS } from "@percho/shared";
+import type { CardIconName } from "@percho/shared/icons";
+import { CARD_ICON_NAMES } from "@percho/shared/icons";
+import type { DimKey } from "@percho/shared/types";
 import type {
 	CommunityCardV3,
 	CommunityReasonV3,

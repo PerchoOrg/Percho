@@ -1,4 +1,4 @@
-import type { DimKey } from "@percho/shared";
+import type { DimKey } from "@percho/shared/types";
 import { StyleSheet, Text, View } from "react-native";
 import Animated, {
 	type SharedValue,
