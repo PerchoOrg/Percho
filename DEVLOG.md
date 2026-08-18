@@ -16,6 +16,62 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-18 19:00 UTC — communities.kind: 'neighborhood' | 'subdivision'; Aberdeen marked
+
+**Objective**: owner is redefining the community content level. The ~8.7k
+Nextdoor-seeded rows are informal areas with no legal boundary; the content
+system will be built on builder / master-planned / gated / HOA communities
+("clear, verifiable boundaries", with amenities and quality photos). Three
+context levels going forward: city, community, listing. First step: a `kind`
+column distinguishing the two populations, with Aberdeen (Suwanee) as the
+first subdivision. Branch `phase55/community-kind` (ws1).
+
+**Actions**:
+- Migration `20260818120000_communities_kind.sql`: `kind text not null
+  default 'neighborhood' check (kind in ('neighborhood','subdivision'))`,
+  plus a data update marking Aberdeen. Pushed to production.
+- Regenerated `database.types.ts`. Local stack wasn't running, so generated
+  with `--linked` instead of the script's `--local` — remote equals the
+  migration chain right after a push, so the source is equivalent.
+- Verified via anon-key query: exactly one `kind='subdivision'` row,
+  `aberdeen-2` / Suwanee.
+
+**Decisions**:
+- Naming per owner discussion: `subdivision` (the FMLS field is literally
+  "Subdivision/Complex", so future MLS matching aligns) vs `neighborhood`
+  (what Nextdoor itself calls its areas). "curated" rejected by owner.
+- Aberdeen matched **by id** in the migration: the bare `aberdeen` slug
+  belongs to an unrelated Nextdoor row in Stone Mountain; Suwanee's is
+  `aberdeen-2`. Update is a no-op on databases without the row.
+- Nextdoor rows kept as-is (owner chose coexistence over replacement) —
+  `listings.community_id` FKs stay intact, nothing filters on `kind` yet.
+- Amenities/boundary columns deliberately deferred until the first
+  subdivision's real data shows what shape they need.
+
+**Issues**: the committed `database.types.ts` was stale — it lacked
+`ai_tour_videos.poi_photo_id` (migration 20260815140000) and its FK. The
+regen also reformats heavily (~-2k lines): CLI 2.113.0 emits a leaner format
+plus an `__InternalSupabase` marker. `pnpm typecheck` / `lint` / `test` all
+pass on the new file (378 tests), so the drift was latent, not load-bearing.
+
+**Learnings**: Vivian's "Suwanee Communities" file is not a community list —
+it is a 2,395-row FMLS listing export for the city of Suwanee. The community
+vocabulary is its `Subdivision/Complex` column: 467 unique values, noisy
+('None'/'none' rows, case duplicates like Morningview/MorningView, long tail
+of one-off spellings). Top subdivisions by listing count: Laurel Springs
+(102), Olde Atlanta Club (68), Morningview (65+10), Grand Cascades (59),
+Richland (57), The River Club (56), Edinburgh (54), Ruby Forest (49),
+Rivermoore Park (47), Aberdeen (36).
+
+**Next steps**:
+- Onboard more Suwanee subdivisions from the FMLS vocabulary (needs a
+  cleanup pass over the 467 names first).
+- Amenities + photos schema for subdivisions, once shapes are clear.
+- Note: ws2 (codex) has been on `community-coverage-definition` for 13h+ —
+  overlapping territory; coordinate before either merges.
+
+---
+
 ## 2026-08-19 10:40 UTC — Specs catch up with the cut flip; assets disambiguated
 
 **Objective**: owner, four items — "we dont do flip anymore, we only have
