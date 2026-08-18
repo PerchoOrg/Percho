@@ -21,10 +21,16 @@
  */
 
 /**
- * Seedance 1.5 Pro — owner's explicit choice 2026-08-17 (was 2.0 Mini).
- * Do NOT change the model without explicit owner approval.
+ * Seedance 2.0 Mini — owner's explicit choice 2026-08-17, reverting the same
+ * day's switch to 1.5 Pro: "1.5 pro result looks unnatural". Mini is what the
+ * clip vocabulary was tuned against (locked frames, slow drifts, the mandatory
+ * clauses in lib/poi/tour-orchestrator/seedance-prompt.ts).
+ *
+ * Do NOT change the model without explicit owner approval — the prompt
+ * template, the 4s floor and the reference-image limits are all model
+ * behaviour, not general truths.
  */
-export const SEEDANCE_MODEL = 'bytedance/seedance-1-5-pro';
+export const SEEDANCE_MODEL = 'bytedance/seedance-2.0-mini';
 
 const API = 'https://openrouter.ai/api/v1';
 

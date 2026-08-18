@@ -4,6 +4,36 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-08-18 17:30 UTC — Seedance back to 2.0 Mini
+
+**Owner**: "change seedance model to 2.0 mini, 1.5 pro result looks unnatural."
+
+`SEEDANCE_MODEL` → `bytedance/seedance-2.0-mini`, reverting this morning's
+switch to 1.5 Pro. The file carries a "do not change without explicit owner
+approval" note; this is that approval, and the comment now records both the
+reversal and the reason. Test expectation updated with it.
+
+Worth stating in the code, and now is: the prompt template, the 4s duration
+floor and the reference-image limits are all **Mini's** behaviour, not general
+truths — which is the argument for pinning the model rather than treating it as
+a swappable backend.
+
+**Model ids verified against the live API** before switching, since a wrong id
+fails silently in the worker much later: `bytedance/seedance-2.0-mini` and
+`bytedance/seedance-1-5-pro` both accepted, `bytedance/seedance-9-9-nope` →
+400 "Model does not exist".
+
+**Mistake, mine**: that verification was not free. I expected a POST with no
+images to be rejected on validation; OpenRouter accepted both and **started two
+real generations** (`wOjfd46OJG9rVWjKTlB2`, `XblgSu8EIU2z15BFs7P9`). There is no
+cancel endpoint — DELETE returns 404 — so they run to completion. Both were
+still `pending` with `usage: null` at the time of writing; worst case is two
+short text-to-video clips at roughly \$0.05 each. Probing a paid endpoint is a
+spend, and I should have checked the ids against a catalogue or the git history
+alone (which already had the exact string).
+
+**Verification**: `pnpm web:typecheck` clean, `pnpm web:test` 366 passed.
+
 ## 2026-08-18 17:00 UTC — "Generate all clips": one button, driven by the plan, across every engine
 
 **Owner**: "based on plan in the photo table, generate all clips (change ↻
