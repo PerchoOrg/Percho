@@ -200,24 +200,6 @@ export default async function BucketJobsPage({
   );
 }
 
-function StatusPill({ status }: { status: string }) {
-  const cls =
-    status === 'ready' || status === 'approved'
-      ? 'bg-emerald-500/15 text-emerald-500'
-      : status === 'failed'
-        ? 'bg-red-500/15 text-red-500'
-        : status === 'processing'
-          ? 'bg-blue-500/15 text-blue-500'
-          : status === 'pending'
-            ? 'bg-amber-500/15 text-amber-500'
-            : 'bg-ink2/15 text-ink2';
-  return (
-    <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${cls}`}>
-      {status}
-    </span>
-  );
-}
-
 function StatusFilterBar({ current }: { current: StatusFilter }) {
   const options: { value: StatusFilter; label: string }[] = [
     { value: 'all', label: 'All' },

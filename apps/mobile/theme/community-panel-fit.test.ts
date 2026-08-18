@@ -46,7 +46,7 @@ describe("community card immersive full-bleed layout (2026-08-16)", () => {
 		expect(SRC).not.toContain("textBlock as geo");
 		expect(SRC).not.toContain("media as mediaGeo");
 		expect(SRC).not.toContain("flex: 1, minHeight: 0");
-		expect(SRC).toContain("overflow: \"hidden\"");
+		expect(SRC).toContain('overflow: "hidden"');
 	});
 
 	it("carries a bottom scrim like the CITY card", () => {
@@ -95,7 +95,7 @@ describe("community card immersive full-bleed layout (2026-08-16)", () => {
 		// text link is gone with the white block). The header's history note
 		// may still mention the old copy — the STYLES and the render must not.
 		expect(SRC).toContain("Explore");
-		expect(SRC).not.toContain("Why people love it\">");
+		expect(SRC).not.toContain('Why people love it">');
 		expect(SRC).toContain("arm(EXPLORE_TAP_TARGET)");
 		// The feed must actually send that target somewhere, or the link is dead
 		// in the stack (a Pressable inside the pan gesture never fires — RNGH

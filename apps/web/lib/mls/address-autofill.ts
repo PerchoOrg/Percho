@@ -13,12 +13,7 @@
 import { BridgeApiError, BridgeClient, hasBridgeCredentials } from './bridge-client';
 import { type NormalizedListing, normalizeReso } from './reso-types';
 
-export type AutofillReason =
-  | 'found'
-  | 'not_in_fmls'
-  | 'ambiguous'
-  | 'api_error'
-  | 'no_credentials';
+export type AutofillReason = 'found' | 'not_in_fmls' | 'ambiguous' | 'api_error' | 'no_credentials';
 
 export interface AutofillAddressInput {
   street: string; // "123 Peachtree St NE"

@@ -17,7 +17,6 @@
 const CATALOG_URL = 'https://incompetech.com/music/royalty-free/pieces.json';
 const MP3_BASE = 'https://incompetech.com/music/royalty-free/mp3-royaltyfree';
 
-// biome-ignore lint/suspicious/noExplicitAny: pieces.json ships extra fields we don't type
 export type IncompetechPiece = {
   uuid: string;
   title: string;

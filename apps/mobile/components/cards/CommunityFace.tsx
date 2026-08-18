@@ -1,3 +1,4 @@
+import type { DimKey } from "@percho/shared";
 /**
  * CommunityFace (§1.4) — the community (subdivision) front face.
  *
@@ -43,19 +44,18 @@
  * its evidence, and that screen is where the CTA goes.
  */
 import { LinearGradient } from "expo-linear-gradient";
-import type { DimKey } from "@percho/shared";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import type { SharedValue } from "react-native-reanimated";
 import type { CommunityCardV3 } from "../../lib/feed/card-types";
-import type { TapSlot } from "../../lib/gesture/tap-slot";
 import { placeStats } from "../../lib/feed/place-stats";
+import type { TapSlot } from "../../lib/gesture/tap-slot";
+import { useSavedStore } from "../../state/saved";
 import { redline, redlineRadii } from "../../theme/tokens";
 import { redlineText } from "../../theme/typography";
 import { CardPhoto } from "../CardPhoto";
 import { CardVideo } from "../CardVideo";
-import { useSavedStore } from "../../state/saved";
-import { StatBar } from "./StatBar";
 import { EXPLORE_TAP_TARGET, SAVE_TAP_TARGET } from "./ListingFace";
+import { StatBar } from "./StatBar";
 
 /**
  * Chip copy for the `dims` fallback. One line each — a 20pt white pill does
@@ -374,7 +374,10 @@ const styles = StyleSheet.create({
 		justifyContent: "center",
 		flexShrink: 1,
 	},
-	chipLabel: { ...redlineText.listingCard.tag, color: "rgba(255,255,255,0.92)" },
+	chipLabel: {
+		...redlineText.listingCard.tag,
+		color: "rgba(255,255,255,0.92)",
+	},
 	/**
 	 * Bottom row — stat bar (left ~2/3) + Explore (right), the listing card's
 	 * divided-info layout (owner 2026-08-19).

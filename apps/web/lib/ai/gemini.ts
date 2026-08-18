@@ -11,6 +11,8 @@
  *     button click or a background job, return job ids if needed.
  */
 
+import { extractJsonObject } from '@/lib/utils/extract-json';
+
 const API_BASE = (m: string) =>
   `https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent`;
 
@@ -52,41 +54,6 @@ async function callMessages(opts: {
   const text = data.candidates?.[0]?.content?.parts?.find((p) => p.text)?.text;
   if (!text) throw new Error('Gemini API returned no text content');
   return text;
-}
-
-/**
- * Extract the first complete JSON object from a model response.
- *
- * Robust to: ```json fences (with or without closing fence), pre/post chatter
- * ("Here's the JSON: {...} hope this helps"), trailing whitespace, etc.
- * Scans for the first '{' and walks to the matching '}', respecting strings
- * and escapes. Returns null if no balanced object is found.
- */
-export function extractJsonObject(s: string): string | null {
-  const start = s.indexOf('{');
-  if (start === -1) return null;
-  let depth = 0;
-  let inStr = false;
-  let esc = false;
-  for (let i = start; i < s.length; i++) {
-    const ch = s[i];
-    if (esc) {
-      esc = false;
-      continue;
-    }
-    if (inStr) {
-      if (ch === '\\') esc = true;
-      else if (ch === '"') inStr = false;
-      continue;
-    }
-    if (ch === '"') inStr = true;
-    else if (ch === '{') depth++;
-    else if (ch === '}') {
-      depth--;
-      if (depth === 0) return s.slice(start, i + 1);
-    }
-  }
-  return null;
 }
 
 function safeJsonParse(raw: string, label: string): unknown {
@@ -264,26 +231,11 @@ export async function generateSocialCopy(
   const platformBrief = platforms.map((p) => `- ${p}: ${PLATFORM_BRIEF[p]}`).join('\n');
   const languageBrief = languages.map((l) => `- ${l}: ${LANGUAGE_LABEL[l]}`).join('\n');
 
-  const shapeExample =
-    '{ ' +
-    platforms
-      .map((p) => `"${p}": { ${languages.map((l) => `"${l}": string`).join(', ')} }`)
-      .join(', ') +
-    ' }';
+  const shapeExample = `{ ${platforms
+    .map((p) => `"${p}": { ${languages.map((l) => `"${l}": string`).join(', ')} }`)
+    .join(', ')} }`;
 
-  const system =
-    'You write marketing copy for US real estate listings. The agent serves a ' +
-    'multilingual US homebuyer audience (English plus the buyer-side languages ' +
-    'requested below). Treat each language as fully native — translate the ' +
-    'meaning, do not transliterate, and use idiomatic phrasing for that locale. ' +
-    'Match the platform conventions exactly:\n' +
-    platformBrief +
-    '\n\nLanguages requested:\n' +
-    languageBrief +
-    '\n\nOutput strict JSON and nothing else (no markdown, no code fences, no commentary). ' +
-    `Shape: ${shapeExample}. ` +
-    'Each string is the post body for that (platform, language). Keep posts concise — total response under ' +
-    `${Math.min(2400, 220 * platforms.length * languages.length)} words.`;
+  const system = `You write marketing copy for US real estate listings. The agent serves a multilingual US homebuyer audience (English plus the buyer-side languages requested below). Treat each language as fully native — translate the meaning, do not transliterate, and use idiomatic phrasing for that locale. Match the platform conventions exactly:\n${platformBrief}\n\nLanguages requested:\n${languageBrief}\n\nOutput strict JSON and nothing else (no markdown, no code fences, no commentary). Shape: ${shapeExample}. Each string is the post body for that (platform, language). Keep posts concise — total response under ${Math.min(2400, 220 * platforms.length * languages.length)} words.`;
 
   // Compact context for the model — only fields with content.
   const userPayload: Record<string, unknown> = {

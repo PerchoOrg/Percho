@@ -207,13 +207,6 @@ export type BrowseCard = {
 
 type Source = 'hero' | 'nearby';
 
-function formatPrice(n: number | null): string {
-  if (n == null) return '';
-  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(2).replace(/\.?0+$/, '')}M`;
-  if (n >= 1_000) return `$${Math.round(n / 1_000)}K`;
-  return `$${n.toLocaleString()}`;
-}
-
 interface CardProps {
   card: BrowseCard;
   source: Source;
@@ -221,7 +214,6 @@ interface CardProps {
   shouldMount: boolean;
   isActive: boolean;
   cardRef: (el: HTMLElement | null) => void;
-  paused: boolean;
   setPaused: (b: boolean) => void;
   onSwipe: (delta: 1 | -1) => void;
   poolSize: number;
@@ -229,13 +221,6 @@ interface CardProps {
   muted: boolean;
   /** Called if the browser blocks autoplay-with-sound and we fall back to muted. */
   onAutoplayBlocked?: () => void;
-  /**
-   * opens the community sheet at the parent level.
-   * Only fires when `card.community` is set. Chip is rendered inside this
-   * Card so it's positioned over the listing video; the sheet itself is
-   * a sibling overlay outside the card swiper.
-   */
-  onOpenCommunitySheet?: () => void;
 }
 
 function poolFor(card: BrowseCard, source: Source): number {
@@ -280,14 +265,12 @@ function PhotoCard({
   cardRef,
   onSwipe,
   poolSize,
-  isActive,
 }: {
   card: BrowseCard;
   cycleIdx: number;
   cardRef: (el: HTMLElement | null) => void;
   onSwipe: (delta: 1 | -1) => void;
   poolSize: number;
-  isActive: boolean;
 }) {
   const realPhotos =
     card.photos && card.photos.length > 0
@@ -473,6 +456,7 @@ function PhotoCard({
         )}
         {photos.map((src, i) => (
           <div
+            // biome-ignore lint/suspicious/noArrayIndexKey: a b-roll pool can repeat the same src, so the index is what makes the key unique
             key={`${src}-${i}`}
             className="relative h-full w-full flex-shrink-0 snap-center"
             style={{ transform: 'translateZ(0)' }}
@@ -572,13 +556,11 @@ function Card({
   shouldMount,
   isActive,
   cardRef,
-  paused,
   setPaused,
   onSwipe,
   poolSize,
   muted,
   onAutoplayBlocked,
-  onOpenCommunitySheet,
 }: CardProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const hlsRef = useRef<Hls | null>(null);
@@ -1550,7 +1532,10 @@ export function BrowseFeed({
   // per-card source + cycle index. key = listing.id
   const [sourceByCard, setSourceByCard] = useState<Record<string, Source>>({});
   const [cycleByCard, setCycleByCard] = useState<Record<string, number>>({});
-  const [pausedActive, setPausedActive] = useState(true);
+  // Value is never read — the Card owns its own play/pause state (see the
+  // `domPaused` note below). Only the setter is used, to force-pause the
+  // underlying video when a sheet takes focus.
+  const [, setPausedActive] = useState(true);
   // Global mute state. We optimistically start UNMUTED — if the user arrived
   // via a click on the Landing "Explore" CTA (or any in-app navigation), the
   // browser's sticky activation lets us autoplay with sound. If the user
@@ -1844,7 +1829,6 @@ export function BrowseFeed({
               cycleIdx={cardCycle}
               cardRef={(el) => setCardRef(idx, el)}
               poolSize={poolFor(card, cardSource)}
-              isActive={idx === activeIndex}
               onSwipe={(delta) => {
                 const pool = poolFor(card, cardSource);
                 if (pool <= 1) return;
@@ -1866,7 +1850,6 @@ export function BrowseFeed({
             shouldMount={Math.abs(idx - activeIndex) <= 1}
             isActive={isThisActive}
             cardRef={(el) => setCardRef(idx, el)}
-            paused={isThisActive ? pausedActive : true}
             setPaused={isThisActive ? setPausedActive : () => {}}
             poolSize={poolFor(card, cardSource)}
             muted={muted}
@@ -1884,16 +1867,6 @@ export function BrowseFeed({
                 return { ...c, [id]: next };
               });
             }}
-            onOpenCommunitySheet={
-              card.community
-                ? () => {
-                    setSheetCardId(card.id);
-                    setSheetOpen(true);
-                    // Pause the underlying listing video so the sheet has focus.
-                    setPausedActive(true);
-                  }
-                : undefined
-            }
           />
         );
       })}

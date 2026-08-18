@@ -102,7 +102,15 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
     if (linkErr) throw linkErr;
 
     const ids = [...new Set((links ?? []).map((l) => l.poi_id))];
-    const byId = new Map<string, { display_name: string; primary_type: string | null; rating: number | null; location: unknown }>();
+    const byId = new Map<
+      string,
+      {
+        display_name: string;
+        primary_type: string | null;
+        rating: number | null;
+        location: unknown;
+      }
+    >();
     if (ids.length > 0) {
       const { data: pois, error: pErr } = (await supabase
         .from('pois')

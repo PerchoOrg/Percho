@@ -12,11 +12,7 @@
  * Pure: no store reads, no Date.now(), no Math.random(). `dtMs` and other
  * clock-dependent telemetry are the caller's to supply (see `events.ts`).
  */
-import type {
-	FeedCardV3,
-	FunnelLayer,
-	SwipeVerdict,
-} from "./card-types";
+import type { FeedCardV3, FunnelLayer, SwipeVerdict } from "./card-types";
 import type { GeoLevel } from "./geo-unit";
 
 /** §1.7 layer fatigue: 15 swipes with zero positive signal stops the layer. */

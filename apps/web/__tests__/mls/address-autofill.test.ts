@@ -2,8 +2,8 @@
  * autofillListingByAddress tests. `fetch` stubbed via vi.stubGlobal.
  */
 
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { autofillListingByAddress } from '@/lib/mls/address-autofill';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 function makeResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -64,7 +64,7 @@ describe('autofillListingByAddress', () => {
 
   describe('with credentials', () => {
     beforeEach(() => {
-      process.env.BRIDGE_SERVER_TOKEN='***';
+      process.env.BRIDGE_SERVER_TOKEN = '***';
       process.env.BRIDGE_DATASET_ID = 'fmls-test';
       process.env.BRIDGE_BASE_URL = 'https://api.example.test/api/v2';
     });
@@ -122,9 +122,7 @@ describe('autofillListingByAddress', () => {
 
     it('returns ambiguous with multiple candidates', async () => {
       const second = { ...RAW_LISTING, ListingKey: 'FMLS-2' };
-      const stub = vi.fn().mockResolvedValue(
-        makeResponse({ value: [RAW_LISTING, second] }),
-      );
+      const stub = vi.fn().mockResolvedValue(makeResponse({ value: [RAW_LISTING, second] }));
       vi.stubGlobal('fetch', stub);
 
       const result = await autofillListingByAddress({
@@ -156,15 +154,26 @@ describe('autofillListingByAddress', () => {
       const stub = vi.fn().mockResolvedValue(makeResponse({ error: 'boom' }, 500));
       vi.stubGlobal('fetch', stub);
 
-      const result = await autofillListingByAddress({
-        street: '123 Peachtree St NE',
-        city: 'Atlanta',
-        state: 'GA',
-        zip: '30303',
-      });
-      // 500s are retried; after MAX_ATTEMPTS the client throws → api_error.
-      expect(result.reason).toBe('api_error');
-    }, 60_000);
+      // 500s are retried with exponential backoff (1s+2s+4s+8s across
+      // MAX_ATTEMPTS). Fake the clock so the suite doesn't actually sleep
+      // 15s — advance timers while the call is in flight, then assert.
+      vi.useFakeTimers();
+      try {
+        const pending = autofillListingByAddress({
+          street: '123 Peachtree St NE',
+          city: 'Atlanta',
+          state: 'GA',
+          zip: '30303',
+        });
+        await vi.runAllTimersAsync();
+        const result = await pending;
+        // After MAX_ATTEMPTS the client throws → api_error.
+        expect(result.reason).toBe('api_error');
+        expect(stub).toHaveBeenCalledTimes(5);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
 
     it('returns not_in_fmls when street cannot be parsed', async () => {
       // No leading number.

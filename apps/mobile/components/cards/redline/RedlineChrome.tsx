@@ -248,9 +248,15 @@ interface RedlineIconProps {
  * and `ICON_GLYPH` is a complete `Record` of it, so an unmapped name is a
  * compile error rather than a run-time tofu box.
  */
-export function RedlineIcon({ name, size, color, weight = "fill" }: RedlineIconProps) {
+export function RedlineIcon({
+	name,
+	size,
+	color,
+	weight = "fill",
+}: RedlineIconProps) {
 	const outline = weight === "outline";
-	const fontSize = size * (outline ? OUTLINE_OPTICAL_SCALE : ICON_OPTICAL_SCALE);
+	const fontSize =
+		size * (outline ? OUTLINE_OPTICAL_SCALE : ICON_OPTICAL_SCALE);
 	return (
 		<View style={[styles.iconBox, { width: size, height: size }]}>
 			<Text
@@ -266,7 +272,9 @@ export function RedlineIcon({ name, size, color, weight = "fill" }: RedlineIconP
 					transform: [
 						{
 							translateX:
-								(fontSize * (1 - (outline ? OUTLINE_ART_WIDTH : ICON_ART_WIDTH)[name])) / 2,
+								(fontSize *
+									(1 - (outline ? OUTLINE_ART_WIDTH : ICON_ART_WIDTH)[name])) /
+								2,
 						},
 					],
 				}}

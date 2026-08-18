@@ -19,7 +19,7 @@ export async function TopBarWrapper() {
   const user = session?.user ?? null;
 
   if (!user) {
-    return <TopBar role="anon" initial="" />;
+    return <TopBar viewer="anon" initial="" />;
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: agents typing not in stub yet
@@ -33,7 +33,9 @@ export async function TopBarWrapper() {
 
   if (agent) {
     const source = agent.name?.trim() || user.email?.trim() || '?';
-    return <TopBar role="agent" initial={source.charAt(0) || '?'} avatarUrl={agent.headshot_url} />;
+    return (
+      <TopBar viewer="agent" initial={source.charAt(0) || '?'} avatarUrl={agent.headshot_url} />
+    );
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: buyers typing not in stub yet
@@ -47,6 +49,10 @@ export async function TopBarWrapper() {
 
   const source = buyer?.display_name?.trim() || user.email?.trim() || '?';
   return (
-    <TopBar role="buyer" initial={source.charAt(0) || '?'} avatarUrl={buyer?.avatar_url ?? null} />
+    <TopBar
+      viewer="buyer"
+      initial={source.charAt(0) || '?'}
+      avatarUrl={buyer?.avatar_url ?? null}
+    />
   );
 }

@@ -3,6 +3,10 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
+    "typecheck": "pnpm -r --no-bail typecheck",
+    "lint": "pnpm -r --no-bail lint",
+    "test": "pnpm -r --no-bail test",
+    "format": "pnpm -r format",
     "web:dev": "pnpm --filter @percho/web dev",
     "web:build": "pnpm --filter @percho/web build",
     "web:lint": "pnpm --filter @percho/web lint",

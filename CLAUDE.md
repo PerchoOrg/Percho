@@ -5,6 +5,10 @@ He reviews diffs and makes product decisions. You write the code.
 
 Read this file in full at the start of every session. Then read `DEVLOG.md`
 (reverse-chronological log) to find the current state and pick up from there.
+`DEVLOG.md` holds the **current month**; older months are split into
+`docs/devlog/YYYY-MM.md` and indexed from the top of `DEVLOG.md`. Read the
+current month by default and reach for an archive only when you need history
+that far back — the whole log is ~1 MB and will not fit in one context.
 v1 has shipped — there is no IMPLEMENTATION.md / phase backlog. Work is now
 ad-hoc fixes, polish, and feature requests from the owner / first agent.
 
@@ -130,8 +134,14 @@ These are mandated by the owner. Breaking any of them ends the session badly:
 
 2. **DEVLOG.md is reverse chronological.** Newest entry at the TOP, not
    appended at the bottom. When you add an entry, insert it directly after the
-   header block (above the most recent existing entry). Each entry leads with
-   `## YYYY-MM-DD HH:MM UTC — <title>`.
+   `## Archive` index block (above the most recent existing entry). Each entry
+   leads with `## YYYY-MM-DD HH:MM UTC — <title>`.
+
+   **Rotation**: `DEVLOG.md` carries only the current month. When the month
+   turns, move the finished month's entries into `docs/devlog/YYYY-MM.md`
+   (newest-first, same format), add a line for it under `## Archive`, and
+   start the new month in `DEVLOG.md`. Never let the live file grow past a
+   few hundred KB — it is read at the start of every session.
 
 3. **One branch per phase, not per task.** Branch name is `phaseN/<phase-slug>`
    (e.g. `phase1/auth-and-dashboard`, `phase2/video-upload`). All tasks within
@@ -143,7 +153,8 @@ These are mandated by the owner. Breaking any of them ends the session badly:
 
 1. **Always read DEVLOG.md first** at the start of a session — newest entry
    at the top tells you what actually happened most recently. Pick up from
-   the last unresolved item or the user's current ask.
+   the last unresolved item or the user's current ask. Only open
+   `docs/devlog/YYYY-MM.md` when you actually need older history.
 2. **Plan before coding.** For each task, post a short plan (3-6 bullets)
    before touching files. Wait for user OK on non-trivial work.
 3. **Commit messages**: imperative, prefix with phase + task:

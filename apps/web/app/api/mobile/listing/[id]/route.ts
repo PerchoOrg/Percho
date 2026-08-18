@@ -8,10 +8,10 @@
  *
  * Every projection rule — which fields are real, why there is no
  * days-on-market, why the comps cohort is a city — lives in
- * `lib/listing/detail.ts`. Read that file's header before changing this one.
+ * `lib/listings/detail.ts`. Read that file's header before changing this one.
  */
 
-import { fetchListingDetail } from '@/lib/listing/detail';
+import { fetchListingDetail } from '@/lib/listings/detail';
 import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';

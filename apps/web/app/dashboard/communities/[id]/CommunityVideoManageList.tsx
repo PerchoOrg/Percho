@@ -34,6 +34,7 @@ import {
   updateCommunityVideoDescription,
 } from '@/app/dashboard/communities/actions';
 import { thumbnailUrl } from '@/lib/cloudflare/stream';
+import { startAsyncTransition } from '@/lib/utils/start-async-transition';
 import { COMMUNITY_VIDEO_CATEGORIES } from '@/lib/zod/community-video-categories';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState, useTransition } from 'react';
@@ -75,7 +76,7 @@ export function CommunityVideoManageList({ communityId, videos, myAgentId, cover
     (videoId: string) => {
       setError(null);
       setBusyId(videoId);
-      startTransition(async () => {
+      startAsyncTransition(startTransition, async () => {
         const r = await setCommunityCoverVideo({ communityId, videoId });
         setBusyId(null);
         if (!r.ok) {
@@ -94,7 +95,7 @@ export function CommunityVideoManageList({ communityId, videos, myAgentId, cover
       if (!window.confirm(`Delete ${label}? This can't be undone.`)) return;
       setError(null);
       setBusyId(videoId);
-      startTransition(async () => {
+      startAsyncTransition(startTransition, async () => {
         const r = await deleteCommunityVideo(videoId, communityId);
         setBusyId(null);
         if (!r.ok) {

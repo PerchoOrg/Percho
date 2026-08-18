@@ -170,7 +170,6 @@ export function EditListingForm({ listingId, initial, communities }: Props) {
   const [saveState, setSaveState] = useState<SaveState>('idle');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-
   function parseIntOrNull(s: string): number | null {
     if (s.trim() === '') return null;
     const n = Number.parseInt(s, 10);

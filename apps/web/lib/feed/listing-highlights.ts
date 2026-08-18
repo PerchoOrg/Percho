@@ -79,7 +79,7 @@
  *   sourced from the word "vibrant" is a claim we cannot stand behind.
  */
 
-import type { DimKey } from "@percho/shared";
+import type { DimKey } from '@percho/shared';
 
 /**
  * One pattern per dim. Deliberately narrow — the phrase has to carry the
@@ -94,23 +94,23 @@ import type { DimKey } from "@percho/shared";
  * Anchored on word boundaries so 'walkable' cannot match inside another word.
  */
 const DIM_PATTERN: Partial<Record<DimKey, RegExp>> = {
-	schools:
-		/\b(?:top[-\s]rated|award[-\s]winning|excellent|sought[-\s]after|highly[-\s]rated|blue[-\s]ribbon)\s+(?:public\s+)?schools?\b|\btop\s+schools?\b|\bbest\s+schools?\b/i,
-	walkable:
-		/\bwalkable\b|\bwalking distance to\b|\bwalk to (?:shops?|shopping|downtown|town|the village|restaurants?|dining|the square)\b|\bsteps? (?:away )?(?:to|from) (?:shops?|downtown|town|the village|restaurants?|dining)\b|\bwalk(?:ing)? (?:distance )?to (?:schools?|parks?|the park|trails?)\b|\bwalk to everything\b/i,
-	trails:
-		/\b(?:walking|nature|hiking|multi[-\s]use|bike) trails?\b|\bgreenway\b|\bbike paths?\b|\bnature preserve\b|\bwalking paths?\b/i,
-	quiet:
-		/\bcul[-\s]?de[-\s]?sac\b|\bquiet (?:street|road|neighborhood|neighbourhood|community|setting|cul)\b|\bpeaceful\b|\bserene\b|\btranquil\b/i,
-	outdoors:
-		/\b(?:private|fenced|level|large|expansive|spacious|flat) (?:back)?yard\b|\bfenced[-\s]in yard\b|\bnear(?:by)? parks?\b|\bpark across\b|\b(?:screened|covered|rocking[-\s]chair)\s+porch\b|\b(?:large|spacious|oversized|expansive|private|new)\s+(?:deck|patio)\b|\bdeck overlook|\bfire pit\b|\bfenced\b[^.]{0,20}\b(?:yard|lot|backyard)\b/i,
-	family:
-		/\bfamily[-\s]friendly\b|\bgreat for families\b|\bswim(?:\/| and |[-\s])tennis\b|\bswim,\s*tennis\b|\btennis courts?\b|\bplayground\b|\bcommunity pool\b/i,
-	entertaining:
-		/\bperfect for entertaining\b|\bgreat for entertaining\b|\bentertainer'?s? (?:dream|delight|paradise)\b|\bopen concept\b/i,
-	move_in:
-		/\bmove[-\s]in ready\b|\bturn[-\s]?key\b|\b(?:newly|fully|completely|recently) renovated\b|\bnew construction\b|\bnew (?:roof|hvac|water heater|windows)\b|\bupdated throughout\b|\bfresh(?:ly)? (?:interior )?paint(?:ed)?\b(?!\s+(?:backyard|fence|deck|exterior|shed))/i,
-	space: /\bspacious\b|\boversized\b|\bexpansive\b/i,
+  schools:
+    /\b(?:top[-\s]rated|award[-\s]winning|excellent|sought[-\s]after|highly[-\s]rated|blue[-\s]ribbon)\s+(?:public\s+)?schools?\b|\btop\s+schools?\b|\bbest\s+schools?\b/i,
+  walkable:
+    /\bwalkable\b|\bwalking distance to\b|\bwalk to (?:shops?|shopping|downtown|town|the village|restaurants?|dining|the square)\b|\bsteps? (?:away )?(?:to|from) (?:shops?|downtown|town|the village|restaurants?|dining)\b|\bwalk(?:ing)? (?:distance )?to (?:schools?|parks?|the park|trails?)\b|\bwalk to everything\b/i,
+  trails:
+    /\b(?:walking|nature|hiking|multi[-\s]use|bike) trails?\b|\bgreenway\b|\bbike paths?\b|\bnature preserve\b|\bwalking paths?\b/i,
+  quiet:
+    /\bcul[-\s]?de[-\s]?sac\b|\bquiet (?:street|road|neighborhood|neighbourhood|community|setting|cul)\b|\bpeaceful\b|\bserene\b|\btranquil\b/i,
+  outdoors:
+    /\b(?:private|fenced|level|large|expansive|spacious|flat) (?:back)?yard\b|\bfenced[-\s]in yard\b|\bnear(?:by)? parks?\b|\bpark across\b|\b(?:screened|covered|rocking[-\s]chair)\s+porch\b|\b(?:large|spacious|oversized|expansive|private|new)\s+(?:deck|patio)\b|\bdeck overlook|\bfire pit\b|\bfenced\b[^.]{0,20}\b(?:yard|lot|backyard)\b/i,
+  family:
+    /\bfamily[-\s]friendly\b|\bgreat for families\b|\bswim(?:\/| and |[-\s])tennis\b|\bswim,\s*tennis\b|\btennis courts?\b|\bplayground\b|\bcommunity pool\b/i,
+  entertaining:
+    /\bperfect for entertaining\b|\bgreat for entertaining\b|\bentertainer'?s? (?:dream|delight|paradise)\b|\bopen concept\b/i,
+  move_in:
+    /\bmove[-\s]in ready\b|\bturn[-\s]?key\b|\b(?:newly|fully|completely|recently) renovated\b|\bnew construction\b|\bnew (?:roof|hvac|water heater|windows)\b|\bupdated throughout\b|\bfresh(?:ly)? (?:interior )?paint(?:ed)?\b(?!\s+(?:backyard|fence|deck|exterior|shed))/i,
+  space: /\bspacious\b|\boversized\b|\bexpansive\b/i,
 };
 
 /**
@@ -118,15 +118,15 @@ const DIM_PATTERN: Partial<Record<DimKey, RegExp>> = {
  * see the header. Order within the tail is by how much it narrows a decision.
  */
 const PRIORITY: DimKey[] = [
-	"schools",
-	"walkable",
-	"trails",
-	"quiet",
-	"outdoors",
-	"family",
-	"move_in",
-	"entertaining",
-	"space",
+  'schools',
+  'walkable',
+  'trails',
+  'quiet',
+  'outdoors',
+  'family',
+  'move_in',
+  'entertaining',
+  'space',
 ];
 
 /** The redline shows three chips; a fourth wraps and breaks the row. */
@@ -138,18 +138,16 @@ const MAX_DIMS = 3;
  * none. The caller omits the field entirely on `[]` so the card renders no chip
  * row rather than an empty one.
  */
-export function listingHighlightDims(
-	description: string[] | null | undefined,
-): DimKey[] {
-	if (!description || description.length === 0) return [];
-	const text = description.join(" ");
-	if (text.trim() === "") return [];
+export function listingHighlightDims(description: string[] | null | undefined): DimKey[] {
+  if (!description || description.length === 0) return [];
+  const text = description.join(' ');
+  if (text.trim() === '') return [];
 
-	const out: DimKey[] = [];
-	for (const dim of PRIORITY) {
-		const pattern = DIM_PATTERN[dim];
-		if (pattern?.test(text)) out.push(dim);
-		if (out.length === MAX_DIMS) break;
-	}
-	return out;
+  const out: DimKey[] = [];
+  for (const dim of PRIORITY) {
+    const pattern = DIM_PATTERN[dim];
+    if (pattern?.test(text)) out.push(dim);
+    if (out.length === MAX_DIMS) break;
+  }
+  return out;
 }

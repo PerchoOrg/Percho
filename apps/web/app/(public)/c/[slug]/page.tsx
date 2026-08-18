@@ -12,22 +12,31 @@
 
 import { resolveCommunityCoverWithCfIds } from '@/lib/communities/cover';
 import { fetchBrowseCardsByCommunitySlug } from '@/lib/feed/browse-cards';
+import type { Row } from '@/lib/supabase/rows';
 import { createClient } from '@/lib/supabase/server';
 import { notFound } from 'next/navigation';
 import { CommunityBody } from './_components/CommunityBody';
 
-interface CommunityRow {
-  id: string;
-  name: string;
-  slug: string;
-  city: string | null;
-  state: string;
-  description: string | null;
-  created_by: string | null;
-  cover_video_id: string | null;
-  cover_storage_path: string | null;
-  boundary: unknown;
-}
+type CommunityRow = Pick<
+  Row<'communities'>,
+  | 'id'
+  | 'name'
+  | 'slug'
+  | 'city'
+  | 'state'
+  | 'description'
+  | 'created_by'
+  | 'cover_video_id'
+  | 'cover_storage_path'
+  | 'boundary'
+  | 'nearby'
+  | 'residents_count'
+  | 'avg_income'
+  | 'avg_age'
+  | 'homeowners_pct'
+  | 'attributes'
+  | 'interests'
+>;
 
 interface VideoRow {
   id: string;
@@ -90,8 +99,8 @@ export default async function CommunityPage({
   // those neighborhoods we've actually seeded (status=active) so we can render
   // real /c/[slug] links; unresolved names still show as static labels.
   type NearbyRaw = { name: string; slug?: string; city?: string; state?: string };
-  const rawNearby = Array.isArray((community as any).nearby)
-    ? ((community as any).nearby as NearbyRaw[]).slice(0, 6)
+  const rawNearby = Array.isArray(community.nearby)
+    ? (community.nearby as NearbyRaw[]).slice(0, 6)
     : [];
   const nearbyNdSlugs = rawNearby.map((n) => n.slug).filter((s): s is string => !!s);
   let nearbyLookup = new Map<
@@ -151,12 +160,12 @@ export default async function CommunityPage({
         city: community.city,
         state: community.state,
         description: community.description,
-        residents_count: (community as any).residents_count ?? null,
-        avg_income: (community as any).avg_income ?? null,
-        avg_age: (community as any).avg_age ?? null,
-        homeowners_pct: (community as any).homeowners_pct ?? null,
-        attributes: (community as any).attributes ?? null,
-        interests: (community as any).interests ?? null,
+        residents_count: community.residents_count ?? null,
+        avg_income: community.avg_income ?? null,
+        avg_age: community.avg_age ?? null,
+        homeowners_pct: community.homeowners_pct ?? null,
+        attributes: community.attributes ?? null,
+        interests: community.interests ?? null,
       }}
       heroCoverUrl={heroCoverUrl}
       boundary={

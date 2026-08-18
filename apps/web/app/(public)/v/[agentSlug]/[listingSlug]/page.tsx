@@ -4,7 +4,7 @@ import {
   buildListingCards,
   loadListingFeedBySlug,
   loadListingPhotos,
-} from '@/lib/listing-feed/load';
+} from '@/lib/listings/feed-load';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { VideoFeed } from './_components/VideoFeed';
@@ -17,7 +17,7 @@ import { VideoFeed } from './_components/VideoFeed';
  * identical to discovery.
  *
  * 2026-06-17: data load + card build extracted to
- * `lib/listing-feed/load.ts` so the dashboard preview route can render the
+ * `lib/listings/feed-load.ts` so the dashboard preview route can render the
  * same feed for draft / archived listings without duplicating logic. This
  * file is now a thin wrapper that:
  *   - filters to published-only (public web)

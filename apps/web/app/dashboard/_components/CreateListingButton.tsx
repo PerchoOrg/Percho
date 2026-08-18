@@ -15,6 +15,7 @@ import { useState, useTransition } from 'react';
 
 import { HUB_CTA_CLASS } from '@/app/_components/EmptyHubState';
 import { createStubListing } from '@/app/dashboard/listings/actions';
+import { startAsyncTransition } from '@/lib/utils/start-async-transition';
 
 export function CreateListingButton() {
   const router = useRouter();
@@ -23,7 +24,7 @@ export function CreateListingButton() {
 
   function onClick() {
     setError(null);
-    startTransition(async () => {
+    startAsyncTransition(startTransition, async () => {
       const result = await createStubListing();
       if (!result.ok) {
         setError('Could not create — please retry.');

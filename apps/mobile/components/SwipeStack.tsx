@@ -304,9 +304,7 @@ function StackCard({
 				pointerEvents="none"
 				style={[styles.cardGlow, glowStyle, { zIndex }]}
 			/>
-			<Animated.View
-				style={[styles.card, cardStyle, { zIndex }, style]}
-			>
+			<Animated.View style={[styles.card, cardStyle, { zIndex }, style]}>
 				<View style={StyleSheet.absoluteFill}>{front}</View>
 				{overlay}
 			</Animated.View>
@@ -416,7 +414,9 @@ export function SwipeStack<T>({
 	// The peeked card's bottom sits just below the top card's bottom (clamped
 	// to the stage so a behind card never spills past the stage's bottom edge).
 	const peekAnchor =
-		stageHeight === 0 ? 0 : Math.min(stageHeight, topOffset + topHeight + PEEK_PT);
+		stageHeight === 0
+			? 0
+			: Math.min(stageHeight, topOffset + topHeight + PEEK_PT);
 
 	const argsFor = (role: CardRole): CardRenderArgs => ({
 		role,
@@ -452,10 +452,7 @@ export function SwipeStack<T>({
 					 * this is what keeps its top edge and its elevation glow
 					 * off the paper above the top card. */}
 					<View
-						style={[
-							styles.stageClip,
-							{ height: topOffset + CLIP_OVERFLOW_PT },
-						]}
+						style={[styles.stageClip, { height: topOffset + CLIP_OVERFLOW_PT }]}
 						pointerEvents="none"
 					/>
 					{mounted.map(({ item, absIndex }) => {

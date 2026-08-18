@@ -1,10 +1,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { notFound } from 'next/navigation';
+import type { Metadata } from 'next';
 import Link from 'next/link';
+import { notFound } from 'next/navigation';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
   robots: { index: false, follow: false },
@@ -23,7 +23,7 @@ function resolveMd(slugParts: string[]): string | null {
   if (!slugParts.length) return null;
   const root = slugParts[0];
   if (!root || !ALLOWED_ROOTS.includes(root)) return null;
-  const rel = slugParts.join('/') + '.md';
+  const rel = `${slugParts.join('/')}.md`;
   const full = path.resolve(DOCS_ROOT, rel);
   const rootReal = path.resolve(DOCS_ROOT);
   if (!full.startsWith(rootReal + path.sep)) return null;
@@ -42,7 +42,10 @@ export default function MdPage({ params }: { params: { slug: string[] } }) {
 
   return (
     <article className="space-y-6 print:space-y-3">
-      <nav className="text-xs text-muted flex flex-wrap items-center gap-1.5 print:hidden" aria-label="Breadcrumb">
+      <nav
+        className="text-xs text-muted flex flex-wrap items-center gap-1.5 print:hidden"
+        aria-label="Breadcrumb"
+      >
         <Link href="/internal/meetup" className="underline hover:text-ink2">
           Docs
         </Link>

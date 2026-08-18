@@ -20,8 +20,8 @@
 
 import { isDraftAddress } from '@/app/dashboard/listings/draft';
 import { findCommunityForPoint } from '@/lib/geo/find-community';
-import { nextCandidate, slugify } from '@/lib/utils/slug';
 import { createClient } from '@/lib/supabase/server';
+import { nextCandidate, slugify } from '@/lib/utils/slug';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 

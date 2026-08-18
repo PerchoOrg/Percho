@@ -11,7 +11,7 @@
  *   t.end();  // emits one JSON line
  */
 
-export function startTimer(label: string) {
+export function startTimer(_label: string) {
   const t0 = Date.now();
   let last = t0;
   const marks: Record<string, number> = {};
@@ -22,12 +22,8 @@ export function startTimer(label: string) {
       marks[name] = now - last;
       last = now;
     },
-    end(extra?: Record<string, unknown>) {
-      const total = Date.now() - t0;
-      // Single-line JSON so Vercel log search can filter by `perf:` prefix.
-      console.log(
-        `perf:${label} ${JSON.stringify({ total_ms: total, ...marks, ...(extra ?? {}) })}`,
-      );
+    end(_extra?: Record<string, unknown>) {
+      const _total = Date.now() - t0;
     },
   };
 }

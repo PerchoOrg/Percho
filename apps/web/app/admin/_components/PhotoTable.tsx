@@ -225,8 +225,7 @@ export function PhotoTable({
       setEnhancedRefreshing(false);
       router.refresh();
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [photos, table]);
+  }, [photos, table, router]);
 
   if (photos.length === 0) {
     return (

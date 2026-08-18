@@ -25,7 +25,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { haptics } from "../../lib/haptics";
 import type { ActionKind, Hotspot } from "../../lib/listing/hotspot";
 import { emojiForRoom } from "../../lib/listing/hotspot";
-import { colors, radii } from "../../theme/tokens";
+import { colors } from "../../theme/tokens";
 import { textStyles } from "../../theme/typography";
 import { BottomSheet } from "../BottomSheet";
 

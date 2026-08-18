@@ -218,9 +218,7 @@ export async function DashboardMetrics({ agentId }: { agentId: string }) {
           This week
         </div>
         {totalThisWeek === 0 ? (
-          <div className="mt-2 font-serif text-ink2 text-xs sm:text-base">
-            Waiting for views…
-          </div>
+          <div className="mt-2 font-serif text-ink2 text-xs sm:text-base">Waiting for views…</div>
         ) : (
           <>
             <div className="mt-2 flex items-baseline gap-1.5 font-serif text-ink sm:gap-3">
@@ -232,10 +230,7 @@ export async function DashboardMetrics({ agentId }: { agentId: string }) {
             <div className="mt-1 text-[10px] text-ink2 sm:text-xs">
               {m.thisWeek.saves}s · {m.thisWeek.leads}l
               {wowViews && (
-                <span className={wowViews.up ? ' text-ink' : ' text-ink2'}>
-                  {' '}
-                  · {wowViews.txt}
-                </span>
+                <span className={wowViews.up ? ' text-ink' : ' text-ink2'}> · {wowViews.txt}</span>
               )}
             </div>
           </>

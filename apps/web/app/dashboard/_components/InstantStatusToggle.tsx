@@ -25,8 +25,9 @@ import {
   publishListing,
   unpublishListing,
 } from '@/app/dashboard/listings/[id]/edit/publish-actions';
+import { startAsyncTransition } from '@/lib/utils/start-async-transition';
 import { useRouter } from 'next/navigation';
-import { useEffect, useRef, useState, useTransition } from 'react';
+import { useCallback, useEffect, useRef, useState, useTransition } from 'react';
 import { createPortal } from 'react-dom';
 
 const MISSING_LABELS: Record<string, string> = {
@@ -62,11 +63,13 @@ export function InstantStatusToggle({ id, status, kind = 'listing', variant = 'h
 
   const isActive = status === 'active';
 
-  function clearErrors() {
+  // useCallback so the outside-click effect can list it as a dependency
+  // without re-subscribing on every render. Only calls stable setters.
+  const clearErrors = useCallback(() => {
     setMissing(null);
     setErr(null);
     setPos(null);
-  }
+  }, []);
 
   function showAt() {
     const el = ref.current;
@@ -80,7 +83,7 @@ export function InstantStatusToggle({ id, status, kind = 'listing', variant = 'h
 
   function handleToggle() {
     clearErrors();
-    startTransition(async () => {
+    startAsyncTransition(startTransition, async () => {
       try {
         flushPending();
       } catch {
@@ -129,13 +132,13 @@ export function InstantStatusToggle({ id, status, kind = 'listing', variant = 'h
       window.clearTimeout(t);
       window.removeEventListener('click', onClick);
     };
-  }, [pos]);
+  }, [pos, clearErrors]);
 
   // Hero variant: chromeless, white text + scrim shadow, hover frosted glass.
   // Outline variant: explicit pill (used outside hero, e.g. dashboard cards).
   const isHero = variant === 'hero';
   const cls = isHero
-    ? `inline-flex items-center gap-2 rounded-full border border-transparent px-3 py-1.5 text-[12.5px] text-surface transition-all duration-150 hover:border-white/25 hover:bg-white/20 hover:shadow-[0_2px_12px_rgba(0,0,0,0.18)] hover:backdrop-blur-md hover:[text-shadow:none] active:scale-[0.97] disabled:opacity-60`
+    ? 'inline-flex items-center gap-2 rounded-full border border-transparent px-3 py-1.5 text-[12.5px] text-surface transition-all duration-150 hover:border-white/25 hover:bg-white/20 hover:shadow-[0_2px_12px_rgba(0,0,0,0.18)] hover:backdrop-blur-md hover:[text-shadow:none] active:scale-[0.97] disabled:opacity-60'
     : `inline-flex items-center gap-2 rounded-full border border-line bg-bg/95 px-3 py-1.5 text-xs font-medium uppercase tracking-wider transition hover:border-line-strong disabled:opacity-60 ${
         isActive ? 'text-ink' : 'text-ink2'
       }`;

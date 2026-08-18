@@ -37,12 +37,8 @@
  * will show two dashes out of four.
  */
 
-import type { SupabaseClient } from "@supabase/supabase-js";
-import {
-  type NeighborhoodScores,
-  type ScorablePoi,
-  scoreNeighborhood,
-} from "./neighborhood-score";
+import type { SupabaseClient } from '@supabase/supabase-js';
+import { type NeighborhoodScores, type ScorablePoi, scoreNeighborhood } from './neighborhood-score';
 
 /** See the header. `false` = aggregate over all crawled links. */
 const SCORE_APPROVED_ONLY = false;
@@ -81,12 +77,12 @@ export async function fetchNeighborhoodScores(
   if (ids.length === 0) return out;
 
   let linkQuery = supabase
-    .from("listing_pois")
-    .select("listing_id, poi_id, intent_bucket, distance_m, status")
-    .in("listing_id", ids)
-    .order("distance_m", { ascending: true })
+    .from('listing_pois')
+    .select('listing_id, poi_id, intent_bucket, distance_m, status')
+    .in('listing_id', ids)
+    .order('distance_m', { ascending: true })
     .limit(MAX_LINKS);
-  if (SCORE_APPROVED_ONLY) linkQuery = linkQuery.eq("status", "approved");
+  if (SCORE_APPROVED_ONLY) linkQuery = linkQuery.eq('status', 'approved');
 
   const { data: links, error: linkErr } = (await linkQuery) as {
     data: LinkRow[] | null;
@@ -102,9 +98,9 @@ export async function fetchNeighborhoodScores(
   const CHUNK = 200;
   for (let i = 0; i < poiIds.length; i += CHUNK) {
     const { data: pois, error: poiErr } = (await supabase
-      .from("pois")
-      .select("id, rating, user_ratings_total")
-      .in("id", poiIds.slice(i, i + CHUNK))) as {
+      .from('pois')
+      .select('id, rating, user_ratings_total')
+      .in('id', poiIds.slice(i, i + CHUNK))) as {
       data: PoiRow[] | null;
       error: unknown;
     };

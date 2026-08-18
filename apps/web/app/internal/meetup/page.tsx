@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import Link from 'next/link';
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import { MeetupSearch } from './MeetupSearch.client';
 
 export const metadata: Metadata = {
@@ -24,7 +24,7 @@ function extractMeta(md: string, fallback: string): { title: string; preview: st
   let title = fallback;
   for (const line of lines) {
     const m = line.match(/^#\s+(.+?)\s*$/);
-    if (m && m[1]) {
+    if (m?.[1]) {
       title = m[1].trim();
       break;
     }
@@ -33,7 +33,7 @@ function extractMeta(md: string, fallback: string): { title: string; preview: st
   let preview = '';
   let inFence = false;
   for (const rawLine of lines) {
-      const line = rawLine.trim();
+    const line = rawLine.trim();
     if (line.startsWith('```')) {
       inFence = !inFence;
       continue;
@@ -49,7 +49,7 @@ function extractMeta(md: string, fallback: string): { title: string; preview: st
       .trim();
     if (preview) break;
   }
-  if (preview.length > 140) preview = preview.slice(0, 137).trimEnd() + '…';
+  if (preview.length > 140) preview = `${preview.slice(0, 137).trimEnd()}…`;
   return { title, preview };
 }
 
@@ -64,7 +64,9 @@ function listMd(folder: string): Entry[] {
       const ai = PRIORITY.indexOf(a);
       const bi = PRIORITY.indexOf(b);
       if (ai !== -1 || bi !== -1) {
-        return (ai === -1 ? Infinity : ai) - (bi === -1 ? Infinity : bi);
+        return (
+          (ai === -1 ? Number.POSITIVE_INFINITY : ai) - (bi === -1 ? Number.POSITIVE_INFINITY : bi)
+        );
       }
       return a.localeCompare(b);
     });
@@ -88,10 +90,7 @@ export default function MeetupIndexPage() {
           Docs viewer for meetup materials, MLS integration notes, and Ken Burns pitch notes.
         </p>
         <div className="flex flex-wrap gap-3 pt-2 text-sm">
-          <Link
-            href="/agents"
-            className="rounded border border-line px-3 py-1.5 hover:bg-surface"
-          >
+          <Link href="/agents" className="rounded border border-line px-3 py-1.5 hover:bg-surface">
             Review /agents landing →
           </Link>
         </div>
@@ -100,8 +99,8 @@ export default function MeetupIndexPage() {
       <section className="space-y-3">
         <h2 className="text-xl font-serif tracking-tight">Demo video</h2>
         <p className="text-ink2 text-sm">
-          24s Ken Burns slideshow for Tuesday&apos;s pitch. Direct link is public — anyone with
-          the URL can view. Do not share outside the meetup crew.
+          24s Ken Burns slideshow for Tuesday&apos;s pitch. Direct link is public — anyone with the
+          URL can view. Do not share outside the meetup crew.
         </p>
         <video
           controls
@@ -111,11 +110,7 @@ export default function MeetupIndexPage() {
           src="/demo/percho-slideshow-demo.mp4"
         />
         <p className="text-ink2 text-xs">
-          <a
-            href="/demo/percho-slideshow-demo.mp4"
-            className="underline hover:text-ink"
-            download
-          >
+          <a href="/demo/percho-slideshow-demo.mp4" className="underline hover:text-ink" download>
             Download MP4 (8.6 MB)
           </a>
         </p>

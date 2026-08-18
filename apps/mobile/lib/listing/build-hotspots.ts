@@ -37,7 +37,6 @@ export interface HotspotContext {
  * `buildHotspot` will drop it — that filter is the point, not a safety net.
  */
 function candidateActions(
-	photo: DetailPhotoDTO,
 	ctx: HotspotContext,
 	dated: boolean,
 ): HotspotAction[] {
@@ -115,7 +114,7 @@ export function buildHotspots(
 		);
 		const hotspot = buildHotspot({
 			photo: { id: photo.id, url: photo.url, tags: photo.tags },
-			candidateActions: candidateActions(photo, ctx, dated),
+			candidateActions: candidateActions(ctx, dated),
 		});
 		if (!hotspot) continue;
 		// First tagged photo per room wins — photos arrive in display order, so

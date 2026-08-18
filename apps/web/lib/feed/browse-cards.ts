@@ -386,9 +386,7 @@ async function assembleCards(
     });
 
     const card: BrowseCard = {
-      id: hero
-        ? (webVideoUid(hero) ?? `ext:${l.id}`)
-        : `photo:${l.id}`,
+      id: hero ? (webVideoUid(hero) ?? `ext:${l.id}`) : `photo:${l.id}`,
       mediaKind: hero ? 'video' : 'photo',
       hero: {
         cfVideoId: webVideoUid(hero) ?? '',

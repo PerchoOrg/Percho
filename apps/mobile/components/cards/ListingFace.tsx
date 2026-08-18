@@ -1,4 +1,3 @@
-import type { DimKey } from "@percho/shared";
 import { LinearGradient } from "expo-linear-gradient";
 import { Fragment } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
@@ -11,7 +10,6 @@ import { redline, redlineRadii } from "../../theme/tokens";
 import { redlineText } from "../../theme/typography";
 import { CardPhoto } from "../CardPhoto";
 import { CardVideo } from "../CardVideo";
-import type { RedlineIconName } from "./redline/RedlineChrome";
 
 /**
  * ListingFace (§1.4) — the listing front face.
@@ -60,21 +58,7 @@ import type { RedlineIconName } from "./redline/RedlineChrome";
  *
  * The tag pills that used to carry these icons are gone (2026-08-13 dropped
  * the icons, 2026-08-17 the pills, 2026-08-18 the white block itself), but the
- * map stays for the detail screens that still use `DIM_ICON`.
  */
-const DIM_ICON: Record<DimKey, RedlineIconName> = {
-	family: "family",
-	walkable: "walk",
-	schools: "school",
-	outdoors: "tree",
-	trails: "path",
-	quiet: "moon",
-	hip: "shop",
-	entertaining: "cup",
-	move_in: "check",
-	space: "expand",
-	nightlife: "cup",
-};
 
 /**
  * Above this many characters the price drops a step (28 → 26pt). Row 1 seats
@@ -186,7 +170,7 @@ export function ListingFace({
 			{/* Bottom scrim — transparent until ~55% down, then darkening to a
 			    deep 0.92 at the bottom (owner 2026-08-19: 底部渐变 + 信息文字条,
 			    like the reference photo — the bottom is near-black so the white
-			    price/specs/address bar reads clearly). */ }
+			    price/specs/address bar reads clearly). */}
 			<LinearGradient
 				colors={["transparent", "rgba(0,0,0,0.5)", "rgba(0,0,0,0.92)"]}
 				locations={[0.55, 0.78, 1]}
@@ -197,7 +181,7 @@ export function ListingFace({
 			/>
 
 			{/* Bottom info — on the photo, stepped hierarchy (no white container).
-			    Price is the anchor, specs secondary, address the muted line. */ }
+			    Price is the anchor, specs secondary, address the muted line. */}
 			<View style={styles.info}>
 				<Text
 					style={
@@ -221,6 +205,7 @@ export function ListingFace({
 					{!!card.bedBathSqft && (
 						<View style={styles.specsBar}>
 							{specsParts(card.bedBathSqft).map((part, i) => (
+								// biome-ignore lint/suspicious/noArrayIndexKey: spec parts repeat (e.g. "2" bd / "2" ba), so the index is what makes the key unique
 								<Fragment key={i}>
 									{i > 0 && <View style={styles.specDivider} />}
 									<Text style={styles.spec} numberOfLines={1}>

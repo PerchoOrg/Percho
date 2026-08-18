@@ -76,10 +76,7 @@ export function SurfacePreview({
         <div className="mx-auto w-[220px] overflow-hidden rounded-2xl border border-line bg-surface shadow-sm">
           <div className="aspect-[9/16] w-full">
             <div className="flex h-full w-full flex-col">
-              <div
-                className="w-full overflow-hidden bg-black/40"
-                style={{ flex: HERO_RATIO }}
-              >
+              <div className="w-full overflow-hidden bg-black/40" style={{ flex: HERO_RATIO }}>
                 {media}
               </div>
               <div

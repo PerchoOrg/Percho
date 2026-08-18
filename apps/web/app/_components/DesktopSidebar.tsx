@@ -30,14 +30,15 @@ import {
 } from './nav-config';
 
 export type DesktopSidebarProps = {
-  role: ViewerRole;
+  /** Named `viewer`, not `role`: `role` is a reserved ARIA attribute. */
+  viewer: ViewerRole;
 };
 
-export function DesktopSidebar({ role }: DesktopSidebarProps) {
+export function DesktopSidebar({ viewer }: DesktopSidebarProps) {
   const pathname = usePathname() ?? '/';
   if (isChromeHidden(pathname)) return null;
 
-  const tabs = getPrimaryTabs(role);
+  const tabs = getPrimaryTabs(viewer);
 
   return (
     <aside
@@ -46,7 +47,7 @@ export function DesktopSidebar({ role }: DesktopSidebarProps) {
       style={{ paddingTop: 'env(safe-area-inset-top)' }}
     >
       <nav aria-label="Primary" className="flex flex-1 flex-col px-4 pt-7">
-        {role === 'agent' ? (
+        {viewer === 'agent' ? (
           <>
             <NewButton />
             {/* hairline separator + extra gap below

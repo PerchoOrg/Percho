@@ -337,7 +337,6 @@ export function CommunityVideoFeed({
   owner = null,
   videos,
   initialIndex = 0,
-  activeListingsCount = 0,
   listings = [],
 }: {
   community: CommunityFeedCommunity;
@@ -349,7 +348,6 @@ export function CommunityVideoFeed({
   owner?: { id: string; name: string } | null;
   videos: CommunityFeedVideo[];
   initialIndex?: number;
-  activeListingsCount?: number;
   /** (V1 redo): listings to surface via the top-left chip. */
   listings?: CommunityListingItem[];
 }) {
@@ -432,7 +430,7 @@ export function CommunityVideoFeed({
       },
       { root, threshold: [0.6] },
     );
-    cardRefs.current.forEach((el) => obs.observe(el));
+    for (const el of cardRefs.current.values()) obs.observe(el);
     return () => obs.disconnect();
   }, [totalCards]);
 

@@ -87,9 +87,7 @@ export default async function WaitlistAdminPage() {
                   <td className="px-4 py-3">{r.phone}</td>
                   <td className="px-4 py-3">{r.brokerage}</td>
                   <td className="px-4 py-3">{r.mls_association}</td>
-                  <td className="px-4 py-3 text-ink2">
-                    {new Date(r.created_at).toLocaleString()}
-                  </td>
+                  <td className="px-4 py-3 text-ink2">{new Date(r.created_at).toLocaleString()}</td>
                 </tr>
               ))
             )}

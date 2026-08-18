@@ -26,7 +26,7 @@ import {
   buildListingCards,
   loadListingFeedBySource,
   loadListingPhotos,
-} from '@/lib/listing-feed/load';
+} from '@/lib/listings/feed-load';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { VideoFeed } from '../../[agentSlug]/[listingSlug]/_components/VideoFeed';

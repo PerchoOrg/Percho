@@ -1,5 +1,5 @@
-import type { Metadata } from 'next';
 import { MapPin, Users, Video } from 'lucide-react';
+import type { Metadata } from 'next';
 import { WaitlistForm } from './_components/WaitlistForm';
 
 export const metadata: Metadata = {
@@ -103,10 +103,7 @@ export default function AgentsLandingPage() {
             q="Is this free?"
             a="Yes — free during beta. Beta agents get grandfathered pricing when we introduce paid tiers."
           />
-          <Faq
-            q="Do I need to pull my listings from Zillow?"
-            a="No. Percho is non-exclusive."
-          />
+          <Faq q="Do I need to pull my listings from Zillow?" a="No. Percho is non-exclusive." />
           <Faq q="Where does the data come from?" a="FMLS, via Bridge Interactive." />
           <Faq q="What markets?" a="Atlanta metro only right now." />
           <Faq q="Who owns the video I upload?" a="You do." />

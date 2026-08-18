@@ -55,7 +55,9 @@ describe("city community line", () => {
 		// no communities must still render NO line — if this starts returning a
 		// string, the homes row has crept back onto the card.
 		expect(
-			communityLine(card({ communityCount: 0, stats: { activeListings: 124 } })),
+			communityLine(
+				card({ communityCount: 0, stats: { activeListings: 124 } }),
+			),
 		).toBeUndefined();
 	});
 });

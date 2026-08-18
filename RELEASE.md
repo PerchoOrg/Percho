@@ -20,6 +20,10 @@ What that changes on screen:
 - **AI motion is used sparingly and only where it is safe.** At most four clips per tour use generative motion, never on a frame with a readable shop or school sign, never on one with people in the foreground, and never to invent anything that was not already in the photo. Each of those clips is labelled as AI-generated.
 - **Narration reads as one script.** Lines are written per photo, then rewritten as a continuous voiceover script paced to the film. Nothing about school assignment is ever stated or implied.
 
+### 2026-08-19
+- Community pages load slightly faster — a database lookup that fed nothing was removed
+- Groundwork: the automated checks that run before any change ships were not actually running, and are now fixed. Two problems they immediately caught have been fixed as well.
+
 ### 2026-08-17
 - Neighborhood tour videos are planned end to end (photo description → shot list → compliance check → narration)
 - Every AI-generated clip in a tour now carries an AI-generated label

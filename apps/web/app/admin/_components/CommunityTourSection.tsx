@@ -12,8 +12,8 @@
  * the table rows, so the table shows clip state and a per-row Generate button.
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { AssemblyVideoPanel } from './AssemblyVideoPanel';
 import type { PhotoRow } from './PhotoTable';
 import { PhotoTable } from './PhotoTable';
@@ -48,7 +48,6 @@ export function CommunityTourSection({
   communityName,
   city,
   state,
-  zip,
   lat,
   lng,
   storageBase,
@@ -59,7 +58,6 @@ export function CommunityTourSection({
   communityName: string;
   city: string | null;
   state: string | null;
-  zip: string | null;
   lat: number | null;
   lng: number | null;
   storageBase: string;
@@ -68,7 +66,7 @@ export function CommunityTourSection({
 }) {
   const [clipRows, setClipRows] = useState<ClipRow[]>([]);
   const inFlight = useRef(false);
-  const router = useRouter();
+  const _router = useRouter();
 
   const loadClips = useCallback(async () => {
     if (inFlight.current) return;
@@ -143,7 +141,6 @@ export function CommunityTourSection({
         communityName={communityName}
         city={city}
         state={state}
-        zip={zip}
         lat={lat}
         lng={lng}
         storageBase={storageBase}

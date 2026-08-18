@@ -19,9 +19,9 @@ describe('parseVideoStatus', () => {
   });
 
   it('treats missing usage cost as null (not an error)', () => {
-    expect(
-      parseVideoStatus({ status: 'completed', unsigned_urls: ['https://cdn/a.mp4'] }),
-    ).toEqual({ status: 'completed', videoUrl: 'https://cdn/a.mp4', costUsd: null });
+    expect(parseVideoStatus({ status: 'completed', unsigned_urls: ['https://cdn/a.mp4'] })).toEqual(
+      { status: 'completed', videoUrl: 'https://cdn/a.mp4', costUsd: null },
+    );
   });
 
   it('treats completed-with-no-URL as a failure, not a success', () => {
@@ -39,7 +39,9 @@ describe('parseVideoStatus', () => {
   });
 
   it('treats expired as terminal failure so the row can be regenerated', () => {
-    expect(parseVideoStatus({ status: 'expired', error: 'Job exceeded maximum time to live' })).toEqual({
+    expect(
+      parseVideoStatus({ status: 'expired', error: 'Job exceeded maximum time to live' }),
+    ).toEqual({
       status: 'failed',
       error: 'Job exceeded maximum time to live',
     });

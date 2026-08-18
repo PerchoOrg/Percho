@@ -23,7 +23,7 @@
 
 import type { ReactNode } from 'react';
 
-import { HubTabs, type HubTab } from './HubTabs';
+import { type HubTab, HubTabs } from './HubTabs';
 
 type Props = {
   /** Cover image URL. Falls back to a soft surface block. */
@@ -58,11 +58,7 @@ export function HubDetailShell({
         <div className="relative aspect-[5/2] w-full overflow-hidden bg-surface md:aspect-[5/1] sm:rounded-b-xl">
           {coverUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={coverUrl}
-              alt=""
-              className="h-full w-full object-cover"
-            />
+            <img src={coverUrl} alt="" className="h-full w-full object-cover" />
           ) : (
             <div className="grid h-full w-full place-items-center text-muted text-xs">
               No cover image yet
@@ -79,9 +75,7 @@ export function HubDetailShell({
                     {title}
                   </h1>
                 )}
-                {subtitle && (
-                  <p className="mt-1 text-sm text-surface/90 drop-shadow">{subtitle}</p>
-                )}
+                {subtitle && <p className="mt-1 text-sm text-surface/90 drop-shadow">{subtitle}</p>}
               </div>
             </>
           )}

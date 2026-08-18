@@ -293,7 +293,6 @@ function TrackRow({
           {vibe}/{track.name}
         </div>
       </div>
-      {/** biome-ignore lint/a11y/useMediaCaption: royalty-free instrumental, no captions */}
       <audio controls preload="none" src={track.url} className="h-8 w-full sm:w-64">
         <track kind="captions" />
       </audio>
@@ -507,7 +506,6 @@ function ImportPicker({
                           {c.instruments ? <span> · {c.instruments}</span> : null}
                         </div>
                       </div>
-                      {/** biome-ignore lint/a11y/useMediaCaption: royalty-free instrumental */}
                       <audio
                         controls
                         preload="none"

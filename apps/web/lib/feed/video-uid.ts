@@ -15,7 +15,7 @@
  *
  * 2026-08-03, 5122 Lower Creek Street: the render worker had been square-only
  * since 2026-07-28, but the two web loaders (`lib/feed/browse-cards.ts`,
- * `lib/listing-feed/load.ts`) resolved `cf_video_id ?? cf_video_id_landscape`
+ * `lib/listings/feed-load.ts`) resolved `cf_video_id ?? cf_video_id_landscape`
  * and did not even SELECT the square column. A square-only listing therefore had
  * no uid web could read and the video silently did not play — while the same
  * listing played fine on iOS. The fallback lived inline at five call sites, so

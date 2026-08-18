@@ -1,15 +1,3 @@
-/**
- * /admin/pipeline/tour-jobs/[id] — per-listing tour hub.
- *
- * Shows every photo + every listing_videos row (walkthrough + agent
- * uploads) for a single listing, plus a button to regenerate the Ken
- * Burns walkthrough. Admin-scoped — bypasses agent ownership.
- *
- * .
- */
-
-import { streamIframeUrl, thumbnailUrl } from '@/lib/cloudflare/stream';
-import { webVideoUid } from '@/lib/feed/video-uid';
 import { createServiceClient } from '@/lib/supabase/server';
 import { notFound } from 'next/navigation';
 import { PhotoTable } from '../../../_components/PhotoTable';
@@ -19,10 +7,6 @@ import { AdminGenerateTourButton } from './AdminGenerateTourButton';
 export const dynamic = 'force-dynamic';
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
-
-function photoPublicUrl(storagePath: string) {
-  return `${SUPABASE_URL}/storage/v1/object/public/listing-photos/${storagePath}`;
-}
 
 interface Params {
   id: string;

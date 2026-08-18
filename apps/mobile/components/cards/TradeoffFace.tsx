@@ -1,19 +1,15 @@
-import { StyleSheet, Text, View } from "react-native";
-import { DIMS } from "@percho/shared";
 import type { DimKey } from "@percho/shared";
-import type { TradeoffCardV3 } from "../../lib/feed/card-types";
-import { SWIPE_THRESHOLD_RATIO } from "../../lib/gesture/decide-swipe";
-import { radii, redline } from "../../theme/tokens";
-import { redlineText } from "../../theme/typography";
-import {
-	RedlineIcon,
-	type RedlineIconName,
-} from "./redline/RedlineChrome";
+import { StyleSheet, Text, View } from "react-native";
 import Animated, {
 	type SharedValue,
 	interpolate,
 	useAnimatedStyle,
 } from "react-native-reanimated";
+import type { TradeoffCardV3 } from "../../lib/feed/card-types";
+import { SWIPE_THRESHOLD_RATIO } from "../../lib/gesture/decide-swipe";
+import { radii, redline } from "../../theme/tokens";
+import { redlineText } from "../../theme/typography";
+import { RedlineIcon, type RedlineIconName } from "./redline/RedlineChrome";
 
 const REST_OPACITY = 0.72;
 const CHOSEN_OPACITY = 1;
@@ -62,11 +58,7 @@ interface TradeoffFaceProps {
 	cardWidth: number;
 }
 
-export function TradeoffFace({
-	card,
-	tx,
-	cardWidth,
-}: TradeoffFaceProps) {
+export function TradeoffFace({ card, tx, cardWidth }: TradeoffFaceProps) {
 	const span = cardWidth * SWIPE_THRESHOLD_RATIO;
 
 	const leftStyle = useAnimatedStyle(() => ({

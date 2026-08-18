@@ -39,6 +39,7 @@
  */
 
 import { deleteCommunity, updateCommunity } from '@/app/dashboard/communities/actions';
+import { startAsyncTransition } from '@/lib/utils/start-async-transition';
 import { COMMUNITY_PROPERTY_TYPES } from '@/lib/zod/community';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
@@ -605,7 +606,7 @@ export function CommunityDangerZone({ communityId }: { communityId: string }) {
     )
       return;
     setErr(null);
-    startTransition(async () => {
+    startAsyncTransition(startTransition, async () => {
       const res = await deleteCommunity(communityId);
       if (res.ok) {
         router.replace('/dashboard/communities');
@@ -657,6 +658,7 @@ function Field({
   children: React.ReactNode;
 }) {
   return (
+    // biome-ignore lint/a11y/noLabelWithoutControl: the control arrives via {children}
     <label className="block space-y-1">
       <span className="text-ink2 text-xs">
         {label}
@@ -760,6 +762,7 @@ function ChipInput({
     >
       {values.map((v, i) => (
         <span
+          // biome-ignore lint/suspicious/noArrayIndexKey: the chip list can hold duplicate values while the user types, so the index disambiguates
           key={`${v}-${i}`}
           className="inline-flex items-center gap-1 rounded-full bg-ink/10 px-2.5 py-0.5 text-ink text-xs"
         >

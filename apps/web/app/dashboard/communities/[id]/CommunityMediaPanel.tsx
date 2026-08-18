@@ -70,7 +70,7 @@ export function CommunityMediaPanel({
   const videoInputRef = useRef<HTMLInputElement | null>(null);
   const photoInputRef = useRef<HTMLInputElement | null>(null);
   const photoRef = useRef<CommunityPhotoPanelHandle | null>(null);
-  const [category, setCategory] = useState<CommunityVideoCategoryId>('walk_the_block');
+  const [category, _setCategory] = useState<CommunityVideoCategoryId>('walk_the_block');
   const [pendingVideos, setPendingVideos] = useState<PendingVideoUpload[]>([]);
   const [unsupportedNotice, setUnsupportedNotice] = useState<string | null>(null);
 

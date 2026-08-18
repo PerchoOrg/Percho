@@ -15,6 +15,7 @@
  * sub-route — we want a one-tap mobile UX.
  */
 
+import { startAsyncTransition } from '@/lib/utils/start-async-transition';
 import { useState, useTransition } from 'react';
 import { updateAgentIdentity } from '../actions';
 import { AvatarPicker } from './AvatarPicker';
@@ -59,7 +60,7 @@ export function EditableAgentIdentity({
     }
 
     setError(null);
-    startTransition(async () => {
+    startAsyncTransition(startTransition, async () => {
       const result = await updateAgentIdentity({
         name: field === 'name' ? trimmed : name,
         brokerage: field === 'brokerage' ? trimmed : brokerage,
@@ -88,7 +89,6 @@ export function EditableAgentIdentity({
       <div className="mt-2">
         {editing === 'name' ? (
           <input
-            autoFocus
             type="text"
             defaultValue={name}
             disabled={isPending}
@@ -120,7 +120,6 @@ export function EditableAgentIdentity({
       <div className="mt-1">
         {editing === 'brokerage' ? (
           <input
-            autoFocus
             type="text"
             defaultValue={brokerage}
             disabled={isPending}

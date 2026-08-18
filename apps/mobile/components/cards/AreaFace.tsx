@@ -2,16 +2,16 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import type { SharedValue } from "react-native-reanimated";
 import type { AreaCardV3 } from "../../lib/feed/card-types";
-import type { TapSlot } from "../../lib/gesture/tap-slot";
 import { placeStats } from "../../lib/feed/place-stats";
+import type { TapSlot } from "../../lib/gesture/tap-slot";
 import { useSavedStore } from "../../state/saved";
 import { redline, redlineRadii } from "../../theme/tokens";
 import { redlineText } from "../../theme/typography";
 import { CardPhoto } from "../CardPhoto";
 import { CardVideo } from "../CardVideo";
 import { CardSurface } from "./CardSurface";
-import { StatBar } from "./StatBar";
 import { SAVE_TAP_TARGET } from "./ListingFace";
+import { StatBar } from "./StatBar";
 
 /** The circular arrow CTA's tap target id (feed.tsx `onTapTarget`). */
 export const CITY_EXPLORE_TAP_TARGET = "city-explore";
@@ -37,12 +37,7 @@ function communityLine(card: AreaCardV3): string | undefined {
 	return communityCount === 1 ? "1 community" : `${communityCount} communities`;
 }
 
-export function AreaFace({
-	card,
-	isTop,
-	tapSlot,
-	onExplore,
-}: AreaFaceProps) {
+export function AreaFace({ card, isTop, tapSlot, onExplore }: AreaFaceProps) {
 	const { unit } = card;
 	const saved = useSavedStore((s) => s.isSaved(card.id));
 	const toggleSaved = useSavedStore((s) => s.toggle);

@@ -23,6 +23,7 @@
  */
 
 import { updateListingAddress } from '@/app/dashboard/listings/[id]/edit/actions';
+import { startAsyncTransition } from '@/lib/utils/start-async-transition';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState, useTransition } from 'react';
 
@@ -132,7 +133,7 @@ export function DraftAddressPanel({ listingId }: { listingId: string }) {
       setSubmitErr('Please pick an address from the dropdown.');
       return;
     }
-    startTransition(async () => {
+    startAsyncTransition(startTransition, async () => {
       const result = await updateListingAddress(listingId, {
         address: resolved.street_address,
         city: resolved.city,

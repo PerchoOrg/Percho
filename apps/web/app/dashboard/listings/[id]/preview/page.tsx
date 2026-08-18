@@ -12,7 +12,11 @@
  */
 
 import { VideoFeed } from '@/app/(public)/v/[agentSlug]/[listingSlug]/_components/VideoFeed';
-import { buildListingCards, loadListingFeedById, loadListingPhotos } from '@/lib/listing-feed/load';
+import {
+  buildListingCards,
+  loadListingFeedById,
+  loadListingPhotos,
+} from '@/lib/listings/feed-load';
 import { createClient } from '@/lib/supabase/server';
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';

@@ -1,6 +1,6 @@
 {
 	"$schema": "https://biomejs.dev/schemas/1.9.4/schema.json",
-	"vcs": { "enabled": true, "clientKind": "git", "useIgnoreFile": true },
+	"extends": ["../../biome.base.json"],
 	"files": {
 		"ignore": [".expo", "expo-env.d.ts", "node_modules"]
 	}

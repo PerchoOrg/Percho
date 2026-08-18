@@ -612,7 +612,7 @@ export function communityReasons(args: {
 /**
  * EVERY reason this community can make, same ranking, unsliced.
  *
- * The community detail screen (`lib/community/detail.ts`) shows the card's three
+ * The community detail screen (`lib/communities/detail.ts`) shows the card's three
  * and then the rest, so the two surfaces must agree on both the set and the
  * order. Sharing one function is what makes the page open on the same three tiles
  * the user just tapped instead of a re-ranked different three.

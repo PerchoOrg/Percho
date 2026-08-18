@@ -18,11 +18,7 @@
  */
 
 import { createClient } from '@/lib/supabase/client';
-import {
-  AVATARS_BUCKET,
-  avatarPublicUrl,
-  nextAvatarStoragePath,
-} from '@/lib/supabase/storage';
+import { AVATARS_BUCKET, avatarPublicUrl, nextAvatarStoragePath } from '@/lib/supabase/storage';
 import { Camera, Loader2, Upload, X } from 'lucide-react';
 import { useCallback, useRef, useState } from 'react';
 import Cropper, { type Area } from 'react-easy-crop';
@@ -84,7 +80,6 @@ export function AvatarCircle({
 }) {
   if (url) {
     return (
-      // biome-ignore lint/a11y/useAltText: alt is set
       <img
         src={url}
         alt="Avatar"

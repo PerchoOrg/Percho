@@ -42,22 +42,12 @@ import { TradeoffFace } from "../../components/cards/TradeoffFace";
 import { CardSkeleton } from "../../components/feed/CardSkeleton";
 import { ExhaustedCard } from "../../components/feed/ExhaustedCard";
 import { OfflineBar } from "../../components/feed/OfflineBar";
-
-import {
-	type SharedValue,
-	runOnUI,
-	withSequence,
-	withTiming,
-} from "react-native-reanimated";
 import { useFeedPool } from "../../hooks/use-feed-pool";
 import { cardBehavior } from "../../lib/feed/behavior";
 import type { FeedCardV3 } from "../../lib/feed/card-types";
 import { deckKey } from "../../lib/feed/deck-key";
 import { buildSamplerDeck, samplerEnabled } from "../../lib/feed/dev-sampler";
-import {
-	buildGestureEvent,
-	buildSwipeEvent,
-} from "../../lib/feed/events";
+import { buildGestureEvent, buildSwipeEvent } from "../../lib/feed/events";
 import { generateFeed } from "../../lib/feed/generate-feed";
 import { FIRST_PAGE_SIZE, PREFETCH_DISTANCE } from "../../lib/feed/ratios";
 import { useEventQueue } from "../../state/event-queue";
@@ -65,8 +55,8 @@ import { useFeedSession } from "../../state/feed-session";
 import { useFunnelStore } from "../../state/funnel";
 import { useSavedStore } from "../../state/saved";
 import { useSwipeHintStore } from "../../state/swipe-hint";
-import { colors, redline } from "../../theme/tokens";
 import { DM_SERIF_FONT } from "../../theme/fonts";
+import { colors } from "../../theme/tokens";
 import { textStyles } from "../../theme/typography";
 
 /**
@@ -110,7 +100,7 @@ const GUTTER = 37;
  */
 
 export default function FeedScreen() {
-	const { width, height } = useWindowDimensions();
+	const { width } = useWindowDimensions();
 
 	const stage = useFunnelStore((s) => s.stage);
 	const stageHydrated = useFunnelStore((s) => s.hydrated);
@@ -314,7 +304,7 @@ export default function FeedScreen() {
 				}),
 			);
 
-			const next = recordSwipe(card, decision, at);
+			recordSwipe(card, decision, at);
 			// A real swipe IS the discovery — the hint never plays again. Only
 			// reached by a committed PAN; every surviving kind commits.
 			recordSwipeHint();
@@ -415,14 +405,7 @@ export default function FeedScreen() {
 					);
 			}
 		},
-		[
-			stage,
-			sessionN,
-			signals.swipesInStage,
-			emitGesture,
-			enqueue,
-			takeSeq,
-		],
+		[stage, sessionN, signals.swipesInStage, emitGesture, enqueue, takeSeq],
 	);
 
 	/**

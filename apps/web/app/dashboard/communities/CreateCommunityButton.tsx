@@ -17,6 +17,7 @@ import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
 
 import { HUB_CTA_CLASS } from '@/app/_components/EmptyHubState';
+import { startAsyncTransition } from '@/lib/utils/start-async-transition';
 import { createStubCommunity } from './actions';
 
 export function CreateCommunityButton() {
@@ -26,7 +27,7 @@ export function CreateCommunityButton() {
 
   function onClick() {
     setError(null);
-    startTransition(async () => {
+    startAsyncTransition(startTransition, async () => {
       const result = await createStubCommunity();
       if (!result.ok) {
         setError('Could not create — please retry.');

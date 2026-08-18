@@ -23,6 +23,7 @@ import {
 } from '@/app/dashboard/communities/[id]/photo-actions';
 import { createClient } from '@/lib/supabase/client';
 import { COMMUNITY_PHOTOS_BUCKET, nextCommunityPhotoStoragePath } from '@/lib/supabase/storage';
+import { startAsyncTransition } from '@/lib/utils/start-async-transition';
 import {
   COMMUNITY_VIDEO_CATEGORIES,
   type CommunityVideoCategoryId,
@@ -214,7 +215,7 @@ export const CommunityPhotoPanel = forwardRef<CommunityPhotoPanelHandle, Props>(
 
     const handleDelete = useCallback(
       (photoId: string) => {
-        startTransition(async () => {
+        startAsyncTransition(startTransition, async () => {
           const prev = photos;
           setPhotos((p) => p.filter((x) => x.id !== photoId));
           const res = await deleteCommunityPhoto({ communityId, photoId });
@@ -236,7 +237,7 @@ export const CommunityPhotoPanel = forwardRef<CommunityPhotoPanelHandle, Props>(
       (photoStoragePath: string) => {
         setGlobalError(null);
         setCoverBusyId(photoStoragePath);
-        startTransition(async () => {
+        startAsyncTransition(startTransition, async () => {
           const res = await setCommunityCoverFromPhoto({
             communityId,
             photoStoragePath,

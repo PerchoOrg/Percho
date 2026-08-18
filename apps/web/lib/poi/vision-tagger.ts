@@ -16,9 +16,9 @@
  * listing refresh (~100 photos) is ~$0.02-0.05.
  */
 
-import { extractJsonObject } from '@/lib/utils/extract-json';
 import { INTENT_BUCKETS, type IntentBucket } from '@/lib/poi/types';
 import { createServiceClient } from '@/lib/supabase/server';
+import { extractJsonObject } from '@/lib/utils/extract-json';
 
 const VISION_MODEL = process.env.GEMINI_VISION_MODEL ?? 'gemini-3.1-flash-lite';
 const API_BASE = (m: string) =>
@@ -252,7 +252,7 @@ export async function tagPoiPhoto(poiPhotoId: string): Promise<{
   };
   try {
     parsed = JSON.parse(jsonStr);
-  } catch (err) {
+  } catch (_err) {
     console.error(`[vision-tagger] JSON parse failed for ${poiPhotoId}; raw=`, raw.slice(0, 300));
     return { ok: false, error: 'parse_failed' };
   }
