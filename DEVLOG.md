@@ -16,6 +16,72 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-19 10:40 UTC — Specs catch up with the cut flip; assets disambiguated
+
+**Objective**: owner, four items — "we dont do flip anymore, we only have
+explore button / i see assets in many places, can we consolidate? / packages
+shared is it needed? only 177 lines / docs some thing are stale".
+Branch `phase54/flip-assets-shared`, on top of phase53.
+
+**flip: the code was already clean; the specs were not.** Searching `flip`
+turned up 45 files, but every hit in `apps/` is a *comment* explaining that
+the mechanic was removed on 2026-07-30 — `flipProgress`, `faceOpacity`,
+`canFlipCard`, `renderBack` and the `flip` event type are all gone, and
+`lib/gesture/capability.ts` carries a "## No `flippable`" section
+specifically so nobody reintroduces a dormant flag. Those comments are worth
+keeping.
+
+The specs were the stale half. spec-v3 still had "Tap 卡身 → 翻到 data face"
+as the gesture contract, `flip` in the analytics event list and in the
+VoiceOver custom actions, and a "Flip back" button drawn into the sticky
+footer of both the listing and community mockups. Six documents corrected;
+tap is no-op on every card type and `Explore →` is the only route into a
+detail screen. One dated note in 00-overview carries the explanation, the
+rest point at it.
+
+**assets: cannot be consolidated, so disambiguated instead.** Three folders
+held asset-shaped files and none were interchangeable — `assets/` (design
+source, never shipped), `apps/mobile/assets/` (what Expo bundles; its fonts
+are *build output* of scripts/icon-fonts), `apps/web/public/` (what Next
+serves). Merging them would put source next to build output and fight Expo's
+fixed convention. Renamed the root one to `brand/`, which leaves exactly one
+folder called `assets`. Ran the icon build scripts afterwards to confirm they
+still resolve their source.
+
+**packages/shared: keep it.** 177 lines is the right size for what it does,
+not evidence it is pointless. It exists so `DimKey` cannot drift between the
+web feed's gate/highlight logic and the mobile card faces — the two places
+that both render the same eleven-dim vocabulary. Every alternative is worse:
+duplicating the union in both apps invites silent divergence, and importing
+across apps points a dependency the wrong way. Its overhead is two files
+(package.json, tsconfig.json). Phase53 already removed everything unused; the
+remainder is exactly the four symbols both apps import.
+
+**Docs.** A path-reference checker over every doc outside devlog/archive found
+12 references to files that do not exist. Down to 3, all deliberate. The
+useful ones: the review-reasons enum is actually `REVIEW_ACTIONS` in
+`lib/poi/types.ts`; the vision tagger is POI-scoped not listing-scoped; and
+the planned `scripts/poi-photos.py` / `streetview.py` port never happened —
+that work went straight into TypeScript — so the plan no longer reads as a
+statement of fact. `ASK_POOL` is labelled **Not built**.
+
+**Learnings**:
+- "Is this feature still around?" is two questions. The code answered yes-it-
+  is-gone immediately; the specs answered no. Grepping the whole repo for a
+  feature name and sorting hits into code-vs-docs is a fast way to find which
+  half is lying.
+- A folder name that is right in isolation can still be wrong in aggregate.
+  Nothing was wrong with `assets/` until there were three of them.
+- Smallness is not a reason to delete a shared package. The question is
+  whether the thing it prevents (drift) is real.
+
+**Next steps**:
+- Rotate the Supabase service-role key found in phase53.
+- ~300 `as any` and ~40 hand-written `XRow` types remain.
+- `use-hls-playback` extraction, gated on device testing.
+
+---
+
 ## 2026-08-19 09:05 UTC — assets/icons, packages/shared, and 549 MB of Workspace scratch
 
 **Objective**: owner: "clean up and refactor 1) assets/icons, 2) packages/shared,
