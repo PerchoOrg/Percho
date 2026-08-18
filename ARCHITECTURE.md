@@ -48,7 +48,15 @@ worker outside Vercel picks it up. Anything slow lives behind that boundary.
 | `scripts/` | Everything that runs outside Vercel: long-running workers, one-shot pipelines, admin utilities, prototypes. |
 | `supabase/` | Schema source of truth. Migrations, RLS policies, edge functions, local config. |
 | `docs/` | Reference material a human reads. Not process logs — those go to `docs/archive/`. |
-| `assets/` | Design source files (icons, fonts) that are not served directly. |
+| `brand/` | Design **source** — the upstream Phosphor font, the 14 chosen SVGs, the glyph selection. Never shipped; `scripts/icon-fonts/` subsets it into the app's fonts. |
+
+**Three places hold files that look like "assets", and they are not
+interchangeable:** `brand/` is design source that is never served;
+`apps/mobile/assets/` is what Expo bundles at runtime (its location is fixed by
+convention, and the fonts in it are build output of `scripts/icon-fonts/`);
+`apps/web/public/` is what Next.js serves over HTTP. Renaming the root folder
+to `brand/` in phase54 left exactly one folder called `assets`, so the name now
+means one thing.
 
 Root files: `CLAUDE.md` (rules for agents), `DEVLOG.md` (current month;
 older months in `docs/devlog/`), `RELEASE.md` (non-technical changelog),
@@ -156,7 +164,7 @@ worker or a one-shot job.
 | `k12/` | School data and photo upload. |
 | `upload-bgm/` | Mirrors the local BGM library into storage. |
 | `admin/` | Operator utilities — curator eval, production smoke test, demo assets. Allowed to use the service-role key (CLAUDE.md §3). |
-| `icon-fonts/` | Rebuilds the mobile app's subset icon fonts from `assets/icons/`. |
+| `icon-fonts/` | Rebuilds the mobile app's subset icon fonts from `brand/icons/`. |
 | `maintenance/` | One-off backfills and requeues run by hand against production. |
 | `prototypes/`, `spikes/` | Experiments. Nothing in the product depends on them; treat as disposable. |
 

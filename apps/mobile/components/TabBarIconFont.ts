@@ -15,7 +15,7 @@
  * `assets/fonts/TabBarIcons.ttf` is a 4-glyph subset of Phosphor regular,
  * built by `scripts/icon-fonts/build-tabbar-icon-font.py` (SVG -> minimal TTF via
  * fontTools, ~1.1 KB). Codepoints match the FILL weight's, so they line up
- * with `assets/icons/phosphor-selection.json`.
+ * with `brand/icons/phosphor-selection.json`.
  *
  * Art widths were measured off the built font with fontTools (bounds pen /
  * unitsPerEm). Every glyph has a 1em advance and zero left side bearing, so

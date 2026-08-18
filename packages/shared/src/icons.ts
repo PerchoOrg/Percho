@@ -23,7 +23,7 @@
  *
  * The app ships a 14-glyph SUBSET of Phosphor Fill (5 KB, not 440 KB). A name
  * added here and to `ICON_GLYPH` but not re-subset renders BLANK on device and
- * nowhere else. Full procedure in `assets/icons/README.md`; short version:
+ * nowhere else. Full procedure in `brand/icons/README.md`; short version:
  *
  *   1. add to `GLYPHS` in `scripts/icon-fonts/build-icon-font.py`
  *   2. add the same key to `ICON_GLYPH` in `icon-font.ts`
