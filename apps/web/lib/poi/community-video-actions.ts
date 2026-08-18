@@ -32,8 +32,8 @@ import {
   type BucketVideoRow,
   type BucketVideoStatus,
   type GenerateBucketVideoResult,
-  COMMUNITY_BUCKET_VIDEO_SCOPE as SCOPE,
-} from './bucket-video-scope';
+  COMMUNITY_SCOPE as SCOPE,
+} from './entity-scope';
 import type { IntentBucket } from './types';
 
 export type GenerateCommunityBucketVideoResult = GenerateBucketVideoResult<'community_not_found'>;

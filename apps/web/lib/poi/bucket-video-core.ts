@@ -1,6 +1,6 @@
 /**
  * The bucket-video pipeline, written once and parameterised by
- * `BucketVideoScope`. `listing-video-actions.ts` and
+ * `PoiEntityScope`. `listing-video-actions.ts` and
  * `community-video-actions.ts` are thin 'use server' adapters over this.
  *
  * Flow (unchanged from the two originals):
@@ -22,10 +22,10 @@ import { revalidatePath } from 'next/cache';
 import { bucketLabel } from './bucket-label';
 import type {
   BucketVideoRow,
-  BucketVideoScope,
   BucketVideoStatus,
   GenerateBucketVideoResult,
-} from './bucket-video-scope';
+  PoiEntityScope,
+} from './entity-scope';
 import type { IntentBucket } from './types';
 
 const MAX_PHOTOS_PER_VIDEO = 15;
@@ -136,7 +136,7 @@ export function filterEligiblePhotos(
 }
 
 export async function generateBucketVideo<N extends string>(
-  s: BucketVideoScope,
+  s: PoiEntityScope,
   entityId: string,
   bucket: IntentBucket,
 ): Promise<GenerateBucketVideoResult<N>> {
@@ -234,7 +234,7 @@ export async function generateBucketVideo<N extends string>(
     .from('generated_videos')
     .select('id, intent_bucket, input_photo_ids, status')
     .eq(s.idColumn, entityId)
-    .eq('scope', s.scope)
+    .eq('scope', s.videoScope)
     .neq('intent_bucket', bucket)
     .in('status', ['pending', 'processing', 'ready'])) as {
     data: Array<{ id: string; input_photo_ids: string[] | null }> | null;
@@ -266,7 +266,7 @@ export async function generateBucketVideo<N extends string>(
     .from('generated_videos')
     .select('id, status')
     .eq(s.idColumn, entityId)
-    .eq('scope', s.scope)
+    .eq('scope', s.videoScope)
     .eq('intent_bucket', bucket)
     .in('status', ['pending', 'processing'])
     .maybeSingle()) as { data: { id: string; status: string } | null };
@@ -284,7 +284,7 @@ export async function generateBucketVideo<N extends string>(
     .insert({
       [s.idColumn]: entityId,
       [s.otherIdColumn]: null,
-      scope: s.scope,
+      scope: s.videoScope,
       intent_bucket: bucket,
       input_photo_ids: inputPhotoIds,
       generator: 'ffmpeg_slideshow',
@@ -324,7 +324,7 @@ export async function generateBucketVideo<N extends string>(
 
 /** All bucket videos for an entity, newest first. */
 export async function listBucketVideos(
-  s: BucketVideoScope,
+  s: PoiEntityScope,
   entityId: string,
 ): Promise<BucketVideoRow[]> {
   const supabase = await createClient();
@@ -339,7 +339,7 @@ export async function listBucketVideos(
       'id, intent_bucket, status, cf_stream_uid, duration_s, input_photo_ids, error, created_at',
     )
     .eq(s.idColumn, entityId)
-    .eq('scope', s.scope)
+    .eq('scope', s.videoScope)
     .order('created_at', { ascending: false })) as {
     data: Array<{
       id: string;
@@ -370,7 +370,7 @@ export async function listBucketVideos(
  * Narrative only counts when it carries a `voiceover` string.
  */
 export async function getBucketVideoStatus(
-  s: BucketVideoScope,
+  s: PoiEntityScope,
   entityId: string,
   bucket: IntentBucket,
 ): Promise<BucketVideoStatus> {
@@ -384,7 +384,7 @@ export async function getBucketVideoStatus(
     .from('generated_videos')
     .select('id, status, cf_stream_uid, duration_s, input_photo_ids, error, created_at, narrative')
     .eq(s.idColumn, entityId)
-    .eq('scope', s.scope)
+    .eq('scope', s.videoScope)
     .eq('intent_bucket', bucket)
     .order('created_at', { ascending: false })
     .limit(1)
@@ -422,7 +422,7 @@ export async function getBucketVideoStatus(
 
 /** Raw pool size for (entity, bucket), before the round-robin cap. */
 export async function getBucketEligiblePhotoCount(
-  s: BucketVideoScope,
+  s: PoiEntityScope,
   entityId: string,
   bucket: IntentBucket,
 ): Promise<number> {
@@ -476,7 +476,7 @@ export async function getBucketEligiblePhotoCount(
  * regenerated through the other's entry point.
  */
 export async function regenerateBucketVideoNarrative(
-  s: BucketVideoScope,
+  s: PoiEntityScope,
   videoId: string,
 ): Promise<
   | { ok: true; narrative: NonNullable<BucketVideoStatus>['narrative'] }
@@ -496,7 +496,7 @@ export async function regenerateBucketVideoNarrative(
     data: (Record<string, string | null> & { scope: string }) | null;
   };
   const ownerId = owned?.[s.idColumn];
-  if (!owned || !ownerId || owned.scope !== s.scope) {
+  if (!owned || !ownerId || owned.scope !== s.videoScope) {
     return { ok: false, message: 'Video not found or not owned by you.' };
   }
 

@@ -28,8 +28,8 @@ import {
   type BucketVideoRow,
   type BucketVideoStatus,
   type GenerateBucketVideoResult,
-  LISTING_BUCKET_VIDEO_SCOPE as SCOPE,
-} from './bucket-video-scope';
+  LISTING_SCOPE as SCOPE,
+} from './entity-scope';
 import type { IntentBucket } from './types';
 
 export type GenerateListingBucketVideoResult = GenerateBucketVideoResult<'listing_not_found'>;
