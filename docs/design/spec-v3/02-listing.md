@@ -8,7 +8,10 @@ Canon: listing-explore.md 全文 · 铁律:Stop.why 必填 + evidence 非空(类
 
 ## 2.1 Data Face(tap 翻面)— 完整图纸
 
-*Mockup:Listing data face — 深色数据面卡:头部 "$685,000 92% match",副行 "1204 Copper Leaf Ct · Waterside · listed 12 days ago",提示 "✨ tap any row to jump to that section";"Why 92%" 进度条行("3 reasons ›");数据行:Price / sqft "$241 · Waterside median $228"、Days on market "12 · metro median 21"、HOA · Tax (2025) "$85/mo · $6,120"、Est. monthly (20% down) "$3,890";"Waterside price distribution — this home" 7 桶直方图(本房桶高亮);POI 行 "🥾 American Tobacco Trail 4 min"、"🏫 Creekside Elem — 9/10 7 min";sticky 底栏 "Flip back" + "Explore →";底部 tabbar(Feed/Search/Saved/You)。*
+*Mockup:Listing data face — 深色数据面卡:头部 "$685,000 92% match",副行 "1204 Copper Leaf Ct · Waterside · listed 12 days ago",提示 "✨ tap any row to jump to that section";"Why 92%" 进度条行("3 reasons ›");数据行:Price / sqft "$241 · Waterside median $228"、Days on market "12 · metro median 21"、HOA · Tax (2025) "$85/mo · $6,120"、Est. monthly (20% down) "$3,890";"Waterside price distribution — this home" 7 桶直方图(本房桶高亮);POI 行 "🥾 American Tobacco Trail 4 min"、"🏫 Creekside Elem — 9/10 7 min";sticky 底栏 "Explore →";底部 tabbar(Feed/Search/Saved/You)。*
+
+> **2026-07-30:** 此页原为 tap 卡身翻出的 data face,底栏有 "Flip back"。flip 已移除 —
+> 现在是 `Explore →` 推入的详情页,退出走导航返回。见 00-overview 顶部说明。
 
 标注说明:
 
@@ -17,7 +20,7 @@ Canon: listing-explore.md 全文 · 铁律:Stop.why 必填 + evidence 非空(类
 3. **Why 92% 行(v2 新)** — match 分解入口:tap 展开 3 条 profile 关联理由(行内 accordion,不跳页):"backs onto greenway — you liked 6 trail homes"。理由必须引用 evidence 数字,模板同 insight 卡。分数不可信阶段(Stage&lt;4)整行不出。
 4. **Est. monthly 行** — 默认 20% down / 当周利率(数据源标注 tap 后展开)。这是买家最常心算的数字,放 data face 省一次跳页。tap → explore 的 monthly 计算 section(可调 down/rate)。
 5. **价格分布 mini chart** — Waterside(所属 subdivision)在售+近 12 月成交价直方图 7 桶,本房桶 --accent 高亮。tap → explore Comps section。数据不足 5 个样本时降级为 "median $612K · 30 sales" 单行,不出假直方图。
-6. **Sticky 底栏** — 渐变遮底。Flip back(描边)+ Explore(实底)。滚到任何位置都可退出。
+6. **Sticky 底栏** — 渐变遮底。Explore(实底)。滚到任何位置都可退出;返回走导航返回,不再有 Flip back。
 7. (—)**内容优先级(装不下时从下砍)** — 价格 context → match 分解 → monthly → 分布图 → POI ×2。POI 最多 2 行(完整列表在 explore)。data face 是 30 秒判断面,不是 mini explore。
 
 ## 2.2 Explore Page — 整体流程

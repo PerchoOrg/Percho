@@ -82,12 +82,19 @@ Owner 定案:前期不上 listing feed,先充分了解 buyer,地理上从大到�
 
 ## 0.5 手势契约总表(全 app 唯一权威)
 
+> **2026-07-30 变更 — flip 已移除。** 卡片曾经是双面的:tap 卡身翻到 data
+> face,底栏有 "Flip back"。owner 砍掉了这个机制("砍掉flip back的功能"),
+> 卡片现在只有一面,进详情统一走卡上的 `Explore →` 按钮。代码里 flip 的每一
+> 处(`flipProgress` / `faceOpacity` / `canFlipCard` / `renderBack`)都已删除,
+> 不是禁用 — 见 `apps/mobile/lib/gesture/capability.ts` 顶部注释。本页及
+> 01/02/03 页凡提到 data face / Flip back 的段落均已按此更新。
+
 Canon §2.5。任何新卡型/新面必须先对照此表 — 尤其"垂直手势永不承载语义"(canon §9.7:swipe-up 与 swipe-right 在手指上冲突)。v2:deep peek 移出 P0,long-press 全卡型 no-op(手势位保留,不复用作其他语义)。
 
 | 手势 | Feed 上语义 | 参数 |
 |---|---|---|
 | 横滑 right / left | 按卡型:yes/no · like/pass · 二选一 · agree/disagree(见 01 页卡型表) | 阈值 = 卡宽 35%;速度 > 800pt/s 直接判定;跟手旋转 ±8° |
-| Tap 卡身 | listing/community:翻到 data face;其余卡型:no-op | flip = 350ms opacity crossfade(禁 3D rotateY — 父级 transform 压扁 3D 上下文) |
+| Tap 卡身 | **全卡型 no-op**(2026-07-30 起 — flip 机制已砍) | 卡片只有一面。进详情走卡上的 `Explore →` 按钮,不是手势 |
 | Long-press | **全卡型 no-op(v2 — deep peek 移出 P0)**。手势位保留,未来不得挪作 like/pass 之外语义 | — |
 | Tap 按钮(Explore / Skip / milestone CTA) | 显式导航/状态变更 — 永远是按钮,不是手势 | hit target ≥ 44pt |
 | 垂直滑动 | **feed 卡面上:无语义。**data face / sheet / detail 内 = 正常滚动 | pan 手势限 ±30° 扇区起判横滑,余下交给 ScrollView |
@@ -95,7 +102,7 @@ Canon §2.5。任何新卡型/新面必须先对照此表 — 尤其"垂直手�
 | Haptics(expo-haptics) | 触发 |
 |---|---|
 | `selectionAsync` | swipe 过阈值瞬间(方向判定) |
-| `impactAsync(light)` | 卡片飞出落定、flip 完成、sheet 弹出 |
+| `impactAsync(light)` | 卡片飞出落定、sheet 弹出 |
 | `notificationAsync(success)` | milestone 卡出现、insight 达成、persona 变化 toast、save feature |
 | 无 haptic | pass(左滑)不震 — 负反馈不奖励 |
 

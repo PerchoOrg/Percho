@@ -258,7 +258,7 @@ create table generated_videos (
 
 **Tag edit reasons**: `wrong-scene`, `missing-mood`, `wrong-subject`, `too-generic`, `other`
 
-Reasons enum lives in `lib/poi/review-reasons.ts`, single source of truth for UI + DB validation.
+Reasons enum lives in `apps/web/lib/poi/types.ts` (`REVIEW_ACTIONS` / `ReviewAction`), single source of truth for UI + DB validation.
 
 
 ---
@@ -452,7 +452,7 @@ First 10k calls/month/SKU are free (Google), so first ~40 listings/month are ~fr
 - **New tables**: 5 migrations under `supabase/migrations/`
 - **New components**: `app/dashboard/listings/[id]/edit/NearbyPoiPanel.tsx`, `PoiCard.tsx`, `IntentBucketAccordion.tsx`, `PhotoReviewDrawer.tsx`, `StreetViewPanel.tsx`
 - **New lib**: `lib/poi/{actions.ts,discovery.ts,photos.ts,streetview.ts,directions.ts,review-reasons.ts,intent-buckets.ts,scoring.ts}`
-- **New scripts** (already exist as prototypes): `scripts/poi-photos.py`, `scripts/streetview.py` — will be ported to TS server actions
+- **New scripts** — this plan was not followed. Photo fetch and POI discovery were written directly as TypeScript in `apps/web/lib/poi/poi-actions-core.ts`; no `poi-photos.py` / `streetview.py` was ever committed.
 - **Modified**: `MediaPanel.tsx` (adds inner tab bar), `EditListingForm.tsx` (wires new panel)
 
 ---

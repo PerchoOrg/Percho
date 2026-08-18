@@ -14,7 +14,7 @@
 2. **加载 listing**: `sb_get('listings')` — 拿 address/city/state/neighborhood/price/beds/baths/sqft
 3. **加载照片**: `sb_get('listing_photos')` → `storage_download('listing-photos')` 到临时目录
 4. **等打标签**: gate 检查所有照片 `tagged_at IS NOT NULL`,否则退回队列 backoff
-   (打标签是上传时 fire-and-forget 触发,`lib/listings/vision-tagger.ts`,~$0.005/photo)
+   (打标签是上传时 fire-and-forget 触发,`apps/web/lib/poi/vision-tagger.ts`,~$0.005/photo)
 5. **方向决策**: `photos_are_mostly_landscape()`(≥80% landscape → 只渲 landscape,
    反之只渲 portrait,Phase 75 单方向策略)
 6. **build_plan** (`photo_selector.py`):

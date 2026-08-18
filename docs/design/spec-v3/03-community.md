@@ -17,7 +17,9 @@ Canon: discovery-feed.md §1.4(subdivision 锚定)· community like 是漏斗最
 
 ## 3.2 Community Data Face(tap 翻面)— 完整图纸
 
-*Mockup:Community data face — 深色数据面:头部 "Waterside",副行 "Subdivision · Decatur GA · 214 homes · HOA $85/mo";数据行:Median (12 mo) "$612K · +3.2% YoY"、For sale now "7 homes · $540K–$780K";提示 "The four things that matter";四柱 2×2 scorecard:🛡 安 Safety A−(Crime 62% below metro · well-lit streets)、🎓 学 Schools A(Oak Grove Elem 9/10 · assigned)、🛒 便 Convenience B+(Grocery 8 min · downtown 22 min)、📈 潜 Potential A−(+3.2% YoY vs metro +1.8% · new transit 2027);提示 "How Waterside fits you";trait 契合条:Trail access(88%,strong)、Yard size(74%,strong);sticky 底栏 "Flip back" + "Explore →";底部 tabbar。*
+*Mockup:Community data face — 深色数据面:头部 "Waterside",副行 "Subdivision · Decatur GA · 214 homes · HOA $85/mo";数据行:Median (12 mo) "$612K · +3.2% YoY"、For sale now "7 homes · $540K–$780K";提示 "The four things that matter";四柱 2×2 scorecard:🛡 安 Safety A−(Crime 62% below metro · well-lit streets)、🎓 学 Schools A(Oak Grove Elem 9/10 · assigned)、🛒 便 Convenience B+(Grocery 8 min · downtown 22 min)、📈 潜 Potential A−(+3.2% YoY vs metro +1.8% · new transit 2027);提示 "How Waterside fits you";trait 契合条:Trail access(88%,strong)、Yard size(74%,strong);sticky 底栏 "Explore →";底部 tabbar。*
+
+> **2026-07-30:** 同 02 页 — 此面原由 tap 卡身翻出,flip 已移除,现在由 `Explore →` 推入。
 
 标注说明:
 

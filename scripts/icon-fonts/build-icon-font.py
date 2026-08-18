@@ -23,7 +23,7 @@ Adding an icon:
   3. Add the same key + codepoint to `ICON_GLYPH` in `icon-font.ts`.
   4. Run this script, then `npx vitest run theme/icon-font.test.ts`.
 
-Requires `fonttools` (pip install fonttools) and `assets/icons/Phosphor-Fill.ttf`.
+Requires `fonttools` (pip install fonttools) and `brand/icons/Phosphor-Fill.ttf`.
 """
 
 import json
@@ -32,8 +32,8 @@ import sys
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
-SOURCE_FONT = REPO / "assets/icons/Phosphor-Fill.ttf"
-SELECTION = REPO / "assets/icons/phosphor-selection.json"
+SOURCE_FONT = REPO / "brand/icons/Phosphor-Fill.ttf"
+SELECTION = REPO / "brand/icons/phosphor-selection.json"
 OUT_FONT = REPO / "apps/mobile/assets/fonts/PerchoIcons.ttf"
 
 # Our icon name -> Phosphor Fill glyph name. Must stay in sync with ICON_GLYPH

@@ -76,7 +76,7 @@ export const ICON_FONT = "PerchoIcons";
  * The OUTLINE weight of the same set, for the 2026-08-14 trade-off redesign.
  *
  * The main subset is Phosphor FILL (owner's 2026-08-01 pick, "Fill weight
- * only" — see `assets/icons/README.md`). The trade-off card's new spec asks
+ * only" — see `brand/icons/README.md`). The trade-off card's new spec asks
  * for fine line icons ("精细 outline icon"), which is a different weight of
  * the SAME drawings: Phosphor's regular.ttf uses the identical codepoints,
  * so `ICON_GLYPH` serves both fonts unchanged — only the font file and the

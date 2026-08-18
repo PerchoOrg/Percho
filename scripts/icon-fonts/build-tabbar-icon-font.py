@@ -11,7 +11,7 @@ Source: Phosphor's regular (outline) weight TTF from the @phosphor-icons/web
 npm package (`package/src/regular/Phosphor.ttf`), subset with fontTools
 subset — the same reproducible path `scripts/icon-fonts/build-icon-font.py` uses for the
 fill weight. The fill-weight codepoints are the same across weights, so they
-line up with `assets/icons/phosphor-selection.json`.
+line up with `brand/icons/phosphor-selection.json`.
 
 Why the official TTF and not SVG→TTF: the first version hand-built the font
 from Phosphor's regular SVG paths, and CoreText filled every interior hole —

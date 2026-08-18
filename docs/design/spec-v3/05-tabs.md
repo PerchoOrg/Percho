@@ -53,7 +53,7 @@ v3:原本页的 Search 设计已并入 04(Search + Map 合并,owner 2026-07-25 �
 | 空态 — Saved | "Homes you like will live here" + [Back to feed]。Search tab 空态见 04 §4.4/§4.5。永远给回主循环的按钮。 |
 | 错误 — API 失败 | toast "Something's off — retrying…" 自动重试;3 次失败出全屏轻量错误卡 + Retry。不用 alert 弹窗。 |
 | Dynamic Type | 正文跟随系统缩放至 XL;卡上 serif 展示字号锁定(照片上文字缩放破坏排版,以 44pt hit target 和 VoiceOver 完整标签补偿)。 |
-| VoiceOver | 卡片 = 单可访问元素,label 汇总("Listing, $685,000, 4 bed, Waterside, 92% match");custom actions = like/pass/flip/explore。swipe 全部有按钮等价物。Search 图层 chips = toggle button 原生可达;热力区块有 label("Decatur, 78 percent explored")。 |
+| VoiceOver | 卡片 = 单可访问元素,label 汇总("Listing, $685,000, 4 bed, Waterside, 92% match");custom actions = like/pass/explore(flip 已移除)。swipe 全部有按钮等价物。Search 图层 chips = toggle button 原生可达;热力区块有 label("Decatur, 78 percent explored")。 |
 | Reduce Motion | 关闭卡片旋转/呼吸/milestone 动画;flyout 改 crossfade;haptics 保留。 |
 | 深链 | `percho://listing/[id]`、`percho://community/[slug]`、`percho://search?focus=<geo>`、universal links percho.co/l/… — 冷启动直达,back 落 feed 首位。 |
 

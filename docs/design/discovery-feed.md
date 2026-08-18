@@ -253,7 +253,9 @@ Ranking of listings/communities against scope happens **inside**
 ```
 
 Background: full-bleed photo, dark gradient overlay. No back face (ask cards
-don't flip; long-press is a no-op).
+don't flip; long-press is a no-op). **2026-07-30: the flip mechanic was cut
+entirely — no card flips now, and `Explore →` on the card opens the detail
+screen instead. The Back column below is history.**
 
 **Map thumb**: only on `region / state / metro / city` layers. Shows the
 geographic scope of the current question so RTP-metro vs Cary-city vs NC-state
@@ -283,7 +285,7 @@ from `state.scope[type]`.
 
 ### 4.3 Feed card types
 
-| Type | Face | Back (flip) | Long-press |
+| Type | Face | Back (flip — removed 2026-07-30) | Long-press |
 |---|---|---|---|
 | `ask` | Question | none | no-op |
 | `listing` | Video/photo | Data (price/beds/DOM) | Deep peek (POIs) |
@@ -349,8 +351,12 @@ New (v1, TBD):
 |---|---|
 | `buyer_scope_events` | Append-only log of every swipe, `(user_id, card_id, layer, verdict, ts)` |
 
-`ASK_POOL` in v1 is a static JSON in `lib/discovery/ask-pool.ts` — not a
+`ASK_POOL` in v1 was to be a static JSON in `lib/discovery/ask-pool.ts` — not a
 table. Table-ify only when we have >50 cards or per-user variants.
+
+> **Not built.** The ask-card pool never shipped; nothing in the repo defines
+> `ASK_POOL` or that file. This section is design intent, not a description of
+> the code.
 
 ## 6. Phased rollout
 

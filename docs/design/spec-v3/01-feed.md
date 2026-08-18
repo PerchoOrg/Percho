@@ -11,9 +11,9 @@ Canon: discovery-feed.md §1–§4(节奏引擎按 owner 2026-07-25 修订升级
 | 卡型 | 目的 | ← 左滑 | 右滑 → | tap | 出现阶段 |
 |---|---|---|---|---|---|
 | **Ask**(preference) | 学偏好 · 收窄地理 | No | Yes | no-op | 全阶段(密度递减) |
-| **Area**(v2 新) | 大区/城市/zip 氛围试探 | not for me | tell me more | flip → area data face | Stage 1–2 主力 |
-| **Community** | 推荐 subdivision | pass | like(漏斗最强信号) | flip → data face(03 页详设) | Stage 3 主力,4 延续 |
-| **Listing** | 精准荐房 | pass | like | flip → data face(02 页详设) | **Stage 1–2 预告(1/10,可 like)· Stage 3 预览 · Stage 4 主力** |
+| **Area**(v2 新) | 大区/城市/zip 氛围试探 | not for me | tell me more | no-op(`Explore →` 按钮进 area 详情) | Stage 1–2 主力 |
+| **Community** | 推荐 subdivision | pass | like(漏斗最强信号) | no-op(`Explore →` 进 community 详情,03 页详设) | Stage 3 主力,4 延续 |
+| **Listing** | 精准荐房 | pass | like | no-op(`Explore →` 进 listing 详情,02 页详设) | **Stage 1–2 预告(1/10,可 like)· Stage 3 预览 · Stage 4 主力** |
 | **Trade-off** ★ | 逼出优先级 | 选左 | 选右(**永不 yes/no**) | no-op | Stage 0 起,全程 |
 | **Challenge** | 市场教育 · 好玩 | 二选一;swipe 后卡面 reveal 真答案 | ← 同左 | no-op | Stage 2+,≤10% |
 | **Insight** | AI 观察确认 | disagree(降权 evidence) | agree | "not sure" 按钮 | evidence 过阈值即出 |
@@ -39,7 +39,7 @@ Canon: discovery-feed.md §1–§4(节奏引擎按 owner 2026-07-25 修订升级
 
 1. **三个粒度共用一个卡型** — AREA(metro 大区,如 "North Fulton")/ CITY / ZIP(呈现为片区名不是数字,"East Decatur · 30030")。kind chip 标粒度。媒体 = 该地标志性街景/航拍视频(muted 自动播,同全局视频规则)。
 2. **Swipe 语义 = 兴趣不是 like** — 右滑 "Tell me more" = 该地理单元加权 + 后续注入其下一级卡;左滑 "Not for me" = 降权(软信号,非拉黑)。连续右滑同 city 两次 = 该 city 视为聚焦,晋级判定输入。
-3. **Tap → area data face** — 深底数据面(同 listing data face 家族):median、库存、价格趋势 mini chart、通勤锚点(到 metro 核心 min)、学区带、3 个代表 community 名。底部双钮 Flip back / See on map →(跳 04 Search tab 并聚焦该区)。每个数据点可点 — 落点是 Search 地图对应图层,不是 listing。
+3. **`Explore →` → area 详情页** — 深底数据面(同 listing 详情家族):median、库存、价格趋势 mini chart、通勤锚点(到 metro 核心 min)、学区带、3 个代表 community 名。底部 See on map →(跳 04 Search tab 并聚焦该区);返回走导航返回,不是 Flip back。每个数据点可点 — 落点是 Search 地图对应图层,不是 listing。
 4. **数据源** — area 级统计从 listing 库聚合(median/库存)+ 静态编辑内容(氛围文案、代表 community)。v1 Atlanta metro 手工编辑 ~40 个地理单元(区/市/zip 片区)足够。
 
 ## 1.4 Listing / Community 卡 front face
@@ -124,7 +124,7 @@ Front face 图纸见 00 §0.6 基准屏(listing)。tap 翻 data face — **data 
 | 事件 | 字段 |
 |---|---|
 | `swipe` | card_id, card_type, geo_level?, verdict(L/R), funnel_stage, dt_since_prev_swipe, active_index |
-| `flip` / `explore_tap` / `datapoint_tap` | card_id + 来源手势;datapoint_tap 带 focus key |
+| `explore_tap` / `datapoint_tap` | card_id + 来源手势;datapoint_tap 带 focus key。(`flip` 曾是第三种,随 flip 机制一起移除 — 见 `apps/mobile/lib/feed/events.ts`) |
 | `stage_advance` / `milestone_cta` / `milestone_map_link` | from_stage, to_stage, swipes_in_stage, session_n |
 | `skip_layer` / `persona_change` | layer / old→new persona |
 | 健康指标 | stage 晋级漏斗(0→1→…→4 转化率 + 每级 swipe 数分布)· Stage 4 listing like 率 vs 旧无漏斗基线 · milestone→map 点击率 |
