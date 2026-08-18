@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Vibe · Place detail</title>
+<link rel="stylesheet" href="_app.css" />
+<style>
+  .screen { background: var(--surface); color: var(--ink); }
+
+  .hero {
+    position: relative; height: 320px;
+    background-size: cover; background-position: center;
+  }
+  .hero::after {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(180deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0) 30%, rgba(0,0,0,0.75) 100%);
+  }
+  .hero-content {
+    position: absolute; left: 0; right: 0; bottom: 20px;
+    padding: 0 20px; color: #fff; z-index: 2;
+  }
+  .hero-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: rgba(232,90,42,0.95); color: #fff;
+    padding: 6px 12px; border-radius: 999px;
+    font-size: 11px; font-weight: 700; letter-spacing: 0.05em;
+    margin-bottom: 10px;
+  }
+  .hero-name { font-size: 32px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.05; }
+  .hero-city { font-size: 13px; opacity: 0.9; margin-top: 4px; }
+
+  .back-btn {
+    position: absolute; top: 54px; left: 16px; z-index: 5;
+    width: 38px; height: 38px; border-radius: 50%;
+    background: rgba(255,255,255,0.15); backdrop-filter: blur(10px);
+    color: #fff; border: none; font-size: 18px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .like-btn {
+    position: absolute; top: 54px; right: 16px; z-index: 5;
+    width: 38px; height: 38px; border-radius: 50%;
+    background: rgba(255,255,255,0.15); backdrop-filter: blur(10px);
+    color: #fff; border: none; font-size: 18px;
+  }
+  .like-btn.liked { background: rgba(232,90,42,0.95); }
+
+  .body-scroll { flex: 1; overflow-y: auto; padding-bottom: 160px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .body-scroll::-webkit-scrollbar { display: none; }
+
+  .stats-row {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    padding: 16px 20px; border-bottom: 1px solid var(--border);
+  }
+  .stats-row .stat b { display: block; font-size: 18px; font-weight: 700; }
+  .stats-row .stat .lbl { font-size: 10px; color: var(--mute); letter-spacing: 0.05em; margin-top: 2px; }
+
+  .section { padding: 20px; border-bottom: 1px solid var(--border); }
+  .section h3 { font-size: 11px; letter-spacing: 0.1em; color: var(--mute); font-weight: 700; margin-bottom: 10px; }
+
+  .match-card {
+    background: linear-gradient(135deg, var(--accent-soft), transparent);
+    border: 1px solid var(--border); border-radius: 14px;
+    padding: 16px; display: flex; gap: 14px; align-items: center;
+  }
+  .match-card .score-big {
+    font-size: 40px; font-weight: 800; color: var(--accent);
+    line-height: 1; font-variant-numeric: tabular-nums;
+    flex-shrink: 0;
+  }
+  .match-card .score-lbl { font-size: 10px; color: var(--mute); letter-spacing: 0.05em; margin-top: 2px; }
+  .match-card .why { font-size: 12px; line-height: 1.55; opacity: 0.9; }
+
+  .blurb { font-size: 14px; line-height: 1.6; opacity: 0.92; }
+
+  .poi-list { display: flex; flex-direction: column; gap: 10px; }
+  .poi {
+    display: flex; gap: 12px; align-items: center;
+    padding: 10px 12px; border-radius: 12px;
+    background: var(--card); border: 1px solid var(--border);
+  }
+  .poi .icon {
+    width: 38px; height: 38px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; flex-shrink: 0;
+    background: var(--surface);
+    border: 1px solid var(--border);
+  }
+  .poi .info { flex: 1; min-width: 0; }
+  .poi .info b { font-size: 13px; display: block; }
+  .poi .info .note { font-size: 11px; color: var(--mute); margin-top: 1px; }
+  .poi .mins {
+    font-size: 11px; font-weight: 700; color: var(--accent);
+    background: var(--accent-soft); padding: 3px 8px; border-radius: 6px;
+  }
+
+  .listings { display: flex; flex-direction: column; gap: 10px; }
+  .listing {
+    display: flex; gap: 12px; padding: 10px;
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 14px;
+  }
+  .listing img { width: 100px; height: 100px; object-fit: cover; border-radius: 10px; flex-shrink: 0; }
+  .listing .info { flex: 1; }
+  .listing .price { font-size: 18px; font-weight: 800; }
+  .listing .addr { font-size: 12px; color: var(--mute); margin-top: 2px; }
+  .listing .specs { font-size: 12px; margin-top: 6px; opacity: 0.9; }
+
+  .cta-row {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    padding: 12px 20px 24px;
+    background: var(--surface); border-top: 1px solid var(--border);
+    display: flex; gap: 10px;
+  }
+  .cta-primary {
+    flex: 2; padding: 14px; border: none; border-radius: 12px;
+    background: var(--accent); color: #fff;
+    font-size: 14px; font-weight: 700;
+  }
+  .cta-secondary {
+    flex: 1; padding: 14px; border: 1px solid var(--border); border-radius: 12px;
+    background: var(--surface); color: var(--ink);
+    font-size: 14px; font-weight: 600;
+  }
+
+  .trait-compare { display: flex; flex-direction: column; gap: 8px; }
+  .tc-row { display: flex; align-items: center; gap: 10px; font-size: 12px; }
+  .tc-row .lbl { flex: 0 0 90px; color: var(--mute); }
+  .tc-row .bar-wrap { flex: 1; height: 6px; background: var(--card); border-radius: 3px; position: relative; }
+  .tc-row .bar-you {
+    position: absolute; top: -1px; height: 8px; width: 2px;
+    background: var(--ink);
+  }
+  .tc-row .bar-place {
+    height: 100%; background: var(--accent); border-radius: 3px;
+  }
+  .tc-row .val { font-size: 10px; font-variant-numeric: tabular-nums; flex: 0 0 42px; text-align: right; color: var(--mute); }
+</style>
+</head>
+<body>
+  <div class="page-title">Vibe · Place detail</div>
+  <div class="phone">
+    <div class="notch"></div>
+    <div class="screen">
+      <div class="body-scroll">
+        <div class="hero" id="hero">
+          <button class="back-btn" onclick="history.back()">←</button>
+          <button class="like-btn" id="likeBtn">♥</button>
+          <div class="hero-content">
+            <div class="hero-badge" id="badge">— MATCH</div>
+            <div class="hero-name" id="hname">—</div>
+            <div class="hero-city" id="hcity">—</div>
+          </div>
+        </div>
+
+        <div class="stats-row" id="stats"></div>
+
+        <div class="section">
+          <h3>WHY THIS FITS YOU</h3>
+          <div class="match-card">
+            <div>
+              <div class="score-big" id="scoreBig">—</div>
+              <div class="score-lbl">MATCH</div>
+            </div>
+            <div class="why" id="whyText">—</div>
+          </div>
+          <div style="height: 14px"></div>
+          <div class="trait-compare" id="traitCompare"></div>
+          <div style="margin-top: 10px; font-size: 10px; color: var(--mute);">Bar = this place · Line = your persona</div>
+        </div>
+
+        <div class="section">
+          <h3>THE PLACE</h3>
+          <div class="blurb" id="blurb">—</div>
+        </div>
+
+        <div class="section">
+          <h3>WHAT'S NEARBY</h3>
+          <div class="poi-list" id="pois"></div>
+        </div>
+
+        <div class="section" style="border-bottom: none;">
+          <h3>IN THIS SUBDIVISION</h3>
+          <div class="listings" id="listings"></div>
+        </div>
+      </div>
+
+      <div class="cta-row">
+        <button class="cta-primary">View all listings</button>
+        <button class="cta-secondary">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="_data.js"></script>
+  <script src="_theme.js"></script>
+  <script>
+    const state = loadState();
+    if (!state || !state.persona) location.href = 'index.html';
+
+    const id = new URLSearchParams(location.search).get('id') || 'waterside';
+    const s = SUBDIVISIONS.find(x => x.id === id);
+    if (!s) location.href = 'app.html';
+
+    const p = state.persona;
+    const score = scoreMatch(p.traits, s);
+    const liked = (state.likedIds || []).includes(id);
+
+    document.getElementById('hero').style.backgroundImage = `url('${s.img}')`;
+    document.getElementById('badge').textContent = score + ' MATCH';
+    document.getElementById('hname').textContent = s.name;
+    document.getElementById('hcity').textContent = s.city + ' · ' + s.stats.vibe + ' vibe';
+    document.getElementById('scoreBig').textContent = score;
+    document.getElementById('whyText').innerHTML = `You valued <b>${matchReasonFor(p, s)}</b> — this place delivers both. ${s.name} scores in the top ${Math.max(5, 100-score)}% for your persona.`;
+    document.getElementById('blurb').textContent = s.blurb;
+
+    document.getElementById('stats').innerHTML = `
+      <div class="stat"><b>${s.stats.median}</b><div class="lbl">MEDIAN</div></div>
+      <div class="stat"><b>${s.stats.homes}</b><div class="lbl">HOMES</div></div>
+      <div class="stat"><b>${s.pois.length}+</b><div class="lbl">POIs / 3KM</div></div>
+    `;
+
+    // Trait compare
+    const traitLabels = { family: 'Family', walkable: 'Walkable', quiet: 'Quiet', hip: 'Hip', outdoors: 'Outdoors', nightlife: 'Nightlife' };
+    document.getElementById('traitCompare').innerHTML = Object.entries(traitLabels).map(([k, lbl]) => `
+      <div class="tc-row">
+        <div class="lbl">${lbl}</div>
+        <div class="bar-wrap">
+          <div class="bar-place" style="width: ${s.traits[k]}%"></div>
+          <div class="bar-you" style="left: ${p.traits[k]}%"></div>
+        </div>
+        <div class="val">${s.traits[k]}</div>
+      </div>
+    `).join('');
+
+    // POIs
+    document.getElementById('pois').innerHTML = s.pois.map(poi => {
+      const meta = CAT_META[poi.cat] || { icon: '📍', label: 'Place' };
+      return `
+        <div class="poi">
+          <div class="icon">${meta.icon}</div>
+          <div class="info">
+            <b>${poi.name}</b>
+            <div class="note">${meta.label} · ${poi.note}</div>
+          </div>
+          <div class="mins">${poi.mins} min</div>
+        </div>
+      `;
+    }).join('');
+
+    // Listings
+    document.getElementById('listings').innerHTML = s.listings.map(l => `
+      <div class="listing">
+        <img src="${l.img}" />
+        <div class="info">
+          <div class="price">${l.price}</div>
+          <div class="addr">${l.addr}</div>
+          <div class="specs">${l.bd} bd · ${l.ba} ba · ${l.sqft.toLocaleString()} sqft</div>
+        </div>
+      </div>
+    `).join('');
+
+    // Like button state
+    const likeBtn = document.getElementById('likeBtn');
+    function refreshLike() { likeBtn.classList.toggle('liked', (loadState().likedIds || []).includes(id)); }
+    refreshLike();
+    likeBtn.onclick = () => {
+      const st = loadState();
+      st.likedIds = st.likedIds || [];
+      const i = st.likedIds.indexOf(id);
+      if (i >= 0) st.likedIds.splice(i, 1); else st.likedIds.push(id);
+      st.persona = derivePersona(st.likedIds); // re-derive persona
+      saveState(st);
+      refreshLike();
+    };
+  </script>
+</body>
+</html>

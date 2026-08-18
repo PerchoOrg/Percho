@@ -5,12 +5,6 @@
   "exports": {
     "./dims": "./src/dims.ts",
     "./icons": "./src/icons.ts",
-    "./persona": "./src/persona.ts",
-    "./pools": "./src/pools.ts",
-    "./profile": "./src/profile.ts",
-    "./rhythm": "./src/rhythm.ts",
-    "./scope": "./src/scope.ts",
-    "./traits": "./src/traits.ts",
     "./types": "./src/types.ts"
   },
   "scripts": {

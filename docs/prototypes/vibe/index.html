@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Vibe · Discover where you belong</title>
+<link rel="stylesheet" href="_app.css" />
+<style>
+  .screen {
+    background:
+      linear-gradient(180deg, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.55) 45%, rgba(11,13,18,0.95) 100%),
+      url('https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=900&q=70&auto=format') center/cover;
+    color: #fff;
+    justify-content: space-between;
+    padding: 100px 28px 40px;
+  }
+  .top { display: flex; flex-direction: column; align-items: flex-start; }
+  .brand-mark {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-size: 13px; letter-spacing: 0.2em; font-weight: 700; opacity: 0.9;
+  }
+  .brand-mark .dot { width: 8px; height: 8px; background: var(--accent); border-radius: 50%; }
+  .headline {
+    font-size: 40px; font-weight: 800; line-height: 1.05;
+    letter-spacing: -0.02em; margin-top: 26px;
+  }
+  .headline em {
+    font-style: normal; color: var(--accent);
+  }
+  .sub {
+    font-size: 15px; opacity: 0.85; margin-top: 16px;
+    line-height: 1.55; max-width: 320px;
+  }
+  .bottom { display: flex; flex-direction: column; gap: 12px; }
+  .cta {
+    padding: 16px; border-radius: 16px; border: none;
+    background: var(--accent); color: #fff;
+    font-size: 16px; font-weight: 700;
+    letter-spacing: 0.01em;
+  }
+  .cta:active { transform: scale(0.99); }
+  .cta.ghost {
+    background: rgba(255,255,255,0.08); color: #fff;
+    border: 1px solid rgba(255,255,255,0.25);
+    font-weight: 500;
+    display: none;
+  }
+  .cta.ghost.show { display: block; }
+  .footer-note {
+    font-size: 11px; opacity: 0.55; text-align: center; margin-top: 4px;
+  }
+  .stats-strip {
+    display: flex; gap: 20px; margin-top: 22px; opacity: 0.75;
+  }
+  .stats-strip div { font-size: 11px; letter-spacing: 0.05em; }
+  .stats-strip b { display: block; font-size: 15px; font-weight: 700; margin-bottom: 1px; }
+</style>
+</head>
+<body>
+  <div class="page-title">Vibe · Splash</div>
+  <div class="phone">
+    <div class="notch"></div>
+    <div class="screen">
+      <div class="top">
+        <div class="brand-mark">
+          <div class="dot"></div> VIBE · BY PERCHO
+        </div>
+        <div class="headline">
+          Find the neighborhood <em>that feels like you</em>.
+        </div>
+        <div class="sub">
+          Swipe an infinite mix of houses and communities. Tap any card to see the data behind it. We map who you are as you go.
+        </div>
+        <div class="stats-strip">
+          <div><b>∞</b>FEED</div>
+          <div><b>flip</b>FOR DATA</div>
+          <div><b>0</b>ADS</div>
+        </div>
+      </div>
+      <div class="bottom">
+        <button class="cta" id="startBtn">Enter the feed →</button>
+        <button class="cta ghost" id="continueBtn">Continue where you left off</button>
+        <div class="footer-note">Chapel Hill · Durham · Carrboro · Pittsboro</div>
+      </div>
+    </div>
+  </div>
+  <script src="_data.js"></script>
+  <script src="_theme.js"></script>
+  <script>
+    const state = loadState();
+    const continueBtn = document.getElementById('continueBtn');
+    const startBtn = document.getElementById('startBtn');
+    if (state && state.persona) {
+      continueBtn.classList.add('show');
+      startBtn.textContent = 'Start over';
+    } else if (state && state.likedIds && state.likedIds.length > 0) {
+      continueBtn.classList.add('show');
+      continueBtn.textContent = `Continue swiping (${state.swipeIdx || state.likedIds.length}/10)`;
+    }
+    startBtn.onclick = () => {
+      clearState();
+      location.href = 'feed.html';
+    };
+    continueBtn.onclick = () => {
+      location.href = 'feed.html';
+    };
+  </script>
+</body>
+</html>

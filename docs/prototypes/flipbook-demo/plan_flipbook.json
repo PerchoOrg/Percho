@@ -1,0 +1,472 @@
+{
+  "listing": {
+    "id": "c7435419-e5ad-4abb-9f01-83bfc753d0cd",
+    "address": "5122 Lower Creek Street",
+    "city": "Peachtree Corners",
+    "state": "GA",
+    "price": 968000,
+    "beds": 4,
+    "baths": 4,
+    "sqft": 3302,
+    "slug": "5122-lower-creek-street"
+  },
+  "style": "modern",
+  "plan": [
+    {
+      "id": "d1502d00-9584-436e-8473-e3fb611ba29e",
+      "sort_order": 0,
+      "room_type": "exterior",
+      "is_master": false,
+      "subject_label": "door",
+      "subject_bbox": [
+        0.42,
+        0.35,
+        0.16,
+        0.25
+      ],
+      "ai_caption": "Two-story brick home with covered porch at sunset",
+      "hero_score": 0.95,
+      "quality": 0.95,
+      "duration_s": 3.5,
+      "mode": "push_in_slow",
+      "is_hero": true
+    },
+    {
+      "id": "919381ea-0ded-4197-943b-913b777790bd",
+      "sort_order": 53,
+      "room_type": "exterior",
+      "is_master": false,
+      "subject_label": "door",
+      "subject_bbox": [
+        0.42,
+        0.32,
+        0.16,
+        0.18
+      ],
+      "ai_caption": "Two-story home with gray siding, brick base, and covered porch",
+      "hero_score": 0.75,
+      "quality": 0.85,
+      "duration_s": 1.5,
+      "mode": "pull_back",
+      "is_hero": false
+    },
+    {
+      "id": "855689e4-a7d7-40ee-b990-025f59930769",
+      "sort_order": 9,
+      "room_type": "living",
+      "is_master": false,
+      "subject_label": "fireplace",
+      "subject_bbox": [
+        0.35,
+        0.45,
+        0.25,
+        0.25
+      ],
+      "ai_caption": "Bright living room with modern fireplace and hardwood floors",
+      "hero_score": 0.85,
+      "quality": 0.95,
+      "duration_s": 1.5,
+      "mode": "push_pan_lr",
+      "is_hero": false
+    },
+    {
+      "id": "36885ba9-0890-4db4-b528-5f2c1c2ade08",
+      "sort_order": 4,
+      "room_type": "living",
+      "is_master": false,
+      "subject_label": "stairs",
+      "subject_bbox": [
+        0.65,
+        0.25,
+        0.2,
+        0.45
+      ],
+      "ai_caption": "Open-plan living with hardwood floors flowing to modern kitchen and stairs",
+      "hero_score": 0.85,
+      "quality": 0.9,
+      "duration_s": 1.5,
+      "mode": "push_pan_rl",
+      "is_hero": false
+    },
+    {
+      "id": "1bd8e253-acf3-4557-ad96-54ece7cc6594",
+      "sort_order": 10,
+      "room_type": "living",
+      "is_master": false,
+      "subject_label": "window_view",
+      "subject_bbox": [
+        0.35,
+        0.25,
+        0.25,
+        0.35
+      ],
+      "ai_caption": "Open living and dining area with hardwood floors and plantation shutters",
+      "hero_score": 0.85,
+      "quality": 0.9,
+      "duration_s": 1.5,
+      "mode": "push_pan_lr",
+      "is_hero": false
+    },
+    {
+      "id": "13bf813d-63f4-4087-b208-b31df897e320",
+      "sort_order": 12,
+      "room_type": "living",
+      "is_master": false,
+      "subject_label": "fireplace",
+      "subject_bbox": [
+        0.38,
+        0.42,
+        0.24,
+        0.15
+      ],
+      "ai_caption": "Living room with fireplace, built-in cabinets, and hardwood floors",
+      "hero_score": 0.85,
+      "quality": 0.9,
+      "duration_s": 1.5,
+      "mode": "push_pan_rl",
+      "is_hero": false
+    },
+    {
+      "id": "e342b228-bbde-465e-9188-7a58f637ff50",
+      "sort_order": 18,
+      "room_type": "kitchen",
+      "is_master": false,
+      "subject_label": "island",
+      "subject_bbox": [
+        0.25,
+        0.45,
+        0.45,
+        0.35
+      ],
+      "ai_caption": "Open kitchen with marble island and professional stainless steel range",
+      "hero_score": 0.88,
+      "quality": 0.95,
+      "duration_s": 3.5,
+      "mode": "push_in_slow",
+      "is_hero": true
+    },
+    {
+      "id": "0cc61054-2173-4f40-98c9-27813eea4d60",
+      "sort_order": 16,
+      "room_type": "kitchen",
+      "is_master": false,
+      "subject_label": "island",
+      "subject_bbox": [
+        0.35,
+        0.45,
+        0.3,
+        0.35
+      ],
+      "ai_caption": "Spacious white kitchen with large island and stainless steel appliances",
+      "hero_score": 0.85,
+      "quality": 0.9,
+      "duration_s": 1.5,
+      "mode": "pan_to_subject",
+      "is_hero": false
+    },
+    {
+      "id": "c6f29f95-93c1-457e-bce9-35b18f2e7d46",
+      "sort_order": 19,
+      "room_type": "kitchen",
+      "is_master": false,
+      "subject_label": "island",
+      "subject_bbox": [
+        0.35,
+        0.45,
+        0.5,
+        0.4
+      ],
+      "ai_caption": "Modern kitchen with white quartz island and stainless steel appliances",
+      "hero_score": 0.85,
+      "quality": 0.9,
+      "duration_s": 1.5,
+      "mode": "pan_lr",
+      "is_hero": false
+    },
+    {
+      "id": "9769103c-6860-4fbd-9759-48ff07807364",
+      "sort_order": 20,
+      "room_type": "kitchen",
+      "is_master": false,
+      "subject_label": "window_view",
+      "subject_bbox": [
+        0.45,
+        0.15,
+        0.25,
+        0.35
+      ],
+      "ai_caption": "Bright white kitchen with farmhouse sink and mountain views",
+      "hero_score": 0.85,
+      "quality": 0.9,
+      "duration_s": 1.5,
+      "mode": "pan_to_subject",
+      "is_hero": false
+    },
+    {
+      "id": "592fa7c2-02a6-4d47-a1d6-7389a8b48d01",
+      "sort_order": 13,
+      "room_type": "dining",
+      "is_master": false,
+      "subject_label": "window_view",
+      "subject_bbox": [
+        0.35,
+        0.25,
+        0.3,
+        0.4
+      ],
+      "ai_caption": "Bright dining room with hardwood floors and plantation shutters",
+      "hero_score": 0.55,
+      "quality": 0.85,
+      "duration_s": 0.9,
+      "mode": "static",
+      "is_hero": false
+    },
+    {
+      "id": "48959c4f-bba6-4293-bb61-249affff67ba",
+      "sort_order": 5,
+      "room_type": "dining",
+      "is_master": false,
+      "subject_label": "door",
+      "subject_bbox": [
+        0.1,
+        0.15,
+        0.25,
+        0.7
+      ],
+      "ai_caption": "Bright dining area with plantation shutters and hardwood floors",
+      "hero_score": 0.45,
+      "quality": 0.85,
+      "duration_s": 0.9,
+      "mode": "static",
+      "is_hero": false
+    },
+    {
+      "id": "e05e8049-651e-4895-855c-8198e83cc8c5",
+      "sort_order": 25,
+      "room_type": "bedroom",
+      "is_master": true,
+      "subject_label": "bed",
+      "subject_bbox": [
+        0.3,
+        0.45,
+        0.4,
+        0.35
+      ],
+      "ai_caption": "Master bedroom with tray ceiling and plantation shutters",
+      "hero_score": 0.75,
+      "quality": 0.95,
+      "duration_s": 1.5,
+      "mode": "push_in",
+      "is_hero": false
+    },
+    {
+      "id": "662fcef6-481a-4143-a54e-5615af990a4d",
+      "sort_order": 24,
+      "room_type": "bedroom",
+      "is_master": true,
+      "subject_label": "window_view",
+      "subject_bbox": [
+        0.45,
+        0.25,
+        0.45,
+        0.45
+      ],
+      "ai_caption": "Spacious bedroom with hardwood floors and plantation shutters",
+      "hero_score": 0.65,
+      "quality": 0.9,
+      "duration_s": 1.5,
+      "mode": "push_in",
+      "is_hero": false
+    },
+    {
+      "id": "363934f2-fef9-4e41-a22f-9e8d866717f3",
+      "sort_order": 26,
+      "room_type": "bedroom",
+      "is_master": true,
+      "subject_label": "window_view",
+      "subject_bbox": [
+        0.15,
+        0.25,
+        0.35,
+        0.3
+      ],
+      "ai_caption": "Spacious master bedroom with tray ceiling and plantation shutters",
+      "hero_score": 0.65,
+      "quality": 0.85,
+      "duration_s": 1.5,
+      "mode": "push_in",
+      "is_hero": false
+    },
+    {
+      "id": "83327f1d-cd75-468c-9632-461f4d78ebca",
+      "sort_order": 27,
+      "room_type": "bedroom",
+      "is_master": true,
+      "subject_label": "window_view",
+      "subject_bbox": [
+        0.78,
+        0.28,
+        0.2,
+        0.35
+      ],
+      "ai_caption": "Spacious bedroom with tray ceiling and plantation shutters",
+      "hero_score": 0.65,
+      "quality": 0.85,
+      "duration_s": 1.5,
+      "mode": "push_in",
+      "is_hero": false
+    },
+    {
+      "id": "50cd741a-805d-42de-a1e1-cfc6edfee369",
+      "sort_order": 29,
+      "room_type": "bathroom",
+      "is_master": true,
+      "subject_label": "vanity",
+      "subject_bbox": [
+        0.15,
+        0.45,
+        0.45,
+        0.4
+      ],
+      "ai_caption": "Modern bathroom with freestanding tub and glass-enclosed shower",
+      "hero_score": 0.72,
+      "quality": 0.85,
+      "duration_s": 1.5,
+      "mode": "tilt_td",
+      "is_hero": false
+    },
+    {
+      "id": "21ee742a-8054-4029-bd3d-6a6294316f81",
+      "sort_order": 30,
+      "room_type": "bathroom",
+      "is_master": true,
+      "subject_label": "vanity",
+      "subject_bbox": [
+        0.15,
+        0.35,
+        0.7,
+        0.5
+      ],
+      "ai_caption": "Dual vanity bathroom with wood cabinetry and white quartz countertops",
+      "hero_score": 0.65,
+      "quality": 0.9,
+      "duration_s": 0.9,
+      "mode": "static",
+      "is_hero": false
+    },
+    {
+      "id": "be5ebb76-ea83-4d61-a77d-47a77b2dc99f",
+      "sort_order": 28,
+      "room_type": "bathroom",
+      "is_master": true,
+      "subject_label": "vanity",
+      "subject_bbox": [
+        0.15,
+        0.45,
+        0.7,
+        0.4
+      ],
+      "ai_caption": "Modern bathroom with dual vanity, wood cabinetry and marble countertop",
+      "hero_score": 0.65,
+      "quality": 0.85,
+      "duration_s": 0.9,
+      "mode": "static",
+      "is_hero": false
+    },
+    {
+      "id": "05bf5cc7-b7a4-46b4-9214-80971a4c4536",
+      "sort_order": 49,
+      "room_type": "balcony",
+      "is_master": false,
+      "subject_label": "window_view",
+      "subject_bbox": [
+        0.05,
+        0.08,
+        0.5,
+        0.6
+      ],
+      "ai_caption": "Covered patio with dining area, built-in grill, and wooded views",
+      "hero_score": 0.75,
+      "quality": 0.85,
+      "duration_s": 1.5,
+      "mode": "pan_to_subject",
+      "is_hero": false
+    },
+    {
+      "id": "40f49929-459e-4b1f-b2f0-af8a1640e779",
+      "sort_order": 2,
+      "room_type": "balcony",
+      "is_master": false,
+      "subject_label": "window_view",
+      "subject_bbox": [
+        0.4,
+        0.1,
+        0.55,
+        0.6
+      ],
+      "ai_caption": "Covered front porch with brick floor and neighborhood views",
+      "hero_score": 0.65,
+      "quality": 0.85,
+      "duration_s": 0.9,
+      "mode": "static",
+      "is_hero": false
+    },
+    {
+      "id": "01e429bc-5087-4fd6-b279-536b4365a291",
+      "sort_order": 65,
+      "room_type": "backyard",
+      "is_master": false,
+      "subject_label": "null",
+      "subject_bbox": [
+        0.25,
+        0.25,
+        0.5,
+        0.5
+      ],
+      "ai_caption": "Expansive backyard with pavilion, stone walls, and paver walkway",
+      "hero_score": 0.75,
+      "quality": 0.85,
+      "duration_s": 1.5,
+      "mode": "pull_back",
+      "is_hero": false
+    },
+    {
+      "id": "c0df1945-98a9-4d2d-a1aa-aa216fa4dc99",
+      "sort_order": 57,
+      "room_type": "backyard",
+      "is_master": false,
+      "subject_label": "null",
+      "subject_bbox": [
+        0.25,
+        0.25,
+        0.5,
+        0.5
+      ],
+      "ai_caption": "Lush wooded backdrop with mature trees and privacy fence",
+      "hero_score": 0.4,
+      "quality": 0.75,
+      "duration_s": 0.9,
+      "mode": "static",
+      "is_hero": false
+    },
+    {
+      "id": "f1b7dad6-a1ea-4e33-b75f-2dedec20f094",
+      "sort_order": 1,
+      "room_type": "exterior",
+      "is_master": false,
+      "subject_label": "door",
+      "subject_bbox": [
+        0.48,
+        0.45,
+        0.08,
+        0.15
+      ],
+      "ai_caption": "Two-story brick home with covered front porch and plantation shutters",
+      "hero_score": 0.88,
+      "quality": 0.85,
+      "duration_s": 3.5,
+      "mode": "push_in_slow",
+      "is_hero": true
+    }
+  ]
+}

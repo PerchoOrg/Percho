@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Vibe · Swipe</title>
+<link rel="stylesheet" href="_app.css" />
+<style>
+  .screen { background: #0A0C10; color: #fff; }
+
+  .swipe-header {
+    padding: 60px 20px 12px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .swipe-header .h { font-size: 15px; font-weight: 600; }
+  .swipe-header .sub { font-size: 11px; opacity: 0.6; margin-top: 2px; }
+  .progress {
+    font-size: 12px; opacity: 0.7; font-variant-numeric: tabular-nums; font-weight: 600;
+  }
+  .prog-bar {
+    height: 3px; background: rgba(255,255,255,0.15); margin: 0 20px; border-radius: 2px; overflow: hidden;
+  }
+  .prog-fill {
+    height: 100%; background: var(--accent); border-radius: 2px;
+    transition: width 0.3s ease;
+  }
+
+  .stack {
+    position: relative; flex: 1;
+    display: flex; align-items: center; justify-content: center;
+    padding: 20px 20px 110px;
+  }
+  .card {
+    position: absolute;
+    width: 320px; height: 520px;
+    border-radius: 24px;
+    overflow: hidden;
+    background: #1a1a1a;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+    transform-origin: center bottom;
+    transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.3, 1.1), opacity 0.3s ease;
+    will-change: transform, opacity;
+    color: #fff;
+    display: flex; flex-direction: column;
+    justify-content: flex-end;
+  }
+  .card.top { z-index: 3; }
+  .card.next { z-index: 2; transform: scale(0.94) translateY(20px); opacity: 0.85; }
+  .card.after { z-index: 1; transform: scale(0.88) translateY(38px); opacity: 0.6; }
+  .card.gone-right { transform: translate(150%, -10%) rotate(20deg); opacity: 0; }
+  .card.gone-left { transform: translate(-150%, -10%) rotate(-20deg); opacity: 0; }
+
+  .card::before {
+    content: '';
+    position: absolute; inset: 0;
+    background-image: linear-gradient(180deg, rgba(0,0,0,0) 30%, rgba(0,0,0,0.85) 100%),
+                      var(--bg-img);
+    background-size: cover; background-position: center;
+  }
+
+  .card-content { position: relative; padding: 20px; z-index: 2; }
+  .subdivision-name { font-size: 26px; font-weight: 700; letter-spacing: -0.02em; }
+  .subdivision-city { font-size: 13px; opacity: 0.85; margin-bottom: 10px; }
+  .blurb { font-size: 12px; line-height: 1.5; opacity: 0.88; margin-bottom: 12px; }
+  .tag-row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+  .tag {
+    background: rgba(255,255,255,0.18); backdrop-filter: blur(10px);
+    padding: 4px 10px; border-radius: 999px;
+    font-size: 11px; font-weight: 500;
+  }
+  .stat-strip {
+    display: flex; justify-content: space-between; padding-top: 10px;
+    border-top: 1px solid rgba(255,255,255,0.2);
+    font-size: 11px; opacity: 0.9;
+  }
+  .stat-strip b { display: block; font-size: 14px; margin-bottom: 2px; }
+
+  .swipe-choice {
+    position: absolute; top: 40px;
+    padding: 6px 16px; border: 3px solid; border-radius: 8px;
+    font-weight: 800; font-size: 22px; letter-spacing: 0.05em;
+    opacity: 0; transition: opacity 0.15s ease;
+    transform: rotate(-8deg); z-index: 3;
+  }
+  .swipe-choice.like { right: 20px; border-color: #22C55E; color: #22C55E; }
+  .swipe-choice.pass { left: 20px; border-color: #EF4444; color: #EF4444; transform: rotate(8deg); }
+  .card.dragging-right .swipe-choice.like { opacity: 1; }
+  .card.dragging-left .swipe-choice.pass { opacity: 1; }
+
+  .actions {
+    position: absolute; bottom: 24px; left: 0; right: 0;
+    display: flex; justify-content: center; gap: 20px; z-index: 10;
+  }
+  .btn-round {
+    width: 56px; height: 56px; border-radius: 50%;
+    border: none; font-size: 22px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .btn-pass { background: #fff; color: #EF4444; }
+  .btn-like { background: #22C55E; color: #fff; }
+  .btn-undo { background: rgba(255,255,255,0.15); color: #fff; width: 44px; height: 44px; font-size: 16px; align-self: center; }
+</style>
+</head>
+<body>
+  <div class="page-title">Vibe · Swipe (10 rounds)</div>
+  <a href="index.html" class="nav-back">← Home</a>
+  <div class="phone">
+    <div class="notch"></div>
+    <div class="screen">
+      <div class="swipe-header">
+        <div>
+          <div class="h">Which vibe is yours?</div>
+          <div class="sub">Right = I'd live here. Left = pass.</div>
+        </div>
+        <div class="progress" id="progress">1 / 10</div>
+      </div>
+      <div class="prog-bar"><div class="prog-fill" id="progFill" style="width: 10%"></div></div>
+
+      <div class="stack" id="stack"></div>
+
+      <div class="actions">
+        <button class="btn-round btn-pass" id="passBtn">✕</button>
+        <button class="btn-round btn-undo" id="undoBtn">↺</button>
+        <button class="btn-round btn-like" id="likeBtn">♥</button>
+      </div>
+    </div>
+  </div>
+  <script src="_data.js"></script>
+  <script src="_theme.js"></script>
+  <script>
+    // Build a 10-card sequence — all 10 subdivisions
+    const CARDS = SUBDIVISIONS.slice(0, 10);
+    let idx = 0;
+    const likedIds = [];
+    const history = []; // stack of { idx, wasLiked }
+    const stack = document.getElementById('stack');
+    const progressEl = document.getElementById('progress');
+    const progFillEl = document.getElementById('progFill');
+
+    // Restore progress if user came back mid-swipe (no persona yet)
+    const existing = loadState();
+    if (existing && !existing.persona && existing.likedIds) {
+      // Not restoring index — user asked to start over via splash. Skip.
+    }
+
+    function render() {
+      stack.innerHTML = '';
+      const remaining = CARDS.slice(idx, idx + 3);
+      remaining.forEach((c, i) => {
+        const el = document.createElement('div');
+        el.className = 'card ' + (i === 0 ? 'top' : i === 1 ? 'next' : 'after');
+        el.style.setProperty('--bg-img', `url('${c.img}')`);
+        el.innerHTML = `
+          <div class="swipe-choice like">MATCH</div>
+          <div class="swipe-choice pass">PASS</div>
+          <div class="card-content">
+            <div class="subdivision-name">${c.name}</div>
+            <div class="subdivision-city">${c.city}</div>
+            <div class="blurb">${c.blurb}</div>
+            <div class="tag-row">${c.tags.map(t => `<span class="tag">${t}</span>`).join('')}</div>
+            <div class="stat-strip">
+              <div><b>${c.stats.median}</b>Median</div>
+              <div><b>${c.stats.homes}</b>Homes</div>
+              <div><b>${c.stats.vibe}</b>Vibe</div>
+            </div>
+          </div>
+        `;
+        if (i === 0) attachSwipe(el, c);
+        stack.appendChild(el);
+      });
+      progressEl.textContent = `${Math.min(idx + 1, CARDS.length)} / ${CARDS.length}`;
+      progFillEl.style.width = `${((idx) / CARDS.length) * 100}%`;
+      document.getElementById('undoBtn').style.opacity = history.length ? 1 : 0.3;
+    }
+
+    function attachSwipe(el, card) {
+      let startX = 0, startY = 0, dx = 0, dy = 0, dragging = false;
+      const onDown = (x, y) => { startX = x; startY = y; dragging = true; };
+      const onMove = (x, y) => {
+        if (!dragging) return;
+        dx = x - startX; dy = y - startY;
+        el.style.transform = `translate(${dx}px, ${dy}px) rotate(${dx * 0.06}deg)`;
+        el.classList.toggle('dragging-right', dx > 40);
+        el.classList.toggle('dragging-left', dx < -40);
+      };
+      const onUp = () => {
+        if (!dragging) return; dragging = false;
+        if (dx > 100) commit('like', card);
+        else if (dx < -100) commit('pass', card);
+        else { el.style.transform = ''; el.classList.remove('dragging-right','dragging-left'); dx = 0; }
+      };
+      el.addEventListener('mousedown', e => onDown(e.clientX, e.clientY));
+      window.addEventListener('mousemove', e => onMove(e.clientX, e.clientY));
+      window.addEventListener('mouseup', onUp);
+      el.addEventListener('touchstart', e => onDown(e.touches[0].clientX, e.touches[0].clientY));
+      el.addEventListener('touchmove', e => onMove(e.touches[0].clientX, e.touches[0].clientY), { passive: true });
+      el.addEventListener('touchend', onUp);
+    }
+
+    function commit(action, card) {
+      const top = stack.querySelector('.card.top');
+      if (top) {
+        top.classList.remove('dragging-right','dragging-left');
+        top.classList.add(action === 'like' ? 'gone-right' : 'gone-left');
+      }
+      const wasLiked = action === 'like';
+      if (wasLiked) likedIds.push(card.id);
+      history.push({ idx, wasLiked, cardId: card.id });
+      // save partial state
+      saveState({ swipeIdx: idx + 1, likedIds: [...likedIds], persona: null });
+      setTimeout(() => {
+        idx++;
+        if (idx >= CARDS.length) return goToReveal();
+        render();
+      }, 300);
+    }
+
+    document.getElementById('likeBtn').onclick = () => { if (idx < CARDS.length) commit('like', CARDS[idx]); };
+    document.getElementById('passBtn').onclick = () => { if (idx < CARDS.length) commit('pass', CARDS[idx]); };
+    document.getElementById('undoBtn').onclick = () => {
+      if (!history.length) return;
+      const last = history.pop();
+      if (last.wasLiked) {
+        const li = likedIds.indexOf(last.cardId);
+        if (li >= 0) likedIds.splice(li, 1);
+      }
+      idx = last.idx;
+      saveState({ swipeIdx: idx, likedIds: [...likedIds], persona: null });
+      render();
+    };
+
+    function goToReveal() {
+      const persona = derivePersona(likedIds);
+      saveState({ swipeIdx: CARDS.length, likedIds, persona });
+      location.href = 'persona.html';
+    }
+
+    render();
+  </script>
+</body>
+</html>
