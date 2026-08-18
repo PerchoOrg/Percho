@@ -16,6 +16,92 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-18 20:15 UTC — The 'amenities' bucket: a community tour can finally show the community
+
+**Objective**: owner, after the roster work — "the point is it doesn't have
+all community amenities" — then "lets focus on generating video for these two
+communities first". Branch `phase56/community-amenities-video` (ws1).
+
+**The gap was structural, not a data shortfall.** All 14 intent buckets
+describe *surroundings* — schools, dining, outdoor, transit. A subdivision's
+own gate, pool, clubhouse and courts had no bucket, so the Aberdeen tour
+sitting `ready` from 2026-08-18 00:00 showed only what is near Aberdeen and
+never Aberdeen itself. Two blockers behind that: no bucket, and no way in for
+photos (an HOA pool is not a listed business, so Google Places has none).
+
+**What shipped**:
+- `'amenities'` added to `INTENT_BUCKETS`. `Record<IntentBucket, …>` maps made
+  tsc enumerate all seven call sites — labels in both nearby panels,
+  bucket-label, narrative hooks, caption archetype (LIFESTYLE), and the
+  worker's two mirrored Python maps. The listing panel gets the label but not
+  the order entry: amenities is community-only.
+- Three DB check constraints widened, **each from its own current
+  vocabulary** — see Issues.
+- `poi_photos.source` accepts `'community_site'`.
+- `scripts/admin/ingest-community-photos.ts`: one POI per amenity
+  subdirectory, upload, link at `intent_bucket='amenities'`, queue enhance.
+  Zero new dependencies — JPEG/PNG dimensions read from the file header
+  (~35 lines) rather than pulling in `image-size`.
+- Aberdeen: 9 photos from aberdeencommunity.org (owner supplied the link)
+  across pool / clubhouse / tennis-courts / grounds. Gemini scored every one
+  `usable`, 0.9–1.0.
+- **Result**: 25-clip, 58s tour, opening on Aberdeen Clubhouse, 7 amenity
+  clips through the body. `tour_assemblies` `ready`, on Cloudflare Stream
+  (uid `f75ce168a2437621a141aa458014c8e3`).
+
+**Issues** — three real defects surfaced, all fixed:
+
+1. *My migration narrowed a constraint.* Re-adding the canonical 14 to
+   `community_pois` failed on live rows: that table already allowed `civic`,
+   `waterfront` and `other`, which the community-tour pipeline writes
+   (`lib/ai/community-tour-prompt.ts`, and the `?? 'other'` fallback in
+   `tour-steps/photos.ts`). The 14-bucket list in `types.ts` is not the DB's
+   vocabulary and has not been for a while. **Read `pg_constraint` before
+   rewriting a check constraint** — `supabase db query` does this fine.
+2. *The opener bias was dead code as first written.* The Curator assigns at
+   most one `opener` per batch on photographic merit; across 25 photos it
+   picked a school and labelled every amenity shot `establishing`, so a bias
+   that only reranked openers never fired. A wide amenity `establishing` shot
+   is now eligible for the slot — which is the Curator's own definition of
+   establishing ("introduces a POI at wide framing").
+3. *Enhance could not rescue a photo, because the drop gate ignored it.*
+   `shots.ts` measured `width_px`/`height_px`, but enhance never rewrites
+   those — Real-ESRGAN x2 writes the new size to `enhanced_meta` instead. A
+   1000x750 album photo needs 2.82x upscale (gate is 2.0) and was dropped;
+   enhanced it is 2000x1500, needing 1.41x. The gate now measures the file the
+   render actually reads, matching `approved_enhanced_path` in worker.py.
+   **This affected every photo in the product, not just amenities.**
+
+**Decisions**:
+- Only the opener is biased toward amenities. Front-loading the whole bucket
+  would fight `spreadBuckets`, which caps a bucket at 2 consecutive clips to
+  keep a tour varied — that rule is worth more than a themed block.
+- The 3 lowest-scoring pool photos were dropped by the existing per-POI cap of
+  2. Left as is; the cap is deliberate.
+- Clubhouse *interiors* (17 on the HOA site) were not ingested — they are
+  utilitarian rental-space shots (kitchen, meeting rooms) and the Curator
+  scores that class low anyway. The 5 professional 1920x890 header images are
+  the community's real assets.
+
+**Learnings**:
+- A `Record<Enum, T>` map is a free exhaustiveness check. Adding one union
+  member and running tsc produced the exact list of places to edit — no
+  grepping, no missed call site. Worth preferring over `Partial<Record<…>>`
+  for exactly this reason.
+- Two of the three defects were only findable by running the thing end to end.
+  Tests passed throughout; the dead opener bias and the enhance-blind gate
+  both look correct in isolation and only fail against real data.
+
+**Next steps**:
+- Laurel Springs was marked `kind='subdivision'` but owner said to hold
+  ("no need to do laurel for now"). Nothing else was done to it.
+- The amenity photos are from the HOA's own website. **Percho does not have
+  permission to use them** — Vivian or the listing agent should clear this
+  with the community before the video is public-facing.
+- Rotate the Supabase service-role key (still outstanding from phase53).
+
+---
+
 ## 2026-08-18 19:00 UTC — communities.kind: 'neighborhood' | 'subdivision'; Aberdeen marked
 
 **Objective**: owner is redefining the community content level. The ~8.7k

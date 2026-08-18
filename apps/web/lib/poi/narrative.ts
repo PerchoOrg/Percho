@@ -59,6 +59,8 @@ export type VideoNarrative = {
 };
 
 const BUCKET_HOOKS: Record<IntentBucket, string> = {
+  amenities:
+    "the community's own amenities — the gate, pool, clubhouse, courts, playground residents use",
   schools: "the schools a buyer's kids would attend and what the campus feels like",
   dining: 'the dining scene a buyer would enjoy — restaurants, cafes, bakeries',
   nightlife: 'the nightlife and entertainment a buyer would spend evenings on',
@@ -76,7 +78,7 @@ const BUCKET_HOOKS: Record<IntentBucket, string> = {
 };
 
 /**
- * 14 nearby buckets → 6 caption archetype (mirror of CAPTION_ARCHETYPE_MAP in
+ * 15 buckets → 6 caption archetype (mirror of CAPTION_ARCHETYPE_MAP in
  * scripts/render-worker/worker.py; keep in sync). Drives which
  * caption_fields the LLM emits.
  */
@@ -86,6 +88,7 @@ const CAPTION_ARCHETYPE: Record<
 > = {
   schools: 'TRUST',
   healthcare: 'TRUST',
+  amenities: 'LIFESTYLE',
   dining: 'LIFESTYLE',
   fitness: 'LIFESTYLE',
   shopping: 'UTILITY',

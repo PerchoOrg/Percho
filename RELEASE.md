@@ -6,6 +6,23 @@
 
 ---
 
+## v1.2 — A community tour now shows the community, not just what surrounds it
+
+Until now a community film could show you everything *around* a neighborhood — its schools, its parks, the coffee shop down the road — but never the neighborhood itself. The gate, the pool, the clubhouse, the tennis courts: the things residents pay dues for, and among the first things a buyer asks about, were the one thing missing.
+
+Community films now open on the community. Its own amenities lead the film and run through it, with the surrounding area playing as context around them.
+
+- **Amenities are their own category.** A community's pool, clubhouse, courts, playground and grounds are grouped together rather than scattered among nearby businesses.
+- **A community's own photography can be used.** Amenity photos rarely exist in map listings — nobody reviews an HOA pool — so photos supplied by the community can now be brought in directly.
+- **Softer photos are rescued rather than discarded.** Older or smaller photos are sharpened and enlarged before the film is cut, so a good photo is no longer dropped for being small. This applies everywhere photos are used, not only to community films.
+
+Aberdeen in Suwanee is the first community with this treatment: a 58-second film that opens on its clubhouse and takes in the pool, the courts and the grounds before heading out into Suwanee.
+
+### 2026-08-18
+- Communities are now classified as either a formally-planned subdivision or an informal neighborhood, so curated communities can be told apart from map data
+
+---
+
 ## v1.1 — Neighborhood tours are now planned shot by shot, not assembled by rule of thumb
 
 A neighborhood tour used to be built from a simple lookup: a photo tagged "landscape" always got the same treatment, for the same number of seconds, in the same place in the film. Every tour therefore looked a little like every other one, and a photo that happened to be tagged wrong got a clip that fought it.

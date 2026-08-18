@@ -142,6 +142,64 @@ describe('scheduleClips — golden fixture', () => {
     expect(roleOf(clips[clips.length - 1]!.photo_id)).toBe('closer');
   });
 
+  it('opens on the community itself when an amenities photo qualifies', () => {
+    // Two equally-valid openers, and the amenities one is the WEAKER of the
+    // pair on emotion — so picking it proves the bucket bias, not the tiebreak.
+    const base = GOLDEN_PHOTOS.slice(0, 6);
+    const photos: PhotoMeta[] = [
+      { ...base[0]!, bucket: 'amenities', poi_name: 'Aberdeen Clubhouse' },
+      ...base.slice(1),
+    ];
+    const ids = new Set(photos.map((p) => p.photo_id));
+    const annotations: PhotoAnnotation[] = GOLDEN_ANNOTATIONS.filter((a) =>
+      ids.has(a.photo_id),
+    ).map((a) => ({
+      ...a,
+      poi_pair_with: null,
+      pair_role: null,
+      narrative_role:
+        a.photo_id === photos[0]!.photo_id || a.photo_id === photos[1]!.photo_id
+          ? 'opener'
+          : 'establishing',
+      emotional_weight: a.photo_id === photos[0]!.photo_id ? 0.4 : 0.9,
+    }));
+    const { clips } = scheduleClips(annotations, photos);
+    expect(clips[0]!.photo_id).toBe(photos[0]!.photo_id);
+  });
+
+  it('promotes a wide amenity shot when the Curator gave the opener elsewhere', () => {
+    // The real Aberdeen case: across 25 photos the Curator marked one opener,
+    // a school, and labelled every amenity photo 'establishing'. The community
+    // still has to lead, so an amenity establishing shot outranks a
+    // neighbourhood opener for the slot.
+    const base = GOLDEN_PHOTOS.slice(0, 6);
+    const photos: PhotoMeta[] = [
+      { ...base[0]!, bucket: 'amenities', poi_name: 'Aberdeen Clubhouse' },
+      ...base.slice(1),
+    ];
+    const ids = new Set(photos.map((p) => p.photo_id));
+    const annotations: PhotoAnnotation[] = GOLDEN_ANNOTATIONS.filter((a) =>
+      ids.has(a.photo_id),
+    ).map((a) => ({
+      ...a,
+      poi_pair_with: null,
+      pair_role: null,
+      // Nothing in the amenities bucket is an opener; a later photo is.
+      narrative_role: a.photo_id === photos[1]!.photo_id ? 'opener' : 'establishing',
+      emotional_weight: a.photo_id === photos[0]!.photo_id ? 0.4 : 0.9,
+    }));
+    const { clips } = scheduleClips(annotations, photos);
+    expect(clips[0]!.photo_id).toBe(photos[0]!.photo_id);
+  });
+
+  it('leaves the opener alone on a tour with no amenities bucket', () => {
+    // The listing path must be untouched by the community bias.
+    const { clips } = plan();
+    const roleOf = (id: string) =>
+      GOLDEN_ANNOTATIONS.find((a) => a.photo_id === id)!.narrative_role;
+    expect(roleOf(clips[0]!.photo_id)).toBe('opener');
+  });
+
   it('keeps a wide→close pair adjacent and in order', () => {
     const { clips } = plan();
     for (const a of GOLDEN_ANNOTATIONS) {

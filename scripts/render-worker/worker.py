@@ -782,7 +782,9 @@ BUCKET_LABELS = {
     "daily_drive": "Daily drive",
     "lifestyle": "Lifestyle",
     "commute": "Commute",
-    # Phase 85: canonical 14 from lib/poi/types.ts INTENT_BUCKETS.
+    # Phase 85: canonical 14 from lib/poi/types.ts INTENT_BUCKETS,
+    # plus "amenities" (phase56) — the community's own facilities.
+    "amenities": "Community Amenities",
     "schools": "Schools",
     "healthcare": "Healthcare",
     "dining": "Dining",
@@ -878,6 +880,7 @@ def poi_type_label(primary_type, types, fallback):
 CAPTION_ARCHETYPE_MAP = {
     "schools": "TRUST",
     "healthcare": "TRUST",
+    "amenities": "LIFESTYLE",
     "dining": "LIFESTYLE",
     "fitness": "LIFESTYLE",
     "shopping": "UTILITY",

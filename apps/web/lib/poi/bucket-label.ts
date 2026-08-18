@@ -7,6 +7,7 @@
 import type { IntentBucket } from './types';
 
 const LABELS: Record<IntentBucket, string> = {
+  amenities: 'Community Amenities',
   schools: 'Schools',
   dining: 'Dining',
   nightlife: 'Nightlife',

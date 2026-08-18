@@ -14,6 +14,7 @@
     "seedance-worker": "tsx ../../scripts/seedance-worker/worker.ts",
     "community-tour-agent": "tsx ../../scripts/community-tour/agent-research.ts",
     "curator-eval": "tsx ../../scripts/admin/curator-eval.ts",
+    "ingest-community-photos": "tsx ../../scripts/admin/ingest-community-photos.ts",
     "db:push": "supabase db push",
     "db:reset": "supabase db reset",
     "test": "vitest run",
