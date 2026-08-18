@@ -43,6 +43,7 @@ import {
   regenerateCommunityBucketVideoNarrative,
 } from '@/lib/poi/community-video-actions';
 import type { IntentBucket } from '@/lib/poi/types';
+import { startAsyncTransition } from '@/lib/utils/start-async-transition';
 import {
   Check,
   ChevronLeft,
@@ -182,7 +183,7 @@ export function CommunityNearbyPanel({
 
   const handleDiscover = () => {
     setNotice(null);
-    startTransition(async () => {
+    startAsyncTransition(startTransition, async () => {
       try {
         const r = await discoverPoisForCommunity(communityId);
         const topBuckets = BUCKET_ORDER.map((b) => ({ b, n: r.buckets[b] ?? 0 }))

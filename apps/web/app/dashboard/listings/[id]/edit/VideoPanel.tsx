@@ -24,6 +24,7 @@ import {
 } from '@/app/dashboard/listings/[id]/edit/actions';
 import { type UploadedVideo, VideoUploader } from '@/components/dashboard/VideoUploader';
 import { thumbnailUrl } from '@/lib/cloudflare/stream';
+import { startAsyncTransition } from '@/lib/utils/start-async-transition';
 import {
   DndContext,
   type DragEndEvent,
@@ -185,7 +186,7 @@ export const VideoPanel = forwardRef<VideoPanelHandle, Props>(function VideoPane
       setCoverVideoId(videoId); // optimistic
       setCoverError(null);
       setCoverPending(true);
-      startTransition(async () => {
+      startAsyncTransition(startTransition, async () => {
         const result = await setListingCover(listingId, videoId);
         setCoverPending(false);
         if (!result.ok) {
@@ -207,7 +208,7 @@ export const VideoPanel = forwardRef<VideoPanelHandle, Props>(function VideoPane
       setVideos((prev) => prev.filter((v) => v.id !== videoId));
       setDeleteError(null);
       setDeletingId(videoId);
-      startTransition(async () => {
+      startAsyncTransition(startTransition, async () => {
         const result = await deleteListingVideo(listingId, videoId);
         setDeletingId(null);
         if (!result.ok) {
@@ -237,7 +238,7 @@ export const VideoPanel = forwardRef<VideoPanelHandle, Props>(function VideoPane
     setVideos(reordered);
     setReorderError(null);
 
-    startTransition(async () => {
+    startAsyncTransition(startTransition, async () => {
       const result = await reorderListingVideos(
         listingId,
         reordered.map((v) => v.id),

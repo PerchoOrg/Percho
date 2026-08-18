@@ -9,6 +9,7 @@
  * public page in V1).
  */
 
+import { startAsyncTransition } from '@/lib/utils/start-async-transition';
 import { useState, useTransition } from 'react';
 import { updateBuyerDisplayName } from '../actions';
 import { AvatarPicker } from './AvatarPicker';
@@ -41,7 +42,7 @@ export function EditableBuyerIdentity({
       return;
     }
     setError(null);
-    startTransition(async () => {
+    startAsyncTransition(startTransition, async () => {
       const result = await updateBuyerDisplayName({ displayName: trimmed });
       if (result.error) {
         setError(result.error);

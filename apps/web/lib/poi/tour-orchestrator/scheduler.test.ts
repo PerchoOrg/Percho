@@ -179,8 +179,8 @@ describe('scheduleClips — golden fixture', () => {
 
   it('never repeats a move on adjacent clips', () => {
     const { clips } = plan();
-    for (let i = 1; i < clips.length; i++) {
-      expect(clips[i]!.move).not.toBe(clips[i - 1]!.move);
+    for (const [prev, next] of clips.slice(0, -1).map((c, i) => [c, clips[i + 1]] as const)) {
+      expect(next?.move).not.toBe(prev.move);
     }
   });
 

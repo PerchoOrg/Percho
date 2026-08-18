@@ -44,10 +44,10 @@ import {
 import MapView, { Marker } from "react-native-maps";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFeedPool } from "../../hooks/use-feed-pool";
-import { useFunnelStore } from "../../state/funnel";
-import { useFeedSession } from "../../state/feed-session";
 import { familiarityFor, unknownDimsLabel } from "../../lib/area-familiarity";
 import type { GeoUnit } from "../../lib/feed/geo-unit";
+import { useFeedSession } from "../../state/feed-session";
+import { useFunnelStore } from "../../state/funnel";
 import { colors, radii } from "../../theme/tokens";
 import { textStyles } from "../../theme/typography";
 
@@ -83,7 +83,9 @@ export default function SearchTab() {
 
 	const units = useMemo(() => {
 		const q = query.trim().toLowerCase();
-		const list = q ? pool.geoUnits.filter((u) => u.name.toLowerCase().includes(q)) : pool.geoUnits;
+		const list = q
+			? pool.geoUnits.filter((u) => u.name.toLowerCase().includes(q))
+			: pool.geoUnits;
 		// Familiar units float to the top so the journey layer is the
 		// natural first read, matching the §4.3 "in your journey first" rule.
 		return [...list].sort((a, b) => fam(b).score - fam(a).score);
@@ -115,13 +117,22 @@ export default function SearchTab() {
 					{units.map((u) => (
 						<Marker
 							key={u.id}
-							coordinate={{ latitude: u.centroid.lat, longitude: u.centroid.lng }}
+							coordinate={{
+								latitude: u.centroid.lat,
+								longitude: u.centroid.lng,
+							}}
 							title={u.name}
 							onPress={() => {
 								setSelectedId(u.id);
 								setExpanded(true);
 							}}
-							pinColor={selectedId === u.id ? colors.accent : journeyOn ? colors.pos : colors.ink2}
+							pinColor={
+								selectedId === u.id
+									? colors.accent
+									: journeyOn
+										? colors.pos
+										: colors.ink2
+							}
 						/>
 					))}
 				</MapView>
@@ -198,7 +209,9 @@ export default function SearchTab() {
 			</View>
 
 			{/* Collapsible list sheet */}
-			<View style={[styles.sheet, { height: sheetH, paddingBottom: insets.bottom }]}>
+			<View
+				style={[styles.sheet, { height: sheetH, paddingBottom: insets.bottom }]}
+			>
 				<Pressable
 					style={styles.grabberArea}
 					onPress={() => setExpanded((v) => !v)}
@@ -206,7 +219,11 @@ export default function SearchTab() {
 					<View style={styles.grabber} />
 				</Pressable>
 				<Text style={styles.sheetTitle}>
-					{query ? `"${query.trim()}"` : journeyOn ? "Your journey" : "All areas"}
+					{query
+						? `"${query.trim()}"`
+						: journeyOn
+							? "Your journey"
+							: "All areas"}
 					{loading ? "" : ` · ${units.length}`}
 				</Text>
 				{expanded && (
@@ -230,10 +247,7 @@ export default function SearchTab() {
 										setExpanded(true);
 									}}
 								>
-									<Image
-										source={{ uri: u.heroUrl }}
-										style={styles.rowThumb}
-									/>
+									<Image source={{ uri: u.heroUrl }} style={styles.rowThumb} />
 									<View style={styles.rowText}>
 										<Text style={styles.rowName}>
 											{u.name}
@@ -339,7 +353,12 @@ const styles = StyleSheet.create({
 		marginBottom: 6,
 	},
 	list: { flex: 1, paddingHorizontal: 12 },
-	empty: { ...textStyles.body, color: colors.ink2, padding: 20, textAlign: "center" },
+	empty: {
+		...textStyles.body,
+		color: colors.ink2,
+		padding: 20,
+		textAlign: "center",
+	},
 	row: {
 		flexDirection: "row",
 		alignItems: "center",

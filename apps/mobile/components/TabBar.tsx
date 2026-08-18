@@ -15,7 +15,14 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { colors, redline } from "../theme/tokens";
-import { TAB_BAR_ART_WIDTH, TAB_BAR_FONT, TAB_BAR_GLYPH, TAB_BAR_GLYPH_SCALE, TAB_BAR_OPTICAL_SCALE, type TabBarIconName } from "./TabBarIconFont";
+import {
+	TAB_BAR_ART_WIDTH,
+	TAB_BAR_FONT,
+	TAB_BAR_GLYPH,
+	TAB_BAR_GLYPH_SCALE,
+	TAB_BAR_OPTICAL_SCALE,
+	type TabBarIconName,
+} from "./TabBarIconFont";
 
 export interface TabItem {
 	key: string;
@@ -62,7 +69,9 @@ export function TabBar({ tabs, activeKey, onSelect }: TabBarProps) {
 						accessibilityRole="tab"
 						accessibilityState={{ selected: active }}
 					>
-						<View style={[styles.iconBox, { width: ICON_SIZE, height: ICON_SIZE }]}>
+						<View
+							style={[styles.iconBox, { width: ICON_SIZE, height: ICON_SIZE }]}
+						>
 							<Text
 								allowFontScaling={false}
 								style={[
@@ -74,8 +83,7 @@ export function TabBar({ tabs, activeKey, onSelect }: TabBarProps) {
 										color: active ? ACTIVE_GREEN : INACTIVE_GRAY,
 										transform: [
 											{
-												translateX:
-													(fontSize * (1 - artWidth)) / 2,
+												translateX: (fontSize * (1 - artWidth)) / 2,
 											},
 										],
 									},
@@ -84,7 +92,9 @@ export function TabBar({ tabs, activeKey, onSelect }: TabBarProps) {
 								{glyph}
 							</Text>
 						</View>
-						<Text style={[styles.label, active ? styles.active : styles.inactive]}>
+						<Text
+							style={[styles.label, active ? styles.active : styles.inactive]}
+						>
 							{t.label}
 						</Text>
 					</Pressable>

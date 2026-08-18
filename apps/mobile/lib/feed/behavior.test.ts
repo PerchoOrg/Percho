@@ -4,11 +4,7 @@
  */
 import { describe, expect, it } from "vitest";
 import { cardBehavior, swipeLabelsFor } from "./behavior";
-import {
-	CARD_KINDS,
-	type CardKindV3,
-	type FeedCardV3,
-} from "./card-types";
+import { CARD_KINDS, type CardKindV3, type FeedCardV3 } from "./card-types";
 
 /** One minimal card per kind. Shapes only — no realistic content. */
 function cardOfKind(kind: CardKindV3): FeedCardV3 {

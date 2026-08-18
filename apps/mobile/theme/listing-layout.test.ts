@@ -37,8 +37,8 @@ describe("listing card immersive full-bleed layout (2026-08-18)", () => {
 		expect(LISTING).not.toContain("textBlock as geo");
 		expect(LISTING).not.toContain("media as mediaGeo");
 		expect(LISTING).not.toContain("flex: 1, minHeight: 0");
-		expect(LISTING).toContain("overflow: \"hidden\"");
-		expect(LISTING).toContain("fit=\"cover\"");
+		expect(LISTING).toContain('overflow: "hidden"');
+		expect(LISTING).toContain('fit="cover"');
 	});
 
 	it("carries a bottom scrim like the CITY card", () => {
@@ -66,7 +66,7 @@ describe("listing card immersive full-bleed layout (2026-08-18)", () => {
 		expect(LISTING).toContain("styles.info");
 		// The overlay block lives on the photo (absolute info), never in a
 		// natural-height white panel below the media.
-		expect(LISTING).toContain("position: \"absolute\"");
+		expect(LISTING).toContain('position: "absolute"');
 	});
 
 	it("unifies the three fixed elements across City / Community / Listing", () => {
@@ -75,15 +75,22 @@ describe("listing card immersive full-bleed layout (2026-08-18)", () => {
 		expect(AREA).toContain(badge);
 		expect(COMMUNITY).toContain(badge);
 
-		const disc = "width: 40,\n\t\theight: 40,\n\t\tborderRadius: 20,\n\t\tbackgroundColor: \"rgba(255,255,255,0.75)\"";
+		const disc =
+			'width: 40,\n\t\theight: 40,\n\t\tborderRadius: 20,\n\t\tbackgroundColor: "rgba(255,255,255,0.75)"';
 		expect(LISTING).toContain(disc);
 		expect(AREA).toContain(disc);
 		expect(COMMUNITY).toContain(disc);
 
 		// Same explore CTA — label copy, size, weight, colour.
-		expect(LISTING).toContain("fontSize: 15,\n\t\tfontWeight: \"500\",\n\t\tcolor: \"rgba(255,255,255,0.92)\"");
-		expect(AREA).toContain("fontSize: 15,\n\t\tfontWeight: \"500\",\n\t\tcolor: \"rgba(255,255,255,0.92)\"");
-		expect(COMMUNITY).toContain("fontSize: 15,\n\t\tfontWeight: \"500\",\n\t\tcolor: \"rgba(255,255,255,0.92)\"");
+		expect(LISTING).toContain(
+			'fontSize: 15,\n\t\tfontWeight: "500",\n\t\tcolor: "rgba(255,255,255,0.92)"',
+		);
+		expect(AREA).toContain(
+			'fontSize: 15,\n\t\tfontWeight: "500",\n\t\tcolor: "rgba(255,255,255,0.92)"',
+		);
+		expect(COMMUNITY).toContain(
+			'fontSize: 15,\n\t\tfontWeight: "500",\n\t\tcolor: "rgba(255,255,255,0.92)"',
+		);
 		expect(LISTING).toContain("Explore\n");
 	});
 
@@ -96,7 +103,7 @@ describe("listing card immersive full-bleed layout (2026-08-18)", () => {
 		// dead in the stack (a Pressable inside the pan gesture never fires —
 		// RNGH #3172).
 		const feed = readFileSync("app/(tabs)/feed.tsx", "utf8");
-		expect(feed).toContain("top.kind === \"listing\"");
+		expect(feed).toContain('top.kind === "listing"');
 		expect(feed).toContain("router.push(`/listing/${top.id}`)");
 		expect(feed).toContain("tapSlot={args.tapSlot}");
 	});

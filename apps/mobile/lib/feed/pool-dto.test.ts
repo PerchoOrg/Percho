@@ -195,8 +195,12 @@ describe("parseCommunity", () => {
 	});
 
 	it("omits an empty signal list so the card falls back to reasons/dims", () => {
-		expect(parseCommunity({ ...COMMUNITY, signals: [] })?.signals).toBeUndefined();
-		expect(parseCommunity({ ...COMMUNITY, signals: 7 })?.signals).toBeUndefined();
+		expect(
+			parseCommunity({ ...COMMUNITY, signals: [] })?.signals,
+		).toBeUndefined();
+		expect(
+			parseCommunity({ ...COMMUNITY, signals: 7 })?.signals,
+		).toBeUndefined();
 		expect(parseCommunity(COMMUNITY)?.signals).toBeUndefined();
 	});
 

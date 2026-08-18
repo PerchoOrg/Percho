@@ -63,7 +63,10 @@ function clamp(v: number, lo: number, hi: number): number {
  * still registers as 100% coverage.
  */
 export function familiarityFor(
-	signals: { geo: readonly GeoSignal[]; dims: Readonly<Record<string, number>> },
+	signals: {
+		geo: readonly GeoSignal[];
+		dims: Readonly<Record<string, number>>;
+	},
 	unitId: string,
 	totalCardsInUnit: number = COVERAGE_SATURATION,
 ): UnitFamiliarity {
@@ -75,7 +78,11 @@ export function familiarityFor(
 	const likeRate =
 		sig && sig.right + sig.left > 0 ? sig.right / (sig.right + sig.left) : 0.5;
 
-	const coverage = clamp((cardsSeen / Math.max(1, totalCardsInUnit)) * 40, 0, 40);
+	const coverage = clamp(
+		(cardsSeen / Math.max(1, totalCardsInUnit)) * 40,
+		0,
+		40,
+	);
 	const decisiveness = clamp(Math.abs(likeRate - 0.5) * 2 * 30, 0, 30);
 	const knownDims = PILLAR_DIMS.filter((d) => (signals.dims[d] ?? 0) >= 2);
 	const unknownDims = PILLAR_DIMS.filter((d) => !knownDims.includes(d));
@@ -86,7 +93,11 @@ export function familiarityFor(
 	return {
 		unitId,
 		score: Math.round(
-			clamp(Math.floor(coverage) + Math.floor(decisiveness) + dimensions, 0, 100),
+			clamp(
+				Math.floor(coverage) + Math.floor(decisiveness) + dimensions,
+				0,
+				100,
+			),
 		),
 		coverage: Math.floor(coverage),
 		decisiveness: Math.floor(decisiveness),

@@ -13,8 +13,8 @@ import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import { ICON_FONT, OUTLINE_FONT } from "../components/cards/redline/icon-font";
 import { TAB_BAR_FONT } from "../components/TabBarIconFont";
+import { ICON_FONT, OUTLINE_FONT } from "../components/cards/redline/icon-font";
 import { DM_SERIF_FONT } from "../theme/fonts";
 
 export default function RootLayout() {

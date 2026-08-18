@@ -12,6 +12,7 @@
 import { useRouter } from 'next/navigation';
 import { useTransition } from 'react';
 
+import { startAsyncTransition } from '@/lib/utils/start-async-transition';
 import { deleteListingAndRedirect } from './archive-actions';
 
 export function DangerZone({ listingId }: { listingId: string }) {
@@ -26,7 +27,7 @@ export function DangerZone({ listingId }: { listingId: string }) {
     ) {
       return;
     }
-    startTransition(async () => {
+    startAsyncTransition(startTransition, async () => {
       try {
         await deleteListingAndRedirect(listingId);
         router.refresh();

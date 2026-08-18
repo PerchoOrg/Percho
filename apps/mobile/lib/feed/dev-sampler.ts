@@ -97,12 +97,7 @@ export function buildSamplerDeck(input: SamplerInput): FeedCardV3[] {
 
 	// Interleave so the deck reads like a feed rather than three blocks of the
 	// same face — but with every video card still up front.
-	const groups: FeedCardV3[][] = [
-		listings,
-		communities,
-		areas,
-		tradeoffs,
-	];
+	const groups: FeedCardV3[][] = [listings, communities, areas, tradeoffs];
 
 	const deck: FeedCardV3[] = [];
 	// The video cards lead, unconditionally: that is the whole point of the flag.

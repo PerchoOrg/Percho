@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { placeStats, type StatCell } from "./place-stats";
+import { type StatCell, placeStats } from "./place-stats";
 
 describe("placeStats — deterministic placeholder stat bars", () => {
 	it("returns the same cells for the same id (no re-roll on re-render)", () => {
-		expect(placeStats("abc-1", "community")).toEqual(placeStats("abc-1", "community"));
+		expect(placeStats("abc-1", "community")).toEqual(
+			placeStats("abc-1", "community"),
+		);
 		expect(placeStats("abc-1", "city")).toEqual(placeStats("abc-1", "city"));
 	});
 

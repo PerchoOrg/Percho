@@ -24,14 +24,10 @@
  * (§1.3), so no handler in here ever branches on a card kind.
  */
 import { useCallback, useEffect, useMemo, useRef } from "react";
-import type { ViewStyle } from "react-native";
 import { Gesture } from "react-native-gesture-handler";
 import {
-	type AnimatedStyle,
 	type SharedValue,
-	interpolate,
 	runOnJS,
-	useAnimatedStyle,
 	useSharedValue,
 	withSpring,
 } from "react-native-reanimated";
@@ -42,7 +38,6 @@ import {
 	panLive,
 } from "../lib/gesture/capability";
 import {
-	SWIPE_THRESHOLD_RATIO,
 	type SwipeDecision,
 	decideSwipe,
 	stepThresholdLatch,
@@ -56,7 +51,6 @@ import {
 } from "../lib/gesture/tap-slot";
 import { haptics } from "../lib/haptics";
 
-const FOLLOW_ROTATION_DEG = 8; // §0.5
 /**
  * §1.8 flyout: a spring at damping 26, NOT the `withTiming` 220ms task-0 shipped.
  *

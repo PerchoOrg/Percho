@@ -7,11 +7,7 @@
  * length, seenIds dedupe, determinism, exhaustion/looping, and fatigue.
  */
 import { describe, expect, it } from "vitest";
-import type {
-	CommunityCardV3,
-	FeedCardV3,
-	ListingCardV3,
-} from "./card-types";
+import type { CommunityCardV3, FeedCardV3, ListingCardV3 } from "./card-types";
 import type { FeedPool } from "./generate-feed";
 import { generateFeed, mixFor } from "./generate-feed";
 import type { GeoUnit } from "./geo-unit";
@@ -94,10 +90,7 @@ const POOL: FeedPool = {
 	],
 };
 
-function gen(
-	stage: 4,
-	over: Partial<Parameters<typeof generateFeed>[0]> = {},
-) {
+function gen(stage: 4, over: Partial<Parameters<typeof generateFeed>[0]> = {}) {
 	return generateFeed({
 		stage,
 		signals: EMPTY_SIGNALS,
@@ -108,7 +101,6 @@ function gen(
 	});
 }
 
-const kinds = (cards: readonly FeedCardV3[]) => cards.map((c) => c.kind);
 const countKind = (cards: readonly FeedCardV3[], kind: string) =>
 	cards.filter((c) => c.kind === kind).length;
 

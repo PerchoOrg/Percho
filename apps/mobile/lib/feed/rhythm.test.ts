@@ -195,7 +195,13 @@ const card = (kind: FeedCardV3["kind"], id = kind): FeedCardV3 =>
 
 describe("trailingRun", () => {
 	it("counts only the tail, not total occurrences", () => {
-		const cards = [card("area"), card("area"), card("tradeoff"), card("area"), card("area")];
+		const cards = [
+			card("area"),
+			card("area"),
+			card("tradeoff"),
+			card("area"),
+			card("area"),
+		];
 		expect(trailingRun(cards, "area")).toBe(2);
 	});
 

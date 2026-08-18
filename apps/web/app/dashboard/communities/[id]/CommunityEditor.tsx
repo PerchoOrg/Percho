@@ -39,6 +39,7 @@
  */
 
 import { deleteCommunity, updateCommunity } from '@/app/dashboard/communities/actions';
+import { startAsyncTransition } from '@/lib/utils/start-async-transition';
 import { COMMUNITY_PROPERTY_TYPES } from '@/lib/zod/community';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
@@ -605,7 +606,7 @@ export function CommunityDangerZone({ communityId }: { communityId: string }) {
     )
       return;
     setErr(null);
-    startTransition(async () => {
+    startAsyncTransition(startTransition, async () => {
       const res = await deleteCommunity(communityId);
       if (res.ok) {
         router.replace('/dashboard/communities');

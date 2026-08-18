@@ -31,6 +31,7 @@ import {
   nextPhotoStoragePath,
   photoPublicUrl,
 } from '@/lib/supabase/storage';
+import { startAsyncTransition } from '@/lib/utils/start-async-transition';
 import { Star, Trash2, Upload } from 'lucide-react';
 import {
   forwardRef,
@@ -199,7 +200,7 @@ export const PhotoPanel = forwardRef<PhotoPanelHandle, Props>(function PhotoPane
 
   const handleDelete = useCallback(
     (photoId: string) => {
-      startTransition(async () => {
+      startAsyncTransition(startTransition, async () => {
         // Optimistic remove.
         const prev = photos;
         const wasCover = coverPhotoId === photoId;
@@ -222,7 +223,7 @@ export const PhotoPanel = forwardRef<PhotoPanelHandle, Props>(function PhotoPane
       setCoverPhotoId(photoId); // optimistic
       setCoverError(null);
       setCoverPending(true);
-      startTransition(async () => {
+      startAsyncTransition(startTransition, async () => {
         const result = await setListingCoverPhoto(listingId, photoId);
         setCoverPending(false);
         if (!result.ok) {

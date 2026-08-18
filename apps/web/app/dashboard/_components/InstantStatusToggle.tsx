@@ -25,6 +25,7 @@ import {
   publishListing,
   unpublishListing,
 } from '@/app/dashboard/listings/[id]/edit/publish-actions';
+import { startAsyncTransition } from '@/lib/utils/start-async-transition';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState, useTransition } from 'react';
 import { createPortal } from 'react-dom';
@@ -82,7 +83,7 @@ export function InstantStatusToggle({ id, status, kind = 'listing', variant = 'h
 
   function handleToggle() {
     clearErrors();
-    startTransition(async () => {
+    startAsyncTransition(startTransition, async () => {
       try {
         flushPending();
       } catch {

@@ -8,7 +8,7 @@ import {
 	commitDecision,
 	panLive,
 } from "./capability";
-import { SWIPE_THRESHOLD_RATIO, decideSwipe } from "./decide-swipe";
+import { SWIPE_THRESHOLD_RATIO } from "./decide-swipe";
 
 const CARD_W = 400;
 

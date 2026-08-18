@@ -1,4 +1,3 @@
-import { VISIBLE_WINDOW } from "../gesture/stack-layer";
 /**
  * `generateFeed` — the discovery composition engine.
  *
@@ -28,7 +27,7 @@ import { TRADEOFFS } from "./content";
 import type { GeoLevel, GeoUnit } from "./geo-unit";
 import { finestAvailableLevel, unitsAtLevel } from "./geo-unit";
 import type { Slot } from "./ratios";
-import { STAGE_MIX, WINDOW } from "./ratios";
+import { STAGE_MIX } from "./ratios";
 import {
 	byStaleness,
 	kindForFill,
@@ -125,8 +124,7 @@ function rankCommunities(
 	signals: SignalState,
 ): CommunityCardV3[] {
 	const passed = new Set(signals.passedCommunityIds);
-	const score = (c: CommunityCardV3): number =>
-		(passed.has(c.id) ? -100 : 0);
+	const score = (c: CommunityCardV3): number => (passed.has(c.id) ? -100 : 0);
 	return [...communities].sort((a, b) => {
 		const d = score(b) - score(a);
 		return d !== 0 ? d : a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
@@ -191,10 +189,7 @@ function pickCommunity(
 	return firstUnseen(ctx.communityRanked, (c) => c.id, ctx.seen, rotate);
 }
 
-function pickListing(
-	ctx: FillContext,
-	rotate: number,
-): ListingCardV3 | null {
+function pickListing(ctx: FillContext, rotate: number): ListingCardV3 | null {
 	return firstUnseen(ctx.listingRanked, (x) => x.id, ctx.seen, rotate);
 }
 

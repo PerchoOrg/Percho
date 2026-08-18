@@ -16,12 +16,10 @@
 import type {
 	CardKindV3,
 	FeedCardV3,
-	FunnelLayer,
 	FunnelStage,
 	SwipeVerdict,
 } from "./card-types";
 import type { GeoLevel } from "./geo-unit";
-import { layerOf } from "./signals";
 
 /** Wire verdict per §1.10 ("verdict(L/R)"). */
 export type WireVerdict = "L" | "R";
@@ -76,10 +74,7 @@ export interface PersonaChangeEvent extends EventBase {
 	newPersona: string;
 }
 
-export type ScopeEvent =
-	| SwipeEvent
-	| GestureEvent
-	| PersonaChangeEvent;
+export type ScopeEvent = SwipeEvent | GestureEvent | PersonaChangeEvent;
 
 export type ScopeEventType = ScopeEvent["type"];
 

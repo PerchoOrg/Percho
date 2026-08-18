@@ -6,10 +6,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import {
-	TAB_BAR_ART_WIDTH,
-	TAB_BAR_GLYPH,
-} from "../components/TabBarIconFont";
+import { TAB_BAR_ART_WIDTH, TAB_BAR_GLYPH } from "../components/TabBarIconFont";
 const FONT = join(__dirname, "../assets/fonts/TabBarIcons.ttf");
 
 /** Minimal TrueType `cmap` reader — every codepoint the font can actually draw. */
@@ -79,7 +76,10 @@ describe("tab bar icon font", () => {
 	it("gives every icon name a distinct glyph", () => {
 		const seen = new Map<string, string>();
 		for (const [name, glyph] of Object.entries(TAB_BAR_GLYPH)) {
-			expect(seen.get(glyph), `${name} duplicates ${seen.get(glyph)}`).toBeUndefined();
+			expect(
+				seen.get(glyph),
+				`${name} duplicates ${seen.get(glyph)}`,
+			).toBeUndefined();
 			seen.set(glyph, name);
 		}
 	});

@@ -42,6 +42,7 @@ import {
   regenerateListingBucketVideoNarrative,
 } from '@/lib/poi/listing-video-actions';
 import type { IntentBucket } from '@/lib/poi/types';
+import { startAsyncTransition } from '@/lib/utils/start-async-transition';
 import {
   Check,
   ChevronLeft,
@@ -166,7 +167,7 @@ export function ListingNearbyPanel({
 
   const handleDiscover = () => {
     setNotice(null);
-    startTransition(async () => {
+    startAsyncTransition(startTransition, async () => {
       try {
         const r = await discoverPoisForListing(listingId);
         const topBuckets = BUCKET_ORDER.map((b) => ({ b, n: r.buckets[b] ?? 0 }))

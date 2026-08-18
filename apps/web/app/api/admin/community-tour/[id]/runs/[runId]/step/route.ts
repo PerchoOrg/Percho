@@ -19,6 +19,7 @@ import { buildResearchPrompt } from '@/lib/ai/community-tour-prompt';
 import { requireAdmin } from '@/lib/auth/require-admin';
 import type { TourPlanPhoto } from '@/lib/poi/tour-orchestrator/plan';
 import type { PhotoAnnotation } from '@/lib/poi/tour-orchestrator/types';
+import type { Json } from '@/lib/supabase/database.types';
 import { createServiceClient } from '@/lib/supabase/server';
 import { extractJsonObject } from '@/lib/utils/extract-json';
 import { NextResponse } from 'next/server';
@@ -27,11 +28,26 @@ export const runtime = 'nodejs';
 // Tag loops Gemini per photo (~3s each); 50 photos = 150s+ > default 60s.
 export const maxDuration = 300;
 
+/**
+ * The service-role client every step handler receives. Named so the
+ * handlers do not each re-derive it — and so it is a real type rather
+ * than the `any` they used before database.types.ts was generated.
+ */
+type TourDb = ReturnType<typeof createServiceClient>;
+
+/**
+ * Step results are plain serialisable objects written to a JSONB column.
+ * The generated schema types that column as `Json`, which TypeScript will
+ * not infer from `Record<string, unknown>`; this narrows at the write
+ * boundary rather than letting `any` back into the whole file.
+ */
+const asJson = (value: unknown): Json => value as Json;
+
 interface RunRow {
   id: string;
   community_id: string;
   status: string;
-  step_results: Record<string, unknown>;
+  step_results: Record<string, Json>;
 }
 
 /**
@@ -60,7 +76,7 @@ async function bestEffortWrite(label: string, q: PromiseLike<{ error: unknown }>
   }
 }
 
-async function getRun(sb: any, runId: string): Promise<RunRow | null> {
+async function getRun(sb: TourDb, runId: string): Promise<RunRow | null> {
   const { data } = await sb
     .from('community_tour_runs')
     .select('id, community_id, status, step_results')
@@ -70,7 +86,7 @@ async function getRun(sb: any, runId: string): Promise<RunRow | null> {
 }
 
 async function setRunStatus(
-  sb: any,
+  sb: TourDb,
   runId: string,
   status: string,
   extra: Record<string, unknown> = {},
@@ -85,7 +101,7 @@ async function setRunStatus(
 }
 
 /** Persist a step's output under step_results.<step> (merge, not replace). */
-async function saveStep(sb: any, run: RunRow, step: string, result: unknown) {
+async function saveStep(sb: TourDb, run: RunRow, step: string, result: unknown) {
   // The write whose silent failure is indistinguishable from "the step did
   // nothing": the panel simply keeps rendering the previous run's numbers.
   await mustWrite(
@@ -93,7 +109,7 @@ async function saveStep(sb: any, run: RunRow, step: string, result: unknown) {
     sb
       .from('community_tour_runs')
       .update({
-        step_results: { ...run.step_results, [step]: result },
+        step_results: asJson({ ...run.step_results, [step]: result }),
         updated_at: new Date().toISOString(),
       })
       .eq('id', run.id),
@@ -114,7 +130,7 @@ async function geminiResearch(opts: {
     lng: number | null;
   };
   runId: string;
-  sb: any;
+  sb: TourDb;
 }): Promise<{
   ok: boolean;
   text: string;
@@ -134,12 +150,15 @@ async function geminiResearch(opts: {
       .eq('id', opts.runId)
       .maybeSingle();
     if (!run) return;
+    // JSONB column — the schema types it as `Json`, which admits primitives
+    // and null, so narrow before spreading.
+    const existing = (run.step_results ?? {}) as Record<string, Json>;
     await bestEffortWrite(
       'research progress',
       opts.sb
         .from('community_tour_runs')
         .update({
-          step_results: { ...run.step_results, ...patch },
+          step_results: asJson({ ...existing, ...patch }),
           updated_at: new Date().toISOString(),
         })
         .eq('id', opts.runId),
@@ -230,7 +249,7 @@ function parseResearchJson(raw: string): { narrative_angle?: string; pois?: unkn
 }
 
 async function runResearch(
-  sb: any,
+  sb: TourDb,
   run: RunRow,
 ): Promise<{ ok: boolean; started: boolean; error?: string }> {
   // If a previous run already produced research, reuse it — agents cost money
@@ -275,7 +294,7 @@ async function runResearch(
     sb
       .from('community_tour_runs')
       .update({
-        step_results: { ...run.step_results, agent_research: research },
+        step_results: asJson({ ...run.step_results, agent_research: research }),
         updated_at: new Date().toISOString(),
       })
       .eq('id', run.id),
@@ -283,7 +302,7 @@ async function runResearch(
   return { ok: true, started: true };
 }
 
-async function runResolve(sb: any, run: RunRow) {
+async function runResolve(sb: TourDb, run: RunRow) {
   const research = run.step_results.agent_research as
     | {
         agents: {
@@ -358,7 +377,7 @@ async function runResolve(sb: any, run: RunRow) {
 
 // ─── step: photos ───────────────────────────────────────────────────────────
 
-async function runPhotos(sb: any, run: RunRow) {
+async function runPhotos(sb: TourDb, run: RunRow) {
   const resolve = run.step_results.resolve as
     | {
         resolved?: Array<{
@@ -419,7 +438,7 @@ async function runPhotos(sb: any, run: RunRow) {
           user_ratings_total: poi.user_ratings_total ?? null,
           // The photo fetch reads its references out of raw_place; a POI
           // without it resolves and then yields zero photos.
-          raw_place: rawPlace,
+          raw_place: asJson(rawPlace),
           location: poi.lng != null && poi.lat != null ? `(${poi.lng},${poi.lat})` : null,
           refreshed_at: new Date().toISOString(),
         },
@@ -563,7 +582,7 @@ async function runPhotos(sb: any, run: RunRow) {
 
 // ─── step: tag ──────────────────────────────────────────────────────────────
 
-async function runTag(sb: any, run: RunRow) {
+async function runTag(sb: TourDb, run: RunRow) {
   const resolve = run.step_results.resolve as
     | { resolved?: Array<{ place_id: string }> }
     | undefined;
@@ -618,7 +637,7 @@ function plannedShots(run: RunRow): PlannedShot[] {
   return Array.isArray(photos?.shots) ? photos.shots : [];
 }
 
-async function runGenerate(sb: any, run: RunRow, photoIds?: string[], engine?: string) {
+async function runGenerate(sb: TourDb, run: RunRow, photoIds?: string[], engine?: string) {
   const resolve = run.step_results.resolve as
     | { resolved?: Array<{ place_id: string; bucket: string; name: string }> }
     | undefined;
@@ -648,8 +667,8 @@ async function runGenerate(sb: any, run: RunRow, photoIds?: string[], engine?: s
       .select('id, poi_id, ai_tags, poi:pois!inner(display_name)')
       .in('id', photoIds);
     const selected = (photos ?? [])
-      .filter((p: any) => ((p.ai_tags ?? {}) as { usable?: boolean }).usable !== false)
-      .map((p: any): PlannedShot => {
+      .filter((p) => ((p.ai_tags ?? {}) as { usable?: boolean }).usable !== false)
+      .map((p): PlannedShot => {
         const shot = plannedById.get(p.id);
         if (shot) {
           if (!forceEngine || forceEngine === shot.engine) return shot;
@@ -716,7 +735,7 @@ async function runGenerate(sb: any, run: RunRow, photoIds?: string[], engine?: s
 }
 
 async function enqueueClips(
-  sb: any,
+  sb: TourDb,
   run: RunRow,
   shotsWithEngine: Array<{
     photo_id: string;
@@ -832,7 +851,7 @@ async function enqueueClips(
 //     ready. Each generation bills ~$0.05, so a second click must not re-bill
 //     four clips. The per-row Regenerate is the deliberate way to redo one.
 
-async function runRegenerateAll(sb: any, run: RunRow) {
+async function runRegenerateAll(sb: TourDb, run: RunRow) {
   const planned = plannedShots(run);
   if (planned.length === 0) {
     return {
@@ -932,7 +951,7 @@ async function runRegenerateAll(sb: any, run: RunRow) {
 /** Shared: build the final shot list for a set of POIs. Photos step computes
  *  and persists this; assemble consumes it. Per-POI cap 2 (owner 2026-08-17). */
 async function computeFinalShots(
-  sb: any,
+  sb: TourDb,
   poiIds: string[],
   buckets?: Map<string, string>,
 ): Promise<{ shots: unknown[]; dropped: unknown[]; plan: unknown }> {
@@ -1160,7 +1179,7 @@ async function computeFinalShots(
 }
 
 async function runAssemble(
-  sb: any,
+  sb: TourDb,
   run: RunRow,
   _photoIds?: string[],
   _engine?: string,
@@ -1184,8 +1203,8 @@ async function runAssemble(
       community_id: run.community_id,
       run_id: run.id,
       status: 'pending',
-      ordered_clips: shots,
-      photos_dropped: dropped,
+      ordered_clips: asJson(shots),
+      photos_dropped: asJson(dropped),
     });
     if (insErr) return { error: 'insert_failed', message: (insErr as { message: string }).message };
     await setRunStatus(sb, run.id, 'assembled');
@@ -1202,7 +1221,7 @@ async function runAssemble(
 const STEP_HANDLERS: Record<
   string,
   (
-    sb: any,
+    sb: TourDb,
     run: RunRow,
     photoIds?: string[],
     engine?: string,
@@ -1226,8 +1245,7 @@ export async function POST(
   if (!admin) return NextResponse.json({ error: 'forbidden' }, { status: 403 });
 
   const { id: communityId, runId } = await params;
-  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
-  const sb: any = createServiceClient();
+  const sb = createServiceClient();
 
   const body = (await req.json().catch(() => ({}))) as {
     step?: string;
