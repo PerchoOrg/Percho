@@ -141,7 +141,8 @@ async function fetchCommunityCardsByIds(ids: string[]): Promise<SavedCommunityCa
       cover_storage_path: c.cover_storage_path,
       fallback_video_cf_id: cfList[0] ?? null,
       name: c.name,
-      boundary: (c.boundary as import('@/lib/communities/logo-cover').BoundaryGeoJSON | null) ?? null,
+      boundary:
+        (c.boundary as import('@/lib/communities/logo-cover').BoundaryGeoJSON | null) ?? null,
     });
     result.push({
       id: c.id,

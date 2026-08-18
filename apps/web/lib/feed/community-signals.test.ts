@@ -11,8 +11,8 @@
  *   · a community with no mapped claim renders no pills
  */
 import { describe, expect, it } from 'vitest';
-import { communityLifestyleSignals } from './community-signals';
 import type { CommunityReason } from './community-reasons';
+import { communityLifestyleSignals } from './community-signals';
 
 function reasons(labels: string[]): CommunityReason[] {
   return labels.map((label) => ({ label, icon: 'tree' }));
@@ -36,10 +36,7 @@ describe('communityLifestyleSignals', () => {
 
   it('ranks the rarest claim first', () => {
     // Walkability (25.2%) is rarer than Peaceful (61.2%) and leads.
-    const out = communityLifestyleSignals(
-      reasons(['Peaceful', 'Walkability']),
-      2,
-    );
+    const out = communityLifestyleSignals(reasons(['Peaceful', 'Walkability']), 2);
     expect(out[0]).toBe('Highly walkable');
     expect(out[1]).toBe('Quiet streets');
   });
@@ -57,10 +54,7 @@ describe('communityLifestyleSignals', () => {
     // A claim-poor community gets 1; a rich one gets 2 (default).
     const poor = communityLifestyleSignals(reasons(['Trees']), 2);
     expect(poor).toHaveLength(1);
-    const rich = communityLifestyleSignals(
-      reasons(['Trees', 'Walkability', 'Restaurants']),
-      2,
-    );
+    const rich = communityLifestyleSignals(reasons(['Trees', 'Walkability', 'Restaurants']), 2);
     expect(rich).toHaveLength(2);
   });
 
@@ -69,10 +63,7 @@ describe('communityLifestyleSignals', () => {
     expect(communityLifestyleSignals([], 2)).toEqual([]);
     // A claim with no family maps to nothing.
     expect(
-      communityLifestyleSignals(
-        [{ label: 'Traceylynn Consultant', icon: 'tree' }],
-        2,
-      ),
+      communityLifestyleSignals([{ label: 'Traceylynn Consultant', icon: 'tree' }], 2),
     ).toEqual([]);
   });
 });

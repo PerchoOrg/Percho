@@ -18,7 +18,10 @@ export async function tagPoiPhotoAction(photoId: string): Promise<Result> {
   const { tagPoiPhoto } = await import('@/lib/poi/vision-tagger');
   const r = await tagPoiPhoto(photoId);
   if (!r.ok) {
-    return { ok: false, message: r.error ?? (r.skipped === 'already_tagged' ? 'Already tagged.' : 'Tag failed.') };
+    return {
+      ok: false,
+      message: r.error ?? (r.skipped === 'already_tagged' ? 'Already tagged.' : 'Tag failed.'),
+    };
   }
   revalidatePath('/admin/pipeline');
   return { ok: true };

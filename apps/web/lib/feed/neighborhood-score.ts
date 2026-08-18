@@ -45,7 +45,7 @@ export interface ScorablePoi {
   ratingCount: number | null;
 }
 
-export type DimensionKey = "safety" | "schools" | "convenience" | "potential";
+export type DimensionKey = 'safety' | 'schools' | 'convenience' | 'potential';
 
 export interface DimensionScore {
   key: DimensionKey;
@@ -76,25 +76,20 @@ export interface NeighborhoodScores {
  */
 const DIMENSION_BUCKETS: Record<DimensionKey, string[] | null> = {
   safety: null,
-  schools: ["schools"],
-  convenience: ["daily_errands", "shopping", "dining"],
+  schools: ['schools'],
+  convenience: ['daily_errands', 'shopping', 'dining'],
   potential: null,
 };
 
 const DIMENSION_LABELS: Record<DimensionKey, string> = {
-  safety: "Safety",
-  schools: "Schools",
-  convenience: "Convenience",
-  potential: "Potential",
+  safety: 'Safety',
+  schools: 'Schools',
+  convenience: 'Convenience',
+  potential: 'Potential',
 };
 
 /** Fixed order, so the card's four rows never reshuffle between renders. */
-export const DIMENSION_ORDER: DimensionKey[] = [
-  "safety",
-  "schools",
-  "convenience",
-  "potential",
-];
+export const DIMENSION_ORDER: DimensionKey[] = ['safety', 'schools', 'convenience', 'potential'];
 
 const NEAR_M = 400;
 const FAR_M = 3000;
@@ -136,7 +131,7 @@ export function scoreNeighborhood(pois: ScorablePoi[]): NeighborhoodScores {
     const label = DIMENSION_LABELS[key];
 
     if (buckets === null) {
-      return { key, label, score: null, count: 0, reason: "no data source" };
+      return { key, label, score: null, count: 0, reason: 'no data source' };
     }
 
     const items = pois
@@ -144,7 +139,7 @@ export function scoreNeighborhood(pois: ScorablePoi[]): NeighborhoodScores {
       .sort((a, b) => a.distanceM - b.distanceM);
 
     if (items.length === 0) {
-      return { key, label, score: null, count: 0, reason: "no POIs" };
+      return { key, label, score: null, count: 0, reason: 'no POIs' };
     }
 
     // Destructure instead of indexing: `noUncheckedIndexedAccess` makes
@@ -152,7 +147,7 @@ export function scoreNeighborhood(pois: ScorablePoi[]): NeighborhoodScores {
     // here would be a lie the compiler can't verify.
     const [nearest, ...rest] = items;
     if (!nearest) {
-      return { key, label, score: null, count: 0, reason: "no POIs" };
+      return { key, label, score: null, count: 0, reason: 'no POIs' };
     }
     const nearestM = nearest.distanceM;
     const goodCount = [nearest, ...rest].filter(isGood).length;
@@ -167,14 +162,10 @@ export function scoreNeighborhood(pois: ScorablePoi[]): NeighborhoodScores {
     };
   });
 
-  const scored = dims
-    .map((d) => d.score)
-    .filter((s): s is number => s !== null);
+  const scored = dims.map((d) => d.score).filter((s): s is number => s !== null);
 
   return {
-    overall: scored.length
-      ? round1(scored.reduce((a, b) => a + b, 0) / scored.length)
-      : null,
+    overall: scored.length ? round1(scored.reduce((a, b) => a + b, 0) / scored.length) : null,
     dims,
   };
 }

@@ -14,8 +14,8 @@
  * the Nearby tab. Never fired automatically to keep spend predictable.
  */
 
-import { extractJsonObject } from '@/lib/utils/extract-json';
 import { createServiceClient } from '@/lib/supabase/server';
+import { extractJsonObject } from '@/lib/utils/extract-json';
 import type { IntentBucket } from './types';
 
 const NARRATIVE_MODEL = process.env.GEMINI_MODEL ?? 'gemini-2.5-flash';

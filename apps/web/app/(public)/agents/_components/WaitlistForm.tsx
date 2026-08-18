@@ -149,9 +149,7 @@ export function WaitlistForm({ presetEmail }: { presetEmail?: string }) {
           className={inputCls}
           aria-invalid={Boolean(errors.brokerage)}
         />
-        {errors.brokerage ? (
-          <p className="mt-1 text-xs text-red-600">{errors.brokerage}</p>
-        ) : null}
+        {errors.brokerage ? <p className="mt-1 text-xs text-red-600">{errors.brokerage}</p> : null}
       </label>
 
       <label className="mt-4 block">

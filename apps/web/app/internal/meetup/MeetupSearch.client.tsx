@@ -76,9 +76,7 @@ export function MeetupSearch({ groups }: { groups: MeetupGroup[] }) {
                   href={`/internal/meetup/${entry.slug}`}
                   className="block rounded border border-line bg-surface px-4 py-3 hover:border-line-strong"
                 >
-                  <div className="text-xs uppercase tracking-eyebrow text-muted">
-                    {folderTitle}
-                  </div>
+                  <div className="text-xs uppercase tracking-eyebrow text-muted">{folderTitle}</div>
                   <div className="mt-1 font-medium">{entry.title}</div>
                   {entry.preview && (
                     <div className="mt-1 text-sm text-ink2 line-clamp-2">{entry.preview}</div>

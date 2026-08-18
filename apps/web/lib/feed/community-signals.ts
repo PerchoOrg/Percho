@@ -1,51 +1,3 @@
-/**
- * Community "lifestyle signals" for the feed card's pill row.
- *
- * Owner spec (2026-08-15): the card must not show generic category words
- * (Restaurants / Walkability / Trees). Instead every community gets the 2-3
- * most DISTINCTIVE lifestyle signals — a short phrase with a conclusion,
- * a number when we hold one ("3 parks nearby"), a qualitative phrase when we
- * do not ("Quiet streets"). Not every card shows the same pills.
- *
- * ── Sources, in rank order ─────────────────────────────────────────────────
- *
- *   1. `community_pois` counts — a NUMBER of real places, "33 restaurants".
- *      Measured: 175 rows for 1 of 8,679 communities (Ashley Crossing). Near
- *      zero coverage, so the text map carries the product everywhere else.
- *   2. `attributes` — residents' own claims about the place. Same honest
- *      vocabulary `community-reasons.ts` uses; this file must NOT become a
- *      second copy of that map, so the text table below is keyed on the SAME
- *      `label` strings that module already produces and the picker works on
- *      labels, not raw tokens.
- *   3. `interests` rank — "3rd resident interest" only for signals the pair
- *      is evidence for. Mostly a tiebreak inside a family.
- *   4. `homeowners_pct` / `residents_count` — only where the signal is
- *      genuinely "well maintained" / "neighbours" shaped.
- *
- * What must NEVER print: `Restaurants` / `Walkability` / `Trees` — the bare
- * category words the owner called out. The whole point of this module is that
- * the pill says something WITH a conclusion: "Mature trees", "Highly
- * walkable", "Cafés nearby". Category words are what the mapping strips.
- *
- * ── Why label-keyed, not token-keyed ───────────────────────────────────────
- *
- * The seed's raw tokens ("Walkability", "Trees") ARE the generic words the
- * owner banned. The label-keyed table therefore matches what
- * `community-reasons.ts` prints after `LABEL_OVERRIDE` (Spanish tokens fold
- * onto their English twins, "Kids" → "Family Friendly", "Clean"/"Beautiful"
- * stay as residents wrote them). This module never sees a raw token and never
- * has to re-implement the override map.
- *
- * ── Distinctiveness ────────────────────────────────────────────────────────
- *
- * Rarity comes from `reasonPrevalence` — the same corpus measurement the
- * reasons module ranks by (a claim only 4% of neighbourhoods make is more
- * distinctive than one 40% make). The picker prefers rare signals, and
- * signals that can carry a number ("Mature trees", "Cafés nearby", "Quiet
- * streets") are preferred over their bare category forms, so the strongest
- * cards lead with the specific phrasing the owner asked for.
- */
-import type { CardIconName } from '@percho/shared';
 import { type CommunityReason, reasonPrevalence } from './community-reasons';
 
 /**
@@ -141,9 +93,7 @@ export function communityLifestyleSignals(
   // followed by "Cafés nearby" would be the same claim twice.
   const counts = extractPoiCounts(reasons);
   const coveredLabels = new Set(
-    (reasons ?? [])
-      .filter((r) => r.fact?.match(/^\d+ [a-zA-Z ]+$/))
-      .map((r) => r.label),
+    (reasons ?? []).filter((r) => r.fact?.match(/^\d+ [a-zA-Z ]+$/)).map((r) => r.label),
   );
   for (const s of counts) add(s);
 
@@ -176,9 +126,7 @@ export function communityLifestyleSignals(
  * "median age 42" fail the shape on purpose — they are not POI counts and
  * must never become "N X nearby".
  */
-export function extractPoiCounts(
-  reasons: readonly CommunityReason[] | null | undefined,
-): string[] {
+export function extractPoiCounts(reasons: readonly CommunityReason[] | null | undefined): string[] {
   if (!reasons) return [];
   const out: string[] = [];
   for (const r of reasons) {

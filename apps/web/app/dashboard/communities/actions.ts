@@ -193,7 +193,8 @@ export async function updateCommunity(id: string, raw: unknown): Promise<ActionR
   if (!existing) return { ok: false, error: 'not_found' };
 
   const newName = parsed.data.name;
-  const baseSlug = existing.name === newName ? existing.slug : slugify(newName, { fallback: 'community' });
+  const baseSlug =
+    existing.name === newName ? existing.slug : slugify(newName, { fallback: 'community' });
   const slugCandidates: string[] =
     baseSlug === existing.slug
       ? [existing.slug]

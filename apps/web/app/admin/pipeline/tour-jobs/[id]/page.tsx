@@ -1,15 +1,3 @@
-/**
- * /admin/pipeline/tour-jobs/[id] — per-listing tour hub.
- *
- * Shows every photo + every listing_videos row (walkthrough + agent
- * uploads) for a single listing, plus a button to regenerate the Ken
- * Burns walkthrough. Admin-scoped — bypasses agent ownership.
- *
- * .
- */
-
-import { streamIframeUrl, thumbnailUrl } from '@/lib/cloudflare/stream';
-import { webVideoUid } from '@/lib/feed/video-uid';
 import { createServiceClient } from '@/lib/supabase/server';
 import { notFound } from 'next/navigation';
 import { PhotoTable } from '../../../_components/PhotoTable';

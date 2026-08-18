@@ -1,5 +1,6 @@
 'use client';
 
+import { streamIframeUrl } from '@/lib/cloudflare/stream';
 /**
  * AssemblyVideoPanel — the community's final tour video (ffmpeg concat of the
  * Selected Photos clips, built by the Assemble step) shown at the TOP of the
@@ -14,7 +15,6 @@
  * Shows the latest ready assembly; pending/processing rows show status.
  */
 import { useEffect, useState } from 'react';
-import { streamIframeUrl } from '@/lib/cloudflare/stream';
 
 interface AssemblyRow {
   id: string;
@@ -95,7 +95,7 @@ export function AssemblyVideoPanel({ communityId }: { communityId: string }) {
         <div className="mt-2 text-xs text-ink2">
           {latest.status === 'pending' || latest.status === 'processing'
             ? 'Assembly is building… (see Video Jobs for the worker log)'
-            : latest.error ?? latest.status}
+            : (latest.error ?? latest.status)}
         </div>
       ) : null}
     </div>

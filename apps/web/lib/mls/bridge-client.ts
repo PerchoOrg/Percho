@@ -111,7 +111,10 @@ export class BridgeClient {
     if (filter?.raw) params.set('$filter', filter.raw);
     params.set('$top', String(top));
     params.set('$skip', String(skip));
-    return this.get<ODataListResponse<ResoProperty>>(`/OData/${this.config.datasetId}/Property`, params);
+    return this.get<ODataListResponse<ResoProperty>>(
+      `/OData/${this.config.datasetId}/Property`,
+      params,
+    );
   }
 
   async getProperty(listingKey: string): Promise<ResoProperty | null> {
@@ -182,15 +185,20 @@ export class BridgeClient {
 
         if (res.status === 429 || (res.status >= 500 && res.status < 600)) {
           const retryAfterHdr = res.headers.get('retry-after');
-          const retryAfter = retryAfterHdr === null ? NaN : Number(retryAfterHdr);
-          const waitMs = Number.isFinite(retryAfter) && retryAfter >= 0
-            ? retryAfter * 1000
-            : Math.min(30_000, 2 ** attempt * 500);
+          const retryAfter = retryAfterHdr === null ? Number.NaN : Number(retryAfterHdr);
+          const waitMs =
+            Number.isFinite(retryAfter) && retryAfter >= 0
+              ? retryAfter * 1000
+              : Math.min(30_000, 2 ** attempt * 500);
           console.error(
             `[bridge] retryable status=${res.status} attempt=${attempt} wait=${waitMs}ms rid=${requestId}`,
           );
           if (attempt >= MAX_ATTEMPTS) {
-            throw new BridgeApiError(`Bridge ${res.status} after ${attempt} attempts`, res.status, requestId);
+            throw new BridgeApiError(
+              `Bridge ${res.status} after ${attempt} attempts`,
+              res.status,
+              requestId,
+            );
           }
           await sleep(waitMs);
           continue;

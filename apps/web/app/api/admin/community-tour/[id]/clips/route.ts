@@ -87,7 +87,10 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   );
   // Seedance vs depthflow/kenburns clips are separate rows (same photo can
   // have both). The UI shows two columns; key by photo_id + engine.
-  const clipsByPhotoEngine = new Map<string, typeof clipByPhoto extends Map<string, infer V> ? V : never>();
+  const clipsByPhotoEngine = new Map<
+    string,
+    typeof clipByPhoto extends Map<string, infer V> ? V : never
+  >();
   for (const c of clips ?? []) {
     clipsByPhotoEngine.set(`${c.photo_id}:${c.engine}`, c);
   }
@@ -126,10 +129,14 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       ai_tags: unknown;
     }) => {
       const clip = clipByPhoto.get(p.id);
-      const dakbClip = clipsByPhotoEngine.get(`${p.id}:depthflow`) ?? clipsByPhotoEngine.get(`${p.id}:kenburns`);
+      const dakbClip =
+        clipsByPhotoEngine.get(`${p.id}:depthflow`) ?? clipsByPhotoEngine.get(`${p.id}:kenburns`);
       const path =
         p.enhanced_status === 'approved' && p.enhanced_path ? p.enhanced_path : p.storage_path;
-      const clipOut = (c: (typeof clipByPhoto extends Map<string, infer V> ? V : never) | undefined, isDakb: boolean) =>
+      const clipOut = (
+        c: (typeof clipByPhoto extends Map<string, infer V> ? V : never) | undefined,
+        isDakb: boolean,
+      ) =>
         c
           ? {
               engine: c.engine,

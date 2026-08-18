@@ -14,10 +14,10 @@
  * The HTTP response returns immediately — polling is UI-driven.
  */
 
-import { requireAdmin } from '@/lib/auth/require-admin';
 import { spawn } from 'node:child_process';
 import { openSync } from 'node:fs';
 import path from 'node:path';
+import { requireAdmin } from '@/lib/auth/require-admin';
 import { NextResponse } from 'next/server';
 
 // nearby_generate expects to run from repo root — /app/scripts/pipelines/...

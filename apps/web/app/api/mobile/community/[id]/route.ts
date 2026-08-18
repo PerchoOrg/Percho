@@ -13,34 +13,25 @@
  * `lib/communities/detail.ts`. Read that file's header before changing this one.
  */
 
-import { fetchCommunityDetail } from "@/lib/communities/detail";
-import { NextResponse } from "next/server";
+import { fetchCommunityDetail } from '@/lib/communities/detail';
+import { NextResponse } from 'next/server';
 
-export const dynamic = "force-dynamic";
+export const dynamic = 'force-dynamic';
 
-export async function GET(
-	_req: Request,
-	ctx: { params: Promise<{ id: string }> },
-) {
-	const { id } = await ctx.params;
-	if (!id?.trim()) {
-		return NextResponse.json(
-			{ error: "community id or slug required" },
-			{ status: 400 },
-		);
-	}
+export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> }) {
+  const { id } = await ctx.params;
+  if (!id?.trim()) {
+    return NextResponse.json({ error: 'community id or slug required' }, { status: 400 });
+  }
 
-	try {
-		const detail = await fetchCommunityDetail(id.trim());
-		if (!detail) {
-			return NextResponse.json(
-				{ error: "community not found" },
-				{ status: 404 },
-			);
-		}
-		return NextResponse.json(detail);
-	} catch (err) {
-		const message = err instanceof Error ? err.message : "unknown error";
-		return NextResponse.json({ error: message }, { status: 500 });
-	}
+  try {
+    const detail = await fetchCommunityDetail(id.trim());
+    if (!detail) {
+      return NextResponse.json({ error: 'community not found' }, { status: 404 });
+    }
+    return NextResponse.json(detail);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'unknown error';
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
 }

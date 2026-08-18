@@ -77,13 +77,11 @@ export function AdminGenerateNearbyButton({ listingId }: { listingId: string }) 
         </button>
         {job && (
           <p className="text-[11px] text-muted">
-            Queued (pid {job.pid}). Bucket cards below will update as each
-            video renders. Log: <code className="font-mono">{job.log_path}</code>
+            Queued (pid {job.pid}). Bucket cards below will update as each video renders. Log:{' '}
+            <code className="font-mono">{job.log_path}</code>
           </p>
         )}
-        {err && !dialogOpen && (
-          <p className="text-[11px] text-red-600">Error: {err}</p>
-        )}
+        {err && !dialogOpen && <p className="text-[11px] text-red-600">Error: {err}</p>}
       </div>
 
       {dialogOpen && (
@@ -95,8 +93,8 @@ export function AdminGenerateNearbyButton({ listingId }: { listingId: string }) 
           <div className="w-full max-w-md rounded-xl border border-line bg-surface p-5 shadow-xl">
             <h4 className="text-base font-semibold text-ink">Generate nearby videos</h4>
             <p className="mt-2 text-sm text-ink2">
-              This will run discovery + rendering for ~5 buckets
-              (dining, schools, outdoor, shopping, daily_errands) — roughly
+              This will run discovery + rendering for ~5 buckets (dining, schools, outdoor,
+              shopping, daily_errands) — roughly
               <strong> $1 in API costs</strong>. Continue?
             </p>
             <label className="mt-4 flex cursor-pointer items-center gap-2 text-sm text-ink2">

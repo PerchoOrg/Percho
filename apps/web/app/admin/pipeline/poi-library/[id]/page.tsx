@@ -127,8 +127,26 @@ export default async function PoiDetailPage({
     .in(
       'photo_id',
       rows.map((p) => p.id),
-    )) as { data: Array<{ photo_id: string; engine: string; duration_s: number | null; status: string; storage_path: string | null; cost_usd: number | null; error: string | null }> | null };
-  type ClipRow = { photo_id: string; engine: string; duration_s: number | null; status: string; storage_path: string | null; cost_usd: number | null; error: string | null };
+    )) as {
+    data: Array<{
+      photo_id: string;
+      engine: string;
+      duration_s: number | null;
+      status: string;
+      storage_path: string | null;
+      cost_usd: number | null;
+      error: string | null;
+    }> | null;
+  };
+  type ClipRow = {
+    photo_id: string;
+    engine: string;
+    duration_s: number | null;
+    status: string;
+    storage_path: string | null;
+    cost_usd: number | null;
+    error: string | null;
+  };
   const clipByPhoto = new Map<string, ClipRow>();
   for (const c of clips ?? []) if (c.engine === 'seedance') clipByPhoto.set(c.photo_id, c);
   const clipByPhotoEngine = new Map<string, ClipRow>();
@@ -141,7 +159,9 @@ export default async function PoiDetailPage({
           engine: c.engine,
           duration_s: c.duration_s,
           status: c.status,
-          video_url: c.storage_path ? `${isDakb ? renderBase : publicBase}/${c.storage_path}` : null,
+          video_url: c.storage_path
+            ? `${isDakb ? renderBase : publicBase}/${c.storage_path}`
+            : null,
           cost_usd: c.cost_usd,
           error: c.error,
         }
@@ -173,7 +193,10 @@ export default async function PoiDetailPage({
           poi_name: poi.display_name,
           used_in: usedIn.get(p.id) ?? [],
           clip: clipOut(clipByPhoto.get(p.id), false),
-          dakb_clip: clipOut(clipByPhotoEngine.get(`${p.id}:depthflow`) ?? clipByPhotoEngine.get(`${p.id}:kenburns`), true),
+          dakb_clip: clipOut(
+            clipByPhotoEngine.get(`${p.id}:depthflow`) ?? clipByPhotoEngine.get(`${p.id}:kenburns`),
+            true,
+          ),
         }))}
       />
     </div>

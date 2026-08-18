@@ -4,12 +4,15 @@
  * a not-found (empty $filter result) case.
  */
 
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { BridgeClient, BridgeConfigError, hasBridgeCredentials } from '@/lib/mls/bridge-client';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 type FetchStub = ReturnType<typeof vi.fn>;
 
-function makeResponse(body: unknown, init: { status?: number; headers?: Record<string, string> } = {}) {
+function makeResponse(
+  body: unknown,
+  init: { status?: number; headers?: Record<string, string> } = {},
+) {
   return new Response(JSON.stringify(body), {
     status: init.status ?? 200,
     headers: init.headers ?? { 'content-type': 'application/json' },
@@ -45,9 +48,9 @@ describe('BridgeClient', () => {
   });
 
   it('listProperties: sends bearer token and parses OData response', async () => {
-    const stub: FetchStub = vi.fn().mockResolvedValue(
-      makeResponse({ value: [{ ListingKey: 'K1', ListPrice: 100 }] }),
-    );
+    const stub: FetchStub = vi
+      .fn()
+      .mockResolvedValue(makeResponse({ value: [{ ListingKey: 'K1', ListPrice: 100 }] }));
     vi.stubGlobal('fetch', stub);
 
     const client = new BridgeClient();
@@ -69,7 +72,13 @@ describe('BridgeClient', () => {
     vi.stubGlobal('fetch', stub);
 
     const client = new BridgeClient();
-    const results = await client.searchByAddress('123', 'Peachtree St NE', 'Atlanta', 'GA', '30303');
+    const results = await client.searchByAddress(
+      '123',
+      'Peachtree St NE',
+      'Atlanta',
+      'GA',
+      '30303',
+    );
 
     expect(results).toHaveLength(0);
     const [url] = stub.mock.calls[0] as [string];
@@ -85,7 +94,9 @@ describe('BridgeClient', () => {
   it('retries on 429 and eventually succeeds', async () => {
     const stub: FetchStub = vi
       .fn()
-      .mockResolvedValueOnce(makeResponse({ error: 'rate' }, { status: 429, headers: { 'retry-after': '0' } }))
+      .mockResolvedValueOnce(
+        makeResponse({ error: 'rate' }, { status: 429, headers: { 'retry-after': '0' } }),
+      )
       .mockResolvedValueOnce(makeResponse({ value: [{ ListingKey: 'OK' }] }));
     vi.stubGlobal('fetch', stub);
 

@@ -12,8 +12,8 @@
  * the table rows, so the table shows clip state and a per-row Generate button.
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { AssemblyVideoPanel } from './AssemblyVideoPanel';
 import type { PhotoRow } from './PhotoTable';
 import { PhotoTable } from './PhotoTable';

@@ -58,94 +58,94 @@
  *   'nightlife' — no attribute in the vocabulary honestly means nightlife.
  */
 
-import type { DimKey } from "@percho/shared";
+import type { DimKey } from '@percho/shared';
 
 /**
  * Resident-stated attributes. Highest-confidence source: a direct claim about
  * the neighbourhood itself.
  */
 const ATTRIBUTE_DIM: Record<string, DimKey> = {
-	// quiet
-	Peaceful: "quiet",
-	Quiet: "quiet",
-	Privacy: "quiet",
-	Secluded: "quiet",
-	Tranquilo: "quiet",
-	Silencioso: "quiet",
-	Apacible: "quiet",
-	Privacidad: "quiet",
-	// family
-	"Family Friendly": "family",
-	Kids: "family",
-	"Ideal para familias": "family",
-	// walkable
-	Walkability: "walkable",
-	Walking: "walkable",
-	Sidewalks: "walkable",
-	"Para caminar": "walkable",
-	Aceras: "walkable",
-	"Zonas peatonales": "walkable",
-	// schools
-	Schools: "schools",
-	// outdoors
-	Trees: "outdoors",
-	Woods: "outdoors",
-	Nature: "outdoors",
-	Parks: "outdoors",
-	Gardens: "outdoors",
-	Wildlife: "outdoors",
-	Birds: "outdoors",
-	Green: "outdoors",
-	Landscaping: "outdoors",
-	Árboles: "outdoors",
-	Parques: "outdoors",
-	Bosque: "outdoors",
-	"Flora y fauna": "outdoors",
-	Naturaleza: "outdoors",
-	Jardines: "outdoors",
-	Pájaros: "outdoors",
-	Paisajismo: "outdoors",
-	// trails (and water/terrain features people walk to)
-	Trails: "trails",
-	Hiking: "trails",
-	Running: "trails",
-	Creek: "trails",
-	Lake: "trails",
-	River: "trails",
-	Hills: "trails",
-	Beach: "trails",
-	Ocean: "trails",
-	Bay: "trails",
-	Pond: "trails",
-	Lago: "trails",
-	// hip
-	Restaurants: "hip",
-	Food: "hip",
-	Shopping: "hip",
-	Stores: "hip",
-	Downtown: "hip",
-	Urban: "hip",
-	Eclectic: "hip",
-	Historic: "hip",
-	Comida: "hip",
-	"Centro de la ciudad": "hip",
-	// space
-	Yards: "space",
-	Large: "space",
-	Open: "space",
-	Grande: "space",
-	Abierto: "space",
-	Patios: "space",
-	// entertaining
-	Events: "entertaining",
-	Golf: "entertaining",
-	Tennis: "entertaining",
-	Pool: "entertaining",
-	Eventos: "entertaining",
-	Tenis: "entertaining",
-	// move_in
-	"Well Maintained": "move_in",
-	"Bien cuidado": "move_in",
+  // quiet
+  Peaceful: 'quiet',
+  Quiet: 'quiet',
+  Privacy: 'quiet',
+  Secluded: 'quiet',
+  Tranquilo: 'quiet',
+  Silencioso: 'quiet',
+  Apacible: 'quiet',
+  Privacidad: 'quiet',
+  // family
+  'Family Friendly': 'family',
+  Kids: 'family',
+  'Ideal para familias': 'family',
+  // walkable
+  Walkability: 'walkable',
+  Walking: 'walkable',
+  Sidewalks: 'walkable',
+  'Para caminar': 'walkable',
+  Aceras: 'walkable',
+  'Zonas peatonales': 'walkable',
+  // schools
+  Schools: 'schools',
+  // outdoors
+  Trees: 'outdoors',
+  Woods: 'outdoors',
+  Nature: 'outdoors',
+  Parks: 'outdoors',
+  Gardens: 'outdoors',
+  Wildlife: 'outdoors',
+  Birds: 'outdoors',
+  Green: 'outdoors',
+  Landscaping: 'outdoors',
+  Árboles: 'outdoors',
+  Parques: 'outdoors',
+  Bosque: 'outdoors',
+  'Flora y fauna': 'outdoors',
+  Naturaleza: 'outdoors',
+  Jardines: 'outdoors',
+  Pájaros: 'outdoors',
+  Paisajismo: 'outdoors',
+  // trails (and water/terrain features people walk to)
+  Trails: 'trails',
+  Hiking: 'trails',
+  Running: 'trails',
+  Creek: 'trails',
+  Lake: 'trails',
+  River: 'trails',
+  Hills: 'trails',
+  Beach: 'trails',
+  Ocean: 'trails',
+  Bay: 'trails',
+  Pond: 'trails',
+  Lago: 'trails',
+  // hip
+  Restaurants: 'hip',
+  Food: 'hip',
+  Shopping: 'hip',
+  Stores: 'hip',
+  Downtown: 'hip',
+  Urban: 'hip',
+  Eclectic: 'hip',
+  Historic: 'hip',
+  Comida: 'hip',
+  'Centro de la ciudad': 'hip',
+  // space
+  Yards: 'space',
+  Large: 'space',
+  Open: 'space',
+  Grande: 'space',
+  Abierto: 'space',
+  Patios: 'space',
+  // entertaining
+  Events: 'entertaining',
+  Golf: 'entertaining',
+  Tennis: 'entertaining',
+  Pool: 'entertaining',
+  Eventos: 'entertaining',
+  Tenis: 'entertaining',
+  // move_in
+  'Well Maintained': 'move_in',
+  'Bien cuidado': 'move_in',
 };
 
 /**
@@ -153,33 +153,33 @@ const ATTRIBUTE_DIM: Record<string, DimKey> = {
  * so this only fills tiles the attributes left empty. See the header.
  */
 const INTEREST_DIM: Record<string, DimKey> = {
-	"Gardening & Landscape": "outdoors",
-	Wildlife: "outdoors",
-	Birding: "outdoors",
-	"Hiking & Trails": "trails",
-	Running: "trails",
-	"Biking & Cycling": "trails",
-	"Canoeing & Kayaking": "trails",
-	Fishing: "trails",
-	Camping: "trails",
-	Walking: "walkable",
-	"Parenting School-Age Kids": "family",
-	"Parenting Babies to 5 y/os": "family",
-	"Parenting Teens": "family",
-	"Family Activities": "family",
-	"Block Parties": "family",
-	"Dinner Parties": "entertaining",
-	"BBQ & Grilling": "entertaining",
-	"Wine Tasting": "entertaining",
-	Golf: "entertaining",
-	Tennis: "entertaining",
-	Swimming: "entertaining",
-	"Seeing Live Music": "hip",
-	"Performing Arts": "hip",
-	Dancing: "hip",
-	"Local History": "hip",
-	"Home Improvement & DIY": "move_in",
-	Woodworking: "move_in",
+  'Gardening & Landscape': 'outdoors',
+  Wildlife: 'outdoors',
+  Birding: 'outdoors',
+  'Hiking & Trails': 'trails',
+  Running: 'trails',
+  'Biking & Cycling': 'trails',
+  'Canoeing & Kayaking': 'trails',
+  Fishing: 'trails',
+  Camping: 'trails',
+  Walking: 'walkable',
+  'Parenting School-Age Kids': 'family',
+  'Parenting Babies to 5 y/os': 'family',
+  'Parenting Teens': 'family',
+  'Family Activities': 'family',
+  'Block Parties': 'family',
+  'Dinner Parties': 'entertaining',
+  'BBQ & Grilling': 'entertaining',
+  'Wine Tasting': 'entertaining',
+  Golf: 'entertaining',
+  Tennis: 'entertaining',
+  Swimming: 'entertaining',
+  'Seeing Live Music': 'hip',
+  'Performing Arts': 'hip',
+  Dancing: 'hip',
+  'Local History': 'hip',
+  'Home Improvement & DIY': 'move_in',
+  Woodworking: 'move_in',
 };
 
 /** The redline's community card has exactly three tiles. */
@@ -196,25 +196,22 @@ export const COMMUNITY_HIGHLIGHT_COUNT = 3;
  * the card renders no tiles rather than invented ones.
  */
 export function communityHighlightDims(args: {
-	attributes?: string[] | null;
-	interests?: string[] | null;
+  attributes?: string[] | null;
+  interests?: string[] | null;
 }): DimKey[] {
-	const out: DimKey[] = [];
+  const out: DimKey[] = [];
 
-	const take = (
-		tokens: string[] | null | undefined,
-		table: Record<string, DimKey>,
-	) => {
-		for (const raw of tokens ?? []) {
-			if (out.length >= COMMUNITY_HIGHLIGHT_COUNT) return;
-			if (typeof raw !== "string") continue;
-			// Seed values carry stray trailing spaces ("Casas ", "perros ").
-			const dim = table[raw.trim()];
-			if (dim && !out.includes(dim)) out.push(dim);
-		}
-	};
+  const take = (tokens: string[] | null | undefined, table: Record<string, DimKey>) => {
+    for (const raw of tokens ?? []) {
+      if (out.length >= COMMUNITY_HIGHLIGHT_COUNT) return;
+      if (typeof raw !== 'string') continue;
+      // Seed values carry stray trailing spaces ("Casas ", "perros ").
+      const dim = table[raw.trim()];
+      if (dim && !out.includes(dim)) out.push(dim);
+    }
+  };
 
-	take(args.attributes, ATTRIBUTE_DIM);
-	take(args.interests, INTEREST_DIM);
-	return out;
+  take(args.attributes, ATTRIBUTE_DIM);
+  take(args.interests, INTEREST_DIM);
+  return out;
 }

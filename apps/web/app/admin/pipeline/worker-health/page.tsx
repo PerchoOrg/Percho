@@ -152,7 +152,8 @@ export default async function WorkerHealthPage() {
 
       <div className="rounded-2xl border border-line bg-surface p-4">
         <div className="text-ink2 text-xs uppercase tracking-wide">
-          Recent render jobs <span className="normal-case">(render_jobs — includes Mac mini tour renders)</span>
+          Recent render jobs{' '}
+          <span className="normal-case">(render_jobs — includes Mac mini tour renders)</span>
         </div>
         <div className="mt-2 space-y-1.5 text-sm">
           {h.recentJobs.length === 0 ? (
@@ -174,9 +175,7 @@ export default async function WorkerHealthPage() {
                 >
                   {j.status}
                 </span>
-                <span className="text-xs text-ink2">
-                  {new Date(j.created_at).toLocaleString()}
-                </span>
+                <span className="text-xs text-ink2">{new Date(j.created_at).toLocaleString()}</span>
                 {j.error && <span className="text-ink2 line-clamp-1 text-xs">{j.error}</span>}
               </div>
             ))
