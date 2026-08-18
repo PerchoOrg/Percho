@@ -13,7 +13,15 @@ import BucketJobsTable, { type BucketJobRow } from './BucketJobsTable';
 
 export const dynamic = 'force-dynamic';
 
-type StatusFilter = 'all' | 'pending' | 'processing' | 'ready' | 'approved' | 'failed' | 'superseded' | 'submitting';
+type StatusFilter =
+  | 'all'
+  | 'pending'
+  | 'processing'
+  | 'ready'
+  | 'approved'
+  | 'failed'
+  | 'superseded'
+  | 'submitting';
 
 type DbRow = {
   id: string;
@@ -40,6 +48,7 @@ type SeedanceRow = {
   provider_job_id: string | null;
   storage_path: string | null;
   created_at: string;
+  updated_at: string | null;
 };
 
 /** Tour assemblies (final concat of approved photo clips) — render worker owns
@@ -51,6 +60,7 @@ type AssemblyRow = {
   error: string | null;
   cf_stream_uid: string | null;
   created_at: string;
+  updated_at: string | null;
 };
 
 export default async function BucketJobsPage({
@@ -86,18 +96,21 @@ export default async function BucketJobsPage({
   const [seedClips, seedTours, assemblies] = await Promise.all([
     supabase
       .from('photo_clips')
-      .select('id, engine, status, error, provider_job_id, storage_path, created_at')
-      .order('created_at', { ascending: false })
+      .select('id, engine, status, error, provider_job_id, storage_path, created_at, updated_at')
+      // Ordered by LAST ACTIVITY, not creation. A clip re-rendered today sits
+      // months down a created_at list: the owner ran one and found it at row
+      // 31 of 79, under rows that had not moved in hours (2026-08-17).
+      .order('updated_at', { ascending: false })
       .limit(100) as unknown as Promise<{ data: SeedanceRow[] | null }>,
     supabase
       .from('ai_tour_videos')
-      .select('id, status, error, provider_job_id, storage_path, created_at')
-      .order('created_at', { ascending: false })
+      .select('id, status, error, provider_job_id, storage_path, created_at, updated_at')
+      .order('updated_at', { ascending: false })
       .limit(100) as unknown as Promise<{ data: SeedanceRow[] | null }>,
     supabase
       .from('tour_assemblies')
-      .select('id, community_id, status, error, cf_stream_uid, created_at')
-      .order('created_at', { ascending: false })
+      .select('id, community_id, status, error, cf_stream_uid, created_at, updated_at')
+      .order('updated_at', { ascending: false })
       .limit(100) as unknown as Promise<{ data: AssemblyRow[] | null }>,
   ]);
 
@@ -112,6 +125,8 @@ export default async function BucketJobsPage({
     storage_path: null,
     error: r.error,
     created_at: r.created_at,
+    // generated_videos has no updated_at column; creation is its only clock.
+    last_activity_at: r.created_at,
     community_id: r.community_id,
     listing_id: r.listing_id,
     photoCount: r.input_photo_ids?.length ?? 0,
@@ -129,6 +144,7 @@ export default async function BucketJobsPage({
       storage_path: r.storage_path,
       error: r.error,
       created_at: r.created_at,
+      last_activity_at: r.updated_at ?? r.created_at,
       community_id: null,
       listing_id: null,
       photoCount: 1,
@@ -144,6 +160,7 @@ export default async function BucketJobsPage({
       storage_path: r.storage_path,
       error: r.error,
       created_at: r.created_at,
+      last_activity_at: r.updated_at ?? r.created_at,
       community_id: null,
       listing_id: null,
       photoCount: 0,
@@ -163,13 +180,16 @@ export default async function BucketJobsPage({
       storage_path: null,
       error: r.error,
       created_at: r.created_at,
+      last_activity_at: r.updated_at ?? r.created_at,
       community_id: r.community_id,
       listing_id: null,
       photoCount: 0,
     }));
 
+  // Newest ACTIVITY first — a job you just re-ran belongs at the top even if
+  // its row was created weeks ago.
   const rows = [...renderRows, ...seedRows, ...assemblyRows].sort((a, b) =>
-    b.created_at.localeCompare(a.created_at),
+    b.last_activity_at.localeCompare(a.last_activity_at),
   );
 
   return (

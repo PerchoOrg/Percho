@@ -4,6 +4,37 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-08-18 18:10 UTC — Video Jobs sorted by creation, so a re-run was invisible
+
+**Owner**: "just tested an ai clip, it shows processing, but dont see it in the
+video job".
+
+Two halves, both real:
+
+**The clip was there, at row 31 of 79.** The Video Jobs page ordered every
+source by `created_at`. The clip the owner ran was a re-render of an existing
+row — created `08-17 11:24`, updated `08-18 00:43` — so it sat mid-list under
+rows created earlier that day and untouched since. Nothing on the row said it
+had moved.
+
+**Fix**: `photo_clips`, `ai_tour_videos` and `tour_assemblies` are queried and
+ordered by `updated_at` (`generated_videos` has no such column and keeps
+`created_at`); rows carry `last_activity_at` and the merged list sorts on it. A
+**Last activity** column shows it, with a `re-run` marker when it differs from
+Created — otherwise a job that ran five minutes ago still reads as stale.
+
+Ordering by `updated_at` also fixes the per-table `limit(100)`: it now keeps the
+100 most recently *active* jobs rather than the 100 most recently created.
+
+**Also confirmed for the owner, from three places rather than one**: the model
+in `origin/main`, the model in the worktree the worker runs from, and — the only
+one that is evidence rather than inference — what OpenRouter recorded for the
+job the worker actually submitted: `bytedance/seedance-2.0-mini-20260811`.
+
+**Verification**: `pnpm web:typecheck` clean, `pnpm web:test` 366 passed, each
+its own command. The one biome hit on the page (`StatusPill` unused) pre-dates
+this change; the diff removes a pre-existing formatting error.
+
 ## 2026-08-18 17:30 UTC — Seedance back to 2.0 Mini
 
 **Owner**: "change seedance model to 2.0 mini, 1.5 pro result looks unnatural."

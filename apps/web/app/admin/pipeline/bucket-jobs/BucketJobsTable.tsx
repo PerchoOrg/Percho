@@ -15,13 +15,17 @@ export type BucketJobRow = {
   storage_path: string | null;
   error: string | null;
   created_at: string;
+  /** updated_at where the table has one, else created_at. The list is sorted
+      by this: a job you just re-ran must not sit where it was created. */
+  last_activity_at: string;
   community_id: string | null;
   listing_id: string | null;
   photoCount: number;
 };
 
 function TypeBadge({ type }: { type: BucketJobRow['type'] }) {
-  const label = type === 'render' ? 'render' : type === 'clip' ? 'clip' : type === 'tour' ? 'tour' : 'assembly';
+  const label =
+    type === 'render' ? 'render' : type === 'clip' ? 'clip' : type === 'tour' ? 'tour' : 'assembly';
   const cls =
     type === 'render'
       ? 'bg-ink2/15 text-ink2'
@@ -31,7 +35,9 @@ function TypeBadge({ type }: { type: BucketJobRow['type'] }) {
           ? 'bg-bronze/15 text-bronze'
           : 'bg-purple-500/15 text-purple-500';
   return (
-    <span className={`inline-block w-14 rounded-full px-2 py-0.5 text-center text-[10px] font-medium ${cls}`}>
+    <span
+      className={`inline-block w-14 rounded-full px-2 py-0.5 text-center text-[10px] font-medium ${cls}`}
+    >
       {label}
     </span>
   );
@@ -173,6 +179,21 @@ const columns: AdminColumn<BucketJobRow>[] = [
     sortValue: (r) => r.created_at,
     render: (r) => (
       <span className="text-ink2 text-xs">{new Date(r.created_at).toLocaleString()}</span>
+    ),
+  },
+  {
+    // What the list is sorted by. Without it a re-rendered job looks stale:
+    // its Created is old and nothing on the row says it moved five minutes ago.
+    key: 'activity',
+    header: 'Last activity',
+    sortValue: (r) => r.last_activity_at,
+    render: (r) => (
+      <span className="text-ink2 text-xs">
+        {new Date(r.last_activity_at).toLocaleString()}
+        {r.last_activity_at !== r.created_at && (
+          <span className="ml-1 rounded bg-bronze/10 px-1 text-[10px] text-bronze">re-run</span>
+        )}
+      </span>
     ),
   },
 ];
