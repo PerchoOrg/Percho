@@ -16,6 +16,103 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-19 02:40 UTC — Repo-wide cleanup: the CI gate was never running
+
+**Objective**: owner asked for a holistic review and a repo-wide refactor —
+"clean up the code base, make it easily understood by human as well as agents,
+make it scalable in the future". Scope agreed up front: foundation + structural
+(unify the duplicated pipelines), with `supabase db push` authorised. Branch
+`phase50/repo-refactor`.
+
+**The two root causes.** Almost everything found traces to these:
+
+1. **CI has never gated anything.** `.github/workflows/ci.yml` runs
+   `pnpm typecheck | lint | test` at the repo root, but root `package.json`
+   only defined `web:*` variants. Every run since the workflow landed died at
+   step 1 with `Command "typecheck" not found`. The §9 definition of done was
+   never machine-enforced, which is how 183 lint errors accumulated.
+
+2. **`database.types.ts` was still the stub** (`Tables: Record<string, never>`)
+   after 48 migrations and 43 tables — and it *could not* be regenerated,
+   because `pnpm db:types` needs a local DB built from the migrations and the
+   chain aborted. `20260815120000_ai_tour_videos.sql` had been edited in place
+   after being applied: its first revision created `poi_photo_id`, the current
+   text does not, so `20260815140000` ("alter column poi_photo_id drop not
+   null") killed a fresh replay with SQLSTATE 42703. With no row types, every
+   query returned nothing useful — hence 314 `as any` casts.
+
+**Actions**:
+- Root scripts fan out with `pnpm -r --no-bail`; CI now actually runs.
+- Guarded the 20260815140000 statement behind an `information_schema` check.
+  All 13 pending migrations then applied; regenerated types are 5,774 lines
+  over 43 tables. **The swap cost zero type errors** — the call sites were
+  already routing around the missing types.
+- Deleted byte-identical dupes (`lib/community/{cover,logo-cover}.ts` vs
+  `lib/communities/`, which also ran the same 10 tests twice), dead
+  `lib/listings/slug.ts`, and the forked `extractJsonObject` (the test covered
+  the `lib/ai/gemini.ts` copy while three modules imported the other).
+- Collapsed `lib/community`/`communities` and `lib/listing`/`listings`/
+  `listing-feed` into symmetric `lib/communities/` + `lib/listings/`.
+- Added `lib/supabase/rows.ts` (`Row<'table'>` etc.) — the codebase carries
+  ~45 hand-written `interface XRow`, six of them named `CommunityRow`. Only
+  the actively-wrong one is converted so far; the rest are follow-up.
+- **Unified the four POI modules into two.** `listing-actions`/
+  `community-actions` matched on 403 of 429 lines, and `listing-video-actions`/
+  `community-video-actions` on 435 of 451, once the entity noun was normalised
+  away. Now `entity-scope.ts` (one descriptor per entity), `poi-actions-core.ts`
+  and `bucket-video-core.ts`, with the four originals as 66-77 line adapters.
+  Public API unchanged; no call site touched. Added 12 tests over the photo
+  selection policy, which had none on either copy.
+- **DEVLOG rotated by month.** It had reached 1.0 MB / 14,237 lines / 296
+  entries, ~250k tokens — CLAUDE.md orders every agent to read it at session
+  start, so the instruction was unfollowable. `DEVLOG.md` now holds the current
+  month; `docs/devlog/YYYY-MM.md` holds the rest. Rotation rule added to
+  CLAUDE.md.
+
+**Issues** (latent breaks the gate exposed once it ran):
+- **apps/web typecheck was already failing for CI.** pnpm-lock pins
+  `@types/react@18.3.31`, whose `TransitionFunction` rejects async callbacks;
+  19 sites pass `startTransition(async () => ...)`. It only looked green
+  locally off a stale cached copy of the types.
+- **apps/mobile lint had never run** — `biome check .` was declared but
+  `@biomejs/biome` was never a dependency, so it died with spawn ENOENT.
+  Installing it surfaced 49 findings including 8 dead symbols.
+- Biome's `--unsafe` fixer is **not safe here**: it deleted the required
+  `role` prop from all three `<TopBar>` call sites. Typecheck caught it. Root
+  cause was the prop being *named* `role`, which a11y rules read as the
+  reserved ARIA attribute — renamed to `viewer` on TopBar, DesktopSidebar and
+  BottomNav to remove the trap.
+
+**Resolution**: lint errors 183 -> 0 (web) and 49 -> 0 (mobile); typecheck
+clean across all three projects; 368 web + 508 mobile tests pass; `next build`
+compiles 60 pages. All three CI steps exit 0 for the first time.
+
+**Learnings**:
+- A green-looking local checkout is not evidence. Both the type break and the
+  mobile lint break were invisible until the gate was wired up.
+- Editing an applied migration is what silently froze the type system. Worth a
+  rule: migrations are append-only once pushed.
+- The `as any` casts were load-bearing scaffolding, not laziness — they were
+  the only way to write queries against a stub. Removing the stub removed the
+  reason for them.
+
+**Next steps** (deliberately not done):
+- ~40 remaining hand-written `XRow` types -> `Pick<Row<'table'>, ...>`; the
+  pattern is documented in `lib/supabase/rows.ts`.
+- ~300 remaining `as any` casts, now removable one file at a time with tsc as
+  the gate.
+- 7 `useExhaustiveDependencies` findings in BrowseFeed / CommunityCarousel /
+  CommunityListingCarousel / CommunityVideoFeed. All are "this dependency can
+  be removed"; removing one changes when an effect re-runs, and that code
+  carries documented iOS autoplay workarounds with no test coverage. Needs
+  on-device verification, so left as warnings.
+- 15 `useSemanticElements` + 4 `useMediaCaption` a11y findings, demoted to
+  warnings — they need UX decisions, not mechanical edits.
+- `step/route.ts` is still 1,286 lines. Its `sb: any` is gone (typed
+  `TourDb`), but the file would split cleanly along its existing
+  `STEP_HANDLERS` registry into `lib/poi/tour-steps/*`.
+- `BrowseFeed.tsx` is still 2,096 lines.
+
 ## 2026-08-18 18:10 UTC — Video Jobs sorted by creation, so a re-run was invisible
 
 **Owner**: "just tested an ai clip, it shows processing, but dont see it in the
