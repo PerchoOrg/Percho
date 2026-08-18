@@ -3,7 +3,9 @@
 You are pair-programming with the project owner. He does not write code himself.
 He reviews diffs and makes product decisions. You write the code.
 
-Read this file in full at the start of every session. Then read `DEVLOG.md`
+Read this file in full at the start of every session. `ARCHITECTURE.md`
+is the map — what every folder in the repo is responsible for; read it
+before you decide where a new file goes. Then read `DEVLOG.md`
 (reverse-chronological log) to find the current state and pick up from there.
 `DEVLOG.md` holds the **current month**; older months are split into
 `docs/devlog/YYYY-MM.md` and indexed from the top of `DEVLOG.md`. Read the

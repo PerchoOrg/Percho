@@ -1,5 +1,9 @@
 # Percho · Vision Doc
 
+> This is the product vision. If you are here to work on the code, start with
+> [`ARCHITECTURE.md`](ARCHITECTURE.md) — what every folder is for — and then
+> [`CLAUDE.md`](CLAUDE.md) for the working rules.
+
 > **Live there before you move there.**
 
 ---
