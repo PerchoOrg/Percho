@@ -4,6 +4,39 @@
 > Historical entries below preserve the original name in-place — the DEVLOG is
 > a record of what was worked on under the product's name at the time.
 
+## 2026-08-18 17:00 UTC — "Generate all clips": one button, driven by the plan, across every engine
+
+**Owner**: "based on plan in the photo table, generate all clips (change ↻
+Re-render all DA+KB, to all)".
+
+`runRegenerateAll` was rewritten to drive entirely off `step_results.photos.shots`
+— the plan already encodes the selection (2 per POI, watermark and resolution
+drops), so the old newest-3-per-POI heuristic and its `poi_photos` query are
+gone.
+
+**The two halves are deliberately not symmetric, because one costs money**:
+
+| engine | missing | failed | ready |
+|---|---|---|---|
+| depthflow / kenburns | create | re-render | **re-render** (local time is free) |
+| seedance | create | requeue | **skipped** (~$0.05 each) |
+
+A second click therefore costs nothing. Redoing one paid clip on purpose is
+what the row's Regenerate button is for. The button now reads **"↻ Generate all
+clips"** and its tooltip states the rule and the price.
+
+The step returns `{planned, created, rerendered, paid_created, paid_skipped}`
+and the panel renders it under the button — "0 queued · 16 re-rendering · 3
+Seedance already rendered, skipped". After a day of silent actions, a bulk
+button that reports nothing was not worth shipping.
+
+**Dry-run against Aberdeen's real 19-shot plan** (logic replayed read-only
+before shipping): 0 to create, 16 to re-render, 3 paid clips skipped — i.e. a
+click now costs $0.00 there.
+
+**Verification**: `pnpm web:typecheck` clean, `pnpm web:test` 366 passed, each
+its own command.
+
 ## 2026-08-18 16:30 UTC — I crashed the community page; then swept every unchecked write
 
 **Symptom** (owner): `TypeError: Cannot read properties of undefined (reading

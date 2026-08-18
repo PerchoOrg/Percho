@@ -819,133 +819,107 @@ async function enqueueClips(
   return { shots: shotsWithEngine.length, created: toCreate.length, requeued };
 }
 
-// ─── step: regenerate-all (DA+KB bulk re-render, owner 2026-08-17) ────────
-// Resets every existing depthflow/kenburns clip for the run's POIs back to
-// pending and enqueues new ones for photos that never got one, so the whole
-// table can be re-rendered with current code in one click. Seedance rows are
-// untouched — this button must never spend generation money.
-// (The per-row button re-renders one photo, ready or not, since 2026-08-17;
-// this one is still the way to redo the whole local half at once.)
+// ─── step: regenerate-all — "Generate all clips" (owner 2026-08-17) ───────
+// Drives entirely off the plan, and covers every engine in it. The plan
+// already encodes the selection (2 per POI, watermark and resolution drops),
+// so there is nothing to re-derive here.
+//
+// The two halves are treated differently on purpose, because one costs money:
+//   depthflow / kenburns — re-rendered whether or not a clip is ready. Local
+//     render time is free, and this is the button that redoes the whole tour
+//     after a plan or renderer change.
+//   seedance — created when missing, requeued when failed, and LEFT ALONE when
+//     ready. Each generation bills ~$0.05, so a second click must not re-bill
+//     four clips. The per-row Regenerate is the deliberate way to redo one.
 
 async function runRegenerateAll(sb: any, run: RunRow) {
-  const photos = run.step_results.photos as { resolved_poi_ids?: string[] } | undefined;
-  const poiIds = photos?.resolved_poi_ids ?? [];
-  if (poiIds.length === 0) {
-    return { error: 'no_photos', message: 'Run the photos step first.' };
+  const planned = plannedShots(run);
+  if (planned.length === 0) {
+    return {
+      error: 'no_plan',
+      message: 'No planned shots — run the photos step first (it builds the shot list).',
+    };
   }
 
-  const { data: photoRows } = await sb
-    .from('poi_photos')
-    .select('id, ai_tags, ai_score, poi_id, created_at, poi:pois!inner(display_name)')
-    .in('poi_id', poiIds);
-  // The plan already assigned depthflow vs kenburns per photo; this button
-  // re-renders the LOCAL half of it, so it follows the plan rather than
-  // flattening everything to kenburns the way it used to.
-  const plannedById = new Map(plannedShots(run).map((s) => [s.photo_id, s]));
-
-  // Selected Photos panel trim (gotcha 46): newest 3 per POI + any photo with
-  // a READY clip. Matches loadNearbyPhotos / computeFinalShots so the bulk
-  // re-render covers exactly what the panel shows.
-  const { data: clipRows } = await sb
+  const { data: existingRows } = await sb
     .from('photo_clips')
-    .select('photo_id, status')
+    .select('photo_id, engine, status')
     .in(
       'photo_id',
-      (photoRows ?? []).map((p: any) => p.id),
+      planned.map((s) => s.photo_id),
     );
-  const readyIds = new Set(
-    (clipRows ?? []).filter((r: any) => r.status === 'ready').map((r: any) => r.photo_id),
+  const statusOf = new Map<string, string>(
+    (existingRows ?? []).map((r: { photo_id: string; engine: string; status: string }) => [
+      `${r.photo_id}:${r.engine}`,
+      r.status,
+    ]),
   );
-  const byPoi = new Map<string, typeof photoRows>();
-  for (const p of photoRows ?? []) {
-    if (!byPoi.has(p.poi_id)) byPoi.set(p.poi_id, []);
-    byPoi.get(p.poi_id)!.push(p);
-  }
-  const kept: any[] = [];
-  for (const list of byPoi.values()) {
-    list.sort((a: any, b: any) =>
-      String(b.created_at ?? '').localeCompare(String(a.created_at ?? '')),
-    );
-    const top = list.slice(0, 3);
-    kept.push(...top.filter((p: any) => readyIds.has(p.id) || top.includes(p)));
-  }
 
-  // Unusable photos never enter the video pool (gotcha 37).
-  const selected = kept
-    .filter((p: any) => ((p.ai_tags ?? {}) as { usable?: boolean }).usable !== false)
-    .map((p: any) => {
-      const shot = plannedById.get(p.id);
-      // Off-plan photos, and the Seedance half of the plan, still render
-      // locally here — that is what this button is for — but as Ken Burns,
-      // whose move the worker can derive on its own.
-      const local = shot && shot.engine === 'depthflow' ? 'depthflow' : 'kenburns';
-      return {
-        photo_id: p.id,
-        poi_id: p.poi_id,
-        poi_name: p.poi?.display_name ?? '',
-        duration_s: shot?.duration_s ?? 3.0,
-        engine: local,
-        move: shot && shot.engine === local ? shot.move : null,
-      };
-    });
+  const toCreate: PlannedShot[] = [];
+  const toRerender: PlannedShot[] = [];
+  let paidSkipped = 0;
 
-  // Reset EVERY existing depthflow/kenburns row for these photos (ready
-  // included — the whole point is re-rendering old 16:9 clips with the new
-  // 9:16 code). Seedance rows are untouched.
-  const photoIds = selected.map((s) => s.photo_id);
-  if (photoIds.length > 0) {
-    await mustWrite(
-      `reset ${photoIds.length} DA+KB clip(s)`,
-      sb
-        .from('photo_clips')
-        .update({ status: 'pending', error: null, updated_at: new Date().toISOString() })
-        .in('photo_id', photoIds)
-        .in('engine', ['depthflow', 'kenburns']),
-    );
+  for (const shot of planned) {
+    const status = statusOf.get(`${shot.photo_id}:${shot.engine}`);
+    if (status === undefined) {
+      toCreate.push(shot);
+      continue;
+    }
+    if (status === 'processing') continue; // in flight, leave it
+    if (shot.engine === 'seedance' && status === 'ready') {
+      paidSkipped += 1; // already generated and paid for
+      continue;
+    }
+    toRerender.push(shot);
   }
 
-  // Enqueue clips for photos that never had one.
-  const { data: existing } = await sb
-    .from('photo_clips')
-    .select('photo_id, engine')
-    .in('photo_id', photoIds)
-    .in('engine', ['depthflow', 'kenburns']);
-  const have = new Set((existing ?? []).map((r: any) => `${r.photo_id}:${r.engine}`));
-  const toCreate = selected.filter((s) => !have.has(`${s.photo_id}:${s.engine}`));
   if (toCreate.length > 0) {
     await mustWrite(
-      `enqueue ${toCreate.length} DA+KB clip(s)`,
+      `enqueue ${toCreate.length} clip(s)`,
       sb.from('photo_clips').insert(
         toCreate.map((s) => ({
           photo_id: s.photo_id,
           engine: s.engine,
           duration_s: s.duration_s,
           move: s.move ?? null,
+          prompt: s.prompt ?? null,
+          ai_generated: s.ai_generated ?? false,
           status: 'pending',
         })),
       ),
     );
   }
-  // Existing rows get the planned move too — otherwise a re-render repeats the
-  // old hash-picked one.
-  for (const s of selected) {
-    if (!s.move) continue;
+
+  for (const s of toRerender) {
     await mustWrite(
-      `apply planned move(${s.photo_id})`,
+      `re-render clip(${s.photo_id}:${s.engine})`,
       sb
         .from('photo_clips')
-        .update({ move: s.move, duration_s: s.duration_s, updated_at: new Date().toISOString() })
+        .update({
+          status: 'pending',
+          error: null,
+          duration_s: s.duration_s,
+          move: s.move ?? null,
+          prompt: s.prompt ?? null,
+          ai_generated: s.ai_generated ?? false,
+          updated_at: new Date().toISOString(),
+        })
         .eq('photo_id', s.photo_id)
         .eq('engine', s.engine),
     );
   }
 
-  await saveStep(sb, run, 'regenerate_all', {
-    reset: photoIds.length,
+  const paidCreated = toCreate.filter((s) => s.engine === 'seedance').length;
+  const result = {
+    planned: planned.length,
     created: toCreate.length,
-  });
+    rerendered: toRerender.length,
+    paid_created: paidCreated,
+    paid_skipped: paidSkipped,
+  };
+  await saveStep(sb, run, 'regenerate_all', result);
   await setRunStatus(sb, run.id, 'generating');
-  return { reset: photoIds.length, created: toCreate.length };
+  return result;
 }
 
 // ─── step: assemble ─────────────────────────────────────────────────────────

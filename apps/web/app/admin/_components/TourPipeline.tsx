@@ -244,19 +244,39 @@ export function TourPipeline({
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ step: 'generate', photoIds: [photoId], engine }),
     });
-    const body = (await res.json()) as { ok?: boolean; message?: string; error?: string };
+    const body = (await res.json()) as {
+      ok?: boolean;
+      message?: string;
+      error?: string;
+      result?: {
+        planned?: number;
+        created?: number;
+        rerendered?: number;
+        paid_created?: number;
+        paid_skipped?: number;
+      };
+    };
     if (!res.ok || !body.ok)
       return { ok: false, message: body.message ?? body.error ?? `HTTP ${res.status}` };
     await loadClips();
     router.refresh();
-    return { ok: true };
+    const r = body.result ?? {};
+    const parts = [
+      `${r.created ?? 0} queued`,
+      `${r.rerendered ?? 0} re-rendering`,
+      ...(r.paid_created
+        ? [`${r.paid_created} Seedance (~$${(r.paid_created * 0.05).toFixed(2)})`]
+        : []),
+      ...(r.paid_skipped ? [`${r.paid_skipped} Seedance already rendered, skipped`] : []),
+    ];
+    return { ok: true, message: parts.join(' · ') };
   }
 
-  async function regenerateAllDAKB(): Promise<{ ok: boolean; message?: string }> {
-    // Bulk re-render for photos that already have a ready DA+KB clip — the
-    // per-row Generate button only shows when there's NO clip (owner
-    // 2026-08-17: old clips have no button, one click to re-render with the
-    // 9:16 fix). Same run as the panel's generateClip.
+  async function generateAllClips(): Promise<{ ok: boolean; message?: string }> {
+    // One click to make the whole plan exist: creates every missing clip and
+    // re-renders the local ones. Seedance clips that are already ready are
+    // left alone — each generation bills, and the per-row Regenerate is the
+    // deliberate way to redo one (owner 2026-08-17).
     if (!run?.id) return { ok: false, message: 'No run yet — create one first.' };
     const res = await fetch(`/api/admin/community-tour/${communityId}/runs/${run.id}/step`, {
       method: 'POST',
@@ -421,7 +441,7 @@ export function TourPipeline({
                       bucket={bucket}
                       photos={stepPhotos}
                       onGenerateClip={generateClip}
-                      onRegenerateAllDAKB={regenerateAllDAKB}
+                      onGenerateAllClips={generateAllClips}
                     />
                   </div>
                 )}
@@ -442,7 +462,7 @@ function StepResult({
   bucket,
   photos,
   onGenerateClip,
-  onRegenerateAllDAKB,
+  onGenerateAllClips,
 }: {
   s: StepName;
   result: Record<string, unknown>;
@@ -450,9 +470,12 @@ function StepResult({
   bucket: string;
   photos: PhotoRow[];
   onGenerateClip?: (photoId: string, engine?: string) => Promise<{ ok: boolean; message?: string }>;
-  onRegenerateAllDAKB?: () => Promise<{ ok: boolean; message?: string }>;
+  onGenerateAllClips?: () => Promise<{ ok: boolean; message?: string }>;
 }) {
   const router = useRouter();
+  // What the bulk generate button just did — it enqueues in the background,
+  // so without this the click has no visible outcome.
+  const [bulkNotice, setBulkNotice] = useState<string | null>(null);
   if (s === 'research') {
     const r = result as {
       prompt?: string;
@@ -783,21 +806,24 @@ function StepResult({
               type="button"
               onClick={() => {
                 void (async () => {
-                  const res = await onRegenerateAllDAKB?.();
-                  if (!res) return;
-                  if (res.ok) {
-                    router.refresh();
-                  } else {
-                    alert(res.message ?? 'Failed');
-                  }
+                  setBulkNotice('Working…');
+                  const res = await onGenerateAllClips?.();
+                  if (!res) return setBulkNotice(null);
+                  setBulkNotice(res.ok ? (res.message ?? 'Done') : `Failed: ${res.message}`);
+                  if (res.ok) router.refresh();
                 })();
               }}
               className="rounded border border-line bg-bg px-2 py-1 text-[10px] font-medium text-ink2 hover:border-ink2"
-              title="Reset every DA+KB clip for these Selected Photos to pending and re-render with current code (9:16 no-black-bars). Seedance clips untouched."
+              title="Generate every clip in the plan: creates what is missing and re-renders the local (DepthFlow / Ken Burns) ones. Seedance clips that are already rendered are skipped — each generation costs ~$0.05; use a row's Regenerate to redo one deliberately."
             >
-              ↻ Re-render all DA+KB
+              ↻ Generate all clips
             </button>
           </div>
+          {bulkNotice && (
+            <div className="rounded-lg border border-line bg-surface px-2 py-1 text-[10px] text-ink2">
+              {bulkNotice}
+            </div>
+          )}
           {stepPhotos.length > 0 ? (
             <PhotoTable
               table="poi_photos"
