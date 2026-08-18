@@ -16,11 +16,11 @@
  * thumbnail (first ready video's poster) + video count + city/state.
  */
 
-import type { BrowseCard } from '@/app/(public)/browse/_components/BrowseFeed';
 import { listSavedCommunityIds } from '@/app/_actions/saved-communities';
 import { listSavedListingIds } from '@/app/_actions/saved-listings';
 import { listLiked } from '@/lib/buyer/likes';
 import { resolveCommunityCoverWithCfIds } from '@/lib/communities/cover';
+import type { BrowseCard } from '@/lib/feed/browse-card';
 import { fetchBrowseCardsByIds } from '@/lib/feed/browse-cards';
 import { createServiceClient } from '@/lib/supabase/server';
 

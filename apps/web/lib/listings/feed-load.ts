@@ -18,7 +18,7 @@
  * to feed `<VideoFeed listingId={...} cards={...} />`.
  */
 
-import type { BrowseCard } from '@/app/(public)/browse/_components/BrowseFeed';
+import type { BrowseCard } from '@/lib/feed/browse-card';
 import { webVideoUid } from '@/lib/feed/video-uid';
 import { createClient } from '@/lib/supabase/server';
 import {

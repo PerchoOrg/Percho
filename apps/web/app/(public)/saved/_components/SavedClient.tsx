@@ -20,13 +20,13 @@
  * device_id lives in browser storage — pure client component.
  */
 
-import type { BrowseCard } from '@/app/(public)/browse/_components/BrowseFeed';
 import { GridCard, GridCardCaption } from '@/app/_components/GridCard';
 import { GridFrame } from '@/app/_components/GridFrame';
 import { GridPageShell } from '@/app/_components/GridPageShell';
 import { ListingGrid, type ListingGridItem } from '@/app/_components/ListingGrid';
 import { getOrCreateDeviceId } from '@/lib/buyer/device-id';
 import { thumbnailUrl } from '@/lib/cloudflare/stream';
+import type { BrowseCard } from '@/lib/feed/browse-card';
 import { linkForCard } from '@/lib/feed/link-for-card';
 import { Bookmark } from 'lucide-react';
 import Link from 'next/link';

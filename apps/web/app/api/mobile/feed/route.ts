@@ -26,8 +26,8 @@
  * injected here. Mobile client owns ask interleaving").
  */
 
-import type { BrowseCard } from '@/app/(public)/browse/_components/BrowseFeed';
 import { fetchAiTourVideoByCommunity } from '@/lib/feed/ai-tour-videos';
+import type { BrowseCard } from '@/lib/feed/browse-card';
 import {
   fetchBrowseCards,
   fetchBrowseCardsByIds,
