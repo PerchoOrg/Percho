@@ -11,6 +11,8 @@
  *     button click or a background job, return job ids if needed.
  */
 
+import { extractJsonObject } from '@/lib/utils/extract-json';
+
 const API_BASE = (m: string) =>
   `https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent`;
 
@@ -52,41 +54,6 @@ async function callMessages(opts: {
   const text = data.candidates?.[0]?.content?.parts?.find((p) => p.text)?.text;
   if (!text) throw new Error('Gemini API returned no text content');
   return text;
-}
-
-/**
- * Extract the first complete JSON object from a model response.
- *
- * Robust to: ```json fences (with or without closing fence), pre/post chatter
- * ("Here's the JSON: {...} hope this helps"), trailing whitespace, etc.
- * Scans for the first '{' and walks to the matching '}', respecting strings
- * and escapes. Returns null if no balanced object is found.
- */
-export function extractJsonObject(s: string): string | null {
-  const start = s.indexOf('{');
-  if (start === -1) return null;
-  let depth = 0;
-  let inStr = false;
-  let esc = false;
-  for (let i = start; i < s.length; i++) {
-    const ch = s[i];
-    if (esc) {
-      esc = false;
-      continue;
-    }
-    if (inStr) {
-      if (ch === '\\') esc = true;
-      else if (ch === '"') inStr = false;
-      continue;
-    }
-    if (ch === '"') inStr = true;
-    else if (ch === '{') depth++;
-    else if (ch === '}') {
-      depth--;
-      if (depth === 0) return s.slice(start, i + 1);
-    }
-  }
-  return null;
 }
 
 function safeJsonParse(raw: string, label: string): unknown {

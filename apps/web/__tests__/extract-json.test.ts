@@ -1,4 +1,4 @@
-import { extractJsonObject } from '@/lib/ai/gemini';
+import { extractJsonObject } from '@/lib/utils/extract-json';
 import { describe, expect, it } from 'vitest';
 
 function parse(raw: string): unknown {

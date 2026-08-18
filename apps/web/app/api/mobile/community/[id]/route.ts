@@ -10,10 +10,10 @@
  *
  * Every projection rule — which figures ship, why `avg_income` never will, why
  * this is not spec-v3 §3.3's four-pillar explore page — lives in
- * `lib/community/detail.ts`. Read that file's header before changing this one.
+ * `lib/communities/detail.ts`. Read that file's header before changing this one.
  */
 
-import { fetchCommunityDetail } from "@/lib/community/detail";
+import { fetchCommunityDetail } from "@/lib/communities/detail";
 import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
