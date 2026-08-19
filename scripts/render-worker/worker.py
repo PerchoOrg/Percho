@@ -1639,6 +1639,74 @@ def claim_assembly() -> dict[str, Any] | None:
     return row
 
 
+# Bold face for the place labels. The list in ken-burns/generate.py is
+# Linux-only (dejavu, liberation) and this worker runs on the Mac mini, where
+# neither exists — which is why its caption filter silently returns "" here.
+LABEL_FONTS = (
+    "/System/Library/Fonts/Supplemental/Arial Bold.ttf",
+    "/System/Library/Fonts/Supplemental/Helvetica.ttc",
+    "/Library/Fonts/Arial Bold.ttf",
+    "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+    "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
+)
+
+
+def _label_font() -> str | None:
+    return next((f for f in LABEL_FONTS if os.path.exists(f)), None)
+
+
+def _escape_drawtext(s: str) -> str:
+    """Escape a label for a drawtext `text=` value (same rules as generate.py)."""
+    return (
+        s.replace("\\", "\\\\")
+        .replace(":", r"\:")
+        .replace("'", r"\'")
+        .replace("%", r"\%")
+    )
+
+
+def _label_drawtext(
+    labels: list[str],
+    durs: list[float],
+    offsets: list[float],
+    xfade: float,
+    scale_to: list[int],
+) -> str:
+    """A chained drawtext per clip, each enabled only while its clip is on screen.
+
+    `offsets[i]` is where the transition from clip i to clip i+1 begins on the
+    finished timeline, so clip i owns the span from the end of its incoming
+    transition to the start of its outgoing one. Labelling only that span keeps
+    a place name from bleeding across a crossfade onto the next place.
+    """
+    font = _label_font()
+    if not font or not any(labels):
+        return ""
+
+    w, h = scale_to[0], scale_to[1]
+    size = max(28, round(w * 0.038))
+    pad = round(w * 0.055)
+    # Sits above the lower third, clear of a phone's home indicator.
+    y = h - round(h * 0.14)
+
+    parts: list[str] = []
+    for i, raw in enumerate(labels):
+        text = raw.strip()
+        if not text:
+            continue
+        start = 0.0 if i == 0 else offsets[i - 1] + xfade
+        end = offsets[i] if i < len(offsets) else crossfade_total(durs, xfade)
+        if end - start < 0.5:  # too short to read; skip rather than flash
+            continue
+        window = f"between(t\\,{start:.3f}\\,{end:.3f})"
+        parts.append(
+            f"drawtext=fontfile='{font}':text='{_escape_drawtext(text)}'"
+            f":fontcolor=white:fontsize={size}:x={pad}:y={y}"
+            f":shadowcolor=black@0.8:shadowx=2:shadowy=2:enable='{window}'"
+        )
+    return ",".join(parts)
+
+
 def process_assembly(row: dict[str, Any]) -> None:
     assembly_id = row["id"]
     ordered = row.get("ordered_clips") or []
@@ -1652,6 +1720,10 @@ def process_assembly(row: dict[str, Any]) -> None:
         # only photo_id/engine), so resolve storage paths here: photo_clips ready rows
         # keyed by photo_id — seedance → ai-videos, depthflow/kenburns → clip-renders.
         clip_paths: list[Path] = []
+        # Kept in lockstep with clip_paths, NOT with `ordered` — a shot whose
+        # clip is not ready is skipped below, and a label list built from
+        # `ordered` would caption every following clip with the wrong place.
+        clip_labels: list[str] = []
         skipped: list[str] = []
         by_photo = {}
         clip_rows = sb_get(
@@ -1696,6 +1768,7 @@ def process_assembly(row: dict[str, Any]) -> None:
             dest = workdir / f"{i:02d}.mp4"
             storage_download(bucket, path, dest)
             clip_paths.append(dest)
+            clip_labels.append(str(c.get("label") or ""))
             print(f"[assembly {assembly_id}] downloaded {bucket}/{path}", flush=True)
 
         if len(clip_paths) < 2:
@@ -1755,6 +1828,23 @@ def process_assembly(row: dict[str, Any]) -> None:
             )
             prev = f"[{name}]"
         total = crossfade_total(durs, xfade)
+
+        # Place labels (owner 2026-08-19). A community tour changes subject
+        # every few seconds — "we should add location names to the videos so
+        # people know what it is and how far it is from community". The text
+        # itself is computed web-side (lib/poi/tour-orchestrator/clip-label.ts)
+        # and arrives on the clip as `label`; here we only place it on the
+        # timeline. Nothing is drawn when a clip has no label, so an older
+        # assembly renders exactly as it did.
+        #
+        # This is the community tour only. The listing tour still carries no
+        # on-screen text at all (2026-08-01) — there the subject is one house
+        # for the whole film, so a caption band interrupts rather than informs.
+        label_filters = _label_drawtext(clip_labels, durs, offsets, xfade, scale_to)
+        if label_filters:
+            filters.append(f"{prev}{label_filters}[labeled]")
+            prev = "[labeled]"
+
         vf = ";".join(filters) + f";{prev}format=yuv420p"
         cmd = [
             "ffmpeg", "-y",
