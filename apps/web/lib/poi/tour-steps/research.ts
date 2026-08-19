@@ -179,6 +179,9 @@ export async function runResearch(
     },
     prompt: buildResearchPrompt(community),
     agents: parsed,
+    // Same reason as saveStep's stamp: the panel cannot otherwise tell a fresh
+    // result from one produced by an older prompt.
+    ran_at: new Date().toISOString(),
   };
   await mustWrite(
     'save agent_research',

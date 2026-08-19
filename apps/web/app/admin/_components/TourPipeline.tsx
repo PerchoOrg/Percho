@@ -357,6 +357,7 @@ export function TourPipeline({
               created?: number;
               started?: boolean;
               error?: string;
+              ran_at?: string;
             }
           | undefined;
         // Live research progress (script writes research_progress while the
@@ -413,7 +414,11 @@ export function TourPipeline({
                 {running === s.name || researching ? 'Running…' : done ? 'Re-run' : 'Run'}
               </button>
             </div>
-            <p className="text-ink2 text-xs">{s.desc}</p>
+            <p className="text-ink2 text-xs">
+              {s.desc}
+              {result?.ran_at && ` · ran ${relativeTime(result.ran_at)}`}
+              {done && !result?.ran_at && ' · ran before this was recorded'}
+            </p>
 
             {!(collapsed[s.name] ?? true) && (
               <>
@@ -480,14 +485,14 @@ function StepResult({
       agents?: {
         gemini_a?: {
           ok?: boolean;
-          parsed?: { pois?: unknown[] } | null;
+          parsed?: { pois?: ProposedPoi[]; narrative_angle?: string } | null;
           raw?: string | null;
           error?: string | null;
           usage?: { input_tokens?: number; output_tokens?: number; total_cost_usd?: number } | null;
         };
         gemini_b?: {
           ok?: boolean;
-          parsed?: { pois?: unknown[] } | null;
+          parsed?: { pois?: ProposedPoi[]; narrative_angle?: string } | null;
           raw?: string | null;
           error?: string | null;
           usage?: { input_tokens?: number; output_tokens?: number; total_cost_usd?: number } | null;
@@ -497,6 +502,16 @@ function StepResult({
     };
     const geminiAPois = r.agents?.gemini_a?.parsed?.pois?.length ?? 0;
     const geminiBPois = r.agents?.gemini_b?.parsed?.pois?.length ?? 0;
+    // What each agent actually proposed, merged and sorted by distance, so the
+    // list can be read without opening two raw JSON blobs (owner 2026-08-19,
+    // asking to tune the pipeline by eye). Distance is the agent's own
+    // estimate — the resolve step measures the real one.
+    const proposed: Array<ProposedPoi & { agent: string }> = [
+      ...(r.agents?.gemini_a?.parsed?.pois ?? []).map((p) => ({ ...p, agent: 'a' })),
+      ...(r.agents?.gemini_b?.parsed?.pois ?? []).map((p) => ({ ...p, agent: 'b' })),
+    ].sort((x, y) => (x.approx_miles ?? 99) - (y.approx_miles ?? 99));
+    const narrativeAngle =
+      r.agents?.gemini_a?.parsed?.narrative_angle ?? r.agents?.gemini_b?.parsed?.narrative_angle;
     return (
       <div className="space-y-2">
         <div className="flex flex-wrap gap-3">
@@ -524,8 +539,52 @@ function StepResult({
             )}
           </span>
         </div>
+        {narrativeAngle && <div className="text-ink2 italic">“{narrativeAngle}”</div>}
+
+        {proposed.length > 0 && (
+          <div className="overflow-x-auto rounded border border-line">
+            <table className="w-full border-collapse text-left text-[10px]">
+              <thead className="bg-surface text-ink2">
+                <tr>
+                  <th className="border-line border-b px-2 py-1">Proposed</th>
+                  <th className="border-line border-b px-2 py-1">Bucket</th>
+                  <th className="border-line border-b px-2 py-1">Miles</th>
+                  <th className="border-line border-b px-2 py-1">By</th>
+                  <th className="border-line border-b px-2 py-1">Why</th>
+                </tr>
+              </thead>
+              <tbody>
+                {proposed.map((p, i) => {
+                  // 4 miles is the ceiling in lib/poi/community-tour.ts; flag
+                  // anything the resolve step is about to throw away.
+                  const tooFar = (p.approx_miles ?? 0) > 4;
+                  return (
+                    <tr
+                      key={`${p.name}-${p.agent}-${i}`}
+                      className="border-line border-b align-top last:border-b-0"
+                    >
+                      <td className={`px-2 py-1 font-medium ${tooFar ? 'text-muted' : ''}`}>
+                        {p.name ?? '—'}
+                      </td>
+                      <td className="px-2 py-1 text-ink2">{p.bucket ?? '—'}</td>
+                      <td
+                        className={`tabular-nums px-2 py-1 ${tooFar ? 'text-red-600' : 'text-ink2'}`}
+                      >
+                        {typeof p.approx_miles === 'number' ? p.approx_miles.toFixed(1) : '—'}
+                        {tooFar && ' ✕'}
+                      </td>
+                      <td className="px-2 py-1 text-ink2">{p.agent}</td>
+                      <td className="max-w-[320px] px-2 py-1 text-ink2">{p.why ?? '—'}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+
         {r.prompt && (
-          <details open>
+          <details>
             <summary className="cursor-pointer text-ink2">Prompt (fed to agent)</summary>
             <pre className="bg-bg mt-1 max-h-48 overflow-auto whitespace-pre-wrap rounded border border-line p-2 text-[10px] text-ink2">
               {r.prompt}
@@ -611,6 +670,7 @@ function StepResult({
         bucket?: string;
         score?: number;
         agreement?: number;
+        distance_m?: number | null;
         place_id?: string;
         source?: string;
         confidence?: string;
@@ -618,11 +678,20 @@ function StepResult({
       }>;
       dropped?: Array<{ name?: string; reason?: string }>;
     };
-    const resolved = r.resolved ?? [];
+    // Nearest first. The score ordering the resolver writes is what the tour
+    // uses; for reading the list by eye, distance is the axis being tuned.
+    const resolved = [...(r.resolved ?? [])].sort(
+      (a, b) =>
+        (a.distance_m ?? Number.POSITIVE_INFINITY) - (b.distance_m ?? Number.POSITIVE_INFINITY),
+    );
+    const droppedTooFar = (r.dropped ?? []).filter((d) => d.reason?.startsWith('too far'));
     return (
       <div>
         <div className="mb-1">
           {resolved.length} resolved · {r.dropped?.length ?? 0} dropped
+          {droppedTooFar.length > 0 && (
+            <span className="text-ink2"> ({droppedTooFar.length} for distance)</span>
+          )}
         </div>
         <div className="overflow-x-auto rounded border border-line">
           <table className="w-full border-collapse text-left text-[10px]">
@@ -631,6 +700,7 @@ function StepResult({
                 <th className="border-line border-b px-2 py-1">Name</th>
                 <th className="border-line border-b px-2 py-1">Address</th>
                 <th className="border-line border-b px-2 py-1">Bucket</th>
+                <th className="border-line border-b px-2 py-1">Miles</th>
                 <th className="border-line border-b px-2 py-1">Score</th>
                 <th className="border-line border-b px-2 py-1">Agreement</th>
               </tr>
@@ -646,6 +716,9 @@ function StepResult({
                     {p.formatted_address ?? '—'}
                   </td>
                   <td className="px-2 py-1 text-ink2">{p.bucket ?? '—'}</td>
+                  <td className="tabular-nums px-2 py-1 text-ink2">
+                    {typeof p.distance_m === 'number' ? (p.distance_m / 1609).toFixed(1) : '—'}
+                  </td>
                   <td className="tabular-nums px-2 py-1">
                     {typeof p.score === 'number' ? p.score.toFixed(2) : '—'}
                   </td>
@@ -879,4 +952,26 @@ function StepResult({
     );
   }
   return null;
+}
+
+/** One POI as an agent proposed it, before Google Places has seen the name. */
+interface ProposedPoi {
+  name?: string;
+  bucket?: string;
+  why?: string;
+  /** The agent's own estimate. Absent on runs from before 2026-08-18. */
+  approx_miles?: number;
+}
+
+/** "12 minutes ago" — enough precision to tell a fresh step from a stale one. */
+function relativeTime(iso: string): string {
+  const seconds = Math.round((Date.now() - new Date(iso).getTime()) / 1000);
+  if (!Number.isFinite(seconds)) return 'at an unknown time';
+  if (seconds < 60) return 'just now';
+  const plural = (n: number, unit: string) => `${n} ${unit}${n === 1 ? '' : 's'} ago`;
+  const minutes = Math.round(seconds / 60);
+  if (minutes < 60) return plural(minutes, 'minute');
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return plural(hours, 'hour');
+  return plural(Math.round(hours / 24), 'day');
 }
