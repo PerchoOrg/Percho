@@ -59,17 +59,25 @@ export async function computeFinalShots(
     }> | null;
   };
 
-  // Owner 2026-08-17: "同一个poi最多2张照片" + "从取到的3张里选取两张质量好的
-  // 更适合的" — per POI pick the 2 BEST by quality, not newest-first. Quality =
-  // usable (tagger verdict) first, then ai_score desc, then newest as tiebreak.
+  // Per POI, keep the BEST photos by quality, not the newest. Quality =
+  // usable (tagger verdict) first, then hand-picked over Places, then
+  // ai_score, then newest as tiebreak.
   //
-  // The cap applies to Google Places photos, which arrive three-at-a-time from
-  // a generic listing and are mostly interchangeable. It does NOT apply to
-  // photos from the community's own website (owner 2026-08-18: "从网站上爬的
-  // 照片和google place上的照片权重不同 质量高 更切合主题 原则是都采纳 不受
-  // 限制"): a human chose that page, every frame is of this community, and the
-  // review table already rejected anything unwanted before it got here.
+  // Two caps, because the two sources are not comparable. Places photos
+  // arrive three-at-a-time from a generic listing and are largely
+  // interchangeable, so two is plenty (owner 2026-08-17: "同一个poi最多2张
+  // 照片"). Photos from the community's own site were chosen by a human and
+  // reviewed one by one, so they get three.
+  //
+  // Three, not unlimited. "都采纳 不受限制" (owner 2026-08-18) was set when
+  // clips of one POI were scattered through the film; now that a POI plays as
+  // one contiguous block, six pool photos are fifteen unbroken seconds of
+  // pool, and the owner called it (2026-08-19: "too many pool pictures … limit
+  // the number of same thing to 3").
+  /** Most Places photos one POI may contribute. */
   const POI_PHOTO_CAP = 2;
+  /** Hard ceiling on clips of one POI, whatever the source mix. */
+  const MAX_CLIPS_PER_POI = 3;
   const photos: NonNullable<typeof photosRaw> = [];
   const dropped: Array<{ photo_id: string; poi_id: string; reason: string }> = [];
 
@@ -121,17 +129,20 @@ export async function computeFinalShots(
       if (score !== 0) return score;
       return (b.created_at ?? '').localeCompare(a.created_at ?? '');
     });
-    // Hand-picked photos are all kept; the cap only rations Places photos.
+    // Three clips per POI, whatever the mix. Hand-picked photos rank first so
+    // they fill the slots; Places photos contribute at most two, which is the
+    // cap they always had. A POI with three good website photos shows three;
+    // one with only a Places listing still shows two.
     const handPicked = (r: (typeof ranked)[number]) =>
       r.source === 'community_site' && r.status !== 'rejected';
     const kept = [
       ...ranked.filter(handPicked),
       ...ranked.filter((r) => !handPicked(r)).slice(0, POI_PHOTO_CAP),
-    ];
+    ].slice(0, MAX_CLIPS_PER_POI);
     const keptIds = new Set(kept.map((r) => r.id));
     photos.push(...kept);
     // Owner 2026-08-17: "另外一张放到drop table里并说明原因" — every photo
-    // beyond the 2/POI cap lands in dropped with the reason it lost.
+    // beyond the per-POI cap lands in dropped with the reason it lost.
     for (const row of ranked) {
       if (keptIds.has(row.id)) continue;
       const tags = (row.ai_tags ?? {}) as { usable?: boolean };
@@ -140,7 +151,7 @@ export async function computeFinalShots(
           ? 'rejected in Review'
           : tags.usable === false
             ? 'tagger-unusable'
-            : 'not in top 2 by quality score';
+            : `not in the top ${MAX_CLIPS_PER_POI} for this place`;
       dropped.push({ photo_id: row.id, poi_id: row.poi_id, reason });
     }
   }
@@ -271,8 +282,28 @@ export async function computeFinalShots(
     dropped.push({ photo_id: ex.photo_id, poi_id: photo?.poi_id ?? '', reason: ex.reason });
   }
 
+  // The on-screen label, computed here because this is where the POI's bucket
+  // and distance are already in hand; the render worker just draws
+  // `clip.label`. See clip-label.ts for why a community tour carries text and
+  // the listing tour deliberately does not.
+  const { clipLabel } = await import('@/lib/poi/tour-orchestrator/clip-label');
+  const { data: distRows } = (await sb
+    .from('community_pois')
+    .select('poi_id, distance_m')
+    .in('poi_id', poiIds)) as { data: Array<{ poi_id: string; distance_m: number | null }> | null };
+  const distanceByPoi = new Map((distRows ?? []).map((r) => [r.poi_id, r.distance_m]));
+
+  const labelled = plan.shots.map((s) => ({
+    ...s,
+    label: clipLabel({
+      poiName: poiName.get(s.poi_id) ?? s.poi_name ?? '',
+      bucket: buckets?.get(s.poi_id) ?? poiBucket.get(s.poi_id) ?? null,
+      distanceM: distanceByPoi.get(s.poi_id) ?? null,
+    }),
+  }));
+
   return {
-    shots: plan.shots,
+    shots: labelled,
     dropped,
     // Everything review needs to judge the plan, persisted next to it.
     plan: {
