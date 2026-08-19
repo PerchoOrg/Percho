@@ -16,6 +16,69 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-19 03:55 UTC — One amenity at a time, in walk-through order; 90s ceiling
+
+**Objective**: owner on the 24-clip cut — "much better now, but lets increase
+the time restriction to 90s… the logical order seems mixed, why do we start
+with pool, then go back to pool again and again, fix that issue, since tts
+later needs to match with the video itself", plus a pointer at
+`aberdeencommunity.org/local-info/` for better photos.
+Branch `phase62/tour-order-and-length` (ws1).
+
+**Ordering — grouping by POI, not by time of day.** Phase61 put the community
+in its own act but still sorted that act by `time_of_day`, which interleaved
+five pool clips with the clubhouse and the courts. The owner's reason for
+caring is the operative one: **narration cannot be written against a scattered
+order.** A line about the pool needs a contiguous stretch of pool to sit over.
+`orderCommunityAct` now groups units by `poi_id` and orders the groups by
+`amenityRank()` — a name-matched walk-through sequence, entrance/grounds →
+clubhouse → pool → courts → playground → gym, with unrecognised amenities
+landing mid-list rather than at either end. Within a group the wide
+establishing frame still leads, then time of day.
+
+**Length**: `TOUR_TARGET_MAX_S` 50 → 90. The window was set when a tour was
+neighbourhood POIs only; two acts do not fit in 50 seconds without one being
+token. `TOUR_TARGET_MIN_S` stays 45.
+
+**Photos — the owner was right about local-info.** That page is a hub, and the
+links off it are where the good imagery lives: the HOA has a dedicated page per
+amenity (`/clubhouse/`, `/swimming/`, `/tennis/`, `/pickleball/`,
+`/playground/`), each with one professionally shot hero image — same
+photographer and shoot date as the homepage headers (`*_Colleen_*20200521*`).
+Ingested all five. Two are amenities we had **no photo of at all**: the
+playground and the pickleball courts. The pool hero (loungers behind azaleas,
+shallow depth of field) is markedly better than anything in the album.
+
+**Issues**: the pickleball photo was dropped by the tagger — `usable: false`,
+"Contains clear faces of individuals". Two residents mid-rally, both faces
+clear. That is a correct call for a published marketing video (likeness release)
+and I did not override it, so pickleball has no usable photo. Owner's call.
+
+**Result**: **28 clips, 78s**, no duration warning. Community act is Grounds →
+Clubhouse → Pool → Tennis → Playground, each contiguous; the surroundings act
+is 8 POIs, each contiguous. Assembly `ready` on Cloudflare Stream
+(`54d2001a5ff6bb7b34375a3cf73cc150`).
+
+**Learnings**:
+- A hub page beats a gallery page. The photo album held 23 mostly-interior
+  shots; five links off the local-info page held five better ones and covered
+  two amenities the album missed entirely. Worth teaching the ingest panel to
+  follow same-host links one level rather than relying on someone finding the
+  right page by hand.
+- "Group these together" and "spread these apart" are the same knob at
+  different signs, and the tour needs both — grouping inside the community act,
+  spreading across the surroundings act. Splitting the list and applying one
+  rule to each half stayed readable; parameterising a single sort would not
+  have.
+
+**Next steps**:
+- Wire the parked `intro-vo.ts` + Gemini TTS against this cut. The community
+  act is 25.5s across five named amenities, which is the structure the intro
+  and any per-amenity narration now have to match.
+- Consider link-following in the ingest panel (see Learnings).
+
+---
+
 ## 2026-08-19 02:10 UTC — Two acts: the community, then everything around it
 
 **Objective**: owner — "for generated video - we should present community

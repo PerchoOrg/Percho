@@ -19,6 +19,8 @@ Community films now open on the community. Its own amenities lead the film and r
 Aberdeen in Suwanee is the first community with this treatment: a 58-second film that opens on its clubhouse and takes in the pool, the courts and the grounds before heading out into Suwanee.
 
 ### 2026-08-19
+- Community films visit one amenity at a time, in the order someone being shown around would see them — the entrance, then the clubhouse, the pool, the courts — instead of cutting back and forth
+- Films can now run up to 90 seconds, enough for the community and its surroundings to each get real time
 - A community film now opens with the community itself — its entrance, pool, clubhouse and grounds play as one opening stretch, and the neighbourhood follows
 - Each step of the community tour screen now says when it last ran, so results left over from an earlier setup are obvious instead of looking current
 - The research step lists the places it proposed with their distances, and the resolve step shows how far each place actually is — both sorted nearest first

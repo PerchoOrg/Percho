@@ -216,6 +216,43 @@ describe('scheduleClips — golden fixture', () => {
     expect(isAmenity.slice(0, amenityIds.size).every(Boolean)).toBe(true);
   });
 
+  it('shows each amenity once, in walk-through order', () => {
+    // Owner 2026-08-19: "why do we start with pool, then go back to pool again
+    // and again". Five pool clips, two courts, one clubhouse — the pool must
+    // not be interleaved with the others, and the clubhouse leads.
+    const base = GOLDEN_PHOTOS.slice(0, 8);
+    const layout: Array<[string, string]> = [
+      ['Aberdeen Pool', 'p'],
+      ['Aberdeen Tennis Courts', 't'],
+      ['Aberdeen Pool', 'p'],
+      ['Aberdeen Clubhouse', 'c'],
+      ['Aberdeen Pool', 'p'],
+      ['Aberdeen Tennis Courts', 't'],
+      ['Aberdeen Pool', 'p'],
+      ['Aberdeen Pool', 'p'],
+    ];
+    const photos: PhotoMeta[] = base.map((p, i) => ({
+      ...p,
+      bucket: 'amenities',
+      poi_name: layout[i]![0],
+      poi_id: layout[i]![0],
+    }));
+    const ids = new Set(photos.map((p) => p.photo_id));
+    const annotations: PhotoAnnotation[] = GOLDEN_ANNOTATIONS.filter((a) =>
+      ids.has(a.photo_id),
+    ).map((a) => ({ ...a, poi_pair_with: null, pair_role: null }));
+
+    const { clips } = scheduleClips(annotations, photos);
+    const nameOf = new Map(photos.map((p) => [p.photo_id, p.poi_name]));
+    const sequence = clips.map((c) => nameOf.get(c.photo_id)!);
+
+    // Each amenity occupies exactly one contiguous run.
+    const runs = sequence.filter((n, i) => n !== sequence[i - 1]);
+    expect(runs).toEqual([...new Set(runs)]);
+    // And they run clubhouse → pool → courts.
+    expect(runs).toEqual(['Aberdeen Clubhouse', 'Aberdeen Pool', 'Aberdeen Tennis Courts']);
+  });
+
   it('leaves the opener alone on a tour with no amenities bucket', () => {
     // The listing path must be untouched by the community bias.
     const { clips } = plan();
