@@ -123,6 +123,32 @@ export async function runPhotos(sb: TourDb, run: RunRow) {
     }
   }
 
+  // The community's OWN amenities never pass through resolve — Google Places
+  // has no listing for an HOA pool, so they are ingested by hand from the
+  // community's site (PhotoSourcePanel / ingest-community-photos.ts) and
+  // linked straight to community_pois. Without this union they would sit in
+  // the photo table forever and never reach a film, which is the opposite of
+  // the point (owner 2026-08-18: "原则是都采纳"). Nothing is fetched for them
+  // here — their photos already exist; they only need to be in scope.
+  const { data: amenityLinks } = (await sb
+    .from('community_pois')
+    .select('poi_id')
+    .eq('community_id', run.community_id)
+    .eq('intent_bucket', 'amenities')) as { data: Array<{ poi_id: string }> | null };
+  for (const link of amenityLinks ?? []) {
+    if (resolvedPoiIds.includes(link.poi_id)) continue;
+    resolvedPoiIds.push(link.poi_id);
+    bucketByPoiId.set(link.poi_id, 'amenities');
+    const { data: rows } = await sb
+      .from('poi_photos')
+      .select('id')
+      .eq('poi_id', link.poi_id)
+      .is('tagged_at', null);
+    // Tagging is what gives the Curator something to plan with; an untagged
+    // photo is invisible to the shot list.
+    fetchedPhotoIds.push(...(rows ?? []).map((row: { id: string }) => row.id));
+  }
+
   // Save progress before the slow half. This step now runs for minutes —
   // fetch, then enhance, then a Gemini tag per photo, then the whole
   // orchestration plan — and it used to write nothing until the very end, so

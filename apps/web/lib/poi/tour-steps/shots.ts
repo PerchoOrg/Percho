@@ -36,7 +36,7 @@ export async function computeFinalShots(
   const { data: photosRaw } = (await sb
     .from('poi_photos')
     .select(
-      'id, poi_id, status, ai_tags, ai_score, storage_path, enhanced_path, enhanced_status, enhanced_meta, created_at, width_px, height_px, curator_tags, curator_version',
+      'id, poi_id, status, source, ai_tags, ai_score, storage_path, enhanced_path, enhanced_status, enhanced_meta, created_at, width_px, height_px, curator_tags, curator_version',
     )
     .in('poi_id', poiIds)
     .order('created_at', { ascending: false, nullsFirst: false })) as {
@@ -44,6 +44,7 @@ export async function computeFinalShots(
       id: string;
       poi_id: string;
       status: string | null;
+      source: string | null;
       ai_tags: Record<string, unknown> | null;
       ai_score: number | null;
       storage_path: string | null;
@@ -61,6 +62,13 @@ export async function computeFinalShots(
   // Owner 2026-08-17: "同一个poi最多2张照片" + "从取到的3张里选取两张质量好的
   // 更适合的" — per POI pick the 2 BEST by quality, not newest-first. Quality =
   // usable (tagger verdict) first, then ai_score desc, then newest as tiebreak.
+  //
+  // The cap applies to Google Places photos, which arrive three-at-a-time from
+  // a generic listing and are mostly interchangeable. It does NOT apply to
+  // photos from the community's own website (owner 2026-08-18: "从网站上爬的
+  // 照片和google place上的照片权重不同 质量高 更切合主题 原则是都采纳 不受
+  // 限制"): a human chose that page, every frame is of this community, and the
+  // review table already rejected anything unwanted before it got here.
   const POI_PHOTO_CAP = 2;
   const photos: NonNullable<typeof photosRaw> = [];
   const dropped: Array<{ photo_id: string; poi_id: string; reason: string }> = [];
@@ -104,16 +112,27 @@ export async function computeFinalShots(
       const aUsable = aTags.usable === false ? 0 : 1;
       const bUsable = bTags.usable === false ? 0 : 1;
       if (aUsable !== bUsable) return bUsable - aUsable;
+      // A hand-picked photo of this community outranks a generic Places photo
+      // of the same POI, whatever the tagger scored them.
+      const aSite = a.source === 'community_site' ? 1 : 0;
+      const bSite = b.source === 'community_site' ? 1 : 0;
+      if (aSite !== bSite) return bSite - aSite;
       const score = (b.ai_score ?? 0) - (a.ai_score ?? 0);
       if (score !== 0) return score;
       return (b.created_at ?? '').localeCompare(a.created_at ?? '');
     });
-    const kept = ranked.slice(0, POI_PHOTO_CAP);
+    // Hand-picked photos are all kept; the cap only rations Places photos.
+    const handPicked = (r: (typeof ranked)[number]) =>
+      r.source === 'community_site' && r.status !== 'rejected';
+    const kept = [
+      ...ranked.filter(handPicked),
+      ...ranked.filter((r) => !handPicked(r)).slice(0, POI_PHOTO_CAP),
+    ];
     const keptIds = new Set(kept.map((r) => r.id));
     photos.push(...kept);
     // Owner 2026-08-17: "另外一张放到drop table里并说明原因" — every photo
     // beyond the 2/POI cap lands in dropped with the reason it lost.
-    for (const row of ranked.slice(POI_PHOTO_CAP)) {
+    for (const row of ranked) {
       if (keptIds.has(row.id)) continue;
       const tags = (row.ai_tags ?? {}) as { usable?: boolean };
       const reason =
