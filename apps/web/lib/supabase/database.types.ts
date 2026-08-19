@@ -1968,6 +1968,11 @@ export type Database = {
           google_photo_name: string | null
           height_px: number | null
           id: string
+          outpaint_error: string | null
+          outpaint_meta: Json | null
+          outpaint_status: string
+          outpainted_at: string | null
+          outpainted_path: string | null
           poi_id: string
           reviewed_at: string | null
           reviewed_by: string | null
@@ -1998,6 +2003,11 @@ export type Database = {
           google_photo_name?: string | null
           height_px?: number | null
           id?: string
+          outpaint_error?: string | null
+          outpaint_meta?: Json | null
+          outpaint_status?: string
+          outpainted_at?: string | null
+          outpainted_path?: string | null
           poi_id: string
           reviewed_at?: string | null
           reviewed_by?: string | null
@@ -2028,6 +2038,11 @@ export type Database = {
           google_photo_name?: string | null
           height_px?: number | null
           id?: string
+          outpaint_error?: string | null
+          outpaint_meta?: Json | null
+          outpaint_status?: string
+          outpainted_at?: string | null
+          outpainted_path?: string | null
           poi_id?: string
           reviewed_at?: string | null
           reviewed_by?: string | null
