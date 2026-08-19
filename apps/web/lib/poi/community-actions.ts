@@ -20,6 +20,7 @@ import {
   type DiscoverResult,
   type NearbyPoi,
   type PhotoFetchResult,
+  type PoiActor,
   discoverPois,
   fetchPhotosForPoi,
   loadNearbyPois,
@@ -40,10 +41,12 @@ export async function discoverPoisForCommunity(
   return discoverPois(SCOPE, communityId, opts);
 }
 
+/** `opts.actor: 'service'` skips the session check — admin scripts only, and
+ *  never from a value a request supplied. See PoiActor. */
 export async function fetchPhotosForCommunityPoi(
   communityId: string,
   poiId: string,
-  opts: { max?: number; maxHeightPx?: number } = {},
+  opts: { max?: number; maxHeightPx?: number; actor?: PoiActor } = {},
 ): Promise<CommunityPhotoFetchResult> {
   return fetchPhotosForPoi(SCOPE, communityId, poiId, opts);
 }

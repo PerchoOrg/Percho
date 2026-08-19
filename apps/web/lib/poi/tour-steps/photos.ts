@@ -3,10 +3,26 @@
  * list from them. Writes progress as it goes so a long run is not mistaken
  * for a dead one.
  */
+import type { PoiActor } from '@/lib/poi/poi-actions-core';
 import { type RunRow, type TourDb, asJson, mustWrite, saveStep, setRunStatus } from './shared';
 import { computeFinalShots } from './shots';
 
-export async function runPhotos(sb: TourDb, run: RunRow) {
+/**
+ * How many places outside the community a film may visit.
+ *
+ * Derived from the runtime, not chosen: the tour targets 45-90s, a place gets
+ * up to 3 clips, and a clip runs 2-4.5s. Ten surrounding places plus the
+ * community's own amenities lands inside that; twenty-two produced 96s.
+ */
+const SURROUNDING_POI_BUDGET = 10;
+
+/**
+ * @param actor 'user' (default) checks the caller's session, which is what the
+ *   admin route needs. 'service' skips it for a script with no session — the
+ *   whole step is otherwise service-role already. Must never be taken from
+ *   request input; see PoiActor.
+ */
+export async function runPhotos(sb: TourDb, run: RunRow, actor: PoiActor = 'user') {
   const resolve = run.step_results.resolve as
     | {
         resolved?: Array<{
@@ -20,6 +36,8 @@ export async function runPhotos(sb: TourDb, run: RunRow) {
           raw_place?: unknown;
           lat?: number | null;
           lng?: number | null;
+          distance_m?: number | null;
+          score?: number;
           bucket?: string;
         }>;
       }
@@ -35,6 +53,8 @@ export async function runPhotos(sb: TourDb, run: RunRow) {
   // The resolve step already decided each POI's tour bucket; the Scheduler
   // needs it to keep one bucket from running more than two clips in a row.
   const bucketByPoiId = new Map<string, string>();
+  // resolve keys its scores by place_id; the budget below needs them by poi_id.
+  const placeIdToPoiId = new Map<string, string>();
   for (const poi of resolve.resolved) {
     // Agent-discovered POIs may not be in nearby scope yet — upsert `pois` by
     // google_place_id and link to this community before fetching photos.
@@ -83,6 +103,7 @@ export async function runPhotos(sb: TourDb, run: RunRow) {
     }
     const poiId: string = upserted.id;
     resolvedPoiIds.push(poiId!);
+    placeIdToPoiId.set(poi.place_id, poiId!);
     if (poi.bucket) bucketByPoiId.set(poiId!, poi.bucket);
     // Ensure community link (candidate status — admin reviews later).
     const { data: link } = await sb
@@ -102,6 +123,10 @@ export async function runPhotos(sb: TourDb, run: RunRow) {
         poi_id: poiId,
         intent_bucket: poi.bucket ?? 'other',
         status: 'candidate',
+        // Resolve measured this; without carrying it over, the on-screen
+        // label has no distance to show and reads as if the place were
+        // inside the community (owner 2026-08-19: seven labels came out bare).
+        distance_m: poi.distance_m ?? null,
       });
       if (linkErr) {
         results[poi.place_id] = {
@@ -110,7 +135,7 @@ export async function runPhotos(sb: TourDb, run: RunRow) {
         continue;
       }
     }
-    const r = await fetchPhotosForCommunityPoi(run.community_id, poiId!, { max: 3 });
+    const r = await fetchPhotosForCommunityPoi(run.community_id, poiId!, { max: 3, actor });
     results[poi.place_id] = r;
     if ((r as { fetched?: number }).fetched) {
       const { data: rows } = await sb
@@ -151,7 +176,7 @@ export async function runPhotos(sb: TourDb, run: RunRow) {
     // Amenity POIs arrive with their photos already ingested; a POI added by
     // hand usually arrives with none, and Places is where they come from.
     if (!count) {
-      const r = await fetchPhotosForCommunityPoi(run.community_id, link.poi_id, { max: 3 });
+      const r = await fetchPhotosForCommunityPoi(run.community_id, link.poi_id, { max: 3, actor });
       results[link.poi_id] = r;
     }
 
@@ -163,6 +188,62 @@ export async function runPhotos(sb: TourDb, run: RunRow) {
     // Tagging is what gives the Curator something to plan with; an untagged
     // photo is invisible to the shot list.
     fetchedPhotoIds.push(...(rows ?? []).map((row: { id: string }) => row.id));
+  }
+
+  // A film has room for a dozen places, not every place we know about.
+  //
+  // Nothing capped the POI COUNT before — only clips per POI (3) — so when the
+  // rewritten research prompt started returning 17 resolved POIs on top of 5
+  // amenities, the plan came out at 44 clips and 96s against a 90s ceiling
+  // (owner 2026-08-19). Trimming here rather than in the scheduler keeps the
+  // reason legible: these places are in the film, those are not.
+  //
+  // The community's own amenities are never trimmed — they are the subject.
+  //
+  // The rest are chosen one bucket at a time, best first, before any bucket
+  // gets a second: coverage before depth, which is the owner's stated order
+  // (2026-08-19). Ranking by distance alone was tried and picked a recycling
+  // centre at 0.7 mi over three parks and the high school — near is not the
+  // same as worth filming. `resolve` already scored each POI on bucket weight,
+  // distance, confidence and photo count, so that is the rank used here.
+  const amenityIds = resolvedPoiIds.filter((id) => bucketByPoiId.get(id) === 'amenities');
+  const surrounding = resolvedPoiIds.filter((id) => bucketByPoiId.get(id) !== 'amenities');
+  if (surrounding.length > SURROUNDING_POI_BUDGET) {
+    const scoreByPoi = new Map<string, number>();
+    for (const poi of resolve.resolved) {
+      const id = placeIdToPoiId.get(poi.place_id);
+      if (id && typeof poi.score === 'number') scoreByPoi.set(id, poi.score);
+    }
+    const byBucket = new Map<string, string[]>();
+    for (const id of surrounding) {
+      const b = bucketByPoiId.get(id) ?? 'other';
+      const arr = byBucket.get(b) ?? [];
+      arr.push(id);
+      byBucket.set(b, arr);
+    }
+    for (const arr of byBucket.values()) {
+      arr.sort((a, b) => (scoreByPoi.get(b) ?? 0) - (scoreByPoi.get(a) ?? 0));
+    }
+    // Buckets themselves in score order, so when the budget runs out it is the
+    // weakest kind of place that misses out, not whichever sorted last.
+    const bucketOrder = [...byBucket.keys()].sort(
+      (a, b) =>
+        (scoreByPoi.get(byBucket.get(b)![0]!) ?? 0) - (scoreByPoi.get(byBucket.get(a)![0]!) ?? 0),
+    );
+    const kept: string[] = [];
+    for (let round = 0; kept.length < SURROUNDING_POI_BUDGET; round++) {
+      let placed = false;
+      for (const b of bucketOrder) {
+        const id = byBucket.get(b)?.[round];
+        if (!id) continue;
+        kept.push(id);
+        placed = true;
+        if (kept.length >= SURROUNDING_POI_BUDGET) break;
+      }
+      if (!placed) break; // every bucket exhausted
+    }
+    resolvedPoiIds.length = 0;
+    resolvedPoiIds.push(...amenityIds, ...kept);
   }
 
   // Save progress before the slow half. This step now runs for minutes —
