@@ -1348,10 +1348,14 @@ def claim_outpaint_job() -> dict[str, Any] | None:
     if not rows:
         return None
     row = rows[0]
+    # No `updated_at` here: poi_photos has no such column, unlike the tables
+    # the other claim helpers touch. Including it 400s the whole PATCH
+    # ("Could not find the 'updated_at' column"), which looks like the queue
+    # never being claimed rather than like an error.
     updated = sb_patch(
         "poi_photos",
         {"id": f"eq.{row['id']}", "outpaint_status": "eq.queued"},
-        {"outpaint_status": "processing", "updated_at": _now_iso()},
+        {"outpaint_status": "processing"},
     )
     return row if updated else None
 

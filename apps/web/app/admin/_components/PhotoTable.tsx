@@ -59,6 +59,17 @@ export interface PhotoRow {
   tagged_at?: string | null;
   enhanced_path?: string | null;
   enhanced_status?: string | null;
+  /** 9:16 reframing — 'skipped' means the original was already well framed. */
+  outpaint_status?: string | null;
+  outpainted_path?: string | null;
+  outpaint_meta?: {
+    width?: number;
+    height?: number;
+    crop_loss_before?: number;
+    model?: string;
+    reason?: string;
+  } | null;
+  outpaint_error?: string | null;
   enhanced_preset?: string | null;
   enhanced_error?: string | null;
   /** Per-photo record of which ops actually fired (worker writes it). Lets you
@@ -315,6 +326,7 @@ export function PhotoTable({
               {!isListing && <Th>Clip</Th>}
               {!isListing && <Th>DA+KB</Th>}
               {!plan && <Th>In video</Th>}
+              {!isListing && <Th>Reframed</Th>}
               <Th>Enhanced</Th>
               <Th className="min-w-[220px]">AI description</Th>
               <Th className="min-w-[160px]">AI tags</Th>
@@ -665,6 +677,18 @@ export function PhotoTable({
                       )}
                     </Td>
                   )}
+                  {!isListing && (
+                    <Td>
+                      <ReframedCell
+                        status={p.outpaint_status}
+                        meta={p.outpaint_meta}
+                        error={p.outpaint_error}
+                        storageBase={storageBase}
+                        bucket={bucket}
+                        path={p.outpainted_path}
+                      />
+                    </Td>
+                  )}
                   <Td>
                     <StatusText value={p.enhanced_status ?? 'none'} />
                     {p.enhanced_meta?.chain && (
@@ -837,6 +861,73 @@ function PhotoSourceBadge({
     return <span className="text-[10px] text-ink2">Google</span>;
   }
   return <span className="text-[10px] text-ink2">{source ?? '—'}</span>;
+}
+
+/**
+ * The 9:16 reframe: whether this photo was outpainted, and what it saved.
+ *
+ * The number is the point of the column. A photo showing "skipped" was already
+ * well framed; one showing "ready · was losing 63%" is one the centre crop
+ * would have gutted, and the thumbnail links to what the render will actually
+ * use so the claim is checkable rather than asserted.
+ */
+function ReframedCell({
+  status,
+  meta,
+  error,
+  storageBase,
+  bucket,
+  path,
+}: {
+  status?: string | null;
+  meta?: { width?: number; height?: number; crop_loss_before?: number; reason?: string } | null;
+  error?: string | null;
+  storageBase: string;
+  bucket: string;
+  path?: string | null;
+}) {
+  if (!status || status === 'none') return <span className="text-[10px] text-ink2">—</span>;
+  if (status === 'skipped') {
+    return (
+      <div>
+        <span className="text-[10px] text-ink2">already 9:16-ish</span>
+        {typeof meta?.crop_loss_before === 'number' && (
+          <div className="text-[10px] text-ink2">
+            {Math.round(meta.crop_loss_before * 100)}% crop
+          </div>
+        )}
+      </div>
+    );
+  }
+  if (status === 'failed') {
+    return (
+      <div className="text-[10px] text-red-600" title={error ?? undefined}>
+        failed
+      </div>
+    );
+  }
+  if (status !== 'ready') return <StatusText value={status} />;
+
+  const href = path ? `${storageBase}/storage/v1/object/public/${bucket}/${path}` : null;
+  return (
+    <div>
+      {href ? (
+        <a
+          href={href}
+          target="_blank"
+          rel="noreferrer"
+          className="text-[10px] text-emerald-700 underline"
+        >
+          reframed
+        </a>
+      ) : (
+        <span className="text-[10px] text-emerald-700">reframed</span>
+      )}
+      {typeof meta?.crop_loss_before === 'number' && (
+        <div className="text-[10px] text-ink2">saved {Math.round(meta.crop_loss_before * 100)}%</div>
+      )}
+    </div>
+  );
 }
 
 function Th({ children, className = '' }: { children: React.ReactNode; className?: string }) {
