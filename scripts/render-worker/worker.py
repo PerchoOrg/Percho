@@ -960,7 +960,7 @@ def process_bucket_job(job: dict[str, Any]) -> None:
         photo_rows = sb_get(
             "poi_photos",
             {
-                "select": "id,storage_path,poi_id,enhanced_path,enhanced_status,outpainted_path,outpaint_status,ai_tags,"
+                "select": "id,storage_path,poi_id,enhanced_path,enhanced_status,enhanced_at,outpainted_path,outpaint_status,outpainted_at,ai_tags,"
                           "pois!inner(display_name,primary_type,types)",
                 "id": f"in.({id_list})",
             },
@@ -1625,9 +1625,21 @@ def approved_enhanced_path(row: dict[str, Any]) -> str | None:
 
     Callers fall back to `storage_path`.
     """
-    if row.get("enhanced_status") == "approved" and row.get("enhanced_path"):
+    enhanced = row.get("enhanced_status") == "approved" and row.get("enhanced_path")
+    reframed = row.get("outpaint_status") == "ready" and row.get("outpainted_path")
+
+    # An enhanced file only wins if it was made FROM the reframed one. Both
+    # derived files can exist and the order they were produced in decides:
+    # enhancement ran on Aberdeen's photos before outpainting existed, so a
+    # naive "enhanced first" rule handed the render an upscaled CROP and the
+    # reframe was never read — 15 reframed photos, zero of them on screen.
+    if enhanced and reframed:
+        enhanced_at = row.get("enhanced_at") or ""
+        outpainted_at = row.get("outpainted_at") or ""
+        return str(row["enhanced_path"] if enhanced_at > outpainted_at else row["outpainted_path"])
+    if enhanced:
         return str(row["enhanced_path"])
-    if row.get("outpaint_status") == "ready" and row.get("outpainted_path"):
+    if reframed:
         return str(row["outpainted_path"])
     return None
 
@@ -1681,7 +1693,7 @@ def process_photo_clip(row: dict[str, Any]) -> None:
         photos = sb_get(
             "poi_photos",
             {
-                "select": "id,storage_path,enhanced_path,enhanced_status,outpainted_path,outpaint_status",
+                "select": "id,storage_path,enhanced_path,enhanced_status,enhanced_at,outpainted_path,outpaint_status,outpainted_at",
                 "id": f"eq.{photo_id}",
                 "limit": "1",
             },

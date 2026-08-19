@@ -133,6 +133,11 @@ async function main() {
         break;
       case 'generate':
         result = await runGenerate(sb, run);
+        // Wait for the worker before moving on. `generate` only enqueues, so
+        // `--steps generate,assemble` used to assemble while clips were still
+        // rendering: the assembly skips a shot whose clip is not ready, and
+        // the film comes up short with no error anywhere.
+        await waitForClips(sb, runId);
         break;
       case 'assemble':
         result = await runAssemble(sb, run, undefined, undefined, true);
@@ -146,6 +151,29 @@ async function main() {
       process.exit(1);
     }
   }
+}
+
+/** Block until no clip is pending or processing. */
+async function waitForClips(
+  // biome-ignore lint/suspicious/noExplicitAny: service client
+  sb: any,
+  runId: string,
+): Promise<void> {
+  const deadline = Date.now() + 40 * 60_000;
+  for (;;) {
+    const { data: pending } = await sb
+      .from('photo_clips')
+      .select('id')
+      .in('status', ['pending', 'processing']);
+    if (!pending?.length) break;
+    if (Date.now() > deadline) {
+      console.log(`\n  (${pending.length} clip(s) still rendering after 40 min — continuing)`);
+      break;
+    }
+    process.stdout.write(`\r  rendering ${pending.length} clip(s)…      `);
+    await new Promise((r) => setTimeout(r, 15_000));
+  }
+  void runId;
 }
 
 /**
