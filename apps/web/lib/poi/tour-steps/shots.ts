@@ -26,8 +26,46 @@ export function plannedShots(run: RunRow): PlannedShot[] {
   return Array.isArray(photos?.shots) ? photos.shots : [];
 }
 
+/**
+ * How many clips a kind of place earns.
+ *
+ * Owner 2026-08-19: "some places like gym we only need 1 picture". Screen time
+ * is the scarce thing in a 70-second film, and these places are not
+ * equivalent — a park or a restaurant is atmosphere a buyer lingers on; a gym
+ * or an urgent care is a fact they need confirmed once. One shot answers "yes,
+ * there is one, and it is three miles away"; a second says nothing more.
+ *
+ * The community's own amenities get the most, because they are the subject.
+ */
+const CLIPS_BY_BUCKET: Record<string, number> = {
+  amenities: 3,
+  schools: 2,
+  outdoor: 2,
+  dining: 2,
+  shopping: 2,
+  kids: 2,
+  waterfront: 2,
+  asian_community: 2,
+  // Confirmed, not toured.
+  fitness: 1,
+  healthcare: 1,
+  civic: 1,
+  daily_errands: 1,
+  pets: 1,
+  transit: 1,
+  work_hubs: 1,
+  nightlife: 1,
+  other: 1,
+};
+const DEFAULT_CLIPS_PER_POI = 2;
+
+export function clipsAllowedFor(bucket: string | null | undefined): number {
+  return CLIPS_BY_BUCKET[bucket ?? ''] ?? DEFAULT_CLIPS_PER_POI;
+}
+
 /** Shared: build the final shot list for a set of POIs. Photos step computes
- *  and persists this; assemble consumes it. Per-POI cap 2 (owner 2026-08-17). */
+ *  and persists this; assemble consumes it. Clips per POI vary by kind of
+ *  place — see CLIPS_BY_BUCKET. */
 export async function computeFinalShots(
   sb: TourDb,
   poiIds: string[],
@@ -76,8 +114,6 @@ export async function computeFinalShots(
   // the number of same thing to 3").
   /** Most Places photos one POI may contribute. */
   const POI_PHOTO_CAP = 2;
-  /** Hard ceiling on clips of one POI, whatever the source mix. */
-  const MAX_CLIPS_PER_POI = 3;
   const photos: NonNullable<typeof photosRaw> = [];
   const dropped: Array<{ photo_id: string; poi_id: string; reason: string }> = [];
 
@@ -135,10 +171,11 @@ export async function computeFinalShots(
     // one with only a Places listing still shows two.
     const handPicked = (r: (typeof ranked)[number]) =>
       r.source === 'community_site' && r.status !== 'rejected';
+    const allowed = clipsAllowedFor(buckets?.get(arr[0]!.poi_id));
     const kept = [
       ...ranked.filter(handPicked),
       ...ranked.filter((r) => !handPicked(r)).slice(0, POI_PHOTO_CAP),
-    ].slice(0, MAX_CLIPS_PER_POI);
+    ].slice(0, allowed);
     const keptIds = new Set(kept.map((r) => r.id));
     photos.push(...kept);
     // Owner 2026-08-17: "另外一张放到drop table里并说明原因" — every photo
@@ -151,7 +188,7 @@ export async function computeFinalShots(
           ? 'rejected in Review'
           : tags.usable === false
             ? 'tagger-unusable'
-            : `not in the top ${MAX_CLIPS_PER_POI} for this place`;
+            : `not in the top ${clipsAllowedFor(buckets?.get(row.poi_id))} for this place`;
       dropped.push({ photo_id: row.id, poi_id: row.poi_id, reason });
     }
   }

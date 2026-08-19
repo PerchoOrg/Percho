@@ -23,6 +23,7 @@ Systemd unit:  scripts/render-worker/percho-render-worker.service
 
 from __future__ import annotations
 
+import base64
 import json
 import os
 import random
@@ -959,7 +960,7 @@ def process_bucket_job(job: dict[str, Any]) -> None:
         photo_rows = sb_get(
             "poi_photos",
             {
-                "select": "id,storage_path,poi_id,enhanced_path,enhanced_status,ai_tags,"
+                "select": "id,storage_path,poi_id,enhanced_path,enhanced_status,outpainted_path,outpaint_status,ai_tags,"
                           "pois!inner(display_name,primary_type,types)",
                 "id": f"in.({id_list})",
             },
@@ -1296,6 +1297,166 @@ def process_bucket_job(job: dict[str, Any]) -> None:
         shutil.rmtree(workdir, ignore_errors=True)
 
 
+# ── outpainting to 9:16 (2026-08-19) ────────────────────────────────────
+#
+# A community tour renders 1080x1920 and the centre crop was discarding a
+# median 63% of every frame — on Aberdeen's clubhouse it removed the stone
+# tower and left a tree as the subject. Resolution was never the problem
+# (median source 4000x3024); the aspect ratio was.
+#
+# Two steps, because one does not work. Handing a 2.16:1 panorama straight to
+# the model leaves it filling 74% of the output and it regenerates the whole
+# scene. Cropping to 3:4 first, with real pixels, leaves ~25% to invent and
+# measured drift against the source fell from 34/255 to 7.4.
+#
+# Same queue shape as enhance, and it runs BEFORE it: outpaint fixes framing
+# and returns 768x1376, then Real-ESRGAN takes that to the canvas.
+
+OUTPAINT_MODEL = os.environ.get("GEMINI_IMAGE_MODEL", "gemini-3.1-flash-image")
+OUTPAINT_TIMEOUT_SEC = 120
+# Matches OUTPAINT_MIN_CROP_LOSS in apps/web/lib/poi/outpaint.ts. A 3:4
+# portrait loses 0.25 and is left alone; a square (0.44) is worth fixing.
+OUTPAINT_MIN_CROP_LOSS = 0.35
+
+FILL_HINT = {
+    "landscape": "more open sky above, more of the same ground cover below",
+    "storefront": "more sky and roofline above, more of the pavement or forecourt below",
+    "interior": "more ceiling and lighting above, more of the same floor below",
+    "aerial": "more of the same terrain above and below",
+    "food": "more of the table surface above and below",
+}
+
+
+def crop_loss(w: int, h: int) -> float:
+    """Fraction of the frame a 9:16 centre crop throws away."""
+    if not (w > 0 and h > 0):
+        return 0.0
+    aspect, target = w / h, 1080 / 1920
+    return 1 - target / aspect if aspect > target else 1 - aspect / target
+
+
+def claim_outpaint_job() -> dict[str, Any] | None:
+    rows = sb_get(
+        "poi_photos",
+        {
+            "select": "id,storage_path,width_px,height_px,ai_tags",
+            "outpaint_status": "eq.queued",
+            "order": "id.asc",
+            "limit": "1",
+        },
+    )
+    if not rows:
+        return None
+    row = rows[0]
+    updated = sb_patch(
+        "poi_photos",
+        {"id": f"eq.{row['id']}", "outpaint_status": "eq.queued"},
+        {"outpaint_status": "processing", "updated_at": _now_iso()},
+    )
+    return row if updated else None
+
+
+def process_outpaint(row: dict[str, Any]) -> None:
+    photo_id = row["id"]
+    workdir = Path(tempfile.mkdtemp(prefix=f"outpaint-{photo_id[:8]}-"))
+    try:
+        from PIL import Image
+
+        w, h = row.get("width_px") or 0, row.get("height_px") or 0
+        loss = crop_loss(w, h)
+        if loss <= OUTPAINT_MIN_CROP_LOSS:
+            # Already close enough to 9:16 — nothing to gain, and every call
+            # costs money (owner 2026-08-19: skip photos already in good shape).
+            sb_patch("poi_photos", {"id": f"eq.{photo_id}"}, {
+                "outpaint_status": "skipped",
+                "outpaint_meta": {"crop_loss": round(loss, 3), "reason": "already well framed"},
+                "outpainted_at": _now_iso(),
+            })
+            print(f"[outpaint {photo_id}] skipped — {loss:.0%} loss", flush=True)
+            return
+
+        src = workdir / "src.jpg"
+        storage_download(PHOTO_BUCKET, row["storage_path"], src)
+
+        # Step 1: real pixels only — crop to 3:4 about the centre.
+        im = Image.open(src).convert("RGB")
+        target_w = min(im.width, round(im.height * 3 / 4))
+        left = max(0, (im.width - target_w) // 2)
+        crop = im.crop((left, 0, left + target_w, im.height))
+        crop_path = workdir / "crop.jpg"
+        crop.save(crop_path, quality=95)
+
+        category = (row.get("ai_tags") or {}).get("primary_category")
+        hint = FILL_HINT.get(category, "whatever plausibly continues the scene above and below")
+        prompt = (
+            "Outpaint this photograph to a 9:16 vertical frame. The supplied image must "
+            "remain the centre of the result, unchanged and uncropped. Generate ONLY the "
+            f"strips above and below it: {hint}. Match the existing grain, focus, light "
+            "and colour exactly. Do not alter, move, restyle or re-render anything already "
+            "in the photograph — in particular, reproduce any sign, lettering or logo "
+            "exactly as it appears or leave it out of the new areas entirely. "
+            "Add no text, no people, no vehicles."
+        )
+        b64 = base64.b64encode(crop_path.read_bytes()).decode()
+        resp = requests.post(
+            f"https://generativelanguage.googleapis.com/v1beta/models/{OUTPAINT_MODEL}:generateContent",
+            json={
+                "contents": [{"role": "user", "parts": [
+                    {"text": prompt},
+                    {"inline_data": {"mime_type": "image/jpeg", "data": b64}},
+                ]}],
+                "generationConfig": {"imageConfig": {"aspectRatio": "9:16"}},
+            },
+            headers={
+                "x-goog-api-key": os.environ["GEMINI_API_KEY"],
+                "content-type": "application/json",
+            },
+            timeout=OUTPAINT_TIMEOUT_SEC,
+        )
+        if not resp.ok:
+            raise RuntimeError(f"outpaint HTTP {resp.status_code}: {resp.text[:200]}")
+        payload = resp.json()
+
+        parts = (payload.get("candidates") or [{}])[0].get("content", {}).get("parts", [])
+        inline = next((p.get("inlineData") or p.get("inline_data") for p in parts
+                       if p.get("inlineData") or p.get("inline_data")), None)
+        if not inline:
+            raise RuntimeError("model returned no image")
+
+        out_path = workdir / "out.png"
+        out_path.write_bytes(base64.b64decode(inline["data"]))
+        out_im = Image.open(out_path)
+
+        dest = f"outpainted/{Path(row['storage_path']).with_suffix('.png')}"
+        storage_upload(PHOTO_BUCKET, dest, out_path)
+
+        usage = payload.get("usageMetadata", {})
+        sb_patch("poi_photos", {"id": f"eq.{photo_id}"}, {
+            "outpainted_path": dest,
+            "outpaint_status": "ready",
+            "outpaint_meta": {
+                "model": OUTPAINT_MODEL,
+                "width": out_im.width,
+                "height": out_im.height,
+                "crop_loss_before": round(loss, 3),
+                "output_tokens": usage.get("candidatesTokenCount"),
+            },
+            "outpaint_error": None,
+            "outpainted_at": _now_iso(),
+        })
+        print(f"[outpaint {photo_id}] ready {out_im.width}x{out_im.height} "
+              f"(was {w}x{h}, {loss:.0%} would have been cropped)", flush=True)
+    except Exception as exc:  # noqa: BLE001
+        traceback.print_exc()
+        sb_patch("poi_photos", {"id": f"eq.{photo_id}"}, {
+            "outpaint_status": "failed",
+            "outpaint_error": f"{type(exc).__name__}: {exc}"[:500],
+            "outpainted_at": _now_iso(),
+        })
+    finally:
+        shutil.rmtree(workdir, ignore_errors=True)
+
+
 # ── photo enhancement (2026-08-03) ──────────────────────────────────────
 #
 # No new queue table: `{listing,poi}_photos.enhanced_status` IS the queue
@@ -1328,7 +1489,7 @@ def claim_enhance_job() -> tuple[str, list[dict[str, Any]]] | None:
         rows = sb_get(
             table,
             {
-                "select": "id,storage_path,enhanced_preset"
+                "select": "id,storage_path,enhanced_preset,outpainted_path,outpaint_status"
                           + (",listing_id" if table == "listing_photos" else ""),
                 "enhanced_status": "eq.queued",
                 "order": "id.asc",
@@ -1341,7 +1502,7 @@ def claim_enhance_job() -> tuple[str, list[dict[str, Any]]] | None:
         group = [first]
         if table == "listing_photos" and first.get("listing_id"):
             group = sb_get(table, {
-                "select": "id,storage_path,enhanced_preset,listing_id",
+                "select": "id,storage_path,enhanced_preset,outpainted_path,outpaint_status,listing_id",
                 "enhanced_status": "eq.queued",
                 "listing_id": f"eq.{first['listing_id']}",
                 "order": "id.asc",
@@ -1373,9 +1534,18 @@ def process_enhance_job(table: str, rows: list[dict[str, Any]]) -> None:
         srcs, dests, ok_rows = [], [], []
         for row in rows:
             try:
-                ext = Path(row["storage_path"]).suffix or ".jpg"
+                # Upscale the REFRAMED file when outpainting produced one:
+                # the model returns 768x1376 and the canvas is 1080x1920, so
+                # this pass is what closes the gap. Enhancing the original
+                # instead would upscale a frame the render is not going to use.
+                source = (
+                    row["outpainted_path"]
+                    if row.get("outpaint_status") == "ready" and row.get("outpainted_path")
+                    else row["storage_path"]
+                )
+                ext = Path(source).suffix or ".jpg"
                 src = workdir / f"{row['id']}{ext}"
-                storage_download(PHOTO_BUCKET, row["storage_path"], src)
+                storage_download(PHOTO_BUCKET, source, src)
                 srcs.append(src)
                 dests.append(workdir / f"{row['id']}-out.jpg")
                 ok_rows.append(row)
@@ -1439,11 +1609,22 @@ def _fail_enhance(table: str, photo_id: str, exc: Exception) -> None:
 def approved_enhanced_path(row: dict[str, Any]) -> str | None:
     """The path a render should actually read for this photo row.
 
-    Returns the enhanced file ONLY when an admin approved it — that is the whole
-    gate. Callers fall back to `storage_path`.
+    Two derived files can exist and they stack: outpaint reframes to 9:16, then
+    enhance upscales that to the canvas. Preference order is therefore
+    enhanced → outpainted → original, because an approved enhanced file is
+    already the enhanced version of the reframed one.
+
+    Enhanced still requires approval — that gate is unchanged. Outpainted does
+    not: it replaces a centre crop that was discarding a median 63% of the
+    frame, so the reframed file is the better default even unreviewed, and the
+    photo table can still reject the photo outright.
+
+    Callers fall back to `storage_path`.
     """
     if row.get("enhanced_status") == "approved" and row.get("enhanced_path"):
         return str(row["enhanced_path"])
+    if row.get("outpaint_status") == "ready" and row.get("outpainted_path"):
+        return str(row["outpainted_path"])
     return None
 
 
@@ -1496,7 +1677,7 @@ def process_photo_clip(row: dict[str, Any]) -> None:
         photos = sb_get(
             "poi_photos",
             {
-                "select": "id,storage_path,enhanced_path,enhanced_status",
+                "select": "id,storage_path,enhanced_path,enhanced_status,outpainted_path,outpaint_status",
                 "id": f"eq.{photo_id}",
                 "limit": "1",
             },
@@ -2029,6 +2210,22 @@ def main() -> None:
 
         if clip_row is not None:
             process_photo_clip(clip_row)
+            continue
+
+        # Outpainting sits just above enhancement and below every render, for
+        # the same reason: it is batch work. Ordering against enhance on a
+        # given photo comes from who queues what, not from this loop — the
+        # photos step queues outpaint first and enhance only once the reframed
+        # file exists.
+        try:
+            outpaint_row = claim_outpaint_job()
+        except Exception:
+            traceback.print_exc()
+            time.sleep(POLL_IDLE_SEC)
+            continue
+
+        if outpaint_row is not None:
+            process_outpaint(outpaint_row)
             continue
 
         # Photo enhancement is LAST in the priority order: a render job is

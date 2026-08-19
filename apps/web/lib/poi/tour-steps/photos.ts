@@ -338,17 +338,79 @@ export async function runPhotos(sb: TourDb, run: RunRow, actor: PoiActor = 'user
 
   const { shots, dropped, plan } = await computeFinalShots(sb, resolvedPoiIds, bucketByPoiId);
 
+  // Queue reframing — AFTER selection, so it only runs on photos that reach
+  // the film. Aberdeen has 103 photos linked but 29 in the cut, of which 21
+  // are badly framed; outpainting all 103 would be four times the cost for
+  // work nobody sees (owner 2026-08-19: "i see only 29 selected right?").
+  //
+  // The threshold means "already in a good shape" is left alone: a 3:4
+  // portrait loses 25% to the crop and passes through untouched.
+  const outpaintCandidates = await selectOutpaintCandidates(
+    sb,
+    shots as Array<{ photo_id?: string; engine?: string }>,
+  );
+  if (outpaintCandidates.length > 0) {
+    await mustWrite(
+      `queue ${outpaintCandidates.length} photo(s) for reframing`,
+      sb
+        .from('poi_photos')
+        .update({ outpaint_status: 'queued', outpaint_error: null })
+        .in('id', outpaintCandidates),
+    );
+  }
+
   await saveStep(sb, run, 'photos', {
     phase: 'done',
     results,
     resolved_poi_ids: resolvedPoiIds,
     auto_tag: taggedCount,
+    outpaint_queued: outpaintCandidates.length,
     shots,
     dropped,
     plan,
   });
   await setRunStatus(sb, run.id, 'tagging');
   return { ok: true, poiCount: Object.keys(results).length, shots: shots.length, plan };
+}
+
+/**
+ * Which of the chosen photos are framed badly enough to be worth reframing.
+ *
+ * Three filters, each of which removes real spend:
+ *  - Seedance shots are excluded. That engine generates its own 496x864 video
+ *    from the photo and does the aspect conversion itself, so reframing first
+ *    pays for work the video model redoes (owner 2026-08-19).
+ *  - Photos already close to 9:16 are left alone.
+ *  - Photos already reframed or in flight are not paid for twice on a re-run.
+ */
+async function selectOutpaintCandidates(
+  sb: TourDb,
+  shots: Array<{ photo_id?: string; engine?: string }>,
+): Promise<string[]> {
+  const ids = shots
+    .filter((s) => s.engine !== 'seedance')
+    .map((s) => s.photo_id)
+    .filter((id): id is string => Boolean(id));
+  if (ids.length === 0) return [];
+
+  const { needsOutpaint } = await import('@/lib/poi/outpaint');
+  const { data: rows } = (await sb
+    .from('poi_photos')
+    .select('id, width_px, height_px, outpaint_status')
+    .in('id', ids)) as {
+    data: Array<{
+      id: string;
+      width_px: number | null;
+      height_px: number | null;
+      outpaint_status: string | null;
+    }> | null;
+  };
+  return (rows ?? [])
+    .filter(
+      (r) => !r.outpaint_status || r.outpaint_status === 'none' || r.outpaint_status === 'failed',
+    )
+    .filter((r) => r.width_px && r.height_px && needsOutpaint(r.width_px, r.height_px))
+    .map((r) => r.id);
 }
 
 // ─── step: tag ──────────────────────────────────────────────────────────────
