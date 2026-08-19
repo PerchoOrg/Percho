@@ -102,6 +102,60 @@ export async function runGenerate(sb: TourDb, run: RunRow, photoIds?: string[], 
   return enqueueClips(sb, run, shotsWithEngine, forceEngine);
 }
 
+/**
+ * Clips whose photo was reframed or enhanced after the clip was rendered.
+ *
+ * `photo_id:engine` keys, matching the map `enqueueClips` builds. Comparing
+ * timestamps is the whole test: a clip last rendered before `outpainted_at` or
+ * `enhanced_at` shows a frame the pipeline no longer intends to use.
+ *
+ * `updated_at`, NOT `created_at`. A requeued clip keeps its creation time, so
+ * comparing against that makes it permanently stale and every generate
+ * re-renders the same clips forever — measured as "0 queued, 13 requeued" on
+ * two consecutive runs with nothing having changed between them. The worker
+ * stamps `updated_at` when it finishes, which is the render time this needs.
+ *
+ * Cheap by construction — the re-render is local (Ken Burns / DepthFlow) for
+ * exactly the photos reframing touches, because Seedance shots are excluded
+ * from reframing in the first place.
+ */
+async function staleClipKeys(
+  sb: TourDb,
+  photoIds: string[],
+  clips: Array<{ photo_id: string; engine: string; status: string; updated_at?: string | null }>,
+): Promise<Set<string>> {
+  const stale = new Set<string>();
+  if (photoIds.length === 0) return stale;
+
+  const { data: photos } = (await sb
+    .from('poi_photos')
+    .select('id, outpainted_at, outpaint_status, enhanced_at, enhanced_status')
+    .in('id', photoIds)) as {
+    data: Array<{
+      id: string;
+      outpainted_at: string | null;
+      outpaint_status: string | null;
+      enhanced_at: string | null;
+      enhanced_status: string | null;
+    }> | null;
+  };
+
+  const changedAt = new Map<string, string>();
+  for (const p of photos ?? []) {
+    const stamps: string[] = [];
+    if (p.outpaint_status === 'ready' && p.outpainted_at) stamps.push(p.outpainted_at);
+    if (p.enhanced_status === 'approved' && p.enhanced_at) stamps.push(p.enhanced_at);
+    if (stamps.length > 0) changedAt.set(p.id, stamps.sort().at(-1) as string);
+  }
+
+  for (const c of clips) {
+    const changed = changedAt.get(c.photo_id);
+    if (!changed || !c.updated_at) continue;
+    if (new Date(c.updated_at) < new Date(changed)) stale.add(`${c.photo_id}:${c.engine}`);
+  }
+  return stale;
+}
+
 async function enqueueClips(
   sb: TourDb,
   run: RunRow,
@@ -123,19 +177,26 @@ async function enqueueClips(
    */
   requeueReady = false,
 ) {
+  const photoIdsInPlay = shotsWithEngine.map((s) => s.photo_id);
   const existing = await sb
     .from('photo_clips')
-    .select('photo_id, engine, status')
-    .in(
-      'photo_id',
-      shotsWithEngine.map((s) => s.photo_id),
-    );
+    .select('photo_id, engine, status, updated_at')
+    .in('photo_id', photoIdsInPlay);
   const have = new Map(
     (existing.data ?? []).map((r: { photo_id: string; engine: string; status: string }) => [
       `${r.photo_id}:${r.engine}`,
       r.status,
     ]),
   );
+
+  // A clip renders one VERSION of a photo. Reframing or enhancing the photo
+  // afterwards leaves the clip showing the old frame, and nothing marked it —
+  // so a bulk generate reported "0 clips queued", the film came out unchanged,
+  // and no error appeared anywhere. That is what happened on Aberdeen: 15
+  // photos reframed, 20 clips still rendered from the crop, and not one
+  // reframed file reached the screen until they were requeued by hand
+  // (owner 2026-08-19).
+  const stale = await staleClipKeys(sb, photoIdsInPlay, existing.data ?? []);
   const toCreate = shotsWithEngine.filter((s) => !have.has(`${s.photo_id}:${s.engine}`));
   if (toCreate.length > 0) {
     await mustWrite(
@@ -160,10 +221,13 @@ async function enqueueClips(
   // a re-plan that changed the move or the prompt has to reach the worker.
   let requeued = 0;
   for (const s of shotsWithEngine) {
-    const status = have.get(`${s.photo_id}:${s.engine}`);
+    const key = `${s.photo_id}:${s.engine}`;
+    const status = have.get(key);
     if (status === undefined) continue;
     if (status === 'processing') continue;
-    const rerender = requeueReady && status === 'ready';
+    // Re-render on an explicit per-row click, or when the photo itself has
+    // changed underneath the clip.
+    const rerender = status === 'ready' && (requeueReady || stale.has(key));
     if (rerender) requeued += 1;
     await mustWrite(
       `apply plan to clip(${s.photo_id}:${s.engine})`,
