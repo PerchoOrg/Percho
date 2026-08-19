@@ -19,6 +19,8 @@ Community films now open on the community. Its own amenities lead the film and r
 Aberdeen in Suwanee is the first community with this treatment: a 58-second film that opens on its clubhouse and takes in the pool, the courts and the grounds before heading out into Suwanee.
 
 ### 2026-08-19
+- Every shot in a community film now names the place on screen, with how far it is from the community when it isn't one of the community's own amenities
+- A film shows at most three shots of any one place, so a pool or a park no longer dominates
 - Places of worship no longer appear in any generated film, and existing ones have been removed from every community and listing. Religion is a protected class in housing, so a film that presents a neighbourhood's religious character is a risk we don't take
 - A film visits each place once, as a single stretch, instead of returning to it later — the same school or shop no longer turns up twice
 - Photos with people in them are used again: a pool with swimmers or a park with families now counts in a film's favour rather than being thrown out. Photos where a person is the subject, and any photo where a child is recognisable, are still excluded
