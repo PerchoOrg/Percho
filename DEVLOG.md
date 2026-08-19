@@ -16,6 +16,67 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-19 04:40 UTC — The parks the HOA recommends and the agent missed; a Source column
+
+**Objective**: owner — "i dont think you fully explored, this page … has To
+learn more about our area visit the below links … Nearby Parks: Old Atlanta
+Recreation Center, Mary Alice Park, Chattahoochee Point Park, Caney Creek
+Preserve, Sharon Springs Park … btw, in the photo table you should have a
+column saying the source".
+Branch `phase63/park-photos-and-source-column` (ws1).
+
+**The real find is not photos, it is POIs.** Four of the five parks the HOA
+itself lists are inside the 4-mile ceiling — Old Atlanta Recreation Center
+1.2 mi (already a POI), Chattahoochee Pointe 1.8, Sharon Springs 2.2, Caney
+Creek Preserve 2.6 — and the research agent proposed **none of the three new
+ones**. It found Sims Lake Park at 4.0 mi instead. Each has 10 Google photos
+available. Mary Alice Park is 7.4 mi and correctly stays out. The three are now
+`pois` rows linked to Aberdeen at `intent_bucket='outdoor'`.
+
+**The county park pages are not a photo source.** All four
+`parks.forsythco.com` pages return the *same* image list in their static HTML —
+site chrome (footer illustration, a flag-football stock shot, "Fowler Park
+Large Pavilion"). The per-park galleries are JS-rendered. Worse than useless:
+Caney Creek's page statically serves a photo of **Fowler Park**, so a naive
+scrape would caption another park's pavilion as this one's. Google Places is
+the right source for these, and the tagger sees the actual pixels.
+
+**Actions**:
+- `runPhotos` now derives its POI set from `community_pois` rather than from
+  `resolve.resolved`, and fetches Places photos for any linked POI that has
+  none. Resolve is how most POIs arrive but no longer the only way — amenity
+  ingest and hand-added places are equally valid, and previously either was
+  invisible to the film unless someone patched `step_results` by hand.
+- `PhotoTable` gained a **Source** column: `Website` (green pill, the source
+  page on hover), `Google`, `Street View`. Provenance now changes how the
+  pipeline treats a file — website photos outrank Places ones and skip the
+  2-per-POI cap — so "why did this one make the cut" is often answered by this
+  column. `attribution` is selected through `loadNearbyPhotos` to carry the
+  source page.
+
+**Decisions**: the three parks were linked but their photos NOT fetched here.
+`fetchPhotosForCommunityPoi` goes through `requireEntity`, which requires an
+authenticated session — a legitimate check that a script has no business
+bypassing. `runPhotos` runs inside the request, so one click of *Selected
+Photos* pulls them.
+
+**Risks**: photos from `parks.forsythco.com`, Discover Forsyth or Visit Halcyon
+would be **third-party county/tourism imagery**, a different licensing question
+from the HOA's own site — which is itself still unresolved (phase56). Not
+ingested; flagged for the owner.
+
+**Learnings**: an HOA's "local info" page is a better POI source than a
+grounding agent, because it is the residents' own answer to "what is near us".
+Worth feeding those links into research rather than only mining them for
+photos.
+
+**Next steps**:
+- Owner clicks Selected Photos to pull the three parks' Places photos, then
+  re-generate and re-assemble.
+- Then TTS against the final cut.
+
+---
+
 ## 2026-08-19 03:55 UTC — One amenity at a time, in walk-through order; 90s ceiling
 
 **Objective**: owner on the 24-clip cut — "much better now, but lets increase
