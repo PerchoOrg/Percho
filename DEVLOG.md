@@ -16,6 +16,51 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-18 20:45 UTC — Resolve & Merge crashed the page; I put the bad data there
+
+**Objective**: owner clicked Resolve & Merge on the Aberdeen tour and the panel
+white-screened: `TypeError: Cannot read properties of undefined (reading
+'toFixed')`.
+
+**Cause: my own phase56 scratch script.** To make `runTag` pick up the four
+amenity POIs I appended entries to the run's `resolve.resolved` carrying only
+`{poi_id, place_id, name, bucket}` — no `score`, no `agreement`. The resolve
+table renders `p.score.toFixed(2)` inside a `.map`, so the first amenity row
+threw and took the whole panel down. A survey of every run found exactly one
+affected: `79f130e0` (Aberdeen), 4 bad entries of 16.
+
+**Actions**:
+- `TourPipeline.tsx` resolve branch: every field on `resolved[]` and
+  `dropped[]` is now optional and rendered defensively — a missing number
+  shows "—". `result` is a **cast over step_results jsonb**, not a validated
+  shape, so the old non-optional type was a claim the data never had to honour.
+- Data repaired: the 4 amenity entries removed from `resolve.resolved`. They
+  never belonged there — that list is "candidates the resolve step verified
+  through Google Places", and a hand-ingested HOA pool is not one.
+  `photos.resolved_poi_ids` still carries all 16, and *that* is what the tag
+  and shots steps actually read, so nothing downstream changes.
+
+**Decisions**:
+- Fixed both the render and the data, not just one. The data fix removes this
+  instance; the render fix means the next partial row degrades to "—" instead
+  of white-screening an admin page.
+- Left `narration.rate.toFixed(2)` alone a few lines below. It reads from a
+  narration object the plan builder writes whole, so its fields cannot arrive
+  piecemeal the way `resolved[]` did.
+- The phase57 ingest route does not touch runs at all, so it cannot
+  reintroduce this.
+
+**Learnings**: `result as {...}` on a jsonb column is the dangerous shape here
+— it looks like a type and behaves like a wish. Anything that writes into
+`step_results` outside the step that owns it has to match the full shape, and
+the renderer should not assume it did. Worth remembering that the bad writer
+was a one-off script, which is exactly the kind of code that skips the
+contract.
+
+**Next steps**: owner to re-click Resolve & Merge and confirm the panel renders.
+
+---
+
 ## 2026-08-18 20:30 UTC — Admin can nominate a source page; its photos land in the review table
 
 **Objective**: owner on the Aberdeen tour — "the generated video needs a lot of

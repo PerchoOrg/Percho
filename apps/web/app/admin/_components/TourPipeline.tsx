@@ -600,18 +600,23 @@ function StepResult({
     );
   }
   if (s === 'resolve') {
+    // `result` is step_results jsonb — a cast, not a runtime check. Rows can
+    // predate a field or be written by something other than the resolve step
+    // (phase56 merged amenity POIs into this list with no score/agreement,
+    // which crashed the table on `score.toFixed`). Every field is optional
+    // here and rendered defensively; a missing number shows as "—".
     const r = result as {
       resolved?: Array<{
-        name: string;
-        bucket: string;
-        score: number;
-        agreement: number;
+        name?: string;
+        bucket?: string;
+        score?: number;
+        agreement?: number;
         place_id?: string;
         source?: string;
         confidence?: string;
         formatted_address?: string;
       }>;
-      dropped?: Array<{ name: string; reason: string }>;
+      dropped?: Array<{ name?: string; reason?: string }>;
     };
     const resolved = r.resolved ?? [];
     return (
@@ -636,13 +641,17 @@ function StepResult({
                   key={`${p.name}-${i}`}
                   className="border-line border-b align-top last:border-b-0"
                 >
-                  <td className="px-2 py-1 font-medium">{p.name}</td>
+                  <td className="px-2 py-1 font-medium">{p.name ?? '—'}</td>
                   <td className="max-w-[260px] px-2 py-1 text-ink2">
                     {p.formatted_address ?? '—'}
                   </td>
-                  <td className="px-2 py-1 text-ink2">{p.bucket}</td>
-                  <td className="tabular-nums px-2 py-1">{p.score.toFixed(2)}</td>
-                  <td className="px-2 py-1">{p.agreement}/2</td>
+                  <td className="px-2 py-1 text-ink2">{p.bucket ?? '—'}</td>
+                  <td className="tabular-nums px-2 py-1">
+                    {typeof p.score === 'number' ? p.score.toFixed(2) : '—'}
+                  </td>
+                  <td className="px-2 py-1">
+                    {typeof p.agreement === 'number' ? `${p.agreement}/2` : '—'}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -654,7 +663,7 @@ function StepResult({
             <ul className="mt-1 space-y-0.5">
               {r.dropped.map((p, i) => (
                 <li key={`${p.name}-${i}`} className="text-ink2">
-                  {p.name} — {p.reason}
+                  {p.name ?? 'unnamed'} — {p.reason ?? 'no reason given'}
                 </li>
               ))}
             </ul>

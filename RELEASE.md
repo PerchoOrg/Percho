@@ -19,6 +19,7 @@ Community films now open on the community. Its own amenities lead the film and r
 Aberdeen in Suwanee is the first community with this treatment: a 58-second film that opens on its clubhouse and takes in the pool, the courts and the grounds before heading out into Suwanee.
 
 ### 2026-08-18
+- Fix: the Resolve & Merge step could blank the community tour screen instead of showing its results
 - Photos can be pulled straight from a community's own website: paste the page address on the community's tour screen and everything on it arrives in the photo table to approve or reject
 - Communities are now classified as either a formally-planned subdivision or an informal neighborhood, so curated communities can be told apart from map data
 
