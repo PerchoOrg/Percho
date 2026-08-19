@@ -24,6 +24,17 @@ const MIN_BYTES = 20_000;
 const MAX_IMAGES = 40;
 const FETCH_TIMEOUT_MS = 15_000;
 
+/**
+ * Paths that hold a site's furniture rather than its content.
+ *
+ * Size alone does not catch these: a decorative illustration is easily bigger
+ * than 400px and 20 KB. Forsyth County's theme shipped
+ * `/themes/…/assets/img/graphics/graphic-boat-launch.png`, a stylised drawing
+ * of a dock, which passed every other filter and landed in Aberdeen's photo
+ * table as an amenity (2026-08-19). A drawing is not a photograph of anywhere.
+ */
+const CHROME_PATH = /\/(themes?|assets|static|dist|graphics|icons?|sprites?|ui|chrome)\//i;
+
 export interface IngestResult {
   poi_id: string;
   poi_name: string;
@@ -166,6 +177,10 @@ export async function ingestPagePhotos(
   let added = 0;
 
   for (const url of urls.slice(0, MAX_IMAGES)) {
+    if (CHROME_PATH.test(new URL(url).pathname)) {
+      skipped.push({ url, reason: 'site furniture, not content' });
+      continue;
+    }
     let bytes: Buffer;
     let contentType: string;
     try {

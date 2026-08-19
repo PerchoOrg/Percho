@@ -54,10 +54,36 @@ Your job is to decide:
 1. What the photo actually shows (short factual description).
 2. Its primary_category — the ONE tag that best describes the frame.
 3. Which buyer-question buckets the photo would strengthen if a buyer asked "what's it like to live here?".
-4. Whether the photo is usable at all (blurry / obstructed / has faces / has license plates → usable=false).
+4. Whether the photo is usable at all (see PEOPLE below; also blurry,
+   obstructed, or a readable license plate → usable=false).
+
+PEOPLE — read this carefully, it is the rule most often got wrong.
+A community is people. A pool with nobody in it, a park with nobody walking,
+a cafe with nobody sitting reads as a brochure for an empty place, and a buyer
+notices. Residents going about their day are the point of the footage, not a
+defect in it. So:
+
+- USABLE: people present but incidental to the frame — in the background, at a
+  distance, turned away, in motion, small in a wide shot. A family walking a
+  trail, swimmers in a pool, customers at tables. This is a plus, not a
+  problem. Do not lower the score for it.
+- NOT USABLE: an identifiable ADULT is the subject of the photo — a portrait,
+  a posed group, one or two people filling the frame with clear faces. That is
+  a picture of a person, not of a place, and we have no likeness release.
+- NEVER USABLE: any IDENTIFIABLE minor. If a child's face is resolved clearly
+  enough that someone who knows them could pick them out, usable=false
+  whatever else the photo shows, and say so in "reason". This one has no
+  exceptions.
+  Identifiable is the test, not present. A distant figure whose face is a few
+  pixels across, someone turned away, a silhouette, a blurred passer-by — none
+  of those is identifiable, and none of them makes a photo unusable. Do not
+  guess an age you cannot see: if you cannot tell whether a small distant
+  figure is a child, it is not identifiable either way.
 
 BUCKETS (a photo can strengthen 0, 1, or many):
-- schools         : school campuses, buildings, entrances (privacy: no kids' faces)
+- schools         : school campuses, buildings, entrances. Campuses are where
+                    the minors rule bites hardest — a wide shot of a building
+                    is fine, a photo with pupils' faces in it is not.
 - dining          : restaurants, cafes, bakeries — food + interior + storefront
 - nightlife       : bars, clubs, movie theaters, evening/night ambience
 - shopping        : malls, department stores, boutiques, retail interiors
@@ -80,12 +106,15 @@ CATEGORIES:
 - food       : plated dishes, close-up food, drinks
 - landscape  : parks, greenery, water, nature
 - aerial     : drone / overhead
-- people     : humans as subject (rare — we usually reject for privacy)
+- people     : humans as the SUBJECT of the frame. Rare, and usable=false —
+               a place with people in it is not this category, it is whatever
+               the place is (landscape, interior, storefront).
 - signage    : text-heavy, sign as subject
 - other      : anything else
 
 QUALITY / RELEVANCE SCORE 0.0-1.0:
-- 0.9-1.0: bright, sharp, wide framing, no people, obvious subject
+- 0.9-1.0: bright, sharp, wide framing, obvious subject. A place shown in use —
+  people enjoying it, incidentally — belongs here too.
 - 0.6-0.8: usable but flawed (some blur, weird crop, unremarkable)
 - 0.3-0.5: technically OK but boring or off-topic
 - 0.0-0.2: unusable (dark, blurry, obstructed)
