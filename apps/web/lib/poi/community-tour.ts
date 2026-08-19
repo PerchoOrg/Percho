@@ -89,19 +89,24 @@ function bucketFromPlace(p: { primaryType?: string; types?: string[] }): string 
 }
 
 /**
- * Hard ceiling on how far a POI can be and still belong in a community tour
- * (owner 2026-08-18: "不应该有市中心的喷泉啥的 除非距离真的很近").
+ * Hard ceiling on how far a POI can be and still belong in a community tour:
+ * a 15-minute suburban drive (owner 2026-08-19), ~7 miles at 25-30 mph.
  *
- * The old rule was `radiusMeters * 2` — 12 km with the 6 km suburban default,
- * which let Suwanee Town Center into Aberdeen's film and put its fountain in
- * the second clip. Four miles is calibrated against the Aberdeen list: it cuts
- * Town Center on Main (4.7 mi), Town Center Park (5.0), PlayTown Suwanee (4.8)
- * and Suwanee Creek Park (4.9) — all of which are across the county line in
- * Gwinnett — while keeping the assigned schools (0.9, 1.1, 3.0), the grocery
- * (1.4), the library (2.1) and the temple (2.6). Those four were the owner's
- * actual complaint, and a 5-mile line let every one of them through.
+ * This is a deliberate loosening from the 4 miles set on 2026-08-18, and the
+ * two instructions behind them pull in opposite directions. Four miles existed
+ * to kill Suwanee Town Center (4.7 mi) after the owner objected to its fountain
+ * opening Aberdeen's film; 15 minutes is his answer to dining and fitness
+ * having no candidates inside four miles.
+ *
+ * What keeps the fountain out at 7 miles is no longer this constant:
+ *   - `distanceWeight` decays to 0.4 by the ceiling, so a far POI has to be
+ *     genuinely better than a near one to win a slot;
+ *   - the research prompt bars a downtown, square, stadium or festival street
+ *     unless it is under 3 miles.
+ * The second is a prompt rule, not code, so it is the weaker of the two. If a
+ * town centre reappears in a film, tighten here rather than re-argue there.
  */
-export const MAX_DISTANCE_M = 6437; // 4 miles
+export const MAX_DISTANCE_M = 11265; // 7 miles ≈ a 15-minute suburban drive
 
 /**
  * How much a POI's score decays with distance. 1.0 for anything inside the
@@ -145,18 +150,25 @@ export function bucketWeight(bucket: string): number {
 
 export function scorePoi(p: {
   bucket: string;
-  agreement: 1 | 2;
+  /** Kept for rows written while two agents ran. Since 2026-08-19 there is one
+   *  agent, so this is always 1 and no longer discriminates — the model's own
+   *  `confidence` carries that weight instead. */
+  agreement?: 1 | 2;
   confidence: 'high' | 'medium';
   photo_count: number;
   /** Straight-line metres from the community. Optional so older callers and
    *  fixtures keep working; absent scores as "unknown", not as "near". */
   distance_m?: number | null;
 }): number {
+  // With one agent, confidence has to do the work agreement used to, so its
+  // spread widens from 1.0/0.85 to 1.0/0.75. A two-agent row keeps its old
+  // bonus so historical scores stay comparable.
+  const consensus = p.agreement === 2 ? 1.0 : 0.9;
   return (
     bucketWeight(p.bucket) *
     distanceWeight(p.distance_m ?? null) *
-    (p.agreement === 2 ? 1.0 : 0.75) *
-    (p.confidence === 'high' ? 1.0 : 0.85) *
+    consensus *
+    (p.confidence === 'high' ? 1.0 : 0.75) *
     Math.min(1.0, p.photo_count / 3)
   );
 }
