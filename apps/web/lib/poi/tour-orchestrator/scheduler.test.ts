@@ -192,6 +192,30 @@ describe('scheduleClips — golden fixture', () => {
     expect(clips[0]!.photo_id).toBe(photos[0]!.photo_id);
   });
 
+  it('plays the whole community act before anything outside it', () => {
+    // Owner 2026-08-19: the community comes first as a block, not one opener
+    // clip with the rest scattered through the film.
+    const base = GOLDEN_PHOTOS.slice(0, 8);
+    const amenityIds = new Set([base[0]!.photo_id, base[3]!.photo_id, base[5]!.photo_id]);
+    const photos: PhotoMeta[] = base.map((p) =>
+      amenityIds.has(p.photo_id) ? { ...p, bucket: 'amenities', poi_name: 'Aberdeen Pool' } : p,
+    );
+    const ids = new Set(photos.map((p) => p.photo_id));
+    const annotations: PhotoAnnotation[] = GOLDEN_ANNOTATIONS.filter((a) =>
+      ids.has(a.photo_id),
+    ).map((a) => ({ ...a, poi_pair_with: null, pair_role: null }));
+
+    const { clips } = scheduleClips(annotations, photos);
+    const isAmenity = clips.map((c) => amenityIds.has(c.photo_id));
+    const lastAmenity = isAmenity.lastIndexOf(true);
+    const firstOutside = isAmenity.indexOf(false);
+
+    expect(lastAmenity).toBe(amenityIds.size - 1);
+    expect(firstOutside).toBe(amenityIds.size);
+    // And no outside clip is stranded inside the community act.
+    expect(isAmenity.slice(0, amenityIds.size).every(Boolean)).toBe(true);
+  });
+
   it('leaves the opener alone on a tour with no amenities bucket', () => {
     // The listing path must be untouched by the community bias.
     const { clips } = plan();

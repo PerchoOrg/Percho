@@ -341,43 +341,62 @@ function unitId(u: Unit): string {
   return u.entries[0]!.annotation.photo_id;
 }
 
+/**
+ * Two acts: the community, then everything around it.
+ *
+ * Owner 2026-08-19: "we should present community itself first before
+ * presenting outside". Biasing only the opener (phase56) put one amenity clip
+ * up front and then let spreadBuckets scatter the rest through the film, so
+ * the pool turned up between a temple and a coffee shop. A buyer should see
+ * the place they would live as a whole first, and the neighbourhood second.
+ *
+ * The acts are ordered independently. spreadBuckets runs on the surroundings
+ * act only: inside the community act every unit is the same bucket by
+ * definition, so the anti-monotony rule has nothing to trade and variety comes
+ * from the POIs themselves (gate, pool, clubhouse, courts).
+ *
+ * With no amenities the first act is empty and this is exactly the previous
+ * behaviour — which is what keeps the listing path untouched.
+ */
 function orderUnits(units: Unit[]): Unit[] {
+  const community = units.filter((u) => u.bucket === 'amenities');
+  const surroundings = units.filter((u) => u.bucket !== 'amenities');
+  return [...orderCommunityAct(community), ...orderSurroundingsAct(surroundings)];
+}
+
+/** Widest, most inviting frame first; the rest by time of day. */
+function orderCommunityAct(units: Unit[]): Unit[] {
+  if (units.length === 0) return [];
+  // The Curator labels at most one photo per batch 'opener' and picks it on
+  // photographic merit, so it rarely lands on an amenity. A wide
+  // 'establishing' shot opens just as well — that is the Curator's own
+  // definition of establishing ("introduces a POI at wide framing").
+  const leadRank = (u: Unit): number => {
+    if (u.role === 'opener') return 0;
+    if (u.role === 'establishing') return 1;
+    return 2;
+  };
+  const [lead, ...rest] = [...units].sort(
+    (a, b) =>
+      leadRank(a) - leadRank(b) || b.emotion - a.emotion || unitId(a).localeCompare(unitId(b)),
+  );
+  const body = rest.sort(
+    (a, b) => a.time - b.time || b.emotion - a.emotion || unitId(a).localeCompare(unitId(b)),
+  );
+  return lead ? [lead, ...body] : body;
+}
+
+/** The original ordering: opener, the day in order, closer — then spread. */
+function orderSurroundingsAct(units: Unit[]): Unit[] {
+  if (units.length === 0) return [];
   const byTime = [...units].sort(
     (a, b) => a.time - b.time || b.emotion - a.emotion || unitId(a).localeCompare(unitId(b)),
   );
 
-  // A community tour opens on the community itself — its gate, sign or
-  // clubhouse — before showing what is around it. The Curator assigns at most
-  // one 'opener' across a whole batch and picks it on photographic merit
-  // alone, so on a 25-photo tour it usually lands on a neighbourhood POI and
-  // an amenity photo never competes. A wide amenity 'establishing' shot is
-  // therefore also eligible for the slot — that is the Curator's own
-  // definition of establishing ("introduces a POI at wide framing"), which is
-  // what an opener has to do. Only the opener is biased: front-loading the
-  // whole bucket would fight spreadBuckets below, which keeps the tour varied.
-  const openerRank = (u: Unit): number => {
-    if (u.bucket === 'amenities' && u.role === 'opener') return 0;
-    if (u.bucket === 'amenities' && u.role === 'establishing') return 1;
-    if (u.role === 'opener') return 2;
-    return 3;
-  };
-
   const pickRole = (role: 'opener' | 'closer'): Unit | undefined => {
-    if (role === 'closer') {
-      const held = byTime.filter((u) => u.role === 'closer');
-      if (held.length === 0) return undefined;
-      return [...held].sort(
-        (a, b) => b.emotion - a.emotion || unitId(a).localeCompare(unitId(b)),
-      )[0];
-    }
-    const held = byTime.filter((u) => openerRank(u) < 3);
+    const held = byTime.filter((u) => u.role === role);
     if (held.length === 0) return undefined;
-    return [...held].sort(
-      (a, b) =>
-        openerRank(a) - openerRank(b) ||
-        b.emotion - a.emotion ||
-        unitId(a).localeCompare(unitId(b)),
-    )[0];
+    return [...held].sort((a, b) => b.emotion - a.emotion || unitId(a).localeCompare(unitId(b)))[0];
   };
 
   const opener = pickRole('opener');

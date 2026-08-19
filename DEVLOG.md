@@ -16,6 +16,67 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-19 02:10 UTC — Two acts: the community, then everything around it
+
+**Objective**: owner — "for generated video - we should present community
+itself first before presenting outside, you need to give a tts to introduce the
+tour". Mid-task he added: "lets finalize the video first, so we can generate
+tts accordingly". Branch `phase61/tour-acts-and-tts` (ws1).
+
+**Ordering.** Phase56 biased only the *opener*, which put one amenity clip up
+front and then let `spreadBuckets` scatter the rest — the pool landed between a
+temple and a coffee shop. `orderUnits` now splits into two acts: every
+amenities unit, then everything else. Each act is ordered independently and
+`spreadBuckets` runs on the surroundings act only — inside the community act
+every unit is the same bucket by definition, so the anti-monotony rule has
+nothing to trade, and variety comes from the POIs themselves. With no
+amenities the first act is empty and the behaviour is byte-identical to
+before, which is what keeps the listing path untouched.
+
+**TTS: designed, then parked on the owner's instruction.** There is no speech
+synthesis anywhere in the repo — `vo-pass.ts` says so explicitly ("No TTS: the
+tour is scored with BGM until a voice provider is chosen"). Owner picked
+**Gemini TTS** (existing `GEMINI_API_KEY`, no new vendor, well under a tenth of
+a cent per intro) and **a purpose-written intro** over reusing the research
+agent's narrative angle. `intro-vo.ts` was written — prompt, word budget from
+the community act's runtime at 2.4 w/s, the school-assignment rule enforced on
+output — then parked unwired when he said to finalize the cut first. It is in
+the session scratchpad, not the repo; wiring it to a moving shot list would
+have meant writing copy against a cut that was about to change.
+
+**Issues** — the two-act structure worked and immediately exposed how bad the
+material was. First cut: 41 clips, 90s, with clips 0-25 all community and
+**19 of those the clubhouse interiors** from the phase57 ingest test.
+Inspecting them settled it: a dining table, a "Gather" sign on a mantel,
+kitchen counters — interior-decor detail of a rental hall, saying nothing about
+living in Aberdeen. They were ingested to test the ingest panel, never chosen
+editorially, and had been sitting on the owner's decision for two rounds. With
+"finalize the video" as the instruction I rejected all 17 rather than ship 19
+kitchen shots. **Reversible** — they are `status='rejected'` in the photo
+table, one click each to bring back.
+
+Result: **24 clips, 56s** — 9 community (pool, clubhouse exterior, tennis,
+grounds), then 15 surroundings. `tour_duration_off_target` still fires at 56s
+against the [45,50] window; six seconds over on a 24-clip film is a trim
+problem, not a structure problem.
+
+**Learnings**:
+- Grouping a bucket into an act and capping consecutive clips are opposite
+  rules, and running both over the same list means one silently wins. Splitting
+  the list first and applying each rule to the part it belongs to was simpler
+  than trying to parameterise `spreadBuckets`.
+- "Unrestricted intake" (phase59) and "the community leads" (this phase)
+  compound: uncapped photos of one POI, all grouped together, become a block
+  the length of the act. The photo table is the only thing standing between
+  that and the film, so its reject button is load-bearing, not cosmetic.
+
+**Next steps**:
+- Assemble the 24-clip cut and check it on screen.
+- Then wire `intro-vo.ts` + Gemini TTS against the final runtime, and mux the
+  voice over the BGM in `worker.py` (duck the music under the voice).
+
+---
+
 ## 2026-08-19 01:20 UTC — The panels showed stale results with nothing saying so
 
 **Objective**: owner after phase59 — "i dont see agent research, resolve and
