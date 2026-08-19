@@ -1,12 +1,21 @@
 /**
- * Generic dual-agent research prompt for the Community Tour pipeline.
+ * Research prompt for the Community Tour pipeline.
  *
- * Runs identically in both Gemini grounding calls (gemini_a / gemini_b).
- * NO density class / probe: the agent researches like a person searching an
- * unfamiliar city.
+ * Rewritten 2026-08-19 with the owner, against measured evidence: POI output
+ * fell as this prompt grew. ~800 input tokens returned 7-12 POIs; the 1221-token
+ * version that followed returned 5. Every rule the pipeline already enforces in
+ * code — the distance ceiling, the religious filter, Places resolution — was
+ * spending model attention for nothing, because getting those wrong costs the
+ * model nothing. They are one line each now, and the space went to recall.
  *
- * Output contract is strict JSON so the orchestrator can merge both agents'
- * results without a human.
+ * Two things drive recall: the buyer's own questions ("where do people buy
+ * groceries") rather than a bucket enum, which produces classification instead
+ * of memory; and reading the community's own site first, because Aberdeen's
+ * HOA page listed four parks inside four miles that the agent never proposed.
+ *
+ * Output contract is strict JSON. `source` is not proof-of-work — it is a page
+ * the photo-ingest panel can later pull imagery from, so it should be the
+ * place's own site wherever one exists.
  */
 
 export type TourBucket =
@@ -31,12 +40,15 @@ export type TourBucket =
 export interface TourPoiCandidate {
   name: string;
   bucket: TourBucket;
+  /** Why a buyer cares. Capped at 10 words — it was averaging 21. */
   why: string;
-  shot_note: string;
+  /** Removed 2026-08-19: nothing read it. Optional so old runs still parse. */
+  shot_note?: string;
   /** The agent's own distance estimate, in miles. Advisory: the real distance
    *  is measured from the resolved Places coordinate. Absent on runs that
    *  predate 2026-08-18. */
   approx_miles?: number;
+  /** The place's own website — a photo-ingest candidate, not a citation. */
   source: string;
   confidence: 'high' | 'medium';
 }
@@ -61,100 +73,58 @@ export function buildResearchPrompt(ctx: {
       ? ` (centroid ${ctx.lat.toFixed(4)}, ${ctx.lng.toFixed(4)})`
       : '';
 
-  return `You are researching ${ctx.name}, a residential community in ${place}${coord}.
+  return `Research ${ctx.name}, a residential community in ${place}${coord}, for a
+short video tour aimed at someone deciding whether to live there.
 
-TASK
-Identify the specific places a human videographer should film to make an honest
-2-3 minute tour of THIS COMMUNITY and the daily life immediately around it, for
-a buyer deciding whether to live here.
+STEP 1 — find the community's own website (HOA, subdivision, builder) and read
+it, especially any "local info" or "area" page. Residents' own list of what is
+nearby beats any search, and it is where the good photos live. Note the URL.
 
-The film is about the community, not about the city it sits in. Its own
-amenities open it; everything you list is the ring of ordinary life around
-those — the school run, the grocery, the park the residents actually walk to.
-A buyer can look up the city's attractions themselves. What they cannot look up
-is what a Tuesday looks like from this address.
+STEP 2 — answer these, by name, for someone living at this address:
+  Where do they buy groceries? Eat on a weeknight? Take coffee?
+  Which schools do the children go to?
+  Where do they walk, run, or take a dog?
+  Where do kids go on a Saturday? Where do adults work out?
+  What errands — pharmacy, hardware, post — and where?
+  What is the one local thing that is not in every suburb?
+Each answer is a POI. Buckets exist to classify them afterwards, not to
+prompt you: schools, dining, nightlife, shopping, outdoor, fitness, kids,
+asian_community, daily_errands, work_hubs, healthcare, pets, transit, civic,
+waterfront, other. Scan that list at the end and fill anything real you missed.
 
-DISTANCE — the rule that matters most
-Rank and filter by how near a place is to this community, in this order:
-  1. Under 1 mile   — the daily orbit. List these first and list them fully.
-  2. 1 to 3 miles   — the weekly orbit: schools, grocery, parks, the usual
-                      errands. Most of your list belongs here.
-  3. 3 to 4 miles   — only if a resident would genuinely go there weekly and
-                      nothing nearer serves the same need.
-  Beyond 4 miles    — do not list it, however famous. A town square, stadium
-                      or festival street four miles away belongs to the city,
-                      not to this community, and putting it on screen tells a
-                      buyer nothing true about living here.
-State a rough distance for every place so the filter can check you.
+DISTANCE — two tiers, both measured from the community:
+  Walkable (under ~0.5 mi) — the strongest material. List all of it.
+  Within a 15-minute drive (~7 mi) — everything else. Nearer is always better.
+Give approx_miles for every POI. Beyond 15 minutes is dropped, so do not list it.
+A downtown, town square, stadium or festival street is the city's, not this
+community's: include one only if it is under 3 miles and residents treat it as
+their own.
 
-METHOD — mandatory
-- Search the web before answering. Read local blogs, the city site, the HOA or
-  subdivision page, r/{metro} and similar forums, "things to do in {city}"
-  guides, school district pages, local news, existing YouTube neighborhood tours.
-- Ground every place in something you actually read. If you cannot point to a
-  source you opened, do not list it.
-- Editorial consensus is your value: what do people who live in THIS
-  subdivision actually mention? A place the whole metro knows, but no resident
-  here mentions, is the wrong answer.
-
-WHAT QUALIFIES
-- Places that answer "what is daily life like here," not "what is the best
-  restaurant in the metro."
-- The assigned schools, the everyday grocery, the nearest parks and trailheads,
-  the streets and entrances around the community itself.
-- Skip anything whose photo looks identical in every US suburb — urgent care,
-  dentists, chain pharmacies, self-storage, insurance offices.
-- Name the one or two things that make THIS place different from the suburb
-  twenty minutes away. If nothing does, say so.
-
-WHAT TO OMIT
-- Places of worship, of any religion — churches, mosques, synagogues, temples,
-  gurdwaras — and religious schools or centres. Not a matter of taste: religion
-  is a protected class under the Fair Housing Act, and a film that presents a
-  neighbourhood's religious character is how a steering complaint starts. Do
-  not list one even if it is the most photographed building nearby.
-- Regional destinations: a downtown, town square, amphitheatre, stadium or
-  festival street that serves a whole city. Include one ONLY if it is under
-  3 miles and residents here treat it as their own.
-- Anything you cannot verify is open today. Businesses close. If your source is
-  more than two years old, verify separately or drop it.
-- Individual restaurants when one nearby centre covers the same ground in one
-  shot.
+RULES
+- 12 to 15 POIs. Returning fewer is a failure — if you cannot reach 12, say why
+  in buckets_deliberately_skipped rather than stopping quietly. Coverage of
+  different kinds of place matters more than depth on any one.
+- Max 2 per bucket. With that cap, 12 POIs means at least six kinds of place.
+- No places of worship, of any religion. (Fair-housing rule, not taste.)
+- Skip what looks identical in every US suburb: urgent care, dentists, chain
+  pharmacies, self-storage, insurance offices.
+- Skip the community's own gate, pool, clubhouse and courts — those come from
+  the community's website through a separate path.
+- Names are resolved against Google Places, so spell each one exactly as Google
+  Maps does, including the branch suffix ("Publix Super Market at Windward
+  Commons", not "Publix"). Give no street address — it makes the lookup worse.
 
 OUTPUT — JSON only, no fences, no preamble
 {
-  "narrative_angle": "one specific, honest sentence on what defines this place",
+  "narrative_angle": "one honest, specific sentence on what defines this place",
   "pois": [{
-    "name": "exact name as it appears on Google Maps",
-    "bucket": "schools|dining|nightlife|shopping|outdoor|fitness|kids|asian_community|daily_errands|work_hubs|healthcare|pets|transit|civic|waterfront|other",
-    "why": "what a buyer learns from seeing this",
-    "shot_note": "what specifically to film here",
+    "name": "exact Google Maps name",
+    "bucket": "one of the buckets above",
+    "why": "why a buyer cares — 10 words maximum",
     "approx_miles": 1.4,
-    "source": "URL you opened",
+    "source": "the place's own website, for photos — omit if it has none",
     "confidence": "high|medium"
   }],
-  "buckets_deliberately_skipped": [{"bucket": "...", "why": "..."}]
-}
-
-CONSTRAINTS
-- 12-20 POIs. Do not pad to reach the ceiling. A short, genuinely local list
-  beats a long one padded with regional landmarks.
-- Max 2 per bucket, unless one bucket genuinely IS the story here.
-- Every POI must carry approx_miles. Anything over 4 is dropped before it
-  reaches the film, so listing it only wastes a slot.
-- Every name will be checked against Google Places. Names that do not resolve
-  are discarded. An unverifiable name is worse than a missing one — this feeds
-  a published real-estate video.
-- Do NOT give an address. The name is looked up against Google Places inside a
-  circle around this community, so the city is already known and a guessed
-  street address only makes the query wrong. Owner 2026-08-17: addresses came
-  back \"very inaccurate\" and the search returned nothing.
-- Spend that effort on the NAME instead: exactly as Google Maps spells it,
-  including the suffix that distinguishes branches (\"Publix Super Market at
-  Windward Commons\", not \"Publix\").
-- Prefer places that are known to have Google listing photos (restaurants,
-  parks, schools, shopping centres) — we need downloadable imagery for every
-  POI. Do NOT list the community's own gate, pool, clubhouse or courts: those
-  carry the film, but their photos come from the community's own website
-  through a separate path, and Google has nothing for them.`;
+  "buckets_deliberately_skipped": [{"bucket": "...", "why": "one line"}]
+}`;
 }

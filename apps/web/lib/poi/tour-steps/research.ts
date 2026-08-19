@@ -28,7 +28,21 @@ async function geminiResearch(opts: {
   error?: string;
   usage?: { input_tokens?: number; output_tokens?: number };
 }> {
-  const model = process.env.GEMINI_MODEL ?? 'gemini-3.5-flash-lite';
+  // Its own env var, NOT the shared GEMINI_MODEL: that is set to
+  // gemini-3.5-flash-lite for the cheap high-volume callers, and reading it
+  // here would silently drag research back down.
+  //
+  // The owner picked Pro on 2026-08-19, but Pro ships only as
+  // `gemini-3.1-pro-preview` and that endpoint returned 503 "experiencing high
+  // demand" on the first two attempts. A preview model behind an overloaded
+  // endpoint is the wrong thing to put a production step on, so the default is
+  // the newest stable flash. Measured on Aberdeen with the rewritten prompt:
+  //   flash-lite  12 POIs / 8 buckets
+  //   3.7-flash   14 POIs / 9 buckets
+  // Most of the gain came from the prompt, not the model — the same prompt on
+  // flash-lite went from 5 POIs to 12. Set GEMINI_RESEARCH_MODEL to
+  // gemini-3.1-pro-preview to try Pro once its capacity settles.
+  const model = process.env.GEMINI_RESEARCH_MODEL ?? 'gemini-3.7-flash';
   const key = process.env.GEMINI_API_KEY;
   if (!key) return { ok: false, text: '', error: 'GEMINI_API_KEY not set' };
   const prompt = buildResearchPrompt(opts.community);
@@ -59,10 +73,14 @@ async function geminiResearch(opts: {
     research_progress: { status: 'running', started_at: startedAt, agents_done: [] },
   });
 
-  const AGENTS = [
-    { name: 'gemini_a', temperature: 0.4 },
-    { name: 'gemini_b', temperature: 0.9 },
-  ];
+  // One agent, on the strongest model (owner 2026-08-19). The pair existed to
+  // give `agreement` a signal — a place both agents named scored higher — but
+  // they differed only in temperature and returned near-identical lists: on
+  // Aberdeen, 3 of each agent's 5 POIs were the same place, so the second call
+  // bought almost nothing. Scoring now uses the model's own `confidence`
+  // instead (see scorePoi). Kept as a list so a second, differently-briefed
+  // agent can be added later without restructuring.
+  const AGENTS = [{ name: 'gemini_a', temperature: 0.5 }];
   const results: Record<string, unknown> = {};
   const agentsDone: string[] = [];
   for (const { name, temperature } of AGENTS) {
@@ -143,9 +161,14 @@ export async function runResearch(
   sb: TourDb,
   run: RunRow,
 ): Promise<{ ok: boolean; started: boolean; error?: string }> {
-  // If a previous run already produced research, reuse it — agents cost money
-  // and the admin can re-run explicitly by clearing the step.
-  if (run.step_results.agent_research) {
+  // Reuse a previous result — agents cost money. But only a SUCCESSFUL one: a
+  // failed attempt still writes agent_research (with the error on it), and the
+  // old check saw that field and refused to retry, so a transient 404 or
+  // timeout wedged the step until someone edited the database.
+  const previous = run.step_results.agent_research as
+    | { agents?: Record<string, { ok?: boolean }> }
+    | undefined;
+  if (previous && Object.values(previous.agents ?? {}).some((a) => a?.ok)) {
     return { ok: true, started: false };
   }
 

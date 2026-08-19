@@ -26,11 +26,16 @@ describe('scorePoi', () => {
       confidence: 'high' as const,
       photo_count: 3,
     };
-    // The Aberdeen case: a park half a mile away vs Suwanee Town Center at 4.7.
+    // Expressed against the ceiling rather than a fixed mileage: the ceiling
+    // moved from 4 miles to a 15-minute drive on 2026-08-19, and a test pinned
+    // to "4.7 miles scores under 0.6" was really testing where the ceiling was.
     const near = scorePoi({ ...base, distance_m: 800 });
-    const far = scorePoi({ ...base, distance_m: 7523 });
-    expect(near).toBeGreaterThan(far);
-    expect(far / near).toBeLessThan(0.6);
+    const midway = scorePoi({ ...base, distance_m: MAX_DISTANCE_M / 2 });
+    const atCeiling = scorePoi({ ...base, distance_m: MAX_DISTANCE_M });
+    expect(near).toBeGreaterThan(midway);
+    expect(midway).toBeGreaterThan(atCeiling);
+    // A place at the ceiling is worth well under half a walkable one.
+    expect(atCeiling / near).toBeLessThan(0.45);
   });
 
   it('treats an unknown distance as neither near nor far', () => {

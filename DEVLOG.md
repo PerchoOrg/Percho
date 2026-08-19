@@ -16,6 +16,82 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-19 07:30 UTC — The research prompt, rebuilt: 843 words → 466, 5 POIs → 14
+
+**Objective**: owner — "843 words make no sense… make a questionnaire for me,
+and we can go through one by one to finalize the prompt". Twelve decisions
+taken with him across three rounds.
+Branch `phase67/research-prompt-rebuild` (ws1).
+
+**The evidence that framed everything.** Output fell as the prompt grew, and
+the relationship is monotone across 20 logged agent calls:
+
+| prompt input tokens | POIs returned |
+|---|---|
+| ~800 (original) | 7, 8, 9, 9, 9, 12 |
+| ~971 | 4, 4, 5, 6 |
+| 1221 (my phase59 rewrite) | 5, 5 |
+
+**I caused that.** Adding the distance tiers, the religious exclusion and the
+regional-destination rule took the prompt from 800 to 1221 tokens and halved
+recall. Every one of those rules is *already enforced in code*, so the model
+was spending attention on constraints it costs nothing to get wrong.
+
+**Owner's twelve decisions**: 12-15 POIs with "coverage first, quality
+second"; one agent instead of two, on the strongest model; drive recall with
+buyer questions *and* the bucket enum; compress code-enforced rules to one
+line; distance as tiers by travel mode (walkable / 15-minute drive); replace
+`agreement` with the model's own `confidence`; `source` becomes the place's own
+website as a photo-ingest candidate rather than proof-of-reading; keep max 2
+per bucket; make "read the community's own site" step 1; drop `shot_note`,
+keep `narrative_angle` and `buckets_deliberately_skipped`, cap `why` at 10
+words.
+
+**Result on Aberdeen** — and the comparison is the point:
+
+| | POIs | buckets | dining/fitness/kids |
+|---|---|---|---|
+| old prompt + flash-lite ×2 | 5 | 4 | none |
+| **new prompt + flash-lite ×1** | **12** | **8** | all three |
+| **new prompt + 3.7-flash ×1** | **14** | **9** | all three |
+
+**The prompt did most of the work, not the model** — same cheap model went
+5 → 12. It also found Caney Creek Preserve and Chattahoochee Point unprompted,
+the parks I had to add by hand in phase63, plus Halcyon and The Collection at
+Forsyth. 11 of 14 POIs carry an official URL for the photo panel; `why` came
+back at 8-10 words against the old 21.
+
+**Issues**:
+- *`gemini-3.1-pro` does not exist.* The pricing pages name it; the API does
+  not. Pro ships only as `gemini-3.1-pro-preview`, which then returned 503
+  "experiencing high demand" twice. Defaulted to `gemini-3.7-flash` (stable,
+  measured above) with `GEMINI_RESEARCH_MODEL` to switch. Owner picked Pro and
+  should know the default differs from his choice and why.
+- *A failed research result blocked its own retry.* The reuse guard checked
+  that `agent_research` existed, but a failure writes that key too — so the
+  first 404 wedged the step until the row was edited. It now requires an agent
+  that actually succeeded.
+- *`MAX_DISTANCE_M` 4 mi → 7 mi* to match "15-minute drive". This deliberately
+  loosens the ceiling that was killing Suwanee Town Center at 4.7 mi. What
+  holds it out now is `distanceWeight` decaying to 0.4 and a prompt rule
+  barring downtowns over 3 miles — and the second is a prompt, not code. Noted
+  in the constant: if a town centre reappears, tighten there rather than
+  re-argue the prompt.
+- *A test was asserting the ceiling, not the behaviour.* "4.7 mi scores under
+  0.6" broke when the ceiling moved; rewritten against `MAX_DISTANCE_M` so the
+  next change to the constant does not look like a regression.
+
+**Learnings**: a prompt is a budget, not a document. Every rule the code
+already enforces is spending the model's attention at zero benefit — the model
+cannot be wrong about them in a way that survives. Rules the code *cannot*
+enforce (what to look for, where to look first) are the only ones worth the
+words.
+
+**Next steps**: TTS against the finished cut. Also worth re-running Aberdeen's
+photos step now that research proposes 14 POIs instead of 5.
+
+---
+
 ## 2026-08-19 06:40 UTC — Three clips a place, on-screen labels, and an ffmpeg with no drawtext
 
 **Objective**: owner, three items on the 27-clip cut — cap repeats of one
