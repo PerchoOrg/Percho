@@ -16,6 +16,74 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-19 05:00 UTC — People belong in the footage; the blanket face rule did not
+
+**Objective**: owner — "looks you skipped all photos with people, i think it is
+a loss, we should add some back so it is more real".
+Branch `phase64/people-in-photos` (ws1).
+
+**The rule was a one-liner doing far too much.** `vision-tagger.ts` said
+"blurry / obstructed / **has faces** / has license plates → usable=false", and
+the scoring band reserved 0.9-1.0 for photos with "**no people**". Across the
+whole library that rejected **86 of 415 tagged photos (21%), 83 of them for
+people** — 44 for adults, 39 for minors.
+
+**Rewritten around who the person is to the frame, not whether one is in it:**
+- *Usable*: people incidental — background, distance, turned away, in motion,
+  small in a wide shot. Explicitly a plus, and the score band no longer
+  rewards emptiness.
+- *Not usable*: an identifiable adult who IS the subject — a portrait or posed
+  group filling the frame. A picture of a person, not of a place, and there is
+  no likeness release.
+- *Never usable*: an identifiable minor, no exceptions.
+
+**A second pass was needed on the minors wording.** The first draft said "a
+child's face recognisable at any size", and the tagger promptly rejected the
+pickleball photo for "the child on the far side of the net" — a player perhaps
+20 m away whose face is a few pixels. Rewritten so identifiability is the test,
+with an explicit instruction not to guess an age it cannot see. The reject
+survived on the near player instead, which is the correct call.
+
+**Issues** — two, and both are the more useful half of this entry:
+
+1. *The rule was not the main reason the film has no people.* After re-tagging
+   all 62 Aberdeen photos, only **4 describe a person at all**. The HOA's
+   professional shoot deliberately photographed empty facilities — empty pool,
+   empty courts, empty playground — and Places photos are mostly exteriors.
+   The source material, not the filter, is the ceiling. The HOA's
+   social-events page (ice cream social, casino night) is the one place with
+   real community life, and every image on it is a **275x183 thumbnail**; the
+   full-size files are not exposed.
+2. *Re-tagging everything was overreach, as the owner said mid-task* ("you only
+   need to re tag the ones rejected right?"). Correct: the rejected set is the
+   necessary scope, and re-tagging accepted photos only matters for ones that
+   have people and were scored down — 4 photos here. It also re-rolls the dice
+   on descriptions that were fine. The right operation is a targeted re-tag of
+   `usable=false AND reason mentions people`.
+
+**A junk photo surfaced, and its path is now filtered.** The 57 → 56 usable
+change was the tagger correctly catching `graphic-boat-launch.png` — a
+stylised county-theme *illustration* of a dock — that had been ingested as an
+Aberdeen amenity. Size filters cannot catch that; a decorative graphic is
+easily over 400px and 20 KB. `ingest-page-photos.ts` now skips URLs whose path
+contains `/themes/`, `/assets/`, `/graphics/`, `/icons/` and similar. Extraction
+still lists them, so the skip shows in the panel's reasons rather than
+vanishing. The stray POI was unlinked from Aberdeen.
+
+**Learnings**: "no people" is a tempting rule because it is trivially checkable
+and always safe, and it quietly deletes the thing that makes a place look
+lived in. The distinction that matters is subject vs incidental, plus a hard
+line on minors — three cases, not one boolean.
+
+**Next steps**:
+- Aberdeen's people problem needs source photos, not more prompt work. Options:
+  ask the HOA for full-size event photos, or accept Places photos of the
+  nearby parks and shops, which do contain incidental people.
+- The other ~78 people-rejected photos across other communities are still
+  tagged under the old rule; a targeted re-tag would recover some.
+
+---
+
 ## 2026-08-19 04:40 UTC — The parks the HOA recommends and the agent missed; a Source column
 
 **Objective**: owner — "i dont think you fully explored, this page … has To

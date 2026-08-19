@@ -56,6 +56,17 @@ describe('extractImageUrls', () => {
     expect(urls).toEqual(['https://www.aberdeencommunity.org/logo.png']);
   });
 
+  it('still lists site-furniture paths — the ingest, not the parser, drops them', () => {
+    // Kept separate on purpose: extraction stays dumb and complete, so the
+    // skip shows up in the panel's "why photos were skipped" list rather than
+    // vanishing silently.
+    const urls = extractImageUrls(
+      `<img src="/app/themes/forsyth-county/assets/img/graphics/graphic-boat-launch.png">`,
+      PAGE,
+    );
+    expect(urls).toHaveLength(1);
+  });
+
   it('survives a malformed src rather than throwing the page away', () => {
     const urls = extractImageUrls(`<img src="http://"><img src="/real.jpg">`, PAGE);
     expect(urls).toContain('https://www.aberdeencommunity.org/real.jpg');
