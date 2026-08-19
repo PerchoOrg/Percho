@@ -90,7 +90,48 @@ export type NearbyPoi = {
   }>;
 };
 
-async function requireEntity(s: PoiEntityScope, entityId: string): Promise<EntityAnchor> {
+/**
+ * Who is asking for this work.
+ *
+ * `'user'` — a signed-in agent or admin acting through the app. Checked
+ * against their session, and RLS applies to the anchor read. Every path a
+ * browser can reach uses this, and it is the default so that stays true by
+ * omission.
+ *
+ * `'service'` — a job with no session: a maintenance script under
+ * `scripts/admin/`, which CLAUDE.md §3 already privileges to use the service
+ * role. There is no user to authenticate, so the session check is skipped and
+ * only the entity's existence is verified.
+ *
+ * **This value must never come from request input.** It is passed literally at
+ * a small number of call sites; nothing parses it from a body, query or
+ * header, and nothing should start. A route that accepted `actor` from a
+ * client would turn every authenticated action into an open one.
+ */
+export type PoiActor = 'user' | 'service';
+
+async function requireEntity(
+  s: PoiEntityScope,
+  entityId: string,
+  actor: PoiActor = 'user',
+): Promise<EntityAnchor> {
+  // Service callers still have to prove the entity exists — they just have no
+  // session to check. Same query, privileged client.
+  if (actor === 'service') {
+    const admin = createServiceClient() as unknown as DynamicClient;
+    const { data: row, error } = (await admin
+      .from(s.entityTable)
+      .select(`id, ${s.labelColumn}, lat, lng`)
+      .eq('id', entityId)
+      .maybeSingle()) as {
+      data: (Record<string, string | null> & { lat: number | null; lng: number | null }) | null;
+      error: unknown;
+    };
+    if (error) throw error;
+    if (!row) throw new Error(s.anchorNotFound(entityId));
+    return { id: entityId, label: row[s.labelColumn] ?? null, lat: row.lat, lng: row.lng };
+  }
+
   const supabase = await createClient();
   const { data: userRes } = await supabase.auth.getUser();
   if (!userRes.user) throw new Error('not authenticated');
@@ -107,6 +148,22 @@ async function requireEntity(s: PoiEntityScope, entityId: string): Promise<Entit
   if (error) throw error;
   if (!row) throw new Error(s.anchorNotFound(entityId));
   return { id: entityId, label: row[s.labelColumn] ?? null, lat: row.lat, lng: row.lng };
+}
+
+/**
+ * Invalidate the entity's page, when there is a page to invalidate.
+ *
+ * `revalidatePath` only means something inside a request — from a script it
+ * throws "static generation store missing" and takes the whole run down with
+ * it. Refreshing a cache is not worth failing a photo fetch over, so a script
+ * context is a no-op rather than an error.
+ */
+function revalidateEntityPage(s: PoiEntityScope, entityId: string): void {
+  try {
+    revalidatePath(s.revalidatePathFor(entityId));
+  } catch {
+    // No request scope — an admin script. Nothing is serving a cached page.
+  }
 }
 
 // ─── discovery ──────────────────────────────────────────────────────────────
@@ -209,7 +266,7 @@ export async function discoverPois(
     buckets[bucket] = (buckets[bucket] ?? 0) + 1;
   }
 
-  revalidatePath(s.revalidatePathFor(entityId));
+  revalidateEntityPage(s, entityId);
   return { discovered, reused, buckets };
 }
 
@@ -219,9 +276,9 @@ export async function fetchPhotosForPoi(
   s: PoiEntityScope,
   entityId: string,
   poiId: string,
-  opts: { max?: number; maxHeightPx?: number } = {},
+  opts: { max?: number; maxHeightPx?: number; actor?: PoiActor } = {},
 ): Promise<PhotoFetchResult> {
-  await requireEntity(s, entityId);
+  await requireEntity(s, entityId, opts.actor);
   const admin = createServiceClient() as unknown as DynamicClient;
 
   const { data: poi, error: poiErr } = (await admin
@@ -287,7 +344,7 @@ export async function fetchPhotosForPoi(
     };
     for (const row of storedRows ?? []) await linkPhoto(row.id);
     reused += (storedRows ?? []).length;
-    revalidatePath(s.revalidatePathFor(entityId));
+    revalidateEntityPage(s, entityId);
     return { fetched, reused, skipped, ...(skippedReasons.length ? { skippedReasons } : {}) };
   }
 
@@ -382,7 +439,7 @@ export async function fetchPhotosForPoi(
     await linkPhoto(poiPhotoId, noteSkip);
   }
 
-  revalidatePath(s.revalidatePathFor(entityId));
+  revalidateEntityPage(s, entityId);
   return { fetched, reused, skipped, ...(skippedReasons.length ? { skippedReasons } : {}) };
 }
 
@@ -404,7 +461,7 @@ export async function setPoiStatus(
     .eq('poi_id', poiId);
   if (error) throw error;
 
-  revalidatePath(s.revalidatePathFor(entityId));
+  revalidateEntityPage(s, entityId);
 }
 
 export async function setPhotoStatus(
@@ -423,7 +480,7 @@ export async function setPhotoStatus(
     .eq('poi_photo_id', poiPhotoId);
   if (error) throw error;
 
-  revalidatePath(s.revalidatePathFor(entityId));
+  revalidateEntityPage(s, entityId);
 
   // Fire-and-forget vision tagging on approve.
   if (status === 'approved') {

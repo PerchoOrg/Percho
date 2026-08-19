@@ -16,6 +16,73 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-19 08:15 UTC — The whole tour runs from one command, and a film is a dozen places
+
+**Objective**: owner — "yes you should be able to do this yourself", approving
+the refactor that lets a script run the photos step. Then the full re-run on
+the rebuilt prompt.
+Branch `phase68/admin-photo-fetch` (ws1).
+
+**`PoiActor`.** `fetchPhotosForPoi` called `requireEntity` purely as a gate —
+the return value was discarded and everything after it already used the
+service client. So the seam was clean: an explicit `'user' | 'service'`
+parameter, defaulting to `'user'`, where `'service'` skips the session check
+and verifies only that the entity exists. Documented in one place with the
+rule that matters: **the value must never come from request input.**
+
+That rule was immediately tested, and typecheck won. `STEP_HANDLERS` in the
+step route has a uniform `(sb, run, photoIds?, engine?, approve?)` signature —
+so registering `runPhotos` bare would have passed `body.photoIds`, straight
+from the request, into `actor`. tsc rejected the assignment. The registry now
+holds `photos: (sb, run) => runPhotos(sb, run)`, and the comment says why.
+
+**`scripts/admin/run-community-tour.ts`** — `pnpm tour <slug> [--steps …]
+[--run …]`. Two things had to be solved beyond auth:
+- `revalidatePath` throws "static generation store missing" outside a request
+  and took the whole run down. Refreshing a page cache is not worth failing a
+  photo fetch over; it is a no-op in a script now.
+- Enhancement is asynchronous. `runPhotos` queues it and returns, so the shot
+  list it computes cannot see the results — the first unattended run fetched
+  30 photos and produced **zero shots**, because a fresh Places photo is
+  1024-1300px, needs 2.4-2.8x for the 9:16 canvas, and is only rescued once
+  its enhanced file is approved. The script now waits for the queue to drain,
+  approves what the worker produced (the same thing the photo table does when
+  an admin opens it), and recomputes.
+
+**A film is a dozen places, not every place we know.** Nothing capped POI
+*count* — only clips per POI — so 17 resolved plus 5 amenities gave 44 clips
+and 96s against a 90s ceiling. `SURROUNDING_POI_BUDGET = 10`, and the choice
+of which ten went through two versions:
+- *Nearest-first* — tried, and wrong. It kept a **recycling centre at 0.7 mi**
+  over three parks and the high school. Near is not the same as worth filming.
+- *Round-robin across buckets, best first within each* — coverage before
+  depth, which is the owner's stated order. Ranked on the score `resolve`
+  already computes.
+
+**Also fixed**: `community_pois.distance_m` was never written by the photos
+step, only by resolve's own record, so seven on-screen labels came out as a
+bare name and read as though the place were inside the community.
+
+**Result** — full run from research to assembly, one command each:
+research 14 POIs → resolve 14 kept / 2 dropped at 7.2 and 7.3 mi → 29 clips,
+83.5s, 10 buckets, every clip labelled. The updated prompt dropped the
+recycling centre on its own and found a restaurant, a gym and a golf club
+instead. Assembly `ready` (`878f8d94cc663409d4bbbf2df41685ba`); the worker log
+shows 19 `label_NN.png` overlays in the filter graph, so the labels are burned
+in rather than merely present in the data.
+
+**Learnings**: the type system is a real part of an authorisation boundary. A
+privilege flag added to a function that a generic dispatcher calls positionally
+is one refactor away from being client-controlled, and the only reason this
+one was not is that the signatures happened to disagree. Worth preferring an
+explicit adapter at the dispatch site over trusting that nobody will widen the
+handler type later.
+
+**Next steps**: TTS against this cut — the structure it has to match is now
+stable.
+
+---
+
 ## 2026-08-19 07:30 UTC — The research prompt, rebuilt: 843 words → 466, 5 POIs → 14
 
 **Objective**: owner — "843 words make no sense… make a questionnaire for me,

@@ -106,8 +106,9 @@ RULES
   different kinds of place matters more than depth on any one.
 - Max 2 per bucket. With that cap, 12 POIs means at least six kinds of place.
 - No places of worship, of any religion. (Fair-housing rule, not taste.)
-- Skip what looks identical in every US suburb: urgent care, dentists, chain
-  pharmacies, self-storage, insurance offices.
+- Skip what looks identical in every US suburb, or has nothing to look at:
+  urgent care, dentists, chain pharmacies, self-storage, insurance offices,
+  recycling and waste sites, car washes, bank branches.
 - Skip the community's own gate, pool, clubhouse and courts — those come from
   the community's website through a separate path.
 - Names are resolved against Google Places, so spell each one exactly as Google

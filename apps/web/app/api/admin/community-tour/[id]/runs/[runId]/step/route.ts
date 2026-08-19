@@ -50,7 +50,12 @@ const STEP_HANDLERS: Record<
 > = {
   research: runResearch,
   resolve: runResolve,
-  photos: runPhotos,
+  // Wrapped, not passed directly. `runPhotos`'s third parameter is `actor`,
+  // and this registry's third argument is `body.photoIds` — straight from the
+  // request. Handing the function over bare would let a client choose to run
+  // the step as 'service' and skip the session check. Typecheck caught it;
+  // this adapter is what keeps it caught.
+  photos: (sb, run) => runPhotos(sb, run),
   tag: runTag,
   generate: runGenerate,
   'regenerate-all': runRegenerateAll,
