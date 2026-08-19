@@ -1655,56 +1655,97 @@ def _label_font() -> str | None:
     return next((f for f in LABEL_FONTS if os.path.exists(f)), None)
 
 
-def _escape_drawtext(s: str) -> str:
-    """Escape a label for a drawtext `text=` value (same rules as generate.py)."""
-    return (
-        s.replace("\\", "\\\\")
-        .replace(":", r"\:")
-        .replace("'", r"\'")
-        .replace("%", r"\%")
+def _render_label_png(text: str, w: int, h: int, font_path: str, dest: Path) -> None:
+    """One transparent full-frame PNG carrying a place label.
+
+    Pillow rather than ffmpeg's drawtext: the ffmpeg on this Mac mini is built
+    without libfreetype, so `drawtext` does not exist as a filter at all
+    (`ffmpeg -filters` lists none). That is the same reason the repo already
+    renders listing captions to PNG and composites them — see
+    scripts/caption-render. This is the small, dependency-free version of that
+    for a one-line label.
+    """
+    from PIL import Image, ImageDraw, ImageFont
+
+    pad_x = round(w * 0.055)
+    baseline_y = h - round(h * 0.14)
+    # The scrim has to end before the right edge or the name looks cropped.
+    max_text_w = w - pad_x * 2
+
+    img = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(img)
+
+    # Shrink to fit rather than truncate. "Publix Super Market at The Village
+    # Shoppes at Windermere" is 54 characters, and a clipped place name is
+    # worse than a smaller one — the label exists to answer "where is this".
+    size = max(28, round(w * 0.038))
+    font = ImageFont.truetype(font_path, size)
+    while size > 18 and draw.textlength(text, font=font) > max_text_w:
+        size -= 2
+        font = ImageFont.truetype(font_path, size)
+
+    # A scrim behind the text, sized to it: the label has to stay legible over
+    # a bright pool or a white facade, and a full-width bar would read as
+    # chrome on an otherwise clean frame.
+    box = draw.textbbox((pad_x, baseline_y), text, font=font)
+    margin = round(size * 0.45)
+    draw.rounded_rectangle(
+        (box[0] - margin, box[1] - margin * 0.6, box[2] + margin, box[3] + margin * 0.6),
+        radius=round(size * 0.35),
+        fill=(0, 0, 0, 130),
     )
+    draw.text((pad_x, baseline_y), text, font=font, fill=(255, 255, 255, 240))
+    img.save(dest)
 
 
-def _label_drawtext(
+def _label_overlay(
     labels: list[str],
     durs: list[float],
     offsets: list[float],
     xfade: float,
     scale_to: list[int],
-) -> str:
-    """A chained drawtext per clip, each enabled only while its clip is on screen.
+    workdir: Path,
+    first_input_index: int,
+    prev: str,
+) -> tuple[list[str], list[str], str]:
+    """PNG inputs, overlay filters, and the label the chain now ends on.
 
+    Each label is composited only while its own clip is on screen:
     `offsets[i]` is where the transition from clip i to clip i+1 begins on the
     finished timeline, so clip i owns the span from the end of its incoming
-    transition to the start of its outgoing one. Labelling only that span keeps
-    a place name from bleeding across a crossfade onto the next place.
+    transition to the start of its outgoing one. Bounding it that way stops a
+    place name bleeding across a crossfade onto the next place.
     """
     font = _label_font()
-    if not font or not any(labels):
-        return ""
+    if not font or not any(l.strip() for l in labels):
+        return [], [], prev
 
     w, h = scale_to[0], scale_to[1]
-    size = max(28, round(w * 0.038))
-    pad = round(w * 0.055)
-    # Sits above the lower third, clear of a phone's home indicator.
-    y = h - round(h * 0.14)
+    total = crossfade_total(durs, xfade)
+    inputs: list[str] = []
+    steps: list[str] = []
+    idx = first_input_index
 
-    parts: list[str] = []
     for i, raw in enumerate(labels):
         text = raw.strip()
         if not text:
             continue
         start = 0.0 if i == 0 else offsets[i - 1] + xfade
-        end = offsets[i] if i < len(offsets) else crossfade_total(durs, xfade)
+        end = offsets[i] if i < len(offsets) else total
         if end - start < 0.5:  # too short to read; skip rather than flash
             continue
-        window = f"between(t\\,{start:.3f}\\,{end:.3f})"
-        parts.append(
-            f"drawtext=fontfile='{font}':text='{_escape_drawtext(text)}'"
-            f":fontcolor=white:fontsize={size}:x={pad}:y={y}"
-            f":shadowcolor=black@0.8:shadowx=2:shadowy=2:enable='{window}'"
+        png = workdir / f"label_{i:02d}.png"
+        _render_label_png(text, w, h, font, png)
+        inputs.extend(["-i", str(png)])
+        out = f"[lo{i}]"
+        steps.append(f"[{idx}:v]format=rgba[lb{i}]")
+        steps.append(
+            f"{prev}[lb{i}]overlay=0:0:enable='between(t\\,{start:.3f}\\,{end:.3f})'{out}"
         )
-    return ",".join(parts)
+        prev = out
+        idx += 1
+
+    return inputs, steps, prev
 
 
 def process_assembly(row: dict[str, Any]) -> None:
@@ -1840,15 +1881,16 @@ def process_assembly(row: dict[str, Any]) -> None:
         # This is the community tour only. The listing tour still carries no
         # on-screen text at all (2026-08-01) — there the subject is one house
         # for the whole film, so a caption band interrupts rather than informs.
-        label_filters = _label_drawtext(clip_labels, durs, offsets, xfade, scale_to)
-        if label_filters:
-            filters.append(f"{prev}{label_filters}[labeled]")
-            prev = "[labeled]"
+        label_inputs, label_steps, prev = _label_overlay(
+            clip_labels, durs, offsets, xfade, scale_to, workdir, len(clip_paths), prev
+        )
+        filters.extend(label_steps)
 
         vf = ";".join(filters) + f";{prev}format=yuv420p"
         cmd = [
             "ffmpeg", "-y",
             *inputs,
+            *label_inputs,
             "-filter_complex", vf,
             "-c:v", "libx264", "-preset", "medium", "-crf", "20",
             "-movflags", "+faststart",
