@@ -17,6 +17,15 @@ import { computeFinalShots } from './shots';
 const SURROUNDING_POI_BUDGET = 10;
 
 /**
+ * Slots reserved for schools, before every other kind of place competes.
+ *
+ * Three, for elementary / middle / high. In this market schools decide more
+ * purchases than the rest of the list put together, and a buyer notices a
+ * missing tier immediately.
+ */
+const SCHOOL_SLOTS = 3;
+
+/**
  * @param actor 'user' (default) checks the caller's session, which is what the
  *   admin route needs. 'service' skips it for a script with no session — the
  *   whole step is otherwise service-role already. Must never be taken from
@@ -231,11 +240,21 @@ export async function runPhotos(sb: TourDb, run: RunRow, actor: PoiActor = 'user
         (scoreByPoi.get(byBucket.get(b)![0]!) ?? 0) - (scoreByPoi.get(byBucket.get(a)![0]!) ?? 0),
     );
     const kept: string[] = [];
+    // Schools take their slots before the round-robin starts. A pure
+    // round-robin gives every bucket one before any bucket gets two, so with
+    // ten buckets and ten slots the film would carry exactly one school —
+    // and elementary/middle/high is the thing this buyer pool decides on
+    // (owner 2026-08-19: "school is very important one").
+    const schools = byBucket.get('schools') ?? [];
+    kept.push(...schools.slice(0, SCHOOL_SLOTS));
+    byBucket.set('schools', schools.slice(SCHOOL_SLOTS));
+
     for (let round = 0; kept.length < SURROUNDING_POI_BUDGET; round++) {
       let placed = false;
       for (const b of bucketOrder) {
         const id = byBucket.get(b)?.[round];
         if (!id) continue;
+        if (kept.includes(id)) continue;
         kept.push(id);
         placed = true;
         if (kept.length >= SURROUNDING_POI_BUDGET) break;
