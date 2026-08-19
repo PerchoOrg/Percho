@@ -16,6 +16,74 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-19 06:40 UTC — Three clips a place, on-screen labels, and an ffmpeg with no drawtext
+
+**Objective**: owner, three items on the 27-clip cut — cap repeats of one
+place at 3; put location names and distances on screen; and a judgement call
+on how to widen POI category coverage.
+Branch `phase66/caps-labels-coverage` (ws1).
+
+**Cap.** Per-POI ceiling is now 3, whatever the source mix, with Places photos
+still contributing at most 2 and hand-picked ones ranking first. "都采纳 不受
+限制" (2026-08-18) was correct when a POI's clips were scattered; once each POI
+plays as one block, six pool photos are fifteen unbroken seconds of pool.
+Aberdeen: 27 clips / 74.5s → **24 clips / 68s**, max 3 per place.
+
+**Labels.** Every clip carries `label` — the place name, plus distance when it
+is outside the community ("Sharon Elementary School · 0.9 mi"); amenities get
+no distance because a number on the clubhouse is noise. Text is computed
+web-side in `clip-label.ts` so it is unit-testable; the worker only places it
+on the timeline, enabled from the end of a clip's incoming crossfade to the
+start of its outgoing one so a name never bleeds onto the next place.
+
+This is the community tour only. The listing tour still carries no on-screen
+text (owner 2026-08-01: a caption band is "a wall between the buyer and the
+house"). That reasoning holds where the subject is one house for the whole
+film; a community tour changes subject every few seconds, so the label answers
+a question instead of interrupting one. Noted in `clip-label.ts` so the two
+decisions do not look like a contradiction later.
+
+**Issues** — three, in order of how much time they cost:
+
+1. *The worker was running code from 2026-08-17.* It is a long-lived process;
+   editing `worker.py` changes nothing until it restarts. The first labelled
+   assembly came back `ready` with all 24 `label` fields populated and **no
+   labels on screen**, which is exactly the kind of thing that gets reported as
+   done. Caught by comparing the process start time against the file mtime.
+   Restarting also revealed the worker runs from `~/Workspace/Percho`, so the
+   change has to be merged to main, not just committed on a branch.
+2. *This ffmpeg has no `drawtext`.* Built without libfreetype — `ffmpeg
+   -filters` lists none. I had actually run that grep earlier, got `0`, and
+   read it as a grep quirk; the assembly then failed with a truncated
+   `CalledProcessError` and only reproducing the filter locally made it plain.
+   This is also why `ken-burns/generate.py`'s caption filter has been silently
+   returning "" on this host. Labels are now transparent full-frame PNGs from
+   Pillow composited with `overlay` — the small version of what
+   `scripts/caption-render` already does for listing captions, and it gives a
+   rounded scrim sized to the text rather than a full-width bar.
+3. *Long names were being cropped.* "Publix Super Market at The Village
+   Shoppes at Windermere · 1.6 mi" is 65 characters. It now shrinks to fit
+   (down to 18px) instead of running off the frame.
+
+**Result**: 24 clips, 68s, every clip labelled. Assembly `ready`
+(`add50faa46af89e497b80a27969ad7c3`), and the worker log confirms 24
+`label_NN.png` overlays in the ffmpeg graph rather than the field merely being
+present in the data.
+
+**Learnings**:
+- A long-running worker makes "the code is merged" and "the behaviour changed"
+  two separate events. Worth checking `ps -o lstart` against the file mtime
+  before believing any render-side change — the failure mode is a green result
+  with the old behaviour.
+- A `grep -c` returning 0 is a finding, not a glitch. Reading past it cost the
+  whole drawtext detour.
+
+**Next steps**: the coverage question (nearby search vs prompt) is answered in
+the reply, not implemented — it needs the owner's pick before spending Places
+calls. Then TTS against this cut.
+
+---
+
 ## 2026-08-19 06:05 UTC — No places of worship in any tour; POI blocks stay whole
 
 **Objective**: owner — "remove this poi: North America Shirdi Sai Temple Of
