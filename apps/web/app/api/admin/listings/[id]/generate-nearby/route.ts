@@ -34,7 +34,8 @@ const KNOWN_BUCKETS = new Set([
   'kids',
   'asian_community',
   'daily_errands',
-  'faith',
+  // 'faith' deliberately absent — places of worship are excluded from every
+  // generated tour (fair-housing policy, owner 2026-08-19; religious-content.ts).
   'work_hubs',
   'healthcare',
   'pets',

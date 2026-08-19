@@ -449,56 +449,93 @@ function orderCommunityAct(units: Unit[]): Unit[] {
     .flat();
 }
 
-/** The original ordering: opener, the day in order, closer — then spread. */
+/**
+ * Opener, the day in order, closer — one POI at a time, then spread.
+ *
+ * Grouped by POI for the same reason the community act is (owner 2026-08-19,
+ * on narration needing something contiguous to sit over). Removing the temple
+ * from Aberdeen changed the bucket mix enough that the old per-clip spread
+ * started splitting Sharon Elementary and Patel Brothers across two positions
+ * each — the same defect, one act over.
+ */
 function orderSurroundingsAct(units: Unit[]): Unit[] {
   if (units.length === 0) return [];
-  const byTime = [...units].sort(
-    (a, b) => a.time - b.time || b.emotion - a.emotion || unitId(a).localeCompare(unitId(b)),
+
+  const groups = new Map<string, Unit[]>();
+  for (const u of units) {
+    const poiId = u.entries[0]!.meta.poi_id;
+    const arr = groups.get(poiId) ?? [];
+    arr.push(u);
+    groups.set(poiId, arr);
+  }
+
+  // Inside one POI: whichever frame introduces it leads. The Curator's single
+  // 'opener' outranks a plain establishing shot — otherwise a POI that holds
+  // the tour's opener can bury it behind its own second photo.
+  const withinRank = (u: Unit): number =>
+    u.role === 'opener' ? 0 : u.role === 'establishing' ? 1 : 2;
+  const blocks = [...groups.values()].map((arr) =>
+    [...arr].sort(
+      (a, b) =>
+        withinRank(a) - withinRank(b) ||
+        a.time - b.time ||
+        b.emotion - a.emotion ||
+        unitId(a).localeCompare(unitId(b)),
+    ),
   );
 
-  const pickRole = (role: 'opener' | 'closer'): Unit | undefined => {
-    const held = byTime.filter((u) => u.role === role);
-    if (held.length === 0) return undefined;
-    return [...held].sort((a, b) => b.emotion - a.emotion || unitId(a).localeCompare(unitId(b)))[0];
-  };
+  const holds = (block: Unit[], role: 'opener' | 'closer') => block.some((u) => u.role === role);
+  const earliest = (block: Unit[]) => Math.min(...block.map((u) => u.time));
+  const bestEmotion = (block: Unit[]) => Math.max(...block.map((u) => u.emotion));
 
-  const opener = pickRole('opener');
-  const closer = pickRole('closer') === opener ? undefined : pickRole('closer');
-  const middle = byTime.filter((u) => u !== opener && u !== closer);
-  const ordered = [...(opener ? [opener] : []), ...middle, ...(closer ? [closer] : [])];
-  return spreadBuckets(ordered);
+  const openerBlock = blocks
+    .filter((b) => holds(b, 'opener'))
+    .sort((a, b) => bestEmotion(b) - bestEmotion(a))[0];
+  const closerBlock = blocks
+    .filter((b) => holds(b, 'closer') && b !== openerBlock)
+    .sort((a, b) => bestEmotion(b) - bestEmotion(a))[0];
+  const middle = blocks
+    .filter((b) => b !== openerBlock && b !== closerBlock)
+    .sort(
+      (a, b) =>
+        earliest(a) - earliest(b) ||
+        bestEmotion(b) - bestEmotion(a) ||
+        unitId(a[0]!).localeCompare(unitId(b[0]!)),
+    );
+
+  const ordered = [
+    ...(openerBlock ? [openerBlock] : []),
+    ...middle,
+    ...(closerBlock ? [closerBlock] : []),
+  ];
+  return spreadBuckets(ordered).flat();
 }
 
 /**
- * No bucket may occupy more than 2 consecutive CLIPS. When it would, pull the
- * first later unit with a different bucket forward. Units move whole — pulling
- * one photo out of a wide→close pair is worse than a third park shot in a row.
- * Opener and closer are pinned and never move.
+ * No two adjacent POI blocks may share a bucket. When they would, pull the
+ * first later block of a different bucket forward.
+ *
+ * This used to work on single units and keep a bucket to two consecutive
+ * CLIPS. That rule cut through a POI: with three tennis clips it would shove a
+ * park between the second and third, and the tour visited the same place
+ * twice. A block is one POI's whole run and moves entire, so the anti-monotony
+ * intent survives at the level a viewer actually reads — two different places
+ * of the same kind back to back — without splitting either of them.
+ *
+ * The opener and closer blocks are pinned and never move.
  */
-function spreadBuckets(ordered: Unit[]): Unit[] {
+function spreadBuckets(ordered: Unit[][]): Unit[][] {
   const out = [...ordered];
   const lastIndex = out.length - 1;
-  let run = 0;
-  let runBucket: string | null = null;
 
-  for (let i = 0; i < out.length; i++) {
-    const u = out[i]!;
-    const size = u.entries.length;
-    if (u.bucket === runBucket) {
-      if (run + size > 2 && i > 0 && i < lastIndex) {
-        const j = out.findIndex((v, k) => k > i && v.bucket !== u.bucket && k < lastIndex);
-        if (j > i) {
-          const [moved] = out.splice(j, 1);
-          out.splice(i, 0, moved!);
-          // Re-read this slot: the unit now sitting here is the moved one.
-          i--;
-          continue;
-        }
-      }
-      run += size;
-    } else {
-      runBucket = u.bucket;
-      run = size;
+  for (let i = 1; i < out.length; i++) {
+    const bucket = out[i]![0]!.bucket;
+    if (bucket !== out[i - 1]![0]!.bucket) continue;
+    if (i >= lastIndex) continue; // the closer block stays put
+    const j = out.findIndex((b, k) => k > i && b[0]!.bucket !== bucket && k < lastIndex);
+    if (j > i) {
+      const [moved] = out.splice(j, 1);
+      out.splice(i, 0, moved!);
     }
   }
   return out;

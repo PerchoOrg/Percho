@@ -17,6 +17,7 @@
 
 import { type PlaceResult, haversineMeters, searchNearby, searchText } from './google-places';
 import { PLACES_TYPE_TO_BUCKET } from './google-places';
+import { RELIGIOUS_DROP_REASON, isReligiousPlace } from './religious-content';
 
 // ─── step 3: resolve + merge ────────────────────────────────────────────────
 
@@ -251,6 +252,29 @@ export async function resolveCandidates(
       });
       continue;
     }
+    // Places of worship never reach a film. Checked here, after resolution,
+    // because Google's type is the reliable signal and the agent only supplies
+    // a name — NASSTA arrived as a name the agent proposed (owner 2026-08-19).
+    if (
+      isReligiousPlace({
+        name: place.displayName?.text ?? first.name,
+        bucket: first.bucket,
+        primaryType: place.primaryType ?? null,
+        types: place.types ?? null,
+      })
+    ) {
+      dropped.push({
+        name: first.name,
+        bucket: first.bucket,
+        reason: RELIGIOUS_DROP_REASON,
+        agent: group.some((c) => c.agent === 'gemini_a')
+          ? group.some((c) => c.agent === 'gemini_b')
+            ? 'both'
+            : 'gemini_a'
+          : 'gemini_b',
+      });
+      continue;
+    }
     if (place.businessStatus && place.businessStatus !== 'OPERATIONAL') {
       dropped.push({
         name: first.name,
@@ -349,6 +373,16 @@ export async function resolveCandidates(
           !p.location ||
           haversineMeters(center, { lat: p.location.latitude, lng: p.location.longitude }) <=
             MAX_DISTANCE_M,
+      )
+      // A nearby search ranks by rating and knows nothing of the policy; a
+      // well-reviewed church would walk straight in.
+      .filter(
+        (p) =>
+          !isReligiousPlace({
+            name: p.displayName?.text ?? null,
+            primaryType: p.primaryType ?? null,
+            types: p.types ?? null,
+          }),
       )
       .sort(
         (a, b) =>

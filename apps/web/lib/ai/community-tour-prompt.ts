@@ -108,6 +108,11 @@ WHAT QUALIFIES
   twenty minutes away. If nothing does, say so.
 
 WHAT TO OMIT
+- Places of worship, of any religion — churches, mosques, synagogues, temples,
+  gurdwaras — and religious schools or centres. Not a matter of taste: religion
+  is a protected class under the Fair Housing Act, and a film that presents a
+  neighbourhood's religious character is how a steering complaint starts. Do
+  not list one even if it is the most photographed building nearby.
 - Regional destinations: a downtown, town square, amphitheatre, stadium or
   festival street that serves a whole city. Include one ONLY if it is under
   3 miles and residents here treat it as their own.
@@ -121,7 +126,7 @@ OUTPUT — JSON only, no fences, no preamble
   "narrative_angle": "one specific, honest sentence on what defines this place",
   "pois": [{
     "name": "exact name as it appears on Google Maps",
-    "bucket": "schools|dining|nightlife|shopping|outdoor|fitness|kids|asian_community|daily_errands|faith|work_hubs|healthcare|pets|transit|civic|waterfront|other",
+    "bucket": "schools|dining|nightlife|shopping|outdoor|fitness|kids|asian_community|daily_errands|work_hubs|healthcare|pets|transit|civic|waterfront|other",
     "why": "what a buyer learns from seeing this",
     "shot_note": "what specifically to film here",
     "approx_miles": 1.4,

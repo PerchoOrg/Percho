@@ -41,7 +41,12 @@ export const BUCKET_PLACES_TYPES: Record<string, readonly string[]> = {
   kids: ['amusement_park', 'aquarium', 'zoo', 'library'],
   asian_community: [], // Text Search follow-up
   daily_errands: ['supermarket', 'grocery_store', 'pharmacy'],
-  faith: ['church', 'mosque', 'synagogue', 'hindu_temple'],
+  // Empty on purpose, not "not yet wired up". Places of worship are excluded
+  // from every generated tour (fair-housing policy, owner 2026-08-19 — see
+  // religious-content.ts). Leaving the types here would have the discover
+  // fanout keep returning them for the resolve firewall to throw away, one
+  // paid Places call at a time.
+  faith: [],
   work_hubs: [], // Text Search follow-up (WeWork / Regus / office parks)
   healthcare: ['hospital', 'doctor'],
   pets: ['veterinary_care', 'pet_store'],
