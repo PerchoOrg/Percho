@@ -924,7 +924,9 @@ function ReframedCell({
         <span className="text-[10px] text-emerald-700">reframed</span>
       )}
       {typeof meta?.crop_loss_before === 'number' && (
-        <div className="text-[10px] text-ink2">saved {Math.round(meta.crop_loss_before * 100)}%</div>
+        <div className="text-[10px] text-ink2">
+          saved {Math.round(meta.crop_loss_before * 100)}%
+        </div>
       )}
     </div>
   );
