@@ -56,9 +56,16 @@ export const PANORAMA_MIN_ASPECT = 2.0;
 export const DURATION_BASE = 3.0;
 export const DURATION_MIN = 2.0;
 export const DURATION_MAX = 4.5;
-/** Finished-film length the tour aims for (spec §9 Phase 3). */
+/**
+ * Finished-film length the tour aims for.
+ *
+ * Was [45, 50] (spec §9 Phase 3), when a tour was neighbourhood POIs only.
+ * Owner 2026-08-19 raised the ceiling to 90s: a community film now carries two
+ * acts — the community's own amenities and then the surroundings — and 50
+ * seconds cannot hold both without cutting one to a token appearance.
+ */
 export const TOUR_TARGET_MIN_S = 45;
-export const TOUR_TARGET_MAX_S = 50;
+export const TOUR_TARGET_MAX_S = 90;
 /** Durations move in half seconds; anything finer is invisible on screen. */
 const DURATION_STEP = 0.5;
 /** Short side at/above which resolution stops shortening a clip. */
@@ -364,26 +371,82 @@ function orderUnits(units: Unit[]): Unit[] {
   return [...orderCommunityAct(community), ...orderSurroundingsAct(surroundings)];
 }
 
-/** Widest, most inviting frame first; the rest by time of day. */
+/**
+ * Amenity order for the community act: the walk a visitor would actually take.
+ *
+ * Lower sorts earlier. Matched against the POI name, so it survives the
+ * naming convention the ingest uses ("Aberdeen Pool", "Aberdeen Tennis
+ * Courts"). Anything unrecognised lands in the middle rather than at either
+ * end — an unknown amenity is not automatically the finale.
+ */
+const AMENITY_SEQUENCE: Array<[RegExp, number]> = [
+  [/\b(entrance|gate|sign|grounds|street|entry)\b/i, 0],
+  [/\b(clubhouse|club house|amenity cent(er|re)|lodge)\b/i, 1],
+  [/\b(pool|swim|aquatic|splash)\b/i, 2],
+  [/\b(tennis|pickleball|court|basketball)\b/i, 3],
+  [/\b(playground|park|trail|green|lake|pond)\b/i, 4],
+  [/\b(gym|fitness|clubroom)\b/i, 5],
+];
+const AMENITY_SEQUENCE_DEFAULT = 3.5;
+
+export function amenityRank(poiName: string): number {
+  for (const [pattern, rank] of AMENITY_SEQUENCE) {
+    if (pattern.test(poiName)) return rank;
+  }
+  return AMENITY_SEQUENCE_DEFAULT;
+}
+
+/**
+ * One amenity at a time, in walk-through order.
+ *
+ * Owner 2026-08-19: "why do we start with pool, then go back to pool again and
+ * again". Sorting the act by time of day interleaved five pool clips with the
+ * clubhouse and the courts, which reads as a slideshow rather than a tour —
+ * and makes narration impossible to write, because a line about the pool has
+ * no contiguous stretch of pool to sit over. Every clip of one POI now plays
+ * together, and the POIs run entrance → clubhouse → pool → courts → green
+ * space, the order someone shown around would see them in.
+ */
 function orderCommunityAct(units: Unit[]): Unit[] {
   if (units.length === 0) return [];
-  // The Curator labels at most one photo per batch 'opener' and picks it on
-  // photographic merit, so it rarely lands on an amenity. A wide
-  // 'establishing' shot opens just as well — that is the Curator's own
-  // definition of establishing ("introduces a POI at wide framing").
+
+  const groups = new Map<string, Unit[]>();
+  for (const u of units) {
+    const poiId = u.entries[0]!.meta.poi_id;
+    const arr = groups.get(poiId) ?? [];
+    arr.push(u);
+    groups.set(poiId, arr);
+  }
+
+  // Inside one amenity: the widest, most inviting frame introduces it, then
+  // the rest by time of day. That is the Curator's own definition of
+  // 'establishing' — "introduces a POI at wide framing".
   const leadRank = (u: Unit): number => {
     if (u.role === 'opener') return 0;
     if (u.role === 'establishing') return 1;
     return 2;
   };
-  const [lead, ...rest] = [...units].sort(
-    (a, b) =>
-      leadRank(a) - leadRank(b) || b.emotion - a.emotion || unitId(a).localeCompare(unitId(b)),
-  );
-  const body = rest.sort(
-    (a, b) => a.time - b.time || b.emotion - a.emotion || unitId(a).localeCompare(unitId(b)),
-  );
-  return lead ? [lead, ...body] : body;
+  const orderWithin = (arr: Unit[]): Unit[] => {
+    const [lead, ...rest] = [...arr].sort(
+      (a, b) =>
+        leadRank(a) - leadRank(b) || b.emotion - a.emotion || unitId(a).localeCompare(unitId(b)),
+    );
+    const body = rest.sort(
+      (a, b) => a.time - b.time || b.emotion - a.emotion || unitId(a).localeCompare(unitId(b)),
+    );
+    return lead ? [lead, ...body] : body;
+  };
+
+  return [...groups.values()]
+    .map(orderWithin)
+    .sort((a, b) => {
+      const ra = amenityRank(a[0]!.entries[0]!.meta.poi_name);
+      const rb = amenityRank(b[0]!.entries[0]!.meta.poi_name);
+      // Emotion breaks a tie between two unrecognised amenities so the order
+      // stays deterministic without being arbitrary.
+      return ra - rb || b[0]!.emotion - a[0]!.emotion || unitId(a[0]!).localeCompare(unitId(b[0]!));
+    })
+    .flat();
 }
 
 /** The original ordering: opener, the day in order, closer — then spread. */
