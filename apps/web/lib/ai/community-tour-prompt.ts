@@ -82,7 +82,9 @@ nearby beats any search, and it is where the good photos live. Note the URL.
 
 STEP 2 — answer these, by name, for someone living at this address:
   Where do they buy groceries? Eat on a weeknight? Take coffee?
-  Which schools do the children go to?
+  Which ELEMENTARY, which MIDDLE, and which HIGH school do the children go to?
+    Name all three — schools decide more purchases here than anything else on
+    this list, and a missing tier is the gap a buyer notices first.
   Where do they walk, run, or take a dog?
   Where do kids go on a Saturday? Where do adults work out?
   What errands — pharmacy, hardware, post — and where?
@@ -104,7 +106,8 @@ RULES
 - 12 to 15 POIs. Returning fewer is a failure — if you cannot reach 12, say why
   in buckets_deliberately_skipped rather than stopping quietly. Coverage of
   different kinds of place matters more than depth on any one.
-- Max 2 per bucket. With that cap, 12 POIs means at least six kinds of place.
+- Max 2 per bucket, except schools, which may have 3 so every tier fits. With
+  that cap, 12 POIs means at least six kinds of place.
 - No places of worship, of any religion. (Fair-housing rule, not taste.)
 - Skip what looks identical in every US suburb, or has nothing to look at:
   urgent care, dentists, chain pharmacies, self-storage, insurance offices,

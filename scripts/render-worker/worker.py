@@ -1767,16 +1767,30 @@ def process_assembly(row: dict[str, Any]) -> None:
         clip_labels: list[str] = []
         skipped: list[str] = []
         by_photo = {}
-        clip_rows = sb_get(
-            "photo_clips",
-            {
-                "select": "id,photo_id,engine,storage_path,status",
-                "status": "eq.ready",
-                "limit": "200",
-            },
-        )
-        for r in clip_rows:
-            by_photo.setdefault(r["photo_id"], []).append(r)
+        # Ask for the clips of THESE photos, not the first page of every ready
+        # clip in the table.
+        #
+        # This was `status=eq.ready&limit=200` with no filter and no order. The
+        # table passed 200 rows on 2026-08-19 (226 ready), so 26 of them fell
+        # outside the page — and any shot whose clip was among them was skipped
+        # as "no ready clip" even though the clip existed and was ready. A
+        # 29-clip tour assembled as 19 clips and 36s instead of 83.5s. The bug
+        # was invisible until the table crossed the limit, and it would have
+        # got worse with every render.
+        wanted = [c.get("photo_id") for c in ordered if c.get("photo_id")]
+        for chunk_start in range(0, len(wanted), 50):  # keep the URL sane
+            chunk = wanted[chunk_start : chunk_start + 50]
+            rows = sb_get(
+                "photo_clips",
+                {
+                    "select": "id,photo_id,engine,storage_path,status",
+                    "status": "eq.ready",
+                    "photo_id": f"in.({','.join(chunk)})",
+                    "limit": str(len(chunk) * 4),  # a photo has at most a few engines
+                },
+            )
+            for r in rows:
+                by_photo.setdefault(r["photo_id"], []).append(r)
         for i, c in enumerate(ordered, start=1):
             engine = c.get("engine") or "kenburns"
             candidates = by_photo.get(c.get("photo_id"), [])
