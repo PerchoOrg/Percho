@@ -16,6 +16,89 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-19 00:45 UTC — A community tour is about the community: distance ceiling, photo weighting, new research prompt
+
+**Objective**: owner on the Aberdeen film — the tour should start from the
+community itself; website photos and Google Places photos should not carry
+equal weight ("质量高 更切合主题 原则是都采纳 不受限制"); and the film should be
+the community plus surrounding daily life, "不应该有市中心的喷泉啥的 除非距离
+真的很近". Change the agent research prompt and the filtering rules.
+Branch `phase59/tour-weighting-and-radius` (ws1).
+
+**The fountain had three separate causes, all real.**
+
+1. *The prompt asked for it.* `WHAT QUALIFIES` listed "town centers" first
+   among visually distinctive places, and `You are NOT ranking by proximity —
+   the Places API already does that` explicitly told the agent to ignore
+   distance. The last constraint also steered *away* from "private spots, HOA
+   clubhouses" — the exact opposite of what phase56 established.
+2. *Nothing enforced distance.* The drop rule was `d > radiusMeters * 2` —
+   12 km with the 6 km suburban default. Suwanee Town Center is 4.7 mi.
+3. *`scorePoi` had no distance term at all.* A POI five miles out scored
+   identically to one half a mile away, so it could win a prime slot — and did:
+   Town Center on Main took clips 1 and 2, right after the opener.
+
+**Actions**:
+- Prompt rewritten around the community, with a four-tier distance rule
+  (<1 mi list fully / 1-3 mi most of the list / 3-4 mi only if genuinely
+  weekly / >4 mi never). Regional destinations named as a category to omit.
+  New `approx_miles` field per POI so the agent's own estimate is checkable.
+  The bullet steering away from HOA amenities now says the opposite, and
+  explains that those photos arrive through the ingest path instead.
+- `MAX_DISTANCE_M = 6437` (4 miles), replacing `radiusMeters * 2`. Applied to
+  the agent path and to the top-rated-nearby path, which had no ceiling either.
+- `distanceWeight()`: 1.0 through the first mile, decaying to 0.4 at the
+  ceiling, 0.7 for unknown. Folded into `scorePoi`.
+- `shots.ts`: `community_site` photos are exempt from the 2/POI cap and
+  outrank Places photos of the same POI in the ranking. `source` added to the
+  select — without it the check silently never fired.
+- `photos.ts`: amenity POIs are unioned into `resolved_poi_ids`. **This was
+  the load-bearing gap** — amenity POIs never pass through resolve, so photos
+  ingested by the phase57 panel could never reach a film. They would have sat
+  in the review table forever.
+
+**Why 4 miles and not 5**: a 5-mile line looked principled and cut exactly one
+POI (George Pierce Park, 5.5). Every place the owner objected to — Town Center
+on Main 4.7, PlayTown 4.8, Suwanee Creek Park 4.9, Town Center Park 5.0 —
+sailed under it. Four miles cuts all five and keeps the assigned schools (0.9,
+1.1, 3.0), the grocery (1.4), the library (2.1) and the temple (2.6). The four
+cut are also across the county line in Gwinnett while Aberdeen is in Forsyth.
+
+**Issues** — the uncapped rule did exactly what it says, and that is the
+finding. With the 17 clubhouse-interior photos from the phase57 ingest test
+left approved, Aberdeen's shot list went to 37 clips / 82s, 26 of them
+amenities, with 16 consecutive interior shots at the tail. `spreadBuckets`
+could not fix it (it pulls a *different* bucket forward, and by then nothing
+else was left) and the planner correctly warned `82.0s outside [45, 50] — 37
+clips cannot reach it within per-clip bounds`. Nothing was regenerated: the
+live Aberdeen video is still the 25-clip one. **Unrestricted only works when a
+human has actually filtered the source** — which is what the photo table is
+for, and those 17 kitchen-and-meeting-room shots are waiting on the owner's
+reject. Without them the list is 20 clips, comfortably in range.
+
+**Decisions**:
+- Kept "unrestricted" literally as instructed rather than sneaking a cap back
+  in. If a length budget is needed it belongs in the scheduler as a global
+  clip budget with ranking, not as a per-POI cap that penalises good photos.
+- Too-far POIs were unlinked from Aberdeen only (`community_pois`), not
+  deleted. The `pois` rows and their photos stay — a different community may
+  legitimately be near Suwanee Town Center.
+
+**Learnings**:
+- Three independent mechanisms all had to agree for the fountain to appear,
+  and fixing any one alone would have left it. Worth asking "what else votes
+  on this?" before declaring a filtering bug fixed.
+- A threshold that sounds right should be checked against the actual data
+  before shipping. Five miles was the intuitive number and it fixed nothing.
+
+**Next steps**:
+- Owner: reject the 17 clubhouse interiors (or keep them, and we add a global
+  clip budget), then re-run photos → generate → assemble for a new film.
+- The `<4 POI widen radius hook` in community-tour.ts is still unbuilt; a
+  tighter ceiling makes it likelier to matter for a rural community.
+
+---
+
 ## 2026-08-18 20:45 UTC — Resolve & Merge crashed the page; I put the bad data there
 
 **Objective**: owner clicked Resolve & Merge on the Aberdeen tour and the panel

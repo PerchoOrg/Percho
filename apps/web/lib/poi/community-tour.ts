@@ -87,6 +87,36 @@ function bucketFromPlace(p: { primaryType?: string; types?: string[] }): string 
   return PLACES_TYPE_TO_BUCKET[t] ?? 'other';
 }
 
+/**
+ * Hard ceiling on how far a POI can be and still belong in a community tour
+ * (owner 2026-08-18: "不应该有市中心的喷泉啥的 除非距离真的很近").
+ *
+ * The old rule was `radiusMeters * 2` — 12 km with the 6 km suburban default,
+ * which let Suwanee Town Center into Aberdeen's film and put its fountain in
+ * the second clip. Four miles is calibrated against the Aberdeen list: it cuts
+ * Town Center on Main (4.7 mi), Town Center Park (5.0), PlayTown Suwanee (4.8)
+ * and Suwanee Creek Park (4.9) — all of which are across the county line in
+ * Gwinnett — while keeping the assigned schools (0.9, 1.1, 3.0), the grocery
+ * (1.4), the library (2.1) and the temple (2.6). Those four were the owner's
+ * actual complaint, and a 5-mile line let every one of them through.
+ */
+export const MAX_DISTANCE_M = 6437; // 4 miles
+
+/**
+ * How much a POI's score decays with distance. 1.0 for anything inside the
+ * daily orbit, then falling to 0.4 at the ceiling, so a nearer place beats a
+ * further one of the same kind without the far one being silently erased —
+ * a genuinely exceptional 4-mile park can still outrank a dull 1-mile one.
+ */
+export function distanceWeight(distanceM: number | null): number {
+  if (distanceM == null) return 0.7; // unknown: neither rewarded nor condemned
+  const NEAR_M = 1609; // 1 mile — full marks
+  if (distanceM <= NEAR_M) return 1.0;
+  if (distanceM >= MAX_DISTANCE_M) return 0.4;
+  const t = (distanceM - NEAR_M) / (MAX_DISTANCE_M - NEAR_M);
+  return 1.0 - 0.6 * t;
+}
+
 /** Per-bucket weight — schools first (GA buyer #1), S+A tiers, then C-tier. */
 const BUCKET_WEIGHT: Record<string, number> = {
   schools: 1.0,
@@ -117,9 +147,13 @@ export function scorePoi(p: {
   agreement: 1 | 2;
   confidence: 'high' | 'medium';
   photo_count: number;
+  /** Straight-line metres from the community. Optional so older callers and
+   *  fixtures keep working; absent scores as "unknown", not as "near". */
+  distance_m?: number | null;
 }): number {
   return (
     bucketWeight(p.bucket) *
+    distanceWeight(p.distance_m ?? null) *
     (p.agreement === 2 ? 1.0 : 0.75) *
     (p.confidence === 'high' ? 1.0 : 0.85) *
     Math.min(1.0, p.photo_count / 3)
@@ -235,11 +269,11 @@ export async function resolveCandidates(
         lat: place.location.latitude,
         lng: place.location.longitude,
       });
-      if (d > radiusMeters * 2) {
+      if (d > MAX_DISTANCE_M) {
         dropped.push({
           name: first.name,
           bucket: first.bucket,
-          reason: `too far (${Math.round(d / 1000)}km)`,
+          reason: `too far (${(d / 1609).toFixed(1)} mi — a community tour stops at ${(MAX_DISTANCE_M / 1609).toFixed(0)})`,
           agent: group.some((c) => c.agent === 'gemini_a')
             ? group.some((c) => c.agent === 'gemini_b')
               ? 'both'
@@ -282,7 +316,18 @@ export async function resolveCandidates(
       photo_count,
       rating: place.rating ?? null,
       user_ratings_total: place.userRatingCount ?? null,
-      score: scorePoi({ bucket: first.bucket, agreement, confidence, photo_count }),
+      score: scorePoi({
+        bucket: first.bucket,
+        agreement,
+        confidence,
+        photo_count,
+        distance_m: place.location
+          ? haversineMeters(center, {
+              lat: place.location.latitude,
+              lng: place.location.longitude,
+            })
+          : null,
+      }),
     });
   }
 
@@ -297,6 +342,14 @@ export async function resolveCandidates(
     const nearby = await searchNearby({ center, radius: radiusMeters, maxResultCount: 20 });
     topRated = nearby
       .filter((p) => p.rating != null && p.userRatingCount != null && !seenIds.has(p.id))
+      // Same ceiling as the agent path: a 4.8-star restaurant six miles out is
+      // still not part of living here.
+      .filter(
+        (p) =>
+          !p.location ||
+          haversineMeters(center, { lat: p.location.latitude, lng: p.location.longitude }) <=
+            MAX_DISTANCE_M,
+      )
       .sort(
         (a, b) =>
           (b.rating ?? 0) - (a.rating ?? 0) || (b.userRatingCount ?? 0) - (a.userRatingCount ?? 0),
@@ -333,6 +386,9 @@ export async function resolveCandidates(
           agreement: 1,
           confidence: 'high',
           photo_count: p.photos?.length ?? 0,
+          distance_m: p.location
+            ? haversineMeters(center, { lat: p.location.latitude, lng: p.location.longitude })
+            : null,
         }),
       }));
     resolved.push(...topRated);
