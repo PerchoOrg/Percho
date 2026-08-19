@@ -46,6 +46,13 @@ export interface PhotoRow {
   poi_name?: string | null;
   /** poi_photos: the owning POI, so the row can link to its detail page. */
   poi_id?: string | null;
+  /** Where the file came from: 'google_places' | 'google_streetview' |
+   *  'community_site'. Hand-picked site photos outrank Places ones in the
+   *  shot list and are exempt from the per-POI cap, so which is which is
+   *  worth seeing (owner 2026-08-19). */
+  source?: string | null;
+  /** Google TOS attribution, or — for community_site — the page it came from. */
+  attribution?: Record<string, unknown> | null;
   // both
   ai_tags?: Record<string, unknown> | null;
   ai_score?: number | null;
@@ -292,6 +299,7 @@ export function PhotoTable({
               {!isListing && <Th>Review</Th>}
               <Th>Photo</Th>
               <Th>{isListing ? '#' : 'POI'}</Th>
+              {!isListing && <Th>Source</Th>}
               <Th>Size</Th>
               <Th>Category</Th>
               {!isListing &&
@@ -381,6 +389,11 @@ export function PhotoTable({
                       (p.poi_name ?? '—')
                     )}
                   </Td>
+                  {!isListing && (
+                    <Td>
+                      <PhotoSourceBadge source={p.source} attribution={p.attribution} />
+                    </Td>
+                  )}
                   <Td className={res === 'low' ? 'text-amber-600' : 'text-ink2'}>
                     {w && h ? `${w}×${h}` : '—'}
                     {res === 'low' && <div className="text-[10px]">low res</div>}
@@ -790,6 +803,40 @@ function truncate(s: string, n: number) {
 function hasPlannedClip(p: PhotoRow, engine: string): boolean {
   const clip = engine === 'seedance' ? p.clip : p.dakb_clip;
   return clip?.engine === engine && clip.status === 'ready';
+}
+
+/**
+ * Where a photo came from. Worth a column because provenance changes how the
+ * pipeline treats the file: a hand-picked photo from the community's own site
+ * outranks a Places photo of the same POI and is exempt from the 2-per-POI cap
+ * (owner 2026-08-19), so "why did this one make the cut" is often answered
+ * here. The source page is on the title so a doubtful photo can be traced.
+ */
+function PhotoSourceBadge({
+  source,
+  attribution,
+}: {
+  source?: string | null;
+  attribution?: Record<string, unknown> | null;
+}) {
+  if (source === 'community_site') {
+    const page = typeof attribution?.source_page === 'string' ? attribution.source_page : undefined;
+    return (
+      <span
+        title={page ?? 'Community website'}
+        className="inline-block rounded bg-emerald-50 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700"
+      >
+        Website
+      </span>
+    );
+  }
+  if (source === 'google_streetview') {
+    return <span className="text-[10px] text-ink2">Street View</span>;
+  }
+  if (source === 'google_places') {
+    return <span className="text-[10px] text-ink2">Google</span>;
+  }
+  return <span className="text-[10px] text-ink2">{source ?? '—'}</span>;
 }
 
 function Th({ children, className = '' }: { children: React.ReactNode; className?: string }) {

@@ -32,6 +32,7 @@ export interface NearbyPhotoRow {
   poi_name: string | null;
   poi_id: string;
   source: string | null;
+  attribution: Record<string, unknown> | null;
   used_in: string[];
 }
 
@@ -66,7 +67,7 @@ export async function loadNearbyPhotos(scope: Scope): Promise<NearbyPhotoRow[]> 
   const { data: photos } = (await sb
     .from('poi_photos')
     .select(
-      'id, poi_id, storage_path, status, width_px, height_px, ai_score, ai_tags, applicable_buckets, tagged_at, enhanced_path, enhanced_status, enhanced_preset, enhanced_error, source, created_at',
+      'id, poi_id, storage_path, status, width_px, height_px, ai_score, ai_tags, applicable_buckets, tagged_at, enhanced_path, enhanced_status, enhanced_preset, enhanced_error, source, attribution, created_at',
     )
     .in('poi_id', poiIds)
     .order('created_at', { ascending: false, nullsFirst: false })

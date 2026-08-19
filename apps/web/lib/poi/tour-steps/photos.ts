@@ -123,22 +123,38 @@ export async function runPhotos(sb: TourDb, run: RunRow) {
     }
   }
 
-  // The community's OWN amenities never pass through resolve — Google Places
-  // has no listing for an HOA pool, so they are ingested by hand from the
-  // community's site (PhotoSourcePanel / ingest-community-photos.ts) and
-  // linked straight to community_pois. Without this union they would sit in
-  // the photo table forever and never reach a film, which is the opposite of
-  // the point (owner 2026-08-18: "原则是都采纳"). Nothing is fetched for them
-  // here — their photos already exist; they only need to be in scope.
-  const { data: amenityLinks } = (await sb
+  // `community_pois` — not `resolve.resolved` — is the community's POI set.
+  // Resolve is how most of them got there, but not the only way: amenity POIs
+  // are ingested from the community's own site (PhotoSourcePanel /
+  // ingest-community-photos.ts), and an admin can add a place the research
+  // agent missed. Aberdeen is the case in point — its HOA recommends four
+  // county parks within 2.6 miles and the agent proposed none of them
+  // (owner 2026-08-19). Anything linked to the community belongs in the film,
+  // however it arrived, so the set is unioned here and any POI without photos
+  // gets the same Places fetch a resolved one would.
+  const { data: links } = (await sb
     .from('community_pois')
-    .select('poi_id')
+    .select('poi_id, intent_bucket')
     .eq('community_id', run.community_id)
-    .eq('intent_bucket', 'amenities')) as { data: Array<{ poi_id: string }> | null };
-  for (const link of amenityLinks ?? []) {
+    .neq('status', 'rejected')) as {
+    data: Array<{ poi_id: string; intent_bucket: string | null }> | null;
+  };
+  for (const link of links ?? []) {
     if (resolvedPoiIds.includes(link.poi_id)) continue;
     resolvedPoiIds.push(link.poi_id);
-    bucketByPoiId.set(link.poi_id, 'amenities');
+    bucketByPoiId.set(link.poi_id, link.intent_bucket ?? 'other');
+
+    const { count } = (await sb
+      .from('poi_photos')
+      .select('id', { count: 'exact', head: true })
+      .eq('poi_id', link.poi_id)) as { count: number | null };
+    // Amenity POIs arrive with their photos already ingested; a POI added by
+    // hand usually arrives with none, and Places is where they come from.
+    if (!count) {
+      const r = await fetchPhotosForCommunityPoi(run.community_id, link.poi_id, { max: 3 });
+      results[link.poi_id] = r;
+    }
+
     const { data: rows } = await sb
       .from('poi_photos')
       .select('id')
