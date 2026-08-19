@@ -16,6 +16,70 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-19 06:05 UTC — No places of worship in any tour; POI blocks stay whole
+
+**Objective**: owner — "remove this poi: North America Shirdi Sai Temple Of
+Atlanta (NASSTA), we should avoid all Religious stuff, especially this photo:
+Ornate statue of Shirdi Sai Baba inside a Hindu temple".
+Branch `phase65/no-religious-content` (ws1).
+
+**Treated as a compliance rule, not a preference.** Religion is a protected
+class under the Fair Housing Act, and a published film that presents a
+neighbourhood's religious character is how a steering complaint starts —
+whichever religion, and regardless of intent. `school-language.ts` is the
+existing precedent for this kind of guard, so `religious-content.ts` follows
+its shape: a pure predicate, documented reasoning, called from every surface
+that can admit a POI.
+
+**Three routes had to be closed, because a temple can arrive by three:**
+1. *The agent proposes one by name.* The research prompt now names places of
+   worship as a category to omit, with the fair-housing reason stated, and
+   `faith` is gone from its bucket enum.
+2. *A nearby search returns one by type.* `BUCKET_PLACES_TYPES.faith` is now
+   empty — leaving `church`/`mosque`/`synagogue`/`hindu_temple` in would keep
+   paying for Places calls whose results the firewall then discards.
+3. *A POI already linked from an earlier run.* `resolveCandidates` drops any
+   candidate `isReligiousPlace()` matches, on the agent path and the
+   top-rated-nearby path, with the reason surfaced in the drop list.
+
+`isReligiousPlace` tests bucket, Google primary type, `types[]`, and finally
+the name. All four are needed: **NASSTA resolved as `tourist_attraction`**, so
+only the name caught it — while `SeneGambia Learning Center` and a POI called
+`R&b` are both `primary_type: mosque`, where only the type does. The name
+pattern is deliberately over-inclusive; losing a café called Temple Coffee
+costs one candidate, the other error is a fair-housing exposure.
+
+**Purge**: 37 `community_pois` links and 3 `listing_pois` links removed across
+the library, covering 23 distinct places of worship. The `pois` rows and their
+photos stay — the link is what puts a place in a film.
+
+**Issues** — removing the temple changed Aberdeen's bucket mix enough to
+expose the same ordering defect one act over. `spreadBuckets` worked on single
+units with a "no bucket for more than 2 consecutive clips" rule, which cut
+*through* a POI: Sharon Elementary and Patel Brothers each appeared twice, in
+two separate positions. It now works on **POI blocks** — a block is one place's
+whole run and moves entire, so the anti-monotony intent survives at the level a
+viewer reads (two different places of the same kind back to back) without
+splitting either. Two golden-fixture tests broke and one of them was a real bug
+in my change: block-internal ordering ranked `establishing` above `opener`, so
+a POI holding the tour's opener buried it behind its own second photo.
+
+The old "≤2 consecutive clips" test was replaced rather than patched: the
+guarantee is now POI contiguity, and same-bucket separation is explicitly best
+effort — a single greedy pass with opener and closer pinned cannot always
+separate a dominant bucket, and the test says so instead of asserting a
+property the algorithm lacks.
+
+**Result**: 27 clips, 74.5s, no religious POI. Assembly `ready`
+(`f3cf848306f20a7cd1799a113c7c7167`). Twelve places, each one contiguous run.
+
+**Learnings**: `'faith'` stays in `INTENT_BUCKETS` even though nothing can ever
+be tagged with it. The DB check constraints allow it and historical rows carry
+it; removing the value would invalidate stored data to gain nothing. An
+unreachable enum member with a comment saying why beats a migration.
+
+---
+
 ## 2026-08-19 05:00 UTC — People belong in the footage; the blanket face rule did not
 
 **Objective**: owner — "looks you skipped all photos with people, i think it is
