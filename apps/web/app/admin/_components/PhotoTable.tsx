@@ -23,6 +23,7 @@ import {
   queuePhotoEnhancement,
   setEnhancedDecision,
 } from '@/lib/poi/admin-enhance-actions';
+import { rejectOutpaint, requeueOutpaint } from '@/lib/poi/admin-outpaint-actions';
 import { setGlobalPhotoStatus } from '@/lib/poi/admin-photo-actions';
 import { projectTags, resolutionWarning } from '@/lib/poi/photo-tag-view';
 import { Check, Film, Sparkles, X } from 'lucide-react';
@@ -680,12 +681,15 @@ export function PhotoTable({
                   {!isListing && (
                     <Td>
                       <ReframedCell
+                        photoId={p.id}
                         status={p.outpaint_status}
                         meta={p.outpaint_meta}
                         error={p.outpaint_error}
                         storageBase={storageBase}
                         bucket={bucket}
                         path={p.outpainted_path}
+                        onZoom={(u) => setLightbox({ url: u, alt: 'reframed' })}
+                        onChanged={() => router.refresh()}
                       />
                     </Td>
                   )}
@@ -864,38 +868,58 @@ function PhotoSourceBadge({
 }
 
 /**
- * The 9:16 reframe: whether this photo was outpainted, and what it saved.
+ * The 9:16 reframe: the result itself, plus what it saved and how to undo it.
  *
- * The number is the point of the column. A photo showing "skipped" was already
- * well framed; one showing "ready · was losing 63%" is one the centre crop
- * would have gutted, and the thumbnail links to what the render will actually
- * use so the claim is checkable rather than asserted.
+ * Shows the reframed image rather than a link to it (owner 2026-08-19: "show
+ * small photos directly in the table"), because this is the one column whose
+ * output has to be judged by eye — the model re-renders rather than strictly
+ * extends, and a bad result is obvious in a thumbnail and invisible in a
+ * status word. A `ready` reframe is live, so Use crop is the way back.
  */
 function ReframedCell({
+  photoId,
   status,
   meta,
   error,
   storageBase,
   bucket,
   path,
+  onZoom,
+  onChanged,
 }: {
+  photoId: string;
   status?: string | null;
   meta?: { width?: number; height?: number; crop_loss_before?: number; reason?: string } | null;
   error?: string | null;
   storageBase: string;
   bucket: string;
   path?: string | null;
+  onZoom: (url: string) => void;
+  onChanged: () => void;
 }) {
+  const [busy, setBusy] = useState(false);
+
   if (!status || status === 'none') return <span className="text-[10px] text-ink2">—</span>;
   if (status === 'skipped') {
     return (
-      <div>
-        <span className="text-[10px] text-ink2">already 9:16-ish</span>
+      <div className="text-[10px] text-ink2">
+        <div>{meta?.reason === 'rejected by admin' ? 'using crop' : 'already 9:16-ish'}</div>
         {typeof meta?.crop_loss_before === 'number' && (
-          <div className="text-[10px] text-ink2">
-            {Math.round(meta.crop_loss_before * 100)}% crop
-          </div>
+          <div>{Math.round(meta.crop_loss_before * 100)}% crop</div>
         )}
+        <button
+          type="button"
+          disabled={busy}
+          onClick={async () => {
+            setBusy(true);
+            await requeueOutpaint(photoId);
+            setBusy(false);
+            onChanged();
+          }}
+          className="mt-0.5 underline hover:text-ink disabled:opacity-50"
+        >
+          {busy ? '…' : 'reframe'}
+        </button>
       </div>
     );
   }
@@ -910,24 +934,50 @@ function ReframedCell({
 
   const href = path ? `${storageBase}/storage/v1/object/public/${bucket}/${path}` : null;
   return (
-    <div>
-      {href ? (
-        <a
-          href={href}
-          target="_blank"
-          rel="noreferrer"
-          className="text-[10px] text-emerald-700 underline"
+    <div className="flex items-start gap-1.5">
+      {href && (
+        <button
+          type="button"
+          onClick={() => onZoom(href)}
+          className="block h-14 w-8 shrink-0 overflow-hidden rounded ring-1 ring-line"
+          title="Reframed to 9:16 — click to enlarge"
         >
-          reframed
-        </a>
-      ) : (
-        <span className="text-[10px] text-emerald-700">reframed</span>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={href} alt="" className="h-full w-full object-cover" />
+        </button>
       )}
-      {typeof meta?.crop_loss_before === 'number' && (
-        <div className="text-[10px] text-ink2">
-          saved {Math.round(meta.crop_loss_before * 100)}%
-        </div>
-      )}
+      <div className="text-[10px] text-ink2">
+        {typeof meta?.crop_loss_before === 'number' && (
+          <div className="text-emerald-700">saved {Math.round(meta.crop_loss_before * 100)}%</div>
+        )}
+        <button
+          type="button"
+          disabled={busy}
+          onClick={async () => {
+            setBusy(true);
+            await rejectOutpaint(photoId);
+            setBusy(false);
+            onChanged();
+          }}
+          className="underline hover:text-ink disabled:opacity-50"
+        >
+          {busy ? '…' : 'use crop'}
+        </button>
+        <button
+          type="button"
+          disabled={busy}
+          onClick={async () => {
+            setBusy(true);
+            await requeueOutpaint(photoId);
+            setBusy(false);
+            onChanged();
+          }}
+          className="ml-1.5 underline hover:text-ink disabled:opacity-50"
+          title="Generate a new one — costs about $0.09"
+        >
+          redo
+        </button>
+      </div>
     </div>
   );
 }
