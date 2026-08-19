@@ -19,6 +19,8 @@ Community films now open on the community. Its own amenities lead the film and r
 Aberdeen in Suwanee is the first community with this treatment: a 58-second film that opens on its clubhouse and takes in the pool, the courts and the grounds before heading out into Suwanee.
 
 ### 2026-08-19
+- Each step of the community tour screen now says when it last ran, so results left over from an earlier setup are obvious instead of looking current
+- The research step lists the places it proposed with their distances, and the resolve step shows how far each place actually is — both sorted nearest first
 - Community films stay local: places more than four miles away no longer appear, so a city's downtown or town square stops turning up in a film about a neighbourhood several suburbs over
 - Nearer places now rank above further ones when both would fit, and the research step is briefed to look for the daily orbit — the assigned schools, the everyday grocery, the parks residents walk to
 - Photos from a community's own website are all used and take precedence over generic map photos of the same place

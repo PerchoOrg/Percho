@@ -86,6 +86,16 @@ export async function setRunStatus(
 
 /** Persist a step's output under step_results.<step> (merge, not replace). */
 export async function saveStep(sb: TourDb, run: RunRow, step: string, result: unknown) {
+  // Stamp when this step last produced its result. A panel renders whatever is
+  // stored, so after a prompt or rule change the screen looks identical until
+  // the step is re-run — with nothing on it to say so (owner 2026-08-19: "i
+  // dont see agent research, resolve and merge section updated"). The
+  // timestamp is what makes stale output legible as stale.
+  const stamped =
+    result !== null && typeof result === 'object' && !Array.isArray(result)
+      ? { ...(result as Record<string, unknown>), ran_at: new Date().toISOString() }
+      : result;
+
   // The write whose silent failure is indistinguishable from "the step did
   // nothing": the panel simply keeps rendering the previous run's numbers.
   await mustWrite(
@@ -93,7 +103,7 @@ export async function saveStep(sb: TourDb, run: RunRow, step: string, result: un
     sb
       .from('community_tour_runs')
       .update({
-        step_results: asJson({ ...run.step_results, [step]: result }),
+        step_results: asJson({ ...run.step_results, [step]: stamped }),
         updated_at: new Date().toISOString(),
       })
       .eq('id', run.id),

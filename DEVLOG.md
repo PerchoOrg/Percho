@@ -16,6 +16,59 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-19 01:20 UTC — The panels showed stale results with nothing saying so
+
+**Objective**: owner after phase59 — "i dont see agent research, resolve and
+merge section updated, i see new selected photots though, can you make sure the
+pipeline is updated so I can tune and see things manually as well".
+Branch `phase60/pipeline-visibility` (ws1).
+
+**Not a bug in phase59 — a visibility gap.** Each panel renders whatever sits
+in `step_results.<step>`. Selected Photos looked new because I had recomputed
+`shots` by hand while verifying; research and resolve still held output from
+2026-08-17, produced by the old prompt under the 12 km rule. Nothing on screen
+distinguishes a result produced ten minutes ago from one produced two days ago
+under different rules, so a prompt change is invisible until the step is
+re-run — and there is no way to tell whether it has been.
+
+**Actions**:
+- `saveStep` stamps `ran_at` into every step result; `research.ts` does the
+  same on its own write path. Each panel header now reads "ran 12 minutes ago",
+  or "ran before this was recorded" for results that predate the stamp.
+- Agent Research grew a POI table — name, bucket, **miles**, agent, why —
+  sorted nearest-first, with anything over 4 miles struck through in red. It
+  previously showed only agent token counts and two raw JSON blobs, so the
+  proposed list could not be read without expanding and parsing JSON by eye.
+  The narrative angle is surfaced as a line of italic text.
+- Resolve & Merge grew a **Miles** column (`distance_m` was already stored and
+  simply never displayed), sorts nearest-first, and counts how many of the
+  dropped were dropped for distance.
+- The prompt `<details>` no longer defaults to open — with a POI table above
+  it, a 60-line prompt dump first is noise.
+
+**Verification** — a fresh run end to end on Aberdeen against the new prompt:
+- Research returned **10 POIs, every one carrying `approx_miles`, all within
+  3.4 mi**, and not one regional landmark. Narrative angle: "A peaceful,
+  established South Forsyth canopy neighborhood where daily life revolves
+  around top-tier public schools, quiet wooded streets, and quick runs to
+  nearby Windermere shopping." The old run's list opened with Suwanee Town
+  Center.
+- Resolve kept all 10 (0.9–4.0 mi), dropped none — nothing needed dropping
+  because the agent no longer proposes far POIs. Scores now track distance:
+  Sharon Elementary 0.9 mi → 1.00, MOTW Coffee 3.7 mi → 0.10.
+- `ran_at` present on both steps.
+
+**Learnings**: when a pipeline persists each step's output, "the code changed"
+and "the screen changed" are different events, and the gap between them is
+invisible unless the UI dates its own data. Any panel rendering stored results
+should say when they were produced — this cost the owner a round trip to
+discover.
+
+**Next steps**: unchanged from phase59 — the 17 clubhouse interiors still need
+the owner's accept/reject before regenerating Aberdeen's film.
+
+---
+
 ## 2026-08-19 00:45 UTC — A community tour is about the community: distance ceiling, photo weighting, new research prompt
 
 **Objective**: owner on the Aberdeen film — the tour should start from the
