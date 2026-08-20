@@ -6,67 +6,19 @@
   "attribution": "Music: Kevin MacLeod (incompetech.com), Licensed under Creative Commons: By Attribution 4.0 License",
   "storage_bucket": "bgm",
   "buckets": {
-    "chill-electronic": {
-      "count": 8,
-      "tracks": [
-        "55-too-cool.mp3",
-        "56-eternity.mp3",
-        "57-zigzag.mp3",
-        "58-jerry-five.mp3",
-        "59-pyro-flow.mp3",
-        "60-space-1990-b.mp3",
-        "61-investigations.mp3",
-        "62-lightless-dawn.mp3"
-      ]
-    },
-    "luxury-ambient": {
-      "count": 8,
-      "tracks": [
-        "10-perspectives.mp3",
-        "28-ossuary-1-a-beginning.mp3",
-        "29-ossuary-5-rest.mp3",
-        "30-ossuary-6-air.mp3",
-        "31-deep-haze.mp3",
-        "32-dream-culture.mp3",
-        "33-path-of-the-goblin-king.mp3",
-        "34-autumn-day.mp3"
-      ]
-    },
-    "modern-corporate": {
-      "count": 15,
-      "tracks": [
-        "40-deliberate-thought.mp3",
-        "41-cool-blast.mp3",
-        "42-cut-and-run.mp3",
-        "43-cut-trance.mp3",
-        "44-constancy-part-one.mp3",
-        "45-constancy-part-two.mp3",
-        "46-consort-for-brass.mp3",
-        "47-continue-life.mp3",
-        "48-crossing-the-chasm.mp3",
-        "49-dispersion-relation.mp3",
-        "50-divertissement.mp3",
-        "51-corncob.mp3",
-        "52-constance.mp3",
-        "53-getting-it-done.mp3",
-        "54-chill-wave.mp3"
-      ]
-    },
     "warm-acoustic": {
-      "count": 10,
+      "count": 8,
       "tracks": [
         "01-carefree.mp3",
         "02-cheery-monday.mp3",
-        "03-wallpaper.mp3",
-        "07-amazing-plan.mp3",
         "08-wholesome.mp3",
-        "09-daily-beetle.mp3",
         "11-happy-alley.mp3",
-        "12-balloon-game.mp3",
-        "13-take-a-chance.mp3",
-        "14-pookatori-and-friends.mp3"
+        "feeling-happy.mp3",
+        "summers-here.mp3",
+        "under-the-sun.mp3",
+        "walking-in-the-park.mp3"
       ]
     }
   },
-  "total_active_tracks": 41
+  "total_active_tracks": 8
 }

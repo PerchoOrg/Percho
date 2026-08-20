@@ -314,22 +314,30 @@ def format_specs(beds: Any, baths: Any, sqft: Any) -> str:
     return " · ".join(parts)
 
 
-def pick_bgm() -> Path | None:
-    """Return a random .mp3 from the `warm-acoustic` bucket, or None if the
-    bucket is empty or missing. The worker still produces a valid (silent)
-    video in that case.
+DEFAULT_BGM_VIBE = "warm-acoustic"
 
-    Only warm-acoustic is production-approved (see docs/bgm/vibe-map.md).
-    modern-corporate / luxury-ambient / chill-electronic / cinematic were
-    trialed and rejected — music must not lead the video.
+
+def pick_bgm(vibe: str = DEFAULT_BGM_VIBE) -> Path | None:
+    """A random reviewed .mp3 from `vibe`, or None if that bucket is empty.
+
+    Only tracks that passed review are on disk at all — `pull-bgm.sh` skips
+    anything the state sidecar lists as rejected or pending — so choosing at
+    random here is choosing among things a human already approved.
+
+    `vibe` is a parameter as of 2026-08-20, when generation made the other
+    three buckets fillable again (owner: "good background music with different
+    types for different vibe"). Nothing passes one yet, so every render still
+    gets warm-acoustic exactly as before; an unknown or empty vibe falls back
+    to it rather than rendering silent.
     """
-    bucket = BGM_DIR / "warm-acoustic"
-    if not bucket.exists():
-        return None
-    tracks = sorted(bucket.glob("*.mp3"))
-    if not tracks:
-        return None
-    return random.choice(tracks)
+    for name in (vibe, DEFAULT_BGM_VIBE):
+        bucket = BGM_DIR / name
+        if not bucket.exists():
+            continue
+        tracks = sorted(bucket.glob("*.mp3"))
+        if tracks:
+            return random.choice(tracks)
+    return None
 
 
 # ── narration ───────────────────────────────────────────────────────────────
@@ -2053,7 +2061,7 @@ def claim_assembly() -> dict[str, Any] | None:
     rows = sb_get(
         "tour_assemblies",
         {
-            "select": "id,community_id,run_id,ordered_clips,narration,status",
+            "select": "id,community_id,run_id,ordered_clips,narration,status,community:communities(name)",
             "status": "eq.pending",
             "order": "created_at.asc",
             "limit": "1",
@@ -2088,6 +2096,11 @@ def _label_font() -> str | None:
     return next((f for f in LABEL_FONTS if os.path.exists(f)), None)
 
 
+# 35% black behind the text. Low, because legibility is carried by the glyph
+# shadow below; the scrim only has to stop a blown-out sky from swallowing it.
+SCRIM_ALPHA = 88
+
+
 def _render_label_png(
     name: str, distance: str, w: int, h: int, font_path: str, dest: Path
 ) -> None:
@@ -2114,7 +2127,7 @@ def _render_label_png(
     so the distance reads as a fact about the place rather than a suffix glued
     to its name.
     """
-    from PIL import Image, ImageDraw, ImageFont
+    from PIL import Image, ImageChops, ImageDraw, ImageFilter, ImageFont
 
     inset_x = round(w * 0.055)
     inset_y = round(h * 0.055)
@@ -2149,24 +2162,69 @@ def _render_label_png(
     block_h = line_h * len(lines) + gap + (sub_size if distance else 0)
 
     right, top = w - inset_x, inset_y
-    pad_h, pad_v = round(size * 0.66), round(size * 0.50)
-    draw.rounded_rectangle(
-        (right - block_w - pad_h, top - pad_v, right + pad_h, top + block_h + pad_v),
-        radius=round(size * 0.46),
-        fill=(0, 0, 0, 97),
-    )
-    for i, line in enumerate(lines):
-        draw.text(
-            (right, top + i * line_h), line, font=font, fill=(255, 255, 255, 245), anchor="ra"
-        )
-    if distance:
-        draw.text(
-            (right, top + line_h * len(lines) + gap),
-            distance,
-            font=sub_font,
-            fill=(255, 255, 255, 158),
-            anchor="ra",
-        )
+
+    # A CORNER SCRIM, not a panel.
+    #
+    # The card used to sit on a 38%-black rounded rectangle, which made its
+    # legibility a function of the photo behind it. On the bright shots — a
+    # white sky, the clubhouse ceiling — 38% black over luma 240 lands at 149
+    # and white text on mid-grey barely reads; on the dark shots the same panel
+    # vanishes and the text is crisp. Cutting between the two every two seconds
+    # is what the owner saw as the label "flashing for the first few photos"
+    # (2026-08-20). It was never absent — it was washing in and out.
+    #
+    # A gradient has no shape to notice: invisible on a dark photo (dark over
+    # dark), doing the work on a bright one, so the card looks the same on every
+    # shot. Two things make it a corner treatment rather than a band across the
+    # frame: it holds full strength only down to just past the text and then
+    # eases out, and it fades away to the LEFT, where there is no text to
+    # protect and no reason to dim the picture.
+    #
+    # Built by multiplying a column by a row rather than per-pixel: the frame is
+    # 1.7M pixels and there is one of these per clip.
+    hold = top + block_h + round(size * 0.3)
+    fade = max(1, round(block_h * 1.5))
+    col = Image.new("L", (1, h), 0)
+    for y in range(h):
+        if y <= hold:
+            v = 1.0
+        elif y < hold + fade:
+            v = (1 - (y - hold) / fade) ** 2
+        else:
+            break
+        col.putpixel((0, y), round(SCRIM_ALPHA * v))
+    x0, x1 = round(w * 0.16), round(w * 0.42)
+    row = Image.new("L", (w, 1), 0)
+    for x in range(x0, w):
+        row.putpixel((x, 0), 255 if x > x1 else round(255 * ((x - x0) / (x1 - x0)) ** 1.4))
+    scrim = Image.new("RGBA", (w, h), (0, 0, 0, 255))
+    scrim.putalpha(ImageChops.multiply(col.resize((w, h)), row.resize((w, h))))
+    img = Image.alpha_composite(img, scrim)
+
+    # A soft shadow under the glyphs, for the shots a scrim alone cannot hold —
+    # a blown-out sky reaches luma 255 and the ramp is at its weakest by the
+    # second line. Blurred rather than offset: an offset copy reads as a
+    # mistake at this size, a blur reads as depth.
+    shadow = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    sdraw = ImageDraw.Draw(shadow)
+
+    def _lines(d: Any, fill_name: tuple[int, int, int, int], fill_sub: tuple[int, int, int, int]):
+        for i, line in enumerate(lines):
+            d.text((right, top + i * line_h), line, font=font, fill=fill_name, anchor="ra")
+        if distance:
+            d.text(
+                (right, top + line_h * len(lines) + gap),
+                distance,
+                font=sub_font,
+                fill=fill_sub,
+                anchor="ra",
+            )
+
+    _lines(sdraw, (0, 0, 0, 160), (0, 0, 0, 128))
+    shadow = shadow.filter(ImageFilter.GaussianBlur(max(2, round(size * 0.26))))
+    img = Image.alpha_composite(img, shadow)
+
+    _lines(ImageDraw.Draw(img), (255, 255, 255, 250), (255, 255, 255, 190))
     img.save(dest)
 
 
@@ -2245,6 +2303,83 @@ def _label_overlay(
         idx += 1
 
     return inputs, steps, prev
+
+
+# ── end card ────────────────────────────────────────────────────────────────
+
+END_CARD_S = 3.0
+END_CARD_FADE = 0.6
+# The luma the community's name should sit on, whatever photo is behind it.
+END_CARD_TARGET_LUMA = 64
+
+
+def _render_end_card(name: str, hero: Path, w: int, h: int, dest: Path) -> bool:
+    """The film's last three seconds: the community's name, and ours.
+
+    Owner 2026-08-20, on a film that ended on a supermarket: "the closing part
+    is weak, it needs better design… lets design some ending page, customized
+    for each community" — then, on the layout: "make it very simple just
+    community name and percho name".
+
+    The ground is the FIRST FRAME OF THE FIRST CLIP, so the film closes on the
+    image it opened with. That is the bookend the shot list could not give us:
+    the scheduler keeps each place to a single stretch (owner 2026-08-19), so
+    returning to the community for a closing shot would have broken the rule,
+    while a card is not a shot.
+
+    The wash is MEASURED, not fixed. A fixed one repeats the mistake the place
+    card just had fixed — a treatment tuned on one photo fails on the next. The
+    band behind the name is sampled and darkened until it lands on
+    END_CARD_TARGET_LUMA, so a dark calm photo keeps most of its light and a
+    blown-out one is pushed down hard. Verified across luma 96 / 113 / 241:
+    all three land the name on 68-75.
+    """
+    from PIL import Image, ImageDraw, ImageFilter, ImageFont, ImageStat
+
+    serif = REPO_ROOT / "apps/mobile/assets/fonts/DMSerifDisplay-Regular.ttf"
+    sans = _label_font()
+    if not serif.exists() or not sans or not hero.exists():
+        return False
+
+    src = Image.open(hero).convert("RGB")
+    ratio = max(w / src.width, h / src.height)
+    src = src.resize((round(src.width * ratio), round(src.height * ratio)), Image.LANCZOS)
+    x, y = (src.width - w) // 2, (src.height - h) // 2
+    img = src.crop((x, y, x + w, y + h)).filter(ImageFilter.GaussianBlur(round(w * 0.010)))
+
+    band = (0, round(h * 0.38), w, round(h * 0.55))
+    lum = ImageStat.Stat(img.crop(band).convert("L")).mean[0]
+    wash = min(0.86, max(0.10, (lum - END_CARD_TARGET_LUMA) / max(lum, 1)))
+    img = Image.blend(img, Image.new("RGB", (w, h), (12, 16, 20)), wash)
+
+    # A wide soft vignette, so the corners settle and the name is the only
+    # thing with edges.
+    mask = Image.new("L", (w, h), 0)
+    ImageDraw.Draw(mask).ellipse((-w * 0.30, -h * 0.15, w * 1.30, h * 1.15), fill=255)
+    mask = mask.filter(ImageFilter.GaussianBlur(round(w * 0.185)))
+    vignette = Image.new("RGBA", (w, h), (6, 9, 12, 255))
+    vignette.putalpha(Image.eval(mask, lambda v: round((255 - v) * 0.8)))
+    img = Image.alpha_composite(img.convert("RGBA"), vignette)
+
+    draw = ImageDraw.Draw(img)
+    size = round(w * 0.139)
+    while size > round(w * 0.06):
+        font = ImageFont.truetype(str(serif), size)
+        if draw.textlength(name, font=font) <= w * 0.82:
+            break
+        size -= 4
+    draw.text((w / 2, h * 0.455), name, font=font, fill=(255, 255, 255, 255), anchor="mm")
+
+    mark_font = ImageFont.truetype(sans, round(w * 0.023))
+    mark, track = "PERCHO", round(w * 0.0065)
+    total = sum(draw.textlength(c, font=mark_font) + track for c in mark) - track
+    mx = w / 2 - total / 2
+    for ch in mark:
+        draw.text((mx, h * 0.905), ch, font=mark_font, fill=(255, 255, 255, 130), anchor="la")
+        mx += draw.textlength(ch, font=mark_font) + track
+
+    img.convert("RGB").save(dest)
+    return True
 
 
 def process_assembly(row: dict[str, Any]) -> None:
@@ -2397,11 +2532,41 @@ def process_assembly(row: dict[str, Any]) -> None:
         )
         filters.extend(label_steps)
 
+        # THE END CARD — after the labels, never before. The label chain gives
+        # its last card the span up to `total`, so a card folded in earlier
+        # would wear the final place name across it.
+        card_inputs: list[str] = []
+        community_name = (row.get("community") or {}).get("name") or ""
+        hero = workdir / "hero.png"
+        subprocess.run(
+            ["ffmpeg", "-y", "-v", "error", "-i", str(clip_paths[0]),
+             "-frames:v", "1", str(hero)],
+            check=False, timeout=60,
+        )
+        card_png = workdir / "end_card.png"
+        if community_name and _render_end_card(
+            community_name, hero, scale_to[0], scale_to[1], card_png
+        ):
+            card_idx = len(clip_paths) + len(label_inputs) // 2
+            card_inputs = ["-loop", "1", "-t", f"{END_CARD_S:.2f}", "-i", str(card_png)]
+            filters.append(
+                f"[{card_idx}:v]fps=30,scale={scale_to[0]}:{scale_to[1]},setsar=1,"
+                f"format=yuv420p,format=rgba[card]"
+            )
+            filters.append(
+                f"{prev}[card]xfade=transition=fade:duration={END_CARD_FADE}:"
+                f"offset={total - END_CARD_FADE:.3f}[withcard]"
+            )
+            prev = "[withcard]"
+            total = total + END_CARD_S - END_CARD_FADE
+            print(f"[assembly {assembly_id}] end card for {community_name}", flush=True)
+
         vf = ";".join(filters) + f";{prev}format=yuv420p"
         cmd = [
             "ffmpeg", "-y",
             *inputs,
             *label_inputs,
+            *card_inputs,
             "-filter_complex", vf,
             "-c:v", "libx264", "-preset", "medium", "-crf", "20",
             "-movflags", "+faststart",
