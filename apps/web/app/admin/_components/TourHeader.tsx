@@ -151,18 +151,28 @@ export function TourHeader({
             onRun={() => onRun('research')}
           >
             {researchPois.length > 0 && (
-              <ul className="space-y-1">
-                {researchPois.map((poi) => (
-                  <li key={poi.name} className="text-[11px] leading-snug">
-                    <span className="font-medium text-ink">{poi.name}</span>
-                    <span className="text-ink2">
-                      {poi.bucket ? ` · ${poi.bucket}` : ''}
-                      {poi.approx_miles != null ? ` · ${poi.approx_miles} mi` : ''}
-                    </span>
-                    {poi.why && <div className="text-[10px] text-ink2">{poi.why}</div>}
-                  </li>
-                ))}
-              </ul>
+              <table className="w-full border-collapse text-left text-[11px]">
+                <thead className="text-ink2">
+                  <tr>
+                    <MiniTh>Place</MiniTh>
+                    <MiniTh>Bucket</MiniTh>
+                    <MiniTh>Dist</MiniTh>
+                    <MiniTh>Why</MiniTh>
+                  </tr>
+                </thead>
+                <tbody>
+                  {researchPois.map((poi) => (
+                    <tr key={poi.name} className="border-line/60 border-t align-top">
+                      <MiniTd className="font-medium text-ink">{poi.name}</MiniTd>
+                      <MiniTd className="text-ink2">{poi.bucket ?? '—'}</MiniTd>
+                      <MiniTd className="text-ink2 tabular-nums">
+                        {poi.approx_miles != null ? `${poi.approx_miles} mi` : '—'}
+                      </MiniTd>
+                      <MiniTd className="text-ink2">{poi.why ?? '—'}</MiniTd>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             )}
           </SourcingStep>
           <SourcingStep
@@ -175,34 +185,52 @@ export function TourHeader({
             onRun={() => onRun('resolve')}
           >
             {(resolvedPlaces.length > 0 || droppedPlaces.length > 0) && (
-              <div className="space-y-2">
-                <ul className="space-y-0.5">
+              <table className="w-full border-collapse text-left text-[11px]">
+                <thead className="text-ink2">
+                  <tr>
+                    <MiniTh>State</MiniTh>
+                    <MiniTh>Place</MiniTh>
+                    <MiniTh>Bucket</MiniTh>
+                    <MiniTh>Dist</MiniTh>
+                  </tr>
+                </thead>
+                <tbody>
                   {resolvedPlaces.map((r, i) => (
-                    <li key={`${r.name}-${i}`} className="text-[11px] leading-snug">
-                      <span className="text-ink">{r.name ?? '(unnamed)'}</span>
-                      <span className="text-ink2">
-                        {r.bucket ? ` · ${r.bucket}` : ''}
-                        {r.distance_m != null
-                          ? ` · ${(r.distance_m / 1609.344).toFixed(1)} mi`
-                          : ''}
-                      </span>
-                    </li>
+                    <tr key={`${r.name}-${i}`} className="border-line/60 border-t align-top">
+                      <MiniTd>
+                        {/* Which of these the film already uses, which the
+                            community merely knows, and which this run just
+                            proposed. Research agrees with itself on ~53% of
+                            place_ids run to run, so without this the list gives
+                            no way to tell churn from discovery. */}
+                        {r.in_film ? (
+                          <Tag className="bg-emerald-50 text-emerald-700">in film</Tag>
+                        ) : r.is_new ? (
+                          <Tag className="bg-blue-50 text-blue-700">new</Tag>
+                        ) : (
+                          <Tag className="bg-ink2/10 text-ink2">known</Tag>
+                        )}
+                      </MiniTd>
+                      <MiniTd className="text-ink">{r.name ?? '(unnamed)'}</MiniTd>
+                      <MiniTd className="text-ink2">{r.bucket ?? '—'}</MiniTd>
+                      <MiniTd className="text-ink2 tabular-nums">
+                        {r.distance_m != null ? `${(r.distance_m / 1609.344).toFixed(1)} mi` : '—'}
+                      </MiniTd>
+                    </tr>
                   ))}
-                </ul>
-                {droppedPlaces.length > 0 && (
-                  <div className="border-line border-t pt-1">
-                    <div className="text-[10px] text-ink2 uppercase tracking-wide">Dropped</div>
-                    <ul className="space-y-0.5">
-                      {droppedPlaces.map((d, i) => (
-                        <li key={`${d.name}-${i}`} className="text-[11px] text-ink2 leading-snug">
-                          {d.name ?? '(unnamed)'}
-                          {d.reason ? ` — ${d.reason}` : ''}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </div>
+                  {droppedPlaces.map((d, i) => (
+                    <tr key={`d-${d.name}-${i}`} className="border-line/60 border-t align-top">
+                      <MiniTd>
+                        <Tag className="bg-red-50 text-red-700">dropped</Tag>
+                      </MiniTd>
+                      <MiniTd className="text-ink2">{d.name ?? '(unnamed)'}</MiniTd>
+                      <MiniTd className="text-ink2" colSpan={2}>
+                        {d.reason ?? '—'}
+                      </MiniTd>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             )}
           </SourcingStep>
         </div>
@@ -254,6 +282,37 @@ export function TourHeader({
         )}
       </section>
     </div>
+  );
+}
+
+/** Compact table cells for the two sourcing panels. */
+function MiniTh({ children }: { children: React.ReactNode }) {
+  return <th className="py-1 pr-2 font-medium text-[10px] uppercase tracking-wide">{children}</th>;
+}
+
+function MiniTd({
+  children,
+  className = '',
+  colSpan,
+}: {
+  children: React.ReactNode;
+  className?: string;
+  colSpan?: number;
+}) {
+  return (
+    <td colSpan={colSpan} className={`py-1 pr-2 ${className}`}>
+      {children}
+    </td>
+  );
+}
+
+function Tag({ children, className }: { children: React.ReactNode; className: string }) {
+  return (
+    <span
+      className={`inline-block whitespace-nowrap rounded px-1 py-px font-medium text-[9px] ${className}`}
+    >
+      {children}
+    </span>
   );
 }
 
