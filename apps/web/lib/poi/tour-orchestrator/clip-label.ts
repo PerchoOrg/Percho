@@ -14,33 +14,47 @@
  * seconds, so the label is answering a question rather than interrupting one.
  */
 
-/** Below this a place is close enough that a number adds nothing. */
-const WALKABLE_M = 400;
-
 export interface ClipLabelInput {
   poiName: string;
-  /** 'amenities' means the community's own facility — no distance shown. */
+  /** 'amenities' means the community's own facility — distance is "0 mi". */
   bucket?: string | null;
   /** Straight-line metres from the community centroid; null when unknown. */
   distanceM?: number | null;
 }
 
 /**
+ * Name and distance as SEPARATE lines. The overlay stacks them right-aligned in
+ * a pinned card, so it needs the parts, not a pre-joined "Name · 0.9 mi".
+ */
+export interface ClipLabel {
+  name: string;
+  /** Empty only when the distance is genuinely unknown. */
+  distance: string;
+}
+
+/**
  * Miles, rounded the way someone says them out loud: "0.9 mi", "2.5 mi".
- * Under a quarter mile reads as walking distance rather than a number.
+ *
+ * No "walkable" special case any more. It put a word where every other clip had
+ * a number, so the second line changed shape as the film ran — visible now that
+ * the card is pinned rather than redrawn per clip. A small number is still
+ * honest; it just reads as "basically here".
  */
 export function formatDistance(distanceM: number): string {
-  if (distanceM <= WALKABLE_M) return 'walkable';
   const miles = distanceM / 1609.344;
   return `${miles < 10 ? miles.toFixed(1) : Math.round(miles)} mi`;
 }
 
-export function clipLabel(input: ClipLabelInput): string {
+export function clipLabel(input: ClipLabelInput): ClipLabel {
   const name = input.poiName.trim();
-  if (!name) return '';
-  // The community's own amenities are, by definition, here. A distance on the
-  // clubhouse would be noise at best and wrong at worst.
-  if (input.bucket === 'amenities') return name;
-  if (input.distanceM == null || !Number.isFinite(input.distanceM)) return name;
-  return `${name} · ${formatDistance(input.distanceM)}`;
+  if (!name) return { name: '', distance: '' };
+  // The community's own amenities are, by definition, here. Owner 2026-08-19:
+  // "if inside the community, just say 0 mile" — an explicit zero reads as
+  // "this one is yours", where the blank line it replaced looked like missing
+  // data on an otherwise uniform card.
+  if (input.bucket === 'amenities') return { name, distance: '0 mi' };
+  if (input.distanceM == null || !Number.isFinite(input.distanceM)) {
+    return { name, distance: '' };
+  }
+  return { name, distance: formatDistance(input.distanceM) };
 }

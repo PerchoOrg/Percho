@@ -969,7 +969,7 @@ def process_bucket_job(job: dict[str, Any]) -> None:
         photo_rows = sb_get(
             "poi_photos",
             {
-                "select": "id,storage_path,poi_id,enhanced_path,enhanced_status,enhanced_at,outpainted_path,outpaint_status,outpainted_at,ai_tags,"
+                "select": "id,storage_path,poi_id,enhanced_path,enhanced_status,enhanced_at,enhanced_meta,width_px,height_px,outpainted_path,outpaint_status,outpainted_at,ai_tags,"
                           "pois!inner(display_name,primary_type,types)",
                 "id": f"in.({id_list})",
             },
@@ -1645,23 +1645,55 @@ def _fail_enhance(table: str, photo_id: str, exc: Exception) -> None:
         traceback.print_exc()
 
 
+def wide_enough_to_travel(row: dict[str, Any]) -> bool:
+    """Does the un-reframed photo already fill the canvas, with room to move?
+
+    Two conditions, and both are about the CANVAS being 0.685 rather than 9:16:
+
+      - it clears MAX_UPSCALE, so it is sharp enough without help, and
+      - it is WIDER than the canvas, so a cover crop overflows horizontally and
+        `cover_travel` has somewhere to sweep.
+
+    Reframing to 9:16 (0.558) satisfies neither on this canvas. It is NARROWER
+    than the frame, so the cover crop overflows vertically instead and the
+    travel axis flips to 'y' — measured on Aberdeen, 8 of 27 clips were planned
+    as horizontal pans with literally zero horizontal room, every one of them a
+    reframed photo. Their originals are 1.33-2.16 wide and need at most 1.35x
+    upscale; several downscale. Owner 2026-08-19 saw it coming from the spec
+    alone: "if we cut the original pic to 2:3 to fit into the ios card, then how
+    do we do the effect such as pan, there is no more room right?"
+    """
+    w, h = row.get("width_px") or 0, row.get("height_px") or 0
+    meta = row.get("enhanced_meta") or {}
+    if row.get("enhanced_status") == "approved" and meta.get("width"):
+        w, h = meta["width"], meta["height"]
+    if not (w > 0 and h > 0):
+        return False
+    upscale = max(TOUR_CANVAS_W / w, TOUR_CANVAS_H / h) * 1.1  # ZOOM_HEADROOM
+    return upscale <= 2.0 and (w / h) > (TOUR_CANVAS_W / TOUR_CANVAS_H)
+
+
 def approved_enhanced_path(row: dict[str, Any]) -> str | None:
     """The path a render should actually read for this photo row.
 
-    Two derived files can exist and they stack: outpaint reframes to 9:16, then
-    enhance upscales that to the canvas. Preference order is therefore
-    enhanced → outpainted → original, because an approved enhanced file is
-    already the enhanced version of the reframed one.
+    Preference order is enhanced → outpainted → original, EXCEPT that the
+    reframe is skipped entirely when the original is already wide enough to
+    fill the canvas and pan across it (`wide_enough_to_travel`). Reframing is
+    the fallback for a photo that cannot fill the frame — Lambert High's 512px
+    facade — not the default it was while the canvas was 9:16.
 
     Enhanced still requires approval — that gate is unchanged. Outpainted does
-    not: it replaces a centre crop that was discarding a median 63% of the
-    frame, so the reframed file is the better default even unreviewed, and the
-    photo table can still reject the photo outright.
+    not: where it IS used, it is the only thing standing between a 512px source
+    and no clip at all, and the photo table can still reject the photo outright.
 
     Callers fall back to `storage_path`.
     """
     enhanced = row.get("enhanced_status") == "approved" and row.get("enhanced_path")
-    reframed = row.get("outpaint_status") == "ready" and row.get("outpainted_path")
+    reframed = (
+        row.get("outpaint_status") == "ready"
+        and row.get("outpainted_path")
+        and not wide_enough_to_travel(row)
+    )
 
     # An enhanced file only wins if it was made FROM the reframed one. Both
     # derived files can exist and the order they were produced in decides:
@@ -1728,7 +1760,7 @@ def process_photo_clip(row: dict[str, Any]) -> None:
         photos = sb_get(
             "poi_photos",
             {
-                "select": "id,storage_path,enhanced_path,enhanced_status,enhanced_at,outpainted_path,outpaint_status,outpainted_at",
+                "select": "id,storage_path,enhanced_path,enhanced_status,enhanced_at,enhanced_meta,width_px,height_px,outpainted_path,outpaint_status,outpainted_at",
                 "id": f"eq.{photo_id}",
                 "limit": "1",
             },
@@ -1887,60 +1919,106 @@ def _label_font() -> str | None:
     return next((f for f in LABEL_FONTS if os.path.exists(f)), None)
 
 
-def _render_label_png(text: str, w: int, h: int, font_path: str, dest: Path) -> None:
-    """One transparent full-frame PNG carrying a place label.
+def _render_label_png(
+    name: str, distance: str, w: int, h: int, font_path: str, dest: Path
+) -> None:
+    """One transparent full-frame PNG carrying a place card.
 
     Pillow rather than ffmpeg's drawtext: the ffmpeg on this Mac mini is built
     without libfreetype, so `drawtext` does not exist as a filter at all
     (`ffmpeg -filters` lists none). That is the same reason the repo already
     renders listing captions to PNG and composites them — see
-    scripts/caption-render. This is the small, dependency-free version of that
-    for a one-line label.
+    scripts/caption-render.
+
+    TOP RIGHT, right-aligned, two lines: the place name over its distance.
+    Owner 2026-08-19: "can you put it to the top right, including name and
+    distance… also it does not look elegant."
+
+    What this replaces sat low-left in a hard black box, which on the card was
+    both cropped by the cover fit and buried under `CommunityFace`'s own name
+    and Explore chrome. The top of the frame is the one region no card chrome
+    occupies, and the cover crop takes only ~1% off each end at the 0.685 canvas
+    (14% on an SE), so a 5.5% inset clears it on every device.
+
+    The panel is 38% black rather than a hard box, the name is semibold white,
+    and the distance sits under it at 62% white, one size step down — a stack,
+    so the distance reads as a fact about the place rather than a suffix glued
+    to its name.
     """
     from PIL import Image, ImageDraw, ImageFont
 
-    pad_x = round(w * 0.055)
-    # 60% down the frame, NOT 14% up from the bottom.
-    #
-    # The card is not a full-bleed player: `CommunityFace` lays its own name,
-    # chip row and Explore link over the bottom ~123pt of the card, and the
-    # `fit="cover"` crop takes a slice off each end on top of that. Measured
-    # against the 0.685 canvas, everything below ~65% of frame height is either
-    # cropped or behind that chrome on some device — at 86% the label was buried
-    # on every iPhone and cropped off entirely on an SE. 60% clears it with room
-    # for the two-line wrap a long place name can take.
-    baseline_y = round(h * 0.60)
-    # The scrim has to end before the right edge or the name looks cropped.
-    max_text_w = w - pad_x * 2
+    inset_x = round(w * 0.055)
+    inset_y = round(h * 0.055)
+    max_text_w = round(w * 0.52)
 
     img = Image.new("RGBA", (w, h), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
 
-    # Shrink to fit rather than truncate. "Publix Super Market at The Village
-    # Shoppes at Windermere" is 54 characters, and a clipped place name is
-    # worse than a smaller one — the label exists to answer "where is this".
-    size = max(28, round(w * 0.038))
-    font = ImageFont.truetype(font_path, size)
-    while size > 18 and draw.textlength(text, font=font) > max_text_w:
-        size -= 2
+    # WRAP a long name; do not shrink it away. "Publix Super Market at The
+    # Village Shoppes at Windermere" is 54 characters — shrinking that to one
+    # line drove the type to 17px and stretched the panel across most of the
+    # frame, which is the opposite of elegant. Two lines at full size read
+    # better and keep the card compact. Only a name too long for two lines
+    # steps the size down, and it is never truncated: the label exists to
+    # answer "where is this".
+    size = round(w * 0.034)
+    while True:
         font = ImageFont.truetype(font_path, size)
+        lines = _wrap_to_width(draw, name, font, max_text_w)
+        if len(lines) <= 2 or size <= round(w * 0.024):
+            break
+        size -= 2
+    line_h = round(size * 1.18)
+    sub_size = max(14, round(size * 0.70))
+    sub_font = ImageFont.truetype(font_path, sub_size)
 
-    # A scrim behind the text, sized to it: the label has to stay legible over
-    # a bright pool or a white facade, and a full-width bar would read as
-    # chrome on an otherwise clean frame.
-    box = draw.textbbox((pad_x, baseline_y), text, font=font)
-    margin = round(size * 0.45)
-    draw.rounded_rectangle(
-        (box[0] - margin, box[1] - margin * 0.6, box[2] + margin, box[3] + margin * 0.6),
-        radius=round(size * 0.35),
-        fill=(0, 0, 0, 130),
+    gap = round(size * 0.24) if distance else 0
+    block_w = max(
+        max(draw.textlength(l, font=font) for l in lines),
+        draw.textlength(distance, font=sub_font) if distance else 0,
     )
-    draw.text((pad_x, baseline_y), text, font=font, fill=(255, 255, 255, 240))
+    block_h = line_h * len(lines) + gap + (sub_size if distance else 0)
+
+    right, top = w - inset_x, inset_y
+    pad_h, pad_v = round(size * 0.66), round(size * 0.50)
+    draw.rounded_rectangle(
+        (right - block_w - pad_h, top - pad_v, right + pad_h, top + block_h + pad_v),
+        radius=round(size * 0.46),
+        fill=(0, 0, 0, 97),
+    )
+    for i, line in enumerate(lines):
+        draw.text(
+            (right, top + i * line_h), line, font=font, fill=(255, 255, 255, 245), anchor="ra"
+        )
+    if distance:
+        draw.text(
+            (right, top + line_h * len(lines) + gap),
+            distance,
+            font=sub_font,
+            fill=(255, 255, 255, 158),
+            anchor="ra",
+        )
     img.save(dest)
 
 
+def _wrap_to_width(draw: Any, text: str, font: Any, max_w: float) -> list[str]:
+    """Greedy word wrap. A single word wider than `max_w` gets its own line."""
+    lines: list[str] = []
+    line = ""
+    for word in text.split():
+        trial = f"{line} {word}".strip()
+        if line and draw.textlength(trial, font=font) > max_w:
+            lines.append(line)
+            line = word
+        else:
+            line = trial
+    if line:
+        lines.append(line)
+    return lines or [text]
+
+
 def _label_overlay(
-    labels: list[str],
+    labels: list[tuple[str, str]],
     durs: list[float],
     offsets: list[float],
     xfade: float,
@@ -1951,14 +2029,23 @@ def _label_overlay(
 ) -> tuple[list[str], list[str], str]:
     """PNG inputs, overlay filters, and the label the chain now ends on.
 
-    Each label is composited only while its own clip is on screen:
-    `offsets[i]` is where the transition from clip i to clip i+1 begins on the
-    finished timeline, so clip i owns the span from the end of its incoming
-    transition to the start of its outgoing one. Bounding it that way stops a
-    place name bleeding across a crossfade onto the next place.
+    The card is PINNED: spans are contiguous, so exactly one is on screen at
+    every instant and only its content changes. Owner 2026-08-19: "it shows up
+    and goes again and again, you need to pin it on the screen but change the
+    content."
+
+    It used to bound each label to the span between its clip's incoming and
+    outgoing crossfades, leaving the card absent for `xfade` seconds at every
+    cut — the card blinked off and back 26 times in a 27-clip film. Handing each
+    label the span up to the NEXT label's start closes those gaps. A place name
+    now carries a half second into its successor's dissolve, which is correct:
+    during a dissolve the outgoing place is still the one mostly on screen.
+
+    A clip with no name at all still yields its span to the previous card rather
+    than blanking it, for the same reason.
     """
     font = _label_font()
-    if not font or not any(l.strip() for l in labels):
+    if not font or not any(n.strip() for n, _ in labels):
         return [], [], prev
 
     w, h = scale_to[0], scale_to[1]
@@ -1967,16 +2054,18 @@ def _label_overlay(
     steps: list[str] = []
     idx = first_input_index
 
-    for i, raw in enumerate(labels):
-        text = raw.strip()
-        if not text:
-            continue
-        start = 0.0 if i == 0 else offsets[i - 1] + xfade
-        end = offsets[i] if i < len(offsets) else total
-        if end - start < 0.5:  # too short to read; skip rather than flash
+    # Where each clip's card takes over: its own start on the finished timeline.
+    starts = [0.0] + [offsets[i - 1] + xfade for i in range(1, len(labels))]
+    named = [i for i, (n, _) in enumerate(labels) if n.strip()]
+
+    for pos, i in enumerate(named):
+        name, distance = labels[i][0].strip(), labels[i][1].strip()
+        start = 0.0 if pos == 0 else starts[i]  # the first card opens the film
+        end = starts[named[pos + 1]] if pos + 1 < len(named) else total
+        if end - start < 0.5:  # too short to read; let the previous card hold
             continue
         png = workdir / f"label_{i:02d}.png"
-        _render_label_png(text, w, h, font, png)
+        _render_label_png(name, distance, w, h, font, png)
         inputs.extend(["-i", str(png)])
         out = f"[lo{i}]"
         steps.append(f"[{idx}:v]format=rgba[lb{i}]")
@@ -2005,7 +2094,7 @@ def process_assembly(row: dict[str, Any]) -> None:
         # Kept in lockstep with clip_paths, NOT with `ordered` — a shot whose
         # clip is not ready is skipped below, and a label list built from
         # `ordered` would caption every following clip with the wrong place.
-        clip_labels: list[str] = []
+        clip_labels: list[tuple[str, str]] = []
         skipped: list[str] = []
         by_photo = {}
         # Ask for the clips of THESE photos, not the first page of every ready
@@ -2064,7 +2153,7 @@ def process_assembly(row: dict[str, Any]) -> None:
             dest = workdir / f"{i:02d}.mp4"
             storage_download(bucket, path, dest)
             clip_paths.append(dest)
-            clip_labels.append(str(c.get("label") or ""))
+            clip_labels.append((str(c.get("label") or ""), str(c.get("label_distance") or "")))
             print(f"[assembly {assembly_id}] downloaded {bucket}/{path}", flush=True)
 
         if len(clip_paths) < 2:
