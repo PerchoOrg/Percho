@@ -2,6 +2,7 @@
  * `generate` and `regenerate-all` steps — enqueue photo->clip jobs in
  * `photo_clips`; the Seedance / Ken Burns workers pick them up.
  */
+import { CANVAS_H, CANVAS_W } from '@/lib/poi/tour-orchestrator/scheduler';
 import { type RunRow, type TourDb, mustWrite, saveStep, setRunStatus } from './shared';
 import { type PlannedShot, plannedShots } from './shots';
 
@@ -102,38 +103,68 @@ export async function runGenerate(sb: TourDb, run: RunRow, photoIds?: string[], 
   return enqueueClips(sb, run, shotsWithEngine, forceEngine);
 }
 
+/** What a clip's pixels depend on. Change any of these and the file is wrong. */
+export interface RenderInputs {
+  engine: string;
+  move: string | null;
+  duration_s: number;
+  /** Newest of the photo's reframe/enhance stamps; '' when it has neither. */
+  photoVersion: string;
+}
+
 /**
- * Clips whose photo was reframed or enhanced after the clip was rendered.
+ * A clip's render inputs as one comparable string.
  *
- * `photo_id:engine` keys, matching the map `enqueueClips` builds. Comparing
- * timestamps is the whole test: a clip last rendered before `outpainted_at` or
- * `enhanced_at` shows a frame the pipeline no longer intends to use.
+ * Canvas is in it because the canvas is not a property of the clip row and has
+ * changed under a whole library once already (1080x1920 -> 1080x1576).
  *
- * `updated_at`, NOT `created_at`. A requeued clip keeps its creation time, so
- * comparing against that makes it permanently stale and every generate
- * re-renders the same clips forever — measured as "0 queued, 13 requeued" on
- * two consecutive runs with nothing having changed between them. The worker
- * stamps `updated_at` when it finishes, which is the render time this needs.
+ * Rounded duration, because it is a float from the scheduler and a 0.0001
+ * difference is not a reason to re-render.
+ */
+export function renderKey(i: RenderInputs): string {
+  return [
+    `c=${CANVAS_W}x${CANVAS_H}`,
+    `e=${i.engine}`,
+    `m=${i.move ?? '-'}`,
+    `d=${i.duration_s.toFixed(2)}`,
+    `p=${i.photoVersion || '-'}`,
+  ].join('|');
+}
+
+/**
+ * The clips whose rendered file no longer matches the plan.
+ *
+ * `photo_id:engine` keys, matching the map `enqueueClips` builds.
+ *
+ * This REPLACED a timestamp comparison — clip.updated_at against the photo's
+ * outpainted_at/enhanced_at — which could only ever see edits to the PHOTO. A
+ * clip is a function of far more than that, and on 2026-08-19 three plan-only
+ * changes each shipped undetected: the canvas changing shape, the render
+ * read-path switching from reframes back to originals, and the camera moves
+ * shifting toward orbit. Every time, `generate` printed "0 requeued", the film
+ * came out unchanged, and the clips had to be requeued by hand. Comparing a
+ * fingerprint of ALL the inputs is what makes that class of bug impossible
+ * rather than one bug fixed three times.
+ *
+ * A row with no stored key (every row predating the column) counts as stale, so
+ * the library re-renders once and is self-consistent afterwards.
  *
  * NEVER stales a Seedance clip. Owner 2026-08-19, emphatic: "for photos with
  * seedance clips, never call it again!!!! always re-use, unless I clicked
- * regenerate manually". Seedance is the only paid engine, so the exemption is
- * enforced here rather than left to the caller — `requeueReady` (the per-row
- * Regenerate button) stays the one and only way to re-run it.
- *
- * This used to hold only by accident: `selectOutpaintCandidates` skips Seedance
- * shots, so reframing never touched them. But `enhanced_at` stales a clip too,
- * and enhancement has no such exemption — re-enhancing a Seedance photo would
- * have silently billed a fresh generation. Every other engine renders locally
- * and is free to re-run.
+ * regenerate manually". Seedance is the only paid engine, so the exemption
+ * lives here rather than in the callers — `requeueReady` (the per-row
+ * Regenerate button) stays the one and only way to re-run it. Note this matters
+ * MORE with a fingerprint than it did with timestamps: a canvas change now
+ * marks every clip stale, and without the exemption that would be a bulk
+ * re-bill of the whole paid library.
  */
-export async function staleClipKeys(
+export async function plannedRenderKeys(
   sb: TourDb,
-  photoIds: string[],
-  clips: Array<{ photo_id: string; engine: string; status: string; updated_at?: string | null }>,
-): Promise<Set<string>> {
-  const stale = new Set<string>();
-  if (photoIds.length === 0) return stale;
+  shots: Array<{ photo_id: string; engine: string; move?: string | null; duration_s: number }>,
+): Promise<Map<string, string>> {
+  const photoIds = [...new Set(shots.map((s) => s.photo_id))];
+  const out = new Map<string, string>();
+  if (photoIds.length === 0) return out;
 
   const { data: photos } = (await sb
     .from('poi_photos')
@@ -148,19 +179,43 @@ export async function staleClipKeys(
     }> | null;
   };
 
-  const changedAt = new Map<string, string>();
+  // A photo's "version" is the newest derived-file stamp it carries. Only a
+  // READY reframe and an APPROVED enhancement count — an in-flight or rejected
+  // one is not what the render will read.
+  const version = new Map<string, string>();
   for (const p of photos ?? []) {
     const stamps: string[] = [];
     if (p.outpaint_status === 'ready' && p.outpainted_at) stamps.push(p.outpainted_at);
     if (p.enhanced_status === 'approved' && p.enhanced_at) stamps.push(p.enhanced_at);
-    if (stamps.length > 0) changedAt.set(p.id, stamps.sort().at(-1) as string);
+    if (stamps.length > 0) version.set(p.id, stamps.sort().at(-1) as string);
   }
 
+  for (const s of shots) {
+    out.set(
+      `${s.photo_id}:${s.engine}`,
+      renderKey({
+        engine: s.engine,
+        move: s.move ?? null,
+        duration_s: s.duration_s,
+        photoVersion: version.get(s.photo_id) ?? '',
+      }),
+    );
+  }
+  return out;
+}
+
+/** Which existing rows no longer match the plan. Pure — see the doc above. */
+export function staleClipKeys(
+  clips: Array<{ photo_id: string; engine: string; render_key?: string | null }>,
+  wanted: Map<string, string>,
+): Set<string> {
+  const stale = new Set<string>();
   for (const c of clips) {
     if (c.engine === 'seedance') continue; // paid — manual Regenerate only
-    const changed = changedAt.get(c.photo_id);
-    if (!changed || !c.updated_at) continue;
-    if (new Date(c.updated_at) < new Date(changed)) stale.add(`${c.photo_id}:${c.engine}`);
+    const key = `${c.photo_id}:${c.engine}`;
+    const want = wanted.get(key);
+    if (want === undefined) continue; // not in this cut; leave it alone
+    if (c.render_key !== want) stale.add(key);
   }
   return stale;
 }
@@ -189,7 +244,7 @@ async function enqueueClips(
   const photoIdsInPlay = shotsWithEngine.map((s) => s.photo_id);
   const existing = await sb
     .from('photo_clips')
-    .select('photo_id, engine, status, updated_at')
+    .select('photo_id, engine, status, render_key')
     .in('photo_id', photoIdsInPlay);
   const have = new Map(
     (existing.data ?? []).map((r: { photo_id: string; engine: string; status: string }) => [
@@ -198,14 +253,14 @@ async function enqueueClips(
     ]),
   );
 
-  // A clip renders one VERSION of a photo. Reframing or enhancing the photo
-  // afterwards leaves the clip showing the old frame, and nothing marked it —
-  // so a bulk generate reported "0 clips queued", the film came out unchanged,
-  // and no error appeared anywhere. That is what happened on Aberdeen: 15
-  // photos reframed, 20 clips still rendered from the crop, and not one
-  // reframed file reached the screen until they were requeued by hand
-  // (owner 2026-08-19).
-  const stale = await staleClipKeys(sb, photoIdsInPlay, existing.data ?? []);
+  // A clip's file is a function of the canvas, the engine, the move, the
+  // duration AND the photo version. Anything in that set changing leaves the
+  // rendered file wrong, and for a long time only the photo half was checked —
+  // so a canvas change, a read-path change and a move change each shipped with
+  // `generate` reporting "0 requeued" and the film coming out unchanged
+  // (2026-08-19, three times in one session). `render_key` is the whole set.
+  const wanted = await plannedRenderKeys(sb, shotsWithEngine);
+  const stale = staleClipKeys(existing.data ?? [], wanted);
   const toCreate = shotsWithEngine.filter((s) => !have.has(`${s.photo_id}:${s.engine}`));
   if (toCreate.length > 0) {
     await mustWrite(
@@ -222,6 +277,7 @@ async function enqueueClips(
           prompt: s.prompt ?? null,
           ai_generated: s.ai_generated ?? false,
           status: 'pending',
+          render_key: wanted.get(`${s.photo_id}:${s.engine}`) ?? null,
         })),
       ),
     );
@@ -234,10 +290,14 @@ async function enqueueClips(
     const status = have.get(key);
     if (status === undefined) continue;
     if (status === 'processing') continue;
-    // Re-render on an explicit per-row click, or when the photo itself has
-    // changed underneath the clip.
+    // Re-render on an explicit per-row click, or when the render inputs moved
+    // out from under the clip.
     const rerender = status === 'ready' && (requeueReady || stale.has(key));
     if (rerender) requeued += 1;
+    // `render_key` describes the file this row is FOR, so it advances only
+    // alongside a re-render. Writing it on a row we are not requeueing would
+    // declare a stale file current and permanently suppress the very check
+    // that caught the change.
     await mustWrite(
       `apply plan to clip(${s.photo_id}:${s.engine})`,
       sb
@@ -247,7 +307,9 @@ async function enqueueClips(
           move: s.move ?? null,
           prompt: s.prompt ?? null,
           ai_generated: s.ai_generated ?? false,
-          ...(rerender ? { status: 'pending', error: null } : {}),
+          ...(rerender
+            ? { status: 'pending', error: null, render_key: wanted.get(key) ?? null }
+            : {}),
           updated_at: new Date().toISOString(),
         })
         .eq('photo_id', s.photo_id)
