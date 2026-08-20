@@ -45,10 +45,17 @@ feature to read the column would have inherited a 404 with no failing test.
 **Issues**: mid-investigation the Supabase project went to **HTTP 402** on
 every endpoint — REST and Storage alike — with `exceed_cached_egress_quota`.
 This is a project-wide stop, not a rate limit. Could not count or backfill the
-stale `generated_videos.video_url` rows as a result. The render worker
-(pid 26458) is still polling and will keep 402ing until service is restored;
-it needs no restart for that, but it now also runs stale code and must be
-restarted after this merge.
+stale rows as a result. The render worker (pid 26458) is still polling and
+will keep 402ing until service is restored; it needs no restart for that, but
+it now also runs stale code and must be restarted after this merge.
+
+**Resolution** (16:05 UTC): owner upgraded off the free plan; REST and Storage
+back to 200. Worker restarted onto the merged code as pid 40448. Backfilled
+the stale URLs — the column is `tour_assemblies.video_url`, not
+`generated_videos.video_url` as written above (`generated_videos` carries only
+`cf_stream_uid`). All 34 non-null rows were broken, none were clean, and every
+one had a `cf_stream_uid`, so the rebuild was deterministic. Re-probed the
+three newest against the live CDN: 200.
 
 **Learnings**: the likely egress driver is this phase's own workload — the
 worker re-reads source photos from Storage on every clip render, and phase71
