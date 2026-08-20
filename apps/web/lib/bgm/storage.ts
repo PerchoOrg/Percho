@@ -77,11 +77,28 @@ export const BGM_STATE_PATH = '_state/state.json';
 export type BgmState = {
   schema_version: 1;
   rejected: string[];
+  /**
+   * Generated but not yet reviewed. Treated exactly like `rejected` by the
+   * render worker — a track nobody has listened to must not be able to reach
+   * a customer's film.
+   *
+   * Added 2026-08-20 with AI generation. Until then every track in the bucket
+   * had been chosen by a human before it got there, so "in Storage" and
+   * "approved" were the same thing; a generate button breaks that, and the
+   * owner asked for the gate explicitly: "ai generation, review and
+   * approve/reject process".
+   */
+  pending?: string[];
   updated_at: string;
 };
 
 export function emptyBgmState(): BgmState {
-  return { schema_version: 1, rejected: [], updated_at: new Date().toISOString() };
+  return { schema_version: 1, rejected: [], pending: [], updated_at: new Date().toISOString() };
+}
+
+/** A track the render worker may use: present, reviewed, and not rejected. */
+export function isPlayable(path: string, state: BgmState): boolean {
+  return !state.rejected.includes(path) && !(state.pending ?? []).includes(path);
 }
 
 /** Public streaming URL for a track in the `bgm` bucket. */

@@ -23,8 +23,19 @@ set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 BGM_DIR="$REPO_ROOT/scripts/render-worker/bgm"
-VIBES=(warm-acoustic)
-RETIRED_VIBES=(modern-corporate luxury-ambient chill-electronic cinematic)
+# All four vibes sync again as of 2026-08-20.
+#
+# Three of them were retired in phase106 because their imported tracks were
+# rejected on listening — a judgement about those particular mp3s, which then
+# hardened into the folders being deleted on every sync. With generation, a
+# vibe is no longer a fixed pile of imports: the owner asked for "different
+# types for different vibe", and a bucket whose contents get purged locally
+# cannot hold anything, however good.
+#
+# Only tracks that pass review are downloaded (see the exclusion list below),
+# so an empty vibe stays empty and costs nothing.
+VIBES=(warm-acoustic modern-corporate luxury-ambient chill-electronic)
+RETIRED_VIBES=(cinematic)
 
 # shellcheck disable=SC1091
 source "$REPO_ROOT/.env.local"
@@ -49,8 +60,12 @@ state_json=$(curl -s -H "$AUTH_HDR" -H "$APIKEY_HDR" \
 if ! echo "$state_json" | jq empty 2>/dev/null; then
     state_json='{"rejected":[]}'
 fi
-rejected_list=$(echo "$state_json" | jq -r '.rejected[]? // empty')
-echo "Rejected tracks in state.json: $(echo "$rejected_list" | grep -c . || true)"
+# Rejected AND pending. A generated track sits in `pending` until someone has
+# listened to it, and an unreviewed track must not be able to reach a
+# customer's film — so as far as this script is concerned the two states are
+# the same thing: do not download it.
+rejected_list=$(echo "$state_json" | jq -r '(.rejected[]?, .pending[]?) // empty')
+echo "Excluded tracks (rejected + pending): $(echo "$rejected_list" | grep -c . || true)"
 
 is_rejected() {
     local candidate="$1"
@@ -110,6 +125,13 @@ done
 
 echo
 echo "Total: $total active tracks. Regenerating manifest.json…"
-python3 "$REPO_ROOT/scripts/upload-bgm/upload.py" --manifest-only
+# The render venv, not bare python3 — upload.py imports `requests`, which the
+# system interpreter does not have. Every run since the venv appeared synced the
+# mp3s correctly and then died here, which is why manifest.json still listed
+# three buckets Storage had already been emptied of.
+BGM_PYTHON="$REPO_ROOT/.venv-render/bin/python3"
+[ -x "$BGM_PYTHON" ] || BGM_PYTHON="$REPO_ROOT/.venv-depthflow/bin/python3"
+[ -x "$BGM_PYTHON" ] || BGM_PYTHON="python3"
+"$BGM_PYTHON" "$REPO_ROOT/scripts/upload-bgm/upload.py" --manifest-only
 
 echo "Done. Restart percho-render-worker if it caches file listings at boot."

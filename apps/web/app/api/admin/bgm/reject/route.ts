@@ -21,23 +21,46 @@ export async function POST(req: Request) {
   const admin = await requireAdmin();
   if (!admin) return NextResponse.json({ error: 'forbidden' }, { status: 403 });
 
-  const body = (await req.json().catch(() => null)) as { path?: string; rejected?: boolean } | null;
-  const path = body?.path?.trim() ?? '';
+  const body = (await req.json().catch(() => null)) as {
+    path?: string;
+    paths?: string[];
+    rejected?: boolean;
+  } | null;
+  // `paths` for a batch, `path` for the original one-track call. Reviewing a
+  // generated set is a batch action by nature, and culling the imported
+  // library to eight meant acting on twenty-two at once.
+  const paths = (body?.paths ?? (body?.path ? [body.path] : []))
+    .map((p) => p.trim())
+    .filter(Boolean);
   const rejected = body?.rejected;
-  if (!path || typeof rejected !== 'boolean') {
-    return NextResponse.json({ error: 'missing path or rejected flag' }, { status: 400 });
+  if (paths.length === 0 || typeof rejected !== 'boolean') {
+    return NextResponse.json({ error: 'missing path(s) or rejected flag' }, { status: 400 });
   }
 
-  const [vibe, ...rest] = path.split('/');
-  if (!vibe || !isBgmVibe(vibe) || rest.length !== 1 || !rest[0]?.endsWith('.mp3')) {
-    return NextResponse.json({ error: `invalid path: ${path}` }, { status: 400 });
+  for (const p of paths) {
+    const [vibe, ...rest] = p.split('/');
+    if (!vibe || !isBgmVibe(vibe) || rest.length !== 1 || !rest[0]?.endsWith('.mp3')) {
+      return NextResponse.json({ error: `invalid path: ${p}` }, { status: 400 });
+    }
   }
 
   const state = await readBgmState();
-  const set = new Set(state.rejected);
-  if (rejected) set.add(path);
-  else set.delete(path);
-  await writeBgmState({ ...state, rejected: Array.from(set).sort() });
+  const reject = new Set(state.rejected);
+  // Either verdict is a REVIEW, so both clear the pending flag — that is what
+  // makes this one endpoint serve the generated-track gate as well. Approving
+  // is `rejected: false`, which now means "reviewed and kept" rather than
+  // merely "not on the reject list".
+  const pending = new Set(state.pending ?? []);
+  for (const p of paths) {
+    if (rejected) reject.add(p);
+    else reject.delete(p);
+    pending.delete(p);
+  }
+  await writeBgmState({
+    ...state,
+    rejected: Array.from(reject).sort(),
+    pending: Array.from(pending).sort(),
+  });
 
-  return NextResponse.json({ path, rejected });
+  return NextResponse.json({ paths, rejected, count: paths.length });
 }

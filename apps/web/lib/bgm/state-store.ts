@@ -26,6 +26,13 @@ export async function readBgmState(): Promise<BgmState> {
       rejected: Array.isArray(parsed.rejected)
         ? parsed.rejected.filter((s) => typeof s === 'string')
         : [],
+      // Carried through rather than defaulted away: every writer rewrites the
+      // whole sidecar, so dropping this on read would silently approve every
+      // unreviewed track the next time someone clicked reject on an unrelated
+      // one.
+      pending: Array.isArray(parsed.pending)
+        ? parsed.pending.filter((s) => typeof s === 'string')
+        : [],
       updated_at:
         typeof parsed.updated_at === 'string' ? parsed.updated_at : new Date().toISOString(),
     };

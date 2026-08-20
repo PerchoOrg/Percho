@@ -15,12 +15,13 @@
  *     106 called "Import").
  */
 
+import { LYRIA_COST_USD } from '@/lib/bgm/lyria';
 import { BGM_VIBE_META, type BgmVibe, prettyTrackTitle } from '@/lib/bgm/storage';
-import { CheckCircle2, Globe, Loader2, Trash2, Upload, X, XCircle } from 'lucide-react';
+import { CheckCircle2, Globe, Loader2, Sparkles, Trash2, Upload, X, XCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 
-export type BgmTrack = { name: string; url: string; rejected: boolean };
+export type BgmTrack = { name: string; url: string; rejected: boolean; pending: boolean };
 type Candidate = {
   title: string;
   filename: string;
@@ -41,9 +42,14 @@ export function BgmVibeSection({ vibe, tracks }: { vibe: BgmVibe; tracks: BgmTra
   const [error, setError] = useState<string | null>(null);
   const [importerOpen, setImporterOpen] = useState(false);
   const [purging, setPurging] = useState(false);
+  const [genOpen, setGenOpen] = useState(false);
 
-  const approved = tracks.filter((t) => !t.rejected);
-  const rejected = tracks.filter((t) => t.rejected);
+  // Three states, in the order they need attention. `pending` is generated
+  // music nobody has listened to yet — it is in Storage but the worker skips
+  // it, so it cannot reach a film before someone says yes.
+  const pending = tracks.filter((t) => t.pending);
+  const approved = tracks.filter((t) => !t.pending && !t.rejected);
+  const rejected = tracks.filter((t) => !t.pending && t.rejected);
 
   async function handleUpload(files: FileList | null) {
     if (!files || files.length === 0) return;
@@ -129,6 +135,27 @@ export function BgmVibeSection({ vibe, tracks }: { vibe: BgmVibe; tracks: BgmTra
     }
   }
 
+  /** Approve or reject a whole group in one call — reviewing a generated set
+   *  is a batch action, and the endpoint takes `paths` for exactly that. */
+  async function handleSetManyRejected(paths: string[], next: boolean) {
+    if (paths.length === 0) return;
+    setBusyPath('__bulk__');
+    setError(null);
+    try {
+      const res = await fetch('/api/admin/bgm/reject', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ paths, rejected: next }),
+      });
+      if (!res.ok) throw new Error(((await res.json()) as { error?: string })?.error ?? 'failed');
+      router.refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusyPath(null);
+    }
+  }
+
   async function handlePurgeRejected() {
     if (rejected.length === 0) return;
     const ok = window.confirm(
@@ -165,6 +192,12 @@ export function BgmVibeSection({ vibe, tracks }: { vibe: BgmVibe; tracks: BgmTra
         <div className="flex flex-wrap items-center gap-2">
           <div className="mr-1 text-ink2 text-xs">
             <span className="font-medium text-ink">{approved.length}</span> approved
+            {pending.length > 0 ? (
+              <>
+                {' '}
+                · <span className="font-medium text-amber-700">{pending.length} to review</span>
+              </>
+            ) : null}
             {rejected.length > 0 ? (
               <>
                 {' '}
@@ -172,6 +205,14 @@ export function BgmVibeSection({ vibe, tracks }: { vibe: BgmVibe; tracks: BgmTra
               </>
             ) : null}
           </div>
+          <button
+            type="button"
+            onClick={() => setGenOpen((v) => !v)}
+            className="inline-flex items-center gap-1.5 rounded-full border border-line bg-bg px-3 py-1 font-medium text-ink text-xs transition hover:border-ink2"
+          >
+            <Sparkles size={12} />
+            Generate
+          </button>
           <button
             type="button"
             onClick={() => setImporterOpen(true)}
@@ -217,13 +258,67 @@ export function BgmVibeSection({ vibe, tracks }: { vibe: BgmVibe; tracks: BgmTra
         </div>
       ) : null}
 
+      {genOpen ? (
+        <GeneratePanel
+          vibe={vibe}
+          onClose={() => setGenOpen(false)}
+          onDone={() => router.refresh()}
+        />
+      ) : null}
+
       {tracks.length === 0 ? (
         <div className="px-4 py-6 text-ink2 text-sm sm:px-5">
-          No tracks yet — click <b>Import</b> to pull from the curated web pool or <b>Upload</b> to
-          add your own.
+          No tracks yet — <b>Generate</b> some, <b>Import</b> from the curated web pool, or{' '}
+          <b>Upload</b> your own.
         </div>
       ) : (
         <ul className="divide-y divide-line">
+          {/* Needs a decision, so it goes first. */}
+          {pending.length > 0 ? (
+            <li className="flex flex-wrap items-center justify-between gap-2 border-amber-200 border-l-2 bg-amber-50/60 px-4 py-2 sm:px-5">
+              <span className="font-medium text-amber-900 text-xs">
+                {pending.length} awaiting review — the worker skips these until you approve
+              </span>
+              <span className="flex gap-2">
+                <button
+                  type="button"
+                  disabled={busyPath === '__bulk__'}
+                  onClick={() =>
+                    handleSetManyRejected(
+                      pending.map((t) => `${vibe}/${t.name}`),
+                      false,
+                    )
+                  }
+                  className="rounded-full border border-line bg-bg px-2.5 py-0.5 font-medium text-ink text-xs hover:border-ink2 disabled:opacity-60"
+                >
+                  Approve all
+                </button>
+                <button
+                  type="button"
+                  disabled={busyPath === '__bulk__'}
+                  onClick={() =>
+                    handleSetManyRejected(
+                      pending.map((t) => `${vibe}/${t.name}`),
+                      true,
+                    )
+                  }
+                  className="rounded-full border border-line bg-bg px-2.5 py-0.5 font-medium text-ink2 text-xs hover:border-ink2 disabled:opacity-60"
+                >
+                  Reject all
+                </button>
+              </span>
+            </li>
+          ) : null}
+          {pending.map((t) => (
+            <TrackRow
+              key={t.name}
+              track={t}
+              vibe={vibe}
+              busy={busyPath === `${vibe}/${t.name}`}
+              onApprove={() => handleSetRejected(`${vibe}/${t.name}`, false)}
+              onReject={() => handleSetRejected(`${vibe}/${t.name}`, true)}
+            />
+          ))}
           {approved.map((t) => (
             <TrackRow
               key={t.name}
@@ -546,6 +641,134 @@ function ImportPicker({
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+/**
+ * Generate music into this vibe.
+ *
+ * The prompt is not exposed for editing: the fixed half of it carries rules
+ * that exist because of specific failures — instrumental only, and above all
+ * no swells or build-ups, because a bed that surges fights the narration. The
+ * free-text box is for steering on top of that, not replacing it.
+ */
+function GeneratePanel({
+  vibe,
+  onClose,
+  onDone,
+}: {
+  vibe: BgmVibe;
+  onClose: () => void;
+  onDone: () => void;
+}) {
+  const [count, setCount] = useState(2);
+  const [seconds, setSeconds] = useState(90);
+  const [extra, setExtra] = useState('');
+  const [running, setRunning] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [summary, setSummary] = useState<string | null>(null);
+
+  async function run() {
+    setRunning(true);
+    setError(null);
+    setSummary(null);
+    try {
+      const res = await fetch('/api/admin/bgm/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ vibe, count, seconds, extra }),
+      });
+      const json = (await res.json()) as {
+        error?: string;
+        generated?: number;
+        requested?: number;
+        cost_usd?: number;
+        results?: Array<{ status: string; error?: string }>;
+      };
+      if (!res.ok) throw new Error(json?.error ?? 'generation failed');
+      // Partial success is normal — the safety filter blocks prompts
+      // unpredictably — so report the shortfall rather than calling it a
+      // failure.
+      const failed = (json.results ?? []).filter((r) => r.status === 'error');
+      setSummary(
+        `Generated ${json.generated}/${json.requested} · $${json.cost_usd?.toFixed(2)}${
+          failed.length > 0 ? ` · ${failed.length} blocked or failed` : ''
+        }`,
+      );
+      if ((json.generated ?? 0) > 0) onDone();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setRunning(false);
+    }
+  }
+
+  return (
+    <div className="border-line border-b bg-surface/40 px-4 py-3 sm:px-5">
+      <div className="flex flex-wrap items-end gap-3">
+        <label className="text-ink2 text-xs">
+          Tracks
+          <select
+            value={count}
+            onChange={(e) => setCount(Number(e.target.value))}
+            className="mt-1 block rounded border border-line bg-bg px-2 py-1 text-ink text-sm"
+          >
+            {[1, 2, 3, 4].map((n) => (
+              <option key={n} value={n}>
+                {n}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="text-ink2 text-xs">
+          Length
+          <select
+            value={seconds}
+            onChange={(e) => setSeconds(Number(e.target.value))}
+            className="mt-1 block rounded border border-line bg-bg px-2 py-1 text-ink text-sm"
+          >
+            {[60, 90, 120, 150].map((n) => (
+              <option key={n} value={n}>
+                {n}s
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="min-w-[16rem] flex-1 text-ink2 text-xs">
+          Steer it (optional)
+          <input
+            type="text"
+            value={extra}
+            onChange={(e) => setExtra(e.target.value)}
+            placeholder="e.g. brighter, more piano, slower"
+            className="mt-1 block w-full rounded border border-line bg-bg px-2 py-1 text-ink text-sm outline-none focus:border-ink2"
+          />
+        </label>
+        <button
+          type="button"
+          onClick={run}
+          disabled={running}
+          className="inline-flex items-center gap-1.5 rounded-full bg-ink px-3 py-1.5 font-medium text-bg text-xs disabled:opacity-50"
+        >
+          {running ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+          {running ? 'Generating…' : `Generate · $${(count * LYRIA_COST_USD).toFixed(2)}`}
+        </button>
+        <button
+          type="button"
+          onClick={onClose}
+          className="rounded-full border border-line bg-bg px-3 py-1.5 font-medium text-ink2 text-xs hover:border-ink2"
+        >
+          Close
+        </button>
+      </div>
+      <p className="mt-2 text-ink2 text-xs">
+        Lyria 3 · instrumental, steady, mixed to sit under narration · lands in{' '}
+        <b>awaiting review</b>, not in films. ~30s per track; the safety filter blocks prompts
+        occasionally, so a batch may come back short.
+      </p>
+      {error ? <p className="mt-2 text-red-700 text-xs">{error}</p> : null}
+      {summary ? <p className="mt-2 text-green-700 text-xs">{summary}</p> : null}
     </div>
   );
 }

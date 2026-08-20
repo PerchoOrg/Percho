@@ -23,7 +23,11 @@ import { type BgmTrack, BgmVibeSection } from './BgmVibeSection';
 
 export const dynamic = 'force-dynamic';
 
-async function listVibe(vibe: BgmVibe, rejected: Set<string>): Promise<BgmTrack[]> {
+async function listVibe(
+  vibe: BgmVibe,
+  rejected: Set<string>,
+  pending: Set<string>,
+): Promise<BgmTrack[]> {
   const svc = createServiceClient();
   const { data } = await svc.storage.from(BGM_BUCKET).list(vibe, {
     limit: 1000,
@@ -35,6 +39,7 @@ async function listVibe(vibe: BgmVibe, rejected: Set<string>): Promise<BgmTrack[
       name: o.name,
       url: bgmPublicUrl(vibe, o.name),
       rejected: rejected.has(`${vibe}/${o.name}`),
+      pending: pending.has(`${vibe}/${o.name}`),
     }));
 }
 
@@ -44,13 +49,19 @@ export default async function BgmLibraryPage() {
 
   const state = await readBgmState();
   const rejected = new Set(state.rejected);
+  const pending = new Set(state.pending ?? []);
   const byVibe = await Promise.all(
-    BGM_VIBES.map((v) => listVibe(v, rejected).then((t) => [v, t] as const)),
+    BGM_VIBES.map((v) => listVibe(v, rejected, pending).then((t) => [v, t] as const)),
+  );
+  // A vibe with tracks waiting on a decision sorts to the top of the page —
+  // review is the step that blocks generated music from being usable.
+  const ordered = [...byVibe].sort(
+    (a, b) => b[1].filter((t) => t.pending).length - a[1].filter((t) => t.pending).length,
   );
 
   return (
     <div className="space-y-6">
-      {byVibe.map(([vibe, tracks]) => (
+      {ordered.map(([vibe, tracks]) => (
         <BgmVibeSection key={vibe} vibe={vibe} tracks={tracks} />
       ))}
 

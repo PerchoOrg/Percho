@@ -314,22 +314,30 @@ def format_specs(beds: Any, baths: Any, sqft: Any) -> str:
     return " · ".join(parts)
 
 
-def pick_bgm() -> Path | None:
-    """Return a random .mp3 from the `warm-acoustic` bucket, or None if the
-    bucket is empty or missing. The worker still produces a valid (silent)
-    video in that case.
+DEFAULT_BGM_VIBE = "warm-acoustic"
 
-    Only warm-acoustic is production-approved (see docs/bgm/vibe-map.md).
-    modern-corporate / luxury-ambient / chill-electronic / cinematic were
-    trialed and rejected — music must not lead the video.
+
+def pick_bgm(vibe: str = DEFAULT_BGM_VIBE) -> Path | None:
+    """A random reviewed .mp3 from `vibe`, or None if that bucket is empty.
+
+    Only tracks that passed review are on disk at all — `pull-bgm.sh` skips
+    anything the state sidecar lists as rejected or pending — so choosing at
+    random here is choosing among things a human already approved.
+
+    `vibe` is a parameter as of 2026-08-20, when generation made the other
+    three buckets fillable again (owner: "good background music with different
+    types for different vibe"). Nothing passes one yet, so every render still
+    gets warm-acoustic exactly as before; an unknown or empty vibe falls back
+    to it rather than rendering silent.
     """
-    bucket = BGM_DIR / "warm-acoustic"
-    if not bucket.exists():
-        return None
-    tracks = sorted(bucket.glob("*.mp3"))
-    if not tracks:
-        return None
-    return random.choice(tracks)
+    for name in (vibe, DEFAULT_BGM_VIBE):
+        bucket = BGM_DIR / name
+        if not bucket.exists():
+            continue
+        tracks = sorted(bucket.glob("*.mp3"))
+        if tracks:
+            return random.choice(tracks)
+    return None
 
 
 # ── narration ───────────────────────────────────────────────────────────────
