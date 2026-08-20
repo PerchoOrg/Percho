@@ -4,6 +4,8 @@
  * Lives apart from either step because both need it — photos computes and
  * persists it, assemble reads it back.
  */
+
+import { RELIGIOUS_PHOTO_DROP_REASON, isReligiousPhoto } from '@/lib/poi/religious-content';
 import type { TourPlanPhoto } from '@/lib/poi/tour-orchestrator/plan';
 import type { PhotoAnnotation } from '@/lib/poi/tour-orchestrator/types';
 import { type RunRow, type TourDb, mustWrite } from './shared';
@@ -138,6 +140,15 @@ export async function computeFinalShots(
   const { upscaleFactor, isTooLowRes } = await import('@/lib/poi/tour-orchestrator/scheduler');
   const byPoi = new Map<string, NonNullable<typeof photosRaw>>();
   for (const p of photosRaw ?? []) {
+    // Religious subject matter, checked on the PHOTO — first, because it is a
+    // policy gate rather than a quality one. The place-level filter cannot see
+    // this: Riverwatch Middle School is a school by every Places signal, and it
+    // shipped a garlanded shrine in its gymnasium, tagged "cultural-celebration".
+    const tags = (p.ai_tags ?? {}) as { description?: string; tags?: string[] };
+    if (isReligiousPhoto({ description: tags.description, tags: tags.tags })) {
+      dropped.push({ photo_id: p.id, poi_id: p.poi_id, reason: RELIGIOUS_PHOTO_DROP_REASON });
+      continue;
+    }
     // Measure the file the render will actually read. The worker reads the
     // enhanced file once an admin approves it (approved_enhanced_path in
     // scripts/render-worker/worker.py), and Real-ESRGAN x2 doubles both

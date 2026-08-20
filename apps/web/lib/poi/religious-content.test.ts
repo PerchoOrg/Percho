@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isReligiousPlace } from './religious-content';
+import { isReligiousPhoto, isReligiousPlace } from './religious-content';
 
 describe('isReligiousPlace', () => {
   it('catches the temple that reached Aberdeen', () => {
@@ -52,5 +52,37 @@ describe('isReligiousPlace', () => {
     // "Temple Coffee" loses one candidate out of a dozen; a missed place of
     // worship is a fair-housing exposure. The trade is deliberate.
     expect(isReligiousPlace({ name: 'Temple Coffee Roasters' })).toBe(true);
+  });
+});
+
+describe('isReligiousPhoto', () => {
+  it('catches the shrine that shipped in Aberdeen, tagged only as a celebration', () => {
+    expect(
+      isReligiousPhoto({
+        description:
+          'A cultural celebration featuring a decorated shrine placed in the center of a school gymnasium.',
+        tags: ['event', 'school-gym', 'cultural-celebration', 'community-gathering'],
+      }),
+    ).toBe(true);
+  });
+
+  it('catches it from the tags alone', () => {
+    expect(isReligiousPhoto({ description: 'A gathering', tags: ['hindu', 'festival'] })).toBe(
+      true,
+    );
+  });
+
+  it('leaves an ordinary school photo alone', () => {
+    expect(
+      isReligiousPhoto({
+        description: 'Aerial view of Lambert High School campus, featuring the football stadium.',
+        tags: ['school', 'aerial', 'stadium'],
+      }),
+    ).toBe(false);
+  });
+
+  it('is false for an empty annotation rather than throwing', () => {
+    expect(isReligiousPhoto({})).toBe(false);
+    expect(isReligiousPhoto({ description: null, tags: null })).toBe(false);
   });
 });
