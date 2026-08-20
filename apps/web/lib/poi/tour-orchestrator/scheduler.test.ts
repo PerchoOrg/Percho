@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { GOLDEN_ANNOTATIONS, GOLDEN_PHOTOS } from './fixtures/peachtree-corners';
 import {
+  CANVAS_H,
+  CANVAS_W,
   DEPTHFLOW_MAX_OVERFLOW,
   DEPTHFLOW_MOVES,
   DURATION_MAX,
@@ -24,14 +26,16 @@ import type { PhotoAnnotation, PhotoMeta } from './types';
 const plan = () => scheduleClips(GOLDEN_ANNOTATIONS, GOLDEN_PHOTOS);
 
 describe('overflow', () => {
+  // Restated for the 0.685 card canvas (2026-08-19). The spec §4.1 figures
+  // these replace — 0.250 / 0.625 / 0.734 — were measured against 9:16.
   it('matches the three known values exactly', () => {
-    expect(overflow(3024, 4032)).toBeCloseTo(0.25, 10);
-    expect(overflow(3456, 2304)).toBeCloseTo(0.625, 10);
-    expect(overflow(2000, 947)).toBeCloseTo(0.734, 3);
+    expect(overflow(3024, 4032)).toBeCloseTo(0.086, 3);
+    expect(overflow(3456, 2304)).toBeCloseTo(0.543, 3);
+    expect(overflow(2000, 947)).toBeCloseTo(0.676, 3);
   });
 
-  it('is zero on an exact 9:16 frame and never negative', () => {
-    expect(overflow(1080, 1920)).toBeCloseTo(0, 10);
+  it('is zero on an exact canvas frame and never negative', () => {
+    expect(overflow(CANVAS_W, CANVAS_H)).toBeCloseTo(0, 10);
     expect(overflow(0, 0)).toBe(0);
   });
 
@@ -42,9 +46,11 @@ describe('overflow', () => {
 });
 
 describe('upscaleFactor / isTooLowRes', () => {
-  it('measures enlargement against the 9:16 canvas, not pixel count', () => {
-    // The frame the owner flagged (2026-08-17).
-    expect(upscaleFactor(680, 497)).toBeCloseTo(4.25, 2);
+  it('measures enlargement against the canvas, not pixel count', () => {
+    // The frame the owner flagged (2026-08-17). 3.49x on the 0.685 canvas,
+    // where it was 4.25x on 9:16 — a shorter canvas needs less enlargement from
+    // a landscape source. Still far past MAX_UPSCALE, so the verdict holds.
+    expect(upscaleFactor(680, 497)).toBeCloseTo(3.49, 2);
     expect(isTooLowRes(680, 497)).toBe(true);
     // Same pixels, different shape, different verdict: a portrait frame reaches
     // the canvas height with far less enlargement than a landscape one.
@@ -340,12 +346,13 @@ describe('scheduleClips — golden fixture', () => {
     }
   });
 
-  it('visits each POI once and never puts two of a kind back to back', () => {
-    // Replaces "no bucket for more than 2 consecutive clips" (2026-08-19). That
-    // rule counted clips, so a POI with three photos got a different place
-    // shoved into the middle of it and the tour visited it twice. The
-    // anti-monotony intent now applies to POI blocks: a place runs as long as
-    // it needs to, and two DIFFERENT places of the same kind never adjoin.
+  it('visits each POI once and runs each kind as one chapter', () => {
+    // The adjacency rule INVERTED on 2026-08-19. It used to assert that two
+    // different places of the same kind never adjoin; the owner asked for the
+    // opposite — "same group content goes together, for example,
+    // elementary/middle/high school should go one by one" — because Aberdeen's
+    // cut split its three schools across five unrelated shots, and because
+    // narration is written against the running order.
     const { clips } = plan();
     const poiOf = new Map(GOLDEN_PHOTOS.map((p) => [p.photo_id, p.poi_id]));
 
@@ -355,16 +362,15 @@ describe('scheduleClips — golden fixture', () => {
       if (blocks.at(-1)?.poi !== poi) blocks.push({ poi, bucket: c.bucket });
     }
 
-    // The guarantee: a place is visited once, as one run.
+    // Unchanged guarantee: a place is visited once, as one run.
     expect(blocks.map((b) => b.poi)).toEqual([...new Set(blocks.map((b) => b.poi))]);
 
-    // Best effort, not a guarantee: the spread is a single greedy pass with
-    // the opener and closer blocks pinned, so a bucket that dominates the
-    // list cannot always be separated. This fixture is 3 outdoor POIs and 2
-    // shopping out of 7. Assert it does most of the work rather than pretend
-    // to a property the algorithm does not have.
-    const adjacentSameKind = blocks.filter((b, i) => i > 0 && b.bucket === blocks[i - 1]!.bucket);
-    expect(adjacentSameKind.length).toBeLessThanOrEqual(1);
+    // A bucket occupies ONE contiguous span. The opener and closer are pinned
+    // and may sit outside their own chapter, so allow those two exceptions.
+    const spans: string[] = [];
+    for (const b of blocks) if (spans.at(-1) !== b.bucket) spans.push(b.bucket);
+    const extraSpans = spans.length - new Set(spans).size;
+    expect(extraSpans).toBeLessThanOrEqual(2);
   });
 
   it('keeps every duration inside [2.0, 4.5]', () => {

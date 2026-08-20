@@ -339,12 +339,26 @@ export async function computeFinalShots(
     }),
   }));
 
+  // A school POI can survive selection and still reach the cut with nothing to
+  // show — `photos.ts` reserves its slot, then the per-photo resolution gate
+  // empties it. That is how Aberdeen shipped without a high school, and without
+  // a word about it anywhere. The film still renders; review can now see that a
+  // tier is gone (owner 2026-08-19: "schools are #1 important to have").
+  const shotPois = new Set(labelled.map((s) => s.poi_id));
+  const schoolWarnings = poiIds
+    .filter((id) => (buckets?.get(id) ?? poiBucket.get(id)) === 'schools' && !shotPois.has(id))
+    .map((id) => ({
+      code: 'school_tier_missing' as const,
+      photo_id: '',
+      detail: `${poiName.get(id) ?? id} was selected but produced no usable shot`,
+    }));
+
   return {
     shots: labelled,
     dropped,
     // Everything review needs to judge the plan, persisted next to it.
     plan: {
-      warnings: plan.warnings,
+      warnings: [...plan.warnings, ...schoolWarnings],
       violations: plan.violations,
       narration: plan.narration,
       curator: plan.curator,

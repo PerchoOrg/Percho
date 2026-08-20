@@ -111,7 +111,18 @@ export interface PlanWarning {
     | 'tour_duration_off_target'
     | 'annotation_enum_coerced'
     | 'annotation_role_coerced'
-    | 'annotation_pair_unpaired';
+    | 'annotation_pair_unpaired'
+    /**
+     * A school POI was selected but reached the cut with no usable photo.
+     *
+     * `photos.ts` reserves SCHOOL_SLOTS before the round-robin so all three
+     * tiers survive POI selection, but the per-photo resolution gate runs
+     * afterwards and can empty a POI out. Aberdeen lost Lambert High that way
+     * — its three Google photos were 512-650px wide — and nothing anywhere
+     * said so; the film simply had no high school in it (owner 2026-08-19:
+     * "schools are #1 important to have").
+     */
+    | 'school_tier_missing';
   photo_id: string;
   detail: string;
 }
