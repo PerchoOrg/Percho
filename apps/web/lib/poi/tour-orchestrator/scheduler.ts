@@ -22,23 +22,30 @@ import type {
 
 // ─── constants ──────────────────────────────────────────────────────────────
 
-/** Every community-tour clip renders 9:16. */
-export const TARGET_ASPECT = 9 / 16;
+// TARGET_ASPECT is derived from the canvas and declared with it, below.
 
 /**
  * Above this overflow a clip goes to Ken Burns, which reveals what the canvas
  * cannot show; below it there is nothing to travel to, so the clip spends
  * itself on parallax instead.
  *
- * 0.55, NOT the 0.20 that `scripts/ken-burns/depthflow_modes.py` uses for the
- * listing card. 0.20 is a landscape-canvas number: on 9:16 even a 3:4 portrait
- * overflows 0.250, so a 0.20 gate makes EVERY photo Ken Burns and DepthFlow
- * gets zero clips — in direct conflict with the 1/3-1/2 quota below. At 0.55 a
- * 3:4 portrait (0.250) and a 4:3 landscape (0.578) land on opposite sides,
- * which is exactly the split the quota wants. The listing path keeps 0.20; the
- * threshold is a function of the canvas, not a global.
+ * The threshold is a function of the CANVAS, not a global — the listing path
+ * keeps its own 0.20 in `scripts/ken-burns/depthflow_modes.py`, which is a
+ * landscape-canvas number.
+ *
+ * The split this has to produce is unchanged: a 3:4 portrait goes to DepthFlow,
+ * a 4:3 landscape to Ken Burns. What moved is where those two land, because
+ * overflow is measured against the canvas:
+ *
+ *              3:4 portrait   4:3 landscape   threshold
+ *   9:16        0.250          0.578          0.55
+ *   0.685       0.087          0.486          0.30   ← both fell below 0.55
+ *
+ * Leaving 0.55 after the canvas change would have sent BOTH shapes to DepthFlow
+ * and left Ken Burns to whatever the 1/3-1/2 quota clawed back — the same
+ * failure mode as the old 0.20, mirrored. 0.30 is the midpoint of the new pair.
  */
-export const DEPTHFLOW_MAX_OVERFLOW = 0.55;
+export const DEPTHFLOW_MAX_OVERFLOW = 0.3;
 
 export const DEPTHFLOW_TARGET_SHARE = 0.4;
 export const DEPTHFLOW_MIN_SHARE = 1 / 3;
@@ -147,9 +154,36 @@ const SEEDANCE_BLOCKED_SUBJECTS: readonly DominantSubject[] = [
 
 // ─── geometry ───────────────────────────────────────────────────────────────
 
-/** The canvas every community-tour clip renders at. */
+/**
+ * The canvas every community-tour clip renders at.
+ *
+ * 1080x1576 (aspect 0.685), NOT 9:16. The tour's only playback surface is the
+ * feed's community card, and that card is 0.685 on every iPhone from the 13
+ * mini up — `(screenW - GUTTER*2) / (stage * CARD_FRAME_RATIO)`, which lands
+ * between 0.679 and 0.693 across the lineup. `CommunityFace` plays it with
+ * `fit="cover"` unconditionally, so any mismatch is cropped away, not
+ * letterboxed: a 9:16 render lost 17% of its height on an iPhone 15 and 38% on
+ * an SE, and the place label — drawn at 86% height — was cropped or buried
+ * under the card's own name/chips/Explore chrome on every device.
+ *
+ * The SE alone stays off this number (0.794, because its short screen gives the
+ * fixed 128pt of chrome a much larger share); it crops 14% instead of ~1%,
+ * which the title-safe label position below absorbs.
+ *
+ * Outpainting still targets 9:16 on purpose — a taller source is a superset of
+ * this canvas, so the reframes produced before this change stay valid and the
+ * spend is not repeated.
+ */
 export const CANVAS_W = 1080;
-export const CANVAS_H = 1920;
+export const CANVAS_H = 1576;
+
+/**
+ * The canvas aspect, DERIVED. Everything that measures "how much does the
+ * canvas throw away" reads this — a hardcoded 9/16 here would compute the
+ * engine split against a frame the film is not rendered in.
+ */
+export const TARGET_ASPECT = CANVAS_W / CANVAS_H;
+
 /** Ken Burns pushes to 1.10, so the source has to carry that much extra. */
 const ZOOM_HEADROOM = 1.1;
 
@@ -188,16 +222,16 @@ export function upscaleFactor(widthPx: number, heightPx: number): number {
  */
 export const MAX_UPSCALE = 2.0;
 
-/** Too soft for a full-frame 9:16 clip, whatever the camera move. */
+/** Too soft for a full-frame clip, whatever the camera move. */
 export function isTooLowRes(widthPx: number, heightPx: number): boolean {
   return upscaleFactor(widthPx, heightPx) > MAX_UPSCALE;
 }
 
 /**
- * Fraction of the photo the 9:16 canvas crops away.
+ * Fraction of the photo the canvas crops away.
  *
- * Known values (spec §4.1): 3024x4032 → 0.250, 3456x2304 → 0.625,
- * 2000x947 → 0.734.
+ * Known values, restated for the 0.685 canvas (the spec §4.1 figures were
+ * 9:16): 3024x4032 → 0.086, 3456x2304 → 0.543, 2000x947 → 0.676.
  */
 export function overflow(widthPx: number, heightPx: number): number {
   if (!(widthPx > 0) || !(heightPx > 0)) return 0;
@@ -298,7 +332,7 @@ interface Entry {
 }
 
 /** A pair renders as one indivisible unit: wide first, close second. */
-interface Unit {
+export interface Unit {
   entries: Entry[];
   time: number;
   emotion: number;
@@ -508,37 +542,75 @@ function orderSurroundingsAct(units: Unit[]): Unit[] {
     ...middle,
     ...(closerBlock ? [closerBlock] : []),
   ];
-  return spreadBuckets(ordered).flat();
+  return groupBuckets(ordered, openerBlock, closerBlock).flat();
+}
+
+/** elementary → middle → high, the order a family moves through them. */
+const SCHOOL_TIER = [/\belementary\b|\bprimary\b/i, /\bmiddle\b|\bjunior\b/i, /\bhigh\b/i];
+
+export function schoolTierRank(name: string): number {
+  const i = SCHOOL_TIER.findIndex((re) => re.test(name));
+  return i === -1 ? SCHOOL_TIER.length : i;
 }
 
 /**
- * No two adjacent POI blocks may share a bucket. When they would, pull the
- * first later block of a different bucket forward.
+ * Blocks of the same bucket run consecutively, as one chapter.
  *
- * This used to work on single units and keep a bucket to two consecutive
- * CLIPS. That rule cut through a POI: with three tennis clips it would shove a
- * park between the second and third, and the tour visited the same place
- * twice. A block is one POI's whole run and moves entire, so the anti-monotony
- * intent survives at the level a viewer actually reads — two different places
- * of the same kind back to back — without splitting either of them.
+ * This REPLACED a rule that did the exact opposite — `spreadBuckets` pushed
+ * same-bucket blocks apart to avoid two restaurants back to back. That reads
+ * fine as a wordless reel but it scattered the thing this audience cares most
+ * about: Aberdeen's cut ran Sharon Elementary, then a gym, a mall and a
+ * library, then Riverwatch Middle five shots later. Owner 2026-08-19: "same
+ * group content goes together, for example, elementary/middle/high school
+ * should go one by one".
  *
- * The opener and closer blocks are pinned and never move.
+ * It also has to be this way for the voice-over. Narration is written against
+ * the running order, so "the three schools" can only be one line if the three
+ * schools are actually adjacent.
+ *
+ * Chapters keep the order their first block already had, so the opener's bucket
+ * still leads. The opener and closer blocks are pinned and never move — a
+ * closer that shares its bucket with an earlier block stays at the end rather
+ * than being pulled into that chapter.
  */
-function spreadBuckets(ordered: Unit[][]): Unit[][] {
-  const out = [...ordered];
-  const lastIndex = out.length - 1;
-
-  for (let i = 1; i < out.length; i++) {
-    const bucket = out[i]![0]!.bucket;
-    if (bucket !== out[i - 1]![0]!.bucket) continue;
-    if (i >= lastIndex) continue; // the closer block stays put
-    const j = out.findIndex((b, k) => k > i && b[0]!.bucket !== bucket && k < lastIndex);
-    if (j > i) {
-      const [moved] = out.splice(j, 1);
-      out.splice(i, 0, moved!);
-    }
+export function groupBuckets(
+  ordered: Unit[][],
+  openerBlock?: Unit[],
+  closerBlock?: Unit[],
+): Unit[][] {
+  const chapters = new Map<string, Unit[][]>();
+  for (const block of ordered) {
+    if (block === openerBlock || block === closerBlock) continue;
+    const bucket = block[0]!.bucket;
+    const chapter = chapters.get(bucket);
+    if (chapter) chapter.push(block);
+    else chapters.set(bucket, [block]);
   }
-  return out;
+
+  // Each bucket appears once, at the position of its FIRST block, carrying
+  // every block of that bucket with it.
+  const seen = new Set<string>();
+  const rebuilt: Unit[][] = [];
+  for (const block of ordered) {
+    if (block === openerBlock || block === closerBlock) {
+      rebuilt.push(block);
+      continue;
+    }
+    const bucket = block[0]!.bucket;
+    if (seen.has(bucket)) continue;
+    seen.add(bucket);
+    const chapter = chapters.get(bucket) ?? [block];
+    if (bucket === 'schools') {
+      chapter.sort(
+        (a, b) =>
+          schoolTierRank(a[0]!.entries[0]!.meta.poi_name ?? '') -
+            schoolTierRank(b[0]!.entries[0]!.meta.poi_name ?? '') ||
+          unitId(a[0]!).localeCompare(unitId(b[0]!)),
+      );
+    }
+    rebuilt.push(...chapter);
+  }
+  return rebuilt;
 }
 
 // ─── engines ────────────────────────────────────────────────────────────────

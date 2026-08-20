@@ -91,6 +91,14 @@ LANDSCAPE_THRESHOLD = 0.8
 # survives (owner's rule: "如果pan 视频能不能保持原本照片的高度 只做左右剪裁").
 SQUARE_EDGE = 1080
 
+# 2026-08-19: the COMMUNITY tour's canvas. Must equal CANVAS_W/CANVAS_H in
+# apps/web/lib/poi/tour-orchestrator/scheduler.ts, which carries the full
+# reasoning: 0.685 is the feed card's real aspect on every iPhone from the 13
+# mini up, and the card plays with fit="cover", so a 9:16 render was losing 17%
+# of its height (38% on an SE) along with the place label at the bottom.
+TOUR_CANVAS_W = 1080
+TOUR_CANVAS_H = 1576
+
 
 def probe_dims(path: Path) -> tuple[int, int] | None:
     """(width, height) of an image via ffprobe, or None if it can't be read.
@@ -1329,10 +1337,17 @@ FILL_HINT = {
 
 
 def crop_loss(w: int, h: int) -> float:
-    """Fraction of the frame a 9:16 centre crop throws away."""
+    """Fraction of the frame a centre crop to the CANVAS throws away.
+
+    Measured against the canvas, not against outpainting's own 9:16 target: this
+    number decides whether to spend a generation, so it has to answer "how much
+    does the film actually lose", and the 0.685 canvas discards far less than
+    9:16 did. A 3:4 portrait now loses 9% (was 25%) and a square 31% (was 44%),
+    so both fall under OUTPAINT_MIN_CROP_LOSS and are left alone.
+    """
     if not (w > 0 and h > 0):
         return 0.0
-    aspect, target = w / h, 1080 / 1920
+    aspect, target = w / h, TOUR_CANVAS_W / TOUR_CANVAS_H
     return 1 - target / aspect if aspect > target else 1 - aspect / target
 
 
@@ -1742,13 +1757,13 @@ def process_photo_clip(row: dict[str, Any]) -> None:
             "--output", str(out_path),
             "--duration-per-photo", str(duration),
             "--engine", engine,
-            # Owner 2026-08-17: every clip must be 9:16, no black bars. The
-            # explicit 1080x1920 canvas + --cover-crop below is what makes a
-            # non-9:16 photo fill the frame edge-to-edge (the fit-inside
-            # blur-letterbox path would pad with black bands). DepthFlow gets
-            # the same aspect up front in render_parallax so its parallax
-            # travel isn't cropped away by the cover crop.
-            "--resolution", "1080x1920",
+            # Owner 2026-08-17: every clip must fill the frame, no black bars.
+            # The explicit canvas + --cover-crop below is what makes a photo of
+            # any shape fill it edge-to-edge (the fit-inside blur-letterbox path
+            # would pad with black bands). DepthFlow gets the same aspect up
+            # front in render_parallax so its parallax travel isn't cropped away
+            # by the cover crop.
+            "--resolution", f"{TOUR_CANVAS_W}x{TOUR_CANVAS_H}",
             "--cover-crop",
         ]
         # Owner 2026-08-17: "DA+KB 每张图片的效果都是zoom in - fix it 应该有很多种效果".
@@ -1885,7 +1900,16 @@ def _render_label_png(text: str, w: int, h: int, font_path: str, dest: Path) -> 
     from PIL import Image, ImageDraw, ImageFont
 
     pad_x = round(w * 0.055)
-    baseline_y = h - round(h * 0.14)
+    # 60% down the frame, NOT 14% up from the bottom.
+    #
+    # The card is not a full-bleed player: `CommunityFace` lays its own name,
+    # chip row and Explore link over the bottom ~123pt of the card, and the
+    # `fit="cover"` crop takes a slice off each end on top of that. Measured
+    # against the 0.685 canvas, everything below ~65% of frame height is either
+    # cropped or behind that chrome on some device — at 86% the label was buried
+    # on every iPhone and cropped off entirely on an SE. 60% clears it with room
+    # for the two-line wrap a long place name can take.
+    baseline_y = round(h * 0.60)
     # The scrim has to end before the right edge or the name looks cropped.
     max_text_w = w - pad_x * 2
 
@@ -2069,28 +2093,26 @@ def process_assembly(row: dict[str, Any]) -> None:
         offsets = crossfade_offsets(durs, xfade)
         filters: list[str] = []
         prev = "[0:v]"
-        # Seedance clips render 496x864 (480p); local DA+KB clips render
-        # 1080x1920. xfade requires all inputs the same resolution — scale every
-        # clip to the largest, center-cropped. Keep 16:9.01 portrait aspect by
-        # scaling to W=max width, H=max height (both chains are same aspect).
-        scale_to = None
-        for p in clip_paths:
-            out = subprocess.run(
-                ["ffprobe", "-v", "error", "-select_streams", "v:0",
-                 "-show_entries", "stream=width,height",
-                 "-of", "csv=p=0", str(p)],
-                capture_output=True, text=True, check=True, timeout=15,
-            )
-            w, h = (int(x) for x in out.stdout.strip().split(",")[:2])
-            if scale_to is None:
-                scale_to = [w, h]
-            else:
-                scale_to[0] = max(scale_to[0], w)
-                scale_to[1] = max(scale_to[1], h)
-        assert scale_to is not None, "clip_paths cannot be empty here"
+        # xfade requires every input at one resolution, and clips arrive at two:
+        # Seedance renders 496x864 (0.574) and the local DA+KB chain renders the
+        # canvas. Normalise to the CANVAS, not to the largest input — a fixed
+        # target is what lets a Seedance clip be reused across a canvas change.
+        #
+        # COVER-crop (increase + crop), not the fit-inside pad this used to do.
+        # Padding was invisible while the canvas was 0.5625 and Seedance 0.574,
+        # but against the 0.685 canvas that same filter would pillarbox every
+        # Seedance clip with ~16% black down each side. Cropping instead is also
+        # what keeps the owner's rule (2026-08-19: "for photos with seedance
+        # clips, never call it again!!!! always re-use") affordable — an aspect
+        # change costs zero Seedance calls.
+        scale_to = [TOUR_CANVAS_W, TOUR_CANVAS_H]
         for i in range(len(clip_paths)):
             name = f"s{i}"
-            filters.append(f"[{i}:v]fps=30,scale={scale_to[0]}:{scale_to[1]}:force_original_aspect_ratio=decrease,pad={scale_to[0]}:{scale_to[1]}:(ow-iw)/2:(oh-ih)/2:color=black,setsar=1[{name}]")
+            filters.append(
+                f"[{i}:v]fps=30,scale={scale_to[0]}:{scale_to[1]}:"
+                f"force_original_aspect_ratio=increase,"
+                f"crop={scale_to[0]}:{scale_to[1]},setsar=1[{name}]"
+            )
         prev = "[s0]"
         for i in range(1, len(clip_paths)):
             name = f"x{i}"
