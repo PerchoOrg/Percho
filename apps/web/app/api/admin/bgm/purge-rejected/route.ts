@@ -40,13 +40,28 @@ export async function POST(req: Request) {
   }
 
   const svc = createServiceClient();
-  const { error } = await svc.storage.from(BGM_BUCKET).remove(targets);
+  const { data: removed, error } = await svc.storage.from(BGM_BUCKET).remove(targets);
   if (error) {
     return NextResponse.json({ error: `storage remove failed: ${error.message}` }, { status: 500 });
   }
 
-  const remaining = state.rejected.filter((p) => !targets.includes(p));
+  // Clear only what Storage says it actually deleted.
+  //
+  // `remove()` reports success and deletes nothing when a path does not match
+  // — verified 2026-08-20: removing a non-existent object returns
+  // `error: null, data: []`. Trusting `error` alone therefore clears the
+  // reject list while the files stay put, and that does not merely fail to
+  // purge: it RESURRECTS every rejected track, because an mp3 in Storage and
+  // absent from the list is by definition approved. The worker then downloads
+  // the lot on its next sync.
+  const deleted = new Set((removed ?? []).map((o) => o.name));
+  const remaining = state.rejected.filter((p) => !deleted.has(p));
   await writeBgmState({ ...state, rejected: remaining });
 
-  return NextResponse.json({ purged: targets.length, paths: targets });
+  return NextResponse.json({
+    purged: deleted.size,
+    paths: [...deleted],
+    // Still rejected, still on disk — surfaced rather than swallowed.
+    failed: targets.filter((p) => !deleted.has(p)),
+  });
 }

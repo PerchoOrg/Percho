@@ -19,11 +19,13 @@ import { requireAdmin } from '@/lib/auth/require-admin';
 import {
   LYRIA_COST_USD,
   buildLyriaPrompt,
+  describeTrack,
   generateLyriaTrack,
   lyriaFilename,
+  namedLyriaFilename,
 } from '@/lib/bgm/lyria';
 import { readBgmState, writeBgmState } from '@/lib/bgm/state-store';
-import { BGM_BUCKET, isBgmVibe } from '@/lib/bgm/storage';
+import { BGM_BUCKET, BGM_VIBE_META, type BgmTrackMeta, isBgmVibe } from '@/lib/bgm/storage';
 import { createServiceClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 
@@ -53,25 +55,41 @@ export async function POST(req: Request) {
 
   const svc = createServiceClient();
   const prompt = buildLyriaPrompt(vibe, seconds, extra);
-  const results: Array<{ file: string; status: 'ok' | 'error'; error?: string }> = [];
+  const results: Array<{ file: string; title?: string; status: 'ok' | 'error'; error?: string }> =
+    [];
   const created: string[] = [];
+  const meta: Record<string, BgmTrackMeta> = {};
 
   // Sequential, not parallel: four concurrent 30s generations is the kind of
   // burst that trips a rate limit, and the whole batch would fail together.
   for (let i = 0; i < count; i++) {
-    const file = lyriaFilename(vibe);
     try {
       const track = await generateLyriaTrack(prompt);
+      // Named per track, not per batch — four tracks off one prompt are four
+      // different pieces of music and should not share a name.
+      const described = await describeTrack(vibe, extra);
+      const title = described?.title ?? `${BGM_VIBE_META[vibe].label} ${i + 1}`;
+      const file = described ? namedLyriaFilename(vibe, title) : lyriaFilename(vibe);
       const { error } = await svc.storage.from(BGM_BUCKET).upload(`${vibe}/${file}`, track.bytes, {
         contentType: 'audio/mpeg',
         upsert: false,
       });
       if (error) throw new Error(error.message);
       created.push(`${vibe}/${file}`);
-      results.push({ file, status: 'ok' });
+      meta[`${vibe}/${file}`] = {
+        title,
+        vibe,
+        // Everything generated here is prompted as a bed — the fixed half of
+        // the prompt forbids swells precisely so it can sit under narration.
+        role: 'bed',
+        tags: described?.tags ?? [],
+        source: 'lyria',
+        created_at: new Date().toISOString(),
+      };
+      results.push({ file, title, status: 'ok' });
     } catch (err) {
       results.push({
-        file,
+        file: '(not created)',
         status: 'error',
         error: err instanceof Error ? err.message : String(err),
       });
@@ -85,6 +103,7 @@ export async function POST(req: Request) {
     await writeBgmState({
       ...state,
       pending: Array.from(new Set([...(state.pending ?? []), ...created])).sort(),
+      meta: { ...(state.meta ?? {}), ...meta },
     });
   }
 

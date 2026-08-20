@@ -2061,7 +2061,7 @@ def claim_assembly() -> dict[str, Any] | None:
     rows = sb_get(
         "tour_assemblies",
         {
-            "select": "id,community_id,run_id,ordered_clips,narration,status,community:communities(name)",
+            "select": "id,community_id,run_id,ordered_clips,narration,bgm,status,community:communities(name)",
             "status": "eq.pending",
             "order": "created_at.asc",
             "limit": "1",
@@ -2584,7 +2584,28 @@ def process_assembly(row: dict[str, Any]) -> None:
         # Narration rides on top of it when the plan wrote one, ducking the
         # music under each line. Owner 2026-08-20, on music alone: "tts is much
         # better than pure music, with more information".
-        bgm = pick_bgm()
+        # The plan's pick if it made one, otherwise the worker's own.
+        #
+        # Choosing here used to mean a uniform random draw from the folder,
+        # which is how the loudest, most dynamic track in the library landed
+        # under the first narrated cut. The planner now decides (owner
+        # 2026-08-20: "planner to decide"), and this honours that decision —
+        # falling back only when the chosen file is not on disk, which happens
+        # when it was approved after this worker's last sync.
+        planned_bgm = (row.get("bgm") or {}).get("path")
+        bgm = None
+        if planned_bgm:
+            candidate = BGM_DIR / planned_bgm
+            if candidate.exists():
+                bgm = candidate
+            else:
+                print(
+                    f"[assembly {assembly_id}] planned track {planned_bgm} not synced yet;"
+                    " falling back",
+                    flush=True,
+                )
+        if bgm is None:
+            bgm = pick_bgm()
         placed: list[tuple[Path, float]] = []
         narration = row.get("narration") or {}
         if narration.get("segments"):
@@ -2659,9 +2680,47 @@ def streamIframeUrl(uid: str) -> str:
     return f"https://{host}/{uid}/iframe"
 
 
+BGM_SYNC_EVERY_SEC = 15 * 60
+_last_bgm_sync = 0.0
+
+
+def sync_bgm_if_due(force: bool = False) -> None:
+    """Refresh the local music cache from Storage.
+
+    Approving a track in the admin only edits the state sidecar; the mp3 has to
+    reach this machine before `pick_bgm` can choose it. Nothing ran the sync
+    script — no cron, no launchd job, no call from here — so until 2026-08-20
+    "approve" meant "approved, and someone must remember to run pull-bgm.sh and
+    restart the worker". That is not a review flow, it is a review flow with a
+    hole in it.
+
+    Failure is logged and ignored: a Storage hiccup must not stop the worker
+    rendering with the music it already has.
+    """
+    global _last_bgm_sync
+    now = time.time()
+    if not force and now - _last_bgm_sync < BGM_SYNC_EVERY_SEC:
+        return
+    _last_bgm_sync = now
+    script = REPO_ROOT / "scripts/render-worker/pull-bgm.sh"
+    if not script.exists():
+        return
+    try:
+        out = subprocess.run(
+            ["bash", str(script)], capture_output=True, text=True, timeout=300,
+            cwd=str(REPO_ROOT),
+        )
+        tail = (out.stdout or out.stderr or "").strip().splitlines()[-1:] or [""]
+        print(f"[bgm] sync: {tail[0]}", flush=True)
+    except Exception as exc:  # noqa: BLE001 — never fatal
+        print(f"[bgm] sync failed: {exc}", flush=True)
+
+
 def main() -> None:
     print(f"[worker] starting, polling every {POLL_IDLE_SEC}s", flush=True)
+    sync_bgm_if_due(force=True)
     while True:
+        sync_bgm_if_due()
         try:
             job = claim_job()
         except Exception:

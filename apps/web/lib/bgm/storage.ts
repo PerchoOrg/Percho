@@ -74,9 +74,46 @@ export const BGM_VIBE_META: Record<BgmVibe, { label: string; blurb: string; fit:
  */
 export const BGM_STATE_PATH = '_state/state.json';
 
+/**
+ * How a track is used, which is the one thing the two products cannot share.
+ *
+ * A community tour now carries narration over most of its length, so its music
+ * has to be a BED: steady, mid-range clear, never surging. A listing video has
+ * no voice on it, so its music can LEAD — it is allowed shape and dynamics,
+ * and a bed under it would be limp.
+ *
+ * Owner 2026-08-20 asked whether music should be shared between listings and
+ * communities or customised. The character (the vibe) is shared; this is not.
+ * Modelling it as a tag rather than four more buckets keeps one library.
+ */
+export const BGM_ROLES = ['bed', 'lead'] as const;
+export type BgmRole = (typeof BGM_ROLES)[number];
+
+/**
+ * What a track is, so the planner can choose one instead of rolling dice.
+ *
+ * Owner 2026-08-20: "each generated music should have a name to reflect its
+ * vibe, and better to have some tags as well so easy for assembly to choose."
+ * A filename like `ai-warm-20260820-8eb4.mp3` says when it was made and
+ * nothing about how it sounds.
+ */
+export type BgmTrackMeta = {
+  /** Human title, e.g. "Porch Light". Shown in the admin, not a filename. */
+  title: string;
+  vibe: BgmVibe;
+  role: BgmRole;
+  /** Free-form descriptors the planner matches on: "calm", "sunlit", "piano". */
+  tags: string[];
+  /** 'lyria' | 'import' | 'upload' — where it came from. */
+  source: string;
+  created_at: string;
+};
+
 export type BgmState = {
   schema_version: 1;
   rejected: string[];
+  /** Keyed by "<vibe>/<file>.mp3". Absent for tracks predating the field. */
+  meta?: Record<string, BgmTrackMeta>;
   /**
    * Generated but not yet reviewed. Treated exactly like `rejected` by the
    * render worker — a track nobody has listened to must not be able to reach
@@ -93,7 +130,13 @@ export type BgmState = {
 };
 
 export function emptyBgmState(): BgmState {
-  return { schema_version: 1, rejected: [], pending: [], updated_at: new Date().toISOString() };
+  return {
+    schema_version: 1,
+    rejected: [],
+    pending: [],
+    meta: {},
+    updated_at: new Date().toISOString(),
+  };
 }
 
 /** A track the render worker may use: present, reviewed, and not rejected. */

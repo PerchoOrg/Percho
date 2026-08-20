@@ -2422,6 +2422,7 @@ export type Database = {
       }
       tour_assemblies: {
         Row: {
+          bgm: Json | null
           cf_stream_uid: string | null
           community_id: string
           created_at: string
@@ -2436,6 +2437,7 @@ export type Database = {
           video_url: string | null
         }
         Insert: {
+          bgm?: Json | null
           cf_stream_uid?: string | null
           community_id: string
           created_at?: string
@@ -2450,6 +2452,7 @@ export type Database = {
           video_url?: string | null
         }
         Update: {
+          bgm?: Json | null
           cf_stream_uid?: string | null
           community_id?: string
           created_at?: string

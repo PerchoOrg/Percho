@@ -27,6 +27,7 @@ async function listVibe(
   vibe: BgmVibe,
   rejected: Set<string>,
   pending: Set<string>,
+  meta: NonNullable<Awaited<ReturnType<typeof readBgmState>>['meta']>,
 ): Promise<BgmTrack[]> {
   const svc = createServiceClient();
   const { data } = await svc.storage.from(BGM_BUCKET).list(vibe, {
@@ -40,6 +41,9 @@ async function listVibe(
       url: bgmPublicUrl(vibe, o.name),
       rejected: rejected.has(`${vibe}/${o.name}`),
       pending: pending.has(`${vibe}/${o.name}`),
+      title: meta[`${vibe}/${o.name}`]?.title,
+      tags: meta[`${vibe}/${o.name}`]?.tags,
+      role: meta[`${vibe}/${o.name}`]?.role,
     }));
 }
 
@@ -51,7 +55,9 @@ export default async function BgmLibraryPage() {
   const rejected = new Set(state.rejected);
   const pending = new Set(state.pending ?? []);
   const byVibe = await Promise.all(
-    BGM_VIBES.map((v) => listVibe(v, rejected, pending).then((t) => [v, t] as const)),
+    BGM_VIBES.map((v) =>
+      listVibe(v, rejected, pending, state.meta ?? {}).then((t) => [v, t] as const),
+    ),
   );
   // A vibe with tracks waiting on a decision sorts to the top of the page —
   // review is the step that blocks generated music from being usable.

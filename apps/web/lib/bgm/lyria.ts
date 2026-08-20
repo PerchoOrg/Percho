@@ -168,3 +168,104 @@ export function lyriaFilename(vibe: BgmVibe, now = new Date()): string {
   const id = Math.random().toString(16).slice(2, 6);
   return `ai-${LYRIA_PRESETS[vibe].slug}-${stamp}-${id}.mp3`;
 }
+
+/** `porch-light` from "Porch Light", for the filename. */
+function titleSlug(title: string): string {
+  return (
+    title
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 28) || 'untitled'
+  );
+}
+
+/** `ai-warm-porch-light-4f2a.mp3` — the name says how it sounds. */
+export function namedLyriaFilename(vibe: BgmVibe, title: string): string {
+  const id = Math.random().toString(16).slice(2, 6);
+  return `ai-${LYRIA_PRESETS[vibe].slug}-${titleSlug(title)}-${id}.mp3`;
+}
+
+export interface TrackDescription {
+  title: string;
+  tags: string[];
+}
+
+const TAG_MODEL = process.env.GEMINI_VO_MODEL ?? 'gemini-3.5-flash';
+
+/**
+ * Name and tag a track, so a person and the planner can both tell them apart.
+ *
+ * Owner 2026-08-20: "each generated music should have a name to reflect its
+ * vibe, and better to have some tags as well so easy for assembly to choose."
+ *
+ * Derived from the PROMPT rather than from the audio: we asked for exactly
+ * these qualities and Lyria delivered against them, so the brief is a fair
+ * description — and it costs one cheap text call instead of decoding an mp3
+ * server-side, which Vercel cannot do anyway. A failure here is not fatal; the
+ * caller falls back to a name built from the vibe.
+ */
+export async function describeTrack(
+  vibe: BgmVibe,
+  extra?: string,
+): Promise<TrackDescription | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+  const prompt = `A short instrumental background music track was just generated to this brief:
+
+${LYRIA_PRESETS[vibe].brief}${extra?.trim() ? `\nAlso: ${extra.trim()}` : ''}
+
+Give it a name and tags.
+
+TITLE: two words, evocative and concrete, the kind of name a production music
+library uses — "Porch Light", "Slow Sunday", "Open Water". Not a description,
+not a sentence, no colon, no "Track".
+
+TAGS: 4 to 6 single lowercase words a person would search by — the mood, the
+main instrument, the pace. No punctuation, no multi-word phrases.
+
+JSON only: {"title": "...", "tags": ["...", "..."]}`;
+
+  try {
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${TAG_MODEL}:generateContent`,
+      {
+        method: 'POST',
+        headers: { 'x-goog-api-key': apiKey, 'content-type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ role: 'user', parts: [{ text: prompt }] }],
+          generationConfig: {
+            maxOutputTokens: 2048,
+            temperature: 1.0,
+            responseMimeType: 'application/json',
+          },
+        }),
+      },
+    );
+    if (!res.ok) return null;
+    const data = (await res.json()) as {
+      candidates?: { content?: { parts?: { text?: string; thought?: boolean }[] } }[];
+    };
+    // Thinking models put their reasoning in parts[0]; only non-thought parts
+    // are the answer.
+    const raw = (data.candidates?.[0]?.content?.parts ?? [])
+      .filter((p) => !p.thought)
+      .map((p) => p.text ?? '')
+      .join('');
+    const start = raw.indexOf('{');
+    if (start < 0) return null;
+    const parsed = JSON.parse(raw.slice(start, raw.lastIndexOf('}') + 1)) as TrackDescription;
+    const title = typeof parsed.title === 'string' ? parsed.title.trim().slice(0, 40) : '';
+    const tags = Array.isArray(parsed.tags)
+      ? parsed.tags
+          .filter((t): t is string => typeof t === 'string')
+          .map((t) => t.toLowerCase().replace(/[^a-z0-9]/g, ''))
+          .filter(Boolean)
+          .slice(0, 6)
+      : [];
+    if (!title) return null;
+    return { title, tags };
+  } catch {
+    return null;
+  }
+}
