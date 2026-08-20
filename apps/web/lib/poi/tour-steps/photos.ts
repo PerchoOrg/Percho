@@ -563,6 +563,16 @@ export async function runPlan(sb: TourDb, run: RunRow) {
   // place the real timeline is known — see `NarrationSection.startClip`.
   const narration = await writeNarration(sb, run, shots);
 
+  // THE MUSIC, chosen here rather than rolled by the worker.
+  //
+  // `pick_bgm()` took a uniform random pick from a folder, which is how the
+  // loudest and most dynamic track in the library ended up under the first
+  // narrated cut (owner: "the background music is too big"). Deciding in the
+  // plan puts it beside every other decision about the film and makes it
+  // reviewable before anything renders — owner 2026-08-20: "planner to
+  // decide".
+  const bgm = await chooseBgm(sb, run, shots);
+
   // Queue reframing — AFTER selection, so it only runs on photos that reach
   // the film. Aberdeen has 103 photos linked but 29 in the cut, of which 21
   // are badly framed; outpainting all 103 would be four times the cost for
@@ -676,6 +686,7 @@ export async function runPlan(sb: TourDb, run: RunRow) {
     dropped,
     plan,
     narration,
+    bgm,
   });
   await setRunStatus(sb, run.id, 'tagging');
   return {
@@ -687,7 +698,58 @@ export async function runPlan(sb: TourDb, run: RunRow) {
     rescueQueued: rescue.length,
     plan,
     narration: { lines: narration.segments.length, voice: narration.voice, error: narration.error },
+    bgm,
   };
+}
+
+/**
+ * The track this film will play, or null to leave the choice to the worker.
+ *
+ * Reads the library straight from Storage and its review state from the
+ * sidecar, so only tracks a human approved are candidates — the same rule the
+ * worker's sync applies, checked here because this is where the decision now
+ * happens. Returning null is a real outcome, not a failure: an empty library
+ * or an unreachable bucket should fall back to the worker's own pick rather
+ * than produce a silent film.
+ */
+async function chooseBgm(sb: TourDb, run: RunRow, shots: unknown[]) {
+  try {
+    const [{ selectBgm, vibeForCommunity }, { readBgmState }, { BGM_BUCKET, BGM_VIBES }] =
+      await Promise.all([
+        import('@/lib/bgm/select'),
+        import('@/lib/bgm/state-store'),
+        import('@/lib/bgm/storage'),
+      ]);
+    type Candidate = Parameters<typeof selectBgm>[0]['candidates'][number];
+    const state = await readBgmState();
+    const blocked = new Set([...state.rejected, ...(state.pending ?? [])]);
+
+    const candidates: Candidate[] = [];
+    for (const vibe of BGM_VIBES) {
+      const { data } = await sb.storage.from(BGM_BUCKET).list(vibe, { limit: 1000 });
+      for (const obj of data ?? []) {
+        if (!/\.mp3$/i.test(obj.name)) continue;
+        const path = `${vibe}/${obj.name}`;
+        if (blocked.has(path)) continue;
+        candidates.push({ path, meta: state.meta?.[path] });
+      }
+    }
+    if (candidates.length === 0) return null;
+
+    const buckets = [
+      ...new Set(
+        (shots as Array<{ bucket?: string | null }>).map((sh) => sh.bucket).filter(Boolean),
+      ),
+    ] as string[];
+    const vibe = vibeForCommunity(buckets);
+    // 'bed' always: this film is narrated, and a track that surges fights the
+    // voice however well it suits the place.
+    const picked = selectBgm({ candidates, vibe, role: 'bed', seed: run.community_id });
+    if (!picked) return null;
+    return { path: picked.path, title: picked.meta?.title ?? null, vibe, role: 'bed' as const };
+  } catch {
+    return null;
+  }
 }
 
 /**

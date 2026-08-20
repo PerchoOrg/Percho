@@ -21,7 +21,16 @@ import { CheckCircle2, Globe, Loader2, Sparkles, Trash2, Upload, X, XCircle } fr
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 
-export type BgmTrack = { name: string; url: string; rejected: boolean; pending: boolean };
+export type BgmTrack = {
+  name: string;
+  url: string;
+  rejected: boolean;
+  pending: boolean;
+  /** Title + tags, present on generated tracks. Absent on older imports. */
+  title?: string;
+  tags?: string[];
+  role?: string;
+};
 type Candidate = {
   title: string;
   filename: string;
@@ -382,11 +391,28 @@ function TrackRow({
         <div
           className={`truncate font-medium text-sm ${isRejected ? 'text-ink2 line-through' : 'text-ink'}`}
         >
-          {prettyTrackTitle(track.name)}
+          {track.title ?? prettyTrackTitle(track.name)}
         </div>
-        <div className="truncate font-mono text-ink2 text-xs">
-          {vibe}/{track.name}
-        </div>
+        {/* Tags, not the filename. The path is what the planner matches on;
+            what a person needs to see is how it sounds. */}
+        {track.tags && track.tags.length > 0 ? (
+          <div className="mt-0.5 flex flex-wrap items-center gap-1">
+            {track.role ? (
+              <span className="rounded bg-ink/5 px-1.5 py-0.5 font-medium text-ink2 text-xs">
+                {track.role}
+              </span>
+            ) : null}
+            {track.tags.map((t) => (
+              <span key={t} className="rounded bg-ink/5 px-1.5 py-0.5 text-ink2 text-xs">
+                {t}
+              </span>
+            ))}
+          </div>
+        ) : (
+          <div className="truncate font-mono text-ink2 text-xs">
+            {vibe}/{track.name}
+          </div>
+        )}
       </div>
       <audio controls preload="none" src={track.url} className="h-8 w-full sm:w-64">
         <track kind="captions" />

@@ -33,6 +33,7 @@ export async function readBgmState(): Promise<BgmState> {
       pending: Array.isArray(parsed.pending)
         ? parsed.pending.filter((s) => typeof s === 'string')
         : [],
+      meta: parsed.meta && typeof parsed.meta === 'object' ? parsed.meta : {},
       updated_at:
         typeof parsed.updated_at === 'string' ? parsed.updated_at : new Date().toISOString(),
     };

@@ -18,6 +18,7 @@ export async function runAssemble(
         shots?: unknown[];
         dropped?: unknown[];
         narration?: { voice?: string; segments?: unknown[] };
+        bgm?: { path?: string; title?: string | null } | null;
       }
     | undefined;
   const shots = photosStep?.shots;
@@ -32,6 +33,7 @@ export async function runAssemble(
     photosStep?.narration && (photosStep.narration.segments?.length ?? 0) > 0
       ? photosStep.narration
       : null;
+  const bgm = photosStep?.bgm?.path ? photosStep.bgm : null;
 
   // How many planned shots will be MISSING from the film.
   //
@@ -69,6 +71,9 @@ export async function runAssemble(
       // Carried, not recomputed: the script belongs to the cut it was written
       // against, and `shots` above is that same cut.
       narration: narration ? asJson(narration) : null,
+      // The planner's pick. Null leaves the worker to choose, which is what
+      // every assembly written before this did.
+      bgm: bgm ? asJson(bgm) : null,
     });
     if (insErr) return { error: 'insert_failed', message: (insErr as { message: string }).message };
     await setRunStatus(sb, run.id, 'assembled');
