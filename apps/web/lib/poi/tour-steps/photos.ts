@@ -324,6 +324,38 @@ export async function runPhotos(sb: TourDb, run: RunRow, actor: PoiActor = 'user
     taggedCount.total = (untaggedRows ?? []).length;
   }
 
+  // Record the initial verdict, so the review has something to review.
+  //
+  // Until now the pipeline filtered internally and left every photo 'pending',
+  // which meant the three sections in the table were a fiction: 71 of
+  // Aberdeen's 103 sat in "Other" and were treated exactly like the approved
+  // ones. Owner 2026-08-19: "why is it only 20 approved, some photos in the
+  // video are not approved?" — they were, in effect; nothing said so.
+  //
+  // Only rows still 'pending' are touched. A verdict the owner has already
+  // given is his, and a re-run must not quietly overturn it.
+  const { initialVerdict } = await import('./shots');
+  const { data: toJudge } = (await sb
+    .from('poi_photos')
+    .select(
+      'id, status, ai_tags, width_px, height_px, enhanced_status, enhanced_meta, storage_path',
+    )
+    .in('poi_id', resolvedPoiIds)
+    .eq('status', 'pending')) as { data: Array<Record<string, unknown>> | null };
+
+  const verdicts = { approved: [] as string[], rejected: [] as string[] };
+  for (const row of toJudge ?? []) {
+    const v = initialVerdict(row as Parameters<typeof initialVerdict>[0]);
+    verdicts[v.ok ? 'approved' : 'rejected'].push(row.id as string);
+  }
+  for (const [status, ids] of Object.entries(verdicts)) {
+    if (ids.length === 0) continue;
+    await mustWrite(
+      `mark ${ids.length} photo(s) ${status}`,
+      sb.from('poi_photos').update({ status }).in('id', ids),
+    );
+  }
+
   // STOP HERE. Everything above is the automated half: fetch, enhance, tag,
   // initial filtering. Planning is a separate step the owner starts himself,
   // after reviewing what this produced.
@@ -347,7 +379,12 @@ export async function runPhotos(sb: TourDb, run: RunRow, actor: PoiActor = 'user
     dropped: [],
   });
   await setRunStatus(sb, run.id, 'review');
-  return { ok: true, poiCount: Object.keys(results).length, awaitingReview: true };
+  return {
+    ok: true,
+    poiCount: Object.keys(results).length,
+    awaitingReview: true,
+    proposed: { approved: verdicts.approved.length, rejected: verdicts.rejected.length },
+  };
 }
 
 /**
