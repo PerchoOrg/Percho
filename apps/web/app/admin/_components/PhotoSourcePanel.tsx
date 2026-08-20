@@ -23,9 +23,19 @@ interface IngestResult {
 export function PhotoSourcePanel({
   communityId,
   onIngested,
+  suggestions = [],
 }: {
   communityId: string;
   onIngested: () => void;
+  /**
+   * URLs the research step already found: the community's own site, and each
+   * POI's. They were collected, stored and never used — the only photo ingest
+   * was this panel's text box, so Aberdeen's 31 site photos were all pasted by
+   * hand while twelve perfectly good county-park and school URLs sat in the
+   * run blob (owner 2026-08-20). Listed here rather than fetched automatically:
+   * he keeps the call on what gets scraped, and photo licensing is unresolved.
+   */
+  suggestions?: Array<{ url: string; label: string }>;
 }) {
   const [url, setUrl] = useState('');
   const [label, setLabel] = useState('');
@@ -33,8 +43,9 @@ export function PhotoSourcePanel({
   const [result, setResult] = useState<IngestResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  async function submit() {
-    if (!url.trim() || busy) return;
+  async function submit(overrideUrl?: string, overrideLabel?: string) {
+    const target = (overrideUrl ?? url).trim();
+    if (!target || busy) return;
     setBusy(true);
     setError(null);
     setResult(null);
@@ -43,8 +54,8 @@ export function PhotoSourcePanel({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          url: url.trim(),
-          ...(label.trim() ? { label: label.trim() } : {}),
+          url: target,
+          ...((overrideLabel ?? label).trim() ? { label: (overrideLabel ?? label).trim() } : {}),
         }),
       });
       const body = (await res.json().catch(() => ({}))) as Partial<IngestResult> & {
@@ -56,7 +67,7 @@ export function PhotoSourcePanel({
         return;
       }
       setResult(body as IngestResult);
-      setUrl('');
+      if (!overrideUrl) setUrl('');
       onIngested();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Request failed');
@@ -110,6 +121,43 @@ export function PhotoSourcePanel({
         Leave the second field blank to file them under &ldquo;Amenities&rdquo;, or name what the
         page shows (Pool, Clubhouse, Tennis) to keep sources apart in the tour.
       </p>
+
+      {suggestions.length > 0 && (
+        <div className="mt-4 border-line border-t pt-3">
+          <div className="font-medium text-ink text-xs">
+            Sources the research step found{' '}
+            <span className="font-normal text-ink2">({suggestions.length})</span>
+          </div>
+          <p className="mt-0.5 text-[11px] text-muted">
+            Fetch pulls every image on the page into the table below as pending — nothing is used
+            until you approve it.
+          </p>
+          <ul className="mt-2 space-y-1">
+            {suggestions.map((sg) => (
+              <li key={sg.url} className="flex items-center gap-2 text-[11px]">
+                <button
+                  type="button"
+                  onClick={() => void submit(sg.url, sg.label)}
+                  disabled={busy}
+                  className="shrink-0 rounded-md border border-line bg-bg px-2 py-0.5 text-ink hover:border-ink2 disabled:cursor-not-allowed disabled:text-muted"
+                >
+                  Fetch
+                </button>
+                <span className="shrink-0 font-medium text-ink">{sg.label}</span>
+                <a
+                  href={sg.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="truncate text-ink2 underline"
+                  title={sg.url}
+                >
+                  {sg.url.replace(/^https?:\/\//, '')}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {error && (
         <div className="mt-3 rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-xs text-red-700">

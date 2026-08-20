@@ -55,6 +55,17 @@ export interface TourPoiCandidate {
 
 export interface TourResearchOutput {
   narrative_angle: string;
+  /**
+   * The community's own site, from STEP 1.
+   *
+   * STEP 1 has always said "Note the URL" — with nowhere in the output schema
+   * to note it, so the model dutifully found the site, used it, and dropped the
+   * address. Aberdeen's 31 hand-picked photos all came from
+   * aberdeencommunity.org, pasted in by hand, while `communities.website` sat
+   * null (owner 2026-08-20: "did we get main website url for the community?").
+   * Optional so runs that predate the field still parse.
+   */
+  community_site?: string;
   pois: TourPoiCandidate[];
   buckets_deliberately_skipped: Array<{ bucket: string; why: string }>;
 }
@@ -121,6 +132,7 @@ RULES
 OUTPUT — JSON only, no fences, no preamble
 {
   "narrative_angle": "one honest, specific sentence on what defines this place",
+  "community_site": "the community's own website from STEP 1 — omit if it has none",
   "pois": [{
     "name": "exact Google Maps name",
     "bucket": "one of the buckets above",
