@@ -2427,6 +2427,7 @@ export type Database = {
           created_at: string
           error: string | null
           id: string
+          narration: Json | null
           ordered_clips: Json
           photos_dropped: Json
           run_id: string
@@ -2440,6 +2441,7 @@ export type Database = {
           created_at?: string
           error?: string | null
           id?: string
+          narration?: Json | null
           ordered_clips?: Json
           photos_dropped?: Json
           run_id: string
@@ -2453,6 +2455,7 @@ export type Database = {
           created_at?: string
           error?: string | null
           id?: string
+          narration?: Json | null
           ordered_clips?: Json
           photos_dropped?: Json
           run_id?: string

@@ -332,6 +332,175 @@ def pick_bgm() -> Path | None:
     return random.choice(tracks)
 
 
+# ── narration ───────────────────────────────────────────────────────────────
+#
+# The script is written by the plan step (lib/poi/tour-orchestrator/narration.ts)
+# and arrives on the assembly row as `narration`. It is spoken HERE because this
+# is the only place the real timeline exists: clip lengths come from ffprobe on
+# the rendered files, laid out with crossfades. Segments are anchored to clip
+# INDICES for that reason — the plan's seconds are an estimate.
+
+TTS_MODEL = os.environ.get("GEMINI_TTS_MODEL", "gemini-3.1-flash-tts-preview")
+
+# Levels, measured rather than judged. Gemini TTS returns about -20 dB mean and
+# the music bed sits at -15.7, so summing them leaves the words underneath the
+# music and inaudible — the first cut of this played as music-only with the
+# narration technically present. Normalising each line to -14 LUFS and dropping
+# the bed to roughly -29 dB puts the voice ~10 dB clear.
+VO_LOUDNORM = "loudnorm=I=-14:TP=-1.5:LRA=11"
+# The bed is normalised rather than scaled, because the warm-acoustic bucket
+# spans 12.6 dB (-11.4 to -24.0 across its tracks) and pick_bgm chooses at
+# random. A fixed multiplier left the same narration clearly above the music on
+# one track and fighting it on another.
+MUSIC_BED_LOUDNORM = "loudnorm=I=-26:TP=-6:LRA=11"
+# Music-only tours keep the level they have always had; nothing about them
+# changed here.
+MUSIC_VOL_ALONE = 0.55
+STEREO_48K = "aformat=sample_fmts=fltp:sample_rates=48000:channel_layouts=stereo"
+
+
+def clip_start_times(durs: list[float], xfade: float) -> list[float]:
+    """When each clip actually begins on the finished timeline.
+
+    Same derivation the on-screen place labels use: a crossfade overlaps the
+    outgoing clip, so clip i starts one transition after the offset that
+    introduced it.
+    """
+    offsets = crossfade_offsets(durs, xfade)
+    return [0.0] + [offsets[i - 1] + xfade for i in range(1, len(durs))]
+
+
+def tts_line(text: str, voice: str, out_wav: Path) -> bool:
+    """Speak one line. False on any failure — narration is never worth a tour."""
+    try:
+        resp = requests.post(
+            f"https://generativelanguage.googleapis.com/v1beta/models/{TTS_MODEL}:generateContent",
+            headers={
+                "x-goog-api-key": os.environ["GEMINI_API_KEY"],
+                "content-type": "application/json",
+            },
+            json={
+                "contents": [{"parts": [{"text": text}]}],
+                "generationConfig": {
+                    "responseModalities": ["AUDIO"],
+                    "speechConfig": {
+                        "voiceConfig": {"prebuiltVoiceConfig": {"voiceName": voice}}
+                    },
+                },
+            },
+            timeout=120,
+        )
+        resp.raise_for_status()
+        parts = resp.json()["candidates"][0]["content"]["parts"]
+        b64 = next(p["inlineData"]["data"] for p in parts if p.get("inlineData"))
+    except Exception as exc:  # noqa: BLE001 — any failure falls back to music
+        print(f"[narration] tts failed: {exc}", flush=True)
+        return False
+
+    pcm = out_wav.with_suffix(".pcm")
+    pcm.write_bytes(base64.b64decode(b64))
+    # The API returns headerless 24 kHz mono PCM.
+    subprocess.run(
+        ["ffmpeg", "-y", "-f", "s16le", "-ar", "24000", "-ac", "1",
+         "-i", str(pcm), str(out_wav)],
+        check=True, capture_output=True, timeout=60,
+    )
+    return out_wav.exists()
+
+
+def render_narration(
+    narration: dict[str, Any], starts: list[float], workdir: Path
+) -> list[tuple[Path, float]]:
+    """Synthesise each segment and pair it with the second its clips begin."""
+    voice = narration.get("voice") or "Kore"
+    placed: list[tuple[Path, float]] = []
+    for seg in narration.get("segments") or []:
+        text = (seg.get("text") or "").strip()
+        idx = seg.get("startClip")
+        if not text or not isinstance(idx, int) or not (0 <= idx < len(starts)):
+            continue
+        wav = workdir / f"vo-{idx}.wav"
+        if tts_line(text, voice, wav):
+            placed.append((wav, starts[idx]))
+    print(
+        f"[narration] {len(placed)}/{len(narration.get('segments') or [])} line(s) "
+        f"in voice {voice}",
+        flush=True,
+    )
+    return placed
+
+
+def mux_audio(
+    video: Path,
+    bgm: Path | None,
+    placed: list[tuple[Path, float]],
+    total: float,
+    workdir: Path,
+) -> Path:
+    """Music under narration, each line at its own anchor.
+
+    Returns the input untouched when there is nothing to add.
+    """
+    if not bgm and not placed:
+        return video
+    out = workdir / "tour_audio.mp4"
+    cmd: list[str] = ["ffmpeg", "-y", "-i", str(video)]
+    filters: list[str] = []
+
+    bgm_idx = None
+    if bgm:
+        bgm_idx = 1
+        cmd += ["-stream_loop", "-1", "-i", str(bgm)]
+        fade_start = max(0.0, total - 2.0)
+        level = MUSIC_BED_LOUDNORM if placed else f"volume={MUSIC_VOL_ALONE}"
+        filters.append(
+            f"[{bgm_idx}:a]atrim=0:{total:.3f},{level},"
+            f"afade=t=out:st={fade_start:.3f}:d=2,{STEREO_48K}[bg]"
+        )
+
+    vo_labels: list[str] = []
+    for n, (wav, start) in enumerate(placed):
+        i = (bgm_idx or 0) + 1 + n
+        cmd += ["-i", str(wav)]
+        ms = int(round(start * 1000))
+        filters.append(f"[{i}:a]{VO_LOUDNORM},{STEREO_48K},adelay={ms}|{ms}[d{n}]")
+        vo_labels.append(f"[d{n}]")
+
+    if vo_labels:
+        # Segments never overlap, so sum them; amix's default normalize would
+        # divide every line by the number of lines instead.
+        filters.append(
+            f"{''.join(vo_labels)}amix=inputs={len(vo_labels)}:duration=longest:"
+            f"normalize=0,apad=whole_dur={total:.3f}[vo]"
+        )
+        if bgm:
+            filters.append("[vo]asplit=2[vo1][vosc]")
+            # sidechaincompress stops at the shorter input, which truncated the
+            # music the first time this ran; apad restores the full length.
+            filters.append(
+                "[bg][vosc]sidechaincompress=threshold=0.03:ratio=12:"
+                f"attack=15:release=350,apad=whole_dur={total:.3f}[duck]"
+            )
+            filters.append(
+                "[duck][vo1]amix=inputs=2:duration=first:normalize=0,"
+                "alimiter=limit=0.95[a]"
+            )
+        else:
+            filters.append("[vo]alimiter=limit=0.95[a]")
+    else:
+        filters.append("[bg]anull[a]")
+
+    cmd += [
+        "-filter_complex", ";".join(filters),
+        "-map", "0:v:0", "-map", "[a]",
+        "-t", f"{total:.3f}",
+        "-c:v", "copy", "-c:a", "aac", "-b:a", "192k",
+        str(out),
+    ]
+    subprocess.run(cmd, check=True, cwd=str(REPO_ROOT), timeout=600)
+    return out
+
+
 def build_overlay(listing: dict[str, Any], photo_count: int) -> dict[str, Any]:
     address = listing.get("address") or ""
     city = listing.get("city") or ""
@@ -1884,7 +2053,7 @@ def claim_assembly() -> dict[str, Any] | None:
     rows = sb_get(
         "tour_assemblies",
         {
-            "select": "id,community_id,run_id,ordered_clips,status",
+            "select": "id,community_id,run_id,ordered_clips,narration,status",
             "status": "eq.pending",
             "order": "created_at.asc",
             "limit": "1",
@@ -2246,22 +2415,24 @@ def process_assembly(row: dict[str, Any]) -> None:
         # Owner 2026-08-17: "assemble要加音乐" — mux a warm-acoustic BGM track
         # (same library + fade + volume as listing/bucket renders, generate.py
         # mux_bgm). Silent if the bucket is empty.
+        #
+        # Narration rides on top of it when the plan wrote one, ducking the
+        # music under each line. Owner 2026-08-20, on music alone: "tts is much
+        # better than pure music, with more information".
         bgm = pick_bgm()
-        if bgm:
-            bgm_out = workdir / "tour_bgm.mp4"
-            fade_start = max(0.0, total - 2.0)
-            mux_cmd = [
-                "ffmpeg", "-y", "-i", str(out_path),
-                "-stream_loop", "-1", "-i", str(bgm),
-                "-shortest", "-t", f"{total:.3f}",
-                "-af", f"afade=t=out:st={fade_start:.3f}:d=2,volume=0.55",
-                "-c:v", "copy", "-c:a", "aac", "-b:a", "160k",
-                "-map", "0:v:0", "-map", "1:a:0",
-                str(bgm_out),
-            ]
-            print(f"[assembly {assembly_id}] muxing BGM {bgm.name}", flush=True)
-            subprocess.run(mux_cmd, check=True, cwd=str(REPO_ROOT), timeout=600)
-            out_path = bgm_out
+        placed: list[tuple[Path, float]] = []
+        narration = row.get("narration") or {}
+        if narration.get("segments"):
+            placed = render_narration(
+                narration, clip_start_times(durs, xfade), workdir
+            )
+        if bgm or placed:
+            print(
+                f"[assembly {assembly_id}] muxing "
+                f"{bgm.name if bgm else 'no music'} + {len(placed)} narration line(s)",
+                flush=True,
+            )
+            out_path = mux_audio(out_path, bgm, placed, total, workdir)
 
         # Upload to CF Stream.
         cf_meta = {

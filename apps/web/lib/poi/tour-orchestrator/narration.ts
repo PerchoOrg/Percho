@@ -1,0 +1,396 @@
+/**
+ * Timed narration — a script anchored to the cut, not laid over it.
+ *
+ * The previous approach wrote one continuous paragraph sized to the film's
+ * total runtime and let the reader's pace decide where each sentence landed.
+ * Measured on Aberdeen, the drift compounded: Halcyon was named 4.6s early,
+ * Sims Lake 13.9s early, and by the closing Publix shot the narration was 28.7
+ * seconds ahead of the picture — talking about groceries over a park. No
+ * amount of rewriting fixes that, because the error is structural: nothing
+ * connected a sentence to a shot.
+ *
+ * So narration is produced as SEGMENTS, each anchored to a run of clips that
+ * share a subject, with a word budget derived from that run's real duration.
+ * Each segment is synthesised separately and placed at its own start time, so
+ * a change to any clip's length moves only that segment. Owner 2026-08-20:
+ * "shouldnt we generate tts during planning phase? since it knows what to
+ * tell, how long and transition stuff."
+ *
+ * It also has to stop sounding like a template. Same voice, same opening, same
+ * order for every community was the complaint, and the material to fix it was
+ * already there and unused: `narrative_angle` is written by the research step
+ * and had never been read by anything.
+ */
+
+import { findSchoolAssignment, stripSchoolAssignment } from './school-language';
+import { WORDS_PER_SECOND_FIT, countWords } from './vo-pass';
+
+export const NARRATION_MODEL = process.env.GEMINI_VO_MODEL ?? 'gemini-3.5-flash';
+
+const GENERATE_URL = (model: string) =>
+  `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
+
+/**
+ * Narration covers this share of a section's runtime, not all of it.
+ *
+ * Wall-to-wall speech over a 90-second tour is exhausting and leaves the
+ * pictures nothing to say. The gap also absorbs the difference between the
+ * synthesiser's pace and the estimate below.
+ */
+export const SECTION_FILL = 0.72;
+
+/** A section too short to say anything useful in gets no line at all. */
+export const MIN_SECTION_SECONDS = 2.5;
+
+export interface NarrationClip {
+  poi_name?: string | null;
+  bucket?: string | null;
+  duration_s: number;
+  label_distance?: string | null;
+}
+
+/** One run of consecutive clips that share a subject. */
+export interface NarrationSection {
+  index: number;
+  /**
+   * First and last clip of the run, inclusive. THIS is the anchor.
+   *
+   * The seconds below are a plan-time estimate and nothing more. The real
+   * timeline is only known at assembly, where the worker ffprobes each
+   * rendered file and lays them out with 0.5s crossfades — clips come back
+   * about half a second longer than planned, which happens to cancel the
+   * overlap almost exactly, but "happens to cancel" is not something to place
+   * audio on. The worker converts these indices to real seconds the same way
+   * it already does for the on-screen place labels.
+   */
+  startClip: number;
+  endClip: number;
+  /** Estimated from planned durations. Used for the word budget, not for placement. */
+  startS: number;
+  endS: number;
+  bucket: string;
+  /** Distinct place names in this run, in order. */
+  places: string[];
+  /** How many words fit, at the VO pass's established pace. */
+  wordBudget: number;
+}
+
+/**
+ * Split the cut into sections at every change of PLACE GROUP.
+ *
+ * A section is a run of clips sharing a bucket — which, since the scheduler
+ * started grouping buckets into chapters, is also a run sharing a subject. The
+ * boundaries are therefore the film's own transitions, which is what makes a
+ * segment land on the footage it describes.
+ */
+export function buildSections(clips: NarrationClip[]): NarrationSection[] {
+  const sections: NarrationSection[] = [];
+  let t = 0;
+  for (const [i, c] of clips.entries()) {
+    const bucket = c.bucket ?? 'other';
+    const last = sections.at(-1);
+    if (last && last.bucket === bucket) {
+      last.endClip = i;
+      last.endS = t + c.duration_s;
+      if (c.poi_name && !last.places.includes(c.poi_name)) last.places.push(c.poi_name);
+    } else {
+      sections.push({
+        index: sections.length,
+        startClip: i,
+        endClip: i,
+        startS: t,
+        endS: t + c.duration_s,
+        bucket,
+        places: c.poi_name ? [c.poi_name] : [],
+        wordBudget: 0,
+      });
+    }
+    t += c.duration_s;
+  }
+  for (const s of sections) {
+    s.wordBudget = Math.max(
+      0,
+      Math.floor((s.endS - s.startS) * SECTION_FILL * WORDS_PER_SECOND_FIT),
+    );
+  }
+  return sections;
+}
+
+export interface NarrationContext {
+  communityName: string;
+  city: string | null;
+  state: string | null;
+  /** The research step's one-line take. Unused before 2026-08-20. */
+  narrativeAngle?: string | null;
+  sections: NarrationSection[];
+}
+
+/**
+ * The prompt. Structure is fixed; VOICE is not.
+ *
+ * The opening instruction deliberately refuses the "<Name> sits in <City>"
+ * formula the old script defaulted to, and hands the model the community's own
+ * angle to open from instead — so a lakeside community can open on water and a
+ * school-heavy one on the morning run.
+ */
+export function buildNarrationPrompt(ctx: NarrationContext): string {
+  const where = [ctx.city, ctx.state].filter(Boolean).join(', ');
+  const timeline = ctx.sections
+    .map(
+      (s) =>
+        `  ${s.index}. ${s.startS.toFixed(1)}–${s.endS.toFixed(1)}s (${(s.endS - s.startS).toFixed(1)}s, max ${s.wordBudget} words) — ${s.bucket}: ${s.places.join(', ') || '(unnamed)'}`,
+    )
+    .join('\n');
+
+  return `Write the spoken narration for a ${ctx.sections.at(-1)?.endS.toFixed(0)}-second video tour of ${ctx.communityName}${where ? `, ${where}` : ''}.
+
+${ctx.narrativeAngle ? `What defines this place, in the researcher's words: "${ctx.narrativeAngle}"\n` : ''}
+The film is already cut. Here is what is on screen, when:
+
+${timeline}
+
+Write ONE line per section. Each line is spoken while those exact shots are on
+screen, so it must be about THOSE places — never the next ones, never the last.
+
+This is a STORY, not a caption track. The lines are heard in order by one
+person, so they have to build. Before writing, decide what this tour is
+actually saying about this place — then let each line carry a piece of it.
+
+BANNED, because they turn narration into a brochure:
+  "offers", "features", "provides", "boasts", "is home to", "enjoy",
+  "nestled", "conveniently located", "a variety of", "something for everyone"
+If a line still works with the place name swapped out, it is not about this
+place. Rewrite it.
+
+RULES
+- Respect each section's word cap. Under is fine; over is not.
+- Open from what makes this community specific — but do NOT quote the
+  researcher's sentence back. It is a note to you, not a line to read out. And
+  never open "<Name> sits in <City>": that sentence fits every community,
+  which is why it is wrong for this one.
+- Name the community once, early. After that, say "here".
+- Use concrete nouns and real detail from the shot list. "The courts stay busy
+  past dusk" beats "tennis courts are available".
+- Distances and facts only where they are shown. No invented amenities.
+- SCHOOLS have one rule and it is absolute: describe the PLACE, never anyone
+  going to it. Name the schools, say where they sit, describe the campus.
+  Nothing about attendance, zoning, enrolment, morning routines, the school
+  run, walking or driving to class, or which school follows which — those are
+  all the same claim wearing different clothes, and a line that makes one is
+  deleted rather than reworded, leaving your schools shot silent.
+    YES — "Sharon Elementary, Riverwatch Middle, and Lambert High sit within a
+           few miles, low brick campuses set back behind their ball fields."
+    NO  — "Morning routines flow toward Sharon Elementary."
+    NO  — "Riverwatch Middle leads to Lambert High."
+  NEVER characterise school quality either — not "top-rated", not "elite", not
+  "award-winning", however the researcher phrased it.
+- No claims about who lives here, or who would like it.
+- Vary sentence length. Not every line needs a verb phrase at the front.
+- The last line should land, not trail off. It is the one people remember.
+
+OUTPUT — JSON only, no fences:
+{"lines": [{"index": 0, "text": "..."}, ...]}
+Omit a section entirely rather than padding it.`;
+}
+
+export interface NarrationSegment {
+  index: number;
+  /** The clips this line is spoken over. The worker places audio from these. */
+  startClip: number;
+  endClip: number;
+  /** Plan-time estimate, for review in the admin table. Not the placement. */
+  startS: number;
+  endS: number;
+  text: string;
+  words: number;
+  /** Trimmed because it exceeded the section's budget. */
+  trimmed: boolean;
+}
+
+/**
+ * Validate the model's lines against the sections they claim.
+ *
+ * Everything here is enforced rather than trusted: the school-assignment rule
+ * gets past prompts (it is enforced twice elsewhere for the same reason), and a
+ * line over budget is a line that runs into the next section's footage — the
+ * exact failure this module exists to prevent.
+ */
+export function parseNarration(
+  raw: string,
+  sections: NarrationSection[],
+): { segments: NarrationSegment[]; warnings: string[] } {
+  const warnings: string[] = [];
+  const start = raw.indexOf('{');
+  const end = raw.lastIndexOf('}');
+  if (start < 0 || end <= start) return { segments: [], warnings: ['no JSON in response'] };
+
+  let parsed: { lines?: Array<{ index?: number; text?: string }> };
+  try {
+    parsed = JSON.parse(raw.slice(start, end + 1));
+  } catch {
+    return { segments: [], warnings: ['unparseable JSON'] };
+  }
+
+  const byIndex = new Map(sections.map((s) => [s.index, s]));
+  const segments: NarrationSegment[] = [];
+  for (const line of parsed.lines ?? []) {
+    const section = typeof line.index === 'number' ? byIndex.get(line.index) : undefined;
+    if (!section || typeof line.text !== 'string') continue;
+    if (section.endS - section.startS < MIN_SECTION_SECONDS) continue;
+
+    const cleaned = stripSchoolAssignment(line.text.trim());
+    if (cleaned.codes.length > 0) {
+      warnings.push(`section ${section.index}: school-assignment (${cleaned.codes.join(', ')})`);
+    }
+    let text = cleaned.text.trim();
+    if (!text) continue;
+
+    // Over budget: drop whole sentences from the end rather than clipping a
+    // word, so what remains is still speakable.
+    let trimmed = false;
+    while (countWords(text) > section.wordBudget) {
+      const cut = text.replace(/(^|\s)[^.!?]*[.!?]\s*$/, '').trim();
+      if (!cut || cut === text) {
+        text = text.split(/\s+/).slice(0, section.wordBudget).join(' ');
+        trimmed = true;
+        break;
+      }
+      text = cut;
+      trimmed = true;
+    }
+    if (!text) continue;
+    if (trimmed) warnings.push(`section ${section.index}: trimmed to ${section.wordBudget} words`);
+
+    segments.push({
+      index: section.index,
+      startClip: section.startClip,
+      endClip: section.endClip,
+      startS: section.startS,
+      endS: section.endS,
+      text,
+      words: countWords(text),
+      trimmed,
+    });
+  }
+  segments.sort((a, b) => a.startS - b.startS);
+
+  // A late safety net, matching the one the VO pass keeps: the strip above
+  // works sentence by sentence and a rewritten line can still carry the
+  // phrasing across a sentence boundary.
+  for (const seg of segments) {
+    const codes = findSchoolAssignment(seg.text);
+    if (codes.length > 0) warnings.push(`section ${seg.index}: RESIDUAL school-assignment`);
+  }
+  return { segments, warnings };
+}
+
+/**
+ * The voice this community is read in.
+ *
+ * Owner 2026-08-20: "i dont want to hear the same voice, same format, same
+ * opening, same order for every single community." Chosen from the community's
+ * own character rather than at random, so the choice means something — and
+ * keyed off stable inputs, so the same community is read by the same voice
+ * every time it is regenerated. A tour whose narrator changed between takes
+ * would read as a different product.
+ */
+export const NARRATION_VOICES = {
+  warm: 'Kore',
+  grounded: 'Charon',
+  bright: 'Puck',
+  calm: 'Aoede',
+  assured: 'Fenrir',
+} as const;
+
+export interface NarrationResult {
+  segments: NarrationSegment[];
+  sections: NarrationSection[];
+  voice: string;
+  warnings: string[];
+  ok: boolean;
+  error?: string;
+}
+
+/**
+ * Write the narration for a planned cut.
+ *
+ * Called from `runPlan`, because that is where the shot list — what is shown,
+ * in what order, for how long — first exists. Everything the script needs to
+ * be in sync is known at that moment and nowhere earlier (owner 2026-08-20:
+ * "shouldnt we generate tts during planning phase? since it knows what to
+ * tell, how long and transition stuff").
+ *
+ * Temperature 1.1: three takes were compared side by side against the Aberdeen
+ * cut and the owner picked the loosest one. The lower settings stayed closer
+ * to the shot list and read like an inventory of it.
+ *
+ * A failure here returns no segments rather than throwing. A tour with music
+ * and no narration is the product as it shipped last week; a plan step that
+ * dies on a text-generation call is a regression.
+ */
+export async function runNarration(
+  clips: NarrationClip[],
+  ctx: Omit<NarrationContext, 'sections'>,
+): Promise<NarrationResult> {
+  const sections = buildSections(clips);
+  const voice = voiceForCommunity(
+    ctx.communityName,
+    sections.map((s) => s.bucket),
+  );
+  const base = { segments: [], sections, voice, warnings: [] };
+
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return { ...base, ok: false, error: 'GEMINI_API_KEY not set' };
+  if (sections.length === 0) return { ...base, ok: true };
+
+  try {
+    const res = await fetch(GENERATE_URL(NARRATION_MODEL), {
+      method: 'POST',
+      headers: { 'x-goog-api-key': apiKey, 'content-type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ role: 'user', parts: [{ text: buildNarrationPrompt({ ...ctx, sections }) }] }],
+        generationConfig: {
+          // Same allowance as the VO pass, for the same reason: this is a
+          // thinking model and its reasoning shares the budget.
+          maxOutputTokens: 8192,
+          temperature: 1.1,
+          responseMimeType: 'application/json',
+        },
+      }),
+    });
+    if (!res.ok) {
+      return {
+        ...base,
+        ok: false,
+        error: `narration ${res.status}: ${(await res.text()).slice(0, 200)}`,
+      };
+    }
+    const data = (await res.json()) as {
+      candidates?: { content?: { parts?: { text?: string; thought?: boolean }[] } }[];
+    };
+    // Skip the thinking block: it is parts[0] often enough that reading
+    // parts[0].text returned prose instead of JSON on every call.
+    const raw = (data.candidates?.[0]?.content?.parts ?? [])
+      .filter((p) => !p.thought)
+      .map((p) => p.text ?? '')
+      .join('');
+    const { segments, warnings } = parseNarration(raw, sections);
+    return { segments, sections, voice, warnings, ok: segments.length > 0 };
+  } catch (err) {
+    return { ...base, ok: false, error: err instanceof Error ? err.message : String(err) };
+  }
+}
+
+export function voiceForCommunity(name: string, buckets: string[]): string {
+  const has = (b: string) => buckets.includes(b);
+  // Character first, where the content states one clearly.
+  if (has('waterfront') || has('outdoor')) return NARRATION_VOICES.calm;
+  if (has('schools') && has('kids')) return NARRATION_VOICES.warm;
+  if (has('nightlife') || has('dining')) return NARRATION_VOICES.bright;
+  if (has('fitness') || has('work_hubs')) return NARRATION_VOICES.assured;
+  // Otherwise stable-but-varied: same community, same voice, forever.
+  const pool = Object.values(NARRATION_VOICES);
+  let h = 0;
+  for (const ch of name) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  return pool[h % pool.length] as string;
+}

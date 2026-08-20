@@ -18,6 +18,15 @@ Community films now open on the community. Its own amenities lead the film and r
 
 Aberdeen in Suwanee is the first community with this treatment: a 58-second film that opens on its clubhouse and takes in the pool, the courts and the grounds before heading out into Suwanee.
 
+### 2026-08-20
+- Community films are now narrated. A voice walks you through the neighbourhood — what it has, what's nearby, what's worth the drive — instead of the film running on music alone
+- The narration is written against the film's own cut, so what you hear matches what you see. Each stretch of the film gets its own line, spoken while those shots are on screen
+- Every community gets its own telling. The narrator's voice suits the community's character and stays the same for that community every time; the opening comes from what makes the place distinctive rather than a fixed formula
+- The music steps back under the narration and comes forward again between lines, at a consistent level whichever track is playing
+- The script can be read on the community tour screen before the film is made, so it can be checked rather than discovered on playback
+- Narration never describes which school anyone attends, or how residents get there. School shots name the schools and describe the campuses
+- A film that can't get a script still renders, with music as before
+
 ### 2026-08-19
 - A community film now visits about a dozen places, picked to cover different kinds — a park, a school, somewhere to eat, somewhere to shop — instead of whatever happened to be nearest
 - The research step finds far more of what is actually around a community: for Aberdeen it went from 5 places across 4 kinds to 14 across 9, including restaurants, a gym and parks it had never surfaced

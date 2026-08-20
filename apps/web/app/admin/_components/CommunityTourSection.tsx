@@ -26,6 +26,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { NarrationPanel, type NarrationSegmentView } from './NarrationPanel';
 import { PhotoSourcePanel } from './PhotoSourcePanel';
 import type { ClipStatus, PhotoRow } from './PhotoTable';
 import { PhotoTable } from './PhotoTable';
@@ -329,6 +330,19 @@ export function CommunityTourSection({
     ]),
   );
 
+  /** The script `plan` wrote for this cut, for review before anything is spoken. */
+  const narration = (
+    run?.step_results.photos as
+      | {
+          narration?: {
+            voice?: string;
+            error?: string;
+            segments?: NarrationSegmentView[];
+          };
+        }
+      | undefined
+  )?.narration;
+
   /** Why each photo the plan considered is NOT in the cut, keyed by photo. */
   const dropReasons = Object.fromEntries(
     (
@@ -411,7 +425,15 @@ export function CommunityTourSection({
         error={stepError}
       />
 
-      {/* 3 · Hand-picked sources: a page URL in, pending photos out. Sits
+      {/* 3 · What the film will say. Written by plan, spoken at assembly —
+           reviewable in between. Absent until plan has run. */}
+      <NarrationPanel
+        voice={narration?.voice}
+        segments={narration?.segments ?? []}
+        error={narration?.error}
+      />
+
+      {/* 4 · Hand-picked sources: a page URL in, pending photos out. Sits
            directly above the table those photos land in. */}
       <PhotoSourcePanel
         communityId={communityId}
@@ -419,7 +441,7 @@ export function CommunityTourSection({
         suggestions={sourceSuggestions}
       />
 
-      {/* 4 · THE workspace. Open, full width — everything is managed here
+      {/* 5 · THE workspace. Open, full width — everything is managed here
            (owner 2026-08-19: "one big table to manage and display
            everything"). It used to be shut behind a <details>. */}
       <section className="rounded-2xl border border-line bg-surface p-4">
