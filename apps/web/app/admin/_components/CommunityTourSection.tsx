@@ -124,15 +124,24 @@ export function CommunityTourSection({
   };
 
   // Compact one-liners for the two sourcing steps now living in the header.
+  type ResearchPoi = { name: string; bucket?: string; why?: string; approx_miles?: number };
   const researchRaw = run?.step_results.agent_research as
-    | { agents?: Record<string, { parsed?: { pois?: unknown[] } | null }> }
+    | { agents?: Record<string, { parsed?: { pois?: ResearchPoi[] } | null }> }
     | undefined;
-  const researchCount = Object.values(researchRaw?.agents ?? {}).reduce(
-    (n, a) => n + (a?.parsed?.pois?.length ?? 0),
-    0,
-  );
+  // Both agents propose, and they overlap — dedupe by name so the panel shows
+  // the candidate list rather than the same place twice.
+  const researchPois = [
+    ...new Map(
+      Object.values(researchRaw?.agents ?? {})
+        .flatMap((a) => a?.parsed?.pois ?? [])
+        .map((poi) => [poi.name, poi]),
+    ).values(),
+  ];
   const resolveRaw = run?.step_results.resolve as
-    | { resolved?: unknown[]; dropped?: unknown[] }
+    | {
+        resolved?: Array<{ name?: string; bucket?: string; distance_m?: number | null }>;
+        dropped?: Array<{ name?: string; reason?: string }>;
+      }
     | undefined;
 
   /**
@@ -297,12 +306,15 @@ export function CommunityTourSection({
         poiCount={poiCount}
         researchState={stateOf('research')}
         resolveState={stateOf('resolve')}
-        researchSummary={researchCount > 0 ? `${researchCount} candidates` : null}
+        researchSummary={researchPois.length > 0 ? `${researchPois.length} candidates` : null}
         resolveSummary={
           resolveRaw
             ? `${resolveRaw.resolved?.length ?? 0} resolved · ${resolveRaw.dropped?.length ?? 0} dropped`
             : null
         }
+        researchPois={researchPois}
+        resolvedPlaces={resolveRaw?.resolved ?? []}
+        droppedPlaces={resolveRaw?.dropped ?? []}
         busy={!!running}
         onRun={(s) => void runStep(s)}
       />
