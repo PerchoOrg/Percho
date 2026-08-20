@@ -9,19 +9,19 @@
  * click… instead of going to step by step section, lets use one big table to
  * manage and display everything."
  *
- *   TourHeader      facts (left) + latest cut (right)
- *   TourStepStrip   the whole pipeline as one row of clickable chips
+ *   TourHeader      facts + Research/Resolve (left), latest cut (right)
+ *   TourStepStrip   Fetch & Tag → Review → Plan → Render → Assemble
  *   PhotoSourcePanel
- *   PhotoTable      OPEN, full width — the workspace
- *   Step details    collapsed; the per-step result dumps
+ *   PhotoTable      OPEN, full width, SELECTED photos — the workspace
  *
- * What this replaced: a full-width video, then five stacked accordion panels,
- * then the table collapsed behind a `<details>`. The thing an admin actually
- * works in was the one thing below the fold and shut.
+ * What this replaced: a full-width video, five stacked accordion step panels
+ * with their result dumps, and the photo table shut behind a `<details>`. The
+ * one surface an admin works in was the only thing below the fold and closed.
  *
- * The step results are demoted, not deleted. Losing the research candidate
- * list or the shot-list plan would make several classes of bug invisible again
- * — most of this month's pipeline bugs were found by reading those panels.
+ * The step-details disclosure is gone too (owner 2026-08-19: "we do not need
+ * to keep step details as well, it is already in the big table"). Per-step
+ * state now reads off the strip and per-photo state off the table, so the
+ * result dumps were a third copy of the same facts.
  */
 
 import { useRouter } from 'next/navigation';
@@ -30,8 +30,13 @@ import { PhotoSourcePanel } from './PhotoSourcePanel';
 import type { PhotoRow } from './PhotoTable';
 import { PhotoTable } from './PhotoTable';
 import { TourHeader } from './TourHeader';
-import { TourPipeline } from './TourPipeline';
-import { AUTOMATABLE_STEPS, type StepName, type StepState, TourStepStrip } from './TourStepStrip';
+import {
+  AUTOMATABLE_STEPS,
+  type StepName,
+  type StepState,
+  type StripStep,
+  TourStepStrip,
+} from './TourStepStrip';
 
 interface ClipRow {
   photo_id: string;
@@ -97,6 +102,7 @@ export function CommunityTourSection({
   const [runs, setRuns] = useState<Run[]>([]);
   const [running, setRunning] = useState<StepName | null>(null);
   const [stepError, setStepError] = useState<string | null>(null);
+  const [showAllPhotos, setShowAllPhotos] = useState(false);
   const router = useRouter();
 
   const loadRuns = useCallback(async () => {
@@ -119,13 +125,30 @@ export function CommunityTourSection({
   const photosResult = run?.step_results.photos as { phase?: string } | undefined;
   const awaitingReview = photosResult?.phase === 'review';
 
-  const stateOf = (s: StepName): StepState => {
+  const stateOf = (s: StripStep | StepName): StepState => {
     if (running === s) return 'running';
-    if (s === 'plan') return photosResult?.phase === 'done' ? 'done' : 'idle';
-    const r = run?.step_results[resultKey(s)] as { error?: string } | undefined;
+    // `review` has no server step, and `plan` writes back into the photos
+    // result rather than a key of its own. Both are "done" once planning has
+    // happened — planning is the only thing that can follow the review.
+    if (s === 'review' || s === 'plan') {
+      return photosResult?.phase === 'done' ? 'done' : 'idle';
+    }
+    const r = run?.step_results[resultKey(s as StepName)] as { error?: string } | undefined;
     if (!r) return 'idle';
     return r.error ? 'failed' : 'done';
   };
+
+  // Compact one-liners for the two sourcing steps now living in the header.
+  const researchRaw = run?.step_results.agent_research as
+    | { agents?: Record<string, { parsed?: { pois?: unknown[] } | null }> }
+    | undefined;
+  const researchCount = Object.values(researchRaw?.agents ?? {}).reduce(
+    (n, a) => n + (a?.parsed?.pois?.length ?? 0),
+    0,
+  );
+  const resolveRaw = run?.step_results.resolve as
+    | { resolved?: unknown[]; dropped?: unknown[] }
+    | undefined;
 
   /**
    * Run one step. `runId` is threaded explicitly rather than read from state:
@@ -206,6 +229,33 @@ export function CommunityTourSection({
     return { ...p, recommended: c.recommended, clip: c.clip, dakb_clip: c.dakb_clip };
   });
 
+  /**
+   * The table shows the SELECTED photos, not everything ever fetched.
+   *
+   * Owner 2026-08-19: "we should not use all photos, only the selected ones."
+   * Aberdeen has 103 photos across 31 POIs, but only the POIs that survived
+   * selection reach the film — most of those rows are for places the tour will
+   * never visit, and they buried the ones under review.
+   *
+   * "Selected" is the run's `resolved_poi_ids`: the POIs the pipeline kept.
+   * Rejected photos of those POIs stay visible on purpose — the review is of
+   * the approved AND the rejected.
+   *
+   * The escape hatch is deliberate. Before the photos step has run there is no
+   * selection to filter by, and an admin chasing a specific frame needs a way
+   * back to the full set.
+   */
+  const selectedPoiIds = new Set(
+    (run?.step_results.photos as { resolved_poi_ids?: string[] } | undefined)?.resolved_poi_ids ??
+      [],
+  );
+  const selected =
+    selectedPoiIds.size > 0
+      ? enriched.filter((p) => !!p.poi_id && selectedPoiIds.has(p.poi_id))
+      : enriched;
+  const visible = showAllPhotos ? enriched : selected;
+  const hiddenCount = enriched.length - selected.length;
+
   async function generateClip(
     photoId: string,
     engine?: string,
@@ -255,6 +305,16 @@ export function CommunityTourSection({
         kind={kind}
         photoCount={photos.length}
         poiCount={poiCount}
+        researchState={stateOf('research')}
+        resolveState={stateOf('resolve')}
+        researchSummary={researchCount > 0 ? `${researchCount} candidates` : null}
+        resolveSummary={
+          resolveRaw
+            ? `${resolveRaw.resolved?.length ?? 0} resolved · ${resolveRaw.dropped?.length ?? 0} dropped`
+            : null
+        }
+        busy={!!running}
+        onRun={(s) => void runStep(s)}
       />
 
       {/* 2 · The whole pipeline as one row of chips. */}
@@ -275,42 +335,33 @@ export function CommunityTourSection({
            (owner 2026-08-19: "one big table to manage and display
            everything"). It used to be shut behind a <details>. */}
       <section className="rounded-2xl border border-line bg-surface p-4">
-        <div className="mb-3 flex items-baseline justify-between gap-3">
-          <h2 className="font-semibold text-ink text-sm">Photos ({enriched.length})</h2>
-          <span className="text-[11px] text-ink2">
-            review, reframe, tag and generate clips — all from this table
-          </span>
+        <div className="mb-3 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+          <h2 className="font-semibold text-ink text-sm">
+            {showAllPhotos ? 'All photos' : 'Selected photos'} ({visible.length})
+          </h2>
+          <div className="flex items-center gap-3 text-[11px] text-ink2">
+            <span>review, reframe, tag and render — all from this table</span>
+            {hiddenCount > 0 && (
+              <button
+                type="button"
+                onClick={() => setShowAllPhotos((v) => !v)}
+                className="underline hover:text-ink"
+              >
+                {showAllPhotos
+                  ? 'show selected only'
+                  : `show all (${hiddenCount} more from unselected POIs)`}
+              </button>
+            )}
+          </div>
         </div>
         <PhotoTable
           table="poi_photos"
           storageBase={storageBase}
           bucket={bucket}
-          photos={enriched}
+          photos={visible}
           onGenerateClip={generateClip}
         />
       </section>
-
-      {/* 5 · The per-step result dumps, demoted but kept: most of this month's
-           pipeline bugs were found by reading them. */}
-      <details className="rounded-2xl border border-line bg-surface">
-        <summary className="cursor-pointer p-4 font-semibold text-ink text-sm">
-          Step details
-        </summary>
-        <div className="px-4 pb-4">
-          <TourPipeline
-            communityId={communityId}
-            communityName={communityName}
-            city={city}
-            state={state}
-            lat={lat}
-            lng={lng}
-            storageBase={storageBase}
-            bucket={bucket}
-            photos={photos}
-            readOnly
-          />
-        </div>
-      </details>
     </div>
   );
 }

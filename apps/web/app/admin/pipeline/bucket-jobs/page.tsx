@@ -52,7 +52,7 @@ type SeedanceRow = {
 };
 
 /** Tour assemblies (final concat of approved photo clips) — render worker owns
- *  these; the TourPipeline Approve button inserts the pending row. */
+ *  these; the community tour's Assemble step inserts the pending row. */
 type AssemblyRow = {
   id: string;
   community_id: string | null;
