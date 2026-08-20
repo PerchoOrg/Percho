@@ -56,10 +56,14 @@ describe("community card immersive full-bleed layout (2026-08-16)", () => {
 		expect(AREA).toContain("locations={[0.55, 0.78, 1]}");
 	});
 
-	it("keeps the COMMUNITY badge and the bookmark", () => {
+	it("keeps the COMMUNITY badge, and NO bookmark", () => {
 		expect(SRC).toContain("COMMUNITY");
-		expect(SRC).toContain("SAVE_TAP_TARGET");
-		expect(SRC).toContain("BookmarkIcon");
+		// The bookmark is gone from this face alone (2026-08-20). Its disc sat
+		// at top:12/right:12, which is where the tour video draws the place
+		// name and distance — see `_render_label_png` in the render worker. The
+		// City and Listing faces keep theirs; neither plays a labelled video.
+		expect(SRC).not.toContain("BookmarkIcon");
+		expect(SRC).not.toContain("SAVE_TAP_TARGET");
 	});
 
 	it("caps the chip row at TWO pills", () => {
