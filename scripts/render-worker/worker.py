@@ -27,6 +27,7 @@ import base64
 import json
 import os
 import random
+import re
 import shutil
 import subprocess
 import sys
@@ -2170,8 +2171,26 @@ def process_assembly(row: dict[str, Any]) -> None:
 
 
 def streamIframeUrl(uid: str) -> str:
-    sub = os.environ.get("NEXT_PUBLIC_CLOUDFLARE_STREAM_CUSTOMER_SUBDOMAIN", "")
-    return f"https://customer-{sub}/media/{uid}/iframe" if sub else f"https://watch.cloudflarestream.com/{uid}"
+    """Player URL for a rendered video. Same shape as the TS side.
+
+    Deliberately mirrors `streamHost()` in apps/web/lib/cloudflare/stream.ts:
+    the env var holds the full host here (`customer-xxx.cloudflarestream.com`)
+    but the Cloudflare dashboard also shows a bare `customer-xxx`, so accept
+    either. Both languages must produce the identical URL — the admin panel
+    rebuilds this from `cf_stream_uid` via the TS helper rather than reading
+    the column, so a divergence would be invisible until something does read it.
+
+    This used to prepend a second `customer-` and insert a `/media/` segment,
+    yielding a host that does not resolve — every video_url written before
+    2026-08-19 is unopenable (owner: "it says 404").
+    """
+    raw = os.environ.get("NEXT_PUBLIC_CLOUDFLARE_STREAM_CUSTOMER_SUBDOMAIN", "").strip()
+    if not raw:
+        return f"https://watch.cloudflarestream.com/{uid}"
+    host = re.sub(r"^https?://", "", raw).rstrip("/")
+    if not host.endswith(".cloudflarestream.com"):
+        host = f"{host}.cloudflarestream.com"
+    return f"https://{host}/{uid}/iframe"
 
 
 def main() -> None:

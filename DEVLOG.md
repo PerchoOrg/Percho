@@ -16,6 +16,52 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-19 14:40 UTC — Every stored video_url was a 404, and Supabase is hard-down
+
+**Objective**: owner — "i am not able to open the old and new links, it says
+404". Branch `phase73/stream-url-fix` (ws1).
+
+**The URL bug.** `worker.py:2174` built
+`https://customer-{sub}/media/{uid}/iframe`, but
+`NEXT_PUBLIC_CLOUDFLARE_STREAM_CUSTOMER_SUBDOMAIN` is already set to the full
+host `customer-4vgbwrmdsd3h7zzb.cloudflarestream.com`. So it emitted
+`customer-customer-…` — a hostname that does not resolve — plus a `/media/`
+segment Cloudflare does not use. Probed the candidate shapes against the live
+CDN: `/{uid}/iframe`, `/{uid}/watch` and `/{uid}/manifest/video.m3u8` all 200;
+`/media/{uid}/iframe` 302s to an error page. Ported `streamHost()`'s tolerance
+from `apps/web/lib/cloudflare/stream.ts` so either env form (bare
+`customer-xxx` or full host, with or without scheme/trailing slash) resolves to
+the same URL, and kept `/iframe` rather than `/watch` so both languages emit a
+byte-identical string.
+
+**Blast radius is smaller than it looks.** `AssemblyVideoPanel` does not read
+`video_url` — it rebuilds the URL from `cf_stream_uid` through the *TS*
+helper, which was always correct. Grepped every `video_url` reference in
+`apps/`, `scripts/`, `packages/`: nothing consumes the column. The bad value
+has been write-only since it was introduced, which is why it surfaced only
+when I hand-copied one into chat. That also makes it a landmine: the first
+feature to read the column would have inherited a 404 with no failing test.
+
+**Issues**: mid-investigation the Supabase project went to **HTTP 402** on
+every endpoint — REST and Storage alike — with `exceed_cached_egress_quota`.
+This is a project-wide stop, not a rate limit. Could not count or backfill the
+stale `generated_videos.video_url` rows as a result. The render worker
+(pid 26458) is still polling and will keep 402ing until service is restored;
+it needs no restart for that, but it now also runs stale code and must be
+restarted after this merge.
+
+**Learnings**: the likely egress driver is this phase's own workload — the
+worker re-reads source photos from Storage on every clip render, and phase71
+outpainting plus phase72's stale-clip invalidation caused a lot of re-renders.
+Worth caching source photos on the worker's local disk keyed by content hash
+before the next big re-render pass, independent of the billing fix.
+
+**Next steps**: (1) owner must lift the Supabase spend cap / upgrade — an
+account-billing action, not mine to take. (2) After that, backfill
+`generated_videos.video_url` and restart the worker. (3) Then TTS.
+
+---
+
 ## 2026-08-19 08:15 UTC — The whole tour runs from one command, and a film is a dozen places
 
 **Objective**: owner — "yes you should be able to do this yourself", approving
