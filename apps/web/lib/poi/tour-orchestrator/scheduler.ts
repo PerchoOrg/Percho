@@ -137,11 +137,24 @@ const KEN_BURNS_PREFERENCE: Partial<Record<DominantSubject, readonly string[]>> 
   interior_close: ['push_in_slow', 'push_pan_lr'],
 };
 
+/**
+ * Orbit leads wherever it plausibly fits. Owner 2026-08-19: "orbit effect is
+ * good, we should give it more weight."
+ *
+ * Orbit is the move that most reads as a camera rather than a pan across a
+ * still — it swings around the subject, so the parallax it exposes is the whole
+ * point of running DepthFlow on the frame at all. It now heads every subject's
+ * list except `nature`, where there is usually no single subject to orbit and a
+ * push through the depth reads better.
+ *
+ * These are preferences, not assignments: the no-repeat rule still outranks
+ * them, so two neighbouring DepthFlow clips will not both orbit.
+ */
 const DEPTHFLOW_PREFERENCE: Partial<Record<DominantSubject, readonly string[]>> = {
-  nature: ['dolly_in', 'zoom_in', 'parallax_bloom'],
+  nature: ['dolly_in', 'orbit_left', 'zoom_in', 'parallax_bloom'],
   building_facade: ['orbit_right', 'orbit_left', 'tilt_parallax'],
-  open_space: ['zoom_out', 'parallax_bloom'],
-  interior_close: ['dolly_in', 'orbit_right'],
+  open_space: ['orbit_left', 'orbit_right', 'zoom_out', 'parallax_bloom'],
+  interior_close: ['orbit_right', 'orbit_left', 'dolly_in'],
 };
 
 /** Subjects that can never be Seedance: geometry it would have to invent. */
@@ -615,6 +628,24 @@ export function groupBuckets(
 
 // ─── engines ────────────────────────────────────────────────────────────────
 
+/**
+ * Any person in frame at all, at any depth.
+ *
+ * DepthFlow is Depth Anything: a monocular depth estimate driving a parallax
+ * warp. It has no notion of a body, so a person straddling a depth discontinuity
+ * gets stretched, bent, or smeared into the background as the camera moves —
+ * and a warped human is the one artefact a viewer always notices, whatever else
+ * the frame is doing. Owner 2026-08-19, as a standing rule: "never use depth
+ * anything for any photos with people in it".
+ *
+ * 'background' counts. The rule is deliberately absolute — the quota below is
+ * satisfied from photos without people, or it goes unmet and those clips fall
+ * to Ken Burns, which only ever moves a crop window and cannot deform anything.
+ */
+function hasPeople(e: Entry): boolean {
+  return e.annotation.people_prominence !== 'none';
+}
+
 function seedanceEligible(e: Entry): boolean {
   const a = e.annotation;
   if (e.letterbox) return false;
@@ -660,7 +691,7 @@ function assignEngines(ordered: Entry[], warnings: PlanWarning[]): Engine[] {
       a.e.overflow - b.e.overflow || a.e.annotation.photo_id.localeCompare(b.e.annotation.photo_id),
   );
   const qualifying = byOverflow.filter(
-    ({ e }) => !e.letterbox && e.overflow <= DEPTHFLOW_MAX_OVERFLOW,
+    ({ e }) => !e.letterbox && !hasPeople(e) && e.overflow <= DEPTHFLOW_MAX_OVERFLOW,
   );
   const chosen = qualifying.slice(0, quota);
   if (chosen.length < quota) {
@@ -668,6 +699,7 @@ function assignEngines(ordered: Entry[], warnings: PlanWarning[]): Engine[] {
       if (chosen.length >= quota) break;
       if (chosen.some((c) => c.i === cand.i)) continue;
       if (cand.e.letterbox) continue; // a panorama is never parallaxed
+      if (hasPeople(cand.e)) continue; // hard rule — see hasPeople
       chosen.push(cand);
       warnings.push({
         code: 'depthflow_quota_over_threshold',
@@ -696,6 +728,7 @@ function repairAdjacency(
   const isFree = (k: number): boolean =>
     engines[k] === 'kenburns' &&
     !ordered[k]!.letterbox &&
+    !hasPeople(ordered[k]!) && // the swap must not smuggle a person into DepthFlow
     engines[k - 1] !== 'depthflow' &&
     engines[k + 1] !== 'depthflow';
 

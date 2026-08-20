@@ -15,6 +15,7 @@ import {
   type Unit,
   groupBuckets,
   overflow,
+  scheduleClips,
   schoolTierRank,
 } from './scheduler';
 
@@ -112,5 +113,45 @@ describe('groupBuckets', () => {
   it('is a no-op when every block is already its own bucket', () => {
     const out = groupBuckets([block('dining', 'A'), block('shopping', 'B'), block('civic', 'C')]);
     expect(names(out)).toEqual(['A', 'B', 'C']);
+  });
+});
+
+describe('DepthFlow never touches a photo with people', () => {
+  // Depth Anything warps a person across a depth discontinuity. Owner
+  // 2026-08-19, standing rule: "never use depth anything for any photos with
+  // people in it".
+  const photo = (id: string, people: string, subject = 'open_space') => ({
+    photo_id: id,
+    dominant_subject: subject,
+    people_prominence: people,
+    narrative_role: 'establishing',
+    emotional_weight: 0.5,
+    has_natural_motion: false,
+    has_readable_brand_signage: false,
+    time_of_day: 50,
+  });
+  const meta = (id: string) => ({
+    photo_id: id,
+    poi_id: `poi-${id}`,
+    poi_name: `Place ${id}`,
+    bucket: 'outdoor',
+    width_px: 3000,
+    height_px: 2000,
+  });
+
+  it('leaves every people photo on a non-parallax engine', () => {
+    const ids = ['a', 'b', 'c', 'd', 'e', 'f'];
+    // Half the pool has people; the DepthFlow quota is a third to a half, so a
+    // people-blind scheduler would be forced to pick some of them.
+    const anns = ids.map((id, i) => photo(id, i % 2 === 0 ? 'background' : 'none'));
+    // biome-ignore lint/suspicious/noExplicitAny: fixture for a pure fn
+    const { clips } = scheduleClips(anns as any, ids.map(meta) as any);
+    // The assertion below is only meaningful if DepthFlow ran at all — the
+    // quota has to have been filled from the half of the pool without people.
+    expect(clips.filter((c) => c.engine === 'depthflow').length).toBeGreaterThan(0);
+    for (const c of clips) {
+      const ann = anns.find((a) => a.photo_id === c.photo_id);
+      if (ann && ann.people_prominence !== 'none') expect(c.engine).not.toBe('depthflow');
+    }
   });
 });
