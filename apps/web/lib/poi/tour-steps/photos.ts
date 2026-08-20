@@ -10,11 +10,19 @@ import { computeFinalShots } from './shots';
 /**
  * How many places outside the community a film may visit.
  *
- * Derived from the runtime, not chosen: the tour targets 45-90s, a place gets
- * up to 3 clips, and a clip runs 2-4.5s. Ten surrounding places plus the
- * community's own amenities lands inside that; twenty-two produced 96s.
+ * 15 since 2026-08-20 (owner). It was 10, derived from the runtime — the tour
+ * targets 45-90s, a place gets up to 3 clips, and a clip runs 2-4.5s — but
+ * priority now claims most of it: seven POIs carrying a hand-approved photo
+ * plus six incumbents is thirteen before a single new candidate is considered,
+ * so at 10 the film would have dropped three places it was already using.
+ *
+ * The runtime does not stretch to match. `fitDuration` shortens clips toward
+ * their floor to stay under TOUR_TARGET_MAX_S, and raises
+ * `tour_duration_off_target` when even the floors overshoot. So the cost of a
+ * bigger budget is paid in seconds per clip, and the warning is where it shows
+ * up — watch it rather than assuming 15 places fit.
  */
-const SURROUNDING_POI_BUDGET = 10;
+const SURROUNDING_POI_BUDGET = 15;
 
 /**
  * Slots reserved for schools, before every other kind of place competes.
