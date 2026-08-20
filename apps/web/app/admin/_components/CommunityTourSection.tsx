@@ -27,7 +27,7 @@
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { PhotoSourcePanel } from './PhotoSourcePanel';
-import type { PhotoRow } from './PhotoTable';
+import type { ClipStatus, PhotoRow } from './PhotoTable';
 import { PhotoTable } from './PhotoTable';
 import { TourHeader } from './TourHeader';
 import {
@@ -44,22 +44,9 @@ interface ClipRow {
   photo_url: string;
   ai_tags: unknown;
   recommended: boolean;
-  clip: {
-    engine: string;
-    duration_s: number | null;
-    status: string;
-    video_url: string | null;
-    cost_usd: number | null;
-    error: string | null;
-  } | null;
-  dakb_clip: {
-    engine: string;
-    duration_s: number | null;
-    status: string;
-    video_url: string | null;
-    cost_usd: number | null;
-    error: string | null;
-  } | null;
+  clip: ClipStatus | null;
+  depthflow_clip: ClipStatus | null;
+  kenburns_clip: ClipStatus | null;
 }
 
 interface Run {
@@ -224,7 +211,13 @@ export function CommunityTourSection({
   const enriched = photos.map((p) => {
     const c = clipById.get(p.id);
     if (!c) return p;
-    return { ...p, recommended: c.recommended, clip: c.clip, dakb_clip: c.dakb_clip };
+    return {
+      ...p,
+      recommended: c.recommended,
+      clip: c.clip,
+      depthflow_clip: c.depthflow_clip,
+      kenburns_clip: c.kenburns_clip,
+    };
   });
 
   /**

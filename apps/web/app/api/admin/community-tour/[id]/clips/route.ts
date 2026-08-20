@@ -129,8 +129,12 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       ai_tags: unknown;
     }) => {
       const clip = clipByPhoto.get(p.id);
-      const dakbClip =
-        clipsByPhotoEngine.get(`${p.id}:depthflow`) ?? clipsByPhotoEngine.get(`${p.id}:kenburns`);
+      // DepthFlow and Ken Burns are separate rows in photo_clips and the two
+      // are separate columns in the table (owner 2026-08-19: "DA, KB (yes
+      // split these two)"). Collapsing them to whichever existed hid the fact
+      // that a photo can have both, or that the one you wanted failed.
+      const depthflowClip = clipsByPhotoEngine.get(`${p.id}:depthflow`);
+      const kenburnsClip = clipsByPhotoEngine.get(`${p.id}:kenburns`);
       const path =
         p.enhanced_status === 'approved' && p.enhanced_path ? p.enhanced_path : p.storage_path;
       const clipOut = (
@@ -157,7 +161,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
         recommended: recommendedIds.has(poiPlaceId.get(p.poi_id) ?? '') || clip?.status === 'ready',
         agreement: agreementByPlace.get(poiPlaceId.get(p.poi_id) ?? '') ?? null,
         clip: clipOut(clip, false),
-        dakb_clip: clipOut(dakbClip, true),
+        depthflow_clip: clipOut(depthflowClip, true),
+        kenburns_clip: clipOut(kenburnsClip, true),
       };
     },
   );

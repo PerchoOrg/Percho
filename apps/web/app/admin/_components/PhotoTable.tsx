@@ -30,6 +30,16 @@ import { Check, Film, Sparkles, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 
+/** One photo_clips row as the clips route projects it. */
+export interface ClipStatus {
+  engine: string;
+  duration_s: number | null;
+  status: string;
+  video_url: string | null;
+  cost_usd: number | null;
+  error: string | null;
+}
+
 export interface PhotoRow {
   id: string;
   storage_path: string;
@@ -88,24 +98,12 @@ export interface PhotoRow {
   recommended?: boolean;
   /** Community tour: resolve-step agent agreement (1 or 2 agents). */
   agreement?: number | null;
-  /** Community tour: per-photo clip status (photo_clips cache). */
-  clip?: {
-    engine: string;
-    duration_s: number | null;
-    status: string;
-    video_url: string | null;
-    cost_usd: number | null;
-    error: string | null;
-  } | null;
-  /** Community tour: depthflow/kenburns clip (separate row per photo+engine). */
-  dakb_clip?: {
-    engine: string;
-    duration_s: number | null;
-    status: string;
-    video_url: string | null;
-    cost_usd: number | null;
-    error: string | null;
-  } | null;
+  /** Community tour: the Seedance clip (photo_clips row, engine=seedance). */
+  clip?: ClipStatus | null;
+  /** Community tour: the DepthFlow clip (photo_clips row, engine=depthflow). */
+  depthflow_clip?: ClipStatus | null;
+  /** Community tour: the Ken Burns clip (photo_clips row, engine=kenburns). */
+  kenburns_clip?: ClipStatus | null;
 }
 
 type SortKey = 'order' | 'score' | 'hero' | 'category' | 'enhanced';
@@ -125,11 +123,6 @@ export interface PlanCell {
   ai_generated: boolean;
   /** Seedance only: the exact prompt the clip will be generated from. */
   prompt: string | null;
-}
-
-/** The engine a DA+KB re-render should use, or null if the plan says Seedance. */
-function plannedLocalEngine(engine: string | undefined): string | null {
-  return engine === 'depthflow' || engine === 'kenburns' ? engine : null;
 }
 
 export function PhotoTable({
@@ -173,17 +166,18 @@ export function PhotoTable({
    * guessing high does not degrade gracefully (see the header row below).
    */
   const columnCount =
-    2 + // Photo, then # / POI
+    3 + // Photo, Enhanced, then # / POI
     (isListing ? 0 : 1) + // Review
+    (isListing ? 0 : 3) + // Clip, DA, KB
+    (isListing ? 0 : 1) + // Reframed
     (isListing ? 0 : 1) + // Source
     2 + // Size, Category
     (isListing ? 0 : 1) + // Plan / Dropped because
     1 + // Score
     (isListing ? 1 : 0) + // Hero
-    (isListing ? 0 : 3) + // Buckets, Clip, DA+KB
+    (isListing ? 0 : 1) + // Buckets
     (isListing ? 1 : 0) + // In video (listing surface only)
-    (isListing ? 0 : 1) + // Reframed
-    3; // Enhanced, AI description, AI tags
+    2; // AI description, AI tags
 
   const rows = useMemo(() => {
     const withTags = photos.map((p) => ({
@@ -361,28 +355,37 @@ export function PhotoTable({
         <table className="w-full border-collapse text-left text-[11px]">
           <thead className="bg-surface text-ink2">
             <tr>
-              {!isListing && <Th>Review</Th>}
-              <Th>Photo</Th>
-              <Th>{isListing ? '#' : 'POI'}</Th>
-              {!isListing && <Th>Source</Th>}
-              <Th>Size</Th>
-              <Th>Category</Th>
+              {!isListing && <Th hint="approve / reject">Review</Th>}
+              <Th hint="as fetched">Photo</Th>
+              <Th hint="ESRGAN x2">Enhanced</Th>
+              {!isListing && <Th hint="Seedance, paid">Clip</Th>}
+              {!isListing && <Th hint="DepthFlow parallax">DA</Th>}
+              {!isListing && <Th hint="Ken Burns pan">KB</Th>}
+              {!isListing && <Th hint="outpainted to 2:3">Reframed</Th>}
+              <Th hint={isListing ? 'order' : 'place'}>{isListing ? '#' : 'POI'}</Th>
+              {!isListing && <Th hint="where it came from">Source</Th>}
+              <Th hint="pixels">Size</Th>
+              <Th hint="tagger">Category</Th>
               {!isListing &&
                 (dropReasons ? (
-                  <Th className="min-w-[120px]">Dropped because</Th>
+                  <Th className="min-w-[120px]" hint="why it is out">
+                    Dropped because
+                  </Th>
                 ) : (
-                  <Th className="min-w-[110px]">Plan</Th>
+                  <Th className="min-w-[110px]" hint="engine · move · secs">
+                    Plan
+                  </Th>
                 ))}
-              <Th>Score</Th>
-              {isListing && <Th>Hero</Th>}
-              {!isListing && <Th>Buckets</Th>}
-              {!isListing && <Th>Clip</Th>}
-              {!isListing && <Th>DA+KB</Th>}
-              {isListing && <Th>In video</Th>}
-              {!isListing && <Th>Reframed</Th>}
-              <Th>Enhanced</Th>
-              <Th className="min-w-[160px]">AI description</Th>
-              <Th className="min-w-[110px]">AI tags</Th>
+              <Th hint="0-1, tagger">Score</Th>
+              {isListing && <Th hint="cover fit">Hero</Th>}
+              {!isListing && <Th hint="which tour sections">Buckets</Th>}
+              {isListing && <Th hint="used in a render">In video</Th>}
+              <Th className="min-w-[160px]" hint="what the tagger saw">
+                AI description
+              </Th>
+              <Th className="min-w-[110px]" hint="tagger keywords">
+                AI tags
+              </Th>
             </tr>
           </thead>
           <tbody>
@@ -445,17 +448,110 @@ export function PhotoTable({
                     </div>
                   </Td>
                   <Td>
-                    <button
-                      type="button"
+                    <Thumb
+                      src={url(thumbPath)}
+                      title="View full size"
                       onClick={() =>
                         setLightbox({ url: url(thumbPath), alt: t.description ?? 'photo' })
                       }
-                      className="block h-14 w-20 overflow-hidden rounded-md ring-1 ring-line"
-                    >
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={url(thumbPath)} alt="" className="h-full w-full object-cover" />
-                    </button>
+                    />
                   </Td>
+                  <Td>
+                    <StatusText value={p.enhanced_status ?? 'none'} />
+                    {p.enhanced_meta?.chain && (
+                      <div className="text-[10px] text-ink2" title={p.enhanced_meta.chain}>
+                        {[
+                          p.enhanced_meta.sr === 'real-esrgan-x2' ? 'ESRGAN' : null,
+                          p.enhanced_meta.straighten_deg != null
+                            ? `straighten ${p.enhanced_meta.straighten_deg}\u00b0`
+                            : null,
+                          p.enhanced_meta.exposure_gain != null &&
+                          Math.abs(p.enhanced_meta.exposure_gain - 1) >= 0.01
+                            ? `exp ${p.enhanced_meta.exposure_gain}\u00d7`
+                            : null,
+                          p.enhanced_meta.chain.includes('indoor_wb') ? 'indoor WB' : null,
+                        ]
+                          .filter(Boolean)
+                          .join(' · ') || 'base grade only'}
+                      </div>
+                    )}
+                    {p.enhanced_error && (
+                      <div className="text-[10px] text-red-600" title={p.enhanced_error}>
+                        {truncate(p.enhanced_error, 40)}
+                      </div>
+                    )}
+                    {p.enhanced_path ? (
+                      <div className="mt-1">
+                        <Thumb
+                          src={url(p.enhanced_path as string)}
+                          title="View the enhanced photo full-size"
+                          onClick={() =>
+                            setLightbox({ url: url(p.enhanced_path as string), alt: 'enhanced' })
+                          }
+                        />
+                      </div>
+                    ) : (
+                      <div className="mt-1 text-[10px] text-ink2">pending enhance</div>
+                    )}
+                  </Td>
+                  {!isListing && (
+                    <Td>
+                      <ClipCell
+                        clip={p.clip}
+                        poster={url(thumbPath)}
+                        label="Seedance"
+                        canGenerate={!!onGenerateClip}
+                        busy={busy}
+                        onGenerate={() => onGenerateClip && run(p.id, () => onGenerateClip(p.id))}
+                        onPlay={setClipLightbox}
+                      />
+                    </Td>
+                  )}
+                  {!isListing && (
+                    <Td>
+                      <ClipCell
+                        clip={p.depthflow_clip}
+                        poster={url(thumbPath)}
+                        label="DepthFlow"
+                        canGenerate={!!onGenerateClip}
+                        busy={busy}
+                        onGenerate={() =>
+                          onGenerateClip && run(p.id, () => onGenerateClip(p.id, 'depthflow'))
+                        }
+                        onPlay={setClipLightbox}
+                      />
+                    </Td>
+                  )}
+                  {!isListing && (
+                    <Td>
+                      <ClipCell
+                        clip={p.kenburns_clip}
+                        poster={url(thumbPath)}
+                        label="Ken Burns"
+                        canGenerate={!!onGenerateClip}
+                        busy={busy}
+                        onGenerate={() =>
+                          onGenerateClip && run(p.id, () => onGenerateClip(p.id, 'kenburns'))
+                        }
+                        onPlay={setClipLightbox}
+                      />
+                    </Td>
+                  )}
+                  {!isListing && (
+                    <Td>
+                      <ReframedCell
+                        photoId={p.id}
+                        status={p.outpaint_status}
+                        meta={p.outpaint_meta}
+                        error={p.outpaint_error}
+                        storageBase={storageBase}
+                        bucket={bucket}
+                        path={p.outpainted_path}
+                        onZoom={(u) => setLightbox({ url: u, alt: 'reframed' })}
+                        onChanged={() => router.refresh()}
+                      />
+                    </Td>
+                  )}
                   <Td className="tabular-nums text-ink2">
                     {isListing ? (
                       (p.sort_order ?? '—')
@@ -585,142 +681,6 @@ export function PhotoTable({
                       )}
                     </Td>
                   )}
-                  {!isListing && (
-                    <Td>
-                      {p.clip ? (
-                        <div className="flex flex-col gap-1">
-                          <StatusText value={p.clip.status} />
-                          {p.clip.status === 'ready' && p.clip.video_url && (
-                            <button
-                              type="button"
-                              onClick={() => setClipLightbox(p.clip!.video_url)}
-                              className="group relative block h-24 w-16 overflow-hidden rounded-md bg-black"
-                              title="Click to play the generated clip"
-                            >
-                              {/* eslint-disable-next-line @next/next/no-img-element */}
-                              <img
-                                src={url(thumbPath)}
-                                alt=""
-                                className="h-full w-full object-cover opacity-80 transition group-hover:opacity-50"
-                              />
-                              <span className="absolute inset-0 flex items-center justify-center text-xl text-white">
-                                ▶
-                              </span>
-                            </button>
-                          )}
-                          {p.clip.cost_usd != null && (
-                            <span className="text-[10px] text-ink2">
-                              ${p.clip.cost_usd.toFixed(2)}
-                            </span>
-                          )}
-                          {p.clip.error && (
-                            <span className="text-[10px] text-red-600" title={p.clip.error}>
-                              {truncate(p.clip.error, 40)}
-                            </span>
-                          )}
-                          {onGenerateClip && (
-                            <MiniBtn
-                              label={p.clip.status === 'ready' ? 'Regenerate' : 'Generate'}
-                              title={
-                                p.clip.status === 'ready'
-                                  ? 'Re-render this seedance clip with the current plan'
-                                  : 'Generate a seedance clip from this photo'
-                              }
-                              disabled={!!pending}
-                              onClick={() => onGenerateClip(p.id, 'seedance')}
-                            />
-                          )}
-                        </div>
-                      ) : (
-                        <div className="flex flex-col gap-1">
-                          <span className="text-ink2">no clip</span>
-                          {onGenerateClip && (
-                            <MiniBtn
-                              label="Generate"
-                              title="Generate a seedance clip from this photo"
-                              disabled={!!pending}
-                              onClick={() => onGenerateClip(p.id, 'seedance')}
-                            />
-                          )}
-                        </div>
-                      )}
-                    </Td>
-                  )}
-                  {!isListing && (
-                    <Td>
-                      {p.dakb_clip ? (
-                        <div className="flex flex-col gap-1">
-                          <StatusText value={p.dakb_clip.status} />
-                          {p.dakb_clip.status === 'ready' && p.dakb_clip.video_url && (
-                            <button
-                              type="button"
-                              onClick={() => setClipLightbox(p.dakb_clip!.video_url)}
-                              className="group relative block h-24 w-16 overflow-hidden rounded-md bg-black"
-                              title="Click to play the DA+KB clip"
-                            >
-                              {/* eslint-disable-next-line @next/next/no-img-element */}
-                              <img
-                                src={url(thumbPath)}
-                                alt=""
-                                className="h-full w-full object-cover opacity-80 transition group-hover:opacity-50"
-                              />
-                              <span className="absolute inset-0 flex items-center justify-center text-xl text-white">
-                                ▶
-                              </span>
-                            </button>
-                          )}
-                          {p.dakb_clip.error && (
-                            <span className="text-[10px] text-red-600" title={p.dakb_clip.error}>
-                              {truncate(p.dakb_clip.error, 40)}
-                            </span>
-                          )}
-                          {onGenerateClip && (
-                            <MiniBtn
-                              label={p.dakb_clip.status === 'ready' ? 'Regenerate' : 'Generate'}
-                              title={
-                                p.dakb_clip.status === 'ready'
-                                  ? 'Re-render this clip with the current plan (move + duration)'
-                                  : 'Generate a DA+KB clip from this photo'
-                              }
-                              disabled={busy}
-                              onClick={() =>
-                                run(p.id, () =>
-                                  // Follow the PLAN's engine, not the existing
-                                  // clip's: a re-plan may have moved this photo
-                                  // from kenburns to depthflow.
-                                  onGenerateClip(
-                                    p.id,
-                                    plannedLocalEngine(plan?.[p.id]?.engine) ??
-                                      p.dakb_clip?.engine ??
-                                      'kenburns',
-                                  ),
-                                )
-                              }
-                            />
-                          )}
-                        </div>
-                      ) : (
-                        <div className="flex flex-col gap-1">
-                          <span className="text-ink2">no clip</span>
-                          {onGenerateClip && (
-                            <MiniBtn
-                              label="Generate"
-                              title="Generate a DA+KB clip from this photo"
-                              disabled={busy}
-                              onClick={() =>
-                                run(p.id, () =>
-                                  onGenerateClip(
-                                    p.id,
-                                    plannedLocalEngine(plan?.[p.id]?.engine) ?? 'kenburns',
-                                  ),
-                                )
-                              }
-                            />
-                          )}
-                        </div>
-                      )}
-                    </Td>
-                  )}
                   {/* Community-tour rows drop this: every planned photo is in
                       the film by definition, and the column cost a slot in an
                       already-crowded grid (owner 2026-08-19). The listing
@@ -739,68 +699,6 @@ export function PhotoTable({
                       )}
                     </Td>
                   )}
-                  {!isListing && (
-                    <Td>
-                      <ReframedCell
-                        photoId={p.id}
-                        status={p.outpaint_status}
-                        meta={p.outpaint_meta}
-                        error={p.outpaint_error}
-                        storageBase={storageBase}
-                        bucket={bucket}
-                        path={p.outpainted_path}
-                        onZoom={(u) => setLightbox({ url: u, alt: 'reframed' })}
-                        onChanged={() => router.refresh()}
-                      />
-                    </Td>
-                  )}
-                  <Td>
-                    <StatusText value={p.enhanced_status ?? 'none'} />
-                    {p.enhanced_meta?.chain && (
-                      <div className="text-[10px] text-ink2" title={p.enhanced_meta.chain}>
-                        {[
-                          p.enhanced_meta.sr === 'real-esrgan-x2' ? 'ESRGAN' : null,
-                          p.enhanced_meta.straighten_deg != null
-                            ? `straighten ${p.enhanced_meta.straighten_deg}\u00b0`
-                            : null,
-                          p.enhanced_meta.exposure_gain != null &&
-                          Math.abs(p.enhanced_meta.exposure_gain - 1) >= 0.01
-                            ? `exp ${p.enhanced_meta.exposure_gain}\u00d7`
-                            : null,
-                          p.enhanced_meta.chain.includes('indoor_wb') ? 'indoor WB' : null,
-                        ]
-                          .filter(Boolean)
-                          .join(' · ') || 'base grade only'}
-                      </div>
-                    )}
-                    {p.enhanced_error && (
-                      <div className="text-[10px] text-red-600" title={p.enhanced_error}>
-                        {truncate(p.enhanced_error, 40)}
-                      </div>
-                    )}
-                    {p.enhanced_path ? (
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setLightbox({
-                            url: url(p.enhanced_path as string),
-                            alt: 'enhanced',
-                          })
-                        }
-                        className="mt-1 block h-16 w-12 overflow-hidden rounded border border-line bg-black"
-                        title="Click to view enhanced photo full-size"
-                      >
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={url(p.enhanced_path as string)}
-                          alt=""
-                          className="h-full w-full object-cover"
-                        />
-                      </button>
-                    ) : (
-                      <div className="mt-1 text-[10px] text-ink2">pending enhance</div>
-                    )}
-                  </Td>
                   <Td className="max-w-[280px] text-ink2">
                     {t.description ? (
                       <span title={t.description}>{truncate(t.description, 110)}</span>
@@ -889,7 +787,8 @@ function truncate(s: string, n: number) {
  * is not the same question as "matches the plan".
  */
 function hasPlannedClip(p: PhotoRow, engine: string): boolean {
-  const clip = engine === 'seedance' ? p.clip : p.dakb_clip;
+  const clip =
+    engine === 'seedance' ? p.clip : engine === 'depthflow' ? p.depthflow_clip : p.kenburns_clip;
   return clip?.engine === engine && clip.status === 'ready';
 }
 
@@ -1012,17 +911,7 @@ function ReframedCell({
   const href = path ? `${storageBase}/storage/v1/object/public/${bucket}/${path}` : null;
   return (
     <div>
-      {href && (
-        <button
-          type="button"
-          onClick={() => onZoom(href)}
-          className="block h-24 w-14 overflow-hidden rounded border border-line bg-black"
-          title="Reframed — click to view full-size"
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={href} alt="" className="h-full w-full object-cover" />
-        </button>
-      )}
+      {href && <Thumb src={href} title="Reframed — view full-size" onClick={() => onZoom(href)} />}
       <div className="mt-1 text-[10px] text-ink2">
         <button
           type="button"
@@ -1058,10 +947,126 @@ function ReframedCell({
 
 // Tight padding so ~15 columns fit one screen without a horizontal scroll
 // (owner 2026-08-19: "make this a big table to show all columns in one page").
-function Th({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+/**
+ * ONE thumbnail size for every picture and every clip in the table.
+ *
+ * Owner 2026-08-19: "all picture and clips should follow the same format." The
+ * cells had drifted to four sizes — h-14 w-20 landscape for the source photo,
+ * h-16 w-12 for enhanced, h-24 w-14 for reframed, h-24 w-16 for clips — so a
+ * row read as four unrelated things rather than one photo at four stages.
+ *
+ * Portrait at the render canvas's aspect, because that is the shape everything
+ * here ends up as: 1080x1576 (see CANVAS_W/CANVAS_H). Landscape sources are
+ * cover-cropped into it, which is also what the film does to them.
+ */
+const THUMB = 'block h-24 w-[66px] shrink-0 overflow-hidden rounded-md bg-black ring-1 ring-line';
+
+/** A still, sized and cropped like every other cell. */
+function Thumb({ src, title, onClick }: { src: string; title: string; onClick: () => void }) {
   return (
-    <th className={`px-1.5 py-1.5 font-medium text-[10px] uppercase tracking-wide ${className}`}>
-      {children}
+    <button type="button" onClick={onClick} className={THUMB} title={title}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={src} alt="" className="h-full w-full object-cover" />
+    </button>
+  );
+}
+
+/**
+ * One clip column: status, a playable poster at the shared size, and a
+ * Generate/Regenerate button.
+ *
+ * Shared by Clip (Seedance), DA (DepthFlow) and KB (Ken Burns) so all three
+ * behave and measure identically. They were one column showing whichever of
+ * DepthFlow/Ken Burns happened to exist, which hid that a photo can have both
+ * and that the one you wanted had failed (owner: "DA, KB — yes split these
+ * two").
+ */
+function ClipCell({
+  clip,
+  poster,
+  label,
+  canGenerate,
+  busy,
+  onGenerate,
+  onPlay,
+}: {
+  clip?: ClipStatus | null;
+  poster: string;
+  /** What this column renders, for the button titles: "Seedance", "DepthFlow". */
+  label: string;
+  canGenerate: boolean;
+  busy: boolean;
+  onGenerate: () => void;
+  onPlay: (url: string) => void;
+}) {
+  return (
+    <div className="flex flex-col gap-1">
+      {clip ? <StatusText value={clip.status} /> : <span className="text-ink2">no clip</span>}
+      {clip?.status === 'ready' && clip.video_url && (
+        <button
+          type="button"
+          onClick={() => onPlay(clip.video_url as string)}
+          className={`group relative ${THUMB}`}
+          title={`Play the ${label} clip`}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={poster}
+            alt=""
+            className="h-full w-full object-cover opacity-80 transition group-hover:opacity-50"
+          />
+          <span className="absolute inset-0 flex items-center justify-center text-white text-xl">
+            ▶
+          </span>
+        </button>
+      )}
+      {clip?.duration_s != null && (
+        <span className="text-[10px] text-ink2 tabular-nums">{clip.duration_s}s</span>
+      )}
+      {clip?.cost_usd != null && (
+        <span className="text-[10px] text-ink2 tabular-nums">${clip.cost_usd.toFixed(3)}</span>
+      )}
+      {clip?.error && (
+        <span className="text-[10px] text-red-600" title={clip.error}>
+          {truncate(clip.error, 40)}
+        </span>
+      )}
+      {canGenerate && (
+        <MiniBtn
+          label={clip ? 'Regenerate' : 'Generate'}
+          title={
+            clip
+              ? `Re-render this ${label} clip with the current plan`
+              : `Generate a ${label} clip from this photo`
+          }
+          disabled={busy}
+          onClick={onGenerate}
+        />
+      )}
+    </div>
+  );
+}
+
+function Th({
+  children,
+  className = '',
+  hint,
+}: {
+  children: React.ReactNode;
+  className?: string;
+  /** One-line gloss under the label — owner 2026-08-19: "give some description
+   *  for the column, for example, reframed can mention 2:3?" Fifteen terse
+   *  headings ("DA", "KB", "Reframed") do not say what the column IS. */
+  hint?: string;
+}) {
+  return (
+    <th className={`px-1.5 py-1.5 align-bottom font-medium ${className}`}>
+      <span className="block text-[10px] uppercase tracking-wide">{children}</span>
+      {hint && (
+        <span className="block font-normal text-[9px] text-ink2/70 normal-case tracking-normal">
+          {hint}
+        </span>
+      )}
     </th>
   );
 }
