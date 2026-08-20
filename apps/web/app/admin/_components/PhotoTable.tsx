@@ -180,8 +180,8 @@ export function PhotoTable({
     (isListing ? 0 : 1) + // Plan / Dropped because
     1 + // Score
     (isListing ? 1 : 0) + // Hero
-    (isListing ? 0 : 4) + // Buckets, Agent, Clip, DA+KB
-    (plan ? 0 : 1) + // In video
+    (isListing ? 0 : 3) + // Buckets, Clip, DA+KB
+    (isListing ? 1 : 0) + // In video (listing surface only)
     (isListing ? 0 : 1) + // Reframed
     3; // Enhanced, AI description, AI tags
 
@@ -376,10 +376,9 @@ export function PhotoTable({
               <Th>Score</Th>
               {isListing && <Th>Hero</Th>}
               {!isListing && <Th>Buckets</Th>}
-              {!isListing && <Th>Agent</Th>}
               {!isListing && <Th>Clip</Th>}
               {!isListing && <Th>DA+KB</Th>}
-              {!plan && <Th>In video</Th>}
+              {isListing && <Th>In video</Th>}
               {!isListing && <Th>Reframed</Th>}
               <Th>Enhanced</Th>
               <Th className="min-w-[160px]">AI description</Th>
@@ -588,15 +587,6 @@ export function PhotoTable({
                   )}
                   {!isListing && (
                     <Td>
-                      {p.agreement != null ? (
-                        <span className="tabular-nums text-ink">{p.agreement}/2 agents</span>
-                      ) : (
-                        <span className="text-ink2">—</span>
-                      )}
-                    </Td>
-                  )}
-                  {!isListing && (
-                    <Td>
                       {p.clip ? (
                         <div className="flex flex-col gap-1">
                           <StatusText value={p.clip.status} />
@@ -731,10 +721,11 @@ export function PhotoTable({
                       )}
                     </Td>
                   )}
-                  {/* Every planned photo is in the film by definition, so the
-                      column only says something where there is no plan — the
-                      listing surface and the Dropped table. */}
-                  {!plan && (
+                  {/* Community-tour rows drop this: every planned photo is in
+                      the film by definition, and the column cost a slot in an
+                      already-crowded grid (owner 2026-08-19). The listing
+                      surface keeps it — there it names the clip index. */}
+                  {isListing && (
                     <Td>
                       {inVideo ? (
                         <span className="flex items-center gap-1 text-emerald-600">
@@ -845,8 +836,7 @@ export function PhotoTable({
 
       <p className="text-ink2 text-[11px]">
         Approving an enhanced photo is what makes the next render use it — <em>ready</em> alone
-        changes nothing. &ldquo;In video&rdquo; is stamped by the render worker, so it only reflects
-        the most recent render.
+        changes nothing.
       </p>
 
       {lightbox && (
