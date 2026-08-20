@@ -160,7 +160,7 @@ function parseResearchJson(raw: string): { narrative_angle?: string; pois?: unkn
 export async function runResearch(
   sb: TourDb,
   run: RunRow,
-): Promise<{ ok: boolean; started: boolean; error?: string }> {
+): Promise<{ ok: boolean; started: boolean; error?: string; communitySite?: string | null }> {
   // Reuse a previous result — agents cost money. But only a SUCCESSFUL one: a
   // failed attempt still writes agent_research (with the error on it), and the
   // old check saw that field and refused to retry, so a transient 404 or
@@ -174,7 +174,7 @@ export async function runResearch(
 
   const { data: community } = await sb
     .from('communities')
-    .select('id, name, city, state, zip, lat, lng')
+    .select('id, name, city, state, zip, lat, lng, website')
     .eq('id', run.community_id)
     .maybeSingle();
   if (!community) {
@@ -216,5 +216,24 @@ export async function runResearch(
       })
       .eq('id', run.id),
   );
-  return { ok: true, started: true };
+
+  // Persist the community's own site on the COMMUNITY, not just in this run's
+  // blob. It is a durable fact about the place — the page its best photos come
+  // from — and every re-run rediscovers it at token cost while
+  // `communities.website` stays null. Aberdeen's 31 hand-picked photos came
+  // from a URL nobody ever recorded.
+  //
+  // Only fills a blank. An address entered by a person outranks the model's
+  // guess, and a later run must not overwrite it.
+  const site = Object.values(parsed as Record<string, { parsed?: { community_site?: unknown } }>)
+    .map((a) => a?.parsed?.community_site)
+    .find((u): u is string => typeof u === 'string' && /^https?:\/\//.test(u));
+  if (site && !community.website) {
+    await bestEffortWrite(
+      'save community website',
+      sb.from('communities').update({ website: site }).eq('id', community.id),
+    );
+  }
+
+  return { ok: true, started: true, communitySite: site ?? null };
 }

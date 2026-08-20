@@ -124,9 +124,21 @@ export function CommunityTourSection({
   };
 
   // Compact one-liners for the two sourcing steps now living in the header.
-  type ResearchPoi = { name: string; bucket?: string; why?: string; approx_miles?: number };
+  type ResearchPoi = {
+    name: string;
+    bucket?: string;
+    why?: string;
+    approx_miles?: number;
+    source?: string;
+  };
   const researchRaw = run?.step_results.agent_research as
-    | { agents?: Record<string, { parsed?: { pois?: ResearchPoi[] } | null }>; prompt?: string }
+    | {
+        agents?: Record<
+          string,
+          { parsed?: { pois?: ResearchPoi[]; community_site?: string } | null }
+        >;
+        prompt?: string;
+      }
     | undefined;
   // Both agents propose, and they overlap — dedupe by name so the panel shows
   // the candidate list rather than the same place twice.
@@ -137,6 +149,21 @@ export function CommunityTourSection({
         .map((poi) => [poi.name, poi]),
     ).values(),
   ];
+  // Every page the research step named: the community's own site first, then
+  // each POI's. Collected since phase59 and never once used — see the panel.
+  const agents = Object.values(researchRaw?.agents ?? {});
+  const communitySite = agents.map((a) => a?.parsed?.community_site).find(Boolean);
+  const sourceSuggestions = [
+    ...(communitySite ? [{ url: communitySite, label: communityName }] : []),
+    ...[
+      ...new Map(
+        researchPois
+          .filter((p) => p.source?.startsWith('http'))
+          .map((p) => [p.source as string, { url: p.source as string, label: p.name }]),
+      ).values(),
+    ],
+  ];
+
   const resolveRaw = run?.step_results.resolve as
     | {
         resolved?: Array<{
@@ -338,7 +365,11 @@ export function CommunityTourSection({
 
       {/* 3 · Hand-picked sources: a page URL in, pending photos out. Sits
            directly above the table those photos land in. */}
-      <PhotoSourcePanel communityId={communityId} onIngested={() => router.refresh()} />
+      <PhotoSourcePanel
+        communityId={communityId}
+        onIngested={() => router.refresh()}
+        suggestions={sourceSuggestions}
+      />
 
       {/* 4 · THE workspace. Open, full width — everything is managed here
            (owner 2026-08-19: "one big table to manage and display
