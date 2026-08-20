@@ -486,23 +486,34 @@ export async function runPhotos(sb: TourDb, run: RunRow, actor: PoiActor = 'user
 export async function runPlan(sb: TourDb, run: RunRow) {
   const photosStep = (run.step_results.photos ?? {}) as {
     results?: Record<string, unknown>;
-    resolved_poi_ids?: string[];
     auto_tag?: unknown;
   };
-  const resolvedPoiIds = photosStep.resolved_poi_ids ?? [];
-  if (resolvedPoiIds.length === 0) {
-    throw new Error('run the photos step first — no resolved POIs to plan from');
-  }
 
-  // Buckets come from the link table rather than from the photos step's saved
-  // state: the owner's review sits between the two, and he can re-bucket a POI
-  // while he is in there.
+  // The candidate set comes from `community_pois`, NOT from what the photos
+  // step saved.
+  //
+  // A saved list is stale by construction: it is written before the review and
+  // read after it. Worse, it survives across runs — re-running plan alone
+  // replayed a list an OLDER photos run had already trimmed to ten, so the
+  // POIs behind seven hand-approved photos were absent from the input and no
+  // amount of prioritising could reach them. Three plan runs, each paying for
+  // Curator, each producing the same answer for that reason (owner 2026-08-20:
+  // "i ran 3 time, cost a lot for this test").
+  //
+  // `community_pois` is the durable truth about what this community has, and
+  // it only grows. Reading it here means plan sees every POI, every time,
+  // whatever ran before it.
   const { data: links } = (await sb
     .from('community_pois')
     .select('poi_id, intent_bucket, ai_score')
-    .eq('community_id', run.community_id)) as {
+    .eq('community_id', run.community_id)
+    .neq('status', 'rejected')) as {
     data: Array<{ poi_id: string; intent_bucket: string | null; ai_score: number | null }> | null;
   };
+  const resolvedPoiIds = [...new Set((links ?? []).map((l) => l.poi_id))];
+  if (resolvedPoiIds.length === 0) {
+    throw new Error('no POIs linked to this community — run research and resolve first');
+  }
   const bucketByPoiId = new Map<string, string>(
     (links ?? []).map((l) => [l.poi_id, l.intent_bucket ?? 'other']),
   );
