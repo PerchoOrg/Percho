@@ -13,7 +13,12 @@ export async function runAssemble(
 ) {
   // Final shot list is computed + persisted by the photos step (owner 2026-08-17).
   const photosStep = run.step_results.photos as
-    | { resolved_poi_ids?: string[]; shots?: unknown[]; dropped?: unknown[] }
+    | {
+        resolved_poi_ids?: string[];
+        shots?: unknown[];
+        dropped?: unknown[];
+        narration?: { voice?: string; segments?: unknown[] };
+      }
     | undefined;
   const shots = photosStep?.shots;
   if (!Array.isArray(shots) || shots.length === 0) {
@@ -23,6 +28,10 @@ export async function runAssemble(
     };
   }
   const dropped = photosStep?.dropped ?? [];
+  const narration =
+    photosStep?.narration && (photosStep.narration.segments?.length ?? 0) > 0
+      ? photosStep.narration
+      : null;
 
   // How many planned shots will be MISSING from the film.
   //
@@ -57,11 +66,20 @@ export async function runAssemble(
       status: 'pending',
       ordered_clips: asJson(shots),
       photos_dropped: asJson(dropped),
+      // Carried, not recomputed: the script belongs to the cut it was written
+      // against, and `shots` above is that same cut.
+      narration: narration ? asJson(narration) : null,
     });
     if (insErr) return { error: 'insert_failed', message: (insErr as { message: string }).message };
     await setRunStatus(sb, run.id, 'assembled');
     await saveStep(sb, run, 'assemble', { approved: true, ordered: shots, dropped, notReady });
-    return { approved: true, ordered: shots, dropped, notReady };
+    return {
+      approved: true,
+      ordered: shots,
+      dropped,
+      notReady,
+      narrated: narration?.segments?.length ?? 0,
+    };
   }
 
   await saveStep(sb, run, 'assemble', { approved: false, ordered: shots, dropped, notReady });

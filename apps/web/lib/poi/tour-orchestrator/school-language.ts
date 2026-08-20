@@ -14,7 +14,14 @@ export interface SchoolPattern {
   re: RegExp;
 }
 
-/** The six patterns the owner froze. Do not relax before the data is verified. */
+/**
+ * The six patterns the owner froze. Do not relax before the data is verified.
+ *
+ * Extended 2026-08-20 with the progression phrasings below, after the timed
+ * narration produced "Sharon Elementary and Riverwatch Middle lead directly to
+ * Lambert High School" — an attendance claim in everything but vocabulary,
+ * which every one of the six sailed past.
+ */
 export const SCHOOL_ASSIGNMENT_PATTERNS: readonly SchoolPattern[] = [
   { code: 'zoned_for', re: /\bzoned\s+for\b/i },
   { code: 'your_children', re: /\byour\s+(kid|kids|child|children)\b/i },
@@ -22,6 +29,25 @@ export const SCHOOL_ASSIGNMENT_PATTERNS: readonly SchoolPattern[] = [
   { code: 'assigned_to', re: /\bassigned\s+to\b/i },
   { code: 'school_district_is', re: /\bschool\s+district\s+is\b/i },
   { code: 'feeds_into', re: /\bfeeds\s+into\b/i },
+  { code: 'feeder', re: /\bfeeder\s+(school|pattern|system)\b/i },
+  // "leads to" is ordinary English about paths and roads, so it only counts
+  // when what it leads to is a school.
+  {
+    code: 'progresses_to',
+    re: /\b(lead|leads|leading|feed|feeding|flow|flows|move|moves|continue|continues|go|goes)\s+(directly\s+|straight\s+|right\s+|on\s+)?(in)?to\b[^.!?]{0,48}?\b(elementary|middle|high\s+school|academy)\b/i,
+  },
+  { code: 'students_go_on', re: /\bstudents?\s+(then\s+)?(go|move|continue)\s+on\b/i },
+  // The school run, described without naming it. "Morning routines here flow
+  // smoothly toward Sharon Elementary" says the same thing as "zoned for" and
+  // was written on 2026-08-20 by a model that had just been told not to.
+  {
+    code: 'school_run',
+    re: /\b(morning|daily|weekday|school-?day)\s+(routine|routines|run|commute|drop-?off)\b/i,
+  },
+  {
+    code: 'travels_to_class',
+    re: /\b(walk|walks|bike|bikes|drive|drives|bus|buses)\s+(to|toward|towards)\s+(class|school)\b/i,
+  },
 ];
 
 /** Which patterns a line trips, in catalogue order. */

@@ -551,6 +551,18 @@ export async function runPlan(sb: TourDb, run: RunRow) {
 
   const { shots, dropped, plan } = await computeFinalShots(sb, cutPoiIds, bucketByPoiId);
 
+  // NARRATION — written here, because the cut only exists here.
+  //
+  // It used to be written against the film's total runtime, which meant
+  // nothing tied a sentence to a shot and the error compounded: on the last
+  // Aberdeen cut the narration named Halcyon 4.6s early and was 28.7s ahead by
+  // the closing Publix shot, talking about groceries over a park. Anchored to
+  // the shot list instead, each line is spoken over the clips it describes.
+  //
+  // Text only. Synthesis and placement belong to the worker, which is the only
+  // place the real timeline is known — see `NarrationSection.startClip`.
+  const narration = await writeNarration(sb, run, shots);
+
   // Queue reframing — AFTER selection, so it only runs on photos that reach
   // the film. Aberdeen has 103 photos linked but 29 in the cut, of which 21
   // are badly framed; outpainting all 103 would be four times the cost for
@@ -663,6 +675,7 @@ export async function runPlan(sb: TourDb, run: RunRow) {
     shots,
     dropped,
     plan,
+    narration,
   });
   await setRunStatus(sb, run.id, 'tagging');
   return {
@@ -673,7 +686,46 @@ export async function runPlan(sb: TourDb, run: RunRow) {
     unapproved: demote.length,
     rescueQueued: rescue.length,
     plan,
+    narration: { lines: narration.segments.length, voice: narration.voice, error: narration.error },
   };
+}
+
+/**
+ * The narration for this cut, or an empty script if the call fails.
+ *
+ * Never throws: the tour shipped with music alone until this week, so losing
+ * narration is a downgrade, while a plan step that dies on a text-generation
+ * call after paying for Curator is a regression. The reason is kept on the
+ * step result so the admin table can say why the column is empty.
+ */
+async function writeNarration(sb: TourDb, run: RunRow, shots: unknown[]) {
+  const { runNarration } = await import('../tour-orchestrator/narration');
+  const { data: community } = await sb
+    .from('communities')
+    .select('name, city, state')
+    .eq('id', run.community_id)
+    .maybeSingle();
+
+  // `narrative_angle` is the research step's one-line read on the place. It has
+  // been written on every run since research shipped and consumed by nothing;
+  // it is what stops every community opening the same way.
+  const agents = (
+    run.step_results.agent_research as { agents?: Record<string, unknown> } | undefined
+  )?.agents;
+  const narrativeAngle =
+    Object.values((agents ?? {}) as Record<string, { parsed?: { narrative_angle?: unknown } }>)
+      .map((a) => a?.parsed?.narrative_angle)
+      .find((v): v is string => typeof v === 'string' && v.length > 0) ?? null;
+
+  return runNarration(
+    shots as Array<{ bucket?: string | null; poi_name?: string | null; duration_s: number }>,
+    {
+      communityName: community?.name ?? 'this community',
+      city: community?.city ?? null,
+      state: community?.state ?? null,
+      narrativeAngle,
+    },
+  );
 }
 
 /**

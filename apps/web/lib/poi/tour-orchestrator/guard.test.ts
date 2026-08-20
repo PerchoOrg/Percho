@@ -158,9 +158,14 @@ describe('school-language patterns', () => {
     ['assigned_to', 'This address is assigned to Pinckneyville Middle.'],
     ['school_district_is', 'The school district is Gwinnett County.'],
     ['feeds_into', 'The neighbourhood feeds into Paul Duke STEM.'],
+    ['feeder', 'Simpson is the feeder school for this side of town.'],
+    ['progresses_to', 'Pinckneyville Middle leads directly to Norcross High School.'],
+    ['students_go_on', 'Students go on from there.'],
+    ['school_run', 'Morning routines here flow toward Simpson Elementary.'],
+    ['travels_to_class', 'Most bike to school along the greenway.'],
   ];
 
-  it('has a hitting case for each of the six patterns', () => {
+  it('has a hitting case for every pattern', () => {
     expect(cases).toHaveLength(SCHOOL_ASSIGNMENT_PATTERNS.length);
     for (const [code, line] of cases) {
       const { text, codes } = stripSchoolAssignment(line);
