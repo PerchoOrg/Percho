@@ -20,7 +20,7 @@
 
 import { streamIframeUrl } from '@/lib/cloudflare/stream';
 import { CANVAS_H, CANVAS_W } from '@/lib/poi/tour-orchestrator/scheduler';
-import { Check, ChevronDown, ChevronRight, Loader2, Play } from 'lucide-react';
+import { Check, Loader2, Play } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import type { StepState } from './TourStepStrip';
 
@@ -72,7 +72,13 @@ export function TourHeader({
   resolveSummary: string | null;
   /** What Research proposed, and what Resolve made of it. */
   researchPois: Array<{ name: string; bucket?: string; why?: string; approx_miles?: number }>;
-  resolvedPlaces: Array<{ name?: string; bucket?: string; distance_m?: number | null }>;
+  resolvedPlaces: Array<{
+    name?: string;
+    bucket?: string;
+    distance_m?: number | null;
+    is_new?: boolean;
+    in_film?: boolean;
+  }>;
   droppedPlaces: Array<{ name?: string; reason?: string }>;
   busy: boolean;
   onRun: (step: 'research' | 'resolve') => void;
@@ -290,7 +296,6 @@ function SourcingStep({
   /** The step's result, revealed on click. */
   children?: React.ReactNode;
 }) {
-  const [open, setOpen] = useState(false);
   return (
     <div
       className={`rounded-xl border px-3 py-2 ${
@@ -322,20 +327,13 @@ function SourcingStep({
           {state === 'done' ? 'Re-run' : 'Run'}
         </button>
       </div>
-      {children ? (
-        <button
-          type="button"
-          onClick={() => setOpen((v) => !v)}
-          className="mt-1 flex w-full items-center gap-1 text-left text-[11px] text-ink2 hover:text-ink"
-        >
-          {open ? <ChevronDown size={11} /> : <ChevronRight size={11} />}
-          {summary ?? hint}
-        </button>
-      ) : (
-        <div className="mt-1 text-[11px] text-ink2">{summary ?? hint}</div>
-      )}
-      {open && children && (
-        <div className="mt-2 max-h-64 overflow-y-auto border-line border-t pt-2">{children}</div>
+      <div className="mt-1 text-[11px] text-ink2">{summary ?? hint}</div>
+      {/* Always open. A click to see whether the step did anything is a click
+          to answer the only question the panel exists for (owner 2026-08-19:
+          "show the result directly for the first 2 steps, no need to click").
+          Capped and scrollable so a long list cannot push the video off. */}
+      {children && (
+        <div className="mt-2 max-h-56 overflow-y-auto border-line border-t pt-2">{children}</div>
       )}
     </div>
   );

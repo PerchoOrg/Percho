@@ -139,7 +139,13 @@ export function CommunityTourSection({
   ];
   const resolveRaw = run?.step_results.resolve as
     | {
-        resolved?: Array<{ name?: string; bucket?: string; distance_m?: number | null }>;
+        resolved?: Array<{
+          name?: string;
+          bucket?: string;
+          distance_m?: number | null;
+          is_new?: boolean;
+          in_film?: boolean;
+        }>;
         dropped?: Array<{ name?: string; reason?: string }>;
       }
     | undefined;

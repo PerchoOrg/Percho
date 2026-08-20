@@ -31,6 +31,86 @@ const SCHOOL_SLOTS = 3;
  *   whole step is otherwise service-role already. Must never be taken from
  *   request input; see PoiActor.
  */
+
+/**
+ * Which surrounding places make the film's budget. PURE.
+ *
+ * Three rules, in order:
+ *
+ *  1. INCUMBENTS — a POI already carrying an approved photo keeps its slot.
+ *     Research is a grounded Gemini call and two runs a day apart agreed on
+ *     only 53% of place_ids, so without this a re-run re-shuffles the budget
+ *     and can silently drop a place whose photos the owner already reviewed
+ *     and whose clips are already rendered. Owner 2026-08-20: "the current
+ *     video is good, i think we should keep the most content here… we should
+ *     improve so it is highly repeatable for good quality." Making the model
+ *     deterministic is not on offer; making the RESULT stable is, and this is
+ *     what makes a re-run monotonic — it can add a place, never take one away.
+ *
+ *     Not permanent: rejecting a POI's photos empties it of approved rows and
+ *     it stops being an incumbent next run. The way out is the review.
+ *
+ *  2. SCHOOLS — up to SCHOOL_SLOTS, counting any an incumbent already brought
+ *     in, so three tiers stay three rather than becoming six.
+ *
+ *  3. ROUND-ROBIN across the remaining buckets, strongest bucket first, so
+ *     when the budget runs out it is the weakest KIND of place that misses
+ *     out rather than whichever happened to sort last.
+ */
+export function selectSurroundingPois({
+  surrounding,
+  bucketOf,
+  scoreOf,
+  incumbents,
+  budget = SURROUNDING_POI_BUDGET,
+  schoolSlots = SCHOOL_SLOTS,
+}: {
+  surrounding: string[];
+  bucketOf: (id: string) => string;
+  scoreOf: (id: string) => number;
+  incumbents: Set<string>;
+  budget?: number;
+  schoolSlots?: number;
+}): string[] {
+  const byBucket = new Map<string, string[]>();
+  for (const id of surrounding) {
+    const b = bucketOf(id);
+    const arr = byBucket.get(b) ?? [];
+    arr.push(id);
+    byBucket.set(b, arr);
+  }
+  for (const arr of byBucket.values()) arr.sort((a, b) => scoreOf(b) - scoreOf(a));
+  const bucketOrder = [...byBucket.keys()].sort(
+    (a, b) => scoreOf(byBucket.get(b)![0]!) - scoreOf(byBucket.get(a)![0]!),
+  );
+
+  const kept: string[] = [];
+  for (const id of surrounding) {
+    if (incumbents.has(id) && kept.length < budget) kept.push(id);
+  }
+
+  const allSchools = byBucket.get('schools') ?? [];
+  const schoolsAlreadyKept = allSchools.filter((id) => kept.includes(id)).length;
+  const schoolsFree = allSchools.filter((id) => !kept.includes(id));
+  const slotsLeft = Math.max(0, schoolSlots - schoolsAlreadyKept);
+  kept.push(...schoolsFree.slice(0, slotsLeft).slice(0, Math.max(0, budget - kept.length)));
+  byBucket.set('schools', schoolsFree.slice(slotsLeft));
+
+  for (let round = 0; kept.length < budget; round++) {
+    let placed = false;
+    for (const b of bucketOrder) {
+      const id = byBucket.get(b)?.[round];
+      if (!id) continue;
+      if (kept.includes(id)) continue;
+      kept.push(id);
+      placed = true;
+      if (kept.length >= budget) break;
+    }
+    if (!placed) break; // every bucket exhausted
+  }
+  return kept;
+}
+
 export async function runPhotos(sb: TourDb, run: RunRow, actor: PoiActor = 'user') {
   const resolve = run.step_results.resolve as
     | {
@@ -223,44 +303,18 @@ export async function runPhotos(sb: TourDb, run: RunRow, actor: PoiActor = 'user
       const id = placeIdToPoiId.get(poi.place_id);
       if (id && typeof poi.score === 'number') scoreByPoi.set(id, poi.score);
     }
-    const byBucket = new Map<string, string[]>();
-    for (const id of surrounding) {
-      const b = bucketByPoiId.get(id) ?? 'other';
-      const arr = byBucket.get(b) ?? [];
-      arr.push(id);
-      byBucket.set(b, arr);
-    }
-    for (const arr of byBucket.values()) {
-      arr.sort((a, b) => (scoreByPoi.get(b) ?? 0) - (scoreByPoi.get(a) ?? 0));
-    }
-    // Buckets themselves in score order, so when the budget runs out it is the
-    // weakest kind of place that misses out, not whichever sorted last.
-    const bucketOrder = [...byBucket.keys()].sort(
-      (a, b) =>
-        (scoreByPoi.get(byBucket.get(b)![0]!) ?? 0) - (scoreByPoi.get(byBucket.get(a)![0]!) ?? 0),
-    );
-    const kept: string[] = [];
-    // Schools take their slots before the round-robin starts. A pure
-    // round-robin gives every bucket one before any bucket gets two, so with
-    // ten buckets and ten slots the film would carry exactly one school —
-    // and elementary/middle/high is the thing this buyer pool decides on
-    // (owner 2026-08-19: "school is very important one").
-    const schools = byBucket.get('schools') ?? [];
-    kept.push(...schools.slice(0, SCHOOL_SLOTS));
-    byBucket.set('schools', schools.slice(SCHOOL_SLOTS));
+    const { data: approvedPhotos } = (await sb
+      .from('poi_photos')
+      .select('poi_id')
+      .in('poi_id', surrounding)
+      .eq('status', 'approved')) as { data: Array<{ poi_id: string }> | null };
 
-    for (let round = 0; kept.length < SURROUNDING_POI_BUDGET; round++) {
-      let placed = false;
-      for (const b of bucketOrder) {
-        const id = byBucket.get(b)?.[round];
-        if (!id) continue;
-        if (kept.includes(id)) continue;
-        kept.push(id);
-        placed = true;
-        if (kept.length >= SURROUNDING_POI_BUDGET) break;
-      }
-      if (!placed) break; // every bucket exhausted
-    }
+    const kept = selectSurroundingPois({
+      surrounding,
+      bucketOf: (id) => bucketByPoiId.get(id) ?? 'other',
+      scoreOf: (id) => scoreByPoi.get(id) ?? 0,
+      incumbents: new Set((approvedPhotos ?? []).map((r) => r.poi_id)),
+    });
     resolvedPoiIds.length = 0;
     resolvedPoiIds.push(...amenityIds, ...kept);
   }

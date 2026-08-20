@@ -73,7 +73,43 @@ export async function runResolve(sb: TourDb, run: RunRow) {
   // The community's real city/state, not the agent's guess at a street address.
   const locality = [research.community?.city, research.community?.state].filter(Boolean).join(', ');
   const result = await resolveCandidates(candidates, center, radiusMeters, locality);
-  await saveStep(sb, run, 'resolve', result);
+
+  // Mark which of these the community ALREADY has, and which already earn
+  // their place in the film.
+  //
+  // Research is a grounded Gemini call, so two runs a day apart agreed on only
+  // 53% of place_ids. That is fine as long as a re-run is additive — the POI
+  // set is durable and this step only ever adds to it — but the panel could
+  // not show which was which, and neither could the budget (see `incumbent` in
+  // photos.ts). Owner 2026-08-20 wants a re-run "highly repeatable for good
+  // quality"; making the RESULT stable is more attainable than making the
+  // model deterministic.
+  const { data: existing } = (await sb
+    .from('community_pois')
+    .select('poi_id, pois!inner(google_place_id)')
+    .eq('community_id', run.community_id)) as {
+    data: Array<{ poi_id: string; pois: { google_place_id: string | null } | null }> | null;
+  };
+  const knownPlaceIds = new Map(
+    (existing ?? [])
+      .filter((e) => e.pois?.google_place_id)
+      .map((e) => [e.pois?.google_place_id as string, e.poi_id]),
+  );
+  const { data: approvedRows } = (await sb
+    .from('poi_photos')
+    .select('poi_id')
+    .in('poi_id', [...knownPlaceIds.values()])
+    .eq('status', 'approved')) as { data: Array<{ poi_id: string }> | null };
+  const inFilm = new Set((approvedRows ?? []).map((r) => r.poi_id));
+
+  const annotated = {
+    ...result,
+    resolved: result.resolved.map((r) => {
+      const poiId = knownPlaceIds.get(r.place_id);
+      return { ...r, is_new: !poiId, in_film: !!poiId && inFilm.has(poiId) };
+    }),
+  };
+  await saveStep(sb, run, 'resolve', annotated);
   await setRunStatus(sb, run.id, result.resolved.length >= 4 ? 'fetching_photos' : 'resolving');
   return { resolved: result.resolved.length, dropped: result.dropped.length };
 }
