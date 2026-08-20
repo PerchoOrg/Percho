@@ -324,13 +324,15 @@ export async function runPhotos(sb: TourDb, run: RunRow, actor: PoiActor = 'user
     taggedCount.total = (untaggedRows ?? []).length;
   }
 
-  // Record the initial verdict, so the review has something to review.
+  // Reject what CANNOT be used. Nothing here approves anything.
   //
-  // Until now the pipeline filtered internally and left every photo 'pending',
-  // which meant the three sections in the table were a fiction: 71 of
-  // Aberdeen's 103 sat in "Other" and were treated exactly like the approved
-  // ones. Owner 2026-08-19: "why is it only 20 approved, some photos in the
-  // video are not approved?" — they were, in effect; nothing said so.
+  // Two different questions were sharing one column. "Is this photo usable at
+  // all" is policy and measurable quality, and the pipeline can answer it here,
+  // before the owner looks. "Does it go in the film" is the shot list, which
+  // only exists after planning — so `plan` is what writes 'approved', and
+  // approved therefore means exactly "in the current cut" (owner 2026-08-19:
+  // "approved can not be 82!!"). Everything in between stays 'pending': usable,
+  // not chosen, available for him to promote.
   //
   // Only rows still 'pending' are touched. A verdict the owner has already
   // given is his, and a re-run must not quietly overturn it.
@@ -343,16 +345,13 @@ export async function runPhotos(sb: TourDb, run: RunRow, actor: PoiActor = 'user
     .in('poi_id', resolvedPoiIds)
     .eq('status', 'pending')) as { data: Array<Record<string, unknown>> | null };
 
-  const verdicts = { approved: [] as string[], rejected: [] as string[] };
-  for (const row of toJudge ?? []) {
-    const v = initialVerdict(row as Parameters<typeof initialVerdict>[0]);
-    verdicts[v.ok ? 'approved' : 'rejected'].push(row.id as string);
-  }
-  for (const [status, ids] of Object.entries(verdicts)) {
-    if (ids.length === 0) continue;
+  const unusable = (toJudge ?? [])
+    .filter((row) => !initialVerdict(row as Parameters<typeof initialVerdict>[0]).ok)
+    .map((row) => row.id as string);
+  if (unusable.length > 0) {
     await mustWrite(
-      `mark ${ids.length} photo(s) ${status}`,
-      sb.from('poi_photos').update({ status }).in('id', ids),
+      `reject ${unusable.length} unusable photo(s)`,
+      sb.from('poi_photos').update({ status: 'rejected' }).in('id', unusable),
     );
   }
 
@@ -383,7 +382,7 @@ export async function runPhotos(sb: TourDb, run: RunRow, actor: PoiActor = 'user
     ok: true,
     poiCount: Object.keys(results).length,
     awaitingReview: true,
-    proposed: { approved: verdicts.approved.length, rejected: verdicts.rejected.length },
+    autoRejected: unusable.length,
   };
 }
 
@@ -441,6 +440,37 @@ export async function runPlan(sb: TourDb, run: RunRow) {
     );
   }
 
+  // `approved` = in the cut. Stamped HERE, because this is where the cut is
+  // decided — owner 2026-08-19: "approved can not be 82!!… they should already
+  // be approved" of the photos in the video. Anything previously approved that
+  // this plan did not pick goes back to 'pending': still usable, no longer in
+  // the film. Rejected rows are never touched; that verdict is the review's.
+  const chosen = new Set(
+    (shots as Array<{ photo_id?: string }>).map((sh) => sh.photo_id).filter(Boolean) as string[],
+  );
+  const { data: current } = (await sb
+    .from('poi_photos')
+    .select('id, status')
+    .in('poi_id', resolvedPoiIds)) as { data: Array<{ id: string; status: string | null }> | null };
+  const promote = (current ?? [])
+    .filter((r) => chosen.has(r.id) && r.status !== 'approved')
+    .map((r) => r.id);
+  const demote = (current ?? [])
+    .filter((r) => !chosen.has(r.id) && r.status === 'approved')
+    .map((r) => r.id);
+  if (promote.length > 0) {
+    await mustWrite(
+      `approve ${promote.length} photo(s) in the cut`,
+      sb.from('poi_photos').update({ status: 'approved' }).in('id', promote),
+    );
+  }
+  if (demote.length > 0) {
+    await mustWrite(
+      `un-approve ${demote.length} photo(s) no longer in the cut`,
+      sb.from('poi_photos').update({ status: 'pending' }).in('id', demote),
+    );
+  }
+
   await saveStep(sb, run, 'photos', {
     ...photosStep,
     phase: 'done',
@@ -450,7 +480,14 @@ export async function runPlan(sb: TourDb, run: RunRow) {
     plan,
   });
   await setRunStatus(sb, run.id, 'tagging');
-  return { ok: true, shots: shots.length, dropped: dropped.length, plan };
+  return {
+    ok: true,
+    shots: shots.length,
+    dropped: dropped.length,
+    approved: promote.length,
+    unapproved: demote.length,
+    plan,
+  };
 }
 
 /**
