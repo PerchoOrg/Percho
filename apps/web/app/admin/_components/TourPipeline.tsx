@@ -12,9 +12,13 @@
  * Panels (display order, owner 2026-08-17; all start collapsed):
  *   1 agent research    (Gemini grounding — inline, Vercel)
  *   2 resolve+merge     (Google firewall)
- *   3 Selected Photos   (photos — auto-enhance, tag, shot list & clip
- *                        generation live in the table below; steps 6/7 merged)
- *   4 assemble          (ffmpeg concat — wire after clips ready)
+ *   3 fetch/tag/filter  (photos — auto-enhance, tag, initial filter)
+ *   ——— the owner reviews the approved AND rejected photos by hand ———
+ *   4 plan shots        (shot list from whatever survived that review)
+ *   5 assemble          (ffmpeg concat — wire after clips ready)
+ *
+ * "Run all" stops before step 4 (owner 2026-08-19). Clip generation lives in
+ * the table below, per photo.
  *
  * Community info was merged into the header title (owner 2026-08-17).
  */
@@ -32,17 +36,32 @@ import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 import { type PhotoRow, PhotoTable, type PlanCell } from './PhotoTable';
 
-type StepName = 'research' | 'resolve' | 'photos' | 'tag' | 'generate' | 'assemble';
+type StepName = 'research' | 'resolve' | 'photos' | 'plan' | 'tag' | 'generate' | 'assemble';
 
+/**
+ * Steps 1-3 are automated; step 4 is yours to start, and the gap before it is
+ * a real stop.
+ *
+ * `photos` used to run straight into planning, so the shot list was fixed
+ * before anyone had looked at a photo and reviewing them changed nothing.
+ * Owner 2026-08-19: "i will do second manual review of approved and rejected
+ * ones, after that, you can continue on the planning, clip generation and
+ * assembly."
+ */
 const STEPS: Array<{ name: StepName; label: string; desc: string }> = [
   { name: 'research', label: '1 · Agent Research', desc: 'Gemini grounding' },
   { name: 'resolve', label: '2 · Resolve & Merge', desc: 'Google Places firewall' },
   {
     name: 'photos',
-    label: '3 · Selected Photos',
-    desc: '3 per POI — auto-enhance, tag, shot list & clips managed in table below',
+    label: '3 · Fetch, Tag & Filter',
+    desc: 'photos per POI — auto-enhance, tag, initial filter. Then stops for your review.',
   },
-  { name: 'assemble', label: '4 · Assemble', desc: 'ffmpeg concat' },
+  {
+    name: 'plan',
+    label: '4 · Plan Shots',
+    desc: 'run AFTER reviewing the table below — builds the shot list from what survived',
+  },
+  { name: 'assemble', label: '5 · Assemble', desc: 'ffmpeg concat' },
 ];
 
 interface Run {
@@ -148,7 +167,13 @@ export function TourPipeline({
       setError('Could not create run');
       return;
     }
-    for (const s of STEPS) {
+    // "Run all" means all of the AUTOMATED steps. It stops at the review gate —
+    // driving through `plan` here would fix the shot list before anyone looked
+    // at a photo, which is exactly what the gate exists to prevent.
+    for (const s of STEPS.slice(
+      0,
+      STEPS.findIndex((x) => x.name === 'plan'),
+    )) {
       setRunning(s.name);
       setError(null);
       try {
@@ -749,7 +774,7 @@ function StepResult({
     const r = result as {
       /** How far the step got: tagging → planning → done. Absent on runs that
           predate progress saves. */
-      phase?: 'tagging' | 'planning' | 'done';
+      phase?: 'tagging' | 'planning' | 'review' | 'done';
       results?: Record<string, { fetched?: number; reused?: number; skipped?: number }>;
       resolved_poi_ids?: string[];
       // The FINAL shot list, planned server-side by the orchestration layer
@@ -820,15 +845,28 @@ function StepResult({
           {droppedPhotos.length} dropped
           {isLegacy ? ' (legacy run — no per-POI mapping)' : ` across ${poiIds.size} resolved POIs`}
         </div>
-        {r.phase && r.phase !== 'done' && (
-          // The step takes minutes; without this the panel shows the previous
-          // run's numbers the whole time and looks like it did nothing.
-          <div className="flex items-center gap-2 rounded-xl border border-ink2/30 bg-ink2/5 px-3 py-2 text-xs text-ink2">
-            <Loader2 size={12} className="animate-spin" />
-            {r.phase === 'tagging'
-              ? 'Photos fetched — enhancing and tagging them now. The shot list appears once the plan is built.'
-              : 'Tagging done — building the shot list (curator, scheduler, guard, narration).'}
+        {r.phase === 'review' ? (
+          // Not a progress state — the pipeline is finished with its half and
+          // waiting on a person. Styled as a prompt rather than a spinner so it
+          // does not read as "still working" (owner 2026-08-19).
+          <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-ink">
+            <span className="font-medium">Your review.</span> Go through the approved AND the
+            rejected photos in the table below, then run{' '}
+            <span className="font-medium">4 · Plan Shots</span>. Nothing is planned or rendered
+            until you do.
           </div>
+        ) : (
+          r.phase &&
+          r.phase !== 'done' && (
+            // The step takes minutes; without this the panel shows the previous
+            // run's numbers the whole time and looks like it did nothing.
+            <div className="flex items-center gap-2 rounded-xl border border-ink2/30 bg-ink2/5 px-3 py-2 text-xs text-ink2">
+              <Loader2 size={12} className="animate-spin" />
+              {r.phase === 'tagging'
+                ? 'Photos fetched — enhancing and tagging them now.'
+                : 'Tagging done — building the shot list (curator, scheduler, guard, narration).'}
+            </div>
+          )
         )}
         {planned.length > 0 && (
           <div className="space-y-1 rounded-xl border border-line bg-surface px-3 py-2 text-xs">

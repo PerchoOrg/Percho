@@ -11,16 +11,25 @@
  * may pass 'service'.
  *
  * Usage, from apps/web:
- *   pnpm tour <community-slug> [--steps research,resolve,photos,generate,assemble]
- *   pnpm tour aberdeen-2 --steps photos,generate,assemble
+ *   pnpm tour <community-slug>            # research -> resolve -> photos, then STOPS
+ *   pnpm tour aberdeen-2 --steps plan,generate,assemble   # after the manual review
  *
  * Steps run in the order given and stop at the first failure. `assemble`
  * enqueues the job; the render worker finishes it out of band.
  */
 import { createClient } from '@supabase/supabase-js';
 
-const ALL_STEPS = ['research', 'resolve', 'photos', 'generate', 'assemble'] as const;
+const ALL_STEPS = ['research', 'resolve', 'photos', 'plan', 'generate', 'assemble'] as const;
 type Step = (typeof ALL_STEPS)[number];
+
+/**
+ * What a bare `pnpm tour <slug>` runs — the automated first half only.
+ *
+ * It stops at the review gate rather than driving through to a film. The owner
+ * reviews the approved AND rejected photos by hand between `photos` and `plan`
+ * (2026-08-19); resume with `--steps plan,generate,assemble`.
+ */
+const DEFAULT_STEPS: readonly Step[] = ['research', 'resolve', 'photos'];
 
 function requireEnv(name: string): string {
   const v = process.env[name];
@@ -48,7 +57,7 @@ function parseArgs(): { slug: string; steps: Step[]; runId?: string } {
     process.exit(1);
   }
   const raw = flagValue(argv, 'steps');
-  const steps = raw ? (raw.split(',').map((s) => s.trim()) as Step[]) : ([...ALL_STEPS] as Step[]);
+  const steps = raw ? (raw.split(',').map((s) => s.trim()) as Step[]) : [...DEFAULT_STEPS];
   const bad = steps.filter((s) => !ALL_STEPS.includes(s));
   if (bad.length) {
     console.error(`Unknown step(s): ${bad.join(', ')}. Known: ${ALL_STEPS.join(', ')}`);
@@ -101,7 +110,7 @@ async function main() {
 
   const { runResearch } = await import('../../apps/web/lib/poi/tour-steps/research.js');
   const { runResolve } = await import('../../apps/web/lib/poi/tour-steps/resolve.js');
-  const { runPhotos } = await import('../../apps/web/lib/poi/tour-steps/photos.js');
+  const { runPhotos, runPlan } = await import('../../apps/web/lib/poi/tour-steps/photos.js');
   const { runGenerate } = await import('../../apps/web/lib/poi/tour-steps/generate.js');
   const { runAssemble } = await import('../../apps/web/lib/poi/tour-steps/assemble.js');
 
@@ -130,6 +139,9 @@ async function main() {
         // The photo table auto-approves 'ready' rows when an admin opens it,
         // so this is the same policy, not a new one.
         result = await settleEnhancements(sb, community.id, runId, result);
+        break;
+      case 'plan':
+        result = await runPlan(sb, run);
         break;
       case 'generate':
         result = await runGenerate(sb, run);

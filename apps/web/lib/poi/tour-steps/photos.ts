@@ -324,17 +324,62 @@ export async function runPhotos(sb: TourDb, run: RunRow, actor: PoiActor = 'user
     taggedCount.total = (untaggedRows ?? []).length;
   }
 
-  // Final shot list — owner 2026-08-17: selection (2/POI cap + engine/category
-  // mapping + rejected/unusable drop) lives in the PHOTOS step, not assemble.
-  // Assemble just enqueues this list. Computed AFTER tag so ai_tags exist.
+  // STOP HERE. Everything above is the automated half: fetch, enhance, tag,
+  // initial filtering. Planning is a separate step the owner starts himself,
+  // after reviewing what this produced.
+  //
+  // Owner 2026-08-19, defining the workflow: "for each community, you will do
+  // the heavy lift work, including agent research and fetch photos, tagging,
+  // and initial filtering, then i will do second manual review of approved and
+  // rejected ones, after that, you can continue on the planning, clip
+  // generation and assembly."
+  //
+  // The gate is the point. Automated filters cut the pile down; they do not
+  // make the editorial call. Running straight into planning both hid that
+  // decision and made his review pointless, because the shot list was already
+  // fixed by the time he saw the photos.
   await saveStep(sb, run, 'photos', {
-    phase: 'planning',
+    phase: 'review',
     results,
     resolved_poi_ids: resolvedPoiIds,
     auto_tag: taggedCount,
     shots: [],
     dropped: [],
   });
+  await setRunStatus(sb, run.id, 'review');
+  return { ok: true, poiCount: Object.keys(results).length, awaitingReview: true };
+}
+
+/**
+ * `plan` step — the shot list, run AFTER the owner's photo review.
+ *
+ * Split out of `photos` on 2026-08-19 so the review gate above has something to
+ * gate. Selection lives here rather than in `assemble` (owner 2026-08-17);
+ * assemble only enqueues what this produced.
+ */
+export async function runPlan(sb: TourDb, run: RunRow) {
+  const photosStep = (run.step_results.photos ?? {}) as {
+    results?: Record<string, unknown>;
+    resolved_poi_ids?: string[];
+    auto_tag?: unknown;
+  };
+  const resolvedPoiIds = photosStep.resolved_poi_ids ?? [];
+  if (resolvedPoiIds.length === 0) {
+    throw new Error('run the photos step first — no resolved POIs to plan from');
+  }
+
+  // Buckets come from the link table rather than from the photos step's saved
+  // state: the owner's review sits between the two, and he can re-bucket a POI
+  // while he is in there.
+  const { data: links } = (await sb
+    .from('community_pois')
+    .select('poi_id, intent_bucket')
+    .eq('community_id', run.community_id)) as {
+    data: Array<{ poi_id: string; intent_bucket: string | null }> | null;
+  };
+  const bucketByPoiId = new Map<string, string>(
+    (links ?? []).map((l) => [l.poi_id, l.intent_bucket ?? 'other']),
+  );
 
   const { shots, dropped, plan } = await computeFinalShots(sb, resolvedPoiIds, bucketByPoiId);
 
@@ -360,17 +405,15 @@ export async function runPhotos(sb: TourDb, run: RunRow, actor: PoiActor = 'user
   }
 
   await saveStep(sb, run, 'photos', {
+    ...photosStep,
     phase: 'done',
-    results,
-    resolved_poi_ids: resolvedPoiIds,
-    auto_tag: taggedCount,
     outpaint_queued: outpaintCandidates.length,
     shots,
     dropped,
     plan,
   });
   await setRunStatus(sb, run.id, 'tagging');
-  return { ok: true, poiCount: Object.keys(results).length, shots: shots.length, plan };
+  return { ok: true, shots: shots.length, dropped: dropped.length, plan };
 }
 
 /**
