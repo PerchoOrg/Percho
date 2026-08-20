@@ -159,6 +159,21 @@ export function PhotoTable({
   const [filter, setFilter] = useState<Filter>('all');
   const [lightbox, setLightbox] = useState<{ url: string; alt: string } | null>(null);
   const [clipLightbox, setClipLightbox] = useState<string | null>(null);
+  /**
+   * Review verdicts applied locally, so approving does not move the row.
+   *
+   * `router.refresh()` re-runs the server component, which re-sorts and
+   * re-groups — an approved photo jumps out of Other and into Approved,
+   * usually off-screen, and the next photo is no longer under the cursor.
+   * Reviewing a hundred photos that way means hunting for your place after
+   * every click (owner 2026-08-20: "dont redirect me, i want to go to the next
+   * photo").
+   *
+   * The verdict drives both what the row shows AND which section it sits in,
+   * so a rejected photo leaves Pending immediately — but locally, with no
+   * server round-trip and no navigation, so the page does not move under you.
+   */
+  const [verdicts, setVerdicts] = useState<Record<string, string>>({});
 
   const isListing = table === 'listing_photos';
   const url = (p: string) => `${storageBase}/storage/v1/object/public/${bucket}/${p}`;
@@ -244,8 +259,14 @@ export function PhotoTable({
     const rejected: Row[] = [];
     const other: Row[] = [];
     for (const r of rows) {
-      if (r.p.status === 'approved') approved.push(r);
-      else if (r.p.status === 'rejected') rejected.push(r);
+      // The LOCAL verdict decides the section, so a photo you just rejected
+      // leaves Pending on the click rather than on the next page load (owner
+      // 2026-08-20: "i see some rejected photos in the pending section, they
+      // should go to rejected area directly"). No refresh is involved, so the
+      // scroll position holds and the next photo slides up under the cursor.
+      const st = verdicts[r.p.id] ?? r.p.status;
+      if (st === 'approved') approved.push(r);
+      else if (st === 'rejected') rejected.push(r);
       else other.push(r);
     }
     const out: Array<{ header: string; count: number } | Row> = [];
@@ -259,7 +280,27 @@ export function PhotoTable({
       out.push(...group);
     }
     return out;
-  }, [rows]);
+  }, [rows, verdicts]);
+
+  /** Review verdict: optimistic, no refresh, row keeps its place. */
+  function decide(id: string, decision: 'approved' | 'rejected') {
+    const previous = verdicts[id];
+    setVerdicts((v) => ({ ...v, [id]: decision }));
+    setError(null);
+    void (async () => {
+      const res = await setGlobalPhotoStatus(id, decision);
+      if (!res.ok) {
+        // Put it back: a verdict that did not persist must not look like it did.
+        setVerdicts((v) => {
+          const next = { ...v };
+          if (previous) next[id] = previous;
+          else delete next[id];
+          return next;
+        });
+        setError(res.message ?? 'Failed');
+      }
+    })();
+  }
 
   function run(id: string, fn: () => Promise<{ ok: boolean; message?: string }>) {
     setPending(id);
@@ -410,6 +451,13 @@ export function PhotoTable({
                 );
               }
               const { p, t, w, h, inVideo } = item;
+              // The row's effective verdict — local if there is one.
+              //
+              // Named explicitly rather than left to a bare `status`: that
+              // identifier resolves to `window.status` in a DOM lib, so a
+              // missing definition type-checks clean and silently reads an
+              // empty string at runtime.
+              const rowStatus = verdicts[p.id] ?? p.status ?? 'pending';
               const res = resolutionWarning(w, h);
               const busy = pending === p.id || pending === 'bulk';
               const showEnhanced = p.enhanced_status === 'approved' && p.enhanced_path;
@@ -423,14 +471,14 @@ export function PhotoTable({
                           {t.usable === false ? (
                             <span className="text-red-600">rejected</span>
                           ) : (
-                            <StatusText value={p.status ?? 'pending'} />
+                            <StatusText value={rowStatus} />
                           )}
                           {/* WHY it is out. A bare "rejected" made an automated
                               verdict indistinguishable from the owner's own
                               click, so the automated ones could not be
                               questioned — and two turned out to be wrong
                               (owner 2026-08-20). */}
-                          {p.status === 'rejected' && p.rejection_reason && (
+                          {rowStatus === 'rejected' && p.rejection_reason && (
                             <span
                               className="block text-[10px] text-red-600/80 leading-tight"
                               title={p.rejection_reason}
@@ -442,21 +490,15 @@ export function PhotoTable({
                             <MiniBtn
                               label={<Check size={11} />}
                               title="Approve photo (platform-wide) — the only gate for final video material"
-                              active={p.status === 'approved'}
-                              disabled={busy}
-                              onClick={() =>
-                                run(p.id, () => setGlobalPhotoStatus(p.id, 'approved'))
-                              }
+                              active={rowStatus === 'approved'}
+                              onClick={() => decide(p.id, 'approved')}
                             />
                             <MiniBtn
                               label={<X size={11} />}
                               title="Reject photo — removes it from every video pool"
                               danger
-                              active={p.status === 'rejected'}
-                              disabled={busy}
-                              onClick={() =>
-                                run(p.id, () => setGlobalPhotoStatus(p.id, 'rejected'))
-                              }
+                              active={rowStatus === 'rejected'}
+                              onClick={() => decide(p.id, 'rejected')}
                             />
                           </div>
                         </>
