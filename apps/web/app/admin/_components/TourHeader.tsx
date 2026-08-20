@@ -37,7 +37,6 @@ const POLL_MS = 10_000;
 export function TourHeader({
   communityId,
   communityName,
-  slug,
   city,
   state,
   zip,
@@ -55,7 +54,6 @@ export function TourHeader({
 }: {
   communityId: string;
   communityName: string;
-  slug: string | null;
   city: string | null;
   state: string | null;
   zip: string | null;
@@ -149,18 +147,12 @@ export function TourHeader({
             onRun={() => onRun('resolve')}
           />
         </div>
-
-        {slug && (
-          <div className="mt-3 text-ink2 text-xs">
-            slug <code className="text-ink">{slug}</code>
-          </div>
-        )}
       </section>
 
       {/* ── Right: the latest cut ────────────────────────────────────── */}
       <section className="rounded-2xl border border-line bg-surface p-4">
         <div className="flex items-center justify-between gap-3">
-          <div className="font-semibold text-ink text-sm">Latest Video</div>
+          <div className="font-semibold text-ink text-lg">Latest Video</div>
           {latest && (
             <span
               className={`rounded-full px-2 py-0.5 font-medium text-xs ${

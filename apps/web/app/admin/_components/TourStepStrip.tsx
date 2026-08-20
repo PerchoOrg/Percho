@@ -88,7 +88,7 @@ export function TourStepStrip({
   return (
     <section className="rounded-2xl border border-line bg-surface p-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="font-semibold text-ink text-sm">Pipeline</div>
+        <div className="font-semibold text-ink text-lg">Pipeline</div>
         <button
           type="button"
           onClick={onRunAutomated}

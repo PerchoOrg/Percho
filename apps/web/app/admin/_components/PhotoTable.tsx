@@ -211,6 +211,41 @@ export function PhotoTable({
     return [...filtered].sort(by);
   }, [photos, sort, filter]);
 
+  /**
+   * The table is grouped by review verdict: Approved, Rejected, then Other.
+   *
+   * Owner 2026-08-19. This is the shape of the review itself — he goes through
+   * the approved AND the rejected — and interleaving them by score meant
+   * scanning the whole table twice to do either. "Other" is everything not yet
+   * decided, which is the working pile.
+   *
+   * A flat list with header entries rather than three tables: one `<table>`
+   * keeps the columns aligned across the sections, which is the entire reason
+   * to group them side by side instead of stacking three separate grids.
+   */
+  const items = useMemo(() => {
+    type Row = (typeof rows)[number];
+    const approved: Row[] = [];
+    const rejected: Row[] = [];
+    const other: Row[] = [];
+    for (const r of rows) {
+      if (r.p.status === 'approved') approved.push(r);
+      else if (r.p.status === 'rejected') rejected.push(r);
+      else other.push(r);
+    }
+    const out: Array<{ header: string; count: number } | Row> = [];
+    for (const [label, group] of [
+      ['Approved Photos', approved],
+      ['Rejected Photos', rejected],
+      ['Other Photos', other],
+    ] as const) {
+      if (group.length === 0) continue;
+      out.push({ header: label, count: group.length });
+      out.push(...group);
+    }
+    return out;
+  }, [rows]);
+
   function run(id: string, fn: () => Promise<{ ok: boolean; message?: string }>) {
     setPending(id);
     setError(null);
@@ -257,9 +292,9 @@ export function PhotoTable({
   return (
     <section className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-lg font-semibold">
+        <h2 className="font-semibold text-xl">
           All Photos{' '}
-          <span className="text-ink2 text-sm font-normal">
+          <span className="font-normal text-base text-ink2 tabular-nums">
             ({rows.length}/{photos.length})
           </span>
         </h2>
@@ -334,7 +369,20 @@ export function PhotoTable({
             </tr>
           </thead>
           <tbody>
-            {rows.map(({ p, t, w, h, inVideo }) => {
+            {items.map((item) => {
+              if ('header' in item) {
+                return (
+                  <tr key={`h-${item.header}`} className="bg-ink2/5">
+                    {/* colSpan 99: the column count varies by table kind and
+                        by which optional columns are on. */}
+                    <td colSpan={99} className="px-3 py-2">
+                      <span className="font-semibold text-ink text-sm">{item.header}</span>{' '}
+                      <span className="text-ink2 text-xs tabular-nums">({item.count})</span>
+                    </td>
+                  </tr>
+                );
+              }
+              const { p, t, w, h, inVideo } = item;
               const res = resolutionWarning(w, h);
               const busy = pending === p.id || pending === 'bulk';
               const showEnhanced = p.enhanced_status === 'approved' && p.enhanced_path;
