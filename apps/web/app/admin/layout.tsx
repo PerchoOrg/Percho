@@ -57,7 +57,12 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   return (
     <div className="min-h-screen bg-bg text-ink">
       <AdminHubTabs tabs={TABS} />
-      <main className="mx-auto max-w-6xl px-3 py-6 sm:px-6 sm:py-8">{children}</main>
+      {/* max-w-screen-2xl, not 6xl. Every page under /admin is a wide data
+          table, and 6xl (1152px) is a reading measure — it forced the photo
+          table's ~15 columns into a horizontal scroll, which is where the Clip
+          columns went (owner 2026-08-19: "make this a big table to show all
+          columns in one page"). */}
+      <main className="mx-auto max-w-screen-2xl px-3 py-6 sm:px-6 sm:py-8">{children}</main>
     </div>
   );
 }

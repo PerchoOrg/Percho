@@ -167,6 +167,24 @@ export function PhotoTable({
   const isListing = table === 'listing_photos';
   const url = (p: string) => `${storageBase}/storage/v1/object/public/${bucket}/${p}`;
 
+  /**
+   * How many columns the header actually renders. Kept next to the header so
+   * the two move together — a section row's colSpan has to match exactly, and
+   * guessing high does not degrade gracefully (see the header row below).
+   */
+  const columnCount =
+    2 + // Photo, then # / POI
+    (isListing ? 0 : 1) + // Review
+    (isListing ? 0 : 1) + // Source
+    2 + // Size, Category
+    (isListing ? 0 : 1) + // Plan / Dropped because
+    1 + // Score
+    (isListing ? 1 : 0) + // Hero
+    (isListing ? 0 : 4) + // Buckets, Agent, Clip, DA+KB
+    (plan ? 0 : 1) + // In video
+    (isListing ? 0 : 1) + // Reframed
+    3; // Enhanced, AI description, AI tags
+
   const rows = useMemo(() => {
     const withTags = photos.map((p) => ({
       p,
@@ -340,7 +358,7 @@ export function PhotoTable({
       )}
 
       <div className="overflow-x-auto rounded-2xl border border-line">
-        <table className="w-full min-w-[1100px] border-collapse text-left text-xs">
+        <table className="w-full border-collapse text-left text-[11px]">
           <thead className="bg-surface text-ink2">
             <tr>
               {!isListing && <Th>Review</Th>}
@@ -351,9 +369,9 @@ export function PhotoTable({
               <Th>Category</Th>
               {!isListing &&
                 (dropReasons ? (
-                  <Th className="min-w-[180px]">Dropped because</Th>
+                  <Th className="min-w-[120px]">Dropped because</Th>
                 ) : (
-                  <Th className="min-w-[150px]">Plan</Th>
+                  <Th className="min-w-[110px]">Plan</Th>
                 ))}
               <Th>Score</Th>
               {isListing && <Th>Hero</Th>}
@@ -364,8 +382,8 @@ export function PhotoTable({
               {!plan && <Th>In video</Th>}
               {!isListing && <Th>Reframed</Th>}
               <Th>Enhanced</Th>
-              <Th className="min-w-[220px]">AI description</Th>
-              <Th className="min-w-[160px]">AI tags</Th>
+              <Th className="min-w-[160px]">AI description</Th>
+              <Th className="min-w-[110px]">AI tags</Th>
             </tr>
           </thead>
           <tbody>
@@ -373,9 +391,13 @@ export function PhotoTable({
               if ('header' in item) {
                 return (
                   <tr key={`h-${item.header}`} className="bg-ink2/5">
-                    {/* colSpan 99: the column count varies by table kind and
-                        by which optional columns are on. */}
-                    <td colSpan={99} className="px-3 py-2">
+                    {/* The REAL column count. A too-large colSpan (this was 99)
+                        makes the browser widen the table to that many columns:
+                        every real column is squeezed off-screen, the Clip
+                        columns vanish and the thumbnail buttons collapse to
+                        nothing (owner 2026-08-19: "Photos can not be clicked
+                        and clips are gone"). */}
+                    <td colSpan={columnCount} className="px-2 py-1.5">
                       <span className="font-semibold text-ink text-sm">{item.header}</span>{' '}
                       <span className="text-ink2 text-xs tabular-nums">({item.count})</span>
                     </td>
@@ -906,11 +928,23 @@ function PhotoSourceBadge({
       </span>
     );
   }
+  // Google sources get a badge too, not plain grey text (owner 2026-08-19:
+  // "use some color for google source as well"). The point of this column is
+  // telling the two apart at a glance while scrolling, and only one of them
+  // being a chip made the other read as "no source".
   if (source === 'google_streetview') {
-    return <span className="text-[10px] text-ink2">Street View</span>;
+    return (
+      <span className="inline-block rounded bg-sky-50 px-1.5 py-0.5 font-medium text-[10px] text-sky-700">
+        Street View
+      </span>
+    );
   }
   if (source === 'google_places') {
-    return <span className="text-[10px] text-ink2">Google</span>;
+    return (
+      <span className="inline-block rounded bg-blue-50 px-1.5 py-0.5 font-medium text-[10px] text-blue-700">
+        Google
+      </span>
+    );
   }
   return <span className="text-[10px] text-ink2">{source ?? '—'}</span>;
 }
@@ -1032,16 +1066,18 @@ function ReframedCell({
   );
 }
 
+// Tight padding so ~15 columns fit one screen without a horizontal scroll
+// (owner 2026-08-19: "make this a big table to show all columns in one page").
 function Th({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return (
-    <th className={`px-2.5 py-2 font-medium uppercase tracking-wide text-[10px] ${className}`}>
+    <th className={`px-1.5 py-1.5 font-medium text-[10px] uppercase tracking-wide ${className}`}>
       {children}
     </th>
   );
 }
 
 function Td({ children, className = '' }: { children: React.ReactNode; className?: string }) {
-  return <td className={`px-2.5 py-2 ${className}`}>{children}</td>;
+  return <td className={`px-1.5 py-1.5 ${className}`}>{children}</td>;
 }
 
 function StatusText({ value }: { value: string }) {
