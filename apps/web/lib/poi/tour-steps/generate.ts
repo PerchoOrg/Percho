@@ -115,11 +115,19 @@ export async function runGenerate(sb: TourDb, run: RunRow, photoIds?: string[], 
  * two consecutive runs with nothing having changed between them. The worker
  * stamps `updated_at` when it finishes, which is the render time this needs.
  *
- * Cheap by construction — the re-render is local (Ken Burns / DepthFlow) for
- * exactly the photos reframing touches, because Seedance shots are excluded
- * from reframing in the first place.
+ * NEVER stales a Seedance clip. Owner 2026-08-19, emphatic: "for photos with
+ * seedance clips, never call it again!!!! always re-use, unless I clicked
+ * regenerate manually". Seedance is the only paid engine, so the exemption is
+ * enforced here rather than left to the caller — `requeueReady` (the per-row
+ * Regenerate button) stays the one and only way to re-run it.
+ *
+ * This used to hold only by accident: `selectOutpaintCandidates` skips Seedance
+ * shots, so reframing never touched them. But `enhanced_at` stales a clip too,
+ * and enhancement has no such exemption — re-enhancing a Seedance photo would
+ * have silently billed a fresh generation. Every other engine renders locally
+ * and is free to re-run.
  */
-async function staleClipKeys(
+export async function staleClipKeys(
   sb: TourDb,
   photoIds: string[],
   clips: Array<{ photo_id: string; engine: string; status: string; updated_at?: string | null }>,
@@ -149,6 +157,7 @@ async function staleClipKeys(
   }
 
   for (const c of clips) {
+    if (c.engine === 'seedance') continue; // paid — manual Regenerate only
     const changed = changedAt.get(c.photo_id);
     if (!changed || !c.updated_at) continue;
     if (new Date(c.updated_at) < new Date(changed)) stale.add(`${c.photo_id}:${c.engine}`);

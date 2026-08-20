@@ -868,13 +868,21 @@ function PhotoSourceBadge({
 }
 
 /**
- * The 9:16 reframe: the result itself, plus what it saved and how to undo it.
+ * The reframe: the result itself, and how to undo it.
  *
  * Shows the reframed image rather than a link to it (owner 2026-08-19: "show
  * small photos directly in the table"), because this is the one column whose
  * output has to be judged by eye — the model re-renders rather than strictly
  * extends, and a bad result is obvious in a thumbnail and invisible in a
- * status word. A `ready` reframe is live, so Use crop is the way back.
+ * status word. Lambert High's aerial came back with the endzone reading
+ * LAMBERNS instead of LONGHORNS; nothing but the picture would have caught it.
+ *
+ * Sized and styled to match the Enhanced column, and taller than it because the
+ * output is portrait (owner 2026-08-19: "follow the same Enhanced column, show
+ * bigger pictures and remove the text"). The "saved N%" caption that used to sit
+ * beside it is gone — it read as a benefit score when it was really just the
+ * crop that a centre-cut would have discarded, and the owner asked what it
+ * meant. A `ready` reframe is live, so Use crop is the way back.
  */
 function ReframedCell({
   photoId,
@@ -889,7 +897,7 @@ function ReframedCell({
 }: {
   photoId: string;
   status?: string | null;
-  meta?: { width?: number; height?: number; crop_loss_before?: number; reason?: string } | null;
+  meta?: { reason?: string } | null;
   error?: string | null;
   storageBase: string;
   bucket: string;
@@ -903,10 +911,7 @@ function ReframedCell({
   if (status === 'skipped') {
     return (
       <div className="text-[10px] text-ink2">
-        <div>{meta?.reason === 'rejected by admin' ? 'using crop' : 'already 9:16-ish'}</div>
-        {typeof meta?.crop_loss_before === 'number' && (
-          <div>{Math.round(meta.crop_loss_before * 100)}% crop</div>
-        )}
+        <div>{meta?.reason === 'rejected by admin' ? 'using crop' : 'well framed'}</div>
         <button
           type="button"
           disabled={busy}
@@ -934,22 +939,19 @@ function ReframedCell({
 
   const href = path ? `${storageBase}/storage/v1/object/public/${bucket}/${path}` : null;
   return (
-    <div className="flex items-start gap-1.5">
+    <div>
       {href && (
         <button
           type="button"
           onClick={() => onZoom(href)}
-          className="block h-14 w-8 shrink-0 overflow-hidden rounded ring-1 ring-line"
-          title="Reframed to 9:16 — click to enlarge"
+          className="block h-24 w-14 overflow-hidden rounded border border-line bg-black"
+          title="Reframed — click to view full-size"
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={href} alt="" className="h-full w-full object-cover" />
         </button>
       )}
-      <div className="text-[10px] text-ink2">
-        {typeof meta?.crop_loss_before === 'number' && (
-          <div className="text-emerald-700">saved {Math.round(meta.crop_loss_before * 100)}%</div>
-        )}
+      <div className="mt-1 text-[10px] text-ink2">
         <button
           type="button"
           disabled={busy}
