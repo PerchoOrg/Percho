@@ -399,13 +399,24 @@ export async function runPhotos(sb: TourDb, run: RunRow, actor: PoiActor = 'user
     .in('poi_id', resolvedPoiIds)
     .eq('status', 'pending')) as { data: Array<Record<string, unknown>> | null };
 
-  const unusable = (toJudge ?? [])
-    .filter((row) => !initialVerdict(row as Parameters<typeof initialVerdict>[0]).ok)
-    .map((row) => row.id as string);
-  if (unusable.length > 0) {
+  // Grouped by reason so the verdict is written WITH its justification. A bare
+  // 'rejected' made an automated call indistinguishable from the owner's own,
+  // which left the automated ones unauditable — and two have already turned out
+  // to be wrong this session (owner 2026-08-20: "we need to add reasons").
+  const byReason = new Map<string, string[]>();
+  for (const row of toJudge ?? []) {
+    const v = initialVerdict(row as Parameters<typeof initialVerdict>[0]);
+    if (v.ok) continue;
+    const ids = byReason.get(v.reason) ?? [];
+    ids.push(row.id as string);
+    byReason.set(v.reason, ids);
+  }
+  let unusableCount = 0;
+  for (const [reason, ids] of byReason) {
+    unusableCount += ids.length;
     await mustWrite(
-      `reject ${unusable.length} unusable photo(s)`,
-      sb.from('poi_photos').update({ status: 'rejected' }).in('id', unusable),
+      `reject ${ids.length} photo(s): ${reason}`,
+      sb.from('poi_photos').update({ status: 'rejected', rejection_reason: reason }).in('id', ids),
     );
   }
 
@@ -436,7 +447,7 @@ export async function runPhotos(sb: TourDb, run: RunRow, actor: PoiActor = 'user
     ok: true,
     poiCount: Object.keys(results).length,
     awaitingReview: true,
-    autoRejected: unusable.length,
+    autoRejected: unusableCount,
   };
 }
 

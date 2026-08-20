@@ -1977,6 +1977,7 @@ export type Database = {
           outpainted_at: string | null
           outpainted_path: string | null
           poi_id: string
+          rejection_reason: string | null
           reviewed_at: string | null
           reviewed_by: string | null
           source: string
@@ -2012,6 +2013,7 @@ export type Database = {
           outpainted_at?: string | null
           outpainted_path?: string | null
           poi_id: string
+          rejection_reason?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           source: string
@@ -2047,6 +2049,7 @@ export type Database = {
           outpainted_at?: string | null
           outpainted_path?: string | null
           poi_id?: string
+          rejection_reason?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           source?: string

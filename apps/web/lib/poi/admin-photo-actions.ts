@@ -33,6 +33,12 @@ export async function setGlobalPhotoStatus(
       status: decision,
       reviewed_at: new Date().toISOString(),
       reviewed_by: admin.id,
+      // The table shows WHY a photo is out, so a manual verdict has to say so
+      // too — otherwise the owner's own click is indistinguishable from an
+      // automated one and reads as a pipeline decision he can question.
+      // Cleared on any non-rejection so a re-approved photo carries no stale
+      // explanation.
+      rejection_reason: decision === 'rejected' ? 'rejected in review' : null,
     })
     .eq('id', photoId);
 

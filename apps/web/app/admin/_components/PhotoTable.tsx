@@ -54,6 +54,8 @@ export interface PhotoRow {
   width_px?: number | null;
   height_px?: number | null;
   status?: string | null;
+  /** Why it is out. Written by the photos step or the review click. */
+  rejection_reason?: string | null;
   applicable_buckets?: string[] | null;
   poi_name?: string | null;
   /** poi_photos: the owning POI, so the row can link to its detail page. */
@@ -422,6 +424,19 @@ export function PhotoTable({
                             <span className="text-red-600">rejected</span>
                           ) : (
                             <StatusText value={p.status ?? 'pending'} />
+                          )}
+                          {/* WHY it is out. A bare "rejected" made an automated
+                              verdict indistinguishable from the owner's own
+                              click, so the automated ones could not be
+                              questioned — and two turned out to be wrong
+                              (owner 2026-08-20). */}
+                          {p.status === 'rejected' && p.rejection_reason && (
+                            <span
+                              className="block text-[10px] text-red-600/80 leading-tight"
+                              title={p.rejection_reason}
+                            >
+                              {truncate(p.rejection_reason, 48)}
+                            </span>
                           )}
                           <div className="flex gap-1">
                             <MiniBtn
