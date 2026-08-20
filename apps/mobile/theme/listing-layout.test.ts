@@ -75,11 +75,15 @@ describe("listing card immersive full-bleed layout (2026-08-18)", () => {
 		expect(AREA).toContain(badge);
 		expect(COMMUNITY).toContain(badge);
 
+		// The save disc is shared by City and Listing. Community dropped it on
+		// 2026-08-20: the disc sat at top:12/right:12, where the tour video
+		// draws its place name and distance. Community is the only face that
+		// plays a labelled video, so it is the only one that had a collision.
 		const disc =
 			'width: 40,\n\t\theight: 40,\n\t\tborderRadius: 20,\n\t\tbackgroundColor: "rgba(255,255,255,0.75)"';
 		expect(LISTING).toContain(disc);
 		expect(AREA).toContain(disc);
-		expect(COMMUNITY).toContain(disc);
+		expect(COMMUNITY).not.toContain(disc);
 
 		// Same explore CTA — label copy, size, weight, colour.
 		expect(LISTING).toContain(

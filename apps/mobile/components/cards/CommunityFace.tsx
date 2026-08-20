@@ -49,12 +49,11 @@ import type { SharedValue } from "react-native-reanimated";
 import type { CommunityCardV3 } from "../../lib/feed/card-types";
 import { placeStats } from "../../lib/feed/place-stats";
 import type { TapSlot } from "../../lib/gesture/tap-slot";
-import { useSavedStore } from "../../state/saved";
 import { redline, redlineRadii } from "../../theme/tokens";
 import { redlineText } from "../../theme/typography";
 import { CardPhoto } from "../CardPhoto";
 import { CardVideo } from "../CardVideo";
-import { EXPLORE_TAP_TARGET, SAVE_TAP_TARGET } from "./ListingFace";
+import { EXPLORE_TAP_TARGET } from "./ListingFace";
 import { StatBar } from "./StatBar";
 
 /**
@@ -133,8 +132,6 @@ export function CommunityFace({
 	tapSlot,
 }: CommunityFaceProps) {
 	const chips = chipLabels(card);
-	const saved = useSavedStore((s) => s.isSaved(card.id));
-	const toggleSaved = useSavedStore((s) => s.toggle);
 
 	/** See `ListingFace.arm` — no gate here; the tap decision happens at release. */
 	const arm = (target: string) => () => {
@@ -176,23 +173,13 @@ export function CommunityFace({
 				</View>
 			</View>
 
-			{/* Bookmark — the CITY card's translucent white disc + dark bookmark
-			    (owner 2026-08-16: 保留 bookmark). Saved fills the body. */}
-			<View style={styles.saveSlot}>
-				<Pressable
-					onTouchStart={arm(SAVE_TAP_TARGET)}
-					onPress={tapSlot ? undefined : () => toggleSaved(card.id)}
-					accessibilityRole="button"
-					accessibilityLabel={saved ? "Saved" : "Save"}
-					hitSlop={12}
-					style={({ pressed }) => [
-						styles.saveDisc,
-						pressed && styles.savePressed,
-					]}
-				>
-					<BookmarkIcon saved={saved} />
-				</Pressable>
-			</View>
+			{/* No bookmark here. The tour video draws its place name and distance
+			    in the top-right corner (see `_render_label_png` in the render
+			    worker), and a 40px disc at top:12/right:12 sat on top of it —
+			    owner 2026-08-20: "remove the save button on the top right for
+			    cards - this is where the location and distance will display".
+			    The other card kinds keep theirs; only this one plays a video
+			    with a label in that corner. */}
 
 			{/* Bottom scrim — transparent until ~55% down, then darkening to a
 			    deep 0.92 at the bottom (owner 2026-08-19: 底部渐变 + 信息文字条,
@@ -295,19 +282,6 @@ const BM_ANGLE = (Math.atan2(BM_RISE, BM_RUN) * 180) / Math.PI;
 /** Same dark ink as the COMMUNITY pill label. */
 const BOOKMARK_INK = "#181B18";
 
-function BookmarkIcon({ saved }: { saved: boolean }) {
-	return (
-		<View style={styles.bookmarkBox}>
-			{saved && <View style={styles.bookmarkFill} />}
-			<View style={styles.bookmarkTop} />
-			<View style={[styles.bookmarkSide, styles.bookmarkSideLeft]} />
-			<View style={[styles.bookmarkSide, styles.bookmarkSideRight]} />
-			<View style={[styles.bookmarkDiag, styles.bookmarkDiagLeft]} />
-			<View style={[styles.bookmarkDiag, styles.bookmarkDiagRight]} />
-		</View>
-	);
-}
-
 const styles = StyleSheet.create({
 	face: { flex: 1, backgroundColor: redline.card, overflow: "hidden" },
 	badgeSlot: { position: "absolute", top: 12, left: 12, zIndex: 2 },
@@ -322,18 +296,6 @@ const styles = StyleSheet.create({
 	},
 	/** Neutral ink, not green — green is reserved for interactive state. */
 	badgeLabel: { ...redlineText.listingCard.badge, color: "#181B18" },
-	saveSlot: { position: "absolute", top: 12, right: 12, zIndex: 2 },
-	/** The CITY card's save disc: 40px translucent white, dark bookmark. */
-	saveDisc: {
-		width: 40,
-		height: 40,
-		borderRadius: 20,
-		backgroundColor: "rgba(255,255,255,0.75)",
-		overflow: "hidden",
-		alignItems: "center",
-		justifyContent: "center",
-	},
-	savePressed: { opacity: 0.7 },
 	/**
 	 * Bottom scrim — `overflow: hidden` on `face` clips it to the card's
 	 * rounded corner. Same as the CITY card's.
