@@ -154,8 +154,12 @@ export function TourStepStrip({
       {awaitingReview && (
         <div className="mt-3 rounded-xl border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-ink text-xs">
           <span className="font-medium">Your review.</span> Go through the approved AND rejected
-          photos in the table below, then run <span className="font-medium">4 · Plan Shots</span>.
-          Nothing is planned or rendered until you do.
+          photos in the table below, then run{' '}
+          {/* Derived, not typed. The hardcoded "4 · Plan Shots" outlived the
+              renumbering that moved Research and Resolve into the header, and
+              pointed at a step that no longer exists (owner 2026-08-20). */}
+          <span className="font-medium">{planStepLabel(steps)}</span>. Nothing is planned or
+          rendered until you do.
         </div>
       )}
 
@@ -166,6 +170,12 @@ export function TourStepStrip({
       )}
     </section>
   );
+}
+
+/** "3 · Plan", from the strip itself, so the banner cannot drift from it. */
+function planStepLabel(steps: StepSpec[]): string {
+  const i = steps.findIndex((s) => s.name === 'plan');
+  return i === -1 ? 'Plan' : `${i + 1} · ${steps[i]!.label}`;
 }
 
 function StateIcon({ state }: { state: StepState }) {

@@ -363,6 +363,7 @@ function SourcingStep({
   /** The step's result, revealed on click. */
   children?: React.ReactNode;
 }) {
+  const [showInfo, setShowInfo] = useState(false);
   return (
     <div
       className={`rounded-xl border px-3 py-2 ${
@@ -376,15 +377,21 @@ function SourcingStep({
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-1.5">
           {info && (
-            // Native title: the prompt is 3k characters and this is a glance,
-            // not a reading surface — a modal for it would be a click to leave.
-            <span
-              title={info}
-              className="inline-flex h-3.5 w-3.5 shrink-0 cursor-help items-center justify-center rounded-full border border-ink2/40 text-[8px] text-ink2"
+            // A toggle, not a native `title`. The prompt is 3.2k characters and
+            // the browser tooltip truncates it (owner 2026-08-20: "hover can
+            // not display all") — which made the button worse than useless,
+            // since it looked like the whole prompt was that short.
+            <button
+              type="button"
+              onClick={() => setShowInfo((v) => !v)}
+              className={`inline-flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full border text-[8px] ${
+                showInfo ? 'border-ink bg-ink text-surface' : 'border-ink2/40 text-ink2'
+              }`}
               aria-label="Show the prompt"
+              aria-expanded={showInfo}
             >
               i
-            </span>
+            </button>
           )}
           {state === 'running' ? (
             <Loader2 size={12} className="animate-spin text-ink2" />
@@ -410,6 +417,11 @@ function SourcingStep({
           to answer the only question the panel exists for (owner 2026-08-19:
           "show the result directly for the first 2 steps, no need to click").
           Capped and scrollable so a long list cannot push the video off. */}
+      {showInfo && info && (
+        <pre className="mt-2 max-h-56 overflow-auto whitespace-pre-wrap break-words border-line border-t pt-2 font-mono text-[10px] text-ink2 leading-relaxed">
+          {info}
+        </pre>
+      )}
       {children && (
         <div className="mt-2 max-h-56 overflow-y-auto border-line border-t pt-2">{children}</div>
       )}
