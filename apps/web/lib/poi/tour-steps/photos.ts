@@ -391,12 +391,27 @@ export async function runPhotos(sb: TourDb, run: RunRow, actor: PoiActor = 'user
   // Only rows still 'pending' are touched. A verdict the owner has already
   // given is his, and a re-run must not quietly overturn it.
   const { initialVerdict } = await import('./shots');
+  // Every POI the community HAS, not just the ones this run's budget selected.
+  //
+  // The step fetches and tags for all of them, so judging only the selected
+  // subset left the rest tagged-but-unjudged: four photos this run fetched came
+  // back marked unusable by the tagger and stayed 'pending', which the table
+  // renders as a red "rejected" sitting in the Pending section (owner
+  // 2026-08-20: "i see some rejected photos in the pending section"). Fetching,
+  // tagging and judging have to cover the same set or the difference shows up
+  // as rows that contradict themselves.
+  const { data: allLinks } = (await sb
+    .from('community_pois')
+    .select('poi_id')
+    .eq('community_id', run.community_id)) as { data: Array<{ poi_id: string }> | null };
+  const judgeablePoiIds = [...new Set((allLinks ?? []).map((l) => l.poi_id))];
+
   const { data: toJudge } = (await sb
     .from('poi_photos')
     .select(
       'id, status, ai_tags, width_px, height_px, enhanced_status, enhanced_meta, storage_path',
     )
-    .in('poi_id', resolvedPoiIds)
+    .in('poi_id', judgeablePoiIds)
     .eq('status', 'pending')) as { data: Array<Record<string, unknown>> | null };
 
   // Grouped by reason so the verdict is written WITH its justification. A bare
