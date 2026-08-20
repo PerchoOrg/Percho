@@ -5,13 +5,14 @@
 # local disk (fast, no per-render round-trip). This script closes the loop:
 # after an admin add/reject, run this on the render host.
 #
-# Only `warm-acoustic` is production-approved (see docs/bgm/vibe-map.md).
-# Other vibe folders (modern-corporate, luxury-ambient, chill-electronic,
-# cinematic) are purged locally on every run.
+# Palettes are acoustic / piano / electronic. The old use-case folders
+# (warm-acoustic, modern-corporate, luxury-ambient, chill-electronic, cinematic)
+# are purged locally on every run.
 #
-# Rejected tracks (listed in bgm/_state/state.json) are skipped when
-# downloading AND removed from local disk. Approving one restores it on
-# the next run.
+# Rejected AND pending tracks (bgm/_state/state.json) are skipped when
+# downloading AND removed from local disk — an unreviewed track must not reach
+# a film. Approving one restores it on the next run, and the worker runs this
+# itself at startup and every 15 minutes.
 #
 # Usage (from the repo root on the render host):
 #   ./scripts/render-worker/pull-bgm.sh
@@ -23,19 +24,15 @@ set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 BGM_DIR="$REPO_ROOT/scripts/render-worker/bgm"
-# All four vibes sync again as of 2026-08-20.
+# The folder is the PALETTE, not a use case (2026-08-20).
 #
-# Three of them were retired in phase106 because their imported tracks were
-# rejected on listening — a judgement about those particular mp3s, which then
-# hardened into the folders being deleted on every sync. With generation, a
-# vibe is no longer a fixed pile of imports: the owner asked for "different
-# types for different vibe", and a bucket whose contents get purged locally
-# cannot hold anything, however good.
-#
-# Only tracks that pass review are downloaded (see the exclusion list below),
-# so an empty vibe stays empty and costs nothing.
-VIBES=(warm-acoustic modern-corporate luxury-ambient chill-electronic)
-RETIRED_VIBES=(cinematic)
+# Was warm-acoustic / modern-corporate / luxury-ambient / chill-electronic,
+# which baked a use case into the folder name and made the mapping unchangeable
+# without moving files. The last two were the same instruments at different
+# energies, so they merged; energy is a track tag now. Only tracks that pass
+# review are downloaded, so an empty palette stays empty and costs nothing.
+VIBES=(acoustic piano electronic)
+RETIRED_VIBES=(warm-acoustic modern-corporate luxury-ambient chill-electronic cinematic)
 
 # shellcheck disable=SC1091
 source "$REPO_ROOT/.env.local"

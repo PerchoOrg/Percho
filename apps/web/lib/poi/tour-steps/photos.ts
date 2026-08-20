@@ -714,7 +714,7 @@ export async function runPlan(sb: TourDb, run: RunRow) {
  */
 async function chooseBgm(sb: TourDb, run: RunRow, shots: unknown[]) {
   try {
-    const [{ selectBgm, vibeForCommunity }, { readBgmState }, { BGM_BUCKET, BGM_VIBES }] =
+    const [{ selectBgm, paletteForCommunity }, { readBgmState }, { BGM_BUCKET, BGM_VIBES }] =
       await Promise.all([
         import('@/lib/bgm/select'),
         import('@/lib/bgm/state-store'),
@@ -736,12 +736,21 @@ async function chooseBgm(sb: TourDb, run: RunRow, shots: unknown[]) {
     }
     if (candidates.length === 0) return null;
 
-    const buckets = [
-      ...new Set(
-        (shots as Array<{ bucket?: string | null }>).map((sh) => sh.bucket).filter(Boolean),
-      ),
-    ] as string[];
-    const vibe = vibeForCommunity(buckets);
+    // Counts and distance, not a set of names: the pipeline forces bucket
+    // variety, so which buckets EXIST says almost nothing.
+    const bucketCounts: Record<string, number> = {};
+    for (const sh of shots as Array<{ bucket?: string | null }>) {
+      const b = sh.bucket ?? 'other';
+      bucketCounts[b] = (bucketCounts[b] ?? 0) + 1;
+    }
+    const { data: links } = await sb
+      .from('community_pois')
+      .select('distance_m')
+      .eq('community_id', run.community_id)
+      .not('distance_m', 'is', null);
+    const miles = (links ?? []).map((l) => (l.distance_m as number) / 1609).sort((a, b) => a - b);
+    const medianMiles = miles.length > 0 ? (miles[Math.floor(miles.length / 2)] ?? null) : null;
+    const vibe = paletteForCommunity({ bucketCounts, medianMiles });
     // 'bed' always: this film is narrated, and a track that surges fights the
     // voice however well it suits the place.
     const picked = selectBgm({ candidates, vibe, role: 'bed', seed: run.community_id });

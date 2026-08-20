@@ -28,10 +28,9 @@ export const maxDuration = 30;
 
 /** Default seed query per vibe when the picker opens with no user input. */
 const DEFAULT_QUERIES: Record<BgmVibe, string> = {
-  'warm-acoustic': 'acoustic',
-  'modern-corporate': 'corporate',
-  'luxury-ambient': 'calming',
-  'chill-electronic': 'electronic',
+  acoustic: 'acoustic',
+  piano: 'piano',
+  electronic: 'electronic',
 };
 
 export async function GET(req: Request) {
