@@ -2053,7 +2053,7 @@ def claim_assembly() -> dict[str, Any] | None:
     rows = sb_get(
         "tour_assemblies",
         {
-            "select": "id,community_id,run_id,ordered_clips,narration,status",
+            "select": "id,community_id,run_id,ordered_clips,narration,status,community:communities(name)",
             "status": "eq.pending",
             "order": "created_at.asc",
             "limit": "1",
@@ -2297,6 +2297,83 @@ def _label_overlay(
     return inputs, steps, prev
 
 
+# ── end card ────────────────────────────────────────────────────────────────
+
+END_CARD_S = 3.0
+END_CARD_FADE = 0.6
+# The luma the community's name should sit on, whatever photo is behind it.
+END_CARD_TARGET_LUMA = 64
+
+
+def _render_end_card(name: str, hero: Path, w: int, h: int, dest: Path) -> bool:
+    """The film's last three seconds: the community's name, and ours.
+
+    Owner 2026-08-20, on a film that ended on a supermarket: "the closing part
+    is weak, it needs better design… lets design some ending page, customized
+    for each community" — then, on the layout: "make it very simple just
+    community name and percho name".
+
+    The ground is the FIRST FRAME OF THE FIRST CLIP, so the film closes on the
+    image it opened with. That is the bookend the shot list could not give us:
+    the scheduler keeps each place to a single stretch (owner 2026-08-19), so
+    returning to the community for a closing shot would have broken the rule,
+    while a card is not a shot.
+
+    The wash is MEASURED, not fixed. A fixed one repeats the mistake the place
+    card just had fixed — a treatment tuned on one photo fails on the next. The
+    band behind the name is sampled and darkened until it lands on
+    END_CARD_TARGET_LUMA, so a dark calm photo keeps most of its light and a
+    blown-out one is pushed down hard. Verified across luma 96 / 113 / 241:
+    all three land the name on 68-75.
+    """
+    from PIL import Image, ImageDraw, ImageFilter, ImageFont, ImageStat
+
+    serif = REPO_ROOT / "apps/mobile/assets/fonts/DMSerifDisplay-Regular.ttf"
+    sans = _label_font()
+    if not serif.exists() or not sans or not hero.exists():
+        return False
+
+    src = Image.open(hero).convert("RGB")
+    ratio = max(w / src.width, h / src.height)
+    src = src.resize((round(src.width * ratio), round(src.height * ratio)), Image.LANCZOS)
+    x, y = (src.width - w) // 2, (src.height - h) // 2
+    img = src.crop((x, y, x + w, y + h)).filter(ImageFilter.GaussianBlur(round(w * 0.010)))
+
+    band = (0, round(h * 0.38), w, round(h * 0.55))
+    lum = ImageStat.Stat(img.crop(band).convert("L")).mean[0]
+    wash = min(0.86, max(0.10, (lum - END_CARD_TARGET_LUMA) / max(lum, 1)))
+    img = Image.blend(img, Image.new("RGB", (w, h), (12, 16, 20)), wash)
+
+    # A wide soft vignette, so the corners settle and the name is the only
+    # thing with edges.
+    mask = Image.new("L", (w, h), 0)
+    ImageDraw.Draw(mask).ellipse((-w * 0.30, -h * 0.15, w * 1.30, h * 1.15), fill=255)
+    mask = mask.filter(ImageFilter.GaussianBlur(round(w * 0.185)))
+    vignette = Image.new("RGBA", (w, h), (6, 9, 12, 255))
+    vignette.putalpha(Image.eval(mask, lambda v: round((255 - v) * 0.8)))
+    img = Image.alpha_composite(img.convert("RGBA"), vignette)
+
+    draw = ImageDraw.Draw(img)
+    size = round(w * 0.139)
+    while size > round(w * 0.06):
+        font = ImageFont.truetype(str(serif), size)
+        if draw.textlength(name, font=font) <= w * 0.82:
+            break
+        size -= 4
+    draw.text((w / 2, h * 0.455), name, font=font, fill=(255, 255, 255, 255), anchor="mm")
+
+    mark_font = ImageFont.truetype(sans, round(w * 0.023))
+    mark, track = "PERCHO", round(w * 0.0065)
+    total = sum(draw.textlength(c, font=mark_font) + track for c in mark) - track
+    mx = w / 2 - total / 2
+    for ch in mark:
+        draw.text((mx, h * 0.905), ch, font=mark_font, fill=(255, 255, 255, 130), anchor="la")
+        mx += draw.textlength(ch, font=mark_font) + track
+
+    img.convert("RGB").save(dest)
+    return True
+
+
 def process_assembly(row: dict[str, Any]) -> None:
     assembly_id = row["id"]
     ordered = row.get("ordered_clips") or []
@@ -2447,11 +2524,41 @@ def process_assembly(row: dict[str, Any]) -> None:
         )
         filters.extend(label_steps)
 
+        # THE END CARD — after the labels, never before. The label chain gives
+        # its last card the span up to `total`, so a card folded in earlier
+        # would wear the final place name across it.
+        card_inputs: list[str] = []
+        community_name = (row.get("community") or {}).get("name") or ""
+        hero = workdir / "hero.png"
+        subprocess.run(
+            ["ffmpeg", "-y", "-v", "error", "-i", str(clip_paths[0]),
+             "-frames:v", "1", str(hero)],
+            check=False, timeout=60,
+        )
+        card_png = workdir / "end_card.png"
+        if community_name and _render_end_card(
+            community_name, hero, scale_to[0], scale_to[1], card_png
+        ):
+            card_idx = len(clip_paths) + len(label_inputs) // 2
+            card_inputs = ["-loop", "1", "-t", f"{END_CARD_S:.2f}", "-i", str(card_png)]
+            filters.append(
+                f"[{card_idx}:v]fps=30,scale={scale_to[0]}:{scale_to[1]},setsar=1,"
+                f"format=yuv420p,format=rgba[card]"
+            )
+            filters.append(
+                f"{prev}[card]xfade=transition=fade:duration={END_CARD_FADE}:"
+                f"offset={total - END_CARD_FADE:.3f}[withcard]"
+            )
+            prev = "[withcard]"
+            total = total + END_CARD_S - END_CARD_FADE
+            print(f"[assembly {assembly_id}] end card for {community_name}", flush=True)
+
         vf = ";".join(filters) + f";{prev}format=yuv420p"
         cmd = [
             "ffmpeg", "-y",
             *inputs,
             *label_inputs,
+            *card_inputs,
             "-filter_complex", vf,
             "-c:v", "libx264", "-preset", "medium", "-crf", "20",
             "-movflags", "+faststart",
