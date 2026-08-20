@@ -24,6 +24,7 @@
  */
 
 import { AlertCircle, Check, Loader2, Play } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 export type StepName = 'research' | 'resolve' | 'photos' | 'plan' | 'generate' | 'assemble';
 
@@ -85,6 +86,21 @@ export function TourStepStrip({
   onRunAutomated: () => void;
   error?: string | null;
 }) {
+  // Seconds since the current step started. A step can run for minutes and the
+  // page gives no other sign of life; a ticking number is the difference
+  // between "working" and "hung".
+  const [elapsed, setElapsed] = useState(0);
+  useEffect(() => {
+    if (!running) {
+      setElapsed(0);
+      return;
+    }
+    const started = Date.now();
+    const t = setInterval(() => setElapsed(Math.round((Date.now() - started) / 1000)), 1000);
+    return () => clearInterval(t);
+  }, [running]);
+  const elapsedLabel = elapsed > 2 ? ` ${elapsed}s` : '';
+
   return (
     <section className="rounded-2xl border border-line bg-surface p-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -114,13 +130,15 @@ export function TourStepStrip({
               {i > 0 && <span className="self-center text-ink2/40">→</span>}
               <div
                 className={`min-w-[9.5rem] rounded-xl border px-3 py-2 ${
-                  gated
-                    ? 'border-amber-500/50 bg-amber-500/10'
-                    : state === 'done'
-                      ? 'border-emerald-600/30 bg-emerald-600/5'
-                      : state === 'failed'
-                        ? 'border-red-400/50 bg-red-50'
-                        : 'border-line bg-bg'
+                  isRunning
+                    ? 'border-ink/40 bg-ink/5 ring-1 ring-ink/20'
+                    : gated
+                      ? 'border-amber-500/50 bg-amber-500/10'
+                      : state === 'done'
+                        ? 'border-emerald-600/30 bg-emerald-600/5'
+                        : state === 'failed'
+                          ? 'border-red-400/50 bg-red-50'
+                          : 'border-line bg-bg'
                 }`}
               >
                 <div className="flex items-center gap-1.5">
@@ -128,7 +146,17 @@ export function TourStepStrip({
                   <span className="font-medium text-ink text-xs">{`${i + 1} · ${s.label}`}</span>
                 </div>
                 <div className="mt-0.5 text-[11px] text-ink2">
-                  {gated ? 'waiting on you' : s.hint}
+                  {/* Plan and Assemble run for a minute or more. A 12px spinner
+                      on its own does not read as "this is working" (owner
+                      2026-08-20: "while waiting, it should show running
+                      status"), so the whole chip says so. */}
+                  {isRunning ? (
+                    <span className="font-medium text-ink">running…{elapsedLabel}</span>
+                  ) : gated ? (
+                    'waiting on you'
+                  ) : (
+                    s.hint
+                  )}
                 </div>
                 {runnable ? (
                   <button
@@ -137,8 +165,12 @@ export function TourStepStrip({
                     disabled={!!running}
                     className="mt-1.5 inline-flex items-center gap-1 rounded-md border border-line bg-surface px-2 py-0.5 text-[11px] text-ink hover:border-ink2 disabled:cursor-not-allowed disabled:text-muted"
                   >
-                    <Play size={10} aria-hidden />
-                    {state === 'done' ? 'Re-run' : 'Run'}
+                    {isRunning ? (
+                      <Loader2 size={10} className="animate-spin" aria-hidden />
+                    ) : (
+                      <Play size={10} aria-hidden />
+                    )}
+                    {isRunning ? 'Running…' : state === 'done' ? 'Re-run' : 'Run'}
                   </button>
                 ) : (
                   <div className="mt-1.5 h-[19px] text-[11px] text-ink2/70">

@@ -49,6 +49,16 @@ interface ClipRow {
   kenburns_clip: ClipStatus | null;
 }
 
+interface PlanShot {
+  photo_id: string;
+  sort_order?: number;
+  engine: string;
+  move?: string | null;
+  duration_s: number;
+  ai_generated?: boolean;
+  prompt?: string | null;
+}
+
 interface Run {
   id: string;
   step_results: Record<string, unknown>;
@@ -277,6 +287,38 @@ export function CommunityTourSection({
    */
   const visible = enriched;
 
+  /**
+   * The shot list, keyed by photo, for the table's Plan column.
+   *
+   * PhotoTable has always taken a `plan` prop and this surface has never
+   * passed one, so the column read "—" for every row. It went unnoticed while
+   * the shot list was also rendered in TourPipeline's step panel; deleting that
+   * panel left the plan with nowhere to appear at all, and running Plan looked
+   * like it had done nothing (owner 2026-08-20: "nothing showing in plan
+   * column").
+   */
+  const planByPhoto = Object.fromEntries(
+    ((run?.step_results.photos as { shots?: PlanShot[] } | undefined)?.shots ?? []).map((sh) => [
+      sh.photo_id,
+      {
+        sort_order: sh.sort_order ?? 0,
+        engine: sh.engine,
+        move: sh.move ?? '',
+        duration_s: sh.duration_s,
+        ai_generated: sh.ai_generated ?? false,
+        prompt: sh.prompt ?? null,
+      },
+    ]),
+  );
+
+  /** Why each photo the plan considered is NOT in the cut, keyed by photo. */
+  const dropReasons = Object.fromEntries(
+    (
+      (run?.step_results.photos as { dropped?: Array<{ photo_id: string; reason: string }> })
+        ?.dropped ?? []
+    ).map((d) => [d.photo_id, d.reason]),
+  );
+
   async function generateClip(
     photoId: string,
     engine?: string,
@@ -372,6 +414,8 @@ export function CommunityTourSection({
           bucket={bucket}
           photos={visible}
           onGenerateClip={generateClip}
+          plan={planByPhoto}
+          dropReasons={dropReasons}
         />
       </section>
     </div>

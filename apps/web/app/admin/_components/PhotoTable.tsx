@@ -190,7 +190,7 @@ export function PhotoTable({
     (isListing ? 0 : 1) + // Reframed
     (isListing ? 0 : 1) + // Source
     2 + // Size, Category
-    (isListing ? 0 : 1) + // Plan / Dropped because
+    (isListing ? 0 : 1) + // Plan
     1 + // Score
     (isListing ? 1 : 0) + // Hero
     (isListing ? 0 : 1) + // Buckets
@@ -410,16 +410,11 @@ export function PhotoTable({
               {!isListing && <Th hint="where it came from">Source</Th>}
               <Th hint="pixels">Size</Th>
               <Th hint="tagger">Category</Th>
-              {!isListing &&
-                (dropReasons ? (
-                  <Th className="min-w-[120px]" hint="why it is out">
-                    Dropped because
-                  </Th>
-                ) : (
-                  <Th className="min-w-[110px]" hint="engine · move · secs">
-                    Plan
-                  </Th>
-                ))}
+              {!isListing && (
+                <Th className="min-w-[110px]" hint="in the cut, or why not">
+                  Plan
+                </Th>
+              )}
               <Th hint="0-1, tagger">Score</Th>
               {isListing && <Th hint="cover fit">Hero</Th>}
               {!isListing && <Th hint="which tour sections">Buckets</Th>}
@@ -652,12 +647,7 @@ export function PhotoTable({
                     {t.isMaster && <div className="text-[10px] text-ink2">master</div>}
                     {t.usable === false && <div className="text-[10px] text-red-600">unusable</div>}
                   </Td>
-                  {!isListing && dropReasons && (
-                    <Td>
-                      <span className="text-ink2">{dropReasons[p.id] ?? 'dropped'}</span>
-                    </Td>
-                  )}
-                  {!isListing && !dropReasons && (
+                  {!isListing && (
                     <Td>
                       {t.usable === false ? (
                         <span className="text-red-600">no</span>
@@ -711,11 +701,19 @@ export function PhotoTable({
                             </details>
                           )}
                         </div>
-                      ) : (
+                      ) : dropReasons?.[p.id] ? (
+                        // Not in the cut, and this is why. The plan drops far
+                        // more photos than it keeps — 29 of 61 on Aberdeen —
+                        // and "—" made every one of them look the same as a
+                        // photo the plan had never considered.
                         <span
-                          className="text-ink2"
-                          title="Not in the current plan — re-run the photos step"
+                          className="text-[10px] text-ink2 leading-tight"
+                          title={dropReasons[p.id]}
                         >
+                          {truncate(dropReasons[p.id] as string, 52)}
+                        </span>
+                      ) : (
+                        <span className="text-ink2" title="Not in the current plan">
                           —
                         </span>
                       )}
