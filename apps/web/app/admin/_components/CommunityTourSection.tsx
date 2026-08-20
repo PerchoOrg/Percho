@@ -234,7 +234,7 @@ export function CommunityTourSection({
           // Not an error — the film still renders, just without these. Said
           // out loud because the worker skips them silently.
           setStepError(
-            `${body.notReady} shot(s) have no rendered clip and will be missing from the film — run Render first.`,
+            `${body.notReady} shot(s) have no clip in any engine and will be missing from the film — run Render first.`,
           );
         }
         return rid;
