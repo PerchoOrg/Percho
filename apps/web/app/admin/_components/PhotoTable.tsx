@@ -17,6 +17,7 @@
  * ponytail: in-memory sort/filter, revisit if a single owner ever exceeds ~1k photos.
  */
 
+import { discardClip } from '@/lib/poi/admin-clip-actions';
 import {
   type EnhanceDecision,
   type PhotoTable as PhotoTableName,
@@ -358,10 +359,10 @@ export function PhotoTable({
               {!isListing && <Th hint="approve / reject">Review</Th>}
               <Th hint="as fetched">Photo</Th>
               <Th hint="ESRGAN x2">Enhanced</Th>
+              {!isListing && <Th hint="outpainted to 2:3">Reframed</Th>}
               {!isListing && <Th hint="Seedance, paid">Clip</Th>}
               {!isListing && <Th hint="DepthFlow parallax">DA</Th>}
               {!isListing && <Th hint="Ken Burns pan">KB</Th>}
-              {!isListing && <Th hint="outpainted to 2:3">Reframed</Th>}
               <Th hint={isListing ? 'order' : 'place'}>{isListing ? '#' : 'POI'}</Th>
               {!isListing && <Th hint="where it came from">Source</Th>}
               <Th hint="pixels">Size</Th>
@@ -448,11 +449,18 @@ export function PhotoTable({
                     </div>
                   </Td>
                   <Td>
+                    {/* The ORIGINAL, always. This used to render `thumbPath`,
+                        which is the approved enhanced file when one exists —
+                        and since the table auto-approves every enhancement,
+                        the Photo and Enhanced columns were showing the same
+                        image (owner 2026-08-19: "i dont see big difference
+                        between these two"). Two columns comparing a file to
+                        itself. */}
                     <Thumb
-                      src={url(thumbPath)}
-                      title="View full size"
+                      src={url(p.storage_path)}
+                      title="The photo as fetched — view full size"
                       onClick={() =>
-                        setLightbox({ url: url(thumbPath), alt: t.description ?? 'photo' })
+                        setLightbox({ url: url(p.storage_path), alt: t.description ?? 'photo' })
                       }
                     />
                   </Td>
@@ -501,6 +509,21 @@ export function PhotoTable({
                   </Td>
                   {!isListing && (
                     <Td>
+                      <ReframedCell
+                        photoId={p.id}
+                        status={p.outpaint_status}
+                        meta={p.outpaint_meta}
+                        error={p.outpaint_error}
+                        storageBase={storageBase}
+                        bucket={bucket}
+                        path={p.outpainted_path}
+                        onZoom={(u) => setLightbox({ url: u, alt: 'reframed' })}
+                        onChanged={() => router.refresh()}
+                      />
+                    </Td>
+                  )}
+                  {!isListing && (
+                    <Td>
                       <ClipCell
                         clip={p.clip}
                         poster={url(thumbPath)}
@@ -509,6 +532,7 @@ export function PhotoTable({
                         busy={busy}
                         onGenerate={() => onGenerateClip && run(p.id, () => onGenerateClip(p.id))}
                         onPlay={setClipLightbox}
+                        onDiscard={() => run(p.id, () => discardClip(p.id))}
                       />
                     </Td>
                   )}
@@ -539,21 +563,6 @@ export function PhotoTable({
                           onGenerateClip && run(p.id, () => onGenerateClip(p.id, 'kenburns'))
                         }
                         onPlay={setClipLightbox}
-                      />
-                    </Td>
-                  )}
-                  {!isListing && (
-                    <Td>
-                      <ReframedCell
-                        photoId={p.id}
-                        status={p.outpaint_status}
-                        meta={p.outpaint_meta}
-                        error={p.outpaint_error}
-                        storageBase={storageBase}
-                        bucket={bucket}
-                        path={p.outpainted_path}
-                        onZoom={(u) => setLightbox({ url: u, alt: 'reframed' })}
-                        onChanged={() => router.refresh()}
                       />
                     </Td>
                   )}
@@ -991,6 +1000,7 @@ function ClipCell({
   busy,
   onGenerate,
   onPlay,
+  onDiscard,
 }: {
   clip?: ClipStatus | null;
   poster: string;
@@ -1000,6 +1010,8 @@ function ClipCell({
   busy: boolean;
   onGenerate: () => void;
   onPlay: (url: string) => void;
+  /** Paid engines only — a local clip is fixed by regenerating, not discarding. */
+  onDiscard?: () => void;
 }) {
   return (
     <div className="flex flex-col gap-1">
@@ -1055,6 +1067,14 @@ function ClipCell({
           onClick={onGenerate}
         />
       )}
+      {onDiscard && clip && (
+        <MiniBtn
+          label="Discard"
+          title={`Drop this ${label} clip so the tour stops using it`}
+          disabled={busy}
+          onClick={onDiscard}
+        />
+      )}
     </div>
   );
 }
@@ -1072,8 +1092,12 @@ function Th({
   hint?: string;
 }) {
   return (
-    <th className={`px-1.5 py-1.5 align-bottom font-medium ${className}`}>
-      <span className="block text-[10px] uppercase tracking-wide">{children}</span>
+    <th className={`px-1.5 py-1.5 align-top font-semibold ${className}`}>
+      {/* align-top + a label line of fixed height: with align-bottom, a header
+          that has a hint sat lower than one that does not, so the labels
+          zig-zagged across the row (owner 2026-08-19: "should be bold and
+          aligned in the same horizon"). */}
+      <span className="block h-3.5 text-[10px] uppercase tracking-wide">{children}</span>
       {hint && (
         <span className="block font-normal text-[9px] text-ink2/70 normal-case tracking-normal">
           {hint}

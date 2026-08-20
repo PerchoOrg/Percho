@@ -7,6 +7,7 @@
 
 import { RELIGIOUS_PHOTO_DROP_REASON, isReligiousPhoto } from '@/lib/poi/religious-content';
 import type { TourPlanPhoto } from '@/lib/poi/tour-orchestrator/plan';
+import { CANVAS_H, CANVAS_W } from '@/lib/poi/tour-orchestrator/scheduler';
 import type { PhotoAnnotation } from '@/lib/poi/tour-orchestrator/types';
 import { type RunRow, type TourDb, mustWrite } from './shared';
 
@@ -69,6 +70,53 @@ const DEFAULT_CLIPS_PER_POI = 2;
 export function clipsAllowedFor(bucket: string | null | undefined): number {
   return CLIPS_BY_BUCKET[bucket ?? ''] ?? DEFAULT_CLIPS_PER_POI;
 }
+
+/**
+ * The pipeline's own verdict on one photo, before any ordering happens.
+ *
+ * These are the gates that say a photo is UNUSABLE — policy and measurable
+ * quality — as opposed to the per-POI caps and scoring, which only say a
+ * usable photo did not make this particular cut. Only the former is a verdict
+ * worth writing to `poi_photos.status`, and the distinction is the whole point:
+ * "rejected" has to mean "never use this", or the owner's review list fills up
+ * with photos that were merely runners-up.
+ *
+ * Exported so the `photos` step can record the verdict BEFORE the owner
+ * reviews, and `computeFinalShots` can apply the same test after. One function,
+ * so the proposal he reviews and the filter that runs later cannot disagree.
+ */
+export function initialVerdict(p: {
+  ai_tags?: Record<string, unknown> | null;
+  width_px?: number | null;
+  height_px?: number | null;
+  enhanced_status?: string | null;
+  enhanced_meta?: { width?: number; height?: number } | null;
+  storage_path?: string | null;
+}): { ok: true } | { ok: false; reason: string } {
+  const tags = (p.ai_tags ?? {}) as { description?: string; tags?: string[]; usable?: boolean };
+  if (isReligiousPhoto({ description: tags.description, tags: tags.tags })) {
+    return { ok: false, reason: RELIGIOUS_PHOTO_DROP_REASON };
+  }
+  if (tags.usable === false) return { ok: false, reason: 'tagger-unusable' };
+  const enhanced = p.enhanced_status === 'approved' ? p.enhanced_meta : null;
+  const w = enhanced?.width ?? p.width_px ?? 0;
+  const h = enhanced?.height ?? p.height_px ?? 0;
+  if (!p.storage_path || w <= 0 || h <= 0) {
+    return { ok: false, reason: 'no stored file or no pixel dimensions' };
+  }
+  if (tooLowRes(w, h)) {
+    return { ok: false, reason: `too low resolution — ${w}x${h} cannot fill the canvas` };
+  }
+  return { ok: true };
+}
+
+/** Sync mirror of the scheduler's gate, so `initialVerdict` stays non-async. */
+function tooLowRes(w: number, h: number): boolean {
+  const upscale = Math.max(CANVAS_W / w, CANVAS_H / h) * ZOOM_HEADROOM;
+  return upscale > MAX_UPSCALE;
+}
+const ZOOM_HEADROOM = 1.1;
+const MAX_UPSCALE = 2.0;
 
 /** Shared: build the final shot list for a set of POIs. Photos step computes
  *  and persists this; assemble consumes it. Clips per POI vary by kind of
@@ -258,22 +306,25 @@ export async function computeFinalShots(
     ]),
   );
 
-  // Photos the tagger or the reviewer already rejected never reach the Curator
-  // — no point paying to annotate a frame that cannot be used.
+  // APPROVED only. Not "anything not rejected".
+  //
+  // The photos step writes its verdict before the owner reviews, so by the time
+  // planning runs every photo has been judged twice — once by the pipeline,
+  // once by him. A row still 'pending' at this point is one that arrived after
+  // the review (a fresh ingest, say), and using it would put an unreviewed
+  // frame in the film. Owner 2026-08-19, on finding pending photos in a
+  // rendered tour: "some photos in the video are not approved?"
   const usable: typeof photos = [];
   for (const p of photos ?? []) {
-    const tags = (p.ai_tags ?? {}) as { usable?: boolean };
-    const rejectedByUser = p.status === 'rejected';
-    const rejectedByTagger = tags.usable === false;
-    if (rejectedByUser || rejectedByTagger) {
-      dropped.push({
-        photo_id: p.id,
-        poi_id: p.poi_id,
-        reason: rejectedByUser ? 'rejected in Review' : 'tagger-unusable',
-      });
+    if (p.status === 'approved') {
+      usable.push(p);
       continue;
     }
-    usable.push(p);
+    dropped.push({
+      photo_id: p.id,
+      poi_id: p.poi_id,
+      reason: p.status === 'rejected' ? 'rejected in Review' : 'not reviewed yet',
+    });
   }
 
   // Orchestration layer (2026-08-17): the engine/move/order/duration used to be
