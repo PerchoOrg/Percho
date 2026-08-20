@@ -70,33 +70,6 @@ export function clipsAllowedFor(bucket: string | null | undefined): number {
   return CLIPS_BY_BUCKET[bucket ?? ''] ?? DEFAULT_CLIPS_PER_POI;
 }
 
-/**
- * A photo whose SUBJECT is an organised event, not the place itself.
- *
- * A tour answers "what is this place like on an ordinary day". A one-off event
- * fails that on its own terms: it dates the footage, it shows a crowd rather
- * than a facility, and the buyer learns nothing about the school from a hall
- * full of chairs. Note this is about events, not about people — incidental
- * people are wanted (owner 2026-08-19: "we should add some back so it is more
- * real"); an event as the subject is not.
- *
- * It is also the route by which content the place filter cannot see gets in.
- * Aberdeen's Riverwatch Middle School shipped a garlanded shrine, and the very
- * next cut carried a second frame from the same event — "Interior of a school
- * gymnasium during an organized cultural event with many attendees", with no
- * religious word anywhere in its tags for `isReligiousPhoto` to catch. Widening
- * that filter would have meant screening for cultural content by keyword, which
- * is the wrong instrument; excluding events is a rule that stands on its own
- * and closes the same hole.
- */
-const EVENT_SUBJECT =
-  /\b(event|celebration|festival|ceremony|gathering|attendees|crowd|performance|parade|assembly|banquet|graduation)\b/i;
-
-export function isEventPhoto(t: { description?: string | null; tags?: readonly string[] | null }) {
-  const text = [t.description ?? '', ...(t.tags ?? [])].join(' ');
-  return text.trim() ? EVENT_SUBJECT.test(text) : false;
-}
-
 /** Shared: build the final shot list for a set of POIs. Photos step computes
  *  and persists this; assemble consumes it. Clips per POI vary by kind of
  *  place — see CLIPS_BY_BUCKET. */
@@ -174,15 +147,6 @@ export async function computeFinalShots(
     const tags = (p.ai_tags ?? {}) as { description?: string; tags?: string[] };
     if (isReligiousPhoto({ description: tags.description, tags: tags.tags })) {
       dropped.push({ photo_id: p.id, poi_id: p.poi_id, reason: RELIGIOUS_PHOTO_DROP_REASON });
-      continue;
-    }
-    // An organised event is not the place — see isEventPhoto.
-    if (isEventPhoto({ description: tags.description, tags: tags.tags })) {
-      dropped.push({
-        photo_id: p.id,
-        poi_id: p.poi_id,
-        reason: 'the subject is an event, not the place',
-      });
       continue;
     }
     // Measure the file the render will actually read. The worker reads the

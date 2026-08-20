@@ -7,8 +7,11 @@
  *                INLINE on Vercel (plain HTTP to Gemini — no local CLI).
  *                ~5-10s total, under the platform function timeout.
  *   resolve    — Google Places Text Search firewall on agent candidates.
- *   photos     — fetch 3 photos per surviving POI (existing poi_photos path).
- *   tag        — Gemini tag every fetched photo + build shot list.
+ *   photos     — fetch 3 photos per surviving POI, enhance, tag, initial
+ *                filter. STOPS at phase 'review'.
+ *   ——— the owner reviews the approved AND rejected photos by hand ———
+ *   plan       — the shot list, from whatever survived that review.
+ *   tag        — Gemini tag every fetched photo.
  *   generate   — enqueue photo→clip jobs in photo_clips (seedance worker
  *                picks them up).
  *   assemble   — ffmpeg concat per shot list (photo_clips must all be ready).
@@ -20,7 +23,7 @@
 import { requireAdmin } from '@/lib/auth/require-admin';
 import { runAssemble } from '@/lib/poi/tour-steps/assemble';
 import { runGenerate, runRegenerateAll } from '@/lib/poi/tour-steps/generate';
-import { runPhotos } from '@/lib/poi/tour-steps/photos';
+import { runPhotos, runPlan } from '@/lib/poi/tour-steps/photos';
 import { runResearch } from '@/lib/poi/tour-steps/research';
 import { runResolve } from '@/lib/poi/tour-steps/resolve';
 import {
@@ -56,6 +59,8 @@ const STEP_HANDLERS: Record<
   // the step as 'service' and skip the session check. Typecheck caught it;
   // this adapter is what keeps it caught.
   photos: (sb, run) => runPhotos(sb, run),
+  // The owner's manual photo review sits between `photos` and `plan`.
+  plan: runPlan,
   tag: runTag,
   generate: runGenerate,
   'regenerate-all': runRegenerateAll,
