@@ -1,24 +1,37 @@
 'use client';
 
 /**
- * CommunityTourSection — page-level assembly for the Community Tour admin
- * (owner 2026-08-16: page order = video → 8 steps → big photo table →
- * collapsible extras).
+ * CommunityTourSection — page-level assembly for the Community Tour admin.
  *
- * The top panel is the community's final assembled video (AssemblyVideoPanel —
- * replaced the old Generate AI Video panel; per-photo Seedance generation now
- * lives in the PhotoTable row Generate buttons). Also fetches per-photo clip
- * status (+ agent-recommended flag) from the clips route and merges it into
- * the table rows, so the table shows clip state and a per-row Generate button.
+ * Layout, owner 2026-08-19: "on top show community information on the left,
+ * and show latest generated video on the right, then show a big photo table,
+ * on top of the top show the progress of few steps that we can manually
+ * click… instead of going to step by step section, lets use one big table to
+ * manage and display everything."
+ *
+ *   TourHeader      facts (left) + latest cut (right)
+ *   TourStepStrip   the whole pipeline as one row of clickable chips
+ *   PhotoSourcePanel
+ *   PhotoTable      OPEN, full width — the workspace
+ *   Step details    collapsed; the per-step result dumps
+ *
+ * What this replaced: a full-width video, then five stacked accordion panels,
+ * then the table collapsed behind a `<details>`. The thing an admin actually
+ * works in was the one thing below the fold and shut.
+ *
+ * The step results are demoted, not deleted. Losing the research candidate
+ * list or the shot-list plan would make several classes of bug invisible again
+ * — most of this month's pipeline bugs were found by reading those panels.
  */
 
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { AssemblyVideoPanel } from './AssemblyVideoPanel';
 import { PhotoSourcePanel } from './PhotoSourcePanel';
 import type { PhotoRow } from './PhotoTable';
 import { PhotoTable } from './PhotoTable';
+import { TourHeader } from './TourHeader';
 import { TourPipeline } from './TourPipeline';
+import { AUTOMATABLE_STEPS, type StepName, type StepState, TourStepStrip } from './TourStepStrip';
 
 interface ClipRow {
   photo_id: string;
@@ -44,30 +57,127 @@ interface ClipRow {
   } | null;
 }
 
+interface Run {
+  id: string;
+  step_results: Record<string, unknown>;
+  status: string;
+}
+
 export function CommunityTourSection({
   communityId,
   communityName,
+  slug,
   city,
   state,
+  zip,
   lat,
   lng,
+  kind,
+  poiCount,
   storageBase,
   bucket,
   photos,
 }: {
   communityId: string;
   communityName: string;
+  slug: string | null;
   city: string | null;
   state: string | null;
+  zip: string | null;
   lat: number | null;
   lng: number | null;
+  kind: string | null;
+  poiCount: number;
   storageBase: string;
   bucket: string;
   photos: PhotoRow[];
 }) {
   const [clipRows, setClipRows] = useState<ClipRow[]>([]);
   const inFlight = useRef(false);
+  const [runs, setRuns] = useState<Run[]>([]);
+  const [running, setRunning] = useState<StepName | null>(null);
+  const [stepError, setStepError] = useState<string | null>(null);
   const router = useRouter();
+
+  const loadRuns = useCallback(async () => {
+    const res = await fetch(`/api/admin/community-tour/${communityId}/runs`);
+    if (!res.ok) return;
+    const body = (await res.json()) as { runs: Run[] };
+    setRuns(body.runs);
+  }, [communityId]);
+
+  useEffect(() => {
+    void loadRuns();
+  }, [loadRuns]);
+
+  const run = runs[0];
+
+  // `research` writes under `agent_research`; every other step uses its name.
+  const resultKey = (s: StepName) => (s === 'research' ? 'agent_research' : s);
+  // `plan` writes back into the `photos` result — it is the second half of what
+  // used to be one step — so its doneness is that result reaching phase 'done'.
+  const photosResult = run?.step_results.photos as { phase?: string } | undefined;
+  const awaitingReview = photosResult?.phase === 'review';
+
+  const stateOf = (s: StepName): StepState => {
+    if (running === s) return 'running';
+    if (s === 'plan') return photosResult?.phase === 'done' ? 'done' : 'idle';
+    const r = run?.step_results[resultKey(s)] as { error?: string } | undefined;
+    if (!r) return 'idle';
+    return r.error ? 'failed' : 'done';
+  };
+
+  /**
+   * Run one step. `runId` is threaded explicitly rather than read from state:
+   * inside a chained loop, `runs` is a stale closure, so every step after the
+   * first would create its own run and each would see an empty predecessor.
+   */
+  const runStep = useCallback(
+    async (step: StepName, runId?: string): Promise<string | null> => {
+      setRunning(step);
+      setStepError(null);
+      try {
+        // Research is expensive and cached per-run, so it always starts a fresh
+        // run — otherwise the button looks inert (owner 2026-08-16).
+        let rid = runId ?? (step === 'research' ? undefined : runs[0]?.id);
+        if (!rid) {
+          const created = await fetch(`/api/admin/community-tour/${communityId}/runs`, {
+            method: 'POST',
+          });
+          if (!created.ok) {
+            setStepError('Could not create run');
+            return null;
+          }
+          rid = ((await created.json()) as { run: { id: string } }).run.id;
+        }
+        const res = await fetch(`/api/admin/community-tour/${communityId}/runs/${rid}/step`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ step }),
+        });
+        const body = (await res.json()) as { ok?: boolean; error?: string; message?: string };
+        if (!res.ok || !body.ok) {
+          setStepError(`${step}: ${body.message ?? body.error ?? `HTTP ${res.status}`}`);
+          return null;
+        }
+        return rid;
+      } finally {
+        setRunning(null);
+        await loadRuns();
+      }
+    },
+    [communityId, runs, loadRuns],
+  );
+
+  /** The automated half only — it stops at the review gate, by construction. */
+  const runAutomated = useCallback(async () => {
+    let rid: string | undefined;
+    for (const s of AUTOMATABLE_STEPS) {
+      const got = await runStep(s, rid);
+      if (!got) return; // a failed step stops the chain; the error is on screen
+      rid = got;
+    }
+  }, [runStep]);
 
   const loadClips = useCallback(async () => {
     if (inFlight.current) return;
@@ -132,40 +242,72 @@ export function CommunityTourSection({
 
   return (
     <div className="space-y-4">
-      {/* 1 · The community's final assembled video (owner 2026-08-17:
-          assembly results at the top — the community's video). */}
-      <AssemblyVideoPanel communityId={communityId} />
-
-      {/* 2 · The 8 pipeline steps, each with its own run button */}
-      <TourPipeline
+      {/* 1 · Facts left, latest cut right. */}
+      <TourHeader
         communityId={communityId}
         communityName={communityName}
+        slug={slug}
         city={city}
         state={state}
+        zip={zip}
         lat={lat}
         lng={lng}
-        storageBase={storageBase}
-        bucket={bucket}
-        photos={photos}
+        kind={kind}
+        photoCount={photos.length}
+        poiCount={poiCount}
+      />
+
+      {/* 2 · The whole pipeline as one row of chips. */}
+      <TourStepStrip
+        stateOf={stateOf}
+        running={running}
+        awaitingReview={awaitingReview}
+        onRun={(s) => void runStep(s)}
+        onRunAutomated={() => void runAutomated()}
+        error={stepError}
       />
 
       {/* 3 · Hand-picked sources: a page URL in, pending photos out. Sits
            directly above the table those photos land in. */}
       <PhotoSourcePanel communityId={communityId} onIngested={() => router.refresh()} />
 
-      {/* 4 · Big table: every photo with all info + clip status + generate.
-           Collapsible — too long to keep open (owner 2026-08-17). */}
+      {/* 4 · THE workspace. Open, full width — everything is managed here
+           (owner 2026-08-19: "one big table to manage and display
+           everything"). It used to be shut behind a <details>. */}
+      <section className="rounded-2xl border border-line bg-surface p-4">
+        <div className="mb-3 flex items-baseline justify-between gap-3">
+          <h2 className="font-semibold text-ink text-sm">Photos ({enriched.length})</h2>
+          <span className="text-[11px] text-ink2">
+            review, reframe, tag and generate clips — all from this table
+          </span>
+        </div>
+        <PhotoTable
+          table="poi_photos"
+          storageBase={storageBase}
+          bucket={bucket}
+          photos={enriched}
+          onGenerateClip={generateClip}
+        />
+      </section>
+
+      {/* 5 · The per-step result dumps, demoted but kept: most of this month's
+           pipeline bugs were found by reading them. */}
       <details className="rounded-2xl border border-line bg-surface">
-        <summary className="cursor-pointer p-4 text-sm font-semibold text-ink">
-          All Fetched Photos ({enriched.length})
+        <summary className="cursor-pointer p-4 font-semibold text-ink text-sm">
+          Step details
         </summary>
         <div className="px-4 pb-4">
-          <PhotoTable
-            table="poi_photos"
+          <TourPipeline
+            communityId={communityId}
+            communityName={communityName}
+            city={city}
+            state={state}
+            lat={lat}
+            lng={lng}
             storageBase={storageBase}
             bucket={bucket}
-            photos={enriched}
-            onGenerateClip={generateClip}
+            photos={photos}
+            readOnly
           />
         </div>
       </details>
