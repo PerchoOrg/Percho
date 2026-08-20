@@ -37,6 +37,11 @@ const SCHOOL_SLOTS = 3;
  *
  * Three rules, in order:
  *
+ *  0. HAND-PICKED — a POI carrying a photo the owner approved himself is
+ *     seated before anything else. Approving was the strongest signal in the
+ *     system and behaved as the weakest; seven of his approvals sat on POIs
+ *     that never entered the competition at all.
+ *
  *  1. INCUMBENTS — a POI already carrying an approved photo keeps its slot.
  *     Research is a grounded Gemini call and two runs a day apart agreed on
  *     only 53% of place_ids, so without this a re-run re-shuffles the budget
@@ -62,6 +67,7 @@ export function selectSurroundingPois({
   bucketOf,
   scoreOf,
   incumbents,
+  handPicked = new Set<string>(),
   budget = SURROUNDING_POI_BUDGET,
   schoolSlots = SCHOOL_SLOTS,
 }: {
@@ -69,6 +75,8 @@ export function selectSurroundingPois({
   bucketOf: (id: string) => string;
   scoreOf: (id: string) => number;
   incumbents: Set<string>;
+  /** POIs carrying a photo the owner approved by hand. Seated first. */
+  handPicked?: Set<string>;
   budget?: number;
   schoolSlots?: number;
 }): string[] {
@@ -85,8 +93,13 @@ export function selectSurroundingPois({
   );
 
   const kept: string[] = [];
+  // 0. HAND-PICKED first — before incumbents, before anything. An explicit
+  //    human approval outranks a machine's previous decision.
   for (const id of surrounding) {
-    if (incumbents.has(id) && kept.length < budget) kept.push(id);
+    if (handPicked.has(id) && kept.length < budget) kept.push(id);
+  }
+  for (const id of surrounding) {
+    if (incumbents.has(id) && !kept.includes(id) && kept.length < budget) kept.push(id);
   }
 
   const allSchools = byBucket.get('schools') ?? [];
@@ -305,15 +318,35 @@ export async function runPhotos(sb: TourDb, run: RunRow, actor: PoiActor = 'user
     }
     const { data: approvedPhotos } = (await sb
       .from('poi_photos')
-      .select('poi_id')
+      .select('poi_id, reviewed_by')
       .in('poi_id', surrounding)
-      .eq('status', 'approved')) as { data: Array<{ poi_id: string }> | null };
+      .eq('status', 'approved')) as {
+      data: Array<{ poi_id: string; reviewed_by: string | null }> | null;
+    };
+
+    // A photo the owner approved BY HAND pulls its POI into the budget.
+    //
+    // Approving is the strongest signal in the system and it was the weakest:
+    // it ranked behind incumbency, score and the per-bucket round-robin, so
+    // seven photos he approved were not merely outranked — their POIs never
+    // entered the competition, and the drop list could not even say why,
+    // because nothing had considered them (owner 2026-08-20: "the photos i
+    // manually approved are not in the plan").
+    //
+    // `reviewed_by` is what separates his verdict from the plan's own: only
+    // the review action sets it, while `runPlan` stamps 'approved' with it
+    // null. Without that column the two are indistinguishable and this would
+    // pin every POI the last cut used.
+    const handPicked = new Set(
+      (approvedPhotos ?? []).filter((r) => r.reviewed_by).map((r) => r.poi_id),
+    );
 
     const kept = selectSurroundingPois({
       surrounding,
       bucketOf: (id) => bucketByPoiId.get(id) ?? 'other',
       scoreOf: (id) => scoreByPoi.get(id) ?? 0,
       incumbents: new Set((approvedPhotos ?? []).map((r) => r.poi_id)),
+      handPicked,
     });
     resolvedPoiIds.length = 0;
     resolvedPoiIds.push(...amenityIds, ...kept);
