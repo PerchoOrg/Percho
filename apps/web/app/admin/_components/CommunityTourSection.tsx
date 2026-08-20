@@ -126,7 +126,7 @@ export function CommunityTourSection({
   // Compact one-liners for the two sourcing steps now living in the header.
   type ResearchPoi = { name: string; bucket?: string; why?: string; approx_miles?: number };
   const researchRaw = run?.step_results.agent_research as
-    | { agents?: Record<string, { parsed?: { pois?: ResearchPoi[] } | null }> }
+    | { agents?: Record<string, { parsed?: { pois?: ResearchPoi[] } | null }>; prompt?: string }
     | undefined;
   // Both agents propose, and they overlap — dedupe by name so the panel shows
   // the candidate list rather than the same place twice.
@@ -318,6 +318,7 @@ export function CommunityTourSection({
             ? `${resolveRaw.resolved?.length ?? 0} resolved · ${resolveRaw.dropped?.length ?? 0} dropped`
             : null
         }
+        researchPrompt={researchRaw?.prompt ?? null}
         researchPois={researchPois}
         resolvedPlaces={resolveRaw?.resolved ?? []}
         droppedPlaces={resolveRaw?.dropped ?? []}

@@ -494,6 +494,58 @@ export async function runPlan(sb: TourDb, run: RunRow) {
     );
   }
 
+  // RESCUE — photos that are only too small, on POIs the film is visiting.
+  //
+  // Resolution stopped being a rejection (owner 2026-08-20: "we should decide
+  // based on content first, quality can be improved with rendering"), which
+  // leaves the question of who does the rendering. This does: a reframe
+  // re-renders the frame at 768x1376 and the enhance pass takes that to
+  // 1536x2752, clearing a gate the original failed from well below.
+  //
+  // It also breaks a loop that used to need hands. Reframing was queued only
+  // for photos already in the cut, and a photo could not enter the cut while
+  // it was too small — Lambert High's 512px facade sat outside for exactly that
+  // reason until it was queued by hand. Queued here, it lands before the next
+  // plan, which then picks it up on its own.
+  const { tooLowRes } = await import('./shots');
+  const { data: candidates } = (await sb
+    .from('poi_photos')
+    .select('id, width_px, height_px, enhanced_status, enhanced_meta, outpaint_status')
+    .in('poi_id', resolvedPoiIds)
+    .neq('status', 'rejected')) as {
+    data: Array<{
+      id: string;
+      width_px: number | null;
+      height_px: number | null;
+      enhanced_status: string | null;
+      enhanced_meta: { width?: number; height?: number } | null;
+      outpaint_status: string | null;
+    }> | null;
+  };
+  const chosenIds = new Set(
+    (shots as Array<{ photo_id?: string }>).map((sh) => sh.photo_id).filter(Boolean) as string[],
+  );
+  const rescue = (candidates ?? [])
+    .filter((c) => {
+      if (chosenIds.has(c.id)) return false; // already in; nothing to rescue
+      // Not already reframed, in flight, or deliberately set aside.
+      if (c.outpaint_status && c.outpaint_status !== 'none') return false;
+      const enh = c.enhanced_status === 'approved' ? c.enhanced_meta : null;
+      const w = enh?.width ?? c.width_px ?? 0;
+      const h = enh?.height ?? c.height_px ?? 0;
+      return w > 0 && h > 0 && tooLowRes(w, h);
+    })
+    .map((c) => c.id);
+  if (rescue.length > 0) {
+    await mustWrite(
+      `queue ${rescue.length} undersized photo(s) for a rescue reframe`,
+      sb
+        .from('poi_photos')
+        .update({ outpaint_status: 'queued', outpaint_error: null })
+        .in('id', rescue),
+    );
+  }
+
   // `approved` = in the cut. Stamped HERE, because this is where the cut is
   // decided — owner 2026-08-19: "approved can not be 82!!… they should already
   // be approved" of the photos in the video. Anything previously approved that
@@ -540,6 +592,7 @@ export async function runPlan(sb: TourDb, run: RunRow) {
     dropped: dropped.length,
     approved: promote.length,
     unapproved: demote.length,
+    rescueQueued: rescue.length,
     plan,
   };
 }

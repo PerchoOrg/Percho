@@ -104,14 +104,26 @@ export function initialVerdict(p: {
   if (!p.storage_path || w <= 0 || h <= 0) {
     return { ok: false, reason: 'no stored file or no pixel dimensions' };
   }
-  if (tooLowRes(w, h)) {
-    return { ok: false, reason: `too low resolution — ${w}x${h} cannot fill the canvas` };
-  }
+  // Resolution is NOT a rejection. Owner 2026-08-20: "we should decide based on
+  // content first, quality can be improved with rendering" — and he is right,
+  // because the rendering that fixes it is ours: Real-ESRGAN doubles the edges
+  // and a reframe re-renders the frame at 768x1376, which together clear this
+  // gate from well below it. Lambert High's 512px facade is the proof; it was
+  // dropped as too small and is now three clips in the film.
+  //
+  // Rejecting on a fixable property also created a loop: reframing was only
+  // queued for photos in the cut, and a photo could not enter the cut while it
+  // was too small. `runPlan` breaks it by queueing a rescue for exactly these.
   return { ok: true };
 }
 
-/** Sync mirror of the scheduler's gate, so `initialVerdict` stays non-async. */
-function tooLowRes(w: number, h: number): boolean {
+/**
+ * Too small to fill the canvas even with the zoom headroom.
+ *
+ * Exported for the rescue in `runPlan`: this is no longer a rejection (see
+ * `initialVerdict`), it is a "needs rendering first" signal.
+ */
+export function tooLowRes(w: number, h: number): boolean {
   const upscale = Math.max(CANVAS_W / w, CANVAS_H / h) * ZOOM_HEADROOM;
   return upscale > MAX_UPSCALE;
 }
