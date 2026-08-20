@@ -49,6 +49,7 @@ export function TourHeader({
   resolveState,
   researchSummary,
   resolveSummary,
+  researchPrompt,
   researchPois,
   resolvedPlaces,
   droppedPlaces,
@@ -70,6 +71,8 @@ export function TourHeader({
   /** One line each, e.g. "14 candidates" — null before the step has run. */
   researchSummary: string | null;
   resolveSummary: string | null;
+  /** The exact text sent to the research model, for the info button. */
+  researchPrompt: string | null;
   /** What Research proposed, and what Resolve made of it. */
   researchPois: Array<{ name: string; bucket?: string; why?: string; approx_miles?: number }>;
   resolvedPlaces: Array<{
@@ -147,6 +150,7 @@ export function TourHeader({
             hint="Gemini finds the places"
             state={researchState}
             summary={researchSummary}
+            info={researchPrompt}
             busy={busy}
             onRun={() => onRun('research')}
           >
@@ -343,6 +347,7 @@ function SourcingStep({
   summary,
   busy,
   onRun,
+  info,
   children,
 }: {
   n: number;
@@ -352,6 +357,9 @@ function SourcingStep({
   summary: string | null;
   busy: boolean;
   onRun: () => void;
+  /** Hover text for a small info button left of the label — the research
+   *  prompt, which is the thing you check when the candidates look wrong. */
+  info?: string | null;
   /** The step's result, revealed on click. */
   children?: React.ReactNode;
 }) {
@@ -367,6 +375,17 @@ function SourcingStep({
     >
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-1.5">
+          {info && (
+            // Native title: the prompt is 3k characters and this is a glance,
+            // not a reading surface — a modal for it would be a click to leave.
+            <span
+              title={info}
+              className="inline-flex h-3.5 w-3.5 shrink-0 cursor-help items-center justify-center rounded-full border border-ink2/40 text-[8px] text-ink2"
+              aria-label="Show the prompt"
+            >
+              i
+            </span>
+          )}
           {state === 'running' ? (
             <Loader2 size={12} className="animate-spin text-ink2" />
           ) : state === 'done' ? (
