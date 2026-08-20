@@ -84,3 +84,64 @@ export function isReligiousPlace(p: PlaceLike): boolean {
 /** The reason string the drop lists show, so the filter is visible, not silent. */
 export const RELIGIOUS_DROP_REASON =
   'place of worship — excluded from every tour (fair-housing policy)';
+
+/**
+ * Religious SUBJECT MATTER, read off a photo's own description and tags.
+ *
+ * The place filter above is not enough, because a religious image can arrive
+ * attached to an entirely secular POI. Riverwatch Middle School shipped in
+ * Aberdeen's film showing a garlanded shrine in the school gymnasium: the POI
+ * is a school, so every check above passed, and the tagger had labelled the
+ * image "cultural-celebration" rather than religious. Only the word "shrine"
+ * in its own description gave it away.
+ *
+ * Same asymmetry as the name list, and more so here: dropping one photo costs
+ * a POI its third frame, while publishing one is the fair-housing exposure.
+ */
+const RELIGIOUS_SUBJECT = new RegExp(
+  [
+    '\\bshrine\\b',
+    '\\baltar\\b',
+    '\\bdeity\\b',
+    '\\bidol\\b',
+    '\\bicon(s|ography)\\b',
+    '\\bmenorah\\b',
+    '\\bcrucifix\\b',
+    '\\bcrescent\\s+and\\s+star\\b',
+    '\\bstar\\s+of\\s+david\\b',
+    '\\bpuja\\b',
+    '\\bmandir\\b',
+    '\\bgurdwara\\b',
+    '\\bpalanquin\\b',
+    '\\bprayer\\b',
+    '\\bworship\\b',
+    '\\breligio\\w*',
+    '\\bhindu\\b',
+    '\\bbuddhis\\w*',
+    '\\bchristian\\b',
+    '\\bmuslim\\b',
+    '\\bislamic\\b',
+    '\\bjewish\\b',
+    '\\bsikh\\b',
+    '\\bnativity\\b',
+    '\\bpew(s)?\\b',
+    '\\bsai\\s+baba\\b',
+    '\\bganesh\\w*',
+    '\\bkrishna\\b',
+    '\\bbuddha\\b',
+  ].join('|'),
+  'i',
+);
+
+/** True when a photo's own content is religious, whatever place it belongs to. */
+export function isReligiousPhoto(photo: {
+  description?: string | null;
+  tags?: readonly string[] | null;
+}): boolean {
+  const text = [photo.description ?? '', ...(photo.tags ?? [])].join(' ');
+  return text.trim() ? RELIGIOUS_SUBJECT.test(text) : false;
+}
+
+/** Drop reason for a photo caught by subject matter rather than by place. */
+export const RELIGIOUS_PHOTO_DROP_REASON =
+  'religious subject matter — excluded from every tour (fair-housing policy)';
