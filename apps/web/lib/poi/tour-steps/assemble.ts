@@ -24,22 +24,31 @@ export async function runAssemble(
   }
   const dropped = photosStep?.dropped ?? [];
 
-  // How many planned shots have no rendered clip yet. The worker skips a shot
-  // whose clip is missing, so without this the film just comes up short with
-  // nothing anywhere saying why — that is exactly how a 29-clip tour shipped as
-  // 19 clips in phase69.
+  // How many planned shots will be MISSING from the film.
+  //
+  // A shot is missing only when its photo has no ready clip AT ALL. The
+  // planned engine not being rendered is not enough: the worker falls back —
+  // seedance first, then the planned engine, then any ready row — so a photo
+  // planned for Ken Burns still renders from the DepthFlow or Seedance clip it
+  // already has (owner 2026-08-20: "do we have other render clips, we should
+  // use what we have"; it already did).
+  //
+  // Counting exact photo+engine matches, which is what this first did, would
+  // have warned about two Aberdeen shots that render perfectly well — one of
+  // them from a Seedance clip already paid for.
+  //
+  // The warning still matters: the worker SKIPS a photo with nothing ready and
+  // says so only in its own log, which is how a 29-clip tour shipped as 19 in
+  // phase69.
   const planned = shots as Array<{ photo_id: string; engine: string }>;
   const photoIds = [...new Set(planned.map((sh) => sh.photo_id))];
   const { data: clipRows } = (await sb
     .from('photo_clips')
-    .select('photo_id, engine, status')
-    .in('photo_id', photoIds)) as {
-    data: Array<{ photo_id: string; engine: string; status: string }> | null;
-  };
-  const ready = new Set(
-    (clipRows ?? []).filter((c) => c.status === 'ready').map((c) => `${c.photo_id}:${c.engine}`),
-  );
-  const notReady = planned.filter((sh) => !ready.has(`${sh.photo_id}:${sh.engine}`)).length;
+    .select('photo_id, status')
+    .in('photo_id', photoIds)
+    .eq('status', 'ready')) as { data: Array<{ photo_id: string }> | null };
+  const haveSomething = new Set((clipRows ?? []).map((c) => c.photo_id));
+  const notReady = planned.filter((sh) => !haveSomething.has(sh.photo_id)).length;
 
   if (approve) {
     const { error: insErr } = await sb.from('tour_assemblies').insert({
