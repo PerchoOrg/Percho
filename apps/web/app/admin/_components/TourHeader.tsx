@@ -1,12 +1,17 @@
 'use client';
 
 /**
- * TourHeader — community facts on the left, the latest cut on the right.
+ * TourHeader — the community and how it was sourced (left), latest cut (right).
  *
  * Owner 2026-08-19: "on top show community information on the left, and show
- * latest generated video on the right". Replaces a full-width video panel that
- * pushed everything else below the fold, and a header that carried only the
- * name.
+ * latest generated video on the right", then: "a lot of empty on the top left
+ * box, you can move 1) and 2) to this area."
+ *
+ * So Research and Resolve live HERE, not in the step strip below. They are the
+ * right shape for it: both are about establishing WHICH PLACES this community
+ * has — the same question the facts beside them answer — and neither is
+ * something you touch again once it has run. The strip below is the production
+ * line, and it now starts where the photos do.
  *
  * The video column is fixed-width and the info column flexes, because the
  * video's width is not negotiable — it is a portrait player at the render
@@ -15,7 +20,9 @@
 
 import { streamIframeUrl } from '@/lib/cloudflare/stream';
 import { CANVAS_H, CANVAS_W } from '@/lib/poi/tour-orchestrator/scheduler';
+import { Check, Loader2, Play } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import type { StepState } from './TourStepStrip';
 
 interface AssemblyRow {
   id: string;
@@ -39,6 +46,12 @@ export function TourHeader({
   kind,
   photoCount,
   poiCount,
+  researchState,
+  resolveState,
+  researchSummary,
+  resolveSummary,
+  busy,
+  onRun,
 }: {
   communityId: string;
   communityName: string;
@@ -51,6 +64,13 @@ export function TourHeader({
   kind: string | null;
   photoCount: number;
   poiCount: number;
+  researchState: StepState;
+  resolveState: StepState;
+  /** One line each, e.g. "14 candidates" — null before the step has run. */
+  researchSummary: string | null;
+  resolveSummary: string | null;
+  busy: boolean;
+  onRun: (step: 'research' | 'resolve') => void;
 }) {
   const [rows, setRows] = useState<AssemblyRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -108,8 +128,30 @@ export function TourHeader({
           />
         </dl>
 
+        {/* Sourcing — how this community got its list of places. */}
+        <div className="mt-4 grid gap-2 border-line border-t pt-4 sm:grid-cols-2">
+          <SourcingStep
+            n={1}
+            label="Agent Research"
+            hint="Gemini finds the places"
+            state={researchState}
+            summary={researchSummary}
+            busy={busy}
+            onRun={() => onRun('research')}
+          />
+          <SourcingStep
+            n={2}
+            label="Resolve & Merge"
+            hint="Google Places firewall"
+            state={resolveState}
+            summary={resolveSummary}
+            busy={busy}
+            onRun={() => onRun('resolve')}
+          />
+        </div>
+
         {slug && (
-          <div className="mt-4 border-line border-t pt-3 text-xs text-ink2">
+          <div className="mt-3 text-ink2 text-xs">
             slug <code className="text-ink">{slug}</code>
           </div>
         )}
@@ -169,6 +211,60 @@ function Fact({ label, value }: { label: string; value: string }) {
     <div>
       <dt className="text-[11px] text-ink2 uppercase tracking-wide">{label}</dt>
       <dd className="mt-0.5 font-medium text-ink text-sm tabular-nums">{value}</dd>
+    </div>
+  );
+}
+
+/** One of the two sourcing steps: state, what it produced, and a Run button. */
+function SourcingStep({
+  n,
+  label,
+  hint,
+  state,
+  summary,
+  busy,
+  onRun,
+}: {
+  n: number;
+  label: string;
+  hint: string;
+  state: StepState;
+  summary: string | null;
+  busy: boolean;
+  onRun: () => void;
+}) {
+  return (
+    <div
+      className={`rounded-xl border px-3 py-2 ${
+        state === 'failed'
+          ? 'border-red-400/50 bg-red-50'
+          : state === 'done'
+            ? 'border-emerald-600/25 bg-emerald-600/5'
+            : 'border-line bg-bg'
+      }`}
+    >
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-1.5">
+          {state === 'running' ? (
+            <Loader2 size={12} className="animate-spin text-ink2" />
+          ) : state === 'done' ? (
+            <Check size={12} className="text-emerald-600" />
+          ) : (
+            <span className="inline-block h-3 w-3 rounded-full border border-ink2/30" />
+          )}
+          <span className="font-medium text-ink text-xs">{`${n} · ${label}`}</span>
+        </div>
+        <button
+          type="button"
+          onClick={onRun}
+          disabled={busy}
+          className="inline-flex items-center gap-1 rounded-md border border-line bg-surface px-2 py-0.5 text-[11px] text-ink hover:border-ink2 disabled:cursor-not-allowed disabled:text-muted"
+        >
+          <Play size={10} aria-hidden />
+          {state === 'done' ? 'Re-run' : 'Run'}
+        </button>
+      </div>
+      <div className="mt-1 text-[11px] text-ink2">{summary ?? hint}</div>
     </div>
   );
 }

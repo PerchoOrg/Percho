@@ -25,28 +25,43 @@
 
 import { AlertCircle, Check, Loader2, Play } from 'lucide-react';
 
-export type StepName = 'research' | 'resolve' | 'photos' | 'plan' | 'assemble';
+export type StepName = 'research' | 'resolve' | 'photos' | 'plan' | 'generate' | 'assemble';
+
+/** `review` is the human gate — it has no server step, so it never runs. */
+export type StripStep = 'photos' | 'review' | 'plan' | 'generate' | 'assemble';
 
 export interface StepSpec {
-  name: StepName;
+  name: StripStep;
   label: string;
   /** One line, shown under the chip. Keep it to what the step DOES. */
   hint: string;
 }
 
+/**
+ * The production line, starting at the photos.
+ *
+ * Research and Resolve are NOT here — they moved into `TourHeader` beside the
+ * community facts (owner 2026-08-19: "you can move 1) and 2) to this area…
+ * then next section starts with fetch and tag, review, plan, render, and
+ * assembly"). They belong there: both answer "which places does this community
+ * have", and neither is touched again once it has run.
+ *
+ * `review` is a chip with no Run button. Making the gate a visible stage is
+ * the point — it is a stage of the work, not an absence of one.
+ */
 export const TOUR_STEPS: StepSpec[] = [
-  { name: 'research', label: 'Research', hint: 'Gemini finds the places' },
-  { name: 'resolve', label: 'Resolve', hint: 'Google Places firewall' },
   { name: 'photos', label: 'Fetch & Tag', hint: 'photos, enhance, initial filter' },
-  { name: 'plan', label: 'Plan Shots', hint: 'after your review' },
-  { name: 'assemble', label: 'Assemble', hint: 'render the film' },
+  { name: 'review', label: 'Review', hint: 'yours — approve/reject in the table' },
+  { name: 'plan', label: 'Plan', hint: 'shot list from what survived' },
+  { name: 'generate', label: 'Render', hint: 'a clip for every shot' },
+  { name: 'assemble', label: 'Assemble', hint: 'stitch the film' },
 ];
 
 /**
  * The steps a machine may run unattended.
  *
- * Everything up to the owner's photo review. `plan` and `assemble` are
- * deliberately outside it — see the review gate in `tour-steps/photos.ts`.
+ * Everything up to the owner's photo review, and nothing after it — see the
+ * review gate in `tour-steps/photos.ts`.
  */
 export const AUTOMATABLE_STEPS: StepName[] = ['research', 'resolve', 'photos'];
 
@@ -62,7 +77,7 @@ export function TourStepStrip({
   error,
 }: {
   steps?: StepSpec[];
-  stateOf: (s: StepName) => StepState;
+  stateOf: (s: StripStep) => StepState;
   running: StepName | null;
   /** True once `photos` has finished and `plan` has not run. */
   awaitingReview: boolean;
@@ -90,9 +105,10 @@ export function TourStepStrip({
         {steps.map((s, i) => {
           const state = stateOf(s.name);
           const isRunning = running === s.name;
-          // The gate is drawn as part of the chip that follows it, so the stop
-          // is visible in the strip itself rather than only in a banner below.
-          const gated = s.name === 'plan' && awaitingReview;
+          // The Review chip highlights while it is the thing blocking, so the
+          // stop reads as a stage of the work rather than an absence of one.
+          const gated = s.name === 'review' && awaitingReview;
+          const runnable = s.name !== 'review';
           return (
             <li key={s.name} className="flex items-stretch gap-2">
               {i > 0 && <span className="self-center text-ink2/40">→</span>}
@@ -114,15 +130,21 @@ export function TourStepStrip({
                 <div className="mt-0.5 text-[11px] text-ink2">
                   {gated ? 'waiting on you' : s.hint}
                 </div>
-                <button
-                  type="button"
-                  onClick={() => onRun(s.name)}
-                  disabled={!!running}
-                  className="mt-1.5 inline-flex items-center gap-1 rounded-md border border-line bg-surface px-2 py-0.5 text-[11px] text-ink hover:border-ink2 disabled:cursor-not-allowed disabled:text-muted"
-                >
-                  <Play size={10} aria-hidden />
-                  {state === 'done' ? 'Re-run' : 'Run'}
-                </button>
+                {runnable ? (
+                  <button
+                    type="button"
+                    onClick={() => onRun(s.name as StepName)}
+                    disabled={!!running}
+                    className="mt-1.5 inline-flex items-center gap-1 rounded-md border border-line bg-surface px-2 py-0.5 text-[11px] text-ink hover:border-ink2 disabled:cursor-not-allowed disabled:text-muted"
+                  >
+                    <Play size={10} aria-hidden />
+                    {state === 'done' ? 'Re-run' : 'Run'}
+                  </button>
+                ) : (
+                  <div className="mt-1.5 h-[19px] text-[11px] text-ink2/70">
+                    {state === 'done' ? 'done' : gated ? 'in the table below' : '—'}
+                  </div>
+                )}
               </div>
             </li>
           );
