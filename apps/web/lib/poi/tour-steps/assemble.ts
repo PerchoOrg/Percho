@@ -24,6 +24,23 @@ export async function runAssemble(
   }
   const dropped = photosStep?.dropped ?? [];
 
+  // How many planned shots have no rendered clip yet. The worker skips a shot
+  // whose clip is missing, so without this the film just comes up short with
+  // nothing anywhere saying why — that is exactly how a 29-clip tour shipped as
+  // 19 clips in phase69.
+  const planned = shots as Array<{ photo_id: string; engine: string }>;
+  const photoIds = [...new Set(planned.map((sh) => sh.photo_id))];
+  const { data: clipRows } = (await sb
+    .from('photo_clips')
+    .select('photo_id, engine, status')
+    .in('photo_id', photoIds)) as {
+    data: Array<{ photo_id: string; engine: string; status: string }> | null;
+  };
+  const ready = new Set(
+    (clipRows ?? []).filter((c) => c.status === 'ready').map((c) => `${c.photo_id}:${c.engine}`),
+  );
+  const notReady = planned.filter((sh) => !ready.has(`${sh.photo_id}:${sh.engine}`)).length;
+
   if (approve) {
     const { error: insErr } = await sb.from('tour_assemblies').insert({
       community_id: run.community_id,
@@ -34,12 +51,12 @@ export async function runAssemble(
     });
     if (insErr) return { error: 'insert_failed', message: (insErr as { message: string }).message };
     await setRunStatus(sb, run.id, 'assembled');
-    await saveStep(sb, run, 'assemble', { approved: true, ordered: shots, dropped });
-    return { approved: true, ordered: shots, dropped };
+    await saveStep(sb, run, 'assemble', { approved: true, ordered: shots, dropped, notReady });
+    return { approved: true, ordered: shots, dropped, notReady };
   }
 
-  await saveStep(sb, run, 'assemble', { approved: false, ordered: shots, dropped });
-  return { approved: false, ordered: shots, dropped };
+  await saveStep(sb, run, 'assemble', { approved: false, ordered: shots, dropped, notReady });
+  return { approved: false, ordered: shots, dropped, notReady };
 }
 
 // ─── dispatcher ─────────────────────────────────────────────────────────────
