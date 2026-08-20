@@ -94,3 +94,46 @@ describe('selectSurroundingPois', () => {
     expect(new Set(kept.map(bucketOf)).size).toBeGreaterThan(1);
   });
 });
+
+describe('hand-picked POIs', () => {
+  it('seats a hand-picked POI before incumbents and before score', () => {
+    const ids = ['dining:9', 'shopping:8', 'outdoor:7', 'pets:1'];
+    const kept = selectSurroundingPois({
+      surrounding: ids,
+      bucketOf,
+      scoreOf,
+      incumbents: new Set(['dining:9', 'shopping:8', 'outdoor:7']),
+      handPicked: new Set(['pets:1']),
+      budget: 2,
+    });
+    // The owner's pick is in even though three incumbents outrank it.
+    expect(kept).toContain('pets:1');
+    expect(kept).toHaveLength(2);
+  });
+
+  it('does not seat the same POI twice when it is both', () => {
+    const ids = ['dining:9', 'shopping:8'];
+    const kept = selectSurroundingPois({
+      surrounding: ids,
+      bucketOf,
+      scoreOf,
+      incumbents: new Set(['dining:9']),
+      handPicked: new Set(['dining:9']),
+      budget: 5,
+    });
+    expect(kept.filter((id) => id === 'dining:9')).toHaveLength(1);
+  });
+
+  it('still honours the budget when hand-picks alone exceed it', () => {
+    const ids = ['a:5', 'b:5', 'c:5', 'd:5'];
+    const kept = selectSurroundingPois({
+      surrounding: ids,
+      bucketOf,
+      scoreOf,
+      incumbents: new Set(),
+      handPicked: new Set(ids),
+      budget: 2,
+    });
+    expect(kept).toHaveLength(2);
+  });
+});

@@ -141,7 +141,7 @@ export async function computeFinalShots(
   const { data: photosRaw } = (await sb
     .from('poi_photos')
     .select(
-      'id, poi_id, status, source, ai_tags, ai_score, storage_path, enhanced_path, enhanced_status, enhanced_meta, created_at, width_px, height_px, curator_tags, curator_version',
+      'id, poi_id, status, reviewed_by, source, ai_tags, ai_score, storage_path, enhanced_path, enhanced_status, enhanced_meta, created_at, width_px, height_px, curator_tags, curator_version',
     )
     .in('poi_id', poiIds)
     .order('created_at', { ascending: false, nullsFirst: false })) as {
@@ -149,6 +149,7 @@ export async function computeFinalShots(
       id: string;
       poi_id: string;
       status: string | null;
+      reviewed_by: string | null;
       source: string | null;
       ai_tags: Record<string, unknown> | null;
       ai_score: number | null;
@@ -261,8 +262,15 @@ export async function computeFinalShots(
     // CLIPS_BY_BUCKET already encodes the intent per kind of place, and its
     // default is 2, so every bucket that is not amenities or schools keeps
     // exactly the allowance it had.
+    // Two kinds of "picked by a person", and both outrank a Places photo:
+    // one the owner approved in the review, and one an admin ingested from the
+    // community's own site. His explicit approval also survives the per-POI
+    // cap below — a verdict he gave by hand is not a candidate to be ranked
+    // (owner 2026-08-20: "the photos i manually approved are not in the plan").
+    const ownerApproved = (r: (typeof ranked)[number]) =>
+      !!r.reviewed_by && r.status === 'approved';
     const handPicked = (r: (typeof ranked)[number]) =>
-      r.source === 'community_site' && r.status !== 'rejected';
+      ownerApproved(r) || (r.source === 'community_site' && r.status !== 'rejected');
     const allowed = clipsAllowedFor(buckets?.get(arr[0]!.poi_id));
     // One ESTABLISHING frame is promoted ahead of the score order.
     //
@@ -279,10 +287,15 @@ export async function computeFinalShots(
       );
     const lead = ranked.find((r) => establishing(r) && !handPicked(r));
     const places = ranked.filter((r) => !handPicked(r) && r !== lead);
-    const kept = [...ranked.filter(handPicked), ...(lead ? [lead] : []), ...places].slice(
-      0,
-      allowed,
-    );
+    // The owner's own approvals are not subject to `allowed`. The cap exists to
+    // stop a POI monopolising the film with interchangeable Places photos; it
+    // has no business overruling someone who looked at the frame and said yes.
+    const mine = ranked.filter(ownerApproved);
+    const rest = [...ranked.filter((r) => handPicked(r) && !ownerApproved(r))];
+    const kept = [
+      ...mine,
+      ...[...rest, ...(lead ? [lead] : []), ...places].slice(0, Math.max(0, allowed - mine.length)),
+    ];
     const keptIds = new Set(kept.map((r) => r.id));
     photos.push(...kept);
     // Owner 2026-08-17: "另外一张放到drop table里并说明原因" — every photo
