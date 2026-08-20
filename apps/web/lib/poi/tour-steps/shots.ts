@@ -106,19 +106,17 @@ export async function computeFinalShots(
   // usable (tagger verdict) first, then hand-picked over Places, then
   // ai_score, then newest as tiebreak.
   //
-  // Two caps, because the two sources are not comparable. Places photos
-  // arrive three-at-a-time from a generic listing and are largely
-  // interchangeable, so two is plenty (owner 2026-08-17: "同一个poi最多2张
-  // 照片"). Photos from the community's own site were chosen by a human and
-  // reviewed one by one, so they get three.
+  // The allowance per POI is CLIPS_BY_BUCKET and nothing else. A separate cap
+  // of two on Places photos used to sit alongside it (owner 2026-08-17:
+  // "同一个poi最多2张照片"), from when every bucket was allowed two anyway; once
+  // CLIPS_BY_BUCKET started varying by kind of place the two disagreed and the
+  // smaller won silently. See the ranking below.
   //
-  // Three, not unlimited. "都采纳 不受限制" (owner 2026-08-18) was set when
+  // Bounded, not unlimited. "都采纳 不受限制" (owner 2026-08-18) was set when
   // clips of one POI were scattered through the film; now that a POI plays as
   // one contiguous block, six pool photos are fifteen unbroken seconds of
   // pool, and the owner called it (2026-08-19: "too many pool pictures … limit
   // the number of same thing to 3").
-  /** Most Places photos one POI may contribute. */
-  const POI_PHOTO_CAP = 2;
   /**
    * Tagger categories that show a place as a whole rather than a detail of it.
    * One of these is promoted to lead its POI — see the ranking below.
@@ -181,10 +179,17 @@ export async function computeFinalShots(
       if (score !== 0) return score;
       return (b.created_at ?? '').localeCompare(a.created_at ?? '');
     });
-    // Three clips per POI, whatever the mix. Hand-picked photos rank first so
-    // they fill the slots; Places photos contribute at most two, which is the
-    // cap they always had. A POI with three good website photos shows three;
-    // one with only a Places listing still shows two.
+    // ONE cap per POI: `clipsAllowedFor`. Hand-picked photos still rank first
+    // so they fill the slots ahead of generic Places frames.
+    //
+    // There used to be a second, independent cap of two on Places photos. With
+    // both in force a school — whose photos are all from Places — could never
+    // reach the three clips CLIPS_BY_BUCKET grants it, so Lambert High showed
+    // two frames when the owner had just asked for a third. The two caps said
+    // different things about the same number and the smaller silently won.
+    // CLIPS_BY_BUCKET already encodes the intent per kind of place, and its
+    // default is 2, so every bucket that is not amenities or schools keeps
+    // exactly the allowance it had.
     const handPicked = (r: (typeof ranked)[number]) =>
       r.source === 'community_site' && r.status !== 'rejected';
     const allowed = clipsAllowedFor(buckets?.get(arr[0]!.poi_id));
@@ -205,7 +210,7 @@ export async function computeFinalShots(
     const places = ranked.filter((r) => !handPicked(r) && r !== lead);
     const kept = [...ranked.filter(handPicked), ...(lead ? [lead] : []), ...places].slice(
       0,
-      Math.min(allowed, ranked.filter(handPicked).length + POI_PHOTO_CAP),
+      allowed,
     );
     const keptIds = new Set(kept.map((r) => r.id));
     photos.push(...kept);
