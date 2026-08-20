@@ -1482,6 +1482,25 @@ ENHANCE_GROUP_MAX = 24
 ENHANCE_TIMEOUT_SEC = 300     # per photo in the group
 
 
+def _enhance_select(table: str) -> str:
+    """Columns to claim with, per table.
+
+    The reframe columns exist ONLY on `poi_photos` — outpainting is a
+    community-tour feature and `20260819100000_poi_photos_outpaint.sql` altered
+    that table alone. Asking `listing_photos` for them is a PostgREST 400, and
+    because `listing_photos` is first in `ENHANCE_TABLES` that 400 raised before
+    `poi_photos` was ever polled: it killed the enhance loop for BOTH tables
+    from phase71 until this fix, with photos sitting in `queued` and no error
+    recorded against any of them.
+    """
+    cols = ["id", "storage_path", "enhanced_preset"]
+    if table == "poi_photos":
+        cols += ["outpainted_path", "outpaint_status"]
+    if table == "listing_photos":
+        cols += ["listing_id"]
+    return ",".join(cols)
+
+
 def claim_enhance_job() -> tuple[str, list[dict[str, Any]]] | None:
     """Claim a GROUP of queued photos. Returns (table, rows).
 
@@ -1491,11 +1510,11 @@ def claim_enhance_job() -> tuple[str, list[dict[str, Any]]] | None:
     a time. It also amortises the 66 MB Real-ESRGAN model load across the group.
     """
     for table in ENHANCE_TABLES:
+        select = _enhance_select(table)
         rows = sb_get(
             table,
             {
-                "select": "id,storage_path,enhanced_preset,outpainted_path,outpaint_status"
-                          + (",listing_id" if table == "listing_photos" else ""),
+                "select": select,
                 "enhanced_status": "eq.queued",
                 "order": "id.asc",
                 "limit": "1",
@@ -1507,7 +1526,7 @@ def claim_enhance_job() -> tuple[str, list[dict[str, Any]]] | None:
         group = [first]
         if table == "listing_photos" and first.get("listing_id"):
             group = sb_get(table, {
-                "select": "id,storage_path,enhanced_preset,outpainted_path,outpaint_status,listing_id",
+                "select": select,
                 "enhanced_status": "eq.queued",
                 "listing_id": f"eq.{first['listing_id']}",
                 "order": "id.asc",
