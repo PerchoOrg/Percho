@@ -10,11 +10,19 @@ import { computeFinalShots } from './shots';
 /**
  * How many places outside the community a film may visit.
  *
- * Derived from the runtime, not chosen: the tour targets 45-90s, a place gets
- * up to 3 clips, and a clip runs 2-4.5s. Ten surrounding places plus the
- * community's own amenities lands inside that; twenty-two produced 96s.
+ * 15 since 2026-08-20 (owner). It was 10, derived from the runtime — the tour
+ * targets 45-90s, a place gets up to 3 clips, and a clip runs 2-4.5s — but
+ * priority now claims most of it: seven POIs carrying a hand-approved photo
+ * plus six incumbents is thirteen before a single new candidate is considered,
+ * so at 10 the film would have dropped three places it was already using.
+ *
+ * The runtime does not stretch to match. `fitDuration` shortens clips toward
+ * their floor to stay under TOUR_TARGET_MAX_S, and raises
+ * `tour_duration_off_target` when even the floors overshoot. So the cost of a
+ * bigger budget is paid in seconds per clip, and the warning is where it shows
+ * up — watch it rather than assuming 15 places fit.
  */
-const SURROUNDING_POI_BUDGET = 10;
+const SURROUNDING_POI_BUDGET = 15;
 
 /**
  * Slots reserved for schools, before every other kind of place competes.
@@ -308,49 +316,18 @@ export async function runPhotos(sb: TourDb, run: RunRow, actor: PoiActor = 'user
   // centre at 0.7 mi over three parks and the high school — near is not the
   // same as worth filming. `resolve` already scored each POI on bucket weight,
   // distance, confidence and photo count, so that is the rank used here.
-  const amenityIds = resolvedPoiIds.filter((id) => bucketByPoiId.get(id) === 'amenities');
-  const surrounding = resolvedPoiIds.filter((id) => bucketByPoiId.get(id) !== 'amenities');
-  if (surrounding.length > SURROUNDING_POI_BUDGET) {
-    const scoreByPoi = new Map<string, number>();
-    for (const poi of resolve.resolved) {
-      const id = placeIdToPoiId.get(poi.place_id);
-      if (id && typeof poi.score === 'number') scoreByPoi.set(id, poi.score);
-    }
-    const { data: approvedPhotos } = (await sb
-      .from('poi_photos')
-      .select('poi_id, reviewed_by')
-      .in('poi_id', surrounding)
-      .eq('status', 'approved')) as {
-      data: Array<{ poi_id: string; reviewed_by: string | null }> | null;
-    };
-
-    // A photo the owner approved BY HAND pulls its POI into the budget.
-    //
-    // Approving is the strongest signal in the system and it was the weakest:
-    // it ranked behind incumbency, score and the per-bucket round-robin, so
-    // seven photos he approved were not merely outranked — their POIs never
-    // entered the competition, and the drop list could not even say why,
-    // because nothing had considered them (owner 2026-08-20: "the photos i
-    // manually approved are not in the plan").
-    //
-    // `reviewed_by` is what separates his verdict from the plan's own: only
-    // the review action sets it, while `runPlan` stamps 'approved' with it
-    // null. Without that column the two are indistinguishable and this would
-    // pin every POI the last cut used.
-    const handPicked = new Set(
-      (approvedPhotos ?? []).filter((r) => r.reviewed_by).map((r) => r.poi_id),
-    );
-
-    const kept = selectSurroundingPois({
-      surrounding,
-      bucketOf: (id) => bucketByPoiId.get(id) ?? 'other',
-      scoreOf: (id) => scoreByPoi.get(id) ?? 0,
-      incumbents: new Set((approvedPhotos ?? []).map((r) => r.poi_id)),
-      handPicked,
-    });
-    resolvedPoiIds.length = 0;
-    resolvedPoiIds.push(...amenityIds, ...kept);
-  }
+  // NO BUDGET HERE. This step saves the full candidate set; `runPlan` picks
+  // which of them the film visits.
+  //
+  // The budget used to be applied here, which put it BEFORE the owner's review
+  // — so a photo he approved could not influence which places made the cut
+  // until the whole photos step was re-run. Seven of his approvals sat on POIs
+  // that `plan` never even loaded, and re-running plan changed nothing, because
+  // plan was only reading a list this step had already frozen (owner
+  // 2026-08-20: "the approved ones still dont have plan").
+  //
+  // Selection belongs after the gate for the same reason planning does: it is a
+  // decision the review is supposed to inform.
 
   // Save progress before the slow half. This step now runs for minutes —
   // fetch, then enhance, then a Gemini tag per photo, then the whole
@@ -522,15 +499,46 @@ export async function runPlan(sb: TourDb, run: RunRow) {
   // while he is in there.
   const { data: links } = (await sb
     .from('community_pois')
-    .select('poi_id, intent_bucket')
+    .select('poi_id, intent_bucket, ai_score')
     .eq('community_id', run.community_id)) as {
-    data: Array<{ poi_id: string; intent_bucket: string | null }> | null;
+    data: Array<{ poi_id: string; intent_bucket: string | null; ai_score: number | null }> | null;
   };
   const bucketByPoiId = new Map<string, string>(
     (links ?? []).map((l) => [l.poi_id, l.intent_bucket ?? 'other']),
   );
 
-  const { shots, dropped, plan } = await computeFinalShots(sb, resolvedPoiIds, bucketByPoiId);
+  // THE BUDGET, applied HERE so the owner's review counts toward it. Amenities
+  // are the community's own and never compete; the surrounding places do.
+  const amenityIds = resolvedPoiIds.filter((id) => bucketByPoiId.get(id) === 'amenities');
+  const surrounding = resolvedPoiIds.filter((id) => bucketByPoiId.get(id) !== 'amenities');
+  let cutPoiIds = resolvedPoiIds;
+  if (surrounding.length > SURROUNDING_POI_BUDGET) {
+    const { data: approvedPhotos } = (await sb
+      .from('poi_photos')
+      .select('poi_id, reviewed_by')
+      .in('poi_id', surrounding)
+      .eq('status', 'approved')) as {
+      data: Array<{ poi_id: string; reviewed_by: string | null }> | null;
+    };
+    const scoreByPoi = new Map<string, number>();
+    for (const l of links ?? []) {
+      if (typeof l.ai_score === 'number') scoreByPoi.set(l.poi_id, l.ai_score);
+    }
+    cutPoiIds = [
+      ...amenityIds,
+      ...selectSurroundingPois({
+        surrounding,
+        bucketOf: (id) => bucketByPoiId.get(id) ?? 'other',
+        scoreOf: (id) => scoreByPoi.get(id) ?? 0,
+        incumbents: new Set((approvedPhotos ?? []).map((r) => r.poi_id)),
+        handPicked: new Set(
+          (approvedPhotos ?? []).filter((r) => r.reviewed_by).map((r) => r.poi_id),
+        ),
+      }),
+    ];
+  }
+
+  const { shots, dropped, plan } = await computeFinalShots(sb, cutPoiIds, bucketByPoiId);
 
   // Queue reframing — AFTER selection, so it only runs on photos that reach
   // the film. Aberdeen has 103 photos linked but 29 in the cut, of which 21
@@ -570,7 +578,7 @@ export async function runPlan(sb: TourDb, run: RunRow) {
   const { data: candidates } = (await sb
     .from('poi_photos')
     .select('id, width_px, height_px, enhanced_status, enhanced_meta, outpaint_status')
-    .in('poi_id', resolvedPoiIds)
+    .in('poi_id', cutPoiIds)
     .neq('status', 'rejected')) as {
     data: Array<{
       id: string;
@@ -616,7 +624,7 @@ export async function runPlan(sb: TourDb, run: RunRow) {
   const { data: current } = (await sb
     .from('poi_photos')
     .select('id, status')
-    .in('poi_id', resolvedPoiIds)) as { data: Array<{ id: string; status: string | null }> | null };
+    .in('poi_id', cutPoiIds)) as { data: Array<{ id: string; status: string | null }> | null };
   const promote = (current ?? [])
     .filter((r) => chosen.has(r.id) && r.status !== 'approved')
     .map((r) => r.id);
@@ -639,6 +647,7 @@ export async function runPlan(sb: TourDb, run: RunRow) {
   await saveStep(sb, run, 'photos', {
     ...photosStep,
     phase: 'done',
+    cut_poi_ids: cutPoiIds,
     outpaint_queued: outpaintCandidates.length,
     shots,
     dropped,
