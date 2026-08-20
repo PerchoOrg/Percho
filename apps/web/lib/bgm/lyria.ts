@@ -23,7 +23,7 @@
  * Output is 44.1kHz stereo MP3 carrying an inaudible SynthID watermark.
  */
 
-import type { BgmVibe } from './storage';
+import type { BgmEnergy, BgmVibe } from './storage';
 
 export const LYRIA_MODEL = process.env.GEMINI_MUSIC_MODEL ?? 'lyria-3-pro-preview';
 const INTERACTIONS_URL = 'https://generativelanguage.googleapis.com/v1beta/interactions';
@@ -48,37 +48,48 @@ no key changes, no big finish. Nothing should ever pull attention away from a sp
 Leave the mid-range uncluttered so a voice sits above it.`;
 
 interface VibePreset {
-  /** What this vibe sounds like. Joined with BED_RULES. */
+  /** The instruments. What the folder is named after. */
   brief: string;
-  /** Filename stem for generated tracks, before the date and id. */
+  /** Filename stem for generated tracks. */
   slug: string;
 }
 
 export const LYRIA_PRESETS: Record<BgmVibe, VibePreset> = {
-  'warm-acoustic': {
-    slug: 'warm',
-    brief: `Warm acoustic. Fingerpicked acoustic guitar, soft ukulele, light hand percussion,
-gentle upright bass. Major key, unhurried, around 90 BPM. Friendly and settled — the feeling of
-a familiar neighbourhood on a weekend morning. Never triumphant, never sentimental.`,
+  acoustic: {
+    slug: 'acoustic',
+    brief: `Acoustic. Fingerpicked acoustic guitar, soft ukulele, light hand percussion,
+gentle upright bass. Major key. Warm and human — the feeling of a familiar street with
+trees on it. Never sentimental.`,
   },
-  'modern-corporate': {
-    slug: 'modern',
-    brief: `Clean and modern. Simple piano figure over soft synth pads, light muted percussion,
-occasional plucked synth. Major key, around 100 BPM. Optimistic but restrained and professional.
-No orchestral hits, no cinematic risers, no motivational-video clichés.`,
+  piano: {
+    slug: 'piano',
+    brief: `Piano. Felt or lightly damped piano, soft sustained strings, air and space,
+very little percussion. Considered and unhurried. Melody matters less than the room
+around it.`,
   },
-  'luxury-ambient': {
-    slug: 'luxury',
-    brief: `Spacious and quiet. Sparse felt piano, soft sustained strings, generous reverb, very
-little percussion. Slow, around 70 BPM. Calm, expensive, unhurried. Restraint is the point — long
-notes and space rather than melody. Not sad, not somber.`,
-  },
-  'chill-electronic': {
-    slug: 'chill',
-    brief: `Organic electronic. Mellow analog-sounding synths, soft filtered beat, warm sub bass,
-light textural noise. Around 95 BPM. Relaxed and urban. Not lo-fi jazz, no vinyl crackle,
+  electronic: {
+    slug: 'electronic',
+    brief: `Electronic. Mellow analog-sounding synths, soft filtered beat, warm sub bass,
+light textural noise. Contemporary and relaxed. Not lo-fi jazz, no vinyl crackle,
 no trap hats, no EDM.`,
   },
+};
+
+/**
+ * How much the music moves, as a phrase for the prompt.
+ *
+ * The axis that separates a restrained high-end film from a warm entry-level
+ * one built out of the same instruments. It used to be smuggled into the
+ * folder name — "luxury-ambient" and "modern-corporate" were both piano, and
+ * only the energy differed.
+ */
+const ENERGY_BRIEF: Record<BgmEnergy, string> = {
+  still: `Very restrained. Slow, around 70 BPM. Long notes, plenty of silence between
+phrases, minimal rhythm. Calm and spacious. Not sad, not somber.`,
+  gentle: `Unhurried but present. Around 90 BPM. A steady gentle pulse, friendly and
+settled, never triumphant.`,
+  moving: `Light forward motion. Around 105 BPM. A clear steady rhythm, bright and
+optimistic — moving, but still even from beginning to end.`,
 };
 
 /** Seconds to `m:ss`. Anything past 0:59 is a different minute, not "0:82". */
@@ -86,7 +97,12 @@ function mmss(total: number): string {
   return `${Math.floor(total / 60)}:${String(Math.round(total % 60)).padStart(2, '0')}`;
 }
 
-export function buildLyriaPrompt(vibe: BgmVibe, seconds: number, extra?: string): string {
+export function buildLyriaPrompt(
+  vibe: BgmVibe,
+  seconds: number,
+  energy: BgmEnergy = 'gentle',
+  extra?: string,
+): string {
   const preset = LYRIA_PRESETS[vibe];
   // A timestamped structure block was present on the call that succeeded and
   // absent on the one the filter blocked. That is one observation, not a
@@ -96,6 +112,8 @@ export function buildLyriaPrompt(vibe: BgmVibe, seconds: number, extra?: string)
   return `${BED_RULES}
 
 ${preset.brief}
+
+${ENERGY_BRIEF[energy]}
 
 Total length about ${seconds} seconds.
 [0:00 - 0:08] Intro: sparse, one or two instruments
@@ -207,13 +225,15 @@ const TAG_MODEL = process.env.GEMINI_VO_MODEL ?? 'gemini-3.5-flash';
  */
 export async function describeTrack(
   vibe: BgmVibe,
+  energy: BgmEnergy = 'gentle',
   extra?: string,
 ): Promise<TrackDescription | null> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) return null;
   const prompt = `A short instrumental background music track was just generated to this brief:
 
-${LYRIA_PRESETS[vibe].brief}${extra?.trim() ? `\nAlso: ${extra.trim()}` : ''}
+${LYRIA_PRESETS[vibe].brief}
+${ENERGY_BRIEF[energy]}${extra?.trim() ? `\nAlso: ${extra.trim()}` : ''}
 
 Give it a name and tags.
 

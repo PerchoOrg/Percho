@@ -1,40 +1,40 @@
 /**
- * BGM Storage helpers — the render-worker background-music library
- * lives in a public Supabase Storage bucket called `bgm`, laid out as:
+ * BGM Storage helpers — the render-worker background-music library lives in a
+ * public Supabase Storage bucket called `bgm`.
  *
  *   bgm/
- *     warm-acoustic/*.mp3
- *     modern-corporate/*.mp3
- *     luxury-ambient/*.mp3
- *     chill-electronic/*.mp3
- * _state/state.json ← rejected-track sidecar (soft-delete)
+ *     acoustic/*.mp3
+ *     piano/*.mp3
+ *     electronic/*.mp3
+ *     _state/state.json   ← review state + per-track metadata
  *
- * bucket created, admin-tab viewer added.
- * Storage is now canonical for the admin UI
- * (add/delete goes through Storage; manifest.json is only used by the
- * render worker for its local mp3 cache — kept in sync via
- * `scripts/render-worker/pull-bgm.sh`).
- * `cinematic` vibe removed (owner: "too somber");
- * per-track "delete" replaced with soft **reject** (mp3 stays in Storage
- * for a possible restore; worker skips downloading it).
+ * THE FOLDER IS THE PALETTE, NOT THE TAXONOMY (2026-08-20).
+ *
+ * It used to be warm-acoustic / modern-corporate / luxury-ambient /
+ * chill-electronic, which baked a USE CASE into the folder name —
+ * "modern-corporate" describes a stock-music aisle and "luxury-ambient" a
+ * price bracket, so changing which listings got which music meant renaming
+ * Storage. Worse, the mapping never existed: every render, listing and
+ * community alike, called `pick_bgm()` and drew at random from warm-acoustic.
+ * The taxonomy was documentation, not mechanism, which is why replacing it
+ * cost nothing.
+ *
+ * Now the folder says only what the music is made of, and everything that
+ * varies — how energetic it is, whether it can carry a film or must sit under
+ * a voice — is a tag. Mapping rules live in `select.ts`, per product, and can
+ * change without moving a file.
  */
-
 export const BGM_BUCKET = 'bgm';
 
 /**
- * The four vibe buckets, in canonical display order.
+ * The three palettes, in display order. What the music is made of.
  *
- * `cinematic` removed — owner rated the whole bucket "too somber".
- * Tracks were deleted from Storage; the folder is no longer created
- * for new tracks. If you resurrect a similar vibe later, pick a new
- * name to avoid confusion with the archived files.
+ * Three rather than four because the old fourth was a duplicate wearing a
+ * different label: "modern-corporate" (clean piano and pads) and
+ * "luxury-ambient" (sparse felt piano) are the same instruments at different
+ * energies, and energy is a tag now.
  */
-export const BGM_VIBES = [
-  'warm-acoustic',
-  'modern-corporate',
-  'luxury-ambient',
-  'chill-electronic',
-] as const;
+export const BGM_VIBES = ['acoustic', 'piano', 'electronic'] as const;
 
 export type BgmVibe = (typeof BGM_VIBES)[number];
 
@@ -42,27 +42,30 @@ export function isBgmVibe(v: string): v is BgmVibe {
   return (BGM_VIBES as readonly string[]).includes(v);
 }
 
-/** Per-vibe descriptive copy (mirrored from docs/bgm/vibe-map.md). */
+/**
+ * How much the music moves. The axis that used to be smuggled into the folder
+ * name, and the one that separates a restrained high-end film from a warm
+ * entry-level one built out of the same instruments.
+ */
+export const BGM_ENERGIES = ['still', 'gentle', 'moving'] as const;
+export type BgmEnergy = (typeof BGM_ENERGIES)[number];
+
+/** Per-palette descriptive copy. Says what it sounds like, not what it is for. */
 export const BGM_VIBE_META: Record<BgmVibe, { label: string; blurb: string; fit: string }> = {
-  'warm-acoustic': {
-    label: 'Warm Acoustic',
-    blurb: 'Acoustic guitar, ukulele, hand percussion. Cozy, human.',
-    fit: 'Single family, cabin, farmhouse, family homes.',
+  acoustic: {
+    label: 'Acoustic',
+    blurb: 'Guitar, ukulele, hand percussion, upright bass. Warm and human.',
+    fit: 'Established neighbourhoods, family homes, anything with trees in it.',
   },
-  'modern-corporate': {
-    label: 'Modern Corporate',
-    blurb: 'Clean piano + light pads, uplifting but restrained.',
-    fit: 'Townhome, condo, new construction, modern homes.',
+  piano: {
+    label: 'Piano',
+    blurb: 'Felt piano, soft strings, air. Considered; the range runs from sparse to bright.',
+    fit: 'High-end and new-build. Sparse at the top of a market, brighter below it.',
   },
-  'luxury-ambient': {
-    label: 'Luxury Ambient',
-    blurb: 'Sparse piano, soft strings, spacious reverb.',
-    fit: '$2M+, estates, high-end condos.',
-  },
-  'chill-electronic': {
-    label: 'Chill Electronic',
-    blurb: 'Organic electronic, mellow beats (not lo-fi jazz).',
-    fit: 'Urban condo, loft, downtown.',
+  electronic: {
+    label: 'Electronic',
+    blurb: 'Mellow analog synth, soft filtered beat, warm sub bass. Contemporary.',
+    fit: 'Urban and walkable — lofts, downtown, communities with nightlife.',
   },
 };
 
@@ -75,16 +78,18 @@ export const BGM_VIBE_META: Record<BgmVibe, { label: string; blurb: string; fit:
 export const BGM_STATE_PATH = '_state/state.json';
 
 /**
- * How a track is used, which is the one thing the two products cannot share.
+ * How a track is used. Follows THE FILM, not the product.
  *
- * A community tour now carries narration over most of its length, so its music
- * has to be a BED: steady, mid-range clear, never surging. A listing video has
- * no voice on it, so its music can LEAD — it is allowed shape and dynamics,
- * and a bed under it would be limp.
+ * A narrated film needs a BED: steady, mid-range clear, never surging, because
+ * a swell fights the voice and the ducking compressor rides the voice rather
+ * than the music. A film with no voice on it can take a LEAD, which is allowed
+ * shape and dynamics; a bed under it would be limp.
  *
- * Owner 2026-08-20 asked whether music should be shared between listings and
- * communities or customised. The character (the vibe) is shared; this is not.
- * Modelling it as a tag rather than four more buckets keeps one library.
+ * Community tours are narrated and listing videos are not — today. Owner
+ * 2026-08-20: "listing will have narration in the future, similar to
+ * community." So the selector is asked whether THIS film is narrated rather
+ * than which product it belongs to, and the day listings gain a voice nothing
+ * here has to change.
  */
 export const BGM_ROLES = ['bed', 'lead'] as const;
 export type BgmRole = (typeof BGM_ROLES)[number];
@@ -102,6 +107,7 @@ export type BgmTrackMeta = {
   title: string;
   vibe: BgmVibe;
   role: BgmRole;
+  energy: BgmEnergy;
   /** Free-form descriptors the planner matches on: "calm", "sunlit", "piano". */
   tags: string[];
   /** 'lyria' | 'import' | 'upload' — where it came from. */

@@ -314,7 +314,7 @@ def format_specs(beds: Any, baths: Any, sqft: Any) -> str:
     return " · ".join(parts)
 
 
-DEFAULT_BGM_VIBE = "warm-acoustic"
+DEFAULT_BGM_VIBE = "acoustic"
 
 
 def pick_bgm(vibe: str = DEFAULT_BGM_VIBE) -> Path | None:

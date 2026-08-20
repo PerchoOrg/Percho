@@ -25,7 +25,14 @@ import {
   namedLyriaFilename,
 } from '@/lib/bgm/lyria';
 import { readBgmState, writeBgmState } from '@/lib/bgm/state-store';
-import { BGM_BUCKET, BGM_VIBE_META, type BgmTrackMeta, isBgmVibe } from '@/lib/bgm/storage';
+import {
+  BGM_BUCKET,
+  BGM_ENERGIES,
+  BGM_VIBE_META,
+  type BgmEnergy,
+  type BgmTrackMeta,
+  isBgmVibe,
+} from '@/lib/bgm/storage';
 import { createServiceClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 
@@ -43,6 +50,7 @@ export async function POST(req: Request) {
     vibe?: string;
     count?: number;
     seconds?: number;
+    energy?: string;
     extra?: string;
   } | null;
 
@@ -52,9 +60,12 @@ export async function POST(req: Request) {
   const count = Math.min(MAX_COUNT, Math.max(1, Math.round(body?.count ?? 1)));
   const seconds = Math.min(180, Math.max(30, Math.round(body?.seconds ?? 90)));
   const extra = typeof body?.extra === 'string' ? body.extra.slice(0, 600) : undefined;
+  const energy: BgmEnergy = (BGM_ENERGIES as readonly string[]).includes(body?.energy ?? '')
+    ? (body?.energy as BgmEnergy)
+    : 'gentle';
 
   const svc = createServiceClient();
-  const prompt = buildLyriaPrompt(vibe, seconds, extra);
+  const prompt = buildLyriaPrompt(vibe, seconds, energy, extra);
   const results: Array<{ file: string; title?: string; status: 'ok' | 'error'; error?: string }> =
     [];
   const created: string[] = [];
@@ -67,7 +78,7 @@ export async function POST(req: Request) {
       const track = await generateLyriaTrack(prompt);
       // Named per track, not per batch — four tracks off one prompt are four
       // different pieces of music and should not share a name.
-      const described = await describeTrack(vibe, extra);
+      const described = await describeTrack(vibe, energy, extra);
       const title = described?.title ?? `${BGM_VIBE_META[vibe].label} ${i + 1}`;
       const file = described ? namedLyriaFilename(vibe, title) : lyriaFilename(vibe);
       const { error } = await svc.storage.from(BGM_BUCKET).upload(`${vibe}/${file}`, track.bytes, {
@@ -82,6 +93,7 @@ export async function POST(req: Request) {
         // Everything generated here is prompted as a bed — the fixed half of
         // the prompt forbids swells precisely so it can sit under narration.
         role: 'bed',
+        energy,
         tags: described?.tags ?? [],
         source: 'lyria',
         created_at: new Date().toISOString(),

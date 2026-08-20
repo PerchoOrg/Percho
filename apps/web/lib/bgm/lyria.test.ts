@@ -12,7 +12,7 @@ describe('buildLyriaPrompt', () => {
   it('writes timestamps as m:ss past a minute', () => {
     // "0:82" is not a time. The first draft emitted exactly that for a 90s
     // track, and 0:112 / 0:120 for a two-minute one.
-    const p = buildLyriaPrompt('warm-acoustic', 90);
+    const p = buildLyriaPrompt('acoustic', 90);
     expect(p).toContain('[0:08 - 1:22]');
     expect(p).toContain('[1:22 - 1:30]');
     expect(p).not.toMatch(/0:(6\d|7\d|8\d|9\d|\d{3})/);
@@ -20,7 +20,7 @@ describe('buildLyriaPrompt', () => {
 
   it('keeps the structure inside the requested length', () => {
     for (const seconds of [30, 60, 90, 120, 150, 180]) {
-      const stamps = buildLyriaPrompt('chill-electronic', seconds)
+      const stamps = buildLyriaPrompt('electronic', seconds)
         .split('\n')
         .filter((l) => l.startsWith('['))
         .flatMap((l) =>
@@ -36,7 +36,7 @@ describe('buildLyriaPrompt', () => {
   });
 
   it('never lets the outro swallow a short track', () => {
-    const stamps = buildLyriaPrompt('warm-acoustic', 30);
+    const stamps = buildLyriaPrompt('acoustic', 30);
     expect(stamps).toContain('[0:08 - 0:22]');
   });
 
@@ -58,7 +58,7 @@ describe('buildLyriaPrompt', () => {
   });
 
   it('appends the operator’s steer without displacing the rules', () => {
-    const p = buildLyriaPrompt('luxury-ambient', 90, 'brighter, more piano');
+    const p = buildLyriaPrompt('piano', 90, 'still', 'brighter, more piano');
     expect(p).toContain('brighter, more piano');
     expect(p).toContain('Instrumental only');
   });
@@ -66,12 +66,12 @@ describe('buildLyriaPrompt', () => {
 
 describe('lyriaFilename', () => {
   it('says where the track came from and sorts by date', () => {
-    const name = lyriaFilename('warm-acoustic', new Date('2026-08-20T12:00:00Z'));
-    expect(name).toMatch(/^ai-warm-20260820-[0-9a-f]{4}\.mp3$/);
+    const name = lyriaFilename('acoustic', new Date('2026-08-20T12:00:00Z'));
+    expect(name).toMatch(/^ai-acoustic-20260820-[0-9a-f]{4}\.mp3$/);
   });
 
   it('does not collide within a batch', () => {
-    const names = new Set(Array.from({ length: 50 }, () => lyriaFilename('chill-electronic')));
+    const names = new Set(Array.from({ length: 50 }, () => lyriaFilename('electronic')));
     expect(names.size).toBeGreaterThan(45);
   });
 });

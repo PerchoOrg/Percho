@@ -16,7 +16,13 @@
  */
 
 import { LYRIA_COST_USD } from '@/lib/bgm/lyria';
-import { BGM_VIBE_META, type BgmVibe, prettyTrackTitle } from '@/lib/bgm/storage';
+import {
+  BGM_ENERGIES,
+  BGM_VIBE_META,
+  type BgmEnergy,
+  type BgmVibe,
+  prettyTrackTitle,
+} from '@/lib/bgm/storage';
 import { CheckCircle2, Globe, Loader2, Sparkles, Trash2, Upload, X, XCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
@@ -690,6 +696,7 @@ function GeneratePanel({
 }) {
   const [count, setCount] = useState(2);
   const [seconds, setSeconds] = useState(90);
+  const [energy, setEnergy] = useState<BgmEnergy>('gentle');
   const [extra, setExtra] = useState('');
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -703,7 +710,7 @@ function GeneratePanel({
       const res = await fetch('/api/admin/bgm/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ vibe, count, seconds, extra }),
+        body: JSON.stringify({ vibe, count, seconds, energy, extra }),
       });
       const json = (await res.json()) as {
         error?: string;
@@ -761,6 +768,20 @@ function GeneratePanel({
             ))}
           </select>
         </label>
+        <label className="text-ink2 text-xs">
+          Energy
+          <select
+            value={energy}
+            onChange={(e) => setEnergy(e.target.value as BgmEnergy)}
+            className="mt-1 block rounded border border-line bg-bg px-2 py-1 text-ink text-sm"
+          >
+            {BGM_ENERGIES.map((e) => (
+              <option key={e} value={e}>
+                {e}
+              </option>
+            ))}
+          </select>
+        </label>
         <label className="min-w-[16rem] flex-1 text-ink2 text-xs">
           Steer it (optional)
           <input
@@ -789,9 +810,9 @@ function GeneratePanel({
         </button>
       </div>
       <p className="mt-2 text-ink2 text-xs">
-        Lyria 3 · instrumental, steady, mixed to sit under narration · lands in{' '}
-        <b>awaiting review</b>, not in films. ~30s per track; the safety filter blocks prompts
-        occasionally, so a batch may come back short.
+        Lyria 3 · instrumental, steady, mixed to sit under narration · tagged and named on arrival ·
+        lands in <b>awaiting review</b>, not in films. ~30s per track; the safety filter blocks
+        prompts occasionally, so a batch may come back short.
       </p>
       {error ? <p className="mt-2 text-red-700 text-xs">{error}</p> : null}
       {summary ? <p className="mt-2 text-green-700 text-xs">{summary}</p> : null}
