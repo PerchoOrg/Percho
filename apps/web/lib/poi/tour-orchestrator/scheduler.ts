@@ -70,6 +70,13 @@ export const DURATION_MAX = 4.5;
  * Owner 2026-08-19 raised the ceiling to 90s: a community film now carries two
  * acts — the community's own amenities and then the surroundings — and 50
  * seconds cannot hold both without cutting one to a token appearance.
+ *
+ * Considered and rejected on 2026-08-20: raising it to 120s alongside the
+ * surrounding budget going 10 -> 15 (owner: "actually dont raise to 2 mins,
+ * keep 90s"). The consequence is real and worth knowing — the ceiling is what
+ * `fitDuration` compresses clips against, so fifteen places inside 90s pushes
+ * clips toward their 2s floor. If clips start reading as too short, this is
+ * the number, and `tour_duration_off_target` is the warning that says so.
  */
 export const TOUR_TARGET_MIN_S = 45;
 export const TOUR_TARGET_MAX_S = 90;
