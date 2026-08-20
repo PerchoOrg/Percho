@@ -1860,6 +1860,7 @@ export type Database = {
           polling_url: string | null
           prompt: string | null
           provider_job_id: string | null
+          render_key: string | null
           status: string
           storage_path: string | null
           updated_at: string
@@ -1877,6 +1878,7 @@ export type Database = {
           polling_url?: string | null
           prompt?: string | null
           provider_job_id?: string | null
+          render_key?: string | null
           status?: string
           storage_path?: string | null
           updated_at?: string
@@ -1894,6 +1896,7 @@ export type Database = {
           polling_url?: string | null
           prompt?: string | null
           provider_job_id?: string | null
+          render_key?: string | null
           status?: string
           storage_path?: string | null
           updated_at?: string

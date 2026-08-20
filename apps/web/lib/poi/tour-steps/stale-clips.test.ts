@@ -1,121 +1,96 @@
 /**
- * Seedance must never be re-billed by the automatic staleness path.
+ * A clip re-renders when its render INPUTS change — not only its photo.
  *
- * Owner 2026-08-19: "for photos with seedance clips, never call it again!!!!
- * always re-use, unless I clicked regenerate manually". The manual path is
- * `enqueueClips(..., requeueReady = true)`, which does not consult this
- * function at all — so exempting Seedance here is what makes the rule hold.
+ * The predecessor compared clip.updated_at against the photo's outpainted_at /
+ * enhanced_at, which sees photo edits and nothing else. On 2026-08-19 three
+ * plan-only changes each shipped undetected behind "0 requeued": the canvas
+ * going 1080x1920 -> 1080x1576, the render read-path preferring originals over
+ * reframes, and the moves shifting toward orbit. `render_key` covers the whole
+ * input set so that class of bug cannot recur.
+ *
+ * Seedance stays exempt from automatic re-render. Owner 2026-08-19: "for photos
+ * with seedance clips, never call it again!!!! always re-use, unless I clicked
+ * regenerate manually". The manual path (`enqueueClips(..., requeueReady)`)
+ * does not consult these functions at all.
  */
 
 import { describe, expect, it } from 'vitest';
-import { staleClipKeys } from './generate';
+import { CANVAS_H, CANVAS_W } from '../tour-orchestrator/scheduler';
+import { renderKey, staleClipKeys } from './generate';
 
-/** Minimal stand-in for the two `.from().select().in()` calls the fn makes. */
-function dbWith(photos: Array<Record<string, unknown>>) {
-  return {
-    from: () => ({
-      select: () => ({
-        in: async () => ({ data: photos }),
-      }),
-    }),
-    // biome-ignore lint/suspicious/noExplicitAny: test double for TourDb
-  } as any;
-}
+const base = { engine: 'kenburns', move: 'pan_lr', duration_s: 3, photoVersion: 'v1' };
 
-const RENDERED = '2026-08-19T10:00:00.000Z';
-const REFRAMED_AFTER = '2026-08-19T12:00:00.000Z';
+describe('renderKey', () => {
+  it('is stable for identical inputs', () => {
+    expect(renderKey(base)).toBe(renderKey({ ...base }));
+  });
+
+  it('changes when any single input changes', () => {
+    const k = renderKey(base);
+    expect(renderKey({ ...base, engine: 'depthflow' })).not.toBe(k);
+    expect(renderKey({ ...base, move: 'orbit_left' })).not.toBe(k);
+    expect(renderKey({ ...base, duration_s: 3.5 })).not.toBe(k);
+    expect(renderKey({ ...base, photoVersion: 'v2' })).not.toBe(k);
+  });
+
+  it('carries the canvas, which is not a property of the clip row', () => {
+    expect(renderKey(base)).toContain(`${CANVAS_W}x${CANVAS_H}`);
+  });
+
+  it('ignores float noise in the duration', () => {
+    expect(renderKey({ ...base, duration_s: 3.0001 })).toBe(renderKey(base));
+  });
+});
 
 describe('staleClipKeys', () => {
-  it('stales a local clip whose photo was reframed after the render', async () => {
-    const sb = dbWith([
-      {
-        id: 'p1',
-        outpainted_at: REFRAMED_AFTER,
-        outpaint_status: 'ready',
-        enhanced_at: null,
-        enhanced_status: null,
-      },
-    ]);
-    const stale = await staleClipKeys(
-      sb,
-      ['p1'],
-      [{ photo_id: 'p1', engine: 'kenburns', status: 'ready', updated_at: RENDERED }],
+  const wanted = new Map([
+    ['p1:kenburns', renderKey(base)],
+    ['p1:seedance', renderKey({ ...base, engine: 'seedance' })],
+    ['p2:depthflow', renderKey({ ...base, engine: 'depthflow' })],
+  ]);
+
+  it('leaves a clip alone when its key already matches', () => {
+    const stale = staleClipKeys(
+      [{ photo_id: 'p1', engine: 'kenburns', render_key: renderKey(base) }],
+      wanted,
+    );
+    expect([...stale]).toEqual([]);
+  });
+
+  it('stales a clip whose key no longer matches', () => {
+    const stale = staleClipKeys(
+      [{ photo_id: 'p1', engine: 'kenburns', render_key: renderKey({ ...base, move: 'tilt_td' }) }],
+      wanted,
     );
     expect([...stale]).toEqual(['p1:kenburns']);
   });
 
-  it('never stales a seedance clip, however far behind it is', async () => {
-    const sb = dbWith([
-      {
-        id: 'p1',
-        outpainted_at: REFRAMED_AFTER,
-        outpaint_status: 'ready',
-        enhanced_at: REFRAMED_AFTER,
-        enhanced_status: 'approved',
-      },
-    ]);
-    const stale = await staleClipKeys(
-      sb,
-      ['p1'],
-      [{ photo_id: 'p1', engine: 'seedance', status: 'ready', updated_at: RENDERED }],
+  it('stales a row that predates the column, so the library heals once', () => {
+    const stale = staleClipKeys([{ photo_id: 'p1', engine: 'kenburns', render_key: null }], wanted);
+    expect([...stale]).toEqual(['p1:kenburns']);
+  });
+
+  it('never stales a seedance clip, however far its key has drifted', () => {
+    const stale = staleClipKeys(
+      [{ photo_id: 'p1', engine: 'seedance', render_key: 'something-else-entirely' }],
+      wanted,
     );
     expect([...stale]).toEqual([]);
   });
 
-  it('stales the local clip but spares the seedance one on the same photo', async () => {
-    const sb = dbWith([
-      {
-        id: 'p1',
-        outpainted_at: null,
-        outpaint_status: null,
-        enhanced_at: REFRAMED_AFTER,
-        enhanced_status: 'approved',
-      },
-    ]);
-    const stale = await staleClipKeys(
-      sb,
-      ['p1'],
+  it('spares the seedance clip while staling the local one on the same photo', () => {
+    const stale = staleClipKeys(
       [
-        { photo_id: 'p1', engine: 'seedance', status: 'ready', updated_at: RENDERED },
-        { photo_id: 'p1', engine: 'depthflow', status: 'ready', updated_at: RENDERED },
+        { photo_id: 'p1', engine: 'seedance', render_key: null },
+        { photo_id: 'p1', engine: 'kenburns', render_key: null },
       ],
+      wanted,
     );
-    expect([...stale]).toEqual(['p1:depthflow']);
+    expect([...stale]).toEqual(['p1:kenburns']);
   });
 
-  it('leaves a clip alone when its render is newer than the change', async () => {
-    const sb = dbWith([
-      {
-        id: 'p1',
-        outpainted_at: RENDERED,
-        outpaint_status: 'ready',
-        enhanced_at: null,
-        enhanced_status: null,
-      },
-    ]);
-    const stale = await staleClipKeys(
-      sb,
-      ['p1'],
-      [{ photo_id: 'p1', engine: 'kenburns', status: 'ready', updated_at: REFRAMED_AFTER }],
-    );
-    expect([...stale]).toEqual([]);
-  });
-
-  it('ignores a reframe that is not ready and an enhancement not approved', async () => {
-    const sb = dbWith([
-      {
-        id: 'p1',
-        outpainted_at: REFRAMED_AFTER,
-        outpaint_status: 'queued',
-        enhanced_at: REFRAMED_AFTER,
-        enhanced_status: 'ready',
-      },
-    ]);
-    const stale = await staleClipKeys(
-      sb,
-      ['p1'],
-      [{ photo_id: 'p1', engine: 'kenburns', status: 'ready', updated_at: RENDERED }],
-    );
+  it('ignores a clip that is not in this cut', () => {
+    const stale = staleClipKeys([{ photo_id: 'p9', engine: 'kenburns', render_key: null }], wanted);
     expect([...stale]).toEqual([]);
   });
 });
