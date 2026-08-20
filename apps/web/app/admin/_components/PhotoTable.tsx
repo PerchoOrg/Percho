@@ -457,41 +457,46 @@ export function PhotoTable({
                     />
                   </Td>
                   <Td>
-                    <StatusText value={p.enhanced_status ?? 'none'} />
-                    {p.enhanced_meta?.chain && (
-                      <div className="text-[10px] text-ink2" title={p.enhanced_meta.chain}>
-                        {[
-                          p.enhanced_meta.sr === 'real-esrgan-x2' ? 'ESRGAN' : null,
-                          p.enhanced_meta.straighten_deg != null
-                            ? `straighten ${p.enhanced_meta.straighten_deg}\u00b0`
-                            : null,
-                          p.enhanced_meta.exposure_gain != null &&
-                          Math.abs(p.enhanced_meta.exposure_gain - 1) >= 0.01
-                            ? `exp ${p.enhanced_meta.exposure_gain}\u00d7`
-                            : null,
-                          p.enhanced_meta.chain.includes('indoor_wb') ? 'indoor WB' : null,
-                        ]
-                          .filter(Boolean)
-                          .join(' · ') || 'base grade only'}
-                      </div>
-                    )}
-                    {p.enhanced_error && (
-                      <div className="text-[10px] text-red-600" title={p.enhanced_error}>
-                        {truncate(p.enhanced_error, 40)}
-                      </div>
-                    )}
+                    {/* Picture + one button, no prose. The status word, the
+                        op-chain and the error text all had a column of their
+                        own worth of noise for something the thumbnail already
+                        answers — is it better? (owner 2026-08-19: "remove all
+                        the text, just show the button, or pic/video with
+                        regenerate"). Failures keep their reason on the title. */}
                     {p.enhanced_path ? (
-                      <div className="mt-1">
+                      <div className="flex flex-col gap-1">
                         <Thumb
                           src={url(p.enhanced_path as string)}
-                          title="View the enhanced photo full-size"
+                          title={
+                            p.enhanced_meta?.chain
+                              ? `Enhanced: ${p.enhanced_meta.chain}`
+                              : 'View the enhanced photo full-size'
+                          }
                           onClick={() =>
                             setLightbox({ url: url(p.enhanced_path as string), alt: 'enhanced' })
                           }
                         />
+                        <MiniBtn
+                          label="Regenerate"
+                          title="Enhance this photo again"
+                          disabled={busy}
+                          onClick={() => run(p.id, () => queuePhotoEnhancement(table, [p.id]))}
+                        />
                       </div>
                     ) : (
-                      <div className="mt-1 text-[10px] text-ink2">pending enhance</div>
+                      <div className="flex flex-col gap-1">
+                        {p.enhanced_error && (
+                          <span className="text-[10px] text-red-600" title={p.enhanced_error}>
+                            failed
+                          </span>
+                        )}
+                        <MiniBtn
+                          label={p.enhanced_status === 'queued' ? 'Queued' : 'Enhance'}
+                          title="Enhance this photo"
+                          disabled={busy || p.enhanced_status === 'queued'}
+                          onClick={() => run(p.id, () => queuePhotoEnhancement(table, [p.id]))}
+                        />
+                      </div>
                     )}
                   </Td>
                   {!isListing && (
@@ -881,10 +886,13 @@ function ReframedCell({
   if (!status || status === 'none') return <span className="text-[10px] text-ink2">—</span>;
   if (status === 'skipped') {
     return (
-      <div className="text-[10px] text-ink2">
-        <div>{meta?.reason === 'rejected by admin' ? 'using crop' : 'well framed'}</div>
-        <button
-          type="button"
+      <div className="flex flex-col gap-1">
+        <span className="text-[10px] text-ink2">
+          {meta?.reason === 'rejected by admin' ? 'discarded' : 'not needed'}
+        </span>
+        <MiniBtn
+          label="Reframe"
+          title="Outpaint this photo to the render aspect — costs about $0.09"
           disabled={busy}
           onClick={async () => {
             setBusy(true);
@@ -892,10 +900,7 @@ function ReframedCell({
             setBusy(false);
             onChanged();
           }}
-          className="mt-0.5 underline hover:text-ink disabled:opacity-50"
-        >
-          {busy ? '…' : 'reframe'}
-        </button>
+        />
       </div>
     );
   }
@@ -910,37 +915,34 @@ function ReframedCell({
 
   const href = path ? `${storageBase}/storage/v1/object/public/${bucket}/${path}` : null;
   return (
-    <div>
+    <div className="flex flex-col gap-1">
       {href && <Thumb src={href} title="Reframed — view full-size" onClick={() => onZoom(href)} />}
-      <div className="mt-1 text-[10px] text-ink2">
-        <button
-          type="button"
-          disabled={busy}
-          onClick={async () => {
-            setBusy(true);
-            await rejectOutpaint(photoId);
-            setBusy(false);
-            onChanged();
-          }}
-          className="underline hover:text-ink disabled:opacity-50"
-        >
-          {busy ? '…' : 'use crop'}
-        </button>
-        <button
-          type="button"
-          disabled={busy}
-          onClick={async () => {
-            setBusy(true);
-            await requeueOutpaint(photoId);
-            setBusy(false);
-            onChanged();
-          }}
-          className="ml-1.5 underline hover:text-ink disabled:opacity-50"
-          title="Generate a new one — costs about $0.09"
-        >
-          redo
-        </button>
-      </div>
+      {/* "use crop" / "redo" meant nothing to the person using them (owner
+          2026-08-19: "use cropredo - i dont know what is it"). Regenerate is
+          the same verb the clip and enhance columns use; Discard says what
+          happens rather than naming the thing you fall back to. */}
+      <MiniBtn
+        label="Regenerate"
+        title="Reframe this photo again — costs about $0.09"
+        disabled={busy}
+        onClick={async () => {
+          setBusy(true);
+          await requeueOutpaint(photoId);
+          setBusy(false);
+          onChanged();
+        }}
+      />
+      <MiniBtn
+        label="Discard"
+        title="Throw this reframe away and render the original photo instead"
+        disabled={busy}
+        onClick={async () => {
+          setBusy(true);
+          await rejectOutpaint(photoId);
+          setBusy(false);
+          onChanged();
+        }}
+      />
     </div>
   );
 }
@@ -1001,7 +1003,22 @@ function ClipCell({
 }) {
   return (
     <div className="flex flex-col gap-1">
-      {clip ? <StatusText value={clip.status} /> : <span className="text-ink2">no clip</span>}
+      {/* No status word and no "no clip": the poster's presence says the clip
+          is ready, and its absence says it is not (owner 2026-08-19: "remove
+          all the text, just show the button, or pic/video with regenerate...
+          still keep the time length and cost"). A render still in flight or
+          failed is the one case with nothing to look at, so those two keep a
+          word. */}
+      {clip && clip.status !== 'ready' && (
+        <span
+          className={
+            clip.status === 'failed' ? 'text-[10px] text-red-600' : 'text-[10px] text-ink2'
+          }
+          title={clip.error ?? undefined}
+        >
+          {clip.status}
+        </span>
+      )}
       {clip?.status === 'ready' && clip.video_url && (
         <button
           type="button"
@@ -1025,11 +1042,6 @@ function ClipCell({
       )}
       {clip?.cost_usd != null && (
         <span className="text-[10px] text-ink2 tabular-nums">${clip.cost_usd.toFixed(3)}</span>
-      )}
-      {clip?.error && (
-        <span className="text-[10px] text-red-600" title={clip.error}>
-          {truncate(clip.error, 40)}
-        </span>
       )}
       {canGenerate && (
         <MiniBtn
