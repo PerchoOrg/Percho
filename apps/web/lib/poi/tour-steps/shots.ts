@@ -39,7 +39,12 @@ export function plannedShots(run: RunRow): PlannedShot[] {
  */
 const CLIPS_BY_BUCKET: Record<string, number> = {
   amenities: 3,
-  schools: 2,
+  // 3, not 2. Two reasons, both the owner's on 2026-08-19: he asked for a
+  // third Lambert High frame ("we can get another high school pic there as
+  // well"), and the schools chapter has to be long enough for the voice-over
+  // to name all three tiers ("school we may need to reserve some time for tts
+  // to talk about it"). Schools are the one bucket he has called #1.
+  schools: 3,
   outdoor: 2,
   dining: 2,
   shopping: 2,
@@ -114,6 +119,17 @@ export async function computeFinalShots(
   // the number of same thing to 3").
   /** Most Places photos one POI may contribute. */
   const POI_PHOTO_CAP = 2;
+  /**
+   * Tagger categories that show a place as a whole rather than a detail of it.
+   * One of these is promoted to lead its POI — see the ranking below.
+   */
+  const ESTABLISHING_CATEGORIES = new Set([
+    'storefront',
+    'landscape',
+    'aerial',
+    'building',
+    'exterior',
+  ]);
   const photos: NonNullable<typeof photosRaw> = [];
   const dropped: Array<{ photo_id: string; poi_id: string; reason: string }> = [];
 
@@ -172,10 +188,25 @@ export async function computeFinalShots(
     const handPicked = (r: (typeof ranked)[number]) =>
       r.source === 'community_site' && r.status !== 'rejected';
     const allowed = clipsAllowedFor(buckets?.get(arr[0]!.poi_id));
-    const kept = [
-      ...ranked.filter(handPicked),
-      ...ranked.filter((r) => !handPicked(r)).slice(0, POI_PHOTO_CAP),
-    ].slice(0, allowed);
+    // One ESTABLISHING frame is promoted ahead of the score order.
+    //
+    // A place has to be recognisable before a detail of it means anything, and
+    // ai_score does not know that: at the Windermere Publix a refrigerated
+    // sushi case scored 0.95 and the storefront 0.85, so the film carried two
+    // interiors and no shopfront (owner 2026-08-19: "why reject the Exterior
+    // facade of a Publix supermarket storefront?"). Promotion, not a reserved
+    // slot — a POI whose only photos are interiors is unchanged.
+    const establishing = (r: (typeof ranked)[number]) =>
+      r.status !== 'rejected' &&
+      ESTABLISHING_CATEGORIES.has(
+        ((r.ai_tags ?? {}) as { primary_category?: string }).primary_category ?? '',
+      );
+    const lead = ranked.find((r) => establishing(r) && !handPicked(r));
+    const places = ranked.filter((r) => !handPicked(r) && r !== lead);
+    const kept = [...ranked.filter(handPicked), ...(lead ? [lead] : []), ...places].slice(
+      0,
+      Math.min(allowed, ranked.filter(handPicked).length + POI_PHOTO_CAP),
+    );
     const keptIds = new Set(kept.map((r) => r.id));
     photos.push(...kept);
     // Owner 2026-08-17: "另外一张放到drop table里并说明原因" — every photo
@@ -330,14 +361,16 @@ export async function computeFinalShots(
     .in('poi_id', poiIds)) as { data: Array<{ poi_id: string; distance_m: number | null }> | null };
   const distanceByPoi = new Map((distRows ?? []).map((r) => [r.poi_id, r.distance_m]));
 
-  const labelled = plan.shots.map((s) => ({
-    ...s,
-    label: clipLabel({
+  const labelled = plan.shots.map((s) => {
+    const { name, distance } = clipLabel({
       poiName: poiName.get(s.poi_id) ?? s.poi_name ?? '',
       bucket: buckets?.get(s.poi_id) ?? poiBucket.get(s.poi_id) ?? null,
       distanceM: distanceByPoi.get(s.poi_id) ?? null,
-    }),
-  }));
+    });
+    // Two fields, not one string: the overlay is a pinned card that stacks the
+    // place name over its distance, right-aligned (owner 2026-08-19).
+    return { ...s, label: name, label_distance: distance };
+  });
 
   // A school POI can survive selection and still reach the cut with nothing to
   // show — `photos.ts` reserves its slot, then the per-photo resolution gate
