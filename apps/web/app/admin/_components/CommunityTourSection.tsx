@@ -12,7 +12,7 @@
  *   TourHeader      facts + Research/Resolve (left), latest cut (right)
  *   TourStepStrip   Fetch & Tag → Review → Plan → Render → Assemble
  *   PhotoSourcePanel
- *   PhotoTable      OPEN, full width, SELECTED photos — the workspace
+ *   PhotoTable      OPEN, full width, EVERY fetched photo — the workspace
  *
  * What this replaced: a full-width video, five stacked accordion step panels
  * with their result dumps, and the photo table shut behind a `<details>`. The
@@ -87,7 +87,6 @@ export function CommunityTourSection({
   const [runs, setRuns] = useState<Run[]>([]);
   const [running, setRunning] = useState<StepName | null>(null);
   const [stepError, setStepError] = useState<string | null>(null);
-  const [showAllPhotos, setShowAllPhotos] = useState(false);
   const router = useRouter();
 
   const loadRuns = useCallback(async () => {
@@ -263,31 +262,20 @@ export function CommunityTourSection({
   });
 
   /**
-   * The table shows the SELECTED photos, not everything ever fetched.
+   * EVERY fetched photo, in the three review sections.
    *
-   * Owner 2026-08-19: "we should not use all photos, only the selected ones."
-   * Aberdeen has 103 photos across 31 POIs, but only the POIs that survived
-   * selection reach the film — most of those rows are for places the tour will
-   * never visit, and they buried the ones under review.
+   * A filter to the run's `resolved_poi_ids` used to hide anything belonging to
+   * a POI that missed the film's 10-place budget. Once incumbency landed, the
+   * three POIs this run discovered lost the budget on score — and the pipeline
+   * had already fetched and tagged nine photos for them, which the table then
+   * silently hid. Paying to fetch a photo and then not showing it is the one
+   * thing the review gate exists to prevent (owner 2026-08-20: "just show all
+   * fetched and tagged photos in 3 categories").
    *
-   * "Selected" is the run's `resolved_poi_ids`: the POIs the pipeline kept.
-   * Rejected photos of those POIs stay visible on purpose — the review is of
-   * the approved AND the rejected.
-   *
-   * The escape hatch is deliberate. Before the photos step has run there is no
-   * selection to filter by, and an admin chasing a specific frame needs a way
-   * back to the full set.
+   * The grouping does the work the filter was trying to do: approved is the
+   * current cut, rejected is out, and everything else is the pile to draw from.
    */
-  const selectedPoiIds = new Set(
-    (run?.step_results.photos as { resolved_poi_ids?: string[] } | undefined)?.resolved_poi_ids ??
-      [],
-  );
-  const selected =
-    selectedPoiIds.size > 0
-      ? enriched.filter((p) => !!p.poi_id && selectedPoiIds.has(p.poi_id))
-      : enriched;
-  const visible = showAllPhotos ? enriched : selected;
-  const hiddenCount = enriched.length - selected.length;
+  const visible = enriched;
 
   async function generateClip(
     photoId: string,
@@ -378,19 +366,6 @@ export function CommunityTourSection({
         {/* No heading here: PhotoTable owns the "All Photos" title. Two
             headings stacked on one table read as two tables (owner
             2026-08-19: "the format doesnt look right"). */}
-        {hiddenCount > 0 && (
-          <div className="mb-2 text-[11px] text-ink2">
-            <button
-              type="button"
-              onClick={() => setShowAllPhotos((v) => !v)}
-              className="underline hover:text-ink"
-            >
-              {showAllPhotos
-                ? 'show selected POIs only'
-                : `also show ${hiddenCount} photos from unselected POIs`}
-            </button>
-          </div>
-        )}
         <PhotoTable
           table="poi_photos"
           storageBase={storageBase}
