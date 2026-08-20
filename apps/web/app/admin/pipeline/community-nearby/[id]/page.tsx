@@ -27,13 +27,12 @@ export default async function AdminCommunityNearbyPage({
 
   const { data: community } = (await supabase
     .from('communities')
-    .select('id, name, slug, city, state, zip, lat, lng, status, kind')
+    .select('id, name, city, state, zip, lat, lng, status, kind')
     .eq('id', id)
     .maybeSingle()) as {
     data: {
       id: string;
       name: string;
-      slug: string | null;
       city: string | null;
       state: string | null;
       zip: string | null;
@@ -58,7 +57,6 @@ export default async function AdminCommunityNearbyPage({
       <CommunityTourSection
         communityId={community.id}
         communityName={community.name}
-        slug={community.slug}
         city={community.city}
         state={community.state}
         zip={community.zip}

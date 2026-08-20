@@ -71,7 +71,6 @@ interface Run {
 export function CommunityTourSection({
   communityId,
   communityName,
-  slug,
   city,
   state,
   zip,
@@ -85,7 +84,6 @@ export function CommunityTourSection({
 }: {
   communityId: string;
   communityName: string;
-  slug: string | null;
   city: string | null;
   state: string | null;
   zip: string | null;
@@ -296,7 +294,6 @@ export function CommunityTourSection({
       <TourHeader
         communityId={communityId}
         communityName={communityName}
-        slug={slug}
         city={city}
         state={state}
         zip={zip}
@@ -335,25 +332,22 @@ export function CommunityTourSection({
            (owner 2026-08-19: "one big table to manage and display
            everything"). It used to be shut behind a <details>. */}
       <section className="rounded-2xl border border-line bg-surface p-4">
-        <div className="mb-3 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-          <h2 className="font-semibold text-ink text-sm">
-            {showAllPhotos ? 'All photos' : 'Selected photos'} ({visible.length})
-          </h2>
-          <div className="flex items-center gap-3 text-[11px] text-ink2">
-            <span>review, reframe, tag and render — all from this table</span>
-            {hiddenCount > 0 && (
-              <button
-                type="button"
-                onClick={() => setShowAllPhotos((v) => !v)}
-                className="underline hover:text-ink"
-              >
-                {showAllPhotos
-                  ? 'show selected only'
-                  : `show all (${hiddenCount} more from unselected POIs)`}
-              </button>
-            )}
+        {/* No heading here: PhotoTable owns the "All Photos" title. Two
+            headings stacked on one table read as two tables (owner
+            2026-08-19: "the format doesnt look right"). */}
+        {hiddenCount > 0 && (
+          <div className="mb-2 text-[11px] text-ink2">
+            <button
+              type="button"
+              onClick={() => setShowAllPhotos((v) => !v)}
+              className="underline hover:text-ink"
+            >
+              {showAllPhotos
+                ? 'show selected POIs only'
+                : `also show ${hiddenCount} photos from unselected POIs`}
+            </button>
           </div>
-        </div>
+        )}
         <PhotoTable
           table="poi_photos"
           storageBase={storageBase}
