@@ -27,7 +27,7 @@ export default async function AdminCommunityNearbyPage({
 
   const { data: community } = (await supabase
     .from('communities')
-    .select('id, name, slug, city, state, zip, lat, lng, status')
+    .select('id, name, slug, city, state, zip, lat, lng, status, kind')
     .eq('id', id)
     .maybeSingle()) as {
     data: {
@@ -40,6 +40,7 @@ export default async function AdminCommunityNearbyPage({
       lat: number | null;
       lng: number | null;
       status: string;
+      kind: string | null;
     } | null;
   };
 
@@ -52,18 +53,19 @@ export default async function AdminCommunityNearbyPage({
 
   return (
     <div className="space-y-4">
-      <header className="rounded-2xl border border-line bg-surface p-4 sm:p-5">
-        <h1 className="text-xl font-semibold">{community.name}</h1>
-      </header>
-
-      {/* Community Tour: video → 8 steps → big photo table (owner 2026-08-16) */}
+      {/* No separate <h1> header row any more: the community's name and facts
+          are the left half of TourHeader (owner 2026-08-19). */}
       <CommunityTourSection
         communityId={community.id}
         communityName={community.name}
+        slug={community.slug}
         city={community.city}
         state={community.state}
+        zip={community.zip}
         lat={community.lat}
         lng={community.lng}
+        kind={community.kind}
+        poiCount={initialPois.length}
         storageBase={process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''}
         bucket="listing-photos"
         photos={photos}

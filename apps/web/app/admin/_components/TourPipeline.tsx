@@ -82,6 +82,7 @@ export function TourPipeline({
   storageBase,
   bucket,
   photos,
+  readOnly = false,
 }: {
   communityId: string;
   communityName: string;
@@ -92,6 +93,13 @@ export function TourPipeline({
   storageBase: string;
   bucket: string;
   photos: PhotoRow[];
+  /**
+   * Read-only mode. Since 2026-08-19 this component is the "Step details"
+   * disclosure UNDER the table, and `TourStepStrip` owns running the pipeline.
+   * Two sets of Run buttons that behave slightly differently is worse than
+   * one, so the details view shows results and the run selector only.
+   */
+  readOnly?: boolean;
 }) {
   const [runs, setRuns] = useState<Run[]>([]);
   const [selectedRun, setSelectedRun] = useState<string | null>(null);
@@ -349,15 +357,17 @@ export function TourPipeline({
               ))}
             </select>
           )}
-          <button
-            type="button"
-            onClick={() => void runAll()}
-            disabled={!!running}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-bg px-3 py-2 text-sm text-ink hover:border-ink2 disabled:cursor-not-allowed disabled:text-muted"
-          >
-            <Play size={14} aria-hidden />
-            Run all
-          </button>
+          {!readOnly && (
+            <button
+              type="button"
+              onClick={() => void runAll()}
+              disabled={!!running}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-bg px-3 py-2 text-ink text-sm hover:border-ink2 disabled:cursor-not-allowed disabled:text-muted"
+            >
+              <Play size={14} aria-hidden />
+              Run all
+            </button>
+          )}
         </div>
       </div>
 
@@ -425,19 +435,21 @@ export function TourPipeline({
                   )}
                 </h3>
               </button>
-              <button
-                type="button"
-                onClick={() => void runStep(s.name, selectedRun, s.name === 'assemble')}
-                disabled={!!running}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-bg px-3 py-1.5 text-xs text-ink hover:border-ink2 disabled:cursor-not-allowed disabled:text-muted"
-              >
-                {running === s.name || researching ? (
-                  <Loader2 size={13} className="animate-spin" />
-                ) : (
-                  <RefreshCw size={13} />
-                )}
-                {running === s.name || researching ? 'Running…' : done ? 'Re-run' : 'Run'}
-              </button>
+              {!readOnly && (
+                <button
+                  type="button"
+                  onClick={() => void runStep(s.name, selectedRun, s.name === 'assemble')}
+                  disabled={!!running}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-bg px-3 py-1.5 text-ink text-xs hover:border-ink2 disabled:cursor-not-allowed disabled:text-muted"
+                >
+                  {running === s.name || researching ? (
+                    <Loader2 size={13} className="animate-spin" />
+                  ) : (
+                    <RefreshCw size={13} />
+                  )}
+                  {running === s.name || researching ? 'Running…' : done ? 'Re-run' : 'Run'}
+                </button>
+              )}
             </div>
             <p className="text-ink2 text-xs">
               {s.desc}
