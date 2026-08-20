@@ -2088,6 +2088,11 @@ def _label_font() -> str | None:
     return next((f for f in LABEL_FONTS if os.path.exists(f)), None)
 
 
+# 35% black behind the text. Low, because legibility is carried by the glyph
+# shadow below; the scrim only has to stop a blown-out sky from swallowing it.
+SCRIM_ALPHA = 88
+
+
 def _render_label_png(
     name: str, distance: str, w: int, h: int, font_path: str, dest: Path
 ) -> None:
@@ -2114,7 +2119,7 @@ def _render_label_png(
     so the distance reads as a fact about the place rather than a suffix glued
     to its name.
     """
-    from PIL import Image, ImageDraw, ImageFont
+    from PIL import Image, ImageChops, ImageDraw, ImageFilter, ImageFont
 
     inset_x = round(w * 0.055)
     inset_y = round(h * 0.055)
@@ -2149,24 +2154,69 @@ def _render_label_png(
     block_h = line_h * len(lines) + gap + (sub_size if distance else 0)
 
     right, top = w - inset_x, inset_y
-    pad_h, pad_v = round(size * 0.66), round(size * 0.50)
-    draw.rounded_rectangle(
-        (right - block_w - pad_h, top - pad_v, right + pad_h, top + block_h + pad_v),
-        radius=round(size * 0.46),
-        fill=(0, 0, 0, 97),
-    )
-    for i, line in enumerate(lines):
-        draw.text(
-            (right, top + i * line_h), line, font=font, fill=(255, 255, 255, 245), anchor="ra"
-        )
-    if distance:
-        draw.text(
-            (right, top + line_h * len(lines) + gap),
-            distance,
-            font=sub_font,
-            fill=(255, 255, 255, 158),
-            anchor="ra",
-        )
+
+    # A CORNER SCRIM, not a panel.
+    #
+    # The card used to sit on a 38%-black rounded rectangle, which made its
+    # legibility a function of the photo behind it. On the bright shots — a
+    # white sky, the clubhouse ceiling — 38% black over luma 240 lands at 149
+    # and white text on mid-grey barely reads; on the dark shots the same panel
+    # vanishes and the text is crisp. Cutting between the two every two seconds
+    # is what the owner saw as the label "flashing for the first few photos"
+    # (2026-08-20). It was never absent — it was washing in and out.
+    #
+    # A gradient has no shape to notice: invisible on a dark photo (dark over
+    # dark), doing the work on a bright one, so the card looks the same on every
+    # shot. Two things make it a corner treatment rather than a band across the
+    # frame: it holds full strength only down to just past the text and then
+    # eases out, and it fades away to the LEFT, where there is no text to
+    # protect and no reason to dim the picture.
+    #
+    # Built by multiplying a column by a row rather than per-pixel: the frame is
+    # 1.7M pixels and there is one of these per clip.
+    hold = top + block_h + round(size * 0.3)
+    fade = max(1, round(block_h * 1.5))
+    col = Image.new("L", (1, h), 0)
+    for y in range(h):
+        if y <= hold:
+            v = 1.0
+        elif y < hold + fade:
+            v = (1 - (y - hold) / fade) ** 2
+        else:
+            break
+        col.putpixel((0, y), round(SCRIM_ALPHA * v))
+    x0, x1 = round(w * 0.16), round(w * 0.42)
+    row = Image.new("L", (w, 1), 0)
+    for x in range(x0, w):
+        row.putpixel((x, 0), 255 if x > x1 else round(255 * ((x - x0) / (x1 - x0)) ** 1.4))
+    scrim = Image.new("RGBA", (w, h), (0, 0, 0, 255))
+    scrim.putalpha(ImageChops.multiply(col.resize((w, h)), row.resize((w, h))))
+    img = Image.alpha_composite(img, scrim)
+
+    # A soft shadow under the glyphs, for the shots a scrim alone cannot hold —
+    # a blown-out sky reaches luma 255 and the ramp is at its weakest by the
+    # second line. Blurred rather than offset: an offset copy reads as a
+    # mistake at this size, a blur reads as depth.
+    shadow = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    sdraw = ImageDraw.Draw(shadow)
+
+    def _lines(d: Any, fill_name: tuple[int, int, int, int], fill_sub: tuple[int, int, int, int]):
+        for i, line in enumerate(lines):
+            d.text((right, top + i * line_h), line, font=font, fill=fill_name, anchor="ra")
+        if distance:
+            d.text(
+                (right, top + line_h * len(lines) + gap),
+                distance,
+                font=sub_font,
+                fill=fill_sub,
+                anchor="ra",
+            )
+
+    _lines(sdraw, (0, 0, 0, 160), (0, 0, 0, 128))
+    shadow = shadow.filter(ImageFilter.GaussianBlur(max(2, round(size * 0.26))))
+    img = Image.alpha_composite(img, shadow)
+
+    _lines(ImageDraw.Draw(img), (255, 255, 255, 250), (255, 255, 255, 190))
     img.save(dest)
 
 
