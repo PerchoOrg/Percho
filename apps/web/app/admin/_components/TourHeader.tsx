@@ -20,7 +20,7 @@
 
 import { streamIframeUrl } from '@/lib/cloudflare/stream';
 import { CANVAS_H, CANVAS_W } from '@/lib/poi/tour-orchestrator/scheduler';
-import { Check, Loader2, Play } from 'lucide-react';
+import { Check, ChevronDown, ChevronRight, Loader2, Play } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import type { StepState } from './TourStepStrip';
 
@@ -49,6 +49,9 @@ export function TourHeader({
   resolveState,
   researchSummary,
   resolveSummary,
+  researchPois,
+  resolvedPlaces,
+  droppedPlaces,
   busy,
   onRun,
 }: {
@@ -67,6 +70,10 @@ export function TourHeader({
   /** One line each, e.g. "14 candidates" — null before the step has run. */
   researchSummary: string | null;
   resolveSummary: string | null;
+  /** What Research proposed, and what Resolve made of it. */
+  researchPois: Array<{ name: string; bucket?: string; why?: string; approx_miles?: number }>;
+  resolvedPlaces: Array<{ name?: string; bucket?: string; distance_m?: number | null }>;
+  droppedPlaces: Array<{ name?: string; reason?: string }>;
   busy: boolean;
   onRun: (step: 'research' | 'resolve') => void;
 }) {
@@ -136,7 +143,22 @@ export function TourHeader({
             summary={researchSummary}
             busy={busy}
             onRun={() => onRun('research')}
-          />
+          >
+            {researchPois.length > 0 && (
+              <ul className="space-y-1">
+                {researchPois.map((poi) => (
+                  <li key={poi.name} className="text-[11px] leading-snug">
+                    <span className="font-medium text-ink">{poi.name}</span>
+                    <span className="text-ink2">
+                      {poi.bucket ? ` · ${poi.bucket}` : ''}
+                      {poi.approx_miles != null ? ` · ${poi.approx_miles} mi` : ''}
+                    </span>
+                    {poi.why && <div className="text-[10px] text-ink2">{poi.why}</div>}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </SourcingStep>
           <SourcingStep
             n={2}
             label="Resolve & Merge"
@@ -145,7 +167,38 @@ export function TourHeader({
             summary={resolveSummary}
             busy={busy}
             onRun={() => onRun('resolve')}
-          />
+          >
+            {(resolvedPlaces.length > 0 || droppedPlaces.length > 0) && (
+              <div className="space-y-2">
+                <ul className="space-y-0.5">
+                  {resolvedPlaces.map((r, i) => (
+                    <li key={`${r.name}-${i}`} className="text-[11px] leading-snug">
+                      <span className="text-ink">{r.name ?? '(unnamed)'}</span>
+                      <span className="text-ink2">
+                        {r.bucket ? ` · ${r.bucket}` : ''}
+                        {r.distance_m != null
+                          ? ` · ${(r.distance_m / 1609.344).toFixed(1)} mi`
+                          : ''}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+                {droppedPlaces.length > 0 && (
+                  <div className="border-line border-t pt-1">
+                    <div className="text-[10px] text-ink2 uppercase tracking-wide">Dropped</div>
+                    <ul className="space-y-0.5">
+                      {droppedPlaces.map((d, i) => (
+                        <li key={`${d.name}-${i}`} className="text-[11px] text-ink2 leading-snug">
+                          {d.name ?? '(unnamed)'}
+                          {d.reason ? ` — ${d.reason}` : ''}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
+          </SourcingStep>
         </div>
       </section>
 
@@ -207,7 +260,16 @@ function Fact({ label, value }: { label: string; value: string }) {
   );
 }
 
-/** One of the two sourcing steps: state, what it produced, and a Run button. */
+/**
+ * One sourcing step: state, what it produced, a Run button — and its RESULT.
+ *
+ * The result panel is not optional garnish. Collapsing these two steps into
+ * summary chips removed the only place their output was rendered (the deleted
+ * step-details panel), so running Research appeared to do nothing at all
+ * (owner 2026-08-19: "i clicked Agent Research - but dont see the result under
+ * it"). The photos step could lose its panel because its output IS the table;
+ * these two produce places, which the table never shows.
+ */
 function SourcingStep({
   n,
   label,
@@ -216,6 +278,7 @@ function SourcingStep({
   summary,
   busy,
   onRun,
+  children,
 }: {
   n: number;
   label: string;
@@ -224,7 +287,10 @@ function SourcingStep({
   summary: string | null;
   busy: boolean;
   onRun: () => void;
+  /** The step's result, revealed on click. */
+  children?: React.ReactNode;
 }) {
+  const [open, setOpen] = useState(false);
   return (
     <div
       className={`rounded-xl border px-3 py-2 ${
@@ -256,7 +322,21 @@ function SourcingStep({
           {state === 'done' ? 'Re-run' : 'Run'}
         </button>
       </div>
-      <div className="mt-1 text-[11px] text-ink2">{summary ?? hint}</div>
+      {children ? (
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          className="mt-1 flex w-full items-center gap-1 text-left text-[11px] text-ink2 hover:text-ink"
+        >
+          {open ? <ChevronDown size={11} /> : <ChevronRight size={11} />}
+          {summary ?? hint}
+        </button>
+      ) : (
+        <div className="mt-1 text-[11px] text-ink2">{summary ?? hint}</div>
+      )}
+      {open && children && (
+        <div className="mt-2 max-h-64 overflow-y-auto border-line border-t pt-2">{children}</div>
+      )}
     </div>
   );
 }
