@@ -306,25 +306,18 @@ export async function computeFinalShots(
     ]),
   );
 
-  // APPROVED only. Not "anything not rejected".
-  //
-  // The photos step writes its verdict before the owner reviews, so by the time
-  // planning runs every photo has been judged twice — once by the pipeline,
-  // once by him. A row still 'pending' at this point is one that arrived after
-  // the review (a fresh ingest, say), and using it would put an unreviewed
-  // frame in the film. Owner 2026-08-19, on finding pending photos in a
-  // rendered tour: "some photos in the video are not approved?"
+  // Anything not rejected is a CANDIDATE. `approved` is this step's OUTPUT —
+  // `runPlan` stamps it on whatever ends up in the shot list — so reading it as
+  // an input here would be circular: nothing could ever be chosen the first
+  // time. What the review controls is the rejected set, and that is enforced
+  // right here.
   const usable: typeof photos = [];
   for (const p of photos ?? []) {
-    if (p.status === 'approved') {
-      usable.push(p);
+    if (p.status === 'rejected') {
+      dropped.push({ photo_id: p.id, poi_id: p.poi_id, reason: 'rejected in Review' });
       continue;
     }
-    dropped.push({
-      photo_id: p.id,
-      poi_id: p.poi_id,
-      reason: p.status === 'rejected' ? 'rejected in Review' : 'not reviewed yet',
-    });
+    usable.push(p);
   }
 
   // Orchestration layer (2026-08-17): the engine/move/order/duration used to be
