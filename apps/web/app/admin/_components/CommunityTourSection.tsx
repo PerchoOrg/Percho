@@ -212,12 +212,30 @@ export function CommunityTourSection({
         const res = await fetch(`/api/admin/community-tour/${communityId}/runs/${rid}/step`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ step }),
+          // `assemble` is two-phase server-side: without `approve` it only
+          // stages the shot list and inserts nothing. The old accordion had a
+          // preview panel to justify that; this UI shows the shot list in the
+          // table's Plan column instead, so the staging phase is a click that
+          // does nothing visible — and that is exactly what it did (owner
+          // 2026-08-20: "clicked assemble, no response").
+          body: JSON.stringify({ step, ...(step === 'assemble' ? { approve: true } : {}) }),
         });
-        const body = (await res.json()) as { ok?: boolean; error?: string; message?: string };
+        const body = (await res.json()) as {
+          ok?: boolean;
+          error?: string;
+          message?: string;
+          notReady?: number;
+        };
         if (!res.ok || !body.ok) {
           setStepError(`${step}: ${body.message ?? body.error ?? `HTTP ${res.status}`}`);
           return null;
+        }
+        if (step === 'assemble' && body.notReady) {
+          // Not an error — the film still renders, just without these. Said
+          // out loud because the worker skips them silently.
+          setStepError(
+            `${body.notReady} shot(s) have no rendered clip and will be missing from the film — run Render first.`,
+          );
         }
         return rid;
       } finally {
