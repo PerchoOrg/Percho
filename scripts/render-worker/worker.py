@@ -1866,10 +1866,24 @@ def process_enhance_job(table: str, rows: list[dict[str, Any]]) -> None:
                 storage_upload(PHOTO_BUCKET, dest_path, dest)
                 sb_patch(table, {"id": f"eq.{row['id']}"}, {
                     "enhanced_path": dest_path,
-                    # 'ready' NOT 'approved' — the render only reads approved
-                    # files, so nothing changes in the product until the owner
-                    # clicks Approve.
-                    "enhanced_status": "ready",
+                    # 'approved', not 'ready'.
+                    #
+                    # The 2026-08-03 migration made approval a manual gate and
+                    # this wrote 'ready' to respect it. The owner removed the
+                    # manual step on 2026-08-17 ("no per-photo manual action")
+                    # and the auto-approve went into a React effect in
+                    # PhotoTable — which only runs while that page is OPEN.
+                    #
+                    # So a photo enhanced by the pipeline stayed at 'ready'
+                    # forever unless someone happened to be looking at it, and
+                    # `approved_enhanced_path` only reads approved files. 866 of
+                    # 1,000 listing photos had never been enhanced at all, and
+                    # of the 75 on 5122 Lower Creek Street only 2 were approved
+                    # when its clips were rendered (owner 2026-08-21).
+                    #
+                    # Approving here is the same decision the UI already makes;
+                    # it just no longer depends on a browser tab.
+                    "enhanced_status": "approved",
                     "enhanced_preset": preset,
                     "enhanced_meta": {**meta, "bytes": dest.stat().st_size},
                     "enhanced_at": _now_iso(),
@@ -3080,6 +3094,7 @@ def _load_listing_photos(
             "cached_ai_tags": p.get("ai_tags"),
             "tagged_at": p.get("tagged_at"),
             "review_status": p.get("review_status") or "pending",
+            "enhanced_status": p.get("enhanced_status"),
         })
     if skipped_downloads:
         print(
@@ -3110,6 +3125,29 @@ def process_tag_job(job: dict[str, Any]) -> None:
         listing, records = _load_listing_photos(listing_id, workdir)
         if not records:
             raise RuntimeError("listing has no photos")
+
+        # Enhance EVERY photo that has not been through it, before a single
+        # clip is rendered (owner 2026-08-21: "for all we should by default
+        # enhance it, before doing da or kb rendering"). Queueing it here rather
+        # than from the admin table is the point — the table only queues what it
+        # can see, while it is open.
+        needs_enhance = [
+            r["id"] for r in records
+            if (r.get("enhanced_status") or "none") in ("none", "failed")
+        ]
+        if needs_enhance:
+            print(f"[tag {job_id}] queueing enhancement for {len(needs_enhance)} photo(s)", flush=True)
+            for pid in needs_enhance:
+                try:
+                    sb_patch(
+                        "listing_photos",
+                        {"id": f"eq.{pid}"},
+                        {"enhanced_status": "queued", "enhanced_error": None},
+                    )
+                except Exception:
+                    # Enhancement is an improvement, not a precondition. A photo
+                    # that fails to queue still renders from its original.
+                    traceback.print_exc()
 
         need_tag = [r for r in records if not r.get("tagged_at")]
         if not need_tag:
