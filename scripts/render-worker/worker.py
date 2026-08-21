@@ -2150,6 +2150,11 @@ BADGE_FONT_PT = 9.5
 # React Native gives Text no explicit lineHeight here, so it takes the face's
 # own — about 1.19x for SF Pro.
 BADGE_LINE_PT = BADGE_FONT_PT * 1.19
+# `redlineRadii.badge`. At the badge's own height this exceeds half of it, so
+# the shape resolves to a stadium — which is why a 33px radius on an
+# identically-tall box still read as a different object (owner 2026-08-20:
+# "box heights are not the same"). They were the same; the corners were not.
+BADGE_RADIUS_PT = 20.0
 
 
 def _render_label_png(
@@ -2239,7 +2244,7 @@ def _render_label_png(
 
     draw.rounded_rectangle(
         (x0, y0, x1, y1),
-        radius=min(box_h // 2, round(size * 1.1)),
+        radius=min(box_h // 2, round(BADGE_RADIUS_PT * scale)),
         fill=(255, 255, 255, LABEL_PILL_ALPHA),
     )
 
