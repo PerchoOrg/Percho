@@ -21,6 +21,9 @@ import { EMPTY_POOL, type FeedPool } from "../lib/feed/generate-feed";
 import { parsePoolResponse } from "../lib/feed/pool-dto";
 import { FIRST_PAGE_SIZE, PAGE_RETRIES } from "../lib/feed/ratios";
 
+/** The feed endpoint's own ceiling (`lib/zod/feed-pool.ts`). */
+const SAMPLER_PAGE_SIZE = 40;
+
 /** §1.9: two consecutive failures is offline; one is a blip worth retrying. */
 const OFFLINE_AFTER_FAILURES = PAGE_RETRIES;
 
@@ -129,7 +132,12 @@ export function useFeedPool({
 						// every card kind is testable without walking the funnel.
 						stage: samplerEnabled() ? 4 : stage,
 						offset,
-						limit: FIRST_PAGE_SIZE,
+						// The sampler asks for the server's maximum in one go. Its deck
+						// is composed from whatever the pool holds, so a 12-card page
+						// meant only the first twelve filmed cards were ever reachable —
+						// with fifteen listings filmed, three were invisible however far
+						// you swiped (owner 2026-08-21).
+						limit: samplerEnabled() ? SAMPLER_PAGE_SIZE : FIRST_PAGE_SIZE,
 						cities: scopedCities ? scopedCities.split(",") : [],
 						likedCommunityIds: scopedLiked ? scopedLiked.split(",") : [],
 						/**
@@ -160,7 +168,8 @@ export function useFeedPool({
 
 				failures.current = 0;
 				setOffline(false);
-				offsetRef.current = offset + FIRST_PAGE_SIZE;
+				offsetRef.current =
+					offset + (samplerEnabled() ? SAMPLER_PAGE_SIZE : FIRST_PAGE_SIZE);
 				setExhausted(parsed.done);
 				setPool((prev) => (reset ? parsed.pool : mergePool(prev, parsed.pool)));
 			} catch {
