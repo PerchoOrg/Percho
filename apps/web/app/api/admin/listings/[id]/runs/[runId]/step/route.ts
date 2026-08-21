@@ -32,6 +32,15 @@ import { createServiceClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 
 export const runtime = 'nodejs';
+// `generate` writes one clip row per shot PER SURFACE — 10 shots across two
+// canvases is 20 sequential round-trips plus the reads — and `assemble` runs
+// twice. Without this the platform default (10s) cuts the request off, the
+// browser gets a 504 whose body is not JSON, and the chip goes quiet with no
+// error while the server-side work may well have half-happened.
+//
+// The community tour's step route has carried the same cap since it started
+// looping Gemini per photo. 300s is the platform maximum, not an estimate.
+export const maxDuration = 300;
 
 const STEP_HANDLERS: Record<
   string,
