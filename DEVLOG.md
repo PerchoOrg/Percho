@@ -16,6 +16,57 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-21 09:50 UTC — A killed worker no longer strands the job it was holding
+
+**Objective**: owner — "1 shot(s) have no clip yet — run Render first. - still
+showing for 9155 Nesbit Ferry Road 47" and "web video is not showing up". One
+cause behind both.
+
+**Cause**: `listing_photo_clips` row `7c9ad85e` / web / kenburns had been
+`processing` since 07:28:51. I restarted the render worker at 07:33 — mid-render
+— and every claim function in `worker.py` selects `status = 'pending'` only.
+Nothing in this process could ever take that row back, so the web cut could
+never reach a full shot list and the film never appeared.
+
+The warning the owner kept seeing was accurate. The clip really was missing,
+permanently, and re-running Render would not fix it: Render enqueues by
+render_key and a `processing` row is neither missing nor stale.
+
+I caused the strand by restarting the worker, but the hole is older than that:
+ALL FIVE claim functions have it (`claim_photo_clip`, `claim_listing_clip`,
+`claim_assembly`, `claim_listing_assembly`, `claim_bucket_job`). Two are mine
+from phase74; three predate it. A restart is a routine operation — a deploy, a
+crash, a `launchctl kickstart` — so this strands work every time it happens.
+
+The seedance worker has had `STALE_PROCESSING_MS` since 2026-08-16. This worker
+never got the equivalent.
+
+**Actions**: `reclaim_stale_jobs()`, called once per idle tick before anything
+is claimed. One conditional UPDATE per queue, matching nothing in the normal
+case. Four queues plus `render_jobs`.
+
+**Decisions**:
+- **Seedance rows are never reclaimed.** They belong to the seedance worker,
+  they bill per generation, and they have their own staleness rule. A reset
+  from this side could re-submit a paid job that is still running. The clip
+  tables are filtered to `depthflow`/`kenburns`; there is a test that fails if
+  `seedance` ever appears in that config.
+- **The community tables are fixed too**, though only the listing ones are
+  mine. It is one bug with one fix, and leaving the other half would guarantee
+  the next restart strands a community clip and we do this again.
+- **`render_jobs` gets an attempt ceiling.** A clip is idempotent and free to
+  redo; a job carries `attempts`, and one that has died three times is not
+  unlucky. It is marked failed rather than retried forever.
+- **`generated_videos` is excluded**: it has no `updated_at`, so "stuck for 30
+  minutes" cannot be asked of it without a schema change. Reported, not fixed.
+- **30 minutes**, matching the seedance worker. A DepthFlow clip takes minutes;
+  a shorter window would start reclaiming jobs that are simply still working.
+
+**Learnings**: I restarted this worker three times today and each restart was a
+silent chance to strand whatever was in flight. The claim/release asymmetry was
+invisible while the worker was long-lived and became load-bearing the moment it
+started being restarted for deploys.
+
 ## 2026-08-21 09:30 UTC — A step waiting on the worker says what it is doing
 
 **Objective**: owner — "3 · Plan / rendering… - it should show planning right?"

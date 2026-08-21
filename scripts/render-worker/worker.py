@@ -34,7 +34,7 @@ import sys
 import tempfile
 import time
 import traceback
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
@@ -3747,11 +3747,118 @@ def process_listing_assembly(row: dict[str, Any]) -> None:
         shutil.rmtree(workdir, ignore_errors=True)
 
 
+# ── stale in-flight recovery ───────────────────────────────────────────────
+#
+# Every claim function in this file takes a row by flipping it out of its
+# waiting status, and NONE of them could take it back. A worker that dies
+# mid-job — a crash, a deploy, a `launchctl kickstart` — leaves the row it held
+# in 'processing' forever, because the claim query only ever looks at 'pending'.
+#
+# That is not a rare event. It is what happens every single time this worker is
+# restarted while busy, and it stranded a home-tour web clip on 2026-08-21:
+# `listing_photo_clips` row stuck at 'processing' for two hours, so the web cut
+# could never reach a full shot list and the film never appeared. The owner saw
+# it as "1 shot has no clip" that would not go away.
+#
+# The seedance worker has had this since 2026-08-16 (STALE_PROCESSING_MS). This
+# is the same idea for the queues this worker drains.
+STALE_PROCESSING_SEC = 30 * 60
+
+# (table, stuck status, status to restore, clock column, extra filters)
+#
+# `generated_videos` is deliberately absent: it has no `updated_at` (creation is
+# its only clock, see the bucket-jobs admin page) so "stuck for 30 minutes"
+# cannot be asked of it without a schema change.
+STALE_QUEUES: tuple[tuple[str, str, str, str, dict[str, str]], ...] = (
+    # Local render engines ONLY. A seedance row must never be reset here: the
+    # seedance worker owns those, bills for them, and has its own staleness
+    # rule. Flipping one back to 'pending' from this side would re-submit a
+    # paid generation that may well still be running.
+    ("listing_photo_clips", "processing", "pending", "updated_at",
+     {"or": "(engine.eq.depthflow,engine.eq.kenburns)"}),
+    ("photo_clips", "processing", "pending", "updated_at",
+     {"or": "(engine.eq.depthflow,engine.eq.kenburns)"}),
+    ("listing_tour_assemblies", "processing", "pending", "updated_at", {}),
+    ("tour_assemblies", "processing", "pending", "updated_at", {}),
+)
+
+
+def reclaim_stale_jobs() -> None:
+    """Put back anything a dead worker was holding.
+
+    Runs once per idle tick. Cheap: each call is one conditional UPDATE that
+    matches nothing in the normal case.
+
+    Never raises — a failure here must not stop the worker from doing the work
+    it CAN do. A stranded row staying stranded one more tick is a smaller
+    problem than a loop that dies trying to rescue it.
+    """
+    cutoff = (
+        datetime.now(timezone.utc) - timedelta(seconds=STALE_PROCESSING_SEC)
+    ).isoformat()
+    for table, stuck, restore, clock, extra in STALE_QUEUES:
+        try:
+            rows = sb_patch(
+                table,
+                {"status": f"eq.{stuck}", clock: f"lt.{cutoff}", **extra},
+                {"status": restore, "updated_at": _now_iso()},
+            )
+            if rows:
+                print(
+                    f"[reclaim] {table}: {len(rows)} stale {stuck} row(s) -> {restore}",
+                    flush=True,
+                )
+        except Exception:
+            traceback.print_exc()
+
+    # render_jobs uses different words for the same states, and unlike a clip a
+    # job carries an attempt count — so it gets a ceiling. A job that has died
+    # three times is not unlucky, and retrying it forever would hide that.
+    try:
+        rows = sb_get(
+            "render_jobs",
+            {
+                "select": "id,attempts,step",
+                "status": "eq.running",
+                "updated_at": f"lt.{cutoff}",
+                "limit": "20",
+            },
+        )
+        for job in rows:
+            if (job.get("attempts") or 0) >= 3:
+                sb_patch(
+                    "render_jobs",
+                    {"id": f"eq.{job['id']}"},
+                    {
+                        "status": "failed",
+                        "error": "abandoned: still running after 3 attempts",
+                        "updated_at": _now_iso(),
+                    },
+                )
+                print(f"[reclaim] render_jobs {job['id']} abandoned after 3 attempts", flush=True)
+            else:
+                sb_patch(
+                    "render_jobs",
+                    {"id": f"eq.{job['id']}"},
+                    {"status": "queued", "updated_at": _now_iso()},
+                )
+                print(
+                    f"[reclaim] render_jobs {job['id']} ({job.get('step')}) -> queued",
+                    flush=True,
+                )
+    except Exception:
+        traceback.print_exc()
+
+
 def main() -> None:
     print(f"[worker] starting, polling every {POLL_IDLE_SEC}s", flush=True)
     sync_bgm_if_due(force=True)
     while True:
         sync_bgm_if_due()
+        # Before claiming anything: put back whatever a dead worker was
+        # holding. Cheap, and it is the only thing that ever unsticks a row
+        # this process abandoned when it was killed.
+        reclaim_stale_jobs()
         try:
             job = claim_job()
         except Exception:
