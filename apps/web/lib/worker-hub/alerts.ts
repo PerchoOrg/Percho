@@ -12,10 +12,22 @@ import type { QueueSnapshot } from './queues';
 
 export type AlertLevel = 'error' | 'warn' | 'info';
 
+/**
+ * What the alert is about, so the table can print it on the row it belongs to
+ * rather than in a banner the reader has to map back onto the data themselves.
+ * `id` is the queue id or the process id; `system` alerts belong to the host
+ * strip, which is neither.
+ */
+export type AlertScope =
+  | { kind: 'queue'; id: string }
+  | { kind: 'process'; id: string }
+  | { kind: 'system' };
+
 export interface Alert {
   level: AlertLevel;
   title: string;
   detail: string;
+  scope: AlertScope;
 }
 
 /** A queue that has waited this long with nothing draining it is stuck. */
@@ -57,6 +69,7 @@ export function deriveAlerts({ processes, system, queues, now = Date.now() }: Al
 
     if (!p.running) {
       out.push({
+        scope: { kind: 'process', id: p.id },
         level: 'error',
         title: `${p.name} is not running`,
         detail:
@@ -69,6 +82,7 @@ export function deriveAlerts({ processes, system, queues, now = Date.now() }: Al
 
     if (p.stale) {
       out.push({
+        scope: { kind: 'process', id: p.id },
         level: 'warn',
         title: `${p.name} is running older code`,
         detail: `Its source was edited after the process booted ${p.uptimeSec ? mins(p.uptimeSec) : '?'} ago. A merged fix does nothing until it restarts.`,
@@ -77,6 +91,7 @@ export function deriveAlerts({ processes, system, queues, now = Date.now() }: Al
 
     if (p.repo?.behind) {
       out.push({
+        scope: { kind: 'process', id: p.id },
         level: 'info',
         title: `${p.name}'s checkout is ${p.repo.behind} commit(s) behind origin/main`,
         detail: `Running ${p.repo.sha} — ${p.repo.subject}`,
@@ -98,6 +113,7 @@ export function deriveAlerts({ processes, system, queues, now = Date.now() }: Al
     const waiting = waitingFor(worker);
     if (silence !== null && silence > LOG_SILENCE_SEC && waiting > 0) {
       out.push({
+        scope: { kind: 'process', id: p.id },
         level: 'error',
         title: `${p.name} has been silent for ${mins(silence)}`,
         detail: `${waiting} job(s) are waiting and nothing has been written to its log. The process is up but not working.`,
@@ -107,13 +123,19 @@ export function deriveAlerts({ processes, system, queues, now = Date.now() }: Al
 
   for (const q of queues) {
     if (q.error) {
-      out.push({ level: 'warn', title: `Can't read ${q.label}`, detail: q.error });
+      out.push({
+        scope: { kind: 'queue', id: q.id },
+        level: 'warn',
+        title: `Can't read ${q.label}`,
+        detail: q.error,
+      });
       continue;
     }
 
     const waitAge = ageSec(q.oldestWaitingAt, now);
     if (q.waiting > 0 && waitAge !== null && waitAge > WAITING_STALL_SEC) {
       out.push({
+        scope: { kind: 'queue', id: q.id },
         level: 'error',
         title: `${q.label}: ${q.waiting} waiting, oldest ${mins(waitAge)}`,
         detail:
@@ -124,6 +146,7 @@ export function deriveAlerts({ processes, system, queues, now = Date.now() }: Al
     const activeAge = ageSec(q.oldestActiveAt, now);
     if (q.active > 0 && activeAge !== null && activeAge > ACTIVE_STALL_SEC) {
       out.push({
+        scope: { kind: 'queue', id: q.id },
         level: 'warn',
         title: `${q.label}: a row has been in flight for ${mins(activeAge)}`,
         detail:
@@ -133,6 +156,7 @@ export function deriveAlerts({ processes, system, queues, now = Date.now() }: Al
 
     if (q.failed24h > 0) {
       out.push({
+        scope: { kind: 'queue', id: q.id },
         level: 'info',
         title: `${q.label}: ${q.failed24h} failed in 24h`,
         detail: 'See the activity feed for the error.',
@@ -145,12 +169,14 @@ export function deriveAlerts({ processes, system, queues, now = Date.now() }: Al
       const pct = system.disk.usedPct;
       if (pct >= DISK_ERROR_PCT) {
         out.push({
+          scope: { kind: 'system' },
           level: 'error',
           title: `Disk ${pct.toFixed(0)}% full`,
           detail: 'A render writes hundreds of MB of scratch. This box will start failing jobs.',
         });
       } else if (pct >= DISK_WARN_PCT) {
         out.push({
+          scope: { kind: 'system' },
           level: 'warn',
           title: `Disk ${pct.toFixed(0)}% full`,
           detail: 'Worth clearing before the next batch of renders.',
@@ -160,6 +186,7 @@ export function deriveAlerts({ processes, system, queues, now = Date.now() }: Al
 
     if (system.memory.usedPct >= MEM_WARN_PCT) {
       out.push({
+        scope: { kind: 'system' },
         level: 'warn',
         title: `Memory ${system.memory.usedPct.toFixed(0)}% used`,
         detail: 'Real-ESRGAN and DepthFlow both load models per job; swapping makes renders crawl.',
@@ -168,6 +195,7 @@ export function deriveAlerts({ processes, system, queues, now = Date.now() }: Al
 
     if (system.loadPerCore > LOAD_WARN_PER_CORE) {
       out.push({
+        scope: { kind: 'system' },
         level: 'warn',
         title: `Load ${system.loadAvg[0].toFixed(1)} on ${system.cpuCount} cores`,
         detail: 'The box is oversubscribed — renders will take longer than their usual wall time.',
@@ -176,6 +204,7 @@ export function deriveAlerts({ processes, system, queues, now = Date.now() }: Al
 
     if (system.scratchDirs >= SCRATCH_WARN) {
       out.push({
+        scope: { kind: 'system' },
         level: 'warn',
         title: `${system.scratchDirs} scratch directories in /tmp`,
         detail: 'Left behind by interrupted renders. Safe to delete when nothing is running.',
@@ -184,6 +213,16 @@ export function deriveAlerts({ processes, system, queues, now = Date.now() }: Al
   }
 
   return out.sort((a, b) => LEVEL_ORDER[a.level] - LEVEL_ORDER[b.level]);
+}
+
+/** The alerts belonging to one row, worst first. */
+export function alertsFor(alerts: Alert[], kind: 'queue' | 'process', id: string): Alert[] {
+  return alerts.filter((a) => a.scope.kind === kind && a.scope.id === id);
+}
+
+/** Host-level alerts — disk, memory, load, scratch. */
+export function systemAlerts(alerts: Alert[]): Alert[] {
+  return alerts.filter((a) => a.scope.kind === 'system');
 }
 
 /** Worst level present, or null when everything is clean. */

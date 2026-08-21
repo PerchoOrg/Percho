@@ -19,6 +19,9 @@ Community films now open on the community. Its own amenities lead the film and r
 Aberdeen in Suwanee is the first community with this treatment: a 58-second film that opens on its clubhouse and takes in the pool, the courts and the grounds before heading out into Suwanee.
 
 ### 2026-08-21
+- The admin Worker screen is now one table you read top to bottom: each worker, then the queues that worker is responsible for directly underneath it, so a backed-up queue and the worker to blame sit together
+- Warnings appear on the row they concern rather than in a list at the top
+- Machine load, memory, disk and the day's AI spend moved into a single line, so the whole picture fits one screen
 - Home tour clips and films now appear on the Video Jobs screen alongside every other queue, instead of being invisible while they ran
 - An AI hero shot requested for a home tour is now actually picked up and made. Before, the request was recorded and nothing ever collected it
 - A home tour step that fails now says so, with the reason, instead of showing as still running. A step that stops making progress is called out rather than spinning forever

@@ -16,6 +16,60 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-21 07:25 UTC — The worker hub becomes one table, grouped by worker
+
+**Objective**: Owner, on the panelled version: "can you make it a big table that
+i can view everything in one page?" Same call as the community tour on
+2026-08-19, same answer.
+
+**Actions**:
+- `WorkerHub.tsx` rewritten: one `<table>`, nine columns, rows grouped by the
+  process that drains them. Group header carries the worker's dot, pid, uptime,
+  CPU, RSS, log freshness + size, running SHA + commits-behind, a stale badge
+  and the Restart button. Queue rows: waiting, oldest wait, in flight, in-flight
+  age, done 24h, failed 24h, 24h sparkline, notes.
+- The alerts banner is gone. `alerts.ts` gained `AlertScope`
+  (`queue` / `process` / `system`) plus `alertsFor` and `systemAlerts`; each
+  alert now prints in the Notes cell of its own row, or inline in the status
+  line for host-level ones. Row tint follows the worst alert on it.
+- Process cards, the system meter grid and the spend panel are gone as
+  sections: host stats collapsed into the one-line status bar, and spend became
+  a 7-bar sparkline in the activity header.
+- `page.tsx` dropped its title and paragraph.
+- Log tail and activity feed sit side by side under the table, both capped at
+  26rem so the page is roughly one screen.
+- Four new tests in `alerts.test.ts` for attribution.
+
+**Decisions**:
+- **Grouping by worker is diagnosis, not layout.** A queue backs up for exactly
+  one reason: the process that polls it is down, stuck, or busy with a queue
+  above it. Putting the process's own health in the group header means the
+  stalled row and the evidence for why are in the same place. The old layout
+  had the two facts three sections apart.
+- **Alerts on the row, not in a banner.** A banner makes the reader map "Home
+  tour clips (Seedance): 1 waiting, oldest 40m" back onto a table row
+  themselves. The Notes column strips the redundant queue-name prefix.
+- **`scope` is required, not optional.** Making it non-optional meant the
+  compiler listed every push site that needed one — an unattributed alert would
+  render nowhere at all.
+- **LiteLLM keeps a group with no queues.** It drains nothing but it can be
+  down, and "no queues — nothing to drain" is a true row.
+- Off the worker host there are no processes to group under, so the queues fall
+  through to one flat "worker state unavailable" section. That is the shape the
+  owner sees on percho.co.
+
+**Issues**: still no screenshot. The Chrome extension navigates but cannot
+capture — "Frame with ID 0 is showing error page" — and the page is behind an
+admin cookie the automated browser does not carry. Likely the extension has no
+site permission for `localhost`. Verified structurally instead: 583 tests,
+typecheck, lint, and a production build in which the page is 7.72 kB of client
+JS (down from 8.12 kB despite the extra columns, the panels having gone).
+
+**Next steps**:
+- Owner to look and say whether the density is right.
+- If the columns want sorting or search, `AdminTable` already does both; the
+  grouping is why this is a hand-rolled table instead.
+
 ## 2026-08-21 07:20 UTC — The home tour's two queues get a worker and a screen
 
 **Objective**: owner, after a successful run: "render finished, running assembly

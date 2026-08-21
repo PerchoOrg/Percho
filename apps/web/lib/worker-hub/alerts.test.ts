@@ -3,7 +3,9 @@ import {
   ACTIVE_STALL_SEC,
   LOG_SILENCE_SEC,
   WAITING_STALL_SEC,
+  alertsFor,
   deriveAlerts,
+  systemAlerts,
   worstLevel,
 } from './alerts';
 import type { ProcessSnapshot, SystemSnapshot } from './host';
@@ -190,13 +192,46 @@ describe('deriveAlerts', () => {
 });
 
 describe('worstLevel', () => {
+  const bare = (level: 'info' | 'error') => ({
+    level,
+    title: '',
+    detail: '',
+    scope: { kind: 'system' } as const,
+  });
+
   it('is null when there is nothing to say', () => expect(worstLevel([])).toBeNull());
   it('picks the worst present', () => {
-    expect(
-      worstLevel([
-        { level: 'info', title: '', detail: '' },
-        { level: 'error', title: '', detail: '' },
-      ]),
-    ).toBe('error');
+    expect(worstLevel([bare('info'), bare('error')])).toBe('error');
+  });
+});
+
+describe('alert attribution', () => {
+  // The table prints each alert on its own row, so every alert must name the
+  // row it belongs to — an unattributed one would silently never be displayed.
+  const alerts = run({
+    processes: [proc({ stale: true })],
+    system: system({ disk: { totalBytes: 100, freeBytes: 2, usedPct: 98 } }),
+    queues: [queue({ id: 'q-hot', failed24h: 2 })],
+  });
+
+  it('gives every alert a scope', () => {
+    expect(alerts.length).toBeGreaterThan(0);
+    for (const a of alerts) expect(a.scope).toBeDefined();
+  });
+
+  it('files a stale process under that process', () => {
+    const mine = alertsFor(alerts, 'process', 'render-worker');
+    expect(mine.map((a) => a.title)).toContain('Render worker is running older code');
+  });
+
+  it('files a queue alert under that queue and no other', () => {
+    expect(alertsFor(alerts, 'queue', 'q-hot')).toHaveLength(1);
+    expect(alertsFor(alerts, 'queue', 'render-jobs')).toHaveLength(0);
+  });
+
+  it('does not file a disk alert under a queue or a process', () => {
+    const host = systemAlerts(alerts);
+    expect(host.map((a) => a.title)).toEqual(['Disk 98% full']);
+    expect(alertsFor(alerts, 'process', 'render-worker')).not.toContain(host[0]);
   });
 });
