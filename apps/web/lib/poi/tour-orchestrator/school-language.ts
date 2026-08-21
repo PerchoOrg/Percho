@@ -40,9 +40,12 @@ export const SCHOOL_ASSIGNMENT_PATTERNS: readonly SchoolPattern[] = [
   // The school run, described without naming it. "Morning routines here flow
   // smoothly toward Sharon Elementary" says the same thing as "zoned for" and
   // was written on 2026-08-20 by a model that had just been told not to.
+  // Only when a SCHOOL is in the same sentence. Unqualified, this fired on
+  // "Publix handles the daily run" and deleted a film's closing line — a trip
+  // to the shops is not the school run (2026-08-21).
   {
     code: 'school_run',
-    re: /\b(morning|daily|weekday|school-?day)\s+(routine|routines|run|commute|drop-?off)\b/i,
+    re: /\b(?:(?:morning|daily|weekday|school-?day)\s+(?:routine|routines|run|commute|drop-?off)\b[^.!?]{0,70}?\b(?:elementary|middle\s+school|high\s+school|academy|schools?)\b|\b(?:elementary|middle\s+school|high\s+school|academy|schools?)\b[^.!?]{0,70}?(?:morning|daily|weekday|school-?day)\s+(?:routine|routines|run|commute|drop-?off))\b/i,
   },
   {
     code: 'travels_to_class',
