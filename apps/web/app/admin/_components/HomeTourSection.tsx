@@ -108,6 +108,7 @@ interface PlanShot {
  * module in for two numbers.
  */
 const IOS_CANVAS = { w: 1080, h: 1576 };
+const WEB_CANVAS = { w: 1920, h: 1080 };
 
 /** "45s", "2m 10s" — short enough to sit under a chip. */
 function elapsedLabel(ms: number): string {
@@ -151,6 +152,15 @@ export function HomeTourSection({
    * it exists to disprove.
    */
   const [now, setNow] = useState(() => Date.now());
+  /**
+   * Which cut the header plays.
+   *
+   * One player, per the owner's ask — two stacked previews was most of the
+   * page's vertical space. But removing the second panel left the web cut with
+   * nowhere to be watched at all (owner 2026-08-21: "i dont see the web video
+   * from website"). A toggle keeps one player and still reaches both.
+   */
+  const [preview, setPreview] = useState<'ios' | 'web'>('ios');
   const [stepError, setStepError] = useState<string | null>(null);
   const inFlight = useRef(false);
 
@@ -253,11 +263,12 @@ export function HomeTourSection({
 
   const latestAssembly = assemblies.find((a) => a.surface === 'ios');
   const webAssembly = assemblies.find((a) => a.surface === 'web');
-  const iosAssembly = latestAssembly;
+  const shownAssembly = preview === 'web' ? webAssembly : latestAssembly;
   const iframeUrl =
-    iosAssembly?.status === 'ready' && iosAssembly.cf_stream_uid
-      ? streamIframeUrl(iosAssembly.cf_stream_uid)
+    shownAssembly?.status === 'ready' && shownAssembly.cf_stream_uid
+      ? streamIframeUrl(shownAssembly.cf_stream_uid)
       : null;
+  const previewCanvas = preview === 'web' ? WEB_CANVAS : IOS_CANVAS;
 
   /** Tag has finished and Plan has not — the gate is what is blocking. */
   const awaitingReview = allTagged && plannedShots.length === 0;
@@ -459,7 +470,11 @@ export function HomeTourSection({
 
   /** Per-row Generate: one photo, one engine, on the surface being managed. */
   const generateClip = useCallback(
-    async (photoId: string, engine?: string): Promise<{ ok: boolean; message?: string }> => {
+    async (
+      photoId: string,
+      engine?: string,
+      surface: 'ios' | 'web' = 'ios',
+    ): Promise<{ ok: boolean; message?: string }> => {
       let rid = runs[0]?.id;
       if (!rid) {
         const created = await fetch(`/api/admin/listings/${listingId}/runs`, { method: 'POST' });
@@ -470,7 +485,7 @@ export function HomeTourSection({
         const res = await fetch(`/api/admin/listings/${listingId}/runs/${rid}/step`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ step: 'generate', photoIds: [photoId], engine, surface: 'ios' }),
+          body: JSON.stringify({ step: 'generate', photoIds: [photoId], engine, surface }),
         });
         if (!res.ok) {
           const body = (await res.json().catch(() => ({}))) as { error?: string };
@@ -561,43 +576,63 @@ export function HomeTourSection({
             most of the vertical space on this page and neither of them was the
             thing being reviewed. The web cut has its own row in the table. */}
         <div>
-          <div className="flex items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="font-semibold text-ink text-lg">Latest Video</div>
-            {iosAssembly && (
-              <span
-                className={`rounded-full px-2 py-0.5 font-medium text-xs ${
-                  iosAssembly.status === 'ready'
-                    ? 'bg-green-100 text-green-700'
-                    : 'bg-amber-100 text-amber-700'
-                }`}
-              >
-                {iosAssembly.status}
-              </span>
-            )}
+            <div className="flex items-center gap-2">
+              <div className="flex overflow-hidden rounded-lg border border-line text-xs">
+                {(['ios', 'web'] as const).map((sfc) => (
+                  <button
+                    key={sfc}
+                    type="button"
+                    onClick={() => setPreview(sfc)}
+                    className={`px-2 py-1 ${
+                      preview === sfc ? 'bg-ink text-bg' : 'bg-bg text-ink2 hover:text-ink'
+                    }`}
+                    title={sfc === 'ios' ? 'The feed card cut, 1080x1576' : 'The 16:9 web cut'}
+                  >
+                    {sfc === 'ios' ? 'iOS' : 'Web'}
+                  </button>
+                ))}
+              </div>
+              {shownAssembly && (
+                <span
+                  className={`rounded-full px-2 py-0.5 font-medium text-xs ${
+                    shownAssembly.status === 'ready'
+                      ? 'bg-green-100 text-green-700'
+                      : 'bg-amber-100 text-amber-700'
+                  }`}
+                >
+                  {shownAssembly.status}
+                </span>
+              )}
+            </div>
           </div>
           {iframeUrl ? (
             <>
               <div className="mt-3 overflow-hidden rounded-xl bg-black">
                 <iframe
-                  title="Home tour video"
+                  title={`Home tour video (${preview})`}
                   src={iframeUrl}
                   // The render canvas, not 9:16 — a hardcoded ratio letterboxed
                   // the community player when its canvas changed shape.
-                  style={{ aspectRatio: `${IOS_CANVAS.w} / ${IOS_CANVAS.h}`, height: 420 }}
+                  style={{
+                    aspectRatio: `${previewCanvas.w} / ${previewCanvas.h}`,
+                    height: preview === 'web' ? 260 : 420,
+                  }}
                   allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture"
                   allowFullScreen
                 />
               </div>
               <div className="mt-2 text-center text-[11px] text-ink2 tabular-nums">
-                {iosAssembly ? new Date(iosAssembly.created_at).toLocaleString() : ''}
+                {shownAssembly ? new Date(shownAssembly.created_at).toLocaleString() : ''}
               </div>
             </>
           ) : (
             <div className="mt-3 flex h-[420px] items-center justify-center rounded-xl border border-line border-dashed px-4 text-center text-ink2 text-xs">
-              {!iosAssembly
-                ? 'No video yet — review the photos, then Plan, Render and Assemble.'
-                : iosAssembly.status === 'failed'
-                  ? (iosAssembly.error ?? 'Assembly failed.')
+              {!shownAssembly
+                ? `No ${preview === 'web' ? 'web' : 'iOS'} video yet — review the photos, then Plan, Render and Assemble.`
+                : shownAssembly.status === 'failed'
+                  ? (shownAssembly.error ?? 'Assembly failed.')
                   : 'Assembling… the worker is rendering it now.'}
             </div>
           )}

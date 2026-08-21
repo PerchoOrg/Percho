@@ -19,6 +19,8 @@ Community films now open on the community. Its own amenities lead the film and r
 Aberdeen in Suwanee is the first community with this treatment: a 58-second film that opens on its clubhouse and takes in the pool, the courts and the grounds before heading out into Suwanee.
 
 ### 2026-08-21
+- The photo table now has an iOS column and a Web column side by side, so both versions of a shot are visible on the same row whichever motion each one uses
+- The finished web version can be watched on the home tour screen — the player switches between the phone cut and the widescreen cut
 - Long steps now show how long they've been running, so a job that takes minutes no longer looks like one that has died
 - A step that fails to complete now says so instead of quietly doing nothing
 - Work interrupted by a restart of the video machine is now picked back up automatically. Previously a clip caught mid-render was stuck forever, which could leave a tour permanently one shot short
