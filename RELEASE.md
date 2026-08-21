@@ -19,6 +19,8 @@ Community films now open on the community. Its own amenities lead the film and r
 Aberdeen in Suwanee is the first community with this treatment: a 58-second film that opens on its clubhouse and takes in the pool, the courts and the grounds before heading out into Suwanee.
 
 ### 2026-08-21
+- Home tour clips and films now appear on the Video Jobs screen alongside every other queue, instead of being invisible while they ran
+- An AI hero shot requested for a home tour is now actually picked up and made. Before, the request was recorded and nothing ever collected it
 - A home tour step that fails now says so, with the reason, instead of showing as still running. A step that stops making progress is called out rather than spinning forever
 - Home tour videos are now built the same way community films are — one stage at a time, with a stop for review in the middle. Photos are labelled, then you go through them and keep or drop each one, then the running order is worked out, then each shot is made, then the film is stitched
 - The running order is visible before anything is rendered. Which photos the film will use, what order they play in, how long each one lasts and how the camera moves across it — all of it can be read and changed while the film still costs nothing to redo

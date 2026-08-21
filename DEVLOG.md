@@ -16,6 +16,71 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-21 07:20 UTC — The home tour's two queues get a worker and a screen
+
+**Objective**: owner, after a successful run: "render finished, running assembly
+now but dont see it on the video jobs."
+
+**What was actually true**: the assembly had already finished — 18 seconds, not
+still running. The whole per-photo pipeline worked end to end for the first
+time: 10 clips ready (7 Ken Burns, 3 DepthFlow), assembly `ready`, film on
+Cloudflare at **1080x1576**, 26s, published to
+`listing_videos.cf_video_id_square`. The canvas fix is confirmed against a real
+asset, not a constant.
+
+**Two real gaps behind the report**:
+
+1. `/admin/pipeline/bucket-jobs` ("Video Jobs") enumerates queues BY NAME —
+   `generated_videos`, `photo_clips`, `ai_tour_videos`, `tour_assemblies`. It
+   never learned about `listing_photo_clips` or `listing_tour_assemblies`, so a
+   pipeline that ran, produced ten clips and a film showed nothing at all.
+
+2. Worse, and not what the owner asked about: **nothing drained
+   `listing_photo_clips`**. The table allows `engine='seedance'` and the table
+   UI has a Generate button wired to it, but `scripts/seedance-worker/worker.ts`
+   polled `photo_clips` and `ai_tour_videos` only. The one Seedance hero clip
+   the owner queued would have waited forever. Found by ws3's new Worker hub,
+   which listed the queue precisely so an undrained one reads as stalled rather
+   than as a clip that never appears.
+
+**Actions**:
+- `scripts/seedance-worker/worker.ts`: `processPhotoClips` becomes
+  `processClipQueue(scope, budget)`, parameterised by a `ClipScope`
+  (`COMMUNITY_CLIPS` / `HOME_CLIPS`) in the same idiom as `entity-scope.ts`.
+  `tick()` drains both.
+- `bucket-jobs/page.tsx`: both home queues added, `scope` distinguishing them
+  in the existing type column; the home clip row shows `engine · surface`
+  because a home clip is only identified by both.
+- `worker-hub/queues.ts`: the "NOTHING DRAINS THIS" note corrected — it was
+  true when written and is not any more.
+
+**Decisions**:
+- **One shared per-tick budget across both clip queues.** These are paid
+  OpenRouter jobs and `MAX_JOBS_PER_TICK = 1` exists to stop several
+  minutes-long generations running at once. Giving the home queue its own cap
+  would have quietly doubled the spend rate — the kind of change that looks
+  like plumbing and reads as a bill.
+- Parameterised rather than copied: the alternative was two copies of a
+  130-line loop that spends money, which is exactly the drift
+  `entity-scope.ts` exists to prevent.
+
+**Issues**: the first edit was applied with `str.replace` and no count, and the
+`ai_tour_videos` loop above shared the same three opening lines — so it was
+silently rewritten to reference `budget`, `scope` and `photoId`, none of which
+exist there. **`pnpm typecheck` does not cover `scripts/`**, so the normal gate
+was green with the worker broken. Caught by typechecking the file directly
+against a throwaway tsconfig, then reverted.
+
+**Learnings**: `scripts/` is outside the typecheck gate while containing two
+long-running workers and every paid code path. A worker edit that passes
+`pnpm typecheck` has not been checked at all. Worth adding `scripts/` to a
+tsconfig before the next change in there — flagged, not done, as it is outside
+this phase.
+
+**Next steps**: restart the seedance worker so it picks up the second queue;
+the pending hero clip will then be claimed. Web (16:9) clips are still planned
+but never enqueued.
+
 ## 2026-08-21 06:40 UTC — The Worker tab becomes a hub: process, host, queues, spend, logs
 
 **Objective**: Owner — "lets improve the admin worker tab - it should function as
