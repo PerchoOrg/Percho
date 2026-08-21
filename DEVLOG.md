@@ -16,6 +16,29 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-21 09:20 UTC — The header places the two cuts by shape
+
+**Objective**: owner — "admin home tour page, put web under information, and
+home video on the right side, it is empty."
+
+**Cause**: the previous pass put both players side by side inside the header's
+RIGHT column, so each got a quarter of the width. The portrait iOS cut came out
+small and the left column's facts left a tall gap beside them — the right side
+read as empty because the thing meant to fill it had been squeezed into half of
+half.
+
+Shape decides placement: the 16:9 web cut is wide and short and belongs under
+the facts it is the same width as; the portrait cut is tall and fills the
+column beside them.
+
+**Actions**: `CutPlayer` extracted from the two-up map so the two halves of the
+header can each render one; `cuts` array removed with its only reader.
+
+**Learnings**: four layouts in a day for one header — stacked, single, tabbed,
+side-by-side, and now placed by aspect. The ones that failed all treated the two
+players as interchangeable items in a list. They are a portrait and a landscape,
+and every layout that ignored that wasted space in one direction or the other.
+
 ## 2026-08-21 09:05 UTC — The iOS deck shows only cards that have a video
 
 **Objective**: owner — "on ios, only show cards with videos, either community
