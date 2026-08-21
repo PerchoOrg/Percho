@@ -66,11 +66,22 @@ export const TOUR_STEPS: StepSpec[] = [
  */
 export const AUTOMATABLE_STEPS: StepName[] = ['research', 'resolve', 'photos'];
 
-export type StepState = 'idle' | 'running' | 'done' | 'failed';
+/**
+ * `running` is the REQUEST in flight. `waiting` is the request finished and the
+ * work still happening somewhere else.
+ *
+ * Assemble and Render both hand off to the render worker and return
+ * immediately, so a state derived from "did the step write a result" turns
+ * green while the film is still encoding — owner 2026-08-20: "I clicked rerun
+ * of assembly, the video is not yet ready, the 5 · Assemble is green, that is
+ * not right." Green now means the artefact exists, not that the button worked.
+ */
+export type StepState = 'idle' | 'running' | 'waiting' | 'done' | 'failed';
 
 export function TourStepStrip({
   steps = TOUR_STEPS,
   stateOf,
+  noteOf,
   running,
   awaitingReview,
   onRun,
@@ -79,6 +90,8 @@ export function TourStepStrip({
 }: {
   steps?: StepSpec[];
   stateOf: (s: StripStep) => StepState;
+  /** Live detail for a step — "rendering 12/39", "encoding". Optional. */
+  noteOf?: (s: StripStep) => string | undefined;
   running: StepName | null;
   /** True once `photos` has finished and `plan` has not run. */
   awaitingReview: boolean;
@@ -138,7 +151,9 @@ export function TourStepStrip({
                         ? 'border-emerald-600/30 bg-emerald-600/5'
                         : state === 'failed'
                           ? 'border-red-400/50 bg-red-50'
-                          : 'border-line bg-bg'
+                          : state === 'waiting'
+                            ? 'border-amber-400/60 bg-amber-50'
+                            : 'border-line bg-bg'
                 }`}
               >
                 <div className="flex items-center gap-1.5">
@@ -152,10 +167,14 @@ export function TourStepStrip({
                       status"), so the whole chip says so. */}
                   {isRunning ? (
                     <span className="font-medium text-ink">running…{elapsedLabel}</span>
+                  ) : state === 'waiting' ? (
+                    <span className="font-medium text-amber-700">
+                      {noteOf?.(s.name) ?? 'rendering…'}
+                    </span>
                   ) : gated ? (
                     'waiting on you'
                   ) : (
-                    s.hint
+                    (noteOf?.(s.name) ?? s.hint)
                   )}
                 </div>
                 {runnable ? (
@@ -174,7 +193,13 @@ export function TourStepStrip({
                   </button>
                 ) : (
                   <div className="mt-1.5 h-[19px] text-[11px] text-ink2/70">
-                    {state === 'done' ? 'done' : gated ? 'in the table below' : '—'}
+                    {state === 'done'
+                      ? 'done'
+                      : state === 'waiting'
+                        ? 'in progress'
+                        : gated
+                          ? 'in the table below'
+                          : '—'}
                   </div>
                 )}
               </div>
@@ -212,6 +237,8 @@ function planStepLabel(steps: StepSpec[]): string {
 
 function StateIcon({ state }: { state: StepState }) {
   if (state === 'running') return <Loader2 size={12} className="animate-spin text-ink2" />;
+  // Spinning too, but amber: the worker has it, and it is not done.
+  if (state === 'waiting') return <Loader2 size={12} className="animate-spin text-amber-600" />;
   if (state === 'done') return <Check size={12} className="text-emerald-600" />;
   if (state === 'failed') return <AlertCircle size={12} className="text-red-600" />;
   return <span className="inline-block h-3 w-3 rounded-full border border-ink2/30" />;
