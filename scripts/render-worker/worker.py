@@ -46,6 +46,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "ken-burns"))
 from xfade import crossfade_offsets, crossfade_total  # type: ignore  # noqa: E402
 from photo_selector import build_plan  # type: ignore  # noqa: E402
 from photo_tagger import MODEL as TAGGER_MODEL, tag_listing_photos  # type: ignore  # noqa: E402
+# The home tour's plan step decides engine and camera move per surface, the
+# same way generate.py does for a whole film — see process_plan_job.
+from depthflow_modes import pick_engines, plan_moves  # type: ignore  # noqa: E402
 
 
 def _now_iso() -> str:
@@ -274,12 +277,20 @@ def cf_upload(mp4: Path, meta: dict[str, str]) -> str:
 # ── job pipeline ────────────────────────────────────────────────────────
 
 def claim_job() -> dict[str, Any] | None:
-    """Optimistic lock: pick oldest queued row, UPDATE if still queued."""
+    """Optimistic lock: pick oldest queued row, UPDATE if still queued.
+
+    `step=render` only. `render_jobs` carries three kinds of work since
+    2026-08-21 — the legacy whole-film render, and the home tour's `tag` and
+    `plan` steps, which produce no video. Without this filter a tag job would
+    be handed to `process_job`, which would try to render a film from it and
+    fail on the null video_row_id.
+    """
     rows = sb_get(
         "render_jobs",
         {
-            "select": "id,listing_id,video_row_id,attempts,orientations,engine",
+            "select": "id,listing_id,video_row_id,attempts,orientations,engine,run_id",
             "status": "eq.queued",
+            "step": "eq.render",
             "order": "created_at.asc",
             "limit": "1",
         },
@@ -2758,6 +2769,838 @@ def sync_bgm_if_due(force: bool = False) -> None:
         print(f"[bgm] sync failed: {exc}", flush=True)
 
 
+
+# ══════════════════════════════════════════════════════════════════════════
+# Home tour pipeline (2026-08-21)
+# ══════════════════════════════════════════════════════════════════════════
+#
+# The home tour used to be `process_job()` alone: one function that tagged,
+# planned, rendered, uploaded and attached, and reported a single error string
+# if any of it failed. It is now the same five-stage shape the community tour
+# has — tag, review (human), plan, render one clip per photo, assemble — with
+# every stage's output persisted to `listing_tour_runs.step_results` so the
+# admin page can see into it.
+#
+# Two of the five run here because they are Python and stay Python (owner
+# decision 2026-08-20): `tag` wraps photo_tagger, `plan` wraps
+# photo_selector.build_plan. The other three are database writes the web app
+# makes directly; this worker consumes their rows.
+#
+# `process_job` is deliberately untouched. It is still the renderer that
+# works, and it stays reachable until a film has come out of the per-photo
+# path on real photos.
+
+# The two canvases a home tour ships. iOS is the SAME shape as the community
+# tour (TOUR_CANVAS_*) — the feed card's measured aspect since the 2026-08-17
+# card unification made every card kind one frame. The 1080x1080 SQUARE_EDGE
+# canvas above it predates that and crops 31.5% of every frame's width under
+# the card's fit="cover".
+#
+# Must equal SURFACE_CANVAS in apps/web/lib/poi/listing-tour-steps/shared.ts:
+# the render key that decides whether a clip is stale is built from these
+# numbers on the web side and the pixels are produced from them here.
+SURFACE_CANVAS = {
+    "ios": (TOUR_CANVAS_W, TOUR_CANVAS_H),
+    "web": (1920, 1080),
+}
+
+
+def canvas_overflow(w: Any, h: Any, cw: int, ch: int) -> float:
+    """How much of a photo the canvas cannot show at once, as a frame fraction.
+
+    A 3:2 photo on a square canvas is 0.50 — the frame has to travel half its
+    own width to reveal the whole thing. 0.0 for a photo that already matches,
+    or one whose dimensions we never learned.
+
+    This is `photo_selector.square_overflow` generalised to any canvas, and it
+    reduces to exactly that function when cw == ch. The home tour needs the
+    general form because the same photo overflows differently on the 0.685 iOS
+    canvas and the 16:9 web one, and that difference is what `pick_engines`
+    reads to decide which clips get parallax.
+    """
+    if not w or not h:
+        return 0.0
+    ar = float(w) / float(h)
+    target = float(cw) / float(ch)
+    return abs(ar / target - 1.0) if ar >= target else abs(target / ar - 1.0)
+
+
+def save_run_step(run_id: str | None, step: str, result: dict[str, Any]) -> None:
+    """Merge one step's output into listing_tour_runs.step_results.
+
+    Read-modify-write rather than a jsonb merge because PostgREST has no
+    partial-object update; the runs are single-writer (one worker, one step at
+    a time) so the race this would lose to does not exist.
+
+    Never raises. A step whose real work succeeded must not be reported as
+    failed because its bookkeeping write did — the artefact is what the admin
+    page reads state from, and it is already correct by this point.
+    """
+    if not run_id:
+        return
+    try:
+        rows = sb_get(
+            "listing_tour_runs",
+            {"select": "id,step_results", "id": f"eq.{run_id}", "limit": "1"},
+        )
+        if not rows:
+            return
+        merged = dict(rows[0].get("step_results") or {})
+        merged[step] = {**result, "ran_at": _now_iso()}
+        sb_patch(
+            "listing_tour_runs",
+            {"id": f"eq.{run_id}"},
+            {"step_results": merged, "updated_at": _now_iso()},
+        )
+    except Exception:
+        traceback.print_exc()
+
+
+def set_run_status(run_id: str | None, status: str) -> None:
+    if not run_id:
+        return
+    try:
+        sb_patch(
+            "listing_tour_runs",
+            {"id": f"eq.{run_id}"},
+            {"status": status, "updated_at": _now_iso()},
+        )
+    except Exception:
+        traceback.print_exc()
+
+
+def claim_step_job() -> dict[str, Any] | None:
+    """Claim the oldest queued home-tour tag/plan job."""
+    rows = sb_get(
+        "render_jobs",
+        {
+            "select": "id,listing_id,run_id,attempts,step",
+            "status": "eq.queued",
+            "or": "(step.eq.tag,step.eq.plan)",
+            "order": "created_at.asc",
+            "limit": "1",
+        },
+    )
+    if not rows:
+        return None
+    job = rows[0]
+    updated = sb_patch(
+        "render_jobs",
+        {"id": f"eq.{job['id']}", "status": "eq.queued"},
+        {"status": "running", "attempts": job["attempts"] + 1},
+    )
+    if not updated:
+        return None
+    return job
+
+
+def _finish_step_job(job_id: str, ok: bool, error: str | None = None) -> None:
+    sb_patch(
+        "render_jobs",
+        {"id": f"eq.{job_id}"},
+        {
+            "status": "done" if ok else "failed",
+            "error": (error or "")[:500] or None,
+            "updated_at": _now_iso(),
+        },
+    )
+
+
+def _load_listing_photos(
+    listing_id: str, workdir: Path, exclude_rejected: bool = False
+) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    """The listing row and its photos, downloaded, with probed dimensions.
+
+    Same read rules the render path uses: an APPROVED enhancement is the file
+    that gets read, while `storage_path` stays the provenance record.
+
+    `exclude_rejected` is the review gate. The plan step passes it so a photo
+    the owner rejected cannot reach `build_plan`; the tag step does not,
+    because tagging a photo is what makes it reviewable in the first place.
+    """
+    listings = sb_get(
+        "listings",
+        {
+            "select": "id,address,city,state,zip,price,beds,baths,sqft,neighborhood,ai_style",
+            "id": f"eq.{listing_id}",
+            "limit": "1",
+        },
+    )
+    if not listings:
+        raise RuntimeError(f"listing {listing_id} not found")
+    listing = listings[0]
+
+    params = {
+        "select": "id,storage_path,sort_order,width,height,ai_tags,tagged_at,"
+                  "enhanced_path,enhanced_status,review_status",
+        "listing_id": f"eq.{listing_id}",
+        "order": "sort_order.asc",
+    }
+    if exclude_rejected:
+        params["review_status"] = "neq.rejected"
+    photos = sb_get("listing_photos", params)
+
+    records: list[dict[str, Any]] = []
+    for p in photos:
+        read_path = approved_enhanced_path(p) or p["storage_path"]
+        sort_i = int(p.get("sort_order") or 0)
+        pid = p["id"]
+        ext = Path(read_path).suffix or ".jpg"
+        dest = workdir / f"{sort_i:03d}_{pid}{ext}"
+        storage_download(PHOTO_BUCKET, read_path, dest)
+        probed = probe_dims(dest)
+        records.append({
+            "id": pid,
+            "sort_order": sort_i,
+            "local_path": str(dest),
+            "storage_path": p["storage_path"],
+            "probe_w": probed[0] if probed else None,
+            "probe_h": probed[1] if probed else None,
+            "width": p.get("width"),
+            "height": p.get("height"),
+            "cached_ai_tags": p.get("ai_tags"),
+            "tagged_at": p.get("tagged_at"),
+            "review_status": p.get("review_status") or "pending",
+        })
+    return listing, records
+
+
+# ── step: tag ──────────────────────────────────────────────────────────────
+
+def process_tag_job(job: dict[str, Any]) -> None:
+    """Vision-tag a listing's untagged photos.
+
+    Extracted from `process_job`'s step 4b so it can be run, watched and
+    re-run on its own. The persistence rules are that block's, unchanged: an
+    errored photo still gets `tagged_at` stamped so a broken frame is not
+    retried forever, and `ai_tags` stays null for it.
+    """
+    job_id = job["id"]
+    listing_id = job["listing_id"]
+    run_id = job.get("run_id")
+    workdir = Path(tempfile.mkdtemp(prefix=f"tag-{job_id[:8]}-"))
+    print(f"[tag {job_id}] listing={listing_id}", flush=True)
+    try:
+        set_run_status(run_id, "tagging")
+        listing, records = _load_listing_photos(listing_id, workdir)
+        if not records:
+            raise RuntimeError("listing has no photos")
+
+        need_tag = [r for r in records if not r.get("tagged_at")]
+        if not need_tag:
+            print(f"[tag {job_id}] all {len(records)} photos already tagged", flush=True)
+            save_run_step(run_id, "tag", {
+                "total": len(records), "tagged": 0, "cached": len(records),
+            })
+            set_run_status(run_id, "review")
+            _finish_step_job(job_id, True)
+            return
+
+        print(f"[tag {job_id}] tagging {len(need_tag)} of {len(records)}", flush=True)
+        tag_result = tag_listing_photos(need_tag, listing)
+        now = _now_iso()
+        written = 0
+        errored = 0
+        for r in tag_result["photos"]:
+            pid = r.get("id")
+            if not pid:
+                continue
+            if "error" in r:
+                errored += 1
+                sb_patch(
+                    "listing_photos",
+                    {"id": f"eq.{pid}"},
+                    {"tagged_at": now, "ai_model": TAGGER_MODEL},
+                )
+                continue
+            ai_tags = {
+                k: v for k, v in r.items()
+                if not k.startswith("_") and k not in ("id", "sort_order")
+            }
+            q = float(r.get("quality") or 0.0)
+            hs = float(r.get("hero_score") or 0.0)
+            sb_patch(
+                "listing_photos",
+                {"id": f"eq.{pid}"},
+                {
+                    "ai_tags": ai_tags,
+                    "ai_score": round(q * hs, 2),
+                    "ai_model": TAGGER_MODEL,
+                    "tagged_at": now,
+                },
+            )
+            written += 1
+
+        style_info = tag_result.get("style")
+        if isinstance(style_info, dict):
+            sb_patch("listings", {"id": f"eq.{listing_id}"}, {"ai_style": style_info})
+
+        save_run_step(run_id, "tag", {
+            "total": len(records),
+            "tagged": written,
+            "errored": errored,
+            "cached": len(records) - len(need_tag),
+            "style": (style_info or {}).get("style"),
+        })
+        # The gate. Nothing plans or renders until the owner has been through
+        # the table, so the run parks here rather than rolling on.
+        set_run_status(run_id, "review")
+        _finish_step_job(job_id, True)
+        print(f"[tag {job_id}] tagged {written}, errored {errored}", flush=True)
+    except Exception as e:  # noqa: BLE001
+        err = f"{type(e).__name__}: {e}"
+        print(f"[tag {job_id}] FAILED: {err}", flush=True)
+        traceback.print_exc()
+        save_run_step(run_id, "tag", {"error": err[:500]})
+        set_run_status(run_id, "failed")
+        _finish_step_job(job_id, False, err)
+    finally:
+        shutil.rmtree(workdir, ignore_errors=True)
+
+
+# ── step: plan ─────────────────────────────────────────────────────────────
+
+def process_plan_job(job: dict[str, Any]) -> None:
+    """Build the shot list. Renders nothing, spends nothing.
+
+    This is the step that did not exist. `build_plan` ran inside the render,
+    so the first sight of which photos a tour used, in what order and for how
+    long, was the finished film. Now it lands in `step_results.plan` and the
+    admin table's Plan column shows it while every clip is still un-rendered.
+
+    Engine and camera move are decided HERE, per surface, and carried on the
+    shot. `pick_engines` reads how much of each photo its canvas cannot show,
+    so the iOS and web cuts genuinely differ — deciding once for both would
+    let the easier canvas dictate the harder one.
+
+    Seedance is never assigned automatically. It is the hero shot only, on an
+    explicit click; a plan that could bill a generation on its own would make
+    "run Plan to see what it would do" a spending decision.
+    """
+    job_id = job["id"]
+    listing_id = job["listing_id"]
+    run_id = job.get("run_id")
+    workdir = Path(tempfile.mkdtemp(prefix=f"plan-{job_id[:8]}-"))
+    print(f"[plan {job_id}] listing={listing_id}", flush=True)
+    try:
+        set_run_status(run_id, "planning")
+        listing, records = _load_listing_photos(listing_id, workdir, exclude_rejected=True)
+        if not records:
+            raise RuntimeError("no photos survived review")
+
+        # Flatten cached tags into the shape build_plan expects.
+        tagged: list[dict[str, Any]] = []
+        untagged: list[str] = []
+        for r in records:
+            tags = r.get("cached_ai_tags")
+            if not (r.get("tagged_at") and isinstance(tags, dict)):
+                untagged.append(r["id"])
+                continue
+            row = dict(tags)
+            row["id"] = r["id"]
+            row["_id"] = r["id"]
+            row["sort_order"] = r["sort_order"]
+            row["_sort_order"] = r["sort_order"]
+            # The planner sizes its short beats around how much of a photo a
+            # clip can reveal, which needs the photo's shape. The DB column is
+            # null for most rows, so prefer what we probed off the file.
+            if r.get("probe_w") and r.get("probe_h"):
+                row["width"], row["height"] = r["probe_w"], r["probe_h"]
+            tagged.append(row)
+
+        valid = [t for t in tagged if t.get("room_type") and not t.get("error")]
+        if not valid:
+            raise RuntimeError(
+                f"zero valid vision tags ({len(tagged)} attempted) — run Tag first"
+            )
+
+        cached_style = listing.get("ai_style")
+        style_info = cached_style if isinstance(cached_style, dict) else {"style": "modern"}
+        style = style_info.get("style", "modern")
+
+        plan = build_plan(tagged, style, listing_id)
+
+        # Per-surface engine + move. `plan_moves` resolves the whole cut at
+        # once so no two neighbouring clips get the same camera move, which a
+        # per-clip decision cannot see.
+        # `build_plan` returns shot dicts that do NOT carry width/height — it
+        # reads them off its INPUT and does not pass them through. Reading
+        # `sh["width"]` here would hand pick_engines a list of zeros for every
+        # surface, which still returns a legal engine split but a blind one:
+        # the parallax clips would be chosen by position rather than by which
+        # photos the canvas can least afford to travel across, and the iOS and
+        # web cuts would come out identical. The dimensions come from the
+        # probed records instead, keyed by photo id.
+        dims_by_id = {r["id"]: (r.get("probe_w"), r.get("probe_h")) for r in records}
+
+        shots: list[dict[str, Any]] = []
+        surfaces_plan: dict[str, list[str]] = {}
+        for surface, (cw, ch) in SURFACE_CANVAS.items():
+            overflows = [
+                canvas_overflow(*dims_by_id.get(sh.get("id"), (None, None)), cw, ch)
+                for sh in plan
+            ]
+            surfaces_plan[surface] = pick_engines(overflows)
+
+        parallax_moves = plan_moves([(sh.get("mode") or "push_in", sh.get("room_type")) for sh in plan])
+
+        for i, sh in enumerate(plan):
+            per_surface: dict[str, Any] = {}
+            for surface in SURFACE_CANVAS:
+                engine = surfaces_plan[surface][i]
+                per_surface[surface] = {
+                    # DepthFlow gets the parallax move resolved from the Ken
+                    # Burns intent; Ken Burns keeps the intent itself.
+                    "move": parallax_moves[i] if engine == "depthflow" else sh.get("mode"),
+                    "engine": engine,
+                    "prompt": None,
+                    "ai_generated": False,
+                }
+            shots.append({
+                "photo_id": sh.get("id"),
+                "sort_order": i,
+                "duration_s": float(sh.get("duration_s") or 3.0),
+                "room_type": sh.get("room_type"),
+                "is_hero": bool(sh.get("is_hero")),
+                "mode": sh.get("mode"),
+                "surfaces": per_surface,
+            })
+
+        chosen = {s["photo_id"] for s in shots}
+        dropped: list[dict[str, str]] = []
+        for r in records:
+            if r["id"] in chosen:
+                continue
+            if r["id"] in untagged:
+                reason = "not tagged yet"
+            else:
+                tag = r.get("cached_ai_tags") or {}
+                if isinstance(tag, dict) and tag.get("usable") is False:
+                    reason = "tagged unusable"
+                else:
+                    reason = "not selected — room quota, near-duplicate, or over the length budget"
+            dropped.append({"photo_id": r["id"], "reason": reason})
+
+        save_run_step(run_id, "plan", {
+            "shots": shots,
+            "dropped": dropped,
+            "style": style,
+            "eligible": len(records),
+            "untagged": len(untagged),
+        })
+        set_run_status(run_id, "planning")
+
+        # Provenance, same as the legacy path: clear the listing, then stamp
+        # the chosen ones, so a photo dropped by a re-plan stops claiming it is
+        # in the tour. Never fail a good plan over bookkeeping.
+        try:
+            sb_patch(
+                "listing_photos",
+                {"listing_id": f"eq.{listing_id}"},
+                {"used_in_video_at": None, "used_clip_index": None},
+            )
+            stamped_at = _now_iso()
+            for clip_i, sh in enumerate(shots):
+                sb_patch(
+                    "listing_photos",
+                    {"id": f"eq.{sh['photo_id']}"},
+                    {"used_in_video_at": stamped_at, "used_clip_index": clip_i},
+                )
+        except Exception:
+            traceback.print_exc()
+
+        _finish_step_job(job_id, True)
+        print(
+            f"[plan {job_id}] {len(shots)} shots from {len(records)} photos "
+            f"(style={style}, {len(dropped)} dropped)",
+            flush=True,
+        )
+    except Exception as e:  # noqa: BLE001
+        err = f"{type(e).__name__}: {e}"
+        print(f"[plan {job_id}] FAILED: {err}", flush=True)
+        traceback.print_exc()
+        save_run_step(run_id, "plan", {"error": err[:500]})
+        set_run_status(run_id, "failed")
+        _finish_step_job(job_id, False, err)
+    finally:
+        shutil.rmtree(workdir, ignore_errors=True)
+
+
+# ── listing_photo_clips: one clip per photo, per surface ───────────────────
+#
+# The home tour's render unit used to be the whole film — one ffmpeg pass over
+# N cross-faded photos, so the smallest thing you could redo was all of it.
+# Now each photo is its own clip, cached and re-renderable on its own (owner
+# 2026-08-20: "so we can more control on the single photos, for better quality
+# or rendering").
+#
+# Only local engines are consumed here. A seedance row is picked up by
+# scripts/seedance-worker, exactly as it is on the community side.
+
+# Every name here must be one kenburns_filter_v2 actually implements. Keep in
+# sync with KEN_BURNS_MOVES in tour-orchestrator/scheduler.ts — the community
+# list ended in v1 names ("zoom-in"/"zoom-out") that had no branch in the v2
+# filter, so 2 of 9 rendered as a push-in whatever they claimed.
+LISTING_CLIP_MODES = [
+    "push_in", "push_in_slow", "pull_back", "pan_lr", "pan_rl",
+    "push_pan_lr", "push_pan_rl", "tilt_td",
+]
+
+
+def claim_listing_clip() -> dict[str, Any] | None:
+    """Claim the oldest pending depthflow/kenburns listing_photo_clips row."""
+    rows = sb_get(
+        "listing_photo_clips",
+        {
+            "select": "id,listing_photo_id,engine,surface,duration_s,status,move",
+            "status": "eq.pending",
+            "or": "(engine.eq.depthflow,engine.eq.kenburns)",
+            "order": "created_at.asc",
+            "limit": "1",
+        },
+    )
+    if not rows:
+        return None
+    row = rows[0]
+    updated = sb_patch(
+        "listing_photo_clips",
+        {"id": f"eq.{row['id']}", "status": "eq.pending"},
+        {"status": "processing", "updated_at": _now_iso()},
+    )
+    if not updated:
+        return None
+    return row
+
+
+def process_listing_clip(row: dict[str, Any]) -> None:
+    clip_id = row["id"]
+    photo_id = row["listing_photo_id"]
+    engine = row.get("engine") or "kenburns"
+    surface = row.get("surface") or "ios"
+    cw, ch = SURFACE_CANVAS.get(surface, SURFACE_CANVAS["ios"])
+    workdir = Path(tempfile.mkdtemp(prefix=f"lclip-{clip_id[:8]}-"))
+    print(f"[lclip {clip_id}] photo={photo_id} engine={engine} surface={surface}", flush=True)
+
+    try:
+        photos = sb_get(
+            "listing_photos",
+            {
+                "select": "id,storage_path,enhanced_path,enhanced_status,width,height",
+                "id": f"eq.{photo_id}",
+                "limit": "1",
+            },
+        )
+        if not photos:
+            raise RuntimeError(f"listing_photo {photo_id} not found")
+        p = photos[0]
+        read_path = approved_enhanced_path(p) or p["storage_path"]
+        ext = Path(read_path).suffix or ".jpg"
+        # The filename MUST be the photo UUID: generate.py's --shot-plan loader
+        # matches plan entries by sort_order prefix OR by filename stem against
+        # the plan's `id`. A plain `photo.jpg` matches neither, which is how
+        # every community DA+KB clip failed on 2026-08-17.
+        src = workdir / f"{photo_id}{ext}"
+        storage_download(PHOTO_BUCKET, read_path, src)
+
+        duration = float(row.get("duration_s") or 3.0)
+        out_path = workdir / "clip.mp4"
+        # The move comes from the plan, which resolved the whole cut at once so
+        # no two neighbouring clips repeat a camera move. A row planned without
+        # one falls back to a deterministic per-photo pick rather than
+        # generate.py's default, which is zoom-in for every clip.
+        mode = (row.get("move") or "").strip() or LISTING_CLIP_MODES[
+            int(photo_id[:8], 16) % len(LISTING_CLIP_MODES)
+        ]
+        shot_plan_path = workdir / "clip_shot_plan.json"
+        shot_plan_path.write_text(json.dumps({"plan": [{
+            "id": photo_id,
+            "sort_order": 0,
+            "room_type": None,
+            "is_master": False,
+            "subject_label": None,
+            "subject_bbox": None,
+            "ai_caption": "",
+            "hero_score": 0.5,
+            "quality": 0.5,
+            "duration_s": duration,
+            "mode": mode,
+            "is_hero": True,
+        }]}))
+        cmd = [
+            PYTHON_BIN,
+            str(GENERATE_SCRIPT),
+            "--photos", str(workdir),
+            "--output", str(out_path),
+            "--duration-per-photo", str(duration),
+            "--engine", engine,
+            # Explicit canvas + cover-crop: every clip fills the frame, no
+            # black bands. The fit-inside blur-letterbox path would pad.
+            "--resolution", f"{cw}x{ch}",
+            "--cover-crop",
+            "--shot-plan", str(shot_plan_path),
+        ]
+        if engine == "depthflow":
+            cmd += ["--depthflow-python", DEPTHFLOW_PYTHON]
+        print(f"[lclip {clip_id}] running: {' '.join(cmd)}", flush=True)
+        subprocess.run(cmd, check=True, cwd=str(REPO_ROOT), timeout=600)
+        if not out_path.exists():
+            raise RuntimeError("generate.py produced no output")
+
+        # LOCAL render output goes to clip-renders, never the paid ai-videos
+        # bucket. Surface is in the path because the same photo has a different
+        # clip per canvas and they must not collide.
+        storage_path = f"listing-clips/{photo_id}-{surface}-{engine}.mp4"
+        storage_upload("clip-renders", storage_path, out_path, content_type="video/mp4")
+
+        sb_patch(
+            "listing_photo_clips",
+            {"id": f"eq.{clip_id}"},
+            {
+                "status": "ready",
+                "storage_path": storage_path,
+                "error": None,
+                "updated_at": _now_iso(),
+            },
+        )
+        print(f"[lclip {clip_id}] ready -> {storage_path}", flush=True)
+    except Exception as e:  # noqa: BLE001
+        err = f"{type(e).__name__}: {e}"
+        print(f"[lclip {clip_id}] FAILED: {err}", flush=True)
+        traceback.print_exc()
+        try:
+            sb_patch(
+                "listing_photo_clips",
+                {"id": f"eq.{clip_id}"},
+                {"status": "failed", "error": err[:500], "updated_at": _now_iso()},
+            )
+        except Exception:
+            traceback.print_exc()
+    finally:
+        shutil.rmtree(workdir, ignore_errors=True)
+
+
+# ── listing_tour_assemblies: the final concat, per surface ─────────────────
+
+def claim_listing_assembly() -> dict[str, Any] | None:
+    rows = sb_get(
+        "listing_tour_assemblies",
+        {
+            "select": "id,listing_id,run_id,surface,ordered_clips,bgm,status",
+            "status": "eq.pending",
+            "order": "created_at.asc",
+            "limit": "1",
+        },
+    )
+    if not rows:
+        return None
+    row = rows[0]
+    updated = sb_patch(
+        "listing_tour_assemblies",
+        {"id": f"eq.{row['id']}", "status": "eq.pending"},
+        {"status": "processing", "updated_at": _now_iso()},
+    )
+    if not updated:
+        return None
+    return row
+
+
+def process_listing_assembly(row: dict[str, Any]) -> None:
+    """Concatenate a home tour's ready clips into one film and publish it.
+
+    Simpler than the community assembly on purpose: no place labels, no end
+    card, no narration. A home tour has never narrated (the legacy render path
+    picks BGM and nothing else), so there is no script to speak.
+    """
+    assembly_id = row["id"]
+    listing_id = row["listing_id"]
+    surface = row.get("surface") or "ios"
+    cw, ch = SURFACE_CANVAS.get(surface, SURFACE_CANVAS["ios"])
+    run_id = row.get("run_id")
+    workdir = Path(tempfile.mkdtemp(prefix=f"lasm-{assembly_id[:8]}-"))
+    print(f"[lassembly {assembly_id}] listing={listing_id} surface={surface}", flush=True)
+
+    try:
+        set_run_status(run_id, "assembling")
+        ordered = row.get("ordered_clips") or []
+        photo_ids = [c.get("photo_id") for c in ordered if c.get("photo_id")]
+        if not photo_ids:
+            raise RuntimeError("assembly has no ordered clips")
+
+        clips = sb_get(
+            "listing_photo_clips",
+            {
+                "select": "listing_photo_id,engine,storage_path,status",
+                "listing_photo_id": f"in.({','.join(photo_ids)})",
+                "surface": f"eq.{surface}",
+                "status": "eq.ready",
+                "limit": str(len(photo_ids) * 4),
+            },
+        )
+        by_photo: dict[str, list[dict[str, Any]]] = {}
+        for c in clips:
+            by_photo.setdefault(c["listing_photo_id"], []).append(c)
+
+        clip_paths: list[Path] = []
+        skipped: list[str] = []
+        for i, c in enumerate(ordered):
+            pid = c.get("photo_id")
+            candidates = by_photo.get(pid, [])
+            if not candidates:
+                skipped.append(str(pid))
+                print(f"[lassembly {assembly_id}] SKIP photo {pid} — no ready clip", flush=True)
+                continue
+            # Prefer the planned engine, then whatever else is ready. A shot
+            # planned for DepthFlow still renders from the Ken Burns clip the
+            # photo already has rather than dropping out of the film.
+            planned = c.get("engine")
+            chosen = next((r for r in candidates if r["engine"] == planned), candidates[0])
+            bucket = "ai-videos" if chosen["engine"] == "seedance" else "clip-renders"
+            dest = workdir / f"{i:02d}.mp4"
+            storage_download(bucket, chosen["storage_path"], dest)
+            clip_paths.append(dest)
+
+        if len(clip_paths) < 2:
+            raise RuntimeError(
+                f"need >=2 ready clips, got {len(clip_paths)} "
+                f"(missing: {', '.join(skipped[:5]) or 'none'})"
+            )
+
+        # Concat with crossfade. Built here rather than by generate.py because
+        # the clips can arrive at different resolutions (a seedance hero comes
+        # back at the provider's size) and have to be normalised first; the
+        # OFFSETS come from the shared helper, which is the part that goes
+        # wrong when this is hand-copied (see xfade.py).
+        durs: list[float] = []
+        for cp in clip_paths:
+            out = subprocess.run(
+                ["ffprobe", "-v", "error", "-show_entries", "format=duration",
+                 "-of", "csv=p=0", str(cp)],
+                capture_output=True, text=True, check=True, timeout=15,
+            )
+            durs.append(float(out.stdout.strip()))
+        xfade = 0.5
+        offsets = crossfade_offsets(durs, xfade)
+        total = crossfade_total(durs, xfade)
+
+        inputs: list[str] = []
+        for cp in clip_paths:
+            inputs += ["-i", str(cp)]
+        filters: list[str] = []
+        for i in range(len(clip_paths)):
+            filters.append(
+                f"[{i}:v]fps=30,scale={cw}:{ch}:force_original_aspect_ratio=increase,"
+                f"crop={cw}:{ch},setsar=1,format=yuv420p[v{i}]"
+            )
+        prev = "[v0]"
+        for i in range(1, len(clip_paths)):
+            label = f"[x{i}]"
+            filters.append(
+                f"{prev}[v{i}]xfade=transition=fade:duration={xfade}:"
+                f"offset={offsets[i - 1]:.3f}{label}"
+            )
+            prev = label
+        vf = ";".join(filters) + f";{prev}format=yuv420p"
+
+        out_path = workdir / "tour.mp4"
+        cmd = [
+            "ffmpeg", "-y",
+            *inputs,
+            "-filter_complex", vf,
+            "-c:v", "libx264", "-preset", "medium", "-crf", "20",
+            "-movflags", "+faststart",
+            str(out_path),
+        ]
+        print(f"[lassembly {assembly_id}] concat {len(clip_paths)} clips", flush=True)
+        subprocess.run(cmd, check=True, cwd=str(REPO_ROOT), timeout=900)
+        if not out_path.exists():
+            raise RuntimeError("concat produced no output")
+
+        planned_bgm = (row.get("bgm") or {}).get("path")
+        bgm = None
+        if planned_bgm:
+            candidate = BGM_DIR / planned_bgm
+            bgm = candidate if candidate.exists() else None
+        if bgm is None:
+            bgm = pick_bgm()
+        if bgm:
+            print(f"[lassembly {assembly_id}] muxing {bgm.name}", flush=True)
+            out_path = mux_audio(out_path, bgm, [], total, workdir)
+
+        cf_uid = cf_upload(out_path, meta={
+            "name": f"home-tour-{listing_id}-{surface}",
+            "scope": "listing_tour_assemble",
+            "listing_id": listing_id,
+            "listing_tour_assembly_id": assembly_id,
+        })
+
+        # Publish into listing_videos — the row every buyer-facing surface
+        # reads. The assembly is the pipeline's record; this is the artefact.
+        # Only the column for THIS surface is written, so rendering iOS never
+        # clears a web video that is already live.
+        column = "cf_video_id_square" if surface == "ios" else "cf_video_id_landscape"
+        existing = sb_get(
+            "listing_videos",
+            {
+                "select": "id",
+                "listing_id": f"eq.{listing_id}",
+                "kind": "eq.walkthrough",
+                "order": "created_at.desc",
+                "limit": "1",
+            },
+        )
+        if existing:
+            video_row_id = existing[0]["id"]
+            sb_patch(
+                "listing_videos",
+                {"id": f"eq.{video_row_id}"},
+                {column: cf_uid, "status": "ready"},
+            )
+        else:
+            created = sb_post("listing_videos", {
+                "listing_id": listing_id,
+                "kind": "walkthrough",
+                "status": "ready",
+                "title": "Home tour",
+                column: cf_uid,
+            })
+            video_row_id = created[0]["id"] if created else None
+
+        sb_patch(
+            "listing_tour_assemblies",
+            {"id": f"eq.{assembly_id}"},
+            {
+                "status": "ready",
+                "cf_stream_uid": cf_uid,
+                "video_row_id": video_row_id,
+                "error": None,
+                "updated_at": _now_iso(),
+            },
+        )
+        save_run_step(run_id, "assemble", {
+            "surface": surface,
+            "cf_stream_uid": cf_uid,
+            "clips": len(clip_paths),
+            "skipped": skipped,
+        })
+        set_run_status(run_id, "ready")
+        print(f"[lassembly {assembly_id}] ready uid={cf_uid}", flush=True)
+    except Exception as e:  # noqa: BLE001
+        err = f"{type(e).__name__}: {e}"
+        print(f"[lassembly {assembly_id}] FAILED: {err}", flush=True)
+        traceback.print_exc()
+        try:
+            sb_patch(
+                "listing_tour_assemblies",
+                {"id": f"eq.{assembly_id}"},
+                {"status": "failed", "error": err[:500], "updated_at": _now_iso()},
+            )
+        except Exception:
+            traceback.print_exc()
+        set_run_status(run_id, "failed")
+    finally:
+        shutil.rmtree(workdir, ignore_errors=True)
+
+
 def main() -> None:
     print(f"[worker] starting, polling every {POLL_IDLE_SEC}s", flush=True)
     sync_bgm_if_due(force=True)
@@ -2772,6 +3615,24 @@ def main() -> None:
 
         if job is not None:
             process_job(job)
+            continue
+
+        # Home-tour tag/plan steps. Directly after the render job and above
+        # everything else: the owner clicked a chip and is watching a page that
+        # says "running". Both are cheap — plan is pure computation, and tag
+        # skips every photo it has already labelled.
+        try:
+            step_job = claim_step_job()
+        except Exception:
+            traceback.print_exc()
+            time.sleep(POLL_IDLE_SEC)
+            continue
+
+        if step_job is not None:
+            if step_job.get("step") == "tag":
+                process_tag_job(step_job)
+            else:
+                process_plan_job(step_job)
             continue
 
         # Phase 76.6b (2026-07-14): after listing_videos tour jobs, also poll
@@ -2802,6 +3663,19 @@ def main() -> None:
             process_assembly(assembly)
             continue
 
+        # Home-tour assemblies, alongside the community ones and for the same
+        # reason: a final concat is the end of a chain somebody is waiting on.
+        try:
+            listing_assembly = claim_listing_assembly()
+        except Exception:
+            traceback.print_exc()
+            time.sleep(POLL_IDLE_SEC)
+            continue
+
+        if listing_assembly is not None:
+            process_listing_assembly(listing_assembly)
+            continue
+
         # Photo clips (depthflow/kenburns) — interactive, above enhancement.
         try:
             clip_row = claim_photo_clip()
@@ -2812,6 +3686,19 @@ def main() -> None:
 
         if clip_row is not None:
             process_photo_clip(clip_row)
+            continue
+
+        # Home-tour per-photo clips, at the same priority as the community
+        # ones: interactive, above batch enhancement.
+        try:
+            listing_clip = claim_listing_clip()
+        except Exception:
+            traceback.print_exc()
+            time.sleep(POLL_IDLE_SEC)
+            continue
+
+        if listing_clip is not None:
+            process_listing_clip(listing_clip)
             continue
 
         # Outpainting sits just above enhancement and below every render, for

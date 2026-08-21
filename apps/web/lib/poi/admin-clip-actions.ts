@@ -52,3 +52,36 @@ export async function discardClip(photoId: string, engine = 'seedance'): Promise
   revalidatePath('/admin/pipeline/community-nearby', 'layout');
   return { ok: true };
 }
+
+/**
+ * Drop a Seedance clip from a HOME tour so the film stops using it.
+ *
+ * Same rule and same reasoning as `discardClip`: only the paid engine gets a
+ * Discard button, because a local clip is fixed by pressing Regenerate. The
+ * home tour's clips are keyed by (photo, engine, surface), so discarding names
+ * a surface — the iOS hero and the web hero are separate generations and
+ * rejecting one is not a verdict on the other.
+ */
+export async function discardListingClip(
+  photoId: string,
+  surface: 'ios' | 'web' = 'ios',
+  engine = 'seedance',
+): Promise<Result> {
+  const admin = await requireAdmin();
+  if (!admin) return { ok: false, message: 'Not authorized.' };
+  if (engine !== 'seedance') {
+    return { ok: false, message: 'Only Seedance clips are discarded — re-render local ones.' };
+  }
+
+  const supabase = createServiceClient();
+  const { error } = await supabase
+    .from('listing_photo_clips')
+    .delete()
+    .eq('listing_photo_id', photoId)
+    .eq('surface', surface)
+    .eq('engine', engine);
+  if (error) return { ok: false, message: (error as { message: string }).message };
+
+  revalidatePath('/admin/pipeline/tour-jobs', 'layout');
+  return { ok: true };
+}

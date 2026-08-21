@@ -16,6 +16,155 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-21 06:15 UTC — Phase 74: the home tour becomes a pipeline you can see into
+
+**Objective**: give the home tour the agentic management workflow the
+community tour has had since 2026-08-15 — a run record, per-step outputs, a
+human review gate, and a per-photo render unit. Owner ask (2026-08-20): "i
+want to follow the similar agentic management workflow in community tour for
+home tour… the goal is to have a similar big table for home tour as well,
+with all the columns, buttons if needed."
+
+**Owner decisions taken before any code**:
+1. Planning logic stays in Python (`photo_tagger`, `photo_selector.build_plan`).
+   Not ported to TypeScript. So `tag` and `plan` are QUEUED steps, not inline
+   ones, and their chips read the artefact rather than the response.
+2. Per-photo clips, same pattern as the community tour — the render unit stops
+   being the whole film.
+3. Admin only. The agent dashboard's one-click `GenerateTourPanel` is untouched.
+4. Seedance is IN, but hero-only: the first or last shot of the cut.
+5. Both surfaces supported, iOS first, iOS on the community tour's canvas.
+
+**The canvas finding.** The owner remembered the community canvas as 2:3. It
+is 1080x1576 — aspect 0.685, which is not a standard ratio but the feed card's
+MEASURED aspect on every iPhone from the 13 mini up (`scheduler.ts:185`).
+Checking it surfaced something worse: `worker.py:88` renders the listing tour
+at 1080x1080 on the strength of a 2026-07-28 note that "the feed card's media
+block is 1:1". The 2026-08-17 card unification (`theme/card-frame.ts`,
+`CARD_FRAME_RATIO = 0.73`) made every card kind one frame, and both
+`ListingFace` and `CommunityFace` play media with `fit="cover"`. A 1:1 video in
+a 0.685 frame under cover loses **31.5% of every frame's width**. The iOS
+canvas moving to 1080x1576 is a bug fix, not an alignment.
+
+**Actions**:
+- Migrations (6, all additive): `listing_tour_runs`, `listing_photos`.
+  `review_status`/`rejection_reason`, `listing_photo_clips`,
+  `listing_tour_assemblies`, `render_jobs.step`, `render_jobs.video_row_id`
+  nullable. All ship with RLS in the same migration; all admin-read only.
+- `lib/poi/listing-tour-steps/` — `shared.ts`, `tag.ts`, `plan.ts`,
+  `generate.ts`, `assemble.ts`.
+- Routes: `/api/admin/listings/[id]/runs`, `/runs/[runId]/step`, `/clips`,
+  `/assemblies`.
+- `HomeTourSection.tsx` replaces the old detail page body; `TourStepStrip`
+  reused with a home-tour step list.
+- `PhotoTable`: Review, Clip, DA, KB and Plan columns now render for
+  `listing_photos` too. Five `!isListing` guards deleted.
+- `worker.py`: `process_tag_job`, `process_plan_job`, `claim/process_listing_clip`,
+  `claim/process_listing_assembly`, plus main-loop dispatch. `claim_job` now
+  filters `step=eq.render`.
+- Tests: `render-key.test.ts` (7), `test_canvas_overflow.py` (9).
+
+**Decisions**:
+- **`review_status`, not a widened `status`.** `listing_photos.status` is the
+  UPLOAD's state (`'ready' | 'error'`) from the baseline. Overloading it would
+  make one column answer two questions and every reader of `status = 'ready'`
+  would start seeing rejected rows. Cost: the table now has two status-ish
+  columns, which reads badly. Documented in the migration.
+- **`listing_photo_clips`, not a nullable second FK on `photo_clips`.** That
+  column is `not null references poi_photos(id)` with nine readers, and the
+  community pipeline was being actively edited in another worktree at the time.
+  The repo already answers this question by splitting (`listing_pois` /
+  `community_pois`) and parameterising the code path (`entity-scope.ts`).
+- **`surface` is in the clip's unique key**, not a render-time argument. A
+  clip's pixels are a function of its canvas; the same photo genuinely has a
+  different clip per surface. It is in `render_key` for the same reason.
+- **The plan never assigns Seedance.** Hero-only is enforced at plan time by
+  omission — `plan` assigns kenburns/depthflow only, and Seedance is an
+  explicit click on the hero row. A plan that could bill a generation on its
+  own would make "run Plan to see what it would do" a spending decision.
+- **Seedance is exempt from automatic requeue**, as on the community side. The
+  per-row Regenerate button is the only path that re-runs it.
+
+**Issues**:
+- `pnpm db:types` resolves to the pinned `supabase@^1.207.9` devDependency
+  (v1.226.4), but the committed `database.types.ts` carries `__InternalSupabase`,
+  which only a v2 CLI emits. Running the documented command produces a spurious
+  ~3,400-line diff. Types were regenerated with the global v2 CLI and the new
+  table blocks spliced in, so the diff is 198 insertions / 3 deletions and the
+  3 deletions are the intended `video_row_id` nullability change.
+- The local Supabase stack is missing `ai_tour_videos.poi_photo_id`, which the
+  committed types have. `20260815130000` replaced that column with
+  `input_photo_ids`, so production still carries a column the migrations no
+  longer produce. Pre-existing drift, left alone; no code reads it.
+- `scripts/render-worker/tests/test_pick_bgm.py` has 2 failures on clean
+  `origin/main` (`pick_bgm()` returns None). Pre-existing, not touched.
+
+**Resolution**: `pnpm typecheck` clean, `pnpm lint` zero errors, 500 web tests
+and 62 of 64 python tests pass (the 2 above pre-date this branch). Migrations
+applied to the LOCAL stack only at first; **pushed to production 2026-08-21
+07:40 UTC** on the owner's instruction (see the push note below).
+
+Beyond the unit tests, 16 schema-behaviour checks were run against the local
+Postgres — the class of bug `tsc` cannot see. All pass: the review verdict is
+independent of the upload status; an unknown verdict, run status, step, engine
+or surface is refused; one photo carries Ken Burns AND DepthFlow on one
+surface; the same photo+engine on the other surface is a separate row and the
+same photo+engine+surface twice is refused; `listing_videos` now accepts a
+square-only row and still refuses one with no source at all; deleting the
+listing cascades every pipeline row away with no orphans.
+
+Attempting the same through PostgREST failed: the local stack has no
+SELECT/INSERT/UPDATE/DELETE grants for `service_role` on ANY table, including
+pre-existing ones like `listings`. Local-stack misconfiguration, unrelated to
+this branch, but it means the API routes have not been exercised end to end
+here.
+
+**Migration push (2026-08-21 07:40 UTC)**: all 7 applied to
+`tavmbcghxjeyaoptndvn` via `supabase db push`. The history was clean going in —
+every migration through `20260820230000` already matched local/remote, and
+exactly these 7 were pending, so nothing belonging to another branch went with
+them. Verified after, against production rather than on the exit code:
+
+- 64/64 migrations now match local and remote; nothing pending.
+- The three new tables answer to the service role and return `[]` to `anon`,
+  which is the admin-only policy doing its job.
+- `listing_photos.review_status` backfilled to `'pending'` on **all 2,588**
+  rows, **0** non-pending. That was the one to check: a default that landed
+  wrong would have silently rejected photos out of every home tour.
+- `render_jobs.step` backfilled to `'render'` on all **45** existing rows, **0**
+  otherwise — the legacy path's meaning preserved exactly.
+- 265 listings and 14 `listing_videos` rows untouched; the widened
+  `listing_videos_source_present_check` validated against all 14, which is what
+  proves no existing row was left in violation.
+
+**Production is now AHEAD of the deployed code**: the tables exist and nothing
+reads them, because the branch carrying the readers is not merged. That is the
+safe ordering for additive migrations and is deliberate, but it means the DB
+and `main` disagree until phase74 merges.
+
+**Remaining risks**:
+- Nothing has rendered through the new path. There is no Mac mini worker
+  attached to this session and no real listing photos in the local stack, so
+  `process_tag_job`, `process_plan_job`, `process_listing_clip` and
+  `process_listing_assembly` are code-reviewed and unit-tested but not
+  end-to-end verified.
+- Because of that, **the legacy whole-film `process_job()` path was NOT
+  retired**, contrary to the phase plan. It stays reachable behind a "Legacy
+  whole-film render" disclosure in the new page's header. Deleting the renderer
+  that works before the replacement has been seen to work would leave a listing
+  with no way to make a video at all. Retiring it is: delete
+  `AdminGenerateTourButton`, its `legacyAction` prop, the `/generate-tour`
+  admin route, and `process_job` + `claim_job`.
+
+**Next steps**:
+1. Owner pushes the migrations (`pnpm db:push`) — six additive migrations.
+2. Run one listing end to end on the Mac mini worker: Tag → review → Plan →
+   Render → Assemble, and confirm a 1080x1576 film lands on
+   `listing_videos.cf_video_id_square`.
+3. Then decide whether to retire the legacy path.
+4. Web 16:9 clips are planned but never enqueued — `runGenerate` defaults to
+   `surface='ios'`. Wiring the web button is a UI change, not a schema one.
+
 ## 2026-08-20 19:10 UTC — Narration moves into `plan` and is anchored to the cut
 
 **Objective**: Fix TTS/video desync and make the story per-community rather than

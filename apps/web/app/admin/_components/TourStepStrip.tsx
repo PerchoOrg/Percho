@@ -26,10 +26,20 @@
 import { AlertCircle, Check, Loader2, Play } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
-export type StepName = 'research' | 'resolve' | 'photos' | 'plan' | 'generate' | 'assemble';
+export type StepName =
+  | 'research'
+  | 'resolve'
+  | 'photos'
+  // The home tour's first step. Its own name rather than a reuse of `photos`:
+  // a community FETCHES photos and then tags them, a home already has them and
+  // only tags (apps/web/lib/poi/listing-tour-steps/tag.ts).
+  | 'tag'
+  | 'plan'
+  | 'generate'
+  | 'assemble';
 
 /** `review` is the human gate — it has no server step, so it never runs. */
-export type StripStep = 'photos' | 'review' | 'plan' | 'generate' | 'assemble';
+export type StripStep = 'photos' | 'tag' | 'review' | 'plan' | 'generate' | 'assemble';
 
 export interface StepSpec {
   name: StripStep;
@@ -86,6 +96,7 @@ export function TourStepStrip({
   awaitingReview,
   onRun,
   onRunAutomated,
+  automatedHint = 'Runs research → resolve → fetch & tag, then stops for your review',
   error,
 }: {
   steps?: StepSpec[];
@@ -97,6 +108,9 @@ export function TourStepStrip({
   awaitingReview: boolean;
   onRun: (s: StepName) => void;
   onRunAutomated: () => void;
+  /** What the automated button will do. Differs per pipeline; the strip does
+   *  not know which steps its caller considers automatable. */
+  automatedHint?: string;
   error?: string | null;
 }) {
   // Seconds since the current step started. A step can run for minutes and the
@@ -123,7 +137,7 @@ export function TourStepStrip({
           onClick={onRunAutomated}
           disabled={!!running}
           className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-bg px-3 py-1.5 text-ink text-xs hover:border-ink2 disabled:cursor-not-allowed disabled:text-muted"
-          title="Runs research → resolve → fetch & tag, then stops for your review"
+          title={automatedHint}
         >
           <Play size={13} aria-hidden />
           Run automated steps

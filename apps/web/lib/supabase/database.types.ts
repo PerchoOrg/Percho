@@ -1264,6 +1264,74 @@ export type Database = {
           },
         ]
       }
+      listing_photo_clips: {
+        Row: {
+          ai_generated: boolean
+          cost_usd: number | null
+          created_at: string
+          duration_s: number | null
+          engine: string
+          error: string | null
+          id: string
+          listing_photo_id: string
+          move: string | null
+          polling_url: string | null
+          prompt: string | null
+          provider_job_id: string | null
+          render_key: string | null
+          status: string
+          storage_path: string | null
+          surface: string
+          updated_at: string
+        }
+        Insert: {
+          ai_generated?: boolean
+          cost_usd?: number | null
+          created_at?: string
+          duration_s?: number | null
+          engine: string
+          error?: string | null
+          id?: string
+          listing_photo_id: string
+          move?: string | null
+          polling_url?: string | null
+          prompt?: string | null
+          provider_job_id?: string | null
+          render_key?: string | null
+          status?: string
+          storage_path?: string | null
+          surface: string
+          updated_at?: string
+        }
+        Update: {
+          ai_generated?: boolean
+          cost_usd?: number | null
+          created_at?: string
+          duration_s?: number | null
+          engine?: string
+          error?: string | null
+          id?: string
+          listing_photo_id?: string
+          move?: string | null
+          polling_url?: string | null
+          prompt?: string | null
+          provider_job_id?: string | null
+          render_key?: string | null
+          status?: string
+          storage_path?: string | null
+          surface?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "listing_photo_clips_listing_photo_id_fkey"
+            columns: ["listing_photo_id"]
+            isOneToOne: false
+            referencedRelation: "listing_photos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       listing_photos: {
         Row: {
           ai_model: string | null
@@ -1280,6 +1348,8 @@ export type Database = {
           height: number | null
           id: string
           listing_id: string
+          rejection_reason: string | null
+          review_status: string
           sort_order: number
           status: string
           storage_path: string
@@ -1303,6 +1373,8 @@ export type Database = {
           height?: number | null
           id?: string
           listing_id: string
+          rejection_reason?: string | null
+          review_status?: string
           sort_order?: number
           status?: string
           storage_path: string
@@ -1326,6 +1398,8 @@ export type Database = {
           height?: number | null
           id?: string
           listing_id?: string
+          rejection_reason?: string | null
+          review_status?: string
           sort_order?: number
           status?: string
           storage_path?: string
@@ -1424,6 +1498,114 @@ export type Database = {
             columns: ["poi_id"]
             isOneToOne: false
             referencedRelation: "pois"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      listing_tour_assemblies: {
+        Row: {
+          bgm: Json | null
+          cf_stream_uid: string | null
+          created_at: string
+          error: string | null
+          id: string
+          listing_id: string
+          ordered_clips: Json
+          photos_dropped: Json
+          run_id: string
+          status: string
+          surface: string
+          updated_at: string
+          video_row_id: string | null
+          video_url: string | null
+        }
+        Insert: {
+          bgm?: Json | null
+          cf_stream_uid?: string | null
+          created_at?: string
+          error?: string | null
+          id?: string
+          listing_id: string
+          ordered_clips?: Json
+          photos_dropped?: Json
+          run_id: string
+          status?: string
+          surface: string
+          updated_at?: string
+          video_row_id?: string | null
+          video_url?: string | null
+        }
+        Update: {
+          bgm?: Json | null
+          cf_stream_uid?: string | null
+          created_at?: string
+          error?: string | null
+          id?: string
+          listing_id?: string
+          ordered_clips?: Json
+          photos_dropped?: Json
+          run_id?: string
+          status?: string
+          surface?: string
+          updated_at?: string
+          video_row_id?: string | null
+          video_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "listing_tour_assemblies_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "listing_tour_assemblies_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "listing_tour_runs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "listing_tour_assemblies_video_row_id_fkey"
+            columns: ["video_row_id"]
+            isOneToOne: false
+            referencedRelation: "listing_videos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      listing_tour_runs: {
+        Row: {
+          created_at: string
+          id: string
+          listing_id: string
+          status: string
+          step_results: Json
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          listing_id: string
+          status?: string
+          step_results?: Json
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          listing_id?: string
+          status?: string
+          step_results?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "listing_tour_runs_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "listings"
             referencedColumns: ["id"]
           },
         ]
@@ -2195,9 +2377,11 @@ export type Database = {
           id: string
           listing_id: string
           orientations: string[] | null
+          run_id: string | null
           status: string
+          step: string
           updated_at: string
-          video_row_id: string
+          video_row_id: string | null
         }
         Insert: {
           attempts?: number
@@ -2207,9 +2391,11 @@ export type Database = {
           id?: string
           listing_id: string
           orientations?: string[] | null
+          run_id?: string | null
           status?: string
+          step?: string
           updated_at?: string
-          video_row_id: string
+          video_row_id?: string | null
         }
         Update: {
           attempts?: number
@@ -2219,9 +2405,11 @@ export type Database = {
           id?: string
           listing_id?: string
           orientations?: string[] | null
+          run_id?: string | null
           status?: string
+          step?: string
           updated_at?: string
-          video_row_id?: string
+          video_row_id?: string | null
         }
         Relationships: [
           {
@@ -2229,6 +2417,13 @@ export type Database = {
             columns: ["listing_id"]
             isOneToOne: false
             referencedRelation: "listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "render_jobs_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "listing_tour_runs"
             referencedColumns: ["id"]
           },
           {
