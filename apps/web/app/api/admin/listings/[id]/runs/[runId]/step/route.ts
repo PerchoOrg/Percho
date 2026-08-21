@@ -17,8 +17,8 @@
  */
 
 import { requireAdmin } from '@/lib/auth/require-admin';
-import { runAssemble } from '@/lib/poi/listing-tour-steps/assemble';
-import { runGenerate } from '@/lib/poi/listing-tour-steps/generate';
+import { runAssemble, runAssembleAllSurfaces } from '@/lib/poi/listing-tour-steps/assemble';
+import { runGenerate, runGenerateAllSurfaces } from '@/lib/poi/listing-tour-steps/generate';
 import { runPlan } from '@/lib/poi/listing-tour-steps/plan';
 import {
   type ListingRunRow,
@@ -49,10 +49,16 @@ const STEP_HANDLERS: Record<
   // today and silently meaningful the day either grows a third parameter.
   tag: (sb, run) => runTag(sb, run),
   plan: (sb, run) => runPlan(sb, run),
+  // A per-row click names its photo and stays on one surface. The Render chip
+  // names neither and means the whole film, which is both.
   generate: (sb, run, photoIds, engine, _approve, surface) =>
-    runGenerate(sb, run, photoIds, engine, surface ?? 'ios'),
-  assemble: (sb, run, photoIds, engine, approve, surface) =>
-    runAssemble(sb, run, photoIds, engine, approve, surface ?? 'ios'),
+    photoIds && photoIds.length > 0
+      ? runGenerate(sb, run, photoIds, engine, surface ?? 'ios')
+      : runGenerateAllSurfaces(sb, run),
+  assemble: (sb, run, _photoIds, _engine, approve, surface) =>
+    surface
+      ? runAssemble(sb, run, undefined, undefined, approve, surface)
+      : runAssembleAllSurfaces(sb, run, approve),
 };
 
 export async function POST(
@@ -81,8 +87,10 @@ export async function POST(
     );
   }
   // Narrowed rather than cast: `surface` is part of a unique key and a typo
-  // would write clips nobody reads.
-  const surface: Surface = body.surface === 'web' ? 'web' : 'ios';
+  // would write clips nobody reads. Absent means "every surface" — that is
+  // what the Render and Assemble chips send.
+  const surface: Surface | undefined =
+    body.surface === 'web' ? 'web' : body.surface === 'ios' ? 'ios' : undefined;
 
   const run = await getListingRun(sb, runId);
   if (!run) return NextResponse.json({ error: 'run_not_found' }, { status: 404 });

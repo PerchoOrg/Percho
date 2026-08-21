@@ -16,6 +16,73 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-21 08:10 UTC — Phase 75: both canvases, one row, and Seedance on the hero
+
+**Objective**: five owner asks after the first successful end-to-end run —
+hook up the web 16:9 clips; put them in the same row as iOS ("it is taking a
+lot of space"); remove the legacy whole-film render; make the header look like
+the community one ("just show the original video"); and "the generated seedance
+clip for hero is really good, we should plan it as a default option, unless we
+manually reject it", plus "all the photos in the listing should be auto
+approved for plan purpose".
+
+**Actions**:
+- Migrations: `listing_photos.review_status` default flips to `'approved'`
+  with a backfill of existing `pending` rows; `listing_photo_clips.status`
+  gains `'rejected'`.
+- `process_plan_job` assigns Seedance to shot 0 on iOS, unless that photo has a
+  rejected Seedance clip.
+- `runGenerateAllSurfaces` / `runAssembleAllSurfaces`; the step route sends no
+  surface for the Render and Assemble chips, and one for a per-row click.
+- `/clips` returns both canvases per engine; `PhotoTable`'s three engine
+  columns render iOS plus a compact `web` line, so the column count does not
+  grow with the canvas count.
+- `discardListingClip` marks `status='rejected'` instead of deleting.
+- Header is one player on the iOS assembly, mirroring `TourHeader`.
+- Deleted: `AdminGenerateTourButton`, `/api/admin/listings/[id]/generate-tour`,
+  and `SurfacePreview` (orphaned by the header change — nothing else imported
+  it).
+- `seedance-worker` asks for `16:9` on a web row.
+
+**Decisions**:
+- **The review gate inverts rather than disappearing.** It was modelled on the
+  community tour, where POI photos are scraped and nobody has looked at them.
+  A listing's photos were chosen and uploaded by the agent, so `pending` made
+  the table open with every row in "Other Photos" asking a question whose
+  answer was always yes. Reviewing a home tour is now REJECTING the few that
+  should not be in the film. Note `build_plan` never excluded `pending`, so
+  this changes what the reviewer is asked, not which photos the film can draw
+  from.
+- **Rejection is a tombstone, not a delete.** The moment the plan assigns
+  Seedance by default, a deleted row is re-planned and re-billed on the next
+  run — which would make the reject button a way to spend money repeatedly.
+  `discardClip` on the community side still deletes, correctly: nothing there
+  recreates it.
+- **One paid clip per tour, not two.** Seedance rides the iOS hero only; the
+  web cut's opening shot renders locally. Wiring both would have doubled the
+  bill for a second hero nobody has asked to see.
+- **Same row, not more columns.** Two canvases across three engine columns
+  would have been six columns of thumbnails of the same photo. The web line
+  carries status and duration, which is what actually differs.
+- **Assemble is green only when BOTH cuts exist.** One surface going green
+  while the other encodes is phase73.47's lie one level up.
+
+**Issues**: `process_job()` is NOT deleted, despite the ask naming the legacy
+render. The agent dashboard's one-click "Create a home tour video"
+(`GenerateTourPanel` -> `/api/listings/[id]/generate-tour`) still enqueues
+`step='render'` against it, and that is a live agent-facing feature. What was
+removed is the ADMIN fallback: its button, its route, and its disclosure.
+
+**Resolution**: `pnpm typecheck` clean, `pnpm lint` zero errors, 579 tests
+pass, and 9 schema-behaviour checks against local Postgres — a new photo lands
+`approved`, the backfill left zero `pending`, a rejection still sticks,
+`rejected` is accepted as a clip status while an unknown one is refused, and
+rejecting the iOS clip leaves the web row untouched.
+
+**Next steps**: the plan's Seedance default has not run yet — the next Plan on
+a real listing is the first one that will bill for a hero. Worth watching that
+it lands on shot 0 and nowhere else.
+
 ## 2026-08-21 07:20 UTC — The home tour's two queues get a worker and a screen
 
 **Objective**: owner, after a successful run: "render finished, running assembly

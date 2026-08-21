@@ -54,13 +54,21 @@ export async function discardClip(photoId: string, engine = 'seedance'): Promise
 }
 
 /**
- * Drop a Seedance clip from a HOME tour so the film stops using it.
+ * Reject a Seedance clip from a HOME tour so the film stops using it.
  *
- * Same rule and same reasoning as `discardClip`: only the paid engine gets a
- * Discard button, because a local clip is fixed by pressing Regenerate. The
- * home tour's clips are keyed by (photo, engine, surface), so discarding names
- * a surface — the iOS hero and the web hero are separate generations and
- * rejecting one is not a verdict on the other.
+ * Marked, NOT deleted — the one place this diverges from `discardClip`, and it
+ * diverges because the home tour's plan step now assigns Seedance to the hero
+ * shot by default (2026-08-21). A deleted row would simply be re-planned on the
+ * next Plan and re-billed on the next Render, which would make the reject
+ * button a way to spend money repeatedly. The tombstone is what makes "unless
+ * we manually reject it" hold.
+ *
+ * Clips are keyed by (photo, engine, surface), so rejecting names a surface:
+ * the iOS hero and the web hero are separate generations and a verdict on one
+ * is not a verdict on the other.
+ *
+ * The rendered file stays in storage; only the claim on it goes away. A manual
+ * Regenerate on the row clears the verdict.
  */
 export async function discardListingClip(
   photoId: string,
@@ -76,7 +84,7 @@ export async function discardListingClip(
   const supabase = createServiceClient();
   const { error } = await supabase
     .from('listing_photo_clips')
-    .delete()
+    .update({ status: 'rejected', updated_at: new Date().toISOString() })
     .eq('listing_photo_id', photoId)
     .eq('surface', surface)
     .eq('engine', engine);

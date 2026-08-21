@@ -41,6 +41,17 @@ export interface ClipStatus {
   error: string | null;
 }
 
+/** One engine's clip on each canvas. Listing surface only. */
+export interface SurfaceClips {
+  ios: ClipStatus | null;
+  web: ClipStatus | null;
+}
+
+/** Narrow the union without a cast — a pair has no `status` of its own. */
+function isSurfacePair(v: ClipStatus | SurfaceClips | null | undefined): v is SurfaceClips {
+  return !!v && !('status' in v);
+}
+
 export interface PhotoRow {
   id: string;
   storage_path: string;
@@ -104,13 +115,20 @@ export interface PhotoRow {
   recommended?: boolean;
   /** Community tour: resolve-step agent agreement (1 or 2 agents). */
   agreement?: number | null;
-  /** The Seedance clip. photo_clips on the POI side, listing_photo_clips on
-   *  the listing side — the shape the two routes project is identical. */
-  clip?: ClipStatus | null;
+  /**
+   * The Seedance clip.
+   *
+   * A single `ClipStatus` on the community side, which has one canvas. On the
+   * listing side it is a `SurfaceClips` pair — a home tour ships iOS and web
+   * and both belong on the SAME ROW (owner 2026-08-21: "can you put it in the
+   * same row with ios? it is taking a lot of space"), so the column count
+   * stays at three however many canvases there are.
+   */
+  clip?: ClipStatus | SurfaceClips | null;
   /** The DepthFlow clip (engine=depthflow). */
-  depthflow_clip?: ClipStatus | null;
+  depthflow_clip?: ClipStatus | SurfaceClips | null;
   /** The Ken Burns clip (engine=kenburns). */
-  kenburns_clip?: ClipStatus | null;
+  kenburns_clip?: ClipStatus | SurfaceClips | null;
 }
 
 type SortKey = 'order' | 'score' | 'hero' | 'category' | 'enhanced';
@@ -625,7 +643,8 @@ export function PhotoTable({
                   )}
                   <Td>
                     <ClipCell
-                      clip={p.clip}
+                      clip={isSurfacePair(p.clip) ? p.clip.ios : p.clip}
+                      webClip={isSurfacePair(p.clip) ? p.clip.web : undefined}
                       poster={url(thumbPath)}
                       label="Seedance"
                       canGenerate={
@@ -650,7 +669,10 @@ export function PhotoTable({
                   </Td>
                   <Td>
                     <ClipCell
-                      clip={p.depthflow_clip}
+                      clip={
+                        isSurfacePair(p.depthflow_clip) ? p.depthflow_clip.ios : p.depthflow_clip
+                      }
+                      webClip={isSurfacePair(p.depthflow_clip) ? p.depthflow_clip.web : undefined}
                       poster={url(thumbPath)}
                       label="DepthFlow"
                       canGenerate={!!onGenerateClip}
@@ -663,7 +685,8 @@ export function PhotoTable({
                   </Td>
                   <Td>
                     <ClipCell
-                      clip={p.kenburns_clip}
+                      clip={isSurfacePair(p.kenburns_clip) ? p.kenburns_clip.ios : p.kenburns_clip}
+                      webClip={isSurfacePair(p.kenburns_clip) ? p.kenburns_clip.web : undefined}
                       poster={url(thumbPath)}
                       label="Ken Burns"
                       canGenerate={!!onGenerateClip}
@@ -910,8 +933,12 @@ function truncate(s: string, n: number) {
  * is not the same question as "matches the plan".
  */
 function hasPlannedClip(p: PhotoRow, engine: string): boolean {
-  const clip =
+  const slot =
     engine === 'seedance' ? p.clip : engine === 'depthflow' ? p.depthflow_clip : p.kenburns_clip;
+  // For a listing the slot holds two canvases. "Rendered" means the PRIMARY
+  // one is: iOS is what the feed plays, and a web-only clip is not the shot
+  // the plan promised.
+  const clip = isSurfacePair(slot) ? slot.ios : slot;
   return clip?.engine === engine && clip.status === 'ready';
 }
 
@@ -1103,6 +1130,7 @@ function Thumb({ src, title, onClick }: { src: string; title: string; onClick: (
  */
 function ClipCell({
   clip,
+  webClip,
   poster,
   label,
   canGenerate,
@@ -1113,6 +1141,13 @@ function ClipCell({
   onDiscard,
 }: {
   clip?: ClipStatus | null;
+  /**
+   * The same engine's clip on the web canvas, when there is one.
+   *
+   * Rendered as a second line in this cell rather than a fourth, fifth and
+   * sixth column. Undefined on the community tour, which has one canvas.
+   */
+  webClip?: ClipStatus | null;
   poster: string;
   /** What this column renders, for the button titles: "Seedance", "DepthFlow". */
   label: string;
@@ -1185,13 +1220,37 @@ function ClipCell({
           onClick={onGenerate}
         />
       )}
-      {onDiscard && clip && (
+      {onDiscard && clip && clip.status !== 'rejected' && (
         <MiniBtn
           label="Discard"
-          title={`Drop this ${label} clip so the tour stops using it`}
+          title={`Reject this ${label} clip so the tour stops using it`}
           disabled={busy}
           onClick={onDiscard}
         />
+      )}
+      {/* The web canvas, on one line. No second thumbnail: it is the same
+          photo, and two per cell across three columns is exactly the space the
+          owner asked back. Status and duration are what differ. */}
+      {webClip !== undefined && (
+        <div className="mt-1 flex items-center gap-1 border-line border-t pt-1 text-[10px]">
+          <span className="text-ink2/60">web</span>
+          {webClip === null ? (
+            <span className="text-ink2/50">—</span>
+          ) : webClip.status === 'ready' && webClip.video_url ? (
+            <button
+              type="button"
+              onClick={() => onPlay(webClip.video_url as string)}
+              className="text-ink2 underline hover:text-ink"
+              title={`Play the 16:9 ${label} clip`}
+            >
+              play{webClip.duration_s != null ? ` · ${webClip.duration_s}s` : ''}
+            </button>
+          ) : (
+            <span className={webClip.status === 'failed' ? 'text-red-600' : 'text-ink2'}>
+              {webClip.status}
+            </span>
+          )}
+        </div>
       )}
     </div>
   );

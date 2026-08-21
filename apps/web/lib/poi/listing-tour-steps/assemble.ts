@@ -84,3 +84,25 @@ export async function runAssemble(
   await saveListingStep(sb, run, 'assemble', { approved: true, surface, ordered, notReady });
   return { approved: true, surface, ordered, notReady };
 }
+
+/**
+ * Stage or approve an assembly for BOTH surfaces.
+ *
+ * Each is its own row and its own worker job — they finish at different times
+ * and fail independently — but one click asks for the film, not for a cut.
+ */
+export async function runAssembleAllSurfaces(sb: TourDb, run: ListingRunRow, approve?: boolean) {
+  const surfaces: Record<string, unknown> = {};
+  let notReady = 0;
+  for (const surface of ['ios', 'web'] as const) {
+    const r = (await runAssemble(sb, run, undefined, undefined, approve, surface)) as {
+      error?: string;
+      message?: string;
+      notReady?: number;
+    };
+    if (r.error) return r;
+    surfaces[surface] = r;
+    notReady += r.notReady ?? 0;
+  }
+  return { surfaces, notReady, approved: !!approve };
+}

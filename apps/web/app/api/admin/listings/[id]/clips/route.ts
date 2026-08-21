@@ -6,8 +6,10 @@
  * table renders three clip columns (Seedance, DepthFlow, Ken Burns), so this
  * returns one entry per photo carrying all three.
  *
- * `surface` defaults to ios — the primary surface, and the only one the
- * generate step enqueues by default.
+ * Both surfaces come back in one payload, keyed by surface inside each engine
+ * slot. The table shows them in the SAME ROW rather than in six columns (owner
+ * 2026-08-21: "can you put it in the same row with ios? it is taking a lot of
+ * space") — three engine columns, two lines each.
  */
 
 import { requireAdmin } from '@/lib/auth/require-admin';
@@ -19,6 +21,7 @@ export const runtime = 'nodejs';
 interface ClipRow {
   listing_photo_id: string;
   engine: string;
+  surface: string;
   duration_s: number | null;
   status: string;
   storage_path: string | null;
@@ -26,12 +29,11 @@ interface ClipRow {
   error: string | null;
 }
 
-export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const admin = await requireAdmin();
   if (!admin) return NextResponse.json({ error: 'forbidden' }, { status: 403 });
 
   const { id: listingId } = await params;
-  const surface = new URL(req.url).searchParams.get('surface') === 'web' ? 'web' : 'ios';
   const sb = createServiceClient();
 
   const { data: photos } = (await sb
@@ -43,8 +45,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
 
   const { data: clips } = (await sb
     .from('listing_photo_clips')
-    .select('listing_photo_id, engine, duration_s, status, storage_path, cost_usd, error')
-    .eq('surface', surface)
+    .select('listing_photo_id, engine, surface, duration_s, status, storage_path, cost_usd, error')
     .in('listing_photo_id', photoIds)) as { data: ClipRow[] | null };
 
   // Seedance renders land in the paid `ai-videos` bucket; DepthFlow and Ken
@@ -55,13 +56,14 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   const paidBase = base('ai-videos');
   const localBase = base('clip-renders');
 
-  const byPhotoEngine = new Map<string, ClipRow>();
-  for (const c of clips ?? []) byPhotoEngine.set(`${c.listing_photo_id}:${c.engine}`, c);
+  const byKey = new Map<string, ClipRow>();
+  for (const c of clips ?? []) byKey.set(`${c.listing_photo_id}:${c.engine}:${c.surface}`, c);
 
   const project = (c: ClipRow | undefined) =>
     c
       ? {
           engine: c.engine,
+          surface: c.surface,
           duration_s: c.duration_s,
           status: c.status,
           video_url: c.storage_path
@@ -72,12 +74,18 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
         }
       : null;
 
+  /** One engine slot, both canvases — what the table renders as two lines. */
+  const bySurface = (id: string, engine: string) => ({
+    ios: project(byKey.get(`${id}:${engine}:ios`)),
+    web: project(byKey.get(`${id}:${engine}:web`)),
+  });
+
   const rows = photoIds.map((id) => ({
     photo_id: id,
-    clip: project(byPhotoEngine.get(`${id}:seedance`)),
-    depthflow_clip: project(byPhotoEngine.get(`${id}:depthflow`)),
-    kenburns_clip: project(byPhotoEngine.get(`${id}:kenburns`)),
+    clip: bySurface(id, 'seedance'),
+    depthflow_clip: bySurface(id, 'depthflow'),
+    kenburns_clip: bySurface(id, 'kenburns'),
   }));
 
-  return NextResponse.json({ surface, clips: rows });
+  return NextResponse.json({ clips: rows });
 }

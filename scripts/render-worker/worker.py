@@ -3073,9 +3073,19 @@ def process_plan_job(job: dict[str, Any]) -> None:
     so the iOS and web cuts genuinely differ — deciding once for both would
     let the easier canvas dictate the harder one.
 
-    Seedance is never assigned automatically. It is the hero shot only, on an
-    explicit click; a plan that could bill a generation on its own would make
-    "run Plan to see what it would do" a spending decision.
+    Seedance rides the HERO shot by default (owner 2026-08-21: "the generated
+    seedance clip for hero is really good, we should plan it as a default
+    option, unless we manually reject it"). That reverses the original rule,
+    and the reversal costs money, so it is fenced three ways:
+
+      - one clip per plan, on shot 0 only. Never the closing shot as well
+        unless asked, and never a middle shot.
+      - iOS only. Wiring web up too would double the bill for a second hero
+        nobody has asked to see yet, so the web hero stays on a local engine.
+      - a REJECTED seedance clip for that photo is remembered and honoured.
+        Without that, discarding a bad hero would simply be re-planned and
+        re-billed on the next run, turning the reject button into a way to
+        spend money repeatedly.
     """
     job_id = job["id"]
     listing_id = job["listing_id"]
@@ -3144,17 +3154,49 @@ def process_plan_job(job: dict[str, Any]) -> None:
 
         parallax_moves = plan_moves([(sh.get("mode") or "push_in", sh.get("room_type")) for sh in plan])
 
+        # Photos whose seedance clip was rejected by hand. The tombstone rows
+        # (status='rejected') are what make "unless we manually reject it"
+        # stick across re-plans.
+        rejected_seedance: set[str] = set()
+        if plan:
+            ids = ",".join(str(sh.get("id")) for sh in plan if sh.get("id"))
+            if ids:
+                for row in sb_get(
+                    "listing_photo_clips",
+                    {
+                        "select": "listing_photo_id",
+                        "listing_photo_id": f"in.({ids})",
+                        "engine": "eq.seedance",
+                        "status": "eq.rejected",
+                    },
+                ):
+                    rejected_seedance.add(row["listing_photo_id"])
+
         for i, sh in enumerate(plan):
             per_surface: dict[str, Any] = {}
+            # The opening shot, on iOS, unless its seedance clip was rejected.
+            hero_seedance = (
+                i == 0 and str(sh.get("id")) not in rejected_seedance
+            )
             for surface in SURFACE_CANVAS:
                 engine = surfaces_plan[surface][i]
+                if hero_seedance and surface == "ios":
+                    engine = "seedance"
+                is_ai = engine == "seedance"
                 per_surface[surface] = {
                     # DepthFlow gets the parallax move resolved from the Ken
-                    # Burns intent; Ken Burns keeps the intent itself.
-                    "move": parallax_moves[i] if engine == "depthflow" else sh.get("mode"),
+                    # Burns intent; Ken Burns keeps the intent itself. Seedance
+                    # takes neither — its motion comes from the prompt, and the
+                    # worker supplies a conservative default when none is set.
+                    "move": parallax_moves[i] if engine == "depthflow" else (
+                        None if is_ai else sh.get("mode")
+                    ),
                     "engine": engine,
                     "prompt": None,
-                    "ai_generated": False,
+                    # Written at plan time, not inferred at render time, so a
+                    # clip downgraded away from Seedance cannot keep a stale
+                    # AI-generation label.
+                    "ai_generated": is_ai,
                 }
             shots.append({
                 "photo_id": sh.get("id"),

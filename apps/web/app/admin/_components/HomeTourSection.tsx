@@ -7,7 +7,7 @@
  * same shape (owner 2026-08-20: "the goal is to have a similar big table for
  * home tour as well, with all the columns, buttons if needed"):
  *
- *   header          listing facts + the latest cut per surface
+ *   header          listing facts + the latest cut, one player
  *   TourStepStrip   Tag → Review → Plan → Render → Assemble
  *   PhotoTable      OPEN, full width, every photo — the workspace
  *
@@ -23,12 +23,11 @@
  * yet ready, the Assemble is green, that is not right."
  */
 
+import { streamIframeUrl } from '@/lib/cloudflare/stream';
 import { type StepJob, jobStepNote, jobStepState } from '@/lib/poi/listing-tour-steps/job-state';
-import type { ReactNode } from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { ClipStatus, PhotoRow, PlanCell } from './PhotoTable';
+import type { PhotoRow, PlanCell, SurfaceClips } from './PhotoTable';
 import { PhotoTable } from './PhotoTable';
-import { SurfacePreview } from './SurfacePreview';
 import {
   type StepName,
   type StepSpec,
@@ -67,9 +66,9 @@ interface Run {
 
 interface ClipRow {
   photo_id: string;
-  clip: ClipStatus | null;
-  depthflow_clip: ClipStatus | null;
-  kenburns_clip: ClipStatus | null;
+  clip: SurfaceClips;
+  depthflow_clip: SurfaceClips;
+  kenburns_clip: SurfaceClips;
 }
 
 interface AssemblyStatus {
@@ -96,8 +95,14 @@ interface PlanShot {
   >;
 }
 
-/** iOS is the surface this page manages. Web is planned but not yet rendered. */
-const SURFACE = 'ios';
+/**
+ * The iOS canvas, for the header player's aspect ratio.
+ *
+ * Mirrors SURFACE_CANVAS.ios in lib/poi/listing-tour-steps/shared.ts. Kept as
+ * a literal rather than imported so a client component does not pull a server
+ * module in for two numbers.
+ */
+const IOS_CANVAS = { w: 1080, h: 1576 };
 
 export function HomeTourSection({
   listingId,
@@ -109,8 +114,6 @@ export function HomeTourSection({
   storageBase,
   bucket,
   photos,
-  latestVideo,
-  legacyAction,
 }: {
   listingId: string;
   address: string;
@@ -121,18 +124,6 @@ export function HomeTourSection({
   storageBase: string;
   bucket: string;
   photos: PhotoRow[];
-  /** The published listing_videos walkthrough, for the header preview. */
-  latestVideo: { iosUid: string | null; webUid: string | null; status: string } | null;
-  /**
-   * The pre-pipeline one-click renderer, kept as a fallback.
-   *
-   * It is the whole-film `process_job()` path — the thing this page replaces —
-   * and it stays reachable until a film has actually come out of the per-photo
-   * path on real photos. Retiring it is a deletion, and deleting the renderer
-   * that works before the replacement has been seen to work is how a listing
-   * ends up with no way to make a video at all.
-   */
-  legacyAction?: ReactNode;
 }) {
   const [runs, setRuns] = useState<Run[]>([]);
   const [jobs, setJobs] = useState<Array<StepJob & { run_id: string }>>([]);
@@ -157,7 +148,7 @@ export function HomeTourSection({
     if (inFlight.current) return;
     inFlight.current = true;
     try {
-      const res = await fetch(`/api/admin/listings/${listingId}/clips?surface=${SURFACE}`);
+      const res = await fetch(`/api/admin/listings/${listingId}/clips`);
       if (!res.ok) return;
       setClipRows(((await res.json()) as { clips: ClipRow[] }).clips);
     } catch {
@@ -223,8 +214,10 @@ export function HomeTourSection({
     () =>
       new Set(
         clipRows
+          // iOS decides "rendered": it is the cut the feed card plays, and a
+          // web-only clip does not make the shot the plan promised exist.
           .filter((c) =>
-            [c.clip, c.depthflow_clip, c.kenburns_clip].some((k) => k?.status === 'ready'),
+            [c.clip, c.depthflow_clip, c.kenburns_clip].some((k) => k?.ios?.status === 'ready'),
           )
           .map((c) => c.photo_id),
       ),
@@ -232,7 +225,13 @@ export function HomeTourSection({
   );
   const shotsRendered = plannedShots.filter((s) => readyPhotoIds.has(s.photo_id)).length;
 
-  const latestAssembly = assemblies.find((a) => a.surface === SURFACE);
+  const latestAssembly = assemblies.find((a) => a.surface === 'ios');
+  const webAssembly = assemblies.find((a) => a.surface === 'web');
+  const iosAssembly = latestAssembly;
+  const iframeUrl =
+    iosAssembly?.status === 'ready' && iosAssembly.cf_stream_uid
+      ? streamIframeUrl(iosAssembly.cf_stream_uid)
+      : null;
 
   /** Tag has finished and Plan has not — the gate is what is blocking. */
   const awaitingReview = allTagged && plannedShots.length === 0;
@@ -256,11 +255,16 @@ export function HomeTourSection({
       case 'generate':
         if (plannedShots.length === 0) return 'idle';
         return shotsRendered < plannedShots.length ? 'waiting' : 'done';
-      case 'assemble':
-        if (!latestAssembly) return 'idle';
-        if (latestAssembly.status === 'ready') return 'done';
-        if (latestAssembly.status === 'failed') return 'failed';
+      case 'assemble': {
+        // Two cuts, and the chip is only green when BOTH exist. One surface
+        // going green while the other is still encoding is the same lie
+        // phase73.47 removed, one level up.
+        const both = [latestAssembly, webAssembly];
+        if (both.every((a) => !a)) return 'idle';
+        if (both.some((a) => a?.status === 'failed')) return 'failed';
+        if (both.every((a) => a?.status === 'ready')) return 'done';
         return 'waiting';
+      }
       default:
         return 'idle';
     }
@@ -280,10 +284,11 @@ export function HomeTourSection({
     if (s === 'generate' && plannedShots.length > 0 && shotsRendered < plannedShots.length) {
       return `rendering ${shotsRendered}/${plannedShots.length} clips`;
     }
-    if (s === 'assemble' && latestAssembly) {
-      if (latestAssembly.status === 'ready') return 'film ready';
-      if (latestAssembly.status === 'failed') return latestAssembly.error ?? 'failed';
-      return `${latestAssembly.status}…`;
+    if (s === 'assemble' && (latestAssembly || webAssembly)) {
+      const failed = [latestAssembly, webAssembly].find((a) => a?.status === 'failed');
+      if (failed) return failed.error ?? 'failed';
+      const ready = [latestAssembly, webAssembly].filter((a) => a?.status === 'ready').length;
+      return ready === 2 ? 'iOS + web ready' : `${ready}/2 cuts ready`;
     }
     return undefined;
   };
@@ -312,7 +317,8 @@ export function HomeTourSection({
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             step,
-            surface: SURFACE,
+            // No surface: Render and Assemble mean the film, and a home tour
+            // ships two cuts. A per-row click is the only thing that names one.
             // `assemble` without `approve` only stages the shot list and
             // inserts nothing — a click that does nothing visible. The shot
             // list is already on screen in the table's Plan column, so the
@@ -373,7 +379,7 @@ export function HomeTourSection({
       const res = await fetch(`/api/admin/listings/${listingId}/runs/${rid}/step`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ step: 'generate', photoIds: [photoId], engine, surface: SURFACE }),
+        body: JSON.stringify({ step: 'generate', photoIds: [photoId], engine, surface: 'ios' }),
       });
       if (!res.ok) {
         const body = (await res.json().catch(() => ({}))) as { error?: string };
@@ -404,7 +410,7 @@ export function HomeTourSection({
   const planByPhoto = useMemo(() => {
     const out: Record<string, PlanCell> = {};
     for (const s of plannedShots) {
-      const clip = s.surfaces?.[SURFACE];
+      const clip = s.surfaces?.ios;
       out[s.photo_id] = {
         sort_order: s.sort_order,
         engine: clip?.engine ?? 'kenburns',
@@ -454,26 +460,53 @@ export function HomeTourSection({
             <dt className="text-ink2">Run</dt>
             <dd className="text-ink">{run ? run.status : 'none yet'}</dd>
           </dl>
-          {legacyAction && (
-            <details className="mt-4">
-              <summary className="cursor-pointer text-[11px] text-ink2 hover:text-ink">
-                Legacy whole-film render
-              </summary>
-              <div className="mt-2">{legacyAction}</div>
-            </details>
-          )}
         </div>
-        <div className="grid gap-3">
-          <SurfacePreview
-            surface="ios"
-            uid={latestVideo?.iosUid ?? null}
-            status={latestVideo?.status ?? 'none'}
-          />
-          <SurfacePreview
-            surface="web"
-            uid={latestVideo?.webUid ?? null}
-            status={latestVideo?.status ?? 'none'}
-          />
+        {/* One player, the iOS cut, exactly as the community header does it
+            (owner 2026-08-21: "ios feed should look similar to community, just
+            show the original video"). Two stacked SurfacePreview panels was
+            most of the vertical space on this page and neither of them was the
+            thing being reviewed. The web cut has its own row in the table. */}
+        <div>
+          <div className="flex items-center justify-between gap-3">
+            <div className="font-semibold text-ink text-lg">Latest Video</div>
+            {iosAssembly && (
+              <span
+                className={`rounded-full px-2 py-0.5 font-medium text-xs ${
+                  iosAssembly.status === 'ready'
+                    ? 'bg-green-100 text-green-700'
+                    : 'bg-amber-100 text-amber-700'
+                }`}
+              >
+                {iosAssembly.status}
+              </span>
+            )}
+          </div>
+          {iframeUrl ? (
+            <>
+              <div className="mt-3 overflow-hidden rounded-xl bg-black">
+                <iframe
+                  title="Home tour video"
+                  src={iframeUrl}
+                  // The render canvas, not 9:16 — a hardcoded ratio letterboxed
+                  // the community player when its canvas changed shape.
+                  style={{ aspectRatio: `${IOS_CANVAS.w} / ${IOS_CANVAS.h}`, height: 420 }}
+                  allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                />
+              </div>
+              <div className="mt-2 text-center text-[11px] text-ink2 tabular-nums">
+                {iosAssembly ? new Date(iosAssembly.created_at).toLocaleString() : ''}
+              </div>
+            </>
+          ) : (
+            <div className="mt-3 flex h-[420px] items-center justify-center rounded-xl border border-line border-dashed px-4 text-center text-ink2 text-xs">
+              {!iosAssembly
+                ? 'No video yet — review the photos, then Plan, Render and Assemble.'
+                : iosAssembly.status === 'failed'
+                  ? (iosAssembly.error ?? 'Assembly failed.')
+                  : 'Assembling… the worker is rendering it now.'}
+            </div>
+          )}
         </div>
       </section>
 

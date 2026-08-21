@@ -408,7 +408,11 @@ async function processClipQueue(scope: ClipScope, budget: number): Promise<numbe
           prompt: row.prompt?.trim() || FALLBACK_CLIP_PROMPT,
           frameImageUrls: [`${publicBase}/${photo.storage_path}`],
           durationS: Math.min(Math.max(Math.round(row.duration_s ?? 4), 4), 15),
-          aspectRatio: AI_VIDEO_ASPECT,
+          // The generation has to come back in the shape of the canvas it will
+          // be cut into. Every clip before 2026-08-21 was for a portrait canvas
+          // so the constant was right by accident; a 16:9 home-tour cut asking
+          // for 9:16 would be centre-cropped to a sliver at assembly.
+          aspectRatio: row.surface === 'web' ? '16:9' : AI_VIDEO_ASPECT,
           mode: 'frames',
         });
 

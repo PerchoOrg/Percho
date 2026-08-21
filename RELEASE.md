@@ -19,6 +19,11 @@ Community films now open on the community. Its own amenities lead the film and r
 Aberdeen in Suwanee is the first community with this treatment: a 58-second film that opens on its clubhouse and takes in the pool, the courts and the grounds before heading out into Suwanee.
 
 ### 2026-08-21
+- Home tours now produce both the phone version and the widescreen web version, from the same reviewed photos and the same running order
+- Both versions sit on one row per photo in the review table, instead of doubling the number of columns
+- The AI hero shot is now planned automatically as the opening shot of every home tour. Reject it and it stays rejected — it won't come back on the next run
+- A listing's own photos start out approved. Reviewing a home tour is now about dropping the few that shouldn't be in it, rather than approving every one
+- The home tour screen shows a single player at the top, matching the community tour screen, instead of two stacked previews
 - Home tour clips and films now appear on the Video Jobs screen alongside every other queue, instead of being invisible while they ran
 - An AI hero shot requested for a home tour is now actually picked up and made. Before, the request was recorded and nothing ever collected it
 - A home tour step that fails now says so, with the reason, instead of showing as still running. A step that stops making progress is called out rather than spinning forever
