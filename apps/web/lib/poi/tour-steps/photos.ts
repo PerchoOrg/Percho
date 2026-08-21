@@ -842,7 +842,7 @@ async function writeNarration(sb: TourDb, run: RunRow, shots: unknown[]) {
     }
   }
 
-  return runNarration(
+  const fresh = await runNarration(
     shots as Array<{
       bucket?: string | null;
       poi_name?: string | null;
@@ -858,6 +858,20 @@ async function writeNarration(sb: TourDb, run: RunRow, shots: unknown[]) {
       facts,
     },
   );
+
+  // A FAILED RUN MUST NOT ERASE A GOOD SCRIPT.
+  //
+  // The generator retries, but it can still come back empty, and this used to
+  // save whatever it returned — so one bad reply replaced a working narration
+  // with nothing, and the next assembly shipped a silent film without anything
+  // going red. Keep the old script and carry the error alongside it, so the
+  // admin says what happened and the film still speaks.
+  const previous = (run.step_results.photos as { narration?: { segments?: unknown[] } } | undefined)
+    ?.narration;
+  if (!fresh.ok && (previous?.segments?.length ?? 0) > 0) {
+    return { ...previous, error: fresh.error, stale: true } as typeof fresh & { stale: true };
+  }
+  return fresh;
 }
 
 /**

@@ -441,44 +441,51 @@ export async function runNarration(
   if (!apiKey) return { ...base, ok: false, error: 'GEMINI_API_KEY not set' };
   if (sections.length === 0) return { ...base, ok: true };
 
-  try {
-    const res = await fetch(GENERATE_URL(NARRATION_MODEL), {
-      method: 'POST',
-      headers: { 'x-goog-api-key': apiKey, 'content-type': 'application/json' },
-      body: JSON.stringify({
-        contents: [
-          { role: 'user', parts: [{ text: buildNarrationPrompt({ ...ctx, sections, angles }) }] },
-        ],
-        generationConfig: {
-          // Same allowance as the VO pass, for the same reason: this is a
-          // thinking model and its reasoning shares the budget.
-          maxOutputTokens: 8192,
-          temperature: 1.1,
-          responseMimeType: 'application/json',
-        },
-      }),
-    });
-    if (!res.ok) {
-      return {
-        ...base,
-        ok: false,
-        error: `narration ${res.status}: ${(await res.text()).slice(0, 200)}`,
+  // Retried, because the failure mode is transient and the cost of accepting it
+  // is a silent film. One live call came back with unparseable JSON — a
+  // thinking model that ran out of room mid-object — and the empty result then
+  // overwrote a perfectly good script.
+  let lastError = 'unknown';
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const res = await fetch(GENERATE_URL(NARRATION_MODEL), {
+        method: 'POST',
+        headers: { 'x-goog-api-key': apiKey, 'content-type': 'application/json' },
+        body: JSON.stringify({
+          contents: [
+            { role: 'user', parts: [{ text: buildNarrationPrompt({ ...ctx, sections, angles }) }] },
+          ],
+          generationConfig: {
+            // Room for the reasoning AND the answer. 8192 was enough while the
+            // sections carried only names; with facts under each one, and a
+            // denser script asked for, a reply ran out of room mid-object.
+            maxOutputTokens: 16384,
+            temperature: 1.1,
+            responseMimeType: 'application/json',
+          },
+        }),
+      });
+      if (!res.ok) {
+        lastError = `narration ${res.status}: ${(await res.text()).slice(0, 200)}`;
+        continue;
+      }
+      const data = (await res.json()) as {
+        candidates?: { content?: { parts?: { text?: string; thought?: boolean }[] } }[];
       };
+      // Skip the thinking block: it is parts[0] often enough that reading
+      // parts[0].text returned prose instead of JSON on every call.
+      const raw = (data.candidates?.[0]?.content?.parts ?? [])
+        .filter((p) => !p.thought)
+        .map((p) => p.text ?? '')
+        .join('');
+      const { segments, warnings } = parseNarration(raw, sections);
+      if (segments.length > 0) return { segments, sections, voice, angles, warnings, ok: true };
+      lastError = warnings[0] ?? 'no lines';
+    } catch (err) {
+      lastError = err instanceof Error ? err.message : String(err);
     }
-    const data = (await res.json()) as {
-      candidates?: { content?: { parts?: { text?: string; thought?: boolean }[] } }[];
-    };
-    // Skip the thinking block: it is parts[0] often enough that reading
-    // parts[0].text returned prose instead of JSON on every call.
-    const raw = (data.candidates?.[0]?.content?.parts ?? [])
-      .filter((p) => !p.thought)
-      .map((p) => p.text ?? '')
-      .join('');
-    const { segments, warnings } = parseNarration(raw, sections);
-    return { segments, sections, voice, angles, warnings, ok: segments.length > 0 };
-  } catch (err) {
-    return { ...base, ok: false, error: err instanceof Error ? err.message : String(err) };
   }
+  return { ...base, ok: false, error: lastError };
 }
 
 export function voiceForCommunity(name: string, buckets: string[]): string {

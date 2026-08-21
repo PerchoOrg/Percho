@@ -2134,6 +2134,32 @@ def process_photo_clip(row: dict[str, Any]) -> None:
 # the ready clips, concatenates with crossfade, uploads to Cloudflare Stream,
 # and marks the assembly ready. Same claim/process pattern as bucket jobs.
 
+# An assembly this old and still "processing" belongs to a worker that is gone.
+# Nothing reclaimed them: the claim below only looks at `pending`, so a restart
+# mid-render orphaned the row forever and the admin sat on "processing…" with no
+# error and nothing coming (owner 2026-08-21: "5 · Assemble processing… for 20
+# mins"). A restart is not rare — every deploy of this file is one.
+#
+# Fifteen minutes is comfortably past a real render, which runs in about three.
+ASSEMBLY_STALE_MIN = 15
+
+
+def requeue_stale_assemblies() -> None:
+    """Hand orphaned assemblies back to the queue. Runs at startup."""
+    cutoff = (datetime.now(timezone.utc) - timedelta(minutes=ASSEMBLY_STALE_MIN)).isoformat()
+    stale = sb_get(
+        "tour_assemblies",
+        {"select": "id", "status": "eq.processing", "updated_at": f"lt.{cutoff}"},
+    )
+    for row in stale or []:
+        sb_patch(
+            "tour_assemblies",
+            {"id": f"eq.{row['id']}", "status": "eq.processing"},
+            {"status": "pending", "updated_at": _now_iso()},
+        )
+        print(f"[assembly {row['id']}] requeued — left processing by a stopped worker", flush=True)
+
+
 def claim_assembly() -> dict[str, Any] | None:
     rows = sb_get(
         "tour_assemblies",
@@ -3852,6 +3878,10 @@ def reclaim_stale_jobs() -> None:
 
 def main() -> None:
     print(f"[worker] starting, polling every {POLL_IDLE_SEC}s", flush=True)
+    try:
+        requeue_stale_assemblies()
+    except Exception:  # noqa: BLE001 — never block startup on housekeeping
+        traceback.print_exc()
     sync_bgm_if_due(force=True)
     while True:
         sync_bgm_if_due()
