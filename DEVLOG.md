@@ -101,7 +101,8 @@ canvas moving to 1080x1576 is a bug fix, not an alignment.
 
 **Resolution**: `pnpm typecheck` clean, `pnpm lint` zero errors, 500 web tests
 and 62 of 64 python tests pass (the 2 above pre-date this branch). Migrations
-applied to the LOCAL stack only — **not pushed to production**.
+applied to the LOCAL stack only at first; **pushed to production 2026-08-21
+07:40 UTC** on the owner's instruction (see the push note below).
 
 Beyond the unit tests, 16 schema-behaviour checks were run against the local
 Postgres — the class of bug `tsc` cannot see. All pass: the review verdict is
@@ -117,6 +118,29 @@ SELECT/INSERT/UPDATE/DELETE grants for `service_role` on ANY table, including
 pre-existing ones like `listings`. Local-stack misconfiguration, unrelated to
 this branch, but it means the API routes have not been exercised end to end
 here.
+
+**Migration push (2026-08-21 07:40 UTC)**: all 7 applied to
+`tavmbcghxjeyaoptndvn` via `supabase db push`. The history was clean going in —
+every migration through `20260820230000` already matched local/remote, and
+exactly these 7 were pending, so nothing belonging to another branch went with
+them. Verified after, against production rather than on the exit code:
+
+- 64/64 migrations now match local and remote; nothing pending.
+- The three new tables answer to the service role and return `[]` to `anon`,
+  which is the admin-only policy doing its job.
+- `listing_photos.review_status` backfilled to `'pending'` on **all 2,588**
+  rows, **0** non-pending. That was the one to check: a default that landed
+  wrong would have silently rejected photos out of every home tour.
+- `render_jobs.step` backfilled to `'render'` on all **45** existing rows, **0**
+  otherwise — the legacy path's meaning preserved exactly.
+- 265 listings and 14 `listing_videos` rows untouched; the widened
+  `listing_videos_source_present_check` validated against all 14, which is what
+  proves no existing row was left in violation.
+
+**Production is now AHEAD of the deployed code**: the tables exist and nothing
+reads them, because the branch carrying the readers is not merged. That is the
+safe ordering for additive migrations and is deliberate, but it means the DB
+and `main` disagree until phase74 merges.
 
 **Remaining risks**:
 - Nothing has rendered through the new path. There is no Mac mini worker
