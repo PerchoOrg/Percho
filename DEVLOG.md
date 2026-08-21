@@ -16,6 +16,48 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-21 09:05 UTC — The iOS deck shows only cards that have a video
+
+**Objective**: owner — "on ios, only show cards with videos, either community
+or listing."
+
+**What was already there**: `videosOnly` has existed on the feed pool route and
+in the mobile client's param type since the /browse videos-only page. Two
+things were missing.
+
+1. **The mobile app never sent it.** Only `videoFirst`, and only when the dev
+   sampler is on.
+2. **`videosOnly` covered listings and silently ignored communities.** The flag
+   that promises "only cards with video" still shipped a full page of
+   photo-only community cards.
+
+**Actions**:
+- The route's `videosOnly` branch now FETCHES the video-bearing communities by
+  id — the same reason `videoFirst` does: the community pool is ordered by name
+  over 8,684 rows and the handful with a tour are nowhere near the first page,
+  so filtering the page would return nothing at all.
+- The filter is re-applied after the video URL is attached. The two id lists
+  come from different tables and a row can be in them and still resolve to no
+  playable URL; `videosOnly` is a promise about what the buyer SEES.
+- Both branches of `orderedCommunities` honour it — the un-sorted one used
+  `communitiesWithVideo`, so without this `videosOnly` would only have worked
+  in combination with `videoFirst`.
+- `use-feed-pool` sends `videosOnly: true`.
+
+**Decisions**: this **overrides spec-v3 §0.7**, which treats "no video" as a
+first-class card state. That stays true of the schema and of every other
+surface — this is a narrowing of the phone deck's inventory, not a rendering
+change. Said out loud in the code because a future reader will otherwise find
+the spec and the behaviour disagreeing with no note of which won.
+
+`videoFirst` is deliberately left alone: it keeps the whole pool and only
+reorders, so the dev sampler can still exercise a photo-only card.
+
+**Impact, measured against production**: 15 of 260 active listings and 7 of
+8,684 communities have a ready video — **a deck of about 22 cards**. That is
+the intended posture for now, but it is a small deck and it shrinks the funnel's
+inventory at every stage; worth revisiting once more tours exist.
+
 ## 2026-08-21 08:45 UTC — Why a photo was dropped, and both cuts side by side
 
 **Objective**: owner — "not selected — room quota, near-duplicate, or over t… -
