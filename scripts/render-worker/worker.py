@@ -3219,7 +3219,10 @@ def process_plan_job(job: dict[str, Any]) -> None:
         style_info = cached_style if isinstance(cached_style, dict) else {"style": "modern"}
         style = style_info.get("style", "modern")
 
-        plan = build_plan(tagged, style, listing_id)
+        # The selector fills this in as it goes: one real reason per photo,
+        # from the stage that actually dropped it.
+        drop_reasons: dict[str, str] = {}
+        plan = build_plan(tagged, style, listing_id, dropped=drop_reasons)
 
         # Per-surface engine + move. `plan_moves` resolves the whole cut at
         # once so no two neighbouring clips get the same camera move, which a
