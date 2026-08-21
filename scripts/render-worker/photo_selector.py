@@ -181,8 +181,18 @@ def hamming(a: int, b: int) -> int:
     return bin(a ^ b).count("1")
 
 
-def dedupe(photos: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Drop near-duplicates by dHash; keep the higher-quality one."""
+def dedupe(
+    photos: list[dict[str, Any]],
+    dropped: dict[str, str] | None = None,
+) -> list[dict[str, Any]]:
+    """Drop near-duplicates by dHash; keep the higher-quality one.
+
+    `dropped` collects photo_id -> why, for the admin table. Every rejection in
+    this file used to be invisible: the plan step reported one string listing
+    all three possible causes, which told the reviewer nothing and could not be
+    argued with (owner 2026-08-21). A verdict you cannot question is a verdict
+    you cannot fix.
+    """
     photos = sorted(photos, key=lambda p: -p.get("quality", 0))
     kept: list[dict[str, Any]] = []
     for p in photos:
@@ -190,21 +200,38 @@ def dedupe(photos: list[dict[str, Any]]) -> list[dict[str, Any]]:
         if h is None:
             kept.append(p)
             continue
-        dup = False
+        twin = None
         for k in kept:
             kh = k.get("_dhash")
             if kh is not None and hamming(h, kh) < DHASH_THRESHOLD:
-                dup = True
+                twin = k
                 break
-        if not dup:
+        if twin is None:
             kept.append(p)
+        elif dropped is not None and p.get("id"):
+            # Name the survivor and the quality gap, so "why this one and not
+            # that one" is answerable from the row.
+            twin_label = twin.get("room_type") or "another photo"
+            dropped[p["id"]] = (
+                f"near-duplicate of a {twin_label} shot that scored higher "
+                f"({twin.get('quality', 0):.2f} vs {p.get('quality', 0):.2f})"
+            )
     return kept
 
 
-def select_by_quota(photos: list[dict[str, Any]], budget: int) -> list[dict[str, Any]]:
+def select_by_quota(
+    photos: list[dict[str, Any]],
+    budget: int,
+    dropped: dict[str, str] | None = None,
+) -> list[dict[str, Any]]:
     """
     Fill quotas.min for every room type first (basic coverage), then fill
     remaining budget by priority × hero_score. Never exceed quota.max.
+
+    `dropped` distinguishes the two ways a photo loses here, which want
+    different responses from the reviewer: the room is FULL (raise the quota,
+    or reject a sibling), or the film is full (nothing to do — it lost on
+    merit).
     """
     # Bucket by room type
     by_room: dict[str, list[dict[str, Any]]] = {}
@@ -248,13 +275,55 @@ def select_by_quota(photos: list[dict[str, Any]], budget: int) -> list[dict[str,
                     continue
                 pool.append((q["priority"], -p.get("hero_score", 0), p, rt))
         pool.sort(key=lambda t: (t[0], t[1]))
+        full = False
         for _prio, _neg, p, rt in pool:
             if len(picked) >= budget:
-                break
+                # Everything from here on lost to the clock, not to a rule.
+                full = True
+            if full:
+                if dropped is not None and p.get("id"):
+                    dropped[p["id"]] = (
+                        f"the film was already full at {budget} shots — "
+                        f"ranked below the ones that made it"
+                    )
+                continue
             if used[rt] >= QUOTAS[rt]["max"]:
+                if dropped is not None and p.get("id"):
+                    dropped[p["id"]] = (
+                        f"{rt} quota full — the film already has "
+                        f"{QUOTAS[rt]['max']} {rt} shot(s)"
+                    )
                 continue
             picked.append(p)
             used[rt] += 1
+
+    # Final sweep: anything still unexplained.
+    #
+    # Pass 2 only runs when pass 1 left room, so a listing whose minimums
+    # already fill the budget skips it entirely and every leftover photo comes
+    # out of here with no verdict. A test caught exactly that — the fallback
+    # string in the plan step is meant to be unreachable, so a silent drop is
+    # the bug, not the message.
+    if dropped is not None:
+        chosen = {id(p) for p in picked}
+        for p in photos:
+            pid = p.get("id")
+            if not pid or id(p) in chosen or pid in dropped:
+                continue
+            rt = p.get("room_type", "other")
+            rt = rt if rt in QUOTAS else "other"
+            if QUOTAS[rt]["max"] <= 0:
+                dropped[pid] = f"{rt} is never shown in a tour"
+            elif used.get(rt, 0) >= QUOTAS[rt]["max"]:
+                dropped[pid] = (
+                    f"{rt} quota full — the film already has "
+                    f"{QUOTAS[rt]['max']} {rt} shot(s)"
+                )
+            else:
+                dropped[pid] = (
+                    f"the film was already full at {budget} shots — "
+                    f"ranked below the ones that made it"
+                )
 
     return picked
 
@@ -430,19 +499,35 @@ def build_plan(
     style: str,
     listing_id: str,
     max_photos: int | None = None,
+    dropped: dict[str, str] | None = None,
 ) -> list[dict[str, Any]]:
     """
     Main entry point. Returns list of shot dicts ready for the renderer.
+
+    `dropped`, when given, is filled with photo_id -> the reason that photo is
+    not in the cut. One reason, the real one, from the stage that actually made
+    the call.
     """
     # 1. drop unusable / no-video room types
-    usable = [
-        p for p in photos
-        if p.get("usable", True)
-        and QUOTAS.get(p.get("room_type", "other"), QUOTAS["other"])["max"] > 0
-    ]
+    usable = []
+    for p in photos:
+        rt = p.get("room_type", "other")
+        quota = QUOTAS.get(rt, QUOTAS["other"])
+        if not p.get("usable", True):
+            if dropped is not None and p.get("id"):
+                # The tagger's own words when it has them — "blurry", "dark" —
+                # rather than a bare "unusable".
+                why = (p.get("unusable_reason") or "").strip()
+                dropped[p["id"]] = f"tagged unusable{f': {why}' if why else ''}"
+            continue
+        if quota["max"] <= 0:
+            if dropped is not None and p.get("id"):
+                dropped[p["id"]] = f"{rt} is never shown in a tour"
+            continue
+        usable.append(p)
 
     # 2. dedupe by dHash
-    usable = dedupe(usable)
+    usable = dedupe(usable, dropped)
 
     # 3. determine budget
     #    total_clip_time = cap + (n-1)*xfade, so n <= (cap + xfade) / per_clip.
@@ -457,7 +542,7 @@ def build_plan(
     budget = min(max_n_by_budget, max_photos or 9999, len(usable))
 
     # 4. quota-based selection
-    picked = select_by_quota(usable, budget)
+    picked = select_by_quota(usable, budget, dropped)
 
     # 5. narrative sort
     ordered = narrative_sort(picked)
