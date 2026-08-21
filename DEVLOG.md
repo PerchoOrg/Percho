@@ -16,6 +16,42 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-21 09:55 UTC — A NameError shipped because nothing checks Python names
+
+**Objective**: the batch re-run failed on its first two listings with
+`NameError: name 'drop_reasons' is not defined`.
+
+**Cause**: my own phase76 edit. The line that DEFINES `drop_reasons` never
+landed — the string-replace anchor did not match the file, and the assertion
+guarding it (`s != before`) was satisfied by the other replacements in the same
+script. The line that READS it landed fine.
+
+Python binds names at run time, so nothing objected: the module imported, my
+`ast.parse` check passed, and `pnpm typecheck` does not cover `scripts/`. The
+break only surfaced when a real listing reached that branch — two tours failed
+before the log said so.
+
+**Actions**:
+- Fixed the call site.
+- `tests/test_no_undefined_names.py`: every function in `scripts/render-worker`
+  is walked for a Name it Loads that is neither local, module-level, nor a
+  builtin. Stdlib `ast` only, no new dependency.
+
+**Decisions**: the checker collects bindings GENEROUSLY — lambda parameters,
+`with ... as` targets, nested `def` parameters — rather than modelling Python's
+scoping. It is looking for names that exist nowhere, and being imprecise about
+which scope binds a name cannot invent one. The first pass reported four false
+positives from exactly those forms; a checker that cries wolf gets switched off,
+so the bar was zero noise on a clean tree.
+
+Verified both ways: it passes now, and reintroducing the missing line turns it
+red naming `worker.py:3224 process_plan_job() reads 'drop_reasons'`.
+
+**Learnings**: this is the second time today that `scripts/` being outside every
+gate has cost a production failure — the first was the seedance worker's TS,
+caught only because I typechecked it by hand. A NameError is the Python
+equivalent and now has a guard. The TS half still does not.
+
 ## 2026-08-21 09:35 UTC — The phone stops falling back to the web cut
 
 **Objective**: owner — "for listing, we still use web video instead of ios video
