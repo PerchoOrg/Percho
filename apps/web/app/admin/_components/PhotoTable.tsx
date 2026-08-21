@@ -172,7 +172,11 @@ export function PhotoTable({
   photos: PhotoRow[];
   /** Community tour: per-row "Generate seedance clip" button (photo_clips).
       `engine` forces the clip engine (DA+KB column passes 'kenburns'). */
-  onGenerateClip?: (photoId: string, engine?: string) => Promise<{ ok: boolean; message?: string }>;
+  onGenerateClip?: (
+    photoId: string,
+    engine?: string,
+    surface?: 'ios' | 'web',
+  ) => Promise<{ ok: boolean; message?: string }>;
   /** Community tour: the planned shot per photo (step_results.photos.shots).
       Without it the Plan column reads "—". Engine is decided by the
       orchestrator at plan time and nothing in this table may guess at it. */
@@ -680,36 +684,66 @@ export function PhotoTable({
                       }
                     />
                   </Td>
-                  <Td>
-                    <ClipCell
-                      clip={
-                        isSurfacePair(p.depthflow_clip) ? p.depthflow_clip.ios : p.depthflow_clip
-                      }
-                      webClip={isSurfacePair(p.depthflow_clip) ? p.depthflow_clip.web : undefined}
-                      poster={url(thumbPath)}
-                      label="DepthFlow"
-                      canGenerate={!!onGenerateClip}
-                      busy={busy}
-                      onGenerate={() =>
-                        onGenerateClip && run(p.id, () => onGenerateClip(p.id, 'depthflow'))
-                      }
-                      onPlay={setClipLightbox}
-                    />
-                  </Td>
-                  <Td>
-                    <ClipCell
-                      clip={isSurfacePair(p.kenburns_clip) ? p.kenburns_clip.ios : p.kenburns_clip}
-                      webClip={isSurfacePair(p.kenburns_clip) ? p.kenburns_clip.web : undefined}
-                      poster={url(thumbPath)}
-                      label="Ken Burns"
-                      canGenerate={!!onGenerateClip}
-                      busy={busy}
-                      onGenerate={() =>
-                        onGenerateClip && run(p.id, () => onGenerateClip(p.id, 'kenburns'))
-                      }
-                      onPlay={setClipLightbox}
-                    />
-                  </Td>
+                  {isListing ? (
+                    // One column per CANVAS, not per engine. `pick_engines`
+                    // runs per canvas, so the same photo routinely lands on
+                    // DepthFlow for iOS and Ken Burns for web — 10 of 21 on the
+                    // first real listing. Keyed by engine, those two clips
+                    // rendered in DIFFERENT columns and were never beside each
+                    // other, which is the opposite of what "same row" meant
+                    // (owner 2026-08-21: "still dont see the generated web ones
+                    // next to ios"). The engine is not lost — it is in the Plan
+                    // column and labelled on the cell.
+                    //
+                    // Generate sends no engine, so the step uses whatever the
+                    // plan chose for that canvas rather than forcing one.
+                    (['ios', 'web'] as const).map((surface) => (
+                      <Td key={surface}>
+                        <ClipCell
+                          clip={localClipFor(p, surface)}
+                          poster={url(thumbPath)}
+                          label={surface === 'ios' ? 'iOS' : 'web'}
+                          showEngine
+                          canGenerate={!!onGenerateClip}
+                          busy={busy}
+                          onGenerate={() =>
+                            onGenerateClip &&
+                            run(p.id, () => onGenerateClip(p.id, undefined, surface))
+                          }
+                          onPlay={setClipLightbox}
+                        />
+                      </Td>
+                    ))
+                  ) : (
+                    <>
+                      <Td>
+                        <ClipCell
+                          clip={p.depthflow_clip as ClipStatus | null}
+                          poster={url(thumbPath)}
+                          label="DepthFlow"
+                          canGenerate={!!onGenerateClip}
+                          busy={busy}
+                          onGenerate={() =>
+                            onGenerateClip && run(p.id, () => onGenerateClip(p.id, 'depthflow'))
+                          }
+                          onPlay={setClipLightbox}
+                        />
+                      </Td>
+                      <Td>
+                        <ClipCell
+                          clip={p.kenburns_clip as ClipStatus | null}
+                          poster={url(thumbPath)}
+                          label="Ken Burns"
+                          canGenerate={!!onGenerateClip}
+                          busy={busy}
+                          onGenerate={() =>
+                            onGenerateClip && run(p.id, () => onGenerateClip(p.id, 'kenburns'))
+                          }
+                          onPlay={setClipLightbox}
+                        />
+                      </Td>
+                    </>
+                  )}
                   <Td className="tabular-nums text-ink2">
                     {isListing ? (
                       (p.sort_order ?? '—')
@@ -984,6 +1018,24 @@ function missingSurfaces(p: PhotoRow): string[] {
   return out;
 }
 
+/**
+ * The local (unpaid) clip this photo has on one canvas, whichever engine made
+ * it.
+ *
+ * Prefers a ready clip; falls back to an in-flight or failed one so the cell
+ * can say what is happening instead of looking empty.
+ */
+function localClipFor(p: PhotoRow, surface: 'ios' | 'web'): ClipStatus | null {
+  const slots = [p.depthflow_clip, p.kenburns_clip];
+  for (const slot of slots) {
+    if (isSurfacePair(slot) && slot[surface]?.status === 'ready') return slot[surface];
+  }
+  for (const slot of slots) {
+    if (isSurfacePair(slot) && slot[surface]) return slot[surface];
+  }
+  return null;
+}
+
 function hasPlannedClip(p: PhotoRow, engine: string): boolean {
   const primary = (slot: ClipStatus | SurfaceClips | null | undefined) =>
     // For a listing the slot holds two canvases. "Rendered" means the PRIMARY
@@ -1193,6 +1245,7 @@ function Thumb({ src, title, onClick }: { src: string; title: string; onClick: (
 function ClipCell({
   clip,
   webClip,
+  showEngine,
   poster,
   label,
   canGenerate,
@@ -1214,6 +1267,9 @@ function ClipCell({
   /** What this column renders, for the button titles: "Seedance", "DepthFlow". */
   label: string;
   canGenerate: boolean;
+  /** Show which engine produced the clip. A canvas-keyed column needs it —
+   *  the column no longer says. */
+  showEngine?: boolean;
   /** Why the button is missing. Rendered in its place — a column that simply
    *  goes blank reads as a bug, not as a rule. */
   disabledHint?: string;
@@ -1259,6 +1315,7 @@ function ClipCell({
           </span>
         </button>
       )}
+      {showEngine && clip?.engine && <span className="text-[10px] text-ink2">{clip.engine}</span>}
       {clip?.duration_s != null && (
         <span className="text-[10px] text-ink2 tabular-nums">{clip.duration_s}s</span>
       )}

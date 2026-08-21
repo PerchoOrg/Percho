@@ -16,6 +16,35 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-21 08:20 UTC — Clip columns keyed by canvas, and the web cut gets a player
+
+**Objective**: owner — "still dont see the generated web ones next to ios",
+then "i mean i dont see the web video from website / oh yeah both clip and
+video, not see them". Two separate holes, both mine.
+
+**The clips.** Phase75 put iOS and web in the same CELL, keyed by engine —
+Seedance, DepthFlow, Ken Burns, each carrying two canvases. That design assumed
+the two canvases share an engine. They deliberately do not: `pick_engines` runs
+per canvas because a photo overflows the 0.685 iOS frame and the 16:9 web frame
+by different amounts. On the first real listing, **10 of 21 photos** had iOS on
+one engine and web on the other — so the two clips rendered in DIFFERENT
+COLUMNS and were never beside each other. The exact opposite of "same row".
+
+Fixed by keying the listing's columns on what is actually being compared: the
+paid clip, the iOS cut, the web cut. The engine has not been lost — it is in
+the Plan column and now labelled on each cell. The community tour keeps
+DA / KB, which is right for a pipeline with one canvas.
+
+**The video.** There was no web player at all. Removing the two stacked
+SurfacePreview panels (owner: "just show the original video") left the web cut
+with nowhere to be watched. One player with an iOS/Web toggle keeps the space
+saving and still reaches both; the iframe follows the chosen canvas' aspect.
+
+**Learnings**: "put them in the same row" and "key them by the same thing" are
+not the same instruction, and I implemented the second while being asked the
+first. The tell was available before shipping — the plan step's own comment
+says the engine split is per canvas *on purpose*.
+
 ## 2026-08-21 08:05 UTC — "Assembly is stuck" was a 3.5-minute encode with no clock
 
 **Objective**: owner — "assembly is stuck."
