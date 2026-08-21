@@ -43,11 +43,16 @@ import {
  * stage is the point. It is a stage of the work, not an absence of one.
  */
 const HOME_TOUR_STEPS: StepSpec[] = [
-  { name: 'tag', label: 'Tag', hint: 'vision labels for every photo' },
+  { name: 'tag', label: 'Tag', hint: 'vision labels for every photo', waitingHint: 'tagging…' },
   { name: 'review', label: 'Review', hint: 'yours — approve/reject in the table' },
-  { name: 'plan', label: 'Plan', hint: 'shot list from what survived' },
-  { name: 'generate', label: 'Render', hint: 'a clip for every shot' },
-  { name: 'assemble', label: 'Assemble', hint: 'stitch the film' },
+  { name: 'plan', label: 'Plan', hint: 'shot list from what survived', waitingHint: 'planning…' },
+  { name: 'generate', label: 'Render', hint: 'a clip for every shot', waitingHint: 'rendering…' },
+  {
+    name: 'assemble',
+    label: 'Assemble',
+    hint: 'stitch the film',
+    waitingHint: 'assembling…',
+  },
 ];
 
 /**
