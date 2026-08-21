@@ -3307,11 +3307,10 @@ def process_plan_job(job: dict[str, Any]) -> None:
             if r["id"] in untagged:
                 reason = "not tagged yet"
             else:
-                tag = r.get("cached_ai_tags") or {}
-                if isinstance(tag, dict) and tag.get("usable") is False:
-                    reason = "tagged unusable"
-                else:
-                    reason = "not selected — room quota, near-duplicate, or over the length budget"
+                # The selector's own verdict. The fallback should be
+                # unreachable — if it starts showing up, a stage is dropping
+                # photos without saying so, and that is the bug to chase.
+                reason = drop_reasons.get(r["id"], "not selected (no reason recorded)")
             dropped.append({"photo_id": r["id"], "reason": reason})
 
         save_run_step(run_id, "plan", {

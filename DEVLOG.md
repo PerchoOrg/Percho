@@ -16,6 +16,50 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-21 08:45 UTC — Why a photo was dropped, and both cuts side by side
+
+**Objective**: owner — "not selected — room quota, near-duplicate, or over t… -
+lets rethink this rejection reason, planning should make better decision", and
+"the ios and web generated videos should be side by side not using tab".
+
+**The rejection reason.** That string listed the RULES THAT EXIST rather than
+saying what happened to this photo. I wrote it as a placeholder in phase74
+because `build_plan` returns only what it kept — the drops happen inside three
+separate stages and none of them said anything.
+
+The three causes want three different responses from the reviewer:
+
+  near-duplicate  -> look at the sibling that beat it, maybe reject that one
+  room quota full -> raise the quota, or accept the room is covered
+  film is full    -> nothing to do, it lost on merit
+
+Collapsing them removed the only information that made the difference
+actionable. A verdict you cannot question is a verdict you cannot fix — the
+same lesson as `poi_photos.rejection_reason` on 2026-08-20, where two automated
+rejections turned out to be wrong and were only found because the reason was on
+the row.
+
+`build_plan` now takes an optional `dropped` dict and each stage fills in its
+own verdict, naming the specifics: which room and its cap, which shot won the
+duplicate and by what quality margin, how many shots the film had room for.
+
+**A hole the tests found**: pass 2 of `select_by_quota` only runs when pass 1
+left budget, so a listing whose room minimums already fill the film skipped it
+entirely and every leftover photo came out with NO reason. A final sweep now
+covers every path, and a test asserts the plan step's fallback string is
+unreachable — a silent drop is the bug, not the message.
+
+**The players.** Third layout in a day: two stacked panels (most of the page's
+height), then one player (which hid the web cut entirely), then a toggle (which
+made comparing them a click). Side by side is what the header is actually for —
+the two are the same film and the question is whether both look right.
+Portrait beside landscape fits on one line because neither needs to be large to
+answer that.
+
+**Learnings**: the placeholder reason survived four phases because nothing ever
+failed on account of it. Vague output is invisible to every check I run —
+typecheck, lint and tests all pass on a string that says nothing.
+
 ## 2026-08-21 08:20 UTC — Clip columns keyed by canvas, and the web cut gets a player
 
 **Objective**: owner — "still dont see the generated web ones next to ios",

@@ -152,15 +152,6 @@ export function HomeTourSection({
    * it exists to disprove.
    */
   const [now, setNow] = useState(() => Date.now());
-  /**
-   * Which cut the header plays.
-   *
-   * One player, per the owner's ask — two stacked previews was most of the
-   * page's vertical space. But removing the second panel left the web cut with
-   * nowhere to be watched at all (owner 2026-08-21: "i dont see the web video
-   * from website"). A toggle keeps one player and still reaches both.
-   */
-  const [preview, setPreview] = useState<'ios' | 'web'>('ios');
   const [stepError, setStepError] = useState<string | null>(null);
   const inFlight = useRef(false);
 
@@ -263,12 +254,20 @@ export function HomeTourSection({
 
   const latestAssembly = assemblies.find((a) => a.surface === 'ios');
   const webAssembly = assemblies.find((a) => a.surface === 'web');
-  const shownAssembly = preview === 'web' ? webAssembly : latestAssembly;
-  const iframeUrl =
-    shownAssembly?.status === 'ready' && shownAssembly.cf_stream_uid
-      ? streamIframeUrl(shownAssembly.cf_stream_uid)
-      : null;
-  const previewCanvas = preview === 'web' ? WEB_CANVAS : IOS_CANVAS;
+  /**
+   * Both cuts, side by side (owner 2026-08-21).
+   *
+   * They were two panels STACKED, which was most of the page's height; then one
+   * player, which hid the web cut entirely; then a toggle, which made comparing
+   * them a click. Side by side is the shape that answers what the header is
+   * for — the two are the same film and the question is whether both look
+   * right. Portrait beside landscape fits on one line because neither needs to
+   * be large to answer that.
+   */
+  const cuts = [
+    { surface: 'ios' as const, label: 'iOS', canvas: IOS_CANVAS, assembly: latestAssembly },
+    { surface: 'web' as const, label: 'Web', canvas: WEB_CANVAS, assembly: webAssembly },
+  ];
 
   /** Tag has finished and Plan has not — the gate is what is blocking. */
   const awaitingReview = allTagged && plannedShots.length === 0;
@@ -570,72 +569,64 @@ export function HomeTourSection({
             <dd className="text-ink">{run ? run.status : 'none yet'}</dd>
           </dl>
         </div>
-        {/* One player, the iOS cut, exactly as the community header does it
-            (owner 2026-08-21: "ios feed should look similar to community, just
-            show the original video"). Two stacked SurfacePreview panels was
-            most of the vertical space on this page and neither of them was the
-            thing being reviewed. The web cut has its own row in the table. */}
-        <div>
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="font-semibold text-ink text-lg">Latest Video</div>
-            <div className="flex items-center gap-2">
-              <div className="flex overflow-hidden rounded-lg border border-line text-xs">
-                {(['ios', 'web'] as const).map((sfc) => (
-                  <button
-                    key={sfc}
-                    type="button"
-                    onClick={() => setPreview(sfc)}
-                    className={`px-2 py-1 ${
-                      preview === sfc ? 'bg-ink text-bg' : 'bg-bg text-ink2 hover:text-ink'
-                    }`}
-                    title={sfc === 'ios' ? 'The feed card cut, 1080x1576' : 'The 16:9 web cut'}
+        <div className="grid gap-3 sm:grid-cols-2">
+          {cuts.map(({ surface, label, canvas, assembly }) => {
+            const url =
+              assembly?.status === 'ready' && assembly.cf_stream_uid
+                ? streamIframeUrl(assembly.cf_stream_uid)
+                : null;
+            return (
+              <div key={surface} className="min-w-0">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="font-medium text-ink text-sm">{label}</div>
+                  {assembly && (
+                    <span
+                      className={`rounded-full px-2 py-0.5 font-medium text-[10px] ${
+                        assembly.status === 'ready'
+                          ? 'bg-green-100 text-green-700'
+                          : assembly.status === 'failed'
+                            ? 'bg-red-100 text-red-700'
+                            : 'bg-amber-100 text-amber-700'
+                      }`}
+                    >
+                      {assembly.status}
+                    </span>
+                  )}
+                </div>
+                {url ? (
+                  <>
+                    <div className="mt-2 overflow-hidden rounded-xl bg-black">
+                      <iframe
+                        title={`Home tour video (${surface})`}
+                        src={url}
+                        className="w-full"
+                        // The render canvas, not a fixed ratio — the iOS one is
+                        // 0.685 and a hardcoded 9:16 letterboxed the community
+                        // player when its canvas changed shape.
+                        style={{ aspectRatio: `${canvas.w} / ${canvas.h}` }}
+                        allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                      />
+                    </div>
+                    <div className="mt-1 text-center text-[10px] text-ink2 tabular-nums">
+                      {new Date(assembly?.created_at ?? '').toLocaleString()}
+                    </div>
+                  </>
+                ) : (
+                  <div
+                    className="mt-2 flex items-center justify-center rounded-xl border border-line border-dashed px-3 text-center text-[11px] text-ink2"
+                    style={{ aspectRatio: `${canvas.w} / ${canvas.h}` }}
                   >
-                    {sfc === 'ios' ? 'iOS' : 'Web'}
-                  </button>
-                ))}
+                    {!assembly
+                      ? `No ${label} cut yet — Plan, Render, then Assemble.`
+                      : assembly.status === 'failed'
+                        ? (assembly.error ?? 'Assembly failed.')
+                        : 'Assembling…'}
+                  </div>
+                )}
               </div>
-              {shownAssembly && (
-                <span
-                  className={`rounded-full px-2 py-0.5 font-medium text-xs ${
-                    shownAssembly.status === 'ready'
-                      ? 'bg-green-100 text-green-700'
-                      : 'bg-amber-100 text-amber-700'
-                  }`}
-                >
-                  {shownAssembly.status}
-                </span>
-              )}
-            </div>
-          </div>
-          {iframeUrl ? (
-            <>
-              <div className="mt-3 overflow-hidden rounded-xl bg-black">
-                <iframe
-                  title={`Home tour video (${preview})`}
-                  src={iframeUrl}
-                  // The render canvas, not 9:16 — a hardcoded ratio letterboxed
-                  // the community player when its canvas changed shape.
-                  style={{
-                    aspectRatio: `${previewCanvas.w} / ${previewCanvas.h}`,
-                    height: preview === 'web' ? 260 : 420,
-                  }}
-                  allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
-                />
-              </div>
-              <div className="mt-2 text-center text-[11px] text-ink2 tabular-nums">
-                {shownAssembly ? new Date(shownAssembly.created_at).toLocaleString() : ''}
-              </div>
-            </>
-          ) : (
-            <div className="mt-3 flex h-[420px] items-center justify-center rounded-xl border border-line border-dashed px-4 text-center text-ink2 text-xs">
-              {!shownAssembly
-                ? `No ${preview === 'web' ? 'web' : 'iOS'} video yet — review the photos, then Plan, Render and Assemble.`
-                : shownAssembly.status === 'failed'
-                  ? (shownAssembly.error ?? 'Assembly failed.')
-                  : 'Assembling… the worker is rendering it now.'}
-            </div>
-          )}
+            );
+          })}
         </div>
       </section>
 
