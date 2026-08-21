@@ -933,12 +933,22 @@ function truncate(s: string, n: number) {
  * is not the same question as "matches the plan".
  */
 function hasPlannedClip(p: PhotoRow, engine: string): boolean {
+  const primary = (slot: ClipStatus | SurfaceClips | null | undefined) =>
+    // For a listing the slot holds two canvases. "Rendered" means the PRIMARY
+    // one is: iOS is what the feed plays, and a web-only clip is not the shot
+    // the plan promised.
+    isSurfacePair(slot) ? slot.ios : slot;
+
+  // A ready Seedance clip satisfies ANY shot, because the assembler is
+  // AI-first and will use it whatever the plan declared. Checking only the
+  // planned engine printed "not rendered yet" on a photo whose paid clip was
+  // sitting there ready — and would have been the one in the film.
+  const seedance = primary(p.clip);
+  if (seedance?.status === 'ready') return true;
+
   const slot =
     engine === 'seedance' ? p.clip : engine === 'depthflow' ? p.depthflow_clip : p.kenburns_clip;
-  // For a listing the slot holds two canvases. "Rendered" means the PRIMARY
-  // one is: iOS is what the feed plays, and a web-only clip is not the shot
-  // the plan promised.
-  const clip = isSurfacePair(slot) ? slot.ios : slot;
+  const clip = primary(slot);
   return clip?.engine === engine && clip.status === 'ready';
 }
 
