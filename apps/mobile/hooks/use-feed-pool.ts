@@ -132,6 +132,22 @@ export function useFeedPool({
 						limit: FIRST_PAGE_SIZE,
 						cities: scopedCities ? scopedCities.split(",") : [],
 						likedCommunityIds: scopedLiked ? scopedLiked.split(",") : [],
+						/**
+						 * Every card in the deck has a video (owner 2026-08-21: "on ios,
+						 * only show cards with videos, either community or listing").
+						 *
+						 * This overrides spec-v3 §0.7, which treats "no video" as a
+						 * first-class card state — that stays true of the schema and of
+						 * every other surface, but the phone deck now shows only what has
+						 * been filmed. It is a deliberate narrowing of the inventory, not
+						 * a rendering change: 15 listings and ~8 communities have a ready
+						 * video today, out of 260 and 8,684.
+						 *
+						 * `videoFirst` is still what the dev sampler wants — it keeps the
+						 * whole pool and only reorders, so the sampler can still exercise
+						 * a photo-only card.
+						 */
+						videosOnly: true,
 						// Dev sampler wants the video cards in the payload at all; the
 						// server has to FETCH them, sorting a page cannot surface a row it
 						// never read. See lib/feed/dev-sampler.ts.

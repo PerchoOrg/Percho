@@ -265,7 +265,22 @@ export async function GET(request: Request) {
    * community half was left sorting an empty set.
    */
   let communityRows = communities;
-  if (needsCommunities && videoFirst) {
+  if (needsCommunities && videosOnly) {
+    /**
+     * `videosOnly` covered listings and silently ignored communities, so the
+     * flag that promises "only cards with video" still shipped 12 photo-only
+     * community cards (owner 2026-08-21: "only show cards with videos, either
+     * community or listing").
+     *
+     * Fetched by id for the same reason the `videoFirst` block below does it:
+     * the community pool is ordered by name over 8,684 rows and the handful
+     * with a tour are nowhere near the first page. Filtering the page would
+     * return nothing at all.
+     */
+    const videoCommunityIds = await fetchVerticalVideoCommunityIds();
+    const allVideoIds = [...new Set([...videoCommunityIds, ...aiTourVideos.keys()])];
+    communityRows = allVideoIds.length > 0 ? await fetchCommunityPoolByIds(allVideoIds) : [];
+  } else if (needsCommunities && videoFirst) {
     const videoCommunityIds = await fetchVerticalVideoCommunityIds();
     const aiVideoIds = [...aiTourVideos.keys()];
     const allVideoIds = [...new Set([...videoCommunityIds, ...aiVideoIds])];
@@ -283,12 +298,18 @@ export async function GET(request: Request) {
     const aiUrl = aiTourVideos.get(c.id);
     return aiUrl ? { ...c, videoUrl: aiUrl } : c;
   });
-  const orderedCommunities = videoFirst
-    ? [
-        ...communitiesWithVideo.filter((c) => c.videoUrl),
-        ...communitiesWithVideo.filter((c) => !c.videoUrl),
-      ]
+  // Belt and braces: the id lists above come from two different tables, and a
+  // row can be listed there and still resolve to no playable URL. `videosOnly`
+  // is a promise about what the buyer sees, so it is enforced on the thing the
+  // buyer actually gets.
+  const videoBearing = videosOnly
+    ? communitiesWithVideo.filter((c) => c.videoUrl)
     : communitiesWithVideo;
+  const orderedCommunities = videoFirst
+    ? [...videoBearing.filter((c) => c.videoUrl), ...videoBearing.filter((c) => !c.videoUrl)]
+    : // `videoBearing`, not `communitiesWithVideo` — the un-sorted branch has to
+      // honour the filter too, or `videosOnly` would only work with `videoFirst`.
+      videoBearing;
 
   const body: FeedPoolResponse = {
     stage,
