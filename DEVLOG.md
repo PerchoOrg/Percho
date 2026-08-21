@@ -103,6 +103,21 @@ canvas moving to 1080x1576 is a bug fix, not an alignment.
 and 62 of 64 python tests pass (the 2 above pre-date this branch). Migrations
 applied to the LOCAL stack only — **not pushed to production**.
 
+Beyond the unit tests, 16 schema-behaviour checks were run against the local
+Postgres — the class of bug `tsc` cannot see. All pass: the review verdict is
+independent of the upload status; an unknown verdict, run status, step, engine
+or surface is refused; one photo carries Ken Burns AND DepthFlow on one
+surface; the same photo+engine on the other surface is a separate row and the
+same photo+engine+surface twice is refused; `listing_videos` now accepts a
+square-only row and still refuses one with no source at all; deleting the
+listing cascades every pipeline row away with no orphans.
+
+Attempting the same through PostgREST failed: the local stack has no
+SELECT/INSERT/UPDATE/DELETE grants for `service_role` on ANY table, including
+pre-existing ones like `listings`. Local-stack misconfiguration, unrelated to
+this branch, but it means the API routes have not been exercised end to end
+here.
+
 **Remaining risks**:
 - Nothing has rendered through the new path. There is no Mac mini worker
   attached to this session and no real listing photos in the local stack, so
