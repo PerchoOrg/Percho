@@ -31,7 +31,19 @@ import {
   renderFacts,
 } from './insights';
 import { findSchoolAssignment, stripSchoolAssignment } from './school-language';
-import { WORDS_PER_SECOND_FIT, countWords } from './vo-pass';
+import { countWords } from './vo-pass';
+
+/**
+ * Words per second, measured on this voice rather than assumed.
+ *
+ * The VO pass's WORDS_PER_SECOND_FIT is 2.4. Timing three real Gemini TTS lines
+ * in Aoede gave 2.20, 2.26 and 2.37 — so budgets built on 2.4 came out about 9%
+ * long, and at 92% fill that was enough to leave 0.1s between the Halcyon line
+ * and the schools line. They did not technically overlap; they simply ran into
+ * each other, which sounds the same (owner 2026-08-21: "before the elementary,
+ * tts overlaps").
+ */
+export const NARRATION_WORDS_PER_SECOND = 2.25;
 
 export const NARRATION_MODEL = process.env.GEMINI_VO_MODEL ?? 'gemini-3.5-flash';
 
@@ -48,19 +60,31 @@ const GENERATE_URL = (model: string) =>
  *
  * Raising this alone would not have fixed it: the opening section allowed 44
  * words and the model wrote 25. The cap was never the constraint, so the prompt
- * now carries a FLOOR as well, and asks long sections for more than one
- * sentence.
+ * carries a FLOOR as well, and asks long sections for more than one sentence.
+ *
+ * Tuned against measurement rather than feel. The film that followed came back
+ * 59% spoken, at a delivered rate of 2.45 words per second — which confirms
+ * WORDS_PER_SECOND_FIT, and puts the shortfall entirely in sections written to
+ * 60-75% of a cap set at 85%. Owner 2026-08-21 asked for 80%; at 0.92 fill with
+ * a 0.85 floor the band works out to 76-89%.
  */
-export const SECTION_FILL = 0.85;
+export const SECTION_FILL = 0.92;
 
 /** A line must use at least this much of its section's budget. */
-export const SECTION_MIN_FILL = 0.7;
+export const SECTION_MIN_FILL = 0.85;
 
 /** Past this, one sentence cannot carry the section and the prompt says so. */
 const MULTI_SENTENCE_SECONDS = 11;
 
-/** A section too short to say anything useful in gets no line at all. */
-export const MIN_SECTION_SECONDS = 2.5;
+/**
+ * A section too short to say anything useful in gets no line at all.
+ *
+ * 2.0 rather than 2.5 since 2026-08-21: at 2.5 the three two-second sections at
+ * the end of the Aberdeen cut were skipped outright, and four of the film's
+ * ninety seconds went quiet for no better reason than a threshold. Four words
+ * fit in two seconds.
+ */
+export const MIN_SECTION_SECONDS = 2.0;
 
 export interface NarrationClip {
   poi_name?: string | null;
@@ -135,7 +159,7 @@ export function buildSections(clips: NarrationClip[]): NarrationSection[] {
   for (const s of sections) {
     s.wordBudget = Math.max(
       0,
-      Math.floor((s.endS - s.startS) * SECTION_FILL * WORDS_PER_SECOND_FIT),
+      Math.floor((s.endS - s.startS) * SECTION_FILL * NARRATION_WORDS_PER_SECOND),
     );
   }
   return sections;

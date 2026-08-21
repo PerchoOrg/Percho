@@ -75,7 +75,7 @@ describe('parseNarration', () => {
   const sections = buildSections([
     clip('amenities', 'Clubhouse', 10),
     clip('schools', 'Sharon Elementary', 10),
-    clip('pets', 'Caney Creek', 2),
+    clip('pets', 'Caney Creek', 1.2),
   ]);
 
   it('places each line at its own section start, not at a running total', () => {
@@ -92,6 +92,14 @@ describe('parseNarration', () => {
   it('drops a section too short to say anything in', () => {
     const raw = JSON.stringify({ lines: [{ index: 2, text: 'The dog park.' }] });
     expect(parseNarration(raw, sections).segments).toHaveLength(0);
+  });
+
+  it('keeps a two-second section — four words fit in two seconds', () => {
+    // At the old 2.5s threshold the Aberdeen cut lost three of these in a row,
+    // and four of its ninety seconds went quiet on a threshold alone.
+    const short = buildSections([clip('pets', 'Caney Creek', 2)]);
+    const raw = JSON.stringify({ lines: [{ index: 0, text: 'Walk dogs at Caney Creek.' }] });
+    expect(parseNarration(raw, short).segments).toHaveLength(1);
   });
 
   it('trims an over-budget line by whole sentences, so it stays speakable', () => {
