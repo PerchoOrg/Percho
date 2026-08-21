@@ -175,8 +175,16 @@ than the filter.
 
 Because `video_row_id` is not read until step 7, the old path rendered AND
 uploaded before failing: **4 orphan Cloudflare Stream assets** (05:57:28,
-05:57:55, 05:58:38, 05:59:05), referenced by no `listing_videos` row. Flagged
-to the owner; not deleted without instruction.
+05:57:55, 05:58:38, 05:59:05), referenced by no `listing_videos` row.
+
+**Deleted 2026-08-21 06:55 UTC** on the owner's instruction, after checking
+each uid against every column in the schema that can hold one — a grep of
+`database.types.ts` gives exactly five tables and seven columns
+(`listing_videos` ×3, `community_videos`, `generated_videos`,
+`tour_assemblies`, `listing_tour_assemblies`), and all seven returned empty for
+all four uids. `ai_tour_videos` cannot reference them at all: it stores a
+Supabase `storage_path`, not a Stream uid. All four now 404. 46.4 MB, 4×26s,
+recovered.
 
 **Resolution**: the reference worktree has since been updated to `2e6df5aa` and
 the worker restarted (PID 33997), and **the new path then worked**: run
