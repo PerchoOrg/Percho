@@ -152,6 +152,9 @@ describe('school progression phrasing', () => {
   it('leaves ordinary location language alone', () => {
     for (const line of [
       'Sharon Elementary, Riverwatch Middle, and Lambert High School stand along South Forsyth.',
+      // The closing line of a real film, deleted by an over-broad school rule.
+      'Publix handles the daily run.',
+      'The morning routine here starts with coffee at Peony.',
       'The trail leads to Sims Lake Park.',
       'Quiet paths wind through the grounds and continue on to the pool.',
       'Lambert High School is two miles east.',
