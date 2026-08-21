@@ -77,8 +77,8 @@ async function freshRun(listingId: string): Promise<ListingRunRow> {
   return data as ListingRunRow;
 }
 
-/** Queue the Python-side plan step and wait for the worker to write it back. */
-async function planAndWait(run: ListingRunRow, timeoutMs = 15 * 60_000): Promise<number> {
+/** Queue the Python-side plan step. The worker writes the result back. */
+async function queuePlan(run: ListingRunRow): Promise<void> {
   await sb.from('render_jobs').insert({
     listing_id: run.listing_id,
     run_id: run.id,
@@ -86,6 +86,16 @@ async function planAndWait(run: ListingRunRow, timeoutMs = 15 * 60_000): Promise
     status: 'queued',
     video_row_id: null,
   });
+}
+
+/**
+ * Wait for one run's shot list.
+ *
+ * Separate from queueing so all fifteen plans sit in the worker's queue at
+ * once. The worker drains them one at a time either way; what changes is that
+ * it never waits for this script between them.
+ */
+async function awaitPlan(run: ListingRunRow, timeoutMs = 40 * 60_000): Promise<number> {
   const until = Date.now() + timeoutMs;
   while (Date.now() < until) {
     await sleep(10_000);
@@ -137,22 +147,66 @@ async function clipsReady(run: ListingRunRow, timeoutMs = 90 * 60_000): Promise<
   log('    clip wait timed out; assembling with what is ready');
 }
 
+/**
+ * Every listing, staged rather than one at a time.
+ *
+ * Owner 2026-08-21: "you should run all in parallel."
+ *
+ * The render worker is single-threaded — it claims one clip per poll — so this
+ * does NOT make rendering faster. What it removes is the idle: the sequential
+ * version left the worker with nothing to do between one listing's last clip
+ * and the next listing's plan, and could not assemble listing 1 while listing 2
+ * rendered. Now the queue is filled once and drained continuously, and each
+ * film is assembled the moment its own clips are ready.
+ */
 async function main() {
   const list = await targets();
   log(`${list.length} listing(s) to re-run${DRY ? ' (dry run)' : ''}`);
   for (const t of list) log(`  ${t.address} — ${t.photos} photos`);
   if (DRY) return;
 
-  const done: string[] = [];
   const failed: Array<{ address: string; why: string }> = [];
+  const fail = (address: string, e: unknown) => {
+    const why = e instanceof Error ? e.message : String(e);
+    log(`  FAILED ${address}: ${why}`);
+    failed.push({ address, why });
+  };
 
-  for (const [i, t] of list.entries()) {
-    log(`\n[${i + 1}/${list.length}] ${t.address}`);
+  // ── 1. plan them all, then wait for the worker to write them all back ──
+  log('\n=== planning all ===');
+  const runs = new Map<string, ListingRunRow>();
+  await Promise.all(
+    list.map(async (t) => {
+      try {
+        const run = await freshRun(t.id);
+        runs.set(t.id, run);
+        await queuePlan(run);
+      } catch (e) {
+        fail(t.address, e);
+      }
+    }),
+  );
+  const planned = (
+    await Promise.all(
+      [...runs.entries()].map(async ([id, run]) => {
+        const t = list.find((x) => x.id === id);
+        try {
+          const shots = await awaitPlan(run);
+          log(`  ${t?.address}: ${shots} shots`);
+          return { id, run, address: t?.address ?? id };
+        } catch (e) {
+          fail(t?.address ?? id, e);
+          return null;
+        }
+      }),
+    )
+  ).filter((x): x is { id: string; run: ListingRunRow; address: string } => x !== null);
+
+  // ── 2. queue every clip, both canvases, in one go ──────────────────────
+  log('\n=== queueing clips ===');
+  let queued = 0;
+  for (const { run, address } of planned) {
     try {
-      const run = await freshRun(t.id);
-      const shots = await planAndWait(run);
-      log(`    planned ${shots} shots`);
-
       const fresh = (await getListingRun(sb, run.id)) as ListingRunRow;
       const gen = (await runGenerateAllSurfaces(sb, fresh)) as {
         queued?: number;
@@ -161,25 +215,38 @@ async function main() {
         message?: string;
       };
       if (gen.error) throw new Error(gen.message ?? gen.error);
-      log(`    queued ${gen.queued ?? 0} clips, reused ${gen.reused ?? 0}`);
-
-      await clipsReady(fresh);
-
-      const latest = (await getListingRun(sb, run.id)) as ListingRunRow;
-      const asm = (await runAssembleAllSurfaces(sb, latest, true)) as {
-        error?: string;
-        message?: string;
-        notReady?: number;
-      };
-      if (asm.error) throw new Error(asm.message ?? asm.error);
-      log(`    assembling both cuts${asm.notReady ? ` (${asm.notReady} shot(s) short)` : ''}`);
-      done.push(t.address);
+      queued += gen.queued ?? 0;
+      log(`  ${address}: +${gen.queued ?? 0} queued, ${gen.reused ?? 0} reused`);
     } catch (e) {
-      const why = e instanceof Error ? e.message : String(e);
-      log(`    FAILED: ${why}`);
-      failed.push({ address: t.address, why });
+      fail(address, e);
     }
   }
+  log(`${queued} clip(s) queued across ${runs.size} listing(s)`);
+
+  // ── 3. assemble each film as soon as ITS clips are ready ───────────────
+  //
+  // Not one wait for everything: a listing whose 12 clips finished in the
+  // first ten minutes should not wait on the 75-photo one behind it.
+  log('\n=== assembling as clips land ===');
+  const done: string[] = [];
+  await Promise.all(
+    planned.map(async ({ run, address }) => {
+      try {
+        await clipsReady(run);
+        const latest = (await getListingRun(sb, run.id)) as ListingRunRow;
+        const asm = (await runAssembleAllSurfaces(sb, latest, true)) as {
+          error?: string;
+          message?: string;
+          notReady?: number;
+        };
+        if (asm.error) throw new Error(asm.message ?? asm.error);
+        log(`  ${address}: assembling${asm.notReady ? ` (${asm.notReady} short)` : ''}`);
+        done.push(address);
+      } catch (e) {
+        fail(address, e);
+      }
+    }),
+  );
 
   log(`\ndone: ${done.length}, failed: ${failed.length}`);
   for (const f of failed) log(`  ${f.address}: ${f.why}`);
