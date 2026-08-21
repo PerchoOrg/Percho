@@ -26,7 +26,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { NarrationPanel, type NarrationSegmentView } from './NarrationPanel';
+import { type BgmChoiceView, NarrationPanel, type NarrationSegmentView } from './NarrationPanel';
 import { PhotoSourcePanel } from './PhotoSourcePanel';
 import type { ClipStatus, PhotoRow } from './PhotoTable';
 import { PhotoTable } from './PhotoTable';
@@ -330,18 +330,24 @@ export function CommunityTourSection({
     ]),
   );
 
-  /** The script `plan` wrote for this cut, for review before anything is spoken. */
-  const narration = (
-    run?.step_results.photos as
-      | {
-          narration?: {
-            voice?: string;
-            error?: string;
-            segments?: NarrationSegmentView[];
-          };
-        }
-      | undefined
-  )?.narration;
+  /** The script and the music `plan` chose, for review before either is heard. */
+  const soundtrack = run?.step_results.photos as
+    | {
+        narration?: { voice?: string; error?: string; segments?: NarrationSegmentView[] };
+        bgm?: BgmChoiceView | null;
+      }
+    | undefined;
+  const narration = soundtrack?.narration;
+  const bgm = soundtrack?.bgm ?? undefined;
+  // The `bgm` bucket is public, so the admin can stream the exact file the
+  // render will use rather than a re-pick. `storageBase` is the project root
+  // (see the page that passes it), so the full Storage path goes on here.
+  const bgmUrl = bgm
+    ? `${storageBase.replace(/\/$/, '')}/storage/v1/object/public/bgm/${bgm.path
+        .split('/')
+        .map(encodeURIComponent)
+        .join('/')}`
+    : undefined;
 
   /** Why each photo the plan considered is NOT in the cut, keyed by photo. */
   const dropReasons = Object.fromEntries(
@@ -430,6 +436,8 @@ export function CommunityTourSection({
       <NarrationPanel
         voice={narration?.voice}
         segments={narration?.segments ?? []}
+        bgm={bgm}
+        bgmUrl={bgmUrl}
         error={narration?.error}
       />
 

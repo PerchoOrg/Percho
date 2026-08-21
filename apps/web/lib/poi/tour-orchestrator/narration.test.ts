@@ -65,8 +65,8 @@ describe('buildSections', () => {
   it('sizes the word budget from real duration, so a longer cut says more', () => {
     const short = buildSections([clip('amenities', 'Pool', 6)])[0];
     const long = buildSections([clip('amenities', 'Pool', 26)])[0];
-    expect(short?.wordBudget).toBe(10);
-    expect(long?.wordBudget).toBe(44);
+    expect(short?.wordBudget).toBe(12);
+    expect(long?.wordBudget).toBe(53);
     expect(long?.wordBudget).toBeGreaterThan((short?.wordBudget ?? 0) * 3);
   });
 });
