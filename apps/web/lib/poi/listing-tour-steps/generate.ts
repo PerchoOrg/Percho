@@ -76,9 +76,13 @@ export function renderKey(i: RenderInputs): string {
  * photos have no outpaint pipeline, so unlike the POI side there is one stamp
  * to consider, not two.
  */
-async function photoVersions(sb: TourDb, photoIds: string[]): Promise<Map<string, string>> {
-  const out = new Map<string, string>();
-  if (photoIds.length === 0) return out;
+async function photoVersions(
+  sb: TourDb,
+  photoIds: string[],
+): Promise<{ version: Map<string, string>; enhancing: Set<string> }> {
+  const version = new Map<string, string>();
+  const enhancing = new Set<string>();
+  if (photoIds.length === 0) return { version, enhancing };
   const { data } = (await sb
     .from('listing_photos')
     .select('id, enhanced_at, enhanced_status')
@@ -86,9 +90,16 @@ async function photoVersions(sb: TourDb, photoIds: string[]): Promise<Map<string
     data: Array<{ id: string; enhanced_at: string | null; enhanced_status: string | null }> | null;
   };
   for (const p of data ?? []) {
-    if (p.enhanced_status === 'approved' && p.enhanced_at) out.set(p.id, p.enhanced_at);
+    if (p.enhanced_status === 'approved' && p.enhanced_at) version.set(p.id, p.enhanced_at);
+    // Enhancement is queued by the tag step and lands minutes later. Render now
+    // and the clip is made from the ORIGINAL; when the enhanced file arrives it
+    // changes `enhanced_at`, which changes the render key, and the same clip is
+    // rendered a second time. Waiting one pass is strictly cheaper.
+    if (p.enhanced_status === 'queued' || p.enhanced_status === 'processing') {
+      enhancing.add(p.id);
+    }
   }
-  return out;
+  return { version, enhancing };
 }
 
 interface ClipRow {
@@ -129,7 +140,7 @@ async function enqueueClips(
     return { error: 'no_shots', message: 'Nothing to render — run Plan first.' };
   }
   const photoIds = [...new Set(shots.map((s) => s.photo_id))];
-  const versions = await photoVersions(sb, photoIds);
+  const { version: versions, enhancing } = await photoVersions(sb, photoIds);
 
   const { data: existing } = (await sb
     .from('listing_photo_clips')
@@ -144,6 +155,17 @@ async function enqueueClips(
   const skipped: Array<{ photo_id: string; reason: string }> = [];
 
   for (const s of shots) {
+    // Wait for the better source rather than rendering from the worse one and
+    // doing it again (owner 2026-08-21: enhance "before doing da or kb
+    // rendering"). Reported, not silent — a shot missing from the film has to
+    // be explainable.
+    if (enhancing.has(s.photo_id)) {
+      skipped.push({
+        photo_id: s.photo_id,
+        reason: 'still being enhanced — render again once it lands',
+      });
+      continue;
+    }
     const key = renderKey({
       surface,
       engine: s.engine,

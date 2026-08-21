@@ -16,6 +16,48 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-21 10:45 UTC — Enhancement stops depending on a browser tab
+
+**Objective**: owner, on 5122 Lower Creek Street — "i see some pics do not have
+enhanced photos why? i think for all we should by default enhance it, before
+doing da or kb rendering."
+
+**Cause**: enhancement was driven by the ADMIN UI, not by the pipeline.
+`PhotoTable` has an effect that queues `none`/`failed` photos and promotes
+`ready` to `approved` — and it only runs while that page is open. The enhance
+worker writes `ready`, and `approved_enhanced_path` reads only `approved`.
+
+So the chain had a step that lived in a React effect. Site-wide, **866 of 1,000
+listing photos had never been enhanced at all**; on 5122, of 75 photos only 2
+were `approved` when its clips were rendered. Every other clip came from the
+original file.
+
+This is design drift, not a single mistake. The 2026-08-03 migration made
+approval a deliberate manual gate, and this code respected it. The owner removed
+the manual step on 2026-08-17 ("no per-photo manual action") and the
+auto-approve went into the UI — the nearest place to the button that had been
+removed, and the wrong one.
+
+**Actions**:
+- The enhance worker writes `approved`, not `ready`. Same decision the UI
+  already made; it no longer needs a browser tab.
+- The `tag` step queues enhancement for every `none`/`failed` photo, before
+  anything is planned or rendered.
+- `generate` SKIPS a photo whose enhancement is in flight, and says so. Without
+  that the clip renders from the original, then `enhanced_at` changes the render
+  key when the enhanced file lands, and the same clip renders again — one wait
+  is strictly cheaper than two renders.
+
+**Decisions**: auto-approving in the worker affects `poi_photos` too, since both
+tables share the enhance queue. That is deliberate and not a widening — the UI
+already auto-approved both; this only changes WHEN, not WHETHER. The migration
+comment at 20260803060000 saying the gate is manual is now stale; noted rather
+than edited, since an applied migration is a historical record.
+
+**Learnings**: a pipeline step that lives in a React effect runs when someone is
+watching. Three of today's bugs share that shape — work that appeared to be
+automatic because it always happened while somebody had the page open.
+
 ## 2026-08-21 10:20 UTC — Three workers, and the two bugs that only three could reveal
 
 **Objective**: owner — "we should have more workers?" then "yes set up 3
