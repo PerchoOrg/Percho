@@ -1,14 +1,22 @@
 /**
- * DEV-ONLY sampler deck — "3 of each kind, video cards first".
+ * DEV-ONLY sampler deck — "every filmed card, then 3 of each kind".
  *
  * WHY: the production mix (`ratios.ts` STAGE_MIX) may not show a listing for a
  * while, so testing a listing card on device meant swiping through many cards —
  * which the owner hit head-on: 「现在我需要翻很多卡片才能看到listing 为了测试方便
  * 暂时不用按照production的规则来 每种来3张就好了」 (2026-07-27).
  *
- * So this composes a flat deck of ~3 cards per kind, in a fixed order, with the
- * cards that carry a 9:16 VIDEO hoisted to the very front. It exists to exercise
- * every face quickly, not to model any real buyer journey.
+ * So this composes a flat deck in a fixed order, with the cards that carry a
+ * VIDEO hoisted to the very front. It exists to exercise every face quickly,
+ * not to model any real buyer journey.
+ *
+ * EVERY filmed card leads, not three of them (owner 2026-08-21: "change the
+ * definition of the dev sampler mode, so all cards with videos can be swiped on
+ * ios"). Reviewing a render is the job this flag is actually used for now, and
+ * a cap of three made twelve finished films unreachable — the fault the owner
+ * hit as "i am not able to see those cards with new ios videos even after
+ * swipping all". The cap still governs the UNFILMED cards, which are there to
+ * exercise a face rather than to be watched.
  *
  * HARD BOUNDARIES — this is a test fixture for the ORDER, never for the DATA:
  *   - Every card is built by the same real constructors the production engine
@@ -30,7 +38,7 @@ import type {
 import { TRADEOFFS } from "./content";
 import type { FeedPool } from "./generate-feed";
 
-/** Cards per kind in the sampler deck. */
+/** Cards per kind in the sampler deck — for the ones with NO video. */
 export const SAMPLER_PER_KIND = 3;
 
 /** Read once at module load — `EXPO_PUBLIC_*` is inlined at bundle time. */
@@ -58,11 +66,13 @@ function take<T>(items: readonly T[], n: number): T[] {
  * video goes missing here again, check what the POOL holds before touching this
  * function.
  */
-function videoFirst<T extends { videoUrl?: string }>(items: readonly T[]): T[] {
-	return [
-		...items.filter((i) => i.videoUrl),
-		...items.filter((i) => !i.videoUrl),
-	];
+/** Every filmed card, then up to SAMPLER_PER_KIND unfilmed ones. */
+function withAndWithoutVideo<T extends { videoUrl?: string }>(
+	items: readonly T[],
+): T[] {
+	const filmed = items.filter((i) => !!i.videoUrl);
+	const rest = items.filter((i) => !i.videoUrl).slice(0, SAMPLER_PER_KIND);
+	return [...filmed, ...rest];
 }
 
 export interface SamplerInput {
@@ -79,15 +89,10 @@ export interface SamplerInput {
 export function buildSamplerDeck(input: SamplerInput): FeedCardV3[] {
 	const { pool } = input;
 
-	const listings: ListingCardV3[] = take(
-		videoFirst(pool.listings),
-		SAMPLER_PER_KIND,
-	);
-
-	const communities: CommunityCardV3[] = take(
-		videoFirst(pool.communities),
-		SAMPLER_PER_KIND,
-	);
+	// Filmed cards are not sampled — all of them are here to be watched. The
+	// cap applies only to what follows them.
+	const listings: ListingCardV3[] = withAndWithoutVideo(pool.listings);
+	const communities: CommunityCardV3[] = withAndWithoutVideo(pool.communities);
 
 	const areas: AreaCardV3[] = take(pool.geoUnits, SAMPLER_PER_KIND).map(
 		(unit) => ({ kind: "area" as const, id: `area-${unit.id}`, unit }),
@@ -107,7 +112,11 @@ export function buildSamplerDeck(input: SamplerInput): FeedCardV3[] {
 	deck.push(...leading);
 
 	const led = new Set(leading.map((c) => c.id));
-	for (let round = 0; round < SAMPLER_PER_KIND; round++) {
+	// Enough rounds to drain the longest group. It used to be SAMPLER_PER_KIND,
+	// which silently dropped anything past the third card of a kind — invisible
+	// while every group was capped at three, and a hole the moment they were not.
+	const rounds = Math.max(...groups.map((g) => g.length), 0);
+	for (let round = 0; round < rounds; round++) {
 		for (const group of groups) {
 			const card = group[round];
 			if (card && !led.has(card.id)) deck.push(card);
