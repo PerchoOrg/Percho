@@ -11,13 +11,19 @@
  * every photo is reviewed, planned and rendered (owner 2026-08-20: "the goal
  * is to have a similar big table for home tour as well, with all the columns,
  * buttons if needed").
+ *
+ * The legacy whole-film button is gone (owner 2026-08-21), now that the
+ * per-photo path has produced a film end to end. `process_job()` itself
+ * REMAINS: the agent dashboard's one-click "Create a home tour video"
+ * (`GenerateTourPanel` -> /api/listings/[id]/generate-tour) still enqueues
+ * step='render' jobs against it, and that is a live agent-facing feature, not
+ * the admin fallback being retired here.
  */
 
 import { createServiceClient } from '@/lib/supabase/server';
 import { notFound } from 'next/navigation';
 import { HomeTourSection } from '../../../_components/HomeTourSection';
 import type { PhotoRow } from '../../../_components/PhotoTable';
-import { AdminGenerateTourButton } from './AdminGenerateTourButton';
 
 export const dynamic = 'force-dynamic';
 
@@ -53,39 +59,15 @@ export default async function AdminTourJobsDetailPage({
 
   if (!listing) notFound();
 
-  const [photoRes, videoRes] = await Promise.all([
-    supabase
-      .from('listing_photos')
-      .select(
-        'id, storage_path, sort_order, width, height, ai_tags, ai_score, tagged_at, used_in_video_at, used_clip_index, enhanced_path, enhanced_status, enhanced_preset, enhanced_error, review_status, rejection_reason',
-      )
-      .eq('listing_id', id)
-      .order('sort_order', { ascending: true }) as unknown as Promise<{
-      data: PhotoRow[] | null;
-    }>,
-    supabase
-      .from('listing_videos')
-      .select(
-        'id, cf_video_id, cf_video_id_landscape, cf_video_id_square, kind, status, created_at',
-      )
-      .eq('listing_id', id)
-      .eq('kind', 'walkthrough')
-      .order('created_at', { ascending: false })
-      .limit(1) as unknown as Promise<{
-      data: Array<{
-        id: string;
-        cf_video_id: string | null;
-        cf_video_id_landscape: string | null;
-        cf_video_id_square: string | null;
-        kind: string;
-        status: string;
-        created_at: string;
-      }> | null;
-    }>,
-  ]);
+  const { data: photoData } = (await supabase
+    .from('listing_photos')
+    .select(
+      'id, storage_path, sort_order, width, height, ai_tags, ai_score, tagged_at, used_in_video_at, used_clip_index, enhanced_path, enhanced_status, enhanced_preset, enhanced_error, review_status, rejection_reason',
+    )
+    .eq('listing_id', id)
+    .order('sort_order', { ascending: true })) as unknown as { data: PhotoRow[] | null };
 
-  const photos = photoRes.data ?? [];
-  const video = videoRes.data?.[0];
+  const photos = photoData ?? [];
 
   return (
     <HomeTourSection
@@ -98,19 +80,6 @@ export default async function AdminTourJobsDetailPage({
       storageBase={SUPABASE_URL}
       bucket="listing-photos"
       photos={photos}
-      latestVideo={
-        video
-          ? {
-              // iOS plays the square-named column; web plays landscape, with
-              // the legacy portrait column as the fallback webVideoUid()
-              // applies for old rows.
-              iosUid: video.cf_video_id_square,
-              webUid: video.cf_video_id_landscape ?? video.cf_video_id,
-              status: video.status,
-            }
-          : null
-      }
-      legacyAction={<AdminGenerateTourButton listingId={listing.id} photoCount={photos.length} />}
     />
   );
 }

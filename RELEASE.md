@@ -22,6 +22,11 @@ Aberdeen in Suwanee is the first community with this treatment: a 58-second film
 - The admin Worker screen is now one table you read top to bottom: each worker, then the queues that worker is responsible for directly underneath it, so a backed-up queue and the worker to blame sit together
 - Warnings appear on the row they concern rather than in a list at the top
 - Machine load, memory, disk and the day's AI spend moved into a single line, so the whole picture fits one screen
+- Home tours now produce both the phone version and the widescreen web version, from the same reviewed photos and the same running order
+- Both versions sit on one row per photo in the review table, instead of doubling the number of columns
+- The AI hero shot is now planned automatically as the opening shot of every home tour. Reject it and it stays rejected — it won't come back on the next run
+- A listing's own photos start out approved. Reviewing a home tour is now about dropping the few that shouldn't be in it, rather than approving every one
+- The home tour screen shows a single player at the top, matching the community tour screen, instead of two stacked previews
 - Home tour clips and films now appear on the Video Jobs screen alongside every other queue, instead of being invisible while they ran
 - An AI hero shot requested for a home tour is now actually picked up and made. Before, the request was recorded and nothing ever collected it
 - A home tour step that fails now says so, with the reason, instead of showing as still running. A step that stops making progress is called out rather than spinning forever

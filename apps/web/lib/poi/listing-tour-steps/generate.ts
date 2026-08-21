@@ -6,10 +6,15 @@
  * This step is a pure database write: it turns the plan's shot list into one
  * pending clip row per shot, and the render worker picks them up.
  *
- * Only `surface = 'ios'` is enqueued by default. Both surfaces are planned —
- * the engine split is canvas-dependent and computing it for web costs nothing —
- * but iOS is the primary surface (owner 2026-08-20: "start with ios since it is
- * more important") and rendering both doubles the worker's time.
+ * BOTH surfaces are enqueued (owner 2026-08-21: "hook up the web 16:9 clips").
+ * iOS was the only one for a day, while the pipeline was unproven; it has since
+ * produced a film end to end, so the second canvas is no longer a risk being
+ * deferred. They are separate rows keyed by surface and they render, fail and
+ * finish independently.
+ *
+ * The paid engine is NOT doubled by that. The plan assigns Seedance to the iOS
+ * hero only, so the web cut's opening shot renders locally — one bill per tour,
+ * not two.
  */
 import {
   type ListingRunRow,
@@ -171,6 +176,15 @@ async function enqueueClips(
     // A paid clip is never re-rendered by a rule. Only the button.
     const paidAndAutomatic = s.engine === 'seedance' && !force;
 
+    // A hand-rejected clip stays rejected. Since the plan now assigns Seedance
+    // to the hero by default, without this the reject button would be undone
+    // by the next Render — and re-billed (owner 2026-08-21: "unless we
+    // manually reject it"). Only the per-row Regenerate clears it.
+    if (row.status === 'rejected' && !force) {
+      skipped.push({ photo_id: s.photo_id, reason: 'clip was rejected — regenerate by hand' });
+      continue;
+    }
+
     if (!force && !dead && !stale) {
       reused += 1;
       continue;
@@ -236,6 +250,38 @@ export async function runGenerate(
     return { error: 'no_plan', message: 'No shot list yet — run Plan first.' };
   }
   return enqueueClips(sb, run, plannedForSurface(planned, surface), surface);
+}
+
+/**
+ * Enqueue every planned shot on every surface.
+ *
+ * The Render chip calls this rather than `runGenerate` per surface: a home tour
+ * ships two cuts and asking the operator to press Render twice was the shape of
+ * the iOS-only phase, not of the product.
+ */
+export async function runGenerateAllSurfaces(sb: TourDb, run: ListingRunRow) {
+  const results: Record<string, unknown> = {};
+  let queued = 0;
+  let requeued = 0;
+  let reused = 0;
+  for (const surface of ['ios', 'web'] as const) {
+    const r = (await runGenerate(sb, run, undefined, undefined, surface)) as {
+      queued?: number;
+      requeued?: number;
+      reused?: number;
+      error?: string;
+      message?: string;
+    };
+    // A surface that cannot be planned is a real failure and must not be
+    // hidden by the other one succeeding.
+    if (r.error) return r;
+    results[surface] = r;
+    queued += r.queued ?? 0;
+    requeued += r.requeued ?? 0;
+    reused += r.reused ?? 0;
+  }
+  await saveListingStep(sb, run, 'generate', { surfaces: results, queued, requeued, reused });
+  return { surfaces: results, queued, requeued, reused };
 }
 
 /** The plan's shots as clip payloads for one surface. */
