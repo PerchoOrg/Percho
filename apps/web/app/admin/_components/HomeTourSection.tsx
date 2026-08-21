@@ -329,7 +329,19 @@ export function HomeTourSection({
         const body = (await res.json()) as {
           ok?: boolean;
           error?: string;
-          result?: { error?: string; message?: string; notReady?: number; skipped?: string[] };
+          result?: {
+            error?: string;
+            message?: string;
+            notReady?: number;
+            skipped?: string[];
+            missing?: Array<{
+              photo_id: string;
+              sort_order: number;
+              room_type: string | null;
+              state: 'rendering' | 'failed' | 'none';
+              surface: string;
+            }>;
+          };
         };
         if (!res.ok || !body.ok) {
           setStepError(`${step}: ${body.error ?? `HTTP ${res.status}`}`);
@@ -350,8 +362,31 @@ export function HomeTourSection({
           return rid;
         }
         if (step === 'assemble' && body.result?.notReady) {
+          // Name the shots and say what is actually true of each. The old
+          // message gave a COUNT and one blanket instruction, which sent the
+          // owner hunting through ten rows for a shot that turned out to be
+          // mid-render — "run Render first" was not just unhelpful there, it
+          // was wrong (owner 2026-08-21: "i dont know which is missing").
+          const missing = body.result.missing ?? [];
+          const describe = (m: (typeof missing)[number]) =>
+            `${m.surface} #${m.sort_order + 1}${m.room_type ? ` ${m.room_type}` : ''}`;
+          const rendering = missing.filter((m) => m.state === 'rendering');
+          const failed = missing.filter((m) => m.state === 'failed');
+          const none = missing.filter((m) => m.state === 'none');
+          const parts: string[] = [];
+          if (rendering.length) {
+            parts.push(`still rendering: ${rendering.map(describe).join(', ')} — wait for it`);
+          }
+          if (failed.length) {
+            parts.push(`failed: ${failed.map(describe).join(', ')} — regenerate on the row`);
+          }
+          if (none.length) {
+            parts.push(`never queued: ${none.map(describe).join(', ')} — run Render`);
+          }
           setStepError(
-            `${body.result.notReady} shot(s) have no clip yet and will be missing from the film — run Render first.`,
+            parts.length
+              ? `${body.result.notReady} shot(s) will be missing from the film. ${parts.join('; ')}.`
+              : `${body.result.notReady} shot(s) have no clip yet — run Render first.`,
           );
         }
         return rid;

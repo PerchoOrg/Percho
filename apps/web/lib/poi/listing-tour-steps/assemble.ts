@@ -16,9 +16,23 @@ import {
   setListingRunStatus,
 } from './shared';
 
-interface ReadyClip {
+interface ClipState {
   listing_photo_id: string;
   engine: string;
+  status: string;
+}
+
+/** A shot the film will be missing, and why. */
+export interface MissingShot {
+  photo_id: string;
+  sort_order: number;
+  room_type: string | null;
+  /**
+   * `rendering` and `none` need different advice, which is the whole point of
+   * separating them: telling someone to run Render while Render is mid-way
+   * through that exact clip is worse than saying nothing.
+   */
+  state: 'rendering' | 'failed' | 'none';
 }
 
 export async function runAssemble(
@@ -45,14 +59,42 @@ export async function runAssemble(
   // The warning still matters: the worker SKIPS a photo with nothing ready and
   // says so only in its own log.
   const photoIds = [...new Set(shots.map((s) => s.photo_id))];
+  // Every status, not just ready: a shot with a clip mid-render is not the
+  // same problem as a shot with no clip at all, and the operator cannot act on
+  // the difference unless it is carried here.
   const { data: clipRows } = (await sb
     .from('listing_photo_clips')
-    .select('listing_photo_id, engine')
+    .select('listing_photo_id, engine, status')
     .in('listing_photo_id', photoIds)
-    .eq('surface', surface)
-    .eq('status', 'ready')) as { data: ReadyClip[] | null };
-  const haveSomething = new Set((clipRows ?? []).map((c) => c.listing_photo_id));
-  const notReady = shots.filter((s) => !haveSomething.has(s.photo_id)).length;
+    .eq('surface', surface)) as { data: ClipState[] | null };
+
+  const byPhoto = new Map<string, ClipState[]>();
+  for (const c of clipRows ?? []) {
+    byPhoto.set(c.listing_photo_id, [...(byPhoto.get(c.listing_photo_id) ?? []), c]);
+  }
+  const haveSomething = new Set(
+    (clipRows ?? []).filter((c) => c.status === 'ready').map((c) => c.listing_photo_id),
+  );
+
+  const missing: MissingShot[] = shots
+    .filter((sh) => !haveSomething.has(sh.photo_id))
+    .map((sh) => {
+      const rows = byPhoto.get(sh.photo_id) ?? [];
+      const state: MissingShot['state'] = rows.some(
+        (r) => r.status === 'pending' || r.status === 'processing',
+      )
+        ? 'rendering'
+        : rows.some((r) => r.status === 'failed')
+          ? 'failed'
+          : 'none';
+      return {
+        photo_id: sh.photo_id,
+        sort_order: sh.sort_order,
+        room_type: sh.room_type,
+        state,
+      };
+    });
+  const notReady = missing.length;
 
   // A surface with NOTHING rendered is not a film with gaps — it is a film
   // that does not exist. Staging it anyway queues a worker job that can only
@@ -76,8 +118,14 @@ export async function runAssemble(
   }));
 
   if (!approve) {
-    await saveListingStep(sb, run, 'assemble', { approved: false, surface, ordered, notReady });
-    return { approved: false, surface, ordered, notReady };
+    await saveListingStep(sb, run, 'assemble', {
+      approved: false,
+      surface,
+      ordered,
+      notReady,
+      missing,
+    });
+    return { approved: false, surface, ordered, notReady, missing };
   }
 
   const { error: insErr } = await sb.from('listing_tour_assemblies').insert({
@@ -95,8 +143,14 @@ export async function runAssemble(
   }
 
   await setListingRunStatus(sb, run.id, 'assembling');
-  await saveListingStep(sb, run, 'assemble', { approved: true, surface, ordered, notReady });
-  return { approved: true, surface, ordered, notReady };
+  await saveListingStep(sb, run, 'assemble', {
+    approved: true,
+    surface,
+    ordered,
+    notReady,
+    missing,
+  });
+  return { approved: true, surface, ordered, notReady, missing };
 }
 
 /**
@@ -113,6 +167,7 @@ export async function runAssembleAllSurfaces(sb: TourDb, run: ListingRunRow, app
       error?: string;
       message?: string;
       notReady?: number;
+      missing?: MissingShot[];
     };
     if (r.error) return r;
     surfaces[surface] = r;
