@@ -16,6 +16,74 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-21 06:25 UTC — A queued step reads its job row, not the enqueue record
+
+**Objective**: owner, on the first real run: "the plan step still shows
+running, it should timeout and show failure now." The `plan` job had failed
+minutes earlier and the chip was still amber.
+
+**Cause**: `stateOf` derived tag/plan from `step_results.<step>.queued`. That
+key is written by `enqueueWorkerStep` and never touched again — it records that
+we ASKED, not that anything is happening. When the worker failed the job (or
+was never running), nothing came back to correct the run, so the chip waited
+forever on work that had already stopped.
+
+This is phase73.47's bug wearing a different hat. There, green meant "the
+request returned" instead of "the film exists"; here amber meant "we asked"
+instead of "it is still being worked on". Same rule, missed twice: read the
+artefact.
+
+**Actions**:
+- `lib/poi/listing-tour-steps/job-state.ts` — `jobStepState` / `jobStepNote`,
+  pure, with `now` injected so staleness is testable. `JOB_STALE_MS` = 10 min.
+- `GET /runs` now returns `jobs` (the run's non-render `render_jobs` rows,
+  newest first) alongside the runs.
+- `HomeTourSection` derives tag/plan from the job row, and `noteOf` surfaces
+  the job's own error text under the chip.
+- 8 tests in `job-state.test.ts`, the first of which is the case that shipped.
+
+**Decisions**:
+- **Two artefacts, two questions.** `render_jobs.status` answers "is this still
+  in flight" and is the only thing that can say `failed`; what the step
+  PRODUCED (tagged photos, a shot list) answers "did it work". So the job
+  decides everything except `done`, and the caller passes `produced` in.
+- **The artefact outranks the job row.** A step re-run after it already
+  succeeded must not un-green while it re-does work it will skip, and a stale
+  failed row from a previous attempt must not outrank a real result.
+- **`status = 'done'` with nothing produced reads as failed**, not idle. A
+  polite exit code and no shot list is still a failure, and idle would invite a
+  re-click that does the same nothing.
+- **10 minutes** for staleness: tagging is ~3s/photo concurrently, so a
+  50-photo listing is a couple of minutes. Being wrong costs only a label — a
+  step marked stale that later finishes still writes its result and goes green.
+
+**Issues**: the run that prompted this (`b8617730`) had ANOTHER cause behind
+it. The worker on the Mac mini (PID 28408, started 22:41 local) predated the
+phase74 merge, so its `claim_job()` had no `step=eq.render` filter, claimed the
+`tag` job, handed it to `process_job()`, and died on `PATCH
+listing_videos?id=eq.None` — `video_row_id` is null for tag and plan. That is
+exactly what the filter exists to prevent; the running process was simply older
+than the filter.
+
+Because `video_row_id` is not read until step 7, the old path rendered AND
+uploaded before failing: **4 orphan Cloudflare Stream assets** (05:57:28,
+05:57:55, 05:58:38, 05:59:05), referenced by no `listing_videos` row. Flagged
+to the owner; not deleted without instruction.
+
+**Resolution**: the reference worktree has since been updated to `2e6df5aa` and
+the worker restarted (PID 33997), and **the new path then worked**: run
+`b8617730` planned 10 shots, style `modern`, 0 dropped, with a real per-surface
+engine split — `#0 exterior 3.5s depthflow/zoom_out`, `#1 living 3.5s
+kenburns/push_in`, `#2 kitchen 3.0s depthflow/orbit_right`. First real output
+from the per-photo pipeline. Verified the fix against those exact production
+rows: both chips read `done` now, and read `failed` with the 400 text if the
+artefacts are removed.
+
+`pnpm typecheck` clean, `pnpm lint` zero errors, 511 tests pass.
+
+**Next steps**: Render and Assemble have still never run. That is the remaining
+unproven half.
+
 ## 2026-08-21 06:15 UTC — Phase 74: the home tour becomes a pipeline you can see into
 
 **Objective**: give the home tour the agentic management workflow the
