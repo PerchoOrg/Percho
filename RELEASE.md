@@ -18,6 +18,14 @@ Community films now open on the community. Its own amenities lead the film and r
 
 Aberdeen in Suwanee is the first community with this treatment: a 58-second film that opens on its clubhouse and takes in the pool, the courts and the grounds before heading out into Suwanee.
 
+### 2026-08-21
+- The admin Worker screen is now a full console for the machine that makes the videos: whether each worker is running, how long it has been up, how hard the machine is working, and how much disk is left
+- Every queue is visible in one table — not just video renders, but photo clips, enhancement, reframing and the paid AI queues — with what's waiting, how long it has been waiting, and what finished or failed in the last day
+- A plain-language verdict sits at the top. It stays quiet while work is simply in progress and speaks up when something has genuinely stalled, rather than showing a number and leaving you to judge
+- Worker logs can be read on the screen, filtered, and followed live, with the video-encoder noise hidden by default
+- What the paid AI video queues cost is shown by day, so a week's spend is visible without opening a bill
+- A worker can be restarted from the screen — including when it is still running code from before a fix was merged, which the screen now points out
+
 ### 2026-08-20
 - Community films are now narrated. A voice walks you through the neighbourhood — what it has, what's nearby, what's worth the drive — instead of the film running on music alone
 - The narration is written against the film's own cut, so what you hear matches what you see. Each stretch of the film gets its own line, spoken while those shots are on screen
