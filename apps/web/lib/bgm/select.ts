@@ -12,6 +12,13 @@
  * every time it is regenerated, for the same reason its narrator does not
  * change between takes. A tour whose music changed on re-render would read as
  * a different film.
+ *
+ * Seeding on the community id is not enough for that, which is the whole point
+ * of `incumbent` below. The seed picks an INDEX into the approved library, so
+ * the library growing moves every index: approving five tracks re-scored all
+ * six test communities, Aberdeen included. Stability has to come from
+ * remembering what the community already used, exactly as the POI budget
+ * remembers which places are already in the film.
  */
 
 import type { BgmEnergy, BgmRole, BgmTrackMeta, BgmVibe } from './storage';
@@ -116,14 +123,20 @@ export function selectBgm({
   role,
   energy,
   seed,
+  incumbent,
 }: {
   candidates: BgmCandidate[];
   vibe: BgmVibe;
   role: BgmRole;
   /** Preferred, not required — narrowing to nothing would leave a silent film. */
   energy?: BgmEnergy;
-  /** Community id, so the same community keeps the same track. */
+  /** Community id, breaking the tie among equally good candidates. */
   seed: string;
+  /**
+   * The track this community last shipped with. Kept if it is still usable,
+   * whatever else has been added to the library since.
+   */
+  incumbent?: string | null;
 }): BgmCandidate | null {
   if (candidates.length === 0) return null;
 
@@ -135,6 +148,15 @@ export function selectBgm({
 
   const usable = candidates.filter((c) => roleOf(c) === role);
   const pool = usable.length > 0 ? usable : candidates;
+
+  // INCUMBENCY, before anything else. A track that already shipped keeps the
+  // film sounding like itself; it loses its place only by being rejected,
+  // deleted, or made unusable for this role — never merely by the library
+  // growing around it.
+  if (incumbent) {
+    const held = pool.find((c) => c.path === incumbent);
+    if (held) return held;
+  }
   const onVibe = pool.filter((c) => vibeOf(c) === vibe);
   const vibePool = onVibe.length > 0 ? onVibe : pool;
   // Energy narrows within the palette, and only if that leaves anything.

@@ -751,9 +751,29 @@ async function chooseBgm(sb: TourDb, run: RunRow, shots: unknown[]) {
     const miles = (links ?? []).map((l) => (l.distance_m as number) / 1609).sort((a, b) => a - b);
     const medianMiles = miles.length > 0 ? (miles[Math.floor(miles.length / 2)] ?? null) : null;
     const vibe = paletteForCommunity({ bucketCounts, medianMiles });
+
+    // What this community last shipped with. Keeping it is what actually makes
+    // the choice stable: the seed only picks an index, so growing the library
+    // moves every index and a re-render would come back with music nobody
+    // reviewed. Assemblies are the record of what really went out.
+    const { data: shipped } = await sb
+      .from('tour_assemblies')
+      .select('bgm')
+      .eq('community_id', run.community_id)
+      .not('bgm', 'is', null)
+      .order('created_at', { ascending: false })
+      .limit(1);
+    const incumbent = (shipped?.[0]?.bgm as { path?: string } | null)?.path ?? null;
+
     // 'bed' always: this film is narrated, and a track that surges fights the
     // voice however well it suits the place.
-    const picked = selectBgm({ candidates, vibe, role: 'bed', seed: run.community_id });
+    const picked = selectBgm({
+      candidates,
+      vibe,
+      role: 'bed',
+      seed: run.community_id,
+      incumbent,
+    });
     if (!picked) return null;
     return { path: picked.path, title: picked.meta?.title ?? null, vibe, role: 'bed' as const };
   } catch {
