@@ -16,6 +16,28 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-21 09:30 UTC — A step waiting on the worker says what it is doing
+
+**Objective**: owner — "3 · Plan / rendering… - it should show planning right?"
+
+**Cause**: `TourStepStrip` hardcoded `'rendering…'` as the text a chip shows in
+the `waiting` state. That is true of exactly two steps. Tagging and planning
+also hand work to the render worker and sit in `waiting` while it runs, and
+both claimed to be rendering while doing neither.
+
+A generic component was guessing at what its caller's steps do. The community
+tour never showed it because its `plan` step never enters `waiting` — it
+returns only `done` or `idle` — so the wrong default was invisible until the
+home tour had two queued steps that were not renders.
+
+**Actions**: `StepSpec.waitingHint`, defaulting to the old string so the
+community strip is byte-identical; set to `tagging…` / `planning…` /
+`rendering…` / `assembling…` on the home-tour steps.
+
+**Learnings**: the default was correct for every caller that existed when it
+was written, which is the shape of a bug that waits. Worth checking the other
+literals in that component for the same assumption.
+
 ## 2026-08-21 09:15 UTC — Name the missing shot, and stop giving it the wrong advice
 
 **Objective**: owner — "1 shot(s) have no clip yet and will be missing from the

@@ -46,6 +46,16 @@ export interface StepSpec {
   label: string;
   /** One line, shown under the chip. Keep it to what the step DOES. */
   hint: string;
+  /**
+   * What the chip says while the work is happening elsewhere.
+   *
+   * Defaults to "rendering…", which was hardcoded here and is true of exactly
+   * two steps. Tagging and planning also hand off to the worker, and both
+   * showed "rendering…" while doing neither (owner 2026-08-21: "3 · Plan
+   * rendering… - it should show planning right?"). A generic component should
+   * not be guessing at what its caller's steps do.
+   */
+  waitingHint?: string;
 }
 
 /**
@@ -183,7 +193,7 @@ export function TourStepStrip({
                     <span className="font-medium text-ink">running…{elapsedLabel}</span>
                   ) : state === 'waiting' ? (
                     <span className="font-medium text-amber-700">
-                      {noteOf?.(s.name) ?? 'rendering…'}
+                      {noteOf?.(s.name) ?? s.waitingHint ?? 'rendering…'}
                     </span>
                   ) : gated ? (
                     'waiting on you'
