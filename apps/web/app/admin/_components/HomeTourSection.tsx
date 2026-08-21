@@ -23,6 +23,7 @@
  * yet ready, the Assemble is green, that is not right."
  */
 
+import { type StepJob, jobStepNote, jobStepState } from '@/lib/poi/listing-tour-steps/job-state';
 import type { ReactNode } from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ClipStatus, PhotoRow, PlanCell } from './PhotoTable';
@@ -134,6 +135,7 @@ export function HomeTourSection({
   legacyAction?: ReactNode;
 }) {
   const [runs, setRuns] = useState<Run[]>([]);
+  const [jobs, setJobs] = useState<Array<StepJob & { run_id: string }>>([]);
   const [clipRows, setClipRows] = useState<ClipRow[]>([]);
   const [assemblies, setAssemblies] = useState<AssemblyStatus[]>([]);
   const [running, setRunning] = useState<StepName | null>(null);
@@ -143,7 +145,12 @@ export function HomeTourSection({
   const loadRuns = useCallback(async () => {
     const res = await fetch(`/api/admin/listings/${listingId}/runs`);
     if (!res.ok) return;
-    setRuns(((await res.json()) as { runs: Run[] }).runs);
+    const body = (await res.json()) as {
+      runs: Run[];
+      jobs: Array<StepJob & { run_id: string }>;
+    };
+    setRuns(body.runs);
+    setJobs(body.jobs ?? []);
   }, [listingId]);
 
   const loadClips = useCallback(async () => {
@@ -197,6 +204,17 @@ export function HomeTourSection({
     [planResult],
   );
 
+  /**
+   * The current attempt for each queued step. The API returns jobs newest
+   * first, so the first match is the live one — an older failed attempt must
+   * not keep the chip red after a re-run.
+   */
+  const jobFor = useCallback(
+    (step: 'tag' | 'plan'): StepJob | undefined =>
+      jobs.find((j) => j.run_id === run?.id && j.step === step),
+    [jobs, run],
+  );
+
   const taggedCount = photos.filter((p) => p.tagged_at).length;
   const allTagged = photos.length > 0 && taggedCount === photos.length;
 
@@ -223,18 +241,18 @@ export function HomeTourSection({
     if (running === s) return 'running';
     switch (s) {
       case 'tag':
-        // The artefact is `tagged_at` on the photos, not the step's response:
-        // the tagger runs in the worker and the request returns immediately.
+        // Two artefacts, two questions: `render_jobs` says whether the work is
+        // still in flight (and is the only thing that can say it failed),
+        // `tagged_at` says whether it succeeded. `step_results.tag.queued` is
+        // neither — it only records that we asked.
         if (photos.length === 0) return 'idle';
         if (tagResult?.error) return 'failed';
-        if (allTagged) return 'done';
-        return tagResult?.queued ? 'waiting' : 'idle';
+        return jobStepState(jobFor('tag'), allTagged);
       case 'review':
         return plannedShots.length > 0 ? 'done' : 'idle';
       case 'plan':
         if (planResult?.error) return 'failed';
-        if (plannedShots.length > 0) return 'done';
-        return planResult?.queued ? 'waiting' : 'idle';
+        return jobStepState(jobFor('plan'), plannedShots.length > 0);
       case 'generate':
         if (plannedShots.length === 0) return 'idle';
         return shotsRendered < plannedShots.length ? 'waiting' : 'done';
@@ -249,6 +267,13 @@ export function HomeTourSection({
   };
 
   const noteOf = (s: StripStep): string | undefined => {
+    if (s === 'tag' || s === 'plan') {
+      const produced = s === 'tag' ? allTagged : plannedShots.length > 0;
+      // A failed or stalled job explains itself; a healthy one falls through
+      // to the progress counter below.
+      const why = jobStepNote(jobFor(s), produced);
+      if (why) return why;
+    }
     if (s === 'tag' && photos.length > 0 && !allTagged) {
       return `${taggedCount}/${photos.length} tagged`;
     }
