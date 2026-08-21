@@ -132,7 +132,14 @@ export interface PhotoRow {
 }
 
 type SortKey = 'order' | 'score' | 'hero' | 'category' | 'enhanced';
-type Filter = 'all' | 'untagged' | 'unreviewed' | 'enhance_ready' | 'in_video' | 'not_in_video';
+type Filter =
+  | 'all'
+  | 'untagged'
+  | 'unreviewed'
+  | 'enhance_ready'
+  | 'in_video'
+  | 'not_in_video'
+  | 'missing_clip';
 
 /**
  * Optional per-row picker. REMOVED with the Generate AI Video panel
@@ -279,6 +286,11 @@ export function PhotoTable({
           return inVideo;
         case 'not_in_video':
           return !inVideo && (t.usable ?? true);
+        case 'missing_clip':
+          // In the cut, but at least one canvas has no ready clip. Ten rows is
+          // enough for "which one is missing" to be a real search (owner
+          // 2026-08-21), and it only gets worse with more photos.
+          return !!plan?.[p.id] && missingSurfaces(p).length > 0;
         default:
           return true;
       }
@@ -300,7 +312,7 @@ export function PhotoTable({
     }[sort];
 
     return [...filtered].sort(by);
-  }, [photos, sort, filter, verdictOf]);
+  }, [photos, sort, filter, verdictOf, plan]);
 
   /**
    * The table is grouped by review verdict: Approved, Rejected, then Other.
@@ -430,6 +442,7 @@ export function PhotoTable({
             <option value="enhance_ready">Enhanced, awaiting approval</option>
             <option value="in_video">In a video</option>
             <option value="not_in_video">Usable but unused</option>
+            <option value="missing_clip">Planned, missing a clip</option>
           </select>
           <select
             value={sort}
@@ -756,14 +769,36 @@ export function PhotoTable({
                         <div className="text-[10px] text-ink2">
                           {plan[p.id]!.move} · {plan[p.id]!.duration_s.toFixed(1)}s
                         </div>
-                        {!hasPlannedClip(p, plan[p.id]!.engine) && (
-                          <div
-                            className="text-[10px] text-amber-600"
-                            title="No ready clip for the planned engine — click Generate on this row (or Re-render all DA+KB) to render the plan"
-                          >
-                            not rendered yet
-                          </div>
-                        )}
+                        {(() => {
+                          // A listing row carries two canvases, so say WHICH
+                          // one is short rather than a bare "not rendered yet"
+                          // — the owner had to hunt ten rows for a shot that
+                          // turned out to be mid-render (2026-08-21). The
+                          // community tour has one canvas and keeps the
+                          // original wording.
+                          const short = missingSurfaces(p);
+                          if (short.length > 0) {
+                            return (
+                              <div
+                                className="text-[10px] text-amber-600"
+                                title="This canvas has no ready clip yet — Render covers both, or use the buttons on this row"
+                              >
+                                no {short.join(' + ')} clip
+                              </div>
+                            );
+                          }
+                          if (isSurfacePair(p.clip) || hasPlannedClip(p, plan[p.id]!.engine)) {
+                            return null;
+                          }
+                          return (
+                            <div
+                              className="text-[10px] text-amber-600"
+                              title="No ready clip for the planned engine — click Generate on this row (or Re-render all DA+KB) to render the plan"
+                            >
+                              not rendered yet
+                            </div>
+                          );
+                        })()}
                         {plan[p.id]!.prompt && (
                           // The exact string the clip is generated from,
                           // mandatory clauses included. Collapsed so the row
@@ -932,6 +967,23 @@ function truncate(s: string, n: number) {
  * depthflow), and that clip is what assemble would pick up — so "has a clip"
  * is not the same question as "matches the plan".
  */
+/**
+ * Which canvases this photo has no ready clip on.
+ *
+ * `[]` on the community tour, which has one canvas and whose rows carry a bare
+ * `ClipStatus` rather than a surface pair.
+ */
+function missingSurfaces(p: PhotoRow): string[] {
+  const slots = [p.clip, p.depthflow_clip, p.kenburns_clip];
+  if (!slots.some(isSurfacePair)) return [];
+  const out: string[] = [];
+  for (const surface of ['ios', 'web'] as const) {
+    const ready = slots.some((slot) => isSurfacePair(slot) && slot[surface]?.status === 'ready');
+    if (!ready) out.push(surface);
+  }
+  return out;
+}
+
 function hasPlannedClip(p: PhotoRow, engine: string): boolean {
   const primary = (slot: ClipStatus | SurfaceClips | null | undefined) =>
     // For a listing the slot holds two canvases. "Rendered" means the PRIMARY

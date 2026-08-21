@@ -16,6 +16,44 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-21 09:15 UTC — Name the missing shot, and stop giving it the wrong advice
+
+**Objective**: owner — "1 shot(s) have no clip yet and will be missing from the
+film — run Render first. / show web clips as well, i dont know which is
+missing."
+
+**What the message got wrong, twice over**:
+1. It gave a COUNT. With ten shots across two canvases there was no way to find
+   the one it meant.
+2. Its advice was wrong. The shot in question was `web #5 bedroom`, whose
+   Ken Burns clip was `processing` — the render worker was rendering it at that
+   moment. "Run Render first" was not merely unhelpful; it told the owner to
+   start work that was already running.
+
+The second is the worse bug. A warning that misdiagnoses is worse than a
+warning that only counts, because it is acted on.
+
+**Actions**:
+- `runAssemble` now reads every clip status, not just `ready`, and returns
+  `missing: MissingShot[]` — photo, `sort_order`, `room_type`, and a `state` of
+  `rendering` | `failed` | `none`. `runAssembleAllSurfaces` stamps the surface
+  onto each.
+- The message groups by state and gives each group its own instruction:
+  "still rendering … wait for it", "failed … regenerate on the row",
+  "never queued … run Render".
+- The Plan column says which CANVAS is short ("no web clip") rather than a bare
+  "not rendered yet"; the community tour, having one canvas, keeps the old
+  wording.
+- New table filter, "Planned, missing a clip", so the row is one click away
+  rather than a scan.
+
+**Decisions**: three states rather than a boolean, because the three want three
+different actions from the operator and collapsing them is what produced the
+wrong advice in the first place.
+
+**Verified** against the live rows: the new message reads "1 shot(s) will be
+missing from the film. still rendering: web #5 bedroom — wait for it."
+
 ## 2026-08-21 08:55 UTC — AI-first: a generated clip is never left out of the film
 
 **Objective**: owner — "generated video seedance is not picked up since the

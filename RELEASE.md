@@ -19,6 +19,8 @@ Community films now open on the community. Its own amenities lead the film and r
 Aberdeen in Suwanee is the first community with this treatment: a 58-second film that opens on its clubhouse and takes in the pool, the courts and the grounds before heading out into Suwanee.
 
 ### 2026-08-21
+- When a shot is missing from a home tour, the warning now names it — which shot, which version, and whether it's still being made, failed, or was never started — instead of just counting them. Each case says what to actually do
+- A filter on the photo table jumps straight to shots that are missing a clip
 - The Worker screen now opens with the essentials: what the machine is doing on the left, what just happened across every queue on the right, the full table below
 - The AI generation cost is on that screen, split by what it was spent on, with the day's and the week's total. It's the figure the provider billed, and local renders don't add to it
 - The log panel says what it is, and explains itself rather than looking broken when it's viewed somewhere the logs don't exist
