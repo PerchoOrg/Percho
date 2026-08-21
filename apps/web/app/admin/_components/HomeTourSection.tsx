@@ -573,6 +573,7 @@ export function HomeTourSection({
           canvas={IOS_CANVAS}
           assembly={latestAssembly}
           emptyHint="No home video yet — Plan, Render, then Assemble."
+          maxHeightPx={420}
         />
       </section>
 
@@ -617,16 +618,31 @@ export function HomeTourSection({
  * community player learned the hard way: a hardcoded 9:16 letterboxed it the
  * day the canvas changed shape.
  */
+/**
+ * A cut is bounded by HEIGHT, not width.
+ *
+ * `w-full` plus an aspect ratio means the column decides the width and the
+ * shape decides the height — which is fine for the 16:9 cut and ruinous for the
+ * portrait one: at a 530px half-column, 1080x1576 comes out 774px tall and
+ * dwarfs the facts beside it (owner 2026-08-21, twice: "ios and web videos are
+ * too big… they are still big").
+ *
+ * Capping the height and letting the aspect set the width fixes it for both
+ * shapes and for any column width, which a width cap would not.
+ */
 function CutPlayer({
   label,
   canvas,
   assembly,
   emptyHint,
+  maxHeightPx = 300,
 }: {
   label: string;
   canvas: { w: number; h: number };
   assembly: AssemblyStatus | undefined;
   emptyHint: string;
+  /** Tallest the player may be. Width follows from the canvas. */
+  maxHeightPx?: number;
 }) {
   const url =
     assembly?.status === 'ready' && assembly.cf_stream_uid
@@ -652,11 +668,18 @@ function CutPlayer({
       </div>
       {url ? (
         <>
-          <div className="mt-2 overflow-hidden rounded-xl bg-black">
+          <div
+            className="mx-auto mt-2 overflow-hidden rounded-xl bg-black"
+            style={{
+              maxHeight: maxHeightPx,
+              aspectRatio: `${canvas.w} / ${canvas.h}`,
+              width: `min(100%, ${Math.round(maxHeightPx * (canvas.w / canvas.h))}px)`,
+            }}
+          >
             <iframe
               title={`Home tour video (${label})`}
               src={url}
-              className="w-full"
+              className="h-full w-full"
               style={{ aspectRatio: `${canvas.w} / ${canvas.h}` }}
               allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture"
               allowFullScreen
@@ -668,8 +691,12 @@ function CutPlayer({
         </>
       ) : (
         <div
-          className="mt-2 flex items-center justify-center rounded-xl border border-line border-dashed px-3 text-center text-[11px] text-ink2"
-          style={{ aspectRatio: `${canvas.w} / ${canvas.h}` }}
+          className="mt-2 mx-auto flex items-center justify-center rounded-xl border border-line border-dashed px-3 text-center text-[11px] text-ink2"
+          style={{
+            maxHeight: maxHeightPx,
+            aspectRatio: `${canvas.w} / ${canvas.h}`,
+            width: `min(100%, ${Math.round(maxHeightPx * (canvas.w / canvas.h))}px)`,
+          }}
         >
           {!assembly
             ? emptyHint
