@@ -2084,7 +2084,13 @@ def claim_assembly() -> dict[str, Any] | None:
 # Bold face for the place labels. The list in ken-burns/generate.py is
 # Linux-only (dejavu, liberation) and this worker runs on the Mac mini, where
 # neither exists — which is why its caption filter silently returns "" here.
+# SF Pro first — `fonts.ui` in the mobile theme is "System", which on iOS is
+# SF Pro, so the COMMUNITY badge on the card is set in it. The place card is
+# meant to be the same object; in Arial it read as a different one (owner
+# 2026-08-20: "the font should be consistent with community tag on the top left
+# of the card"). SFNS.ttf is variable, so the weight is picked by axis below.
 LABEL_FONTS = (
+    "/System/Library/Fonts/SFNS.ttf",
     "/System/Library/Fonts/Supplemental/Arial Bold.ttf",
     "/System/Library/Fonts/Supplemental/Helvetica.ttc",
     "/Library/Fonts/Arial Bold.ttf",
@@ -2097,6 +2103,24 @@ def _label_font() -> str | None:
     return next((f for f in LABEL_FONTS if os.path.exists(f)), None)
 
 
+def _ui_font(path: str, size: int, weight: str) -> Any:
+    """The card's UI face at a named weight.
+
+    SF Pro ships as one variable file, so the weight is an axis rather than a
+    separate file. On a host without it the fallback is a static Arial and the
+    axis call simply does not apply — the label still renders, one weight for
+    everything.
+    """
+    from PIL import ImageFont
+
+    font = ImageFont.truetype(path, size)
+    try:
+        font.set_variation_by_name(weight)
+    except Exception:  # noqa: BLE001 — static font, or no FreeType variation support
+        pass
+    return font
+
+
 # The place card is the feed card's COMMUNITY badge, on the video.
 #
 # Near-opaque on purpose: three translucent attempts all flashed, because a
@@ -2107,11 +2131,25 @@ LABEL_INK = (23, 23, 21)                    # redline.ink
 LABEL_INK2 = (111, 107, 101)                # redline.ink2
 LABEL_ACCENT = (14, 107, 87)                # redline.accent — the only accent
 
-# Where the first line's optical centre sits, as a fraction of frame height.
-# Matched to `badgeSlot` on the feed card: top 12, 7pt padding, 9.5pt type, so
-# its centre is 24.75pt down; the card is `screenWidth - 52` wide, which puts
-# that between 71px and 83px at 1080 across.
-LABEL_FIRST_LINE_CENTRE = 78 / 1576
+# The place card is the COMMUNITY badge's twin, so its geometry is derived from
+# the badge's rather than tuned to look close.
+#
+# `CommunityFace` puts `badgeSlot` at top 12 / left 12 and the badge itself at
+# 7pt vertical padding around 9.5pt System type. The feed card is
+# `screenWidth - 52` wide, which is 341pt on an iPhone 15 — the reference used
+# here, since the video is one fixed size and the card is not.
+#
+# Owner 2026-08-20: "their heights are not the same, can you make sure they are
+# perfectly aligned." Single-line pills are now the same height as the badge
+# and share its top edge; a wrapped name grows downward from that edge rather
+# than shrinking the type.
+CARD_REF_WIDTH_PT = 341.0
+BADGE_TOP_PT = 12.0
+BADGE_PAD_V_PT = 7.0
+BADGE_FONT_PT = 9.5
+# React Native gives Text no explicit lineHeight here, so it takes the face's
+# own — about 1.19x for SF Pro.
+BADGE_LINE_PT = BADGE_FONT_PT * 1.19
 
 
 def _render_label_png(
@@ -2156,9 +2194,15 @@ def _render_label_png(
     img = Image.new("RGBA", (w, h), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
 
-    size = round(w * 0.029)
-    font = ImageFont.truetype(font_path, size)
-    sub_font = ImageFont.truetype(font_path, round(size * 0.80))
+    # Everything below is the badge's own geometry, scaled from card points to
+    # canvas pixels. Same type size, same weight, same pill height.
+    scale = w / CARD_REF_WIDTH_PT
+    size = round(BADGE_FONT_PT * scale)
+    font = _ui_font(font_path, size, "Bold")
+    sub_font = _ui_font(font_path, round(size * 0.82), "Regular")
+
+    badge_h = round((BADGE_LINE_PT + BADGE_PAD_V_PT * 2) * scale)
+    badge_top = round(BADGE_TOP_PT * scale)
 
     # The pin, if the icon font is here. Optional — a missing brand asset must
     # not cost the label.
@@ -2173,8 +2217,11 @@ def _render_label_png(
     # "Publix Super Market at The Village Shoppes at Windermere" is 54
     # characters; on one line it would stretch the pill across the frame.
     lines = _wrap_to_width(draw, name, font, w * 0.50)[:2]
-    line_h = round(size * 1.26)
-    pad_h, pad_v = round(size * 0.72), round(size * 0.44)
+    line_h = round(BADGE_LINE_PT * scale)
+    # Vertical padding solved from the badge's height rather than chosen, so a
+    # one-line pill matches it exactly.
+    pad_v = max(2, round((badge_h - line_h) / 2))
+    pad_h = round(BADGE_FONT_PT * 1.05 * scale)
     gap = round(size * 0.80)
 
     text_w = max(draw.textlength(l, font=font) for l in lines)
@@ -2182,13 +2229,12 @@ def _render_label_png(
     box_w = pin_w + (gap * 0.7 if pin else 0) + text_w + (gap + dist_w if distance else 0) + pad_h * 2
     box_h = line_h * len(lines) + pad_v * 2
 
-    x1 = round(w * 0.945)
+    # Mirrors `badgeSlot`'s left inset of 12pt, on the other side.
+    x1 = w - badge_top
     x0 = x1 - box_w
-    # The first line's centre lines up with the COMMUNITY pill on the feed card:
-    # `badgeSlot` is top 12 with 7pt padding around 9.5pt type, so its centre is
-    # 24.75pt down, and the card is `screenWidth - 52` wide — 71-83px at 1080
-    # across, depending on the device.
-    y0 = round(h * LABEL_FIRST_LINE_CENTRE) - line_h // 2 - pad_v
+    # TOP edges aligned, so a single-line pill is the badge's twin and a
+    # two-line one grows downward instead of drifting off its line.
+    y0 = badge_top
     y1 = y0 + box_h
 
     draw.rounded_rectangle(
