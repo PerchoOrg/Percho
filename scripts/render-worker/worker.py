@@ -428,12 +428,56 @@ def tts_line(text: str, voice: str, out_wav: Path) -> bool:
     return out_wav.exists()
 
 
+# A line must finish before the next one starts, with room to breathe.
+NARRATION_MIN_GAP_S = 0.35
+# How much a line may be sped up to make it fit. Beyond this it starts to sound
+# hurried; below it the change is inaudible.
+NARRATION_MAX_TEMPO = 1.15
+
+
+def _wav_seconds(path: Path) -> float:
+    out = subprocess.run(
+        ["ffprobe", "-v", "error", "-show_entries", "format=duration",
+         "-of", "csv=p=0", str(path)],
+        capture_output=True, text=True, check=True, timeout=15,
+    )
+    return float(out.stdout.strip())
+
+
+def _speed_up(src: Path, tempo: float, dest: Path) -> bool:
+    """Re-render a line slightly faster. Pitch is preserved by atempo."""
+    try:
+        subprocess.run(
+            ["ffmpeg", "-y", "-v", "error", "-i", str(src),
+             "-filter:a", f"atempo={tempo:.4f}", str(dest)],
+            check=True, capture_output=True, timeout=60,
+        )
+        return dest.exists()
+    except Exception as exc:  # noqa: BLE001 — keep the original on failure
+        print(f"[narration] atempo failed: {exc}", flush=True)
+        return False
+
+
 def render_narration(
-    narration: dict[str, Any], starts: list[float], workdir: Path
+    narration: dict[str, Any], starts: list[float], workdir: Path, total: float
 ) -> list[tuple[Path, float]]:
-    """Synthesise each segment and pair it with the second its clips begin."""
+    """Synthesise each segment, place it, and make sure the lines do not collide.
+
+    Anchoring each line to its own clip is what keeps narration on the footage
+    it describes, but on its own it guarantees nothing about the line BEFORE it.
+    While the model under-wrote its sections there was slack and no line ever
+    reached the next one's anchor; raising the fill to 92% removed the slack and
+    two lines started talking over each other (owner 2026-08-21: "before the
+    elementary, tts overlaps").
+
+    So overruns are resolved here, where the true durations are finally known —
+    the plan can only estimate them. A line that runs long is sped up, up to
+    NARRATION_MAX_TEMPO, which is inaudible at these ratios; if that is not
+    enough the next line is pushed later instead, because arriving half a second
+    late on the right footage beats arriving on time underneath someone else.
+    """
     voice = narration.get("voice") or "Kore"
-    placed: list[tuple[Path, float]] = []
+    made: list[dict[str, Any]] = []
     for seg in narration.get("segments") or []:
         text = (seg.get("text") or "").strip()
         idx = seg.get("startClip")
@@ -441,13 +485,34 @@ def render_narration(
             continue
         wav = workdir / f"vo-{idx}.wav"
         if tts_line(text, voice, wav):
-            placed.append((wav, starts[idx]))
+            made.append({"wav": wav, "start": starts[idx], "dur": _wav_seconds(wav)})
+
+    made.sort(key=lambda m: m["start"])
+    shifted = sped = 0
+    for i, cur in enumerate(made):
+        limit = made[i + 1]["start"] if i + 1 < len(made) else total
+        room = limit - cur["start"] - NARRATION_MIN_GAP_S
+        if room <= 0 or cur["dur"] <= room:
+            continue
+        tempo = min(NARRATION_MAX_TEMPO, cur["dur"] / room)
+        fast = cur["wav"].with_name(f"{cur['wav'].stem}-fast.wav")
+        if tempo > 1.001 and _speed_up(cur["wav"], tempo, fast):
+            cur["wav"], cur["dur"] = fast, cur["dur"] / tempo
+            sped += 1
+        # Still over? Move the NEXT line out of the way rather than talk over it.
+        if i + 1 < len(made):
+            need = cur["start"] + cur["dur"] + NARRATION_MIN_GAP_S
+            if need > made[i + 1]["start"]:
+                made[i + 1]["start"] = min(need, total - made[i + 1]["dur"])
+                shifted += 1
+
+    note = f" ({sped} sped up, {shifted} shifted)" if sped or shifted else ""
     print(
-        f"[narration] {len(placed)}/{len(narration.get('segments') or [])} line(s) "
-        f"in voice {voice}",
+        f"[narration] {len(made)}/{len(narration.get('segments') or [])} line(s) "
+        f"in voice {voice}{note}",
         flush=True,
     )
-    return placed
+    return [(m["wav"], m["start"]) for m in made]
 
 
 def mux_audio(
@@ -2663,7 +2728,7 @@ def process_assembly(row: dict[str, Any]) -> None:
         narration = row.get("narration") or {}
         if narration.get("segments"):
             placed = render_narration(
-                narration, clip_start_times(durs, xfade), workdir
+                narration, clip_start_times(durs, xfade), workdir, total
             )
         if bgm or placed:
             print(
