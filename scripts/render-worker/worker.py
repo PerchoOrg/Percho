@@ -1889,7 +1889,10 @@ def process_enhance_job(table: str, rows: list[dict[str, Any]]) -> None:
                     "enhanced_at": _now_iso(),
                     "enhanced_error": None,
                 })
-                print(f"[enhance {table}/{row['id']}] ready "
+                # Says what was written. The row goes to 'approved' now, and a
+                # log line still claiming 'ready' sends the next person looking
+                # for a promotion step that no longer exists.
+                print(f"[enhance {table}/{row['id']}] approved "
                       f"{meta.get('width')}x{meta.get('height')} {meta.get('chain')}", flush=True)
             except Exception as exc:  # noqa: BLE001
                 traceback.print_exc()
