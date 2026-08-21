@@ -76,12 +76,22 @@ function heroUrlFor(card: BrowseCard): string {
   return '';
 }
 
-function videoUrlFor(card: BrowseCard): string | undefined {
+/**
+ * The video URL a PHONE card may play, from the browse card alone.
+ *
+ * Deliberately does NOT fall back to `card.hero.cfVideoId`. That field is built
+ * by `lib/feed/browse-cards.ts` with `webVideoUid`, which prefers the wide web
+ * render — so whenever this fallback fired, the phone played the web cut
+ * (owner 2026-08-21: "for listing, we still use web video instead of ios video
+ * on ios"). The phone's cut is resolved by `fetchVerticalVideos`, which uses
+ * the phone's preference order, and that is the only CF uid allowed through.
+ *
+ * `externalUrl` survives because it is shape-agnostic: a demo listing ships one
+ * file and there is no other render to prefer.
+ */
+function phoneVideoUrlFor(card: BrowseCard): string | undefined {
   if (card.mediaKind !== 'video') return undefined;
-  if (card.hero?.externalUrl) return card.hero.externalUrl;
-  const cfId = card.hero?.cfVideoId;
-  if (cfId) return `${CF_STREAM_BASE}/${cfId}/manifest/video.m3u8`;
-  return undefined;
+  return card.hero?.externalUrl ?? undefined;
 }
 
 function formatBedBathSqft(l: BrowseCard['listing']): string {
@@ -130,8 +140,8 @@ function projectListing(card: BrowseCard, verticalUid?: string): PoolListingDTO 
     ...(card.listing.mapUrl ? { mapUrl: card.listing.mapUrl } : {}),
     ...(verticalUid
       ? { videoUrl: streamManifestUrl(verticalUid) }
-      : videoUrlFor(card)
-        ? { videoUrl: videoUrlFor(card) }
+      : phoneVideoUrlFor(card)
+        ? { videoUrl: phoneVideoUrlFor(card) }
         : {}),
     ...(card.community?.slug ? { communityId: card.community.slug } : {}),
     ...(card.listing.city ? { city: card.listing.city } : {}),
