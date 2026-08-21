@@ -16,6 +16,42 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-21 08:35 UTC — Assemble skips a canvas that was never rendered
+
+**Objective**: owner hit `RuntimeError: need >=2 ready clips, got 0` on
+Assemble, with "10 shot(s) have no clip yet" above it.
+
+**Cause**: not the iOS cut — the WEB one. The listing had 11 ready clips, all
+`surface='ios'`, produced before phase75 existed. Phase75 made Assemble do both
+canvases, so it staged a web assembly against a library that had no web clips,
+and the worker raised from inside the job. The error named no surface, so it
+read as "the whole thing is broken" rather than "one of the two cuts has
+nothing to build from".
+
+Both halves of that are mine: staging a doomed job, and an error that could not
+say which canvas it was about.
+
+**Actions**:
+- `runAssemble` refuses a surface with zero ready clips (`nothing_rendered`)
+  instead of inserting an assembly row — the refusal happens where the message
+  can name the surface and say what to do.
+- `runAssembleAllSurfaces` treats that as SKIP, not fatal, and returns a
+  message saying how many cuts shipped. It only errors when neither canvas has
+  anything.
+- The worker's own error string now leads with the surface.
+- `HomeTourSection` shows the partial-assembly message rather than swallowing
+  it, so "Assemble finished" cannot read as "both films exist".
+
+**Decisions**: skip rather than fail, because every clip library that existed
+before 2026-08-21 is iOS-only. Making the iOS cut un-assemblable until the web
+canvas is rendered would have punished exactly the listings that proved the
+pipeline works.
+
+**Learnings**: adding a second surface to a step changed the meaning of that
+step for data that predated it. The migration was written for the schema and
+not for the ROWS — nothing backfilled a web clip, and nothing needed to, but
+the step that consumes them assumed both canvases were equally populated.
+
 ## 2026-08-21 08:10 UTC — Phase 75: both canvases, one row, and Seedance on the hero
 
 **Objective**: five owner asks after the first successful end-to-end run —

@@ -3503,7 +3503,7 @@ def process_listing_assembly(row: dict[str, Any]) -> None:
 
         if len(clip_paths) < 2:
             raise RuntimeError(
-                f"need >=2 ready clips, got {len(clip_paths)} "
+                f"{surface}: need >=2 ready clips, got {len(clip_paths)} "
                 f"(missing: {', '.join(skipped[:5]) or 'none'})"
             )
 
