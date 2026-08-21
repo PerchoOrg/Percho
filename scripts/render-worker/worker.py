@@ -2097,35 +2097,20 @@ def _label_font() -> str | None:
     return next((f for f in LABEL_FONTS if os.path.exists(f)), None)
 
 
-# The luma the place name should sit on, whatever the photo behind it.
+# The place card is the feed card's COMMUNITY badge, on the video.
 #
-# A FIXED scrim strength cannot do this, and two attempts proved it. A hard
-# panel was a grey slab on a bright shot and invisible on a dark one; replacing
-# it with a constant-alpha gradient just made the slab a rectangle — owner
-# 2026-08-20, on the second attempt: "the location area has a rectangle dark",
-# and the flashing "is gone starting aberdeen pool pictures", which is exactly
-# where Aberdeen stops being bright. So the strength is measured per clip, the
-# same way the end card does it.
-LABEL_TARGET_LUMA = 78
-
-# Never fully transparent, never a blackout. These bound the PEAK, which the
-# text never sees in full — see the compensation below.
-LABEL_SCRIM_MIN, LABEL_SCRIM_MAX = 0.06, 0.88
-
-# A radial falloff averages 0.72 of its peak over the strip the type occupies
-# (measured on the actual ramp). Without dividing by that, the scrim lands well
-# short of the target and a bright shot still reads brighter than a dark one:
-# 104 vs 90 on the first calibration, against 78 asked for.
-LABEL_FALLOFF_MEAN = 0.72
+# Near-opaque on purpose: three translucent attempts all flashed, because a
+# see-through treatment has to follow the photo to stay legible and following
+# the photo means changing at every cut. At 92% white nothing follows anything.
+LABEL_PILL_ALPHA = 235                      # rgba(255,255,255,0.92) on the card
+LABEL_INK = (23, 23, 21)                    # redline.ink
+LABEL_INK2 = (111, 107, 101)                # redline.ink2
+LABEL_ACCENT = (14, 107, 87)                # redline.accent — the only accent
 
 # Where the first line's optical centre sits, as a fraction of frame height.
-#
-# Matched to the COMMUNITY pill on the feed card, which the video plays inside:
-# `badgeSlot` is top 12 with 7pt padding around 9.5pt type, so its centre is
-# 24.75pt below the card's top edge. The card is `screenWidth - 52` wide, so at
-# 1080 across that lands between 71px (Pro Max) and 83px (SE) — 78 in the
-# middle. Owner 2026-08-20: "the location should be on the same height as
-# community tag on the card."
+# Matched to `badgeSlot` on the feed card: top 12, 7pt padding, 9.5pt type, so
+# its centre is 24.75pt down; the card is `screenWidth - 52` wide, which puts
+# that between 71px and 83px at 1080 across.
 LABEL_FIRST_LINE_CENTRE = 78 / 1576
 
 
@@ -2136,122 +2121,101 @@ def _render_label_png(
     h: int,
     font_path: str,
     dest: Path,
-    backdrop_luma: float | None = None,
 ) -> None:
     """One transparent full-frame PNG carrying a place card.
 
+    AN OPAQUE PILL, after three failed attempts at a subtle one.
+    ------------------------------------------------------------------
+    A 38%-black panel, then a gradient, then a gradient whose strength was
+    measured per clip. All three flashed, because all three were see-through:
+    a translucent treatment has to follow the photo to keep the type legible,
+    and following the photo means changing at every cut. The last attempt made
+    it worse — the darkening itself pulsed, a smudge growing and shrinking over
+    the top right, which is more visible than the contrast problem it fixed.
+
+    You cannot win that inside the video. What does win is not being
+    see-through: at 92% white the pill looks the same over a blown-out ceiling
+    (luma 220) and over dark pines (luma 60), so there is nothing left to
+    fluctuate. Verified across eight real backgrounds spanning luma 59-220.
+
+    It is also the card's own language. The COMMUNITY badge on the feed card is
+    `rgba(255,255,255,0.92)` with #181B18 ink, and it has never flashed for
+    exactly this reason — owner 2026-08-20: "the location should be on the same
+    height as community tag on the card", and, on where this belongs at all,
+    "the latter one would better align other information style in the card".
+
+    Colour is an accent, not a fill: the pin is the brand's deep forest green,
+    which `theme/tokens.ts` calls "the ONLY accent on these faces". A pill
+    filled with it competes with the photography for ninety seconds.
+
     Pillow rather than ffmpeg's drawtext: the ffmpeg on this Mac mini is built
-    without libfreetype, so `drawtext` does not exist as a filter at all
-    (`ffmpeg -filters` lists none). That is the same reason the repo already
-    renders listing captions to PNG and composites them — see
-    scripts/caption-render.
-
-    TOP RIGHT, right-aligned, two lines: the place name over its distance.
-    Owner 2026-08-19: "can you put it to the top right, including name and
-    distance… also it does not look elegant."
-
-    What this replaces sat low-left in a hard black box, which on the card was
-    both cropped by the cover fit and buried under `CommunityFace`'s own name
-    and Explore chrome. The top of the frame is the one region no card chrome
-    occupies, and the cover crop takes only ~1% off each end at the 0.685 canvas
-    (14% on an SE), so a 5.5% inset clears it on every device.
-
-    The panel is 38% black rather than a hard box, the name is semibold white,
-    and the distance sits under it at 62% white, one size step down — a stack,
-    so the distance reads as a fact about the place rather than a suffix glued
-    to its name.
+    without libfreetype, so `drawtext` does not exist as a filter at all.
     """
-    from PIL import Image, ImageChops, ImageDraw, ImageFilter, ImageFont
-
-    inset_x = round(w * 0.055)
-    max_text_w = round(w * 0.52)
+    from PIL import Image, ImageDraw, ImageFont
 
     img = Image.new("RGBA", (w, h), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
 
-    # WRAP a long name; do not shrink it away. "Publix Super Market at The
-    # Village Shoppes at Windermere" is 54 characters — shrinking that to one
-    # line drove the type to 17px and stretched the panel across most of the
-    # frame, which is the opposite of elegant. Two lines at full size read
-    # better and keep the card compact. Only a name too long for two lines
-    # steps the size down, and it is never truncated: the label exists to
-    # answer "where is this".
-    size = round(w * 0.034)
-    while True:
-        font = ImageFont.truetype(font_path, size)
-        lines = _wrap_to_width(draw, name, font, max_text_w)
-        if len(lines) <= 2 or size <= round(w * 0.024):
-            break
-        size -= 2
-    line_h = round(size * 1.18)
-    sub_size = max(14, round(size * 0.70))
-    # `top` is the ascender line for anchor "ra"; the optical centre of the
-    # first line sits about 0.36 of the type size below it.
-    inset_y = max(8, round(h * LABEL_FIRST_LINE_CENTRE - size * 0.36))
-    sub_font = ImageFont.truetype(font_path, sub_size)
+    size = round(w * 0.029)
+    font = ImageFont.truetype(font_path, size)
+    sub_font = ImageFont.truetype(font_path, round(size * 0.80))
 
-    gap = round(size * 0.24) if distance else 0
-    block_w = max(
-        max(draw.textlength(l, font=font) for l in lines),
-        draw.textlength(distance, font=sub_font) if distance else 0,
+    # The pin, if the icon font is here. Optional — a missing brand asset must
+    # not cost the label.
+    pin, pin_font, pin_w = "", None, 0.0
+    icon_path = REPO_ROOT / "brand/icons/Phosphor-Fill.ttf"
+    if icon_path.exists():
+        pin = "\ue316"  # map-pin-fill
+        pin_font = ImageFont.truetype(str(icon_path), round(size * 1.05))
+        pin_w = draw.textlength(pin, font=pin_font)
+
+    # WRAP a long name onto a second line rather than shrinking it away.
+    # "Publix Super Market at The Village Shoppes at Windermere" is 54
+    # characters; on one line it would stretch the pill across the frame.
+    lines = _wrap_to_width(draw, name, font, w * 0.50)[:2]
+    line_h = round(size * 1.26)
+    pad_h, pad_v = round(size * 0.72), round(size * 0.44)
+    gap = round(size * 0.80)
+
+    text_w = max(draw.textlength(l, font=font) for l in lines)
+    dist_w = draw.textlength(distance, font=sub_font) if distance else 0.0
+    box_w = pin_w + (gap * 0.7 if pin else 0) + text_w + (gap + dist_w if distance else 0) + pad_h * 2
+    box_h = line_h * len(lines) + pad_v * 2
+
+    x1 = round(w * 0.945)
+    x0 = x1 - box_w
+    # The first line's centre lines up with the COMMUNITY pill on the feed card:
+    # `badgeSlot` is top 12 with 7pt padding around 9.5pt type, so its centre is
+    # 24.75pt down, and the card is `screenWidth - 52` wide — 71-83px at 1080
+    # across, depending on the device.
+    y0 = round(h * LABEL_FIRST_LINE_CENTRE) - line_h // 2 - pad_v
+    y1 = y0 + box_h
+
+    draw.rounded_rectangle(
+        (x0, y0, x1, y1),
+        radius=min(box_h // 2, round(size * 1.1)),
+        fill=(255, 255, 255, LABEL_PILL_ALPHA),
     )
-    block_h = line_h * len(lines) + gap + (sub_size if distance else 0)
 
-    right, top = w - inset_x, inset_y
+    cx = x0 + pad_h
+    if pin_font:
+        draw.text((cx, y0 + box_h / 2), pin, font=pin_font, fill=LABEL_ACCENT, anchor="lm")
+        cx += pin_w + gap * 0.7
+    for i, line in enumerate(lines):
+        draw.text(
+            (cx, y0 + pad_v + line_h * i + line_h / 2), line, font=font, fill=LABEL_INK, anchor="lm"
+        )
+    if distance:
+        rule_x = x1 - pad_h - dist_w - gap * 0.6
+        draw.line(
+            [(rule_x, y0 + pad_v * 1.15), (rule_x, y1 - pad_v * 1.15)],
+            fill=(*LABEL_INK2, 110),
+            width=2,
+        )
+        draw.text(
+            (x1 - pad_h, y0 + box_h / 2), distance, font=sub_font, fill=LABEL_INK2, anchor="rm"
+        )
 
-    # A CORNER SCRIM WITH NO FLAT PART.
-    #
-    # Two earlier attempts failed the same way: a rounded panel, then a gradient
-    # that held FULL strength across the whole text block before easing out. The
-    # second is still a shape — a uniform dark rectangle in the top right, plain
-    # on every bright shot and gone on every dark one, which is precisely the
-    # flashing it was meant to cure.
-    #
-    # This is a radial falloff from the corner with no plateau anywhere, so
-    # there is no edge to see at any strength; and the strength itself is
-    # measured from the clip it will sit on, so the card reads the same over a
-    # white ceiling and over dark pines.
-    if backdrop_luma is None:
-        alpha = 0.34
-    else:
-        need = (backdrop_luma - LABEL_TARGET_LUMA) / max(backdrop_luma, 1.0)
-        peak = need / LABEL_FALLOFF_MEAN
-        alpha = min(LABEL_SCRIM_MAX, max(LABEL_SCRIM_MIN, peak))
-
-    # numpy, not a per-pixel loop: this is 1080x1576 once per clip.
-    ys = np.arange(h, dtype=np.float32)[:, None] / (h * 0.40)
-    xs = (w - np.arange(w, dtype=np.float32)[None, :]) / (w * 1.15)
-    d = np.sqrt(xs * xs + ys * ys)
-    t = np.clip(1.0 - d, 0.0, 1.0)
-    ramp = (alpha * 255.0) * (t * t * (3.0 - 2.0 * t))  # smoothstep
-    scrim = Image.new("RGBA", (w, h), (0, 0, 0, 255))
-    scrim.putalpha(Image.fromarray(ramp.astype(np.uint8), mode="L"))
-    img = Image.alpha_composite(img, scrim)
-
-    # A soft shadow under the glyphs, for the shots a scrim alone cannot hold —
-    # a blown-out sky reaches luma 255 and the ramp is at its weakest by the
-    # second line. Blurred rather than offset: an offset copy reads as a
-    # mistake at this size, a blur reads as depth.
-    shadow = Image.new("RGBA", (w, h), (0, 0, 0, 0))
-    sdraw = ImageDraw.Draw(shadow)
-
-    def _lines(d: Any, fill_name: tuple[int, int, int, int], fill_sub: tuple[int, int, int, int]):
-        for i, line in enumerate(lines):
-            d.text((right, top + i * line_h), line, font=font, fill=fill_name, anchor="ra")
-        if distance:
-            d.text(
-                (right, top + line_h * len(lines) + gap),
-                distance,
-                font=sub_font,
-                fill=fill_sub,
-                anchor="ra",
-            )
-
-    _lines(sdraw, (0, 0, 0, 160), (0, 0, 0, 128))
-    shadow = shadow.filter(ImageFilter.GaussianBlur(max(2, round(size * 0.26))))
-    img = Image.alpha_composite(img, shadow)
-
-    _lines(ImageDraw.Draw(img), (255, 255, 255, 250), (255, 255, 255, 190))
     img.save(dest)
 
 
@@ -2271,31 +2235,6 @@ def _wrap_to_width(draw: Any, text: str, font: Any, max_w: float) -> list[str]:
     return lines or [text]
 
 
-def _clip_label_luma(clip: Path, w: int, h: int, workdir: Path, tag: int) -> float | None:
-    """Mean luma of the region the place card will occupy, in THIS clip.
-
-    One frame a third of the way in, cropped to the top-right where the card
-    goes and scaled to the canvas first so the crop means the same thing for a
-    Seedance clip (496x864) as for a local render. Returns None on any failure —
-    the caller then falls back to a fixed scrim rather than skipping the label.
-    """
-    probe = workdir / f"lumaprobe_{tag:02d}.png"
-    try:
-        subprocess.run(
-            ["ffmpeg", "-y", "-v", "error", "-ss", "0.8", "-i", str(clip),
-             "-frames:v", "1",
-             "-vf", f"scale={w}:{h}:force_original_aspect_ratio=increase,"
-                    f"crop={w}:{h},crop={round(w * 0.55)}:{round(h * 0.14)}:"
-                    f"{round(w * 0.42)}:{round(h * 0.03)}",
-             str(probe)],
-            check=True, capture_output=True, timeout=30,
-        )
-        from PIL import Image as _Image
-        return float(np.asarray(_Image.open(probe).convert("L"), dtype=np.float32).mean())
-    except Exception:
-        return None
-
-
 def _label_overlay(
     labels: list[tuple[str, str]],
     durs: list[float],
@@ -2305,7 +2244,6 @@ def _label_overlay(
     workdir: Path,
     first_input_index: int,
     prev: str,
-    clip_paths: list[Path] | None = None,
 ) -> tuple[list[str], list[str], str]:
     """PNG inputs, overlay filters, and the label the chain now ends on.
 
@@ -2345,12 +2283,7 @@ def _label_overlay(
         if end - start < 0.5:  # too short to read; let the previous card hold
             continue
         png = workdir / f"label_{i:02d}.png"
-        luma = (
-            _clip_label_luma(clip_paths[i], w, h, workdir, i)
-            if clip_paths and i < len(clip_paths)
-            else None
-        )
-        _render_label_png(name, distance, w, h, font, png, backdrop_luma=luma)
+        _render_label_png(name, distance, w, h, font, png)
         inputs.extend(["-i", str(png)])
         out = f"[lo{i}]"
         steps.append(f"[{idx}:v]format=rgba[lb{i}]")
@@ -2587,7 +2520,6 @@ def process_assembly(row: dict[str, Any]) -> None:
         # for the whole film, so a caption band interrupts rather than informs.
         label_inputs, label_steps, prev = _label_overlay(
             clip_labels, durs, offsets, xfade, scale_to, workdir, len(clip_paths), prev,
-            clip_paths,
         )
         filters.extend(label_steps)
 
