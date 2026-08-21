@@ -2,7 +2,7 @@
  * /admin/pipeline/worker-health — the worker hub.
  *
  * What this replaced: four counters over `generated_videos` and five rows of
- * `render_jobs`, which covered two of the eight queues the render worker
+ * `render_jobs`, which covered two of the thirteen queues the render worker
  * drains and could not tell a busy worker from a dead one.
  *
  * The page itself is deliberately empty. Everything here is a live reading —
@@ -17,16 +17,8 @@ import { WorkerHub } from './WorkerHub';
 export const dynamic = 'force-dynamic';
 
 export default function WorkerHealthPage() {
-  return (
-    <div className="space-y-4">
-      <header>
-        <h1 className="font-semibold text-xl">Worker</h1>
-        <p className="text-ink2 text-sm">
-          The render and Seedance workers run on this Mac as launchd agents — not on Vercel. This is
-          their console.
-        </p>
-      </header>
-      <WorkerHub />
-    </div>
-  );
+  // No page header: the ask was everything on one screen, and a title plus a
+  // paragraph is two rows of the table's worth of vertical space. The tab bar
+  // above already says which page this is, and the status line says which host.
+  return <WorkerHub />;
 }
