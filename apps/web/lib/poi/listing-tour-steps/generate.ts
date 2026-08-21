@@ -173,6 +173,27 @@ async function enqueueClips(
 
     const stale = row.render_key !== key;
     const dead = row.status === 'failed';
+
+    /**
+     * NEVER touch a row a worker is holding.
+     *
+     * The requeue below writes `status: 'pending'`. Applied to a row already
+     * `processing`, it hands that clip to a SECOND worker while the first is
+     * still rendering it — both finish, both write the same storage path, and
+     * the work is done twice. Invisible with one worker, which cannot race
+     * itself; the moment three were running it showed up as seven clips
+     * rendered twice (2026-08-21).
+     *
+     * Skipping is safe: the in-flight render completes and, if its inputs
+     * really are stale, the NEXT generate requeues it from `ready`. The cost of
+     * waiting one pass is one stale clip; the cost of not waiting is double
+     * work, and on a paid engine it would be a double bill.
+     */
+    if (row.status === 'processing') {
+      reused += 1;
+      skipped.push({ photo_id: s.photo_id, reason: 'a worker is rendering this clip right now' });
+      continue;
+    }
     // A paid clip is never re-rendered by a rule. Only the button.
     const paidAndAutomatic = s.engine === 'seedance' && !force;
 

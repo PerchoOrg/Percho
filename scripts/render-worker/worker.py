@@ -2998,9 +2998,18 @@ def _finish_step_job(job_id: str, ok: bool, error: str | None = None) -> None:
 
 
 def _load_listing_photos(
-    listing_id: str, workdir: Path, exclude_rejected: bool = False
+    listing_id: str,
+    workdir: Path,
+    exclude_rejected: bool = False,
+    need_files: bool = True,
 ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
-    """The listing row and its photos, downloaded, with probed dimensions.
+    """The listing row and its photos, with dimensions; downloaded when needed.
+
+    `need_files=False` skips the download for any photo whose size is already
+    on the row. Planning only needs the SHAPE — it never opens the file — and
+    downloading 75 photos to re-measure what the database already knows made
+    re-planning a 30-second job instead of a one-second one (owner 2026-08-21).
+    The tag step still needs the bytes, so it keeps the default.
 
     Same read rules the render path uses: an APPROVED enhancement is the file
     that gets read, while `storage_path` stays the provenance record.
@@ -3032,14 +3041,33 @@ def _load_listing_photos(
     photos = sb_get("listing_photos", params)
 
     records: list[dict[str, Any]] = []
+    skipped_downloads = 0
     for p in photos:
         read_path = approved_enhanced_path(p) or p["storage_path"]
         sort_i = int(p.get("sort_order") or 0)
         pid = p["id"]
         ext = Path(read_path).suffix or ".jpg"
         dest = workdir / f"{sort_i:03d}_{pid}{ext}"
-        storage_download(PHOTO_BUCKET, read_path, dest)
-        probed = probe_dims(dest)
+        known = (p.get("width"), p.get("height"))
+        if not need_files and known[0] and known[1]:
+            probed = known
+            skipped_downloads += 1
+        else:
+            storage_download(PHOTO_BUCKET, read_path, dest)
+            probed = probe_dims(dest)
+            # Persist what we measured. These columns exist and were NULL for
+            # almost every row, which is the only reason planning had to open
+            # the file at all. Best-effort: a failed write costs a download next
+            # time, nothing more.
+            if probed and (not known[0] or not known[1]):
+                try:
+                    sb_patch(
+                        "listing_photos",
+                        {"id": f"eq.{pid}"},
+                        {"width": probed[0], "height": probed[1]},
+                    )
+                except Exception:
+                    traceback.print_exc()
         records.append({
             "id": pid,
             "sort_order": sort_i,
@@ -3053,6 +3081,12 @@ def _load_listing_photos(
             "tagged_at": p.get("tagged_at"),
             "review_status": p.get("review_status") or "pending",
         })
+    if skipped_downloads:
+        print(
+            f"[photos] reused stored dimensions for {skipped_downloads}/{len(photos)} "
+            "photo(s) — no download needed",
+            flush=True,
+        )
     return listing, records
 
 
@@ -3185,7 +3219,9 @@ def process_plan_job(job: dict[str, Any]) -> None:
     print(f"[plan {job_id}] listing={listing_id}", flush=True)
     try:
         set_run_status(run_id, "planning")
-        listing, records = _load_listing_photos(listing_id, workdir, exclude_rejected=True)
+        listing, records = _load_listing_photos(
+            listing_id, workdir, exclude_rejected=True, need_files=False
+        )
         if not records:
             raise RuntimeError("no photos survived review")
 
