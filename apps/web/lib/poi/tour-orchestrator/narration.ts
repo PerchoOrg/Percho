@@ -22,6 +22,14 @@
  * and had never been read by anything.
  */
 
+import {
+  ANGLE_BRIEF,
+  type InsightAngle,
+  type PlaceFact,
+  anglesForCommunity,
+  filmFacts,
+  renderFacts,
+} from './insights';
 import { findSchoolAssignment, stripSchoolAssignment } from './school-language';
 import { WORDS_PER_SECOND_FIT, countWords } from './vo-pass';
 
@@ -56,6 +64,7 @@ export const MIN_SECTION_SECONDS = 2.5;
 
 export interface NarrationClip {
   poi_name?: string | null;
+  poi_id?: string | null;
   bucket?: string | null;
   duration_s: number;
   label_distance?: string | null;
@@ -83,6 +92,8 @@ export interface NarrationSection {
   bucket: string;
   /** Distinct place names in this run, in order. */
   places: string[];
+  /** Distinct poi ids, so facts can be attached without matching on names. */
+  poiIds: string[];
   /** How many words fit, at the VO pass's established pace. */
   wordBudget: number;
 }
@@ -105,6 +116,7 @@ export function buildSections(clips: NarrationClip[]): NarrationSection[] {
       last.endClip = i;
       last.endS = t + c.duration_s;
       if (c.poi_name && !last.places.includes(c.poi_name)) last.places.push(c.poi_name);
+      if (c.poi_id && !last.poiIds.includes(c.poi_id)) last.poiIds.push(c.poi_id);
     } else {
       sections.push({
         index: sections.length,
@@ -114,6 +126,7 @@ export function buildSections(clips: NarrationClip[]): NarrationSection[] {
         endS: t + c.duration_s,
         bucket,
         places: c.poi_name ? [c.poi_name] : [],
+        poiIds: c.poi_id ? [c.poi_id] : [],
         wordBudget: 0,
       });
     }
@@ -134,6 +147,12 @@ export interface NarrationContext {
   state: string | null;
   /** The research step's one-line take. Unused before 2026-08-20. */
   narrativeAngle?: string | null;
+  /** Community id — seeds the angle rotation. Falls back to the name. */
+  seed?: string;
+  /** What we know about each place, keyed by poi id. */
+  facts?: Record<string, PlaceFact>;
+  /** Which kinds of insight this film leans on. */
+  angles?: InsightAngle[];
   sections: NarrationSection[];
 }
 
@@ -147,6 +166,7 @@ export interface NarrationContext {
  */
 export function buildNarrationPrompt(ctx: NarrationContext): string {
   const where = [ctx.city, ctx.state].filter(Boolean).join(', ');
+  const facts = ctx.facts ?? {};
   const timeline = ctx.sections
     .map((s) => {
       const secs = s.endS - s.startS;
@@ -155,17 +175,38 @@ export function buildNarrationPrompt(ctx: NarrationContext): string {
         secs >= MULTI_SENTENCE_SECONDS
           ? ` — needs ${secs >= 20 ? 'three sentences' : 'two sentences'}`
           : '';
-      return `  ${s.index}. ${s.startS.toFixed(1)}–${s.endS.toFixed(1)}s (${secs.toFixed(1)}s, ${min}-${s.wordBudget} words${ask}) — ${s.bucket}: ${s.places.join(', ') || '(unnamed)'}`;
+      const head = `  ${s.index}. ${s.startS.toFixed(1)}–${s.endS.toFixed(1)}s (${secs.toFixed(1)}s, ${min}-${s.wordBudget} words${ask}) — ${s.bucket}: ${s.places.join(', ') || '(unnamed)'}`;
+      // The facts, indented under the section. This is the whole difference
+      // between a line that captions the picture and one that tells you
+      // something: before this, the model had nothing but the name.
+      const known = s.poiIds.map((id) => facts[id]).filter((f): f is PlaceFact => !!f);
+      return known.length > 0 ? `${head}\n${renderFacts(known)}` : head;
     })
     .join('\n');
+
+  const angles = ctx.angles ?? [];
+  const allFacts = Object.values(facts);
+  const overall = allFacts.length > 0 ? filmFacts(allFacts) : [];
 
   return `Write the spoken narration for a ${ctx.sections.at(-1)?.endS.toFixed(0)}-second video tour of ${ctx.communityName}${where ? `, ${where}` : ''}.
 
 ${ctx.narrativeAngle ? `What defines this place, in the researcher's words: "${ctx.narrativeAngle}"\n` : ''}
-The film is already cut. Here is what is on screen, when:
+The film is already cut. Here is what is on screen, when — with what we know
+about each place under it:
 
 ${timeline}
-
+${
+  overall.length > 0
+    ? `\nTrue of the film as a whole:\n${overall.map((f) => `  · ${f}`).join('\n')}\n`
+    : ''
+}${
+  angles.length > 0
+    ? `\nLEAN ON THESE. Not every line, but this film is about these things as much
+as it is about the pictures. Weave them in; do not list them.\n\n${angles
+        .map((a) => ANGLE_BRIEF[a])
+        .join('\n\n')}\n`
+    : ''
+}
 Write ONE line per section. Each line is spoken while those exact shots are on
 screen, so it must be about THOSE places — never the next ones, never the last.
 
@@ -195,6 +236,11 @@ RULES
 - Use concrete nouns and real detail from the shot list. "The courts stay busy
   past dusk" beats "tennis courts are available".
 - Distances and facts only where they are shown. No invented amenities.
+- USE THE FACTS. A number a viewer could not get from the picture is worth more
+  than another adjective: how far, how well reviewed, by how many people. Do not
+  recite them — a line is not a datasheet — but let at least half the lines rest
+  on something real.
+- Only facts given above. Never invent a rating, a distance, or a count.
 - SCHOOLS have one rule and it is absolute: describe the PLACE, never anyone
   going to it. Name the schools, say where they sit, describe the campus.
   Nothing about attendance, zoning, enrolment, morning routines, the school
@@ -205,8 +251,8 @@ RULES
            few miles, low brick campuses set back behind their ball fields."
     NO  — "Morning routines flow toward Sharon Elementary."
     NO  — "Riverwatch Middle leads to Lambert High."
-  NEVER characterise school quality either — not "top-rated", not "elite", not
-  "award-winning", however the researcher phrased it.
+  No ratings for schools. Google's are not there for them and ours would be
+  invented; a quality claim needs a source that is not us.
 - No claims about who lives here, or who would like it.
 - Vary sentence length. Not every line needs a verb phrase at the front.
 - The last line should land, not trail off. It is the one people remember.
@@ -329,6 +375,8 @@ export interface NarrationResult {
   segments: NarrationSegment[];
   sections: NarrationSection[];
   voice: string;
+  /** The insight angles this script was asked to lean on. */
+  angles: InsightAngle[];
   warnings: string[];
   ok: boolean;
   error?: string;
@@ -360,7 +408,10 @@ export async function runNarration(
     ctx.communityName,
     sections.map((s) => s.bucket),
   );
-  const base = { segments: [], sections, voice, warnings: [] };
+  // Which insight angles this film leans on, seeded so a community keeps its
+  // own emphasis while two communities differ.
+  const angles = ctx.angles ?? anglesForCommunity(ctx.seed ?? ctx.communityName);
+  const base = { segments: [], sections, voice, angles, warnings: [] };
 
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) return { ...base, ok: false, error: 'GEMINI_API_KEY not set' };
@@ -371,7 +422,9 @@ export async function runNarration(
       method: 'POST',
       headers: { 'x-goog-api-key': apiKey, 'content-type': 'application/json' },
       body: JSON.stringify({
-        contents: [{ role: 'user', parts: [{ text: buildNarrationPrompt({ ...ctx, sections }) }] }],
+        contents: [
+          { role: 'user', parts: [{ text: buildNarrationPrompt({ ...ctx, sections, angles }) }] },
+        ],
         generationConfig: {
           // Same allowance as the VO pass, for the same reason: this is a
           // thinking model and its reasoning shares the budget.
@@ -398,7 +451,7 @@ export async function runNarration(
       .map((p) => p.text ?? '')
       .join('');
     const { segments, warnings } = parseNarration(raw, sections);
-    return { segments, sections, voice, warnings, ok: segments.length > 0 };
+    return { segments, sections, voice, angles, warnings, ok: segments.length > 0 };
   } catch (err) {
     return { ...base, ok: false, error: err instanceof Error ? err.message : String(err) };
   }

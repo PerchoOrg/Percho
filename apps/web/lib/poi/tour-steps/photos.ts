@@ -4,6 +4,7 @@
  * for a dead one.
  */
 import type { PoiActor } from '@/lib/poi/poi-actions-core';
+import type { PlaceFact } from '../tour-orchestrator/insights';
 import { type RunRow, type TourDb, asJson, mustWrite, saveStep, setRunStatus } from './shared';
 import { computeFinalShots } from './shots';
 
@@ -808,13 +809,53 @@ async function writeNarration(sb: TourDb, run: RunRow, shots: unknown[]) {
       .map((a) => a?.parsed?.narrative_angle)
       .find((v): v is string => typeof v === 'string' && v.length > 0) ?? null;
 
+  // What we know about each place beyond its name. Without this the model can
+  // only caption the picture, which is exactly what it did (owner 2026-08-21:
+  // "the narrative is just talking about the pics").
+  const poiIds = [
+    ...new Set(
+      (shots as Array<{ poi_id?: string }>).map((sh) => sh.poi_id).filter(Boolean) as string[],
+    ),
+  ];
+  const facts: Record<string, PlaceFact> = {};
+  if (poiIds.length > 0) {
+    const { data: links } = await sb
+      .from('community_pois')
+      .select(
+        'poi_id, distance_m, intent_bucket, poi:pois(display_name, rating, user_ratings_total)',
+      )
+      .eq('community_id', run.community_id)
+      .in('poi_id', poiIds);
+    for (const l of links ?? []) {
+      const poi = l.poi as unknown as {
+        display_name?: string;
+        rating?: number | null;
+        user_ratings_total?: number | null;
+      } | null;
+      facts[l.poi_id as string] = {
+        name: poi?.display_name ?? '',
+        bucket: (l.intent_bucket as string) ?? 'other',
+        miles: l.distance_m == null ? null : (l.distance_m as number) / 1609,
+        rating: poi?.rating ?? null,
+        reviews: poi?.user_ratings_total ?? null,
+      };
+    }
+  }
+
   return runNarration(
-    shots as Array<{ bucket?: string | null; poi_name?: string | null; duration_s: number }>,
+    shots as Array<{
+      bucket?: string | null;
+      poi_name?: string | null;
+      poi_id?: string | null;
+      duration_s: number;
+    }>,
     {
       communityName: community?.name ?? 'this community',
       city: community?.city ?? null,
       state: community?.state ?? null,
       narrativeAngle,
+      seed: run.community_id,
+      facts,
     },
   );
 }
