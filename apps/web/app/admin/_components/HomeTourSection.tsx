@@ -438,9 +438,7 @@ export function HomeTourSection({
             </details>
           )}
         </div>
-        {/* Side by side and height-matched, so the pair stands level with the
-            facts instead of towering over them. */}
-        <div className="flex flex-wrap items-start justify-end gap-3">
+        <div className="grid gap-3">
           <SurfacePreview
             surface="ios"
             uid={latestVideo?.iosUid ?? null}

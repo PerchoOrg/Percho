@@ -15,13 +15,6 @@
  * `apps/mobile/theme/listing-geometry.ts` and apps/web does not depend on
  * apps/mobile. The test in listing-geometry keeps the mobile side honest; the
  * comment here keeps the pair findable by grep.
- *
- * SIZED BY HEIGHT, not width. A 220px-wide phone card is 391px tall and a
- * full-width 16:9 is another 280, so stacking them made the preview column
- * three times the height of the facts beside it (owner 2026-08-21: "ios and
- * web videos are too big, can you fix that so they fit, just align with
- * information section"). Fixing the height instead lets each surface keep its
- * true aspect and lets the pair sit side by side against the facts.
  */
 
 import { streamIframeUrl, thumbnailUrl } from '@/lib/cloudflare/stream';
@@ -41,13 +34,10 @@ export function SurfacePreview({
   surface,
   uid,
   status,
-  heightPx = 200,
 }: {
   surface: 'ios' | 'web';
   uid: string | null;
   status: string;
-  /** Both surfaces are drawn to this height; width follows the real aspect. */
-  heightPx?: number;
 }) {
   const iframe = uid ? safe(() => streamIframeUrl(uid)) : null;
   const thumb = uid ? safe(() => thumbnailUrl(uid)) : null;
@@ -73,7 +63,7 @@ export function SurfacePreview({
 
   return (
     <div className="space-y-1.5">
-      <div className="flex items-center justify-between gap-2 text-[11px]">
+      <div className="flex items-center justify-between text-[11px]">
         <span className="font-medium text-ink">{label}</span>
         <span className={uid ? 'text-emerald-600' : 'text-amber-600'}>
           {uid ? 'rendered' : 'missing'}
@@ -83,11 +73,8 @@ export function SurfacePreview({
       {surface === 'ios' ? (
         // Phone-shaped card. The media block gets HERO_RATIO of the height and
         // the rest is the (blocked-out) content panel — the real card layout.
-        <div
-          className="overflow-hidden rounded-2xl border border-line bg-surface shadow-sm"
-          style={{ height: heightPx, aspectRatio: '9 / 16' }}
-        >
-          <div className="h-full w-full">
+        <div className="mx-auto w-[220px] overflow-hidden rounded-2xl border border-line bg-surface shadow-sm">
+          <div className="aspect-[9/16] w-full">
             <div className="flex h-full w-full flex-col">
               <div className="w-full overflow-hidden bg-black/40" style={{ flex: HERO_RATIO }}>
                 {media}
@@ -105,10 +92,7 @@ export function SurfacePreview({
           </div>
         </div>
       ) : (
-        <div
-          className="overflow-hidden rounded-xl border border-line bg-black/40"
-          style={{ height: heightPx, aspectRatio: '16 / 9' }}
-        >
+        <div className="aspect-video w-full overflow-hidden rounded-xl border border-line bg-black/40">
           {media}
         </div>
       )}
