@@ -97,7 +97,8 @@ export function LogViewer({ sources }: { sources: LogSource[] }) {
 
   return (
     <section className="rounded-2xl border border-line bg-surface">
-      <header className="flex flex-wrap items-center gap-2 border-line border-b px-4 py-3">
+      <header className="flex flex-wrap items-center gap-2 border-line border-b px-3 py-2">
+        <h2 className="font-semibold text-[11.5px]">Worker log</h2>
         <div className="flex gap-1">
           {withLogs.map((s) => (
             <button
@@ -153,7 +154,13 @@ export function LogViewer({ sources }: { sources: LogSource[] }) {
       </header>
 
       {data?.available === false ? (
-        <p className="px-4 py-6 text-ink2 text-sm">{data.reason ?? data.error ?? 'unavailable'}</p>
+        <div className="px-3 py-6 text-[11px] text-ink2">
+          <p>{data.reason ?? data.error ?? 'unavailable'}</p>
+          <p className="mt-1 text-[10px]">
+            This panel tails the render and Seedance workers' log files. They are launchd agents on
+            the Mac mini, so their logs only exist there — a deployed build has no file to read.
+          </p>
+        </div>
       ) : (
         <>
           <div className="max-h-[26rem] overflow-auto bg-bg/40 px-4 py-3 font-mono text-[11.5px] leading-relaxed">

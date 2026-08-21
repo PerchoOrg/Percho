@@ -3,9 +3,14 @@
  * and what the paid ones cost.
  *
  * Spend is here rather than in `queues.ts` because it is not a queue property —
- * it is the answer to "what did today cost", and only the two seedance queues
- * carry a `cost_usd`. The owner's standing rule is to reach for the free path
- * first, which needs the paid number visible rather than buried in a bill.
+ * it is the answer to "what did today cost", and only the paid queues carry a
+ * `cost_usd`. The owner's standing rule is to reach for the free path first,
+ * which needs the paid number visible rather than buried in a bill.
+ *
+ * `cost_usd` is NOT our estimate: it is `usage.cost` off the OpenRouter
+ * response for that generation (`lib/ai/openrouter-video.ts`), i.e. what the
+ * provider says it billed. Local Ken Burns and DepthFlow renders never write
+ * one, so a $0 day means no paid generation ran, not that nothing rendered.
  */
 
 import { restQuery } from './rest';
@@ -131,6 +136,8 @@ export interface SpendSnapshot {
   /** Oldest day first, seven entries, so the panel can draw a bar per day. */
   byDay: { date: string; usd: number }[];
   jobs7d: number;
+  /** Per-queue split, biggest first — "what is this number" needs an answer. */
+  bySource: { label: string; usd: number; jobs: number }[];
 }
 
 /**
@@ -138,7 +145,11 @@ export interface SpendSnapshot {
  * 74 — a paid home-tour clip bills the same provider as a paid community one,
  * so leaving it out would under-report the week.
  */
-const SPEND_TABLES = ['photo_clips', 'listing_photo_clips', 'ai_tour_videos'] as const;
+const SPEND_TABLES = [
+  { table: 'photo_clips', label: 'Community clips' },
+  { table: 'listing_photo_clips', label: 'Home tour clips' },
+  { table: 'ai_tour_videos', label: 'AI tour videos' },
+] as const;
 const SPEND_SAMPLE = 1000;
 
 /** UTC day key. Days are the unit the owner reasons about spend in. */
@@ -147,7 +158,7 @@ export function dayKey(iso: string): string {
 }
 
 export function summarise(
-  rows: { cost_usd: number; created_at: string }[],
+  rows: { cost_usd: number; created_at: string; source?: string }[],
   now = new Date(),
 ): SpendSnapshot {
   const byDay = new Map<string, number>();
@@ -157,22 +168,32 @@ export function summarise(
   }
 
   const todayKey = now.toISOString().slice(0, 10);
+  const bySource = new Map<string, { usd: number; jobs: number }>();
   let today = 0;
   let last7d = 0;
+  let jobs7d = 0;
 
   for (const row of rows) {
     const key = dayKey(row.created_at);
     if (!byDay.has(key)) continue;
     byDay.set(key, (byDay.get(key) ?? 0) + row.cost_usd);
     last7d += row.cost_usd;
+    jobs7d += 1;
     if (key === todayKey) today += row.cost_usd;
+
+    const label = row.source ?? 'other';
+    const prev = bySource.get(label) ?? { usd: 0, jobs: 0 };
+    bySource.set(label, { usd: prev.usd + row.cost_usd, jobs: prev.jobs + 1 });
   }
 
   return {
     today,
     last7d,
     byDay: [...byDay.entries()].map(([date, usd]) => ({ date, usd })),
-    jobs7d: rows.length,
+    jobs7d,
+    bySource: [...bySource.entries()]
+      .map(([label, v]) => ({ label, usd: v.usd, jobs: v.jobs }))
+      .sort((a, b) => b.usd - a.usd),
   };
 }
 
@@ -181,7 +202,7 @@ export async function loadSpend(): Promise<SpendSnapshot> {
   const since = new Date(Date.now() - 7 * 86_400_000).toISOString();
 
   const perTable = await Promise.all(
-    SPEND_TABLES.map(async (table) => {
+    SPEND_TABLES.map(async ({ table, label }) => {
       try {
         const { rows } = await restQuery<{ cost_usd: number | null; created_at: string }>(table, {
           select: 'cost_usd,created_at',
@@ -190,7 +211,7 @@ export async function loadSpend(): Promise<SpendSnapshot> {
           order: 'created_at.desc',
           limit: String(SPEND_SAMPLE),
         });
-        return rows;
+        return rows.map((r) => ({ ...r, source: label as string }));
       } catch {
         return [];
       }
@@ -199,7 +220,10 @@ export async function loadSpend(): Promise<SpendSnapshot> {
 
   const rows = perTable
     .flat()
-    .filter((r): r is { cost_usd: number; created_at: string } => typeof r.cost_usd === 'number');
+    .filter(
+      (r): r is { cost_usd: number; created_at: string; source: string } =>
+        typeof r.cost_usd === 'number',
+    );
 
   return summarise(rows);
 }

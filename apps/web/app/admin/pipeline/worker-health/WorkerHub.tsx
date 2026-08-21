@@ -16,6 +16,11 @@
  * the row they belong to (`scope` in `alerts.ts`) rather than in a banner the
  * reader has to map back onto the data.
  *
+ * Layout, owner 2026-08-21: basic information (host, and what it is costing)
+ * top left, recent transitions top right, the table under both, the log last.
+ * The two top panels are "what is going on right now"; the table is the
+ * detail; the log is what you open once the table says something is wrong.
+ *
  * It polls rather than rendering once: the question this page answers ("is it
  * moving?") is only answerable over time. Two cadences — `/host` is cheap and
  * local, `/metrics` is ~50 small PostgREST counts. Pausing stops both, so a
@@ -149,19 +154,22 @@ export function WorkerHub() {
 
   return (
     <div className="space-y-3">
-      <StatusLine
-        alerts={alerts}
-        system={host?.system ?? null}
-        hostReason={host && !host.available ? (host.reason ?? 'host unavailable') : null}
-        spend={metrics?.spend ?? null}
-        updatedAt={updatedAt}
-        paused={paused}
-        onToggle={() => setPaused((v) => !v)}
-        onRefresh={() => {
-          void loadHost();
-          void loadMetrics();
-        }}
-      />
+      <div className="grid gap-3 xl:grid-cols-2">
+        <BasicInfo
+          alerts={alerts}
+          system={host?.system ?? null}
+          hostReason={host && !host.available ? (host.reason ?? 'host unavailable') : null}
+          spend={metrics?.spend ?? null}
+          updatedAt={updatedAt}
+          paused={paused}
+          onToggle={() => setPaused((v) => !v)}
+          onRefresh={() => {
+            void loadHost();
+            void loadMetrics();
+          }}
+        />
+        <ActivityPanel events={metrics?.activity ?? []} />
+      </div>
 
       {notice && (
         <p className="rounded-lg border border-line bg-surface px-3 py-1.5 text-ink2 text-xs">
@@ -221,19 +229,20 @@ export function WorkerHub() {
         </table>
       </div>
 
-      <div className="grid gap-3 xl:grid-cols-[1.6fr_1fr]">
-        <LogViewer
-          sources={processes.map((p) => ({ id: p.id, name: p.name, logPath: p.logPath }))}
-        />
-        <ActivityPanel events={metrics?.activity ?? []} spend={metrics?.spend ?? null} />
-      </div>
+      <LogViewer sources={processes.map((p) => ({ id: p.id, name: p.name, logPath: p.logPath }))} />
     </div>
   );
 }
 
-/* ------------------------------------------------------------ status line */
+/* ------------------------------------------------------------ basic info */
 
-function StatusLine({
+/**
+ * Top left: what machine this is, how hard it is working, and what it is
+ * costing. Owner 2026-08-21 asked for the cost here and asked what it was —
+ * hence the per-source breakdown and the explicit note that it is the
+ * provider's own billed figure, not an estimate of ours.
+ */
+function BasicInfo({
   alerts,
   system,
   hostReason,
@@ -254,99 +263,187 @@ function StatusLine({
 }) {
   const worst = worstLevel(alerts);
   const hostIssues = systemAlerts(alerts);
-  const tone =
-    worst === 'error'
-      ? 'border-red-500/40 bg-red-500/10'
-      : worst === 'warn'
-        ? 'border-amber-500/40 bg-amber-500/10'
-        : 'border-line bg-surface';
-
   const errors = alerts.filter((a) => a.level === 'error').length;
   const warns = alerts.filter((a) => a.level === 'warn').length;
 
   return (
-    <section
-      className={`flex flex-wrap items-center gap-x-4 gap-y-2 rounded-2xl border px-3 py-2 text-[11px] ${tone}`}
-    >
-      <span className="flex items-center gap-1.5 font-semibold">
-        {worst === 'error' ? (
-          <XCircle size={14} className="text-red-500" />
-        ) : worst === 'warn' ? (
-          <AlertTriangle size={14} className="text-amber-500" />
+    <section className="rounded-2xl border border-line bg-surface">
+      <header className="flex items-center gap-2 border-line border-b px-3 py-2">
+        <span className="flex items-center gap-1.5 font-semibold text-[11.5px]">
+          {worst === 'error' ? (
+            <XCircle size={14} className="text-red-500" />
+          ) : worst === 'warn' ? (
+            <AlertTriangle size={14} className="text-amber-500" />
+          ) : (
+            <CheckCircle2 size={14} className="text-emerald-500" />
+          )}
+          {worst === 'error'
+            ? `${errors} problem${errors === 1 ? '' : 's'}`
+            : worst === 'warn'
+              ? `${warns} warning${warns === 1 ? '' : 's'}`
+              : 'All clear'}
+        </span>
+
+        <span className="ml-auto flex items-center gap-2 text-[10px]">
+          <span className="text-ink2">
+            {updatedAt ? formatAge(new Date(updatedAt).toISOString()) : 'loading…'}
+          </span>
+          <button
+            type="button"
+            onClick={onToggle}
+            className="flex items-center gap-1 rounded border border-line px-1.5 py-0.5 text-ink2 transition hover:text-ink"
+          >
+            {paused ? <Play size={11} /> : <Pause size={11} />}
+            {paused ? 'Paused' : 'Live'}
+          </button>
+          <button
+            type="button"
+            onClick={onRefresh}
+            className="rounded border border-line p-1 text-ink2 transition hover:text-ink"
+            aria-label="Refresh now"
+          >
+            <RotateCw size={11} />
+          </button>
+        </span>
+      </header>
+
+      <div className="px-3 py-2.5">
+        {system ? (
+          <>
+            <div className="text-[10px] text-ink2">
+              {system.hostname.replace(/\.local$/, '')} · {system.arch} · {system.cpuCount} cores ·
+              up {formatDuration(system.uptimeSec)}
+            </div>
+            <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-3">
+              <Meter
+                label="Load"
+                value={system.loadAvg[0].toFixed(2)}
+                hint={`${system.loadAvg[1].toFixed(2)} / ${system.loadAvg[2].toFixed(2)}`}
+                pct={Math.min(100, system.loadPerCore * 100)}
+              />
+              <Meter
+                label="Memory"
+                value={`${system.memory.usedPct.toFixed(0)}%`}
+                hint={`${formatBytes(system.memory.availableBytes)} free`}
+                pct={system.memory.usedPct}
+              />
+              <Meter
+                label="Disk"
+                value={system.disk ? `${system.disk.usedPct.toFixed(0)}%` : '—'}
+                hint={system.disk ? `${formatBytes(system.disk.freeBytes)} free` : 'unreadable'}
+                pct={system.disk?.usedPct ?? 0}
+              />
+              <Stat label="ffmpeg" value={String(system.ffmpegProcs)} hint="rendering now" />
+              <Stat label="scratch" value={`${system.scratchDirs}`} hint="dirs in /tmp" />
+            </div>
+          </>
         ) : (
-          <CheckCircle2 size={14} className="text-emerald-500" />
+          <p className="text-[11px] text-ink2">
+            {hostReason ?? 'reading host…'}
+            <span className="block text-[10px]">
+              Machine and process readings only exist on the Mac the workers run on.
+            </span>
+          </p>
         )}
-        {worst === 'error'
-          ? `${errors} problem${errors === 1 ? '' : 's'}`
-          : worst === 'warn'
-            ? `${warns} warning${warns === 1 ? '' : 's'}`
-            : 'All clear'}
-      </span>
 
-      {system ? (
-        <>
-          <Stat label="host" value={system.hostname.replace(/\.local$/, '')} />
-          <Stat
-            label="load"
-            value={`${system.loadAvg[0].toFixed(2)} / ${system.cpuCount}`}
-            tone={system.loadPerCore > 2 ? 'bad' : undefined}
-          />
-          <Stat
-            label="mem"
-            value={`${system.memory.usedPct.toFixed(0)}%`}
-            hint={`${formatBytes(system.memory.availableBytes)} free`}
-            tone={system.memory.usedPct >= 92 ? 'bad' : undefined}
-          />
-          <Stat
-            label="disk"
-            value={system.disk ? `${system.disk.usedPct.toFixed(0)}%` : '—'}
-            hint={system.disk ? `${formatBytes(system.disk.freeBytes)} free` : undefined}
-            tone={system.disk && system.disk.usedPct >= 85 ? 'bad' : undefined}
-          />
-          <Stat label="ffmpeg" value={String(system.ffmpegProcs)} />
-          <Stat label="scratch" value={`${system.scratchDirs} dirs`} />
-        </>
-      ) : (
-        hostReason && <span className="text-ink2">{hostReason}</span>
-      )}
+        {hostIssues.length > 0 && (
+          <ul className="mt-2 space-y-0.5">
+            {hostIssues.map((a) => (
+              <li key={a.title} className="flex gap-1 text-[10px] text-amber-600">
+                <AlertTriangle size={11} className="mt-px shrink-0" />
+                <span title={a.detail}>{a.title}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
 
-      {spend && (
-        <Stat
-          label="spend"
-          value={formatUsd(spend.today)}
-          hint={`${formatUsd(spend.last7d)} / 7d`}
-        />
-      )}
-
-      {hostIssues.length > 0 && (
-        <span className="flex items-center gap-1 text-amber-600">
-          <AlertTriangle size={12} />
-          {hostIssues.map((a) => a.title).join(' · ')}
-        </span>
-      )}
-
-      <span className="ml-auto flex items-center gap-2">
-        <span className="text-ink2">
-          {updatedAt ? formatAge(new Date(updatedAt).toISOString()) : 'loading…'}
-        </span>
-        <button
-          type="button"
-          onClick={onToggle}
-          className="flex items-center gap-1 rounded border border-line bg-surface px-1.5 py-0.5 text-ink2 transition hover:text-ink"
-        >
-          {paused ? <Play size={11} /> : <Pause size={11} />}
-          {paused ? 'Paused' : 'Live'}
-        </button>
-        <button
-          type="button"
-          onClick={onRefresh}
-          className="rounded border border-line bg-surface p-1 text-ink2 transition hover:text-ink"
-          aria-label="Refresh now"
-        >
-          <RotateCw size={11} />
-        </button>
-      </span>
+      <SpendBlock spend={spend} />
     </section>
+  );
+}
+
+/**
+ * The cost, and what it is.
+ *
+ * `cost_usd` is `usage.cost` off the provider's own response — what OpenRouter
+ * says it billed for that generation, not a rate we multiply out. Local Ken
+ * Burns and DepthFlow renders never write one, so a $0 day means no paid
+ * generation ran, not that nothing rendered. The breakdown is here because the
+ * owner's first question about the number was what it covered.
+ */
+function SpendBlock({ spend }: { spend: SpendSnapshot | null }) {
+  if (!spend) return null;
+  const max = Math.max(0.01, ...spend.byDay.map((d) => d.usd));
+
+  return (
+    <div className="border-line border-t px-3 py-2.5">
+      <div className="flex items-baseline gap-3">
+        <span className="text-[10px] text-ink2 uppercase tracking-wide">Paid generation</span>
+        <span className="text-[10px] text-ink2">billed by OpenRouter · local renders are free</span>
+      </div>
+
+      <div className="mt-1.5 flex items-end gap-5">
+        <div>
+          <div className="font-semibold text-lg leading-none">{formatUsd(spend.today)}</div>
+          <div className="text-[10px] text-ink2">today (UTC)</div>
+        </div>
+        <div>
+          <div className="font-semibold text-lg leading-none">{formatUsd(spend.last7d)}</div>
+          <div className="text-[10px] text-ink2">7 days · {spend.jobs7d} jobs</div>
+        </div>
+        <div className="ml-auto flex h-8 items-end gap-1">
+          {spend.byDay.map((d) => (
+            <span
+              key={d.date}
+              className={`w-2 rounded-t ${d.usd > 0 ? 'bg-amber-500/70' : 'bg-line'}`}
+              style={{ height: `${Math.max(6, (d.usd / max) * 100)}%` }}
+              title={`${d.date}: ${formatUsd(d.usd)}`}
+            />
+          ))}
+        </div>
+      </div>
+
+      {spend.bySource.length > 0 && (
+        <ul className="mt-2 space-y-0.5">
+          {spend.bySource.map((s) => (
+            <li key={s.label} className="flex items-baseline gap-2 text-[10px]">
+              <span className="text-ink2">{s.label}</span>
+              <span className="flex-1 border-line/60 border-b border-dotted" aria-hidden />
+              <span className="text-ink2">{s.jobs} jobs</span>
+              <span className="w-12 text-right font-medium">{formatUsd(s.usd)}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function Meter({
+  label,
+  value,
+  hint,
+  pct,
+}: {
+  label: string;
+  value: string;
+  hint: string;
+  pct: number;
+}) {
+  const tone = pct >= 90 ? 'bg-red-500' : pct >= 75 ? 'bg-amber-500' : 'bg-emerald-500';
+  return (
+    <div>
+      <div className="text-[10px] text-ink2 uppercase tracking-wide">{label}</div>
+      <div className="font-semibold text-sm leading-tight">{value}</div>
+      <div className="mt-0.5 h-1 w-full overflow-hidden rounded-full bg-bg">
+        <div
+          className={`h-full ${tone}`}
+          style={{ width: `${Math.min(100, Math.max(0, pct))}%` }}
+        />
+      </div>
+      <div className="mt-0.5 text-[10px] text-ink2">{hint}</div>
+    </div>
   );
 }
 
@@ -571,35 +668,22 @@ const STATUS_CLASS: Record<string, string> = {
   submitting: 'text-blue-500',
 };
 
-function ActivityPanel({
-  events,
-  spend,
-}: {
-  events: ActivityEvent[];
-  spend: SpendSnapshot | null;
-}) {
-  const max = Math.max(0.01, ...(spend?.byDay ?? []).map((d) => d.usd));
-
+/**
+ * Top right: the last transition of every queue, merged into one list. This is
+ * the "what just happened" view — the table says how many failed in 24h, this
+ * says which one and why.
+ */
+function ActivityPanel({ events }: { events: ActivityEvent[] }) {
   return (
-    <section className="rounded-2xl border border-line bg-surface">
-      <header className="flex items-center gap-2 border-line border-b px-3 py-2">
+    <section className="flex flex-col rounded-2xl border border-line bg-surface">
+      <header className="flex items-baseline gap-2 border-line border-b px-3 py-2">
         <h2 className="font-semibold text-[11.5px]">Recent transitions</h2>
-        {spend && (
-          <span className="ml-auto flex items-end gap-px" title="paid spend, last 7 days">
-            {spend.byDay.map((d) => (
-              <span
-                key={d.date}
-                className={`w-1.5 rounded-t ${d.usd > 0 ? 'bg-amber-500/70' : 'bg-line'}`}
-                style={{ height: `${Math.max(3, (d.usd / max) * 16)}px` }}
-                title={`${d.date}: ${formatUsd(d.usd)}`}
-              />
-            ))}
-          </span>
-        )}
+        <span className="text-[10px] text-ink2">every queue, newest first</span>
+        <span className="ml-auto text-[10px] text-ink2">{events.length}</span>
       </header>
-      <div className="max-h-[26rem] overflow-auto">
+      <div className="max-h-[19rem] min-h-[9rem] flex-1 overflow-auto">
         {events.length === 0 ? (
-          <p className="px-3 py-6 text-ink2 text-[11px]">nothing yet</p>
+          <p className="px-3 py-6 text-[11px] text-ink2">nothing yet</p>
         ) : (
           <ul className="divide-y divide-line/60">
             {events.map((e) => (
