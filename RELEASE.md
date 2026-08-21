@@ -25,6 +25,12 @@ Aberdeen in Suwanee is the first community with this treatment: a 58-second film
 - Each shot is now made on its own, so a single room can be re-done without rebuilding the whole film
 - Home tour videos now fill the card properly on iPhone. They were being made square, which meant almost a third of every frame was cut off the sides on the feed card
 - An AI-generated opening or closing shot can be requested for a home tour. It's limited to those two positions
+- The admin Worker screen is now a full console for the machine that makes the videos: whether each worker is running, how long it has been up, how hard the machine is working, and how much disk is left
+- Every queue is visible in one table — not just video renders, but photo clips, enhancement, reframing and the paid AI queues — with what's waiting, how long it has been waiting, and what finished or failed in the last day
+- A plain-language verdict sits at the top. It stays quiet while work is simply in progress and speaks up when something has genuinely stalled, rather than showing a number and leaving you to judge
+- Worker logs can be read on the screen, filtered, and followed live, with the video-encoder noise hidden by default
+- What the paid AI video queues cost is shown by day, so a week's spend is visible without opening a bill
+- A worker can be restarted from the screen — including when it is still running code from before a fix was merged, which the screen now points out
 
 ### 2026-08-20
 - Community films are now narrated. A voice walks you through the neighbourhood — what it has, what's nearby, what's worth the drive — instead of the film running on music alone

@@ -108,6 +108,7 @@ No React in here. If it renders, it belongs in `app/`.
 | `cloudflare/` | Cloudflare Stream URLs and thumbnails. |
 | `buyer/` | Anonymous-buyer identity and likes (device id, no account required). |
 | `copy/` | Static marketing copy kept out of components. |
+| `worker-hub/` | What the `/admin` Worker console reads: the queue specs the two local workers drain, the launchd/`ps`/log readers for the box they run on, and the alert rules over both. The host readers answer "not the worker host" everywhere but the Mac mini. |
 | `perf/` | Server timing helpers. |
 | `utils/` | Genuinely generic, domain-free helpers. If it mentions a listing or a community it does not belong here. |
 | `log.ts` | The logger. `console.log` is forbidden in production paths; use this, and `mask()` anything resembling PII. |

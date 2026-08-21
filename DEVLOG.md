@@ -16,6 +16,114 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-21 06:40 UTC — The Worker tab becomes a hub: process, host, queues, spend, logs
+
+**Objective**: Owner — "lets improve the admin worker tab - it should function as
+a super hub for monitering of the local process, metrics, logs, and system heath".
+The page it replaced showed four counters over `generated_videos` and five rows
+of `render_jobs`: two of the eight queues the render worker drains, no knowledge
+of the processes themselves, and no way to tell a busy worker from a dead one.
+
+**Actions**:
+- New `apps/web/lib/worker-hub/`:
+  - `rest.ts` — small PostgREST reader (count from `content-range`).
+  - `queues.ts` — `QUEUES`, all nine queues as data, in worker polling order.
+  - `activity.ts` — merged transition feed + paid-spend summary.
+  - `host.ts` — launchd/ps/vm_stat/df readers, log tail, `launchctl kickstart`.
+  - `host-parsers.ts` — the pure parsers, split out so they test without a Mac.
+  - `alerts.ts` — the health verdict; `format.ts` — client-safe display helpers.
+  - 54 tests across `host-parsers`, `alerts`, `format`, `activity`, `rest`.
+- New routes `app/api/admin/worker/{host,metrics,logs,restart}`, each behind
+  `requireAdmin()`; `lib/zod/worker-hub.ts` validates the two that take input.
+- `app/admin/pipeline/worker-health/`: `page.tsx` is now a shell over
+  `WorkerHub.tsx` (client, polling) + `LogViewer.tsx`.
+
+**Decisions**:
+- **Queues as data, not eight loaders.** Six tables, four status vocabularies,
+  two of them columns on photo rows. A list makes "did we forget a queue"
+  answerable and mirrors `main()` in `worker.py` — including its priority order,
+  which is itself diagnostic: a queue high in the list starves everything under it.
+- **PostgREST directly, not supabase-js.** The specs carry table and column
+  names as strings; supabase-js types `.from()`/`.eq()` against the generated
+  `Database` and would need a cast per call. Same reasoning as `worker.py`.
+- **The plists are the source of truth.** Log path, working directory and
+  program arguments are read from `~/Library/LaunchAgents/com.percho.*.plist`
+  via `plutil`, so nothing here duplicates them. `MANAGED` is only the allowlist
+  of labels — and it is what bounds the restart endpoint: no request string
+  reaches a command line, and no path comes from a query parameter.
+- **Degrade, don't heartbeat** (owner's pick of the two offered). Process, log
+  and system panels answer "not the worker host" off-box; queue and spend
+  panels read Supabase and work anywhere. No migration, no `worker.py` edit, no
+  worker restart to ship a monitoring change.
+- **Every alert pairs a count with a time.** "4 pending" is healthy mid-render
+  and a dead worker four hours later. Thresholds live in `alerts.ts` as named
+  exports and are tested, rather than scattered through JSX.
+- **Staleness by mtime, not by SHA.** A worker runs the code it booted with;
+  comparing the newest mtime in the entry script's directory against process
+  start catches the case the DEVLOG has hit twice ("the worker was running code
+  from 2026-08-17"). The repo SHA and commits-behind are shown alongside.
+- **`vm_stat`, not `os.freemem()`.** On macOS `freemem()` counts only free
+  pages and reads near-zero on a healthy box, which would light the memory
+  meter red permanently. Inactive/speculative/purgeable count as available.
+- **Read-only plus Restart** (owner's pick). Restarting mid-render abandons the
+  render and leaves the row `processing`; the confirm says so, and says it more
+  loudly when a job is actually in flight.
+
+**Issues**:
+- The two photo-status queues (`enhanced_status`, `outpaint_status`) live on the
+  photo rows, whose only timestamp is when the PHOTO was created. Age and
+  throughput there would be numbers that look right and mean nothing, so both
+  time columns are null and the columns render `n/a`.
+- Chrome extension dropped its tab group on every attempt, and the page is
+  behind an admin cookie anyway — no screenshot this session.
+
+**Resolution**: Verified against the live host and live Supabase rather than
+through the UI: `loadProcesses`/`loadSystem`/`tailLog` return correct readings
+for all three agents (render worker pid 28408, up 20m, 109 MB RSS, 12.2 MB log;
+seedance pid 61478; litellm pid 7265), and all nine queues + activity + spend
+load in 639 ms. `pnpm build` succeeds; the client chunk contains no reference to
+`SUPABASE_SERVICE_ROLE_KEY` and no `launchctl`. 547 tests pass, typecheck and
+lint clean. **The page itself has not been looked at by a human yet.**
+
+**Learnings**:
+- The hub found two real things on its first live run: both worker checkouts
+  are 5 commits behind `origin/main`, and two home-tour renders failed in the
+  last 24h with a PostgREST 400 out of `process_job`'s error handler
+  (`worker.py:957`, patching `listing_videos.status='error'`) — an error path
+  that itself errors, which is why the failure was invisible.
+- Alert rules are the part worth testing. "Does not warn about work that is
+  merely in progress" is the assertion that keeps a monitoring page usable.
+
+**Merge note (06:55 UTC)**: `origin/main` had moved 8 commits while this was
+on a branch — phase 74 landed the home-tour pipeline, which added three queues
+(`render_jobs` `step` in tag/plan, `listing_photo_clips`, `listing_tour_assemblies`)
+and changed the poll order. `QUEUES` went 9 → 13 and `claim_job`'s new
+`step=render` filter is mirrored, so a tag job is not counted as a render.
+`listing_photo_clips.cost_usd` joined the spend tables. This is the argument
+for keeping queues as data: catching up was one object per queue, and the
+diff shows exactly which queues the hub knows about.
+
+**Finding — a paid queue with no consumer**: `listing_photo_clips` accepts
+`engine='seedance'` (a forced regenerate from the home-tour table writes one),
+but `scripts/seedance-worker/worker.ts` polls `photo_clips` and `ai_tour_videos`
+only — it contains no reference to `listing_photo_clips`. Such a row waits
+forever. Listed in `QUEUES` as its own entry so it surfaces as a stalled queue
+rather than as a clip that silently never appears. Not fixed here: the
+home-tour pipeline is another agent's in-flight work (ws2). Owner informed.
+
+**Next steps**:
+- Owner to look at `/admin/pipeline/worker-health` and say what is missing.
+- **The process / system / log panels cannot work on percho.co** — Vercel has
+  no launchd, no `ps`, no log file. The owner uses production, not local dev,
+  so the "degrade gracefully" choice made on a wrong assumption of mine covers
+  only queues/spend/activity there. Making the rest work off-box needs the
+  heartbeat path: a `worker_heartbeats` table both workers write to, plus
+  shipping the last N log lines with it. Migration + `worker.py` + `worker.ts`
+  + a worker restart.
+- Decide who drains `listing_photo_clips` with `engine='seedance'`.
+- Investigate the `listing_videos` 400 the hub surfaced — separate from this work.
+- Both worker checkouts are behind `origin/main`; `~/Workspace/Percho` needs a
+  pull and both agents a restart before the next render reflects merged code.
 ## 2026-08-21 06:15 UTC — Phase 74: the home tour becomes a pipeline you can see into
 
 **Objective**: give the home tour the agentic management workflow the
