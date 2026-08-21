@@ -119,7 +119,9 @@ home-tour pipeline is another agent's in-flight work (ws2). Owner informed.
   only queues/spend/activity there. Making the rest work off-box needs the
   heartbeat path: a `worker_heartbeats` table both workers write to, plus
   shipping the last N log lines with it. Migration + `worker.py` + `worker.ts`
-  + a worker restart.
+  + a worker restart. **Owner decided 2026-08-21: not now.** Production shows
+  queues, spend and the activity feed; process, host and log inspection stay on
+  a local dev server. Do not build the heartbeat without asking again.
 - Decide who drains `listing_photo_clips` with `engine='seedance'`.
 - Investigate the `listing_videos` 400 the hub surfaced — separate from this work.
 - Both worker checkouts are behind `origin/main`; `~/Workspace/Percho` needs a
