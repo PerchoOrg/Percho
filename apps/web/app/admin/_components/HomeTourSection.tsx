@@ -329,7 +329,7 @@ export function HomeTourSection({
         const body = (await res.json()) as {
           ok?: boolean;
           error?: string;
-          result?: { error?: string; message?: string; notReady?: number };
+          result?: { error?: string; message?: string; notReady?: number; skipped?: string[] };
         };
         if (!res.ok || !body.ok) {
           setStepError(`${step}: ${body.error ?? `HTTP ${res.status}`}`);
@@ -340,6 +340,13 @@ export function HomeTourSection({
         // screen, not swallowed as a 200.
         if (body.result?.error) {
           setStepError(`${step}: ${body.result.message ?? body.result.error}`);
+          return rid;
+        }
+        // Not an error: one cut shipped and the other had nothing to build
+        // from. Said out loud so "Assemble finished" does not read as "both
+        // films exist".
+        if (step === 'assemble' && body.result?.message) {
+          setStepError(body.result.message);
           return rid;
         }
         if (step === 'assemble' && body.result?.notReady) {

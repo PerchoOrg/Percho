@@ -54,6 +54,20 @@ export async function runAssemble(
   const haveSomething = new Set((clipRows ?? []).map((c) => c.listing_photo_id));
   const notReady = shots.filter((s) => !haveSomething.has(s.photo_id)).length;
 
+  // A surface with NOTHING rendered is not a film with gaps — it is a film
+  // that does not exist. Staging it anyway queues a worker job that can only
+  // raise "need >=2 ready clips, got 0", which is what happened the first time
+  // Assemble ran for both canvases over an iOS-only clip library (owner
+  // 2026-08-21). Refuse here, where the message can name the surface and say
+  // what to do, instead of failing the run from inside the worker.
+  if (haveSomething.size === 0) {
+    return {
+      error: 'nothing_rendered',
+      surface,
+      message: `No ${surface} clips are rendered yet — run Render, which does both canvases.`,
+    };
+  }
+
   const ordered = shots.map((s) => ({
     photo_id: s.photo_id,
     sort_order: s.sort_order,
