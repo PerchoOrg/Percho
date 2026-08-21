@@ -254,20 +254,6 @@ export function HomeTourSection({
 
   const latestAssembly = assemblies.find((a) => a.surface === 'ios');
   const webAssembly = assemblies.find((a) => a.surface === 'web');
-  /**
-   * Both cuts, side by side (owner 2026-08-21).
-   *
-   * They were two panels STACKED, which was most of the page's height; then one
-   * player, which hid the web cut entirely; then a toggle, which made comparing
-   * them a click. Side by side is the shape that answers what the header is
-   * for — the two are the same film and the question is whether both look
-   * right. Portrait beside landscape fits on one line because neither needs to
-   * be large to answer that.
-   */
-  const cuts = [
-    { surface: 'ios' as const, label: 'iOS', canvas: IOS_CANVAS, assembly: latestAssembly },
-    { surface: 'web' as const, label: 'Web', canvas: WEB_CANVAS, assembly: webAssembly },
-  ];
 
   /** Tag has finished and Plan has not — the gate is what is blocking. */
   const awaitingReview = allTagged && plannedShots.length === 0;
@@ -568,66 +554,26 @@ export function HomeTourSection({
             <dt className="text-ink2">Run</dt>
             <dd className="text-ink">{run ? run.status : 'none yet'}</dd>
           </dl>
+
+          <div className="mt-4">
+            <CutPlayer
+              label="Web"
+              canvas={WEB_CANVAS}
+              assembly={webAssembly}
+              emptyHint="No web cut yet — Plan, Render, then Assemble."
+            />
+          </div>
         </div>
-        <div className="grid gap-3 sm:grid-cols-2">
-          {cuts.map(({ surface, label, canvas, assembly }) => {
-            const url =
-              assembly?.status === 'ready' && assembly.cf_stream_uid
-                ? streamIframeUrl(assembly.cf_stream_uid)
-                : null;
-            return (
-              <div key={surface} className="min-w-0">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="font-medium text-ink text-sm">{label}</div>
-                  {assembly && (
-                    <span
-                      className={`rounded-full px-2 py-0.5 font-medium text-[10px] ${
-                        assembly.status === 'ready'
-                          ? 'bg-green-100 text-green-700'
-                          : assembly.status === 'failed'
-                            ? 'bg-red-100 text-red-700'
-                            : 'bg-amber-100 text-amber-700'
-                      }`}
-                    >
-                      {assembly.status}
-                    </span>
-                  )}
-                </div>
-                {url ? (
-                  <>
-                    <div className="mt-2 overflow-hidden rounded-xl bg-black">
-                      <iframe
-                        title={`Home tour video (${surface})`}
-                        src={url}
-                        className="w-full"
-                        // The render canvas, not a fixed ratio — the iOS one is
-                        // 0.685 and a hardcoded 9:16 letterboxed the community
-                        // player when its canvas changed shape.
-                        style={{ aspectRatio: `${canvas.w} / ${canvas.h}` }}
-                        allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture"
-                        allowFullScreen
-                      />
-                    </div>
-                    <div className="mt-1 text-center text-[10px] text-ink2 tabular-nums">
-                      {new Date(assembly?.created_at ?? '').toLocaleString()}
-                    </div>
-                  </>
-                ) : (
-                  <div
-                    className="mt-2 flex items-center justify-center rounded-xl border border-line border-dashed px-3 text-center text-[11px] text-ink2"
-                    style={{ aspectRatio: `${canvas.w} / ${canvas.h}` }}
-                  >
-                    {!assembly
-                      ? `No ${label} cut yet — Plan, Render, then Assemble.`
-                      : assembly.status === 'failed'
-                        ? (assembly.error ?? 'Assembly failed.')
-                        : 'Assembling…'}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
+
+        {/* The 16:9 cut is wide and short, so it sits under the facts; the
+            portrait one is tall and fills the column beside them, which was
+            otherwise empty (owner 2026-08-21). Shape decides placement. */}
+        <CutPlayer
+          label="Home video"
+          canvas={IOS_CANVAS}
+          assembly={latestAssembly}
+          emptyHint="No home video yet — Plan, Render, then Assemble."
+        />
       </section>
 
       {/* 2 · The whole pipeline as one row of chips. */}
@@ -655,6 +601,83 @@ export function HomeTourSection({
           dropReasons={dropReasons}
         />
       </section>
+    </div>
+  );
+}
+
+/**
+ * One assembled cut, at the aspect of the canvas it was rendered for.
+ *
+ * Extracted so the header can place the two by SHAPE rather than side by side:
+ * the 16:9 web cut is wide and short and sits under the facts, the portrait iOS
+ * cut is tall and fills the column beside them (owner 2026-08-21: "put web
+ * under information, and home video on the right side, it is empty").
+ *
+ * The aspect comes from the canvas rather than a literal, for the reason the
+ * community player learned the hard way: a hardcoded 9:16 letterboxed it the
+ * day the canvas changed shape.
+ */
+function CutPlayer({
+  label,
+  canvas,
+  assembly,
+  emptyHint,
+}: {
+  label: string;
+  canvas: { w: number; h: number };
+  assembly: AssemblyStatus | undefined;
+  emptyHint: string;
+}) {
+  const url =
+    assembly?.status === 'ready' && assembly.cf_stream_uid
+      ? streamIframeUrl(assembly.cf_stream_uid)
+      : null;
+  return (
+    <div className="min-w-0">
+      <div className="flex items-center justify-between gap-2">
+        <div className="font-medium text-ink text-sm">{label}</div>
+        {assembly && (
+          <span
+            className={`rounded-full px-2 py-0.5 font-medium text-[10px] ${
+              assembly.status === 'ready'
+                ? 'bg-green-100 text-green-700'
+                : assembly.status === 'failed'
+                  ? 'bg-red-100 text-red-700'
+                  : 'bg-amber-100 text-amber-700'
+            }`}
+          >
+            {assembly.status}
+          </span>
+        )}
+      </div>
+      {url ? (
+        <>
+          <div className="mt-2 overflow-hidden rounded-xl bg-black">
+            <iframe
+              title={`Home tour video (${label})`}
+              src={url}
+              className="w-full"
+              style={{ aspectRatio: `${canvas.w} / ${canvas.h}` }}
+              allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+            />
+          </div>
+          <div className="mt-1 text-center text-[10px] text-ink2 tabular-nums">
+            {new Date(assembly?.created_at ?? '').toLocaleString()}
+          </div>
+        </>
+      ) : (
+        <div
+          className="mt-2 flex items-center justify-center rounded-xl border border-line border-dashed px-3 text-center text-[11px] text-ink2"
+          style={{ aspectRatio: `${canvas.w} / ${canvas.h}` }}
+        >
+          {!assembly
+            ? emptyHint
+            : assembly.status === 'failed'
+              ? (assembly.error ?? 'Assembly failed.')
+              : 'Assembling…'}
+        </div>
+      )}
     </div>
   );
 }
