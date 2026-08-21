@@ -60,6 +60,15 @@ interface PlanShot {
   prompt?: string | null;
 }
 
+interface AssemblyStatus {
+  id: string;
+  run_id: string | null;
+  status: string;
+  cf_stream_uid: string | null;
+  error: string | null;
+  created_at: string;
+}
+
 interface Run {
   id: string;
   step_results: Record<string, unknown>;
@@ -98,6 +107,7 @@ export function CommunityTourSection({
   const [runs, setRuns] = useState<Run[]>([]);
   const [running, setRunning] = useState<StepName | null>(null);
   const [stepError, setStepError] = useState<string | null>(null);
+  const [assemblies, setAssemblies] = useState<AssemblyStatus[]>([]);
   const router = useRouter();
 
   const loadRuns = useCallback(async () => {
@@ -111,6 +121,22 @@ export function CommunityTourSection({
     void loadRuns();
   }, [loadRuns]);
 
+  // Assemblies, because "did the step return" and "does the film exist" are
+  // different questions and the strip was answering the first one.
+  const loadAssemblies = useCallback(async () => {
+    const res = await fetch(`/api/admin/community-tour/${communityId}/assemblies`);
+    if (!res.ok) return;
+    setAssemblies(((await res.json()) as { assemblies: AssemblyStatus[] }).assemblies);
+  }, [communityId]);
+
+  useEffect(() => {
+    void loadAssemblies();
+    // The worker takes a minute or two; without a poll the chip would sit amber
+    // until something else happened to re-render the page.
+    const t = setInterval(() => void loadAssemblies(), 10_000);
+    return () => clearInterval(t);
+  }, [loadAssemblies]);
+
   const run = runs[0];
 
   // `research` writes under `agent_research`; every other step uses its name.
@@ -120,8 +146,39 @@ export function CommunityTourSection({
   const photosResult = run?.step_results.photos as { phase?: string } | undefined;
   const awaitingReview = photosResult?.phase === 'review';
 
+  /** Clips the current plan needs, and how many are actually rendered. */
+  const plannedShots = ((run?.step_results.photos as { shots?: PlanShot[] } | undefined)?.shots ??
+    []) as PlanShot[];
+  // READY, not merely present: the clips endpoint returns pending and failed
+  // rows too, and counting those as rendered would turn Render green the
+  // instant the queue was written — the same mistake as Assemble.
+  const readyPhotoIds = new Set(
+    clipRows
+      .filter((c) => [c.clip, c.depthflow_clip, c.kenburns_clip].some((k) => k?.status === 'ready'))
+      .map((c) => c.photo_id),
+  );
+  const shotsRendered = plannedShots.filter((sh) => readyPhotoIds.has(sh.photo_id)).length;
+
+  /** The newest assembly for the run on screen. */
+  const latestAssembly = assemblies.find((a) => a.run_id === run?.id) ?? assemblies[0];
+
   const stateOf = (s: StripStep | StepName): StepState => {
     if (running === s) return 'running';
+
+    // Both of these hand work to the render worker and return straight away,
+    // so their state is the state of what the worker produced — not of the
+    // request. Owner 2026-08-20: "just pulling the status and show it".
+    if (s === 'assemble') {
+      if (!latestAssembly) return 'idle';
+      if (latestAssembly.status === 'ready') return 'done';
+      if (latestAssembly.status === 'failed') return 'failed';
+      return 'waiting';
+    }
+    if (s === 'generate') {
+      if (plannedShots.length === 0) return 'idle';
+      if (shotsRendered < plannedShots.length) return 'waiting';
+      return 'done';
+    }
     // `review` has no server step, and `plan` writes back into the photos
     // result rather than a key of its own. Both are "done" once planning has
     // happened — planning is the only thing that can follow the review.
@@ -357,6 +414,19 @@ export function CommunityTourSection({
     ).map((d) => [d.photo_id, d.reason]),
   );
 
+  /** What a step is actually doing, when the chip alone would not say. */
+  const noteOf = (s: StripStep): string | undefined => {
+    if (s === 'generate' && plannedShots.length > 0 && shotsRendered < plannedShots.length) {
+      return `rendering ${shotsRendered}/${plannedShots.length} clips`;
+    }
+    if (s === 'assemble' && latestAssembly) {
+      if (latestAssembly.status === 'ready') return 'film ready';
+      if (latestAssembly.status === 'failed') return latestAssembly.error ?? 'failed';
+      return `${latestAssembly.status}…`;
+    }
+    return undefined;
+  };
+
   async function generateClip(
     photoId: string,
     engine?: string,
@@ -424,6 +494,7 @@ export function CommunityTourSection({
       {/* 2 · The whole pipeline as one row of chips. */}
       <TourStepStrip
         stateOf={stateOf}
+        noteOf={noteOf}
         running={running}
         awaitingReview={awaitingReview}
         onRun={(s) => void runStep(s)}

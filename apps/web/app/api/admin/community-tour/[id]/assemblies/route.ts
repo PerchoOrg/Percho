@@ -18,7 +18,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   const sb = createServiceClient();
   const { data, error } = await sb
     .from('tour_assemblies')
-    .select('id, status, cf_stream_uid, video_url, error, created_at')
+    .select('id, run_id, status, cf_stream_uid, video_url, error, created_at')
     .eq('community_id', id)
     .order('created_at', { ascending: false });
 
