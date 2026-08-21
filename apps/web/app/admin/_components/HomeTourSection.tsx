@@ -110,6 +110,28 @@ interface PlanShot {
 const IOS_CANVAS = { w: 1080, h: 1576 };
 const WEB_CANVAS = { w: 1920, h: 1080 };
 
+/**
+ * The header's geometry, derived from the surfaces rather than chosen.
+ *
+ * Owner 2026-08-21: "information width is the web width, information + web
+ * height is right ios height, ios height should be same as what it is on ios
+ * card."
+ *
+ * The last clause is the anchor. On the feed card the iOS cut fills the media
+ * block at the card's full width, and the card is `screenWidth - 52` — 341pt on
+ * an iPhone 15, the same reference the place card's geometry uses. So the
+ * portrait player is shown at exactly the size a buyer sees it, and everything
+ * else is solved from there: the left column is as tall as the phone and as
+ * wide as its own 16:9 cut.
+ */
+const CARD_WIDTH_PT = 341;
+const IOS_H = Math.round((CARD_WIDTH_PT * IOS_CANVAS.h) / IOS_CANVAS.w); // 498; width follows, 341
+const HEADER_GAP = 12;
+const WEB_H = 300;
+const WEB_W = Math.round((WEB_H * WEB_CANVAS.w) / WEB_CANVAS.h); // 533
+/** What is left for the facts once the web cut has its share of the column. */
+const INFO_H = IOS_H - WEB_H - HEADER_GAP; // 186
+
 /** "45s", "2m 10s" — short enough to sit under a chip. */
 function elapsedLabel(ms: number): string {
   if (!Number.isFinite(ms) || ms < 0) return '';
@@ -530,50 +552,48 @@ export function HomeTourSection({
   return (
     <div className="space-y-4">
       {/* 1 · Facts left, latest cut right. */}
-      <section className="grid gap-4 rounded-2xl border border-line bg-surface p-4 sm:grid-cols-2">
-        <div>
-          <h1 className="font-semibold text-2xl text-ink">{address}</h1>
-          <p className="mt-1 text-ink2 text-sm">
-            {where}
-            {zip ? ` ${zip}` : ''}
-            {agentName ? ` · ${agentName}` : ''}
-          </p>
-          <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
-            <dt className="text-ink2">Photos</dt>
-            <dd className="tabular-nums text-ink">{photos.length}</dd>
-            <dt className="text-ink2">Tagged</dt>
-            <dd className="tabular-nums text-ink">
-              {taggedCount}/{photos.length}
-            </dd>
-            <dt className="text-ink2">Planned shots</dt>
-            <dd className="tabular-nums text-ink">{plannedShots.length || '—'}</dd>
-            <dt className="text-ink2">Clips ready</dt>
-            <dd className="tabular-nums text-ink">
-              {plannedShots.length ? `${shotsRendered}/${plannedShots.length}` : '—'}
-            </dd>
-            <dt className="text-ink2">Run</dt>
-            <dd className="text-ink">{run ? run.status : 'none yet'}</dd>
-          </dl>
-
-          <div className="mt-4">
-            <CutPlayer
-              label="Web"
-              canvas={WEB_CANVAS}
-              assembly={webAssembly}
-              emptyHint="No web cut yet — Plan, Render, then Assemble."
-            />
+      <section className="flex flex-wrap items-start gap-3 rounded-2xl border border-line bg-surface p-4">
+        {/* Left: facts stacked on the 16:9 cut, together as tall as the phone. */}
+        <div className="flex flex-col" style={{ width: WEB_W, gap: HEADER_GAP }}>
+          <div style={{ minHeight: INFO_H }}>
+            <h1 className="font-semibold text-2xl text-ink">{address}</h1>
+            <p className="mt-1 text-ink2 text-sm">
+              {where}
+              {zip ? ` ${zip}` : ''}
+              {agentName ? ` · ${agentName}` : ''}
+            </p>
+            <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+              <dt className="text-ink2">Photos</dt>
+              <dd className="tabular-nums text-ink">{photos.length}</dd>
+              <dt className="text-ink2">Tagged</dt>
+              <dd className="tabular-nums text-ink">
+                {taggedCount}/{photos.length}
+              </dd>
+              <dt className="text-ink2">Planned shots</dt>
+              <dd className="tabular-nums text-ink">{plannedShots.length || '—'}</dd>
+              <dt className="text-ink2">Clips ready</dt>
+              <dd className="tabular-nums text-ink">
+                {plannedShots.length ? `${shotsRendered}/${plannedShots.length}` : '—'}
+              </dd>
+              <dt className="text-ink2">Run</dt>
+              <dd className="text-ink">{run ? run.status : 'none yet'}</dd>
+            </dl>
           </div>
+
+          <CutPlayer
+            canvas={WEB_CANVAS}
+            assembly={webAssembly}
+            emptyHint="No web cut yet — Plan, Render, then Assemble."
+            heightPx={WEB_H}
+          />
         </div>
 
-        {/* The 16:9 cut is wide and short, so it sits under the facts; the
-            portrait one is tall and fills the column beside them, which was
-            otherwise empty (owner 2026-08-21). Shape decides placement. */}
+        {/* Right: the phone cut, at the size the phone shows it. */}
         <CutPlayer
-          label="Home video"
           canvas={IOS_CANVAS}
           assembly={latestAssembly}
           emptyHint="No home video yet — Plan, Render, then Assemble."
-          maxHeightPx={420}
+          heightPx={IOS_H}
         />
       </section>
 
@@ -631,27 +651,28 @@ export function HomeTourSection({
  * shapes and for any column width, which a width cap would not.
  */
 function CutPlayer({
-  label,
   canvas,
   assembly,
   emptyHint,
-  maxHeightPx = 300,
+  heightPx = 300,
 }: {
-  label: string;
   canvas: { w: number; h: number };
   assembly: AssemblyStatus | undefined;
   emptyHint: string;
-  /** Tallest the player may be. Width follows from the canvas. */
-  maxHeightPx?: number;
+  /** The player's height. Width follows from the canvas. */
+  heightPx?: number;
 }) {
   const url =
     assembly?.status === 'ready' && assembly.cf_stream_uid
       ? streamIframeUrl(assembly.cf_stream_uid)
       : null;
+  const width = Math.round((heightPx * canvas.w) / canvas.h);
   return (
-    <div className="min-w-0">
-      <div className="flex items-center justify-between gap-2">
-        <div className="font-medium text-ink text-sm">{label}</div>
+    <div className="min-w-0" style={{ width }}>
+      {/* No caption: the shape says which surface it is, and the words were
+          only restating it (owner 2026-08-21: "remove the Web and Home video
+          text"). The status pill stays — that is not decoration. */}
+      <div className="flex items-center justify-end gap-2">
         {assembly && (
           <span
             className={`rounded-full px-2 py-0.5 font-medium text-[10px] ${
@@ -668,16 +689,9 @@ function CutPlayer({
       </div>
       {url ? (
         <>
-          <div
-            className="mx-auto mt-2 overflow-hidden rounded-xl bg-black"
-            style={{
-              maxHeight: maxHeightPx,
-              aspectRatio: `${canvas.w} / ${canvas.h}`,
-              width: `min(100%, ${Math.round(maxHeightPx * (canvas.w / canvas.h))}px)`,
-            }}
-          >
+          <div className="overflow-hidden rounded-xl bg-black" style={{ height: heightPx, width }}>
             <iframe
-              title={`Home tour video (${label})`}
+              title={`Home tour video, ${canvas.w}x${canvas.h}`}
               src={url}
               className="h-full w-full"
               style={{ aspectRatio: `${canvas.w} / ${canvas.h}` }}
@@ -691,12 +705,8 @@ function CutPlayer({
         </>
       ) : (
         <div
-          className="mt-2 mx-auto flex items-center justify-center rounded-xl border border-line border-dashed px-3 text-center text-[11px] text-ink2"
-          style={{
-            maxHeight: maxHeightPx,
-            aspectRatio: `${canvas.w} / ${canvas.h}`,
-            width: `min(100%, ${Math.round(maxHeightPx * (canvas.w / canvas.h))}px)`,
-          }}
+          className="flex items-center justify-center rounded-xl border border-line border-dashed px-3 text-center text-[11px] text-ink2"
+          style={{ height: heightPx, width }}
         >
           {!assembly
             ? emptyHint
