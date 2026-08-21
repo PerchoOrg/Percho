@@ -16,6 +16,56 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-21 10:20 UTC — Three workers, and the two bugs that only three could reveal
+
+**Objective**: owner — "we should have more workers?" then "yes set up 3
+workers", and separately the stored-dimensions idea from the last entry.
+
+**Why three.** Measured rather than guessed: the Mac mini is an M4 Pro, 14
+cores, 48 GB, and it sat **76–88% idle** through five samples while the worker
+was rendering — no ffmpeg or DepthFlow subprocess caught in any of them. A clip
+renders in **6.7–8.6 seconds**; median time from queued to ready was **72s**.
+That gap is download, upload and the 5-second poll. One process was leaving
+thirteen cores idle to wait on the network.
+
+Three rather than fourteen: DepthFlow carries torch and a depth model and is
+the memory risk (48 GB with 4.6 GB unused and the compressor already at 3 GB),
+ffmpeg is itself multi-threaded, and the win here is masking I/O, which
+saturates early. Set up as two more launchd plists with their own labels and
+logs.
+
+**Bug 1, mine, in `enqueueClips`.** The requeue path writes
+`status: 'pending'` — applied to a row already `processing`, it hands that clip
+to a second worker while the first is still rendering it. Both finish, both
+write the same storage path, the work is done twice. **Seven clips were
+rendered twice** before I caught it in the logs.
+
+Invisible with one worker, which cannot race itself. It became reachable the
+minute a second existed, and it would have been a DOUBLE BILL had a Seedance
+row ever gone stale mid-flight.
+
+Fixed by never touching an in-flight row: the render completes, and if its
+inputs really are stale the next generate requeues it from `ready`. One pass of
+latency against doing everything twice.
+
+Worth recording what was NOT the cause, because I suspected both: the atomic
+claim works (verified directly against production — a conditional PATCH on an
+already-claimed row returns zero rows), and `reclaim_stale_jobs` never fired at
+all.
+
+**Bug 2 / improvement: `listing_photos.width`/`height` are now written.** They
+have existed and been NULL for almost every row, which is the only reason
+planning had to download every photo — it needs the SHAPE and never opens the
+file. `_load_listing_photos(need_files=False)` reuses a stored size and the
+download path persists what it measures. Re-planning a 75-photo listing goes
+from about thirty seconds to about one.
+
+**Learnings**: concurrency did not introduce the requeue bug, it revealed one
+that had been latent since phase74. Every "safe because it is atomic" claim in
+this worker is now load-bearing in a way it was not this morning — the claims
+themselves check out, but code OUTSIDE the claim that writes `pending` is not
+covered by them, and `enqueueClips` was exactly that.
+
 ## 2026-08-21 09:55 UTC — A NameError shipped because nothing checks Python names
 
 **Objective**: the batch re-run failed on its first two listings with
