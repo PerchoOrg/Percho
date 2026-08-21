@@ -14,8 +14,8 @@
 import {
   type ListingRunRow,
   type ListingShot,
-  type Surface,
   SURFACE_CANVAS,
+  type Surface,
   type TourDb,
   mustWrite,
   plannedShots,
@@ -109,7 +109,14 @@ interface ClipRow {
 async function enqueueClips(
   sb: TourDb,
   run: ListingRunRow,
-  shots: Array<{ photo_id: string; engine: ClipEngine; move: string | null; duration_s: number; prompt: string | null; ai_generated: boolean }>,
+  shots: Array<{
+    photo_id: string;
+    engine: ClipEngine;
+    move: string | null;
+    duration_s: number;
+    prompt: string | null;
+    ai_generated: boolean;
+  }>,
   surface: Surface,
   force = false,
 ) {

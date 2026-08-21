@@ -18,6 +18,14 @@ Community films now open on the community. Its own amenities lead the film and r
 
 Aberdeen in Suwanee is the first community with this treatment: a 58-second film that opens on its clubhouse and takes in the pool, the courts and the grounds before heading out into Suwanee.
 
+### 2026-08-21
+- Home tour videos are now built the same way community films are — one stage at a time, with a stop for review in the middle. Photos are labelled, then you go through them and keep or drop each one, then the running order is worked out, then each shot is made, then the film is stitched
+- The running order is visible before anything is rendered. Which photos the film will use, what order they play in, how long each one lasts and how the camera moves across it — all of it can be read and changed while the film still costs nothing to redo
+- Photos can be approved or rejected for a home tour. A rejected photo is left out of the running order
+- Each shot is now made on its own, so a single room can be re-done without rebuilding the whole film
+- Home tour videos now fill the card properly on iPhone. They were being made square, which meant almost a third of every frame was cut off the sides on the feed card
+- An AI-generated opening or closing shot can be requested for a home tour. It's limited to those two positions
+
 ### 2026-08-20
 - Community films are now narrated. A voice walks you through the neighbourhood — what it has, what's nearby, what's worth the drive — instead of the film running on music alone
 - The narration is written against the film's own cut, so what you hear matches what you see. Each stretch of the film gets its own line, spoken while those shots are on screen
