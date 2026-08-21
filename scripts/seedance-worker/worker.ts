@@ -249,15 +249,32 @@ async function tick(): Promise<void> {
     }
   }
 
-  // ── photo_clips (per-photo cache, single-photo jobs) ──
+  // ── per-photo clip caches, community then home ──
+  //
+  // Community first, and the budget is SHARED: these are paid OpenRouter jobs
+  // and the per-tick cap exists to stop the worker running several minutes-long
+  // generations at once. Giving the home queue its own cap would quietly double
+  // the spend rate.
   if (done >= MAX_JOBS_PER_TICK) return;
-  await processPhotoClips();
+  done += await processClipQueue(COMMUNITY_CLIPS, MAX_JOBS_PER_TICK - done);
+  done += await processClipQueue(HOME_CLIPS, MAX_JOBS_PER_TICK - done);
   log('tick done', Date.now() - tickStart, 'ms', done, 'jobs');
 }
 
+/**
+ * A row from either clip table.
+ *
+ * The two carry the same job under different column names — `photo_clips`
+ * keys on `photo_id` into `poi_photos`, `listing_photo_clips` on
+ * `listing_photo_id` into `listing_photos` — so the fields that differ are
+ * optional here and normalised at the top of the loop rather than forking it.
+ */
 type PhotoClipRow = {
   id: string;
-  photo_id: string;
+  photo_id?: string;
+  listing_photo_id?: string;
+  /** Home-tour clips only: which canvas the clip is for. */
+  surface?: string;
   engine: string;
   duration_s: number;
   status: string;
@@ -280,13 +297,58 @@ const FALLBACK_CLIP_PROMPT =
   'Camera drifts forward very slowly and smoothly. ' +
   'No people appear in the frame. Storefront signage stays unchanged.';
 
-async function processPhotoClips(): Promise<void> {
-  // MONEY GUARD (owner 2026-08-17): photo_clips now carries depthflow/kenburns
+/**
+ * What differs between the two per-photo clip queues.
+ *
+ * Same idea as `apps/web/lib/poi/entity-scope.ts`: the pipeline is written
+ * once and parameterised by entity, because the alternative is two copies of a
+ * 130-line loop that bills real money and will drift.
+ */
+interface ClipScope {
+  /** Log prefix, so a line in the worker log says which queue it came from. */
+  readonly label: string;
+  readonly clipTable: 'photo_clips' | 'listing_photo_clips';
+  readonly photoTable: 'poi_photos' | 'listing_photos';
+  /** Where the finished mp4 lands in the AI_VIDEO_BUCKET. */
+  storagePathFor(photoId: string, row: PhotoClipRow): string;
+}
+
+const COMMUNITY_CLIPS: ClipScope = {
+  label: 'photo-clip',
+  clipTable: 'photo_clips',
+  photoTable: 'poi_photos',
+  storagePathFor: (photoId) => `clips/${photoId}.mp4`,
+};
+
+const HOME_CLIPS: ClipScope = {
+  label: 'home-clip',
+  clipTable: 'listing_photo_clips',
+  photoTable: 'listing_photos',
+  // Surface is in the path because the same photo has a different clip per
+  // canvas, and the two must not overwrite each other.
+  storagePathFor: (photoId, row) => `listing-clips/${photoId}-${row.surface ?? 'ios'}.mp4`,
+};
+
+/**
+ * Drain one per-photo clip queue.
+ *
+ * `listing_photo_clips` was added on 2026-08-21 with `engine='seedance'` in its
+ * CHECK and a Generate button wired to it, but nothing polling it — a home-tour
+ * hero clip sat pending forever. Found by the Worker hub, which listed the
+ * queue precisely so an undrained one would show up as stalled rather than as
+ * a clip that never appears.
+ *
+ * Returns how many jobs it advanced, so the paid budget is shared across both
+ * queues rather than doubled.
+ */
+async function processClipQueue(scope: ClipScope, budget: number): Promise<number> {
+  if (budget <= 0) return 0;
+  // MONEY GUARD (owner 2026-08-17): both clip tables carry depthflow/kenburns
   // rows too, consumed locally by render-worker. This worker must ONLY claim
   // seedance rows — submitting a depthflow/kenburns row here would bill a paid
   // OpenRouter job for something the local render service does free.
   const { data } = (await sb
-    .from('photo_clips')
+    .from(scope.clipTable)
     .select('*')
     .in('status', ['pending', 'processing'])
     .eq('engine', 'seedance')
@@ -295,15 +357,23 @@ async function processPhotoClips(): Promise<void> {
 
   let done = 0;
   for (const row of data ?? []) {
-    if (done >= MAX_JOBS_PER_TICK) break;
+    if (done >= budget) break;
+    // The two tables name the same reference differently — `photo_id` into
+    // poi_photos, `listing_photo_id` into listing_photos. Normalised once here
+    // rather than forking the loop.
+    const photoId = row.photo_id ?? row.listing_photo_id;
+    if (!photoId) {
+      log(scope.label, 'row', row.id, 'has no photo reference — skipping');
+      continue;
+    }
     try {
       if (row.status === 'pending') {
-        // Atomic claim. Status MUST be in photo_clips' CHECK set —
+        // Atomic claim. Status MUST be in the clip table's CHECK set —
         // ('pending','processing','ready','failed') — 'submitting' is NOT
         // allowed and the constraint violation silently returns 0 rows,
         // leaving the row pending forever (owner 2026-08-16).
         const { data: claimed } = (await sb
-          .from('photo_clips')
+          .from(scope.clipTable)
           .update({ status: 'processing', updated_at: new Date().toISOString() })
           .eq('id', row.id)
           .eq('status', 'pending')
@@ -311,9 +381,9 @@ async function processPhotoClips(): Promise<void> {
         if ((claimed ?? []).length === 0) continue;
 
         const { data: photo } = (await sb
-          .from('poi_photos')
+          .from(scope.photoTable)
           .select('id, storage_path, enhanced_path, enhanced_status')
-          .eq('id', row.photo_id)
+          .eq('id', photoId)
           .maybeSingle()) as {
           data: {
             id: string;
@@ -322,7 +392,7 @@ async function processPhotoClips(): Promise<void> {
             enhanced_status: string;
           } | null;
         };
-        if (!photo) throw new Error(`photo ${row.photo_id} not found`);
+        if (!photo) throw new Error(`photo ${photoId} not found`);
 
         // Original photo for seedance input (owner 2026-08-17) — enhanced
         // files feed DA+KB local renders, not the AI model.
@@ -343,7 +413,7 @@ async function processPhotoClips(): Promise<void> {
         });
 
         await sb
-          .from('photo_clips')
+          .from(scope.clipTable)
           .update({
             status: 'processing',
             provider_job_id: job.id,
@@ -351,16 +421,16 @@ async function processPhotoClips(): Promise<void> {
             updated_at: new Date().toISOString(),
           })
           .eq('id', row.id);
-        log('photo-clip submitted', row.id, 'job', job.id);
+        log(scope.label, 'submitted', row.id, 'job', job.id);
       } else {
         if (!row.polling_url) {
           const ageMs = Date.now() - new Date(row.updated_at).getTime();
           if (ageMs > STALE_PROCESSING_MS) {
             await sb
-              .from('photo_clips')
+              .from(scope.clipTable)
               .update({ status: 'pending', updated_at: new Date().toISOString() })
               .eq('id', row.id);
-            log('reset stale photo-clip -> pending', row.id);
+            log('reset stale', scope.label, '-> pending', row.id);
           }
           continue;
         }
@@ -368,21 +438,21 @@ async function processPhotoClips(): Promise<void> {
         if (state.status === 'processing') continue;
         if (state.status === 'failed') {
           await sb
-            .from('photo_clips')
+            .from(scope.clipTable)
             .update({ status: 'failed', error: state.error.slice(0, 500), updated_at: new Date().toISOString() })
             .eq('id', row.id);
-          log('photo-clip failed', row.id, state.error.slice(0, 200));
+          log(scope.label, 'failed', row.id, state.error.slice(0, 200));
           continue;
         }
         const mp4 = await downloadVideo(state.videoUrl);
-        const storagePath = `clips/${row.photo_id}.mp4`;
+        const storagePath = scope.storagePathFor(photoId, row);
         const transcode = await transcodeForStreaming(mp4);
         const { error: upErr } = await sb.storage
           .from(AI_VIDEO_BUCKET)
           .upload(storagePath, transcode, { contentType: 'video/mp4', upsert: true });
         if (upErr) throw new Error(`storage upload failed: ${(upErr as { message: string }).message}`);
         await sb
-          .from('photo_clips')
+          .from(scope.clipTable)
           .update({
             status: 'ready',
             storage_path: storagePath,
@@ -391,18 +461,19 @@ async function processPhotoClips(): Promise<void> {
             updated_at: new Date().toISOString(),
           })
           .eq('id', row.id);
-        log('photo-clip ready', row.id, storagePath);
+        log(scope.label, 'ready', row.id, storagePath);
       }
       done += 1;
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      log('photo-clip error', row.id, message.slice(0, 300));
+      log(scope.label, 'error', row.id, message.slice(0, 300));
       await sb
-        .from('photo_clips')
+        .from(scope.clipTable)
         .update({ status: 'failed', error: message.slice(0, 500), updated_at: new Date().toISOString() })
         .eq('id', row.id);
     }
   }
+  return done;
 }
 
 log('worker starting');

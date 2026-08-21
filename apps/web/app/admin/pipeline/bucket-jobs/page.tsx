@@ -53,6 +53,29 @@ type SeedanceRow = {
 
 /** Tour assemblies (final concat of approved photo clips) — render worker owns
  *  these; the community tour's Assemble step inserts the pending row. */
+type HomeClipRow = {
+  id: string;
+  engine: string | null;
+  surface: string | null;
+  status: string;
+  error: string | null;
+  provider_job_id: string | null;
+  storage_path: string | null;
+  created_at: string;
+  updated_at: string | null;
+};
+
+type HomeAssemblyRow = {
+  id: string;
+  listing_id: string;
+  surface: string | null;
+  status: string;
+  error: string | null;
+  cf_stream_uid: string | null;
+  created_at: string;
+  updated_at: string | null;
+};
+
 type AssemblyRow = {
   id: string;
   community_id: string | null;
@@ -93,7 +116,7 @@ export default async function BucketJobsPage({
 
   // Seedance worker rows (photo_clips + ai_tour_videos) — merged into the same
   // table with a type column so the worker's queue is visible on this page.
-  const [seedClips, seedTours, assemblies] = await Promise.all([
+  const [seedClips, seedTours, assemblies, homeClips, homeAssemblies] = await Promise.all([
     supabase
       .from('photo_clips')
       .select('id, engine, status, error, provider_job_id, storage_path, created_at, updated_at')
@@ -112,6 +135,23 @@ export default async function BucketJobsPage({
       .select('id, community_id, status, error, cf_stream_uid, created_at, updated_at')
       .order('updated_at', { ascending: false })
       .limit(100) as unknown as Promise<{ data: AssemblyRow[] | null }>,
+    // The home tour's two queues (2026-08-21). They were absent from this page
+    // for a day: the pipeline ran, produced clips and a film, and none of it
+    // appeared here, because the page enumerates queues by name and nobody
+    // added the new ones (owner: "running assembly now but dont see it on the
+    // video jobs").
+    supabase
+      .from('listing_photo_clips')
+      .select(
+        'id, listing_id:listing_photo_id, engine, surface, status, error, provider_job_id, storage_path, created_at, updated_at',
+      )
+      .order('updated_at', { ascending: false })
+      .limit(100) as unknown as Promise<{ data: HomeClipRow[] | null }>,
+    supabase
+      .from('listing_tour_assemblies')
+      .select('id, listing_id, surface, status, error, cf_stream_uid, created_at, updated_at')
+      .order('updated_at', { ascending: false })
+      .limit(100) as unknown as Promise<{ data: HomeAssemblyRow[] | null }>,
   ]);
 
   const renderRows: BucketJobRow[] = (data ?? []).map((r) => ({
@@ -167,6 +207,46 @@ export default async function BucketJobsPage({
     })),
   ].filter((r) => statusFilter === 'all' || r.status === statusFilter);
 
+  // Engine AND surface in the badge column: a home clip is only identified by
+  // both, and the two surfaces fail independently.
+  const homeClipRows: BucketJobRow[] = (homeClips.data ?? [])
+    .filter((r) => statusFilter === 'all' || r.status === statusFilter)
+    .map((r) => ({
+      id: r.id,
+      type: 'clip' as const,
+      scope: 'listing_photo_clips',
+      intent_bucket: `${r.engine ?? '?'} · ${r.surface ?? '?'}`,
+      status: r.status,
+      cf_stream_uid: null,
+      provider_job_id: r.provider_job_id,
+      storage_path: r.storage_path,
+      error: r.error,
+      created_at: r.created_at,
+      last_activity_at: r.updated_at ?? r.created_at,
+      community_id: null,
+      listing_id: null,
+      photoCount: 1,
+    }));
+
+  const homeAssemblyRows: BucketJobRow[] = (homeAssemblies.data ?? [])
+    .filter((r) => statusFilter === 'all' || r.status === statusFilter)
+    .map((r) => ({
+      id: r.id,
+      type: 'assembly' as const,
+      scope: 'listing_tour_assemblies',
+      intent_bucket: r.surface ?? null,
+      status: r.status,
+      cf_stream_uid: r.cf_stream_uid,
+      provider_job_id: null,
+      storage_path: null,
+      error: r.error,
+      created_at: r.created_at,
+      last_activity_at: r.updated_at ?? r.created_at,
+      community_id: null,
+      listing_id: r.listing_id,
+      photoCount: 0,
+    }));
+
   const assemblyRows: BucketJobRow[] = (assemblies.data ?? [])
     .filter((r) => statusFilter === 'all' || r.status === statusFilter)
     .map((r) => ({
@@ -188,9 +268,13 @@ export default async function BucketJobsPage({
 
   // Newest ACTIVITY first — a job you just re-ran belongs at the top even if
   // its row was created weeks ago.
-  const rows = [...renderRows, ...seedRows, ...assemblyRows].sort((a, b) =>
-    b.last_activity_at.localeCompare(a.last_activity_at),
-  );
+  const rows = [
+    ...renderRows,
+    ...seedRows,
+    ...assemblyRows,
+    ...homeClipRows,
+    ...homeAssemblyRows,
+  ].sort((a, b) => b.last_activity_at.localeCompare(a.last_activity_at));
 
   return (
     <div className="space-y-4">

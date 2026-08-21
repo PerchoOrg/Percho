@@ -218,12 +218,13 @@ export const QUEUES: QueueSpec[] = [
     hint: 'PAID — OpenRouter. Every row here costs money',
   },
   {
-    // NOTHING DRAINS THIS. `listing_photo_clips` rows can be written with
-    // engine='seedance' (a forced regenerate on the home-tour table), but
-    // `scripts/seedance-worker/worker.ts` polls `photo_clips` and
-    // `ai_tour_videos` only — it does not mention this table. A row here waits
-    // forever. Listed precisely so that shows up as a stalled queue instead of
-    // as a clip that never appears. Reported to the owner 2026-08-21.
+    // Drained since 2026-08-21. It was NOT when this entry was written: the
+    // seedance worker polled `photo_clips` and `ai_tour_videos` only, so a
+    // home-tour hero clip sat pending forever. Listing the queue here is what
+    // surfaced it — a stalled queue rather than a clip that never appears —
+    // and `processClipQueue` in the seedance worker is now parameterised over
+    // both tables. The two share one per-tick budget, so adding the queue did
+    // not double the spend rate.
     id: 'listing-seedance-clips',
     label: 'Home tour clips (Seedance)',
     worker: 'seedance',
@@ -236,7 +237,7 @@ export const QUEUES: QueueSpec[] = [
     failed: ['failed'],
     enqueued: 'created_at',
     completed: 'updated_at',
-    hint: 'PAID — and currently has no worker polling it',
+    hint: 'PAID — OpenRouter. Every row here costs money',
   },
   {
     id: 'ai-tour-videos',
