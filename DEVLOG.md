@@ -16,6 +16,49 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-21 08:05 UTC — "Assembly is stuck" was a 3.5-minute encode with no clock
+
+**Objective**: owner — "assembly is stuck."
+
+**What the data said**: it was not. Three pairs of assemblies, all `ready`, run
+status `ready`. The one he was watching was created 07:49:59 and finished
+07:53:31 — a 3m32s 1920x1080 encode. The chip showed `0/2 cuts ready` and held
+that string still for three and a half minutes, which is indistinguishable from
+a dead job.
+
+Thirteen assembly rows for one listing say the rest: he clicked Assemble about
+six times because nothing told him the first click had worked.
+
+**Three real faults behind that**:
+
+1. **The step route had no `maxDuration`.** The community route has carried
+   `300` since it started looping Gemini per photo. Phase75 doubled this
+   route's work — `generate` writes a clip row per shot PER SURFACE, `assemble`
+   runs twice — against the platform's 10s default. A cut-off request returns a
+   504 whose body is not JSON.
+
+2. **`runStep` had `try/finally` and no `catch`.** So `res.json()` throwing on
+   that 504 body escaped past `void runStep(...)` and the only symptom was that
+   nothing happened. Silence is the worst possible report: it is
+   indistinguishable from success, from a no-op, and from a hang.
+
+3. **No elapsed time on the `waiting` state.** The strip has shown a ticking
+   counter for `running` since phase73 precisely because "a 12px spinner on its
+   own does not read as this is working" — and then `waiting`, which is the
+   state that lasts MINUTES rather than seconds, got no counter at all.
+
+**Actions**: `maxDuration = 300` on the step route; a `catch` in `runStep` and
+in `generateClip` that puts the failure on screen and says the work may have
+half-happened; `${ready}/2 cuts ready · 2m 10s` on the Assemble chip, with a
+1s tick so the figure moves between the 10s polls; `.limit(20)` on the
+assemblies route, which the page re-fetches every ten seconds and which grows
+by two rows per click.
+
+**Learnings**: every one of these is the same omission — the UI could not
+distinguish working from broken, so the owner supplied the missing signal by
+clicking again. Twice today a report of "stuck" turned out to be "running, and
+nothing said so". Worth auditing the remaining `waiting` states for a clock.
+
 ## 2026-08-21 09:50 UTC — A killed worker no longer strands the job it was holding
 
 **Objective**: owner — "1 shot(s) have no clip yet — run Render first. - still

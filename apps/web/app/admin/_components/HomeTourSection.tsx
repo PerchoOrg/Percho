@@ -109,6 +109,14 @@ interface PlanShot {
  */
 const IOS_CANVAS = { w: 1080, h: 1576 };
 
+/** "45s", "2m 10s" — short enough to sit under a chip. */
+function elapsedLabel(ms: number): string {
+  if (!Number.isFinite(ms) || ms < 0) return '';
+  const total = Math.round(ms / 1000);
+  if (total < 60) return `${total}s`;
+  return `${Math.floor(total / 60)}m ${total % 60}s`;
+}
+
 export function HomeTourSection({
   listingId,
   address,
@@ -135,6 +143,14 @@ export function HomeTourSection({
   const [clipRows, setClipRows] = useState<ClipRow[]>([]);
   const [assemblies, setAssemblies] = useState<AssemblyStatus[]>([]);
   const [running, setRunning] = useState<StepName | null>(null);
+  /**
+   * Ticks once a second purely so elapsed times below stay live.
+   *
+   * The data polls every 10 seconds; without this the "assembling… 2m" figure
+   * would jump in 10-second steps and sit still in between, which is the thing
+   * it exists to disprove.
+   */
+  const [now, setNow] = useState(() => Date.now());
   const [stepError, setStepError] = useState<string | null>(null);
   const inFlight = useRef(false);
 
@@ -174,6 +190,11 @@ export function HomeTourSection({
     void loadClips();
     void loadAssemblies();
   }, [loadRuns, loadClips, loadAssemblies]);
+
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
 
   // Tag, plan, render and assemble all finish somewhere else — the render
   // worker's loop, not this request. Without a poll every chip would sit on
@@ -292,8 +313,20 @@ export function HomeTourSection({
     if (s === 'assemble' && (latestAssembly || webAssembly)) {
       const failed = [latestAssembly, webAssembly].find((a) => a?.status === 'failed');
       if (failed) return failed.error ?? 'failed';
-      const ready = [latestAssembly, webAssembly].filter((a) => a?.status === 'ready').length;
-      return ready === 2 ? 'iOS + web ready' : `${ready}/2 cuts ready`;
+      const both = [latestAssembly, webAssembly];
+      const ready = both.filter((a) => a?.status === 'ready').length;
+      if (ready === 2) return 'iOS + web ready';
+      // How long the unfinished cut has been going. A 16:9 encode runs for
+      // minutes, and "0/2 cuts ready" held still for three of them reads as a
+      // dead job (owner 2026-08-21: "assembly is stuck"). A number that moves
+      // is the difference between working and hung.
+      const oldest = both
+        .filter((a) => a && a.status !== 'ready')
+        .map((a) => new Date(a?.created_at ?? '').getTime())
+        .filter((t) => Number.isFinite(t))
+        .sort()[0];
+      const age = oldest ? elapsedLabel(now - oldest) : '';
+      return `${ready}/2 cuts ready${age ? ` · ${age}` : ''}`;
     }
     return undefined;
   };
@@ -395,6 +428,16 @@ export function HomeTourSection({
           );
         }
         return rid;
+      } catch (e) {
+        // Without this the chip simply stopped and said nothing. A step route
+        // that times out returns a 504 whose body is not JSON, so `res.json()`
+        // throws, the throw escapes past `void runStep(...)`, and the only
+        // symptom is that nothing happened (owner 2026-08-21: "assembly is
+        // stuck"). Silence is the worst possible report.
+        setStepError(
+          `${step}: ${e instanceof Error ? e.message : String(e)} — the request did not complete. Check whether the work started anyway before re-running.`,
+        );
+        return null;
       } finally {
         setRunning(null);
         await loadRuns();
@@ -423,17 +466,21 @@ export function HomeTourSection({
         if (!created.ok) return { ok: false, message: 'Could not create run' };
         rid = ((await created.json()) as { run: { id: string } }).run.id;
       }
-      const res = await fetch(`/api/admin/listings/${listingId}/runs/${rid}/step`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ step: 'generate', photoIds: [photoId], engine, surface: 'ios' }),
-      });
-      if (!res.ok) {
-        const body = (await res.json().catch(() => ({}))) as { error?: string };
-        return { ok: false, message: body.error ?? `HTTP ${res.status}` };
+      try {
+        const res = await fetch(`/api/admin/listings/${listingId}/runs/${rid}/step`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ step: 'generate', photoIds: [photoId], engine, surface: 'ios' }),
+        });
+        if (!res.ok) {
+          const body = (await res.json().catch(() => ({}))) as { error?: string };
+          return { ok: false, message: body.error ?? `HTTP ${res.status}` };
+        }
+        await loadClips();
+        return { ok: true };
+      } catch (e) {
+        return { ok: false, message: e instanceof Error ? e.message : String(e) };
       }
-      await loadClips();
-      return { ok: true };
     },
     [listingId, runs, loadClips],
   );

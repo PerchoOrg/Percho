@@ -25,7 +25,11 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     .from('listing_tour_assemblies')
     .select('id, run_id, surface, status, cf_stream_uid, video_url, error, created_at')
     .eq('listing_id', id)
-    .order('created_at', { ascending: false });
+    .order('created_at', { ascending: false })
+    // Every Assemble click writes two more rows and the page only ever reads
+    // the newest per surface. Unbounded, this grows for the life of the
+    // listing and is re-fetched every ten seconds.
+    .limit(20);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ assemblies: data ?? [] });
