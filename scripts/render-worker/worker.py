@@ -3126,17 +3126,20 @@ def process_tag_job(job: dict[str, Any]) -> None:
         if not records:
             raise RuntimeError("listing has no photos")
 
-        # Enhance EVERY photo that has not been through it, before a single
-        # clip is rendered (owner 2026-08-21: "for all we should by default
-        # enhance it, before doing da or kb rendering"). Queueing it here rather
-        # than from the admin table is the point — the table only queues what it
-        # can see, while it is open.
+        # A BACKSTOP, not the trigger.
+        #
+        # Photos join the enhance queue when they are imported — that is the
+        # column default since 20260821120000 (owner 2026-08-21: "enhancement
+        # should happen once the pics firstly are imported"). This catches the
+        # two cases that default cannot: a row that predates it and somehow
+        # stayed at `none`, and one whose enhancement FAILED and deserves
+        # another attempt before its listing is filmed.
         needs_enhance = [
             r["id"] for r in records
             if (r.get("enhanced_status") or "none") in ("none", "failed")
         ]
         if needs_enhance:
-            print(f"[tag {job_id}] queueing enhancement for {len(needs_enhance)} photo(s)", flush=True)
+            print(f"[tag {job_id}] re-queueing enhancement for {len(needs_enhance)} photo(s)", flush=True)
             for pid in needs_enhance:
                 try:
                     sb_patch(
