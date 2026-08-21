@@ -19,6 +19,7 @@ Community films now open on the community. Its own amenities lead the film and r
 Aberdeen in Suwanee is the first community with this treatment: a 58-second film that opens on its clubhouse and takes in the pool, the courts and the grounds before heading out into Suwanee.
 
 ### 2026-08-21
+- The iPhone feed now always plays the phone version of a home tour. In some cases it was falling back to the widescreen version, which is cut for a different shape
 - The iPhone feed now shows only homes and neighborhoods that have a video, so every card in the deck plays
 - When a photo doesn't make it into a home tour, the table now says exactly why — which room was already full and how many it holds, which better shot it duplicated, or that the film simply ran out of room — instead of listing every rule it might have broken
 - The phone cut and the widescreen cut now sit side by side on the home tour screen, so both can be checked at a glance

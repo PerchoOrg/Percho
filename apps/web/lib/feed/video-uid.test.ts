@@ -44,3 +44,30 @@ describe('video-uid', () => {
     expect(webVideoUid(null)).toBeNull();
   });
 });
+
+describe('the phone and the web never share a preference', () => {
+  it('picks a different render when both shapes exist', () => {
+    // The property that matters: a listing rendered for both surfaces must not
+    // hand the same file to both. On 2026-08-21 the phone was playing the web
+    // cut because a fallback in the feed route resolved the uid with the WEB
+    // preference; the two functions themselves were always right.
+    const both = {
+      cf_video_id: null,
+      cf_video_id_landscape: 'WEB',
+      cf_video_id_square: 'PHONE',
+    };
+    expect(mobileVideoUid(both)).toBe('PHONE');
+    expect(webVideoUid(both)).toBe('WEB');
+  });
+
+  it('still plays something when only one shape was rendered', () => {
+    // A one-surface listing is the common case for everything rendered before
+    // both canvases existed. Neither surface may go dark over it.
+    const phoneOnly = { cf_video_id: null, cf_video_id_landscape: null, cf_video_id_square: 'P' };
+    const webOnly = { cf_video_id: null, cf_video_id_landscape: 'W', cf_video_id_square: null };
+    expect(mobileVideoUid(phoneOnly)).toBe('P');
+    expect(webVideoUid(phoneOnly)).toBe('P');
+    expect(mobileVideoUid(webOnly)).toBe('W');
+    expect(webVideoUid(webOnly)).toBe('W');
+  });
+});

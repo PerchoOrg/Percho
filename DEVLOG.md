@@ -16,6 +16,41 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-21 09:35 UTC — The phone stops falling back to the web cut
+
+**Objective**: owner — "for listing, we still use web video instead of ios video
+on ios."
+
+**Cause**: `projectListing` in the mobile feed route resolved a listing's video
+as `verticalUid ?? videoUrlFor(card)`. The first is right — `fetchVerticalVideos`
+uses the phone's preference order. The second was not: `card.hero.cfVideoId` is
+built by `lib/feed/browse-cards.ts` with `webVideoUid`, which prefers the wide
+web render. So whenever the fallback fired, the phone played the web cut.
+
+The two preference functions were never wrong. `video-uid.ts` was written in
+August precisely so each surface would pick the shape it displays, and it does.
+The bug was a THIRD path that went around it — a browse-card field carrying a
+web-resolved uid into a mobile response.
+
+**Actions**: `videoUrlFor` becomes `phoneVideoUrlFor` and returns only
+`externalUrl`, which is shape-agnostic (a demo listing ships one file and there
+is no other render to prefer). Any Cloudflare uid must now come from the phone's
+own resolver. Two tests pin the property: with both shapes rendered the two
+surfaces must not resolve to the same file, and with only one shape rendered
+neither surface may go dark.
+
+**Learnings**: `video-uid.ts` exists because this same fallback used to live
+inline at five call sites, and its own header says so. Centralising the rule did
+not stop a new caller reading a field that had already applied the wrong one —
+the fix removes the field from the mobile path rather than adding a sixth
+place that remembers.
+
+**Deferred**: the owner does not want the column naming discussed yet ("i dont
+understand the square thing, lets review that later"). Worth revisiting: the
+column is called `cf_video_id_square` and has held a 1080x1576 asset since
+2026-08-21, so its name has been a lie for a day. Renaming it touches every
+reader; noted, not done.
+
 ## 2026-08-21 09:20 UTC — The header places the two cuts by shape
 
 **Objective**: owner — "admin home tour page, put web under information, and
