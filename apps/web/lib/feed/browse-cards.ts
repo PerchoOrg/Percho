@@ -309,20 +309,30 @@ async function assembleCards(
     // Synthesise a placeholder agent shape from external_agent_name / office
     // so downstream card rendering stays identical; caption card decides
     // whether to link or render plain text based on `agent.isExternal`.
-    const isExternal = !l.agent_id;
     const aid = l.agent_id;
-    const agent = aid
-      ? agentsById.get(aid)
-      : ({
-          id: '',
-          slug: '',
-          name: l.external_agent_name ?? 'FMLS Agent',
-          email: null,
-          phone: l.external_agent_phone,
-          office: l.external_office,
-          isExternal: true,
-        } as AgentRow & { office: string | null; isExternal: true });
-    if (!agent) continue;
+    const placeholderAgent = {
+      id: '',
+      slug: '',
+      name: l.external_agent_name ?? 'FMLS Agent',
+      email: null,
+      phone: l.external_agent_phone,
+      office: l.external_office,
+      isExternal: true,
+    } as AgentRow & { office: string | null; isExternal: true };
+    // A missing agent no longer costs the listing its card.
+    //
+    // The null case was already handled — external FMLS imports have no
+    // agent_id and get the placeholder above. What was not handled is an
+    // agent_id that points at a row this query did not return: deleted, or
+    // filtered by a policy. That fell to `if (!agent) continue`, and a listing
+    // with photos, a video and an active status vanished from the feed with
+    // nothing logged. Owner 2026-08-21: "still show if agent is missing".
+    //
+    // The card carries the agent's name and contact and nothing else depends
+    // on it, so the placeholder degrades one line of the caption rather than
+    // the whole card.
+    const agent = (aid ? agentsById.get(aid) : undefined) ?? placeholderAgent;
+    const isExternal = !aid || !agentsById.has(aid);
     if (!hero && !heroPhoto) continue;
 
     const community = l.community_id ? (communitiesById.get(l.community_id) ?? null) : null;
