@@ -33,11 +33,23 @@ const GENERATE_URL = (model: string) =>
 /**
  * Narration covers this share of a section's runtime, not all of it.
  *
- * Wall-to-wall speech over a 90-second tour is exhausting and leaves the
- * pictures nothing to say. The gap also absorbs the difference between the
- * synthesiser's pace and the estimate below.
+ * Some air is right — wall-to-wall speech is exhausting and leaves the pictures
+ * nothing to say — but the first cut came back 46% silent, with a 15.9-second
+ * hole after the opening line. Owner 2026-08-20: "you can leave some pause, but
+ * you definitely dont want 50% pause during the video."
+ *
+ * Raising this alone would not have fixed it: the opening section allowed 44
+ * words and the model wrote 25. The cap was never the constraint, so the prompt
+ * now carries a FLOOR as well, and asks long sections for more than one
+ * sentence.
  */
-export const SECTION_FILL = 0.72;
+export const SECTION_FILL = 0.85;
+
+/** A line must use at least this much of its section's budget. */
+export const SECTION_MIN_FILL = 0.7;
+
+/** Past this, one sentence cannot carry the section and the prompt says so. */
+const MULTI_SENTENCE_SECONDS = 11;
 
 /** A section too short to say anything useful in gets no line at all. */
 export const MIN_SECTION_SECONDS = 2.5;
@@ -136,10 +148,15 @@ export interface NarrationContext {
 export function buildNarrationPrompt(ctx: NarrationContext): string {
   const where = [ctx.city, ctx.state].filter(Boolean).join(', ');
   const timeline = ctx.sections
-    .map(
-      (s) =>
-        `  ${s.index}. ${s.startS.toFixed(1)}–${s.endS.toFixed(1)}s (${(s.endS - s.startS).toFixed(1)}s, max ${s.wordBudget} words) — ${s.bucket}: ${s.places.join(', ') || '(unnamed)'}`,
-    )
+    .map((s) => {
+      const secs = s.endS - s.startS;
+      const min = Math.floor(s.wordBudget * SECTION_MIN_FILL);
+      const ask =
+        secs >= MULTI_SENTENCE_SECONDS
+          ? ` — needs ${secs >= 20 ? 'three sentences' : 'two sentences'}`
+          : '';
+      return `  ${s.index}. ${s.startS.toFixed(1)}–${s.endS.toFixed(1)}s (${secs.toFixed(1)}s, ${min}-${s.wordBudget} words${ask}) — ${s.bucket}: ${s.places.join(', ') || '(unnamed)'}`;
+    })
     .join('\n');
 
   return `Write the spoken narration for a ${ctx.sections.at(-1)?.endS.toFixed(0)}-second video tour of ${ctx.communityName}${where ? `, ${where}` : ''}.
@@ -163,7 +180,13 @@ If a line still works with the place name swapped out, it is not about this
 place. Rewrite it.
 
 RULES
-- Respect each section's word cap. Under is fine; over is not.
+- Every section has a word RANGE. Land inside it. Coming in under the minimum
+  is the most common way this goes wrong: a 28-second stretch given one short
+  sentence leaves fifteen seconds of silence over moving pictures, which reads
+  as a fault rather than as restraint. Over the cap is also wrong — the line
+  then runs into the next section's footage.
+- A long section is several shots of several places. Say something about more
+  than one of them.
 - Open from what makes this community specific — but do NOT quote the
   researcher's sentence back. It is a note to you, not a line to read out. And
   never open "<Name> sits in <City>": that sentence fits every community,

@@ -38,6 +38,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+import numpy as np
 import requests
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -2096,13 +2097,46 @@ def _label_font() -> str | None:
     return next((f for f in LABEL_FONTS if os.path.exists(f)), None)
 
 
-# 35% black behind the text. Low, because legibility is carried by the glyph
-# shadow below; the scrim only has to stop a blown-out sky from swallowing it.
-SCRIM_ALPHA = 88
+# The luma the place name should sit on, whatever the photo behind it.
+#
+# A FIXED scrim strength cannot do this, and two attempts proved it. A hard
+# panel was a grey slab on a bright shot and invisible on a dark one; replacing
+# it with a constant-alpha gradient just made the slab a rectangle — owner
+# 2026-08-20, on the second attempt: "the location area has a rectangle dark",
+# and the flashing "is gone starting aberdeen pool pictures", which is exactly
+# where Aberdeen stops being bright. So the strength is measured per clip, the
+# same way the end card does it.
+LABEL_TARGET_LUMA = 78
+
+# Never fully transparent, never a blackout. These bound the PEAK, which the
+# text never sees in full — see the compensation below.
+LABEL_SCRIM_MIN, LABEL_SCRIM_MAX = 0.06, 0.88
+
+# A radial falloff averages 0.72 of its peak over the strip the type occupies
+# (measured on the actual ramp). Without dividing by that, the scrim lands well
+# short of the target and a bright shot still reads brighter than a dark one:
+# 104 vs 90 on the first calibration, against 78 asked for.
+LABEL_FALLOFF_MEAN = 0.72
+
+# Where the first line's optical centre sits, as a fraction of frame height.
+#
+# Matched to the COMMUNITY pill on the feed card, which the video plays inside:
+# `badgeSlot` is top 12 with 7pt padding around 9.5pt type, so its centre is
+# 24.75pt below the card's top edge. The card is `screenWidth - 52` wide, so at
+# 1080 across that lands between 71px (Pro Max) and 83px (SE) — 78 in the
+# middle. Owner 2026-08-20: "the location should be on the same height as
+# community tag on the card."
+LABEL_FIRST_LINE_CENTRE = 78 / 1576
 
 
 def _render_label_png(
-    name: str, distance: str, w: int, h: int, font_path: str, dest: Path
+    name: str,
+    distance: str,
+    w: int,
+    h: int,
+    font_path: str,
+    dest: Path,
+    backdrop_luma: float | None = None,
 ) -> None:
     """One transparent full-frame PNG carrying a place card.
 
@@ -2130,7 +2164,6 @@ def _render_label_png(
     from PIL import Image, ImageChops, ImageDraw, ImageFilter, ImageFont
 
     inset_x = round(w * 0.055)
-    inset_y = round(h * 0.055)
     max_text_w = round(w * 0.52)
 
     img = Image.new("RGBA", (w, h), (0, 0, 0, 0))
@@ -2152,6 +2185,9 @@ def _render_label_png(
         size -= 2
     line_h = round(size * 1.18)
     sub_size = max(14, round(size * 0.70))
+    # `top` is the ascender line for anchor "ra"; the optical centre of the
+    # first line sits about 0.36 of the type size below it.
+    inset_y = max(8, round(h * LABEL_FIRST_LINE_CENTRE - size * 0.36))
     sub_font = ImageFont.truetype(font_path, sub_size)
 
     gap = round(size * 0.24) if distance else 0
@@ -2163,42 +2199,33 @@ def _render_label_png(
 
     right, top = w - inset_x, inset_y
 
-    # A CORNER SCRIM, not a panel.
+    # A CORNER SCRIM WITH NO FLAT PART.
     #
-    # The card used to sit on a 38%-black rounded rectangle, which made its
-    # legibility a function of the photo behind it. On the bright shots — a
-    # white sky, the clubhouse ceiling — 38% black over luma 240 lands at 149
-    # and white text on mid-grey barely reads; on the dark shots the same panel
-    # vanishes and the text is crisp. Cutting between the two every two seconds
-    # is what the owner saw as the label "flashing for the first few photos"
-    # (2026-08-20). It was never absent — it was washing in and out.
+    # Two earlier attempts failed the same way: a rounded panel, then a gradient
+    # that held FULL strength across the whole text block before easing out. The
+    # second is still a shape — a uniform dark rectangle in the top right, plain
+    # on every bright shot and gone on every dark one, which is precisely the
+    # flashing it was meant to cure.
     #
-    # A gradient has no shape to notice: invisible on a dark photo (dark over
-    # dark), doing the work on a bright one, so the card looks the same on every
-    # shot. Two things make it a corner treatment rather than a band across the
-    # frame: it holds full strength only down to just past the text and then
-    # eases out, and it fades away to the LEFT, where there is no text to
-    # protect and no reason to dim the picture.
-    #
-    # Built by multiplying a column by a row rather than per-pixel: the frame is
-    # 1.7M pixels and there is one of these per clip.
-    hold = top + block_h + round(size * 0.3)
-    fade = max(1, round(block_h * 1.5))
-    col = Image.new("L", (1, h), 0)
-    for y in range(h):
-        if y <= hold:
-            v = 1.0
-        elif y < hold + fade:
-            v = (1 - (y - hold) / fade) ** 2
-        else:
-            break
-        col.putpixel((0, y), round(SCRIM_ALPHA * v))
-    x0, x1 = round(w * 0.16), round(w * 0.42)
-    row = Image.new("L", (w, 1), 0)
-    for x in range(x0, w):
-        row.putpixel((x, 0), 255 if x > x1 else round(255 * ((x - x0) / (x1 - x0)) ** 1.4))
+    # This is a radial falloff from the corner with no plateau anywhere, so
+    # there is no edge to see at any strength; and the strength itself is
+    # measured from the clip it will sit on, so the card reads the same over a
+    # white ceiling and over dark pines.
+    if backdrop_luma is None:
+        alpha = 0.34
+    else:
+        need = (backdrop_luma - LABEL_TARGET_LUMA) / max(backdrop_luma, 1.0)
+        peak = need / LABEL_FALLOFF_MEAN
+        alpha = min(LABEL_SCRIM_MAX, max(LABEL_SCRIM_MIN, peak))
+
+    # numpy, not a per-pixel loop: this is 1080x1576 once per clip.
+    ys = np.arange(h, dtype=np.float32)[:, None] / (h * 0.40)
+    xs = (w - np.arange(w, dtype=np.float32)[None, :]) / (w * 1.15)
+    d = np.sqrt(xs * xs + ys * ys)
+    t = np.clip(1.0 - d, 0.0, 1.0)
+    ramp = (alpha * 255.0) * (t * t * (3.0 - 2.0 * t))  # smoothstep
     scrim = Image.new("RGBA", (w, h), (0, 0, 0, 255))
-    scrim.putalpha(ImageChops.multiply(col.resize((w, h)), row.resize((w, h))))
+    scrim.putalpha(Image.fromarray(ramp.astype(np.uint8), mode="L"))
     img = Image.alpha_composite(img, scrim)
 
     # A soft shadow under the glyphs, for the shots a scrim alone cannot hold —
@@ -2244,6 +2271,31 @@ def _wrap_to_width(draw: Any, text: str, font: Any, max_w: float) -> list[str]:
     return lines or [text]
 
 
+def _clip_label_luma(clip: Path, w: int, h: int, workdir: Path, tag: int) -> float | None:
+    """Mean luma of the region the place card will occupy, in THIS clip.
+
+    One frame a third of the way in, cropped to the top-right where the card
+    goes and scaled to the canvas first so the crop means the same thing for a
+    Seedance clip (496x864) as for a local render. Returns None on any failure —
+    the caller then falls back to a fixed scrim rather than skipping the label.
+    """
+    probe = workdir / f"lumaprobe_{tag:02d}.png"
+    try:
+        subprocess.run(
+            ["ffmpeg", "-y", "-v", "error", "-ss", "0.8", "-i", str(clip),
+             "-frames:v", "1",
+             "-vf", f"scale={w}:{h}:force_original_aspect_ratio=increase,"
+                    f"crop={w}:{h},crop={round(w * 0.55)}:{round(h * 0.14)}:"
+                    f"{round(w * 0.42)}:{round(h * 0.03)}",
+             str(probe)],
+            check=True, capture_output=True, timeout=30,
+        )
+        from PIL import Image as _Image
+        return float(np.asarray(_Image.open(probe).convert("L"), dtype=np.float32).mean())
+    except Exception:
+        return None
+
+
 def _label_overlay(
     labels: list[tuple[str, str]],
     durs: list[float],
@@ -2253,6 +2305,7 @@ def _label_overlay(
     workdir: Path,
     first_input_index: int,
     prev: str,
+    clip_paths: list[Path] | None = None,
 ) -> tuple[list[str], list[str], str]:
     """PNG inputs, overlay filters, and the label the chain now ends on.
 
@@ -2292,7 +2345,12 @@ def _label_overlay(
         if end - start < 0.5:  # too short to read; let the previous card hold
             continue
         png = workdir / f"label_{i:02d}.png"
-        _render_label_png(name, distance, w, h, font, png)
+        luma = (
+            _clip_label_luma(clip_paths[i], w, h, workdir, i)
+            if clip_paths and i < len(clip_paths)
+            else None
+        )
+        _render_label_png(name, distance, w, h, font, png, backdrop_luma=luma)
         inputs.extend(["-i", str(png)])
         out = f"[lo{i}]"
         steps.append(f"[{idx}:v]format=rgba[lb{i}]")
@@ -2528,7 +2586,8 @@ def process_assembly(row: dict[str, Any]) -> None:
         # on-screen text at all (2026-08-01) — there the subject is one house
         # for the whole film, so a caption band interrupts rather than informs.
         label_inputs, label_steps, prev = _label_overlay(
-            clip_labels, durs, offsets, xfade, scale_to, workdir, len(clip_paths), prev
+            clip_labels, durs, offsets, xfade, scale_to, workdir, len(clip_paths), prev,
+            clip_paths,
         )
         filters.extend(label_steps)
 
