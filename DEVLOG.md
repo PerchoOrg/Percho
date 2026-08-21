@@ -16,6 +16,58 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-21 07:50 UTC — Hub layout: basics + cost top left, transitions top right
+
+**Objective**: Owner, reading the one-table version: "what is left bottom
+section? move Recent transitions to top right, and make top left as some basic
+information, including that cost, btw what is the cost here?"
+
+**Actions**:
+- `WorkerHub.tsx`: the one-line status bar became `BasicInfo` (top left) —
+  verdict, Live/Pause/Refresh, hostname/arch/cores/uptime, load + memory + disk
+  as meters, ffmpeg and scratch counts, host-level alerts — with `SpendBlock`
+  under it. `ActivityPanel` moved to top right and lost the spend sparkline it
+  had been carrying. The table sits under both; `LogViewer` is last, full width.
+- `activity.ts`: `SpendSnapshot.bySource` — per-queue split, biggest first.
+  `summarise` takes an optional `source` per row and counts `jobs7d` from
+  in-window rows only (it was `rows.length`, which included rows the window had
+  already dropped). Three tests.
+- `LogViewer`: header now reads "Worker log", and the unavailable state says
+  what the panel is and why there is no file to read.
+
+**Decisions**:
+- **The left-bottom panel was the log, and the owner did not recognise it.**
+  That is the finding, not the layout request: on percho.co it renders as a box
+  saying "Not the worker host", which reads as broken rather than as
+  inapplicable. Fixed by naming it and explaining the condition in place.
+- **The cost breakdown is the answer to "what is the cost here?"** written into
+  the UI instead of only into this log. The block now says "billed by
+  OpenRouter · local renders are free", labels the day as UTC, and lists each
+  paid queue with its job count.
+- `jobs7d` counting out-of-window rows was a real bug: `loadSpend` fetches with
+  a 7-day filter so it never showed, but `summarise` is the tested unit and its
+  contract was wrong.
+
+**Learnings**:
+- `cost_usd` is `usage.cost` off the provider's response
+  (`lib/ai/openrouter-video.ts:171`) — what OpenRouter says it billed, not a
+  rate we multiply out. Local Ken Burns and DepthFlow renders never write one.
+  Live figures at time of writing: 7 days $2.4012 over 35 jobs — Community
+  clips 33/$2.1012 (4s clip typically $0.0568, max $0.3667), AI tour videos
+  1/$0.2432 (8s), Home tour clips 1/$0.0568.
+
+**Issues**: still no screenshot — the Chrome extension navigates but cannot
+capture (`Frame with ID 0 is showing error page`), most likely missing site
+permission for `localhost`, and the page is behind an admin cookie the
+automated browser does not carry. Verified structurally: 586 tests, typecheck,
+lint, production build, and `loadSpend` run against live data — the breakdown
+matches the figures above.
+
+**Next steps**:
+- Owner to confirm the arrangement.
+- Granting the Chrome extension `localhost` permission would let layout changes
+  be verified visually instead of structurally.
+
 ## 2026-08-21 08:35 UTC — Assemble skips a canvas that was never rendered
 
 **Objective**: owner hit `RuntimeError: need >=2 ready clips, got 0` on
