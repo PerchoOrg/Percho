@@ -148,6 +148,51 @@ describe('paletteForCommunity', () => {
   });
 });
 
+describe('incumbency', () => {
+  it('keeps what the community already shipped with when the library grows', () => {
+    // Approving five tracks re-scored all six test communities before this
+    // existed — the seed picks an index, and a longer list moves every index.
+    const grown = [
+      ...beds,
+      ...['x', 'y', 'z', 'p', 'q'].map((n) => track(`acoustic/${n}.mp3`, 'bed')),
+    ];
+    const before = selectBgm({ candidates: beds, vibe: 'acoustic', role: 'bed', seed: 'abc' })!;
+    const after = selectBgm({
+      candidates: grown,
+      vibe: 'acoustic',
+      role: 'bed',
+      seed: 'abc',
+      incumbent: before.path,
+    })!;
+    expect(after.path).toBe(before.path);
+  });
+
+  it('lets go of a track that is no longer a candidate', () => {
+    // Rejected, deleted, or re-tagged as a lead: the way out is the review.
+    const got = selectBgm({
+      candidates: beds,
+      vibe: 'acoustic',
+      role: 'bed',
+      seed: 'abc',
+      incumbent: 'acoustic/deleted.mp3',
+    });
+    expect(got).not.toBeNull();
+    expect(got!.path).not.toBe('acoustic/deleted.mp3');
+  });
+
+  it('will not hold on to a lead track for a narrated film', () => {
+    const mixed = [track('acoustic/loud.mp3', 'lead'), ...beds];
+    const got = selectBgm({
+      candidates: mixed,
+      vibe: 'acoustic',
+      role: 'bed',
+      seed: 'abc',
+      incumbent: 'acoustic/loud.mp3',
+    })!;
+    expect(got.meta?.role).toBe('bed');
+  });
+});
+
 describe('energy', () => {
   it('prefers the asked-for energy within the palette', () => {
     const mixed = [
