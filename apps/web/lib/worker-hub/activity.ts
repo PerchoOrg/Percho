@@ -58,12 +58,28 @@ const FEED_SOURCES: FeedSource[] = [
     detail: (r) => `community ${short(r.community_id)}`,
   },
   {
-    source: 'Photo clips',
+    source: 'Community clips',
     table: 'photo_clips',
     select: 'id,status,updated_at,error,engine,move,cost_usd',
     timeColumn: 'updated_at',
     filters: {},
     detail: (r) => `${str(r.engine) ?? '—'}${r.move ? ` · ${str(r.move)}` : ''}`,
+  },
+  {
+    source: 'Home tour clips',
+    table: 'listing_photo_clips',
+    select: 'id,status,updated_at,error,engine,move,surface',
+    timeColumn: 'updated_at',
+    filters: {},
+    detail: (r) => `${str(r.engine) ?? '—'} · ${str(r.surface) ?? '—'}`,
+  },
+  {
+    source: 'Home tour assemblies',
+    table: 'listing_tour_assemblies',
+    select: 'id,status,updated_at,error,listing_id,surface',
+    timeColumn: 'updated_at',
+    filters: {},
+    detail: (r) => `listing ${short(r.listing_id)} · ${str(r.surface) ?? '—'}`,
   },
   {
     source: 'AI tour videos',
@@ -117,7 +133,12 @@ export interface SpendSnapshot {
   jobs7d: number;
 }
 
-const SPEND_TABLES = ['photo_clips', 'ai_tour_videos'] as const;
+/**
+ * Every table with a `cost_usd`. `listing_photo_clips` joined the list in phase
+ * 74 — a paid home-tour clip bills the same provider as a paid community one,
+ * so leaving it out would under-report the week.
+ */
+const SPEND_TABLES = ['photo_clips', 'listing_photo_clips', 'ai_tour_videos'] as const;
 const SPEND_SAMPLE = 1000;
 
 /** UTC day key. Days are the unit the owner reasons about spend in. */

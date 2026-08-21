@@ -1,17 +1,19 @@
 /**
  * The queues the two local workers drain, as data.
  *
- * There is no jobs table. There are eight independent queues in six tables,
- * each with its own status vocabulary, and the render worker polls them in a
- * fixed priority order (`main()` in `scripts/render-worker/worker.py`):
- * listing renders → bucket videos → assemblies → photo clips → outpaint →
- * enhance. The seedance worker drains the two paid queues. `order` below is
- * that polling order, so the hub shows the pipeline in the sequence the worker
- * actually walks it — a queue high in the list starves everything under it.
+ * There is no jobs table. There are thirteen independent queues across nine
+ * tables, each with its own status vocabulary, and the render worker polls
+ * them in a fixed priority order (`main()` in
+ * `scripts/render-worker/worker.py`). The order below IS that order, so the
+ * hub shows the pipeline in the sequence the worker actually walks it — a
+ * queue high in the list starves everything under it, which is a diagnosis
+ * you cannot reach from counts alone.
  *
- * Keeping this a list rather than eight hand-written loaders is what makes
+ * Keeping this a list rather than thirteen hand-written loaders is what makes
  * "did we forget a queue" answerable: the tab shows every entry here, and
- * adding a queue to the worker means adding one object.
+ * adding a queue to the worker means adding one object. Phase 74 landed three
+ * new ones (`tag`/`plan` steps, listing clips, listing assemblies) between
+ * this file being written and merged, which is the argument for the list.
  */
 
 import { restQuery } from './rest';
@@ -47,18 +49,36 @@ export interface QueueSpec {
 export const QUEUES: QueueSpec[] = [
   {
     id: 'render-jobs',
-    label: 'Home tour renders',
+    label: 'Home tour renders (whole film)',
     worker: 'render',
     table: 'render_jobs',
+    // `step` splits this table three ways since phase 74. Without the filter a
+    // tag job would be counted as a render, which is what `claim_job` itself
+    // had to start guarding against.
     column: 'status',
-    filters: {},
+    filters: { step: 'eq.render' },
     waiting: ['queued'],
     active: ['running'],
     done: ['done'],
     failed: ['failed'],
     enqueued: 'created_at',
     completed: 'updated_at',
-    hint: 'agent clicked Generate — interactive, polled first',
+    hint: 'the legacy one-shot path — agent clicked Generate, polled first',
+  },
+  {
+    id: 'tour-steps',
+    label: 'Home tour steps (tag / plan)',
+    worker: 'render',
+    table: 'render_jobs',
+    column: 'status',
+    filters: { step: 'in.(tag,plan)' },
+    waiting: ['queued'],
+    active: ['running'],
+    done: ['done'],
+    failed: ['failed'],
+    enqueued: 'created_at',
+    completed: 'updated_at',
+    hint: 'label the photos, then work out the running order — produce no video',
   },
   {
     id: 'bucket-videos',
@@ -93,8 +113,23 @@ export const QUEUES: QueueSpec[] = [
     hint: 'stitch approved clips into the film — TTS + BGM mux',
   },
   {
+    id: 'listing-assemblies',
+    label: 'Home tour assemblies',
+    worker: 'render',
+    table: 'listing_tour_assemblies',
+    column: 'status',
+    filters: {},
+    waiting: ['pending'],
+    active: ['processing'],
+    done: ['ready'],
+    failed: ['failed'],
+    enqueued: 'created_at',
+    completed: 'updated_at',
+    hint: 'stitch a home tour’s ready clips into the film',
+  },
+  {
     id: 'photo-clips',
-    label: 'Photo clips (local)',
+    label: 'Community clips (local)',
     worker: 'render',
     table: 'photo_clips',
     column: 'status',
@@ -106,6 +141,21 @@ export const QUEUES: QueueSpec[] = [
     enqueued: 'created_at',
     completed: 'updated_at',
     hint: 'DepthFlow / Ken Burns — free, runs on this box',
+  },
+  {
+    id: 'listing-clips',
+    label: 'Home tour clips (local)',
+    worker: 'render',
+    table: 'listing_photo_clips',
+    column: 'status',
+    filters: { engine: 'in.(depthflow,kenburns)' },
+    waiting: ['pending'],
+    active: ['processing'],
+    done: ['ready'],
+    failed: ['failed'],
+    enqueued: 'created_at',
+    completed: 'updated_at',
+    hint: 'one clip per approved listing photo — free, runs on this box',
   },
   {
     id: 'outpaint',
@@ -154,7 +204,7 @@ export const QUEUES: QueueSpec[] = [
   },
   {
     id: 'seedance-clips',
-    label: 'Seedance clips',
+    label: 'Community clips (Seedance)',
     worker: 'seedance',
     table: 'photo_clips',
     column: 'status',
@@ -166,6 +216,27 @@ export const QUEUES: QueueSpec[] = [
     enqueued: 'created_at',
     completed: 'updated_at',
     hint: 'PAID — OpenRouter. Every row here costs money',
+  },
+  {
+    // NOTHING DRAINS THIS. `listing_photo_clips` rows can be written with
+    // engine='seedance' (a forced regenerate on the home-tour table), but
+    // `scripts/seedance-worker/worker.ts` polls `photo_clips` and
+    // `ai_tour_videos` only — it does not mention this table. A row here waits
+    // forever. Listed precisely so that shows up as a stalled queue instead of
+    // as a clip that never appears. Reported to the owner 2026-08-21.
+    id: 'listing-seedance-clips',
+    label: 'Home tour clips (Seedance)',
+    worker: 'seedance',
+    table: 'listing_photo_clips',
+    column: 'status',
+    filters: { engine: 'eq.seedance' },
+    waiting: ['pending'],
+    active: ['submitting', 'processing'],
+    done: ['ready'],
+    failed: ['failed'],
+    enqueued: 'created_at',
+    completed: 'updated_at',
+    hint: 'PAID — and currently has no worker polling it',
   },
   {
     id: 'ai-tour-videos',

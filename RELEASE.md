@@ -19,6 +19,12 @@ Community films now open on the community. Its own amenities lead the film and r
 Aberdeen in Suwanee is the first community with this treatment: a 58-second film that opens on its clubhouse and takes in the pool, the courts and the grounds before heading out into Suwanee.
 
 ### 2026-08-21
+- Home tour videos are now built the same way community films are — one stage at a time, with a stop for review in the middle. Photos are labelled, then you go through them and keep or drop each one, then the running order is worked out, then each shot is made, then the film is stitched
+- The running order is visible before anything is rendered. Which photos the film will use, what order they play in, how long each one lasts and how the camera moves across it — all of it can be read and changed while the film still costs nothing to redo
+- Photos can be approved or rejected for a home tour. A rejected photo is left out of the running order
+- Each shot is now made on its own, so a single room can be re-done without rebuilding the whole film
+- Home tour videos now fill the card properly on iPhone. They were being made square, which meant almost a third of every frame was cut off the sides on the feed card
+- An AI-generated opening or closing shot can be requested for a home tour. It's limited to those two positions
 - The admin Worker screen is now a full console for the machine that makes the videos: whether each worker is running, how long it has been up, how hard the machine is working, and how much disk is left
 - Every queue is visible in one table — not just video renders, but photo clips, enhancement, reframing and the paid AI queues — with what's waiting, how long it has been waiting, and what finished or failed in the last day
 - A plain-language verdict sits at the top. It stays quiet while work is simply in progress and speaks up when something has genuinely stalled, rather than showing a number and leaving you to judge

@@ -126,6 +126,7 @@ copied per entity.
 | `{listing,community}-actions.ts` | `'use server'` adapters over the two cores. No logic. |
 | `{listing,community}-video-actions.ts` | Same, for the video pipeline. |
 | `tour-steps/` | The seven community-tour steps — research, resolve, photos, tag, generate, assemble, regenerate-all — one module each, plus `shared.ts` and `shots.ts`. The route only dispatches. |
+| `listing-tour-steps/` | The home tour's four steps — tag, plan, generate, assemble — same shape, same `step_results` persistence. `tag` and `plan` queue work to the render worker because their logic is Python; the other two are database writes. A sibling of `tour-steps/` rather than a merge: the two pipelines run different steps, and only the generic plumbing is shared (imported, not copied). |
 | `tour-orchestrator/` | The planning layer: Curator (describes photos), Scheduler (orders and times them), Guard (compliance), VO Pass (narration). Pure functions, well tested. |
 | `google-places.ts` | The POI pipeline's Places client — nearby/text search, photo binaries. Distinct from `lib/listings/address-autocomplete.ts`, which is the address form's. |
 | `vision-tagger.ts`, `narrative.ts` | Per-photo tagging and voiceover generation. |

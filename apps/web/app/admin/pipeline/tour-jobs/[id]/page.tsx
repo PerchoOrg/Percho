@@ -1,7 +1,22 @@
+/**
+ * /admin/pipeline/tour-jobs/[id] — one home's tour pipeline.
+ *
+ * Was: a header with three Generate buttons, a list of video previews, and a
+ * photo table with most of its columns switched off. The whole pipeline
+ * between "click Generate" and "a film exists" was one Python function and
+ * nothing on this page could see into it.
+ *
+ * Now the page is the same shape as the Community Tour admin — facts and the
+ * latest cut on top, the pipeline as a row of chips, and one big table where
+ * every photo is reviewed, planned and rendered (owner 2026-08-20: "the goal
+ * is to have a similar big table for home tour as well, with all the columns,
+ * buttons if needed").
+ */
+
 import { createServiceClient } from '@/lib/supabase/server';
 import { notFound } from 'next/navigation';
-import { PhotoTable } from '../../../_components/PhotoTable';
-import { SurfacePreview } from '../../../_components/SurfacePreview';
+import { HomeTourSection } from '../../../_components/HomeTourSection';
+import type { PhotoRow } from '../../../_components/PhotoTable';
 import { AdminGenerateTourButton } from './AdminGenerateTourButton';
 
 export const dynamic = 'force-dynamic';
@@ -42,118 +57,60 @@ export default async function AdminTourJobsDetailPage({
     supabase
       .from('listing_photos')
       .select(
-        'id, storage_path, sort_order, width, height, ai_tags, ai_score, tagged_at, used_in_video_at, used_clip_index, enhanced_path, enhanced_status, enhanced_preset, enhanced_error',
+        'id, storage_path, sort_order, width, height, ai_tags, ai_score, tagged_at, used_in_video_at, used_clip_index, enhanced_path, enhanced_status, enhanced_preset, enhanced_error, review_status, rejection_reason',
       )
       .eq('listing_id', id)
       .order('sort_order', { ascending: true }) as unknown as Promise<{
-      data: Array<{
-        id: string;
-        storage_path: string;
-        sort_order: number;
-        width: number | null;
-        height: number | null;
-        ai_tags: Record<string, unknown> | null;
-        ai_score: number | null;
-        tagged_at: string | null;
-        used_in_video_at: string | null;
-        used_clip_index: number | null;
-        enhanced_path: string | null;
-        enhanced_status: string;
-        enhanced_preset: string | null;
-        enhanced_error: string | null;
-      }> | null;
+      data: PhotoRow[] | null;
     }>,
     supabase
       .from('listing_videos')
       .select(
-        'id, cf_video_id, cf_video_id_landscape, cf_video_id_square, external_url, kind, status, title, sort_order, created_at',
+        'id, cf_video_id, cf_video_id_landscape, cf_video_id_square, kind, status, created_at',
       )
       .eq('listing_id', id)
-      .order('sort_order', { ascending: true }) as unknown as Promise<{
+      .eq('kind', 'walkthrough')
+      .order('created_at', { ascending: false })
+      .limit(1) as unknown as Promise<{
       data: Array<{
         id: string;
         cf_video_id: string | null;
         cf_video_id_landscape: string | null;
         cf_video_id_square: string | null;
-        external_url: string | null;
         kind: string;
         status: string;
-        title: string | null;
-        sort_order: number;
         created_at: string;
       }> | null;
     }>,
   ]);
 
   const photos = photoRes.data ?? [];
-  const videos = videoRes.data ?? [];
+  const video = videoRes.data?.[0];
 
   return (
-    <div className="space-y-6">
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold">{listing.address}</h1>
-        </div>
-        <AdminGenerateTourButton listingId={listing.id} photoCount={photos.length} />
-      </header>
-
-      <section>
-        <h2 className="mb-3 text-lg font-semibold">
-          Videos <span className="text-ink2 text-sm font-normal">({videos.length})</span>
-        </h2>
-        {videos.length === 0 ? (
-          <p className="text-ink2 rounded-2xl border border-line bg-surface p-6 text-sm">
-            No videos yet. Use the Generate buttons above to render from the photos.
-          </p>
-        ) : (
-          <ul className="space-y-4">
-            {videos.map((v) => {
-              // Each surface previewed SEPARATELY at its own aspect — a 1:1 asset
-              // squeezed into one shared 9:16 tile told you nothing about what the
-              // buyer actually sees (owner, 2026-08-03).
-              const iosUid = v.cf_video_id_square;
-              // Web plays landscape; portrait is the legacy column, and square is
-              // the last-resort fallback webVideoUid() applies for old rows.
-              const webUid = v.cf_video_id_landscape ?? v.cf_video_id;
-              return (
-                <li key={v.id} className="rounded-2xl border border-line bg-surface p-4">
-                  <div className="grid gap-5 sm:grid-cols-2">
-                    <SurfacePreview surface="ios" uid={iosUid} status={v.status} />
-                    <SurfacePreview surface="web" uid={webUid} status={v.status} />
-                  </div>
-                  <div className="mt-3 text-xs">
-                    {/* Title, kind and status line removed 2026-08-03: a render
-                        goes live the moment it finishes, so the only thing worth
-                        surfacing is a MISSING surface or an outright failure. */}
-                    {v.status === 'failed' ? (
-                      <span className="text-red-500">Render failed.</span>
-                    ) : v.status !== 'ready' ? (
-                      <span className="text-amber-500">{v.status}…</span>
-                    ) : !iosUid || !webUid ? (
-                      <span className="text-amber-600">
-                        {!iosUid && !webUid
-                          ? 'Neither surface rendered yet.'
-                          : !iosUid
-                            ? 'No iOS render — click Generate iOS video.'
-                            : 'No web render — click Generate web video.'}
-                      </span>
-                    ) : (
-                      <span className="text-emerald-600">Live on iOS and web.</span>
-                    )}
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </section>
-
-      <PhotoTable
-        table="listing_photos"
-        storageBase={SUPABASE_URL}
-        bucket="listing-photos"
-        photos={photos}
-      />
-    </div>
+    <HomeTourSection
+      listingId={listing.id}
+      address={listing.address}
+      city={listing.city}
+      state={listing.state}
+      zip={listing.zip}
+      agentName={listing.agents?.name ?? null}
+      storageBase={SUPABASE_URL}
+      bucket="listing-photos"
+      photos={photos}
+      latestVideo={
+        video
+          ? {
+              // iOS plays the square-named column; web plays landscape, with
+              // the legacy portrait column as the fallback webVideoUid()
+              // applies for old rows.
+              iosUid: video.cf_video_id_square,
+              webUid: video.cf_video_id_landscape ?? video.cf_video_id,
+              status: video.status,
+            }
+          : null
+      }
+      legacyAction={<AdminGenerateTourButton listingId={listing.id} photoCount={photos.length} />}
+    />
   );
 }

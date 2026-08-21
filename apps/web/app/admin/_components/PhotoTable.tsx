@@ -17,7 +17,7 @@
  * ponytail: in-memory sort/filter, revisit if a single owner ever exceeds ~1k photos.
  */
 
-import { discardClip } from '@/lib/poi/admin-clip-actions';
+import { discardClip, discardListingClip } from '@/lib/poi/admin-clip-actions';
 import {
   type EnhanceDecision,
   type PhotoTable as PhotoTableName,
@@ -25,11 +25,11 @@ import {
   setEnhancedDecision,
 } from '@/lib/poi/admin-enhance-actions';
 import { rejectOutpaint, requeueOutpaint } from '@/lib/poi/admin-outpaint-actions';
-import { setGlobalPhotoStatus } from '@/lib/poi/admin-photo-actions';
+import { setGlobalPhotoStatus, setListingPhotoReview } from '@/lib/poi/admin-photo-actions';
 import { projectTags, resolutionWarning } from '@/lib/poi/photo-tag-view';
 import { Check, Film, Sparkles, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 /** One photo_clips row as the clips route projects it. */
 export interface ClipStatus {
@@ -50,6 +50,9 @@ export interface PhotoRow {
   height?: number | null;
   used_in_video_at?: string | null;
   used_clip_index?: number | null;
+  /** listing_photos: the home-tour review verdict. A SEPARATE column from
+   *  `status`, which on this table means the upload succeeded. */
+  review_status?: string | null;
   // poi_photos only
   width_px?: number | null;
   height_px?: number | null;
@@ -101,11 +104,12 @@ export interface PhotoRow {
   recommended?: boolean;
   /** Community tour: resolve-step agent agreement (1 or 2 agents). */
   agreement?: number | null;
-  /** Community tour: the Seedance clip (photo_clips row, engine=seedance). */
+  /** The Seedance clip. photo_clips on the POI side, listing_photo_clips on
+   *  the listing side — the shape the two routes project is identical. */
   clip?: ClipStatus | null;
-  /** Community tour: the DepthFlow clip (photo_clips row, engine=depthflow). */
+  /** The DepthFlow clip (engine=depthflow). */
   depthflow_clip?: ClipStatus | null;
-  /** Community tour: the Ken Burns clip (photo_clips row, engine=kenburns). */
+  /** The Ken Burns clip (engine=kenburns). */
   kenburns_clip?: ClipStatus | null;
 }
 
@@ -179,18 +183,57 @@ export function PhotoTable({
   const url = (p: string) => `${storageBase}/storage/v1/object/public/${bucket}/${p}`;
 
   /**
+   * Where each table keeps its review verdict.
+   *
+   * `poi_photos.status` IS the verdict. `listing_photos.status` is the upload's
+   * state ('ready' | 'error') and has been since the baseline, so the home tour
+   * got its own `review_status` column rather than overloading it — reading
+   * `p.status` here would grade every listing photo as neither approved nor
+   * rejected but "ready", and drop the whole table into one section.
+   */
+  const verdictOf = useCallback(
+    (p: PhotoRow) => (isListing ? p.review_status : p.status) ?? 'pending',
+    [isListing],
+  );
+
+  /**
+   * Which photos may be sent to Seedance.
+   *
+   * `null` means no restriction — that is the community tour, where every POI
+   * photo is a candidate for AI generation.
+   *
+   * On a HOME tour it is the opening and closing shot and nothing else (owner
+   * 2026-08-20: "i may need seedback for the first picture or last one, as
+   * hero photo"). Seedance generates video OF THE HOUSE, so the narrower the
+   * exposure the better; a hero bookend is the whole of the ask.
+   *
+   * Derived from the plan rather than from `sort_order`, because the cut's
+   * first shot is the planner's choice, not the upload order's. No plan yet
+   * means no hero yet, which is an empty set — the button is off until Plan
+   * has run, and the tooltip says why.
+   */
+  const seedanceAllowed = useMemo(() => {
+    if (!isListing) return null;
+    const ordered = Object.entries(plan ?? {}).sort((a, b) => a[1].sort_order - b[1].sort_order);
+    const ends = [ordered[0]?.[0], ordered[ordered.length - 1]?.[0]].filter(
+      (v): v is string => !!v,
+    );
+    return new Set(ends);
+  }, [isListing, plan]);
+
+  /**
    * How many columns the header actually renders. Kept next to the header so
    * the two move together — a section row's colSpan has to match exactly, and
    * guessing high does not degrade gracefully (see the header row below).
    */
   const columnCount =
     3 + // Photo, Enhanced, then # / POI
-    (isListing ? 0 : 1) + // Review
-    (isListing ? 0 : 3) + // Clip, DA, KB
+    1 + // Review
+    3 + // Clip, DA, KB
     (isListing ? 0 : 1) + // Reframed
     (isListing ? 0 : 1) + // Source
     2 + // Size, Category
-    (isListing ? 0 : 1) + // Plan
+    1 + // Plan
     1 + // Score
     (isListing ? 1 : 0) + // Hero
     (isListing ? 0 : 1) + // Buckets
@@ -211,7 +254,7 @@ export function PhotoTable({
         case 'untagged':
           return !p.tagged_at;
         case 'unreviewed':
-          return (p.status ?? 'pending') === 'pending';
+          return verdictOf(p) === 'pending';
         case 'enhance_ready':
           return p.enhanced_status === 'ready';
         case 'in_video':
@@ -239,7 +282,7 @@ export function PhotoTable({
     }[sort];
 
     return [...filtered].sort(by);
-  }, [photos, sort, filter]);
+  }, [photos, sort, filter, verdictOf]);
 
   /**
    * The table is grouped by review verdict: Approved, Rejected, then Other.
@@ -264,7 +307,7 @@ export function PhotoTable({
       // 2026-08-20: "i see some rejected photos in the pending section, they
       // should go to rejected area directly"). No refresh is involved, so the
       // scroll position holds and the next photo slides up under the cursor.
-      const st = verdicts[r.p.id] ?? r.p.status;
+      const st = verdicts[r.p.id] ?? verdictOf(r.p);
       if (st === 'approved') approved.push(r);
       else if (st === 'rejected') rejected.push(r);
       else other.push(r);
@@ -280,7 +323,7 @@ export function PhotoTable({
       out.push(...group);
     }
     return out;
-  }, [rows, verdicts]);
+  }, [rows, verdicts, verdictOf]);
 
   /** Review verdict: optimistic, no refresh, row keeps its place. */
   function decide(id: string, decision: 'approved' | 'rejected') {
@@ -288,7 +331,9 @@ export function PhotoTable({
     setVerdicts((v) => ({ ...v, [id]: decision }));
     setError(null);
     void (async () => {
-      const res = await setGlobalPhotoStatus(id, decision);
+      const res = isListing
+        ? await setListingPhotoReview(id, decision)
+        : await setGlobalPhotoStatus(id, decision);
       if (!res.ok) {
         // Put it back: a verdict that did not persist must not look like it did.
         setVerdicts((v) => {
@@ -399,22 +444,20 @@ export function PhotoTable({
         <table className="w-full border-collapse text-left text-[11px]">
           <thead className="bg-surface text-ink2">
             <tr>
-              {!isListing && <Th hint="approve / reject">Review</Th>}
+              <Th hint="approve / reject">Review</Th>
               <Th hint="as fetched">Photo</Th>
               <Th hint="ESRGAN x2">Enhanced</Th>
               {!isListing && <Th hint="outpainted to 2:3">Reframed</Th>}
-              {!isListing && <Th hint="Seedance, paid">Clip</Th>}
-              {!isListing && <Th hint="DepthFlow parallax">DA</Th>}
-              {!isListing && <Th hint="Ken Burns pan">KB</Th>}
+              <Th hint={isListing ? 'Seedance, paid — hero shot only' : 'Seedance, paid'}>Clip</Th>
+              <Th hint="DepthFlow parallax">DA</Th>
+              <Th hint="Ken Burns pan">KB</Th>
               <Th hint={isListing ? 'order' : 'place'}>{isListing ? '#' : 'POI'}</Th>
               {!isListing && <Th hint="where it came from">Source</Th>}
               <Th hint="pixels">Size</Th>
               <Th hint="tagger">Category</Th>
-              {!isListing && (
-                <Th className="min-w-[110px]" hint="in the cut, or why not">
-                  Plan
-                </Th>
-              )}
+              <Th className="min-w-[110px]" hint="in the cut, or why not">
+                Plan
+              </Th>
               <Th hint="0-1, tagger">Score</Th>
               {isListing && <Th hint="cover fit">Hero</Th>}
               {!isListing && <Th hint="which tour sections">Buckets</Th>}
@@ -452,7 +495,7 @@ export function PhotoTable({
               // identifier resolves to `window.status` in a DOM lib, so a
               // missing definition type-checks clean and silently reads an
               // empty string at runtime.
-              const rowStatus = verdicts[p.id] ?? p.status ?? 'pending';
+              const rowStatus = verdicts[p.id] ?? verdictOf(p);
               const res = resolutionWarning(w, h);
               const busy = pending === p.id || pending === 'bulk';
               const showEnhanced = p.enhanced_status === 'approved' && p.enhanced_path;
@@ -461,43 +504,49 @@ export function PhotoTable({
                 <tr key={p.id} className="border-line border-t align-top hover:bg-surface/60">
                   <Td>
                     <div className="flex flex-col gap-1">
-                      {!isListing && (
-                        <>
-                          {t.usable === false ? (
-                            <span className="text-red-600">rejected</span>
-                          ) : (
-                            <StatusText value={rowStatus} />
-                          )}
-                          {/* WHY it is out. A bare "rejected" made an automated
+                      <>
+                        {t.usable === false ? (
+                          <span className="text-red-600">rejected</span>
+                        ) : (
+                          <StatusText value={rowStatus} />
+                        )}
+                        {/* WHY it is out. A bare "rejected" made an automated
                               verdict indistinguishable from the owner's own
                               click, so the automated ones could not be
                               questioned — and two turned out to be wrong
                               (owner 2026-08-20). */}
-                          {rowStatus === 'rejected' && p.rejection_reason && (
-                            <span
-                              className="block text-[10px] text-red-600/80 leading-tight"
-                              title={p.rejection_reason}
-                            >
-                              {truncate(p.rejection_reason, 48)}
-                            </span>
-                          )}
-                          <div className="flex gap-1">
-                            <MiniBtn
-                              label={<Check size={11} />}
-                              title="Approve photo (platform-wide) — the only gate for final video material"
-                              active={rowStatus === 'approved'}
-                              onClick={() => decide(p.id, 'approved')}
-                            />
-                            <MiniBtn
-                              label={<X size={11} />}
-                              title="Reject photo — removes it from every video pool"
-                              danger
-                              active={rowStatus === 'rejected'}
-                              onClick={() => decide(p.id, 'rejected')}
-                            />
-                          </div>
-                        </>
-                      )}
+                        {rowStatus === 'rejected' && p.rejection_reason && (
+                          <span
+                            className="block text-[10px] text-red-600/80 leading-tight"
+                            title={p.rejection_reason}
+                          >
+                            {truncate(p.rejection_reason, 48)}
+                          </span>
+                        )}
+                        <div className="flex gap-1">
+                          <MiniBtn
+                            label={<Check size={11} />}
+                            title={
+                              isListing
+                                ? 'Approve photo — it stays a candidate for this home tour'
+                                : 'Approve photo (platform-wide) — the only gate for final video material'
+                            }
+                            active={rowStatus === 'approved'}
+                            onClick={() => decide(p.id, 'approved')}
+                          />
+                          <MiniBtn
+                            label={<X size={11} />}
+                            title={
+                              isListing
+                                ? 'Reject photo — the plan step will leave it out of the cut'
+                                : 'Reject photo — removes it from every video pool'
+                            }
+                            danger
+                            active={rowStatus === 'rejected'}
+                            onClick={() => decide(p.id, 'rejected')}
+                          />
+                        </div>
+                      </>
                     </div>
                   </Td>
                   <Td>
@@ -574,50 +623,57 @@ export function PhotoTable({
                       />
                     </Td>
                   )}
-                  {!isListing && (
-                    <Td>
-                      <ClipCell
-                        clip={p.clip}
-                        poster={url(thumbPath)}
-                        label="Seedance"
-                        canGenerate={!!onGenerateClip}
-                        busy={busy}
-                        onGenerate={() => onGenerateClip && run(p.id, () => onGenerateClip(p.id))}
-                        onPlay={setClipLightbox}
-                        onDiscard={() => run(p.id, () => discardClip(p.id))}
-                      />
-                    </Td>
-                  )}
-                  {!isListing && (
-                    <Td>
-                      <ClipCell
-                        clip={p.depthflow_clip}
-                        poster={url(thumbPath)}
-                        label="DepthFlow"
-                        canGenerate={!!onGenerateClip}
-                        busy={busy}
-                        onGenerate={() =>
-                          onGenerateClip && run(p.id, () => onGenerateClip(p.id, 'depthflow'))
-                        }
-                        onPlay={setClipLightbox}
-                      />
-                    </Td>
-                  )}
-                  {!isListing && (
-                    <Td>
-                      <ClipCell
-                        clip={p.kenburns_clip}
-                        poster={url(thumbPath)}
-                        label="Ken Burns"
-                        canGenerate={!!onGenerateClip}
-                        busy={busy}
-                        onGenerate={() =>
-                          onGenerateClip && run(p.id, () => onGenerateClip(p.id, 'kenburns'))
-                        }
-                        onPlay={setClipLightbox}
-                      />
-                    </Td>
-                  )}
+                  <Td>
+                    <ClipCell
+                      clip={p.clip}
+                      poster={url(thumbPath)}
+                      label="Seedance"
+                      canGenerate={
+                        !!onGenerateClip && (!seedanceAllowed || seedanceAllowed.has(p.id))
+                      }
+                      disabledHint={
+                        seedanceAllowed && !seedanceAllowed.has(p.id)
+                          ? seedanceAllowed.size === 0
+                            ? "Run Plan first — the hero shot is the plan's first or last."
+                            : 'Seedance is the hero shot only (first or last in the cut).'
+                          : undefined
+                      }
+                      busy={busy}
+                      onGenerate={() =>
+                        onGenerateClip && run(p.id, () => onGenerateClip(p.id, 'seedance'))
+                      }
+                      onPlay={setClipLightbox}
+                      onDiscard={() =>
+                        run(p.id, () => (isListing ? discardListingClip(p.id) : discardClip(p.id)))
+                      }
+                    />
+                  </Td>
+                  <Td>
+                    <ClipCell
+                      clip={p.depthflow_clip}
+                      poster={url(thumbPath)}
+                      label="DepthFlow"
+                      canGenerate={!!onGenerateClip}
+                      busy={busy}
+                      onGenerate={() =>
+                        onGenerateClip && run(p.id, () => onGenerateClip(p.id, 'depthflow'))
+                      }
+                      onPlay={setClipLightbox}
+                    />
+                  </Td>
+                  <Td>
+                    <ClipCell
+                      clip={p.kenburns_clip}
+                      poster={url(thumbPath)}
+                      label="Ken Burns"
+                      canGenerate={!!onGenerateClip}
+                      busy={busy}
+                      onGenerate={() =>
+                        onGenerateClip && run(p.id, () => onGenerateClip(p.id, 'kenburns'))
+                      }
+                      onPlay={setClipLightbox}
+                    />
+                  </Td>
                   <Td className="tabular-nums text-ink2">
                     {isListing ? (
                       (p.sort_order ?? '—')
@@ -647,78 +703,76 @@ export function PhotoTable({
                     {t.isMaster && <div className="text-[10px] text-ink2">master</div>}
                     {t.usable === false && <div className="text-[10px] text-red-600">unusable</div>}
                   </Td>
-                  {!isListing && (
-                    <Td>
-                      {t.usable === false ? (
-                        <span className="text-red-600">no</span>
-                      ) : plan?.[p.id] ? (
-                        <div className="space-y-0.5">
-                          <div className="flex items-center gap-1">
-                            <span className="tabular-nums text-ink2">
-                              #{String(plan[p.id]!.sort_order + 1).padStart(2, '0')}
-                            </span>
+                  <Td>
+                    {t.usable === false ? (
+                      <span className="text-red-600">no</span>
+                    ) : plan?.[p.id] ? (
+                      <div className="space-y-0.5">
+                        <div className="flex items-center gap-1">
+                          <span className="tabular-nums text-ink2">
+                            #{String(plan[p.id]!.sort_order + 1).padStart(2, '0')}
+                          </span>
+                          <span
+                            className={
+                              plan[p.id]!.engine === 'seedance'
+                                ? 'font-medium text-emerald-600'
+                                : 'font-medium text-ink'
+                            }
+                          >
+                            {plan[p.id]!.engine}
+                          </span>
+                          {plan[p.id]!.ai_generated && (
                             <span
-                              className={
-                                plan[p.id]!.engine === 'seedance'
-                                  ? 'font-medium text-emerald-600'
-                                  : 'font-medium text-ink'
-                              }
+                              className="rounded bg-emerald-50 px-1 text-[9px] font-medium text-emerald-700"
+                              title="AI-generated clip — disclosed on the row in photo_clips"
                             >
-                              {plan[p.id]!.engine}
+                              AI
                             </span>
-                            {plan[p.id]!.ai_generated && (
-                              <span
-                                className="rounded bg-emerald-50 px-1 text-[9px] font-medium text-emerald-700"
-                                title="AI-generated clip — disclosed on the row in photo_clips"
-                              >
-                                AI
-                              </span>
-                            )}
-                          </div>
-                          <div className="text-[10px] text-ink2">
-                            {plan[p.id]!.move} · {plan[p.id]!.duration_s.toFixed(1)}s
-                          </div>
-                          {!hasPlannedClip(p, plan[p.id]!.engine) && (
-                            <div
-                              className="text-[10px] text-amber-600"
-                              title="No ready clip for the planned engine — click Generate on this row (or Re-render all DA+KB) to render the plan"
-                            >
-                              not rendered yet
-                            </div>
-                          )}
-                          {plan[p.id]!.prompt && (
-                            // The exact string the clip is generated from,
-                            // mandatory clauses included. Collapsed so the row
-                            // stays readable; this is the text to check before
-                            // paying for a generation.
-                            <details className="mt-0.5">
-                              <summary className="cursor-pointer text-[10px] text-ink2 hover:text-ink">
-                                prompt
-                              </summary>
-                              <p className="mt-1 max-w-[280px] whitespace-pre-wrap break-words rounded bg-surface p-1 text-[10px] leading-snug text-ink2">
-                                {plan[p.id]!.prompt}
-                              </p>
-                            </details>
                           )}
                         </div>
-                      ) : dropReasons?.[p.id] ? (
-                        // Not in the cut, and this is why. The plan drops far
-                        // more photos than it keeps — 29 of 61 on Aberdeen —
-                        // and "—" made every one of them look the same as a
-                        // photo the plan had never considered.
-                        <span
-                          className="text-[10px] text-ink2 leading-tight"
-                          title={dropReasons[p.id]}
-                        >
-                          {truncate(dropReasons[p.id] as string, 52)}
-                        </span>
-                      ) : (
-                        <span className="text-ink2" title="Not in the current plan">
-                          —
-                        </span>
-                      )}
-                    </Td>
-                  )}
+                        <div className="text-[10px] text-ink2">
+                          {plan[p.id]!.move} · {plan[p.id]!.duration_s.toFixed(1)}s
+                        </div>
+                        {!hasPlannedClip(p, plan[p.id]!.engine) && (
+                          <div
+                            className="text-[10px] text-amber-600"
+                            title="No ready clip for the planned engine — click Generate on this row (or Re-render all DA+KB) to render the plan"
+                          >
+                            not rendered yet
+                          </div>
+                        )}
+                        {plan[p.id]!.prompt && (
+                          // The exact string the clip is generated from,
+                          // mandatory clauses included. Collapsed so the row
+                          // stays readable; this is the text to check before
+                          // paying for a generation.
+                          <details className="mt-0.5">
+                            <summary className="cursor-pointer text-[10px] text-ink2 hover:text-ink">
+                              prompt
+                            </summary>
+                            <p className="mt-1 max-w-[280px] whitespace-pre-wrap break-words rounded bg-surface p-1 text-[10px] leading-snug text-ink2">
+                              {plan[p.id]!.prompt}
+                            </p>
+                          </details>
+                        )}
+                      </div>
+                    ) : dropReasons?.[p.id] ? (
+                      // Not in the cut, and this is why. The plan drops far
+                      // more photos than it keeps — 29 of 61 on Aberdeen —
+                      // and "—" made every one of them look the same as a
+                      // photo the plan had never considered.
+                      <span
+                        className="text-[10px] text-ink2 leading-tight"
+                        title={dropReasons[p.id]}
+                      >
+                        {truncate(dropReasons[p.id] as string, 52)}
+                      </span>
+                    ) : (
+                      <span className="text-ink2" title="Not in the current plan">
+                        —
+                      </span>
+                    )}
+                  </Td>
                   <Td className="tabular-nums">
                     {p.ai_score != null ? (
                       p.ai_score.toFixed(2)
@@ -1052,6 +1106,7 @@ function ClipCell({
   poster,
   label,
   canGenerate,
+  disabledHint,
   busy,
   onGenerate,
   onPlay,
@@ -1062,6 +1117,9 @@ function ClipCell({
   /** What this column renders, for the button titles: "Seedance", "DepthFlow". */
   label: string;
   canGenerate: boolean;
+  /** Why the button is missing. Rendered in its place — a column that simply
+   *  goes blank reads as a bug, not as a rule. */
+  disabledHint?: string;
   busy: boolean;
   onGenerate: () => void;
   onPlay: (url: string) => void;
@@ -1109,6 +1167,11 @@ function ClipCell({
       )}
       {clip?.cost_usd != null && (
         <span className="text-[10px] text-ink2 tabular-nums">${clip.cost_usd.toFixed(3)}</span>
+      )}
+      {!canGenerate && disabledHint && (
+        <span className="text-[10px] text-ink2/70" title={disabledHint}>
+          hero only
+        </span>
       )}
       {canGenerate && (
         <MiniBtn
