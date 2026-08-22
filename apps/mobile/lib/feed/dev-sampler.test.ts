@@ -130,13 +130,13 @@ describe("buildSamplerDeck", () => {
 	});
 
 	it("covers the kinds the pool can really support", () => {
+		// Listings and communities are the whole deck since area and trade-off
+		// cards were pulled (2026-08-22) — the sampler carries what the
+		// production mix carries, nothing else.
 		const kinds = new Set(
 			buildSamplerDeck({ pool, stage: 4 }).map((c) => c.kind),
 		);
-		expect(kinds).toContain("listing");
-		expect(kinds).toContain("community");
-		expect(kinds).toContain("area");
-		expect(kinds).toContain("tradeoff");
+		expect([...kinds].sort()).toEqual(["community", "listing"]);
 	});
 
 	it("emits no listing/community cards from an empty pool rather than blanks", () => {

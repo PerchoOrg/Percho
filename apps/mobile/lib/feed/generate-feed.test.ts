@@ -107,8 +107,13 @@ const countKind = (cards: readonly FeedCardV3[], kind: string) =>
 // ─── §1.7 the stage-4 mix ─────────────────────────────────────────────────────
 
 describe("§1.7 stage 4 mix", () => {
-	it("the mix table is exactly one window long", () => {
-		expect(STAGE_MIX[4]).toHaveLength(WINDOW);
+	it("the mix table holds listing and community slots only", () => {
+		// 2026-08-22: the geo and trade-off slots were removed, so the table is
+		// shorter than a window — the engine walks it cyclically either way.
+		expect(new Set(STAGE_MIX[4].map((s) => s.fill))).toEqual(
+			new Set(["listing", "community"]),
+		);
+		expect(STAGE_MIX[4].length).toBeLessThanOrEqual(WINDOW);
 	});
 
 	it("stage 4 is listing-dominant", () => {
@@ -116,28 +121,21 @@ describe("§1.7 stage 4 mix", () => {
 		expect(countKind(cards, "listing")).toBeGreaterThanOrEqual(4);
 	});
 
-	it("emits a healthy mix of all 4 kinds", () => {
+	it("emits both surviving kinds and nothing else", () => {
 		const { cards } = gen(4);
-		expect(countKind(cards, "area")).toBeGreaterThan(0);
+		expect(countKind(cards, "listing")).toBeGreaterThan(0);
 		expect(countKind(cards, "community")).toBeGreaterThan(0);
-		expect(countKind(cards, "tradeoff")).toBeGreaterThan(0);
+		expect(countKind(cards, "area")).toBe(0);
+		expect(countKind(cards, "tradeoff")).toBe(0);
 	});
 
-	it("mixFor returns the stage-4 window", () => {
-		expect(mixFor(4, "city")).toHaveLength(WINDOW);
-		expect(mixFor(4, "zip")).toHaveLength(WINDOW);
+	it("mixFor returns the stage-4 table", () => {
+		expect(mixFor(4, "city")).toHaveLength(STAGE_MIX[4].length);
+		expect(mixFor(4, "zip")).toHaveLength(STAGE_MIX[4].length);
 	});
 
 	it("always returns exactly the requested count when the pool can fill it", () => {
 		expect(gen(4, { count: 12 }).cards).toHaveLength(12);
-	});
-
-	it("uses city units when the pool has no zips", () => {
-		const areas = gen(4).cards.filter((c) => c.kind === "area");
-		expect(areas.length).toBeGreaterThan(0);
-		for (const a of areas) {
-			if (a.kind === "area") expect(a.unit.level).toBe("city");
-		}
 	});
 
 	it("emits no geo card when the pool has no units at all", () => {
@@ -200,8 +198,10 @@ describe("seenIds and exhaustion", () => {
 			seenIds: [],
 			count: 10,
 		});
-		// The trade-off table is static content, so there is always something.
-		expect(res.cards.length).toBeGreaterThan(0);
+		// Both surviving kinds come from the pool — with the static trade-off
+		// table out of the mix there is nothing left to fall back on, so an
+		// empty pool means an empty deck and the §1.9 terminal card.
+		expect(res.cards).toEqual([]);
 	});
 });
 

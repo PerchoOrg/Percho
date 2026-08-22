@@ -75,25 +75,31 @@ describe("deckKey", () => {
 });
 
 describe("a real session's deck keys", () => {
-	// Today's production shape for stage 0: the geo view returns city units but
-	// there are no listings or communities, so the finite client-side ask and
-	// trade-off tables are the entire supply and §1.9 looping kicks in early.
+	// A thin pool is what makes §1.9 looping kick in early. It has to be a
+	// COMMUNITY pool: since the deck was cut to listings + communities
+	// (2026-08-22) those are the only kinds left, and `loopedFallback` only
+	// recycles communities — a listing is never re-emitted, so a listing-only
+	// pool simply runs dry instead of looping.
+	const community = (i: number) => ({
+		kind: "community" as const,
+		id: `cm-${i}`,
+		slug: `cm-${i}`,
+		name: `Community ${i}`,
+		city: "Duluth",
+		state: "GA",
+		heroUrl: `https://example.test/cm-${i}.jpg`,
+	});
+
 	const pools: [string, FeedPool][] = [
-		["an empty pool", EMPTY_POOL],
 		[
-			"a pool with geo units only",
+			"a pool with one community",
+			{ ...EMPTY_POOL, communities: [community(0)] },
+		],
+		[
+			"a pool with a handful of communities",
 			{
 				...EMPTY_POOL,
-				geoUnits: Array.from({ length: 40 }, (_, i) => ({
-					id: `city-${i}`,
-					level: "city" as const,
-					name: `City ${i}`,
-					state: "GA",
-					centroid: { lat: 33.7 + i * 0.01, lng: -84.4 - i * 0.01 },
-					communityCount: 3,
-					sampleCommunityNames: [],
-					stats: {},
-				})),
+				communities: Array.from({ length: 3 }, (_, i) => community(i)),
 			},
 		],
 	];

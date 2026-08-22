@@ -156,14 +156,20 @@ describe("§1.7 rhythm — the single stage 4 mix never collapses into one kind"
 		expect(kinds.size).toBeGreaterThan(1);
 	});
 
-	it("no single kind exceeds two thirds of a long session", () => {
+	it("no single kind runs away with a long session", () => {
+		// The bound tracks the declared ratio. With the geo and trade-off slots
+		// gone (2026-08-22) the mix is listing ×5 · community ×2, so listings
+		// legitimately hold ~5/7 (0.714) of the deck — the guard is against ONE
+		// kind swallowing it, not against listing-dominance itself. The bound
+		// carries a little slack because a session that ends mid-table lands
+		// slightly off the exact ratio.
 		const cards = session(4, 8);
 		const counts = new Map<string, number>();
 		for (const c of cards) {
 			counts.set(c.kind, (counts.get(c.kind) ?? 0) + 1);
 		}
 		const dominant = Math.max(...counts.values());
-		expect(dominant / cards.length).toBeLessThanOrEqual(0.67);
+		expect(dominant / cards.length).toBeLessThanOrEqual(0.75);
 	});
 });
 

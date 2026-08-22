@@ -7,9 +7,14 @@
  * kinds. The `FunnelStage` type still exists (search's journey strip reads it)
  * but is pinned at 4.
  *
- * One entry per card in a 10-card window, in spec order, so a test can assert
- * the mix by counting rather than by re-deriving it. `generateFeed` walks the
- * table cyclically.
+ * 2026-08-22: area/geo and trade-off cards were pulled from the deck (owner:
+ * only listings and communities). The `geo` and `tradeoff` fills still exist in
+ * `Slot` and the engine can still materialise them — they simply hold no slot
+ * in the mix, so nothing emits them.
+ *
+ * One entry per card, in spec order, so a test can assert the mix by counting
+ * rather than by re-deriving it. `generateFeed` walks the table cyclically, so
+ * the table no longer has to be exactly `WINDOW` long.
  */
 import type { FunnelStage } from "./card-types";
 import type { GeoLevel } from "./geo-unit";
@@ -33,11 +38,8 @@ export const STAGE_MIX: Record<FunnelStage, readonly Slot[]> = {
 		{ fill: "listing", variant: "primary" },
 		{ fill: "community" },
 		{ fill: "listing", variant: "primary" },
-		{ fill: "geo", level: "finest" },
 		{ fill: "listing", variant: "primary" },
-		{ fill: "tradeoff" },
 		{ fill: "community" },
-		{ fill: "geo", level: "finest" },
 		{ fill: "listing", variant: "primary" },
 	],
 };

@@ -16,6 +16,20 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-22 22:40 UTC — Feed deck narrowed to listings + communities only
+
+**Objective**: owner: "隐藏所有不是 listing 或者 community 的 card" then "线上只要有视频的 listing 和 community card".
+
+**Actions**:
+- `apps/mobile/lib/feed/ratios.ts`: `STAGE_MIX[4]` drops the 2 `geo` and 1 `tradeoff` slots — the mix is now `listing ×5 · community ×2`. The `geo`/`tradeoff` fills still exist in `Slot` and the engine can still materialise them; they simply hold no slot, so nothing emits them. `generate-feed.ts` / `rhythm.ts` untouched — `findAlt` / `loopedFallback` derive candidates from the mix, so empty slots produce no cards.
+- `apps/mobile/lib/feed/dev-sampler.ts`: sampler deck narrowed to `[listings, communities]`; dropped the now-orphaned `areas`/`tradeoffs` locals, `take()` helper and unused imports.
+- Tests: `generate-feed.test.ts` (mix assertions → listing/community only; empty pool now returns an empty deck — the static tradeoff fallback is gone), `deck-key.test.ts` (fixtures switched to community pools since geo-only pools yield nothing), `rhythm.test.ts` (single-kind cap 2/3 → 0.75, matching the 5/7 listing share), `dev-sampler.test.ts` (kinds assertion → exactly `["community","listing"]`).
+
+**Notes**:
+- Video-only was ALREADY live client-side: `hooks/use-feed-pool.ts` sends `videosOnly: true` unconditionally (owner 2026-08-21 "on ios, only show cards with videos, either community or listing"), so the deck was already video-only listings + communities; this change removes the last non-video-capable card kinds (area/tradeoff) from the mix.
+- Behavior change: with no static tradeoff fallback, an empty pool now goes straight to the §1.9 terminal card.
+- Verified: `npx vitest run` (520 tests) + `npx tsc --noEmit` clean.
+
 ## 2026-08-22 21:05 UTC — The community search that shipped broken, and the list that never showed new work
 
 **Objective**: owner, after the server-side search shipped: "still can not see

@@ -28,14 +28,7 @@
  * Turn it on with `EXPO_PUBLIC_DEV_SAMPLER=1` in the shell that starts Expo.
  */
 
-import type {
-	AreaCardV3,
-	CommunityCardV3,
-	FeedCardV3,
-	ListingCardV3,
-	TradeoffCardV3,
-} from "./card-types";
-import { TRADEOFFS } from "./content";
+import type { CommunityCardV3, FeedCardV3, ListingCardV3 } from "./card-types";
 import type { FeedPool } from "./generate-feed";
 
 /** Cards per kind in the sampler deck — for the ones with NO video. */
@@ -44,10 +37,6 @@ export const SAMPLER_PER_KIND = 3;
 /** Read once at module load — `EXPO_PUBLIC_*` is inlined at bundle time. */
 export function samplerEnabled(): boolean {
 	return process.env.EXPO_PUBLIC_DEV_SAMPLER === "1";
-}
-
-function take<T>(items: readonly T[], n: number): T[] {
-	return items.slice(0, n);
 }
 
 /**
@@ -94,15 +83,11 @@ export function buildSamplerDeck(input: SamplerInput): FeedCardV3[] {
 	const listings: ListingCardV3[] = withAndWithoutVideo(pool.listings);
 	const communities: CommunityCardV3[] = withAndWithoutVideo(pool.communities);
 
-	const areas: AreaCardV3[] = take(pool.geoUnits, SAMPLER_PER_KIND).map(
-		(unit) => ({ kind: "area" as const, id: `area-${unit.id}`, unit }),
-	);
-
-	const tradeoffs: TradeoffCardV3[] = take(TRADEOFFS, SAMPLER_PER_KIND);
-
-	// Interleave so the deck reads like a feed rather than three blocks of the
-	// same face — but with every video card still up front.
-	const groups: FeedCardV3[][] = [listings, communities, areas, tradeoffs];
+	// Interleave so the deck reads like a feed rather than two blocks of the
+	// same face — but with every video card still up front. Area and trade-off
+	// cards were pulled from the deck on 2026-08-22, so the sampler carries the
+	// same two kinds the production mix does.
+	const groups: FeedCardV3[][] = [listings, communities];
 
 	const deck: FeedCardV3[] = [];
 	// The video cards lead, unconditionally: that is the whole point of the flag.
