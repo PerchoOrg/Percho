@@ -2,7 +2,8 @@
 
 /**
  * Shared admin table with:
- * - Top-right search (client-side substring over `searchable(row)`)
+ * - Top-right search (client-side substring over `searchable(row)`, or
+ *   server-side via `serverSearchParam`)
  * - Click-to-sort on every column (three-state: asc → desc → none)
  * - 20 rows/page + Prev/Next
  *
@@ -10,7 +11,8 @@
  * per-table so each page keeps its own cell-render logic.
  */
 
-import { type ReactNode, useMemo, useState } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 
 export type AdminColumn<T> = {
   key: string;
@@ -33,6 +35,17 @@ export type AdminTableProps<T> = {
   /** Placeholder for the search input. */
   searchPlaceholder?: string;
   pageSize?: number;
+  /**
+   * Opt in to server-side search: the box reads and writes this URL search
+   * param, and `rows` is expected to arrive already filtered, so the local
+   * substring pass is skipped.
+   *
+   * Without it the box filters the pre-fetched rows in the browser, which is
+   * only honest when the page hands down every row that could ever match. A
+   * page that caps its query needs this — otherwise the box quietly searches
+   * the cap instead of the table.
+   */
+  serverSearchParam?: string;
 };
 
 type SortState = { key: string; dir: 'asc' | 'desc' } | null;
@@ -56,16 +69,48 @@ export function AdminTable<T>({
   minWidth = 640,
   searchPlaceholder = 'Search…',
   pageSize = 20,
+  serverSearchParam,
 }: AdminTableProps<T>) {
-  const [query, setQuery] = useState('');
+  const router = useRouter();
+  const pathname = usePathname();
+  const params = useSearchParams();
+  const urlQuery = serverSearchParam ? (params.get(serverSearchParam) ?? '') : '';
+
+  const [query, setQuery] = useState(urlQuery);
   const [sort, setSort] = useState<SortState>(null);
   const [page, setPage] = useState(0);
 
+  // The input stays controlled and instant; the round-trip is debounced so a
+  // word typed at speed is one navigation, not one per letter. `typed` gates
+  // it to real keystrokes — without that, arriving at a URL would push that
+  // same URL straight back and Back would never escape.
+  const typed = useRef(false);
+  useEffect(() => {
+    if (!serverSearchParam || !typed.current) return;
+    const t = setTimeout(() => {
+      typed.current = false;
+      const next = new URLSearchParams(params.toString());
+      if (query) next.set(serverSearchParam, query);
+      else next.delete(serverSearchParam);
+      const qs = next.toString();
+      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+    }, 300);
+    return () => clearTimeout(t);
+  }, [query, serverSearchParam, params, pathname, router]);
+
+  // …and the other direction, so Back/forward moves the box too.
+  useEffect(() => {
+    if (!typed.current) setQuery(urlQuery);
+  }, [urlQuery]);
+
   const filtered = useMemo(() => {
+    // Server-side search already narrowed `rows` — re-running the predicate
+    // here would only re-filter a set that is by definition already filtered.
+    if (serverSearchParam) return rows;
     const q = query.trim().toLowerCase();
     if (!q) return rows;
     return rows.filter((r) => searchable(r).toLowerCase().includes(q));
-  }, [rows, query, searchable]);
+  }, [rows, query, searchable, serverSearchParam]);
 
   const sorted = useMemo(() => {
     if (!sort) return filtered;
@@ -98,6 +143,7 @@ export function AdminTable<T>({
           type="search"
           value={query}
           onChange={(e) => {
+            typed.current = true;
             setQuery(e.target.value);
             setPage(0);
           }}

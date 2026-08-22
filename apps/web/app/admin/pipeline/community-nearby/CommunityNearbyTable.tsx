@@ -69,8 +69,11 @@ export default function CommunityNearbyTable({ rows }: { rows: CommunityNearbyRo
       columns={columns}
       rowKey={(r) => r.id}
       searchable={(r) => `${r.name} ${r.city ?? ''} ${r.state ?? ''}`}
-      emptyMessage="No communities yet."
-      searchPlaceholder="Search communities…"
+      // Search the whole table, not the page's 500-row window: there are ~8.7k
+      // communities and the window stops partway through the B's.
+      serverSearchParam="q"
+      emptyMessage="No communities found."
+      searchPlaceholder="Search all communities…"
     />
   );
 }
