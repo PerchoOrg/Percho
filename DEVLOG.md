@@ -16,6 +16,116 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-22 23:45 UTC — MAX_IMAGES 40 → 80, now that the slots hold real photos
+
+**Objective**: answer the question the previous entry left open. Owner: "merge
+and go with 80."
+
+**Actions**: `MAX_IMAGES` 40 → 80 in `ingest-page-photos.ts`; the comment on
+`maxDuration` in the ingest-url route updated to match.
+
+**Decisions**: measured before changing it rather than reasoning about it.
+Fetched all 79 of Bellmoore Park's candidates sequentially, exactly as the
+route does: **2.2 s, 28 MB**. Downloads are not what the cap was protecting —
+0.03 s per image against a 300 s budget. What it protects is the Supabase
+storage upload plus the two DB round trips (content-hash lookup, insert) each
+image costs; 80 images leaves 3.75 s each, which is ample.
+
+**Resolution**: Bellmoore Park now yields **71 photos** — 79 candidates after
+furniture removal, of which 8 fail the genuine size floors. Up from 6 before
+this phase, and from 35 at a cap of 40. `pnpm typecheck` clean, `pnpm test`
+620/620, biome unchanged from origin/main.
+
+**Learnings**: the 40 was never wrong as a safety limit — it was wrong as a
+*photo* limit, because it was counting resize variants. Raising it before
+fixing the counting would have bought roughly ten more real photos and hidden
+the actual bug behind a bigger number.
+
+**Next steps**: unchanged from the previous entry — the written amenity list
+and the 62 gallery alt texts on that page are still unharvested.
+
+## 2026-08-22 23:20 UTC — One photo served at four widths counted as four photos
+
+**Objective**: owner on Bellmoore Park: "i clicked fetch from website, but only
+see few photots, and dont see any amenities, which also on their website."
+Find out why, given the page he linked has a 62-photo gallery on it.
+
+**Actions**:
+- Fetched his URL with the ingester's own User-Agent (HTTP 200, 283 KB), ran
+  the shipped `extractImageUrls` over it, downloaded every candidate and
+  applied the real filters. Reproduced exactly: **6 photos kept, none of them
+  of an amenity.**
+- `apps/web/lib/poi/ingest-page-photos.ts`: `extractImageUrls` now decodes HTML
+  entities, and collapses width-declaring variants onto their path keeping the
+  widest. New exported `isFurniture`, applied to every URL *before* the
+  `MAX_IMAGES` slice. Over-cap URLs now land in `skipped` with a reason.
+- `ingest-page-photos.test.ts`: +7 tests (14 total).
+
+**Issues**: three faults compounding on the same page.
+1. The Providence Group serves every image at 300/400/1000/1920w. Each srcset
+   candidate was added as its own URL, so ~100 real images extracted as **309**.
+   `MAX_IMAGES = 40` therefore cut about ten photos in.
+2. Inside that window the variant first in document order was the 300px
+   thumbnail — ~300x175 and 12-19 KB, under *both* `MIN_EDGE_PX` and
+   `MIN_BYTES`. Every gallery photo reached was skipped as "too small".
+3. `CHROME_PATH` is tested inside the capped loop, so 13 header SVGs from
+   `/providence/images/` (not an `/assets/` path, so not caught by name) each
+   burned a slot before the first photograph.
+
+The 6 survivors were house elevation renderings and the site plan PNG. The
+amenity gallery — alt-tagged "Aerial view of community amenity center with lap
+pool", "Fitness center with Matrix cardio machines", "Outdoor tennis courts" —
+starts at URL index 30 and was lost in its entirety.
+
+**Decisions**:
+- **Did not raise `MAX_IMAGES`.** The constant's stated reason is real: each
+  image is a download plus an upload under a 300 s `maxDuration`. The fix
+  makes 40 slots hold 40 distinct photographs instead of ten photos' worth of
+  resize variants and a header's worth of icons. 40 is still the binding
+  constraint (79 candidates survive furniture removal) — but that is now a
+  product question, not a bug, and it is asked separately.
+- **Collapse only variants that declare a width** (a srcset `w` descriptor or a
+  `width=` query), keyed on origin+pathname. Keying every URL on its path was
+  the tempting version and is wrong: `?size=thumb` and `?size=full` are not
+  knowably the same picture, and guessing costs a photo. A URL that declares no
+  width keys on its full href and is left exactly as it is today.
+- **Over-cap URLs are reported, not dropped in silence.** Silent truncation is
+  precisely what made this read as "a page with no photos" instead of "a page
+  we stopped reading". They go in the existing `skipped` array behind the
+  panel's collapsed disclosure — no API change.
+- Left the pre-existing `noNonNullAssertion` warning in `titleCase` alone, and
+  left the unused `queued` array alone (see Learnings).
+
+**Resolution**: verified by running the *shipped* code over the saved page, not
+the prototype — 309 → 100 extracted, 21 furniture dropped, 79 candidates, 0
+`&amp;` left in any URL, 0 300w thumbnails inside the cap. Downloading those 40
+and applying the real size filters: **35 kept, 29 of them gallery photos**, up
+from 6 and 0. `pnpm typecheck` clean; `pnpm test` 620/620 across 56 files;
+`apps/web` biome now identical to pristine origin/main (173 pre-existing
+warnings, no error — `apps/mobile` still fails with `spawn ENOENT`, biome is
+not installed there, and does so on main too).
+
+**Learnings**:
+- A resize CDN's URL arrives as `?width=300&amp;ois=7796e8e`. Feeding that back
+  verbatim asks for a parameter named `amp;ois`, so the signature the CDN
+  checks goes missing. Providence's shrugged and served a default; a strict one
+  would have answered 403 and the page would have looked empty. Any regex
+  scraper over raw HTML needs entity decoding — this was latent everywhere.
+- The size floors are load-bearing and correct. What was wrong was *which*
+  variant we handed them. A filter that rejects the right thing for the wrong
+  reason looks identical in the logs to one that is working.
+- `queued` in `ingestPagePhotos` is written and never read — pre-existing dead
+  code, left in place per CLAUDE.md §0.3. Worth a look by whoever owns the
+  enhance queue.
+
+**Next steps**:
+- Owner re-runs Fetch from website on Bellmoore Park and reviews ~35 pending.
+- Ask the owner whether 40 should rise now that the slots are real.
+- The page also carries a written amenity list ("Clubhouse (Bellmoore Club),
+  fitness center, two pools, six lighted tennis courts…") and genuinely
+  descriptive alt text on all 62 gallery photos. We ingest neither. Separate
+  feature; not touched here.
+
 ## 2026-08-22 22:05 UTC — The Community Tour index was counting the wrong pipeline
 
 **Objective**: owner: "community tour page, why all rows show 0/0 video? can

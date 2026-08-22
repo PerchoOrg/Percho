@@ -20,8 +20,17 @@ import { imageSizeOf } from './image-size';
 const MIN_EDGE_PX = 400;
 /** Anything smaller is an icon or a tracking pixel, whatever its dimensions. */
 const MIN_BYTES = 20_000;
-/** One page should not be able to enqueue an unbounded fetch. */
-const MAX_IMAGES = 40;
+/**
+ * One page should not be able to enqueue an unbounded fetch.
+ *
+ * Raised from 40 to 80 (owner 2026-08-22) once the slots held distinct
+ * photographs rather than resize variants of the same one: Bellmoore Park
+ * offers 79 candidates after furniture is removed, and 40 threw away half a
+ * gallery. Downloads are not what this guards — all 79 fetch in 2.2s / 28 MB.
+ * It guards the uploads and the two DB round trips each image costs, against
+ * the route's 300s maxDuration.
+ */
+const MAX_IMAGES = 80;
 const FETCH_TIMEOUT_MS = 15_000;
 
 /**
@@ -35,6 +44,16 @@ const FETCH_TIMEOUT_MS = 15_000;
  */
 const CHROME_PATH = /\/(themes?|assets|static|dist|graphics|icons?|sprites?|ui|chrome)\//i;
 
+/**
+ * A URL that is a page's furniture rather than its content, judged without
+ * downloading it. Cheap enough to run over every image on the page, which is
+ * the whole point: it has to happen before MAX_IMAGES, not inside it.
+ */
+export function isFurniture(url: string): boolean {
+  const { pathname } = new URL(url);
+  return CHROME_PATH.test(pathname) || /\.svg$/i.test(pathname);
+}
+
 export interface IngestResult {
   poi_id: string;
   poi_name: string;
@@ -43,37 +62,101 @@ export interface IngestResult {
   skipped: Array<{ url: string; reason: string }>;
 }
 
+/** The entities that actually turn up inside a URL-bearing attribute. */
+const NAMED_ENTITIES: Record<string, string> = {
+  amp: '&',
+  lt: '<',
+  gt: '>',
+  quot: '"',
+  apos: "'",
+};
+
 /**
- * Every image URL a page points at, absolute and de-duplicated.
+ * An attribute value with its HTML entities resolved.
+ *
+ * `&amp;` is the one that matters. A resize CDN's URL is written into the
+ * markup as `?width=300&amp;ois=7796e8e`, and handing that back verbatim asks
+ * for a parameter literally named `amp;ois` — so the signature the CDN checks
+ * goes missing. Providence's shrugs and serves a default; a stricter one would
+ * answer 403 and the page would look like it had no photos on it.
+ */
+function decodeEntities(value: string): string {
+  return value.replace(/&(#\d+|#x[0-9a-f]+|[a-z]+);/gi, (whole, ref: string) => {
+    const key = ref.toLowerCase();
+    if (!key.startsWith('#')) return NAMED_ENTITIES[key] ?? whole;
+    const code = key.startsWith('#x') ? Number.parseInt(key.slice(2), 16) : Number(key.slice(1));
+    // A malformed numeric entity is not worth throwing the whole page away for.
+    if (!Number.isInteger(code) || code < 0 || code > 0x10ffff) return whole;
+    return String.fromCodePoint(code);
+  });
+}
+
+/** The declared pixel width of a variant, or null if it does not claim one. */
+function declaredWidth(url: URL, descriptor: number | undefined): number | null {
+  if (descriptor !== undefined) return descriptor;
+  const param = url.searchParams.get('width');
+  if (param === null) return null;
+  const parsed = Number(param);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+/**
+ * Every image a page points at, absolute, de-duplicated, at its largest size.
  *
  * Covers three shapes because real community sites use all of them: `<img
  * src>`, `srcset` candidate lists, and — the Aberdeen photo album's shape — an
  * `<a href>` pointing straight at the full-size JPEG, where the `<img>` is
  * only a thumbnail.
+ *
+ * One photograph must come back as one URL. The Providence Group serves every
+ * image at four widths (300 / 400 / 1000 / 1920), and counting those as four
+ * images did two kinds of damage at once: Bellmoore Park's page yielded 309
+ * "images" for ~100 real ones, so `MAX_IMAGES` was spent about ten photos in,
+ * and the variant reached first in document order was the 300px thumbnail,
+ * which then failed the size floor. Six photos survived, none of them of an
+ * amenity, out of a 62-photo gallery (owner 2026-08-22).
+ *
+ * So variants that *declare* a width — a `w` descriptor, or a `width=` query —
+ * collapse onto their path and the widest one wins. Anything that declares no
+ * width keys on its full URL and is left alone: `?size=full` and `?size=thumb`
+ * are not knowably the same picture, and guessing costs a photo.
  */
 export function extractImageUrls(html: string, pageUrl: string): string[] {
-  const out = new Set<string>();
-  const add = (raw: string | undefined) => {
+  /** key → the widest variant seen for it so far. Insertion order is kept. */
+  const best = new Map<string, { url: string; width: number }>();
+
+  const add = (raw: string | undefined, descriptor?: number) => {
     if (!raw) return;
-    const trimmed = raw.trim();
+    const trimmed = decodeEntities(raw.trim());
     if (!trimmed || trimmed.startsWith('data:')) return;
+    let parsed: URL;
     try {
-      out.add(new URL(trimmed, pageUrl).toString());
+      parsed = new URL(trimmed, pageUrl);
     } catch {
       /* a malformed src is not worth failing the page over */
+      return;
+    }
+    const width = declaredWidth(parsed, descriptor);
+    const key = width === null ? parsed.toString() : `${parsed.origin}${parsed.pathname}`;
+    const seen = best.get(key);
+    if (!seen || (width ?? 0) > seen.width) {
+      best.set(key, { url: parsed.toString(), width: width ?? 0 });
     }
   };
 
   for (const m of html.matchAll(/<img\b[^>]*?\bsrc\s*=\s*["']([^"']+)["']/gi)) add(m[1]);
   for (const m of html.matchAll(/\bsrcset\s*=\s*["']([^"']+)["']/gi)) {
-    // "a.jpg 480w, b.jpg 960w" — the URL is the first token of each candidate.
-    for (const candidate of (m[1] ?? '').split(',')) add(candidate.trim().split(/\s+/)[0]);
+    // "a.jpg 480w, b.jpg 960w" — URL first, then an optional size descriptor.
+    for (const candidate of (m[1] ?? '').split(',')) {
+      const [url, size] = candidate.trim().split(/\s+/);
+      add(url, size?.endsWith('w') ? Number(size.slice(0, -1)) : undefined);
+    }
   }
   for (const m of html.matchAll(/<a\b[^>]*?\bhref\s*=\s*["']([^"']+\.(?:jpe?g|png))["']/gi)) {
     add(m[1]);
   }
 
-  return [...out];
+  return [...best.values()].map((v) => v.url);
 }
 
 async function fetchWithTimeout(url: string, init?: RequestInit): Promise<Response> {
@@ -176,11 +259,27 @@ export async function ingestPagePhotos(
   const queued: string[] = [];
   let added = 0;
 
-  for (const url of urls.slice(0, MAX_IMAGES)) {
-    if (CHROME_PATH.test(new URL(url).pathname)) {
+  // Furniture is rejected on the URL alone, and — this is the point — before
+  // MAX_IMAGES is applied. Deciding it inside the capped loop meant a header
+  // full of icons could spend the whole budget before the first photograph:
+  // thirteen of Bellmoore Park's first forty slots went to SVG chrome. An SVG
+  // is furniture by definition here; `imageSizeOf` reads JPEG and PNG only, so
+  // one could never have become a photo.
+  const candidates: string[] = [];
+  for (const url of urls) {
+    if (isFurniture(url)) {
       skipped.push({ url, reason: 'site furniture, not content' });
-      continue;
+    } else {
+      candidates.push(url);
     }
+  }
+  // Say so when the cap bites. Silent truncation is what made this look like a
+  // page with no photos on it rather than a page we stopped reading.
+  for (const url of candidates.slice(MAX_IMAGES)) {
+    skipped.push({ url, reason: `past the ${MAX_IMAGES}-image limit for one page` });
+  }
+
+  for (const url of candidates.slice(0, MAX_IMAGES)) {
     let bytes: Buffer;
     let contentType: string;
     try {

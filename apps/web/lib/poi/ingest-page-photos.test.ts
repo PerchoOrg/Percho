@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { extractImageUrls } from './ingest-page-photos';
+import { extractImageUrls, isFurniture } from './ingest-page-photos';
 
 const PAGE = 'https://www.aberdeencommunity.org/photo-album/';
 
@@ -38,6 +38,51 @@ describe('extractImageUrls', () => {
     expect(urls).toContain('https://www.aberdeencommunity.org/a-1920.jpg');
   });
 
+  it('collapses one photo served at four widths down to the widest', () => {
+    // The Providence Group's shape, and what buried Bellmoore Park's gallery:
+    // four variants of one photograph, the 300px one first in document order.
+    // Counted as four images they exhausted MAX_IMAGES ten photos in; picked
+    // by document order the thumbnail then failed the size floor.
+    const urls = extractImageUrls(
+      `<img srcset="/p/HbtM3.jpeg?width=300&amp;ois=aaa 300w,
+                    /p/HbtM3.jpeg?width=400&amp;ois=bbb 400w,
+                    /p/HbtM3.jpeg?width=1920&amp;ois=ccc 1920w"
+            src="/p/HbtM3.jpeg?width=300&amp;ois=aaa">`,
+      PAGE,
+    );
+    expect(urls).toEqual(['https://www.aberdeencommunity.org/p/HbtM3.jpeg?width=1920&ois=ccc']);
+  });
+
+  it('decodes the entities in an attribute, so the CDN gets its real query', () => {
+    // `&amp;` left in place asks for a parameter named `amp;ois` — the resize
+    // signature goes missing and a strict CDN answers 403.
+    const urls = extractImageUrls(
+      `<img src="/p/pool.jpg?width=1600&amp;fit=bounds&amp;ois=7796e8e">`,
+      PAGE,
+    );
+    expect(urls).toEqual([
+      'https://www.aberdeencommunity.org/p/pool.jpg?width=1600&fit=bounds&ois=7796e8e',
+    ]);
+  });
+
+  it('keeps variants that declare no width apart, rather than guessing', () => {
+    // `?size=thumb` and `?size=full` are not knowably the same picture, and
+    // collapsing them on the path alone would cost whichever one it dropped.
+    const urls = extractImageUrls(
+      `<img src="/p/pool.jpg?size=thumb"><img src="/p/pool.jpg?size=full">`,
+      PAGE,
+    );
+    expect(urls).toHaveLength(2);
+  });
+
+  it('keeps a width-bearing variant from swallowing a different photo', () => {
+    const urls = extractImageUrls(
+      `<img srcset="/p/pool.jpg?width=1920 1920w"><img srcset="/p/tennis.jpg?width=1920 1920w">`,
+      PAGE,
+    );
+    expect(urls).toHaveLength(2);
+  });
+
   it('ignores inline data URIs and non-image links', () => {
     const urls = extractImageUrls(
       `<img src="data:image/gif;base64,R0lGOD">
@@ -70,5 +115,27 @@ describe('extractImageUrls', () => {
   it('survives a malformed src rather than throwing the page away', () => {
     const urls = extractImageUrls(`<img src="http://"><img src="/real.jpg">`, PAGE);
     expect(urls).toContain('https://www.aberdeencommunity.org/real.jpg');
+  });
+});
+
+describe('isFurniture', () => {
+  it('rejects an SVG, which could never have become a photo', () => {
+    // imageSizeOf reads JPEG and PNG headers only. Thirteen of Bellmoore
+    // Park's first forty slots went to icon SVGs that were always going to be
+    // thrown away — which is why this is decided before MAX_IMAGES, not inside
+    // the capped loop.
+    expect(isFurniture('https://static.example.com/providence/images/icon-bed.svg?v=1')).toBe(true);
+  });
+
+  it('rejects a themed asset path', () => {
+    expect(isFurniture('https://example.org/app/themes/forsyth/assets/img/graphics/boat.png')).toBe(
+      true,
+    );
+  });
+
+  it('keeps a photograph served from a plain media path', () => {
+    expect(isFurniture('https://media.example.com/259/2020/9/10/HbtM3.jpeg?width=1920')).toBe(
+      false,
+    );
   });
 });
