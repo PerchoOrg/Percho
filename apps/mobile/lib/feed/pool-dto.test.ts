@@ -204,6 +204,92 @@ describe("parseCommunity", () => {
 		expect(parseCommunity(COMMUNITY)?.signals).toBeUndefined();
 	});
 
+	describe("tour segments (the dashed progress bar)", () => {
+		const seg = (name: string, endFraction: number) => ({ name, endFraction });
+
+		it("carries the film's places in play order", () => {
+			const c = parseCommunity({
+				...COMMUNITY,
+				tourSegments: [
+					seg("Clubhouse", 0.4),
+					seg("Pool", 0.75),
+					seg("Park", 1),
+				],
+			});
+			expect(c?.tourSegments).toEqual([
+				{ name: "Clubhouse", endFraction: 0.4 },
+				{ name: "Pool", endFraction: 0.75 },
+				{ name: "Park", endFraction: 1 },
+			]);
+		});
+
+		it("omits an empty list so the card draws a plain bar", () => {
+			expect(parseCommunity(COMMUNITY)?.tourSegments).toBeUndefined();
+			expect(
+				parseCommunity({ ...COMMUNITY, tourSegments: [] })?.tourSegments,
+			).toBeUndefined();
+			expect(
+				parseCommunity({ ...COMMUNITY, tourSegments: "nope" })?.tourSegments,
+			).toBeUndefined();
+		});
+
+		/**
+		 * A dash's WIDTH is its end minus the previous end, so a sequence that
+		 * does not rise produces a zero or negative width — a bar with a gap in
+		 * it, or dashes drawn on top of each other. The whole list is rejected
+		 * rather than repaired: a plain bar is always right, and a repaired one
+		 * would be a guess about where the film's places actually are.
+		 */
+		it("rejects a sequence that does not rise", () => {
+			for (const bad of [
+				[seg("a", 0.5), seg("b", 0.5)],
+				[seg("a", 0.6), seg("b", 0.3)],
+				[seg("a", 0)],
+				[seg("a", -0.2)],
+			]) {
+				expect(
+					parseCommunity({ ...COMMUNITY, tourSegments: bad })?.tourSegments,
+				).toBeUndefined();
+			}
+		});
+
+		it("rejects a fraction past the end of the film", () => {
+			expect(
+				parseCommunity({
+					...COMMUNITY,
+					tourSegments: [seg("a", 0.5), seg("b", 1.4)],
+				})?.tourSegments,
+			).toBeUndefined();
+		});
+
+		it("rejects an unreadable entry rather than skipping it", () => {
+			// Skipping one would silently shift every dash after it.
+			expect(
+				parseCommunity({
+					...COMMUNITY,
+					tourSegments: [seg("a", 0.5), null, seg("c", 1)],
+				})?.tourSegments,
+			).toBeUndefined();
+			expect(
+				parseCommunity({
+					...COMMUNITY,
+					tourSegments: [seg("a", 0.5), { name: "b" }],
+				})?.tourSegments,
+			).toBeUndefined();
+		});
+
+		it("keeps a nameless segment — the dash is the point, not the label", () => {
+			const c = parseCommunity({
+				...COMMUNITY,
+				tourSegments: [{ endFraction: 0.5 }, { endFraction: 1 }],
+			});
+			expect(c?.tourSegments).toEqual([
+				{ name: "", endFraction: 0.5 },
+				{ name: "", endFraction: 1 },
+			]);
+		});
+	});
+
 	describe("reason tiles (layout E)", () => {
 		it("parses reasons, keeping a sub-fact only when the server sent one", () => {
 			const c = parseCommunity({

@@ -19,6 +19,7 @@
  */
 
 import { publicCoverImageUrl } from '@/lib/communities/cover';
+import type { TourSegment } from '@/lib/feed/tour-segments';
 import { createAnonClient } from '@/lib/supabase/server';
 import type { DimKey } from '@percho/shared/types';
 import { communityHighlightDims } from './community-highlights';
@@ -65,6 +66,13 @@ export interface PoolCommunityDTO {
    * could never play one.
    */
   videoUrl?: string;
+  /**
+   * One entry per PLACE in the attached tour, so the card can draw its progress
+   * as one dash per place instead of one continuous bar (owner 2026-08-22).
+   * Attached by the route from `tour_assemblies`; absent whenever the video did
+   * not come from an assembly, or came from one whose shot list is unreadable.
+   */
+  tourSegments?: TourSegment[];
 }
 
 type CommunityPoolRow = {

@@ -35,6 +35,7 @@
  * belong to a listing's *surroundings*, not to the listing.
  */
 
+import { type TourSegment, tourSegments } from '@/lib/feed/tour-segments';
 import { mobileVideoUid } from '@/lib/feed/video-uid';
 import { createServiceClient } from '@/lib/supabase/server';
 
@@ -64,11 +65,25 @@ type GeneratedVideoRow = {
   created_at: string;
 };
 
+/** A `tour_assemblies` row: a bucket video plus the shot list it was cut from. */
+type AssemblyRow = GeneratedVideoRow & { ordered_clips: unknown };
+
 export interface HeroVideoIndex {
   /** listing id → stream uid of that home's OWN tour. */
   byListing: Map<string, string>;
   /** community id → stream uid of that neighbourhood's video. */
   byCommunity: Map<string, string>;
+  /**
+   * community id → one entry per PLACE in that neighbourhood's film, for the
+   * card's dashed progress bar.
+   *
+   * Only ever populated from `tour_assemblies`, and only for the assembly whose
+   * uid actually WON above: it is the one source that records what the film is
+   * made of. A community playing an older `generated_videos` bucket video is
+   * absent here and the card draws a plain bar — the right answer, since we do
+   * not know that video's structure and must not invent one.
+   */
+  segmentsByCommunity: Map<string, TourSegment[]>;
 }
 
 /**
@@ -102,13 +117,14 @@ export async function fetchVerticalVideos(): Promise<HeroVideoIndex> {
     // the older bucket videos when it's ready.
     supabase
       .from('tour_assemblies')
-      .select('community_id, cf_stream_uid, created_at')
+      .select('community_id, cf_stream_uid, created_at, ordered_clips')
       .eq('status', 'ready')
       .order('created_at', { ascending: false }),
   ]);
 
   const byListing = new Map<string, string>();
   const byCommunity = new Map<string, string>();
+  const segmentsByCommunity = new Map<string, TourSegment[]>();
 
   // A video is an enhancement, not the card. A failed read must not take the
   // whole feed down — the cards still render with photos.
@@ -141,10 +157,15 @@ export async function fetchVerticalVideos(): Promise<HeroVideoIndex> {
   // key is the OLDEST — keep the FIRST (latest), then overwrite bucket values.
   if (!assemblyRes.error) {
     const byCommunityLatest = new Map<string, string>();
-    for (const row of (assemblyRes.data ?? []) as GeneratedVideoRow[]) {
+    for (const row of (assemblyRes.data ?? []) as AssemblyRow[]) {
       if (!row.cf_stream_uid || !row.community_id) continue;
       if (!byCommunityLatest.has(row.community_id)) {
         byCommunityLatest.set(row.community_id, row.cf_stream_uid);
+        // Read from the SAME row that won, inside the same guard. Taking the
+        // structure from one assembly and the uid from another would dash a
+        // film against a different film's shot list.
+        const segments = tourSegments(row.ordered_clips);
+        if (segments.length > 0) segmentsByCommunity.set(row.community_id, segments);
       }
     }
     for (const [id, uid] of byCommunityLatest) {
@@ -152,7 +173,7 @@ export async function fetchVerticalVideos(): Promise<HeroVideoIndex> {
     }
   }
 
-  return { byListing, byCommunity };
+  return { byListing, byCommunity, segmentsByCommunity };
 }
 
 /** Listing ids that have a hero tour, for the dev `videoFirst` fetch. */

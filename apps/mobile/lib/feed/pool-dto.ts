@@ -87,6 +87,32 @@ function strings(v: unknown): string[] {
 	return v.filter((s): s is string => typeof s === "string" && s.length > 0);
 }
 
+/**
+ * The tour's per-place progress segments.
+ *
+ * Validated harder than `signals` is, and for a different reason: a bad string
+ * costs a wrong chip, whereas a bad `endFraction` lays out the whole dashed bar
+ * wrong. Every entry must be a finite fraction in (0, 1] and the sequence must
+ * RISE — that is what makes each dash's width (this end minus the last) a
+ * positive number. Anything else yields `[]` and the card draws a plain bar,
+ * which needs no structure to be correct.
+ */
+function tourSegments(v: unknown): { name: string; endFraction: number }[] {
+	if (!Array.isArray(v)) return [];
+	const out: { name: string; endFraction: number }[] = [];
+	let prev = 0;
+	for (const raw of v) {
+		const r = rec(raw);
+		if (r === null) return [];
+		const endFraction = num(r.endFraction);
+		if (endFraction === undefined || endFraction <= prev || endFraction > 1)
+			return [];
+		prev = endFraction;
+		out.push({ name: str(r.name) ?? "", endFraction });
+	}
+	return out;
+}
+
 function stats(v: unknown): GeoStats {
 	const raw = rec(v);
 	if (!raw) return {};
@@ -271,6 +297,7 @@ export function parseCommunity(v: unknown): CommunityCardV3 | null {
 	// (2026-08-15). No validation beyond non-empty strings: the server owns the
 	// vocabulary, and a stale build must not drop pills for the whole pool.
 	const signals = strings(raw.signals);
+	const segments = tourSegments(raw.tourSegments);
 	return {
 		kind: "community",
 		id,
@@ -287,6 +314,7 @@ export function parseCommunity(v: unknown): CommunityCardV3 | null {
 		...(d.length > 0 ? { dims: d } : {}),
 		...(r.length > 0 ? { reasons: r } : {}),
 		...(signals.length > 0 ? { signals } : {}),
+		...(segments.length > 0 ? { tourSegments: segments } : {}),
 	};
 }
 

@@ -19,9 +19,10 @@ Community films now open on the community. Its own amenities lead the film and r
 Aberdeen in Suwanee is the first community with this treatment: a 58-second film that opens on its clubhouse and takes in the pool, the courts and the grounds before heading out into Suwanee.
 
 ### 2026-08-22
-- Neighborhood cards in the iPhone feed now show a slim progress line along the bottom, so you can see how much of a community film is left before deciding to stay with it
+- Neighborhood cards now show the community film's progress as a row of segments, one per place the film visits — so a card tells you how many stops a tour has and which one you are watching, instead of leaving you to guess how long it runs
 - The **Explore** link on a neighborhood card gives a gentle pulse as the film nears its end, as an invitation to read more about the place you have just been shown
 - The four-figure summary bar (Schools, Safety, Convenience, Growth) has moved off the neighborhood card and onto the neighborhood's own Explore screen, so the card is the film and nothing else
+- With it gone, the neighborhood's name now sits in the bottom-left corner with **Explore** opposite it, and the card reads as balanced again
 
 ### 2026-08-21
 - Every photo is now sharpened and enlarged automatically before a home tour is made, rather than only when someone happened to have the admin photo table open. Most photos were never being improved at all
