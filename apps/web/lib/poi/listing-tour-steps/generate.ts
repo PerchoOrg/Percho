@@ -131,6 +131,8 @@ async function enqueueClips(
     move: string | null;
     duration_s: number;
     prompt: string | null;
+    pair_photo_id?: string | null;
+    pair_role?: string | null;
     ai_generated: boolean;
   }>,
   surface: Surface,
@@ -181,6 +183,9 @@ async function enqueueClips(
       move: s.move,
       duration_s: s.duration_s,
       prompt: s.prompt,
+      // Birdview hero only: the aerial photo anchoring the clip's other end.
+      pair_photo_id: s.engine === 'seedance' ? (s.pair_photo_id ?? null) : null,
+      pair_role: s.engine === 'seedance' ? (s.pair_role ?? null) : null,
       ai_generated: s.ai_generated,
       render_key: key,
       status: 'pending' as const,
@@ -282,6 +287,8 @@ export async function runGenerate(
         move: forced && forced !== planClip?.engine ? null : (planClip?.move ?? null),
         duration_s: shot?.duration_s ?? 3.0,
         prompt: chosen === 'seedance' ? (planClip?.prompt ?? null) : null,
+        pair_photo_id: chosen === 'seedance' ? (planClip?.pair_photo_id ?? null) : null,
+        pair_role: chosen === 'seedance' ? (planClip?.pair_role ?? null) : null,
         ai_generated: chosen === 'seedance',
       };
     });
@@ -335,6 +342,8 @@ function plannedForSurface(shots: ListingShot[], surface: Surface) {
     move: string | null;
     duration_s: number;
     prompt: string | null;
+    pair_photo_id?: string | null;
+    pair_role?: string | null;
     ai_generated: boolean;
   }> = [];
   for (const s of shots) {
@@ -346,6 +355,8 @@ function plannedForSurface(shots: ListingShot[], surface: Surface) {
       move: clip.move,
       duration_s: s.duration_s,
       prompt: clip.prompt,
+      pair_photo_id: clip.pair_photo_id ?? null,
+      pair_role: clip.pair_role ?? null,
       ai_generated: clip.ai_generated,
     });
   }

@@ -192,6 +192,56 @@ failed on files that no longer exist.
   runs from there and it sat two commits behind yesterday, which is why he saw
   no change at all.
 
+## 2026-08-22 11:10 UTC — Phase 85: the hero prompt is chosen by a model inside a fence
+
+**Objective**: the home tour's Seedance hero rendered from the community
+pipeline's FALLBACK_CLIP_PROMPT — no scene description, the same forward
+drift for every home, and a "storefront signage" clause. The owner reviewed a
+filmed effect vocabulary (11 test clips, $0.80, on the Hero Shot Lab artifact
+page) and set the rules: the model picks the move and writes scene/motion/
+focus, no static per-room decision tables, the explicitly rejected moves are
+simply not available, and a birdview is only allowed anchored to a REAL
+aerial photo.
+
+**Actions**:
+- `scripts/render-worker/hero_prompt.py` (new): approved pool of 9 camera
+  clauses (the filmed ones, verbatim), 4 mandatory clauses appended by code,
+  banned-word regex, `choose_hero_prompt()` — one Gemini vision call per plan
+  (hero photo + up to 3 aerial candidates), validated, falling back to a
+  locked frame on any failure. The rejected effects (facade tilt-up,
+  streetscape glide, synthetic aerial) have no camera sentence to render from.
+- `process_plan_job`: downloads the hero ORIGINAL plus aerial candidates
+  (filtered by `looks_aerial` over cached ai_tags captions), writes prompt /
+  effect / pair onto the shot's seedance surface entry.
+- Migration `20260822090000`: `listing_photo_clips.pair_photo_id` +
+  `pair_role('first'|'last')` — a birdview clip is anchored by TWO real
+  photos (descend opens on the aerial, rise closes on it). Types spliced by
+  hand (the v1/v2 CLI drift from phase74 still stands).
+- `generate.ts` carries the pair through both enqueue paths;
+  `seedance-worker/worker.ts` submits `[pair, hero]` or `[hero, pair]` in
+  frames mode. The provider rejects a lone last_frame (learned in testing —
+  it 400s), so the pair always travels with the ground shot.
+
+**Decisions**:
+- The model's freedom is scene/motion/focus plus the pick itself; the camera
+  sentence is a lookup. Owner explicitly approved focus ("1 focus - yes we
+  can give it") and rejected freeing the camera language ("2 no") — that
+  language is what was verified against Seedance 2.0 Mini, and freeing it
+  re-runs the "every clip zooms in" experiment.
+- Aerial cleanliness (no highlight rings/overlay text — every 5122 aerial
+  carries a yellow marketing ring) is judged by the model in the same call,
+  not by a heuristic.
+- `pair_*` is NOT in render_key: seedance is exempt from automatic requeue
+  anyway, and prompt already isn't in the key.
+
+**Resolution**: 104 python tests pass (12 new in test_hero_prompt.py — pool
+enforcement, verbatim clauses, pair-role mapping, banned words, fallback);
+typecheck + lint clean, 598 web tests pass; seedance worker.ts typechecked
+directly (only pre-existing dotenv resolution noise).
+
+**Next steps**: db push, restart render + seedance workers, one verification
+re-plan; owner tests effects manually via per-row Regenerate.
+
 ## 2026-08-22 08:35 UTC — All 15 home tours re-rendered from enhanced photos
 
 **Objective**: owner — "yes yes lets redo" on re-rendering the existing tours.

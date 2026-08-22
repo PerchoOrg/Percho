@@ -283,6 +283,10 @@ type PhotoClipRow = {
   updated_at: string;
   /** Built by the tour Guard, mandatory clauses included. Null on old rows. */
   prompt: string | null;
+  /** Birdview hero only: the REAL aerial photo anchoring the clip's other end. */
+  pair_photo_id?: string | null;
+  /** Where the pair sits: 'first' (descend opens on it) or 'last' (rise closes on it). */
+  pair_role?: string | null;
 };
 
 /**
@@ -401,12 +405,28 @@ async function processClipQueue(scope: ClipScope, budget: number): Promise<numbe
           '',
         );
 
-        // Single photo → first-frame control (no inter-frame geometry risk).
+        // A birdview hero carries a second REAL photo (the aerial); the pair's
+        // role says which end of the clip it anchors. The provider rejects a
+        // lone last_frame, so the pair always travels WITH the ground shot.
+        const heroUrl = `${publicBase}/${photo.storage_path}`;
+        let frameUrls = [heroUrl];
+        if (row.pair_photo_id && (row.pair_role === 'first' || row.pair_role === 'last')) {
+          const { data: pair } = (await sb
+            .from(scope.photoTable)
+            .select('storage_path')
+            .eq('id', row.pair_photo_id)
+            .maybeSingle()) as { data: { storage_path: string } | null };
+          if (!pair) throw new Error(`pair photo ${row.pair_photo_id} not found`);
+          const pairUrl = `${publicBase}/${pair.storage_path}`;
+          frameUrls = row.pair_role === 'first' ? [pairUrl, heroUrl] : [heroUrl, pairUrl];
+        }
+
+        // frames mode: first-frame control, plus last-frame when a pair rides along.
         const job = await submitVideo({
           // The prompt is built by the tour Guard (four fixed parts, verbatim
           // mandatory clauses) — this worker never composes or edits one.
           prompt: row.prompt?.trim() || FALLBACK_CLIP_PROMPT,
-          frameImageUrls: [`${publicBase}/${photo.storage_path}`],
+          frameImageUrls: frameUrls,
           durationS: Math.min(Math.max(Math.round(row.duration_s ?? 4), 4), 15),
           // The generation has to come back in the shape of the canvas it will
           // be cut into. Every clip before 2026-08-21 was for a portrait canvas

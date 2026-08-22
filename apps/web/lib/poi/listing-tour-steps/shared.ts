@@ -44,6 +44,12 @@ export interface PlannedClip {
   move: string | null;
   /** Seedance only — the prompt the clip is generated from. */
   prompt: string | null;
+  /** Seedance only — which pool effect the model picked (hero_prompt.py). */
+  effect?: string | null;
+  /** Birdview hero only — the REAL aerial photo anchoring the other end. */
+  pair_photo_id?: string | null;
+  /** Where the pair photo sits in the clip: 'first' (descend) or 'last' (rise). */
+  pair_role?: string | null;
   ai_generated: boolean;
 }
 

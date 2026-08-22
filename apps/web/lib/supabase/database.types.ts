@@ -1275,6 +1275,8 @@ export type Database = {
           id: string
           listing_photo_id: string
           move: string | null
+          pair_photo_id: string | null
+          pair_role: string | null
           polling_url: string | null
           prompt: string | null
           provider_job_id: string | null
@@ -1294,6 +1296,8 @@ export type Database = {
           id?: string
           listing_photo_id: string
           move?: string | null
+          pair_photo_id?: string | null
+          pair_role?: string | null
           polling_url?: string | null
           prompt?: string | null
           provider_job_id?: string | null
@@ -1313,6 +1317,8 @@ export type Database = {
           id?: string
           listing_photo_id?: string
           move?: string | null
+          pair_photo_id?: string | null
+          pair_role?: string | null
           polling_url?: string | null
           prompt?: string | null
           provider_job_id?: string | null
@@ -1326,6 +1332,13 @@ export type Database = {
           {
             foreignKeyName: "listing_photo_clips_listing_photo_id_fkey"
             columns: ["listing_photo_id"]
+            isOneToOne: false
+            referencedRelation: "listing_photos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "listing_photo_clips_pair_photo_id_fkey"
+            columns: ["pair_photo_id"]
             isOneToOne: false
             referencedRelation: "listing_photos"
             referencedColumns: ["id"]
