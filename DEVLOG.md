@@ -16,6 +16,43 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-22 18:47 UTC — The community name stops being abbreviated
+
+**Objective**: owner — "much better now. 1) if community name is long, it can
+be truncated, fix that 2) icons should be on the right side of the community
+name".
+
+**Actions**:
+- `numberOfLines` on the name goes 1 → 2, so a long name WRAPS instead of
+  ellipsizing.
+- The glyph run moves after the name in the row.
+
+**Decisions**: wrapping rather than auto-shrinking the type. `adjustsFontSize
+ToFit` would have kept the single line and the alignment, but it makes the
+headline of a long-named community smaller than the headline of a short-named
+one — and the size of that name is the thing the owner asked to increase two
+messages ago. Wrapping spends card height, which this card has; truncation
+spent the name, which it does not.
+
+Still `alignItems: center` on the row, so `Explore` and the glyphs centre
+against a two-line name rather than hanging off its first line.
+
+Two lines, not unlimited: the cap is what stops a pathological name from
+walking up over the footage. A name that overruns two lines at 27pt still
+ellipsizes, and that is the right place to give up.
+
+**Resolution**: typecheck clean, 520/520 mobile tests, biome clean. Not
+verified on device.
+
+**Learnings**: the truncation was not a bug in the layout — `flexShrink: 1` and
+`minWidth: 0` were doing exactly what they were written to do two messages
+earlier, when the instruction was to keep the name and `Explore` on one line.
+"The name gives way" and "the name must be complete" are the same constraint
+resolved in opposite directions; only the second one was ever stated out loud.
+
+**Next steps**: unchanged — device check on the scrub, the counts lost with the
+pills, and the explore screen's four invented stat values.
+
 ## 2026-08-22 18:40 UTC — The bar becomes a control; pills become glyphs
 
 **Objective**: owner, on device — "community and explore should be aligned,
