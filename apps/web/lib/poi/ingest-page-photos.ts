@@ -20,8 +20,17 @@ import { imageSizeOf } from './image-size';
 const MIN_EDGE_PX = 400;
 /** Anything smaller is an icon or a tracking pixel, whatever its dimensions. */
 const MIN_BYTES = 20_000;
-/** One page should not be able to enqueue an unbounded fetch. */
-const MAX_IMAGES = 40;
+/**
+ * One page should not be able to enqueue an unbounded fetch.
+ *
+ * Raised from 40 to 80 (owner 2026-08-22) once the slots held distinct
+ * photographs rather than resize variants of the same one: Bellmoore Park
+ * offers 79 candidates after furniture is removed, and 40 threw away half a
+ * gallery. Downloads are not what this guards — all 79 fetch in 2.2s / 28 MB.
+ * It guards the uploads and the two DB round trips each image costs, against
+ * the route's 300s maxDuration.
+ */
+const MAX_IMAGES = 80;
 const FETCH_TIMEOUT_MS = 15_000;
 
 /**

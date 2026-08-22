@@ -15,7 +15,7 @@ import { CommunityPhotoIngest } from '@/lib/zod/schemas';
 import { NextResponse } from 'next/server';
 
 export const runtime = 'nodejs';
-// One page can carry 40 images; each is a download plus an upload.
+// One page can carry 80 images; each is a download plus an upload.
 export const maxDuration = 300;
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {

@@ -16,6 +16,34 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-22 23:45 UTC — MAX_IMAGES 40 → 80, now that the slots hold real photos
+
+**Objective**: answer the question the previous entry left open. Owner: "merge
+and go with 80."
+
+**Actions**: `MAX_IMAGES` 40 → 80 in `ingest-page-photos.ts`; the comment on
+`maxDuration` in the ingest-url route updated to match.
+
+**Decisions**: measured before changing it rather than reasoning about it.
+Fetched all 79 of Bellmoore Park's candidates sequentially, exactly as the
+route does: **2.2 s, 28 MB**. Downloads are not what the cap was protecting —
+0.03 s per image against a 300 s budget. What it protects is the Supabase
+storage upload plus the two DB round trips (content-hash lookup, insert) each
+image costs; 80 images leaves 3.75 s each, which is ample.
+
+**Resolution**: Bellmoore Park now yields **71 photos** — 79 candidates after
+furniture removal, of which 8 fail the genuine size floors. Up from 6 before
+this phase, and from 35 at a cap of 40. `pnpm typecheck` clean, `pnpm test`
+620/620, biome unchanged from origin/main.
+
+**Learnings**: the 40 was never wrong as a safety limit — it was wrong as a
+*photo* limit, because it was counting resize variants. Raising it before
+fixing the counting would have bought roughly ten more real photos and hidden
+the actual bug behind a bigger number.
+
+**Next steps**: unchanged from the previous entry — the written amenity list
+and the 62 gallery alt texts on that page are still unharvested.
+
 ## 2026-08-22 23:20 UTC — One photo served at four widths counted as four photos
 
 **Objective**: owner on Bellmoore Park: "i clicked fetch from website, but only
