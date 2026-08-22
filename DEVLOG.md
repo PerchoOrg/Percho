@@ -229,6 +229,43 @@ failed on files that no longer exist.
   runs from there and it sat two commits behind yesterday, which is why he saw
   no change at all.
 
+## 2026-08-22 20:10 UTC — A regenerated clip now actually shows up: ?v= on clip URLs
+
+**Objective**: owner regenerated 3525 Berkeley Park's hero; Video Jobs showed
+the new generation, but the photo table's player kept playing the OLD clip.
+Suspected cache — confirmed cache.
+
+**Cause**: a clip's storage path is FIXED (`listing-clips/{photoId}-{surface}
+.mp4`, community `clips/{photoId}.mp4`) and the seedance worker uploads with
+`upsert: true` — a regenerate overwrites the same object. The clips routes
+built `video_url` as the bare public URL, and Supabase storage serves it with
+`cache-control: public, max-age=3600`. So the ROW updates instantly (Video
+Jobs reads rows) while the URL's bytes stay stale in the browser/CDN for up
+to an hour. Same for locally re-rendered DA/KB clips — this morning's
+enhanced-photo re-render also served stale previews in the admin tables.
+
+**Actions**: both clips routes (`listings/[id]/clips`,
+`community-tour/[id]/clips`) now select `updated_at` and append
+`?v=<epoch(updated_at)>` to `video_url`. New bytes → new updated_at → new
+cache key. The lightbox mounts a fresh `<video src>` per open, so a changed
+URL is fetched. `ai_tour_videos` needs nothing: its path embeds the row id
+and is unique per generation.
+
+**Not changed**: the fixed storage path + upsert. Versioned paths would leak
+orphaned objects on every regenerate; the row-updates-instantly /
+bytes-lag-behind split is only a problem for DISPLAY, and the display now
+carries the version. The assemblers download via the storage API (origin,
+service role), not the public CDN URL, so films were never at risk of stale
+bytes.
+
+**Also**: one pre-existing lint error on main (import order in
+`community-signals.test.ts`, another branch's file) autofixed in passing —
+it was failing `pnpm lint` for every branch.
+
+**Verified**: the storage endpoint serves the versioned URL (200, full
+object); bare URL confirmed `max-age=3600`, which is the smoking gun.
+Typecheck clean, lint zero errors, 602 web tests pass.
+
 ## 2026-08-22 19:20 UTC — Phase 85.2: slow_rise leaves the pool; ground effects get an altitude fence
 
 **Objective**: owner's first manual test (3525 Berkeley Park Court) — "tested,

@@ -27,6 +27,7 @@ interface ClipRow {
   storage_path: string | null;
   cost_usd: number | null;
   error: string | null;
+  updated_at: string;
 }
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -45,7 +46,9 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 
   const { data: clips } = (await sb
     .from('listing_photo_clips')
-    .select('listing_photo_id, engine, surface, duration_s, status, storage_path, cost_usd, error')
+    .select(
+      'listing_photo_id, engine, surface, duration_s, status, storage_path, cost_usd, error, updated_at',
+    )
     .in('listing_photo_id', photoIds)) as { data: ClipRow[] | null };
 
   // Seedance renders land in the paid `ai-videos` bucket; DepthFlow and Ken
@@ -66,8 +69,12 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
           surface: c.surface,
           duration_s: c.duration_s,
           status: c.status,
+          // ?v= busts the browser/CDN cache: a regenerated clip OVERWRITES the
+          // same storage path (upsert), so without a version the old bytes
+          // keep playing under a row that says the new clip is ready (owner
+          // hit this on 3525 Berkeley Park's hero, 2026-08-22).
           video_url: c.storage_path
-            ? `${c.engine === 'seedance' ? paidBase : localBase}/${c.storage_path}`
+            ? `${c.engine === 'seedance' ? paidBase : localBase}/${c.storage_path}?v=${Date.parse(c.updated_at) || 0}`
             : null,
           cost_usd: c.cost_usd,
           error: c.error,
