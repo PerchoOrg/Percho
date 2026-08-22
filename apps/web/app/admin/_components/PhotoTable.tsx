@@ -157,6 +157,40 @@ export interface PlanCell {
   prompt: string | null;
 }
 
+/**
+ * What each section is CALLED, per surface — because 'approved' does not mean
+ * the same thing on the two tables and the labels were pretending it did.
+ *
+ * On a community tour `approved` is written by the plan step and means "in this
+ * cut" (owner 2026-08-19: "approved can not be 82!!"). The third pile is
+ * therefore not a backlog — it is every usable photo the plan did not pick, and
+ * calling it "Other Photos" made a finished, correct table look like an
+ * unreviewed one (owner 2026-08-22: "after fetching and tagging, the photos
+ * should be only in approved or rejected sections, why am i seeing many
+ * pending").
+ *
+ * On a home tour there is no cut in this column at all: `plan` reads everything
+ * that is not rejected, so approving is an opinion and only rejecting is a
+ * gate. Module-level so the object identity is stable across renders — it is a
+ * dependency of the grouping memo.
+ */
+const SECTION_LABELS = {
+  listing: {
+    approved: 'Approved',
+    rejected: 'Rejected — never use',
+    other: 'Usable — no opinion yet',
+    otherHint:
+      'Judged usable by the pipeline. These are planned and rendered whether or not you approve them — only Rejected is a gate.',
+  },
+  community: {
+    approved: 'In the Cut',
+    rejected: 'Rejected — never use',
+    other: 'Usable — not in this cut',
+    otherHint:
+      'Judged usable by the pipeline, then not picked by the plan. Nothing here is waiting on you — promote one only if you want it in the film.',
+  },
+} as const;
+
 export function PhotoTable({
   table,
   storageBase,
@@ -318,13 +352,14 @@ export function PhotoTable({
     return [...filtered].sort(by);
   }, [photos, sort, filter, verdictOf, plan]);
 
+  const sections = SECTION_LABELS[isListing ? 'listing' : 'community'];
+
   /**
-   * The table is grouped by review verdict: Approved, Rejected, then Other.
+   * The table is grouped by review verdict: Approved, Rejected, then the rest.
    *
    * Owner 2026-08-19. This is the shape of the review itself — he goes through
    * the approved AND the rejected — and interleaving them by score meant
-   * scanning the whole table twice to do either. "Other" is everything not yet
-   * decided, which is the working pile.
+   * scanning the whole table twice to do either.
    *
    * A flat list with header entries rather than three tables: one `<table>`
    * keeps the columns aligned across the sections, which is the entire reason
@@ -337,7 +372,7 @@ export function PhotoTable({
     const other: Row[] = [];
     for (const r of rows) {
       // The LOCAL verdict decides the section, so a photo you just rejected
-      // leaves Pending on the click rather than on the next page load (owner
+      // leaves the usable pile on the click rather than on the next page load (owner
       // 2026-08-20: "i see some rejected photos in the pending section, they
       // should go to rejected area directly"). No refresh is involved, so the
       // scroll position holds and the next photo slides up under the cursor.
@@ -346,18 +381,18 @@ export function PhotoTable({
       else if (st === 'rejected') rejected.push(r);
       else other.push(r);
     }
-    const out: Array<{ header: string; count: number } | Row> = [];
-    for (const [label, group] of [
-      ['Approved Photos', approved],
-      ['Rejected Photos', rejected],
-      ['Other Photos', other],
+    const out: Array<{ header: string; count: number; hint?: string } | Row> = [];
+    for (const [label, group, hint] of [
+      [sections.approved, approved, undefined],
+      [sections.rejected, rejected, undefined],
+      [sections.other, other, sections.otherHint],
     ] as const) {
       if (group.length === 0) continue;
-      out.push({ header: label, count: group.length });
+      out.push({ header: label, count: group.length, hint });
       out.push(...group);
     }
     return out;
-  }, [rows, verdicts, verdictOf]);
+  }, [rows, verdicts, verdictOf, sections]);
 
   /** Review verdict: optimistic, no refresh, row keeps its place. */
   function decide(id: string, decision: 'approved' | 'rejected') {
@@ -442,7 +477,7 @@ export function PhotoTable({
           >
             <option value="all">All</option>
             <option value="untagged">Not AI-tagged</option>
-            <option value="unreviewed">Awaiting review</option>
+            <option value="unreviewed">{isListing ? 'Awaiting review' : 'Not in the cut'}</option>
             <option value="enhance_ready">Enhanced, awaiting approval</option>
             <option value="in_video">In a video</option>
             <option value="not_in_video">Usable but unused</option>
@@ -519,6 +554,7 @@ export function PhotoTable({
                     <td colSpan={columnCount} className="px-2 py-1.5">
                       <span className="font-semibold text-ink text-sm">{item.header}</span>{' '}
                       <span className="text-ink2 text-xs tabular-nums">({item.count})</span>
+                      {item.hint && <span className="ml-2 text-ink2 text-xs">{item.hint}</span>}
                     </td>
                   </tr>
                 );

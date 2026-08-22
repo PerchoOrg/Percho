@@ -16,6 +16,76 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-22 22:15 UTC — "Why am I seeing many pending" — two different answers, one of them a missing feature
+
+**Objective**: owner, of both the community and the listing photo tables:
+"after fetching and tagging, the photos should be only in approved or rejected
+sections, why am i seeing many pending". Find out why for each surface and fix
+what is actually broken.
+
+**Issues** — the two tables were pending for unrelated reasons:
+
+1. **Community (`poi_photos.status`)**: working as designed and labelled
+   badly. `runPhotos` writes only `rejected` (via `initialVerdict`), and
+   `approved` is stamped by the plan step to mean "in this cut" — the owner's
+   own 2026-08-19 rule, "approved can not be 82!!". So a correct, finished
+   community table has most of its photos outside both sections, and the
+   header called that pile **"Other Photos"**, which reads as a backlog.
+2. **Listing (`listing_photos.review_status`)**: a genuine gap. Nothing in the
+   home-tour pipeline has ever written that column. `runTag` only queues the
+   worker; `runPlan` only filters `review_status != 'rejected'`; `worker.py`
+   reads the column and never patches it. The single writer in the entire repo
+   is `admin-photo-actions.ts:84`, i.e. the owner's own click. Every listing
+   photo was therefore pending forever, and the community tour's initial
+   filtering had simply never been ported to the home tour.
+
+**Decisions**: the owner picked option A — keep `approved = in the cut` on the
+community side and fix the labels, rather than redefining `approved` to mean
+"usable" (which would put it straight back to 82). Concretely:
+
+- `PhotoTable.tsx`: section labels are now per-surface (`SECTION_LABELS`).
+  Community reads **In the Cut / Rejected — never use / Usable — not in this
+  cut**; listing reads **Approved / Rejected — never use / Usable — no opinion
+  yet**. The third section carries a one-line hint saying nothing there is
+  waiting on him. The "Awaiting review" filter is renamed "Not in the cut" on
+  the community surface, where awaiting-review is not what it selects.
+- `worker.py`: `initial_listing_verdicts()` + `_write_initial_verdicts()`, run
+  at the end of `process_tag_job` — both in the freshly-tagged path and in the
+  all-cached early return — so re-running **tag** on an existing listing
+  backfills its verdicts. Gates are deliberately only the two that cannot be
+  fixed downstream: the tagger said `usable=false`, or there is no file / no
+  pixels. **Resolution is not a gate**, same as the community rule, because
+  enhancement fixes it. Rows already approved or rejected are never touched;
+  an untagged row gets no verdict at all.
+- Verdicts land with a `rejection_reason` ("tagger-unusable"), so an automated
+  call stays distinguishable from the owner's — the 2026-08-20 rule.
+- `step_results.tag.auto_rejected` records the count.
+
+**Actions**: `apps/web/app/admin/_components/PhotoTable.tsx`,
+`scripts/render-worker/worker.py`,
+`scripts/render-worker/tests/test_initial_listing_verdicts.py` (new, 7 tests).
+
+**Verification**: `pnpm typecheck` clean, `pnpm lint` clean (173 pre-existing
+warnings), `pnpm test` 613 passed. Worker suite: **116 passed, 2 failed** —
+the two failures are `test_pick_bgm.py`, pre-existing and already recorded on
+a clean checkout.
+
+**Learnings**:
+- `.venv-render` had no `pytest` (documented as a gap since 2026-08-11) and
+  `.venv-motion` has no `requests`, so *neither* venv could run the tests that
+  import `worker`. Installed `pytest` into `.venv-render`, which can now run
+  the whole `scripts/render-worker/tests` suite. The new test stubs the four
+  env vars `worker.py` reads at import so it needs no `.env.local`.
+- A column with exactly one writer, and that writer a UI click, is worth
+  grepping for whenever a status "never changes". The listing review gate
+  looked implemented from every call site that *read* it.
+
+**Next steps**: the worker runs from `~/Workspace/Percho` under launchd, so
+this needs a pull there plus
+`launchctl kickstart -k gui/501/com.percho.render-worker` before any listing
+picks it up. Existing listings get their verdicts by re-running the **tag**
+step.
+
 ## 2026-08-22 22:05 UTC — The Community Tour index was counting the wrong pipeline
 
 **Objective**: owner: "community tour page, why all rows show 0/0 video? can
