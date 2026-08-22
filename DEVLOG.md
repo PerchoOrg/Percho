@@ -16,6 +16,39 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-22 01:15 UTC — Phase 83: the agent-side legacy tour button is retired
+
+**Objective**: owner, reviewing the home-tour improvement list — "delete the
+button from agent view". The agent dashboard's one-click "Create a home tour
+video" was the last live entry into the legacy whole-film render, which still
+draws the 1080x1080 canvas that loses 31.5% of its width inside the 0.685 feed
+frame.
+
+**What was actually there**: less than expected. `GenerateTourPanel` was
+already unmounted — nothing imported it, so no agent has seen the button for
+some time. The live surface was the ROUTE: `/api/listings/[id]/generate-tour`
+still accepted authenticated agent POSTs and was the only remaining writer of
+`render_jobs.step='render'`.
+
+**Actions**:
+- Deleted `GenerateTourPanel.tsx` (dead) and
+  `/api/listings/[id]/generate-tour/route.ts` (live, uncalled by any UI).
+- The stale comment on `tour-jobs/[id]/page.tsx` claiming the agent feature was
+  live is corrected: nothing enqueues `step='render'` any more.
+
+**Not done, flagged**: `process_job()` / `claim_job()` in `worker.py` are now
+unreachable dead code (~500 lines, plus the `SQUARE_EDGE` canvas). Left in
+place — worker.py is in flight in another worktree (ws4) and the audio work
+(BGM/narration for the per-photo assembler) will touch the same file; remove
+it there. The worker-hub `render_jobs` render-step queue row now counts a
+queue nothing can fill.
+
+**Resolution**: typecheck clean, lint zero errors, 589 web tests pass.
+
+**Next steps**: re-run the 15 existing tours so their clips pick up the
+enhanced photos (rerun-home-tours.ts, free — Seedance clips are reused); then
+Seedance hero prompt design; then audio for the per-photo assembler.
+
 ## 2026-08-21 10:45 UTC — Enhancement stops depending on a browser tab
 
 **Objective**: owner, on 5122 Lower Creek Street — "i see some pics do not have
