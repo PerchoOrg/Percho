@@ -53,7 +53,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 
   const { data: clips } = await sb
     .from('photo_clips')
-    .select('photo_id, engine, duration_s, status, storage_path, cost_usd, error')
+    .select('photo_id, engine, duration_s, status, storage_path, cost_usd, error, updated_at')
     .in(
       'photo_id',
       (photos ?? []).map((p: { id: string }) => p.id),
@@ -69,6 +69,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       storage_path: string | null;
       cost_usd: number | null;
       error: string | null;
+      updated_at: string;
     }
   >(
     (clips ?? [])
@@ -82,6 +83,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
           storage_path: string | null;
           cost_usd: number | null;
           error: string | null;
+          updated_at: string;
         }) => [c.photo_id, c],
       ),
   );
@@ -146,8 +148,11 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
               engine: c.engine,
               duration_s: c.duration_s,
               status: c.status,
+              // ?v= busts the browser/CDN cache: a regenerated clip OVERWRITES
+              // the same storage path (upsert), so without a version the old
+              // bytes keep playing under a row that says the new clip is ready.
               video_url: c.storage_path
-                ? `${isDakb ? renderBase : publicBase}/${c.storage_path}`
+                ? `${isDakb ? renderBase : publicBase}/${c.storage_path}?v=${Date.parse(c.updated_at) || 0}`
                 : null,
               cost_usd: c.cost_usd,
               error: c.error,
