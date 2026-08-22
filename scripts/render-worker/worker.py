@@ -49,6 +49,7 @@ from photo_tagger import MODEL as TAGGER_MODEL, tag_listing_photos  # type: igno
 # The home tour's plan step decides engine and camera move per surface, the
 # same way generate.py does for a whole film — see process_plan_job.
 from depthflow_modes import pick_engines, plan_moves  # type: ignore  # noqa: E402
+from hero_prompt import choose_hero_prompt, fallback_hero, looks_aerial  # type: ignore  # noqa: E402
 
 
 def _now_iso() -> str:
@@ -3346,6 +3347,49 @@ def process_plan_job(job: dict[str, Any]) -> None:
                 ):
                     rejected_seedance.add(row["listing_photo_id"])
 
+        # The hero's Seedance prompt — the model picks the move from the
+        # approved pool (hero_prompt.py); code enforces the fence. Downloads
+        # only the hero photo plus up to three aerial candidates, ORIGINALS —
+        # Seedance eats originals (owner 2026-08-17), so the model should
+        # describe the same file the clip will animate. Never fails the plan:
+        # any error falls back to a locked frame on the photo itself.
+        hero_info: dict[str, Any] | None = None
+        if plan and str(plan[0].get("id")) not in rejected_seedance:
+            by_id = {r["id"]: r for r in records}
+            hero_rec = by_id.get(plan[0].get("id"))
+            try:
+                if hero_rec is None:
+                    raise RuntimeError("hero photo record missing")
+                hero_dest = workdir / "hero_prompt_hero.jpg"
+                storage_download(PHOTO_BUCKET, hero_rec["storage_path"], hero_dest)
+                aerials: list[dict[str, Any]] = []
+                for r in records:
+                    if r["id"] == hero_rec["id"] or not looks_aerial(r.get("cached_ai_tags")):
+                        continue
+                    dest = workdir / f"hero_prompt_aerial_{len(aerials)}.jpg"
+                    storage_download(PHOTO_BUCKET, r["storage_path"], dest)
+                    aerials.append({"id": r["id"], "bytes": dest.read_bytes()})
+                    if len(aerials) >= 3:
+                        break
+                cached = hero_rec.get("cached_ai_tags")
+                caption = cached.get("caption") if isinstance(cached, dict) else None
+                hero_info = choose_hero_prompt(hero_dest.read_bytes(), aerials, caption)
+            except Exception:
+                traceback.print_exc()
+                cached = hero_rec.get("cached_ai_tags") if hero_rec else None
+                hero_info = fallback_hero(
+                    cached.get("caption") if isinstance(cached, dict) else None
+                )
+            print(
+                f"[plan {job_id}] hero effect={hero_info['effect']}"
+                + (
+                    f" pair={hero_info['pair_photo_id']}({hero_info['pair_role']})"
+                    if hero_info["pair_photo_id"]
+                    else ""
+                ),
+                flush=True,
+            )
+
         for i, sh in enumerate(plan):
             per_surface: dict[str, Any] = {}
             # The opening shot, on iOS, unless its seedance clip was rejected.
@@ -3357,6 +3401,7 @@ def process_plan_job(job: dict[str, Any]) -> None:
                 if hero_seedance and surface == "ios":
                     engine = "seedance"
                 is_ai = engine == "seedance"
+                is_hero_ai = is_ai and hero_info is not None
                 per_surface[surface] = {
                     # DepthFlow gets the parallax move resolved from the Ken
                     # Burns intent; Ken Burns keeps the intent itself. Seedance
@@ -3366,7 +3411,12 @@ def process_plan_job(job: dict[str, Any]) -> None:
                         None if is_ai else sh.get("mode")
                     ),
                     "engine": engine,
-                    "prompt": None,
+                    "prompt": hero_info["prompt"] if is_hero_ai else None,
+                    "effect": hero_info["effect"] if is_hero_ai else None,
+                    # A birdview hero is anchored by TWO real photos; the pair
+                    # is the aerial and pair_role says which end it sits on.
+                    "pair_photo_id": hero_info["pair_photo_id"] if is_hero_ai else None,
+                    "pair_role": hero_info["pair_role"] if is_hero_ai else None,
                     # Written at plan time, not inferred at render time, so a
                     # clip downgraded away from Seedance cannot keep a stale
                     # AI-generation label.
