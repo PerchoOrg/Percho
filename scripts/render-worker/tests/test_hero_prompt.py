@@ -67,19 +67,29 @@ def test_rejected_effects_are_not_in_the_pool():
 
 
 def test_birdview_maps_pair_role_by_direction():
-    descend = {**GOOD, "effect": "birdview_descend", "aerial_index": 2}
+    # aerial_index is the GLOBAL image number: hero is 1, aerials start at 2.
+    # The first live run proved the model counts this way — it answered 2 for
+    # the only aerial in a two-image call.
+    descend = {**GOOD, "effect": "birdview_descend", "aerial_index": 3}
     out = choose_hero_prompt(HERO, AERIALS, call=fake_call(descend))
     assert out["pair_photo_id"] == "aer-2" and out["pair_role"] == "first"
 
-    rise = {**GOOD, "effect": "rise_to_birdview", "aerial_index": 1}
+    rise = {**GOOD, "effect": "rise_to_birdview", "aerial_index": 2}
     out = choose_hero_prompt(HERO, AERIALS, call=fake_call(rise))
     assert out["pair_photo_id"] == "aer-1" and out["pair_role"] == "last"
 
 
+def test_birdview_accepts_digit_string_index():
+    pick = {**GOOD, "effect": "birdview_descend", "aerial_index": "2"}
+    out = choose_hero_prompt(HERO, AERIALS, call=fake_call(pick))
+    assert out["pair_photo_id"] == "aer-1" and out["pair_role"] == "first"
+
+
 def test_birdview_without_valid_aerial_falls_back():
-    for idx in [None, 0, 3, "1"]:
+    # 1 is the hero itself; 4 is past the last aerial; no aerials at all.
+    for idx, aerials in [(None, AERIALS), (1, AERIALS), (4, AERIALS), (2, [])]:
         pick = {**GOOD, "effect": "birdview_descend", "aerial_index": idx}
-        out = choose_hero_prompt(HERO, AERIALS[:2] if idx == 3 else [], call=fake_call(pick))
+        out = choose_hero_prompt(HERO, aerials, call=fake_call(pick))
         assert out["effect"] == "full_frame_hold"
         assert out["pair_photo_id"] is None
 
