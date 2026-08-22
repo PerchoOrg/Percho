@@ -32,11 +32,16 @@ import type { CardIconName } from "@percho/shared/icons";
  * Owner, on device: "community and explore should be aligned, community name
  * size can be bigger, lets add icons to the left of community name for now".
  *
- * The bottom info is now a single centred row — signal GLYPHS, the name at
- * 27pt, and `Explore` on the right. The pill row is gone; the glyphs are what
+ * The bottom info is now a single centred row — the name at 27pt, its signal
+ * GLYPHS, and `Explore` on the right. The pill row is gone; the glyphs are what
  * is left of it, which is the "or just make them some icons to save space"
  * half of the same instruction. A signal with no honest glyph in the 14-glyph
  * subset font draws nothing rather than borrowing one.
+ *
+ * Revised the same day: the glyphs sit to the RIGHT of the name, and the name
+ * wraps to two lines instead of ellipsizing. It is the card's headline and the
+ * one string on it a buyer cannot infer from context — a wrapped name costs
+ * height the card has, a truncated one costs the name.
  *
  * The cost, stated plainly: a pill could say "3 parks nearby" and a glyph
  * cannot say "3". The owner's own earlier note on this row was 「图标里要有干货
@@ -430,6 +435,15 @@ export function CommunityFace({
 			    truncated CTA is not, and half a glyph is nothing at all. */}
 			<View style={styles.info}>
 				<View style={styles.infoLeft}>
+					{/* Two lines, not one. A name that did not fit used to ellipsize
+					    — "Hidden Lakes at Sug…" — which is the one thing on this
+					    card a buyer cannot afford to be guessing at (owner
+					    2026-08-22: "if community name is long, it can be truncated,
+					    fix that"). Wrapping spends card height, which this card has;
+					    truncation spent the name, which it does not. */}
+					<Text style={styles.name} numberOfLines={2}>
+						{card.name}
+					</Text>
 					{icons.length > 0 && (
 						<View style={styles.icons}>
 							{icons.map((name) => (
@@ -442,9 +456,6 @@ export function CommunityFace({
 							))}
 						</View>
 					)}
-					<Text style={styles.name} numberOfLines={1}>
-						{card.name}
-					</Text>
 				</View>
 				{!!onExplore && (
 					<Animated.View style={[styles.ctaRow, breathing]}>
@@ -622,7 +633,7 @@ const styles = StyleSheet.create({
 		alignItems: "center",
 		gap: 12,
 	},
-	/** Glyphs + name. `minWidth: 0` is what lets the name ellipsize instead of
+	/** Name + glyphs. `minWidth: 0` is what lets the name WRAP instead of
 	 *  pushing `Explore` off the card — a text child will not shrink below its
 	 *  content without it. */
 	infoLeft: {
@@ -632,7 +643,12 @@ const styles = StyleSheet.create({
 		alignItems: "center",
 		gap: 7,
 	},
-	/** The glyph run, left of the name. Never squeezed — see the row's doc. */
+	/**
+	 * The glyph run, RIGHT of the name (owner 2026-08-22: "icons should be on
+	 * the right side of the community name"). Never squeezed — see the row's
+	 * doc; the name is what gives. Centred against the name block, so on a
+	 * wrapped two-line name they sit level with its middle.
+	 */
 	icons: {
 		flexDirection: "row",
 		alignItems: "center",
