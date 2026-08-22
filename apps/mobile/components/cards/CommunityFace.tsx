@@ -118,8 +118,16 @@ const MAX_COMMUNITY_PILLS = 2;
 /** Chip pill height — vertical padding (×2) + the 10.5pt label. */
 const PILL_HEIGHT = 21;
 
-/** Tour progress hairline. 2pt: legible at a glance, invisible as furniture. */
-const PROGRESS_H = 2;
+/**
+ * Tour progress. 3pt and inset, up from a 2pt hairline flush with the card's
+ * edge — the owner could not find that one (2026-08-22: "ugly and not easy to
+ * find"). Rounded ends and a gap between dashes need a bar thick enough for
+ * the radius to read at all.
+ */
+const PROGRESS_H = 3;
+/** Between dashes. Wide enough to separate, narrow enough to still read as
+ *  one bar rather than as a row of pills. */
+const DASH_GAP = 3;
 
 /**
  * The 82% nudge on the `Explore` link — `CardSkeleton`'s breath, borrowed
@@ -177,6 +185,7 @@ export function CommunityFace({
 	/** 0..1 playback position, written by `CardVideo` off the UI thread. */
 	const progress = useSharedValue(0);
 	const fill = useAnimatedStyle(() => ({ width: `${progress.value * 100}%` }));
+	const segments = card.tourSegments ?? [];
 
 	/** True once this card's tour has passed `CardVideo`'s 82% mark. */
 	const [nearEnd, setNearEnd] = useState(false);
@@ -270,24 +279,30 @@ export function CommunityFace({
 				pointerEvents="none"
 			/>
 
-			{/* Bottom info — on the photo, stepped hierarchy (no white container). */}
+			{/* Bottom info — name and chips anchored bottom-LEFT, `Explore` holding
+			    the right against them (owner 2026-08-22: "move community name to
+			    the bottom left"). One row, two zones, no measurement: the left
+			    column takes the space the link does not, so a community with no
+			    chips reads as name-left / link-right and one with chips stacks
+			    them under the name, which is where "between community name and
+			    explore button" lands without asking how wide a pill is. */}
 			<View style={styles.info}>
-				<Text style={styles.name} numberOfLines={1}>
-					{card.name}
-				</Text>
-				{chips.length > 0 && (
-					<View style={styles.chips}>
-						{chips.map((label) => (
-							<View key={label} style={styles.chip}>
-								<Text style={styles.chipLabel} numberOfLines={1}>
-									{label}
-								</Text>
-							</View>
-						))}
-					</View>
-				)}
-				{/* Explore → — right-aligned. It had the bottom row's right third
-				    against the stat bar; with the bar gone it owns the row. */}
+				<View style={styles.infoLeft}>
+					<Text style={styles.name} numberOfLines={1}>
+						{card.name}
+					</Text>
+					{chips.length > 0 && (
+						<View style={styles.chips}>
+							{chips.map((label) => (
+								<View key={label} style={styles.chip}>
+									<Text style={styles.chipLabel} numberOfLines={1}>
+										{label}
+									</Text>
+								</View>
+							))}
+						</View>
+					)}
+				</View>
 				{!!onExplore && (
 					<Animated.View style={[styles.ctaRow, breathing]}>
 						<Pressable
@@ -310,15 +325,59 @@ export function CommunityFace({
 				)}
 			</View>
 
-			{/* Tour progress — the card's bottom edge, above the scrim. Only for a
-			    card that actually plays something; the photo branch has no clock
-			    to show. `overflow: hidden` on `face` rounds its ends with the
-			    card. */}
+			{/* Tour progress. One dash per PLACE when the film's structure came
+			    down with it, one continuous bar when it did not. Only for a card
+			    that actually plays something — the photo branch has no clock. */}
 			{!!card.videoUrl && (
-				<View style={styles.progressTrack} pointerEvents="none">
-					<Animated.View style={[styles.progressFill, fill]} />
+				<View style={styles.progressRow} pointerEvents="none">
+					{segments.length > 0 ? (
+						segments.map((seg, i) => (
+							<ProgressDash
+								key={`${seg.name}-${seg.endFraction}`}
+								progress={progress}
+								start={i === 0 ? 0 : (segments[i - 1]?.endFraction ?? 0)}
+								end={seg.endFraction}
+							/>
+						))
+					) : (
+						<View style={styles.dashTrack}>
+							<Animated.View style={[styles.dashFill, fill]} />
+						</View>
+					)}
 				</View>
 			)}
+		</View>
+	);
+}
+
+/**
+ * One dash of the tour's progress bar — one PLACE in the film.
+ *
+ * A component rather than a loop body because each dash needs its OWN
+ * `useAnimatedStyle`, and hooks cannot be called in a map.
+ *
+ * The dash is flexed by its SHARE of the film, so a place the tour lingers on
+ * gets a wider dash than one it passes through. Reading `progress` (0..1 of the
+ * whole film) against this dash's own span turns the shared value into a local
+ * 0..1 with no extra state and no second listener.
+ */
+function ProgressDash({
+	progress,
+	start,
+	end,
+}: {
+	progress: SharedValue<number>;
+	start: number;
+	end: number;
+}) {
+	const span = Math.max(end - start, 1e-6);
+	const style = useAnimatedStyle(() => {
+		const local = (progress.value - start) / span;
+		return { width: `${Math.min(Math.max(local, 0), 1) * 100}%` };
+	});
+	return (
+		<View style={[styles.dashTrack, { flexGrow: span }]}>
+			<Animated.View style={[styles.dashFill, style]} />
 		</View>
 	);
 }
@@ -394,7 +453,16 @@ const styles = StyleSheet.create({
 		right: 24,
 		bottom: 24,
 		zIndex: 2,
+		flexDirection: "row",
+		alignItems: "flex-end",
+		gap: 12,
 	},
+	/**
+	 * Name + chips. `flexShrink` with `minWidth: 0` is what lets a long
+	 * community name ellipsize instead of pushing `Explore` off the card — a
+	 * text child will not shrink below its content without it.
+	 */
+	infoLeft: { flex: 1, minWidth: 0 },
 	/** Community name — serif 24/600 white, the CITY name's family. */
 	name: {
 		...redlineText.place,
@@ -425,15 +493,14 @@ const styles = StyleSheet.create({
 		color: "rgba(255,255,255,0.92)",
 	},
 	/**
-	 * Explore → row — right-aligned, bottom of the info block. No `flex: 1`
-	 * any more: it shared the bottom row with the stat bar and took its right
-	 * third, and a flex child of the info COLUMN would stretch vertically.
+	 * Explore → — the right zone of the info row, sized by its own content and
+	 * never squeezed. `flexShrink: 0` because the left column is the one that
+	 * gives: a truncated community name is readable, a truncated CTA is not.
 	 */
 	ctaRow: {
 		flexDirection: "row",
-		justifyContent: "flex-end",
 		alignItems: "center",
-		marginTop: 12,
+		flexShrink: 0,
 	},
 	ctaLink: {
 		flexDirection: "row",
@@ -452,22 +519,40 @@ const styles = StyleSheet.create({
 	},
 
 	/**
-	 * Progress hairline — the card's bottom edge, above the scrim (zIndex 3, so
-	 * over the info block's 2 as well; they do not overlap, but the bar is the
-	 * card's frame and nothing should ever be able to cross it).
+	 * The progress row — INSET from the card's edges, not flush with them
+	 * (owner 2026-08-22: the flush 2pt hairline was "ugly and not easy to
+	 * find"). Sitting on the same 24pt gutter as the name reads as part of the
+	 * card's information rather than as a scrollbar stuck to its frame, and it
+	 * no longer has its ends clipped by the corner radius.
 	 */
-	progressTrack: {
+	progressRow: {
 		position: "absolute",
-		left: 0,
-		right: 0,
-		bottom: 0,
+		left: 24,
+		right: 24,
+		bottom: 12,
 		height: PROGRESS_H,
-		backgroundColor: "rgba(255,255,255,0.18)",
+		flexDirection: "row",
+		alignItems: "center",
+		gap: DASH_GAP,
 		zIndex: 3,
 	},
-	progressFill: {
+	/**
+	 * One dash. `flexGrow` is set per-dash from its share of the film;
+	 * `flexBasis: 0` so that share is the ONLY thing deciding its width, and
+	 * `overflow: hidden` so the fill inside is clipped to the rounded end.
+	 */
+	dashTrack: {
+		flexGrow: 1,
+		flexBasis: 0,
 		height: PROGRESS_H,
-		backgroundColor: "rgba(255,255,255,0.85)",
+		borderRadius: PROGRESS_H / 2,
+		backgroundColor: "rgba(255,255,255,0.28)",
+		overflow: "hidden",
+	},
+	dashFill: {
+		height: PROGRESS_H,
+		borderRadius: PROGRESS_H / 2,
+		backgroundColor: "#FFFFFF",
 	},
 
 	// ─── Arrow art (see the block above) ──────────────────────────────────

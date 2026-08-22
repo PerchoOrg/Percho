@@ -304,7 +304,18 @@ export async function GET(request: Request) {
   // AI tour videos (Seedance) attach the same way; vertical wins if both exist.
   const communitiesWithVideo = communityRows.map((c) => {
     const uid = verticalVideos.byCommunity.get(c.id);
-    if (uid) return { ...c, videoUrl: streamManifestUrl(uid) };
+    if (uid) {
+      // The dashed progress bar's structure, and ONLY for the assembly path —
+      // `segmentsByCommunity` is populated from the same row that produced this
+      // uid. A bucket video has no shot list and the card falls back to a plain
+      // bar rather than dashing it against a film it is not.
+      const segments = verticalVideos.segmentsByCommunity.get(c.id);
+      return {
+        ...c,
+        videoUrl: streamManifestUrl(uid),
+        ...(segments ? { tourSegments: segments } : {}),
+      };
+    }
     const aiUrl = aiTourVideos.get(c.id);
     return aiUrl ? { ...c, videoUrl: aiUrl } : c;
   });

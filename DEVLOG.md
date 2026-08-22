@@ -16,6 +16,94 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-22 17:18 UTC — One dash per place, and the name moves to the corner
+
+**Objective**: owner, after seeing yesterday's card on device — "1) the page is
+not balanced now, you need to move community name to the bottom left, and for
+the tags, if there are spaces yes lets put them somewhere between community
+name and explore button, but if not we can remove them for now... 2) the
+progress bar is ugly and not easy to find, can you make it dotted line and each
+represents a specific content".
+
+**Why it was unbalanced.** Removing the `StatBar` left `Explore` alone on a row
+of its own, right-aligned, with two thirds of that row empty. The name sat
+above it in a column. Nothing was wrong with either piece; the row they used to
+share had lost the thing that balanced it.
+
+**Actions, item 1**: `info` becomes a ROW — name + chips in a left column,
+`Explore` holding the right. No measurement and no conditional: the left column
+takes whatever the link does not, so a community with chips stacks them under
+its name and one without reads as name-left / link-right. `flexShrink: 0` on
+the link and `minWidth: 0` on the column decide who gives when a name is long —
+a truncated community name is readable, a truncated CTA is not.
+
+The tags survive as text. Iconifying them was the owner's other option and I
+did not take it: the signal vocabulary is ~30 phrases ("Mature trees", "3 parks
+nearby") against a 14-glyph icon font, the mapping would be lossy, and a bare
+glyph cannot say "3". His own standing note on this row is 「图标里要有干货数据
+比如33个餐厅」 — the number IS the content.
+
+**Actions, item 2**: the bar is now one dash per PLACE, Stories-style, and it
+moved off the card's edge onto the same 24pt gutter as the name — inset reads
+as the card's own information rather than as a scrollbar stuck to the frame,
+and its ends stop being clipped by the corner radius. 2pt → 3pt so a rounded
+end has something to round.
+
+That needed the film's structure on the phone, which it had never had:
+- `lib/feed/tour-segments.ts` (new) turns `tour_assemblies.ordered_clips` into
+  one `{name, endFraction}` per place, grouping the ~3 consecutive clips the
+  planner cuts for each one.
+- `fetchVerticalVideos` selects `ordered_clips` and returns
+  `segmentsByCommunity`, populated inside the same guard that picks the winning
+  uid — structure from one assembly against another's footage would be worse
+  than no structure.
+- Route → `PoolCommunityDTO.tourSegments` → `pool-dto` → `CommunityCardV3`.
+- `ProgressDash` is its own component because each dash needs its own
+  `useAnimatedStyle` and hooks cannot be called in a map. Each is flexed by its
+  share of the film, so a place the tour lingers on gets a wider dash.
+
+**Issues / a corrected claim.** I wrote in `tour-segments.ts` that ignoring the
+0.5s crossfade would put the dashes "visibly out of step" — 6.5s of overlap on
+a 14-clip tour, ~14% of the runtime. I then wrote a test asserting that and it
+FAILED at 2%. The dashes are laid out as fractions and the overlap shrinks the
+total by the same 6.5s, so most of it cancels: worst-case boundary error from
+ignoring the xfade is 3.8% of the bar at 3 clips and 1.2% at 14. The header now
+says that, and the test pins both numbers. The xfade math stays because it is
+four lines and it is what the renderer actually did — not because the bar would
+break without it.
+
+**Decisions**: a community whose video came from `generated_videos` rather than
+from an assembly gets NO segments and falls back to the continuous bar. We do
+not know that video's structure and a dashed bar would be a claim about content
+we cannot see. Same rule in `pool-dto`: a segment list that does not strictly
+rise is rejected whole rather than repaired, because a dash's width is its end
+minus the previous one and a repaired list is a guess about where the film's
+places are.
+
+**Known gap**: the 3s end card `worker.py` appends when it can is invisible to
+this — nothing on the row records whether one was rendered — so the last place's
+dash absorbs it. The bar still completes exactly at the end of the film; its
+last ~5% belongs to a title card. Not worth a schema column.
+
+**Resolution**: web typecheck + 598 tests, mobile typecheck + 516 tests, biome
+clean on both. NOT verified on device.
+
+**Learnings**: two of the three lint/verify steps in the last two sessions were
+lying. Yesterday `npx biome` resolved to an unrelated 0.3.3 package that exited
+0 having checked nothing; today the real binary run from the repo root applied
+MOBILE's config (tabs) to WEB files and reported six formatting errors in code
+I had not touched. Biome resolves its config from the working directory — it
+has to be run from inside each app. And `apps/web/.next/types` still held
+generated types for two routes the 08-22 merge deleted, so `pnpm typecheck`
+failed on files that no longer exist.
+
+**Next steps**:
+- The 08-21 note stands: the stat bar's four values are still invented, now on
+  the explore screen.
+- Fast-forward `~/Workspace/Percho` after every merge. The owner's Expo server
+  runs from there and it sat two commits behind yesterday, which is why he saw
+  no change at all.
+
 ## 2026-08-22 08:35 UTC — All 15 home tours re-rendered from enhanced photos
 
 **Objective**: owner — "yes yes lets redo" on re-rendering the existing tours.

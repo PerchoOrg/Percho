@@ -189,6 +189,21 @@ export interface CommunityCardV3 {
 	 * (Restaurants / Walkability / Trees).
 	 */
 	signals?: readonly string[];
+	/**
+	 * One entry per PLACE in the attached tour, in play order, for the card's
+	 * dashed progress bar (owner 2026-08-22: "make it dotted line and each
+	 * represents a specific content").
+	 *
+	 * `endFraction` is where that place's stretch ENDS as a fraction of the
+	 * finished film, so a dash's share of the bar is its own end minus the
+	 * previous one's. Built server-side in `lib/feed/tour-segments.ts` — the
+	 * clip durations it is derived from overlap by a crossfade, which is not
+	 * arithmetic the card should be doing.
+	 *
+	 * Absent whenever the video did not come from a tour assembly; the card
+	 * draws a plain continuous bar then.
+	 */
+	tourSegments?: readonly { name: string; endFraction: number }[];
 }
 
 // ─── Trade-off (§1.6) ───────────────────────────────────────────────
