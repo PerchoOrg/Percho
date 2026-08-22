@@ -24,6 +24,25 @@ import type { DimKey } from "@percho/shared/types";
  *     No white bottom information container; no hairline; no place line —
  *     the subdivision's key info is the name + signals, on the photo.
  *
+ * ── 2026-08-22: the card serves the TOUR ─────────────────────────────────────
+ *
+ * `videosOnly` (2026-08-21) means every community card on the phone now plays
+ * an assembled community tour, up to 90 seconds of it. Two consequences:
+ *
+ *   · A progress hairline along the card's bottom edge. Ninety seconds with no
+ *     clock is a blind commitment on a surface whose whole job is deciding
+ *     whether to stay; the bar is the cheapest possible answer and costs the
+ *     photography nothing. It is drawn HERE rather than inside `CardVideo`
+ *     because the scrim above reaches 0.92 black at exactly that edge.
+ *   · The `Explore` link breathes once playback passes 82%. `CardVideo` has
+ *     fired `onNearEnd` for this since it was written and NOTHING in the feed
+ *     was listening — the only consumer in the repo was `dev-foundation`.
+ *
+ * The `StatBar` that used to sit in the bottom row is GONE from this card
+ * (owner 2026-08-22: "remove from front page, but move it to the explore
+ * page"). It now renders on `app/community/[slug]`'s hero. Its four values are
+ * still `place-stats.ts` placeholders — see that module's header.
+ *
  * ── Data, not sample copy ────────────────────────────────────────────────────
  *
  * Three sources for the chip row, in descending confidence, exactly one of
@@ -44,17 +63,23 @@ import type { DimKey } from "@percho/shared/types";
  * its evidence, and that screen is where the CTA goes.
  */
 import { LinearGradient } from "expo-linear-gradient";
+import { useEffect, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import type { SharedValue } from "react-native-reanimated";
+import Animated, {
+	Easing,
+	type SharedValue,
+	useAnimatedStyle,
+	useSharedValue,
+	withRepeat,
+	withTiming,
+} from "react-native-reanimated";
 import type { CommunityCardV3 } from "../../lib/feed/card-types";
-import { placeStats } from "../../lib/feed/place-stats";
 import type { TapSlot } from "../../lib/gesture/tap-slot";
 import { redline, redlineRadii } from "../../theme/tokens";
 import { redlineText } from "../../theme/typography";
 import { CardPhoto } from "../CardPhoto";
 import { CardVideo } from "../CardVideo";
 import { EXPLORE_TAP_TARGET } from "./ListingFace";
-import { StatBar } from "./StatBar";
 
 /**
  * Chip copy for the `dims` fallback. One line each — a 20pt white pill does
@@ -92,6 +117,22 @@ const MAX_COMMUNITY_PILLS = 2;
 
 /** Chip pill height — vertical padding (×2) + the 10.5pt label. */
 const PILL_HEIGHT = 21;
+
+/** Tour progress hairline. 2pt: legible at a glance, invisible as furniture. */
+const PROGRESS_H = 2;
+
+/**
+ * The 82% nudge on the `Explore` link — `CardSkeleton`'s breath, borrowed
+ * because the app already means "alive, waiting for you" with it.
+ *
+ * FINITE, unlike the skeleton's `-1`. A skeleton pulses until its content
+ * arrives and then stops existing; this link stays on screen for as long as
+ * the buyer keeps watching, and a CTA that never stops moving reads as a nag.
+ * Six half-cycles is three breaths, and an even count lands back on opacity 1.
+ */
+const BREATH_MS = 900;
+const BREATH_DIM = 0.5;
+const BREATH_CYCLES = 6;
 
 /**
  * The chip row's labels — `signals` first (the server's per-community
@@ -133,6 +174,40 @@ export function CommunityFace({
 }: CommunityFaceProps) {
 	const chips = chipLabels(card);
 
+	/** 0..1 playback position, written by `CardVideo` off the UI thread. */
+	const progress = useSharedValue(0);
+	const fill = useAnimatedStyle(() => ({ width: `${progress.value * 100}%` }));
+
+	/** True once this card's tour has passed `CardVideo`'s 82% mark. */
+	const [nearEnd, setNearEnd] = useState(false);
+	const breath = useSharedValue(1);
+
+	/*
+	 * The nudge belongs to one viewing, not to the card. A face that leaves the
+	 * top and comes back must be able to invite again — and assigning `breath`
+	 * cancels a repeat still in flight, so a mid-breath swipe does not leave the
+	 * next card's link stuck at half opacity.
+	 */
+	useEffect(() => {
+		if (isTop) return;
+		setNearEnd(false);
+		breath.value = 1;
+	}, [isTop, breath]);
+
+	useEffect(() => {
+		if (!nearEnd) return;
+		breath.value = withRepeat(
+			withTiming(BREATH_DIM, {
+				duration: BREATH_MS,
+				easing: Easing.inOut(Easing.quad),
+			}),
+			BREATH_CYCLES,
+			true,
+		);
+	}, [nearEnd, breath]);
+
+	const breathing = useAnimatedStyle(() => ({ opacity: breath.value }));
+
 	/** See `ListingFace.arm` — no gate here; the tap decision happens at release. */
 	const arm = (target: string) => () => {
 		if (!tapSlot) return;
@@ -147,6 +222,8 @@ export function CommunityFace({
 					url={card.videoUrl}
 					poster={card.heroUrl}
 					isTop={isTop}
+					progress={progress}
+					onNearEnd={() => setNearEnd(true)}
 					/*
 					 * `cover`, unconditionally. NOT the measured `frameAspect` path:
 					 * that makes the fit a RUNTIME decision, and `mediaFit` returns
@@ -209,32 +286,39 @@ export function CommunityFace({
 						))}
 					</View>
 				)}
-				{/* Bottom row — stat bar (left ~2/3) + Explore (right), the
-				    listing card's divided-info layout (owner 2026-08-19). */}
-				<View style={styles.bottomRow}>
-					<StatBar cells={placeStats(card.id, "community")} />
-					{!!onExplore && (
-						<View style={styles.ctaRow}>
-							<Pressable
-								onTouchStart={arm(EXPLORE_TAP_TARGET)}
-								onPress={tapSlot ? undefined : onExplore}
-								accessibilityRole="link"
-								accessibilityLabel={`Explore ${card.name}`}
-								hitSlop={12}
-								style={({ pressed }) => [
-									styles.ctaLink,
-									pressed && styles.ctaPressed,
-								]}
-							>
-								<Text style={styles.ctaLabel} numberOfLines={1}>
-									Explore
-								</Text>
-								<ArrowRightIcon />
-							</Pressable>
-						</View>
-					)}
-				</View>
+				{/* Explore → — right-aligned. It had the bottom row's right third
+				    against the stat bar; with the bar gone it owns the row. */}
+				{!!onExplore && (
+					<Animated.View style={[styles.ctaRow, breathing]}>
+						<Pressable
+							onTouchStart={arm(EXPLORE_TAP_TARGET)}
+							onPress={tapSlot ? undefined : onExplore}
+							accessibilityRole="link"
+							accessibilityLabel={`Explore ${card.name}`}
+							hitSlop={12}
+							style={({ pressed }) => [
+								styles.ctaLink,
+								pressed && styles.ctaPressed,
+							]}
+						>
+							<Text style={styles.ctaLabel} numberOfLines={1}>
+								Explore
+							</Text>
+							<ArrowRightIcon />
+						</Pressable>
+					</Animated.View>
+				)}
 			</View>
+
+			{/* Tour progress — the card's bottom edge, above the scrim. Only for a
+			    card that actually plays something; the photo branch has no clock
+			    to show. `overflow: hidden` on `face` rounds its ends with the
+			    card. */}
+			{!!card.videoUrl && (
+				<View style={styles.progressTrack} pointerEvents="none">
+					<Animated.View style={[styles.progressFill, fill]} />
+				</View>
+			)}
 		</View>
 	);
 }
@@ -341,22 +425,15 @@ const styles = StyleSheet.create({
 		color: "rgba(255,255,255,0.92)",
 	},
 	/**
-	 * Bottom row — stat bar (left ~2/3) + Explore (right), the listing card's
-	 * divided-info layout (owner 2026-08-19).
+	 * Explore → row — right-aligned, bottom of the info block. No `flex: 1`
+	 * any more: it shared the bottom row with the stat bar and took its right
+	 * third, and a flex child of the info COLUMN would stretch vertically.
 	 */
-	bottomRow: {
-		flexDirection: "row",
-		alignItems: "center",
-		justifyContent: "space-between",
-		gap: 12,
-		marginTop: 12,
-	},
-	/** Explore → row — right-aligned, bottom of the info block. */
 	ctaRow: {
-		flex: 1,
 		flexDirection: "row",
 		justifyContent: "flex-end",
 		alignItems: "center",
+		marginTop: 12,
 	},
 	ctaLink: {
 		flexDirection: "row",
@@ -372,6 +449,25 @@ const styles = StyleSheet.create({
 		fontSize: 15,
 		fontWeight: "500",
 		color: "rgba(255,255,255,0.92)",
+	},
+
+	/**
+	 * Progress hairline — the card's bottom edge, above the scrim (zIndex 3, so
+	 * over the info block's 2 as well; they do not overlap, but the bar is the
+	 * card's frame and nothing should ever be able to cross it).
+	 */
+	progressTrack: {
+		position: "absolute",
+		left: 0,
+		right: 0,
+		bottom: 0,
+		height: PROGRESS_H,
+		backgroundColor: "rgba(255,255,255,0.18)",
+		zIndex: 3,
+	},
+	progressFill: {
+		height: PROGRESS_H,
+		backgroundColor: "rgba(255,255,255,0.85)",
 	},
 
 	// ─── Arrow art (see the block above) ──────────────────────────────────

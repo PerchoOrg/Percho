@@ -16,6 +16,100 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-22 08:18 UTC — The community card becomes the tour's card
+
+**Objective**: owner — "lets improve our community tour card". A review pass
+first, then the two items he picked: drop the stat bar off the feed card, and
+give the tour a clock.
+
+**What the review found**, in severity order:
+
+1. **The stat bar's four numbers are invented.** `lib/feed/place-stats.ts`
+   seeds mulberry32 off the card id and prints Schools 8/10, Safety 9/10,
+   Convenience 106, Growth +6.2%. Stable per card, unrelated to the community.
+   The module says so in its own header — it was built as a placeholder on
+   2026-08-19 with the API to follow, and the API never came.
+2. **90 seconds with no clock.** `TOUR_TARGET_MAX_S` is 90, `CardVideo` loops,
+   and the card offered no progress, no pause, no scrub. A swipe deck asks
+   "stay or go" and the card answered with no idea how long staying costs.
+3. **`onNearEnd` was wired to nothing.** `CardVideo` has fired it at 82% since
+   it was written, for a "breathing CTA" — the only consumer in the repo was
+   `dev-foundation.tsx`.
+4. **The chip row is unrelated to the film.** `signals` come from resident
+   attributes; `tour_assemblies.ordered_clips` carries the `poi_name` of every
+   place the tour actually visits, and `fetchVerticalVideos` already selects
+   that table. Not done — noted for a second round.
+5. Dead bookmark art (~60 lines, orphaned when the button came off on 08-20)
+   and three stale comments. Not touched: pre-existing, and CLAUDE.md §0.3 says
+   mention rather than delete.
+
+Owner's calls: (4) is not the priority — "no need to render all, we are still
+testing", so the 7-tour inventory stays as is. On (1), first "remove this
+statbar for now", then revised: "remove from front page, but move it to the
+explore page".
+
+**Actions**:
+- `CommunityFace` — `StatBar` and `placeStats` gone. The bottom row existed to
+  divide space between the bar and the link; with the bar gone the link is the
+  row, and `ctaRow` loses the `flex: 1` that was its share of it.
+- `app/community/[slug]` — the bar renders on the HERO, under the place line.
+  Not in the body: `StatBar` is white-on-scrim by construction and the hero is
+  the screen's only dark surface, so anywhere else means a second light-theme
+  copy for one caller.
+- `CardVideo` gains `progress?: SharedValue<number>`, written from the
+  `timeUpdate` listener it already had.
+- `CommunityFace` draws a 2pt hairline on the card's bottom edge from it, and
+  breathes the `Explore` link for three cycles once `onNearEnd` fires.
+
+**Decisions**:
+
+*A shared value, not a callback.* `timeUpdateEventInterval` is 0.25s, so a
+`(ratio: number) => void` prop would re-render the top card four times a second
+to move a 2px bar. The shared value touches no React state — the same reason
+`tapSlot` is one on these faces.
+
+*The bar is drawn in the face, not in `CardVideo`.* `CardVideo`'s frame is an
+absolute fill with no zIndex, and the face's scrim above it reaches 0.92 black
+at exactly the bottom edge. A bar painted inside the video would be dimmed by
+the card's own gradient.
+
+*No easing between ticks.* Considered `withTiming` at 250ms linear to glide
+between updates. Rejected: on a 90s tour each tick is 0.28% of the width, which
+is invisible, and easing would animate the LOOP'S REWIND backwards over a
+quarter second — inventing an artefact to smooth one nobody can see.
+
+*The breath is finite.* `CardSkeleton` repeats `-1` because it stops existing
+when its content lands. This link stays on screen as long as the buyer watches,
+and a CTA that never stops moving is a nag. Six half-cycles, even so it settles
+back on opacity 1.
+
+**Issues**: `apps/mobile` in ws3 has no `@biomejs/biome` installed — `pnpm lint`
+dies with `biome: command not found`, and `npx biome` silently resolves to an
+UNRELATED package called `biome` (version 0.3.3) that exits 0 having checked
+nothing. A lint run that passes because it linted nothing is worse than one
+that fails. Ran the real binary out of `~/Workspace/Percho/node_modules`
+instead; it caught an import-order error `npx` had "passed".
+
+**Resolution**: typecheck clean, real biome clean, 510/510 mobile tests pass.
+NOT verified on device — no iOS simulator is installed on this host, and the
+change is visual. Owner check in Expo Go is the remaining gate.
+
+**Learnings**: three of the five findings are the same shape — a seam built
+correctly and then never connected. `onNearEnd` fires for a consumer that was
+never written, `place-stats` documents itself as the swap point for an API that
+never arrived, and `ordered_clips` carries POI names no reader reads. None is a
+bug; each is a finished half of something.
+
+**Next steps**:
+- The stat bar's values are still invented, and they now sit on the one screen
+  whose header cites §3.4 (「缺数据显示 "–" 不编造」) and whose other numbers are
+  DB columns printed verbatim under a source line. Fine while the pipeline is
+  being tested; it must not meet a buyer. The cheap honest version is real
+  values where they exist (`homes`, `extractPoiCounts`) and "–" elsewhere.
+- Finding (4): put the tour's own POI names in the chip row. One extra column
+  on a query already made.
+- Findings (5): dead bookmark art and the stale comments, on the owner's word.
+
 ## 2026-08-21 10:45 UTC — Enhancement stops depending on a browser tab
 
 **Objective**: owner, on 5122 Lower Creek Street — "i see some pics do not have

@@ -8,7 +8,9 @@
  *   - playback error → mute-and-retry once (§0.7's "play() reject" rule; on
  *     native, `play()` returns void and failures surface via `statusChange`),
  *   - fires `onNearEnd` once when playback reaches 82–99%; the latch resets on
- *     every card swap so the next top card can fire again.
+ *     every card swap so the next top card can fire again,
+ *   - writes 0..1 playback progress into the caller's `progress` shared value,
+ *     for a caller that wants to draw a progress bar (see `CommunityFace`).
  *
  * A no-video card is a first-class state elsewhere (task-1 renders a static
  * hero); this component assumes a real `url`.
@@ -40,6 +42,7 @@
 import { VideoView, useVideoPlayer } from "expo-video";
 import { useEffect, useRef, useState } from "react";
 import { Image, StyleSheet, View } from "react-native";
+import type { SharedValue } from "react-native-reanimated";
 import { type MediaSize, mediaFit } from "../lib/media/fit";
 import { useSoundStore } from "../state/sound";
 import { colors } from "../theme/tokens";
@@ -88,6 +91,19 @@ interface CardVideoProps {
 	 * must not be waiting on a measurement to look right.
 	 */
 	unknownFit?: "contain" | "cover";
+	/**
+	 * Playback position as 0..1, written on every `timeUpdate` tick.
+	 *
+	 * A shared value rather than a callback ON PURPOSE: `timeUpdateEventInterval`
+	 * is 0.25s, so a `(ratio: number) => void` prop would re-render the top card
+	 * four times a second for a 2px bar. Writing a shared value touches no React
+	 * state at all — the same reason `tapSlot` is one on the card faces.
+	 *
+	 * The bar is NOT drawn here. On a full-bleed card this component sits under
+	 * the face's bottom scrim (which reaches 0.92 black), so a bar painted inside
+	 * this frame would be dimmed by it. The caller owns the layer.
+	 */
+	progress?: SharedValue<number>;
 }
 
 export function CardVideo({
@@ -98,6 +114,7 @@ export function CardVideo({
 	fit = "contain",
 	frameAspect,
 	unknownFit = "contain",
+	progress,
 }: CardVideoProps) {
 	const soundOn = useSoundStore((s) => s.soundOn);
 	const nearEndFired = useRef(false);
@@ -123,6 +140,9 @@ export function CardVideo({
 	useEffect(() => {
 		nearEndFired.current = false;
 		mutedRetried.current = false;
+		// The play-gate rewinds to 0 below; the bar has to rewind with it, or a
+		// card swapped back to the top shows the previous card's fill for a tick.
+		if (progress) progress.value = 0;
 		if (isTop) {
 			player.currentTime = 0;
 			player.muted = !soundOn;
@@ -154,17 +174,23 @@ export function CardVideo({
 	// 82% breathing-CTA trigger, once-latched per card (§0.7 / owner-approved #7).
 	useEffect(() => {
 		const sub = player.addListener("timeUpdate", ({ currentTime }) => {
-			if (!isTop || nearEndFired.current) return;
+			if (!isTop) return;
 			const dur = player.duration;
 			if (!dur || dur <= 0) return;
 			const ratio = currentTime / dur;
+			// Raw, not eased. Ticks land every 0.25s, which on a 90s tour is a
+			// 0.28%-of-width step — invisible. `withTiming` between ticks would
+			// buy nothing and would animate the loop's rewind BACKWARDS over a
+			// quarter second, which is a visible artefact where none exists now.
+			if (progress) progress.value = Math.min(ratio, 1);
+			if (nearEndFired.current) return;
 			if (ratio >= NEAR_END_RATIO && ratio < 1) {
 				nearEndFired.current = true;
 				onNearEndRef.current?.();
 			}
 		});
 		return () => sub.remove();
-	}, [player, isTop]);
+	}, [player, isTop, progress]);
 
 	/**
 	 * Learn the real track size, so `mediaFit` can decide fill-vs-letterbox.
