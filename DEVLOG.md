@@ -16,6 +16,80 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-22 22:05 UTC — The Community Tour index was counting the wrong pipeline
+
+**Objective**: owner: "community tour page, why all rows show 0/0 video? can
+you make this table more useful, for example order by recently updated, with
+more columns to show overview status".
+
+**Issues**: the Videos column counted `generated_videos` rows with
+`scope = 'community_intent_bucket'` — the *bucket-video* pipeline, which has
+**8 rows in the entire database** and predates the Community Tour. The tour
+writes to `community_tour_runs` (27 rows / 7 communities), `photo_clips` (247)
+and `tour_assemblies` (53 / 6 communities); the index queried none of them. So
+Aberdeen, with 35 finished films, read `0 / 0` — same as the 8,676 communities
+that have never been touched. The column was not broken, it was pointed at the
+wrong table, which is worse: it rendered a confident zero.
+
+**Actions**:
+- `apps/web/lib/communities/tour-index.ts` (new, + 8 tests): folds runs /
+  assemblies / `community_pois` into per-community counters — stage, run count,
+  POIs approved/total, videos ready/failed, last activity.
+- `apps/web/app/admin/pipeline/community-nearby/page.tsx`: three new queries,
+  a backfill pass, and ordering by real activity.
+- `CommunityNearbyTable.tsx`: **Stage / POIs / Videos / Last activity** replace
+  the dead Videos column.
+
+**Decisions**:
+- *Read the tour tables whole, filter `community_pois` by them.* The obvious
+  shape — stats for the 500 communities on screen — needs `.in()` lists of 500
+  community ids, then ~500 poi ids, then ~1000 photo ids, and a 1,000-uuid
+  `.in()` is a 37 KB URL. Inverting it works because the active set is tiny:
+  runs and assemblies are one row per run, and everything else keys off the 8
+  communities they name. Two unfiltered reads (capped at 4,000) and one small
+  `.in()`.
+- *Backfill communities outside the window.* Ordering by `communities.updated_at`
+  and taking 500 drops a community that was rendering an hour ago but last
+  *edited* weeks ago — verified: two of the four Suwanee communities were
+  outside the window. Any community with tour activity is now pulled in
+  explicitly, and the final order is `max(run, assembly, communities.updated_at)`
+  desc. Suppressed during a search: there, the window *is* the answer.
+- *Dropped photos and clips from the index.* They need the deep
+  `community_pois → poi_photos → photo_clips` join, which is exactly the
+  `.in()` blow-up above. The Stage column already says `Review` when the photo
+  gate is what's waiting, which is the actionable half.
+- *Stage sorts by pipeline position, not alphabetically.* Ranked
+  research → resolve → photos → tagging → **review** → rendering → assembled →
+  failed. Review is amber: it is the only stage waiting on the owner, so the
+  column doubles as a to-do list.
+- *`formatAge` is called on the server.* It reads the clock; formatting in the
+  client component would make every row's text disagree with the HTML it
+  hydrates.
+
+**Resolution**: verified against the production PostgREST by running the page's
+exact query sequence end to end — 8 active communities, 535 POI rows, 2
+communities backfilled from outside the window, 502 rows rendered of 8,684.
+Ashley Crossing (`fetching_photos`, 3/162 POIs), Apremont-Highcroft
+(`fetching_photos`, 6 runs, 6 videos), Bellmoore Park (`review`), Aberdeen
+(`assembled`, 8 runs, 19/38 POIs, 35 videos +1 failed) lead the table; the
+never-run communities fall in behind them. `pnpm typecheck` and `biome check`
+clean, 8 new tests pass.
+
+**Issues (open)**: the visual check did not happen — the Chrome extension lost
+its tab group and would not recreate it across five attempts. A dev server is
+up on **:3177** for the owner to eyeball. Everything below the pixels is
+verified against the real database.
+
+**Learnings**: a column that survives a pipeline rewrite is worse than a column
+that breaks. The bucket-video scope stayed valid, the query kept returning 200,
+and the zero it rendered was indistinguishable from a real zero — the same
+failure class as yesterday's swallowed `.or()` error, one layer up.
+
+**Next steps**: photos-awaiting-review per community would be the next most
+useful number, but it needs a `community_tour_overview` view (or an RPC) to
+aggregate the three-table join server-side. Worth doing when more than a
+handful of communities are live.
+
 ## 2026-08-22 21:05 UTC — The community search that shipped broken, and the list that never showed new work
 
 **Objective**: owner, after the server-side search shipped: "still can not see

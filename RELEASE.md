@@ -19,6 +19,9 @@ Community films now open on the community. Its own amenities lead the film and r
 Aberdeen in Suwanee is the first community with this treatment: a 58-second film that opens on its clubhouse and takes in the pool, the courts and the grounds before heading out into Suwanee.
 
 ### 2026-08-22
+- The admin community list now shows where each community's tour actually is — the stage it reached, how many places it has, how many finished films it has, and how long ago anything happened to it. The video count it showed before was reading the wrong pipeline and said "0 / 0" for every community, including ones with dozens of finished films
+- Communities are now ordered by when anything last happened to them, whether that was an edit or the tour pipeline running, so whatever you touched most recently is at the top. A community that has been rendering all morning no longer disappears down the list because nobody edited its record
+- Communities waiting on your photo review are flagged in amber, so the list doubles as a to-do list
 - Searching the admin community list now actually returns matches — it was failing silently and reporting "no communities found" for every search
 - The community list now shows the most recently added or edited communities first, with the date each was last touched, so a community you just created is at the top instead of buried alphabetically
 - The list now says how many communities it is showing out of the total, rather than looking like the whole table
