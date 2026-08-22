@@ -39,24 +39,33 @@ what is actually broken.
    photo was therefore pending forever, and the community tour's initial
    filtering had simply never been ported to the home tour.
 
-**Decisions**: the owner picked option A — keep `approved = in the cut` on the
-community side and fix the labels, rather than redefining `approved` to mean
-"usable" (which would put it straight back to 82). Concretely:
+**Decisions**: the owner first picked option A — keep `approved = in the cut`
+on the community side and fix the labels — then, on seeing the two models side
+by side, defined the one he actually wants for both: "after tag you will get
+rejected immediately, same for both, then remaining ones are default as
+approved for planning, unless you reject explicitly in the review step, after
+that planning will use the approved ones, but not necessary all of them for
+actual video." So `approved` means ELIGIBLE and the cut is a separate signal.
+
+**The home tour ships on that model. The community tour does not, yet**
+(owner: "lets not change anything for community yet"). Community was drafted
+and reverted — see *Not done* below for what it costs. Concretely:
 
 - `PhotoTable.tsx`: section labels are now per-surface (`SECTION_LABELS`).
   Community reads **In the Cut / Rejected — never use / Usable — not in this
-  cut**; listing reads **Approved / Rejected — never use / Usable — no opinion
-  yet**. The third section carries a one-line hint saying nothing there is
-  waiting on him. The "Awaiting review" filter is renamed "Not in the cut" on
-  the community surface, where awaiting-review is not what it selects.
+  cut**; listing reads **Approved / Rejected — never use / Not yet judged**.
+  The third section carries a one-line hint saying what it is waiting on. The
+  "Awaiting review" filter is renamed "Not in the cut" on the community
+  surface, where awaiting-review is not what it selects.
 - `worker.py`: `initial_listing_verdicts()` + `_write_initial_verdicts()`, run
   at the end of `process_tag_job` — both in the freshly-tagged path and in the
   all-cached early return — so re-running **tag** on an existing listing
-  backfills its verdicts. Gates are deliberately only the two that cannot be
-  fixed downstream: the tagger said `usable=false`, or there is no file / no
-  pixels. **Resolution is not a gate**, same as the community rule, because
-  enhancement fixes it. Rows already approved or rejected are never touched;
-  an untagged row gets no verdict at all.
+  backfills its verdicts. Every tagged photo gets one: `rejected` for the two
+  faults that cannot be fixed downstream (tagger said `usable=false`, or no
+  file / no pixels), `approved` for everything else. **Resolution is not a
+  gate** — enhancement fixes it. Rows already approved or rejected are never
+  touched, and an untagged row gets no verdict at all, so `pending` on a
+  listing now means exactly one thing: the tagger has not reached it.
 - Verdicts land with a `rejection_reason` ("tagger-unusable"), so an automated
   call stays distinguishable from the owner's — the 2026-08-20 rule.
 - `step_results.tag.auto_rejected` records the count.
@@ -66,7 +75,7 @@ community side and fix the labels, rather than redefining `approved` to mean
 `scripts/render-worker/tests/test_initial_listing_verdicts.py` (new, 7 tests).
 
 **Verification**: `pnpm typecheck` clean, `pnpm lint` clean (173 pre-existing
-warnings), `pnpm test` 613 passed. Worker suite: **116 passed, 2 failed** —
+warnings), `pnpm test` 613 passed. Worker suite: **117 passed, 2 failed** —
 the two failures are `test_pick_bgm.py`, pre-existing and already recorded on
 a clean checkout.
 
@@ -79,6 +88,27 @@ a clean checkout.
 - A column with exactly one writer, and that writer a UI click, is worth
   grepping for whenever a status "never changes". The listing review gate
   looked implemented from every call site that *read* it.
+
+**Not done — the community half.** It was written and reverted on the owner's
+call, and the draft is worth reconstructing rather than rediscovering. Three
+things have to move together, because `poi_photos.status` currently carries
+both meanings:
+
+1. `runPhotos` approves every tagged, non-rejected photo; `runPlan` stops
+   writing `approved` / demoting to `pending` — `step_results.photos.shots`
+   is the cut and the Plan column already renders it.
+2. **Incumbency breaks silently otherwise.** `selectSurroundingPois` seats
+   "a POI already carrying an approved photo" ahead of the school slots and
+   the round-robin; approve everything and every POI with a usable photo is an
+   incumbent, so the 15-place budget fills in arrival order. The draft read the
+   film instead — a non-rejected photo with a `photo_clips` row in `ready`,
+   unioned with the previous plan's shots.
+3. `resolve.ts` annotates research results with `in_film` from the same
+   "has an approved photo" query and needs the same replacement, or every POI
+   with a photo shows as already filmed.
+
+`computeFinalShots`'s `ownerApproved` needs NO change either way: it is gated
+on `reviewed_by`, which only a human click sets.
 
 **Next steps**: the worker runs from `~/Workspace/Percho` under launchd, so
 this needs a pull there plus

@@ -19,8 +19,8 @@ Community films now open on the community. Its own amenities lead the film and r
 Aberdeen in Suwanee is the first community with this treatment: a 58-second film that opens on its clubhouse and takes in the pool, the courts and the grounds before heading out into Suwanee.
 
 ### 2026-08-22
-- Home tour photos are now judged automatically as soon as they are tagged: broken frames go straight to Rejected instead of sitting in the pile with everything else. Re-run tagging on an existing listing to sort its photos the same way
-- The photo review table's three sections now say what they mean. On a community tour the top section is the photos that are in the film, and the bottom one is everything usable that this cut did not pick — it is not a queue waiting on you, and it no longer looks like one
+- Home tour photos are now judged automatically as soon as they are tagged: broken frames go to Rejected, everything else goes to Approved, and nothing is left sitting in between. Approved means the photo can be used — the video still picks about twenty of them. Re-run tagging on an existing listing to sort its photos the same way
+- The photo review table's sections now say what they mean on each kind of tour. On a community tour the top section is the photos that are in the film and the bottom one is everything usable the cut did not pick — it is not a queue waiting on you, and it no longer looks like one
 - The admin community list now shows where each community's tour actually is — the stage it reached, how many places it has, how many finished films it has, and how long ago anything happened to it. The video count it showed before was reading the wrong pipeline and said "0 / 0" for every community, including ones with dozens of finished films
 - Communities are now ordered by when anything last happened to them, whether that was an edit or the tour pipeline running, so whatever you touched most recently is at the top. A community that has been rendering all morning no longer disappears down the list because nobody edited its record
 - Communities waiting on your photo review are flagged in amber, so the list doubles as a to-do list

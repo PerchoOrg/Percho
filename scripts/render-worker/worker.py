@@ -3114,29 +3114,38 @@ def _load_listing_photos(
 def initial_listing_verdicts(
     records: list[dict[str, Any]],
     fresh_tags: dict[str, dict[str, Any]] | None = None,
-) -> list[tuple[str, str]]:
-    """The pipeline's own verdict on each tagged listing photo: reject or leave.
+) -> list[tuple[str, str, str | None]]:
+    """The pipeline's verdict on each tagged listing photo: rejected, or approved.
 
-    The community tour has had this since 2026-08-19 (`initialVerdict` in
-    `tour-steps/shots.ts`): the automated half decides what is UNUSABLE before
-    the owner opens the table, so his review is a review of real candidates.
-    The home tour never got it — nothing but a human click has ever written
-    `listing_photos.review_status`, so every photo sat in the table's third
-    section forever and the owner read that section as "not yet judged"
-    (owner 2026-08-22: "after fetching and tagging, the photos should be only
-    in approved or rejected sections, why am i seeing many pending").
+    Owner 2026-08-22, one model for both surfaces: "after tag you will get
+    rejected immediately, same for both, then remaining ones are default as
+    approved for planning, unless you reject explicitly in the review step,
+    after that planning will use the approved ones, but not necessary all of
+    them for actual video."
 
-    Rejection means "never use this", so the gates are only the two that
-    cannot be fixed downstream: the tagger called the frame broken, or there
-    is no file/no pixels to render. Resolution is deliberately NOT a gate —
-    same reasoning as the community side, enhancement fixes it.
+    So `approved` means ELIGIBLE, not "in the film" — a listing plans ~20
+    photos out of the approved pile and the rest simply do not make it. What
+    got filmed is `used_in_video_at`, and that is a different column.
 
-    Returns `(photo_id, reason)`. Rows already approved or rejected are left
-    alone: that verdict is the owner's and a re-run must not overturn it.
-    An untagged photo has no verdict either — the tagger is the input here.
+    Nothing in the home tour has ever written `review_status`: `runTag` queues
+    the worker, `runPlan` only filters out `rejected`, and the sole writer in
+    the repo is the owner's own click. Every listing photo therefore sat
+    unjudged forever (owner 2026-08-22: "after fetching and tagging, the
+    photos should be only in approved or rejected sections, why am i seeing
+    many pending").
+
+    Rejection means "never use this", so only two gates: the tagger called the
+    frame broken, or there is no file / no pixels. Resolution is deliberately
+    NOT a gate — enhancement doubles the edges and fixes it, same as the
+    community rule.
+
+    Returns `(photo_id, review_status, rejection_reason)`. Rows already
+    approved or rejected are left alone: that verdict is the owner's and a
+    re-run must not overturn it. An untagged photo gets no verdict at all —
+    the tagger is the input here, and 'pending' now means exactly that.
     """
     fresh = fresh_tags or {}
-    out: list[tuple[str, str]] = []
+    out: list[tuple[str, str, str | None]] = []
     for r in records:
         if (r.get("review_status") or "pending") != "pending":
             continue
@@ -3144,12 +3153,14 @@ def initial_listing_verdicts(
         if not isinstance(tags, dict):
             continue
         if tags.get("usable") is False:
-            out.append((r["id"], "tagger-unusable"))
+            out.append((r["id"], "rejected", "tagger-unusable"))
             continue
         w = r.get("probe_w") or r.get("width") or 0
         h = r.get("probe_h") or r.get("height") or 0
         if not r.get("storage_path") or w <= 0 or h <= 0:
-            out.append((r["id"], "no stored file or no pixel dimensions"))
+            out.append((r["id"], "rejected", "no stored file or no pixel dimensions"))
+            continue
+        out.append((r["id"], "approved", None))
     return out
 
 
@@ -3157,25 +3168,28 @@ def _write_initial_verdicts(
     job_id: str,
     records: list[dict[str, Any]],
     fresh_tags: dict[str, dict[str, Any]] | None = None,
-) -> int:
+) -> dict[str, int]:
     """Persist `initial_listing_verdicts`. Best-effort, per row."""
-    verdicts = initial_listing_verdicts(records, fresh_tags)
-    written = 0
-    for pid, reason in verdicts:
+    counts = {"approved": 0, "rejected": 0}
+    for pid, verdict, reason in initial_listing_verdicts(records, fresh_tags):
         try:
             sb_patch(
                 "listing_photos",
                 {"id": f"eq.{pid}"},
-                {"review_status": "rejected", "rejection_reason": reason},
+                {"review_status": verdict, "rejection_reason": reason},
             )
-            written += 1
+            counts[verdict] += 1
         except Exception:
-            # A verdict that fails to write leaves the photo reviewable, which
-            # is the safe direction — the owner sees it instead of losing it.
+            # A verdict that fails to write leaves the photo pending, which is
+            # the safe direction — the owner sees it instead of losing it.
             traceback.print_exc()
-    if written:
-        print(f"[tag {job_id}] auto-rejected {written} unusable photo(s)", flush=True)
-    return written
+    if counts["approved"] or counts["rejected"]:
+        print(
+            f"[tag {job_id}] initial verdicts: {counts['approved']} approved, "
+            f"{counts['rejected']} rejected",
+            flush=True,
+        )
+    return counts
 
 
 def process_tag_job(job: dict[str, Any]) -> None:
@@ -3226,10 +3240,11 @@ def process_tag_job(job: dict[str, Any]) -> None:
         need_tag = [r for r in records if not r.get("tagged_at")]
         if not need_tag:
             print(f"[tag {job_id}] all {len(records)} photos already tagged", flush=True)
-            auto_rejected = _write_initial_verdicts(job_id, records)
+            verdicts = _write_initial_verdicts(job_id, records)
             save_run_step(run_id, "tag", {
                 "total": len(records), "tagged": 0, "cached": len(records),
-                "auto_rejected": auto_rejected,
+                "auto_approved": verdicts["approved"],
+                "auto_rejected": verdicts["rejected"],
             })
             set_run_status(run_id, "review")
             _finish_step_job(job_id, True)
@@ -3277,14 +3292,16 @@ def process_tag_job(job: dict[str, Any]) -> None:
             sb_patch("listings", {"id": f"eq.{listing_id}"}, {"ai_style": style_info})
 
         # The initial verdict, before the review gate below — the owner should
-        # open the table to photos already sorted into usable and unusable.
-        auto_rejected = _write_initial_verdicts(job_id, records, fresh_tags)
+        # open the table to photos already sorted into approved and rejected,
+        # with nothing left in between.
+        verdicts = _write_initial_verdicts(job_id, records, fresh_tags)
         save_run_step(run_id, "tag", {
             "total": len(records),
             "tagged": written,
             "errored": errored,
             "cached": len(records) - len(need_tag),
-            "auto_rejected": auto_rejected,
+            "auto_approved": verdicts["approved"],
+            "auto_rejected": verdicts["rejected"],
             "style": (style_info or {}).get("style"),
         })
         # The gate. Nothing plans or renders until the owner has been through

@@ -169,18 +169,23 @@ export interface PlanCell {
  * should be only in approved or rejected sections, why am i seeing many
  * pending").
  *
- * On a home tour there is no cut in this column at all: `plan` reads everything
- * that is not rejected, so approving is an opinion and only rejecting is a
- * gate. Module-level so the object identity is stable across renders — it is a
+ * The home tour means something else by the same word, and as of 2026-08-22 it
+ * is the owner's model for both: tagging rejects what is unusable and approves
+ * everything else, so `approved` there means ELIGIBLE — planning picks ~20 of
+ * them and the rest simply do not make the film. Nothing after tagging is
+ * pending, and the third section holds only what the tagger has not reached.
+ * The community tour is deliberately left on the old rule for now (owner
+ * 2026-08-22: "lets not change anything for community yet").
+ *
+ * Module-level so the object identity is stable across renders — it is a
  * dependency of the grouping memo.
  */
 const SECTION_LABELS = {
   listing: {
     approved: 'Approved',
     rejected: 'Rejected — never use',
-    other: 'Usable — no opinion yet',
-    otherHint:
-      'Judged usable by the pipeline. These are planned and rendered whether or not you approve them — only Rejected is a gate.',
+    other: 'Not yet judged',
+    otherHint: 'Waiting on the tagger — these get a verdict automatically when tagging runs.',
   },
   community: {
     approved: 'In the Cut',

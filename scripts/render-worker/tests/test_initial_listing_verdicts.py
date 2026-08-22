@@ -47,21 +47,24 @@ def rec(pid, *, usable=True, tags=True, review="pending", w=1500, h=1000, path="
 
 
 def test_tagger_unusable_is_rejected():
-    assert initial_listing_verdicts([rec("p1", usable=False)]) == [("p1", "tagger-unusable")]
+    assert initial_listing_verdicts([rec("p1", usable=False)]) == [
+        ("p1", "rejected", "tagger-unusable")
+    ]
 
 
-def test_usable_photo_is_left_alone():
-    assert initial_listing_verdicts([rec("p1")]) == []
+def test_usable_photo_is_approved():
+    """Approved means eligible for planning, not in the film."""
+    assert initial_listing_verdicts([rec("p1")]) == [("p1", "approved", None)]
 
 
 def test_low_resolution_is_not_a_rejection():
     """Enhancement doubles the edges — a small photo is a rendering problem."""
-    assert initial_listing_verdicts([rec("p1", w=480, h=320)]) == []
+    assert initial_listing_verdicts([rec("p1", w=480, h=320)]) == [("p1", "approved", None)]
 
 
 def test_no_file_or_no_pixels_is_rejected():
-    assert initial_listing_verdicts([rec("p1", path="")])[0][1].startswith("no stored file")
-    assert initial_listing_verdicts([rec("p2", w=0, h=0)])[0][1].startswith("no stored file")
+    assert initial_listing_verdicts([rec("p1", path="")])[0][2].startswith("no stored file")
+    assert initial_listing_verdicts([rec("p2", w=0, h=0)])[0][2].startswith("no stored file")
 
 
 def test_untagged_photo_gets_no_verdict():
@@ -70,14 +73,20 @@ def test_untagged_photo_gets_no_verdict():
 
 
 def test_owner_verdicts_are_never_overturned():
-    broken = [rec("p1", usable=False, review="approved"), rec("p2", usable=False, review="rejected")]
-    assert initial_listing_verdicts(broken) == []
+    decided = [rec("p1", usable=False, review="approved"), rec("p2", review="rejected")]
+    assert initial_listing_verdicts(decided) == []
 
 
 def test_fresh_tags_win_over_the_row():
     """The tag step judges what it just wrote, not the row it read first."""
-    stale = rec("p1", usable=True)
+    stale = rec("p1")
     stale["cached_ai_tags"] = None
     assert initial_listing_verdicts([stale], {"p1": {"usable": False}}) == [
-        ("p1", "tagger-unusable")
+        ("p1", "rejected", "tagger-unusable")
     ]
+
+
+def test_nothing_is_left_pending():
+    """The whole point: after tagging, every tagged photo has a verdict."""
+    records = [rec("p1"), rec("p2", usable=False), rec("p3", w=200, h=150)]
+    assert {pid for pid, _, _ in initial_listing_verdicts(records)} == {"p1", "p2", "p3"}
