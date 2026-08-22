@@ -19,6 +19,9 @@ Community films now open on the community. Its own amenities lead the film and r
 Aberdeen in Suwanee is the first community with this treatment: a 58-second film that opens on its clubhouse and takes in the pool, the courts and the grounds before heading out into Suwanee.
 
 ### 2026-08-22
+- A home tour's opening shot now gets its own tailored camera direction, chosen per home from a reviewed set of moves — a locked "living photo", a slow reveal, a rise, a glide toward the front door, and more — instead of the same slow push used for every home
+- When a listing has real drone photography, the opening shot can now begin high above the home and settle onto its front — or lift off from the front into the aerial view. Both ends of that shot are the listing's own photos; homes without clean aerial photos never get an invented one
+- All 15 existing home tours were re-rendered from the improved (sharpened and enlarged) photos
 - Neighborhood cards now show the community film's progress as a row of segments, one per place the film visits — so a card tells you how many stops a tour has and which one you are watching, instead of leaving you to guess how long it runs
 - The **Explore** link on a neighborhood card gives a gentle pulse as the film nears its end, as an invitation to read more about the place you have just been shown
 - The four-figure summary bar (Schools, Safety, Convenience, Growth) has moved off the neighborhood card and onto the neighborhood's own Explore screen, so the card is the film and nothing else
