@@ -12,12 +12,11 @@
  * is to have a similar big table for home tour as well, with all the columns,
  * buttons if needed").
  *
- * The legacy whole-film button is gone (owner 2026-08-21), now that the
- * per-photo path has produced a film end to end. `process_job()` itself
- * REMAINS: the agent dashboard's one-click "Create a home tour video"
- * (`GenerateTourPanel` -> /api/listings/[id]/generate-tour) still enqueues
- * step='render' jobs against it, and that is a live agent-facing feature, not
- * the admin fallback being retired here.
+ * The legacy whole-film path is fully retired (owner 2026-08-22): the admin
+ * button went on 2026-08-21, and the agent dashboard's `GenerateTourPanel` +
+ * /api/listings/[id]/generate-tour followed. Nothing enqueues step='render'
+ * jobs any more; `process_job()` in worker.py is unreachable dead code
+ * awaiting removal.
  */
 
 import { createServiceClient } from '@/lib/supabase/server';
