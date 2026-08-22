@@ -31,6 +31,7 @@ import {
   type TourDb,
   bestEffortWrite,
   getRun,
+  saveStep,
   setRunStatus,
 } from '@/lib/poi/tour-steps/shared';
 import { runTag } from '@/lib/poi/tour-steps/tag';
@@ -124,7 +125,25 @@ export async function POST(
     return NextResponse.json({ ok: true, step, result });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    await setRunStatus(sb, run.id, 'failed');
+    // Recording the failure must not itself throw — setRunStatus and saveStep
+    // both go through mustWrite, and a secondary write failure that swallowed
+    // the real message is how a run ends up with no explanation anywhere.
+    try {
+      await setRunStatus(sb, run.id, 'failed');
+      // The photos step now claims itself with phase 'running' before it
+      // fetches, so a throw would otherwise leave it spinning. The strip reads
+      // an `error` key on the step result as 'failed'; give it one. Re-read the
+      // run first — the handler wrote step_results on its way down, and `run`
+      // is the snapshot from before it ran.
+      if (step === 'photos') {
+        const fresh = (await getRun(sb, run.id)) ?? run;
+        const prior = fresh.step_results.photos;
+        const partial = prior && typeof prior === 'object' && !Array.isArray(prior) ? prior : {};
+        await saveStep(sb, fresh, 'photos', { ...partial, phase: 'failed', error: message });
+      }
+    } catch (writeErr) {
+      console.error('[community-tour] recording step failure failed:', writeErr);
+    }
     return NextResponse.json({ ok: false, step, error: message }, { status: 500 });
   }
 }

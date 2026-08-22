@@ -185,6 +185,10 @@ export function CommunityTourSection({
     if (s === 'review' || s === 'plan') {
       return photosResult?.phase === 'done' ? 'done' : 'idle';
     }
+    // The photos step claims itself with phase 'running' before it fetches
+    // anything. A result exists, so the generic branch below would call it
+    // done — green for a step that is still working, or dead.
+    if (s === 'photos' && photosResult?.phase === 'running') return 'waiting';
     const r = run?.step_results[resultKey(s as StepName)] as { error?: string } | undefined;
     if (!r) return 'idle';
     return r.error ? 'failed' : 'done';

@@ -157,6 +157,19 @@ export async function runPhotos(sb: TourDb, run: RunRow, actor: PoiActor = 'user
     return { error: 'no_resolved', message: 'Run the resolve step first.' };
   }
 
+  // Claim the step before the first fetch. Until now the earliest write was the
+  // 'tagging' one below — minutes in — so a death during the fetch loop (Vercel
+  // timeout, a throw) left step_results.photos never written at all: the run sat
+  // on status 'fetching_photos' and the strip, which reads 'no result = idle',
+  // showed nothing. No green, no spinner, no failure, just a corpse.
+  await saveStep(sb, run, 'photos', {
+    phase: 'running',
+    results: {},
+    resolved_poi_ids: [],
+    shots: [],
+    dropped: [],
+  });
+
   const { fetchPhotosForCommunityPoi } = await import('@/lib/poi/community-actions');
   const results: Record<string, unknown> = {};
   const resolvedPoiIds: string[] = [];
