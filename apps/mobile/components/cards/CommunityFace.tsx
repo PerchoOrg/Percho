@@ -432,7 +432,9 @@ export function CommunityFace({
 			    The name is the only thing that gives when space runs out —
 			    `flexShrink: 0` on both the glyphs and the link, `minWidth: 0` on
 			    the name. A truncated community name is still readable; a
-			    truncated CTA is not, and half a glyph is nothing at all. */}
+			    truncated CTA is not, and half a glyph is nothing at all. What
+			    gives against the GLYPHS, though, is the line: they wrap under
+			    the name rather than shrink it (see `infoLeft`). */}
 			<View style={styles.info}>
 				<View style={styles.infoLeft}>
 					{/* Two lines, not one. A name that did not fit used to ellipsize
@@ -635,19 +637,32 @@ const styles = StyleSheet.create({
 	},
 	/** Name + glyphs. `minWidth: 0` is what lets the name WRAP instead of
 	 *  pushing `Explore` off the card — a text child will not shrink below its
-	 *  content without it. */
+	 *  content without it.
+	 *
+	 *  `flexWrap` is what keeps the glyphs ON the name (owner 2026-08-22: "the
+	 *  icons should be close to community name, not explore button, sometimes i
+	 *  see the other way"). Without it, a name too long for the row was SHRUNK
+	 *  by the glyphs' width and then re-wrapped inside the box it was shrunk
+	 *  to — and a wrapped line rarely fills its box, so the glyphs were laid
+	 *  out after a box edge the text did not reach, drifting up to the width of
+	 *  the short line towards `Explore`. Wrapped, the name is never squeezed by
+	 *  its sibling: the glyphs either fit beside its true width or drop onto
+	 *  their own line under it. Either way they touch the name. */
 	infoLeft: {
 		flex: 1,
 		minWidth: 0,
 		flexDirection: "row",
+		flexWrap: "wrap",
 		alignItems: "center",
 		gap: 7,
 	},
 	/**
 	 * The glyph run, RIGHT of the name (owner 2026-08-22: "icons should be on
-	 * the right side of the community name"). Never squeezed — see the row's
-	 * doc; the name is what gives. Centred against the name block, so on a
-	 * wrapped two-line name they sit level with its middle.
+	 * the right side of the community name") — or directly UNDER it, on the
+	 * long names where "right of the name" and "on the card" cannot both be
+	 * true. Never squeezed — see the row's doc; the name is what gives. Centred
+	 * against the name block, so on a wrapped two-line name they sit level with
+	 * its middle.
 	 */
 	icons: {
 		flexDirection: "row",

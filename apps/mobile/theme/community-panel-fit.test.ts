@@ -80,6 +80,26 @@ describe("community card immersive full-bleed layout (2026-08-16)", () => {
 		expect(SRC).toContain("out.length >= MAX_COMMUNITY_ICONS");
 	});
 
+	it("keeps the glyphs attached to the name, never to `Explore`", () => {
+		// Owner 2026-08-22: "the icons should be close to community name, not
+		// explore button, sometimes i see the other way". "Sometimes" was the
+		// long names: the glyphs' width was taken out of the name's box, the
+		// name re-wrapped inside the smaller box, and the glyphs were then drawn
+		// after a box edge the wrapped text no longer reached. The name and the
+		// glyphs must therefore share a WRAPPING line — the glyphs drop under
+		// the name instead of squeezing it.
+		expect(SRC).toContain('flexWrap: "wrap"');
+		// And they must still be the name's neighbours in the tree, not the
+		// link's: one container holds the name and the glyphs, `Explore` is
+		// outside it.
+		const left = SRC.indexOf("styles.infoLeft");
+		const glyphs = SRC.indexOf("styles.icons");
+		const cta = SRC.indexOf("styles.ctaRow");
+		expect(left).toBeGreaterThan(-1);
+		expect(glyphs).toBeGreaterThan(left);
+		expect(cta).toBeGreaterThan(glyphs);
+	});
+
 	it("has no pill row left", () => {
 		// The pills were replaced, not moved: nothing on this card renders a
 		// label in a box any more.
