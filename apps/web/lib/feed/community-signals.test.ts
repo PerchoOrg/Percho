@@ -1,3 +1,4 @@
+import { CARD_ICON_NAMES } from '@percho/shared/icons';
 /**
  * Tests for the community card's lifestyle signal pills (owner, 2026-08-15).
  *
@@ -12,7 +13,6 @@
  */
 import { describe, expect, it } from 'vitest';
 import type { CommunityReason } from './community-reasons';
-import { CARD_ICON_NAMES } from '@percho/shared/icons';
 import { SIGNAL_FAMILIES, communityLifestyleSignals, signalIcon } from './community-signals';
 
 function reasons(labels: string[]): CommunityReason[] {
