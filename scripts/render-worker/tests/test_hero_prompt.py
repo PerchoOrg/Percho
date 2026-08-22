@@ -16,6 +16,7 @@ sys.path.insert(0, str(REPO / "scripts" / "render-worker"))
 from hero_prompt import (  # noqa: E402
     BIRDVIEW_EFFECTS,
     CAMERA,
+    CLAUSE_GROUND_LEVEL,
     MANDATORY_CLAUSES,
     choose_hero_prompt,
     compose_prompt,
@@ -61,8 +62,9 @@ def test_effect_outside_pool_falls_back():
 
 def test_rejected_effects_are_not_in_the_pool():
     # The owner's explicit rejections must not merely be discouraged — they
-    # must have no camera sentence to render from.
-    for rejected in ["aerial_pull_away", "facade_tilt_up", "streetscape_glide"]:
+    # must have no camera sentence to render from. slow_rise joined the list
+    # after flying a one-story home into an invented drone shot twice.
+    for rejected in ["aerial_pull_away", "facade_tilt_up", "streetscape_glide", "slow_rise"]:
         assert rejected not in CAMERA
 
 
@@ -138,6 +140,19 @@ def test_fallback_is_always_legal():
 def test_birdview_effects_all_have_cameras():
     for e in BIRDVIEW_EFFECTS:
         assert e in CAMERA
+
+
+def test_ground_effects_carry_the_altitude_fence_and_birdviews_do_not():
+    # A rise or pull-back that climbs becomes an invented drone shot — the
+    # synthetic birdview the owner banned (seen live on 3525 Berkeley Park:
+    # slow_rise flew a one-story ranch). Ground effects pin the camera below
+    # the roofline; birdviews are exempt because their aerial is a real photo.
+    for effect in CAMERA:
+        prompt = compose_prompt(effect, "A home.", "Nothing moves.")
+        if effect in BIRDVIEW_EFFECTS:
+            assert CLAUSE_GROUND_LEVEL not in prompt
+        else:
+            assert CLAUSE_GROUND_LEVEL in prompt
 
 
 def test_looks_aerial_keyword_filter():

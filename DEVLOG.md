@@ -229,6 +229,41 @@ failed on files that no longer exist.
   runs from there and it sat two commits behind yesterday, which is why he saw
   no change at all.
 
+## 2026-08-22 19:20 UTC — Phase 85.2: slow_rise leaves the pool; ground effects get an altitude fence
+
+**Objective**: owner's first manual test (3525 Berkeley Park Court) — "tested,
+why birdview?" The clip looked like an aerial. It was not the birdview effect:
+the plan had chosen `slow_rise` (pair=None), and the generation climbed into
+an invented drone shot of a roof nobody photographed — the synthetic birdview
+the owner banned, arrived at through a ground effect.
+
+**Cause**: C's camera clause ended "revealing the roofline against the sky".
+On the two-story dusk test house that read as a gentle rise; on a one-story
+ranch, seeing the roofline MEANS climbing, and Seedance Mini flew.
+
+**What was tried**: softened wording ("rises slowly and gently by a small
+amount") plus a new mandatory clause pinning the camera below the roofline,
+retested on the same photo outside the pipeline ($0.0568). Better — no more
+top-down — but still well above "a small amount", and the model invented a
+"VIRTUALLY…" watermark in the closing frames.
+
+**Actions**:
+- `slow_rise` REMOVED from the pool. Its verb is "go up" and two paid tests
+  say that cannot be fenced on this model. An effect that cannot be fenced is
+  not offered.
+- `CLAUSE_GROUND_LEVEL` stays, appended to every non-birdview effect —
+  defense in depth for pull-back and the others, which tested clean.
+- `CLAUSE_TEXT` extended: "no new text, logos, or watermarks appear."
+- 3525's plan re-queued after deploy so its stored hero prompt is a legal one.
+
+**Resolution**: 106 python tests pass; workers restarted. Cumulative test
+spend $0.86.
+
+**Learnings**: the fence worked as designed even when the effect misbehaved —
+the failure produced an ugly clip, never a broken pipeline. But "the model
+follows camera language" is per-verb, not global: hold/pull/glide/push all
+obey; rise does not. The pool is now verbs the model demonstrably obeys.
+
 ## 2026-08-22 11:35 UTC — Phase 85.1: verified live, one dialect fix
 
 **Objective**: deploy phase85 and prove it against production before handing
