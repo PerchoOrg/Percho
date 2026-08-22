@@ -1,10 +1,15 @@
 /**
- * Place stat bars for the Community and City cards.
+ * Place stat bars for the City card and the community explore screen.
  *
  * Owner spec (Tia, 2026-08-19): the community/city cards get the same bottom
  * gradient + divided info bar as the listing card. Community shows
  * Schools / Safety / Convenience / Growth; city shows Jobs / Cost of Living /
  * Commute / Growth (reference photo).
+ *
+ * 2026-08-22: the community CARD no longer renders one — the bar moved to
+ * `app/community/[slug]`'s hero so the feed card is the tour and nothing else
+ * (owner: "remove from front page, but move it to the explore page"). The
+ * `"community"` kind is unchanged, it is just read from the explore screen now.
  *
  * The API does not serve these numbers yet, so this module produces
  * DETERMINISTIC random values keyed on the card id — the same card always
