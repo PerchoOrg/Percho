@@ -16,6 +16,79 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-23 03:23 UTC — The home tour index gets the community index’s treatment
+
+**Objective**: owner, after the Community Tour index was reworked: "improve
+home tour page, similar to community tour page, so the table gives more info,
+and ordered by recently processed."
+
+**Actions**:
+- `apps/web/lib/listings/tour-index.ts` (new, + 10 tests): folds
+  `listing_tour_runs` + `listing_tour_assemblies` + `listing_photos` into one
+  row per listing and sorts them. The counterpart of
+  `lib/communities/tour-index.ts`, one pipeline over.
+- `apps/web/app/admin/pipeline/tour-jobs/page.tsx`: queries those tables,
+  throws on a PostgREST error instead of rendering an empty table, and prints
+  the same header line the community index does — order, window, how many
+  homes have a run, how many have a finished film.
+- `TourJobsTable.tsx`: columns are now Stage / Photos / Film / Last activity.
+
+**Decisions**:
+- **The clock is `listing_tour_runs.updated_at`, not `listings.updated_at`.**
+  The community index folds a plain record edit into "last touched" because
+  the owner hand-edits communities. Homes are different: 247 of the 265
+  listings share ONE `updated_at` from a bulk backfill, so folding it in would
+  order the table by an import job. Pipeline activity only; homes it has never
+  touched fall to the back in creation order, where the old index put
+  everything.
+- **Film is per surface, not per `listing_videos` row.** A home has one
+  `listing_videos` walkthrough row and two cuts (`web`, `ios`). The old Tour
+  column read the single row, so it could not say that web is up and iOS is
+  still encoding — the same lie phase73.47 removed on the detail page. Both
+  surfaces show separately; the header's "finished film" count requires both.
+- Stage is the newest run's status with the community index's tones, and
+  `review` is amber for the same reason: it is the one stage waiting on the
+  owner, so the column doubles as a to-do list.
+- Dropped the raw Videos count. It was `listing_videos` rows per listing — 15
+  rows in the whole database, one per home that has a film, so the column
+  could only ever read 0 or 1.
+
+**Issues**:
+- **The Photos column has been undercounting for as long as it has existed.**
+  PostgREST caps a response at 1000 rows on this project; `listing_photos` has
+  2588. The page fetched every photo row for the window in one un-paged call,
+  so every listing past the cap counted zero — "9155 Nesbit Ferry Road 47"
+  showed 0 photos next to a finished film. `loadPhotos` now pages, advancing by
+  what actually came back rather than by a hard-coded page size, so a smaller
+  server cap pages correctly instead of stopping early.
+- A first cut sorted and compared timestamps with `localeCompare`. These three
+  tables return different fractional-second widths (`…:49.632+00:00` vs
+  `…:27.161740+00:00`), and `'+'` sorts before `'0'`, so a string compare ranks
+  by digit count. Parsed to millis, same as `lib/communities/tour-index.ts`,
+  with a test that fails on the string compare.
+- The first version of this work was written against `~/Workspace/Percho`,
+  which is pinned several commits behind: it mirrored the community index as
+  it looked BEFORE phase88 (`4e5764fb`) reworked it. Rewritten against the
+  real one.
+
+**Resolution**: verified against production PostgREST by running the page's
+exact queries through `buildTourIndexRows` — 265 listings, 2588 photos, 43
+runs, 87 assemblies; the 16 homes with a run lead the table newest-first
+(Nesbit Ferry 3h ago → Morgans Creek 15h ago), the other 249 follow in
+creation order. `pnpm typecheck`, `pnpm lint`, `pnpm test` (630) and
+`pnpm build` all clean.
+
+**Learnings**: an un-paged PostgREST fetch is a silent wrong answer above 1000
+rows, and the failure mode is a plausible-looking zero rather than an error.
+Any admin index that counts child rows by fetching them has this bug — the
+listing/community photo tables are worth an audit.
+
+**Next steps**: the UI itself is unverified — the Chrome extension did not
+respond in this session, and /admin is session-gated. Owner said "merge for
+test": it goes to main and he checks it on the Vercel deploy, which is how he
+tests (no local dev servers).
+
+
 ## 2026-08-23 03:10 UTC — "Fetch & Tag" reported complete having tagged nothing
 
 **Objective**: owner, on the first clean run after the scope fix: "Apremont -
