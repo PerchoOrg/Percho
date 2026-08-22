@@ -16,6 +16,38 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-22 08:35 UTC — All 15 home tours re-rendered from enhanced photos
+
+**Objective**: owner — "yes yes lets redo" on re-rendering the existing tours.
+Their clips were rendered before the 2026-08-21 enhancement fix landed, so
+nearly every clip came from the original file (on 5122 Lower Creek, 2 of 75
+photos were enhanced at render time).
+
+**Actions**: ran the existing `scripts/admin/rerun-home-tours.ts` — no code
+changes. 15 listings: fresh run → plan → both-canvas generate → assemble.
+
+**Resolution — verified against production, not the exit code**:
+- done: 15, failed: 0; whole batch took ~19 minutes wall clock with the three
+  render workers (planning all 15 took under a minute).
+- 30 new assemblies (15 listings x 2 surfaces) all `ready`, 0 failed clips.
+- Spot check 5122 Lower Creek: newest iOS assembly `cf_stream_uid`
+  d614e5df… == `listing_videos.cf_video_id_square`, web c1f24a46… ==
+  `cf_video_id_landscape`, both stamped 08:28 UTC today. Publish confirmed.
+- **$0 spent**: `listing_photo_clips` seedance count is 15 before and after,
+  0 pending — every re-plan picked the same hero photo, so every paid clip was
+  reused, as `enqueueClips`' paid-exemption promises.
+
+**Learnings**: the render_key including the photo version is what made this a
+one-command operation — only stale clips re-rendered, ready ones from enhanced
+sources were left alone. Also noted while reading the assembler: the per-photo
+home tour DOES mux BGM (planned track or `pick_bgm` fallback) — the earlier
+review claim that the new films are silent was wrong. What the home tour lacks
+vs the community tour is narration only.
+
+**Next steps**: Seedance hero prompt design is with the owner (the plan writes
+`prompt: None` today, so heroes render from the community FALLBACK_CLIP_PROMPT
+with its storefront clause); then narration for the per-photo assembler.
+
 ## 2026-08-22 01:15 UTC — Phase 83: the agent-side legacy tour button is retired
 
 **Objective**: owner, reviewing the home-tour improvement list — "delete the
