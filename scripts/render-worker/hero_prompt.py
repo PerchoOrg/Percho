@@ -110,7 +110,7 @@ The first image is the listing's hero photo — the clip's first frame will be e
 Return STRICT JSON only, no prose:
 {
   "effect": "full_frame_hold|pull_back_reveal|slow_rise|lateral_glide|establish_push|entry_push_in|walk_up|birdview_descend|rise_to_birdview",
-  "aerial_index": 1-based index into the aerial images, or null,
+  "aerial_index": the IMAGE NUMBER of the chosen aerial photo, counting every image in order (the hero photo is image 1, so the first aerial is image 2), or null,
   "scene": "one factual sentence describing what is in the hero photo",
   "motion": "one sentence naming the few things that may naturally move; end it with '; everything else stays completely still.'",
   "focus": "optional single short sentence naming what the camera should settle on, or null"
@@ -203,9 +203,15 @@ def choose_hero_prompt(
         pair_role = None
         if effect in BIRDVIEW_EFFECTS:
             idx = out.get("aerial_index")
-            if not isinstance(idx, int) or not (1 <= idx <= len(aerials)):
+            if isinstance(idx, str) and idx.isdigit():
+                idx = int(idx)
+            # Image numbering is GLOBAL: the hero is image 1, aerials start at
+            # 2. The first contract ("index into the aerial images") read
+            # naturally to the model as this global count — it answered 2 for
+            # the only aerial — so the code now speaks the model's dialect.
+            if not isinstance(idx, int) or not (2 <= idx <= len(aerials) + 1):
                 raise HeroPromptError(f"birdview without a valid aerial_index: {idx!r}")
-            pair_photo_id = aerials[idx - 1]["id"]
+            pair_photo_id = aerials[idx - 2]["id"]
             # The clip's own photo is the ground shot. On a descend the aerial
             # OPENS the clip (pair=first); on a rise it CLOSES it (pair=last).
             pair_role = "first" if effect == "birdview_descend" else "last"
