@@ -19,6 +19,9 @@ Community films now open on the community. Its own amenities lead the film and r
 Aberdeen in Suwanee is the first community with this treatment: a 58-second film that opens on its clubhouse and takes in the pool, the courts and the grounds before heading out into Suwanee.
 
 ### 2026-08-22
+- Searching the admin community list now actually returns matches — it was failing silently and reporting "no communities found" for every search
+- The community list now shows the most recently added or edited communities first, with the date each was last touched, so a community you just created is at the top instead of buried alphabetically
+- The list now says how many communities it is showing out of the total, rather than looking like the whole table
 - A home tour's opening shot now gets its own tailored camera direction, chosen per home from a reviewed set of moves — a locked "living photo", a slow reveal, a rise, a glide toward the front door, and more — instead of the same slow push used for every home
 - When a listing has real drone photography, the opening shot can now begin high above the home and settle onto its front — or lift off from the front into the aerial view. Both ends of that shot are the listing's own photos; homes without clean aerial photos never get an invented one
 - All 15 existing home tours were re-rendered from the improved (sharpened and enlarged) photos

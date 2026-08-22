@@ -16,6 +16,56 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-22 21:05 UTC — The community search that shipped broken, and the list that never showed new work
+
+**Objective**: owner, after the server-side search shipped: "still can not see
+bellmoore". Find out why, and make a community he just touched findable without
+him having to know the trick.
+
+**Actions**:
+- `apps/web/lib/communities/admin-search.ts` (new, + test): builds the
+  PostgREST `or=` filter for the search box.
+- `apps/web/app/admin/pipeline/community-nearby/page.tsx`: uses it, throws on
+  a PostgREST error instead of falling through to an empty list, orders the
+  default window by `updated_at desc`, and asks for `count: 'exact'` so the
+  page can say "500 of 8,684" rather than implying it shows everything.
+- `CommunityNearbyTable.tsx`: an **Updated** column, so the new order is
+  visible rather than mysterious.
+
+**Issues**: the search shipped in a6013b4f never worked. `.or(f)` appends
+`or=(${f})` — it wraps for you — and the filter string was itself wrapped in
+parens, so the request went out as `or=((name.ilike…,city.ilike…))` and
+PostgREST answered 400 PGRST100, "failed to parse logic tree". The call site
+destructured only `{ data }`, so the error was dropped, `data` was null, rows
+was `[]`, and the table rendered "No communities found." A broken query and a
+genuine miss were pixel-identical — which is why the owner read it as the
+community still being absent.
+
+**Resolution**: verified against the production PostgREST both ways before
+committing — the old shape returns 400 PGRST100; the fixed one returns exactly
+one row, Bellmoore Park (`f00f6784`, Johns Creek). Then ran the real call
+through supabase-js: `q=bellmoore` → count 1; no `q` → 8684 total, 500
+returned, Bellmoore Park first.
+
+**Decisions**: ordered the default window by `updated_at desc`, not
+`created_at desc`. Bellmoore Park was seeded from Nextdoor on 2026-07-15 —
+under created_at it sits ~8600 rows down even though the owner edited it
+minutes ago. `updated_at` covers both "I just created this" and "I just fixed
+this", which is the actual mental model: he touches a community, then goes to
+the table to find it. The sibling listing index already orders newest-first,
+so the alphabetical community index was the outlier.
+
+**Learnings**: a swallowed `error` on a Supabase call is not a missing log
+line, it is a wrong answer rendered confidently. Every `{ data }`-only
+destructure in an admin index has this failure mode. Also: a filter-string
+builder is exactly the kind of thing that looks too small to test and then
+ships 400ing on every keystroke — the test is three lines and would have
+caught it.
+
+**Next steps**: the other admin indexes still cap at 500 with client-side
+search (`listing-nearby`, `poi-library`); same class of silent lie once those
+tables grow. Worth a sweep, not urgent.
+
 ## 2026-08-22 18:47 UTC — The community name stops being abbreviated
 
 **Objective**: owner — "much better now. 1) if community name is long, it can

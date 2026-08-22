@@ -8,6 +8,7 @@ export type CommunityNearbyRow = {
   name: string;
   city: string | null;
   state: string | null;
+  updatedAt: string | null;
   ready: number;
   pending: number;
   failed: number;
@@ -26,6 +27,16 @@ const columns: AdminColumn<CommunityNearbyRow>[] = [
     sortValue: (r) => `${r.state ?? ''} ${r.city ?? ''}`,
     render: (r) => (
       <span className="text-ink2">{[r.city, r.state].filter(Boolean).join(', ') || '—'}</span>
+    ),
+  },
+  {
+    // The page hands rows down newest-touched-first; without a date on screen
+    // that order reads as random.
+    key: 'updated',
+    header: 'Updated',
+    sortValue: (r) => r.updatedAt ?? '',
+    render: (r) => (
+      <span className="text-ink2">{r.updatedAt ? r.updatedAt.slice(0, 10) : '—'}</span>
     ),
   },
   {
