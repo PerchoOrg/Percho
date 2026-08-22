@@ -183,15 +183,43 @@ describe("parseCommunity", () => {
 		expect(parseCommunity(COMMUNITY)?.pills).toBeUndefined();
 	});
 
-	it("keeps the lifestyle signal pills — the chip row's content", () => {
-		// Owner, 2026-08-15: the card's pills are the server's per-community
-		// signals ("Mature trees", "3 parks nearby"), never generic category
-		// words. The old `blurb` field is gone with the description row.
+	it("keeps the lifestyle signals and the glyph the server chose", () => {
+		// Owner, 2026-08-15: the card's signals are the server's per-community
+		// ones ("Mature trees", "3 parks nearby"), never generic category words.
+		// 2026-08-22 they became GLYPHS left of the name, so each now carries
+		// the icon picked next to the phrase table on the server.
 		const c = parseCommunity({
 			...COMMUNITY,
-			signals: ["Mature trees", "3 parks nearby"],
+			signals: [
+				{ label: "Mature trees", icon: "tree" },
+				{ label: "3 parks nearby", icon: "yard" },
+			],
 		});
-		expect(c?.signals).toEqual(["Mature trees", "3 parks nearby"]);
+		expect(c?.signals).toEqual([
+			{ label: "Mature trees", icon: "tree" },
+			{ label: "3 parks nearby", icon: "yard" },
+		]);
+	});
+
+	it("keeps a signal whose phrase has no honest glyph", () => {
+		// "Lake nearby" has no match in the 14-glyph subset, so the server sends
+		// no icon. The LABEL is the part that carries meaning and must survive —
+		// the card simply draws no glyph for it.
+		const c = parseCommunity({
+			...COMMUNITY,
+			signals: [{ label: "Lake nearby" }],
+		});
+		expect(c?.signals).toEqual([{ label: "Lake nearby" }]);
+	});
+
+	it("drops an icon this build's font cannot draw, keeping the label", () => {
+		// An icon name now crosses the wire; a name added on the server before
+		// the font was re-subset renders as a tofu box on device.
+		const c = parseCommunity({
+			...COMMUNITY,
+			signals: [{ label: "Mature trees", icon: "not-a-real-glyph" }],
+		});
+		expect(c?.signals).toEqual([{ label: "Mature trees" }]);
 	});
 
 	it("omits an empty signal list so the card falls back to reasons/dims", () => {

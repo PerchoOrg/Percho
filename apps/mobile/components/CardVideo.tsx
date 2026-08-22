@@ -40,9 +40,13 @@
  * So there is no dimension detection here at all. `contain` needs none.
  */
 import { VideoView, useVideoPlayer } from "expo-video";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Image, StyleSheet, View } from "react-native";
-import type { SharedValue } from "react-native-reanimated";
+import {
+	type SharedValue,
+	runOnJS,
+	useAnimatedReaction,
+} from "react-native-reanimated";
 import { type MediaSize, mediaFit } from "../lib/media/fit";
 import { useSoundStore } from "../state/sound";
 import { colors } from "../theme/tokens";
@@ -104,6 +108,27 @@ interface CardVideoProps {
 	 * this frame would be dimmed by it. The caller owns the layer.
 	 */
 	progress?: SharedValue<number>;
+	/**
+	 * Set by the caller while the buyer is dragging a scrubber.
+	 *
+	 * While true this component stops writing `progress` — the bar has to follow
+	 * the FINGER, and a `timeUpdate` tick from the still-playing video would
+	 * yank it back to wherever playback actually is, four times a second.
+	 */
+	scrubbing?: SharedValue<boolean>;
+	/**
+	 * A seek request as 0..1 of the duration; `-1` means none.
+	 *
+	 * The caller writes a fraction, this component performs the seek and writes
+	 * `-1` back — the reset is what makes the channel re-armable, and doing it
+	 * here rather than in the caller means one owner for the whole handshake.
+	 *
+	 * A shared value rather than an imperative handle because the player is
+	 * private to this component and the scrubber lives on the card face; the
+	 * alternative is lifting `useVideoPlayer` out, which would put the player's
+	 * lifecycle in a component that does not render it.
+	 */
+	seekTo?: SharedValue<number>;
 }
 
 export function CardVideo({
@@ -115,6 +140,8 @@ export function CardVideo({
 	frameAspect,
 	unknownFit = "contain",
 	progress,
+	scrubbing,
+	seekTo,
 }: CardVideoProps) {
 	const soundOn = useSoundStore((s) => s.soundOn);
 	const nearEndFired = useRef(false);
@@ -134,6 +161,22 @@ export function CardVideo({
 		p.muted = true;
 		p.timeUpdateEventInterval = TIME_UPDATE_INTERVAL_S;
 	});
+
+	/**
+	 * Jump to a fraction of the duration.
+	 *
+	 * Clamped short of the very end: seeking to exactly `duration` on a looping
+	 * player lands on the wrap boundary, which restarts the film — the opposite
+	 * of what dragging the bar to its right edge is asking for.
+	 */
+	const applySeek = useCallback(
+		(ratio: number) => {
+			const dur = player.duration;
+			if (!dur || dur <= 0) return;
+			player.currentTime = Math.max(0, Math.min(ratio, 0.999)) * dur;
+		},
+		[player],
+	);
 
 	// Play-gate + reset. Reset the 82% latch on every top-change (= card swap).
 	// biome-ignore lint/correctness/useExhaustiveDependencies: soundOn read once here on purpose — the effect below tracks it without restarting playback
@@ -178,6 +221,10 @@ export function CardVideo({
 			const dur = player.duration;
 			if (!dur || dur <= 0) return;
 			const ratio = currentTime / dur;
+			// The finger owns the bar while it is down. Still fires `onNearEnd`
+			// below: playback has genuinely reached 82% whether or not anyone is
+			// dragging, and the CTA's nudge is about the film, not the bar.
+			if (scrubbing?.value) return;
 			// Raw, not eased. Ticks land every 0.25s, which on a 90s tour is a
 			// 0.28%-of-width step — invisible. `withTiming` between ticks would
 			// buy nothing and would animate the loop's rewind BACKWARDS over a
@@ -190,7 +237,24 @@ export function CardVideo({
 			}
 		});
 		return () => sub.remove();
-	}, [player, isTop, progress]);
+	}, [player, isTop, progress, scrubbing]);
+
+	/**
+	 * Perform a seek the caller asked for, then disarm the channel.
+	 *
+	 * `useAnimatedReaction` rather than an effect: the request is written from a
+	 * gesture worklet on the UI thread, and a shared value write does not
+	 * re-render React. This is the documented hop back.
+	 */
+	useAnimatedReaction(
+		() => seekTo?.value ?? -1,
+		(requested) => {
+			if (requested < 0) return;
+			if (seekTo) seekTo.value = -1;
+			runOnJS(applySeek)(requested);
+		},
+		[seekTo],
+	);
 
 	/**
 	 * Learn the real track size, so `mediaFit` can decide fill-vs-letterbox.

@@ -53,7 +53,10 @@
  */
 import { useCallback, useEffect, useLayoutEffect, useState } from "react";
 import { type LayoutChangeEvent, StyleSheet, View } from "react-native";
-import { GestureDetector } from "react-native-gesture-handler";
+import {
+	GestureDetector,
+	type GestureType,
+} from "react-native-gesture-handler";
 import Animated, {
 	runOnUI,
 	type SharedValue,
@@ -115,6 +118,21 @@ export interface CardRenderArgs {
 	tapSlot?: SharedValue<TapSlot>;
 	/** The tap gesture's live state. Only used to disarm a stale slot. */
 	tapStatus?: SharedValue<TapStatus>;
+	/**
+	 * The deck's own pan/tap composition, so a face can build a gesture that
+	 * BLOCKS it — `Gesture.Pan().blocksExternalGesture(deckGesture)`.
+	 *
+	 * The community card's progress bar is the case this exists for: scrubbing
+	 * it is a horizontal drag, which is also the swipe, and without an explicit
+	 * relation the two race. Whoever activates first wins, and the deck's pan
+	 * needs 10pt of travel while a scrub wants to start immediately — so the
+	 * scrub usually wins, and "usually" is how a buyer loses a card they were
+	 * trying to rewind.
+	 *
+	 * Handed down rather than looked up: the gesture is built in `useSwipeCard`
+	 * and a face has no other route to it.
+	 */
+	deckGesture?: GestureType;
 }
 
 /**
@@ -331,18 +349,26 @@ export function SwipeStack<T>({
 	const topCapability: CardCapability =
 		top === undefined ? INERT_CAPABILITY : capability(top);
 
-	const { gesture, tx, topAbs, exitX, advance, tapSlot, tapStatus } =
-		useSwipeCard({
-			cardWidth,
-			capability: topCapability,
-			onDecision: (decision) => {
-				if (top) onDecision(decision, top);
-			},
-			onTapTarget: (target) => {
-				if (target === "__touchdown__") return;
-				if (top) onTapTarget?.(target);
-			},
-		});
+	const {
+		gesture,
+		panGesture,
+		tx,
+		topAbs,
+		exitX,
+		advance,
+		tapSlot,
+		tapStatus,
+	} = useSwipeCard({
+		cardWidth,
+		capability: topCapability,
+		onDecision: (decision) => {
+			if (top) onDecision(decision, top);
+		},
+		onTapTarget: (target) => {
+			if (target === "__touchdown__") return;
+			if (top) onTapTarget?.(target);
+		},
+	});
 
 	/**
 	 * Keep the UI-thread cursor in step with React.
@@ -424,6 +450,7 @@ export function SwipeStack<T>({
 		cardWidth,
 		tapSlot,
 		tapStatus,
+		deckGesture: panGesture,
 	});
 
 	// The mounted window trails one card behind `activeIndex` so a committed card

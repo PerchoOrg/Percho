@@ -1,3 +1,4 @@
+import type { CardIconName } from '@percho/shared/icons';
 import { type CommunityReason, reasonPrevalence } from './community-reasons';
 
 /**
@@ -137,4 +138,74 @@ export function extractPoiCounts(reasons: readonly CommunityReason[] | null | un
     out.push(`${n} ${f[2]} nearby`);
   }
   return out;
+}
+
+/**
+ * The glyph a signal wears on the community card.
+ *
+ * ── Why the map lives HERE ──────────────────────────────────────────────────
+ *
+ * `packages/shared/src/icons.ts` states the rule: a phrase→glyph decision
+ * belongs next to the phrase table, because the phrases are what change. That
+ * table is `SIGNAL_FAMILIES` above, so this is the file.
+ *
+ * ── An unmapped signal draws NOTHING ────────────────────────────────────────
+ *
+ * `undefined`, never a fallback glyph. The shipped font is a 14-glyph subset
+ * and several real signals have no honest match in it — "Lake nearby",
+ * "Golf nearby", "Tennis nearby". A generic stand-in would be the card
+ * asserting a category the community was never measured on, which is the same
+ * failure the reason tiles avoid by deduping icons. A missing icon costs a few
+ * points of whitespace; a wrong one is a claim.
+ */
+const SIGNAL_ICON: Record<string, CardIconName> = {
+  'Highly walkable': 'walk',
+  'Walkable streets': 'walk',
+  'Sidewalks everywhere': 'walk',
+  'Great for walking': 'walk',
+  'Quiet streets': 'moon',
+  'Peaceful streets': 'moon',
+  'Cafés nearby': 'cup',
+  'Great dining nearby': 'cup',
+  'Mature trees': 'tree',
+  'Lots of trees': 'tree',
+  'Wooded lots': 'tree',
+  'Parks nearby': 'yard',
+  'Green space nearby': 'yard',
+  'Trails nearby': 'path',
+  'Hiking nearby': 'path',
+  'Dog friendly': 'dog',
+  'Great schools': 'school',
+  'Family friendly': 'family',
+  Safe: 'shieldCheck',
+  Convenient: 'check',
+  'Shopping nearby': 'shop',
+  'Shops nearby': 'shop',
+  Yards: 'yard',
+};
+
+/**
+ * The noun inside a COUNT signal — "33 restaurants nearby", "3 parks nearby".
+ *
+ * Those are built by `extractPoiCounts` from whatever noun the seed's fact
+ * used, so they never appear in `SIGNAL_ICON` above and have to be matched on
+ * the noun alone. Same rule: an unrecognised noun draws nothing.
+ */
+const COUNT_NOUN_ICON: Record<string, CardIconName> = {
+  restaurants: 'cup',
+  cafes: 'cup',
+  parks: 'yard',
+  schools: 'school',
+  shops: 'shop',
+  stores: 'shop',
+  trails: 'path',
+};
+
+/** The glyph for one signal phrase, or `undefined` when none is honest. */
+export function signalIcon(signal: string): CardIconName | undefined {
+  const exact = SIGNAL_ICON[signal];
+  if (exact) return exact;
+  const count = signal.match(/^\d+ ([a-zA-Z ]+) nearby$/);
+  if (!count?.[1]) return undefined;
+  return COUNT_NOUN_ICON[count[1].trim().toLowerCase()];
 }

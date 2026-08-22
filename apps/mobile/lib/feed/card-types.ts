@@ -162,6 +162,20 @@ export interface CommunityReasonV3 {
 	fact?: string;
 }
 
+/**
+ * One lifestyle signal and the glyph it wears. The glyph is chosen server-side
+ * next to the phrase table (`apps/web/lib/feed/community-signals.ts`), same
+ * rule as the reason tiles.
+ *
+ * `icon` is often ABSENT and that is not a defect: the shipped font is a
+ * 14-glyph subset and several real signals ("Lake nearby", "Golf nearby") have
+ * no honest match. The card skips those rather than borrowing a wrong glyph.
+ */
+export interface CommunitySignalV3 {
+	label: string;
+	icon?: CardIconName;
+}
+
 export interface CommunityCardV3 {
 	kind: "community";
 	id: string;
@@ -188,7 +202,7 @@ export interface CommunityCardV3 {
 	 * trees", "3 parks nearby", "Quiet streets". Never generic category words
 	 * (Restaurants / Walkability / Trees).
 	 */
-	signals?: readonly string[];
+	signals?: readonly CommunitySignalV3[];
 	/**
 	 * One entry per PLACE in the attached tour, in play order, for the card's
 	 * dashed progress bar (owner 2026-08-22: "make it dotted line and each

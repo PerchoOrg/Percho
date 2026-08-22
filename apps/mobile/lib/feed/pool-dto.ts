@@ -18,6 +18,7 @@ import type { DimKey } from "@percho/shared/types";
 import type {
 	CommunityCardV3,
 	CommunityReasonV3,
+	CommunitySignalV3,
 	ListingCardV3,
 	NeighborhoodScores,
 	ScoreDimension,
@@ -78,6 +79,30 @@ function reasons(v: unknown): CommunityReasonV3[] {
 		if (!label || !icon) continue;
 		const fact = str(raw.fact);
 		out.push({ label, icon, ...(fact ? { fact } : {}) });
+	}
+	return out;
+}
+
+/**
+ * The lifestyle signals, each with the glyph the server picked for it.
+ *
+ * The glyph is dropped when the shipped subset font cannot draw it — the same
+ * check the reason tiles do, and for the same reason: an icon name now crosses
+ * the wire, and a name this build's font lacks renders as a tofu box. Dropping
+ * the icon keeps the LABEL, which is the part that carries meaning.
+ */
+function signals(v: unknown): CommunitySignalV3[] {
+	if (!Array.isArray(v)) return [];
+	const out: CommunitySignalV3[] = [];
+	for (const item of v) {
+		const raw = rec(item);
+		if (!raw) continue;
+		const label = str(raw.label);
+		if (!label) continue;
+		const icon = CARD_ICON_NAMES.find((n) => n === raw.icon) as
+			| CardIconName
+			| undefined;
+		out.push({ label, ...(icon ? { icon } : {}) });
 	}
 	return out;
 }
@@ -296,7 +321,7 @@ export function parseCommunity(v: unknown): CommunityCardV3 | null {
 	// Distinctive lifestyle signals — the chip row's primary content
 	// (2026-08-15). No validation beyond non-empty strings: the server owns the
 	// vocabulary, and a stale build must not drop pills for the whole pool.
-	const signals = strings(raw.signals);
+	const signalList = signals(raw.signals);
 	const segments = tourSegments(raw.tourSegments);
 	return {
 		kind: "community",
@@ -313,7 +338,7 @@ export function parseCommunity(v: unknown): CommunityCardV3 | null {
 		...(pills.length > 0 ? { pills } : {}),
 		...(d.length > 0 ? { dims: d } : {}),
 		...(r.length > 0 ? { reasons: r } : {}),
-		...(signals.length > 0 ? { signals } : {}),
+		...(signalList.length > 0 ? { signals: signalList } : {}),
 		...(segments.length > 0 ? { tourSegments: segments } : {}),
 	};
 }

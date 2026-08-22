@@ -12,7 +12,8 @@
  */
 import { describe, expect, it } from 'vitest';
 import type { CommunityReason } from './community-reasons';
-import { communityLifestyleSignals } from './community-signals';
+import { CARD_ICON_NAMES } from '@percho/shared/icons';
+import { SIGNAL_FAMILIES, communityLifestyleSignals, signalIcon } from './community-signals';
 
 function reasons(labels: string[]): CommunityReason[] {
   return labels.map((label) => ({ label, icon: 'tree' }));
@@ -65,5 +66,46 @@ describe('communityLifestyleSignals', () => {
     expect(
       communityLifestyleSignals([{ label: 'Traceylynn Consultant', icon: 'tree' }], 2),
     ).toEqual([]);
+  });
+});
+
+describe('signalIcon', () => {
+  it('gives the phrases the card actually shows a glyph', () => {
+    expect(signalIcon('Mature trees')).toBe('tree');
+    expect(signalIcon('Highly walkable')).toBe('walk');
+    expect(signalIcon('Quiet streets')).toBe('moon');
+    expect(signalIcon('Great schools')).toBe('school');
+    expect(signalIcon('Safe')).toBe('shieldCheck');
+  });
+
+  it('reads the noun out of a count signal', () => {
+    // These are built by `extractPoiCounts` from the seed's own noun, so they
+    // can never appear in the phrase table and must match on the noun alone.
+    expect(signalIcon('33 restaurants nearby')).toBe('cup');
+    expect(signalIcon('3 parks nearby')).toBe('yard');
+    expect(signalIcon('12 shops nearby')).toBe('shop');
+  });
+
+  /**
+   * The rule the card depends on. The shipped font is a 14-glyph subset and
+   * these signals have no honest match in it; a generic stand-in would be the
+   * card asserting a category the community was never measured on.
+   */
+  it('returns nothing rather than a stand-in glyph', () => {
+    expect(signalIcon('Lake nearby')).toBeUndefined();
+    expect(signalIcon('Golf nearby')).toBeUndefined();
+    expect(signalIcon('Tennis nearby')).toBeUndefined();
+    expect(signalIcon('7 helipads nearby')).toBeUndefined();
+    expect(signalIcon('')).toBeUndefined();
+  });
+
+  it('only ever names a glyph the shipped font carries', () => {
+    // A name added here but never re-subset into the .ttf renders BLANK on
+    // device and nowhere else — see `packages/shared/src/icons.ts`.
+    const phrases = SIGNAL_FAMILIES.flatMap((f) => f.signals);
+    for (const phrase of phrases) {
+      const icon = signalIcon(phrase);
+      if (icon) expect(CARD_ICON_NAMES).toContain(icon);
+    }
   });
 });
