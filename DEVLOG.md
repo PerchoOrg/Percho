@@ -192,6 +192,36 @@ failed on files that no longer exist.
   runs from there and it sat two commits behind yesterday, which is why he saw
   no change at all.
 
+## 2026-08-22 11:35 UTC — Phase 85.1: verified live, one dialect fix
+
+**Objective**: deploy phase85 and prove it against production before handing
+it to the owner for manual effect testing.
+
+**Deployed**: migration pushed (`20260822090000`, the one pending), all three
+render workers + the seedance worker restarted on merged main with every
+queue empty (nothing stranded).
+
+**The dialect fix**: the first live plan on 2f4a1a23 fell back —
+`[hero_prompt] fell back to full_frame_hold: birdview without a valid
+aerial_index: 2`. The model had chosen a birdview and pointed at the right
+photo; it counts images GLOBALLY (hero = image 1, first aerial = image 2)
+while the contract said "index into the aerial images". The code now speaks
+the model's dialect: valid range 2..len(aerials)+1, mapped `idx - 2`; digit
+strings accepted. The fence held exactly as designed — a misunderstood index
+produced a safe fallback, not a broken clip.
+
+**Verified against production, both directions**:
+- 2f4a1a23 (clean aerial): `effect=birdview_descend`,
+  `pair=86038768(first)`, model-written scene/motion/focus, all four
+  mandatory clauses verbatim in the stored prompt.
+- 5122 / c7435419 (every aerial carries a yellow marketing ring): birdview
+  correctly refused — `effect=entry_push_in`, `pair=None`, dusk-appropriate
+  scene. The cleanliness judgment lives in the model and it exercised it.
+
+**Next steps**: owner tests effects manually (re-plan or per-row Regenerate
+on the hero row — Regenerate is the only path that re-bills Seedance). Then
+narration (task 1 from the 2026-08-22 review).
+
 ## 2026-08-22 11:10 UTC — Phase 85: the hero prompt is chosen by a model inside a fence
 
 **Objective**: the home tour's Seedance hero rendered from the community
