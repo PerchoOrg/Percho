@@ -39,10 +39,12 @@ CAMERA: dict[str, str] = {
         "Camera pulls back slowly and smoothly, revealing the home's setting "
         "while keeping the home centered and fully in view."
     ),
-    "slow_rise": (
-        "Camera rises slowly and steadily, keeping a level horizon and the "
-        "full width of the home in frame, revealing the roofline against the sky."
-    ),
+    # slow_rise is deliberately ABSENT. Its verb is "go up", and Seedance Mini
+    # treats that as an invitation to fly: on 3525 Berkeley Park (one-story,
+    # 2026-08-22) it climbed into an invented drone shot — the synthetic
+    # birdview the owner banned — and a $0.06 retest with softened wording
+    # plus CLAUSE_GROUND_LEVEL still drifted well above "a small amount" and
+    # invented a watermark. An effect that cannot be fenced is not in the pool.
     "lateral_glide": (
         "Camera glides slowly and smoothly sideways across the front of the "
         "home, keeping a level horizon, so the entire facade passes through the frame."
@@ -84,7 +86,17 @@ CLAUSE_STRUCTURE = (
     "The home's structure, windows, and rooflines stay exactly as photographed; "
     "nothing is added or removed."
 )
-CLAUSE_TEXT = "House numbers and any visible text stay unchanged."
+CLAUSE_TEXT = (
+    "House numbers and any visible text stay unchanged; no new text, logos, "
+    "or watermarks appear."
+)
+# Ground effects only. Without it a rise or pull-back can drift into an
+# invented drone shot of a roof nobody photographed — the synthetic birdview
+# the owner banned. Birdview effects are exempt: their aerial IS a real photo.
+CLAUSE_GROUND_LEVEL = (
+    "The camera stays below the home's roofline at all times and never looks "
+    "down on the home from above."
+)
 
 MANDATORY_CLAUSES = (
     CLAUSE_NO_PEOPLE,
@@ -109,7 +121,7 @@ The first image is the listing's hero photo — the clip's first frame will be e
 
 Return STRICT JSON only, no prose:
 {
-  "effect": "full_frame_hold|pull_back_reveal|slow_rise|lateral_glide|establish_push|entry_push_in|walk_up|birdview_descend|rise_to_birdview",
+  "effect": "full_frame_hold|pull_back_reveal|lateral_glide|establish_push|entry_push_in|walk_up|birdview_descend|rise_to_birdview",
   "aerial_index": the IMAGE NUMBER of the chosen aerial photo, counting every image in order (the hero photo is image 1, so the first aerial is image 2), or null,
   "scene": "one factual sentence describing what is in the hero photo",
   "motion": "one sentence naming the few things that may naturally move; end it with '; everything else stays completely still.'",
@@ -153,6 +165,8 @@ def compose_prompt(effect: str, scene: str, motion: str, focus: str = "") -> str
     if focus:
         parts.append(focus)
     parts.extend(MANDATORY_CLAUSES)
+    if effect not in BIRDVIEW_EFFECTS:
+        parts.append(CLAUSE_GROUND_LEVEL)
     prompt = re.sub(r"\s{2,}", " ", " ".join(parts)).strip()
     banned = _BANNED_RE.search(prompt)
     if banned:
