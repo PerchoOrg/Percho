@@ -21,10 +21,24 @@
 import { publicCoverImageUrl } from '@/lib/communities/cover';
 import type { TourSegment } from '@/lib/feed/tour-segments';
 import { createAnonClient } from '@/lib/supabase/server';
+import type { CardIconName } from '@percho/shared/icons';
 import type { DimKey } from '@percho/shared/types';
 import { communityHighlightDims } from './community-highlights';
 import { type CommunityReason, communityReasons } from './community-reasons';
-import { communityLifestyleSignals } from './community-signals';
+import { communityLifestyleSignals, signalIcon } from './community-signals';
+
+/**
+ * One lifestyle signal, and the glyph it wears.
+ *
+ * `icon` is optional and often absent: the shipped font is a 14-glyph subset
+ * and "Lake nearby" / "Golf nearby" have no honest match in it. The card
+ * renders the label with no glyph rather than borrowing a wrong one — see
+ * `signalIcon` in `community-signals.ts`.
+ */
+export interface CommunitySignal {
+  label: string;
+  icon?: CardIconName;
+}
 
 export interface PoolCommunityDTO {
   id: string;
@@ -57,7 +71,7 @@ export interface PoolCommunityDTO {
    * "Mature trees" / "3 parks nearby" / "Quiet streets", not Restaurants /
    * Walkability / Trees). Omitted when the community yields no usable signal.
    */
-  signals?: string[];
+  signals?: CommunitySignal[];
   /**
    * 9:16 hero video, attached by the route from `generated_videos` (see
    * `lib/feed/vertical-videos.ts`). Absent for most communities: only 4 have a
@@ -263,7 +277,10 @@ export function projectCommunityPool(
     });
     // The chip row's 2-3 lifestyle signals — distinct per community, and a
     // count ("33 restaurants") only when this community actually has one.
-    const signals = communityLifestyleSignals(reasons);
+    const signals: CommunitySignal[] = communityLifestyleSignals(reasons).map((label) => {
+      const icon = signalIcon(label);
+      return icon ? { label, icon } : { label };
+    });
     out.push({
       id: r.id,
       slug: r.slug,

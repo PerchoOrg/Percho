@@ -1,4 +1,4 @@
-import type { DimKey } from "@percho/shared/types";
+import type { CardIconName } from "@percho/shared/icons";
 /**
  * CommunityFace (§1.4) — the community (subdivision) front face.
  *
@@ -16,13 +16,31 @@ import type { DimKey } from "@percho/shared/types";
  *     exactly the CITY card's scrim (locations [0.55, 1]).
  *   · bottom info, 3 layers (24pt gutters):
  *       a. name (serif 24/600 white — same class as the CITY name)
- *       b. chips — up to TWO lifestyle signal pills (signals → reasons →
- *          dims → pills; no chip row when none exist). White-on-scrim pills.
- *          Three until 2026-08-17 — see `MAX_COMMUNITY_PILLS`.
+ *       b. chips — up to TWO lifestyle signal pills, white-on-scrim
  *       c. `Explore →` right-aligned (owner: CTA → "Explore →"; the old
  *          "Why people love it" text link is gone with the white block).
  *     No white bottom information container; no hairline; no place line —
  *     the subdivision's key info is the name + signals, on the photo.
+ *
+ *   NOTE (2026-08-22): (a)–(c) are no longer three layers. They are ONE line —
+ *   see the 08-22 block below, which supersedes this one on the bottom info.
+ *   Kept because the rest of the description (full-bleed media, the badge, the
+ *   scrim) is still exactly what this file does.
+ *
+ * ── 2026-08-22 (later): one line, and glyphs instead of pills ───────────────
+ *
+ * Owner, on device: "community and explore should be aligned, community name
+ * size can be bigger, lets add icons to the left of community name for now".
+ *
+ * The bottom info is now a single centred row — signal GLYPHS, the name at
+ * 27pt, and `Explore` on the right. The pill row is gone; the glyphs are what
+ * is left of it, which is the "or just make them some icons to save space"
+ * half of the same instruction. A signal with no honest glyph in the 14-glyph
+ * subset font draws nothing rather than borrowing one.
+ *
+ * The cost, stated plainly: a pill could say "3 parks nearby" and a glyph
+ * cannot say "3". The owner's own earlier note on this row was 「图标里要有干货
+ * 数据 比如33个餐厅」, so the counts are a real loss — accepted "for now".
  *
  * ── 2026-08-22: the card serves the TOUR ─────────────────────────────────────
  *
@@ -63,11 +81,24 @@ import type { DimKey } from "@percho/shared/types";
  * its evidence, and that screen is where the CTA goes.
  */
 import { LinearGradient } from "expo-linear-gradient";
-import { useEffect, useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { useEffect, useMemo, useState } from "react";
+import {
+	type LayoutChangeEvent,
+	Pressable,
+	StyleSheet,
+	Text,
+	View,
+} from "react-native";
+import {
+	Gesture,
+	GestureDetector,
+	type GestureType,
+} from "react-native-gesture-handler";
 import Animated, {
 	Easing,
+	runOnJS,
 	type SharedValue,
+	useAnimatedReaction,
 	useAnimatedStyle,
 	useSharedValue,
 	withRepeat,
@@ -80,43 +111,18 @@ import { redlineText } from "../../theme/typography";
 import { CardPhoto } from "../CardPhoto";
 import { CardVideo } from "../CardVideo";
 import { EXPLORE_TAP_TARGET } from "./ListingFace";
+import { RedlineIcon } from "./redline/RedlineChrome";
 
 /**
- * Chip copy for the `dims` fallback. One line each — a 20pt white pill does
- * not wrap. A full `Record`, not `Partial`: with a partial map an unmapped
- * dim would fall through to a default and mislabel the chip. Deliberately NOT
- * `ListingFace`'s `CHIP_LABEL` — that one is written about a house
- * ("Private Backyard"), and a subdivision does not have one.
+ * How many glyphs sit left of the name. TWO, inherited from the pill row that
+ * preceded them (owner 2026-08-17, was 3) and now also a width constraint: the
+ * icons, the name and `Explore` share ONE line, and every icon is width the
+ * name does not get.
  */
-const CHIP_LABEL: Record<DimKey, string> = {
-	outdoors: "Outdoor Space",
-	walkable: "Walkable",
-	schools: "Great Schools",
-	quiet: "Quiet Streets",
-	hip: "Cultural Scene",
-	entertaining: "Great for Hosting",
-	trails: "Trails Nearby",
-	nightlife: "Nightlife",
-	family: "Family Friendly",
-	move_in: "Move-in Ready",
-	space: "Spacious",
-};
+const MAX_COMMUNITY_ICONS = 2;
 
-/**
- * How many lifestyle pills the chip row seats. TWO (owner 2026-08-17, was 3):
- * the row shares one line with a 24pt name and the Explore link on a frame
- * that just lost ~6% of its height, and three pills at 10.5pt were the row
- * that made the block read as crowded.
- *
- * Local rather than imported: the listing card's tag pills were deleted in the
- * 2026-08-17: the tag pills and the hairline are gone from this card, and
- * `theme/listing-layout.ts` (the listing card's layout arithmetic) is gone
- * entirely — the 2026-08-18 full-bleed rebuild deleted the file.
- */
-const MAX_COMMUNITY_PILLS = 2;
-
-/** Chip pill height — vertical padding (×2) + the 10.5pt label. */
-const PILL_HEIGHT = 21;
+/** Glyph art size in the row left of the name. */
+const SIGNAL_ICON_SIZE = 15;
 
 /**
  * Tour progress. 3pt and inset, up from a 2pt hairline flush with the card's
@@ -143,20 +149,33 @@ const BREATH_DIM = 0.5;
 const BREATH_CYCLES = 6;
 
 /**
- * The chip row's labels — `signals` first (the server's per-community
- * lifestyle signals), else reasons, else dims, else pills, at most
- * `MAX_COMMUNITY_PILLS`. See `chipLabels` below.
+ * The glyphs shown to the LEFT of the community name (owner 2026-08-22: "lets
+ * add icons to the left of community name for now").
+ *
+ * Same descending-confidence order the pill row used, minus the two sources
+ * that cannot produce a glyph: `dims` and `pills` are bare strings, and the
+ * card would have to invent the mapping. Those communities simply show no
+ * icons — the name still reads.
+ *
+ * A signal whose phrase has no honest glyph in the 14-glyph subset font is
+ * SKIPPED, not substituted (see `signalIcon` on the server), so this can return
+ * fewer icons than there are signals, or none at all.
+ *
+ * Deduped: two signals mapping to the same glyph would read as a rendering bug
+ * rather than as two claims — the reason tiles dedupe for the same reason.
  */
-function chipLabels(card: CommunityCardV3): string[] {
-	const signals = card.signals ?? [];
-	if (signals.length > 0) return signals.slice(0, MAX_COMMUNITY_PILLS);
-	const reasons = card.reasons ?? [];
-	if (reasons.length > 0)
-		return reasons.slice(0, MAX_COMMUNITY_PILLS).map((r) => r.label);
-	const dims = card.dims ?? [];
-	if (dims.length > 0)
-		return dims.slice(0, MAX_COMMUNITY_PILLS).map((d) => CHIP_LABEL[d]);
-	return (card.pills ?? []).slice(0, MAX_COMMUNITY_PILLS);
+function signalIcons(card: CommunityCardV3): CardIconName[] {
+	const out: CardIconName[] = [];
+	const seen = new Set<CardIconName>();
+	const push = (icon: CardIconName | undefined) => {
+		if (!icon || seen.has(icon) || out.length >= MAX_COMMUNITY_ICONS) return;
+		seen.add(icon);
+		out.push(icon);
+	};
+	for (const s of card.signals ?? []) push(s.icon);
+	if (out.length > 0) return out;
+	for (const r of card.reasons ?? []) push(r.icon);
+	return out;
 }
 
 interface CommunityFaceProps {
@@ -172,6 +191,13 @@ interface CommunityFaceProps {
 	 * stack (dev-foundation), where `onExplore` runs through `onPress` instead.
 	 */
 	tapSlot?: SharedValue<TapSlot>;
+	/**
+	 * The deck's pan, so the progress bar's own drag can block it. Without this
+	 * the scrub and the swipe race for the same horizontal drag — see
+	 * `CardRenderArgs.deckGesture`. Absent outside the stack, where there is no
+	 * competing gesture and the scrub simply works.
+	 */
+	deckGesture?: GestureType;
 }
 
 export function CommunityFace({
@@ -179,13 +205,124 @@ export function CommunityFace({
 	isTop,
 	onExplore,
 	tapSlot,
+	deckGesture,
 }: CommunityFaceProps) {
-	const chips = chipLabels(card);
+	const icons = signalIcons(card);
 
 	/** 0..1 playback position, written by `CardVideo` off the UI thread. */
 	const progress = useSharedValue(0);
 	const fill = useAnimatedStyle(() => ({ width: `${progress.value * 100}%` }));
 	const segments = card.tourSegments ?? [];
+
+	/* ── Scrubbing ────────────────────────────────────────────────────────── */
+
+	/** Measured width of the bar, so a touch x can become a fraction. */
+	const barWidth = useSharedValue(0);
+	/** True while a finger is down on the bar; `CardVideo` stops writing then. */
+	const scrubbing = useSharedValue(false);
+	/** 0..1 seek request for `CardVideo`; -1 = none. It disarms the channel. */
+	const seekTo = useSharedValue(-1);
+	/** Which dash the finger is over, or -1. Drives the floating label. */
+	const scrubIndex = useSharedValue(-1);
+	const [scrubbedName, setScrubbedName] = useState<string | null>(null);
+
+	/**
+	 * The dash boundaries as a plain number array.
+	 *
+	 * A worklet may only close over values Reanimated can serialise, and this is
+	 * read on the UI thread on every move. Numbers, not the segment objects.
+	 */
+	const bounds = useMemo(
+		() => segments.map((seg) => seg.endFraction),
+		[segments],
+	);
+
+	/**
+	 * Name the finger's dash, on the JS thread, only when it CHANGES.
+	 *
+	 * Not `runOnJS` per move: a drag fires at display rate and this would be a
+	 * cross-thread hop and a React render per frame. Crossing into a new place
+	 * is the only moment the label has anything new to say.
+	 */
+	useAnimatedReaction(
+		() => scrubIndex.value,
+		(index, previous) => {
+			if (index === previous) return;
+			runOnJS(setScrubbedName)(
+				index < 0 ? null : (segments[index]?.name ?? null),
+			);
+		},
+		[segments],
+	);
+
+	/**
+	 * Drag the bar to move through the film.
+	 *
+	 * `blocksExternalGesture(deckGesture)` is load-bearing: a scrub is a
+	 * horizontal drag and so is a swipe. Without the relation, whichever
+	 * activates first wins — and losing that race means the card the buyer was
+	 * trying to rewind flies off the deck instead.
+	 *
+	 * `useMemo` with narrow deps for the reason `useSwipeCard` documents:
+	 * replacing a live `Gesture.Pan` mid-drag drops the in-flight touch, so
+	 * `onFinalize` never runs and `scrubbing` would be left stuck true — which
+	 * would freeze the bar for the rest of the card's life.
+	 */
+	const scrub = useMemo(() => {
+		const locate = (x: number) => {
+			"worklet";
+			const width = barWidth.value;
+			if (width <= 0) return 0;
+			return Math.min(Math.max(x / width, 0), 1);
+		};
+		const dashAt = (ratio: number) => {
+			"worklet";
+			for (let i = 0; i < bounds.length; i++) {
+				if (ratio <= (bounds[i] ?? 1)) return i;
+			}
+			return bounds.length - 1;
+		};
+		const track = (x: number) => {
+			"worklet";
+			const ratio = locate(x);
+			progress.value = ratio;
+			scrubIndex.value = dashAt(ratio);
+		};
+		let gesture = Gesture.Pan()
+			.enabled(isTop && !!card.videoUrl)
+			// A scrub starts where the finger lands, so the bar jumps under it on
+			// touch-down rather than waiting for movement.
+			.minDistance(0)
+			.onBegin((e) => {
+				scrubbing.value = true;
+				track(e.x);
+			})
+			.onUpdate((e) => track(e.x))
+			// `onFinalize`, not `onEnd`: a cancelled gesture must also release the
+			// bar and commit, or `scrubbing` stays true and playback never
+			// reconnects to the bar again.
+			.onFinalize(() => {
+				seekTo.value = progress.value;
+				scrubbing.value = false;
+				scrubIndex.value = -1;
+			});
+		if (deckGesture) gesture = gesture.blocksExternalGesture(deckGesture);
+		return gesture;
+	}, [
+		bounds,
+		isTop,
+		card.videoUrl,
+		deckGesture,
+		barWidth,
+		progress,
+		scrubbing,
+		seekTo,
+		scrubIndex,
+	]);
+
+	const onBarLayout = (e: LayoutChangeEvent) => {
+		barWidth.value = e.nativeEvent.layout.width;
+	};
 
 	/** True once this card's tour has passed `CardVideo`'s 82% mark. */
 	const [nearEnd, setNearEnd] = useState(false);
@@ -232,6 +369,8 @@ export function CommunityFace({
 					poster={card.heroUrl}
 					isTop={isTop}
 					progress={progress}
+					scrubbing={scrubbing}
+					seekTo={seekTo}
 					onNearEnd={() => setNearEnd(true)}
 					/*
 					 * `cover`, unconditionally. NOT the measured `frameAspect` path:
@@ -279,29 +418,33 @@ export function CommunityFace({
 				pointerEvents="none"
 			/>
 
-			{/* Bottom info — name and chips anchored bottom-LEFT, `Explore` holding
-			    the right against them (owner 2026-08-22: "move community name to
-			    the bottom left"). One row, two zones, no measurement: the left
-			    column takes the space the link does not, so a community with no
-			    chips reads as name-left / link-right and one with chips stacks
-			    them under the name, which is where "between community name and
-			    explore button" lands without asking how wide a pill is. */}
+			{/* Bottom info — ONE line: signal glyphs, the community name, and
+			    `Explore` on the right, all on a shared centre line (owner
+			    2026-08-22: "community and explore should be aligned... lets add
+			    icons to the left of community name"). The pill row is gone; the
+			    glyphs are what is left of it.
+
+			    The name is the only thing that gives when space runs out —
+			    `flexShrink: 0` on both the glyphs and the link, `minWidth: 0` on
+			    the name. A truncated community name is still readable; a
+			    truncated CTA is not, and half a glyph is nothing at all. */}
 			<View style={styles.info}>
 				<View style={styles.infoLeft}>
-					<Text style={styles.name} numberOfLines={1}>
-						{card.name}
-					</Text>
-					{chips.length > 0 && (
-						<View style={styles.chips}>
-							{chips.map((label) => (
-								<View key={label} style={styles.chip}>
-									<Text style={styles.chipLabel} numberOfLines={1}>
-										{label}
-									</Text>
-								</View>
+					{icons.length > 0 && (
+						<View style={styles.icons}>
+							{icons.map((name) => (
+								<RedlineIcon
+									key={name}
+									name={name}
+									size={SIGNAL_ICON_SIZE}
+									color="rgba(255,255,255,0.85)"
+								/>
 							))}
 						</View>
 					)}
+					<Text style={styles.name} numberOfLines={1}>
+						{card.name}
+					</Text>
 				</View>
 				{!!onExplore && (
 					<Animated.View style={[styles.ctaRow, breathing]}>
@@ -325,26 +468,45 @@ export function CommunityFace({
 				)}
 			</View>
 
-			{/* Tour progress. One dash per PLACE when the film's structure came
-			    down with it, one continuous bar when it did not. Only for a card
-			    that actually plays something — the photo branch has no clock. */}
+			{/* Tour progress — one dash per PLACE when the film's structure came
+			    down with it, one continuous bar when it did not, and draggable
+			    either way. Only for a card that actually plays something. */}
 			{!!card.videoUrl && (
-				<View style={styles.progressRow} pointerEvents="none">
-					{segments.length > 0 ? (
-						segments.map((seg, i) => (
-							<ProgressDash
-								key={`${seg.name}-${seg.endFraction}`}
-								progress={progress}
-								start={i === 0 ? 0 : (segments[i - 1]?.endFraction ?? 0)}
-								end={seg.endFraction}
-							/>
-						))
-					) : (
-						<View style={styles.dashTrack}>
-							<Animated.View style={[styles.dashFill, fill]} />
+				<GestureDetector gesture={scrub}>
+					{/* The TOUCH target, not the art: a 3pt bar cannot be hit. The
+					    padding gives it a ~28pt band while the bar stays 3pt, which
+					    is why this view is transparent and the row inside is what
+					    you see. */}
+					<View style={styles.progressHit}>
+						{/* The place under the finger (owner 2026-08-22: "should show
+						    something when hover"). There is no hover on a phone, so
+						    it appears on TOUCH and follows the drag — a label that
+						    could only be summoned by a mouse would never be seen. */}
+						{scrubbedName !== null && scrubbedName !== "" && (
+							<View style={styles.scrubLabel}>
+								<Text style={styles.scrubLabelText} numberOfLines={1}>
+									{scrubbedName}
+								</Text>
+							</View>
+						)}
+						<View style={styles.progressRow} onLayout={onBarLayout}>
+							{segments.length > 0 ? (
+								segments.map((seg, i) => (
+									<ProgressDash
+										key={`${seg.name}-${seg.endFraction}`}
+										progress={progress}
+										start={i === 0 ? 0 : (segments[i - 1]?.endFraction ?? 0)}
+										end={seg.endFraction}
+									/>
+								))
+							) : (
+								<View style={styles.dashTrack}>
+									<Animated.View style={[styles.dashFill, fill]} />
+								</View>
+							)}
 						</View>
-					)}
-				</View>
+					</View>
+				</GestureDetector>
 			)}
 		</View>
 	);
@@ -454,43 +616,42 @@ const styles = StyleSheet.create({
 		bottom: 24,
 		zIndex: 2,
 		flexDirection: "row",
-		alignItems: "flex-end",
+		// `center`, not `flex-end`: this is what puts the name and the link on
+		// one line rather than on a shared bottom edge (owner: "community and
+		// explore should be aligned").
+		alignItems: "center",
 		gap: 12,
 	},
+	/** Glyphs + name. `minWidth: 0` is what lets the name ellipsize instead of
+	 *  pushing `Explore` off the card — a text child will not shrink below its
+	 *  content without it. */
+	infoLeft: {
+		flex: 1,
+		minWidth: 0,
+		flexDirection: "row",
+		alignItems: "center",
+		gap: 7,
+	},
+	/** The glyph run, left of the name. Never squeezed — see the row's doc. */
+	icons: {
+		flexDirection: "row",
+		alignItems: "center",
+		gap: 5,
+		flexShrink: 0,
+	},
 	/**
-	 * Name + chips. `flexShrink` with `minWidth: 0` is what lets a long
-	 * community name ellipsize instead of pushing `Explore` off the card — a
-	 * text child will not shrink below its content without it.
+	 * Community name — serif 27/600 white, the CITY name's family. Up from 24
+	 * (owner 2026-08-22: "community name size can be bigger"); it is the card's
+	 * headline and it no longer shares its line with a pill row.
 	 */
-	infoLeft: { flex: 1, minWidth: 0 },
-	/** Community name — serif 24/600 white, the CITY name's family. */
 	name: {
 		...redlineText.place,
-		fontSize: 24,
-		lineHeight: 26,
+		fontSize: 27,
+		lineHeight: 30,
 		fontWeight: "600",
 		color: "#FFFFFF",
-	},
-	/** Chip row — white pills over the scrim. */
-	chips: {
-		flexDirection: "row",
-		flexWrap: "nowrap",
-		gap: 6,
-		marginTop: 8,
-	},
-	/** Radius 9 on translucent white: light chips, not capsule candy. */
-	chip: {
-		height: PILL_HEIGHT,
-		paddingHorizontal: 9,
-		borderRadius: 9,
-		backgroundColor: "rgba(255,255,255,0.22)",
-		alignItems: "center",
-		justifyContent: "center",
 		flexShrink: 1,
-	},
-	chipLabel: {
-		...redlineText.listingCard.tag,
-		color: "rgba(255,255,255,0.92)",
+		minWidth: 0,
 	},
 	/**
 	 * Explore → — the right zone of the info row, sized by its own content and
@@ -519,6 +680,23 @@ const styles = StyleSheet.create({
 	},
 
 	/**
+	 * The bar's TOUCH band. Transparent and ~28pt tall around a 3pt bar: a 3pt
+	 * target is roughly a tenth of the 44pt Apple asks for, and the bar is now
+	 * draggable, so the hit area has to be real even though the art is a
+	 * hairline. `justifyContent: flex-end` keeps the bar itself pinned to the
+	 * bottom of the band, where it was before the band existed.
+	 */
+	progressHit: {
+		position: "absolute",
+		left: 24,
+		right: 24,
+		bottom: 0,
+		paddingBottom: 12,
+		paddingTop: 13,
+		justifyContent: "flex-end",
+		zIndex: 3,
+	},
+	/**
 	 * The progress row — INSET from the card's edges, not flush with them
 	 * (owner 2026-08-22: the flush 2pt hairline was "ugly and not easy to
 	 * find"). Sitting on the same 24pt gutter as the name reads as part of the
@@ -526,15 +704,33 @@ const styles = StyleSheet.create({
 	 * no longer has its ends clipped by the corner radius.
 	 */
 	progressRow: {
-		position: "absolute",
-		left: 24,
-		right: 24,
-		bottom: 12,
 		height: PROGRESS_H,
 		flexDirection: "row",
 		alignItems: "center",
 		gap: DASH_GAP,
-		zIndex: 3,
+	},
+	/**
+	 * The dragged-to place, floating above the bar. Left-anchored rather than
+	 * tracking the finger: a label that slides under the thumb is a label the
+	 * thumb covers, and it would collide with the card's edges at both ends.
+	 */
+	scrubLabel: {
+		position: "absolute",
+		left: 0,
+		bottom: 22,
+		maxWidth: "100%",
+		paddingHorizontal: 9,
+		paddingVertical: 5,
+		borderRadius: 8,
+		// The COMMUNITY badge's fill. `_render_label_png` in the render worker
+		// works through why a card's chrome over photography is opaque white
+		// rather than translucent: at 92% it reads the same over a blown-out sky
+		// and over dark pines, so nothing flickers as the footage cuts.
+		backgroundColor: "rgba(255,255,255,0.92)",
+	},
+	scrubLabelText: {
+		...redlineText.listingCard.tag,
+		color: "#181B18",
 	},
 	/**
 	 * One dash. `flexGrow` is set per-dash from its share of the film;

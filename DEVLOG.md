@@ -16,6 +16,94 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-22 18:40 UTC — The bar becomes a control; pills become glyphs
+
+**Objective**: owner, on device — "community and explore should be aligned,
+community name size can be bigger, lets add icons to the left of community name
+for now" and "progress bar, it should show something when hover, and be able to
+drag to go back or advance".
+
+**Layout.** The bottom info is now ONE centred row: signal glyphs, the name at
+27pt (was 24), `Explore` on the right. `alignItems: center` is what actually
+answers "aligned" — it was `flex-end`, which shares a bottom EDGE, not a line.
+The name is the only thing that shrinks; the glyphs and the link are
+`flexShrink: 0`, because half a glyph is nothing and a truncated CTA is
+unreadable.
+
+**Pills → glyphs.** The phrase→glyph map went in `community-signals.ts`, next
+to `SIGNAL_FAMILIES`, because `packages/shared/src/icons.ts` states that rule
+explicitly: the decision belongs beside the phrase table. `signals` on the wire
+becomes `{label, icon?}[]`; `pool-dto` drops an icon this build's font cannot
+draw and keeps the label.
+
+An unmapped signal draws NOTHING. "Lake nearby", "Golf nearby" and
+"Tennis nearby" have no honest match in the 14-glyph subset, and a stand-in
+glyph would be the card asserting a category the community was never measured
+on. Pinned by a test.
+
+**The cost, recorded because it is a real regression**: a pill could say
+"3 parks nearby" and a glyph cannot say "3". The owner's own standing note on
+this row is 「图标里要有干货数据 比如33个餐厅」. He asked for icons "for now"
+knowing the row; the counts are gone until it changes back or the glyph learns
+to carry a number.
+
+**The scrubber.** The bar is now draggable, and this is the part with a real
+hazard: a scrub is a horizontal drag and so is a swipe.
+
+- `useSwipeCard` exposes `panGesture` (the pan alone). `blocksExternalGesture`
+  takes a base gesture and REFUSES a `ComposedGesture`, which is what the
+  existing `gesture` return is — found at the type level, not on device.
+- `CardRenderArgs.deckGesture` carries it to the face; the face's
+  `Gesture.Pan().blocksExternalGesture(deckGesture)` makes the deck wait.
+  Without it whichever activates first wins, and losing that race throws away
+  the card the buyer was trying to rewind.
+- `CardVideo` gains two more shared-value channels: `scrubbing` (stop writing
+  `progress` — the finger owns the bar, or a `timeUpdate` tick yanks it back
+  four times a second) and `seekTo` (0..1, self-disarming). A shared value
+  rather than an imperative handle because the player is private to `CardVideo`
+  and lifting `useVideoPlayer` out would put its lifecycle in a component that
+  does not render it.
+- `onFinalize`, not `onEnd`: a CANCELLED gesture must also clear `scrubbing`,
+  or it stays true and the bar never reconnects to playback for the rest of the
+  card's life.
+- The touch band is ~28pt around a 3pt bar. A 3pt target is a tenth of the 44pt
+  Apple asks for.
+
+**"Show something when hover"**: there is no hover on a phone, so the label
+appears on TOUCH and follows the drag — a label only a mouse could summon would
+never be seen. It names the place under the finger, on the render worker's own
+opaque-white-pill treatment, and is driven by `useAnimatedReaction` on a dash
+INDEX so the JS hop and the React render happen once per place crossed rather
+than once per frame.
+
+**Issues**: three tests failed, all correctly. `community-panel-fit.test.ts`
+pins this card's composition as source text and it still asserted
+`MAX_COMMUNITY_PILLS` and `PILL_HEIGHT`; `pool-dto.test.ts` expected `signals`
+to be strings. Rewritten to pin the new invariants — the cap now enforced in
+ONE place, no pill row left, and never substituting a glyph. The third failure
+was the file's own header still describing "3 layers" of bottom info; that
+comment is now marked superseded rather than deleted, since the rest of it
+still describes what the file does.
+
+**Resolution**: web typecheck + 602 tests, mobile typecheck + 520 tests, biome
+zero errors on both. The 3 biome warnings on `feed.tsx` are a pre-existing dep
+list at line 411; my change there is 3 lines at 376. NOT verified on device —
+and this entry has more device risk than the last two: gesture relations,
+seeking on HLS, and a `blocksExternalGesture` relation that cannot be exercised
+by any test in this repo.
+
+**Learnings**: the mobile suite's source-text assertions earned their keep. Two
+of them failed for the right reason on a change that typechecked, tested and
+linted clean otherwise — they are the only thing in the repo that notices when
+a card's composition changes out from under its documentation.
+
+**Next steps**:
+- Device check on the scrub is the gate. If a drag on the bar still swipes the
+  card, the relation is the suspect, not the maths.
+- The counts lost with the pills. Icon-plus-number is the obvious middle.
+- Still outstanding from 08-21: the explore screen's four stat values are
+  invented.
+
 ## 2026-08-22 17:18 UTC — One dash per place, and the name moves to the corner
 
 **Objective**: owner, after seeing yesterday's card on device — "1) the page is

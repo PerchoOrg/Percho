@@ -66,24 +66,43 @@ describe("community card immersive full-bleed layout (2026-08-16)", () => {
 		expect(SRC).not.toContain("SAVE_TAP_TARGET");
 	});
 
-	it("caps the chip row at TWO pills", () => {
-		// Owner 2026-08-17: max 2 lifestyle pills (was 3, borrowed from the
-		// listing card's MAX_TAGS — which no longer exists, because the listing
-		// card's pills were deleted in the same pass). The cap is local to this
-		// face now, and EVERY one of the four label sources must respect it, or
-		// a community with reasons-but-no-signals quietly renders three again.
-		expect(SRC).toContain("const MAX_COMMUNITY_PILLS = 2");
+	it("caps the signal glyphs at TWO", () => {
+		// Owner 2026-08-17 capped the lifestyle row at 2 (was 3). The row became
+		// GLYPHS on 2026-08-22 — "lets add icons to the left of community name
+		// for now" — and the cap survived the change of medium, now for a second
+		// reason: the glyphs, the name and `Explore` share one line, so every
+		// icon is width the name does not get.
+		expect(SRC).toContain("const MAX_COMMUNITY_ICONS = 2");
 		expect(SRC).not.toContain("MAX_TAGS");
-		expect(SRC.match(/slice\(0, MAX_COMMUNITY_PILLS\)/g)).toHaveLength(4);
+		// The cap is enforced in ONE place — the `push` helper both sources feed
+		// — rather than at each call site, which is what a `slice` per source
+		// used to require.
+		expect(SRC).toContain("out.length >= MAX_COMMUNITY_ICONS");
 	});
 
-	it("renders chips label-only — no statistic line survives on the card", () => {
-		// The glass tile carried a `fact` sub-line; a white one-line pill
-		// cannot, and there is no placeholder for a reason with no fact. The
-		// facts moved to the community explore screen, which is where the CTA
-		// goes. The card's chips are the server's lifestyle signals.
+	it("has no pill row left", () => {
+		// The pills were replaced, not moved: nothing on this card renders a
+		// label in a box any more.
+		expect(SRC).not.toContain("MAX_COMMUNITY_PILLS");
+		expect(SRC).not.toContain("PILL_HEIGHT");
+		expect(SRC).not.toContain("chipLabel");
+	});
+
+	it("never substitutes a glyph it does not have", () => {
+		// The shipped font is a 14-glyph subset and several real signals
+		// ("Lake nearby", "Golf nearby") have no honest match. The card must
+		// skip those, never fall back — a wrong glyph is a claim the community
+		// was never measured on. The server returns `icon` as optional and this
+		// face only ever pushes a defined one.
+		expect(SRC).toContain("if (!icon || seen.has(icon)");
+	});
+
+	it("renders no statistic line on the card", () => {
+		// The glass tile carried a `fact` sub-line and the pill that replaced it
+		// could not; the glyph that replaced the pill certainly cannot. The
+		// facts live on the community explore screen, which is where the CTA
+		// goes.
 		expect(SRC).not.toContain("r.fact");
-		expect(SRC).toContain("PILL_HEIGHT");
 		expect(SRC).toContain("card.signals");
 	});
 

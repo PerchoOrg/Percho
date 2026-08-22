@@ -108,6 +108,19 @@ interface UseSwipeCardResult {
 	 * card can fire a tap.
 	 */
 	gesture: ReturnType<typeof Gesture.Exclusive>;
+	/**
+	 * The pan half on its own, so a gesture inside a card can declare a relation
+	 * to it — `blocksExternalGesture` takes a base gesture and refuses a
+	 * `ComposedGesture`, which is what `gesture` above is.
+	 *
+	 * The pan is also the only half worth blocking: the tap needs a stationary
+	 * finger, so it can never contend with a drag.
+	 *
+	 * The community card's progress scrubber is the caller. Without the relation
+	 * a scrub and a swipe race for the same horizontal drag, and losing that race
+	 * throws away the card the buyer was trying to rewind.
+	 */
+	panGesture: ReturnType<typeof Gesture.Pan>;
 	/** Horizontal drag offset — cards behind read this to rise toward the top. */
 	tx: SharedValue<number>;
 	/**
@@ -412,6 +425,9 @@ export function useSwipeCard({
 
 	return {
 		gesture: Gesture.Exclusive(gesture, tapGesture),
+		// The pan ALONE, for a card face that needs to block it. See `panGesture`
+		// on the return type.
+		panGesture: gesture,
 		tx,
 		topAbs,
 		exitX,

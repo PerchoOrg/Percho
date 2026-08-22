@@ -376,6 +376,9 @@ export default function FeedScreen() {
 							card={card}
 							isTop={isTop}
 							tapSlot={args.tapSlot}
+							/* Lets the progress bar's drag block the deck's swipe —
+							   without it the two race for the same gesture. */
+							deckGesture={args.deckGesture}
 							/*
 							 * "Why people love it →" now has a destination (owner,
 							 * 2026-08-02: 「最后还有why people love it的跳转button」).
