@@ -30,7 +30,8 @@
  * The only narrowing affordances are the search box, the viewport, and the
  * layer chips (§4.1 铁律). There is no price/bed/bath picker on this screen.
  */
-import { useMemo, useState } from "react";
+import { useLocalSearchParams } from "expo-router";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
 	Image,
 	Pressable,
@@ -81,6 +82,37 @@ export default function SearchTab() {
 	const [expanded, setExpanded] = useState(false);
 	const [selectedId, setSelectedId] = useState<string | null>(null);
 
+	const mapRef = useRef<MapView>(null);
+
+	/** Select a unit AND move the map to it — pin tap, row tap, `focus` param. */
+	const select = (u: GeoUnit) => {
+		setSelectedId(u.id);
+		setExpanded(true);
+		mapRef.current?.animateToRegion(
+			{
+				latitude: u.centroid.lat,
+				longitude: u.centroid.lng,
+				latitudeDelta: 0.18,
+				longitudeDelta: 0.15,
+			},
+			500,
+		);
+	};
+
+	// `?focus=<unitId>` — the You tab's familiarity rows, the Saved tab's area
+	// rows and the §5.5 deep link all land here. Handled once per distinct
+	// value: the pool refreshing must not re-fly a map the buyer has panned.
+	const { focus } = useLocalSearchParams<{ focus?: string }>();
+	const handledFocus = useRef<string | null>(null);
+	useEffect(() => {
+		if (!focus || focus === handledFocus.current) return;
+		const unit = pool.geoUnits.find((u) => u.id === focus);
+		if (!unit) return; // pool still loading — retry on the next pool change
+		handledFocus.current = focus;
+		select(unit);
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [focus, pool.geoUnits]);
+
 	const units = useMemo(() => {
 		const q = query.trim().toLowerCase();
 		const list = q
@@ -103,6 +135,7 @@ export default function SearchTab() {
 			{/* Map body */}
 			<View style={styles.mapWrap}>
 				<MapView
+					ref={mapRef}
 					style={StyleSheet.absoluteFill}
 					mapType="mutedStandard"
 					showsPointsOfInterest={false}
@@ -122,10 +155,7 @@ export default function SearchTab() {
 								longitude: u.centroid.lng,
 							}}
 							title={u.name}
-							onPress={() => {
-								setSelectedId(u.id);
-								setExpanded(true);
-							}}
+							onPress={() => select(u)}
 							pinColor={
 								selectedId === u.id
 									? colors.accent
@@ -242,10 +272,7 @@ export default function SearchTab() {
 										styles.row,
 										selectedId === u.id && styles.rowSelected,
 									]}
-									onPress={() => {
-										setSelectedId(u.id);
-										setExpanded(true);
-									}}
+									onPress={() => select(u)}
 								>
 									<Image source={{ uri: u.heroUrl }} style={styles.rowThumb} />
 									<View style={styles.rowText}>

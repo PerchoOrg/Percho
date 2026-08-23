@@ -73,7 +73,7 @@ export function AreaFace({ card, isTop, tapSlot, onExplore }: AreaFaceProps) {
 			<View style={styles.saveSlot}>
 				<Pressable
 					onTouchStart={arm(SAVE_TAP_TARGET)}
-					onPress={tapSlot ? undefined : () => toggleSaved(card.id)}
+					onPress={tapSlot ? undefined : () => toggleSaved(card.id, "area")}
 					accessibilityRole="button"
 					accessibilityLabel={saved ? "Saved" : "Save"}
 					hitSlop={12}

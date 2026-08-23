@@ -39,6 +39,13 @@ export interface SignalState {
 	skippedLayers: readonly FunnelLayer[];
 	/** Total swipes in the current session — telemetry for `stage_advance`. */
 	swipesInStage: number;
+	/**
+	 * Trade-off cards answered, lifetime. The You tab's persona subtitle
+	 * ("Shaped by N likes · M trade-offs") needs the count and it cannot be
+	 * recovered from `dims` (the +1/−0.5 bumps are not invertible). Optional:
+	 * state persisted before this field existed rehydrates without it.
+	 */
+	tradeoffCount?: number;
 }
 
 export const EMPTY_SIGNALS: SignalState = {
@@ -191,6 +198,7 @@ export function applySwipe(
 			next = {
 				...next,
 				dims: bump(next.dims, chosen.dim, 1),
+				tradeoffCount: (next.tradeoffCount ?? 0) + 1,
 			};
 			if (discarded.dim !== chosen.dim) {
 				next = {
@@ -213,6 +221,22 @@ export function applySwipe(
 	}
 
 	return next;
+}
+
+/**
+ * The You tab's evidence correction (05 §5.3): "Still true? → No, remove"
+ * drops the dim's accumulated weight outright. Removal, not decrement — the
+ * buyer said the observation is wrong, and a wrong observation at half
+ * strength is still wrong.
+ */
+export function applyDimRemoval(
+	signals: SignalState,
+	dim: string,
+): SignalState {
+	if (!(dim in signals.dims)) return signals;
+	const dims = { ...signals.dims };
+	delete dims[dim];
+	return { ...signals, dims };
 }
 
 export function applySkipLayer(

@@ -16,6 +16,83 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-23 09:40 UTC — Saved and You become real tabs; Search learns to move its map
+
+**Objective**: owner — "Lets also complete the Search, Saved, and You section
+on the app". Follow-ups: "dont descope yet, saved is for both" (Homes AND
+Communities), persona name in (lexicon approach approved over an LLM call),
+and "deliver this end to end".
+
+**Actions** (`phase116/tabs-saved-you`, all in `apps/mobile` unless noted):
+
+- `state/saved.ts` v2 — entries are now `{id, kind}` (`listing | community |
+  area`); persisted v1 arrays migrate as `kind: "listing"` (the feed only
+  ever routed listing saves in). `toggle(id, kind)` at every call site.
+- `app/(tabs)/saved.tsx` — the real Saved tab: segment chips (Homes ·
+  Communities, Areas appears when non-empty), rows re-fetched per id from the
+  detail endpoints (price · specs / address for homes, name / city for
+  communities), 404 renders "No longer on the market", per-row Retry/Remove,
+  §5.5 empty state with "Back to feed", and §5.2's gray Compare entry at ≥2
+  homes. Verified live: both detail endpoints return exactly the fields the
+  rows read; missing id → 404.
+- `app/community/[slug].tsx` — Save button on the explore page hero (glass
+  pill, mirroring the ✕). The card face CAN'T carry it: owner removed the
+  card's top-right bookmark on 2026-08-20 for the tour's place/distance
+  label, so the explore page is the community's save entry point.
+- **Bug found & fixed**: the CITY card's bookmark did nothing in the feed —
+  `onTapTarget` only handled `kind === "listing"` for `SAVE_TAP_TARGET`, and
+  the face's own `onPress` is disarmed under `tapSlot`. Area saves now land
+  in the store and surface in Saved's Areas segment (tap → Search focused on
+  the unit).
+- `lib/feed/persona.ts` (new, pure) — deterministic persona naming: top-2
+  dims ≥ threshold 2 pick MODIFIER + ARCHETYPE from two 11-entry hand-written
+  tables (110 possible names, all reviewable); below threshold → null →
+  "Still taking shape". `trails + family` produces the spec's own example
+  "Trail-Runner Suburbanite". Also `DIM_LABELS` for the evidence list.
+- `lib/feed/signals.ts` — `tradeoffCount?` on `SignalState` (the persona
+  subtitle's "M trade-offs" is not recoverable from `dims`; optional so
+  pre-field persisted state rehydrates), and `applyDimRemoval` for the You
+  tab's evidence correction ("No, remove" drops the dim outright).
+  `state/feed-session.ts` gains `removeDim`.
+- `app/(tabs)/you.tsx` — the real You tab: persona card ("Shaped by N likes ·
+  M trade-offs"; the spec's "Stage X of 5" is dropped — the funnel collapsed
+  2026-08-15 and the stage is pinned), area familiarity rows from
+  `familiarityFor` (SAME source as Search's journey layer, §5.3 hard rule),
+  row tap → Search focused; evidence rows with strength bars and the "Still
+  true? Yes / No, remove" correction; scope reset with the recap on screen
+  AND in the confirm (§5.3: no bare reset without a preview); Settings with
+  the one real switch (sound autoplay). No account rows — there are no
+  accounts.
+- `app/(tabs)/search.tsx` — `select()` now ALSO moves the map
+  (`animateToRegion`, 500ms) on pin tap / row tap, and the tab accepts
+  `?focus=<unitId>` (You rows, Saved area rows, §5.5's deep-link shape),
+  handled once per distinct value so a pool refresh doesn't re-fly a map the
+  buyer panned.
+- `lib/saved/rows.ts` (new, pure) — `formatPrice` / `specsLine` /
+  `areaUnitId` with tests.
+
+**Decisions**:
+- Persona name: lexicon over LLM (owner-approved). NOTE for owner review: the
+  two name tables and `DIM_LABELS` in `lib/feed/persona.ts` are authored
+  copy — flagged per CLAUDE.md §6, shipped under the "deliver end to end, no
+  questions for 5h" instruction.
+- Must-haves segment NOT built: Explore-side feature saving doesn't exist
+  anywhere (no affordance, no `saved_features` on the wire) — a permanent
+  `· 0` chip is worse than its absence. Lands with that pipeline.
+- No price-change / DOM badges: schema has no price history and no listing
+  date. The 404 → "gone" row is the one honest state.
+
+**Verification**: `pnpm typecheck` clean; vitest 44 files / 542 tests pass
+(30 new assertions across persona / signals / rows); biome clean on all
+touched files (the only warnings are `feed.tsx`'s two pre-existing
+`useExhaustiveDependencies`, present on main); `expo export --platform ios`
+bundles clean; live-curled both detail endpoints + the 404 path. NOT verified
+on device — needs the owner's phone via the reference-worktree Metro.
+
+**Next steps**: device pass on the three tabs; then phase117 (iOS release
+prep: icon/splash, eas.json, privacy page, runbook) per the owner-approved
+release plan.
+
 ## 2026-08-23 09:21 UTC — a tap is not a small drag: the release goes to whoever won the touch
 
 **Objective**: owner, third report, and this one names the split — "if you drag

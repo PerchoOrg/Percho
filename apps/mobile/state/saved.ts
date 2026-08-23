@@ -1,52 +1,77 @@
 /**
- * Saved listings store — the card heart's target and the Saved tab's data.
+ * Saved store — the card bookmark's target and the Saved tab's data.
  *
  * ── Scope: this is the local truth, nothing more ────────────────────────────
  *
- * Spec-v3's saved surface (05 §5.2) is not built: the Saved tab is a
- * placeholder, there is no `/api/mobile/saved` endpoint, and the server's
- * `listing_saves` table has no REST route. Until that lands, a persisted
- * local set is the only honest "saved" — it survives app restarts, it is the
- * exact data the Saved tab will render when task 5 wires it, and it costs no
- * fake network calls. The tab keeps its "task 5" copy; this store is what it
- * will read.
+ * There is still no `/api/mobile/saved` endpoint and no account to sync to, so
+ * a persisted local list is the only honest "saved" — it survives app
+ * restarts and costs no fake network calls. Kind-tagged ids only: the Saved
+ * tab re-fetches fresh rows from the detail endpoints, so storing a snapshot
+ * of a card would go stale the moment a price changes.
+ *
+ * ── v2 (phase116): entries carry their kind ─────────────────────────────────
+ *
+ * v1 stored bare listing ids. The Saved tab now shows Homes and Communities
+ * (owner 2026-08-23: "saved is for both"), and a bare id cannot say which
+ * detail endpoint resolves it. Persisted v1 arrays migrate as
+ * `kind: "listing"` — the feed only ever routed listing saves into the store,
+ * so that is what those ids are.
  *
  * Not persisted when empty (so a fresh install carries no empty-array
- * baggage); card ids only — the feed re-fetches fresh cards, so storing a
- * snapshot of `ListingCardV3` would go stale the moment a price changes.
+ * baggage).
  */
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 
+/** What a saved id points at — which detail surface can resolve it. */
+export type SavedKind = "listing" | "community" | "area";
+
+export interface SavedItem {
+	id: string;
+	kind: SavedKind;
+}
+
 interface SavedState {
-	/** Listing card ids the buyer saved, most recent first. */
-	ids: readonly string[];
+	/** Saved entries, most recent first. */
+	items: readonly SavedItem[];
 	hydrated: boolean;
-	/** Toggle a listing's saved state. Returns the new state. */
-	toggle: (id: string) => boolean;
+	/** Toggle an entry's saved state. Returns the new state. */
+	toggle: (id: string, kind: SavedKind) => boolean;
 	isSaved: (id: string) => boolean;
 }
 
 export const useSavedStore = create<SavedState>()(
 	persist(
 		(set, get) => ({
-			ids: [],
+			items: [],
 			hydrated: false,
-			toggle: (id) => {
-				const has = get().ids.includes(id);
-				const ids = has
-					? get().ids.filter((x) => x !== id)
-					: [id, ...get().ids];
-				set({ ids });
+			toggle: (id, kind) => {
+				const has = get().items.some((x) => x.id === id);
+				const items = has
+					? get().items.filter((x) => x.id !== id)
+					: [{ id, kind }, ...get().items];
+				set({ items });
 				return !has;
 			},
-			isSaved: (id) => get().ids.includes(id),
+			isSaved: (id) => get().items.some((x) => x.id === id),
 		}),
 		{
 			name: "percho-v3:saved:v1",
+			version: 2,
 			storage: createJSONStorage(() => AsyncStorage),
-			partialize: (s) => (s.ids.length === 0 ? {} : { ids: s.ids }),
+			partialize: (s) => (s.items.length === 0 ? {} : { items: s.items }),
+			migrate: (persisted) => {
+				const old = persisted as { ids?: unknown };
+				if (Array.isArray(old?.ids)) {
+					return {
+						items: old.ids
+							.filter((id): id is string => typeof id === "string")
+							.map((id) => ({ id, kind: "listing" as const })),
+					};
+				}
+				return persisted as Partial<SavedState>;
+			},
 			onRehydrateStorage: () => () => {
 				useSavedStore.setState({ hydrated: true });
 			},

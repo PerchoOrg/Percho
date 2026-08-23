@@ -154,7 +154,7 @@ export function ListingFace({
 			<View style={styles.saveSlot}>
 				<Pressable
 					onTouchStart={arm(SAVE_TAP_TARGET)}
-					onPress={tapSlot ? undefined : () => toggleSaved(card.id)}
+					onPress={tapSlot ? undefined : () => toggleSaved(card.id, "listing")}
 					accessibilityRole="button"
 					accessibilityLabel={saved ? "Saved" : "Save"}
 					hitSlop={12}
