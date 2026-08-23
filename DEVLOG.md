@@ -16,6 +16,57 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-23 01:05 UTC — The review page follows the tour's POIs now, and both orphaned runs are stopped
+
+**Objective**: owner, after reading the diagnosis below: "merge to main, and
+stop ashley crossing too and cleanup admin photo list, only show the photos
+from resolved poi".
+
+**Actions**:
+- Stopped Ashley Crossing's run (`03b9afec`) by hand — same orphan as
+  Apremont's, dead in the same second (00:19:34), still advertising
+  `fetching_photos`. `status='failed'`, `photos.phase='failed'` with the reason.
+- `lib/poi/nearby-photo-scope.ts` (new, + 5 tests): `keepPhotoForTour`, the
+  predicate for the review page.
+- `lib/poi/admin-nearby-photos.ts`: `narrowToTour` rebuilds the tour's POI set
+  — the newest run that HAS a resolve result, plus the `approved` links — and
+  filters the flattened photo rows through it. Community scope only; the
+  listing pages have no runs and are untouched.
+
+**Decisions**:
+- *Two exceptions to "resolved only", or the narrowing eats finished work.*
+  A photo with `status='approved'` is IN the current cut (that is what `plan`
+  writes), and a photo with `reviewed_by` set is the owner's own verdict.
+  Aberdeen has seven of the first and two of the second sitting on POIs its
+  newest run did not resolve; without the exceptions its review page would
+  drop photos that are in 35 shipped films.
+- *Newest run WITH a resolve result, not the newest run.* Both runs stopped
+  today died before writing one, and a community mid-research has none — either
+  would have blanked the page. A community with no resolve result anywhere has
+  never been toured, so nothing is narrowed and the nearby pages behave exactly
+  as before.
+- *The predicate lives in its own module.* `admin-nearby-photos.ts` is a
+  `'use server'` file: every export has to be an async server action, so a pure
+  synchronous helper exported from it fails `next build` (not `tsc`). Caught
+  before the merge build, not by it.
+
+**Resolution**: replayed against production for all eight communities that have
+a tour run. Photos on the page, before → after: Apremont - Highcroft
+**479 → 68**, Aberdeen 124 → 92 (7 of them held by the exceptions), Ashley
+Crossing 132 → 110, Bellmoore Park 64 → 64 (every POI is in focus), and the
+four Suwanee test communities 73 → 22, 69 → 25, 68 → 29, 48 → 21. The per-POI
+display cap of 3 still applies on top. `pnpm typecheck` clean, `apps/web` lint
+clean, 263 `lib/poi` tests pass.
+
+**Learnings**: `'use server'` turns "export a pure helper so it can be tested"
+into a build error, and neither `tsc` nor vitest sees it — the test imported
+and passed. Worth remembering for any `lib/` file that carries the directive.
+
+**Next steps**: the hidden photos are still in `poi_photos` (this is a display
+change; nothing was deleted). If they should actually go, that is a separate
+decision — and the 228 `candidate` links behind them are the thing to remove
+first, otherwise the next Nearby click puts them all back.
+
 ## 2026-08-23 00:45 UTC — 16 resolved POIs, 335 photos: the photos step was working off the Nearby button's leftovers
 
 **Objective**: owner: "Apremont - Highcroft — its stuck in rendering for very

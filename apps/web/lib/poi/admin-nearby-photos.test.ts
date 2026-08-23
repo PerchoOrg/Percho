@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { keepPhotoForTour } from './nearby-photo-scope';
 
 /**
  * The nearby photo loader's two joins, as pure functions over the shapes the
@@ -62,5 +63,40 @@ describe('nearby photo joins', () => {
 
   it('survives null input_photo_ids', () => {
     expect(usedIn([{ intent_bucket: 'dining', scope: null, input_photo_ids: null }]).size).toBe(0);
+  });
+});
+
+describe('keepPhotoForTour', () => {
+  const focus = new Set(['resolved-poi', 'approved-link-poi']);
+  const photo = (over: Partial<Parameters<typeof keepPhotoForTour>[0]> = {}) => ({
+    poi_id: 'nearby-leftover',
+    status: 'pending' as string | null,
+    reviewed_by: null as string | null,
+    ...over,
+  });
+
+  it('keeps photos on the POIs the tour resolved or a person approved', () => {
+    expect(keepPhotoForTour(photo({ poi_id: 'resolved-poi' }), focus)).toBe(true);
+    expect(keepPhotoForTour(photo({ poi_id: 'approved-link-poi' }), focus)).toBe(true);
+  });
+
+  it('drops a pending photo on a POI the Nearby button left behind', () => {
+    expect(keepPhotoForTour(photo(), focus)).toBe(false);
+    expect(keepPhotoForTour(photo({ status: 'rejected' }), focus)).toBe(false);
+  });
+
+  it('keeps a photo already in the cut, wherever it sits', () => {
+    expect(keepPhotoForTour(photo({ status: 'approved' }), focus)).toBe(true);
+  });
+
+  it('keeps a photo a person ruled on, so narrowing cannot bury their verdict', () => {
+    expect(keepPhotoForTour(photo({ status: 'rejected', reviewed_by: 'owner-uuid' }), focus)).toBe(
+      true,
+    );
+  });
+
+  it('narrows to nothing when the tour resolved nothing the photos sit on', () => {
+    const rows = [photo(), photo({ poi_id: 'another-leftover' })];
+    expect(rows.filter((r) => keepPhotoForTour(r, focus))).toEqual([]);
   });
 });

@@ -14,6 +14,7 @@
  */
 
 import { createServiceClient } from '@/lib/supabase/server';
+import { keepPhotoForTour } from './nearby-photo-scope';
 
 export interface NearbyPhotoRow {
   id: string;
@@ -42,6 +43,58 @@ export interface NearbyPhotoRow {
 }
 
 type Scope = { kind: 'community'; id: string } | { kind: 'listing'; id: string };
+
+/**
+ * Drop the photos that belong to POIs the tour never resolved.
+ *
+ * The set is rebuilt from the newest run that HAS a resolve result rather than
+ * from the newest run: a run that died in `photos` (or one still researching)
+ * carries no resolved list, and reading it would empty the page. A community
+ * with no resolve result at all has never been toured — its nearby photos are
+ * all there is, so nothing is narrowed.
+ */
+async function narrowToTour<
+  T extends { poi_id: string; status: string | null; reviewed_by: string | null },
+>(
+  // biome-ignore lint/suspicious/noExplicitAny: stub generated types
+  sb: any,
+  communityId: string,
+  rows: T[],
+): Promise<T[]> {
+  if (rows.length === 0) return rows;
+
+  const { data: runs } = (await sb
+    .from('community_tour_runs')
+    .select('step_results')
+    .eq('community_id', communityId)
+    .order('created_at', { ascending: false })
+    .limit(10)) as {
+    data: Array<{ step_results: { resolve?: { resolved?: Array<{ place_id?: string }> } } }> | null;
+  };
+  const resolved = (runs ?? [])
+    .map((r) => r.step_results?.resolve?.resolved)
+    .find((r) => r && r.length > 0);
+  if (!resolved) return rows;
+
+  const placeIds = resolved.map((r) => r.place_id).filter(Boolean) as string[];
+  const focusPoiIds = new Set<string>();
+  if (placeIds.length > 0) {
+    const { data: pois } = (await sb.from('pois').select('id').in('google_place_id', placeIds)) as {
+      data: Array<{ id: string }> | null;
+    };
+    for (const p of pois ?? []) focusPoiIds.add(p.id);
+  }
+  // The amenity ingest and the admin panel both stamp 'approved' — the places
+  // a person chose, which resolve never sees.
+  const { data: approved } = (await sb
+    .from('community_pois')
+    .select('poi_id')
+    .eq('community_id', communityId)
+    .eq('status', 'approved')) as { data: Array<{ poi_id: string }> | null };
+  for (const l of approved ?? []) focusPoiIds.add(l.poi_id);
+
+  return rows.filter((row) => keepPhotoForTour(row, focusPoiIds));
+}
 
 export async function loadNearbyPhotos(scope: Scope): Promise<NearbyPhotoRow[]> {
   // biome-ignore lint/suspicious/noExplicitAny: stub generated types
@@ -72,15 +125,21 @@ export async function loadNearbyPhotos(scope: Scope): Promise<NearbyPhotoRow[]> 
   const { data: photos } = (await sb
     .from('poi_photos')
     .select(
-      'id, poi_id, storage_path, status, rejection_reason, width_px, height_px, ai_score, ai_tags, applicable_buckets, tagged_at, enhanced_path, enhanced_status, enhanced_preset, enhanced_error, outpainted_path, outpaint_status, outpaint_meta, outpaint_error, source, attribution, created_at',
+      'id, poi_id, storage_path, status, rejection_reason, width_px, height_px, ai_score, ai_tags, applicable_buckets, tagged_at, enhanced_path, enhanced_status, enhanced_preset, enhanced_error, outpainted_path, outpaint_status, outpaint_meta, outpaint_error, source, attribution, created_at, reviewed_by',
     )
     .in('poi_id', poiIds)
     .order('created_at', { ascending: false, nullsFirst: false })
     .limit(1000)) as {
-    data: Array<Omit<NearbyPhotoRow, 'poi_name' | 'used_in'> & { created_at: string }> | null;
+    data: Array<
+      Omit<NearbyPhotoRow, 'poi_name' | 'used_in'> & {
+        created_at: string;
+        reviewed_by: string | null;
+      }
+    > | null;
   };
 
-  const rows = photos ?? [];
+  const rows =
+    scope.kind === 'community' ? await narrowToTour(sb, scope.id, photos ?? []) : (photos ?? []);
   if (rows.length === 0) return [];
 
   // Which rendered videos used each photo. Scoped to THIS owner — a photo used
