@@ -210,3 +210,29 @@ describe('buildTourIndexRows', () => {
     expect(rows.map((r) => r.lastActivityLabel)).toEqual(['2h ago', '—']);
   });
 });
+
+describe('abandoned runs', () => {
+  it('stops reporting a stalled re-run once it is marked abandoned', () => {
+    const rows = buildTourIndexRows({
+      listings: [
+        {
+          id: 'a',
+          address: 'a',
+          city: 'c',
+          state: 'GA',
+          status: 'live',
+          created_at: '2026-01-01T00:00:00Z',
+          agents: null,
+        },
+      ],
+      photos: [],
+      runs: [
+        { listing_id: 'a', status: 'ready', updated_at: '2026-08-22T08:29:00Z' },
+        { listing_id: 'a', status: 'abandoned', updated_at: '2026-08-22T18:03:00Z' },
+      ],
+      assemblies: [],
+      formatActivity: () => '—',
+    });
+    expect(rows[0]).toMatchObject({ stage: 'ready', rerunStage: null });
+  });
+});

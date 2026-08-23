@@ -19,6 +19,8 @@ Community films now open on the community. Its own amenities lead the film and r
 Aberdeen in Suwanee is the first community with this treatment: a 58-second film that opens on its clubhouse and takes in the pool, the courts and the grounds before heading out into Suwanee.
 
 ### 2026-08-23
+- The Worker page can now clean up video storage. Every time a tour is re-run, the previous version of the film stays on the video host forever — 233 of the 282 videos in the account were copies nothing can reach any more. The page lists exactly what it would remove, with dates and lengths, before you delete anything, and never offers a video that is still in use or less than a day old
+- Tours that stopped halfway can now be closed from the same place, so they stop showing up as though something were still running
 - The home tour list no longer counts up how many times a home has been through the pipeline — the row says where it got to and whether something is still running, which is what you act on
 - The home tour list's photo count now says how many photos are actually in the film — a home with 75 photos whose film uses 20 said "75 / 75", which read as though all 75 were used. Before a film exists it says how many the plan picked, or how many have been tagged
 - A home's stage now shows how far it actually got, not how far the latest attempt got. A home with a finished film was showing "Plan" because someone had started a re-run that stopped early; the unfinished re-run is now a note underneath instead of the headline

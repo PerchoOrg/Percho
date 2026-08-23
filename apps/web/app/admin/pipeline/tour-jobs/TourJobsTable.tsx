@@ -22,6 +22,7 @@ const STAGES: Record<string, { label: string; tone: string }> = {
   assembling: { label: 'Assembling', tone: 'text-blue-500' },
   ready: { label: 'Ready', tone: 'text-emerald-500' },
   failed: { label: 'Failed', tone: 'text-red-500' },
+  abandoned: { label: 'Abandoned', tone: 'text-ink2' },
 };
 
 const stageLabel = (status: string): string => STAGES[status]?.label ?? status;
