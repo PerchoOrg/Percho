@@ -101,13 +101,84 @@ export interface EvidenceCitedEvent extends ExploreEventBase {
 	evidenceIds: readonly string[];
 }
 
+// ─── Phase114 explore-page events (spec §5) ─────────────────────────────────
+// The redesigned explore page's preference-engine inputs. Same stream, same
+// queue, same purity rules as the §2.6 events above.
+
+/** `explore_open` — the page was reached. */
+export interface ExploreOpenEvent extends ExploreEventBase {
+	type: "explore_open";
+}
+
+/**
+ * `media_swipe(index, room, dwellMs)` — the carousel changed slides. `dwellMs`
+ * is how long the PREVIOUS slide was watched; which rooms a buyer lingers on
+ * is the highest-volume preference signal this page produces.
+ */
+export interface MediaSwipeEvent extends ExploreEventBase {
+	type: "media_swipe";
+	/** Slide arrived AT (0 = video). */
+	index: number;
+	/** Room group of that slide (`"video"` for slide 0). */
+	room: string;
+	/** ms the previous slide was watched. */
+	dwellMs: number;
+}
+
+/** `room_jump(room)` — a room chip was tapped. Intent, not drift. */
+export interface RoomJumpEvent extends ExploreEventBase {
+	type: "room_jump";
+	room: string;
+}
+
+/** `photo_fullscreen(index, room)` — the buyer opened the viewer on a photo. */
+export interface PhotoFullscreenEvent extends ExploreEventBase {
+	type: "photo_fullscreen";
+	index: number;
+	room: string;
+}
+
+/** `fit_dwell(ms)` — how long the FitCard was actually on screen. */
+export interface FitDwellEvent extends ExploreEventBase {
+	type: "fit_dwell";
+	ms: number;
+}
+
+/** `tradeoff_vote(axis, value)` — the FitCard's one-question vote. */
+export interface TradeoffVoteEvent extends ExploreEventBase {
+	type: "tradeoff_vote";
+	axis: string;
+	value: "worth" | "not";
+}
+
+/** `cost_adjust(downPct, ratePct)` — the calculator's inputs moved. */
+export interface CostAdjustEvent extends ExploreEventBase {
+	type: "cost_adjust";
+	downPct: number;
+	ratePct: number;
+}
+
+/** `dock_action` — ✕ / ♡ / Request a tour, same semantics as the feed swipe. */
+export interface DockActionEvent extends ExploreEventBase {
+	type: "dock_action";
+	action: "pass" | "save" | "unsave" | "tour";
+}
+
 export type ExploreEvent =
 	| TourEvent
 	| HotspotEvent
 	| ActionTapEvent
 	| SaveFeatureEvent
 	| DatapointFocusEvent
-	| EvidenceCitedEvent;
+	| EvidenceCitedEvent
+	| ExploreOpenEvent
+	| MediaSwipeEvent
+	| RoomJumpEvent
+	| PhotoFullscreenEvent
+	| FitDwellEvent
+	| TradeoffVoteEvent
+	| CostAdjustEvent
+	| DockActionEvent;
 
 export type ExploreEventType = ExploreEvent["type"];
 
@@ -190,4 +261,72 @@ export function buildEvidenceCitedEvent(
 		stopId: input.stopId,
 		evidenceIds: [...input.evidenceIds],
 	};
+}
+
+// ─── Phase114 constructors ──────────────────────────────────────────────────
+
+export function buildExploreOpenEvent(ctx: Ctx): ExploreOpenEvent {
+	return { ...ctx, type: "explore_open" };
+}
+
+export function buildMediaSwipeEvent(
+	ctx: Ctx,
+	input: { index: number; room: string; dwellMs: number },
+): MediaSwipeEvent {
+	return {
+		...ctx,
+		type: "media_swipe",
+		index: input.index,
+		room: input.room,
+		// Same clock-adjustment guard as `hotspot_open`'s dwell.
+		dwellMs: Math.max(0, Math.round(input.dwellMs)),
+	};
+}
+
+export function buildRoomJumpEvent(
+	ctx: Ctx,
+	input: { room: string },
+): RoomJumpEvent {
+	return { ...ctx, type: "room_jump", room: input.room };
+}
+
+export function buildPhotoFullscreenEvent(
+	ctx: Ctx,
+	input: { index: number; room: string },
+): PhotoFullscreenEvent {
+	return { ...ctx, type: "photo_fullscreen", ...input };
+}
+
+/**
+ * Null under 500ms: that is a scroll-past, and recording it as a dwell would
+ * teach the engine that every buyer studies the FitCard.
+ */
+export function buildFitDwellEvent(
+	ctx: Ctx,
+	input: { ms: number },
+): FitDwellEvent | null {
+	const ms = Math.round(input.ms);
+	if (ms < 500) return null;
+	return { ...ctx, type: "fit_dwell", ms };
+}
+
+export function buildTradeoffVoteEvent(
+	ctx: Ctx,
+	input: { axis: string; value: TradeoffVoteEvent["value"] },
+): TradeoffVoteEvent {
+	return { ...ctx, type: "tradeoff_vote", ...input };
+}
+
+export function buildCostAdjustEvent(
+	ctx: Ctx,
+	input: { downPct: number; ratePct: number },
+): CostAdjustEvent {
+	return { ...ctx, type: "cost_adjust", ...input };
+}
+
+export function buildDockActionEvent(
+	ctx: Ctx,
+	input: { action: DockActionEvent["action"] },
+): DockActionEvent {
+	return { ...ctx, type: "dock_action", action: input.action };
 }

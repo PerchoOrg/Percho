@@ -13,9 +13,11 @@
  *
  * Three consequences, all deliberate and all visible in the DTO's shape:
  *
- * 1. **No `daysOnMarket` field exists.** The schema has no listing date of any
- *    kind, so the §2.1 row cannot ship. An absent key beats `daysOnMarket: 0`,
- *    which would render as "listed today" on every home in the database.
+ * 1. **`daysOnMarket` comes from the `mls_listings` mirror only** (phase118 —
+ *    the mirror postdates the 2026-07-27 audit above, which found no listing
+ *    date on `listings` itself). Absent when the listing has no linked mirror
+ *    row. An absent key beats `daysOnMarket: 0`, which would render as
+ *    "listed today" on every unlinked home in the database.
  * 2. **The comps cohort is the CITY, not the subdivision.** §2.1 anchors on
  *    subdivision ("Waterside median $228"), but 4 of 265 rows carry a
  *    `community_id`. `cohortLabel` names what was actually measured so the UI
@@ -29,6 +31,8 @@
  * of a number we do not have (`_MASTER.md`).
  */
 
+import { streamManifestUrl, streamPosterUrl } from '@/lib/feed/vertical-videos';
+import { mobileVideoUid } from '@/lib/feed/video-uid';
 import type { Database } from '@/lib/supabase/database.types';
 import { photoPublicUrl } from '@/lib/supabase/storage';
 import { createClient as createPlainClient } from '@supabase/supabase-js';
@@ -61,6 +65,14 @@ export interface CompsCohortDTO {
   medianPricePerSqftSampleSize?: number;
 }
 
+/** The listing's own walkthrough video, when one has been rendered. */
+export interface ListingVideoDTO {
+  /** HLS manifest URL (Cloudflare Stream). */
+  url: string;
+  posterUrl: string;
+  durationSec?: number;
+}
+
 export interface ListingDetailDTO {
   id: string;
   slug: string;
@@ -79,7 +91,21 @@ export interface ListingDetailDTO {
   photos: DetailPhotoDTO[];
   comps: CompsCohortDTO;
   communityId?: string;
-  /** NOTE: no `daysOnMarket` — see file note 1. */
+  /**
+   * From the `mls_listings` mirror (joined on `our_listing_id`), NOT the
+   * `listings` table — file note 1 predates the MLS mirror. Absent when the
+   * listing has no mirror row.
+   */
+  daysOnMarket?: number;
+  /** RAW lot text from `listings.lot_size` ("0.31 acres", "13,504 sqft"…). */
+  lotSizeRaw?: string;
+  /** `mls_listings.lot_size_acres`, when the mirror has it and listings doesn't. */
+  lotSizeAcres?: number;
+  zip?: string;
+  neighborhood?: string;
+  /** `mls_listings.listing_key` — the FMLS number a buyer can quote. */
+  mlsNumber?: string;
+  video?: ListingVideoDTO;
 }
 
 type ListingRow = {
@@ -96,6 +122,24 @@ type ListingRow = {
   hoa: string | null;
   description: string[] | null;
   community_id: string | null;
+  lot_size?: string | null;
+  zip?: string | null;
+  neighborhood?: string | null;
+};
+
+/** The slice of the `mls_listings` mirror the DTO reads. */
+type MlsMirrorRow = {
+  days_on_market: number | null;
+  lot_size_acres: number | null;
+  listing_key: string;
+};
+
+/** A `listing_videos` row, uid-resolved by `mobileVideoUid`. */
+type ListingVideoRow = {
+  cf_video_id: string | null;
+  cf_video_id_landscape: string | null;
+  cf_video_id_square: string | null;
+  duration_sec: number | null;
 };
 
 type PhotoRow = {
@@ -115,7 +159,10 @@ export function projectDetail(
   listing: ListingRow,
   photos: PhotoRow[],
   comps: CompRow[],
+  extras: { mls?: MlsMirrorRow | null; video?: ListingVideoRow | null } = {},
 ): ListingDetailDTO {
+  const video = projectVideo(extras.video ?? null);
+  const mls = extras.mls ?? null;
   return {
     id: listing.id,
     slug: listing.slug,
@@ -132,8 +179,36 @@ export function projectDetail(
     ...(listing.hoa?.trim() ? { hoaRaw: listing.hoa.trim() } : {}),
     ...(listing.description?.length ? { description: listing.description } : {}),
     ...(listing.community_id ? { communityId: listing.community_id } : {}),
+    ...(listing.lot_size?.trim() ? { lotSizeRaw: listing.lot_size.trim() } : {}),
+    ...(listing.zip?.trim() ? { zip: listing.zip.trim() } : {}),
+    ...(listing.neighborhood?.trim() ? { neighborhood: listing.neighborhood.trim() } : {}),
+    // DOM ≥ 0 only: the mirror's null means "not provided", never "listed today".
+    ...(mls?.days_on_market != null && mls.days_on_market >= 0
+      ? { daysOnMarket: mls.days_on_market }
+      : {}),
+    // Only when `listings.lot_size` is empty — one lot figure, not two that disagree.
+    ...(!listing.lot_size?.trim() && mls?.lot_size_acres != null && mls.lot_size_acres > 0
+      ? { lotSizeAcres: mls.lot_size_acres }
+      : {}),
+    ...(mls?.listing_key?.trim() ? { mlsNumber: mls.listing_key.trim() } : {}),
+    ...(video ? { video } : {}),
     photos: projectPhotos(photos),
     comps: projectComps(comps, listing.city),
+  };
+}
+
+/**
+ * The walkthrough video's playable projection, or null when no render exists.
+ * Square-first (`mobileVideoUid`) because the explore hero is a full-width
+ * ~1:1 block — the same shape preference the feed card uses.
+ */
+export function projectVideo(row: ListingVideoRow | null): ListingVideoDTO | null {
+  const uid = mobileVideoUid(row);
+  if (!uid) return null;
+  return {
+    url: streamManifestUrl(uid),
+    posterUrl: streamPosterUrl(uid),
+    ...(row?.duration_sec != null && row.duration_sec > 0 ? { durationSec: row.duration_sec } : {}),
   };
 }
 
@@ -235,7 +310,7 @@ function createUncachedAnonClient() {
 export async function fetchListingDetail(idOrSlug: string): Promise<ListingDetailDTO | null> {
   const supabase = createUncachedAnonClient();
   const columns =
-    'id, slug, address, city, state, price, beds, baths, sqft, year_built, hoa, description, community_id, status';
+    'id, slug, address, city, state, price, beds, baths, sqft, year_built, hoa, description, community_id, status, lot_size, zip, neighborhood';
 
   const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(idOrSlug);
   const { data: rows, error } = await supabase
@@ -248,9 +323,9 @@ export async function fetchListingDetail(idOrSlug: string): Promise<ListingDetai
   const row = (rows ?? [])[0] as (ListingRow & { status: string | null }) | undefined;
   if (!row || row.status !== 'active') return null;
 
-  // Photos and comps are independent reads — run them together rather than
-  // paying two sequential round trips on a screen the buyer is waiting on.
-  const [photoRes, compRes] = await Promise.all([
+  // Independent reads — run them together rather than paying four sequential
+  // round trips on a screen the buyer is waiting on.
+  const [photoRes, compRes, mlsRes, videoRes] = await Promise.all([
     supabase
       .from('listing_photos')
       .select('id, storage_path, ai_tags, sort_order')
@@ -263,10 +338,42 @@ export async function fetchListingDetail(idOrSlug: string): Promise<ListingDetai
       .eq('status', 'active')
       .not('price', 'is', null)
       .limit(COMPS_LIMIT),
+    // The MLS mirror row, when the sync has linked one. `maybeSingle` — a
+    // missing mirror is normal, not an error.
+    supabase
+      .from('mls_listings')
+      .select('days_on_market, lot_size_acres, listing_key')
+      .eq('our_listing_id', row.id)
+      .limit(1)
+      .maybeSingle(),
+    // The home's own walkthrough — same rule as the feed hero
+    // (`lib/feed/vertical-videos.ts`): `kind='walkthrough'` only, because
+    // that is the one kind built from the listing's own photos.
+    supabase
+      .from('listing_videos')
+      .select('cf_video_id, cf_video_id_landscape, cf_video_id_square, duration_sec')
+      .eq('listing_id', row.id)
+      .eq('kind', 'walkthrough')
+      .eq('status', 'ready')
+      .order('sort_order', { ascending: true })
+      .limit(1)
+      .maybeSingle(),
   ]);
 
   if (photoRes.error) throw new Error(`listing-detail: photos failed: ${photoRes.error.message}`);
   if (compRes.error) throw new Error(`listing-detail: comps failed: ${compRes.error.message}`);
+  // MLS mirror and video are enrichments: a read failure downgrades to absence
+  // rather than 500ing a page whose core content loaded fine.
+  const mls = mlsRes.error ? null : (mlsRes.data as MlsMirrorRow | null);
+  const video = videoRes.error ? null : (videoRes.data as ListingVideoRow | null);
 
-  return projectDetail(row, (photoRes.data ?? []) as PhotoRow[], (compRes.data ?? []) as CompRow[]);
+  return projectDetail(
+    row,
+    (photoRes.data ?? []) as PhotoRow[],
+    (compRes.data ?? []) as CompRow[],
+    {
+      mls,
+      video,
+    },
+  );
 }

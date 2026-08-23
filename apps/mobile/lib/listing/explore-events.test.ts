@@ -11,9 +11,12 @@ import {
 	buildActionTapEvent,
 	buildDatapointFocusEvent,
 	buildEvidenceCitedEvent,
+	buildFitDwellEvent,
 	buildHotspotEvent,
+	buildMediaSwipeEvent,
 	buildSaveFeatureEvent,
 	buildTourEvent,
+	buildTradeoffVoteEvent,
 } from "./explore-events";
 
 const ctx = {
@@ -117,5 +120,34 @@ describe("buildEvidenceCitedEvent", () => {
 		// A queued event is persisted and drained later; sharing the array would
 		// let a later mutation rewrite history.
 		expect(e?.evidenceIds).toEqual(["a", "b"]);
+	});
+});
+
+describe("phase118 constructors", () => {
+	it("media_swipe clamps a negative dwell like hotspot_open does", () => {
+		const e = buildMediaSwipeEvent(ctx, {
+			index: 3,
+			room: "kitchen",
+			dwellMs: -120,
+		});
+		expect(e).toMatchObject({ type: "media_swipe", index: 3, dwellMs: 0 });
+	});
+
+	it("fit_dwell refuses a scroll-past under 500ms", () => {
+		expect(buildFitDwellEvent(ctx, { ms: 499 })).toBeNull();
+		expect(buildFitDwellEvent(ctx, { ms: 500 })?.ms).toBe(500);
+	});
+
+	it("tradeoff_vote carries the axis and the choice", () => {
+		const e = buildTradeoffVoteEvent(ctx, {
+			axis: "price_vs_space",
+			value: "worth",
+		});
+		expect(e).toMatchObject({
+			type: "tradeoff_vote",
+			axis: "price_vs_space",
+			value: "worth",
+			listingId: "listing-1",
+		});
 	});
 });

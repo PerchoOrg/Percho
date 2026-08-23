@@ -36,6 +36,14 @@ export interface CompsCohortDTO {
 	medianPricePerSqftSampleSize?: number;
 }
 
+/** The listing's own walkthrough video, when one has been rendered. */
+export interface ListingVideoDTO {
+	/** HLS manifest URL (Cloudflare Stream). */
+	url: string;
+	posterUrl: string;
+	durationSec?: number;
+}
+
 export interface ListingDetailDTO {
 	id: string;
 	slug: string;
@@ -53,6 +61,17 @@ export interface ListingDetailDTO {
 	photos: DetailPhotoDTO[];
 	comps: CompsCohortDTO;
 	communityId?: string;
+	/** From the `mls_listings` mirror; absent when no mirror row is linked. */
+	daysOnMarket?: number;
+	/** RAW lot text ("0.31 acres", "13,504 sqft"…). */
+	lotSizeRaw?: string;
+	/** Mirror acres — present only when `lotSizeRaw` is not. */
+	lotSizeAcres?: number;
+	zip?: string;
+	neighborhood?: string;
+	/** The FMLS number a buyer can quote. */
+	mlsNumber?: string;
+	video?: ListingVideoDTO;
 }
 
 type State =

@@ -71,3 +71,14 @@ export function feedPoolUrl(params: {
 	if (params.videoFirst) q.set("videoFirst", "1");
 	return `${apiBase()}/api/mobile/feed?${q.toString()}`;
 }
+
+/**
+ * `/api/mobile/listings?ids=…` — batch summaries for the explore page's
+ * CompareRail and FitCard derivation (phase118). Caller caps the id count;
+ * the server re-caps at 24 regardless.
+ */
+export function listingSummariesUrl(ids: readonly string[]): string {
+	return `${apiBase()}/api/mobile/listings?ids=${ids
+		.map(encodeURIComponent)
+		.join(",")}`;
+}

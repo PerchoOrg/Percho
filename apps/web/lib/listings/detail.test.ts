@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { projectComps, projectDetail, projectPhotos } from './detail';
+import { projectComps, projectDetail, projectPhotos, projectVideo } from './detail';
 
 const baseListing = {
   id: 'l1',
@@ -138,5 +138,62 @@ describe('projectComps', () => {
       'Duluth',
     );
     expect(c.medianPricePerSqftSampleSize).toBe(5);
+  });
+});
+
+describe('projectDetail — phase118 enrichments (MLS mirror + walkthrough video)', () => {
+  const mls = { days_on_market: 23, lot_size_acres: 0.31, listing_key: '7382914' };
+
+  it('omits every enrichment when there is no mirror row and no video', () => {
+    const d = projectDetail(baseListing, [], []);
+    for (const key of ['daysOnMarket', 'lotSizeRaw', 'lotSizeAcres', 'mlsNumber', 'video']) {
+      expect(key in d, key).toBe(false);
+    }
+  });
+
+  it('carries daysOnMarket / lot / mls number from the mirror', () => {
+    const d = projectDetail(baseListing, [], [], { mls });
+    expect(d.daysOnMarket).toBe(23);
+    expect(d.lotSizeAcres).toBe(0.31);
+    expect(d.mlsNumber).toBe('7382914');
+  });
+
+  it('prefers listings.lot_size over the mirror acres — one lot figure only', () => {
+    const d = projectDetail({ ...baseListing, lot_size: '0.31 acres' }, [], [], { mls });
+    expect(d.lotSizeRaw).toBe('0.31 acres');
+    expect('lotSizeAcres' in d).toBe(false);
+  });
+
+  it('drops a negative days_on_market instead of rendering nonsense', () => {
+    const d = projectDetail(baseListing, [], [], {
+      mls: { ...mls, days_on_market: -1 },
+    });
+    expect('daysOnMarket' in d).toBe(false);
+  });
+
+  it('resolves the video square-first and carries duration only when real', () => {
+    const d = projectDetail(baseListing, [], [], {
+      video: {
+        cf_video_id: null,
+        cf_video_id_landscape: 'land1',
+        cf_video_id_square: 'sq1',
+        duration_sec: 42,
+      },
+    });
+    expect(d.video?.url).toContain('sq1');
+    expect(d.video?.posterUrl).toContain('sq1');
+    expect(d.video?.durationSec).toBe(42);
+  });
+
+  it('projectVideo returns null when no uid survives the fallback chain', () => {
+    expect(projectVideo(null)).toBeNull();
+    expect(
+      projectVideo({
+        cf_video_id: null,
+        cf_video_id_landscape: null,
+        cf_video_id_square: null,
+        duration_sec: 10,
+      }),
+    ).toBeNull();
   });
 });
