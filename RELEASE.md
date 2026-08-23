@@ -6,6 +6,17 @@
 
 ---
 
+## v1.3 — Opening a home now answers "does this fit me?"
+
+The home page has been rebuilt from the ground up. Instead of a list of MLS fields, opening a home now walks you through one question — whether this home fits the way you've been searching.
+
+- **One swipeable reel of everything.** The home's video tour plays first, then every photo, in one strip. Room chips (Kitchen · 7, Backyard · 2 …) show where you are and jump you straight to the room you care about. Tap any photo to see it full-screen and uncropped, or open the grid to see every photo grouped by room.
+- **"How it fits you."** The page compares this home against the homes you've actually saved and swiped — "More space than the homes you save: 6 of your 9 saves are under 2,800 sqft" — and is honest about the trade-offs, with the receipts for each claim. When a home costs more than your usual but gives you something back, it asks you directly: worth it, or not? One tap answers.
+- **What you'd actually pay.** The big number is the estimated monthly payment, not the sticker price, broken into loan, property tax, insurance and HOA — with the assumptions spelled out underneath. Not a lending offer.
+- **Days on market, lot size, and the MLS number** now appear on homes where we have them.
+- **Next to what you've saved.** The page ends with this home side by side with your saved homes — your own shortlist, never someone else's recommendations.
+- The essentials (lot, HOA, year built, ZIP, MLS#) sit in one compact card. Anything you'd still want to ask is coming next: a built-in "ask anything about this home".
+
 ## v1.2 — A community tour now shows the community, not just what surrounds it
 
 Until now a community film could show you everything *around* a neighborhood — its schools, its parks, the coffee shop down the road — but never the neighborhood itself. The gate, the pool, the clubhouse, the tennis courts: the things residents pay dues for, and among the first things a buyer asks about, were the one thing missing.

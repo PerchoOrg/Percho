@@ -1,151 +1,111 @@
 /**
- * Listing explore page (`02-listing.md` §2.2–2.4) — `/listing/[id]`.
+ * Listing explore page (phase119 redesign) — `/listing/[id]`.
  *
- * Pushed OVER the tab bar (see `app/_layout.tsx`), so the tab bar is correctly
- * absent here: this is a committed, depth-reading screen, not a tab.
+ * The owner's `percho-explore-reference.html` is the visual truth source; the
+ * accompanying spec's one-line brief for this page: answer "does this home fit
+ * ME", not "here are the MLS fields". Structure, top to bottom:
  *
- * §2.2 entry rules, implemented:
- *   - `?focus=<key>`  → skip the tour, land in free explore, scroll to the
- *                       section, highlight it for 2s.
- *   - no focus, 1st visit → guided tour (when the listing can produce one).
- *   - tour ✕ / finished, or a repeat visit → free explore, no penalty.
+ *   MediaCarousel   video slide 0 + every photo, room-jump strip
+ *   Headline        price / specs / address / days·$psf·built
+ *   FitCard         ★ locally-derived match & trade-off rows (`lib/listing/fit`)
+ *   CostBlock       monthly payment split, stated assumptions
+ *   FactsBlock      ≤6 real fields; the long tail is P1's Ask entry
+ *   CompareRail     this home next to the buyer's SAVES (not recommendations)
+ *   ActionDock      ✕ / ♡ / Request a tour
  *
- * §2.3–2.5 (tour stops, hotspot pins, action sheets) all hang off HOTSPOTS,
- * which come from `listing_photos.ai_tags`. The tour and pins appear
- * automatically for any listing that HAS tags — the code path is live, not
- * stubbed. Backfill tooling: `scripts/render-worker/backfill_photo_tags.py`
- * (Gemini tagger, migrated off Bedrock 2026-08-08).
+ * Every section can be independently absent (fit underivable → no card; no
+ * saves → no rail; no price → no cost) — absence over placeholder, always.
  *
- * No placeholder pins, no "coming soon" sections, no invented captions.
+ * This replaced the tour/hotspot explore page (owner decision 2026-08-23,
+ * "直接替换"). The tour machinery (`TourStop`, `HotspotSheet`, `build-hotspots`)
+ * stays in the repo unmounted; `?focus=` deep links land here harmlessly as
+ * plain opens (no live caller emits them today).
  */
 import { router, useLocalSearchParams } from "expo-router";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
-	Image,
 	Pressable,
 	ScrollView,
 	StyleSheet,
 	Text,
 	View,
+	useWindowDimensions,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { SoundToggle } from "../../components/SoundToggle";
-import { HotspotSheet } from "../../components/listing/HotspotSheet";
-import { PhotoGallery } from "../../components/listing/PhotoGallery";
-import { PriceHistogram } from "../../components/listing/PriceHistogram";
-import { TourStop } from "../../components/listing/TourStop";
-import { TransitionCard } from "../../components/listing/TransitionCard";
-import { ValueSlider } from "../../components/listing/ValueSlider";
+import { ActionDock } from "../../components/listing/explore/ActionDock";
 import {
-	DEFAULT_ANNUAL_RATE,
-	assumptionLabel,
-	formatRate,
-} from "../../lib/listing/assumptions";
-import {
-	buildHotspots,
-	buildListingTour,
-	transitionSignals,
-} from "../../lib/listing/build-hotspots";
+	type AppBarTab,
+	CollapsedAppBar,
+} from "../../components/listing/explore/CollapsedAppBar";
+import { CompareRail } from "../../components/listing/explore/CompareRail";
+import { CostBlock } from "../../components/listing/explore/CostBlock";
+import { FactsBlock } from "../../components/listing/explore/FactsBlock";
+import { FitCard } from "../../components/listing/explore/FitCard";
+import { MediaCarousel } from "../../components/listing/explore/MediaCarousel";
+import { PhotoGrid } from "../../components/listing/explore/PhotoGrid";
+import { PhotoViewer } from "../../components/listing/explore/PhotoViewer";
+import { DEFAULT_ANNUAL_RATE } from "../../lib/listing/assumptions";
+import { assumptionLine, buildCost } from "../../lib/listing/cost";
 import { useListingDetail } from "../../lib/listing/detail-dto";
 import {
-	buildActionTapEvent,
-	buildDatapointFocusEvent,
-	buildEvidenceCitedEvent,
-	buildHotspotEvent,
-	buildSaveFeatureEvent,
-	buildTourEvent,
+	buildDockActionEvent,
+	buildExploreOpenEvent,
+	buildFitDwellEvent,
+	buildMediaSwipeEvent,
+	buildPhotoFullscreenEvent,
+	buildRoomJumpEvent,
+	buildTradeoffVoteEvent,
 } from "../../lib/listing/explore-events";
-import {
-	FOCUS_HIGHLIGHT_MS,
-	type SectionId,
-	parseFocus,
-	sectionForFocus,
-	serialiseFocus,
-} from "../../lib/listing/focus-key";
-import { buildGallerySlides } from "../../lib/listing/gallery";
-import { buildDistribution } from "../../lib/listing/histogram";
-import type { ActionKind, Hotspot } from "../../lib/listing/hotspot";
-import { emojiForRoom } from "../../lib/listing/hotspot";
+import { buildFacts } from "../../lib/listing/facts";
+import { deriveFit } from "../../lib/listing/fit";
 import {
 	DEFAULT_DOWN_FRACTION,
-	computeMonthly,
 	formatUsd,
 	parseHoaMonthlyUsd,
 } from "../../lib/listing/monthly";
-import {
-	type NavChip,
-	buildNavChips,
-	currentNavKey,
-	navKey,
-} from "../../lib/listing/section-nav";
-import { DOWN_SCALE, RATE_SCALE } from "../../lib/listing/slider-scale";
+import { buildRoomGroups } from "../../lib/listing/rooms";
+import { useListingSummaries } from "../../lib/listing/summaries";
 import { useEventQueue } from "../../state/event-queue";
+import { useFeedSession } from "../../state/feed-session";
 import { useFunnelStore } from "../../state/funnel";
-import { colors, radii } from "../../theme/tokens";
-import { textStyles } from "../../theme/typography";
+import { useSavedStore } from "../../state/saved";
+import { explore, fonts } from "../../theme/tokens";
 
-const HERO_HEIGHT = 190;
-
-/**
- * Height of the sticky chip strip. The activation line for "which section am I
- * in" sits just below it, so a heading counts as reached when it clears the
- * chips rather than when it slides under them.
- */
-const NAV_H = 46;
+/** Scroll offset (pt below a section's top) a tab jump lands at. */
+const TAB_LANDING = 96;
 
 /**
- * §2.2's three entry modes. `tour` is only ever entered when a tour actually
- * exists AND there is no `?focus=`; everything else lands in `free`.
+ * The feed's geo-unit id for a city — MUST mirror the server's `citySlug`
+ * (`app/api/mobile/feed/route.ts`), because `SignalState.geo` is keyed by it.
  */
-type Mode = "tour" | "transition" | "free";
+function cityGeoUnitId(city: string, state: string): string {
+	return `city:${`${city}-${state}`
+		.toLowerCase()
+		.replace(/[^a-z0-9]+/g, "-")
+		.replace(/^-|-$/g, "")}`;
+}
 
 export default function ListingExploreScreen() {
-	const params = useLocalSearchParams<{ id?: string; focus?: string }>();
+	const params = useLocalSearchParams<{ id?: string }>();
 	const insets = useSafeAreaInsets();
+	const { width, height: screenH } = useWindowDimensions();
 	const state = useListingDetail(params.id);
 
-	const focus = useMemo(() => parseFocus(params.focus), [params.focus]);
-	const focusedSection = focus ? sectionForFocus(focus) : null;
+	// Reference §3.1: clamp(340, screenHeight * 0.46, 460) — 388pt on iPhone 15.
+	const heroH = Math.min(Math.max(340, screenH * 0.46), 460);
 
-	/**
-	 * §2.2: a `?focus=` deep link SKIPS the tour. Held in state (initialised from
-	 * the param) rather than derived, because the buyer can leave the tour and
-	 * that must not be undone by a re-render.
-	 */
-	const [mode, setMode] = useState<Mode>(focus ? "free" : "tour");
-	const [stopIndex, setStopIndex] = useState(0);
-	const [openHotspot, setOpenHotspot] = useState<Hotspot | null>(null);
-	/**
-	 * The full-photo gallery (2026-08-01). An OVERLAY, not a route, for the same
-	 * reason `TransitionCard` is one: dismissing it must return the buyer to this
-	 * page at the scroll position they left, and a route push/pop resets that.
-	 */
-	const [galleryOpen, setGalleryOpen] = useState(false);
-	const [visitedPins, setVisitedPins] = useState<readonly string[]>([]);
-
-	/**
-	 * §2.4 #3: the calculator's two adjustable inputs. Seeded from the same
-	 * defaults the data-face row uses, so the page opens showing the number the
-	 * buyer already saw and the sliders explain it rather than contradicting it.
-	 */
-	const [downFraction, setDownFraction] = useState(DEFAULT_DOWN_FRACTION);
-	const [annualRate, setAnnualRate] = useState(DEFAULT_ANNUAL_RATE);
-
-	/** §2.4 #2: which chip is highlighted, driven by scroll position. */
-	const [currentKey, setCurrentKey] = useState<string | null>(null);
-
-	// ——— §2.6 telemetry ———
-	// The queue and the stage are read once here; every emitter closes over them.
+	// ——— stores ———
 	const enqueue = useEventQueue((s) => s.enqueue);
 	const takeSeq = useEventQueue((s) => s.takeSeq);
 	const funnelStage = useFunnelStore((s) => s.stage);
+	const savedIds = useSavedStore((s) => s.ids);
+	const toggleSaved = useSavedStore((s) => s.toggle);
+	const seenListingCount = useFeedSession((s) => s.seenListingIds.length);
+	const geoSignals = useFeedSession((s) => s.signals.geo);
+
 	const listingId = params.id ?? "";
 
-	/**
-	 * Builds the shared context for an explore event. A function rather than a
-	 * memo because `seq` must be reserved AT EMIT TIME — a memoised context would
-	 * hand the same seq to every event in a session and destroy server-side dedupe.
-	 */
+	/** Shared event context. A function so `seq` is reserved at emit time. */
 	const ctx = useCallback(
 		() => ({
 			seq: takeSeq(),
@@ -156,70 +116,75 @@ export default function ListingExploreScreen() {
 		[takeSeq, funnelStage, listingId],
 	);
 
-	/** Open timestamp of the sheet, so `hotspot_open` can carry real dwell. */
-	const sheetOpenedAt = useRef(0);
-	/** Stop indices already reported, so a Prev/Next bounce is not a re-view. */
-	const viewedStops = useRef<Set<string>>(new Set());
-
-	// §2.1 #2 / §2.2: the landed-on section pulses for 2s, then stays put. A
-	// timer, not an animation loop — the highlight is a one-shot cue.
-	const [highlight, setHighlight] = useState<SectionId | null>(focusedSection);
+	/** §5 `explore_open` — once per arrival, not per render. */
 	useEffect(() => {
-		if (!focusedSection) return;
-		setHighlight(focusedSection);
-		const t = setTimeout(() => setHighlight(null), FOCUS_HIGHLIGHT_MS);
-		return () => clearTimeout(t);
-	}, [focusedSection]);
+		if (!listingId) return;
+		enqueue(buildExploreOpenEvent(ctx()));
+	}, [listingId, enqueue, ctx]);
 
-	/**
-	 * §2.6 row 5, `datapoint_focus(key)` — which data-face row the buyer tapped
-	 * to get here, which decides row ordering in v1.1.
-	 *
-	 * Emitted HERE rather than at the tap site on the feed card, because the
-	 * focus key is a property of the arriving URL: a deep link from anywhere
-	 * (share sheet, notification, a future Search result) is the same signal, and
-	 * one emitter at the destination cannot be forgotten by a new caller.
-	 * Keyed on `params.focus` so re-rendering does not re-report.
-	 */
-	useEffect(() => {
-		if (!focus) return;
-		enqueue(
-			buildDatapointFocusEvent(ctx(), { focusKey: serialiseFocus(focus) }),
-		);
-	}, [focus, enqueue, ctx]);
+	// ——— saves → summaries (rail + fit inputs) ———
+	const summaries = useListingSummaries(savedIds);
 
+	// ——— overlays ———
+	const [viewerIndex, setViewerIndex] = useState<number | null>(null);
+	const [gridOpen, setGridOpen] = useState(false);
+
+	// ——— vote (optimistic; the offline-durable queue reports behind it) ———
+	const [vote, setVote] = useState<"worth" | "not" | null>(null);
+
+	// ——— scroll bookkeeping: app bar, tabs, fit dwell ———
 	const scrollRef = useRef<ScrollView>(null);
-	/**
-	 * Scroll offset per nav key. Keyed by `navKey(...)`, so a fixed section
-	 * ("monthly") and a generated room section ("hotspot:<id>") share one map —
-	 * the chip strip and the `?focus=` deep link then read the same offsets
-	 * instead of two maps that can disagree.
-	 */
+	const [barVisible, setBarVisible] = useState(false);
+	const [activeTab, setActiveTab] = useState<string | null>(null);
 	const offsets = useRef<Record<string, number | undefined>>({});
-	/** Guards the one-shot deep-link scroll so later layout passes don't re-jump. */
-	const scrolledTo = useRef<SectionId | null>(null);
+
+	const fitSpan = useRef<{ y: number; h: number } | null>(null);
+	const fitShownAt = useRef<number | null>(null);
+	const fitDwellMs = useRef(0);
+
+	const settleFitDwell = useCallback((visible: boolean) => {
+		const now = Date.now();
+		if (visible && fitShownAt.current === null) fitShownAt.current = now;
+		if (!visible && fitShownAt.current !== null) {
+			fitDwellMs.current += now - fitShownAt.current;
+			fitShownAt.current = null;
+		}
+	}, []);
 
 	/**
-	 * Records a section's offset and, for the deep-linked one, scrolls to it.
-	 *
-	 * Driven by `onLayout` rather than an effect because the offset only EXISTS
-	 * after layout: an effect would have to depend on the fetch status to re-run
-	 * late, which is a proxy for "has it laid out yet" and fires at the wrong
-	 * time. `scrolledTo` keeps it one-shot, so a re-layout (rotation, image load)
-	 * cannot yank a buyer who has since scrolled away.
+	 * §5 `fit_dwell`, emitted once when the page is left. The emitter lives in
+	 * a ref so the unmount effect can stay mount-scoped without closing over a
+	 * stale `ctx` (the same staleness class DEVLOG 2026-08-23 records).
 	 */
-	const onSectionLayout = (key: string) => (y: number) => {
-		offsets.current[key] = y;
-		if (key !== focusedSection || scrolledTo.current === focusedSection) return;
-		scrolledTo.current = focusedSection;
-		scrollRef.current?.scrollTo({ y: Math.max(y - 8, 0), animated: true });
+	const emitFitDwell = useRef(() => {});
+	emitFitDwell.current = () => {
+		settleFitDwell(false);
+		const e = buildFitDwellEvent(ctx(), { ms: fitDwellMs.current });
+		if (e) enqueue(e);
+	};
+	useEffect(() => () => emitFitDwell.current(), []);
+
+	const handleScroll = (y: number) => {
+		setBarVisible(y > heroH - 120);
+		// Which tab: the last section whose top has cleared the bar.
+		let current: string | null = null;
+		for (const id of ["home", "cost"]) {
+			const top = offsets.current[id];
+			if (top !== undefined && top - 140 <= y) current = id;
+		}
+		setActiveTab(current);
+		// Fit dwell: visible while any part of the card is inside the viewport.
+		const span = fitSpan.current;
+		if (span) settleFitDwell(span.y < y + screenH && span.y + span.h > y);
 	};
 
-	/** §2.4 #2: a chip scrolls the page; it does not switch a tab. */
-	const scrollToKey = (key: string) => {
-		const y = offsets.current[key];
+	const scrollToTab = (id: string) => {
+		const y = offsets.current[id];
 		if (y === undefined) return;
-		scrollRef.current?.scrollTo({ y: Math.max(y - NAV_H, 0), animated: true });
+		scrollRef.current?.scrollTo({
+			y: Math.max(y - TAB_LANDING, 0),
+			animated: true,
+		});
 	};
 
 	if (state.status === "loading") {
@@ -233,7 +198,7 @@ export default function ListingExploreScreen() {
 	if (state.status === "missing") {
 		return (
 			<View style={styles.center}>
-				<Text style={styles.title}>This home is no longer listed.</Text>
+				<Text style={styles.centerTitle}>This home is no longer listed.</Text>
 				<Pressable onPress={() => router.back()} style={styles.backBtn}>
 					<Text style={styles.backLabel}>← Back</Text>
 				</Pressable>
@@ -244,7 +209,7 @@ export default function ListingExploreScreen() {
 	if (state.status === "error") {
 		return (
 			<View style={styles.center}>
-				<Text style={styles.title}>Couldn't load this home.</Text>
+				<Text style={styles.centerTitle}>Couldn't load this home.</Text>
 				<Text style={styles.dim}>{state.message}</Text>
 				<Pressable onPress={state.reload} style={styles.backBtn}>
 					<Text style={styles.backLabel}>Try again</Text>
@@ -254,204 +219,79 @@ export default function ListingExploreScreen() {
 	}
 
 	const { detail } = state;
-	const hero = detail.photos[0];
-	/**
-	 * Every photo, in `sort_order`. This is the set the owner asked Explore to
-	 * show — "浏览所有照片 包括视频里没有的" — so it is deliberately the raw DTO
-	 * list, not the video's shot plan (8–14 clips after dedup + quota trim) and
-	 * not the hotspot list (tagged, navigable rooms only).
-	 */
-	const gallerySlides = buildGallerySlides(detail.photos);
-	const hoaMonthlyUsd = parseHoaMonthlyUsd(detail.hoaRaw);
-	const monthly =
-		detail.price !== undefined
-			? computeMonthly({
-					priceUsd: detail.price,
-					// §2.4 #3: the sliders' current values, not the defaults. The data
-					// face's row is this same function at the defaults — one formula,
-					// two callers, which is why `monthly.ts` is shared and pure.
-					annualRate,
-					downFraction,
-					...(hoaMonthlyUsd !== undefined ? { hoaMonthlyUsd } : {}),
-				})
-			: undefined;
+	const saved = savedIds.includes(detail.id);
+	const rooms = buildRoomGroups(detail.photos);
 
-	const distribution = buildDistribution({
-		pricesUsd: detail.comps.pricesUsd,
-		subjectPriceUsd: detail.price ?? 0,
-		cohortLabel: detail.comps.cohortLabel,
-	});
+	// Saves other than this home — comparing a home to itself teaches nothing.
+	const otherSaves = summaries.filter((s) => s.id !== detail.id);
 
-	/**
-	 * §2.3–2.5 inventory. Empty today for every feed listing, because
-	 * `listing_photos.ai_tags` is unpopulated for the fmls import — so pins, the
-	 * tour, and the sheets simply do not appear rather than appearing empty. The
-	 * code path is live: backfilling tags turns all three on with no UI change.
-	 */
-	const hotspots = buildHotspots(detail.photos, {
-		comps: detail.comps,
-		...(detail.sqft !== undefined ? { sqft: detail.sqft } : {}),
-		...(detail.yearBuilt !== undefined ? { yearBuilt: detail.yearBuilt } : {}),
-	});
-	const tour = buildListingTour(hotspots, {
+	const citySignal = geoSignals.find(
+		(g) => g.unitId === cityGeoUnitId(detail.city, detail.state),
+	);
+	const fit = deriveFit({
+		...(detail.price !== undefined ? { price: detail.price } : {}),
 		...(detail.sqft !== undefined ? { sqft: detail.sqft } : {}),
 		...(detail.beds !== undefined ? { beds: detail.beds } : {}),
-		...(detail.yearBuilt !== undefined ? { yearBuilt: detail.yearBuilt } : {}),
+		city: detail.city,
+		saves: otherSaves,
+		seenListingCount,
+		...(citySignal
+			? { citySignal: { right: citySignal.right, left: citySignal.left } }
+			: {}),
 	});
 
-	const openSheet = (hotspot: Hotspot) => {
-		setOpenHotspot(hotspot);
-		// Start the dwell clock here, not in the sheet: §2.6 measures how long the
-		// buyer looked, which begins when it opens, not when it finishes animating.
-		sheetOpenedAt.current = Date.now();
-		// §2.4 #1: a visited pin stops pulsing.
-		setVisitedPins((v) => (v.includes(hotspot.id) ? v : [...v, hotspot.id]));
-	};
+	const hoaMonthlyUsd = parseHoaMonthlyUsd(detail.hoaRaw);
+	const cost =
+		detail.price !== undefined
+			? buildCost({
+					priceUsd: detail.price,
+					annualRate: DEFAULT_ANNUAL_RATE,
+					downFraction: DEFAULT_DOWN_FRACTION,
+					...(hoaMonthlyUsd !== undefined ? { hoaMonthlyUsd } : {}),
+				})
+			: null;
 
-	/**
-	 * §2.6 `hotspot_open(hotspot_id, dwell_ms)`, emitted on CLOSE so the duration
-	 * is real. See `explore-events.ts` for why dwell rides the open event rather
-	 * than needing a second close row.
-	 */
-	const closeSheet = () => {
-		const hotspot = openHotspot;
-		if (hotspot && sheetOpenedAt.current > 0) {
-			enqueue(
-				buildHotspotEvent(ctx(), {
-					hotspotId: hotspot.id,
-					dwellMs: Date.now() - sheetOpenedAt.current,
-				}),
-			);
-		}
-		sheetOpenedAt.current = 0;
-		setOpenHotspot(null);
-	};
+	const facts = buildFacts(detail);
 
-	/**
-	 * §2.6 `action_tap(kind)` plus `save_feature(feature)`.
-	 *
-	 * Save emits BOTH: the tap belongs in the action distribution (§2.6 row 3
-	 * watches for one action taking >70% share), and the saved feature is a
-	 * separate profile write (row 4). Collapsing them would lose one or the other.
-	 */
-	const emitAction = (
-		hotspot: Hotspot,
-		kind: ActionKind,
-		surface: "tour" | "sheet",
-	) => {
-		enqueue(
-			buildActionTapEvent(ctx(), { hotspotId: hotspot.id, kind, surface }),
-		);
-		if (kind === "save") {
-			enqueue(
-				buildSaveFeatureEvent(ctx(), {
-					hotspotId: hotspot.id,
-					// The label the buyer saw, per §2.6 row 4 — not an internal id.
-					feature: hotspot.title,
-				}),
-			);
-		}
-	};
-
-	/**
-	 * §2.2 / §2.3: the guided tour. Rendered INSTEAD of free explore, and only
-	 * when a real tour exists — `buildListingTour` returns null unless it can
-	 * produce 3 evidence-backed stops, and §2.2 sends that buyer straight to free
-	 * explore, which is the same no-penalty path the ✕ takes.
-	 */
-	if (mode === "tour" && tour) {
-		const stop = tour.stops[Math.min(stopIndex, tour.stops.length - 1)];
-		if (stop) {
-			const total = tour.stops.length;
-			const tourCtx = {
-				stopIndex,
-				stopCount: total,
-				stopId: stop.id,
-			};
-			/**
-			 * §2.6 `tour_stop_view` + `evidence_cited`, emitted during RENDER of a
-			 * stop the buyer has not seen before.
-			 *
-			 * In render rather than an effect, deliberately: the guarded set makes
-			 * this idempotent, and an effect would need `stop.id` in its dependency
-			 * list inside a branch that returns early — a conditional hook, which is
-			 * illegal. The set also means Prev/Next bouncing over stop 2 reports one
-			 * view, which is what a completion rate needs.
-			 */
-			if (!viewedStops.current.has(stop.id)) {
-				viewedStops.current.add(stop.id);
-				enqueue(buildTourEvent(ctx(), { ...tourCtx, type: "tour_stop_view" }));
-				// §2.6 row 6: which profile signals actually got put in front of the
-				// buyer. Null when the stop cited nothing — impossible today, since
-				// `tour.ts` refuses an evidence-free stop, but the guard is the point.
-				const cited = buildEvidenceCitedEvent(ctx(), {
-					stopId: stop.id,
-					evidenceIds: stop.evidence.flatMap((e) => e.sourceIds ?? [e.label]),
-				});
-				if (cited) enqueue(cited);
-			}
-			return (
-				<View style={styles.screen}>
-					<TourStop
-						stop={stop}
-						index={stopIndex}
-						stopIds={tour.stops.map((s) => s.id)}
-						onPrev={() => setStopIndex((i) => Math.max(i - 1, 0))}
-						onNext={() => {
-							if (stopIndex >= total - 1) {
-								enqueue(
-									buildTourEvent(ctx(), { ...tourCtx, type: "tour_complete" }),
-								);
-								setMode("transition");
-								return;
-							}
-							setStopIndex((i) => i + 1);
-						}}
-						onExit={() => {
-							// §2.6 row 1: abandon carries the stop it happened AT, which is
-							// the drop-off point the completion funnel is measuring.
-							enqueue(
-								buildTourEvent(ctx(), { ...tourCtx, type: "tour_abandoned" }),
-							);
-							setMode("free");
-						}}
-						onAction={(kind) => emitAction(stop.hotspot, kind, "tour")}
-					/>
-				</View>
-			);
-		}
-	}
-
-	const stats = [
-		detail.beds !== undefined ? `${detail.beds} beds` : null,
-		detail.baths !== undefined ? `${detail.baths} baths` : null,
+	const specs = [
+		detail.beds !== undefined ? `${detail.beds} bd` : null,
+		detail.baths !== undefined ? `${detail.baths} ba` : null,
 		detail.sqft !== undefined
 			? `${detail.sqft.toLocaleString("en-US")} sqft`
 			: null,
-		detail.yearBuilt !== undefined ? `built ${detail.yearBuilt}` : null,
 	]
 		.filter((s): s is string => s !== null)
 		.join(" · ");
 
-	const sectionStyle = (id: SectionId) => [
-		styles.section,
-		highlight === id && styles.sectionHighlight,
+	const pricePerSqft =
+		detail.price !== undefined && detail.sqft !== undefined && detail.sqft > 0
+			? Math.round(detail.price / detail.sqft)
+			: undefined;
+
+	const tabs: AppBarTab[] = [
+		{ id: "home", label: "HOME" },
+		...(cost ? [{ id: "cost", label: "COST" }] : []),
 	];
 
-	/**
-	 * §2.4 #2's chip row. Built from what this page actually renders, using the
-	 * SAME conditions as the JSX below — the flags are read from the same
-	 * expressions, not re-derived, so a chip cannot outlive its section.
-	 */
-	const navChips: NavChip[] = buildNavChips({
-		hotspots,
-		hasMonthly: !!monthly,
-		hasComps: distribution.kind !== "empty",
-		hasCosts: !!detail.hoaRaw,
-		// Community is 03's screen; the section is not on this page yet, so no chip.
-		hasCommunity: false,
-	});
-	const activeKey = currentKey ?? navChips[0]?.key ?? null;
+	const priceTitle =
+		detail.price !== undefined ? formatUsd(detail.price) : detail.address;
+	const barTitle =
+		detail.beds !== undefined
+			? `${priceTitle} · ${detail.beds} bd`
+			: priceTitle;
+
+	const toggleSave = (surface: "dock" | "hero") => {
+		const nowSaved = toggleSaved(detail.id);
+		if (surface === "dock") {
+			enqueue(
+				buildDockActionEvent(ctx(), { action: nowSaved ? "save" : "unsave" }),
+			);
+		}
+	};
+
+	const sectionLayout = (id: string) => (y: number) => {
+		offsets.current[id] = y;
+	};
 
 	return (
 		<View style={styles.screen}>
@@ -459,325 +299,190 @@ export default function ListingExploreScreen() {
 				ref={scrollRef}
 				contentContainerStyle={{ paddingBottom: insets.bottom + 96 }}
 				showsVerticalScrollIndicator={false}
-				/**
-				 * The chip strip is child index 1 (the hero is 0), so it scrolls up
-				 * with the hero and then PINS — §2.4 #2 wants it reachable from any
-				 * scroll position without stealing height at the top of the page.
-				 * `stickyHeaderIndices` rather than an absolutely positioned bar
-				 * because an overlay would sit on top of the hero and its ← button.
-				 */
-				stickyHeaderIndices={navChips.length > 0 ? [1] : undefined}
-				// 16/s is enough for a highlight that tracks headings and cheap
-				// enough not to fight the scroll: this handler only recomputes which
-				// chip is current from offsets already measured.
 				scrollEventThrottle={64}
-				onScroll={(e) =>
-					setCurrentKey(
-						currentNavKey(
-							navChips,
-							offsets.current,
-							e.nativeEvent.contentOffset.y,
-							NAV_H + 8,
-						),
-					)
-				}
+				onScroll={(e) => handleScroll(e.nativeEvent.contentOffset.y)}
 			>
-				<View style={styles.hero}>
-					{hero ? (
-						<Image source={{ uri: hero.url }} style={styles.heroImg} />
-					) : (
-						<View style={[styles.heroImg, styles.heroEmpty]} />
-					)}
-					<Pressable
-						onPress={() => router.back()}
-						hitSlop={10}
-						style={[styles.heroBack, { top: insets.top + 8 }]}
-					>
-						<Text style={styles.heroBackLabel}>←</Text>
-					</Pressable>
-					{/*
-					 * The global mute toggle (owner, 2026-08-14). It used to sit in the
-					 * feed's chrome row, but that row is now the wordmark and its two
-					 * corners must stay empty, so the control moved here rather than
-					 * being deleted — this screen plays the guided tour ("Replay tour
-					 * →"), so it is the surface where a buyer actually wants sound, and
-					 * §0.7's global `soundOn` store is unchanged.
-					 */}
-					<View style={[styles.heroSound, { top: insets.top + 8 }]}>
-						<SoundToggle />
-					</View>
-					{/* §2.4 #1: a pin per hotspot; unvisited ones pulse. Pulse is the
-					    ring's opacity, not a scale transform — a scaling pin over a photo
-					    reads as a layout jitter on device. */}
-					{hotspots.map((hotspot) => (
-						<Pressable
-							key={hotspot.id}
-							onPress={() => openSheet(hotspot)}
-							hitSlop={8}
-							style={[
-								styles.pin,
-								{
-									left: `${hotspot.pin.x * 100}%`,
-									top: `${hotspot.pin.y * 100}%`,
-								},
-								!visitedPins.includes(hotspot.id) && styles.pinUnvisited,
-							]}
-						>
-							<Text style={styles.pinGlyph}>{emojiForRoom(hotspot.room)}</Text>
-						</Pressable>
-					))}
-					{/*
-					 * The gallery entry point, bottom-right of the hero.
-					 *
-					 * This is where the photo count went when the swipe card's hero pill
-					 * was removed (2026-08-01). On the card that pill sat over playing
-					 * video and cost immersion for no gain; here it is the affordance
-					 * that answers "can I see the rest?", on a still image, on a screen
-					 * the buyer navigated to on purpose. Same information, the surface
-					 * where it is an action rather than a decoration.
-					 *
-					 * `> 1` because "1 Photo" is not worth a button — the hero already
-					 * IS that photo.
-					 */}
-					{gallerySlides.length > 1 && (
-						<Pressable
-							onPress={() => setGalleryOpen(true)}
-							hitSlop={8}
-							accessibilityRole="button"
-							accessibilityLabel={`View all ${gallerySlides.length} photos`}
-							style={({ pressed }) => [
-								styles.galleryBtn,
-								pressed && styles.pressedRow,
-							]}
-						>
-							<Text style={styles.galleryLabel}>
-								{`⊞  All ${gallerySlides.length} photos`}
-							</Text>
-						</Pressable>
-					)}
-				</View>
+				<MediaCarousel
+					width={width}
+					height={heroH}
+					{...(detail.video ? { video: detail.video } : {})}
+					photos={detail.photos}
+					rooms={rooms}
+					saved={saved}
+					onBack={() => router.back()}
+					onToggleSave={() => toggleSave("hero")}
+					onOpenGrid={() => setGridOpen(true)}
+					onOpenViewer={(photoIndex) => {
+						setViewerIndex(photoIndex);
+						enqueue(
+							buildPhotoFullscreenEvent(ctx(), {
+								index: photoIndex,
+								room: rooms.keyByIndex[photoIndex] ?? "other",
+							}),
+						);
+					}}
+					onSlideChange={(index, room, dwellMs) =>
+						enqueue(buildMediaSwipeEvent(ctx(), { index, room, dwellMs }))
+					}
+					onRoomJump={(room) => enqueue(buildRoomJumpEvent(ctx(), { room }))}
+				/>
 
-				{/*
-				 * §2.4 #2: a horizontally scrolling chip row. Scrolls the page, does
-				 * NOT switch a tab — this is one long page and the chips are jumps
-				 * within it. Rendered as an empty View (not null) when there are no
-				 * chips, so `stickyHeaderIndices`'s child index stays valid.
-				 */}
-				{navChips.length > 0 ? (
-					<View style={styles.navBar}>
-						<ScrollView
-							horizontal
-							showsHorizontalScrollIndicator={false}
-							contentContainerStyle={styles.navRow}
-						>
-							{navChips.map((chip) => {
-								const active = chip.key === activeKey;
-								return (
-									<Pressable
-										key={chip.key}
-										onPress={() => scrollToKey(chip.key)}
-										style={({ pressed }) => [
-											styles.chip,
-											active && styles.chipActive,
-											pressed && styles.pressedRow,
-										]}
-									>
-										<Text
-											style={[
-												styles.chipLabel,
-												active && styles.chipLabelActive,
-											]}
-										>
-											{chip.label}
-										</Text>
-									</Pressable>
-								);
-							})}
-						</ScrollView>
-					</View>
-				) : (
-					<View />
-				)}
-
+				{/* ——— Headline (§3.3) ——— */}
 				<View
-					style={sectionStyle("overview")}
-					onLayout={(e) => onSectionLayout("overview")(e.nativeEvent.layout.y)}
+					style={styles.section}
+					onLayout={(e) => sectionLayout("home")(e.nativeEvent.layout.y)}
 				>
-					<Text style={styles.price}>
-						{detail.price !== undefined
-							? formatUsd(detail.price)
-							: detail.address}
-					</Text>
+					<View style={styles.headline}>
+						<Text style={styles.price}>{priceTitle}</Text>
+						{!!specs && <Text style={styles.specs}>{specs}</Text>}
+					</View>
 					<Text style={styles.address}>
 						{detail.address} · {detail.city}, {detail.state}
+						{detail.zip ? ` ${detail.zip}` : ""}
 					</Text>
-					{!!stats && <Text style={styles.stats}>{stats}</Text>}
-					{/* §2.2: once the buyer is in free explore and a tour exists, the top
-					    of the page keeps a text link back into it. */}
-					{mode === "free" && !!tour && (
-						<Pressable
-							onPress={() => {
-								setStopIndex(0);
-								setMode("tour");
-							}}
-							hitSlop={6}
-						>
-							<Text style={styles.replay}>Replay tour →</Text>
-						</Pressable>
+					{(detail.daysOnMarket !== undefined ||
+						pricePerSqft !== undefined ||
+						detail.yearBuilt !== undefined) && (
+						<View style={styles.meta}>
+							{detail.daysOnMarket !== undefined && (
+								<Text style={styles.metaItem}>
+									<Text style={styles.metaStrong}>{detail.daysOnMarket}</Text>
+									{" days listed"}
+								</Text>
+							)}
+							{pricePerSqft !== undefined && (
+								<Text style={styles.metaItem}>
+									<Text style={styles.metaStrong}>{`$${pricePerSqft}`}</Text>
+									/sqft
+								</Text>
+							)}
+							{detail.yearBuilt !== undefined && (
+								<Text style={styles.metaItem}>
+									Built{" "}
+									<Text style={styles.metaStrong}>{detail.yearBuilt}</Text>
+								</Text>
+							)}
+						</View>
 					)}
-					{detail.description?.map((para) => (
-						<Text key={para.slice(0, 32)} style={styles.body}>
-							{para}
-						</Text>
-					))}
 				</View>
 
-				{!!monthly && (
+				{/* ——— FitCard (§3.4) — absent when underivable, never faked ——— */}
+				{fit && (
 					<View
-						style={sectionStyle("monthly")}
-						onLayout={(e) => onSectionLayout("monthly")(e.nativeEvent.layout.y)}
+						style={styles.section}
+						onLayout={(e) => {
+							fitSpan.current = {
+								y: e.nativeEvent.layout.y,
+								h: e.nativeEvent.layout.height,
+							};
+						}}
 					>
-						<Text style={styles.sectionHead}>MONTHLY</Text>
-						<Text
-							style={styles.big}
-						>{`${formatUsd(monthly.totalUsd)}/mo`}</Text>
-						<Text style={styles.dim}>
-							{/* The label must follow the SLIDERS, not the defaults — a
-							    disclosure that says "assumes 6.5%" under a payment
-							    computed at 8% is worse than no disclosure. */}
-							{assumptionLabel(annualRate, downFraction)}
-						</Text>
-						<Text style={styles.dim}>
-							{`principal & interest ${formatUsd(monthly.principalAndInterestUsd)}`}
-							{monthly.hoaMonthlyUsd !== undefined
-								? ` · HOA ${formatUsd(monthly.hoaMonthlyUsd)}`
-								: ""}
-						</Text>
-						{/* §2.4 #3: "Monthly section = 可调计算器(down %、rate,滑杆)". */}
-						<ValueSlider
-							label="Down payment"
-							valueLabel={`${Math.round(downFraction * 100)}% · ${formatUsd(monthly.downPaymentUsd)}`}
-							value={downFraction}
-							scale={DOWN_SCALE}
-							onChange={setDownFraction}
-							a11yLabel="Down payment percentage"
+						<FitCard
+							fit={fit}
+							vote={vote}
+							onVote={(value) => {
+								setVote(value);
+								if (fit.question) {
+									enqueue(
+										buildTradeoffVoteEvent(ctx(), {
+											axis: fit.question.axis,
+											value,
+										}),
+									);
+								}
+							}}
 						/>
-						<ValueSlider
-							label="Interest rate"
-							valueLabel={formatRate(annualRate)}
-							value={annualRate}
-							scale={RATE_SCALE}
-							onChange={setAnnualRate}
-							a11yLabel="Annual interest rate"
-						/>
-						{annualRate !== DEFAULT_ANNUAL_RATE && (
-							<Pressable onPress={() => setAnnualRate(DEFAULT_ANNUAL_RATE)}>
-								<Text style={styles.replay}>Reset to published rate</Text>
-							</Pressable>
-						)}
-						{/* Says what is NOT in the number, rather than quietly excluding
-						    it: taxes and insurance are not in the schema. */}
-						<Text style={styles.dim}>
-							Taxes and insurance aren't included — we don't have them for this
-							home.
-						</Text>
 					</View>
 				)}
 
-				{distribution.kind !== "empty" && (
+				{/* ——— Cost (§3.7) ——— */}
+				{cost && (
 					<View
-						style={sectionStyle("comps")}
-						onLayout={(e) => onSectionLayout("comps")(e.nativeEvent.layout.y)}
+						style={[styles.section, styles.sectionRuled]}
+						onLayout={(e) => sectionLayout("cost")(e.nativeEvent.layout.y)}
 					>
-						<Text style={styles.sectionHead}>COMPS</Text>
-						<PriceHistogram distribution={distribution} size="full" />
-						{detail.comps.medianPricePerSqft !== undefined && (
-							<Text style={styles.dim}>
-								{`${detail.comps.cohortLabel} median $${detail.comps.medianPricePerSqft}/sqft · ${detail.comps.medianPricePerSqftSampleSize} listings`}
-							</Text>
-						)}
+						<Text style={styles.eyebrow}>WHAT YOU'D ACTUALLY PAY</Text>
+						<CostBlock
+							cost={cost}
+							assumptionLine={assumptionLine({
+								downFraction: DEFAULT_DOWN_FRACTION,
+								annualRate: DEFAULT_ANNUAL_RATE,
+							})}
+						/>
 					</View>
 				)}
 
-				{/* §2.4 #3: one section per hotspot room, each a row that opens the
-				    action sheet. Absent entirely when there are no hotspots — no
-				    "features coming soon" placeholder. */}
-				{hotspots.map((hotspot) => (
-					<Pressable
-						key={hotspot.id}
-						onPress={() => openSheet(hotspot)}
-						// Registers this section's offset under the same key its chip
-						// carries, which is what makes the chip able to scroll here.
-						onLayout={(e) =>
-							onSectionLayout(
-								navKey({ kind: "hotspot", id: hotspot.id, room: hotspot.room }),
-							)(e.nativeEvent.layout.y)
-						}
-						style={({ pressed }) => [
-							styles.section,
-							pressed && styles.pressedRow,
-						]}
-					>
-						<Text style={styles.sectionHead}>
-							{hotspot.room} {emojiForRoom(hotspot.room)}
-						</Text>
-						<Text style={styles.stats}>{hotspot.title}</Text>
-						<Text style={styles.dim}>
-							{`${hotspot.actions.length} actions`}
-						</Text>
-					</Pressable>
-				))}
+				{/* ——— Facts (§3.8) ——— */}
+				{facts.length > 0 && (
+					<View style={[styles.section, styles.sectionRuled]}>
+						<Text style={styles.eyebrow}>THE REST OF IT</Text>
+						<FactsBlock facts={facts} />
+					</View>
+				)}
 
-				{!!detail.hoaRaw && (
-					<View
-						style={sectionStyle("costs")}
-						onLayout={(e) => onSectionLayout("costs")(e.nativeEvent.layout.y)}
-					>
-						<Text style={styles.sectionHead}>COSTS</Text>
-						<Text style={styles.body}>HOA {detail.hoaRaw}</Text>
+				{/* ——— Compare (§3.9) — saves only, never recommendations ——— */}
+				{otherSaves.length > 0 && (
+					<View style={[styles.section, styles.sectionRuled]}>
+						<Text style={styles.eyebrow}>NEXT TO WHAT YOU'VE SAVED</Text>
+						<CompareRail
+							current={{
+								...(detail.price !== undefined ? { price: detail.price } : {}),
+								city: detail.city,
+								...(detail.photos[0] ? { thumbUrl: detail.photos[0].url } : {}),
+							}}
+							saves={otherSaves}
+						/>
 					</View>
 				)}
 			</ScrollView>
 
-			{/* §2.4 #4: the commercial endpoint, reachable from any scroll position. */}
-			<View style={[styles.ctaBar, { paddingBottom: insets.bottom + 12 }]}>
-				<Pressable style={styles.cta}>
-					<Text style={styles.ctaLabel}>Schedule a tour</Text>
-				</Pressable>
-			</View>
+			<CollapsedAppBar
+				visible={barVisible}
+				title={barTitle}
+				subtitle={`${detail.address}, ${detail.city}`}
+				saved={saved}
+				tabs={tabs}
+				activeTab={activeTab ?? tabs[0]?.id ?? null}
+				onTab={scrollToTab}
+				onBack={() => router.back()}
+				onToggleSave={() => toggleSave("hero")}
+			/>
 
-			{/* §2.4 #5: an overlay ON free explore, not a route — Continue must resume
-			    the same URL at the same scroll position. */}
-			{mode === "transition" && !!tour && (
-				<TransitionCard
-					signals={transitionSignals(tour)}
-					onContinue={() => setMode("free")}
+			<ActionDock
+				saved={saved}
+				bottomInset={insets.bottom}
+				onPass={() => {
+					enqueue(buildDockActionEvent(ctx(), { action: "pass" }));
+					router.back();
+				}}
+				onToggleSave={() => toggleSave("dock")}
+				onTour={() => enqueue(buildDockActionEvent(ctx(), { action: "tour" }))}
+			/>
+
+			{/* Overlays — mounted only while open (see DEVLOG 2026-07-27). */}
+			{gridOpen && (
+				<PhotoGrid
+					photos={detail.photos}
+					rooms={rooms}
+					onClose={() => setGridOpen(false)}
+					onPick={(photoIndex) => {
+						setGridOpen(false);
+						setViewerIndex(photoIndex);
+						enqueue(
+							buildPhotoFullscreenEvent(ctx(), {
+								index: photoIndex,
+								room: rooms.keyByIndex[photoIndex] ?? "other",
+							}),
+						);
+					}}
 				/>
 			)}
-
-			{/*
-			 * The full-photo gallery. Mounted ONLY while open, following the same
-			 * rule the HotspotSheet note below records: a permanently-mounted
-			 * full-screen overlay black-screened the feed on iOS. This one is a plain
-			 * absolutely-positioned View rather than a Modal, so it cannot repeat
-			 * that failure, but conditional mounting also means a 40-photo listing
-			 * pays nothing until the buyer asks for the photos.
-			 */}
-			{galleryOpen && (
-				<PhotoGallery
-					slides={gallerySlides}
-					onClose={() => setGalleryOpen(false)}
-				/>
-			)}
-
-			{/* Mounted ONLY while open. An always-mounted transparent Modal
-			    black-screened the whole feed on iOS in task-1 — see DEVLOG
-			    2026-07-27. Do not switch this to a `visible` toggle. */}
-			{!!openHotspot && (
-				<HotspotSheet
-					hotspot={openHotspot}
-					onClose={closeSheet}
-					onAction={(kind) => emitAction(openHotspot, kind, "sheet")}
+			{viewerIndex !== null && (
+				<PhotoViewer
+					photos={detail.photos}
+					rooms={rooms}
+					initialIndex={viewerIndex}
+					onClose={() => setViewerIndex(null)}
 				/>
 			)}
 		</View>
@@ -785,126 +490,76 @@ export default function ListingExploreScreen() {
 }
 
 const styles = StyleSheet.create({
-	screen: { flex: 1, backgroundColor: colors.bg },
+	screen: { flex: 1, backgroundColor: explore.bg },
 	center: {
 		flex: 1,
 		alignItems: "center",
 		justifyContent: "center",
 		gap: 10,
 		padding: 24,
-		backgroundColor: colors.bg,
+		backgroundColor: explore.bg,
 	},
-	hero: { height: HERO_HEIGHT, backgroundColor: colors.surface2 },
-	heroImg: { width: "100%", height: HERO_HEIGHT },
-	heroEmpty: { backgroundColor: colors.surface2 },
-	heroBack: {
-		position: "absolute",
-		left: 16,
-		width: 36,
-		height: 36,
-		borderRadius: radii.pill,
-		alignItems: "center",
-		justifyContent: "center",
-		backgroundColor: colors.glass,
+	centerTitle: {
+		fontSize: 17,
+		fontWeight: "700",
+		color: explore.ink,
+		textAlign: "center",
+		fontFamily: fonts.ui,
 	},
-	heroBackLabel: { ...textStyles.headline, color: colors.ink },
-	/** Mirrors `heroBack` at the other end of the hero. */
-	heroSound: { position: "absolute", right: 16 },
-	pin: {
-		position: "absolute",
-		width: 32,
-		height: 32,
-		marginLeft: -16,
-		marginTop: -16,
-		borderRadius: radii.pill,
-		alignItems: "center",
-		justifyContent: "center",
-		backgroundColor: colors.glass,
-	},
-	/** Unvisited pins carry the accent ring (§2.4 #1). */
-	pinUnvisited: { borderWidth: 2, borderColor: colors.accent },
-	pinGlyph: { fontSize: 16 },
-	/**
-	 * The "All N photos" button, bottom-right of the hero. `glass` is the §0.3
-	 * token for a light control laid over a photo — the same one the hero's ←
-	 * uses, so the two read as one control layer rather than two designs.
-	 */
-	galleryBtn: {
-		position: "absolute",
-		right: 12,
-		bottom: 12,
-		minHeight: 34,
-		justifyContent: "center",
-		paddingHorizontal: 12,
-		borderRadius: radii.pill,
-		backgroundColor: colors.glass,
-	},
-	galleryLabel: { ...textStyles.footnote, color: colors.ink },
-	section: {
-		paddingHorizontal: 20,
-		paddingVertical: 18,
-		gap: 6,
-		borderBottomWidth: StyleSheet.hairlineWidth,
-		borderBottomColor: colors.border,
-	},
-	sectionHighlight: { backgroundColor: colors.surface2 },
-	pressedRow: { opacity: 0.75 },
-	/**
-	 * The sticky chip strip. Opaque `bg` is required, not cosmetic: a sticky
-	 * header with a transparent background lets the content scroll through it.
-	 */
-	navBar: {
-		height: NAV_H,
-		justifyContent: "center",
-		backgroundColor: colors.bg,
-		borderBottomWidth: StyleSheet.hairlineWidth,
-		borderBottomColor: colors.border,
-	},
-	navRow: { paddingHorizontal: 20, gap: 8, alignItems: "center" },
-	chip: {
-		minHeight: 30,
-		justifyContent: "center",
-		paddingHorizontal: 12,
-		borderRadius: radii.pill,
-		backgroundColor: colors.surface2,
-	},
-	chipActive: { backgroundColor: colors.accent },
-	chipLabel: { ...textStyles.footnote, color: colors.ink2 },
-	chipLabelActive: { color: colors.bg },
-	replay: { ...textStyles.headline, color: colors.accent, marginTop: 6 },
-	sectionHead: { ...textStyles.caption, color: colors.accent },
-	price: { ...textStyles.title1, color: colors.ink },
-	big: { ...textStyles.title1, color: colors.ink },
-	address: { ...textStyles.footnote, color: colors.ink2 },
-	stats: { ...textStyles.body, color: colors.ink },
-	body: { ...textStyles.body, color: colors.ink, marginTop: 4 },
-	title: { ...textStyles.title2, color: colors.ink, textAlign: "center" },
-	dim: { ...textStyles.footnote, color: colors.ink2 },
+	dim: { fontSize: 13, color: explore.ink2, fontFamily: fonts.ui },
 	backBtn: {
 		minHeight: 44,
 		justifyContent: "center",
 		paddingHorizontal: 20,
-		borderRadius: radii.pill,
-		backgroundColor: colors.surface2,
+		borderRadius: 999,
+		backgroundColor: explore.chip,
 	},
-	backLabel: { ...textStyles.headline, color: colors.ink },
-	ctaBar: {
-		position: "absolute",
-		left: 0,
-		right: 0,
-		bottom: 0,
-		paddingHorizontal: 20,
-		paddingTop: 12,
-		backgroundColor: colors.bg,
+	backLabel: {
+		fontSize: 15,
+		fontWeight: "600",
+		color: explore.ink,
+		fontFamily: fonts.ui,
+	},
+	section: { paddingHorizontal: 18, paddingVertical: 20 },
+	sectionRuled: {
 		borderTopWidth: StyleSheet.hairlineWidth,
-		borderTopColor: colors.border,
+		borderTopColor: explore.line,
 	},
-	cta: {
-		minHeight: 50,
-		alignItems: "center",
-		justifyContent: "center",
-		borderRadius: radii.btn,
-		backgroundColor: colors.cta,
+	eyebrow: {
+		fontSize: 10,
+		fontWeight: "700",
+		letterSpacing: 1.5,
+		color: explore.muted,
+		marginBottom: 12,
+		fontFamily: fonts.ui,
 	},
-	ctaLabel: { ...textStyles.headline, color: colors.bg },
+	headline: {
+		flexDirection: "row",
+		alignItems: "baseline",
+		justifyContent: "space-between",
+		gap: 10,
+	},
+	price: {
+		fontSize: 32,
+		fontWeight: "700",
+		letterSpacing: -1.1,
+		color: explore.ink,
+		fontFamily: fonts.ui,
+		fontVariant: ["tabular-nums"],
+	},
+	specs: {
+		fontSize: 13,
+		fontWeight: "600",
+		color: explore.ink2,
+		fontFamily: fonts.ui,
+	},
+	address: {
+		fontSize: 13,
+		color: explore.muted,
+		marginTop: 7,
+		fontFamily: fonts.ui,
+	},
+	meta: { flexDirection: "row", gap: 16, marginTop: 13 },
+	metaItem: { fontSize: 11.5, color: explore.ink2, fontFamily: fonts.ui },
+	metaStrong: { fontWeight: "600", color: explore.ink },
 });

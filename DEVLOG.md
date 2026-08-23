@@ -16,6 +16,93 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-23 09:55 UTC — phase119: the explore page answers "does this home fit me"
+
+**Objective**: owner shipped a full spec + interactive reference
+(`percho-explore-reference.html`, cream/forest-green, iPhone-15 pixel basis)
+for a rebuilt listing explore page, and the instruction "build a complete
+explore page … deliver end to end". Two decisions taken via prompt before
+work started: the new page **replaces** `/listing/[id]` outright, and the
+FitCard derives **locally** from real device history (no server preference
+engine exists yet).
+
+**Actions** (branch `phase119/explore-home-detail`, ws6):
+- **Web** — `lib/listings/detail.ts`: DTO grew `daysOnMarket` / `lotSizeAcres`
+  / `mlsNumber` (all from the `mls_listings` mirror via `our_listing_id` —
+  the "no DOM column" note from 2026-07-27 predates the mirror), `lotSizeRaw`
+  / `zip` / `neighborhood` (columns that were always there), and `video`
+  (walkthrough `listing_videos` row, square-first via `mobileVideoUid`, HLS +
+  poster URLs). New `lib/listings/summaries.ts` +
+  `GET /api/mobile/listings?ids=…` — batch summaries (price/beds/sqft/city/
+  thumb) serving both the CompareRail and the fit derivation; ids capped at
+  24, unknown ids dropped silently.
+- **Mobile libs** — `lib/listing/rooms.ts` (VLM `room_type` → 8 display
+  groups; strip/grid/viewer share ONE taxonomy), `fit.ts` (price/sqft/beds
+  medians vs the buyer's saves + city swipe tallies; every row carries a real
+  "N of your M saves…" attribution; card is null under `MIN_SAVES`=3 or with
+  no match), `cost.ts` (P&I via shared `computeMonthly` + flat-rate tax
+  0.85%/yr and insurance 0.35%/yr, disclosed by `assumptionLine` ending "Not
+  a lending offer."), `facts.ts` (≤6 rows, only schema-real fields — no
+  garage/heating anywhere in the schema, so they never render),
+  `summaries.ts` fetch hook (soft-fail to absent sections).
+- **Events** — `explore-events.ts` gained the spec §5 union: `explore_open`,
+  `media_swipe` (dwell per slide), `room_jump`, `photo_fullscreen`,
+  `fit_dwell` (refuses <500ms scroll-pasts), `tradeoff_vote`, `cost_adjust`
+  (P1 UI, event ready), `dock_action`.
+- **State** — `feed-session.ts` grew persisted `seenListingIds` (listing
+  cards actually swiped): the honest denominator behind "from N homes you've
+  seen". `seenIds` couldn't serve — it mixes card kinds and counts paged-in
+  cards.
+- **Components** — `components/listing/explore/`: MediaCarousel (video slide
+  0 + all photos, cover-fit, room strip that doubles as chapters entry,
+  global SoundToggle kept on slide 0 — its only non-dev mount), CollapsedAppBar
+  (160ms fade past the hero, HOME/COST tabs), FitCard (optimistic vote),
+  CostBlock (proportional bars), FactsBlock, CompareRail (saves only, city as
+  the shared dimension until commutes exist), ActionDock (✕/♡/tour over a
+  gradient fade), PhotoViewer (contain, near-black backdrop), PhotoGrid
+  (room-grouped). New `explore` token group + `exploreRadii` in
+  `theme/tokens.ts`, transcribed from the reference `:root` (brand green ==
+  `redline.ctaDeep`, by design).
+- **Screen** — `app/listing/[id].tsx` rewritten. Tour/hotspot machinery left
+  in the repo unmounted (TourStop, HotspotSheet, build-hotspots, section-nav,
+  gallery, histogram; their tests still run).
+
+**Decisions**:
+- Tax + insurance are now ESTIMATED under a disclosed assumptions line — a
+  deliberate reversal of the old page's "we don't have them", per the spec's
+  §3.7. The rates live only in `cost.ts` and the label is generated from
+  them, so copy and math cannot disagree.
+- Fit rows that cannot cite behaviour are not rendered (宁可少，不能编). The
+  whole card is withheld below 3 saves or when only trade-offs derive.
+- P1 deferred: Ask entry (LiteLLM), commutes + invitation empty state,
+  map layers, cost Adjust UI, FunnelExitCard, neighborhood ClipReel (P2).
+  No dead pills rendered for any of them.
+
+**Issues**:
+- `pnpm install` in ws6 materialised `apps/web/node_modules/@types/react` as
+  a real directory, giving tsc two React type identities (`TS2786` all over
+  web). The reference worktree solves this with a hand-made symlink to
+  `@types+react@18.3.31` (and a parked `.ignored_react` dir, 2026-08-14);
+  reproduced that fix in ws6. Worth knowing before the next fresh install.
+- Mobile `pnpm lint` fails on files this phase never touched
+  (`lib/feed/place-stats.test.ts` non-null assertions, `feed.tsx`,
+  `use-swipe-card.ts`, `search.tsx`) — pre-existing on main. Phase files are
+  biome-clean; the pre-existing debt is left alone per §0.3.
+
+**Resolution**: mobile typecheck clean, biome clean on all touched files,
+549/549 tests; web typecheck clean, 777/777 tests (43 in `lib/listings`).
+Device verification pending — needs the owner's phone via Metro after the
+reference worktree is pulled.
+
+**Learnings**: `mls_listings.our_listing_id` is the bridge that turns several
+"the schema doesn't have it" absences (DOM, lot acres, MLS number) into real
+fields. Any future "we can't show X" claim should check the mirror first.
+
+**Next steps**: P1 — Ask entry on the existing LiteLLM chain with full MLS
+context; commute set-once store + invitation card; fit vote persistence
+(currently session-state only); real fit engine server-side when telemetry
+accumulates.
+
 ## 2026-08-23 10:45 UTC — the home tour's music is planned, not rolled
 
 **Objective**: owner — "what is current rule of selecting music for listing

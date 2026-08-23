@@ -293,6 +293,70 @@ export const cardSurfaces = {
 
 export type CardSurfaceVariant = keyof typeof cardSurfaces;
 
+/**
+ * Explore-page tokens (phase119) — transcribed verbatim from the owner's
+ * `percho-explore-reference.html` `:root`, which is the visual truth source for
+ * the home-detail redesign.
+ *
+ * A THIRD deliberate palette, same reasoning as `redline` above: the explore
+ * page is cream (#F6F1E8) with the redline's deep forest green as its only
+ * accent (`brand` === `redline.ctaDeep`), and the app chrome's amber never
+ * enters it. Values only the explore page uses live here, not in `colors`.
+ */
+export const explore = {
+	/** `--bg` — page background (cream). */
+	bg: "#F6F1E8",
+	/** `--surface` — raised card. */
+	surface: "#FFFDF9",
+	/** `--ink` / `--ink-2` / `--muted`. */
+	ink: "#14181A",
+	ink2: "#4A524E",
+	muted: "#8A918C",
+	/** `--brand` — perch green. Same value as `redline.ctaDeep`, by design. */
+	brand: "#0E5C48",
+	/** `--chip` — neutral chip fill (segmented track, facts labels). */
+	chip: "#EFE9DE",
+	/** `--line` / `--line-strong` — hairlines. */
+	line: "rgba(20,24,26,0.08)",
+	lineStrong: "rgba(20,24,26,0.14)",
+	/** Fit rows: match (green) and trade-off (amber) dot fills. */
+	posBg: "#E2EDE7",
+	posInk: "#0E5C48",
+	negBg: "#F6E7D6",
+	negInk: "#96551A",
+	/** `--scrim` — dark glass chip over the hero media (counter, ⊞, 🔊). */
+	scrim: "rgba(8,16,13,0.55)",
+	/** Light glass disc over the hero media (← / ♡). */
+	glass: "rgba(255,255,255,0.92)",
+	/** Room-strip chip over the photo, resting state. */
+	jumpChip: "rgba(255,255,255,0.15)",
+	jumpChipBorder: "rgba(255,255,255,0.30)",
+	/** Hero washes: a light cap at the top, a legibility wash at the foot. */
+	heroScrimFrom: "rgba(8,16,13,0.30)",
+	heroScrimTo: "rgba(8,16,13,0.62)",
+	/**
+	 * Collapsed app bar fill. The reference uses 0.93 + blur(18); RN has no
+	 * backdrop blur without a native dep, so the fill runs nearly opaque instead
+	 * — a translucent bar with no blur just shows scrolling text through itself.
+	 */
+	appbar: "rgba(246,241,232,0.97)",
+	/** Cost bars 2–4 (bar 1 is `brand`): the reference's green ramp. */
+	costBar2: "#5C9280",
+	costBar3: "#9DBDB0",
+	costBar4: "#CBDBD2",
+	/** Full-screen viewer / grid backdrop (`#0B0F11` in the reference). */
+	overlayBg: "#0B0F11",
+	onMedia: "#FFFFFF",
+	onMediaDim: "rgba(255,255,255,0.72)",
+} as const;
+
+/** Explore-page radii (reference: card 20 · tile 18 · sm 14; pill = `radii.pill`). */
+export const exploreRadii = {
+	card: 20,
+	tile: 18,
+	sm: 14,
+} as const;
+
 // ─── Radius (§0.3) — only these five steps exist ────────────────────
 export const radii = {
 	card: 28,
