@@ -35,6 +35,17 @@ const SURROUNDING_POI_BUDGET = 15;
 const SCHOOL_SLOTS = 3;
 
 /**
+ * How long the photos step may spend tagging in one invocation.
+ *
+ * The route is `maxDuration = 300` on Vercel and a Gemini tag measures ~3.5s,
+ * so an unbounded loop over a backlog gets the whole invocation killed — and a
+ * platform kill skips the catch that records the failure, leaving the run
+ * stuck on `fetching_photos`. 150s leaves room for the fetch that precedes it
+ * and the judging that follows (owner 2026-08-23).
+ */
+const TAG_BUDGET_MS = 150_000;
+
+/**
  * @param actor 'user' (default) checks the caller's session, which is what the
  *   admin route needs. 'service' skips it for a script with no session — the
  *   whole step is otherwise service-role already. Must never be taken from
@@ -133,6 +144,22 @@ export function selectSurroundingPois({
   return kept;
 }
 
+/**
+ * Enhance statuses this step must not touch. PURE.
+ *
+ * `ready` / `approved` / `rejected` are a finished verdict; `queued` /
+ * `processing` are work the render worker has already been handed. Re-stamping
+ * either of the last two hands the same photo out twice, which is how a
+ * re-run stopped being free (owner 2026-08-23). `failed` and `none` are the
+ * two that DO want queueing — a retry and a first attempt.
+ */
+const ENHANCE_SETTLED = new Set(['ready', 'approved', 'rejected', 'queued', 'processing']);
+
+/** Photos in scope that still owe the render worker an enhance pass. PURE. */
+export function enhanceTargets(photos: Array<{ id: string; enhanced_status: string }>): string[] {
+  return photos.filter((p) => !ENHANCE_SETTLED.has(p.enhanced_status)).map((p) => p.id);
+}
+
 export async function runPhotos(sb: TourDb, run: RunRow, actor: PoiActor = 'user') {
   const resolve = run.step_results.resolve as
     | {
@@ -173,7 +200,6 @@ export async function runPhotos(sb: TourDb, run: RunRow, actor: PoiActor = 'user
   const { fetchPhotosForCommunityPoi } = await import('@/lib/poi/community-actions');
   const results: Record<string, unknown> = {};
   const resolvedPoiIds: string[] = [];
-  const fetchedPhotoIds: string[] = [];
   // The resolve step already decided each POI's tour bucket; the Scheduler
   // needs it to keep one bucket from running more than two clips in a row.
   const bucketByPoiId = new Map<string, string>();
@@ -276,15 +302,6 @@ export async function runPhotos(sb: TourDb, run: RunRow, actor: PoiActor = 'user
     }
     const r = await fetchPhotosForCommunityPoi(run.community_id, poiId!, { max: 3, actor });
     results[poi.place_id] = r;
-    if ((r as { fetched?: number }).fetched) {
-      const { data: rows } = await sb
-        .from('poi_photos')
-        .select('id')
-        .eq('poi_id', poiId!)
-        .order('created_at', { ascending: false })
-        .limit(3);
-      fetchedPhotoIds.push(...(rows ?? []).map((row: { id: string }) => row.id));
-    }
   }
 
   // Resolve is how most of the community's POIs got here, but not the only
@@ -331,15 +348,6 @@ export async function runPhotos(sb: TourDb, run: RunRow, actor: PoiActor = 'user
       const r = await fetchPhotosForCommunityPoi(run.community_id, link.poi_id, { max: 3, actor });
       results[link.poi_id] = r;
     }
-
-    const { data: rows } = await sb
-      .from('poi_photos')
-      .select('id')
-      .eq('poi_id', link.poi_id)
-      .is('tagged_at', null);
-    // Tagging is what gives the Curator something to plan with; an untagged
-    // photo is invisible to the shot list.
-    fetchedPhotoIds.push(...(rows ?? []).map((row: { id: string }) => row.id));
   }
 
   // A film has room for a dozen places, not every place we know about.
@@ -386,6 +394,30 @@ export async function runPhotos(sb: TourDb, run: RunRow, actor: PoiActor = 'user
     dropped: [],
   });
 
+  // WHAT THE STEP OWES WORK TO IS THE POIs IN SCOPE — not what this
+  // invocation happened to download.
+  //
+  // Enhancing and tagging used to run off `fetchedPhotoIds`, filled only when
+  // a fetch returned NEW photos. So the second time the step ran, every POI
+  // already had its photos, every fetch came back `{ fetched: 0, reused: n }`,
+  // the list stayed empty, and the step enhanced nothing and tagged nothing —
+  // then reported itself complete. Apremont - Highcroft came out of a clean
+  // run with 30 of 67 photos untagged and a green tick (owner 2026-08-23:
+  // "clicked fetch and tag, it shows complete, but many are untagged"). Those
+  // 30 had been downloaded by the runs that timed out before tagging reached
+  // them, which is exactly the state a resumable step has to be able to see.
+  const scopePhotos: Array<{ id: string; tagged_at: string | null; enhanced_status: string }> = [];
+  for (let i = 0; i < resolvedPoiIds.length; i += 100) {
+    const { data } = (await sb
+      .from('poi_photos')
+      .select('id, tagged_at, enhanced_status')
+      .in('poi_id', resolvedPoiIds.slice(i, i + 100))
+      .neq('status', 'rejected')) as {
+      data: Array<{ id: string; tagged_at: string | null; enhanced_status: string }> | null;
+    };
+    scopePhotos.push(...(data ?? []));
+  }
+
   // Auto-enhance the panel's photos (owner 2026-08-17): the enhance QUEUE is
   // poi_photos.enhanced_status itself — render-worker claims `queued` rows.
   // Set to queued unless already enhanced (ready/approved/rejected = keep
@@ -395,43 +427,64 @@ export async function runPhotos(sb: TourDb, run: RunRow, actor: PoiActor = 'user
   // 'queued' and 'processing' are left alone too. Re-writing 'queued' over a
   // row the worker has already claimed hands the same photo out twice, and a
   // re-run of this step is meant to cost nothing (owner 2026-08-23).
-  if (fetchedPhotoIds.length > 0) {
-    const { data: existing } = await sb
-      .from('poi_photos')
-      .select('id, enhanced_status')
-      .in('id', fetchedPhotoIds)
-      .in('enhanced_status', ['ready', 'approved', 'rejected', 'queued', 'processing']);
-    const keep = new Set((existing ?? []).map((r: { id: string }) => r.id));
-    const toEnhance = fetchedPhotoIds.filter((id) => !keep.has(id));
-    if (toEnhance.length > 0) {
-      await mustWrite(
-        `queue ${toEnhance.length} photo(s) for enhancement`,
-        sb
-          .from('poi_photos')
-          .update({ enhanced_status: 'queued', enhanced_error: null })
-          .in('id', toEnhance),
-      );
-    }
+  const toEnhance = enhanceTargets(scopePhotos);
+  if (toEnhance.length > 0) {
+    await mustWrite(
+      `queue ${toEnhance.length} photo(s) for enhancement`,
+      sb
+        .from('poi_photos')
+        .update({ enhanced_status: 'queued', enhanced_error: null })
+        .in('id', toEnhance),
+    );
   }
 
   // Auto-tag (owner 2026-08-17): each community has only dozens of photos, so
-  // tagging needs no manual trigger — tag what we just fetched (only photos
-  // not yet tagged; tagPoiPhoto is idempotent but skip the API call anyway).
-  const taggedCount: Record<string, unknown> = {};
-  if (fetchedPhotoIds.length > 0) {
-    const { data: untaggedRows } = await sb
-      .from('poi_photos')
-      .select('id')
-      .in('id', fetchedPhotoIds)
-      .is('tagged_at', null);
-    const { tagPoiPhoto } = await import('@/lib/poi/vision-tagger');
-    let tagged = 0;
-    for (const row of untaggedRows ?? []) {
-      const r = await tagPoiPhoto(row.id);
-      if (r.ok) tagged += 1;
-    }
-    taggedCount.tagged = tagged;
-    taggedCount.total = (untaggedRows ?? []).length;
+  // tagging needs no manual trigger.
+  //
+  // Bounded by the clock, not by a count. This route is `maxDuration = 300` on
+  // Vercel, a tag costs ~3.5s, and a platform kill skips the catch block that
+  // would have recorded a failure — so a run that overruns leaves a row
+  // claiming to be in progress forever (see DEVLOG 2026-08-23 02:45). Under
+  // budget the step finishes and opens the review gate; over it, the step says
+  // so and stays on `tagging` for another click, which now resumes rather than
+  // repeats.
+  const untaggedIds = scopePhotos.filter((p) => !p.tagged_at).map((p) => p.id);
+  const { tagPoiPhoto } = await import('@/lib/poi/vision-tagger');
+  const tagStartedAt = Date.now();
+  let tagged = 0;
+  let attempted = 0;
+  for (const id of untaggedIds) {
+    if (Date.now() - tagStartedAt > TAG_BUDGET_MS) break;
+    attempted += 1;
+    const r = await tagPoiPhoto(id);
+    if (r.ok) tagged += 1;
+  }
+  const remaining = untaggedIds.length - tagged;
+  const taggedCount: Record<string, unknown> = {
+    tagged,
+    total: untaggedIds.length,
+    remaining,
+    ...(attempted < untaggedIds.length ? { stopped_on: 'time_budget' } : {}),
+  };
+
+  // Untagged photos are invisible to the Curator, so a review over a
+  // half-tagged set is a review of the wrong thing. Stop here and say what is
+  // left rather than opening the gate on it.
+  if (remaining > 0) {
+    await saveStep(sb, run, 'photos', {
+      phase: 'tagging',
+      results,
+      resolved_poi_ids: resolvedPoiIds,
+      auto_tag: taggedCount,
+      shots: [],
+      dropped: [],
+    });
+    await setRunStatus(sb, run.id, 'tagging');
+    return {
+      phase: 'tagging',
+      auto_tag: taggedCount,
+      message: `Tagged ${tagged}. ${remaining} photo(s) still untagged — run Fetch & Tag again.`,
+    };
   }
 
   // Reject what CANNOT be used. Nothing here approves anything.
@@ -517,6 +570,7 @@ export async function runPhotos(sb: TourDb, run: RunRow, actor: PoiActor = 'user
     poiCount: Object.keys(results).length,
     awaitingReview: true,
     autoRejected: unusableCount,
+    autoTagged: tagged,
   };
 }
 
