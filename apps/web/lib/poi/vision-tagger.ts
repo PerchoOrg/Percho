@@ -175,6 +175,11 @@ async function callVision(opts: {
       ],
       generationConfig: { maxOutputTokens: 512 },
     }),
+    // The photos step tags one photo at a time in a serial loop, so a call
+    // that never answers stops the whole run silently — the same way the
+    // un-deadlined Places calls did (see google-places.ts, owner 2026-08-23).
+    // tagPoiPhoto already reports a throw as `{ ok: false }` and moves on.
+    signal: AbortSignal.timeout(60_000),
   });
   if (!res.ok) {
     throw new Error(`Gemini vision ${res.status}: ${(await res.text()).slice(0, 300)}`);

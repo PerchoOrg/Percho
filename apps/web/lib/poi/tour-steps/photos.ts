@@ -272,20 +272,33 @@ export async function runPhotos(sb: TourDb, run: RunRow, actor: PoiActor = 'user
     }
   }
 
-  // `community_pois` — not `resolve.resolved` — is the community's POI set.
-  // Resolve is how most of them got there, but not the only way: amenity POIs
-  // are ingested from the community's own site (PhotoSourcePanel /
-  // ingest-community-photos.ts), and an admin can add a place the research
-  // agent missed. Aberdeen is the case in point — its HOA recommends four
-  // county parks within 2.6 miles and the agent proposed none of them
-  // (owner 2026-08-19). Anything linked to the community belongs in the film,
-  // however it arrived, so the set is unioned here and any POI without photos
-  // gets the same Places fetch a resolved one would.
+  // Resolve is how most of the community's POIs got here, but not the only
+  // way: amenity POIs are ingested from the community's own site
+  // (PhotoSourcePanel / ingest-community-photos.ts), and an admin can add a
+  // place the research agent missed. Aberdeen is the case in point — its HOA
+  // recommends four county parks within 2.6 miles and the agent proposed none
+  // of them (owner 2026-08-19). Those belong in the film however they arrived,
+  // so they are unioned in here, and any of them without photos gets the same
+  // Places fetch a resolved POI would.
+  //
+  // APPROVED ONLY. This used to take every link that was not 'rejected', which
+  // is a different set entirely: the Nearby button (`discoverPois`) writes a
+  // `candidate` row for 20 places per included type, so Apremont - Highcroft
+  // carried 228 links against 16 resolved POIs. At 3 photos each that is ~680
+  // photos to download, tag through Gemini one at a time and enhance on the
+  // GPU — for a film that visits 15 places. The run had been in
+  // `fetching_photos` for four hours when the owner asked why a 16-POI
+  // community was showing 335 photos (2026-08-23).
+  //
+  // 'approved' is exactly the "a person chose this place" set: the amenity
+  // ingest stamps it (ingest-page-photos.ts) and so does the admin panel. Bulk
+  // discovery output stays 'candidate', and picking from that is what `resolve`
+  // is for.
   const { data: links } = (await sb
     .from('community_pois')
     .select('poi_id, intent_bucket')
     .eq('community_id', run.community_id)
-    .neq('status', 'rejected')) as {
+    .eq('status', 'approved')) as {
     data: Array<{ poi_id: string; intent_bucket: string | null }> | null;
   };
   for (const link of links ?? []) {
@@ -415,20 +428,18 @@ export async function runPhotos(sb: TourDb, run: RunRow, actor: PoiActor = 'user
   // Only rows still 'pending' are touched. A verdict the owner has already
   // given is his, and a re-run must not quietly overturn it.
   const { initialVerdict } = await import('./shots');
-  // Every POI the community HAS, not just the ones this run's budget selected.
+  // The POIs this step fetched and tagged for — no more, no less.
   //
-  // The step fetches and tags for all of them, so judging only the selected
-  // subset left the rest tagged-but-unjudged: four photos this run fetched came
-  // back marked unusable by the tagger and stayed 'pending', which the table
-  // renders as a red "rejected" sitting in the Pending section (owner
-  // 2026-08-20: "i see some rejected photos in the pending section"). Fetching,
-  // tagging and judging have to cover the same set or the difference shows up
-  // as rows that contradict themselves.
-  const { data: allLinks } = (await sb
-    .from('community_pois')
-    .select('poi_id')
-    .eq('community_id', run.community_id)) as { data: Array<{ poi_id: string }> | null };
-  const judgeablePoiIds = [...new Set((allLinks ?? []).map((l) => l.poi_id))];
+  // Judging a narrower set than it tagged left the rest tagged-but-unjudged:
+  // four photos one run fetched came back marked unusable by the tagger and
+  // stayed 'pending', which the table renders as a red "rejected" sitting in
+  // the Pending section (owner 2026-08-20: "i see some rejected photos in the
+  // pending section"). Fetching, tagging and judging have to cover the same
+  // set or the difference shows up as rows that contradict themselves — which
+  // is why this is `resolvedPoiIds` and not another read of `community_pois`.
+  // That read covered every link, including the hundreds of `candidate` rows
+  // the Nearby button leaves behind, which this step no longer touches.
+  const judgeablePoiIds = [...new Set(resolvedPoiIds)];
 
   const { data: toJudge } = (await sb
     .from('poi_photos')
@@ -517,19 +528,40 @@ export async function runPlan(sb: TourDb, run: RunRow) {
   // `community_pois` is the durable truth about what this community has, and
   // it only grows. Reading it here means plan sees every POI, every time,
   // whatever ran before it.
-  const { data: links } = (await sb
+  const { data: allLinks } = (await sb
     .from('community_pois')
     .select('poi_id, intent_bucket, ai_score')
     .eq('community_id', run.community_id)
     .neq('status', 'rejected')) as {
     data: Array<{ poi_id: string; intent_bucket: string | null; ai_score: number | null }> | null;
   };
-  const resolvedPoiIds = [...new Set((links ?? []).map((l) => l.poi_id))];
+  // ...but only the POIs that have photos. A place with none contributes no
+  // shots, so leaving it in spends one of the fifteen surrounding slots on
+  // nothing. It never mattered while `photos` fetched for every link; now that
+  // it fetches for the resolved set and the approved links only (see above),
+  // the rest of `community_pois` is hundreds of `candidate` rows with no
+  // photos behind them.
+  //
+  // Chunked, because one `.in()` over every link is a URL a few hundred uuids
+  // long and PostgREST sits behind an 8 KB header limit — the 1,000-uuid
+  // `.in()` that forced the tour-index rewrite was 37 KB (2026-08-22).
+  const linkPoiIds = [...new Set((allLinks ?? []).map((l) => l.poi_id))];
+  const hasPhotos = new Set<string>();
+  for (let i = 0; i < linkPoiIds.length; i += 100) {
+    const { data: photoRows } = (await sb
+      .from('poi_photos')
+      .select('poi_id')
+      .in('poi_id', linkPoiIds.slice(i, i + 100))
+      .neq('status', 'rejected')) as { data: Array<{ poi_id: string }> | null };
+    for (const r of photoRows ?? []) hasPhotos.add(r.poi_id);
+  }
+  const links = (allLinks ?? []).filter((l) => hasPhotos.has(l.poi_id));
+  const resolvedPoiIds = [...new Set(links.map((l) => l.poi_id))];
   if (resolvedPoiIds.length === 0) {
-    throw new Error('no POIs linked to this community — run research and resolve first');
+    throw new Error('no POIs with photos linked to this community — run research and photos first');
   }
   const bucketByPoiId = new Map<string, string>(
-    (links ?? []).map((l) => [l.poi_id, l.intent_bucket ?? 'other']),
+    links.map((l) => [l.poi_id, l.intent_bucket ?? 'other']),
   );
 
   // THE BUDGET, applied HERE so the owner's review counts toward it. Amenities
@@ -546,7 +578,7 @@ export async function runPlan(sb: TourDb, run: RunRow) {
       data: Array<{ poi_id: string; reviewed_by: string | null }> | null;
     };
     const scoreByPoi = new Map<string, number>();
-    for (const l of links ?? []) {
+    for (const l of links) {
       if (typeof l.ai_score === 'number') scoreByPoi.set(l.poi_id, l.ai_score);
     }
     cutPoiIds = [

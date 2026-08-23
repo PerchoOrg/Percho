@@ -16,6 +16,147 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-23 01:05 UTC — The review page follows the tour's POIs now, and both orphaned runs are stopped
+
+**Objective**: owner, after reading the diagnosis below: "merge to main, and
+stop ashley crossing too and cleanup admin photo list, only show the photos
+from resolved poi".
+
+**Actions**:
+- Stopped Ashley Crossing's run (`03b9afec`) by hand — same orphan as
+  Apremont's, dead in the same second (00:19:34), still advertising
+  `fetching_photos`. `status='failed'`, `photos.phase='failed'` with the reason.
+- `lib/poi/nearby-photo-scope.ts` (new, + 5 tests): `keepPhotoForTour`, the
+  predicate for the review page.
+- `lib/poi/admin-nearby-photos.ts`: `narrowToTour` rebuilds the tour's POI set
+  — the newest run that HAS a resolve result, plus the `approved` links — and
+  filters the flattened photo rows through it. Community scope only; the
+  listing pages have no runs and are untouched.
+
+**Decisions**:
+- *Two exceptions to "resolved only", or the narrowing eats finished work.*
+  A photo with `status='approved'` is IN the current cut (that is what `plan`
+  writes), and a photo with `reviewed_by` set is the owner's own verdict.
+  Aberdeen has seven of the first and two of the second sitting on POIs its
+  newest run did not resolve; without the exceptions its review page would
+  drop photos that are in 35 shipped films.
+- *Newest run WITH a resolve result, not the newest run.* Both runs stopped
+  today died before writing one, and a community mid-research has none — either
+  would have blanked the page. A community with no resolve result anywhere has
+  never been toured, so nothing is narrowed and the nearby pages behave exactly
+  as before.
+- *The predicate lives in its own module.* `admin-nearby-photos.ts` is a
+  `'use server'` file: every export has to be an async server action, so a pure
+  synchronous helper exported from it fails `next build` (not `tsc`). Caught
+  before the merge build, not by it.
+
+**Resolution**: replayed against production for all eight communities that have
+a tour run. Photos on the page, before → after: Apremont - Highcroft
+**479 → 68**, Aberdeen 124 → 92 (7 of them held by the exceptions), Ashley
+Crossing 132 → 110, Bellmoore Park 64 → 64 (every POI is in focus), and the
+four Suwanee test communities 73 → 22, 69 → 25, 68 → 29, 48 → 21. The per-POI
+display cap of 3 still applies on top. `pnpm typecheck` clean, `apps/web` lint
+clean, 263 `lib/poi` tests pass.
+
+**Learnings**: `'use server'` turns "export a pure helper so it can be tested"
+into a build error, and neither `tsc` nor vitest sees it — the test imported
+and passed. Worth remembering for any `lib/` file that carries the directive.
+
+**Next steps**: the hidden photos are still in `poi_photos` (this is a display
+change; nothing was deleted). If they should actually go, that is a separate
+decision — and the 228 `candidate` links behind them are the thing to remove
+first, otherwise the next Nearby click puts them all back.
+
+## 2026-08-23 00:45 UTC — 16 resolved POIs, 335 photos: the photos step was working off the Nearby button's leftovers
+
+**Objective**: owner: "Apremont - Highcroft — its stuck in rendering for very
+long, there are 16 resolved pois, and each we only fetch 3, how come we have
+335 photos?" Then: "stop now and fix".
+
+**Issues**: both halves of the question had the same answer, and it was not the
+3-per-POI cap — that is correct.
+
+- `runPhotos` fetches for the resolve output (16 POIs), then unions in
+  **every `community_pois` link that is not 'rejected'** and fetches 3 for any
+  of those without photos. Apremont carries **228** such links, all
+  `status='candidate'`, none of them from the tour: the Nearby button
+  (`discoverPois`) writes a candidate row for 20 places per included type, so
+  one click leaves a few hundred behind. 228 × 3 ≈ 680 photos to download, tag
+  through Gemini **one at a time**, and enhance on the GPU — for a film that
+  visits 15 places. The 335 the owner saw was a mid-fetch snapshot; it was 479
+  by the time the run died.
+- "Stuck in rendering" was not slowness. The run sat in `fetching_photos` with
+  `photos.phase: 'running'`, last write **00:19:36**, and *nothing was running*:
+  all four local dev servers were at 0% CPU with no outbound sockets, and no
+  `poi_photos` row had been written anywhere in the database for ten minutes.
+  The request executing the step had died, and a death skips the step route's
+  catch — which is the only thing that ever writes `status='failed'`. The same
+  run had already done this once (20:30 start, silent from 21:5x, restarted by
+  hand at 00:14). Ashley Crossing, running concurrently, stopped in the same
+  second.
+
+**Actions**:
+- `tour-steps/photos.ts`: the union now takes `status='approved'` links only —
+  the amenity ingest and the admin panel both stamp `approved`, so that is
+  exactly the "a person chose this place" set. Bulk discovery output stays
+  `candidate` and is left to `resolve` to pick from.
+- `tour-steps/photos.ts`: `judgeablePoiIds` is now `resolvedPoiIds` rather than
+  a second read of every link — fetch, tag and judge have to cover one set or
+  photos come back tagged-but-unjudged (the 2026-08-20 "rejected photos in the
+  pending section" bug).
+- `tour-steps/photos.ts` (`runPlan`): its candidate pool drops POIs with no
+  usable photos. It never mattered while the step fetched for every link; now a
+  photo-less POI would spend one of the fifteen surrounding slots on nothing.
+- `google-places.ts`: `AbortSignal.timeout` on all four calls — 20 s for the
+  JSON ones, 60 s for a photo binary. There was no deadline anywhere.
+- `vision-tagger.ts`: 60 s on the Gemini vision call, same reason —
+  `tagPoiPhoto` already reports a throw as `{ ok: false }` and moves on.
+- Stopped the orphaned run by hand (`e429ebaa`, Apremont): `status='failed'`,
+  `photos.phase='failed'` with an error string saying what happened — the same
+  write the step route's catch block does.
+
+**Decisions**:
+- *Scope by `approved`, not by a cap on candidates.* A "fetch the best 30" rule
+  needs a ranking before the photos exist, which is what `resolve` already is.
+  The link status already carried the distinction; nothing was reading it.
+- *No unit test.* Both changes are query scope inside a step that touches a
+  dozen tables through chained calls; a fake client for it would be a bigger
+  fixture than the change. Verified against production instead, by replaying
+  the old and new queries for all four live communities.
+- *Timeouts everywhere the tour loops serially.* One connection that never
+  answers stops a run with no error and no failed status. That is the second
+  time this week a run has been "stuck" and turned out to be dead.
+
+**Resolution**: replayed against the production PostgREST — photos-step scope,
+then plan pool:
+
+| community | links | photos step | plan pool |
+|---|---|---|---|
+| Apremont - Highcroft | 228 | 228 → **0 approved** + 16 resolved | 228 → 124 |
+| Ashley Crossing | 171 | 171 → **3** + resolved | 171 → 22 |
+| Aberdeen | 38 | 38 → **19** + resolved | 38 → 36 |
+| Bellmoore Park | 17 | 17 → **1** + resolved | 17 → 15 |
+
+Aberdeen is the check that matters — 35 finished films, and its plan pool loses
+only the 2 POIs that have no usable photo and therefore contributed no shot.
+`pnpm typecheck` clean, `apps/web` lint clean (173 pre-existing warnings),
+258 `lib/poi` tests pass. (`apps/mobile` lint fails with `spawn ENOENT` in this
+worktree — biome is not installed there; unrelated and pre-existing.)
+
+**Learnings**: `community_pois` is two sets wearing one table — what a person
+chose and what a search dumped — and every consumer that read it as "the
+community's POIs" was reading the second. `discoverPois` is the only writer of
+the big one, and it has been running against these communities since July.
+
+**Next steps**:
+- Ashley Crossing's run (`fetching_photos`, orphaned in the same second) is
+  still showing "rendering" in the table; it needs the same manual stop.
+- A step that runs for hours inside a foreground request will keep dying this
+  way. Either the run needs a heartbeat the table can read as "no longer
+  alive", or the photos step belongs in the render worker.
+- Nothing reaps orphaned runs: `status` has no timeout, so a dead run is
+  indistinguishable from a live one until someone reads the timestamps.
+
 ## 2026-08-22 23:45 UTC — MAX_IMAGES 40 → 80, now that the slots hold real photos
 
 **Objective**: answer the question the previous entry left open. Owner: "merge
