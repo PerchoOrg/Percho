@@ -1101,6 +1101,61 @@ the big one, and it has been running against these communities since July.
 - Nothing reaps orphaned runs: `status` has no timeout, so a dead run is
   indistinguishable from a live one until someone reads the timestamps.
 
+## 2026-08-23 06:30 UTC — The hero clip must show the whole house, not a front door
+
+**Objective**: owner, on 5122 Lower Creek Street — asked which category its hero
+prompt was, then: "you got my point, fix the prompt, we need full picture."
+
+**Actions**:
+- Looked the listing up rather than guessing. `listing_tour_runs` for
+  `c7435419-e5ad-4abb-9f01-83bfc753d0cd`, newest run `041b2583` (2026-08-22
+  18:03 UTC, still `generating`): hero `effect = entry_push_in`, camera
+  sentence "pushes in very slowly ... keeping the front door centered as it
+  slowly fills the frame", model's own `focus` "The camera settles on the dark
+  front door" — on a hero photo its own `scene` describes as "A two-story brick
+  residence with a front porch, columns, and centered front door."
+- `hero_prompt.py`: new `full_facade` boolean in the model's JSON contract;
+  the three prose rules rewritten so the whole-home requirement leads and the
+  entry moves are stated as forbidden when `full_facade` is true.
+- `hero_prompt.py`: the fence in `choose_hero_prompt` — `ENTRY_EFFECTS`
+  (`entry_push_in`, `walk_up`) are substituted with `establish_push` unless the
+  model returned an explicit `full_facade: false`. Logs the substitution.
+- `tests/test_hero_prompt.py`: +4 tests (18 in the file).
+
+**Decisions**:
+- **A fence, not a stronger preference.** The rule the model broke was already
+  in `_SYSTEM` — "A photo showing the complete front of a detached house favors
+  moves that keep or reveal the full facade." It read as advice and the model
+  argued past it. This module's whole doctrine is that the model picks and the
+  code enforces; the whole-home rule now lives on the code side too.
+- **`establish_push` as the substitute, not `full_frame_hold`.** The model
+  reaching for an entry move is not nonsense — the entry is where a buyer's eye
+  goes. `establish_push` opens with the entire front in frame, holds, then
+  moves toward the door: the owner's "full picture" first, the model's intent
+  second. A hard downgrade to a locked frame would throw away a real judgment.
+- **Only an explicit `false` unlocks an entry move.** A missing or malformed
+  flag substitutes. `establish_push` on a townhouse is harmless — it opens on
+  whatever front the photo has; a door-filling clip on a whole house is the
+  failure being fixed, so the ambiguous case falls on the safe side.
+
+**Issues**: `tests/test_pick_bgm.py` cannot be collected without Supabase and
+Cloudflare env (it imports `worker.py`, which reads `os.environ` at module
+level), and with dummy values 2 of its 5 fail on an unrelated `AttributeError`.
+Pre-existing on `origin/main`, untouched by this change.
+
+**Resolution**: 110 render-worker tests pass (`test_pick_bgm.py` excluded, as
+above), 18 of them in `test_hero_prompt.py`.
+
+**Learnings**: the hero pool now has two kinds of rule with different
+enforcement — what the camera may DO (pool membership, mandatory clauses, the
+altitude fence) and what the clip must SHOW. The second kind was living in
+prose only, and prose lost. Anything the owner would reject on sight belongs on
+the code side of the line.
+
+**Next steps**: run `041b2583` was planned before this change and still carries
+the door-filling hero. A re-plan re-calls Seedance for the hero clip (paid), so
+it is the owner's call — not run.
+
 ## 2026-08-22 23:45 UTC — MAX_IMAGES 40 → 80, now that the slots hold real photos
 
 **Objective**: answer the question the previous entry left open. Owner: "merge
