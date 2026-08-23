@@ -136,6 +136,19 @@ export const CommunityPhotoIngest = z.object({
 });
 export type CommunityPhotoIngest = z.infer<typeof CommunityPhotoIngest>;
 
+/**
+ * Tick or untick one page in `community_photo_sources`.
+ *
+ * Only `enabled` is writable. The URL, the label and the origin are all
+ * decided by the ingest step or by the paste box; letting a PATCH change them
+ * would let a request re-point an already-approved source at another site.
+ */
+export const CommunityPhotoSourceToggle = z.object({
+  id: z.string().uuid(),
+  enabled: z.boolean(),
+});
+export type CommunityPhotoSourceToggle = z.infer<typeof CommunityPhotoSourceToggle>;
+
 // ─── Events ──────────────────────────────────────────────────────
 export const EventInsert = z.object({
   listing_id: z.string().uuid().optional(),

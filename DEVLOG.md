@@ -16,6 +16,122 @@ Same reverse-chronological format, same content.
 
 ---
 
+## 2026-08-23 05:00 UTC — Fetch & Tag was four jobs in one 300s function; it is four steps now
+
+**Objective**: owner: "we need to split the fetch & tag to 4 steps: fetch from
+resolved pois, fetch from selected websites, tag selected photos,
+auto-filtering."
+
+**What the one step was doing**: `runPhotos` was 355 lines that fetched Places
+photos for every POI, queued the enhance pass, ran a Gemini tag per photo, then
+applied `initialVerdict` and opened the review gate. Four jobs, one Vercel
+invocation, one 300s cap between them — which is why the tag loop needed a
+`TAG_BUDGET_MS = 150_000` clock carved out of the middle of it, and why a
+community with a real backlog could not finish in one click without one of the
+four quietly doing nothing. And "fetch from selected websites" was not in there
+at all: `ingestPagePhotos` existed but its only caller was a text box in
+`PhotoSourcePanel`, outside the pipeline entirely, so a community's best
+photographs depended on somebody remembering to go and paste a URL.
+
+**Actions**:
+- **`tour-steps/photos.ts`** — slimmed to Places fetch + enhance queue, ends at
+  phase `done`. `TAG_BUDGET_MS` deleted with the loop it bounded. `runPlan` is
+  untouched and still writes its shot list back into `step_results.photos`; the
+  whole admin surface reads shots, narration and bgm from there.
+- **`tour-steps/ingest.ts`** (new) — records what research found, expands each
+  community-site page ONCE into its same-origin neighbours, then reads the
+  enabled pages it has not read yet under a 180s budget.
+- **`tour-steps/tag.ts`** — rewritten. Scope comes from `tourPoiIds` rather
+  than the `resolved_poi_ids` the photos step froze, because `ingest` runs
+  after `photos` and creates POIs it could not have known about — the
+  community's own amenities, precisely the ones worth tagging. The 15-photo
+  count cap is gone; 240s of budget is ~60 photos a click against the old 15.
+- **`tour-steps/filter.ts`** (new) — `initialVerdict` by reason, then the
+  review gate. **Refuses to judge an untagged photo.** An untagged row has no
+  `ai_tags`, so `initialVerdict` only checks that a file exists and passes it:
+  judging early does not over-reject, it under-rejects, and then opens the gate
+  on a pile nobody has looked at.
+- **`site-map.ts`** (new, 10 tests) — `sameOriginPageLinks`. A nav bar IS a
+  site's sibling list and its in-page links are its children, so both fall out
+  of reading the anchors on one page. Depth 1, enforced by stamping children
+  `expanded_at` at insert.
+- **`community_photo_sources`** (migration `20260823220000`, **pushed** — 70/70
+  local and remote match). `origin` decides the default of `enabled`:
+  `community_site` on, `manual` on (pasting is the choice), `research` OFF.
+  It had to be a table and not `step_results`: re-running research starts a new
+  run and would take the owner's ticks with it.
+- **`PhotoSourcePanel`** — a checkbox list in those three groups, plus the
+  paste box, which now also records what it fetched as a source.
+- **`TourStepStrip`** — five chips to eight; `AUTOMATABLE_STEPS` now runs
+  research → resolve → photos → ingest → tag → filter and stops.
+
+**WebP** (`image-size.ts`, 9 tests): `imageSizeOf` read JPEG and PNG only, and
+`ingestPagePhotos` rejects anything it cannot read as "not a JPEG or PNG" — so
+the website-ingest step would have come back empty-handed on any site built
+this decade. VP8, VP8L and VP8X are ~25 dependency-free lines; the parser was
+run over four real files from Google's own WebP gallery and agrees with macOS
+`sips` on all four (550x368, 400x301, 400x301, 300x225). The test commits those
+headers rather than 500 KB of fixtures. The alternative was `sharp` — a native
+binary in a Vercel function, to read six bytes.
+
+**A refusal was invisible**: every handler returns `{ error, message }` when its
+inputs are not ready, and the route wraps that in a perfectly successful HTTP
+200 that nothing read. So "run resolve first" looked exactly like a step that
+had run and done nothing. `runStep` now reads `result.error`, surfaces it and
+stops the chain — which `filter` depends on, since refusing is how it keeps a
+half-tagged pile away from the gate.
+
+**Decisions**:
+- *Generic ingest, not per-site scripts* (owner asked directly). The existing
+  design already is: HTML layer harvests candidates from three generic markup
+  shapes, the byte layer filters on size/format/hash, and the VISION layer
+  decides what the picture is. Nothing in the markup tells you a photo is a
+  floor plan or a stock family; only the tagger can. Recall belongs to layer 1,
+  precision to layer 3, and that division is what makes new sites free.
+- *Enhance queueing stays inside `photos`*, not a fifth step. It is two DB
+  writes handing work to another process — part of fetching a photo, not a
+  stage anyone would run alone.
+- *Query strings dropped when canonicalising links.* On a real site they are
+  almost always a view of a page already in the list.
+- *`origin` is corrected every run, `enabled` never is.* Pasting the community's
+  own URL before `ingest` first runs files it as `manual`, and the expansion
+  keys on origin. Writing `enabled` there too would undo an untick every run.
+
+**Issues / risks**:
+- **Amenity POI count is now unbounded, and amenities bypass the film's place
+  budget.** `ingestPagePhotos` creates one synthetic POI per (community, label)
+  and stamps the link `approved`; a depth-1 crawl of an 8-photo-page site
+  therefore yields 8 amenity POIs, and `runPlan` never trims amenities — they
+  are the subject. Partly self-limiting: `runPlan` already drops POIs with no
+  usable photo, so a Contact Us page contributes nothing. But a site with
+  several genuine galleries can put 20+ amenity clips into a 90s film before a
+  single surrounding place is considered, which `fitDuration` will absorb by
+  shortening clips and raising `tour_duration_off_target`. **Watch that warning
+  on the first real community.** Not fixed here: how many amenity POIs a
+  community should have is an editorial question, not part of splitting a step.
+- **Not verified end-to-end.** The sandbox this was written in resolves only
+  allowlisted hosts, so no real community site could be crawled or ingested.
+  Everything below the network — the link extractor, the WebP parser, the
+  research-source split — is covered by unit tests against real captured bytes.
+  The first live run is the test of the rest.
+
+**Verification**: `pnpm typecheck` clean across all three packages. `pnpm test`
+683 web + 520 mobile, all passing (24 new). `biome check` zero errors; the
+`noExplicitAny` casts written against the not-yet-generated table type were
+removed once `database.types.ts` was regenerated, and the real types
+immediately caught a `Json` boundary in `last_result` that the cast had hidden.
+
+**Learnings**: the 300s cap was never the constraint people thought it was —
+the constraint was four jobs sharing one budget. Each of the four now has the
+whole function, and the two that can still overrun (`ingest`, `tag`) say so on
+the chip and resume on the next click instead of dying at the platform's hands.
+
+**Next steps**: run the pipeline on one real community and read three numbers —
+how many subpages the crawl enables, how many amenity POIs survive with photos,
+and whether `tour_duration_off_target` fires. The other two generic-ingest gaps
+(JS-rendered galleries; `CHROME_PATH` false positives) are deliberately left
+for their own phase, with real sites to measure against.
+
 ## 2026-08-23 21:15 UTC — 83% of the Cloudflare Stream bill is cuts nobody can reach
 
 **Objective**: owner, after the run-count change: "actually i do care the

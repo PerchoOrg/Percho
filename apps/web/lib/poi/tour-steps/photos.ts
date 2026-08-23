@@ -1,7 +1,13 @@
 /**
- * `photos` step — fetch photos for each surviving POI, then plan the shot
- * list from them. Writes progress as it goes so a long run is not mistaken
- * for a dead one.
+ * `photos` step — Places photos for every POI the tour has, and the enhance
+ * queue for them. Writes progress as it goes so a long run is not mistaken for
+ * a dead one.
+ *
+ * The FIRST of the four steps that "Fetch & Tag" became on 2026-08-23. The
+ * other three are `ingest` (photos from the community's own website), `tag`
+ * and `filter`; `runPlan` still lives at the bottom of this file, because it
+ * writes the shot list back into this step's result and the whole admin
+ * surface reads it from there.
  */
 import type { PoiActor } from '@/lib/poi/poi-actions-core';
 import type { PlaceFact } from '../tour-orchestrator/insights';
@@ -34,17 +40,6 @@ const SURROUNDING_POI_BUDGET = 15;
  * missing tier immediately.
  */
 const SCHOOL_SLOTS = 3;
-
-/**
- * How long the photos step may spend tagging in one invocation.
- *
- * The route is `maxDuration = 300` on Vercel and a Gemini tag measures ~3.5s,
- * so an unbounded loop over a backlog gets the whole invocation killed — and a
- * platform kill skips the catch that records the failure, leaving the run
- * stuck on `fetching_photos`. 150s leaves room for the fetch that precedes it
- * and the judging that follows (owner 2026-08-23).
- */
-const TAG_BUDGET_MS = 150_000;
 
 /**
  * @param actor 'user' (default) checks the caller's session, which is what the
@@ -380,54 +375,40 @@ export async function runPhotos(sb: TourDb, run: RunRow, actor: PoiActor = 'user
   // Selection belongs after the gate for the same reason planning does: it is a
   // decision the review is supposed to inform.
 
-  // Save progress before the slow half. This step now runs for minutes —
-  // fetch, then enhance, then a Gemini tag per photo, then the whole
-  // orchestration plan — and it used to write nothing until the very end, so
-  // the panel showed the PREVIOUS run's numbers throughout. That is
-  // indistinguishable from "it did nothing", and cost three rounds of the
-  // owner reporting an empty table while the step was in fact working
-  // (2026-08-17).
-  await saveStep(sb, run, 'photos', {
-    phase: 'tagging',
-    results,
-    resolved_poi_ids: resolvedPoiIds,
-    shots: [],
-    dropped: [],
-  });
-
   // WHAT THE STEP OWES WORK TO IS THE POIs IN SCOPE — not what this
   // invocation happened to download.
   //
-  // Enhancing and tagging used to run off `fetchedPhotoIds`, filled only when
-  // a fetch returned NEW photos. So the second time the step ran, every POI
+  // Enhancing used to run off a `fetchedPhotoIds` list, filled only when a
+  // fetch returned NEW photos. So the second time the step ran, every POI
   // already had its photos, every fetch came back `{ fetched: 0, reused: n }`,
-  // the list stayed empty, and the step enhanced nothing and tagged nothing —
-  // then reported itself complete. Apremont - Highcroft came out of a clean
-  // run with 30 of 67 photos untagged and a green tick (owner 2026-08-23:
-  // "clicked fetch and tag, it shows complete, but many are untagged"). Those
-  // 30 had been downloaded by the runs that timed out before tagging reached
-  // them, which is exactly the state a resumable step has to be able to see.
-  const scopePhotos: Array<{ id: string; tagged_at: string | null; enhanced_status: string }> = [];
+  // the list stayed empty, and the step enhanced nothing — then reported
+  // itself complete (owner 2026-08-23: "clicked fetch and tag, it shows
+  // complete, but many are untagged"). A resumable step has to be able to see
+  // the work an earlier, killed invocation left behind.
+  const scopePhotos: Array<{ id: string; enhanced_status: string }> = [];
   for (let i = 0; i < resolvedPoiIds.length; i += 100) {
     const { data } = (await sb
       .from('poi_photos')
-      .select('id, tagged_at, enhanced_status')
+      .select('id, enhanced_status')
       .in('poi_id', resolvedPoiIds.slice(i, i + 100))
       .neq('status', 'rejected')) as {
-      data: Array<{ id: string; tagged_at: string | null; enhanced_status: string }> | null;
+      data: Array<{ id: string; enhanced_status: string }> | null;
     };
     scopePhotos.push(...(data ?? []));
   }
 
-  // Auto-enhance the panel's photos (owner 2026-08-17): the enhance QUEUE is
+  // Auto-enhance (owner 2026-08-17): the enhance QUEUE is
   // poi_photos.enhanced_status itself — render-worker claims `queued` rows.
-  // Set to queued unless already enhanced (ready/approved/rejected = keep
-  // whatever exists; failed = retry once). Thumbnails + clips then pick up
-  // the enhanced file automatically (approved → enhanced_path).
+  // Thumbnails and clips then pick up the enhanced file automatically
+  // (approved → enhanced_path).
   //
-  // 'queued' and 'processing' are left alone too. Re-writing 'queued' over a
-  // row the worker has already claimed hands the same photo out twice, and a
-  // re-run of this step is meant to cost nothing (owner 2026-08-23).
+  // Queueing stays HERE rather than moving to its own step: it costs two DB
+  // writes and hands the work to a different process entirely, so it is part
+  // of fetching a photo, not a stage of the pipeline the owner would ever want
+  // to run on its own. `enhanceTargets` is what keeps it idempotent — a row
+  // already 'queued' or 'processing' is left alone, because re-stamping one
+  // the worker has claimed hands the same photo out twice and a re-run is
+  // meant to cost nothing (owner 2026-08-23).
   const toEnhance = enhanceTargets(scopePhotos);
   if (toEnhance.length > 0) {
     await mustWrite(
@@ -439,139 +420,33 @@ export async function runPhotos(sb: TourDb, run: RunRow, actor: PoiActor = 'user
     );
   }
 
-  // Auto-tag (owner 2026-08-17): each community has only dozens of photos, so
-  // tagging needs no manual trigger.
+  // STOP HERE — and this is now a much earlier stop than it used to be.
   //
-  // Bounded by the clock, not by a count. This route is `maxDuration = 300` on
-  // Vercel, a tag costs ~3.5s, and a platform kill skips the catch block that
-  // would have recorded a failure — so a run that overruns leaves a row
-  // claiming to be in progress forever (see DEVLOG 2026-08-23 02:45). Under
-  // budget the step finishes and opens the review gate; over it, the step says
-  // so and stays on `tagging` for another click, which now resumes rather than
-  // repeats.
-  const untaggedIds = scopePhotos.filter((p) => !p.tagged_at).map((p) => p.id);
-  const { tagPoiPhoto } = await import('@/lib/poi/vision-tagger');
-  const tagStartedAt = Date.now();
-  let tagged = 0;
-  let attempted = 0;
-  for (const id of untaggedIds) {
-    if (Date.now() - tagStartedAt > TAG_BUDGET_MS) break;
-    attempted += 1;
-    const r = await tagPoiPhoto(id);
-    if (r.ok) tagged += 1;
-  }
-  const remaining = untaggedIds.length - tagged;
-  const taggedCount: Record<string, unknown> = {
-    tagged,
-    total: untaggedIds.length,
-    remaining,
-    ...(attempted < untaggedIds.length ? { stopped_on: 'time_budget' } : {}),
-  };
-
-  // Untagged photos are invisible to the Curator, so a review over a
-  // half-tagged set is a review of the wrong thing. Stop here and say what is
-  // left rather than opening the gate on it.
-  if (remaining > 0) {
-    await saveStep(sb, run, 'photos', {
-      phase: 'tagging',
-      results,
-      resolved_poi_ids: resolvedPoiIds,
-      auto_tag: taggedCount,
-      shots: [],
-      dropped: [],
-    });
-    await setRunStatus(sb, run.id, 'tagging');
-    return {
-      phase: 'tagging',
-      auto_tag: taggedCount,
-      message: `Tagged ${tagged}. ${remaining} photo(s) still untagged — run Fetch & Tag again.`,
-    };
-  }
-
-  // Reject what CANNOT be used. Nothing here approves anything.
+  // This step was "Fetch & Tag": Places photos, then the website ingest that
+  // never actually ran, then a Gemini tag per photo, then the initial filter,
+  // then the review gate. Four jobs and one 300s Vercel function between them,
+  // which is why the tag loop needed a clock budget and why a community with a
+  // real backlog could not finish in one click without one of the four
+  // silently doing nothing. They are four steps now (owner 2026-08-23: "we
+  // need to split the fetch & tag to 4 steps: fetch from resolved pois, fetch
+  // from selected websites, tag selected photos, auto-filtering"), each with
+  // the whole function to itself and each individually re-runnable.
   //
-  // Two different questions were sharing one column. "Is this photo usable at
-  // all" is policy and measurable quality, and the pipeline can answer it here,
-  // before the owner looks. "Does it go in the film" is the shot list, which
-  // only exists after planning — so `plan` is what writes 'approved', and
-  // approved therefore means exactly "in the current cut" (owner 2026-08-19:
-  // "approved can not be 82!!"). Everything in between stays 'pending': usable,
-  // not chosen, available for him to promote.
-  //
-  // Only rows still 'pending' are touched. A verdict the owner has already
-  // given is his, and a re-run must not quietly overturn it.
-  const { initialVerdict } = await import('./shots');
-  // The POIs this step fetched and tagged for — no more, no less.
-  //
-  // Judging a narrower set than it tagged left the rest tagged-but-unjudged:
-  // four photos one run fetched came back marked unusable by the tagger and
-  // stayed 'pending', which the table renders as a red "rejected" sitting in
-  // the Pending section (owner 2026-08-20: "i see some rejected photos in the
-  // pending section"). Fetching, tagging and judging have to cover the same
-  // set or the difference shows up as rows that contradict themselves — which
-  // is why this is `resolvedPoiIds` and not another read of `community_pois`.
-  // That read covered every link, including the hundreds of `candidate` rows
-  // the Nearby button leaves behind, which this step no longer touches.
-  const judgeablePoiIds = [...new Set(resolvedPoiIds)];
-
-  const { data: toJudge } = (await sb
-    .from('poi_photos')
-    .select(
-      'id, status, ai_tags, width_px, height_px, enhanced_status, enhanced_meta, storage_path',
-    )
-    .in('poi_id', judgeablePoiIds)
-    .eq('status', 'pending')) as { data: Array<Record<string, unknown>> | null };
-
-  // Grouped by reason so the verdict is written WITH its justification. A bare
-  // 'rejected' made an automated call indistinguishable from the owner's own,
-  // which left the automated ones unauditable — and two have already turned out
-  // to be wrong this session (owner 2026-08-20: "we need to add reasons").
-  const byReason = new Map<string, string[]>();
-  for (const row of toJudge ?? []) {
-    const v = initialVerdict(row as Parameters<typeof initialVerdict>[0]);
-    if (v.ok) continue;
-    const ids = byReason.get(v.reason) ?? [];
-    ids.push(row.id as string);
-    byReason.set(v.reason, ids);
-  }
-  let unusableCount = 0;
-  for (const [reason, ids] of byReason) {
-    unusableCount += ids.length;
-    await mustWrite(
-      `reject ${ids.length} photo(s): ${reason}`,
-      sb.from('poi_photos').update({ status: 'rejected', rejection_reason: reason }).in('id', ids),
-    );
-  }
-
-  // STOP HERE. Everything above is the automated half: fetch, enhance, tag,
-  // initial filtering. Planning is a separate step the owner starts himself,
-  // after reviewing what this produced.
-  //
-  // Owner 2026-08-19, defining the workflow: "for each community, you will do
-  // the heavy lift work, including agent research and fetch photos, tagging,
-  // and initial filtering, then i will do second manual review of approved and
-  // rejected ones, after that, you can continue on the planning, clip
-  // generation and assembly."
-  //
-  // The gate is the point. Automated filters cut the pile down; they do not
-  // make the editorial call. Running straight into planning both hid that
-  // decision and made his review pointless, because the shot list was already
-  // fixed by the time he saw the photos.
+  // The review gate moved with the filter, to `tour-steps/filter.ts`.
   await saveStep(sb, run, 'photos', {
-    phase: 'review',
+    phase: 'done',
     results,
     resolved_poi_ids: resolvedPoiIds,
-    auto_tag: taggedCount,
+    enhance_queued: toEnhance.length,
     shots: [],
     dropped: [],
   });
-  await setRunStatus(sb, run.id, 'review');
+  await setRunStatus(sb, run.id, 'fetching_photos');
   return {
     ok: true,
     poiCount: Object.keys(results).length,
-    awaitingReview: true,
-    autoRejected: unusableCount,
-    autoTagged: tagged,
+    photoCount: scopePhotos.length,
+    enhanceQueued: toEnhance.length,
   };
 }
 
